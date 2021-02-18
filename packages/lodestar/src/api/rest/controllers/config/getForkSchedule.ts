@@ -7,7 +7,7 @@ export const getForkSchedule: ApiController = {
     const forkSchedule = await this.api.config.getForkSchedule();
     return resp.status(200).send({
       data: forkSchedule.map((fork) => {
-        return this.config.types.Fork.toJson(fork, {case: "snake"});
+        return this.config.types.phase0.Fork.toJson(fork, {case: "snake"});
       }),
     });
   },

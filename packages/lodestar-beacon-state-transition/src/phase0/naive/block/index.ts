@@ -2,7 +2,7 @@
  * @module chain/stateTransition/block
  */
 
-import {BeaconBlock, BeaconState} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
 import {processEth1Data} from "./eth1Data";
@@ -17,8 +17,8 @@ export * from "./operations";
 
 export function processBlock(
   config: IBeaconConfig,
-  state: BeaconState,
-  block: BeaconBlock,
+  state: phase0.BeaconState,
+  block: phase0.BeaconBlock,
   verifySignatures = true
 ): void {
   // block header

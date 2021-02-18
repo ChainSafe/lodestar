@@ -1,4 +1,4 @@
-import {BeaconState, Gwei} from "@chainsafe/lodestar-types";
+import {phase0, Gwei} from "@chainsafe/lodestar-types";
 import {bigIntSqrt, bigIntMax} from "@chainsafe/lodestar-utils";
 import {BASE_REWARDS_PER_EPOCH as BASE_REWARDS_PER_EPOCH_CONST} from "../../../constants";
 
@@ -19,7 +19,7 @@ import {
 export function getAttestationDeltas(
   epochCtx: EpochContext,
   process: IEpochProcess,
-  state: BeaconState
+  state: phase0.BeaconState
 ): [Gwei[], Gwei[]] {
   const params = epochCtx.config.params;
   const validatorCount = process.statuses.length;

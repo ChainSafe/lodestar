@@ -2,7 +2,7 @@
  * @module validator
  */
 
-import {BeaconState, BLSPubkey, Epoch, Fork, Root, SignedBeaconBlock, Slot} from "@chainsafe/lodestar-types";
+import {BLSPubkey, Epoch, Root, phase0, Slot} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {SecretKey} from "@chainsafe/bls";
 import {ILogger} from "@chainsafe/lodestar-utils";
@@ -136,11 +136,16 @@ export default class BlockProposingService {
   public async createAndPublishBlock(
     validatorKeys: {publicKey: BLSPubkey; secretKey: SecretKey},
     slot: Slot,
-    fork: Fork,
+    fork: phase0.Fork,
     genesisValidatorsRoot: Root
-  ): Promise<SignedBeaconBlock | null> {
+  ): Promise<phase0.SignedBeaconBlock | null> {
     const epoch = computeEpochAtSlot(this.config, slot);
-    const randaoDomain = getDomain(this.config, {fork, genesisValidatorsRoot} as BeaconState, DomainType.RANDAO, epoch);
+    const randaoDomain = getDomain(
+      this.config,
+      {fork, genesisValidatorsRoot} as phase0.BeaconState,
+      DomainType.RANDAO,
+      epoch
+    );
     const randaoSigningRoot = computeSigningRoot(this.config, this.config.types.Epoch, epoch, randaoDomain);
     let block;
     try {
@@ -157,24 +162,27 @@ export default class BlockProposingService {
     }
     const proposerDomain = getDomain(
       this.config,
-      {fork, genesisValidatorsRoot} as BeaconState,
+      {fork, genesisValidatorsRoot} as phase0.BeaconState,
       DomainType.BEACON_PROPOSER,
       computeEpochAtSlot(this.config, slot)
     );
-    const signingRoot = computeSigningRoot(this.config, this.config.types.BeaconBlock, block, proposerDomain);
+    const signingRoot = computeSigningRoot(this.config, this.config.types.phase0.BeaconBlock, block, proposerDomain);
 
     await this.slashingProtection.checkAndInsertBlockProposal(validatorKeys.publicKey, {
       slot: block.slot,
       signingRoot,
     });
 
-    const signedBlock: SignedBeaconBlock = {
+    const signedBlock: phase0.SignedBeaconBlock = {
       message: block,
       signature: validatorKeys.secretKey.sign(signingRoot).toBytes(),
     };
     try {
       await this.provider.beacon.blocks.publishBlock(signedBlock);
-      this.logger.info("Proposed block", {hash: toHexString(this.config.types.BeaconBlock.hashTreeRoot(block)), slot});
+      this.logger.info("Proposed block", {
+        hash: toHexString(this.config.types.phase0.BeaconBlock.hashTreeRoot(block)),
+        slot,
+      });
     } catch (e) {
       this.logger.error("Failed to publish block", {slot}, e);
     }

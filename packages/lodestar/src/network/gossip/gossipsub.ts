@@ -5,7 +5,7 @@ import Libp2p from "libp2p";
 import {CompositeType} from "@chainsafe/ssz";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {ForkDigest, SignedBeaconBlock} from "@chainsafe/lodestar-types";
+import {ForkDigest, phase0} from "@chainsafe/lodestar-types";
 
 import {GossipMessageValidatorFn, GossipObject, IGossipMessageValidator, ILodestarGossipMessage} from "./interface";
 import {
@@ -205,7 +205,7 @@ export class LodestarGossipsub extends Gossipsub {
 
     if (isAttestationSubnetTopic(topic)) {
       const subnet = getSubnetFromAttestationSubnetTopic(topic);
-      return {object: this.config.types.Attestation.deserialize(data), subnet};
+      return {object: this.config.types.phase0.Attestation.deserialize(data), subnet};
     }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -213,19 +213,19 @@ export class LodestarGossipsub extends Gossipsub {
     const gossipEvent = topicToGossipEvent(topic);
     switch (gossipEvent) {
       case GossipEvent.BLOCK:
-        objType = (this.config.types.SignedBeaconBlock as CompositeType<SignedBeaconBlock>).tree;
+        objType = (this.config.types.phase0.SignedBeaconBlock as CompositeType<phase0.SignedBeaconBlock>).tree;
         break;
       case GossipEvent.AGGREGATE_AND_PROOF:
-        objType = this.config.types.SignedAggregateAndProof;
+        objType = this.config.types.phase0.SignedAggregateAndProof;
         break;
       case GossipEvent.ATTESTER_SLASHING:
-        objType = this.config.types.AttesterSlashing;
+        objType = this.config.types.phase0.AttesterSlashing;
         break;
       case GossipEvent.PROPOSER_SLASHING:
-        objType = this.config.types.ProposerSlashing;
+        objType = this.config.types.phase0.ProposerSlashing;
         break;
       case GossipEvent.VOLUNTARY_EXIT:
-        objType = this.config.types.SignedVoluntaryExit;
+        objType = this.config.types.phase0.SignedVoluntaryExit;
         break;
       default:
         throw new Error(`Don't know how to deserialize object received under topic ${topic}`);

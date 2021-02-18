@@ -2,7 +2,6 @@ import {expect} from "chai";
 import sinon from "sinon";
 import bls, {SecretKey} from "@chainsafe/bls";
 import {List} from "@chainsafe/ssz";
-import {Validator} from "@chainsafe/lodestar-types";
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {SlashingProtection} from "@chainsafe/lodestar-validator";
 import {FAR_FUTURE_EPOCH, ZERO_HASH} from "../../../../../src/constants";
@@ -50,18 +49,18 @@ describe("produce block", function () {
     const parentHeader = signedBlockToSignedHeader(config, parentBlock);
     const parentBlockSummary = generateBlockSummary({
       slot: parentBlock.message.slot,
-      blockRoot: config.types.BeaconBlockHeader.hashTreeRoot(parentHeader.message),
+      blockRoot: config.types.phase0.BeaconBlockHeader.hashTreeRoot(parentHeader.message),
       parentRoot: parentBlock.message.parentRoot.valueOf() as Uint8Array,
       stateRoot: parentBlock.message.stateRoot.valueOf() as Uint8Array,
     });
     const state = generateState({
-      validators: validators as List<Validator>,
+      validators: validators as List<phase0.Validator>,
       balances: balances as List<bigint>,
       latestBlockHeader: parentHeader.message,
     });
-    const depositDataRootList = config.types.DepositDataRootList.tree.defaultValue();
+    const depositDataRootList = config.types.phase0.DepositDataRootList.tree.defaultValue();
     const tree = depositDataRootList.tree();
-    depositDataRootList.push(config.types.DepositData.hashTreeRoot(generateDeposit().data));
+    depositDataRootList.push(config.types.phase0.DepositData.hashTreeRoot(generateDeposit().data));
     const epochCtx = new phase0.EpochContext(config);
     epochCtx.loadState(state);
     sinon.stub(epochCtx, "getBeaconProposer").returns(20);

@@ -1,13 +1,13 @@
-import {SignedVoluntaryExit, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {phase0, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IDatabaseController, Bucket, Repository} from "@chainsafe/lodestar-db";
 
-export class VoluntaryExitRepository extends Repository<ValidatorIndex, SignedVoluntaryExit> {
+export class VoluntaryExitRepository extends Repository<ValidatorIndex, phase0.SignedVoluntaryExit> {
   public constructor(config: IBeaconConfig, db: IDatabaseController<Buffer, Buffer>) {
-    super(config, db, Bucket.exit, config.types.SignedVoluntaryExit);
+    super(config, db, Bucket.exit, config.types.phase0.SignedVoluntaryExit);
   }
 
-  public getId(value: SignedVoluntaryExit): ValidatorIndex {
+  public getId(value: phase0.SignedVoluntaryExit): ValidatorIndex {
     return value.message.validatorIndex;
   }
 }

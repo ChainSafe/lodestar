@@ -2,7 +2,7 @@
  * @module network/gossip
  */
 
-import {AttesterSlashing} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {getGossipTopic} from "../utils";
 import {Gossip} from "../gossip";
 import {GossipEvent} from "../constants";
@@ -10,7 +10,7 @@ import {GossipObject} from "../interface";
 
 export async function handleIncomingAttesterSlashing(this: Gossip, obj: GossipObject): Promise<void> {
   try {
-    const attesterSlashing = obj as AttesterSlashing;
+    const attesterSlashing = obj as phase0.AttesterSlashing;
     this.logger.verbose("Received attester slashing");
     this.emit(GossipEvent.ATTESTER_SLASHING, attesterSlashing);
   } catch (e) {
@@ -18,12 +18,12 @@ export async function handleIncomingAttesterSlashing(this: Gossip, obj: GossipOb
   }
 }
 
-export async function publishAttesterSlashing(this: Gossip, attesterSlashing: AttesterSlashing): Promise<void> {
+export async function publishAttesterSlashing(this: Gossip, attesterSlashing: phase0.AttesterSlashing): Promise<void> {
   const forkDigestValue = await this.getForkDigest(attesterSlashing.attestation1.data.slot);
 
   await this.pubsub.publish(
     getGossipTopic(GossipEvent.PROPOSER_SLASHING, forkDigestValue),
-    Buffer.from(this.config.types.AttesterSlashing.serialize(attesterSlashing))
+    Buffer.from(this.config.types.phase0.AttesterSlashing.serialize(attesterSlashing))
   );
 
   this.logger.verbose("Publishing attester slashing");

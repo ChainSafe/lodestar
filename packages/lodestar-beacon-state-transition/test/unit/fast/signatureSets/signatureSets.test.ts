@@ -2,20 +2,7 @@ import crypto from "crypto";
 import bls, {init} from "@chainsafe/bls";
 import {BitList, List} from "@chainsafe/ssz";
 import {config} from "@chainsafe/lodestar-config/mainnet";
-import {
-  BeaconBlock,
-  SignedBeaconBlock,
-  ProposerSlashing,
-  AttesterSlashing,
-  Deposit,
-  SignedVoluntaryExit,
-  Attestation,
-  SignedBeaconBlockHeader,
-  ValidatorIndex,
-  BLSSignature,
-  IndexedAttestation,
-  AttestationData,
-} from "@chainsafe/lodestar-types";
+import {ValidatorIndex, BLSSignature} from "@chainsafe/lodestar-types";
 import {ZERO_HASH, FAR_FUTURE_EPOCH} from "../../../../src/constants";
 import {generateState} from "../../../utils/state";
 import {generateValidators} from "../../../utils/validator";
@@ -30,7 +17,7 @@ describe("signatureSets", () => {
   it("should aggregate all signatures from a block", () => {
     const EMPTY_SIGNATURE = Buffer.alloc(96);
 
-    const block: BeaconBlock = {
+    const block: phase0.BeaconBlock = {
       slot: 0,
       proposerIndex: 0,
       parentRoot: crypto.randomBytes(32),
@@ -48,24 +35,24 @@ describe("signatureSets", () => {
             {proposerIndex: 0, signature: EMPTY_SIGNATURE},
             {proposerIndex: 0, signature: EMPTY_SIGNATURE}
           ),
-        ] as List<ProposerSlashing>,
+        ] as List<phase0.ProposerSlashing>,
         attesterSlashings: [
           getMockAttesterSlashings(
             {attestingIndices: [0] as List<ValidatorIndex>, signature: EMPTY_SIGNATURE},
             {attestingIndices: [0] as List<ValidatorIndex>, signature: EMPTY_SIGNATURE}
           ),
-        ] as List<AttesterSlashing>,
+        ] as List<phase0.AttesterSlashing>,
         attestations: [
           getMockAttestations({attestingIndices: [0] as List<ValidatorIndex>, signature: EMPTY_SIGNATURE}),
-        ] as List<Attestation>,
-        deposits: ([] as Deposit[]) as List<Deposit>,
+        ] as List<phase0.Attestation>,
+        deposits: ([] as phase0.Deposit[]) as List<phase0.Deposit>,
         voluntaryExits: [getMockSignedVoluntaryExit({validatorIndex: 0, signature: EMPTY_SIGNATURE})] as List<
-          SignedVoluntaryExit
+          phase0.SignedVoluntaryExit
         >,
       },
     };
 
-    const signedBlock: SignedBeaconBlock = {
+    const signedBlock: phase0.SignedBeaconBlock = {
       message: block,
       signature: EMPTY_SIGNATURE,
     };
@@ -108,14 +95,14 @@ interface IBlockProposerData {
   signature: BLSSignature;
 }
 
-function getMockProposerSlashings(data1: IBlockProposerData, data2: IBlockProposerData): ProposerSlashing {
+function getMockProposerSlashings(data1: IBlockProposerData, data2: IBlockProposerData): phase0.ProposerSlashing {
   return {
     signedHeader1: getMockSignedBeaconBlockHeader(data1),
     signedHeader2: getMockSignedBeaconBlockHeader(data2),
   };
 }
 
-function getMockSignedBeaconBlockHeader(data: IBlockProposerData): SignedBeaconBlockHeader {
+function getMockSignedBeaconBlockHeader(data: IBlockProposerData): phase0.SignedBeaconBlockHeader {
   return {
     message: {
       slot: 0,
@@ -133,14 +120,14 @@ interface IIndexAttestationData {
   signature: BLSSignature;
 }
 
-function getMockAttesterSlashings(data1: IIndexAttestationData, data2: IIndexAttestationData): AttesterSlashing {
+function getMockAttesterSlashings(data1: IIndexAttestationData, data2: IIndexAttestationData): phase0.AttesterSlashing {
   return {
     attestation1: getMockIndexAttestation(data1),
     attestation2: getMockIndexAttestation(data2),
   };
 }
 
-function getMockIndexAttestation(data: IIndexAttestationData): IndexedAttestation {
+function getMockIndexAttestation(data: IIndexAttestationData): phase0.IndexedAttestation {
   return {
     attestingIndices: data.attestingIndices,
     data: getAttestationData(),
@@ -148,7 +135,7 @@ function getMockIndexAttestation(data: IIndexAttestationData): IndexedAttestatio
   };
 }
 
-function getAttestationData(): AttestationData {
+function getAttestationData(): phase0.AttestationData {
   return {
     slot: 0,
     index: 0,
@@ -164,7 +151,7 @@ function getAttestationData(): AttestationData {
   };
 }
 
-function getMockAttestations(data: IIndexAttestationData): Attestation {
+function getMockAttestations(data: IIndexAttestationData): phase0.Attestation {
   return {
     aggregationBits: [true] as BitList,
     data: getAttestationData(),
@@ -177,7 +164,7 @@ interface ISignedVoluntaryExitData {
   validatorIndex: ValidatorIndex;
 }
 
-function getMockSignedVoluntaryExit(data: ISignedVoluntaryExitData): SignedVoluntaryExit {
+function getMockSignedVoluntaryExit(data: ISignedVoluntaryExitData): phase0.SignedVoluntaryExit {
   return {
     message: {
       epoch: 0,

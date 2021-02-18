@@ -16,7 +16,7 @@ export const produceAggregatedAttestation: ApiController<Query> = {
       req.query.slot
     );
     resp.status(200).send({
-      data: this.config.types.Attestation.toJson(aggregate, {case: "snake"}),
+      data: this.config.types.phase0.Attestation.toJson(aggregate, {case: "snake"}),
     });
   },
 

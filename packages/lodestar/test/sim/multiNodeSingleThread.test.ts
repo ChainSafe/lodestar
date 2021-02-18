@@ -2,7 +2,7 @@ import {IBeaconParams} from "@chainsafe/lodestar-params";
 import {WinstonLogger} from "@chainsafe/lodestar-utils";
 import {getDevBeaconNode} from "../utils/node/beacon";
 import {waitForEvent} from "../utils/events/resolver";
-import {Checkpoint} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {getDevValidator} from "../utils/node/validator";
 import {Validator} from "@chainsafe/lodestar-validator/lib";
 import {BeaconNode} from "../../src/node";
@@ -80,7 +80,9 @@ describe.skip("Run multi node single thread interop validators (no eth1) until c
       await Promise.all(validators.map((validator) => validator.start()));
 
       // Wait for justified checkpoint on all nodes
-      await Promise.all(nodes.map((node) => waitForEvent<Checkpoint>(node.chain.emitter, checkpointEvent, 240000)));
+      await Promise.all(
+        nodes.map((node) => waitForEvent<phase0.Checkpoint>(node.chain.emitter, checkpointEvent, 240000))
+      );
       logger.info("All nodes reached justified checkpoint");
     });
   }

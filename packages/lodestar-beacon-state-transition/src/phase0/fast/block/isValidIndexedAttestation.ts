@@ -1,4 +1,4 @@
-import {BeaconState, IndexedAttestation} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {DomainType} from "../../../constants";
 import {computeSigningRoot, getDomain} from "../../../util";
 import {ISignatureSet, SignatureSetType, verifySignatureSet} from "../signatureSets";
@@ -9,8 +9,8 @@ import {EpochContext} from "../util";
  */
 export function isValidIndexedAttestation(
   epochCtx: EpochContext,
-  state: BeaconState,
-  indexedAttestation: IndexedAttestation,
+  state: phase0.BeaconState,
+  indexedAttestation: phase0.IndexedAttestation,
   verifySignature = true
 ): boolean {
   const config = epochCtx.config;
@@ -48,8 +48,8 @@ export function isValidIndexedAttestation(
 
 export function getIndexedAttestationSignatureSet(
   epochCtx: EpochContext,
-  state: BeaconState,
-  indexedAttestation: IndexedAttestation,
+  state: phase0.BeaconState,
+  indexedAttestation: phase0.IndexedAttestation,
   indices?: number[]
 ): ISignatureSet {
   const config = epochCtx.config;
@@ -59,11 +59,11 @@ export function getIndexedAttestationSignatureSet(
   return {
     type: SignatureSetType.aggregate,
     pubkeys: indices.map((i) => epochCtx.index2pubkey[i]),
-    signingRoot: computeSigningRoot(config, config.types.AttestationData, indexedAttestation.data, domain),
+    signingRoot: computeSigningRoot(config, config.types.phase0.AttestationData, indexedAttestation.data, domain),
     signature: indexedAttestation.signature.valueOf() as Uint8Array,
   };
 }
 
-function getIndices(indexedAttestation: IndexedAttestation): number[] {
+function getIndices(indexedAttestation: phase0.IndexedAttestation): number[] {
   return Array.from(indexedAttestation.attestingIndices);
 }

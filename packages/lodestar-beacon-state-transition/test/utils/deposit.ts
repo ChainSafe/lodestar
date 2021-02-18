@@ -1,4 +1,4 @@
-import {Deposit} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {DEPOSIT_CONTRACT_TREE_DEPTH, EMPTY_SIGNATURE} from "../../src/constants";
 
 /**
@@ -6,7 +6,7 @@ import {DEPOSIT_CONTRACT_TREE_DEPTH, EMPTY_SIGNATURE} from "../../src/constants"
  * @returns {Deposit}
  * @param index
  */
-export function generateDeposit(): Deposit {
+export function generateDeposit(): phase0.Deposit {
   return {
     proof: Array.from({length: DEPOSIT_CONTRACT_TREE_DEPTH + 1}, () => Buffer.alloc(32)),
     data: {

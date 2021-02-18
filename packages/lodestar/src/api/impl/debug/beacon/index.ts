@@ -1,5 +1,5 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {BeaconState, SlotRoot} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {IBeaconChain} from "../../../../chain";
 import {IBeaconDb} from "../../../../db";
@@ -22,7 +22,7 @@ export class DebugBeaconApi implements IDebugBeaconApi {
     this.db = modules.db;
   }
 
-  public async getHeads(): Promise<SlotRoot[] | null> {
+  public async getHeads(): Promise<phase0.SlotRoot[] | null> {
     try {
       return this.chain.forkChoice
         .getHeads()
@@ -33,7 +33,7 @@ export class DebugBeaconApi implements IDebugBeaconApi {
     }
   }
 
-  public async getState(stateId: StateId): Promise<BeaconState | null> {
+  public async getState(stateId: StateId): Promise<phase0.BeaconState | null> {
     try {
       const stateContext = await resolveStateId(this.chain, this.db, stateId);
       return stateContext?.state || null;

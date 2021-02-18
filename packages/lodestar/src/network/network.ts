@@ -247,7 +247,7 @@ export class Libp2pNetwork extends (EventEmitter as {new (): NetworkEventEmitter
         .filter((enr: ENR) => enr.get("attnets"))
         .filter((enr: ENR) => {
           try {
-            return this.config.types.AttestationSubnets.deserialize(enr.get("attnets")!)[subnet];
+            return this.config.types.phase0.AttestationSubnets.deserialize(enr.get("attnets")!)[subnet];
           } catch (err) {
             return false;
           }

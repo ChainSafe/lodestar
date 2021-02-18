@@ -2,7 +2,7 @@
  * @module chain/stateTransition/epoch
  */
 
-import {BeaconState} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {decreaseBalance, getCurrentEpoch, getTotalActiveBalance} from "../../../util";
 import {bigIntMin, intDiv} from "@chainsafe/lodestar-utils";
@@ -12,7 +12,7 @@ import {bigIntMin, intDiv} from "@chainsafe/lodestar-utils";
  *
  * Note that this function mutates ``state``.
  */
-export function processSlashings(config: IBeaconConfig, state: BeaconState): void {
+export function processSlashings(config: IBeaconConfig, state: phase0.BeaconState): void {
   const currentEpoch = getCurrentEpoch(config, state);
   const totalBalance = getTotalActiveBalance(config, state);
   const totalSlashings = Array.from(state.slashings).reduce((a, b) => a + b, BigInt(0));

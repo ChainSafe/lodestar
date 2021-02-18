@@ -1,11 +1,15 @@
-import {BeaconState} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {readOnlyMap, List} from "@chainsafe/ssz";
 
 import {GENESIS_EPOCH} from "../../../constants";
 import {EpochContext, IEpochProcess} from "../util";
 import {getAttestationDeltas} from "./getAttestationDeltas";
 
-export function processRewardsAndPenalties(epochCtx: EpochContext, process: IEpochProcess, state: BeaconState): void {
+export function processRewardsAndPenalties(
+  epochCtx: EpochContext,
+  process: IEpochProcess,
+  state: phase0.BeaconState
+): void {
   // No rewards are applied at the end of `GENESIS_EPOCH` because rewards are for work done in the previous epoch
   if (process.currentEpoch === GENESIS_EPOCH) {
     return;

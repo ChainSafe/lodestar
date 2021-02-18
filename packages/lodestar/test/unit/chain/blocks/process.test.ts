@@ -28,7 +28,7 @@ describe("processBlock", function () {
   });
 
   it("should throw on unknown parent", async function () {
-    const signedBlock = config.types.SignedBeaconBlock.defaultValue();
+    const signedBlock = config.types.phase0.SignedBeaconBlock.defaultValue();
     signedBlock.message.slot = 1;
     const job = getNewBlockJob(signedBlock);
     forkChoice.hasBlock.returns(false);
@@ -47,7 +47,7 @@ describe("processBlock", function () {
   });
 
   it("should throw on missing prestate", async function () {
-    const signedBlock = config.types.SignedBeaconBlock.defaultValue();
+    const signedBlock = config.types.phase0.SignedBeaconBlock.defaultValue();
     signedBlock.message.slot = 1;
     const job = getNewBlockJob(signedBlock);
     forkChoice.hasBlock.returns(true);

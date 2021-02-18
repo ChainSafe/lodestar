@@ -1,5 +1,5 @@
 import {IReadonlyEpochShuffling} from ".";
-import {ValidatorIndex, Slot, BeaconState, Validator} from "@chainsafe/lodestar-types";
+import {ValidatorIndex, Slot, phase0} from "@chainsafe/lodestar-types";
 import {ByteVector, readOnlyForEach} from "@chainsafe/ssz";
 import {createIFlatValidator, IFlatValidator} from "./flatValidator";
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
@@ -25,11 +25,11 @@ export type ReadonlyEpochContext = {
  * that'd update both the cached validators and the one in the original state.
  */
 // eslint-disable-next-line @typescript-eslint/naming-convention
-export interface CachedValidatorsBeaconState extends BeaconState {
+export interface CachedValidatorsBeaconState extends phase0.BeaconState {
   flatValidators(): Vector<IFlatValidator>;
   updateValidator(i: ValidatorIndex, value: Partial<IFlatValidator>): void;
-  addValidator(validator: Validator): void;
-  getOriginalState(): BeaconState;
+  addValidator(validator: phase0.Validator): void;
+  getOriginalState(): phase0.BeaconState;
   clone(): CachedValidatorsBeaconState;
 }
 
@@ -41,11 +41,11 @@ export interface CachedValidatorsBeaconState extends BeaconState {
  */
 export class CachedValidatorsBeaconState {
   // the original BeaconState
-  private _state: BeaconState;
+  private _state: phase0.BeaconState;
   // this is immutable and shared across BeaconStates for most of the validators
   private _cachedValidators: Vector<IFlatValidator>;
 
-  constructor(state: BeaconState, cachedValidators: Vector<IFlatValidator>) {
+  constructor(state: phase0.BeaconState, cachedValidators: Vector<IFlatValidator>) {
     this._state = state;
     this._cachedValidators = cachedValidators;
   }
@@ -71,7 +71,7 @@ export class CachedValidatorsBeaconState {
    * Add validator to both the cache and BeaconState
    * _cachedValidators refers to a new instance
    */
-  public addValidator(validator: Validator): void {
+  public addValidator(validator: phase0.Validator): void {
     this._cachedValidators = this._cachedValidators.append(createIFlatValidator(validator));
     this._state.validators.push(validator);
   }
@@ -87,12 +87,12 @@ export class CachedValidatorsBeaconState {
    * This is very cheap thanks to persistent-merkle-tree and persistent-vector.
    */
   public clone(): CachedValidatorsBeaconState {
-    const clonedState = config.types.BeaconState.clone(this._state);
+    const clonedState = config.types.phase0.BeaconState.clone(this._state);
     const clonedCachedValidators = this._cachedValidators.clone();
     return new CachedValidatorsBeaconState(clonedState, clonedCachedValidators).createProxy();
   }
 
-  public getOriginalState(): BeaconState {
+  public getOriginalState(): phase0.BeaconState {
     return this._state;
   }
 }
@@ -101,7 +101,7 @@ export class CachedValidatorsBeaconState {
  * Convenient method to create a CachedValidatorsBeaconState from a BeaconState
  * @param state
  */
-export function createCachedValidatorsBeaconState(state: BeaconState): CachedValidatorsBeaconState {
+export function createCachedValidatorsBeaconState(state: phase0.BeaconState): CachedValidatorsBeaconState {
   const tmpValidators: IFlatValidator[] = [];
   readOnlyForEach(state.validators, (validator) => {
     tmpValidators.push(createIFlatValidator(validator));
@@ -114,7 +114,7 @@ class CachedValidatorsBeaconStateProxyHandler implements ProxyHandler<CachedVali
    * Forward all BeaconState property getters to _state.
    */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  public get(target: CachedValidatorsBeaconState, p: keyof BeaconState): any {
+  public get(target: CachedValidatorsBeaconState, p: keyof phase0.BeaconState): any {
     if (target[p] !== undefined) {
       return target[p];
     }
@@ -125,7 +125,7 @@ class CachedValidatorsBeaconStateProxyHandler implements ProxyHandler<CachedVali
    * Forward all BeaconState property setters to _state.
    */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  public set(target: CachedValidatorsBeaconState, p: keyof BeaconState, value: any): boolean {
+  public set(target: CachedValidatorsBeaconState, p: keyof phase0.BeaconState, value: any): boolean {
     if (target[p] !== undefined) {
       target[p] = value;
     } else {

@@ -4,7 +4,7 @@ import {IBeaconSync, ISyncModules, SyncMode} from "./interface";
 import {defaultSyncOptions, ISyncOptions} from "./options";
 import {getSyncProtocols, getUnknownRootProtocols, INetwork} from "../network";
 import {ILogger} from "@chainsafe/lodestar-utils";
-import {CommitteeIndex, Root, Slot, SyncingStatus} from "@chainsafe/lodestar-types";
+import {CommitteeIndex, Root, Slot, phase0} from "@chainsafe/lodestar-types";
 import {IRegularSync} from "./regular";
 import {BeaconReqRespHandler, IReqRespHandler} from "./reqResp";
 import {BeaconGossipHandler, IGossipHandler} from "./gossip";
@@ -100,7 +100,7 @@ export class BeaconSync implements IBeaconSync {
     await this.gossip.stop();
   }
 
-  public async getSyncStatus(): Promise<SyncingStatus> {
+  public async getSyncStatus(): Promise<phase0.SyncingStatus> {
     const currentSlot = this.chain.clock.currentSlot;
     const headSlot = this.chain.forkChoice.getHead().slot;
     switch (this.mode) {
@@ -222,7 +222,7 @@ export class BeaconSync implements IBeaconSync {
 
   private onUnknownBlockRoot = async (err: BlockError): Promise<void> => {
     if (err.type.code !== BlockErrorCode.PARENT_UNKNOWN) return;
-    const blockRoot = this.config.types.BeaconBlock.hashTreeRoot(err.job.signedBlock.message);
+    const blockRoot = this.config.types.phase0.BeaconBlock.hashTreeRoot(err.job.signedBlock.message);
     const unknownAncestorRoot = this.chain.pendingBlocks.getMissingAncestor(blockRoot);
     const missingRootHex = toHexString(unknownAncestorRoot);
     if (this.processingRoots.has(missingRootHex)) {

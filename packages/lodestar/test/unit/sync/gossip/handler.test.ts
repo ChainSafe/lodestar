@@ -13,7 +13,7 @@ import {sleep, WinstonLogger} from "@chainsafe/lodestar-utils";
 import {MockBeaconChain} from "../../../utils/mocks/chain/chain";
 import {generateState} from "../../../utils/state";
 import {StubbedBeaconDb} from "../../../utils/stub";
-import {BeaconState} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {TreeBacked} from "@chainsafe/ssz";
 
 describe("gossip handler", function () {
@@ -84,12 +84,12 @@ describe("gossip handler", function () {
 
   it("should handle fork version changed", async function () {
     // handler is started and fork digest changed after that
-    const state: BeaconState = generateState();
+    const state: phase0.BeaconState = generateState();
     const chain = new MockBeaconChain({
       genesisTime: 0,
       chainId: 0,
       networkId: BigInt(0),
-      state: state as TreeBacked<BeaconState>,
+      state: state as TreeBacked<phase0.BeaconState>,
       config,
     });
     const oldForkDigest = chain.getForkDigest();

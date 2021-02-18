@@ -1,7 +1,7 @@
 import pipe from "it-pipe";
 import all from "it-all";
 import {config} from "@chainsafe/lodestar-config/minimal";
-import {ResponseBody} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {LodestarError} from "@chainsafe/lodestar-utils";
 import {Method, ReqRespEncoding, RpcResponseStatus, RpcResponseStatusError} from "../../../../../src/constants";
 import {responseEncodeError, responseEncodeSuccess} from "../../../../../src/network/reqresp/encoders/responseEncode";
@@ -16,7 +16,7 @@ describe("network / reqresp / encoders / responseEncode", () => {
       id: string;
       method: Method;
       encoding: ReqRespEncoding;
-      responseChunks: ResponseBody[];
+      responseChunks: phase0.ResponseBody[];
       error?: LodestarError<any>;
       chunks?: Buffer[];
     }[] = [

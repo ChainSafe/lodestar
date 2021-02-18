@@ -1,8 +1,8 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {Attestation, AttestationData} from "@chainsafe/lodestar-types";
 import {IBeaconDb} from "../../db/api";
 import {IAttestationJob, IBeaconChain, ITreeStateContext} from "..";
-import {computeEpochAtSlot, phase0} from "@chainsafe/lodestar-beacon-state-transition";
+import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
+import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {AttestationError, AttestationErrorCode} from "../errors";
 import {ATTESTATION_PROPAGATION_SLOT_RANGE} from "../../constants";
 
@@ -53,7 +53,7 @@ export async function validateGossipAttestation(
   if (await db.seenAttestationCache.hasCommitteeAttestation(attestation)) {
     throw new AttestationError({
       code: AttestationErrorCode.ATTESTATION_ALREADY_KNOWN,
-      root: config.types.Attestation.hashTreeRoot(attestation),
+      root: config.types.phase0.Attestation.hashTreeRoot(attestation),
       job: attestationJob,
     });
   }
@@ -157,23 +157,26 @@ export async function validateGossipAttestation(
   await db.seenAttestationCache.addCommitteeAttestation(attestation);
 }
 
-export async function isAttestingToInValidBlock(db: IBeaconDb, attestation: Attestation): Promise<boolean> {
+export async function isAttestingToInValidBlock(db: IBeaconDb, attestation: phase0.Attestation): Promise<boolean> {
   const blockRoot = attestation.data.beaconBlockRoot.valueOf() as Uint8Array;
   // TODO: check if source and target blocks are not in bad block repository
   return await db.badBlock.has(blockRoot);
 }
 
-export function getAttestationAttesterCount(attestation: Attestation): number {
+export function getAttestationAttesterCount(attestation: phase0.Attestation): number {
   return Array.from(attestation.aggregationBits).filter((bit) => !!bit).length;
 }
 
-export function isCommitteeIndexWithinRange(epochCtx: phase0.EpochContext, attestationData: AttestationData): boolean {
+export function isCommitteeIndexWithinRange(
+  epochCtx: phase0.fast.EpochContext,
+  attestationData: phase0.AttestationData
+): boolean {
   return attestationData.index < epochCtx.getCommitteeCountAtSlot(attestationData.slot);
 }
 
 export function doAggregationBitsMatchCommitteeSize(
   attestationPreStateContext: ITreeStateContext,
-  attestation: Attestation
+  attestation: phase0.Attestation
 ): boolean {
   return (
     attestation.aggregationBits.length ===

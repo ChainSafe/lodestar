@@ -62,7 +62,9 @@ export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
       config,
       db,
       logger,
-      config.types.BeaconState.tree.deserialize(await fs.promises.readFile(join(args.rootDir, args.genesisStateFile)))
+      config.types.phase0.BeaconState.tree.deserialize(
+        await fs.promises.readFile(join(args.rootDir, args.genesisStateFile))
+      )
     );
   } else {
     throw new Error("Unable to start node: no available genesis state");

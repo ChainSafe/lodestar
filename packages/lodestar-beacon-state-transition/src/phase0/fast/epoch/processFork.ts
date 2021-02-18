@@ -1,9 +1,9 @@
-import {BeaconState} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {EpochContext} from "..";
 import {intToBytes} from "@chainsafe/lodestar-utils";
 import {IEpochProcess} from "../util";
 
-export function processForkChanged(epochCtx: EpochContext, process: IEpochProcess, state: BeaconState): void {
+export function processForkChanged(epochCtx: EpochContext, process: IEpochProcess, state: phase0.BeaconState): void {
   const config = epochCtx.config;
   const currentEpoch = process.currentEpoch;
   const nextEpoch = currentEpoch + 1;

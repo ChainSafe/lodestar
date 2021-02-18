@@ -1,4 +1,4 @@
-import {ResponseBody} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {Method} from "../../../constants";
 import {isRequestSingleChunk} from "../../util";
 import {RequestErrorCode, RequestInternalError} from "./errors";
@@ -10,10 +10,10 @@ import {RequestErrorCode, RequestInternalError} from "./errors";
  * ```
  * Note: `response` has zero or more chunks for SSZ-list responses or exactly one chunk for non-list
  */
-export function collectResponses<T extends ResponseBody | ResponseBody[]>(
+export function collectResponses<T extends phase0.ResponseBody | phase0.ResponseBody[]>(
   method: Method,
   maxResponses?: number
-): (source: AsyncIterable<ResponseBody>) => Promise<T> {
+): (source: AsyncIterable<phase0.ResponseBody>) => Promise<T> {
   return async (source) => {
     if (isRequestSingleChunk(method)) {
       for await (const response of source) {
@@ -23,7 +23,7 @@ export function collectResponses<T extends ResponseBody | ResponseBody[]>(
     }
 
     // else: zero or more responses
-    const responses: ResponseBody[] = [];
+    const responses: phase0.ResponseBody[] = [];
     for await (const response of source) {
       responses.push(response);
 

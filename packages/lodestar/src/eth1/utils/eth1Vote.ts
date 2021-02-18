@@ -1,16 +1,20 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {BeaconState, Eth1Data} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {computeTimeAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {toHexString, TreeBacked, readOnlyMap} from "@chainsafe/ssz";
 import {mostFrequent} from "../../util/objects";
 
-export type Eth1DataGetter = ({timestampRange}: {timestampRange: {gte: number; lte: number}}) => Promise<Eth1Data[]>;
+export type Eth1DataGetter = ({
+  timestampRange,
+}: {
+  timestampRange: {gte: number; lte: number};
+}) => Promise<phase0.Eth1Data[]>;
 
 export async function getEth1VotesToConsider(
   config: IBeaconConfig,
-  state: TreeBacked<BeaconState>,
+  state: TreeBacked<phase0.BeaconState>,
   eth1DataGetter: Eth1DataGetter
-): Promise<Eth1Data[]> {
+): Promise<phase0.Eth1Data[]> {
   const periodStart = votingPeriodStartTime(config, state);
   const {SECONDS_PER_ETH1_BLOCK, ETH1_FOLLOW_DISTANCE} = config.params;
 
@@ -31,9 +35,9 @@ export async function getEth1VotesToConsider(
 
 export function pickEth1Vote(
   config: IBeaconConfig,
-  state: TreeBacked<BeaconState>,
-  votesToConsider: Eth1Data[]
-): Eth1Data {
+  state: TreeBacked<phase0.BeaconState>,
+  votesToConsider: phase0.Eth1Data[]
+): phase0.Eth1Data {
   const votesToConsiderHashMap = new Set<string>();
   for (const eth1Data of votesToConsider) votesToConsiderHashMap.add(serializeEth1Data(eth1Data));
 
@@ -42,14 +46,14 @@ export function pickEth1Vote(
   );
 
   if (validVotes.length > 0) {
-    const frequentVotes = mostFrequent<Eth1Data>(config.types.Eth1Data, validVotes);
+    const frequentVotes = mostFrequent<phase0.Eth1Data>(config.types.phase0.Eth1Data, validVotes);
     if (frequentVotes.length === 1) {
       return frequentVotes[0];
     } else {
       return validVotes[
         Math.max(
           ...frequentVotes.map((vote) =>
-            validVotes.findIndex((eth1Data) => config.types.Eth1Data.equals(vote, eth1Data))
+            validVotes.findIndex((eth1Data) => config.types.phase0.Eth1Data.equals(vote, eth1Data))
           )
         )
       ];
@@ -62,11 +66,11 @@ export function pickEth1Vote(
 /**
  * Serialize eth1Data types to a unique string ID. It is only used for comparison.
  */
-function serializeEth1Data(eth1Data: Eth1Data): string {
+function serializeEth1Data(eth1Data: phase0.Eth1Data): string {
   return toHexString(eth1Data.blockHash) + eth1Data.depositCount.toString(16) + toHexString(eth1Data.depositRoot);
 }
 
-export function votingPeriodStartTime(config: IBeaconConfig, state: TreeBacked<BeaconState>): number {
+export function votingPeriodStartTime(config: IBeaconConfig, state: TreeBacked<phase0.BeaconState>): number {
   const eth1VotingPeriodStartSlot =
     state.slot - (state.slot % (config.params.EPOCHS_PER_ETH1_VOTING_PERIOD * config.params.SLOTS_PER_EPOCH));
   return computeTimeAtSlot(config, eth1VotingPeriodStartSlot, state.genesisTime);

@@ -2,7 +2,7 @@
  * @module chain/stateTransition/epoch/util
  */
 
-import {BeaconState, Epoch, Gwei, PendingAttestation, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {Epoch, Gwei, phase0, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {assert} from "@chainsafe/lodestar-utils";
 
@@ -23,9 +23,9 @@ import {
  */
 export function getMatchingSourceAttestations(
   config: IBeaconConfig,
-  state: BeaconState,
+  state: phase0.BeaconState,
   epoch: Epoch
-): PendingAttestation[] {
+): phase0.PendingAttestation[] {
   const currentEpoch = getCurrentEpoch(config, state);
   assert.true(
     epoch === currentEpoch || epoch === getPreviousEpoch(config, state),
@@ -40,9 +40,9 @@ export function getMatchingSourceAttestations(
  */
 export function getMatchingTargetAttestations(
   config: IBeaconConfig,
-  state: BeaconState,
+  state: phase0.BeaconState,
   epoch: Epoch
-): PendingAttestation[] {
+): phase0.PendingAttestation[] {
   const blockRoot = getBlockRoot(config, state, epoch);
   return getMatchingSourceAttestations(config, state, epoch).filter((a) =>
     config.types.Root.equals(a.data.target.root, blockRoot)
@@ -55,9 +55,9 @@ export function getMatchingTargetAttestations(
  */
 export function getMatchingHeadAttestations(
   config: IBeaconConfig,
-  state: BeaconState,
+  state: phase0.BeaconState,
   epoch: Epoch
-): PendingAttestation[] {
+): phase0.PendingAttestation[] {
   return getMatchingTargetAttestations(config, state, epoch).filter((a) =>
     config.types.Root.equals(a.data.beaconBlockRoot, getBlockRootAtSlot(config, state, a.data.slot))
   );
@@ -72,8 +72,8 @@ export function getMatchingHeadAttestations(
  */
 export function getUnslashedAttestingIndices(
   config: IBeaconConfig,
-  state: BeaconState,
-  attestations: PendingAttestation[]
+  state: phase0.BeaconState,
+  attestations: phase0.PendingAttestation[]
 ): ValidatorIndex[] {
   const output: Set<ValidatorIndex> = new Set();
 
@@ -94,8 +94,8 @@ export function getUnslashedAttestingIndices(
  */
 export function getAttestingBalance(
   config: IBeaconConfig,
-  state: BeaconState,
-  attestations: PendingAttestation[]
+  state: phase0.BeaconState,
+  attestations: phase0.PendingAttestation[]
 ): Gwei {
   return getTotalBalance(config, state, getUnslashedAttestingIndices(config, state, attestations));
 }

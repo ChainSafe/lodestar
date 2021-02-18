@@ -1,12 +1,14 @@
-import {AggregateAndProof, SignedAggregateAndProof} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {generateEmptyAttestation} from "./attestation";
 import {EMPTY_SIGNATURE} from "../../src/constants";
 import deepmerge from "deepmerge";
 import {isPlainObject} from "@chainsafe/lodestar-utils";
 import {RecursivePartial} from "@chainsafe/lodestar-cli/src/util";
 
-export function generateAggregateAndProof(override: RecursivePartial<AggregateAndProof> = {}): AggregateAndProof {
-  return deepmerge<AggregateAndProof, RecursivePartial<AggregateAndProof>>(
+export function generateAggregateAndProof(
+  override: RecursivePartial<phase0.AggregateAndProof> = {}
+): phase0.AggregateAndProof {
+  return deepmerge<phase0.AggregateAndProof, RecursivePartial<phase0.AggregateAndProof>>(
     {
       aggregatorIndex: 0,
       aggregate: generateEmptyAttestation(),
@@ -18,8 +20,8 @@ export function generateAggregateAndProof(override: RecursivePartial<AggregateAn
 }
 
 export function generateSignedAggregateAndProof(
-  override: RecursivePartial<AggregateAndProof> = {}
-): SignedAggregateAndProof {
+  override: RecursivePartial<phase0.AggregateAndProof> = {}
+): phase0.SignedAggregateAndProof {
   return {
     message: generateAggregateAndProof(override),
     signature: EMPTY_SIGNATURE,

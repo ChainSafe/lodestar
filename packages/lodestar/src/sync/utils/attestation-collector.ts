@@ -1,7 +1,7 @@
 import {ChainEvent, IBeaconChain} from "../../chain";
 import {IBeaconDb} from "../../db";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {Attestation, CommitteeIndex, ForkDigest, Slot} from "@chainsafe/lodestar-types";
+import {phase0, CommitteeIndex, ForkDigest, Slot} from "@chainsafe/lodestar-types";
 import {IService} from "../../node";
 import {INetwork} from "../../network";
 import {computeSubnetForSlot} from "@chainsafe/lodestar-beacon-state-transition";
@@ -81,7 +81,7 @@ export class AttestationCollector implements IService {
     }
   };
 
-  private handleCommitteeAttestation = async ({attestation}: {attestation: Attestation}): Promise<void> => {
+  private handleCommitteeAttestation = async ({attestation}: {attestation: phase0.Attestation}): Promise<void> => {
     await this.db.attestation.add(attestation);
   };
 }

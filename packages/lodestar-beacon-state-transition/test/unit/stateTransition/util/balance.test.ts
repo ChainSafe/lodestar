@@ -1,7 +1,7 @@
 import {assert} from "chai";
 
 import {List} from "@chainsafe/ssz";
-import {BeaconState, Gwei, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {phase0, Gwei, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {config} from "@chainsafe/lodestar-config/minimal";
 
 import {increaseBalance, decreaseBalance, getTotalBalance} from "../../../../src/util";
@@ -17,7 +17,7 @@ describe("getTotalBalance", () => {
     for (const v of validators) {
       v.effectiveBalance = validatorBalance;
     }
-    const state: BeaconState = generateState({validators: validators});
+    const state: phase0.BeaconState = generateState({validators: validators});
     const validatorIndices: ValidatorIndex[] = Array.from({length: num}, (_, i) => i);
 
     const result = getTotalBalance(config, state, validatorIndices);
@@ -29,7 +29,7 @@ describe("getTotalBalance", () => {
     const num = 5;
     const validators = generateValidators(num);
     const balances = Array.from({length: num}, () => BigInt(0)) as List<Gwei>;
-    const state: BeaconState = generateState({validators: validators, balances});
+    const state: phase0.BeaconState = generateState({validators: validators, balances});
     const validatorIndices: ValidatorIndex[] = Array.from({length: num}, (_, i) => i);
 
     const result = getTotalBalance(config, state, validatorIndices);

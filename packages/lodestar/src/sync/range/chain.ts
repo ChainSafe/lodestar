@@ -1,6 +1,6 @@
 import PeerId from "peer-id";
 import {AbortSignal} from "abort-controller";
-import {BeaconBlocksByRangeRequest, Epoch, SignedBeaconBlock} from "@chainsafe/lodestar-types";
+import {Epoch, phase0} from "@chainsafe/lodestar-types";
 import {ErrorAborted, ILogger} from "@chainsafe/lodestar-utils";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ChainSegmentError} from "../../chain/errors";
@@ -21,12 +21,12 @@ export type SyncChainOpts = BatchOpts & {maybeStuckTimeoutMs: number};
  * Should return if ALL blocks are processed successfully
  * If SOME blocks are processed must throw BlockProcessorError()
  */
-export type ProcessChainSegment = (blocks: SignedBeaconBlock[]) => Promise<void>;
+export type ProcessChainSegment = (blocks: phase0.SignedBeaconBlock[]) => Promise<void>;
 
 export type DownloadBeaconBlocksByRange = (
   peer: PeerId,
-  request: BeaconBlocksByRangeRequest
-) => Promise<SignedBeaconBlock[]>;
+  request: phase0.BeaconBlocksByRangeRequest
+) => Promise<phase0.SignedBeaconBlock[]>;
 
 /**
  * The SyncManager should dynamically inject pools of peers and their targetEpoch through this method.

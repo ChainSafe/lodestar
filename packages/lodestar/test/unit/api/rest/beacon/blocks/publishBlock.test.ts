@@ -40,7 +40,7 @@ describe("rest - beacon - publishBlock", function () {
     api.beacon.blocks.publishBlock.resolves();
     await supertest(restApi.server.server)
       .post(urlJoin(BEACON_PREFIX, publishBlock.url))
-      .send(config.types.SignedBeaconBlock.toJson(block, {case: "snake"}) as Record<string, unknown>)
+      .send(config.types.phase0.SignedBeaconBlock.toJson(block, {case: "snake"}) as Record<string, unknown>)
       .expect(200)
       .expect("Content-Type", "application/json");
   });

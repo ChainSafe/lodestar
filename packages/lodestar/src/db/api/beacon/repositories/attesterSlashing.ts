@@ -1,4 +1,4 @@
-import {AttesterSlashing, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {phase0, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IDatabaseController, Bucket, Repository} from "@chainsafe/lodestar-db";
 
@@ -8,9 +8,9 @@ import {IDatabaseController, Bucket, Repository} from "@chainsafe/lodestar-db";
  * Added via gossip or api
  * Removed when included on chain or old
  */
-export class AttesterSlashingRepository extends Repository<Uint8Array, AttesterSlashing> {
+export class AttesterSlashingRepository extends Repository<Uint8Array, phase0.AttesterSlashing> {
   public constructor(config: IBeaconConfig, db: IDatabaseController<Buffer, Buffer>) {
-    super(config, db, Bucket.attesterSlashing, config.types.AttesterSlashing);
+    super(config, db, Bucket.attesterSlashing, config.types.phase0.AttesterSlashing);
   }
 
   public async hasAll(attesterIndices: ValidatorIndex[] = []): Promise<boolean> {

@@ -1,4 +1,4 @@
-import {Root, Status} from "@chainsafe/lodestar-types";
+import {Root, phase0} from "@chainsafe/lodestar-types";
 import {expect} from "chai";
 import PeerId from "peer-id";
 import {getPeersByMostCommonFinalizedCheckpoint, IPeerWithMetadata} from "../../../../src/sync/utils/bestPeers";
@@ -40,7 +40,7 @@ describe("sync / utils / bestPeer - getPeersByMostCommonFinalizedCheckpoint", ()
     expect(res).to.equal(null);
   });
 
-  function generateStatus(finalizedEpoch: number, finalizedRoot: Root): Status {
+  function generateStatus(finalizedEpoch: number, finalizedRoot: Root): phase0.Status {
     return {
       forkDigest: Buffer.alloc(4),
       finalizedRoot,

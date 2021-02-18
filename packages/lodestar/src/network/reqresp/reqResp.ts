@@ -2,17 +2,7 @@
  * @module network
  */
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {
-  BeaconBlocksByRangeRequest,
-  BeaconBlocksByRootRequest,
-  Goodbye,
-  Metadata,
-  Ping,
-  RequestBody,
-  ResponseBody,
-  SignedBeaconBlock,
-  Status,
-} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {AbortController} from "abort-controller";
 import LibP2p from "libp2p";
@@ -128,35 +118,51 @@ export class ReqResp implements IReqResp {
     this.controller?.abort();
   }
 
-  public async status(peerId: PeerId, request: Status): Promise<Status> {
-    return await this.sendRequest<Status>(peerId, Method.Status, request);
+  public async status(peerId: PeerId, request: phase0.Status): Promise<phase0.Status> {
+    return await this.sendRequest<phase0.Status>(peerId, Method.Status, request);
   }
 
-  public async goodbye(peerId: PeerId, request: Goodbye): Promise<void> {
-    await this.sendRequest<Goodbye>(peerId, Method.Goodbye, request);
+  public async goodbye(peerId: PeerId, request: phase0.Goodbye): Promise<void> {
+    await this.sendRequest<phase0.Goodbye>(peerId, Method.Goodbye, request);
   }
 
-  public async ping(peerId: PeerId, request: Ping): Promise<Ping> {
-    return await this.sendRequest<Ping>(peerId, Method.Ping, request);
+  public async ping(peerId: PeerId, request: phase0.Ping): Promise<phase0.Ping> {
+    return await this.sendRequest<phase0.Ping>(peerId, Method.Ping, request);
   }
 
-  public async metadata(peerId: PeerId): Promise<Metadata> {
-    return await this.sendRequest<Metadata>(peerId, Method.Metadata, null);
+  public async metadata(peerId: PeerId): Promise<phase0.Metadata> {
+    return await this.sendRequest<phase0.Metadata>(peerId, Method.Metadata, null);
   }
 
-  public async beaconBlocksByRange(peerId: PeerId, request: BeaconBlocksByRangeRequest): Promise<SignedBeaconBlock[]> {
-    return await this.sendRequest<SignedBeaconBlock[]>(peerId, Method.BeaconBlocksByRange, request, request.count);
+  public async beaconBlocksByRange(
+    peerId: PeerId,
+    request: phase0.BeaconBlocksByRangeRequest
+  ): Promise<phase0.SignedBeaconBlock[]> {
+    return await this.sendRequest<phase0.SignedBeaconBlock[]>(
+      peerId,
+      Method.BeaconBlocksByRange,
+      request,
+      request.count
+    );
   }
 
-  public async beaconBlocksByRoot(peerId: PeerId, request: BeaconBlocksByRootRequest): Promise<SignedBeaconBlock[]> {
-    return await this.sendRequest<SignedBeaconBlock[]>(peerId, Method.BeaconBlocksByRoot, request, request.length);
+  public async beaconBlocksByRoot(
+    peerId: PeerId,
+    request: phase0.BeaconBlocksByRootRequest
+  ): Promise<phase0.SignedBeaconBlock[]> {
+    return await this.sendRequest<phase0.SignedBeaconBlock[]>(
+      peerId,
+      Method.BeaconBlocksByRoot,
+      request,
+      request.length
+    );
   }
 
   // Helper to reduce code duplication
-  private async sendRequest<T extends ResponseBody | ResponseBody[]>(
+  private async sendRequest<T extends phase0.ResponseBody | phase0.ResponseBody[]>(
     peerId: PeerId,
     method: Method,
-    body: RequestBody,
+    body: phase0.RequestBody,
     maxResponses?: number
   ): Promise<T> {
     try {

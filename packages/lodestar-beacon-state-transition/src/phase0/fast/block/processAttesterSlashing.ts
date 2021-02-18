@@ -1,4 +1,4 @@
-import {AttesterSlashing, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {phase0, ValidatorIndex} from "@chainsafe/lodestar-types";
 
 import {isSlashableValidator, isSlashableAttestationData} from "../../../util";
 import {EpochContext, CachedValidatorsBeaconState} from "../util";
@@ -8,7 +8,7 @@ import {isValidIndexedAttestation} from "./isValidIndexedAttestation";
 export function processAttesterSlashing(
   epochCtx: EpochContext,
   state: CachedValidatorsBeaconState,
-  attesterSlashing: AttesterSlashing,
+  attesterSlashing: phase0.AttesterSlashing,
   verifySignatures = true
 ): void {
   const config = epochCtx.config;

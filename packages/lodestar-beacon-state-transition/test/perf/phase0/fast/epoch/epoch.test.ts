@@ -6,7 +6,7 @@ import {phase0} from "../../../../../src";
 
 describe("Epoch Processing Performance Tests", function () {
   let state: phase0.fast.CachedValidatorsBeaconState;
-  let epochCtx: phase0.EpochContext;
+  let epochCtx: phase0.fast.EpochContext;
   let process: phase0.fast.IEpochProcess;
   const logger = new WinstonLogger();
 
@@ -16,7 +16,7 @@ describe("Epoch Processing Performance Tests", function () {
     const origState = await generatePerformanceState();
     // go back 1 slot to process epoch
     origState.slot -= 1;
-    epochCtx = new phase0.EpochContext(config);
+    epochCtx = new phase0.fast.EpochContext(config);
     epochCtx.loadState(origState);
     state = phase0.fast.createCachedValidatorsBeaconState(origState);
   });

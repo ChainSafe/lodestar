@@ -33,7 +33,7 @@ describe("network / reqresp / sszSnappy / encode", () => {
     }[] = [
       {
         id: "Bad body",
-        type: config.types.Status,
+        type: config.types.phase0.Status,
         body: BigInt(1),
         error: new SszSnappyError({
           code: SszSnappyErrorCode.SERIALIZE_ERROR,

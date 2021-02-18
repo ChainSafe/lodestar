@@ -1,10 +1,10 @@
-import {Root, SignedBeaconBlock, Status} from "@chainsafe/lodestar-types";
+import {Root, phase0} from "@chainsafe/lodestar-types";
 import {List, toHexString} from "@chainsafe/ssz";
 import {expect} from "chai";
 import {ILibP2pStream} from "../../../../src/network";
 import {generateEmptySignedBlock} from "../../../utils/block";
 
-export function createStatus(): Status {
+export function createStatus(): phase0.Status {
   return {
     finalizedEpoch: 1,
     finalizedRoot: Buffer.alloc(32, 0),
@@ -32,7 +32,7 @@ export async function* arrToSource<T>(arr: T[]): AsyncGenerator<T> {
   }
 }
 
-export function generateEmptySignedBlocks(n = 3): SignedBeaconBlock[] {
+export function generateEmptySignedBlocks(n = 3): phase0.SignedBeaconBlock[] {
   return Array.from({length: n}).map(() => generateEmptySignedBlock());
 }
 

@@ -5,7 +5,7 @@
 import xor from "buffer-xor";
 import {hash} from "@chainsafe/ssz";
 import bls from "@chainsafe/bls";
-import {BeaconBlockBody, BeaconState} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {assert} from "@chainsafe/lodestar-utils";
 
@@ -14,8 +14,8 @@ import {getBeaconProposerIndex, getCurrentEpoch, getDomain, getRandaoMix, comput
 
 export function processRandao(
   config: IBeaconConfig,
-  state: BeaconState,
-  body: BeaconBlockBody,
+  state: phase0.BeaconState,
+  body: phase0.BeaconBlockBody,
   verifySignature = true
 ): void {
   const currentEpoch = getCurrentEpoch(config, state);

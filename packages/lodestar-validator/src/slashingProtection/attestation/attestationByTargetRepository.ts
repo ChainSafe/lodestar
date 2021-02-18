@@ -1,4 +1,4 @@
-import {BLSPubkey, Epoch, SlashingProtectionAttestation} from "@chainsafe/lodestar-types";
+import {BLSPubkey, Epoch, phase0} from "@chainsafe/lodestar-types";
 import {intToBytes, bytesToInt} from "@chainsafe/lodestar-utils";
 import {Bucket, encodeKey, IDatabaseApiOptions, bucketLen, uintLen} from "@chainsafe/lodestar-db";
 import {Type} from "@chainsafe/ssz";
@@ -11,16 +11,16 @@ import {LodestarValidatorDatabaseController} from "../../types";
  * attestation's target epoch.
  */
 export class AttestationByTargetRepository {
-  protected type: Type<SlashingProtectionAttestation>;
+  protected type: Type<phase0.SlashingProtectionAttestation>;
   protected db: LodestarValidatorDatabaseController;
   protected bucket = Bucket.slashingProtectionAttestationByTarget;
 
   constructor(opts: IDatabaseApiOptions) {
     this.db = opts.controller;
-    this.type = opts.config.types.SlashingProtectionAttestation;
+    this.type = opts.config.types.phase0.SlashingProtectionAttestation;
   }
 
-  async getAll(pubkey: BLSPubkey, limit?: number): Promise<SlashingProtectionAttestation[]> {
+  async getAll(pubkey: BLSPubkey, limit?: number): Promise<phase0.SlashingProtectionAttestation[]> {
     const blocks = await this.db.values({
       limit,
       gte: this.encodeKey(pubkey, 0),
@@ -29,12 +29,12 @@ export class AttestationByTargetRepository {
     return blocks.map((block) => this.type.deserialize(block));
   }
 
-  async get(pubkey: BLSPubkey, targetEpoch: Epoch): Promise<SlashingProtectionAttestation | null> {
+  async get(pubkey: BLSPubkey, targetEpoch: Epoch): Promise<phase0.SlashingProtectionAttestation | null> {
     const att = await this.db.get(this.encodeKey(pubkey, targetEpoch));
     return att && this.type.deserialize(att);
   }
 
-  async set(pubkey: BLSPubkey, atts: SlashingProtectionAttestation[]): Promise<void> {
+  async set(pubkey: BLSPubkey, atts: phase0.SlashingProtectionAttestation[]): Promise<void> {
     await this.db.batchPut(
       atts.map((att) => ({
         key: this.encodeKey(pubkey, att.targetEpoch),

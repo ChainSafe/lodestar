@@ -2,7 +2,7 @@
  * @module chain/stateTransition/block
  */
 
-import {Attestation, BeaconState, PendingAttestation} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {assert} from "@chainsafe/lodestar-utils";
 
@@ -19,8 +19,8 @@ import {
 
 export function processAttestation(
   config: IBeaconConfig,
-  state: BeaconState,
-  attestation: Attestation,
+  state: phase0.BeaconState,
+  attestation: phase0.Attestation,
   verifySignature = true
 ): void {
   const currentEpoch = getCurrentEpoch(config, state);
@@ -37,7 +37,7 @@ export function processAttestation(
   assert.equal(attestation.aggregationBits.length, committee.length, "Attestation invalid aggregationBits length");
 
   // Cache pending attestation
-  const pendingAttestation: PendingAttestation = {
+  const pendingAttestation: phase0.PendingAttestation = {
     data: data,
     aggregationBits: attestation.aggregationBits,
     inclusionDelay: state.slot - data.slot,
@@ -46,13 +46,13 @@ export function processAttestation(
 
   if (data.target.epoch === currentEpoch) {
     assert.true(
-      config.types.Checkpoint.equals(data.source, state.currentJustifiedCheckpoint),
+      config.types.phase0.Checkpoint.equals(data.source, state.currentJustifiedCheckpoint),
       "Attestation invalid source"
     );
     state.currentEpochAttestations.push(pendingAttestation);
   } else {
     assert.true(
-      config.types.Checkpoint.equals(data.source, state.previousJustifiedCheckpoint),
+      config.types.phase0.Checkpoint.equals(data.source, state.previousJustifiedCheckpoint),
       "Attestation invalid source"
     );
     state.previousEpochAttestations.push(pendingAttestation);

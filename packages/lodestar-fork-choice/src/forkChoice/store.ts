@@ -1,4 +1,4 @@
-import {Checkpoint, Slot} from "@chainsafe/lodestar-types";
+import {phase0, Slot} from "@chainsafe/lodestar-types";
 
 /**
  * Approximates the `Store` in "Ethereum 2.0 Phase 0 -- Beacon Chain Fork Choice":
@@ -14,7 +14,7 @@ import {Checkpoint, Slot} from "@chainsafe/lodestar-types";
  */
 export interface IForkChoiceStore {
   currentSlot: Slot;
-  justifiedCheckpoint: Checkpoint;
-  finalizedCheckpoint: Checkpoint;
-  bestJustifiedCheckpoint: Checkpoint;
+  justifiedCheckpoint: phase0.Checkpoint;
+  finalizedCheckpoint: phase0.Checkpoint;
+  bestJustifiedCheckpoint: phase0.Checkpoint;
 }

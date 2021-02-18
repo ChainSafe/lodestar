@@ -1,4 +1,4 @@
-import {Fork} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Json} from "@chainsafe/ssz";
@@ -15,8 +15,8 @@ export class RestConfigApi implements IConfigApi {
     this.config = config;
   }
 
-  public async getForkSchedule(): Promise<Fork[]> {
+  public async getForkSchedule(): Promise<phase0.Fork[]> {
     const data = (await this.client.get<{data: Json}>("/fork_schedule")).data as [];
-    return data.map((fork) => this.config.types.Fork.fromJson(fork));
+    return data.map((fork) => this.config.types.phase0.Fork.fromJson(fork));
   }
 }

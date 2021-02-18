@@ -1,7 +1,7 @@
-import {Eth1Data} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {ZERO_HASH} from "../../src/constants";
 
-export function generateEth1Data(blockHash = ZERO_HASH, depositCount = 0, depositRoot = ZERO_HASH): Eth1Data {
+export function generateEth1Data(blockHash = ZERO_HASH, depositCount = 0, depositRoot = ZERO_HASH): phase0.Eth1Data {
   return {
     blockHash,
     depositCount,

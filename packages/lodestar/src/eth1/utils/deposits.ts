@@ -1,16 +1,16 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {Deposit, Root, DepositEvent, Eth1Data, BeaconState} from "@chainsafe/lodestar-types";
+import {Root, phase0} from "@chainsafe/lodestar-types";
 import {TreeBacked, List, toHexString} from "@chainsafe/ssz";
 import {IFilterOptions} from "@chainsafe/lodestar-db";
 import {getTreeAtIndex} from "../../util/tree";
 
-export type DepositGetter<T> = (indexRange: IFilterOptions<number>, eth1Data: Eth1Data) => Promise<T[]>;
+export type DepositGetter<T> = (indexRange: IFilterOptions<number>, eth1Data: phase0.Eth1Data) => Promise<T[]>;
 
 export async function getDeposits<T>(
   config: IBeaconConfig,
   // eth1_deposit_index represents the next deposit index to be added
-  state: TreeBacked<BeaconState>,
-  eth1Data: Eth1Data,
+  state: TreeBacked<phase0.BeaconState>,
+  eth1Data: phase0.Eth1Data,
   depositsGetter: DepositGetter<T>
 ): Promise<T[]> {
   const depositIndex = state.eth1DepositIndex;
@@ -33,10 +33,10 @@ export async function getDeposits<T>(
 
 export function getDepositsWithProofs(
   config: IBeaconConfig,
-  depositEvents: DepositEvent[],
+  depositEvents: phase0.DepositEvent[],
   depositRootTree: TreeBacked<List<Root>>,
-  eth1Data: Eth1Data
-): Deposit[] {
+  eth1Data: phase0.Eth1Data
+): phase0.Deposit[] {
   // Get tree at this particular depositCount to compute correct proofs
   const treeAtDepositCount = getTreeAtIndex(depositRootTree, eth1Data.depositCount - 1);
 

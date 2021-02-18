@@ -7,7 +7,7 @@ export const getVoluntaryExits: ApiController = {
     const exits = await this.api.beacon.pool.getVoluntaryExits();
     resp.status(200).send({
       data: exits.map((exit) => {
-        return this.config.types.SignedVoluntaryExit.toJson(exit, {case: "snake"});
+        return this.config.types.phase0.SignedVoluntaryExit.toJson(exit, {case: "snake"});
       }),
     });
   },

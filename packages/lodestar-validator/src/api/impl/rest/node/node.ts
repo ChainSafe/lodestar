@@ -2,7 +2,7 @@ import {HttpClient, urlJoin} from "../../../../util";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {INodeApi} from "../../../interface/node";
-import {SyncingStatus} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {Json} from "@chainsafe/ssz/lib/interface";
 
 export class RestNodeApi implements INodeApi {
@@ -19,8 +19,8 @@ export class RestNodeApi implements INodeApi {
     return (await this.client.get<{data: {version: string}}>("/version")).data.version;
   }
 
-  public async getSyncingStatus(): Promise<SyncingStatus> {
-    return this.config.types.SyncingStatus.fromJson((await this.client.get<{data: Json}>("/syncing")).data, {
+  public async getSyncingStatus(): Promise<phase0.SyncingStatus> {
+    return this.config.types.phase0.SyncingStatus.fromJson((await this.client.get<{data: Json}>("/syncing")).data, {
       case: "snake",
     });
   }

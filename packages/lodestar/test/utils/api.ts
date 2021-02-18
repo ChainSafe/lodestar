@@ -1,4 +1,4 @@
-import {SignedBeaconHeaderResponse} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import deepmerge from "deepmerge";
 import {blockToHeader} from "@chainsafe/lodestar-beacon-state-transition";
 import {config} from "@chainsafe/lodestar-config/minimal";
@@ -6,8 +6,8 @@ import {generateEmptySignedBlock} from "./block";
 import {isPlainObject} from "@chainsafe/lodestar-utils";
 
 export function generateSignedBeaconHeaderResponse(
-  override: Partial<SignedBeaconHeaderResponse> = {}
-): SignedBeaconHeaderResponse {
+  override: Partial<phase0.SignedBeaconHeaderResponse> = {}
+): phase0.SignedBeaconHeaderResponse {
   const signedBlock = generateEmptySignedBlock();
   return deepmerge(
     {

@@ -3,7 +3,7 @@
  */
 
 import {toHexString} from "@chainsafe/ssz";
-import {BeaconState, Slot} from "@chainsafe/lodestar-types";
+import {phase0, Slot} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ForkChoice, ProtoArray} from "@chainsafe/lodestar-fork-choice";
 
@@ -24,7 +24,7 @@ export class LodestarForkChoice extends ForkChoice {
     config: IBeaconConfig;
     emitter: ChainEventEmitter;
     currentSlot: Slot;
-    anchorState: BeaconState;
+    anchorState: phase0.BeaconState;
   }) {
     const {blockHeader, checkpoint} = computeAnchorCheckpoint(config, anchorState);
     const finalizedCheckpoint = {...checkpoint};

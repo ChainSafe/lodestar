@@ -19,10 +19,14 @@ export const getStateFinalityCheckpoints: ApiController<DefaultQuery, Params> = 
       return resp.status(200).send({
         data: {
           // eslint-disable-next-line @typescript-eslint/naming-convention
-          previous_justified: this.config.types.Checkpoint.toJson(state.previousJustifiedCheckpoint, {case: "snake"}),
+          previous_justified: this.config.types.phase0.Checkpoint.toJson(state.previousJustifiedCheckpoint, {
+            case: "snake",
+          }),
           // eslint-disable-next-line @typescript-eslint/naming-convention
-          current_justified: this.config.types.Checkpoint.toJson(state.currentJustifiedCheckpoint, {case: "snake"}),
-          finalized: this.config.types.Checkpoint.toJson(state.finalizedCheckpoint, {case: "snake"}),
+          current_justified: this.config.types.phase0.Checkpoint.toJson(state.currentJustifiedCheckpoint, {
+            case: "snake",
+          }),
+          finalized: this.config.types.phase0.Checkpoint.toJson(state.finalizedCheckpoint, {case: "snake"}),
         },
       });
     } catch (e) {

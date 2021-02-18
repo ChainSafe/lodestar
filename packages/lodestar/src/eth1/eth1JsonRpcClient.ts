@@ -1,5 +1,5 @@
 import {fromHexString} from "@chainsafe/ssz";
-import {Eth1Block} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {AbortSignal} from "abort-controller";
 import {chunkifyInclusiveRange} from "../util/chunkify";
 import {linspace} from "../util/numpy";
@@ -44,7 +44,7 @@ export class Eth1JsonRpcClient {
   /**
    * Fetches an arbitrary array of block numbers in batch
    */
-  async getBlocksByNumber(fromBlock: number, toBlock: number, signal?: AbortSignal): Promise<Eth1Block[]> {
+  async getBlocksByNumber(fromBlock: number, toBlock: number, signal?: AbortSignal): Promise<phase0.Eth1Block[]> {
     const method = "eth_getBlockByNumber";
     const blocksRawArr = await retry(
       (attempt) => {
@@ -71,7 +71,7 @@ export class Eth1JsonRpcClient {
     return blocksRawArr.flat(1).map(parseBlock);
   }
 
-  async getBlockByNumber(blockNumber: number, signal?: AbortSignal): Promise<Eth1Block> {
+  async getBlockByNumber(blockNumber: number, signal?: AbortSignal): Promise<phase0.Eth1Block> {
     const method = "eth_getBlockByNumber";
     const blocksRaw = await this.rpc.fetch<IEthJsonRpcTypes[typeof method]>(
       {method, params: [toHex(blockNumber), false]},
@@ -114,7 +114,7 @@ function toHex(n: number): string {
   return "0x" + n.toString(16);
 }
 
-function parseBlock(blockRaw: IEthJsonRpcTypes["eth_getBlockByNumber"]): Eth1Block {
+function parseBlock(blockRaw: IEthJsonRpcTypes["eth_getBlockByNumber"]): phase0.Eth1Block {
   return {
     blockHash: fromHexString(blockRaw.hash),
     blockNumber: parseInt(blockRaw.number, 16),

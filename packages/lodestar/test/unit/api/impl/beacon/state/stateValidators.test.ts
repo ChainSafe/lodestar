@@ -1,5 +1,5 @@
 import {config} from "@chainsafe/lodestar-config/minimal";
-import {Gwei, ValidatorStatus} from "@chainsafe/lodestar-types";
+import {Gwei} from "@chainsafe/lodestar-types";
 import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {List} from "@chainsafe/ssz";
 import {expect, use} from "chai";
@@ -31,7 +31,7 @@ describe("beacon api impl - state - validators", function () {
     toValidatorResponseStub.returns({
       index: 1,
       balance: BigInt(3200000),
-      status: ValidatorStatus.ACTIVE_ONGOING,
+      status: phase0.ValidatorStatus.ACTIVE_ONGOING,
       validator: generateValidator(),
     });
   });
@@ -63,11 +63,11 @@ describe("beacon api impl - state - validators", function () {
       toValidatorResponseStub.onFirstCall().returns({
         index: 1,
         balance: BigInt(3200000),
-        status: ValidatorStatus.EXITED_SLASHED,
+        status: phase0.ValidatorStatus.EXITED_SLASHED,
         validator: generateValidator(),
       });
       const api = new BeaconStateApi({}, {config, db, chain});
-      const validators = api.getStateValidators("someState", {statuses: [ValidatorStatus.ACTIVE_ONGOING]});
+      const validators = api.getStateValidators("someState", {statuses: [phase0.ValidatorStatus.ACTIVE_ONGOING]});
       expect((await validators).length).to.equal(9);
     });
 

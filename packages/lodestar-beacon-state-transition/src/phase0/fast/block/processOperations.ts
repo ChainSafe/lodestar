@@ -1,12 +1,5 @@
 import {List, readOnlyForEach} from "@chainsafe/ssz";
-import {
-  Attestation,
-  AttesterSlashing,
-  BeaconBlockBody,
-  Deposit,
-  ProposerSlashing,
-  VoluntaryExit,
-} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 
 import {EpochContext, CachedValidatorsBeaconState} from "../util";
 import {processProposerSlashing} from "./processProposerSlashing";
@@ -15,7 +8,12 @@ import {processAttestation} from "./processAttestation";
 import {processDeposit} from "./processDeposit";
 import {processVoluntaryExit} from "./processVoluntaryExit";
 
-type Operation = ProposerSlashing | AttesterSlashing | Attestation | Deposit | VoluntaryExit;
+type Operation =
+  | phase0.ProposerSlashing
+  | phase0.AttesterSlashing
+  | phase0.Attestation
+  | phase0.Deposit
+  | phase0.VoluntaryExit;
 type OperationFunction = (
   epochCtx: EpochContext,
   state: CachedValidatorsBeaconState,
@@ -26,7 +24,7 @@ type OperationFunction = (
 export function processOperations(
   epochCtx: EpochContext,
   state: CachedValidatorsBeaconState,
-  body: BeaconBlockBody,
+  body: phase0.BeaconBlockBody,
   verifySignatures = true
 ): void {
   // verify that outstanding deposits are processed up to the maximum number of deposits

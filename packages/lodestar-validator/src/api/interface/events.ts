@@ -1,4 +1,4 @@
-import {BlockEventPayload, ChainHead, ChainReorg} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {IStoppableEventIterable} from "@chainsafe/lodestar-utils";
 
 export enum BeaconEventType {
@@ -9,17 +9,17 @@ export enum BeaconEventType {
 
 export type BeaconBlockEvent = {
   type: typeof BeaconEventType.BLOCK;
-  message: BlockEventPayload;
+  message: phase0.BlockEventPayload;
 };
 
 export type BeaconChainReorgEvent = {
   type: typeof BeaconEventType.CHAIN_REORG;
-  message: ChainReorg;
+  message: phase0.ChainReorg;
 };
 
 export type HeadEvent = {
   type: typeof BeaconEventType.HEAD;
-  message: ChainHead;
+  message: phase0.ChainHead;
 };
 
 export type BeaconEvent = BeaconBlockEvent | BeaconChainReorgEvent | HeadEvent;

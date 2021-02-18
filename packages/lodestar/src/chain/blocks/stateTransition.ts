@@ -24,14 +24,14 @@ export function emitCheckpointEvent(emitter: ChainEventEmitter, checkpointStateC
   const config = checkpointStateContext.epochCtx.config;
   const slot = checkpointStateContext.state.slot;
   assert.true(slot % config.params.SLOTS_PER_EPOCH === 0, "Checkpoint state slot must be first in an epoch");
-  const blockHeader = config.types.BeaconBlockHeader.clone(checkpointStateContext.state.latestBlockHeader);
+  const blockHeader = config.types.phase0.BeaconBlockHeader.clone(checkpointStateContext.state.latestBlockHeader);
   if (config.types.Root.equals(blockHeader.stateRoot, ZERO_HASH)) {
-    blockHeader.stateRoot = config.types.BeaconState.hashTreeRoot(checkpointStateContext.state);
+    blockHeader.stateRoot = config.types.phase0.BeaconState.hashTreeRoot(checkpointStateContext.state);
   }
   emitter.emit(
     ChainEvent.checkpoint,
     {
-      root: config.types.BeaconBlockHeader.hashTreeRoot(blockHeader),
+      root: config.types.phase0.BeaconBlockHeader.hashTreeRoot(blockHeader),
       epoch: computeEpochAtSlot(config, slot),
     },
     checkpointStateContext

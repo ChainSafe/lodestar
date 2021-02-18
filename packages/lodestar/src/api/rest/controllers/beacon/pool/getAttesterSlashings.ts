@@ -7,7 +7,7 @@ export const getAttesterSlashings: ApiController = {
     const attesterSlashings = await this.api.beacon.pool.getAttesterSlashings();
     resp.status(200).send({
       data: attesterSlashings.map((slashing) => {
-        return this.config.types.AttesterSlashing.toJson(slashing, {case: "snake"});
+        return this.config.types.phase0.AttesterSlashing.toJson(slashing, {case: "snake"});
       }),
     });
   },

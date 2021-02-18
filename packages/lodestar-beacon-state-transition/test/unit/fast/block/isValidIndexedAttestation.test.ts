@@ -2,8 +2,8 @@ import {List} from "@chainsafe/ssz";
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import {generateAttestationData} from "../../../utils/attestation";
 import {expect} from "chai";
-import {IndexedAttestation} from "@chainsafe/lodestar-types";
-import {EMPTY_SIGNATURE, phase0} from "../../../../src";
+import {EMPTY_SIGNATURE} from "../../../../src";
+import {phase0} from "../../../../src";
 import {generateState} from "../../../utils/state";
 import {generateValidators} from "../../../utils/validator";
 
@@ -15,7 +15,7 @@ describe("validate indexed attestation", () => {
       validators: generateValidators(100),
     });
 
-    const indexedAttestation: IndexedAttestation = {
+    const indexedAttestation: phase0.IndexedAttestation = {
       attestingIndices: ([] as number[]) as List<number>,
       data: attestationData,
       signature: EMPTY_SIGNATURE,
@@ -29,7 +29,7 @@ describe("validate indexed attestation", () => {
       validators: generateValidators(100),
     });
 
-    const indexedAttestation: IndexedAttestation = {
+    const indexedAttestation: phase0.IndexedAttestation = {
       attestingIndices: [1, 0] as List<number>,
       data: attestationData,
       signature: EMPTY_SIGNATURE,
@@ -43,7 +43,7 @@ describe("validate indexed attestation", () => {
       validators: generateValidators(100),
     });
 
-    const indexedAttestation: IndexedAttestation = {
+    const indexedAttestation: phase0.IndexedAttestation = {
       attestingIndices: [0, 1, 2, 3] as List<number>,
       data: attestationData,
       signature: EMPTY_SIGNATURE,

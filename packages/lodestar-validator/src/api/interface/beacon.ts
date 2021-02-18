@@ -1,32 +1,23 @@
-import {
-  BLSPubkey,
-  Fork,
-  Genesis,
-  ValidatorResponse,
-  ValidatorIndex,
-  SignedBeaconBlock,
-  Attestation,
-  SignedVoluntaryExit,
-} from "@chainsafe/lodestar-types";
+import {BLSPubkey, ValidatorIndex, phase0} from "@chainsafe/lodestar-types";
 
 export interface IBeaconApi {
   state: IBeaconStateApi;
   blocks: IBeaconBlocksApi;
   pool: IBeaconPoolApi;
 
-  getGenesis(): Promise<Genesis | null>;
+  getGenesis(): Promise<phase0.Genesis | null>;
 }
 
 export interface IBeaconStateApi {
-  getFork(stateId: "head"): Promise<Fork | null>;
-  getStateValidator(stateId: "head", validatorId: ValidatorIndex | BLSPubkey): Promise<ValidatorResponse | null>;
+  getFork(stateId: "head"): Promise<phase0.Fork | null>;
+  getStateValidator(stateId: "head", validatorId: ValidatorIndex | BLSPubkey): Promise<phase0.ValidatorResponse | null>;
 }
 
 export interface IBeaconBlocksApi {
-  publishBlock(block: SignedBeaconBlock): Promise<void>;
+  publishBlock(block: phase0.SignedBeaconBlock): Promise<void>;
 }
 
 export interface IBeaconPoolApi {
-  submitAttestation(attestation: Attestation): Promise<void>;
-  submitVoluntaryExit(signedVoluntaryExit: SignedVoluntaryExit): Promise<void>;
+  submitAttestation(attestation: phase0.Attestation): Promise<void>;
+  submitVoluntaryExit(signedVoluntaryExit: phase0.SignedVoluntaryExit): Promise<void>;
 }

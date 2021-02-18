@@ -1,5 +1,5 @@
 import {EpochContext, CachedValidatorsBeaconState} from "../util";
-import {BeaconBlock} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 
 import {processBlockHeader} from "./processBlockHeader";
 import {processRandao} from "./processRandao";
@@ -28,7 +28,7 @@ export {
 export function processBlock(
   epochCtx: EpochContext,
   state: CachedValidatorsBeaconState,
-  block: BeaconBlock,
+  block: phase0.BeaconBlock,
   verifySignatures = true
 ): void {
   processBlockHeader(epochCtx, state, block);

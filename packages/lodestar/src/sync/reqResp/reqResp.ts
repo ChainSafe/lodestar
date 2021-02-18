@@ -4,18 +4,7 @@
 
 import {GENESIS_SLOT} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {
-  BeaconBlocksByRangeRequest,
-  BeaconBlocksByRootRequest,
-  Goodbye,
-  MAX_REQUEST_BLOCKS,
-  Metadata,
-  Ping,
-  RequestBody,
-  ResponseBody,
-  SignedBeaconBlock,
-  Status,
-} from "@chainsafe/lodestar-types";
+import {MAX_REQUEST_BLOCKS, phase0} from "@chainsafe/lodestar-types";
 import {ILogger, LodestarError} from "@chainsafe/lodestar-utils";
 import PeerId from "peer-id";
 import {IBeaconChain} from "../../chain";
@@ -101,32 +90,36 @@ export class BeaconReqRespHandler implements IReqRespHandler {
     this.network.reqResp.unregisterHandler();
   }
 
-  public async *onRequest(method: Method, requestBody: RequestBody, peerId: PeerId): AsyncIterable<ResponseBody> {
+  public async *onRequest(
+    method: Method,
+    requestBody: phase0.RequestBody,
+    peerId: PeerId
+  ): AsyncIterable<phase0.ResponseBody> {
     switch (method) {
       case Method.Status:
-        yield* this.onStatus(requestBody as Status, peerId);
+        yield* this.onStatus(requestBody as phase0.Status, peerId);
         break;
       case Method.Goodbye:
-        yield* this.onGoodbye(requestBody as Goodbye, peerId);
+        yield* this.onGoodbye(requestBody as phase0.Goodbye, peerId);
         break;
       case Method.Ping:
-        yield* this.onPing(requestBody as Ping, peerId);
+        yield* this.onPing(requestBody as phase0.Ping, peerId);
         break;
       case Method.Metadata:
         yield* this.onMetadata();
         break;
       case Method.BeaconBlocksByRange:
-        yield* this.onBeaconBlocksByRange(requestBody as BeaconBlocksByRangeRequest);
+        yield* this.onBeaconBlocksByRange(requestBody as phase0.BeaconBlocksByRangeRequest);
         break;
       case Method.BeaconBlocksByRoot:
-        yield* this.onBeaconBlocksByRoot(requestBody as BeaconBlocksByRootRequest);
+        yield* this.onBeaconBlocksByRoot(requestBody as phase0.BeaconBlocksByRootRequest);
         break;
       default:
         throw Error(`Unsupported method ${method}`);
     }
   }
 
-  private async *onStatus(status: Status, peerId: PeerId): AsyncIterable<Status> {
+  private async *onStatus(status: phase0.Status, peerId: PeerId): AsyncIterable<phase0.Status> {
     try {
       await assertPeerRelevance(status, this.chain, this.config);
     } catch (e) {
@@ -145,7 +138,7 @@ export class BeaconReqRespHandler implements IReqRespHandler {
     yield this.chain.getStatus();
   }
 
-  private async *onGoodbye(requestBody: Goodbye, peerId: PeerId): AsyncIterable<bigint> {
+  private async *onGoodbye(requestBody: phase0.Goodbye, peerId: PeerId): AsyncIterable<bigint> {
     this.logger.verbose("Received goodbye request", {
       peer: peerId.toB58String(),
       reason: requestBody,
@@ -158,7 +151,7 @@ export class BeaconReqRespHandler implements IReqRespHandler {
     await this.network.disconnect(peerId);
   }
 
-  private async *onPing(requestBody: Ping, peerId: PeerId): AsyncIterable<bigint> {
+  private async *onPing(requestBody: phase0.Ping, peerId: PeerId): AsyncIterable<bigint> {
     yield this.network.metadata.seqNumber;
 
     // # TODO: Will this line be called if the yield consumer returns? Consider using finally {}
@@ -168,11 +161,13 @@ export class BeaconReqRespHandler implements IReqRespHandler {
     });
   }
 
-  private async *onMetadata(): AsyncIterable<Metadata> {
+  private async *onMetadata(): AsyncIterable<phase0.Metadata> {
     yield this.network.metadata.all;
   }
 
-  private async *onBeaconBlocksByRange(requestBody: BeaconBlocksByRangeRequest): AsyncIterable<SignedBeaconBlock> {
+  private async *onBeaconBlocksByRange(
+    requestBody: phase0.BeaconBlocksByRangeRequest
+  ): AsyncIterable<phase0.SignedBeaconBlock> {
     if (requestBody.step < 1) {
       throw new ResponseError(RpcResponseStatus.INVALID_REQUEST, "step < 1");
     }
@@ -195,7 +190,9 @@ export class BeaconReqRespHandler implements IReqRespHandler {
     yield* this.injectRecentBlocks(archiveBlocksStream, this.chain, requestBody);
   }
 
-  private async *onBeaconBlocksByRoot(requestBody: BeaconBlocksByRootRequest): AsyncIterable<SignedBeaconBlock> {
+  private async *onBeaconBlocksByRoot(
+    requestBody: phase0.BeaconBlocksByRootRequest
+  ): AsyncIterable<phase0.SignedBeaconBlock> {
     const getBlock = this.db.block.get.bind(this.db.block);
     const getFinalizedBlock = this.db.blockArchive.getByRoot.bind(this.db.blockArchive);
     for (const blockRoot of requestBody) {
@@ -223,10 +220,10 @@ export class BeaconReqRespHandler implements IReqRespHandler {
   };
 
   private injectRecentBlocks = async function* (
-    archiveStream: AsyncIterable<SignedBeaconBlock>,
+    archiveStream: AsyncIterable<phase0.SignedBeaconBlock>,
     chain: IBeaconChain,
-    request: BeaconBlocksByRangeRequest
-  ): AsyncGenerator<SignedBeaconBlock> {
+    request: phase0.BeaconBlocksByRangeRequest
+  ): AsyncGenerator<phase0.SignedBeaconBlock> {
     let slot = -1;
     for await (const archiveBlock of archiveStream) {
       yield archiveBlock;

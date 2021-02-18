@@ -1,4 +1,4 @@
-import {Eth1Data, PendingAttestation} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {List, readOnlyMap} from "@chainsafe/ssz";
 import {bigIntMin, intDiv} from "@chainsafe/lodestar-utils";
 
@@ -31,7 +31,7 @@ export function processFinalUpdates(
 
   // reset eth1 data votes
   if (nextEpoch % EPOCHS_PER_ETH1_VOTING_PERIOD === 0) {
-    state.eth1DataVotes = ([] as Eth1Data[]) as List<Eth1Data>;
+    state.eth1DataVotes = ([] as phase0.Eth1Data[]) as List<phase0.Eth1Data>;
   }
 
   // update effective balances with hysteresis
@@ -59,7 +59,7 @@ export function processFinalUpdates(
   // set historical root accumulator
   if (nextEpoch % intDiv(SLOTS_PER_HISTORICAL_ROOT, SLOTS_PER_EPOCH) === 0) {
     state.historicalRoots.push(
-      config.types.HistoricalBatch.hashTreeRoot({
+      config.types.phase0.HistoricalBatch.hashTreeRoot({
         blockRoots: state.blockRoots,
         stateRoots: state.stateRoots,
       })
@@ -68,5 +68,5 @@ export function processFinalUpdates(
 
   // rotate current/previous epoch attestations
   state.previousEpochAttestations = state.currentEpochAttestations;
-  state.currentEpochAttestations = ([] as PendingAttestation[]) as List<PendingAttestation>;
+  state.currentEpochAttestations = ([] as phase0.PendingAttestation[]) as List<phase0.PendingAttestation>;
 }

@@ -2,7 +2,7 @@
  * @module chain/stateTransition/slot
  */
 
-import {BeaconState, Slot} from "@chainsafe/lodestar-types";
+import {phase0, Slot} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {assert} from "@chainsafe/lodestar-utils";
 
@@ -10,7 +10,7 @@ import {ZERO_HASH} from "../../constants";
 
 import {processEpoch} from "./epoch";
 
-export function processSlots(config: IBeaconConfig, state: BeaconState, slot: Slot): void {
+export function processSlots(config: IBeaconConfig, state: phase0.BeaconState, slot: Slot): void {
   assert.lt(state.slot, slot, `Too old slot ${slot}, current=${state.slot}`);
 
   while (state.slot < slot) {
@@ -23,9 +23,9 @@ export function processSlots(config: IBeaconConfig, state: BeaconState, slot: Sl
   }
 }
 
-function processSlot(config: IBeaconConfig, state: BeaconState): void {
+function processSlot(config: IBeaconConfig, state: phase0.BeaconState): void {
   // Cache state root
-  const previousStateRoot = config.types.BeaconState.hashTreeRoot(state);
+  const previousStateRoot = config.types.phase0.BeaconState.hashTreeRoot(state);
   state.stateRoots[state.slot % config.params.SLOTS_PER_HISTORICAL_ROOT] = previousStateRoot;
 
   // Cache latest block header state root
@@ -34,6 +34,6 @@ function processSlot(config: IBeaconConfig, state: BeaconState): void {
   }
 
   // Cache block root
-  const previousBlockRoot = config.types.BeaconBlockHeader.hashTreeRoot(state.latestBlockHeader);
+  const previousBlockRoot = config.types.phase0.BeaconBlockHeader.hashTreeRoot(state.latestBlockHeader);
   state.blockRoots[state.slot % config.params.SLOTS_PER_HISTORICAL_ROOT] = previousBlockRoot;
 }

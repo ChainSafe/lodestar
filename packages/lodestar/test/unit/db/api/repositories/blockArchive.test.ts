@@ -113,7 +113,7 @@ describe("block archive repository", function () {
     await blockArchive.add(block);
     expect(
       spy.withArgs(
-        encodeKey(Bucket.blockArchiveRootIndex, config.types.BeaconBlock.hashTreeRoot(block.message)),
+        encodeKey(Bucket.blockArchiveRootIndex, config.types.phase0.BeaconBlock.hashTreeRoot(block.message)),
         intToBytes(block.message.slot, 64, "be")
       ).calledOnce
     ).to.be.true;
@@ -131,7 +131,7 @@ describe("block archive repository", function () {
     await blockArchive.batchAdd(blocks);
     expect(
       spy.withArgs(
-        encodeKey(Bucket.blockArchiveRootIndex, config.types.BeaconBlock.hashTreeRoot(blocks[0].message)),
+        encodeKey(Bucket.blockArchiveRootIndex, config.types.phase0.BeaconBlock.hashTreeRoot(blocks[0].message)),
         intToBytes(blocks[0].message.slot, 64, "be")
       ).calledTwice
     ).to.be.true;
@@ -146,16 +146,16 @@ describe("block archive repository", function () {
   it("should get slot by root", async function () {
     const block = generateEmptySignedBlock();
     await blockArchive.add(block);
-    const slot = await blockArchive.getSlotByRoot(config.types.BeaconBlock.hashTreeRoot(block.message));
+    const slot = await blockArchive.getSlotByRoot(config.types.phase0.BeaconBlock.hashTreeRoot(block.message));
     expect(slot).to.equal(block.message.slot);
   });
 
   it("should get block by root", async function () {
     const block = generateEmptySignedBlock();
     await blockArchive.add(block);
-    const retrieved = await blockArchive.getByRoot(config.types.BeaconBlock.hashTreeRoot(block.message));
+    const retrieved = await blockArchive.getByRoot(config.types.phase0.BeaconBlock.hashTreeRoot(block.message));
     if (!retrieved) throw Error("getByRoot returned null");
-    expect(config.types.SignedBeaconBlock.equals(retrieved, block)).to.be.true;
+    expect(config.types.phase0.SignedBeaconBlock.equals(retrieved, block)).to.be.true;
   });
 
   it("should get slot by parent root", async function () {
@@ -170,6 +170,6 @@ describe("block archive repository", function () {
     await blockArchive.add(block);
     const retrieved = await blockArchive.getByParentRoot(block.message.parentRoot);
     if (!retrieved) throw Error("getByRoot returned null");
-    expect(config.types.SignedBeaconBlock.equals(retrieved, block)).to.be.true;
+    expect(config.types.phase0.SignedBeaconBlock.equals(retrieved, block)).to.be.true;
   });
 });

@@ -1,7 +1,7 @@
 import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
-import {BeaconBlocksByRangeRequest, BeaconBlocksByRootRequest} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {LogLevel, WinstonLogger} from "@chainsafe/lodestar-utils";
 import {expect} from "chai";
 import Libp2p from "libp2p";
@@ -77,7 +77,7 @@ describe("[sync] rpc", function () {
     );
     forkChoiceStub.getFinalizedCheckpoint.returns({
       epoch: computeEpochAtSlot(config, block.message.slot),
-      root: config.types.BeaconBlock.hashTreeRoot(block.message),
+      root: config.types.phase0.BeaconBlock.hashTreeRoot(block.message),
     });
     libP2pA = await createNode(multiaddr);
     netA = new Libp2pNetwork(opts, {config, libp2p: libP2pA, logger, metrics, validator, chain});
@@ -192,7 +192,7 @@ describe("[sync] rpc", function () {
   });
 
   it("beacon block by root", async function () {
-    const request = [Buffer.alloc(32)] as BeaconBlocksByRootRequest;
+    const request = [Buffer.alloc(32)] as phase0.BeaconBlocksByRootRequest;
     await netA.connect(netB.peerId, netB.localMultiaddrs);
     const response = await netA.reqResp.beaconBlocksByRoot(netB.peerId, request);
     expect(response.length).to.equal(1);
@@ -201,7 +201,7 @@ describe("[sync] rpc", function () {
   });
 
   it("beacon blocks by range", async () => {
-    const request: BeaconBlocksByRangeRequest = {
+    const request: phase0.BeaconBlocksByRangeRequest = {
       startSlot: BLOCK_SLOT,
       count: 2,
       step: 1,

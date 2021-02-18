@@ -13,7 +13,7 @@ export const getBlockRoot: ApiController<DefaultQuery, {blockId: string}> = {
       }
       return resp.status(200).send({
         data: {
-          root: this.config.types.Root.toJson(this.config.types.BeaconBlock.hashTreeRoot(data.message)),
+          root: this.config.types.Root.toJson(this.config.types.phase0.BeaconBlock.hashTreeRoot(data.message)),
         },
       });
     } catch (e) {

@@ -1,6 +1,5 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {SignedBeaconBlock, Slot} from "@chainsafe/lodestar-types";
-import {SlotRoot} from "@chainsafe/lodestar-types";
+import {phase0, Slot} from "@chainsafe/lodestar-types";
 import {ErrorAborted, ILogger, sleep} from "@chainsafe/lodestar-utils";
 import deepmerge from "deepmerge";
 import PeerId from "peer-id";
@@ -26,7 +25,7 @@ export class BlockRangeFetcher implements IBlockRangeFetcher {
   private readonly logger: ILogger;
   private readonly opts: IRegularSyncOptions;
   // for control range across next() calls
-  private lastFetchCheckpoint: SlotRoot;
+  private lastFetchCheckpoint: phase0.SlotRoot;
   // for each next() call
   private rangeStart: Slot = 0;
   private rangeEnd: Slot = 0;
@@ -46,16 +45,16 @@ export class BlockRangeFetcher implements IBlockRangeFetcher {
     this.lastFetchCheckpoint = {root: ZERO_HASH, slot: 0};
   }
 
-  public setLastProcessedBlock(lastFetchCheckpoint: SlotRoot): void {
+  public setLastProcessedBlock(lastFetchCheckpoint: phase0.SlotRoot): void {
     this.lastFetchCheckpoint = lastFetchCheckpoint;
   }
 
   /**
    * Get next block range.
    */
-  public async getNextBlockRange(): Promise<SignedBeaconBlock[]> {
+  public async getNextBlockRange(): Promise<phase0.SignedBeaconBlock[]> {
     this.updateNextRange();
-    let result: SignedBeaconBlock[] | null = null;
+    let result: phase0.SignedBeaconBlock[] | null = null;
     let peer: PeerId | null = null;
     const badPeers = new Set<string>();
     // expect at least 2 blocks since we check linear chain
@@ -82,7 +81,7 @@ export class BlockRangeFetcher implements IBlockRangeFetcher {
               reject(new Error("beacon_blocks_by_range timeout"));
             }, 3 * 60 * 1000); // 3 minutes
           }),
-        ])) as SignedBeaconBlock[] | null;
+        ])) as phase0.SignedBeaconBlock[] | null;
         if (timer) clearTimeout(timer);
         if (result) {
           // we queried from last fetched block
@@ -90,7 +89,7 @@ export class BlockRangeFetcher implements IBlockRangeFetcher {
             (signedBlock) =>
               !this.config.types.Root.equals(
                 this.lastFetchCheckpoint.root,
-                this.config.types.BeaconBlock.hashTreeRoot(signedBlock.message)
+                this.config.types.phase0.BeaconBlock.hashTreeRoot(signedBlock.message)
               )
           );
           // 0-1 block result should go through and we'll handle it in next round
@@ -106,7 +105,10 @@ export class BlockRangeFetcher implements IBlockRangeFetcher {
     // success, ignore last block (there should be >= 2 blocks) since we can't validate parent-child
     result.splice(result.length - 1, 1);
     const lastBlock = result[result.length - 1].message;
-    this.lastFetchCheckpoint = {root: this.config.types.BeaconBlock.hashTreeRoot(lastBlock), slot: lastBlock.slot};
+    this.lastFetchCheckpoint = {
+      root: this.config.types.phase0.BeaconBlock.hashTreeRoot(lastBlock),
+      slot: lastBlock.slot,
+    };
     return result!;
   }
 
@@ -122,7 +124,7 @@ export class BlockRangeFetcher implements IBlockRangeFetcher {
    * Since we query 1 additional block to check linear chain, a return of 0 or 1 block
    * should go to this handler.
    */
-  private async handleEmptyRange(peer: PeerId, blocks: SignedBeaconBlock[] = []): Promise<void> {
+  private async handleEmptyRange(peer: PeerId, blocks: phase0.SignedBeaconBlock[] = []): Promise<void> {
     const range = {start: this.rangeStart, end: this.rangeEnd};
     const peerHeadSlot = this.network.peerMetadata.status.get(peer)?.headSlot ?? 0;
     this.logger.verbose("Regular Sync: Not found enough blocks for range", {

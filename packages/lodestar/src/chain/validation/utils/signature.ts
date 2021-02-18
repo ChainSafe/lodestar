@@ -1,12 +1,12 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {BeaconState, Epoch, SignedAggregateAndProof, Slot} from "@chainsafe/lodestar-types";
+import {Epoch, phase0, Slot} from "@chainsafe/lodestar-types";
 import bls, {PublicKey} from "@chainsafe/bls";
 import {computeEpochAtSlot, computeSigningRoot, getDomain} from "@chainsafe/lodestar-beacon-state-transition";
 import {DomainType} from "../../../constants";
 
 export function isValidSelectionProofSignature(
   config: IBeaconConfig,
-  state: BeaconState,
+  state: phase0.BeaconState,
   slot: Slot,
   aggregator: PublicKey,
   signature: Uint8Array
@@ -19,15 +19,15 @@ export function isValidSelectionProofSignature(
 
 export function isValidAggregateAndProofSignature(
   config: IBeaconConfig,
-  state: BeaconState,
+  state: phase0.BeaconState,
   epoch: Epoch,
   aggregator: PublicKey,
-  aggregateAndProof: SignedAggregateAndProof
+  aggregateAndProof: phase0.SignedAggregateAndProof
 ): boolean {
   const aggregatorDomain = getDomain(config, state, DomainType.AGGREGATE_AND_PROOF, epoch);
   const aggregatorSigningRoot = computeSigningRoot(
     config,
-    config.types.AggregateAndProof,
+    config.types.phase0.AggregateAndProof,
     aggregateAndProof.message,
     aggregatorDomain
   );

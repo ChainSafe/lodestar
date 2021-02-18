@@ -1,6 +1,6 @@
 import {Discv5Discovery, ENR} from "@chainsafe/discv5";
 import {config} from "@chainsafe/lodestar-config/mainnet";
-import {Attestation, SignedBeaconBlock} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {ILogger, sleep, WinstonLogger} from "@chainsafe/lodestar-utils";
 import {expect} from "chai";
 import PeerId from "peer-id";
@@ -50,7 +50,7 @@ describe("[network] network", function () {
     const state = generateState({
       finalizedCheckpoint: {
         epoch: 0,
-        root: config.types.BeaconBlock.hashTreeRoot(block.message),
+        root: config.types.phase0.BeaconBlock.hashTreeRoot(block.message),
       },
     });
     // state.finalizedCheckpoint = {
@@ -159,7 +159,7 @@ describe("[network] network", function () {
     const forkDigest = chain.getForkDigest();
     const received = new Promise((resolve, reject) => {
       setTimeout(reject, 4000);
-      netA.gossip.subscribeToBlock(forkDigest, (signedBlock: SignedBeaconBlock): void => {
+      netA.gossip.subscribeToBlock(forkDigest, (signedBlock: phase0.SignedBeaconBlock): void => {
         resolve(signedBlock);
       });
     });
@@ -170,7 +170,7 @@ describe("[network] network", function () {
     block.message.slot = 2020;
     void netB.gossip.publishBlock(block).catch((e) => console.error(e));
     const receivedBlock = await received;
-    expect(config.types.SignedBeaconBlock.equals(receivedBlock as SignedBeaconBlock, block)).to.be.true;
+    expect(config.types.phase0.SignedBeaconBlock.equals(receivedBlock as phase0.SignedBeaconBlock, block)).to.be.true;
   });
 
   it("should receive aggregate on subscription", async function () {
@@ -200,7 +200,7 @@ describe("[network] network", function () {
     await netA.connect(netB.peerId, netB.localMultiaddrs);
     await connected;
     const forkDigest = chain.getForkDigest();
-    let callback: (attestation: {attestation: Attestation; subnet: number}) => void;
+    let callback: (attestation: {attestation: phase0.Attestation; subnet: number}) => void;
     const received = new Promise((resolve, reject) => {
       setTimeout(reject, 4000);
       netA.gossip.subscribeToAttestationSubnet(forkDigest, 0, resolve);
@@ -226,7 +226,7 @@ describe("[network] network", function () {
       new Promise((resolve) => netB.on(NetworkEvent.peerConnect, resolve)),
     ]);
     const enrB = ENR.createFromPeerId(peerIdB);
-    enrB.set("attnets", Buffer.from(config.types.AttestationSubnets.serialize(netB.metadata.attnets)));
+    enrB.set("attnets", Buffer.from(config.types.phase0.AttestationSubnets.serialize(netB.metadata.attnets)));
     enrB.setLocationMultiaddr((libP2pB._discovery.get("discv5") as Discv5Discovery).discv5.bindAddress);
     enrB.setLocationMultiaddr(libP2pB.multiaddrs[0]);
     // let discv5 of A know enr of B

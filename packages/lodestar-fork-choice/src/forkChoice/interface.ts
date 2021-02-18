@@ -1,14 +1,4 @@
-import {
-  BeaconBlock,
-  BeaconState,
-  Checkpoint,
-  Epoch,
-  Gwei,
-  IndexedAttestation,
-  Root,
-  Slot,
-  ValidatorIndex,
-} from "@chainsafe/lodestar-types";
+import {Epoch, Gwei, Slot, ValidatorIndex, phase0} from "@chainsafe/lodestar-types";
 import {IBlockSummary} from "./blockSummary";
 
 export interface IForkChoice {
@@ -22,7 +12,7 @@ export interface IForkChoice {
    *
    * https://github.com/ethereum/eth2.0-specs/blob/v0.12.1/specs/phase0/fork-choice.md#get_ancestor
    */
-  getAncestor(blockRoot: Root, ancestorSlot: Slot): Uint8Array;
+  getAncestor(blockRoot: phase0.Root, ancestorSlot: Slot): Uint8Array;
   /**
    * Run the fork choice rule to determine the head.
    *
@@ -38,8 +28,8 @@ export interface IForkChoice {
    * Retrieves all possible chain heads (leaves of fork choice tree).
    */
   getHeads(): IBlockSummary[];
-  getFinalizedCheckpoint(): Checkpoint;
-  getJustifiedCheckpoint(): Checkpoint;
+  getFinalizedCheckpoint(): phase0.Checkpoint;
+  getJustifiedCheckpoint(): phase0.Checkpoint;
   /**
    * Add `block` to the fork choice DAG.
    *
@@ -59,7 +49,7 @@ export interface IForkChoice {
    * `justifiedBalances` validator balances of justified checkpoint which is updated synchronously.
    * This ensures that the forkchoice is never out of sync.
    */
-  onBlock(block: BeaconBlock, state: BeaconState, justifiedBalances?: Gwei[]): void;
+  onBlock(block: phase0.BeaconBlock, state: phase0.BeaconState, justifiedBalances?: Gwei[]): void;
   /**
    * Register `attestation` with the fork choice DAG so that it may influence future calls to `getHead`.
    *
@@ -78,7 +68,7 @@ export interface IForkChoice {
    * The supplied `attestation` **must** pass the `in_valid_indexed_attestation` function as it
    * will not be run here.
    */
-  onAttestation(attestation: IndexedAttestation): void;
+  onAttestation(attestation: phase0.IndexedAttestation): void;
   getLatestMessage(validatorIndex: ValidatorIndex): ILatestMessage | undefined;
   /**
    * Call `onTick` for all slots between `fcStore.getCurrentSlot()` and the provided `currentSlot`.
@@ -92,48 +82,48 @@ export interface IForkChoice {
   /**
    * Returns `true` if the block is known **and** a descendant of the finalized root.
    */
-  hasBlock(blockRoot: Root): boolean;
+  hasBlock(blockRoot: phase0.Root): boolean;
   /**
    * Returns a `IBlockSummary` if the block is known **and** a descendant of the finalized root.
    */
-  getBlock(blockRoot: Root): IBlockSummary | null;
+  getBlock(blockRoot: phase0.Root): IBlockSummary | null;
   getFinalizedBlock(): IBlockSummary;
   /**
    * Return `true` if `block_root` is equal to the finalized root, or a known descendant of it.
    */
-  isDescendantOfFinalized(blockRoot: Root): boolean;
+  isDescendantOfFinalized(blockRoot: phase0.Root): boolean;
   /**
    * Returns true if the `descendantRoot` has an ancestor with `ancestorRoot`.
    *
    * Always returns `false` if either input roots are unknown.
    * Still returns `true` if `ancestorRoot===descendantRoot` (and the roots are known)
    */
-  isDescendant(ancestorRoot: Root, descendantRoot: Root): boolean;
+  isDescendant(ancestorRoot: phase0.Root, descendantRoot: phase0.Root): boolean;
   /**
    * Prune items up to a finalized root.
    */
-  prune(finalizedRoot: Root): IBlockSummary[];
+  prune(finalizedRoot: phase0.Root): IBlockSummary[];
   setPruneThreshold(threshold: number): void;
   /**
    * Iterates backwards through block summaries, starting from a block root
    */
-  iterateBlockSummaries(blockRoot: Root): IBlockSummary[];
+  iterateBlockSummaries(blockRoot: phase0.Root): IBlockSummary[];
   /**
    * The same to iterateBlockSummaries but this gets non-ancestor nodes instead of ancestor nodes.
    */
-  iterateNonAncestors(blockRoot: Root): IBlockSummary[];
+  iterateNonAncestors(blockRoot: phase0.Root): IBlockSummary[];
   getCanonicalBlockSummaryAtSlot(slot: Slot): IBlockSummary | null;
   /**
    * Iterates forwards through block summaries, exact order is not guaranteed
    */
   forwardIterateBlockSummaries(): IBlockSummary[];
-  getBlockSummariesByParentRoot(parentRoot: Root): IBlockSummary[];
+  getBlockSummariesByParentRoot(parentRoot: phase0.Root): IBlockSummary[];
   getBlockSummariesAtSlot(slot: Slot): IBlockSummary[];
 }
 
 export interface ILatestMessage {
   epoch: Epoch;
-  root: Root;
+  root: phase0.Root;
 }
 
 /**

@@ -28,7 +28,7 @@ describe("block archiver task", function () {
    *       C
    */
   it("should archive finalized blocks on same chain", async function () {
-    const blockBuffer = Buffer.from(config.types.SignedBeaconBlock.serialize(generateEmptySignedBlock()));
+    const blockBuffer = Buffer.from(config.types.phase0.SignedBeaconBlock.serialize(generateEmptySignedBlock()));
     dbStub.block.getBinary.resolves(blockBuffer);
     const canonicalBlocks = [
       generateBlockSummary({slot: 5}),

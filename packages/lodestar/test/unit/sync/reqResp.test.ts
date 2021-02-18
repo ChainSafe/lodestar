@@ -1,7 +1,7 @@
 import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
 import {config} from "@chainsafe/lodestar-config/mainnet";
-import {BeaconBlocksByRangeRequest, Goodbye, SignedBeaconBlock, Status} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import all from "it-all";
 import PeerId from "peer-id";
 import sinon, {SinonStubbedInstance} from "sinon";
@@ -69,7 +69,7 @@ describe("sync req resp", function () {
   });
 
   it("should handle request - onStatus", async function () {
-    const body: Status = {
+    const body: phase0.Status = {
       forkDigest: Buffer.alloc(4),
       finalizedRoot: Buffer.alloc(32),
       finalizedEpoch: 1,
@@ -85,7 +85,7 @@ describe("sync req resp", function () {
   });
 
   it("should handle request - onGoodbye", async function () {
-    const goodbye: Goodbye = BigInt(1);
+    const goodbye: phase0.Goodbye = BigInt(1);
     networkStub.disconnect.resolves();
 
     await all(syncRpc.onRequest(Method.Goodbye, goodbye, peerId));
@@ -95,7 +95,7 @@ describe("sync req resp", function () {
 
   it("Throw if BeaconBlocksByRangeRequest is invalid", async function () {
     const peerId = new PeerId(Buffer.from("lodestar"));
-    const requestBody: BeaconBlocksByRangeRequest = {
+    const requestBody: phase0.BeaconBlocksByRangeRequest = {
       step: 0,
       startSlot: 0,
       count: 10,
@@ -108,7 +108,7 @@ describe("sync req resp", function () {
 
   it("should handle request - onBeaconBlocksByRange", async function () {
     const peerId = new PeerId(Buffer.from("lodestar"));
-    const requestBody: BeaconBlocksByRangeRequest = {
+    const requestBody: phase0.BeaconBlocksByRangeRequest = {
       startSlot: 2,
       count: 4,
       step: 2,
@@ -130,7 +130,7 @@ describe("sync req resp", function () {
     const slots: number[] = [];
     try {
       for await (const chunk of syncRpc.onRequest(Method.BeaconBlocksByRange, requestBody, peerId)) {
-        slots.push((chunk as SignedBeaconBlock).message.slot);
+        slots.push((chunk as phase0.SignedBeaconBlock).message.slot);
       }
     } catch (e) {
       console.log({e});

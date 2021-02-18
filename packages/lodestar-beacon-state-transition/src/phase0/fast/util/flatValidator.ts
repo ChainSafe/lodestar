@@ -1,5 +1,5 @@
 import {readOnlyEntries} from "@chainsafe/ssz";
-import {Gwei, Epoch, Validator} from "@chainsafe/lodestar-types";
+import {Gwei, Epoch, phase0} from "@chainsafe/lodestar-types";
 
 /**
  * Concrete Validator w/o pubkey & withdrawCredentials.
@@ -19,11 +19,11 @@ export interface IFlatValidator {
  * Convert a Validator (most likely with a tree-backing)
  * into a IFlatValidator
  */
-export function createIFlatValidator(v: Validator): IFlatValidator {
+export function createIFlatValidator(v: phase0.Validator): IFlatValidator {
   return (readOnlyEntries(v).reduce((flat, [k, v]) => {
     flat[k] = v;
     return flat;
-  }, {} as Record<string, Validator[keyof Validator]>) as unknown) as IFlatValidator;
+  }, {} as Record<string, phase0.Validator[keyof phase0.Validator]>) as unknown) as IFlatValidator;
 }
 
 export function isActiveIFlatValidator(v: IFlatValidator, epoch: Epoch): boolean {

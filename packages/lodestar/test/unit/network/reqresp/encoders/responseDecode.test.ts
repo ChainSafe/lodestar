@@ -4,7 +4,7 @@ import pipe from "it-pipe";
 import all from "it-all";
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {LodestarError} from "@chainsafe/lodestar-utils";
-import {ResponseBody} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {Method, Methods, ReqRespEncoding, RpcResponseStatus} from "../../../../../src/constants";
 import {SszSnappyError, SszSnappyErrorCode} from "../../../../../src/network/reqresp/encodingStrategies/sszSnappy";
 import {responseDecode} from "../../../../../src/network/reqresp/encoders/responseDecode";
@@ -26,7 +26,7 @@ describe("network / reqresp / encoders / responseDecode", () => {
     encoding?: ReqRespEncoding;
     chunks: Buffer[];
     error?: LodestarError<any>;
-    responseChunks?: ResponseBody[];
+    responseChunks?: phase0.ResponseBody[];
   }[] = [
     {
       id: "No chunks should be ok",

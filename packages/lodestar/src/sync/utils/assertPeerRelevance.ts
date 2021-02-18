@@ -1,6 +1,6 @@
 import {computeStartSlotAtEpoch, getBlockRootAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {Epoch, ForkDigest, Root, Status} from "@chainsafe/lodestar-types";
+import {Epoch, ForkDigest, Root, phase0} from "@chainsafe/lodestar-types";
 import {LodestarError} from "@chainsafe/lodestar-utils";
 import {toHexString} from "@chainsafe/ssz";
 import {IBeaconChain} from "../../chain";
@@ -28,7 +28,11 @@ export class IrrelevantPeerError extends LodestarError<IrrelevantPeerErrorType> 
  * Process a `Status` message to determine if a peer is relevant to us. If the peer is
  * irrelevant the reason is returned.
  */
-export async function assertPeerRelevance(remote: Status, chain: IBeaconChain, config: IBeaconConfig): Promise<void> {
+export async function assertPeerRelevance(
+  remote: phase0.Status,
+  chain: IBeaconChain,
+  config: IBeaconConfig
+): Promise<void> {
   const local = chain.getStatus();
 
   // The node is on a different network/fork

@@ -18,17 +18,7 @@ import {handleIncomingProposerSlashing, publishProposerSlashing} from "./handler
 import {handleIncomingVoluntaryExit, publishVoluntaryExit} from "./handlers/voluntaryExit";
 import {handleIncomingAggregateAndProof, publishAggregatedAttestation} from "./handlers/aggregateAndProof";
 import {LodestarGossipsub} from "./gossipsub";
-import {
-  Attestation,
-  AttesterSlashing,
-  Epoch,
-  ForkDigest,
-  ProposerSlashing,
-  SignedAggregateAndProof,
-  SignedBeaconBlock,
-  SignedVoluntaryExit,
-  Slot,
-} from "@chainsafe/lodestar-types";
+import {Epoch, ForkDigest, phase0, Slot} from "@chainsafe/lodestar-types";
 import {ChainEvent, IBeaconChain} from "../../chain";
 import {computeEpochAtSlot, computeForkDigest} from "@chainsafe/lodestar-beacon-state-transition";
 import {GossipEncoding} from "./encoding";
@@ -98,33 +88,42 @@ export class Gossip extends (EventEmitter as {new (): GossipEventEmitter}) imple
 
   public publishAttesterSlashing = publishAttesterSlashing.bind(this);
 
-  public subscribeToBlock(forkDigest: ForkDigest, callback: (block: SignedBeaconBlock) => void): void {
+  public subscribeToBlock(forkDigest: ForkDigest, callback: (block: phase0.SignedBeaconBlock) => void): void {
     this.subscribe(forkDigest, GossipEvent.BLOCK, callback);
   }
 
   public subscribeToAggregateAndProof(
     forkDigest: ForkDigest,
-    callback: (signedAggregate: SignedAggregateAndProof) => void
+    callback: (signedAggregate: phase0.SignedAggregateAndProof) => void
   ): void {
     this.subscribe(forkDigest, GossipEvent.AGGREGATE_AND_PROOF, callback);
   }
 
-  public subscribeToVoluntaryExit(forkDigest: ForkDigest, callback: (signed: SignedVoluntaryExit) => void): void {
+  public subscribeToVoluntaryExit(
+    forkDigest: ForkDigest,
+    callback: (signed: phase0.SignedVoluntaryExit) => void
+  ): void {
     this.subscribe(forkDigest, GossipEvent.VOLUNTARY_EXIT, callback);
   }
 
-  public subscribeToProposerSlashing(forkDigest: ForkDigest, callback: (slashing: ProposerSlashing) => void): void {
+  public subscribeToProposerSlashing(
+    forkDigest: ForkDigest,
+    callback: (slashing: phase0.ProposerSlashing) => void
+  ): void {
     this.subscribe(forkDigest, GossipEvent.PROPOSER_SLASHING, callback);
   }
 
-  public subscribeToAttesterSlashing(forkDigest: ForkDigest, callback: (slashing: AttesterSlashing) => void): void {
+  public subscribeToAttesterSlashing(
+    forkDigest: ForkDigest,
+    callback: (slashing: phase0.AttesterSlashing) => void
+  ): void {
     this.subscribe(forkDigest, GossipEvent.ATTESTER_SLASHING, callback);
   }
 
   public subscribeToAttestationSubnet(
     forkDigest: ForkDigest,
     subnet: number | string,
-    callback?: (attestation: {attestation: Attestation; subnet: number}) => void
+    callback?: (attestation: {attestation: phase0.Attestation; subnet: number}) => void
   ): void {
     const subnetNum: number = typeof subnet === "string" ? parseInt(subnet) : (subnet as number);
     this.subscribe(
@@ -138,7 +137,7 @@ export class Gossip extends (EventEmitter as {new (): GossipEventEmitter}) imple
   public unsubscribeFromAttestationSubnet(
     forkDigest: ForkDigest,
     subnet: number | string,
-    callback?: (attestation: {attestation: Attestation; subnet: number}) => void
+    callback?: (attestation: {attestation: phase0.Attestation; subnet: number}) => void
   ): void {
     const subnetNum: number = typeof subnet === "string" ? parseInt(subnet) : (subnet as number);
     this.unsubscribe(

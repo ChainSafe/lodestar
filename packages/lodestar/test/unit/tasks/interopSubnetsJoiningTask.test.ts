@@ -10,7 +10,7 @@ import {WinstonLogger, bytesToInt, intToBytes} from "@chainsafe/lodestar-utils";
 import {expect} from "chai";
 import {MockBeaconChain} from "../../utils/mocks/chain/chain";
 import {generateState} from "../../utils/state";
-import {BeaconState} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {MetadataController} from "../../../src/network/metadata";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {computeForkDigest} from "@chainsafe/lodestar-beacon-state-transition";
@@ -25,7 +25,7 @@ describe("interopSubnetsJoiningTask", () => {
   let chain: IBeaconChain;
   const logger = new WinstonLogger();
   let task: InteropSubnetsJoiningTask;
-  let state: BeaconState;
+  let state: phase0.BeaconState;
 
   const ALL_FORKS = [
     {
@@ -49,7 +49,7 @@ describe("interopSubnetsJoiningTask", () => {
       genesisTime: 0,
       chainId: 0,
       networkId: BigInt(0),
-      state: state as TreeBacked<BeaconState>,
+      state: state as TreeBacked<phase0.BeaconState>,
       config,
     });
     networkStub.metadata = new MetadataController({}, {config, chain, logger});

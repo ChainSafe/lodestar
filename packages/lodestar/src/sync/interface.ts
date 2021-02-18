@@ -1,7 +1,7 @@
 import {IService} from "../node";
 import {INetwork} from "../network";
 import {ILogger} from "@chainsafe/lodestar-utils";
-import {CommitteeIndex, Slot, SyncingStatus} from "@chainsafe/lodestar-types";
+import {CommitteeIndex, Slot, phase0} from "@chainsafe/lodestar-types";
 import {IRegularSync} from "./regular";
 import {IGossipHandler} from "./gossip";
 import {IReqRespHandler} from "./reqResp";
@@ -20,7 +20,7 @@ export enum SyncMode {
 
 export interface IBeaconSync extends IService {
   state: SyncMode;
-  getSyncStatus(): Promise<SyncingStatus>;
+  getSyncStatus(): Promise<phase0.SyncingStatus>;
   isSynced(): boolean;
   collectAttestations(slot: Slot, committeeIndex: CommitteeIndex): Promise<void>;
 }

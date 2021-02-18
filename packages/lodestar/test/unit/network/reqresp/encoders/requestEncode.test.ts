@@ -1,7 +1,7 @@
 import all from "it-all";
 import pipe from "it-pipe";
 import {config} from "@chainsafe/lodestar-config/minimal";
-import {RequestBody} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {Method, ReqRespEncoding} from "../../../../../src/constants";
 import {requestEncode} from "../../../../../src/network/reqresp/encoders/requestEncode";
 import {expectEqualByteChunks} from "../utils";
@@ -12,7 +12,7 @@ describe("network / reqresp / encoders / requestEncode", () => {
     id: string;
     method: Method;
     encoding: ReqRespEncoding;
-    requestBody: RequestBody;
+    requestBody: phase0.RequestBody;
     chunks: Buffer[];
   }[] = [
     {

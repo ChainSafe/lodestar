@@ -1,6 +1,6 @@
 import {TreeBacked} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {BeaconState, Eth1Data, Deposit} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {getNewEth1Data} from "../../../lodestar-beacon-state-transition/lib/phase0/fast/block/processEth1Data";
 import {ILogger, sleep} from "@chainsafe/lodestar-utils";
 import {AbortSignal} from "abort-controller";
@@ -68,10 +68,10 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
    * Return eth1Data and deposits ready for block production for a given state
    */
   async getEth1DataAndDeposits(
-    state: TreeBacked<BeaconState>
+    state: TreeBacked<phase0.BeaconState>
   ): Promise<{
-    eth1Data: Eth1Data;
-    deposits: Deposit[];
+    eth1Data: phase0.Eth1Data;
+    deposits: phase0.Deposit[];
   }> {
     const eth1Data = await this.getEth1Data(state);
     const deposits = await this.getDeposits(state, eth1Data);
@@ -82,7 +82,7 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
    * Returns an eth1Data vote for a given state.
    * Requires internal caches to be updated regularly to return good results
    */
-  private async getEth1Data(state: TreeBacked<BeaconState>): Promise<Eth1Data> {
+  private async getEth1Data(state: TreeBacked<phase0.BeaconState>): Promise<phase0.Eth1Data> {
     const eth1VotesToConsider = await getEth1VotesToConsider(
       this.config,
       state,
@@ -95,7 +95,10 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
    * Returns deposits to be included for a given state and eth1Data vote.
    * Requires internal caches to be updated regularly to return good results
    */
-  private async getDeposits(state: TreeBacked<BeaconState>, eth1DataVote: Eth1Data): Promise<Deposit[]> {
+  private async getDeposits(
+    state: TreeBacked<phase0.BeaconState>,
+    eth1DataVote: phase0.Eth1Data
+  ): Promise<phase0.Deposit[]> {
     // Eth1 data may change due to the vote included in this block
     const newEth1Data = getNewEth1Data(this.config, state, eth1DataVote) || state.eth1Data;
     return await getDeposits(this.config, state, newEth1Data, this.depositsCache.get.bind(this.depositsCache));

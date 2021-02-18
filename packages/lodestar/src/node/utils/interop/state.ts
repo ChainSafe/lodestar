@@ -1,5 +1,5 @@
 import {List, TreeBacked} from "@chainsafe/ssz";
-import {BeaconState, Deposit, Root} from "@chainsafe/lodestar-types";
+import {phase0, Root} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {initializeBeaconStateFromEth1} from "../../../chain/genesis/genesis";
 
@@ -10,8 +10,8 @@ export function getInteropState(
   config: IBeaconConfig,
   depositDataRootList: TreeBacked<List<Root>>,
   genesisTime: number,
-  deposits: Deposit[]
-): TreeBacked<BeaconState> {
+  deposits: phase0.Deposit[]
+): TreeBacked<phase0.BeaconState> {
   const state = initializeBeaconStateFromEth1(config, INTEROP_BLOCK_HASH, INTEROP_TIMESTAMP, deposits);
   state.genesisTime = genesisTime;
   return state;

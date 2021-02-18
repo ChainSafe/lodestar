@@ -12,7 +12,7 @@ export const getStateValidators: ApiController<DefaultQuery, Params> = {
   handler: async function (req, resp) {
     const validators = await this.api.beacon.state.getStateValidators(req.params.stateId);
     return resp.status(200).send({
-      data: validators.map((v) => this.config.types.ValidatorResponse.toJson(v, {case: "snake"})),
+      data: validators.map((v) => this.config.types.phase0.ValidatorResponse.toJson(v, {case: "snake"})),
     });
   },
 

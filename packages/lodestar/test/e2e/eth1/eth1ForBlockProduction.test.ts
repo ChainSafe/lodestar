@@ -96,7 +96,7 @@ describe("eth1 / Eth1Provider", function () {
     const periodStart = maxTimestamp + SECONDS_PER_ETH1_BLOCK * ETH1_FOLLOW_DISTANCE;
 
     // Compute correct deposit root tree
-    const depositRootTree = config.types.DepositDataRootList.tree.createValue(
+    const depositRootTree = config.types.phase0.DepositDataRootList.tree.createValue(
       pyrmontDepositsDataRoot.map((root) => fromHexString(root)) as List<Root>
     );
 
@@ -118,7 +118,7 @@ describe("eth1 / Eth1Provider", function () {
     const result = await eth1ForBlockProduction.getEth1DataAndDeposits(state);
     expect(result.eth1Data).to.deep.equal(latestEth1Data, "Wrong eth1Data for block production");
     expect(
-      result.deposits.map((deposit) => toHexString(config.types.DepositData.hashTreeRoot(deposit.data)))
+      result.deposits.map((deposit) => toHexString(config.types.phase0.DepositData.hashTreeRoot(deposit.data)))
     ).to.deep.equal(pyrmontDepositsDataRoot, "Wrong deposits for for block production");
   });
 });

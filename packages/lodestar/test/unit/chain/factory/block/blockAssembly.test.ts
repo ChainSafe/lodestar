@@ -51,7 +51,7 @@ describe("block assembly", function () {
       state: generateCachedState({slot: 1}),
       epochCtx: epochCtx,
     });
-    beaconDB.depositDataRoot.getTreeBacked.resolves(config.types.DepositDataRootList.tree.defaultValue());
+    beaconDB.depositDataRoot.getTreeBacked.resolves(config.types.phase0.DepositDataRootList.tree.defaultValue());
     assembleBodyStub.resolves(generateEmptyBlock().body);
     const state = generateState();
 

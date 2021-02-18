@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import {DepositEvent} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {groupDepositEventsByBlock} from "../../../../src/eth1/utils/groupDepositEventsByBlock";
 
 describe("eth1 / util / groupDepositEventsByBlock", function () {
@@ -10,7 +10,7 @@ describe("eth1 / util / groupDepositEventsByBlock", function () {
       withdrawalCredentials: Buffer.alloc(32),
       pubkey: Buffer.alloc(48),
     };
-    const depositEvents: DepositEvent[] = [
+    const depositEvents: phase0.DepositEvent[] = [
       {blockNumber: 1, index: 0, depositData},
       {blockNumber: 2, index: 2, depositData},
       {blockNumber: 2, index: 1, depositData},
