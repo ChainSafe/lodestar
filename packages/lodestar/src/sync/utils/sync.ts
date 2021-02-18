@@ -2,27 +2,14 @@ import PeerId from "peer-id";
 import {Checkpoint, SignedBeaconBlock, Status, Root} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {getStatusProtocols, INetwork} from "../../network";
-import {IBeaconChain} from "../../chain";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {toHexString} from "@chainsafe/ssz";
-import {GENESIS_EPOCH, ZERO_HASH} from "../../constants";
+import {ZERO_HASH} from "../../constants";
 import {IPeerMetadataStore} from "../../network/peers/interface";
 import {getSyncPeers} from "./peers";
 
 export function getStatusFinalizedCheckpoint(status: Status): Checkpoint {
   return {epoch: status.finalizedEpoch, root: status.finalizedRoot};
-}
-
-export async function createStatus(chain: IBeaconChain): Promise<Status> {
-  const head = chain.forkChoice.getHead();
-  const finalizedCheckpoint = chain.forkChoice.getFinalizedCheckpoint();
-  return {
-    forkDigest: chain.getForkDigest(),
-    finalizedRoot: finalizedCheckpoint.epoch === GENESIS_EPOCH ? ZERO_HASH : finalizedCheckpoint.root,
-    finalizedEpoch: finalizedCheckpoint.epoch,
-    headRoot: head.blockRoot,
-    headSlot: head.slot,
-  };
 }
 
 export async function syncPeersStatus(network: INetwork, status: Status): Promise<void> {

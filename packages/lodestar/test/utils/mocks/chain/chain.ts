@@ -10,6 +10,7 @@ import {
   Number64,
   SignedBeaconBlock,
   Slot,
+  Status,
   Uint16,
   Uint64,
 } from "@chainsafe/lodestar-types";
@@ -167,5 +168,15 @@ export class MockBeaconChain implements IBeaconChain {
 
   async getStateContextByBlockRoot(): Promise<ITreeStateContext | null> {
     return null;
+  }
+
+  getStatus(): Status {
+    return {
+      forkDigest: this.getForkDigest(),
+      finalizedRoot: Buffer.alloc(32),
+      finalizedEpoch: 0,
+      headRoot: Buffer.alloc(32),
+      headSlot: 0,
+    };
   }
 }

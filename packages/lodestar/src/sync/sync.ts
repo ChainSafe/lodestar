@@ -15,13 +15,7 @@ import {BlockError, BlockErrorCode} from "../chain/errors";
 import {getPeersInitialSync} from "./utils/bestPeers";
 import {ORARegularSync} from "./regular/oneRangeAhead/oneRangeAhead";
 import {SyncChain, ProcessChainSegment, DownloadBeaconBlocksByRange, GetPeersAndTargetEpoch} from "./range/chain";
-import {
-  assertSequentialBlocksInRange,
-  AttestationCollector,
-  createStatus,
-  RoundRobinArray,
-  syncPeersStatus,
-} from "./utils";
+import {assertSequentialBlocksInRange, AttestationCollector, RoundRobinArray, syncPeersStatus} from "./utils";
 
 export class BeaconSync implements IBeaconSync {
   private readonly opts: ISyncOptions;
@@ -190,7 +184,7 @@ export class BeaconSync implements IBeaconSync {
     this.stopSyncTimer();
     this.statusSyncTimer = setInterval(async () => {
       try {
-        await syncPeersStatus(this.network, await createStatus(this.chain));
+        await syncPeersStatus(this.network, this.chain.getStatus());
       } catch (e) {
         this.logger.error("Error on syncPeersStatus", e);
       }

@@ -20,11 +20,12 @@ import {
   Root,
   SignedBeaconBlock,
   Slot,
+  Status,
 } from "@chainsafe/lodestar-types";
 import {ILogger, intToBytes} from "@chainsafe/lodestar-utils";
 import {TreeBacked} from "@chainsafe/ssz";
 import {AbortController} from "abort-controller";
-import {FAR_FUTURE_EPOCH} from "../constants";
+import {FAR_FUTURE_EPOCH, GENESIS_EPOCH, ZERO_HASH} from "../constants";
 import {IBeaconDb} from "../db";
 import {CheckpointStateCache, StateContextCache} from "./stateCache";
 import {IBeaconMetrics} from "../metrics";
@@ -284,6 +285,18 @@ export class BeaconChain implements IBeaconChain {
         ? intToBytes(nextVersion.currentVersion, 4)
         : (currentVersion.valueOf() as Uint8Array),
       nextForkEpoch: nextVersion ? nextVersion.epoch : FAR_FUTURE_EPOCH,
+    };
+  }
+
+  public getStatus(): Status {
+    const head = this.forkChoice.getHead();
+    const finalizedCheckpoint = this.forkChoice.getFinalizedCheckpoint();
+    return {
+      forkDigest: this.getForkDigest(),
+      finalizedRoot: finalizedCheckpoint.epoch === GENESIS_EPOCH ? ZERO_HASH : finalizedCheckpoint.root,
+      finalizedEpoch: finalizedCheckpoint.epoch,
+      headRoot: head.blockRoot,
+      headSlot: head.slot,
     };
   }
 }
