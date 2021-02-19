@@ -74,7 +74,7 @@ export class TasksService implements IService {
     await new ArchiveStatesTask(
       this.config,
       {chain: this.chain, db: this.db, logger: this.logger},
-      await this.chain.getFinalizedCheckpoint()
+      this.chain.getFinalizedCheckpoint()
     ).run();
   }
 

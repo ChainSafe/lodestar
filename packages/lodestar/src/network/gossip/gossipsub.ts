@@ -57,7 +57,7 @@ export class LodestarGossipsub extends Gossipsub {
     if (!this.interval) {
       this.interval = setInterval(this.cleanUp.bind(this), this.timeToLive);
     }
-    await super.start();
+    super.start();
   }
 
   public getTopicPeerIds(topic: string): Set<string> | undefined {
@@ -70,7 +70,7 @@ export class LodestarGossipsub extends Gossipsub {
     }
 
     try {
-      await super.stop();
+      super.stop();
     } catch (error) {
       if (error.code !== "ERR_HEARTBEAT_NO_RUNNING") {
         throw error;
