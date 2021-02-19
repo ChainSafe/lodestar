@@ -124,7 +124,7 @@ export class BlockRangeFetcher implements IBlockRangeFetcher {
    */
   private async handleEmptyRange(peer: PeerId, blocks: SignedBeaconBlock[] = []): Promise<void> {
     const range = {start: this.rangeStart, end: this.rangeEnd};
-    const peerHeadSlot = this.network.peerMetadata.getStatus(peer)?.headSlot ?? 0;
+    const peerHeadSlot = this.network.peerMetadata.status.get(peer)?.headSlot ?? 0;
     this.logger.verbose("Regular Sync: Not found enough blocks for range", {
       range,
       numBlocks: blocks.length,

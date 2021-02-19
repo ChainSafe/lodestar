@@ -23,7 +23,7 @@ import {sendRequest} from "./request";
 import {handleRequest} from "./response";
 import {Method, ReqRespEncoding, timeoutOptions} from "../../constants";
 import {errorToScoreEvent, successToScoreEvent} from "./score";
-import {IPeerMetadataStore} from "../peers/interface";
+import {IPeerMetadataStore} from "../peers";
 import {IRpcScoreTracker} from "../peers/score";
 import {createRpcProtocol} from "../util";
 
@@ -73,7 +73,7 @@ export class ReqResp implements IReqResp {
 
           // Store peer encoding preference for this.sendRequest
           if (method === Method.Status) {
-            this.peerMetadata.setEncoding(peerId, encoding);
+            this.peerMetadata.encoding.set(peerId, encoding);
           }
 
           if (!this.performRequestHandler) {
@@ -160,7 +160,7 @@ export class ReqResp implements IReqResp {
     maxResponses?: number
   ): Promise<T> {
     try {
-      const encoding = this.peerMetadata.getEncoding(peerId) ?? ReqRespEncoding.SSZ_SNAPPY;
+      const encoding = this.peerMetadata.encoding.get(peerId) ?? ReqRespEncoding.SSZ_SNAPPY;
       const result = await sendRequest<T>(
         {libp2p: this.libp2p, logger: this.logger, config: this.config},
         peerId,

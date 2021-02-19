@@ -139,7 +139,7 @@ export class BeaconReqRespHandler implements IReqRespHandler {
     }
 
     // set status on peer
-    this.network.peerMetadata.setStatus(peerId, status);
+    this.network.peerMetadata.status.set(peerId, status);
 
     // send status response
     yield this.chain.getStatus();
@@ -211,7 +211,7 @@ export class BeaconReqRespHandler implements IReqRespHandler {
     if (direction === "outbound") {
       const request = this.chain.getStatus();
       try {
-        this.network.peerMetadata.setStatus(peerId, await this.network.reqResp.status(peerId, request));
+        this.network.peerMetadata.status.set(peerId, await this.network.reqResp.status(peerId, request));
       } catch (e) {
         this.logger.verbose("Failed to get peer latest status and metadata", {
           peerId: peerId.toB58String(),

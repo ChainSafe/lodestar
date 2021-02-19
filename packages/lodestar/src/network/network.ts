@@ -19,7 +19,7 @@ import {MetadataController} from "./metadata";
 import {Discv5, Discv5Discovery, ENR} from "@chainsafe/discv5";
 import {DiversifyPeersBySubnetTask} from "./tasks/diversifyPeersBySubnetTask";
 import {CheckPeerAliveTask} from "./tasks/checkPeerAliveTask";
-import {IPeerMetadataStore} from "./peers/interface";
+import {IPeerMetadataStore} from "./peers";
 import {Libp2pPeerMetadataStore} from "./peers/metastore";
 import {getPeerCountBySubnet} from "./peers/utils";
 import {IRpcScoreTracker, SimpleRpcScoreTracker} from "./peers/score";

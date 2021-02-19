@@ -26,7 +26,7 @@ function getPeersThatSupportSync(network: INetwork): IPeerWithMetadata[] {
 
   for (const libp2pPeer of network.getPeers({supportsProtocols: getSyncProtocols()})) {
     const peerId = libp2pPeer.id;
-    const status = network.peerMetadata.getStatus(peerId);
+    const status = network.peerMetadata.status.get(peerId);
     const score = network.peerRpcScores.getScore(peerId);
     if (status) {
       peers.push({peerId, status, score});

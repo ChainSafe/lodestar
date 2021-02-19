@@ -33,8 +33,8 @@ describe("Libp2pPeerMetadataStore", function () {
   it("can store and retrieve encoding", function () {
     const store = new Libp2pPeerMetadataStore(config, metabookStub);
     const value = ReqRespEncoding.SSZ_SNAPPY;
-    store.setEncoding(peerId, value);
-    const result = store.getEncoding(peerId);
+    store.encoding.set(peerId, value);
+    const result = store.encoding.get(peerId);
 
     expect(result).to.be.equal(value);
   });
@@ -48,8 +48,8 @@ describe("Libp2pPeerMetadataStore", function () {
       headRoot: Buffer.alloc(32, 2),
       headSlot: 10,
     };
-    store.setStatus(peerId, value);
-    const result = store.getStatus(peerId);
+    store.status.set(peerId, value);
+    const result = store.status.get(peerId);
 
     expect(config.types.Status.equals(result as Status, value)).to.be.true;
   });
@@ -60,8 +60,8 @@ describe("Libp2pPeerMetadataStore", function () {
       attnets: Array.from({length: 64}, () => true),
       seqNumber: BigInt(20),
     };
-    store.setMetadata(peerId, value);
-    const result = store.getMetadata(peerId);
+    store.metadata.set(peerId, value);
+    const result = store.metadata.get(peerId);
 
     expect(config.types.Metadata.equals(result as Metadata, value)).to.be.true;
   });
@@ -69,8 +69,8 @@ describe("Libp2pPeerMetadataStore", function () {
   it("can store and retrieve score", function () {
     const store = new Libp2pPeerMetadataStore(config, metabookStub);
     const value = 80;
-    store.setRpcScore(peerId, value);
-    const result = store.getRpcScore(peerId);
+    store.rpcScore.set(peerId, value);
+    const result = store.rpcScore.get(peerId);
 
     expect(config.types.Number64.equals(result as number, value)).to.be.true;
   });

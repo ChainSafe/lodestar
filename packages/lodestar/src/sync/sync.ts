@@ -215,7 +215,7 @@ export class BeaconSync implements IBeaconSync {
     return this.network
       .getPeers({supportsProtocols: protocols})
       .filter((peer) => {
-        return !!this.network.peerMetadata.getStatus(peer.id) && this.network.peerRpcScores.getScore(peer.id) > 50;
+        return !!this.network.peerMetadata.status.get(peer.id) && this.network.peerRpcScores.getScore(peer.id) > 50;
       })
       .map((peer) => peer.id);
   }
