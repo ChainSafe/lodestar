@@ -8,8 +8,6 @@ import sinon, {SinonStubbedInstance} from "sinon";
 import {GENESIS_EPOCH, Method, ZERO_HASH} from "../../../src/constants";
 import {IBeaconDb} from "../../../src/db/api";
 import {Libp2pNetwork} from "../../../src/network";
-import {IPeerMetadataStore} from "../../../src/network/peers/interface";
-import {Libp2pPeerMetadataStore} from "../../../src/network/peers/metastore";
 import {ReqResp} from "../../../src/network/reqresp/reqResp";
 import {BeaconReqRespHandler} from "../../../src/sync/reqResp";
 import {generateEmptySignedBlock} from "../../utils/block";
@@ -18,6 +16,7 @@ import {silentLogger} from "../../utils/logger";
 import {generatePeer} from "../../utils/peer";
 import {generateState} from "../../utils/state";
 import {StubbedBeaconChain, StubbedBeaconDb} from "../../utils/stub";
+import {getStubbedMetadataStore, StubbedIPeerMetadataStore} from "../../utils/peer";
 
 chai.use(chaiAsPromised);
 
@@ -28,7 +27,7 @@ describe("sync req resp", function () {
   let syncRpc: BeaconReqRespHandler;
   let chainStub: StubbedBeaconChain,
     networkStub: SinonStubbedInstance<Libp2pNetwork>,
-    metaStub: SinonStubbedInstance<IPeerMetadataStore>,
+    metaStub: StubbedIPeerMetadataStore,
     reqRespStub: SinonStubbedInstance<ReqResp>;
   let dbStub: StubbedBeaconDb;
 
@@ -43,7 +42,7 @@ describe("sync req resp", function () {
     reqRespStub = sandbox.createStubInstance(ReqResp);
     networkStub = sandbox.createStubInstance(Libp2pNetwork);
     networkStub.reqResp = reqRespStub as ReqResp & SinonStubbedInstance<ReqResp>;
-    metaStub = sandbox.createStubInstance(Libp2pPeerMetadataStore);
+    metaStub = getStubbedMetadataStore();
     networkStub.peerMetadata = metaStub;
     dbStub = new StubbedBeaconDb(sandbox);
 

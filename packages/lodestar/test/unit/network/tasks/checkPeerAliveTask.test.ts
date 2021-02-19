@@ -6,13 +6,12 @@ import {WinstonLogger} from "@chainsafe/lodestar-utils";
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import {expect} from "chai";
 import PeerId from "peer-id";
-import {IPeerMetadataStore} from "../../../../src/network/peers/interface";
-import {Libp2pPeerMetadataStore} from "../../../../src/network/peers/metastore";
+import {getStubbedMetadataStore, StubbedIPeerMetadataStore} from "../../../utils/peer";
 
 describe("CheckPeerAliveTask", function () {
   let networkStub: SinonStubbedInstance<INetwork>;
   let reqRespStub: SinonStubbedInstance<IReqResp>;
-  let peerMetadataStub: SinonStubbedInstance<IPeerMetadataStore>;
+  let peerMetadataStub: StubbedIPeerMetadataStore;
   let task: CheckPeerAliveTask;
   let peerId: PeerId;
 
@@ -20,7 +19,7 @@ describe("CheckPeerAliveTask", function () {
     networkStub = sinon.createStubInstance(Libp2pNetwork);
     reqRespStub = sinon.createStubInstance(ReqResp);
     networkStub.reqResp = reqRespStub;
-    peerMetadataStub = sinon.createStubInstance(Libp2pPeerMetadataStore);
+    peerMetadataStub = getStubbedMetadataStore();
     networkStub.peerMetadata = peerMetadataStub;
     task = new CheckPeerAliveTask(config, {
       logger: new WinstonLogger(),
@@ -49,7 +48,7 @@ describe("CheckPeerAliveTask", function () {
 
   it("ping successfully, return same sequence number", async () => {
     reqRespStub.ping.resolves(BigInt(1));
-    peerMetadataStub.getMetadata.withArgs(peerId).returns({
+    peerMetadataStub.metadata.get.withArgs(peerId).returns({
       seqNumber: BigInt(1),
       attnets: Array(64).fill(true),
     });
@@ -61,7 +60,7 @@ describe("CheckPeerAliveTask", function () {
 
   it("ping successfully, return bigger sequence number", async () => {
     reqRespStub.ping.resolves(BigInt(10));
-    peerMetadataStub.getMetadata.withArgs(peerId).returns({
+    peerMetadataStub.metadata.get.withArgs(peerId).returns({
       seqNumber: BigInt(1),
       attnets: Array(64).fill(true),
     });

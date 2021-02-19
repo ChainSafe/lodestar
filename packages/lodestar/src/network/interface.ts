@@ -18,7 +18,7 @@ import PeerId from "peer-id";
 import StrictEventEmitter from "strict-event-emitter-types";
 import {IGossip} from "./gossip/interface";
 import {MetadataController} from "./metadata";
-import {IPeerMetadataStore} from "./peers/interface";
+import {IPeerMetadataStore} from "./peers";
 import {IRpcScoreTracker} from "./peers/score";
 import {ReqRespHandler} from "./reqresp";
 

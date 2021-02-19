@@ -5,7 +5,7 @@ import {getStatusProtocols, INetwork} from "../../network";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {toHexString} from "@chainsafe/ssz";
 import {ZERO_HASH} from "../../constants";
-import {IPeerMetadataStore} from "../../network/peers/interface";
+import {IPeerMetadataStore} from "../../network/peers";
 import {getSyncPeers} from "./peers";
 
 export function getStatusFinalizedCheckpoint(status: Status): Checkpoint {
@@ -16,7 +16,7 @@ export async function syncPeersStatus(network: INetwork, status: Status): Promis
   await Promise.all(
     network.getPeers({supportsProtocols: getStatusProtocols()}).map(async (peer) => {
       try {
-        network.peerMetadata.setStatus(peer.id, await network.reqResp.status(peer.id, status));
+        network.peerMetadata.status.set(peer.id, await network.reqResp.status(peer.id, status));
         // eslint-disable-next-line no-empty
       } catch {}
     })
@@ -29,7 +29,7 @@ export async function syncPeersStatus(network: INetwork, status: Status): Promis
 export function getBestHead(peers: PeerId[], peerMetaStore: IPeerMetadataStore): {slot: number; root: Root} {
   return peers
     .map((peerId) => {
-      const status = peerMetaStore.getStatus(peerId);
+      const status = peerMetaStore.status.get(peerId);
       return status ? {slot: status.headSlot, root: status.headRoot} : {slot: 0, root: ZERO_HASH};
     })
     .reduce(
@@ -46,7 +46,7 @@ export function getBestHead(peers: PeerId[], peerMetaStore: IPeerMetadataStore):
 export function getBestPeer(config: IBeaconConfig, peers: PeerId[], peerMetaStore: IPeerMetadataStore): PeerId {
   const {root} = getBestHead(peers, peerMetaStore);
   return peers.find((peerId) =>
-    config.types.Root.equals(root, peerMetaStore.getStatus(peerId)?.headRoot || ZERO_HASH)
+    config.types.Root.equals(root, peerMetaStore.status.get(peerId)?.headRoot || ZERO_HASH)
   )!;
 }
 
@@ -64,7 +64,7 @@ export function getBestPeerCandidates(forkChoice: IForkChoice, network: INetwork
   return getSyncPeers(
     network,
     (peer) => {
-      const status = network.peerMetadata.getStatus(peer);
+      const status = network.peerMetadata.status.get(peer);
       return !!status && status.headSlot > forkChoice.getHead().slot;
     },
     10

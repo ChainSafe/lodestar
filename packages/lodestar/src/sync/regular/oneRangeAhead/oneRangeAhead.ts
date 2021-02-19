@@ -138,7 +138,7 @@ export class ORARegularSync extends (EventEmitter as {new (): RegularSyncEventEm
       );
       if (peers && peers.length > 0) {
         bestPeer = getBestPeer(this.config, peers, this.network.peerMetadata);
-        const peerHeadSlot = this.network.peerMetadata.getStatus(bestPeer)!.headSlot;
+        const peerHeadSlot = this.network.peerMetadata.status.get(bestPeer)!.headSlot;
         this.logger.info("Regular Sync: Found best peer", {
           peerId: bestPeer.toB58String(),
           peerHeadSlot,

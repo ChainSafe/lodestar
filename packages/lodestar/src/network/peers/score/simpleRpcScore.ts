@@ -1,5 +1,5 @@
 import {RpcScoreEvent, IRpcScoreTracker} from "./interface";
-import {IPeerMetadataStore} from "../interface";
+import {IPeerMetadataStore} from "../metastore";
 import PeerId from "peer-id";
 
 const scoreConstants: Record<RpcScoreEvent, number> = {
@@ -24,17 +24,17 @@ export class SimpleRpcScoreTracker implements IRpcScoreTracker {
   }
 
   public getScore(peer: PeerId): number {
-    return this.store.getRpcScore(peer) ?? DEFAULT_RPC_SCORE;
+    return this.store.rpcScore.get(peer) ?? DEFAULT_RPC_SCORE;
   }
 
   public reset(peer: PeerId): void {
-    this.store.setRpcScore(peer, DEFAULT_RPC_SCORE);
+    this.store.rpcScore.set(peer, DEFAULT_RPC_SCORE);
   }
 
   public update(peer: PeerId, event: RpcScoreEvent): void {
     const currentScore = this.getScore(peer);
     const delta = scoreConstants[event];
     // ensure score is between min and max
-    this.store.setRpcScore(peer, Math.max(Math.min(MAX_SCORE, currentScore + delta), MIN_SCORE));
+    this.store.rpcScore.set(peer, Math.max(Math.min(MAX_SCORE, currentScore + delta), MIN_SCORE));
   }
 }

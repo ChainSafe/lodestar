@@ -11,15 +11,15 @@ import * as slotUtils from "@chainsafe/lodestar-beacon-state-transition/lib/util
 import {ZERO_HASH} from "../../../../../src/constants";
 import {IBeaconClock, LocalClock} from "../../../../../src/chain/clock";
 import {generateEmptySignedBlock} from "../../../../utils/block";
-import {IPeerMetadataStore, Libp2pPeerMetadataStore} from "../../../../../src/network/peers";
 import {Status} from "@chainsafe/lodestar-types";
+import {getStubbedMetadataStore, StubbedIPeerMetadataStore} from "../../../../utils/peer";
 
 describe("BlockRangeFetcher", function () {
   let fetcher: BlockRangeFetcher;
   let chainStub: SinonStubbedInstance<IBeaconChain>;
   let clockStub: SinonStubbedInstance<IBeaconClock>;
   let networkStub: SinonStubbedInstance<INetwork>;
-  let metadataStub: SinonStubbedInstance<IPeerMetadataStore>;
+  let metadataStub: StubbedIPeerMetadataStore;
   let getBlockRangeStub: SinonStub;
   let getCurrentSlotStub: SinonStub;
   const logger = new WinstonLogger();
@@ -35,7 +35,7 @@ describe("BlockRangeFetcher", function () {
     clockStub = sandbox.createStubInstance(LocalClock);
     chainStub.clock = clockStub;
     networkStub = sandbox.createStubInstance(Libp2pNetwork);
-    metadataStub = sandbox.createStubInstance(Libp2pPeerMetadataStore);
+    metadataStub = getStubbedMetadataStore();
     networkStub.peerMetadata = metadataStub;
     fetcher = new BlockRangeFetcher(
       {},
@@ -132,7 +132,7 @@ describe("BlockRangeFetcher", function () {
     getBlockRangeStub.onFirstCall().resolves([]);
     getBlockRangeStub.onSecondCall().resolves([firstBlock]);
     getBlockRangeStub.onThirdCall().resolves([firstBlock, secondBlock]);
-    metadataStub.getStatus.returns({headSlot: 3000} as Status);
+    metadataStub.status.get.returns({headSlot: 3000} as Status);
     const result = await fetcher.getNextBlockRange();
     expect(getPeers.calledThrice).to.be.true;
     // should switch peer
@@ -165,7 +165,7 @@ describe("BlockRangeFetcher", function () {
     thirdBlock.message.parentRoot = config.types.BeaconBlock.hashTreeRoot(secondBlock.message);
     getBlockRangeStub.onFirstCall().resolves([firstBlock, secondBlock]);
     getBlockRangeStub.onSecondCall().resolves([firstBlock, secondBlock, thirdBlock]);
-    metadataStub.getStatus.returns({headSlot: 3000} as Status);
+    metadataStub.status.get.returns({headSlot: 3000} as Status);
     const result = await fetcher.getNextBlockRange();
     expect(getPeers.calledTwice).to.be.true;
     // should switch peer

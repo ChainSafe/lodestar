@@ -19,9 +19,8 @@ import {generateBlockSummary, generateEmptySignedBlock} from "../../../utils/blo
 import {ZERO_HASH} from "@chainsafe/lodestar-beacon-state-transition";
 import {INetwork, Libp2pNetwork} from "../../../../src/network";
 import {generatePeer} from "../../../utils/peer";
-import {IPeerMetadataStore} from "../../../../src/network/peers/interface";
-import {Libp2pPeerMetadataStore} from "../../../../src/network/peers/metastore";
 import {IRpcScoreTracker, SimpleRpcScoreTracker} from "../../../../src/network/peers";
+import {getStubbedMetadataStore, StubbedIPeerMetadataStore} from "../../../utils/peer";
 
 describe("sync utils", function () {
   const sandbox = sinon.createSandbox();
@@ -45,10 +44,10 @@ describe("sync utils", function () {
   });
 
   describe("getBestHead and getBestPeer", () => {
-    let metastoreStub: SinonStubbedInstance<IPeerMetadataStore>;
+    let metastoreStub: StubbedIPeerMetadataStore;
 
     beforeEach(function () {
-      metastoreStub = sinon.createStubInstance(Libp2pPeerMetadataStore);
+      metastoreStub = getStubbedMetadataStore();
     });
 
     it("should get best head and best peer", async () => {
@@ -57,21 +56,21 @@ describe("sync utils", function () {
       const peer3 = await PeerId.create();
       const peer4 = await PeerId.create();
       const peers = [peer1, peer2, peer3, peer4];
-      metastoreStub.getStatus.withArgs(peer1).returns({
+      metastoreStub.status.get.withArgs(peer1).returns({
         forkDigest: Buffer.alloc(0),
         finalizedRoot: Buffer.alloc(0),
         finalizedEpoch: 0,
         headRoot: Buffer.alloc(32, 1),
         headSlot: 1000,
       });
-      metastoreStub.getStatus.withArgs(peer2).returns({
+      metastoreStub.status.get.withArgs(peer2).returns({
         forkDigest: Buffer.alloc(0),
         finalizedRoot: Buffer.alloc(0),
         finalizedEpoch: 0,
         headRoot: Buffer.alloc(32, 2),
         headSlot: 2000,
       });
-      metastoreStub.getStatus.withArgs(peer3).returns({
+      metastoreStub.status.get.withArgs(peer3).returns({
         forkDigest: Buffer.alloc(0),
         finalizedRoot: Buffer.alloc(0),
         finalizedEpoch: 0,
@@ -94,11 +93,11 @@ describe("sync utils", function () {
   describe("checkBestPeer", function () {
     let networkStub: SinonStubbedInstance<INetwork>;
     let forkChoiceStub: SinonStubbedInstance<ForkChoice> & ForkChoice;
-    let metastoreStub: SinonStubbedInstance<IPeerMetadataStore>;
+    let metastoreStub: StubbedIPeerMetadataStore;
     let peerScoreStub: SinonStubbedInstance<IRpcScoreTracker>;
 
     beforeEach(() => {
-      metastoreStub = sinon.createStubInstance(Libp2pPeerMetadataStore);
+      metastoreStub = getStubbedMetadataStore();
       networkStub = sinon.createStubInstance(Libp2pNetwork);
       networkStub.peerMetadata = metastoreStub;
       forkChoiceStub = sinon.createStubInstance(ForkChoice) as SinonStubbedInstance<ForkChoice> & ForkChoice;
@@ -143,7 +142,7 @@ describe("sync utils", function () {
     it("peer head slot is not better than us", async function () {
       const peer1 = await PeerId.create();
       networkStub.getPeers.returns([generatePeer(peer1)]);
-      metastoreStub.getStatus.withArgs(peer1).returns({
+      metastoreStub.status.get.withArgs(peer1).returns({
         finalizedEpoch: 0,
         finalizedRoot: Buffer.alloc(0),
         forkDigest: Buffer.alloc(0),
@@ -161,7 +160,7 @@ describe("sync utils", function () {
     it("peer is good for best peer", async function () {
       const peer1 = await PeerId.create();
       networkStub.getPeers.returns([generatePeer(peer1)]);
-      metastoreStub.getStatus.withArgs(peer1).returns({
+      metastoreStub.status.get.withArgs(peer1).returns({
         finalizedEpoch: 0,
         finalizedRoot: Buffer.alloc(0),
         forkDigest: Buffer.alloc(0),
