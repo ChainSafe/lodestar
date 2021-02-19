@@ -30,13 +30,6 @@ module.exports = {
     "plugin:import/typescript",
     "plugin:@typescript-eslint/recommended"
   ],
-  settings: {
-    "import/resolver": {
-      "@mpetrunic/eslint-import-resolver-lerna": {
-        packages: path.resolve(__dirname, "packages")
-      }
-    }
-  },
   rules: {
     "prettier/prettier": "error",
     //doesnt work, it reports false errors
