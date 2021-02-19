@@ -1,8 +1,8 @@
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import {WinstonLogger} from "@chainsafe/lodestar-utils";
-import {generatePerformanceState, initBLS} from "./util";
+import {generatePerformanceState, initBLS} from "../../../util";
 import {expect} from "chai";
-import {phase0} from "../../src";
+import {phase0} from "../../../../../src";
 
 describe("Epoch Processing Performance Tests", function () {
   let state: phase0.fast.CachedValidatorsBeaconState;

@@ -3,8 +3,8 @@ import {SignedBeaconBlock, SignedVoluntaryExit} from "@chainsafe/lodestar-types"
 import {WinstonLogger} from "@chainsafe/lodestar-utils";
 import {List} from "@chainsafe/ssz";
 import {expect} from "chai";
-import {generatePerformanceBlock, generatePerformanceState, initBLS} from "../util";
-import {phase0} from "../../../src";
+import {generatePerformanceBlock, generatePerformanceState, initBLS} from "../../../util";
+import {phase0} from "../../../../../src";
 
 describe("Process Blocks Performance Test", function () {
   this.timeout(0);
