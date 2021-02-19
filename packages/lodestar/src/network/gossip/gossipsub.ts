@@ -153,7 +153,7 @@ export class LodestarGossipsub extends Gossipsub {
    * Override default `_buildMessage` to snappy-compress the data
    */
   public _buildMessage(msg: InMessage): Promise<InMessage> {
-    msg.data = encodeMessageData(msg.topicIDs[0], msg.data!);
+    msg.data = encodeMessageData(msg.topicIDs[0], msg.data);
     return super._buildMessage(msg);
   }
 
@@ -162,7 +162,7 @@ export class LodestarGossipsub extends Gossipsub {
    */
   public getMsgId(msg: ILodestarGossipMessage): Uint8Array {
     if (!msg.msgId) {
-      msg.msgId = computeMsgId(msg.topicIDs[0], msg.data!);
+      msg.msgId = computeMsgId(msg.topicIDs[0], msg.data);
     }
     return msg.msgId;
   }
@@ -201,7 +201,7 @@ export class LodestarGossipsub extends Gossipsub {
   }
 
   private deserializeGossipMessage(topic: string, msg: InMessage): {object: GossipObject; subnet?: number} {
-    const data = decodeMessageData(topic, msg.data!);
+    const data = decodeMessageData(topic, msg.data);
 
     if (isAttestationSubnetTopic(topic)) {
       const subnet = getSubnetFromAttestationSubnetTopic(topic);
