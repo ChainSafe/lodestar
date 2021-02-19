@@ -13,8 +13,8 @@ interface IResult {
   serialized: Uint8Array;
 }
 
-export function testStatic(type: keyof IBeaconSSZTypes): void {
-  const sszType = safeType(config.types[type]) as CompositeType<any>;
+export function testStatic(type: keyof IBeaconSSZTypes["phase0"]): void {
+  const sszType = safeType(config.types.phase0[type]) as CompositeType<any>;
   for (const caseName of [
     "ssz_lengthy",
     "ssz_max",

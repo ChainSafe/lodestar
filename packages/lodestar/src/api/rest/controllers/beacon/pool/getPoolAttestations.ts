@@ -11,7 +11,7 @@ export const getPoolAttestations: ApiController<{slot: string; committee_index: 
     });
     resp.status(200).send({
       data: attestations.map((attestation) => {
-        return this.config.types.Attestation.toJson(attestation, {case: "snake"});
+        return this.config.types.phase0.Attestation.toJson(attestation, {case: "snake"});
       }),
     });
   },

@@ -1,4 +1,4 @@
-import {BLSPubkey, SlashingProtectionBlock} from "@chainsafe/lodestar-types";
+import {BLSPubkey, phase0} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {isEqualNonZeroRoot} from "../utils";
 import {InvalidBlockError, InvalidBlockErrorCode} from "./errors";
@@ -22,7 +22,7 @@ export class SlashingProtectionBlockService {
    * Check a block proposal for slash safety, and if it is safe, record it in the database.
    * This is the safe, externally-callable interface for checking block proposals.
    */
-  async checkAndInsertBlockProposal(pubkey: BLSPubkey, block: SlashingProtectionBlock): Promise<void> {
+  async checkAndInsertBlockProposal(pubkey: BLSPubkey, block: phase0.SlashingProtectionBlock): Promise<void> {
     const safeStatus = await this.checkBlockProposal(pubkey, block);
 
     if (safeStatus != SafeStatus.SAME_DATA) {
@@ -35,7 +35,7 @@ export class SlashingProtectionBlockService {
   /**
    * Check a block proposal from `pubKey` for slash safety.
    */
-  async checkBlockProposal(pubkey: BLSPubkey, block: SlashingProtectionBlock): Promise<SafeStatus> {
+  async checkBlockProposal(pubkey: BLSPubkey, block: phase0.SlashingProtectionBlock): Promise<SafeStatus> {
     // Double proposal
     const sameSlotBlock = await this.blockBySlot.get(pubkey, block.slot);
     if (sameSlotBlock && block.slot === sameSlotBlock.slot) {
@@ -71,21 +71,21 @@ export class SlashingProtectionBlockService {
    * This should *only* be called in the same (exclusive) transaction as `checkBlockProposal`
    * so that the check isn't invalidated by a concurrent mutation
    */
-  async insertBlockProposal(pubkey: BLSPubkey, block: SlashingProtectionBlock): Promise<void> {
+  async insertBlockProposal(pubkey: BLSPubkey, block: phase0.SlashingProtectionBlock): Promise<void> {
     await this.blockBySlot.set(pubkey, [block]);
   }
 
   /**
    * Interchange import / export functionality
    */
-  async importBlocks(pubkey: BLSPubkey, blocks: SlashingProtectionBlock[]): Promise<void> {
+  async importBlocks(pubkey: BLSPubkey, blocks: phase0.SlashingProtectionBlock[]): Promise<void> {
     await this.blockBySlot.set(pubkey, blocks);
   }
 
   /**
    * Interchange import / export functionality
    */
-  async exportBlocks(pubkey: BLSPubkey): Promise<SlashingProtectionBlock[]> {
+  async exportBlocks(pubkey: BLSPubkey): Promise<phase0.SlashingProtectionBlock[]> {
     return this.blockBySlot.getAll(pubkey);
   }
 

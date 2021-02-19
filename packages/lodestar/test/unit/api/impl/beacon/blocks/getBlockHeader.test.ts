@@ -59,6 +59,6 @@ describe("api - beacon - getBlockHeader", function () {
     resolveBlockIdStub.withArgs(config, sinon.match.any, sinon.match.any, "head").resolves(generateEmptySignedBlock());
     const result = await blockApi.getBlockHeader("head");
     expect(result).to.not.be.null;
-    expect(() => config.types.SignedBeaconHeaderResponse.assertValidValue(result)).to.not.throw();
+    expect(() => config.types.phase0.SignedBeaconHeaderResponse.assertValidValue(result)).to.not.throw();
   });
 });

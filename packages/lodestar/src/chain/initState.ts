@@ -4,9 +4,9 @@
 
 import {AbortSignal} from "abort-controller";
 
-import {blockToHeader, computeEpochAtSlot, phase0} from "@chainsafe/lodestar-beacon-state-transition";
+import {blockToHeader, computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
+import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {BeaconBlockHeader, BeaconState, Checkpoint, SignedBeaconBlock} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {toHexString, TreeBacked} from "@chainsafe/ssz";
 
@@ -21,7 +21,7 @@ import {CheckpointStateCache, StateContextCache} from "./stateCache";
 export async function persistGenesisResult(
   db: IBeaconDb,
   genesisResult: IGenesisResult,
-  genesisBlock: SignedBeaconBlock
+  genesisBlock: phase0.SignedBeaconBlock
 ): Promise<void> {
   await Promise.all([
     db.stateArchive.add(genesisResult.state),
@@ -38,7 +38,7 @@ export async function persistGenesisResult(
 export async function persistAnchorState(
   config: IBeaconConfig,
   db: IBeaconDb,
-  anchorState: TreeBacked<BeaconState>
+  anchorState: TreeBacked<phase0.BeaconState>
 ): Promise<void> {
   if (anchorState.slot === GENESIS_SLOT) {
     const genesisBlock = createGenesisBlock(config, anchorState);
@@ -48,9 +48,9 @@ export async function persistAnchorState(
   }
 }
 
-export function createGenesisBlock(config: IBeaconConfig, genesisState: BeaconState): SignedBeaconBlock {
-  const genesisBlock = config.types.SignedBeaconBlock.defaultValue();
-  const stateRoot = config.types.BeaconState.hashTreeRoot(genesisState);
+export function createGenesisBlock(config: IBeaconConfig, genesisState: phase0.BeaconState): phase0.SignedBeaconBlock {
+  const genesisBlock = config.types.phase0.SignedBeaconBlock.defaultValue();
+  const stateRoot = config.types.phase0.BeaconState.hashTreeRoot(genesisState);
   genesisBlock.message.stateRoot = stateRoot;
   return genesisBlock;
 }
@@ -64,15 +64,15 @@ export async function initStateFromEth1(
   logger: ILogger,
   eth1Provider: Eth1Provider,
   signal: AbortSignal
-): Promise<TreeBacked<BeaconState>> {
+): Promise<TreeBacked<phase0.BeaconState>> {
   logger.info("Listening to eth1 for genesis state");
 
   const builder = new GenesisBuilder(config, {eth1Provider, logger, signal});
 
   const genesisResult = await builder.waitForGenesis();
   const genesisBlock = createGenesisBlock(config, genesisResult.state);
-  const stateRoot = config.types.BeaconState.hashTreeRoot(genesisResult.state);
-  const blockRoot = config.types.BeaconBlock.hashTreeRoot(genesisBlock.message);
+  const stateRoot = config.types.phase0.BeaconState.hashTreeRoot(genesisResult.state);
+  const blockRoot = config.types.phase0.BeaconBlock.hashTreeRoot(genesisBlock.message);
 
   logger.info("Initializing genesis state", {
     stateRoot: toHexString(stateRoot),
@@ -91,7 +91,7 @@ export async function initStateFromDb(
   config: IBeaconConfig,
   db: IBeaconDb,
   logger: ILogger
-): Promise<TreeBacked<BeaconState>> {
+): Promise<TreeBacked<phase0.BeaconState>> {
   const state = await db.stateArchive.lastValue();
   if (!state) {
     throw new Error("No state exists in database");
@@ -100,7 +100,7 @@ export async function initStateFromDb(
   logger.info("Initializing beacon state from db", {
     slot: state.slot,
     epoch: computeEpochAtSlot(config, state.slot),
-    stateRoot: toHexString(config.types.BeaconState.hashTreeRoot(state)),
+    stateRoot: toHexString(config.types.phase0.BeaconState.hashTreeRoot(state)),
   });
 
   return state;
@@ -113,12 +113,12 @@ export async function initStateFromAnchorState(
   config: IBeaconConfig,
   db: IBeaconDb,
   logger: ILogger,
-  anchorState: TreeBacked<BeaconState>
-): Promise<TreeBacked<BeaconState>> {
+  anchorState: TreeBacked<phase0.BeaconState>
+): Promise<TreeBacked<phase0.BeaconState>> {
   logger.info("Initializing beacon state", {
     slot: anchorState.slot,
     epoch: computeEpochAtSlot(config, anchorState.slot),
-    stateRoot: toHexString(config.types.BeaconState.hashTreeRoot(anchorState)),
+    stateRoot: toHexString(config.types.phase0.BeaconState.hashTreeRoot(anchorState)),
   });
 
   await persistAnchorState(config, db, anchorState);
@@ -133,10 +133,10 @@ export function restoreStateCaches(
   config: IBeaconConfig,
   stateCache: StateContextCache,
   checkpointStateCache: CheckpointStateCache,
-  state: TreeBacked<BeaconState>
+  state: TreeBacked<phase0.BeaconState>
 ): void {
   const {checkpoint} = computeAnchorCheckpoint(config, state);
-  const epochCtx = new phase0.EpochContext(config);
+  const epochCtx = new phase0.fast.EpochContext(config);
   epochCtx.loadState(state);
 
   const stateCtx = {state: phase0.fast.createCachedValidatorsBeaconState(state), epochCtx};
@@ -146,7 +146,7 @@ export function restoreStateCaches(
   checkpointStateCache.add(checkpoint, stateCtx);
 }
 
-export function initBeaconMetrics(metrics: IBeaconMetrics, state: TreeBacked<BeaconState>): void {
+export function initBeaconMetrics(metrics: IBeaconMetrics, state: TreeBacked<phase0.BeaconState>): void {
   metrics.headSlot.set(state.slot);
   metrics.previousJustifiedEpoch.set(state.previousJustifiedCheckpoint.epoch);
   metrics.currentJustifiedEpoch.set(state.currentJustifiedCheckpoint.epoch);
@@ -155,21 +155,21 @@ export function initBeaconMetrics(metrics: IBeaconMetrics, state: TreeBacked<Bea
 
 export function computeAnchorCheckpoint(
   config: IBeaconConfig,
-  anchorState: BeaconState
-): {checkpoint: Checkpoint; blockHeader: BeaconBlockHeader} {
+  anchorState: phase0.BeaconState
+): {checkpoint: phase0.Checkpoint; blockHeader: phase0.BeaconBlockHeader} {
   let blockHeader;
   let root;
   if (anchorState.latestBlockHeader.slot === GENESIS_SLOT) {
-    const block = config.types.BeaconBlock.defaultValue();
-    block.stateRoot = config.types.BeaconState.hashTreeRoot(anchorState);
+    const block = config.types.phase0.BeaconBlock.defaultValue();
+    block.stateRoot = config.types.phase0.BeaconState.hashTreeRoot(anchorState);
     blockHeader = blockToHeader(config, block);
-    root = config.types.BeaconBlockHeader.hashTreeRoot(blockHeader);
+    root = config.types.phase0.BeaconBlockHeader.hashTreeRoot(blockHeader);
   } else {
-    blockHeader = config.types.BeaconBlockHeader.clone(anchorState.latestBlockHeader);
+    blockHeader = config.types.phase0.BeaconBlockHeader.clone(anchorState.latestBlockHeader);
     if (config.types.Root.equals(blockHeader.stateRoot, ZERO_HASH)) {
-      blockHeader.stateRoot = config.types.BeaconState.hashTreeRoot(anchorState);
+      blockHeader.stateRoot = config.types.phase0.BeaconState.hashTreeRoot(anchorState);
     }
-    root = config.types.BeaconBlockHeader.hashTreeRoot(blockHeader);
+    root = config.types.phase0.BeaconBlockHeader.hashTreeRoot(blockHeader);
   }
 
   return {

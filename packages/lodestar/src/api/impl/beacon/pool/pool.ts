@@ -1,6 +1,4 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {Attestation, AttesterSlashing, ProposerSlashing} from "@chainsafe/lodestar-types";
-import {SignedVoluntaryExit} from "../../../../../../lodestar-types/lib/types/operations";
 import {IAttestationJob, IBeaconChain} from "../../../../chain";
 import {AttestationError, AttestationErrorCode} from "../../../../chain/errors";
 import {validateGossipAttestation} from "../../../../chain/validation";
@@ -34,7 +32,7 @@ export class BeaconPoolApi implements IBeaconPoolApi {
     this.chain = modules.chain;
   }
 
-  public async getAttestations(filters: Partial<IAttestationFilters> = {}): Promise<Attestation[]> {
+  public async getAttestations(filters: Partial<IAttestationFilters> = {}): Promise<phase0.Attestation[]> {
     return (await this.db.attestation.values()).filter((attestation) => {
       if (filters.slot && filters.slot !== attestation.data.slot) {
         return false;
@@ -46,7 +44,7 @@ export class BeaconPoolApi implements IBeaconPoolApi {
     });
   }
 
-  public async submitAttestation(attestation: Attestation): Promise<void> {
+  public async submitAttestation(attestation: phase0.Attestation): Promise<void> {
     await checkSyncStatus(this.config, this.sync);
     const attestationJob = {
       attestation,
@@ -73,29 +71,29 @@ export class BeaconPoolApi implements IBeaconPoolApi {
     ]);
   }
 
-  public async getAttesterSlashings(): Promise<AttesterSlashing[]> {
+  public async getAttesterSlashings(): Promise<phase0.AttesterSlashing[]> {
     return this.db.attesterSlashing.values();
   }
 
-  public async submitAttesterSlashing(slashing: AttesterSlashing): Promise<void> {
+  public async submitAttesterSlashing(slashing: phase0.AttesterSlashing): Promise<void> {
     await validateGossipAttesterSlashing(this.config, this.chain, this.db, slashing);
     await Promise.all([this.network.gossip.publishAttesterSlashing(slashing), this.db.attesterSlashing.add(slashing)]);
   }
 
-  public async getProposerSlashings(): Promise<ProposerSlashing[]> {
+  public async getProposerSlashings(): Promise<phase0.ProposerSlashing[]> {
     return this.db.proposerSlashing.values();
   }
 
-  public async submitProposerSlashing(slashing: ProposerSlashing): Promise<void> {
+  public async submitProposerSlashing(slashing: phase0.ProposerSlashing): Promise<void> {
     await validateGossipProposerSlashing(this.config, this.chain, this.db, slashing);
     await Promise.all([this.network.gossip.publishProposerSlashing(slashing), this.db.proposerSlashing.add(slashing)]);
   }
 
-  public async getVoluntaryExits(): Promise<SignedVoluntaryExit[]> {
+  public async getVoluntaryExits(): Promise<phase0.SignedVoluntaryExit[]> {
     return this.db.voluntaryExit.values();
   }
 
-  public async submitVoluntaryExit(exit: SignedVoluntaryExit): Promise<void> {
+  public async submitVoluntaryExit(exit: phase0.SignedVoluntaryExit): Promise<void> {
     await validateGossipVoluntaryExit(this.config, this.chain, this.db, exit);
     await Promise.all([this.network.gossip.publishVoluntaryExit(exit), this.db.voluntaryExit.add(exit)]);
   }

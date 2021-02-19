@@ -39,7 +39,10 @@ describe("rest - config - getDepositContract", function () {
       chainId: config.params.DEPOSIT_CHAIN_ID,
       address: config.params.DEPOSIT_CONTRACT_ADDRESS,
     };
-    const expectedJson = config.types.Contract.toJson(depositContract, {case: "snake"}) as Record<string, unknown>;
+    const expectedJson = config.types.phase0.Contract.toJson(depositContract, {case: "snake"}) as Record<
+      string,
+      unknown
+    >;
     api.config.getDepositContract.resolves(depositContract);
     const response = await supertest(restApi.server.server)
       .get(urlJoin(CONFIG_PREFIX, getDepositContract.url))

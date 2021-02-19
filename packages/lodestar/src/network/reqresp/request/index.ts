@@ -2,7 +2,7 @@ import {AbortSignal} from "abort-controller";
 import {source as abortSource} from "abortable-iterator";
 import pipe from "it-pipe";
 import PeerId from "peer-id";
-import {RequestBody, ResponseBody} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ErrorAborted, ILogger, Context, withTimeout, TimeoutError} from "@chainsafe/lodestar-utils";
 import {Method, ReqRespEncoding, timeoutOptions} from "../../../constants";
@@ -34,12 +34,12 @@ export {RequestError, RequestErrorCode};
  *    - Any part of the response_chunk fails validation. Throws a typed error (see `SszSnappyError`)
  *    - The maximum number of requested chunks are read. Does not throw, returns read chunks only.
  */
-export async function sendRequest<T extends ResponseBody | ResponseBody[]>(
+export async function sendRequest<T extends phase0.ResponseBody | phase0.ResponseBody[]>(
   {libp2p, config, logger}: {libp2p: LibP2p; config: IBeaconConfig; logger: ILogger},
   peerId: PeerId,
   method: Method,
   encoding: ReqRespEncoding,
-  requestBody: RequestBody,
+  requestBody: phase0.RequestBody,
   maxResponses?: number,
   signal?: AbortSignal,
   options?: Partial<typeof timeoutOptions>,

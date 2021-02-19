@@ -1,9 +1,9 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {BeaconState} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {getCurrentEpoch} from "../../../";
 import {intToBytes} from "@chainsafe/lodestar-utils";
 
-export function processForkChanged(config: IBeaconConfig, state: BeaconState): void {
+export function processForkChanged(config: IBeaconConfig, state: phase0.BeaconState): void {
   const currentEpoch = getCurrentEpoch(config, state);
   const nextEpoch = currentEpoch + 1;
   const currentForkVersion = state.fork.currentVersion;

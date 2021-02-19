@@ -1,5 +1,4 @@
 import {config} from "@chainsafe/lodestar-config/mainnet";
-import {SignedBeaconBlock, SignedVoluntaryExit} from "@chainsafe/lodestar-types";
 import {WinstonLogger} from "@chainsafe/lodestar-utils";
 import {List} from "@chainsafe/ssz";
 import {expect} from "chai";
@@ -32,9 +31,9 @@ describe("Process Blocks Performance Test", function () {
   });
 
   it("should process multiple validator exits in same block", async () => {
-    const signedBlock: SignedBeaconBlock = await generatePerformanceBlock();
+    const signedBlock: phase0.SignedBeaconBlock = await generatePerformanceBlock();
     const exitEpoch = stateCtx.epochCtx.currentShuffling.epoch;
-    const voluntaryExits: SignedVoluntaryExit[] = [];
+    const voluntaryExits: phase0.SignedVoluntaryExit[] = [];
     const numValidatorExits = config.params.MAX_VOLUNTARY_EXITS;
     for (let i = 0; i < numValidatorExits; i++) {
       voluntaryExits.push({
@@ -42,7 +41,7 @@ describe("Process Blocks Performance Test", function () {
         signature: Buffer.alloc(96),
       });
     }
-    signedBlock.message.body.voluntaryExits = (voluntaryExits as unknown) as List<SignedVoluntaryExit>;
+    signedBlock.message.body.voluntaryExits = (voluntaryExits as unknown) as List<phase0.SignedVoluntaryExit>;
     const start = Date.now();
     logger.profile(`Process block ${signedBlock.message.slot} with ${numValidatorExits} validator exits`);
     phase0.fast.fastStateTransition(stateCtx, signedBlock, {

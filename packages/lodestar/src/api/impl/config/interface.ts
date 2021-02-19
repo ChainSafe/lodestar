@@ -1,8 +1,8 @@
 import {IBeaconParams} from "@chainsafe/lodestar-params";
-import {Fork, Contract} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 
 export interface IConfigApi {
-  getForkSchedule(): Promise<Fork[]>;
-  getDepositContract(): Promise<Contract>;
+  getForkSchedule(): Promise<phase0.Fork[]>;
+  getDepositContract(): Promise<phase0.Contract>;
   getSpec(): Promise<IBeaconParams>;
 }

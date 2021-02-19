@@ -1,5 +1,5 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {ResponseBody} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {Method, Methods, ReqRespEncoding, RpcResponseStatus} from "../../../constants";
 import {BufferedSource} from "../utils/bufferedSource";
 import {readEncodedPayload} from "../encodingStrategies";
@@ -25,7 +25,7 @@ export function responseDecode(
   config: IBeaconConfig,
   method: Method,
   encoding: ReqRespEncoding
-): (source: AsyncIterable<Buffer>) => AsyncGenerator<ResponseBody> {
+): (source: AsyncIterable<Buffer>) => AsyncGenerator<phase0.ResponseBody> {
   return async function* (source) {
     const type = Methods[method].responseSSZType(config);
     const isSszTree = method === Method.BeaconBlocksByRange || method === Method.BeaconBlocksByRoot;
@@ -50,7 +50,7 @@ export function responseDecode(
           throw new ResponseError(status, errorMessage);
         }
 
-        yield await readEncodedPayload<ResponseBody>(bufferedSource, encoding, type, {isSszTree});
+        yield await readEncodedPayload<phase0.ResponseBody>(bufferedSource, encoding, type, {isSszTree});
       }
     } finally {
       await bufferedSource.return();

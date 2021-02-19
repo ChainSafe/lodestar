@@ -5,9 +5,9 @@
 import {ContainerType, VectorType} from "@chainsafe/ssz";
 
 import {DEPOSIT_CONTRACT_TREE_DEPTH} from "../constants";
-import {IBeaconSSZTypes} from "../interface";
+import {IPhase0SSZTypes} from "../interface";
 
-export const ProposerSlashing = (ssz: IBeaconSSZTypes): ContainerType =>
+export const ProposerSlashing = (ssz: IPhase0SSZTypes): ContainerType =>
   new ContainerType({
     fields: {
       signedHeader1: ssz.SignedBeaconBlockHeader,
@@ -15,7 +15,7 @@ export const ProposerSlashing = (ssz: IBeaconSSZTypes): ContainerType =>
     },
   });
 
-export const AttesterSlashing = (ssz: IBeaconSSZTypes): ContainerType =>
+export const AttesterSlashing = (ssz: IPhase0SSZTypes): ContainerType =>
   new ContainerType({
     fields: {
       attestation1: ssz.IndexedAttestation,
@@ -23,7 +23,7 @@ export const AttesterSlashing = (ssz: IBeaconSSZTypes): ContainerType =>
     },
   });
 
-export const Attestation = (ssz: IBeaconSSZTypes): ContainerType =>
+export const Attestation = (ssz: IPhase0SSZTypes): ContainerType =>
   new ContainerType({
     fields: {
       aggregationBits: ssz.CommitteeBits,
@@ -32,7 +32,7 @@ export const Attestation = (ssz: IBeaconSSZTypes): ContainerType =>
     },
   });
 
-export const Deposit = (ssz: IBeaconSSZTypes): ContainerType =>
+export const Deposit = (ssz: IPhase0SSZTypes): ContainerType =>
   new ContainerType({
     fields: {
       proof: new VectorType({
@@ -43,7 +43,7 @@ export const Deposit = (ssz: IBeaconSSZTypes): ContainerType =>
     },
   });
 
-export const VoluntaryExit = (ssz: IBeaconSSZTypes): ContainerType =>
+export const VoluntaryExit = (ssz: IPhase0SSZTypes): ContainerType =>
   new ContainerType({
     fields: {
       epoch: ssz.Epoch,
@@ -51,7 +51,7 @@ export const VoluntaryExit = (ssz: IBeaconSSZTypes): ContainerType =>
     },
   });
 
-export const SignedVoluntaryExit = (ssz: IBeaconSSZTypes): ContainerType =>
+export const SignedVoluntaryExit = (ssz: IPhase0SSZTypes): ContainerType =>
   new ContainerType({
     fields: {
       message: ssz.VoluntaryExit,

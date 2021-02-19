@@ -2,7 +2,7 @@
 import {parentPort, workerData} from "worker_threads";
 
 import {init} from "@chainsafe/bls";
-import {Checkpoint} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {WinstonLogger} from "@chainsafe/lodestar-utils";
 
 import {getDevBeaconNode} from "../../utils/node/beacon";
@@ -36,7 +36,7 @@ import {getDevValidator} from "../../utils/node/validator";
       node.close().then(() => {
         parentPort!.postMessage({
           event: checkpointEvent,
-          checkpoint: node.config.types.Checkpoint.toJson(checkpoint as Checkpoint),
+          checkpoint: node.config.types.phase0.Checkpoint.toJson(checkpoint as phase0.Checkpoint),
         });
       })
     );

@@ -15,7 +15,7 @@ export const proposerDutiesController: ApiController<DefaultQuery, Params> = {
       .type("application/json")
       .send({
         data: duties.map((d) => {
-          return this.config.types.ProposerDuty.toJson(d, {case: "snake"});
+          return this.config.types.phase0.ProposerDuty.toJson(d, {case: "snake"});
         }),
       });
   },

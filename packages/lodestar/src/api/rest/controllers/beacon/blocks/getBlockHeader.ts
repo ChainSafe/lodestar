@@ -12,7 +12,7 @@ export const getBlockHeader: ApiController<DefaultQuery, {blockId: string}> = {
         return resp.status(404).send();
       }
       return resp.status(200).send({
-        data: this.config.types.SignedBeaconHeaderResponse.toJson(data, {case: "snake"}),
+        data: this.config.types.phase0.SignedBeaconHeaderResponse.toJson(data, {case: "snake"}),
       });
     } catch (e) {
       if (e.message === "Invalid block id") {

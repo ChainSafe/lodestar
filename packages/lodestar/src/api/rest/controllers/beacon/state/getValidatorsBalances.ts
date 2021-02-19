@@ -26,7 +26,7 @@ export const getStateValidatorsBalances: ApiController<Query, Params> = {
     }
     const balances = await this.api.beacon.state.getStateValidatorBalances(req.params.stateId, indices);
     return resp.status(200).send({
-      data: balances.map((b) => this.config.types.ValidatorBalance.toJson(b, {case: "snake"})),
+      data: balances.map((b) => this.config.types.phase0.ValidatorBalance.toJson(b, {case: "snake"})),
     });
   },
 

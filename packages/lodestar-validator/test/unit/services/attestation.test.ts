@@ -1,6 +1,6 @@
 import bls from "@chainsafe/bls";
 import {config} from "@chainsafe/lodestar-config/mainnet";
-import {AttesterDuty} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {LodestarEventIterator} from "@chainsafe/lodestar-utils";
 import {
   generateAttestation,
@@ -39,7 +39,7 @@ describe("validator attestation service", function () {
       })
     );
     slashingProtectionStub = sandbox.createStubInstance(SlashingProtection);
-    rpcClientStub.beacon.state.getStateValidator.resolves(config.types.ValidatorResponse.defaultValue());
+    rpcClientStub.beacon.state.getStateValidator.resolves(config.types.phase0.ValidatorResponse.defaultValue());
   });
 
   afterEach(() => {
@@ -73,7 +73,7 @@ describe("validator attestation service", function () {
       slashingProtectionStub,
       logger
     );
-    const duty: AttesterDuty = {
+    const duty: phase0.AttesterDuty = {
       slot: 1,
       committeeIndex: 1,
       committeeLength: 120,
@@ -114,7 +114,7 @@ describe("validator attestation service", function () {
     sandbox.stub(rpcClientStub.clock, "currentEpoch").get(() => 1);
     await service.start();
     const pubkey = secretKeys[0].toPublicKey().toBytes();
-    const duty: AttesterDuty = {
+    const duty: phase0.AttesterDuty = {
       slot: 1,
       committeeIndex: 2,
       committeeLength: 120,
@@ -149,7 +149,7 @@ describe("validator attestation service", function () {
     sandbox.stub(rpcClientStub.clock, "currentEpoch").get(() => 1);
     await service.start();
     const pubkey = secretKeys[0].toPublicKey().toBytes();
-    const duty: AttesterDuty = {
+    const duty: phase0.AttesterDuty = {
       slot: 1,
       committeeIndex: 3,
       committeeLength: 120,
@@ -189,7 +189,7 @@ describe("validator attestation service", function () {
     sandbox.stub(rpcClientStub.clock, "currentEpoch").get(() => 1);
     await service.start();
     const pubkey = secretKeys[0].toPublicKey().toBytes();
-    const duty: AttesterDuty = {
+    const duty: phase0.AttesterDuty = {
       slot: 10,
       committeeIndex: 1,
       committeeLength: 120,

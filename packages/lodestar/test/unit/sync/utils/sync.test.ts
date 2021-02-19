@@ -3,7 +3,7 @@ import deepmerge from "deepmerge";
 import PeerId from "peer-id";
 import sinon, {SinonStubbedInstance} from "sinon";
 
-import {Checkpoint, Status} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {isPlainObject} from "@chainsafe/lodestar-utils";
 import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
@@ -34,13 +34,13 @@ describe("sync utils", function () {
   });
 
   it("status to finalized checkpoint", function () {
-    const checkpoint: Checkpoint = {
+    const checkpoint: phase0.Checkpoint = {
       epoch: 1,
       root: Buffer.alloc(32, 4),
     };
     const status = generateStatus({finalizedEpoch: checkpoint.epoch, finalizedRoot: checkpoint.root});
     const result = getStatusFinalizedCheckpoint(status);
-    expect(config.types.Checkpoint.equals(result, checkpoint)).to.be.true;
+    expect(config.types.phase0.Checkpoint.equals(result, checkpoint)).to.be.true;
   });
 
   describe("getBestHead and getBestPeer", () => {
@@ -208,14 +208,14 @@ describe("sync utils", function () {
       const ancestorRoot = firstBlock.message.parentRoot;
       const secondBlock = generateEmptySignedBlock();
       secondBlock.message.slot = 1;
-      secondBlock.message.parentRoot = config.types.BeaconBlock.hashTreeRoot(firstBlock.message);
+      secondBlock.message.parentRoot = config.types.phase0.BeaconBlock.hashTreeRoot(firstBlock.message);
       checkLinearChainSegment(config, [firstBlock, secondBlock], ancestorRoot);
       // no error thrown means success
     });
   });
 });
 
-function generateStatus(overiddes: Partial<Status>): Status {
+function generateStatus(overiddes: Partial<phase0.Status>): phase0.Status {
   return deepmerge(
     {
       finalizedEpoch: 0,

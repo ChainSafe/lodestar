@@ -2,7 +2,7 @@
  * @module tasks used for running tasks on specific events
  */
 
-import {Checkpoint} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils";
 
@@ -86,7 +86,7 @@ export class TasksService implements IService {
     await this.interopSubnetsTask.stop();
   };
 
-  private onFinalizedCheckpoint = async (finalized: Checkpoint): Promise<void> => {
+  private onFinalizedCheckpoint = async (finalized: phase0.Checkpoint): Promise<void> => {
     try {
       await new ArchiveBlocksTask(
         this.config,

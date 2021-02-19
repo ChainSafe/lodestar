@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 // Minimal preset
 
-export const minimalYaml = {
+export const minimalJson = {
   CONFIG_NAME: "minimal",
 
   // Misc

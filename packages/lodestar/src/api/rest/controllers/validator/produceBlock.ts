@@ -23,7 +23,7 @@ export const produceBlockController: ApiController<Query, Params> = {
       .code(200)
       .type("application/json")
       .send({
-        data: this.config.types.BeaconBlock.toJson(block, {case: "snake"}),
+        data: this.config.types.phase0.BeaconBlock.toJson(block, {case: "snake"}),
       });
   },
 

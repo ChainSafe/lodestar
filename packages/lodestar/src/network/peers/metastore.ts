@@ -1,6 +1,6 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import PeerId from "peer-id";
-import {Metadata, Status} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {BasicType, ContainerType} from "@chainsafe/ssz";
 import {notNullish} from "../../util/notNullish";
 import {ReqRespEncoding} from "../../constants";
@@ -10,9 +10,9 @@ import {ReqRespEncoding} from "../../constants";
  */
 export interface IPeerMetadataStore {
   encoding: PeerStoreBucket<ReqRespEncoding>;
-  metadata: PeerStoreBucket<Metadata>;
+  metadata: PeerStoreBucket<phase0.Metadata>;
   rpcScore: PeerStoreBucket<number>;
-  status: PeerStoreBucket<Status>;
+  status: PeerStoreBucket<phase0.Status>;
 }
 
 export type PeerStoreBucket<T> = {
@@ -26,9 +26,9 @@ export type PeerStoreBucket<T> = {
  */
 export class Libp2pPeerMetadataStore implements IPeerMetadataStore {
   encoding: PeerStoreBucket<ReqRespEncoding>;
-  metadata: PeerStoreBucket<Metadata>;
+  metadata: PeerStoreBucket<phase0.Metadata>;
   rpcScore: PeerStoreBucket<number>;
-  status: PeerStoreBucket<Status>;
+  status: PeerStoreBucket<phase0.Status>;
 
   private readonly config: IBeaconConfig;
   private readonly metabook: MetadataBook;
@@ -37,9 +37,9 @@ export class Libp2pPeerMetadataStore implements IPeerMetadataStore {
     this.config = config;
     this.metabook = metabook;
     this.encoding = this.typedStore("encoding", new StringType());
-    this.metadata = this.typedStore("metadata", this.config.types.Metadata);
+    this.metadata = this.typedStore("metadata", this.config.types.phase0.Metadata);
     this.rpcScore = this.typedStore("score", this.config.types.Number64);
-    this.status = this.typedStore("status", this.config.types.Status);
+    this.status = this.typedStore("status", this.config.types.phase0.Status);
   }
 
   private typedStore<T>(key: string, type: BasicType<T> | ContainerType<T>): PeerStoreBucket<T> {

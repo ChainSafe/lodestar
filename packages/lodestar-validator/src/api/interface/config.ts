@@ -1,5 +1,5 @@
-import {Fork} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 
 export interface IConfigApi {
-  getForkSchedule(): Promise<Fork[]>;
+  getForkSchedule(): Promise<phase0.Fork[]>;
 }

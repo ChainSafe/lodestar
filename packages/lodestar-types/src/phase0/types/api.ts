@@ -12,7 +12,7 @@ import {
   Uint64,
   ValidatorIndex,
   Version,
-} from "./primitive";
+} from "../../primitive/types";
 import {List} from "@chainsafe/ssz";
 
 export interface SignedBeaconHeaderResponse {

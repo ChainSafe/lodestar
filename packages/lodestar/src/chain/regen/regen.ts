@@ -1,4 +1,4 @@
-import {BeaconBlock, Checkpoint, Root, Slot} from "@chainsafe/lodestar-types";
+import {phase0, Root, Slot} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
@@ -45,7 +45,7 @@ export class StateRegenerator implements IStateRegenerator {
     this.db = db;
   }
 
-  async getPreState(block: BeaconBlock): Promise<ITreeStateContext> {
+  async getPreState(block: phase0.BeaconBlock): Promise<ITreeStateContext> {
     const parentBlock = this.forkChoice.getBlock(block.parentRoot);
     if (!parentBlock) {
       throw new RegenError({
@@ -74,7 +74,7 @@ export class StateRegenerator implements IStateRegenerator {
     return this.getState(parentBlock.stateRoot);
   }
 
-  async getCheckpointState(cp: Checkpoint): Promise<ITreeStateContext> {
+  async getCheckpointState(cp: phase0.Checkpoint): Promise<ITreeStateContext> {
     const checkpointStartSlot = computeStartSlotAtEpoch(this.config, cp.epoch);
     return await this.getBlockSlotState(cp.root, checkpointStartSlot);
   }

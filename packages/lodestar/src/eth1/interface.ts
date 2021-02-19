@@ -5,34 +5,34 @@
 import {AbortSignal} from "abort-controller";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {TreeBacked} from "@chainsafe/ssz";
-import {BeaconState, Eth1Data, Deposit, DepositEvent, Eth1Block} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 
 export interface IEth1Provider {
   deployBlock: number;
   getBlockNumber(signal?: AbortSignal): Promise<number>;
-  getBlockByNumber(blockNumber: number, signal?: AbortSignal): Promise<Eth1Block>;
-  getBlocksByNumber(fromBlock: number, toBlock: number, signal?: AbortSignal): Promise<Eth1Block[]>;
-  getDepositEvents(fromBlock: number, toBlock: number, signal?: AbortSignal): Promise<DepositEvent[]>;
+  getBlockByNumber(blockNumber: number, signal?: AbortSignal): Promise<phase0.Eth1Block>;
+  getBlocksByNumber(fromBlock: number, toBlock: number, signal?: AbortSignal): Promise<phase0.Eth1Block[]>;
+  getDepositEvents(fromBlock: number, toBlock: number, signal?: AbortSignal): Promise<phase0.DepositEvent[]>;
   validateContract(signal?: AbortSignal): Promise<void>;
 }
 
 export interface IEth1ForBlockProduction {
   getEth1DataAndDeposits(
-    state: TreeBacked<BeaconState>
+    state: TreeBacked<phase0.BeaconState>
   ): Promise<{
-    eth1Data: Eth1Data;
-    deposits: Deposit[];
+    eth1Data: phase0.Eth1Data;
+    deposits: phase0.Deposit[];
   }>;
 }
 
 export interface IBatchDepositEvents {
-  depositEvents: DepositEvent[];
+  depositEvents: phase0.DepositEvent[];
   blockNumber: number;
 }
 
 export interface IEth1Streamer {
   getDepositsStream(fromBlock: number): AsyncGenerator<IBatchDepositEvents>;
-  getDepositsAndBlockStreamForGenesis(fromBlock: number): AsyncGenerator<[DepositEvent[], Eth1Block]>;
+  getDepositsAndBlockStreamForGenesis(fromBlock: number): AsyncGenerator<[phase0.DepositEvent[], phase0.Eth1Block]>;
 }
 
 export type IEth1StreamParams = Pick<

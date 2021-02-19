@@ -2,7 +2,7 @@ import {unlinkSync, writeFileSync} from "fs";
 import {join} from "path";
 
 import {ContainerType, Type, Json} from "@chainsafe/ssz";
-import {Boolean, Number64} from "@chainsafe/lodestar-types/lib/ssz/generators/primitive";
+import {Boolean, Number64} from "@chainsafe/lodestar-types/lib/primitive/ssz";
 import {describeDirectorySpecTest} from "../../../src/single";
 import {loadYamlFile} from "../../../src/util";
 

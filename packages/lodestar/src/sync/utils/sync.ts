@@ -1,5 +1,5 @@
 import PeerId from "peer-id";
-import {Checkpoint, SignedBeaconBlock, Status, Root} from "@chainsafe/lodestar-types";
+import {phase0, Root} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {getStatusProtocols, INetwork} from "../../network";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
@@ -8,11 +8,11 @@ import {ZERO_HASH} from "../../constants";
 import {IPeerMetadataStore} from "../../network/peers";
 import {getSyncPeers} from "./peers";
 
-export function getStatusFinalizedCheckpoint(status: Status): Checkpoint {
+export function getStatusFinalizedCheckpoint(status: phase0.Status): phase0.Checkpoint {
   return {epoch: status.finalizedEpoch, root: status.finalizedRoot};
 }
 
-export async function syncPeersStatus(network: INetwork, status: Status): Promise<void> {
+export async function syncPeersStatus(network: INetwork, status: phase0.Status): Promise<void> {
   await Promise.all(
     network.getPeers({supportsProtocols: getStatusProtocols()}).map(async (peer) => {
       try {
@@ -78,7 +78,7 @@ export function getBestPeerCandidates(forkChoice: IForkChoice, network: INetwork
  */
 export function checkLinearChainSegment(
   config: IBeaconConfig,
-  blocks: SignedBeaconBlock[] | null,
+  blocks: phase0.SignedBeaconBlock[] | null,
   ancestorRoot: Root | null = null
 ): void {
   if (!blocks || blocks.length <= 1) throw new Error("Not enough blocks to validate");
@@ -87,6 +87,6 @@ export function checkLinearChainSegment(
     if (parentRoot && !config.types.Root.equals(block.message.parentRoot, parentRoot)) {
       throw new Error(`Block ${block.message.slot} does not link to parent ${toHexString(parentRoot)}`);
     }
-    parentRoot = config.types.BeaconBlock.hashTreeRoot(block.message);
+    parentRoot = config.types.phase0.BeaconBlock.hashTreeRoot(block.message);
   }
 }

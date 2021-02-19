@@ -2,7 +2,7 @@
  * @module chain/stateTransition/epoch
  */
 
-import {BeaconState} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
 import {GENESIS_EPOCH} from "../../../../constants";
@@ -11,7 +11,7 @@ import {getAttestationDeltas} from "./attestation";
 
 export * from "./attestation";
 
-export function processRewardsAndPenalties(config: IBeaconConfig, state: BeaconState): void {
+export function processRewardsAndPenalties(config: IBeaconConfig, state: phase0.BeaconState): void {
   if (getCurrentEpoch(config, state) == GENESIS_EPOCH) {
     return;
   }

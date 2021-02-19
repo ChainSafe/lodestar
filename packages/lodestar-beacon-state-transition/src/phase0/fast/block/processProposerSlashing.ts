@@ -1,4 +1,4 @@
-import {BeaconState, ProposerSlashing} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {DomainType} from "../../../constants";
 import {computeEpochAtSlot, computeSigningRoot, getDomain, isSlashableValidator} from "../../../util";
 import {EpochContext, CachedValidatorsBeaconState} from "../util";
@@ -8,11 +8,11 @@ import {ISignatureSet, SignatureSetType, verifySignatureSet} from "../signatureS
 export function processProposerSlashing(
   epochCtx: EpochContext,
   state: CachedValidatorsBeaconState,
-  proposerSlashing: ProposerSlashing,
+  proposerSlashing: phase0.ProposerSlashing,
   verifySignatures = true
 ): void {
   const config = epochCtx.config;
-  const {BeaconBlockHeader} = config.types;
+  const {BeaconBlockHeader} = config.types.phase0;
   const header1 = proposerSlashing.signedHeader1.message;
   const header2 = proposerSlashing.signedHeader2.message;
 
@@ -54,8 +54,8 @@ export function processProposerSlashing(
  */
 export function getProposerSlashingSignatureSets(
   epochCtx: EpochContext,
-  state: BeaconState,
-  proposerSlashing: ProposerSlashing
+  state: phase0.BeaconState,
+  proposerSlashing: phase0.ProposerSlashing
 ): ISignatureSet[] {
   const config = epochCtx.config;
   const pubkey = epochCtx.index2pubkey[proposerSlashing.signedHeader1.message.proposerIndex];
@@ -68,7 +68,7 @@ export function getProposerSlashingSignatureSets(
       return {
         type: SignatureSetType.single,
         pubkey,
-        signingRoot: computeSigningRoot(config, config.types.BeaconBlockHeader, signedHeader.message, domain),
+        signingRoot: computeSigningRoot(config, config.types.phase0.BeaconBlockHeader, signedHeader.message, domain),
         signature: signedHeader.signature,
       };
     }

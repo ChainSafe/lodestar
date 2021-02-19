@@ -2,20 +2,10 @@ import {AbortController} from "abort-controller";
 import sinon from "sinon";
 
 import {TreeBacked} from "@chainsafe/ssz";
-import {
-  BeaconState,
-  Checkpoint,
-  ENRForkID,
-  ForkDigest,
-  Number64,
-  SignedBeaconBlock,
-  Slot,
-  Status,
-  Uint16,
-  Uint64,
-} from "@chainsafe/lodestar-types";
+import {ForkDigest, Number64, Slot, Uint16, Uint64} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {computeForkDigest, phase0} from "@chainsafe/lodestar-beacon-state-transition";
+import {computeForkDigest} from "@chainsafe/lodestar-beacon-state-transition";
+import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 
 import {ChainEventEmitter, IBeaconChain, ITreeStateContext} from "../../../../src/chain";
@@ -32,7 +22,7 @@ export interface IMockChainParams {
   genesisTime?: Number64;
   chainId: Uint16;
   networkId: Uint64;
-  state: TreeBacked<BeaconState>;
+  state: TreeBacked<phase0.BeaconState>;
   config: IBeaconConfig;
 }
 
@@ -48,7 +38,7 @@ export class MockBeaconChain implements IBeaconChain {
   public pendingBlocks: BlockPool;
   public pendingAttestations: AttestationPool;
 
-  private state: TreeBacked<BeaconState>;
+  private state: TreeBacked<phase0.BeaconState>;
   private config: IBeaconConfig;
   private abortController: AbortController;
 
@@ -108,7 +98,7 @@ export class MockBeaconChain implements IBeaconChain {
     };
   }
 
-  public async getCanonicalBlockAtSlot(slot: Slot): Promise<SignedBeaconBlock> {
+  public async getCanonicalBlockAtSlot(slot: Slot): Promise<phase0.SignedBeaconBlock> {
     const block = generateEmptySignedBlock();
     block.message.slot = slot;
     return block;
@@ -118,18 +108,18 @@ export class MockBeaconChain implements IBeaconChain {
     return this.getHeadStateContext().epochCtx;
   }
 
-  public getHeadState(): TreeBacked<BeaconState> {
-    return this.getHeadStateContext().state.getOriginalState() as TreeBacked<BeaconState>;
+  public getHeadState(): TreeBacked<phase0.BeaconState> {
+    return this.getHeadStateContext().state.getOriginalState() as TreeBacked<phase0.BeaconState>;
   }
 
-  public async getUnfinalizedBlocksAtSlots(slots: Slot[]): Promise<SignedBeaconBlock[]> {
+  public async getUnfinalizedBlocksAtSlots(slots: Slot[]): Promise<phase0.SignedBeaconBlock[]> {
     if (!slots) {
       return [];
     }
     return await Promise.all(slots.map(this.getCanonicalBlockAtSlot));
   }
 
-  public getFinalizedCheckpoint(): Checkpoint {
+  public getFinalizedCheckpoint(): phase0.Checkpoint {
     return this.state.finalizedCheckpoint;
   }
 
@@ -137,7 +127,7 @@ export class MockBeaconChain implements IBeaconChain {
     return computeForkDigest(this.config, this.state.fork.currentVersion, this.state.genesisValidatorsRoot);
   }
 
-  public getENRForkID(): ENRForkID {
+  public getENRForkID(): phase0.ENRForkID {
     return {
       forkDigest: Buffer.alloc(4),
       nextForkEpoch: 100,
@@ -170,7 +160,7 @@ export class MockBeaconChain implements IBeaconChain {
     return null;
   }
 
-  getStatus(): Status {
+  getStatus(): phase0.Status {
     return {
       forkDigest: this.getForkDigest(),
       finalizedRoot: Buffer.alloc(32),

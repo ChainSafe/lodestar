@@ -14,7 +14,7 @@ import {MockBeaconChain} from "../../../utils/mocks/chain/chain";
 import {generateState} from "../../../utils/state";
 import {generateEmptySignedBlock} from "../../../utils/block";
 import {GossipEncoding} from "../../../../src/network/gossip/encoding";
-import {BeaconState} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {TreeBacked} from "@chainsafe/ssz";
 import {silentLogger} from "../../../utils/logger";
 import {sleep} from "@chainsafe/lodestar-utils";
@@ -24,7 +24,7 @@ describe("Network Gossip", function () {
   const sandbox = sinon.createSandbox();
   let pubsub: IGossipSub;
   let chain: IBeaconChain;
-  let state: BeaconState;
+  let state: phase0.BeaconState;
 
   beforeEach(async () => {
     const networkOpts: INetworkOptions = {
@@ -44,7 +44,7 @@ describe("Network Gossip", function () {
       genesisTime: 0,
       chainId: 0,
       networkId: BigInt(0),
-      state: state as TreeBacked<BeaconState>,
+      state: state as TreeBacked<phase0.BeaconState>,
       config,
     });
     pubsub = new MockGossipSub();

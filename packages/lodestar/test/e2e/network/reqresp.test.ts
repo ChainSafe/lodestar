@@ -134,7 +134,7 @@ describe("[network] network", function () {
     expect(returnedBlocks).to.have.length(count, "Wrong returnedBlocks lenght");
 
     returnedBlocks.forEach((returnedBlock, i) => {
-      expect(config.types.SignedBeaconBlock.equals(returnedBlock, blocks[i])).to.equal(
+      expect(config.types.phase0.SignedBeaconBlock.equals(returnedBlock, blocks[i])).to.equal(
         true,
         `Wrong returnedBlock[${i}]`
       );

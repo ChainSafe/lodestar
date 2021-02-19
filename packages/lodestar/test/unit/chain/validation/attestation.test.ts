@@ -3,7 +3,6 @@ import {BeaconChain, ChainEventEmitter, ForkChoiceStore, IBeaconChain} from "../
 import {StubbedBeaconDb} from "../../../utils/stub";
 import {expect} from "chai";
 
-import {Attestation, IndexedAttestation} from "@chainsafe/lodestar-types";
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {phase0, getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import * as attestationUtils from "@chainsafe/lodestar-beacon-state-transition/lib/phase0/fast/util/attestation";
@@ -28,7 +27,7 @@ describe("gossip attestation validation", function () {
   let computeAttestationSubnetStub: SinonStub;
   let isValidIndexedAttestationStub: SinonStub;
   let forkChoiceStub: SinonStubbedInstance<ForkChoice>;
-  let toIndexedAttestation: (attestation: Attestation) => IndexedAttestation;
+  let toIndexedAttestation: (attestation: phase0.Attestation) => phase0.IndexedAttestation;
 
   beforeEach(function () {
     chain = sinon.createStubInstance(BeaconChain);
@@ -42,12 +41,12 @@ describe("gossip attestation validation", function () {
     computeAttestationSubnetStub = sinon.stub(attestationUtils, "computeSubnetForAttestation");
     isValidIndexedAttestationStub = sinon.stub(blockUtils, "isValidIndexedAttestation");
     forkChoiceStub = sinon.createStubInstance(ForkChoice);
-    toIndexedAttestation = (attestation: Attestation) =>
+    toIndexedAttestation = (attestation: phase0.Attestation) =>
       ({
         attestingIndices: Object.entries(attestation.aggregationBits).map((value) => (value ? 1 : 0)),
         data: attestation.data,
         signature: attestation.signature,
-      } as IndexedAttestation);
+      } as phase0.IndexedAttestation);
   });
 
   afterEach(function () {

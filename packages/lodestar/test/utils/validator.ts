@@ -1,5 +1,5 @@
 import {List} from "@chainsafe/ssz";
-import {Validator} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {FAR_FUTURE_EPOCH} from "../../src/constants";
 import bls from "@chainsafe/bls";
 /**
@@ -7,7 +7,7 @@ import bls from "@chainsafe/bls";
  * @returns {Validator}
  * @param opts
  */
-export function generateValidator(opts: Partial<Validator> = {}): Validator {
+export function generateValidator(opts: Partial<phase0.Validator> = {}): phase0.Validator {
   const randNum = (): number => Math.floor(Math.random() * Math.floor(4));
   const activationEpoch = opts.activationEpoch || opts.activationEpoch === 0 ? opts.activationEpoch : FAR_FUTURE_EPOCH;
   return {
@@ -28,6 +28,6 @@ export function generateValidator(opts: Partial<Validator> = {}): Validator {
  * @param opts
  * @returns {Validator[]}
  */
-export function generateValidators(n: number, opts?: Partial<Validator>): List<Validator> {
-  return Array.from({length: n}, () => generateValidator(opts)) as List<Validator>;
+export function generateValidators(n: number, opts?: Partial<phase0.Validator>): List<phase0.Validator> {
+  return Array.from({length: n}, () => generateValidator(opts)) as List<phase0.Validator>;
 }

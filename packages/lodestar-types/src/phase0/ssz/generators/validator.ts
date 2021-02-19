@@ -2,9 +2,9 @@
  * @module sszTypes/generators
  */
 import {ContainerType} from "@chainsafe/ssz";
-import {IBeaconSSZTypes} from "../interface";
+import {IPhase0SSZTypes} from "../interface";
 
-export const CommitteeAssignment = (ssz: IBeaconSSZTypes): ContainerType =>
+export const CommitteeAssignment = (ssz: IPhase0SSZTypes): ContainerType =>
   new ContainerType({
     fields: {
       validators: ssz.CommitteeIndices,
@@ -13,7 +13,7 @@ export const CommitteeAssignment = (ssz: IBeaconSSZTypes): ContainerType =>
     },
   });
 
-export const AggregateAndProof = (ssz: IBeaconSSZTypes): ContainerType =>
+export const AggregateAndProof = (ssz: IPhase0SSZTypes): ContainerType =>
   new ContainerType({
     fields: {
       aggregatorIndex: ssz.ValidatorIndex,
@@ -22,7 +22,7 @@ export const AggregateAndProof = (ssz: IBeaconSSZTypes): ContainerType =>
     },
   });
 
-export const SignedAggregateAndProof = (ssz: IBeaconSSZTypes): ContainerType =>
+export const SignedAggregateAndProof = (ssz: IPhase0SSZTypes): ContainerType =>
   new ContainerType({
     fields: {
       message: ssz.AggregateAndProof,
@@ -30,7 +30,7 @@ export const SignedAggregateAndProof = (ssz: IBeaconSSZTypes): ContainerType =>
     },
   });
 
-export const SlashingProtectionBlock = (ssz: IBeaconSSZTypes): ContainerType =>
+export const SlashingProtectionBlock = (ssz: IPhase0SSZTypes): ContainerType =>
   new ContainerType({
     fields: {
       slot: ssz.Slot,
@@ -38,7 +38,7 @@ export const SlashingProtectionBlock = (ssz: IBeaconSSZTypes): ContainerType =>
     },
   });
 
-export const SlashingProtectionAttestation = (ssz: IBeaconSSZTypes): ContainerType =>
+export const SlashingProtectionAttestation = (ssz: IPhase0SSZTypes): ContainerType =>
   new ContainerType({
     fields: {
       sourceEpoch: ssz.Epoch,
@@ -47,7 +47,7 @@ export const SlashingProtectionAttestation = (ssz: IBeaconSSZTypes): ContainerTy
     },
   });
 
-export const SlashingProtectionAttestationLowerBound = (ssz: IBeaconSSZTypes): ContainerType =>
+export const SlashingProtectionAttestationLowerBound = (ssz: IPhase0SSZTypes): ContainerType =>
   new ContainerType({
     fields: {
       minSourceEpoch: ssz.Epoch,

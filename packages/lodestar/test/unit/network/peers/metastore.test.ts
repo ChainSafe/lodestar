@@ -4,7 +4,7 @@ import sinon, {SinonStub, SinonStubbedInstance} from "sinon";
 import {ReqRespEncoding} from "../../../../src/constants";
 import {expect} from "chai";
 import PeerId from "peer-id";
-import {Metadata, Status} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 
 describe("Libp2pPeerMetadataStore", function () {
   let metabookStub: SinonStubbedInstance<MetadataBook>;
@@ -41,7 +41,7 @@ describe("Libp2pPeerMetadataStore", function () {
 
   it("can store and retrieve status", function () {
     const store = new Libp2pPeerMetadataStore(config, metabookStub);
-    const value: Status = {
+    const value: phase0.Status = {
       finalizedEpoch: 1,
       finalizedRoot: Buffer.alloc(32, 1),
       forkDigest: Buffer.alloc(4),
@@ -51,19 +51,19 @@ describe("Libp2pPeerMetadataStore", function () {
     store.status.set(peerId, value);
     const result = store.status.get(peerId);
 
-    expect(config.types.Status.equals(result as Status, value)).to.be.true;
+    expect(config.types.phase0.Status.equals(result as phase0.Status, value)).to.be.true;
   });
 
   it("can store and retrieve metadata", function () {
     const store = new Libp2pPeerMetadataStore(config, metabookStub);
-    const value: Metadata = {
+    const value: phase0.Metadata = {
       attnets: Array.from({length: 64}, () => true),
       seqNumber: BigInt(20),
     };
     store.metadata.set(peerId, value);
     const result = store.metadata.get(peerId);
 
-    expect(config.types.Metadata.equals(result as Metadata, value)).to.be.true;
+    expect(config.types.phase0.Metadata.equals(result as phase0.Metadata, value)).to.be.true;
   });
 
   it("can store and retrieve score", function () {

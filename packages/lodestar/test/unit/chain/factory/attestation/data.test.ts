@@ -16,7 +16,7 @@ describe("assemble attestation data", function () {
       }),
       balances: generateInitialMaxBalances(config),
     });
-    const blockRoot = config.types.BeaconBlock.hashTreeRoot(generateEmptyBlock());
+    const blockRoot = config.types.phase0.BeaconBlock.hashTreeRoot(generateEmptyBlock());
     const result = await assembleAttestationData(config, state, blockRoot, 2, 1);
     expect(result).to.not.be.null;
   });

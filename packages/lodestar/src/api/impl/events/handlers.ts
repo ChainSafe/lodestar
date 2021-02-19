@@ -32,7 +32,7 @@ export function handleBeaconBlockEvent(
     callback({
       type: BeaconEventType.BLOCK,
       message: {
-        block: config.types.BeaconBlock.hashTreeRoot(payload.message),
+        block: config.types.phase0.BeaconBlock.hashTreeRoot(payload.message),
         slot: payload.message.slot,
       },
     });

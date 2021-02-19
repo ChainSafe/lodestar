@@ -1,4 +1,4 @@
-import {Attestation, BeaconState} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 
 import {computeEpochAtSlot} from "../../../util";
 import {EpochContext} from "../util";
@@ -6,8 +6,8 @@ import {isValidIndexedAttestation} from "./isValidIndexedAttestation";
 
 export function processAttestation(
   epochCtx: EpochContext,
-  state: BeaconState,
-  attestation: Attestation,
+  state: phase0.BeaconState,
+  attestation: phase0.Attestation,
   verifySignature = true
 ): void {
   const config = epochCtx.config;
@@ -59,20 +59,20 @@ export function processAttestation(
   };
 
   if (data.target.epoch === epochCtx.currentShuffling.epoch) {
-    if (!config.types.Checkpoint.equals(data.source, state.currentJustifiedCheckpoint)) {
+    if (!config.types.phase0.Checkpoint.equals(data.source, state.currentJustifiedCheckpoint)) {
       throw new Error(
         "Attestation source does not equal current justified checkpoint: " +
-          `source=${config.types.Checkpoint.toJson(data.source)} ` +
-          `currentJustifiedCheckpoint=${config.types.Checkpoint.toJson(state.currentJustifiedCheckpoint)}`
+          `source=${config.types.phase0.Checkpoint.toJson(data.source)} ` +
+          `currentJustifiedCheckpoint=${config.types.phase0.Checkpoint.toJson(state.currentJustifiedCheckpoint)}`
       );
     }
     state.currentEpochAttestations.push(pendingAttestation);
   } else {
-    if (!config.types.Checkpoint.equals(data.source, state.previousJustifiedCheckpoint)) {
+    if (!config.types.phase0.Checkpoint.equals(data.source, state.previousJustifiedCheckpoint)) {
       throw new Error(
         "Attestation source does not equal previous justified checkpoint: " +
-          `source=${config.types.Checkpoint.toJson(data.source)} ` +
-          `previousJustifiedCheckpoint=${config.types.Checkpoint.toJson(state.previousJustifiedCheckpoint)}`
+          `source=${config.types.phase0.Checkpoint.toJson(data.source)} ` +
+          `previousJustifiedCheckpoint=${config.types.phase0.Checkpoint.toJson(state.previousJustifiedCheckpoint)}`
       );
     }
     state.previousEpochAttestations.push(pendingAttestation);

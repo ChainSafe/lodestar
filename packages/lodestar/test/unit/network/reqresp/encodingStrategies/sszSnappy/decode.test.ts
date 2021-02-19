@@ -36,27 +36,27 @@ describe("network / reqresp / sszSnappy / decode", () => {
     }[] = [
       {
         id: "if it takes more than 10 bytes for varint",
-        type: config.types.Status,
+        type: config.types.phase0.Status,
         error: SszSnappyErrorCode.INVALID_VARINT_BYTES_COUNT,
         chunks: [Buffer.from(varint.encode(99999999999999999999999))],
       },
       {
         id: "if failed ssz size bound validation",
-        type: config.types.Status,
+        type: config.types.phase0.Status,
         error: SszSnappyErrorCode.UNDER_SSZ_MIN_SIZE,
         chunks: [Buffer.alloc(12, 0)],
       },
       {
         id: "if it read more than maxEncodedLen",
-        type: config.types.Ping,
+        type: config.types.phase0.Ping,
         error: SszSnappyErrorCode.TOO_MUCH_BYTES_READ,
-        chunks: [Buffer.from(varint.encode(config.types.Ping.minSize())), Buffer.alloc(100)],
+        chunks: [Buffer.from(varint.encode(config.types.phase0.Ping.minSize())), Buffer.alloc(100)],
       },
       {
         id: "if failed ssz snappy input malformed",
-        type: config.types.Status,
+        type: config.types.phase0.Status,
         error: SszSnappyErrorCode.DECOMPRESSOR_ERROR,
-        chunks: [Buffer.from(varint.encode(config.types.Status.minSize())), Buffer.from("wrong snappy data")],
+        chunks: [Buffer.from(varint.encode(config.types.phase0.Status.minSize())), Buffer.from("wrong snappy data")],
       },
     ];
 

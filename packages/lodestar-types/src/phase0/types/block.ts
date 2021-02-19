@@ -4,7 +4,7 @@
 
 import {List} from "@chainsafe/ssz";
 
-import {BLSSignature, Bytes32, Root, Slot, ValidatorIndex} from "./primitive";
+import {BLSSignature, Bytes32, Root, Slot, ValidatorIndex} from "../../primitive/types";
 import {Eth1Data} from "./misc";
 import {Attestation, AttesterSlashing, Deposit, ProposerSlashing, SignedVoluntaryExit} from "./operations";
 

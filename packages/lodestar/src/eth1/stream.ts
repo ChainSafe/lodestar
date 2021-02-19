@@ -7,7 +7,7 @@ import {IBatchDepositEvents, IEth1Provider, IEth1StreamParams} from "./interface
 import {groupDepositEventsByBlock} from "./utils/groupDepositEventsByBlock";
 import {optimizeNextBlockDiffForGenesis} from "./utils/optimizeNextBlockDiffForGenesis";
 import {sleep} from "@chainsafe/lodestar-utils";
-import {DepositEvent, Eth1Block} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 
 /**
  * Phase 1 of genesis building.
@@ -47,7 +47,7 @@ export async function* getDepositsAndBlockStreamForGenesis(
   provider: IEth1Provider,
   params: IEth1StreamParams,
   signal?: AbortSignal
-): AsyncGenerator<[DepositEvent[], Eth1Block]> {
+): AsyncGenerator<[phase0.DepositEvent[], phase0.Eth1Block]> {
   fromBlock = Math.max(fromBlock, provider.deployBlock);
   fromBlock = Math.min(fromBlock, await getRemoteFollowBlock(provider, params));
   let toBlock = fromBlock; // First, fetch only the first block

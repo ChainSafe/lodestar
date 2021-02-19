@@ -4,13 +4,13 @@
 
 import {Gossip} from "../gossip";
 import {getGossipTopic} from "../utils";
-import {SignedVoluntaryExit} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {GossipEvent} from "../constants";
 import {GossipObject} from "../interface";
 
 export async function handleIncomingVoluntaryExit(this: Gossip, obj: GossipObject): Promise<void> {
   try {
-    const voluntaryExit = obj as SignedVoluntaryExit;
+    const voluntaryExit = obj as phase0.SignedVoluntaryExit;
     this.logger.verbose("Received voluntary exit", {validator: voluntaryExit.message.validatorIndex});
     this.emit(GossipEvent.VOLUNTARY_EXIT, voluntaryExit);
   } catch (e) {
@@ -18,7 +18,7 @@ export async function handleIncomingVoluntaryExit(this: Gossip, obj: GossipObjec
   }
 }
 
-export async function publishVoluntaryExit(this: Gossip, voluntaryExit: SignedVoluntaryExit): Promise<void> {
+export async function publishVoluntaryExit(this: Gossip, voluntaryExit: phase0.SignedVoluntaryExit): Promise<void> {
   const forkDigestValue = await this.getForkDigestByEpoch(voluntaryExit.message.epoch);
   const topic = getGossipTopic(GossipEvent.VOLUNTARY_EXIT, forkDigestValue);
   const voluntaryExitTopics = this.pubsub.getTopicPeerIds(topic);
@@ -26,7 +26,7 @@ export async function publishVoluntaryExit(this: Gossip, voluntaryExit: SignedVo
   if (voluntaryExitTopics && voluntaryExitTopics.size > 0) {
     await this.pubsub.publish(
       getGossipTopic(GossipEvent.VOLUNTARY_EXIT, forkDigestValue),
-      Buffer.from(this.config.types.SignedVoluntaryExit.serialize(voluntaryExit))
+      Buffer.from(this.config.types.phase0.SignedVoluntaryExit.serialize(voluntaryExit))
     );
     this.logger.verbose("Publishing voluntary exit", {validator: voluntaryExit.message.validatorIndex});
   } else {

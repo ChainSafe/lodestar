@@ -3,7 +3,7 @@
  */
 
 import {List} from "@chainsafe/ssz";
-import {BLSSignature, CommitteeIndex, Epoch, Root, Slot, ValidatorIndex} from "./primitive";
+import {BLSSignature, CommitteeIndex, Epoch, Root, Slot, ValidatorIndex} from "../../primitive/types";
 import {Attestation} from "./operations";
 
 export interface CommitteeAssignment {

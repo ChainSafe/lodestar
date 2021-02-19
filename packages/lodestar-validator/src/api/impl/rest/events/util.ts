@@ -9,12 +9,12 @@ export function deserializeBeaconEventMessage(config: IBeaconConfig, msg: Messag
     case BeaconEventType.BLOCK:
       return {
         type: BeaconEventType.BLOCK,
-        message: deserializeEventData(config.types.BlockEventPayload, msg.data),
+        message: deserializeEventData(config.types.phase0.BlockEventPayload, msg.data),
       };
     case BeaconEventType.CHAIN_REORG:
       return {
         type: BeaconEventType.CHAIN_REORG,
-        message: deserializeEventData(config.types.ChainReorg, msg.data),
+        message: deserializeEventData(config.types.phase0.ChainReorg, msg.data),
       };
     default:
       throw new Error("Unsupported beacon event type " + msg.type);

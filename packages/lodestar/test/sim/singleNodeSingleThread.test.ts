@@ -1,7 +1,7 @@
 import {IBeaconParams} from "@chainsafe/lodestar-params";
 import {getDevBeaconNode} from "../utils/node/beacon";
 import {waitForEvent} from "../utils/events/resolver";
-import {Checkpoint} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {getDevValidators} from "../utils/node/validator";
 import {expect} from "chai";
 import {ChainEvent} from "../../src/chain";
@@ -42,7 +42,7 @@ describe("Run single node single thread interop validators (no eth1) until check
         validatorCount: testCase.vc * testCase.validators,
         logger: new WinstonLogger(),
       });
-      const justificationEventListener = waitForEvent<Checkpoint>(
+      const justificationEventListener = waitForEvent<phase0.Checkpoint>(
         bn.chain.emitter,
         testCase.event,
         timeout - 10 * 1000

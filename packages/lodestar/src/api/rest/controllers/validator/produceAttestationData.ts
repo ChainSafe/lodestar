@@ -12,7 +12,7 @@ export const produceAttestationData: ApiController<Query> = {
   handler: async function (req, resp) {
     const attestationData = await this.api.validator.produceAttestationData(req.query.committee_index, req.query.slot);
     resp.send({
-      data: this.config.types.AttestationData.toJson(attestationData, {case: "snake"}),
+      data: this.config.types.phase0.AttestationData.toJson(attestationData, {case: "snake"}),
     });
   },
 

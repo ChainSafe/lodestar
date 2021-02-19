@@ -1,12 +1,5 @@
 import {IGossipMessageValidator} from "./interface";
-import {
-  Attestation,
-  AttesterSlashing,
-  ProposerSlashing,
-  SignedAggregateAndProof,
-  SignedBeaconBlock,
-  SignedVoluntaryExit,
-} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {IBeaconDb} from "../../db";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils";
@@ -45,9 +38,9 @@ export class GossipMessageValidator implements IGossipMessageValidator {
     this.logger = logger;
   }
 
-  public isValidIncomingBlock = async (signedBlock: SignedBeaconBlock): Promise<ExtendedValidatorResult> => {
+  public isValidIncomingBlock = async (signedBlock: phase0.SignedBeaconBlock): Promise<ExtendedValidatorResult> => {
     const logContext = {
-      blockRoot: toHexString(this.config.types.BeaconBlock.hashTreeRoot(signedBlock.message)),
+      blockRoot: toHexString(this.config.types.phase0.BeaconBlock.hashTreeRoot(signedBlock.message)),
       blockSlot: signedBlock.message.slot,
     };
     try {
@@ -93,13 +86,13 @@ export class GossipMessageValidator implements IGossipMessageValidator {
   };
 
   public isValidIncomingCommitteeAttestation = async (
-    attestation: Attestation,
+    attestation: phase0.Attestation,
     subnet: number
   ): Promise<ExtendedValidatorResult> => {
     const logContext = {
       attestationSlot: attestation.data.slot,
       attestationBlockRoot: toHexString(attestation.data.beaconBlockRoot),
-      attestationRoot: toHexString(this.config.types.Attestation.hashTreeRoot(attestation)),
+      attestationRoot: toHexString(this.config.types.phase0.Attestation.hashTreeRoot(attestation)),
       subnet,
     };
 
@@ -152,14 +145,16 @@ export class GossipMessageValidator implements IGossipMessageValidator {
   };
 
   public isValidIncomingAggregateAndProof = async (
-    signedAggregateAndProof: SignedAggregateAndProof
+    signedAggregateAndProof: phase0.SignedAggregateAndProof
   ): Promise<ExtendedValidatorResult> => {
     const attestation = signedAggregateAndProof.message.aggregate;
     const logContext = {
       attestationSlot: attestation.data.slot,
       aggregatorIndex: signedAggregateAndProof.message.aggregatorIndex,
-      aggregateRoot: toHexString(this.config.types.AggregateAndProof.hashTreeRoot(signedAggregateAndProof.message)),
-      attestationRoot: toHexString(this.config.types.Attestation.hashTreeRoot(attestation)),
+      aggregateRoot: toHexString(
+        this.config.types.phase0.AggregateAndProof.hashTreeRoot(signedAggregateAndProof.message)
+      ),
+      attestationRoot: toHexString(this.config.types.phase0.Attestation.hashTreeRoot(attestation)),
       targetEpoch: attestation.data.target.epoch,
     };
 
@@ -208,7 +203,7 @@ export class GossipMessageValidator implements IGossipMessageValidator {
   };
 
   public isValidIncomingVoluntaryExit = async (
-    voluntaryExit: SignedVoluntaryExit
+    voluntaryExit: phase0.SignedVoluntaryExit
   ): Promise<ExtendedValidatorResult> => {
     try {
       await validateGossipVoluntaryExit(this.config, this.chain, this.db, voluntaryExit);
@@ -233,7 +228,7 @@ export class GossipMessageValidator implements IGossipMessageValidator {
   };
 
   public isValidIncomingProposerSlashing = async (
-    proposerSlashing: ProposerSlashing
+    proposerSlashing: phase0.ProposerSlashing
   ): Promise<ExtendedValidatorResult> => {
     try {
       await validateGossipProposerSlashing(this.config, this.chain, this.db, proposerSlashing);
@@ -258,7 +253,7 @@ export class GossipMessageValidator implements IGossipMessageValidator {
   };
 
   public isValidIncomingAttesterSlashing = async (
-    attesterSlashing: AttesterSlashing
+    attesterSlashing: phase0.AttesterSlashing
   ): Promise<ExtendedValidatorResult> => {
     try {
       await validateGossipAttesterSlashing(this.config, this.chain, this.db, attesterSlashing);

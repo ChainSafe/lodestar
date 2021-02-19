@@ -18,7 +18,7 @@ import {
   Bytes32,
   Domain,
   ForkDigest,
-} from "./primitive";
+} from "../../primitive/types";
 
 export interface Fork {
   // Previous fork version

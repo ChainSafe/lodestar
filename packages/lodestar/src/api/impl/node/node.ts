@@ -1,4 +1,4 @@
-import {SyncingStatus} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {createKeypairFromPeerId} from "@chainsafe/discv5";
 
 import {NodeIdentity, NodePeer} from "../../types";
@@ -69,7 +69,7 @@ export class NodeApi implements INodeApi {
     return nodePeers;
   }
 
-  public async getSyncingStatus(): Promise<SyncingStatus> {
+  public async getSyncingStatus(): Promise<phase0.SyncingStatus> {
     return this.sync.getSyncStatus();
   }
 

@@ -1,4 +1,4 @@
-import {SyncingStatus} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 
 import {NodeIdentity, NodePeer} from "../../types";
 
@@ -14,6 +14,6 @@ export interface INodeApi {
    * eth2 clients.
    * */
   getVersion(): Promise<string>;
-  getSyncingStatus(): Promise<SyncingStatus>;
+  getSyncingStatus(): Promise<phase0.SyncingStatus>;
   getNodeStatus(): Promise<"ready" | "syncing" | "error">;
 }

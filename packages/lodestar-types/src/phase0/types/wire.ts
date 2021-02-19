@@ -1,6 +1,6 @@
 import {List} from "@chainsafe/ssz";
 
-import {Slot, Epoch, Root, Number64, Uint64, ForkDigest, Uint8} from "./primitive";
+import {Slot, Epoch, Root, Number64, Uint64, ForkDigest, Uint8} from "../../primitive/types";
 import {SignedBeaconBlock} from "./block";
 import {AttestationSubnets} from "./misc";
 

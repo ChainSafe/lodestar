@@ -46,7 +46,7 @@ describe("BeaconChain", function () {
       expect(config.types.Version.equals(enrForkID.nextForkVersion, Buffer.from([255, 255, 255, 255])));
       expect(enrForkID.nextForkEpoch === Number.MAX_SAFE_INTEGER);
       // it's possible to serialize enr fork id
-      config.types.ENRForkID.hashTreeRoot(enrForkID);
+      config.types.phase0.ENRForkID.hashTreeRoot(enrForkID);
     });
 
     it("should get enr fork id if found next fork", async () => {
@@ -62,7 +62,7 @@ describe("BeaconChain", function () {
       expect(config.types.Version.equals(enrForkID.nextForkVersion, Buffer.from([2, 0, 0, 0])));
       expect(enrForkID.nextForkEpoch === 100);
       // it's possible to serialize enr fork id
-      config.types.ENRForkID.hashTreeRoot(enrForkID);
+      config.types.phase0.ENRForkID.hashTreeRoot(enrForkID);
       config.params.ALL_FORKS = undefined!;
     });
   });

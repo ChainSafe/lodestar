@@ -1,5 +1,5 @@
 import {List, readOnlyForEach, readOnlyMap} from "@chainsafe/ssz";
-import {Epoch, ValidatorIndex, Gwei, PendingAttestation} from "@chainsafe/lodestar-types";
+import {Epoch, ValidatorIndex, Gwei, phase0} from "@chainsafe/lodestar-types";
 import {intDiv} from "@chainsafe/lodestar-utils";
 
 import {computeActivationExitEpoch, getBlockRootAtSlot, computeStartSlotAtEpoch, getChurnLimit} from "../../../util";
@@ -162,7 +162,7 @@ export function prepareEpochProcessState(epochCtx: EpochContext, state: CachedVa
 
   const statusProcessEpoch = (
     statuses: IAttesterStatus[],
-    attestations: List<PendingAttestation>,
+    attestations: List<phase0.PendingAttestation>,
     epoch: Epoch,
     sourceFlag: number,
     targetFlag: number,

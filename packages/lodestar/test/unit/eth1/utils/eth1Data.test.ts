@@ -2,7 +2,7 @@ import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
 import {pick} from "lodash";
 import {config} from "@chainsafe/lodestar-config/minimal";
-import {Root, Eth1Data, DepositEvent, Eth1Block} from "@chainsafe/lodestar-types";
+import {Root, phase0} from "@chainsafe/lodestar-types";
 import {List, TreeBacked} from "@chainsafe/ssz";
 import {iteratorFromArray} from "../../../utils/interator";
 import {mapToObj} from "../../../utils/map";
@@ -19,11 +19,11 @@ chai.use(chaiAsPromised);
 describe("eth1 / util / getEth1DataForBlocks", function () {
   interface ITestCase {
     id: string;
-    blocks: Eth1Block[];
-    deposits: DepositEvent[];
+    blocks: phase0.Eth1Block[];
+    deposits: phase0.DepositEvent[];
     depositRootTree: TreeBacked<List<Root>>;
     lastProcessedDepositBlockNumber: number;
-    expectedEth1Data?: Partial<Eth1Data & Eth1Block>[];
+    expectedEth1Data?: Partial<phase0.Eth1Data & phase0.Eth1Block>[];
     error?: any;
   }
 
@@ -42,13 +42,13 @@ describe("eth1 / util / getEth1DataForBlocks", function () {
       const blocks = expectedEth1Data.map(({blockNumber}) => getMockBlock({blockNumber}));
 
       // Arbitrary list of consecutive non-uniform (blockNumber-wise) deposit roots
-      const deposits: DepositEvent[] = expectedEth1Data.map(({blockNumber, depositCount}) =>
+      const deposits: phase0.DepositEvent[] = expectedEth1Data.map(({blockNumber, depositCount}) =>
         getMockDeposit({blockNumber, index: depositCount - 1})
       );
       const lastProcessedDepositBlockNumber = expectedEth1Data[expectedEth1Data.length - 1].blockNumber;
 
       // Pre-fill the depositTree with roots for all deposits
-      const depositRootTree = config.types.DepositDataRootList.tree.createValue(
+      const depositRootTree = config.types.phase0.DepositDataRootList.tree.createValue(
         Array.from({length: deposits[deposits.length - 1].index + 1}, (_, i) => Buffer.alloc(32, i)) as List<Root>
       );
 
@@ -67,7 +67,7 @@ describe("eth1 / util / getEth1DataForBlocks", function () {
         id: "No deposits yet, should throw with NoDepositsForBlockRange",
         blocks: [getMockBlock({blockNumber: 0})],
         deposits: [],
-        depositRootTree: config.types.DepositDataRootList.tree.defaultValue(),
+        depositRootTree: config.types.phase0.DepositDataRootList.tree.defaultValue(),
         lastProcessedDepositBlockNumber: 0,
         error: ErrorNoDepositsForBlockRange,
       };
@@ -78,7 +78,7 @@ describe("eth1 / util / getEth1DataForBlocks", function () {
         id: "With deposits and no deposit roots, should throw with NotEnoughDepositRoots",
         blocks: [getMockBlock({blockNumber: 0})],
         deposits: [getMockDeposit({blockNumber: 0, index: 0})],
-        depositRootTree: config.types.DepositDataRootList.tree.defaultValue(),
+        depositRootTree: config.types.phase0.DepositDataRootList.tree.defaultValue(),
         lastProcessedDepositBlockNumber: 0,
         error: ErrorNotEnoughDepositRoots,
       };
@@ -89,7 +89,7 @@ describe("eth1 / util / getEth1DataForBlocks", function () {
         id: "Empty case",
         blocks: [],
         deposits: [],
-        depositRootTree: config.types.DepositDataRootList.tree.defaultValue(),
+        depositRootTree: config.types.phase0.DepositDataRootList.tree.defaultValue(),
         lastProcessedDepositBlockNumber: 0,
         expectedEth1Data: [],
       };
@@ -133,8 +133,8 @@ describe("eth1 / util / getDepositsByBlockNumber", function () {
     id: string;
     fromBlock: number;
     toBlock: number;
-    deposits: DepositEvent[];
-    expectedResult: DepositEvent[];
+    deposits: phase0.DepositEvent[];
+    expectedResult: phase0.DepositEvent[];
   }
 
   const testCases: (() => ITestCase)[] = [
@@ -212,7 +212,7 @@ describe("eth1 / util / getDepositRootByDepositCount", function () {
   }
 
   const fullRootMap = new Map<number, Root>();
-  const fullDepositRootTree = config.types.DepositDataRootList.tree.defaultValue();
+  const fullDepositRootTree = config.types.phase0.DepositDataRootList.tree.defaultValue();
   for (let i = 0; i < 10; i++) {
     fullDepositRootTree.push(Buffer.alloc(32, i));
     fullRootMap.set(fullDepositRootTree.length, fullDepositRootTree.hashTreeRoot());
@@ -242,7 +242,7 @@ describe("eth1 / util / getDepositRootByDepositCount", function () {
       };
     },
     () => {
-      const emptyTree = config.types.DepositDataRootList.tree.defaultValue();
+      const emptyTree = config.types.phase0.DepositDataRootList.tree.defaultValue();
       return {
         id: "Empty case",
         depositCounts: [],
@@ -261,7 +261,7 @@ describe("eth1 / util / getDepositRootByDepositCount", function () {
   }
 });
 
-function getMockBlock({blockNumber}: {blockNumber: number}): Eth1Block {
+function getMockBlock({blockNumber}: {blockNumber: number}): phase0.Eth1Block {
   return {
     blockNumber,
     blockHash: Buffer.alloc(32, blockNumber),
@@ -269,7 +269,7 @@ function getMockBlock({blockNumber}: {blockNumber: number}): Eth1Block {
   };
 }
 
-function getMockDeposit({blockNumber, index}: {blockNumber: number; index: number}): DepositEvent {
+function getMockDeposit({blockNumber, index}: {blockNumber: number; index: number}): phase0.DepositEvent {
   return {
     blockNumber,
     index,

@@ -1,7 +1,7 @@
 import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
 import {fromHexString} from "@chainsafe/ssz";
-import {SlashingProtectionAttestation, SlashingProtectionBlock} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {LevelDbController} from "@chainsafe/lodestar-db";
 import {LogLevel, WinstonLogger} from "@chainsafe/lodestar-utils";
 import {config} from "@chainsafe/lodestar-config/mainnet";
@@ -56,7 +56,7 @@ describe("slashing-protection-interchange-tests", () => {
       testCase.blocks.forEach((blockRaw, i) => {
         it(`Add block ${i}`, async () => {
           const pubkey = fromHexString(blockRaw.pubkey);
-          const block: SlashingProtectionBlock = {
+          const block: phase0.SlashingProtectionBlock = {
             slot: blockRaw.slot,
             signingRoot: blockRaw.signing_root ? fromHexString(blockRaw.signing_root) : ZERO_HASH,
           };
@@ -74,7 +74,7 @@ describe("slashing-protection-interchange-tests", () => {
       testCase.attestations.forEach((attestationRaw, i) => {
         it(`Add attestation ${i}`, async () => {
           const pubkey = fromHexString(attestationRaw.pubkey);
-          const attestation: SlashingProtectionAttestation = {
+          const attestation: phase0.SlashingProtectionAttestation = {
             sourceEpoch: attestationRaw.source_epoch,
             targetEpoch: attestationRaw.target_epoch,
             signingRoot: attestationRaw.signing_root ? fromHexString(attestationRaw.signing_root) : ZERO_HASH,

@@ -3,7 +3,6 @@
  */
 import {params} from "@chainsafe/lodestar-params/minimal";
 
-import {createIBeaconSSZTypes} from "../generators";
-import {IBeaconSSZTypes} from "../interface";
+import {createIBeaconSSZTypes, IBeaconSSZTypes} from "../IBeaconSSZTypes";
 
 export const types: IBeaconSSZTypes = createIBeaconSSZTypes(params);

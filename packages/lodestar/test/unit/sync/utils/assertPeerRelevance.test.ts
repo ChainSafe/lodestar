@@ -1,7 +1,7 @@
 import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
 import {config} from "@chainsafe/lodestar-config/minimal";
-import {Status} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {MockBeaconChain} from "../../../utils/mocks/chain/chain";
 import {
   assertPeerRelevance,
@@ -34,7 +34,7 @@ describe("sync / utils / assertPeerRelevance", () => {
     } as Partial<IBeaconClock>,
   } as Partial<MockBeaconChain>) as MockBeaconChain;
 
-  const testCases: {id: string; remote: Status; error?: IrrelevantPeerError}[] = [
+  const testCases: {id: string; remote: phase0.Status; error?: IrrelevantPeerError}[] = [
     {
       id: "Reject incompatible forks",
       remote: {

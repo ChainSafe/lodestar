@@ -1,5 +1,5 @@
 import {config} from "@chainsafe/lodestar-config/mainnet";
-import {BeaconState, Gwei} from "@chainsafe/lodestar-types";
+import {phase0, Gwei} from "@chainsafe/lodestar-types";
 import {ContainerType, ListType} from "@chainsafe/ssz";
 
 export interface IDeltas {
@@ -42,7 +42,7 @@ export const AttestationDeltasType = new ContainerType({
 
 export interface IRewardsTestCase {
   [k: string]: IDeltas | unknown | null | undefined;
-  pre: BeaconState;
+  pre: phase0.BeaconState;
 }
 
 export function generateSZZTypeMapping(): Record<string, unknown> {

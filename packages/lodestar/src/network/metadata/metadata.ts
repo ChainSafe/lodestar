@@ -1,12 +1,12 @@
 import {BitVector, toHexString} from "@chainsafe/ssz";
 import {ENR} from "@chainsafe/discv5";
-import {Metadata} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ChainEvent, IBeaconChain} from "../../chain";
 import {ILogger} from "@chainsafe/lodestar-utils";
 
 export interface IMetadataOpts {
-  metadata?: Metadata;
+  metadata?: phase0.Metadata;
 }
 
 export interface IMetadataModules {
@@ -24,21 +24,24 @@ export class MetadataController {
   private enr?: ENR;
   private config: IBeaconConfig;
   private chain: IBeaconChain;
-  private _metadata: Metadata;
+  private _metadata: phase0.Metadata;
   private logger: ILogger;
 
   constructor(opts: IMetadataOpts, modules: IMetadataModules) {
     this.config = modules.config;
     this.chain = modules.chain;
     this.logger = modules.logger;
-    this._metadata = opts.metadata || this.config.types.Metadata.defaultValue();
+    this._metadata = opts.metadata || this.config.types.phase0.Metadata.defaultValue();
   }
 
   public async start(enr: ENR): Promise<void> {
     this.enr = enr;
     if (this.enr) {
-      this.enr.set("attnets", Buffer.from(this.config.types.AttestationSubnets.serialize(this._metadata.attnets)));
-      this.enr.set("eth2", Buffer.from(this.config.types.ENRForkID.serialize(this.chain.getENRForkID())));
+      this.enr.set(
+        "attnets",
+        Buffer.from(this.config.types.phase0.AttestationSubnets.serialize(this._metadata.attnets))
+      );
+      this.enr.set("eth2", Buffer.from(this.config.types.phase0.ENRForkID.serialize(this.chain.getENRForkID())));
     }
     this.chain.emitter.on(ChainEvent.forkVersion, this.handleForkVersion);
   }
@@ -57,13 +60,13 @@ export class MetadataController {
 
   set attnets(attnets: BitVector) {
     if (this.enr) {
-      this.enr.set("attnets", Buffer.from(this.config.types.AttestationSubnets.serialize(attnets)));
+      this.enr.set("attnets", Buffer.from(this.config.types.phase0.AttestationSubnets.serialize(attnets)));
     }
     this._metadata.seqNumber++;
     this._metadata.attnets = attnets;
   }
 
-  get all(): Metadata {
+  get all(): phase0.Metadata {
     return this._metadata;
   }
 
@@ -71,7 +74,7 @@ export class MetadataController {
     const forkDigest = this.chain.getForkDigest();
     this.logger.verbose(`Metadata: received new fork digest ${toHexString(forkDigest)}`);
     if (this.enr) {
-      this.enr.set("eth2", Buffer.from(this.config.types.ENRForkID.serialize(this.chain.getENRForkID())));
+      this.enr.set("eth2", Buffer.from(this.config.types.phase0.ENRForkID.serialize(this.chain.getENRForkID())));
     }
   }
 }

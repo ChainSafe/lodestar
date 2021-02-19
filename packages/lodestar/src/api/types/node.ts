@@ -1,11 +1,11 @@
-import {Metadata} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 
 export type NodeIdentity = {
   peerId: string;
   enr: string;
   p2pAddresses: string[];
   discoveryAddresses: string[];
-  metadata: Metadata;
+  metadata: phase0.Metadata;
 };
 
 export type NodePeer = {

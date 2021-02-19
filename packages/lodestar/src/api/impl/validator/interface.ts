@@ -1,20 +1,7 @@
 /**
  * @module api/rpc
  */
-import {
-  Attestation,
-  AttestationData,
-  AttesterDuty,
-  BeaconBlock,
-  BLSSignature,
-  CommitteeIndex,
-  Epoch,
-  ProposerDuty,
-  Root,
-  SignedAggregateAndProof,
-  Slot,
-  ValidatorIndex,
-} from "@chainsafe/lodestar-types";
+import {BLSSignature, CommitteeIndex, Epoch, Root, phase0, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
 
 export type BeaconCommitteeSubscription = {
   validatorIndex: number;
@@ -28,22 +15,22 @@ export type BeaconCommitteeSubscription = {
  * The API interface defines the calls that can be made from a Validator
  */
 export interface IValidatorApi {
-  getProposerDuties(epoch: Epoch): Promise<ProposerDuty[]>;
+  getProposerDuties(epoch: Epoch): Promise<phase0.ProposerDuty[]>;
 
-  getAttesterDuties(epoch: Epoch, validatorIndices: ValidatorIndex[]): Promise<AttesterDuty[]>;
+  getAttesterDuties(epoch: Epoch, validatorIndices: ValidatorIndex[]): Promise<phase0.AttesterDuty[]>;
 
   /**
    * Requests a BeaconNode to produce a valid block,
    * which can then be signed by a ValidatorClient.
    * @returns {Promise<BeaconBlock>} A proposed BeaconBlock object
    */
-  produceBlock(slot: Slot, randaoReveal: BLSSignature, graffiti: string): Promise<BeaconBlock>;
+  produceBlock(slot: Slot, randaoReveal: BLSSignature, graffiti: string): Promise<phase0.BeaconBlock>;
 
-  produceAttestationData(index: CommitteeIndex, slot: Slot): Promise<AttestationData>;
+  produceAttestationData(index: CommitteeIndex, slot: Slot): Promise<phase0.AttestationData>;
 
-  getAggregatedAttestation(attestationDataRoot: Root, slot: Slot): Promise<Attestation>;
+  getAggregatedAttestation(attestationDataRoot: Root, slot: Slot): Promise<phase0.Attestation>;
 
-  publishAggregateAndProofs(signedAggregateAndProofs: SignedAggregateAndProof[]): Promise<void>;
+  publishAggregateAndProofs(signedAggregateAndProofs: phase0.SignedAggregateAndProof[]): Promise<void>;
 
   prepareBeaconCommitteeSubnet(subscriptions: BeaconCommitteeSubscription[]): Promise<void>;
 }

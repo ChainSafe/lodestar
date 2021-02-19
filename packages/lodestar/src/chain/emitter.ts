@@ -1,7 +1,7 @@
 import {EventEmitter} from "events";
 import StrictEventEmitter from "strict-event-emitter-types";
 
-import {Attestation, Checkpoint, Epoch, SignedBeaconBlock, Slot, Version} from "@chainsafe/lodestar-types";
+import {phase0, Epoch, Slot, Version} from "@chainsafe/lodestar-types";
 import {IBlockSummary} from "@chainsafe/lodestar-fork-choice";
 import {IBlockJob, ITreeStateContext} from "./interface";
 import {AttestationError, BlockError} from "./errors";
@@ -104,14 +104,18 @@ export enum ChainEvent {
 }
 
 export interface IChainEvents {
-  [ChainEvent.attestation]: (attestation: Attestation) => void;
-  [ChainEvent.block]: (signedBlock: SignedBeaconBlock, postStateContext: ITreeStateContext, job: IBlockJob) => void;
+  [ChainEvent.attestation]: (attestation: phase0.Attestation) => void;
+  [ChainEvent.block]: (
+    signedBlock: phase0.SignedBeaconBlock,
+    postStateContext: ITreeStateContext,
+    job: IBlockJob
+  ) => void;
   [ChainEvent.errorAttestation]: (error: AttestationError) => void;
   [ChainEvent.errorBlock]: (error: BlockError) => void;
 
-  [ChainEvent.checkpoint]: (checkpoint: Checkpoint, stateContext: ITreeStateContext) => void;
-  [ChainEvent.justified]: (checkpoint: Checkpoint, stateContext: ITreeStateContext) => void;
-  [ChainEvent.finalized]: (checkpoint: Checkpoint, stateContext: ITreeStateContext) => void;
+  [ChainEvent.checkpoint]: (checkpoint: phase0.Checkpoint, stateContext: ITreeStateContext) => void;
+  [ChainEvent.justified]: (checkpoint: phase0.Checkpoint, stateContext: ITreeStateContext) => void;
+  [ChainEvent.finalized]: (checkpoint: phase0.Checkpoint, stateContext: ITreeStateContext) => void;
   [ChainEvent.forkVersion]: (version: Version) => void;
 
   [ChainEvent.clockSlot]: (slot: Slot) => void;
@@ -119,8 +123,8 @@ export interface IChainEvents {
 
   [ChainEvent.forkChoiceHead]: (head: IBlockSummary) => void;
   [ChainEvent.forkChoiceReorg]: (head: IBlockSummary, oldHead: IBlockSummary, depth: number) => void;
-  [ChainEvent.forkChoiceJustified]: (checkpoint: Checkpoint) => void;
-  [ChainEvent.forkChoiceFinalized]: (checkpoint: Checkpoint) => void;
+  [ChainEvent.forkChoiceJustified]: (checkpoint: phase0.Checkpoint) => void;
+  [ChainEvent.forkChoiceFinalized]: (checkpoint: phase0.Checkpoint) => void;
 }
 
 /**

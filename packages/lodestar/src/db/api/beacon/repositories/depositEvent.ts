@@ -1,14 +1,14 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {DepositEvent} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {IDatabaseController, Bucket, Repository} from "@chainsafe/lodestar-db";
 
 /**
  * DepositData indexed by deposit index
  * Removed when included on chain or old
  */
-export class DepositEventRepository extends Repository<number, DepositEvent> {
+export class DepositEventRepository extends Repository<number, phase0.DepositEvent> {
   public constructor(config: IBeaconConfig, db: IDatabaseController<Buffer, Buffer>) {
-    super(config, db, Bucket.depositEvent, config.types.DepositEvent);
+    super(config, db, Bucket.depositEvent, config.types.phase0.DepositEvent);
   }
 
   public async deleteOld(depositCount: number): Promise<void> {
@@ -19,7 +19,7 @@ export class DepositEventRepository extends Repository<number, DepositEvent> {
     await this.batchDelete(Array.from({length: depositCount - firstDepositIndex}, (_, i) => i + firstDepositIndex));
   }
 
-  public async batchPutValues(depositEvents: DepositEvent[]): Promise<void> {
+  public async batchPutValues(depositEvents: phase0.DepositEvent[]): Promise<void> {
     await this.batchPut(
       depositEvents.map((depositEvent) => ({
         key: depositEvent.index,
