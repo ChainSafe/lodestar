@@ -126,7 +126,7 @@ export class BeaconChain implements IBeaconChain {
     handleChainEvents.bind(this)(this.abortController.signal);
   }
 
-  public async close(): Promise<void> {
+  public close(): void {
     this.abortController.abort();
     this.stateCache.clear();
     this.checkpointStateCache.clear();
@@ -185,7 +185,7 @@ export class BeaconChain implements IBeaconChain {
     if (!summary) {
       return null;
     }
-    return this.db.block.get(summary.blockRoot);
+    return await this.db.block.get(summary.blockRoot);
   }
 
   public async getStateContextByBlockRoot(blockRoot: Root): Promise<ITreeStateContext | null> {
@@ -224,13 +224,13 @@ export class BeaconChain implements IBeaconChain {
     return this.forkChoice.getFinalizedCheckpoint();
   }
 
-  public async receiveAttestation(attestation: phase0.Attestation): Promise<void> {
+  public receiveAttestation(attestation: phase0.Attestation): void {
     this.attestationProcessor
       .processAttestationJob({attestation, validSignature: false})
       .catch(() => /* unreachable */ ({}));
   }
 
-  public async receiveBlock(signedBlock: phase0.SignedBeaconBlock, trusted = false): Promise<void> {
+  public receiveBlock(signedBlock: phase0.SignedBeaconBlock, trusted = false): void {
     this.blockProcessor
       .processBlockJob({
         signedBlock,
@@ -243,7 +243,7 @@ export class BeaconChain implements IBeaconChain {
   }
 
   public async processChainSegment(signedBlocks: phase0.SignedBeaconBlock[], trusted = false): Promise<void> {
-    return this.blockProcessor.processChainSegment({
+    return await this.blockProcessor.processChainSegment({
       signedBlocks,
       reprocess: false,
       prefinalized: trusted,

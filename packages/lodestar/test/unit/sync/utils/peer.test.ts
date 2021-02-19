@@ -23,7 +23,7 @@ describe("sync peer utils", function () {
     expect(result.length).to.be.equal(0);
   });
 
-  it("should filter and sort peers", async function () {
+  it("should filter and sort peers", function () {
     const peers = [
       generatePeer(PeerId.createFromBytes(Buffer.alloc(32, 0))),
       generatePeer(PeerId.createFromBytes(Buffer.alloc(32, 1))),

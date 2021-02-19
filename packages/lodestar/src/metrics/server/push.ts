@@ -14,10 +14,10 @@ export class PushMetricsServer implements IMetricsServer {
     this.opts = opts;
     this.metrics = metrics;
   }
-  public async start(): Promise<void> {
+  public start(): void {
     this.gateway = new Pushgateway(this.opts.gatewayUrl as string, {}, this.metrics.registry);
   }
-  public async stop(): Promise<void> {
+  public stop(): void {
     this.gateway = null;
   }
 }

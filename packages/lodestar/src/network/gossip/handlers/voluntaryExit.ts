@@ -8,7 +8,7 @@ import {phase0} from "@chainsafe/lodestar-types";
 import {GossipEvent} from "../constants";
 import {GossipObject} from "../interface";
 
-export async function handleIncomingVoluntaryExit(this: Gossip, obj: GossipObject): Promise<void> {
+export function handleIncomingVoluntaryExit(this: Gossip, obj: GossipObject): void {
   try {
     const voluntaryExit = obj as phase0.SignedVoluntaryExit;
     this.logger.verbose("Received voluntary exit", {validator: voluntaryExit.message.validatorIndex});
@@ -19,7 +19,7 @@ export async function handleIncomingVoluntaryExit(this: Gossip, obj: GossipObjec
 }
 
 export async function publishVoluntaryExit(this: Gossip, voluntaryExit: phase0.SignedVoluntaryExit): Promise<void> {
-  const forkDigestValue = await this.getForkDigestByEpoch(voluntaryExit.message.epoch);
+  const forkDigestValue = this.getForkDigestByEpoch(voluntaryExit.message.epoch);
   const topic = getGossipTopic(GossipEvent.VOLUNTARY_EXIT, forkDigestValue);
   const voluntaryExitTopics = this.pubsub.getTopicPeerIds(topic);
 

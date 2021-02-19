@@ -121,7 +121,7 @@ export class BeaconReqRespHandler implements IReqRespHandler {
 
   private async *onStatus(status: phase0.Status, peerId: PeerId): AsyncIterable<phase0.Status> {
     try {
-      await assertPeerRelevance(status, this.chain, this.config);
+      assertPeerRelevance(status, this.chain, this.config);
     } catch (e) {
       this.logger.debug("Irrelevant peer", {
         peer: peerId.toB58String(),

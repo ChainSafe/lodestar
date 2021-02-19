@@ -23,13 +23,13 @@ describe("velidateAttestation", function () {
     sinon.restore();
   });
 
-  it("should throw on bad target epoch", async function () {
+  it("should throw on bad target epoch", function () {
     sinon.stub(clock, "currentSlot").get(() => 0);
     sinon.stub(clock, "currentEpoch").get(() => 0);
     // slot clearly not in target epoch
     const attestation = generateAttestation({data: {slot: 10000, target: {epoch: 0}}});
     try {
-      await validateAttestation({
+      validateAttestation({
         config,
         forkChoice,
         clock,
@@ -41,14 +41,14 @@ describe("velidateAttestation", function () {
     }
   });
 
-  it("should throw on past target epoch", async function () {
+  it("should throw on past target epoch", function () {
     const currentSlot = 100;
     const currentEpoch = computeEpochAtSlot(config, currentSlot);
     sinon.stub(clock, "currentSlot").get(() => currentSlot);
     sinon.stub(clock, "currentEpoch").get(() => currentEpoch);
     const attestation = generateAttestation({data: {slot: 0, target: {epoch: 0}}});
     try {
-      await validateAttestation({
+      validateAttestation({
         config,
         forkChoice,
         clock,
@@ -60,14 +60,14 @@ describe("velidateAttestation", function () {
     }
   });
 
-  it("should throw on future target epoch", async function () {
+  it("should throw on future target epoch", function () {
     const currentSlot = 100;
     const currentEpoch = computeEpochAtSlot(config, currentSlot);
     sinon.stub(clock, "currentSlot").get(() => currentSlot);
     sinon.stub(clock, "currentEpoch").get(() => currentEpoch);
     const attestation = generateAttestation({data: {slot: 200, target: {epoch: computeEpochAtSlot(config, 200)}}});
     try {
-      await validateAttestation({
+      validateAttestation({
         config,
         forkChoice,
         clock,
@@ -79,7 +79,7 @@ describe("velidateAttestation", function () {
     }
   });
 
-  it("should throw on future slot", async function () {
+  it("should throw on future slot", function () {
     const attSlot = 101;
     const currentSlot = 100;
     const currentEpoch = computeEpochAtSlot(config, currentSlot);
@@ -89,7 +89,7 @@ describe("velidateAttestation", function () {
       data: {slot: attSlot, target: {epoch: computeEpochAtSlot(config, attSlot)}},
     });
     try {
-      await validateAttestation({
+      validateAttestation({
         config,
         forkChoice,
         clock,
@@ -101,7 +101,7 @@ describe("velidateAttestation", function () {
     }
   });
 
-  it("should throw on unknown target", async function () {
+  it("should throw on unknown target", function () {
     const attSlot = 99;
     const currentSlot = 100;
     const currentEpoch = computeEpochAtSlot(config, currentSlot);
@@ -112,7 +112,7 @@ describe("velidateAttestation", function () {
       data: {slot: attSlot, target: {epoch: computeEpochAtSlot(config, attSlot)}},
     });
     try {
-      await validateAttestation({
+      validateAttestation({
         config,
         forkChoice,
         clock,
@@ -124,7 +124,7 @@ describe("velidateAttestation", function () {
     }
   });
 
-  it("should throw on unknown head", async function () {
+  it("should throw on unknown head", function () {
     const attSlot = 99;
     const currentSlot = 100;
     const currentEpoch = computeEpochAtSlot(config, currentSlot);
@@ -142,7 +142,7 @@ describe("velidateAttestation", function () {
       },
     });
     try {
-      await validateAttestation({
+      validateAttestation({
         config,
         forkChoice,
         clock,
@@ -154,7 +154,7 @@ describe("velidateAttestation", function () {
     }
   });
 
-  it("should throw on head not descendant of target", async function () {
+  it("should throw on head not descendant of target", function () {
     const attSlot = 99;
     const currentSlot = 100;
     const currentEpoch = computeEpochAtSlot(config, currentSlot);
@@ -169,7 +169,7 @@ describe("velidateAttestation", function () {
       },
     });
     try {
-      await validateAttestation({
+      validateAttestation({
         config,
         forkChoice,
         clock,

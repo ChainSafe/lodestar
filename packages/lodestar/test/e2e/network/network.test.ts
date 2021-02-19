@@ -72,7 +72,7 @@ describe("[network] network", function () {
   });
 
   afterEach(async () => {
-    await chain.close();
+    chain.close();
     await Promise.all([netA.stop(), netB.stop()]);
     sinon.restore();
   });

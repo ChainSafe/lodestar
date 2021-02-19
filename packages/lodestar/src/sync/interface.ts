@@ -1,4 +1,3 @@
-import {IService} from "../node";
 import {INetwork} from "../network";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {CommitteeIndex, Slot, phase0} from "@chainsafe/lodestar-types";
@@ -18,11 +17,13 @@ export enum SyncMode {
   STOPPED,
 }
 
-export interface IBeaconSync extends IService {
+export interface IBeaconSync {
   state: SyncMode;
-  getSyncStatus(): Promise<phase0.SyncingStatus>;
+  start(): Promise<void>;
+  stop(): Promise<void>;
+  getSyncStatus(): phase0.SyncingStatus;
   isSynced(): boolean;
-  collectAttestations(slot: Slot, committeeIndex: CommitteeIndex): Promise<void>;
+  collectAttestations(slot: Slot, committeeIndex: CommitteeIndex): void;
 }
 
 export interface ISyncModule {

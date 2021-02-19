@@ -55,7 +55,7 @@ export class BeaconSync implements IBeaconSync {
   public async start(): Promise<void> {
     this.mode = SyncMode.WAITING_PEERS as SyncMode;
     await this.reqResp.start();
-    await this.attestationCollector.start();
+    this.attestationCollector.start();
     if (this.mode === SyncMode.STOPPED) {
       return;
     }
@@ -79,7 +79,7 @@ export class BeaconSync implements IBeaconSync {
 
     await initialSync.sync();
 
-    await this.startRegularSync();
+    this.startRegularSync();
   }
 
   public async stop(): Promise<void> {
@@ -94,13 +94,13 @@ export class BeaconSync implements IBeaconSync {
     this.chain.emitter.off(ChainEvent.errorBlock, this.onUnknownBlockRoot);
     this.regularSync.off("syncCompleted", this.syncCompleted);
     this.stopSyncTimer();
-    await this.regularSync.stop();
-    await this.attestationCollector.stop();
+    this.regularSync.stop();
+    this.attestationCollector.stop();
     await this.reqResp.stop();
-    await this.gossip.stop();
+    this.gossip.stop();
   }
 
-  public async getSyncStatus(): Promise<phase0.SyncingStatus> {
+  public getSyncStatus(): phase0.SyncingStatus {
     const currentSlot = this.chain.clock.currentSlot;
     const headSlot = this.chain.forkChoice.getHead().slot;
     switch (this.mode) {
@@ -129,11 +129,11 @@ export class BeaconSync implements IBeaconSync {
     return this.mode;
   }
 
-  public async collectAttestations(slot: Slot, committeeIndex: CommitteeIndex): Promise<void> {
+  public collectAttestations(slot: Slot, committeeIndex: CommitteeIndex): void {
     if (!(this.mode === SyncMode.REGULAR_SYNCING || this.mode === SyncMode.SYNCED)) {
       throw new Error("Cannot collect attestations before regular sync");
     }
-    await this.attestationCollector.subscribeToCommitteeAttestations(slot, committeeIndex);
+    this.attestationCollector.subscribeToCommitteeAttestations(slot, committeeIndex);
   }
 
   private processChainSegment: ProcessChainSegment = async (blocks) => {
@@ -163,14 +163,14 @@ export class BeaconSync implements IBeaconSync {
     }
   };
 
-  private async startRegularSync(): Promise<void> {
+  private startRegularSync(): void {
     if (this.mode === SyncMode.STOPPED) return;
     this.mode = SyncMode.REGULAR_SYNCING;
     this.startSyncTimer(3 * this.config.params.SECONDS_PER_SLOT * 1000);
     this.regularSync.on("syncCompleted", this.syncCompleted);
     this.chain.emitter.on(ChainEvent.errorBlock, this.onUnknownBlockRoot);
-    await this.gossip.start();
-    await this.regularSync.start();
+    this.gossip.start();
+    this.regularSync.start();
   }
 
   private syncCompleted = async (): Promise<void> => {
@@ -245,7 +245,7 @@ export class BeaconSync implements IBeaconSync {
         if (blocks[0]) {
           this.logger.verbose("Found block for root", {slot: blocks[0].message.slot, blockRoot: missingRootHex});
           found = true;
-          await this.chain.receiveBlock(blocks[0]);
+          this.chain.receiveBlock(blocks[0]);
           break;
         }
       } catch (e) {

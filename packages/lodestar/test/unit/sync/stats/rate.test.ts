@@ -14,15 +14,15 @@ describe("rate counter", function () {
     expect(() => new RateCounter(0)).to.throw();
   });
 
-  it("should start and stop cleanly", async function () {
+  it("should start and stop cleanly", function () {
     const rate = new RateCounter(10);
-    await rate.start();
-    await rate.stop();
+    rate.start();
+    rate.stop();
   });
 
-  it("should get rate", async function () {
+  it("should get rate", function () {
     const rate = new RateCounter(10);
-    await rate.start();
+    rate.start();
     rate.increment(2);
     sandbox.clock.tick(2000);
     expect(rate.rate()).to.equal(1);
@@ -31,6 +31,6 @@ describe("rate counter", function () {
     rate.increment(1);
     sandbox.clock.tick(2000);
     expect(rate.rate()).to.equal(0.5);
-    await rate.stop();
+    rate.stop();
   });
 });

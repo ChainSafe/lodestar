@@ -72,7 +72,7 @@ export class GossipMessageValidator implements IGossipMessageValidator {
 
         case BlockErrorCode.FUTURE_SLOT:
         case BlockErrorCode.PARENT_UNKNOWN:
-          await this.chain.receiveBlock(signedBlock);
+          this.chain.receiveBlock(signedBlock);
           this.logger.warn("Ignoring gossip block", logContext, e);
           return ExtendedValidatorResult.ignore;
 
@@ -128,7 +128,7 @@ export class GossipMessageValidator implements IGossipMessageValidator {
         case AttestationErrorCode.UNKNOWN_BEACON_BLOCK_ROOT:
         case AttestationErrorCode.MISSING_ATTESTATION_PRESTATE:
           // attestation might be valid after we receive block
-          await this.chain.receiveAttestation(attestation);
+          this.chain.receiveAttestation(attestation);
           this.logger.warn("Ignoring gossip attestation", logContext, e);
           return ExtendedValidatorResult.ignore;
 
@@ -140,7 +140,7 @@ export class GossipMessageValidator implements IGossipMessageValidator {
           return ExtendedValidatorResult.ignore;
       }
     } finally {
-      await this.db.seenAttestationCache.addCommitteeAttestation(attestation);
+      this.db.seenAttestationCache.addCommitteeAttestation(attestation);
     }
   };
 
@@ -186,7 +186,7 @@ export class GossipMessageValidator implements IGossipMessageValidator {
           return ExtendedValidatorResult.reject;
 
         case AttestationErrorCode.FUTURE_SLOT:
-          await this.chain.receiveAttestation(attestation);
+          this.chain.receiveAttestation(attestation);
           this.logger.warn("Ignoring gossip aggregate and proof", logContext, e);
           return ExtendedValidatorResult.ignore;
 
@@ -198,7 +198,7 @@ export class GossipMessageValidator implements IGossipMessageValidator {
           return ExtendedValidatorResult.ignore;
       }
     } finally {
-      await this.db.seenAttestationCache.addAggregateAndProof(signedAggregateAndProof.message);
+      this.db.seenAttestationCache.addAggregateAndProof(signedAggregateAndProof.message);
     }
   };
 

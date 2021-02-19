@@ -26,14 +26,14 @@ export class CheckPeerAliveTask {
     this.logger = modules.logger;
   }
 
-  public async start(): Promise<void> {
+  public start(): void {
     this.interval = setInterval(
       this.run,
       this.config.params.SLOTS_PER_EPOCH * this.config.params.SECONDS_PER_SLOT * 1000
     );
   }
 
-  public async stop(): Promise<void> {
+  public stop(): void {
     if (this.interval) {
       clearInterval(this.interval);
     }

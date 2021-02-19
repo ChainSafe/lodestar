@@ -22,9 +22,9 @@ describe("gossip handlers - block", function () {
     sandbox.restore();
   });
 
-  it("handle valid block", async function () {
+  it("handle valid block", function () {
     const block = generateEmptySignedBlock();
-    await handleIncomingBlock.bind(gossipStub)(block);
+    handleIncomingBlock.bind(gossipStub)(block);
 
     expect(gossipStub.emit.withArgs(GossipEvent.BLOCK, block).calledOnce).to.be.true;
   });

@@ -29,20 +29,20 @@ export class DiversifyPeersBySubnetTask {
     this.isSynced = false;
   }
 
-  public async start(): Promise<void> {
+  public start(): void {
     this.testInterval = setInterval(
       this.run,
       1 * this.config.params.SLOTS_PER_EPOCH * this.config.params.SECONDS_PER_SLOT * 1000
     );
   }
 
-  public async stop(): Promise<void> {
+  public stop(): void {
     if (this.testInterval) {
       clearInterval(this.testInterval);
     }
   }
 
-  public async handleSyncCompleted(): Promise<void> {
+  public handleSyncCompleted(): void {
     this.isSynced = true;
   }
 

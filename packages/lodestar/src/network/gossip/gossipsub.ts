@@ -53,7 +53,7 @@ export class LodestarGossipsub extends Gossipsub {
     this.logger = logger;
   }
 
-  public async start(): Promise<void> {
+  public start(): void {
     if (!this.interval) {
       this.interval = setInterval(this.cleanUp.bind(this), this.timeToLive);
     }
@@ -64,7 +64,7 @@ export class LodestarGossipsub extends Gossipsub {
     return this.topics.get(topic);
   }
 
-  public async stop(): Promise<void> {
+  public stop(): void {
     if (this.interval) {
       clearInterval(this.interval);
     }

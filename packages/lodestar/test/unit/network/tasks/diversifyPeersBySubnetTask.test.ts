@@ -32,7 +32,7 @@ describe("DiversifyPeersBySubnetTask", function () {
 
   it("should search all subnets, no peer", async () => {
     networkStub.getPeers.returns([]);
-    await task.handleSyncCompleted();
+    task.handleSyncCompleted();
     await task.run();
     const allSubnets = Array.from({length: 64}, (_, i) => String(i));
     expect(networkStub.searchSubnetPeers.calledOnceWithExactly(allSubnets)).to.be.true;
@@ -71,7 +71,7 @@ describe("DiversifyPeersBySubnetTask", function () {
       seqNumber: BigInt(1),
     });
 
-    await task.handleSyncCompleted();
+    task.handleSyncCompleted();
     await task.run();
     // subnet 0,1,2 are connected
     const missingSubnets = Array.from({length: 61}, (_, i) => String(i + 3));

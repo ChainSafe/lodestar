@@ -29,7 +29,7 @@ function wrapHandler<
   event: Event,
   emitter: ChainEventEmitter,
   logger: ILogger,
-  handler: (...args: Parameters<Callback>) => Promise<void>
+  handler: (...args: Parameters<Callback>) => Promise<void> | void
 ) {
   return async (...args: Parameters<Callback>): Promise<void> => {
     try {
@@ -137,15 +137,11 @@ export async function onClockSlot(this: BeaconChain, slot: Slot): Promise<void> 
   });
 }
 
-export async function onForkVersion(this: BeaconChain, version: Version): Promise<void> {
+export function onForkVersion(this: BeaconChain, version: Version): void {
   this.logger.verbose("New fork version", this.config.types.Version.toJson(version));
 }
 
-export async function onCheckpoint(
-  this: BeaconChain,
-  cp: phase0.Checkpoint,
-  stateContext: ITreeStateContext
-): Promise<void> {
+export function onCheckpoint(this: BeaconChain, cp: phase0.Checkpoint, stateContext: ITreeStateContext): void {
   this.logger.verbose("Checkpoint processed", this.config.types.phase0.Checkpoint.toJson(cp));
   this.checkpointStateCache.add(cp, stateContext);
 
@@ -168,30 +164,26 @@ export async function onCheckpoint(
   }
 }
 
-export async function onJustified(
-  this: BeaconChain,
-  cp: phase0.Checkpoint,
-  stateContext: ITreeStateContext
-): Promise<void> {
+export function onJustified(this: BeaconChain, cp: phase0.Checkpoint, stateContext: ITreeStateContext): void {
   this.logger.verbose("Checkpoint justified", this.config.types.phase0.Checkpoint.toJson(cp));
   this.metrics.previousJustifiedEpoch.set(stateContext.state.previousJustifiedCheckpoint.epoch);
   this.metrics.currentJustifiedEpoch.set(cp.epoch);
 }
 
-export async function onFinalized(this: BeaconChain, cp: phase0.Checkpoint): Promise<void> {
+export function onFinalized(this: BeaconChain, cp: phase0.Checkpoint): void {
   this.logger.verbose("Checkpoint finalized", this.config.types.phase0.Checkpoint.toJson(cp));
   this.metrics.finalizedEpoch.set(cp.epoch);
 }
 
-export async function onForkChoiceJustified(this: BeaconChain, cp: phase0.Checkpoint): Promise<void> {
+export function onForkChoiceJustified(this: BeaconChain, cp: phase0.Checkpoint): void {
   this.logger.verbose("Fork choice justified", this.config.types.phase0.Checkpoint.toJson(cp));
 }
 
-export async function onForkChoiceFinalized(this: BeaconChain, cp: phase0.Checkpoint): Promise<void> {
+export function onForkChoiceFinalized(this: BeaconChain, cp: phase0.Checkpoint): void {
   this.logger.verbose("Fork choice finalized", this.config.types.phase0.Checkpoint.toJson(cp));
 }
 
-export async function onForkChoiceHead(this: BeaconChain, head: IBlockSummary): Promise<void> {
+export function onForkChoiceHead(this: BeaconChain, head: IBlockSummary): void {
   this.logger.verbose("New chain head", {
     headSlot: head.slot,
     headRoot: toHexString(head.blockRoot),
@@ -199,18 +191,11 @@ export async function onForkChoiceHead(this: BeaconChain, head: IBlockSummary): 
   this.metrics.headSlot.set(head.slot);
 }
 
-export async function onForkChoiceReorg(
-  this: BeaconChain,
-  head: IBlockSummary,
-  oldHead: IBlockSummary,
-  depth: number
-): Promise<void> {
-  this.logger.verbose("Chain reorg", {
-    depth,
-  });
+export function onForkChoiceReorg(this: BeaconChain, head: IBlockSummary, oldHead: IBlockSummary, depth: number): void {
+  this.logger.verbose("Chain reorg", {depth});
 }
 
-export async function onAttestation(this: BeaconChain, attestation: phase0.Attestation): Promise<void> {
+export function onAttestation(this: BeaconChain, attestation: phase0.Attestation): void {
   this.logger.debug("Attestation processed", {
     slot: attestation.data.slot,
     index: attestation.data.index,

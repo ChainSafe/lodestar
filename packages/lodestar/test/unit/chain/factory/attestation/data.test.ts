@@ -7,7 +7,7 @@ import {generateValidators} from "../../../../utils/validator";
 import {generateInitialMaxBalances} from "../../../../utils/balances";
 
 describe("assemble attestation data", function () {
-  it("should produce attestation", async function () {
+  it("should produce attestation", function () {
     const state = generateState({
       genesisTime: Math.floor(Date.now() / 1000) - config.params.SECONDS_PER_SLOT,
       validators: generateValidators(config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT, {
@@ -17,7 +17,7 @@ describe("assemble attestation data", function () {
       balances: generateInitialMaxBalances(config),
     });
     const blockRoot = config.types.phase0.BeaconBlock.hashTreeRoot(generateEmptyBlock());
-    const result = await assembleAttestationData(config, state, blockRoot, 2, 1);
+    const result = assembleAttestationData(config, state, blockRoot, 2, 1);
     expect(result).to.not.be.null;
   });
 });

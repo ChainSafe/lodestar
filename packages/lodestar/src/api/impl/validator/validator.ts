@@ -72,7 +72,7 @@ export class ValidatorApi implements IValidatorApi {
       await checkSyncStatus(this.config, this.sync);
       const headRoot = this.chain.forkChoice.getHeadRoot();
       const {state, epochCtx} = await this.chain.regen.getBlockSlotState(headRoot, slot);
-      return await assembleAttestationData(
+      return assembleAttestationData(
         epochCtx.config,
         state.getOriginalState() as TreeBacked<phase0.BeaconState>,
         headRoot,
@@ -185,7 +185,7 @@ export class ValidatorApi implements IValidatorApi {
 
     for (const {isAggregator, slot, committeeIndex, committeesAtSlot} of subscriptions) {
       if (isAggregator) {
-        await this.sync.collectAttestations(slot, committeeIndex);
+        this.sync.collectAttestations(slot, committeeIndex);
       }
       const subnet = computeSubnetForCommitteesAtSlot(this.config, slot, committeesAtSlot, committeeIndex);
       await this.network.searchSubnetPeers([String(subnet)]);

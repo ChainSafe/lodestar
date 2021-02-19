@@ -29,7 +29,7 @@ describe("gossip aggregate and proof test", function () {
   let isValidSignatureStub: SinonStub;
   let isValidIndexedAttestationStub: SinonStub;
 
-  beforeEach(async function () {
+  beforeEach(function () {
     chain = sinon.createStubInstance(BeaconChain);
     db = new StubbedBeaconDb(sinon);
     chain.getGenesisTime.returns(Math.floor(Date.now() / 1000));
@@ -37,7 +37,7 @@ describe("gossip aggregate and proof test", function () {
     sinon.stub(chain.clock, "currentSlot").get(() => 0);
     regen = chain.regen = sinon.createStubInstance(StateRegenerator);
     db.badBlock.has.resolves(false);
-    db.seenAttestationCache.hasAggregateAndProof.resolves(false);
+    db.seenAttestationCache.hasAggregateAndProof.returns(false);
     isAggregatorStub = sinon.stub(validatorUtils, "isAggregatorFromCommitteeLength");
     isValidSelectionProofStub = sinon.stub(validationUtils, "isValidSelectionProofSignature");
     isValidSignatureStub = sinon.stub(validationUtils, "isValidAggregateAndProofSignature");
@@ -112,7 +112,7 @@ describe("gossip aggregate and proof test", function () {
         },
       },
     });
-    db.seenAttestationCache.hasAggregateAndProof.resolves(true);
+    db.seenAttestationCache.hasAggregateAndProof.returns(true);
     try {
       await validateGossipAggregateAndProof(config, chain, db, item, {
         attestation: item.message.aggregate,

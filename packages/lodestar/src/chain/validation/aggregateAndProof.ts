@@ -40,7 +40,7 @@ export async function validateGossipAggregateAndProof(
     });
   }
 
-  if (await db.seenAttestationCache.hasAggregateAndProof(aggregateAndProof)) {
+  if (db.seenAttestationCache.hasAggregateAndProof(aggregateAndProof)) {
     throw new AttestationError({
       code: AttestationErrorCode.AGGREGATE_ALREADY_KNOWN,
       job: attestationJob,

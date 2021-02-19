@@ -2,7 +2,6 @@ import {ChainEvent, IBeaconChain} from "../../chain";
 import {IBeaconDb} from "../../db";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {phase0, CommitteeIndex, ForkDigest, Slot} from "@chainsafe/lodestar-types";
-import {IService} from "../../node";
 import {INetwork} from "../../network";
 import {computeSubnetForSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {ILogger} from "@chainsafe/lodestar-utils";
@@ -14,7 +13,7 @@ export interface IAttestationCollectorModules {
   logger: ILogger;
 }
 
-export class AttestationCollector implements IService {
+export class AttestationCollector {
   private readonly config: IBeaconConfig;
   private readonly chain: IBeaconChain;
   private readonly network: INetwork;
@@ -31,16 +30,16 @@ export class AttestationCollector implements IService {
     this.logger = modules.logger;
   }
 
-  public async start(): Promise<void> {
+  public start(): void {
     this.chain.emitter.on(ChainEvent.clockSlot, this.checkDuties);
   }
 
-  public async stop(): Promise<void> {
+  public stop(): void {
     for (const timer of this.timers) clearTimeout(timer);
     this.chain.emitter.off(ChainEvent.clockSlot, this.checkDuties);
   }
 
-  public async subscribeToCommitteeAttestations(slot: Slot, committeeIndex: CommitteeIndex): Promise<void> {
+  public subscribeToCommitteeAttestations(slot: Slot, committeeIndex: CommitteeIndex): void {
     const forkDigest = this.chain.getForkDigest();
     const headState = this.chain.getHeadState();
     const subnet = computeSubnetForSlot(this.config, headState, slot, committeeIndex);
@@ -56,7 +55,7 @@ export class AttestationCollector implements IService {
     }
   }
 
-  private checkDuties = async (slot: Slot): Promise<void> => {
+  private checkDuties = (slot: Slot): void => {
     const committees = this.aggregationDuties.get(slot) || new Set();
     const forkDigest = this.chain.getForkDigest();
     const headState = this.chain.getHeadState();
