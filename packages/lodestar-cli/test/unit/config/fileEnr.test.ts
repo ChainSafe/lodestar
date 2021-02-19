@@ -24,7 +24,7 @@ describe("fileENR", function () {
     const peerIdFile = beaconPaths.peerIdFile;
     await initPeerId(peerIdFile);
     const peerId = await readPeerId(peerIdFile);
-    await initEnr(enrFilePath, peerId);
+    initEnr(enrFilePath, peerId);
     const enr = FileENR.initFromFile(enrFilePath, peerId);
     const newValue = new Uint8Array(55);
     enr.set("tcp", newValue);

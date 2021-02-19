@@ -255,7 +255,7 @@ describe("eth1 / util / getDepositRootByDepositCount", function () {
   for (const testCase of testCases) {
     const {id, depositCounts, depositRootTree, expectedMap} = testCase();
     it(id, async function () {
-      const map = await getDepositRootByDepositCount(depositCounts, depositRootTree);
+      const map = getDepositRootByDepositCount(depositCounts, depositRootTree);
       expect(mapToObj(map)).to.deep.equal(mapToObj(expectedMap));
     });
   }

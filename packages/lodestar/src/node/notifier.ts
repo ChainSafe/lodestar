@@ -48,7 +48,7 @@ export async function runNodeNotifier({
 
       const currentSlot = chain.clock.currentSlot;
       const headInfo = chain.forkChoice.getHead();
-      const headState = await chain.getHeadState();
+      const headState = chain.getHeadState();
       const finalizedEpoch = headState.finalizedCheckpoint.epoch;
       const finalizedRoot = headState.finalizedCheckpoint.root;
       const headSlot = headInfo.slot;
