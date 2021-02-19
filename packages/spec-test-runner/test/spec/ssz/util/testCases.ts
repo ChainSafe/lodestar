@@ -14,7 +14,7 @@ interface IResult {
 }
 
 export function testStatic(type: keyof IBeaconSSZTypes): void {
-  const sszType = safeType(config.types[type]) as CompositeType<any>;
+  const sszType = safeType(config.types.phase0[type]) as CompositeType<any>;
   for (const caseName of [
     "ssz_lengthy",
     "ssz_max",
