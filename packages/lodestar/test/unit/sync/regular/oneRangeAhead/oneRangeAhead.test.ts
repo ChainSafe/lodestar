@@ -75,10 +75,10 @@ describe("ORARegularSync", function () {
     );
     getCurrentSlotStub.returns(2000);
     await Promise.all([
-      new Promise((resolve) => {
+      new Promise<void>((resolve) => {
         setTimeout(async () => {
           logger.info("Stopping from unit test...");
-          await sync.stop();
+          sync.stop();
           // one more round
           await sleep(200);
           resolve();

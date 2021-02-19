@@ -69,7 +69,7 @@ export interface IBeaconChain {
   /**
    * Stop beacon chain processing
    */
-  close(): Promise<void>;
+  close(): void;
 
   getHeadStateContext(): ITreeStateContext;
   getHeadState(): TreeBacked<phase0.BeaconState>;
@@ -106,12 +106,12 @@ export interface IBeaconChain {
   /**
    * Add attestation to the fork-choice rule
    */
-  receiveAttestation(attestation: phase0.Attestation): Promise<void>;
+  receiveAttestation(attestation: phase0.Attestation): void;
 
   /**
    * Pre-process and run the per slot state transition function
    */
-  receiveBlock(signedBlock: phase0.SignedBeaconBlock, trusted?: boolean): Promise<void>;
+  receiveBlock(signedBlock: phase0.SignedBeaconBlock, trusted?: boolean): void;
   /**
    * Process a chain of blocks until complete.
    */

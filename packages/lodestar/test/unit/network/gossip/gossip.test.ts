@@ -54,12 +54,12 @@ describe("Network Gossip", function () {
 
   afterEach(async () => {
     await gossip.stop();
-    await chain.close();
+    chain.close();
     sandbox.restore();
   });
 
   describe("subscribe/unsubscribe", () => {
-    it("should subscribe to attestation subnet correctly", async () => {
+    it("should subscribe to attestation subnet correctly", () => {
       const spy = sandbox.spy();
       const anotherSpy = sandbox.spy();
 
@@ -86,7 +86,7 @@ describe("Network Gossip", function () {
       expect(anotherSpy.callCount).to.be.equal(1);
     });
 
-    it("should unsubscribe to single subnet correctly", async () => {
+    it("should unsubscribe to single subnet correctly", () => {
       const spy = sandbox.spy();
       const forkDigest = chain.getForkDigest();
       gossip.subscribeToAttestationSubnet(forkDigest, "1", spy);
@@ -113,7 +113,7 @@ describe("Network Gossip", function () {
       expect(spy.callCount).to.be.equal(0);
     });
 
-    it("should unsubscribe across subnets correctly", async () => {
+    it("should unsubscribe across subnets correctly", () => {
       const spy = sandbox.spy();
       const spy2 = sandbox.spy();
 
@@ -140,7 +140,7 @@ describe("Network Gossip", function () {
       expect(spy2.callCount).to.be.equal(0);
     });
 
-    it("should subscribe/unsubscribe to block correctly", async () => {
+    it("should subscribe/unsubscribe to block correctly", () => {
       const spy = sandbox.spy();
       const anotherSpy = sandbox.spy();
       const forkDigest = chain.getForkDigest();
@@ -163,7 +163,7 @@ describe("Network Gossip", function () {
       expect(anotherSpy.callCount).to.be.equal(3);
     });
 
-    it("should ignore unsubscribing strange listener", async () => {
+    it("should ignore unsubscribing strange listener", () => {
       const spy = sandbox.spy();
       const strangeListener = sandbox.spy();
       const forkDigest = chain.getForkDigest();

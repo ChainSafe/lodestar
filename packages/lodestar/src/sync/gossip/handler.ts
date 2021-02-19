@@ -21,13 +21,13 @@ export class BeaconGossipHandler implements IGossipHandler {
     this.logger = logger;
   }
 
-  public async start(): Promise<void> {
+  public start(): void {
     this.currentForkDigest = this.chain.getForkDigest();
     this.subscribeBlockAndAttestation(this.currentForkDigest);
     this.chain.emitter.on(ChainEvent.forkVersion, this.handleForkVersion);
   }
 
-  public async stop(): Promise<void> {
+  public stop(): void {
     this.unsubscribe(this.currentForkDigest);
     this.chain.emitter.off(ChainEvent.forkVersion, this.handleForkVersion);
   }
@@ -36,7 +36,7 @@ export class BeaconGossipHandler implements IGossipHandler {
     this.subscribeValidatorTopics(this.currentForkDigest);
   }
 
-  private handleForkVersion = async (): Promise<void> => {
+  private handleForkVersion = (): void => {
     const forkDigest = this.chain.getForkDigest();
     this.logger.important(`Gossip handler: received new fork digest ${toHexString(forkDigest)}`);
     this.unsubscribe(this.currentForkDigest);
@@ -68,8 +68,8 @@ export class BeaconGossipHandler implements IGossipHandler {
     this.network.gossip.unsubscribe(forkDigest, GossipEvent.VOLUNTARY_EXIT, this.onVoluntaryExit);
   };
 
-  private onBlock = async (block: phase0.SignedBeaconBlock): Promise<void> => {
-    await this.chain.receiveBlock(block);
+  private onBlock = (block: phase0.SignedBeaconBlock): void => {
+    this.chain.receiveBlock(block);
   };
 
   private onAggregatedAttestation = async (aggregate: phase0.SignedAggregateAndProof): Promise<void> => {

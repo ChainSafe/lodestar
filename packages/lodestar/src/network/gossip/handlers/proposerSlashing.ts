@@ -8,7 +8,7 @@ import {Gossip} from "../gossip";
 import {GossipEvent} from "../constants";
 import {GossipObject} from "../interface";
 
-export async function handleIncomingProposerSlashing(this: Gossip, obj: GossipObject): Promise<void> {
+export function handleIncomingProposerSlashing(this: Gossip, obj: GossipObject): void {
   try {
     const proposerSlashing = obj as phase0.ProposerSlashing;
     this.logger.verbose("Received slashing", {proposer: proposerSlashing.signedHeader1.message.proposerIndex});
@@ -19,7 +19,7 @@ export async function handleIncomingProposerSlashing(this: Gossip, obj: GossipOb
 }
 
 export async function publishProposerSlashing(this: Gossip, proposerSlashing: phase0.ProposerSlashing): Promise<void> {
-  const forkDigestValue = await this.getForkDigest(proposerSlashing.signedHeader1.message.slot);
+  const forkDigestValue = this.getForkDigest(proposerSlashing.signedHeader1.message.slot);
 
   await this.pubsub.publish(
     getGossipTopic(GossipEvent.PROPOSER_SLASHING, forkDigestValue),

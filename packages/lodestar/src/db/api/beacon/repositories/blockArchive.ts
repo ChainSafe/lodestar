@@ -109,7 +109,7 @@ export class BlockArchiveRepository extends Repository<Slot, phase0.SignedBeacon
   }
 
   public async values(opts?: IBlockFilterOptions): Promise<phase0.SignedBeaconBlock[]> {
-    return all(this.valuesStream(opts));
+    return await all(this.valuesStream(opts));
   }
 
   public async *valuesStream(opts?: IBlockFilterOptions): AsyncIterable<phase0.SignedBeaconBlock> {
@@ -131,19 +131,19 @@ export class BlockArchiveRepository extends Repository<Slot, phase0.SignedBeacon
   }
 
   private async storeRootIndex(slot: Slot, blockRoot: Root): Promise<void> {
-    return this.db.put(this.getRootIndexKey(blockRoot), intToBytes(slot, 64, "be"));
+    return await this.db.put(this.getRootIndexKey(blockRoot), intToBytes(slot, 64, "be"));
   }
 
   private async storeParentRootIndex(slot: Slot, parentRoot: Root): Promise<void> {
-    return this.db.put(this.getParentRootIndexKey(parentRoot), intToBytes(slot, 64, "be"));
+    return await this.db.put(this.getParentRootIndexKey(parentRoot), intToBytes(slot, 64, "be"));
   }
 
   private async deleteRootIndex(block: phase0.SignedBeaconBlock): Promise<void> {
-    return this.db.delete(this.getRootIndexKey(this.config.types.phase0.BeaconBlock.hashTreeRoot(block.message)));
+    return await this.db.delete(this.getRootIndexKey(this.config.types.phase0.BeaconBlock.hashTreeRoot(block.message)));
   }
 
   private async deleteParentRootIndex(block: phase0.SignedBeaconBlock): Promise<void> {
-    return this.db.delete(this.getParentRootIndexKey(block.message.parentRoot));
+    return await this.db.delete(this.getParentRootIndexKey(block.message.parentRoot));
   }
 
   private getParentRootIndexKey(parentRoot: Root): Buffer {

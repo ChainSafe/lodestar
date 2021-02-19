@@ -8,7 +8,7 @@ import {getGossipTopic} from "../utils";
 import {GossipEvent} from "../constants";
 import {GossipObject} from "../interface";
 
-export async function handleIncomingBlock(this: Gossip, obj: GossipObject): Promise<void> {
+export function handleIncomingBlock(this: Gossip, obj: GossipObject): void {
   try {
     const signedBlock = obj as phase0.SignedBeaconBlock;
     this.logger.verbose("Incoming gossip block", {slot: signedBlock.message.slot});
@@ -19,7 +19,7 @@ export async function handleIncomingBlock(this: Gossip, obj: GossipObject): Prom
 }
 
 export async function publishBlock(this: Gossip, signedBlock: phase0.SignedBeaconBlock): Promise<void> {
-  const forkDigestValue = await this.getForkDigest(signedBlock.message.slot);
+  const forkDigestValue = this.getForkDigest(signedBlock.message.slot);
 
   await this.pubsub.publish(
     getGossipTopic(GossipEvent.BLOCK, forkDigestValue),

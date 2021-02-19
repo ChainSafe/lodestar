@@ -1,6 +1,6 @@
 import {EventEmitter} from "events";
 
-export async function waitForEvent<T>(
+export function waitForEvent<T>(
   emitter: EventEmitter,
   event: string,
   timeout = 3000,

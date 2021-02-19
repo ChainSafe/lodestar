@@ -9,7 +9,7 @@ import {getGossipTopic} from "../utils";
 import {GossipEvent} from "../constants";
 import {GossipObject} from "../interface";
 
-export async function handleIncomingAggregateAndProof(this: Gossip, obj: GossipObject): Promise<void> {
+export function handleIncomingAggregateAndProof(this: Gossip, obj: GossipObject): void {
   try {
     const signedAggregateAndProof = obj as phase0.SignedAggregateAndProof;
     this.logger.verbose("Received AggregateAndProof", {
@@ -26,7 +26,7 @@ export async function publishAggregatedAttestation(
   this: Gossip,
   signedAggregateAndProof: phase0.SignedAggregateAndProof
 ): Promise<void> {
-  const forkDigestValue = await this.getForkDigest(signedAggregateAndProof.message.aggregate.data.slot);
+  const forkDigestValue = this.getForkDigest(signedAggregateAndProof.message.aggregate.data.slot);
   await this.pubsub.publish(
     getGossipTopic(GossipEvent.AGGREGATE_AND_PROOF, forkDigestValue),
     Buffer.from(this.config.types.phase0.SignedAggregateAndProof.serialize(signedAggregateAndProof))

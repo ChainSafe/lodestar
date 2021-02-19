@@ -6,7 +6,6 @@ import {phase0} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils";
 
-import {IService} from "../node";
 import {IBeaconDb} from "../db/api";
 import {ChainEvent, IBeaconChain} from "../chain";
 import {ArchiveBlocksTask} from "./tasks/archiveBlocks";
@@ -33,11 +32,10 @@ export interface ITasksModules {
  * Used for running tasks that depends on some events or are executed
  * periodically.
  */
-export class TasksService implements IService {
+export class TasksService {
   private readonly config: IBeaconConfig;
   private readonly db: IBeaconDb;
   private readonly chain: IBeaconChain;
-  private readonly sync: IBeaconSync;
   private readonly network: INetwork;
   private readonly logger: ILogger;
 
@@ -48,7 +46,6 @@ export class TasksService implements IService {
     this.db = modules.db;
     this.chain = modules.chain;
     this.logger = modules.logger;
-    this.sync = modules.sync;
     this.network = modules.network;
     this.interopSubnetsTask = new InteropSubnetsJoiningTask(this.config, {
       chain: this.chain,
@@ -57,7 +54,7 @@ export class TasksService implements IService {
     });
   }
 
-  public async start(): Promise<void> {
+  public start(): void {
     this.chain.emitter.on(ChainEvent.forkChoiceFinalized, this.onFinalizedCheckpoint);
     this.chain.emitter.on(ChainEvent.checkpoint, this.onCheckpoint);
     this.network.gossip.on(NetworkEvent.gossipStart, this.handleGossipStart);
@@ -69,7 +66,7 @@ export class TasksService implements IService {
     this.chain.emitter.off(ChainEvent.checkpoint, this.onCheckpoint);
     this.network.gossip.off(NetworkEvent.gossipStart, this.handleGossipStart);
     this.network.gossip.off(NetworkEvent.gossipStop, this.handleGossipStop);
-    await this.interopSubnetsTask.stop();
+    this.interopSubnetsTask.stop();
     // Archive latest finalized state
     await new ArchiveStatesTask(
       this.config,
@@ -78,12 +75,12 @@ export class TasksService implements IService {
     ).run();
   }
 
-  private handleGossipStart = async (): Promise<void> => {
-    await this.interopSubnetsTask.start();
+  private handleGossipStart = (): void => {
+    this.interopSubnetsTask.start();
   };
 
-  private handleGossipStop = async (): Promise<void> => {
-    await this.interopSubnetsTask.stop();
+  private handleGossipStop = (): void => {
+    this.interopSubnetsTask.stop();
   };
 
   private onFinalizedCheckpoint = async (finalized: phase0.Checkpoint): Promise<void> => {

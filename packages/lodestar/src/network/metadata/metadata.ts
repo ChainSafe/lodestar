@@ -34,7 +34,7 @@ export class MetadataController {
     this._metadata = opts.metadata || this.config.types.phase0.Metadata.defaultValue();
   }
 
-  public async start(enr: ENR): Promise<void> {
+  public start(enr: ENR): void {
     this.enr = enr;
     if (this.enr) {
       this.enr.set(
@@ -46,7 +46,7 @@ export class MetadataController {
     this.chain.emitter.on(ChainEvent.forkVersion, this.handleForkVersion);
   }
 
-  public async stop(): Promise<void> {
+  public stop(): void {
     this.chain.emitter.off(ChainEvent.forkVersion, this.handleForkVersion);
   }
 
@@ -70,7 +70,7 @@ export class MetadataController {
     return this._metadata;
   }
 
-  private async handleForkVersion(): Promise<void> {
+  private handleForkVersion(): void {
     const forkDigest = this.chain.getForkDigest();
     this.logger.verbose(`Metadata: received new fork digest ${toHexString(forkDigest)}`);
     if (this.enr) {

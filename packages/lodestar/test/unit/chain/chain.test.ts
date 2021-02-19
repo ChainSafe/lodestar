@@ -20,7 +20,7 @@ describe("BeaconChain", function () {
   const logger = new WinstonLogger();
   let chain: IBeaconChain;
 
-  beforeEach(async () => {
+  beforeEach(() => {
     dbStub = new StubbedBeaconDb(sandbox);
     metrics = new BeaconMetrics({enabled: false} as any, {logger});
     const state = generateState();
@@ -34,13 +34,13 @@ describe("BeaconChain", function () {
     });
   });
 
-  afterEach(async () => {
-    await chain.close();
+  afterEach(() => {
+    chain.close();
     sandbox.restore();
   });
 
   describe("getENRForkID", () => {
-    it("should get enr fork id if not found next fork", async () => {
+    it("should get enr fork id if not found next fork", () => {
       chain.forkChoice.getHead = () => generateBlockSummary();
       const enrForkID = chain.getENRForkID();
       expect(config.types.Version.equals(enrForkID.nextForkVersion, Buffer.from([255, 255, 255, 255])));
@@ -49,7 +49,7 @@ describe("BeaconChain", function () {
       config.types.phase0.ENRForkID.hashTreeRoot(enrForkID);
     });
 
-    it("should get enr fork id if found next fork", async () => {
+    it("should get enr fork id if found next fork", () => {
       config.params.ALL_FORKS = [
         {
           currentVersion: 2,

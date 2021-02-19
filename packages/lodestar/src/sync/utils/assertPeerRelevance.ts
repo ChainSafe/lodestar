@@ -28,11 +28,7 @@ export class IrrelevantPeerError extends LodestarError<IrrelevantPeerErrorType> 
  * Process a `Status` message to determine if a peer is relevant to us. If the peer is
  * irrelevant the reason is returned.
  */
-export async function assertPeerRelevance(
-  remote: phase0.Status,
-  chain: IBeaconChain,
-  config: IBeaconConfig
-): Promise<void> {
+export function assertPeerRelevance(remote: phase0.Status, chain: IBeaconChain, config: IBeaconConfig): void {
   const local = chain.getStatus();
 
   // The node is on a different network/fork
@@ -74,7 +70,7 @@ export async function assertPeerRelevance(
       remote.finalizedEpoch === local.finalizedEpoch
         ? local.finalizedRoot
         : // This will get the latest known block at the start of the epoch.
-          await getRootAtHistoricalEpoch(config, chain, remote.finalizedEpoch);
+          getRootAtHistoricalEpoch(config, chain, remote.finalizedEpoch);
 
     if (!config.types.Root.equals(remoteRoot, expectedRoot)) {
       throw new IrrelevantPeerError({
@@ -93,7 +89,7 @@ export function isZeroRoot(config: IBeaconConfig, root: Root): boolean {
   return config.types.Root.equals(root, ZERO_ROOT);
 }
 
-async function getRootAtHistoricalEpoch(config: IBeaconConfig, chain: IBeaconChain, epoch: Epoch): Promise<Root> {
+function getRootAtHistoricalEpoch(config: IBeaconConfig, chain: IBeaconChain, epoch: Epoch): Root {
   const headState = chain.getHeadState();
 
   const slot = computeStartSlotAtEpoch(config, epoch);

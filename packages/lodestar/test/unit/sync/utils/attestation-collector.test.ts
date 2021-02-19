@@ -49,12 +49,12 @@ describe("Attestation collector", function () {
       db: dbStub,
       logger,
     });
-    await collector.start();
+    collector.start();
     computeSubnetStub.returns(10);
     const subscribed = new Promise((resolve) => {
       fakeGossip.subscribeToAttestationSubnet.callsFake(resolve);
     });
-    await collector.subscribeToCommitteeAttestations(1, 1);
+    collector.subscribeToCommitteeAttestations(1, 1);
     expect(fakeGossip.subscribeToAttestationSubnet.withArgs(sinon.match.any, 10).calledOnce).to.be.true;
     sandbox.clock.tick(config.params.SECONDS_PER_SLOT * 1000);
     await subscribed;
@@ -63,11 +63,11 @@ describe("Attestation collector", function () {
     sandbox.clock.tick(config.params.SECONDS_PER_SLOT * 1000);
     expect(fakeGossip.unsubscribeFromAttestationSubnet.withArgs(sinon.match.any, 10, sinon.match.func).calledOnce).to.be
       .true;
-    await collector.stop();
+    collector.stop();
     abortController.abort();
   });
 
-  it("should skip if there is no duties", async function () {
+  it("should skip if there is no duties", function () {
     const emitter = new ChainEventEmitter();
     const abortController = new AbortController();
     const realClock = new LocalClock({
@@ -91,10 +91,10 @@ describe("Attestation collector", function () {
       },
       logger,
     });
-    await collector.start();
+    collector.start();
     sandbox.clock.tick(config.params.SECONDS_PER_SLOT * 1000);
     expect(fakeGossip.subscribeToAttestationSubnet.called).to.be.false;
-    await collector.stop();
+    collector.stop();
     abortController.abort();
   });
 });

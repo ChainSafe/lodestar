@@ -1,5 +1,3 @@
-import chai, {expect} from "chai";
-import chaiAsPromised from "chai-as-promised";
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {phase0} from "@chainsafe/lodestar-types";
 import {MockBeaconChain} from "../../../utils/mocks/chain/chain";
@@ -9,10 +7,8 @@ import {
   IrrelevantPeerErrorCode,
 } from "../../../../src/sync/utils/assertPeerRelevance";
 import {IBeaconClock} from "../../../../src/chain/clock";
-import {expectRejectedWithLodestarError} from "../../../utils/errors";
+import {expectThrowsLodestarError} from "../../../utils/errors";
 import {toHexString} from "@chainsafe/ssz";
-
-chai.use(chaiAsPromised);
 
 describe("sync / utils / assertPeerRelevance", () => {
   const correctForkDigest = Buffer.alloc(4, 0);
@@ -96,12 +92,10 @@ describe("sync / utils / assertPeerRelevance", () => {
 
   for (const {id, remote, error} of testCases) {
     it(id, async () => {
-      const promise = assertPeerRelevance(remote, chain, config);
       if (error) {
-        expect;
-        await expectRejectedWithLodestarError(promise, error);
+        expectThrowsLodestarError(() => assertPeerRelevance(remote, chain, config), error);
       } else {
-        await promise;
+        assertPeerRelevance(remote, chain, config);
       }
     });
   }

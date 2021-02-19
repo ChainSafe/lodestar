@@ -18,22 +18,22 @@ export class SeenAttestationCache {
     this.cache = new Map();
   }
 
-  public async addCommitteeAttestation(attestation: phase0.Attestation): Promise<void> {
+  public addCommitteeAttestation(attestation: phase0.Attestation): void {
     const key = this.attestationKey(attestation);
     this.add(key);
   }
 
-  public async addAggregateAndProof(aggregateAndProof: phase0.AggregateAndProof): Promise<void> {
+  public addAggregateAndProof(aggregateAndProof: phase0.AggregateAndProof): void {
     const key = this.aggregateAndProofKey(aggregateAndProof);
     this.add(key);
   }
 
-  public async hasCommitteeAttestation(attestation: phase0.Attestation): Promise<boolean> {
+  public hasCommitteeAttestation(attestation: phase0.Attestation): boolean {
     const key = this.attestationKey(attestation);
     return this.cache.has(key);
   }
 
-  public async hasAggregateAndProof(aggregateAndProof: phase0.AggregateAndProof): Promise<boolean> {
+  public hasAggregateAndProof(aggregateAndProof: phase0.AggregateAndProof): boolean {
     const key = this.aggregateAndProofKey(aggregateAndProof);
     return this.cache.has(key);
   }

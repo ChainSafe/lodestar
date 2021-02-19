@@ -39,7 +39,7 @@ describe("interopSubnetsJoiningTask", () => {
   const params = Object.assign({}, minimalConfig.params, {ALL_FORKS});
   const config: IBeaconConfig = Object.assign({}, minimalConfig, {params});
 
-  beforeEach(async function () {
+  beforeEach(() => {
     clock = sandbox.useFakeTimers();
     networkStub = sandbox.createStubInstance(Libp2pNetwork);
     gossipStub = sandbox.createStubInstance(Gossip);
@@ -58,11 +58,11 @@ describe("interopSubnetsJoiningTask", () => {
       chain,
       logger,
     });
-    await task.start();
+    task.start();
   });
 
-  afterEach(async () => {
-    await task.stop();
+  afterEach(() => {
+    task.stop();
     sandbox.reset();
     clock.restore();
   });
@@ -100,7 +100,7 @@ describe("interopSubnetsJoiningTask", () => {
     expect(Number(networkStub.metadata.seqNumber)).to.be.gt(Number(seqNumber));
   });
 
-  it("should prepare for a hard fork", async function () {
+  it("should prepare for a hard fork", function () {
     // scheduleNextForkSubscription already get called after start
     const state = chain.getHeadState();
     const nextForkDigest = computeForkDigest(

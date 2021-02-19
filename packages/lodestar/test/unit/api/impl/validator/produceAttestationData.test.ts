@@ -44,7 +44,7 @@ describe("api - validator - produceAttestationData", function () {
   });
 
   it("not synced", async function () {
-    syncStub.getSyncStatus.resolves({syncDistance: BigInt(300), headSlot: BigInt(0)});
+    syncStub.getSyncStatus.returns({syncDistance: BigInt(300), headSlot: BigInt(0)});
     const api = new ValidatorApi({}, modules);
     await expect(api.produceAttestationData(0, 0)).to.be.rejectedWith("Node is syncing");
   });

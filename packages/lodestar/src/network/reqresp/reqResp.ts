@@ -54,7 +54,7 @@ export class ReqResp implements IReqResp {
     this.performRequestHandler = null;
   }
 
-  public async start(): Promise<void> {
+  public start(): void {
     this.controller = new AbortController();
     for (const method of Object.values(Method)) {
       for (const encoding of Object.values(ReqRespEncoding)) {
@@ -109,7 +109,7 @@ export class ReqResp implements IReqResp {
     return handler;
   }
 
-  public async stop(): Promise<void> {
+  public stop(): void {
     for (const method of Object.values(Method)) {
       for (const encoding of Object.values(ReqRespEncoding)) {
         this.libp2p.unhandle(createRpcProtocol(method, encoding));

@@ -23,7 +23,7 @@ describe("gossip handlers - aggregate and proof", function () {
     sandbox.restore();
   });
 
-  it("handle valid message", async function () {
+  it("handle valid message", function () {
     const aggregate: phase0.AggregateAndProof = {
       aggregatorIndex: 0,
       selectionProof: Buffer.alloc(0),
@@ -35,7 +35,7 @@ describe("gossip handlers - aggregate and proof", function () {
       signature: Buffer.alloc(96),
     };
 
-    await handleIncomingAggregateAndProof.bind(gossipStub)(signedAggregate);
+    handleIncomingAggregateAndProof.bind(gossipStub)(signedAggregate);
 
     expect(gossipStub.emit.withArgs(GossipEvent.AGGREGATE_AND_PROOF, signedAggregate).calledOnce).to.be.true;
   });

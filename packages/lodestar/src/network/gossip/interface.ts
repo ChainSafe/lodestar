@@ -9,7 +9,6 @@ import {EventEmitter} from "events";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import LibP2p from "libp2p";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
-import {IService} from "../../node";
 import {InMessage} from "libp2p-interfaces/src/pubsub";
 import {IBeaconChain} from "../../chain";
 import {ForkDigest} from "@chainsafe/lodestar-types";
@@ -57,7 +56,9 @@ export interface IGossipSub extends EventEmitter {
   getTopicPeerIds(topic: string): Set<string> | undefined;
 }
 
-export interface IGossip extends IService, GossipEventEmitter {
+export interface IGossip extends GossipEventEmitter {
+  start(): Promise<void>;
+  stop(): Promise<void>;
   publishBlock(signedBlock: phase0.SignedBeaconBlock): Promise<void>;
   publishCommiteeAttestation(attestation: phase0.Attestation): Promise<void>;
   publishAggregatedAttestation(signedAggregateAndProof: phase0.SignedAggregateAndProof): Promise<void>;

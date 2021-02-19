@@ -24,12 +24,6 @@ import {runNodeNotifier} from "./notifier";
 
 export * from "./options";
 
-export interface IService {
-  start(): Promise<void>;
-
-  stop(): Promise<void>;
-}
-
 export interface IBeaconNodeModules {
   opts: IBeaconNodeOptions;
   config: IBeaconConfig;
@@ -197,7 +191,7 @@ export class BeaconNode {
       api,
     });
 
-    await metrics.start();
+    metrics.start();
     await metricsServer.start();
     await network.start();
 
@@ -205,7 +199,7 @@ export class BeaconNode {
     // Now if sync.start() is awaited it will stall the node start process
     // eslint-disable-next-line @typescript-eslint/no-floating-promises
     sync.start();
-    await chores.start();
+    chores.start();
 
     void runNodeNotifier({network, chain, sync, config, logger, signal});
 
@@ -237,8 +231,8 @@ export class BeaconNode {
       if (this.metricsServer) await this.metricsServer.stop();
       if (this.restApi) await this.restApi.close();
 
-      await (this.metrics as BeaconMetrics).stop();
-      await this.chain.close();
+      (this.metrics as BeaconMetrics).stop();
+      this.chain.close();
       await this.db.stop();
       if (this.controller) this.controller.abort();
       this.status = BeaconNodeStatus.closed;

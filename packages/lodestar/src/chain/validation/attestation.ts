@@ -50,7 +50,7 @@ export async function validateGossipAttestation(
   }
 
   // no other validator attestation for same target epoch has been seen
-  if (await db.seenAttestationCache.hasCommitteeAttestation(attestation)) {
+  if (db.seenAttestationCache.hasCommitteeAttestation(attestation)) {
     throw new AttestationError({
       code: AttestationErrorCode.ATTESTATION_ALREADY_KNOWN,
       root: config.types.phase0.Attestation.hashTreeRoot(attestation),
@@ -154,7 +154,7 @@ export async function validateGossipAttestation(
       job: attestationJob,
     });
   }
-  await db.seenAttestationCache.addCommitteeAttestation(attestation);
+  db.seenAttestationCache.addCommitteeAttestation(attestation);
 }
 
 export async function isAttestingToInValidBlock(db: IBeaconDb, attestation: phase0.Attestation): Promise<boolean> {

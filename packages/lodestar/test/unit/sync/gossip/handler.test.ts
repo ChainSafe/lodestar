@@ -36,22 +36,22 @@ describe("gossip handler", function () {
     sinon.restore();
   });
 
-  it("should handle new block", async function () {
+  it("should handle new block", function () {
     gossipStub.subscribeToBlock.callsFake((digest, callback) => {
       callback(generateEmptySignedBlock());
     });
     const handler = new BeaconGossipHandler(chainStub, networkStub, dbStub, logger);
-    await handler.start();
+    handler.start();
     expect(chainStub.receiveBlock.calledOnce).to.be.true;
   });
 
-  it("should handle new aggregate and proof", async function () {
+  it("should handle new aggregate and proof", function () {
     const aggregateAndProof = generateEmptySignedAggregateAndProof();
     gossipStub.subscribeToAggregateAndProof.callsFake((digest, callback) => {
       callback(aggregateAndProof);
     });
     const handler = new BeaconGossipHandler(chainStub, networkStub, dbStub, logger);
-    await handler.start();
+    handler.start();
     expect(dbStub.aggregateAndProof.add.withArgs(aggregateAndProof.message).calledOnce).to.be.true;
   });
 
@@ -94,7 +94,7 @@ describe("gossip handler", function () {
     });
     const oldForkDigest = chain.getForkDigest();
     const handler = new BeaconGossipHandler(chain, networkStub, dbStub, logger);
-    await handler.start();
+    handler.start();
     expect(gossipStub.subscribeToBlock.callCount).to.be.equal(1);
     // fork digest changed due to current version changed
     state.fork.currentVersion = Buffer.from([100, 0, 0, 0]);

@@ -61,17 +61,17 @@ export class StateRegenerator implements IStateRegenerator {
     // then we may use the checkpoint state before the block. This may save us at least one epoch transition.
     const isCheckpointBlock = block.slot % this.config.params.SLOTS_PER_EPOCH === 0;
     if (parentEpoch < blockEpoch && !isCheckpointBlock) {
-      return this.getCheckpointState({root: block.parentRoot, epoch: blockEpoch});
+      return await this.getCheckpointState({root: block.parentRoot, epoch: blockEpoch});
     }
 
     // If there's more than one epoch to pre-process (but the block is a checkpoint block)
     // get the checkpoint state as close as possible
     if (parentEpoch < blockEpoch - 1) {
-      return this.getCheckpointState({root: block.parentRoot, epoch: blockEpoch - 1});
+      return await this.getCheckpointState({root: block.parentRoot, epoch: blockEpoch - 1});
     }
 
     // Otherwise, get the state normally.
-    return this.getState(parentBlock.stateRoot);
+    return await this.getState(parentBlock.stateRoot);
   }
 
   async getCheckpointState(cp: phase0.Checkpoint): Promise<ITreeStateContext> {

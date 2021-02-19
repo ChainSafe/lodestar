@@ -9,7 +9,7 @@ export async function checkSyncStatus(config: IBeaconConfig, sync: IBeaconSync):
   if (!sync.isSynced()) {
     let syncStatus;
     try {
-      syncStatus = await sync.getSyncStatus();
+      syncStatus = sync.getSyncStatus();
     } catch (e) {
       throw new ApiError(503, "Node is stopped");
     }

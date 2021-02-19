@@ -8,7 +8,7 @@ import {Gossip} from "../gossip";
 import {GossipEvent} from "../constants";
 import {GossipObject} from "../interface";
 
-export async function handleIncomingAttesterSlashing(this: Gossip, obj: GossipObject): Promise<void> {
+export function handleIncomingAttesterSlashing(this: Gossip, obj: GossipObject): void {
   try {
     const attesterSlashing = obj as phase0.AttesterSlashing;
     this.logger.verbose("Received attester slashing");
@@ -19,7 +19,7 @@ export async function handleIncomingAttesterSlashing(this: Gossip, obj: GossipOb
 }
 
 export async function publishAttesterSlashing(this: Gossip, attesterSlashing: phase0.AttesterSlashing): Promise<void> {
-  const forkDigestValue = await this.getForkDigest(attesterSlashing.attestation1.data.slot);
+  const forkDigestValue = this.getForkDigest(attesterSlashing.attestation1.data.slot);
 
   await this.pubsub.publish(
     getGossipTopic(GossipEvent.PROPOSER_SLASHING, forkDigestValue),

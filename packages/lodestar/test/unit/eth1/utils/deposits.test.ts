@@ -106,7 +106,7 @@ describe("eth1 / util / deposits", function () {
   });
 
   describe("getDepositsWithProofs", () => {
-    it("return empty array if no pending deposits", async function () {
+    it("return empty array if no pending deposits", function () {
       const initialValues = [Buffer.alloc(32)] as List<Root>;
       const depositRootTree = config.types.phase0.DepositDataRootList.tree.createValue(initialValues);
       const depositCount = 0;
@@ -116,7 +116,7 @@ describe("eth1 / util / deposits", function () {
       expect(deposits).to.be.deep.equal([]);
     });
 
-    it("return deposits with valid proofs", async function () {
+    it("return deposits with valid proofs", function () {
       const depositEvents = Array.from(
         {length: 2},
         (_, index): phase0.DepositEvent => ({

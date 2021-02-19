@@ -39,7 +39,7 @@ export class ORARegularSync extends (EventEmitter as {new (): RegularSyncEventEm
     this.blockBuffer = [];
   }
 
-  public async start(): Promise<void> {
+  public start(): void {
     const headSlot = this.chain.forkChoice.getHead().slot;
     const currentSlot = this.chain.clock.currentSlot;
     this.logger.info("Started regular syncing", {currentSlot, headSlot});
@@ -54,7 +54,7 @@ export class ORARegularSync extends (EventEmitter as {new (): RegularSyncEventEm
     });
   }
 
-  public async stop(): Promise<void> {
+  public stop(): void {
     if (this.controller && !this.controller.signal.aborted) {
       this.controller.abort();
     }
@@ -71,20 +71,20 @@ export class ORARegularSync extends (EventEmitter as {new (): RegularSyncEventEm
     return lastBlock ?? this.chain.forkChoice.getHead().slot;
   }
 
-  private onGossipBlock = async (block: phase0.SignedBeaconBlock): Promise<void> => {
+  private onGossipBlock = (block: phase0.SignedBeaconBlock): void => {
     const gossipParentBlockRoot = block.message.parentRoot;
     if (this.chain.forkChoice.hasBlock(gossipParentBlockRoot as Uint8Array)) {
       this.logger.important("Regular Sync: caught up to gossip block parent " + toHexString(gossipParentBlockRoot));
       this.emit("syncCompleted");
-      await this.stop();
+      this.stop();
     }
   };
 
-  private onProcessedBlock = async (signedBlock: phase0.SignedBeaconBlock): Promise<void> => {
+  private onProcessedBlock = (signedBlock: phase0.SignedBeaconBlock): void => {
     if (signedBlock.message.slot >= this.chain.clock.currentSlot) {
       this.logger.info("Regular Sync: processed up to current slot", {slot: signedBlock.message.slot});
       this.emit("syncCompleted");
-      await this.stop();
+      this.stop();
     }
   };
 

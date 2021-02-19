@@ -11,7 +11,7 @@ import {AttestationError, AttestationErrorCode} from "../errors";
  * Based on:
  * https://github.com/ethereum/eth2.0-specs/blob/v0.12.3/specs/phase0/fork-choice.md#validate_on_attestation
  */
-export async function validateAttestation({
+export function validateAttestation({
   config,
   forkChoice,
   clock,
@@ -21,7 +21,7 @@ export async function validateAttestation({
   forkChoice: IForkChoice;
   clock: IBeaconClock;
   job: IAttestationJob;
-}): Promise<void> {
+}): void {
   const {attestation} = job;
   const target = attestation.data.target;
   const currentSlot = clock.currentSlot;

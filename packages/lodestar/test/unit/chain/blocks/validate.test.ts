@@ -22,7 +22,7 @@ describe("validateBlock", function () {
     sinon.restore();
   });
 
-  it("should throw on genesis block", async function () {
+  it("should throw on genesis block", function () {
     const signedBlock = config.types.phase0.SignedBeaconBlock.defaultValue();
     const job = getNewBlockJob(signedBlock);
     try {
@@ -33,7 +33,7 @@ describe("validateBlock", function () {
     }
   });
 
-  it("should throw on already known block", async function () {
+  it("should throw on already known block", function () {
     const signedBlock = config.types.phase0.SignedBeaconBlock.defaultValue();
     signedBlock.message.slot = 1;
     const job = getNewBlockJob(signedBlock);
@@ -46,7 +46,7 @@ describe("validateBlock", function () {
     }
   });
 
-  it("should throw on already known block", async function () {
+  it("should throw on already known block", function () {
     const signedBlock = config.types.phase0.SignedBeaconBlock.defaultValue();
     signedBlock.message.slot = 1;
     const job = getNewBlockJob(signedBlock);
@@ -60,7 +60,7 @@ describe("validateBlock", function () {
     }
   });
 
-  it("should throw on future slot", async function () {
+  it("should throw on future slot", function () {
     const signedBlock = config.types.phase0.SignedBeaconBlock.defaultValue();
     signedBlock.message.slot = 1;
     const job = getNewBlockJob(signedBlock);
