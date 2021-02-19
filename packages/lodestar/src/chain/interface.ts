@@ -8,6 +8,7 @@ import {
   Root,
   SignedBeaconBlock,
   Slot,
+  Status,
 } from "@chainsafe/lodestar-types";
 import {TreeBacked} from "@chainsafe/ssz";
 import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
@@ -93,6 +94,7 @@ export interface IBeaconChain {
    */
   getENRForkID(): ENRForkID;
   getGenesisTime(): Number64;
+  getStatus(): Status;
 
   getHeadStateContextAtCurrentEpoch(): Promise<ITreeStateContext>;
   getHeadStateContextAtCurrentSlot(): Promise<ITreeStateContext>;
