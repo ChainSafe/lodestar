@@ -23,6 +23,7 @@ use(chaiAsPromised);
 
 describe("beacon state api utils", function () {
   describe("resolve state id", function () {
+    const epochCtx = ({} as unknown) as phase0.EpochContext;
     let dbStub: StubbedBeaconDb;
     let chainStub: StubbedBeaconChain;
 
@@ -33,7 +34,7 @@ describe("beacon state api utils", function () {
 
     it("resolve head state id - success", async function () {
       chainStub.forkChoice.getHead.returns(generateBlockSummary({stateRoot: Buffer.alloc(32, 1)}));
-      chainStub.stateCache.get.returns({state: generateCachedState(), epochCtx: null!});
+      chainStub.stateCache.get.returns({state: generateCachedState(), epochCtx});
       const state = await resolveStateId(chainStub, dbStub, "head");
       expect(state).to.not.be.null;
       expect(chainStub.forkChoice.getHead.calledOnce).to.be.true;
@@ -49,7 +50,7 @@ describe("beacon state api utils", function () {
 
     it("resolve finalized state id - success", async function () {
       chainStub.forkChoice.getFinalizedCheckpoint.returns({root: Buffer.alloc(32, 1), epoch: 1});
-      chainStub.stateCache.get.returns({state: generateCachedState(), epochCtx: null!});
+      chainStub.stateCache.get.returns({state: generateCachedState(), epochCtx});
       const state = await resolveStateId(chainStub, dbStub, "finalized");
       expect(state).to.not.be.null;
       expect(chainStub.forkChoice.getFinalizedCheckpoint.calledOnce).to.be.true;
@@ -67,7 +68,7 @@ describe("beacon state api utils", function () {
 
     it("resolve justified state id - success", async function () {
       chainStub.forkChoice.getJustifiedCheckpoint.returns({root: Buffer.alloc(32, 1), epoch: 1});
-      chainStub.stateCache.get.returns({state: generateCachedState(), epochCtx: null!});
+      chainStub.stateCache.get.returns({state: generateCachedState(), epochCtx});
       const state = await resolveStateId(chainStub, dbStub, "justified");
       expect(state).to.not.be.null;
       expect(chainStub.forkChoice.getJustifiedCheckpoint.calledOnce).to.be.true;
@@ -84,14 +85,14 @@ describe("beacon state api utils", function () {
     });
 
     it("resolve state by root", async function () {
-      chainStub.stateCache.get.returns({state: generateCachedState(), epochCtx: null!});
+      chainStub.stateCache.get.returns({state: generateCachedState(), epochCtx});
       const state = await resolveStateId(chainStub, dbStub, toHexString(Buffer.alloc(32, 1)));
       expect(state).to.not.be.null;
       expect(chainStub.stateCache.get.calledOnce).to.be.true;
     });
 
     it.skip("resolve finalized state by root", async function () {
-      chainStub.stateCache.get.returns({state: generateCachedState(), epochCtx: null!});
+      chainStub.stateCache.get.returns({state: generateCachedState(), epochCtx});
       const state = await resolveStateId(chainStub, dbStub, toHexString(Buffer.alloc(32, 1)));
       expect(state).to.be.null;
       expect(chainStub.stateCache.get.calledOnce).to.be.true;
@@ -106,7 +107,7 @@ describe("beacon state api utils", function () {
       chainStub.forkChoice.getCanonicalBlockSummaryAtSlot
         .withArgs(123)
         .returns(generateBlockSummary({stateRoot: Buffer.alloc(32, 1)}));
-      chainStub.stateCache.get.returns({state: generateCachedState(), epochCtx: null!});
+      chainStub.stateCache.get.returns({state: generateCachedState(), epochCtx});
       const state = await resolveStateId(chainStub, dbStub, "123");
       expect(state).to.not.be.null;
       expect(chainStub.forkChoice.getCanonicalBlockSummaryAtSlot.withArgs(123).calledOnce).to.be.true;

@@ -6,6 +6,8 @@ import {Checkpoint} from "@chainsafe/lodestar-types";
 import {waitForEvent} from "../utils/events/resolver";
 import {ChainEvent} from "../../src/chain";
 
+/* eslint-disable no-console */
+
 describe("Run multi node multi thread interop validators (no eth1) until checkpoint", function () {
   const checkpointEvent = ChainEvent.justified;
   const validatorsPerNode = 8;
