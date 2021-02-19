@@ -47,7 +47,11 @@ export class StateContextCache {
   }
 
   public delete(root: ByteVector): void {
-    delete this.cache[toHexString(root)];
+    const key = toHexString(root);
+    const item = this.cache[key];
+    if (!item) return;
+    this.epochIndex[item.epochCtx.currentShuffling.epoch].delete(key);
+    delete this.cache[key];
   }
 
   public batchDelete(roots: ByteVector[]): void {
@@ -73,6 +77,8 @@ export class StateContextCache {
       // object keys are stored in insertion order, delete keys starting from the front
       for (const key of keys.slice(0, keys.length - this.maxState)) {
         if (key !== headStateRootHex) {
+          const item = this.cache[key];
+          this.epochIndex[item.epochCtx.currentShuffling.epoch].delete(key);
           delete this.cache[key];
         }
       }
@@ -82,7 +88,7 @@ export class StateContextCache {
   /**
    * Prune per finalized epoch.
    */
-  public async pruneFinalized(finalizedEpoch: Epoch): Promise<void> {
+  public async deleteAllBeforeEpoch(finalizedEpoch: Epoch): Promise<void> {
     for (const epoch of Object.keys(this.epochIndex).map(Number)) {
       if (epoch < finalizedEpoch) {
         this.deleteAllEpochItems(epoch);
