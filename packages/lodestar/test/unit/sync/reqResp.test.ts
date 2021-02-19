@@ -78,6 +78,7 @@ describe("sync req resp", function () {
       headSlot: 1,
     };
     chainStub.stateCache.get.returns(generateState() as any);
+    chainStub.clock = {currentSlot: 0} as any;
 
     const res = await all(syncRpc.onRequest(Method.Status, body, peerId));
     expect(res).have.length(1, "Wrong number of chunks responded");
