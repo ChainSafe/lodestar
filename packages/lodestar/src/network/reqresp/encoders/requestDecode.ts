@@ -1,5 +1,5 @@
 import BufferList from "bl";
-import {RequestBody} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Method, Methods, ReqRespEncoding} from "../../../constants";
 import {BufferedSource} from "../utils/bufferedSource";
@@ -15,7 +15,7 @@ export function requestDecode(
   config: IBeaconConfig,
   method: Method,
   encoding: ReqRespEncoding
-): (source: AsyncIterable<Buffer | BufferList>) => Promise<RequestBody> {
+): (source: AsyncIterable<Buffer | BufferList>) => Promise<phase0.RequestBody> {
   return async function (source) {
     const type = Methods[method].requestSSZType(config);
     if (!type) {
@@ -26,7 +26,7 @@ export function requestDecode(
     // Request has a single payload, so return immediately
     const bufferedSource = new BufferedSource(source as AsyncGenerator<Buffer>);
     try {
-      return await readEncodedPayload<RequestBody>(bufferedSource, encoding, type);
+      return await readEncodedPayload<phase0.RequestBody>(bufferedSource, encoding, type);
     } finally {
       await bufferedSource.return();
     }

@@ -3,17 +3,17 @@
  */
 
 import {List} from "@chainsafe/ssz";
-import {BeaconState, HistoricalBatch, Eth1Data, PendingAttestation} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {getCurrentEpoch, getRandaoMix} from "../../../util";
 import {bigIntMin, intDiv} from "@chainsafe/lodestar-utils";
 
-export function processFinalUpdates(config: IBeaconConfig, state: BeaconState): void {
+export function processFinalUpdates(config: IBeaconConfig, state: phase0.BeaconState): void {
   const currentEpoch = getCurrentEpoch(config, state);
   const nextEpoch = currentEpoch + 1;
   // Reset eth1 data votes
   if (nextEpoch % config.params.EPOCHS_PER_ETH1_VOTING_PERIOD === 0) {
-    state.eth1DataVotes = ([] as Eth1Data[]) as List<Eth1Data>;
+    state.eth1DataVotes = ([] as phase0.Eth1Data[]) as List<phase0.Eth1Data>;
   }
   // Update effective balances with hysteresis
   state.validators.forEach((validator, index) => {
@@ -37,13 +37,13 @@ export function processFinalUpdates(config: IBeaconConfig, state: BeaconState): 
   state.randaoMixes[nextEpoch % config.params.EPOCHS_PER_HISTORICAL_VECTOR] = getRandaoMix(config, state, currentEpoch);
   // Set historical root accumulator
   if (nextEpoch % intDiv(config.params.SLOTS_PER_HISTORICAL_ROOT, config.params.SLOTS_PER_EPOCH) === 0) {
-    const historicalBatch: HistoricalBatch = {
+    const historicalBatch: phase0.HistoricalBatch = {
       blockRoots: state.blockRoots,
       stateRoots: state.stateRoots,
     };
-    state.historicalRoots.push(config.types.HistoricalBatch.hashTreeRoot(historicalBatch));
+    state.historicalRoots.push(config.types.phase0.HistoricalBatch.hashTreeRoot(historicalBatch));
   }
   // Rotate current/previous epoch attestations
   state.previousEpochAttestations = state.currentEpochAttestations;
-  state.currentEpochAttestations = ([] as PendingAttestation[]) as List<PendingAttestation>;
+  state.currentEpochAttestations = ([] as phase0.PendingAttestation[]) as List<phase0.PendingAttestation>;
 }

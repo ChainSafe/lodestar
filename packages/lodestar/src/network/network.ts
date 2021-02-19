@@ -19,7 +19,7 @@ import {MetadataController} from "./metadata";
 import {Discv5, Discv5Discovery, ENR} from "@chainsafe/discv5";
 import {DiversifyPeersBySubnetTask} from "./tasks/diversifyPeersBySubnetTask";
 import {CheckPeerAliveTask} from "./tasks/checkPeerAliveTask";
-import {IPeerMetadataStore} from "./peers/interface";
+import {IPeerMetadataStore} from "./peers";
 import {Libp2pPeerMetadataStore} from "./peers/metastore";
 import {getPeerCountBySubnet} from "./peers/utils";
 import {IRpcScoreTracker, SimpleRpcScoreTracker} from "./peers/score";
@@ -84,22 +84,22 @@ export class Libp2pNetwork extends (EventEmitter as {new (): NetworkEventEmitter
     this.libp2p.connectionManager.on(NetworkEvent.peerDisconnect, this.emitPeerDisconnect);
     await this.libp2p.start();
     this.localMultiaddrs = this.libp2p.multiaddrs;
-    await this.reqResp.start();
+    this.reqResp.start();
     const enr = this.getEnr();
-    await this.metadata.start(enr!);
+    this.metadata.start(enr!);
     await this.gossip.start();
-    await this.diversifyPeersTask.start();
+    this.diversifyPeersTask.start();
     const multiaddresses = this.libp2p.multiaddrs.map((m) => m.toString()).join(",");
-    this.logger.important(`PeerId ${this.libp2p.peerId.toB58String()}, Multiaddrs ${multiaddresses}`);
+    this.logger.info(`PeerId ${this.libp2p.peerId.toB58String()}, Multiaddrs ${multiaddresses}`);
   }
 
   public async stop(): Promise<void> {
     this.libp2p.connectionManager.removeListener(NetworkEvent.peerConnect, this.emitPeerConnect);
     this.libp2p.connectionManager.removeListener(NetworkEvent.peerDisconnect, this.emitPeerDisconnect);
     await Promise.all([this.diversifyPeersTask.stop(), this.checkPeerAliveTask.stop()]);
-    await this.metadata.stop();
+    this.metadata.stop();
     await this.gossip.stop();
-    await this.reqResp.stop();
+    this.reqResp.stop();
     await this.libp2p.stop();
   }
 
@@ -247,7 +247,7 @@ export class Libp2pNetwork extends (EventEmitter as {new (): NetworkEventEmitter
         .filter((enr: ENR) => enr.get("attnets"))
         .filter((enr: ENR) => {
           try {
-            return this.config.types.AttestationSubnets.deserialize(enr.get("attnets")!)[subnet];
+            return this.config.types.phase0.AttestationSubnets.deserialize(enr.get("attnets")!)[subnet];
           } catch (err) {
             return false;
           }

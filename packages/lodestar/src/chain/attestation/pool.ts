@@ -1,5 +1,5 @@
 import {toHexString} from "@chainsafe/ssz";
-import {Attestation, AttestationRootHex, BlockRootHex, Root, Slot} from "@chainsafe/lodestar-types";
+import {phase0, AttestationRootHex, BlockRootHex, Root, Slot} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
 import {IAttestationJob} from "../interface";
@@ -120,7 +120,7 @@ export class AttestationPool {
     return Array.from(this.attestationsBySlot.get(slot)?.values() ?? []);
   }
 
-  private getAttestationKey(attestation: Attestation): string {
-    return toHexString(this.config.types.Attestation.hashTreeRoot(attestation));
+  private getAttestationKey(attestation: phase0.Attestation): string {
+    return toHexString(this.config.types.phase0.Attestation.hashTreeRoot(attestation));
   }
 }

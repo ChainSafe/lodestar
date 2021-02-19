@@ -2,7 +2,7 @@ import {expect} from "chai";
 import supertest from "supertest";
 
 import {List} from "@chainsafe/ssz";
-import {Attestation} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {config} from "@chainsafe/lodestar-config/minimal";
 
 import {ApiNamespace, RestApi} from "../../../../../../src/api";
@@ -43,7 +43,7 @@ describe("rest - beacon - getBlockAttestations", function () {
       generateSignedBlock({
         message: {
           body: {
-            attestations: [generateEmptyAttestation(), generateEmptyAttestation()] as List<Attestation>,
+            attestations: [generateEmptyAttestation(), generateEmptyAttestation()] as List<phase0.Attestation>,
           },
         },
       })

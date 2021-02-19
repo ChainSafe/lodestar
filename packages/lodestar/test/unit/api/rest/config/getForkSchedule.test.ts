@@ -1,5 +1,5 @@
 import {config} from "@chainsafe/lodestar-config/minimal";
-import {Fork} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {urlJoin} from "@chainsafe/lodestar-validator/src/util";
 import {expect} from "chai";
 import supertest from "supertest";
@@ -36,7 +36,7 @@ describe("rest - config - getForkSchedule", function () {
   });
 
   it("ready", async function () {
-    const expectedData: Fork[] = [];
+    const expectedData: phase0.Fork[] = [];
     api.config.getForkSchedule.resolves(expectedData);
     const response = await supertest(restApi.server.server)
       .get(urlJoin(CONFIG_PREFIX, getForkSchedule.url))

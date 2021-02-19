@@ -1,7 +1,7 @@
 import {AbortSignal} from "abort-controller";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
-import {SignedBeaconBlock} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 
 import {IBlockJob, IChainSegmentJob} from "../interface";
 import {ChainEvent, ChainEventEmitter} from "../emitter";
@@ -43,11 +43,11 @@ export class BlockProcessor {
   }
 
   public async processBlockJob(job: IBlockJob): Promise<void> {
-    return this.jobQueue.enqueueJob(async () => await processBlockJob(this.modules, job));
+    return await this.jobQueue.enqueueJob(async () => await processBlockJob(this.modules, job));
   }
 
   public async processChainSegment(job: IChainSegmentJob): Promise<void> {
-    return this.jobQueue.enqueueJob(async () => await processChainSegmentJob(this.modules, job));
+    return await this.jobQueue.enqueueJob(async () => await processChainSegmentJob(this.modules, job));
   }
 }
 
@@ -78,7 +78,7 @@ export async function processChainSegmentJob(modules: BlockProcessorModules, job
   const blocks = job.signedBlocks;
 
   // Validate and filter out irrelevant blocks
-  const filteredChainSegment: SignedBeaconBlock[] = [];
+  const filteredChainSegment: phase0.SignedBeaconBlock[] = [];
   for (const [i, block] of blocks.entries()) {
     const child = blocks[i + 1];
     if (child) {
@@ -89,7 +89,7 @@ export async function processChainSegmentJob(modules: BlockProcessorModules, job
       // incorrect shuffling. That would be bad, mmkay.
       if (
         !modules.config.types.Root.equals(
-          modules.config.types.BeaconBlock.hashTreeRoot(block.message),
+          modules.config.types.phase0.BeaconBlock.hashTreeRoot(block.message),
           child.message.parentRoot
         )
       ) {

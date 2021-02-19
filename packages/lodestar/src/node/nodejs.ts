@@ -7,7 +7,7 @@ import LibP2p from "libp2p";
 
 import {TreeBacked} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {BeaconState} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
 
 import {IBeaconDb} from "../db";
@@ -20,14 +20,9 @@ import {TasksService} from "../tasks";
 import {IBeaconNodeOptions} from "./options";
 import {GossipMessageValidator} from "../network/gossip/validator";
 import {Eth1ForBlockProduction, Eth1ForBlockProductionDisabled, Eth1Provider} from "../eth1";
+import {runNodeNotifier} from "./notifier";
 
 export * from "./options";
-
-export interface IService {
-  start(): Promise<void>;
-
-  stop(): Promise<void>;
-}
 
 export interface IBeaconNodeModules {
   opts: IBeaconNodeOptions;
@@ -50,7 +45,7 @@ export interface IBeaconNodeInitModules {
   db: IBeaconDb;
   logger: ILogger;
   libp2p: LibP2p;
-  anchorState: TreeBacked<BeaconState>;
+  anchorState: TreeBacked<phase0.BeaconState>;
 }
 
 export enum BeaconNodeStatus {
@@ -122,6 +117,8 @@ export class BeaconNode {
     anchorState,
   }: IBeaconNodeInitModules): Promise<T> {
     const controller = new AbortController();
+    const signal = controller.signal;
+
     // start db if not already started
     await db.start();
 
@@ -177,7 +174,7 @@ export class BeaconNode {
             eth1Provider: new Eth1Provider(config, opts.eth1),
             logger: logger.child(opts.logger.eth1),
             opts: opts.eth1,
-            signal: controller.signal,
+            signal,
           })
         : new Eth1ForBlockProductionDisabled(),
       sync,
@@ -194,7 +191,7 @@ export class BeaconNode {
       api,
     });
 
-    await metrics.start();
+    metrics.start();
     await metricsServer.start();
     await network.start();
 
@@ -202,7 +199,9 @@ export class BeaconNode {
     // Now if sync.start() is awaited it will stall the node start process
     // eslint-disable-next-line @typescript-eslint/no-floating-promises
     sync.start();
-    await chores.start();
+    chores.start();
+
+    void runNodeNotifier({network, chain, sync, config, logger, signal});
 
     return new this({
       opts,
@@ -232,8 +231,8 @@ export class BeaconNode {
       if (this.metricsServer) await this.metricsServer.stop();
       if (this.restApi) await this.restApi.close();
 
-      await (this.metrics as BeaconMetrics).stop();
-      await this.chain.close();
+      (this.metrics as BeaconMetrics).stop();
+      this.chain.close();
       await this.db.stop();
       if (this.controller) this.controller.abort();
       this.status = BeaconNodeStatus.closed;

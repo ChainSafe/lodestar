@@ -5,7 +5,7 @@
 import {toHexString} from "@chainsafe/ssz";
 import {Gossip, GossipHandlerFn} from "../gossip";
 import {getGossipTopic, getAttestationSubnetEvent} from "../utils";
-import {Attestation} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {GossipEvent} from "../constants";
 import {GossipObject} from "../interface";
 import {computeSubnetForAttestation} from "@chainsafe/lodestar-beacon-state-transition";
@@ -14,7 +14,7 @@ import {GossipEncoding} from "../encoding";
 export function getCommitteeAttestationHandler(subnet: number): GossipHandlerFn {
   return function handleIncomingCommitteeAttestation(this: Gossip, obj: GossipObject): void {
     try {
-      const attestation = obj as Attestation;
+      const attestation = obj as phase0.Attestation;
 
       this.logger.verbose("Received committee attestation", {
         block: toHexString(attestation.data.beaconBlockRoot),
@@ -32,8 +32,8 @@ export function getCommitteeAttestationHandler(subnet: number): GossipHandlerFn 
   };
 }
 
-export async function publishCommiteeAttestation(this: Gossip, attestation: Attestation): Promise<void> {
-  const forkDigestValue = await this.getForkDigest(attestation.data.slot);
+export async function publishCommiteeAttestation(this: Gossip, attestation: phase0.Attestation): Promise<void> {
+  const forkDigestValue = this.getForkDigest(attestation.data.slot);
   const headState = this.chain.getHeadState();
   const subnet = computeSubnetForAttestation(this.config, headState, attestation);
 
@@ -44,9 +44,9 @@ export async function publishCommiteeAttestation(this: Gossip, attestation: Atte
       GossipEncoding.SSZ_SNAPPY,
       new Map([["subnet", String(subnet)]])
     ),
-    Buffer.from(this.config.types.Attestation.serialize(attestation))
+    Buffer.from(this.config.types.phase0.Attestation.serialize(attestation))
   );
 
-  const attestationHex = toHexString(this.config.types.Attestation.hashTreeRoot(attestation));
+  const attestationHex = toHexString(this.config.types.phase0.Attestation.hashTreeRoot(attestation));
   this.logger.verbose("Publishing attestation", {attestationHex, subnet});
 }

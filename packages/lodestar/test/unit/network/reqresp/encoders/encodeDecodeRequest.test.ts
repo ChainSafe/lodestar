@@ -2,14 +2,7 @@ import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
 import pipe from "it-pipe";
 import {config} from "@chainsafe/lodestar-config/minimal";
-import {
-  BeaconBlocksByRangeRequest,
-  BeaconBlocksByRootRequest,
-  Goodbye,
-  Ping,
-  RequestBody,
-  Status,
-} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {Method, Methods, ReqRespEncoding} from "../../../../../src/constants";
 import {requestEncode} from "../../../../../src/network/reqresp/encoders/requestEncode";
 import {requestDecode} from "../../../../../src/network/reqresp/encoders/requestDecode";
@@ -20,12 +13,12 @@ chai.use(chaiAsPromised);
 
 describe("network / reqresp / encoders / encodeDecodeRequest", () => {
   interface IRequestTypes {
-    [Method.Status]: Status;
-    [Method.Goodbye]: Goodbye;
-    [Method.Ping]: Ping;
+    [Method.Status]: phase0.Status;
+    [Method.Goodbye]: phase0.Goodbye;
+    [Method.Ping]: phase0.Ping;
     [Method.Metadata]: null;
-    [Method.BeaconBlocksByRange]: BeaconBlocksByRangeRequest;
-    [Method.BeaconBlocksByRoot]: BeaconBlocksByRootRequest;
+    [Method.BeaconBlocksByRange]: phase0.BeaconBlocksByRangeRequest;
+    [Method.BeaconBlocksByRoot]: phase0.BeaconBlocksByRootRequest;
   }
 
   const testCases: {[P in keyof IRequestTypes]: IRequestTypes[P][]} = {
@@ -43,7 +36,7 @@ describe("network / reqresp / encoders / encodeDecodeRequest", () => {
     for (const [_method, _requests] of Object.entries(testCases)) {
       // Cast to more generic types, type by index is useful only at declaration of `testCases`
       const method = _method as keyof typeof testCases;
-      const requests = _requests as RequestBody[];
+      const requests = _requests as phase0.RequestBody[];
 
       requests.forEach((request, i) => {
         it(`${encoding} ${method} - req ${i}`, async () => {

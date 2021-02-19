@@ -3,7 +3,7 @@
  */
 
 import bls from "@chainsafe/bls";
-import {BeaconState, Deposit, Validator} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {DEPOSIT_CONTRACT_TREE_DEPTH, DomainType, FAR_FUTURE_EPOCH} from "../../../../constants";
 import {computeDomain, increaseBalance, computeSigningRoot} from "../../../../util";
@@ -12,11 +12,11 @@ import {assert, bigIntMin, verifyMerkleBranch} from "@chainsafe/lodestar-utils";
 /**
  * Process an Eth1 deposit, registering a validator or increasing its balance.
  */
-export function processDeposit(config: IBeaconConfig, state: BeaconState, deposit: Deposit): void {
+export function processDeposit(config: IBeaconConfig, state: phase0.BeaconState, deposit: phase0.Deposit): void {
   // Verify the Merkle branch
   assert.true(
     verifyMerkleBranch(
-      config.types.DepositData.hashTreeRoot(deposit.data),
+      config.types.phase0.DepositData.hashTreeRoot(deposit.data),
       Array.from(deposit.proof).map((p) => p.valueOf() as Uint8Array),
       DEPOSIT_CONTRACT_TREE_DEPTH + 1,
       state.eth1DepositIndex,
@@ -33,7 +33,7 @@ export function processDeposit(config: IBeaconConfig, state: BeaconState, deposi
   const validatorIndex = Array.from(state.validators).findIndex((v) => config.types.BLSPubkey.equals(v.pubkey, pubkey));
   if (validatorIndex === -1) {
     const domain = computeDomain(config, DomainType.DEPOSIT);
-    const signingRoot = computeSigningRoot(config, config.types.DepositMessage, deposit.data, domain);
+    const signingRoot = computeSigningRoot(config, config.types.phase0.DepositMessage, deposit.data, domain);
     // Verify the deposit signature (proof of possession)
     // Note: The deposit contract does not check signatures.
     // Note: Deposits are valid across forks, thus the deposit domain is retrieved directly from `computeDomain`.
@@ -41,7 +41,7 @@ export function processDeposit(config: IBeaconConfig, state: BeaconState, deposi
       return;
     }
     // Add validator and balance entries
-    const validator: Validator = {
+    const validator: phase0.Validator = {
       pubkey,
       withdrawalCredentials: deposit.data.withdrawalCredentials,
       activationEligibilityEpoch: FAR_FUTURE_EPOCH,

@@ -1,5 +1,5 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {ResponseBody} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {Method, Methods, ReqRespEncoding, RpcResponseStatus, RpcResponseStatusError} from "../../../constants";
 import {writeEncodedPayload} from "../encodingStrategies";
 import {encodeErrorMessage} from "../utils/errorMessage";
@@ -17,7 +17,7 @@ export function responseEncodeSuccess(
   config: IBeaconConfig,
   method: Method,
   encoding: ReqRespEncoding
-): (source: AsyncIterable<ResponseBody>) => AsyncIterable<Buffer> {
+): (source: AsyncIterable<phase0.ResponseBody>) => AsyncIterable<Buffer> {
   const type = Methods[method].responseSSZType(config);
 
   return async function* (source) {

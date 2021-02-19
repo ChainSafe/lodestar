@@ -1,18 +1,22 @@
 import bls from "@chainsafe/bls";
-import {Deposit} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {verifyMerkleBranch, bigIntMin} from "@chainsafe/lodestar-utils";
 
 import {DEPOSIT_CONTRACT_TREE_DEPTH, DomainType, FAR_FUTURE_EPOCH} from "../../../constants";
 import {computeDomain, computeSigningRoot, increaseBalance} from "../../../util";
 import {EpochContext, CachedValidatorsBeaconState} from "../util";
 
-export function processDeposit(epochCtx: EpochContext, state: CachedValidatorsBeaconState, deposit: Deposit): void {
+export function processDeposit(
+  epochCtx: EpochContext,
+  state: CachedValidatorsBeaconState,
+  deposit: phase0.Deposit
+): void {
   const config = epochCtx.config;
   const {EFFECTIVE_BALANCE_INCREMENT, MAX_EFFECTIVE_BALANCE} = config.params;
   // verify the merkle branch
   if (
     !verifyMerkleBranch(
-      config.types.DepositData.hashTreeRoot(deposit.data),
+      config.types.phase0.DepositData.hashTreeRoot(deposit.data),
       Array.from({length: deposit.proof.length}, (_, i) => deposit.proof[i].valueOf() as Uint8Array),
       DEPOSIT_CONTRACT_TREE_DEPTH + 1,
       state.eth1DepositIndex,
@@ -37,7 +41,7 @@ export function processDeposit(epochCtx: EpochContext, state: CachedValidatorsBe
     };
     // fork-agnostic domain since deposits are valid across forks
     const domain = computeDomain(config, DomainType.DEPOSIT);
-    const signingRoot = computeSigningRoot(config, config.types.DepositMessage, depositMessage, domain);
+    const signingRoot = computeSigningRoot(config, config.types.phase0.DepositMessage, depositMessage, domain);
     if (!bls.verify(pubkey.valueOf() as Uint8Array, signingRoot, deposit.data.signature.valueOf() as Uint8Array)) {
       return;
     }

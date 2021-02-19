@@ -26,14 +26,14 @@ export class CheckPeerAliveTask {
     this.logger = modules.logger;
   }
 
-  public async start(): Promise<void> {
+  public start(): void {
     this.interval = setInterval(
       this.run,
       this.config.params.SLOTS_PER_EPOCH * this.config.params.SECONDS_PER_SLOT * 1000
     );
   }
 
-  public async stop(): Promise<void> {
+  public stop(): void {
     if (this.interval) {
       clearInterval(this.interval);
     }
@@ -46,10 +46,9 @@ export class CheckPeerAliveTask {
     const seq = this.network.metadata.seqNumber;
     await Promise.all(
       peers.map(async (peer) => {
-        let peerSeq: BigInt | null = null;
+        let peerSeq: BigInt;
         try {
           peerSeq = await this.network.reqResp.ping(peer, seq);
-          if (peerSeq === null) throw new Error("ping method return null for peer " + peer.toB58String());
         } catch (e) {
           this.logger.warn("Cannot ping peer, disconnecting it", {peerId: peer.toB58String(), error: e.message});
           // a peer may still be good for gossip blocks even it does not response to ping

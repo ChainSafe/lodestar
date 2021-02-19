@@ -10,7 +10,7 @@ import {WinstonLogger, bytesToInt, intToBytes} from "@chainsafe/lodestar-utils";
 import {expect} from "chai";
 import {MockBeaconChain} from "../../utils/mocks/chain/chain";
 import {generateState} from "../../utils/state";
-import {BeaconState} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {MetadataController} from "../../../src/network/metadata";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {computeForkDigest} from "@chainsafe/lodestar-beacon-state-transition";
@@ -25,7 +25,7 @@ describe("interopSubnetsJoiningTask", () => {
   let chain: IBeaconChain;
   const logger = new WinstonLogger();
   let task: InteropSubnetsJoiningTask;
-  let state: BeaconState;
+  let state: phase0.BeaconState;
 
   const ALL_FORKS = [
     {
@@ -39,7 +39,7 @@ describe("interopSubnetsJoiningTask", () => {
   const params = Object.assign({}, minimalConfig.params, {ALL_FORKS});
   const config: IBeaconConfig = Object.assign({}, minimalConfig, {params});
 
-  beforeEach(async function () {
+  beforeEach(() => {
     clock = sandbox.useFakeTimers();
     networkStub = sandbox.createStubInstance(Libp2pNetwork);
     gossipStub = sandbox.createStubInstance(Gossip);
@@ -49,7 +49,7 @@ describe("interopSubnetsJoiningTask", () => {
       genesisTime: 0,
       chainId: 0,
       networkId: BigInt(0),
-      state: state as TreeBacked<BeaconState>,
+      state: state as TreeBacked<phase0.BeaconState>,
       config,
     });
     networkStub.metadata = new MetadataController({}, {config, chain, logger});
@@ -58,11 +58,11 @@ describe("interopSubnetsJoiningTask", () => {
       chain,
       logger,
     });
-    await task.start();
+    task.start();
   });
 
-  afterEach(async () => {
-    await task.stop();
+  afterEach(() => {
+    task.stop();
     sandbox.reset();
     clock.restore();
   });
@@ -100,7 +100,7 @@ describe("interopSubnetsJoiningTask", () => {
     expect(Number(networkStub.metadata.seqNumber)).to.be.gt(Number(seqNumber));
   });
 
-  it("should prepare for a hard fork", async function () {
+  it("should prepare for a hard fork", function () {
     // scheduleNextForkSubscription already get called after start
     const state = chain.getHeadState();
     const nextForkDigest = computeForkDigest(

@@ -1,5 +1,5 @@
 import {toHexString} from "@chainsafe/ssz";
-import {DepositEvent} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {AbortSignal} from "abort-controller";
 import {isValidAddress} from "../util/address";
@@ -23,7 +23,7 @@ export class Eth1Provider extends Eth1JsonRpcClient implements IEth1Provider {
     this.config = config;
   }
 
-  async getDepositEvents(fromBlock: number, toBlock: number, signal?: AbortSignal): Promise<DepositEvent[]> {
+  async getDepositEvents(fromBlock: number, toBlock: number, signal?: AbortSignal): Promise<phase0.DepositEvent[]> {
     const logsRawArr = await retry(
       (attempt) => {
         // Large log requests can return with code 200 but truncated, with broken JSON

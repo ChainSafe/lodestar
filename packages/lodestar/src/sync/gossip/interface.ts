@@ -1,5 +1,5 @@
-import {IService} from "../../node";
-
-export type IGossipHandler = IService & {
+export interface IGossipHandler {
+  start(): void;
+  stop(): void;
   handleSyncCompleted(): void;
-};
+}

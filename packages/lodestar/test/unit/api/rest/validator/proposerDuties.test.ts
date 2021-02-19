@@ -36,8 +36,8 @@ describe("rest - validator - proposerDuties", function () {
 
   it("should succeed", async function () {
     api.validator.getProposerDuties.resolves([
-      config.types.ProposerDuty.defaultValue(),
-      config.types.ProposerDuty.defaultValue(),
+      config.types.phase0.ProposerDuty.defaultValue(),
+      config.types.phase0.ProposerDuty.defaultValue(),
     ]);
     const response = await supertest(restApi.server.server)
       .get(urlJoin(VALIDATOR_PREFIX, proposerDutiesController.url.replace(":epoch", "1")))

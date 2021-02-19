@@ -20,7 +20,7 @@ describe("BeaconChain", function () {
   const logger = new WinstonLogger();
   let chain: IBeaconChain;
 
-  beforeEach(async () => {
+  beforeEach(() => {
     dbStub = new StubbedBeaconDb(sandbox);
     metrics = new BeaconMetrics({enabled: false} as any, {logger});
     const state = generateState();
@@ -34,22 +34,22 @@ describe("BeaconChain", function () {
     });
   });
 
-  afterEach(async () => {
-    await chain.close();
+  afterEach(() => {
+    chain.close();
     sandbox.restore();
   });
 
   describe("getENRForkID", () => {
-    it("should get enr fork id if not found next fork", async () => {
+    it("should get enr fork id if not found next fork", () => {
       chain.forkChoice.getHead = () => generateBlockSummary();
       const enrForkID = chain.getENRForkID();
       expect(config.types.Version.equals(enrForkID.nextForkVersion, Buffer.from([255, 255, 255, 255])));
       expect(enrForkID.nextForkEpoch === Number.MAX_SAFE_INTEGER);
       // it's possible to serialize enr fork id
-      config.types.ENRForkID.hashTreeRoot(enrForkID);
+      config.types.phase0.ENRForkID.hashTreeRoot(enrForkID);
     });
 
-    it("should get enr fork id if found next fork", async () => {
+    it("should get enr fork id if found next fork", () => {
       config.params.ALL_FORKS = [
         {
           currentVersion: 2,
@@ -62,7 +62,7 @@ describe("BeaconChain", function () {
       expect(config.types.Version.equals(enrForkID.nextForkVersion, Buffer.from([2, 0, 0, 0])));
       expect(enrForkID.nextForkEpoch === 100);
       // it's possible to serialize enr fork id
-      config.types.ENRForkID.hashTreeRoot(enrForkID);
+      config.types.phase0.ENRForkID.hashTreeRoot(enrForkID);
       config.params.ALL_FORKS = undefined!;
     });
   });

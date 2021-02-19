@@ -1,5 +1,5 @@
 import PeerId from "peer-id";
-import {BeaconBlocksByRangeRequest, SignedBeaconBlock, Slot} from "@chainsafe/lodestar-types";
+import {phase0, Slot} from "@chainsafe/lodestar-types";
 import {RoundRobinArray} from "./robin";
 import {IReqResp} from "../../network";
 import {ISlotRange} from "../interface";
@@ -32,7 +32,7 @@ export async function getBlockRangeFromPeer(
   rpc: IReqResp,
   peer: PeerId,
   chunk: ISlotRange
-): Promise<SignedBeaconBlock[] | null> {
+): Promise<phase0.SignedBeaconBlock[]> {
   return await rpc.beaconBlocksByRange(peer, {
     startSlot: chunk.start,
     step: 1,
@@ -47,14 +47,14 @@ export async function getBlockRange(
   range: ISlotRange,
   blocksPerChunk?: number,
   maxRetry = 6
-): Promise<SignedBeaconBlock[] | null> {
+): Promise<phase0.SignedBeaconBlock[] | null> {
   const totalBlocks = range.end - range.start;
   blocksPerChunk = blocksPerChunk || Math.ceil(totalBlocks / peers.length);
   if (blocksPerChunk < 5) {
     blocksPerChunk = totalBlocks;
   }
   let chunks = chunkify(blocksPerChunk, range.start, range.end);
-  let blocks: SignedBeaconBlock[] = [];
+  let blocks: phase0.SignedBeaconBlock[] = [];
   // try to fetch chunks from different peers until all chunks are fetched
   let retry = 0;
   while (chunks.length > 0) {
@@ -90,7 +90,7 @@ export async function getBlockRange(
   return sortBlocks(blocks);
 }
 
-export function sortBlocks(blocks: SignedBeaconBlock[]): SignedBeaconBlock[] {
+export function sortBlocks(blocks: phase0.SignedBeaconBlock[]): phase0.SignedBeaconBlock[] {
   return blocks.sort((b1, b2) => b1.message.slot - b2.message.slot);
 }
 
@@ -98,7 +98,10 @@ export function sortBlocks(blocks: SignedBeaconBlock[]): SignedBeaconBlock[] {
  * Asserts a response from BeaconBlocksByRange respects the request and is sequential
  * Note: MUST allow missing block for skipped slots.
  */
-export function assertSequentialBlocksInRange(blocks: SignedBeaconBlock[], request: BeaconBlocksByRangeRequest): void {
+export function assertSequentialBlocksInRange(
+  blocks: phase0.SignedBeaconBlock[],
+  request: phase0.BeaconBlocksByRangeRequest
+): void {
   // Check below would throw for empty ranges
   if (blocks.length === 0) {
     return;

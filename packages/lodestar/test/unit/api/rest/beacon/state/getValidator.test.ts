@@ -10,7 +10,7 @@ import {StubbedApi} from "../../../../../utils/stub/api";
 import {generateValidator} from "../../../../../utils/validator";
 import {urlJoin} from "../../utils";
 import {BEACON_PREFIX} from "../index.test";
-import {ValidatorStatus} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 
 describe("rest - beacon - getStateValidator", function () {
   let restApi: RestApi;
@@ -43,7 +43,7 @@ describe("rest - beacon - getStateValidator", function () {
     api.beacon.state.getStateValidator.withArgs("head", config.types.BLSPubkey.fromJson(pubkey)).resolves({
       index: 1,
       balance: BigInt(3200000),
-      status: ValidatorStatus.ACTIVE_ONGOING,
+      status: phase0.ValidatorStatus.ACTIVE_ONGOING,
       validator: generateValidator(),
     });
     const response = await supertest(restApi.server.server)
@@ -58,7 +58,7 @@ describe("rest - beacon - getStateValidator", function () {
     api.beacon.state.getStateValidator.withArgs("head", 1).resolves({
       index: 1,
       balance: BigInt(3200000),
-      status: ValidatorStatus.ACTIVE_ONGOING,
+      status: phase0.ValidatorStatus.ACTIVE_ONGOING,
       validator: generateValidator(),
     });
     const response = await supertest(restApi.server.server)

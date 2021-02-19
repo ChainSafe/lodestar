@@ -1,4 +1,4 @@
-import {DepositEvent} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {createIBeaconConfig, IBeaconConfig} from "@chainsafe/lodestar-config";
 import {params} from "@chainsafe/lodestar-params/mainnet";
 import {goerliRpcUrl} from "../testParams";
@@ -36,7 +36,7 @@ export const goerliTestnetLogs = [
 ];
 
 /** Goerli parsed deposit event for the Medalla testnet */
-export const goerliTestnetDepositEvents: DepositEvent[] = [
+export const goerliTestnetDepositEvents: phase0.DepositEvent[] = [
   {
     blockNumber: 3124930,
     index: 6833,

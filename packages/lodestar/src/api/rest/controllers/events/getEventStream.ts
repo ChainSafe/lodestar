@@ -24,19 +24,19 @@ export const getEventStream: ApiController<Query> = {
       for await (const event of source) {
         switch (event.type) {
           case BeaconEventType.HEAD:
-            yield serializeEvent(config.types.ChainHead, event);
+            yield serializeEvent(config.types.phase0.ChainHead, event);
             break;
           case BeaconEventType.BLOCK:
-            yield serializeEvent(config.types.BlockEventPayload, event);
+            yield serializeEvent(config.types.phase0.BlockEventPayload, event);
             break;
           case BeaconEventType.ATTESTATION:
-            yield serializeEvent(config.types.Attestation, event);
+            yield serializeEvent(config.types.phase0.Attestation, event);
             break;
           case BeaconEventType.FINALIZED_CHECKPOINT:
-            yield serializeEvent(config.types.FinalizedCheckpoint, event);
+            yield serializeEvent(config.types.phase0.FinalizedCheckpoint, event);
             break;
           case BeaconEventType.CHAIN_REORG:
-            yield serializeEvent(config.types.ChainReorg, event);
+            yield serializeEvent(config.types.phase0.ChainReorg, event);
             break;
           default:
             req.log.warn("Missing serializer for event " + event.type);

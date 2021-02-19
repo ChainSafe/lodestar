@@ -3,7 +3,7 @@ import sinon, {SinonStubbedInstance} from "sinon";
 import {expect} from "chai";
 import {generateEmptySignedBlock} from "../../../utils/block";
 import PeerId from "peer-id";
-import {BeaconBlocksByRangeRequest, SignedBeaconBlock} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {silentLogger} from "../../../utils/logger";
 import {
   chunkify,
@@ -43,7 +43,7 @@ describe("sync - block utils", function () {
       const peer1 = await PeerId.create();
       const peer2 = await PeerId.create();
       const peers = [peer1, peer2];
-      rpcStub.beaconBlocksByRange.onFirstCall().resolves(null);
+      rpcStub.beaconBlocksByRange.onFirstCall().rejects(Error("TEST_ERROR"));
       rpcStub.beaconBlocksByRange.onSecondCall().resolves([generateEmptySignedBlock(), generateEmptySignedBlock()]);
       const blockPromise = getBlockRange(logger, rpcStub, peers, {start: 0, end: 4}, 2);
       await sandbox.clock.tickAsync(1000);
@@ -104,9 +104,9 @@ describe("sync - block utils", function () {
 
   describe("assertSequentialBlocksInRange", () => {
     it("Should assert correct blocksInRange", () => {
-      const request: BeaconBlocksByRangeRequest = {startSlot: 10, count: 10, step: 1};
+      const request: phase0.BeaconBlocksByRangeRequest = {startSlot: 10, count: 10, step: 1};
 
-      const blocks: SignedBeaconBlock[] = [];
+      const blocks: phase0.SignedBeaconBlock[] = [];
       for (let i = request.startSlot; i < request.startSlot + request.count; i += request.step) {
         const block = generateEmptySignedBlock();
         block.message.slot = i;

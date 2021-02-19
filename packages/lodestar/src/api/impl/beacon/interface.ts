@@ -2,7 +2,7 @@
  * @module api/rpc
  */
 
-import {Genesis, SignedBeaconBlock} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {IStoppableEventIterable} from "@chainsafe/lodestar-utils";
 import {IBeaconBlocksApi} from "./blocks";
 import {IBeaconPoolApi} from "./pool";
@@ -13,7 +13,7 @@ export interface IBeaconApi {
   state: IBeaconStateApi;
   pool: IBeaconPoolApi;
 
-  getGenesis(): Promise<Genesis | null>;
+  getGenesis(): Promise<phase0.Genesis | null>;
 
-  getBlockStream(): IStoppableEventIterable<SignedBeaconBlock>;
+  getBlockStream(): IStoppableEventIterable<phase0.SignedBeaconBlock>;
 }

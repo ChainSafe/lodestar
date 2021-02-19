@@ -1,4 +1,4 @@
-import {BeaconState, SignedVoluntaryExit} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {DomainType, FAR_FUTURE_EPOCH} from "../../../constants";
 import {computeSigningRoot, getDomain, isActiveValidator} from "../../../util";
 import {ISignatureSet, SignatureSetType, verifySignatureSet} from "../signatureSets";
@@ -8,7 +8,7 @@ import {initiateValidatorExit} from "./initiateValidatorExit";
 export function processVoluntaryExit(
   epochCtx: EpochContext,
   state: CachedValidatorsBeaconState,
-  signedVoluntaryExit: SignedVoluntaryExit,
+  signedVoluntaryExit: phase0.SignedVoluntaryExit,
   verifySignature = true
 ): void {
   const config = epochCtx.config;
@@ -51,8 +51,8 @@ export function processVoluntaryExit(
  */
 export function getVoluntaryExitSignatureSet(
   epochCtx: EpochContext,
-  state: BeaconState,
-  signedVoluntaryExit: SignedVoluntaryExit
+  state: phase0.BeaconState,
+  signedVoluntaryExit: phase0.SignedVoluntaryExit
 ): ISignatureSet {
   const config = epochCtx.config;
   const domain = getDomain(config, state, DomainType.VOLUNTARY_EXIT, signedVoluntaryExit.message.epoch);
@@ -60,7 +60,7 @@ export function getVoluntaryExitSignatureSet(
   return {
     type: SignatureSetType.single,
     pubkey: epochCtx.index2pubkey[signedVoluntaryExit.message.validatorIndex],
-    signingRoot: computeSigningRoot(config, config.types.VoluntaryExit, signedVoluntaryExit.message, domain),
+    signingRoot: computeSigningRoot(config, config.types.phase0.VoluntaryExit, signedVoluntaryExit.message, domain),
     signature: signedVoluntaryExit.signature,
   };
 }

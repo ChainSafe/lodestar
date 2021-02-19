@@ -1,4 +1,4 @@
-import {AttestationData, BeaconState, CommitteeIndex, Slot, Root} from "@chainsafe/lodestar-types";
+import {phase0, CommitteeIndex, Slot, Root} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {
   computeStartSlotAtEpoch,
@@ -7,13 +7,13 @@ import {
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {TreeBacked} from "@chainsafe/ssz";
 
-export async function assembleAttestationData(
+export function assembleAttestationData(
   config: IBeaconConfig,
-  headState: TreeBacked<BeaconState>,
+  headState: TreeBacked<phase0.BeaconState>,
   headBlockRoot: Uint8Array,
   slot: Slot,
   index: CommitteeIndex
-): Promise<AttestationData> {
+): phase0.AttestationData {
   const currentEpoch = getCurrentEpoch(config, headState);
   const epochStartSlot = computeStartSlotAtEpoch(config, currentEpoch);
 

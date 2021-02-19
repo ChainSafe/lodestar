@@ -8,7 +8,7 @@ import PeerId from "peer-id";
 import {expect} from "chai";
 import Multiaddr from "multiaddr";
 import {MetadataController} from "../../../../../src/network/metadata";
-import {Metadata} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {generatePeer} from "../../../../utils/peer";
 import {NodePeer} from "../../../../../src/api/types";
 
@@ -48,7 +48,7 @@ describe("node api implementation", function () {
       networkStub.getEnr.returns(enr);
       networkStub.peerId = peerId;
       networkStub.metadata = {
-        get all(): Metadata {
+        get all(): phase0.Metadata {
           return {
             attnets: [true],
             seqNumber: BigInt(1),

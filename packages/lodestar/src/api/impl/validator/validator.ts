@@ -5,21 +5,7 @@
 import bls, {Signature} from "@chainsafe/bls";
 import {computeStartSlotAtEpoch, computeSubnetForCommitteesAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {
-  Attestation,
-  AttestationData,
-  AttesterDuty,
-  BeaconBlock,
-  BeaconState,
-  Bytes96,
-  CommitteeIndex,
-  Epoch,
-  ProposerDuty,
-  Root,
-  SignedAggregateAndProof,
-  Slot,
-  ValidatorIndex,
-} from "@chainsafe/lodestar-types";
+import {Bytes96, CommitteeIndex, Epoch, Root, phase0, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {assert, ILogger} from "@chainsafe/lodestar-utils";
 import {readOnlyForEach, TreeBacked} from "@chainsafe/ssz";
 import {IAttestationJob, IBeaconChain} from "../../../chain";
@@ -68,7 +54,7 @@ export class ValidatorApi implements IValidatorApi {
     this.logger = modules.logger;
   }
 
-  public async produceBlock(slot: Slot, randaoReveal: Bytes96, graffiti = ""): Promise<BeaconBlock> {
+  public async produceBlock(slot: Slot, randaoReveal: Bytes96, graffiti = ""): Promise<phase0.BeaconBlock> {
     await checkSyncStatus(this.config, this.sync);
     return await assembleBlock(
       this.config,
@@ -81,14 +67,14 @@ export class ValidatorApi implements IValidatorApi {
     );
   }
 
-  public async produceAttestationData(committeeIndex: CommitteeIndex, slot: Slot): Promise<AttestationData> {
+  public async produceAttestationData(committeeIndex: CommitteeIndex, slot: Slot): Promise<phase0.AttestationData> {
     try {
       await checkSyncStatus(this.config, this.sync);
       const headRoot = this.chain.forkChoice.getHeadRoot();
       const {state, epochCtx} = await this.chain.regen.getBlockSlotState(headRoot, slot);
-      return await assembleAttestationData(
+      return assembleAttestationData(
         epochCtx.config,
-        state.getOriginalState() as TreeBacked<BeaconState>,
+        state.getOriginalState() as TreeBacked<phase0.BeaconState>,
         headRoot,
         slot,
         committeeIndex
@@ -99,13 +85,13 @@ export class ValidatorApi implements IValidatorApi {
     }
   }
 
-  public async getProposerDuties(epoch: Epoch): Promise<ProposerDuty[]> {
+  public async getProposerDuties(epoch: Epoch): Promise<phase0.ProposerDuty[]> {
     await checkSyncStatus(this.config, this.sync);
     assert.gte(epoch, 0, "Epoch must be positive");
     assert.lte(epoch, this.chain.clock.currentEpoch, "Must get proposer duties in current epoch");
     const {state, epochCtx} = await this.chain.getHeadStateContextAtCurrentEpoch();
     const startSlot = computeStartSlotAtEpoch(this.config, epoch);
-    const duties: ProposerDuty[] = [];
+    const duties: phase0.ProposerDuty[] = [];
 
     for (let slot = startSlot; slot < startSlot + this.config.params.SLOTS_PER_EPOCH; slot++) {
       const blockProposerIndex = epochCtx.getBeaconProposer(slot);
@@ -114,7 +100,7 @@ export class ValidatorApi implements IValidatorApi {
     return duties;
   }
 
-  public async getAttesterDuties(epoch: number, validatorIndices: ValidatorIndex[]): Promise<AttesterDuty[]> {
+  public async getAttesterDuties(epoch: number, validatorIndices: ValidatorIndex[]): Promise<phase0.AttesterDuty[]> {
     await checkSyncStatus(this.config, this.sync);
     if (validatorIndices.length === 0) throw new ApiError(400, "No validator to get attester duties");
     if (epoch > this.chain.clock.currentEpoch + 1)
@@ -128,10 +114,10 @@ export class ValidatorApi implements IValidatorApi {
         }
         return assembleAttesterDuty(this.config, {pubkey: validator.pubkey, index: validatorIndex}, epochCtx, epoch);
       })
-      .filter(notNullish) as AttesterDuty[];
+      .filter(notNullish) as phase0.AttesterDuty[];
   }
 
-  public async getAggregatedAttestation(attestationDataRoot: Root, slot: Slot): Promise<Attestation> {
+  public async getAggregatedAttestation(attestationDataRoot: Root, slot: Slot): Promise<phase0.Attestation> {
     await checkSyncStatus(this.config, this.sync);
     const attestations = await this.db.attestation.getAttestationsByDataRoot(slot, attestationDataRoot);
 
@@ -165,7 +151,7 @@ export class ValidatorApi implements IValidatorApi {
     };
   }
 
-  public async publishAggregateAndProofs(signedAggregateAndProofs: SignedAggregateAndProof[]): Promise<void> {
+  public async publishAggregateAndProofs(signedAggregateAndProofs: phase0.SignedAggregateAndProof[]): Promise<void> {
     await checkSyncStatus(this.config, this.sync);
     await Promise.all(
       signedAggregateAndProofs.map(async (signedAggregateAndProof) => {
@@ -199,7 +185,7 @@ export class ValidatorApi implements IValidatorApi {
 
     for (const {isAggregator, slot, committeeIndex, committeesAtSlot} of subscriptions) {
       if (isAggregator) {
-        await this.sync.collectAttestations(slot, committeeIndex);
+        this.sync.collectAttestations(slot, committeeIndex);
       }
       const subnet = computeSubnetForCommitteesAtSlot(this.config, slot, committeesAtSlot, committeeIndex);
       await this.network.searchSubnetPeers([String(subnet)]);

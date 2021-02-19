@@ -1,4 +1,4 @@
-import {BLSPubkey, SlashingProtectionAttestation} from "@chainsafe/lodestar-types";
+import {BLSPubkey, phase0} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {isEqualNonZeroRoot, minEpoch} from "../utils";
 import {MinMaxSurround, SurroundAttestationError, SurroundAttestationErrorCode} from "../minMaxSurround";
@@ -33,7 +33,7 @@ export class SlashingProtectionAttestationService {
    * Check an attestation for slash safety, and if it is safe, record it in the database
    * This is the safe, externally-callable interface for checking attestations
    */
-  async checkAndInsertAttestation(pubKey: BLSPubkey, att: SlashingProtectionAttestation): Promise<void> {
+  async checkAndInsertAttestation(pubKey: BLSPubkey, att: phase0.SlashingProtectionAttestation): Promise<void> {
     const safeStatus = await this.checkAttestation(pubKey, att);
 
     if (safeStatus != SafeStatus.SAME_DATA) {
@@ -46,7 +46,7 @@ export class SlashingProtectionAttestationService {
   /**
    * Check an attestation from `pubKey` for slash safety.
    */
-  async checkAttestation(pubKey: BLSPubkey, att: SlashingProtectionAttestation): Promise<SafeStatus> {
+  async checkAttestation(pubKey: BLSPubkey, att: phase0.SlashingProtectionAttestation): Promise<SafeStatus> {
     // Although it's not required to avoid slashing, we disallow attestations
     // which are obviously invalid by virtue of their source epoch exceeding their target.
     if (att.sourceEpoch > att.targetEpoch) {
@@ -113,7 +113,7 @@ export class SlashingProtectionAttestationService {
    * This should *only* be called in the same (exclusive) transaction as `checkAttestation`
    * so that the check isn't invalidated by a concurrent mutation
    */
-  async insertAttestation(pubKey: BLSPubkey, att: SlashingProtectionAttestation): Promise<void> {
+  async insertAttestation(pubKey: BLSPubkey, att: phase0.SlashingProtectionAttestation): Promise<void> {
     await this.attestationByTarget.set(pubKey, [att]);
     await this.minMaxSurround.insertAttestation(pubKey, {source: att.sourceEpoch, target: att.targetEpoch});
   }
@@ -121,7 +121,7 @@ export class SlashingProtectionAttestationService {
   /**
    * Interchange import / export functionality
    */
-  async importAttestations(pubkey: BLSPubkey, atts: SlashingProtectionAttestation[]): Promise<void> {
+  async importAttestations(pubkey: BLSPubkey, atts: phase0.SlashingProtectionAttestation[]): Promise<void> {
     await this.attestationByTarget.set(pubkey, atts);
 
     // Pre-compute spans for all attestations
@@ -140,7 +140,7 @@ export class SlashingProtectionAttestationService {
   /**
    * Interchange import / export functionality
    */
-  async exportAttestations(pubkey: BLSPubkey): Promise<SlashingProtectionAttestation[]> {
+  async exportAttestations(pubkey: BLSPubkey): Promise<phase0.SlashingProtectionAttestation[]> {
     return await this.attestationByTarget.getAll(pubkey);
   }
 

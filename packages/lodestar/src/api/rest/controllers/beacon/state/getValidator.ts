@@ -2,7 +2,7 @@ import {DefaultQuery} from "fastify";
 import {StateId} from "../../../../impl/beacon/state/interface";
 import {ApiError} from "../../../../impl/errors/api";
 import {ApiController} from "../../types";
-import {ValidatorResponse} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 
 type Params = {
   stateId: StateId;
@@ -13,7 +13,7 @@ export const getStateValidator: ApiController<DefaultQuery, Params> = {
   url: "/states/:stateId/validators/:validatorId",
 
   handler: async function (req, resp) {
-    let validator: ValidatorResponse | undefined;
+    let validator: phase0.ValidatorResponse | undefined;
     if (req.params.validatorId.toLowerCase().startsWith("0x")) {
       validator =
         (await this.api.beacon.state.getStateValidator(
@@ -31,7 +31,7 @@ export const getStateValidator: ApiController<DefaultQuery, Params> = {
       throw new ApiError(404, "Validator not found");
     }
     return resp.status(200).send({
-      data: this.config.types.ValidatorResponse.toJson(validator, {case: "snake"}),
+      data: this.config.types.phase0.ValidatorResponse.toJson(validator, {case: "snake"}),
     });
   },
 

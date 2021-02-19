@@ -1,7 +1,7 @@
 import {assert} from "chai";
 
 import {config} from "@chainsafe/lodestar-config/mainnet";
-import {BeaconState, Epoch, Slot} from "@chainsafe/lodestar-types";
+import {phase0, Epoch, Slot} from "@chainsafe/lodestar-types";
 import {GENESIS_SLOT} from "../../../../src/constants";
 import {
   computeStartSlotAtEpoch,
@@ -52,21 +52,21 @@ describe("computeStartSlotAtEpoch", () => {
 
 describe("getPreviousEpoch", () => {
   it("epoch should return previous epoch", () => {
-    const state: BeaconState = generateState({slot: 512});
+    const state: phase0.BeaconState = generateState({slot: 512});
     const expected: Epoch = 15;
     const result = getPreviousEpoch(config, state);
     assert.equal(result, expected);
   });
 
   it("epoch should return previous epoch", () => {
-    const state: BeaconState = generateState({slot: 256});
+    const state: phase0.BeaconState = generateState({slot: 256});
     const expected: Epoch = 7;
     const result = getPreviousEpoch(config, state);
     assert.equal(result, expected);
   });
 
   it("epoch should return genesis epoch", () => {
-    const state: BeaconState = generateState({slot: GENESIS_SLOT});
+    const state: phase0.BeaconState = generateState({slot: GENESIS_SLOT});
     const expected: Epoch = computeEpochAtSlot(config, GENESIS_SLOT);
     const result = getPreviousEpoch(config, state);
     assert.equal(result, expected);

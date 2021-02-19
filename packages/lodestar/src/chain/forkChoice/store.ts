@@ -1,6 +1,6 @@
 import {EventEmitter} from "events";
 
-import {Checkpoint, Slot} from "@chainsafe/lodestar-types";
+import {phase0, Slot} from "@chainsafe/lodestar-types";
 import {IForkChoiceStore} from "@chainsafe/lodestar-fork-choice";
 import {ChainEventEmitter} from "../../chain";
 import {ChainEvent} from "../emitter";
@@ -10,10 +10,10 @@ import {ChainEvent} from "../emitter";
  */
 export class ForkChoiceStore implements IForkChoiceStore {
   public currentSlot: Slot;
-  public bestJustifiedCheckpoint: Checkpoint;
+  public bestJustifiedCheckpoint: phase0.Checkpoint;
 
-  private _justifiedCheckpoint: Checkpoint;
-  private _finalizedCheckpoint: Checkpoint;
+  private _justifiedCheckpoint: phase0.Checkpoint;
+  private _finalizedCheckpoint: phase0.Checkpoint;
   private emitter: EventEmitter;
   constructor({
     emitter,
@@ -23,8 +23,8 @@ export class ForkChoiceStore implements IForkChoiceStore {
   }: {
     emitter: ChainEventEmitter;
     currentSlot: Slot;
-    justifiedCheckpoint: Checkpoint;
-    finalizedCheckpoint: Checkpoint;
+    justifiedCheckpoint: phase0.Checkpoint;
+    finalizedCheckpoint: phase0.Checkpoint;
   }) {
     this.emitter = emitter;
     this.currentSlot = currentSlot;
@@ -33,20 +33,20 @@ export class ForkChoiceStore implements IForkChoiceStore {
     this._finalizedCheckpoint = finalizedCheckpoint;
   }
 
-  public get justifiedCheckpoint(): Checkpoint {
+  public get justifiedCheckpoint(): phase0.Checkpoint {
     return this._justifiedCheckpoint;
   }
 
-  public set justifiedCheckpoint(checkpoint: Checkpoint) {
+  public set justifiedCheckpoint(checkpoint: phase0.Checkpoint) {
     this._justifiedCheckpoint = checkpoint;
     this.emitter.emit(ChainEvent.forkChoiceJustified, checkpoint);
   }
 
-  public get finalizedCheckpoint(): Checkpoint {
+  public get finalizedCheckpoint(): phase0.Checkpoint {
     return this._finalizedCheckpoint;
   }
 
-  public set finalizedCheckpoint(checkpoint: Checkpoint) {
+  public set finalizedCheckpoint(checkpoint: phase0.Checkpoint) {
     this._finalizedCheckpoint = checkpoint;
     this.emitter.emit(ChainEvent.forkChoiceFinalized, checkpoint);
   }

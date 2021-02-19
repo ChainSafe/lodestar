@@ -1,6 +1,6 @@
-import {BeaconState} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 
 export interface IStateTestCase {
-  pre: BeaconState;
-  post: BeaconState;
+  pre: phase0.BeaconState;
+  post: phase0.BeaconState;
 }

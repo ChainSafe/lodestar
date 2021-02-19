@@ -1,18 +1,18 @@
 import {List} from "@chainsafe/ssz";
 import {config} from "@chainsafe/lodestar-config/mainnet";
-import {AttesterSlashing, ProposerSlashing} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {generateEmptyBlock} from "./block";
 import {getTemporaryBlockHeader} from "../../src/util/blockRoot";
 import {generateEmptyAttestation} from "./attestation";
 
-export function generateEmptyProposerSlashing(): ProposerSlashing {
+export function generateEmptyProposerSlashing(): phase0.ProposerSlashing {
   return {
     signedHeader1: {message: getTemporaryBlockHeader(config, generateEmptyBlock()), signature: Buffer.alloc(96)},
     signedHeader2: {message: getTemporaryBlockHeader(config, generateEmptyBlock()), signature: Buffer.alloc(96)},
   };
 }
 
-export function generateEmptyAttesterSlashing(): AttesterSlashing {
+export function generateEmptyAttesterSlashing(): phase0.AttesterSlashing {
   return {
     attestation1: {
       data: generateEmptyAttestation().data,

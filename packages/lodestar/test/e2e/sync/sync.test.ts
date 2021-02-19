@@ -1,7 +1,7 @@
 import {IBeaconParams} from "@chainsafe/lodestar-params";
 import {getDevBeaconNode} from "../../utils/node/beacon";
 import {waitForEvent} from "../../utils/events/resolver";
-import {Checkpoint, SignedBeaconBlock} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import * as assert from "assert";
 import {getDevValidators} from "../../utils/node/validator";
 import {config} from "@chainsafe/lodestar-config/minimal";
@@ -24,7 +24,7 @@ describe("syncing", function () {
       options: {sync: {minPeers: 0}},
       validatorCount,
     });
-    const finalizationEventListener = waitForEvent<Checkpoint>(bn.chain.emitter, ChainEvent.finalized, 240000);
+    const finalizationEventListener = waitForEvent<phase0.Checkpoint>(bn.chain.emitter, ChainEvent.finalized, 240000);
     const validators = getDevValidators(bn, 8);
 
     await Promise.all(validators.map((validator) => validator.start()));
@@ -40,8 +40,8 @@ describe("syncing", function () {
       genesisTime: bn.chain.getHeadState().genesisTime,
     });
     const head = await bn.chain.getHeadBlock()!;
-    const waitForSynced = waitForEvent<SignedBeaconBlock>(bn2.chain.emitter, ChainEvent.block, 100000, (block) =>
-      config.types.SignedBeaconBlock.equals(block, head!)
+    const waitForSynced = waitForEvent<phase0.SignedBeaconBlock>(bn2.chain.emitter, ChainEvent.block, 100000, (block) =>
+      config.types.phase0.SignedBeaconBlock.equals(block, head!)
     );
     await bn2.network.connect(bn.network.peerId, bn.network.localMultiaddrs);
     try {

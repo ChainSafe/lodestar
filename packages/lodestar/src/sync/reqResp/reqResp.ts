@@ -2,31 +2,20 @@
  * @module sync
  */
 
-import {computeStartSlotAtEpoch, GENESIS_SLOT, getBlockRootAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
+import {GENESIS_SLOT} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {
-  BeaconBlocksByRangeRequest,
-  BeaconBlocksByRootRequest,
-  Goodbye,
-  MAX_REQUEST_BLOCKS,
-  Metadata,
-  Ping,
-  RequestBody,
-  ResponseBody,
-  SignedBeaconBlock,
-  Status,
-} from "@chainsafe/lodestar-types";
-import {ILogger} from "@chainsafe/lodestar-utils";
-import {toHexString} from "@chainsafe/ssz";
+import {MAX_REQUEST_BLOCKS, phase0} from "@chainsafe/lodestar-types";
+import {ILogger, LodestarError} from "@chainsafe/lodestar-utils";
 import PeerId from "peer-id";
 import {IBeaconChain} from "../../chain";
-import {GENESIS_EPOCH, Method, ReqRespEncoding, RpcResponseStatus, ZERO_HASH} from "../../constants";
+import {Method, ReqRespEncoding, RpcResponseStatus} from "../../constants";
 import {IBeaconDb} from "../../db";
 import {IBlockFilterOptions} from "../../db/api/beacon/repositories";
 import {createRpcProtocol, INetwork, NetworkEvent} from "../../network";
 import {ResponseError} from "../../network/reqresp/response";
 import {handlePeerMetadataSequence} from "../../network/peers/utils";
-import {createStatus, syncPeersStatus} from "../utils/sync";
+import {syncPeersStatus} from "../utils/sync";
+import {assertPeerRelevance} from "../utils/assertPeerRelevance";
 import {IReqRespHandler} from "./interface";
 
 export interface IReqRespHandlerModules {
@@ -81,7 +70,7 @@ export class BeaconReqRespHandler implements IReqRespHandler {
   public async start(): Promise<void> {
     this.network.reqResp.registerHandler(this.onRequest.bind(this));
     this.network.on(NetworkEvent.peerConnect, this.handshake);
-    const myStatus = await createStatus(this.chain);
+    const myStatus = this.chain.getStatus();
     await syncPeersStatus(this.network, myStatus);
   }
 
@@ -101,117 +90,55 @@ export class BeaconReqRespHandler implements IReqRespHandler {
     this.network.reqResp.unregisterHandler();
   }
 
-  public async *onRequest(method: Method, requestBody: RequestBody, peerId: PeerId): AsyncIterable<ResponseBody> {
+  public async *onRequest(
+    method: Method,
+    requestBody: phase0.RequestBody,
+    peerId: PeerId
+  ): AsyncIterable<phase0.ResponseBody> {
     switch (method) {
       case Method.Status:
-        yield* this.onStatus(requestBody as Status, peerId);
+        yield* this.onStatus(requestBody as phase0.Status, peerId);
         break;
       case Method.Goodbye:
-        yield* this.onGoodbye(requestBody as Goodbye, peerId);
+        yield* this.onGoodbye(requestBody as phase0.Goodbye, peerId);
         break;
       case Method.Ping:
-        yield* this.onPing(requestBody as Ping, peerId);
+        yield* this.onPing(requestBody as phase0.Ping, peerId);
         break;
       case Method.Metadata:
         yield* this.onMetadata();
         break;
       case Method.BeaconBlocksByRange:
-        yield* this.onBeaconBlocksByRange(requestBody as BeaconBlocksByRangeRequest);
+        yield* this.onBeaconBlocksByRange(requestBody as phase0.BeaconBlocksByRangeRequest);
         break;
       case Method.BeaconBlocksByRoot:
-        yield* this.onBeaconBlocksByRoot(requestBody as BeaconBlocksByRootRequest);
+        yield* this.onBeaconBlocksByRoot(requestBody as phase0.BeaconBlocksByRootRequest);
         break;
       default:
         throw Error(`Unsupported method ${method}`);
     }
   }
 
-  // Must be public for testing
-  async shouldDisconnectOnStatus(request: Status): Promise<boolean> {
-    const currentForkDigest = this.chain.getForkDigest();
-    if (!this.config.types.ForkDigest.equals(currentForkDigest, request.forkDigest)) {
-      this.logger.verbose("Fork digest mismatch", {
-        expected: toHexString(currentForkDigest),
-        received: toHexString(request.forkDigest),
+  private async *onStatus(status: phase0.Status, peerId: PeerId): AsyncIterable<phase0.Status> {
+    try {
+      assertPeerRelevance(status, this.chain, this.config);
+    } catch (e) {
+      this.logger.debug("Irrelevant peer", {
+        peer: peerId.toB58String(),
+        reason: e instanceof LodestarError ? e.getMetadata() : e.message,
       });
-      return true;
-    }
-    if (request.finalizedEpoch === GENESIS_EPOCH) {
-      if (!this.config.types.Root.equals(request.finalizedRoot, ZERO_HASH)) {
-        this.logger.verbose("Genesis finalized root must be zeroed", {
-          expected: toHexString(ZERO_HASH),
-          received: toHexString(request.finalizedRoot),
-        });
-        return true;
-      }
-    } else {
-      // we're on a further (or equal) finalized epoch
-      // but the peer's block root at that epoch may not match match ours
-      const headSummary = this.chain.forkChoice.getHead();
-      const finalizedCheckpoint = this.chain.forkChoice.getFinalizedCheckpoint();
-      const requestFinalizedSlot = computeStartSlotAtEpoch(this.config, request.finalizedEpoch);
-
-      if (request.finalizedEpoch === finalizedCheckpoint.epoch) {
-        if (!this.config.types.Root.equals(request.finalizedRoot, finalizedCheckpoint.root)) {
-          this.logger.verbose("Status with same finalized epoch has different root", {
-            expected: toHexString(finalizedCheckpoint.root),
-            received: toHexString(request.finalizedRoot),
-          });
-          return true;
-        }
-      } else if (request.finalizedEpoch < finalizedCheckpoint.epoch) {
-        // If it is within recent history, we can directly check against the block roots in the state
-        if (headSummary.slot - requestFinalizedSlot < this.config.params.SLOTS_PER_HISTORICAL_ROOT) {
-          const headState = this.chain.getHeadState();
-          // This will get the latest known block at the start of the epoch.
-          const expected = getBlockRootAtSlot(this.config, headState, requestFinalizedSlot);
-          if (!this.config.types.Root.equals(request.finalizedRoot, expected)) {
-            this.logger.verbose("Status with different finalized root", {
-              received: toHexString(request.finalizedRoot),
-              epected: toHexString(expected),
-              epoch: request.finalizedEpoch,
-            });
-            return true;
-          }
-        } else {
-          // finalized checkpoint of status is from an old long-ago epoch.
-          // We need to ask the chain for most recent canonical block at the finalized checkpoint start slot.
-          // The problem is that the slot may be a skip slot.
-          // And the block root may be from multiple epochs back even.
-          // The epoch in the checkpoint is there to checkpoint the tail end of skip slots, even if there is no block.
-          // TODO: accepted for now. Need to maintain either a list of finalized block roots,
-          // or inefficiently loop from finalized slot backwards, until we find the block we need to check against.
-          return false;
-        }
-      } else {
-        // request status finalized checkpoint is in the future, we do not know if it is a true finalized root
-        this.logger.verbose("Status with future finalized epoch", {
-          finalizedEpoch: request.finalizedEpoch,
-          finalizedRoot: toHexString(request.finalizedRoot),
-        });
-      }
-    }
-    return false;
-  }
-
-  private async *onStatus(requestBody: Status, peerId: PeerId): AsyncIterable<Status> {
-    if (await this.shouldDisconnectOnStatus(requestBody)) {
-      try {
-        await this.network.reqResp.goodbye(peerId, BigInt(GoodByeReasonCode.IRRELEVANT_NETWORK));
-      } catch {
-        // ignore error
-        return;
-      }
+      await this.network.reqResp.goodbye(peerId, BigInt(GoodByeReasonCode.IRRELEVANT_NETWORK));
+      return;
     }
 
     // set status on peer
-    this.network.peerMetadata.setStatus(peerId, requestBody);
+    this.network.peerMetadata.status.set(peerId, status);
 
     // send status response
-    yield await createStatus(this.chain);
+    yield this.chain.getStatus();
   }
 
-  private async *onGoodbye(requestBody: Goodbye, peerId: PeerId): AsyncIterable<bigint> {
+  private async *onGoodbye(requestBody: phase0.Goodbye, peerId: PeerId): AsyncIterable<bigint> {
     this.logger.verbose("Received goodbye request", {
       peer: peerId.toB58String(),
       reason: requestBody,
@@ -224,7 +151,7 @@ export class BeaconReqRespHandler implements IReqRespHandler {
     await this.network.disconnect(peerId);
   }
 
-  private async *onPing(requestBody: Ping, peerId: PeerId): AsyncIterable<bigint> {
+  private async *onPing(requestBody: phase0.Ping, peerId: PeerId): AsyncIterable<bigint> {
     yield this.network.metadata.seqNumber;
 
     // # TODO: Will this line be called if the yield consumer returns? Consider using finally {}
@@ -234,11 +161,13 @@ export class BeaconReqRespHandler implements IReqRespHandler {
     });
   }
 
-  private async *onMetadata(): AsyncIterable<Metadata> {
+  private async *onMetadata(): AsyncIterable<phase0.Metadata> {
     yield this.network.metadata.all;
   }
 
-  private async *onBeaconBlocksByRange(requestBody: BeaconBlocksByRangeRequest): AsyncIterable<SignedBeaconBlock> {
+  private async *onBeaconBlocksByRange(
+    requestBody: phase0.BeaconBlocksByRangeRequest
+  ): AsyncIterable<phase0.SignedBeaconBlock> {
     if (requestBody.step < 1) {
       throw new ResponseError(RpcResponseStatus.INVALID_REQUEST, "step < 1");
     }
@@ -261,7 +190,9 @@ export class BeaconReqRespHandler implements IReqRespHandler {
     yield* this.injectRecentBlocks(archiveBlocksStream, this.chain, requestBody);
   }
 
-  private async *onBeaconBlocksByRoot(requestBody: BeaconBlocksByRootRequest): AsyncIterable<SignedBeaconBlock> {
+  private async *onBeaconBlocksByRoot(
+    requestBody: phase0.BeaconBlocksByRootRequest
+  ): AsyncIterable<phase0.SignedBeaconBlock> {
     const getBlock = this.db.block.get.bind(this.db.block);
     const getFinalizedBlock = this.db.blockArchive.getByRoot.bind(this.db.blockArchive);
     for (const blockRoot of requestBody) {
@@ -275,9 +206,9 @@ export class BeaconReqRespHandler implements IReqRespHandler {
 
   private handshake = async (peerId: PeerId, direction: "inbound" | "outbound"): Promise<void> => {
     if (direction === "outbound") {
-      const request = await createStatus(this.chain);
+      const request = this.chain.getStatus();
       try {
-        this.network.peerMetadata.setStatus(peerId, await this.network.reqResp.status(peerId, request));
+        this.network.peerMetadata.status.set(peerId, await this.network.reqResp.status(peerId, request));
       } catch (e) {
         this.logger.verbose("Failed to get peer latest status and metadata", {
           peerId: peerId.toB58String(),
@@ -289,10 +220,10 @@ export class BeaconReqRespHandler implements IReqRespHandler {
   };
 
   private injectRecentBlocks = async function* (
-    archiveStream: AsyncIterable<SignedBeaconBlock>,
+    archiveStream: AsyncIterable<phase0.SignedBeaconBlock>,
     chain: IBeaconChain,
-    request: BeaconBlocksByRangeRequest
-  ): AsyncGenerator<SignedBeaconBlock> {
+    request: phase0.BeaconBlocksByRangeRequest
+  ): AsyncGenerator<phase0.SignedBeaconBlock> {
     let slot = -1;
     for await (const archiveBlock of archiveStream) {
       yield archiveBlock;

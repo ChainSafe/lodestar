@@ -1,12 +1,12 @@
 import {config} from "@chainsafe/lodestar-config/mainnet";
-import {BeaconState} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {generateState} from "../../../utils/state";
 import {processForkChanged} from "../../../../src/phase0/naive/epoch/fork";
 import {expect} from "chai";
 import {bytesToInt} from "@chainsafe/lodestar-utils";
 
 describe("processForkChanged", () => {
-  let state: BeaconState;
+  let state: phase0.BeaconState;
 
   beforeEach(() => {
     state = generateState();
@@ -25,7 +25,7 @@ describe("processForkChanged", () => {
     config.params.ALL_FORKS = [];
     const preFork = state.fork;
     processForkChanged(config, state);
-    expect(config.types.Fork.equals(preFork, state.fork)).to.be.true;
+    expect(config.types.phase0.Fork.equals(preFork, state.fork)).to.be.true;
   });
 
   it("should not update fork if found matched next fork but epoch not matched", () => {
@@ -38,7 +38,7 @@ describe("processForkChanged", () => {
     ];
     const preFork = state.fork;
     processForkChanged(config, state);
-    expect(config.types.Fork.equals(preFork, state.fork)).to.be.true;
+    expect(config.types.phase0.Fork.equals(preFork, state.fork)).to.be.true;
   });
 
   it("should update fork if found matched next fork and matched epoch", () => {
@@ -52,8 +52,8 @@ describe("processForkChanged", () => {
     const preFork = state.fork;
     state.slot = 200 * config.params.SLOTS_PER_EPOCH - 1;
     processForkChanged(config, state);
-    expect(config.types.Fork.equals(preFork, state.fork)).to.be.false;
-    expect(config.types.Version.equals(preFork.currentVersion, state.fork.previousVersion));
+    expect(config.types.phase0.Fork.equals(preFork, state.fork)).to.be.false;
+    expect(config.types.phase0.Version.equals(preFork.currentVersion, state.fork.previousVersion));
     expect(state.fork.epoch).to.be.equal(200);
   });
 });

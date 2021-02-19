@@ -1,17 +1,6 @@
 import {ByteVector, hash, toHexString, readOnlyMap, BitList, List} from "@chainsafe/ssz";
 import bls, {PublicKey} from "@chainsafe/bls";
-import {
-  Attestation,
-  AttestationData,
-  BeaconState,
-  BLSSignature,
-  CommitteeIndex,
-  Epoch,
-  IndexedAttestation,
-  Slot,
-  ValidatorIndex,
-  CommitteeAssignment,
-} from "@chainsafe/lodestar-types";
+import {BLSSignature, CommitteeIndex, Epoch, Slot, ValidatorIndex, phase0} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {intToBytes, assert} from "@chainsafe/lodestar-utils";
 
@@ -67,7 +56,7 @@ export class EpochContext {
   /**
    * Precomputes the data for the given state.
    */
-  public loadState(state: BeaconState): void {
+  public loadState(state: phase0.BeaconState): void {
     this.syncPubkeys(state);
     const currentEpoch = computeEpochAtSlot(this.config, state.slot);
     const previousEpoch = currentEpoch === GENESIS_EPOCH ? GENESIS_EPOCH : currentEpoch - 1;
@@ -110,7 +99,7 @@ export class EpochContext {
    * Checks the precomputed data (from loadState) against a state, and then adds missing pubkeys (strictly append-only
    * however, not meant to fork this information).
    */
-  public syncPubkeys(state: BeaconState): void {
+  public syncPubkeys(state: phase0.BeaconState): void {
     if (!this.pubkey2index) {
       this.pubkey2index = new PubkeyIndexMap();
     }
@@ -170,7 +159,7 @@ export class EpochContext {
   /**
    * Return the indexed attestation corresponding to ``attestation``.
    */
-  public getIndexedAttestation(attestation: Attestation): IndexedAttestation {
+  public getIndexedAttestation(attestation: phase0.Attestation): phase0.IndexedAttestation {
     const data = attestation.data;
     const bits = readOnlyMap(attestation.aggregationBits, (b) => b);
     const committee = this.getBeaconCommittee(data.slot, data.index);
@@ -190,7 +179,7 @@ export class EpochContext {
     };
   }
 
-  public getAttestingIndices(data: AttestationData, bits: BitList): ValidatorIndex[] {
+  public getAttestingIndices(data: phase0.AttestationData, bits: BitList): ValidatorIndex[] {
     const committee = this.getBeaconCommittee(data.slot, data.index);
     return getAttestingIndicesFromCommittee(committee, readOnlyMap(bits, (b) => b) as List<boolean>);
   }
@@ -203,7 +192,7 @@ export class EpochContext {
    * ``assignment[2]`` is the slot at which the committee is assigned
    * Return null if no assignment..
    */
-  getCommitteeAssignment(epoch: Epoch, validatorIndex: ValidatorIndex): CommitteeAssignment | null {
+  getCommitteeAssignment(epoch: Epoch, validatorIndex: ValidatorIndex): phase0.CommitteeAssignment | null {
     const nextEpoch = this.currentShuffling.epoch + 1;
     assert.lte(epoch, nextEpoch, "Cannot get committee assignment for epoch more than 1 ahead");
 
@@ -230,7 +219,7 @@ export class EpochContext {
     return isAggregatorFromCommitteeLength(this.config, committee.length, slotSignature);
   }
 
-  private _resetProposers(state: BeaconState): void {
+  private _resetProposers(state: phase0.BeaconState): void {
     const epochSeed = getSeed(this.config, state, this.currentShuffling.epoch, DomainType.BEACON_PROPOSER);
     const startSlot = computeStartSlotAtEpoch(this.config, this.currentShuffling.epoch);
     this.proposers = [];

@@ -3,7 +3,7 @@ import {AbortSignal} from "abort-controller";
 import {TreeBacked} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils";
-import {BeaconState} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {IBeaconDb} from "@chainsafe/lodestar/lib/db";
 import {Eth1Provider} from "@chainsafe/lodestar/lib/eth1";
 import {initStateFromAnchorState, initStateFromDb, initStateFromEth1} from "@chainsafe/lodestar/lib/chain";
@@ -29,7 +29,7 @@ export async function initBeaconState(
   db: IBeaconDb,
   logger: ILogger,
   signal: AbortSignal
-): Promise<TreeBacked<BeaconState>> {
+): Promise<TreeBacked<phase0.BeaconState>> {
   const shouldInitFromDb = (await db.stateArchive.lastKey()) != null;
 
   if (args.network && !args.genesisStateFile && !shouldInitFromDb) {
@@ -45,7 +45,7 @@ export async function initBeaconState(
       config,
       db,
       logger,
-      config.types.BeaconState.tree.deserialize(await downloadOrLoadFile(anchorStateFile))
+      config.types.phase0.BeaconState.tree.deserialize(await downloadOrLoadFile(anchorStateFile))
     );
   } else if (shouldInitFromDb) {
     anchorState = await initStateFromDb(config, db, logger);

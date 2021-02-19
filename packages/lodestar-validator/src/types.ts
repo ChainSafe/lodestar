@@ -2,19 +2,19 @@
  * @module validator
  */
 import {SecretKey} from "@chainsafe/bls";
-import {AttesterDuty, ValidatorResponse} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {IDatabaseController} from "@chainsafe/lodestar-db";
 
 export type GenesisInfo = {
   startTime: number;
 };
 
-export interface IAttesterDuty extends AttesterDuty {
+export interface IAttesterDuty extends phase0.AttesterDuty {
   isAggregator: boolean;
 }
 
 export type ValidatorAndSecret = {
-  validator: ValidatorResponse | null;
+  validator: phase0.ValidatorResponse | null;
   secretKey: SecretKey;
 };
 

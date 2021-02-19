@@ -8,20 +8,7 @@ import {
   getDomain,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {
-  AggregateAndProof,
-  Attestation,
-  AttestationData,
-  AttesterDuty,
-  BeaconState,
-  BLSSignature,
-  Epoch,
-  Fork,
-  Root,
-  SignedAggregateAndProof,
-  Slot,
-  ValidatorIndex,
-} from "@chainsafe/lodestar-types";
+import {BLSSignature, Epoch, Root, phase0, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {fromHexString, List, toHexString} from "@chainsafe/ssz";
 import {AbortController, AbortSignal} from "abort-controller";
@@ -121,7 +108,7 @@ export class AttestationService {
    * Fetch validator attester duties from the validator api and update local list of attester duties accordingly.
    */
   public async updateDuties(epoch: Epoch): Promise<void> {
-    let attesterDuties: AttesterDuty[] | undefined;
+    let attesterDuties: phase0.AttesterDuty[] | undefined;
     try {
       const indices: ValidatorIndex[] = [];
       this.validators.forEach((v) => {
@@ -192,8 +179,8 @@ export class AttestationService {
     });
     const abortSignal = this.controller!.signal;
     await this.waitForAttestationBlock(duty.slot, abortSignal);
-    let attestation: Attestation | undefined;
-    let fork: Fork | null;
+    let attestation: phase0.Attestation | undefined;
+    let fork: phase0.Fork | null;
     try {
       fork = await this.provider.beacon.state.getFork("head");
       if (!fork) {
@@ -236,7 +223,7 @@ export class AttestationService {
       this.logger.info("Published new attestation", {
         slot: attestation.data.slot,
         committee: attestation.data.index,
-        attestation: toHexString(this.config.types.Attestation.hashTreeRoot(attestation)),
+        attestation: toHexString(this.config.types.phase0.Attestation.hashTreeRoot(attestation)),
         block: toHexString(attestation.data.target.root),
         validator: toHexString(duty.pubkey),
       });
@@ -283,29 +270,29 @@ export class AttestationService {
    */
   private aggregateAttestations = async (
     duty: IAttesterDuty,
-    attestation: Attestation,
-    fork: Fork,
+    attestation: phase0.Attestation,
+    fork: phase0.Fork,
     genesisValidatorsRoot: Root,
     validator: ValidatorAndSecret
   ): Promise<void> => {
     this.logger.info("Aggregating attestations", {committeeIndex: duty.committeeIndex, slot: duty.slot});
-    let aggregate: Attestation;
+    let aggregate: phase0.Attestation;
     try {
       aggregate = await this.provider.validator.getAggregatedAttestation(
-        this.config.types.AttestationData.hashTreeRoot(attestation.data),
+        this.config.types.phase0.AttestationData.hashTreeRoot(attestation.data),
         duty.slot
       );
     } catch (e) {
       this.logger.error("Failed to produce aggregate and proof", e);
       return;
     }
-    const aggregateAndProof: AggregateAndProof = {
+    const aggregateAndProof: phase0.AggregateAndProof = {
       aggregate,
       aggregatorIndex: duty.validatorIndex,
       selectionProof: Buffer.alloc(96, 0),
     };
     aggregateAndProof.selectionProof = this.getSlotSignature(validator, duty.slot, fork, genesisValidatorsRoot);
-    const signedAggregateAndProof: SignedAggregateAndProof = {
+    const signedAggregateAndProof: phase0.SignedAggregateAndProof = {
       message: aggregateAndProof,
       signature: this.getAggregateAndProofSignature(validator, fork, genesisValidatorsRoot, aggregateAndProof),
     };
@@ -323,30 +310,35 @@ export class AttestationService {
 
   private getAggregateAndProofSignature(
     validator: ValidatorAndSecret,
-    fork: Fork,
+    fork: phase0.Fork,
     genesisValidatorsRoot: Root,
-    aggregateAndProof: AggregateAndProof
+    aggregateAndProof: phase0.AggregateAndProof
   ): BLSSignature {
     const aggregate = aggregateAndProof.aggregate;
     const domain = getDomain(
       this.config,
-      {fork, genesisValidatorsRoot} as BeaconState,
+      {fork, genesisValidatorsRoot} as phase0.BeaconState,
       DomainType.AGGREGATE_AND_PROOF,
       computeEpochAtSlot(this.config, aggregate.data.slot)
     );
-    const signingRoot = computeSigningRoot(this.config, this.config.types.AggregateAndProof, aggregateAndProof, domain);
+    const signingRoot = computeSigningRoot(
+      this.config,
+      this.config.types.phase0.AggregateAndProof,
+      aggregateAndProof,
+      domain
+    );
     return validator.secretKey.sign(signingRoot).toBytes();
   }
 
   private getSlotSignature(
     validator: ValidatorAndSecret,
     slot: Slot,
-    fork: Fork,
+    fork: phase0.Fork,
     genesisValidatorsRoot: Root
   ): BLSSignature {
     const domain = getDomain(
       this.config,
-      {fork, genesisValidatorsRoot} as BeaconState,
+      {fork, genesisValidatorsRoot} as phase0.BeaconState,
       DomainType.SELECTION_PROOF,
       computeEpochAtSlot(this.config, slot)
     );
@@ -356,12 +348,12 @@ export class AttestationService {
 
   private async createAttestation(
     duty: IAttesterDuty,
-    fork: Fork,
+    fork: phase0.Fork,
     genesisValidatorsRoot: Root,
     validator: ValidatorAndSecret
-  ): Promise<Attestation> {
+  ): Promise<phase0.Attestation> {
     const {committeeIndex, slot} = duty;
-    let attestationData: AttestationData;
+    let attestationData: phase0.AttestationData;
     try {
       attestationData = await this.provider.validator.produceAttestationData(committeeIndex, slot);
     } catch (e) {
@@ -371,11 +363,16 @@ export class AttestationService {
 
     const domain = getDomain(
       this.config,
-      {fork, genesisValidatorsRoot} as BeaconState,
+      {fork, genesisValidatorsRoot} as phase0.BeaconState,
       DomainType.BEACON_ATTESTER,
       attestationData.target.epoch
     );
-    const signingRoot = computeSigningRoot(this.config, this.config.types.AttestationData, attestationData, domain);
+    const signingRoot = computeSigningRoot(
+      this.config,
+      this.config.types.phase0.AttestationData,
+      attestationData,
+      domain
+    );
 
     await this.slashingProtection.checkAndInsertAttestation(duty.pubkey, {
       sourceEpoch: attestationData.target.epoch,
@@ -383,7 +380,7 @@ export class AttestationService {
       signingRoot,
     });
 
-    const attestation: Attestation = {
+    const attestation: phase0.Attestation = {
       aggregationBits: getAggregationBits(duty.committeeLength, duty.validatorCommitteeIndex) as List<boolean>,
       data: attestationData,
       signature: validator.secretKey.sign(signingRoot).toBytes(),

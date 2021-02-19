@@ -2,7 +2,7 @@ import {expect} from "chai";
 import sinon from "sinon";
 
 import {List} from "@chainsafe/ssz";
-import {PendingAttestation, Validator} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import {
   getAttestingBalance,
@@ -55,7 +55,7 @@ describe("process epoch - crosslinks", function () {
     ];
     const state = generateState({
       slot: config.params.SLOTS_PER_EPOCH,
-      currentEpochAttestations: pendingAttestations as List<PendingAttestation>,
+      currentEpochAttestations: pendingAttestations as List<phase0.PendingAttestation>,
     });
 
     const result = getMatchingSourceAttestations(config, state, 1);
@@ -79,8 +79,8 @@ describe("process epoch - crosslinks", function () {
     ];
     const state = generateState({
       slot: config.params.SLOTS_PER_EPOCH,
-      currentEpochAttestations: currentPendingAttestations as List<PendingAttestation>,
-      previousEpochAttestations: previousPendingAttestations as List<PendingAttestation>,
+      currentEpochAttestations: currentPendingAttestations as List<phase0.PendingAttestation>,
+      previousEpochAttestations: previousPendingAttestations as List<phase0.PendingAttestation>,
     });
 
     const result = getMatchingSourceAttestations(config, state, 0);
@@ -104,7 +104,7 @@ describe("process epoch - crosslinks", function () {
     currentPendingAttestations[0].data.target.root = blockRoot;
     const state = generateState({
       slot: config.params.SLOTS_PER_EPOCH,
-      currentEpochAttestations: currentPendingAttestations as List<PendingAttestation>,
+      currentEpochAttestations: currentPendingAttestations as List<phase0.PendingAttestation>,
     });
     getBlockRootStub.returns(blockRoot);
 
@@ -130,7 +130,7 @@ describe("process epoch - crosslinks", function () {
     currentPendingAttestations[0].data.beaconBlockRoot = blockRoot;
     const state = generateState({
       slot: config.params.SLOTS_PER_EPOCH,
-      currentEpochAttestations: currentPendingAttestations as List<PendingAttestation>,
+      currentEpochAttestations: currentPendingAttestations as List<phase0.PendingAttestation>,
     });
     getBlockRootAtSlotStub.returns(blockRoot);
     getBlockRootStub.returns(Buffer.alloc(32));
@@ -156,7 +156,7 @@ describe("process epoch - crosslinks", function () {
     getAttestingIndicesStub.returns([0, 1]);
     const validator1 = generateValidator({activation: 0, exit: FAR_FUTURE_EPOCH, slashed: true});
     const validator2 = generateValidator({activation: 0, exit: FAR_FUTURE_EPOCH, slashed: false});
-    const state = generateState({validators: [validator1, validator2] as List<Validator>});
+    const state = generateState({validators: [validator1, validator2] as List<phase0.Validator>});
 
     const result = getUnslashedAttestingIndices(config, state, pendingAttestations);
     expect(result).to.be.deep.equal([1]);
@@ -179,7 +179,7 @@ describe("process epoch - crosslinks", function () {
     getAttestingIndicesStub.returns([0, 1]);
     const validator1 = generateValidator({activation: 0, exit: FAR_FUTURE_EPOCH, slashed: true});
     const validator2 = generateValidator({activation: 0, exit: FAR_FUTURE_EPOCH, slashed: false});
-    const state = generateState({validators: [validator1, validator2] as List<Validator>});
+    const state = generateState({validators: [validator1, validator2] as List<phase0.Validator>});
     getTotalBalanceStub.returns(BigInt(1));
 
     const result = getAttestingBalance(config, state, pendingAttestations);

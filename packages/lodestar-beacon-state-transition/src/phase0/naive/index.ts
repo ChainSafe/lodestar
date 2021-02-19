@@ -1,5 +1,5 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {BeaconState, SignedBeaconBlock} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {processSlots} from "./slot";
 import {verifyBlockSignature} from "../..";
 import {processBlock} from "./block";
@@ -20,14 +20,14 @@ export * from "./slot";
  */
 export function stateTransition(
   config: IBeaconConfig,
-  state: BeaconState,
-  signedBlock: SignedBeaconBlock,
+  state: phase0.BeaconState,
+  signedBlock: phase0.SignedBeaconBlock,
   options?: {verifyStateRoot?: boolean; verifyProposer?: boolean; verifySignatures?: boolean}
-): BeaconState {
+): phase0.BeaconState {
   const {verifyStateRoot = true, verifyProposer = true, verifySignatures = true} = options || {};
 
   // Clone state because process slots and block are not pure
-  const postState = config.types.BeaconState.clone(state);
+  const postState = config.types.phase0.BeaconState.clone(state);
   // Process slots (including those with no blocks) since block
   processSlots(config, postState, signedBlock.message.slot);
   // Verify block signature
@@ -39,7 +39,7 @@ export function stateTransition(
   // Validate state root (`validate_state_root == True` in production)
   if (verifyStateRoot) {
     assert.true(
-      config.types.Root.equals(signedBlock.message.stateRoot, config.types.BeaconState.hashTreeRoot(postState)),
+      config.types.Root.equals(signedBlock.message.stateRoot, config.types.phase0.BeaconState.hashTreeRoot(postState)),
       "State root is not valid"
     );
   }

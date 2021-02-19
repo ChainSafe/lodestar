@@ -13,7 +13,7 @@ import {sleep, WinstonLogger} from "@chainsafe/lodestar-utils";
 import {MockBeaconChain} from "../../../utils/mocks/chain/chain";
 import {generateState} from "../../../utils/state";
 import {StubbedBeaconDb} from "../../../utils/stub";
-import {BeaconState} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {TreeBacked} from "@chainsafe/ssz";
 
 describe("gossip handler", function () {
@@ -36,65 +36,65 @@ describe("gossip handler", function () {
     sinon.restore();
   });
 
-  it("should handle new block", async function () {
-    gossipStub.subscribeToBlock.callsFake(async (digest, callback) => {
-      await callback(generateEmptySignedBlock());
+  it("should handle new block", function () {
+    gossipStub.subscribeToBlock.callsFake((digest, callback) => {
+      callback(generateEmptySignedBlock());
     });
     const handler = new BeaconGossipHandler(chainStub, networkStub, dbStub, logger);
-    await handler.start();
+    handler.start();
     expect(chainStub.receiveBlock.calledOnce).to.be.true;
   });
 
-  it("should handle new aggregate and proof", async function () {
+  it("should handle new aggregate and proof", function () {
     const aggregateAndProof = generateEmptySignedAggregateAndProof();
-    gossipStub.subscribeToAggregateAndProof.callsFake(async (digest, callback) => {
-      await callback(aggregateAndProof);
+    gossipStub.subscribeToAggregateAndProof.callsFake((digest, callback) => {
+      callback(aggregateAndProof);
     });
     const handler = new BeaconGossipHandler(chainStub, networkStub, dbStub, logger);
-    await handler.start();
+    handler.start();
     expect(dbStub.aggregateAndProof.add.withArgs(aggregateAndProof.message).calledOnce).to.be.true;
   });
 
-  it("should handle new attester slashing", async function () {
-    gossipStub.subscribeToAttesterSlashing.callsFake(async (digest, callback) => {
-      await callback(generateEmptyAttesterSlashing());
+  it("should handle new attester slashing", function () {
+    gossipStub.subscribeToAttesterSlashing.callsFake((digest, callback) => {
+      callback(generateEmptyAttesterSlashing());
     });
     const handler = new BeaconGossipHandler(chainStub, networkStub, dbStub, logger);
-    await handler.handleSyncCompleted();
+    handler.handleSyncCompleted();
     expect(dbStub.attesterSlashing.add.calledOnce).to.be.true;
   });
 
-  it("should handle new proposer slashing", async function () {
-    gossipStub.subscribeToProposerSlashing.callsFake(async (digest, callback) => {
-      await callback(generateEmptyProposerSlashing());
+  it("should handle new proposer slashing", function () {
+    gossipStub.subscribeToProposerSlashing.callsFake((digest, callback) => {
+      callback(generateEmptyProposerSlashing());
     });
     const handler = new BeaconGossipHandler(chainStub, networkStub, dbStub, logger);
-    await handler.handleSyncCompleted();
+    handler.handleSyncCompleted();
     expect(dbStub.proposerSlashing.add.calledOnce).to.be.true;
   });
 
-  it("should handle new voluntary exit", async function () {
-    gossipStub.subscribeToVoluntaryExit.callsFake(async (digest, callback) => {
-      await callback(generateEmptySignedVoluntaryExit());
+  it("should handle new voluntary exit", function () {
+    gossipStub.subscribeToVoluntaryExit.callsFake((digest, callback) => {
+      callback(generateEmptySignedVoluntaryExit());
     });
     const handler = new BeaconGossipHandler(chainStub, networkStub, dbStub, logger);
-    await handler.handleSyncCompleted();
+    handler.handleSyncCompleted();
     expect(dbStub.voluntaryExit.add.calledOnce).to.be.true;
   });
 
   it("should handle fork version changed", async function () {
     // handler is started and fork digest changed after that
-    const state: BeaconState = generateState();
+    const state: phase0.BeaconState = generateState();
     const chain = new MockBeaconChain({
       genesisTime: 0,
       chainId: 0,
       networkId: BigInt(0),
-      state: state as TreeBacked<BeaconState>,
+      state: state as TreeBacked<phase0.BeaconState>,
       config,
     });
     const oldForkDigest = chain.getForkDigest();
     const handler = new BeaconGossipHandler(chain, networkStub, dbStub, logger);
-    await handler.start();
+    handler.start();
     expect(gossipStub.subscribeToBlock.callCount).to.be.equal(1);
     // fork digest changed due to current version changed
     state.fork.currentVersion = Buffer.from([100, 0, 0, 0]);

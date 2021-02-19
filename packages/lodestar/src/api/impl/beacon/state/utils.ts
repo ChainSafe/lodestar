@@ -1,17 +1,9 @@
 // this will need async once we wan't to resolve archive slot
-import {GENESIS_SLOT, phase0, FAR_FUTURE_EPOCH} from "@chainsafe/lodestar-beacon-state-transition";
+import {GENESIS_SLOT, FAR_FUTURE_EPOCH} from "@chainsafe/lodestar-beacon-state-transition";
+import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
-import {
-  Epoch,
-  Validator,
-  ValidatorIndex,
-  ValidatorStatus,
-  ValidatorResponse,
-  Gwei,
-  BeaconState,
-  Slot,
-} from "@chainsafe/lodestar-types";
+import {Epoch, ValidatorIndex, Gwei, Slot} from "@chainsafe/lodestar-types";
 import {fromHexString, readOnlyMap, TreeBacked} from "@chainsafe/ssz";
 import {IBeaconChain} from "../../../../chain";
 import {StateContextCache} from "../../../../chain/stateCache";
@@ -42,42 +34,42 @@ export async function resolveStateId(
  * Get the status of the validator
  * based on conditions outlined in https://hackmd.io/ofFJ5gOmQpu1jjHilHbdQQ
  */
-export function getValidatorStatus(validator: Validator, currentEpoch: Epoch): ValidatorStatus {
+export function getValidatorStatus(validator: phase0.Validator, currentEpoch: Epoch): phase0.ValidatorStatus {
   // pending
   if (validator.activationEpoch > currentEpoch) {
     if (validator.activationEligibilityEpoch === FAR_FUTURE_EPOCH) {
-      return ValidatorStatus.PENDING_INITIALIZED;
+      return phase0.ValidatorStatus.PENDING_INITIALIZED;
     } else if (validator.activationEligibilityEpoch < FAR_FUTURE_EPOCH) {
-      return ValidatorStatus.PENDING_QUEUED;
+      return phase0.ValidatorStatus.PENDING_QUEUED;
     }
   }
   // active
   if (validator.activationEpoch <= currentEpoch && currentEpoch < validator.exitEpoch) {
     if (validator.exitEpoch === FAR_FUTURE_EPOCH) {
-      return ValidatorStatus.ACTIVE_ONGOING;
+      return phase0.ValidatorStatus.ACTIVE_ONGOING;
     } else if (validator.exitEpoch < FAR_FUTURE_EPOCH) {
-      return validator.slashed ? ValidatorStatus.ACTIVE_SLASHED : ValidatorStatus.ACTIVE_EXITING;
+      return validator.slashed ? phase0.ValidatorStatus.ACTIVE_SLASHED : phase0.ValidatorStatus.ACTIVE_EXITING;
     }
   }
   // exited
   if (validator.exitEpoch <= currentEpoch && currentEpoch < validator.withdrawableEpoch) {
-    return validator.slashed ? ValidatorStatus.EXITED_SLASHED : ValidatorStatus.EXITED_UNSLASHED;
+    return validator.slashed ? phase0.ValidatorStatus.EXITED_SLASHED : phase0.ValidatorStatus.EXITED_UNSLASHED;
   }
   // withdrawal
   if (validator.withdrawableEpoch <= currentEpoch) {
     return validator.effectiveBalance !== BigInt(0)
-      ? ValidatorStatus.WITHDRAWAL_POSSIBLE
-      : ValidatorStatus.WITHDRAWAL_DONE;
+      ? phase0.ValidatorStatus.WITHDRAWAL_POSSIBLE
+      : phase0.ValidatorStatus.WITHDRAWAL_DONE;
   }
   throw new Error("ValidatorStatus unknown");
 }
 
 export function toValidatorResponse(
   index: ValidatorIndex,
-  validator: Validator,
+  validator: phase0.Validator,
   balance: Gwei,
   currentEpoch: Epoch
-): ValidatorResponse {
+): phase0.ValidatorResponse {
   return {
     index,
     status: getValidatorStatus(validator, currentEpoch),
@@ -127,7 +119,7 @@ async function stateByName(
   forkChoice: IForkChoice,
   stateId: StateId
 ): Promise<ApiStateContext | null> {
-  let state: TreeBacked<BeaconState> | null = null;
+  let state: TreeBacked<phase0.BeaconState> | null = null;
   switch (stateId) {
     case "head":
       return stateCache.get(forkChoice.getHead().stateRoot) ?? null;

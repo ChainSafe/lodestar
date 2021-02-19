@@ -22,9 +22,9 @@ describe("gossip handlers - proposerSlashing", function () {
     sandbox.restore();
   });
 
-  it("handle valid proposer slashing", async function () {
+  it("handle valid proposer slashing", function () {
     const proposerSlashing = generateEmptyProposerSlashing();
-    await handleIncomingProposerSlashing.bind(gossipStub)(proposerSlashing);
+    handleIncomingProposerSlashing.bind(gossipStub)(proposerSlashing);
 
     expect(gossipStub.emit.withArgs(GossipEvent.PROPOSER_SLASHING, proposerSlashing).calledOnce).to.be.true;
   });

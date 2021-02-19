@@ -4,7 +4,7 @@
 
 import {ITask} from "../interface";
 import {IBeaconDb} from "../../db/api";
-import {Checkpoint} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {IBlockSummary, IForkChoice} from "@chainsafe/lodestar-fork-choice";
@@ -24,9 +24,9 @@ export class ArchiveBlocksTask implements ITask {
   private readonly forkChoice: IForkChoice;
   private readonly logger: ILogger;
 
-  private finalized: Checkpoint;
+  private finalized: phase0.Checkpoint;
 
-  public constructor(config: IBeaconConfig, modules: IArchiveBlockModules, finalized: Checkpoint) {
+  public constructor(config: IBeaconConfig, modules: IArchiveBlockModules, finalized: phase0.Checkpoint) {
     this.config = config;
     this.db = modules.db;
     this.forkChoice = modules.forkChoice;

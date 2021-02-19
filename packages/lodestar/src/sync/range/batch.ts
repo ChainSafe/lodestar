@@ -1,5 +1,5 @@
 import PeerId from "peer-id";
-import {BeaconBlocksByRangeRequest, Epoch, SignedBeaconBlock} from "@chainsafe/lodestar-types";
+import {Epoch, phase0} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ILogger, LodestarError} from "@chainsafe/lodestar-utils";
 import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
@@ -41,8 +41,8 @@ export type Attempt = {
 
 export type BatchState =
   | {status: BatchStatus.AwaitingDownload}
-  | {status: BatchStatus.Downloading; peer: PeerId; blocks: SignedBeaconBlock[]}
-  | {status: BatchStatus.AwaitingProcessing; peer: PeerId; blocks: SignedBeaconBlock[]}
+  | {status: BatchStatus.Downloading; peer: PeerId; blocks: phase0.SignedBeaconBlock[]}
+  | {status: BatchStatus.AwaitingProcessing; peer: PeerId; blocks: phase0.SignedBeaconBlock[]}
   | {status: BatchStatus.Processing; attempt: Attempt}
   | {status: BatchStatus.AwaitingValidation; attempt: Attempt};
 
@@ -66,7 +66,7 @@ export class Batch {
   /** State of the batch. */
   state: BatchState = {status: BatchStatus.AwaitingDownload};
   /** BeaconBlocksByRangeRequest */
-  request: BeaconBlocksByRangeRequest;
+  request: phase0.BeaconBlocksByRangeRequest;
   /** The `Attempts` that have been made and failed to send us this batch. */
   private failedProcessingAttempts: Attempt[] = [];
   /** The number of download retries this batch has undergone due to a failed request. */
@@ -115,7 +115,7 @@ export class Batch {
   /**
    * Downloading -> AwaitingProcessing
    */
-  downloadingSuccess(blocks: SignedBeaconBlock[]): void {
+  downloadingSuccess(blocks: phase0.SignedBeaconBlock[]): void {
     if (this.state.status !== BatchStatus.Downloading) {
       throw new WrongStateError(this.getErrorType(BatchStatus.Downloading));
     }
@@ -146,7 +146,7 @@ export class Batch {
   /**
    * AwaitingProcessing -> Processing
    */
-  startProcessing(): SignedBeaconBlock[] {
+  startProcessing(): phase0.SignedBeaconBlock[] {
     if (this.state.status !== BatchStatus.AwaitingProcessing) {
       throw new WrongStateError(this.getErrorType(BatchStatus.AwaitingProcessing));
     }

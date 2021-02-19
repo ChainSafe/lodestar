@@ -6,7 +6,7 @@ export const getDepositContract: ApiController = {
   handler: async function (req, resp) {
     const depositContract = await this.api.config.getDepositContract();
     return resp.status(200).send({
-      data: this.config.types.Contract.toJson(depositContract, {case: "snake"}),
+      data: this.config.types.phase0.Contract.toJson(depositContract, {case: "snake"}),
     });
   },
 

@@ -9,7 +9,7 @@ export const getGenesis: ApiController = {
       return resp.status(404).send();
     }
     return resp.status(200).send({
-      data: this.config.types.Genesis.toJson(genesis, {case: "snake"}),
+      data: this.config.types.phase0.Genesis.toJson(genesis, {case: "snake"}),
     });
   },
 

@@ -1,11 +1,11 @@
 import {readOnlyMap} from "@chainsafe/ssz";
-import {BeaconState} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {bigIntMin} from "@chainsafe/lodestar-utils";
 
 import {decreaseBalance} from "../../../util";
 import {EpochContext, IEpochProcess} from "../util";
 
-export function processSlashings(epochCtx: EpochContext, process: IEpochProcess, state: BeaconState): void {
+export function processSlashings(epochCtx: EpochContext, process: IEpochProcess, state: phase0.BeaconState): void {
   const totalBalance = process.totalActiveStake;
   const totalSlashings = readOnlyMap(state.slashings, (s) => s).reduce((a, b) => a + b, BigInt(0));
   const proportionalSlashingMultiplier = BigInt(epochCtx.config.params.PROPORTIONAL_SLASHING_MULTIPLIER);

@@ -1,13 +1,4 @@
-import {
-  BeaconBlock,
-  SignedBeaconBlock,
-  ProposerSlashing,
-  AttesterSlashing,
-  Attestation,
-  Deposit,
-  SignedVoluntaryExit,
-  SignedBeaconBlockHeader,
-} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {List} from "@chainsafe/ssz";
 import {IBlockSummary} from "@chainsafe/lodestar-fork-choice";
 import {isPlainObject} from "@chainsafe/lodestar-utils";
@@ -17,7 +8,7 @@ import {EMPTY_SIGNATURE, ZERO_HASH} from "../../src/constants";
 import deepmerge from "deepmerge";
 import {IBlockJob} from "../../src/chain";
 
-export function generateEmptyBlock(): BeaconBlock {
+export function generateEmptyBlock(): phase0.BeaconBlock {
   return {
     slot: 0,
     proposerIndex: 0,
@@ -31,23 +22,23 @@ export function generateEmptyBlock(): BeaconBlock {
         depositCount: 0,
       },
       graffiti: Buffer.alloc(32),
-      proposerSlashings: ([] as ProposerSlashing[]) as List<ProposerSlashing>,
-      attesterSlashings: ([] as AttesterSlashing[]) as List<AttesterSlashing>,
-      attestations: ([] as Attestation[]) as List<Attestation>,
-      deposits: ([] as Deposit[]) as List<Deposit>,
-      voluntaryExits: ([] as SignedVoluntaryExit[]) as List<SignedVoluntaryExit>,
+      proposerSlashings: ([] as phase0.ProposerSlashing[]) as List<phase0.ProposerSlashing>,
+      attesterSlashings: ([] as phase0.AttesterSlashing[]) as List<phase0.AttesterSlashing>,
+      attestations: ([] as phase0.Attestation[]) as List<phase0.Attestation>,
+      deposits: ([] as phase0.Deposit[]) as List<phase0.Deposit>,
+      voluntaryExits: ([] as phase0.SignedVoluntaryExit[]) as List<phase0.SignedVoluntaryExit>,
     },
   };
 }
 
-export function generateEmptySignedBlock(): SignedBeaconBlock {
+export function generateEmptySignedBlock(): phase0.SignedBeaconBlock {
   return {
     message: generateEmptyBlock(),
     signature: EMPTY_SIGNATURE,
   };
 }
 
-export function generateEmptySignedBlockHeader(): SignedBeaconBlockHeader {
+export function generateEmptySignedBlockHeader(): phase0.SignedBeaconBlockHeader {
   return {
     message: {
       slot: 0,
@@ -60,10 +51,16 @@ export function generateEmptySignedBlockHeader(): SignedBeaconBlockHeader {
   };
 }
 
-export function generateSignedBlock(override: RecursivePartial<SignedBeaconBlock> = {}): SignedBeaconBlock {
-  return deepmerge<SignedBeaconBlock, RecursivePartial<SignedBeaconBlock>>(generateEmptySignedBlock(), override, {
-    isMergeableObject: isPlainObject,
-  });
+export function generateSignedBlock(
+  override: RecursivePartial<phase0.SignedBeaconBlock> = {}
+): phase0.SignedBeaconBlock {
+  return deepmerge<phase0.SignedBeaconBlock, RecursivePartial<phase0.SignedBeaconBlock>>(
+    generateEmptySignedBlock(),
+    override,
+    {
+      isMergeableObject: isPlainObject,
+    }
+  );
 }
 
 export function generateEmptyBlockSummary(): IBlockSummary {
@@ -87,7 +84,7 @@ export function generateBlockSummary(overrides: RecursivePartial<IBlockSummary> 
 /**
  * Block job with all metadata set to false
  */
-export function getNewBlockJob(signedBlock: SignedBeaconBlock): IBlockJob {
+export function getNewBlockJob(signedBlock: phase0.SignedBeaconBlock): IBlockJob {
   return {
     signedBlock,
     reprocess: false,

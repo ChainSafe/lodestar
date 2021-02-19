@@ -14,7 +14,7 @@ import {Gossip} from "../../../../../src/network/gossip/gossip";
 import {IBeaconClock, LocalClock} from "../../../../../src/chain/clock";
 import * as slotUtils from "@chainsafe/lodestar-beacon-state-transition/lib/util/slot";
 import {sleep} from "@chainsafe/lodestar-cli/src/util";
-import {SignedBeaconBlock} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 
 describe("ORARegularSync", function () {
   let sync: ORARegularSync;
@@ -59,7 +59,7 @@ describe("ORARegularSync", function () {
     forkChoiceStub.getHead.returns(generateBlockSummary({slot: 1000}));
     let slot = 1000;
     fetcherStub.getNextBlockRange.callsFake(
-      async (): Promise<SignedBeaconBlock[]> => {
+      async (): Promise<phase0.SignedBeaconBlock[]> => {
         await sleep(200);
         logger.info("Fetched slot " + slot);
         const block = generateEmptySignedBlock();
@@ -68,17 +68,17 @@ describe("ORARegularSync", function () {
       }
     );
     chainStub.processChainSegment.callsFake(
-      async (blocks: SignedBeaconBlock[]): Promise<void> => {
+      async (blocks: phase0.SignedBeaconBlock[]): Promise<void> => {
         await sleep(200);
         logger.info("Processed until slot " + blocks[blocks.length - 1].message.slot);
       }
     );
     getCurrentSlotStub.returns(2000);
     await Promise.all([
-      new Promise((resolve) => {
+      new Promise<void>((resolve) => {
         setTimeout(async () => {
           logger.info("Stopping from unit test...");
-          await sync.stop();
+          sync.stop();
           // one more round
           await sleep(200);
           resolve();

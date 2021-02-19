@@ -1,6 +1,5 @@
 import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {config} from "@chainsafe/lodestar-config/minimal";
-import {Validator, ValidatorStatus} from "@chainsafe/lodestar-types";
 import {List, toHexString} from "@chainsafe/ssz";
 import {expect, use} from "chai";
 import chaiAsPromised from "chai-as-promised";
@@ -23,6 +22,7 @@ use(chaiAsPromised);
 
 describe("beacon state api utils", function () {
   describe("resolve state id", function () {
+    const epochCtx = ({} as unknown) as phase0.EpochContext;
     let dbStub: StubbedBeaconDb;
     let chainStub: StubbedBeaconChain;
 
@@ -33,7 +33,7 @@ describe("beacon state api utils", function () {
 
     it("resolve head state id - success", async function () {
       chainStub.forkChoice.getHead.returns(generateBlockSummary({stateRoot: Buffer.alloc(32, 1)}));
-      chainStub.stateCache.get.returns({state: generateCachedState(), epochCtx: null!});
+      chainStub.stateCache.get.returns({state: generateCachedState(), epochCtx});
       const state = await resolveStateId(chainStub, dbStub, "head");
       expect(state).to.not.be.null;
       expect(chainStub.forkChoice.getHead.calledOnce).to.be.true;
@@ -49,7 +49,7 @@ describe("beacon state api utils", function () {
 
     it("resolve finalized state id - success", async function () {
       chainStub.forkChoice.getFinalizedCheckpoint.returns({root: Buffer.alloc(32, 1), epoch: 1});
-      chainStub.stateCache.get.returns({state: generateCachedState(), epochCtx: null!});
+      chainStub.stateCache.get.returns({state: generateCachedState(), epochCtx});
       const state = await resolveStateId(chainStub, dbStub, "finalized");
       expect(state).to.not.be.null;
       expect(chainStub.forkChoice.getFinalizedCheckpoint.calledOnce).to.be.true;
@@ -67,7 +67,7 @@ describe("beacon state api utils", function () {
 
     it("resolve justified state id - success", async function () {
       chainStub.forkChoice.getJustifiedCheckpoint.returns({root: Buffer.alloc(32, 1), epoch: 1});
-      chainStub.stateCache.get.returns({state: generateCachedState(), epochCtx: null!});
+      chainStub.stateCache.get.returns({state: generateCachedState(), epochCtx});
       const state = await resolveStateId(chainStub, dbStub, "justified");
       expect(state).to.not.be.null;
       expect(chainStub.forkChoice.getJustifiedCheckpoint.calledOnce).to.be.true;
@@ -84,14 +84,14 @@ describe("beacon state api utils", function () {
     });
 
     it("resolve state by root", async function () {
-      chainStub.stateCache.get.returns({state: generateCachedState(), epochCtx: null!});
+      chainStub.stateCache.get.returns({state: generateCachedState(), epochCtx});
       const state = await resolveStateId(chainStub, dbStub, toHexString(Buffer.alloc(32, 1)));
       expect(state).to.not.be.null;
       expect(chainStub.stateCache.get.calledOnce).to.be.true;
     });
 
     it.skip("resolve finalized state by root", async function () {
-      chainStub.stateCache.get.returns({state: generateCachedState(), epochCtx: null!});
+      chainStub.stateCache.get.returns({state: generateCachedState(), epochCtx});
       const state = await resolveStateId(chainStub, dbStub, toHexString(Buffer.alloc(32, 1)));
       expect(state).to.be.null;
       expect(chainStub.stateCache.get.calledOnce).to.be.true;
@@ -106,7 +106,7 @@ describe("beacon state api utils", function () {
       chainStub.forkChoice.getCanonicalBlockSummaryAtSlot
         .withArgs(123)
         .returns(generateBlockSummary({stateRoot: Buffer.alloc(32, 1)}));
-      chainStub.stateCache.get.returns({state: generateCachedState(), epochCtx: null!});
+      chainStub.stateCache.get.returns({state: generateCachedState(), epochCtx});
       const state = await resolveStateId(chainStub, dbStub, "123");
       expect(state).to.not.be.null;
       expect(chainStub.forkChoice.getCanonicalBlockSummaryAtSlot.withArgs(123).calledOnce).to.be.true;
@@ -118,89 +118,89 @@ describe("beacon state api utils", function () {
       const validator = {
         activationEpoch: 1,
         activationEligibilityEpoch: Infinity,
-      } as Validator;
+      } as phase0.Validator;
       const currentEpoch = 0;
       const status = getValidatorStatus(validator, currentEpoch);
-      expect(status).to.be.equal(ValidatorStatus.PENDING_INITIALIZED);
+      expect(status).to.be.equal(phase0.ValidatorStatus.PENDING_INITIALIZED);
     });
     it("should return PENDING_QUEUED", function () {
       const validator = {
         activationEpoch: 1,
         activationEligibilityEpoch: 101010101101010,
-      } as Validator;
+      } as phase0.Validator;
       const currentEpoch = 0;
       const status = getValidatorStatus(validator, currentEpoch);
-      expect(status).to.be.equal(ValidatorStatus.PENDING_QUEUED);
+      expect(status).to.be.equal(phase0.ValidatorStatus.PENDING_QUEUED);
     });
     it("should return ACTIVE_ONGOING", function () {
       const validator = {
         activationEpoch: 1,
         exitEpoch: Infinity,
-      } as Validator;
+      } as phase0.Validator;
       const currentEpoch = 1;
       const status = getValidatorStatus(validator, currentEpoch);
-      expect(status).to.be.equal(ValidatorStatus.ACTIVE_ONGOING);
+      expect(status).to.be.equal(phase0.ValidatorStatus.ACTIVE_ONGOING);
     });
     it("should return ACTIVE_SLASHED", function () {
       const validator = {
         activationEpoch: 1,
         exitEpoch: 101010101101010,
         slashed: true,
-      } as Validator;
+      } as phase0.Validator;
       const currentEpoch = 1;
       const status = getValidatorStatus(validator, currentEpoch);
-      expect(status).to.be.equal(ValidatorStatus.ACTIVE_SLASHED);
+      expect(status).to.be.equal(phase0.ValidatorStatus.ACTIVE_SLASHED);
     });
     it("should return ACTIVE_EXITING", function () {
       const validator = {
         activationEpoch: 1,
         exitEpoch: 101010101101010,
         slashed: false,
-      } as Validator;
+      } as phase0.Validator;
       const currentEpoch = 1;
       const status = getValidatorStatus(validator, currentEpoch);
-      expect(status).to.be.equal(ValidatorStatus.ACTIVE_EXITING);
+      expect(status).to.be.equal(phase0.ValidatorStatus.ACTIVE_EXITING);
     });
     it("should return EXITED_SLASHED", function () {
       const validator = {
         exitEpoch: 1,
         withdrawableEpoch: 3,
         slashed: true,
-      } as Validator;
+      } as phase0.Validator;
       const currentEpoch = 2;
       const status = getValidatorStatus(validator, currentEpoch);
-      expect(status).to.be.equal(ValidatorStatus.EXITED_SLASHED);
+      expect(status).to.be.equal(phase0.ValidatorStatus.EXITED_SLASHED);
     });
     it("should return EXITED_UNSLASHED", function () {
       const validator = {
         exitEpoch: 1,
         withdrawableEpoch: 3,
         slashed: false,
-      } as Validator;
+      } as phase0.Validator;
       const currentEpoch = 2;
       const status = getValidatorStatus(validator, currentEpoch);
-      expect(status).to.be.equal(ValidatorStatus.EXITED_UNSLASHED);
+      expect(status).to.be.equal(phase0.ValidatorStatus.EXITED_UNSLASHED);
     });
     it("should return WITHDRAWAL_POSSIBLE", function () {
       const validator = {
         withdrawableEpoch: 1,
         effectiveBalance: BigInt(32),
-      } as Validator;
+      } as phase0.Validator;
       const currentEpoch = 1;
       const status = getValidatorStatus(validator, currentEpoch);
-      expect(status).to.be.equal(ValidatorStatus.WITHDRAWAL_POSSIBLE);
+      expect(status).to.be.equal(phase0.ValidatorStatus.WITHDRAWAL_POSSIBLE);
     });
     it("should return WITHDRAWAL_DONE", function () {
       const validator = {
         withdrawableEpoch: 1,
         effectiveBalance: BigInt(0),
-      } as Validator;
+      } as phase0.Validator;
       const currentEpoch = 1;
       const status = getValidatorStatus(validator, currentEpoch);
-      expect(status).to.be.equal(ValidatorStatus.WITHDRAWAL_DONE);
+      expect(status).to.be.equal(phase0.ValidatorStatus.WITHDRAWAL_DONE);
     });
     it("should error", function () {
-      const validator = {} as Validator;
+      const validator = {} as phase0.Validator;
       const currentEpoch = 0;
       try {
         getValidatorStatus(validator, currentEpoch);
@@ -243,7 +243,7 @@ describe("beacon state api utils", function () {
       stateContext.state = generateState({
         slot: 0,
         validators: Array.from({length: 24}, () => generateValidator({activationEpoch: 0, exitEpoch: 10})) as List<
-          Validator
+          phase0.Validator
         >,
       });
       const committees = getEpochBeaconCommittees(config, chainStub, stateContext, 1);
@@ -257,7 +257,7 @@ describe("beacon state api utils", function () {
       const stateContext = getApiContext();
       stateContext.state = generateState({
         slot: 0,
-        validators: Array.from({length: 20}, () => generateValidator({activationEpoch: 1})) as List<Validator>,
+        validators: Array.from({length: 20}, () => generateValidator({activationEpoch: 1})) as List<phase0.Validator>,
       });
       const committees = getEpochBeaconCommittees(config, chainStub, stateContext, 1);
       expect(committees[0][0][0]).to.not.be.undefined;

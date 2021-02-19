@@ -3,7 +3,7 @@
  */
 
 import {List} from "@chainsafe/ssz";
-import {BeaconState, CommitteeAssignment, Epoch, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {phase0, Epoch, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {assert} from "@chainsafe/lodestar-utils";
 
@@ -21,10 +21,10 @@ import {getBeaconProposerIndex} from "./proposer";
  */
 export function getCommitteeAssignment(
   config: IBeaconConfig,
-  state: BeaconState,
+  state: phase0.BeaconState,
   epoch: Epoch,
   validatorIndex: ValidatorIndex
-): CommitteeAssignment | null {
+): phase0.CommitteeAssignment | null {
   const next2Epoch = getCurrentEpoch(config, state) + 2;
   assert.lte(epoch, next2Epoch, "Cannot get committee assignment for epoch more than two ahead");
 
@@ -51,7 +51,7 @@ export function getCommitteeAssignment(
  */
 export function isProposerAtSlot(
   config: IBeaconConfig,
-  state: BeaconState,
+  state: phase0.BeaconState,
   slot: Slot,
   validatorIndex: ValidatorIndex
 ): boolean {

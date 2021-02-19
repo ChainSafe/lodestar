@@ -1,6 +1,6 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
-import {Epoch, SignedBeaconBlock} from "@chainsafe/lodestar-types";
+import {Epoch, phase0} from "@chainsafe/lodestar-types";
 
 /**
  * Groups blocks by ascending epoch
@@ -9,8 +9,11 @@ import {Epoch, SignedBeaconBlock} from "@chainsafe/lodestar-types";
  * [[0,1,2,3], [5,7], [8,9,10], ...]
  * ```
  */
-export function groupBlocksByEpoch(config: IBeaconConfig, blocks: SignedBeaconBlock[]): SignedBeaconBlock[][] {
-  const blocksByEpoch = new Map<Epoch, SignedBeaconBlock[]>();
+export function groupBlocksByEpoch(
+  config: IBeaconConfig,
+  blocks: phase0.SignedBeaconBlock[]
+): phase0.SignedBeaconBlock[][] {
+  const blocksByEpoch = new Map<Epoch, phase0.SignedBeaconBlock[]>();
 
   for (const block of blocks) {
     const epoch = computeEpochAtSlot(config, block.message.slot);

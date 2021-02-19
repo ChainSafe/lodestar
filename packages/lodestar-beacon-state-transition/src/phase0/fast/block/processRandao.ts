@@ -1,6 +1,6 @@
 import xor from "buffer-xor";
 import {hash} from "@chainsafe/ssz";
-import {BeaconBlock, BeaconState} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {DomainType} from "../../../constants";
 import {computeEpochAtSlot, computeSigningRoot, getDomain, getRandaoMix} from "../../../util";
 import {EpochContext} from "../util";
@@ -8,8 +8,8 @@ import {ISignatureSet, SignatureSetType, verifySignatureSet} from "../signatureS
 
 export function processRandao(
   epochCtx: EpochContext,
-  state: BeaconState,
-  block: BeaconBlock,
+  state: phase0.BeaconState,
+  block: phase0.BeaconBlock,
   verifySignature = true
 ): void {
   const config = epochCtx.config;
@@ -36,8 +36,8 @@ export function processRandao(
  */
 export function getRandaoRevealSignatureSet(
   epochCtx: EpochContext,
-  state: BeaconState,
-  block: BeaconBlock
+  state: phase0.BeaconState,
+  block: phase0.BeaconBlock
 ): ISignatureSet {
   const config = epochCtx.config;
   // should not get epoch from epochCtx

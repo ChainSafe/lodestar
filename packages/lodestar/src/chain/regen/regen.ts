@@ -1,4 +1,4 @@
-import {BeaconBlock, Checkpoint, Root, Slot} from "@chainsafe/lodestar-types";
+import {phase0, Root, Slot} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
@@ -45,7 +45,7 @@ export class StateRegenerator implements IStateRegenerator {
     this.db = db;
   }
 
-  async getPreState(block: BeaconBlock): Promise<ITreeStateContext> {
+  async getPreState(block: phase0.BeaconBlock): Promise<ITreeStateContext> {
     const parentBlock = this.forkChoice.getBlock(block.parentRoot);
     if (!parentBlock) {
       throw new RegenError({
@@ -61,20 +61,20 @@ export class StateRegenerator implements IStateRegenerator {
     // then we may use the checkpoint state before the block. This may save us at least one epoch transition.
     const isCheckpointBlock = block.slot % this.config.params.SLOTS_PER_EPOCH === 0;
     if (parentEpoch < blockEpoch && !isCheckpointBlock) {
-      return this.getCheckpointState({root: block.parentRoot, epoch: blockEpoch});
+      return await this.getCheckpointState({root: block.parentRoot, epoch: blockEpoch});
     }
 
     // If there's more than one epoch to pre-process (but the block is a checkpoint block)
     // get the checkpoint state as close as possible
     if (parentEpoch < blockEpoch - 1) {
-      return this.getCheckpointState({root: block.parentRoot, epoch: blockEpoch - 1});
+      return await this.getCheckpointState({root: block.parentRoot, epoch: blockEpoch - 1});
     }
 
     // Otherwise, get the state normally.
-    return this.getState(parentBlock.stateRoot);
+    return await this.getState(parentBlock.stateRoot);
   }
 
-  async getCheckpointState(cp: Checkpoint): Promise<ITreeStateContext> {
+  async getCheckpointState(cp: phase0.Checkpoint): Promise<ITreeStateContext> {
     const checkpointStartSlot = computeStartSlotAtEpoch(this.config, cp.epoch);
     return await this.getBlockSlotState(cp.root, checkpointStartSlot);
   }
