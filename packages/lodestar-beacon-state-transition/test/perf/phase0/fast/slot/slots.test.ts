@@ -1,8 +1,8 @@
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import {WinstonLogger} from "@chainsafe/lodestar-utils";
 import {expect} from "chai";
-import {phase0} from "../../../src";
-import {initBLS, generatePerformanceState} from "../util";
+import {phase0} from "../../../../../src";
+import {initBLS, generatePerformanceState} from "../../../util";
 
 describe("Process Slots Performance Test", function () {
   this.timeout(0);
