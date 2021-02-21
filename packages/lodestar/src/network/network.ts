@@ -15,6 +15,7 @@ import {INetwork, NetworkEvent, NetworkEventEmitter, PeerSearchOptions} from "./
 import {Gossip} from "./gossip/gossip";
 import {IGossip, IGossipMessageValidator} from "./gossip/interface";
 import {IBeaconChain} from "../chain";
+import {IBeaconDb} from "../db";
 import {MetadataController} from "./metadata";
 import {Discv5, Discv5Discovery, ENR} from "@chainsafe/discv5";
 import {DiversifyPeersBySubnetTask} from "./tasks/diversifyPeersBySubnetTask";
@@ -23,6 +24,7 @@ import {IPeerMetadataStore} from "./peers";
 import {Libp2pPeerMetadataStore} from "./peers/metastore";
 import {getPeerCountBySubnet} from "./peers/utils";
 import {IRpcScoreTracker, SimpleRpcScoreTracker} from "./peers/score";
+import {BeaconReqRespHandler, IReqRespHandler} from "./reqresp/handlers";
 
 interface ILibp2pModules {
   config: IBeaconConfig;
@@ -31,6 +33,7 @@ interface ILibp2pModules {
   metrics: IBeaconMetrics;
   validator: IGossipMessageValidator;
   chain: IBeaconChain;
+  db: IBeaconDb;
 }
 
 export class Libp2pNetwork extends (EventEmitter as {new (): NetworkEventEmitter}) implements INetwork {
@@ -49,26 +52,25 @@ export class Libp2pNetwork extends (EventEmitter as {new (): NetworkEventEmitter
   private metrics: IBeaconMetrics;
   private diversifyPeersTask: DiversifyPeersBySubnetTask;
   private checkPeerAliveTask: CheckPeerAliveTask;
+  private reqRespHandler: IReqRespHandler;
 
-  public constructor(
-    opts: INetworkOptions & IReqRespOptions,
-    {config, libp2p, logger, metrics, validator, chain}: ILibp2pModules
-  ) {
+  public constructor(opts: INetworkOptions & IReqRespOptions, modules: ILibp2pModules) {
     super();
     this.opts = opts;
-    this.config = config;
-    this.logger = logger;
-    this.metrics = metrics;
-    this.peerId = libp2p.peerId;
-    this.libp2p = libp2p;
-    this.peerMetadata = new Libp2pPeerMetadataStore(this.config, this.libp2p.peerStore.metadataBook);
-    this.peerRpcScores = new SimpleRpcScoreTracker(this.peerMetadata);
-    this.reqResp = new ReqResp(
-      {config, libp2p, peerMetadata: this.peerMetadata, blockProviderScores: this.peerRpcScores, logger},
-      opts
-    );
-    this.metadata = new MetadataController({}, {config, chain, logger});
-    this.gossip = (new Gossip(opts, {config, libp2p, logger, validator, chain}) as unknown) as IGossip;
+    this.config = modules.config;
+    this.logger = modules.logger;
+    this.metrics = modules.metrics;
+    this.peerId = modules.libp2p.peerId;
+    this.libp2p = modules.libp2p;
+    const peerMetadata = new Libp2pPeerMetadataStore(this.config, this.libp2p.peerStore.metadataBook);
+    const peerRpcScores = new SimpleRpcScoreTracker(peerMetadata);
+    const reqRespHandler = new BeaconReqRespHandler({...modules, network: this});
+    this.reqResp = new ReqResp({...modules, reqRespHandler, peerMetadata, peerRpcScores}, opts);
+    this.peerMetadata = peerMetadata;
+    this.peerRpcScores = peerRpcScores;
+    this.reqRespHandler = reqRespHandler;
+    this.metadata = new MetadataController({}, modules);
+    this.gossip = (new Gossip(opts, modules) as unknown) as IGossip;
     this.diversifyPeersTask = new DiversifyPeersBySubnetTask(this.config, {
       network: this,
       logger: this.logger,
@@ -89,6 +91,7 @@ export class Libp2pNetwork extends (EventEmitter as {new (): NetworkEventEmitter
     this.metadata.start(enr!);
     await this.gossip.start();
     this.diversifyPeersTask.start();
+    await this.reqRespHandler.start();
     const multiaddresses = this.libp2p.multiaddrs.map((m) => m.toString()).join(",");
     this.logger.info(`PeerId ${this.libp2p.peerId.toB58String()}, Multiaddrs ${multiaddresses}`);
   }
@@ -97,6 +100,7 @@ export class Libp2pNetwork extends (EventEmitter as {new (): NetworkEventEmitter
     this.libp2p.connectionManager.removeListener(NetworkEvent.peerConnect, this.emitPeerConnect);
     this.libp2p.connectionManager.removeListener(NetworkEvent.peerDisconnect, this.emitPeerDisconnect);
     await Promise.all([this.diversifyPeersTask.stop(), this.checkPeerAliveTask.stop()]);
+    await this.reqRespHandler.stop();
     this.metadata.stop();
     await this.gossip.stop();
     this.reqResp.stop();

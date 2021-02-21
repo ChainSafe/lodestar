@@ -147,6 +147,7 @@ export class BeaconNode {
       metrics,
       validator: gossipMessageValidator,
       chain,
+      db,
     });
     const sync = new BeaconSync(opts.sync, {
       config,

@@ -16,6 +16,8 @@ import {generateState} from "../../utils/state";
 import {arrToSource, generateEmptySignedBlocks} from "../../unit/network/reqresp/utils";
 import {generateEmptySignedBlock} from "../../utils/block";
 import {expectRejectedWithLodestarError} from "../../utils/errors";
+import {IReqRespHandler} from "../../../src/network/reqresp";
+import {IBeaconDb} from "../../../src/db";
 
 chai.use(chaiAsPromised);
 
@@ -37,6 +39,7 @@ describe("[network] network", function () {
   const validator = {} as GossipMessageValidator;
   const state = generateState();
   const chain = new MockBeaconChain({genesisTime: 0, chainId: 0, networkId: BigInt(0), state, config});
+  const db = {} as IBeaconDb;
 
   const afterEachCallbacks: (() => Promise<void> | void)[] = [];
 
@@ -47,7 +50,10 @@ describe("[network] network", function () {
     }
   });
 
-  async function createAndConnectPeers(reqRespOpts?: IReqRespOptions): Promise<[Libp2pNetwork, Libp2pNetwork]> {
+  async function createAndConnectPeers(
+    reqRespOpts?: IReqRespOptions,
+    onRequest?: IReqRespHandler["onRequest"]
+  ): Promise<[Libp2pNetwork, Libp2pNetwork]> {
     const peerIdB = await createPeerId();
     const [libP2pA, libP2pB] = await Promise.all([createNode(multiaddr), createNode(multiaddr, peerIdB)]);
 
@@ -57,8 +63,11 @@ describe("[network] network", function () {
     const loggerB = debugMode ? new WinstonLogger({level: LogLevel.verbose, module: "B"}) : silentLogger;
 
     const opts = {...networkOptsDefault, ...reqRespOpts};
-    const netA = new Libp2pNetwork(opts, {config, libp2p: libP2pA, logger: loggerA, metrics, validator, chain});
-    const netB = new Libp2pNetwork(opts, {config, libp2p: libP2pB, logger: loggerB, metrics, validator, chain});
+    const modules = {config, metrics, validator, chain, db};
+    const netA = new Libp2pNetwork(opts, {...modules, libp2p: libP2pA, logger: loggerA});
+    const netB = new Libp2pNetwork(opts, {...modules, libp2p: libP2pB, logger: loggerB});
+    if (onRequest) netA["reqRespHandler"].onRequest = onRequest;
+    if (onRequest) netB["reqRespHandler"].onRequest = onRequest;
     await Promise.all([netA.start(), netB.start()]);
 
     const connected = Promise.all([
@@ -77,11 +86,9 @@ describe("[network] network", function () {
   }
 
   it("should send/receive a ping message", async function () {
-    const [netA, netB] = await createAndConnectPeers();
-
     const pingBody = BigInt(128);
 
-    netB.reqResp.registerHandler(async function* (method, requestBody) {
+    const [netA, netB] = await createAndConnectPeers({}, async function* (method, requestBody) {
       if (method === Method.Ping) {
         if (requestBody !== pingBody) throw Error(`Wrong requestBody ${requestBody} !== ${pingBody}`);
         yield pingBody;
@@ -95,14 +102,12 @@ describe("[network] network", function () {
   });
 
   it("should send/receive a metadata message", async function () {
-    const [netA, netB] = await createAndConnectPeers();
-
     const metadataBody = {
-      seqNumber: netB.metadata.seqNumber,
-      attnets: netB.metadata.attnets,
+      seqNumber: BigInt(1),
+      attnets: [true],
     };
 
-    netB.reqResp.registerHandler(async function* (method) {
+    const [netA, netB] = await createAndConnectPeers({}, async function* (method) {
       if (method === Method.Metadata) {
         yield metadataBody;
       } else {
@@ -115,12 +120,10 @@ describe("[network] network", function () {
   });
 
   it("should send/receive signed blocks", async function () {
-    const [netA, netB] = await createAndConnectPeers();
-
     const count = 2;
     const blocks = generateEmptySignedBlocks(count);
 
-    netB.reqResp.registerHandler(async function* (method) {
+    const [netA, netB] = await createAndConnectPeers({}, async function* (method) {
       if (method === Method.BeaconBlocksByRange) {
         yield* arrToSource(blocks);
       } else {
@@ -142,12 +145,10 @@ describe("[network] network", function () {
   });
 
   it("should handle a server error", async function () {
-    const [netA, netB] = await createAndConnectPeers();
-
     const testErrorMessage = "TEST_EXAMPLE_ERROR_1234";
 
     // eslint-disable-next-line require-yield
-    netB.reqResp.registerHandler(async function* (method) {
+    const [netA, netB] = await createAndConnectPeers({}, async function* (method) {
       if (method === Method.Metadata) {
         throw Error(testErrorMessage);
       } else {
@@ -165,11 +166,9 @@ describe("[network] network", function () {
   });
 
   it("should handle a server error after emitting two blocks", async function () {
-    const [netA, netB] = await createAndConnectPeers();
-
     const testErrorMessage = "TEST_EXAMPLE_ERROR_1234";
 
-    netB.reqResp.registerHandler(async function* (method) {
+    const [netA, netB] = await createAndConnectPeers({}, async function* (method) {
       if (method === Method.BeaconBlocksByRange) {
         yield* arrToSource(generateEmptySignedBlocks(2));
         throw Error(testErrorMessage);
@@ -193,9 +192,7 @@ describe("[network] network", function () {
     const TTFB_TIMEOUT = 250;
 
     // eslint-disable-next-line @typescript-eslint/naming-convention
-    const [netA, netB] = await createAndConnectPeers({TTFB_TIMEOUT});
-
-    netB.reqResp.registerHandler(async function* (method) {
+    const [netA, netB] = await createAndConnectPeers({TTFB_TIMEOUT}, async function* (method) {
       if (method === Method.BeaconBlocksByRange) {
         // Wait for too long before sending first response chunk
         await sleep(TTFB_TIMEOUT * 10, controller.signal);
@@ -220,9 +217,7 @@ describe("[network] network", function () {
     const RESP_TIMEOUT = 250;
 
     // eslint-disable-next-line @typescript-eslint/naming-convention
-    const [netA, netB] = await createAndConnectPeers({RESP_TIMEOUT});
-
-    netB.reqResp.registerHandler(async function* (method) {
+    const [netA, netB] = await createAndConnectPeers({RESP_TIMEOUT}, async function* (method) {
       if (method === Method.BeaconBlocksByRange) {
         yield generateEmptySignedBlock();
         // Wait for too long before sending second response chunk

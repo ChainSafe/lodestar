@@ -8,7 +8,7 @@ import {AbortController} from "abort-controller";
 import LibP2p from "libp2p";
 import PeerId from "peer-id";
 import {IReqResp} from "../interface";
-import {IReqRespModules, ReqRespHandler, ILibP2pStream} from "./interface";
+import {IReqRespModules, ILibP2pStream} from "./interface";
 import {sendRequest} from "./request";
 import {handleRequest} from "./response";
 import {Method, ReqRespEncoding, timeoutOptions} from "../../constants";
@@ -16,6 +16,7 @@ import {errorToScoreEvent, successToScoreEvent} from "./score";
 import {IPeerMetadataStore} from "../peers";
 import {IRpcScoreTracker} from "../peers/score";
 import {createRpcProtocol} from "../util";
+import {IReqRespHandler} from "./handlers";
 
 export type IReqRespOptions = Partial<typeof timeoutOptions>;
 
@@ -28,30 +29,22 @@ export class ReqResp implements IReqResp {
   private config: IBeaconConfig;
   private libp2p: LibP2p;
   private logger: ILogger;
+  private reqRespHandler: IReqRespHandler;
   private peerMetadata: IPeerMetadataStore;
-  private blockProviderScores: IRpcScoreTracker;
+  private peerRpcScores: IRpcScoreTracker;
   private controller: AbortController | undefined;
   private options?: IReqRespOptions;
   private reqCount = 0;
   private respCount = 0;
 
-  /**
-   * @see this.registerHandler
-   */
-  private performRequestHandler: ReqRespHandler | null;
-
-  public constructor(
-    {config, libp2p, peerMetadata, blockProviderScores, logger}: IReqRespModules,
-    options?: IReqRespOptions
-  ) {
-    this.config = config;
-    this.libp2p = libp2p;
-    this.peerMetadata = peerMetadata;
-    this.logger = logger;
-    this.blockProviderScores = blockProviderScores;
+  public constructor(modules: IReqRespModules, options?: IReqRespOptions) {
+    this.config = modules.config;
+    this.libp2p = modules.libp2p;
+    this.logger = modules.logger;
+    this.reqRespHandler = modules.reqRespHandler;
+    this.peerMetadata = modules.peerMetadata;
+    this.peerRpcScores = modules.peerRpcScores;
     this.options = options;
-
-    this.performRequestHandler = null;
   }
 
   public start(): void {
@@ -61,21 +54,16 @@ export class ReqResp implements IReqResp {
         this.libp2p.handle(createRpcProtocol(method, encoding), async ({connection, stream}) => {
           const peerId = connection.remotePeer;
 
-          // Store peer encoding preference for this.sendRequest
+          // TODO: Do we really need this now that there is only one encoding?
+          // Remember the prefered encoding of this peer
           if (method === Method.Status) {
             this.peerMetadata.encoding.set(peerId, encoding);
-          }
-
-          if (!this.performRequestHandler) {
-            stream.close();
-            this.logger.error("performRequestHandler not registered", {method, peer: peerId.toB58String()});
-            return;
           }
 
           try {
             await handleRequest(
               {config: this.config, logger: this.logger},
-              this.performRequestHandler,
+              this.onRequest.bind(this),
               stream as ILibP2pStream,
               peerId,
               method,
@@ -92,23 +80,6 @@ export class ReqResp implements IReqResp {
     }
   }
 
-  /**
-   * ReqResp handler implementers MUST register the requestHandler with this method
-   * Then this ReqResp instance will used the registered handler to serve requests
-   */
-  registerHandler(handler: ReqRespHandler): void {
-    if (this.performRequestHandler) {
-      throw new Error("Already registered handler");
-    }
-    this.performRequestHandler = handler;
-  }
-
-  unregisterHandler(): ReqRespHandler | null {
-    const handler = this.performRequestHandler;
-    this.performRequestHandler = null;
-    return handler;
-  }
-
   public stop(): void {
     for (const method of Object.values(Method)) {
       for (const encoding of Object.values(ReqRespEncoding)) {
@@ -123,6 +94,8 @@ export class ReqResp implements IReqResp {
   }
 
   public async goodbye(peerId: PeerId, request: phase0.Goodbye): Promise<void> {
+    // NOTE: Responding node may terminate the stream before completing the ReqResp protocol
+    // TODO: Consider doing error handling here for `SSZ_SNAPPY_ERROR_SOURCE_ABORTED`
     await this.sendRequest<phase0.Goodbye>(peerId, Method.Goodbye, request);
   }
 
@@ -179,13 +152,21 @@ export class ReqResp implements IReqResp {
         this.reqCount++
       );
 
-      this.blockProviderScores.update(peerId, successToScoreEvent(method));
+      this.peerRpcScores.update(peerId, successToScoreEvent(method));
 
       return result;
     } catch (e) {
-      this.blockProviderScores.update(peerId, errorToScoreEvent(e, method));
+      this.peerRpcScores.update(peerId, errorToScoreEvent(e, method));
 
       throw e;
     }
+  }
+
+  private async *onRequest(
+    method: Method,
+    requestBody: phase0.RequestBody,
+    peerId: PeerId
+  ): AsyncIterable<phase0.ResponseBody> {
+    yield* this.reqRespHandler.onRequest(method, requestBody, peerId);
   }
 }

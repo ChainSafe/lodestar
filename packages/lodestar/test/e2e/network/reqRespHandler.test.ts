@@ -16,7 +16,6 @@ import {decodeErrorMessage} from "../../../src/network/reqresp/utils/errorMessag
 import {IGossipMessageValidator} from "../../../src/network/gossip/interface";
 import {INetworkOptions} from "../../../src/network/options";
 import {ILibP2pStream} from "../../../src/network/reqresp";
-import {BeaconReqRespHandler, IReqRespHandler} from "../../../src/sync/reqResp";
 import {generateEmptySignedBlock} from "../../utils/block";
 import {getBlockSummary} from "../../utils/headBlockInfo";
 import {MockBeaconChain} from "../../utils/mocks/chain/chain";
@@ -52,8 +51,8 @@ describe("[sync] rpc", function () {
   const logger = debugMode ? new WinstonLogger({level: LogLevel.debug}) : silentLogger;
   const metrics = new BeaconMetrics({enabled: false, timeout: 5000, pushGateway: false}, {logger});
 
-  let rpcA: IReqRespHandler, netA: Libp2pNetwork;
-  let rpcB: IReqRespHandler, netB: Libp2pNetwork;
+  let netA: Libp2pNetwork;
+  let netB: Libp2pNetwork;
   let libP2pA: Libp2p;
   const validator: IGossipMessageValidator = {} as IGossipMessageValidator;
   let chain: MockBeaconChain;
@@ -80,16 +79,7 @@ describe("[sync] rpc", function () {
       root: config.types.phase0.BeaconBlock.hashTreeRoot(block.message),
     });
     libP2pA = await createNode(multiaddr);
-    netA = new Libp2pNetwork(opts, {config, libp2p: libP2pA, logger, metrics, validator, chain});
-    netB = new Libp2pNetwork(opts, {
-      config,
-      libp2p: await createNode(multiaddr),
-      logger,
-      metrics,
-      validator,
-      chain,
-    });
-    await Promise.all([netA.start(), netB.start()]);
+    const libp2pB = await createNode(multiaddr);
 
     const db = new StubbedBeaconDb(sandbox, config);
     chain.stateCache.get = sinon.stub().returns(state as any);
@@ -101,27 +91,15 @@ describe("[sync] rpc", function () {
         yield block2;
       })()
     );
-    rpcA = new BeaconReqRespHandler({
-      config,
-      db,
-      chain,
-      network: netA,
-      logger,
-    });
 
-    rpcB = new BeaconReqRespHandler({
-      config,
-      db,
-      chain,
-      network: netB,
-      logger: logger,
-    });
-    await Promise.all([rpcA.start(), rpcB.start()]);
+    const modules = {logger, config, metrics, validator, chain, db};
+    netA = new Libp2pNetwork(opts, {...modules, libp2p: libP2pA});
+    netB = new Libp2pNetwork(opts, {...modules, libp2p: libp2pB});
+    await Promise.all([netA.start(), netB.start()]);
   });
 
   afterEach(async () => {
     await chain.close();
-    await Promise.all([rpcA.stop(), rpcB.stop()]);
     await Promise.all([netA.stop(), netB.stop()]);
   });
 
@@ -177,16 +155,15 @@ describe("[sync] rpc", function () {
 
     const requestPeerBPromise = new Promise((resolve) => {
       // Replace the handler with a spy and restore it afterwards
-      const handler = netB.reqResp.unregisterHandler();
+      const onRequest = netB["reqRespHandler"].onRequest;
       // eslint-disable-next-line require-yield
-      netB.reqResp.registerHandler(async function* (method) {
+      netB["reqRespHandler"].onRequest = async function* (method) {
         resolve(method);
-        netB.reqResp.unregisterHandler();
-        if (handler) netB.reqResp.registerHandler(handler);
-      });
+        netB["reqRespHandler"].onRequest = onRequest;
+      };
     });
 
-    const [requestedMethodOnPeerB] = await Promise.all([requestPeerBPromise, rpcA.stop()]);
+    const [requestedMethodOnPeerB] = await Promise.all([requestPeerBPromise, netA.stop()]);
 
     expect(requestedMethodOnPeerB).to.equal(Method.Goodbye);
   });

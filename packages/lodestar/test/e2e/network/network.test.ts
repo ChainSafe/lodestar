@@ -12,6 +12,7 @@ import {ExtendedValidatorResult} from "../../../src/network/gossip/constants";
 import {getAttestationSubnetEvent} from "../../../src/network/gossip/utils";
 import {GossipMessageValidator} from "../../../src/network/gossip/validator";
 import {INetworkOptions} from "../../../src/network/options";
+import {IBeaconDb} from "../../../src/db";
 import {generateEmptyAttestation, generateEmptySignedAggregateAndProof} from "../../utils/attestation";
 import {generateEmptySignedBlock} from "../../utils/block";
 import {MockBeaconChain} from "../../utils/mocks/chain/chain";
@@ -66,8 +67,9 @@ describe("[network] network", function () {
     });
     peerIdB = await createPeerId();
     [libP2pA, libP2pB] = await Promise.all([createNode(multiaddr), createNode(multiaddr, peerIdB)]);
-    netA = new Libp2pNetwork(opts, {config, libp2p: libP2pA, logger, metrics, validator, chain});
-    netB = new Libp2pNetwork(opts, {config, libp2p: libP2pB, logger, metrics, validator, chain});
+    const modules = {config, logger, metrics, validator, chain, db: {} as IBeaconDb};
+    netA = new Libp2pNetwork(opts, {libp2p: libP2pA, ...modules});
+    netB = new Libp2pNetwork(opts, {libp2p: libP2pB, ...modules});
     await Promise.all([netA.start(), netB.start()]);
   });
 

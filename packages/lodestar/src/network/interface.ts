@@ -12,7 +12,6 @@ import {IGossip} from "./gossip/interface";
 import {MetadataController} from "./metadata";
 import {IPeerMetadataStore} from "./peers";
 import {IRpcScoreTracker} from "./peers/score";
-import {ReqRespHandler} from "./reqresp";
 
 export interface IReqResp {
   status(peerId: PeerId, request: phase0.Status): Promise<phase0.Status>;
@@ -21,8 +20,6 @@ export interface IReqResp {
   metadata(peerId: PeerId): Promise<phase0.Metadata>;
   beaconBlocksByRange(peerId: PeerId, request: phase0.BeaconBlocksByRangeRequest): Promise<phase0.SignedBeaconBlock[]>;
   beaconBlocksByRoot(peerId: PeerId, request: phase0.BeaconBlocksByRootRequest): Promise<phase0.SignedBeaconBlock[]>;
-  registerHandler(handler: ReqRespHandler): void;
-  unregisterHandler(): ReqRespHandler | null;
 }
 
 export enum NetworkEvent {

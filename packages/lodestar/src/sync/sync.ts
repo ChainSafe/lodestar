@@ -6,7 +6,6 @@ import {getSyncProtocols, getUnknownRootProtocols, INetwork} from "../network";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {CommitteeIndex, Root, Slot, phase0} from "@chainsafe/lodestar-types";
 import {IRegularSync} from "./regular";
-import {BeaconReqRespHandler, IReqRespHandler} from "./reqResp";
 import {BeaconGossipHandler, IGossipHandler} from "./gossip";
 import {ChainEvent, IBeaconChain} from "../chain";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
@@ -26,7 +25,6 @@ export class BeaconSync implements IBeaconSync {
 
   private mode: SyncMode;
   private regularSync: IRegularSync;
-  private reqResp: IReqRespHandler;
   private gossip: IGossipHandler;
   private attestationCollector: AttestationCollector;
 
@@ -44,7 +42,6 @@ export class BeaconSync implements IBeaconSync {
     this.chain = modules.chain;
     this.logger = modules.logger;
     this.regularSync = modules.regularSync || new ORARegularSync(opts, modules);
-    this.reqResp = modules.reqRespHandler || new BeaconReqRespHandler(modules);
     this.gossip =
       modules.gossipHandler || new BeaconGossipHandler(modules.chain, modules.network, modules.db, this.logger);
     this.attestationCollector = modules.attestationCollector || new AttestationCollector(modules.config, modules);
@@ -54,7 +51,6 @@ export class BeaconSync implements IBeaconSync {
 
   public async start(): Promise<void> {
     this.mode = SyncMode.WAITING_PEERS as SyncMode;
-    await this.reqResp.start();
     this.attestationCollector.start();
     if (this.mode === SyncMode.STOPPED) {
       return;
@@ -96,7 +92,6 @@ export class BeaconSync implements IBeaconSync {
     this.stopSyncTimer();
     this.regularSync.stop();
     this.attestationCollector.stop();
-    await this.reqResp.stop();
     this.gossip.stop();
   }
 
