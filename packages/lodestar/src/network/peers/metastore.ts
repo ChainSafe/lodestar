@@ -12,6 +12,7 @@ export interface IPeerMetadataStore {
   encoding: PeerStoreBucket<ReqRespEncoding>;
   metadata: PeerStoreBucket<phase0.Metadata>;
   rpcScore: PeerStoreBucket<number>;
+  rpcScoreLastUpdate: PeerStoreBucket<number>;
   status: PeerStoreBucket<phase0.Status>;
 }
 
@@ -28,6 +29,7 @@ export class Libp2pPeerMetadataStore implements IPeerMetadataStore {
   encoding: PeerStoreBucket<ReqRespEncoding>;
   metadata: PeerStoreBucket<phase0.Metadata>;
   rpcScore: PeerStoreBucket<number>;
+  rpcScoreLastUpdate: PeerStoreBucket<number>;
   status: PeerStoreBucket<phase0.Status>;
 
   private readonly config: IBeaconConfig;
@@ -39,6 +41,7 @@ export class Libp2pPeerMetadataStore implements IPeerMetadataStore {
     this.encoding = this.typedStore("encoding", new StringType());
     this.metadata = this.typedStore("metadata", this.config.types.phase0.Metadata);
     this.rpcScore = this.typedStore("score", this.config.types.Number64);
+    this.rpcScoreLastUpdate = this.typedStore("score-last-update", this.config.types.Number64);
     this.status = this.typedStore("status", this.config.types.phase0.Status);
   }
 

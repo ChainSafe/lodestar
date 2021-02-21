@@ -29,6 +29,7 @@ export function getStubbedMetadataStore(): StubbedIPeerMetadataStore {
     encoding: getStubbedMetadataStoreItem(),
     metadata: getStubbedMetadataStoreItem(),
     rpcScore: getStubbedMetadataStoreItem(),
+    rpcScoreLastUpdate: getStubbedMetadataStoreItem(),
     status: getStubbedMetadataStoreItem(),
   };
 }

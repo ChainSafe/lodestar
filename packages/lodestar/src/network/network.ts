@@ -22,7 +22,7 @@ import {CheckPeerAliveTask} from "./tasks/checkPeerAliveTask";
 import {IPeerMetadataStore} from "./peers";
 import {Libp2pPeerMetadataStore} from "./peers/metastore";
 import {getPeerCountBySubnet} from "./peers/utils";
-import {IRpcScoreTracker, SimpleRpcScoreTracker} from "./peers/score";
+import {IPeerRpcScoreStore, PeerRpcScoreStore} from "./peers/score";
 
 interface ILibp2pModules {
   config: IBeaconConfig;
@@ -40,7 +40,7 @@ export class Libp2pNetwork extends (EventEmitter as {new (): NetworkEventEmitter
   public gossip: IGossip;
   public metadata: MetadataController;
   public peerMetadata: IPeerMetadataStore;
-  public peerRpcScores: IRpcScoreTracker;
+  public peerRpcScores: IPeerRpcScoreStore;
 
   private opts: INetworkOptions;
   private config: IBeaconConfig;
@@ -62,9 +62,9 @@ export class Libp2pNetwork extends (EventEmitter as {new (): NetworkEventEmitter
     this.peerId = libp2p.peerId;
     this.libp2p = libp2p;
     this.peerMetadata = new Libp2pPeerMetadataStore(this.config, this.libp2p.peerStore.metadataBook);
-    this.peerRpcScores = new SimpleRpcScoreTracker(this.peerMetadata);
+    this.peerRpcScores = new PeerRpcScoreStore(this.peerMetadata);
     this.reqResp = new ReqResp(
-      {config, libp2p, peerMetadata: this.peerMetadata, blockProviderScores: this.peerRpcScores, logger},
+      {config, libp2p, peerMetadata: this.peerMetadata, peerRpcScores: this.peerRpcScores, logger},
       opts
     );
     this.metadata = new MetadataController({}, {config, chain, logger});

@@ -12,9 +12,9 @@ import {IReqRespModules, ReqRespHandler, ILibP2pStream} from "./interface";
 import {sendRequest} from "./request";
 import {handleRequest} from "./response";
 import {Method, ReqRespEncoding, timeoutOptions} from "../../constants";
-import {errorToScoreEvent, successToScoreEvent} from "./score";
+import {onOutgoingReqRespError} from "./score";
 import {IPeerMetadataStore} from "../peers";
-import {IRpcScoreTracker} from "../peers/score";
+import {IPeerRpcScoreStore} from "../peers/score";
 import {createRpcProtocol} from "../util";
 
 export type IReqRespOptions = Partial<typeof timeoutOptions>;
@@ -29,7 +29,7 @@ export class ReqResp implements IReqResp {
   private libp2p: LibP2p;
   private logger: ILogger;
   private peerMetadata: IPeerMetadataStore;
-  private blockProviderScores: IRpcScoreTracker;
+  private peerRpcScores: IPeerRpcScoreStore;
   private controller: AbortController | undefined;
   private options?: IReqRespOptions;
   private reqCount = 0;
@@ -41,14 +41,14 @@ export class ReqResp implements IReqResp {
   private performRequestHandler: ReqRespHandler | null;
 
   public constructor(
-    {config, libp2p, peerMetadata, blockProviderScores, logger}: IReqRespModules,
+    {config, libp2p, peerMetadata, peerRpcScores, logger}: IReqRespModules,
     options?: IReqRespOptions
   ) {
     this.config = config;
     this.libp2p = libp2p;
     this.peerMetadata = peerMetadata;
     this.logger = logger;
-    this.blockProviderScores = blockProviderScores;
+    this.peerRpcScores = peerRpcScores;
     this.options = options;
 
     this.performRequestHandler = null;
@@ -179,11 +179,10 @@ export class ReqResp implements IReqResp {
         this.reqCount++
       );
 
-      this.blockProviderScores.update(peerId, successToScoreEvent(method));
-
       return result;
     } catch (e) {
-      this.blockProviderScores.update(peerId, errorToScoreEvent(e, method));
+      const peerAction = onOutgoingReqRespError(e, method);
+      if (peerAction !== null) this.peerRpcScores.applyAction(peerId, peerAction);
 
       throw e;
     }

@@ -16,6 +16,7 @@ import {getPeersInitialSync} from "./utils/bestPeers";
 import {ORARegularSync} from "./regular/oneRangeAhead/oneRangeAhead";
 import {SyncChain, ProcessChainSegment, DownloadBeaconBlocksByRange, GetPeersAndTargetEpoch} from "./range/chain";
 import {assertSequentialBlocksInRange, AttestationCollector, RoundRobinArray, syncPeersStatus} from "./utils";
+import {ScoreState} from "../network/peers";
 
 export class BeaconSync implements IBeaconSync {
   private readonly opts: ISyncOptions;
@@ -215,7 +216,10 @@ export class BeaconSync implements IBeaconSync {
     return this.network
       .getPeers({supportsProtocols: protocols})
       .filter((peer) => {
-        return !!this.network.peerMetadata.status.get(peer.id) && this.network.peerRpcScores.getScore(peer.id) > 50;
+        return (
+          !!this.network.peerMetadata.status.get(peer.id) &&
+          this.network.peerRpcScores.getScoreState(peer.id) === ScoreState.Healthy
+        );
       })
       .map((peer) => peer.id);
   }

@@ -1,5 +1,5 @@
 import {Method} from "../../constants";
-import {RpcScoreEvent} from "../peers/score";
+import {PeerAction} from "../peers/score";
 import {RequestError, RequestErrorCode} from "./request";
 
 /**
@@ -12,34 +12,48 @@ const libp2pErrorCodes = {
   ERR_UNSUPPORTED_PROTOCOL: "ERR_UNSUPPORTED_PROTOCOL",
 };
 
-export function successToScoreEvent(method: Method): RpcScoreEvent {
-  if (method === Method.BeaconBlocksByRange) {
-    return RpcScoreEvent.SUCCESS_BLOCK_RANGE;
-  }
+export function onOutgoingReqRespError(e: Error, method: Method): PeerAction | null {
+  if (e instanceof RequestError) {
+    switch (e.type.code) {
+      case RequestErrorCode.INVALID_REQUEST:
+        return PeerAction.LowToleranceError;
 
-  if (method === Method.BeaconBlocksByRoot) {
-    return RpcScoreEvent.SUCCESS_BLOCK_ROOT;
-  }
+      case RequestErrorCode.SERVER_ERROR:
+        return PeerAction.MidToleranceError;
+      case RequestErrorCode.UNKNOWN_ERROR_STATUS:
+        return PeerAction.HighToleranceError;
 
-  return RpcScoreEvent.NONE;
-}
+      case RequestErrorCode.DIAL_TIMEOUT:
+      case RequestErrorCode.DIAL_ERROR:
+        return PeerAction.LowToleranceError;
 
-export function errorToScoreEvent(e: Error, method: Method): RpcScoreEvent {
-  if (e.message.includes(libp2pErrorCodes.ERR_UNSUPPORTED_PROTOCOL)) {
-    return RpcScoreEvent.UNSUPPORTED_PROTOCOL;
-  }
+      // TODO: Detect SSZDecodeError and return PeerAction.Fatal
 
-  if (method === Method.BeaconBlocksByRange || method === Method.BeaconBlocksByRoot) {
-    if (e instanceof RequestError) {
-      switch (e.type.code) {
-        case RequestErrorCode.TTFB_TIMEOUT:
-        case RequestErrorCode.RESP_TIMEOUT:
-          return RpcScoreEvent.RESPONSE_TIMEOUT;
-      }
+      case RequestErrorCode.TTFB_TIMEOUT:
+      case RequestErrorCode.RESP_TIMEOUT:
+        switch (method) {
+          case Method.Ping:
+            return PeerAction.LowToleranceError;
+          case Method.BeaconBlocksByRange:
+          case Method.BeaconBlocksByRoot:
+            return PeerAction.MidToleranceError;
+          default:
+            return null;
+        }
     }
-
-    return RpcScoreEvent.UNKNOWN_ERROR;
   }
 
-  return RpcScoreEvent.NONE;
+  if (e.message.includes(libp2pErrorCodes.ERR_UNSUPPORTED_PROTOCOL)) {
+    switch (method) {
+      case Method.Ping:
+        return PeerAction.Fatal;
+      case Method.Metadata:
+      case Method.Status:
+        return PeerAction.LowToleranceError;
+      default:
+        return null;
+    }
+  }
+
+  return null;
 }
