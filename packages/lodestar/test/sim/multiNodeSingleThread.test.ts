@@ -8,7 +8,7 @@ import {Validator} from "@chainsafe/lodestar-validator/lib";
 import {BeaconNode} from "../../src/node";
 import {ChainEvent} from "../../src/chain";
 
-describe.skip("Run multi node single thread interop validators (no eth1) until checkpoint", function () {
+describe("Run multi node single thread interop validators (no eth1) until checkpoint", function () {
   const checkpointEvent = ChainEvent.justified;
   const validatorsPerNode = 8;
   const beaconParams: Pick<IBeaconParams, "SECONDS_PER_SLOT" | "SLOTS_PER_EPOCH"> = {
@@ -20,7 +20,7 @@ describe.skip("Run multi node single thread interop validators (no eth1) until c
 
   let onDoneHandlers: (() => Promise<void>)[] = [];
 
-  for (const nodeCount of [2, 4]) {
+  for (const nodeCount of [2]) {
     it(`${nodeCount} nodes / ${validatorsPerNode} vc / 1 validator > until ${checkpointEvent}`, async function () {
       this.timeout("10 min");
 
