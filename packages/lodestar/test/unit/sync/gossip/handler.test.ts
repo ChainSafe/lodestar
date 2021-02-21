@@ -60,7 +60,7 @@ describe("gossip handler", function () {
       callback(generateEmptyAttesterSlashing());
     });
     const handler = new BeaconGossipHandler(chainStub, networkStub, dbStub, logger);
-    handler.handleSyncCompleted();
+    handler.start();
     expect(dbStub.attesterSlashing.add.calledOnce).to.be.true;
   });
 
@@ -69,7 +69,7 @@ describe("gossip handler", function () {
       callback(generateEmptyProposerSlashing());
     });
     const handler = new BeaconGossipHandler(chainStub, networkStub, dbStub, logger);
-    handler.handleSyncCompleted();
+    handler.start();
     expect(dbStub.proposerSlashing.add.calledOnce).to.be.true;
   });
 
@@ -78,7 +78,7 @@ describe("gossip handler", function () {
       callback(generateEmptySignedVoluntaryExit());
     });
     const handler = new BeaconGossipHandler(chainStub, networkStub, dbStub, logger);
-    handler.handleSyncCompleted();
+    handler.start();
     expect(dbStub.voluntaryExit.add.calledOnce).to.be.true;
   });
 
