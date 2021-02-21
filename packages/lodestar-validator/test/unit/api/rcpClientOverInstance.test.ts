@@ -8,7 +8,7 @@ import {RestEventsApi} from "../../../src/api/impl/rest/events/events";
 import {MockBeaconApi} from "../../utils/mocks/beacon";
 import {MockNodeApi} from "../../utils/mocks/node";
 import {MockValidatorApi} from "../../utils/mocks/validator";
-import {silentLogger} from "../../utils/logger";
+import {testLogger} from "../../utils/logger";
 import {ClockEventType} from "../../../src/api/interface/clock";
 import {MockConfigApi} from "../../utils/mocks/config";
 
@@ -46,7 +46,7 @@ describe("RpcClientOverInstance test", function () {
       node: new MockNodeApi(),
       validator: new MockValidatorApi(),
       events,
-      logger: silentLogger,
+      logger: testLogger(),
       configApi: new MockConfigApi({config}),
     });
   }

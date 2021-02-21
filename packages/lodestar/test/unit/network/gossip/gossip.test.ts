@@ -16,7 +16,7 @@ import {generateEmptySignedBlock} from "../../../utils/block";
 import {GossipEncoding} from "../../../../src/network/gossip/encoding";
 import {phase0} from "@chainsafe/lodestar-types";
 import {TreeBacked} from "@chainsafe/ssz";
-import {silentLogger} from "../../../utils/logger";
+import {testLogger} from "../../../utils/logger";
 import {sleep} from "@chainsafe/lodestar-utils";
 
 describe("Network Gossip", function () {
@@ -37,7 +37,7 @@ describe("Network Gossip", function () {
       disconnectTimeout: 0,
     };
     const libp2p = sandbox.createStubInstance(NodejsNode);
-    const logger = silentLogger;
+    const logger = testLogger();
     const validator = {} as IGossipMessageValidator;
     state = generateState();
     chain = new MockBeaconChain({

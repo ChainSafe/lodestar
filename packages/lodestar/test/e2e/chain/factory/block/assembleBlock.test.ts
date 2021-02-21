@@ -20,7 +20,7 @@ import {mapSecretKeysToValidators} from "@chainsafe/lodestar-validator/lib/servi
 import {ApiClientOverInstance} from "@chainsafe/lodestar-validator/lib";
 import {ValidatorApi} from "../../../../../src/api/impl/validator";
 import {StubbedBeaconDb} from "../../../../utils/stub";
-import {silentLogger} from "../../../../utils/logger";
+import {testLogger} from "../../../../utils/logger";
 import {StateRegenerator} from "../../../../../src/chain/regen";
 
 describe("produce block", function () {
@@ -104,6 +104,6 @@ describe("produce block", function () {
     rpcClientStub.validator = sinon.createStubInstance(ValidatorApi);
     const slashingProtection = sinon.createStubInstance(SlashingProtection);
     const validators = mapSecretKeysToValidators([secretKey]);
-    return new BlockProposingService(config, validators, rpcClientStub, slashingProtection, silentLogger);
+    return new BlockProposingService(config, validators, rpcClientStub, slashingProtection, testLogger());
   }
 });

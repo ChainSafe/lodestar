@@ -1,16 +1,13 @@
 import {expect} from "chai";
 import PeerId from "peer-id";
 import {config} from "@chainsafe/lodestar-config/minimal";
-import {LogLevel, WinstonLogger} from "@chainsafe/lodestar-utils";
-import {silentLogger} from "../../../utils/logger";
+import {testLogger} from "../../../utils/logger";
 import {Batch, BatchOpts} from "../../../../src/sync/range/batch";
 import {ChainPeersBalancer} from "../../../../src/sync/range/peerBalancer";
 
-const debugMode = process.env.DEBUG;
-
 describe("sync / range / peerBalancer", () => {
   const opts: BatchOpts = {epochsPerBatch: 1};
-  const logger = debugMode ? new WinstonLogger({level: LogLevel.verbose, module: "SYNC"}) : silentLogger;
+  const logger = testLogger();
   const error = Error("TEST_ERROR");
 
   it("bestPeerToRetryBatch", () => {

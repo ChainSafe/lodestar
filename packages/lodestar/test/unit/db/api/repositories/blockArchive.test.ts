@@ -7,15 +7,16 @@ import {LevelDbController, Bucket, encodeKey} from "@chainsafe/lodestar-db";
 import {generateEmptySignedBlock} from "../../../../utils/block";
 import {BlockArchiveRepository} from "../../../../../src/db/api/beacon/repositories";
 import sinon from "sinon";
-import {silentLogger} from "../../../../utils/logger";
+import {testLogger} from "../../../../utils/logger";
 
 describe("block archive repository", function () {
   const testDir = "./.tmp";
+  const logger = testLogger();
   let blockArchive: BlockArchiveRepository;
   let controller: LevelDbController;
 
   beforeEach(async function () {
-    controller = new LevelDbController({name: testDir}, {logger: silentLogger});
+    controller = new LevelDbController({name: testDir}, {logger});
     blockArchive = new BlockArchiveRepository(config, controller);
     await controller.start();
   });

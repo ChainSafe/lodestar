@@ -1,11 +1,10 @@
 import PeerId from "peer-id";
 import {AbortController} from "abort-controller";
-import {LogLevel, WinstonLogger} from "@chainsafe/lodestar-utils";
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {Epoch, phase0, Slot} from "@chainsafe/lodestar-types";
 import {linspace} from "../../../../src/util/numpy";
 import {generateEmptyBlock, generateEmptySignedBlock} from "../../../utils/block";
-import {silentLogger} from "../../../utils/logger";
+import {testLogger} from "../../../utils/logger";
 import {
   SyncChain,
   SyncChainOpts,
@@ -13,8 +12,6 @@ import {
   DownloadBeaconBlocksByRange,
   GetPeersAndTargetEpoch,
 } from "../../../../src/sync/range/chain";
-
-const debugMode = process.env.DEBUG;
 
 describe("sync / range / chain", () => {
   const {SLOTS_PER_EPOCH} = config.params;
@@ -56,7 +53,7 @@ describe("sync / range / chain", () => {
   ];
 
   // Helper variables to trigger errors
-  const logger = debugMode ? new WinstonLogger({level: LogLevel.debug}) : silentLogger;
+  const logger = testLogger();
   const controller = new AbortController();
   const ACCEPT_BLOCK = Buffer.alloc(96, 0);
   const REJECT_BLOCK = Buffer.alloc(96, 1);

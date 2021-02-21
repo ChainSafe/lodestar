@@ -4,7 +4,7 @@ import supertest from "supertest";
 import {ApiNamespace, RestApi} from "../../../../../src/api";
 import {produceAttestationData} from "../../../../../src/api/rest/controllers/validator/produceAttestationData";
 import {generateEmptyAttestation} from "../../../../utils/attestation";
-import {silentLogger} from "../../../../utils/logger";
+import {testLogger} from "../../../../utils/logger";
 import {StubbedApi} from "../../../../utils/stub/api";
 import {urlJoin} from "../utils";
 import {VALIDATOR_PREFIX} from "./index.test";
@@ -25,7 +25,7 @@ describe("rest - validator - produceAttestationData", function () {
       },
       {
         config,
-        logger: silentLogger,
+        logger: testLogger(),
         api,
       }
     );

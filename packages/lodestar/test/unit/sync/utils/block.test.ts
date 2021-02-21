@@ -4,7 +4,7 @@ import {expect} from "chai";
 import {generateEmptySignedBlock} from "../../../utils/block";
 import PeerId from "peer-id";
 import {phase0} from "@chainsafe/lodestar-types";
-import {silentLogger} from "../../../utils/logger";
+import {testLogger} from "../../../utils/logger";
 import {
   chunkify,
   getBlockRange,
@@ -16,7 +16,7 @@ describe("sync - block utils", function () {
   describe("get block range from multiple peers", function () {
     const sandbox = sinon.createSandbox();
 
-    const logger = silentLogger;
+    const logger = testLogger();
     let rpcStub: SinonStubbedInstance<ReqResp>;
 
     beforeEach(function () {

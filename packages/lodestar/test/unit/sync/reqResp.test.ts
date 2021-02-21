@@ -12,7 +12,7 @@ import {ReqResp} from "../../../src/network/reqresp/reqResp";
 import {BeaconReqRespHandler} from "../../../src/sync/reqResp";
 import {generateEmptySignedBlock} from "../../utils/block";
 import {getBlockSummary} from "../../utils/headBlockInfo";
-import {silentLogger} from "../../utils/logger";
+import {testLogger} from "../../utils/logger";
 import {generatePeer} from "../../utils/peer";
 import {generateState} from "../../utils/state";
 import {StubbedBeaconChain, StubbedBeaconDb} from "../../utils/stub";
@@ -22,7 +22,7 @@ chai.use(chaiAsPromised);
 
 describe("sync req resp", function () {
   const peerId = new PeerId(Buffer.from("lodestar"));
-  const logger = silentLogger;
+  const logger = testLogger();
   const sandbox = sinon.createSandbox();
   let syncRpc: BeaconReqRespHandler;
   let chainStub: StubbedBeaconChain,

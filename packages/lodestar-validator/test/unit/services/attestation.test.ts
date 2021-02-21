@@ -18,7 +18,7 @@ import {AttestationService} from "../../../src/services/attestation";
 import {mapSecretKeysToValidators} from "../../../src/services/utils";
 import {SinonStubbedApi} from "../../utils/apiStub";
 import {generateFork} from "../../utils/fork";
-import {silentLogger} from "../../utils/logger";
+import {testLogger} from "../../utils/logger";
 
 const clock = sinon.useFakeTimers({now: Date.now(), shouldAdvanceTime: true, toFake: ["setTimeout"]});
 
@@ -27,7 +27,7 @@ describe("validator attestation service", function () {
 
   let rpcClientStub: SinonStubbedApi;
   let slashingProtectionStub: sinon.SinonStubbedInstance<SlashingProtection>;
-  const logger = silentLogger;
+  const logger = testLogger();
 
   beforeEach(() => {
     rpcClientStub = new SinonStubbedApi(sandbox);

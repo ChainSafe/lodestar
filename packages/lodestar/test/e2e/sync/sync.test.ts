@@ -6,6 +6,7 @@ import * as assert from "assert";
 import {getDevValidators} from "../../utils/node/validator";
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {ChainEvent} from "../../../src/chain";
+import {testLogger, LogLevel} from "../../utils/logger";
 
 describe("syncing", function () {
   const validatorCount = 8;
@@ -23,6 +24,7 @@ describe("syncing", function () {
       params: beaconParams,
       options: {sync: {minPeers: 0}},
       validatorCount,
+      logger: testLogger("A", LogLevel.info),
     });
     const finalizationEventListener = waitForEvent<phase0.Checkpoint>(bn.chain.emitter, ChainEvent.finalized, 240000);
     const validators = getDevValidators(bn, 8);
@@ -38,6 +40,7 @@ describe("syncing", function () {
       params: beaconParams,
       validatorCount,
       genesisTime: bn.chain.getHeadState().genesisTime,
+      logger: testLogger("B", LogLevel.info),
     });
     const head = await bn.chain.getHeadBlock()!;
     const waitForSynced = waitForEvent<phase0.SignedBeaconBlock>(bn2.chain.emitter, ChainEvent.block, 100000, (block) =>
