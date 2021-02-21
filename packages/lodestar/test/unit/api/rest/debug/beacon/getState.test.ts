@@ -4,7 +4,7 @@ import {config} from "@chainsafe/lodestar-config/minimal";
 
 import {ApiNamespace, RestApi} from "../../../../../../src/api";
 import {StubbedApi} from "../../../../../utils/stub/api";
-import {silentLogger} from "../../../../../utils/logger";
+import {testLogger} from "../../../../../utils/logger";
 import {SinonStubbedInstance} from "sinon";
 import {DebugBeaconApi} from "../../../../../../src/api/impl/debug/beacon";
 import {generateState} from "../../../../../utils/state";
@@ -25,7 +25,7 @@ describe("rest - debug - beacon - getState", function () {
       },
       {
         config,
-        logger: silentLogger,
+        logger: testLogger(),
         api,
       }
     );

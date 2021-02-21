@@ -10,11 +10,11 @@ import {ChainEventEmitter} from "../../../../src/chain/emitter";
 import {Gossip} from "../../../../src/network/gossip/gossip";
 import {BeaconDb} from "../../../../src/db";
 import {generateState} from "../../../utils/state";
-import {silentLogger} from "../../../utils/logger";
+import {testLogger} from "../../../utils/logger";
 
 describe("Attestation collector", function () {
   const sandbox = sinon.createSandbox();
-  const logger = silentLogger;
+  const logger = testLogger();
   beforeEach(() => {
     sandbox.useFakeTimers();
   });

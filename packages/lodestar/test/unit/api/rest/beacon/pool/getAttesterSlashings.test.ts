@@ -3,7 +3,7 @@ import {expect} from "chai";
 import supertest from "supertest";
 import {ApiNamespace, RestApi} from "../../../../../../src/api";
 import {getAttesterSlashings} from "../../../../../../src/api/rest/controllers/beacon/pool/getAttesterSlashings";
-import {silentLogger} from "../../../../../utils/logger";
+import {testLogger} from "../../../../../utils/logger";
 import {generateEmptyAttesterSlashing} from "../../../../../utils/slashings";
 import {StubbedApi} from "../../../../../utils/stub/api";
 import {urlJoin} from "../../utils";
@@ -25,7 +25,7 @@ describe("rest - beacon - getAttesterSlashings", function () {
       },
       {
         config,
-        logger: silentLogger,
+        logger: testLogger(),
         api,
       }
     );

@@ -10,7 +10,7 @@ import {Eth1ForBlockProduction} from "../../../../../src/eth1/eth1ForBlockProduc
 import {INetwork} from "../../../../../src/network/interface";
 import {Libp2pNetwork} from "../../../../../src/network/network";
 import {BeaconSync} from "../../../../../src/sync/sync";
-import {silentLogger} from "../../../../utils/logger";
+import {testLogger} from "../../../../utils/logger";
 import {StubbedBeaconDb} from "../../../../utils/stub/beaconDb";
 import chaiAsPromised from "chai-as-promised";
 import {use, expect} from "chai";
@@ -37,7 +37,7 @@ describe("api - validator - produceAttestationData", function () {
       config,
       db: dbStub,
       eth1: eth1Stub,
-      logger: silentLogger,
+      logger: testLogger(),
       network: networkStub,
       sync: syncStub,
     };

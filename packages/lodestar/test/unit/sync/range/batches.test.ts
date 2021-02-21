@@ -2,7 +2,7 @@ import {expect} from "chai";
 import PeerId from "peer-id";
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {Epoch} from "@chainsafe/lodestar-types";
-import {silentLogger} from "../../../utils/logger";
+import {testLogger} from "../../../utils/logger";
 import {Batch, BatchOpts, BatchStatus} from "../../../../src/sync/range/batch";
 import {
   validateBatchesStatus,
@@ -12,6 +12,7 @@ import {
 } from "../../../../src/sync/range/batches";
 
 describe("sync / range / batches", () => {
+  const logger = testLogger();
   const opts: BatchOpts = {epochsPerBatch: 2};
   const peer = new PeerId(Buffer.from("lodestar"));
 
@@ -210,7 +211,7 @@ describe("sync / range / batches", () => {
   });
 
   function createBatch(status: BatchStatus, startEpoch = 0): Batch {
-    const batch = new Batch(startEpoch, config, silentLogger, opts);
+    const batch = new Batch(startEpoch, config, logger, opts);
 
     if (status === BatchStatus.AwaitingDownload) return batch;
 

@@ -3,7 +3,7 @@ import {expect} from "chai";
 import supertest from "supertest";
 import {ApiNamespace, RestApi} from "../../../../../../src/api";
 import {getProposerSlashings} from "../../../../../../src/api/rest/controllers/beacon/pool/getProposerSlashings";
-import {silentLogger} from "../../../../../utils/logger";
+import {testLogger} from "../../../../../utils/logger";
 import {generateEmptyProposerSlashing} from "../../../../../utils/slashings";
 import {StubbedApi} from "../../../../../utils/stub/api";
 import {urlJoin} from "../../utils";
@@ -25,7 +25,7 @@ describe("rest - beacon - getProposerSlashings", function () {
       },
       {
         config,
-        logger: silentLogger,
+        logger: testLogger(),
         api,
       }
     );

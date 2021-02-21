@@ -2,7 +2,7 @@ import {config} from "@chainsafe/lodestar-config/minimal";
 import {expect} from "chai";
 import supertest from "supertest";
 import {ApiNamespace, RestApi} from "../../../../../../src/api";
-import {silentLogger} from "../../../../../utils/logger";
+import {testLogger} from "../../../../../utils/logger";
 import {StubbedApi} from "../../../../../utils/stub/api";
 import {urlJoin} from "../../utils";
 import {BEACON_PREFIX} from "../index.test";
@@ -25,7 +25,7 @@ describe("rest - beacon - submitProposerSlashing", function () {
       },
       {
         config,
-        logger: silentLogger,
+        logger: testLogger(),
         api,
       }
     );

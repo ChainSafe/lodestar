@@ -8,11 +8,11 @@ import {ForkChoice} from "../../../../src/chain";
 import {ArchiveBlocksTask} from "../../../../src/tasks/tasks/archiveBlocks";
 import {generateBlockSummary, generateEmptySignedBlock} from "../../../utils/block";
 import {StubbedBeaconDb} from "../../../utils/stub";
-import {silentLogger} from "../../../utils/logger";
+import {testLogger} from "../../../utils/logger";
 
 describe("block archiver task", function () {
   const sandbox = sinon.createSandbox();
-  const logger = silentLogger;
+  const logger = testLogger();
 
   let dbStub: StubbedBeaconDb;
   let forkChoiceStub: SinonStubbedInstance<ForkChoice>;

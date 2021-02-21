@@ -5,7 +5,7 @@ import {config} from "@chainsafe/lodestar-config/minimal";
 import {ApiNamespace, RestApi} from "../../../../../src/api";
 import {getNetworkIdentity} from "../../../../../src/api/rest/controllers/node/getNetworkIdentity";
 import {StubbedApi} from "../../../../utils/stub/api";
-import {silentLogger} from "../../../../utils/logger";
+import {testLogger} from "../../../../utils/logger";
 import {urlJoin} from "../utils";
 import {NODE_PREFIX} from "./index";
 
@@ -25,7 +25,7 @@ describe("rest - node - getNetworkIdentity", function () {
       },
       {
         config,
-        logger: silentLogger,
+        logger: testLogger(),
         api,
       }
     );

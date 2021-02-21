@@ -1,17 +1,14 @@
 import {expect} from "chai";
 import PeerId from "peer-id";
 import {config} from "@chainsafe/lodestar-config/minimal";
-import {LogLevel, WinstonLogger} from "@chainsafe/lodestar-utils";
-import {silentLogger} from "../../../utils/logger";
+import {testLogger} from "../../../utils/logger";
 import {generateEmptySignedBlock} from "../../../utils/block";
 import {expectThrowsLodestarError} from "../../../utils/errors";
 import {Batch, BatchOpts, BatchStatus, WrongStateError, BatchErrorCode} from "../../../../src/sync/range/batch";
 
-const debugMode = process.env.DEBUG;
-
 describe("sync / range / batch", () => {
   const opts: BatchOpts = {epochsPerBatch: 2};
-  const logger = debugMode ? new WinstonLogger({level: LogLevel.verbose, module: "SYNC"}) : silentLogger;
+  const logger = testLogger();
 
   // Common mock data
   const startEpoch = 0;

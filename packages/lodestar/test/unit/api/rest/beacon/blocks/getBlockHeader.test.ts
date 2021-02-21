@@ -5,7 +5,7 @@ import {ApiNamespace, RestApi} from "../../../../../../src/api";
 import {getBlockHeader} from "../../../../../../src/api/rest/controllers/beacon/blocks";
 import {StubbedApi} from "../../../../../utils/stub/api";
 import {generateSignedBeaconHeaderResponse} from "../../../../../utils/api";
-import {silentLogger} from "../../../../../utils/logger";
+import {testLogger} from "../../../../../utils/logger";
 import {urlJoin} from "../../utils";
 import {BEACON_PREFIX} from "../index.test";
 
@@ -25,7 +25,7 @@ describe("rest - beacon - getBlockHeader", function () {
       },
       {
         config,
-        logger: silentLogger,
+        logger: testLogger(),
         api,
       }
     );
