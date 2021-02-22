@@ -6,7 +6,7 @@ import sinon from "sinon";
 import {ChainEvent, IBeaconChain} from "../../../src/chain";
 import {Gossip} from "../../../src/network/gossip/gossip";
 import {InteropSubnetsJoiningTask} from "../../../src/tasks/tasks/interopSubnetsJoiningTask";
-import {WinstonLogger, bytesToInt, intToBytes} from "@chainsafe/lodestar-utils";
+import {WinstonLogger} from "@chainsafe/lodestar-utils";
 import {expect} from "chai";
 import {MockBeaconChain} from "../../utils/mocks/chain/chain";
 import {generateState} from "../../utils/state";
