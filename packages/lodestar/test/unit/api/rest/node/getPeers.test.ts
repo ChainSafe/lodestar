@@ -5,7 +5,7 @@ import {config} from "@chainsafe/lodestar-config/minimal";
 import {ApiNamespace, RestApi} from "../../../../../src/api";
 import {getPeers} from "../../../../../src/api/rest/controllers/node";
 import {StubbedApi} from "../../../../utils/stub/api";
-import {silentLogger} from "../../../../utils/logger";
+import {testLogger} from "../../../../utils/logger";
 import {urlJoin} from "../utils";
 import {NODE_PREFIX} from "./index";
 
@@ -25,7 +25,7 @@ describe("rest - node - getPeers", function () {
       },
       {
         config,
-        logger: silentLogger,
+        logger: testLogger(),
         api,
       }
     );

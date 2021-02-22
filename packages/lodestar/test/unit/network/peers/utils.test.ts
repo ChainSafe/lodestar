@@ -10,22 +10,22 @@ import {
   syncPeersToDisconnect,
 } from "../../../../src/network/peers/utils";
 import * as peersUtil from "../../../../src/sync/utils/peers";
-import {silentLogger} from "../../../utils/logger";
+import {testLogger} from "../../../utils/logger";
 import {ReqResp} from "../../../../src/network/reqresp/reqResp";
-import {IRpcScoreTracker, SimpleRpcScoreTracker} from "../../../../src/network/peers";
+import {IPeerRpcScoreStore, PeerRpcScoreStore} from "../../../../src/network/peers";
 import {getStubbedMetadataStore, StubbedIPeerMetadataStore} from "../../../utils/peer";
 
 describe("network peer utils", function () {
-  const logger = silentLogger;
+  const logger = testLogger();
   let networkStub: SinonStubbedInstance<INetwork>;
   let peerMetadataStoreStub: StubbedIPeerMetadataStore;
-  let scoreTrackerStub: SinonStubbedInstance<IRpcScoreTracker>;
+  let scoreTrackerStub: SinonStubbedInstance<IPeerRpcScoreStore>;
   let getSyncPeersStub: SinonStub;
 
   beforeEach(() => {
     peerMetadataStoreStub = getStubbedMetadataStore();
     networkStub = sinon.createStubInstance(Libp2pNetwork);
-    scoreTrackerStub = sinon.createStubInstance(SimpleRpcScoreTracker);
+    scoreTrackerStub = sinon.createStubInstance(PeerRpcScoreStore);
     networkStub.peerRpcScores = scoreTrackerStub;
     networkStub.peerMetadata = peerMetadataStoreStub;
     getSyncPeersStub = sinon.stub(peersUtil, "getSyncPeers");

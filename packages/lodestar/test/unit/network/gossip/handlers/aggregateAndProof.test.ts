@@ -6,7 +6,7 @@ import {generateEmptyAttestation} from "../../../../utils/attestation";
 import {expect} from "chai";
 import {GossipEvent} from "../../../../../src/network/gossip/constants";
 import {config} from "@chainsafe/lodestar-config/minimal";
-import {silentLogger} from "../../../../utils/logger";
+import {testLogger} from "../../../../utils/logger";
 
 describe("gossip handlers - aggregate and proof", function () {
   const sandbox = sinon.createSandbox();
@@ -15,7 +15,7 @@ describe("gossip handlers - aggregate and proof", function () {
 
   beforeEach(function () {
     gossipStub = sandbox.createStubInstance(Gossip);
-    gossipStub.logger = silentLogger;
+    gossipStub.logger = testLogger();
     gossipStub.config = config;
   });
 

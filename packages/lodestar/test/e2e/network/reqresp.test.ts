@@ -9,7 +9,7 @@ import {createPeerId, IReqRespOptions, Libp2pNetwork, NetworkEvent} from "../../
 import {GossipMessageValidator} from "../../../src/network/gossip/validator";
 import {INetworkOptions} from "../../../src/network/options";
 import {RequestError, RequestErrorCode} from "../../../src/network/reqresp/request";
-import {silentLogger} from "../../utils/logger";
+import {testLogger} from "../../utils/logger";
 import {MockBeaconChain} from "../../utils/mocks/chain/chain";
 import {createNode} from "../../utils/network";
 import {generateState} from "../../utils/state";
@@ -51,14 +51,9 @@ describe("[network] network", function () {
     const peerIdB = await createPeerId();
     const [libP2pA, libP2pB] = await Promise.all([createNode(multiaddr), createNode(multiaddr, peerIdB)]);
 
-    // Run tests with `DEBUG=true mocha ...` to get detailed logs of ReqResp exchanges
-    const debugMode = process.env.DEBUG;
-    const loggerA = debugMode ? new WinstonLogger({level: LogLevel.verbose, module: "A"}) : silentLogger;
-    const loggerB = debugMode ? new WinstonLogger({level: LogLevel.verbose, module: "B"}) : silentLogger;
-
     const opts = {...networkOptsDefault, ...reqRespOpts};
-    const netA = new Libp2pNetwork(opts, {config, libp2p: libP2pA, logger: loggerA, metrics, validator, chain});
-    const netB = new Libp2pNetwork(opts, {config, libp2p: libP2pB, logger: loggerB, metrics, validator, chain});
+    const netA = new Libp2pNetwork(opts, {config, libp2p: libP2pA, logger: testLogger("A"), metrics, validator, chain});
+    const netB = new Libp2pNetwork(opts, {config, libp2p: libP2pB, logger: testLogger("B"), metrics, validator, chain});
     await Promise.all([netA.start(), netB.start()]);
 
     const connected = Promise.all([

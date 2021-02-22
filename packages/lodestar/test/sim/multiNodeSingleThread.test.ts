@@ -7,6 +7,7 @@ import {getDevValidator} from "../utils/node/validator";
 import {Validator} from "@chainsafe/lodestar-validator/lib";
 import {BeaconNode} from "../../src/node";
 import {ChainEvent} from "../../src/chain";
+import {testLogger, LogLevel} from "../utils/logger";
 
 describe.skip("Run multi node single thread interop validators (no eth1) until checkpoint", function () {
   const checkpointEvent = ChainEvent.justified;
@@ -38,16 +39,18 @@ describe.skip("Run multi node single thread interop validators (no eth1) until c
           options: {sync: {minPeers: 1}},
           validatorCount: nodeCount * validatorsPerNode,
           genesisTime,
-          logger: logger.child({module: `Node ${i}`}),
+          logger: testLogger(`Node ${i}`, LogLevel.info),
         });
 
+        const startIndex = i * validatorsPerNode;
+        const endIndex = i * validatorsPerNode + validatorsPerNode - 1;
         validators.push(
           getDevValidator({
             node,
-            startIndex: i * validatorsPerNode,
+            startIndex,
             count: validatorsPerNode,
             logger: logger.child({
-              module: `Validator ${i * validatorsPerNode}-${i * validatorsPerNode + validatorsPerNode}`,
+              module: `Vali ${startIndex}-${endIndex}`,
             }),
           })
         );

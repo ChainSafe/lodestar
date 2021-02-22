@@ -5,7 +5,7 @@ import {BeaconMetrics} from "../../../src/metrics";
 import {LocalClock} from "../../../src/chain/clock";
 import {StateRegenerator} from "../../../src/chain/regen";
 import {CheckpointStateCache, StateContextCache} from "../../../src/chain/stateCache";
-import {silentLogger} from "../logger";
+import {testLogger} from "../logger";
 import {StubbedBeaconDb} from "./beaconDb";
 import {generateValidators} from "../validator";
 import {phase0} from "@chainsafe/lodestar-types";
@@ -22,7 +22,7 @@ export class StubbedBeaconChain extends BeaconChain {
     super({
       opts: {},
       config,
-      logger: silentLogger,
+      logger: testLogger(),
       metrics: sinon.createStubInstance(BeaconMetrics),
       db: new StubbedBeaconDb(sinon, config),
       anchorState: config.types.phase0.BeaconState.tree.createValue({

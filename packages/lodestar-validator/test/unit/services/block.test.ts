@@ -10,14 +10,14 @@ import BlockProposingService from "../../../src/services/block";
 import {mapSecretKeysToValidators} from "../../../src/services/utils";
 import {SinonStubbedApi} from "../../utils/apiStub";
 import {generateFork} from "../../utils/fork";
-import {silentLogger} from "../../utils/logger";
+import {testLogger} from "../../utils/logger";
 
 describe("block proposing service", function () {
   const sandbox = sinon.createSandbox();
 
   let rpcClientStub: SinonStubbedApi;
   let slashingProtectionStub: sinon.SinonStubbedInstance<SlashingProtection>;
-  const logger = silentLogger;
+  const logger = testLogger();
 
   beforeEach(() => {
     rpcClientStub = new SinonStubbedApi(sandbox);

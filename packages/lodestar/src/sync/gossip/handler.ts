@@ -1,4 +1,3 @@
-import {IGossipHandler} from "./interface";
 import {GossipEvent} from "../../network/gossip/constants";
 import {INetwork} from "../../network";
 import {phase0, ForkDigest} from "@chainsafe/lodestar-types";
@@ -7,12 +6,26 @@ import {IBeaconDb} from "../../db";
 import {toHexString} from "@chainsafe/ssz";
 import {ILogger} from "@chainsafe/lodestar-utils";
 
+export interface IGossipHandler {
+  start(): void;
+  stop(): void;
+}
+
+enum GossipHandlerStatus {
+  Started = "Started",
+  Stopped = "Stopped",
+}
+
+type GossipHandlerState =
+  | {status: GossipHandlerStatus.Stopped}
+  | {status: GossipHandlerStatus.Started; forkDigest: ForkDigest};
+
 export class BeaconGossipHandler implements IGossipHandler {
   private readonly chain: IBeaconChain;
   private readonly network: INetwork;
   private readonly db: IBeaconDb;
   private readonly logger: ILogger;
-  private currentForkDigest!: ForkDigest;
+  private state: GossipHandlerState = {status: GossipHandlerStatus.Stopped};
 
   constructor(chain: IBeaconChain, network: INetwork, db: IBeaconDb, logger: ILogger) {
     this.chain = chain;
@@ -22,39 +35,42 @@ export class BeaconGossipHandler implements IGossipHandler {
   }
 
   public start(): void {
-    this.currentForkDigest = this.chain.getForkDigest();
-    this.subscribeBlockAndAttestation(this.currentForkDigest);
+    if (this.state.status === GossipHandlerStatus.Started) {
+      return;
+    }
+
+    const forkDigest = this.chain.getForkDigest();
+    this.subscribe(forkDigest);
+    this.state = {status: GossipHandlerStatus.Started, forkDigest};
     this.chain.emitter.on(ChainEvent.forkVersion, this.handleForkVersion);
   }
 
   public stop(): void {
-    this.unsubscribe(this.currentForkDigest);
-    this.chain.emitter.off(ChainEvent.forkVersion, this.handleForkVersion);
-  }
+    if (this.state.status !== GossipHandlerStatus.Started) {
+      return;
+    }
 
-  public handleSyncCompleted(): void {
-    this.subscribeValidatorTopics(this.currentForkDigest);
+    this.chain.emitter.off(ChainEvent.forkVersion, this.handleForkVersion);
+    this.unsubscribe(this.state.forkDigest);
+    this.state = {status: GossipHandlerStatus.Stopped};
   }
 
   private handleForkVersion = (): void => {
-    const forkDigest = this.chain.getForkDigest();
-    this.logger.important(`Gossip handler: received new fork digest ${toHexString(forkDigest)}`);
-    this.unsubscribe(this.currentForkDigest);
-    this.currentForkDigest = forkDigest;
-    this.subscribe(forkDigest);
+    if (this.state.status !== GossipHandlerStatus.Started) {
+      return;
+    }
+
+    const prevForkDigest = this.state.forkDigest;
+    const nextForkDigest = this.chain.getForkDigest();
+    this.logger.info(`Gossip handler: received new fork digest ${toHexString(nextForkDigest)}`);
+    this.unsubscribe(prevForkDigest);
+    this.subscribe(nextForkDigest);
+    this.state = {status: GossipHandlerStatus.Started, forkDigest: nextForkDigest};
   };
 
   private subscribe = (forkDigest: ForkDigest): void => {
-    this.subscribeBlockAndAttestation(forkDigest);
-    this.subscribeValidatorTopics(forkDigest);
-  };
-
-  private subscribeBlockAndAttestation = (forkDigest: ForkDigest): void => {
     this.network.gossip.subscribeToBlock(forkDigest, this.onBlock);
     this.network.gossip.subscribeToAggregateAndProof(forkDigest, this.onAggregatedAttestation);
-  };
-
-  private subscribeValidatorTopics = (forkDigest: ForkDigest): void => {
     this.network.gossip.subscribeToAttesterSlashing(forkDigest, this.onAttesterSlashing);
     this.network.gossip.subscribeToProposerSlashing(forkDigest, this.onProposerSlashing);
     this.network.gossip.subscribeToVoluntaryExit(forkDigest, this.onVoluntaryExit);

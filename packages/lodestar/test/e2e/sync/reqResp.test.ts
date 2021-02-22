@@ -2,7 +2,6 @@ import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {phase0} from "@chainsafe/lodestar-types";
-import {LogLevel, WinstonLogger} from "@chainsafe/lodestar-utils";
 import {expect} from "chai";
 import Libp2p from "libp2p";
 import sinon from "sinon";
@@ -24,7 +23,7 @@ import {createNode} from "../../utils/network";
 import {generateState} from "../../utils/state";
 import {StubbedBeaconDb} from "../../utils/stub";
 import {arrToSource} from "../../unit/network/reqresp/utils";
-import {silentLogger} from "../../utils/logger";
+import {testLogger} from "../../utils/logger";
 
 const multiaddr = "/ip4/127.0.0.1/tcp/0";
 const opts: INetworkOptions = {
@@ -47,9 +46,7 @@ describe("[sync] rpc", function () {
   this.timeout(20000);
   const sandbox = sinon.createSandbox();
 
-  // Run tests with `DEBUG=true mocha ...` to get detailed logs of ReqResp exchanges
-  const debugMode = process.env.DEBUG;
-  const logger = debugMode ? new WinstonLogger({level: LogLevel.debug}) : silentLogger;
+  const logger = testLogger();
   const metrics = new BeaconMetrics({enabled: false, timeout: 5000, pushGateway: false}, {logger});
 
   let rpcA: IReqRespHandler, netA: Libp2pNetwork;

@@ -5,7 +5,7 @@ import {GossipEvent} from "../../../../../src/network/gossip/constants";
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {generateEmptyAttesterSlashing} from "../../../../utils/slashings";
 import {handleIncomingAttesterSlashing} from "../../../../../src/network/gossip/handlers/attesterSlashing";
-import {silentLogger} from "../../../../utils/logger";
+import {testLogger} from "../../../../utils/logger";
 
 describe("gossip handlers - attesterSlashing", function () {
   const sandbox = sinon.createSandbox();
@@ -14,7 +14,7 @@ describe("gossip handlers - attesterSlashing", function () {
 
   beforeEach(function () {
     gossipStub = sandbox.createStubInstance(Gossip);
-    gossipStub.logger = silentLogger;
+    gossipStub.logger = testLogger();
     gossipStub.config = config;
   });
 

@@ -11,7 +11,7 @@ import StrictEventEmitter from "strict-event-emitter-types";
 import {IGossip} from "./gossip/interface";
 import {MetadataController} from "./metadata";
 import {IPeerMetadataStore} from "./peers";
-import {IRpcScoreTracker} from "./peers/score";
+import {IPeerRpcScoreStore} from "./peers/score";
 import {ReqRespHandler} from "./reqresp";
 
 export interface IReqResp {
@@ -49,7 +49,7 @@ export interface INetwork extends NetworkEventEmitter {
   gossip: IGossip;
   metadata: MetadataController;
   peerMetadata: IPeerMetadataStore;
-  peerRpcScores: IRpcScoreTracker;
+  peerRpcScores: IPeerRpcScoreStore;
   /**
    * Our network identity
    */
