@@ -42,40 +42,26 @@ export class BlockArchiveRepository {
     ]);
   }
 
-  public async get(id: Slot): Promise<allForks.SignedBeaconBlock | null> {
-    return await this.getRepository(id).get(id);
+  public async get(slot: Slot): Promise<allForks.SignedBeaconBlock | null> {
+    return await this.getRepository(slot).get(slot);
   }
 
   public async getByRoot(root: Root): Promise<allForks.SignedBeaconBlock | null> {
     const slot = await this.getSlotByRoot(root);
-    if (slot !== null && Number.isInteger(slot)) {
-      return await this.getRepository(slot).get(slot);
-    }
-    return null;
+    return slot !== null ? await this.get(slot) : null;
   }
 
   public async getByParentRoot(root: Root): Promise<allForks.SignedBeaconBlock | null> {
     const slot = await this.getSlotByParentRoot(root);
-    if (slot !== null && Number.isInteger(slot)) {
-      return await this.getRepository(slot).get(slot);
-    }
-    return null;
+    return slot !== null ? await this.get(slot) : null;
   }
 
   public async getSlotByRoot(root: Root): Promise<Slot | null> {
-    const value = await this.db.get(getRootIndexKey(root));
-    if (value) {
-      return bytesToInt(value, "be");
-    }
-    return null;
+    return this.parseSlot(await this.db.get(getRootIndexKey(root)));
   }
 
   public async getSlotByParentRoot(root: Root): Promise<Slot | null> {
-    const value = await this.db.get(getParentRootIndexKey(root));
-    if (value) {
-      return bytesToInt(value, "be");
-    }
-    return null;
+    return this.parseSlot(await this.db.get(getParentRootIndexKey(root)));
   }
 
   public async add(value: allForks.SignedBeaconBlock): Promise<void> {
@@ -83,31 +69,17 @@ export class BlockArchiveRepository {
   }
 
   public async batchPut(items: Array<IKeyValue<Slot, allForks.SignedBeaconBlock>>): Promise<void> {
-    const kvs = {} as Record<IForkName, IKeyValue<Slot, allForks.SignedBeaconBlock>[]>;
-    items.forEach((kv) => {
-      const forkName = this.config.getForkName(kv.key);
-      if (!kvs[forkName]) kvs[forkName] = [];
-
-      kvs[forkName].push(kv);
-    });
     await Promise.all(
-      Object.keys(kvs).map((forkName) =>
-        this.getRepositoryByForkName(forkName as IForkName).batchPut(kvs[forkName as IForkName])
+      Object.entries(this.groupByFork(items)).map(([forkName, items]) =>
+        this.getRepositoryByForkName(forkName as IForkName).batchPut(items)
       )
     );
   }
 
   public async batchPutBinary(items: Array<IKeyValueSummary<Slot, Buffer, IBlockSummary>>): Promise<void> {
-    const itemsByFork = {} as Record<IForkName, IKeyValueSummary<Slot, Buffer, IBlockSummary>[]>;
-    items.forEach((kv) => {
-      const forkName = this.config.getForkName(kv.key);
-      if (!itemsByFork[forkName]) itemsByFork[forkName] = [];
-
-      itemsByFork[forkName].push(kv);
-    });
     await Promise.all(
-      Object.keys(itemsByFork).map((forkName) =>
-        this.getRepositoryByForkName(forkName as IForkName).batchPutBinary(itemsByFork[forkName as IForkName])
+      Object.entries(this.groupByFork(items)).map(([forkName, items]) =>
+        this.getRepositoryByForkName(forkName as IForkName).batchPutBinary(items)
       )
     );
   }
@@ -140,5 +112,22 @@ export class BlockArchiveRepository {
 
   private getRepository(slot: Slot): Repository<Slot, allForks.SignedBeaconBlock> {
     return this.getRepositoryByForkName(this.config.getForkName(slot));
+  }
+
+  private groupByFork<T>(items: Array<IKeyValue<Slot, T>>): Record<IForkName, IKeyValue<Slot, T>[]> {
+    const itemsByFork = {} as Record<IForkName, IKeyValue<Slot, T>[]>;
+    for (const kv of items) {
+      const forkName = this.config.getForkName(kv.key);
+      if (!itemsByFork[forkName]) itemsByFork[forkName] = [];
+      itemsByFork[forkName].push(kv);
+    }
+    return itemsByFork;
+  }
+
+  private parseSlot(slotBytes: Buffer | null): Slot | null {
+    if (!slotBytes) return null;
+    const slot = bytesToInt(slotBytes, "be");
+    // TODO: Is this necessary? How can bytesToInt return a non-integer?
+    return Number.isInteger(slot) ? slot : null;
   }
 }
