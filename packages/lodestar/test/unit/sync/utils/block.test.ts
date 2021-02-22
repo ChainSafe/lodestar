@@ -3,14 +3,8 @@ import sinon, {SinonStubbedInstance} from "sinon";
 import {expect} from "chai";
 import {generateEmptySignedBlock} from "../../../utils/block";
 import PeerId from "peer-id";
-import {phase0} from "@chainsafe/lodestar-types";
 import {testLogger} from "../../../utils/logger";
-import {
-  chunkify,
-  getBlockRange,
-  getBlockRangeFromPeer,
-  assertSequentialBlocksInRange,
-} from "../../../../src/sync/utils";
+import {chunkify, getBlockRange, getBlockRangeFromPeer} from "../../../../src/sync/utils";
 
 describe("sync - block utils", function () {
   describe("get block range from multiple peers", function () {
@@ -99,21 +93,6 @@ describe("sync - block utils", function () {
       if (!result) throw Error("getBlockRangeFromPeer returned null");
       expect(result.length).to.be.greaterThan(0);
       expect(rpcStub.beaconBlocksByRange.calledOnce).to.be.true;
-    });
-  });
-
-  describe("assertSequentialBlocksInRange", () => {
-    it("Should assert correct blocksInRange", () => {
-      const request: phase0.BeaconBlocksByRangeRequest = {startSlot: 10, count: 10, step: 1};
-
-      const blocks: phase0.SignedBeaconBlock[] = [];
-      for (let i = request.startSlot; i < request.startSlot + request.count; i += request.step) {
-        const block = generateEmptySignedBlock();
-        block.message.slot = i;
-        blocks.push(block);
-      }
-
-      assertSequentialBlocksInRange(blocks, request);
     });
   });
 });

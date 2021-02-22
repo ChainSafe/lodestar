@@ -16,6 +16,7 @@ import {onOutgoingReqRespError} from "./score";
 import {IPeerMetadataStore} from "../peers";
 import {IPeerRpcScoreStore} from "../peers/score";
 import {createRpcProtocol} from "../util";
+import {assertSequentialBlocksInRange} from "./utils/assertSequentialBlocksInRange";
 
 export type IReqRespOptions = Partial<typeof timeoutOptions>;
 
@@ -138,12 +139,14 @@ export class ReqResp implements IReqResp {
     peerId: PeerId,
     request: phase0.BeaconBlocksByRangeRequest
   ): Promise<phase0.SignedBeaconBlock[]> {
-    return await this.sendRequest<phase0.SignedBeaconBlock[]>(
+    const blocks = await this.sendRequest<phase0.SignedBeaconBlock[]>(
       peerId,
       Method.BeaconBlocksByRange,
       request,
       request.count
     );
+    assertSequentialBlocksInRange(blocks, request);
+    return blocks;
   }
 
   public async beaconBlocksByRoot(

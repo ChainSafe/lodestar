@@ -15,7 +15,7 @@ import {BlockError, BlockErrorCode} from "../chain/errors";
 import {getPeersInitialSync} from "./utils/bestPeers";
 import {ORARegularSync} from "./regular/oneRangeAhead/oneRangeAhead";
 import {SyncChain, ProcessChainSegment, DownloadBeaconBlocksByRange, GetPeersAndTargetEpoch} from "./range/chain";
-import {assertSequentialBlocksInRange, AttestationCollector, RoundRobinArray, syncPeersStatus} from "./utils";
+import {AttestationCollector, RoundRobinArray, syncPeersStatus} from "./utils";
 import {ScoreState} from "../network/peers";
 
 export class BeaconSync implements IBeaconSync {
@@ -143,9 +143,7 @@ export class BeaconSync implements IBeaconSync {
   };
 
   private downloadBeaconBlocksByRange: DownloadBeaconBlocksByRange = async (peerId, request) => {
-    const blocks = await this.network.reqResp.beaconBlocksByRange(peerId, request);
-    assertSequentialBlocksInRange(blocks, request);
-    return blocks;
+    return await this.network.reqResp.beaconBlocksByRange(peerId, request);
   };
 
   private getPeersAndTargetEpoch: GetPeersAndTargetEpoch = () => {
