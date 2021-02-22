@@ -1,7 +1,6 @@
 import {phase0} from "@chainsafe/lodestar-types";
 import {List, readOnlyMap} from "@chainsafe/ssz";
 import {bigIntMin, intDiv} from "@chainsafe/lodestar-utils";
-
 import {getRandaoMix} from "../../../util";
 import {EpochContext, IEpochProcess, CachedValidatorsBeaconState} from "../util";
 

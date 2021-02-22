@@ -1,9 +1,9 @@
 import {BLSPubkey, Epoch, phase0} from "@chainsafe/lodestar-types";
 import {intToBytes, bytesToInt} from "@chainsafe/lodestar-utils";
-import {Bucket, encodeKey, IDatabaseApiOptions, bucketLen, uintLen} from "@chainsafe/lodestar-db";
+import {Bucket, DB_PREFIX_LENGTH, encodeKey, IDatabaseApiOptions, uintLen} from "@chainsafe/lodestar-db";
 import {Type} from "@chainsafe/ssz";
-import {uniqueVectorArr, blsPubkeyLen} from "../utils";
 import {LodestarValidatorDatabaseController} from "../../types";
+import {blsPubkeyLen, uniqueVectorArr} from "../utils";
 
 /**
  * Manages validator db storage of attestations.
@@ -13,7 +13,7 @@ import {LodestarValidatorDatabaseController} from "../../types";
 export class AttestationByTargetRepository {
   protected type: Type<phase0.SlashingProtectionAttestation>;
   protected db: LodestarValidatorDatabaseController;
-  protected bucket = Bucket.slashingProtectionAttestationByTarget;
+  protected bucket = Bucket.phase0_slashingProtectionAttestationByTarget;
 
   constructor(opts: IDatabaseApiOptions) {
     this.db = opts.controller;
@@ -54,8 +54,11 @@ export class AttestationByTargetRepository {
 
   private decodeKey(key: Buffer): {pubkey: BLSPubkey; targetEpoch: Epoch} {
     return {
-      pubkey: key.slice(bucketLen, bucketLen + blsPubkeyLen),
-      targetEpoch: bytesToInt(key.slice(bucketLen + blsPubkeyLen, bucketLen + blsPubkeyLen + uintLen), "be"),
+      pubkey: key.slice(DB_PREFIX_LENGTH, DB_PREFIX_LENGTH + blsPubkeyLen),
+      targetEpoch: bytesToInt(
+        key.slice(DB_PREFIX_LENGTH + blsPubkeyLen, DB_PREFIX_LENGTH + blsPubkeyLen + uintLen),
+        "be"
+      ),
     };
   }
 }

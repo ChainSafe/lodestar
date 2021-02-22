@@ -4,7 +4,7 @@ import {BLSSignature, CommitteeIndex, Epoch, Slot, ValidatorIndex, phase0} from 
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {intToBytes, assert} from "@chainsafe/lodestar-utils";
 
-import {DomainType, GENESIS_EPOCH} from "../../../constants";
+import {GENESIS_EPOCH} from "../../../constants";
 import {
   computeEpochAtSlot,
   computeProposerIndex,
@@ -220,7 +220,12 @@ export class EpochContext {
   }
 
   private _resetProposers(state: phase0.BeaconState): void {
-    const epochSeed = getSeed(this.config, state, this.currentShuffling.epoch, DomainType.BEACON_PROPOSER);
+    const epochSeed = getSeed(
+      this.config,
+      state,
+      this.currentShuffling.epoch,
+      this.config.params.DOMAIN_BEACON_PROPOSER
+    );
     const startSlot = computeStartSlotAtEpoch(this.config, this.currentShuffling.epoch);
     this.proposers = [];
     for (let slot = startSlot; slot < startSlot + this.config.params.SLOTS_PER_EPOCH; slot++) {

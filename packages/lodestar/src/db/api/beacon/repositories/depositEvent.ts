@@ -8,7 +8,7 @@ import {IDatabaseController, Bucket, Repository} from "@chainsafe/lodestar-db";
  */
 export class DepositEventRepository extends Repository<number, phase0.DepositEvent> {
   public constructor(config: IBeaconConfig, db: IDatabaseController<Buffer, Buffer>) {
-    super(config, db, Bucket.depositEvent, config.types.phase0.DepositEvent);
+    super(config, db, Bucket.phase0_depositEvent, config.types.phase0.DepositEvent);
   }
 
   public async deleteOld(depositCount: number): Promise<void> {

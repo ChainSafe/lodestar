@@ -3,10 +3,9 @@
  */
 
 import {hash} from "@chainsafe/ssz";
-import {Epoch, phase0, Bytes32} from "@chainsafe/lodestar-types";
+import {Epoch, phase0, Bytes32, DomainType} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {assert, bytesToBigInt, intToBytes, intDiv} from "@chainsafe/lodestar-utils";
-import {DomainType} from "../constants";
 
 /**
  * Return the shuffled validator index corresponding to ``seed`` (and ``index_count``).
@@ -57,5 +56,5 @@ export function getSeed(
     epoch + config.params.EPOCHS_PER_HISTORICAL_VECTOR - config.params.MIN_SEED_LOOKAHEAD - 1
   );
 
-  return hash(Buffer.concat([intToBytes(domainType, 4), intToBytes(epoch, 8), mix.valueOf() as Uint8Array]));
+  return hash(Buffer.concat([domainType as Buffer, intToBytes(epoch, 8), mix.valueOf() as Uint8Array]));
 }

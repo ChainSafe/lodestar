@@ -1,9 +1,9 @@
+import {config} from "@chainsafe/lodestar-config/minimal";
+import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
+import {List, TreeBacked} from "@chainsafe/ssz";
 import {Gwei, Root} from "@chainsafe/lodestar-types";
 import {GENESIS_EPOCH, GENESIS_SLOT, ZERO_HASH} from "../../src/constants";
 import {generateEmptyBlock} from "./block";
-import {config} from "@chainsafe/lodestar-config/minimal";
-import {TreeBacked, List} from "@chainsafe/ssz";
-import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
 
 /**
  * Copy of BeaconState, but all fields are marked optional to allow for swapping out variables as needed.

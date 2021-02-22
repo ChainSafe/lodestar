@@ -2,7 +2,7 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import PeerId from "peer-id";
 import {phase0} from "@chainsafe/lodestar-types";
 import {BasicType, ContainerType} from "@chainsafe/ssz";
-import {notNullish} from "../../util/notNullish";
+import {notNullish} from "@chainsafe/lodestar-utils";
 import {ReqRespEncoding} from "../../constants";
 
 /**

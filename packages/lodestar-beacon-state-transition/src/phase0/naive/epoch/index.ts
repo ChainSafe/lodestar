@@ -10,8 +10,6 @@ import {processFinalUpdates} from "./finalUpdates";
 import {processJustificationAndFinalization} from "./justification";
 import {processRegistryUpdates} from "./registryUpdates";
 import {processSlashings} from "./slashings";
-import {processForkChanged} from "./fork";
-
 export * from "./balanceUpdates";
 export * from "./finalUpdates";
 export * from "./justification";
@@ -39,9 +37,6 @@ export function processEpoch(config: IBeaconConfig, state: phase0.BeaconState): 
 
   // Final Updates
   processFinalUpdates(config, state);
-
-  // check and process planned hard fork
-  processForkChanged(config, state);
 
   // TODO Later Phase
   // afterProcessFinalUpdates

@@ -3,7 +3,6 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {intDiv} from "@chainsafe/lodestar-utils";
 
 import {getSeed, unshuffleList} from "../../../util";
-import {DomainType} from "../../../constants";
 
 /**
  * Readonly interface for IEpochShuffling.
@@ -58,7 +57,7 @@ export function computeEpochShuffling(
   indicesBounded: [ValidatorIndex, Epoch, Epoch][],
   epoch: Epoch
 ): IEpochShuffling {
-  const seed = getSeed(config, state, epoch, DomainType.BEACON_ATTESTER);
+  const seed = getSeed(config, state, epoch, config.params.DOMAIN_BEACON_ATTESTER);
 
   const activeIndices: ValidatorIndex[] = [];
   for (const [index, activationEpoch, exitEpoch] of indicesBounded) {

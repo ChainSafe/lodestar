@@ -10,6 +10,7 @@ import {getCurrentEpoch, increaseBalance, decreaseBalance} from "../../../../uti
 import {getAttestationDeltas} from "./attestation";
 
 export * from "./attestation";
+export * from "./util";
 
 export function processRewardsAndPenalties(config: IBeaconConfig, state: phase0.BeaconState): void {
   if (getCurrentEpoch(config, state) == GENESIS_EPOCH) {

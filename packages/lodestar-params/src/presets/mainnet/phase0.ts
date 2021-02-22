@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 // Mainnet preset
 
-export const mainnetJson = {
+export const phase0Json = {
   CONFIG_NAME: "mainnet",
 
   // Misc

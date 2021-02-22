@@ -4,7 +4,7 @@ import {IDatabaseController, Bucket, Repository} from "@chainsafe/lodestar-db";
 
 export class VoluntaryExitRepository extends Repository<ValidatorIndex, phase0.SignedVoluntaryExit> {
   public constructor(config: IBeaconConfig, db: IDatabaseController<Buffer, Buffer>) {
-    super(config, db, Bucket.exit, config.types.phase0.SignedVoluntaryExit);
+    super(config, db, Bucket.phase0_exit, config.types.phase0.SignedVoluntaryExit);
   }
 
   public getId(value: phase0.SignedVoluntaryExit): ValidatorIndex {

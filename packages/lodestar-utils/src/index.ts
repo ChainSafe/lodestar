@@ -6,6 +6,7 @@ export * from "./bytes";
 export * from "./errors";
 export * from "./math";
 export * from "./objects";
+export * from "./notNullish";
 export * from "./sleep";
 export * from "./sort";
 export * from "./timeout";

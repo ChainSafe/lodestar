@@ -22,7 +22,7 @@ import {IValidatorOptions} from "./options";
 import {ApiClientOverRest} from "./api/impl/rest/apiClient";
 import {ISlashingProtection} from "./slashingProtection";
 import {mapSecretKeysToValidators} from "./services/utils";
-import {DomainType, computeSigningRoot, computeDomain} from "@chainsafe/lodestar-beacon-state-transition";
+import {computeSigningRoot, computeDomain} from "@chainsafe/lodestar-beacon-state-transition";
 import {phase0} from "@chainsafe/lodestar-types";
 
 /**
@@ -98,7 +98,12 @@ export class Validator {
     const fork = forkSchedule[0] || (await this.apiClient.beacon.state.getFork("head"));
     if (!fork) throw new Error("VoluntaryExit: Fork not found");
     const genesisValidatorsRoot = (await this.apiClient.beacon.getGenesis())?.genesisValidatorsRoot;
-    const domain = computeDomain(this.config, DomainType.VOLUNTARY_EXIT, fork.currentVersion, genesisValidatorsRoot);
+    const domain = computeDomain(
+      this.config,
+      this.config.params.DOMAIN_VOLUNTARY_EXIT,
+      fork.currentVersion,
+      genesisValidatorsRoot
+    );
     const signingRoot = computeSigningRoot(this.config, this.config.types.phase0.VoluntaryExit, voluntaryExit, domain);
 
     let secretKey;

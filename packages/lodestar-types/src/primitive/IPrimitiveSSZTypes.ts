@@ -23,6 +23,7 @@ export interface IPrimitiveSSZTypes {
   Gwei: BigIntUintType;
   Root: ByteVectorType;
   Version: ByteVectorType;
+  DomainType: ByteVectorType;
   ForkDigest: ByteVectorType;
   BLSPubkey: ByteVectorType;
   BLSSignature: ByteVectorType;

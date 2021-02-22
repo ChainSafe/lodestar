@@ -3,8 +3,7 @@ import {phase0, Slot} from "@chainsafe/lodestar-types";
 import {RoundRobinArray} from "./robin";
 import {IReqResp} from "../../network";
 import {ISlotRange} from "../interface";
-import {ILogger} from "@chainsafe/lodestar-utils";
-import {notNullish} from "../../util/notNullish";
+import {ILogger, notNullish} from "@chainsafe/lodestar-utils";
 
 /**
  * Creates slot chunks returned chunks represents (inclusive) start and (inclusive) end slot

@@ -2,7 +2,7 @@ import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
 import {SecretKey, PublicKey} from "@chainsafe/bls";
 import {config} from "@chainsafe/lodestar-config/minimal";
-import {computeDomain, computeSigningRoot, DomainType} from "@chainsafe/lodestar-beacon-state-transition";
+import {computeDomain, computeSigningRoot} from "@chainsafe/lodestar-beacon-state-transition";
 import {ValidatorIndex, phase0} from "@chainsafe/lodestar-types";
 import {ErrorAborted, WinstonLogger, interopSecretKey} from "@chainsafe/lodestar-utils";
 import {toHexString} from "@chainsafe/ssz";
@@ -113,7 +113,7 @@ describe("genesis builder", function () {
 });
 
 function generateDeposit(index: ValidatorIndex, secretKey: SecretKey, publicKey: PublicKey): phase0.DepositData {
-  const domain = computeDomain(config, DomainType.DEPOSIT);
+  const domain = computeDomain(config, config.params.DOMAIN_DEPOSIT);
   const depositMessage = {
     pubkey: publicKey.toBytes(),
     withdrawalCredentials: Buffer.alloc(32, index),

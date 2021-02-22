@@ -1,6 +1,6 @@
-import {ArrayLike, Type} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-
+import {ArrayLike, Type} from "@chainsafe/ssz";
+import {BUCKET_LENGTH} from ".";
 import {IDatabaseController, IFilterOptions, IKeyValue} from "./controller";
 import {Bucket, encodeKey as _encodeKey} from "./schema";
 
@@ -43,7 +43,7 @@ export abstract class Repository<I extends Id, T> {
   }
 
   public decodeKey(key: Buffer): I {
-    return (key.slice(1) as Uint8Array) as I;
+    return (key.slice(BUCKET_LENGTH) as Uint8Array) as I;
   }
 
   public async get(id: I): Promise<T | null> {

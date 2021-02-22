@@ -84,16 +84,4 @@ export interface IPhase0Params {
   DOMAIN_VOLUNTARY_EXIT: Buffer;
   DOMAIN_SELECTION_PROOF: Buffer;
   DOMAIN_AGGREGATE_AND_PROOF: Buffer;
-
-  // Old and future forks
-  ALL_FORKS: IFork[];
-}
-
-interface IFork {
-  // 4 bytes
-  previousVersion: number;
-  // 4 bytes
-  currentVersion: number;
-  // Fork epoch number
-  epoch: number;
 }

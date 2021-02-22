@@ -8,7 +8,7 @@ export class DepositDataRootRepository extends Repository<number, Root> {
   private depositRootTree?: TreeBacked<List<Root>>;
 
   public constructor(config: IBeaconConfig, db: IDatabaseController<Buffer, Buffer>) {
-    super(config, db, Bucket.depositDataRoot, config.types.Root);
+    super(config, db, Bucket.index_depositDataRoot, config.types.Root);
   }
 
   public decodeKey(data: Buffer): number {

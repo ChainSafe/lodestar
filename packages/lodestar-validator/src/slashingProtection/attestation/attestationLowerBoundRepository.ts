@@ -10,7 +10,7 @@ import {LodestarValidatorDatabaseController} from "../../types";
 export class AttestationLowerBoundRepository {
   protected type: Type<phase0.SlashingProtectionAttestationLowerBound>;
   protected db: LodestarValidatorDatabaseController;
-  protected bucket = Bucket.slashingProtectionAttestationLowerBound;
+  protected bucket = Bucket.phase0_slashingProtectionAttestationLowerBound;
 
   constructor(opts: IDatabaseApiOptions) {
     this.db = opts.controller;

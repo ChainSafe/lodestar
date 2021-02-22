@@ -1,7 +1,14 @@
 import {IBeaconParams} from "@chainsafe/lodestar-params";
-import {createIBeaconSSZTypes, IPhase0SSZTypes, Slot} from "@chainsafe/lodestar-types";
+import {
+  createIBeaconSSZTypes,
+  ILightclientSSZTypes,
+  IPhase0SSZTypes,
+  IPhase1SSZTypes,
+  Slot,
+  Version,
+} from "@chainsafe/lodestar-types";
 
-import {IBeaconConfig} from "./interface";
+import {IBeaconConfig, IForkName} from "./interface";
 
 export * from "./interface";
 
@@ -10,9 +17,26 @@ export function createIBeaconConfig(params: IBeaconParams): IBeaconConfig {
   return {
     params,
     types,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    getTypes(slot: Slot): IPhase0SSZTypes {
-      return types.phase0;
+    getForkName(slot: Slot): IForkName {
+      if (slot < params.LIGHTCLIENT_PATCH_FORK_SLOT) {
+        return "phase0";
+      } else if (slot < params.PHASE_1_FORK_SLOT) {
+        return "lightclient";
+      } else {
+        return "phase1";
+      }
+    },
+    getForkVersion(slot: Slot): Version {
+      if (slot < params.LIGHTCLIENT_PATCH_FORK_SLOT) {
+        return params.GENESIS_FORK_VERSION;
+      } else if (slot < params.PHASE_1_FORK_SLOT) {
+        return params.LIGHTCLIENT_PATCH_FORK_VERSION;
+      } else {
+        return params.PHASE_1_FORK_VERSION;
+      }
+    },
+    getTypes(slot: Slot): IPhase0SSZTypes | ILightclientSSZTypes | IPhase1SSZTypes {
+      return types[this.getForkName(slot)];
     },
   };
 }

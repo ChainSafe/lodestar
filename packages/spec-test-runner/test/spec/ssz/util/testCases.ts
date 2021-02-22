@@ -4,7 +4,6 @@ import {join} from "path";
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {expect} from "chai";
 import {CompositeType} from "@chainsafe/ssz";
-
 import {IBaseSSZStaticTestCase} from "../type";
 import {SPEC_TEST_LOCATION} from "../../../utils/specTestCases";
 

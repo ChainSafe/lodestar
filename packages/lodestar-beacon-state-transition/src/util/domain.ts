@@ -1,11 +1,10 @@
 /**
  * @module chain/stateTransition/util
  */
-import {Epoch, Version, phase0, Root} from "@chainsafe/lodestar-types";
+import {Epoch, Version, phase0, Root, DomainType} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
-import {DomainType, ZERO_HASH} from "../constants";
-import {intToBytes} from "@chainsafe/lodestar-utils";
+import {ZERO_HASH} from "../constants";
 
 import {getCurrentEpoch} from "./epoch";
 import {computeForkDataRoot} from "./fork";
@@ -23,7 +22,7 @@ export function computeDomain(
     forkVersion = config.params.GENESIS_FORK_VERSION;
   }
   const forkDataRoot = computeForkDataRoot(config, forkVersion, genesisValidatorRoot);
-  return Buffer.concat([intToBytes(domainType, 4), (forkDataRoot.valueOf() as Uint8Array).slice(0, 28)]);
+  return Buffer.concat([domainType as Buffer, (forkDataRoot.valueOf() as Uint8Array).slice(0, 28)]);
 }
 
 /**

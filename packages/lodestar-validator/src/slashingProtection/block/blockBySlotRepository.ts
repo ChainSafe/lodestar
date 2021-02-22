@@ -1,9 +1,9 @@
 import {BLSPubkey, phase0, Slot} from "@chainsafe/lodestar-types";
 import {intToBytes, bytesToInt} from "@chainsafe/lodestar-utils";
-import {Bucket, encodeKey, IDatabaseApiOptions, bucketLen, uintLen} from "@chainsafe/lodestar-db";
+import {Bucket, DB_PREFIX_LENGTH, encodeKey, IDatabaseApiOptions, uintLen} from "@chainsafe/lodestar-db";
 import {Type} from "@chainsafe/ssz";
-import {uniqueVectorArr, blsPubkeyLen} from "../utils";
 import {LodestarValidatorDatabaseController} from "../../types";
+import {blsPubkeyLen, uniqueVectorArr} from "../utils";
 
 /**
  * Manages validator db storage of blocks.
@@ -13,7 +13,7 @@ import {LodestarValidatorDatabaseController} from "../../types";
 export class BlockBySlotRepository {
   protected type: Type<phase0.SlashingProtectionBlock>;
   protected db: LodestarValidatorDatabaseController;
-  protected bucket = Bucket.slashingProtectionBlockBySlot;
+  protected bucket = Bucket.phase0_slashingProtectionBlockBySlot;
 
   constructor(opts: IDatabaseApiOptions) {
     this.db = opts.controller;
@@ -59,8 +59,8 @@ export class BlockBySlotRepository {
 
   private decodeKey(key: Buffer): {pubkey: BLSPubkey; slot: Slot} {
     return {
-      pubkey: key.slice(bucketLen, bucketLen + blsPubkeyLen),
-      slot: bytesToInt(key.slice(bucketLen + blsPubkeyLen, bucketLen + blsPubkeyLen + uintLen), "be"),
+      pubkey: key.slice(DB_PREFIX_LENGTH, DB_PREFIX_LENGTH + blsPubkeyLen),
+      slot: bytesToInt(key.slice(DB_PREFIX_LENGTH, DB_PREFIX_LENGTH + uintLen), "be"),
     };
   }
 }

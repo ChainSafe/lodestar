@@ -2,13 +2,12 @@
  * @module tasks
  */
 
-import {ITask} from "../interface";
-import {IBeaconDb} from "../../db/api";
 import {phase0} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {ILogger} from "@chainsafe/lodestar-utils";
 import {IBlockSummary, IForkChoice} from "@chainsafe/lodestar-fork-choice";
-
+import {ILogger} from "@chainsafe/lodestar-utils";
+import {IBeaconDb} from "../../db/api";
+import {ITask} from "../interface";
 export interface IArchiveBlockModules {
   db: IBeaconDb;
   forkChoice: IForkChoice;

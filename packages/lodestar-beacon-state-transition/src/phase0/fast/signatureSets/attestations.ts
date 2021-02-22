@@ -1,7 +1,7 @@
 import {readOnlyMap} from "@chainsafe/ssz";
 import {phase0} from "@chainsafe/lodestar-types";
 import {ISignatureSet} from "./types";
-import {EpochContext} from "../index";
+import {EpochContext} from "../util";
 import {getIndexedAttestationSignatureSet} from "../block/isValidIndexedAttestation";
 
 export function getAttestationsSignatureSets(

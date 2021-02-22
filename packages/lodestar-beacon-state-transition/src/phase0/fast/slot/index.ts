@@ -2,7 +2,7 @@ import {Slot} from "@chainsafe/lodestar-types";
 
 import {processEpoch} from "../epoch";
 import {processSlot} from "./processSlot";
-import {CachedValidatorsBeaconState} from "../util/interface";
+import {CachedValidatorsBeaconState} from "../util";
 import {EpochContext} from "../util";
 
 export {processSlot};

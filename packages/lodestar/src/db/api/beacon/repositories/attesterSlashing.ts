@@ -10,7 +10,7 @@ import {IDatabaseController, Bucket, Repository} from "@chainsafe/lodestar-db";
  */
 export class AttesterSlashingRepository extends Repository<Uint8Array, phase0.AttesterSlashing> {
   public constructor(config: IBeaconConfig, db: IDatabaseController<Buffer, Buffer>) {
-    super(config, db, Bucket.attesterSlashing, config.types.phase0.AttesterSlashing);
+    super(config, db, Bucket.phase0_attesterSlashing, config.types.phase0.AttesterSlashing);
   }
 
   public async hasAll(attesterIndices: ValidatorIndex[] = []): Promise<boolean> {

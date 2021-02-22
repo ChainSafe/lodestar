@@ -2,7 +2,7 @@ import {expect} from "chai";
 import sinon, {SinonStubbedInstance} from "sinon";
 
 import {config} from "@chainsafe/lodestar-config/minimal";
-import {bytesToInt, WinstonLogger} from "@chainsafe/lodestar-utils";
+import {WinstonLogger} from "@chainsafe/lodestar-utils";
 import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
 
 import {BeaconChain, IBeaconChain} from "../../../src/chain";
@@ -47,23 +47,6 @@ describe("BeaconChain", function () {
       expect(enrForkID.nextForkEpoch === Number.MAX_SAFE_INTEGER);
       // it's possible to serialize enr fork id
       config.types.phase0.ENRForkID.hashTreeRoot(enrForkID);
-    });
-
-    it("should get enr fork id if found next fork", () => {
-      config.params.ALL_FORKS = [
-        {
-          currentVersion: 2,
-          epoch: 100,
-          previousVersion: bytesToInt(config.params.GENESIS_FORK_VERSION),
-        },
-      ];
-      chain.forkChoice.getHead = () => generateBlockSummary();
-      const enrForkID = chain.getENRForkID();
-      expect(config.types.Version.equals(enrForkID.nextForkVersion, Buffer.from([2, 0, 0, 0])));
-      expect(enrForkID.nextForkEpoch === 100);
-      // it's possible to serialize enr fork id
-      config.types.phase0.ENRForkID.hashTreeRoot(enrForkID);
-      config.params.ALL_FORKS = undefined!;
     });
   });
 });

@@ -117,10 +117,10 @@ module.exports = {
     {
       "files": ["**/lodestar-types/**/*.ts"],
       "rules": {
-        "@typescript-eslint/naming-convention": ["off", {
-          selector: "interface", prefix: ["I"]
-        }],
+        "@typescript-eslint/naming-convention": ["off", 
+        { selector: "interface", prefix: ["I"]},
+        {selector: "interface", format: ['PascalCase'], prefix: ["I"]},],
       }
-    }
+    },
   ]
 };

@@ -5,7 +5,7 @@
 import bls from "@chainsafe/bls";
 import {phase0} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {DEPOSIT_CONTRACT_TREE_DEPTH, DomainType, FAR_FUTURE_EPOCH} from "../../../../constants";
+import {DEPOSIT_CONTRACT_TREE_DEPTH, FAR_FUTURE_EPOCH} from "../../../../constants";
 import {computeDomain, increaseBalance, computeSigningRoot} from "../../../../util";
 import {assert, bigIntMin, verifyMerkleBranch} from "@chainsafe/lodestar-utils";
 
@@ -32,7 +32,7 @@ export function processDeposit(config: IBeaconConfig, state: phase0.BeaconState,
   const amount = deposit.data.amount;
   const validatorIndex = Array.from(state.validators).findIndex((v) => config.types.BLSPubkey.equals(v.pubkey, pubkey));
   if (validatorIndex === -1) {
-    const domain = computeDomain(config, DomainType.DEPOSIT);
+    const domain = computeDomain(config, config.params.DOMAIN_DEPOSIT);
     const signingRoot = computeSigningRoot(config, config.types.phase0.DepositMessage, deposit.data, domain);
     // Verify the deposit signature (proof of possession)
     // Note: The deposit contract does not check signatures.

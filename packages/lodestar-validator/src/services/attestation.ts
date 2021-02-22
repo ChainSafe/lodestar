@@ -1,12 +1,7 @@
 /**
  * @module validator/attestation
  */
-import {
-  computeEpochAtSlot,
-  computeSigningRoot,
-  DomainType,
-  getDomain,
-} from "@chainsafe/lodestar-beacon-state-transition";
+import {computeEpochAtSlot, computeSigningRoot, getDomain} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {BLSSignature, Epoch, Root, phase0, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
@@ -318,7 +313,7 @@ export class AttestationService {
     const domain = getDomain(
       this.config,
       {fork, genesisValidatorsRoot} as phase0.BeaconState,
-      DomainType.AGGREGATE_AND_PROOF,
+      this.config.params.DOMAIN_AGGREGATE_AND_PROOF,
       computeEpochAtSlot(this.config, aggregate.data.slot)
     );
     const signingRoot = computeSigningRoot(
@@ -339,7 +334,7 @@ export class AttestationService {
     const domain = getDomain(
       this.config,
       {fork, genesisValidatorsRoot} as phase0.BeaconState,
-      DomainType.SELECTION_PROOF,
+      this.config.params.DOMAIN_SELECTION_PROOF,
       computeEpochAtSlot(this.config, slot)
     );
     const signingRoot = computeSigningRoot(this.config, this.config.types.Slot, slot, domain);
@@ -364,7 +359,7 @@ export class AttestationService {
     const domain = getDomain(
       this.config,
       {fork, genesisValidatorsRoot} as phase0.BeaconState,
-      DomainType.BEACON_ATTESTER,
+      this.config.params.DOMAIN_BEACON_ATTESTER,
       attestationData.target.epoch
     );
     const signingRoot = computeSigningRoot(

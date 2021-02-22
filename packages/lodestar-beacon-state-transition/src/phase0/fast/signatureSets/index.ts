@@ -1,7 +1,6 @@
 import {phase0} from "@chainsafe/lodestar-types";
 import {getRandaoRevealSignatureSet} from "../block/processRandao";
-import {getBlockSignatureSet} from "../util/block";
-import {EpochContext} from "../index";
+import {EpochContext, getBlockSignatureSet} from "../util";
 import {ISignatureSet} from "./types";
 import {getProposerSlashingsSignatureSets} from "./proposerSlashings";
 import {getAttesterSlashingsSignatureSets} from "./attesterSlashings";

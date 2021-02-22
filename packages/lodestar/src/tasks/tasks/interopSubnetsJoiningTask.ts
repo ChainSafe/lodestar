@@ -1,11 +1,10 @@
 import {INetwork} from "../../network";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ATTESTATION_SUBNET_COUNT} from "../../constants";
-import {randBetween, ILogger, intToBytes} from "@chainsafe/lodestar-utils";
+import {randBetween, ILogger} from "@chainsafe/lodestar-utils";
 import {ChainEvent, IBeaconChain} from "../../chain";
 import {ForkDigest} from "@chainsafe/lodestar-types";
 import {toHexString} from "@chainsafe/ssz";
-import {computeStartSlotAtEpoch, computeForkDigest} from "@chainsafe/lodestar-beacon-state-transition";
 
 export interface IInteropSubnetsJoiningModules {
   network: INetwork;
@@ -65,30 +64,25 @@ export class InteropSubnetsJoiningTask {
    * Prepare for EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION epochs in advance of the fork
    */
   private scheduleNextForkSubscription = (): void => {
+    // TODO figure out forking
+    /*
     const state = this.chain.getHeadState();
     const currentForkVersion = state.fork.currentVersion;
-    const nextFork =
-      this.config.params.ALL_FORKS &&
-      this.config.params.ALL_FORKS.find((fork) =>
-        this.config.types.Version.equals(currentForkVersion, intToBytes(fork.previousVersion, 4))
-      );
-    if (nextFork) {
+    const nextFork = null as phase0.Fork;
+    if (nextFork != null) {
       const preparedEpoch = nextFork.epoch - this.config.params.EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION;
       const timeToPreparedEpoch =
         (computeStartSlotAtEpoch(this.config, preparedEpoch) - this.chain.clock.currentSlot) *
         this.config.params.SECONDS_PER_SLOT *
         1000;
       if (timeToPreparedEpoch > 0) {
-        const nextForkDigest = computeForkDigest(
-          this.config,
-          intToBytes(nextFork.currentVersion, 4),
-          state.genesisValidatorsRoot
-        );
+        const nextForkDigest = computeForkDigest(this.config, nextFork.currentVersion, state.genesisValidatorsRoot);
         this.nextForkSubsTimer = setTimeout(() => {
           this.run(nextForkDigest);
         }, timeToPreparedEpoch);
       }
     }
+    */
   };
 
   /**

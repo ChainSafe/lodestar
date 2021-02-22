@@ -8,7 +8,6 @@ import {computeShuffledIndex, getSeed} from "./seed";
 import {getActiveValidatorIndices} from "./validator";
 import {computeEpochAtSlot} from "./epoch";
 import {intDiv} from "@chainsafe/lodestar-utils";
-import {DomainType} from "../constants";
 
 /**
  * Return the [[index]]'th shuffled committee out of a total [[count]]
@@ -58,7 +57,7 @@ export function getBeaconCommittee(
   return computeCommittee(
     config,
     getActiveValidatorIndices(state, epoch),
-    getSeed(config, state, epoch, DomainType.BEACON_ATTESTER),
+    getSeed(config, state, epoch, config.params.DOMAIN_BEACON_ATTESTER),
     (slot % config.params.SLOTS_PER_EPOCH) * committeesPerSlot + index,
     committeesPerSlot * config.params.SLOTS_PER_EPOCH
   );
