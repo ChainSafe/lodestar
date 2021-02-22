@@ -64,6 +64,6 @@ export class RestValidatorApi implements IValidatorApi {
   }
 
   public async prepareBeaconCommitteeSubnet(subscriptions: BeaconCommitteeSubscription[]): Promise<void> {
-    return await this.clientV2.post<Json[], void>("/beacon_committee_subscriptions", [subscriptions]);
+    return await this.clientV2.post<Json[], void>("/beacon_committee_subscriptions", subscriptions);
   }
 }
