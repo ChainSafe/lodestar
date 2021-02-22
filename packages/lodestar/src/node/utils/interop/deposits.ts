@@ -3,7 +3,6 @@ import {phase0, Root} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {interopSecretKeys} from "@chainsafe/lodestar-utils";
 import {computeDomain, computeSigningRoot} from "@chainsafe/lodestar-beacon-state-transition";
-import {DomainType} from "../../../constants";
 
 /**
  * Compute and return deposit data from other validators.
@@ -23,7 +22,7 @@ export function interopDeposits(
       amount: config.params.MAX_EFFECTIVE_BALANCE,
       signature: Buffer.alloc(0),
     };
-    const domain = computeDomain(config, DomainType.DEPOSIT);
+    const domain = computeDomain(config, config.params.DOMAIN_DEPOSIT);
     const signingRoot = computeSigningRoot(config, config.types.phase0.DepositMessage, data, domain);
     data.signature = secretKey.sign(signingRoot).toBytes();
     // Add to merkle tree

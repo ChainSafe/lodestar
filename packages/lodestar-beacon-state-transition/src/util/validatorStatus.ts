@@ -6,7 +6,7 @@ import {ValidatorIndex, phase0} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import bls from "@chainsafe/bls";
 
-import {FAR_FUTURE_EPOCH, DomainType} from "../constants";
+import {FAR_FUTURE_EPOCH} from "../constants";
 import {computeActivationExitEpoch, getCurrentEpoch, computeEpochAtSlot} from "./epoch";
 import {getValidatorChurnLimit, isSlashableValidator, isActiveValidator} from "./validator";
 import {decreaseBalance, increaseBalance} from "./balance";
@@ -127,7 +127,12 @@ export function isValidProposerSlashing(
   if (!verifySignatures) {
     return true;
   }
-  const domain = getDomain(config, state, DomainType.BEACON_PROPOSER, computeEpochAtSlot(config, header1.slot));
+  const domain = getDomain(
+    config,
+    state,
+    config.params.DOMAIN_BEACON_PROPOSER,
+    computeEpochAtSlot(config, header1.slot)
+  );
   const signingRoot = computeSigningRoot(
     config,
     config.types.phase0.BeaconBlockHeader,
@@ -142,7 +147,12 @@ export function isValidProposerSlashing(
   if (!proposalData1Verified) {
     return false;
   }
-  const domain2 = getDomain(config, state, DomainType.BEACON_PROPOSER, computeEpochAtSlot(config, header2.slot));
+  const domain2 = getDomain(
+    config,
+    state,
+    config.params.DOMAIN_BEACON_PROPOSER,
+    computeEpochAtSlot(config, header2.slot)
+  );
   const signingRoot2 = computeSigningRoot(
     config,
     config.types.phase0.BeaconBlockHeader,
@@ -165,7 +175,7 @@ export function isValidVoluntaryExit(
 ): boolean {
   const validator = state.validators[signedExit.message.validatorIndex];
   const currentEpoch = getCurrentEpoch(config, state);
-  const domain = getDomain(config, state, DomainType.VOLUNTARY_EXIT, signedExit.message.epoch);
+  const domain = getDomain(config, state, config.params.DOMAIN_VOLUNTARY_EXIT, signedExit.message.epoch);
   const signingRoot = computeSigningRoot(config, config.types.phase0.VoluntaryExit, signedExit.message, domain);
   // Verify the validator is active
   return (

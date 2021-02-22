@@ -1,5 +1,5 @@
 import {phase0} from "@chainsafe/lodestar-types";
-import {DomainType, FAR_FUTURE_EPOCH} from "../../../constants";
+import {FAR_FUTURE_EPOCH} from "../../../constants";
 import {computeSigningRoot, getDomain, isActiveValidator} from "../../../util";
 import {ISignatureSet, SignatureSetType, verifySignatureSet} from "../signatureSets";
 import {CachedValidatorsBeaconState, EpochContext} from "../util";
@@ -55,7 +55,7 @@ export function getVoluntaryExitSignatureSet(
   signedVoluntaryExit: phase0.SignedVoluntaryExit
 ): ISignatureSet {
   const config = epochCtx.config;
-  const domain = getDomain(config, state, DomainType.VOLUNTARY_EXIT, signedVoluntaryExit.message.epoch);
+  const domain = getDomain(config, state, config.params.DOMAIN_VOLUNTARY_EXIT, signedVoluntaryExit.message.epoch);
 
   return {
     type: SignatureSetType.single,

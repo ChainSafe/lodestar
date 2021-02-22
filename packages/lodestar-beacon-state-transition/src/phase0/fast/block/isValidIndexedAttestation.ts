@@ -1,5 +1,4 @@
 import {phase0} from "@chainsafe/lodestar-types";
-import {DomainType} from "../../../constants";
 import {computeSigningRoot, getDomain} from "../../../util";
 import {ISignatureSet, SignatureSetType, verifySignatureSet} from "../signatureSets";
 import {EpochContext} from "../util";
@@ -53,7 +52,7 @@ export function getIndexedAttestationSignatureSet(
   indices?: number[]
 ): ISignatureSet {
   const config = epochCtx.config;
-  const domain = getDomain(config, state, DomainType.BEACON_ATTESTER, indexedAttestation.data.target.epoch);
+  const domain = getDomain(config, state, config.params.DOMAIN_BEACON_ATTESTER, indexedAttestation.data.target.epoch);
 
   if (!indices) indices = getIndices(indexedAttestation);
   return {

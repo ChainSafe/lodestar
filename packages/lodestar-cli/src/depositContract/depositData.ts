@@ -3,7 +3,7 @@ import {hash, Json, toHexString} from "@chainsafe/ssz";
 import {phase0} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import bls, {SecretKey, PublicKey} from "@chainsafe/bls";
-import {computeSigningRoot, computeDomain, DomainType} from "@chainsafe/lodestar-beacon-state-transition";
+import {computeSigningRoot, computeDomain} from "@chainsafe/lodestar-beacon-state-transition";
 
 const depositFunctionFragment =
   "function deposit(bytes pubkey, bytes withdrawal_credentials, bytes signature, bytes32 deposit_data_root) external payable;";
@@ -54,7 +54,7 @@ export function encodeDepositData(
     signature: Buffer.alloc(96),
   };
 
-  const domain = computeDomain(config, DomainType.DEPOSIT);
+  const domain = computeDomain(config, config.params.DOMAIN_DEPOSIT);
   const signingroot = computeSigningRoot(config, config.types.phase0.DepositMessage, depositData, domain);
   depositData.signature = bls.sign(signingKey.toBytes(), signingroot);
 

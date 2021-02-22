@@ -1,7 +1,6 @@
 import xor from "buffer-xor";
 import {hash} from "@chainsafe/ssz";
 import {phase0} from "@chainsafe/lodestar-types";
-import {DomainType} from "../../../constants";
 import {computeEpochAtSlot, computeSigningRoot, getDomain, getRandaoMix} from "../../../util";
 import {EpochContext} from "../util";
 import {ISignatureSet, SignatureSetType, verifySignatureSet} from "../signatureSets";
@@ -42,7 +41,7 @@ export function getRandaoRevealSignatureSet(
   const config = epochCtx.config;
   // should not get epoch from epochCtx
   const epoch = computeEpochAtSlot(config, block.slot);
-  const domain = getDomain(config, state, DomainType.RANDAO);
+  const domain = getDomain(config, state, config.params.DOMAIN_RANDAO);
 
   return {
     type: SignatureSetType.single,

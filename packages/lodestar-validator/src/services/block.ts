@@ -7,12 +7,7 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {SecretKey} from "@chainsafe/bls";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {toHexString} from "@chainsafe/ssz";
-import {
-  computeEpochAtSlot,
-  computeSigningRoot,
-  DomainType,
-  getDomain,
-} from "@chainsafe/lodestar-beacon-state-transition";
+import {computeEpochAtSlot, computeSigningRoot, getDomain} from "@chainsafe/lodestar-beacon-state-transition";
 import {IApiClient} from "../api";
 import {BeaconEventType} from "../api/interface/events";
 import {ClockEventType} from "../api/interface/clock";
@@ -143,7 +138,7 @@ export default class BlockProposingService {
     const randaoDomain = getDomain(
       this.config,
       {fork, genesisValidatorsRoot} as phase0.BeaconState,
-      DomainType.RANDAO,
+      this.config.params.DOMAIN_RANDAO,
       epoch
     );
     const randaoSigningRoot = computeSigningRoot(this.config, this.config.types.Epoch, epoch, randaoDomain);
@@ -163,7 +158,7 @@ export default class BlockProposingService {
     const proposerDomain = getDomain(
       this.config,
       {fork, genesisValidatorsRoot} as phase0.BeaconState,
-      DomainType.BEACON_PROPOSER,
+      this.config.params.DOMAIN_BEACON_PROPOSER,
       computeEpochAtSlot(this.config, slot)
     );
     const signingRoot = computeSigningRoot(this.config, this.config.types.phase0.BeaconBlock, block, proposerDomain);

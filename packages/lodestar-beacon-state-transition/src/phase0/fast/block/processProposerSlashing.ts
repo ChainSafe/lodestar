@@ -1,5 +1,4 @@
 import {phase0} from "@chainsafe/lodestar-types";
-import {DomainType} from "../../../constants";
 import {computeEpochAtSlot, computeSigningRoot, getDomain, isSlashableValidator} from "../../../util";
 import {CachedValidatorsBeaconState, EpochContext} from "../util";
 import {slashValidator} from "./slashValidator";
@@ -63,7 +62,7 @@ export function getProposerSlashingSignatureSets(
   return [proposerSlashing.signedHeader1, proposerSlashing.signedHeader2].map(
     (signedHeader): ISignatureSet => {
       const epoch = computeEpochAtSlot(config, signedHeader.message.slot);
-      const domain = getDomain(config, state, DomainType.BEACON_PROPOSER, epoch);
+      const domain = getDomain(config, state, config.params.DOMAIN_BEACON_PROPOSER, epoch);
 
       return {
         type: SignatureSetType.single,
