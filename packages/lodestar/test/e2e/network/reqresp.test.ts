@@ -3,6 +3,7 @@ import chaiAsPromised from "chai-as-promised";
 import {AbortController} from "abort-controller";
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import {LogLevel, sleep, WinstonLogger} from "@chainsafe/lodestar-utils";
+import {phase0} from "@chainsafe/lodestar-types";
 import {Method, ReqRespEncoding} from "../../../src/constants";
 import {BeaconMetrics} from "../../../src/metrics";
 import {createPeerId, IReqRespOptions, Libp2pNetwork, NetworkEvent} from "../../../src/network";
@@ -112,8 +113,13 @@ describe("[network] network", function () {
   it("should send/receive signed blocks", async function () {
     const [netA, netB] = await createAndConnectPeers();
 
-    const count = 2;
-    const blocks = generateEmptySignedBlocks(count);
+    const req: phase0.BeaconBlocksByRangeRequest = {startSlot: 0, step: 1, count: 2};
+    const blocks: phase0.SignedBeaconBlock[] = [];
+    for (let slot = req.startSlot; slot < req.count; slot++) {
+      const block = generateEmptySignedBlock();
+      block.message.slot = slot;
+      blocks.push(block);
+    }
 
     netB.reqResp.registerHandler(async function* (method) {
       if (method === Method.BeaconBlocksByRange) {
@@ -123,10 +129,10 @@ describe("[network] network", function () {
       }
     });
 
-    const returnedBlocks = await netA.reqResp.beaconBlocksByRange(netB.peerId, {startSlot: 0, step: 1, count});
+    const returnedBlocks = await netA.reqResp.beaconBlocksByRange(netB.peerId, req);
 
     if (!returnedBlocks) throw Error("Returned null");
-    expect(returnedBlocks).to.have.length(count, "Wrong returnedBlocks lenght");
+    expect(returnedBlocks).to.have.length(req.count, "Wrong returnedBlocks lenght");
 
     returnedBlocks.forEach((returnedBlock, i) => {
       expect(config.types.phase0.SignedBeaconBlock.equals(returnedBlock, blocks[i])).to.equal(

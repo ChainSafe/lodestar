@@ -6,7 +6,7 @@ export function expectThrowsLodestarError(fn: () => any, expectedErr: LodestarEr
   try {
     const value = fn();
     const json = JSON.stringify(value, null, 2);
-    throw Error(`Expected promise to reject but returned value: \n\n\t${json}`);
+    throw Error(`Expected fn to throw but returned value: \n\n\t${json}`);
   } catch (e) {
     expectLodestarError(e, expectedErr);
   }
