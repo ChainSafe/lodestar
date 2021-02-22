@@ -78,7 +78,14 @@ export class BeaconSync implements IBeaconSync {
       this.controller.signal
     );
 
-    await initialSync.sync();
+    const currentSlot = this.chain.clock.currentSlot;
+    const headSlot = this.chain.forkChoice.getHead().slot;
+    const slotImportTolerance = this.config.params.SLOTS_PER_EPOCH;
+    if (currentSlot >= headSlot && headSlot >= currentSlot - slotImportTolerance) {
+      // Synced
+    } else {
+      await initialSync.sync();
+    }
 
     this.startRegularSync();
   }
