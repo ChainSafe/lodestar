@@ -2,7 +2,7 @@
  * @module chain/stateTransition/epoch
  */
 
-import {BeaconState, Validator} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
 import {
@@ -19,7 +19,7 @@ import {
  * Processes (i) the validator activation queue, and (ii) the rule that validators with <=
  * `EJECTION_BALANCE` ETH get ejected.
  */
-export function processRegistryUpdates(config: IBeaconConfig, state: BeaconState): BeaconState {
+export function processRegistryUpdates(config: IBeaconConfig, state: phase0.BeaconState): phase0.BeaconState {
   const currentEpoch = getCurrentEpoch(config, state);
   // Process activation eligibility and ejections
   const ejectionBalance = config.params.EJECTION_BALANCE;
@@ -38,7 +38,7 @@ export function processRegistryUpdates(config: IBeaconConfig, state: BeaconState
       (validator) => isEligibleForActivation(config, state, validator)
       // Order by the sequence of activation_eligibility_epoch setting and then index
     )
-    .map((val: Validator, index: number) => {
+    .map((val: phase0.Validator, index: number) => {
       return {val, index};
     })
     .sort((a, b) => a.val.activationEligibilityEpoch - b.val.activationEligibilityEpoch || a.index - b.index)

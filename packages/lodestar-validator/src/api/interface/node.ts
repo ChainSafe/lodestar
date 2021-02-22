@@ -1,6 +1,6 @@
-import {SyncingStatus} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 
 export interface INodeApi {
   getVersion(): Promise<string>;
-  getSyncingStatus(): Promise<SyncingStatus>;
+  getSyncingStatus(): Promise<phase0.SyncingStatus>;
 }

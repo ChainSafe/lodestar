@@ -52,7 +52,17 @@ describe("rest - validator - prepareCommitteeSubnet", function () {
         },
       ])
       .expect(200);
-    expect(api.validator.prepareBeaconCommitteeSubnet.withArgs(1, 2, 64, 0, false).calledOnce).to.be.true;
+    expect(
+      api.validator.prepareBeaconCommitteeSubnet.withArgs([
+        {
+          validatorIndex: 1,
+          committeeIndex: 2,
+          committeesAtSlot: 64,
+          slot: 0,
+          isAggregator: false,
+        },
+      ]).calledOnce
+    ).to.be.true;
   });
 
   it("missing param", async function () {

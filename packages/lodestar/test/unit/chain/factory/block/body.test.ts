@@ -28,7 +28,7 @@ describe("blockAssembly - body", function () {
     dbStub.attesterSlashing.values.resolves([generateEmptyAttesterSlashing()]);
     dbStub.aggregateAndProof.getBlockAttestations.resolves([generateEmptyAttestation()]);
     dbStub.voluntaryExit.values.resolves([generateEmptySignedVoluntaryExit()]);
-    dbStub.depositDataRoot.getTreeBacked.resolves(config.types.DepositDataRootList.tree.defaultValue());
+    dbStub.depositDataRoot.getTreeBacked.resolves(config.types.phase0.DepositDataRootList.tree.defaultValue());
 
     const result = await assembleBody(config, dbStub, eth1, generateState(), Buffer.alloc(96, 0), Buffer.alloc(32, 0));
     expect(result).to.not.be.null;

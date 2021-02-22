@@ -1,4 +1,4 @@
-import {ProposerSlashing} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {ValidationError} from "../../../../impl/errors/validation";
 import {ApiController} from "../../types";
 
@@ -6,9 +6,9 @@ export const submitProposerSlashing: ApiController = {
   url: "/pool/proposer_slashings",
 
   handler: async function (req, resp) {
-    let slashing: ProposerSlashing;
+    let slashing: phase0.ProposerSlashing;
     try {
-      slashing = this.config.types.ProposerSlashing.fromJson(req.body, {case: "snake"});
+      slashing = this.config.types.phase0.ProposerSlashing.fromJson(req.body, {case: "snake"});
     } catch (e) {
       throw new ValidationError("Failed to deserialize proposer slashing");
     }

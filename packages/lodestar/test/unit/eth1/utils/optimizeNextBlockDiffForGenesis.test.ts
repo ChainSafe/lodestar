@@ -1,6 +1,6 @@
 import {expect} from "chai";
 import {optimizeNextBlockDiffForGenesis} from "../../../../src/eth1/utils/optimizeNextBlockDiffForGenesis";
-import {Eth1Block} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 
 describe("eth1 / utils / optimizeNextBlockDiffForGenesis", function () {
   it("should return optimized block diff to find genesis time", () => {
@@ -13,7 +13,7 @@ describe("eth1 / utils / optimizeNextBlockDiffForGenesis", function () {
       SECONDS_PER_ETH1_BLOCK: 14,
     };
     const initialTimeDiff = params.GENESIS_DELAY * 2;
-    let lastFetchedBlock: Eth1Block = {
+    let lastFetchedBlock: phase0.Eth1Block = {
       blockHash: Buffer.alloc(32, 0),
       blockNumber: 100000,
       timestamp: params.MIN_GENESIS_TIME - initialTimeDiff,

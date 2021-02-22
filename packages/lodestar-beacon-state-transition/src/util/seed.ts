@@ -3,7 +3,7 @@
  */
 
 import {hash} from "@chainsafe/ssz";
-import {Epoch, BeaconState, Bytes32, Bytes4} from "@chainsafe/lodestar-types";
+import {Epoch, phase0, Bytes32, Bytes4} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {assert, bytesToBigInt, intToBytes, intDiv} from "@chainsafe/lodestar-utils";
 import {DomainType} from "../constants";
@@ -38,7 +38,7 @@ export function computeShuffledIndex(config: IBeaconConfig, index: number, index
 /**
  * Return the randao mix at a recent [[epoch]].
  */
-export function getRandaoMix(config: IBeaconConfig, state: BeaconState, epoch: Epoch): Bytes32 {
+export function getRandaoMix(config: IBeaconConfig, state: phase0.BeaconState, epoch: Epoch): Bytes32 {
   return state.randaoMixes[epoch % config.params.EPOCHS_PER_HISTORICAL_VECTOR];
 }
 
@@ -47,7 +47,7 @@ export function getRandaoMix(config: IBeaconConfig, state: BeaconState, epoch: E
  */
 export function getSeed(
   config: IBeaconConfig,
-  state: BeaconState,
+  state: phase0.BeaconState,
   epoch: Epoch,
   domainType: DomainType | Bytes4
 ): Uint8Array {

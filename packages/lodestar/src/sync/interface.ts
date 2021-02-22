@@ -1,7 +1,6 @@
-import {IService} from "../node";
 import {INetwork} from "../network";
 import {ILogger} from "@chainsafe/lodestar-utils";
-import {CommitteeIndex, Slot, SyncingStatus} from "@chainsafe/lodestar-types";
+import {CommitteeIndex, Slot, phase0} from "@chainsafe/lodestar-types";
 import {IRegularSync} from "./regular";
 import {IGossipHandler} from "./gossip";
 import {IReqRespHandler} from "./reqResp";
@@ -10,10 +9,21 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBeaconDb} from "../db/api";
 import {AttestationCollector} from "./utils";
 
-export interface IBeaconSync extends IService {
-  getSyncStatus(): Promise<SyncingStatus>;
+export enum SyncMode {
+  WAITING_PEERS,
+  INITIAL_SYNCING,
+  REGULAR_SYNCING,
+  SYNCED,
+  STOPPED,
+}
+
+export interface IBeaconSync {
+  state: SyncMode;
+  start(): Promise<void>;
+  stop(): Promise<void>;
+  getSyncStatus(): phase0.SyncingStatus;
   isSynced(): boolean;
-  collectAttestations(slot: Slot, committeeIndex: CommitteeIndex): Promise<void>;
+  collectAttestations(slot: Slot, committeeIndex: CommitteeIndex): void;
 }
 
 export interface ISyncModule {

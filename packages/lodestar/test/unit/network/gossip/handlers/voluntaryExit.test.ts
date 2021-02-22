@@ -22,9 +22,9 @@ describe("gossip handlers - voluntaryExit", function () {
     sandbox.restore();
   });
 
-  it("handle valid voluntary exit", async function () {
+  it("handle valid voluntary exit", function () {
     const voluntaryExit = generateEmptySignedVoluntaryExit();
-    await handleIncomingVoluntaryExit.bind(gossipStub)(voluntaryExit);
+    handleIncomingVoluntaryExit.bind(gossipStub)(voluntaryExit);
 
     expect(gossipStub.emit.withArgs(GossipEvent.VOLUNTARY_EXIT, voluntaryExit).calledOnce).to.be.true;
   });

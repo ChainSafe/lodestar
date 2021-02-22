@@ -91,7 +91,7 @@ describe("[network] network", function () {
     });
 
     const pingRes = await netA.reqResp.ping(netB.peerId, pingBody);
-    expect(pingRes?.toString()).to.deep.equal(pingBody.toString(), "Wrong response body");
+    expect(pingRes.toString()).to.deep.equal(pingBody.toString(), "Wrong response body");
   });
 
   it("should send/receive a metadata message", async function () {
@@ -134,7 +134,7 @@ describe("[network] network", function () {
     expect(returnedBlocks).to.have.length(count, "Wrong returnedBlocks lenght");
 
     returnedBlocks.forEach((returnedBlock, i) => {
-      expect(config.types.SignedBeaconBlock.equals(returnedBlock, blocks[i])).to.equal(
+      expect(config.types.phase0.SignedBeaconBlock.equals(returnedBlock, blocks[i])).to.equal(
         true,
         `Wrong returnedBlock[${i}]`
       );

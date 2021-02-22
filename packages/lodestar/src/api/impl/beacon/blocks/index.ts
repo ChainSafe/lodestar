@@ -1,4 +1,4 @@
-import {Root, SignedBeaconBlock, SignedBeaconHeaderResponse, Slot} from "@chainsafe/lodestar-types";
+import {Root, phase0, Slot} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
 import {IBeaconChain} from "../../../../chain";
@@ -33,8 +33,8 @@ export class BeaconBlockApi implements IBeaconBlocksApi {
 
   public async getBlockHeaders(
     filters: Partial<{slot: Slot; parentRoot: Root}>
-  ): Promise<SignedBeaconHeaderResponse[]> {
-    const result: SignedBeaconHeaderResponse[] = [];
+  ): Promise<phase0.SignedBeaconHeaderResponse[]> {
+    const result: phase0.SignedBeaconHeaderResponse[] = [];
     if (filters.parentRoot) {
       const finalizedBlock = await this.db.blockArchive.getByParentRoot(filters.parentRoot);
       if (finalizedBlock) {
@@ -83,7 +83,7 @@ export class BeaconBlockApi implements IBeaconBlocksApi {
       if (!canonicalBlock) {
         return [];
       }
-      const canonicalRoot = this.config.types.BeaconBlock.hashTreeRoot(canonicalBlock.message);
+      const canonicalRoot = this.config.types.phase0.BeaconBlock.hashTreeRoot(canonicalBlock.message);
       result.push(toBeaconHeaderResponse(this.config, canonicalBlock, true));
 
       // fork blocks
@@ -102,7 +102,7 @@ export class BeaconBlockApi implements IBeaconBlocksApi {
     return result;
   }
 
-  public async getBlockHeader(blockId: BlockId): Promise<SignedBeaconHeaderResponse | null> {
+  public async getBlockHeader(blockId: BlockId): Promise<phase0.SignedBeaconHeaderResponse | null> {
     const block = await this.getBlock(blockId);
     if (!block) {
       return null;
@@ -110,11 +110,11 @@ export class BeaconBlockApi implements IBeaconBlocksApi {
     return toBeaconHeaderResponse(this.config, block, true);
   }
 
-  public async getBlock(blockId: BlockId): Promise<SignedBeaconBlock | null> {
+  public async getBlock(blockId: BlockId): Promise<phase0.SignedBeaconBlock | null> {
     return await resolveBlockId(this.config, this.chain.forkChoice, this.db, blockId);
   }
 
-  public async publishBlock(signedBlock: SignedBeaconBlock): Promise<void> {
+  public async publishBlock(signedBlock: phase0.SignedBeaconBlock): Promise<void> {
     await checkSyncStatus(this.config, this.sync);
     await Promise.all([this.chain.receiveBlock(signedBlock), this.network.gossip.publishBlock(signedBlock)]);
   }

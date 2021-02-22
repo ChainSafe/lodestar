@@ -1,5 +1,5 @@
 import {SinonSandbox, SinonStubbedInstance} from "sinon";
-import {SignedBeaconBlock} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {LevelDbController} from "@chainsafe/lodestar-db";
 
 import {BeaconDb} from "../../../src/db";
@@ -42,8 +42,8 @@ export class StubbedBeaconDb extends BeaconDb {
 
   public seenAttestationCache: SinonStubbedInstance<SeenAttestationCache> & SeenAttestationCache;
 
-  public processBlockOperations: SinonStubbedInstance<(signedBlock: SignedBeaconBlock) => Promise<void>> &
-    ((signedBlock: SignedBeaconBlock) => Promise<void>);
+  public processBlockOperations: SinonStubbedInstance<(signedBlock: phase0.SignedBeaconBlock) => Promise<void>> &
+    ((signedBlock: phase0.SignedBeaconBlock) => Promise<void>);
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   constructor(sinon: SinonSandbox, config = minimalConfig) {

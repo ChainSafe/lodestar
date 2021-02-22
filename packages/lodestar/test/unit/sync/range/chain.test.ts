@@ -2,7 +2,7 @@ import PeerId from "peer-id";
 import {AbortController} from "abort-controller";
 import {LogLevel, WinstonLogger} from "@chainsafe/lodestar-utils";
 import {config} from "@chainsafe/lodestar-config/minimal";
-import {Epoch, SignedBeaconBlock, Slot} from "@chainsafe/lodestar-types";
+import {Epoch, phase0, Slot} from "@chainsafe/lodestar-types";
 import {linspace} from "../../../../src/util/numpy";
 import {generateEmptyBlock, generateEmptySignedBlock} from "../../../utils/block";
 import {silentLogger} from "../../../utils/logger";
@@ -76,7 +76,7 @@ describe("sync / range / chain", () => {
       };
 
       const downloadBeaconBlocksByRange: DownloadBeaconBlocksByRange = async (peerId, request) => {
-        const blocks: SignedBeaconBlock[] = [];
+        const blocks: phase0.SignedBeaconBlock[] = [];
         for (let i = request.startSlot; i < request.startSlot + request.count; i += request.step) {
           if (skippedSlots?.has(i)) {
             continue; // Skip

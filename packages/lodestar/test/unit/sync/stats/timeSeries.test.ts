@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import {TimeSeries} from "../../../../src/sync/stats/timeSeries";
+import {TimeSeries} from "../../../../src/util/timeSeries";
 
 // Even with rounding to 3 decimals, the test still breaks sometimes...
 describe.skip("sync / stats / TimeSeries", () => {

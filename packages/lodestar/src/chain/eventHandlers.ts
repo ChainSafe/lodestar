@@ -1,6 +1,6 @@
 import {AbortSignal} from "abort-controller";
 import {readOnlyMap, toHexString} from "@chainsafe/ssz";
-import {Attestation, Checkpoint, SignedBeaconBlock, Slot, Version} from "@chainsafe/lodestar-types";
+import {phase0, Slot, Version} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {IBlockSummary} from "@chainsafe/lodestar-fork-choice";
 
@@ -29,7 +29,7 @@ function wrapHandler<
   event: Event,
   emitter: ChainEventEmitter,
   logger: ILogger,
-  handler: (...args: Parameters<Callback>) => Promise<void>
+  handler: (...args: Parameters<Callback>) => Promise<void> | void
 ) {
   return async (...args: Parameters<Callback>): Promise<void> => {
     try {
@@ -137,12 +137,12 @@ export async function onClockSlot(this: BeaconChain, slot: Slot): Promise<void> 
   });
 }
 
-export async function onForkVersion(this: BeaconChain, version: Version): Promise<void> {
+export function onForkVersion(this: BeaconChain, version: Version): void {
   this.logger.verbose("New fork version", this.config.types.Version.toJson(version));
 }
 
-export async function onCheckpoint(this: BeaconChain, cp: Checkpoint, stateContext: ITreeStateContext): Promise<void> {
-  this.logger.verbose("Checkpoint processed", this.config.types.Checkpoint.toJson(cp));
+export function onCheckpoint(this: BeaconChain, cp: phase0.Checkpoint, stateContext: ITreeStateContext): void {
+  this.logger.verbose("Checkpoint processed", this.config.types.phase0.Checkpoint.toJson(cp));
   this.checkpointStateCache.add(cp, stateContext);
 
   this.metrics.currentValidators.set({status: "active"}, stateContext.epochCtx.currentShuffling.activeIndices.length);
@@ -164,26 +164,26 @@ export async function onCheckpoint(this: BeaconChain, cp: Checkpoint, stateConte
   }
 }
 
-export async function onJustified(this: BeaconChain, cp: Checkpoint, stateContext: ITreeStateContext): Promise<void> {
-  this.logger.important("Checkpoint justified", this.config.types.Checkpoint.toJson(cp));
+export function onJustified(this: BeaconChain, cp: phase0.Checkpoint, stateContext: ITreeStateContext): void {
+  this.logger.verbose("Checkpoint justified", this.config.types.phase0.Checkpoint.toJson(cp));
   this.metrics.previousJustifiedEpoch.set(stateContext.state.previousJustifiedCheckpoint.epoch);
   this.metrics.currentJustifiedEpoch.set(cp.epoch);
 }
 
-export async function onFinalized(this: BeaconChain, cp: Checkpoint): Promise<void> {
-  this.logger.important("Checkpoint finalized", this.config.types.Checkpoint.toJson(cp));
+export function onFinalized(this: BeaconChain, cp: phase0.Checkpoint): void {
+  this.logger.verbose("Checkpoint finalized", this.config.types.phase0.Checkpoint.toJson(cp));
   this.metrics.finalizedEpoch.set(cp.epoch);
 }
 
-export async function onForkChoiceJustified(this: BeaconChain, cp: Checkpoint): Promise<void> {
-  this.logger.verbose("Fork choice justified", this.config.types.Checkpoint.toJson(cp));
+export function onForkChoiceJustified(this: BeaconChain, cp: phase0.Checkpoint): void {
+  this.logger.verbose("Fork choice justified", this.config.types.phase0.Checkpoint.toJson(cp));
 }
 
-export async function onForkChoiceFinalized(this: BeaconChain, cp: Checkpoint): Promise<void> {
-  this.logger.verbose("Fork choice finalized", this.config.types.Checkpoint.toJson(cp));
+export function onForkChoiceFinalized(this: BeaconChain, cp: phase0.Checkpoint): void {
+  this.logger.verbose("Fork choice finalized", this.config.types.phase0.Checkpoint.toJson(cp));
 }
 
-export async function onForkChoiceHead(this: BeaconChain, head: IBlockSummary): Promise<void> {
+export function onForkChoiceHead(this: BeaconChain, head: IBlockSummary): void {
   this.logger.verbose("New chain head", {
     headSlot: head.slot,
     headRoot: toHexString(head.blockRoot),
@@ -191,33 +191,26 @@ export async function onForkChoiceHead(this: BeaconChain, head: IBlockSummary): 
   this.metrics.headSlot.set(head.slot);
 }
 
-export async function onForkChoiceReorg(
-  this: BeaconChain,
-  head: IBlockSummary,
-  oldHead: IBlockSummary,
-  depth: number
-): Promise<void> {
-  this.logger.verbose("Chain reorg", {
-    depth,
-  });
+export function onForkChoiceReorg(this: BeaconChain, head: IBlockSummary, oldHead: IBlockSummary, depth: number): void {
+  this.logger.verbose("Chain reorg", {depth});
 }
 
-export async function onAttestation(this: BeaconChain, attestation: Attestation): Promise<void> {
+export function onAttestation(this: BeaconChain, attestation: phase0.Attestation): void {
   this.logger.debug("Attestation processed", {
     slot: attestation.data.slot,
     index: attestation.data.index,
     targetRoot: toHexString(attestation.data.target.root),
-    aggregationBits: this.config.types.CommitteeBits.toJson(attestation.aggregationBits),
+    aggregationBits: this.config.types.phase0.CommitteeBits.toJson(attestation.aggregationBits),
   });
 }
 
 export async function onBlock(
   this: BeaconChain,
-  block: SignedBeaconBlock,
+  block: phase0.SignedBeaconBlock,
   postStateContext: ITreeStateContext,
   job: IBlockJob
 ): Promise<void> {
-  const blockRoot = this.config.types.BeaconBlock.hashTreeRoot(block.message);
+  const blockRoot = this.config.types.phase0.BeaconBlock.hashTreeRoot(block.message);
   this.logger.verbose("Block processed", {
     slot: block.message.slot,
     root: toHexString(blockRoot),
@@ -274,7 +267,7 @@ export async function onErrorAttestation(this: BeaconChain, err: AttestationErro
   }
 
   this.logger.debug("Attestation error", {}, err);
-  const attestationRoot = this.config.types.Attestation.hashTreeRoot(err.job.attestation);
+  const attestationRoot = this.config.types.phase0.Attestation.hashTreeRoot(err.job.attestation);
 
   switch (err.type.code) {
     case AttestationErrorCode.FUTURE_SLOT:
@@ -309,7 +302,7 @@ export async function onErrorBlock(this: BeaconChain, err: BlockError): Promise<
   }
 
   this.logger.error("Block error", {slot: err.job.signedBlock.message.slot}, err);
-  const blockRoot = this.config.types.BeaconBlock.hashTreeRoot(err.job.signedBlock.message);
+  const blockRoot = this.config.types.phase0.BeaconBlock.hashTreeRoot(err.job.signedBlock.message);
 
   switch (err.type.code) {
     case BlockErrorCode.FUTURE_SLOT:

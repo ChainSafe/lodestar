@@ -8,7 +8,7 @@ import {CheckpointStateCache, StateContextCache} from "../../../src/chain/stateC
 import {silentLogger} from "../logger";
 import {StubbedBeaconDb} from "./beaconDb";
 import {generateValidators} from "../validator";
-import {BeaconState} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {FAR_FUTURE_EPOCH} from "@chainsafe/lodestar-beacon-state-transition";
 
 export class StubbedBeaconChain extends BeaconChain {
@@ -25,8 +25,8 @@ export class StubbedBeaconChain extends BeaconChain {
       logger: silentLogger,
       metrics: sinon.createStubInstance(BeaconMetrics),
       db: new StubbedBeaconDb(sinon, config),
-      anchorState: config.types.BeaconState.tree.createValue({
-        ...config.types.BeaconState.defaultValue(),
+      anchorState: config.types.phase0.BeaconState.tree.createValue({
+        ...config.types.phase0.BeaconState.defaultValue(),
         validators: generateValidators(64, {
           effectiveBalance: BigInt(config.params.MAX_EFFECTIVE_BALANCE),
           activationEpoch: 0,
@@ -35,7 +35,7 @@ export class StubbedBeaconChain extends BeaconChain {
           exitEpoch: FAR_FUTURE_EPOCH,
         }),
         balances: Array.from({length: 64}, () => BigInt(0)),
-      } as BeaconState),
+      } as phase0.BeaconState),
     });
     this.forkChoice = sinon.createStubInstance(ForkChoice) as any;
     this.stateCache = sinon.createStubInstance(StateContextCache) as any;

@@ -1,11 +1,11 @@
-import {Eth1Data, Eth1DataOrdered} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {bytesToInt} from "@chainsafe/lodestar-utils";
 import {IDatabaseController, Bucket, Repository} from "@chainsafe/lodestar-db";
 
-export class Eth1DataRepository extends Repository<number, Eth1DataOrdered> {
+export class Eth1DataRepository extends Repository<number, phase0.Eth1DataOrdered> {
   public constructor(config: IBeaconConfig, db: IDatabaseController<Buffer, Buffer>) {
-    super(config, db, Bucket.eth1Data, config.types.Eth1DataOrdered);
+    super(config, db, Bucket.phase0_eth1Data, config.types.phase0.Eth1DataOrdered);
   }
 
   public decodeKey(data: Buffer): number {
@@ -13,11 +13,11 @@ export class Eth1DataRepository extends Repository<number, Eth1DataOrdered> {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  public getId(value: Eth1Data): number {
+  public getId(value: phase0.Eth1Data): number {
     throw new Error("Unable to create timestamp from block hash");
   }
 
-  public async batchPutValues(eth1Datas: (Eth1DataOrdered & {timestamp: number})[]): Promise<void> {
+  public async batchPutValues(eth1Datas: (phase0.Eth1DataOrdered & {timestamp: number})[]): Promise<void> {
     await this.batchPut(
       eth1Datas.map((eth1Data) => ({
         key: eth1Data.timestamp,

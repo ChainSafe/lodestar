@@ -1,7 +1,7 @@
-import {BeaconState, Deposit} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 
 export interface IProcessDepositTestCase {
-  deposit: Deposit;
-  pre: BeaconState;
-  post?: BeaconState;
+  deposit: phase0.Deposit;
+  pre: phase0.BeaconState;
+  post?: phase0.BeaconState;
 }

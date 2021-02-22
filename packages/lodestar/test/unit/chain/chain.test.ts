@@ -3,7 +3,7 @@ import sinon, {SinonStubbedInstance} from "sinon";
 
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {bytesToInt, WinstonLogger} from "@chainsafe/lodestar-utils";
-import {phase0, createCachedValidatorsBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
+import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
 
 import {BeaconChain, IBeaconChain} from "../../../src/chain";
 import {defaultChainOptions} from "../../../src/chain/options";
@@ -20,7 +20,7 @@ describe("BeaconChain", function () {
   const logger = new WinstonLogger();
   let chain: IBeaconChain;
 
-  beforeEach(async () => {
+  beforeEach(() => {
     dbStub = new StubbedBeaconDb(sandbox);
     metrics = new BeaconMetrics({enabled: false} as any, {logger});
     const state = generateState();
@@ -29,28 +29,27 @@ describe("BeaconChain", function () {
     chain = new BeaconChain({opts: defaultChainOptions, config, db: dbStub, logger, metrics, anchorState: state});
     chain.stateCache = (sandbox.createStubInstance(StateContextCache) as unknown) as StateContextCache;
     (chain.stateCache as SinonStubbedInstance<StateContextCache> & StateContextCache).get.returns({
-      state: createCachedValidatorsBeaconState(state),
+      state: phase0.fast.createCachedValidatorsBeaconState(state),
       epochCtx: new phase0.fast.EpochContext(config),
     });
   });
 
-  afterEach(async () => {
-    await chain.close();
+  afterEach(() => {
+    chain.close();
     sandbox.restore();
   });
 
   describe("getENRForkID", () => {
-    it("should get enr fork id if not found next fork", async () => {
+    it("should get enr fork id if not found next fork", () => {
       chain.forkChoice.getHead = () => generateBlockSummary();
       const enrForkID = chain.getENRForkID();
       expect(config.types.Version.equals(enrForkID.nextForkVersion, Buffer.from([255, 255, 255, 255])));
       expect(enrForkID.nextForkEpoch === Number.MAX_SAFE_INTEGER);
       // it's possible to serialize enr fork id
-      config.types.ENRForkID.hashTreeRoot(enrForkID);
+      config.types.phase0.ENRForkID.hashTreeRoot(enrForkID);
     });
 
-    it("should get enr fork id if found next fork", async () => {
-      const backup = config.params.ALL_FORKS;
+    it("should get enr fork id if found next fork", () => {
       config.params.ALL_FORKS = [
         {
           currentVersion: 2,
@@ -63,8 +62,8 @@ describe("BeaconChain", function () {
       expect(config.types.Version.equals(enrForkID.nextForkVersion, Buffer.from([2, 0, 0, 0])));
       expect(enrForkID.nextForkEpoch === 100);
       // it's possible to serialize enr fork id
-      config.types.ENRForkID.hashTreeRoot(enrForkID);
-      config.params.ALL_FORKS = backup;
+      config.types.phase0.ENRForkID.hashTreeRoot(enrForkID);
+      config.params.ALL_FORKS = undefined!;
     });
   });
 });

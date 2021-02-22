@@ -1,7 +1,7 @@
 import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
-import {BeaconBlocksByRangeRequest, BeaconBlocksByRootRequest} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {LogLevel, WinstonLogger} from "@chainsafe/lodestar-utils";
 import {expect} from "chai";
 import Libp2p from "libp2p";
@@ -77,7 +77,7 @@ describe("[sync] rpc", function () {
     );
     forkChoiceStub.getFinalizedCheckpoint.returns({
       epoch: computeEpochAtSlot(config, block.message.slot),
-      root: config.types.BeaconBlock.hashTreeRoot(block.message),
+      root: config.types.phase0.BeaconBlock.hashTreeRoot(block.message),
     });
     libP2pA = await createNode(multiaddr);
     netA = new Libp2pNetwork(opts, {config, libp2p: libP2pA, logger, metrics, validator, chain});
@@ -127,8 +127,8 @@ describe("[sync] rpc", function () {
 
   it("hello handshake on peer connect with correct encoding", async function () {
     // A sends status request to B with ssz encoding
-    netA.peerMetadata.setEncoding(netB.peerId, ReqRespEncoding.SSZ_SNAPPY);
-    expect(netB.peerMetadata.getStatus(netA.peerId)).to.be.equal(null, "peer B should not have peer A status");
+    netA.peerMetadata.encoding.set(netB.peerId, ReqRespEncoding.SSZ_SNAPPY);
+    expect(netB.peerMetadata.status.get(netA.peerId), "peer B should not have peer A status").to.not.be.ok;
 
     const peersConnectedPromise = Promise.all([
       new Promise((resolve) => netA.once(NetworkEvent.peerConnect, resolve)),
@@ -141,19 +141,19 @@ describe("[sync] rpc", function () {
     expect(netB.hasPeer(netA.peerId)).to.equal(true, "peer B should have peer A");
 
     // Wait for peers to send each other a status request
-    while (netA.peerMetadata.getStatus(netB.peerId) === null || netB.peerMetadata.getStatus(netA.peerId) === null) {
+    while (!netA.peerMetadata.status.get(netB.peerId) || !netB.peerMetadata.status.get(netA.peerId)) {
       await new Promise((r) => setTimeout(r, 250));
     }
 
-    expect(netA.peerMetadata.getStatus(netB.peerId)).to.not.equal(null, "peer A should have peer B status");
-    expect(netB.peerMetadata.getStatus(netA.peerId)).to.not.equal(null, "peer B should have peer A status");
+    expect(netA.peerMetadata.status.get(netB.peerId), "peer A should have peer B status").to.be.ok;
+    expect(netB.peerMetadata.status.get(netA.peerId), "peer B should have peer A status").to.be.ok;
 
     // B should store A with ssz as preferred encoding
-    expect(netA.peerMetadata.getEncoding(netB.peerId)).to.be.equal(
+    expect(netA.peerMetadata.encoding.get(netB.peerId)).to.be.equal(
       ReqRespEncoding.SSZ_SNAPPY,
       "peer A should store peer B preferred encoding"
     );
-    expect(netB.peerMetadata.getEncoding(netA.peerId)).to.be.equal(
+    expect(netB.peerMetadata.encoding.get(netA.peerId)).to.be.equal(
       ReqRespEncoding.SSZ_SNAPPY,
       "peer B should store peer A preferred encoding"
     );
@@ -168,7 +168,7 @@ describe("[sync] rpc", function () {
     await peersConnectedPromise;
 
     // Wait for peers to send each other a status request
-    while (netA.peerMetadata.getStatus(netB.peerId) === null || netB.peerMetadata.getStatus(netA.peerId) === null) {
+    while (!netA.peerMetadata.status.get(netB.peerId) || !netB.peerMetadata.status.get(netA.peerId)) {
       await new Promise((r) => setTimeout(r, 250));
     }
 
@@ -192,17 +192,16 @@ describe("[sync] rpc", function () {
   });
 
   it("beacon block by root", async function () {
-    const request = [Buffer.alloc(32)] as BeaconBlocksByRootRequest;
+    const request = [Buffer.alloc(32)] as phase0.BeaconBlocksByRootRequest;
     await netA.connect(netB.peerId, netB.localMultiaddrs);
     const response = await netA.reqResp.beaconBlocksByRoot(netB.peerId, request);
-    if (!response) throw Error("beaconBlocksByRoot returned null");
     expect(response.length).to.equal(1);
     const block = response[0];
     expect(block.message.slot).to.equal(BLOCK_SLOT);
   });
 
   it("beacon blocks by range", async () => {
-    const request: BeaconBlocksByRangeRequest = {
+    const request: phase0.BeaconBlocksByRangeRequest = {
       startSlot: BLOCK_SLOT,
       count: 2,
       step: 1,

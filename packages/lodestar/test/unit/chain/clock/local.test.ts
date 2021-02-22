@@ -30,7 +30,7 @@ describe("LocalClock", function () {
     abortController.abort();
   });
 
-  it("Should notify on new slot", async function () {
+  it("Should notify on new slot", function () {
     const spy = sinon.spy();
     emitter.on(ChainEvent.clockSlot, spy);
     sandbox.clock.tick(config.params.SECONDS_PER_SLOT * 1000);
@@ -38,7 +38,7 @@ describe("LocalClock", function () {
     expect(spy.calledWith(clock.currentSlot)).to.be.true;
   });
 
-  it("Should notify on new epoch", async function () {
+  it("Should notify on new epoch", function () {
     const spy = sinon.spy();
     emitter.on(ChainEvent.clockEpoch, spy);
     sandbox.clock.tick(config.params.SLOTS_PER_EPOCH * config.params.SECONDS_PER_SLOT * 1000);

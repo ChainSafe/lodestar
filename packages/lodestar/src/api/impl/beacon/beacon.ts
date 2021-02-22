@@ -3,7 +3,7 @@
  */
 
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {Genesis, SignedBeaconBlock} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {LodestarEventIterator} from "@chainsafe/lodestar-utils";
 import {ChainEvent, IBeaconChain} from "../../../chain";
 import {IBeaconDb} from "../../../db/api";
@@ -41,7 +41,7 @@ export class BeaconApi implements IBeaconApi {
     this.pool = new BeaconPoolApi(opts, modules);
   }
 
-  public async getGenesis(): Promise<Genesis | null> {
+  public async getGenesis(): Promise<phase0.Genesis | null> {
     const state = this.chain.getHeadState();
     if (state) {
       return {
@@ -53,8 +53,8 @@ export class BeaconApi implements IBeaconApi {
     return null;
   }
 
-  public getBlockStream(): LodestarEventIterator<SignedBeaconBlock> {
-    return new LodestarEventIterator<SignedBeaconBlock>(({push}) => {
+  public getBlockStream(): LodestarEventIterator<phase0.SignedBeaconBlock> {
+    return new LodestarEventIterator<phase0.SignedBeaconBlock>(({push}) => {
       this.chain.emitter.on(ChainEvent.block, push);
       return () => {
         this.chain.emitter.off(ChainEvent.block, push);

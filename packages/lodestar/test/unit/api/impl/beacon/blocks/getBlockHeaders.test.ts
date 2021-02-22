@@ -46,7 +46,7 @@ describe("api - beacon - getBlockHeaders", function () {
       generateEmptyBlockSummary(),
       //canonical block summary
       deepmerge<IBlockSummary>(generateEmptyBlockSummary(), {
-        blockRoot: config.types.BeaconBlock.hashTreeRoot(generateEmptyBlock()),
+        blockRoot: config.types.phase0.BeaconBlock.hashTreeRoot(generateEmptyBlock()),
       }),
     ]);
     dbStub.block.get.resolves(deepmerge(generateEmptySignedBlock(), {message: {slot: 3}}));
@@ -54,8 +54,8 @@ describe("api - beacon - getBlockHeaders", function () {
     const blockHeaders = await blockApi.getBlockHeaders({});
     expect(blockHeaders).to.not.be.null;
     expect(blockHeaders.length).to.be.equal(2);
-    expect(() => config.types.SignedBeaconHeaderResponse.assertValidValue(blockHeaders[0])).to.not.throw;
-    expect(() => config.types.SignedBeaconHeaderResponse.assertValidValue(blockHeaders[1])).to.not.throw;
+    expect(() => config.types.phase0.SignedBeaconHeaderResponse.assertValidValue(blockHeaders[0])).to.not.throw;
+    expect(() => config.types.phase0.SignedBeaconHeaderResponse.assertValidValue(blockHeaders[1])).to.not.throw;
     expect(blockHeaders.filter((header) => header.canonical).length).to.be.equal(1);
     expect(forkChoiceStub.getHead.calledOnce).to.be.true;
     expect(chainStub.getCanonicalBlockAtSlot.calledOnce).to.be.true;
@@ -75,7 +75,7 @@ describe("api - beacon - getBlockHeaders", function () {
     forkChoiceStub.getBlockSummariesAtSlot.withArgs(0).returns([]);
     const blockHeaders = await blockApi.getBlockHeaders({slot: 0});
     expect(blockHeaders.length).to.be.equal(1);
-    expect(() => config.types.SignedBeaconHeaderResponse.assertValidValue(blockHeaders[0])).to.not.throw;
+    expect(() => config.types.phase0.SignedBeaconHeaderResponse.assertValidValue(blockHeaders[0])).to.not.throw;
     expect(blockHeaders[0].canonical).to.be.true;
   });
 
@@ -96,7 +96,7 @@ describe("api - beacon - getBlockHeaders", function () {
     forkChoiceStub.getCanonicalBlockSummaryAtSlot.withArgs(1).returns(generateBlockSummary());
     forkChoiceStub.getCanonicalBlockSummaryAtSlot
       .withArgs(2)
-      .returns(generateBlockSummary({blockRoot: config.types.BeaconBlock.hashTreeRoot(cannonical.message)}));
+      .returns(generateBlockSummary({blockRoot: config.types.phase0.BeaconBlock.hashTreeRoot(cannonical.message)}));
     dbStub.block.get.onFirstCall().resolves(generateSignedBlock({message: {slot: 1}}));
     dbStub.block.get.onSecondCall().resolves(generateSignedBlock({message: {slot: 2}}));
     const blockHeaders = await blockApi.getBlockHeaders({parentRoot: Buffer.alloc(32, 1)});
@@ -130,7 +130,7 @@ describe("api - beacon - getBlockHeaders", function () {
     forkChoiceStub.getCanonicalBlockSummaryAtSlot.withArgs(1).returns(generateBlockSummary());
     forkChoiceStub.getCanonicalBlockSummaryAtSlot
       .withArgs(2)
-      .returns(generateBlockSummary({blockRoot: config.types.BeaconBlock.hashTreeRoot(cannonical.message)}));
+      .returns(generateBlockSummary({blockRoot: config.types.phase0.BeaconBlock.hashTreeRoot(cannonical.message)}));
     dbStub.block.get.onFirstCall().resolves(generateSignedBlock({message: {slot: 1}}));
     dbStub.block.get.onSecondCall().resolves(generateSignedBlock({message: {slot: 2}}));
     const blockHeaders = await blockApi.getBlockHeaders({parentRoot: Buffer.alloc(32, 1), slot: 1});

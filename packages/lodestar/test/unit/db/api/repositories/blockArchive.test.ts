@@ -4,11 +4,10 @@ import {config} from "@chainsafe/lodestar-config/minimal";
 import {intToBytes} from "@chainsafe/lodestar-utils";
 import {LevelDbController, Bucket, encodeKey} from "@chainsafe/lodestar-db";
 
-import {generateEmptySignedBlock, generateEmptyLightclientSignedBlock} from "../../../../utils/block";
+import {generateEmptySignedBlock} from "../../../../utils/block";
 import {BlockArchiveRepository} from "../../../../../src/db/api/beacon/repositories";
 import sinon from "sinon";
 import {silentLogger} from "../../../../utils/logger";
-import {Lightclient} from "@chainsafe/lodestar-types";
 
 describe("block archive repository", function () {
   const testDir = "./.tmp";
@@ -35,8 +34,7 @@ describe("block archive repository", function () {
           key: slot,
           value: block,
         };
-      }),
-      config.params.GENESIS_FORK_VERSION
+      })
     );
     // test keys
     let lastSlot = 0;
@@ -115,13 +113,13 @@ describe("block archive repository", function () {
     await blockArchive.add(block);
     expect(
       spy.withArgs(
-        encodeKey(Bucket.blockArchiveRootIndex, config.types.BeaconBlock.hashTreeRoot(block.message)),
+        encodeKey(Bucket.index_blockArchiveRootIndex, config.types.phase0.BeaconBlock.hashTreeRoot(block.message)),
         intToBytes(block.message.slot, 64, "be")
       ).calledOnce
     ).to.be.true;
     expect(
       spy.withArgs(
-        encodeKey(Bucket.blockArchiveParentRootIndex, block.message.parentRoot.valueOf() as Uint8Array),
+        encodeKey(Bucket.index_blockArchiveParentRootIndex, block.message.parentRoot.valueOf() as Uint8Array),
         intToBytes(block.message.slot, 64, "be")
       ).calledOnce
     ).to.be.true;
@@ -129,20 +127,17 @@ describe("block archive repository", function () {
 
   it("should store indexes when block batch", async function () {
     const spy = sinon.spy(controller, "put");
-    const blocks = [generateEmptyLightclientSignedBlock(), generateEmptyLightclientSignedBlock()];
-    await blockArchive.batchPut(
-      blocks.map((block) => ({key: block.message.slot, value: block})),
-      config.params.GENESIS_FORK_VERSION
-    );
+    const blocks = [generateEmptySignedBlock(), generateEmptySignedBlock()];
+    await blockArchive.batchAdd(blocks);
     expect(
       spy.withArgs(
-        encodeKey(Bucket.blockArchiveRootIndex, config.types.BeaconBlock.hashTreeRoot(blocks[0].message)),
+        encodeKey(Bucket.index_blockArchiveRootIndex, config.types.phase0.BeaconBlock.hashTreeRoot(blocks[0].message)),
         intToBytes(blocks[0].message.slot, 64, "be")
       ).calledTwice
     ).to.be.true;
     expect(
       spy.withArgs(
-        encodeKey(Bucket.blockArchiveParentRootIndex, blocks[0].message.parentRoot.valueOf() as Uint8Array),
+        encodeKey(Bucket.index_blockArchiveParentRootIndex, blocks[0].message.parentRoot.valueOf() as Uint8Array),
         intToBytes(blocks[0].message.slot, 64, "be")
       ).calledTwice
     ).to.be.true;
@@ -151,32 +146,30 @@ describe("block archive repository", function () {
   it("should get slot by root", async function () {
     const block = generateEmptySignedBlock();
     await blockArchive.add(block);
-    const slot = await blockArchive.getSlotByRoot(config.types.BeaconBlock.hashTreeRoot(block.message));
+    const slot = await blockArchive.getSlotByRoot(config.types.phase0.BeaconBlock.hashTreeRoot(block.message));
     expect(slot).to.equal(block.message.slot);
   });
 
   it("should get block by root", async function () {
     const block = generateEmptySignedBlock();
     await blockArchive.add(block);
-    const retrieved = (await blockArchive.getByRoot(
-      config.types.BeaconBlock.hashTreeRoot(block.message)
-    )) as Lightclient.SignedBeaconBlock | null;
+    const retrieved = await blockArchive.getByRoot(config.types.phase0.BeaconBlock.hashTreeRoot(block.message));
     if (!retrieved) throw Error("getByRoot returned null");
-    expect(config.types.SignedBeaconBlock.equals(retrieved, block)).to.be.true;
+    expect(config.types.phase0.SignedBeaconBlock.equals(retrieved, block)).to.be.true;
   });
 
   it("should get slot by parent root", async function () {
-    const block = generateEmptyLightclientSignedBlock();
+    const block = generateEmptySignedBlock();
     await blockArchive.add(block);
     const slot = await blockArchive.getSlotByParentRoot(block.message.parentRoot);
     expect(slot).to.equal(block.message.slot);
   });
 
   it("should get block by parent root", async function () {
-    const block = generateEmptyLightclientSignedBlock();
+    const block = generateEmptySignedBlock();
     await blockArchive.add(block);
     const retrieved = await blockArchive.getByParentRoot(block.message.parentRoot);
     if (!retrieved) throw Error("getByRoot returned null");
-    expect(config.types.SignedBeaconBlock.equals(retrieved, block)).to.be.true;
+    expect(config.types.phase0.SignedBeaconBlock.equals(retrieved, block)).to.be.true;
   });
 });

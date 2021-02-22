@@ -1,11 +1,11 @@
 import PeerId from "peer-id";
-import {Checkpoint, Status} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {getSyncProtocols, INetwork} from "../../network";
 import {toHexString} from "@chainsafe/ssz";
 
 export interface IPeerWithMetadata {
   peerId: PeerId;
-  status: Status;
+  status: phase0.Status;
   score: number;
 }
 
@@ -15,7 +15,7 @@ export interface IPeerWithMetadata {
  * - their score > minScore
  * - status = most common finalied checkpoint
  */
-export function getPeersInitialSync(network: INetwork, minScore = 60): IPeersByCheckpoint<Checkpoint> | null {
+export function getPeersInitialSync(network: INetwork, minScore = 60): IPeersByCheckpoint<phase0.Checkpoint> | null {
   const peers = getPeersThatSupportSync(network);
   const goodPeers = peers.filter((peer) => peer.score > minScore);
   return getPeersByMostCommonFinalizedCheckpoint(goodPeers);
@@ -26,7 +26,7 @@ function getPeersThatSupportSync(network: INetwork): IPeerWithMetadata[] {
 
   for (const libp2pPeer of network.getPeers({supportsProtocols: getSyncProtocols()})) {
     const peerId = libp2pPeer.id;
-    const status = network.peerMetadata.getStatus(peerId);
+    const status = network.peerMetadata.status.get(peerId);
     const score = network.peerRpcScores.getScore(peerId);
     if (status) {
       peers.push({peerId, status, score});
@@ -45,7 +45,7 @@ function getPeersThatSupportSync(network: INetwork): IPeerWithMetadata[] {
  */
 export function getPeersByMostCommonFinalizedCheckpoint(
   peers: IPeerWithMetadata[]
-): IPeersByCheckpoint<Checkpoint> | null {
+): IPeersByCheckpoint<phase0.Checkpoint> | null {
   const peersByCheckpoint = groupPeersByCheckpoint(
     peers,
     (peer) => ({epoch: peer.status.finalizedEpoch, root: peer.status.finalizedRoot}),

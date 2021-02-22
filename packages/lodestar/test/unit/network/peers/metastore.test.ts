@@ -4,7 +4,7 @@ import sinon, {SinonStub, SinonStubbedInstance} from "sinon";
 import {ReqRespEncoding} from "../../../../src/constants";
 import {expect} from "chai";
 import PeerId from "peer-id";
-import {Metadata, Status} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 
 describe("Libp2pPeerMetadataStore", function () {
   let metabookStub: SinonStubbedInstance<MetadataBook>;
@@ -33,44 +33,44 @@ describe("Libp2pPeerMetadataStore", function () {
   it("can store and retrieve encoding", function () {
     const store = new Libp2pPeerMetadataStore(config, metabookStub);
     const value = ReqRespEncoding.SSZ_SNAPPY;
-    store.setEncoding(peerId, value);
-    const result = store.getEncoding(peerId);
+    store.encoding.set(peerId, value);
+    const result = store.encoding.get(peerId);
 
     expect(result).to.be.equal(value);
   });
 
   it("can store and retrieve status", function () {
     const store = new Libp2pPeerMetadataStore(config, metabookStub);
-    const value: Status = {
+    const value: phase0.Status = {
       finalizedEpoch: 1,
       finalizedRoot: Buffer.alloc(32, 1),
       forkDigest: Buffer.alloc(4),
       headRoot: Buffer.alloc(32, 2),
       headSlot: 10,
     };
-    store.setStatus(peerId, value);
-    const result = store.getStatus(peerId);
+    store.status.set(peerId, value);
+    const result = store.status.get(peerId);
 
-    expect(config.types.Status.equals(result as Status, value)).to.be.true;
+    expect(config.types.phase0.Status.equals(result as phase0.Status, value)).to.be.true;
   });
 
   it("can store and retrieve metadata", function () {
     const store = new Libp2pPeerMetadataStore(config, metabookStub);
-    const value: Metadata = {
+    const value: phase0.Metadata = {
       attnets: Array.from({length: 64}, () => true),
       seqNumber: BigInt(20),
     };
-    store.setMetadata(peerId, value);
-    const result = store.getMetadata(peerId);
+    store.metadata.set(peerId, value);
+    const result = store.metadata.get(peerId);
 
-    expect(config.types.Metadata.equals(result as Metadata, value)).to.be.true;
+    expect(config.types.phase0.Metadata.equals(result as phase0.Metadata, value)).to.be.true;
   });
 
   it("can store and retrieve score", function () {
     const store = new Libp2pPeerMetadataStore(config, metabookStub);
     const value = 80;
-    store.setRpcScore(peerId, value);
-    const result = store.getRpcScore(peerId);
+    store.rpcScore.set(peerId, value);
+    const result = store.rpcScore.get(peerId);
 
     expect(config.types.Number64.equals(result as number, value)).to.be.true;
   });

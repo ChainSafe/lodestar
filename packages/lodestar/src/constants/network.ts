@@ -59,35 +59,37 @@ export enum MethodResponseType {
 // eslint-disable-next-line @typescript-eslint/naming-convention
 export const Methods = {
   [Method.Status]: {
-    requestSSZType: (config: IBeaconConfig): typeof config.types.Status => config.types.Status,
-    responseSSZType: (config: IBeaconConfig): typeof config.types.Status => config.types.Status,
+    requestSSZType: (config: IBeaconConfig): typeof config.types.phase0.Status => config.types.phase0.Status,
+    responseSSZType: (config: IBeaconConfig): typeof config.types.phase0.Status => config.types.phase0.Status,
     responseType: MethodResponseType.SingleResponse,
   },
   [Method.Goodbye]: {
-    requestSSZType: (config: IBeaconConfig): typeof config.types.Goodbye => config.types.Goodbye,
-    responseSSZType: (config: IBeaconConfig): typeof config.types.Goodbye => config.types.Goodbye,
+    requestSSZType: (config: IBeaconConfig): typeof config.types.phase0.Goodbye => config.types.phase0.Goodbye,
+    responseSSZType: (config: IBeaconConfig): typeof config.types.phase0.Goodbye => config.types.phase0.Goodbye,
     responseType: MethodResponseType.SingleResponse,
   },
   [Method.Ping]: {
-    requestSSZType: (config: IBeaconConfig): typeof config.types.Ping => config.types.Ping,
-    responseSSZType: (config: IBeaconConfig): typeof config.types.Ping => config.types.Ping,
+    requestSSZType: (config: IBeaconConfig): typeof config.types.phase0.Ping => config.types.phase0.Ping,
+    responseSSZType: (config: IBeaconConfig): typeof config.types.phase0.Ping => config.types.phase0.Ping,
     responseType: MethodResponseType.SingleResponse,
   },
   [Method.Metadata]: {
     requestSSZType: (): null => null,
-    responseSSZType: (config: IBeaconConfig): typeof config.types.Metadata => config.types.Metadata,
+    responseSSZType: (config: IBeaconConfig): typeof config.types.phase0.Metadata => config.types.phase0.Metadata,
     responseType: MethodResponseType.SingleResponse,
   },
   [Method.BeaconBlocksByRange]: {
-    requestSSZType: (config: IBeaconConfig): typeof config.types.BeaconBlocksByRangeRequest =>
-      config.types.BeaconBlocksByRangeRequest,
-    responseSSZType: (config: IBeaconConfig): typeof config.types.SignedBeaconBlock => config.types.SignedBeaconBlock,
+    requestSSZType: (config: IBeaconConfig): typeof config.types.phase0.BeaconBlocksByRangeRequest =>
+      config.types.phase0.BeaconBlocksByRangeRequest,
+    responseSSZType: (config: IBeaconConfig): typeof config.types.phase0.SignedBeaconBlock =>
+      config.types.phase0.SignedBeaconBlock,
     responseType: MethodResponseType.Stream,
   },
   [Method.BeaconBlocksByRoot]: {
-    requestSSZType: (config: IBeaconConfig): typeof config.types.BeaconBlocksByRootRequest =>
-      config.types.BeaconBlocksByRootRequest,
-    responseSSZType: (config: IBeaconConfig): typeof config.types.SignedBeaconBlock => config.types.SignedBeaconBlock,
+    requestSSZType: (config: IBeaconConfig): typeof config.types.phase0.BeaconBlocksByRootRequest =>
+      config.types.phase0.BeaconBlocksByRootRequest,
+    responseSSZType: (config: IBeaconConfig): typeof config.types.phase0.SignedBeaconBlock =>
+      config.types.phase0.SignedBeaconBlock,
     responseType: MethodResponseType.Stream,
   },
 };

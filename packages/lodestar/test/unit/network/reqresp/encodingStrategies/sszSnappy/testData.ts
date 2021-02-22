@@ -1,15 +1,6 @@
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {fromHexString, List} from "@chainsafe/ssz";
-import {
-  Ping,
-  SignedBeaconBlock,
-  Status,
-  ProposerSlashing,
-  AttesterSlashing,
-  Attestation,
-  Deposit,
-  SignedVoluntaryExit,
-} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {RequestOrResponseBody, RequestOrResponseType} from "../../../../../../src/network";
 
 // This test data generated with code from 'master' at Jan 1st 2021
@@ -22,9 +13,9 @@ export interface ISszSnappyTestData<T extends RequestOrResponseBody> {
   chunks: Buffer[];
 }
 
-export const sszSnappyPing: ISszSnappyTestData<Ping> = {
+export const sszSnappyPing: ISszSnappyTestData<phase0.Ping> = {
   id: "Ping type",
-  type: config.types.Ping,
+  type: config.types.phase0.Ping,
   body: BigInt(1),
   chunks: [
     "0x08", // length prefix
@@ -33,9 +24,9 @@ export const sszSnappyPing: ISszSnappyTestData<Ping> = {
   ].map(fromHexString) as Buffer[],
 };
 
-export const sszSnappyStatus: ISszSnappyTestData<Status> = {
+export const sszSnappyStatus: ISszSnappyTestData<phase0.Status> = {
   id: "Status type",
-  type: config.types.Status,
+  type: config.types.phase0.Status,
   body: {
     forkDigest: Buffer.alloc(4, 0xda),
     finalizedRoot: Buffer.alloc(32, 0xda),
@@ -50,9 +41,9 @@ export const sszSnappyStatus: ISszSnappyTestData<Status> = {
   ].map(fromHexString) as Buffer[],
 };
 
-export const sszSnappySignedBlock: ISszSnappyTestData<SignedBeaconBlock> = {
+export const sszSnappySignedBlock: ISszSnappyTestData<phase0.SignedBeaconBlock> = {
   id: "SignedBeaconBlock type",
-  type: config.types.SignedBeaconBlock,
+  type: config.types.phase0.SignedBeaconBlock,
   body: {
     message: {
       slot: 9,
@@ -67,11 +58,11 @@ export const sszSnappySignedBlock: ISszSnappyTestData<SignedBeaconBlock> = {
           depositCount: 9,
         },
         graffiti: Buffer.alloc(32, 0xda),
-        proposerSlashings: ([] as ProposerSlashing[]) as List<ProposerSlashing>,
-        attesterSlashings: ([] as AttesterSlashing[]) as List<AttesterSlashing>,
-        attestations: ([] as Attestation[]) as List<Attestation>,
-        deposits: ([] as Deposit[]) as List<Deposit>,
-        voluntaryExits: ([] as SignedVoluntaryExit[]) as List<SignedVoluntaryExit>,
+        proposerSlashings: ([] as phase0.ProposerSlashing[]) as List<phase0.ProposerSlashing>,
+        attesterSlashings: ([] as phase0.AttesterSlashing[]) as List<phase0.AttesterSlashing>,
+        attestations: ([] as phase0.Attestation[]) as List<phase0.Attestation>,
+        deposits: ([] as phase0.Deposit[]) as List<phase0.Deposit>,
+        voluntaryExits: ([] as phase0.SignedVoluntaryExit[]) as List<phase0.SignedVoluntaryExit>,
       },
     },
     signature: Buffer.alloc(96, 0xda),

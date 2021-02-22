@@ -1,19 +1,24 @@
 import {TreeBacked, CompositeType} from "@chainsafe/ssz";
-import {BeaconState, Epoch, Root, Slot} from "@chainsafe/lodestar-types";
+import {phase0, Epoch, Root, Slot} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {bytesToInt, intToBytes} from "@chainsafe/lodestar-utils";
 import {IDatabaseController, Bucket, Repository, encodeKey} from "@chainsafe/lodestar-db";
 
-export class StateArchiveRepository extends Repository<Slot, TreeBacked<BeaconState>> {
+export class StateArchiveRepository extends Repository<Slot, TreeBacked<phase0.BeaconState>> {
   public constructor(config: IBeaconConfig, db: IDatabaseController<Buffer, Buffer>) {
-    super(config, db, Bucket.state, (config.types.BeaconState as unknown) as CompositeType<TreeBacked<BeaconState>>);
+    super(
+      config,
+      db,
+      Bucket.phase0_stateArchive,
+      (config.types.phase0.BeaconState as unknown) as CompositeType<TreeBacked<phase0.BeaconState>>
+    );
   }
 
-  public async put(key: Slot, value: TreeBacked<BeaconState>): Promise<void> {
+  public async put(key: Slot, value: TreeBacked<phase0.BeaconState>): Promise<void> {
     await Promise.all([super.put(key, value), this.storeRootIndex(key, value.hashTreeRoot())]);
   }
 
-  public getId(state: TreeBacked<BeaconState>): Epoch {
+  public getId(state: TreeBacked<phase0.BeaconState>): Epoch {
     return state.slot;
   }
 
@@ -21,11 +26,11 @@ export class StateArchiveRepository extends Repository<Slot, TreeBacked<BeaconSt
     return bytesToInt((super.decodeKey(data) as unknown) as Uint8Array, "be");
   }
 
-  public decodeValue(data: Buffer): TreeBacked<BeaconState> {
-    return ((this.type as unknown) as CompositeType<BeaconState>).tree.deserialize(data);
+  public decodeValue(data: Buffer): TreeBacked<phase0.BeaconState> {
+    return ((this.type as unknown) as CompositeType<phase0.BeaconState>).tree.deserialize(data);
   }
 
-  public async getByRoot(stateRoot: Root): Promise<TreeBacked<BeaconState> | null> {
+  public async getByRoot(stateRoot: Root): Promise<TreeBacked<phase0.BeaconState> | null> {
     const slot = await this.getSlotByRoot(stateRoot);
     if (slot !== null && Number.isInteger(slot)) {
       return this.get(slot);
@@ -46,6 +51,6 @@ export class StateArchiveRepository extends Repository<Slot, TreeBacked<BeaconSt
   }
 
   private getRootIndexKey(root: Root): Buffer {
-    return encodeKey(Bucket.stateArchiveRootIndex, root.valueOf() as Uint8Array);
+    return encodeKey(Bucket.index_stateArchiveRootIndex, root.valueOf() as Uint8Array);
   }
 }

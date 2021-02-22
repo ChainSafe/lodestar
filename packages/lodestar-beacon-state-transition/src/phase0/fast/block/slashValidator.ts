@@ -1,8 +1,7 @@
 import {ValidatorIndex} from "@chainsafe/lodestar-types";
 
 import {decreaseBalance, increaseBalance} from "../../../util";
-import {EpochContext} from "../util";
-import {CachedValidatorsBeaconState} from "../../..";
+import {CachedValidatorsBeaconState, EpochContext} from "../util";
 import {initiateValidatorExit} from "./initiateValidatorExit";
 
 export function slashValidator(

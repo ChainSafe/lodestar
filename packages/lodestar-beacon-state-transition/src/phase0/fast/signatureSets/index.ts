@@ -1,7 +1,6 @@
-import {BeaconState, SignedBeaconBlock} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {getRandaoRevealSignatureSet} from "../block/processRandao";
-import {getBlockSignatureSet} from "../util/block";
-import {EpochContext} from "../index";
+import {EpochContext, getBlockSignatureSet} from "../util";
 import {ISignatureSet} from "./types";
 import {getProposerSlashingsSignatureSets} from "./proposerSlashings";
 import {getAttesterSlashingsSignatureSets} from "./attesterSlashings";
@@ -17,8 +16,8 @@ export * from "./verify";
  */
 export function getAllBlockSignatureSets(
   epochCtx: EpochContext,
-  state: BeaconState,
-  signedBlock: SignedBeaconBlock
+  state: phase0.BeaconState,
+  signedBlock: phase0.SignedBeaconBlock
 ): ISignatureSet[] {
   return [
     getBlockSignatureSet(epochCtx, state, signedBlock),
@@ -32,8 +31,8 @@ export function getAllBlockSignatureSets(
  */
 export function getAllBlockSignatureSetsExceptProposer(
   epochCtx: EpochContext,
-  state: BeaconState,
-  signedBlock: SignedBeaconBlock
+  state: phase0.BeaconState,
+  signedBlock: phase0.SignedBeaconBlock
 ): ISignatureSet[] {
   return [
     getRandaoRevealSignatureSet(epochCtx, state, signedBlock.message),

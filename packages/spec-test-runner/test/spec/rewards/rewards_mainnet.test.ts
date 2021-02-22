@@ -30,7 +30,7 @@ for (const testSuite of ["basic", "leak", "random"]) {
         meta: InputType.YAML,
       },
       sszTypes: {
-        pre: config.types.BeaconState,
+        pre: config.types.phase0.BeaconState,
         ...generateSZZTypeMapping(),
       },
       timeout: 100000000,

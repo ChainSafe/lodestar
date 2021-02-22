@@ -2,8 +2,7 @@ import {ValidatorIndex} from "@chainsafe/lodestar-types";
 
 import {FAR_FUTURE_EPOCH} from "../../../constants";
 import {computeActivationExitEpoch, getChurnLimit} from "../../../util";
-import {EpochContext} from "../util";
-import {CachedValidatorsBeaconState} from "../../..";
+import {CachedValidatorsBeaconState, EpochContext} from "../util";
 
 /**
  * Initiate the exit of the validator with index ``index``.

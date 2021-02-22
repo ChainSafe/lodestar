@@ -1,4 +1,4 @@
-import {Root, Eth1Data, DepositEvent, Eth1Block} from "@chainsafe/lodestar-types";
+import {Root, phase0} from "@chainsafe/lodestar-types";
 import {List, TreeBacked} from "@chainsafe/ssz";
 import {getTreeAtIndex} from "../../util/tree";
 import {binarySearchLte} from "../../util/binarySearch";
@@ -8,11 +8,11 @@ import {binarySearchLte} from "../../util/binarySearch";
  * eth1 data deposit is inferred from sparse eth1 data obtained from the deposit logs
  */
 export async function getEth1DataForBlocks(
-  blocks: Eth1Block[],
-  depositDescendingStream: AsyncIterable<DepositEvent>,
+  blocks: phase0.Eth1Block[],
+  depositDescendingStream: AsyncIterable<phase0.DepositEvent>,
   depositRootTree: TreeBacked<List<Root>>,
   lastProcessedDepositBlockNumber: number | null
-): Promise<(Eth1Data & Eth1Block)[]> {
+): Promise<(phase0.Eth1Data & phase0.Eth1Block)[]> {
   // Exclude blocks for which there is no valid eth1 data deposit
   if (lastProcessedDepositBlockNumber) {
     blocks = blocks.filter((block) => block.blockNumber <= lastProcessedDepositBlockNumber);
@@ -35,7 +35,7 @@ export async function getEth1DataForBlocks(
   const depositCounts = depositsByBlockNumber.map((event) => event.index + 1);
   const depositRootByDepositCount = getDepositRootByDepositCount(depositCounts, depositRootTree);
 
-  const eth1Datas: (Eth1Data & Eth1Block)[] = [];
+  const eth1Datas: (phase0.Eth1Data & phase0.Eth1Block)[] = [];
   for (const block of blocks) {
     const deposit = binarySearchLte(depositsByBlockNumber, block.blockNumber, (event) => event.blockNumber);
     const depositCount = deposit.index + 1;
@@ -55,9 +55,9 @@ export async function getEth1DataForBlocks(
 export async function getDepositsByBlockNumber(
   fromBlock: number,
   toBlock: number,
-  depositEventDescendingStream: AsyncIterable<DepositEvent>
-): Promise<DepositEvent[]> {
-  const depositCountMap = new Map<number, DepositEvent>();
+  depositEventDescendingStream: AsyncIterable<phase0.DepositEvent>
+): Promise<phase0.DepositEvent[]> {
+  const depositCountMap = new Map<number, phase0.DepositEvent>();
   // Take blocks until the block under the range lower bound (included)
   for await (const deposit of depositEventDescendingStream) {
     if (deposit.blockNumber <= toBlock && !depositCountMap.has(deposit.blockNumber)) {

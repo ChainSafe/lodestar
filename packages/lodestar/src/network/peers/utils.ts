@@ -1,10 +1,10 @@
-import {IPeerMetadataStore} from "./interface";
+import {IPeerMetadataStore} from "./metastore";
 import PeerId from "peer-id";
 import {ATTESTATION_SUBNET_COUNT} from "../../constants";
 import {INetwork} from "../interface";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {getSyncProtocols} from "../util";
-import {notNullish} from "@chainsafe/lodestar-utils/src/notNullish";
+import {notNullish} from "@chainsafe/lodestar-utils";
 import {getSyncPeers} from "../../sync/utils/peers";
 
 /**
@@ -25,7 +25,7 @@ export function getPeerCountBySubnet(
       throw new Error(`Invalid subnet ${subnetStr}`);
     }
     const peers = connectedPeers.filter((peer) => {
-      const meta = peerMetadata.getMetadata(peer);
+      const meta = peerMetadata.metadata.get(peer);
       // remove if no metadata or not in subnet
       return !(!meta || !meta.attnets[subnet]);
     });
@@ -41,12 +41,11 @@ export async function handlePeerMetadataSequence(
   peer: PeerId,
   metadataSeq: BigInt | null
 ): Promise<void> {
-  const latestMetadata = network.peerMetadata.getMetadata(peer);
+  const latestMetadata = network.peerMetadata.metadata.get(peer);
   if (notNullish(metadataSeq) && (!latestMetadata || latestMetadata.seqNumber < metadataSeq)) {
     try {
       logger.verbose("Getting peer metadata", {peer: peer.toB58String()});
-      const metadata = await network.reqResp.metadata(peer);
-      network.peerMetadata.setMetadata(peer, metadata);
+      network.peerMetadata.metadata.set(peer, await network.reqResp.metadata(peer));
     } catch (e) {
       logger.verbose("Cannot get peer metadata", {peer: peer.toB58String(), e: e.message});
     }
@@ -63,7 +62,7 @@ export async function handlePeerMetadataSequence(
  */
 export function findMissingSubnets(connectedPeers: PeerId[], network: INetwork): number[] {
   const attNets = connectedPeers
-    .map((peer) => network.peerMetadata.getMetadata(peer))
+    .map((peer) => network.peerMetadata.metadata.get(peer))
     .filter((metadata) => !!metadata)
     .map((metadata) => (metadata ? metadata.attnets : []));
 
@@ -148,8 +147,8 @@ export function gossipPeersToDisconnect(
 
   // worse peer on top
   const sortedPeers = candidatePeers.sort((peer1, peer2) => {
-    const peer1Meta = network.peerMetadata.getMetadata(peer1);
-    const peer2Meta = network.peerMetadata.getMetadata(peer2);
+    const peer1Meta = network.peerMetadata.metadata.get(peer1);
+    const peer2Meta = network.peerMetadata.metadata.get(peer2);
 
     if (syncPeers.includes(peer1) && !syncPeers.includes(peer2)) return 1;
     if (!syncPeers.includes(peer1) && syncPeers.includes(peer2)) return -1;
@@ -181,7 +180,7 @@ export function getImportantPeers(peers: PeerId[], peerMetadata: IPeerMetadataSt
     let count = 0;
     let candidatePeer: PeerId | null = null;
     for (const peer of peers) {
-      const latestMetadata = peerMetadata.getMetadata(peer);
+      const latestMetadata = peerMetadata.metadata.get(peer);
       if (latestMetadata && latestMetadata.attnets[subnet]) {
         candidatePeer = peer;
         count++;

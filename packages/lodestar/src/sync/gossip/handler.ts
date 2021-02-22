@@ -1,14 +1,7 @@
 import {IGossipHandler} from "./interface";
 import {GossipEvent} from "../../network/gossip/constants";
 import {INetwork} from "../../network";
-import {
-  AttesterSlashing,
-  ProposerSlashing,
-  SignedAggregateAndProof,
-  SignedBeaconBlock,
-  SignedVoluntaryExit,
-  ForkDigest,
-} from "@chainsafe/lodestar-types";
+import {phase0, ForkDigest} from "@chainsafe/lodestar-types";
 import {ChainEvent, IBeaconChain} from "../../chain";
 import {IBeaconDb} from "../../db";
 import {toHexString} from "@chainsafe/ssz";
@@ -28,13 +21,13 @@ export class BeaconGossipHandler implements IGossipHandler {
     this.logger = logger;
   }
 
-  public async start(): Promise<void> {
+  public start(): void {
     this.currentForkDigest = this.chain.getForkDigest();
     this.subscribeBlockAndAttestation(this.currentForkDigest);
     this.chain.emitter.on(ChainEvent.forkVersion, this.handleForkVersion);
   }
 
-  public async stop(): Promise<void> {
+  public stop(): void {
     this.unsubscribe(this.currentForkDigest);
     this.chain.emitter.off(ChainEvent.forkVersion, this.handleForkVersion);
   }
@@ -43,7 +36,7 @@ export class BeaconGossipHandler implements IGossipHandler {
     this.subscribeValidatorTopics(this.currentForkDigest);
   }
 
-  private handleForkVersion = async (): Promise<void> => {
+  private handleForkVersion = (): void => {
     const forkDigest = this.chain.getForkDigest();
     this.logger.important(`Gossip handler: received new fork digest ${toHexString(forkDigest)}`);
     this.unsubscribe(this.currentForkDigest);
@@ -75,23 +68,23 @@ export class BeaconGossipHandler implements IGossipHandler {
     this.network.gossip.unsubscribe(forkDigest, GossipEvent.VOLUNTARY_EXIT, this.onVoluntaryExit);
   };
 
-  private onBlock = async (block: SignedBeaconBlock): Promise<void> => {
-    await this.chain.receiveBlock(block);
+  private onBlock = (block: phase0.SignedBeaconBlock): void => {
+    this.chain.receiveBlock(block);
   };
 
-  private onAggregatedAttestation = async (aggregate: SignedAggregateAndProof): Promise<void> => {
+  private onAggregatedAttestation = async (aggregate: phase0.SignedAggregateAndProof): Promise<void> => {
     await this.db.aggregateAndProof.add(aggregate.message);
   };
 
-  private onAttesterSlashing = async (attesterSlashing: AttesterSlashing): Promise<void> => {
+  private onAttesterSlashing = async (attesterSlashing: phase0.AttesterSlashing): Promise<void> => {
     await this.db.attesterSlashing.add(attesterSlashing);
   };
 
-  private onProposerSlashing = async (proposerSlashing: ProposerSlashing): Promise<void> => {
+  private onProposerSlashing = async (proposerSlashing: phase0.ProposerSlashing): Promise<void> => {
     await this.db.proposerSlashing.add(proposerSlashing);
   };
 
-  private onVoluntaryExit = async (exit: SignedVoluntaryExit): Promise<void> => {
+  private onVoluntaryExit = async (exit: phase0.SignedVoluntaryExit): Promise<void> => {
     await this.db.voluntaryExit.add(exit);
   };
 }

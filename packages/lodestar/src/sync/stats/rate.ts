@@ -20,12 +20,12 @@ export class RateCounter {
     this.since = Date.now();
   }
 
-  public async start(): Promise<void> {
+  public start(): void {
     this.resetRate();
     this.timer = setInterval(this.resetRate, this.timePeriod * 1000);
   }
 
-  public async stop(): Promise<void> {
+  public stop(): void {
     if (this.timer) {
       clearInterval(this.timer);
     }

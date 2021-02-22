@@ -1,13 +1,5 @@
 import {List} from "@chainsafe/ssz";
-import {
-  Attestation,
-  AttesterSlashing,
-  BeaconBlockBody,
-  BeaconState,
-  Deposit,
-  ProposerSlashing,
-  SignedVoluntaryExit,
-} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {assert} from "@chainsafe/lodestar-utils";
 
@@ -23,12 +15,17 @@ export * from "./attestation";
 export * from "./deposit";
 export * from "./voluntaryExit";
 
-type Operation = ProposerSlashing | AttesterSlashing | Attestation | Deposit | SignedVoluntaryExit;
+type Operation =
+  | phase0.ProposerSlashing
+  | phase0.AttesterSlashing
+  | phase0.Attestation
+  | phase0.Deposit
+  | phase0.SignedVoluntaryExit;
 
 export function processOperations(
   config: IBeaconConfig,
-  state: BeaconState,
-  body: BeaconBlockBody,
+  state: phase0.BeaconState,
+  body: phase0.BeaconBlockBody,
   verifySignatures = true
 ): void {
   // Verify that outstanding deposits are processed up to the maximum number of deposits
@@ -41,7 +38,7 @@ export function processOperations(
     operations: List<Operation>;
     maxOperations: number;
     /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
-    func: (config: IBeaconConfig, state: BeaconState, operation: any, verifySignatures: boolean) => void;
+    func: (config: IBeaconConfig, state: phase0.BeaconState, operation: any, verifySignatures: boolean) => void;
     verifySignatures: boolean;
   }[] = [
     {

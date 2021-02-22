@@ -13,7 +13,7 @@ export const getBlockAttestations: ApiController<DefaultQuery, {blockId: string}
       }
       return resp.status(200).send({
         data: Array.from(data.message.body.attestations).map((attestations) => {
-          this.config.types.Attestation.toJson(attestations, {case: "snake"});
+          this.config.types.phase0.Attestation.toJson(attestations, {case: "snake"});
         }),
       });
     } catch (e) {

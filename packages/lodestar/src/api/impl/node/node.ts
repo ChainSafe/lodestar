@@ -1,4 +1,4 @@
-import {SyncingStatus} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {createKeypairFromPeerId} from "@chainsafe/discv5";
 
 import {NodeIdentity, NodePeer} from "../../types";
@@ -25,11 +25,11 @@ export class NodeApi implements INodeApi {
   public async getNodeIdentity(): Promise<NodeIdentity> {
     const enr = this.network.getEnr();
     const keypair = createKeypairFromPeerId(this.network.peerId);
-    const discoveryAddresses = [] as string[];
-    // eslint-disable-next-line @typescript-eslint/no-non-null-asserted-optional-chain
-    if (enr?.getLocationMultiaddr("tcp")) discoveryAddresses.push(enr?.getLocationMultiaddr("tcp")?.toString()!);
-    // eslint-disable-next-line @typescript-eslint/no-non-null-asserted-optional-chain
-    if (enr?.getLocationMultiaddr("udp")) discoveryAddresses.push(enr?.getLocationMultiaddr("udp")?.toString()!);
+    const discoveryAddresses = [
+      enr?.getLocationMultiaddr("tcp")?.toString() ?? null,
+      enr?.getLocationMultiaddr("udp")?.toString() ?? null,
+    ].filter((addr): addr is string => Boolean(addr));
+
     return {
       peerId: this.network.peerId.toB58String(),
       enr: enr?.encodeTxt(keypair.privateKey) || "",
@@ -69,7 +69,7 @@ export class NodeApi implements INodeApi {
     return nodePeers;
   }
 
-  public async getSyncingStatus(): Promise<SyncingStatus> {
+  public async getSyncingStatus(): Promise<phase0.SyncingStatus> {
     return this.sync.getSyncStatus();
   }
 

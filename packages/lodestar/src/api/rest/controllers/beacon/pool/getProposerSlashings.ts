@@ -7,7 +7,7 @@ export const getProposerSlashings: ApiController = {
     const proposerSlashings = await this.api.beacon.pool.getProposerSlashings();
     resp.status(200).send({
       data: proposerSlashings.map((slashing) => {
-        return this.config.types.ProposerSlashing.toJson(slashing, {case: "snake"});
+        return this.config.types.phase0.ProposerSlashing.toJson(slashing, {case: "snake"});
       }),
     });
   },

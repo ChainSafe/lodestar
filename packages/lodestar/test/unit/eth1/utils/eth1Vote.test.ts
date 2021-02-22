@@ -1,7 +1,7 @@
 import {expect} from "chai";
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {List, TreeBacked} from "@chainsafe/ssz";
-import {BeaconState, Eth1Data} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {generateState} from "../../../utils/state";
 import {filterBy} from "../../../utils/db";
@@ -13,7 +13,7 @@ import {
 } from "../../../../src/eth1/utils/eth1Vote";
 
 describe("eth1 / util / eth1Vote", function () {
-  function generateEth1Vote(i: number): Eth1Data {
+  function generateEth1Vote(i: number): phase0.Eth1Data {
     return {
       blockHash: Buffer.alloc(32, i),
       depositRoot: Buffer.alloc(32, i),
@@ -25,9 +25,9 @@ describe("eth1 / util / eth1Vote", function () {
     // Function array to scope votes in each test case defintion
     const testCases: (() => {
       id: string;
-      eth1DataVotesInState: Eth1Data[];
-      votesToConsider: Eth1Data[];
-      expectedEth1Vote: Eth1Data;
+      eth1DataVotesInState: phase0.Eth1Data[];
+      votesToConsider: phase0.Eth1Data[];
+      expectedEth1Vote: phase0.Eth1Data;
     })[] = [
       () => {
         const vote = generateEth1Vote(0);
@@ -83,9 +83,9 @@ describe("eth1 / util / eth1Vote", function () {
     for (const testCase of testCases) {
       const {id, eth1DataVotesInState, votesToConsider, expectedEth1Vote} = testCase();
       it(`get eth1 vote: ${id}`, async function () {
-        const state = generateState({slot: 5, eth1DataVotes: eth1DataVotesInState as List<Eth1Data>});
+        const state = generateState({slot: 5, eth1DataVotes: eth1DataVotesInState as List<phase0.Eth1Data>});
         const eth1Vote = pickEth1Vote(config, state, votesToConsider);
-        expect(config.types.Eth1Data.equals(eth1Vote, expectedEth1Vote)).to.be.true;
+        expect(config.types.phase0.Eth1Data.equals(eth1Vote, expectedEth1Vote)).to.be.true;
       });
     }
   });
@@ -94,9 +94,9 @@ describe("eth1 / util / eth1Vote", function () {
     // Function array to scope votes in each test case defintion
     const testCases: (() => {
       id: string;
-      state: TreeBacked<BeaconState>;
+      state: TreeBacked<phase0.BeaconState>;
       eth1Datas: IEth1DataWithTimestamp[];
-      expectedVotesToConsider: Eth1Data[];
+      expectedVotesToConsider: phase0.Eth1Data[];
     })[] = [
       () => {
         const state = generateState({eth1Data: generateEth1Vote(0)});
@@ -138,7 +138,7 @@ describe("eth1 / util / eth1Vote", function () {
   });
 });
 
-interface IEth1DataWithTimestamp extends Eth1Data {
+interface IEth1DataWithTimestamp extends phase0.Eth1Data {
   timestamp: number;
 }
 
@@ -161,7 +161,7 @@ function getEth1DataBlock(eth1DataBlock: Partial<IEth1DataWithTimestamp>): IEth1
  * @param config
  * @param state
  */
-function getTimestampInRange(config: IBeaconConfig, state: TreeBacked<BeaconState>): number {
+function getTimestampInRange(config: IBeaconConfig, state: TreeBacked<phase0.BeaconState>): number {
   const {SECONDS_PER_ETH1_BLOCK, ETH1_FOLLOW_DISTANCE} = config.params;
   const periodStart = votingPeriodStartTime(config, state);
   return periodStart - SECONDS_PER_ETH1_BLOCK * ETH1_FOLLOW_DISTANCE;

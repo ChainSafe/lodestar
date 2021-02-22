@@ -1,5 +1,5 @@
 import {ByteVector, toHexString, TreeBacked} from "@chainsafe/ssz";
-import {BeaconState} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {ITreeStateContext} from "../interface";
 
 /**
@@ -22,9 +22,9 @@ export class StateContextCache {
   }
 
   public add(item: ITreeStateContext): void {
-    this.cache[toHexString((item.state.getOriginalState() as TreeBacked<BeaconState>).hashTreeRoot())] = this.clone(
-      item
-    );
+    this.cache[
+      toHexString((item.state.getOriginalState() as TreeBacked<phase0.BeaconState>).hashTreeRoot())
+    ] = this.clone(item);
   }
 
   public delete(root: ByteVector): void {

@@ -1,4 +1,4 @@
-import {phase0, createCachedValidatorsBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
+import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
 import {join} from "path";
@@ -14,7 +14,7 @@ for (const testSuite of ["basic", "leak", "random"]) {
       const state = testcase.pre;
       const epochCtx = new phase0.fast.EpochContext(config);
       epochCtx.loadState(state);
-      const wrappedState = createCachedValidatorsBeaconState(state);
+      const wrappedState = phase0.fast.createCachedValidatorsBeaconState(state);
       const process = phase0.fast.prepareEpochProcessState(epochCtx, wrappedState);
       const [rewards, penalties] = phase0.fast.getAttestationDeltas(epochCtx, process, state);
       return {
@@ -27,7 +27,7 @@ for (const testSuite of ["basic", "leak", "random"]) {
         meta: InputType.YAML,
       },
       sszTypes: {
-        pre: config.types.BeaconState,
+        pre: config.types.phase0.BeaconState,
         ...generateSZZTypeMapping(),
       },
       timeout: 100000000,

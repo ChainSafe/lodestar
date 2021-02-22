@@ -2,7 +2,7 @@
  * @module chain/stateTransition/epoch
  */
 
-import {BeaconState} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
 import {GENESIS_EPOCH} from "../../../constants";
@@ -10,7 +10,7 @@ import {getBlockRoot, getCurrentEpoch, getPreviousEpoch, getTotalActiveBalance} 
 
 import {getAttestingBalance, getMatchingTargetAttestations} from "./util";
 
-export function processJustificationAndFinalization(config: IBeaconConfig, state: BeaconState): void {
+export function processJustificationAndFinalization(config: IBeaconConfig, state: phase0.BeaconState): void {
   const currentEpoch = getCurrentEpoch(config, state);
   if (currentEpoch <= GENESIS_EPOCH + 1) {
     return;

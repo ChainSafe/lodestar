@@ -22,9 +22,9 @@ describe("gossip handlers - attesterSlashing", function () {
     sandbox.restore();
   });
 
-  it("handle valid attester slashing", async function () {
+  it("handle valid attester slashing", function () {
     const attesterSlashing = generateEmptyAttesterSlashing();
-    await handleIncomingAttesterSlashing.bind(gossipStub)(attesterSlashing);
+    handleIncomingAttesterSlashing.bind(gossipStub)(attesterSlashing);
 
     expect(gossipStub.emit.withArgs(GossipEvent.ATTESTER_SLASHING, attesterSlashing).calledOnce).to.be.true;
   });

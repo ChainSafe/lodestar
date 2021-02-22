@@ -54,7 +54,7 @@ describe("rest - debug - beacon - getState", function () {
       .accept("application/octet-stream")
       .expect(200)
       .expect("Content-Type", "application/octet-stream");
-    expect(response.body).to.be.deep.equal(config.types.BeaconState.serialize(state));
+    expect(response.body).to.be.deep.equal(config.types.phase0.BeaconState.serialize(state));
   });
 
   it("should return status code 404", async function () {

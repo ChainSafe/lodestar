@@ -2,8 +2,8 @@ import {Slot} from "@chainsafe/lodestar-types";
 
 import {processEpoch} from "../epoch";
 import {processSlot} from "./processSlot";
+import {CachedValidatorsBeaconState} from "../util";
 import {EpochContext} from "../util";
-import {CachedValidatorsBeaconState, lightclient} from "../../..";
 
 export {processSlot};
 
@@ -20,10 +20,6 @@ export function processSlots(epochCtx: EpochContext, state: CachedValidatorsBeac
       epochCtx.rotateEpochs(state);
     } else {
       state.slot += 1;
-    }
-    if (state.slot >= epochCtx.config.params.lightclient.LIGHTCLIENT_PATCH_FORK_SLOT) {
-      const newState = lightclient.upgrade(epochCtx.config, state);
-      state = new CachedValidatorsBeaconState(newState, state.flatValidators());
     }
   }
 }

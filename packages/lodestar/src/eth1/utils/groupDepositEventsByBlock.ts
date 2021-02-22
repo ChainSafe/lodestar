@@ -1,4 +1,4 @@
-import {DepositEvent} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {IBatchDepositEvents} from "../interface";
 
 /**
@@ -6,9 +6,9 @@ import {IBatchDepositEvents} from "../interface";
  * Blocks without events are omitted
  * @param depositEvents range deposit events
  */
-export function groupDepositEventsByBlock(depositEvents: DepositEvent[]): IBatchDepositEvents[] {
+export function groupDepositEventsByBlock(depositEvents: phase0.DepositEvent[]): IBatchDepositEvents[] {
   depositEvents.sort((event1, event2) => event1.index - event2.index);
-  const depositsByBlockMap = new Map<number, DepositEvent[]>();
+  const depositsByBlockMap = new Map<number, phase0.DepositEvent[]>();
   for (const deposit of depositEvents) {
     depositsByBlockMap.set(deposit.blockNumber, [...(depositsByBlockMap.get(deposit.blockNumber) || []), deposit]);
   }

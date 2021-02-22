@@ -1,6 +1,6 @@
 import {config} from "@chainsafe/lodestar-config/minimal";
 import sinon, {SinonStubbedInstance} from "sinon";
-import {IBeaconSync} from "../../../../../lib/sync/interface";
+import {IBeaconSync} from "../../../../../src/sync/interface";
 import {IApiModules} from "../../../../../src/api/impl/interface";
 import {ValidatorApi} from "../../../../../src/api/impl/validator/validator";
 import {IBeaconChain} from "../../../../../src/chain";
@@ -44,7 +44,7 @@ describe("api - validator - produceAttestationData", function () {
   });
 
   it("not synced", async function () {
-    syncStub.getSyncStatus.resolves({syncDistance: BigInt(300), headSlot: BigInt(0)});
+    syncStub.getSyncStatus.returns({syncDistance: BigInt(300), headSlot: BigInt(0)});
     const api = new ValidatorApi({}, modules);
     await expect(api.produceAttestationData(0, 0)).to.be.rejectedWith("Node is syncing");
   });

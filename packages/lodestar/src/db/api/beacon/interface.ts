@@ -2,7 +2,7 @@
  * @module db/api/beacon
  */
 
-import {SignedBeaconBlock} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 
 import {
   AggregateAndProofRepository,
@@ -59,7 +59,7 @@ export interface IBeaconDb {
   depositDataRoot: DepositDataRootRepository;
   eth1Data: Eth1DataRepository;
 
-  processBlockOperations(signedBlock: SignedBeaconBlock): Promise<void>;
+  processBlockOperations(signedBlock: phase0.SignedBeaconBlock): Promise<void>;
 
   /**
    * Start the connection to the db instance and open the db store.

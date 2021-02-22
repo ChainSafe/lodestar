@@ -1,7 +1,7 @@
 import {assert} from "chai";
 
 import {config} from "@chainsafe/lodestar-config/mainnet";
-import {Fork} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {GENESIS_SLOT} from "../../../../src/constants";
 import {getBlockRoot, getDomain} from "../../../../src/util";
 
@@ -11,7 +11,7 @@ import {generateState} from "../../../utils/state";
 
 describe("getDomain", () => {
   const state = generateState();
-  const fork: Fork = {
+  const fork: phase0.Fork = {
     epoch: 12,
     previousVersion: Buffer.from([4, 0, 0, 0]),
     currentVersion: Buffer.from([5, 0, 0, 0]),

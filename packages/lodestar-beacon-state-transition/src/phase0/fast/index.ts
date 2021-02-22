@@ -1,8 +1,7 @@
-import {SignedBeaconBlock} from "@chainsafe/lodestar-types";
-import {IStateContext} from "../..";
+import {phase0} from "@chainsafe/lodestar-types";
 import {processBlock} from "./block";
 import {processSlots} from "./slot";
-import {verifyBlockSignature} from "./util";
+import {IStateContext, verifyBlockSignature} from "./util";
 
 export * from "./block";
 export * from "./epoch";
@@ -15,7 +14,7 @@ export * from "./util";
  */
 export function fastStateTransition(
   {state, epochCtx}: IStateContext,
-  signedBlock: SignedBeaconBlock,
+  signedBlock: phase0.SignedBeaconBlock,
   options?: {verifyStateRoot?: boolean; verifyProposer?: boolean; verifySignatures?: boolean}
 ): IStateContext {
   const {verifyStateRoot = true, verifyProposer = true, verifySignatures = true} = options || {};
@@ -36,7 +35,7 @@ export function fastStateTransition(
   processBlock(epochCtx, postState, block, verifySignatures);
   // verify state root
   if (verifyStateRoot) {
-    if (!types.Root.equals(block.stateRoot, types.BeaconState.hashTreeRoot(postState.getOriginalState()))) {
+    if (!types.Root.equals(block.stateRoot, types.phase0.BeaconState.hashTreeRoot(postState.getOriginalState()))) {
       throw new Error("Invalid state root");
     }
   }

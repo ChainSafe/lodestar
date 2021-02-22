@@ -1,11 +1,4 @@
-import {
-  Attestation,
-  BlockEventPayload,
-  ChainHead,
-  ChainReorg,
-  FinalizedCheckpoint,
-  SignedVoluntaryExit,
-} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 
 export enum BeaconEventType {
   HEAD = "head",
@@ -18,32 +11,32 @@ export enum BeaconEventType {
 
 export type BeaconHeadEvent = {
   type: typeof BeaconEventType.HEAD;
-  message: ChainHead;
+  message: phase0.ChainHead;
 };
 
 export type BeaconBlockEvent = {
   type: typeof BeaconEventType.BLOCK;
-  message: BlockEventPayload;
+  message: phase0.BlockEventPayload;
 };
 
 export type BeaconAttestationEvent = {
   type: typeof BeaconEventType.ATTESTATION;
-  message: Attestation;
+  message: phase0.Attestation;
 };
 
 export type VoluntaryExitEvent = {
   type: typeof BeaconEventType.VOLUNTARY_EXIT;
-  message: SignedVoluntaryExit;
+  message: phase0.SignedVoluntaryExit;
 };
 
 export type FinalizedCheckpointEvent = {
   type: typeof BeaconEventType.FINALIZED_CHECKPOINT;
-  message: FinalizedCheckpoint;
+  message: phase0.FinalizedCheckpoint;
 };
 
 export type BeaconChainReorgEvent = {
   type: typeof BeaconEventType.CHAIN_REORG;
-  message: ChainReorg;
+  message: phase0.ChainReorg;
 };
 
 export type BeaconEvent =

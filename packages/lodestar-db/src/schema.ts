@@ -7,51 +7,48 @@ import {BUCKET_LENGTH} from "./const";
 // Buckets are separate database namespaces
 export enum Bucket {
   // beacon chain
-  // every state
-  state = 0, // Root -> BeaconState
+  // finalized states
+  phase0_stateArchive = 0, // Root -> phase0.BeaconState
   // unfinalized blocks
-  // @deprecate
-  // block = 1, // Root -> SignedBeaconBlock
+  phase0_block = 1, // Root -> phase0.SignedBeaconBlock
   // finalized blocks
-  // @deprecate
-  //blockArchive = 2, // Slot -> SignedBeaconBlock
-  blockArchiveParentRootIndex = 3, // parent Root -> Slot
-  blockArchiveRootIndex = 4, // Root -> Slot
+  phase0_blockArchive = 2, // Slot -> phase0.SignedBeaconBlock
+  // finalized block additional indices
+  index_blockArchiveParentRootIndex = 3, // parent Root -> Slot
+  index_blockArchiveRootIndex = 4, // Root -> Slot
   // known bad block
-  invalidBlock = 5, // Root -> boolean
+  index_invalidBlock = 5, // Root -> boolean
   // finalized chain
-  mainChain = 6, // Slot -> Root<BeaconBlock>
+  index_mainChain = 6, // Slot -> Root<BeaconBlock>
   // justified, finalized state and block hashes
-  chainInfo = 7, // Key -> Number64 | stateHash | blockHash
+  index_chainInfo = 7, // Key -> Number64 | stateHash | blockHash
   // eth1 processing
-  eth1Data = 8, // timestamp -> Eth1Data
-  depositDataRoot = 9, // depositIndex -> Root<DepositData>
-  depositEvent = 19, // depositIndex -> DepositEvent
+  phase0_eth1Data = 8, // timestamp -> Eth1Data
+  index_depositDataRoot = 9, // depositIndex -> Root<DepositData>
+  phase0_depositEvent = 19, // depositIndex -> DepositEvent
   // op pool
-  attestation = 10, // Root -> Attestation
-  aggregateAndProof = 11, // Root -> AggregateAndProof
-  depositData = 12, // [DEPRECATED] index -> DepositData
-  exit = 13, // ValidatorIndex -> VoluntaryExit
-  proposerSlashing = 14, // ValidatorIndex -> ProposerSlashing
-  attesterSlashing = 15, // Root -> AttesterSlashing
+  phase0_attestation = 10, // Root -> Attestation
+  phase0_aggregateAndProof = 11, // Root -> AggregateAndProof
+  phase0_depositData = 12, // [DEPRECATED] index -> DepositData
+  phase0_exit = 13, // ValidatorIndex -> VoluntaryExit
+  phase0_proposerSlashing = 14, // ValidatorIndex -> ProposerSlashing
+  phase0_attesterSlashing = 15, // Root -> AttesterSlashing
   // validator
   // validator = 16, // DEPRECATED on v0.11.0
   // lastProposedBlock = 17, // DEPRECATED on v0.11.0
   // proposedAttestations = 18, // DEPRECATED on v0.11.0
   // validator slashing protection
-  slashingProtectionBlockBySlot = 20,
-  slashingProtectionAttestationByTarget = 21,
-  slashingProtectionAttestationLowerBound = 22,
-  slashingProtectionMinSpanDistance = 23,
-  slashingProtectionMaxSpanDistance = 24,
-  pendingBlock = 25, // Root -> SignedBeaconBlock
+  phase0_slashingProtectionBlockBySlot = 20,
+  phase0_slashingProtectionAttestationByTarget = 21,
+  phase0_slashingProtectionAttestationLowerBound = 22,
+  index_slashingProtectionMinSpanDistance = 23,
+  index_slashingProtectionMaxSpanDistance = 24,
+  phase0_pendingBlock = 25, // Root -> SignedBeaconBlock
 
-  stateArchiveRootIndex = 26, // State Root -> slot
+  index_stateArchiveRootIndex = 26, // State Root -> slot
 
-  phase0Block = 27,
-  lightclientBlock = 28,
-  phase0BlockArchive = 29,
-  lightclientBlockArchive = 30,
+  lightclient_block = 27, // Root -> lightclient.SignedBeaconBlock
+  lightclient_blockArchive = 28, // Slot -> lightclient.SignedBeaconBlock
 }
 
 export enum Key {

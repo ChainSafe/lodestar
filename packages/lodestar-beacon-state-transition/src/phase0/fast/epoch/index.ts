@@ -1,12 +1,10 @@
-import {prepareEpochProcessState} from "../util";
-import {EpochContext} from "../../../util/fast/epochContext";
+import {prepareEpochProcessState, EpochContext, CachedValidatorsBeaconState} from "../util";
 import {processJustificationAndFinalization} from "./processJustificationAndFinalization";
 import {processRewardsAndPenalties} from "./processRewardsAndPenalties";
 import {processRegistryUpdates} from "./processRegistryUpdates";
 import {processSlashings} from "./processSlashings";
 import {processFinalUpdates} from "./processFinalUpdates";
 import {getAttestationDeltas} from "./getAttestationDeltas";
-import {CachedValidatorsBeaconState} from "../../..";
 
 export {
   processJustificationAndFinalization,

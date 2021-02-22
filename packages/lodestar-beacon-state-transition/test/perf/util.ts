@@ -1,20 +1,20 @@
 import {config} from "@chainsafe/lodestar-config/mainnet";
-import {BeaconState, Eth1Data, Gwei, SignedBeaconBlock, Validator} from "@chainsafe/lodestar-types";
+import {Gwei, phase0} from "@chainsafe/lodestar-types";
 import {init} from "@chainsafe/bls";
 import {WinstonLogger, interopSecretKeys} from "@chainsafe/lodestar-utils";
 import {fromHexString, List, TreeBacked} from "@chainsafe/ssz";
-import {getBeaconProposerIndex} from "../../src/util/proposer";
+import {getBeaconProposerIndex} from "../../lib/util/proposer";
 
-let archivedState: TreeBacked<BeaconState> | null = null;
-let signedBlock: TreeBacked<SignedBeaconBlock> | null = null;
+let archivedState: TreeBacked<phase0.BeaconState> | null = null;
+let signedBlock: TreeBacked<phase0.SignedBeaconBlock> | null = null;
 const logger = new WinstonLogger();
 
 /**
  * This is generated from Medalla state 756416
  */
-export async function generatePerformanceState(): Promise<TreeBacked<BeaconState>> {
+export async function generatePerformanceState(): Promise<TreeBacked<phase0.BeaconState>> {
   if (!archivedState) {
-    const state = config.types.BeaconState.defaultValue();
+    const state = config.types.phase0.BeaconState.defaultValue();
     state.genesisTime = 1596546008;
     state.genesisValidatorsRoot = fromHexString("0x04700007fabc8282644aed6d1c7c9e21d38a03a0c4ba193f3afe428824b3a673");
     state.slot = 756416;
@@ -48,7 +48,7 @@ export async function generatePerformanceState(): Promise<TreeBacked<BeaconState
           blockHash: Buffer.alloc(32, i),
         };
       }
-    ) as unknown) as List<Eth1Data>;
+    ) as unknown) as List<phase0.Eth1Data>;
     state.eth1DepositIndex = 114038;
     const numValidators = 114038;
     const numKeyPairs = 100;
@@ -64,7 +64,7 @@ export async function generatePerformanceState(): Promise<TreeBacked<BeaconState
         exitEpoch: Infinity,
         withdrawableEpoch: Infinity,
       };
-    }) as unknown) as List<Validator>;
+    }) as unknown) as List<phase0.Validator>;
     state.balances = Array.from({length: numValidators}, () => BigInt(31217089836)) as List<Gwei>;
     state.randaoMixes = Array.from({length: config.params.EPOCHS_PER_HISTORICAL_VECTOR}, (_, i) => Buffer.alloc(32, i));
     // no slashings
@@ -83,7 +83,7 @@ export async function generatePerformanceState(): Promise<TreeBacked<BeaconState
       root: fromHexString("0x122b8ff579d0c8f8a8b66326bdfec3f685007d2842f01615a0768870961ccc17"),
     };
 
-    archivedState = config.types.BeaconState.tree.createValue(state);
+    archivedState = config.types.phase0.BeaconState.tree.createValue(state);
     logger.info("Loaded state", {
       slot: archivedState.slot,
       numValidators: archivedState.validators.length,
@@ -97,21 +97,21 @@ export async function generatePerformanceState(): Promise<TreeBacked<BeaconState
 /**
  * This is generated from Medalla block 756417
  */
-export async function generatePerformanceBlock(): Promise<TreeBacked<SignedBeaconBlock>> {
+export async function generatePerformanceBlock(): Promise<TreeBacked<phase0.SignedBeaconBlock>> {
   if (!signedBlock) {
-    const block = config.types.SignedBeaconBlock.defaultValue();
+    const block = config.types.phase0.SignedBeaconBlock.defaultValue();
     const parentState = await generatePerformanceState();
     const newState = parentState.clone();
     newState.slot++;
     block.message.slot = newState.slot;
     block.message.proposerIndex = getBeaconProposerIndex(config, newState);
-    block.message.parentRoot = config.types.BeaconBlockHeader.hashTreeRoot(parentState.latestBlockHeader);
+    block.message.parentRoot = config.types.phase0.BeaconBlockHeader.hashTreeRoot(parentState.latestBlockHeader);
     block.message.stateRoot = fromHexString("0x6c86ca3c4c6688cf189421b8a68bf2dbc91521609965e6f4e207d44347061fee");
     block.message.body.randaoReveal = fromHexString(
       "0x8a5d2673c48f22f6ed19462efec35645db490df29eed2f56321dbe4a89b2463b0c902095a7ab74a2dc5b7f67edb1a19507ea3d4361d5af9cb0a524945c91638dfd6568841486813a2c45142659d6d9403f5081febb123a7931edbc248b9d0025"
     );
     // eth1Data, graffiti, attestations
-    signedBlock = config.types.SignedBeaconBlock.tree.createValue(block);
+    signedBlock = config.types.phase0.SignedBeaconBlock.tree.createValue(block);
     logger.info("Loaded block", {slot: signedBlock.message.slot});
   }
   return signedBlock.clone();

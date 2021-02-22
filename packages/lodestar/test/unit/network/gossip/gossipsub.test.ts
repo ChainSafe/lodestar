@@ -24,7 +24,7 @@ describe("gossipsub", function () {
   beforeEach(async function () {
     const signedBLock = generateEmptySignedBlock();
     message = {
-      data: config.types.SignedBeaconBlock.serialize(signedBLock),
+      data: config.types.phase0.SignedBeaconBlock.serialize(signedBLock),
       from: "0",
       receivedFrom: "0",
       seqno: new Uint8Array(),

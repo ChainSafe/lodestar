@@ -1,6 +1,6 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBeaconParams} from "@chainsafe/lodestar-params";
-import {Contract, Fork} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {IConfigApi} from "../../../src/api/interface/config";
 
 export interface IMockConfigApiOpts {
@@ -14,11 +14,11 @@ export class MockConfigApi implements IConfigApi {
     this.config = opts.config;
   }
 
-  public async getForkSchedule(): Promise<Fork[]> {
+  public async getForkSchedule(): Promise<phase0.Fork[]> {
     return [];
   }
 
-  public async getDepositContract(): Promise<Contract> {
+  public async getDepositContract(): Promise<phase0.Contract> {
     return {
       chainId: this.config.params.DEPOSIT_CHAIN_ID,
       address: this.config.params.DEPOSIT_CONTRACT_ADDRESS,

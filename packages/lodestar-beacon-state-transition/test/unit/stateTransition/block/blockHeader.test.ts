@@ -49,7 +49,7 @@ describe("process block - block header", function () {
     state.validators.push(generateValidator({activation: 0, exit: 10, slashed: true}));
     const block = generateEmptyBlock();
     block.slot = 5;
-    block.parentRoot = config.types.BeaconBlockHeader.hashTreeRoot(state.latestBlockHeader);
+    block.parentRoot = config.types.phase0.BeaconBlockHeader.hashTreeRoot(state.latestBlockHeader);
     try {
       processBlockHeader(config, state, block);
       expect.fail();
@@ -61,7 +61,7 @@ describe("process block - block header", function () {
     state.validators.push(generateValidator({activation: 0, exit: 10}));
     const block = generateEmptyBlock();
     block.slot = 5;
-    block.parentRoot = config.types.BeaconBlockHeader.hashTreeRoot(state.latestBlockHeader);
+    block.parentRoot = config.types.phase0.BeaconBlockHeader.hashTreeRoot(state.latestBlockHeader);
     getBeaconProposeIndexStub.returns(0);
 
     processBlockHeader(config, state, block);

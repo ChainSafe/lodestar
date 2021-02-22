@@ -16,7 +16,7 @@ export const getBlockHeaders: ApiController<{slot?: string | number; parent_root
     }
     const data = await this.api.beacon.blocks.getBlockHeaders({slot, parentRoot});
     resp.status(200).send({
-      data: data.map((item) => this.config.types.SignedBeaconHeaderResponse.toJson(item, {case: "snake"})),
+      data: data.map((item) => this.config.types.phase0.SignedBeaconHeaderResponse.toJson(item, {case: "snake"})),
     });
   },
 

@@ -2,11 +2,10 @@
  * @module tasks
  */
 
-import {computeEpochAtSlot, epochToCurrentForkVersion} from "@chainsafe/lodestar-beacon-state-transition";
+import {phase0} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBlockSummary, IForkChoice} from "@chainsafe/lodestar-fork-choice";
-import {Checkpoint} from "@chainsafe/lodestar-types";
-import {ILogger, toHex, fromHex} from "@chainsafe/lodestar-utils";
+import {ILogger} from "@chainsafe/lodestar-utils";
 import {IBeaconDb} from "../../db/api";
 import {ITask} from "../interface";
 export interface IArchiveBlockModules {
@@ -24,9 +23,9 @@ export class ArchiveBlocksTask implements ITask {
   private readonly forkChoice: IForkChoice;
   private readonly logger: ILogger;
 
-  private finalized: Checkpoint;
+  private finalized: phase0.Checkpoint;
 
-  public constructor(config: IBeaconConfig, modules: IArchiveBlockModules, finalized: Checkpoint) {
+  public constructor(config: IBeaconConfig, modules: IArchiveBlockModules, finalized: phase0.Checkpoint) {
     this.config = config;
     this.db = modules.db;
     this.forkChoice = modules.forkChoice;
@@ -72,27 +71,14 @@ export class ArchiveBlocksTask implements ITask {
           return {
             key: summary.slot,
             value: blockBuffer,
-            fork: epochToCurrentForkVersion(this.config, computeEpochAtSlot(this.config, summary.slot)),
             summary,
           };
         })
       )
-    ).filter((kv) => kv.value && kv.fork);
-    //group block summaries by fork
-    const blocksByFork: Map<string, typeof canonicalBlockEntries> = canonicalBlockEntries.reduce((agg, current) => {
-      const arr = agg.get(toHex(current.fork!));
-      if (!arr) {
-        agg.set(toHex(current.fork!), [current]);
-      } else {
-        arr.push(current);
-      }
-      return agg;
-    }, new Map());
+    ).filter((kv) => kv.value);
     // put to blockArchive db and delete block db
     await Promise.all([
-      ...Array.from(blocksByFork.entries()).map(([fork, blockSummaries]) =>
-        this.db.blockArchive.batchPutBinary(blockSummaries, fromHex(fork))
-      ),
+      this.db.blockArchive.batchPutBinary(canonicalBlockEntries),
       this.db.block.batchDelete(canonicalSummaries.map((summary) => summary.blockRoot)),
     ]);
   }

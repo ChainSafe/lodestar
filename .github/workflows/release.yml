@@ -69,7 +69,6 @@ jobs:
         with:
           token: ${{ secrets.GH_PAGES_TOKEN }}
           issues: "false"
-          issuesWoLabels: "false"
           pullRequests: "true"
           prWoLabels: "true"
           author: "true"

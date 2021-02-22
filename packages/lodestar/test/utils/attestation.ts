@@ -1,16 +1,6 @@
 import {List} from "@chainsafe/ssz";
-import {
-  Attestation,
-  AttestationData,
-  CommitteeIndex,
-  Epoch,
-  Slot,
-  VoluntaryExit,
-  SignedVoluntaryExit,
-  SignedAggregateAndProof,
-} from "@chainsafe/lodestar-types";
+import {CommitteeIndex, Epoch, Slot, phase0} from "@chainsafe/lodestar-types";
 import crypto from "crypto";
-import {AggregateAndProof} from "@chainsafe/lodestar-types/src";
 import deepmerge from "deepmerge";
 import {isPlainObject} from "@chainsafe/lodestar-utils";
 import {RecursivePartial} from "@chainsafe/lodestar-cli/src/util";
@@ -29,7 +19,7 @@ export function generateAttestationData(
   targetEpoch: Epoch,
   index: CommitteeIndex = 1,
   slot: Slot = 1
-): AttestationData {
+): phase0.AttestationData {
   return {
     slot: slot,
     index: index,
@@ -45,8 +35,8 @@ export function generateAttestationData(
   };
 }
 
-export function generateAttestation(override: RecursivePartial<Attestation> = {}): Attestation {
-  return deepmerge<Attestation, RecursivePartial<Attestation>>(
+export function generateAttestation(override: RecursivePartial<phase0.Attestation> = {}): phase0.Attestation {
+  return deepmerge<phase0.Attestation, RecursivePartial<phase0.Attestation>>(
     {
       aggregationBits: Array.from({length: 64}, () => false) as List<boolean>,
       data: {
@@ -69,11 +59,11 @@ export function generateAttestation(override: RecursivePartial<Attestation> = {}
   );
 }
 
-export function generateEmptyAttestation(): Attestation {
+export function generateEmptyAttestation(): phase0.Attestation {
   return generateAttestation();
 }
 
-export function generateEmptySignedAggregateAndProof(): SignedAggregateAndProof {
+export function generateEmptySignedAggregateAndProof(): phase0.SignedAggregateAndProof {
   const message = generateEmptyAggregateAndProof();
   return {
     message,
@@ -81,7 +71,7 @@ export function generateEmptySignedAggregateAndProof(): SignedAggregateAndProof 
   };
 }
 
-export function generateEmptyAggregateAndProof(): AggregateAndProof {
+export function generateEmptyAggregateAndProof(): phase0.AggregateAndProof {
   const attestation = generateEmptyAttestation();
   return {
     aggregatorIndex: 0,
@@ -90,14 +80,14 @@ export function generateEmptyAggregateAndProof(): AggregateAndProof {
   };
 }
 
-export function generateEmptyVoluntaryExit(): VoluntaryExit {
+export function generateEmptyVoluntaryExit(): phase0.VoluntaryExit {
   return {
     epoch: 0,
     validatorIndex: 0,
   };
 }
 
-export function generateEmptySignedVoluntaryExit(): SignedVoluntaryExit {
+export function generateEmptySignedVoluntaryExit(): phase0.SignedVoluntaryExit {
   return {
     message: generateEmptyVoluntaryExit(),
     signature: Buffer.alloc(96),

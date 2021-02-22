@@ -1,14 +1,8 @@
 import {List, readOnlyForEach, readOnlyMap} from "@chainsafe/ssz";
-import {Epoch, ValidatorIndex, Gwei, PendingAttestation} from "@chainsafe/lodestar-types";
+import {Epoch, ValidatorIndex, Gwei, phase0} from "@chainsafe/lodestar-types";
 import {intDiv} from "@chainsafe/lodestar-utils";
 
-import {
-  computeActivationExitEpoch,
-  getBlockRootAtSlot,
-  computeStartSlotAtEpoch,
-  getChurnLimit,
-  CachedValidatorsBeaconState,
-} from "../../../util";
+import {computeActivationExitEpoch, getBlockRootAtSlot, computeStartSlotAtEpoch, getChurnLimit} from "../../../util";
 import {FAR_FUTURE_EPOCH} from "../../../constants";
 import {
   IAttesterStatus,
@@ -24,8 +18,9 @@ import {
   FLAG_CURR_HEAD_ATTESTER,
 } from "./attesterStatus";
 import {IEpochStakeSummary} from "./epochStakeSummary";
-import {isActiveIFlatValidator} from "../../../util/fast/flatValidator";
-import {EpochContext} from "../../../util/fast/epochContext";
+import {isActiveIFlatValidator} from "./flatValidator";
+import {CachedValidatorsBeaconState} from "./interface";
+import {EpochContext} from "./epochContext";
 
 /**
  * The AttesterStatus (and FlatValidator under status.validator) objects and
@@ -167,7 +162,7 @@ export function prepareEpochProcessState(epochCtx: EpochContext, state: CachedVa
 
   const statusProcessEpoch = (
     statuses: IAttesterStatus[],
-    attestations: List<PendingAttestation>,
+    attestations: List<phase0.PendingAttestation>,
     epoch: Epoch,
     sourceFlag: number,
     targetFlag: number,

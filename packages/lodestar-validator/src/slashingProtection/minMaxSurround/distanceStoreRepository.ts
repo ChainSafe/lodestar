@@ -13,8 +13,8 @@ export class DistanceStoreRepository implements IDistanceStore {
   maxSpan: SpanDistanceRepository;
 
   constructor(opts: IDatabaseApiOptions) {
-    this.minSpan = new SpanDistanceRepository(opts, Bucket.slashingProtectionMinSpanDistance);
-    this.maxSpan = new SpanDistanceRepository(opts, Bucket.slashingProtectionMaxSpanDistance);
+    this.minSpan = new SpanDistanceRepository(opts, Bucket.index_slashingProtectionMinSpanDistance);
+    this.maxSpan = new SpanDistanceRepository(opts, Bucket.index_slashingProtectionMaxSpanDistance);
   }
 }
 

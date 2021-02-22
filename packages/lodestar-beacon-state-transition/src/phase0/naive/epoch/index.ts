@@ -2,7 +2,7 @@
  * @module chain/stateTransition/epoch
  */
 
-import {BeaconState} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
 import {processRewardsAndPenalties} from "./balanceUpdates";
@@ -16,7 +16,7 @@ export * from "./justification";
 export * from "./registryUpdates";
 export * from "./slashings";
 
-export function processEpoch(config: IBeaconConfig, state: BeaconState): BeaconState {
+export function processEpoch(config: IBeaconConfig, state: phase0.BeaconState): phase0.BeaconState {
   // Justification
   processJustificationAndFinalization(config, state);
 

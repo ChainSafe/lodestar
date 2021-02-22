@@ -1,8 +1,9 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBeaconChain, IBlockJob} from "..";
 import {IBeaconDb} from "../../db/api";
-import {BeaconBlock, ValidatorIndex} from "@chainsafe/lodestar-types";
-import {computeStartSlotAtEpoch, phase0} from "@chainsafe/lodestar-beacon-state-transition";
+import {ValidatorIndex} from "@chainsafe/lodestar-types";
+import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
+import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {BlockError, BlockErrorCode} from "../errors";
 
 export async function validateGossipBlock(
@@ -13,7 +14,7 @@ export async function validateGossipBlock(
 ): Promise<void> {
   const block = blockJob.signedBlock;
   const blockSlot = block.message.slot;
-  const blockRoot = config.types.BeaconBlock.hashTreeRoot(block.message);
+  const blockRoot = config.types.phase0.BeaconBlock.hashTreeRoot(block.message);
   const finalizedCheckpoint = chain.getFinalizedCheckpoint();
   const finalizedSlot = computeStartSlotAtEpoch(config, finalizedCheckpoint.epoch);
   // block is too old
@@ -97,7 +98,7 @@ export async function hasProposerAlreadyProposed(
   return existingBlock?.message.proposerIndex === proposerIndex;
 }
 
-export function isExpectedProposer(epochCtx: phase0.EpochContext, block: BeaconBlock): boolean {
+export function isExpectedProposer(epochCtx: phase0.fast.EpochContext, block: phase0.BeaconBlock): boolean {
   const supposedProposerIndex = epochCtx.getBeaconProposer(block.slot);
   return supposedProposerIndex === block.proposerIndex;
 }

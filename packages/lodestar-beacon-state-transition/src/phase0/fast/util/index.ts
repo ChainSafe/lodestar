@@ -1,8 +1,20 @@
-export {EpochContext} from "../../../util/fast/epochContext";
-export * from "../../../util/fast/flatValidator";
+import {EpochContext} from "./epochContext";
+import {CachedValidatorsBeaconState} from "./interface";
+
+export * from "./block";
 export * from "./attestation";
 export * from "./attesterStatus";
-export * from "./block";
+export {EpochContext} from "./epochContext";
 export * from "./epochProcess";
 export * from "./epochShuffling";
 export * from "./epochStakeSummary";
+export * from "./flatValidator";
+export * from "./interface";
+
+/**
+ * Exchange Interface of StateContext
+ */
+export interface IStateContext {
+  state: CachedValidatorsBeaconState;
+  epochCtx: EpochContext;
+}

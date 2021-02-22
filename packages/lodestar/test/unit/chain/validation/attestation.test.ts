@@ -3,7 +3,6 @@ import {BeaconChain, ChainEventEmitter, ForkChoiceStore, IBeaconChain} from "../
 import {StubbedBeaconDb} from "../../../utils/stub";
 import {expect} from "chai";
 
-import {Attestation, IndexedAttestation} from "@chainsafe/lodestar-types";
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {phase0, getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import * as attestationUtils from "@chainsafe/lodestar-beacon-state-transition/lib/phase0/fast/util/attestation";
@@ -28,7 +27,7 @@ describe("gossip attestation validation", function () {
   let computeAttestationSubnetStub: SinonStub;
   let isValidIndexedAttestationStub: SinonStub;
   let forkChoiceStub: SinonStubbedInstance<ForkChoice>;
-  let toIndexedAttestation: (attestation: Attestation) => IndexedAttestation;
+  let toIndexedAttestation: (attestation: phase0.Attestation) => phase0.IndexedAttestation;
 
   beforeEach(function () {
     chain = sinon.createStubInstance(BeaconChain);
@@ -42,12 +41,12 @@ describe("gossip attestation validation", function () {
     computeAttestationSubnetStub = sinon.stub(attestationUtils, "computeSubnetForAttestation");
     isValidIndexedAttestationStub = sinon.stub(blockUtils, "isValidIndexedAttestation");
     forkChoiceStub = sinon.createStubInstance(ForkChoice);
-    toIndexedAttestation = (attestation: Attestation) =>
+    toIndexedAttestation = (attestation: phase0.Attestation) =>
       ({
         attestingIndices: Object.entries(attestation.aggregationBits).map((value) => (value ? 1 : 0)),
         data: attestation.data,
         signature: attestation.signature,
-      } as IndexedAttestation);
+      } as phase0.IndexedAttestation);
   });
 
   afterEach(function () {
@@ -161,7 +160,7 @@ describe("gossip attestation validation", function () {
     const attestation = generateAttestation({
       aggregationBits: [true] as BitList,
     });
-    db.seenAttestationCache.hasCommitteeAttestation.resolves(true);
+    db.seenAttestationCache.hasCommitteeAttestation.returns(true);
     try {
       await validateGossipAttestation(
         config,
@@ -184,7 +183,7 @@ describe("gossip attestation validation", function () {
     const attestation = generateAttestation({
       aggregationBits: [true] as BitList,
     });
-    db.seenAttestationCache.hasCommitteeAttestation.resolves(false);
+    db.seenAttestationCache.hasCommitteeAttestation.returns(false);
     forkChoice.hasBlock.returns(false);
     try {
       await validateGossipAttestation(
@@ -207,7 +206,7 @@ describe("gossip attestation validation", function () {
     const attestation = generateAttestation({
       aggregationBits: [true] as BitList,
     });
-    db.seenAttestationCache.hasCommitteeAttestation.resolves(false);
+    db.seenAttestationCache.hasCommitteeAttestation.returns(false);
     forkChoice.hasBlock.returns(true);
     regen.getCheckpointState.throws();
     try {
@@ -231,7 +230,7 @@ describe("gossip attestation validation", function () {
     const attestation = generateAttestation({
       aggregationBits: [true] as BitList,
     });
-    db.seenAttestationCache.hasCommitteeAttestation.resolves(false);
+    db.seenAttestationCache.hasCommitteeAttestation.returns(false);
     forkChoice.hasBlock.returns(true);
     const attestationPreState = {
       state: generateCachedState(),
@@ -261,7 +260,7 @@ describe("gossip attestation validation", function () {
     const attestation = generateAttestation({
       aggregationBits: [true] as BitList,
     });
-    db.seenAttestationCache.hasCommitteeAttestation.resolves(false);
+    db.seenAttestationCache.hasCommitteeAttestation.returns(false);
     forkChoice.hasBlock.returns(true);
     const attestationPreState = {
       state: generateCachedState(),
@@ -296,7 +295,7 @@ describe("gossip attestation validation", function () {
         index: 999999999,
       },
     });
-    db.seenAttestationCache.hasCommitteeAttestation.resolves(false);
+    db.seenAttestationCache.hasCommitteeAttestation.returns(false);
     forkChoice.hasBlock.returns(true);
     const attestationPreState = {
       state: generateCachedState(),
@@ -334,7 +333,7 @@ describe("gossip attestation validation", function () {
         index: 999999999,
       },
     });
-    db.seenAttestationCache.hasCommitteeAttestation.resolves(false);
+    db.seenAttestationCache.hasCommitteeAttestation.returns(false);
     forkChoice.hasBlock.returns(true);
     const attestationPreState = {
       state: generateCachedState(),
@@ -375,7 +374,7 @@ describe("gossip attestation validation", function () {
     const attestation = generateAttestation({
       aggregationBits: [true] as BitList,
     });
-    db.seenAttestationCache.hasCommitteeAttestation.resolves(false);
+    db.seenAttestationCache.hasCommitteeAttestation.returns(false);
     forkChoice.hasBlock.returns(true);
     const attestationPreState = {
       state: generateCachedState(),
@@ -419,7 +418,7 @@ describe("gossip attestation validation", function () {
         },
       },
     });
-    db.seenAttestationCache.hasCommitteeAttestation.resolves(false);
+    db.seenAttestationCache.hasCommitteeAttestation.returns(false);
     forkChoice.hasBlock.returns(true);
     const attestationPreState = {
       state: generateCachedState(),
@@ -481,7 +480,7 @@ describe("gossip attestation validation", function () {
       }),
       queuedAttestations: new Set(),
     });
-    db.seenAttestationCache.hasCommitteeAttestation.resolves(false);
+    db.seenAttestationCache.hasCommitteeAttestation.returns(false);
     forkChoice.hasBlock.returns(true);
     const attestationPreState = {
       state: generateCachedState(),
@@ -519,7 +518,7 @@ describe("gossip attestation validation", function () {
         beaconBlockRoot: Buffer.alloc(32),
       },
     });
-    db.seenAttestationCache.hasCommitteeAttestation.resolves(false);
+    db.seenAttestationCache.hasCommitteeAttestation.returns(false);
     forkChoice.hasBlock.returns(true);
     forkChoice.isDescendant.returns(true);
     forkChoice.isDescendantOfFinalized.returns(false);
@@ -574,7 +573,7 @@ describe("gossip attestation validation", function () {
     chain.forkChoice = forkChoiceStub;
     forkChoiceStub.getFinalizedCheckpoint.returns({epoch: 0, root: Buffer.alloc(32)});
     forkChoiceStub.getAncestor.returns(Buffer.alloc(32));
-    db.seenAttestationCache.hasCommitteeAttestation.resolves(false);
+    db.seenAttestationCache.hasCommitteeAttestation.returns(false);
     forkChoiceStub.hasBlock.returns(true);
     forkChoiceStub.isDescendant.returns(true);
     forkChoiceStub.isDescendantOfFinalized.returns(true);

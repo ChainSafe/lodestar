@@ -1,4 +1,4 @@
-import {Slot, SlashingProtectionBlock} from "@chainsafe/lodestar-types";
+import {Slot, phase0} from "@chainsafe/lodestar-types";
 import {LodestarError} from "@chainsafe/lodestar-utils";
 
 export enum InvalidBlockErrorCode {
@@ -15,8 +15,8 @@ export enum InvalidBlockErrorCode {
 type InvalidBlockErrorType =
   | {
       code: InvalidBlockErrorCode.DOUBLE_BLOCK_PROPOSAL;
-      block: SlashingProtectionBlock;
-      block2: SlashingProtectionBlock;
+      block: phase0.SlashingProtectionBlock;
+      block2: phase0.SlashingProtectionBlock;
     }
   | {
       code: InvalidBlockErrorCode.SLOT_LESS_THAN_LOWER_BOUND;

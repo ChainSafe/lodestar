@@ -1,5 +1,5 @@
-import {EpochContext} from "../util";
-import {BeaconBlock} from "@chainsafe/lodestar-types";
+import {EpochContext, CachedValidatorsBeaconState} from "../util";
+import {phase0} from "@chainsafe/lodestar-types";
 
 import {processBlockHeader} from "./processBlockHeader";
 import {processRandao} from "./processRandao";
@@ -10,7 +10,6 @@ import {processAttesterSlashing} from "./processAttesterSlashing";
 import {processDeposit} from "./processDeposit";
 import {processProposerSlashing} from "./processProposerSlashing";
 import {processVoluntaryExit} from "./processVoluntaryExit";
-import {CachedValidatorsBeaconState} from "../../..";
 
 export * from "./isValidIndexedAttestation";
 
@@ -29,7 +28,7 @@ export {
 export function processBlock(
   epochCtx: EpochContext,
   state: CachedValidatorsBeaconState,
-  block: BeaconBlock,
+  block: phase0.BeaconBlock,
   verifySignatures = true
 ): void {
   processBlockHeader(epochCtx, state, block);

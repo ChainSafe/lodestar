@@ -1,19 +1,16 @@
-import {
-  CachedValidatorsBeaconState,
-  createCachedValidatorsBeaconState,
-} from "@chainsafe/lodestar-beacon-state-transition";
 import {config} from "@chainsafe/lodestar-config/minimal";
-import {BeaconState, Eth1Data, Gwei, PendingAttestation, Root, Validator} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {List, TreeBacked} from "@chainsafe/ssz";
+import {Gwei, Root} from "@chainsafe/lodestar-types";
 import {GENESIS_EPOCH, GENESIS_SLOT, ZERO_HASH} from "../../src/constants";
 import {generateEmptyBlock} from "./block";
 
 /**
  * Copy of BeaconState, but all fields are marked optional to allow for swapping out variables as needed.
  */
-type TestBeaconState = Partial<BeaconState>;
+type TestBeaconState = Partial<phase0.BeaconState>;
 
-let treeBackedState: TreeBacked<BeaconState>;
+let treeBackedState: TreeBacked<phase0.BeaconState>;
 
 /**
  * Generate beaconState, by default it will use the initial state defined when the `ChainStart` log is emitted.
@@ -24,8 +21,8 @@ let treeBackedState: TreeBacked<BeaconState>;
  * @param config
  * @returns {BeaconState}
  */
-export function generateState(opts: TestBeaconState = {}): TreeBacked<BeaconState> {
-  const defaultState: BeaconState = {
+export function generateState(opts: TestBeaconState = {}): TreeBacked<phase0.BeaconState> {
+  const defaultState: phase0.BeaconState = {
     genesisTime: Math.floor(Date.now() / 1000),
     genesisValidatorsRoot: ZERO_HASH,
     slot: GENESIS_SLOT,
@@ -39,7 +36,7 @@ export function generateState(opts: TestBeaconState = {}): TreeBacked<BeaconStat
       proposerIndex: 0,
       parentRoot: Buffer.alloc(32),
       stateRoot: Buffer.alloc(32),
-      bodyRoot: config.types.BeaconBlockBody.hashTreeRoot(generateEmptyBlock().body),
+      bodyRoot: config.types.phase0.BeaconBlockBody.hashTreeRoot(generateEmptyBlock().body),
     },
     blockRoots: Array.from({length: config.params.SLOTS_PER_HISTORICAL_ROOT}, () => ZERO_HASH),
     stateRoots: Array.from({length: config.params.SLOTS_PER_HISTORICAL_ROOT}, () => ZERO_HASH),
@@ -49,14 +46,14 @@ export function generateState(opts: TestBeaconState = {}): TreeBacked<BeaconStat
       blockHash: Buffer.alloc(32),
       depositCount: 0,
     },
-    eth1DataVotes: ([] as Eth1Data[]) as List<Eth1Data>,
+    eth1DataVotes: ([] as phase0.Eth1Data[]) as List<phase0.Eth1Data>,
     eth1DepositIndex: 0,
-    validators: ([] as Validator[]) as List<Validator>,
+    validators: ([] as phase0.Validator[]) as List<phase0.Validator>,
     balances: ([] as Gwei[]) as List<Gwei>,
     randaoMixes: Array.from({length: config.params.EPOCHS_PER_HISTORICAL_VECTOR}, () => ZERO_HASH),
     slashings: Array.from({length: config.params.EPOCHS_PER_SLASHINGS_VECTOR}, () => BigInt(0)),
-    previousEpochAttestations: ([] as PendingAttestation[]) as List<PendingAttestation>,
-    currentEpochAttestations: ([] as PendingAttestation[]) as List<PendingAttestation>,
+    previousEpochAttestations: ([] as phase0.PendingAttestation[]) as List<phase0.PendingAttestation>,
+    currentEpochAttestations: ([] as phase0.PendingAttestation[]) as List<phase0.PendingAttestation>,
     justificationBits: Array.from({length: 4}, () => false),
     previousJustifiedCheckpoint: {
       epoch: GENESIS_EPOCH,
@@ -71,7 +68,7 @@ export function generateState(opts: TestBeaconState = {}): TreeBacked<BeaconStat
       root: ZERO_HASH,
     },
   };
-  treeBackedState = treeBackedState || config.types.BeaconState.tree.createValue(defaultState);
+  treeBackedState = treeBackedState || config.types.phase0.BeaconState.tree.createValue(defaultState);
   const resultState = treeBackedState.clone();
   for (const key in opts) {
     // @ts-ignore
@@ -80,6 +77,6 @@ export function generateState(opts: TestBeaconState = {}): TreeBacked<BeaconStat
   return resultState;
 }
 
-export function generateCachedState(opts: TestBeaconState = {}): CachedValidatorsBeaconState {
-  return createCachedValidatorsBeaconState(generateState(opts));
+export function generateCachedState(opts: TestBeaconState = {}): phase0.fast.CachedValidatorsBeaconState {
+  return phase0.fast.createCachedValidatorsBeaconState(generateState(opts));
 }

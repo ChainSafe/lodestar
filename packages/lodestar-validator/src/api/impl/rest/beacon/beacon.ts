@@ -1,5 +1,5 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {BeaconBlock, BeaconState, Genesis} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {Json} from "@chainsafe/ssz";
 import {HttpClient, urlJoin} from "../../../../util";
@@ -26,20 +26,20 @@ export class RestBeaconApi implements IBeaconApi {
     this.pool = new RestBeaconPoolApi(this.config, this.clientV2, this.logger);
   }
 
-  public async getGenesis(): Promise<Genesis | null> {
+  public async getGenesis(): Promise<phase0.Genesis | null> {
     try {
       const genesisResponse = await this.clientV2.get<{data: Json}>("/genesis");
-      return this.config.types.Genesis.fromJson(genesisResponse.data, {case: "snake"});
+      return this.config.types.phase0.Genesis.fromJson(genesisResponse.data, {case: "snake"});
     } catch (e) {
       this.logger.error("Failed to obtain genesis time", {error: e.message});
       return null;
     }
   }
 
-  public async getChainHead(): Promise<BeaconBlock> {
+  public async getChainHead(): Promise<phase0.BeaconBlock> {
     throw new Error("Method not implemented.");
   }
-  public async getBeaconState(): Promise<BeaconState> {
+  public async getBeaconState(): Promise<phase0.BeaconState> {
     throw new Error("Method not implemented.");
   }
 }

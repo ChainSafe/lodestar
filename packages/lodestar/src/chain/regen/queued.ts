@@ -1,5 +1,5 @@
 import {AbortSignal} from "abort-controller";
-import {BeaconBlock, Root, Checkpoint, Slot} from "@chainsafe/lodestar-types";
+import {Root, phase0, Slot} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 
@@ -43,11 +43,11 @@ export class QueuedStateRegenerator implements IStateRegenerator {
     this.jobQueue = new JobQueue({queueSize, signal});
   }
 
-  async getPreState(block: BeaconBlock): Promise<ITreeStateContext> {
+  async getPreState(block: phase0.BeaconBlock): Promise<ITreeStateContext> {
     return await this.jobQueue.enqueueJob(async () => await this.regen.getPreState(block));
   }
 
-  async getCheckpointState(cp: Checkpoint): Promise<ITreeStateContext> {
+  async getCheckpointState(cp: phase0.Checkpoint): Promise<ITreeStateContext> {
     return await this.jobQueue.enqueueJob(async () => await this.regen.getCheckpointState(cp));
   }
 

@@ -1,7 +1,6 @@
 import {expect} from "chai";
 import sinon, {SinonStub, SinonStubbedInstance} from "sinon";
 
-import {IndexedAttestation} from "@chainsafe/lodestar-types";
 import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import * as attestationUtils from "@chainsafe/lodestar-beacon-state-transition/lib/phase0/fast/block/isValidIndexedAttestation";
@@ -68,7 +67,7 @@ describe("processAttestation", function () {
     const attestation = generateAttestation();
     const state = generateCachedState();
     const epochCtx = sinon.createStubInstance(phase0.EpochContext);
-    epochCtx.getIndexedAttestation.returns({} as IndexedAttestation);
+    epochCtx.getIndexedAttestation.returns({} as phase0.IndexedAttestation);
     regen.getCheckpointState.resolves({state, epochCtx: (epochCtx as unknown) as phase0.EpochContext});
     isValidIndexedAttestationStub.returns(false);
     try {
@@ -87,8 +86,8 @@ describe("processAttestation", function () {
   it("should emit 'attestation' event on processed attestation", async function () {
     const attestation = generateAttestation();
     const state = generateCachedState();
-    const epochCtx = sinon.createStubInstance(phase0.EpochContext);
-    epochCtx.getIndexedAttestation.returns({} as IndexedAttestation);
+    const epochCtx = sinon.createStubInstance(phase0.fast.EpochContext);
+    epochCtx.getIndexedAttestation.returns({} as phase0.IndexedAttestation);
     regen.getCheckpointState.resolves({state, epochCtx: (epochCtx as unknown) as phase0.EpochContext});
     isValidIndexedAttestationStub.returns(true);
     forkChoice.onAttestation.returns();

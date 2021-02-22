@@ -1,10 +1,9 @@
-import {SignedBeaconBlock} from "@chainsafe/lodestar-types";
-import {SlotRoot} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {IRegularSyncModules} from "../..";
 
 export interface IBlockRangeFetcher {
-  setLastProcessedBlock(lastProcessedBlock: SlotRoot): void;
-  getNextBlockRange(): Promise<SignedBeaconBlock[]>;
+  setLastProcessedBlock(lastProcessedBlock: phase0.SlotRoot): void;
+  getNextBlockRange(): Promise<phase0.SignedBeaconBlock[]>;
 }
 
 export type ORARegularSyncModules = IRegularSyncModules & {

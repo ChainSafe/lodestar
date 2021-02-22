@@ -1,8 +1,8 @@
-import {BeaconBlock, BeaconState} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 
 import {EpochContext} from "../util";
 
-export function processBlockHeader(epochCtx: EpochContext, state: BeaconState, block: BeaconBlock): void {
+export function processBlockHeader(epochCtx: EpochContext, state: phase0.BeaconState, block: phase0.BeaconBlock): void {
   const types = epochCtx.config.types;
   const slot = state.slot;
   // verify that the slots match
@@ -25,7 +25,7 @@ export function processBlockHeader(epochCtx: EpochContext, state: BeaconState, b
     );
   }
   // verify that the parent matches
-  if (!types.Root.equals(block.parentRoot, types.BeaconBlockHeader.hashTreeRoot(state.latestBlockHeader))) {
+  if (!types.Root.equals(block.parentRoot, types.phase0.BeaconBlockHeader.hashTreeRoot(state.latestBlockHeader))) {
     throw new Error("Block parent root does not match state latest block");
   }
   // cache current block as the new latest block
@@ -34,7 +34,7 @@ export function processBlockHeader(epochCtx: EpochContext, state: BeaconState, b
     proposerIndex: block.proposerIndex,
     parentRoot: block.parentRoot,
     stateRoot: new Uint8Array(32),
-    bodyRoot: types.BeaconBlockBody.hashTreeRoot(block.body),
+    bodyRoot: types.phase0.BeaconBlockBody.hashTreeRoot(block.body),
   };
 
   // verify proposer is not slashed

@@ -1,7 +1,7 @@
 import "mocha";
 import {expect} from "chai";
 import {fromHexString} from "@chainsafe/ssz";
-import {Eth1Block} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {goerliRpcUrl} from "../../testParams";
 import {Eth1JsonRpcClient} from "../../../src/eth1/eth1JsonRpcClient";
 
@@ -10,7 +10,7 @@ describe("eth1 / httpEth1Client", function () {
 
   const eth1JsonRpcClient = new Eth1JsonRpcClient({providerUrl: goerliRpcUrl});
 
-  const firstGoerliBlocks: Eth1Block[] = [
+  const firstGoerliBlocks: phase0.Eth1Block[] = [
     [0, 1548854791, "0xbf7e331f7f7c1dd2e05159666b3bf8bc7a8a3a9eb1d518969eab529dd9b88c1a"],
     [1, 1548947453, "0x8f5bab218b6bb34476f51ca588e9f4553a3a7ce5e13a66c660a5283e97e9a85a"],
     [2, 1548947468, "0xe675f1362d82cdd1ec260b16fb046c17f61d8a84808150f5d715ccce775f575e"],

@@ -2,15 +2,7 @@
  * @module network
  */
 import {ENR} from "@chainsafe/discv5/lib";
-import {
-  BeaconBlocksByRangeRequest,
-  BeaconBlocksByRootRequest,
-  Goodbye,
-  Metadata,
-  Ping,
-  SignedBeaconBlock,
-  Status,
-} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {EventEmitter} from "events";
 import LibP2p from "libp2p";
 import Multiaddr from "multiaddr";
@@ -18,17 +10,17 @@ import PeerId from "peer-id";
 import StrictEventEmitter from "strict-event-emitter-types";
 import {IGossip} from "./gossip/interface";
 import {MetadataController} from "./metadata";
-import {IPeerMetadataStore} from "./peers/interface";
+import {IPeerMetadataStore} from "./peers";
 import {IRpcScoreTracker} from "./peers/score";
 import {ReqRespHandler} from "./reqresp";
 
 export interface IReqResp {
-  status(peerId: PeerId, request: Status): Promise<Status | null>;
-  goodbye(peerId: PeerId, request: Goodbye): Promise<void>;
-  ping(peerId: PeerId, request: Ping): Promise<Ping | null>;
-  metadata(peerId: PeerId): Promise<Metadata | null>;
-  beaconBlocksByRange(peerId: PeerId, request: BeaconBlocksByRangeRequest): Promise<SignedBeaconBlock[] | null>;
-  beaconBlocksByRoot(peerId: PeerId, request: BeaconBlocksByRootRequest): Promise<SignedBeaconBlock[] | null>;
+  status(peerId: PeerId, request: phase0.Status): Promise<phase0.Status>;
+  goodbye(peerId: PeerId, request: phase0.Goodbye): Promise<void>;
+  ping(peerId: PeerId, request: phase0.Ping): Promise<phase0.Ping>;
+  metadata(peerId: PeerId): Promise<phase0.Metadata>;
+  beaconBlocksByRange(peerId: PeerId, request: phase0.BeaconBlocksByRangeRequest): Promise<phase0.SignedBeaconBlock[]>;
+  beaconBlocksByRoot(peerId: PeerId, request: phase0.BeaconBlocksByRootRequest): Promise<phase0.SignedBeaconBlock[]>;
   registerHandler(handler: ReqRespHandler): void;
   unregisterHandler(): ReqRespHandler | null;
 }

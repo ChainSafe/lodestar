@@ -1,4 +1,4 @@
-import {BeaconBlock, Bytes32, Fork, Genesis, Number64} from "@chainsafe/lodestar-types";
+import {Bytes32, phase0, Number64} from "@chainsafe/lodestar-types";
 import {generateEmptyBlock} from "@chainsafe/lodestar/test/utils/block";
 import sinon, {SinonStubbedInstance} from "sinon";
 import {IBeaconBlocksApi} from "../../../lib/api/interface/beacon";
@@ -9,8 +9,8 @@ import {IBeaconApi, IBeaconPoolApi, IBeaconStateApi} from "../../../src/api/inte
 
 export interface IMockBeaconApiOpts {
   version?: Bytes32;
-  fork?: Fork;
-  head?: BeaconBlock;
+  fork?: phase0.Fork;
+  head?: phase0.BeaconBlock;
   genesisTime?: Number64;
 }
 
@@ -20,8 +20,8 @@ export class MockBeaconApi implements IBeaconApi {
   public pool: SinonStubbedInstance<IBeaconPoolApi>;
 
   private version: Bytes32;
-  private fork: Fork;
-  private head: BeaconBlock;
+  private fork: phase0.Fork;
+  private head: phase0.BeaconBlock;
   private genesisTime: Number64;
 
   public constructor(opts?: IMockBeaconApiOpts) {
@@ -38,7 +38,7 @@ export class MockBeaconApi implements IBeaconApi {
     throw new Error("Method not implemented.");
   }
 
-  public async getGenesis(): Promise<Genesis | null> {
+  public async getGenesis(): Promise<phase0.Genesis | null> {
     return {
       genesisTime: BigInt(this.genesisTime),
       genesisForkVersion: Buffer.alloc(8, 1),

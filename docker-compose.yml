@@ -6,6 +6,8 @@ services:
     volumes:
       - lodestar:/root/.local/share/lodestar
     command: beacon --network ${NETWORK:-pyrmont}
+    ports:
+      - "9000:9000"
 
   prometheus:
     build: docker/prometheus

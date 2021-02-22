@@ -1,14 +1,17 @@
 import {load, FAILSAFE_SCHEMA, Schema, Type} from "js-yaml";
-import {Json, ContainerType} from "@chainsafe/ssz";
+import {Json} from "@chainsafe/ssz";
 
-export function createParams<T>(input: Record<string, unknown>, type: ContainerType<T>): T {
-  const params: Partial<T> = {};
-  Object.entries(type.fields).forEach(([fieldName, fieldType]) => {
+import {IBeaconParams} from "./interface";
+import {BeaconParams} from "./beaconParams";
+
+export function createIBeaconParams(input: Record<string, unknown>): Partial<IBeaconParams> {
+  const params: Partial<IBeaconParams> = {};
+  Object.entries(BeaconParams.fields).forEach(([fieldName, fieldType]) => {
     if (input[fieldName]) {
       (params as Record<string, unknown>)[fieldName] = fieldType.fromJson(input[fieldName] as Json) as unknown;
     }
   });
-  return params as T;
+  return params;
 }
 
 export function loadConfigYaml(configYaml: string): Record<string, unknown> {
@@ -26,17 +29,3 @@ export const schema = new Schema({
     }),
   ],
 });
-
-export function mapValuesNumToString<T extends {[key: string]: number | string | Array<number | string>}>(
-  obj: T
-): {[K in keyof T]: string | string[]} {
-  const objAsStrings = {} as {[K in keyof T]: string | string[]};
-  for (const key in obj) {
-    if (Array.isArray(obj[key])) {
-      objAsStrings[key] = (obj[key] as Array<string | number>).map((i) => String(i));
-    } else {
-      objAsStrings[key] = String(obj[key]);
-    }
-  }
-  return objAsStrings;
-}

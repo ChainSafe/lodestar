@@ -1,9 +1,9 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Bucket, IDatabaseController, IFilterOptions, IKeyValue, Repository} from "@chainsafe/lodestar-db";
 import {IBlockSummary} from "@chainsafe/lodestar-fork-choice";
-import {SignedBeaconBlock, Slot} from "@chainsafe/lodestar-types";
+import {allForks, Slot} from "@chainsafe/lodestar-types";
 import {bytesToInt} from "@chainsafe/lodestar-utils";
-import {ArrayLike, ContainerType, Type} from "@chainsafe/ssz";
+import {ArrayLike, ContainerType} from "@chainsafe/ssz";
 import all from "it-all";
 import {deleteParentRootIndex, deleteRootIndex, storeParentRootIndex, storeRootIndex} from "./db-index";
 
@@ -18,22 +18,22 @@ export interface IKeyValueSummary<K, V, S> extends IKeyValue<K, V> {
 /**
  * Stores finalized blocks. Block slot is identifier.
  */
-export abstract class GenericBlockArchiveRepository<TBlock extends SignedBeaconBlock> extends Repository<Slot, TBlock> {
-  protected signedBlockType: ContainerType<TBlock>;
+export class GenericBlockArchiveRepository extends Repository<Slot, allForks.SignedBeaconBlock> {
+  protected type: ContainerType<allForks.SignedBeaconBlock>;
 
   public constructor(
     config: IBeaconConfig,
     db: IDatabaseController<Buffer, Buffer>,
     bucket: Bucket,
-    type: ContainerType<TBlock>
+    type: ContainerType<allForks.SignedBeaconBlock>
   ) {
     //casting should be fixed once complex and basic types inherit from Type
-    super(config, db, bucket, (type as unknown) as Type<TBlock>);
-    this.signedBlockType = type;
+    super(config, db, bucket, type);
+    this.type = type;
   }
 
-  public async put(key: Slot, value: TBlock): Promise<void> {
-    const blockRoot = this.signedBlockType.fields["message"].hashTreeRoot(value.message);
+  public async put(key: Slot, value: allForks.SignedBeaconBlock): Promise<void> {
+    const blockRoot = this.type.fields["message"].hashTreeRoot(value.message);
     const slot = value.message.slot;
     await Promise.all([
       super.put(key, value),
@@ -42,12 +42,12 @@ export abstract class GenericBlockArchiveRepository<TBlock extends SignedBeaconB
     ]);
   }
 
-  public async batchPut(items: ArrayLike<IKeyValue<Slot, TBlock>>): Promise<void> {
+  public async batchPut(items: ArrayLike<IKeyValue<Slot, allForks.SignedBeaconBlock>>): Promise<void> {
     await Promise.all([
       super.batchPut(items),
       Array.from(items).map((item) => {
         const slot = item.value.message.slot;
-        const blockRoot = this.signedBlockType.fields["message"].hashTreeRoot(item.value.message);
+        const blockRoot = this.type.fields["message"].hashTreeRoot(item.value.message);
         return storeRootIndex(this.db, slot, blockRoot);
       }),
       Array.from(items).map((item) => {
@@ -66,20 +66,18 @@ export abstract class GenericBlockArchiveRepository<TBlock extends SignedBeaconB
     ]);
   }
 
-  public async remove(value: TBlock): Promise<void> {
+  public async remove(value: allForks.SignedBeaconBlock): Promise<void> {
     await Promise.all([
       super.remove(value),
-      deleteRootIndex(this.db, this.signedBlockType.fields["message"] as ContainerType<TBlock["message"]>, value),
+      deleteRootIndex(this.db, this.type, value),
       deleteParentRootIndex(this.db, value),
     ]);
   }
 
-  public async batchRemove(values: ArrayLike<TBlock>): Promise<void> {
+  public async batchRemove(values: ArrayLike<allForks.SignedBeaconBlock>): Promise<void> {
     await Promise.all([
       super.batchRemove(values),
-      Array.from(values).map((value) =>
-        deleteRootIndex(this.db, this.signedBlockType.fields["message"] as ContainerType<TBlock["message"]>, value)
-      ),
+      Array.from(values).map((value) => deleteRootIndex(this.db, this.type, value)),
       Array.from(values).map((value) => deleteParentRootIndex(this.db, value)),
     ]);
   }
@@ -88,15 +86,15 @@ export abstract class GenericBlockArchiveRepository<TBlock extends SignedBeaconB
     return bytesToInt((super.decodeKey(data) as unknown) as Uint8Array, "be");
   }
 
-  public getId(value: TBlock): Slot {
+  public getId(value: allForks.SignedBeaconBlock): Slot {
     return value.message.slot;
   }
 
-  public async values(opts?: IBlockFilterOptions): Promise<TBlock[]> {
+  public async values(opts?: IBlockFilterOptions): Promise<allForks.SignedBeaconBlock[]> {
     return all(this.valuesStream(opts));
   }
 
-  public async *valuesStream(opts?: IBlockFilterOptions): AsyncIterable<TBlock> {
+  public async *valuesStream(opts?: IBlockFilterOptions): AsyncIterable<allForks.SignedBeaconBlock> {
     const dbFilterOpts = this.dbFilterOptions(opts);
     const firstSlot = dbFilterOpts.gt
       ? this.decodeKey(dbFilterOpts.gt) + 1

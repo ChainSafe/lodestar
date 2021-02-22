@@ -1,12 +1,14 @@
-import {computeEpochAtSlot, epochToCurrentForkVersion, ZERO_HASH} from "@chainsafe/lodestar-beacon-state-transition";
-import {config} from "@chainsafe/lodestar-config/mainnet";
 import {expect} from "chai";
 import sinon, {SinonStubbedInstance} from "sinon";
+
+import {config} from "@chainsafe/lodestar-config/mainnet";
+import {ZERO_HASH} from "@chainsafe/lodestar-beacon-state-transition";
+
 import {ForkChoice} from "../../../../src/chain";
 import {ArchiveBlocksTask} from "../../../../src/tasks/tasks/archiveBlocks";
 import {generateBlockSummary, generateEmptySignedBlock} from "../../../utils/block";
-import {silentLogger} from "../../../utils/logger";
 import {StubbedBeaconDb} from "../../../utils/stub";
+import {silentLogger} from "../../../utils/logger";
 
 describe("block archiver task", function () {
   const sandbox = sinon.createSandbox();
@@ -26,7 +28,7 @@ describe("block archiver task", function () {
    *       C
    */
   it("should archive finalized blocks on same chain", async function () {
-    const blockBuffer = Buffer.from(config.types.SignedBeaconBlock.serialize(generateEmptySignedBlock()));
+    const blockBuffer = Buffer.from(config.types.phase0.SignedBeaconBlock.serialize(generateEmptySignedBlock()));
     dbStub.block.getBinary.resolves(blockBuffer);
     const canonicalBlocks = [
       generateBlockSummary({slot: 5}),
@@ -54,10 +56,8 @@ describe("block archiver task", function () {
         canonicalBlocks.map((summary) => ({
           key: summary.slot,
           value: blockBuffer,
-          fork: epochToCurrentForkVersion(config, computeEpochAtSlot(config, summary.slot)),
           summary,
-        })),
-        sinon.match.any
+        }))
       )
     ).to.be.true;
     // delete canonical blocks
