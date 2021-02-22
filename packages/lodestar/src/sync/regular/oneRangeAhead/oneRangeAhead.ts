@@ -42,7 +42,7 @@ export class ORARegularSync extends (EventEmitter as {new (): RegularSyncEventEm
   public start(): void {
     const headSlot = this.chain.forkChoice.getHead().slot;
     const currentSlot = this.chain.clock.currentSlot;
-    this.logger.info("Started regular syncing", {currentSlot, headSlot});
+    this.logger.verbose("Started regular syncing", {currentSlot, headSlot});
     this.logger.verbose("Regular Sync: Current slot at start", {currentSlot});
     this.controller = new AbortController();
     this.network.gossip.subscribeToBlock(this.chain.getForkDigest(), this.onGossipBlock);
@@ -82,7 +82,7 @@ export class ORARegularSync extends (EventEmitter as {new (): RegularSyncEventEm
 
   private onProcessedBlock = (signedBlock: phase0.SignedBeaconBlock): void => {
     if (signedBlock.message.slot >= this.chain.clock.currentSlot) {
-      this.logger.info("Regular Sync: processed up to current slot", {slot: signedBlock.message.slot});
+      this.logger.verbose("Regular Sync: processed up to current slot", {slot: signedBlock.message.slot});
       this.emit("syncCompleted");
       this.stop();
     }
@@ -99,11 +99,11 @@ export class ORARegularSync extends (EventEmitter as {new (): RegularSyncEventEm
       ]);
       if (!result[0] || !result[0].length) {
         // node is stopped
-        this.logger.info("Regular Sync: fetcher returns empty array, finish sync now");
+        this.logger.verbose("Regular Sync: fetcher returns empty array, finish sync now");
         return;
       }
       this.blockBuffer = result[0];
-      this.logger.info("Regular Sync: Synced up to slot", {
+      this.logger.verbose("Regular Sync: Synced up to slot", {
         lastProcessedSlot: lastSlot,
         currentSlot: this.chain.clock.currentSlot,
       });
@@ -119,7 +119,7 @@ export class ORARegularSync extends (EventEmitter as {new (): RegularSyncEventEm
       excludedPeers.includes(this.bestPeer?.toB58String() ?? "") ||
       !checkBestPeer(this.bestPeer!, this.chain.forkChoice, this.network)
     ) {
-      this.logger.info("Regular Sync: wait for best peer");
+      this.logger.verbose("Regular Sync: wait for best peer");
       this.bestPeer = await this.waitForBestPeer(this.controller.signal, excludedPeers);
       if (this.controller.signal.aborted) return [];
     }
@@ -138,7 +138,7 @@ export class ORARegularSync extends (EventEmitter as {new (): RegularSyncEventEm
       if (peers && peers.length > 0) {
         bestPeer = getBestPeer(this.config, peers, this.network.peerMetadata);
         const peerHeadSlot = this.network.peerMetadata.status.get(bestPeer)!.headSlot;
-        this.logger.info("Regular Sync: Found best peer", {
+        this.logger.verbose("Regular Sync: Found best peer", {
           peerId: bestPeer.toB58String(),
           peerHeadSlot,
           currentSlot: this.chain.clock.currentSlot,

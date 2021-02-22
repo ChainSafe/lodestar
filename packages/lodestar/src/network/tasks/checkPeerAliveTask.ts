@@ -40,8 +40,7 @@ export class CheckPeerAliveTask {
   }
 
   public run = async (): Promise<void> => {
-    this.logger.info("Running CheckPeerAliveTask");
-    this.logger.profile("CheckPeerAliveTask");
+    this.logger.verbose("Running CheckPeerAliveTask");
     const peers = this.network.getPeers().map((peer) => peer.id);
     const seq = this.network.metadata.seqNumber;
     await Promise.all(
@@ -59,6 +58,5 @@ export class CheckPeerAliveTask {
         await handlePeerMetadataSequence(this.network, this.logger, peer, peerSeq);
       })
     );
-    this.logger.profile("CheckPeerAliveTask");
   };
 }

@@ -104,7 +104,7 @@ export class GossipMessageValidator implements IGossipMessageValidator {
 
       this.logger.verbose("Started gossip committee attestation validation", logContext);
       await validateGossipAttestation(this.config, this.chain, this.db, attestationJob, subnet);
-      this.logger.info("Received valid committee attestation", logContext);
+      this.logger.verbose("Received valid committee attestation", logContext);
 
       return ExtendedValidatorResult.accept;
     } catch (e) {

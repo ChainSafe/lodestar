@@ -32,7 +32,6 @@ export class BeaconSync implements IBeaconSync {
   private attestationCollector: AttestationCollector;
 
   private statusSyncTimer?: NodeJS.Timeout;
-  private peerCountTimer?: NodeJS.Timeout;
   // avoid finding same root at the same time
   private processingRoots: Set<string>;
 
@@ -60,7 +59,6 @@ export class BeaconSync implements IBeaconSync {
     if (this.mode === SyncMode.STOPPED) {
       return;
     }
-    this.peerCountTimer = setInterval(this.logPeerCount, 3 * this.config.params.SECONDS_PER_SLOT * 1000);
 
     if ((this.mode as SyncMode) === SyncMode.STOPPED) return;
     this.mode = SyncMode.INITIAL_SYNCING;
@@ -85,9 +83,6 @@ export class BeaconSync implements IBeaconSync {
 
   public async stop(): Promise<void> {
     this.controller.abort();
-    if (this.peerCountTimer) {
-      clearInterval(this.peerCountTimer);
-    }
     if (this.mode === SyncMode.STOPPED) {
       return;
     }
@@ -150,10 +145,10 @@ export class BeaconSync implements IBeaconSync {
     const minPeers = this.opts.minPeers ?? defaultSyncOptions.minPeers;
     const peerSet = getPeersInitialSync(this.network);
     if (!peerSet && minPeers === 0) {
-      this.logger.info("minPeers=0, skipping initial sync");
+      this.logger.verbose("minPeers=0, skipping initial sync");
       return {peers: [], targetEpoch: this.chain.forkChoice.getFinalizedBlock().finalizedEpoch};
     } else if (!peerSet || peerSet.peers.length < minPeers) {
-      this.logger.info(`Waiting for minPeers: ${peerSet?.peers?.length ?? 0}/${minPeers}`);
+      this.logger.verbose(`Waiting for minPeers: ${peerSet?.peers?.length ?? 0}/${minPeers}`);
       return null;
     } else {
       const targetEpoch = peerSet.checkpoint.epoch;
@@ -189,14 +184,6 @@ export class BeaconSync implements IBeaconSync {
       }
     }, interval);
   }
-
-  private logPeerCount = (): void => {
-    this.logger.info("Peer status", {
-      activePeers: this.network.getPeers().length,
-      syncPeers: this.getSyncPeers().length,
-      unknownRootPeers: this.getUnknownRootPeers().length,
-    });
-  };
 
   private stopSyncTimer(): void {
     if (this.statusSyncTimer) clearInterval(this.statusSyncTimer);

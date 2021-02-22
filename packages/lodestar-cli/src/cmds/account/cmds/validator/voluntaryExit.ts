@@ -10,6 +10,8 @@ import inquirer from "inquirer";
 import {readdirSync} from "fs";
 import {getSlashingProtection} from "./slashingProtection/utils";
 
+/* eslint-disable no-console */
+
 export type IValidatorVoluntaryExitArgs = IValidatorCliArgs & {
   publicKey: string;
   exitEpoch: number;
@@ -50,7 +52,6 @@ like to choose for the voluntary exit.",
 
     const force = args.force;
     let publicKey = args.publicKey;
-    const logger = new WinstonLogger();
     const accountPaths = getAccountPaths(args);
     const validatorDirManager = new ValidatorDirManager(accountPaths);
 
@@ -87,7 +88,7 @@ BE UNTIL AT LEAST TWO YEARS AFTER THE PHASE 0 MAINNET LAUNCH.
 
     if (confirmation.choice === "NO") return;
 
-    logger.info(`Initiating voluntary exit for validator ${publicKey}`);
+    console.log(`Initiating voluntary exit for validator ${publicKey}`);
 
     let secretKey;
 
@@ -97,7 +98,7 @@ BE UNTIL AT LEAST TWO YEARS AFTER THE PHASE 0 MAINNET LAUNCH.
       throw new YargsError(error);
     }
     if (!secretKey) throw new YargsError("No validator keystores found");
-    logger.info(`Decrypted keystore for validator ${publicKey}`);
+    console.log(`Decrypted keystore for validator ${publicKey}`);
 
     const config = getBeaconConfigFromArgs(args);
 
@@ -106,7 +107,7 @@ BE UNTIL AT LEAST TWO YEARS AFTER THE PHASE 0 MAINNET LAUNCH.
       config,
       api: args.server,
       secretKeys: [secretKey],
-      logger,
+      logger: new WinstonLogger(),
       graffiti: args.graffiti,
     });
 
