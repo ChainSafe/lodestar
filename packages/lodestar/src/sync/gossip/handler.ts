@@ -62,7 +62,7 @@ export class BeaconGossipHandler implements IGossipHandler {
 
     const prevForkDigest = this.state.forkDigest;
     const nextForkDigest = this.chain.getForkDigest();
-    this.logger.info(`Gossip handler: received new fork digest ${toHexString(nextForkDigest)}`);
+    this.logger.verbose(`Gossip handler: received new fork digest ${toHexString(nextForkDigest)}`);
     this.unsubscribe(prevForkDigest);
     this.subscribe(nextForkDigest);
     this.state = {status: GossipHandlerStatus.Started, forkDigest: nextForkDigest};
