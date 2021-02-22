@@ -67,7 +67,6 @@ export function getBeaconParams({preset, network, paramsFile, additionalParamsCl
     // Params from CLI flags
     additionalParamsCli || {}
   );
-  //TODO: probably needs deepmerge since additional phase 1 params will replace preset default params
   return {...presetBeaconParams, ...createIBeaconParams(additionalParams)};
 }
 

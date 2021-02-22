@@ -1,4 +1,4 @@
-import {Slot, Version, Root, phase0, ForkDigest} from "@chainsafe/lodestar-types";
+import {Version, Root, phase0, ForkDigest} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
 /**
@@ -19,12 +19,4 @@ export function computeForkDigest(
 ): ForkDigest {
   const root = computeForkDataRoot(config, currentVersion, genesisValidatorsRoot);
   return (root.valueOf() as Uint8Array).slice(0, 4);
-}
-
-export function epochToCurrentForkVersion(config: IBeaconConfig, slot: Slot): Version | null {
-  let fork = config.params.GENESIS_FORK_VERSION;
-  if (slot >= config.params.LIGHTCLIENT_PATCH_FORK_SLOT) {
-    fork = config.params.LIGHTCLIENT_PATCH_FORK_VERSION;
-  }
-  return fork;
 }
