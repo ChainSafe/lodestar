@@ -59,12 +59,11 @@ export function getAttestationDeltas(
       rewards[i] += Number(maxAttesterReward / status.inclusionDelay);
     }
     if (hasMarkers(status.flags, FLAG_ELIGIBLE_ATTESTER)) {
+      const baseRewardsPerTotalBalance = BigInt(baseReward) / totalBalance;
       // expected FFG source
       if (hasMarkers(status.flags, FLAG_PREV_SOURCE_ATTESTER | FLAG_UNSLASHED)) {
         // justification-participation reward
-        rewards[i] += isInInactivityLeak
-          ? baseReward
-          : Number((BigInt(baseReward) * prevEpochSourceStake) / totalBalance);
+        rewards[i] += isInInactivityLeak ? baseReward : Number(baseRewardsPerTotalBalance * prevEpochSourceStake);
       } else {
         // justification-non-participation R-penalty
         penalties[i] += Number(baseReward);
@@ -73,9 +72,7 @@ export function getAttestationDeltas(
       // expected FFG target
       if (hasMarkers(status.flags, FLAG_PREV_TARGET_ATTESTER | FLAG_UNSLASHED)) {
         // boundary-attestation reward
-        rewards[i] += isInInactivityLeak
-          ? baseReward
-          : Number((BigInt(baseReward) * prevEpochTargetStake) / totalBalance);
+        rewards[i] += isInInactivityLeak ? baseReward : Number(baseRewardsPerTotalBalance * prevEpochTargetStake);
       } else {
         // boundary-attestation-non-participation R-penalty
         penalties[i] += baseReward;
@@ -84,9 +81,7 @@ export function getAttestationDeltas(
       // expected head
       if (hasMarkers(status.flags, FLAG_PREV_HEAD_ATTESTER | FLAG_UNSLASHED)) {
         // canonical-participation reward
-        rewards[i] += isInInactivityLeak
-          ? baseReward
-          : Number((BigInt(baseReward) * prevEpochHeadStake) / totalBalance);
+        rewards[i] += isInInactivityLeak ? baseReward : Number(baseRewardsPerTotalBalance * prevEpochHeadStake);
       } else {
         // non-canonical-participation R-penalty
         penalties[i] += baseReward;
