@@ -1,9 +1,10 @@
-import {BeaconBlock, Checkpoint, Root, Slot} from "@chainsafe/lodestar-types";
+import {phase0, Root, Slot} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 
-import {ITreeStateContext} from "../../db/api/beacon/stateContextCache";
+import {ITreeStateContext} from "../interface";
+import {CheckpointStateCache, StateContextCache} from "../stateCache";
 import {ChainEventEmitter} from "../emitter";
 import {IBeaconDb} from "../../db";
 import {processSlotsByCheckpoint, runStateTransition} from "../blocks/stateTransition";
@@ -17,26 +18,34 @@ export class StateRegenerator implements IStateRegenerator {
   private config: IBeaconConfig;
   private emitter: ChainEventEmitter;
   private forkChoice: IForkChoice;
+  private stateCache: StateContextCache;
+  private checkpointStateCache: CheckpointStateCache;
   private db: IBeaconDb;
 
   constructor({
     config,
     emitter,
     forkChoice,
+    stateCache,
+    checkpointStateCache,
     db,
   }: {
     config: IBeaconConfig;
     emitter: ChainEventEmitter;
     forkChoice: IForkChoice;
+    stateCache: StateContextCache;
+    checkpointStateCache: CheckpointStateCache;
     db: IBeaconDb;
   }) {
     this.config = config;
     this.emitter = emitter;
     this.forkChoice = forkChoice;
+    this.stateCache = stateCache;
+    this.checkpointStateCache = checkpointStateCache;
     this.db = db;
   }
 
-  async getPreState(block: BeaconBlock): Promise<ITreeStateContext> {
+  async getPreState(block: phase0.BeaconBlock): Promise<ITreeStateContext> {
     const parentBlock = this.forkChoice.getBlock(block.parentRoot);
     if (!parentBlock) {
       throw new RegenError({
@@ -52,20 +61,20 @@ export class StateRegenerator implements IStateRegenerator {
     // then we may use the checkpoint state before the block. This may save us at least one epoch transition.
     const isCheckpointBlock = block.slot % this.config.params.SLOTS_PER_EPOCH === 0;
     if (parentEpoch < blockEpoch && !isCheckpointBlock) {
-      return this.getCheckpointState({root: block.parentRoot, epoch: blockEpoch});
+      return await this.getCheckpointState({root: block.parentRoot, epoch: blockEpoch});
     }
 
     // If there's more than one epoch to pre-process (but the block is a checkpoint block)
     // get the checkpoint state as close as possible
     if (parentEpoch < blockEpoch - 1) {
-      return this.getCheckpointState({root: block.parentRoot, epoch: blockEpoch - 1});
+      return await this.getCheckpointState({root: block.parentRoot, epoch: blockEpoch - 1});
     }
 
     // Otherwise, get the state normally.
-    return this.getState(parentBlock.stateRoot);
+    return await this.getState(parentBlock.stateRoot);
   }
 
-  async getCheckpointState(cp: Checkpoint): Promise<ITreeStateContext> {
+  async getCheckpointState(cp: phase0.Checkpoint): Promise<ITreeStateContext> {
     const checkpointStartSlot = computeStartSlotAtEpoch(this.config, cp.epoch);
     return await this.getBlockSlotState(cp.root, checkpointStartSlot);
   }
@@ -87,7 +96,7 @@ export class StateRegenerator implements IStateRegenerator {
       });
     }
 
-    const latestCheckpointStateCtx = await this.db.checkpointStateCache.getLatest({
+    const latestCheckpointStateCtx = this.checkpointStateCache.getLatest({
       root: blockRoot,
       epoch: computeEpochAtSlot(this.config, slot),
     });
@@ -107,7 +116,7 @@ export class StateRegenerator implements IStateRegenerator {
 
   async getState(stateRoot: Root): Promise<ITreeStateContext> {
     // Trivial case, stateCtx at stateRoot is already cached
-    const cachedStateCtx = await this.db.stateCache.get(stateRoot);
+    const cachedStateCtx = this.stateCache.get(stateRoot);
     if (cachedStateCtx) {
       return cachedStateCtx;
     }
@@ -132,11 +141,11 @@ export class StateRegenerator implements IStateRegenerator {
     const blocksToReplay = [block];
     let stateCtx: ITreeStateContext | null = null;
     for (const b of this.forkChoice.iterateBlockSummaries(block.parentRoot)) {
-      stateCtx = await this.db.stateCache.get(b.stateRoot);
+      stateCtx = this.stateCache.get(b.stateRoot);
       if (stateCtx) {
         break;
       }
-      stateCtx = await this.db.checkpointStateCache.getLatest({
+      stateCtx = this.checkpointStateCache.getLatest({
         root: b.blockRoot,
         epoch: computeEpochAtSlot(this.config, blocksToReplay[blocksToReplay.length - 1].slot - 1),
       });
@@ -170,7 +179,7 @@ export class StateRegenerator implements IStateRegenerator {
       }
 
       try {
-        stateCtx = await runStateTransition(this.emitter, this.forkChoice, this.db, stateCtx, {
+        stateCtx = await runStateTransition(this.emitter, this.forkChoice, this.checkpointStateCache, stateCtx, {
           signedBlock: block,
           reprocess: true,
           prefinalized: true,
@@ -185,6 +194,6 @@ export class StateRegenerator implements IStateRegenerator {
       }
     }
 
-    return stateCtx;
+    return stateCtx as ITreeStateContext;
   }
 }

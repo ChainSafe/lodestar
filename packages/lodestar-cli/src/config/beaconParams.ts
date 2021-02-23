@@ -3,20 +3,20 @@ import {createIBeaconParams, BeaconParams, IBeaconParams} from "@chainsafe/lodes
 import {params as mainnetParams} from "@chainsafe/lodestar-params/mainnet";
 import {params as minimalParams} from "@chainsafe/lodestar-params/minimal";
 import {writeFile, readFileIfExists} from "../util";
-import {getTestnetBeaconParams, TestnetName} from "../testnets";
+import {getNetworkBeaconParams, NetworkName} from "../networks";
 import {getGlobalPaths, IGlobalPaths} from "../paths/global";
 import {IBeaconParamsUnparsed} from "./types";
 import {parseBeaconParamsArgs} from "../options";
 
 type IBeaconParamsCliArgs = {
   preset: string;
-  testnet?: TestnetName;
+  network?: NetworkName;
   paramsFile: string;
 } & Partial<IGlobalPaths>;
 
 interface IBeaconParamsArgs {
   preset: string;
-  testnet?: TestnetName;
+  network?: NetworkName;
   paramsFile: string;
   additionalParamsCli: IBeaconParamsUnparsed;
 }
@@ -36,7 +36,7 @@ export function getBeaconConfigFromArgs(args: IBeaconParamsCliArgs): IBeaconConf
 export function getBeaconParamsFromArgs(args: IBeaconParamsCliArgs): IBeaconParams {
   return getBeaconParams({
     preset: args.preset,
-    testnet: args.testnet,
+    network: args.network,
     paramsFile: getGlobalPaths(args).paramsFile,
     additionalParamsCli: parseBeaconParamsArgs(args as Record<string, string | number>),
   });
@@ -53,22 +53,21 @@ export function getBeaconConfig(args: IBeaconParamsArgs): IBeaconConfig {
 /**
  * Computes merged IBeaconParams type from (in order)
  * - preset
- * - Testnet params (diff)
+ * - Network params (diff)
  * - existing params file
  * - CLI flags
  */
-export function getBeaconParams({preset, testnet, paramsFile, additionalParamsCli}: IBeaconParamsArgs): IBeaconParams {
+export function getBeaconParams({preset, network, paramsFile, additionalParamsCli}: IBeaconParamsArgs): IBeaconParams {
   const presetBeaconParams = getPresetBeaconParams(preset);
   const additionalParams = mergeBeaconParams(
-    // Default testnet params
-    testnet ? getTestnetBeaconParams(testnet) : {},
+    // Default network params
+    network ? getNetworkBeaconParams(network) : {},
     // Existing user custom params from file
     readBeaconParamsIfExists(paramsFile),
     // Params from CLI flags
     additionalParamsCli || {}
   );
-  //TODO: probably needs deepmerge since additional phase 1 params will replace preset default params
-  return {...presetBeaconParams, ...createIBeaconParams(additionalParams, BeaconParams)};
+  return {...presetBeaconParams, ...createIBeaconParams(additionalParams)};
 }
 
 function getPresetBeaconParams(preset: string): IBeaconParams {

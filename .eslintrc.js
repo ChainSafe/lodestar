@@ -1,5 +1,3 @@
-const path = require('path');
-
 module.exports = {
   root: true,
   env: {
@@ -30,17 +28,11 @@ module.exports = {
     "plugin:import/typescript",
     "plugin:@typescript-eslint/recommended"
   ],
-  settings: {
-    "import/resolver": {
-      "@mpetrunic/eslint-import-resolver-lerna": {
-        packages: path.resolve(__dirname, "packages")
-      }
-    }
-  },
   rules: {
     "prettier/prettier": "error",
     //doesnt work, it reports false errors
     "constructor-super": "off",
+    "@typescript-eslint/await-thenable": "error",
     "@typescript-eslint/naming-convention": ["error", 
     {selector: "default", format: ['camelCase']},
     {selector: ["classProperty", "objectLiteralProperty", "classMethod", "parameter"], format: ['camelCase'], leadingUnderscore: "allow"},

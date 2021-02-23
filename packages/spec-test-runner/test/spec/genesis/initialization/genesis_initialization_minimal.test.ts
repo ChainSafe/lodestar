@@ -3,29 +3,29 @@ import {join} from "path";
 import {expect} from "chai";
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {BeaconState, Deposit, Uint64, Root} from "@chainsafe/lodestar-types";
+import {phase0, Uint64, Root} from "@chainsafe/lodestar-types";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util/lib/single";
 import {initializeBeaconStateFromEth1} from "@chainsafe/lodestar/lib/chain/genesis/genesis";
 
 import {SPEC_TEST_LOCATION} from "../../../utils/specTestCases";
 
 interface IGenesisInitSpecTest {
-  [k: string]: Deposit | unknown | null | undefined;
+  [k: string]: phase0.Deposit | unknown | null | undefined;
   eth1_block_hash: Root;
   eth1_timestamp: Uint64;
   meta: {
     depositsCount: Uint64;
   };
-  state: BeaconState;
+  state: phase0.BeaconState;
 }
 
-describeDirectorySpecTest<IGenesisInitSpecTest, BeaconState>(
+describeDirectorySpecTest<IGenesisInitSpecTest, phase0.BeaconState>(
   "genesis initialization",
   join(SPEC_TEST_LOCATION, "/tests/minimal/phase0/genesis/initialization/pyspec_tests"),
   (testcase) => {
-    const deposits: Deposit[] = [];
+    const deposits: phase0.Deposit[] = [];
     for (let i = 0; i < Number(testcase.meta.depositsCount); i++) {
-      deposits.push(testcase[`deposits_${i}`] as Deposit);
+      deposits.push(testcase[`deposits_${i}`] as phase0.Deposit);
     }
     return initializeBeaconStateFromEth1(config, testcase.eth1_block_hash, Number(testcase.eth1_timestamp), deposits);
   },
@@ -38,21 +38,24 @@ describeDirectorySpecTest<IGenesisInitSpecTest, BeaconState>(
     // @ts-ignore
     sszTypes: {
       eth1_block_hash: config.types.Root,
-      state: config.types.BeaconState,
+      state: config.types.phase0.BeaconState,
       ...generateDepositSSZTypeMapping(192, config),
     },
     timeout: 60000,
     getExpected: (testCase) => testCase.state,
     expectFunc: (testCase, expected, actual) => {
-      expect(config.types.BeaconState.equals(actual, expected)).to.be.true;
+      expect(config.types.phase0.BeaconState.equals(actual, expected)).to.be.true;
     },
   }
 );
 
-function generateDepositSSZTypeMapping(n: number, config: IBeaconConfig): Record<string, typeof config.types.Deposit> {
+function generateDepositSSZTypeMapping(
+  n: number,
+  config: IBeaconConfig
+): Record<string, typeof config.types.phase0.Deposit> {
   const depositMappings = {};
   for (let i = 0; i < n; i++) {
-    depositMappings[`deposits_${i}`] = config.types.Deposit;
+    depositMappings[`deposits_${i}`] = config.types.phase0.Deposit;
   }
   return depositMappings;
 }

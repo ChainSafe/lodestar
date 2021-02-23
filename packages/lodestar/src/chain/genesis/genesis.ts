@@ -3,7 +3,7 @@
  */
 
 import {TreeBacked, List} from "@chainsafe/ssz";
-import {BeaconState, Deposit, Number64, Bytes32, Root, DepositEvent} from "@chainsafe/lodestar-types";
+import {Number64, Bytes32, Root, phase0} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {AbortSignal} from "abort-controller";
 import {getTemporaryBlockHeader} from "@chainsafe/lodestar-beacon-state-transition";
@@ -26,7 +26,7 @@ export class GenesisBuilder implements IGenesisBuilder {
   private readonly logger: ILogger;
   private readonly signal?: AbortSignal;
   private readonly eth1Params: IEth1StreamParams;
-  private state: TreeBacked<BeaconState>;
+  private state: TreeBacked<phase0.BeaconState>;
   private depositTree: TreeBacked<List<Root>>;
   private depositCache: Set<number>;
 
@@ -44,10 +44,10 @@ export class GenesisBuilder implements IGenesisBuilder {
 
     this.state = getGenesisBeaconState(
       config,
-      config.types.Eth1Data.defaultValue(),
+      config.types.phase0.Eth1Data.defaultValue(),
       getTemporaryBlockHeader(config, getEmptyBlock())
     );
-    this.depositTree = config.types.DepositDataRootList.tree.defaultValue();
+    this.depositTree = config.types.phase0.DepositDataRootList.tree.defaultValue();
     this.depositCache = new Set<number>();
   }
 
@@ -112,12 +112,12 @@ export class GenesisBuilder implements IGenesisBuilder {
     throw Error("depositsStream stopped without a valid genesis state");
   }
 
-  private applyDeposits(depositEvents: DepositEvent[]): void {
+  private applyDeposits(depositEvents: phase0.DepositEvent[]): void {
     const newDeposits = depositEvents
       .filter((depositEvent) => !this.depositCache.has(depositEvent.index))
       .map((depositEvent) => {
         this.depositCache.add(depositEvent.index);
-        this.depositTree.push(this.config.types.DepositData.hashTreeRoot(depositEvent.depositData));
+        this.depositTree.push(this.config.types.phase0.DepositData.hashTreeRoot(depositEvent.depositData));
         return {
           proof: this.depositTree.tree().getSingleProof(this.depositTree.gindexOfProperty(depositEvent.index)),
           data: depositEvent.depositData,
@@ -141,11 +141,11 @@ export function initializeBeaconStateFromEth1(
   config: IBeaconConfig,
   eth1BlockHash: Bytes32,
   eth1Timestamp: Number64,
-  deposits: Deposit[]
-): TreeBacked<BeaconState> {
+  deposits: phase0.Deposit[]
+): TreeBacked<phase0.BeaconState> {
   const state = getGenesisBeaconState(
     config,
-    config.types.Eth1Data.defaultValue(),
+    config.types.phase0.Eth1Data.defaultValue(),
     getTemporaryBlockHeader(config, getEmptyBlock())
   );
 

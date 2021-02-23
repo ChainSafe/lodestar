@@ -1,4 +1,4 @@
-import {SignedBeaconBlock, SignedBeaconHeaderResponse} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {blockToHeader} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
@@ -9,11 +9,11 @@ import {fromHexString} from "@chainsafe/ssz";
 
 export function toBeaconHeaderResponse(
   config: IBeaconConfig,
-  block: SignedBeaconBlock,
+  block: phase0.SignedBeaconBlock,
   canonical = false
-): SignedBeaconHeaderResponse {
+): phase0.SignedBeaconHeaderResponse {
   return {
-    root: config.types.BeaconBlock.hashTreeRoot(block.message),
+    root: config.types.phase0.BeaconBlock.hashTreeRoot(block.message),
     canonical,
     header: {
       message: blockToHeader(config, block.message),
@@ -27,7 +27,7 @@ export async function resolveBlockId(
   forkChoice: IForkChoice,
   db: IBeaconDb,
   blockId: BlockId
-): Promise<SignedBeaconBlock | null> {
+): Promise<phase0.SignedBeaconBlock | null> {
   blockId = blockId.toLowerCase();
   if (blockId === "head") {
     return db.block.get(forkChoice.getHeadRoot());
@@ -42,7 +42,7 @@ export async function resolveBlockId(
     const root = fromHexString(blockId);
     return (await db.block.get(root)) || (await db.blockArchive.getByRoot(root));
   }
-  //block id must be slot
+  // block id must be slot
   const slot = parseInt(blockId, 10);
   if (isNaN(slot) && isNaN(slot - 0)) {
     throw new Error("Invalid block id");

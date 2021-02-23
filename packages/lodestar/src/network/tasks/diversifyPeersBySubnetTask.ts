@@ -29,32 +29,33 @@ export class DiversifyPeersBySubnetTask {
     this.isSynced = false;
   }
 
-  public async start(): Promise<void> {
+  public start(): void {
     this.testInterval = setInterval(
       this.run,
       1 * this.config.params.SLOTS_PER_EPOCH * this.config.params.SECONDS_PER_SLOT * 1000
     );
   }
 
-  public async stop(): Promise<void> {
+  public stop(): void {
     if (this.testInterval) {
       clearInterval(this.testInterval);
     }
   }
 
-  public async handleSyncCompleted(): Promise<void> {
+  public handleSyncCompleted(): void {
     this.isSynced = true;
   }
 
   public run = async (): Promise<void> => {
-    this.logger.info("Running DiversifyPeersBySubnetTask");
-    this.logger.profile("DiversifyPeersBySubnetTask");
-
-    const missingSubnets = this.isSynced ? findMissingSubnets(this.network) : [];
+    this.logger.verbose("Running DiversifyPeersBySubnetTask");
+    // network getPeers() is expensive, we don't want to call it multiple times
+    const connectedPeers = this.network.getPeers();
+    const connectedPeerIds = connectedPeers.map((peer) => peer.id);
+    const missingSubnets = this.isSynced ? findMissingSubnets(connectedPeerIds, this.network) : [];
     if (missingSubnets.length > 0) {
       this.logger.verbose("Searching peers for missing subnets", {missingSubnets});
     } else {
-      this.logger.info(
+      this.logger.verbose(
         this.isSynced
           ? "Our peers subscribed to all subnets!"
           : "Node not synced, no need to search for missing subnets"
@@ -62,8 +63,8 @@ export class DiversifyPeersBySubnetTask {
     }
 
     const toDiscPeers: PeerId[] = this.isSynced
-      ? gossipPeersToDisconnect(this.network, missingSubnets.length, this.network.getMaxPeer()) || []
-      : syncPeersToDisconnect(this.network) || [];
+      ? gossipPeersToDisconnect(connectedPeers, this.network, missingSubnets.length, this.network.getMaxPeer()) || []
+      : syncPeersToDisconnect(connectedPeers, this.network) || [];
 
     if (toDiscPeers.length > 0) {
       this.logger.verbose("Disconnecting peers to find new peers", {
@@ -77,16 +78,10 @@ export class DiversifyPeersBySubnetTask {
       }
     }
 
-    await Promise.all(
-      missingSubnets.map(async (subnet) => {
-        try {
-          await this.network.searchSubnetPeers(String(subnet));
-        } catch (e) {
-          this.logger.warn("Cannot connect to peers on subnet", {subnet, error: e.message});
-        }
-      })
-    );
-
-    this.logger.profile("DiversifyPeersBySubnetTask");
+    try {
+      await this.network.searchSubnetPeers(missingSubnets.map((subnet) => String(subnet)));
+    } catch (e) {
+      this.logger.warn("Cannot connect to peers on subnet", {subnet: missingSubnets, error: e.message});
+    }
   };
 }

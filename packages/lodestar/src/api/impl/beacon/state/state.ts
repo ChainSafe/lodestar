@@ -1,25 +1,17 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
-import {
-  BeaconCommitteeResponse,
-  BeaconState,
-  FinalityCheckpoints,
-  Fork,
-  Root,
-  ValidatorBalance,
-  ValidatorIndex,
-} from "@chainsafe/lodestar-types";
+import {Root, phase0} from "@chainsafe/lodestar-types";
 import {List, readOnlyMap} from "@chainsafe/ssz";
+import {notNullish} from "@chainsafe/lodestar-utils";
 import {IBeaconChain} from "../../../../chain/interface";
 import {IBeaconDb} from "../../../../db/api";
-import {notNullish} from "../../../../util/notNullish";
 import {IApiOptions} from "../../../options";
 import {ApiError, StateNotFound} from "../../errors/api";
 import {IApiModules} from "../../interface";
 import {IBeaconStateApi, ICommitteesFilters, IValidatorFilters, StateId} from "./interface";
 import {getEpochBeaconCommittees, resolveStateId, toValidatorResponse} from "./utils";
-import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
-import {ValidatorResponse} from "@chainsafe/lodestar-types";
+import {computeEpochAtSlot, getCurrentEpoch} from "@chainsafe/lodestar-beacon-state-transition";
+
 export class BeaconStateApi implements IBeaconStateApi {
   private readonly config: IBeaconConfig;
   private readonly db: IBeaconDb;
@@ -38,10 +30,10 @@ export class BeaconStateApi implements IBeaconStateApi {
     if (!state) {
       return null;
     }
-    return this.config.types.BeaconState.hashTreeRoot(state);
+    return this.config.types.phase0.BeaconState.hashTreeRoot(state);
   }
 
-  public async getStateFinalityCheckpoints(stateId: StateId): Promise<FinalityCheckpoints | null> {
+  public async getStateFinalityCheckpoints(stateId: StateId): Promise<phase0.FinalityCheckpoints | null> {
     const state = await this.getState(stateId);
     if (!state) {
       return null;
@@ -54,33 +46,33 @@ export class BeaconStateApi implements IBeaconStateApi {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  public async getStateValidators(stateId: StateId, filters?: IValidatorFilters): Promise<ValidatorResponse[]> {
-    const state = await resolveStateId(this.config, this.db, this.forkChoice, stateId);
+  public async getStateValidators(stateId: StateId, filters?: IValidatorFilters): Promise<phase0.ValidatorResponse[]> {
+    const state = await resolveStateId(this.chain, this.db, stateId);
     if (!state) {
       throw new StateNotFound();
     }
     //TODO: implement filters
     return readOnlyMap(state.state.validators, (v, index) =>
-      toValidatorResponse(index, v, state.state.balances[index])
+      toValidatorResponse(index, v, state.state.balances[index], getCurrentEpoch(this.config, state.state))
     );
   }
 
   public async getStateValidator(
     stateId: StateId,
-    validatorId: ValidatorIndex | Root
-  ): Promise<ValidatorResponse | null> {
-    const state = await resolveStateId(this.config, this.db, this.forkChoice, stateId);
+    validatorId: phase0.ValidatorIndex | Root
+  ): Promise<phase0.ValidatorResponse | null> {
+    const state = await resolveStateId(this.chain, this.db, stateId);
     if (!state) {
       throw new StateNotFound();
     }
-    let validatorIndex: ValidatorIndex | undefined;
+    let validatorIndex: phase0.ValidatorIndex | undefined;
     if (typeof validatorId === "number") {
       if (state.state.validators.length > validatorId) {
         validatorIndex = validatorId;
       }
     } else {
-      validatorIndex = (await this.chain.getHeadEpochContext()).pubkey2index.get(validatorId) ?? undefined;
-      //validator added later than given stateId
+      validatorIndex = this.chain.getHeadEpochContext().pubkey2index.get(validatorId) ?? undefined;
+      // validator added later than given stateId
       if (validatorIndex && validatorIndex >= state.state.validators.length) {
         validatorIndex = undefined;
       }
@@ -91,20 +83,21 @@ export class BeaconStateApi implements IBeaconStateApi {
     return toValidatorResponse(
       validatorIndex,
       state.state.validators[validatorIndex],
-      state.state.balances[validatorIndex]
+      state.state.balances[validatorIndex],
+      getCurrentEpoch(this.config, state.state)
     );
   }
 
   public async getStateValidatorBalances(
     stateId: StateId,
-    indices?: (ValidatorIndex | Root)[]
-  ): Promise<ValidatorBalance[]> {
-    const state = await resolveStateId(this.config, this.db, this.forkChoice, stateId);
+    indices?: (phase0.ValidatorIndex | Root)[]
+  ): Promise<phase0.ValidatorBalance[]> {
+    const state = await resolveStateId(this.chain, this.db, stateId);
     if (!state) {
       throw new StateNotFound();
     }
     if (indices) {
-      const epochCtx = await this.chain.getHeadEpochContext();
+      const epochCtx = this.chain.getHeadEpochContext();
       return indices
         .map((id) => {
           if (typeof id === "number") {
@@ -132,12 +125,15 @@ export class BeaconStateApi implements IBeaconStateApi {
     });
   }
 
-  public async getStateCommittees(stateId: StateId, filters?: ICommitteesFilters): Promise<BeaconCommitteeResponse[]> {
-    const stateContext = await resolveStateId(this.config, this.db, this.forkChoice, stateId);
+  public async getStateCommittees(
+    stateId: StateId,
+    filters?: ICommitteesFilters
+  ): Promise<phase0.BeaconCommitteeResponse[]> {
+    const stateContext = await resolveStateId(this.chain, this.db, stateId);
     if (!stateContext) {
       throw new StateNotFound();
     }
-    const committes: ValidatorIndex[][][] = getEpochBeaconCommittees(
+    const committes: phase0.ValidatorIndex[][][] = getEpochBeaconCommittees(
       this.config,
       this.chain,
       stateContext,
@@ -155,18 +151,18 @@ export class BeaconStateApi implements IBeaconStateApi {
           {
             index: committeeIndex,
             slot,
-            validators: committee as List<ValidatorIndex>,
+            validators: committee as List<phase0.ValidatorIndex>,
           },
         ];
       });
     });
   }
 
-  public async getState(stateId: StateId): Promise<BeaconState | null> {
-    return (await resolveStateId(this.config, this.db, this.forkChoice, stateId))?.state ?? null;
+  public async getState(stateId: StateId): Promise<phase0.BeaconState | null> {
+    return (await resolveStateId(this.chain, this.db, stateId))?.state ?? null;
   }
 
-  public async getFork(stateId: StateId): Promise<Fork | null> {
+  public async getFork(stateId: StateId): Promise<phase0.Fork | null> {
     return (await this.getState(stateId))?.fork ?? null;
   }
 }

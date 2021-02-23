@@ -18,21 +18,12 @@ import {handleIncomingProposerSlashing, publishProposerSlashing} from "./handler
 import {handleIncomingVoluntaryExit, publishVoluntaryExit} from "./handlers/voluntaryExit";
 import {handleIncomingAggregateAndProof, publishAggregatedAttestation} from "./handlers/aggregateAndProof";
 import {LodestarGossipsub} from "./gossipsub";
-import {
-  Attestation,
-  AttesterSlashing,
-  Epoch,
-  ForkDigest,
-  ProposerSlashing,
-  SignedAggregateAndProof,
-  SignedBeaconBlock,
-  SignedVoluntaryExit,
-  Slot,
-} from "@chainsafe/lodestar-types";
+import {Epoch, ForkDigest, phase0, Slot} from "@chainsafe/lodestar-types";
 import {ChainEvent, IBeaconChain} from "../../chain";
 import {computeEpochAtSlot, computeForkDigest} from "@chainsafe/lodestar-beacon-state-transition";
 import {GossipEncoding} from "./encoding";
 import {toHexString} from "@chainsafe/ssz";
+import {NetworkEvent} from "../interface";
 
 export type GossipHandlerFn = (this: Gossip, obj: GossipObject) => void;
 
@@ -65,19 +56,19 @@ export class Gossip extends (EventEmitter as {new (): GossipEventEmitter}) imple
 
   public async start(): Promise<void> {
     await this.pubsub.start();
-    const forkDigest = await this.chain.getForkDigest();
+    const forkDigest = this.chain.getForkDigest();
     this.pubsub.registerLibp2pTopicValidators(forkDigest);
     this.registerHandlers(forkDigest);
     this.chain.emitter.on(ChainEvent.forkVersion, this.handleForkVersion);
-    this.emit("gossip:start");
+    this.emit(NetworkEvent.gossipStart);
     this.logger.verbose("Gossip is started");
     this.statusInterval = setInterval(this.logSubscriptions, 60000);
   }
 
   public async stop(): Promise<void> {
-    this.emit("gossip:stop");
+    this.emit(NetworkEvent.gossipStop);
     this.unregisterHandlers();
-    this.chain.emitter.removeListener(ChainEvent.forkVersion, this.handleForkVersion);
+    this.chain.emitter.off(ChainEvent.forkVersion, this.handleForkVersion);
     await this.pubsub.stop();
     if (this.statusInterval) {
       clearInterval(this.statusInterval);
@@ -97,33 +88,42 @@ export class Gossip extends (EventEmitter as {new (): GossipEventEmitter}) imple
 
   public publishAttesterSlashing = publishAttesterSlashing.bind(this);
 
-  public subscribeToBlock(forkDigest: ForkDigest, callback: (block: SignedBeaconBlock) => void): void {
+  public subscribeToBlock(forkDigest: ForkDigest, callback: (block: phase0.SignedBeaconBlock) => void): void {
     this.subscribe(forkDigest, GossipEvent.BLOCK, callback);
   }
 
   public subscribeToAggregateAndProof(
     forkDigest: ForkDigest,
-    callback: (signedAggregate: SignedAggregateAndProof) => void
+    callback: (signedAggregate: phase0.SignedAggregateAndProof) => void
   ): void {
     this.subscribe(forkDigest, GossipEvent.AGGREGATE_AND_PROOF, callback);
   }
 
-  public subscribeToVoluntaryExit(forkDigest: ForkDigest, callback: (signed: SignedVoluntaryExit) => void): void {
+  public subscribeToVoluntaryExit(
+    forkDigest: ForkDigest,
+    callback: (signed: phase0.SignedVoluntaryExit) => void
+  ): void {
     this.subscribe(forkDigest, GossipEvent.VOLUNTARY_EXIT, callback);
   }
 
-  public subscribeToProposerSlashing(forkDigest: ForkDigest, callback: (slashing: ProposerSlashing) => void): void {
+  public subscribeToProposerSlashing(
+    forkDigest: ForkDigest,
+    callback: (slashing: phase0.ProposerSlashing) => void
+  ): void {
     this.subscribe(forkDigest, GossipEvent.PROPOSER_SLASHING, callback);
   }
 
-  public subscribeToAttesterSlashing(forkDigest: ForkDigest, callback: (slashing: AttesterSlashing) => void): void {
+  public subscribeToAttesterSlashing(
+    forkDigest: ForkDigest,
+    callback: (slashing: phase0.AttesterSlashing) => void
+  ): void {
     this.subscribe(forkDigest, GossipEvent.ATTESTER_SLASHING, callback);
   }
 
   public subscribeToAttestationSubnet(
     forkDigest: ForkDigest,
     subnet: number | string,
-    callback?: (attestation: {attestation: Attestation; subnet: number}) => void
+    callback?: (attestation: {attestation: phase0.Attestation; subnet: number}) => void
   ): void {
     const subnetNum: number = typeof subnet === "string" ? parseInt(subnet) : (subnet as number);
     this.subscribe(
@@ -137,7 +137,7 @@ export class Gossip extends (EventEmitter as {new (): GossipEventEmitter}) imple
   public unsubscribeFromAttestationSubnet(
     forkDigest: ForkDigest,
     subnet: number | string,
-    callback?: (attestation: {attestation: Attestation; subnet: number}) => void
+    callback?: (attestation: {attestation: phase0.Attestation; subnet: number}) => void
   ): void {
     const subnetNum: number = typeof subnet === "string" ? parseInt(subnet) : (subnet as number);
     this.unsubscribe(
@@ -161,17 +161,17 @@ export class Gossip extends (EventEmitter as {new (): GossipEventEmitter}) imple
       }
     }
     if (listener) {
-      this.removeListener(event as keyof IGossipEvents, listener as (...args: unknown[]) => void);
+      this.off(event as keyof IGossipEvents, listener as (...args: unknown[]) => void);
     }
   }
 
-  public async getForkDigest(slot: Slot): Promise<ForkDigest> {
+  public getForkDigest(slot: Slot): ForkDigest {
     const epoch = computeEpochAtSlot(this.config, slot);
     return this.getForkDigestByEpoch(epoch);
   }
 
-  public async getForkDigestByEpoch(epoch: Epoch): Promise<ForkDigest> {
-    const state = await this.chain.getHeadState();
+  public getForkDigestByEpoch(epoch: Epoch): ForkDigest {
+    const state = this.chain.getHeadState();
     const forkVersion = epoch < state.fork.epoch ? state.fork.previousVersion : state.fork.currentVersion;
     return computeForkDigest(this.config, forkVersion, state.genesisValidatorsRoot);
   }
@@ -192,9 +192,9 @@ export class Gossip extends (EventEmitter as {new (): GossipEventEmitter}) imple
     }
   }
 
-  private handleForkVersion = async (): Promise<void> => {
-    const forkDigest = await this.chain.getForkDigest();
-    this.logger.important(`Gossip: received new fork digest ${toHexString(forkDigest)}`);
+  private handleForkVersion = (): void => {
+    const forkDigest = this.chain.getForkDigest();
+    this.logger.verbose(`Gossip: received new fork digest ${toHexString(forkDigest)}`);
     this.pubsub.registerLibp2pTopicValidators(forkDigest);
     this.unregisterHandlers();
     this.registerHandlers(forkDigest);
@@ -210,14 +210,14 @@ export class Gossip extends (EventEmitter as {new (): GossipEventEmitter}) imple
   private unregisterHandlers(): void {
     if (this.handlers) {
       this.handlers.forEach((handler, topic) => {
-        this.pubsub.removeListener(topic, handler);
+        this.pubsub.off(topic, handler);
       });
     }
   }
 
   private createHandlers(forkDigest: ForkDigest): Map<string, GossipHandlerFn> {
     const handlers = new Map();
-    handlers.set("gossipsub:heartbeat", this.emitGossipHeartbeat);
+    handlers.set(NetworkEvent.gossipHeartbeat, this.emitGossipHeartbeat);
     // eslint-disable-next-line @typescript-eslint/no-this-alias
     const that = this;
     for (const encoding of this.supportedEncodings) {
@@ -251,7 +251,7 @@ export class Gossip extends (EventEmitter as {new (): GossipEventEmitter}) imple
   }
 
   private emitGossipHeartbeat = (): void => {
-    this.emit("gossipsub:heartbeat");
+    this.emit(NetworkEvent.gossipHeartbeat);
   };
 
   private logSubscriptions = (): void => {

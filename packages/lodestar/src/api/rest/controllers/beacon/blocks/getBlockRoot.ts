@@ -1,6 +1,6 @@
 import {ApiController} from "../../types";
 import {DefaultQuery} from "fastify";
-import {FastifyError} from "fastify";
+import {toRestValidationError} from "../../utils";
 
 export const getBlockRoot: ApiController<DefaultQuery, {blockId: string}> = {
   url: "/blocks/:blockId/root",
@@ -13,21 +13,12 @@ export const getBlockRoot: ApiController<DefaultQuery, {blockId: string}> = {
       }
       return resp.status(200).send({
         data: {
-          root: this.config.types.Root.toJson(this.config.types.BeaconBlock.hashTreeRoot(data.message)),
+          root: this.config.types.Root.toJson(this.config.types.phase0.BeaconBlock.hashTreeRoot(data.message)),
         },
       });
     } catch (e) {
       if (e.message === "Invalid block id") {
-        //TODO: fix when unifying errors
-        throw {
-          statusCode: 400,
-          validation: [
-            {
-              dataPath: "block_id",
-              message: e.message,
-            },
-          ],
-        } as FastifyError;
+        throw toRestValidationError("block_id", e.message);
       }
       throw e;
     }

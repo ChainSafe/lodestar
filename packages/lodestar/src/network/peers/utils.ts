@@ -1,27 +1,38 @@
-import {IPeerMetadataStore} from "./interface";
+import {IPeerMetadataStore} from "./metastore";
 import PeerId from "peer-id";
 import {ATTESTATION_SUBNET_COUNT} from "../../constants";
 import {INetwork} from "../interface";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {getSyncProtocols} from "../util";
-import {notNullish} from "../../util/notNullish";
+import {notNullish} from "@chainsafe/lodestar-utils";
 import {getSyncPeers} from "../../sync/utils/peers";
 
-export function getPeersWithSubnet(peers: PeerId[], peerMetadata: IPeerMetadataStore, subnetStr: string): PeerId[] {
-  if (!new RegExp("^\\d+$").test(subnetStr)) {
-    throw new Error(`Invalid subnet ${subnetStr}`);
+/**
+ * Return number of peers by subnet.
+ */
+export function getPeerCountBySubnet(
+  connectedPeers: PeerId[],
+  peerMetadata: IPeerMetadataStore,
+  subnetStrs: string[]
+): Map<string, number> {
+  const peerCountBySunet = new Map<string, number>();
+  for (const subnetStr of subnetStrs) {
+    if (!new RegExp("^\\d+$").test(subnetStr)) {
+      throw new Error(`Invalid subnet ${subnetStr}`);
+    }
+    const subnet = parseInt(subnetStr);
+    if (subnet < 0 || subnet >= ATTESTATION_SUBNET_COUNT) {
+      throw new Error(`Invalid subnet ${subnetStr}`);
+    }
+    const peers = connectedPeers.filter((peer) => {
+      const meta = peerMetadata.metadata.get(peer);
+      // remove if no metadata or not in subnet
+      return !(!meta || !meta.attnets[subnet]);
+    });
+    peerCountBySunet.set(subnetStr, peers.length);
   }
 
-  const subnet = parseInt(subnetStr);
-  if (subnet < 0 || subnet >= ATTESTATION_SUBNET_COUNT) {
-    throw new Error(`Invalid subnet ${subnetStr}`);
-  }
-
-  return peers.filter((peer) => {
-    const meta = peerMetadata.getMetadata(peer);
-    //remove if no metadata or not in subnet
-    return !(!meta || !meta.attnets[subnet]);
-  });
+  return peerCountBySunet;
 }
 
 export async function handlePeerMetadataSequence(
@@ -30,12 +41,11 @@ export async function handlePeerMetadataSequence(
   peer: PeerId,
   metadataSeq: BigInt | null
 ): Promise<void> {
-  const latestMetadata = network.peerMetadata.getMetadata(peer);
+  const latestMetadata = network.peerMetadata.metadata.get(peer);
   if (notNullish(metadataSeq) && (!latestMetadata || latestMetadata.seqNumber < metadataSeq)) {
     try {
       logger.verbose("Getting peer metadata", {peer: peer.toB58String()});
-      const metadata = await network.reqResp.metadata(peer);
-      network.peerMetadata.setMetadata(peer, metadata);
+      network.peerMetadata.metadata.set(peer, await network.reqResp.metadata(peer));
     } catch (e) {
       logger.verbose("Cannot get peer metadata", {peer: peer.toB58String(), e: e.message});
     }
@@ -50,11 +60,9 @@ export async function handlePeerMetadataSequence(
 /**
  * Find subnets that we don't have at least 1 connected peer.
  */
-export function findMissingSubnets(network: INetwork): number[] {
-  const peers = network.getPeers({connected: true}).map((peer) => peer.id);
-
-  const attNets = peers
-    .map((peer) => network.peerMetadata.getMetadata(peer))
+export function findMissingSubnets(connectedPeers: PeerId[], network: INetwork): number[] {
+  const attNets = connectedPeers
+    .map((peer) => network.peerMetadata.metadata.get(peer))
     .filter((metadata) => !!metadata)
     .map((metadata) => (metadata ? metadata.attnets : []));
 
@@ -69,19 +77,29 @@ export function findMissingSubnets(network: INetwork): number[] {
 }
 
 /**
+ * Get sync peers from connected peers.
+ */
+export function getSyncProtocolsPeers(connectedPeers: LibP2p.Peer[]): LibP2p.Peer[] {
+  const syncProtocols = getSyncProtocols();
+  return connectedPeers.filter((peer) => {
+    for (const protocol of syncProtocols) {
+      const peerProtocols = peer.protocols || [];
+      if (!peerProtocols.includes(protocol)) {
+        return false;
+      }
+    }
+    return true;
+  });
+}
+
+/**
  * Disconnect useless peers when node is syncing:
  * + Disconnect all peers that do not support sync protocols
  * + Disconnect half of bad score sync peers, gradually we'll only have good score sync peers.
  */
-export function syncPeersToDisconnect(network: INetwork): PeerId[] {
-  const allPeers = network.getPeers({connected: true}).map((peer) => peer.id);
-
-  const syncPeers = network
-    .getPeers({
-      connected: true,
-      supportsProtocols: getSyncProtocols(),
-    })
-    .map((peer) => peer.id);
+export function syncPeersToDisconnect(connectedPeers: LibP2p.Peer[], network: INetwork): PeerId[] {
+  const allPeers = connectedPeers.map((peer) => peer.id);
+  const syncPeers = getSyncProtocolsPeers(connectedPeers).map((peer) => peer.id);
 
   const nonSyncPeers = allPeers.filter((peer) => !syncPeers.includes(peer));
   const goodScoreSyncPeers = getSyncPeers(network, undefined, network.getMaxPeer());
@@ -109,12 +127,13 @@ export function syncPeersToDisconnect(network: INetwork): PeerId[] {
  * @param retainRatio: 0 to 1, the ratio to consider disconnecting peers, 90% by default.
  */
 export function gossipPeersToDisconnect(
+  connectedPeers: LibP2p.Peer[],
   network: INetwork,
   newPeer: number,
   maxPeer: number,
   retainRatio = 0.9
 ): PeerId[] {
-  const peers = network.getPeers({connected: true}).map((peer) => peer.id);
+  const peers = connectedPeers.map((peer) => peer.id);
 
   // only disconnect peers if we have >= 90% connected peers
   if (peers.length < maxPeer * retainRatio) return [];
@@ -124,12 +143,12 @@ export function gossipPeersToDisconnect(
   // should not disconnect important peers
   const importantPeers = getImportantPeers(peers, network.peerMetadata);
   const candidatePeers = peers.filter((peer) => !importantPeers.has(peer));
+  const syncPeers = getSyncProtocolsPeers(connectedPeers).map((peer) => peer.id);
 
   // worse peer on top
   const sortedPeers = candidatePeers.sort((peer1, peer2) => {
-    const peer1Meta = network.peerMetadata.getMetadata(peer1);
-    const peer2Meta = network.peerMetadata.getMetadata(peer2);
-    const syncPeers = network.getPeers({connected: true, supportsProtocols: getSyncProtocols()}).map((peer) => peer.id);
+    const peer1Meta = network.peerMetadata.metadata.get(peer1);
+    const peer2Meta = network.peerMetadata.metadata.get(peer2);
 
     if (syncPeers.includes(peer1) && !syncPeers.includes(peer2)) return 1;
     if (!syncPeers.includes(peer1) && syncPeers.includes(peer2)) return -1;
@@ -161,7 +180,7 @@ export function getImportantPeers(peers: PeerId[], peerMetadata: IPeerMetadataSt
     let count = 0;
     let candidatePeer: PeerId | null = null;
     for (const peer of peers) {
-      const latestMetadata = peerMetadata.getMetadata(peer);
+      const latestMetadata = peerMetadata.metadata.get(peer);
       if (latestMetadata && latestMetadata.attnets[subnet]) {
         candidatePeer = peer;
         count++;

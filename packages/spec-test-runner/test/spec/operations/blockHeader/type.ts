@@ -1,8 +1,8 @@
-import {BeaconBlock, BeaconState} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {IBaseSpecTest} from "../../type";
 
 export interface IProcessBlockHeader extends IBaseSpecTest {
-  block: BeaconBlock;
-  pre: BeaconState;
-  post?: BeaconState;
+  block: phase0.BeaconBlock;
+  pre: phase0.BeaconState;
+  post?: phase0.BeaconState;
 }

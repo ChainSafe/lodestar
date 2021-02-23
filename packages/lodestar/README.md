@@ -10,7 +10,6 @@
 
 ## Prerequisites
 
-- [Lerna](https://github.com/lerna/lerna)
 - [Yarn](https://yarnpkg.com/)
 
 ## What you need
@@ -22,6 +21,10 @@ You will need to go over the [specification](https://github.com/ethereum/eth2.0-
 - Follow the [installation guide](https://chainsafe.github.io/lodestar/installation) to install Lodestar.
 - Quickly try out the whole stack by [starting a local testnet](https://chainsafe.github.io/lodestar/usage).
 - View the [typedoc code docs](https://chainsafe.github.io/lodestar/packages).
+
+## Architecture Overview
+
+see [Beacon Node Module Architecture](https://chainsafe.github.io/lodestar/design/architecture/)
 
 ## Contributors
 

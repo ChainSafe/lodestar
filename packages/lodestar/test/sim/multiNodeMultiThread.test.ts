@@ -2,9 +2,11 @@ import path from "path";
 import os from "os";
 import {Worker} from "worker_threads";
 import {IBeaconParams} from "@chainsafe/lodestar-params";
-import {Checkpoint} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {waitForEvent} from "../utils/events/resolver";
 import {ChainEvent} from "../../src/chain";
+
+/* eslint-disable no-console */
 
 describe("Run multi node multi thread interop validators (no eth1) until checkpoint", function () {
   const checkpointEvent = ChainEvent.justified;
@@ -56,7 +58,7 @@ describe("Run multi node multi thread interop validators (no eth1) until checkpo
 
       interface IJustifiedCheckpointEvent {
         event: typeof checkpointEvent;
-        checkpoint: Checkpoint;
+        checkpoint: phase0.Checkpoint;
       }
       // Wait for finalized checkpoint on all nodes
       try {

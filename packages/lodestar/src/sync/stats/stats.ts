@@ -12,14 +12,14 @@ export class SyncStats implements ISyncStats {
     this.rateCounter = rateCounter || new RateCounter(30);
   }
 
-  public async start(): Promise<void> {
-    await this.rateCounter.start();
+  public start(): void {
+    this.rateCounter.start();
     this.chainEvents.on(ChainEvent.block, this.onBlockProcessed);
   }
 
-  public async stop(): Promise<void> {
-    this.chainEvents.removeListener(ChainEvent.block, this.onBlockProcessed);
-    await this.rateCounter.stop();
+  public stop(): void {
+    this.chainEvents.off(ChainEvent.block, this.onBlockProcessed);
+    this.rateCounter.stop();
   }
 
   public getEstimate(headSlot: Slot, targetSlot: Slot): number {

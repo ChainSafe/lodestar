@@ -2,8 +2,8 @@ import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
 import {SecretKey, PublicKey} from "@chainsafe/bls";
 import {config} from "@chainsafe/lodestar-config/minimal";
-import {computeDomain, computeSigningRoot, DomainType} from "@chainsafe/lodestar-beacon-state-transition";
-import {DepositData, ValidatorIndex, DepositEvent, Eth1Block} from "@chainsafe/lodestar-types";
+import {computeDomain, computeSigningRoot} from "@chainsafe/lodestar-beacon-state-transition";
+import {ValidatorIndex, phase0} from "@chainsafe/lodestar-types";
 import {ErrorAborted, WinstonLogger, interopSecretKey} from "@chainsafe/lodestar-utils";
 import {toHexString} from "@chainsafe/ssz";
 import {AbortController} from "abort-controller";
@@ -24,16 +24,20 @@ describe("genesis builder", function () {
   });
 
   function generateGenesisBuilderMockData(): {
-    events: DepositEvent[];
-    blocks: Eth1Block[];
+    events: phase0.DepositEvent[];
+    blocks: phase0.Eth1Block[];
   } {
-    const events: DepositEvent[] = [];
-    const blocks: Eth1Block[] = [];
+    const events: phase0.DepositEvent[] = [];
+    const blocks: phase0.Eth1Block[] = [];
 
     for (let i = 0; i < schlesiConfig.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT; i++) {
       const secretKey = interopSecretKey(i);
       const publicKey = secretKey.toPublicKey();
-      const event: DepositEvent = {depositData: generateDeposit(i, secretKey, publicKey), index: i, blockNumber: i};
+      const event: phase0.DepositEvent = {
+        depositData: generateDeposit(i, secretKey, publicKey),
+        index: i,
+        blockNumber: i,
+      };
       events.push(event);
       // All blocks satisfy MIN_GENESIS_TIME, so genesis will happen when the min validator count is reached
       blocks.push({
@@ -108,14 +112,14 @@ describe("genesis builder", function () {
   });
 });
 
-function generateDeposit(index: ValidatorIndex, secretKey: SecretKey, publicKey: PublicKey): DepositData {
-  const domain = computeDomain(config, DomainType.DEPOSIT);
+function generateDeposit(index: ValidatorIndex, secretKey: SecretKey, publicKey: PublicKey): phase0.DepositData {
+  const domain = computeDomain(config, config.params.DOMAIN_DEPOSIT);
   const depositMessage = {
     pubkey: publicKey.toBytes(),
     withdrawalCredentials: Buffer.alloc(32, index),
     amount: BigInt(32) * BigInt("1000000000000000000"),
   };
-  const signingRoot = computeSigningRoot(config, config.types.DepositMessage, depositMessage, domain);
+  const signingRoot = computeSigningRoot(config, config.types.phase0.DepositMessage, depositMessage, domain);
   const signature = secretKey.sign(signingRoot);
   return {...depositMessage, signature: signature.toBytes()};
 }

@@ -3,7 +3,7 @@ import {config} from "@chainsafe/lodestar-config/mainnet";
 
 import {ApiNamespace, RestApi} from "../../../../../src/api";
 import {StubbedApi} from "../../../../utils/stub/api";
-import {silentLogger} from "../../../../utils/logger";
+import {testLogger} from "../../../../utils/logger";
 
 export const BEACON_PREFIX = "/eth/v1/beacon";
 
@@ -24,7 +24,7 @@ describe("Test beacon rest api", function () {
       },
       {
         config,
-        logger: silentLogger,
+        logger: testLogger(),
         api,
       }
     );

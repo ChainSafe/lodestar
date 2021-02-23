@@ -1,18 +1,17 @@
 import {join} from "path";
 import {expect} from "chai";
 import {config} from "@chainsafe/lodestar-config/minimal";
-import {BeaconState} from "@chainsafe/lodestar-types";
-import {processSlots} from "@chainsafe/lodestar-beacon-state-transition";
+import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util/lib/single";
 import {IProcessSlotsTestCase} from "./type";
 import {SPEC_TEST_LOCATION} from "../../../utils/specTestCases";
 
-describeDirectorySpecTest<IProcessSlotsTestCase, BeaconState>(
+describeDirectorySpecTest<IProcessSlotsTestCase, phase0.BeaconState>(
   "slot sanity minimal",
   join(SPEC_TEST_LOCATION, "/tests/minimal/phase0/sanity/slots/pyspec_tests"),
   (testcase) => {
     const state = testcase.pre;
-    processSlots(config, state, state.slot + Number(testcase.slots));
+    phase0.processSlots(config, state, state.slot + Number(testcase.slots));
     return state;
   },
   {
@@ -22,8 +21,8 @@ describeDirectorySpecTest<IProcessSlotsTestCase, BeaconState>(
     },
     // @ts-ignore
     sszTypes: {
-      pre: config.types.BeaconState,
-      post: config.types.BeaconState,
+      pre: config.types.phase0.BeaconState,
+      post: config.types.phase0.BeaconState,
     },
     shouldError: (testCase) => {
       return !testCase.post;
@@ -31,7 +30,7 @@ describeDirectorySpecTest<IProcessSlotsTestCase, BeaconState>(
     timeout: 10000000,
     getExpected: (testCase) => testCase.post,
     expectFunc: (testCase, expected, actual) => {
-      expect(config.types.BeaconState.equals(actual, expected)).to.be.true;
+      expect(config.types.phase0.BeaconState.equals(actual, expected)).to.be.true;
     },
   }
 );

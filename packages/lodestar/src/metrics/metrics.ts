@@ -17,14 +17,14 @@ export class Metrics implements IMetrics {
     this.registry = new Registry();
   }
 
-  public async start(): Promise<void> {
+  public start(): void {
     this.defaultInterval = collectDefaultMetrics({
       register: this.registry,
       timeout: this.opts.timeout,
     }) as NodeJS.Timeout;
   }
 
-  public async stop(): Promise<void> {
+  public stop(): void {
     clearInterval(this.defaultInterval as NodeJS.Timeout);
   }
 }

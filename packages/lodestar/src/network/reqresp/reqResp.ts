@@ -2,70 +2,115 @@
  * @module network
  */
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {
-  BeaconBlocksByRangeRequest,
-  BeaconBlocksByRootRequest,
-  Goodbye,
-  Metadata,
-  Ping,
-  RequestBody,
-  ResponseBody,
-  SignedBeaconBlock,
-  Status,
-} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {AbortController} from "abort-controller";
-import {pipe} from "it-pipe";
 import LibP2p from "libp2p";
 import PeerId from "peer-id";
-import {IReqEventEmitterClass, IReqRespModules, sendRequest} from ".";
-import {Method, ReqRespEncoding, RpcResponseStatus} from "../../constants";
-import {IValidatedRequestBody} from "../encoders/interface";
-import {eth2RequestDecode} from "../encoders/request";
-import {RpcError, updateRpcScore} from "../error";
 import {IReqResp} from "../interface";
-import {IPeerMetadataStore} from "../peers/interface";
-import {IRpcScoreTracker, RpcScoreEvent} from "../peers/score";
-import {createRpcProtocol, randomRequestId} from "../util";
-import {ReqRespRequest} from "./interface";
-import {sendResponse} from "./respUtils";
-import {EventEmitter} from "events";
+import {IReqRespModules, ReqRespHandler, ILibP2pStream} from "./interface";
+import {sendRequest} from "./request";
+import {handleRequest} from "./response";
+import {Method, ReqRespEncoding, timeoutOptions} from "../../constants";
+import {onOutgoingReqRespError} from "./score";
+import {IPeerMetadataStore} from "../peers";
+import {IPeerRpcScoreStore} from "../peers/score";
+import {createRpcProtocol} from "../util";
+import {assertSequentialBlocksInRange} from "./utils/assertSequentialBlocksInRange";
 
-export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements IReqResp {
+export type IReqRespOptions = Partial<typeof timeoutOptions>;
+
+/**
+ * Implementation of eth2 p2p Req/Resp domain.
+ * For the spec that this code is based on, see:
+ * https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/p2p-interface.md#the-reqresp-domain
+ */
+export class ReqResp implements IReqResp {
   private config: IBeaconConfig;
   private libp2p: LibP2p;
   private logger: ILogger;
   private peerMetadata: IPeerMetadataStore;
-  private blockProviderScores: IRpcScoreTracker;
+  private peerRpcScores: IPeerRpcScoreStore;
   private controller: AbortController | undefined;
+  private options?: IReqRespOptions;
+  private reqCount = 0;
+  private respCount = 0;
 
-  public constructor({config, libp2p, peerMetadata, blockProviderScores, logger}: IReqRespModules) {
-    super();
+  /**
+   * @see this.registerHandler
+   */
+  private performRequestHandler: ReqRespHandler | null;
+
+  public constructor(
+    {config, libp2p, peerMetadata, peerRpcScores, logger}: IReqRespModules,
+    options?: IReqRespOptions
+  ) {
     this.config = config;
     this.libp2p = libp2p;
     this.peerMetadata = peerMetadata;
     this.logger = logger;
-    this.blockProviderScores = blockProviderScores;
+    this.peerRpcScores = peerRpcScores;
+    this.options = options;
+
+    this.performRequestHandler = null;
   }
 
-  public async start(): Promise<void> {
+  public start(): void {
     this.controller = new AbortController();
     for (const method of Object.values(Method)) {
       for (const encoding of Object.values(ReqRespEncoding)) {
         this.libp2p.handle(createRpcProtocol(method, encoding), async ({connection, stream}) => {
           const peerId = connection.remotePeer;
-          pipe(
-            stream.source,
-            eth2RequestDecode(this.config, this.logger, method, encoding),
-            this.storePeerEncodingPreference(peerId, method, encoding),
-            this.handleRpcRequest(peerId, method, encoding, stream.sink)
-          );
+
+          // Store peer encoding preference for this.sendRequest
+          if (method === Method.Status) {
+            this.peerMetadata.encoding.set(peerId, encoding);
+          }
+
+          if (!this.performRequestHandler) {
+            stream.close();
+            this.logger.error("performRequestHandler not registered", {method, peer: peerId.toB58String()});
+            return;
+          }
+
+          try {
+            await handleRequest(
+              {config: this.config, logger: this.logger},
+              this.performRequestHandler,
+              stream as ILibP2pStream,
+              peerId,
+              method,
+              encoding,
+              this.respCount++
+            );
+            // TODO: Do success peer scoring here
+          } catch (e) {
+            // TODO: Do error peer scoring here
+            // Must not throw since this is an event handler
+          }
         });
       }
     }
   }
 
-  public async stop(): Promise<void> {
+  /**
+   * ReqResp handler implementers MUST register the requestHandler with this method
+   * Then this ReqResp instance will used the registered handler to serve requests
+   */
+  registerHandler(handler: ReqRespHandler): void {
+    if (this.performRequestHandler) {
+      throw new Error("Already registered handler");
+    }
+    this.performRequestHandler = handler;
+  }
+
+  unregisterHandler(): ReqRespHandler | null {
+    const handler = this.performRequestHandler;
+    this.performRequestHandler = null;
+    return handler;
+  }
+
+  public stop(): void {
     for (const method of Object.values(Method)) {
       for (const encoding of Object.values(ReqRespEncoding)) {
         this.libp2p.unhandle(createRpcProtocol(method, encoding));
@@ -74,109 +119,75 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
     this.controller?.abort();
   }
 
-  public async status(peerId: PeerId, request: Status): Promise<Status | null> {
-    return await this.sendRequest<Status>(peerId, Method.Status, request);
+  public async status(peerId: PeerId, request: phase0.Status): Promise<phase0.Status> {
+    return await this.sendRequest<phase0.Status>(peerId, Method.Status, request);
   }
 
-  public async goodbye(peerId: PeerId, request: Goodbye): Promise<void> {
-    await this.sendRequest<Goodbye>(peerId, Method.Goodbye, request);
+  public async goodbye(peerId: PeerId, request: phase0.Goodbye): Promise<void> {
+    await this.sendRequest<phase0.Goodbye>(peerId, Method.Goodbye, request);
   }
 
-  public async ping(peerId: PeerId, request: Ping): Promise<Ping | null> {
-    return await this.sendRequest<Ping>(peerId, Method.Ping, request);
+  public async ping(peerId: PeerId, request: phase0.Ping): Promise<phase0.Ping> {
+    return await this.sendRequest<phase0.Ping>(peerId, Method.Ping, request);
   }
 
-  public async metadata(peerId: PeerId): Promise<Metadata | null> {
-    return await this.sendRequest<Metadata>(peerId, Method.Metadata);
+  public async metadata(peerId: PeerId): Promise<phase0.Metadata> {
+    return await this.sendRequest<phase0.Metadata>(peerId, Method.Metadata, null);
   }
 
   public async beaconBlocksByRange(
     peerId: PeerId,
-    request: BeaconBlocksByRangeRequest
-  ): Promise<SignedBeaconBlock[] | null> {
-    try {
-      const result = await this.sendRequest<SignedBeaconBlock[]>(peerId, Method.BeaconBlocksByRange, request);
-      this.blockProviderScores.update(peerId, RpcScoreEvent.SUCCESS_BLOCK_RANGE);
-      return result;
-    } catch (e) {
-      updateRpcScore(this.blockProviderScores, peerId, e);
-      throw e;
-    }
+    request: phase0.BeaconBlocksByRangeRequest
+  ): Promise<phase0.SignedBeaconBlock[]> {
+    const blocks = await this.sendRequest<phase0.SignedBeaconBlock[]>(
+      peerId,
+      Method.BeaconBlocksByRange,
+      request,
+      request.count
+    );
+    assertSequentialBlocksInRange(blocks, request);
+    return blocks;
   }
 
   public async beaconBlocksByRoot(
     peerId: PeerId,
-    request: BeaconBlocksByRootRequest
-  ): Promise<SignedBeaconBlock[] | null> {
-    try {
-      const result = await this.sendRequest<SignedBeaconBlock[]>(peerId, Method.BeaconBlocksByRoot, request);
-      this.blockProviderScores.update(peerId, RpcScoreEvent.SUCCESS_BLOCK_ROOT);
-      return result;
-    } catch (e) {
-      updateRpcScore(this.blockProviderScores, peerId, e);
-      throw e;
-    }
-  }
-
-  private storePeerEncodingPreference(
-    peerId: PeerId,
-    method: Method,
-    encoding: ReqRespEncoding
-  ): (source: AsyncIterable<IValidatedRequestBody>) => AsyncGenerator<IValidatedRequestBody> {
-    const peerReputations = this.peerMetadata;
-    return async function* (source) {
-      if (method === Method.Status) {
-        peerReputations.setEncoding(peerId, encoding);
-      }
-      yield* source;
-    };
-  }
-
-  private handleRpcRequest(
-    peerId: PeerId,
-    method: Method,
-    encoding: ReqRespEncoding,
-    sink: Sink<unknown, unknown>
-  ): (source: AsyncIterable<IValidatedRequestBody>) => Promise<void> {
-    const {config, logger} = this;
-    const emit = this.emit.bind(this);
-    return async (source) => {
-      for await (const request of source) {
-        if (!request.isValid) {
-          await sendResponse(
-            {config, logger},
-            randomRequestId(),
-            method,
-            encoding,
-            sink,
-            new RpcError(RpcResponseStatus.INVALID_REQ, "Invalid request")
-          );
-        } else {
-          emit(
-            "request",
-            {id: randomRequestId(), method, encoding, body: request.body ?? null} as ReqRespRequest<RequestBody>,
-            peerId,
-            sink
-          );
-        }
-        return;
-      }
-    };
+    request: phase0.BeaconBlocksByRootRequest
+  ): Promise<phase0.SignedBeaconBlock[]> {
+    return await this.sendRequest<phase0.SignedBeaconBlock[]>(
+      peerId,
+      Method.BeaconBlocksByRoot,
+      request,
+      request.length
+    );
   }
 
   // Helper to reduce code duplication
-  private async sendRequest<T extends ResponseBody | ResponseBody[]>(
+  private async sendRequest<T extends phase0.ResponseBody | phase0.ResponseBody[]>(
     peerId: PeerId,
     method: Method,
-    body?: RequestBody
-  ): Promise<T | null> {
-    return await sendRequest<T>(
-      {libp2p: this.libp2p, logger: this.logger, config: this.config},
-      peerId,
-      method,
-      this.peerMetadata.getEncoding(peerId) ?? ReqRespEncoding.SSZ_SNAPPY,
-      body,
-      this.controller?.signal
-    );
+    body: phase0.RequestBody,
+    maxResponses?: number
+  ): Promise<T> {
+    try {
+      const encoding = this.peerMetadata.encoding.get(peerId) ?? ReqRespEncoding.SSZ_SNAPPY;
+      const result = await sendRequest<T>(
+        {libp2p: this.libp2p, logger: this.logger, config: this.config},
+        peerId,
+        method,
+        encoding,
+        body,
+        maxResponses,
+        this.controller?.signal,
+        this.options,
+        this.reqCount++
+      );
+
+      return result;
+    } catch (e) {
+      const peerAction = onOutgoingReqRespError(e, method);
+      if (peerAction !== null) this.peerRpcScores.applyAction(peerId, peerAction);
+
+      throw e;
+    }
   }
 }

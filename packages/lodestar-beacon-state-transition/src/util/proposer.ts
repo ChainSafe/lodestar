@@ -3,22 +3,24 @@
  */
 
 import {hash} from "@chainsafe/ssz";
-import {BeaconState, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {phase0, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {assert, intToBytes, intDiv} from "@chainsafe/lodestar-utils";
 
 import {getCurrentEpoch} from "./epoch";
 import {getSeed, computeShuffledIndex} from "./seed";
-import {DomainType} from "../constants";
 import {getActiveValidatorIndices} from ".";
 
 /**
  * Return the beacon proposer index at ``state.slot``.
  */
-export function getBeaconProposerIndex(config: IBeaconConfig, state: BeaconState): ValidatorIndex {
+export function getBeaconProposerIndex(config: IBeaconConfig, state: phase0.BeaconState): ValidatorIndex {
   const currentEpoch = getCurrentEpoch(config, state);
   const seed = hash(
-    Buffer.concat([getSeed(config, state, currentEpoch, DomainType.BEACON_PROPOSER), intToBytes(state.slot, 8)])
+    Buffer.concat([
+      getSeed(config, state, currentEpoch, config.params.DOMAIN_BEACON_PROPOSER),
+      intToBytes(state.slot, 8),
+    ])
   );
   const indices = getActiveValidatorIndices(state, currentEpoch);
   return computeProposerIndex(config, state, indices, seed);
@@ -29,7 +31,7 @@ export function getBeaconProposerIndex(config: IBeaconConfig, state: BeaconState
  */
 export function computeProposerIndex(
   config: IBeaconConfig,
-  state: BeaconState,
+  state: phase0.BeaconState,
   indices: ValidatorIndex[],
   seed: Uint8Array
 ): ValidatorIndex {

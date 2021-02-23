@@ -11,15 +11,15 @@ import * as slotUtils from "@chainsafe/lodestar-beacon-state-transition/lib/util
 import {ZERO_HASH} from "../../../../../src/constants";
 import {IBeaconClock, LocalClock} from "../../../../../src/chain/clock";
 import {generateEmptySignedBlock} from "../../../../utils/block";
-import {IPeerMetadataStore, Libp2pPeerMetadataStore} from "../../../../../src/network/peers";
-import {Status} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
+import {getStubbedMetadataStore, StubbedIPeerMetadataStore} from "../../../../utils/peer";
 
 describe("BlockRangeFetcher", function () {
   let fetcher: BlockRangeFetcher;
   let chainStub: SinonStubbedInstance<IBeaconChain>;
   let clockStub: SinonStubbedInstance<IBeaconClock>;
   let networkStub: SinonStubbedInstance<INetwork>;
-  let metadataStub: SinonStubbedInstance<IPeerMetadataStore>;
+  let metadataStub: StubbedIPeerMetadataStore;
   let getBlockRangeStub: SinonStub;
   let getCurrentSlotStub: SinonStub;
   const logger = new WinstonLogger();
@@ -35,7 +35,7 @@ describe("BlockRangeFetcher", function () {
     clockStub = sandbox.createStubInstance(LocalClock);
     chainStub.clock = clockStub;
     networkStub = sandbox.createStubInstance(Libp2pNetwork);
-    metadataStub = sandbox.createStubInstance(Libp2pPeerMetadataStore);
+    metadataStub = getStubbedMetadataStore();
     networkStub.peerMetadata = metadataStub;
     fetcher = new BlockRangeFetcher(
       {},
@@ -60,7 +60,7 @@ describe("BlockRangeFetcher", function () {
     const firstBlock = generateEmptySignedBlock();
     const secondBlock = generateEmptySignedBlock();
     secondBlock.message.slot = 2;
-    secondBlock.message.parentRoot = config.types.BeaconBlock.hashTreeRoot(firstBlock.message);
+    secondBlock.message.parentRoot = config.types.phase0.BeaconBlock.hashTreeRoot(firstBlock.message);
     getBlockRangeStub.resolves([firstBlock, secondBlock]);
     await fetcher.getNextBlockRange();
     expect(getBlockRangeStub.calledOnceWith(logger, sinon.match.any, sinon.match.any, {start: 1000, end: 1065})).to.be
@@ -76,10 +76,10 @@ describe("BlockRangeFetcher", function () {
     firstBlock.message.slot = 1010;
     const secondBlock = generateEmptySignedBlock();
     secondBlock.message.slot = 1020;
-    secondBlock.message.parentRoot = config.types.BeaconBlock.hashTreeRoot(firstBlock.message);
+    secondBlock.message.parentRoot = config.types.phase0.BeaconBlock.hashTreeRoot(firstBlock.message);
     const thirdBlock = generateEmptySignedBlock();
     thirdBlock.message.slot = 1030;
-    thirdBlock.message.parentRoot = config.types.BeaconBlock.hashTreeRoot(secondBlock.message);
+    thirdBlock.message.parentRoot = config.types.phase0.BeaconBlock.hashTreeRoot(secondBlock.message);
     getBlockRangeStub.onFirstCall().resolves([firstBlock, secondBlock]);
     getBlockRangeStub.onSecondCall().resolves([secondBlock, thirdBlock]);
     let result = await fetcher.getNextBlockRange();
@@ -103,28 +103,7 @@ describe("BlockRangeFetcher", function () {
     firstBlock.message.slot = 1010;
     const secondBlock = generateEmptySignedBlock();
     secondBlock.message.slot = 1020;
-    secondBlock.message.parentRoot = config.types.BeaconBlock.hashTreeRoot(firstBlock.message);
-    getBlockRangeStub.onSecondCall().resolves([firstBlock, secondBlock]);
-    const result = await fetcher.getNextBlockRange();
-    expect(getBlockRangeStub.calledWith(logger, sinon.match.any, sinon.match.any, {start: 1000, end: 1065})).to.be.true;
-    expect(getBlockRangeStub.calledTwice).to.be.true;
-    // second block is ignored since we can't validate if it's orphaned block or not
-    expect(result).to.be.deep.equal([firstBlock]);
-    expect(getPeers.calledWithExactly([firstPeerId.toB58String()])).to.be.true;
-  });
-
-  it("should handle getBlockRange returning null", async () => {
-    // should switch peer
-    const firstPeerId = await PeerId.create();
-    getPeers.onFirstCall().resolves([firstPeerId]);
-    fetcher.setLastProcessedBlock({root: ZERO_HASH, slot: 1000});
-    getCurrentSlotStub.returns(2000);
-    getBlockRangeStub.onFirstCall().resolves(null);
-    const firstBlock = generateEmptySignedBlock();
-    firstBlock.message.slot = 1010;
-    const secondBlock = generateEmptySignedBlock();
-    secondBlock.message.slot = 1020;
-    secondBlock.message.parentRoot = config.types.BeaconBlock.hashTreeRoot(firstBlock.message);
+    secondBlock.message.parentRoot = config.types.phase0.BeaconBlock.hashTreeRoot(firstBlock.message);
     getBlockRangeStub.onSecondCall().resolves([firstBlock, secondBlock]);
     const result = await fetcher.getNextBlockRange();
     expect(getBlockRangeStub.calledWith(logger, sinon.match.any, sinon.match.any, {start: 1000, end: 1065})).to.be.true;
@@ -149,11 +128,11 @@ describe("BlockRangeFetcher", function () {
     firstBlock.message.slot = 1010;
     const secondBlock = generateEmptySignedBlock();
     secondBlock.message.slot = 1011;
-    secondBlock.message.parentRoot = config.types.BeaconBlock.hashTreeRoot(firstBlock.message);
+    secondBlock.message.parentRoot = config.types.phase0.BeaconBlock.hashTreeRoot(firstBlock.message);
     getBlockRangeStub.onFirstCall().resolves([]);
     getBlockRangeStub.onSecondCall().resolves([firstBlock]);
     getBlockRangeStub.onThirdCall().resolves([firstBlock, secondBlock]);
-    metadataStub.getStatus.returns({headSlot: 3000} as Status);
+    metadataStub.status.get.returns({headSlot: 3000} as phase0.Status);
     const result = await fetcher.getNextBlockRange();
     expect(getPeers.calledThrice).to.be.true;
     // should switch peer
@@ -177,16 +156,16 @@ describe("BlockRangeFetcher", function () {
     getCurrentSlotStub.returns(2000);
     const firstBlock = generateEmptySignedBlock();
     firstBlock.message.slot = 1000;
-    fetcher.setLastProcessedBlock({root: config.types.BeaconBlock.hashTreeRoot(firstBlock.message), slot: 1000});
+    fetcher.setLastProcessedBlock({root: config.types.phase0.BeaconBlock.hashTreeRoot(firstBlock.message), slot: 1000});
     const secondBlock = generateEmptySignedBlock();
     secondBlock.message.slot = 1001;
-    secondBlock.message.parentRoot = config.types.BeaconBlock.hashTreeRoot(firstBlock.message);
+    secondBlock.message.parentRoot = config.types.phase0.BeaconBlock.hashTreeRoot(firstBlock.message);
     const thirdBlock = generateEmptySignedBlock();
     thirdBlock.message.slot = 1002;
-    thirdBlock.message.parentRoot = config.types.BeaconBlock.hashTreeRoot(secondBlock.message);
+    thirdBlock.message.parentRoot = config.types.phase0.BeaconBlock.hashTreeRoot(secondBlock.message);
     getBlockRangeStub.onFirstCall().resolves([firstBlock, secondBlock]);
     getBlockRangeStub.onSecondCall().resolves([firstBlock, secondBlock, thirdBlock]);
-    metadataStub.getStatus.returns({headSlot: 3000} as Status);
+    metadataStub.status.get.returns({headSlot: 3000} as phase0.Status);
     const result = await fetcher.getNextBlockRange();
     expect(getPeers.calledTwice).to.be.true;
     // should switch peer
@@ -208,7 +187,7 @@ describe("BlockRangeFetcher", function () {
     firstBlock.message.slot = 1010;
     const secondBlock = generateEmptySignedBlock();
     secondBlock.message.slot = 1011;
-    secondBlock.message.parentRoot = config.types.BeaconBlock.hashTreeRoot(firstBlock.message);
+    secondBlock.message.parentRoot = config.types.phase0.BeaconBlock.hashTreeRoot(firstBlock.message);
     // onFirstCall timeout
     getBlockRangeStub.onFirstCall().returns(
       new Promise((resolve) => {
@@ -238,7 +217,7 @@ describe("BlockRangeFetcher", function () {
     firstBlock.message.slot = 1010;
     const secondBlock = generateEmptySignedBlock();
     secondBlock.message.slot = 1011;
-    secondBlock.message.parentRoot = config.types.BeaconBlock.hashTreeRoot(firstBlock.message);
+    secondBlock.message.parentRoot = config.types.phase0.BeaconBlock.hashTreeRoot(firstBlock.message);
     // second call returns linear chain
     getBlockRangeStub.onSecondCall().resolves([firstBlock, secondBlock]);
     const result = await fetcher.getNextBlockRange();

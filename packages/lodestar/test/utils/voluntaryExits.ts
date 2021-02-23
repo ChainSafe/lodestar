@@ -1,13 +1,13 @@
-import {VoluntaryExit, SignedVoluntaryExit} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 
-export function generateEmptyVoluntaryExit(): VoluntaryExit {
+export function generateEmptyVoluntaryExit(): phase0.VoluntaryExit {
   return {
     epoch: 0,
     validatorIndex: 0,
   };
 }
 
-export function generateEmptySignedVoluntaryExit(): SignedVoluntaryExit {
+export function generateEmptySignedVoluntaryExit(): phase0.SignedVoluntaryExit {
   return {
     message: generateEmptyVoluntaryExit(),
     signature: Buffer.alloc(96),

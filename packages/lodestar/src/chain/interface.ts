@@ -1,27 +1,22 @@
-import {
-  Attestation,
-  BeaconState,
-  Checkpoint,
-  ENRForkID,
-  ForkDigest,
-  Number64,
-  Root,
-  SignedBeaconBlock,
-  Slot,
-} from "@chainsafe/lodestar-types";
+import {Number64, Root, Slot} from "@chainsafe/lodestar-types";
 import {TreeBacked} from "@chainsafe/ssz";
-import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
+import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 
 import {IBeaconClock} from "./clock/interface";
-import {ITreeStateContext} from "../db/api/beacon/stateContextCache";
 import {ChainEventEmitter} from "./emitter";
 import {IStateRegenerator} from "./regen";
 import {BlockPool} from "./blocks";
 import {AttestationPool} from "./attestation";
+import {StateContextCache, CheckpointStateCache} from "./stateCache";
 
-export interface IBlockJob<TBlock extends SignedBeaconBlock = SignedBeaconBlock> {
-  signedBlock: TBlock;
+// Lodestar specifc state context
+export interface ITreeStateContext {
+  state: phase0.fast.CachedValidatorsBeaconState;
+  epochCtx: phase0.fast.EpochContext;
+}
+
+interface IProcessBlock {
   /**
    * Metadata: lets a block thats already been processed to be processed again.
    * After processing, the block will not be stored in the database
@@ -41,8 +36,16 @@ export interface IBlockJob<TBlock extends SignedBeaconBlock = SignedBeaconBlock>
   validSignatures: boolean;
 }
 
+export interface IChainSegmentJob extends IProcessBlock {
+  signedBlocks: phase0.SignedBeaconBlock[];
+}
+
+export interface IBlockJob extends IProcessBlock {
+  signedBlock: phase0.SignedBeaconBlock;
+}
+
 export interface IAttestationJob {
-  attestation: Attestation;
+  attestation: phase0.Attestation;
   /**
    * `true` if the signature has already been verified
    */
@@ -57,6 +60,8 @@ export interface IBeaconChain {
   emitter: ChainEventEmitter;
   clock: IBeaconClock;
   forkChoice: IForkChoice;
+  stateCache: StateContextCache;
+  checkpointStateCache: CheckpointStateCache;
   regen: IStateRegenerator;
   pendingBlocks: BlockPool;
   pendingAttestations: AttestationPool;
@@ -64,27 +69,29 @@ export interface IBeaconChain {
   /**
    * Stop beacon chain processing
    */
-  close(): Promise<void>;
+  close(): void;
 
+  getHeadStateContext(): ITreeStateContext;
+  getHeadState(): TreeBacked<phase0.BeaconState>;
+  getHeadEpochContext(): phase0.fast.EpochContext;
   /**
    * Get ForkDigest from the head state
    */
-  getForkDigest(): Promise<ForkDigest>;
+  getForkDigest(): phase0.ForkDigest;
   /**
    * Get ENRForkID from the head state
    */
-  getENRForkID(): Promise<ENRForkID>;
+  getENRForkID(): phase0.ENRForkID;
   getGenesisTime(): Number64;
-  getHeadStateContext(): Promise<ITreeStateContext>;
+  getStatus(): phase0.Status;
+
   getHeadStateContextAtCurrentEpoch(): Promise<ITreeStateContext>;
   getHeadStateContextAtCurrentSlot(): Promise<ITreeStateContext>;
-  getHeadState(): Promise<TreeBacked<BeaconState>>;
-  getHeadEpochContext(): Promise<EpochContext>;
-  getHeadBlock(): Promise<SignedBeaconBlock | null>;
+  getHeadBlock(): Promise<phase0.SignedBeaconBlock | null>;
 
   getStateContextByBlockRoot(blockRoot: Root): Promise<ITreeStateContext | null>;
 
-  getFinalizedCheckpoint(): Promise<Checkpoint>;
+  getFinalizedCheckpoint(): phase0.Checkpoint;
 
   /**
    * Since we can have multiple parallel chains,
@@ -92,17 +99,21 @@ export interface IBeaconChain {
    * forkchoice. Works for finalized slots as well
    * @param slot
    */
-  getCanonicalBlockAtSlot(slot: Slot): Promise<SignedBeaconBlock | null>;
+  getCanonicalBlockAtSlot(slot: Slot): Promise<phase0.SignedBeaconBlock | null>;
 
-  getUnfinalizedBlocksAtSlots(slots: Slot[]): Promise<SignedBeaconBlock[] | null>;
+  getUnfinalizedBlocksAtSlots(slots: Slot[]): Promise<phase0.SignedBeaconBlock[]>;
 
   /**
    * Add attestation to the fork-choice rule
    */
-  receiveAttestation(attestation: Attestation): Promise<void>;
+  receiveAttestation(attestation: phase0.Attestation): void;
 
   /**
    * Pre-process and run the per slot state transition function
    */
-  receiveBlock(signedBlock: SignedBeaconBlock, trusted?: boolean): Promise<void>;
+  receiveBlock(signedBlock: phase0.SignedBeaconBlock, trusted?: boolean): void;
+  /**
+   * Process a chain of blocks until complete.
+   */
+  processChainSegment(signedBlocks: phase0.SignedBeaconBlock[], trusted?: boolean): Promise<void>;
 }

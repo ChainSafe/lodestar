@@ -3,8 +3,8 @@ import sinon from "sinon";
 
 import {List} from "@chainsafe/ssz";
 import {config} from "@chainsafe/lodestar-config/mainnet";
-import {Eth1Data} from "@chainsafe/lodestar-types";
-import {processEth1Data} from "../../../../src/block/eth1Data";
+import {phase0} from "@chainsafe/lodestar-types";
+import {processEth1Data} from "../../../../src/phase0/naive/block/eth1Data";
 
 import {generateEmptyBlock} from "../../../utils/block";
 import {generateState} from "../../../utils/state";
@@ -18,7 +18,7 @@ describe("process block - eth1data", function () {
 
   it("should set latest eth1 data", function () {
     const state = generateState();
-    const vote: Eth1Data = {
+    const vote: phase0.Eth1Data = {
       depositCount: 3,
       blockHash: Buffer.alloc(32),
       depositRoot: Buffer.alloc(32),
@@ -27,16 +27,18 @@ describe("process block - eth1data", function () {
       .fill(undefined)
       .map(() => {
         return vote;
-      }) as List<Eth1Data>;
+      }) as List<phase0.Eth1Data>;
     const block = generateEmptyBlock();
     block.body.eth1Data = vote;
     processEth1Data(config, state, block.body);
-    expect(config.types.Eth1Data.serialize(state.eth1Data)).to.be.deep.equal(config.types.Eth1Data.serialize(vote));
+    expect(config.types.phase0.Eth1Data.serialize(state.eth1Data)).to.be.deep.equal(
+      config.types.phase0.Eth1Data.serialize(vote)
+    );
   });
 
   it("should not set latest eth1 data", function () {
     const state = generateState();
-    const vote: Eth1Data = {
+    const vote: phase0.Eth1Data = {
       depositCount: 3,
       blockHash: Buffer.alloc(32),
       depositRoot: Buffer.alloc(32),
@@ -44,6 +46,8 @@ describe("process block - eth1data", function () {
     const block = generateEmptyBlock();
     block.body.eth1Data = vote;
     processEth1Data(config, state, block.body);
-    expect(config.types.Eth1Data.serialize(state.eth1Data)).to.not.be.deep.equal(config.types.Eth1Data.serialize(vote));
+    expect(config.types.phase0.Eth1Data.serialize(state.eth1Data)).to.not.be.deep.equal(
+      config.types.phase0.Eth1Data.serialize(vote)
+    );
   });
 });

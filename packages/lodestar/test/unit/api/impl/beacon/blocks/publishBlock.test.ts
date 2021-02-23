@@ -59,7 +59,7 @@ describe("api - beacon - publishBlock", function () {
 
   it("node is syncing", async function () {
     syncStub.isSynced.returns(false);
-    syncStub.getSyncStatus.resolves({
+    syncStub.getSyncStatus.returns({
       syncDistance: BigInt(50),
       headSlot: BigInt(0),
     });

@@ -1,5 +1,5 @@
 import {List} from "@chainsafe/ssz";
-import {Attestation, AttestationData, Epoch} from "@chainsafe/lodestar-types";
+import {phase0, Epoch} from "@chainsafe/lodestar-types";
 
 /**
  * Generates a fake attestation data for test purposes.
@@ -8,7 +8,7 @@ import {Attestation, AttestationData, Epoch} from "@chainsafe/lodestar-types";
  * @returns {AttestationData}
  */
 
-export function generateAttestationData(sourceEpoch: Epoch, targetEpoch: Epoch): AttestationData {
+export function generateAttestationData(sourceEpoch: Epoch, targetEpoch: Epoch): phase0.AttestationData {
   return {
     slot: 0,
     index: 0,
@@ -24,7 +24,7 @@ export function generateAttestationData(sourceEpoch: Epoch, targetEpoch: Epoch):
   };
 }
 
-export function generateEmptyAttestation(): Attestation {
+export function generateEmptyAttestation(): phase0.Attestation {
   return {
     aggregationBits: Array.from({length: 64}, () => false) as List<boolean>,
     data: {

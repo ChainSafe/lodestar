@@ -1,11 +1,9 @@
 import PeerId from "peer-id";
-import {BeaconBlockHeader, SignedBeaconBlock, Slot} from "@chainsafe/lodestar-types";
+import {phase0, Slot} from "@chainsafe/lodestar-types";
 import {RoundRobinArray} from "./robin";
 import {IReqResp} from "../../network";
 import {ISlotRange} from "../interface";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {ILogger} from "@chainsafe/lodestar-utils";
-import {notNullish} from "../../util/notNullish";
+import {ILogger, notNullish} from "@chainsafe/lodestar-utils";
 
 /**
  * Creates slot chunks returned chunks represents (inclusive) start and (inclusive) end slot
@@ -19,7 +17,7 @@ export function chunkify(blocksPerChunk: number, currentSlot: Slot, targetSlot: 
     blocksPerChunk = 5;
   }
   const chunks: ISlotRange[] = [];
-  //currentSlot is our state slot so we need block from next slot
+  // currentSlot is our state slot so we need block from next slot
   for (let i = currentSlot; i <= targetSlot; i = i + blocksPerChunk + 1) {
     chunks.push({
       start: i,
@@ -33,7 +31,7 @@ export async function getBlockRangeFromPeer(
   rpc: IReqResp,
   peer: PeerId,
   chunk: ISlotRange
-): Promise<SignedBeaconBlock[] | null> {
+): Promise<phase0.SignedBeaconBlock[]> {
   return await rpc.beaconBlocksByRange(peer, {
     startSlot: chunk.start,
     step: 1,
@@ -48,18 +46,18 @@ export async function getBlockRange(
   range: ISlotRange,
   blocksPerChunk?: number,
   maxRetry = 6
-): Promise<SignedBeaconBlock[] | null> {
+): Promise<phase0.SignedBeaconBlock[] | null> {
   const totalBlocks = range.end - range.start;
   blocksPerChunk = blocksPerChunk || Math.ceil(totalBlocks / peers.length);
   if (blocksPerChunk < 5) {
     blocksPerChunk = totalBlocks;
   }
   let chunks = chunkify(blocksPerChunk, range.start, range.end);
-  let blocks: SignedBeaconBlock[] = [];
-  //try to fetch chunks from different peers until all chunks are fetched
+  let blocks: phase0.SignedBeaconBlock[] = [];
+  // try to fetch chunks from different peers until all chunks are fetched
   let retry = 0;
   while (chunks.length > 0) {
-    //rotate peers
+    // rotate peers
     const peerBalancer = new RoundRobinArray(peers);
     chunks = (
       await Promise.all(
@@ -76,7 +74,7 @@ export async function getBlockRange(
             return null;
           } else {
             logger.warn("Failed to obtain chunk from peer", {peerId: peer!.toB58String(), ...chunk});
-            //if failed to obtain blocks, try in next round on another peer
+            // if failed to obtain blocks, try in next round on another peer
             return chunk;
           }
         })
@@ -91,21 +89,6 @@ export async function getBlockRange(
   return sortBlocks(blocks);
 }
 
-export function sortBlocks(blocks: SignedBeaconBlock[]): SignedBeaconBlock[] {
+export function sortBlocks(blocks: phase0.SignedBeaconBlock[]): phase0.SignedBeaconBlock[] {
   return blocks.sort((b1, b2) => b1.message.slot - b2.message.slot);
-}
-
-export function isValidChainOfBlocks(
-  config: IBeaconConfig,
-  start: BeaconBlockHeader,
-  signedBlocks: SignedBeaconBlock[]
-): boolean {
-  let parentRoot = config.types.BeaconBlockHeader.hashTreeRoot(start);
-  for (const signedBlock of signedBlocks) {
-    if (!config.types.Root.equals(parentRoot, signedBlock.message.parentRoot)) {
-      return false;
-    }
-    parentRoot = config.types.BeaconBlock.hashTreeRoot(signedBlock.message);
-  }
-  return true;
 }

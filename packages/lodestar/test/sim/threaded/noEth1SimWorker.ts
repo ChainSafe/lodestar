@@ -2,11 +2,11 @@
 import {parentPort, workerData} from "worker_threads";
 
 import {init} from "@chainsafe/bls";
-import {Checkpoint} from "@chainsafe/lodestar-types";
-import {WinstonLogger} from "@chainsafe/lodestar-utils";
+import {phase0} from "@chainsafe/lodestar-types";
 
 import {getDevBeaconNode} from "../../utils/node/beacon";
 import {getDevValidator} from "../../utils/node/validator";
+import {testLogger, LogLevel} from "../../utils/logger";
 
 (async function () {
   // blst Native bindings don't work right on worker threads. It errors with
@@ -15,18 +15,18 @@ import {getDevValidator} from "../../utils/node/validator";
   await init("herumi");
 
   const {nodeIndex, validatorsPerNode, startIndex, checkpointEvent} = workerData.options;
+  const endIndex = startIndex + validatorsPerNode - 1;
 
-  const logger = new WinstonLogger();
   const node = await getDevBeaconNode({
     ...workerData.options,
-    logger: logger.child({module: `Node ${nodeIndex}`}),
+    logger: testLogger(`Node ${nodeIndex}`, LogLevel.info),
   });
 
   const validator = getDevValidator({
     node,
     startIndex,
     count: validatorsPerNode,
-    logger: logger.child({module: `Validator ${startIndex}-${startIndex + validatorsPerNode}`}),
+    logger: testLogger(`Vali ${startIndex}-${endIndex}`, LogLevel.info),
   });
 
   await validator.start();
@@ -36,7 +36,7 @@ import {getDevValidator} from "../../utils/node/validator";
       node.close().then(() => {
         parentPort!.postMessage({
           event: checkpointEvent,
-          checkpoint: node.config.types.Checkpoint.toJson(checkpoint as Checkpoint),
+          checkpoint: node.config.types.phase0.Checkpoint.toJson(checkpoint as phase0.Checkpoint),
         });
       })
     );

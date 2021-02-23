@@ -2,7 +2,7 @@
  * simple lru cache of slot + committee index + aggregation bits hashes
  *
  */
-import {AggregateAndProof, Attestation} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 
 /**
  * USed to verify gossip attestation. When there are multiple
@@ -18,22 +18,22 @@ export class SeenAttestationCache {
     this.cache = new Map();
   }
 
-  public async addCommitteeAttestation(attestation: Attestation): Promise<void> {
+  public addCommitteeAttestation(attestation: phase0.Attestation): void {
     const key = this.attestationKey(attestation);
     this.add(key);
   }
 
-  public async addAggregateAndProof(aggregateAndProof: AggregateAndProof): Promise<void> {
+  public addAggregateAndProof(aggregateAndProof: phase0.AggregateAndProof): void {
     const key = this.aggregateAndProofKey(aggregateAndProof);
     this.add(key);
   }
 
-  public async hasCommitteeAttestation(attestation: Attestation): Promise<boolean> {
+  public hasCommitteeAttestation(attestation: phase0.Attestation): boolean {
     const key = this.attestationKey(attestation);
     return this.cache.has(key);
   }
 
-  public async hasAggregateAndProof(aggregateAndProof: AggregateAndProof): Promise<boolean> {
+  public hasAggregateAndProof(aggregateAndProof: phase0.AggregateAndProof): boolean {
     const key = this.aggregateAndProofKey(aggregateAndProof);
     return this.cache.has(key);
   }
@@ -41,13 +41,13 @@ export class SeenAttestationCache {
   private add(key: string): void {
     this.cache.set(key, true);
     if (this.cache.size > this.maxSize) {
-      //deletes oldest element added (map keep list of insert order)
+      // deletes oldest element added (map keep list of insert order)
       this.cache.delete(this.cache.keys().next().value);
     }
   }
 
-  //serialize attestation key as concatenation of interested properties
-  private attestationKey(attestation: Attestation): string {
+  // serialize attestation key as concatenation of interested properties
+  private attestationKey(attestation: phase0.Attestation): string {
     return (
       "" +
       attestation.data.slot +
@@ -59,8 +59,8 @@ export class SeenAttestationCache {
     );
   }
 
-  //serialize aggregate key as concatenation of interested properties
-  private aggregateAndProofKey(aggreate: AggregateAndProof): string {
+  // serialize aggregate key as concatenation of interested properties
+  private aggregateAndProofKey(aggreate: phase0.AggregateAndProof): string {
     return "" + aggreate.aggregatorIndex + aggreate.aggregate.data.target.epoch;
   }
 }

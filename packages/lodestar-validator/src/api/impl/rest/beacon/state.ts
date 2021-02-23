@@ -1,13 +1,16 @@
-import {BLSPubkey, Fork, ValidatorIndex, ValidatorResponse} from "@chainsafe/lodestar-types";
+import {BLSPubkey, ValidatorIndex, phase0} from "@chainsafe/lodestar-types";
 import {Json} from "@chainsafe/ssz";
 import {IBeaconStateApi} from "../../../interface/beacon";
 import {RestApi} from "./abstract";
 
 export class RestBeaconStateApi extends RestApi implements IBeaconStateApi {
+  /**
+   * Fetch given validator from a given state
+   */
   public async getStateValidator(
     stateId: "head",
     validatorId: ValidatorIndex | BLSPubkey
-  ): Promise<ValidatorResponse | null> {
+  ): Promise<phase0.ValidatorResponse | null> {
     let id = "";
     if (typeof validatorId === "number") {
       id = validatorId.toString();
@@ -15,7 +18,7 @@ export class RestBeaconStateApi extends RestApi implements IBeaconStateApi {
       id = this.config.types.BLSPubkey.toJson(validatorId)?.toString() ?? "";
     }
     try {
-      return this.config.types.ValidatorResponse.fromJson(
+      return this.config.types.phase0.ValidatorResponse.fromJson(
         (await this.client.get<{data: Json}>(`/states/${stateId}/validators/${id}`)).data,
         {
           case: "snake",
@@ -26,11 +29,15 @@ export class RestBeaconStateApi extends RestApi implements IBeaconStateApi {
       return null;
     }
   }
-  public async getFork(stateId: "head"): Promise<Fork | null> {
+
+  public async getFork(stateId: "head"): Promise<phase0.Fork | null> {
     try {
-      return this.config.types.Fork.fromJson((await this.client.get<{data: Json}>(`/states/${stateId}/fork`)).data, {
-        case: "snake",
-      });
+      return this.config.types.phase0.Fork.fromJson(
+        (await this.client.get<{data: Json}>(`/states/${stateId}/fork`)).data,
+        {
+          case: "snake",
+        }
+      );
     } catch (e) {
       this.logger.error("Failed to fetch head fork version", {error: e.message});
       return null;

@@ -2,7 +2,7 @@ import {config} from "@chainsafe/lodestar-config/minimal";
 import {expect} from "chai";
 import supertest from "supertest";
 import {ApiNamespace, RestApi} from "../../../../../../src/api";
-import {silentLogger} from "../../../../../utils/logger";
+import {testLogger} from "../../../../../utils/logger";
 import {StubbedApi} from "../../../../../utils/stub/api";
 import {urlJoin} from "../../utils";
 import {BEACON_PREFIX} from "../index.test";
@@ -25,7 +25,7 @@ describe("rest - beacon - submitProposerSlashing", function () {
       },
       {
         config,
-        logger: silentLogger,
+        logger: testLogger(),
         api,
       }
     );
@@ -39,7 +39,7 @@ describe("rest - beacon - submitProposerSlashing", function () {
     const slashing = generateEmptyProposerSlashing();
     await supertest(restApi.server.server)
       .post(urlJoin(BEACON_PREFIX, submitProposerSlashing.url))
-      .send(config.types.ProposerSlashing.toJson(slashing, {case: "snake"}) as Record<string, unknown>)
+      .send(config.types.phase0.ProposerSlashing.toJson(slashing, {case: "snake"}) as Record<string, unknown>)
       .expect(200);
     expect(api.beacon.pool.submitProposerSlashing.calledOnce).to.be.true;
   });
@@ -48,7 +48,7 @@ describe("rest - beacon - submitProposerSlashing", function () {
     const slashing = generateEmptyProposerSlashing();
     await supertest(restApi.server.server)
       .post(urlJoin(BEACON_PREFIX, submitProposerSlashing.url))
-      .send(config.types.ProposerSlashing.toJson(slashing, {case: "camel"}) as Record<string, unknown>)
+      .send(config.types.phase0.ProposerSlashing.toJson(slashing, {case: "camel"}) as Record<string, unknown>)
       .expect(400)
       .expect("Content-Type", "application/json; charset=utf-8");
     expect(api.beacon.pool.submitProposerSlashing.notCalled).to.be.true;

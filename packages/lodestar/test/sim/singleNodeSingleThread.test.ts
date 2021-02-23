@@ -1,11 +1,12 @@
 import {IBeaconParams} from "@chainsafe/lodestar-params";
 import {getDevBeaconNode} from "../utils/node/beacon";
 import {waitForEvent} from "../utils/events/resolver";
-import {Checkpoint} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {getDevValidators} from "../utils/node/validator";
 import {expect} from "chai";
 import {ChainEvent} from "../../src/chain";
 import {IRestApiOptions} from "../../src/api/rest/options";
+import {testLogger, LogLevel} from "../utils/logger";
 
 describe("Run single node single thread interop validators (no eth1) until checkpoint", function () {
   const timeout = 120 * 1000;
@@ -39,8 +40,9 @@ describe("Run single node single thread interop validators (no eth1) until check
         params: testCase.params,
         options: {sync: {minPeers: 0}, api: {rest: {enabled: true} as IRestApiOptions}},
         validatorCount: testCase.vc * testCase.validators,
+        logger: testLogger("A", LogLevel.info),
       });
-      const justificationEventListener = waitForEvent<Checkpoint>(
+      const justificationEventListener = waitForEvent<phase0.Checkpoint>(
         bn.chain.emitter,
         testCase.event,
         timeout - 10 * 1000

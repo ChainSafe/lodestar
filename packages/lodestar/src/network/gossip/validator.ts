@@ -1,12 +1,5 @@
 import {IGossipMessageValidator} from "./interface";
-import {
-  Attestation,
-  AttesterSlashing,
-  ProposerSlashing,
-  SignedAggregateAndProof,
-  SignedBeaconBlock,
-  SignedVoluntaryExit,
-} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {IBeaconDb} from "../../db";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils";
@@ -45,9 +38,9 @@ export class GossipMessageValidator implements IGossipMessageValidator {
     this.logger = logger;
   }
 
-  public isValidIncomingBlock = async (signedBlock: SignedBeaconBlock): Promise<ExtendedValidatorResult> => {
+  public isValidIncomingBlock = async (signedBlock: phase0.SignedBeaconBlock): Promise<ExtendedValidatorResult> => {
     const logContext = {
-      blockRoot: toHexString(this.config.types.BeaconBlock.hashTreeRoot(signedBlock.message)),
+      blockRoot: toHexString(this.config.types.phase0.BeaconBlock.hashTreeRoot(signedBlock.message)),
       blockSlot: signedBlock.message.slot,
     };
     try {
@@ -61,7 +54,7 @@ export class GossipMessageValidator implements IGossipMessageValidator {
 
       this.logger.verbose("Started gossip block validation", logContext);
       await validateGossipBlock(this.config, this.chain, this.db, blockJob);
-      this.logger.info("Received valid gossip block", logContext);
+      this.logger.verbose("Received valid gossip block", logContext);
 
       return ExtendedValidatorResult.accept;
     } catch (e) {
@@ -79,7 +72,7 @@ export class GossipMessageValidator implements IGossipMessageValidator {
 
         case BlockErrorCode.FUTURE_SLOT:
         case BlockErrorCode.PARENT_UNKNOWN:
-          await this.chain.receiveBlock(signedBlock);
+          this.chain.receiveBlock(signedBlock);
           this.logger.warn("Ignoring gossip block", logContext, e);
           return ExtendedValidatorResult.ignore;
 
@@ -93,13 +86,13 @@ export class GossipMessageValidator implements IGossipMessageValidator {
   };
 
   public isValidIncomingCommitteeAttestation = async (
-    attestation: Attestation,
+    attestation: phase0.Attestation,
     subnet: number
   ): Promise<ExtendedValidatorResult> => {
     const logContext = {
       attestationSlot: attestation.data.slot,
       attestationBlockRoot: toHexString(attestation.data.beaconBlockRoot),
-      attestationRoot: toHexString(this.config.types.Attestation.hashTreeRoot(attestation)),
+      attestationRoot: toHexString(this.config.types.phase0.Attestation.hashTreeRoot(attestation)),
       subnet,
     };
 
@@ -111,7 +104,7 @@ export class GossipMessageValidator implements IGossipMessageValidator {
 
       this.logger.verbose("Started gossip committee attestation validation", logContext);
       await validateGossipAttestation(this.config, this.chain, this.db, attestationJob, subnet);
-      this.logger.info("Received valid committee attestation", logContext);
+      this.logger.verbose("Received valid committee attestation", logContext);
 
       return ExtendedValidatorResult.accept;
     } catch (e) {
@@ -135,7 +128,7 @@ export class GossipMessageValidator implements IGossipMessageValidator {
         case AttestationErrorCode.UNKNOWN_BEACON_BLOCK_ROOT:
         case AttestationErrorCode.MISSING_ATTESTATION_PRESTATE:
           // attestation might be valid after we receive block
-          await this.chain.receiveAttestation(attestation);
+          this.chain.receiveAttestation(attestation);
           this.logger.warn("Ignoring gossip attestation", logContext, e);
           return ExtendedValidatorResult.ignore;
 
@@ -147,19 +140,21 @@ export class GossipMessageValidator implements IGossipMessageValidator {
           return ExtendedValidatorResult.ignore;
       }
     } finally {
-      await this.db.seenAttestationCache.addCommitteeAttestation(attestation);
+      this.db.seenAttestationCache.addCommitteeAttestation(attestation);
     }
   };
 
   public isValidIncomingAggregateAndProof = async (
-    signedAggregateAndProof: SignedAggregateAndProof
+    signedAggregateAndProof: phase0.SignedAggregateAndProof
   ): Promise<ExtendedValidatorResult> => {
     const attestation = signedAggregateAndProof.message.aggregate;
     const logContext = {
       attestationSlot: attestation.data.slot,
       aggregatorIndex: signedAggregateAndProof.message.aggregatorIndex,
-      aggregateRoot: toHexString(this.config.types.AggregateAndProof.hashTreeRoot(signedAggregateAndProof.message)),
-      attestationRoot: toHexString(this.config.types.Attestation.hashTreeRoot(attestation)),
+      aggregateRoot: toHexString(
+        this.config.types.phase0.AggregateAndProof.hashTreeRoot(signedAggregateAndProof.message)
+      ),
+      attestationRoot: toHexString(this.config.types.phase0.Attestation.hashTreeRoot(attestation)),
       targetEpoch: attestation.data.target.epoch,
     };
 
@@ -171,7 +166,7 @@ export class GossipMessageValidator implements IGossipMessageValidator {
 
       this.logger.verbose("Started gossip aggregate and proof validation", logContext);
       await validateGossipAggregateAndProof(this.config, this.chain, this.db, signedAggregateAndProof, attestationJob);
-      this.logger.info("Received valid gossip aggregate and proof", logContext);
+      this.logger.verbose("Received valid gossip aggregate and proof", logContext);
 
       return ExtendedValidatorResult.accept;
     } catch (e) {
@@ -191,7 +186,7 @@ export class GossipMessageValidator implements IGossipMessageValidator {
           return ExtendedValidatorResult.reject;
 
         case AttestationErrorCode.FUTURE_SLOT:
-          await this.chain.receiveAttestation(attestation);
+          this.chain.receiveAttestation(attestation);
           this.logger.warn("Ignoring gossip aggregate and proof", logContext, e);
           return ExtendedValidatorResult.ignore;
 
@@ -203,12 +198,12 @@ export class GossipMessageValidator implements IGossipMessageValidator {
           return ExtendedValidatorResult.ignore;
       }
     } finally {
-      await this.db.seenAttestationCache.addAggregateAndProof(signedAggregateAndProof.message);
+      this.db.seenAttestationCache.addAggregateAndProof(signedAggregateAndProof.message);
     }
   };
 
   public isValidIncomingVoluntaryExit = async (
-    voluntaryExit: SignedVoluntaryExit
+    voluntaryExit: phase0.SignedVoluntaryExit
   ): Promise<ExtendedValidatorResult> => {
     try {
       await validateGossipVoluntaryExit(this.config, this.chain, this.db, voluntaryExit);
@@ -233,7 +228,7 @@ export class GossipMessageValidator implements IGossipMessageValidator {
   };
 
   public isValidIncomingProposerSlashing = async (
-    proposerSlashing: ProposerSlashing
+    proposerSlashing: phase0.ProposerSlashing
   ): Promise<ExtendedValidatorResult> => {
     try {
       await validateGossipProposerSlashing(this.config, this.chain, this.db, proposerSlashing);
@@ -258,7 +253,7 @@ export class GossipMessageValidator implements IGossipMessageValidator {
   };
 
   public isValidIncomingAttesterSlashing = async (
-    attesterSlashing: AttesterSlashing
+    attesterSlashing: phase0.AttesterSlashing
   ): Promise<ExtendedValidatorResult> => {
     try {
       await validateGossipAttesterSlashing(this.config, this.chain, this.db, attesterSlashing);

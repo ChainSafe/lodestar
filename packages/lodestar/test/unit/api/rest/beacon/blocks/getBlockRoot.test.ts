@@ -7,7 +7,7 @@ import {ApiNamespace, RestApi} from "../../../../../../src/api";
 import {getBlockRoot} from "../../../../../../src/api/rest/controllers/beacon/blocks";
 import {StubbedApi} from "../../../../../utils/stub/api";
 import {generateEmptySignedBlock} from "../../../../../utils/block";
-import {silentLogger} from "../../../../../utils/logger";
+import {testLogger} from "../../../../../utils/logger";
 import {urlJoin} from "../../utils";
 import {BEACON_PREFIX} from "../index.test";
 
@@ -27,7 +27,7 @@ describe("rest - beacon - getBlockRoot", function () {
       },
       {
         config,
-        logger: silentLogger,
+        logger: testLogger(),
         api,
       }
     );
@@ -44,7 +44,9 @@ describe("rest - beacon - getBlockRoot", function () {
       .get(urlJoin(BEACON_PREFIX, getBlockRoot.url.replace(":blockId", "head")))
       .expect(200)
       .expect("Content-Type", "application/json; charset=utf-8");
-    expect(response.body.data.root).to.be.equal(toHexString(config.types.BeaconBlock.hashTreeRoot(block.message)));
+    expect(response.body.data.root).to.be.equal(
+      toHexString(config.types.phase0.BeaconBlock.hashTreeRoot(block.message))
+    );
   });
 
   it("should not found block header", async function () {

@@ -1,7 +1,7 @@
 import {assert} from "chai";
 
 import {List} from "@chainsafe/ssz";
-import {Validator} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 
 import {getActiveValidatorIndices, isActiveValidator, isSlashableValidator} from "../../../../src/util";
 
@@ -19,7 +19,7 @@ describe("getActiveValidatorIndices", () => {
     const exitEpoch = 10;
     state.validators = Array.from({length: 10}, () =>
       generateValidator({activation: activationEpoch, exit: exitEpoch})
-    ) as List<Validator>;
+    ) as List<phase0.Validator>;
     const allActiveIndices = Array.from(state.validators).map((_, i) => i);
     const allInactiveIndices: any = [];
     assert.deepEqual(getActiveValidatorIndices(state, activationEpoch), allActiveIndices);
@@ -29,37 +29,37 @@ describe("getActiveValidatorIndices", () => {
 
 describe("isActiveValidator", () => {
   it("should be active", () => {
-    const v: Validator = generateValidator({activation: 0, exit: 100});
+    const v: phase0.Validator = generateValidator({activation: 0, exit: 100});
     const result: boolean = isActiveValidator(v, 0);
     assert.isTrue(result);
   });
 
   it("should be active", () => {
-    const v: Validator = generateValidator({activation: 10, exit: 101});
+    const v: phase0.Validator = generateValidator({activation: 10, exit: 101});
     const result: boolean = isActiveValidator(v, 100);
     assert.isTrue(result);
   });
 
   it("should be active", () => {
-    const v: Validator = generateValidator({activation: 100, exit: 1000});
+    const v: phase0.Validator = generateValidator({activation: 100, exit: 1000});
     const result: boolean = isActiveValidator(v, 100);
     assert.isTrue(result);
   });
 
   it("should not be active", () => {
-    const v: Validator = generateValidator({activation: 1});
+    const v: phase0.Validator = generateValidator({activation: 1});
     const result: boolean = isActiveValidator(v, 0);
     assert.isFalse(result);
   });
 
   it("should not be active", () => {
-    const v: Validator = generateValidator({activation: 100});
+    const v: phase0.Validator = generateValidator({activation: 100});
     const result: boolean = isActiveValidator(v, 5);
     assert.isFalse(result);
   });
 
   it("should not be active", () => {
-    const v: Validator = generateValidator({activation: 1, exit: 5});
+    const v: phase0.Validator = generateValidator({activation: 1, exit: 5});
     const result: boolean = isActiveValidator(v, 100);
     assert.isFalse(result);
   });

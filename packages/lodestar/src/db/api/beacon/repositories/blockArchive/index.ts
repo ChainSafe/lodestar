@@ -1,18 +1,12 @@
-import {computeEpochAtSlot, epochToCurrentForkVersion} from "@chainsafe/lodestar-beacon-state-transition";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {IDatabaseController, Repository, IKeyValue, IFilterOptions} from "@chainsafe/lodestar-db";
+import {IBeaconConfig, IForkName} from "@chainsafe/lodestar-config";
+import {IDatabaseController, Repository, IKeyValue, IFilterOptions, Bucket} from "@chainsafe/lodestar-db";
 import {IBlockSummary} from "@chainsafe/lodestar-fork-choice";
-import {Lightclient, SignedBeaconBlock, Slot, Version, Root} from "@chainsafe/lodestar-types";
-import {IKeyValueSummary, IBlockFilterOptions} from "./abstract";
-import {InitialBlockArchiveRepository} from "./initial";
-import {LightclientBlockArchiveRepository} from "./lightclient";
+import {Slot, Root, allForks} from "@chainsafe/lodestar-types";
+import {IKeyValueSummary, IBlockFilterOptions, GenericBlockArchiveRepository} from "./abstract";
 import {getRootIndexKey, getParentRootIndexKey} from "./db-index";
-import {bytesToInt, toHex} from "@chainsafe/lodestar-utils";
+import {bytesToInt} from "@chainsafe/lodestar-utils";
 import all from "it-all";
-
-type BlockType = SignedBeaconBlock | Lightclient.SignedBeaconBlock;
-
-type ForkHex = string;
+import {ContainerType} from "@chainsafe/ssz";
 
 /**
  * Stores finalized blocks. Block slot is identifier.
@@ -21,111 +15,119 @@ export class BlockArchiveRepository {
   protected config: IBeaconConfig;
   protected db: IDatabaseController<Buffer, Buffer>;
 
-  protected blockArchiveRepositories: Map<ForkHex, Repository<Slot, BlockType>>;
+  protected repositories: Map<IForkName, Repository<Slot, allForks.SignedBeaconBlock>>;
 
-  public constructor(
-    config: IBeaconConfig,
-    db: IDatabaseController<Buffer, Buffer>,
-    forkVersionBlockRepositories: Map<ForkHex, Repository<Slot, BlockType>> = new Map()
-  ) {
+  public constructor(config: IBeaconConfig, db: IDatabaseController<Buffer, Buffer>) {
     this.config = config;
     this.db = db;
-    this.blockArchiveRepositories = new Map([
-      [toHex(config.params.GENESIS_FORK_VERSION), new InitialBlockArchiveRepository(config, db)],
+    this.repositories = new Map([
       [
-        toHex(config.params.lightclient.LIGHTCLIENT_PATCH_FORK_VERSION),
-        new LightclientBlockArchiveRepository(config, db),
+        "phase0",
+        new GenericBlockArchiveRepository(
+          config,
+          db,
+          Bucket.phase0_blockArchive,
+          config.types.phase0.SignedBeaconBlock as ContainerType<allForks.SignedBeaconBlock>
+        ),
       ],
-      ...forkVersionBlockRepositories.entries(),
+      [
+        "lightclient",
+        new GenericBlockArchiveRepository(
+          config,
+          db,
+          Bucket.lightclient_blockArchive,
+          config.types.lightclient.SignedBeaconBlock as ContainerType<allForks.SignedBeaconBlock>
+        ),
+      ],
     ]);
   }
 
-  public async get(id: Slot): Promise<BlockType | null> {
-    return (await this.getBlockArchiveRepository(id)?.get(id)) ?? null;
+  public async get(slot: Slot): Promise<allForks.SignedBeaconBlock | null> {
+    return await this.getRepository(slot).get(slot);
   }
 
-  public async getByRoot(root: Root): Promise<BlockType | null> {
+  public async getByRoot(root: Root): Promise<allForks.SignedBeaconBlock | null> {
     const slot = await this.getSlotByRoot(root);
-    if (slot !== null && Number.isInteger(slot)) {
-      return (await this.getBlockArchiveRepository(slot)?.get(slot)) ?? null;
-    }
-    return null;
+    return slot !== null ? await this.get(slot) : null;
   }
 
-  public async getByParentRoot(root: Root): Promise<BlockType | null> {
+  public async getByParentRoot(root: Root): Promise<allForks.SignedBeaconBlock | null> {
     const slot = await this.getSlotByParentRoot(root);
-    if (slot !== null && Number.isInteger(slot)) {
-      return (await this.getBlockArchiveRepository(slot)?.get(slot)) ?? null;
-    }
-    return null;
+    return slot !== null ? await this.get(slot) : null;
   }
 
   public async getSlotByRoot(root: Root): Promise<Slot | null> {
-    const value = await this.db.get(getRootIndexKey(root));
-    if (value) {
-      return bytesToInt(value, "be");
-    }
-    return null;
+    return this.parseSlot(await this.db.get(getRootIndexKey(root)));
   }
 
   public async getSlotByParentRoot(root: Root): Promise<Slot | null> {
-    const value = await this.db.get(getParentRootIndexKey(root));
-    if (value) {
-      return bytesToInt(value, "be");
-    }
-    return null;
+    return this.parseSlot(await this.db.get(getParentRootIndexKey(root)));
   }
 
-  public async add(value: BlockType): Promise<void> {
-    await this.getBlockArchiveRepository(value.message.slot).add(value);
+  public async add(value: allForks.SignedBeaconBlock): Promise<void> {
+    await this.getRepository(value.message.slot).add(value);
   }
 
-  public async batchPut(items: Array<IKeyValue<Slot, BlockType>>, fork: Version): Promise<void> {
-    const repo = this.blockArchiveRepositories.get(toHex(fork));
-    if (!repo) {
-      throw new Error("No supported block archive repositories for fork. " + JSON.stringify({currentFork: fork}));
-    }
-    await repo.batchPut(items);
+  public async batchPut(items: Array<IKeyValue<Slot, allForks.SignedBeaconBlock>>): Promise<void> {
+    await Promise.all(
+      Object.entries(this.groupByFork(items)).map(([forkName, items]) =>
+        this.getRepositoryByForkName(forkName as IForkName).batchPut(items)
+      )
+    );
   }
 
-  public async batchPutBinary(
-    items: Array<IKeyValueSummary<Slot, Buffer, IBlockSummary>>,
-    fork: Version
-  ): Promise<void> {
-    const repo = this.blockArchiveRepositories.get(toHex(fork));
-    if (!repo) {
-      throw new Error("No supported block archive repositories for fork. " + JSON.stringify({currentFork: fork}));
-    }
-    await repo.batchPutBinary(items);
+  public async batchPutBinary(items: Array<IKeyValueSummary<Slot, Buffer, IBlockSummary>>): Promise<void> {
+    await Promise.all(
+      Object.entries(this.groupByFork(items)).map(([forkName, items]) =>
+        this.getRepositoryByForkName(forkName as IForkName).batchPutBinary(items)
+      )
+    );
   }
 
   public async *keysStream(opts?: IFilterOptions<Slot>): AsyncIterable<Slot> {
-    const repos = this.blockArchiveRepositories.values();
+    const repos = this.repositories.values();
     for (const repo of repos) {
       yield* repo.keysStream(opts);
     }
   }
 
-  public async *valuesStream(opts?: IBlockFilterOptions): AsyncIterable<BlockType> {
-    const repos = this.blockArchiveRepositories.values();
+  public async *valuesStream(opts?: IBlockFilterOptions): AsyncIterable<allForks.SignedBeaconBlock> {
+    const repos = this.repositories.values();
     for (const repo of repos) {
       yield* repo.valuesStream(opts);
     }
   }
 
-  public async values(opts?: IBlockFilterOptions): Promise<BlockType[]> {
+  public async values(opts?: IBlockFilterOptions): Promise<allForks.SignedBeaconBlock[]> {
     return all(this.valuesStream(opts));
   }
 
-  private getBlockArchiveRepository(slot: Slot): Repository<Slot, BlockType> {
-    const fork = epochToCurrentForkVersion(this.config, computeEpochAtSlot(this.config, slot));
-    if (!fork) {
-      throw new Error("Not supported fork. " + JSON.stringify({currentFork: fork, slot}));
-    }
-    const repo = this.blockArchiveRepositories.get(toHex(fork));
+  private getRepositoryByForkName(forkName: IForkName): Repository<Slot, allForks.SignedBeaconBlock> {
+    const repo = this.repositories.get(forkName);
     if (!repo) {
-      throw new Error("No supported block archive repositories for fork. " + JSON.stringify({currentFork: fork, slot}));
+      throw new Error("No supported block archive repository for fork: " + forkName);
     }
     return repo;
+  }
+
+  private getRepository(slot: Slot): Repository<Slot, allForks.SignedBeaconBlock> {
+    return this.getRepositoryByForkName(this.config.getForkName(slot));
+  }
+
+  private groupByFork<T>(items: Array<IKeyValue<Slot, T>>): Record<IForkName, IKeyValue<Slot, T>[]> {
+    const itemsByFork = {} as Record<IForkName, IKeyValue<Slot, T>[]>;
+    for (const kv of items) {
+      const forkName = this.config.getForkName(kv.key);
+      if (!itemsByFork[forkName]) itemsByFork[forkName] = [];
+      itemsByFork[forkName].push(kv);
+    }
+    return itemsByFork;
+  }
+
+  private parseSlot(slotBytes: Buffer | null): Slot | null {
+    if (!slotBytes) return null;
+    const slot = bytesToInt(slotBytes, "be");
+    // TODO: Is this necessary? How can bytesToInt return a non-integer?
+    return Number.isInteger(slot) ? slot : null;
   }
 }

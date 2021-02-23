@@ -4,7 +4,7 @@ import supertest from "supertest";
 import {ApiNamespace, RestApi} from "../../../../../../src/api";
 import {publishBlock} from "../../../../../../src/api/rest/controllers/beacon/blocks/publishBlock";
 import {generateEmptySignedBlock} from "../../../../../utils/block";
-import {silentLogger} from "../../../../../utils/logger";
+import {testLogger} from "../../../../../utils/logger";
 import {StubbedApi} from "../../../../../utils/stub/api";
 import {urlJoin} from "../../utils";
 import {BEACON_PREFIX} from "../index.test";
@@ -25,7 +25,7 @@ describe("rest - beacon - publishBlock", function () {
       },
       {
         config,
-        logger: silentLogger,
+        logger: testLogger(),
         api,
       }
     );
@@ -40,7 +40,7 @@ describe("rest - beacon - publishBlock", function () {
     api.beacon.blocks.publishBlock.resolves();
     await supertest(restApi.server.server)
       .post(urlJoin(BEACON_PREFIX, publishBlock.url))
-      .send(config.types.SignedBeaconBlock.toJson(block, {case: "snake"}) as Record<string, unknown>)
+      .send(config.types.phase0.SignedBeaconBlock.toJson(block, {case: "snake"}) as Record<string, unknown>)
       .expect(200)
       .expect("Content-Type", "application/json");
   });

@@ -10,14 +10,3 @@ export const ZERO_HASH = Buffer.alloc(32, 0);
 export const EMPTY_SIGNATURE = Buffer.alloc(96, 0);
 export const SECONDS_PER_DAY = 86400;
 export const BASE_REWARDS_PER_EPOCH = 4;
-
-// Domain Types
-export enum DomainType {
-  BEACON_PROPOSER = 0,
-  BEACON_ATTESTER = 1,
-  RANDAO = 2,
-  DEPOSIT = 3,
-  VOLUNTARY_EXIT = 4,
-  SELECTION_PROOF = 5,
-  AGGREGATE_AND_PROOF = 6,
-}

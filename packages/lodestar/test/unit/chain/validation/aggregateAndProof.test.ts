@@ -6,8 +6,8 @@ import bls from "@chainsafe/bls";
 import {bigIntToBytes} from "@chainsafe/lodestar-utils";
 import {config} from "@chainsafe/lodestar-config/minimal";
 import * as validatorUtils from "@chainsafe/lodestar-beacon-state-transition/lib/util/validator";
-import {EpochContext, getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
-import * as blockUtils from "@chainsafe/lodestar-beacon-state-transition/lib/fast/block/isValidIndexedAttestation";
+import {phase0, getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
+import * as blockUtils from "@chainsafe/lodestar-beacon-state-transition/lib/phase0/fast/block/isValidIndexedAttestation";
 
 import {BeaconChain, IAttestationJob, IBeaconChain} from "../../../../src/chain";
 import {LocalClock} from "../../../../src/chain/clock";
@@ -16,7 +16,7 @@ import {validateGossipAggregateAndProof} from "../../../../src/chain/validation"
 import {ATTESTATION_PROPAGATION_SLOT_RANGE, MAXIMUM_GOSSIP_CLOCK_DISPARITY} from "../../../../src/constants";
 import * as validationUtils from "../../../../src/chain/validation/utils";
 import {generateSignedAggregateAndProof} from "../../../utils/aggregateAndProof";
-import {generateState} from "../../../utils/state";
+import {generateCachedState} from "../../../utils/state";
 import {StubbedBeaconDb} from "../../../utils/stub";
 import {AttestationErrorCode} from "../../../../src/chain/errors";
 
@@ -29,7 +29,7 @@ describe("gossip aggregate and proof test", function () {
   let isValidSignatureStub: SinonStub;
   let isValidIndexedAttestationStub: SinonStub;
 
-  beforeEach(async function () {
+  beforeEach(function () {
     chain = sinon.createStubInstance(BeaconChain);
     db = new StubbedBeaconDb(sinon);
     chain.getGenesisTime.returns(Math.floor(Date.now() / 1000));
@@ -37,7 +37,7 @@ describe("gossip aggregate and proof test", function () {
     sinon.stub(chain.clock, "currentSlot").get(() => 0);
     regen = chain.regen = sinon.createStubInstance(StateRegenerator);
     db.badBlock.has.resolves(false);
-    db.seenAttestationCache.hasAggregateAndProof.resolves(false);
+    db.seenAttestationCache.hasAggregateAndProof.returns(false);
     isAggregatorStub = sinon.stub(validatorUtils, "isAggregatorFromCommitteeLength");
     isValidSelectionProofStub = sinon.stub(validationUtils, "isValidSelectionProofSignature");
     isValidSignatureStub = sinon.stub(validationUtils, "isValidAggregateAndProofSignature");
@@ -112,7 +112,7 @@ describe("gossip aggregate and proof test", function () {
         },
       },
     });
-    db.seenAttestationCache.hasAggregateAndProof.resolves(true);
+    db.seenAttestationCache.hasAggregateAndProof.returns(true);
     try {
       await validateGossipAggregateAndProof(config, chain, db, item, {
         attestation: item.message.aggregate,
@@ -196,11 +196,11 @@ describe("gossip aggregate and proof test", function () {
         },
       },
     });
-    const state = generateState();
-    const epochCtx = sinon.createStubInstance(EpochContext);
+    const state = generateCachedState();
+    const epochCtx = sinon.createStubInstance(phase0.fast.EpochContext);
     regen.getBlockSlotState.resolves({
       state,
-      epochCtx: (epochCtx as unknown) as EpochContext,
+      epochCtx: (epochCtx as unknown) as phase0.fast.EpochContext,
     });
     epochCtx.getBeaconCommittee.returns([]);
     try {
@@ -226,11 +226,11 @@ describe("gossip aggregate and proof test", function () {
         },
       },
     });
-    const state = generateState();
-    const epochCtx = sinon.createStubInstance(EpochContext);
+    const state = generateCachedState();
+    const epochCtx = sinon.createStubInstance(phase0.fast.EpochContext);
     regen.getBlockSlotState.resolves({
       state,
-      epochCtx: (epochCtx as unknown) as EpochContext,
+      epochCtx: (epochCtx as unknown) as phase0.fast.EpochContext,
     });
     epochCtx.getBeaconCommittee.returns([item.message.aggregatorIndex]);
     isAggregatorStub.returns(false);
@@ -254,14 +254,14 @@ describe("gossip aggregate and proof test", function () {
         },
       },
     });
-    const state = generateState();
-    const epochCtx = sinon.createStubInstance(EpochContext);
+    const state = generateCachedState();
+    const epochCtx = sinon.createStubInstance(phase0.fast.EpochContext);
     epochCtx.index2pubkey = [];
     const privateKey = bls.SecretKey.fromBytes(bigIntToBytes(BigInt(1), 32));
     epochCtx.index2pubkey[item.message.aggregatorIndex] = privateKey.toPublicKey();
     regen.getBlockSlotState.resolves({
       state,
-      epochCtx: (epochCtx as unknown) as EpochContext,
+      epochCtx: (epochCtx as unknown) as phase0.fast.EpochContext,
     });
     epochCtx.getBeaconCommittee.returns([item.message.aggregatorIndex]);
     isAggregatorStub.returns(true);
@@ -286,14 +286,14 @@ describe("gossip aggregate and proof test", function () {
         },
       },
     });
-    const state = generateState();
-    const epochCtx = sinon.createStubInstance(EpochContext);
+    const state = generateCachedState();
+    const epochCtx = sinon.createStubInstance(phase0.fast.EpochContext);
     epochCtx.index2pubkey = [];
     const privateKey = bls.SecretKey.fromBytes(bigIntToBytes(BigInt(1), 32));
     epochCtx.index2pubkey[item.message.aggregatorIndex] = privateKey.toPublicKey();
     regen.getBlockSlotState.resolves({
       state,
-      epochCtx: (epochCtx as unknown) as EpochContext,
+      epochCtx: (epochCtx as unknown) as phase0.fast.EpochContext,
     });
     epochCtx.getBeaconCommittee.returns([item.message.aggregatorIndex]);
     isAggregatorStub.returns(true);
@@ -327,14 +327,14 @@ describe("gossip aggregate and proof test", function () {
         },
       },
     });
-    const state = generateState();
-    const epochCtx = sinon.createStubInstance(EpochContext);
+    const state = generateCachedState();
+    const epochCtx = sinon.createStubInstance(phase0.fast.EpochContext);
     epochCtx.index2pubkey = [];
     const privateKey = bls.SecretKey.fromBytes(bigIntToBytes(BigInt(1), 32));
     epochCtx.index2pubkey[item.message.aggregatorIndex] = privateKey.toPublicKey();
     regen.getBlockSlotState.resolves({
       state,
-      epochCtx: (epochCtx as unknown) as EpochContext,
+      epochCtx: (epochCtx as unknown) as phase0.fast.EpochContext,
     });
     epochCtx.getBeaconCommittee.returns([item.message.aggregatorIndex]);
     isAggregatorStub.returns(true);
@@ -361,14 +361,14 @@ describe("gossip aggregate and proof test", function () {
         },
       },
     });
-    const state = generateState();
-    const epochCtx = sinon.createStubInstance(EpochContext);
+    const state = generateCachedState();
+    const epochCtx = sinon.createStubInstance(phase0.fast.EpochContext);
     epochCtx.index2pubkey = [];
     const privateKey = bls.SecretKey.fromKeygen();
     epochCtx.index2pubkey[item.message.aggregatorIndex] = privateKey.toPublicKey();
     regen.getBlockSlotState.resolves({
       state,
-      epochCtx: (epochCtx as unknown) as EpochContext,
+      epochCtx: (epochCtx as unknown) as phase0.fast.EpochContext,
     });
     epochCtx.getBeaconCommittee.returns([item.message.aggregatorIndex]);
     isAggregatorStub.returns(true);

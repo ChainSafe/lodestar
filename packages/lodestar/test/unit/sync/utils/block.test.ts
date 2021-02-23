@@ -1,19 +1,16 @@
 import {ReqResp} from "../../../../src/network/reqresp/reqResp";
 import sinon, {SinonStubbedInstance} from "sinon";
-import {chunkify, getBlockRange, getBlockRangeFromPeer, isValidChainOfBlocks} from "../../../../src/sync/utils";
 import {expect} from "chai";
-import {generateEmptyBlock, generateEmptySignedBlock} from "../../../utils/block";
-import {blockToHeader} from "@chainsafe/lodestar-beacon-state-transition";
-import {config} from "@chainsafe/lodestar-config/src/presets/minimal";
+import {generateEmptySignedBlock} from "../../../utils/block";
 import PeerId from "peer-id";
-import {BeaconBlockHeader, SignedBeaconBlock} from "@chainsafe/lodestar-types";
-import {silentLogger} from "../../../utils/logger";
+import {testLogger} from "../../../utils/logger";
+import {chunkify, getBlockRange, getBlockRangeFromPeer} from "../../../../src/sync/utils";
 
 describe("sync - block utils", function () {
   describe("get block range from multiple peers", function () {
     const sandbox = sinon.createSandbox();
 
-    const logger = silentLogger;
+    const logger = testLogger();
     let rpcStub: SinonStubbedInstance<ReqResp>;
 
     beforeEach(function () {
@@ -40,7 +37,7 @@ describe("sync - block utils", function () {
       const peer1 = await PeerId.create();
       const peer2 = await PeerId.create();
       const peers = [peer1, peer2];
-      rpcStub.beaconBlocksByRange.onFirstCall().resolves(null);
+      rpcStub.beaconBlocksByRange.onFirstCall().rejects(Error("TEST_ERROR"));
       rpcStub.beaconBlocksByRange.onSecondCall().resolves([generateEmptySignedBlock(), generateEmptySignedBlock()]);
       const blockPromise = getBlockRange(logger, rpcStub, peers, {start: 0, end: 4}, 2);
       await sandbox.clock.tickAsync(1000);
@@ -88,39 +85,6 @@ describe("sync - block utils", function () {
     });
   });
 
-  describe("verify header chain", function () {
-    it("Should verify correct chain of blocks", function () {
-      const startHeader = blockToHeader(config, generateEmptyBlock());
-      const blocks = generateValidChain(startHeader);
-      const result = isValidChainOfBlocks(config, startHeader, blocks);
-      expect(result).to.be.true;
-    });
-
-    it("Should verify invalid chain of blocks - blocks out of order", function () {
-      const startHeader = blockToHeader(config, generateEmptyBlock());
-      const blocks = generateValidChain(startHeader);
-      [blocks[0], blocks[1]] = [blocks[1], blocks[0]];
-      const result = isValidChainOfBlocks(config, startHeader, blocks);
-      expect(result).to.be.false;
-    });
-
-    it("Should verify invalid chain of blocks - different start header", function () {
-      const startHeader = blockToHeader(config, generateEmptyBlock());
-      const blocks = generateValidChain(startHeader);
-      startHeader.slot = 99;
-      const result = isValidChainOfBlocks(config, startHeader, blocks);
-      expect(result).to.be.false;
-    });
-
-    it("Should verify invalid chain of blocks - invalid middle root", function () {
-      const startHeader = blockToHeader(config, generateEmptyBlock());
-      const blocks = generateValidChain(startHeader);
-      blocks[1].message.parentRoot = Buffer.alloc(32);
-      const result = isValidChainOfBlocks(config, startHeader, blocks);
-      expect(result).to.be.false;
-    });
-  });
-
   describe("get blocks from peer", function () {
     it("should get block range from peer", async function () {
       const rpcStub = sinon.createStubInstance(ReqResp);
@@ -132,16 +96,3 @@ describe("sync - block utils", function () {
     });
   });
 });
-
-function generateValidChain(start: BeaconBlockHeader, n = 3): SignedBeaconBlock[] {
-  const blocks: SignedBeaconBlock[] = [];
-  let parentRoot = config.types.BeaconBlockHeader.hashTreeRoot(start);
-  for (let i = 0; i < n; i++) {
-    const block = generateEmptySignedBlock();
-    block.message.parentRoot = parentRoot;
-    block.message.slot = i;
-    parentRoot = config.types.BeaconBlock.hashTreeRoot(block.message);
-    blocks.push(block);
-  }
-  return blocks;
-}

@@ -3,7 +3,7 @@ import {expect} from "chai";
 import supertest from "supertest";
 import {ApiNamespace, RestApi} from "../../../../../../src/api";
 import {submitAttesterSlashing} from "../../../../../../src/api/rest/controllers/beacon/pool";
-import {silentLogger} from "../../../../../utils/logger";
+import {testLogger} from "../../../../../utils/logger";
 import {generateEmptyAttesterSlashing} from "../../../../../utils/slashings";
 import {StubbedApi} from "../../../../../utils/stub/api";
 import {urlJoin} from "../../utils";
@@ -25,7 +25,7 @@ describe("rest - beacon - submitAttesterSlashing", function () {
       },
       {
         config,
-        logger: silentLogger,
+        logger: testLogger(),
         api,
       }
     );
@@ -39,7 +39,7 @@ describe("rest - beacon - submitAttesterSlashing", function () {
     const slashing = generateEmptyAttesterSlashing();
     await supertest(restApi.server.server)
       .post(urlJoin(BEACON_PREFIX, submitAttesterSlashing.url))
-      .send(config.types.AttesterSlashing.toJson(slashing, {case: "snake"}) as Record<string, unknown>)
+      .send(config.types.phase0.AttesterSlashing.toJson(slashing, {case: "snake"}) as Record<string, unknown>)
       .expect(200);
     expect(api.beacon.pool.submitAttesterSlashing.calledOnce).to.be.true;
   });
@@ -48,7 +48,7 @@ describe("rest - beacon - submitAttesterSlashing", function () {
     const slashing = generateEmptyAttesterSlashing();
     await supertest(restApi.server.server)
       .post(urlJoin(BEACON_PREFIX, submitAttesterSlashing.url))
-      .send(config.types.AttesterSlashing.toJson(slashing, {case: "camel"}) as Record<string, unknown>)
+      .send(config.types.phase0.AttesterSlashing.toJson(slashing, {case: "camel"}) as Record<string, unknown>)
       .expect(400)
       .expect("Content-Type", "application/json; charset=utf-8");
     expect(api.beacon.pool.submitAttesterSlashing.notCalled).to.be.true;

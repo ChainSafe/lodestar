@@ -1,7 +1,7 @@
-import {SignedAggregateAndProof} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {Json} from "@chainsafe/ssz";
 import {DefaultParams, DefaultQuery} from "fastify";
-import {notNullish} from "../../../../util/notNullish";
+import {notNullish} from "@chainsafe/lodestar-utils";
 import {ApiController} from "../types";
 
 type Body = Json[];
@@ -14,13 +14,13 @@ export const publishAggregateAndProof: ApiController<DefaultQuery, DefaultParams
       req.body
         .map((aggreagteJson) => {
           try {
-            return this.config.types.SignedAggregateAndProof.fromJson(aggreagteJson, {case: "snake"});
+            return this.config.types.phase0.SignedAggregateAndProof.fromJson(aggreagteJson, {case: "snake"});
           } catch (e) {
             this.log.warn("Failed to parse AggregateAndProof", e.message);
             return null;
           }
         })
-        .filter(notNullish) as SignedAggregateAndProof[]
+        .filter(notNullish) as phase0.SignedAggregateAndProof[]
     );
     resp.status(200).send();
   },

@@ -6,7 +6,7 @@ import supertest from "supertest";
 import {ApiNamespace, RestApi} from "../../../../../../src/api";
 import {StateNotFound} from "../../../../../../src/api/impl/errors/api";
 import {getStateBeaconCommittees} from "../../../../../../src/api/rest/controllers/beacon/state";
-import {silentLogger} from "../../../../../utils/logger";
+import {testLogger} from "../../../../../utils/logger";
 import {StubbedApi} from "../../../../../utils/stub/api";
 import {urlJoin} from "../../utils";
 import {BEACON_PREFIX} from "../index.test";
@@ -27,7 +27,7 @@ describe("rest - beacon - getStateBeaconCommittees", function () {
       },
       {
         config,
-        logger: silentLogger,
+        logger: testLogger(),
         api,
       }
     );

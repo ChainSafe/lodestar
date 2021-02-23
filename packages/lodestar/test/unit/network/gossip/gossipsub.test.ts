@@ -8,7 +8,7 @@ import sinon from "sinon";
 import {LodestarGossipsub} from "../../../../src/network/gossip/gossipsub";
 import {WinstonLogger} from "@chainsafe/lodestar-utils";
 import {expect, assert} from "chai";
-import {Libp2p} from "libp2p-gossipsub/src/interfaces";
+import Libp2p from "libp2p";
 import {createNode} from "../../../utils/network";
 import {GossipEncoding} from "../../../../src/network/gossip/encoding";
 import {ERR_TOPIC_VALIDATOR_REJECT} from "libp2p-gossipsub/src/constants";
@@ -24,7 +24,7 @@ describe("gossipsub", function () {
   beforeEach(async function () {
     const signedBLock = generateEmptySignedBlock();
     message = {
-      data: config.types.SignedBeaconBlock.serialize(signedBLock),
+      data: config.types.phase0.SignedBeaconBlock.serialize(signedBLock),
       from: "0",
       receivedFrom: "0",
       seqno: new Uint8Array(),

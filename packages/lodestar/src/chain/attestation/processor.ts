@@ -41,7 +41,7 @@ export class AttestationProcessor {
  */
 export async function processAttestationJob(modules: AttestationProcessorModules, job: IAttestationJob): Promise<void> {
   try {
-    await validateAttestation({...modules, job});
+    validateAttestation({...modules, job});
     await processAttestation({...modules, job});
   } catch (e) {
     // above functions only throw AttestationError

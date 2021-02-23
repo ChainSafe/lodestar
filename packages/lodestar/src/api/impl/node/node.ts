@@ -1,4 +1,4 @@
-import {SyncingStatus} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {createKeypairFromPeerId} from "@chainsafe/discv5";
 
 import {NodeIdentity, NodePeer} from "../../types";
@@ -7,7 +7,7 @@ import {IBeaconSync} from "../../../sync";
 
 import {IApiOptions} from "../../options";
 import {ApiNamespace, IApiModules} from "../interface";
-import {getPeerState} from "./utils";
+import {filterByStateAndDirection, getPeerState} from "./utils";
 import {INodeApi} from "./interface";
 
 export class NodeApi implements INodeApi {
@@ -25,11 +25,11 @@ export class NodeApi implements INodeApi {
   public async getNodeIdentity(): Promise<NodeIdentity> {
     const enr = this.network.getEnr();
     const keypair = createKeypairFromPeerId(this.network.peerId);
-    const discoveryAddresses = [] as string[];
-    // eslint-disable-next-line @typescript-eslint/no-non-null-asserted-optional-chain
-    if (enr?.getLocationMultiaddr("tcp")) discoveryAddresses.push(enr?.getLocationMultiaddr("tcp")?.toString()!);
-    // eslint-disable-next-line @typescript-eslint/no-non-null-asserted-optional-chain
-    if (enr?.getLocationMultiaddr("udp")) discoveryAddresses.push(enr?.getLocationMultiaddr("udp")?.toString()!);
+    const discoveryAddresses = [
+      enr?.getLocationMultiaddr("tcp")?.toString() ?? null,
+      enr?.getLocationMultiaddr("udp")?.toString() ?? null,
+    ].filter((addr): addr is string => Boolean(addr));
+
     return {
       peerId: this.network.peerId.toB58String(),
       enr: enr?.encodeTxt(keypair.privateKey) || "",
@@ -40,32 +40,36 @@ export class NodeApi implements INodeApi {
   }
 
   public async getNodeStatus(): Promise<"ready" | "syncing" | "error"> {
-    return (await this.sync.isSynced()) ? "ready" : "syncing";
+    return this.sync.isSynced() ? "ready" : "syncing";
   }
 
   public async getPeer(peerId: string): Promise<NodePeer | null> {
     return (await this.getPeers()).find((peer) => peer.peerId === peerId) || null;
   }
 
-  public async getPeers(): Promise<NodePeer[]> {
-    const peers: NodePeer[] = [];
-    for (const peer of this.network.getPeers({connected: true})) {
+  public async getPeers(state: string[] = [], direction: string[] = []): Promise<NodePeer[]> {
+    const nodePeers: NodePeer[] = [];
+    // if direction includes "inbound" or "outbound", it means we want connected peers
+    let peers =
+      (state.length === 1 && state[0] === "connected") || direction.length > 0
+        ? this.network.getPeers()
+        : this.network.getAllPeers();
+    peers = filterByStateAndDirection(peers, this.network, state, direction);
+    for (const peer of peers) {
       const conn = this.network.getPeerConnection(peer.id);
-      if (conn) {
-        peers.push({
-          peerId: peer.id.toB58String(),
-          //TODO: figure out how to get enr of peer
-          enr: "",
-          address: conn.remoteAddr.toString(),
-          direction: conn.stat.direction,
-          state: getPeerState(conn.stat.status),
-        });
-      }
+      nodePeers.push({
+        peerId: peer.id.toB58String(),
+        //TODO: figure out how to get enr of peer
+        enr: "",
+        lastSeenP2pAddress: conn ? conn.remoteAddr.toString() : "",
+        direction: conn ? conn.stat.direction : null,
+        state: conn ? getPeerState(conn.stat.status) : "disconnected",
+      });
     }
-    return peers;
+    return nodePeers;
   }
 
-  public async getSyncingStatus(): Promise<SyncingStatus> {
+  public async getSyncingStatus(): Promise<phase0.SyncingStatus> {
     return this.sync.getSyncStatus();
   }
 

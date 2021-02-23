@@ -3,7 +3,7 @@ import path from "path";
 import lockFile from "lockfile";
 import bls, {SecretKey} from "@chainsafe/bls";
 import {Keystore} from "@chainsafe/bls-keystore";
-import {DepositData} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {YargsError, readValidatorPassphrase} from "../util";
 import {decodeEth1TxData} from "../depositContract/depositData";
@@ -29,7 +29,7 @@ export interface IEth1DepositData {
   /**
    * The deposit data used to generate `self.rlp`
    */
-  depositData: DepositData;
+  depositData: phase0.DepositData;
   /**
    * The root of `self.deposit_data`
    */
@@ -63,7 +63,7 @@ export class ValidatorDir {
     this.dir = path.join(baseDir, add0xPrefix(pubkey));
     this.lockfilePath = path.join(this.dir, LOCK_FILE);
 
-    if (!fs.existsSync(this.dir)) throw new YargsError(`Validator directory ${this.dir} does not exists`);
+    if (!fs.existsSync(this.dir)) throw new YargsError(`Validator directory ${this.dir} does not exist`);
 
     try {
       lockFile.lockSync(this.lockfilePath);

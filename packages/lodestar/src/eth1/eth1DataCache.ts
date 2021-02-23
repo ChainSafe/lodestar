@@ -1,5 +1,5 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {Eth1DataOrdered} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {IBeaconDb} from "../db";
 
 export class Eth1DataCache {
@@ -11,11 +11,11 @@ export class Eth1DataCache {
     this.db = db;
   }
 
-  async get({timestampRange}: {timestampRange: {gte: number; lte: number}}): Promise<Eth1DataOrdered[]> {
+  async get({timestampRange}: {timestampRange: {gte: number; lte: number}}): Promise<phase0.Eth1DataOrdered[]> {
     return await this.db.eth1Data.values(timestampRange);
   }
 
-  async add(eth1Datas: (Eth1DataOrdered & {timestamp: number})[]): Promise<void> {
+  async add(eth1Datas: (phase0.Eth1DataOrdered & {timestamp: number})[]): Promise<void> {
     await this.db.eth1Data.batchPutValues(eth1Datas);
   }
 

@@ -57,7 +57,7 @@ export class JobQueue {
     this.currentSize--;
   }
 
-  async enqueueJob<T extends Job>(job: T): Promise<ReturnType<T>> {
+  enqueueJob<T extends Job>(job: T): Promise<ReturnType<T>> {
     if (this.signal.aborted) {
       throw new QueueError({code: QueueErrorCode.QUEUE_ABORTED});
     }

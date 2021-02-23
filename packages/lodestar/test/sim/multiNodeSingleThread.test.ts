@@ -2,11 +2,12 @@ import {IBeaconParams} from "@chainsafe/lodestar-params";
 import {WinstonLogger} from "@chainsafe/lodestar-utils";
 import {getDevBeaconNode} from "../utils/node/beacon";
 import {waitForEvent} from "../utils/events/resolver";
-import {Checkpoint} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {getDevValidator} from "../utils/node/validator";
 import {Validator} from "@chainsafe/lodestar-validator/lib";
 import {BeaconNode} from "../../src/node";
 import {ChainEvent} from "../../src/chain";
+import {testLogger, LogLevel} from "../utils/logger";
 
 describe.skip("Run multi node single thread interop validators (no eth1) until checkpoint", function () {
   const checkpointEvent = ChainEvent.justified;
@@ -38,16 +39,18 @@ describe.skip("Run multi node single thread interop validators (no eth1) until c
           options: {sync: {minPeers: 1}},
           validatorCount: nodeCount * validatorsPerNode,
           genesisTime,
-          logger: logger.child({module: `Node ${i}`}),
+          logger: testLogger(`Node ${i}`, LogLevel.info),
         });
 
+        const startIndex = i * validatorsPerNode;
+        const endIndex = i * validatorsPerNode + validatorsPerNode - 1;
         validators.push(
           getDevValidator({
             node,
-            startIndex: i * validatorsPerNode,
+            startIndex,
             count: validatorsPerNode,
             logger: logger.child({
-              module: `Validator ${i * validatorsPerNode}-${i * validatorsPerNode + validatorsPerNode}`,
+              module: `Vali ${startIndex}-${endIndex}`,
             }),
           })
         );
@@ -79,11 +82,10 @@ describe.skip("Run multi node single thread interop validators (no eth1) until c
       // Start all validators at once.
       await Promise.all(validators.map((validator) => validator.start()));
 
-      // Uncomment this to visualize validator dutties and attestations
-      // printBeaconCliMetrics(nodes[0]);
-
       // Wait for justified checkpoint on all nodes
-      await Promise.all(nodes.map((node) => waitForEvent<Checkpoint>(node.chain.emitter, checkpointEvent, 240000)));
+      await Promise.all(
+        nodes.map((node) => waitForEvent<phase0.Checkpoint>(node.chain.emitter, checkpointEvent, 240000))
+      );
       logger.info("All nodes reached justified checkpoint");
     });
   }

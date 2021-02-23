@@ -3,9 +3,9 @@ import {expect} from "chai";
 
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import * as utils1 from "../../../../src/util";
-import * as utils2 from "../../../../src/epoch/util";
+import * as utils2 from "../../../../src/phase0/naive/epoch/util";
 import {generateState} from "../../../utils/state";
-import {processJustificationAndFinalization} from "../../../../src/epoch/justification";
+import {processJustificationAndFinalization} from "../../../../src/phase0/naive/epoch/justification";
 
 describe("process epoch - justification and finalization", function () {
   const sandbox = sinon.createSandbox();

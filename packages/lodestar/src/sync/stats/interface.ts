@@ -1,7 +1,9 @@
-import {IService} from "../../node";
 import {Slot} from "@chainsafe/lodestar-types";
 
-export interface ISyncStats extends IService {
+export interface ISyncStats {
+  start(): void;
+  stop(): void;
+
   /**
    * Returns blocks per second processing
    */

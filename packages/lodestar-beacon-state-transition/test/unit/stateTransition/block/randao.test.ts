@@ -1,7 +1,7 @@
 import {expect} from "chai";
 import sinon from "sinon";
 import {config} from "@chainsafe/lodestar-config/mainnet";
-import {processRandao} from "../../../../src/block";
+import {processRandao} from "../../../../src/phase0/naive/block";
 import * as utils from "../../../../src/util";
 import {getCurrentEpoch} from "../../../../src/util";
 import {generateEmptyBlock} from "../../../utils/block";

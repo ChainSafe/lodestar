@@ -21,8 +21,6 @@ export function onGracefulShutdown(
       });
 
       await cleanUpFunction();
-      logFn("Cleanup completed");
-      process.exit(0);
     });
   }
 }

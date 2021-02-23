@@ -1,17 +1,17 @@
 import "mocha";
 import {expect} from "chai";
 import {AbortController} from "abort-controller";
-import {getMedallaConfig, medalla} from "../../utils/medalla";
+import {getTestnetConfig, testnet} from "../../utils/testnet";
 import {getDepositsStream, getDepositsAndBlockStreamForGenesis, Eth1Provider} from "../../../src/eth1";
 
 describe("Eth1 streams", function () {
   this.timeout("2 min");
 
-  const config = getMedallaConfig();
+  const config = getTestnetConfig();
   const eth1Provider = new Eth1Provider(config, {
     enabled: true,
-    providerUrl: medalla.providerUrl,
-    depositContractDeployBlock: medalla.depositBlock,
+    providerUrl: testnet.providerUrl,
+    depositContractDeployBlock: testnet.depositBlock,
   });
 
   const MAX_BLOCKS_PER_POLL = 1000;
@@ -22,7 +22,7 @@ describe("Eth1 streams", function () {
   it(`Should fetch ${depositsToFetch} deposits with getDepositsStream`, async function () {
     const controller = new AbortController();
     const depositsStream = getDepositsStream(
-      medalla.blockWithDepositActivity,
+      testnet.blockWithDepositActivity,
       eth1Provider,
       eth1Params,
       controller.signal
@@ -42,7 +42,7 @@ describe("Eth1 streams", function () {
   it(`Should fetch ${depositsToFetch} deposits with getDepositsAndBlockStreamForGenesis`, async function () {
     const controller = new AbortController();
     const stream = getDepositsAndBlockStreamForGenesis(
-      medalla.blockWithDepositActivity,
+      testnet.blockWithDepositActivity,
       eth1Provider,
       eth1Params,
       controller.signal

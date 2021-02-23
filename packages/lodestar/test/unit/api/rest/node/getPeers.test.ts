@@ -5,7 +5,7 @@ import {config} from "@chainsafe/lodestar-config/minimal";
 import {ApiNamespace, RestApi} from "../../../../../src/api";
 import {getPeers} from "../../../../../src/api/rest/controllers/node";
 import {StubbedApi} from "../../../../utils/stub/api";
-import {silentLogger} from "../../../../utils/logger";
+import {testLogger} from "../../../../utils/logger";
 import {urlJoin} from "../utils";
 import {NODE_PREFIX} from "./index";
 
@@ -25,7 +25,7 @@ describe("rest - node - getPeers", function () {
       },
       {
         config,
-        logger: silentLogger,
+        logger: testLogger(),
         api,
       }
     );
@@ -36,9 +36,9 @@ describe("rest - node - getPeers", function () {
   });
 
   it("should succeed", async function () {
-    api.node.getPeers.resolves([
+    api.node.getPeers.withArgs(["connected"], undefined).resolves([
       {
-        address: "/ip4/127.0.0.1/tcp/36000",
+        lastSeenP2pAddress: "/ip4/127.0.0.1/tcp/36000",
         direction: "inbound",
         enr: "enr-",
         peerId: "16",
@@ -47,6 +47,7 @@ describe("rest - node - getPeers", function () {
     ]);
     const response = await supertest(restApi.server.server)
       .get(urlJoin(NODE_PREFIX, getPeers.url))
+      .query({state: "connected"})
       .expect(200)
       .expect("Content-Type", "application/json; charset=utf-8");
     expect(response.body.data).to.not.be.undefined;

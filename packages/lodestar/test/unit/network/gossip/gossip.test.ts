@@ -14,9 +14,9 @@ import {MockBeaconChain} from "../../../utils/mocks/chain/chain";
 import {generateState} from "../../../utils/state";
 import {generateEmptySignedBlock} from "../../../utils/block";
 import {GossipEncoding} from "../../../../src/network/gossip/encoding";
-import {BeaconState} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {TreeBacked} from "@chainsafe/ssz";
-import {silentLogger} from "../../../utils/logger";
+import {testLogger} from "../../../utils/logger";
 import {sleep} from "@chainsafe/lodestar-utils";
 
 describe("Network Gossip", function () {
@@ -24,7 +24,7 @@ describe("Network Gossip", function () {
   const sandbox = sinon.createSandbox();
   let pubsub: IGossipSub;
   let chain: IBeaconChain;
-  let state: BeaconState;
+  let state: phase0.BeaconState;
 
   beforeEach(async () => {
     const networkOpts: INetworkOptions = {
@@ -37,14 +37,14 @@ describe("Network Gossip", function () {
       disconnectTimeout: 0,
     };
     const libp2p = sandbox.createStubInstance(NodejsNode);
-    const logger = silentLogger;
+    const logger = testLogger();
     const validator = {} as IGossipMessageValidator;
     state = generateState();
     chain = new MockBeaconChain({
       genesisTime: 0,
       chainId: 0,
       networkId: BigInt(0),
-      state: state as TreeBacked<BeaconState>,
+      state: state as TreeBacked<phase0.BeaconState>,
       config,
     });
     pubsub = new MockGossipSub();
@@ -54,16 +54,16 @@ describe("Network Gossip", function () {
 
   afterEach(async () => {
     await gossip.stop();
-    await chain.close();
+    chain.close();
     sandbox.restore();
   });
 
   describe("subscribe/unsubscribe", () => {
-    it("should subscribe to attestation subnet correctly", async () => {
+    it("should subscribe to attestation subnet correctly", () => {
       const spy = sandbox.spy();
       const anotherSpy = sandbox.spy();
 
-      const forkDigest = await chain.getForkDigest();
+      const forkDigest = chain.getForkDigest();
 
       gossip.subscribeToAttestationSubnet(forkDigest, "1", spy);
       gossip.subscribeToAttestationSubnet(forkDigest, "1", anotherSpy);
@@ -86,9 +86,9 @@ describe("Network Gossip", function () {
       expect(anotherSpy.callCount).to.be.equal(1);
     });
 
-    it("should unsubscribe to single subnet correctly", async () => {
+    it("should unsubscribe to single subnet correctly", () => {
       const spy = sandbox.spy();
-      const forkDigest = await chain.getForkDigest();
+      const forkDigest = chain.getForkDigest();
       gossip.subscribeToAttestationSubnet(forkDigest, "1", spy);
 
       // should not unsubscribe wrong subnet
@@ -113,11 +113,11 @@ describe("Network Gossip", function () {
       expect(spy.callCount).to.be.equal(0);
     });
 
-    it("should unsubscribe across subnets correctly", async () => {
+    it("should unsubscribe across subnets correctly", () => {
       const spy = sandbox.spy();
       const spy2 = sandbox.spy();
 
-      const forkDigest = await chain.getForkDigest();
+      const forkDigest = chain.getForkDigest();
 
       gossip.subscribeToAttestationSubnet(forkDigest, "1", spy);
       gossip.subscribeToAttestationSubnet(forkDigest, "2", spy2);
@@ -140,10 +140,10 @@ describe("Network Gossip", function () {
       expect(spy2.callCount).to.be.equal(0);
     });
 
-    it("should subscribe/unsubscribe to block correctly", async () => {
+    it("should subscribe/unsubscribe to block correctly", () => {
       const spy = sandbox.spy();
       const anotherSpy = sandbox.spy();
-      const forkDigest = await chain.getForkDigest();
+      const forkDigest = chain.getForkDigest();
       gossip.subscribeToBlock(forkDigest, spy);
       gossip.subscribeToBlock(forkDigest, anotherSpy);
       const block = generateEmptySignedBlock();
@@ -163,10 +163,10 @@ describe("Network Gossip", function () {
       expect(anotherSpy.callCount).to.be.equal(3);
     });
 
-    it("should ignore unsubscribing strange listener", async () => {
+    it("should ignore unsubscribing strange listener", () => {
       const spy = sandbox.spy();
       const strangeListener = sandbox.spy();
-      const forkDigest = await chain.getForkDigest();
+      const forkDigest = chain.getForkDigest();
       gossip.subscribeToBlock(forkDigest, spy);
       const block = generateEmptySignedBlock();
       pubsub.emit(getGossipTopic(GossipEvent.BLOCK, forkDigest), block);
@@ -182,9 +182,9 @@ describe("Network Gossip", function () {
 
     it("should handle fork version changed", async () => {
       // fork digest is changed after gossip started
-      const oldForkDigest = await chain.getForkDigest();
+      const oldForkDigest = chain.getForkDigest();
       state.fork.currentVersion = Buffer.from([100, 0, 0, 0]);
-      const forkDigest = await chain.getForkDigest();
+      const forkDigest = chain.getForkDigest();
       expect(config.types.ForkDigest.equals(forkDigest, oldForkDigest)).to.be.false;
       const received = new Promise((resolve) => {
         gossip.subscribeToBlock(forkDigest, resolve);

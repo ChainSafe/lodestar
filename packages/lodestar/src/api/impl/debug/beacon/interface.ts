@@ -1,5 +1,10 @@
-import {SlotRoot} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
+import {StateId} from "../../beacon/state";
 
 export interface IDebugBeaconApi {
-  getHeads(): Promise<SlotRoot[] | null>;
+  /**
+   * API wrapper function for `getHeads` in `@chainsafe/lodestar-fork-choice`.
+   * */
+  getHeads(): Promise<phase0.SlotRoot[] | null>;
+  getState(stateId: StateId): Promise<phase0.BeaconState | null>;
 }

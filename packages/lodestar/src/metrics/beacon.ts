@@ -182,11 +182,11 @@ export class BeaconMetrics extends Metrics implements IBeaconMetrics {
     });
   }
 
-  public async start(): Promise<void> {
-    await super.start();
+  public start(): void {
+    super.start();
   }
 
-  public async stop(): Promise<void> {
-    await super.stop();
+  public stop(): void {
+    super.stop();
   }
 }

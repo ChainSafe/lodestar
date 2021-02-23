@@ -1,4 +1,4 @@
-import {SyncingStatus} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {INodeApi} from "../../../src/api/interface/node";
 
 export class MockNodeApi implements INodeApi {
@@ -6,7 +6,7 @@ export class MockNodeApi implements INodeApi {
     return "dev";
   }
 
-  public async getSyncingStatus(): Promise<SyncingStatus> {
+  public async getSyncingStatus(): Promise<phase0.SyncingStatus> {
     return {
       headSlot: BigInt(0),
       syncDistance: BigInt(0),

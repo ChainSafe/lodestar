@@ -1,4 +1,4 @@
-import {Deposit, DepositEvent, Eth1Data, Eth1Block} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {IFilterOptions} from "@chainsafe/lodestar-db";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBeaconDb} from "../db";
@@ -22,7 +22,7 @@ export class Eth1DepositsCache {
    * have 100 proofs, but the eth2 chain only acknowledges 50 of them, we must produce our
    * proofs with respect to a tree size of 50.
    */
-  async get(indexRange: IFilterOptions<number>, eth1Data: Eth1Data): Promise<Deposit[]> {
+  async get(indexRange: IFilterOptions<number>, eth1Data: phase0.Eth1Data): Promise<phase0.Deposit[]> {
     const depositEvents = await this.db.depositEvent.values(indexRange);
     const depositRootTree = await this.db.depositDataRoot.getDepositRootTree();
     return getDepositsWithProofs(this.config, depositEvents, depositRootTree, eth1Data);
@@ -32,7 +32,7 @@ export class Eth1DepositsCache {
    * Add log to cache
    * This function enforces that `logs` are imported one-by-one with consecutive indexes
    */
-  async add(depositEvents: DepositEvent[]): Promise<void> {
+  async add(depositEvents: phase0.DepositEvent[]): Promise<void> {
     assertConsecutiveDeposits(depositEvents);
 
     const lastLog = await this.db.depositEvent.lastValue();
@@ -48,7 +48,7 @@ export class Eth1DepositsCache {
 
     const depositRoots = depositEvents.map((depositEvent) => ({
       index: depositEvent.index,
-      root: this.config.types.DepositData.hashTreeRoot(depositEvent.depositData),
+      root: this.config.types.phase0.DepositData.hashTreeRoot(depositEvent.depositData),
     }));
 
     // Store events after verifying that data is consecutive
@@ -64,9 +64,9 @@ export class Eth1DepositsCache {
    * @param toBlock
    */
   async getEth1DataForBlocks(
-    blocks: Eth1Block[],
+    blocks: phase0.Eth1Block[],
     lastProcessedDepositBlockNumber: number | null
-  ): Promise<(Eth1Data & Eth1Block)[]> {
+  ): Promise<(phase0.Eth1Data & phase0.Eth1Block)[]> {
     const highestBlock = blocks[blocks.length - 1]?.blockNumber;
     return await getEth1DataForBlocks(
       blocks,

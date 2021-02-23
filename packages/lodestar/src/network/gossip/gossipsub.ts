@@ -1,11 +1,11 @@
 import Gossipsub from "libp2p-gossipsub";
 import {InMessage} from "libp2p-interfaces/src/pubsub";
 import {ERR_TOPIC_VALIDATOR_REJECT, ERR_TOPIC_VALIDATOR_IGNORE} from "libp2p-gossipsub/src/constants";
-import {Libp2p} from "libp2p-gossipsub/src/interfaces";
+import Libp2p from "libp2p";
 import {CompositeType} from "@chainsafe/ssz";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {ForkDigest, SignedBeaconBlock} from "@chainsafe/lodestar-types";
+import {ForkDigest, phase0} from "@chainsafe/lodestar-types";
 
 import {GossipMessageValidatorFn, GossipObject, IGossipMessageValidator, ILodestarGossipMessage} from "./interface";
 import {
@@ -44,7 +44,7 @@ export class LodestarGossipsub extends Gossipsub {
     options = {}
   ) {
     // eslint-disable-next-line @typescript-eslint/naming-convention
-    super(libp2p, Object.assign(options, {globalSignaturePolicy: "StrictNoSign", D: 8, Dlow: 6}));
+    super(libp2p, Object.assign(options, {globalSignaturePolicy: "StrictNoSign" as const, D: 8, Dlow: 6}));
     this.transformedObjects = new Map();
     this.config = config;
     this.validator = validator;
@@ -53,20 +53,24 @@ export class LodestarGossipsub extends Gossipsub {
     this.logger = logger;
   }
 
-  public async start(): Promise<void> {
+  public start(): void {
     if (!this.interval) {
       this.interval = setInterval(this.cleanUp.bind(this), this.timeToLive);
     }
-    await super.start();
+    super.start();
   }
 
-  public async stop(): Promise<void> {
+  public getTopicPeerIds(topic: string): Set<string> | undefined {
+    return this.topics.get(topic);
+  }
+
+  public stop(): void {
     if (this.interval) {
       clearInterval(this.interval);
     }
 
     try {
-      await super.stop();
+      super.stop();
     } catch (error) {
       if (error.code !== "ERR_HEARTBEAT_NO_RUNNING") {
         throw error;
@@ -149,7 +153,7 @@ export class LodestarGossipsub extends Gossipsub {
    * Override default `_buildMessage` to snappy-compress the data
    */
   public _buildMessage(msg: InMessage): Promise<InMessage> {
-    msg.data = encodeMessageData(msg.topicIDs[0], msg.data!);
+    msg.data = encodeMessageData(msg.topicIDs[0], msg.data);
     return super._buildMessage(msg);
   }
 
@@ -158,7 +162,7 @@ export class LodestarGossipsub extends Gossipsub {
    */
   public getMsgId(msg: ILodestarGossipMessage): Uint8Array {
     if (!msg.msgId) {
-      msg.msgId = computeMsgId(msg.topicIDs[0], msg.data!);
+      msg.msgId = computeMsgId(msg.topicIDs[0], msg.data);
     }
     return msg.msgId;
   }
@@ -197,11 +201,11 @@ export class LodestarGossipsub extends Gossipsub {
   }
 
   private deserializeGossipMessage(topic: string, msg: InMessage): {object: GossipObject; subnet?: number} {
-    const data = decodeMessageData(topic, msg.data!);
+    const data = decodeMessageData(topic, msg.data);
 
     if (isAttestationSubnetTopic(topic)) {
       const subnet = getSubnetFromAttestationSubnetTopic(topic);
-      return {object: this.config.types.Attestation.deserialize(data), subnet};
+      return {object: this.config.types.phase0.Attestation.deserialize(data), subnet};
     }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -209,19 +213,19 @@ export class LodestarGossipsub extends Gossipsub {
     const gossipEvent = topicToGossipEvent(topic);
     switch (gossipEvent) {
       case GossipEvent.BLOCK:
-        objType = (this.config.types.SignedBeaconBlock as CompositeType<SignedBeaconBlock>).tree;
+        objType = (this.config.types.phase0.SignedBeaconBlock as CompositeType<phase0.SignedBeaconBlock>).tree;
         break;
       case GossipEvent.AGGREGATE_AND_PROOF:
-        objType = this.config.types.SignedAggregateAndProof;
+        objType = this.config.types.phase0.SignedAggregateAndProof;
         break;
       case GossipEvent.ATTESTER_SLASHING:
-        objType = this.config.types.AttesterSlashing;
+        objType = this.config.types.phase0.AttesterSlashing;
         break;
       case GossipEvent.PROPOSER_SLASHING:
-        objType = this.config.types.ProposerSlashing;
+        objType = this.config.types.phase0.ProposerSlashing;
         break;
       case GossipEvent.VOLUNTARY_EXIT:
-        objType = this.config.types.SignedVoluntaryExit;
+        objType = this.config.types.phase0.SignedVoluntaryExit;
         break;
       default:
         throw new Error(`Don't know how to deserialize object received under topic ${topic}`);

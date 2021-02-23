@@ -1,4 +1,4 @@
-import {BLSPubkey, SlashingProtectionBlock, SlashingProtectionAttestation, Root} from "@chainsafe/lodestar-types";
+import {BLSPubkey, phase0, Root} from "@chainsafe/lodestar-types";
 import {DatabaseService, IDatabaseApiOptions} from "@chainsafe/lodestar-db";
 import {BlockBySlotRepository, SlashingProtectionBlockService} from "./block";
 import {
@@ -22,6 +22,10 @@ export {InvalidBlockError, InvalidBlockErrorCode} from "./block";
 export {InterchangeError, InterchangeErrorErrorCode} from "./interchange";
 export {ISlashingProtection};
 
+/**
+ * Handles slashing protection for validator proposer and attester duties as well as slashing protection
+ * during a validator interchange import/export process.
+ */
 export class SlashingProtection extends DatabaseService implements ISlashingProtection {
   private blockService: SlashingProtectionBlockService;
   private attestationService: SlashingProtectionAttestationService;
@@ -43,11 +47,11 @@ export class SlashingProtection extends DatabaseService implements ISlashingProt
     );
   }
 
-  async checkAndInsertBlockProposal(pubKey: BLSPubkey, block: SlashingProtectionBlock): Promise<void> {
+  async checkAndInsertBlockProposal(pubKey: BLSPubkey, block: phase0.SlashingProtectionBlock): Promise<void> {
     await this.blockService.checkAndInsertBlockProposal(pubKey, block);
   }
 
-  async checkAndInsertAttestation(pubKey: BLSPubkey, attestation: SlashingProtectionAttestation): Promise<void> {
+  async checkAndInsertAttestation(pubKey: BLSPubkey, attestation: phase0.SlashingProtectionAttestation): Promise<void> {
     await this.attestationService.checkAndInsertAttestation(pubKey, attestation);
   }
 

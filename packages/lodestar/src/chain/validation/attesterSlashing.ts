@@ -1,6 +1,6 @@
 import {isValidAttesterSlashing} from "@chainsafe/lodestar-beacon-state-transition/";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {AttesterSlashing, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {phase0, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {IBeaconChain} from "..";
 import {AttesterSlashingError, AttesterSlashingErrorCode} from "../errors/attesterSlashingError";
 import {IBeaconDb} from "../../db";
@@ -10,7 +10,7 @@ export async function validateGossipAttesterSlashing(
   config: IBeaconConfig,
   chain: IBeaconChain,
   db: IBeaconDb,
-  attesterSlashing: AttesterSlashing
+  attesterSlashing: phase0.AttesterSlashing
 ): Promise<void> {
   const attesterSlashedIndices = arrayIntersection<ValidatorIndex>(
     attesterSlashing.attestation1.attestingIndices.valueOf() as ValidatorIndex[],
@@ -24,7 +24,7 @@ export async function validateGossipAttesterSlashing(
     });
   }
 
-  const state = await chain.getHeadState();
+  const state = chain.getHeadState();
   if (!isValidAttesterSlashing(config, state, attesterSlashing)) {
     throw new AttesterSlashingError({
       code: AttesterSlashingErrorCode.INVALID_SLASHING,

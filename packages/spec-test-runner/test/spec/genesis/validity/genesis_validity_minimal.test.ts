@@ -2,18 +2,18 @@
 import {join} from "path";
 
 import {config} from "@chainsafe/lodestar-config/minimal";
-import {BeaconState} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util/lib/single";
 import {isValidGenesisState} from "@chainsafe/lodestar/lib/chain/genesis/util";
 import {SPEC_TEST_LOCATION} from "../../../utils/specTestCases";
 
 interface IGenesisValidityTestCase {
   is_valid: boolean;
-  genesis: BeaconState;
+  genesis: phase0.BeaconState;
 }
 
 describeDirectorySpecTest<IGenesisValidityTestCase, boolean>(
-  "genesis initialization",
+  "genesis validity",
   join(SPEC_TEST_LOCATION, "tests/minimal/phase0/genesis/validity/pyspec_tests"),
   (testcase) => {
     return isValidGenesisState(config, testcase.genesis);
@@ -25,7 +25,7 @@ describeDirectorySpecTest<IGenesisValidityTestCase, boolean>(
     },
     // @ts-ignore
     sszTypes: {
-      genesis: config.types.BeaconState,
+      genesis: config.types.phase0.BeaconState,
     },
     getExpected: (testCase) => testCase.is_valid,
   }

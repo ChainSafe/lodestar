@@ -2,7 +2,7 @@ import {config} from "@chainsafe/lodestar-config/minimal";
 import {expect} from "chai";
 import supertest from "supertest";
 import {ApiNamespace, RestApi} from "../../../../../src/api";
-import {silentLogger} from "../../../../utils/logger";
+import {testLogger} from "../../../../utils/logger";
 import {StubbedApi} from "../../../../utils/stub/api";
 import {urlJoin} from "../utils";
 import {VALIDATOR_PREFIX} from "./index.test";
@@ -24,7 +24,7 @@ describe("rest - validator - prepareCommitteeSubnet", function () {
       },
       {
         config,
-        logger: silentLogger,
+        logger: testLogger(),
         api,
       }
     );
@@ -52,7 +52,17 @@ describe("rest - validator - prepareCommitteeSubnet", function () {
         },
       ])
       .expect(200);
-    expect(api.validator.prepareBeaconCommitteeSubnet.withArgs(1, 2, 64, 0, false).calledOnce).to.be.true;
+    expect(
+      api.validator.prepareBeaconCommitteeSubnet.withArgs([
+        {
+          validatorIndex: 1,
+          committeeIndex: 2,
+          committeesAtSlot: 64,
+          slot: 0,
+          isAggregator: false,
+        },
+      ]).calledOnce
+    ).to.be.true;
   });
 
   it("missing param", async function () {

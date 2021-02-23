@@ -2,17 +2,7 @@
  * @module chain/blockAssembly
  */
 
-import {
-  BeaconBlockBody,
-  BeaconState,
-  Bytes96,
-  Bytes32,
-  ProposerSlashing,
-  AttesterSlashing,
-  Attestation,
-  Deposit,
-  SignedVoluntaryExit,
-} from "@chainsafe/lodestar-types";
+import {Bytes96, Bytes32, phase0} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
 import {IBeaconDb} from "../../../db";
@@ -23,10 +13,10 @@ export async function assembleBody(
   config: IBeaconConfig,
   db: IBeaconDb,
   eth1: IEth1ForBlockProduction,
-  currentState: TreeBacked<BeaconState>,
+  currentState: TreeBacked<phase0.BeaconState>,
   randaoReveal: Bytes96,
   graffiti: Bytes32
-): Promise<BeaconBlockBody> {
+): Promise<phase0.BeaconBlockBody> {
   const [proposerSlashings, attesterSlashings, attestations, voluntaryExits, {eth1Data, deposits}] = await Promise.all([
     db.proposerSlashing.values({limit: config.params.MAX_PROPOSER_SLASHINGS}),
     db.attesterSlashing.values({limit: config.params.MAX_ATTESTER_SLASHINGS}),
@@ -41,10 +31,10 @@ export async function assembleBody(
     randaoReveal,
     graffiti,
     eth1Data,
-    proposerSlashings: proposerSlashings as List<ProposerSlashing>,
-    attesterSlashings: attesterSlashings as List<AttesterSlashing>,
-    attestations: attestations as List<Attestation>,
-    deposits: deposits as List<Deposit>,
-    voluntaryExits: voluntaryExits as List<SignedVoluntaryExit>,
+    proposerSlashings: proposerSlashings as List<phase0.ProposerSlashing>,
+    attesterSlashings: attesterSlashings as List<phase0.AttesterSlashing>,
+    attestations: attestations as List<phase0.Attestation>,
+    deposits: deposits as List<phase0.Deposit>,
+    voluntaryExits: voluntaryExits as List<phase0.SignedVoluntaryExit>,
   };
 }

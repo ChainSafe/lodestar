@@ -8,14 +8,14 @@ The 12-word string is randomly generated during wallet creation and printed out 
 
 <!-- prettier-ignore-start -->
 !!! warning
-    If you want to create a wallet for a testnet, you need to add `--testnet $TESTNET_NAME` to the following command
+    If you want to create a wallet for a testnet, you need to add `--network $TESTNET_NAME` to the following command
 <!-- prettier-ignore-end -->
 
 ### Create a wallet
 
 To create a wallet, use the following command:
 
-```
+```bash
 lodestar account wallet create --name primary --passphraseFile primary.pass
 ```
 
@@ -37,14 +37,14 @@ Validators are represented by a BLS keypair. It is recommended to generate valid
 
 <!-- prettier-ignore-start -->
 !!! warning
-    If you want to create a validator for a testnet, you need to add `--testnet $TESTNET_NAME` to all of the following commands and will use the `.$TESTNET_NAME` directory instead of `.lodestar`
+    If you want to create a validator for a testnet, you need to add `--network $TESTNET_NAME` to all of the following commands and will use the `.$TESTNET_NAME` directory instead of `.lodestar`
 <!-- prettier-ignore-end -->
 
 ### Create validator keypair
 
 To create a new validator use the following command:
 
-```
+```bash
 lodestar account validator create --name primary --passphraseFile primary.pass
 ```
 
@@ -52,8 +52,8 @@ This command will:
 
 - Derive a new BLS keypair from the wallet `primary`.
 - Create a new directory in `.lodestar/keystores` containing:
-  - An encrypted Keystore with the validator voting keypair.
-  - An eth1_deposit_data.rlp file with the precomputed Eth1 deposit transaction data ready to be submitted to the deposit contract.
+      - An encrypted Keystore with the validator voting keypair.
+      - An eth1_deposit_data.rlp file with the precomputed Eth1 deposit transaction data ready to be submitted to the deposit contract.
 - Store the validator voting Keystore password in `.lodestar/secrets`.
 - Print the validator public key to the terminal
 
@@ -66,16 +66,16 @@ This command will:
 
 To import a keystore that was created via the ETH2.0 Deposit Launch Pad:
 
-```
-./lodestar account validator import --testnet medalla --directory <path to your launchpad keys>
+```bash
+./lodestar account validator import --network $TESTNET_NAME --directory <path to your launchpad keys>
 ```
 
 You will be prompted to enter a password. Use the same one you used to create the keys initially.
 
 To confirm your keys have been imported run:
 
-```
-./lodestar account validator list --testnet medalla
+```bash
+./lodestar account validator list --network $TESTNET_NAME
 ```
 
 This command will print the public address of every active keystore.
@@ -83,21 +83,4 @@ This command will print the public address of every active keystore.
 
 ### Submit a validator deposit
 
-To submit the deposit transaction for a validator, use the following command with one of these options to connect to an Eth1 node:
-
-- To fund the deposit with a local Keystore use the `--keystorePath` and `--keystorePassword` arguments. You should provide a `--rpcUrl` to connect to an Eth1 node and broadcast the transaction.
-- To fund the deposit with your local node with accounts you can connect directly to it with
-  - `--ipcPath` to connect to the node via IPC.
-  - `--rpcUrl` and `--rpcPassword` to connect to the node's JSON RPC API and unlock its account.
-  - `--rpcUrl` alone to connect to the node's JSON RPC API if it's already unlocked.
-
-```
-lodestar account validator deposit --validator 0x88f920bb56d76c68e0d983e9772e67d2ba4afadd5eb162a51f7fc62212c138e5611d99f98f834fce43f310295ca35eca
-```
-
-The resulting transaction hash will be print to the terminal and also stored in the validator's dir.
-
-<!-- prettier-ignore-start -->
-!!! info
-    The existance of the transaction hash file will block subsecuent deposits for the same validator.
-<!-- prettier-ignore-end -->
+DEPRECATED. Please use the official tools to perform your deposits - eth2.0-deposit-cli: https://github.com/ethereum/eth2.0-deposit-cli - Ethereum Foundation launchpad: https://pyrmont.launchpad.ethereum.org

@@ -7,27 +7,22 @@ import LibP2p from "libp2p";
 
 import {TreeBacked} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {BeaconState} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
 
 import {IBeaconDb} from "../db";
 import {INetwork, Libp2pNetwork} from "../network";
 import {BeaconSync, IBeaconSync} from "../sync";
-import {BeaconChain, IBeaconChain, initBeaconMetrics, restoreStateCaches} from "../chain";
+import {BeaconChain, IBeaconChain, initBeaconMetrics} from "../chain";
 import {BeaconMetrics, HttpMetricsServer, IBeaconMetrics} from "../metrics";
 import {Api, IApi, RestApi} from "../api";
 import {TasksService} from "../tasks";
 import {IBeaconNodeOptions} from "./options";
 import {GossipMessageValidator} from "../network/gossip/validator";
 import {Eth1ForBlockProduction, Eth1ForBlockProductionDisabled, Eth1Provider} from "../eth1";
+import {runNodeNotifier} from "./notifier";
 
 export * from "./options";
-
-export interface IService {
-  start(): Promise<void>;
-
-  stop(): Promise<void>;
-}
 
 export interface IBeaconNodeModules {
   opts: IBeaconNodeOptions;
@@ -50,7 +45,7 @@ export interface IBeaconNodeInitModules {
   db: IBeaconDb;
   logger: ILogger;
   libp2p: LibP2p;
-  anchorState: TreeBacked<BeaconState>;
+  anchorState: TreeBacked<phase0.BeaconState>;
 }
 
 export enum BeaconNodeStatus {
@@ -60,7 +55,8 @@ export enum BeaconNodeStatus {
 }
 
 /**
- * Beacon Node
+ * The main Beacon Node class.  Contains various components for getting and processing data from the
+ * eth2 ecosystem as well as systems for getting beacon node metadata.
  */
 export class BeaconNode {
   public opts: IBeaconNodeOptions;
@@ -108,6 +104,10 @@ export class BeaconNode {
     this.status = BeaconNodeStatus.started;
   }
 
+  /**
+   * Initialize a beacon node.  Initializes and `start`s the varied sub-component services of the
+   * beacon node
+   */
   public static async init<T extends BeaconNode = BeaconNode>({
     opts,
     config,
@@ -117,9 +117,10 @@ export class BeaconNode {
     anchorState,
   }: IBeaconNodeInitModules): Promise<T> {
     const controller = new AbortController();
+    const signal = controller.signal;
+
     // start db if not already started
     await db.start();
-    await restoreStateCaches(config, db, anchorState);
 
     const metrics = new BeaconMetrics(opts.metrics, {logger: logger.child(opts.logger.metrics)});
     initBeaconMetrics(metrics, anchorState);
@@ -173,7 +174,7 @@ export class BeaconNode {
             eth1Provider: new Eth1Provider(config, opts.eth1),
             logger: logger.child(opts.logger.eth1),
             opts: opts.eth1,
-            signal: controller.signal,
+            signal,
           })
         : new Eth1ForBlockProductionDisabled(),
       sync,
@@ -190,7 +191,7 @@ export class BeaconNode {
       api,
     });
 
-    await metrics.start();
+    metrics.start();
     await metricsServer.start();
     await network.start();
 
@@ -198,7 +199,9 @@ export class BeaconNode {
     // Now if sync.start() is awaited it will stall the node start process
     // eslint-disable-next-line @typescript-eslint/no-floating-promises
     sync.start();
-    await chores.start();
+    chores.start();
+
+    void runNodeNotifier({network, chain, sync, config, logger, signal});
 
     return new this({
       opts,
@@ -216,6 +219,9 @@ export class BeaconNode {
     }) as T;
   }
 
+  /**
+   * Stop beacon node and its sub-components.
+   */
   public async close(): Promise<void> {
     if (this.status === BeaconNodeStatus.started) {
       this.status = BeaconNodeStatus.closing;
@@ -225,8 +231,8 @@ export class BeaconNode {
       if (this.metricsServer) await this.metricsServer.stop();
       if (this.restApi) await this.restApi.close();
 
-      await (this.metrics as BeaconMetrics).stop();
-      await this.chain.close();
+      (this.metrics as BeaconMetrics).stop();
+      this.chain.close();
       await this.db.stop();
       if (this.controller) this.controller.abort();
       this.status = BeaconNodeStatus.closed;

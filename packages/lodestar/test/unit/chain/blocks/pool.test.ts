@@ -10,13 +10,13 @@ describe("BlockPool", function () {
   });
 
   it("should get missing ancestor", () => {
-    const firstBlock = config.types.SignedBeaconBlock.defaultValue();
+    const firstBlock = config.types.phase0.SignedBeaconBlock.defaultValue();
     const ancestorRoot = firstBlock.message.parentRoot;
-    const secondBlock = config.types.SignedBeaconBlock.defaultValue();
-    secondBlock.message.parentRoot = config.types.BeaconBlock.hashTreeRoot(firstBlock.message);
+    const secondBlock = config.types.phase0.SignedBeaconBlock.defaultValue();
+    secondBlock.message.parentRoot = config.types.phase0.BeaconBlock.hashTreeRoot(firstBlock.message);
     pool.addBySlot(firstBlock);
     pool.addByParent(secondBlock);
-    const root = pool.getMissingAncestor(config.types.BeaconBlock.hashTreeRoot(secondBlock.message));
+    const root = pool.getMissingAncestor(config.types.phase0.BeaconBlock.hashTreeRoot(secondBlock.message));
     expect(config.types.Root.equals(ancestorRoot, root)).to.be.true;
   });
 });

@@ -22,72 +22,56 @@ describe("validateBlock", function () {
     sinon.restore();
   });
 
-  it("should throw on genesis block", async function () {
-    const signedBlock = config.types.SignedBeaconBlock.defaultValue();
+  it("should throw on genesis block", function () {
+    const signedBlock = config.types.phase0.SignedBeaconBlock.defaultValue();
     const job = getNewBlockJob(signedBlock);
     try {
-      await validateBlock({config, forkChoice, clock, job});
+      validateBlock({config, forkChoice, clock, job});
       expect.fail("block should throw");
     } catch (e) {
       expect(e.type.code).to.equal(BlockErrorCode.GENESIS_BLOCK);
     }
   });
 
-  it("should throw on already known block", async function () {
-    const signedBlock = config.types.SignedBeaconBlock.defaultValue();
+  it("should throw on already known block", function () {
+    const signedBlock = config.types.phase0.SignedBeaconBlock.defaultValue();
     signedBlock.message.slot = 1;
     const job = getNewBlockJob(signedBlock);
     forkChoice.hasBlock.returns(true);
     try {
-      await validateBlock({config, forkChoice, clock, job});
+      validateBlock({config, forkChoice, clock, job});
       expect.fail("block should throw");
     } catch (e) {
       expect(e.type.code).to.equal(BlockErrorCode.BLOCK_IS_ALREADY_KNOWN);
     }
   });
 
-  it("should throw on already known block", async function () {
-    const signedBlock = config.types.SignedBeaconBlock.defaultValue();
+  it("should throw on already known block", function () {
+    const signedBlock = config.types.phase0.SignedBeaconBlock.defaultValue();
     signedBlock.message.slot = 1;
     const job = getNewBlockJob(signedBlock);
     forkChoice.hasBlock.returns(false);
     forkChoice.getFinalizedCheckpoint.returns({epoch: 5, root: Buffer.alloc(32)});
     try {
-      await validateBlock({config, forkChoice, clock, job});
+      validateBlock({config, forkChoice, clock, job});
       expect.fail("block should throw");
     } catch (e) {
       expect(e.type.code).to.equal(BlockErrorCode.WOULD_REVERT_FINALIZED_SLOT);
     }
   });
 
-  it("should throw on future slot", async function () {
-    const signedBlock = config.types.SignedBeaconBlock.defaultValue();
+  it("should throw on future slot", function () {
+    const signedBlock = config.types.phase0.SignedBeaconBlock.defaultValue();
     signedBlock.message.slot = 1;
     const job = getNewBlockJob(signedBlock);
     forkChoice.hasBlock.returns(false);
     forkChoice.getFinalizedCheckpoint.returns({epoch: 0, root: Buffer.alloc(32)});
     sinon.stub(clock, "currentSlot").get(() => 0);
     try {
-      await validateBlock({config, forkChoice, clock, job});
+      validateBlock({config, forkChoice, clock, job});
       expect.fail("block should throw");
     } catch (e) {
       expect(e.type.code).to.equal(BlockErrorCode.FUTURE_SLOT);
-    }
-  });
-
-  it("should throw on unknown parent", async function () {
-    const signedBlock = config.types.SignedBeaconBlock.defaultValue();
-    signedBlock.message.slot = 1;
-    const job = getNewBlockJob(signedBlock);
-    forkChoice.hasBlock.returns(false);
-    forkChoice.getFinalizedCheckpoint.returns({epoch: 0, root: Buffer.alloc(32)});
-    sinon.stub(clock, "currentSlot").get(() => 1);
-    forkChoice.hasBlock.returns(false);
-    try {
-      await validateBlock({config, forkChoice, clock, job});
-      expect.fail("block should throw");
-    } catch (e) {
-      expect(e.type.code).to.equal(BlockErrorCode.PARENT_UNKNOWN);
     }
   });
 });

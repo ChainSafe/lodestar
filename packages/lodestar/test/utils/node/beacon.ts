@@ -13,7 +13,7 @@ import {initDevState} from "../../../src/node/utils/state";
 import {IBeaconNodeOptions} from "../../../src/node/options";
 import {defaultOptions} from "../../../src/node/options";
 import {BeaconDb} from "../../../src/db";
-import {silentLogger} from "../logger";
+import {testLogger} from "../logger";
 
 type RecursivePartial<T> = {
   [P in keyof T]?: T[P] extends (infer U)[]
@@ -39,7 +39,7 @@ export async function getDevBeaconNode({
   const peerId = await createPeerId();
   const tmpDir = tmp.dirSync({unsafeCleanup: true});
   const config = createIBeaconConfig({...minimalParams, ...params});
-  logger = logger ?? silentLogger;
+  logger = logger ?? testLogger();
 
   const db = new BeaconDb({config, controller: new LevelDbController({name: tmpDir.name}, {logger})});
   await db.start();
@@ -49,7 +49,7 @@ export async function getDevBeaconNode({
     {
       discv5: {
         enabled: false,
-        enr: await createEnr(peerId),
+        enr: createEnr(peerId),
         bindAddr: "/ip4/127.0.0.1/udp/0",
         bootEnrs: [],
       },

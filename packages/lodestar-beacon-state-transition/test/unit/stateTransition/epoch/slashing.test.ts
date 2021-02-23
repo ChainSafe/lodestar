@@ -1,11 +1,11 @@
 import sinon from "sinon";
 import {expect} from "chai";
 import {List} from "@chainsafe/ssz";
-import {Validator} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import * as utils from "../../../../src/util";
 import {FAR_FUTURE_EPOCH} from "../../../../src/constants";
-import {processSlashings} from "../../../../src/epoch/slashings";
+import {processSlashings} from "../../../../src/phase0/naive/epoch/slashings";
 import {generateState} from "../../../utils/state";
 import {generateValidator} from "../../../utils/validator";
 import {intDiv} from "@chainsafe/lodestar-utils";
@@ -34,7 +34,7 @@ describe("process epoch - slashings", function () {
     const validator3 = generateValidator({activation: 0, exit: FAR_FUTURE_EPOCH, slashed: true});
     validator3.withdrawableEpoch = intDiv(config.params.EPOCHS_PER_SLASHINGS_VECTOR, 2) + 1;
     const state = generateState({
-      validators: [validator1, validator2, validator3] as List<Validator>,
+      validators: [validator1, validator2, validator3] as List<phase0.Validator>,
     });
 
     processSlashings(config, state);

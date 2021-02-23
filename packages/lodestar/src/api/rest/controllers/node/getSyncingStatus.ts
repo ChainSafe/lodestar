@@ -9,7 +9,7 @@ export const getSyncingStatus: ApiController = {
     const status = await this.api.node.getSyncingStatus();
 
     resp.status(200).send({
-      data: this.config.types.SyncingStatus.toJson(status, {case: "snake"}),
+      data: this.config.types.phase0.SyncingStatus.toJson(status, {case: "snake"}),
     });
   },
 };

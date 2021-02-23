@@ -1,7 +1,7 @@
 import {ApiController} from "../../types";
 import {DefaultQuery} from "fastify";
-import {FastifyError} from "fastify";
 import {StateId} from "../../../../impl/beacon/state";
+import {toRestValidationError} from "../../utils";
 
 type Params = {
   stateId: StateId;
@@ -17,20 +17,11 @@ export const getStateFork: ApiController<DefaultQuery, Params> = {
         return resp.status(404).send();
       }
       return resp.status(200).send({
-        data: this.config.types.Fork.toJson(fork, {case: "snake"}),
+        data: this.config.types.phase0.Fork.toJson(fork, {case: "snake"}),
       });
     } catch (e) {
       if (e.message === "Invalid state id") {
-        //TODO: fix when unifying errors
-        throw {
-          statusCode: 400,
-          validation: [
-            {
-              dataPath: "state_id",
-              message: e.message,
-            },
-          ],
-        } as FastifyError;
+        throw toRestValidationError("state_id", e.message);
       }
       throw e;
     }

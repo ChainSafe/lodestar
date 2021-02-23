@@ -10,11 +10,11 @@ import {ChainEventEmitter} from "../../../../src/chain/emitter";
 import {Gossip} from "../../../../src/network/gossip/gossip";
 import {BeaconDb} from "../../../../src/db";
 import {generateState} from "../../../utils/state";
-import {silentLogger} from "../../../utils/logger";
+import {testLogger} from "../../../utils/logger";
 
 describe("Attestation collector", function () {
   const sandbox = sinon.createSandbox();
-  const logger = silentLogger;
+  const logger = testLogger();
   beforeEach(() => {
     sandbox.useFakeTimers();
   });
@@ -38,8 +38,8 @@ describe("Attestation collector", function () {
       // @ts-ignore
       chain: {
         clock: realClock,
-        getHeadState: () => Promise.resolve(generateState()),
-        getForkDigest: () => Promise.resolve(Buffer.alloc(4)),
+        getHeadState: () => generateState(),
+        getForkDigest: () => Buffer.alloc(4),
         emitter,
       },
       // @ts-ignore
@@ -49,24 +49,25 @@ describe("Attestation collector", function () {
       db: dbStub,
       logger,
     });
-    await collector.start();
+    collector.start();
     computeSubnetStub.returns(10);
-    await collector.subscribeToCommitteeAttestations(1, 1);
-    expect(fakeGossip.subscribeToAttestationSubnet.withArgs(sinon.match.any, 10).calledOnce).to.be.true;
-    sandbox.clock.tick(config.params.SECONDS_PER_SLOT * 1000);
-    await new Promise((resolve) => {
+    const subscribed = new Promise((resolve) => {
       fakeGossip.subscribeToAttestationSubnet.callsFake(resolve);
     });
+    collector.subscribeToCommitteeAttestations(1, 1);
+    expect(fakeGossip.subscribeToAttestationSubnet.withArgs(sinon.match.any, 10).calledOnce).to.be.true;
+    sandbox.clock.tick(config.params.SECONDS_PER_SLOT * 1000);
+    await subscribed;
     expect(fakeGossip.subscribeToAttestationSubnet.withArgs(sinon.match.any, 10, sinon.match.func).calledOnce).to.be
       .true;
     sandbox.clock.tick(config.params.SECONDS_PER_SLOT * 1000);
     expect(fakeGossip.unsubscribeFromAttestationSubnet.withArgs(sinon.match.any, 10, sinon.match.func).calledOnce).to.be
       .true;
-    await collector.stop();
+    collector.stop();
     abortController.abort();
   });
 
-  it("should skip if there is no duties", async function () {
+  it("should skip if there is no duties", function () {
     const emitter = new ChainEventEmitter();
     const abortController = new AbortController();
     const realClock = new LocalClock({
@@ -80,8 +81,8 @@ describe("Attestation collector", function () {
       // @ts-ignore
       chain: {
         clock: realClock,
-        getHeadState: () => Promise.resolve(generateState()),
-        getForkDigest: () => Promise.resolve(Buffer.alloc(4)),
+        getHeadState: () => generateState(),
+        getForkDigest: () => Buffer.alloc(4),
         emitter,
       },
       // @ts-ignore
@@ -90,10 +91,10 @@ describe("Attestation collector", function () {
       },
       logger,
     });
-    await collector.start();
+    collector.start();
     sandbox.clock.tick(config.params.SECONDS_PER_SLOT * 1000);
     expect(fakeGossip.subscribeToAttestationSubnet.called).to.be.false;
-    await collector.stop();
+    collector.stop();
     abortController.abort();
   });
 });

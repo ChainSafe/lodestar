@@ -1,5 +1,5 @@
-import {types as mainnetTypes} from "../../src/ssz/presets/mainnet";
-import {types as minimalTypes} from "../../src/ssz/presets/minimal";
+import {types as mainnetTypes} from "../../src/presets/mainnet";
+import {types as minimalTypes} from "../../src/presets/minimal";
 import {expect} from "chai";
 
 describe("phase1 types", function () {

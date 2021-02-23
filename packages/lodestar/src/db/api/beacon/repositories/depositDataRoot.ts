@@ -8,7 +8,7 @@ export class DepositDataRootRepository extends Repository<number, Root> {
   private depositRootTree?: TreeBacked<List<Root>>;
 
   public constructor(config: IBeaconConfig, db: IDatabaseController<Buffer, Buffer>) {
-    super(config, db, Bucket.depositDataRoot, config.types.Root);
+    super(config, db, Bucket.index_depositDataRoot, config.types.Root);
   }
 
   public decodeKey(data: Buffer): number {
@@ -65,7 +65,7 @@ export class DepositDataRootRepository extends Repository<number, Root> {
   public async getDepositRootTree(): Promise<TreeBacked<List<Root>>> {
     if (!this.depositRootTree) {
       const values = (await this.values()) as List<Vector<number>>;
-      this.depositRootTree = this.config.types.DepositDataRootList.tree.createValue(values);
+      this.depositRootTree = this.config.types.phase0.DepositDataRootList.tree.createValue(values);
     }
     return this.depositRootTree;
   }

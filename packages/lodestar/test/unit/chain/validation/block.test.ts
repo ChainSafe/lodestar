@@ -2,8 +2,8 @@ import {expect} from "chai";
 import sinon, {SinonStub, SinonStubbedInstance} from "sinon";
 
 import {config} from "@chainsafe/lodestar-config/minimal";
-import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
-import * as specUtils from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util/block";
+import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
+import * as specUtils from "@chainsafe/lodestar-beacon-state-transition/lib/phase0/fast/util/block";
 
 import {BeaconChain, ForkChoice, IBeaconChain} from "../../../../src/chain";
 import {LocalClock} from "../../../../src/chain/clock";
@@ -11,7 +11,7 @@ import {StateRegenerator} from "../../../../src/chain/regen";
 import {validateGossipBlock} from "../../../../src/chain/validation";
 import {generateSignedBlock, getNewBlockJob} from "../../../utils/block";
 import {StubbedBeaconDb} from "../../../utils/stub";
-import {generateState} from "../../../utils/state";
+import {generateCachedState} from "../../../utils/state";
 import {BlockErrorCode} from "../../../../src/chain/errors";
 
 describe("gossip block validation", function () {
@@ -38,7 +38,7 @@ describe("gossip block validation", function () {
   it("should throw error - block slot is finalized", async function () {
     const signedBlock = generateSignedBlock();
     const job = getNewBlockJob(signedBlock);
-    chainStub.getFinalizedCheckpoint.resolves({
+    chainStub.getFinalizedCheckpoint.returns({
       epoch: 1,
       root: Buffer.alloc(32),
     });
@@ -52,10 +52,10 @@ describe("gossip block validation", function () {
   });
 
   it("should throw error - bad block", async function () {
-    sinon.stub(chainStub.clock, "currentSlot").get(() => 1);
+    sinon.stub(chainStub.clock, "currentSlotWithGossipDisparity").get(() => 1);
     const signedBlock = generateSignedBlock({message: {slot: 1}});
     const job = getNewBlockJob(signedBlock);
-    chainStub.getFinalizedCheckpoint.resolves({
+    chainStub.getFinalizedCheckpoint.returns({
       epoch: 0,
       root: Buffer.alloc(32),
     });
@@ -71,10 +71,10 @@ describe("gossip block validation", function () {
   });
 
   it("should throw error - already proposed", async function () {
-    sinon.stub(chainStub.clock, "currentSlot").get(() => 1);
+    sinon.stub(chainStub.clock, "currentSlotWithGossipDisparity").get(() => 1);
     const signedBlock = generateSignedBlock({message: {slot: 1}});
     const job = getNewBlockJob(signedBlock);
-    chainStub.getFinalizedCheckpoint.resolves({
+    chainStub.getFinalizedCheckpoint.returns({
       epoch: 0,
       root: Buffer.alloc(32),
     });
@@ -91,10 +91,10 @@ describe("gossip block validation", function () {
   });
 
   it("should throw error - missing parent", async function () {
-    sinon.stub(chainStub.clock, "currentSlot").get(() => 1);
+    sinon.stub(chainStub.clock, "currentSlotWithGossipDisparity").get(() => 1);
     const signedBlock = generateSignedBlock({message: {slot: 1}});
     const job = getNewBlockJob(signedBlock);
-    chainStub.getFinalizedCheckpoint.resolves({
+    chainStub.getFinalizedCheckpoint.returns({
       epoch: 0,
       root: Buffer.alloc(32),
     });
@@ -112,18 +112,18 @@ describe("gossip block validation", function () {
   });
 
   it("should throw error - invalid signature", async function () {
-    sinon.stub(chainStub.clock, "currentSlot").get(() => 1);
+    sinon.stub(chainStub.clock, "currentSlotWithGossipDisparity").get(() => 1);
     const signedBlock = generateSignedBlock({message: {slot: 1}});
     const job = getNewBlockJob(signedBlock);
-    chainStub.getFinalizedCheckpoint.resolves({
+    chainStub.getFinalizedCheckpoint.returns({
       epoch: 0,
       root: Buffer.alloc(32),
     });
     dbStub.badBlock.has.resolves(false);
     dbStub.block.get.resolves(null);
     regenStub.getBlockSlotState.resolves({
-      state: generateState(),
-      epochCtx: new EpochContext(config),
+      state: generateCachedState(),
+      epochCtx: new phase0.fast.EpochContext(config),
     });
     verifySignatureStub.returns(false);
     try {
@@ -139,19 +139,19 @@ describe("gossip block validation", function () {
   });
 
   it("should throw error - wrong proposer", async function () {
-    sinon.stub(chainStub.clock, "currentSlot").get(() => 1);
+    sinon.stub(chainStub.clock, "currentSlotWithGossipDisparity").get(() => 1);
     const signedBlock = generateSignedBlock({message: {slot: 1}});
     const job = getNewBlockJob(signedBlock);
-    chainStub.getFinalizedCheckpoint.resolves({
+    chainStub.getFinalizedCheckpoint.returns({
       epoch: 0,
       root: Buffer.alloc(32),
     });
     dbStub.badBlock.has.resolves(false);
     dbStub.block.get.resolves(null);
-    const epochCtxStub = sinon.createStubInstance(EpochContext);
+    const epochCtxStub = sinon.createStubInstance(phase0.fast.EpochContext);
     regenStub.getBlockSlotState.resolves({
-      state: generateState(),
-      epochCtx: (epochCtxStub as unknown) as EpochContext,
+      state: generateCachedState(),
+      epochCtx: (epochCtxStub as unknown) as phase0.fast.EpochContext,
     });
     verifySignatureStub.returns(true);
     epochCtxStub.getBeaconProposer.returns(signedBlock.message.proposerIndex + 1);
@@ -169,7 +169,7 @@ describe("gossip block validation", function () {
   });
 
   it("should accept - valid block", async function () {
-    sinon.stub(chainStub.clock, "currentSlot").get(() => 1);
+    sinon.stub(chainStub.clock, "currentSlotWithGossipDisparity").get(() => 1);
     const signedBlock = generateSignedBlock({message: {slot: 1}});
     const job = getNewBlockJob(signedBlock);
     chainStub.getFinalizedCheckpoint.resolves({
@@ -179,10 +179,10 @@ describe("gossip block validation", function () {
     dbStub.badBlock.has.resolves(false);
     chainStub.getCanonicalBlockAtSlot.resolves(null);
     forkChoiceStub.isDescendantOfFinalized.returns(true);
-    const epochCtxStub = sinon.createStubInstance(EpochContext);
+    const epochCtxStub = sinon.createStubInstance(phase0.fast.EpochContext);
     regenStub.getBlockSlotState.resolves({
-      state: generateState(),
-      epochCtx: (epochCtxStub as unknown) as EpochContext,
+      state: generateCachedState(),
+      epochCtx: (epochCtxStub as unknown) as phase0.fast.EpochContext,
     });
     verifySignatureStub.returns(true);
     epochCtxStub.getBeaconProposer.returns(signedBlock.message.proposerIndex);

@@ -1,9 +1,9 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBeaconChain, IBlockJob} from "..";
 import {IBeaconDb} from "../../db/api";
-import {BeaconBlock, ValidatorIndex} from "@chainsafe/lodestar-types";
-import {computeStartSlotAtEpoch, EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
-import {verifyBlockSignature} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
+import {ValidatorIndex} from "@chainsafe/lodestar-types";
+import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
+import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {BlockError, BlockErrorCode} from "../errors";
 
 export async function validateGossipBlock(
@@ -14,8 +14,8 @@ export async function validateGossipBlock(
 ): Promise<void> {
   const block = blockJob.signedBlock;
   const blockSlot = block.message.slot;
-  const blockRoot = config.types.BeaconBlock.hashTreeRoot(block.message);
-  const finalizedCheckpoint = await chain.getFinalizedCheckpoint();
+  const blockRoot = config.types.phase0.BeaconBlock.hashTreeRoot(block.message);
+  const finalizedCheckpoint = chain.getFinalizedCheckpoint();
   const finalizedSlot = computeStartSlotAtEpoch(config, finalizedCheckpoint.epoch);
   // block is too old
   if (blockSlot <= finalizedSlot) {
@@ -27,11 +27,11 @@ export async function validateGossipBlock(
     });
   }
 
-  const currentSlot = chain.clock.currentSlot;
-  if (currentSlot < blockSlot) {
+  const currentSlotWithGossipDisparity = chain.clock.currentSlotWithGossipDisparity;
+  if (currentSlotWithGossipDisparity < blockSlot) {
     throw new BlockError({
       code: BlockErrorCode.FUTURE_SLOT,
-      currentSlot,
+      currentSlot: currentSlotWithGossipDisparity,
       blockSlot,
       job: blockJob,
     });
@@ -64,7 +64,7 @@ export async function validateGossipBlock(
     });
   }
 
-  if (!verifyBlockSignature(blockContext.epochCtx, blockContext.state, block)) {
+  if (!phase0.fast.verifyBlockSignature(blockContext.epochCtx, blockContext.state, block)) {
     throw new BlockError({
       code: BlockErrorCode.PROPOSAL_SIGNATURE_INVALID,
       job: blockJob,
@@ -98,7 +98,7 @@ export async function hasProposerAlreadyProposed(
   return existingBlock?.message.proposerIndex === proposerIndex;
 }
 
-export function isExpectedProposer(epochCtx: EpochContext, block: BeaconBlock): boolean {
+export function isExpectedProposer(epochCtx: phase0.fast.EpochContext, block: phase0.BeaconBlock): boolean {
   const supposedProposerIndex = epochCtx.getBeaconProposer(block.slot);
   return supposedProposerIndex === block.proposerIndex;
 }

@@ -1,33 +1,36 @@
-import {
-  BeaconState,
-  BLSPubkey,
-  CommitteeIndex,
-  Epoch,
-  FinalityCheckpoints,
-  Root,
-  Slot,
-  ValidatorBalance,
-  ValidatorIndex,
-  BeaconCommitteeResponse,
-  Fork,
-} from "@chainsafe/lodestar-types";
-import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
-import {ValidatorResponse} from "@chainsafe/lodestar-types";
+import {BLSPubkey, CommitteeIndex, Epoch, Root, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
 
 export interface IBeaconStateApi {
   getStateRoot(stateId: StateId): Promise<Root | null>;
-  getState(stateId: StateId): Promise<BeaconState | null>;
-  getStateFinalityCheckpoints(stateId: StateId): Promise<FinalityCheckpoints | null>;
-  getStateValidators(stateId: StateId, filters?: IValidatorFilters): Promise<ValidatorResponse[]>;
-  getStateValidator(stateId: StateId, validatorId: BLSPubkey | ValidatorIndex): Promise<ValidatorResponse | null>;
-  getStateValidatorBalances(stateId: StateId, indices?: (BLSPubkey | ValidatorIndex)[]): Promise<ValidatorBalance[]>;
-  getStateCommittees(stateId: StateId, filters?: ICommitteesFilters): Promise<BeaconCommitteeResponse[]>;
-  getFork(stateId: StateId): Promise<Fork | null>;
+  getState(stateId: StateId): Promise<phase0.BeaconState | null>;
+  getStateFinalityCheckpoints(stateId: StateId): Promise<phase0.FinalityCheckpoints | null>;
+  getStateValidators(stateId: StateId, filters?: IValidatorFilters): Promise<phase0.ValidatorResponse[]>;
+  getStateValidator(
+    stateId: StateId,
+    validatorId: BLSPubkey | ValidatorIndex
+  ): Promise<phase0.ValidatorResponse | null>;
+  getStateValidatorBalances(
+    stateId: StateId,
+    indices?: (BLSPubkey | ValidatorIndex)[]
+  ): Promise<phase0.ValidatorBalance[]>;
+  getStateCommittees(stateId: StateId, filters?: ICommitteesFilters): Promise<phase0.BeaconCommitteeResponse[]>;
+  getFork(stateId: StateId): Promise<phase0.Fork | null>;
 }
 
 export type StateId = string | "head" | "genesis" | "finalized" | "justified";
 
-export type ValidatorStatus = "active";
+export type ValidatorStatus =
+  | "active"
+  | "pending_initialized"
+  | "pending_queued"
+  | "active_ongoing"
+  | "active_exiting"
+  | "active_slashed"
+  | "exited_unslashed"
+  | "exited_slashed"
+  | "withdrawal_possible"
+  | "withdrawal_done";
 
 export interface IValidatorFilters {
   indices?: (BLSPubkey | ValidatorIndex)[];
@@ -40,6 +43,6 @@ export interface ICommitteesFilters {
 }
 
 export type ApiStateContext = {
-  state: BeaconState;
-  epochCtx?: EpochContext;
+  state: phase0.BeaconState;
+  epochCtx?: phase0.fast.EpochContext;
 };

@@ -5,7 +5,7 @@ import {GossipEvent} from "../../../../../src/network/gossip/constants";
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {generateEmptySignedVoluntaryExit} from "../../../../utils/voluntaryExits";
 import {handleIncomingVoluntaryExit} from "../../../../../src/network/gossip/handlers/voluntaryExit";
-import {silentLogger} from "../../../../utils/logger";
+import {testLogger} from "../../../../utils/logger";
 
 describe("gossip handlers - voluntaryExit", function () {
   const sandbox = sinon.createSandbox();
@@ -14,7 +14,7 @@ describe("gossip handlers - voluntaryExit", function () {
 
   beforeEach(function () {
     gossipStub = sandbox.createStubInstance(Gossip);
-    gossipStub.logger = silentLogger;
+    gossipStub.logger = testLogger();
     gossipStub.config = config;
   });
 
@@ -22,9 +22,9 @@ describe("gossip handlers - voluntaryExit", function () {
     sandbox.restore();
   });
 
-  it("handle valid voluntary exit", async function () {
+  it("handle valid voluntary exit", function () {
     const voluntaryExit = generateEmptySignedVoluntaryExit();
-    await handleIncomingVoluntaryExit.bind(gossipStub)(voluntaryExit);
+    handleIncomingVoluntaryExit.bind(gossipStub)(voluntaryExit);
 
     expect(gossipStub.emit.withArgs(GossipEvent.VOLUNTARY_EXIT, voluntaryExit).calledOnce).to.be.true;
   });

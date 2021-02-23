@@ -5,7 +5,7 @@ import {GossipEvent} from "../../../../../src/network/gossip/constants";
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {generateEmptySignedBlock} from "../../../../utils/block";
 import {handleIncomingBlock} from "../../../../../src/network/gossip/handlers/block";
-import {silentLogger} from "../../../../utils/logger";
+import {testLogger} from "../../../../utils/logger";
 
 describe("gossip handlers - block", function () {
   const sandbox = sinon.createSandbox();
@@ -14,7 +14,7 @@ describe("gossip handlers - block", function () {
 
   beforeEach(function () {
     gossipStub = sandbox.createStubInstance(Gossip);
-    gossipStub.logger = silentLogger;
+    gossipStub.logger = testLogger();
     gossipStub.config = config;
   });
 
@@ -22,9 +22,9 @@ describe("gossip handlers - block", function () {
     sandbox.restore();
   });
 
-  it("handle valid block", async function () {
+  it("handle valid block", function () {
     const block = generateEmptySignedBlock();
-    await handleIncomingBlock.bind(gossipStub)(block);
+    handleIncomingBlock.bind(gossipStub)(block);
 
     expect(gossipStub.emit.withArgs(GossipEvent.BLOCK, block).calledOnce).to.be.true;
   });

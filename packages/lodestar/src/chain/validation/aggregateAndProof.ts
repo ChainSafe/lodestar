@@ -1,10 +1,9 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IAttestationJob, IBeaconChain} from "..";
 import {IBeaconDb} from "../../db/api";
-import {Attestation, SignedAggregateAndProof} from "@chainsafe/lodestar-types";
 import {computeEpochAtSlot, isAggregatorFromCommitteeLength} from "@chainsafe/lodestar-beacon-state-transition";
+import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {isAttestingToInValidBlock} from "./attestation";
-import {isValidIndexedAttestation} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/block/isValidIndexedAttestation";
 import {isValidAggregateAndProofSignature, isValidSelectionProofSignature} from "./utils";
 import {AttestationError, AttestationErrorCode} from "../errors";
 import {ATTESTATION_PROPAGATION_SLOT_RANGE} from "../../constants";
@@ -13,7 +12,7 @@ export async function validateGossipAggregateAndProof(
   config: IBeaconConfig,
   chain: IBeaconChain,
   db: IBeaconDb,
-  signedAggregateAndProof: SignedAggregateAndProof,
+  signedAggregateAndProof: phase0.SignedAggregateAndProof,
   attestationJob: IAttestationJob
 ): Promise<void> {
   const aggregateAndProof = signedAggregateAndProof.message;
@@ -41,7 +40,7 @@ export async function validateGossipAggregateAndProof(
     });
   }
 
-  if (await db.seenAttestationCache.hasAggregateAndProof(aggregateAndProof)) {
+  if (db.seenAttestationCache.hasAggregateAndProof(aggregateAndProof)) {
     throw new AttestationError({
       code: AttestationErrorCode.AGGREGATE_ALREADY_KNOWN,
       job: attestationJob,
@@ -68,14 +67,14 @@ export async function validateGossipAggregateAndProof(
   await validateAggregateAttestation(config, chain, signedAggregateAndProof, attestationJob);
 }
 
-export function hasAttestationParticipants(attestation: Attestation): boolean {
+export function hasAttestationParticipants(attestation: phase0.Attestation): boolean {
   return Array.from(attestation.aggregationBits).filter((bit) => !!bit).length >= 1;
 }
 
 export async function validateAggregateAttestation(
   config: IBeaconConfig,
   chain: IBeaconChain,
-  aggregateAndProof: SignedAggregateAndProof,
+  aggregateAndProof: phase0.SignedAggregateAndProof,
   attestationJob: IAttestationJob
 ): Promise<void> {
   const attestation = aggregateAndProof.message.aggregate;
@@ -148,7 +147,7 @@ export async function validateAggregateAttestation(
 
   // TODO: once we have pool, check if aggregate block is seen and has target as ancestor
 
-  if (!isValidIndexedAttestation(epochCtx, state, epochCtx.getIndexedAttestation(attestation))) {
+  if (!phase0.fast.isValidIndexedAttestation(epochCtx, state, epochCtx.getIndexedAttestation(attestation))) {
     throw new AttestationError({
       code: AttestationErrorCode.INVALID_SIGNATURE,
       job: attestationJob,

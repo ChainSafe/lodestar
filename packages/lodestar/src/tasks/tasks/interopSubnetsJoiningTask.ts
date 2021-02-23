@@ -1,11 +1,10 @@
 import {INetwork} from "../../network";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ATTESTATION_SUBNET_COUNT} from "../../constants";
-import {randBetween, ILogger, intToBytes} from "@chainsafe/lodestar-utils";
+import {randBetween, ILogger} from "@chainsafe/lodestar-utils";
 import {ChainEvent, IBeaconChain} from "../../chain";
 import {ForkDigest} from "@chainsafe/lodestar-types";
 import {toHexString} from "@chainsafe/ssz";
-import {computeStartSlotAtEpoch, computeForkDigest} from "@chainsafe/lodestar-beacon-state-transition";
 
 export interface IInteropSubnetsJoiningModules {
   network: INetwork;
@@ -35,15 +34,15 @@ export class InteropSubnetsJoiningTask {
     this.nextForkSubnets = new Set();
   }
 
-  public async start(): Promise<void> {
-    this.currentForkDigest = await this.chain.getForkDigest();
+  public start(): void {
+    this.currentForkDigest = this.chain.getForkDigest();
     this.chain.emitter.on(ChainEvent.forkVersion, this.handleForkVersion);
-    await this.run(this.currentForkDigest);
-    await this.scheduleNextForkSubscription();
+    this.run(this.currentForkDigest);
+    this.scheduleNextForkSubscription();
   }
 
-  public async stop(): Promise<void> {
-    this.chain.emitter.removeListener(ChainEvent.forkVersion, this.handleForkVersion);
+  public stop(): void {
+    this.chain.emitter.off(ChainEvent.forkVersion, this.handleForkVersion);
     if (this.nextForkSubsTimer) {
       clearTimeout(this.nextForkSubsTimer);
     }
@@ -52,10 +51,10 @@ export class InteropSubnetsJoiningTask {
       clearTimeout(timer);
     }
 
-    return this.cleanUpCurrentSubscriptions();
+    this.cleanUpCurrentSubscriptions();
   }
 
-  private run = async (forkDigest: ForkDigest): Promise<void> => {
+  private run = (forkDigest: ForkDigest): void => {
     for (let i = 0; i < this.config.params.RANDOM_SUBNETS_PER_VALIDATOR; i++) {
       this.subscribeToRandomSubnet(forkDigest);
     }
@@ -64,55 +63,49 @@ export class InteropSubnetsJoiningTask {
   /**
    * Prepare for EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION epochs in advance of the fork
    */
-  private scheduleNextForkSubscription = async (): Promise<void> => {
-    const state = await this.chain.getHeadState();
+  private scheduleNextForkSubscription = (): void => {
+    // TODO figure out forking
+    /*
+    const state = this.chain.getHeadState();
     const currentForkVersion = state.fork.currentVersion;
-    const nextFork =
-      this.config.params.ALL_FORKS &&
-      this.config.params.ALL_FORKS.find((fork) =>
-        this.config.types.Version.equals(currentForkVersion, intToBytes(fork.previousVersion, 4))
-      );
-    if (nextFork) {
+    const nextFork = null as phase0.Fork;
+    if (nextFork != null) {
       const preparedEpoch = nextFork.epoch - this.config.params.EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION;
       const timeToPreparedEpoch =
         (computeStartSlotAtEpoch(this.config, preparedEpoch) - this.chain.clock.currentSlot) *
         this.config.params.SECONDS_PER_SLOT *
         1000;
       if (timeToPreparedEpoch > 0) {
-        const nextForkDigest = computeForkDigest(
-          this.config,
-          intToBytes(nextFork.currentVersion, 4),
-          state.genesisValidatorsRoot
-        );
+        const nextForkDigest = computeForkDigest(this.config, nextFork.currentVersion, state.genesisValidatorsRoot);
         this.nextForkSubsTimer = setTimeout(() => {
-          // eslint-disable-next-line @typescript-eslint/no-floating-promises
-          this.run(nextForkDigest).catch();
+          this.run(nextForkDigest);
         }, timeToPreparedEpoch);
       }
     }
+    */
   };
 
   /**
    * Transition from current fork to next fork.
    */
-  private handleForkVersion = async (): Promise<void> => {
-    const forkDigest = await this.chain.getForkDigest();
+  private handleForkVersion = (): void => {
+    const forkDigest = this.chain.getForkDigest();
     this.logger.important(`InteropSubnetsJoiningTask: received new fork digest ${toHexString(forkDigest)}`);
     // at this time current fork digest and next fork digest subnets are subscribed in parallel
     // this cleans up current fork digest subnets subscription and keep subscribed to next fork digest subnets
-    await this.cleanUpCurrentSubscriptions();
+    this.cleanUpCurrentSubscriptions();
     this.currentForkDigest = forkDigest;
     this.currentSubnets = this.nextForkSubnets;
     this.nextForkSubnets = new Set();
     this.currentTimers = this.nextForkTimers;
     this.nextForkTimers = [];
-    await this.scheduleNextForkSubscription();
+    this.scheduleNextForkSubscription();
   };
 
   /**
    * Clean up subscription and timers of current fork.
    */
-  private cleanUpCurrentSubscriptions = async (): Promise<void> => {
+  private cleanUpCurrentSubscriptions = (): void => {
     for (const timer of this.currentTimers) {
       clearTimeout(timer);
     }
@@ -150,7 +143,6 @@ export class InteropSubnetsJoiningTask {
       : this.nextForkTimers;
     timers.push(
       setTimeout(() => {
-        // eslint-disable-next-line @typescript-eslint/no-floating-promises
         this.handleChangeSubnets(forkDigest, subnet);
       }, subscriptionLifetime * this.config.params.SLOTS_PER_EPOCH * this.config.params.SECONDS_PER_SLOT * 1000)
     );
@@ -164,7 +156,7 @@ export class InteropSubnetsJoiningTask {
     return subnet;
   }
 
-  private handleChangeSubnets = async (forkDigest: ForkDigest, subnet: number): Promise<void> => {
+  private handleChangeSubnets = (forkDigest: ForkDigest, subnet: number): void => {
     this.network.gossip.unsubscribeFromAttestationSubnet(forkDigest, subnet, this.handleWireAttestation);
     const attnets = this.network.metadata.attnets;
     if (attnets[subnet]) {
@@ -179,6 +171,6 @@ export class InteropSubnetsJoiningTask {
   };
 
   private handleWireAttestation = (): void => {
-    //ignore random committee attestations
+    // ignore random committee attestations
   };
 }

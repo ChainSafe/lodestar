@@ -118,7 +118,7 @@ export async function downloadOrCopyFile(pathDest: string, urlOrPathSrc: string)
 }
 
 /**
- * Downloads a genesis file per testnet if it does not exist
+ * Downloads a genesis file per network if it does not exist
  */
 export async function downloadFile(pathDest: string, url: string): Promise<void> {
   if (!fs.existsSync(pathDest)) {

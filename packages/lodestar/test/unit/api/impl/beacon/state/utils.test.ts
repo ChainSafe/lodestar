@@ -1,112 +1,212 @@
-import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
-import {IEpochShuffling} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util/epochShuffling";
+import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {config} from "@chainsafe/lodestar-config/minimal";
-import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
-import {Validator} from "@chainsafe/lodestar-types";
 import {List, toHexString} from "@chainsafe/ssz";
 import {expect, use} from "chai";
 import chaiAsPromised from "chai-as-promised";
 import sinon, {SinonStubbedInstance} from "sinon";
 import {ApiStateContext} from "../../../../../../src/api/impl/beacon/state/interface";
-import {getEpochBeaconCommittees, resolveStateId} from "../../../../../../src/api/impl/beacon/state/utils";
+import {
+  getEpochBeaconCommittees,
+  resolveStateId,
+  getValidatorStatus,
+} from "../../../../../../src/api/impl/beacon/state/utils";
 import {BeaconChain, IBeaconChain} from "../../../../../../src/chain";
 import {IBeaconClock} from "../../../../../../src/chain/clock/interface";
 import {generateBlockSummary} from "../../../../../utils/block";
-import {generateState} from "../../../../../utils/state";
+import {generateCachedState, generateState} from "../../../../../utils/state";
 import {StubbedBeaconDb} from "../../../../../utils/stub";
+import {StubbedBeaconChain} from "../../../../../utils/stub/chain";
 import {generateValidator} from "../../../../../utils/validator";
 
 use(chaiAsPromised);
 
 describe("beacon state api utils", function () {
   describe("resolve state id", function () {
+    const epochCtx = ({} as unknown) as phase0.EpochContext;
     let dbStub: StubbedBeaconDb;
-    let forkChoiceStub: SinonStubbedInstance<ForkChoice>;
+    let chainStub: StubbedBeaconChain;
 
     beforeEach(function () {
       dbStub = new StubbedBeaconDb(sinon, config);
-      forkChoiceStub = sinon.createStubInstance(ForkChoice);
+      chainStub = new StubbedBeaconChain(sinon, config);
     });
 
     it("resolve head state id - success", async function () {
-      forkChoiceStub.getHead.returns(generateBlockSummary({stateRoot: Buffer.alloc(32, 1)}));
-      dbStub.stateCache.get.resolves({state: generateState(), epochCtx: null!});
-      const state = await resolveStateId(config, dbStub, forkChoiceStub, "head");
+      chainStub.forkChoice.getHead.returns(generateBlockSummary({stateRoot: Buffer.alloc(32, 1)}));
+      chainStub.stateCache.get.returns({state: generateCachedState(), epochCtx});
+      const state = await resolveStateId(chainStub, dbStub, "head");
       expect(state).to.not.be.null;
-      expect(forkChoiceStub.getHead.calledOnce).to.be.true;
-      expect(dbStub.stateCache.get.calledOnce).to.be.true;
+      expect(chainStub.forkChoice.getHead.calledOnce).to.be.true;
+      expect(chainStub.stateCache.get.calledOnce).to.be.true;
     });
 
     it("resolve genesis state id - success", async function () {
       dbStub.stateArchive.get.withArgs(0).resolves(generateState());
-      const state = await resolveStateId(config, dbStub, forkChoiceStub, "genesis");
+      const state = await resolveStateId(chainStub, dbStub, "genesis");
       expect(state).to.not.be.null;
       expect(dbStub.stateArchive.get.withArgs(0).calledOnce).to.be.true;
     });
 
     it("resolve finalized state id - success", async function () {
-      forkChoiceStub.getFinalizedCheckpoint.returns({root: Buffer.alloc(32, 1), epoch: 1});
-      dbStub.stateCache.get.resolves({state: generateState(), epochCtx: null!});
-      const state = await resolveStateId(config, dbStub, forkChoiceStub, "finalized");
+      chainStub.forkChoice.getFinalizedCheckpoint.returns({root: Buffer.alloc(32, 1), epoch: 1});
+      chainStub.stateCache.get.returns({state: generateCachedState(), epochCtx});
+      const state = await resolveStateId(chainStub, dbStub, "finalized");
       expect(state).to.not.be.null;
-      expect(forkChoiceStub.getFinalizedCheckpoint.calledOnce).to.be.true;
-      expect(dbStub.stateCache.get.calledOnce).to.be.true;
+      expect(chainStub.forkChoice.getFinalizedCheckpoint.calledOnce).to.be.true;
+      expect(chainStub.stateCache.get.calledOnce).to.be.true;
     });
 
     it("resolve finalized state id - missing state", async function () {
-      forkChoiceStub.getFinalizedCheckpoint.returns({root: Buffer.alloc(32, 1), epoch: 1});
-      dbStub.stateCache.get.resolves(null);
-      const state = await resolveStateId(config, dbStub, forkChoiceStub, "finalized");
+      chainStub.forkChoice.getFinalizedCheckpoint.returns({root: Buffer.alloc(32, 1), epoch: 1});
+      chainStub.stateCache.get.returns(null);
+      const state = await resolveStateId(chainStub, dbStub, "finalized");
       expect(state).to.be.null;
-      expect(forkChoiceStub.getFinalizedCheckpoint.calledOnce).to.be.true;
-      expect(dbStub.stateCache.get.calledOnce).to.be.true;
+      expect(chainStub.forkChoice.getFinalizedCheckpoint.calledOnce).to.be.true;
+      expect(chainStub.stateCache.get.calledOnce).to.be.true;
     });
 
     it("resolve justified state id - success", async function () {
-      forkChoiceStub.getJustifiedCheckpoint.returns({root: Buffer.alloc(32, 1), epoch: 1});
-      dbStub.stateCache.get.resolves({state: generateState(), epochCtx: null!});
-      const state = await resolveStateId(config, dbStub, forkChoiceStub, "justified");
+      chainStub.forkChoice.getJustifiedCheckpoint.returns({root: Buffer.alloc(32, 1), epoch: 1});
+      chainStub.stateCache.get.returns({state: generateCachedState(), epochCtx});
+      const state = await resolveStateId(chainStub, dbStub, "justified");
       expect(state).to.not.be.null;
-      expect(forkChoiceStub.getJustifiedCheckpoint.calledOnce).to.be.true;
-      expect(dbStub.stateCache.get.calledOnce).to.be.true;
+      expect(chainStub.forkChoice.getJustifiedCheckpoint.calledOnce).to.be.true;
+      expect(chainStub.stateCache.get.calledOnce).to.be.true;
     });
 
     it("resolve justified state id - missing state", async function () {
-      forkChoiceStub.getJustifiedCheckpoint.returns({root: Buffer.alloc(32, 1), epoch: 1});
-      dbStub.stateCache.get.resolves(null);
-      const state = await resolveStateId(config, dbStub, forkChoiceStub, "justified");
+      chainStub.forkChoice.getJustifiedCheckpoint.returns({root: Buffer.alloc(32, 1), epoch: 1});
+      chainStub.stateCache.get.returns(null);
+      const state = await resolveStateId(chainStub, dbStub, "justified");
       expect(state).to.be.null;
-      expect(forkChoiceStub.getJustifiedCheckpoint.calledOnce).to.be.true;
-      expect(dbStub.stateCache.get.calledOnce).to.be.true;
+      expect(chainStub.forkChoice.getJustifiedCheckpoint.calledOnce).to.be.true;
+      expect(chainStub.stateCache.get.calledOnce).to.be.true;
     });
 
     it("resolve state by root", async function () {
-      dbStub.stateCache.get.resolves({state: generateState(), epochCtx: null!});
-      const state = await resolveStateId(config, dbStub, forkChoiceStub, toHexString(Buffer.alloc(32, 1)));
+      chainStub.stateCache.get.returns({state: generateCachedState(), epochCtx});
+      const state = await resolveStateId(chainStub, dbStub, toHexString(Buffer.alloc(32, 1)));
       expect(state).to.not.be.null;
-      expect(dbStub.stateCache.get.calledOnce).to.be.true;
+      expect(chainStub.stateCache.get.calledOnce).to.be.true;
     });
 
     it.skip("resolve finalized state by root", async function () {
-      dbStub.stateCache.get.resolves({state: generateState(), epochCtx: null!});
-      const state = await resolveStateId(config, dbStub, forkChoiceStub, toHexString(Buffer.alloc(32, 1)));
+      chainStub.stateCache.get.returns({state: generateCachedState(), epochCtx});
+      const state = await resolveStateId(chainStub, dbStub, toHexString(Buffer.alloc(32, 1)));
       expect(state).to.be.null;
-      expect(dbStub.stateCache.get.calledOnce).to.be.true;
+      expect(chainStub.stateCache.get.calledOnce).to.be.true;
     });
 
     it("state id is invalid root", async function () {
-      await expect(resolveStateId(config, dbStub, forkChoiceStub, "adcas")).to.be.eventually.rejected;
-      expect(dbStub.stateCache.get.notCalled).to.be.true;
+      await expect(resolveStateId(chainStub, dbStub, "adcas")).to.be.eventually.rejected;
+      expect(chainStub.stateCache.get.notCalled).to.be.true;
     });
 
     it("resolve state by slot", async function () {
-      forkChoiceStub.getCanonicalBlockSummaryAtSlot
+      chainStub.forkChoice.getCanonicalBlockSummaryAtSlot
         .withArgs(123)
         .returns(generateBlockSummary({stateRoot: Buffer.alloc(32, 1)}));
-      dbStub.stateCache.get.resolves({state: generateState(), epochCtx: null!});
-      const state = await resolveStateId(config, dbStub, forkChoiceStub, "123");
+      chainStub.stateCache.get.returns({state: generateCachedState(), epochCtx});
+      const state = await resolveStateId(chainStub, dbStub, "123");
       expect(state).to.not.be.null;
-      expect(forkChoiceStub.getCanonicalBlockSummaryAtSlot.withArgs(123).calledOnce).to.be.true;
+      expect(chainStub.forkChoice.getCanonicalBlockSummaryAtSlot.withArgs(123).calledOnce).to.be.true;
+    });
+  });
+
+  describe("getValidatorStatus", function () {
+    it("should return PENDING_INITIALIZED", function () {
+      const validator = {
+        activationEpoch: 1,
+        activationEligibilityEpoch: Infinity,
+      } as phase0.Validator;
+      const currentEpoch = 0;
+      const status = getValidatorStatus(validator, currentEpoch);
+      expect(status).to.be.equal(phase0.ValidatorStatus.PENDING_INITIALIZED);
+    });
+    it("should return PENDING_QUEUED", function () {
+      const validator = {
+        activationEpoch: 1,
+        activationEligibilityEpoch: 101010101101010,
+      } as phase0.Validator;
+      const currentEpoch = 0;
+      const status = getValidatorStatus(validator, currentEpoch);
+      expect(status).to.be.equal(phase0.ValidatorStatus.PENDING_QUEUED);
+    });
+    it("should return ACTIVE_ONGOING", function () {
+      const validator = {
+        activationEpoch: 1,
+        exitEpoch: Infinity,
+      } as phase0.Validator;
+      const currentEpoch = 1;
+      const status = getValidatorStatus(validator, currentEpoch);
+      expect(status).to.be.equal(phase0.ValidatorStatus.ACTIVE_ONGOING);
+    });
+    it("should return ACTIVE_SLASHED", function () {
+      const validator = {
+        activationEpoch: 1,
+        exitEpoch: 101010101101010,
+        slashed: true,
+      } as phase0.Validator;
+      const currentEpoch = 1;
+      const status = getValidatorStatus(validator, currentEpoch);
+      expect(status).to.be.equal(phase0.ValidatorStatus.ACTIVE_SLASHED);
+    });
+    it("should return ACTIVE_EXITING", function () {
+      const validator = {
+        activationEpoch: 1,
+        exitEpoch: 101010101101010,
+        slashed: false,
+      } as phase0.Validator;
+      const currentEpoch = 1;
+      const status = getValidatorStatus(validator, currentEpoch);
+      expect(status).to.be.equal(phase0.ValidatorStatus.ACTIVE_EXITING);
+    });
+    it("should return EXITED_SLASHED", function () {
+      const validator = {
+        exitEpoch: 1,
+        withdrawableEpoch: 3,
+        slashed: true,
+      } as phase0.Validator;
+      const currentEpoch = 2;
+      const status = getValidatorStatus(validator, currentEpoch);
+      expect(status).to.be.equal(phase0.ValidatorStatus.EXITED_SLASHED);
+    });
+    it("should return EXITED_UNSLASHED", function () {
+      const validator = {
+        exitEpoch: 1,
+        withdrawableEpoch: 3,
+        slashed: false,
+      } as phase0.Validator;
+      const currentEpoch = 2;
+      const status = getValidatorStatus(validator, currentEpoch);
+      expect(status).to.be.equal(phase0.ValidatorStatus.EXITED_UNSLASHED);
+    });
+    it("should return WITHDRAWAL_POSSIBLE", function () {
+      const validator = {
+        withdrawableEpoch: 1,
+        effectiveBalance: BigInt(32),
+      } as phase0.Validator;
+      const currentEpoch = 1;
+      const status = getValidatorStatus(validator, currentEpoch);
+      expect(status).to.be.equal(phase0.ValidatorStatus.WITHDRAWAL_POSSIBLE);
+    });
+    it("should return WITHDRAWAL_DONE", function () {
+      const validator = {
+        withdrawableEpoch: 1,
+        effectiveBalance: BigInt(0),
+      } as phase0.Validator;
+      const currentEpoch = 1;
+      const status = getValidatorStatus(validator, currentEpoch);
+      expect(status).to.be.equal(phase0.ValidatorStatus.WITHDRAWAL_DONE);
+    });
+    it("should error", function () {
+      const validator = {} as phase0.Validator;
+      const currentEpoch = 0;
+      try {
+        getValidatorStatus(validator, currentEpoch);
+      } catch (error) {
+        expect(error).to.have.property("message", "ValidatorStatus unknown");
+      }
     });
   });
 
@@ -143,7 +243,7 @@ describe("beacon state api utils", function () {
       stateContext.state = generateState({
         slot: 0,
         validators: Array.from({length: 24}, () => generateValidator({activationEpoch: 0, exitEpoch: 10})) as List<
-          Validator
+          phase0.Validator
         >,
       });
       const committees = getEpochBeaconCommittees(config, chainStub, stateContext, 1);
@@ -157,7 +257,7 @@ describe("beacon state api utils", function () {
       const stateContext = getApiContext();
       stateContext.state = generateState({
         slot: 0,
-        validators: Array.from({length: 20}, () => generateValidator({activationEpoch: 1})) as List<Validator>,
+        validators: Array.from({length: 20}, () => generateValidator({activationEpoch: 1})) as List<phase0.Validator>,
       });
       const committees = getEpochBeaconCommittees(config, chainStub, stateContext, 1);
       expect(committees[0][0][0]).to.not.be.undefined;
@@ -165,7 +265,7 @@ describe("beacon state api utils", function () {
 
     function getApiContext(): ApiStateContext {
       return {
-        state: generateState(),
+        state: generateCachedState(),
         epochCtx: {
           currentShuffling: {
             committees: [
@@ -178,7 +278,7 @@ describe("beacon state api utils", function () {
                 [8, 12, 22],
               ],
             ],
-          } as IEpochShuffling,
+          } as phase0.fast.IEpochShuffling,
           previousShuffling: {
             committees: [
               [
@@ -190,8 +290,8 @@ describe("beacon state api utils", function () {
                 [8, 12, 22],
               ],
             ],
-          } as IEpochShuffling,
-        } as EpochContext,
+          } as phase0.fast.IEpochShuffling,
+        } as phase0.EpochContext,
       };
     }
   });

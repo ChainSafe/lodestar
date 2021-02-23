@@ -5,7 +5,7 @@ type Params = {
   epoch: number;
 };
 
-//validator indices
+// validator indices
 type Body = number[];
 
 export const attesterDutiesController: ApiController<DefaultQuery, Params, Body> = {
@@ -18,7 +18,7 @@ export const attesterDutiesController: ApiController<DefaultQuery, Params, Body>
       .type("application/json")
       .send({
         data: responseValue.map((value) => {
-          return this.config.types.AttesterDuty.toJson(value, {case: "snake"});
+          return this.config.types.phase0.AttesterDuty.toJson(value, {case: "snake"});
         }),
       });
   },
