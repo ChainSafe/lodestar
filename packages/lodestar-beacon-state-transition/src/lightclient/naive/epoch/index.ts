@@ -2,7 +2,7 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {lightclient} from "@chainsafe/lodestar-types";
 import {processJustificationAndFinalization} from "./justification_finalization";
 import {processRewardsAndPenalties} from "./rewards_and_penalties";
-import {phase0} from "../..";
+import {phase0} from "../../..";
 import {processSyncCommitteeUpdates} from "./sync_committee";
 import {processParticipationFlagUpdates} from "./flag";
 
@@ -24,8 +24,15 @@ export function processEpoch(config: IBeaconConfig, state: lightclient.BeaconSta
   // Slashings
   phase0.processSlashings(config, state);
 
-  // Final Updates
-  phase0.processFinalUpdates(config, state);
+  phase0.processEth1DataReset(config, state);
+
+  phase0.processEffectiveBalanceUpdates(config, state);
+
+  phase0.processSlashingsReset(config, state);
+
+  phase0.processRandaoMixesReset(config, state);
+
+  phase0.processHistoricalRootsUpdate(config, state);
 
   processParticipationFlagUpdates(config, state);
 

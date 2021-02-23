@@ -6,9 +6,9 @@ import {
   getTotalBalance,
   getTotalActiveBalance,
   getBlockRoot,
-} from "../..";
-import {TIMELY_TARGET_FLAG} from "../constants";
-import {getUnslashedParticipatingIndices} from "../state_accessor";
+} from "../../..";
+import {TIMELY_TARGET_FLAG} from "../../constants";
+import {getUnslashedParticipatingIndices} from "../../state_accessor";
 import {lightclient} from "@chainsafe/lodestar-types";
 
 export function processJustificationAndFinalization(config: IBeaconConfig, state: lightclient.BeaconState): void {

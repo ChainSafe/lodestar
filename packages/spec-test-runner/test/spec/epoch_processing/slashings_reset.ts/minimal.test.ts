@@ -1,17 +1,18 @@
-import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
+import {join} from "path";
+import {expect} from "chai";
+
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util/lib/single";
-import {expect} from "chai";
-import {join} from "path";
-import {SPEC_TEST_LOCATION} from "../../../utils/specTestCases";
 import {IStateTestCase} from "../../../utils/specTestTypes/stateTestCase";
+import {SPEC_TEST_LOCATION} from "../../../utils/specTestCases";
+import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
 
 describeDirectorySpecTest<IStateTestCase, phase0.BeaconState>(
-  "epoch final updates minimal",
-  join(SPEC_TEST_LOCATION, "tests/minimal/phase0/epoch_processing/final_updates/pyspec_tests"),
+  "process slashings reset minimal",
+  join(SPEC_TEST_LOCATION, "tests/minimal/phase0/epoch_processing/slashings_reset/pyspec_tests"),
   (testcase) => {
     const state = testcase.pre;
-    phase0.processFinalUpdates(config, state);
+    phase0.processSlashingsReset(config, state);
     return state;
   },
   {
