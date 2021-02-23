@@ -1,6 +1,6 @@
 import {List} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {phase0, lightclient} from "@chainsafe/lodestar-types";
+import {phase0, lightclient, ValidatorFlag} from "@chainsafe/lodestar-types";
 
 import {getCurrentEpoch} from "../../util";
 
@@ -15,6 +15,8 @@ export function upgrade(config: IBeaconConfig, pre: phase0.BeaconState): lightcl
     },
     previousEpochAttestations: new Array<phase0.PendingAttestation>() as List<phase0.PendingAttestation>,
     currentEpochAttestations: new Array<phase0.PendingAttestation>() as List<phase0.PendingAttestation>,
+    previousEpochParticipation: Array.from({length: pre.validators.length}, () => 0) as List<ValidatorFlag>,
+    currentEpochParticipation: Array.from({length: pre.validators.length}, () => 0) as List<ValidatorFlag>,
     currentSyncCommittee: config.types.lightclient.SyncCommittee.defaultValue(),
     nextSyncCommittee: config.types.lightclient.SyncCommittee.defaultValue(),
   };

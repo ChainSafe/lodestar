@@ -1,8 +1,8 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {Lightclient} from "@chainsafe/lodestar-types";
+import {lightclient} from "@chainsafe/lodestar-types";
 import {processJustificationAndFinalization} from "./justification_finalization";
 import {processRewardsAndPenalties} from "./rewards_and_penalties";
-import {processRegistryUpdates, processSlashings, processFinalUpdates} from "../..";
+import {phase0} from "../..";
 import {processSyncCommitteeUpdates} from "./sync_committee";
 import {processParticipationFlagUpdates} from "./flag";
 
@@ -11,7 +11,7 @@ export * from "./rewards_and_penalties";
 export * from "./flag";
 export * from "./sync_committee";
 
-export function processEpoch(config: IBeaconConfig, state: Lightclient.BeaconState): Lightclient.BeaconState {
+export function processEpoch(config: IBeaconConfig, state: lightclient.BeaconState): lightclient.BeaconState {
   // Justification
   processJustificationAndFinalization(config, state);
 
@@ -19,13 +19,13 @@ export function processEpoch(config: IBeaconConfig, state: Lightclient.BeaconSta
   processRewardsAndPenalties(config, state);
 
   // Validator Registry
-  processRegistryUpdates(config, state);
+  phase0.processRegistryUpdates(config, state);
 
   // Slashings
-  processSlashings(config, state);
+  phase0.processSlashings(config, state);
 
   // Final Updates
-  processFinalUpdates(config, state);
+  phase0.processFinalUpdates(config, state);
 
   processParticipationFlagUpdates(config, state);
 

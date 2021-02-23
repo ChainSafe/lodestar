@@ -9,9 +9,9 @@ import {
 } from "../..";
 import {TIMELY_TARGET_FLAG} from "../constants";
 import {getUnslashedParticipatingIndices} from "../state_accessor";
-import {Lightclient} from "@chainsafe/lodestar-types";
+import {lightclient} from "@chainsafe/lodestar-types";
 
-export function processJustificationAndFinalization(config: IBeaconConfig, state: Lightclient.BeaconState): void {
+export function processJustificationAndFinalization(config: IBeaconConfig, state: lightclient.BeaconState): void {
   const currentEpoch = getCurrentEpoch(config, state);
   if (currentEpoch <= GENESIS_EPOCH + 1) {
     return;

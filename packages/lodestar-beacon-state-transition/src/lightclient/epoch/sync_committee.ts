@@ -1,19 +1,19 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {Lightclient} from "@chainsafe/lodestar-types";
-import {getSyncCommittee} from "../sync_committee";
+import {lightclient} from "@chainsafe/lodestar-types";
 import {getCurrentEpoch} from "../../util";
+import {getSyncCommittee} from "..";
 
 /**
  * Call to ``proces_sync_committee_updates`` added to ``process_epoch`` in HF1
  */
-export function processSyncCommitteeUpdates(config: IBeaconConfig, state: Lightclient.BeaconState): void {
+export function processSyncCommitteeUpdates(config: IBeaconConfig, state: lightclient.BeaconState): void {
   const nextEpoch = getCurrentEpoch(config, state) + 1;
-  if (nextEpoch % config.params.lightclient.EPOCHS_PER_SYNC_COMMITTEE_PERIOD === 0) {
+  if (nextEpoch % config.params.EPOCHS_PER_SYNC_COMMITTEE_PERIOD === 0) {
     state.currentSyncCommittee = state.nextSyncCommittee;
     state.nextSyncCommittee = getSyncCommittee(
       config,
       state,
-      nextEpoch + config.params.lightclient.EPOCHS_PER_SYNC_COMMITTEE_PERIOD
+      nextEpoch + config.params.EPOCHS_PER_SYNC_COMMITTEE_PERIOD
     );
   }
 }

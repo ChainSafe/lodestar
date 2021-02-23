@@ -1,5 +1,5 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {Lightclient, ValidatorFlag, Epoch, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {lightclient, ValidatorFlag, Epoch, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {getCurrentEpoch, getPreviousEpoch} from "../..";
 import {assert} from "@chainsafe/lodestar-utils";
 import {getActiveValidatorIndices} from "../../util/validator";
@@ -7,7 +7,7 @@ import {hasValidatorFlags} from "../misc";
 
 export function getUnslashedParticipatingIndices(
   config: IBeaconConfig,
-  state: Lightclient.BeaconState,
+  state: lightclient.BeaconState,
   flags: ValidatorFlag,
   epoch: Epoch
 ): ValidatorIndex[] {
