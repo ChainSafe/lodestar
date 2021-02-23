@@ -18,14 +18,14 @@ export function processRewardsAndPenalties(
   const newBalances = readOnlyMap(state.balances, (balance) => balance);
 
   rewards.forEach((reward, i) => {
-    newBalances[i] += reward;
+    newBalances[i] += BigInt(reward);
   });
 
   penalties.forEach((penalty, i) => {
     if (penalty > newBalances[i]) {
       newBalances[i] = BigInt(0);
     } else {
-      newBalances[i] -= penalty;
+      newBalances[i] -= BigInt(penalty);
     }
   });
   process.balances = newBalances;

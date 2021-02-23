@@ -21,7 +21,7 @@ describe("getAttestationDeltas", function () {
     state = phase0.fast.createCachedValidatorsBeaconState(origState);
   });
 
-  it("should getAttestationDeltas", function () {
+  it.only("should getAttestationDeltas", function () {
     this.timeout(0);
     epochProcess = phase0.fast.prepareEpochProcessState(epochCtx, state);
     let minTime = Number.MAX_SAFE_INTEGER;
