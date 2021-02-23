@@ -99,4 +99,20 @@ describe("sync / utils / assertPeerRelevance", () => {
       }
     });
   }
+
+  it("Accept during pre-genesis clock", () => {
+    // clock slot pre-genesis (< 0) by a good margin
+    (chain as any).clock.currentSlot = -50;
+    assertPeerRelevance(
+      {
+        forkDigest: correctForkDigest,
+        finalizedRoot: ZERO_HASH,
+        finalizedEpoch: 0,
+        headRoot: ZERO_HASH,
+        headSlot: 0,
+      },
+      chain,
+      config
+    );
+  });
 });
