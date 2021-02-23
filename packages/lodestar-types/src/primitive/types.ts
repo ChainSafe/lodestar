@@ -39,3 +39,4 @@ export type BLSSecretKey = Bytes32;
 export type BLSSignature = Bytes96;
 export type BlockRootHex = string;
 export type AttestationRootHex = string;
+export type ValidatorFlag = Uint8;

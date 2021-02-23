@@ -84,6 +84,14 @@ export const BeaconState: LightClientTypesGenerator<ContainerType<lightclient.Be
   return new ContainerType({
     fields: {
       ...phase0Types.BeaconState.fields,
+      previousEpochParticipation: new ListType({
+        elementType: phase0Types.ValidatorFlag,
+        limit: params.VALIDATOR_REGISTRY_LIMIT,
+      }),
+      currentEpochParticipation: new ListType({
+        elementType: phase0Types.ValidatorFlag,
+        limit: params.VALIDATOR_REGISTRY_LIMIT,
+      }),
       currentSyncCommittee: lightclientTypes.SyncCommittee,
       nextSyncCommittee: lightclientTypes.SyncCommittee,
     },

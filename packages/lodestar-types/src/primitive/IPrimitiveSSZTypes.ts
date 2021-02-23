@@ -28,4 +28,5 @@ export interface IPrimitiveSSZTypes {
   BLSPubkey: ByteVectorType;
   BLSSignature: ByteVectorType;
   Domain: ByteVectorType;
+  ValidatorFlag: NumberUintType;
 }

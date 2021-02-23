@@ -1,5 +1,5 @@
-import {BitVector} from "@chainsafe/ssz";
-
+import {BitVector, List} from "@chainsafe/ssz";
+import {ValidatorFlag} from "../..";
 import * as phase0 from "../../phase0";
 import {SyncCommittee} from "./committee";
 
@@ -18,6 +18,9 @@ export interface SignedBeaconBlock extends phase0.SignedBeaconBlock {
 }
 
 export interface BeaconState extends phase0.BeaconState {
+  // Participation
+  previousEpochParticipation: List<ValidatorFlag>;
+  currentEpochParticipation: List<ValidatorFlag>;
   // Sync committees
   currentSyncCommittee: SyncCommittee;
   nextSyncCommittee: SyncCommittee;
