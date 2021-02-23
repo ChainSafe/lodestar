@@ -21,7 +21,7 @@ describe("getAttestationDeltas", function () {
     state = phase0.fast.createCachedValidatorsBeaconState(origState);
   });
 
-  it.only("should getAttestationDeltas", function () {
+  it("should getAttestationDeltas", function () {
     this.timeout(0);
     epochProcess = phase0.fast.prepareEpochProcessState(epochCtx, state);
     let minTime = Number.MAX_SAFE_INTEGER;
@@ -38,8 +38,8 @@ describe("getAttestationDeltas", function () {
     const to = process.hrtime.bigint();
     const average = Number((to - from) / BigInt(MAX_TRY) / BigInt(1000000));
     logger.info("getAttestationDeltas in ms", {minTime, maxTime, average, maxTry: MAX_TRY});
-    expect(minTime).to.be.lt(98, "Minimal balances assignment is not less than 98ms");
-    expect(maxTime).to.be.lt(1375, "Maximal balances assignment is not less than 1375ms");
-    expect(average).to.be.lt(130, "Average balances assignment is not less than 130ms");
+    expect(minTime).to.be.lt(67, "Minimal balances assignment is not less than 67ms");
+    expect(maxTime).to.be.lt(620, "Maximal balances assignment is not less than 620ms");
+    expect(average).to.be.lt(75, "Average balances assignment is not less than 75ms");
   });
 });
