@@ -63,11 +63,13 @@ export function getInactivityPenaltyDeltas(config: IBeaconConfig, state: lightcl
       previousEpoch
     );
     for (const index of phase0.getEligibleValidatorIndices(config, state)) {
-      penalties[index] += (phase0.getBaseReward(config, state, index) * BigInt(rewardNumeratorSum)) / REWARD_DENOMINATOR;
+      penalties[index] +=
+        (phase0.getBaseReward(config, state, index) * BigInt(rewardNumeratorSum)) / REWARD_DENOMINATOR;
       if (matchingTargetAttestingIndices.indexOf(index) === -1) {
         const effectiveBalance = state.validators[index].effectiveBalance;
         penalties[index] +=
-          (effectiveBalance * BigInt(phase0.getFinalityDelay(config, state))) / config.params.INACTIVITY_PENALTY_QUOTIENT;
+          (effectiveBalance * BigInt(phase0.getFinalityDelay(config, state))) /
+          config.params.INACTIVITY_PENALTY_QUOTIENT;
       }
     }
   }
