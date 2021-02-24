@@ -1,5 +1,5 @@
 import {AbortSignal} from "abort-controller";
-import pushable, {Pushable} from "it-pushable";
+import pushable from "it-pushable";
 import pipe from "it-pipe";
 import {LodestarError} from "@chainsafe/lodestar-utils";
 
@@ -25,18 +25,24 @@ type JobQueueItem<T extends Job = Job> = {
   reject: (reason?: unknown) => void;
 };
 
-export class JobQueue {
+type JobQueueOpts = {
   queueSize: number;
-  currentSize: number;
   signal: AbortSignal;
-  queue: Pushable<JobQueueItem>;
-  processor: Promise<void>;
-  constructor({queueSize, signal}: {queueSize: number; signal: AbortSignal}) {
-    this.queueSize = queueSize;
-    this.currentSize = 0;
-    this.signal = signal;
-    this.queue = pushable();
-    this.processor = pipe(this.queue, async (source) => {
+  /**
+   * Called when a job resolves or rejects.
+   * Returns the total miliseconds ellapsed from job start to done
+   */
+  onJobDone?: (data: {ms: number}) => void;
+};
+
+export class JobQueue {
+  private currentSize = 0;
+  private queue = pushable<JobQueueItem>();
+  private opts: JobQueueOpts;
+
+  constructor(opts: JobQueueOpts) {
+    this.opts = opts;
+    void pipe(this.queue, async (source) => {
       for await (const job of source) {
         await this.processJob(job);
       }
@@ -44,24 +50,27 @@ export class JobQueue {
   }
 
   async processJob({job, resolve, reject}: JobQueueItem): Promise<void> {
-    if (this.signal.aborted) {
+    if (this.opts.signal.aborted) {
       reject(new QueueError({code: QueueErrorCode.QUEUE_ABORTED}));
     } else {
+      const start = Date.now();
       try {
         const result = await job();
         resolve(result);
       } catch (e) {
         reject(e);
+      } finally {
+        this.currentSize--;
+        this.opts.onJobDone?.({ms: Date.now() - start});
       }
     }
-    this.currentSize--;
   }
 
   enqueueJob<T extends Job>(job: T): Promise<ReturnType<T>> {
-    if (this.signal.aborted) {
+    if (this.opts.signal.aborted) {
       throw new QueueError({code: QueueErrorCode.QUEUE_ABORTED});
     }
-    if (this.currentSize + 1 > this.queueSize) {
+    if (this.currentSize + 1 > this.opts.queueSize) {
       throw new QueueError({code: QueueErrorCode.QUEUE_THROTTLED});
     }
     return new Promise((resolve, reject) => {

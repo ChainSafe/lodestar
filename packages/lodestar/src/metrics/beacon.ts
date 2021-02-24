@@ -36,6 +36,7 @@ export class BeaconMetrics extends Metrics implements IBeaconMetrics {
   public previousEpochTargetGwei: Gauge;
   public observedEpochAttesters: Gauge;
   public observedEpochAggregators: Gauge;
+  public blockProcessorTotalAsyncTime: Gauge;
 
   private logger: ILogger;
 
@@ -178,6 +179,14 @@ export class BeaconMetrics extends Metrics implements IBeaconMetrics {
     this.observedEpochAggregators = new Gauge({
       name: "beacon_observed_epoch_aggregators",
       help: "number of aggregators for which we have seen an attestation, not necessarily included on chain.",
+      registers,
+    });
+
+    // Extra Lodestar custom metrics
+
+    this.blockProcessorTotalAsyncTime = new Gauge({
+      name: "lodestar_block_processor_total_async_time",
+      help: "Total number of seconds spent completing block processor async jobs",
       registers,
     });
   }
