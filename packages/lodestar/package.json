@@ -87,7 +87,8 @@
     "snappyjs": "^0.6.0",
     "stream-to-it": "^0.2.0",
     "strict-event-emitter-types": "^2.0.0",
-    "varint": "^5.0.0"
+    "varint": "^5.0.0",
+    "wtfnode": "^0.8.4"
   },
   "devDependencies": {
     "@chainsafe/benchmark-utils": "^0.16.0",
