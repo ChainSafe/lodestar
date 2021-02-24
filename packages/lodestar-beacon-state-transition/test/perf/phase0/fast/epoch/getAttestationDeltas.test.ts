@@ -38,8 +38,8 @@ describe("getAttestationDeltas", function () {
     const to = process.hrtime.bigint();
     const average = Number((to - from) / BigInt(MAX_TRY) / BigInt(1000000));
     logger.info("getAttestationDeltas in ms", {minTime, maxTime, average, maxTry: MAX_TRY});
-    expect(minTime).to.be.lt(67, "Minimal balances assignment is not less than 67ms");
-    expect(maxTime).to.be.lt(620, "Maximal balances assignment is not less than 620ms");
-    expect(average).to.be.lt(75, "Average balances assignment is not less than 75ms");
+    expect(minTime).to.be.lte(64, "Minimal balances assignment is not less than 67ms");
+    expect(maxTime).to.be.lte(620, "Maximal balances assignment is not less than 620ms");
+    expect(average).to.be.lte(79, "Average balances assignment is not less than 75ms");
   });
 });
