@@ -29,7 +29,6 @@ docker-compose.yml
 /packages/spec-test-runner/spec-tests
 
 # Lodestar artifacts
-**/*-db
 .lodestar
 .pyrmont
 
