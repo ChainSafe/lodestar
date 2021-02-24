@@ -3,6 +3,15 @@ export interface ILodestarApi {
 }
 
 export class LodestarApi implements ILodestarApi {
+  constructor() {
+    // Allows to load wtfnode listeners immedeatelly. Usefull when dockerized,
+    // so after an unexpected restart wtfnode becomes properly loaded again
+    if (process?.env?.START_WTF_NODE) {
+      // eslint-disable-next-line
+      require("wtfnode");
+    }
+  }
+
   /**
    * Get a wtfnode dump of all active handles
    * Will only load the wtfnode after the first call, and registers async hooks
