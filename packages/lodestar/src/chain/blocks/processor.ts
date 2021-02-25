@@ -10,6 +10,7 @@ import {IStateRegenerator} from "../regen";
 import {JobQueue} from "../../util/queue";
 import {CheckpointStateCache} from "../stateCache";
 import {BlockError, BlockErrorCode, ChainSegmentError} from "../errors";
+import {IBeaconMetrics} from "../../metrics";
 
 import {processBlock, processChainSegment} from "./process";
 import {validateBlock} from "./validate";
@@ -19,6 +20,7 @@ type BlockProcessorModules = {
   forkChoice: IForkChoice;
   regen: IStateRegenerator;
   emitter: ChainEventEmitter;
+  metrics: IBeaconMetrics;
   clock: IBeaconClock;
   checkpointStateCache: CheckpointStateCache;
 };
@@ -39,7 +41,7 @@ export class BlockProcessor {
     queueSize?: number;
   }) {
     this.modules = modules;
-    this.jobQueue = new JobQueue({queueSize, signal});
+    this.jobQueue = new JobQueue({queueSize, signal, onJobDone: this.onJobDone});
   }
 
   public async processBlockJob(job: IBlockJob): Promise<void> {
@@ -49,6 +51,10 @@ export class BlockProcessor {
   public async processChainSegment(job: IChainSegmentJob): Promise<void> {
     return await this.jobQueue.enqueueJob(async () => await processChainSegmentJob(this.modules, job));
   }
+
+  private onJobDone = ({ms}: {ms: number}): void => {
+    this.modules.metrics.blockProcessorTotalAsyncTime.inc(ms / 1000);
+  };
 }
 
 /**

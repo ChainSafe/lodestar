@@ -123,6 +123,12 @@ export interface IBeaconMetrics extends IMetrics {
    * That attestation is not necessarily included on chain.
    */
   observedEpochAggregators: Gauge;
+  /**
+   * Total number of seconds spent completing block processor async jobs
+   * Useful to compute the utilitzation ratio of the blockProcessor with:
+   * `rate(lodestar_block_processor_total_async_time[1m])`
+   */
+  blockProcessorTotalAsyncTime: Gauge;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-empty-interface

@@ -119,6 +119,7 @@ export class BeaconChain implements IBeaconChain {
       forkChoice: this.forkChoice,
       clock: this.clock,
       regen: this.regen,
+      metrics: this.metrics,
       emitter: this.internalEmitter,
       checkpointStateCache: this.checkpointStateCache,
       signal: this.abortController.signal,

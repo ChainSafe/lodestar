@@ -71,7 +71,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.3.1",
+      "pluginVersion": "7.3.7",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -167,7 +167,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.3.1",
+      "pluginVersion": "7.3.7",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -263,7 +263,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.3.1",
+      "pluginVersion": "7.3.7",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -359,7 +359,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.3.1",
+      "pluginVersion": "7.3.7",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -469,7 +469,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.3.1",
+      "pluginVersion": "7.3.7",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -563,7 +563,7 @@
         },
         "textMode": "auto"
       },
-      "pluginVersion": "7.3.1",
+      "pluginVersion": "7.3.7",
       "targets": [
         {
           "expr": "libp2p_peers",
@@ -615,7 +615,7 @@
         },
         "textMode": "auto"
       },
-      "pluginVersion": "7.3.1",
+      "pluginVersion": "7.3.7",
       "targets": [
         {
           "expr": "beacon_head_slot",
@@ -666,7 +666,7 @@
         },
         "textMode": "auto"
       },
-      "pluginVersion": "7.3.1",
+      "pluginVersion": "7.3.7",
       "targets": [
         {
           "expr": "beacon_finalized_epoch",
@@ -717,7 +717,7 @@
         },
         "textMode": "auto"
       },
-      "pluginVersion": "7.3.1",
+      "pluginVersion": "7.3.7",
       "targets": [
         {
           "expr": "rate(beacon_head_slot[2m])",
@@ -770,7 +770,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.3.1",
+      "pluginVersion": "7.3.7",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -867,7 +867,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.3.1",
+      "pluginVersion": "7.3.7",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -889,6 +889,117 @@
       "timeRegions": [],
       "timeShift": null,
       "title": "Slots / sec",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "collapsed": false,
+      "datasource": null,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 34
+      },
+      "id": 25,
+      "panels": [],
+      "title": "Sync stats",
+      "type": "row"
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": null,
+      "fieldConfig": {
+        "defaults": {
+          "custom": {},
+          "links": []
+        },
+        "overrides": []
+      },
+      "fill": 1,
+      "fillGradient": 3,
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 35
+      },
+      "hiddenSeries": false,
+      "id": 26,
+      "legend": {
+        "avg": true,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": true
+      },
+      "lines": true,
+      "linewidth": 1,
+      "nullPointMode": "null",
+      "options": {
+        "alertThreshold": true
+      },
+      "percentage": false,
+      "pluginVersion": "7.3.7",
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "rate(lodestar_block_processor_total_async_time[1m])",
+          "instant": false,
+          "interval": "",
+          "legendFormat": "",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Block processor utilization ratio",
       "tooltip": {
         "shared": true,
         "sort": 0,
