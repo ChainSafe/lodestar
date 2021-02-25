@@ -17,12 +17,14 @@ import {syncPeersStatus} from "../utils/sync";
 import {assertPeerRelevance} from "../utils/assertPeerRelevance";
 import {IReqRespHandler} from "./interface";
 import {IBlockFilterOptions} from "../../db/api/beacon/repositories/blockArchive/abstract";
+import {IBeaconMetrics} from "../../metrics";
 
 export interface IReqRespHandlerModules {
   config: IBeaconConfig;
   db: IBeaconDb;
   chain: IBeaconChain;
   network: INetwork;
+  metrics: IBeaconMetrics;
   logger: ILogger;
 }
 
@@ -57,13 +59,15 @@ export class BeaconReqRespHandler implements IReqRespHandler {
   private db: IBeaconDb;
   private chain: IBeaconChain;
   private network: INetwork;
+  private metrics: IBeaconMetrics;
   private logger: ILogger;
 
-  public constructor({config, db, chain, network, logger}: IReqRespHandlerModules) {
+  public constructor({config, db, chain, network, metrics, logger}: IReqRespHandlerModules) {
     this.config = config;
     this.db = db;
     this.chain = chain;
     this.network = network;
+    this.metrics = metrics;
     this.logger = logger;
   }
 
@@ -81,7 +85,7 @@ export class BeaconReqRespHandler implements IReqRespHandler {
         .getPeers({supportsProtocols: [createRpcProtocol(Method.Goodbye, ReqRespEncoding.SSZ_SNAPPY)]})
         .map(async (peer) => {
           try {
-            await this.network.reqResp.goodbye(peer.id, BigInt(GoodByeReasonCode.CLIENT_SHUTDOWN));
+            await this.goodbye(peer.id, GoodByeReasonCode.CLIENT_SHUTDOWN);
           } catch (e) {
             this.logger.verbose("Failed to send goodbye", {error: e.message});
           }
@@ -127,7 +131,7 @@ export class BeaconReqRespHandler implements IReqRespHandler {
         peer: peerId.toB58String(),
         reason: e instanceof LodestarError ? e.getMetadata() : e.message,
       });
-      await this.network.reqResp.goodbye(peerId, BigInt(GoodByeReasonCode.IRRELEVANT_NETWORK));
+      await this.goodbye(peerId, GoodByeReasonCode.IRRELEVANT_NETWORK);
       return;
     }
 
@@ -138,12 +142,10 @@ export class BeaconReqRespHandler implements IReqRespHandler {
     yield this.chain.getStatus();
   }
 
-  private async *onGoodbye(requestBody: phase0.Goodbye, peerId: PeerId): AsyncIterable<bigint> {
-    this.logger.verbose("Received goodbye request", {
-      peer: peerId.toB58String(),
-      reason: requestBody,
-      description: GoodbyeReasonCodeDescriptions[requestBody.toString()],
-    });
+  private async *onGoodbye(goodbyeCode: phase0.Goodbye, peerId: PeerId): AsyncIterable<bigint> {
+    const reason = GoodbyeReasonCodeDescriptions[goodbyeCode.toString()] || "";
+    this.logger.verbose("Received goodbye request", {peer: peerId.toB58String(), code: goodbyeCode, reason});
+    this.metrics.peerGoodbyeReceived.inc({reason});
 
     yield BigInt(GoodByeReasonCode.CLIENT_SHUTDOWN);
 
@@ -202,6 +204,13 @@ export class BeaconReqRespHandler implements IReqRespHandler {
         yield block;
       }
     }
+  }
+
+  private async goodbye(peerId: PeerId, goodbyeCode: GoodByeReasonCode): Promise<void> {
+    const reason = GoodbyeReasonCodeDescriptions[goodbyeCode.toString()] || "";
+    this.metrics.peerGoodbyeSent.inc({reason});
+
+    await this.network.reqResp.goodbye(peerId, BigInt(goodbyeCode));
   }
 
   private handshake = async (peerId: PeerId, direction: "inbound" | "outbound"): Promise<void> => {

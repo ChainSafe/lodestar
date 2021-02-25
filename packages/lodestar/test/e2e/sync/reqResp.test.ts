@@ -102,6 +102,7 @@ describe("[sync] rpc", function () {
       config,
       db,
       chain,
+      metrics,
       network: netA,
       logger,
     });
@@ -110,6 +111,7 @@ describe("[sync] rpc", function () {
       config,
       db,
       chain,
+      metrics,
       network: netB,
       logger: logger,
     });

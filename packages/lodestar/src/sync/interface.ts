@@ -5,6 +5,7 @@ import {IRegularSync} from "./regular";
 import {IGossipHandler} from "./gossip";
 import {IReqRespHandler} from "./reqResp";
 import {IBeaconChain} from "../chain";
+import {IBeaconMetrics} from "../metrics";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBeaconDb} from "../db/api";
 import {AttestationCollector} from "./utils";
@@ -41,6 +42,7 @@ export interface ISyncModules {
   db: IBeaconDb;
   logger: ILogger;
   chain: IBeaconChain;
+  metrics: IBeaconMetrics;
   regularSync?: IRegularSync;
   reqRespHandler?: IReqRespHandler;
   gossipHandler?: IGossipHandler;

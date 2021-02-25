@@ -152,6 +152,7 @@ export class BeaconNode {
       config,
       db,
       chain,
+      metrics,
       network,
       logger: logger.child(opts.logger.sync),
     });
