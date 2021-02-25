@@ -26,6 +26,7 @@ describe("sync req resp", function () {
   const logger = testLogger();
   const sandbox = sinon.createSandbox();
   const metrics = sandbox.createStubInstance(BeaconMetrics);
+  metrics.peerGoodbyeReceived = {inc: sinon.stub()} as any;
   let syncRpc: BeaconReqRespHandler;
   let chainStub: StubbedBeaconChain,
     networkStub: SinonStubbedInstance<Network>,
