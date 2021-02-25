@@ -60,10 +60,10 @@ export class JobQueue {
       } catch (e) {
         reject(e);
       } finally {
-        this.currentSize--;
         this.opts.onJobDone?.({ms: Date.now() - start});
       }
     }
+    this.currentSize--;
   }
 
   enqueueJob<T extends Job>(job: T): Promise<ReturnType<T>> {
