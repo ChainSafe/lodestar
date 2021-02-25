@@ -139,6 +139,8 @@ export interface IBeaconMetrics extends IMetrics {
   peerGoodbyeReceived: Gauge;
   /** Number of goodbye sent, labeled by reason */
   peerGoodbyeSent: Gauge;
+  /** Total number of unique peers that have had a connection with */
+  peersTotalUniqueConnected: Gauge;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-empty-interface

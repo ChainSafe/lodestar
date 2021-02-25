@@ -49,6 +49,8 @@ export class Network extends (EventEmitter as {new (): NetworkEventEmitter}) imp
   private metrics: IBeaconMetrics;
   private diversifyPeersTask: DiversifyPeersBySubnetTask;
   private checkPeerAliveTask: CheckPeerAliveTask;
+  /** To count total number of unique seen peers */
+  private seenPeers = new Set();
 
   public constructor(
     opts: INetworkOptions & IReqRespOptions,
@@ -268,6 +270,9 @@ export class Network extends (EventEmitter as {new (): NetworkEventEmitter}) imp
     this.emit(NetworkEvent.peerConnect, conn.remotePeer, conn.stat.direction);
     this.metrics.peerConnectedEvent.inc({direction: conn.stat.direction});
     this.runPeerCountMetrics();
+
+    this.seenPeers.add(conn.remotePeer.toB58String());
+    this.metrics.peersTotalUniqueConnected.set(this.seenPeers.size);
   };
 
   private emitPeerDisconnect = (conn: LibP2pConnection): void => {

@@ -42,6 +42,7 @@ export class BeaconMetrics extends Metrics implements IBeaconMetrics {
   peerDisconnectedEvent: Gauge;
   peerGoodbyeReceived: Gauge;
   peerGoodbyeSent: Gauge;
+  peersTotalUniqueConnected: Gauge;
 
   private logger: ILogger;
 
@@ -227,6 +228,12 @@ export class BeaconMetrics extends Metrics implements IBeaconMetrics {
       name: "lodestar_peer_goodbye_sent",
       help: "Number of goodbye sent, labeled by reason",
       labelNames: ["reason"],
+      registers,
+    });
+
+    this.peersTotalUniqueConnected = new Gauge({
+      name: "lodestar_peers_total_unique_connected",
+      help: "Total number of unique peers that have had a connection with",
       registers,
     });
   }
