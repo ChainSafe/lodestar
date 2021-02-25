@@ -10,6 +10,7 @@ import {IBeaconDb} from "../../../src/db/api";
 import {Network} from "../../../src/network";
 import {ReqResp} from "../../../src/network/reqresp/reqResp";
 import {BeaconReqRespHandler} from "../../../src/sync/reqResp";
+import {BeaconMetrics} from "../../../src/metrics";
 import {generateEmptySignedBlock} from "../../utils/block";
 import {getBlockSummary} from "../../utils/headBlockInfo";
 import {testLogger} from "../../utils/logger";
@@ -24,6 +25,8 @@ describe("sync req resp", function () {
   const peerId = new PeerId(Buffer.from("lodestar"));
   const logger = testLogger();
   const sandbox = sinon.createSandbox();
+  const metrics = sandbox.createStubInstance(BeaconMetrics);
+  metrics.peerGoodbyeReceived = {inc: sinon.stub()} as any;
   let syncRpc: BeaconReqRespHandler;
   let chainStub: StubbedBeaconChain,
     networkStub: SinonStubbedInstance<Network>,
@@ -51,6 +54,7 @@ describe("sync req resp", function () {
       db: (dbStub as unknown) as IBeaconDb,
       chain: chainStub,
       network: networkStub,
+      metrics,
       logger,
     });
   });

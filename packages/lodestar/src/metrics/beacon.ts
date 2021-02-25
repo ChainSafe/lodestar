@@ -37,6 +37,12 @@ export class BeaconMetrics extends Metrics implements IBeaconMetrics {
   public observedEpochAttesters: Gauge;
   public observedEpochAggregators: Gauge;
   public blockProcessorTotalAsyncTime: Gauge;
+  peersByDirection: Gauge;
+  peerConnectedEvent: Gauge;
+  peerDisconnectedEvent: Gauge;
+  peerGoodbyeReceived: Gauge;
+  peerGoodbyeSent: Gauge;
+  peersTotalUniqueConnected: Gauge;
 
   private logger: ILogger;
 
@@ -187,6 +193,47 @@ export class BeaconMetrics extends Metrics implements IBeaconMetrics {
     this.blockProcessorTotalAsyncTime = new Gauge({
       name: "lodestar_block_processor_total_async_time",
       help: "Total number of seconds spent completing block processor async jobs",
+      registers,
+    });
+
+    this.peersByDirection = new Gauge({
+      name: "lodestar_peers_by_direction",
+      help: "number of peers, labeled by direction",
+      labelNames: ["direction"],
+      registers,
+    });
+
+    this.peerConnectedEvent = new Gauge({
+      name: "lodestar_peer_connected",
+      help: "Number of peer:connected event, labeled by direction",
+      labelNames: ["direction"],
+      registers,
+    });
+
+    this.peerDisconnectedEvent = new Gauge({
+      name: "lodestar_peer_disconnected",
+      help: "Number of peer:disconnected event, labeled by direction",
+      labelNames: ["direction"],
+      registers,
+    });
+
+    this.peerGoodbyeReceived = new Gauge({
+      name: "lodestar_peer_goodbye_received",
+      help: "Number of goodbye received, labeled by reason",
+      labelNames: ["reason"],
+      registers,
+    });
+
+    this.peerGoodbyeSent = new Gauge({
+      name: "lodestar_peer_goodbye_sent",
+      help: "Number of goodbye sent, labeled by reason",
+      labelNames: ["reason"],
+      registers,
+    });
+
+    this.peersTotalUniqueConnected = new Gauge({
+      name: "lodestar_peers_total_unique_connected",
+      help: "Total number of unique peers that have had a connection with",
       registers,
     });
   }

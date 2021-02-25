@@ -49,6 +49,8 @@ export class Network extends (EventEmitter as {new (): NetworkEventEmitter}) imp
   private metrics: IBeaconMetrics;
   private diversifyPeersTask: DiversifyPeersBySubnetTask;
   private checkPeerAliveTask: CheckPeerAliveTask;
+  /** To count total number of unique seen peers */
+  private seenPeers = new Set();
 
   public constructor(
     opts: INetworkOptions & IReqRespOptions,
@@ -261,17 +263,43 @@ export class Network extends (EventEmitter as {new (): NetworkEventEmitter}) imp
   };
 
   private emitPeerConnect = (conn: LibP2pConnection): void => {
-    this.metrics.peers.inc();
     this.logger.verbose("peer connected", {peerId: conn.remotePeer.toB58String(), direction: conn.stat.direction});
 
     // tmp fix, we will just do double status exchange but nothing major
     // TODO: fix it?
     this.emit(NetworkEvent.peerConnect, conn.remotePeer, conn.stat.direction);
+    this.metrics.peerConnectedEvent.inc({direction: conn.stat.direction});
+    this.runPeerCountMetrics();
+
+    this.seenPeers.add(conn.remotePeer.toB58String());
+    this.metrics.peersTotalUniqueConnected.set(this.seenPeers.size);
   };
 
   private emitPeerDisconnect = (conn: LibP2pConnection): void => {
     this.logger.verbose("peer disconnected", {peerId: conn.remotePeer.toB58String()});
-    this.metrics.peers.dec();
+
     this.emit(NetworkEvent.peerDisconnect, conn.remotePeer);
+    this.metrics.peerDisconnectedEvent.inc({direction: conn.stat.direction});
+    this.runPeerCountMetrics();
   };
+
+  /** Register peer count metrics */
+  private runPeerCountMetrics(): void {
+    let total = 0;
+    const peersByDirection = new Map<string, number>();
+    for (const connections of this.libp2p.connectionManager.connections.values()) {
+      const cnx = connections.find((cnx) => cnx.stat.status === "open");
+      if (cnx) {
+        const direction = cnx.stat.direction;
+        peersByDirection.set(direction, 1 + (peersByDirection.get(direction) ?? 0));
+        total++;
+      }
+    }
+
+    for (const [direction, peers] of peersByDirection.entries()) {
+      this.metrics.peersByDirection.set({direction}, peers);
+    }
+
+    this.metrics.peers.set(total);
+  }
 }
