@@ -2,14 +2,14 @@ import {expect} from "chai";
 import PeerId from "peer-id";
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {Epoch} from "@chainsafe/lodestar-types";
-import {testLogger} from "../../../utils/logger";
-import {Batch, BatchOpts, BatchStatus} from "../../../../src/sync/range/batch";
+import {testLogger} from "../../../../utils/logger";
+import {Batch, BatchOpts, BatchStatus} from "../../../../../src/sync/range/batch";
 import {
   validateBatchesStatus,
   getNextBatchToProcess,
   toBeProcessedStartEpoch,
   toBeDownloadedStartEpoch,
-} from "../../../../src/sync/range/batches";
+} from "../../../../../src/sync/range/utils/batches";
 
 describe("sync / range / batches", () => {
   const logger = testLogger();
