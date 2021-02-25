@@ -1,11 +1,11 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {lightclient, ValidatorFlag, Gwei} from "@chainsafe/lodestar-types";
-import {getUnslashedParticipatingIndices} from "../state_accessor/index";
-import {getPreviousEpoch} from "../../util/epoch";
-import {getTotalBalance, getTotalActiveBalance} from "../../util/balance";
-import {REWARD_DENOMINATOR, TIMELY_TARGET_FLAG} from "../constants";
-import {getFlagsAndNumerators} from "../misc";
-import {phase0} from "../..";
+import {getUnslashedParticipatingIndices} from "../../state_accessor/index";
+import {getPreviousEpoch} from "../../../util/epoch";
+import {getTotalBalance, getTotalActiveBalance} from "../../../util/balance";
+import {REWARD_DENOMINATOR, TIMELY_TARGET_FLAG} from "../../constants";
+import {getFlagsAndNumerators} from "../../misc";
+import {phase0} from "../../..";
 
 /**
  *  Compute the rewards and penalties associated with a particular duty, by scanning through the participation

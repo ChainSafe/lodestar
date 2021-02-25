@@ -1,22 +1,18 @@
 import {join} from "path";
 import {expect} from "chai";
 
-import {config} from "@chainsafe/lodestar-config/mainnet";
-import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
+import {config} from "@chainsafe/lodestar-config/minimal";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util/lib/single";
 import {IStateTestCase} from "../../../utils/specTestTypes/stateTestCase";
 import {SPEC_TEST_LOCATION} from "../../../utils/specTestCases";
+import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
 
 describeDirectorySpecTest<IStateTestCase, phase0.BeaconState>(
-  "epoch final updates mainnet",
-  join(SPEC_TEST_LOCATION, "tests/mainnet/phase0/epoch_processing/final_updates/pyspec_tests"),
+  "process randao mixes reset minimal",
+  join(SPEC_TEST_LOCATION, "tests/minimal/phase0/epoch_processing/randao_mixes_reset/pyspec_tests"),
   (testcase) => {
     const state = testcase.pre;
-    const epochCtx = new phase0.fast.EpochContext(config);
-    epochCtx.loadState(state);
-    const wrappedState = phase0.fast.createCachedValidatorsBeaconState(state);
-    const process = phase0.fast.prepareEpochProcessState(epochCtx, wrappedState);
-    phase0.fast.processFinalUpdates(epochCtx, process, wrappedState);
+    phase0.processRandaoMixesReset(config, state);
     return state;
   },
   {

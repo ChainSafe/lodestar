@@ -6,19 +6,19 @@ import tar from "tar";
 import stream from "stream";
 import {promisify} from "util";
 
-const BASE_URL = "https://github.com/ethereum/eth2.0-spec-tests/releases/download";
-
 export type TestToDownload = "general" | "mainnet" | "minimal";
 export const defaultTestsToDownload: TestToDownload[] = ["general", "mainnet", "minimal"];
+export const defaultSpecTestsRepoUrl = "https://github.com/ethereum/eth2.0-spec-tests";
 
 export interface IDownloadTestsOptions {
+  specTestsRepoUrl?: string;
   specVersion: string;
   outputDir: string;
   testsToDownload?: TestToDownload[];
 }
 
 export async function downloadTests(
-  {specVersion, outputDir, testsToDownload = defaultTestsToDownload}: IDownloadTestsOptions,
+  {specVersion, specTestsRepoUrl, outputDir, testsToDownload = defaultTestsToDownload}: IDownloadTestsOptions,
   // eslint-disable-next-line @typescript-eslint/no-empty-function
   log: (msg: string) => void = () => {}
 ): Promise<void> {
@@ -41,7 +41,7 @@ export async function downloadTests(
 
   await Promise.all(
     testsToDownload.map(async (test) => {
-      const url = `${BASE_URL}/${specVersion}/${test}.tar.gz`;
+      const url = `${specTestsRepoUrl ?? defaultSpecTestsRepoUrl}/releases/download/${specVersion}/${test}.tar.gz`;
 
       // download tar
       const {data, headers} = await axios({
