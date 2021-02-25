@@ -5,7 +5,7 @@ import {ErrorAborted, ILogger} from "@chainsafe/lodestar-utils";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ChainSegmentError} from "../../chain/errors";
 import {ItTrigger} from "../../util/itTrigger";
-import {ChainPeersBalancer} from "./peerBalancer";
+import {ChainPeersBalancer} from "./utils/peerBalancer";
 import {Batch, BatchOpts, BatchMetadata, BatchStatus} from "./batch";
 import {
   validateBatchesStatus,
@@ -13,7 +13,7 @@ import {
   toBeProcessedStartEpoch,
   toBeDownloadedStartEpoch,
   toArr,
-} from "./batches";
+} from "./utils/batches";
 
 export type SyncChainOpts = BatchOpts & {maybeStuckTimeoutMs: number};
 
