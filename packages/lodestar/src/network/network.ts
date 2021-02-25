@@ -33,7 +33,7 @@ interface ILibp2pModules {
   chain: IBeaconChain;
 }
 
-export class Libp2pNetwork extends (EventEmitter as {new (): NetworkEventEmitter}) implements INetwork {
+export class Network extends (EventEmitter as {new (): NetworkEventEmitter}) implements INetwork {
   public peerId: PeerId;
   public localMultiaddrs!: Multiaddr[];
   public reqResp: ReqResp;

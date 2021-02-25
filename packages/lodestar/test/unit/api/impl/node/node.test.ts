@@ -1,7 +1,7 @@
 import {INodeApi} from "../../../../../src/api/impl/node";
 import {NodeApi} from "../../../../../src/api/impl/node/node";
 import sinon, {SinonStubbedInstance} from "sinon";
-import {createPeerId, INetwork, Libp2pNetwork} from "../../../../../src/network";
+import {createPeerId, INetwork, Network} from "../../../../../src/network";
 import {BeaconSync, IBeaconSync} from "../../../../../src/sync";
 import {createKeypairFromPeerId, ENR} from "@chainsafe/discv5/lib";
 import PeerId from "peer-id";
@@ -34,7 +34,7 @@ describe("node api implementation", function () {
   let syncStub: SinonStubbedInstance<IBeaconSync>;
 
   beforeEach(function () {
-    networkStub = sinon.createStubInstance(Libp2pNetwork);
+    networkStub = sinon.createStubInstance(Network);
     syncStub = sinon.createStubInstance(BeaconSync);
     api = new NodeApi({}, {network: networkStub, sync: syncStub});
   });

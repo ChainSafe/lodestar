@@ -3,7 +3,7 @@ import sinon, {SinonStub, SinonStubbedInstance} from "sinon";
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {BlockRangeFetcher} from "../../../../../src/sync/regular/oneRangeAhead/fetcher";
 import {BeaconChain, IBeaconChain} from "../../../../../src/chain";
-import {INetwork, Libp2pNetwork} from "../../../../../src/network";
+import {INetwork, Network} from "../../../../../src/network";
 import {WinstonLogger} from "@chainsafe/lodestar-utils";
 import PeerId from "peer-id";
 import * as blockUtils from "../../../../../src/sync/utils/blocks";
@@ -34,7 +34,7 @@ describe("BlockRangeFetcher", function () {
     chainStub = sandbox.createStubInstance(BeaconChain);
     clockStub = sandbox.createStubInstance(LocalClock);
     chainStub.clock = clockStub;
-    networkStub = sandbox.createStubInstance(Libp2pNetwork);
+    networkStub = sandbox.createStubInstance(Network);
     metadataStub = getStubbedMetadataStore();
     networkStub.peerMetadata = metadataStub;
     fetcher = new BlockRangeFetcher(

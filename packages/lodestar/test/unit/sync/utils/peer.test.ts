@@ -1,5 +1,5 @@
 import {SinonStubbedInstance} from "sinon";
-import {INetwork, Libp2pNetwork} from "../../../../src/network";
+import {INetwork, Network} from "../../../../src/network";
 import sinon from "sinon";
 import {getSyncPeers} from "../../../../src/sync/utils/peers";
 import {expect} from "chai";
@@ -12,7 +12,7 @@ describe("sync peer utils", function () {
   let peerScoreStub: SinonStubbedInstance<IPeerRpcScoreStore>;
 
   beforeEach(function () {
-    networkStub = sinon.createStubInstance(Libp2pNetwork);
+    networkStub = sinon.createStubInstance(Network);
     peerScoreStub = sinon.createStubInstance(PeerRpcScoreStore);
     networkStub.peerRpcScores = peerScoreStub;
   });

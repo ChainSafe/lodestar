@@ -9,7 +9,7 @@ import {expect, use} from "chai";
 import chaiAsPromised from "chai-as-promised";
 import {generateEmptySignedBlock} from "../../../../../utils/block";
 import {BeaconSync} from "../../../../../../src/sync/sync";
-import {Libp2pNetwork} from "../../../../../../src/network";
+import {Network} from "../../../../../../src/network";
 
 use(chaiAsPromised);
 
@@ -34,7 +34,7 @@ describe("api - beacon - getBlock", function () {
         chain: chainStub,
         config,
         db: dbStub,
-        network: sinon.createStubInstance(Libp2pNetwork),
+        network: sinon.createStubInstance(Network),
         sync: sinon.createStubInstance(BeaconSync),
       }
     );

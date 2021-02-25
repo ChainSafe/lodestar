@@ -1,6 +1,6 @@
 import sinon, {SinonStubbedInstance} from "sinon";
 import {CheckPeerAliveTask} from "../../../../src/network/tasks/checkPeerAliveTask";
-import {INetwork, IReqResp, Libp2pNetwork} from "../../../../src/network";
+import {INetwork, IReqResp, Network} from "../../../../src/network";
 import {ReqResp} from "../../../../src/network/reqresp/reqResp";
 import {WinstonLogger} from "@chainsafe/lodestar-utils";
 import {config} from "@chainsafe/lodestar-config/mainnet";
@@ -16,7 +16,7 @@ describe("CheckPeerAliveTask", function () {
   let peerId: PeerId;
 
   beforeEach(async () => {
-    networkStub = sinon.createStubInstance(Libp2pNetwork);
+    networkStub = sinon.createStubInstance(Network);
     reqRespStub = sinon.createStubInstance(ReqResp);
     networkStub.reqResp = reqRespStub;
     peerMetadataStub = getStubbedMetadataStore();

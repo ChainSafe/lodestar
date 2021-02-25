@@ -6,7 +6,7 @@ import {LogLevel, sleep, WinstonLogger} from "@chainsafe/lodestar-utils";
 import {phase0} from "@chainsafe/lodestar-types";
 import {Method, ReqRespEncoding} from "../../../src/constants";
 import {BeaconMetrics} from "../../../src/metrics";
-import {createPeerId, IReqRespOptions, Libp2pNetwork, NetworkEvent} from "../../../src/network";
+import {createPeerId, IReqRespOptions, Network, NetworkEvent} from "../../../src/network";
 import {GossipMessageValidator} from "../../../src/network/gossip/validator";
 import {INetworkOptions} from "../../../src/network/options";
 import {RequestError, RequestErrorCode} from "../../../src/network/reqresp/request";
@@ -48,13 +48,13 @@ describe("[network] network", function () {
     }
   });
 
-  async function createAndConnectPeers(reqRespOpts?: IReqRespOptions): Promise<[Libp2pNetwork, Libp2pNetwork]> {
+  async function createAndConnectPeers(reqRespOpts?: IReqRespOptions): Promise<[Network, Network]> {
     const peerIdB = await createPeerId();
     const [libP2pA, libP2pB] = await Promise.all([createNode(multiaddr), createNode(multiaddr, peerIdB)]);
 
     const opts = {...networkOptsDefault, ...reqRespOpts};
-    const netA = new Libp2pNetwork(opts, {config, libp2p: libP2pA, logger: testLogger("A"), metrics, validator, chain});
-    const netB = new Libp2pNetwork(opts, {config, libp2p: libP2pB, logger: testLogger("B"), metrics, validator, chain});
+    const netA = new Network(opts, {config, libp2p: libP2pA, logger: testLogger("A"), metrics, validator, chain});
+    const netB = new Network(opts, {config, libp2p: libP2pB, logger: testLogger("B"), metrics, validator, chain});
     await Promise.all([netA.start(), netB.start()]);
 
     const connected = Promise.all([

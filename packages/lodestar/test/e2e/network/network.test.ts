@@ -7,7 +7,7 @@ import PeerId from "peer-id";
 import sinon, {SinonStubbedInstance} from "sinon";
 import {IBeaconChain} from "../../../src/chain";
 import {BeaconMetrics} from "../../../src/metrics";
-import {createPeerId, Libp2pNetwork, NetworkEvent} from "../../../src/network";
+import {createPeerId, Network, NetworkEvent} from "../../../src/network";
 import {ExtendedValidatorResult} from "../../../src/network/gossip/constants";
 import {getAttestationSubnetEvent} from "../../../src/network/gossip/utils";
 import {GossipMessageValidator} from "../../../src/network/gossip/validator";
@@ -32,7 +32,7 @@ const opts: INetworkOptions = {
 
 describe("[network] network", function () {
   this.timeout(5000);
-  let netA: Libp2pNetwork, netB: Libp2pNetwork;
+  let netA: Network, netB: Network;
   let peerIdB: PeerId;
   let libP2pA: LibP2p;
   let libP2pB: LibP2p;
@@ -66,8 +66,8 @@ describe("[network] network", function () {
     });
     peerIdB = await createPeerId();
     [libP2pA, libP2pB] = await Promise.all([createNode(multiaddr), createNode(multiaddr, peerIdB)]);
-    netA = new Libp2pNetwork(opts, {config, libp2p: libP2pA, logger, metrics, validator, chain});
-    netB = new Libp2pNetwork(opts, {config, libp2p: libP2pB, logger, metrics, validator, chain});
+    netA = new Network(opts, {config, libp2p: libP2pA, logger, metrics, validator, chain});
+    netB = new Network(opts, {config, libp2p: libP2pB, logger, metrics, validator, chain});
     await Promise.all([netA.start(), netB.start()]);
   });
 

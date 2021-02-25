@@ -6,7 +6,7 @@ import {StubbedBeaconDb} from "../../../../utils/stub";
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {expect} from "chai";
 import {generateState} from "../../../../utils/state";
-import {Libp2pNetwork} from "../../../../../src/network/network";
+import {Network} from "../../../../../src/network/network";
 
 describe("beacon api implementation", function () {
   let api: BeaconApi;
@@ -24,7 +24,7 @@ describe("beacon api implementation", function () {
         config,
         chain: chainStub,
         db: dbStub,
-        network: sinon.createStubInstance(Libp2pNetwork),
+        network: sinon.createStubInstance(Network),
         sync: syncStub,
       }
     );
