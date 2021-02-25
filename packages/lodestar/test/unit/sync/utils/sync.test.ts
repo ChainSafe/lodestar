@@ -17,7 +17,7 @@ import {
 } from "../../../../src/sync/utils";
 import {generateBlockSummary, generateEmptySignedBlock} from "../../../utils/block";
 import {ZERO_HASH} from "@chainsafe/lodestar-beacon-state-transition";
-import {INetwork, Libp2pNetwork} from "../../../../src/network";
+import {INetwork, Network} from "../../../../src/network";
 import {generatePeer} from "../../../utils/peer";
 import {IPeerRpcScoreStore, PeerRpcScoreStore, ScoreState} from "../../../../src/network/peers";
 import {getStubbedMetadataStore, StubbedIPeerMetadataStore} from "../../../utils/peer";
@@ -98,7 +98,7 @@ describe("sync utils", function () {
 
     beforeEach(() => {
       metastoreStub = getStubbedMetadataStore();
-      networkStub = sinon.createStubInstance(Libp2pNetwork);
+      networkStub = sinon.createStubInstance(Network);
       networkStub.peerMetadata = metastoreStub;
       forkChoiceStub = sinon.createStubInstance(ForkChoice) as SinonStubbedInstance<ForkChoice> & ForkChoice;
       peerScoreStub = sinon.createStubInstance(PeerRpcScoreStore);

@@ -8,7 +8,7 @@ import {StubbedBeaconDb} from "../../../../../utils/stub";
 import {expect, use} from "chai";
 import chaiAsPromised from "chai-as-promised";
 import {generateEmptySignedBlock} from "../../../../../utils/block";
-import {Libp2pNetwork} from "../../../../../../src/network/network";
+import {Network} from "../../../../../../src/network/network";
 import {BeaconSync} from "../../../../../../src/sync/sync";
 
 use(chaiAsPromised);
@@ -34,7 +34,7 @@ describe("api - beacon - getBlockHeader", function () {
         chain: chainStub,
         config,
         db: dbStub,
-        network: sinon.createStubInstance(Libp2pNetwork),
+        network: sinon.createStubInstance(Network),
         sync: sinon.createStubInstance(BeaconSync),
       }
     );

@@ -8,7 +8,7 @@ import {BeaconChain} from "../../../../../src/chain/chain";
 import {IEth1ForBlockProduction} from "../../../../../src/eth1";
 import {Eth1ForBlockProduction} from "../../../../../src/eth1/eth1ForBlockProduction";
 import {INetwork} from "../../../../../src/network/interface";
-import {Libp2pNetwork} from "../../../../../src/network/network";
+import {Network} from "../../../../../src/network/network";
 import {BeaconSync} from "../../../../../src/sync/sync";
 import {testLogger} from "../../../../utils/logger";
 import {StubbedBeaconDb} from "../../../../utils/stub/beaconDb";
@@ -30,7 +30,7 @@ describe("api - validator - produceAttestationData", function () {
     chainStub = sinon.createStubInstance(BeaconChain);
     dbStub = new StubbedBeaconDb(sinon);
     eth1Stub = sinon.createStubInstance(Eth1ForBlockProduction);
-    networkStub = sinon.createStubInstance(Libp2pNetwork);
+    networkStub = sinon.createStubInstance(Network);
     syncStub = sinon.createStubInstance(BeaconSync);
     modules = {
       chain: chainStub,

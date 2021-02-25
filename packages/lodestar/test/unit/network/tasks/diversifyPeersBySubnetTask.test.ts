@@ -1,5 +1,5 @@
 import sinon, {SinonStubbedInstance} from "sinon";
-import {INetwork, IReqResp, Libp2pNetwork} from "../../../../src/network";
+import {INetwork, IReqResp, Network} from "../../../../src/network";
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import {ReqResp} from "../../../../src/network/reqresp/reqResp";
 import {DiversifyPeersBySubnetTask} from "../../../../src/network/tasks/diversifyPeersBySubnetTask";
@@ -15,7 +15,7 @@ describe("DiversifyPeersBySubnetTask", function () {
   let task: DiversifyPeersBySubnetTask;
 
   beforeEach(() => {
-    networkStub = sinon.createStubInstance(Libp2pNetwork);
+    networkStub = sinon.createStubInstance(Network);
     reqRespStub = sinon.createStubInstance(ReqResp);
     networkStub.reqResp = reqRespStub;
     peerMetadataStore = getStubbedMetadataStore();
