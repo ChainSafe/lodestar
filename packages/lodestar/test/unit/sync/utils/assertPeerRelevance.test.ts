@@ -16,21 +16,7 @@ describe("sync / utils / assertPeerRelevance", () => {
   const ZERO_HASH = Buffer.alloc(32, 0);
   const differedRoot = Buffer.alloc(32, 1);
 
-  // Partial instance with only the methods needed for the test
-  const chain = ({
-    getStatus: () => ({
-      forkDigest: correctForkDigest,
-      finalizedRoot: ZERO_HASH,
-      finalizedEpoch: 0,
-      headRoot: ZERO_HASH,
-      headSlot: 0,
-    }),
-    clock: {
-      currentSlot: 0,
-    } as Partial<IBeaconClock>,
-  } as Partial<MockBeaconChain>) as MockBeaconChain;
-
-  const testCases: {id: string; remote: phase0.Status; error?: IrrelevantPeerError}[] = [
+  const testCases: {id: string; remote: phase0.Status; currentSlot?: number; error?: IrrelevantPeerError}[] = [
     {
       id: "Reject incompatible forks",
       remote: {
@@ -88,10 +74,36 @@ describe("sync / utils / assertPeerRelevance", () => {
         headSlot: 0,
       },
     },
+    {
+      id: "Accept during pre-genesis clock",
+      remote: {
+        forkDigest: correctForkDigest,
+        finalizedRoot: ZERO_HASH,
+        finalizedEpoch: 0,
+        headRoot: ZERO_HASH,
+        headSlot: 0,
+      },
+      // clock slot pre-genesis (< 0) by a good margin
+      currentSlot: -50,
+    },
   ];
 
-  for (const {id, remote, error} of testCases) {
+  for (const {id, remote, currentSlot, error} of testCases) {
     it(id, async () => {
+      // Partial instance with only the methods needed for the test
+      const chain = ({
+        getStatus: () => ({
+          forkDigest: correctForkDigest,
+          finalizedRoot: ZERO_HASH,
+          finalizedEpoch: 0,
+          headRoot: ZERO_HASH,
+          headSlot: 0,
+        }),
+        clock: {
+          currentSlot: currentSlot || 0,
+        } as Partial<IBeaconClock>,
+      } as Partial<MockBeaconChain>) as MockBeaconChain;
+
       if (error) {
         expectThrowsLodestarError(() => assertPeerRelevance(remote, chain, config), error);
       } else {
@@ -99,20 +111,4 @@ describe("sync / utils / assertPeerRelevance", () => {
       }
     });
   }
-
-  it("Accept during pre-genesis clock", () => {
-    // clock slot pre-genesis (< 0) by a good margin
-    (chain as any).clock.currentSlot = -50;
-    assertPeerRelevance(
-      {
-        forkDigest: correctForkDigest,
-        finalizedRoot: ZERO_HASH,
-        finalizedEpoch: 0,
-        headRoot: ZERO_HASH,
-        headSlot: 0,
-      },
-      chain,
-      config
-    );
-  });
 });
