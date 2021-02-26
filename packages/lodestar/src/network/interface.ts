@@ -56,8 +56,8 @@ export interface INetwork extends NetworkEventEmitter {
   peerId: PeerId;
   localMultiaddrs: Multiaddr[];
   getEnr(): ENR | undefined;
+  getConnectionsByPeer(): Map<string, LibP2pConnection[]>;
   getPeers(opts?: Partial<PeerSearchOptions>): LibP2p.Peer[];
-  getAllPeers(): LibP2p.Peer[];
   getMaxPeer(): number;
   /**
    * Get the instance of a connection with a given peer.
@@ -84,3 +84,7 @@ export interface INetwork extends NetworkEventEmitter {
   stop(): Promise<void>;
   handleSyncCompleted(): Promise<void>;
 }
+
+export type PeerDirection = LibP2pConnection["stat"]["direction"];
+export type PeerStatus = LibP2pConnection["stat"]["status"];
+export type PeerState = "disconnected" | "connecting" | "connected" | "disconnecting";
