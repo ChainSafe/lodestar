@@ -784,7 +784,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "lodestar_peers",
+          "expr": "lodestar_peers_by_direction",
           "hide": false,
           "interval": "",
           "legendFormat": "{{direction}}",
