@@ -16,7 +16,8 @@ export function getDevValidators(
   node: BeaconNode,
   count = 8,
   validatorClientCount = 1,
-  useRestApi = false
+  useRestApi = false,
+  logger?: ILogger
 ): Validator[] {
   const validatorsPerValidatorClient = intDiv(count, validatorClientCount);
   const vcs: Validator[] = [];
@@ -28,6 +29,7 @@ export function getDevValidators(
           startIndex: vcs.length * validatorsPerValidatorClient,
           count: validatorsPerValidatorClient,
           useRestApi,
+          logger,
         })
       );
     } else {
@@ -37,6 +39,7 @@ export function getDevValidators(
           startIndex: vcs.length * validatorsPerValidatorClient,
           count,
           useRestApi,
+          logger,
         })
       );
     }
