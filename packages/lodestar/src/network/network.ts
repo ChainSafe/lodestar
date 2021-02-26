@@ -114,6 +114,10 @@ export class Network extends (EventEmitter as {new (): NetworkEventEmitter}) imp
     return discv5Discovery?.discv5?.enr ?? undefined;
   }
 
+  public getConnectionsByPeer(): Map<string, LibP2pConnection[]> {
+    return this.libp2p.connectionManager.connections;
+  }
+
   /**
    * Get connected peers.
    * @param opts PeerSearchOptions
@@ -144,14 +148,6 @@ export class Network extends (EventEmitter as {new (): NetworkEventEmitter}) imp
       }) as LibP2p.Peer[];
 
     return peers.slice(0, opts?.count ?? peers.length) || [];
-  }
-
-  /**
-   * Get all peers including disconnected ones.
-   * There are probably more than 10k peers, only the api uses this.
-   */
-  public getAllPeers(): LibP2p.Peer[] {
-    return Array.from(this.libp2p.peerStore.peers.values());
   }
 
   public getMaxPeer(): number {

@@ -1,42 +1,50 @@
+import {PeerStatus, PeerState} from "../../../network";
 import {NodePeer} from "../../types";
-import LibP2p from "libp2p";
-import {INetwork} from "../../../network";
 
-export function getPeerState(status: LibP2pConnection["stat"]["status"]): NodePeer["state"] {
+/**
+ * Format a list of connections from libp2p connections manager into the API's format NodePeer
+ */
+export function formatNodePeer(peerIdStr: string, connections: LibP2pConnection[]): NodePeer {
+  const conn = getRevelantConnection(connections);
+
+  return {
+    peerId: conn ? conn.remotePeer.toB58String() : peerIdStr,
+    // TODO: figure out how to get enr of peer
+    enr: "",
+    lastSeenP2pAddress: conn ? conn.remoteAddr.toString() : "",
+    direction: conn ? conn.stat.direction : null,
+    state: conn ? getPeerState(conn.stat.status) : "disconnected",
+  };
+}
+
+/**
+ * From a list of connections, get the most relevant of a peer
+ * - The first open connection if any
+ * - Otherwise, the first closing connection
+ * - Otherwise, the first closed connection
+ */
+function getRevelantConnection(connections: LibP2pConnection[]): LibP2pConnection | null {
+  const byStatus = new Map<PeerStatus, LibP2pConnection>();
+  for (const conn of connections) {
+    if (conn.stat.status === "open") return conn;
+    if (!byStatus.has(conn.stat.status)) byStatus.set(conn.stat.status, conn);
+  }
+
+  return byStatus.get("open") || byStatus.get("closing") || byStatus.get("closed") || null;
+}
+
+/**
+ * Map libp2p connection status to the API's peer state notation
+ * @param status
+ */
+function getPeerState(status: PeerStatus): PeerState {
   switch (status) {
-    case "closed":
-      return "disconnected";
-    case "closing":
-      return "disconnecting";
     case "open":
       return "connected";
+    case "closing":
+      return "disconnecting";
+    case "closed":
     default:
       return "disconnected";
   }
-}
-
-export function filterByStateAndDirection(
-  peers: LibP2p.Peer[] = [],
-  network: INetwork,
-  state: string[] = [],
-  direction: string[] = []
-): LibP2p.Peer[] {
-  if (!state.length) return peers;
-  return peers.filter((peer) => {
-    const conn = network.getPeerConnection(peer.id);
-    // by default return all states
-    if (state.length) {
-      if (!state.includes("disconnected") && (!conn || conn.stat.status === "closed")) return false;
-      // TODO: not sure how to map "connecting" state
-      if (!state.includes("connected") && conn && conn.stat.status === "open") return false;
-      if (!state.includes("disconnecting") && conn && conn.stat.status === "closing") return false;
-    }
-    // by default return all directions
-    if (direction.length) {
-      if (!direction.includes("inbound") && conn && conn.stat.direction === "inbound") return false;
-      if (!direction.includes("outbound") && conn && conn.stat.direction === "outbound") return false;
-    }
-
-    return true;
-  });
 }
