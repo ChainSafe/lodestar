@@ -9,12 +9,12 @@ import {assert, intToBytes, intDiv} from "@chainsafe/lodestar-utils";
 
 import {getCurrentEpoch} from "./epoch";
 import {getSeed, computeShuffledIndex} from "./seed";
-import {getActiveValidatorIndices} from ".";
+import {getActiveValidatorIndices, BeaconState} from ".";
 
 /**
  * Return the beacon proposer index at ``state.slot``.
  */
-export function getBeaconProposerIndex(config: IBeaconConfig, state: phase0.BeaconState): ValidatorIndex {
+export function getBeaconProposerIndex(config: IBeaconConfig, state: BeaconState): ValidatorIndex {
   const currentEpoch = getCurrentEpoch(config, state);
   const seed = hash(
     Buffer.concat([
@@ -31,7 +31,7 @@ export function getBeaconProposerIndex(config: IBeaconConfig, state: phase0.Beac
  */
 export function computeProposerIndex(
   config: IBeaconConfig,
-  state: phase0.BeaconState,
+  state: BeaconState,
   indices: ValidatorIndex[],
   seed: Uint8Array
 ): ValidatorIndex {

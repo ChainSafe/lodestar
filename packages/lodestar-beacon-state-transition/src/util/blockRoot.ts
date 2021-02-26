@@ -8,11 +8,12 @@ import {assert} from "@chainsafe/lodestar-utils";
 
 import {ZERO_HASH} from "../constants";
 import {computeStartSlotAtEpoch} from "./epoch";
+import { BeaconState } from ".";
 
 /**
  * Return the block root at a recent [[slot]].
  */
-export function getBlockRootAtSlot(config: IBeaconConfig, state: phase0.BeaconState, slot: Slot): Root {
+export function getBlockRootAtSlot(config: IBeaconConfig, state: BeaconState, slot: Slot): Root {
   assert.lt(slot, state.slot, "Cannot get block root for slot in the future");
   assert.lte(
     state.slot,
@@ -25,7 +26,7 @@ export function getBlockRootAtSlot(config: IBeaconConfig, state: phase0.BeaconSt
 /**
  * Return the block root at the start of a recent [[epoch]].
  */
-export function getBlockRoot(config: IBeaconConfig, state: phase0.BeaconState, epoch: Epoch): Root {
+export function getBlockRoot(config: IBeaconConfig, state: BeaconState, epoch: Epoch): Root {
   return getBlockRootAtSlot(config, state, computeStartSlotAtEpoch(config, epoch));
 }
 /**

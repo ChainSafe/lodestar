@@ -1,14 +1,13 @@
-import {phase0, verifyBlockSignature} from "../..";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {lightclient} from "@chainsafe/lodestar-types";
+import {lightclient, phase0 as phase0Types} from "@chainsafe/lodestar-types";
 import {assert} from "@chainsafe/lodestar-utils";
+import {phase0, verifyBlockSignature} from "../..";
 import {processBlock} from "./block";
-import {upgrade} from "./upgrade";
 
-export * from "./sync_committee";
 export * from "./block";
-export * from "./upgrade";
 export * from "./epoch";
+export * from "./sync_committee";
+export * from "./upgrade";
 
 /**
  * The ETH2.0 Beacon Chain state transition function
@@ -28,12 +27,11 @@ export function stateTransition(
   const {verifyStateRoot = true, verifyProposer = true, verifySignatures = true} = options || {};
 
   // Clone state because process slots and block are not pure
-  let postState = config.types.lightclient.BeaconState.clone(state);
+  const postState = config.types.lightclient.BeaconState.clone(state) as lightclient.BeaconState &
+    phase0Types.BeaconState;
   // Process slots (including those with no blocks) since block
   phase0.processSlots(config, postState, signedBlock.message.slot);
-  if (postState.slot === config.params.LIGHTCLIENT_PATCH_FORK_SLOT) {
-    postState = upgrade(config, postState);
-  }
+
   // Verify block signature
   if (verifyProposer) {
     verifyBlockSignature(config, state, signedBlock);

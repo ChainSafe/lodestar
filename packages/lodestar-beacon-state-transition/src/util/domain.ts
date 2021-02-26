@@ -8,6 +8,7 @@ import {ZERO_HASH} from "../constants";
 
 import {getCurrentEpoch} from "./epoch";
 import {computeForkDataRoot} from "./fork";
+import { BeaconState } from ".";
 
 /**
  * Return the domain for the [[domainType]] and [[forkVersion]].
@@ -30,7 +31,7 @@ export function computeDomain(
  */
 export function getDomain(
   config: IBeaconConfig,
-  state: phase0.BeaconState,
+  state: BeaconState,
   domainType: DomainType,
   messageEpoch: Epoch | null = null
 ): Buffer {

@@ -2,9 +2,9 @@
  * @module chain/stateTransition/util
  */
 
-import {Epoch, Slot, phase0} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-
+import {Epoch, Slot} from "@chainsafe/lodestar-types";
+import {BeaconState} from ".";
 import {GENESIS_EPOCH} from "../constants";
 
 /**
@@ -31,14 +31,14 @@ export function computeActivationExitEpoch(config: IBeaconConfig, epoch: Epoch):
 /**
  * Return the current epoch of the given state.
  */
-export function getCurrentEpoch(config: IBeaconConfig, state: phase0.BeaconState): Epoch {
+export function getCurrentEpoch(config: IBeaconConfig, state: BeaconState): Epoch {
   return computeEpochAtSlot(config, state.slot);
 }
 
 /**
  * Return the previous epoch of the given state.
  */
-export function getPreviousEpoch(config: IBeaconConfig, state: phase0.BeaconState): Epoch {
+export function getPreviousEpoch(config: IBeaconConfig, state: BeaconState): Epoch {
   const currentEpoch = getCurrentEpoch(config, state);
   if (currentEpoch === GENESIS_EPOCH) {
     return GENESIS_EPOCH;

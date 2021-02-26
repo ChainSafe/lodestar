@@ -13,7 +13,7 @@ import {phase0} from "../../..";
  */
 export function getFlagDeltas(
   config: IBeaconConfig,
-  state: lightclient.BeaconState,
+  state: lightclient.BeaconState & phase0.BeaconState,
   flag: ValidatorFlag,
   numerator: number
 ): [Gwei[], Gwei[]] {
@@ -50,7 +50,10 @@ export function getFlagDeltas(
  *   flags to determine who participated and who did not, applying the leak penalty globally and applying
  *   compensatory rewards to participants.
  */
-export function getInactivityPenaltyDeltas(config: IBeaconConfig, state: lightclient.BeaconState): [Gwei[], Gwei[]] {
+export function getInactivityPenaltyDeltas(
+  config: IBeaconConfig,
+  state: lightclient.BeaconState & phase0.BeaconState
+): [Gwei[], Gwei[]] {
   const penalties = Array.from({length: state.validators.length}, () => BigInt(0));
   const previousEpoch = getPreviousEpoch(config, state);
 

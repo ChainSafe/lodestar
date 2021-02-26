@@ -2,6 +2,7 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {phase0} from "@chainsafe/lodestar-types";
 
 import {FAR_FUTURE_EPOCH} from "../constants";
+import {BeaconState} from ".";
 
 /**
  * Check if ``validator`` is eligible to be placed into the activation queue.
@@ -18,7 +19,7 @@ export function isEligibleForActivationQueue(config: IBeaconConfig, validator: p
  */
 export function isEligibleForActivation(
   config: IBeaconConfig,
-  state: phase0.BeaconState,
+  state: BeaconState,
   validator: phase0.Validator
 ): boolean {
   return (

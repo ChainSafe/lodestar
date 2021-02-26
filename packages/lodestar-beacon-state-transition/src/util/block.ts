@@ -3,13 +3,14 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {phase0} from "@chainsafe/lodestar-types";
 import {getDomain} from "./domain";
 import {computeSigningRoot} from "./signingRoot";
+import {BeaconState} from ".";
 
 export function verifyBlockSignature(
   config: IBeaconConfig,
-  state: phase0.BeaconState,
+  state: BeaconState,
   signedBlock: phase0.SignedBeaconBlock
 ): boolean {
-  const domain = getDomain(config, state, config.params.DOMAIN_BEACON_PROPOSER);
+  const domain = getDomain(config, state as phase0.BeaconState, config.params.DOMAIN_BEACON_PROPOSER);
   const signingRoot = computeSigningRoot(config, config.types.phase0.BeaconBlock, signedBlock.message, domain);
   const proposer = state.validators[signedBlock.message.proposerIndex];
   return bls.verify(

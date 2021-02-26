@@ -1,5 +1,5 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {lightclient} from "@chainsafe/lodestar-types";
+import {lightclient, phase0} from "@chainsafe/lodestar-types";
 import {getCurrentEpoch} from "../../../util";
 import {getSyncCommittee} from "../..";
 

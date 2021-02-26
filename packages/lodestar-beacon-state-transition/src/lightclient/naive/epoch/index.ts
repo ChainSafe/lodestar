@@ -11,7 +11,10 @@ export * from "./rewards_and_penalties";
 export * from "./flag";
 export * from "./sync_committee";
 
-export function processEpoch(config: IBeaconConfig, state: lightclient.BeaconState): lightclient.BeaconState {
+export function processEpoch(
+  config: IBeaconConfig,
+  state: lightclient.BeaconState & phase0.BeaconState
+): lightclient.BeaconState {
   // Justification
   processJustificationAndFinalization(config, state);
 

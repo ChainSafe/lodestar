@@ -1,11 +1,14 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {lightclient} from "@chainsafe/lodestar-types";
+import {lightclient, phase0} from "@chainsafe/lodestar-types";
 import {getCurrentEpoch, GENESIS_EPOCH} from "../../..";
 import {getFlagsAndNumerators} from "../../misc";
 import {getFlagDeltas, getInactivityPenaltyDeltas} from "./balance_utils";
 import {increaseBalance, decreaseBalance} from "../../../util/balance";
 
-export function processRewardsAndPenalties(config: IBeaconConfig, state: lightclient.BeaconState): void {
+export function processRewardsAndPenalties(
+  config: IBeaconConfig,
+  state: lightclient.BeaconState & phase0.BeaconState
+): void {
   if (getCurrentEpoch(config, state) == GENESIS_EPOCH) {
     return;
   }

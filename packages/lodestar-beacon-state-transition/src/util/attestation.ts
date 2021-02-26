@@ -11,6 +11,7 @@ import {getBeaconCommittee, getCommitteeCountAtSlot} from "./committee";
 import {getDomain} from "./domain";
 import {computeSigningRoot} from "./signingRoot";
 import {computeSlotsSinceEpochStart} from "./slot";
+import { BeaconState } from ".";
 
 /**
  * Check if [[data1]] and [[data2]] are slashable according to Casper FFG rules.
@@ -33,7 +34,7 @@ export function isSlashableAttestationData(
  */
 export function isValidIndexedAttestation(
   config: IBeaconConfig,
-  state: phase0.BeaconState,
+  state: BeaconState,
   indexedAttestation: phase0.IndexedAttestation,
   verifySignature = true
 ): boolean {
@@ -65,7 +66,7 @@ export function isValidIndexedAttestation(
  */
 export function getAttestingIndices(
   config: IBeaconConfig,
-  state: phase0.BeaconState,
+  state: BeaconState,
   data: phase0.AttestationData,
   bits: BitList
 ): ValidatorIndex[] {
@@ -87,7 +88,7 @@ export function getAttestingIndicesFromCommittee(committee: ValidatorIndex[], bi
  */
 export function getIndexedAttestation(
   config: IBeaconConfig,
-  state: phase0.BeaconState,
+  state: BeaconState,
   attestation: phase0.Attestation
 ): phase0.IndexedAttestation {
   const attestingIndices = getAttestingIndices(config, state, attestation.data, attestation.aggregationBits);
@@ -124,7 +125,7 @@ export function isUnaggregatedAttestation(attestation: phase0.Attestation): bool
  */
 export function computeSubnetForAttestation(
   config: IBeaconConfig,
-  state: phase0.BeaconState,
+  state: BeaconState,
   attestation: phase0.Attestation
 ): number {
   const {slot, index} = attestation.data;
@@ -136,7 +137,7 @@ export function computeSubnetForAttestation(
  */
 export function computeSubnetForSlot(
   config: IBeaconConfig,
-  state: phase0.BeaconState,
+  state: BeaconState,
   slot: number,
   committeeIndex: number
 ): number {

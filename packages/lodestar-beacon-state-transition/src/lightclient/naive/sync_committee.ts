@@ -22,7 +22,7 @@ const MAX_RANDOM_BYTE = BigInt(2 ** 8 - 1);
 
 export function processSyncCommittee(
   config: IBeaconConfig,
-  state: lightclient.BeaconState,
+  state: lightclient.BeaconState & phase0.BeaconState,
   block: lightclient.BeaconBlock
 ): void {
   const previousSlot = Math.max(state.slot, 1) - 1;
@@ -73,16 +73,16 @@ export function processSyncCommittee(
  */
 export function getSyncCommitteeIndices(
   config: IBeaconConfig,
-  state: lightclient.BeaconState,
+  state: lightclient.BeaconState | phase0.BeaconState,
   epoch: Epoch
 ): ValidatorIndex[] {
   const baseEpoch =
     (Math.max(intDiv(epoch, config.params.EPOCHS_PER_SYNC_COMMITTEE_PERIOD), 1) - 1) *
     config.params.EPOCHS_PER_SYNC_COMMITTEE_PERIOD;
 
-  const activeValidatorIndices = getActiveValidatorIndices(state, baseEpoch);
+  const activeValidatorIndices = getActiveValidatorIndices(state as phase0.BeaconState, baseEpoch);
   const activeValidatorCount = activeValidatorIndices.length;
-  const seed = getSeed(config, state, baseEpoch, config.params.DOMAIN_SYNC_COMMITTEE);
+  const seed = getSeed(config, state as phase0.BeaconState, baseEpoch, config.params.DOMAIN_SYNC_COMMITTEE);
   let i = 0;
   const syncCommitteeIndices = [];
   while (syncCommitteeIndices.length < config.params.SYNC_COMMITTEE_SIZE) {
@@ -103,7 +103,7 @@ export function getSyncCommitteeIndices(
  */
 export function getSyncCommittee(
   config: IBeaconConfig,
-  state: lightclient.BeaconState,
+  state: lightclient.BeaconState | phase0.BeaconState,
   epoch: Epoch
 ): lightclient.SyncCommittee {
   const indices = getSyncCommitteeIndices(config, state, epoch);
