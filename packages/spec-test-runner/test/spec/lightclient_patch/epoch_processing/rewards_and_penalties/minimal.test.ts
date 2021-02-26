@@ -27,7 +27,6 @@ describeDirectorySpecTest<ILightclientStateTestCase, lightclientTypes.BeaconStat
     },
     getExpected: (testCase) => testCase.post,
     expectFunc: (testCase, expected, actual) => {
-      expect(actual).to.be.deep.equal(expected);
       expect(config.types.lightclient.BeaconState.equals(actual, expected)).to.be.true;
     },
   }

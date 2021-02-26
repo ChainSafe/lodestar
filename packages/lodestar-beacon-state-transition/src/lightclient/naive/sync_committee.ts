@@ -71,7 +71,7 @@ export function processSyncCommittee(
 /**
  * Return the sync committee indices for a given state and epoch.
  */
-export function getSyncCommitteeIndices(
+export function   getSyncCommitteeIndices(
   config: IBeaconConfig,
   state: lightclient.BeaconState | phase0.BeaconState,
   epoch: Epoch
@@ -80,15 +80,15 @@ export function getSyncCommitteeIndices(
     (Math.max(intDiv(epoch, config.params.EPOCHS_PER_SYNC_COMMITTEE_PERIOD), 1) - 1) *
     config.params.EPOCHS_PER_SYNC_COMMITTEE_PERIOD;
 
-  const activeValidatorIndices = getActiveValidatorIndices(state as phase0.BeaconState, baseEpoch);
+  const activeValidatorIndices = getActiveValidatorIndices(state, baseEpoch);
   const activeValidatorCount = activeValidatorIndices.length;
-  const seed = getSeed(config, state as phase0.BeaconState, baseEpoch, config.params.DOMAIN_SYNC_COMMITTEE);
+  const seed = getSeed(config, state, baseEpoch, config.params.DOMAIN_SYNC_COMMITTEE);
   let i = 0;
   const syncCommitteeIndices = [];
   while (syncCommitteeIndices.length < config.params.SYNC_COMMITTEE_SIZE) {
     const shuffledIndex = computeShuffledIndex(config, i % activeValidatorCount, activeValidatorCount, seed);
     const candidateIndex = activeValidatorIndices[shuffledIndex];
-    const randomByte = hash(Buffer.concat([seed, intToBytes(intDiv(i, activeValidatorCount), 4, "le")]))[i % 32];
+    const randomByte = hash(Buffer.concat([seed, intToBytes(intDiv(i, 32), 8, "le")]))[i % 32];
     const effectiveBalance = state.validators[candidateIndex].effectiveBalance;
     if (effectiveBalance * MAX_RANDOM_BYTE >= config.params.MAX_EFFECTIVE_BALANCE * BigInt(randomByte)) {
       syncCommitteeIndices.push(candidateIndex);
