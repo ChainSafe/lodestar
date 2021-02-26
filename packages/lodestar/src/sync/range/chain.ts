@@ -5,7 +5,6 @@ import {ErrorAborted, ILogger} from "@chainsafe/lodestar-utils";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ChainSegmentError} from "../../chain/errors";
 import {ItTrigger} from "../../util/itTrigger";
-import {ChainPeersBalancer} from "./utils/peerBalancer";
 import {Batch, BatchOpts, BatchMetadata, BatchStatus} from "./batch";
 import {
   validateBatchesStatus,
@@ -13,7 +12,9 @@ import {
   toBeProcessedStartEpoch,
   toBeDownloadedStartEpoch,
   toArr,
-} from "./utils/batches";
+  wrapError,
+  ChainPeersBalancer,
+} from "./utils";
 
 export type SyncChainOpts = BatchOpts & {maybeStuckTimeoutMs: number};
 
@@ -234,56 +235,63 @@ export class SyncChain {
     // Inform the batch about the new request
     batch.startDownloading(peer);
 
-    try {
-      const blocks = await this.downloadBeaconBlocksByRange(peer, batch.request);
-      batch.downloadingSuccess(blocks || []);
+    // wrapError ensures to never call both batch success() and batch error()
+    const res = await wrapError(this.downloadBeaconBlocksByRange(peer, batch.request));
 
+    if (!res.err) {
+      batch.downloadingSuccess(res.result);
       this.triggerBatchProcessor();
-    } catch (e) {
-      batch.downloadingError(e);
-    } finally {
-      // Pre-emptively request more blocks from peers whilst we process current blocks
-      this.triggerBatchDownloader();
+    } else {
+      this.logger.verbose("Batch download error", {...batch.getMetadata()}, res.err);
+      batch.downloadingError(res.err); // Throws after MAX_DOWNLOAD_ATTEMPTS
     }
+
+    // Pre-emptively request more blocks from peers whilst we process current blocks
+    this.triggerBatchDownloader();
   }
 
   /**
    * Sends `batch` to the processor. Note: batch may be empty
    */
   private async processBatch(batch: Batch): Promise<void> {
-    try {
-      const blocks = batch.startProcessing();
-      await this.processChainSegment(blocks);
+    const blocks = batch.startProcessing();
+
+    // wrapError ensures to never call both batch success() and batch error()
+    const res = await wrapError(this.processChainSegment(blocks));
+
+    if (!res.err) {
       batch.processingSuccess();
 
-      // If the processed batch was not empty, we can validate previous unvalidated blocks.
+      // If the processed batch is not empty, validate previous AwaitingValidation blocks.
       if (blocks.length > 0) {
         this.advanceChain(batch.startEpoch);
       }
 
       // Potentially process next AwaitingProcessing batch
       this.triggerBatchProcessor();
-    } catch (e) {
-      batch.processingError(e);
+    } else {
+      this.logger.verbose("Batch process error", {...batch.getMetadata()}, res.err);
+      batch.processingError(res.err); // Throws after MAX_BATCH_PROCESSING_ATTEMPTS
 
       // At least one block was successfully verified and imported, so we can be sure all
       // previous batches are valid and we only need to download the current failed batch.
-      if (e instanceof ChainSegmentError && e.importedBlocks > 0) {
+      if (res.err instanceof ChainSegmentError && res.err.importedBlocks > 0) {
         this.advanceChain(batch.startEpoch);
       }
 
       // The current batch could not be processed, so either this or previous batches are invalid.
-      // All previous batches (awaiting validation) are potentially faulty and marked for retry
-      // Progress will be drop back to this.startEpoch
+      // All previous batches (AwaitingValidation) are potentially faulty and marked for retry.
+      // Progress will be drop back to `this.startEpoch`
       for (const pendingBatch of this.batches.values()) {
         if (pendingBatch.startEpoch < batch.startEpoch) {
-          pendingBatch.validationError();
+          this.logger.verbose("Batch validation error", {...pendingBatch.getMetadata()});
+          pendingBatch.validationError(); // Throws after MAX_BATCH_PROCESSING_ATTEMPTS
         }
       }
-    } finally {
-      // A batch is no longer in Processing status, queue has an empty spot to download next batch
-      this.triggerBatchDownloader();
     }
+
+    // A batch is no longer in Processing status, queue has an empty spot to download next batch
+    this.triggerBatchDownloader();
   }
 
   /**
