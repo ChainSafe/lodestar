@@ -20,14 +20,18 @@ describe("syncing", function () {
   it("should sync from other BN", async function () {
     this.timeout("10 min");
 
+    const loggerNodeA = testLogger("Node-A", LogLevel.info);
+    const loggerNodeB = testLogger("Node-B", LogLevel.info);
+    const loggerValiA = testLogger("Vali-A", LogLevel.info);
+
     const bn = await getDevBeaconNode({
       params: beaconParams,
       options: {sync: {minPeers: 0}},
       validatorCount,
-      logger: testLogger("A", LogLevel.info),
+      logger: loggerNodeA,
     });
     const finalizationEventListener = waitForEvent<phase0.Checkpoint>(bn.chain.emitter, ChainEvent.finalized, 240000);
-    const validators = getDevValidators(bn, 8);
+    const validators = getDevValidators(bn, 8, 1, false, loggerValiA);
 
     await Promise.all(validators.map((validator) => validator.start()));
 
@@ -40,7 +44,7 @@ describe("syncing", function () {
       params: beaconParams,
       validatorCount,
       genesisTime: bn.chain.getHeadState().genesisTime,
-      logger: testLogger("B", LogLevel.info),
+      logger: loggerNodeB,
     });
     const head = await bn.chain.getHeadBlock()!;
     const waitForSynced = waitForEvent<phase0.SignedBeaconBlock>(bn2.chain.emitter, ChainEvent.block, 100000, (block) =>
