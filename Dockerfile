@@ -9,11 +9,13 @@ RUN yarn install --non-interactive --ignore-optional --frozen-lockfile --ignore-
 COPY . .
 RUN yarn install --non-interactive --ignore-optional --frozen-lockfile
 
+RUN node ./scripts/getGitData /usr/app/.git-data.json
 
 # Copy built src + node_modules to a new layer to prune unnecessary fs
 # Previous layer weights 7.25GB, while this final 488MB (as of Oct 2020)
 FROM node:12.13-alpine
 WORKDIR /usr/app
 COPY --from=build /usr/app .
+ENV DOCKER_LODESTAR_GIT_DATA_FILEPATH /usr/app/.git-data.json
 
 ENTRYPOINT ["node", "./packages/lodestar-cli/bin/lodestar"]
