@@ -15,7 +15,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "id": 3,
+  "id": 1,
   "links": [],
   "panels": [
     {
@@ -71,7 +71,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.3.7",
+      "pluginVersion": "7.4.3",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -166,7 +166,7 @@
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "7.3.7",
+      "pluginVersion": "7.4.3",
       "targets": [
         {
           "expr": "libp2p_peers",
@@ -219,7 +219,7 @@
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "7.3.7",
+      "pluginVersion": "7.4.3",
       "targets": [
         {
           "expr": "beacon_head_slot",
@@ -271,7 +271,7 @@
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "7.3.7",
+      "pluginVersion": "7.4.3",
       "targets": [
         {
           "expr": "beacon_finalized_epoch",
@@ -323,7 +323,7 @@
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "7.3.7",
+      "pluginVersion": "7.4.3",
       "targets": [
         {
           "expr": "rate(beacon_head_slot[2m])",
@@ -377,9 +377,10 @@
           "fields": "",
           "values": false
         },
+        "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "7.3.7",
+      "pluginVersion": "7.4.3",
       "targets": [
         {
           "expr": "process_start_time_seconds*1000",
@@ -418,7 +419,7 @@
       },
       "gridPos": {
         "h": 2,
-        "w": 9,
+        "w": 6,
         "x": 15,
         "y": 4
       },
@@ -433,9 +434,10 @@
           "fields": "",
           "values": false
         },
+        "text": {},
         "textMode": "name"
       },
-      "pluginVersion": "7.3.7",
+      "pluginVersion": "7.4.3",
       "targets": [
         {
           "expr": "lodestar_version",
@@ -447,6 +449,63 @@
       "timeFrom": null,
       "timeShift": null,
       "title": "Lodestar version",
+      "type": "stat"
+    },
+    {
+      "datasource": null,
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {},
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 2,
+        "w": 3,
+        "x": 21,
+        "y": 4
+      },
+      "id": 56,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        },
+        "text": {},
+        "textMode": "name"
+      },
+      "pluginVersion": "7.4.3",
+      "targets": [
+        {
+          "expr": "nodejs_version_info",
+          "interval": "",
+          "legendFormat": "{{version}}",
+          "refId": "A"
+        }
+      ],
+      "title": "NodeJS version",
       "type": "stat"
     },
     {
@@ -488,7 +547,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.3.7",
+      "pluginVersion": "7.4.3",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -585,7 +644,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.3.7",
+      "pluginVersion": "7.4.3",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -693,7 +752,7 @@
             "alertThreshold": true
           },
           "percentage": false,
-          "pluginVersion": "7.3.7",
+          "pluginVersion": "7.4.3",
           "pointradius": 2,
           "points": false,
           "renderer": "flot",
@@ -789,7 +848,7 @@
             "alertThreshold": true
           },
           "percentage": false,
-          "pluginVersion": "7.3.7",
+          "pluginVersion": "7.4.3",
           "pointradius": 2,
           "points": false,
           "renderer": "flot",
@@ -905,7 +964,7 @@
             "current": false,
             "max": false,
             "min": false,
-            "show": true,
+            "show": false,
             "total": false,
             "values": false
           },
@@ -916,7 +975,7 @@
             "alertThreshold": true
           },
           "percentage": false,
-          "pluginVersion": "7.3.7",
+          "pluginVersion": "7.4.3",
           "pointradius": 2,
           "points": false,
           "renderer": "flot",
@@ -938,7 +997,8 @@
               "fill": true,
               "line": true,
               "op": "gt",
-              "value": 5
+              "value": 5,
+              "visible": true
             }
           ],
           "timeFrom": null,
@@ -1009,7 +1069,7 @@
             "current": false,
             "max": false,
             "min": false,
-            "show": true,
+            "show": false,
             "total": false,
             "values": false
           },
@@ -1020,7 +1080,7 @@
             "alertThreshold": true
           },
           "percentage": false,
-          "pluginVersion": "7.3.7",
+          "pluginVersion": "7.4.3",
           "pointradius": 2,
           "points": false,
           "renderer": "flot",
@@ -1117,7 +1177,7 @@
             "alertThreshold": true
           },
           "percentage": false,
-          "pluginVersion": "7.3.7",
+          "pluginVersion": "7.4.3",
           "pointradius": 2,
           "points": false,
           "renderer": "flot",
@@ -1218,7 +1278,7 @@
             "alertThreshold": true
           },
           "percentage": false,
-          "pluginVersion": "7.3.7",
+          "pluginVersion": "7.4.3",
           "pointradius": 2,
           "points": false,
           "renderer": "flot",
@@ -1299,23 +1359,10 @@
           "datasource": null,
           "fieldConfig": {
             "defaults": {
-              "custom": {
-                "align": null,
-                "filterable": false
-              },
-              "mappings": [],
+              "custom": {},
               "thresholds": {
                 "mode": "absolute",
-                "steps": [
-                  {
-                    "color": "green",
-                    "value": null
-                  },
-                  {
-                    "color": "red",
-                    "value": 80
-                  }
-                ]
+                "steps": []
               }
             },
             "overrides": []
@@ -1326,7 +1373,7 @@
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 43
+            "y": 19
           },
           "hiddenSeries": false,
           "id": 48,
@@ -1346,7 +1393,7 @@
             "alertThreshold": true
           },
           "percentage": false,
-          "pluginVersion": "7.3.7",
+          "pluginVersion": "7.4.3",
           "pointradius": 2,
           "points": false,
           "renderer": "flot",
@@ -1424,7 +1471,7 @@
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 43
+            "y": 19
           },
           "hiddenSeries": false,
           "id": 50,
@@ -1444,7 +1491,7 @@
             "alertThreshold": true
           },
           "percentage": false,
-          "pluginVersion": "7.3.7",
+          "pluginVersion": "7.4.3",
           "pointradius": 2,
           "points": false,
           "renderer": "flot",
@@ -2260,7 +2307,7 @@
     }
   ],
   "refresh": "30s",
-  "schemaVersion": 26,
+  "schemaVersion": 27,
   "style": "dark",
   "tags": [],
   "templating": {
