@@ -6,6 +6,7 @@ import {Gauge, Counter} from "prom-client";
 import {IBeaconMetrics} from "./interface";
 import {IMetricsOptions} from "./options";
 import {Metrics} from "./metrics";
+import {readLodestarGitData} from "./gitData";
 import {ILogger} from "@chainsafe/lodestar-utils";
 
 export class BeaconMetrics extends Metrics implements IBeaconMetrics {
@@ -44,6 +45,7 @@ export class BeaconMetrics extends Metrics implements IBeaconMetrics {
   peerGoodbyeSent: Gauge;
   peersTotalUniqueConnected: Gauge;
 
+  private lodestarVersion: Gauge;
   private logger: ILogger;
 
   public constructor(opts: IMetricsOptions, {logger}: {logger: ILogger}) {
@@ -236,10 +238,19 @@ export class BeaconMetrics extends Metrics implements IBeaconMetrics {
       help: "Total number of unique peers that have had a connection with",
       registers,
     });
+
+    // Private - only used once in start()
+    this.lodestarVersion = new Gauge({
+      name: "lodestar_version",
+      help: "Lodestar version",
+      labelNames: ["semver", "branch", "commit", "version"],
+      registers,
+    });
   }
 
   public start(): void {
     super.start();
+    this.lodestarVersion.set(readLodestarGitData(), 1);
   }
 
   public stop(): void {
