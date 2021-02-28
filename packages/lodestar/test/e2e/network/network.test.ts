@@ -3,7 +3,7 @@ import {expect} from "chai";
 
 import PeerId from "peer-id";
 import {Discv5Discovery, ENR} from "@chainsafe/discv5";
-import {config} from "@chainsafe/lodestar-config/mainnet";
+import {config} from "@chainsafe/lodestar-config/minimal";
 import {ILogger, sleep, WinstonLogger} from "@chainsafe/lodestar-utils";
 
 import {IBeaconChain} from "../../../src/chain";

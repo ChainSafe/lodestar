@@ -2,22 +2,21 @@ import xor from "buffer-xor";
 import {hash} from "@chainsafe/ssz";
 import {phase0} from "@chainsafe/lodestar-types";
 import {computeEpochAtSlot, computeSigningRoot, getDomain, getRandaoMix} from "../../../util";
-import {EpochContext} from "../util";
+import {CachedBeaconState} from "../util";
 import {ISignatureSet, SignatureSetType, verifySignatureSet} from "../signatureSets";
 
 export function processRandao(
-  epochCtx: EpochContext,
-  state: phase0.BeaconState,
+  state: CachedBeaconState<phase0.BeaconState>,
   block: phase0.BeaconBlock,
   verifySignature = true
 ): void {
-  const config = epochCtx.config;
+  const {config, epochCtx} = state;
   const epoch = epochCtx.currentShuffling.epoch;
   const randaoReveal = block.body.randaoReveal.valueOf() as Uint8Array;
 
   // verify RANDAO reveal
   if (verifySignature) {
-    const signatureSet = getRandaoRevealSignatureSet(epochCtx, state, block);
+    const signatureSet = getRandaoRevealSignatureSet(state, block);
     if (!verifySignatureSet(signatureSet)) {
       throw new Error("RANDAO reveal is an invalid signature");
     }
@@ -34,11 +33,10 @@ export function processRandao(
  * Extract signatures to allow validating all block signatures at once
  */
 export function getRandaoRevealSignatureSet(
-  epochCtx: EpochContext,
-  state: phase0.BeaconState,
+  state: CachedBeaconState<phase0.BeaconState>,
   block: phase0.BeaconBlock
 ): ISignatureSet {
-  const config = epochCtx.config;
+  const {config, epochCtx} = state;
   // should not get epoch from epochCtx
   const epoch = computeEpochAtSlot(config, block.slot);
   const domain = getDomain(config, state, config.params.DOMAIN_RANDAO);

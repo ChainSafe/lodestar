@@ -1,4 +1,4 @@
-import {IFlatValidator} from "./flatValidator";
+import {phase0} from "@chainsafe/lodestar-types";
 
 export const FLAG_PREV_SOURCE_ATTESTER = 1 << 0;
 export const FLAG_PREV_TARGET_ATTESTER = 1 << 1;
@@ -18,11 +18,11 @@ export interface IAttesterStatus {
   flags: number;
   proposerIndex: number; // -1 when not included by any proposer
   inclusionDelay: number;
-  validator: IFlatValidator;
+  validator: phase0.Validator;
   active: boolean;
 }
 
-export function createIAttesterStatus(v: IFlatValidator): IAttesterStatus {
+export function createIAttesterStatus(v: phase0.Validator): IAttesterStatus {
   return {
     flags: 0,
     proposerIndex: -1,

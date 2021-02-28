@@ -1,13 +1,19 @@
 import {byteArrayEquals} from "@chainsafe/ssz";
 import {Gwei, Slot} from "@chainsafe/lodestar-types";
 import {assert} from "@chainsafe/lodestar-utils";
-import {computeEpochAtSlot, computeStartSlotAtEpoch, phase0} from "@chainsafe/lodestar-beacon-state-transition";
+import {
+  CachedBeaconState,
+  computeEpochAtSlot,
+  computeStartSlotAtEpoch,
+  isActiveValidator,
+  phase0,
+} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBlockSummary, IForkChoice} from "@chainsafe/lodestar-fork-choice";
 
 import {ZERO_HASH} from "../../constants";
 import {CheckpointStateCache} from "../stateCache";
 import {ChainEvent, ChainEventEmitter} from "../emitter";
-import {IBlockJob, ITreeStateContext} from "../interface";
+import {IBlockJob} from "../interface";
 import {sleep} from "@chainsafe/lodestar-utils";
 
 /**
@@ -15,13 +21,16 @@ import {sleep} from "@chainsafe/lodestar-utils";
  *
  * This will throw an error if the checkpoint state is not a valid checkpoint state, eg: NOT the first slot in an epoch.
  */
-export function emitCheckpointEvent(emitter: ChainEventEmitter, checkpointStateContext: ITreeStateContext): void {
-  const config = checkpointStateContext.epochCtx.config;
-  const slot = checkpointStateContext.state.slot;
+export function emitCheckpointEvent(
+  emitter: ChainEventEmitter,
+  checkpointState: CachedBeaconState<phase0.BeaconState>
+): void {
+  const config = checkpointState.config;
+  const slot = checkpointState.slot;
   assert.true(slot % config.params.SLOTS_PER_EPOCH === 0, "Checkpoint state slot must be first in an epoch");
-  const blockHeader = config.types.phase0.BeaconBlockHeader.clone(checkpointStateContext.state.latestBlockHeader);
+  const blockHeader = config.types.phase0.BeaconBlockHeader.clone(checkpointState.latestBlockHeader);
   if (config.types.Root.equals(blockHeader.stateRoot, ZERO_HASH)) {
-    blockHeader.stateRoot = config.types.phase0.BeaconState.hashTreeRoot(checkpointStateContext.state);
+    blockHeader.stateRoot = config.types.phase0.BeaconState.hashTreeRoot(checkpointState);
   }
   emitter.emit(
     ChainEvent.checkpoint,
@@ -29,19 +38,12 @@ export function emitCheckpointEvent(emitter: ChainEventEmitter, checkpointStateC
       root: config.types.phase0.BeaconBlockHeader.hashTreeRoot(blockHeader),
       epoch: computeEpochAtSlot(config, slot),
     },
-    checkpointStateContext
+    checkpointState
   );
 }
 
-export function cloneStateCtx(stateCtx: ITreeStateContext): ITreeStateContext {
-  return {
-    state: stateCtx.state.clone(),
-    epochCtx: stateCtx.epochCtx.copy(),
-  };
-}
-
 /**
- * Starting at `stateCtx.state.slot`,
+ * Starting at `state.slot`,
  * process slots forward towards `slot`,
  * emitting "checkpoint" events after every epoch processed.
  *
@@ -49,43 +51,43 @@ export function cloneStateCtx(stateCtx: ITreeStateContext): ITreeStateContext {
  */
 export async function processSlotsToNearestCheckpoint(
   emitter: ChainEventEmitter,
-  stateCtx: ITreeStateContext,
+  preState: CachedBeaconState<phase0.BeaconState>,
   slot: Slot
-): Promise<phase0.fast.IStateContext> {
-  const config = stateCtx.epochCtx.config;
+): Promise<CachedBeaconState<phase0.BeaconState>> {
+  const config = preState.config;
   const {SLOTS_PER_EPOCH} = config.params;
-  const preSlot = stateCtx.state.slot;
+  const preSlot = preState.slot;
   const postSlot = slot;
   const preEpoch = computeEpochAtSlot(config, preSlot);
-  const postCtx = cloneStateCtx(stateCtx);
+  const postState = preState.clone();
   for (
     let nextEpochSlot = computeStartSlotAtEpoch(config, preEpoch + 1);
     nextEpochSlot <= postSlot;
     nextEpochSlot += SLOTS_PER_EPOCH
   ) {
-    phase0.fast.processSlots(postCtx.epochCtx, postCtx.state, nextEpochSlot);
-    emitCheckpointEvent(emitter, cloneStateCtx(postCtx));
+    phase0.fast.processSlots(postState, nextEpochSlot);
+    emitCheckpointEvent(emitter, postState.clone());
     // this avoids keeping our node busy processing blocks
     await sleep(0);
   }
-  return postCtx;
+  return postState;
 }
 
 /**
- * Starting at `stateCtx.state.slot`,
+ * Starting at `state.slot`,
  * process slots forward towards `slot`,
  * emitting "checkpoint" events after every epoch processed.
  */
 export async function processSlotsByCheckpoint(
   emitter: ChainEventEmitter,
-  stateCtx: ITreeStateContext,
+  preState: CachedBeaconState<phase0.BeaconState>,
   slot: Slot
-): Promise<ITreeStateContext> {
-  const postCtx = await processSlotsToNearestCheckpoint(emitter, stateCtx, slot);
-  if (postCtx.state.slot < slot) {
-    phase0.fast.processSlots(postCtx.epochCtx, postCtx.state, slot);
+): Promise<CachedBeaconState<phase0.BeaconState>> {
+  const postState = await processSlotsToNearestCheckpoint(emitter, preState, slot);
+  if (postState.slot < slot) {
+    phase0.fast.processSlots(postState, slot);
   }
-  return postCtx;
+  return postState;
 }
 
 export function emitForkChoiceHeadEvents(
@@ -110,23 +112,27 @@ export function emitForkChoiceHeadEvents(
   }
 }
 
-export function emitBlockEvent(emitter: ChainEventEmitter, job: IBlockJob, postCtx: ITreeStateContext): void {
-  emitter.emit(ChainEvent.block, job.signedBlock, postCtx, job);
+export function emitBlockEvent(
+  emitter: ChainEventEmitter,
+  job: IBlockJob,
+  postState: CachedBeaconState<phase0.BeaconState>
+): void {
+  emitter.emit(ChainEvent.block, job.signedBlock, postState, job);
 }
 
 export async function runStateTransition(
   emitter: ChainEventEmitter,
   forkChoice: IForkChoice,
   checkpointStateCache: CheckpointStateCache,
-  stateContext: ITreeStateContext,
+  preState: CachedBeaconState<phase0.BeaconState>,
   job: IBlockJob
-): Promise<ITreeStateContext> {
-  const config = stateContext.epochCtx.config;
+): Promise<CachedBeaconState<phase0.BeaconState>> {
+  const config = preState.config;
   const {SLOTS_PER_EPOCH} = config.params;
   const postSlot = job.signedBlock.message.slot;
 
   // if block is trusted don't verify proposer or op signature
-  const postStateContext = phase0.fast.fastStateTransition(stateContext, job.signedBlock, {
+  const postState = phase0.fast.fastStateTransition(preState, job.signedBlock, {
     verifyStateRoot: true,
     verifyProposer: !job.validSignatures && !job.validProposerSignature,
     verifySignatures: !job.validSignatures,
@@ -137,23 +143,23 @@ export async function runStateTransition(
   // current justified checkpoint should be prev epoch or current epoch if it's just updated
   // it should always have epochBalances there bc it's a checkpoint state, ie got through processEpoch
   const justifiedBalances: Gwei[] = [];
-  if (postStateContext.state.currentJustifiedCheckpoint.epoch > forkChoice.getJustifiedCheckpoint().epoch) {
-    const justifiedStateContext = checkpointStateCache.get(postStateContext.state.currentJustifiedCheckpoint);
-    const justifiedEpoch = justifiedStateContext?.epochCtx.currentShuffling.epoch;
-    justifiedStateContext?.state.flatValidators().readOnlyForEach((v) => {
-      justifiedBalances.push(phase0.fast.isActiveIFlatValidator(v, justifiedEpoch!) ? v.effectiveBalance : BigInt(0));
+  if (postState.currentJustifiedCheckpoint.epoch > forkChoice.getJustifiedCheckpoint().epoch) {
+    const justifiedState = checkpointStateCache.get(postState.currentJustifiedCheckpoint);
+    const justifiedEpoch = justifiedState?.currentShuffling.epoch;
+    justifiedState?.validators.forEach((v) => {
+      justifiedBalances.push(isActiveValidator(v, justifiedEpoch!) ? v.effectiveBalance : BigInt(0));
     });
   }
-  forkChoice.onBlock(job.signedBlock.message, postStateContext.state.getOriginalState(), justifiedBalances);
+  forkChoice.onBlock(job.signedBlock.message, postState, justifiedBalances);
 
   if (postSlot % SLOTS_PER_EPOCH === 0) {
-    emitCheckpointEvent(emitter, postStateContext);
+    emitCheckpointEvent(emitter, postState);
   }
 
-  emitBlockEvent(emitter, job, postStateContext);
+  emitBlockEvent(emitter, job, postState);
   emitForkChoiceHeadEvents(emitter, forkChoice, forkChoice.getHead(), oldHead);
 
   // this avoids keeping our node busy processing blocks
   await sleep(0);
-  return postStateContext;
+  return postState;
 }

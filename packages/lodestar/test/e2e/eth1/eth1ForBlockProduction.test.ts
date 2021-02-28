@@ -14,6 +14,7 @@ import {BeaconDb} from "../../../src/db";
 import {generateState} from "../../utils/state";
 import {fromHexString, List, toHexString} from "@chainsafe/ssz";
 import {Root} from "@chainsafe/lodestar-types";
+import {createCachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
 
 const dbLocation = "./.__testdb";
 
@@ -100,20 +101,26 @@ describe("eth1 / Eth1Provider", function () {
       pyrmontDepositsDataRoot.map((root) => fromHexString(root)) as List<Root>
     );
 
-    const state = generateState({
-      // Set genesis time and slot so latestEth1Data is considered
-      slot: 0,
-      genesisTime: periodStart,
-      // No deposits processed yet
-      // eth1_deposit_index represents the next deposit index to be added
-      eth1DepositIndex: 0,
-      // Set eth1Data with deposit length to return them
-      eth1Data: {
-        depositCount: deposits.length,
-        depositRoot: depositRootTree.hashTreeRoot(),
-        blockHash: Buffer.alloc(32),
-      },
-    });
+    const state = createCachedBeaconState(
+      config,
+      generateState(
+        {
+          // Set genesis time and slot so latestEth1Data is considered
+          slot: 0,
+          genesisTime: periodStart,
+          // No deposits processed yet
+          // eth1_deposit_index represents the next deposit index to be added
+          eth1DepositIndex: 0,
+          // Set eth1Data with deposit length to return them
+          eth1Data: {
+            depositCount: deposits.length,
+            depositRoot: depositRootTree.hashTreeRoot(),
+            blockHash: Buffer.alloc(32),
+          },
+        },
+        config
+      )
+    );
 
     const result = await eth1ForBlockProduction.getEth1DataAndDeposits(state);
     expect(result.eth1Data).to.deep.equal(latestEth1Data, "Wrong eth1Data for block production");

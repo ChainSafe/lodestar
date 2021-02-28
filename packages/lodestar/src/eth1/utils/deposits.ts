@@ -9,7 +9,7 @@ export type DepositGetter<T> = (indexRange: IFilterOptions<number>, eth1Data: ph
 export async function getDeposits<T>(
   config: IBeaconConfig,
   // eth1_deposit_index represents the next deposit index to be added
-  state: TreeBacked<phase0.BeaconState>,
+  state: phase0.BeaconState,
   eth1Data: phase0.Eth1Data,
   depositsGetter: DepositGetter<T>
 ): Promise<T[]> {

@@ -4,14 +4,10 @@ import {verifyMerkleBranch, bigIntMin} from "@chainsafe/lodestar-utils";
 
 import {DEPOSIT_CONTRACT_TREE_DEPTH, FAR_FUTURE_EPOCH} from "../../../constants";
 import {computeDomain, computeSigningRoot, increaseBalance} from "../../../util";
-import {CachedValidatorsBeaconState, EpochContext} from "../util";
+import {CachedBeaconState} from "../util";
 
-export function processDeposit(
-  epochCtx: EpochContext,
-  state: CachedValidatorsBeaconState,
-  deposit: phase0.Deposit
-): void {
-  const config = epochCtx.config;
+export function processDeposit(state: CachedBeaconState<phase0.BeaconState>, deposit: phase0.Deposit): void {
+  const {config, validators, epochCtx} = state;
   const {EFFECTIVE_BALANCE_INCREMENT, MAX_EFFECTIVE_BALANCE} = config.params;
   // verify the merkle branch
   if (
@@ -32,7 +28,7 @@ export function processDeposit(
   const pubkey = deposit.data.pubkey;
   const amount = deposit.data.amount;
   const cachedIndex = epochCtx.pubkey2index.get(pubkey);
-  if (cachedIndex === undefined || !Number.isSafeInteger(cachedIndex) || cachedIndex >= state.validators.length) {
+  if (cachedIndex === undefined || !Number.isSafeInteger(cachedIndex) || cachedIndex >= validators.length) {
     // verify the deposit signature (proof of posession) which is not checked by the deposit contract
     const depositMessage = {
       pubkey: deposit.data.pubkey,
@@ -47,7 +43,7 @@ export function processDeposit(
     }
 
     // add validator and balance entries
-    state.addValidator({
+    validators.push({
       pubkey: pubkey,
       withdrawalCredentials: deposit.data.withdrawalCredentials,
       activationEligibilityEpoch: FAR_FUTURE_EPOCH,
@@ -58,10 +54,11 @@ export function processDeposit(
       slashed: false,
     });
     state.balances.push(amount);
+
+    // now that there is a new validator, update the epoch context with the new pubkey
+    epochCtx.addPubkey(validators.length - 1, pubkey.valueOf() as Uint8Array);
   } else {
     // increase balance by deposit amount
     increaseBalance(state, cachedIndex, amount);
   }
-  // now that there is a new validator, update the epoch context with the new pubkey
-  epochCtx.syncPubkeys(state);
 }

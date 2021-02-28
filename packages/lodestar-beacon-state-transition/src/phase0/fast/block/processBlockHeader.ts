@@ -1,9 +1,9 @@
 import {phase0} from "@chainsafe/lodestar-types";
 
-import {EpochContext} from "../util";
+import {CachedBeaconState} from "../util";
 
-export function processBlockHeader(epochCtx: EpochContext, state: phase0.BeaconState, block: phase0.BeaconBlock): void {
-  const types = epochCtx.config.types;
+export function processBlockHeader(state: CachedBeaconState<phase0.BeaconState>, block: phase0.BeaconBlock): void {
+  const types = state.config.types;
   const slot = state.slot;
   // verify that the slots match
   if (block.slot !== slot) {
@@ -17,7 +17,7 @@ export function processBlockHeader(epochCtx: EpochContext, state: phase0.BeaconS
     );
   }
   // verify that proposer index is the correct index
-  const proposerIndex = epochCtx.getBeaconProposer(slot);
+  const proposerIndex = state.getBeaconProposer(slot);
   if (block.proposerIndex !== proposerIndex) {
     throw new Error(
       "Block proposer index does not match state proposer index" +

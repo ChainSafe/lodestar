@@ -2,18 +2,19 @@
  * @module chain/blockAssembly
  */
 
+import {List} from "@chainsafe/ssz";
 import {Bytes96, Bytes32, phase0} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
 
 import {IBeaconDb} from "../../../db";
 import {IEth1ForBlockProduction} from "../../../eth1";
-import {TreeBacked, List} from "@chainsafe/ssz";
 
 export async function assembleBody(
   config: IBeaconConfig,
   db: IBeaconDb,
   eth1: IEth1ForBlockProduction,
-  currentState: TreeBacked<phase0.BeaconState>,
+  currentState: CachedBeaconState<phase0.BeaconState>,
   randaoReveal: Bytes96,
   graffiti: Bytes32
 ): Promise<phase0.BeaconBlockBody> {

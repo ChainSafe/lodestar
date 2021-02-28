@@ -1,4 +1,4 @@
-import {Epoch, ValidatorIndex, phase0} from "@chainsafe/lodestar-types";
+import {Epoch, ValidatorIndex, allForks} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {intDiv} from "@chainsafe/lodestar-utils";
 
@@ -53,7 +53,7 @@ export function computeCommitteeCount(config: IBeaconConfig, activeValidatorCoun
 
 export function computeEpochShuffling(
   config: IBeaconConfig,
-  state: phase0.BeaconState,
+  state: allForks.BeaconState,
   indicesBounded: [ValidatorIndex, Epoch, Epoch][],
   epoch: Epoch
 ): IEpochShuffling {

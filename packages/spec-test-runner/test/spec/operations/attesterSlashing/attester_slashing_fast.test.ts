@@ -1,5 +1,7 @@
 import {join} from "path";
 import {expect} from "chai";
+
+import {TreeBacked} from "@chainsafe/ssz";
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
@@ -10,16 +12,24 @@ describeDirectorySpecTest<IProcessAttesterSlashingTestCase, phase0.BeaconState>(
   "process attester slashing mainnet",
   join(SPEC_TEST_LOCATION, "/tests/mainnet/phase0/operations/attester_slashing/pyspec_tests"),
   (testcase) => {
-    const state = testcase.pre;
-    const epochCtx = new phase0.fast.EpochContext(config);
-    epochCtx.loadState(state);
+    const wrappedState = phase0.fast.createCachedBeaconState<phase0.BeaconState>(
+      config,
+      testcase.pre as TreeBacked<phase0.BeaconState>
+    );
     const verify = !!testcase.meta && !!testcase.meta.blsSetting && testcase.meta.blsSetting === BigInt(1);
-    const wrappedState = phase0.fast.createCachedValidatorsBeaconState(state);
-    phase0.fast.processAttesterSlashing(epochCtx, wrappedState, testcase.attester_slashing, verify);
-    return state;
+    phase0.fast.processAttesterSlashing(wrappedState, testcase.attester_slashing, verify);
+    return wrappedState;
   },
   {
     inputTypes: {
+      pre: {
+        type: InputType.SSZ,
+        treeBacked: true,
+      },
+      post: {
+        type: InputType.SSZ,
+        treeBacked: true,
+      },
       meta: InputType.YAML,
     },
     sszTypes: {

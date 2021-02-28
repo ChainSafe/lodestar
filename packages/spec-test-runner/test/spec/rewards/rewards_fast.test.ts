@@ -1,3 +1,4 @@
+import {TreeBacked} from "@chainsafe/ssz";
 import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
@@ -11,12 +12,12 @@ for (const testSuite of ["basic", "leak", "random"]) {
     "process attestation mainnet",
     join(SPEC_TEST_LOCATION, `/tests/mainnet/phase0/rewards/${testSuite}/pyspec_tests`),
     (testcase) => {
-      const state = testcase.pre;
-      const epochCtx = new phase0.fast.EpochContext(config);
-      epochCtx.loadState(state);
-      const wrappedState = phase0.fast.createCachedValidatorsBeaconState(state);
-      const process = phase0.fast.prepareEpochProcessState(epochCtx, wrappedState);
-      const [rewards, penalties] = phase0.fast.getAttestationDeltas(epochCtx, process, state);
+      const wrappedState = phase0.fast.createCachedBeaconState<phase0.BeaconState>(
+        config,
+        testcase.pre as TreeBacked<phase0.BeaconState>
+      );
+      const process = phase0.fast.prepareEpochProcessState(wrappedState);
+      const [rewards, penalties] = phase0.fast.getAttestationDeltas(wrappedState, process);
       return {
         rewards: rewards.map((reward) => BigInt(reward)),
         penalties: penalties.map((pen) => BigInt(pen)),
@@ -24,6 +25,14 @@ for (const testSuite of ["basic", "leak", "random"]) {
     },
     {
       inputTypes: {
+        pre: {
+          type: InputType.SSZ,
+          treeBacked: true,
+        },
+        post: {
+          type: InputType.SSZ,
+          treeBacked: true,
+        },
         meta: InputType.YAML,
       },
       sszTypes: {

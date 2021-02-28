@@ -52,10 +52,10 @@ export async function validateGossipBlock(
     });
   }
 
-  let blockContext;
+  let blockState;
   try {
     // getBlockSlotState also checks for whether the current finalized checkpoint is an ancestor of the block.  as a result, we throw an IGNORE (whereas the spec says we should REJECT for this scenario).  this is something we should change this in the future to make the code airtight to the spec.
-    blockContext = await chain.regen.getBlockSlotState(block.message.parentRoot, block.message.slot);
+    blockState = await chain.regen.getBlockSlotState(block.message.parentRoot, block.message.slot);
   } catch (e) {
     throw new BlockError({
       code: BlockErrorCode.PARENT_UNKNOWN,
@@ -64,7 +64,7 @@ export async function validateGossipBlock(
     });
   }
 
-  if (!phase0.fast.verifyBlockSignature(blockContext.epochCtx, blockContext.state, block)) {
+  if (!phase0.fast.verifyBlockSignature(blockState, block)) {
     throw new BlockError({
       code: BlockErrorCode.PROPOSAL_SIGNATURE_INVALID,
       job: blockJob,
@@ -72,7 +72,7 @@ export async function validateGossipBlock(
   }
 
   try {
-    const validProposer = isExpectedProposer(blockContext.epochCtx, block.message);
+    const validProposer = isExpectedProposer(blockState.epochCtx, block.message);
     if (!validProposer) {
       throw new BlockError({
         code: BlockErrorCode.INCORRECT_PROPOSER,

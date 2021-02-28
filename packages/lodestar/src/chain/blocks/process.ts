@@ -32,13 +32,12 @@ export async function processBlock({
   }
 
   try {
-    const preStateContext = await regen.getPreState(job.signedBlock.message);
+    const preState = await regen.getPreState(job.signedBlock.message);
 
     if (!job.validSignatures) {
-      const {epochCtx, state} = preStateContext;
       const signatureSets = job.validProposerSignature
-        ? phase0.fast.getAllBlockSignatureSetsExceptProposer(epochCtx, state, job.signedBlock)
-        : phase0.fast.getAllBlockSignatureSets(epochCtx, state, job.signedBlock);
+        ? phase0.fast.getAllBlockSignatureSetsExceptProposer(preState, job.signedBlock)
+        : phase0.fast.getAllBlockSignatureSets(preState, job.signedBlock);
 
       if (!verifySignatureSetsBatch(signatureSets)) {
         throw new BlockError({
@@ -51,7 +50,7 @@ export async function processBlock({
       job.validSignatures = true;
     }
 
-    await runStateTransition(emitter, forkChoice, checkpointStateCache, preStateContext, job);
+    await runStateTransition(emitter, forkChoice, checkpointStateCache, preState, job);
   } catch (e) {
     if (e instanceof RegenError) {
       throw new BlockError({
@@ -116,17 +115,16 @@ export async function processChainSegment({
     }
 
     try {
-      let preStateContext = await regen.getPreState(firstBlock.message);
+      let preState = await regen.getPreState(firstBlock.message);
 
       // Verify the signature of the blocks, returning early if the signature is invalid.
       if (!job.validSignatures) {
         const signatureSets: phase0.fast.ISignatureSet[] = [];
         for (const block of blocksInEpoch) {
-          const {epochCtx, state} = preStateContext;
           signatureSets.push(
             ...(job.validProposerSignature
-              ? phase0.fast.getAllBlockSignatureSetsExceptProposer(epochCtx, state, block)
-              : phase0.fast.getAllBlockSignatureSets(epochCtx, state, block))
+              ? phase0.fast.getAllBlockSignatureSetsExceptProposer(preState, block)
+              : phase0.fast.getAllBlockSignatureSets(preState, block))
           );
         }
 
@@ -140,7 +138,7 @@ export async function processChainSegment({
       }
 
       for (const block of blocksInEpoch) {
-        preStateContext = await runStateTransition(emitter, forkChoice, checkpointStateCache, preStateContext, {
+        preState = await runStateTransition(emitter, forkChoice, checkpointStateCache, preState, {
           reprocess: job.reprocess,
           prefinalized: job.prefinalized,
           signedBlock: block,

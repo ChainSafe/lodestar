@@ -89,10 +89,9 @@ export async function validateAggregateAttestation(
     });
   }
 
-  const {state, epochCtx} = attestationPreState;
   let committee;
   try {
-    committee = epochCtx.getBeaconCommittee(attestation.data.slot, attestation.data.index);
+    committee = attestationPreState.getBeaconCommittee(attestation.data.slot, attestation.data.index);
   } catch (error) {
     throw new AttestationError({
       code: AttestationErrorCode.AGGREGATOR_NOT_IN_COMMITTEE,
@@ -114,11 +113,11 @@ export async function validateAggregateAttestation(
     });
   }
 
-  const aggregator = epochCtx.index2pubkey[aggregateAndProof.message.aggregatorIndex];
+  const aggregator = attestationPreState.index2pubkey[aggregateAndProof.message.aggregatorIndex];
   if (
     !isValidSelectionProofSignature(
       config,
-      state,
+      attestationPreState,
       attestation.data.slot,
       aggregator,
       aggregateAndProof.message.selectionProof.valueOf() as Uint8Array
@@ -133,7 +132,7 @@ export async function validateAggregateAttestation(
   if (
     !isValidAggregateAndProofSignature(
       config,
-      state,
+      attestationPreState,
       computeEpochAtSlot(config, attestation.data.slot),
       aggregator,
       aggregateAndProof
@@ -147,7 +146,9 @@ export async function validateAggregateAttestation(
 
   // TODO: once we have pool, check if aggregate block is seen and has target as ancestor
 
-  if (!phase0.fast.isValidIndexedAttestation(epochCtx, state, epochCtx.getIndexedAttestation(attestation))) {
+  if (
+    !phase0.fast.isValidIndexedAttestation(attestationPreState, attestationPreState.getIndexedAttestation(attestation))
+  ) {
     throw new AttestationError({
       code: AttestationErrorCode.INVALID_SIGNATURE,
       job: attestationJob,

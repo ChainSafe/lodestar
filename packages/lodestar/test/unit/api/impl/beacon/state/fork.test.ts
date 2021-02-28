@@ -5,7 +5,7 @@ import {StubbedBeaconDb} from "../../../../../utils/stub";
 import sinon, {SinonStubbedMember} from "sinon";
 import {IBeaconStateApi} from "../../../../../../src/api/impl/beacon/state/interface";
 import * as stateApiUtils from "../../../../../../src/api/impl/beacon/state/utils";
-import {generateState} from "../../../../../utils/state";
+import {generateCachedState} from "../../../../../utils/state";
 import {expect} from "chai";
 
 describe("beacon api impl - state - get fork", function () {
@@ -29,9 +29,7 @@ describe("beacon api impl - state - get fork", function () {
   });
 
   it("should get fork by state id", async function () {
-    resolveStateIdStub.resolves({
-      state: generateState(),
-    });
+    resolveStateIdStub.resolves(generateCachedState());
     const fork = await api.getFork("something");
     expect(fork).to.not.be.null;
   });

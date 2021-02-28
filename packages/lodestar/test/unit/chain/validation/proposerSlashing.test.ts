@@ -8,7 +8,7 @@ import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
 
 import {BeaconChain} from "../../../../src/chain";
 import {StubbedBeaconDb, StubbedChain} from "../../../utils/stub";
-import {generateState} from "../../../utils/state";
+import {generateCachedState} from "../../../utils/state";
 import {ProposerSlashingErrorCode} from "../../../../src/chain/errors/proposerSlashingError";
 import {validateGossipProposerSlashing} from "../../../../src/chain/validation/proposerSlashing";
 
@@ -40,7 +40,7 @@ describe("validate proposer slashing", () => {
   it("should return invalid proposer slashing - invalid", async () => {
     const slashing = generateEmptyProposerSlashing();
     dbStub.proposerSlashing.has.resolves(false);
-    const state = generateState();
+    const state = generateCachedState();
     chainStub.getHeadState.returns(state);
     isValidIncomingProposerSlashingStub.returns(false);
     try {
@@ -53,7 +53,7 @@ describe("validate proposer slashing", () => {
   it("should return valid proposer slashing", async () => {
     const slashing = generateEmptyProposerSlashing();
     dbStub.proposerSlashing.has.resolves(false);
-    const state = generateState();
+    const state = generateCachedState();
     chainStub.getHeadState.returns(state);
     isValidIncomingProposerSlashingStub.returns(true);
     const validationTest = await validateGossipProposerSlashing(config, chainStub, dbStub, slashing);

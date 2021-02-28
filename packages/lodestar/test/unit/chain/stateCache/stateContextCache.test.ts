@@ -1,4 +1,3 @@
-import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {expect} from "chai";
 import {config} from "@chainsafe/lodestar-config/minimal";
 
@@ -15,24 +14,21 @@ describe("StateContextCache", function () {
     // max 2 items
     cache = new StateContextCache(2);
     const state1 = generateCachedState({slot: 0});
-    key1 = config.types.phase0.BeaconState.hashTreeRoot(state1.getOriginalState());
-    const epochCtx1 = new phase0.EpochContext(config);
-    epochCtx1.currentShuffling = {epoch: 0, activeIndices: [], shuffling: [], committees: []};
-    cache.add({state: state1, epochCtx: epochCtx1});
+    key1 = state1.hashTreeRoot();
+    state1.epochCtx.currentShuffling = {epoch: 0, activeIndices: [], shuffling: [], committees: []};
+    cache.add(state1);
     const state2 = generateCachedState({slot: 1 * config.params.SLOTS_PER_EPOCH});
-    key2 = config.types.phase0.BeaconState.hashTreeRoot(state2.getOriginalState());
-    const epochCtx2 = new phase0.EpochContext(config);
-    epochCtx2.currentShuffling = {epoch: 1, activeIndices: [], shuffling: [], committees: []};
-    cache.add({state: state2, epochCtx: epochCtx2});
+    key2 = state2.hashTreeRoot();
+    state2.epochCtx.currentShuffling = {epoch: 1, activeIndices: [], shuffling: [], committees: []};
+    cache.add(state2);
   });
 
   it("should prune", function () {
     expect(cache.size).to.be.equal(2);
     const state3 = generateCachedState({slot: 2 * config.params.SLOTS_PER_EPOCH});
-    const epochCtx3 = new phase0.EpochContext(config);
-    epochCtx3.currentShuffling = {epoch: 2, activeIndices: [], shuffling: [], committees: []};
+    state3.epochCtx.currentShuffling = {epoch: 2, activeIndices: [], shuffling: [], committees: []};
 
-    cache.add({state: state3, epochCtx: epochCtx3});
+    cache.add(state3);
     expect(cache.size).to.be.equal(3);
     cache.prune(ZERO_HASH);
     expect(cache.size).to.be.equal(2);

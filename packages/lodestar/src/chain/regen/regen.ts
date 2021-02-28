@@ -1,9 +1,12 @@
 import {phase0, Root, Slot} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
+import {
+  CachedBeaconState,
+  computeEpochAtSlot,
+  computeStartSlotAtEpoch,
+} from "@chainsafe/lodestar-beacon-state-transition";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 
-import {ITreeStateContext} from "../interface";
 import {CheckpointStateCache, StateContextCache} from "../stateCache";
 import {ChainEventEmitter} from "../emitter";
 import {IBeaconDb} from "../../db";
@@ -45,7 +48,7 @@ export class StateRegenerator implements IStateRegenerator {
     this.db = db;
   }
 
-  async getPreState(block: phase0.BeaconBlock): Promise<ITreeStateContext> {
+  async getPreState(block: phase0.BeaconBlock): Promise<CachedBeaconState<phase0.BeaconState>> {
     const parentBlock = this.forkChoice.getBlock(block.parentRoot);
     if (!parentBlock) {
       throw new RegenError({
@@ -74,12 +77,12 @@ export class StateRegenerator implements IStateRegenerator {
     return await this.getState(parentBlock.stateRoot);
   }
 
-  async getCheckpointState(cp: phase0.Checkpoint): Promise<ITreeStateContext> {
+  async getCheckpointState(cp: phase0.Checkpoint): Promise<CachedBeaconState<phase0.BeaconState>> {
     const checkpointStartSlot = computeStartSlotAtEpoch(this.config, cp.epoch);
     return await this.getBlockSlotState(cp.root, checkpointStartSlot);
   }
 
-  async getBlockSlotState(blockRoot: Root, slot: Slot): Promise<ITreeStateContext> {
+  async getBlockSlotState(blockRoot: Root, slot: Slot): Promise<CachedBeaconState<phase0.BeaconState>> {
     const block = this.forkChoice.getBlock(blockRoot);
     if (!block) {
       throw new RegenError({
@@ -114,8 +117,8 @@ export class StateRegenerator implements IStateRegenerator {
     return await processSlotsByCheckpoint(this.emitter, blockStateCtx, slot);
   }
 
-  async getState(stateRoot: Root): Promise<ITreeStateContext> {
-    // Trivial case, stateCtx at stateRoot is already cached
+  async getState(stateRoot: Root): Promise<CachedBeaconState<phase0.BeaconState>> {
+    // Trivial case, state at stateRoot is already cached
     const cachedStateCtx = this.stateCache.get(stateRoot);
     if (cachedStateCtx) {
       return cachedStateCtx;
@@ -139,23 +142,23 @@ export class StateRegenerator implements IStateRegenerator {
     // blocks to replay, ordered highest to lowest
     // gets reversed when replayed
     const blocksToReplay = [block];
-    let stateCtx: ITreeStateContext | null = null;
+    let state: CachedBeaconState<phase0.BeaconState> | null = null;
     for (const b of this.forkChoice.iterateBlockSummaries(block.parentRoot)) {
-      stateCtx = this.stateCache.get(b.stateRoot);
-      if (stateCtx) {
+      state = this.stateCache.get(b.stateRoot);
+      if (state) {
         break;
       }
-      stateCtx = this.checkpointStateCache.getLatest({
+      state = this.checkpointStateCache.getLatest({
         root: b.blockRoot,
         epoch: computeEpochAtSlot(this.config, blocksToReplay[blocksToReplay.length - 1].slot - 1),
       });
-      if (stateCtx) {
+      if (state) {
         break;
       }
       blocksToReplay.push(b);
     }
 
-    if (stateCtx === null) {
+    if (state === null) {
       throw new RegenError({
         code: RegenErrorCode.NO_SEED_STATE,
       });
@@ -179,7 +182,7 @@ export class StateRegenerator implements IStateRegenerator {
       }
 
       try {
-        stateCtx = await runStateTransition(this.emitter, this.forkChoice, this.checkpointStateCache, stateCtx, {
+        state = await runStateTransition(this.emitter, this.forkChoice, this.checkpointStateCache, state, {
           signedBlock: block,
           reprocess: true,
           prefinalized: true,
@@ -194,6 +197,6 @@ export class StateRegenerator implements IStateRegenerator {
       }
     }
 
-    return stateCtx as ITreeStateContext;
+    return state as CachedBeaconState<phase0.BeaconState>;
   }
 }

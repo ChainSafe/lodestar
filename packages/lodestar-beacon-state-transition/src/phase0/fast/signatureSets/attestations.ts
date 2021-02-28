@@ -1,15 +1,14 @@
 import {readOnlyMap} from "@chainsafe/ssz";
 import {phase0} from "@chainsafe/lodestar-types";
 import {ISignatureSet} from "./types";
-import {EpochContext} from "../util";
+import {CachedBeaconState} from "../util";
 import {getIndexedAttestationSignatureSet} from "../block/isValidIndexedAttestation";
 
 export function getAttestationsSignatureSets(
-  epochCtx: EpochContext,
-  state: phase0.BeaconState,
+  state: CachedBeaconState<phase0.BeaconState>,
   signedBlock: phase0.SignedBeaconBlock
 ): ISignatureSet[] {
   return readOnlyMap(signedBlock.message.body.attestations, (attestation) =>
-    getIndexedAttestationSignatureSet(epochCtx, state, epochCtx.getIndexedAttestation(attestation))
+    getIndexedAttestationSignatureSet(state, state.getIndexedAttestation(attestation))
   );
 }
