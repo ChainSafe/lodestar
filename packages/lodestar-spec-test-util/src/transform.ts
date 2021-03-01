@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import {Type, UintType, BigIntUintType, byteType} from "@chainsafe/ssz";
+import {Type, UintType, BigIntUintType, byteType, isCompositeType} from "@chainsafe/ssz";
 
 /**
  * Transform the type to something that is safe to deserialize
@@ -9,7 +9,7 @@ import {Type, UintType, BigIntUintType, byteType} from "@chainsafe/ssz";
 export function safeType(type: Type<any>): Type<any> {
   if (type === byteType) {
     return type;
-  } else if (type.isBasic()) {
+  } else if (!isCompositeType(type)) {
     if ((type as UintType<any>).byteLength) {
       return new BigIntUintType({byteLength: (type as UintType<any>).byteLength});
     } else {

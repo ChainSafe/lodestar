@@ -50,7 +50,7 @@
     "@chainsafe/lodestar-db": "^0.16.0",
     "@chainsafe/lodestar-types": "^0.16.0",
     "@chainsafe/lodestar-utils": "^0.16.0",
-    "@chainsafe/ssz": "^0.6.13",
+    "@chainsafe/ssz": "^0.7.0",
     "abort-controller": "^3.0.0",
     "abortable-iterator": "^3.0.0",
     "axios": "^0.21.1",
