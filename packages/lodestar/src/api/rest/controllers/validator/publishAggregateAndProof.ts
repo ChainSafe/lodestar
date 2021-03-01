@@ -1,7 +1,7 @@
 import {phase0} from "@chainsafe/lodestar-types";
 import {Json} from "@chainsafe/ssz";
 import {DefaultParams, DefaultQuery} from "fastify";
-import {notNullish} from "../../../../util/notNullish";
+import {notNullish} from "@chainsafe/lodestar-utils";
 import {ApiController} from "../types";
 
 type Body = Json[];

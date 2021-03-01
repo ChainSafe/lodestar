@@ -19,7 +19,7 @@ export interface IKeyValueSummary<K, V, S> extends IKeyValue<K, V> {
  */
 export class BlockArchiveRepository extends Repository<Slot, phase0.SignedBeaconBlock> {
   public constructor(config: IBeaconConfig, db: IDatabaseController<Buffer, Buffer>) {
-    super(config, db, Bucket.blockArchive, config.types.phase0.SignedBeaconBlock);
+    super(config, db, Bucket.phase0_blockArchive, config.types.phase0.SignedBeaconBlock);
   }
 
   public async put(key: Slot, value: phase0.SignedBeaconBlock): Promise<void> {
@@ -147,10 +147,10 @@ export class BlockArchiveRepository extends Repository<Slot, phase0.SignedBeacon
   }
 
   private getParentRootIndexKey(parentRoot: Root): Buffer {
-    return encodeKey(Bucket.blockArchiveParentRootIndex, parentRoot.valueOf() as Uint8Array);
+    return encodeKey(Bucket.index_blockArchiveParentRootIndex, parentRoot.valueOf() as Uint8Array);
   }
 
   private getRootIndexKey(root: Root): Buffer {
-    return encodeKey(Bucket.blockArchiveRootIndex, root.valueOf() as Uint8Array);
+    return encodeKey(Bucket.index_blockArchiveRootIndex, root.valueOf() as Uint8Array);
   }
 }

@@ -30,6 +30,7 @@ describe("LodestarForkChoice", function () {
       const finalizedRoot = config.types.phase0.BeaconBlockHeader.hashTreeRoot(blockHeader);
       const targetBlock = generateSignedBlock({message: {slot: 32}});
       targetBlock.message.parentRoot = finalizedRoot;
+      //
       const targetState = runStateTransition(anchorState, targetBlock);
       targetBlock.message.stateRoot = config.types.phase0.BeaconState.hashTreeRoot(targetState);
       const {block: orphanedBlock, state: orphanedState} = makeChild({block: targetBlock, state: targetState}, 33);

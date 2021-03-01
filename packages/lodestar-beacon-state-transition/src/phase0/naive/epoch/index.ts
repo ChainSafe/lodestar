@@ -2,21 +2,27 @@
  * @module chain/stateTransition/epoch
  */
 
-import {phase0} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-
+import {phase0} from "@chainsafe/lodestar-types";
+import {processEth1DataReset} from "..";
 import {processRewardsAndPenalties} from "./balanceUpdates";
-import {processFinalUpdates} from "./finalUpdates";
 import {processJustificationAndFinalization} from "./justification";
 import {processRegistryUpdates} from "./registryUpdates";
-import {processSlashings} from "./slashings";
-import {processForkChanged} from "./fork";
+import {processSlashings, processSlashingsReset} from "./slashings";
+import {processEffectiveBalanceUpdates} from "./effective_balance";
+import {processRandaoMixesReset} from "./randao";
+import {processHistoricalRootsUpdate} from "./historical_roots";
+import {processParticipationRecordUpdates} from "./participation_records";
 
 export * from "./balanceUpdates";
-export * from "./finalUpdates";
+export * from "./eth1";
 export * from "./justification";
 export * from "./registryUpdates";
 export * from "./slashings";
+export * from "./effective_balance";
+export * from "./randao";
+export * from "./historical_roots";
+export * from "./participation_records";
 
 export function processEpoch(config: IBeaconConfig, state: phase0.BeaconState): phase0.BeaconState {
   // Justification
@@ -28,23 +34,20 @@ export function processEpoch(config: IBeaconConfig, state: phase0.BeaconState): 
   // Validator Registry
   processRegistryUpdates(config, state);
 
-  // TODO Later Phase
-  // processRevealDeadlines
-
-  // TODO Later Phase
-  // processChallengeDeadlines
-
   // Slashings
   processSlashings(config, state);
 
-  // Final Updates
-  processFinalUpdates(config, state);
+  processEth1DataReset(config, state);
 
-  // check and process planned hard fork
-  processForkChanged(config, state);
+  processEffectiveBalanceUpdates(config, state);
 
-  // TODO Later Phase
-  // afterProcessFinalUpdates
+  processSlashingsReset(config, state);
+
+  processRandaoMixesReset(config, state);
+
+  processHistoricalRootsUpdate(config, state);
+
+  processParticipationRecordUpdates(config, state);
 
   return state;
 }

@@ -24,7 +24,7 @@ export function parseArgs(args: IApiArgs): IBeaconNodeOptions["api"] {
 export const options: ICliCommandOptions<IApiArgs> = {
   "api.rest.api": {
     type: "array",
-    choices: ["beacon", "validator", "node", "events"],
+    choices: ["beacon", "validator", "node", "events", "debug", "lodestar"],
     description: "Pick namespaces to expose for HTTP API",
     defaultDescription: JSON.stringify(defaultOptions.api.rest.api),
     group: "api",

@@ -31,3 +31,10 @@ export function processSlashings(config: IBeaconConfig, state: phase0.BeaconStat
     }
   });
 }
+
+export function processSlashingsReset(config: IBeaconConfig, state: phase0.BeaconState): void {
+  const currentEpoch = getCurrentEpoch(config, state);
+  const nextEpoch = currentEpoch + 1;
+  // Reset slashings
+  state.slashings[nextEpoch % config.params.EPOCHS_PER_SLASHINGS_VECTOR] = BigInt(0);
+}

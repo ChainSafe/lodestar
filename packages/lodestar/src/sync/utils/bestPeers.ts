@@ -1,7 +1,8 @@
 import PeerId from "peer-id";
 import {phase0} from "@chainsafe/lodestar-types";
-import {getSyncProtocols, INetwork} from "../../network";
 import {toHexString} from "@chainsafe/ssz";
+import {getSyncProtocols, INetwork} from "../../network";
+import {ScoreState} from "../../network/peers";
 
 export interface IPeerWithMetadata {
   peerId: PeerId;
@@ -12,13 +13,12 @@ export interface IPeerWithMetadata {
 /**
  * Get peers that:
  * - support sync protocols
- * - their score > minScore
+ * - their score is Healthy
  * - status = most common finalied checkpoint
  */
-export function getPeersInitialSync(network: INetwork, minScore = 60): IPeersByCheckpoint<phase0.Checkpoint> | null {
+export function getPeersInitialSync(network: INetwork): IPeersByCheckpoint<phase0.Checkpoint> | null {
   const peers = getPeersThatSupportSync(network);
-  const goodPeers = peers.filter((peer) => peer.score > minScore);
-  return getPeersByMostCommonFinalizedCheckpoint(goodPeers);
+  return getPeersByMostCommonFinalizedCheckpoint(peers);
 }
 
 function getPeersThatSupportSync(network: INetwork): IPeerWithMetadata[] {
@@ -28,7 +28,7 @@ function getPeersThatSupportSync(network: INetwork): IPeerWithMetadata[] {
     const peerId = libp2pPeer.id;
     const status = network.peerMetadata.status.get(peerId);
     const score = network.peerRpcScores.getScore(peerId);
-    if (status) {
+    if (status && network.peerRpcScores.getScoreState(peerId) === ScoreState.Healthy) {
       peers.push({peerId, status, score});
     }
   }

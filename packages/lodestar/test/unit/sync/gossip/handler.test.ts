@@ -1,6 +1,6 @@
 import sinon, {SinonStubbedInstance} from "sinon";
 import {BeaconChain, ChainEvent, ChainEventEmitter, IBeaconChain} from "../../../../src/chain";
-import {INetwork, Libp2pNetwork} from "../../../../src/network";
+import {INetwork, Network} from "../../../../src/network";
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import {IGossip} from "../../../../src/network/gossip/interface";
 import {Gossip} from "../../../../src/network/gossip/gossip";
@@ -26,7 +26,7 @@ describe("gossip handler", function () {
   beforeEach(function () {
     chainStub = sinon.createStubInstance(BeaconChain);
     chainStub.emitter = new ChainEventEmitter();
-    networkStub = sinon.createStubInstance(Libp2pNetwork);
+    networkStub = sinon.createStubInstance(Network);
     gossipStub = sinon.createStubInstance(Gossip);
     networkStub.gossip = gossipStub;
     dbStub = new StubbedBeaconDb(sinon);
@@ -60,7 +60,7 @@ describe("gossip handler", function () {
       callback(generateEmptyAttesterSlashing());
     });
     const handler = new BeaconGossipHandler(chainStub, networkStub, dbStub, logger);
-    handler.handleSyncCompleted();
+    handler.start();
     expect(dbStub.attesterSlashing.add.calledOnce).to.be.true;
   });
 
@@ -69,7 +69,7 @@ describe("gossip handler", function () {
       callback(generateEmptyProposerSlashing());
     });
     const handler = new BeaconGossipHandler(chainStub, networkStub, dbStub, logger);
-    handler.handleSyncCompleted();
+    handler.start();
     expect(dbStub.proposerSlashing.add.calledOnce).to.be.true;
   });
 
@@ -78,7 +78,7 @@ describe("gossip handler", function () {
       callback(generateEmptySignedVoluntaryExit());
     });
     const handler = new BeaconGossipHandler(chainStub, networkStub, dbStub, logger);
-    handler.handleSyncCompleted();
+    handler.start();
     expect(dbStub.voluntaryExit.add.calledOnce).to.be.true;
   });
 

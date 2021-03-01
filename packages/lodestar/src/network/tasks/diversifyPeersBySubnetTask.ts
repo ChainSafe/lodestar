@@ -47,8 +47,7 @@ export class DiversifyPeersBySubnetTask {
   }
 
   public run = async (): Promise<void> => {
-    this.logger.info("Running DiversifyPeersBySubnetTask");
-    this.logger.profile("DiversifyPeersBySubnetTask");
+    this.logger.verbose("Running DiversifyPeersBySubnetTask");
     // network getPeers() is expensive, we don't want to call it multiple times
     const connectedPeers = this.network.getPeers();
     const connectedPeerIds = connectedPeers.map((peer) => peer.id);
@@ -56,7 +55,7 @@ export class DiversifyPeersBySubnetTask {
     if (missingSubnets.length > 0) {
       this.logger.verbose("Searching peers for missing subnets", {missingSubnets});
     } else {
-      this.logger.info(
+      this.logger.verbose(
         this.isSynced
           ? "Our peers subscribed to all subnets!"
           : "Node not synced, no need to search for missing subnets"
@@ -84,7 +83,5 @@ export class DiversifyPeersBySubnetTask {
     } catch (e) {
       this.logger.warn("Cannot connect to peers on subnet", {subnet: missingSubnets, error: e.message});
     }
-
-    this.logger.profile("DiversifyPeersBySubnetTask");
   };
 }

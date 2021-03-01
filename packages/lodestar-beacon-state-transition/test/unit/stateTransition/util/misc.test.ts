@@ -19,7 +19,7 @@ describe("getDomain", () => {
   state.fork = fork;
 
   it("epoch before fork epoch should result in domain === previous fork version * 2**32 + domain type", () => {
-    const result = getDomain(config, state, 4, 8);
+    const result = getDomain(config, state, Uint8Array.from([4, 0, 0, 0]), 8);
     assert.equal(
       Buffer.from(result).toString("hex"),
       "04000000d6e497b816c27a31acd5d9f3ed670639fef7842fee51f044dfbfb631"
@@ -27,7 +27,7 @@ describe("getDomain", () => {
   });
 
   it("epoch before fork epoch should result in domain === previous fork version * 2**32 + domain type", () => {
-    const result = getDomain(config, state, 5, 13);
+    const result = getDomain(config, state, Uint8Array.from([5, 0, 0, 0]), 13);
     assert.equal(
       Buffer.from(result).toString("hex"),
       "05000000c8b9e6acb00f5b32f776f5466510630a94829c965d35074e9d162016"
@@ -35,7 +35,7 @@ describe("getDomain", () => {
   });
 
   it("epoch before fork epoch should result in domain === previous fork version * 2**32 + domain type", () => {
-    const result = getDomain(config, state, 5, 12);
+    const result = getDomain(config, state, Uint8Array.from([5, 0, 0, 0]), 12);
     assert.equal(
       Buffer.from(result).toString("hex"),
       "05000000c8b9e6acb00f5b32f776f5466510630a94829c965d35074e9d162016"

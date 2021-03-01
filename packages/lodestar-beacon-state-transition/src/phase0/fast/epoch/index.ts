@@ -1,11 +1,9 @@
-import {CachedValidatorsBeaconState, prepareEpochProcessState} from "../util";
-import {EpochContext} from "../util/epochContext";
+import {prepareEpochProcessState, EpochContext, CachedValidatorsBeaconState} from "../util";
 import {processJustificationAndFinalization} from "./processJustificationAndFinalization";
 import {processRewardsAndPenalties} from "./processRewardsAndPenalties";
 import {processRegistryUpdates} from "./processRegistryUpdates";
 import {processSlashings} from "./processSlashings";
 import {processFinalUpdates} from "./processFinalUpdates";
-import {processForkChanged} from "./processFork";
 import {getAttestationDeltas} from "./getAttestationDeltas";
 
 export {
@@ -14,7 +12,6 @@ export {
   processRegistryUpdates,
   processSlashings,
   processFinalUpdates,
-  processForkChanged,
   getAttestationDeltas,
 };
 
@@ -25,5 +22,4 @@ export function processEpoch(epochCtx: EpochContext, state: CachedValidatorsBeac
   processRegistryUpdates(epochCtx, process, state);
   processSlashings(epochCtx, process, state);
   processFinalUpdates(epochCtx, process, state);
-  processForkChanged(epochCtx, process, state);
 }

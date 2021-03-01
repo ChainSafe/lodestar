@@ -36,8 +36,10 @@ export function bytesToBigInt(value: Uint8Array, endianness: Endianness = "le"):
 }
 
 export function toHex(buffer: ArrayLike<number>): string {
-  if (buffer instanceof Uint8Array) {
-    return "0x" + Buffer.from(buffer.buffer, buffer.byteOffset).toString("hex");
+  if (Buffer.isBuffer(buffer)) {
+    return "0x" + buffer.toString("hex");
+  } else if (buffer instanceof Uint8Array) {
+    return "0x" + Buffer.from(buffer.buffer, buffer.byteOffset, buffer.length).toString("hex");
   } else {
     return "0x" + Buffer.from(buffer).toString("hex");
   }

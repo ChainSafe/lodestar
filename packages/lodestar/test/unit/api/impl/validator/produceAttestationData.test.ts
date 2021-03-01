@@ -8,9 +8,9 @@ import {BeaconChain} from "../../../../../src/chain/chain";
 import {IEth1ForBlockProduction} from "../../../../../src/eth1";
 import {Eth1ForBlockProduction} from "../../../../../src/eth1/eth1ForBlockProduction";
 import {INetwork} from "../../../../../src/network/interface";
-import {Libp2pNetwork} from "../../../../../src/network/network";
+import {Network} from "../../../../../src/network/network";
 import {BeaconSync} from "../../../../../src/sync/sync";
-import {silentLogger} from "../../../../utils/logger";
+import {testLogger} from "../../../../utils/logger";
 import {StubbedBeaconDb} from "../../../../utils/stub/beaconDb";
 import chaiAsPromised from "chai-as-promised";
 import {use, expect} from "chai";
@@ -30,14 +30,14 @@ describe("api - validator - produceAttestationData", function () {
     chainStub = sinon.createStubInstance(BeaconChain);
     dbStub = new StubbedBeaconDb(sinon);
     eth1Stub = sinon.createStubInstance(Eth1ForBlockProduction);
-    networkStub = sinon.createStubInstance(Libp2pNetwork);
+    networkStub = sinon.createStubInstance(Network);
     syncStub = sinon.createStubInstance(BeaconSync);
     modules = {
       chain: chainStub,
       config,
       db: dbStub,
       eth1: eth1Stub,
-      logger: silentLogger,
+      logger: testLogger(),
       network: networkStub,
       sync: syncStub,
     };

@@ -8,7 +8,6 @@ import * as justificationUtils from "../../../../src/phase0/naive/epoch/justific
 import * as balanceUpdateUtils from "../../../../src/phase0/naive/epoch/balanceUpdates";
 import * as registryUpdateUtils from "../../../../src/phase0/naive/epoch/registryUpdates";
 import * as slashingUtils from "../../../../src/phase0/naive/epoch/slashings";
-import * as finalUtils from "../../../../src/phase0/naive/epoch/finalUpdates";
 import {generateState} from "../../../utils/state";
 
 /* eslint-disable no-empty */
@@ -19,15 +18,13 @@ describe("process epoch - crosslinks", function () {
   let processJustificationAndFinalizationStub: any,
     processRewardsAndPenaltiesStub: any,
     processRegistryUpdatesStub: any,
-    processSlashingsStub: any,
-    processFinalUpdatesStub: any;
+    processSlashingsStub: any;
 
   beforeEach(() => {
     processJustificationAndFinalizationStub = sandbox.stub(justificationUtils, "processJustificationAndFinalization");
     processRewardsAndPenaltiesStub = sandbox.stub(balanceUpdateUtils, "processRewardsAndPenalties");
     processRegistryUpdatesStub = sandbox.stub(registryUpdateUtils, "processRegistryUpdates");
     processSlashingsStub = sandbox.stub(slashingUtils, "processSlashings");
-    processFinalUpdatesStub = sandbox.stub(finalUtils, "processFinalUpdates");
   });
 
   afterEach(() => {
@@ -54,6 +51,5 @@ describe("process epoch - crosslinks", function () {
     expect(processRewardsAndPenaltiesStub.calledOnce).to.be.true;
     expect(processRegistryUpdatesStub.calledOnce).to.be.true;
     expect(processSlashingsStub.calledOnce).to.be.true;
-    expect(processFinalUpdatesStub.calledOnce).to.be.true;
   });
 });

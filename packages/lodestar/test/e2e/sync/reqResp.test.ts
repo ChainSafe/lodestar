@@ -2,7 +2,6 @@ import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {phase0} from "@chainsafe/lodestar-types";
-import {LogLevel, WinstonLogger} from "@chainsafe/lodestar-utils";
 import {expect} from "chai";
 import Libp2p from "libp2p";
 import sinon from "sinon";
@@ -11,7 +10,7 @@ import all from "it-all";
 import {Method, ReqRespEncoding, RpcResponseStatus} from "../../../src/constants";
 import {BeaconMetrics} from "../../../src/metrics";
 import {SszSnappyErrorCode} from "../../../src/network/reqresp/encodingStrategies/sszSnappy";
-import {createRpcProtocol, Libp2pNetwork, NetworkEvent} from "../../../src/network";
+import {createRpcProtocol, Network, NetworkEvent} from "../../../src/network";
 import {decodeErrorMessage} from "../../../src/network/reqresp/utils/errorMessage";
 import {IGossipMessageValidator} from "../../../src/network/gossip/interface";
 import {INetworkOptions} from "../../../src/network/options";
@@ -24,7 +23,7 @@ import {createNode} from "../../utils/network";
 import {generateState} from "../../utils/state";
 import {StubbedBeaconDb} from "../../utils/stub";
 import {arrToSource} from "../../unit/network/reqresp/utils";
-import {silentLogger} from "../../utils/logger";
+import {testLogger} from "../../utils/logger";
 
 const multiaddr = "/ip4/127.0.0.1/tcp/0";
 const opts: INetworkOptions = {
@@ -47,13 +46,11 @@ describe("[sync] rpc", function () {
   this.timeout(20000);
   const sandbox = sinon.createSandbox();
 
-  // Run tests with `DEBUG=true mocha ...` to get detailed logs of ReqResp exchanges
-  const debugMode = process.env.DEBUG;
-  const logger = debugMode ? new WinstonLogger({level: LogLevel.debug}) : silentLogger;
+  const logger = testLogger();
   const metrics = new BeaconMetrics({enabled: false, timeout: 5000, pushGateway: false}, {logger});
 
-  let rpcA: IReqRespHandler, netA: Libp2pNetwork;
-  let rpcB: IReqRespHandler, netB: Libp2pNetwork;
+  let rpcA: IReqRespHandler, netA: Network;
+  let rpcB: IReqRespHandler, netB: Network;
   let libP2pA: Libp2p;
   const validator: IGossipMessageValidator = {} as IGossipMessageValidator;
   let chain: MockBeaconChain;
@@ -80,8 +77,8 @@ describe("[sync] rpc", function () {
       root: config.types.phase0.BeaconBlock.hashTreeRoot(block.message),
     });
     libP2pA = await createNode(multiaddr);
-    netA = new Libp2pNetwork(opts, {config, libp2p: libP2pA, logger, metrics, validator, chain});
-    netB = new Libp2pNetwork(opts, {
+    netA = new Network(opts, {config, libp2p: libP2pA, logger, metrics, validator, chain});
+    netB = new Network(opts, {
       config,
       libp2p: await createNode(multiaddr),
       logger,
@@ -105,6 +102,7 @@ describe("[sync] rpc", function () {
       config,
       db,
       chain,
+      metrics,
       network: netA,
       logger,
     });
@@ -113,6 +111,7 @@ describe("[sync] rpc", function () {
       config,
       db,
       chain,
+      metrics,
       network: netB,
       logger: logger,
     });

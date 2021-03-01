@@ -7,7 +7,6 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ATTESTATION_SUBNET_COUNT, phase0, Slot, ValidatorIndex, CommitteeIndex} from "@chainsafe/lodestar-types";
 import {isSorted} from "@chainsafe/lodestar-utils";
 import {BitList, List} from "@chainsafe/ssz";
-import {DomainType} from "../constants";
 import {getBeaconCommittee, getCommitteeCountAtSlot} from "./committee";
 import {getDomain} from "./domain";
 import {computeSigningRoot} from "./signingRoot";
@@ -49,7 +48,7 @@ export function isValidIndexedAttestation(
     return false;
   }
   const pubKeys = indices.map((i) => state.validators[i].pubkey.valueOf() as Uint8Array);
-  const domain = getDomain(config, state, DomainType.BEACON_ATTESTER, indexedAttestation.data.target.epoch);
+  const domain = getDomain(config, state, config.params.DOMAIN_BEACON_ATTESTER, indexedAttestation.data.target.epoch);
   const signingRoot = computeSigningRoot(config, config.types.phase0.AttestationData, indexedAttestation.data, domain);
   //  Verify aggregate signature
   if (

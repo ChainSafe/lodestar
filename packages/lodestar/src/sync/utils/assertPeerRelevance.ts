@@ -43,7 +43,7 @@ export function assertPeerRelevance(remote: phase0.Status, chain: IBeaconChain, 
   // The remote's head is on a slot that is significantly ahead of what we consider the
   // current slot. This could be because they are using a different genesis time, or that
   // their or our system's clock is incorrect.
-  const slotDiff = remote.headSlot - chain.clock.currentSlot;
+  const slotDiff = remote.headSlot - Math.max(chain.clock.currentSlot, 0);
   if (slotDiff > FUTURE_SLOT_TOLERANCE) {
     throw new IrrelevantPeerError({code: IrrelevantPeerErrorCode.DIFFERENT_CLOCKS, slotDiff});
   }

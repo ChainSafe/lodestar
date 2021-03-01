@@ -12,7 +12,7 @@ import {IDatabaseController, Bucket, Repository} from "@chainsafe/lodestar-db";
  */
 export class AggregateAndProofRepository extends Repository<Uint8Array, phase0.AggregateAndProof> {
   public constructor(config: IBeaconConfig, db: IDatabaseController<Buffer, Buffer>) {
-    super(config, db, Bucket.aggregateAndProof, config.types.phase0.AggregateAndProof);
+    super(config, db, Bucket.phase0_aggregateAndProof, config.types.phase0.AggregateAndProof);
   }
 
   /**

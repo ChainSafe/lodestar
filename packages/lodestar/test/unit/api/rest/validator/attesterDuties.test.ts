@@ -3,7 +3,7 @@ import {expect} from "chai";
 import supertest from "supertest";
 import {ApiNamespace, RestApi} from "../../../../../src/api";
 import {attesterDutiesController} from "../../../../../src/api/rest/controllers/validator/duties/attesterDuties";
-import {silentLogger} from "../../../../utils/logger";
+import {testLogger} from "../../../../utils/logger";
 import {StubbedApi} from "../../../../utils/stub/api";
 import {urlJoin} from "../utils";
 import {VALIDATOR_PREFIX} from "./index.test";
@@ -24,7 +24,7 @@ describe("rest - validator - attesterDuties", function () {
       },
       {
         config,
-        logger: silentLogger,
+        logger: testLogger(),
         api,
       }
     );

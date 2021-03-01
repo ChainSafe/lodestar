@@ -9,7 +9,6 @@ import {phase0} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {assert} from "@chainsafe/lodestar-utils";
 
-import {DomainType} from "../../../constants";
 import {getBeaconProposerIndex, getCurrentEpoch, getDomain, getRandaoMix, computeSigningRoot} from "../../../util";
 
 export function processRandao(
@@ -20,7 +19,7 @@ export function processRandao(
 ): void {
   const currentEpoch = getCurrentEpoch(config, state);
   const proposer = state.validators[getBeaconProposerIndex(config, state)];
-  const domain = getDomain(config, state, DomainType.RANDAO);
+  const domain = getDomain(config, state, config.params.DOMAIN_RANDAO);
   const signingRoot = computeSigningRoot(config, config.types.Epoch, currentEpoch, domain);
   // Verify RANDAO reveal
   assert.true(

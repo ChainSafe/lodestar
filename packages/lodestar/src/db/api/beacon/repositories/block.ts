@@ -9,7 +9,7 @@ import {IDatabaseController, Bucket, Repository} from "@chainsafe/lodestar-db";
  */
 export class BlockRepository extends Repository<Uint8Array, phase0.SignedBeaconBlock> {
   public constructor(config: IBeaconConfig, db: IDatabaseController<Buffer, Buffer>) {
-    super(config, db, Bucket.block, config.types.phase0.SignedBeaconBlock);
+    super(config, db, Bucket.phase0_block, config.types.phase0.SignedBeaconBlock);
   }
 
   /**

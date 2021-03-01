@@ -2,9 +2,9 @@ import bls from "@chainsafe/bls";
 import {phase0} from "@chainsafe/lodestar-types";
 import {verifyMerkleBranch, bigIntMin} from "@chainsafe/lodestar-utils";
 
-import {DEPOSIT_CONTRACT_TREE_DEPTH, DomainType, FAR_FUTURE_EPOCH} from "../../../constants";
+import {DEPOSIT_CONTRACT_TREE_DEPTH, FAR_FUTURE_EPOCH} from "../../../constants";
 import {computeDomain, computeSigningRoot, increaseBalance} from "../../../util";
-import {EpochContext, CachedValidatorsBeaconState} from "../util";
+import {CachedValidatorsBeaconState, EpochContext} from "../util";
 
 export function processDeposit(
   epochCtx: EpochContext,
@@ -40,7 +40,7 @@ export function processDeposit(
       amount: deposit.data.amount,
     };
     // fork-agnostic domain since deposits are valid across forks
-    const domain = computeDomain(config, DomainType.DEPOSIT);
+    const domain = computeDomain(config, config.params.DOMAIN_DEPOSIT);
     const signingRoot = computeSigningRoot(config, config.types.phase0.DepositMessage, depositMessage, domain);
     if (!bls.verify(pubkey.valueOf() as Uint8Array, signingRoot, deposit.data.signature.valueOf() as Uint8Array)) {
       return;

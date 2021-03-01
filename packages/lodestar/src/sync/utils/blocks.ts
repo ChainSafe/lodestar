@@ -3,8 +3,7 @@ import {phase0, Slot} from "@chainsafe/lodestar-types";
 import {RoundRobinArray} from "./robin";
 import {IReqResp} from "../../network";
 import {ISlotRange} from "../interface";
-import {ILogger} from "@chainsafe/lodestar-utils";
-import {notNullish} from "../../util/notNullish";
+import {ILogger, notNullish} from "@chainsafe/lodestar-utils";
 
 /**
  * Creates slot chunks returned chunks represents (inclusive) start and (inclusive) end slot
@@ -92,44 +91,4 @@ export async function getBlockRange(
 
 export function sortBlocks(blocks: phase0.SignedBeaconBlock[]): phase0.SignedBeaconBlock[] {
   return blocks.sort((b1, b2) => b1.message.slot - b2.message.slot);
-}
-
-/**
- * Asserts a response from BeaconBlocksByRange respects the request and is sequential
- * Note: MUST allow missing block for skipped slots.
- */
-export function assertSequentialBlocksInRange(
-  blocks: phase0.SignedBeaconBlock[],
-  request: phase0.BeaconBlocksByRangeRequest
-): void {
-  // Check below would throw for empty ranges
-  if (blocks.length === 0) {
-    return;
-  }
-
-  if (blocks.length > request.count) {
-    throw Error(`BlockRangeError: wrong length ${blocks.length} > ${request.count}`);
-  }
-
-  const minSlot = request.startSlot;
-  const maxSlot = request.startSlot + request.count * request.step;
-  const firstSlot = blocks[0].message.slot;
-  const lastSlot = blocks[blocks.length - 1].message.slot;
-
-  if (firstSlot < minSlot) {
-    throw Error(`BlockRangeError: wrong firstSlot ${firstSlot} < ${minSlot}`);
-  }
-
-  if (lastSlot > maxSlot) {
-    throw Error(`BlockRangeError: wrong lastSlot ${lastSlot} > ${maxSlot}`);
-  }
-
-  // Assert sequential with request.step
-  for (let i = 0; i < blocks.length - 1; i++) {
-    const slotL = blocks[i].message.slot;
-    const slotR = blocks[i + 1].message.slot;
-    if (slotL + request.step > slotR) {
-      throw Error(`BlockRangeError: wrong sequence ${slotL} + ${request.step} > ${slotR}`);
-    }
-  }
 }

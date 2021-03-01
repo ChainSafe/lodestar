@@ -6,7 +6,7 @@ import {getDevValidators} from "../utils/node/validator";
 import {expect} from "chai";
 import {ChainEvent} from "../../src/chain";
 import {IRestApiOptions} from "../../src/api/rest/options";
-import {WinstonLogger} from "@chainsafe/lodestar-utils";
+import {testLogger, LogLevel} from "../utils/logger";
 
 describe("Run single node single thread interop validators (no eth1) until checkpoint", function () {
   const timeout = 120 * 1000;
@@ -21,6 +21,9 @@ describe("Run single node single thread interop validators (no eth1) until check
     // eslint-disable-next-line @typescript-eslint/naming-convention
     TARGET_AGGREGATORS_PER_COMMITTEE: 1,
   };
+
+  const loggerNodeA = testLogger("Node-A", LogLevel.info);
+  const loggerValiA = testLogger("Vali-A", LogLevel.info);
 
   const testCases: {
     vc: number;
@@ -40,14 +43,14 @@ describe("Run single node single thread interop validators (no eth1) until check
         params: testCase.params,
         options: {sync: {minPeers: 0}, api: {rest: {enabled: true} as IRestApiOptions}},
         validatorCount: testCase.vc * testCase.validators,
-        logger: new WinstonLogger(),
+        logger: loggerNodeA,
       });
       const justificationEventListener = waitForEvent<phase0.Checkpoint>(
         bn.chain.emitter,
         testCase.event,
         timeout - 10 * 1000
       );
-      const validators = getDevValidators(bn, testCase.validators, testCase.vc, true);
+      const validators = getDevValidators(bn, testCase.validators, testCase.vc, true, loggerValiA);
       await Promise.all(validators.map((v) => v.start()));
       try {
         await justificationEventListener;

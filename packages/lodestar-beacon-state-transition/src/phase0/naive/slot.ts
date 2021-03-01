@@ -5,9 +5,7 @@
 import {phase0, Slot} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {assert} from "@chainsafe/lodestar-utils";
-
 import {ZERO_HASH} from "../../constants";
-
 import {processEpoch} from "./epoch";
 
 export function processSlots(config: IBeaconConfig, state: phase0.BeaconState, slot: Slot): void {

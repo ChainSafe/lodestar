@@ -9,7 +9,7 @@ export class StateArchiveRepository extends Repository<Slot, TreeBacked<phase0.B
     super(
       config,
       db,
-      Bucket.state,
+      Bucket.phase0_stateArchive,
       (config.types.phase0.BeaconState as unknown) as CompositeType<TreeBacked<phase0.BeaconState>>
     );
   }
@@ -51,6 +51,6 @@ export class StateArchiveRepository extends Repository<Slot, TreeBacked<phase0.B
   }
 
   private getRootIndexKey(root: Root): Buffer {
-    return encodeKey(Bucket.stateArchiveRootIndex, root.valueOf() as Uint8Array);
+    return encodeKey(Bucket.index_stateArchiveRootIndex, root.valueOf() as Uint8Array);
   }
 }

@@ -123,6 +123,24 @@ export interface IBeaconMetrics extends IMetrics {
    * That attestation is not necessarily included on chain.
    */
   observedEpochAggregators: Gauge;
+  /**
+   * Total number of seconds spent completing block processor async jobs
+   * Useful to compute the utilitzation ratio of the blockProcessor with:
+   * `rate(lodestar_block_processor_total_async_time[1m])`
+   */
+  blockProcessorTotalAsyncTime: Gauge;
+  /** Peers labeled by direction */
+  peersByDirection: Gauge;
+  /** Number of peer:connected event, labeled by direction */
+  peerConnectedEvent: Gauge;
+  /** Number of peer:disconnected event, labeled by direction */
+  peerDisconnectedEvent: Gauge;
+  /** Number of goodbye received, labeled by reason */
+  peerGoodbyeReceived: Gauge;
+  /** Number of goodbye sent, labeled by reason */
+  peerGoodbyeSent: Gauge;
+  /** Total number of unique peers that have had a connection with */
+  peersTotalUniqueConnected: Gauge;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-empty-interface

@@ -4,7 +4,7 @@ import supertest from "supertest";
 import {ApiNamespace, RestApi} from "../../../../../../src/api";
 import {StateNotFound} from "../../../../../../src/api/impl/errors/api";
 import {getStateValidators} from "../../../../../../src/api/rest/controllers/beacon";
-import {silentLogger} from "../../../../../utils/logger";
+import {testLogger} from "../../../../../utils/logger";
 import {StubbedApi} from "../../../../../utils/stub/api";
 import {generateValidator} from "../../../../../utils/validator";
 import {urlJoin} from "../../utils";
@@ -27,7 +27,7 @@ describe("rest - beacon - getStateValidators", function () {
       },
       {
         config,
-        logger: silentLogger,
+        logger: testLogger(),
         api,
       }
     );

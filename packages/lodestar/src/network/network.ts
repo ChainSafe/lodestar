@@ -22,7 +22,7 @@ import {CheckPeerAliveTask} from "./tasks/checkPeerAliveTask";
 import {IPeerMetadataStore} from "./peers";
 import {Libp2pPeerMetadataStore} from "./peers/metastore";
 import {getPeerCountBySubnet} from "./peers/utils";
-import {IRpcScoreTracker, SimpleRpcScoreTracker} from "./peers/score";
+import {IPeerRpcScoreStore, PeerRpcScoreStore} from "./peers/score";
 
 interface ILibp2pModules {
   config: IBeaconConfig;
@@ -33,14 +33,14 @@ interface ILibp2pModules {
   chain: IBeaconChain;
 }
 
-export class Libp2pNetwork extends (EventEmitter as {new (): NetworkEventEmitter}) implements INetwork {
+export class Network extends (EventEmitter as {new (): NetworkEventEmitter}) implements INetwork {
   public peerId: PeerId;
   public localMultiaddrs!: Multiaddr[];
   public reqResp: ReqResp;
   public gossip: IGossip;
   public metadata: MetadataController;
   public peerMetadata: IPeerMetadataStore;
-  public peerRpcScores: IRpcScoreTracker;
+  public peerRpcScores: IPeerRpcScoreStore;
 
   private opts: INetworkOptions;
   private config: IBeaconConfig;
@@ -49,6 +49,8 @@ export class Libp2pNetwork extends (EventEmitter as {new (): NetworkEventEmitter
   private metrics: IBeaconMetrics;
   private diversifyPeersTask: DiversifyPeersBySubnetTask;
   private checkPeerAliveTask: CheckPeerAliveTask;
+  /** To count total number of unique seen peers */
+  private seenPeers = new Set();
 
   public constructor(
     opts: INetworkOptions & IReqRespOptions,
@@ -62,9 +64,9 @@ export class Libp2pNetwork extends (EventEmitter as {new (): NetworkEventEmitter
     this.peerId = libp2p.peerId;
     this.libp2p = libp2p;
     this.peerMetadata = new Libp2pPeerMetadataStore(this.config, this.libp2p.peerStore.metadataBook);
-    this.peerRpcScores = new SimpleRpcScoreTracker(this.peerMetadata);
+    this.peerRpcScores = new PeerRpcScoreStore(this.peerMetadata);
     this.reqResp = new ReqResp(
-      {config, libp2p, peerMetadata: this.peerMetadata, blockProviderScores: this.peerRpcScores, logger},
+      {config, libp2p, peerMetadata: this.peerMetadata, peerRpcScores: this.peerRpcScores, logger},
       opts
     );
     this.metadata = new MetadataController({}, {config, chain, logger});
@@ -112,6 +114,10 @@ export class Libp2pNetwork extends (EventEmitter as {new (): NetworkEventEmitter
     return discv5Discovery?.discv5?.enr ?? undefined;
   }
 
+  public getConnectionsByPeer(): Map<string, LibP2pConnection[]> {
+    return this.libp2p.connectionManager.connections;
+  }
+
   /**
    * Get connected peers.
    * @param opts PeerSearchOptions
@@ -142,14 +148,6 @@ export class Libp2pNetwork extends (EventEmitter as {new (): NetworkEventEmitter
       }) as LibP2p.Peer[];
 
     return peers.slice(0, opts?.count ?? peers.length) || [];
-  }
-
-  /**
-   * Get all peers including disconnected ones.
-   * There are probably more than 10k peers, only the api uses this.
-   */
-  public getAllPeers(): LibP2p.Peer[] {
-    return Array.from(this.libp2p.peerStore.peers.values());
   }
 
   public getMaxPeer(): number {
@@ -261,17 +259,43 @@ export class Libp2pNetwork extends (EventEmitter as {new (): NetworkEventEmitter
   };
 
   private emitPeerConnect = (conn: LibP2pConnection): void => {
-    this.metrics.peers.inc();
     this.logger.verbose("peer connected", {peerId: conn.remotePeer.toB58String(), direction: conn.stat.direction});
 
     // tmp fix, we will just do double status exchange but nothing major
     // TODO: fix it?
     this.emit(NetworkEvent.peerConnect, conn.remotePeer, conn.stat.direction);
+    this.metrics.peerConnectedEvent.inc({direction: conn.stat.direction});
+    this.runPeerCountMetrics();
+
+    this.seenPeers.add(conn.remotePeer.toB58String());
+    this.metrics.peersTotalUniqueConnected.set(this.seenPeers.size);
   };
 
   private emitPeerDisconnect = (conn: LibP2pConnection): void => {
     this.logger.verbose("peer disconnected", {peerId: conn.remotePeer.toB58String()});
-    this.metrics.peers.dec();
+
     this.emit(NetworkEvent.peerDisconnect, conn.remotePeer);
+    this.metrics.peerDisconnectedEvent.inc({direction: conn.stat.direction});
+    this.runPeerCountMetrics();
   };
+
+  /** Register peer count metrics */
+  private runPeerCountMetrics(): void {
+    let total = 0;
+    const peersByDirection = new Map<string, number>();
+    for (const connections of this.libp2p.connectionManager.connections.values()) {
+      const cnx = connections.find((cnx) => cnx.stat.status === "open");
+      if (cnx) {
+        const direction = cnx.stat.direction;
+        peersByDirection.set(direction, 1 + (peersByDirection.get(direction) ?? 0));
+        total++;
+      }
+    }
+
+    for (const [direction, peers] of peersByDirection.entries()) {
+      this.metrics.peersByDirection.set({direction}, peers);
+    }
+
+    this.metrics.peers.set(total);
+  }
 }

@@ -11,14 +11,14 @@ import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {ForkDigest, Number64, Root, Slot} from "@chainsafe/lodestar-types";
-import {ILogger, intToBytes} from "@chainsafe/lodestar-utils";
+import {ILogger} from "@chainsafe/lodestar-utils";
 import {TreeBacked} from "@chainsafe/ssz";
 import {AbortController} from "abort-controller";
 import {FAR_FUTURE_EPOCH, GENESIS_EPOCH, ZERO_HASH} from "../constants";
 import {IBeaconDb} from "../db";
 import {CheckpointStateCache, StateContextCache} from "./stateCache";
 import {IBeaconMetrics} from "../metrics";
-import {notNullish} from "../util/notNullish";
+import {notNullish} from "@chainsafe/lodestar-utils";
 import {AttestationPool, AttestationProcessor} from "./attestation";
 import {BlockPool, BlockProcessor} from "./blocks";
 import {IBeaconClock, LocalClock} from "./clock";
@@ -119,6 +119,7 @@ export class BeaconChain implements IBeaconChain {
       forkChoice: this.forkChoice,
       clock: this.clock,
       regen: this.regen,
+      metrics: this.metrics,
       emitter: this.internalEmitter,
       checkpointStateCache: this.checkpointStateCache,
       signal: this.abortController.signal,
@@ -260,20 +261,14 @@ export class BeaconChain implements IBeaconChain {
   public getENRForkID(): phase0.ENRForkID {
     const state = this.getHeadState();
     const currentVersion = state.fork.currentVersion;
-    const nextVersion =
-      this.config.params.ALL_FORKS &&
-      this.config.params.ALL_FORKS.find((fork) =>
-        this.config.types.Version.equals(currentVersion, intToBytes(fork.previousVersion, 4))
-      );
 
     const forkDigest = this.getForkDigest();
 
     return {
       forkDigest,
-      nextForkVersion: nextVersion
-        ? intToBytes(nextVersion.currentVersion, 4)
-        : (currentVersion.valueOf() as Uint8Array),
-      nextForkEpoch: nextVersion ? nextVersion.epoch : FAR_FUTURE_EPOCH,
+      // TODO figure out forking
+      nextForkVersion: currentVersion.valueOf() as Uint8Array,
+      nextForkEpoch: FAR_FUTURE_EPOCH,
     };
   }
 

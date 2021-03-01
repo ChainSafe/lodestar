@@ -5,7 +5,7 @@ import {IDatabaseController, Bucket, Repository} from "@chainsafe/lodestar-db";
 
 export class Eth1DataRepository extends Repository<number, phase0.Eth1DataOrdered> {
   public constructor(config: IBeaconConfig, db: IDatabaseController<Buffer, Buffer>) {
-    super(config, db, Bucket.eth1Data, config.types.phase0.Eth1DataOrdered);
+    super(config, db, Bucket.phase0_eth1Data, config.types.phase0.Eth1DataOrdered);
   }
 
   public decodeKey(data: Buffer): number {

@@ -3,13 +3,10 @@
  */
 
 import {AbortSignal} from "abort-controller";
-
-import {blockToHeader, computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
-import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
+import {blockToHeader, computeEpochAtSlot, phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {toHexString, TreeBacked} from "@chainsafe/ssz";
-
 import {GENESIS_SLOT, ZERO_HASH} from "../constants";
 import {IBeaconDb} from "../db";
 import {Eth1Provider} from "../eth1";

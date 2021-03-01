@@ -27,7 +27,7 @@ import {getBaseReward, isInInactivityLeak, getProposerReward, getFinalityDelay} 
  * Both active validators and slashed-but-not-yet-withdrawn validators are eligible to receive
  * penalties. This is done to prevent self-slashing from being a way to escape inactivity leaks.
  */
-function getEligibleValidatorIndices(config: IBeaconConfig, state: phase0.BeaconState): ValidatorIndex[] {
+export function getEligibleValidatorIndices(config: IBeaconConfig, state: phase0.BeaconState): ValidatorIndex[] {
   const previousEpoch = getPreviousEpoch(config, state);
   return Array.from(state.validators).reduce((indices: ValidatorIndex[], v, index) => {
     if (isActiveValidator(v, previousEpoch) || (v.slashed && previousEpoch + 1 < v.withdrawableEpoch)) {
@@ -40,7 +40,7 @@ function getEligibleValidatorIndices(config: IBeaconConfig, state: phase0.Beacon
 /**
  * Helper with shared logic for use by get source, target, and head deltas functions
  */
-function getAttestationComponentDeltas(
+export function getAttestationComponentDeltas(
   config: IBeaconConfig,
   state: phase0.BeaconState,
   attestations: phase0.PendingAttestation[]

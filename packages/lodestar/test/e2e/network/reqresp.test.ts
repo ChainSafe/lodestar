@@ -3,13 +3,14 @@ import chaiAsPromised from "chai-as-promised";
 import {AbortController} from "abort-controller";
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import {LogLevel, sleep, WinstonLogger} from "@chainsafe/lodestar-utils";
+import {phase0} from "@chainsafe/lodestar-types";
 import {Method, ReqRespEncoding} from "../../../src/constants";
 import {BeaconMetrics} from "../../../src/metrics";
-import {createPeerId, IReqRespOptions, Libp2pNetwork, NetworkEvent} from "../../../src/network";
+import {createPeerId, IReqRespOptions, Network, NetworkEvent} from "../../../src/network";
 import {GossipMessageValidator} from "../../../src/network/gossip/validator";
 import {INetworkOptions} from "../../../src/network/options";
 import {RequestError, RequestErrorCode} from "../../../src/network/reqresp/request";
-import {silentLogger} from "../../utils/logger";
+import {testLogger} from "../../utils/logger";
 import {MockBeaconChain} from "../../utils/mocks/chain/chain";
 import {createNode} from "../../utils/network";
 import {generateState} from "../../utils/state";
@@ -47,18 +48,13 @@ describe("[network] network", function () {
     }
   });
 
-  async function createAndConnectPeers(reqRespOpts?: IReqRespOptions): Promise<[Libp2pNetwork, Libp2pNetwork]> {
+  async function createAndConnectPeers(reqRespOpts?: IReqRespOptions): Promise<[Network, Network]> {
     const peerIdB = await createPeerId();
     const [libP2pA, libP2pB] = await Promise.all([createNode(multiaddr), createNode(multiaddr, peerIdB)]);
 
-    // Run tests with `DEBUG=true mocha ...` to get detailed logs of ReqResp exchanges
-    const debugMode = process.env.DEBUG;
-    const loggerA = debugMode ? new WinstonLogger({level: LogLevel.verbose, module: "A"}) : silentLogger;
-    const loggerB = debugMode ? new WinstonLogger({level: LogLevel.verbose, module: "B"}) : silentLogger;
-
     const opts = {...networkOptsDefault, ...reqRespOpts};
-    const netA = new Libp2pNetwork(opts, {config, libp2p: libP2pA, logger: loggerA, metrics, validator, chain});
-    const netB = new Libp2pNetwork(opts, {config, libp2p: libP2pB, logger: loggerB, metrics, validator, chain});
+    const netA = new Network(opts, {config, libp2p: libP2pA, logger: testLogger("A"), metrics, validator, chain});
+    const netB = new Network(opts, {config, libp2p: libP2pB, logger: testLogger("B"), metrics, validator, chain});
     await Promise.all([netA.start(), netB.start()]);
 
     const connected = Promise.all([
@@ -117,8 +113,13 @@ describe("[network] network", function () {
   it("should send/receive signed blocks", async function () {
     const [netA, netB] = await createAndConnectPeers();
 
-    const count = 2;
-    const blocks = generateEmptySignedBlocks(count);
+    const req: phase0.BeaconBlocksByRangeRequest = {startSlot: 0, step: 1, count: 2};
+    const blocks: phase0.SignedBeaconBlock[] = [];
+    for (let slot = req.startSlot; slot < req.count; slot++) {
+      const block = generateEmptySignedBlock();
+      block.message.slot = slot;
+      blocks.push(block);
+    }
 
     netB.reqResp.registerHandler(async function* (method) {
       if (method === Method.BeaconBlocksByRange) {
@@ -128,10 +129,10 @@ describe("[network] network", function () {
       }
     });
 
-    const returnedBlocks = await netA.reqResp.beaconBlocksByRange(netB.peerId, {startSlot: 0, step: 1, count});
+    const returnedBlocks = await netA.reqResp.beaconBlocksByRange(netB.peerId, req);
 
     if (!returnedBlocks) throw Error("Returned null");
-    expect(returnedBlocks).to.have.length(count, "Wrong returnedBlocks lenght");
+    expect(returnedBlocks).to.have.length(req.count, "Wrong returnedBlocks lenght");
 
     returnedBlocks.forEach((returnedBlock, i) => {
       expect(config.types.phase0.SignedBeaconBlock.equals(returnedBlock, blocks[i])).to.equal(

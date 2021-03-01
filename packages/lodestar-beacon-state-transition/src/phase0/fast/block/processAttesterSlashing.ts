@@ -1,7 +1,7 @@
 import {phase0, ValidatorIndex} from "@chainsafe/lodestar-types";
 
 import {isSlashableValidator, isSlashableAttestationData} from "../../../util";
-import {EpochContext, CachedValidatorsBeaconState} from "../util";
+import {CachedValidatorsBeaconState, EpochContext} from "../util";
 import {slashValidator} from "./slashValidator";
 import {isValidIndexedAttestation} from "./isValidIndexedAttestation";
 

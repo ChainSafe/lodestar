@@ -4,7 +4,7 @@ import {ATTESTATION_SUBNET_COUNT} from "../../constants";
 import {INetwork} from "../interface";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {getSyncProtocols} from "../util";
-import {notNullish} from "../../util/notNullish";
+import {notNullish} from "@chainsafe/lodestar-utils";
 import {getSyncPeers} from "../../sync/utils/peers";
 
 /**

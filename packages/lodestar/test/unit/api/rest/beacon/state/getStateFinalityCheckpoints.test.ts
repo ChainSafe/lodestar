@@ -3,7 +3,7 @@ import {expect} from "chai";
 import supertest from "supertest";
 import {ApiNamespace, RestApi} from "../../../../../../src/api";
 import {getStateFinalityCheckpoints} from "../../../../../../src/api/rest/controllers/beacon/state";
-import {silentLogger} from "../../../../../utils/logger";
+import {testLogger} from "../../../../../utils/logger";
 import {generateState} from "../../../../../utils/state";
 import {StubbedApi} from "../../../../../utils/stub/api";
 import {urlJoin} from "../../utils";
@@ -25,7 +25,7 @@ describe("rest - beacon - getStateFinalityCheckpoints", function () {
       },
       {
         config,
-        logger: silentLogger,
+        logger: testLogger(),
         api,
       }
     );

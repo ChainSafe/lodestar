@@ -15,7 +15,8 @@ import {BlockError, BlockErrorCode} from "../chain/errors";
 import {getPeersInitialSync} from "./utils/bestPeers";
 import {ORARegularSync} from "./regular/oneRangeAhead/oneRangeAhead";
 import {SyncChain, ProcessChainSegment, DownloadBeaconBlocksByRange, GetPeersAndTargetEpoch} from "./range/chain";
-import {assertSequentialBlocksInRange, AttestationCollector, RoundRobinArray, syncPeersStatus} from "./utils";
+import {AttestationCollector, RoundRobinArray, syncPeersStatus} from "./utils";
+import {ScoreState} from "../network/peers";
 
 export class BeaconSync implements IBeaconSync {
   private readonly opts: ISyncOptions;
@@ -31,7 +32,6 @@ export class BeaconSync implements IBeaconSync {
   private attestationCollector: AttestationCollector;
 
   private statusSyncTimer?: NodeJS.Timeout;
-  private peerCountTimer?: NodeJS.Timeout;
   // avoid finding same root at the same time
   private processingRoots: Set<string>;
 
@@ -59,7 +59,6 @@ export class BeaconSync implements IBeaconSync {
     if (this.mode === SyncMode.STOPPED) {
       return;
     }
-    this.peerCountTimer = setInterval(this.logPeerCount, 3 * this.config.params.SECONDS_PER_SLOT * 1000);
 
     if ((this.mode as SyncMode) === SyncMode.STOPPED) return;
     this.mode = SyncMode.INITIAL_SYNCING;
@@ -84,9 +83,6 @@ export class BeaconSync implements IBeaconSync {
 
   public async stop(): Promise<void> {
     this.controller.abort();
-    if (this.peerCountTimer) {
-      clearInterval(this.peerCountTimer);
-    }
     if (this.mode === SyncMode.STOPPED) {
       return;
     }
@@ -142,19 +138,17 @@ export class BeaconSync implements IBeaconSync {
   };
 
   private downloadBeaconBlocksByRange: DownloadBeaconBlocksByRange = async (peerId, request) => {
-    const blocks = await this.network.reqResp.beaconBlocksByRange(peerId, request);
-    assertSequentialBlocksInRange(blocks, request);
-    return blocks;
+    return await this.network.reqResp.beaconBlocksByRange(peerId, request);
   };
 
   private getPeersAndTargetEpoch: GetPeersAndTargetEpoch = () => {
     const minPeers = this.opts.minPeers ?? defaultSyncOptions.minPeers;
     const peerSet = getPeersInitialSync(this.network);
     if (!peerSet && minPeers === 0) {
-      this.logger.info("minPeers=0, skipping initial sync");
+      this.logger.verbose("minPeers=0, skipping initial sync");
       return {peers: [], targetEpoch: this.chain.forkChoice.getFinalizedBlock().finalizedEpoch};
     } else if (!peerSet || peerSet.peers.length < minPeers) {
-      this.logger.info(`Waiting for minPeers: ${peerSet?.peers?.length ?? 0}/${minPeers}`);
+      this.logger.verbose(`Waiting for minPeers: ${peerSet?.peers?.length ?? 0}/${minPeers}`);
       return null;
     } else {
       const targetEpoch = peerSet.checkpoint.epoch;
@@ -176,7 +170,7 @@ export class BeaconSync implements IBeaconSync {
   private syncCompleted = async (): Promise<void> => {
     this.mode = SyncMode.SYNCED;
     this.stopSyncTimer();
-    this.gossip.handleSyncCompleted();
+    this.gossip.start();
     await this.network.handleSyncCompleted();
   };
 
@@ -190,14 +184,6 @@ export class BeaconSync implements IBeaconSync {
       }
     }, interval);
   }
-
-  private logPeerCount = (): void => {
-    this.logger.info("Peer status", {
-      activePeers: this.network.getPeers().length,
-      syncPeers: this.getSyncPeers().length,
-      unknownRootPeers: this.getUnknownRootPeers().length,
-    });
-  };
 
   private stopSyncTimer(): void {
     if (this.statusSyncTimer) clearInterval(this.statusSyncTimer);
@@ -215,21 +201,23 @@ export class BeaconSync implements IBeaconSync {
     return this.network
       .getPeers({supportsProtocols: protocols})
       .filter((peer) => {
-        return !!this.network.peerMetadata.status.get(peer.id) && this.network.peerRpcScores.getScore(peer.id) > 50;
+        return (
+          !!this.network.peerMetadata.status.get(peer.id) &&
+          this.network.peerRpcScores.getScoreState(peer.id) === ScoreState.Healthy
+        );
       })
       .map((peer) => peer.id);
   }
 
   private onUnknownBlockRoot = async (err: BlockError): Promise<void> => {
     if (err.type.code !== BlockErrorCode.PARENT_UNKNOWN) return;
-    const blockRoot = this.config.types.phase0.BeaconBlock.hashTreeRoot(err.job.signedBlock.message);
-    const unknownAncestorRoot = this.chain.pendingBlocks.getMissingAncestor(blockRoot);
-    const missingRootHex = toHexString(unknownAncestorRoot);
-    if (this.processingRoots.has(missingRootHex)) {
+    const parentRoot = err.type.parentRoot;
+    const parentRootHex = toHexString(parentRoot);
+    if (this.processingRoots.has(parentRootHex)) {
       return;
     } else {
-      this.processingRoots.add(missingRootHex);
-      this.logger.verbose("Finding block for unknown ancestor root", {blockRoot: missingRootHex});
+      this.processingRoots.add(parentRootHex);
+      this.logger.verbose("Finding block for unknown ancestor root", {parentRootHex});
     }
     const peerBalancer = new RoundRobinArray(this.getUnknownRootPeers());
     let retry = 0;
@@ -241,16 +229,16 @@ export class BeaconSync implements IBeaconSync {
         break;
       }
       try {
-        const blocks = await this.network.reqResp.beaconBlocksByRoot(peer, [unknownAncestorRoot] as List<Root>);
+        const blocks = await this.network.reqResp.beaconBlocksByRoot(peer, [parentRoot] as List<Root>);
         if (blocks[0]) {
-          this.logger.verbose("Found block for root", {slot: blocks[0].message.slot, blockRoot: missingRootHex});
+          this.logger.verbose("Found block for root", {slot: blocks[0].message.slot, parentRootHex});
           found = true;
           this.chain.receiveBlock(blocks[0]);
           break;
         }
       } catch (e) {
         this.logger.verbose("Failed to get unknown ancestor root from peer", {
-          blockRoot: missingRootHex,
+          parentRootHex,
           peer: peer.toB58String(),
           error: e.message,
           maxRetry,
@@ -259,7 +247,7 @@ export class BeaconSync implements IBeaconSync {
       }
       retry++;
     } // end while
-    this.processingRoots.delete(missingRootHex);
-    if (!found) this.logger.error("Failed to get unknown ancestor root", {blockRoot: missingRootHex});
+    this.processingRoots.delete(parentRootHex);
+    if (!found) this.logger.error("Failed to get unknown ancestor root", {parentRootHex});
   };
 }

@@ -6,7 +6,7 @@ import supertest from "supertest";
 import {CONFIG_PREFIX} from ".";
 import {ApiNamespace, RestApi} from "../../../../../src/api";
 import {getSpec} from "../../../../../src/api/rest/controllers/config";
-import {silentLogger} from "../../../../utils/logger";
+import {testLogger} from "../../../../utils/logger";
 import {StubbedApi} from "../../../../utils/stub/api";
 
 describe("rest - config - getSpec", function () {
@@ -25,7 +25,7 @@ describe("rest - config - getSpec", function () {
       },
       {
         config,
-        logger: silentLogger,
+        logger: testLogger(),
         api,
       }
     );

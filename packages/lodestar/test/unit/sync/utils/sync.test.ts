@@ -17,9 +17,9 @@ import {
 } from "../../../../src/sync/utils";
 import {generateBlockSummary, generateEmptySignedBlock} from "../../../utils/block";
 import {ZERO_HASH} from "@chainsafe/lodestar-beacon-state-transition";
-import {INetwork, Libp2pNetwork} from "../../../../src/network";
+import {INetwork, Network} from "../../../../src/network";
 import {generatePeer} from "../../../utils/peer";
-import {IRpcScoreTracker, SimpleRpcScoreTracker} from "../../../../src/network/peers";
+import {IPeerRpcScoreStore, PeerRpcScoreStore, ScoreState} from "../../../../src/network/peers";
 import {getStubbedMetadataStore, StubbedIPeerMetadataStore} from "../../../utils/peer";
 
 describe("sync utils", function () {
@@ -94,14 +94,14 @@ describe("sync utils", function () {
     let networkStub: SinonStubbedInstance<INetwork>;
     let forkChoiceStub: SinonStubbedInstance<ForkChoice> & ForkChoice;
     let metastoreStub: StubbedIPeerMetadataStore;
-    let peerScoreStub: SinonStubbedInstance<IRpcScoreTracker>;
+    let peerScoreStub: SinonStubbedInstance<IPeerRpcScoreStore>;
 
     beforeEach(() => {
       metastoreStub = getStubbedMetadataStore();
-      networkStub = sinon.createStubInstance(Libp2pNetwork);
+      networkStub = sinon.createStubInstance(Network);
       networkStub.peerMetadata = metastoreStub;
       forkChoiceStub = sinon.createStubInstance(ForkChoice) as SinonStubbedInstance<ForkChoice> & ForkChoice;
-      peerScoreStub = sinon.createStubInstance(SimpleRpcScoreTracker);
+      peerScoreStub = sinon.createStubInstance(PeerRpcScoreStore);
       networkStub.peerRpcScores = peerScoreStub;
     });
     afterEach(() => {
@@ -132,10 +132,10 @@ describe("sync utils", function () {
       const peer1 = await PeerId.create();
       networkStub.getPeers.returns([generatePeer(peer1)]);
       forkChoiceStub.getHead.returns(generateBlockSummary({slot: 20}));
-      peerScoreStub.getScore.returns(20);
+      peerScoreStub.getScoreState.returns(ScoreState.Banned);
       expect(checkBestPeer(peer1, forkChoiceStub, networkStub)).to.be.false;
       expect(networkStub.getPeers.calledOnce).to.be.true;
-      expect(peerScoreStub.getScore.calledOnce).to.be.true;
+      expect(peerScoreStub.getScoreState.calledOnce).to.be.true;
       expect(forkChoiceStub.getHead.calledOnce).to.be.false;
     });
 
@@ -150,10 +150,10 @@ describe("sync utils", function () {
         headSlot: 10,
       });
       forkChoiceStub.getHead.returns(generateBlockSummary({slot: 20}));
-      peerScoreStub.getScore.returns(150);
+      peerScoreStub.getScoreState.returns(ScoreState.Healthy);
       expect(checkBestPeer(peer1, forkChoiceStub, networkStub)).to.be.false;
       expect(networkStub.getPeers.calledOnce).to.be.true;
-      expect(peerScoreStub.getScore.calledOnce).to.be.true;
+      expect(peerScoreStub.getScoreState.calledOnce).to.be.true;
       expect(forkChoiceStub.getHead.calledOnce).to.be.true;
     });
 
@@ -167,11 +167,11 @@ describe("sync utils", function () {
         headRoot: ZERO_HASH,
         headSlot: 30,
       });
-      peerScoreStub.getScore.returns(150);
+      peerScoreStub.getScoreState.returns(ScoreState.Healthy);
       forkChoiceStub.getHead.returns(generateBlockSummary({slot: 20}));
       expect(checkBestPeer(peer1, forkChoiceStub, networkStub)).to.be.true;
       expect(networkStub.getPeers.calledOnce).to.be.true;
-      expect(peerScoreStub.getScore.calledOnce).to.be.true;
+      expect(peerScoreStub.getScoreState.calledOnce).to.be.true;
       expect(forkChoiceStub.getHead.calledOnce).to.be.true;
     });
   });

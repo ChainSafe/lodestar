@@ -1,8 +1,8 @@
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import {List, TreeBacked} from "@chainsafe/ssz";
 import {expect} from "chai";
-import {generateState} from "../../../utils/state";
 import {phase0} from "../../../../src";
+import {generateState} from "../../../utils/state";
 
 const NUM_VALIDATORS = 100000;
 

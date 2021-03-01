@@ -11,7 +11,7 @@ import {IDatabaseController, Bucket, Repository} from "@chainsafe/lodestar-db";
  */
 export class AttestationRepository extends Repository<Uint8Array, phase0.Attestation> {
   public constructor(config: IBeaconConfig, db: IDatabaseController<Buffer, Buffer>) {
-    super(config, db, Bucket.attestation, config.types.phase0.Attestation);
+    super(config, db, Bucket.phase0_attestation, config.types.phase0.Attestation);
   }
 
   public async getCommiteeAttestations(epoch: Epoch, committeeIndex: CommitteeIndex): Promise<phase0.Attestation[]> {

@@ -6,7 +6,7 @@ import {StubbedApi} from "../../../../utils/stub/api";
 import sinon from "sinon";
 import {ApiNamespace} from "../../../../../src/api/impl";
 import {config} from "@chainsafe/lodestar-config/minimal";
-import {silentLogger} from "../../../../utils/logger";
+import {testLogger} from "../../../../utils/logger";
 import pushable from "it-pushable/index";
 import {generateAttestation} from "../../../../utils/attestation";
 import {expect} from "chai";
@@ -28,7 +28,7 @@ describe("rest - events - getEventStream", function () {
       },
       {
         config,
-        logger: silentLogger,
+        logger: testLogger(),
         api,
       }
     );

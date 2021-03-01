@@ -1,6 +1,7 @@
 scrape_configs:
   - job_name: Lodestar
-    scrape_interval: 5s
+    scrape_interval: 20s
+    scrape_timeout: 20s
     metrics_path: /metrics
     static_configs:
       - targets: ["localhost:8008"]

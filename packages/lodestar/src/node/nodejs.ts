@@ -11,7 +11,7 @@ import {phase0} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
 
 import {IBeaconDb} from "../db";
-import {INetwork, Libp2pNetwork} from "../network";
+import {INetwork, Network} from "../network";
 import {BeaconSync, IBeaconSync} from "../sync";
 import {BeaconChain, IBeaconChain, initBeaconMetrics} from "../chain";
 import {BeaconMetrics, HttpMetricsServer, IBeaconMetrics} from "../metrics";
@@ -140,7 +140,7 @@ export class BeaconNode {
       config,
       logger: logger.child(opts.logger.network),
     });
-    const network = new Libp2pNetwork(opts.network, {
+    const network = new Network(opts.network, {
       config,
       libp2p,
       logger: logger.child(opts.logger.network),
@@ -152,6 +152,7 @@ export class BeaconNode {
       config,
       db,
       chain,
+      metrics,
       network,
       logger: logger.child(opts.logger.sync),
     });
