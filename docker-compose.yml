@@ -1,14 +1,12 @@
 version: "3.4"
 services:
-  lodestar:
+  beacon_node:
     build: .
     restart: always
     volumes:
       - lodestar:/root/.local/share/lodestar
       - /root/.local/share/lodestar/pyrmont:/root/.local/share/lodestar/pyrmont
     command: beacon --network ${NETWORK:-pyrmont} --api.rest.host 0.0.0.0
-    expose:
-      - "9596"
     ports:
       - "9000:9000"
 
@@ -16,12 +14,12 @@ services:
     build: .
     restart: always
     volumes:
-      - lodestar:/root/.local/share/lodestar
+      - validator:/root/.local/share/validator
       # NOTE: mapping of pyrmont volume assumes that a validator has been manually imported or created here
       - /root/.local/share/lodestar/pyrmont:/root/.local/share/lodestar/pyrmont
-    command: validator --network ${NETWORK:-pyrmont} --graffiti "lodestar wuz here" --server http://lodestar:9596
+    command: validator --network ${NETWORK:-pyrmont} --graffiti "lodestar wuz here" --server http://beacon_node:9596
     depends_on:
-      - lodestar
+      - beacon_node
 
   prometheus:
     build: docker/prometheus
@@ -29,10 +27,7 @@ services:
     volumes:
       - "prometheus:/prometheus"
     depends_on:
-      - lodestar
-    expose:
-      - "9090"
-      - "8008"
+      - beacon_node
 
   grafana:
     build: docker/grafana
@@ -46,5 +41,6 @@ services:
 
 volumes:
   lodestar:
+  validator:
   prometheus:
   grafana:
