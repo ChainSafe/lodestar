@@ -17,7 +17,7 @@ services:
     volumes:
       - validator:/root/.local/share/validator
       # NOTE: mapping of pyrmont volume assumes that a validator has been manually imported or created here
-      - /root/.local/share/lodestar/pyrmont:/root/.local/share/lodestar/pyrmont
+      - /root/.local/share/lodestar:/root/.local/share/lodestar
     command: validator --network ${NETWORK:-pyrmont} --graffiti "lodestar wuz here" --server http://beacon_node:9596
     depends_on:
       - beacon_node
