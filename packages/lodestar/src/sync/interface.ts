@@ -42,7 +42,7 @@ export interface ISyncModules {
   db: IBeaconDb;
   logger: ILogger;
   chain: IBeaconChain;
-  metrics: IBeaconMetrics;
+  metrics?: IBeaconMetrics;
   regularSync?: IRegularSync;
   reqRespHandler?: IReqRespHandler;
   gossipHandler?: IGossipHandler;

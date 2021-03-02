@@ -16,9 +16,7 @@ export class Metrics implements IMetrics {
   public constructor(opts: IMetricsOptions) {
     this.opts = opts;
     this.registry = new Registry();
-  }
 
-  public start(): void {
     this.defaultInterval = collectDefaultMetrics({
       register: this.registry,
       timeout: this.opts.timeout,
@@ -31,7 +29,7 @@ export class Metrics implements IMetrics {
     gcStats(this.registry)();
   }
 
-  public stop(): void {
+  public close(): void {
     clearInterval(this.defaultInterval as NodeJS.Timeout);
   }
 }
