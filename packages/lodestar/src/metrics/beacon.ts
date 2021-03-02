@@ -239,21 +239,17 @@ export class BeaconMetrics extends Metrics implements IBeaconMetrics {
       registers,
     });
 
-    // Private - only used once in start()
+    // Private - only used once now
     this.lodestarVersion = new Gauge({
       name: "lodestar_version",
       help: "Lodestar version",
       labelNames: ["semver", "branch", "commit", "version"],
       registers,
     });
-  }
-
-  public start(): void {
-    super.start();
     this.lodestarVersion.set(readLodestarGitData(), 1);
   }
 
-  public stop(): void {
-    super.stop();
+  public close(): void {
+    super.close();
   }
 }
