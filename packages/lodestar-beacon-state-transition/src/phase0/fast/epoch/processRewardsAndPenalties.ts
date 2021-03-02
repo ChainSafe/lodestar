@@ -15,11 +15,11 @@ export function processRewardsAndPenalties(
     return;
   }
   const [rewards, penalties] = getAttestationDeltas(epochCtx, process, state);
-  // const newBalances = readOnlyMap(state.balances, (balance) => balance);
   const newBalances = readOnlyMap(state.balances, (balance, i) => {
     const newBalance = balance + BigInt(rewards[i] - penalties[i]);
     return newBalance < 0 ? BigInt(0) : newBalance;
   });
+  process.balances = newBalances;
 
   process.balances = newBalances;
   // important: do not change state one balance at a time

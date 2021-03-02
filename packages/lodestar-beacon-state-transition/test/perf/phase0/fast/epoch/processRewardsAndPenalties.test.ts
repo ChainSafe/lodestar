@@ -4,7 +4,7 @@ import {generatePerformanceState, initBLS} from "../../../util";
 import {expect} from "chai";
 import {phase0} from "../../../../../src";
 
-describe("getAttestationDeltas", function () {
+describe("processRewardsAndPenalties", function () {
   let state: phase0.fast.CachedValidatorsBeaconState;
   let epochCtx: phase0.EpochContext;
   let epochProcess: phase0.fast.IEpochProcess;
@@ -21,7 +21,7 @@ describe("getAttestationDeltas", function () {
     state = phase0.fast.createCachedValidatorsBeaconState(origState);
   });
 
-  it("should getAttestationDeltas", function () {
+  it("should processRewardsAndPenalties", function () {
     this.timeout(0);
     epochProcess = phase0.fast.prepareEpochProcessState(epochCtx, state);
     let minTime = Number.MAX_SAFE_INTEGER;
@@ -30,16 +30,16 @@ describe("getAttestationDeltas", function () {
     const from = process.hrtime.bigint();
     for (let i = 0; i < MAX_TRY; i++) {
       const start = Date.now();
-      phase0.fast.getAttestationDeltas(epochCtx, epochProcess, state);
+      phase0.fast.processRewardsAndPenalties(epochCtx, epochProcess, state);
       const duration = Date.now() - start;
       if (duration < minTime) minTime = duration;
       if (duration > maxTime) maxTime = duration;
     }
     const to = process.hrtime.bigint();
     const average = Number((to - from) / BigInt(MAX_TRY) / BigInt(1000000));
-    logger.info("getAttestationDeltas in ms", {minTime, maxTime, average, maxTry: MAX_TRY});
-    expect(minTime).to.be.lte(64, "Minimal getAttestationDeltas is not less than 67ms");
-    expect(maxTime).to.be.lte(500, "Maximal getAttestationDeltas is not less than 500ms");
-    expect(average).to.be.lte(79, "Average getAttestationDeltas is not less than 75ms");
+    logger.info("processRewardsAndPenalties in ms", {minTime, maxTime, average, maxTry: MAX_TRY});
+    expect(minTime).to.be.lte(170, "Minimal processRewardsAndPenalties is not less than 170ms");
+    expect(maxTime).to.be.lte(700, "Maximal processRewardsAndPenalties is not less than 700ms");
+    expect(average).to.be.lte(195, "Average processRewardsAndPenalties is not less than 195ms");
   });
 });
