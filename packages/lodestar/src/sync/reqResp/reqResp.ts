@@ -23,7 +23,7 @@ export interface IReqRespHandlerModules {
   db: IBeaconDb;
   chain: IBeaconChain;
   network: INetwork;
-  metrics: IBeaconMetrics;
+  metrics?: IBeaconMetrics;
   logger: ILogger;
 }
 
@@ -58,7 +58,7 @@ export class BeaconReqRespHandler implements IReqRespHandler {
   private db: IBeaconDb;
   private chain: IBeaconChain;
   private network: INetwork;
-  private metrics: IBeaconMetrics;
+  private metrics?: IBeaconMetrics;
   private logger: ILogger;
 
   public constructor({config, db, chain, network, metrics, logger}: IReqRespHandlerModules) {
@@ -144,7 +144,7 @@ export class BeaconReqRespHandler implements IReqRespHandler {
   private async *onGoodbye(goodbyeCode: phase0.Goodbye, peerId: PeerId): AsyncIterable<bigint> {
     const reason = GoodbyeReasonCodeDescriptions[goodbyeCode.toString()] || "";
     this.logger.verbose("Received goodbye request", {peer: peerId.toB58String(), code: goodbyeCode, reason});
-    this.metrics.peerGoodbyeReceived.inc({reason});
+    this.metrics?.peerGoodbyeReceived.inc({reason});
 
     yield BigInt(GoodByeReasonCode.CLIENT_SHUTDOWN);
 
@@ -168,7 +168,7 @@ export class BeaconReqRespHandler implements IReqRespHandler {
 
   private async goodbye(peerId: PeerId, goodbyeCode: GoodByeReasonCode): Promise<void> {
     const reason = GoodbyeReasonCodeDescriptions[goodbyeCode.toString()] || "";
-    this.metrics.peerGoodbyeSent.inc({reason});
+    this.metrics?.peerGoodbyeSent.inc({reason});
 
     await this.network.reqResp.goodbye(peerId, BigInt(goodbyeCode));
   }

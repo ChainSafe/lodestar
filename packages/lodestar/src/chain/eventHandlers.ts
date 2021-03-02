@@ -145,7 +145,7 @@ export function onCheckpoint(this: BeaconChain, cp: phase0.Checkpoint, stateCont
   this.logger.verbose("Checkpoint processed", this.config.types.phase0.Checkpoint.toJson(cp));
   this.checkpointStateCache.add(cp, stateContext);
 
-  this.metrics.currentValidators.set({status: "active"}, stateContext.epochCtx.currentShuffling.activeIndices.length);
+  this.metrics?.currentValidators.set({status: "active"}, stateContext.epochCtx.currentShuffling.activeIndices.length);
   const parentBlockSummary = this.forkChoice.getBlock(stateContext.state.latestBlockHeader.parentRoot);
 
   if (parentBlockSummary) {
@@ -166,13 +166,13 @@ export function onCheckpoint(this: BeaconChain, cp: phase0.Checkpoint, stateCont
 
 export function onJustified(this: BeaconChain, cp: phase0.Checkpoint, stateContext: ITreeStateContext): void {
   this.logger.verbose("Checkpoint justified", this.config.types.phase0.Checkpoint.toJson(cp));
-  this.metrics.previousJustifiedEpoch.set(stateContext.state.previousJustifiedCheckpoint.epoch);
-  this.metrics.currentJustifiedEpoch.set(cp.epoch);
+  this.metrics?.previousJustifiedEpoch.set(stateContext.state.previousJustifiedCheckpoint.epoch);
+  this.metrics?.currentJustifiedEpoch.set(cp.epoch);
 }
 
 export function onFinalized(this: BeaconChain, cp: phase0.Checkpoint): void {
   this.logger.verbose("Checkpoint finalized", this.config.types.phase0.Checkpoint.toJson(cp));
-  this.metrics.finalizedEpoch.set(cp.epoch);
+  this.metrics?.finalizedEpoch.set(cp.epoch);
 }
 
 export function onForkChoiceJustified(this: BeaconChain, cp: phase0.Checkpoint): void {
@@ -188,7 +188,7 @@ export function onForkChoiceHead(this: BeaconChain, head: IBlockSummary): void {
     headSlot: head.slot,
     headRoot: toHexString(head.blockRoot),
   });
-  this.metrics.headSlot.set(head.slot);
+  this.metrics?.headSlot.set(head.slot);
 }
 
 export function onForkChoiceReorg(this: BeaconChain, head: IBlockSummary, oldHead: IBlockSummary, depth: number): void {

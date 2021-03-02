@@ -1,5 +1,5 @@
-import {phase0, Gwei} from "@chainsafe/lodestar-types";
-import {bigIntSqrt, bigIntMax} from "@chainsafe/lodestar-utils";
+import {phase0} from "@chainsafe/lodestar-types";
+import {bigIntSqrt, bigIntMax, intDiv} from "@chainsafe/lodestar-utils";
 import {BASE_REWARDS_PER_EPOCH as BASE_REWARDS_PER_EPOCH_CONST} from "../../../constants";
 
 import {
@@ -20,11 +20,11 @@ export function getAttestationDeltas(
   epochCtx: EpochContext,
   process: IEpochProcess,
   state: phase0.BeaconState
-): [Gwei[], Gwei[]] {
+): [number[], number[]] {
   const params = epochCtx.config.params;
   const validatorCount = process.statuses.length;
-  const rewards = Array.from({length: validatorCount}, () => BigInt(0));
-  const penalties = Array.from({length: validatorCount}, () => BigInt(0));
+  const rewards = Array.from({length: validatorCount}, () => 0);
+  const penalties = Array.from({length: validatorCount}, () => 0);
 
   const increment = params.EFFECTIVE_BALANCE_INCREMENT;
   let totalBalance = bigIntMax(process.totalActiveStake, increment);
@@ -42,27 +42,28 @@ export function getAttestationDeltas(
 
   const BASE_REWARD_FACTOR = BigInt(params.BASE_REWARD_FACTOR);
   const BASE_REWARDS_PER_EPOCH = BigInt(BASE_REWARDS_PER_EPOCH_CONST);
-  const PROPOSER_REWARD_QUOTIENT = BigInt(params.PROPOSER_REWARD_QUOTIENT);
   const MIN_EPOCHS_TO_INACTIVITY_PENALTY = params.MIN_EPOCHS_TO_INACTIVITY_PENALTY;
   const INACTIVITY_PENALTY_QUOTIENT = params.INACTIVITY_PENALTY_QUOTIENT;
   const isInInactivityLeak = finalityDelay > MIN_EPOCHS_TO_INACTIVITY_PENALTY;
 
   process.statuses.forEach((status, i) => {
     const effBalance = status.validator.effectiveBalance;
-    const baseReward = (effBalance * BASE_REWARD_FACTOR) / balanceSqRoot / BASE_REWARDS_PER_EPOCH;
-    const proposerReward = baseReward / PROPOSER_REWARD_QUOTIENT;
+    const baseReward = Number((effBalance * BASE_REWARD_FACTOR) / balanceSqRoot / BASE_REWARDS_PER_EPOCH);
+    const proposerReward = intDiv(baseReward, params.PROPOSER_REWARD_QUOTIENT);
 
     // inclusion speed bonus
     if (hasMarkers(status.flags, FLAG_PREV_SOURCE_ATTESTER | FLAG_UNSLASHED)) {
       rewards[status.proposerIndex] += proposerReward;
       const maxAttesterReward = baseReward - proposerReward;
-      rewards[i] += maxAttesterReward / BigInt(status.inclusionDelay);
+      rewards[i] += intDiv(maxAttesterReward, status.inclusionDelay);
     }
     if (hasMarkers(status.flags, FLAG_ELIGIBLE_ATTESTER)) {
       // expected FFG source
       if (hasMarkers(status.flags, FLAG_PREV_SOURCE_ATTESTER | FLAG_UNSLASHED)) {
         // justification-participation reward
-        rewards[i] += isInInactivityLeak ? baseReward : (baseReward * BigInt(prevEpochSourceStake)) / totalBalance;
+        rewards[i] += isInInactivityLeak
+          ? baseReward
+          : Number((BigInt(baseReward) * prevEpochSourceStake) / totalBalance);
       } else {
         // justification-non-participation R-penalty
         penalties[i] += baseReward;
@@ -71,7 +72,9 @@ export function getAttestationDeltas(
       // expected FFG target
       if (hasMarkers(status.flags, FLAG_PREV_TARGET_ATTESTER | FLAG_UNSLASHED)) {
         // boundary-attestation reward
-        rewards[i] += isInInactivityLeak ? baseReward : (baseReward * BigInt(prevEpochTargetStake)) / totalBalance;
+        rewards[i] += isInInactivityLeak
+          ? baseReward
+          : Number((BigInt(baseReward) * prevEpochTargetStake) / totalBalance);
       } else {
         // boundary-attestation-non-participation R-penalty
         penalties[i] += baseReward;
@@ -80,7 +83,9 @@ export function getAttestationDeltas(
       // expected head
       if (hasMarkers(status.flags, FLAG_PREV_HEAD_ATTESTER | FLAG_UNSLASHED)) {
         // canonical-participation reward
-        rewards[i] += isInInactivityLeak ? baseReward : (baseReward * BigInt(prevEpochHeadStake)) / totalBalance;
+        rewards[i] += isInInactivityLeak
+          ? baseReward
+          : Number((BigInt(baseReward) * prevEpochHeadStake) / totalBalance);
       } else {
         // non-canonical-participation R-penalty
         penalties[i] += baseReward;
@@ -88,10 +93,10 @@ export function getAttestationDeltas(
 
       // take away max rewards if we're not finalizing
       if (isInInactivityLeak) {
-        penalties[i] += baseReward * BASE_REWARDS_PER_EPOCH - proposerReward;
+        penalties[i] += baseReward * BASE_REWARDS_PER_EPOCH_CONST - proposerReward;
 
         if (!hasMarkers(status.flags, FLAG_PREV_TARGET_ATTESTER | FLAG_UNSLASHED)) {
-          penalties[i] += (effBalance * finalityDelay) / INACTIVITY_PENALTY_QUOTIENT;
+          penalties[i] += Number((effBalance * finalityDelay) / INACTIVITY_PENALTY_QUOTIENT);
         }
       }
     }

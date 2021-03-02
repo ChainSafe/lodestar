@@ -45,7 +45,7 @@
     "blockchain"
   ],
   "dependencies": {
-    "@chainsafe/ssz": "^0.6.13",
+    "@chainsafe/ssz": "^0.7.0",
     "@types/js-yaml": "^3.12.2",
     "axios": "^0.21.0",
     "js-yaml": "^3.13.1"

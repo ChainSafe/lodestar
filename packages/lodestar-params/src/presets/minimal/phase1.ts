@@ -9,7 +9,7 @@ export const phase1Json = {
   // [customized] for testnet distinction
   PHASE_1_FORK_VERSION: "0x01000001",
   // [STUB]
-  PHASE_1_FORK_SLOT: 0,
+  PHASE_1_FORK_SLOT: "0xffffffffffffffff",
   // [customized] reduced for testing
   INITIAL_ACTIVE_SHARDS: 2,
 

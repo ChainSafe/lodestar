@@ -27,7 +27,7 @@ describe("Process Slots Performance Test", function () {
     const start = Date.now();
     phase0.fast.processSlots(epochCtx, state, state.slot + numSlot);
     logger.profile(`Process ${numSlot} slots`);
-    expect(Date.now() - start).lt(1100);
+    expect(Date.now() - start).lt(570);
   });
 
   it("process double empty epochs", async () => {
@@ -36,7 +36,7 @@ describe("Process Slots Performance Test", function () {
     const start = Date.now();
     phase0.fast.processSlots(epochCtx, state, state.slot + numSlot);
     logger.profile(`Process ${numSlot} slots`);
-    expect(Date.now() - start).lt(2200);
+    expect(Date.now() - start).lt(1200);
   });
 
   it("process 4 empty epochs", async () => {
@@ -45,6 +45,6 @@ describe("Process Slots Performance Test", function () {
     const start = Date.now();
     phase0.fast.processSlots(epochCtx, state, state.slot + numSlot);
     logger.profile(`Process ${numSlot} slots`);
-    expect(Date.now() - start).lt(4300);
+    expect(Date.now() - start).lt(2000);
   });
 });

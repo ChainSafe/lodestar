@@ -28,7 +28,7 @@ interface ILibp2pModules {
   config: IBeaconConfig;
   libp2p: LibP2p;
   logger: ILogger;
-  metrics: IBeaconMetrics;
+  metrics?: IBeaconMetrics;
   validator: IGossipMessageValidator;
   chain: IBeaconChain;
 }
@@ -46,7 +46,7 @@ export class Network extends (EventEmitter as {new (): NetworkEventEmitter}) imp
   private config: IBeaconConfig;
   private libp2p: LibP2p;
   private logger: ILogger;
-  private metrics: IBeaconMetrics;
+  private metrics?: IBeaconMetrics;
   private diversifyPeersTask: DiversifyPeersBySubnetTask;
   private checkPeerAliveTask: CheckPeerAliveTask;
   /** To count total number of unique seen peers */
@@ -264,18 +264,18 @@ export class Network extends (EventEmitter as {new (): NetworkEventEmitter}) imp
     // tmp fix, we will just do double status exchange but nothing major
     // TODO: fix it?
     this.emit(NetworkEvent.peerConnect, conn.remotePeer, conn.stat.direction);
-    this.metrics.peerConnectedEvent.inc({direction: conn.stat.direction});
+    this.metrics?.peerConnectedEvent.inc({direction: conn.stat.direction});
     this.runPeerCountMetrics();
 
     this.seenPeers.add(conn.remotePeer.toB58String());
-    this.metrics.peersTotalUniqueConnected.set(this.seenPeers.size);
+    this.metrics?.peersTotalUniqueConnected.set(this.seenPeers.size);
   };
 
   private emitPeerDisconnect = (conn: LibP2pConnection): void => {
     this.logger.verbose("peer disconnected", {peerId: conn.remotePeer.toB58String()});
 
     this.emit(NetworkEvent.peerDisconnect, conn.remotePeer);
-    this.metrics.peerDisconnectedEvent.inc({direction: conn.stat.direction});
+    this.metrics?.peerDisconnectedEvent.inc({direction: conn.stat.direction});
     this.runPeerCountMetrics();
   };
 
@@ -293,9 +293,9 @@ export class Network extends (EventEmitter as {new (): NetworkEventEmitter}) imp
     }
 
     for (const [direction, peers] of peersByDirection.entries()) {
-      this.metrics.peersByDirection.set({direction}, peers);
+      this.metrics?.peersByDirection.set({direction}, peers);
     }
 
-    this.metrics.peers.set(total);
+    this.metrics?.peers.set(total);
   }
 }
