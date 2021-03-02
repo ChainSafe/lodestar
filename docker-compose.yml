@@ -6,7 +6,7 @@ services:
     restart: always
     volumes:
       - beacon_node:/root/.local/share/lodestar
-      - /root/.local/share/lodestar/pyrmont:/root/.local/share/lodestar/pyrmont
+      - /root/.local/share/lodestar/${NETWORK:-pyrmont}:/root/.local/share/lodestar/${NETWORK:-pyrmont}
     command: beacon --network ${NETWORK:-pyrmont} --api.rest.host 0.0.0.0
     ports:
       - "9000:9000"
@@ -16,8 +16,8 @@ services:
     restart: always
     volumes:
       - validator:/root/.local/share/validator
-      # NOTE: mapping of pyrmont volume assumes that a validator has been manually imported or created here
-      - /root/.local/share/lodestar:/root/.local/share/lodestar
+      # NOTE: mapping of ${NETWORK} volume assumes that a validator has been manually imported or created here
+      - /root/.local/share/lodestar/${NETWORK:-pyrmont}:/root/.local/share/lodestar/${NETWORK:-pyrmont}
     command: validator --network ${NETWORK:-pyrmont} --graffiti "lodestar wuz here" --server http://beacon_node:9596
     depends_on:
       - beacon_node
