@@ -11,7 +11,7 @@ import {IBeaconNodeOptions} from "@chainsafe/lodestar/lib/node";
 
 import {downloadOrLoadFile} from "../../util";
 import {IBeaconArgs} from "./options";
-import {IGlobalArgs} from "../../options/globalOptions";
+import {defaultNetwork, IGlobalArgs} from "../../options/globalOptions";
 import {getGenesisFileUrl} from "../../networks";
 
 /**
@@ -30,27 +30,23 @@ export async function initBeaconState(
   logger: ILogger,
   signal: AbortSignal
 ): Promise<TreeBacked<phase0.BeaconState>> {
-  const shouldInitFromDb = (await db.stateArchive.lastKey()) != null;
-
-  if (args.network && !args.genesisStateFile && !shouldInitFromDb) {
-    args.genesisStateFile = getGenesisFileUrl(args.network) ?? undefined;
+  async function initFromFile(pathOrUrl: string): Promise<TreeBacked<phase0.BeaconState>> {
+    const anchorState = config.types.phase0.BeaconState.tree.deserialize(await downloadOrLoadFile(pathOrUrl));
+    return await initStateFromAnchorState(config, db, logger, anchorState);
   }
 
-  const shouldInitFromFile = Boolean(args.weakSubjectivityStateFile || (!args.forceGenesis && args.genesisStateFile));
-  let anchorState;
+  const dbHasSomeState = (await db.stateArchive.lastKey()) != null;
 
-  if (shouldInitFromFile) {
-    const anchorStateFile = (args.weakSubjectivityStateFile || args.genesisStateFile) as string;
-    anchorState = await initStateFromAnchorState(
-      config,
-      db,
-      logger,
-      config.types.phase0.BeaconState.tree.deserialize(await downloadOrLoadFile(anchorStateFile))
-    );
-  } else if (shouldInitFromDb) {
-    anchorState = await initStateFromDb(config, db, logger);
+  if (args.weakSubjectivityStateFile) {
+    return await initFromFile(args.weakSubjectivityStateFile);
+  } else if (dbHasSomeState) {
+    return await initStateFromDb(config, db, logger);
   } else {
-    anchorState = await initStateFromEth1(config, db, logger, new Eth1Provider(config, options.eth1), signal);
+    const genesisStateFile = args.genesisStateFile || getGenesisFileUrl(args.network || defaultNetwork);
+    if (genesisStateFile && !args.forceGenesis) {
+      return await initFromFile(genesisStateFile);
+    } else {
+      return await initStateFromEth1(config, db, logger, new Eth1Provider(config, options.eth1), signal);
+    }
   }
-  return anchorState;
 }
