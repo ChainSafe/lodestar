@@ -142,8 +142,10 @@ export class LodestarGossipsub extends Gossipsub {
    */
   public _emitMessage(message: InMessage): void {
     for (const topic of message.topicIDs) {
-      const transformedObj = this.transformedObjects.get(msgIdToString(this.getMsgId(message)));
+      const msgIdStr = msgIdToString(this.getMsgId(message));
+      const transformedObj = this.transformedObjects.get(msgIdStr);
       if (transformedObj && transformedObj.object) {
+        this.transformedObjects.delete(msgIdStr);
         super.emit(topic, transformedObj.object);
       }
     }
