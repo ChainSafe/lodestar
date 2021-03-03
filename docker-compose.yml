@@ -4,20 +4,22 @@ services:
     build: ../lodestar
     image: lodestar/lodestar
     restart: always
-    command: beacon --network ${NETWORK:-mainnet} --api.rest.host 0.0.0.0
+    command: beacon --api.rest.host 0.0.0.0 --network ${NETWORK}
     ports:
       - "9000:9000"
+    env_file: .env
 
   validator:
     image: lodestar/lodestar
     restart: always
     volumes:
       - validator:/root/.local/share/validator
-      # NOTE: mapping of ${NETWORK} volume assumes that a validator has been manually imported or created here
-      - ~/.local/share/lodestar/${NETWORK:-mainnet}:/root/.local/share/lodestar/${NETWORK:-mainnet}
-    command: validator --network ${NETWORK:-mainnet} --graffiti "lodestar wuz here" --server http://beacon_node:9596
+      - ./keystores:/keystores
+      - ./secrets:/secrets
+    command: validator --graffiti "lodestar wuz here" --server http://beacon_node:9596 --network ${NETWORK}
     depends_on:
       - beacon_node
+    env_file: .env
 
   prometheus:
     build: docker/prometheus
