@@ -4,8 +4,6 @@ services:
     build: ../lodestar
     image: lodestar/lodestar
     restart: always
-    volumes:
-      - ~/.local/share/lodestar/${NETWORK:-mainnet}:/root/.local/share/lodestar/${NETWORK:-mainnet}
     command: beacon --network ${NETWORK:-mainnet} --api.rest.host 0.0.0.0
     ports:
       - "9000:9000"
