@@ -1,5 +1,6 @@
 {
   "name": "@chainsafe/lodestar-light-client",
+  "private": true,
   "description": "A Typescript implementation of the eth2 light client",
   "license": "LGPL-3.0",
   "author": "ChainSafe Systems",
