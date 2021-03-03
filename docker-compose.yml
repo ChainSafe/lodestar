@@ -5,7 +5,7 @@ services:
     image: lodestar/lodestar
     restart: always
     volumes:
-      - $HOME/.local/share/lodestar/${NETWORK:-mainnet}:/root/.local/share/lodestar/${NETWORK:-mainnet}
+      - ~/.local/share/lodestar/${NETWORK:-mainnet}:/root/.local/share/lodestar/${NETWORK:-mainnet}
     command: beacon --network ${NETWORK:-mainnet} --api.rest.host 0.0.0.0
     ports:
       - "9000:9000"
@@ -16,7 +16,7 @@ services:
     volumes:
       - validator:/root/.local/share/validator
       # NOTE: mapping of ${NETWORK} volume assumes that a validator has been manually imported or created here
-      - $HOME/.local/share/lodestar/${NETWORK:-mainnet}:/root/.local/share/lodestar/${NETWORK:-mainnet}
+      - ~/.local/share/lodestar/${NETWORK:-mainnet}:/root/.local/share/lodestar/${NETWORK:-mainnet}
     command: validator --network ${NETWORK:-mainnet} --graffiti "lodestar wuz here" --server http://beacon_node:9596
     depends_on:
       - beacon_node
