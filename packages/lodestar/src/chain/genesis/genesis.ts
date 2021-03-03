@@ -119,7 +119,9 @@ export class GenesisBuilder implements IGenesisBuilder {
         this.depositCache.add(depositEvent.index);
         this.depositTree.push(this.config.types.phase0.DepositData.hashTreeRoot(depositEvent.depositData));
         return {
-          proof: this.depositTree.tree().getSingleProof(this.depositTree.gindexOfProperty(depositEvent.index)),
+          proof: this.depositTree
+            .tree()
+            .getSingleProof(this.depositTree.type().tree.gindexOfProperty(depositEvent.index)),
           data: depositEvent.depositData,
         };
       });

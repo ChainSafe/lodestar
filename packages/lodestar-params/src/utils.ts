@@ -7,7 +7,7 @@ import {BeaconParams} from "./beaconParams";
 export function createIBeaconParams(input: Record<string, unknown>): Partial<IBeaconParams> {
   const params: Partial<IBeaconParams> = {};
   Object.entries(BeaconParams.fields).forEach(([fieldName, fieldType]) => {
-    if (input[fieldName]) {
+    if (input[fieldName] != null) {
       (params as Record<string, unknown>)[fieldName] = fieldType.fromJson(input[fieldName] as Json) as unknown;
     }
   });

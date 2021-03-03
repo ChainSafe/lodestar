@@ -35,7 +35,7 @@ export interface IBeaconChainModules {
   config: IBeaconConfig;
   db: IBeaconDb;
   logger: ILogger;
-  metrics: IBeaconMetrics;
+  metrics?: IBeaconMetrics;
   anchorState: TreeBacked<phase0.BeaconState>;
 }
 
@@ -54,7 +54,7 @@ export class BeaconChain implements IBeaconChain {
   protected readonly config: IBeaconConfig;
   protected readonly db: IBeaconDb;
   protected readonly logger: ILogger;
-  protected readonly metrics: IBeaconMetrics;
+  protected readonly metrics?: IBeaconMetrics;
   protected readonly opts: IChainOptions;
   protected readonly genesisTime: Number64;
   /**

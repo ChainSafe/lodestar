@@ -55,7 +55,7 @@
     "@chainsafe/lodestar-utils": "^0.16.0",
     "@chainsafe/lodestar-validator": "^0.16.0",
     "@chainsafe/snappy-stream": "3.0.5",
-    "@chainsafe/ssz": "^0.6.13",
+    "@chainsafe/ssz": "^0.7.0",
     "@ethersproject/abi": "^5.0.0",
     "@types/datastore-level": "^1.1.1",
     "abort-controller": "^3.0.0",

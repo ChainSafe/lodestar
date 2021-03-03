@@ -15,19 +15,11 @@ export function processRewardsAndPenalties(
     return;
   }
   const [rewards, penalties] = getAttestationDeltas(epochCtx, process, state);
-  const newBalances = readOnlyMap(state.balances, (balance) => balance);
-
-  rewards.forEach((reward, i) => {
-    newBalances[i] += reward;
+  const newBalances = readOnlyMap(state.balances, (balance, i) => {
+    const newBalance = balance + BigInt(rewards[i] - penalties[i]);
+    return newBalance < 0 ? BigInt(0) : newBalance;
   });
 
-  penalties.forEach((penalty, i) => {
-    if (penalty > newBalances[i]) {
-      newBalances[i] = BigInt(0);
-    } else {
-      newBalances[i] -= penalty;
-    }
-  });
   process.balances = newBalances;
   // important: do not change state one balance at a time
   // set them all at once, constructing the tree in one go

@@ -10,6 +10,8 @@ interface IGlobalSingleArgs {
   paramsFile: string;
 }
 
+export const defaultNetwork: NetworkName = "mainnet";
+
 const globalSingleOptions: ICliCommandOptions<IGlobalSingleArgs> = {
   rootDir: {
     description: "Lodestar root directory",
@@ -20,6 +22,7 @@ const globalSingleOptions: ICliCommandOptions<IGlobalSingleArgs> = {
   network: {
     description: "Name of the Eth2 chain network to join",
     type: "string",
+    default: defaultNetwork,
     choices: networkNames,
   },
 

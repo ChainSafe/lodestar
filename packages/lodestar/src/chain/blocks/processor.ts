@@ -20,7 +20,7 @@ type BlockProcessorModules = {
   forkChoice: IForkChoice;
   regen: IStateRegenerator;
   emitter: ChainEventEmitter;
-  metrics: IBeaconMetrics;
+  metrics?: IBeaconMetrics;
   clock: IBeaconClock;
   checkpointStateCache: CheckpointStateCache;
 };
@@ -53,7 +53,7 @@ export class BlockProcessor {
   }
 
   private onJobDone = ({ms}: {ms: number}): void => {
-    this.modules.metrics.blockProcessorTotalAsyncTime.inc(ms / 1000);
+    this.modules.metrics?.blockProcessorTotalAsyncTime.inc(ms / 1000);
   };
 }
 
