@@ -175,8 +175,7 @@ required each time the validator client starts
       message: "Enter the keystore password, or press enter to omit it",
       validate: async (input) => {
         try {
-          // Accept empty passwords
-          if (input) await keystore.decrypt(stripOffNewlines(input));
+          await keystore.decrypt(stripOffNewlines(input));
           return true;
         } catch (e) {
           return `Invalid password: ${e.message}`;
