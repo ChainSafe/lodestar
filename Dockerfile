@@ -4,10 +4,10 @@ RUN apk update && apk add --no-cache git g++ make python && rm -rf /var/cache/ap
 
 # Installs all deps in the root yarn.lock, which are most of them. To cache before copying the src
 COPY package.json yarn.lock ./
-RUN yarn install --non-interactive --ignore-optional --frozen-lockfile --ignore-scripts
+RUN yarn install --non-interactive --frozen-lockfile --ignore-scripts
 
 COPY . .
-RUN yarn install --non-interactive --ignore-optional --frozen-lockfile
+RUN yarn install --non-interactive --frozen-lockfile
 
 RUN node ./scripts/getGitData /usr/app/.git-data.json
 
