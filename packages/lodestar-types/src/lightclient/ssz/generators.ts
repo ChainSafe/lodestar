@@ -71,8 +71,8 @@ export const SignedBeaconBlock: LightClientTypesGenerator<ContainerType<lightcli
 ) => {
   return new ContainerType({
     fields: {
-      ...phase0Types.SignedBeaconBlock.fields,
       message: lightclientTypes.BeaconBlock,
+      signature: phase0Types.BLSSignature,
     },
   });
 };

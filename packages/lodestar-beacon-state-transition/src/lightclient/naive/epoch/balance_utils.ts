@@ -3,7 +3,7 @@ import {lightclient, ValidatorFlag, Gwei, ValidatorIndex} from "@chainsafe/lodes
 import {getUnslashedParticipatingIndices} from "../../state_accessor/index";
 import {getPreviousEpoch} from "../../../util/epoch";
 import {getTotalBalance, getTotalActiveBalance} from "../../../util/balance";
-import {REWARD_DENOMINATOR, TIMELY_TARGET_FLAG} from "../../constants";
+import {FLAG_DENOMINATOR, TIMELY_TARGET_FLAG} from "../../constants";
 import {getFlagsAndNumerators} from "../../misc";
 import {phase0} from "../../..";
 import {bigIntSqrt} from "@chainsafe/lodestar-utils";
@@ -34,13 +34,13 @@ export function getFlagDeltas(
     const baseReward = getBaseReward(config, state, index);
     if (unslashedParticipatingIndices.indexOf(index) !== -1) {
       if (phase0.isInInactivityLeak(config, (state as unknown) as phase0.BeaconState)) {
-        rewards[index] = (baseReward * BigInt(numerator)) / REWARD_DENOMINATOR;
+        rewards[index] = (baseReward * BigInt(numerator)) / FLAG_DENOMINATOR;
       } else {
         rewards[index] =
-          (baseReward * BigInt(numerator) * unslashedParticipatingIncrements) / (activeIncrements * REWARD_DENOMINATOR);
+          (baseReward * BigInt(numerator) * unslashedParticipatingIncrements) / (activeIncrements * FLAG_DENOMINATOR);
       }
     } else {
-      penalties[index] = (baseReward * BigInt(numerator)) / REWARD_DENOMINATOR;
+      penalties[index] = (baseReward * BigInt(numerator)) / FLAG_DENOMINATOR;
     }
   }
   return [rewards, penalties];
@@ -64,7 +64,7 @@ export function getInactivityPenaltyDeltas(config: IBeaconConfig, state: lightcl
       previousEpoch
     );
     for (const index of phase0.getEligibleValidatorIndices(config, (state as unknown) as phase0.BeaconState)) {
-      penalties[index] += (getBaseReward(config, state, index) * BigInt(rewardNumeratorSum)) / REWARD_DENOMINATOR;
+      penalties[index] += (getBaseReward(config, state, index) * BigInt(rewardNumeratorSum)) / FLAG_DENOMINATOR;
       if (matchingTargetAttestingIndices.indexOf(index) === -1) {
         const effectiveBalance = state.validators[index].effectiveBalance;
         penalties[index] +=

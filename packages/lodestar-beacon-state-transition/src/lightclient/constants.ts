@@ -7,4 +7,4 @@ export const TIMELY_TARGET_FLAG: ValidatorFlag = 4;
 export const TIMELY_HEAD_NUMERATOR = 12;
 export const TIMELY_SOURCE_NUMERATOR = 12;
 export const TIMELY_TARGET_NUMERATOR = 32;
-export const REWARD_DENOMINATOR = BigInt(64);
+export const FLAG_DENOMINATOR = BigInt(64);

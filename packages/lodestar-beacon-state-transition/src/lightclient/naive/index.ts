@@ -1,11 +1,13 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {lightclient, phase0 as phase0Types} from "@chainsafe/lodestar-types";
 import {assert} from "@chainsafe/lodestar-utils";
-import {phase0, verifyBlockSignature} from "../..";
-import {processBlock} from "./block";
+import {verifyBlockSignature} from "../..";
+import {processBlock} from "./block/block";
+import {processSlots} from "./slot";
 
 export * from "./block";
 export * from "./epoch";
+export * from "./slot";
 export * from "./sync_committee";
 export * from "./upgrade";
 
@@ -30,7 +32,7 @@ export function stateTransition(
   const postState = config.types.lightclient.BeaconState.clone(state) as lightclient.BeaconState &
     phase0Types.BeaconState;
   // Process slots (including those with no blocks) since block
-  phase0.processSlots(config, postState, signedBlock.message.slot);
+  processSlots(config, postState, signedBlock.message.slot);
 
   // Verify block signature
   if (verifyProposer) {

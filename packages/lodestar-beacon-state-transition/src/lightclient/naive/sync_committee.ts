@@ -23,7 +23,8 @@ const MAX_RANDOM_BYTE = BigInt(2 ** 8 - 1);
 export function processSyncCommittee(
   config: IBeaconConfig,
   state: lightclient.BeaconState & phase0.BeaconState,
-  block: lightclient.BeaconBlock
+  block: lightclient.BeaconBlock,
+  verifySignatures = true
 ): void {
   const previousSlot = Math.max(state.slot, 1) - 1;
   const currentEpoch = getCurrentEpoch(config, state);
@@ -43,14 +44,16 @@ export function processSyncCommittee(
     getBlockRootAtSlot(config, state, previousSlot),
     domain
   );
-  assert.true(
-    verifyAggregate(
-      participantPubkeys.map((pubkey) => pubkey.valueOf() as Uint8Array),
-      signingRoot,
-      block.body.syncCommitteeSignature.valueOf() as Uint8Array
-    ),
-    "Sync committee signature invalid"
-  );
+  if (verifySignatures) {
+    assert.true(
+      verifyAggregate(
+        participantPubkeys.map((pubkey) => pubkey.valueOf() as Uint8Array),
+        signingRoot,
+        block.body.syncCommitteeSignature.valueOf() as Uint8Array
+      ),
+      "Sync committee signature invalid"
+    );
+  }
 
   let participantRewards = BigInt(0);
   const activeValidatorCount = BigInt(getActiveValidatorIndices(state, currentEpoch).length);
@@ -71,7 +74,7 @@ export function processSyncCommittee(
 /**
  * Return the sync committee indices for a given state and epoch.
  */
-export function   getSyncCommitteeIndices(
+export function getSyncCommitteeIndices(
   config: IBeaconConfig,
   state: lightclient.BeaconState | phase0.BeaconState,
   epoch: Epoch
