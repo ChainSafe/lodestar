@@ -5,10 +5,11 @@
 import {
   computeEpochAtSlot,
   computeForkDigest,
+  computeForkNameFromForkDigest,
   computeStartSlotAtEpoch,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {IBeaconConfig, IForkName} from "@chainsafe/lodestar-config";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {ForkDigest, Number64, Root, Slot} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
@@ -256,6 +257,11 @@ export class BeaconChain implements IBeaconChain {
   public getForkDigest(): ForkDigest {
     const {state} = this.getHeadStateContext();
     return computeForkDigest(this.config, state.fork.currentVersion, state.genesisValidatorsRoot);
+  }
+
+  public getForkName(): IForkName {
+    const {state} = this.getHeadStateContext();
+    return computeForkNameFromForkDigest(this.config, state.genesisValidatorsRoot, this.getForkDigest());
   }
 
   public getENRForkID(): phase0.ENRForkID {

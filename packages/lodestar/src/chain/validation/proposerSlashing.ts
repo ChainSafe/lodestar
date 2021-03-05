@@ -2,7 +2,7 @@ import {isValidProposerSlashing} from "@chainsafe/lodestar-beacon-state-transiti
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {phase0} from "@chainsafe/lodestar-types";
 import {IBeaconChain} from "..";
-import {ProposerSlashingError, ProposerSlashingErrorCode} from "../errors/proposerSlahingError";
+import {ProposerSlashingError, ProposerSlashingErrorCode} from "../errors/proposerSlashingError";
 import {IBeaconDb} from "../../db";
 
 export async function validateGossipProposerSlashing(

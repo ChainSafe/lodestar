@@ -142,6 +142,10 @@ export interface IBeaconMetrics extends IMetrics {
   /** Total number of unique peers that have had a connection with */
   peersTotalUniqueConnected: Gauge;
 
+  /** Gossip mesh peer count by GossipType */
+  gossipMeshPeersByType: Gauge;
+  /** Gossip mesh peer count by beacon attestation subnet */
+  gossipMeshPeersByBeaconAttestationSubnet: Gauge;
   close(): void;
 }
 

@@ -2,13 +2,13 @@ import {INetwork} from "../network";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {CommitteeIndex, Slot, phase0} from "@chainsafe/lodestar-types";
 import {IRegularSync} from "./regular";
-import {IGossipHandler} from "./gossip";
 import {IReqRespHandler} from "./reqResp";
 import {IBeaconChain} from "../chain";
 import {IBeaconMetrics} from "../metrics";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBeaconDb} from "../db/api";
 import {AttestationCollector} from "./utils";
+import {BeaconGossipHandler} from "./gossip";
 
 export enum SyncMode {
   WAITING_PEERS,
@@ -45,6 +45,6 @@ export interface ISyncModules {
   metrics?: IBeaconMetrics;
   regularSync?: IRegularSync;
   reqRespHandler?: IReqRespHandler;
-  gossipHandler?: IGossipHandler;
+  gossipHandler?: BeaconGossipHandler;
   attestationCollector?: AttestationCollector;
 }

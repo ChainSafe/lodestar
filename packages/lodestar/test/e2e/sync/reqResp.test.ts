@@ -9,10 +9,10 @@ import {encode} from "varint";
 import all from "it-all";
 import {Method, ReqRespEncoding, RpcResponseStatus} from "../../../src/constants";
 import {BeaconMetrics} from "../../../src/metrics";
+import {IBeaconDb} from "../../../src/db";
 import {SszSnappyErrorCode} from "../../../src/network/reqresp/encodingStrategies/sszSnappy";
 import {createRpcProtocol, Network, NetworkEvent} from "../../../src/network";
 import {decodeErrorMessage} from "../../../src/network/reqresp/utils/errorMessage";
-import {IGossipMessageValidator} from "../../../src/network/gossip/interface";
 import {INetworkOptions} from "../../../src/network/options";
 import {ILibP2pStream} from "../../../src/network/reqresp";
 import {BeaconReqRespHandler, IReqRespHandler} from "../../../src/sync/reqResp";
@@ -52,7 +52,6 @@ describe("[sync] rpc", function () {
   let rpcA: IReqRespHandler, netA: Network;
   let rpcB: IReqRespHandler, netB: Network;
   let libP2pA: Libp2p;
-  const validator: IGossipMessageValidator = {} as IGossipMessageValidator;
   let chain: MockBeaconChain;
 
   beforeEach(async () => {
@@ -77,18 +76,18 @@ describe("[sync] rpc", function () {
       root: config.types.phase0.BeaconBlock.hashTreeRoot(block.message),
     });
     libP2pA = await createNode(multiaddr);
-    netA = new Network(opts, {config, libp2p: libP2pA, logger, metrics, validator, chain});
+    const db = new StubbedBeaconDb(sandbox, config);
+    netA = new Network(opts, {config, libp2p: libP2pA, logger, metrics, db: (db as unknown) as IBeaconDb, chain});
     netB = new Network(opts, {
       config,
       libp2p: await createNode(multiaddr),
       logger,
       metrics,
-      validator,
+      db: (db as unknown) as IBeaconDb,
       chain,
     });
     await Promise.all([netA.start(), netB.start()]);
 
-    const db = new StubbedBeaconDb(sandbox, config);
     chain.stateCache.get = sinon.stub().returns(state as any);
     db.block.get.resolves(block);
     db.blockArchive.get.resolves(block);

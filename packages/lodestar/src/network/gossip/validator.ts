@@ -1,279 +1,366 @@
-import {IGossipMessageValidator} from "./interface";
-import {phase0} from "@chainsafe/lodestar-types";
-import {IBeaconDb} from "../../db";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {ILogger} from "@chainsafe/lodestar-utils";
-import {IAttestationJob, IBeaconChain} from "../../chain";
-import {ExtendedValidatorResult} from "./constants";
-import {validateGossipAggregateAndProof, validateGossipAttestation, validateGossipBlock} from "../../chain/validation";
-import {BlockError, BlockErrorCode} from "../../chain/errors/blockError";
-import {IBlockJob} from "../../chain";
-import {AttestationError, AttestationErrorCode} from "../../chain/errors/attestationError";
-import {AttesterSlashingError, AttesterSlashingErrorCode} from "../../chain/errors/attesterSlashingError";
-import {validateGossipAttesterSlashing} from "../../chain/validation/attesterSlashing";
-import {ProposerSlashingError, ProposerSlashingErrorCode} from "../../chain/errors/proposerSlahingError";
-import {validateGossipProposerSlashing} from "../../chain/validation/proposerSlashing";
-import {validateGossipVoluntaryExit} from "../../chain/validation/voluntaryExit";
-import {VoluntaryExitError, VoluntaryExitErrorCode} from "../../chain/errors/voluntaryExitError";
+import {ERR_TOPIC_VALIDATOR_IGNORE, ERR_TOPIC_VALIDATOR_REJECT} from "libp2p-gossipsub/src/constants";
+import {ATTESTATION_SUBNET_COUNT, phase0} from "@chainsafe/lodestar-types";
 import {toHexString} from "@chainsafe/ssz";
 
-// eslint-disable-next-line @typescript-eslint/naming-convention
-interface GossipMessageValidatorModules {
-  chain: IBeaconChain;
-  db: IBeaconDb;
-  config: IBeaconConfig;
-  logger: ILogger;
+import {IAttestationJob, IBlockJob} from "../../chain";
+import {
+  validateGossipAggregateAndProof,
+  validateGossipAttestation,
+  validateGossipBlock,
+  validateGossipProposerSlashing,
+  validateGossipVoluntaryExit,
+  validateGossipAttesterSlashing,
+} from "../../chain/validation";
+import {
+  BlockError,
+  BlockErrorCode,
+  AttestationError,
+  AttestationErrorCode,
+  AttesterSlashingError,
+  AttesterSlashingErrorCode,
+  ProposerSlashingError,
+  ProposerSlashingErrorCode,
+  VoluntaryExitError,
+  VoluntaryExitErrorCode,
+} from "../../chain/errors";
+
+import {
+  GossipType,
+  IGossipMessage,
+  TopicValidatorFn,
+  ObjectValidatorFn,
+  IObjectValidatorModules,
+  GossipTopic,
+  IBeaconAttestationTopic,
+} from "./interface";
+import {getGossipTopicString} from "./topic";
+import {GossipValidationError} from "./errors";
+import {DEFAULT_ENCODING} from "./constants";
+
+// Gossip validation functions are wrappers around chain-level validation functions
+// With a few additional elements:
+//
+// - Gossip error handling - chain-level validation throws eg: `BlockErrorCode` with many possible error types.
+//   Gossip validation functions instead throw either "ignore" or "reject" errors.
+//
+// - Logging - chain-level validation has no logging.
+//   For gossip, its useful to know, via logs/metrics, when gossip is received/ignored/rejected.
+//
+// - Gossip type conversion - Gossip validation functions operate on messages of binary data.
+//   This data must be deserialized into the proper type, determined by the topic (fork digest)
+//   This deserialization is performed in the gossip validation function.
+//   In the validation success case, the deserialized object cached for later processing
+
+export async function validateBeaconBlock(
+  {chain, db, config, logger}: IObjectValidatorModules,
+  _topic: GossipTopic,
+  signedBlock: phase0.SignedBeaconBlock
+): Promise<void> {
+  const logContext = {
+    blockRoot: toHexString(config.types.phase0.BeaconBlock.hashTreeRoot(signedBlock.message)),
+    blockSlot: signedBlock.message.slot,
+  };
+  try {
+    const blockJob: IBlockJob = {
+      signedBlock,
+      reprocess: false,
+      prefinalized: false,
+      validSignatures: false,
+      validProposerSignature: false,
+    };
+
+    logger.verbose("Started gossip block validation", logContext);
+    await validateGossipBlock(config, chain, db, blockJob);
+    logger.verbose("Received valid gossip block", logContext);
+  } catch (e) {
+    if (!(e instanceof BlockError)) {
+      logger.error("Gossip block validation threw a non-BlockError", e);
+      throw new GossipValidationError(ERR_TOPIC_VALIDATOR_IGNORE);
+    }
+
+    switch (e.type.code) {
+      case BlockErrorCode.PROPOSAL_SIGNATURE_INVALID:
+      case BlockErrorCode.INCORRECT_PROPOSER:
+      case BlockErrorCode.KNOWN_BAD_BLOCK:
+        logger.warn("Rejecting gossip block", logContext, e);
+        throw new GossipValidationError(ERR_TOPIC_VALIDATOR_REJECT);
+
+      case BlockErrorCode.FUTURE_SLOT:
+      case BlockErrorCode.PARENT_UNKNOWN:
+        chain.receiveBlock(signedBlock);
+        logger.warn("Ignoring gossip block", logContext, e);
+        throw new GossipValidationError(ERR_TOPIC_VALIDATOR_IGNORE);
+
+      case BlockErrorCode.WOULD_REVERT_FINALIZED_SLOT:
+      case BlockErrorCode.REPEAT_PROPOSAL:
+      default:
+        logger.warn("Ignoring gossip block", logContext, e);
+        throw new GossipValidationError(ERR_TOPIC_VALIDATOR_IGNORE);
+    }
+  }
 }
 
-export class GossipMessageValidator implements IGossipMessageValidator {
-  private readonly chain: IBeaconChain;
-  private readonly db: IBeaconDb;
-  private readonly config: IBeaconConfig;
-  private readonly logger: ILogger;
+export async function validateAggregatedAttestation(
+  {chain, db, config, logger}: IObjectValidatorModules,
+  _topic: GossipTopic,
+  signedAggregateAndProof: phase0.SignedAggregateAndProof
+): Promise<void> {
+  const attestation = signedAggregateAndProof.message.aggregate;
+  const logContext = {
+    attestationSlot: attestation.data.slot,
+    aggregatorIndex: signedAggregateAndProof.message.aggregatorIndex,
+    aggregateRoot: toHexString(config.types.phase0.AggregateAndProof.hashTreeRoot(signedAggregateAndProof.message)),
+    attestationRoot: toHexString(config.types.phase0.Attestation.hashTreeRoot(attestation)),
+    targetEpoch: attestation.data.target.epoch,
+  };
 
-  public constructor({chain, db, config, logger}: GossipMessageValidatorModules) {
-    this.chain = chain;
-    this.db = db;
-    this.config = config;
-    this.logger = logger;
+  try {
+    const attestationJob = {
+      attestation: attestation,
+      validSignature: false,
+    } as IAttestationJob;
+
+    logger.verbose("Started gossip aggregate and proof validation", logContext);
+    await validateGossipAggregateAndProof(config, chain, db, signedAggregateAndProof, attestationJob);
+    logger.verbose("Received valid gossip aggregate and proof", logContext);
+  } catch (e) {
+    if (!(e instanceof AttestationError)) {
+      logger.error("Gossip aggregate and proof validation threw a non-AttestationError", e);
+      throw new GossipValidationError(ERR_TOPIC_VALIDATOR_IGNORE);
+    }
+
+    switch (e.type.code) {
+      case AttestationErrorCode.WRONG_NUMBER_OF_AGGREGATION_BITS:
+      case AttestationErrorCode.KNOWN_BAD_BLOCK:
+      case AttestationErrorCode.AGGREGATOR_NOT_IN_COMMITTEE:
+      case AttestationErrorCode.INVALID_SELECTION_PROOF:
+      case AttestationErrorCode.INVALID_SIGNATURE:
+      case AttestationErrorCode.INVALID_AGGREGATOR:
+        logger.warn("Rejecting gossip aggregate and proof", logContext, e);
+        throw new GossipValidationError(ERR_TOPIC_VALIDATOR_REJECT);
+
+      case AttestationErrorCode.FUTURE_SLOT:
+        chain.receiveAttestation(attestation);
+        logger.warn("Ignoring gossip aggregate and proof", logContext, e);
+        throw new GossipValidationError(ERR_TOPIC_VALIDATOR_IGNORE);
+
+      case AttestationErrorCode.PAST_SLOT:
+      case AttestationErrorCode.AGGREGATE_ALREADY_KNOWN:
+      case AttestationErrorCode.MISSING_ATTESTATION_PRESTATE:
+      default:
+        logger.warn("Ignoring gossip aggregate and proof", logContext, e);
+        throw new GossipValidationError(ERR_TOPIC_VALIDATOR_IGNORE);
+    }
+  } finally {
+    db.seenAttestationCache.addAggregateAndProof(signedAggregateAndProof.message);
   }
+}
 
-  public isValidIncomingBlock = async (signedBlock: phase0.SignedBeaconBlock): Promise<ExtendedValidatorResult> => {
-    const logContext = {
-      blockRoot: toHexString(this.config.types.phase0.BeaconBlock.hashTreeRoot(signedBlock.message)),
-      blockSlot: signedBlock.message.slot,
-    };
-    try {
-      const blockJob: IBlockJob = {
-        signedBlock,
-        reprocess: false,
-        prefinalized: false,
-        validSignatures: false,
-        validProposerSignature: false,
-      };
+export async function validateCommitteeAttestation(
+  {chain, db, config, logger}: IObjectValidatorModules,
+  topic: IBeaconAttestationTopic,
+  attestation: phase0.Attestation
+): Promise<void> {
+  const subnet = topic.subnet;
 
-      this.logger.verbose("Started gossip block validation", logContext);
-      await validateGossipBlock(this.config, this.chain, this.db, blockJob);
-      this.logger.verbose("Received valid gossip block", logContext);
-
-      return ExtendedValidatorResult.accept;
-    } catch (e) {
-      if (!(e instanceof BlockError)) {
-        this.logger.error("Gossip block validation threw a non-BlockError", e);
-        return ExtendedValidatorResult.ignore;
-      }
-
-      switch (e.type.code) {
-        case BlockErrorCode.PROPOSAL_SIGNATURE_INVALID:
-        case BlockErrorCode.INCORRECT_PROPOSER:
-        case BlockErrorCode.KNOWN_BAD_BLOCK:
-          this.logger.warn("Rejecting gossip block", logContext, e);
-          return ExtendedValidatorResult.reject;
-
-        case BlockErrorCode.FUTURE_SLOT:
-        case BlockErrorCode.PARENT_UNKNOWN:
-          this.chain.receiveBlock(signedBlock);
-          this.logger.warn("Ignoring gossip block", logContext, e);
-          return ExtendedValidatorResult.ignore;
-
-        case BlockErrorCode.WOULD_REVERT_FINALIZED_SLOT:
-        case BlockErrorCode.REPEAT_PROPOSAL:
-        default:
-          this.logger.warn("Ignoring gossip block", logContext, e);
-          return ExtendedValidatorResult.ignore;
-      }
-    }
+  const logContext = {
+    attestationSlot: attestation.data.slot,
+    attestationBlockRoot: toHexString(attestation.data.beaconBlockRoot),
+    attestationRoot: toHexString(config.types.phase0.Attestation.hashTreeRoot(attestation)),
+    subnet,
   };
 
-  public isValidIncomingCommitteeAttestation = async (
-    attestation: phase0.Attestation,
-    subnet: number
-  ): Promise<ExtendedValidatorResult> => {
-    const logContext = {
-      attestationSlot: attestation.data.slot,
-      attestationBlockRoot: toHexString(attestation.data.beaconBlockRoot),
-      attestationRoot: toHexString(this.config.types.phase0.Attestation.hashTreeRoot(attestation)),
+  try {
+    const attestationJob = {
+      attestation,
+      validSignature: false,
+    } as IAttestationJob;
+
+    logger.verbose("Started gossip committee attestation validation", logContext);
+    await validateGossipAttestation(config, chain, db, attestationJob, subnet);
+    logger.verbose("Received valid committee attestation", logContext);
+  } catch (e) {
+    if (!(e instanceof AttestationError)) {
+      logger.error("Gossip attestation validation threw a non-AttestationError", e);
+      throw new GossipValidationError(ERR_TOPIC_VALIDATOR_IGNORE);
+    }
+    switch (e.type.code) {
+      case AttestationErrorCode.COMMITTEE_INDEX_OUT_OF_RANGE:
+      case AttestationErrorCode.INVALID_SUBNET_ID:
+      case AttestationErrorCode.BAD_TARGET_EPOCH:
+      case AttestationErrorCode.NOT_EXACTLY_ONE_AGGREGATION_BIT_SET:
+      case AttestationErrorCode.WRONG_NUMBER_OF_AGGREGATION_BITS:
+      case AttestationErrorCode.INVALID_SIGNATURE:
+      case AttestationErrorCode.KNOWN_BAD_BLOCK:
+      case AttestationErrorCode.FINALIZED_CHECKPOINT_NOT_AN_ANCESTOR_OF_ROOT:
+      case AttestationErrorCode.TARGET_BLOCK_NOT_AN_ANCESTOR_OF_LMD_BLOCK:
+        logger.warn("Rejecting gossip attestation", logContext, e);
+        throw new GossipValidationError(ERR_TOPIC_VALIDATOR_REJECT);
+
+      case AttestationErrorCode.UNKNOWN_BEACON_BLOCK_ROOT:
+      case AttestationErrorCode.MISSING_ATTESTATION_PRESTATE:
+        // attestation might be valid after we receive block
+        chain.receiveAttestation(attestation);
+        logger.warn("Ignoring gossip attestation", logContext, e);
+        throw new GossipValidationError(ERR_TOPIC_VALIDATOR_IGNORE);
+
+      case AttestationErrorCode.PAST_SLOT:
+      case AttestationErrorCode.FUTURE_SLOT:
+      case AttestationErrorCode.ATTESTATION_ALREADY_KNOWN:
+      default:
+        logger.warn("Ignoring gossip attestation", logContext, e);
+        throw new GossipValidationError(ERR_TOPIC_VALIDATOR_IGNORE);
+    }
+  } finally {
+    db.seenAttestationCache.addCommitteeAttestation(attestation);
+  }
+}
+
+export async function validateVoluntaryExit(
+  {chain, db, config, logger}: IObjectValidatorModules,
+  _topic: GossipTopic,
+  voluntaryExit: phase0.SignedVoluntaryExit
+): Promise<void> {
+  try {
+    await validateGossipVoluntaryExit(config, chain, db, voluntaryExit);
+  } catch (e) {
+    if (!(e instanceof VoluntaryExitError)) {
+      logger.error("Gossip voluntary exit validation threw a non-VoluntaryExitError", e);
+      throw new GossipValidationError(ERR_TOPIC_VALIDATOR_IGNORE);
+    }
+
+    switch (e.type.code) {
+      case VoluntaryExitErrorCode.INVALID_EXIT:
+        logger.warn("Rejecting gossip voluntary exit", {}, e);
+        throw new GossipValidationError(ERR_TOPIC_VALIDATOR_REJECT);
+
+      case VoluntaryExitErrorCode.EXIT_ALREADY_EXISTS:
+      default:
+        logger.warn("Ignoring gossip voluntary exit", {}, e);
+        throw new GossipValidationError(ERR_TOPIC_VALIDATOR_IGNORE);
+    }
+  }
+}
+
+export async function validateProposerSlashing(
+  {chain, db, config, logger}: IObjectValidatorModules,
+  _topic: GossipTopic,
+  proposerSlashing: phase0.ProposerSlashing
+): Promise<void> {
+  try {
+    await validateGossipProposerSlashing(config, chain, db, proposerSlashing);
+  } catch (e) {
+    if (!(e instanceof ProposerSlashingError)) {
+      logger.error("Gossip proposer slashing validation threw a non-ProposerSlashingError", e);
+      throw new GossipValidationError(ERR_TOPIC_VALIDATOR_IGNORE);
+    }
+
+    switch (e.type.code) {
+      case ProposerSlashingErrorCode.INVALID_SLASHING:
+        logger.warn("Rejecting gossip proposer slashing", {}, e);
+        throw new GossipValidationError(ERR_TOPIC_VALIDATOR_REJECT);
+
+      case ProposerSlashingErrorCode.SLASHING_ALREADY_EXISTS:
+      default:
+        logger.warn("Ignoring gossip proposer slashing", {}, e);
+        throw new GossipValidationError(ERR_TOPIC_VALIDATOR_IGNORE);
+    }
+  }
+}
+
+export async function validateAttesterSlashing(
+  {chain, db, config, logger}: IObjectValidatorModules,
+  _topic: GossipTopic,
+  attesterSlashing: phase0.AttesterSlashing
+): Promise<void> {
+  try {
+    await validateGossipAttesterSlashing(config, chain, db, attesterSlashing);
+  } catch (e) {
+    if (!(e instanceof AttesterSlashingError)) {
+      logger.error("Gossip attester slashing validation threw a non-AttesterSlashingError", e);
+      throw new GossipValidationError(ERR_TOPIC_VALIDATOR_IGNORE);
+    }
+
+    switch (e.type.code) {
+      case AttesterSlashingErrorCode.INVALID_SLASHING:
+        logger.warn("Rejecting gossip attester slashing", {}, e);
+        throw new GossipValidationError(ERR_TOPIC_VALIDATOR_REJECT);
+
+      case AttesterSlashingErrorCode.SLASHING_ALREADY_EXISTS:
+      default:
+        logger.warn("Ignoring gossip attester slashing", {}, e);
+        throw new GossipValidationError(ERR_TOPIC_VALIDATOR_IGNORE);
+    }
+  }
+}
+
+/**
+ * Wrap an ObjectValidatorFn as a TopicValidatorFn
+ *
+ * See TopicValidatorFn here https://github.com/libp2p/js-libp2p-interfaces/blob/v0.5.2/src/pubsub/index.js#L529
+ */
+export function createTopicValidatorFn(
+  modules: IObjectValidatorModules,
+  objectValidatorFn: ObjectValidatorFn
+): TopicValidatorFn {
+  return async (topicString: string, msg: IGossipMessage): Promise<void> => {
+    const gossipTopic = msg.gossipTopic;
+    const gossipObject = msg.gossipObject;
+    if (gossipTopic == null || gossipObject == null) {
+      throw new GossipValidationError(ERR_TOPIC_VALIDATOR_REJECT);
+    }
+    await objectValidatorFn(modules, gossipTopic, gossipObject);
+  };
+}
+
+export function createTopicValidatorFnMap(modules: IObjectValidatorModules): Map<string, TopicValidatorFn> {
+  const validatorFns = new Map<string, TopicValidatorFn>();
+  const genesisValidatorsRoot = modules.chain.getHeadState().genesisValidatorsRoot;
+  // TODO: other fork topics should get added here
+  // phase0
+  const fork = "phase0";
+  const staticTopics: {
+    type: GossipType;
+    objectValidatorFn: ObjectValidatorFn;
+  }[] = [
+    {
+      type: GossipType.beacon_block,
+      objectValidatorFn: validateBeaconBlock as ObjectValidatorFn,
+    },
+    {
+      type: GossipType.beacon_aggregate_and_proof,
+      objectValidatorFn: validateAggregatedAttestation as ObjectValidatorFn,
+    },
+    {
+      type: GossipType.voluntary_exit,
+      objectValidatorFn: validateVoluntaryExit as ObjectValidatorFn,
+    },
+    {
+      type: GossipType.proposer_slashing,
+      objectValidatorFn: validateProposerSlashing as ObjectValidatorFn,
+    },
+    {
+      type: GossipType.attester_slashing,
+      objectValidatorFn: validateAttesterSlashing as ObjectValidatorFn,
+    },
+  ];
+  staticTopics.forEach(({type, objectValidatorFn}) => {
+    const topic = {type, fork, encoding: DEFAULT_ENCODING} as GossipTopic;
+    const topicString = getGossipTopicString(modules.config, topic, genesisValidatorsRoot);
+    const topicValidatorFn = createTopicValidatorFn(modules, objectValidatorFn);
+    validatorFns.set(topicString, topicValidatorFn);
+  });
+  // create an entry for every committee subnet - phase0
+  for (let subnet = 0; subnet < ATTESTATION_SUBNET_COUNT; subnet++) {
+    const topic = {
+      type: GossipType.beacon_attestation,
+      fork,
+      encoding: DEFAULT_ENCODING,
       subnet,
-    };
-
-    try {
-      const attestationJob = {
-        attestation,
-        validSignature: false,
-      } as IAttestationJob;
-
-      this.logger.verbose("Started gossip committee attestation validation", logContext);
-      await validateGossipAttestation(this.config, this.chain, this.db, attestationJob, subnet);
-      this.logger.verbose("Received valid committee attestation", logContext);
-
-      return ExtendedValidatorResult.accept;
-    } catch (e) {
-      if (!(e instanceof AttestationError)) {
-        this.logger.error("Gossip attestation validation threw a non-AttestationError", e);
-        return ExtendedValidatorResult.ignore;
-      }
-      switch (e.type.code) {
-        case AttestationErrorCode.COMMITTEE_INDEX_OUT_OF_RANGE:
-        case AttestationErrorCode.INVALID_SUBNET_ID:
-        case AttestationErrorCode.BAD_TARGET_EPOCH:
-        case AttestationErrorCode.NOT_EXACTLY_ONE_AGGREGATION_BIT_SET:
-        case AttestationErrorCode.WRONG_NUMBER_OF_AGGREGATION_BITS:
-        case AttestationErrorCode.INVALID_SIGNATURE:
-        case AttestationErrorCode.KNOWN_BAD_BLOCK:
-        case AttestationErrorCode.FINALIZED_CHECKPOINT_NOT_AN_ANCESTOR_OF_ROOT:
-        case AttestationErrorCode.TARGET_BLOCK_NOT_AN_ANCESTOR_OF_LMD_BLOCK:
-          this.logger.warn("Rejecting gossip attestation", logContext, e);
-          return ExtendedValidatorResult.reject;
-
-        case AttestationErrorCode.UNKNOWN_BEACON_BLOCK_ROOT:
-        case AttestationErrorCode.MISSING_ATTESTATION_PRESTATE:
-          // attestation might be valid after we receive block
-          this.chain.receiveAttestation(attestation);
-          this.logger.warn("Ignoring gossip attestation", logContext, e);
-          return ExtendedValidatorResult.ignore;
-
-        case AttestationErrorCode.PAST_SLOT:
-        case AttestationErrorCode.FUTURE_SLOT:
-        case AttestationErrorCode.ATTESTATION_ALREADY_KNOWN:
-        default:
-          this.logger.warn("Ignoring gossip attestation", logContext, e);
-          return ExtendedValidatorResult.ignore;
-      }
-    } finally {
-      this.db.seenAttestationCache.addCommitteeAttestation(attestation);
-    }
-  };
-
-  public isValidIncomingAggregateAndProof = async (
-    signedAggregateAndProof: phase0.SignedAggregateAndProof
-  ): Promise<ExtendedValidatorResult> => {
-    const attestation = signedAggregateAndProof.message.aggregate;
-    const logContext = {
-      attestationSlot: attestation.data.slot,
-      aggregatorIndex: signedAggregateAndProof.message.aggregatorIndex,
-      aggregateRoot: toHexString(
-        this.config.types.phase0.AggregateAndProof.hashTreeRoot(signedAggregateAndProof.message)
-      ),
-      attestationRoot: toHexString(this.config.types.phase0.Attestation.hashTreeRoot(attestation)),
-      targetEpoch: attestation.data.target.epoch,
-    };
-
-    try {
-      const attestationJob = {
-        attestation: attestation,
-        validSignature: false,
-      } as IAttestationJob;
-
-      this.logger.verbose("Started gossip aggregate and proof validation", logContext);
-      await validateGossipAggregateAndProof(this.config, this.chain, this.db, signedAggregateAndProof, attestationJob);
-      this.logger.verbose("Received valid gossip aggregate and proof", logContext);
-
-      return ExtendedValidatorResult.accept;
-    } catch (e) {
-      if (!(e instanceof AttestationError)) {
-        this.logger.error("Gossip aggregate and proof validation threw a non-AttestationError", e);
-        return ExtendedValidatorResult.ignore;
-      }
-
-      switch (e.type.code) {
-        case AttestationErrorCode.WRONG_NUMBER_OF_AGGREGATION_BITS:
-        case AttestationErrorCode.KNOWN_BAD_BLOCK:
-        case AttestationErrorCode.AGGREGATOR_NOT_IN_COMMITTEE:
-        case AttestationErrorCode.INVALID_SELECTION_PROOF:
-        case AttestationErrorCode.INVALID_SIGNATURE:
-        case AttestationErrorCode.INVALID_AGGREGATOR:
-          this.logger.warn("Rejecting gossip aggregate and proof", logContext, e);
-          return ExtendedValidatorResult.reject;
-
-        case AttestationErrorCode.FUTURE_SLOT:
-          this.chain.receiveAttestation(attestation);
-          this.logger.warn("Ignoring gossip aggregate and proof", logContext, e);
-          return ExtendedValidatorResult.ignore;
-
-        case AttestationErrorCode.PAST_SLOT:
-        case AttestationErrorCode.AGGREGATE_ALREADY_KNOWN:
-        case AttestationErrorCode.MISSING_ATTESTATION_PRESTATE:
-        default:
-          this.logger.warn("Ignoring gossip aggregate and proof", logContext, e);
-          return ExtendedValidatorResult.ignore;
-      }
-    } finally {
-      this.db.seenAttestationCache.addAggregateAndProof(signedAggregateAndProof.message);
-    }
-  };
-
-  public isValidIncomingVoluntaryExit = async (
-    voluntaryExit: phase0.SignedVoluntaryExit
-  ): Promise<ExtendedValidatorResult> => {
-    try {
-      await validateGossipVoluntaryExit(this.config, this.chain, this.db, voluntaryExit);
-      return ExtendedValidatorResult.accept;
-    } catch (e) {
-      if (!(e instanceof VoluntaryExitError)) {
-        this.logger.error("Gossip voluntary exit validation threw a non-VoluntaryExitError", e);
-        return ExtendedValidatorResult.ignore;
-      }
-
-      switch (e.type.code) {
-        case VoluntaryExitErrorCode.INVALID_EXIT:
-          this.logger.warn("Rejecting gossip voluntary exit", {}, e);
-          return ExtendedValidatorResult.reject;
-
-        case VoluntaryExitErrorCode.EXIT_ALREADY_EXISTS:
-        default:
-          this.logger.warn("Ignoring gossip voluntary exit", {}, e);
-          return ExtendedValidatorResult.ignore;
-      }
-    }
-  };
-
-  public isValidIncomingProposerSlashing = async (
-    proposerSlashing: phase0.ProposerSlashing
-  ): Promise<ExtendedValidatorResult> => {
-    try {
-      await validateGossipProposerSlashing(this.config, this.chain, this.db, proposerSlashing);
-      return ExtendedValidatorResult.accept;
-    } catch (e) {
-      if (!(e instanceof ProposerSlashingError)) {
-        this.logger.error("Gossip proposer slashing validation threw a non-ProposerSlashingError", e);
-        return ExtendedValidatorResult.ignore;
-      }
-
-      switch (e.type.code) {
-        case ProposerSlashingErrorCode.INVALID_SLASHING:
-          this.logger.warn("Rejecting gossip proposer slashing", {}, e);
-          return ExtendedValidatorResult.reject;
-
-        case ProposerSlashingErrorCode.SLASHING_ALREADY_EXISTS:
-        default:
-          this.logger.warn("Ignoring gossip proposer slashing", {}, e);
-          return ExtendedValidatorResult.ignore;
-      }
-    }
-  };
-
-  public isValidIncomingAttesterSlashing = async (
-    attesterSlashing: phase0.AttesterSlashing
-  ): Promise<ExtendedValidatorResult> => {
-    try {
-      await validateGossipAttesterSlashing(this.config, this.chain, this.db, attesterSlashing);
-      return ExtendedValidatorResult.accept;
-    } catch (e) {
-      if (!(e instanceof AttesterSlashingError)) {
-        this.logger.error("Gossip attester slashing validation threw a non-AttesterSlashingError", e);
-        return ExtendedValidatorResult.ignore;
-      }
-
-      switch (e.type.code) {
-        case AttesterSlashingErrorCode.INVALID_SLASHING:
-          this.logger.warn("Rejecting gossip attester slashing", {}, e);
-          return ExtendedValidatorResult.reject;
-
-        case AttesterSlashingErrorCode.SLASHING_ALREADY_EXISTS:
-        default:
-          this.logger.warn("Ignoring gossip attester slashing", {}, e);
-          return ExtendedValidatorResult.ignore;
-      }
-    }
-  };
+    } as GossipTopic;
+    const topicString = getGossipTopicString(modules.config, topic, genesisValidatorsRoot);
+    const topicValidatorFn = createTopicValidatorFn(modules, validateCommitteeAttestation as ObjectValidatorFn);
+    validatorFns.set(topicString, topicValidatorFn);
+  }
+  return validatorFns;
 }
