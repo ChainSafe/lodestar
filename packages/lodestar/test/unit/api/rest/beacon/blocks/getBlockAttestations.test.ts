@@ -3,41 +3,14 @@ import supertest from "supertest";
 
 import {List} from "@chainsafe/ssz";
 import {phase0} from "@chainsafe/lodestar-types";
-import {config} from "@chainsafe/lodestar-config/minimal";
 
-import {ApiNamespace, RestApi} from "../../../../../../src/api";
-import {StubbedApi} from "../../../../../utils/stub/api";
 import {getBlockAttestations} from "../../../../../../src/api/rest/controllers/beacon/blocks";
 import {generateSignedBlock} from "../../../../../utils/block";
 import {generateEmptyAttestation} from "../../../../../utils/attestation";
-import {testLogger} from "../../../../../utils/logger";
 import {urlJoin} from "../../utils";
-import {BEACON_PREFIX} from "../index.test";
+import {BEACON_PREFIX, api, restApi} from "../index.test";
 
 describe("rest - beacon - getBlockAttestations", function () {
-  const opts = {
-    api: [ApiNamespace.BEACON],
-    cors: "*",
-    enabled: true,
-    host: "127.0.0.1",
-    port: 0,
-  };
-  let restApi: RestApi;
-  let api: StubbedApi;
-
-  beforeEach(async function () {
-    api = new StubbedApi();
-    restApi = await RestApi.init(opts, {
-      config,
-      logger: testLogger(),
-      api,
-    });
-  });
-
-  afterEach(async function () {
-    await restApi.close();
-  });
-
   it("should succeed", async function () {
     api.beacon.blocks.getBlock.withArgs("head").resolves(
       generateSignedBlock({

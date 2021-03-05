@@ -1,42 +1,13 @@
 import {expect} from "chai";
 import supertest from "supertest";
 import {toHexString} from "@chainsafe/ssz";
-import {config} from "@chainsafe/lodestar-config/minimal";
 
-import {ApiNamespace, RestApi} from "../../../../../../src/api";
 import {getBlockHeaders} from "../../../../../../src/api/rest/controllers/beacon/blocks";
 import {generateSignedBeaconHeaderResponse} from "../../../../../utils/api";
-import {StubbedApi} from "../../../../../utils/stub/api";
-import {testLogger} from "../../../../../utils/logger";
 import {urlJoin} from "../../utils";
-import {BEACON_PREFIX} from "../index.test";
+import {BEACON_PREFIX, api, restApi} from "../index.test";
 
 describe("rest - beacon - getBlockHeaders", function () {
-  let restApi: RestApi;
-  let api: StubbedApi;
-
-  beforeEach(async function () {
-    api = new StubbedApi();
-    restApi = await RestApi.init(
-      {
-        api: [ApiNamespace.BEACON],
-        cors: "*",
-        enabled: true,
-        host: "127.0.0.1",
-        port: 0,
-      },
-      {
-        config,
-        logger: testLogger(),
-        api,
-      }
-    );
-  });
-
-  afterEach(async function () {
-    await restApi.close();
-  });
-
   it("should fetch without filters", async function () {
     api.beacon.blocks.getBlockHeaders.resolves([generateSignedBeaconHeaderResponse()]);
     const response = await supertest(restApi.server.server)

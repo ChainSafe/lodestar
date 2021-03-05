@@ -1,7 +1,4 @@
-import {BeaconBlockApi} from "../../../../../../src/api/impl/beacon/blocks";
-import sinon, {SinonStubbedInstance} from "sinon";
-import {BeaconChain, IBeaconChain} from "../../../../../../src/chain";
-import {ForkChoice, IBlockSummary} from "@chainsafe/lodestar-fork-choice";
+import {IBlockSummary} from "@chainsafe/lodestar-fork-choice";
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {
   generateBlockSummary,
@@ -11,34 +8,10 @@ import {
   generateSignedBlock,
 } from "../../../../../utils/block";
 import deepmerge from "deepmerge";
-import {StubbedBeaconDb} from "../../../../../utils/stub";
 import {expect} from "chai";
-import {Network} from "../../../../../../src/network/network";
-import {BeaconSync} from "../../../../../../src/sync/sync";
+import { forkChoiceStub, chainStub, dbStub, blockApi } from "./index.test";
 
 describe("api - beacon - getBlockHeaders", function () {
-  let blockApi: BeaconBlockApi;
-  let chainStub: SinonStubbedInstance<IBeaconChain>;
-  let dbStub: StubbedBeaconDb;
-  let forkChoiceStub: SinonStubbedInstance<ForkChoice>;
-
-  beforeEach(function () {
-    forkChoiceStub = sinon.createStubInstance(ForkChoice);
-    chainStub = sinon.createStubInstance(BeaconChain);
-    chainStub.forkChoice = forkChoiceStub;
-    dbStub = new StubbedBeaconDb(sinon, config);
-    blockApi = new BeaconBlockApi(
-      {},
-      {
-        chain: chainStub,
-        config,
-        db: dbStub,
-        network: sinon.createStubInstance(Network),
-        sync: sinon.createStubInstance(BeaconSync),
-      }
-    );
-  });
-
   it("no filters - assume head slot", async function () {
     forkChoiceStub.getHead.returns(generateBlockSummary({slot: 1}));
     chainStub.getCanonicalBlockAtSlot.withArgs(1).resolves(generateEmptySignedBlock());

@@ -1,39 +1,11 @@
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {expect} from "chai";
 import supertest from "supertest";
-import {ApiNamespace, RestApi} from "../../../../../src/api";
 import {proposerDutiesController} from "../../../../../src/api/rest/controllers/validator";
-import {testLogger} from "../../../../utils/logger";
-import {StubbedApi} from "../../../../utils/stub/api";
 import {urlJoin} from "../utils";
-import {VALIDATOR_PREFIX} from "./index.test";
+import {VALIDATOR_PREFIX, api, restApi} from "./index.test";
 
 describe("rest - validator - proposerDuties", function () {
-  let restApi: RestApi;
-  let api: StubbedApi;
-
-  beforeEach(async function () {
-    api = new StubbedApi();
-    restApi = await RestApi.init(
-      {
-        api: [ApiNamespace.VALIDATOR],
-        cors: "*",
-        enabled: true,
-        host: "127.0.0.1",
-        port: 0,
-      },
-      {
-        config,
-        logger: testLogger(),
-        api,
-      }
-    );
-  });
-
-  afterEach(async function () {
-    await restApi.close();
-  });
-
   it("should succeed", async function () {
     api.validator.getProposerDuties.resolves([
       config.types.phase0.ProposerDuty.defaultValue(),

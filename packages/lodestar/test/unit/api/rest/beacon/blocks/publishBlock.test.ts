@@ -1,40 +1,12 @@
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {expect} from "chai";
 import supertest from "supertest";
-import {ApiNamespace, RestApi} from "../../../../../../src/api";
 import {publishBlock} from "../../../../../../src/api/rest/controllers/beacon/blocks/publishBlock";
 import {generateEmptySignedBlock} from "../../../../../utils/block";
-import {testLogger} from "../../../../../utils/logger";
-import {StubbedApi} from "../../../../../utils/stub/api";
 import {urlJoin} from "../../utils";
-import {BEACON_PREFIX} from "../index.test";
+import {BEACON_PREFIX, api, restApi} from "../index.test";
 
 describe("rest - beacon - publishBlock", function () {
-  let restApi: RestApi;
-  let api: StubbedApi;
-
-  beforeEach(async function () {
-    api = new StubbedApi();
-    restApi = await RestApi.init(
-      {
-        api: [ApiNamespace.BEACON],
-        cors: "*",
-        enabled: true,
-        host: "127.0.0.1",
-        port: 0,
-      },
-      {
-        config,
-        logger: testLogger(),
-        api,
-      }
-    );
-  });
-
-  afterEach(async function () {
-    await restApi.close();
-  });
-
   it("should succeed", async function () {
     const block = generateEmptySignedBlock();
     api.beacon.blocks.publishBlock.resolves();

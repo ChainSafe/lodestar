@@ -1,42 +1,13 @@
-import {config} from "@chainsafe/lodestar-config/minimal";
 import {expect} from "chai";
 import supertest from "supertest";
-import {ApiNamespace, RestApi} from "../../../../../../src/api";
 import {StateNotFound} from "../../../../../../src/api/impl/errors/api";
 import {getStateValidators} from "../../../../../../src/api/rest/controllers/beacon";
-import {testLogger} from "../../../../../utils/logger";
-import {StubbedApi} from "../../../../../utils/stub/api";
 import {generateValidator} from "../../../../../utils/validator";
 import {urlJoin} from "../../utils";
-import {BEACON_PREFIX} from "../index.test";
+import {BEACON_PREFIX, api, restApi} from "../index.test";
 import {phase0} from "@chainsafe/lodestar-types";
 
 describe("rest - beacon - getStateValidators", function () {
-  let restApi: RestApi;
-  let api: StubbedApi;
-
-  beforeEach(async function () {
-    api = new StubbedApi();
-    restApi = await RestApi.init(
-      {
-        api: [ApiNamespace.BEACON],
-        cors: "*",
-        enabled: true,
-        host: "127.0.0.1",
-        port: 0,
-      },
-      {
-        config,
-        logger: testLogger(),
-        api,
-      }
-    );
-  });
-
-  afterEach(async function () {
-    await restApi.close();
-  });
-
   it("should success", async function () {
     api.beacon.state.getStateValidators.withArgs("head").resolves([
       {
