@@ -27,6 +27,9 @@ describe("Ensure config is synced", function () {
   const blacklist = [
     "LIGHTCLIENT_PATCH_FORK_SLOT",
     "LIGHTCLIENT_PATCH_FORK_VERSION",
+    "HF1_INACTIVITY_PENALTY_QUOTIENT",
+    "HF1_MIN_SLASHING_PENALTY_QUOTIENT",
+    "HF1_PROPORTIONAL_SLASHING_MULTIPLIER",
     "PHASE_1_FORK_SLOT",
   ];
 
