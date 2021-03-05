@@ -11,7 +11,7 @@ import {getBeaconCommittee, getCommitteeCountAtSlot} from "./committee";
 import {getDomain} from "./domain";
 import {computeSigningRoot} from "./signingRoot";
 import {computeSlotsSinceEpochStart} from "./slot";
-import { BeaconState } from ".";
+import {BeaconState} from ".";
 
 /**
  * Check if [[data1]] and [[data2]] are slashable according to Casper FFG rules.

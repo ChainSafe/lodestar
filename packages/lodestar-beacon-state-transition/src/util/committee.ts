@@ -2,13 +2,13 @@
  * @module chain/stateTransition/util
  */
 
-import {ValidatorIndex, phase0, CommitteeIndex, Slot, Bytes32} from "@chainsafe/lodestar-types";
+import {ValidatorIndex, CommitteeIndex, Slot, Bytes32} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {computeShuffledIndex, getSeed} from "./seed";
 import {getActiveValidatorIndices} from "./validator";
 import {computeEpochAtSlot} from "./epoch";
 import {intDiv} from "@chainsafe/lodestar-utils";
-import { BeaconState } from ".";
+import {BeaconState} from ".";
 
 /**
  * Return the [[index]]'th shuffled committee out of a total [[count]]

@@ -3,7 +3,7 @@
  */
 
 import {hash} from "@chainsafe/ssz";
-import {phase0, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {ValidatorIndex} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {assert, intToBytes, intDiv} from "@chainsafe/lodestar-utils";
 

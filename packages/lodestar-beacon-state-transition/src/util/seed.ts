@@ -3,7 +3,7 @@
  */
 
 import {hash} from "@chainsafe/ssz";
-import {Epoch, phase0, Bytes32, DomainType} from "@chainsafe/lodestar-types";
+import {Epoch, Bytes32, DomainType} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {assert, bytesToBigInt, intToBytes, intDiv} from "@chainsafe/lodestar-utils";
 import {BeaconState} from ".";
