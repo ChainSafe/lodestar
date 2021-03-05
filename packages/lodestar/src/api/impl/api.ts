@@ -6,6 +6,7 @@ import {IValidatorApi, ValidatorApi} from "./validator";
 import {EventsApi, IEventsApi} from "./events";
 import {DebugApi, IDebugApi} from "./debug";
 import {ConfigApi, IConfigApi} from "./config";
+import {LodestarApi, ILodestarApi} from "./lodestar";
 
 export class Api implements IApi {
   public beacon: IBeaconApi;
@@ -14,6 +15,7 @@ export class Api implements IApi {
   public events: IEventsApi;
   public debug: IDebugApi;
   public config: IConfigApi;
+  public lodestar: ILodestarApi;
 
   public constructor(opts: Partial<IApiOptions>, modules: IApiModules) {
     this.beacon = new BeaconApi(opts, modules);
@@ -22,5 +24,6 @@ export class Api implements IApi {
     this.events = new EventsApi(opts, modules);
     this.debug = new DebugApi(opts, modules);
     this.config = new ConfigApi(opts, modules);
+    this.lodestar = new LodestarApi();
   }
 }

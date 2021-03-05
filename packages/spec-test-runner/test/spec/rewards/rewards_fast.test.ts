@@ -18,8 +18,8 @@ for (const testSuite of ["basic", "leak", "random"]) {
       const process = phase0.fast.prepareEpochProcessState(epochCtx, wrappedState);
       const [rewards, penalties] = phase0.fast.getAttestationDeltas(epochCtx, process, state);
       return {
-        rewards,
-        penalties,
+        rewards: rewards.map((reward) => BigInt(reward)),
+        penalties: penalties.map((pen) => BigInt(pen)),
       };
     },
     {

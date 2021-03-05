@@ -7,9 +7,10 @@ import PeerId from "peer-id";
 import sinon, {SinonStubbedInstance} from "sinon";
 import {GENESIS_EPOCH, Method, ZERO_HASH} from "../../../src/constants";
 import {IBeaconDb} from "../../../src/db/api";
-import {Libp2pNetwork} from "../../../src/network";
+import {Network} from "../../../src/network";
 import {ReqResp} from "../../../src/network/reqresp/reqResp";
 import {BeaconReqRespHandler} from "../../../src/sync/reqResp";
+import {BeaconMetrics} from "../../../src/metrics";
 import {generateEmptySignedBlock} from "../../utils/block";
 import {getBlockSummary} from "../../utils/headBlockInfo";
 import {testLogger} from "../../utils/logger";
@@ -24,9 +25,11 @@ describe("sync req resp", function () {
   const peerId = new PeerId(Buffer.from("lodestar"));
   const logger = testLogger();
   const sandbox = sinon.createSandbox();
+  const metrics = sandbox.createStubInstance(BeaconMetrics);
+  metrics.peerGoodbyeReceived = {inc: sinon.stub()} as any;
   let syncRpc: BeaconReqRespHandler;
   let chainStub: StubbedBeaconChain,
-    networkStub: SinonStubbedInstance<Libp2pNetwork>,
+    networkStub: SinonStubbedInstance<Network>,
     metaStub: StubbedIPeerMetadataStore,
     reqRespStub: SinonStubbedInstance<ReqResp>;
   let dbStub: StubbedBeaconDb;
@@ -40,7 +43,7 @@ describe("sync req resp", function () {
     chainStub.config = config;
     chainStub.getForkDigest = sandbox.stub().returns(Buffer.alloc(4));
     reqRespStub = sandbox.createStubInstance(ReqResp);
-    networkStub = sandbox.createStubInstance(Libp2pNetwork);
+    networkStub = sandbox.createStubInstance(Network);
     networkStub.reqResp = reqRespStub as ReqResp & SinonStubbedInstance<ReqResp>;
     metaStub = getStubbedMetadataStore();
     networkStub.peerMetadata = metaStub;
@@ -51,6 +54,7 @@ describe("sync req resp", function () {
       db: (dbStub as unknown) as IBeaconDb,
       chain: chainStub,
       network: networkStub,
+      metrics,
       logger,
     });
   });

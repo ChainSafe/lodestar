@@ -1,5 +1,5 @@
 import {SinonStubbedInstance, SinonFakeTimers} from "sinon";
-import {INetwork, Libp2pNetwork} from "../../../src/network";
+import {INetwork, Network} from "../../../src/network";
 import {IGossip} from "../../../src/network/gossip/interface";
 import {minimalConfig} from "@chainsafe/lodestar-config/minimal";
 import sinon from "sinon";
@@ -32,7 +32,7 @@ describe("interopSubnetsJoiningTask", () => {
 
   beforeEach(() => {
     clock = sandbox.useFakeTimers();
-    networkStub = sandbox.createStubInstance(Libp2pNetwork);
+    networkStub = sandbox.createStubInstance(Network);
     gossipStub = sandbox.createStubInstance(Gossip);
     networkStub.gossip = gossipStub;
     state = generateState();

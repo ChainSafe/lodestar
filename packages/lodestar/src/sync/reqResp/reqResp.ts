@@ -2,27 +2,28 @@
  * @module sync
  */
 
-import {GENESIS_SLOT} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {MAX_REQUEST_BLOCKS, phase0} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {ILogger, LodestarError} from "@chainsafe/lodestar-utils";
 import PeerId from "peer-id";
 import {IBeaconChain} from "../../chain";
-import {Method, ReqRespEncoding, RpcResponseStatus} from "../../constants";
+import {Method, ReqRespEncoding} from "../../constants";
 import {IBeaconDb} from "../../db";
 import {createRpcProtocol, INetwork, NetworkEvent} from "../../network";
-import {ResponseError} from "../../network/reqresp/response";
 import {handlePeerMetadataSequence} from "../../network/peers/utils";
 import {syncPeersStatus} from "../utils/sync";
 import {assertPeerRelevance} from "../utils/assertPeerRelevance";
 import {IReqRespHandler} from "./interface";
-import {IBlockFilterOptions} from "../../db/api/beacon/repositories/blockArchive/abstract";
+import {IBeaconMetrics} from "../../metrics";
+import {onBeaconBlocksByRange} from "../../network/reqresp/handlers/beaconBlocksByRange";
+import {onBeaconBlocksByRoot} from "../../network/reqresp/handlers/beaconBlocksByRoot";
 
 export interface IReqRespHandlerModules {
   config: IBeaconConfig;
   db: IBeaconDb;
   chain: IBeaconChain;
   network: INetwork;
+  metrics?: IBeaconMetrics;
   logger: ILogger;
 }
 
@@ -57,13 +58,15 @@ export class BeaconReqRespHandler implements IReqRespHandler {
   private db: IBeaconDb;
   private chain: IBeaconChain;
   private network: INetwork;
+  private metrics?: IBeaconMetrics;
   private logger: ILogger;
 
-  public constructor({config, db, chain, network, logger}: IReqRespHandlerModules) {
+  public constructor({config, db, chain, network, metrics, logger}: IReqRespHandlerModules) {
     this.config = config;
     this.db = db;
     this.chain = chain;
     this.network = network;
+    this.metrics = metrics;
     this.logger = logger;
   }
 
@@ -81,7 +84,7 @@ export class BeaconReqRespHandler implements IReqRespHandler {
         .getPeers({supportsProtocols: [createRpcProtocol(Method.Goodbye, ReqRespEncoding.SSZ_SNAPPY)]})
         .map(async (peer) => {
           try {
-            await this.network.reqResp.goodbye(peer.id, BigInt(GoodByeReasonCode.CLIENT_SHUTDOWN));
+            await this.goodbye(peer.id, GoodByeReasonCode.CLIENT_SHUTDOWN);
           } catch (e) {
             this.logger.verbose("Failed to send goodbye", {error: e.message});
           }
@@ -109,10 +112,10 @@ export class BeaconReqRespHandler implements IReqRespHandler {
         yield* this.onMetadata();
         break;
       case Method.BeaconBlocksByRange:
-        yield* this.onBeaconBlocksByRange(requestBody as phase0.BeaconBlocksByRangeRequest);
+        yield* onBeaconBlocksByRange(requestBody as phase0.BeaconBlocksByRangeRequest, this.chain, this.db);
         break;
       case Method.BeaconBlocksByRoot:
-        yield* this.onBeaconBlocksByRoot(requestBody as phase0.BeaconBlocksByRootRequest);
+        yield* onBeaconBlocksByRoot(requestBody as phase0.BeaconBlocksByRootRequest, this.db);
         break;
       default:
         throw Error(`Unsupported method ${method}`);
@@ -127,7 +130,7 @@ export class BeaconReqRespHandler implements IReqRespHandler {
         peer: peerId.toB58String(),
         reason: e instanceof LodestarError ? e.getMetadata() : e.message,
       });
-      await this.network.reqResp.goodbye(peerId, BigInt(GoodByeReasonCode.IRRELEVANT_NETWORK));
+      await this.goodbye(peerId, GoodByeReasonCode.IRRELEVANT_NETWORK);
       return;
     }
 
@@ -138,12 +141,10 @@ export class BeaconReqRespHandler implements IReqRespHandler {
     yield this.chain.getStatus();
   }
 
-  private async *onGoodbye(requestBody: phase0.Goodbye, peerId: PeerId): AsyncIterable<bigint> {
-    this.logger.verbose("Received goodbye request", {
-      peer: peerId.toB58String(),
-      reason: requestBody,
-      description: GoodbyeReasonCodeDescriptions[requestBody.toString()],
-    });
+  private async *onGoodbye(goodbyeCode: phase0.Goodbye, peerId: PeerId): AsyncIterable<bigint> {
+    const reason = GoodbyeReasonCodeDescriptions[goodbyeCode.toString()] || "";
+    this.logger.verbose("Received goodbye request", {peer: peerId.toB58String(), code: goodbyeCode, reason});
+    this.metrics?.peerGoodbyeReceived.inc({reason});
 
     yield BigInt(GoodByeReasonCode.CLIENT_SHUTDOWN);
 
@@ -165,43 +166,11 @@ export class BeaconReqRespHandler implements IReqRespHandler {
     yield this.network.metadata.all;
   }
 
-  private async *onBeaconBlocksByRange(
-    requestBody: phase0.BeaconBlocksByRangeRequest
-  ): AsyncIterable<phase0.SignedBeaconBlock> {
-    if (requestBody.step < 1) {
-      throw new ResponseError(RpcResponseStatus.INVALID_REQUEST, "step < 1");
-    }
-    if (requestBody.count < 1) {
-      throw new ResponseError(RpcResponseStatus.INVALID_REQUEST, "count < 1");
-    }
-    if (requestBody.startSlot < GENESIS_SLOT) {
-      throw new ResponseError(RpcResponseStatus.INVALID_REQUEST, "startSlot < genesis");
-    }
+  private async goodbye(peerId: PeerId, goodbyeCode: GoodByeReasonCode): Promise<void> {
+    const reason = GoodbyeReasonCodeDescriptions[goodbyeCode.toString()] || "";
+    this.metrics?.peerGoodbyeSent.inc({reason});
 
-    if (requestBody.count > MAX_REQUEST_BLOCKS) {
-      requestBody.count = MAX_REQUEST_BLOCKS;
-    }
-
-    const archiveBlocksStream = this.db.blockArchive.valuesStream({
-      gte: requestBody.startSlot,
-      lt: requestBody.startSlot + requestBody.count * requestBody.step,
-      step: requestBody.step,
-    } as IBlockFilterOptions);
-    yield* this.injectRecentBlocks(archiveBlocksStream, this.chain, requestBody);
-  }
-
-  private async *onBeaconBlocksByRoot(
-    requestBody: phase0.BeaconBlocksByRootRequest
-  ): AsyncIterable<phase0.SignedBeaconBlock> {
-    const getBlock = this.db.block.get.bind(this.db.block);
-    const getFinalizedBlock = this.db.blockArchive.getByRoot.bind(this.db.blockArchive);
-    for (const blockRoot of requestBody) {
-      const root = blockRoot.valueOf() as Uint8Array;
-      const block = (await getBlock(root)) || (await getFinalizedBlock(root));
-      if (block) {
-        yield block;
-      }
-    }
+    await this.network.reqResp.goodbye(peerId, BigInt(goodbyeCode));
   }
 
   private handshake = async (peerId: PeerId, direction: "inbound" | "outbound"): Promise<void> => {
@@ -215,32 +184,6 @@ export class BeaconReqRespHandler implements IReqRespHandler {
           error: e.message,
         });
         await this.network.disconnect(peerId);
-      }
-    }
-  };
-
-  private injectRecentBlocks = async function* (
-    archiveStream: AsyncIterable<phase0.SignedBeaconBlock>,
-    chain: IBeaconChain,
-    request: phase0.BeaconBlocksByRangeRequest
-  ): AsyncGenerator<phase0.SignedBeaconBlock> {
-    let slot = -1;
-    for await (const archiveBlock of archiveStream) {
-      yield archiveBlock;
-      slot = archiveBlock.message.slot;
-    }
-    slot = slot === -1 ? request.startSlot : slot + request.step;
-    const upperSlot = request.startSlot + request.count * request.step;
-    const slots = [] as number[];
-    while (slot < upperSlot) {
-      slots.push(slot);
-      slot += request.step;
-    }
-
-    const blocks = (await chain.getUnfinalizedBlocksAtSlots(slots)) || [];
-    for (const block of blocks) {
-      if (block) {
-        yield block;
       }
     }
   };

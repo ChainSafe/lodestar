@@ -7,7 +7,7 @@ import {BeaconBlockApi} from "../../../../../../src/api/impl/beacon/blocks";
 import {BeaconChain, IBeaconChain} from "../../../../../../src/chain";
 import {Gossip} from "../../../../../../src/network/gossip/gossip";
 import {INetwork} from "../../../../../../src/network/interface";
-import {Libp2pNetwork} from "../../../../../../src/network/network";
+import {Network} from "../../../../../../src/network/network";
 import {BeaconSync} from "../../../../../../src/sync/sync";
 import {IGossip} from "../../../../../../src/network/gossip/interface";
 import {generateEmptySignedBlock} from "../../../../../utils/block";
@@ -28,7 +28,7 @@ describe("api - beacon - publishBlock", function () {
   beforeEach(function () {
     chainStub = sinon.createStubInstance(BeaconChain);
     syncStub = sinon.createStubInstance(BeaconSync);
-    networkStub = sinon.createStubInstance(Libp2pNetwork);
+    networkStub = sinon.createStubInstance(Network);
     gossipStub = sinon.createStubInstance(Gossip);
     gossipStub.publishBlock = sinon.stub();
     networkStub.gossip = gossipStub;

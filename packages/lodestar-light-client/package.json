@@ -1,5 +1,6 @@
 {
   "name": "@chainsafe/lodestar-light-client",
+  "private": true,
   "description": "A Typescript implementation of the eth2 light client",
   "license": "LGPL-3.0",
   "author": "ChainSafe Systems",
@@ -11,7 +12,7 @@
   "bugs": {
     "url": "https://github.com/ChainSafe/lodestar/issues"
   },
-  "version": "0.12.0",
+  "version": "0.17.0",
   "main": "lib/index.js",
   "files": [
     "lib/**/*.d.ts",
@@ -36,12 +37,12 @@
   },
   "dependencies": {
     "@chainsafe/bls": "^5.1.1",
-    "@chainsafe/lodestar-beacon-state-transition": "^0.16.0",
-    "@chainsafe/lodestar-config": "^0.16.0",
-    "@chainsafe/lodestar-params": "^0.16.0",
-    "@chainsafe/lodestar-types": "^0.16.0",
-    "@chainsafe/lodestar-utils": "^0.16.0",
-    "@chainsafe/ssz": "^0.6.13"
+    "@chainsafe/lodestar-beacon-state-transition": "^0.17.0",
+    "@chainsafe/lodestar-config": "^0.17.0",
+    "@chainsafe/lodestar-params": "^0.17.0",
+    "@chainsafe/lodestar-types": "^0.17.0",
+    "@chainsafe/lodestar-utils": "^0.17.0",
+    "@chainsafe/ssz": "^0.7.0"
   },
   "keywords": [
     "ethereum",

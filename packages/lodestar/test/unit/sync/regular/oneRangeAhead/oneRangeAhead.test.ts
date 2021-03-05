@@ -5,7 +5,7 @@ import {BlockRangeFetcher} from "../../../../../src/sync/regular/oneRangeAhead/f
 import sinon from "sinon";
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {BeaconChain, ChainEventEmitter, ForkChoice, IBeaconChain} from "../../../../../src/chain";
-import {INetwork, Libp2pNetwork} from "../../../../../src/network";
+import {INetwork, Network} from "../../../../../src/network";
 import {WinstonLogger} from "@chainsafe/lodestar-utils";
 import {generateBlockSummary, generateEmptySignedBlock} from "../../../../utils/block";
 import {expect} from "chai";
@@ -34,7 +34,7 @@ describe("ORARegularSync", function () {
     chainStub.emitter = new ChainEventEmitter();
     clockStub = sinon.createStubInstance(LocalClock);
     chainStub.clock = clockStub;
-    networkStub = sinon.createStubInstance(Libp2pNetwork);
+    networkStub = sinon.createStubInstance(Network);
     gossipStub = sinon.createStubInstance(Gossip);
     networkStub.gossip = gossipStub;
     fetcherStub = sinon.createStubInstance(BlockRangeFetcher);

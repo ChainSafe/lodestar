@@ -1,7 +1,7 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import PeerId from "peer-id";
 import {phase0} from "@chainsafe/lodestar-types";
-import {BasicType, ContainerType} from "@chainsafe/ssz";
+import {BasicType, ContainerType, Json} from "@chainsafe/ssz";
 import {notNullish} from "@chainsafe/lodestar-utils";
 import {ReqRespEncoding} from "../../constants";
 
@@ -68,10 +68,29 @@ export class Libp2pPeerMetadataStore implements IPeerMetadataStore {
  * Dedicated string type only used here, so not worth to keep it in `lodestar-types`
  */
 class StringType<T extends string> extends BasicType<T> {
+  defaultValue(): T {
+    return "" as T;
+  }
+  assertValidValue(value: unknown): value is T {
+    throw new Error("not implemented");
+  }
+  fromJson(value: Json): T {
+    return value as T;
+  }
+  toJson(value: T): Json {
+    return value as Json;
+  }
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  toBytes(value: T, output: Uint8Array, offset: number): number {
+    throw new Error("not implemented");
+  }
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  fromBytes(data: Uint8Array, offset: number): T {
+    throw new Error("not implemented");
+  }
   serialize(value: T): Uint8Array {
     return Buffer.from(value);
   }
-
   deserialize(data: Uint8Array): T {
     return (Buffer.from(data).toString() as unknown) as T;
   }

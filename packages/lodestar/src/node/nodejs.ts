@@ -11,7 +11,7 @@ import {phase0} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
 
 import {IBeaconDb} from "../db";
-import {INetwork, Libp2pNetwork} from "../network";
+import {INetwork, Network} from "../network";
 import {BeaconSync, IBeaconSync} from "../sync";
 import {BeaconChain, IBeaconChain, initBeaconMetrics} from "../chain";
 import {BeaconMetrics, HttpMetricsServer, IBeaconMetrics} from "../metrics";
@@ -28,7 +28,7 @@ export interface IBeaconNodeModules {
   opts: IBeaconNodeOptions;
   config: IBeaconConfig;
   db: IBeaconDb;
-  metrics: IBeaconMetrics;
+  metrics?: IBeaconMetrics;
   network: INetwork;
   chain: IBeaconChain;
   api: IApi;
@@ -62,7 +62,7 @@ export class BeaconNode {
   public opts: IBeaconNodeOptions;
   public config: IBeaconConfig;
   public db: IBeaconDb;
-  public metrics: IBeaconMetrics;
+  public metrics?: IBeaconMetrics;
   public metricsServer?: HttpMetricsServer;
   public network: INetwork;
   public chain: IBeaconChain;
@@ -122,8 +122,11 @@ export class BeaconNode {
     // start db if not already started
     await db.start();
 
-    const metrics = new BeaconMetrics(opts.metrics, {logger: logger.child(opts.logger.metrics)});
-    initBeaconMetrics(metrics, anchorState);
+    let metrics;
+    if (opts.metrics.enabled) {
+      metrics = new BeaconMetrics(opts.metrics, {logger: logger.child(opts.logger.metrics)});
+      initBeaconMetrics(metrics, anchorState);
+    }
 
     const chain = new BeaconChain({
       opts: opts.chain,
@@ -140,7 +143,7 @@ export class BeaconNode {
       config,
       logger: logger.child(opts.logger.network),
     });
-    const network = new Libp2pNetwork(opts.network, {
+    const network = new Network(opts.network, {
       config,
       libp2p,
       logger: logger.child(opts.logger.network),
@@ -152,6 +155,7 @@ export class BeaconNode {
       config,
       db,
       chain,
+      metrics,
       network,
       logger: logger.child(opts.logger.sync),
     });
@@ -181,18 +185,21 @@ export class BeaconNode {
       network,
       chain,
     });
-    const metricsServer = new HttpMetricsServer(opts.metrics, {
-      metrics: metrics,
-      logger: logger.child(opts.logger.metrics),
-    });
+
+    let metricsServer;
+    if (metrics) {
+      metricsServer = new HttpMetricsServer(opts.metrics, {
+        metrics: metrics,
+        logger: logger.child(opts.logger.metrics),
+      });
+      await metricsServer.start();
+    }
     const restApi = await RestApi.init(opts.api.rest, {
       config,
       logger: logger.child(opts.logger.api),
       api,
     });
 
-    metrics.start();
-    await metricsServer.start();
     await network.start();
 
     // TODO: refactor the sync module to respect the "start should resolve quickly" interface
@@ -231,8 +238,8 @@ export class BeaconNode {
       if (this.metricsServer) await this.metricsServer.stop();
       if (this.restApi) await this.restApi.close();
 
-      (this.metrics as BeaconMetrics).stop();
       this.chain.close();
+      this.metrics?.close();
       await this.db.stop();
       if (this.controller) this.controller.abort();
       this.status = BeaconNodeStatus.closed;

@@ -211,14 +211,13 @@ export class BeaconSync implements IBeaconSync {
 
   private onUnknownBlockRoot = async (err: BlockError): Promise<void> => {
     if (err.type.code !== BlockErrorCode.PARENT_UNKNOWN) return;
-    const blockRoot = this.config.types.phase0.BeaconBlock.hashTreeRoot(err.job.signedBlock.message);
-    const unknownAncestorRoot = this.chain.pendingBlocks.getMissingAncestor(blockRoot);
-    const missingRootHex = toHexString(unknownAncestorRoot);
-    if (this.processingRoots.has(missingRootHex)) {
+    const parentRoot = err.type.parentRoot;
+    const parentRootHex = toHexString(parentRoot);
+    if (this.processingRoots.has(parentRootHex)) {
       return;
     } else {
-      this.processingRoots.add(missingRootHex);
-      this.logger.verbose("Finding block for unknown ancestor root", {blockRoot: missingRootHex});
+      this.processingRoots.add(parentRootHex);
+      this.logger.verbose("Finding block for unknown ancestor root", {parentRootHex});
     }
     const peerBalancer = new RoundRobinArray(this.getUnknownRootPeers());
     let retry = 0;
@@ -230,16 +229,16 @@ export class BeaconSync implements IBeaconSync {
         break;
       }
       try {
-        const blocks = await this.network.reqResp.beaconBlocksByRoot(peer, [unknownAncestorRoot] as List<Root>);
+        const blocks = await this.network.reqResp.beaconBlocksByRoot(peer, [parentRoot] as List<Root>);
         if (blocks[0]) {
-          this.logger.verbose("Found block for root", {slot: blocks[0].message.slot, blockRoot: missingRootHex});
+          this.logger.verbose("Found block for root", {slot: blocks[0].message.slot, parentRootHex});
           found = true;
           this.chain.receiveBlock(blocks[0]);
           break;
         }
       } catch (e) {
         this.logger.verbose("Failed to get unknown ancestor root from peer", {
-          blockRoot: missingRootHex,
+          parentRootHex,
           peer: peer.toB58String(),
           error: e.message,
           maxRetry,
@@ -248,7 +247,7 @@ export class BeaconSync implements IBeaconSync {
       }
       retry++;
     } // end while
-    this.processingRoots.delete(missingRootHex);
-    if (!found) this.logger.error("Failed to get unknown ancestor root", {blockRoot: missingRootHex});
+    this.processingRoots.delete(parentRootHex);
+    if (!found) this.logger.error("Failed to get unknown ancestor root", {parentRootHex});
   };
 }

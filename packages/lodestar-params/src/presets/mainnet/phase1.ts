@@ -8,7 +8,7 @@ export const phase1Json = {
   // ---------------------------------------------------------------
   PHASE_1_FORK_VERSION: "0x01000000",
   // [STUB]
-  PHASE_1_FORK_SLOT: 0,
+  PHASE_1_FORK_SLOT: "0xffffffffffffffff",
   INITIAL_ACTIVE_SHARDS: 64,
 
   // beacon-chain

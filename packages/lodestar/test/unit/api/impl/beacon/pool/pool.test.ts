@@ -2,7 +2,7 @@ import {config} from "@chainsafe/lodestar-config/minimal";
 import {expect} from "chai";
 import sinon, {SinonStub} from "sinon";
 import {BeaconPoolApi} from "../../../../../../src/api/impl/beacon/pool";
-import {Libp2pNetwork} from "../../../../../../src/network/network";
+import {Network} from "../../../../../../src/network/network";
 import {BeaconSync} from "../../../../../../src/sync/sync";
 import {
   generateAttestation,
@@ -27,7 +27,7 @@ describe("beacon pool api impl", function () {
   let poolApi: BeaconPoolApi;
   let dbStub: StubbedBeaconDb;
   let chainStub: SinonStubbedInstance<IBeaconChain>;
-  let networkStub: SinonStubbedInstance<Libp2pNetwork>;
+  let networkStub: SinonStubbedInstance<Network>;
   let gossipStub: SinonStubbedInstance<IGossip>;
   let validateGossipAttesterSlashing: SinonStub;
   let validateGossipProposerSlashing: SinonStub;
@@ -40,7 +40,7 @@ describe("beacon pool api impl", function () {
     gossipStub.publishAttesterSlashing = sinon.stub();
     gossipStub.publishProposerSlashing = sinon.stub();
     gossipStub.publishVoluntaryExit = sinon.stub();
-    networkStub = sinon.createStubInstance(Libp2pNetwork);
+    networkStub = sinon.createStubInstance(Network);
     networkStub.gossip = gossipStub;
     poolApi = new BeaconPoolApi(
       {},

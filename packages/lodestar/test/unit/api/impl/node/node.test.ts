@@ -1,7 +1,7 @@
 import {INodeApi} from "../../../../../src/api/impl/node";
 import {NodeApi} from "../../../../../src/api/impl/node/node";
 import sinon, {SinonStubbedInstance} from "sinon";
-import {createPeerId, INetwork, Libp2pNetwork} from "../../../../../src/network";
+import {createPeerId, INetwork, Network} from "../../../../../src/network";
 import {BeaconSync, IBeaconSync} from "../../../../../src/sync";
 import {createKeypairFromPeerId, ENR} from "@chainsafe/discv5/lib";
 import PeerId from "peer-id";
@@ -9,8 +9,8 @@ import {expect} from "chai";
 import Multiaddr from "multiaddr";
 import {MetadataController} from "../../../../../src/network/metadata";
 import {phase0} from "@chainsafe/lodestar-types";
-import {generatePeer} from "../../../../utils/peer";
 import {NodePeer} from "../../../../../src/api/types";
+import {PeerStatus, PeerDirection} from "../../../../../src/network";
 
 interface IPeerSummary {
   direction: string | null;
@@ -34,7 +34,7 @@ describe("node api implementation", function () {
   let syncStub: SinonStubbedInstance<IBeaconSync>;
 
   beforeEach(function () {
-    networkStub = sinon.createStubInstance(Libp2pNetwork);
+    networkStub = sinon.createStubInstance(Network);
     syncStub = sinon.createStubInstance(BeaconSync);
     api = new NodeApi({}, {network: networkStub, sync: syncStub});
   });
@@ -47,6 +47,7 @@ describe("node api implementation", function () {
       enr.setLocationMultiaddr(new Multiaddr("/ip4/127.0.0.1/tcp/36001"));
       networkStub.getEnr.returns(enr);
       networkStub.peerId = peerId;
+      networkStub.localMultiaddrs = [new Multiaddr("/ip4/127.0.0.1/tcp/36000")];
       networkStub.metadata = {
         get all(): phase0.Metadata {
           return {
@@ -55,7 +56,6 @@ describe("node api implementation", function () {
           };
         },
       } as MetadataController;
-      networkStub.localMultiaddrs = [new Multiaddr("/ip4/127.0.0.1/tcp/36000")];
       const identity = await api.getNodeIdentity();
       expect(identity.peerId.startsWith("16")).to.be.true;
       expect(identity.enr.startsWith("enr:-")).to.be.true;
@@ -94,65 +94,35 @@ describe("node api implementation", function () {
     it("should return connected and disconnecting peers", async function () {
       const peer1 = await createPeerId();
       const peer2 = await createPeerId();
-      networkStub.getAllPeers.returns([generatePeer(peer1), generatePeer(peer2)]);
-      networkStub.getPeerConnection.onFirstCall().returns({
-        remoteAddr: new Multiaddr(),
-        stat: {
-          status: "open",
-          direction: "outbound",
-        },
-      } as LibP2pConnection);
-      networkStub.getPeerConnection.onSecondCall().returns({
-        remoteAddr: new Multiaddr(),
-        stat: {
-          status: "closing",
-          direction: "inbound",
-        },
-      } as LibP2pConnection);
+      const connectionsByPeer = new Map<string, LibP2pConnection[]>([
+        [peer1.toB58String(), [libp2pConnection(peer1, "open", "outbound")]],
+        [peer2.toB58String(), [libp2pConnection(peer2, "closing", "inbound")]],
+      ]);
+      networkStub.getConnectionsByPeer.returns(connectionsByPeer);
+
       const peers = await api.getPeers();
       expect(peers.length).to.equal(2);
-      expect(toPeerSummary(peers[0])).to.be.deep.equal({
-        direction: "outbound",
-        state: "connected",
-        hasP2pAddress: true,
-        hasPeerId: true,
-      });
-      expect(toPeerSummary(peers[1])).to.be.deep.equal({
-        direction: "inbound",
-        state: "disconnecting",
-        hasPeerId: true,
-        hasP2pAddress: true,
-      });
+      expect(peers.map(toPeerSummary)).to.be.deep.equal([
+        {direction: "outbound", state: "connected", hasP2pAddress: true, hasPeerId: true},
+        {direction: "inbound", state: "disconnecting", hasPeerId: true, hasP2pAddress: true},
+      ]);
     });
 
     it("should return disconnected peers", async function () {
       const peer1 = await createPeerId();
       const peer2 = await createPeerId();
-      networkStub.getAllPeers.returns([generatePeer(peer1), generatePeer(peer2)]);
-      // peer 1 is in connection manager with status "closed"
-      networkStub.getPeerConnection.onFirstCall().returns({
-        remoteAddr: new Multiaddr(),
-        stat: {
-          status: "closed",
-          direction: "outbound",
-        },
-      } as LibP2pConnection);
-      // peer2 is not in connection manager
+      const connectionsByPeer = new Map<string, LibP2pConnection[]>([
+        [peer1.toB58String(), [libp2pConnection(peer1, "closed", "outbound")]],
+        [peer2.toB58String(), []], // peer2 has no connections in the connection manager
+      ]);
+      networkStub.getConnectionsByPeer.returns(connectionsByPeer);
+
       const peers = await api.getPeers();
       // expect(peers[0].enr).not.empty;
-      expect(toPeerSummary(peers[0])).to.be.deep.equal({
-        direction: "outbound",
-        state: "disconnected",
-        hasPeerId: true,
-        hasP2pAddress: true,
-      });
-      // expect(peers[1].enr).not.empty;
-      expect(toPeerSummary(peers[1])).to.be.deep.equal({
-        direction: null,
-        state: "disconnected",
-        hasPeerId: true,
-        hasP2pAddress: false,
-      });
+      expect(peers.map(toPeerSummary)).to.be.deep.equal([
+        {direction: "outbound", state: "disconnected", hasPeerId: true, hasP2pAddress: true},
+        {direction: null, state: "disconnected", hasPeerId: true, hasP2pAddress: false},
+      ]);
     });
   });
 
@@ -160,21 +130,12 @@ describe("node api implementation", function () {
     it("success", async function () {
       const peer1 = await createPeerId();
       const peer2 = await createPeerId();
-      networkStub.getAllPeers.returns([generatePeer(peer1), generatePeer(peer2)]);
-      networkStub.getPeerConnection.onFirstCall().returns({
-        remoteAddr: new Multiaddr(),
-        stat: {
-          status: "open",
-          direction: "outbound",
-        },
-      } as LibP2pConnection);
-      networkStub.getPeerConnection.onSecondCall().returns({
-        remoteAddr: new Multiaddr(),
-        stat: {
-          status: "closing",
-          direction: "inbound",
-        },
-      } as LibP2pConnection);
+      const connectionsByPeer = new Map<string, LibP2pConnection[]>([
+        [peer1.toB58String(), [libp2pConnection(peer1, "open", "outbound")]],
+        [peer2.toB58String(), [libp2pConnection(peer2, "closing", "inbound")]],
+      ]);
+      networkStub.getConnectionsByPeer.returns(connectionsByPeer);
+
       const peer = await api.getPeer(peer1.toB58String());
       if (!peer) throw Error("getPeer returned no peer");
       expect(peer.peerId).to.equal(peer1.toB58String());
@@ -186,23 +147,9 @@ describe("node api implementation", function () {
     });
 
     it("peer not found", async function () {
-      const peer1 = await createPeerId();
-      const peer2 = await createPeerId();
-      networkStub.getPeers.returns([generatePeer(peer1), generatePeer(peer2)]);
-      networkStub.getPeerConnection.onFirstCall().returns({
-        remoteAddr: new Multiaddr(),
-        stat: {
-          status: "open",
-          direction: "outbound",
-        },
-      } as LibP2pConnection);
-      networkStub.getPeerConnection.onSecondCall().returns({
-        remoteAddr: new Multiaddr(),
-        stat: {
-          status: "closing",
-          direction: "inbound",
-        },
-      } as LibP2pConnection);
+      const connectionsByPeer = new Map<string, LibP2pConnection[]>();
+      networkStub.getConnectionsByPeer.returns(connectionsByPeer);
+
       const peer = await api.getPeer("not existent");
       expect(peer).to.be.null;
     });
@@ -227,3 +174,14 @@ describe("node api implementation", function () {
     });
   });
 });
+
+export function libp2pConnection(peer: PeerId, status: PeerStatus, direction: PeerDirection): LibP2pConnection {
+  return {
+    remoteAddr: new Multiaddr(),
+    stat: {
+      status,
+      direction,
+    },
+    remotePeer: peer,
+  } as LibP2pConnection;
+}

@@ -13,6 +13,7 @@ import {IValidatorApi} from "./validator";
 import {IEventsApi} from "./events";
 import {IDebugApi} from "./debug/interface";
 import {IConfigApi} from "./config/interface";
+import {ILodestarApi} from "./lodestar";
 
 export const enum ApiNamespace {
   BEACON = "beacon",
@@ -21,6 +22,7 @@ export const enum ApiNamespace {
   EVENTS = "events",
   DEBUG = "debug",
   CONFIG = "config",
+  LODESTAR = "lodestar",
 }
 
 export interface IApiModules {
@@ -40,4 +42,5 @@ export interface IApi {
   events: IEventsApi;
   debug: IDebugApi;
   config: IConfigApi;
+  lodestar: ILodestarApi;
 }

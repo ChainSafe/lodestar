@@ -5,7 +5,7 @@ services:
     restart: always
     volumes:
       - lodestar:/root/.local/share/lodestar
-    command: beacon --network ${NETWORK:-pyrmont}
+    command: beacon
     ports:
       - "9000:9000"
 

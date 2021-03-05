@@ -1,5 +1,5 @@
 import {Epoch} from "@chainsafe/lodestar-types";
-import {Batch, BatchOpts, BatchStatus} from "./batch";
+import {Batch, BatchOpts, BatchStatus} from "../batch";
 
 /**
  * Validates that the status and ordering of batches is valid
@@ -63,10 +63,10 @@ export function getNextBatchToProcess(batches: Batch[]): Batch | undefined {
  * Compute the startEpoch of the next batch to be processed
  */
 export function toBeProcessedStartEpoch(batches: Batch[], startEpoch: Epoch, opts: BatchOpts): Epoch {
-  const startEpochs = batches
-    .filter((batch) => batch.state.status === BatchStatus.AwaitingValidation)
-    .map((batch) => batch.startEpoch);
-  return startEpochs.length > 0 ? Math.max(...startEpochs) + opts.epochsPerBatch : startEpoch;
+  const lastAwaitingValidation = batches
+    .reverse()
+    .find((batch) => batch.state.status === BatchStatus.AwaitingValidation);
+  return lastAwaitingValidation ? lastAwaitingValidation.startEpoch + opts.epochsPerBatch : startEpoch;
 }
 
 /**

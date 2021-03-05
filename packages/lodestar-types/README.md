@@ -27,11 +27,11 @@ const b: BeaconState = {
 
 ```typescript
 // mainnet and minimal types pre-generated under non-default export
-import {types as mainnetTypes} from "@chainsafe/lodestar-types/lib/ssz/presets/mainnet";
-import {types as minimalTypes} from "@chainsafe/lodestar-types/lib/ssz/presets/mainnet";
+import {types as mainnetTypes} from "@chainsafe/lodestar-types/lib/presets/mainnet";
+import {types as minimalTypes} from "@chainsafe/lodestar-types/lib/presets/mainnet";
 
-mainnetTypes.BeaconState.defaultValue();
-minimalTypes.BeaconState.defaultValue();
+mainnetTypes.phase0.BeaconState.defaultValue();
+minimalTypes.phase0.BeaconState.defaultValue();
 
 ...
 

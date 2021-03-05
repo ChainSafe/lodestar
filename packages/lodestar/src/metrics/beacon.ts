@@ -6,6 +6,7 @@ import {Gauge, Counter} from "prom-client";
 import {IBeaconMetrics} from "./interface";
 import {IMetricsOptions} from "./options";
 import {Metrics} from "./metrics";
+import {readLodestarGitData} from "./gitData";
 import {ILogger} from "@chainsafe/lodestar-utils";
 
 export class BeaconMetrics extends Metrics implements IBeaconMetrics {
@@ -36,7 +37,15 @@ export class BeaconMetrics extends Metrics implements IBeaconMetrics {
   public previousEpochTargetGwei: Gauge;
   public observedEpochAttesters: Gauge;
   public observedEpochAggregators: Gauge;
+  public blockProcessorTotalAsyncTime: Gauge;
+  peersByDirection: Gauge;
+  peerConnectedEvent: Gauge;
+  peerDisconnectedEvent: Gauge;
+  peerGoodbyeReceived: Gauge;
+  peerGoodbyeSent: Gauge;
+  peersTotalUniqueConnected: Gauge;
 
+  private lodestarVersion: Gauge;
   private logger: ILogger;
 
   public constructor(opts: IMetricsOptions, {logger}: {logger: ILogger}) {
@@ -180,13 +189,67 @@ export class BeaconMetrics extends Metrics implements IBeaconMetrics {
       help: "number of aggregators for which we have seen an attestation, not necessarily included on chain.",
       registers,
     });
+
+    // Extra Lodestar custom metrics
+
+    this.blockProcessorTotalAsyncTime = new Gauge({
+      name: "lodestar_block_processor_total_async_time",
+      help: "Total number of seconds spent completing block processor async jobs",
+      registers,
+    });
+
+    this.peersByDirection = new Gauge({
+      name: "lodestar_peers_by_direction",
+      help: "number of peers, labeled by direction",
+      labelNames: ["direction"],
+      registers,
+    });
+
+    this.peerConnectedEvent = new Gauge({
+      name: "lodestar_peer_connected",
+      help: "Number of peer:connected event, labeled by direction",
+      labelNames: ["direction"],
+      registers,
+    });
+
+    this.peerDisconnectedEvent = new Gauge({
+      name: "lodestar_peer_disconnected",
+      help: "Number of peer:disconnected event, labeled by direction",
+      labelNames: ["direction"],
+      registers,
+    });
+
+    this.peerGoodbyeReceived = new Gauge({
+      name: "lodestar_peer_goodbye_received",
+      help: "Number of goodbye received, labeled by reason",
+      labelNames: ["reason"],
+      registers,
+    });
+
+    this.peerGoodbyeSent = new Gauge({
+      name: "lodestar_peer_goodbye_sent",
+      help: "Number of goodbye sent, labeled by reason",
+      labelNames: ["reason"],
+      registers,
+    });
+
+    this.peersTotalUniqueConnected = new Gauge({
+      name: "lodestar_peers_total_unique_connected",
+      help: "Total number of unique peers that have had a connection with",
+      registers,
+    });
+
+    // Private - only used once now
+    this.lodestarVersion = new Gauge({
+      name: "lodestar_version",
+      help: "Lodestar version",
+      labelNames: ["semver", "branch", "commit", "version"],
+      registers,
+    });
+    this.lodestarVersion.set(readLodestarGitData(), 1);
   }
 
-  public start(): void {
-    super.start();
-  }
-
-  public stop(): void {
-    super.stop();
+  public close(): void {
+    super.close();
   }
 }

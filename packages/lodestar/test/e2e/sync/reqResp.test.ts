@@ -10,7 +10,7 @@ import all from "it-all";
 import {Method, ReqRespEncoding, RpcResponseStatus} from "../../../src/constants";
 import {BeaconMetrics} from "../../../src/metrics";
 import {SszSnappyErrorCode} from "../../../src/network/reqresp/encodingStrategies/sszSnappy";
-import {createRpcProtocol, Libp2pNetwork, NetworkEvent} from "../../../src/network";
+import {createRpcProtocol, Network, NetworkEvent} from "../../../src/network";
 import {decodeErrorMessage} from "../../../src/network/reqresp/utils/errorMessage";
 import {IGossipMessageValidator} from "../../../src/network/gossip/interface";
 import {INetworkOptions} from "../../../src/network/options";
@@ -49,8 +49,8 @@ describe("[sync] rpc", function () {
   const logger = testLogger();
   const metrics = new BeaconMetrics({enabled: false, timeout: 5000, pushGateway: false}, {logger});
 
-  let rpcA: IReqRespHandler, netA: Libp2pNetwork;
-  let rpcB: IReqRespHandler, netB: Libp2pNetwork;
+  let rpcA: IReqRespHandler, netA: Network;
+  let rpcB: IReqRespHandler, netB: Network;
   let libP2pA: Libp2p;
   const validator: IGossipMessageValidator = {} as IGossipMessageValidator;
   let chain: MockBeaconChain;
@@ -77,8 +77,8 @@ describe("[sync] rpc", function () {
       root: config.types.phase0.BeaconBlock.hashTreeRoot(block.message),
     });
     libP2pA = await createNode(multiaddr);
-    netA = new Libp2pNetwork(opts, {config, libp2p: libP2pA, logger, metrics, validator, chain});
-    netB = new Libp2pNetwork(opts, {
+    netA = new Network(opts, {config, libp2p: libP2pA, logger, metrics, validator, chain});
+    netB = new Network(opts, {
       config,
       libp2p: await createNode(multiaddr),
       logger,
@@ -102,6 +102,7 @@ describe("[sync] rpc", function () {
       config,
       db,
       chain,
+      metrics,
       network: netA,
       logger,
     });
@@ -110,6 +111,7 @@ describe("[sync] rpc", function () {
       config,
       db,
       chain,
+      metrics,
       network: netB,
       logger: logger,
     });
