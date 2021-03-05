@@ -66,6 +66,9 @@ export class BeaconSync implements IBeaconSync {
 
     const finalizedBlock = this.chain.forkChoice.getFinalizedBlock();
     const startEpoch = finalizedBlock.finalizedEpoch;
+    // Set state cache size to 1 during initial sync
+    const maxStates = this.chain.stateCache.maxStates;
+    this.chain.stateCache.maxStates = 1;
     const initialSync = new SyncChain(
       startEpoch,
       this.processChainSegment,
@@ -78,6 +81,8 @@ export class BeaconSync implements IBeaconSync {
 
     await initialSync.sync();
 
+    // Reset state cache size after initial sync
+    this.chain.stateCache.maxStates = maxStates;
     this.startRegularSync();
   }
 
