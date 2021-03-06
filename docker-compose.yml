@@ -5,12 +5,12 @@ services:
     image: lodestar
     restart: always
     volumes:
-      - beacon_node:/root/.local/share
+      - beacon_node:/data
     env_file: .env
     ports:
       - "9000:9000" # P2P port
       - "9596:9596" # REST API port
-    command: beacon --api.rest.host 0.0.0.0
+    command: beacon --rootDir /data --api.rest.host 0.0.0.0
 
   prometheus:
     build: docker/prometheus
