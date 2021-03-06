@@ -24,7 +24,7 @@ export function decodeMessageData(encoding: GossipEncoding, data: Uint8Array): U
       return data;
 
     default:
-      throw new Error(`Unable to decode message with encoding ${encoding}`);
+      throw new Error(`Unsupported encoding ${encoding}`);
   }
 }
 
@@ -37,7 +37,7 @@ export function encodeMessageData(encoding: GossipEncoding, data: Uint8Array): U
       return data;
 
     default:
-      throw new Error(`Unable to encode message with encoding ${encoding}`);
+      throw new Error(`Unsupported encoding ${encoding}`);
   }
 }
 
@@ -56,7 +56,7 @@ export function getMessageDecoder(encoding: GossipEncoding): (message: IGossipMe
       return (message) => message.data;
 
     default:
-      throw new Error(`No available message decoder for encoding ${encoding}`);
+      throw new Error(`unsupported encoding ${encoding}`);
   }
 }
 

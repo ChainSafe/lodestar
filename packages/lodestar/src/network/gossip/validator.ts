@@ -344,12 +344,12 @@ export function createTopicValidatorFnMap(modules: IObjectValidatorModules): Map
       objectValidatorFn: validateAttesterSlashing as ObjectValidatorFn,
     },
   ];
-  staticTopics.forEach(({type, objectValidatorFn}) => {
+  for (const {type, objectValidatorFn} of staticTopics) {
     const topic = {type, fork, encoding: DEFAULT_ENCODING} as GossipTopic;
     const topicString = getGossipTopicString(modules.config, topic, genesisValidatorsRoot);
     const topicValidatorFn = createTopicValidatorFn(modules, objectValidatorFn);
     validatorFns.set(topicString, topicValidatorFn);
-  });
+  }
   // create an entry for every committee subnet - phase0
   for (let subnet = 0; subnet < ATTESTATION_SUBNET_COUNT; subnet++) {
     const topic = {
