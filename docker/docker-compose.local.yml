@@ -5,11 +5,10 @@ version: "3.4"
 #
 # HOW TO USE: Start a Lodestar node, then run
 #
-# docker-compose -f docker/docker-compose-local.yml up -d
+# docker-compose -f docker/docker-compose.local.yml up -d
 
 services:
   prometheus:
-    build: 
     build:
       context: prometheus
       args:

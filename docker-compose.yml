@@ -1,25 +1,16 @@
 version: "3.4"
 services:
   beacon_node:
-    build: ../lodestar
-    image: lodestar/lodestar
-    restart: always
-    command: beacon --api.rest.host 0.0.0.0 --network ${NETWORK}
-    ports:
-      - "9000:9000"
-    env_file: .env
-
-  validator:
-    image: lodestar/lodestar
+    build: .
+    image: lodestar
     restart: always
     volumes:
-      - validator:/root/.local/share/validator
-      - ./keystores:/keystores
-      - ./secrets:/secrets
-    command: validator --graffiti "lodestar wuz here" --server http://beacon_node:9596 --network ${NETWORK}
-    depends_on:
-      - beacon_node
+      - beacon_node:/root/.local/share
     env_file: .env
+    ports:
+      - "9000:9000" # P2P port
+      - "9596:9596" # REST API port
+    command: beacon --api.rest.host 0.0.0.0
 
   prometheus:
     build: docker/prometheus
@@ -41,6 +32,5 @@ services:
 
 volumes:
   beacon_node:
-  validator:
   prometheus:
   grafana:

@@ -3,21 +3,53 @@
 > Thanks for your contribution to Lodestar. It's people like you that push the Ethereum ecosystem forward.
 
 # Prerequisites
+
 - [Lerna](https://github.com/lerna/lerna)
 - [Yarn](https://yarnpkg.com/)
 
 # Getting Started
+
 - Run `lerna bootstrap` or `yarn install` to install dependencies
 - NOTE: By default the spec tests (5GB) will be installed with other dependencies. If you would like to avoid downloading the spec tests, instead run `yarn install --ignore-optional`.
 
 # Tests
+
 - Run `lerna run test:spec-min` for minimal spec tests
 - Run `lerna run test:spec-main` for mainnet spec tests
 - Run `lerna run test:unit` for unit tests
 - Run `lerna run test:e2e` for end-to-end tests
 - Run `lerna run test` to run all tests
 
+# Docker
+
+The docker-compose file requires that a `.env` file be present in this directory. The `default.env` file provides a template and can be copied `.env`:
+
+```
+cp default.env .env
+```
+
+**Beacon node only**
+
+```
+docker-compose up -d
+```
+
+**Beacon node and validator**
+
+First, you must have keystores and their secrets available locally at `./keystores` and `./secrets`
+
+```
+docker-compose -f docker-compose.yml -f docker-compose.validator.yml up -d
+```
+
+**Dockerized metrics + local beacon node**
+
+```
+docker-compose -f docker/docker-compose.local.yml up -d
+```
+
 # First-time Contributor?
+
 Unsure where to begin contributing to Lodestar? Here are some ideas!
 
 - See any typos? See any verbiage that should be changed or updated? Go for it! Github makes it easy to make contributions right from the browser.
@@ -25,6 +57,7 @@ Unsure where to begin contributing to Lodestar? Here are some ideas!
 - Join our [discord chat](https://discord.gg/aMxzVcr)!
 
 # Reporting a bug?
+
 [Create a new issue!](https://github.com/ChainSafe/lodestar/issues/new/choose) Select the type of issue that best fits, and please fill out as much of the information as you can.
 
 # Contribution process
