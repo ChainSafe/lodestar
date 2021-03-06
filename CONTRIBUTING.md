@@ -17,6 +17,11 @@
 - Run `lerna run test:e2e` for end-to-end tests
 - Run `lerna run test` to run all tests
 
+# Docker
+
+- Run `docker-compose up` to launch a local lodestar beacon node, prometheus, and grafana
+- Run `docker-compose -f docker/docker-compose-local.yml up` to launch just a local prometheus and grafana
+
 # First-time Contributor?
 Unsure where to begin contributing to Lodestar? Here are some ideas!
 
