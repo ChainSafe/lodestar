@@ -249,7 +249,7 @@ export class BeaconMetrics extends Metrics implements IBeaconMetrics {
     });
 
     this.gossipMeshPeersByBeaconAttestationSubnet = new Gauge({
-      name: "lodestar_gossip_peers",
+      name: "lodestar_gossip_mesh_peers_by_beacon_attestation_subnet",
       help: "Number of connected mesh peers per beacon attestation subnet",
       labelNames: ["subnet"],
       registers,

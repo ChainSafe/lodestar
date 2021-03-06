@@ -71,7 +71,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.2.0",
+      "pluginVersion": "7.4.3",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -159,16 +159,14 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": [
-            "last"
-          ],
+          "calcs": ["last"],
           "fields": "",
           "values": false
         },
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "7.2.0",
+      "pluginVersion": "7.4.3",
       "targets": [
         {
           "expr": "libp2p_peers",
@@ -214,16 +212,14 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         },
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "7.2.0",
+      "pluginVersion": "7.4.3",
       "targets": [
         {
           "expr": "beacon_head_slot",
@@ -268,16 +264,14 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         },
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "7.2.0",
+      "pluginVersion": "7.4.3",
       "targets": [
         {
           "expr": "beacon_finalized_epoch",
@@ -322,16 +316,14 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         },
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "7.2.0",
+      "pluginVersion": "7.4.3",
       "targets": [
         {
           "expr": "rate(beacon_head_slot[2m])",
@@ -381,16 +373,14 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         },
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "7.2.0",
+      "pluginVersion": "7.4.3",
       "targets": [
         {
           "expr": "process_start_time_seconds*1000",
@@ -440,16 +430,14 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": [
-            "mean"
-          ],
+          "calcs": ["mean"],
           "fields": "",
           "values": false
         },
         "text": {},
         "textMode": "name"
       },
-      "pluginVersion": "7.2.0",
+      "pluginVersion": "7.4.3",
       "targets": [
         {
           "expr": "lodestar_version",
@@ -501,16 +489,14 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         },
         "text": {},
         "textMode": "name"
       },
-      "pluginVersion": "7.2.0",
+      "pluginVersion": "7.4.3",
       "targets": [
         {
           "expr": "nodejs_version_info",
@@ -561,7 +547,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.2.0",
+      "pluginVersion": "7.4.3",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -658,7 +644,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.2.0",
+      "pluginVersion": "7.4.3",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -1405,20 +1391,14 @@
             "conditions": [
               {
                 "evaluator": {
-                  "params": [
-                    5
-                  ],
+                  "params": [5],
                   "type": "gt"
                 },
                 "operator": {
                   "type": "and"
                 },
                 "query": {
-                  "params": [
-                    "A",
-                    "5m",
-                    "now"
-                  ]
+                  "params": ["A", "5m", "now"]
                 },
                 "reducer": {
                   "params": [],
@@ -2755,15 +2735,13 @@
             "displayMode": "basic",
             "orientation": "auto",
             "reduceOptions": {
-              "calcs": [
-                "lastNotNull"
-              ],
+              "calcs": ["last"],
               "fields": "",
               "values": false
             },
             "showUnfilled": true
           },
-          "pluginVersion": "7.2.0",
+          "pluginVersion": "7.4.3",
           "targets": [
             {
               "expr": "lodestar_gossip_mesh_peers_by_type",
@@ -2779,51 +2757,41 @@
           "type": "bargauge"
         },
         {
-          "aliasColors": {},
-          "bars": false,
-          "dashLength": 10,
-          "dashes": false,
           "datasource": null,
           "fieldConfig": {
             "defaults": {
-              "custom": {}
+              "custom": {},
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  }
+                ]
+              }
             },
             "overrides": []
           },
-          "fill": 1,
-          "fillGradient": 0,
           "gridPos": {
             "h": 8,
-            "w": 12,
-            "x": 12,
-            "y": 22
+            "w": 24,
+            "x": 0,
+            "y": 30
           },
-          "hiddenSeries": false,
           "id": 70,
-          "legend": {
-            "avg": false,
-            "current": false,
-            "max": false,
-            "min": false,
-            "show": true,
-            "total": false,
-            "values": false
-          },
-          "lines": true,
-          "linewidth": 1,
-          "nullPointMode": "null",
           "options": {
-            "alertThreshold": true
+            "displayMode": "basic",
+            "orientation": "auto",
+            "reduceOptions": {
+              "calcs": ["last"],
+              "fields": "",
+              "values": false
+            },
+            "showUnfilled": true
           },
-          "percentage": false,
-          "pluginVersion": "7.2.0",
-          "pointradius": 2,
-          "points": false,
-          "renderer": "flot",
-          "seriesOverrides": [],
-          "spaceLength": 10,
-          "stack": false,
-          "steppedLine": false,
+          "pluginVersion": "7.4.3",
           "targets": [
             {
               "expr": "lodestar_gossip_mesh_peers_by_beacon_attestation_subnet",
@@ -2832,46 +2800,10 @@
               "refId": "A"
             }
           ],
-          "thresholds": [],
           "timeFrom": null,
-          "timeRegions": [],
           "timeShift": null,
           "title": "Beacon Attestation Mesh Peers per Subnet",
-          "tooltip": {
-            "shared": true,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "buckets": null,
-            "mode": "time",
-            "name": null,
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": true
-            },
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": true
-            }
-          ],
-          "yaxis": {
-            "align": false,
-            "alignLevel": null
-          }
+          "type": "bargauge"
         }
       ],
       "title": "Gossip Stats",
@@ -2879,7 +2811,7 @@
     }
   ],
   "refresh": "30s",
-  "schemaVersion": 26,
+  "schemaVersion": 27,
   "style": "dark",
   "tags": [],
   "templating": {
@@ -2890,21 +2822,10 @@
     "to": "now"
   },
   "timepicker": {
-    "refresh_intervals": [
-      "5s",
-      "10s",
-      "30s",
-      "1m",
-      "5m",
-      "15m",
-      "30m",
-      "1h",
-      "2h",
-      "1d"
-    ]
+    "refresh_intervals": ["5s", "10s", "30s", "1m", "5m", "15m", "30m", "1h", "2h", "1d"]
   },
   "timezone": "",
   "title": "Lodestar",
   "uid": "lodestar",
-  "version": 3
+  "version": 2
 }

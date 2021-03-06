@@ -3,7 +3,7 @@ import Gossipsub from "libp2p-gossipsub";
 import {InMessage} from "libp2p-interfaces/src/pubsub";
 import Libp2p from "libp2p";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {phase0, Root} from "@chainsafe/lodestar-types";
+import {ATTESTATION_SUBNET_COUNT, phase0, Root} from "@chainsafe/lodestar-types";
 import {ILogger, toJson} from "@chainsafe/lodestar-utils";
 import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 
@@ -301,8 +301,15 @@ export class Eth2Gossipsub extends Gossipsub {
 
   private logSubscriptions = (): void => {
     if (this.metrics) {
+      // reset these mesh counter metrics, they get set each time
+      // beacon attestation mesh gets counted separately so we can track mesh peers by subnet
       this.metrics.gossipMeshPeersByType.reset();
       this.metrics.gossipMeshPeersByBeaconAttestationSubnet.reset();
+      // zero out all subnet choices, so the dashboard will register them
+      for (let subnet = 0; subnet < ATTESTATION_SUBNET_COUNT; subnet++) {
+        this.metrics.gossipMeshPeersByBeaconAttestationSubnet.set({subnet}, 0);
+      }
+      // loop through all mesh entries, count each set size
       for (const [topicString, peers] of this.mesh.entries()) {
         const topic = this.getGossipTopic(topicString);
         if (topic.type === GossipType.beacon_attestation) {
