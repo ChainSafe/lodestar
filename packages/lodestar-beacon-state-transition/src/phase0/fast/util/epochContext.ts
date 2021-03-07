@@ -165,11 +165,11 @@ export class EpochContext {
     const committee = this.getBeaconCommittee(data.slot, data.index);
     // No need for a Set, the indices in the committee are already unique.
     const attestingIndices: ValidatorIndex[] = [];
-    committee.forEach((index, i) => {
+    for (const [i, index] of committee.entries()) {
       if (bits[i]) {
         attestingIndices.push(index);
       }
-    });
+    }
     // sort in-place
     attestingIndices.sort((a, b) => a - b);
     return {

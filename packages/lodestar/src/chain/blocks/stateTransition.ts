@@ -1,15 +1,10 @@
 import {byteArrayEquals} from "@chainsafe/ssz";
 import {Gwei, Slot} from "@chainsafe/lodestar-types";
 import {assert} from "@chainsafe/lodestar-utils";
-import {
-  ZERO_HASH,
-  computeEpochAtSlot,
-  computeStartSlotAtEpoch,
-  phase0,
-} from "@chainsafe/lodestar-beacon-state-transition";
-import {processSlots} from "../../../../lodestar-beacon-state-transition/lib/phase0/fast/slot";
+import {computeEpochAtSlot, computeStartSlotAtEpoch, phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBlockSummary, IForkChoice} from "@chainsafe/lodestar-fork-choice";
 
+import {ZERO_HASH} from "../../constants";
 import {CheckpointStateCache} from "../stateCache";
 import {ChainEvent, ChainEventEmitter} from "../emitter";
 import {IBlockJob, ITreeStateContext} from "../interface";
@@ -68,7 +63,7 @@ export async function processSlotsToNearestCheckpoint(
     nextEpochSlot <= postSlot;
     nextEpochSlot += SLOTS_PER_EPOCH
   ) {
-    processSlots(postCtx.epochCtx, postCtx.state, nextEpochSlot);
+    phase0.fast.processSlots(postCtx.epochCtx, postCtx.state, nextEpochSlot);
     emitCheckpointEvent(emitter, cloneStateCtx(postCtx));
     // this avoids keeping our node busy processing blocks
     await sleep(0);
@@ -88,7 +83,7 @@ export async function processSlotsByCheckpoint(
 ): Promise<ITreeStateContext> {
   const postCtx = await processSlotsToNearestCheckpoint(emitter, stateCtx, slot);
   if (postCtx.state.slot < slot) {
-    processSlots(postCtx.epochCtx, postCtx.state, slot);
+    phase0.fast.processSlots(postCtx.epochCtx, postCtx.state, slot);
   }
   return postCtx;
 }

@@ -19,7 +19,6 @@ import {FAR_FUTURE_EPOCH, GENESIS_EPOCH, ZERO_HASH} from "../constants";
 import {IBeaconDb} from "../db";
 import {CheckpointStateCache, StateContextCache} from "./stateCache";
 import {IBeaconMetrics} from "../metrics";
-import {notNullish} from "@chainsafe/lodestar-utils";
 import {AttestationPool, AttestationProcessor} from "./attestation";
 import {BlockPool, BlockProcessor} from "./blocks";
 import {IBeaconClock, LocalClock} from "./clock";
@@ -219,7 +218,7 @@ export class BeaconChain implements IBeaconChain {
     }
 
     const unfinalizedBlocks = await Promise.all(slots.map((slot) => blockRootsPerSlot.get(slot)));
-    return unfinalizedBlocks.filter(notNullish);
+    return unfinalizedBlocks.filter((block): block is phase0.SignedBeaconBlock => block != null);
   }
 
   public getFinalizedCheckpoint(): phase0.Checkpoint {
