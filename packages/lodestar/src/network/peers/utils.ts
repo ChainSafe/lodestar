@@ -4,7 +4,6 @@ import {ATTESTATION_SUBNET_COUNT} from "../../constants";
 import {INetwork} from "../interface";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {getSyncProtocols} from "../util";
-import {notNullish} from "@chainsafe/lodestar-utils";
 import {getSyncPeers} from "../../sync/utils/peers";
 
 /**
@@ -42,7 +41,7 @@ export async function handlePeerMetadataSequence(
   metadataSeq: BigInt | null
 ): Promise<void> {
   const latestMetadata = network.peerMetadata.metadata.get(peer);
-  if (notNullish(metadataSeq) && (!latestMetadata || latestMetadata.seqNumber < metadataSeq)) {
+  if (metadataSeq !== null && (!latestMetadata || latestMetadata.seqNumber < metadataSeq)) {
     try {
       logger.verbose("Getting peer metadata", {peer: peer.toB58String()});
       network.peerMetadata.metadata.set(peer, await network.reqResp.metadata(peer));

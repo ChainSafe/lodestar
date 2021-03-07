@@ -3,7 +3,7 @@ import {phase0, Slot} from "@chainsafe/lodestar-types";
 import {RoundRobinArray} from "./robin";
 import {IReqResp} from "../../network";
 import {ISlotRange} from "../interface";
-import {ILogger, notNullish} from "@chainsafe/lodestar-utils";
+import {ILogger} from "@chainsafe/lodestar-utils";
 
 /**
  * Creates slot chunks returned chunks represents (inclusive) start and (inclusive) end slot
@@ -79,7 +79,7 @@ export async function getBlockRange(
           }
         })
       )
-    ).filter(notNullish);
+    ).filter((chunk): chunk is ISlotRange => chunk != null);
     retry++;
     if ((retry > maxRetry || retry > peers.length) && chunks.length > 0) {
       logger.error("Max req retry for blocks by range. Failed chunks", JSON.stringify(chunks));
