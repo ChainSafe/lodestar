@@ -9,7 +9,7 @@ import {processRegistryUpdates} from "../../../../src/phase0/naive/epoch/registr
 import {generateState} from "../../../utils/state";
 import {generateValidator} from "../../../utils/validator";
 
-describe("process epoch - slashings", function () {
+describe.skip("process epoch - slashings", function () {
   const sandbox = sinon.createSandbox();
 
   let getCurrentEpochStub: any, isActiveValidatorStub: any, initiateValidatorExitStub: any;
