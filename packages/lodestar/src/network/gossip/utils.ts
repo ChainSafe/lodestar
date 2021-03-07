@@ -18,9 +18,9 @@ export function getGossipTopic(
 ): string {
   const forkDigestHash = toHexString(forkDigestValue).toLowerCase().substring(2);
   let topic = `/eth2/${forkDigestHash}/${event}/${encoding}`;
-  params.forEach((value, key) => {
+  for (const [key, value] of params.entries()) {
     topic = topic.replace(`{${key}}`, value);
-  });
+  }
   return topic;
 }
 

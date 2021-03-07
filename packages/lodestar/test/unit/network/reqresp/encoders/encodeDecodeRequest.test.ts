@@ -38,7 +38,7 @@ describe("network / reqresp / encoders / encodeDecodeRequest", () => {
       const method = _method as keyof typeof testCases;
       const requests = _requests as phase0.RequestBody[];
 
-      requests.forEach((request, i) => {
+      for (const [i, request] of requests.entries()) {
         it(`${encoding} ${method} - req ${i}`, async () => {
           const returnedRequest = await pipe(
             requestEncode(config, method, encoding, request),
@@ -53,7 +53,7 @@ describe("network / reqresp / encoders / encodeDecodeRequest", () => {
             "decoded request does not match encoded request"
           );
         });
-      });
+      }
     }
   }
 });

@@ -45,7 +45,7 @@ for (const testSuite of ["basic", "leak", "random"]) {
           inclusionDelayDeltas.rewards,
           inactivityPenaltyDeltas.rewards,
         ].reduce((previousValue, currentValue) => {
-          previousValue.forEach((_, index) => (previousValue[index] += currentValue[index]));
+          for (const index of previousValue.keys()) previousValue[index] += currentValue[index];
           return previousValue;
         });
         const penalties = [
@@ -55,7 +55,7 @@ for (const testSuite of ["basic", "leak", "random"]) {
           inclusionDelayDeltas.penalties,
           inactivityPenaltyDeltas.penalties,
         ].reduce((previousValue, currentValue) => {
-          previousValue.forEach((_, index) => (previousValue[index] += currentValue[index]));
+          for (const index of previousValue.keys()) previousValue[index] += currentValue[index];
           return previousValue;
         });
         return {

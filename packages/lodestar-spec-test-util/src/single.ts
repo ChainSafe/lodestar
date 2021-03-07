@@ -76,9 +76,9 @@ export function describeDirectorySpecTest<TestCase, Result>(
       .map((name) => join(testCaseDirectoryPath, name))
       .filter(isDirectory);
 
-    testCases.forEach((testCaseDirectory, index) => {
+    for (const [index, testCaseDirectory] of testCases.entries()) {
       generateTestCase(testCaseDirectory, index, testFunction, options);
-    });
+    }
   });
 }
 

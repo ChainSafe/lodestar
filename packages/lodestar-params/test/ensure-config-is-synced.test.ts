@@ -24,29 +24,25 @@ describe("Ensure config is synced", function () {
   // TODO: Remove items from this list as the specs are updated
   // Items added here are intentionally either not added, or are different
   // eslint-disable-next-line prettier/prettier
-  const blacklist = [
-    "LIGHTCLIENT_PATCH_FORK_SLOT",
-    "LIGHTCLIENT_PATCH_FORK_VERSION",
-    "PHASE_1_FORK_SLOT",
-  ];
+  const blacklist = ["LIGHTCLIENT_PATCH_FORK_SLOT", "LIGHTCLIENT_PATCH_FORK_VERSION", "PHASE_1_FORK_SLOT"];
 
   it("mainnet", async function () {
     const remoteParams = await downloadRemoteConfig("mainnet", mainnet.commit);
     const localParams = {...mainnet.params};
-    blacklist.forEach((param) => {
+    for (const param of blacklist) {
       delete remoteParams[param];
       delete (localParams as Record<string, unknown>)[param];
-    });
+    }
     expect(localParams).to.deep.equal(remoteParams);
   });
 
   it("minimal", async function () {
     const remoteParams = await downloadRemoteConfig("minimal", minimal.commit);
     const localParams = {...minimal.params};
-    blacklist.forEach((param) => {
+    for (const param of blacklist) {
       delete remoteParams[param];
       delete (localParams as Record<string, unknown>)[param];
-    });
+    }
     expect(localParams).to.deep.equal(remoteParams);
   });
 });
