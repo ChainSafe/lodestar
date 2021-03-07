@@ -1,4 +1,4 @@
-import fastify, {FastifyInstance} from "fastify";
+import fastify, {FastifyInstance, ServerOptions} from "fastify";
 import fastifyCors from "fastify-cors";
 import {FastifySSEPlugin} from "fastify-sse-v2";
 import {IncomingMessage, Server, ServerResponse} from "http";
@@ -54,7 +54,7 @@ function setupServer(opts: IRestApiOptions, modules: IRestApiModules): FastifyIn
         coerceTypes: "array",
       },
     },
-    querystringParser: querystring.parse,
+    querystringParser: querystring.parse as ServerOptions["querystringParser"],
   });
   server.setErrorHandler(errorHandler);
   if (opts.cors) {

@@ -82,12 +82,15 @@ export function isLocalMultiAddr(multiaddr: Multiaddr | undefined): boolean {
         .map((n) => n.toString(16))
         .join(":");
 
-  const localIpStrs = Object.values(interfaces)
-    .reduce((finalArr, val) => finalArr.concat(val), [])
-    .filter((networkInterface) => networkInterface.family === family)
-    .map((networkInterface) => networkInterface.address);
+  for (const networkInterfaces of Object.values(interfaces)) {
+    for (const networkInterface of networkInterfaces || []) {
+      if (networkInterface.family === family && networkInterface.address === ipStr) {
+        return true;
+      }
+    }
+  }
 
-  return localIpStrs.includes(ipStr);
+  return false;
 }
 
 export function clearMultiaddrUDP(enr: ENR): void {

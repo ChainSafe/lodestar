@@ -55,7 +55,7 @@ export const runSuite = (bench: BenchSuite, name?: string): void => {
     if (bench.profile) {
       const profile = profiler.stopProfiling(profileId);
       profile.export((error, result) => {
-        if (error) {
+        if (error || !result) {
           return;
         }
         writeFile(`${dirname(bench.file)}/${profileId}`, result, () => {

@@ -27,7 +27,7 @@ describe("[network] nodejs libp2p", () => {
 
     // connect
     await Promise.all([
-      new Promise((resolve, reject) => {
+      new Promise<void>((resolve, reject) => {
         const t = setTimeout(reject, 1000, "connection timed out");
         nodeB.connectionManager.once(NetworkEvent.peerConnect, () => {
           clearTimeout(t);

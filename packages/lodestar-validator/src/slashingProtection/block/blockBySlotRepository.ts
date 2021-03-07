@@ -54,7 +54,10 @@ export class BlockBySlotRepository {
   }
 
   private encodeKey(pubkey: BLSPubkey, slot: Slot): Buffer {
-    return encodeKey(this.bucket, Buffer.concat([Buffer.from(pubkey), intToBytes(BigInt(slot), uintLen, "be")]));
+    return encodeKey(
+      this.bucket,
+      Buffer.concat([Buffer.from(pubkey as Uint8Array), intToBytes(BigInt(slot), uintLen, "be")])
+    );
   }
 
   private decodeKey(key: Buffer): {pubkey: BLSPubkey; slot: Slot} {
