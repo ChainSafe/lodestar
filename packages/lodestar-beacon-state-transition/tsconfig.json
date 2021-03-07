@@ -2,7 +2,6 @@
   "extends": "../../tsconfig",
   "include": ["src", "test"],
   "compilerOptions": {
-    "typeRoots": ["../../node_modules/@types"],
     "outDir": "lib",
     /* Redirect output structure to the directory. */
     "rootDirs": ["./src", "./test"]

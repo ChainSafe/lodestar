@@ -1,7 +1,7 @@
 {
   "extends": "../../tsconfig",
   "compilerOptions": {
-    "typeRoots": ["../../node_modules/@types"],
+    "types": ["mocha", "node"],
     "outDir": "lib"
   },
   "include": ["src", "test"]
