@@ -38,15 +38,15 @@ export function processOperations(
     );
   }
 
-  ([
+  for (const [operations, processOp] of [
     [body.proposerSlashings, processProposerSlashing],
     [body.attesterSlashings, processAttesterSlashing],
     [body.attestations, processAttestation],
     [body.deposits, processDeposit],
     [body.voluntaryExits, processVoluntaryExit],
-  ] as [List<Operation>, OperationFunction][]).forEach(([operations, processOp]) => {
+  ] as [List<Operation>, OperationFunction][]) {
     readOnlyForEach(operations, (op) => {
       processOp(epochCtx, state, op, verifySignatures);
     });
-  });
+  }
 }

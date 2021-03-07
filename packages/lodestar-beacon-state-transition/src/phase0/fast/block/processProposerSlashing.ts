@@ -38,11 +38,11 @@ export function processProposerSlashing(
 
   // verify signatures
   if (verifySignatures) {
-    getProposerSlashingSignatureSets(epochCtx, state, proposerSlashing).forEach((signatureSet, i) => {
+    for (const [i, signatureSet] of getProposerSlashingSignatureSets(epochCtx, state, proposerSlashing).entries()) {
       if (!verifySignatureSet(signatureSet)) {
         throw new Error(`ProposerSlashing header${i + 1} signature invalid`);
       }
-    });
+    }
   }
 
   slashValidator(epochCtx, state, header1.proposerIndex);

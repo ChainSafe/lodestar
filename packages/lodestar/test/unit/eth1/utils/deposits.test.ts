@@ -139,7 +139,7 @@ describe("eth1 / util / deposits", function () {
       expect(deposits.length).to.be.equal(2);
 
       // Verify each individual merkle root
-      deposits.forEach((deposit, index) => {
+      for (const [index, deposit] of deposits.entries()) {
         expect(
           verifyMerkleBranch(
             config.types.phase0.DepositData.hashTreeRoot(deposit.data),
@@ -150,7 +150,7 @@ describe("eth1 / util / deposits", function () {
           ),
           `Wrong merkle proof on deposit ${index}`
         ).to.be.true;
-      });
+      }
     });
   });
 });

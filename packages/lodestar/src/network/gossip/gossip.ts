@@ -202,16 +202,16 @@ export class Gossip extends (EventEmitter as {new (): GossipEventEmitter}) imple
 
   private registerHandlers(forkDigest: ForkDigest): void {
     this.handlers = this.createHandlers(forkDigest);
-    this.handlers.forEach((handler, topic) => {
+    for (const [topic, handler] of this.handlers.entries()) {
       this.pubsub.on(topic, handler);
-    });
+    }
   }
 
   private unregisterHandlers(): void {
     if (this.handlers) {
-      this.handlers.forEach((handler, topic) => {
+      for (const [topic, handler] of this.handlers.entries()) {
         this.pubsub.off(topic, handler);
-      });
+      }
     }
   }
 

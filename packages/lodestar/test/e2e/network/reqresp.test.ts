@@ -134,12 +134,12 @@ describe("[network] network", function () {
     if (!returnedBlocks) throw Error("Returned null");
     expect(returnedBlocks).to.have.length(req.count, "Wrong returnedBlocks lenght");
 
-    returnedBlocks.forEach((returnedBlock, i) => {
+    for (const [i, returnedBlock] of returnedBlocks.entries()) {
       expect(config.types.phase0.SignedBeaconBlock.equals(returnedBlock, blocks[i])).to.equal(
         true,
         `Wrong returnedBlock[${i}]`
       );
-    });
+    }
   });
 
   it("should handle a server error", async function () {

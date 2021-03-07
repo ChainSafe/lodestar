@@ -61,7 +61,7 @@ export function applyDeposits(
   const initDepositCount = depositDataRootList.length;
   const depositDatas = fullDepositDataRootList ? null : newDeposits.map((deposit) => deposit.data);
 
-  newDeposits.forEach((deposit, index) => {
+  for (const [index, deposit] of newDeposits.entries()) {
     if (fullDepositDataRootList) {
       depositDataRootList.push(fullDepositDataRootList[index + initDepositCount]);
       state.eth1Data.depositRoot = config.types.phase0.DepositDataRootList.hashTreeRoot(
@@ -76,7 +76,7 @@ export function applyDeposits(
 
     state.eth1Data.depositCount += 1;
     processDeposit(config, state, deposit);
-  });
+  }
 
   // Process activations
   state.validators.forEach((validator, index) => {

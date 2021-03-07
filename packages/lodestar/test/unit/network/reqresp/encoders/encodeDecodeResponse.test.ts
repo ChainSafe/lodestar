@@ -39,7 +39,7 @@ describe("network / reqresp / encoders / encodeDecodeResponse", () => {
       const method = _method as keyof typeof testCases;
       const responsesChunks = _responsesChunks as phase0.ResponseBody[][];
 
-      responsesChunks.forEach((responseChunks, i) => {
+      for (const [i, responseChunks] of responsesChunks.entries()) {
         it(`${encoding} ${method} - resp ${i}`, async function () {
           const returnedResponses = await pipe(
             arrToSource(responseChunks),
@@ -53,7 +53,7 @@ describe("network / reqresp / encoders / encodeDecodeResponse", () => {
 
           expectIsEqualSszTypeArr(type, returnedResponses, responseChunks, "Response chunks");
         });
-      });
+      }
     }
   }
 });

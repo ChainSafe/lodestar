@@ -53,7 +53,7 @@ describe("slashing-protection-interchange-tests", () => {
       });
 
       // Add blocks
-      testCase.blocks.forEach((blockRaw, i) => {
+      for (const [i, blockRaw] of testCase.blocks.entries()) {
         it(`Add block ${i}`, async () => {
           const pubkey = fromHexString(blockRaw.pubkey);
           const block: phase0.SlashingProtectionBlock = {
@@ -68,10 +68,10 @@ describe("slashing-protection-interchange-tests", () => {
             );
           }
         });
-      });
+      }
 
       // Add attestations
-      testCase.attestations.forEach((attestationRaw, i) => {
+      for (const [i, attestationRaw] of testCase.attestations.entries()) {
         it(`Add attestation ${i}`, async () => {
           const pubkey = fromHexString(attestationRaw.pubkey);
           const attestation: phase0.SlashingProtectionAttestation = {
@@ -87,7 +87,7 @@ describe("slashing-protection-interchange-tests", () => {
             );
           }
         });
-      });
+      }
     });
   }
 });
