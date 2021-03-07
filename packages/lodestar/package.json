@@ -41,6 +41,7 @@
     "test:e2e": "TS_NODE_PROJECT=tsconfig.test.json mocha 'test/e2e/**/*.test.ts'",
     "test:sim": "TS_NODE_PROJECT=tsconfig.test.json mocha 'test/sim/**/*.test.ts'",
     "test:sim:singleThread": "TS_NODE_PROJECT=tsconfig.test.json mocha 'test/sim/singleNodeSingleThread.test.ts'",
+    "test:sim:singleThreadMultiNode": "TS_NODE_PROJECT=tsconfig.test.json mocha 'test/sim/multiNodeSingleThread.test.ts'",
     "test:sim:multiThread": "TS_NODE_PROJECT=tsconfig.test.json mocha 'test/sim/multiNodeMultiThread.test.ts'"
   },
   "dependencies": {
