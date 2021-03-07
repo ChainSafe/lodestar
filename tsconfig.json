@@ -1,13 +1,3 @@
 {
-  "compilerOptions": {
-    "target": "es2019",
-    "module": "commonjs",
-    "pretty": true,
-    "lib": ["es2020", "esnext.bigint", "es2020.string", "es2020.symbol.wellknown"],
-    "declaration": true,
-    "declarationMap": true,
-    "strict": true,
-    "strictNullChecks": true,
-    "esModuleInterop": true
-  }
+  "extends": "./tsconfig.build.json"
 }
