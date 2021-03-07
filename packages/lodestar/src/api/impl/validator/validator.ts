@@ -6,7 +6,7 @@ import bls, {Signature} from "@chainsafe/bls";
 import {computeStartSlotAtEpoch, computeSubnetForCommitteesAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Bytes96, CommitteeIndex, Epoch, Root, phase0, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
-import {assert, ILogger, notNullish} from "@chainsafe/lodestar-utils";
+import {assert, ILogger} from "@chainsafe/lodestar-utils";
 import {readOnlyForEach, TreeBacked} from "@chainsafe/ssz";
 import {IAttestationJob, IBeaconChain} from "../../../chain";
 import {assembleAttestationData} from "../../../chain/factory/attestation";
@@ -113,7 +113,7 @@ export class ValidatorApi implements IValidatorApi {
         }
         return assembleAttesterDuty(this.config, {pubkey: validator.pubkey, index: validatorIndex}, epochCtx, epoch);
       })
-      .filter(notNullish) as phase0.AttesterDuty[];
+      .filter((duty): duty is phase0.AttesterDuty => duty != null);
   }
 
   public async getAggregatedAttestation(attestationDataRoot: Root, slot: Slot): Promise<phase0.Attestation> {

@@ -1,6 +1,6 @@
 {
   "extends": "../../tsconfig",
-  "include": ["src", "test", "../lodestar-utils/src/notNullish.ts"],
+  "include": ["src", "test"],
   "exclude": ["../../node_modules/it-pipe"],
   "compilerOptions": {
     "typeRoots": ["../../node_modules/@types", "../../node_modules/libp2p-ts/types", "./types"],
