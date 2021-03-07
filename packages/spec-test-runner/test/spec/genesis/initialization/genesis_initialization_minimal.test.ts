@@ -53,7 +53,7 @@ function generateDepositSSZTypeMapping(
   n: number,
   config: IBeaconConfig
 ): Record<string, typeof config.types.phase0.Deposit> {
-  const depositMappings = {};
+  const depositMappings: Record<string, typeof config.types.phase0.Deposit> = {};
   for (let i = 0; i < n; i++) {
     depositMappings[`deposits_${i}`] = config.types.phase0.Deposit;
   }
