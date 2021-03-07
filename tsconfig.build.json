@@ -4,10 +4,14 @@
     "module": "commonjs",
     "pretty": true,
     "lib": ["es2020", "esnext.bigint", "es2020.string", "es2020.symbol.wellknown"],
-    "declaration": true,
-    "declarationMap": true,
     "strict": true,
     "strictNullChecks": true,
-    "esModuleInterop": true
+    "esModuleInterop": true,
+    // Babel builds source, Typescript is used only for .d.ts files
+    "declaration": true,
+    "declarationMap": true,
+    "emitDeclarationOnly": true,
+    "incremental": true,
+    "preserveWatchOutput": true
   }
 }
