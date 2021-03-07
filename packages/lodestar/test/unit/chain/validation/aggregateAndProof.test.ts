@@ -1,5 +1,6 @@
 import sinon, {SinonStub, SinonStubbedInstance} from "sinon";
 import {expect} from "chai";
+import {rewiremock} from "../../../rewiremock";
 
 import {List} from "@chainsafe/ssz";
 import bls from "@chainsafe/bls";
@@ -19,6 +20,7 @@ import {generateSignedAggregateAndProof} from "../../../utils/aggregateAndProof"
 import {generateCachedState} from "../../../utils/state";
 import {StubbedBeaconDb} from "../../../utils/stub";
 import {AttestationErrorCode} from "../../../../src/chain/errors";
+import {expectRejectedWithLodestarError} from "../../../utils/errors";
 
 describe("gossip aggregate and proof test", function () {
   let chain: SinonStubbedInstance<IBeaconChain>;
@@ -28,6 +30,36 @@ describe("gossip aggregate and proof test", function () {
   let isValidSelectionProofStub: SinonStub;
   let isValidSignatureStub: SinonStub;
   let isValidIndexedAttestationStub: SinonStub;
+
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
+  async function mockValidateGossipAggregateAndProof({
+    isAggregatorFromCommitteeLength,
+    isValidIndexedAttestation,
+    isValidSelectionProofSignature,
+    isValidAggregateAndProofSignature,
+  }: {
+    isAggregatorFromCommitteeLength: typeof validatorUtils.isAggregatorFromCommitteeLength;
+    isValidIndexedAttestation: typeof blockUtils.isValidIndexedAttestation;
+    isValidSelectionProofSignature: typeof validationUtils.isValidSelectionProofSignature;
+    isValidAggregateAndProofSignature: typeof validationUtils.isValidAggregateAndProofSignature;
+  }) {
+    return await rewiremock.around(
+      () => import("../../../../src/chain/validation"),
+      (mock) => {
+        mock(() => import("@chainsafe/lodestar-beacon-state-transition/lib/util/validator"))
+          .with({isAggregatorFromCommitteeLength})
+          .toBeUsed();
+        mock(() =>
+          import("@chainsafe/lodestar-beacon-state-transition/lib/phase0/fast/block/isValidIndexedAttestation")
+        )
+          .with({isValidIndexedAttestation})
+          .toBeUsed();
+        mock(() => import("../../../../src/chain/validation/utils"))
+          .with({isValidSelectionProofSignature, isValidAggregateAndProofSignature})
+          .toBeUsed();
+      }
+    );
+  }
 
   beforeEach(function () {
     chain = sinon.createStubInstance(BeaconChain);
@@ -246,6 +278,13 @@ describe("gossip aggregate and proof test", function () {
   });
 
   it("should throw error - invalid selection proof signature", async function () {
+    const {validateGossipAggregateAndProof} = await mockValidateGossipAggregateAndProof({
+      isAggregatorFromCommitteeLength: sinon.stub().returns(true),
+      isValidIndexedAttestation: sinon.stub().returns(true),
+      isValidSelectionProofSignature: sinon.stub().returns(false),
+      isValidAggregateAndProofSignature: sinon.stub().returns(true),
+    });
+
     const item = generateSignedAggregateAndProof({
       aggregate: {
         aggregationBits: Array.from([true]) as List<boolean>,
@@ -264,20 +303,24 @@ describe("gossip aggregate and proof test", function () {
       epochCtx: (epochCtx as unknown) as phase0.fast.EpochContext,
     });
     epochCtx.getBeaconCommittee.returns([item.message.aggregatorIndex]);
-    isAggregatorStub.returns(true);
-    isValidSelectionProofStub.returns(false);
-    try {
-      await validateGossipAggregateAndProof(config, chain, db, item, {
+
+    await expectRejectedWithLodestarError(
+      validateGossipAggregateAndProof(config, chain, db, item, {
         attestation: item.message.aggregate,
         validSignature: false,
-      } as IAttestationJob);
-    } catch (error) {
-      expect(error.type).to.have.property("code", AttestationErrorCode.INVALID_SELECTION_PROOF);
-    }
-    expect(isValidSelectionProofStub.calledOnce).to.be.true;
+      } as IAttestationJob),
+      AttestationErrorCode.INVALID_SELECTION_PROOF
+    );
   });
 
   it("should throw error - invalid signature", async function () {
+    const {validateGossipAggregateAndProof} = await mockValidateGossipAggregateAndProof({
+      isAggregatorFromCommitteeLength: sinon.stub().returns(true),
+      isValidIndexedAttestation: sinon.stub().returns(true),
+      isValidSelectionProofSignature: sinon.stub().returns(true),
+      isValidAggregateAndProofSignature: sinon.stub().returns(false),
+    });
+
     const item = generateSignedAggregateAndProof({
       aggregate: {
         aggregationBits: Array.from([true]) as List<boolean>,
@@ -296,29 +339,24 @@ describe("gossip aggregate and proof test", function () {
       epochCtx: (epochCtx as unknown) as phase0.fast.EpochContext,
     });
     epochCtx.getBeaconCommittee.returns([item.message.aggregatorIndex]);
-    isAggregatorStub.returns(true);
-    isValidSelectionProofStub.returns(true);
-    isValidSignatureStub.returns(false);
-    try {
-      await validateGossipAggregateAndProof(config, chain, db, item, {
+
+    await expectRejectedWithLodestarError(
+      validateGossipAggregateAndProof(config, chain, db, item, {
         attestation: item.message.aggregate,
         validSignature: false,
-      } as IAttestationJob);
-    } catch (error) {
-      expect(error.type).to.have.property("code", AttestationErrorCode.INVALID_SIGNATURE);
-    }
-    expect(
-      isValidSignatureStub.withArgs(
-        config,
-        state,
-        0,
-        epochCtx.index2pubkey[item.message.aggregatorIndex],
-        sinon.match.any
-      ).calledOnce
-    ).to.be.true;
+      } as IAttestationJob),
+      AttestationErrorCode.INVALID_SIGNATURE
+    );
   });
 
   it("should throw error - invalid indexed attestation", async function () {
+    const {validateGossipAggregateAndProof} = await mockValidateGossipAggregateAndProof({
+      isAggregatorFromCommitteeLength: sinon.stub().returns(true),
+      isValidIndexedAttestation: sinon.stub().returns(false),
+      isValidSelectionProofSignature: sinon.stub().returns(true),
+      isValidAggregateAndProofSignature: sinon.stub().returns(true),
+    });
+
     const item = generateSignedAggregateAndProof({
       aggregate: {
         aggregationBits: Array.from([true]) as List<boolean>,
@@ -337,22 +375,24 @@ describe("gossip aggregate and proof test", function () {
       epochCtx: (epochCtx as unknown) as phase0.fast.EpochContext,
     });
     epochCtx.getBeaconCommittee.returns([item.message.aggregatorIndex]);
-    isAggregatorStub.returns(true);
-    isValidSelectionProofStub.returns(true);
-    isValidSignatureStub.returns(true);
-    isValidIndexedAttestationStub.returns(false);
-    try {
-      await validateGossipAggregateAndProof(config, chain, db, item, {
+
+    await expectRejectedWithLodestarError(
+      validateGossipAggregateAndProof(config, chain, db, item, {
         attestation: item.message.aggregate,
         validSignature: false,
-      } as IAttestationJob);
-    } catch (error) {
-      expect(error.type).to.have.property("code", AttestationErrorCode.INVALID_SIGNATURE);
-    }
-    expect(isValidIndexedAttestationStub.calledOnce).to.be.true;
+      } as IAttestationJob),
+      AttestationErrorCode.INVALID_SIGNATURE
+    );
   });
 
   it("should accept", async function () {
+    const {validateGossipAggregateAndProof} = await mockValidateGossipAggregateAndProof({
+      isAggregatorFromCommitteeLength: sinon.stub().returns(true),
+      isValidIndexedAttestation: sinon.stub().returns(true),
+      isValidSelectionProofSignature: sinon.stub().returns(true),
+      isValidAggregateAndProofSignature: sinon.stub().returns(true),
+    });
+
     const item = generateSignedAggregateAndProof({
       aggregate: {
         aggregationBits: Array.from([true]) as List<boolean>,
@@ -371,14 +411,12 @@ describe("gossip aggregate and proof test", function () {
       epochCtx: (epochCtx as unknown) as phase0.fast.EpochContext,
     });
     epochCtx.getBeaconCommittee.returns([item.message.aggregatorIndex]);
-    isAggregatorStub.returns(true);
-    isValidSelectionProofStub.returns(true);
-    isValidSignatureStub.returns(true);
-    isValidIndexedAttestationStub.returns(true);
-    const validationTest = await validateGossipAggregateAndProof(config, chain, db, item, {
-      attestation: item.message.aggregate,
-      validSignature: false,
-    } as IAttestationJob);
-    expect(validationTest).to.not.throw;
+
+    expect(
+      await validateGossipAggregateAndProof(config, chain, db, item, {
+        attestation: item.message.aggregate,
+        validSignature: false,
+      } as IAttestationJob)
+    ).to.not.throw;
   });
 });
