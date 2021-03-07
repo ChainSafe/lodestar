@@ -1,7 +1,6 @@
 import {TreeBacked} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {phase0} from "@chainsafe/lodestar-types";
-import {getNewEth1Data} from "../../../lodestar-beacon-state-transition/lib/phase0/fast/block/processEth1Data";
+import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {ILogger, sleep} from "@chainsafe/lodestar-utils";
 import {AbortSignal} from "abort-controller";
 import {IBeaconDb} from "../db";
@@ -100,7 +99,7 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
     eth1DataVote: phase0.Eth1Data
   ): Promise<phase0.Deposit[]> {
     // Eth1 data may change due to the vote included in this block
-    const newEth1Data = getNewEth1Data(this.config, state, eth1DataVote) || state.eth1Data;
+    const newEth1Data = phase0.fast.getNewEth1Data(this.config, state, eth1DataVote) || state.eth1Data;
     return await getDeposits(this.config, state, newEth1Data, this.depositsCache.get.bind(this.depositsCache));
   }
 

@@ -4,11 +4,14 @@ import {TreeBacked} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {phase0} from "@chainsafe/lodestar-types";
-import {IBeaconDb} from "@chainsafe/lodestar/lib/db";
-import {Eth1Provider} from "@chainsafe/lodestar/lib/eth1";
-import {initStateFromAnchorState, initStateFromDb, initStateFromEth1} from "@chainsafe/lodestar/lib/chain";
-import {IBeaconNodeOptions} from "@chainsafe/lodestar/lib/node";
-
+import {
+  IBeaconDb,
+  Eth1Provider,
+  IBeaconNodeOptions,
+  initStateFromAnchorState,
+  initStateFromDb,
+  initStateFromEth1,
+} from "@chainsafe/lodestar";
 import {downloadOrLoadFile} from "../../util";
 import {IBeaconArgs} from "./options";
 import {defaultNetwork, IGlobalArgs} from "../../options/globalOptions";

@@ -3,7 +3,7 @@ import {ILogger} from "@chainsafe/lodestar-utils";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {INodeApi} from "../../../interface/node";
 import {phase0} from "@chainsafe/lodestar-types";
-import {Json} from "@chainsafe/ssz/lib/interface";
+import {Json} from "@chainsafe/ssz";
 
 export class RestNodeApi implements INodeApi {
   private readonly client: HttpClient;

@@ -8,7 +8,7 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
 import {EMPTY_SIGNATURE, GENESIS_SLOT, ZERO_HASH} from "../../constants";
 import {computeEpochAtSlot, getActiveValidatorIndices} from "@chainsafe/lodestar-beacon-state-transition";
-import {processDeposit} from "@chainsafe/lodestar-beacon-state-transition/lib/phase0";
+import {processDeposit} from "@chainsafe/lodestar-beacon-state-transition/phase0";
 import {bigIntMin} from "@chainsafe/lodestar-utils";
 
 /**
