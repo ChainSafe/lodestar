@@ -9,6 +9,7 @@
     "lib/**/*.js.map"
   ],
   "scripts": {
+    "clean": "rm -rf lib && rm -f *.tsbuildinfo",
     "build": "concurrently \"yarn build:lib\" \"yarn build:types\"",
     "build:lib": "babel src -x .ts -d lib --source-maps",
     "build:lib:watch": "yarn run build:lib --watch",
@@ -16,7 +17,6 @@
     "build:types": "tsc --project tsconfig.build.json",
     "build:types:watch": "yarn run build:types --watch",
     "check-types": "tsc --noEmit",
-    "clean": "rm -rf lib && rm -f tsconfig.tsbuildinfo && rm -f tsconfig.build.tsbuildinfo",
     "lint": "eslint --color --ext .ts src/ test/",
     "lint:fix": "yarn run lint --fix",
     "prepublishOnly": "yarn build",

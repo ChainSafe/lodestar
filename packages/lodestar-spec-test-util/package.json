@@ -19,7 +19,7 @@
     "eth2-spec-test-download": "lib/downloadTestsCli.js"
   },
   "scripts": {
-    "clean": "rm -rf lib && rm -f tsconfig.tsbuildinfo && rm -f tsconfig.build.tsbuildinfo",
+    "clean": "rm -rf lib && rm -f *.tsbuildinfo",
     "build": "concurrently \"yarn build:lib\" \"yarn build:types\"",
     "build:release": "yarn clean && yarn build && yarn build:typedocs",
     "build:types": "tsc --project tsconfig.build.json",

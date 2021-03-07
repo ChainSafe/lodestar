@@ -22,6 +22,7 @@
     "lib/**/*.js.map"
   ],
   "scripts": {
+    "clean": "rm -rf lib && rm -f *.tsbuildinfo",
     "benchmark": "ts-node test/benchmarks",
     "build": "concurrently \"yarn build:lib\" \"yarn build:types\"",
     "build:typedocs": "typedoc --exclude src/index.ts --out typedocs src",
@@ -31,7 +32,6 @@
     "build:types": "tsc --project tsconfig.build.json",
     "build:types:watch": "yarn run build:types --watch",
     "check-types": "tsc --noEmit",
-    "clean": "rm -rf lib && rm -f tsconfig.tsbuildinfo tsconfig.build.tsbuildinfo",
     "coverage": "codecov -F lodestar",
     "lint": "eslint --color --ext .ts src/ test/",
     "lint:fix": "yarn run lint --fix",

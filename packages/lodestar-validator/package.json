@@ -15,7 +15,7 @@
     "lib/**/*.d.ts"
   ],
   "scripts": {
-    "clean": "rm -rf lib && rm -f tsconfig.tsbuildinfo && rm -f tsconfig.build.tsbuildinfo",
+    "clean": "rm -rf lib && rm -f *.tsbuildinfo",
     "build": "concurrently \"yarn build:lib\" \"yarn build:types\"",
     "build:release": "yarn clean && yarn run build && yarn run build:typedocs",
     "build:lib": "babel src -x .ts -d lib --source-maps",

@@ -18,7 +18,7 @@
     "minimal.*"
   ],
   "scripts": {
-    "clean": "rm -rf lib && rm -f tsconfig.tsbuildinfo",
+    "clean": "rm -rf lib && rm -f *.tsbuildinfo",
     "build": "concurrently \"yarn build:lib\" \"yarn build:types\"",
     "build:release": "yarn run clean && yarn run build && yarn run build:typedocs",
     "build:types": "tsc --project tsconfig.build.json",

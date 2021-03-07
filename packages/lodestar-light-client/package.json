@@ -20,13 +20,13 @@
     "lib/**/*.js.map"
   ],
   "scripts": {
+    "clean": "rm -rf lib && rm -f *.tsbuildinfo",
     "build": "concurrently \"yarn build:lib\" \"yarn build:types\"",
     "build:typedocs": "typedoc --exclude src/index.ts --out typedocs src",
     "build:lib": "babel src -x .ts -d lib --source-maps",
     "build:release": "yarn clean && yarn run build && yarn run build:typedocs",
     "build:types": "tsc --project tsconfig.build.json",
     "check-types": "tsc --noEmit",
-    "clean": "rm -rf lib && rm -f tsconfig.tsbuildinfo && rm -f tsconfig.build.tsbuildinfo",
     "coverage": "codecov -F lodestar-light-client",
     "lint": "eslint --color --ext .ts src/ test/",
     "lint:fix": "yarn run lint --fix",
