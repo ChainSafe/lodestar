@@ -3,7 +3,7 @@ name: Release
 on:
   push:
     branches:
-      - 'master'
+      - "master"
 
 jobs:
   tag:
@@ -39,7 +39,7 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
-      
+
       - name: Setup Nodejs
         uses: actions/setup-node@v1
         with:
@@ -54,7 +54,7 @@ jobs:
             node_modules
             packages/*/node_modules
           key: ${{ runner.os }}-${{ hashFiles('**/yarn.lock') }}-ignore-optional
-      
+
       - name: Install & build
         if: steps.cache-deps.outputs.cache-hit != 'true'
         run: yarn install --frozen-lockfile --ignore-optional
@@ -92,10 +92,10 @@ jobs:
           prerelease: true # we can promote to release trough github
 
       - name: Publish to npm registry
-        run: yarn run publish 
+        run: yarn run publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-      
+
       #in case of failure
       - name: Rollback on failure
         if: failure()

@@ -31,6 +31,7 @@ Download and install Grafana from it's official repository https://grafana.com/d
 Add Prometheus as a data source to Grafana https://prometheus.io/docs/visualization/grafana/#installing
 
 An example of relevant metrics of interest to monitor are:
+
 - `nodejs_heap_space_size_used_bytes`
 - `nodejs_eventloop_lag_seconds`
 - `beaconchain_peers`
