@@ -6,7 +6,7 @@ Lodestar implementation of the [Eth2 fork choice](https://github.com/ethereum/et
 
 ## Usage
 
- See usage in the `lodestar` package here: 
+See usage in the `lodestar` package here:
 https://github.com/ChainSafe/lodestar/blob/0cf18e3bedcbf402e46917d402eb92938dafd49c/packages/lodestar/src/chain/forkChoice/forkChoice.ts#L17
 
 ## License

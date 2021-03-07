@@ -1,7 +1,7 @@
 import {Bytes32, phase0, Number64} from "@chainsafe/lodestar-types";
 import {generateEmptyBlock} from "@chainsafe/lodestar/test/utils/block";
 import sinon, {SinonStubbedInstance} from "sinon";
-import {IBeaconBlocksApi} from "../../../lib/api/interface/beacon";
+import {IBeaconBlocksApi} from "../../../src/api/interface/beacon";
 import {RestBeaconBlocksApi} from "../../../src/api/impl/rest/beacon/blocks";
 import {RestBeaconPoolApi} from "../../../src/api/impl/rest/beacon/pool";
 import {RestBeaconStateApi} from "../../../src/api/impl/rest/beacon/state";

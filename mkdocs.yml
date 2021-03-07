@@ -20,8 +20,8 @@ plugins:
   - mermaid2:
       version: 8.6.4
       arguments:
-          theme: |
-            ^(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light'
+        theme: |
+          ^(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light'
 
 markdown_extensions:
   - meta

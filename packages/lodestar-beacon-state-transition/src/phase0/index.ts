@@ -13,4 +13,4 @@ export * from "./fast/util/interface";
 // phase0.processDeposit(...)
 //
 // const x: phase0.BeaconState;
-export * from "@chainsafe/lodestar-types/lib/phase0";
+export * from "@chainsafe/lodestar-types/phase0";

@@ -86,16 +86,16 @@ export function handleChainEvents(this: BeaconChain, signal: AbortSignal): void 
   );
   handlers.set(ChainEvent.errorBlock, wrapHandler(ChainEvent.errorBlock, emitter, logger, onErrorBlock.bind(this)));
 
-  handlers.forEach((handler, event) => {
+  for (const [event, handler] of handlers.entries()) {
     this.internalEmitter.on(event, handler);
-  });
+  }
 
   signal.addEventListener(
     "abort",
     () => {
-      handlers.forEach((handler, event) => {
+      for (const [event, handler] of handlers.entries()) {
         this.internalEmitter.off(event, handler);
-      });
+      }
     },
     {once: true}
   );

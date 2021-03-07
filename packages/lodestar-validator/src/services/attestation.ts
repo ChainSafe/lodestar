@@ -106,9 +106,9 @@ export class AttestationService {
     let attesterDuties: phase0.AttesterDuty[] | undefined;
     try {
       const indices: ValidatorIndex[] = [];
-      this.validators.forEach((v) => {
+      for (const v of this.validators.values()) {
         if (v.validator?.index != null) indices.push(v.validator?.index);
-      });
+      }
       attesterDuties = await this.provider.validator.getAttesterDuties(epoch, indices);
     } catch (e) {
       this.logger.error("Failed to obtain attester duty", {epoch, error: e.message});

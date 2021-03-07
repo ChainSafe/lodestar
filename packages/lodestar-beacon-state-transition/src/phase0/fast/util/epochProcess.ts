@@ -188,11 +188,11 @@ export function prepareEpochProcessState(epochCtx: EpochContext, state: CachedVa
       const committee = epochCtx.getBeaconCommittee(attSlot, committeeIndex);
 
       const participants: ValidatorIndex[] = [];
-      committee.forEach((index, i) => {
+      for (const [i, index] of committee.entries()) {
         if (attBits[i]) {
           participants.push(index);
         }
-      });
+      }
 
       if (epoch === prevEpoch) {
         for (const p of participants) {

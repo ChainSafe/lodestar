@@ -1,6 +1,6 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {lightclient} from "@chainsafe/lodestar-types";
-import {assert, intDiv, verifyMerkleBranch, notNullish} from "@chainsafe/lodestar-utils";
+import {assert, intDiv, verifyMerkleBranch} from "@chainsafe/lodestar-utils";
 import {
   FINALIZED_ROOT_INDEX,
   NEXT_SYNC_COMMITTEE_INDEX,
@@ -72,15 +72,12 @@ export function isValidLightclientUpdate(
     );
   }
   assert.gte(Array.from(update.syncCommitteeBits).filter((bit) => !!bit).length, MIN_SYNC_COMMITTEE_PARTICIPANTS);
-  const participantPubkeys = Array.from(update.syncCommitteeBits)
-    .map((bit) => {
-      if (bit) {
-        return syncCommittee.pubkeys.valueOf() as Uint8Array;
-      } else {
-        return null;
-      }
-    })
-    .filter(notNullish);
+  const participantPubkeys: Uint8Array[] = [];
+  for (const bit of Array.from(update.syncCommitteeBits)) {
+    if (bit) {
+      participantPubkeys.push(syncCommittee.pubkeys.valueOf() as Uint8Array);
+    }
+  }
   const domain = computeDomain(config, config.params.DOMAIN_SYNC_COMMITTEE, update.forkVersion);
   const signingRoot = computeSigningRoot(config, config.types.lightclient.BeaconBlockHeader, signedHeader, domain);
   assert.true(verifyAggregate(participantPubkeys, signingRoot, update.syncCommitteeSignature.valueOf() as Uint8Array));

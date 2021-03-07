@@ -1,4 +1,4 @@
-import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
+import {config} from "@chainsafe/lodestar-config/mainnet";
 import {List, TreeBacked} from "@chainsafe/ssz";
 import {expect} from "chai";
 import {phase0} from "../../../../src";

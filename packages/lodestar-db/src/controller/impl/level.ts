@@ -10,6 +10,11 @@ import all from "it-all";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {IDatabaseController, IDatabaseOptions, IFilterOptions, IKeyValue} from "../interface";
 
+enum Status {
+  started = "started",
+  stopped = "stopped",
+}
+
 export interface ILevelDBOptions extends IDatabaseOptions {
   db?: LevelUp;
 }
@@ -18,6 +23,7 @@ export interface ILevelDBOptions extends IDatabaseOptions {
  * The LevelDB implementation of DB
  */
 export class LevelDbController implements IDatabaseController<Buffer, Buffer> {
+  private status = Status.stopped;
   private db: LevelUp;
 
   private opts: ILevelDBOptions;
@@ -31,11 +37,17 @@ export class LevelDbController implements IDatabaseController<Buffer, Buffer> {
   }
 
   public async start(): Promise<void> {
+    if (this.status === Status.started) return;
+    this.status = Status.started;
+
     await this.db.open();
     this.logger.info("Connected to LevelDB database", {name: this.opts.name});
   }
 
   public async stop(): Promise<void> {
+    if (this.status === Status.stopped) return;
+    this.status = Status.stopped;
+
     await this.db.close();
   }
 

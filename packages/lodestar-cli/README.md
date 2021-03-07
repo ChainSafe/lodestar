@@ -19,7 +19,6 @@ Command line tool for Lodestar
 
 We have an experimental new CLI called `lodestar` which currently provides a subset of the `lodestar` CLI functionality.
 
-
 Here's a quick list of the available CLI commands:
 | Command | Description |
 | - | - |

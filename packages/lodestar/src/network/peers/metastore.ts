@@ -2,7 +2,6 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import PeerId from "peer-id";
 import {phase0} from "@chainsafe/lodestar-types";
 import {BasicType, ContainerType, Json} from "@chainsafe/ssz";
-import {notNullish} from "@chainsafe/lodestar-utils";
 import {ReqRespEncoding} from "../../constants";
 
 /**
@@ -48,7 +47,7 @@ export class Libp2pPeerMetadataStore implements IPeerMetadataStore {
   private typedStore<T>(key: string, type: BasicType<T> | ContainerType<T>): PeerStoreBucket<T> {
     return {
       set: (peer: PeerId, value: T): void => {
-        if (notNullish(value)) {
+        if (value != null) {
           this.metabook.set(peer, key, Buffer.from(type.serialize(value)));
         } else {
           this.metabook.deleteValue(peer, key);

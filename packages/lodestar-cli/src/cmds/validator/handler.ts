@@ -1,6 +1,6 @@
 import fs from "fs";
 import {consoleTransport, fileTransport, LogLevel, WinstonLogger} from "@chainsafe/lodestar-utils";
-import {ApiClientOverRest} from "@chainsafe/lodestar-validator/lib/api/impl/rest/apiClient";
+import {ApiClientOverRest} from "@chainsafe/lodestar-validator";
 import {Validator, SlashingProtection} from "@chainsafe/lodestar-validator";
 import {LevelDbController} from "@chainsafe/lodestar-db";
 import {getBeaconConfigFromArgs} from "../../config";
