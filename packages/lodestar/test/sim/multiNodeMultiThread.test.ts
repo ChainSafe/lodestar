@@ -18,7 +18,7 @@ describe("Run multi node multi thread interop validators (no eth1) until checkpo
     SLOTS_PER_EPOCH: 8,
   };
 
-  for (const nodeCount of [2]) {
+  for (const nodeCount of [4]) {
     it(`${nodeCount} nodes / ${validatorsPerNode} vc / 1 validator > until ${checkpointEvent}`, async function () {
       this.timeout("10 min");
 
