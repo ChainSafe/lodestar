@@ -11,7 +11,9 @@ import {processDeposit} from "./processDeposit";
 import {processProposerSlashing} from "./processProposerSlashing";
 import {processVoluntaryExit} from "./processVoluntaryExit";
 
-export * from "./isValidIndexedAttestation";
+// Extra utils used by other modules
+export {isValidIndexedAttestation} from "./isValidIndexedAttestation";
+export {getNewEth1Data} from "./processEth1Data";
 
 export {
   processBlockHeader,

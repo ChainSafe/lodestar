@@ -8,7 +8,7 @@ import StrictEventEmitter from "strict-event-emitter-types";
 import {EventEmitter} from "events";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import LibP2p from "libp2p";
-import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
+import {ILogger} from "@chainsafe/lodestar-utils";
 import {InMessage} from "libp2p-interfaces/src/pubsub";
 import {IBeaconChain} from "../../chain";
 import {ForkDigest} from "@chainsafe/lodestar-types";

@@ -1,6 +1,6 @@
 import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {config} from "@chainsafe/lodestar-config/mainnet";
-import {describeDirectorySpecTest} from "@chainsafe/lodestar-spec-test-util/lib/single";
+import {describeDirectorySpecTest} from "@chainsafe/lodestar-spec-test-util";
 import {expect} from "chai";
 import {join} from "path";
 import {SPEC_TEST_LOCATION} from "../../../utils/specTestCases";

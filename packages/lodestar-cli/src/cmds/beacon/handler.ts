@@ -2,9 +2,7 @@ import {AbortController} from "abort-controller";
 
 import {consoleTransport, fileTransport, WinstonLogger} from "@chainsafe/lodestar-utils";
 import {LevelDbController} from "@chainsafe/lodestar-db";
-import {createNodeJsLibp2p} from "@chainsafe/lodestar/lib/network/nodejs";
-import {BeaconNode} from "@chainsafe/lodestar/lib/node";
-import {BeaconDb} from "@chainsafe/lodestar/lib/db";
+import {BeaconNode, BeaconDb, createNodeJsLibp2p} from "@chainsafe/lodestar";
 
 import {IGlobalArgs} from "../../options";
 import {parseEnrArgs} from "../../options/enrOptions";
