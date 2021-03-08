@@ -44,7 +44,7 @@ export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
 
   // BeaconNode setup
   const libp2p = await createNodeJsLibp2p(peerId, options.network);
-  const logger = new WinstonLogger();
+  const logger = new WinstonLogger({level: args.logLevel});
 
   const db = new BeaconDb({config, controller: new LevelDbController(options.db, {logger})});
   await db.start();
