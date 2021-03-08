@@ -48,8 +48,7 @@ import {DEFAULT_ENCODING} from "./constants";
 //
 // - Gossip type conversion - Gossip validation functions operate on messages of binary data.
 //   This data must be deserialized into the proper type, determined by the topic (fork digest)
-//   This deserialization is performed in the gossip validation function.
-//   In the validation success case, the deserialized object cached for later processing
+//   This deserialization must have happened prior to the topic validator running.
 
 export async function validateBeaconBlock(
   {chain, db, config, logger}: IObjectValidatorModules,
