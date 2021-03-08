@@ -1,7 +1,7 @@
 import got from "got";
 import {IBeaconNodeOptions} from "@chainsafe/lodestar";
+import {RecursivePartial} from "@chainsafe/lodestar-utils";
 import {IBeaconParamsUnparsed} from "../config/types";
-import {RecursivePartial} from "../util";
 import * as pyrmont from "./pyrmont";
 import * as mainnet from "./mainnet";
 

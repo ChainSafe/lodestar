@@ -1,4 +1,4 @@
-import {RecursivePartial} from "./types";
+import {RecursivePartial} from "@chainsafe/lodestar-utils";
 
 /**
  * Removes (mutates) all properties with a value === undefined, recursively

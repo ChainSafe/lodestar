@@ -4,7 +4,7 @@ import {createEnr} from "@chainsafe/lodestar-cli/src/config";
 import {params as minimalParams} from "@chainsafe/lodestar-params/minimal";
 import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBeaconParams} from "@chainsafe/lodestar-params";
-import {ILogger} from "@chainsafe/lodestar-utils";
+import {ILogger, RecursivePartial} from "@chainsafe/lodestar-utils";
 import {LevelDbController} from "@chainsafe/lodestar-db";
 import {BeaconNode} from "../../../src/node";
 import {createNodeJsLibp2p} from "../../../src/network/nodejs";
@@ -14,14 +14,6 @@ import {IBeaconNodeOptions} from "../../../src/node/options";
 import {defaultOptions} from "../../../src/node/options";
 import {BeaconDb} from "../../../src/db";
 import {testLogger} from "../logger";
-
-type RecursivePartial<T> = {
-  [P in keyof T]?: T[P] extends (infer U)[]
-    ? RecursivePartial<U>[]
-    : T[P] extends Record<string, unknown>
-    ? RecursivePartial<T[P]>
-    : T[P];
-};
 
 export async function getDevBeaconNode({
   params,

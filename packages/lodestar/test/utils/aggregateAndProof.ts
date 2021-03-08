@@ -3,7 +3,7 @@ import {generateEmptyAttestation} from "./attestation";
 import {EMPTY_SIGNATURE} from "../../src/constants";
 import deepmerge from "deepmerge";
 import {isPlainObject} from "@chainsafe/lodestar-utils";
-import {RecursivePartial} from "@chainsafe/lodestar-cli/src/util";
+import {RecursivePartial} from "@chainsafe/lodestar-utils";
 
 export function generateAggregateAndProof(
   override: RecursivePartial<phase0.AggregateAndProof> = {}
