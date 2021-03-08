@@ -67,6 +67,8 @@ export class Eth2Gossipsub extends Gossipsub {
   private statusInterval?: NodeJS.Timeout;
 
   constructor({config, genesisValidatorsRoot, libp2p, validatorFns, logger, metrics}: IGossipsubModules) {
+    // Gossipsub parameters defined here:
+    // https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/p2p-interface.md#the-gossip-domain-gossipsub
     super(libp2p, {
       gossipIncoming: true,
       globalSignaturePolicy: "StrictNoSign" as const,
