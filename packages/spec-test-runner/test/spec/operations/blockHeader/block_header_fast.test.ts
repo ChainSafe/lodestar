@@ -10,7 +10,7 @@ describeDirectorySpecTest<IProcessBlockHeader, phase0.BeaconState>(
   "process block header mainnet",
   join(SPEC_TEST_LOCATION, "/tests/mainnet/phase0/operations/block_header/pyspec_tests"),
   (testcase) => {
-    const state = testcase.pre;
+    const state = config.types.phase0.BeaconState.tree.createValue(testcase.pre);
     const epochCtx = new phase0.fast.EpochContext(config);
     epochCtx.loadState(state);
     phase0.fast.processBlockHeader(epochCtx, state, testcase.block);

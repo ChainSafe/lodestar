@@ -10,7 +10,7 @@ describeDirectorySpecTest<IStateTestCase, phase0.BeaconState>(
   "epoch justification and finalization mainnet",
   join(SPEC_TEST_LOCATION, "tests/mainnet/phase0/epoch_processing/justification_and_finalization/pyspec_tests"),
   (testcase) => {
-    const state = testcase.pre;
+    const state = config.types.phase0.BeaconState.tree.createValue(testcase.pre);
     const epochCtx = new phase0.fast.EpochContext(config);
     epochCtx.loadState(state);
     const wrappedState = phase0.fast.createCachedValidatorsBeaconState(state);

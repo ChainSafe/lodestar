@@ -1,6 +1,5 @@
 import {ValidatorIndex} from "@chainsafe/lodestar-types";
 
-import {decreaseBalance, increaseBalance} from "../../../util";
 import {CachedValidatorsBeaconState, EpochContext} from "../util";
 import {initiateValidatorExit} from "./initiateValidatorExit";
 
@@ -24,7 +23,7 @@ export function slashValidator(
     withdrawableEpoch: Math.max(validator.withdrawableEpoch, epoch + EPOCHS_PER_SLASHINGS_VECTOR),
   });
   state.slashings[epoch % EPOCHS_PER_SLASHINGS_VECTOR] += validator.effectiveBalance;
-  decreaseBalance(state, slashedIndex, validator.effectiveBalance / BigInt(MIN_SLASHING_PENALTY_QUOTIENT));
+  state.decreaseBalanceBigInt(slashedIndex, validator.effectiveBalance / BigInt(MIN_SLASHING_PENALTY_QUOTIENT));
 
   // apply proposer and whistleblower rewards
   const proposerIndex = epochCtx.getBeaconProposer(state.slot);
@@ -33,6 +32,6 @@ export function slashValidator(
   }
   const whistleblowerReward = validator.effectiveBalance / BigInt(WHISTLEBLOWER_REWARD_QUOTIENT);
   const proposerReward = whistleblowerReward / BigInt(PROPOSER_REWARD_QUOTIENT);
-  increaseBalance(state, proposerIndex, proposerReward);
-  increaseBalance(state, whistleblowerIndex, whistleblowerReward - proposerReward);
+  state.increaseBalanceBigInt(proposerIndex, proposerReward);
+  state.increaseBalanceBigInt(whistleblowerIndex, whistleblowerReward - proposerReward);
 }

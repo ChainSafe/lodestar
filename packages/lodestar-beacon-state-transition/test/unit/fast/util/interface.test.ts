@@ -107,7 +107,7 @@ describe("Cache balances", function () {
 
   beforeEach(function () {
     state = originalState.clone();
-    cachedState = createCachedValidatorsBeaconState(state);
+    cachedState = createCachedValidatorsBeaconState(config.types.phase0.BeaconState.clone(state));
   });
 
   it("same balance", function () {

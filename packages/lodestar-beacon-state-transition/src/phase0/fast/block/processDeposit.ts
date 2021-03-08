@@ -3,7 +3,7 @@ import {phase0} from "@chainsafe/lodestar-types";
 import {verifyMerkleBranch, bigIntMin} from "@chainsafe/lodestar-utils";
 
 import {DEPOSIT_CONTRACT_TREE_DEPTH, FAR_FUTURE_EPOCH} from "../../../constants";
-import {computeDomain, computeSigningRoot, increaseBalance} from "../../../util";
+import {computeDomain, computeSigningRoot} from "../../../util";
 import {CachedValidatorsBeaconState, EpochContext} from "../util";
 
 export function processDeposit(
@@ -57,10 +57,10 @@ export function processDeposit(
       effectiveBalance: bigIntMin(amount - (amount % EFFECTIVE_BALANCE_INCREMENT), MAX_EFFECTIVE_BALANCE),
       slashed: false,
     });
-    state.balances.push(amount);
+    state.addBalance(amount);
   } else {
     // increase balance by deposit amount
-    increaseBalance(state, cachedIndex, amount);
+    state.increaseBalanceBigInt(cachedIndex, amount);
   }
   // now that there is a new validator, update the epoch context with the new pubkey
   epochCtx.syncPubkeys(state);

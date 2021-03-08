@@ -10,7 +10,7 @@ describeDirectorySpecTest<IProcessAttesterSlashingTestCase, phase0.BeaconState>(
   "process attester slashing mainnet",
   join(SPEC_TEST_LOCATION, "/tests/mainnet/phase0/operations/attester_slashing/pyspec_tests"),
   (testcase) => {
-    const state = testcase.pre;
+    const state = config.types.phase0.BeaconState.tree.createValue(testcase.pre);
     const epochCtx = new phase0.fast.EpochContext(config);
     epochCtx.loadState(state);
     const verify = !!testcase.meta && !!testcase.meta.blsSetting && testcase.meta.blsSetting === BigInt(1);

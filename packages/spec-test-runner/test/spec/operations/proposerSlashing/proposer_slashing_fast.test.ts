@@ -10,7 +10,7 @@ describeDirectorySpecTest<IProcessProposerSlashingTestCase, phase0.BeaconState>(
   "process proposer slashing mainnet",
   join(SPEC_TEST_LOCATION, "/tests/mainnet/phase0/operations/proposer_slashing/pyspec_tests"),
   (testcase) => {
-    const state = testcase.pre;
+    const state = config.types.phase0.BeaconState.tree.createValue(testcase.pre);
     const epochCtx = new phase0.fast.EpochContext(config);
     epochCtx.loadState(state);
     const wrappedState = phase0.fast.createCachedValidatorsBeaconState(state);

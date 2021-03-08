@@ -1,11 +1,13 @@
 import {readOnlyMap} from "@chainsafe/ssz";
-import {phase0} from "@chainsafe/lodestar-types";
 import {bigIntMin} from "@chainsafe/lodestar-utils";
 
-import {decreaseBalance} from "../../../util";
-import {EpochContext, IEpochProcess} from "../util";
+import {CachedValidatorsBeaconState, EpochContext, IEpochProcess} from "../util";
 
-export function processSlashings(epochCtx: EpochContext, process: IEpochProcess, state: phase0.BeaconState): void {
+export function processSlashings(
+  epochCtx: EpochContext,
+  process: IEpochProcess,
+  state: CachedValidatorsBeaconState
+): void {
   const totalBalance = process.totalActiveStake;
   const totalSlashings = readOnlyMap(state.slashings, (s) => s).reduce((a, b) => a + b, BigInt(0));
   const proportionalSlashingMultiplier = BigInt(epochCtx.config.params.PROPORTIONAL_SLASHING_MULTIPLIER);
@@ -15,6 +17,6 @@ export function processSlashings(epochCtx: EpochContext, process: IEpochProcess,
     const effectiveBalance = process.statuses[index].validator.effectiveBalance;
     const penaltyNumerator = (effectiveBalance / increment) * adjustedTotalSlashingBalance;
     const penalty = (penaltyNumerator / totalBalance) * increment;
-    decreaseBalance(state, index, penalty);
+    state.decreaseBalanceBigInt(index, penalty);
   }
 }

@@ -10,7 +10,7 @@ describeDirectorySpecTest<IProcessAttestationTestCase, phase0.BeaconState>(
   "process attestation mainnet",
   join(SPEC_TEST_LOCATION, "/tests/mainnet/phase0/operations/attestation/pyspec_tests"),
   (testcase) => {
-    const state = testcase.pre;
+    const state = config.types.phase0.BeaconState.tree.createValue(testcase.pre);
     const epochCtx = new phase0.fast.EpochContext(config);
     epochCtx.loadState(state);
     phase0.fast.processAttestation(epochCtx, state, testcase.attestation);

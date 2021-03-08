@@ -69,15 +69,14 @@ export class CachedValidatorsBeaconState {
   // the leaves of this tree is actually data of _balanceChunks
   private _balancesTree: Tree;
 
-  constructor(
-    state: phase0.BeaconState,
-    balanceChunks: Vector<Uint8Array>,
-    balancesTree: Tree,
-    cachedValidators: Vector<IFlatValidator>
-  ) {
+  constructor(state: phase0.BeaconState, balanceChunks: Vector<Uint8Array>, cachedValidators: Vector<IFlatValidator>) {
     this._state = state;
     this._balanceChunks = balanceChunks;
-    this._balancesTree = balancesTree;
+    const beaconStateTree = (state as TreeBacked<BeaconState>).tree();
+    this._balancesTree = config.types.phase0.BeaconState.tree.getSubtreeAtChunk(
+      beaconStateTree,
+      BALANCES_FIELD_IN_BEACON_STATE
+    );
     this._cachedValidators = cachedValidators;
   }
 
@@ -236,7 +235,7 @@ export class CachedValidatorsBeaconState {
       this._balanceChunks = this._balanceChunks.set(lastChunkIndex, newChunk);
       balancesBytes8Type.tree.setRootAtChunk(this._balancesTree, lastChunkIndex, newChunk);
     }
-    setTreeLength(this._balancesTree, numBalance);
+    setTreeLength(this._balancesTree, numBalance + 1);
   }
 
   /**
@@ -245,14 +244,8 @@ export class CachedValidatorsBeaconState {
   public clone(): CachedValidatorsBeaconState {
     const clonedState = config.types.phase0.BeaconState.clone(this._state);
     const clonedCachedValidators = this._cachedValidators.clone();
-    const balanceTree = this._balancesTree.clone();
     const balanceChunks = this._balanceChunks.clone();
-    return new CachedValidatorsBeaconState(
-      clonedState,
-      balanceChunks,
-      balanceTree,
-      clonedCachedValidators
-    ).createProxy();
+    return new CachedValidatorsBeaconState(clonedState, balanceChunks, clonedCachedValidators).createProxy();
   }
 
   public getOriginalState(): phase0.BeaconState {
@@ -280,7 +273,7 @@ export function createCachedValidatorsBeaconState(state: phase0.BeaconState): Ca
     balanceChunks = balanceChunks.append(balancesBytes8Type.tree.getRootAtChunk(balanceTree, chunkIndex));
   }
 
-  return new CachedValidatorsBeaconState(state, balanceChunks, balanceTree, Vector.from(tmpValidators)).createProxy();
+  return new CachedValidatorsBeaconState(state, balanceChunks, Vector.from(tmpValidators)).createProxy();
 }
 
 /**
