@@ -227,15 +227,18 @@ export class CachedValidatorsBeaconState {
       const newChunk = new Uint8Array(32);
       newChunk.set(amountArr);
       this._balanceChunks = this._balanceChunks.append(newChunk);
-      balancesBytes8Type.tree.setRootAtChunk(this._balancesTree, this._balanceChunks.length - 1, newChunk);
     } else {
       const offset = getOffset(numBalance);
       const lastChunkIndex = this._balanceChunks.length - 1;
       const newChunk = addUint8Array(this._balanceChunks.get(lastChunkIndex)!, amountArr, offset);
       this._balanceChunks = this._balanceChunks.set(lastChunkIndex, newChunk);
-      balancesBytes8Type.tree.setRootAtChunk(this._balancesTree, lastChunkIndex, newChunk);
     }
-    setTreeLength(this._balancesTree, numBalance + 1);
+    this._state.balances.push(amount);
+    const beaconStateTree = (this._state as TreeBacked<BeaconState>).tree();
+    this._balancesTree = config.types.phase0.BeaconState.tree.getSubtreeAtChunk(
+      beaconStateTree,
+      BALANCES_FIELD_IN_BEACON_STATE
+    );
   }
 
   /**
