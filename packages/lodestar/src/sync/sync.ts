@@ -7,7 +7,7 @@ import {ILogger} from "@chainsafe/lodestar-utils";
 import {CommitteeIndex, Root, Slot, phase0} from "@chainsafe/lodestar-types";
 import {IRegularSync} from "./regular";
 import {BeaconReqRespHandler, IReqRespHandler} from "./reqResp";
-import {BeaconGossipHandler, IGossipHandler} from "./gossip";
+import {BeaconGossipHandler} from "./gossip";
 import {ChainEvent, IBeaconChain} from "../chain";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {List, toHexString} from "@chainsafe/ssz";
@@ -28,7 +28,7 @@ export class BeaconSync implements IBeaconSync {
   private mode: SyncMode;
   private regularSync: IRegularSync;
   private reqResp: IReqRespHandler;
-  private gossip: IGossipHandler;
+  private gossip: BeaconGossipHandler;
   private attestationCollector: AttestationCollector;
 
   private statusSyncTimer?: NodeJS.Timeout;
@@ -46,7 +46,7 @@ export class BeaconSync implements IBeaconSync {
     this.regularSync = modules.regularSync || new ORARegularSync(opts, modules);
     this.reqResp = modules.reqRespHandler || new BeaconReqRespHandler(modules);
     this.gossip =
-      modules.gossipHandler || new BeaconGossipHandler(modules.chain, modules.network, modules.db, this.logger);
+      modules.gossipHandler || new BeaconGossipHandler(modules.config, modules.chain, modules.network, modules.db);
     this.attestationCollector = modules.attestationCollector || new AttestationCollector(modules.config, modules);
     this.mode = SyncMode.STOPPED;
     this.processingRoots = new Set();
@@ -99,6 +99,7 @@ export class BeaconSync implements IBeaconSync {
     this.attestationCollector.stop();
     await this.reqResp.stop();
     this.gossip.stop();
+    this.gossip.close();
   }
 
   public getSyncStatus(): phase0.SyncingStatus {

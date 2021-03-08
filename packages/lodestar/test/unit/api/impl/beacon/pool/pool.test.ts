@@ -19,8 +19,7 @@ import * as voluntaryExitValidation from "../../../../../../src/chain/validation
 import {BeaconChain} from "../../../../../../src/chain/chain";
 import {phase0, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {List} from "@chainsafe/ssz";
-import {Gossip} from "../../../../../../src/network/gossip/gossip";
-import {IGossip} from "../../../../../../src/network/gossip/interface";
+import {Eth2Gossipsub} from "../../../../../../src/network/gossip";
 import {generateEmptySignedBlockHeader} from "../../../../../utils/block";
 
 describe("beacon pool api impl", function () {
@@ -28,7 +27,7 @@ describe("beacon pool api impl", function () {
   let dbStub: StubbedBeaconDb;
   let chainStub: SinonStubbedInstance<IBeaconChain>;
   let networkStub: SinonStubbedInstance<Network>;
-  let gossipStub: SinonStubbedInstance<IGossip>;
+  let gossipStub: SinonStubbedInstance<Eth2Gossipsub>;
   let validateGossipAttesterSlashing: SinonStub;
   let validateGossipProposerSlashing: SinonStub;
   let validateVoluntaryExit: SinonStub;
@@ -36,12 +35,12 @@ describe("beacon pool api impl", function () {
   beforeEach(function () {
     dbStub = new StubbedBeaconDb(sinon, config);
     chainStub = sinon.createStubInstance(BeaconChain);
-    gossipStub = sinon.createStubInstance(Gossip);
+    gossipStub = sinon.createStubInstance(Eth2Gossipsub);
     gossipStub.publishAttesterSlashing = sinon.stub();
     gossipStub.publishProposerSlashing = sinon.stub();
     gossipStub.publishVoluntaryExit = sinon.stub();
     networkStub = sinon.createStubInstance(Network);
-    networkStub.gossip = gossipStub;
+    networkStub.gossip = (gossipStub as unknown) as Eth2Gossipsub;
     poolApi = new BeaconPoolApi(
       {},
       {

@@ -2,62 +2,27 @@
  * @module network/gossip
  */
 
-import {toHexString} from "@chainsafe/ssz";
-import {ForkDigest} from "@chainsafe/lodestar-types";
-import {assert} from "@chainsafe/lodestar-utils";
+import {InMessage} from "libp2p-interfaces/src/pubsub";
+import {IGossipMessage} from "./interface";
+import {computeMsgId} from "./encoding";
+import {GOSSIP_MAX_SIZE} from "../../constants";
 
-import {AttestationSubnetRegExp, GossipEvent, GossipTopicRegExp} from "./constants";
-import {IGossipEvents} from "./interface";
-import {GossipEncoding} from "./encoding";
-
-export function getGossipTopic(
-  event: GossipEvent,
-  forkDigestValue: ForkDigest,
-  encoding = GossipEncoding.SSZ_SNAPPY,
-  params: Map<string, string> = new Map()
-): string {
-  const forkDigestHash = toHexString(forkDigestValue).toLowerCase().substring(2);
-  let topic = `/eth2/${forkDigestHash}/${event}/${encoding}`;
-  for (const [key, value] of params.entries()) {
-    topic = topic.replace(`{${key}}`, value);
-  }
-  return topic;
-}
-
-export function mapGossipEvent(event: keyof IGossipEvents | string): GossipEvent {
-  if (isAttestationSubnetEvent(event)) {
-    return GossipEvent.ATTESTATION_SUBNET;
-  }
-  return event as GossipEvent;
-}
-
-export function topicToGossipEvent(topic: string): GossipEvent {
-  const groups = topic.match(GossipTopicRegExp);
-  const topicName = groups && groups[3];
-  if (!topicName) throw Error(`Bad gossip topic format: ${topic}`);
-  return topicName as GossipEvent;
-}
-
-export function getAttestationSubnetEvent(subnet: number): string {
-  return GossipEvent.ATTESTATION_SUBNET + "_" + subnet;
-}
-
-export function isAttestationSubnetEvent(event: keyof IGossipEvents | string): boolean {
-  return event.toString().startsWith(GossipEvent.ATTESTATION_SUBNET);
-}
-
-export function isAttestationSubnetTopic(topic: string): boolean {
-  return AttestationSubnetRegExp.test(topic);
-}
-
-export function getSubnetFromAttestationSubnetTopic(topic: string): number {
-  assert.true(isAttestationSubnetTopic(topic), "Should be an attestation topic");
-  const groups = topic.match(AttestationSubnetRegExp);
-  const subnetStr = groups && groups[4];
-  if (!subnetStr) throw Error(`Bad attestation topic format: ${topic}`);
-  return parseInt(subnetStr);
+/**
+ * Basic sanity check on gossip message
+ */
+export function messageIsValid(message: InMessage): boolean | undefined {
+  return message.topicIDs && message.topicIDs.length === 1 && message.data && message.data.length <= GOSSIP_MAX_SIZE;
 }
 
 export function msgIdToString(msgId: Uint8Array): string {
   return Buffer.from(msgId).toString("base64");
+}
+
+export function getMsgId(msg: IGossipMessage): Uint8Array {
+  if (!msg.msgId) {
+    const {msgId, uncompressed} = computeMsgId(msg.topicIDs[0], msg.data);
+    msg.msgId = msgId;
+    msg.uncompressed = uncompressed;
+  }
+  return msg.msgId;
 }

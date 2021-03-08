@@ -9,8 +9,7 @@ import {INetwork, Network} from "../../../../../src/network";
 import {WinstonLogger} from "@chainsafe/lodestar-utils";
 import {generateBlockSummary, generateEmptySignedBlock} from "../../../../utils/block";
 import {expect} from "chai";
-import {IGossip} from "../../../../../src/network/gossip/interface";
-import {Gossip} from "../../../../../src/network/gossip/gossip";
+import {Eth2Gossipsub} from "../../../../../src/network/gossip";
 import {IBeaconClock, LocalClock} from "../../../../../src/chain/clock";
 import * as slotUtils from "@chainsafe/lodestar-beacon-state-transition/lib/util/slot";
 import {sleep} from "@chainsafe/lodestar-cli/src/util";
@@ -23,7 +22,7 @@ describe("ORARegularSync", function () {
   let clockStub: SinonStubbedInstance<IBeaconClock>;
   let forkChoiceStub: SinonStubbedInstance<ForkChoice>;
   let networkStub: SinonStubbedInstance<INetwork>;
-  let gossipStub: SinonStubbedInstance<IGossip>;
+  let gossipStub: SinonStubbedInstance<Eth2Gossipsub>;
   let getCurrentSlotStub: SinonStub;
   const logger = new WinstonLogger({module: "ORARegularSync"});
 
@@ -35,8 +34,8 @@ describe("ORARegularSync", function () {
     clockStub = sinon.createStubInstance(LocalClock);
     chainStub.clock = clockStub;
     networkStub = sinon.createStubInstance(Network);
-    gossipStub = sinon.createStubInstance(Gossip);
-    networkStub.gossip = gossipStub;
+    gossipStub = sinon.createStubInstance(Eth2Gossipsub);
+    networkStub.gossip = (gossipStub as unknown) as Eth2Gossipsub;
     fetcherStub = sinon.createStubInstance(BlockRangeFetcher);
     sync = new ORARegularSync(
       {},

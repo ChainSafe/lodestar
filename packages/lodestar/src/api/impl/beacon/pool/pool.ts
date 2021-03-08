@@ -66,7 +66,7 @@ export class BeaconPoolApi implements IBeaconPoolApi {
     );
     await validateGossipAttestation(this.config, this.chain, this.db, attestationJob, subnet);
     await Promise.all([
-      this.network.gossip.publishCommiteeAttestation(attestation),
+      this.network.gossip.publishBeaconAttestation(attestation, subnet),
       this.db.attestation.add(attestation),
     ]);
   }

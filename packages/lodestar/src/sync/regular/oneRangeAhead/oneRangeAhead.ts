@@ -8,7 +8,7 @@ import PeerId from "peer-id";
 import {IRegularSync, IRegularSyncOptions, RegularSyncEventEmitter} from "..";
 import {ChainEvent, IBeaconChain} from "../../../chain";
 import {INetwork} from "../../../network";
-import {GossipEvent} from "../../../network/gossip/constants";
+import {GossipHandlerFn, GossipType} from "../../../network/gossip";
 import {checkBestPeer, getBestPeer, getBestPeerCandidates} from "../../utils";
 import {BlockRangeFetcher} from "./fetcher";
 import {IBlockRangeFetcher, ORARegularSyncModules} from "./interface";
@@ -45,7 +45,10 @@ export class ORARegularSync extends (EventEmitter as {new (): RegularSyncEventEm
     this.logger.verbose("Started regular syncing", {currentSlot, headSlot});
     this.logger.verbose("Regular Sync: Current slot at start", {currentSlot});
     this.controller = new AbortController();
-    this.network.gossip.subscribeToBlock(this.chain.getForkDigest(), this.onGossipBlock);
+    this.network.gossip.handleTopic(
+      {type: GossipType.beacon_block, fork: this.chain.getForkName()},
+      this.onGossipBlock as GossipHandlerFn
+    );
     this.chain.emitter.on(ChainEvent.block, this.onProcessedBlock);
     const head = this.chain.forkChoice.getHead();
     this.setLastProcessedBlock({slot: head.slot, root: head.blockRoot});
@@ -58,7 +61,10 @@ export class ORARegularSync extends (EventEmitter as {new (): RegularSyncEventEm
     if (this.controller && !this.controller.signal.aborted) {
       this.controller.abort();
     }
-    this.network.gossip.unsubscribe(this.chain.getForkDigest(), GossipEvent.BLOCK, this.onGossipBlock);
+    this.network.gossip.unhandleTopic(
+      {type: GossipType.beacon_block, fork: this.chain.getForkName()},
+      this.onGossipBlock as GossipHandlerFn
+    );
     this.chain.emitter.off(ChainEvent.block, this.onProcessedBlock);
   }
 

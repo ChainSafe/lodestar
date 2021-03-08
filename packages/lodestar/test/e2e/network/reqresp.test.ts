@@ -1,3 +1,4 @@
+import sinon from "sinon";
 import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
 import {AbortController} from "abort-controller";
@@ -7,8 +8,8 @@ import {phase0} from "@chainsafe/lodestar-types";
 import {Method, ReqRespEncoding} from "../../../src/constants";
 import {BeaconMetrics} from "../../../src/metrics";
 import {createPeerId, IReqRespOptions, Network, NetworkEvent} from "../../../src/network";
-import {GossipMessageValidator} from "../../../src/network/gossip/validator";
 import {INetworkOptions} from "../../../src/network/options";
+import {IBeaconDb} from "../../../src/db";
 import {RequestError, RequestErrorCode} from "../../../src/network/reqresp/request";
 import {testLogger} from "../../utils/logger";
 import {MockBeaconChain} from "../../utils/mocks/chain/chain";
@@ -17,6 +18,7 @@ import {generateState} from "../../utils/state";
 import {arrToSource, generateEmptySignedBlocks} from "../../unit/network/reqresp/utils";
 import {generateEmptySignedBlock} from "../../utils/block";
 import {expectRejectedWithLodestarError} from "../../utils/errors";
+import {StubbedBeaconDb} from "../../utils/stub";
 
 chai.use(chaiAsPromised);
 
@@ -35,7 +37,6 @@ describe("[network] network", function () {
   };
   const logger = new WinstonLogger({level: LogLevel.error});
   const metrics = new BeaconMetrics({enabled: true, timeout: 5000, pushGateway: false}, {logger});
-  const validator = {} as GossipMessageValidator;
   const state = generateState();
   const chain = new MockBeaconChain({genesisTime: 0, chainId: 0, networkId: BigInt(0), state, config});
 
@@ -53,8 +54,9 @@ describe("[network] network", function () {
     const [libP2pA, libP2pB] = await Promise.all([createNode(multiaddr), createNode(multiaddr, peerIdB)]);
 
     const opts = {...networkOptsDefault, ...reqRespOpts};
-    const netA = new Network(opts, {config, libp2p: libP2pA, logger: testLogger("A"), metrics, validator, chain});
-    const netB = new Network(opts, {config, libp2p: libP2pB, logger: testLogger("B"), metrics, validator, chain});
+    const db = new StubbedBeaconDb(sinon) as StubbedBeaconDb & IBeaconDb;
+    const netA = new Network(opts, {config, libp2p: libP2pA, logger: testLogger("A"), metrics, db, chain});
+    const netB = new Network(opts, {config, libp2p: libP2pB, logger: testLogger("B"), metrics, db, chain});
     await Promise.all([netA.start(), netB.start()]);
 
     const connected = Promise.all([

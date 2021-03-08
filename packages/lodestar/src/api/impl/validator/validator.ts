@@ -170,7 +170,7 @@ export class ValidatorApi implements IValidatorApi {
           await Promise.all([
             this.db.aggregateAndProof.add(signedAggregateAndProof.message),
             this.db.seenAttestationCache.addAggregateAndProof(signedAggregateAndProof.message),
-            this.network.gossip.publishAggregatedAttestation(signedAggregateAndProof),
+            this.network.gossip.publishBeaconAggregateAndProof(signedAggregateAndProof),
           ]);
         } catch (e) {
           this.logger.warn("Failed to publish aggregate and proof", e);

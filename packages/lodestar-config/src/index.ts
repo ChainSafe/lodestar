@@ -1,4 +1,4 @@
-import {IBeaconParams} from "@chainsafe/lodestar-params";
+import {GENESIS_SLOT, IBeaconParams} from "@chainsafe/lodestar-params";
 import {
   createIBeaconSSZTypes,
   ILightclientSSZTypes,
@@ -8,7 +8,7 @@ import {
   Version,
 } from "@chainsafe/lodestar-types";
 
-import {IBeaconConfig, IForkName} from "./interface";
+import {IBeaconConfig, IForkInfo, IForkName} from "./interface";
 
 export * from "./interface";
 
@@ -17,6 +17,25 @@ export function createIBeaconConfig(params: IBeaconParams): IBeaconConfig {
   return {
     params,
     types,
+    getForkInfoRecord(): Record<IForkName, IForkInfo> {
+      return {
+        phase0: {
+          name: "phase0",
+          slot: GENESIS_SLOT,
+          version: params.GENESIS_FORK_VERSION,
+        },
+        lightclient: {
+          name: "lightclient",
+          slot: params.LIGHTCLIENT_PATCH_FORK_SLOT,
+          version: params.LIGHTCLIENT_PATCH_FORK_VERSION,
+        },
+        phase1: {
+          name: "phase1",
+          slot: params.PHASE_1_FORK_SLOT,
+          version: params.PHASE_1_FORK_VERSION,
+        },
+      };
+    },
     getForkName(slot: Slot): IForkName {
       if (slot < params.LIGHTCLIENT_PATCH_FORK_SLOT) {
         return "phase0";

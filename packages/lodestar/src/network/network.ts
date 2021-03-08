@@ -12,8 +12,6 @@ import {IBeaconMetrics} from "../metrics";
 import {ReqResp, IReqRespOptions} from "./reqresp/reqResp";
 import {INetworkOptions} from "./options";
 import {INetwork, NetworkEvent, NetworkEventEmitter, PeerSearchOptions} from "./interface";
-import {Gossip} from "./gossip/gossip";
-import {IGossip, IGossipMessageValidator} from "./gossip/interface";
 import {IBeaconChain} from "../chain";
 import {MetadataController} from "./metadata";
 import {Discv5, Discv5Discovery, ENR} from "@chainsafe/discv5";
@@ -23,21 +21,23 @@ import {IPeerMetadataStore} from "./peers";
 import {Libp2pPeerMetadataStore} from "./peers/metastore";
 import {getPeerCountBySubnet} from "./peers/utils";
 import {IPeerRpcScoreStore, PeerRpcScoreStore} from "./peers/score";
+import {IBeaconDb} from "../db";
+import {createTopicValidatorFnMap, Eth2Gossipsub} from "./gossip";
 
 interface ILibp2pModules {
   config: IBeaconConfig;
   libp2p: LibP2p;
   logger: ILogger;
   metrics?: IBeaconMetrics;
-  validator: IGossipMessageValidator;
   chain: IBeaconChain;
+  db: IBeaconDb;
 }
 
 export class Network extends (EventEmitter as {new (): NetworkEventEmitter}) implements INetwork {
   public peerId: PeerId;
   public localMultiaddrs!: Multiaddr[];
   public reqResp: ReqResp;
-  public gossip: IGossip;
+  public gossip: Eth2Gossipsub;
   public metadata: MetadataController;
   public peerMetadata: IPeerMetadataStore;
   public peerRpcScores: IPeerRpcScoreStore;
@@ -54,7 +54,7 @@ export class Network extends (EventEmitter as {new (): NetworkEventEmitter}) imp
 
   public constructor(
     opts: INetworkOptions & IReqRespOptions,
-    {config, libp2p, logger, metrics, validator, chain}: ILibp2pModules
+    {config, libp2p, logger, metrics, chain, db}: ILibp2pModules
   ) {
     super();
     this.opts = opts;
@@ -70,7 +70,14 @@ export class Network extends (EventEmitter as {new (): NetworkEventEmitter}) imp
       opts
     );
     this.metadata = new MetadataController({}, {config, chain, logger});
-    this.gossip = (new Gossip(opts, {config, libp2p, logger, validator, chain}) as unknown) as IGossip;
+    this.gossip = new Eth2Gossipsub({
+      config,
+      genesisValidatorsRoot: chain.getHeadState().genesisValidatorsRoot,
+      libp2p,
+      validatorFns: createTopicValidatorFnMap({config, chain, db, logger}),
+      logger,
+      metrics,
+    });
     this.diversifyPeersTask = new DiversifyPeersBySubnetTask(this.config, {
       network: this,
       logger: this.logger,
@@ -89,7 +96,7 @@ export class Network extends (EventEmitter as {new (): NetworkEventEmitter}) imp
     this.reqResp.start();
     const enr = this.getEnr();
     this.metadata.start(enr!);
-    await this.gossip.start();
+    this.gossip.start();
     this.diversifyPeersTask.start();
     const multiaddresses = this.libp2p.multiaddrs.map((m) => m.toString()).join(",");
     this.logger.info(`PeerId ${this.libp2p.peerId.toB58String()}, Multiaddrs ${multiaddresses}`);
@@ -100,7 +107,7 @@ export class Network extends (EventEmitter as {new (): NetworkEventEmitter}) imp
     this.libp2p.connectionManager.removeListener(NetworkEvent.peerDisconnect, this.emitPeerDisconnect);
     await Promise.all([this.diversifyPeersTask.stop(), this.checkPeerAliveTask.stop()]);
     this.metadata.stop();
-    await this.gossip.stop();
+    this.gossip.stop();
     this.reqResp.stop();
     await this.libp2p.stop();
   }

@@ -1,10 +1,9 @@
 import {SinonStubbedInstance, SinonFakeTimers} from "sinon";
 import {INetwork, Network} from "../../../src/network";
-import {IGossip} from "../../../src/network/gossip/interface";
 import {minimalConfig} from "@chainsafe/lodestar-config/minimal";
 import sinon from "sinon";
 import {ChainEvent, IBeaconChain} from "../../../src/chain";
-import {Gossip} from "../../../src/network/gossip/gossip";
+import {Eth2Gossipsub} from "../../../src/network/gossip";
 import {InteropSubnetsJoiningTask} from "../../../src/tasks/tasks/interopSubnetsJoiningTask";
 import {WinstonLogger} from "@chainsafe/lodestar-utils";
 import {expect} from "chai";
@@ -19,7 +18,7 @@ describe("interopSubnetsJoiningTask", () => {
   const sandbox = sinon.createSandbox();
   let clock: SinonFakeTimers;
   let networkStub: SinonStubbedInstance<INetwork>;
-  let gossipStub: SinonStubbedInstance<IGossip>;
+  let gossipStub: SinonStubbedInstance<Eth2Gossipsub>;
 
   let chain: IBeaconChain;
   const logger = new WinstonLogger();
@@ -33,8 +32,8 @@ describe("interopSubnetsJoiningTask", () => {
   beforeEach(() => {
     clock = sandbox.useFakeTimers();
     networkStub = sandbox.createStubInstance(Network);
-    gossipStub = sandbox.createStubInstance(Gossip);
-    networkStub.gossip = gossipStub;
+    gossipStub = sandbox.createStubInstance(Eth2Gossipsub);
+    networkStub.gossip = (gossipStub as unknown) as Eth2Gossipsub;
     state = generateState();
     chain = new MockBeaconChain({
       genesisTime: 0,
@@ -60,24 +59,22 @@ describe("interopSubnetsJoiningTask", () => {
 
   it("should handle fork digest change", async () => {
     const oldForkDigest = chain.getForkDigest();
-    expect(gossipStub.subscribeToAttestationSubnet.callCount).to.be.equal(config.params.RANDOM_SUBNETS_PER_VALIDATOR);
+    expect(gossipStub.subscribeTopic.callCount).to.be.equal(config.params.RANDOM_SUBNETS_PER_VALIDATOR);
     // fork digest changed due to current version changed
-    state.fork.currentVersion = Buffer.from([100, 0, 0, 0]);
+    state.fork.currentVersion = config.getForkInfoRecord().lightclient.version;
     expect(config.types.ForkDigest.equals(oldForkDigest, chain.getForkDigest())).to.be.false;
     // not subscribe, just unsubscribe at that time
-    const unSubscribePromise = new Promise((resolve) => gossipStub.unsubscribeFromAttestationSubnet.callsFake(resolve));
-    chain.emitter.emit(ChainEvent.forkVersion, state.fork.currentVersion);
+    const unSubscribePromise = new Promise((resolve) => gossipStub.unsubscribeTopic.callsFake(resolve));
+    chain.emitter.emit(ChainEvent.forkVersion, state.fork.currentVersion, "phase0");
     await unSubscribePromise;
-    expect(gossipStub.unsubscribeFromAttestationSubnet.callCount).to.be.equal(
-      config.params.RANDOM_SUBNETS_PER_VALIDATOR
-    );
+    expect(gossipStub.unsubscribeTopic.callCount).to.be.equal(config.params.RANDOM_SUBNETS_PER_VALIDATOR);
   });
 
   it("should change subnet subscription after 2*EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION", async () => {
     const seqNumber = networkStub.metadata.seqNumber;
     expect(Number(seqNumber)).to.be.gt(0);
-    expect(gossipStub.subscribeToAttestationSubnet.callCount).to.be.equal(config.params.RANDOM_SUBNETS_PER_VALIDATOR);
-    const unsubscribePromise = new Promise((resolve) => gossipStub.unsubscribeFromAttestationSubnet.callsFake(resolve));
+    expect(gossipStub.subscribeTopic.callCount).to.be.equal(config.params.RANDOM_SUBNETS_PER_VALIDATOR);
+    const unsubscribePromise = new Promise((resolve) => gossipStub.unsubscribeTopic.callsFake(resolve));
     clock.tick(
       2 *
         config.params.EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION *
@@ -86,8 +83,8 @@ describe("interopSubnetsJoiningTask", () => {
         1000
     );
     await unsubscribePromise;
-    expect(gossipStub.unsubscribeFromAttestationSubnet.callCount).to.be.gte(config.params.RANDOM_SUBNETS_PER_VALIDATOR);
-    expect(gossipStub.subscribeToAttestationSubnet.callCount).to.be.gte(2 * config.params.RANDOM_SUBNETS_PER_VALIDATOR);
+    expect(gossipStub.unsubscribeTopic.callCount).to.be.gte(config.params.RANDOM_SUBNETS_PER_VALIDATOR);
+    expect(gossipStub.subscribeTopic.callCount).to.be.gte(2 * config.params.RANDOM_SUBNETS_PER_VALIDATOR);
     expect(Number(networkStub.metadata.seqNumber)).to.be.gt(Number(seqNumber));
   });
 });
