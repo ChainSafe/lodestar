@@ -52,7 +52,7 @@ export const create: ICliCommand<IWalletCreateArgs, IAccountWalletArgs & IGlobal
   If the file does not exist, a random password will be generated and saved at that \
   path. To avoid confusion, if the file does not already exist it must include a \
   '.pass' suffix.",
-      alias: ["passphrase-file", "p"],
+      alias: ["p"],
       demandOption: true,
       type: "string",
     },
@@ -68,7 +68,6 @@ wallets are supported presently.",
 
     mnemonicOutputPath: {
       description: "If present, the mnemonic will be saved to this file",
-      alias: ["mnemonic-output-path"],
       type: "string",
     },
   },
