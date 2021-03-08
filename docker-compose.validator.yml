@@ -11,7 +11,7 @@ services:
       - ./keystores:/keystores
       - ./secrets:/secrets
     env_file: .env
-    command: validator --rootDir /data --server http://beacon_node:9596
+    command: validator --rootDir /data --keystoresDir /keystores --secretsDir /secrets --server http://beacon_node:9596
 
 volumes:
   validator:
