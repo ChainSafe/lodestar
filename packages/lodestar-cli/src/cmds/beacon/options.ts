@@ -1,4 +1,5 @@
 import {Options} from "yargs";
+import {defaultLogLevel, LogLevel, LogLevels} from "@chainsafe/lodestar-utils";
 import {beaconNodeOptions, paramsOptions, IBeaconNodeArgs, IENRArgs, enrOptions} from "../../options";
 import {defaultBeaconPaths, IBeaconPaths} from "./paths";
 import {ICliCommandOptions} from "../../util";
@@ -7,6 +8,7 @@ interface IBeaconExtraArgs {
   forceGenesis?: boolean;
   genesisStateFile?: string;
   weakSubjectivityStateFile?: string;
+  logLevel: LogLevel;
 }
 
 const beaconExtraOptions: ICliCommandOptions<IBeaconExtraArgs> = {
@@ -24,6 +26,13 @@ const beaconExtraOptions: ICliCommandOptions<IBeaconExtraArgs> = {
     description: "Path or URL to download a weak subjectivity state file in ssz-encoded format",
     type: "string",
   },
+
+  logLevel: {
+    choices: LogLevels,
+    description: "Logging verbosity level",
+    defaultDescription: defaultLogLevel,
+    type: "string",
+  },
 };
 
 const beaconPathsOptions: ICliCommandOptions<IBeaconPaths> = {
@@ -35,7 +44,6 @@ const beaconPathsOptions: ICliCommandOptions<IBeaconPaths> = {
   },
 
   dbDir: {
-    alias: ["db.dir", "db.name"],
     description: "Beacon DB directory",
     defaultDescription: defaultBeaconPaths.dbDir,
     hidden: true,
@@ -44,7 +52,6 @@ const beaconPathsOptions: ICliCommandOptions<IBeaconPaths> = {
   },
 
   configFile: {
-    alias: ["config"],
     description: "Beacon node configuration file path",
     defaultDescription: defaultBeaconPaths.configFile,
     type: "string",
@@ -77,7 +84,6 @@ const beaconPathsOptions: ICliCommandOptions<IBeaconPaths> = {
 
   logFile: {
     description: "Path to output all logs to a persistent log file",
-    alias: ["log.file"],
     type: "string",
     normalize: true,
   },

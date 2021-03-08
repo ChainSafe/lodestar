@@ -39,7 +39,7 @@ export async function beaconHandler(args: IBeaconArgs & IGlobalArgs): Promise<vo
   const abortController = new AbortController();
 
   // Logger setup
-  const logger = new WinstonLogger({}, [
+  const logger = new WinstonLogger({level: args.logLevel}, [
     consoleTransport,
     ...(beaconPaths.logFile ? [fileTransport(beaconPaths.logFile)] : []),
   ]);
