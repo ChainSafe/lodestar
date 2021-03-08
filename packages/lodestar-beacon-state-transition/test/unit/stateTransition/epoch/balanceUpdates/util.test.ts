@@ -9,7 +9,7 @@ import {getBaseReward} from "../../../../../src/phase0/naive/epoch/balanceUpdate
 import {bigIntSqrt} from "@chainsafe/lodestar-utils";
 import {BASE_REWARDS_PER_EPOCH} from "../../../../../src/constants";
 
-describe("process epoch - balance updates", function () {
+describe.skip("process epoch - balance updates", function () {
   const sandbox = sinon.createSandbox();
   let getTotalActiveBalanceStub: any;
 

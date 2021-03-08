@@ -15,7 +15,7 @@ describe("LevelDB controller", () => {
 
   after(async () => {
     await db.stop();
-    await new Promise((resolve, reject) => {
+    await new Promise<void>((resolve, reject) => {
       leveldown.destroy(dbLocation, (err: Error) => {
         if (err) reject(err);
         else resolve();

@@ -92,7 +92,7 @@ describe("processAttestation", function () {
     isValidIndexedAttestationStub.returns(true);
     forkChoice.onAttestation.returns();
 
-    const eventPromise = new Promise((resolve, reject) => {
+    const eventPromise = new Promise<void>((resolve, reject) => {
       const timeout = setTimeout(reject, 1000);
       emitter.once(ChainEvent.attestation, () => {
         clearTimeout(timeout);

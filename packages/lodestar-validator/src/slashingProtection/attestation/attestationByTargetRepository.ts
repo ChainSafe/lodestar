@@ -49,7 +49,10 @@ export class AttestationByTargetRepository {
   }
 
   private encodeKey(pubkey: BLSPubkey, targetEpoch: Epoch): Buffer {
-    return encodeKey(this.bucket, Buffer.concat([Buffer.from(pubkey), intToBytes(BigInt(targetEpoch), uintLen, "be")]));
+    return encodeKey(
+      this.bucket,
+      Buffer.concat([Buffer.from(pubkey as Uint8Array), intToBytes(BigInt(targetEpoch), uintLen, "be")])
+    );
   }
 
   private decodeKey(key: Buffer): {pubkey: BLSPubkey; targetEpoch: Epoch} {

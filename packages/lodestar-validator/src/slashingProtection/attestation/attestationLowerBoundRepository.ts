@@ -27,6 +27,6 @@ export class AttestationLowerBoundRepository {
   }
 
   private encodeKey(pubkey: BLSPubkey): Buffer {
-    return encodeKey(this.bucket, Buffer.from(pubkey));
+    return encodeKey(this.bucket, Buffer.from(pubkey as Uint8Array));
   }
 }

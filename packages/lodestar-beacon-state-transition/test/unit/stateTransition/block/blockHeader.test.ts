@@ -56,7 +56,7 @@ describe("process block - block header", function () {
     } catch (e) {}
   });
 
-  it("should process block", function () {
+  it.skip("should process block", function () {
     const state = generateState({slot: 5});
     state.validators.push(generateValidator({activation: 0, exit: 10}));
     const block = generateEmptyBlock();

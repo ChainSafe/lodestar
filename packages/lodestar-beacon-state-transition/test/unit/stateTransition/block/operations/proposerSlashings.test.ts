@@ -91,7 +91,7 @@ describe("process block - proposer slashings", function () {
     }
   });
 
-  it("should process", function () {
+  it.skip("should process", function () {
     const state = generateState({validators: generateValidators(1)});
     const proposerSlashing = generateEmptyProposerSlashing();
     proposerSlashing.signedHeader1.message.slot = 1;

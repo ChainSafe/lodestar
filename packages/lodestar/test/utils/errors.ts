@@ -14,15 +14,26 @@ export function expectThrowsLodestarError(fn: () => any, expectedErr: LodestarEr
 
 export async function expectRejectedWithLodestarError(
   promise: Promise<any>,
-  expectedErr: LodestarError<any>
+  expectedErr: LodestarError<any> | string
 ): Promise<void> {
   try {
     const value = await promise;
     const json = JSON.stringify(value, null, 2);
     throw Error(`Expected promise to reject but returned value: \n\n\t${json}`);
   } catch (e) {
-    expectLodestarError(e, expectedErr);
+    if (typeof expectedErr === "string") {
+      expectLodestarErrorCode(e, expectedErr);
+    } else {
+      expectLodestarError(e, expectedErr);
+    }
   }
+}
+
+export function expectLodestarErrorCode<T extends {code: string}>(err: LodestarError<T>, expectedCode: string): void {
+  if (!(err instanceof LodestarError)) throw Error(`err not instanceof LodestarError: ${(err as Error).stack}`);
+
+  const code = err.type.code;
+  expect(code).to.deep.equal(expectedCode, "Wrong LodestarError code");
 }
 
 export function expectLodestarError<T extends {code: string}>(err1: LodestarError<T>, err2: LodestarError<T>): void {
