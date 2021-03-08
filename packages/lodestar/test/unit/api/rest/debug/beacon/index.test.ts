@@ -1,13 +1,13 @@
 import {config} from "@chainsafe/lodestar-config/minimal";
-import { RestApi, ApiNamespace } from "../../../../../../src/api";
-import { testLogger } from "../../../../../utils/logger";
-import { StubbedApi } from "../../../../../utils/stub/api";
-
-export let restApi: RestApi, api: StubbedApi;
+import {SinonStubbedInstance} from "sinon";
+import {RestApi, ApiNamespace} from "../../../../../../src/api";
+import {DebugBeaconApi} from "../../../../../../src/api/impl/debug/beacon";
+import {testLogger} from "../../../../../utils/logger";
+import {StubbedApi} from "../../../../../utils/stub/api";
 
 beforeEach(async function () {
-  api = new StubbedApi();
-  restApi = await RestApi.init(
+  this.api = new StubbedApi();
+  this.restApi = await RestApi.init(
     {
       api: [ApiNamespace.DEBUG],
       cors: "*",
@@ -18,11 +18,12 @@ beforeEach(async function () {
     {
       config,
       logger: testLogger(),
-      api,
+      api: this.api,
     }
   );
+  this.debugBeaconStub = this.api.debug.beacon as SinonStubbedInstance<DebugBeaconApi>;
 });
 
 afterEach(async function () {
-  await restApi.close();
+  await this.restApi.close();
 });

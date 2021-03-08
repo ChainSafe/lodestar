@@ -1,7 +1,5 @@
 import {BeaconStateApi} from "../../../../../../src/api/impl/beacon/state/state";
 import {config} from "@chainsafe/lodestar-config/minimal";
-import {BeaconChain} from "../../../../../../src/chain";
-import {StubbedBeaconDb} from "../../../../../utils/stub";
 import sinon, {SinonStubbedMember} from "sinon";
 import {IBeaconStateApi} from "../../../../../../src/api/impl/beacon/state/interface";
 import * as stateApiUtils from "../../../../../../src/api/impl/beacon/state/utils";
@@ -18,8 +16,8 @@ describe("beacon api impl - state - get fork", function () {
       {},
       {
         config,
-        chain: sinon.createStubInstance(BeaconChain),
-        db: new StubbedBeaconDb(sinon, config),
+        chain: this.test?.ctx?.chainStub,
+        db: this.test?.ctx?.dbStub,
       }
     );
   });

@@ -1,5 +1,4 @@
-import sinon, {SinonStub, SinonStubbedInstance} from "sinon";
-import * as blockUtils from "../../../../../../src/api/impl/beacon/blocks/utils";
+import sinon, {SinonStubbedInstance} from "sinon";
 import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {resolveBlockId} from "../../../../../../src/api/impl/beacon/blocks/utils";
 import {config} from "@chainsafe/lodestar-config/minimal";
@@ -10,11 +9,10 @@ import chaiAsPromised from "chai-as-promised";
 import {StubbedBeaconDb} from "../../../../../utils/stub";
 import {GENESIS_SLOT} from "../../../../../../src/constants";
 import {bufferEqualsMatcher} from "../../../../../utils/sinon/matcher";
-import { sandbox } from "./index.test";
 
 use(chaiAsPromised);
 
-describe("", () => {
+describe("utils tests", () => {
   describe("resolveBlockId", function () {
     let localForkChoiceStub: SinonStubbedInstance<ForkChoice>;
     let localDbStub: StubbedBeaconDb;
@@ -79,5 +77,5 @@ describe("", () => {
     it("should trow on invalid", async function () {
       await expect(resolveBlockId(config, localForkChoiceStub, localDbStub, "asbc")).to.eventually.be.rejected;
     });
-  })
+  });
 });

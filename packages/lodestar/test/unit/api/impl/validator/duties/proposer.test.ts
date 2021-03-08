@@ -10,31 +10,25 @@ import {FAR_FUTURE_EPOCH} from "../../../../../../src/constants";
 import {IValidatorApi, ValidatorApi} from "../../../../../../src/api/impl/validator";
 import {generateInitialMaxBalances} from "../../../../../utils/balances";
 import {generateState} from "../../../../../utils/state";
-import {StubbedBeaconDb} from "../../../../../utils/stub";
 import {BeaconSync, IBeaconSync} from "../../../../../../src/sync";
 import {generateValidators} from "../../../../../utils/validator";
 
 describe("get proposers api impl", function () {
-  const sandbox = sinon.createSandbox();
-
-  let dbStub: StubbedBeaconDb,
-    chainStub: SinonStubbedInstance<IBeaconChain>,
-    syncStub: SinonStubbedInstance<IBeaconSync>;
+  let chainStub: SinonStubbedInstance<IBeaconChain>, syncStub: SinonStubbedInstance<IBeaconSync>;
 
   let api: IValidatorApi;
 
   beforeEach(function () {
-    dbStub = new StubbedBeaconDb(sandbox, config);
-    chainStub = sandbox.createStubInstance(BeaconChain);
-    chainStub.clock = sandbox.createStubInstance(LocalClock);
-    chainStub.forkChoice = sandbox.createStubInstance(ForkChoice);
-    syncStub = sandbox.createStubInstance(BeaconSync);
+    chainStub = this.test?.ctx?.sandbox.createStubInstance(BeaconChain);
+    chainStub.clock = this.test?.ctx?.sandbox.createStubInstance(LocalClock);
+    chainStub.forkChoice = this.test?.ctx?.sandbox.createStubInstance(ForkChoice);
+    syncStub = this.test?.ctx?.sandbox.createStubInstance(BeaconSync);
     // @ts-ignore
-    api = new ValidatorApi({}, {db: dbStub, chain: chainStub, sync: syncStub, config});
+    api = new ValidatorApi({}, {db: this.test?.ctx?.dbStub, chain: chainStub, sync: syncStub, config});
   });
 
   afterEach(function () {
-    sandbox.restore();
+    this.test?.ctx?.sandbox.restore();
   });
 
   it("should throw error when node is syncing", async function () {
@@ -64,9 +58,9 @@ describe("get proposers api impl", function () {
 
   it("should get proposers", async function () {
     syncStub.isSynced.returns(true);
-    sandbox.stub(chainStub.clock, "currentEpoch").get(() => 0);
-    sandbox.stub(chainStub.clock, "currentSlot").get(() => 0);
-    dbStub.block.get.resolves({message: {stateRoot: Buffer.alloc(32)}} as any);
+    this.test?.ctx?.sandbox.stub(chainStub.clock, "currentEpoch").get(() => 0);
+    this.test?.ctx?.sandbox.stub(chainStub.clock, "currentSlot").get(() => 0);
+    this.test?.ctx?.dbStub.block.get.resolves({message: {stateRoot: Buffer.alloc(32)}} as any);
     const state = generateState({
       slot: 0,
       validators: generateValidators(25, {

@@ -1,7 +1,7 @@
 import {config} from "@chainsafe/lodestar-config/minimal";
-import { RestApi, ApiNamespace } from "../../../../../src/api";
-import { testLogger } from "../../../../utils/logger";
-import { StubbedApi } from "../../../../utils/stub/api";
+import {RestApi, ApiNamespace} from "../../../../../src/api";
+import {testLogger} from "../../../../utils/logger";
+import {StubbedApi} from "../../../../utils/stub/api";
 
 export const CONFIG_PREFIX = "/eth/v1/config";
 

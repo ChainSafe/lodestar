@@ -32,22 +32,23 @@ describe("node api implementation", function () {
   let api: INodeApi;
   let networkStub: SinonStubbedInstance<INetwork>;
   let syncStub: SinonStubbedInstance<IBeaconSync>;
+  let peerId: PeerId;
 
-  beforeEach(function () {
+  beforeEach(async function () {
     networkStub = sinon.createStubInstance(Network);
     syncStub = sinon.createStubInstance(BeaconSync);
     api = new NodeApi({}, {network: networkStub, sync: syncStub});
+    peerId = await PeerId.create({keyType: "secp256k1"});
+    networkStub.peerId = peerId;
+    networkStub.localMultiaddrs = [new Multiaddr("/ip4/127.0.0.1/tcp/36000")];
   });
 
   describe("getNodeIdentity", function () {
     it("should get node identity", async function () {
-      const peerId = await PeerId.create({keyType: "secp256k1"});
       const keypair = createKeypairFromPeerId(peerId);
       const enr = ENR.createV4(keypair.publicKey);
       enr.setLocationMultiaddr(new Multiaddr("/ip4/127.0.0.1/tcp/36001"));
       networkStub.getEnr.returns(enr);
-      networkStub.peerId = peerId;
-      networkStub.localMultiaddrs = [new Multiaddr("/ip4/127.0.0.1/tcp/36000")];
       networkStub.metadata = {
         get all(): phase0.Metadata {
           return {
@@ -67,10 +68,7 @@ describe("node api implementation", function () {
     });
 
     it("should get node identity - no enr", async function () {
-      const peerId = await PeerId.create({keyType: "secp256k1"});
       networkStub.getEnr.returns(null!);
-      networkStub.peerId = peerId;
-      networkStub.localMultiaddrs = [new Multiaddr("/ip4/127.0.0.1/tcp/36000")];
       const identity = await api.getNodeIdentity();
       expect(identity.enr).equal("");
     });
@@ -91,9 +89,14 @@ describe("node api implementation", function () {
   });
 
   describe("getPeers", function () {
+    let peer1: PeerId, peer2: PeerId;
+
+    before(async function () {
+      peer1 = await createPeerId();
+      peer2 = await createPeerId();
+    });
+
     it("should return connected and disconnecting peers", async function () {
-      const peer1 = await createPeerId();
-      const peer2 = await createPeerId();
       const connectionsByPeer = new Map<string, LibP2pConnection[]>([
         [peer1.toB58String(), [libp2pConnection(peer1, "open", "outbound")]],
         [peer2.toB58String(), [libp2pConnection(peer2, "closing", "inbound")]],
@@ -109,8 +112,6 @@ describe("node api implementation", function () {
     });
 
     it("should return disconnected peers", async function () {
-      const peer1 = await createPeerId();
-      const peer2 = await createPeerId();
       const connectionsByPeer = new Map<string, LibP2pConnection[]>([
         [peer1.toB58String(), [libp2pConnection(peer1, "closed", "outbound")]],
         [peer2.toB58String(), []], // peer2 has no connections in the connection manager

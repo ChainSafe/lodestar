@@ -5,10 +5,16 @@ import {urlJoin} from "../../utils";
 import {BEACON_PREFIX, api, restApi} from "../index.test";
 import {generateAttestation} from "../../../../../utils/attestation";
 import {submitPoolAttestation} from "../../../../../../src/api/rest/controllers/beacon/pool/submitPoolAttestation";
+import {Attestation} from "@chainsafe/lodestar-types/lib/phase0";
 
 describe("rest - beacon - submitAttestation", function () {
+  let attestation: Attestation;
+
+  before(function () {
+    attestation = generateAttestation();
+  });
+
   it("should succeed", async function () {
-    const attestation = generateAttestation();
     await supertest(restApi.server.server)
       .post(urlJoin(BEACON_PREFIX, submitPoolAttestation.url))
       .send(config.types.phase0.Attestation.toJson(attestation, {case: "snake"}) as Record<string, unknown>)
@@ -17,7 +23,6 @@ describe("rest - beacon - submitAttestation", function () {
   });
 
   it("should fail to parse body", async function () {
-    const attestation = generateAttestation();
     await supertest(restApi.server.server)
       .post(urlJoin(BEACON_PREFIX, submitPoolAttestation.url))
       .send(config.types.phase0.Attestation.toJson(attestation, {case: "camel"}) as Record<string, unknown>)

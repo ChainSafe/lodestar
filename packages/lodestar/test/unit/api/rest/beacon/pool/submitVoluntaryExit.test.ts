@@ -1,4 +1,5 @@
 import {config} from "@chainsafe/lodestar-config/minimal";
+import {SignedVoluntaryExit} from "@chainsafe/lodestar-types/lib/phase0";
 import {expect} from "chai";
 import supertest from "supertest";
 import {submitVoluntaryExit} from "../../../../../../src/api/rest/controllers/beacon/pool";
@@ -7,8 +8,13 @@ import {urlJoin} from "../../utils";
 import {BEACON_PREFIX, api, restApi} from "../index.test";
 
 describe("rest - beacon - submitVoluntaryExit", function () {
+  let voluntaryExit: SignedVoluntaryExit;
+
+  before(function () {
+    voluntaryExit = generateEmptySignedVoluntaryExit();
+  });
+
   it("should succeed", async function () {
-    const voluntaryExit = generateEmptySignedVoluntaryExit();
     await supertest(restApi.server.server)
       .post(urlJoin(BEACON_PREFIX, submitVoluntaryExit.url))
       .send(config.types.phase0.SignedVoluntaryExit.toJson(voluntaryExit, {case: "snake"}) as Record<string, unknown>)
@@ -17,7 +23,6 @@ describe("rest - beacon - submitVoluntaryExit", function () {
   });
 
   it("should fail to parse body", async function () {
-    const voluntaryExit = generateEmptySignedVoluntaryExit();
     await supertest(restApi.server.server)
       .post(urlJoin(BEACON_PREFIX, submitVoluntaryExit.url))
       .send(config.types.phase0.SignedVoluntaryExit.toJson(voluntaryExit, {case: "camel"}) as Record<string, unknown>)

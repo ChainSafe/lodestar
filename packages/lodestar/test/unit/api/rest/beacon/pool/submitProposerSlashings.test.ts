@@ -5,10 +5,16 @@ import {urlJoin} from "../../utils";
 import {BEACON_PREFIX, api, restApi} from "../index.test";
 import {generateEmptyProposerSlashing} from "../../../../../utils/slashings";
 import {submitProposerSlashing} from "../../../../../../src/api/rest/controllers/beacon/pool/submitProposerSlashing";
+import {ProposerSlashing} from "@chainsafe/lodestar-types/lib/phase0";
 
 describe("rest - beacon - submitProposerSlashing", function () {
+  let slashing: ProposerSlashing;
+
+  before(function () {
+    slashing = generateEmptyProposerSlashing();
+  });
+
   it("should succeed", async function () {
-    const slashing = generateEmptyProposerSlashing();
     await supertest(restApi.server.server)
       .post(urlJoin(BEACON_PREFIX, submitProposerSlashing.url))
       .send(config.types.phase0.ProposerSlashing.toJson(slashing, {case: "snake"}) as Record<string, unknown>)
@@ -17,7 +23,6 @@ describe("rest - beacon - submitProposerSlashing", function () {
   });
 
   it("should fail to parse body", async function () {
-    const slashing = generateEmptyProposerSlashing();
     await supertest(restApi.server.server)
       .post(urlJoin(BEACON_PREFIX, submitProposerSlashing.url))
       .send(config.types.phase0.ProposerSlashing.toJson(slashing, {case: "camel"}) as Record<string, unknown>)

@@ -11,7 +11,6 @@ import {INetwork} from "../../../../../src/network/interface";
 import {Network} from "../../../../../src/network/network";
 import {BeaconSync} from "../../../../../src/sync/sync";
 import {testLogger} from "../../../../utils/logger";
-import {StubbedBeaconDb} from "../../../../utils/stub/beaconDb";
 import chaiAsPromised from "chai-as-promised";
 import {use, expect} from "chai";
 
@@ -19,7 +18,6 @@ use(chaiAsPromised);
 
 describe("api - validator - produceAttestationData", function () {
   let chainStub: SinonStubbedInstance<IBeaconChain>;
-  let dbStub: StubbedBeaconDb;
   let eth1Stub: SinonStubbedInstance<IEth1ForBlockProduction>;
   let networkStub: SinonStubbedInstance<INetwork>;
   let syncStub: SinonStubbedInstance<IBeaconSync>;
@@ -28,14 +26,13 @@ describe("api - validator - produceAttestationData", function () {
 
   beforeEach(function () {
     chainStub = sinon.createStubInstance(BeaconChain);
-    dbStub = new StubbedBeaconDb(sinon);
     eth1Stub = sinon.createStubInstance(Eth1ForBlockProduction);
     networkStub = sinon.createStubInstance(Network);
     syncStub = sinon.createStubInstance(BeaconSync);
     modules = {
       chain: chainStub,
       config,
-      db: dbStub,
+      db: this.test?.ctx?.dbStub,
       eth1: eth1Stub,
       logger: testLogger(),
       network: networkStub,

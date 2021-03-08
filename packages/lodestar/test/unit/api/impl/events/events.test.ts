@@ -11,15 +11,16 @@ describe("Events api impl", function () {
   describe("beacon event stream", function () {
     let chainStub: SinonStubbedInstance<IBeaconChain>;
     let chainEventEmmitter: ChainEventEmitter;
+    let api: EventsApi;
 
     beforeEach(function () {
       chainStub = sinon.createStubInstance(BeaconChain);
       chainEventEmmitter = new ChainEventEmitter();
       chainStub.emitter = chainEventEmmitter;
+      api = new EventsApi({}, {config, chain: chainStub});
     });
 
     it("should ignore not sent topics", async function () {
-      const api = new EventsApi({}, {config, chain: chainStub});
       const stream = api.getEventStream([BeaconEventType.HEAD]);
       const headSummary = generateBlockSummary();
       chainEventEmmitter.emit(ChainEvent.forkChoiceReorg, headSummary, headSummary, 2);
@@ -32,7 +33,6 @@ describe("Events api impl", function () {
     });
 
     it("should process head event", async function () {
-      const api = new EventsApi({}, {config, chain: chainStub});
       const stream = api.getEventStream([BeaconEventType.HEAD]);
       const headSummary = generateBlockSummary();
       chainEventEmmitter.emit(ChainEvent.forkChoiceHead, headSummary);
@@ -44,7 +44,6 @@ describe("Events api impl", function () {
     });
 
     it("should process block event", async function () {
-      const api = new EventsApi({}, {config, chain: chainStub});
       const stream = api.getEventStream([BeaconEventType.BLOCK]);
       const block = generateSignedBlock();
       chainEventEmmitter.emit(ChainEvent.block, block, null as any, null as any);
@@ -56,7 +55,6 @@ describe("Events api impl", function () {
     });
 
     it("should process attestation event", async function () {
-      const api = new EventsApi({}, {config, chain: chainStub});
       const stream = api.getEventStream([BeaconEventType.ATTESTATION]);
       const attestation = generateAttestation();
       chainEventEmmitter.emit(ChainEvent.attestation, attestation);
@@ -68,7 +66,6 @@ describe("Events api impl", function () {
     });
 
     it("should process voluntary exit event", async function () {
-      const api = new EventsApi({}, {config, chain: chainStub});
       const stream = api.getEventStream([BeaconEventType.VOLUNTARY_EXIT]);
       const exit = generateEmptySignedVoluntaryExit();
       const block = generateEmptySignedBlock();
@@ -82,7 +79,6 @@ describe("Events api impl", function () {
     });
 
     it("should process finalized checkpoint event", async function () {
-      const api = new EventsApi({}, {config, chain: chainStub});
       const stream = api.getEventStream([BeaconEventType.FINALIZED_CHECKPOINT]);
       const checkpoint = generateState().finalizedCheckpoint;
       chainEventEmmitter.emit(ChainEvent.finalized, checkpoint, null as any);
@@ -94,7 +90,6 @@ describe("Events api impl", function () {
     });
 
     it("should process chain reorg event", async function () {
-      const api = new EventsApi({}, {config, chain: chainStub});
       const stream = api.getEventStream([BeaconEventType.CHAIN_REORG]);
       const oldHead = generateBlockSummary({slot: 4});
       const newHead = generateBlockSummary({slot: 3});

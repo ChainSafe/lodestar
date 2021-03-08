@@ -1,4 +1,3 @@
-import {config} from "@chainsafe/lodestar-config/minimal";
 import {expect} from "chai";
 import supertest from "supertest";
 import {produceAttestationData} from "../../../../../src/api/rest/controllers/validator/produceAttestationData";
