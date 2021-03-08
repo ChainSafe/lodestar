@@ -139,7 +139,7 @@ export class BeaconSync implements IBeaconSync {
   }
 
   private processChainSegment: ProcessChainSegment = async (blocks) => {
-    const trusted = true; // TODO: Verify signatures
+    const trusted = false; // Verify signatures
     await this.chain.processChainSegment(blocks, trusted);
   };
 
