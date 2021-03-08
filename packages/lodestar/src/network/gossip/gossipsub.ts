@@ -303,11 +303,11 @@ export class Eth2Gossipsub extends Gossipsub {
 
   private logSubscriptions = (): void => {
     if (this.metrics) {
-      // reset these mesh counter metrics, they get set each time
       // beacon attestation mesh gets counted separately so we can track mesh peers by subnet
-      this.metrics.gossipMeshPeersByType.reset();
-      this.metrics.gossipMeshPeersByBeaconAttestationSubnet.reset();
-      // zero out all subnet choices, so the dashboard will register them
+      // zero out all gossip type & subnet choices, so the dashboard will register them
+      for (const gossipType of Object.values(GossipType)) {
+        this.metrics.gossipMeshPeersByType.set({gossipType}, 0);
+      }
       for (let subnet = 0; subnet < ATTESTATION_SUBNET_COUNT; subnet++) {
         this.metrics.gossipMeshPeersByBeaconAttestationSubnet.set({subnet}, 0);
       }
