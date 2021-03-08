@@ -20,7 +20,6 @@ export const validatorOptions: ICliCommandOptions<IValidatorCliArgs> = {
   validatorsDbDir: {
     description: "Data directory for validator databases.",
     defaultDescription: defaultValidatorPaths.validatorsDbDir,
-    alias: ["dbDir", "db.dir", "db.name"],
     normalize: true,
     type: "string",
   },
