@@ -308,6 +308,32 @@ export function buildBalancesTree(balanceChunks: Vector<Uint8Array>, length: num
   return tree;
 }
 
+/**
+ * For testing purpose
+ */
+export function buildBalancesTreeBigUint64Array(balances: Vector<BigUint64Array>, length: number, limit: number): Tree {
+  const contents: Node[] = balances.readOnlyMap((balance) => new LeafNode(new Uint8Array(balance.buffer.slice(0))));
+  const tree = new Tree(subtreeFillToContents(contents, getDepth(limit)));
+  setTreeLength(tree, length);
+  return tree;
+}
+
+/**
+ * For testing purpose
+ */
+export function buildBalancesTreeGiantBigUint64Array(balances: BigUint64Array, limit: number): Tree {
+  const numChunk = Math.ceil(balances.length / 4);
+  const contents: Node[] = [];
+  for (let i = 0; i < numChunk; i++) {
+    // 1 chunk = 32 bytes
+    const buffer = balances.buffer.slice(i * 8, (i + 4) * 8);
+    contents.push(new LeafNode(new Uint8Array(buffer)));
+  }
+  const tree = new Tree(subtreeFillToContents(contents, getDepth(limit)));
+  setTreeLength(tree, balances.length);
+  return tree;
+}
+
 function getDepth(limit: number): number {
   const maxChunkCount = Math.ceil((limit * 8) / 32);
   return countToDepth(BigInt(maxChunkCount)) + 1;

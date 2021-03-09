@@ -3,7 +3,14 @@ import {Vector} from "@chainsafe/persistent-ts";
 import {BasicListType, List, ListType, TreeBacked} from "@chainsafe/ssz";
 import {expect} from "chai";
 import {decreaseBalance, increaseBalance, phase0, ZERO_HASH} from "../../../../src";
-import {BeaconState, buildBalancesTree, createCachedValidatorsBeaconState, Gwei} from "../../../../src/phase0";
+import {
+  BeaconState,
+  buildBalancesTree,
+  buildBalancesTreeBigUint64Array,
+  buildBalancesTreeGiantBigUint64Array,
+  createCachedValidatorsBeaconState,
+  Gwei,
+} from "../../../../src/phase0";
 import {generateState} from "../../../utils/state";
 
 const NUM_VALIDATORS = 100000;
@@ -210,26 +217,51 @@ describe("Cache balances", function () {
       config.types.phase0.Gwei.toBytes(balance, output, 0);
       return output;
     });
-    let chunk = new Uint8Array(32);
-    let chunks: Vector<Uint8Array> = Vector.empty<Uint8Array>();
-    const chunkArr: Uint8Array[] = [];
+    let uint8Chunk = new Uint8Array(32);
+    let uint64Chunk = new BigUint64Array(4);
+    let uint8Chunks: Vector<Uint8Array> = Vector.empty<Uint8Array>();
+    let uint64Chunks: Vector<BigUint64Array> = Vector.empty<BigUint64Array>();
+    const giantUint64Arr: BigUint64Array = new BigUint64Array(newBalances.length);
     for (let i = 0; i < newBalances.length; i++) {
       const balance = newBalances[i];
-      if (i % 4 === 0) chunk = new Uint8Array(32);
-      config.types.phase0.Gwei.toBytes(balance, chunk, (i % 4) * 8);
-      if (i % 4 === 3 || i === newBalances.length - 1) {
-        chunks = chunks.append(chunk);
-        chunkArr.push(chunk);
+      if (i % 4 === 0) {
+        uint8Chunk = new Uint8Array(32);
+        uint64Chunk = new BigUint64Array(4);
       }
+      config.types.phase0.Gwei.toBytes(balance, uint8Chunk, (i % 4) * 8);
+      uint64Chunk[i % 4] = balance;
+      if (i % 4 === 3 || i === newBalances.length - 1) {
+        uint8Chunks = uint8Chunks.append(uint8Chunk);
+        uint64Chunks = uint64Chunks.append(uint64Chunk);
+      }
+      giantUint64Arr[i] = balance;
     }
+
     start = Date.now();
     const balancesUint8ArrayTree = balancesBytes8Type.tree.createValue(newBalancesUint8Array);
-    console.log("@@@ build balancesUint8ArrayTree in", Date.now() - start);
+    console.log("@@@ build balancesUint8ArrayTree - Vector<Uint8Array> in", Date.now() - start);
     expect(balancesBigIntTree.hashTreeRoot()).to.be.deep.equal(balancesUint8ArrayTree.hashTreeRoot());
 
     start = Date.now();
-    const tree = buildBalancesTree(chunks, newBalances.length, config.params.VALIDATOR_REGISTRY_LIMIT);
+    const tree = buildBalancesTree(uint8Chunks, newBalances.length, config.params.VALIDATOR_REGISTRY_LIMIT);
     console.log("@@@ subTreeFillsToContent in", Date.now() - start);
     expect(tree.root).to.be.deep.equal(balancesUint8ArrayTree.hashTreeRoot());
+
+    start = Date.now();
+    const uint64Tree = buildBalancesTreeBigUint64Array(
+      uint64Chunks,
+      newBalances.length,
+      config.params.VALIDATOR_REGISTRY_LIMIT
+    );
+    console.log("@@@ subTreeFillsToContent - Vector<BigUint64Array> in", Date.now() - start);
+    expect(uint64Tree.root).to.be.deep.equal(balancesUint8ArrayTree.hashTreeRoot());
+
+    start = Date.now();
+    const giantUint64Tree = buildBalancesTreeGiantBigUint64Array(
+      giantUint64Arr,
+      config.params.VALIDATOR_REGISTRY_LIMIT
+    );
+    console.log("@@@ subTreeFillsToContent - Giant BigUint64Array in", Date.now() - start);
+    expect(giantUint64Tree.root).to.be.deep.equal(balancesUint8ArrayTree.hashTreeRoot());
   });
 });
