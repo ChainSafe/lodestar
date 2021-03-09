@@ -15,7 +15,7 @@ export function processBlock(
   block: lightclient.BeaconBlock,
   verifySignatures = true
 ): void {
-  phase0.processBlockHeader(config, state, block, config.types.lightclient.BeaconBlockBody);
+  phase0.processBlockHeader(config, state, block);
   phase0.processRandao(config, state, block.body);
   phase0.processEth1Data(config, state, block.body);
   processOperations(config, state, block.body, verifySignatures);

@@ -1,6 +1,6 @@
 import {aggregatePublicKeys, verifyAggregate} from "@chainsafe/bls";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {Epoch, lightclient, ValidatorIndex} from "@chainsafe/lodestar-types";
+import { Epoch, lightclient, ValidatorIndex, allForks } from '@chainsafe/lodestar-types';
 import {assert, intDiv, intToBytes} from "@chainsafe/lodestar-utils";
 import {hash} from "@chainsafe/ssz";
 
@@ -76,7 +76,7 @@ export function processSyncCommittee(
  */
 export function getSyncCommitteeIndices(
   config: IBeaconConfig,
-  state: lightclient.BeaconState | phase0.BeaconState,
+  state: allForks.BeaconState,
   epoch: Epoch
 ): ValidatorIndex[] {
   const baseEpoch =
@@ -106,7 +106,7 @@ export function getSyncCommitteeIndices(
  */
 export function getSyncCommittee(
   config: IBeaconConfig,
-  state: lightclient.BeaconState | phase0.BeaconState,
+  state: allForks.BeaconState,
   epoch: Epoch
 ): lightclient.SyncCommittee {
   const indices = getSyncCommitteeIndices(config, state, epoch);

@@ -1,12 +1,15 @@
 import {join} from "path";
 import {expect} from "chai";
-import {config} from "@chainsafe/lodestar-config/minimal";
+import {params} from "@chainsafe/lodestar-params/minimal"
 import {lightclient} from "@chainsafe/lodestar-beacon-state-transition";
 import {lightclient as lightclientTypes} from "@chainsafe/lodestar-types";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util/lib/single";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {IBeaconConfig, createIBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBlockSanityTestCase} from "./types";
 import {SPEC_TEST_LOCATION} from "../../../../utils/specTestCases";
+
+// eslint-disable-next-line @typescript-eslint/naming-convention
+const config = createIBeaconConfig({...params, LIGHTCLIENT_PATCH_FORK_SLOT: 0});
 
 describeDirectorySpecTest<IBlockSanityTestCase, lightclientTypes.BeaconState>(
   "lightclient block sanity minimal",

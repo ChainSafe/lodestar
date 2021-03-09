@@ -2,7 +2,7 @@
  * @module chain/stateTransition/util
  */
 
-import {Epoch, Slot, Root, phase0, lightclient} from "@chainsafe/lodestar-types";
+import {Epoch, Slot, Root, phase0, lightclient, allForks} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {assert} from "@chainsafe/lodestar-utils";
 
@@ -35,19 +35,17 @@ export function getBlockRoot(config: IBeaconConfig, state: BeaconState, epoch: E
  */
 export function getTemporaryBlockHeader(
   config: IBeaconConfig,
-  block: phase0.BeaconBlock | lightclient.BeaconBlock,
-  type: ContainerType<phase0.BeaconBlockBody> | ContainerType<lightclient.BeaconBlockBody> | null = null
+  block: phase0.BeaconBlock | lightclient.BeaconBlock
 ): phase0.BeaconBlockHeader {
-  if (!type) {
-    type = config.types.phase0.BeaconBlockBody;
-  }
   return {
     slot: block.slot,
     proposerIndex: block.proposerIndex,
     parentRoot: block.parentRoot,
     // `state_root` is zeroed and overwritten in the next `process_slot` call
     stateRoot: ZERO_HASH,
-    bodyRoot: type.hashTreeRoot(block.body as lightclient.BeaconBlockBody),
+    bodyRoot: (config.getTypes(block.slot).BeaconBlockBody as ContainerType<allForks.BeaconBlockBody>).hashTreeRoot(
+      block.body
+    ),
   };
 }
 
