@@ -1,15 +1,10 @@
-import {GossipEvent} from "../../network/gossip/constants";
+import {phase0, Version} from "@chainsafe/lodestar-types";
+import {IBeaconConfig, IForkName} from "@chainsafe/lodestar-config";
+
 import {INetwork} from "../../network";
-import {phase0, ForkDigest} from "@chainsafe/lodestar-types";
 import {ChainEvent, IBeaconChain} from "../../chain";
 import {IBeaconDb} from "../../db";
-import {toHexString} from "@chainsafe/ssz";
-import {ILogger} from "@chainsafe/lodestar-utils";
-
-export interface IGossipHandler {
-  start(): void;
-  stop(): void;
-}
+import {GossipHandlerFn, GossipTopic, GossipType} from "../../network/gossip";
 
 enum GossipHandlerStatus {
   Started = "Started",
@@ -18,89 +13,139 @@ enum GossipHandlerStatus {
 
 type GossipHandlerState =
   | {status: GossipHandlerStatus.Stopped}
-  | {status: GossipHandlerStatus.Started; forkDigest: ForkDigest};
+  | {status: GossipHandlerStatus.Started; fork: IForkName};
 
-export class BeaconGossipHandler implements IGossipHandler {
+export class BeaconGossipHandler {
+  private readonly config: IBeaconConfig;
   private readonly chain: IBeaconChain;
   private readonly network: INetwork;
   private readonly db: IBeaconDb;
-  private readonly logger: ILogger;
   private state: GossipHandlerState = {status: GossipHandlerStatus.Stopped};
 
-  constructor(chain: IBeaconChain, network: INetwork, db: IBeaconDb, logger: ILogger) {
+  constructor(config: IBeaconConfig, chain: IBeaconChain, network: INetwork, db: IBeaconDb) {
+    this.config = config;
     this.chain = chain;
     this.network = network;
     this.db = db;
-    this.logger = logger;
+
+    this.addGossipHandlers();
   }
 
+  close(): void {
+    this.removeGossipHandlers();
+    if (this.state.status === GossipHandlerStatus.Started) {
+      this.stop();
+    }
+  }
+
+  /**
+   * Subscribe to all gossip events
+   */
   public start(): void {
     if (this.state.status === GossipHandlerStatus.Started) {
       return;
     }
 
-    const forkDigest = this.chain.getForkDigest();
-    this.subscribe(forkDigest);
-    this.state = {status: GossipHandlerStatus.Started, forkDigest};
+    const fork = this.chain.getForkName();
+    this.subscribeAtFork(fork);
+    this.state = {status: GossipHandlerStatus.Started, fork};
     this.chain.emitter.on(ChainEvent.forkVersion, this.handleForkVersion);
   }
 
+  /**
+   * Unsubscribe from all gossip events
+   */
   public stop(): void {
     if (this.state.status !== GossipHandlerStatus.Started) {
       return;
     }
 
     this.chain.emitter.off(ChainEvent.forkVersion, this.handleForkVersion);
-    this.unsubscribe(this.state.forkDigest);
+    this.unsubscribeAtFork(this.state.fork);
     this.state = {status: GossipHandlerStatus.Stopped};
   }
 
-  private handleForkVersion = (): void => {
+  public onBlock = (block: phase0.SignedBeaconBlock): void => {
+    this.chain.receiveBlock(block);
+  };
+
+  public onAggregatedAttestation = async (aggregate: phase0.SignedAggregateAndProof): Promise<void> => {
+    await this.db.aggregateAndProof.add(aggregate.message);
+  };
+
+  public onAttesterSlashing = async (attesterSlashing: phase0.AttesterSlashing): Promise<void> => {
+    await this.db.attesterSlashing.add(attesterSlashing);
+  };
+
+  public onProposerSlashing = async (proposerSlashing: phase0.ProposerSlashing): Promise<void> => {
+    await this.db.proposerSlashing.add(proposerSlashing);
+  };
+
+  public onVoluntaryExit = async (exit: phase0.SignedVoluntaryExit): Promise<void> => {
+    await this.db.voluntaryExit.add(exit);
+  };
+
+  private subscribeAtFork = (fork: IForkName): void => {
+    this.network.gossip.subscribeTopic({type: GossipType.beacon_block, fork});
+    this.network.gossip.subscribeTopic({type: GossipType.beacon_aggregate_and_proof, fork});
+    this.network.gossip.subscribeTopic({type: GossipType.voluntary_exit, fork});
+    this.network.gossip.subscribeTopic({type: GossipType.proposer_slashing, fork});
+    this.network.gossip.subscribeTopic({type: GossipType.attester_slashing, fork});
+  };
+
+  private unsubscribeAtFork = (fork: IForkName): void => {
+    this.network.gossip.unsubscribeTopic({type: GossipType.beacon_block, fork});
+    this.network.gossip.unsubscribeTopic({type: GossipType.beacon_aggregate_and_proof, fork});
+    this.network.gossip.unsubscribeTopic({type: GossipType.voluntary_exit, fork});
+    this.network.gossip.unsubscribeTopic({type: GossipType.proposer_slashing, fork});
+    this.network.gossip.unsubscribeTopic({type: GossipType.attester_slashing, fork});
+  };
+
+  private handleForkVersion = (_forkVersion: Version, fork: IForkName): void => {
     if (this.state.status !== GossipHandlerStatus.Started) {
       return;
     }
 
-    const prevForkDigest = this.state.forkDigest;
-    const nextForkDigest = this.chain.getForkDigest();
-    this.logger.verbose(`Gossip handler: received new fork digest ${toHexString(nextForkDigest)}`);
-    this.unsubscribe(prevForkDigest);
-    this.subscribe(nextForkDigest);
-    this.state = {status: GossipHandlerStatus.Started, forkDigest: nextForkDigest};
+    this.unsubscribeAtFork(this.state.fork);
+    this.subscribeAtFork(fork);
+    this.state = {status: GossipHandlerStatus.Started, fork};
   };
 
-  private subscribe = (forkDigest: ForkDigest): void => {
-    this.network.gossip.subscribeToBlock(forkDigest, this.onBlock);
-    this.network.gossip.subscribeToAggregateAndProof(forkDigest, this.onAggregatedAttestation);
-    this.network.gossip.subscribeToAttesterSlashing(forkDigest, this.onAttesterSlashing);
-    this.network.gossip.subscribeToProposerSlashing(forkDigest, this.onProposerSlashing);
-    this.network.gossip.subscribeToVoluntaryExit(forkDigest, this.onVoluntaryExit);
-  };
+  private addGossipHandlers(): void {
+    // phase 0
+    const topicHandlers = [
+      {type: GossipType.beacon_block, handler: this.onBlock},
+      {
+        type: GossipType.beacon_aggregate_and_proof,
+        handler: this.onAggregatedAttestation,
+      },
+      {type: GossipType.voluntary_exit, handler: this.onVoluntaryExit},
+      {type: GossipType.proposer_slashing, handler: this.onProposerSlashing},
+      {type: GossipType.attester_slashing, handler: this.onAttesterSlashing},
+    ];
+    for (const {type, handler} of topicHandlers) {
+      const topic = {type, fork: "phase0"};
+      this.network.gossip.handleTopic(topic as GossipTopic, handler as GossipHandlerFn);
+    }
+    // TODO lightclient
+  }
 
-  private unsubscribe = (forkDigest: ForkDigest): void => {
-    this.network.gossip.unsubscribe(forkDigest, GossipEvent.BLOCK, this.onBlock);
-    this.network.gossip.unsubscribe(forkDigest, GossipEvent.AGGREGATE_AND_PROOF, this.onAggregatedAttestation);
-    this.network.gossip.unsubscribe(forkDigest, GossipEvent.ATTESTER_SLASHING, this.onAttesterSlashing);
-    this.network.gossip.unsubscribe(forkDigest, GossipEvent.PROPOSER_SLASHING, this.onProposerSlashing);
-    this.network.gossip.unsubscribe(forkDigest, GossipEvent.VOLUNTARY_EXIT, this.onVoluntaryExit);
-  };
-
-  private onBlock = (block: phase0.SignedBeaconBlock): void => {
-    this.chain.receiveBlock(block);
-  };
-
-  private onAggregatedAttestation = async (aggregate: phase0.SignedAggregateAndProof): Promise<void> => {
-    await this.db.aggregateAndProof.add(aggregate.message);
-  };
-
-  private onAttesterSlashing = async (attesterSlashing: phase0.AttesterSlashing): Promise<void> => {
-    await this.db.attesterSlashing.add(attesterSlashing);
-  };
-
-  private onProposerSlashing = async (proposerSlashing: phase0.ProposerSlashing): Promise<void> => {
-    await this.db.proposerSlashing.add(proposerSlashing);
-  };
-
-  private onVoluntaryExit = async (exit: phase0.SignedVoluntaryExit): Promise<void> => {
-    await this.db.voluntaryExit.add(exit);
-  };
+  private removeGossipHandlers(): void {
+    // phase 0
+    const topicHandlers = [
+      {type: GossipType.beacon_block, handler: this.onBlock},
+      {
+        type: GossipType.beacon_aggregate_and_proof,
+        handler: this.onAggregatedAttestation,
+      },
+      {type: GossipType.voluntary_exit, handler: this.onVoluntaryExit},
+      {type: GossipType.proposer_slashing, handler: this.onProposerSlashing},
+      {type: GossipType.attester_slashing, handler: this.onAttesterSlashing},
+    ];
+    for (const {type, handler} of topicHandlers) {
+      const topic = {type, fork: "phase0"};
+      this.network.gossip.unhandleTopic(topic as GossipTopic, handler as GossipHandlerFn);
+    }
+    // TODO lightclient
+  }
 }

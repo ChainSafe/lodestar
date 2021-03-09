@@ -51,9 +51,7 @@ lodestar account validator create --name primary --passphraseFile primary.pass
 This command will:
 
 - Derive a new BLS keypair from the wallet `primary`.
-- Create a new directory in `.lodestar/keystores` containing:
-      - An encrypted Keystore with the validator voting keypair.
-      - An eth1_deposit_data.rlp file with the precomputed Eth1 deposit transaction data ready to be submitted to the deposit contract.
+- Create a new directory in `.lodestar/keystores` containing: - An encrypted Keystore with the validator voting keypair. - An eth1_deposit_data.rlp file with the precomputed Eth1 deposit transaction data ready to be submitted to the deposit contract.
 - Store the validator voting Keystore password in `.lodestar/secrets`.
 - Print the validator public key to the terminal
 
@@ -79,7 +77,6 @@ To confirm your keys have been imported run:
 ```
 
 This command will print the public address of every active keystore.
-
 
 ### Submit a validator deposit
 

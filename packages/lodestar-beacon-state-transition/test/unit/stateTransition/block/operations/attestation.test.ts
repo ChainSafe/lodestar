@@ -47,7 +47,7 @@ describe("process block - attestation", function () {
     expect(() => phase0.processAttestation(config, state, attestation)).to.throw;
   });
 
-  it("should process attestation - currentEpoch === data.targetEpoch", function () {
+  it.skip("should process attestation - currentEpoch === data.targetEpoch", function () {
     const state = generateState({
       slot: config.params.MIN_ATTESTATION_INCLUSION_DELAY + 1,
       currentJustifiedCheckpoint: {epoch: 1, root: ZERO_HASH},
@@ -67,7 +67,7 @@ describe("process block - attestation", function () {
     expect(state.previousEpochAttestations.length).to.be.equal(0);
   });
 
-  it("should process attestation - previousEpoch === data.targetEpoch", function () {
+  it.skip("should process attestation - previousEpoch === data.targetEpoch", function () {
     const state = generateState({
       slot: config.params.MIN_ATTESTATION_INCLUSION_DELAY + 1,
       currentJustifiedCheckpoint: {epoch: 1, root: ZERO_HASH},

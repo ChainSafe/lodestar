@@ -20,7 +20,7 @@ import {uniqueVectorArr} from "../slashingProtection/utils";
 export {InvalidAttestationError, InvalidAttestationErrorCode} from "./attestation";
 export {InvalidBlockError, InvalidBlockErrorCode} from "./block";
 export {InterchangeError, InterchangeErrorErrorCode} from "./interchange";
-export {ISlashingProtection};
+export {ISlashingProtection, InterchangeFormatVersion};
 
 /**
  * Handles slashing protection for validator proposer and attester duties as well as slashing protection

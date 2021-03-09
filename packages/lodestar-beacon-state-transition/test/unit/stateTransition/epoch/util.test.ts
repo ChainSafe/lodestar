@@ -87,7 +87,7 @@ describe("process epoch - crosslinks", function () {
     expect(result).to.be.deep.equal(previousPendingAttestations);
   });
 
-  it("should get matching target attestation", function () {
+  it.skip("should get matching target attestation", function () {
     const blockRoot = Buffer.alloc(36, 2);
     const currentPendingAttestations = [
       {
@@ -113,7 +113,7 @@ describe("process epoch - crosslinks", function () {
     expect(result).to.be.deep.equal([currentPendingAttestations[0]]);
   });
 
-  it("should get matching head attestation", function () {
+  it.skip("should get matching head attestation", function () {
     const blockRoot = Buffer.alloc(32, 2);
     const currentPendingAttestations = [
       {
@@ -140,7 +140,7 @@ describe("process epoch - crosslinks", function () {
     expect(result).to.be.deep.equal([currentPendingAttestations[0]]);
   });
 
-  it("should get unslashed attesting indices", function () {
+  it.skip("should get unslashed attesting indices", function () {
     const pendingAttestations = [
       {
         ...generateEmptyAttestation(),
@@ -163,7 +163,7 @@ describe("process epoch - crosslinks", function () {
     expect(getAttestingIndicesStub.calledTwice).to.be.true;
   });
 
-  it("should get attesting balance", function () {
+  it.skip("should get attesting balance", function () {
     const pendingAttestations = [
       {
         ...generateEmptyAttestation(),

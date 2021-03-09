@@ -10,6 +10,7 @@ export * from "./notNullish";
 export * from "./sleep";
 export * from "./sort";
 export * from "./timeout";
+export * from "./types";
 export * from "./verifyMerkleBranch";
 export * from "./json";
 export * from "./interop";

@@ -3,15 +3,11 @@ import path from "path";
 import {promisify} from "util";
 import rimraf from "rimraf";
 import {join} from "path";
-import {BeaconNode} from "@chainsafe/lodestar/lib/node";
-import {createNodeJsLibp2p} from "@chainsafe/lodestar/lib/network/nodejs";
+import {BeaconNode, BeaconDb, initStateFromAnchorState, createNodeJsLibp2p, nodeUtils} from "@chainsafe/lodestar";
 import {WinstonLogger} from "@chainsafe/lodestar-utils";
-import {getInteropValidator} from "../validator/utils/interop/validator";
-import {Validator} from "@chainsafe/lodestar-validator/lib";
-import {initDevState, storeSSZState} from "@chainsafe/lodestar/lib/node/utils/state";
-import {BeaconDb} from "@chainsafe/lodestar/lib/db";
+import {Validator} from "@chainsafe/lodestar-validator";
 import {LevelDbController} from "@chainsafe/lodestar-db";
-import {initStateFromAnchorState} from "@chainsafe/lodestar/lib/chain";
+import {getInteropValidator} from "../validator/utils/interop/validator";
 import {getValidatorApiClient} from "./utils/validator";
 import {onGracefulShutdown} from "../../util/process";
 import {createEnr, createPeerId} from "../../config";
@@ -48,15 +44,15 @@ export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
 
   // BeaconNode setup
   const libp2p = await createNodeJsLibp2p(peerId, options.network);
-  const logger = new WinstonLogger();
+  const logger = new WinstonLogger({level: args.logLevel});
 
   const db = new BeaconDb({config, controller: new LevelDbController(options.db, {logger})});
   await db.start();
 
   let anchorState;
   if (args.genesisValidators) {
-    anchorState = await initDevState(config, db, args.genesisValidators);
-    storeSSZState(config, anchorState, join(args.rootDir, "dev", "genesis.ssz"));
+    anchorState = await nodeUtils.initDevState(config, db, args.genesisValidators);
+    nodeUtils.storeSSZState(config, anchorState, join(args.rootDir, "dev", "genesis.ssz"));
   } else if (args.genesisStateFile) {
     anchorState = await initStateFromAnchorState(
       config,

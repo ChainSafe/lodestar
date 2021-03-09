@@ -1,10 +1,11 @@
 import {ChainEvent, IBeaconChain} from "../../chain";
 import {IBeaconDb} from "../../db";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {phase0, CommitteeIndex, ForkDigest, Slot} from "@chainsafe/lodestar-types";
+import {IBeaconConfig, IForkName} from "@chainsafe/lodestar-config";
+import {phase0, CommitteeIndex, Slot, ATTESTATION_SUBNET_COUNT} from "@chainsafe/lodestar-types";
 import {INetwork} from "../../network";
 import {computeSubnetForSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {ILogger} from "@chainsafe/lodestar-utils";
+import {GossipHandlerFn, GossipType} from "../../network/gossip";
 
 export interface IAttestationCollectorModules {
   chain: IBeaconChain;
@@ -32,19 +33,31 @@ export class AttestationCollector {
 
   public start(): void {
     this.chain.emitter.on(ChainEvent.clockSlot, this.checkDuties);
+    for (let subnet = 0; subnet < ATTESTATION_SUBNET_COUNT; subnet++) {
+      this.network.gossip.handleTopic(
+        {type: GossipType.beacon_attestation, fork: "phase0", subnet},
+        this.handleCommitteeAttestation as GossipHandlerFn
+      );
+    }
   }
 
   public stop(): void {
     for (const timer of this.timers) clearTimeout(timer);
+    for (let subnet = 0; subnet < ATTESTATION_SUBNET_COUNT; subnet++) {
+      this.network.gossip.unhandleTopic(
+        {type: GossipType.beacon_attestation, fork: "phase0", subnet},
+        this.handleCommitteeAttestation as GossipHandlerFn
+      );
+    }
     this.chain.emitter.off(ChainEvent.clockSlot, this.checkDuties);
   }
 
   public subscribeToCommitteeAttestations(slot: Slot, committeeIndex: CommitteeIndex): void {
-    const forkDigest = this.chain.getForkDigest();
+    const fork = this.chain.getForkName();
     const headState = this.chain.getHeadState();
     const subnet = computeSubnetForSlot(this.config, headState, slot, committeeIndex);
     try {
-      this.network.gossip.subscribeToAttestationSubnet(forkDigest, subnet);
+      this.network.gossip.subscribeTopic({type: GossipType.beacon_attestation, fork, subnet});
       if (this.aggregationDuties.has(slot)) {
         this.aggregationDuties.get(slot)!.add(committeeIndex);
       } else {
@@ -57,30 +70,30 @@ export class AttestationCollector {
 
   private checkDuties = (slot: Slot): void => {
     const committees = this.aggregationDuties.get(slot) || new Set();
-    const forkDigest = this.chain.getForkDigest();
+    const fork = this.chain.getForkName();
     const headState = this.chain.getHeadState();
     this.timers = [];
     for (const committeeIndex of committees) {
       const subnet = computeSubnetForSlot(this.config, headState, slot, committeeIndex);
-      this.network.gossip.subscribeToAttestationSubnet(forkDigest, subnet, this.handleCommitteeAttestation);
+      this.network.gossip.subscribeTopic({type: GossipType.beacon_attestation, fork, subnet});
       this.timers.push(
         setTimeout(() => {
-          this.unsubscribeSubnet(subnet, forkDigest);
+          this.unsubscribeSubnet(subnet, fork);
         }, this.config.params.SECONDS_PER_SLOT * 1000)
       );
     }
     this.aggregationDuties.delete(slot);
   };
 
-  private unsubscribeSubnet = (subnet: number, forkDigest: ForkDigest): void => {
+  private unsubscribeSubnet = (subnet: number, fork: IForkName): void => {
     try {
-      this.network.gossip.unsubscribeFromAttestationSubnet(forkDigest, subnet, this.handleCommitteeAttestation);
+      this.network.gossip.unsubscribeTopic({type: GossipType.beacon_attestation, fork, subnet});
     } catch (e) {
       this.logger.error("Unable to unsubscribe to attestation subnet", {subnet});
     }
   };
 
-  private handleCommitteeAttestation = async ({attestation}: {attestation: phase0.Attestation}): Promise<void> => {
+  private handleCommitteeAttestation = async (attestation: phase0.Attestation): Promise<void> => {
     await this.db.attestation.add(attestation);
   };
 }

@@ -120,7 +120,7 @@ describe("eth1 / jsonRpcHttpClient", function () {
         if (!url) url = `http://localhost:${port}`;
 
         const server = http.createServer(requestListener);
-        await new Promise((resolve) => server.listen(port, resolve));
+        await new Promise<void>((resolve) => server.listen(port, resolve));
         afterHooks.push(
           () =>
             new Promise((resolve, reject) =>

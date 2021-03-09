@@ -153,13 +153,13 @@ export function getAttestationDeltas(config: IBeaconConfig, state: phase0.Beacon
   const inactivityPenalties = getInactivityPenaltyDeltas(config, state);
   const rewards = [sourceRewards, targetRewards, headRewards, inclusionDelayRewards].reduce(
     (previousValue, currentValue) => {
-      previousValue.forEach((_, index) => (previousValue[index] += currentValue[index]));
+      for (const index of previousValue.keys()) previousValue[index] += currentValue[index];
       return previousValue;
     }
   );
   const penalties = [sourcePenalties, targetPenalties, headPenalties, inactivityPenalties].reduce(
     (previousValue, currentValue) => {
-      previousValue.forEach((_, index) => (previousValue[index] += currentValue[index]));
+      for (const index of previousValue.keys()) previousValue[index] += currentValue[index];
       return previousValue;
     }
   );

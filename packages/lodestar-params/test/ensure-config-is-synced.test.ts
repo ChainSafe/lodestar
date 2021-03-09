@@ -36,20 +36,20 @@ describe("Ensure config is synced", function () {
   it("mainnet", async function () {
     const remoteParams = await downloadRemoteConfig("mainnet", mainnet.commit);
     const localParams = {...mainnet.params};
-    blacklist.forEach((param) => {
+    for (const param of blacklist) {
       delete remoteParams[param];
       delete (localParams as Record<string, unknown>)[param];
-    });
+    }
     expect(localParams).to.deep.equal(remoteParams);
   });
 
   it("minimal", async function () {
     const remoteParams = await downloadRemoteConfig("minimal", minimal.commit);
     const localParams = {...minimal.params};
-    blacklist.forEach((param) => {
+    for (const param of blacklist) {
       delete remoteParams[param];
       delete (localParams as Record<string, unknown>)[param];
-    });
+    }
     expect(localParams).to.deep.equal(remoteParams);
   });
 });

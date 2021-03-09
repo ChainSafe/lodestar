@@ -2,7 +2,7 @@ import {join} from "path";
 import {expect} from "chai";
 
 import {config} from "@chainsafe/lodestar-config/mainnet";
-import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util/lib/single";
+import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
 import {IStateTestCase} from "../../../utils/specTestTypes/stateTestCase";
 import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {SPEC_TEST_LOCATION} from "../../../utils/specTestCases";

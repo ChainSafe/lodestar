@@ -92,7 +92,7 @@ describe("process block - voluntary exits", function () {
     }
   });
 
-  it("should process exit", function () {
+  it.skip("should process exit", function () {
     const validator = generateValidator({activation: 1, exit: FAR_FUTURE_EPOCH});
     const state = generateState({slot: (config.params.SHARD_COMMITTEE_PERIOD + 1) * config.params.SLOTS_PER_EPOCH});
     const exit = generateEmptySignedVoluntaryExit();

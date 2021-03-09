@@ -1,8 +1,8 @@
+import {defaultLogLevel, LogLevel, LogLevels} from "@chainsafe/lodestar-utils";
 import {ICliCommandOptions} from "../../util";
 import {defaultValidatorPaths} from "./paths";
 import {accountValidatorOptions, IAccountValidatorArgs} from "../account/cmds/validator/options";
 import {beaconOptions} from "../beacon/options";
-import {LogLevels} from "@chainsafe/lodestar-utils";
 
 export type IValidatorCliArgs = IAccountValidatorArgs & {
   validatorsDbDir?: string;
@@ -10,7 +10,7 @@ export type IValidatorCliArgs = IAccountValidatorArgs & {
   force: boolean;
   graffiti: string;
   logFile: string;
-  logLevel: string;
+  logLevel: LogLevel;
 };
 
 export const validatorOptions: ICliCommandOptions<IValidatorCliArgs> = {
@@ -20,7 +20,6 @@ export const validatorOptions: ICliCommandOptions<IValidatorCliArgs> = {
   validatorsDbDir: {
     description: "Data directory for validator databases.",
     defaultDescription: defaultValidatorPaths.validatorsDbDir,
-    alias: ["dbDir", "db.dir", "db.name"],
     normalize: true,
     type: "string",
   },
@@ -43,8 +42,9 @@ export const validatorOptions: ICliCommandOptions<IValidatorCliArgs> = {
   },
 
   logLevel: {
-    description: "Set the log level for the winston logger.",
     choices: LogLevels,
+    description: "Logging verbosity level",
+    defaultDescription: defaultLogLevel,
     type: "string",
   },
 };

@@ -5,10 +5,11 @@
 import {
   computeEpochAtSlot,
   computeForkDigest,
+  computeForkNameFromForkDigest,
   computeStartSlotAtEpoch,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {IBeaconConfig, IForkName} from "@chainsafe/lodestar-config";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {ForkDigest, Number64, Root, Slot} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
@@ -18,7 +19,6 @@ import {FAR_FUTURE_EPOCH, GENESIS_EPOCH, ZERO_HASH} from "../constants";
 import {IBeaconDb} from "../db";
 import {CheckpointStateCache, StateContextCache} from "./stateCache";
 import {IBeaconMetrics} from "../metrics";
-import {notNullish} from "@chainsafe/lodestar-utils";
 import {AttestationPool, AttestationProcessor} from "./attestation";
 import {BlockPool, BlockProcessor} from "./blocks";
 import {IBeaconClock, LocalClock} from "./clock";
@@ -218,7 +218,7 @@ export class BeaconChain implements IBeaconChain {
     }
 
     const unfinalizedBlocks = await Promise.all(slots.map((slot) => blockRootsPerSlot.get(slot)));
-    return unfinalizedBlocks.filter(notNullish);
+    return unfinalizedBlocks.filter((block): block is phase0.SignedBeaconBlock => block != null);
   }
 
   public getFinalizedCheckpoint(): phase0.Checkpoint {
@@ -256,6 +256,11 @@ export class BeaconChain implements IBeaconChain {
   public getForkDigest(): ForkDigest {
     const {state} = this.getHeadStateContext();
     return computeForkDigest(this.config, state.fork.currentVersion, state.genesisValidatorsRoot);
+  }
+
+  public getForkName(): IForkName {
+    const {state} = this.getHeadStateContext();
+    return computeForkNameFromForkDigest(this.config, state.genesisValidatorsRoot, this.getForkDigest());
   }
 
   public getENRForkID(): phase0.ENRForkID {

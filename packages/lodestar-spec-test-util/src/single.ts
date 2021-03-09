@@ -37,7 +37,7 @@ export interface ISpecTestOptions<TestCase, Result> {
 
   shouldSkip?: (testCase: TestCase, name: string, index: number) => boolean;
 
-  expectFunc?: (testCase: TestCase, expected, actual) => void;
+  expectFunc?: (testCase: TestCase, expected: any, actual: any) => void;
 
   timeout?: number;
 }
@@ -76,9 +76,9 @@ export function describeDirectorySpecTest<TestCase, Result>(
       .map((name) => join(testCaseDirectoryPath, name))
       .filter(isDirectory);
 
-    testCases.forEach((testCaseDirectory, index) => {
+    for (const [index, testCaseDirectory] of testCases.entries()) {
       generateTestCase(testCaseDirectory, index, testFunction, options);
-    });
+    }
   });
 }
 
@@ -121,7 +121,7 @@ function generateTestCase<TestCase, Result>(
 }
 
 function loadInputFiles<TestCase, Result>(directory: string, options: ISpecTestOptions<TestCase, Result>): TestCase {
-  const testCase = {};
+  const testCase: any = {};
   readdirSync(directory)
     .map((name) => join(directory, name))
     .filter((file) => {
@@ -129,7 +129,8 @@ function loadInputFiles<TestCase, Result>(directory: string, options: ISpecTestO
         return false;
       }
       if (!options.inputTypes) throw Error("inputTypes is not defined");
-      const extension = options.inputTypes[parse(file).name] || InputType.SSZ;
+      const name = parse(file).name as keyof NonNullable<TestCase>;
+      const extension = (options.inputTypes[name] || InputType.SSZ) as string;
       return file.endsWith(extension);
     })
     .forEach((file) => {
@@ -147,19 +148,19 @@ function loadInputFiles<TestCase, Result>(directory: string, options: ISpecTestO
 }
 
 function deserializeTestCase<TestCase, Result>(
-  file,
-  inputName,
+  file: string,
+  inputName: string,
   options: ISpecTestOptions<TestCase, Result>
 ): Record<string, unknown> {
   if (file.endsWith(InputType.SSZ)) {
     if (!options.sszTypes) throw Error("sszTypes is not defined");
-    return options.sszTypes[inputName].deserialize(readFileSync(file));
+    return options.sszTypes[inputName as keyof NonNullable<TestCase>]?.deserialize(readFileSync(file));
   } else {
     return loadYamlFile(file);
   }
 }
 
-function generateProfileReport(profile, directory, profileId: string): void {
+function generateProfileReport(profile: profiler.CpuProfile, directory: string, profileId: string): void {
   profile.export((error, result) => {
     if (error) {
       return;

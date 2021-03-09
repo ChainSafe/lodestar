@@ -57,13 +57,13 @@ export function processSyncCommittee(
 
   let participantRewards = BigInt(0);
   const activeValidatorCount = BigInt(getActiveValidatorIndices(state, currentEpoch).length);
-  participantIndices.forEach((participantIndex) => {
+  for (const participantIndex of participantIndices) {
     const baseReward = phase0.getBaseReward(config, state, participantIndex);
     const reward =
       (baseReward * activeValidatorCount) / BigInt(committeeIndices.length) / BigInt(config.params.SLOTS_PER_EPOCH);
     increaseBalance(state, participantIndex, reward);
     participantRewards += reward;
-  });
+  }
   increaseBalance(
     state,
     getBeaconProposerIndex(config, state),

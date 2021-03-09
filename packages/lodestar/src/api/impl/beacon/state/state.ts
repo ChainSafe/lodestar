@@ -2,7 +2,6 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {Root, phase0} from "@chainsafe/lodestar-types";
 import {List, readOnlyMap} from "@chainsafe/ssz";
-import {notNullish} from "@chainsafe/lodestar-utils";
 import {IBeaconChain} from "../../../../chain/interface";
 import {IBeaconDb} from "../../../../db/api";
 import {IApiOptions} from "../../../options";
@@ -98,24 +97,21 @@ export class BeaconStateApi implements IBeaconStateApi {
     }
     if (indices) {
       const epochCtx = this.chain.getHeadEpochContext();
-      return indices
-        .map((id) => {
-          if (typeof id === "number") {
-            if (state.state.validators.length <= id) {
-              return null;
-            }
-            return {
-              index: id,
-              balance: state.state.balances[id],
-            };
-          } else {
-            const index = epochCtx.pubkey2index.get(id) ?? undefined;
-            return index && index <= state.state.validators.length
-              ? {index, balance: state.state.balances[index]}
-              : null;
+      const balances: phase0.ValidatorBalance[] = [];
+      for (const id of indices) {
+        if (typeof id === "number") {
+          if (state.state.validators.length <= id) {
+            continue;
           }
-        })
-        .filter(notNullish);
+          balances.push({index: id, balance: state.state.balances[id]});
+        } else {
+          const index = epochCtx.pubkey2index.get(id);
+          if (index != null && index <= state.state.validators.length) {
+            balances.push({index, balance: state.state.balances[index]});
+          }
+        }
+      }
+      return balances;
     }
     return readOnlyMap(state.state.validators, (v, index) => {
       return {

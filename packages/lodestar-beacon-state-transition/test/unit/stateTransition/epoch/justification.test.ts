@@ -7,7 +7,7 @@ import * as utils2 from "../../../../src/phase0/naive/epoch/util";
 import {generateState} from "../../../utils/state";
 import {processJustificationAndFinalization} from "../../../../src/phase0/naive/epoch/justification";
 
-describe("process epoch - justification and finalization", function () {
+describe.skip("process epoch - justification and finalization", function () {
   const sandbox = sinon.createSandbox();
 
   let getBlockRootStub: any,

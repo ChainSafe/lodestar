@@ -1,7 +1,7 @@
 import {join} from "path";
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import {unshuffleList} from "@chainsafe/lodestar-beacon-state-transition";
-import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util/lib/single";
+import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
 import {IShufflingTestCase} from "./type";
 import {SPEC_TEST_LOCATION} from "../../utils/specTestCases";
 

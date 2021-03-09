@@ -1,10 +1,7 @@
 {
-  "extends": "../../tsconfig",
+  "extends": "../../tsconfig.build.json",
   "include": ["src"],
   "compilerOptions": {
-    "typeRoots": ["../../node_modules/@types"],
-    "outDir": "lib",
-    /* Redirect output structure to the directory. */
-    "rootDir": "./src"
+    "outDir": "./lib"
   }
 }

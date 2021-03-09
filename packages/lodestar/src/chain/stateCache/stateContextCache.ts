@@ -10,18 +10,21 @@ const MAX_STATES = 96;
  * Similar API to Repository
  */
 export class StateContextCache {
+  /**
+   * Max number of states allowed in the cache
+   */
+  public maxStates: number;
+
   private cache: Record<string, ITreeStateContext>;
   /**
    * Epoch -> Set<blockRoot>
    */
   private epochIndex: Record<Epoch, Set<string>>;
 
-  private maxState: number;
-
-  constructor(maxState = MAX_STATES) {
+  constructor(maxStates = MAX_STATES) {
     this.cache = {};
     this.epochIndex = {};
-    this.maxState = maxState;
+    this.maxStates = maxStates;
   }
 
   public get(root: ByteVector): ITreeStateContext | null {
@@ -72,10 +75,10 @@ export class StateContextCache {
    */
   public prune(headStateRoot: ByteVector): void {
     const keys = Object.keys(this.cache);
-    if (keys.length > this.maxState) {
+    if (keys.length > this.maxStates) {
       const headStateRootHex = toHexString(headStateRoot);
       // object keys are stored in insertion order, delete keys starting from the front
-      for (const key of keys.slice(0, keys.length - this.maxState)) {
+      for (const key of keys.slice(0, keys.length - this.maxStates)) {
         if (key !== headStateRootHex) {
           const item = this.cache[key];
           this.epochIndex[item.epochCtx.currentShuffling.epoch].delete(key);

@@ -116,6 +116,6 @@ export class BeaconBlockApi implements IBeaconBlocksApi {
 
   public async publishBlock(signedBlock: phase0.SignedBeaconBlock): Promise<void> {
     await checkSyncStatus(this.config, this.sync);
-    await Promise.all([this.chain.receiveBlock(signedBlock), this.network.gossip.publishBlock(signedBlock)]);
+    await Promise.all([this.chain.receiveBlock(signedBlock), this.network.gossip.publishBeaconBlock(signedBlock)]);
   }
 }
