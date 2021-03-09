@@ -1,6 +1,6 @@
 import {aggregatePublicKeys, verifyAggregate} from "@chainsafe/bls";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import { Epoch, lightclient, ValidatorIndex, allForks } from '@chainsafe/lodestar-types';
+import {Epoch, lightclient, ValidatorIndex, allForks} from "@chainsafe/lodestar-types";
 import {assert, intDiv, intToBytes} from "@chainsafe/lodestar-utils";
 import {hash} from "@chainsafe/ssz";
 
