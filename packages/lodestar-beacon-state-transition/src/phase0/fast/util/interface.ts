@@ -119,6 +119,22 @@ export class CachedValidatorsBeaconState {
     return balanceBigIntType.fromBytes(this._balanceChunks.get(chunkIndex)!, offset);
   }
 
+  public getBalances(): bigint[] {
+    const result: bigint[] = [];
+    const length = this._state.balances.length;
+    let i = 0;
+    this._balanceChunks.readOnlyForEach((chunk) => {
+      const bigUintArr = new BigUint64Array(chunk.buffer.slice(0));
+      for (let j = 0; j < 4; j++) {
+        if (i < length) {
+          result.push(bigUintArr[j]);
+        }
+        i++;
+      }
+    });
+    return result;
+  }
+
   /**
    * Process epoch (rewards + penalties)
    * Rebuild the balances tree

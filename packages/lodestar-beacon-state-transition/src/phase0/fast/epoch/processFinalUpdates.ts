@@ -33,10 +33,11 @@ export function processFinalUpdates(
     state.eth1DataVotes = ([] as phase0.Eth1Data[]) as List<phase0.Eth1Data>;
   }
 
+  const balances = state.getBalances();
   // update effective balances with hysteresis
   for (let i = 0; i < process.statuses.length; i++) {
     const status = process.statuses[i];
-    const balance = state.getBalance(i);
+    const balance = balances[i];
     const effectiveBalance = status.validator.effectiveBalance;
     if (balance + DOWNWARD_THRESHOLD < effectiveBalance || effectiveBalance + UPWARD_THRESHOLD < balance) {
       state.updateValidator(i, {

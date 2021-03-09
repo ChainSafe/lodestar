@@ -111,19 +111,27 @@ describe("Cache balances", function () {
   });
 
   it("same balance", function () {
+    let balances = cachedState.getBalances();
     expect(cachedState.getBalance(0)).to.be.equal(state.balances[0]);
     expect(cachedState.getBalance(1)).to.be.equal(state.balances[1]);
+    expect(balances[0]).to.be.equal(state.balances[0]);
+    expect(balances[1]).to.be.equal(state.balances[1]);
     increaseBalance(state, 0, BigInt(10000));
     cachedState.increaseBalance(0, 10000);
     decreaseBalance(state, 1, BigInt(20000));
     cachedState.decreaseBalance(1, 20000);
+    balances = cachedState.getBalances();
     expect(cachedState.getBalance(0)).to.be.equal(state.balances[0]);
     expect(cachedState.getBalance(1)).to.be.equal(state.balances[1]);
+    expect(balances[0]).to.be.equal(state.balances[0]);
+    expect(balances[1]).to.be.equal(state.balances[1]);
     expect(state.balances[5]).to.be.undefined;
     state.balances.push(BigInt(2021));
     cachedState.addBalance(BigInt(2021));
     // last balance
+    balances = cachedState.getBalances();
     expect(cachedState.getBalance(5)).to.be.equal(state.balances[5]);
+    expect(balances[5]).to.be.equal(state.balances[5]);
     expect(config.types.phase0.BeaconState.equals(state, cachedState.getOriginalState())).to.be.true;
   });
 
