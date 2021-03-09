@@ -165,7 +165,7 @@ function generateProfileReport(profile: profiler.CpuProfile, directory: string, 
     if (error) {
       return;
     }
-    writeFile(`${directory}/${profileId}`, result, () => {
+    writeFile(`${directory}/${profileId}`, result as string, () => {
       profile.delete();
     });
   });
