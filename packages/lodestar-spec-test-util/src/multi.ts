@@ -52,7 +52,7 @@ export function describeMultiSpec<TestCase extends IBaseCase, Result>(
   getActual: (result: any) => Result,
   shouldError = (testCase: TestCase, index: number) => false,
   shouldSkip = (testCase: TestCase, index: number) => false,
-  expectFunc = (testCase, expect, expected, actual) => expect(actual).to.be.equal(expected),
+  expectFunc = (testCase: TestCase, expect: any, expected: any, actual: any) => expect(actual).to.be.equal(expected),
   timeout = 10 * 60 * 1000
 ): void {
   const testSpec = (loadYamlFile(testYamlPath) as unknown) as TestSpec<TestCase>;
