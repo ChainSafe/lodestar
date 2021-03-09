@@ -2,7 +2,7 @@ import {phase0} from "@chainsafe/lodestar-types";
 import {List} from "@chainsafe/ssz";
 import {IBlockSummary} from "@chainsafe/lodestar-fork-choice";
 import {isPlainObject} from "@chainsafe/lodestar-utils";
-import {RecursivePartial} from "@chainsafe/lodestar-cli/src/util";
+import {RecursivePartial} from "@chainsafe/lodestar-utils";
 
 import {EMPTY_SIGNATURE, ZERO_HASH} from "../../src/constants";
 import deepmerge from "deepmerge";

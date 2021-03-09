@@ -1,5 +1,6 @@
 import {IBeaconNodeOptions} from "@chainsafe/lodestar";
-import {RecursivePartial, removeUndefinedRecursive} from "../../util";
+import {RecursivePartial} from "@chainsafe/lodestar-utils";
+import {removeUndefinedRecursive} from "../../util";
 import * as api from "./api";
 import * as eth1 from "./eth1";
 import * as logger from "./logger";
