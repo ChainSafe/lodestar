@@ -1,6 +1,6 @@
 import {join} from "path";
 import {expect} from "chai";
-import {params} from "@chainsafe/lodestar-params/minimal"
+import {params} from "@chainsafe/lodestar-params/minimal";
 import {lightclient} from "@chainsafe/lodestar-beacon-state-transition";
 import {lightclient as lightclientTypes} from "@chainsafe/lodestar-types";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util/lib/single";
