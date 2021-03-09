@@ -2,11 +2,6 @@ import EventSource from "eventsource";
 import {URL} from "url";
 import {BeaconEvent, BeaconEventType} from "../../../../../src/api/impl/events";
 import {RestApi} from "../../../../../src/api/rest";
-import {StubbedApi} from "../../../../utils/stub/api";
-import sinon from "sinon";
-import {ApiNamespace} from "../../../../../src/api/impl";
-import {config} from "@chainsafe/lodestar-config/minimal";
-import {testLogger} from "../../../../utils/logger";
 import pushable from "it-pushable/index";
 import {generateAttestation} from "../../../../utils/attestation";
 import {expect} from "chai";
@@ -14,36 +9,14 @@ import {AddressInfo} from "net";
 import {LodestarEventIterator} from "@chainsafe/lodestar-utils";
 
 describe("rest - events - getEventStream", function () {
-  let restApi: RestApi, api: StubbedApi;
-
-  beforeEach(async function () {
-    api = new StubbedApi(sinon);
-    restApi = await RestApi.init(
-      {
-        api: [ApiNamespace.EVENTS],
-        cors: "*",
-        enabled: true,
-        host: "127.0.0.1",
-        port: 0,
-      },
-      {
-        config,
-        logger: testLogger(),
-        api,
-      }
-    );
-  });
-
-  afterEach(async function () {
-    await restApi.close();
-  });
-
   it("should subscribe to topics", async function () {
     const source = pushable<BeaconEvent>();
     // @ts-ignore
     source.stop = () => null;
-    api.events.getEventStream.returns((source as unknown) as LodestarEventIterator<BeaconEvent>);
-    const eventSource = new EventSource(getEventStreamUrl([BeaconEventType.BLOCK, BeaconEventType.ATTESTATION]));
+    this.test?.ctx?.api.events.getEventStream.returns((source as unknown) as LodestarEventIterator<BeaconEvent>);
+    const eventSource = new EventSource(
+      getEventStreamUrl([BeaconEventType.BLOCK, BeaconEventType.ATTESTATION], this.test?.ctx?.restApi)
+    );
     const blockEventPromise = new Promise((resolve) => {
       eventSource.addEventListener(BeaconEventType.BLOCK, resolve);
     });
@@ -68,7 +41,7 @@ describe("rest - events - getEventStream", function () {
     eventSource.close();
   });
 
-  function getEventStreamUrl(topics: BeaconEventType[]): string {
+  function getEventStreamUrl(topics: BeaconEventType[], restApi: RestApi): string {
     const addressInfo = restApi.server.server.address() as AddressInfo;
     return new URL(
       "/eth/v1/events?" + topics.map((t) => "topics=" + t).join("&"),

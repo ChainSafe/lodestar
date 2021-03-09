@@ -3,25 +3,25 @@ import {expect} from "chai";
 import supertest from "supertest";
 import {proposerDutiesController} from "../../../../../src/api/rest/controllers/validator";
 import {urlJoin} from "../utils";
-import {VALIDATOR_PREFIX, api, restApi} from "./index.test";
+import {VALIDATOR_PREFIX} from "../index.test";
 
 describe("rest - validator - proposerDuties", function () {
   it("should succeed", async function () {
-    api.validator.getProposerDuties.resolves([
+    this.test?.ctx?.api.validator.getProposerDuties.resolves([
       config.types.phase0.ProposerDuty.defaultValue(),
       config.types.phase0.ProposerDuty.defaultValue(),
     ]);
-    const response = await supertest(restApi.server.server)
+    const response = await supertest(this.test?.ctx?.restApi.server.server)
       .get(urlJoin(VALIDATOR_PREFIX, proposerDutiesController.url.replace(":epoch", "1")))
       .expect(200)
       .expect("Content-Type", "application/json; charset=utf-8");
     expect(response.body.data).to.be.instanceOf(Array);
     expect(response.body.data).to.have.length(2);
-    expect(api.validator.getProposerDuties.withArgs(1).calledOnce).to.be.true;
+    expect(this.test?.ctx?.api.validator.getProposerDuties.withArgs(1).calledOnce).to.be.true;
   });
 
   it("invalid epoch", async function () {
-    await supertest(restApi.server.server)
+    await supertest(this.test?.ctx?.restApi.server.server)
       .get(urlJoin(VALIDATOR_PREFIX, proposerDutiesController.url.replace(":epoch", "a")))
       .expect(400)
       .expect("Content-Type", "application/json; charset=utf-8");

@@ -49,14 +49,17 @@ describe("beacon api impl - states", function () {
       resolveStateIdStub.resolves(null);
       await expect(api.getStateCommittees("blem")).to.be.eventually.rejectedWith("State not found");
     });
+
+    const state = generateState();
+
     it("no filters", async function () {
-      resolveStateIdStub.resolves({state: generateState()});
+      resolveStateIdStub.resolves({state});
       getEpochBeaconCommitteesStub.returns([[[1, 4, 5]], [[2, 3, 6]]]);
       const committees = await api.getStateCommittees("blem");
       expect(committees).to.have.length(2);
     });
     it("slot and committee filter", async function () {
-      resolveStateIdStub.resolves({state: generateState()});
+      resolveStateIdStub.resolves({state});
       getEpochBeaconCommitteesStub.returns([
         [[1, 4, 5]],
         [

@@ -4,13 +4,13 @@ import {expect} from "chai";
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
 
-import {BeaconChain, ForkChoice, IBeaconChain} from "../../../../../../src/chain";
+import {ForkChoice, IBeaconChain} from "../../../../../../src/chain";
 import {LocalClock} from "../../../../../../src/chain/clock";
 import {FAR_FUTURE_EPOCH} from "../../../../../../src/constants";
 import {IValidatorApi, ValidatorApi} from "../../../../../../src/api/impl/validator";
 import {generateInitialMaxBalances} from "../../../../../utils/balances";
 import {generateState} from "../../../../../utils/state";
-import {BeaconSync, IBeaconSync} from "../../../../../../src/sync";
+import {IBeaconSync} from "../../../../../../src/sync";
 import {generateValidators} from "../../../../../utils/validator";
 
 describe("get proposers api impl", function () {
@@ -19,10 +19,10 @@ describe("get proposers api impl", function () {
   let api: IValidatorApi;
 
   beforeEach(function () {
-    chainStub = this.test?.ctx?.sandbox.createStubInstance(BeaconChain);
+    chainStub = this.test?.ctx?.chainStub;
+    syncStub = this.test?.ctx?.syncStub;
     chainStub.clock = this.test?.ctx?.sandbox.createStubInstance(LocalClock);
     chainStub.forkChoice = this.test?.ctx?.sandbox.createStubInstance(ForkChoice);
-    syncStub = this.test?.ctx?.sandbox.createStubInstance(BeaconSync);
     // @ts-ignore
     api = new ValidatorApi({}, {db: this.test?.ctx?.dbStub, chain: chainStub, sync: syncStub, config});
   });

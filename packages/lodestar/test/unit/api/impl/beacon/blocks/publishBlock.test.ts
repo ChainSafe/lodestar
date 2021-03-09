@@ -5,11 +5,13 @@ import {Gossip} from "../../../../../../src/network/gossip/gossip";
 import {IGossip} from "../../../../../../src/network/gossip/interface";
 import {BeaconBlockApi} from "../../../../../../src/api/impl/beacon/blocks";
 import {generateEmptySignedBlock} from "../../../../../utils/block";
+import {SignedBeaconBlock} from "@chainsafe/lodestar-types/lib/allForks";
 
 use(chaiAsPromised);
 
 describe("api - beacon - publishBlock", function () {
   let gossipStub: SinonStubbedInstance<IGossip>;
+  let block: SignedBeaconBlock;
 
   beforeEach(() => {
     gossipStub = sinon.createStubInstance(Gossip);
@@ -25,11 +27,11 @@ describe("api - beacon - publishBlock", function () {
         sync: this.ctx.syncStub,
       }
     );
+    block = generateEmptySignedBlock();
   });
 
   it("successful publish", async function () {
     this.test?.ctx?.syncStub.isSynced.returns(true);
-    const block = generateEmptySignedBlock();
     await expect(this.test?.ctx?.blockApi.publishBlock(block)).to.be.fulfilled;
     expect(this.test?.ctx?.chainStub.receiveBlock.calledOnceWith(block)).to.be.true;
     expect(gossipStub.publishBlock.calledOnceWith(block)).to.be.true;
@@ -41,7 +43,6 @@ describe("api - beacon - publishBlock", function () {
       syncDistance: BigInt(50),
       headSlot: BigInt(0),
     });
-    const block = generateEmptySignedBlock();
     await expect(this.test?.ctx?.blockApi.publishBlock(block)).to.be.rejected;
     expect(this.test?.ctx?.chainStub.receiveBlock.called).to.be.false;
     expect(gossipStub.publishBlock.called).to.be.false;

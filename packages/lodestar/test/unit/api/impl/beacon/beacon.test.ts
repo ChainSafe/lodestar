@@ -10,19 +10,19 @@ import {Network} from "../../../../../src/network/network";
 
 describe("beacon api implementation", function () {
   let api: BeaconApi;
-  let chainStub: SinonStubbedInstance<IBeaconChain>;
+  let chainStubz: SinonStubbedInstance<IBeaconChain>;
   let dbStub: StubbedBeaconDb;
   let syncStub: SinonStubbedInstance<IBeaconSync>;
 
   beforeEach(function () {
-    chainStub = sinon.createStubInstance(BeaconChain);
+    chainStubz = sinon.createStubInstance(BeaconChain);
     dbStub = new StubbedBeaconDb(sinon);
     syncStub = sinon.createStubInstance(BeaconSync);
     api = new BeaconApi(
       {},
       {
         config,
-        chain: chainStub,
+        chain: chainStubz,
         db: dbStub,
         network: sinon.createStubInstance(Network),
         sync: syncStub,
@@ -32,13 +32,13 @@ describe("beacon api implementation", function () {
 
   describe("getGenesis", function () {
     it("genesis has not yet occured", async function () {
-      chainStub.getHeadState.returns(undefined as any);
+      chainStubz.getHeadState.returns(undefined as any);
       const genesis = await api.getGenesis();
       expect(genesis).to.be.null;
     });
 
     it("success", async function () {
-      chainStub.getHeadState.returns(generateState());
+      chainStubz.getHeadState.returns(generateState());
       const genesis = await api.getGenesis();
       if (!genesis) throw Error("Genesis is nullish");
       expect(genesis.genesisForkVersion).to.not.be.undefined;

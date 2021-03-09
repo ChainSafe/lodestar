@@ -1,10 +1,10 @@
 import {config} from "@chainsafe/lodestar-config/minimal";
 import sinon from "sinon";
-import {BeaconBlockApi} from "../../../../../../src/api/impl/beacon/blocks";
-import {ForkChoice, BeaconChain} from "../../../../../../src/chain";
-import {Network} from "../../../../../../src/network";
-import {BeaconSync} from "../../../../../../src/sync";
-import {StubbedBeaconDb} from "../../../../../utils/stub";
+import {BeaconBlockApi} from "../../../../src/api/impl/beacon/blocks";
+import {ForkChoice, BeaconChain} from "../../../../src/chain";
+import {Network} from "../../../../src/network";
+import {BeaconSync} from "../../../../src/sync";
+import {StubbedBeaconDb} from "../../../utils/stub";
 
 beforeEach(function () {
   this.sandbox = sinon.createSandbox();

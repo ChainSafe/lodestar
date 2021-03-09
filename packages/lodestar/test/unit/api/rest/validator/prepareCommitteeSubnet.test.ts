@@ -1,13 +1,13 @@
 import {expect} from "chai";
 import supertest from "supertest";
 import {urlJoin} from "../utils";
-import {VALIDATOR_PREFIX, api, restApi} from "./index.test";
+import {VALIDATOR_PREFIX} from "../index.test";
 import {prepareCommitteeSubnet} from "../../../../../src/api/rest/controllers/validator/prepareCommitteeSubnet";
 
 describe("rest - validator - prepareCommitteeSubnet", function () {
   it("should succeed", async function () {
-    api.validator.prepareBeaconCommitteeSubnet.resolves();
-    await supertest(restApi.server.server)
+    this.test?.ctx?.api.validator.prepareBeaconCommitteeSubnet.resolves();
+    await supertest(this.test?.ctx?.restApi.server.server)
       .post(urlJoin(VALIDATOR_PREFIX, prepareCommitteeSubnet.url))
       .send([
         {
@@ -24,7 +24,7 @@ describe("rest - validator - prepareCommitteeSubnet", function () {
       ])
       .expect(200);
     expect(
-      api.validator.prepareBeaconCommitteeSubnet.withArgs([
+      this.test?.ctx?.api.validator.prepareBeaconCommitteeSubnet.withArgs([
         {
           validatorIndex: 1,
           committeeIndex: 2,
@@ -37,7 +37,7 @@ describe("rest - validator - prepareCommitteeSubnet", function () {
   });
 
   it("missing param", async function () {
-    await supertest(restApi.server.server)
+    await supertest(this.test?.ctx?.restApi.server.server)
       .post(urlJoin(VALIDATOR_PREFIX, prepareCommitteeSubnet.url))
       .send([
         {

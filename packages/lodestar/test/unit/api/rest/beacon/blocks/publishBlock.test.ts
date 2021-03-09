@@ -4,13 +4,13 @@ import supertest from "supertest";
 import {publishBlock} from "../../../../../../src/api/rest/controllers/beacon/blocks/publishBlock";
 import {generateEmptySignedBlock} from "../../../../../utils/block";
 import {urlJoin} from "../../utils";
-import {BEACON_PREFIX, api, restApi} from "../index.test";
+import {BEACON_PREFIX} from "../../index.test";
 
 describe("rest - beacon - publishBlock", function () {
   it("should succeed", async function () {
     const block = generateEmptySignedBlock();
-    api.beacon.blocks.publishBlock.resolves();
-    await supertest(restApi.server.server)
+    this.test?.ctx?.beaconBlocksStub.publishBlock.resolves();
+    await supertest(this.test?.ctx?.restApi.server.server)
       .post(urlJoin(BEACON_PREFIX, publishBlock.url))
       .send(config.types.phase0.SignedBeaconBlock.toJson(block, {case: "snake"}) as Record<string, unknown>)
       .expect(200)
@@ -18,11 +18,11 @@ describe("rest - beacon - publishBlock", function () {
   });
 
   it("bad body", async function () {
-    await supertest(restApi.server.server)
+    await supertest(this.test?.ctx?.restApi.server.server)
       .post(urlJoin(BEACON_PREFIX, publishBlock.url))
       .send({})
       .expect(400)
       .expect("Content-Type", "application/json; charset=utf-8");
-    expect(api.beacon.blocks.publishBlock.notCalled).to.be.true;
+    expect(this.test?.ctx?.beaconBlocksStub.publishBlock.notCalled).to.be.true;
   });
 });

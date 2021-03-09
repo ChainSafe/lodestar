@@ -3,11 +3,11 @@ import supertest from "supertest";
 
 import {getPeers} from "../../../../../src/api/rest/controllers/node";
 import {urlJoin} from "../utils";
-import {NODE_PREFIX, api, restApi} from "./index.test";
+import {NODE_PREFIX} from "../index.test";
 
 describe("rest - node - getPeers", function () {
   it("should succeed", async function () {
-    api.node.getPeers.withArgs(["connected"], undefined).resolves([
+    this.test?.ctx?.api.node.getPeers.withArgs(["connected"], undefined).resolves([
       {
         lastSeenP2pAddress: "/ip4/127.0.0.1/tcp/36000",
         direction: "inbound",
@@ -16,7 +16,7 @@ describe("rest - node - getPeers", function () {
         state: "connected",
       },
     ]);
-    const response = await supertest(restApi.server.server)
+    const response = await supertest(this.test?.ctx?.restApi.server.server)
       .get(urlJoin(NODE_PREFIX, getPeers.url))
       .query({state: "connected"})
       .expect(200)

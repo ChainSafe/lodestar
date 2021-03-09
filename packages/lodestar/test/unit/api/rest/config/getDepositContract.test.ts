@@ -2,7 +2,7 @@ import {config} from "@chainsafe/lodestar-config/minimal";
 import {urlJoin} from "@chainsafe/lodestar-validator/src/util";
 import {expect} from "chai";
 import supertest from "supertest";
-import {CONFIG_PREFIX, api, restApi} from "./index.test";
+import {CONFIG_PREFIX} from "../index.test";
 import {getDepositContract} from "../../../../../src/api/rest/controllers/config";
 
 describe("rest - config - getDepositContract", function () {
@@ -15,8 +15,8 @@ describe("rest - config - getDepositContract", function () {
       string,
       unknown
     >;
-    api.config.getDepositContract.resolves(depositContract);
-    const response = await supertest(restApi.server.server)
+    this.test?.ctx?.configStub.getDepositContract.resolves(depositContract);
+    const response = await supertest(this.test?.ctx?.restApi.server.server)
       .get(urlJoin(CONFIG_PREFIX, getDepositContract.url))
       .expect(200);
     expect(response.body.data).to.not.be.undefined;

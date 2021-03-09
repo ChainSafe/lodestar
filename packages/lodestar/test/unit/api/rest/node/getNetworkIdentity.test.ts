@@ -3,11 +3,11 @@ import supertest from "supertest";
 
 import {getNetworkIdentity} from "../../../../../src/api/rest/controllers/node/getNetworkIdentity";
 import {urlJoin} from "../utils";
-import {NODE_PREFIX, api, restApi} from "./index.test";
+import {NODE_PREFIX} from "../index.test";
 
 describe("rest - node - getNetworkIdentity", function () {
   it("should succeed", async function () {
-    api.node.getNodeIdentity.resolves({
+    this.test?.ctx?.api.node.getNodeIdentity.resolves({
       metadata: {
         attnets: [true, false],
         seqNumber: BigInt(3),
@@ -17,7 +17,7 @@ describe("rest - node - getNetworkIdentity", function () {
       enr: "enr-",
       discoveryAddresses: ["/ip4/127.0.0.1/tcp/36000"],
     });
-    const response = await supertest(restApi.server.server)
+    const response = await supertest(this.test?.ctx?.restApi.server.server)
       .get(urlJoin(NODE_PREFIX, getNetworkIdentity.url))
       .expect(200)
       .expect("Content-Type", "application/json; charset=utf-8");
