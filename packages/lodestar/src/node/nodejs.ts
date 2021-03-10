@@ -18,7 +18,6 @@ import {BeaconMetrics, HttpMetricsServer, IBeaconMetrics} from "../metrics";
 import {Api, IApi, RestApi} from "../api";
 import {TasksService} from "../tasks";
 import {IBeaconNodeOptions} from "./options";
-import {GossipMessageValidator} from "../network/gossip/validator";
 import {Eth1ForBlockProduction, Eth1ForBlockProductionDisabled, Eth1Provider} from "../eth1";
 import {runNodeNotifier} from "./notifier";
 
@@ -136,20 +135,13 @@ export class BeaconNode {
       metrics,
       anchorState,
     });
-
-    const gossipMessageValidator = new GossipMessageValidator({
-      chain,
-      db,
-      config,
-      logger: logger.child(opts.logger.network),
-    });
     const network = new Network(opts.network, {
       config,
       libp2p,
       logger: logger.child(opts.logger.network),
       metrics,
-      validator: gossipMessageValidator,
       chain,
+      db,
     });
     const sync = new BeaconSync(opts.sync, {
       config,

@@ -3,7 +3,7 @@ import {CommitteeIndex, Epoch, Slot, phase0} from "@chainsafe/lodestar-types";
 import crypto from "crypto";
 import deepmerge from "deepmerge";
 import {isPlainObject} from "@chainsafe/lodestar-utils";
-import {RecursivePartial} from "@chainsafe/lodestar-cli/src/util";
+import {RecursivePartial} from "@chainsafe/lodestar-utils";
 
 /**
  * Generates a fake attestation data for test purposes.

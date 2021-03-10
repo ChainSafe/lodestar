@@ -4,7 +4,7 @@ import {expect} from "chai";
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {phase0, Uint64, Root} from "@chainsafe/lodestar-types";
-import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util/lib/single";
+import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
 import {initializeBeaconStateFromEth1} from "@chainsafe/lodestar/lib/chain/genesis/genesis";
 
 import {SPEC_TEST_LOCATION} from "../../../utils/specTestCases";
@@ -53,7 +53,7 @@ function generateDepositSSZTypeMapping(
   n: number,
   config: IBeaconConfig
 ): Record<string, typeof config.types.phase0.Deposit> {
-  const depositMappings = {};
+  const depositMappings: Record<string, typeof config.types.phase0.Deposit> = {};
   for (let i = 0; i < n; i++) {
     depositMappings[`deposits_${i}`] = config.types.phase0.Deposit;
   }

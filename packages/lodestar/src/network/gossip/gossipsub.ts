@@ -1,76 +1,106 @@
+/* eslint-disable @typescript-eslint/naming-convention */
 import Gossipsub from "libp2p-gossipsub";
 import {InMessage} from "libp2p-interfaces/src/pubsub";
-import {ERR_TOPIC_VALIDATOR_REJECT, ERR_TOPIC_VALIDATOR_IGNORE} from "libp2p-gossipsub/src/constants";
 import Libp2p from "libp2p";
-import {CompositeType} from "@chainsafe/ssz";
-import {ILogger} from "@chainsafe/lodestar-utils";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {ForkDigest, phase0} from "@chainsafe/lodestar-types";
+import {ATTESTATION_SUBNET_COUNT, phase0, Root} from "@chainsafe/lodestar-types";
+import {ILogger, toJson} from "@chainsafe/lodestar-utils";
+import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 
-import {GossipMessageValidatorFn, GossipObject, IGossipMessageValidator, ILodestarGossipMessage} from "./interface";
+import {IBeaconMetrics} from "../../metrics";
 import {
-  getSubnetFromAttestationSubnetTopic,
-  isAttestationSubnetTopic,
-  topicToGossipEvent,
-  getGossipTopic,
-  msgIdToString,
-} from "./utils";
-import {ExtendedValidatorResult, GossipEvent} from "./constants";
-import {GOSSIP_MAX_SIZE, ATTESTATION_SUBNET_COUNT} from "../../constants";
-import {computeMsgId, decodeMessageData, encodeMessageData, GossipEncoding} from "./encoding";
+  GossipEncoding,
+  GossipHandlerFn,
+  GossipObject,
+  GossipTopic,
+  GossipType,
+  IGossipMessage,
+  TopicValidatorFn,
+} from "./interface";
+import {msgIdToString, getMsgId, messageIsValid} from "./utils";
+import {getGossipSSZDeserializer, getGossipSSZSerializer, getGossipTopic, getGossipTopicString} from "./topic";
+import {encodeMessageData, decodeMessageData} from "./encoding";
+import {DEFAULT_ENCODING} from "./constants";
 import {GossipValidationError} from "./errors";
+import {ERR_TOPIC_VALIDATOR_REJECT} from "libp2p-gossipsub/src/constants";
 
-type ValidatorFn = (topic: string, msg: InMessage) => Promise<void>;
+interface IGossipsubModules {
+  config: IBeaconConfig;
+  genesisValidatorsRoot: Root;
+  libp2p: Libp2p;
+  validatorFns: Map<string, TopicValidatorFn>;
+  logger: ILogger;
+  metrics?: IBeaconMetrics;
+}
 
 /**
- * This validates messages in Gossipsub and emit the transformed messages.
- * We don't want to double deserialize messages for performance benefit.
+ * Wrapper around js-libp2p-gossipsub with the following extensions:
+ * - Eth2 message id
+ * - Emits `GossipObject`, not `InMessage`
+ * - Provides convenience interface:
+ *   - `publishObject`
+ *   - `subscribeTopic`
+ *   - `unsubscribeTopic`
+ *   - `handleTopic`
+ *   - `unhandleTopic`
+ *
+ * See https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/p2p-interface.md#the-gossip-domain-gossipsub
  */
-export class LodestarGossipsub extends Gossipsub {
-  // Initialized in super class https://github.com/libp2p/js-libp2p-interfaces/blob/v0.5.1/src/pubsub/index.js#L130
-  public topicValidators: Map<string, ValidatorFn> = new Map();
-  private transformedObjects: Map<string, {createdAt: Date; object: GossipObject}>;
-  private config: IBeaconConfig;
-  private validator: IGossipMessageValidator;
-  private interval?: NodeJS.Timeout;
-  private timeToLive: number;
+export class Eth2Gossipsub extends Gossipsub {
+  private readonly config: IBeaconConfig;
+  private readonly genesisValidatorsRoot: Root;
   private readonly logger: ILogger;
+  private readonly metrics?: IBeaconMetrics;
+  /**
+   * Cached gossip objects
+   *
+   * Objects are deserialized during validation. If they pass validation, they get added here for later processing
+   */
+  private gossipObjects: Map<string, GossipObject>;
+  /**
+   * Cached gossip topic objects
+   */
+  private gossipTopics: Map<string, GossipTopic>;
+  /**
+   * Timeout for logging status message
+   */
+  private statusInterval?: NodeJS.Timeout;
 
-  constructor(
-    config: IBeaconConfig,
-    validator: IGossipMessageValidator,
-    logger: ILogger,
-    libp2p: Libp2p,
-    options = {}
-  ) {
-    // eslint-disable-next-line @typescript-eslint/naming-convention
-    super(libp2p, Object.assign(options, {globalSignaturePolicy: "StrictNoSign" as const, D: 8, Dlow: 6}));
-    this.transformedObjects = new Map();
+  constructor({config, genesisValidatorsRoot, libp2p, validatorFns, logger, metrics}: IGossipsubModules) {
+    // Gossipsub parameters defined here:
+    // https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/p2p-interface.md#the-gossip-domain-gossipsub
+    super(libp2p, {
+      gossipIncoming: true,
+      globalSignaturePolicy: "StrictNoSign" as const,
+      D: 8,
+      Dlo: 6,
+      Dhi: 12,
+      Dlazy: 6,
+    });
     this.config = config;
-    this.validator = validator;
-    // This can be epoch/daily/hourly ...
-    this.timeToLive = this.config.params.SLOTS_PER_EPOCH * this.config.params.SECONDS_PER_SLOT * 1000;
+    this.genesisValidatorsRoot = genesisValidatorsRoot;
     this.logger = logger;
+    this.metrics = metrics;
+
+    this.gossipObjects = new Map();
+    this.gossipTopics = new Map();
+
+    for (const [topic, validatorFn] of validatorFns.entries()) {
+      this.topicValidators.set(topic, validatorFn);
+    }
   }
 
   public start(): void {
-    if (!this.interval) {
-      this.interval = setInterval(this.cleanUp.bind(this), this.timeToLive);
-    }
     super.start();
-  }
-
-  public getTopicPeerIds(topic: string): Set<string> | undefined {
-    return this.topics.get(topic);
+    this.statusInterval = setInterval(this.logSubscriptions, 12000);
   }
 
   public stop(): void {
-    if (this.interval) {
-      clearInterval(this.interval);
-    }
-
     try {
       super.stop();
+      if (this.statusInterval) {
+        clearInterval(this.statusInterval);
+      }
     } catch (error) {
       if (error.code !== "ERR_HEARTBEAT_NO_RUNNING") {
         throw error;
@@ -78,172 +108,221 @@ export class LodestarGossipsub extends Gossipsub {
     }
   }
 
-  public registerLibp2pTopicValidators(forkDigest: ForkDigest): void {
-    this.topicValidators = new Map();
-    for (const event of [
-      GossipEvent.BLOCK,
-      GossipEvent.AGGREGATE_AND_PROOF,
-      GossipEvent.ATTESTER_SLASHING,
-      GossipEvent.PROPOSER_SLASHING,
-      GossipEvent.VOLUNTARY_EXIT,
-    ]) {
-      this.topicValidators.set(getGossipTopic(event, forkDigest), this.libP2pTopicValidator as ValidatorFn);
+  /**
+   * @override Use eth2 msg id and cache results to the msg
+   */
+  public getMsgId(msg: IGossipMessage): Uint8Array {
+    return getMsgId(msg);
+  }
+
+  /**
+   * @override
+   */
+  public async validate(message: IGossipMessage): Promise<void> {
+    try {
+      // message sanity check
+      if (!messageIsValid(message)) {
+        throw null;
+      }
+      // get GossipTopic and GossipObject, set on IGossipMessage
+      const gossipTopic = this.getGossipTopic(message.topicIDs[0]);
+      const gossipObject = getGossipSSZDeserializer(
+        this.config,
+        gossipTopic
+      )(decodeMessageData(gossipTopic.encoding as GossipEncoding, message.data));
+      // Lodestar ObjectValidatorFns rely on these properties being set
+      message.gossipObject = gossipObject;
+      message.gossipTopic = gossipTopic;
+    } catch (e) {
+      const err = new GossipValidationError(ERR_TOPIC_VALIDATOR_REJECT);
+      // must set gossip scores manually, since this usually happens in super.validate
+      this.score.rejectMessage(message, err.code);
+      this.gossipTracer.rejectMessage(message, err.code);
+      throw e;
     }
-    for (let subnet = 0; subnet < ATTESTATION_SUBNET_COUNT; subnet++) {
-      const topic = getGossipTopic(
-        GossipEvent.ATTESTATION_SUBNET,
-        forkDigest,
-        GossipEncoding.SSZ_SNAPPY,
-        new Map([["subnet", String(subnet)]])
-      );
-      this.topicValidators.set(topic, this.libP2pTopicValidator as ValidatorFn);
+
+    await super.validate(message); // No error here means that the incoming object is valid
+
+    //`message.gossipObject` must have been set ^ so that we can cache the deserialized gossip object
+    if (message.gossipObject) {
+      this.gossipObjects.set(msgIdToString(this.getMsgId(message)), message.gossipObject);
     }
   }
 
   /**
-   * Should throw ERR_TOPIC_VALIDATOR_IGNORE or ERR_TOPIC_VALIDATOR_REJECT
-   * If we don't throw it means accept
-   * Refer to https://github.com/libp2p/js-libp2p-interfaces/blob/v0.5.2/src/pubsub/index.js#L529
-   * and https://github.com/ChainSafe/js-libp2p-gossipsub/blob/v0.6.3/ts/index.ts#L447
-   */
-  public libP2pTopicValidator = async (topic: string, message: InMessage): Promise<void> => {
-    if (!this.genericIsValid(message)) {
-      throw new GossipValidationError(ERR_TOPIC_VALIDATOR_REJECT);
-    }
-    try {
-      const validatorFn = this.getLodestarTopicValidator(topic);
-      const objSubnet = this.deserializeGossipMessage(topic, message);
-      const transformedObj = objSubnet.object;
-      const validationResult = await validatorFn(transformedObj, objSubnet.subnet);
-      switch (validationResult) {
-        case ExtendedValidatorResult.ignore:
-          throw new GossipValidationError(ERR_TOPIC_VALIDATOR_IGNORE);
-        case ExtendedValidatorResult.reject:
-          throw new GossipValidationError(ERR_TOPIC_VALIDATOR_REJECT);
-        default:
-          // no error means accept
-          this.transformedObjects.set(msgIdToString(this.getMsgId(message)), {
-            createdAt: new Date(),
-            object: transformedObj,
-          });
-      }
-    } catch (e) {
-      if (e.code === ERR_TOPIC_VALIDATOR_REJECT) {
-        throw new GossipValidationError(ERR_TOPIC_VALIDATOR_REJECT);
-      } else {
-        throw new GossipValidationError(ERR_TOPIC_VALIDATOR_IGNORE);
-      }
-    }
-  };
-
-  /**
-   * Override https://github.com/libp2p/js-libp2p-interfaces/blob/v0.5.2/src/pubsub/index.js#L428
-   * we want to emit our transformed object instead of the raw message here.
+   * @override
+   * See https://github.com/libp2p/js-libp2p-interfaces/blob/v0.5.2/src/pubsub/index.js#L428
+   *
+   * Instead of emitting `InMessage`, emit `GossipObject`
    */
   public _emitMessage(message: InMessage): void {
-    for (const topic of message.topicIDs) {
-      const msgIdStr = msgIdToString(this.getMsgId(message));
-      const transformedObj = this.transformedObjects.get(msgIdStr);
-      if (transformedObj && transformedObj.object) {
-        this.transformedObjects.delete(msgIdStr);
-        super.emit(topic, transformedObj.object);
-      }
+    const topic = message.topicIDs[0];
+    const msgIdStr = msgIdToString(this.getMsgId(message));
+    const gossipObject = this.gossipObjects.get(msgIdStr);
+    if (gossipObject) {
+      this.gossipObjects.delete(msgIdStr);
+    }
+    // Only messages that are currently subscribed and have properly been cached are emitted
+    if (this.subscriptions.has(topic) && gossipObject) {
+      this.emit(topic, gossipObject);
     }
   }
 
   /**
-   * Override default `_buildMessage` to snappy-compress the data
+   * @override
+   * Differs from upstream `unsubscribe` by _always_ unsubscribing,
+   * instead of unsubsribing only when no handlers are attached to the topic
+   *
+   * See https://github.com/libp2p/js-libp2p-interfaces/blob/v0.8.3/src/pubsub/index.js#L720
    */
-  public _buildMessage(msg: InMessage): Promise<InMessage> {
-    msg.data = encodeMessageData(msg.topicIDs[0], msg.data);
-    return super._buildMessage(msg);
+  public unsubscribe(topic: string): void {
+    if (!this.started) {
+      throw new Error("Pubsub is not started");
+    }
+
+    if (this.subscriptions.has(topic)) {
+      this.subscriptions.delete(topic);
+      this.peers.forEach((_, id) => this._sendSubscriptions(id, [topic], false));
+    }
   }
 
   /**
-   * Override default `getMsgId` function to cache the message-id
+   * Publish a `GossipObject` on a `GossipTopic`
    */
-  public getMsgId(msg: ILodestarGossipMessage): Uint8Array {
-    if (!msg.msgId) {
-      msg.msgId = computeMsgId(msg.topicIDs[0], msg.data);
-    }
-    return msg.msgId;
+  public async publishObject(topic: GossipTopic, object: GossipObject): Promise<void> {
+    this.logger.verbose("Publish to topic", toJson(topic));
+    await this.publish(
+      this.getGossipTopicString(topic),
+      encodeMessageData(topic.encoding ?? DEFAULT_ENCODING, getGossipSSZSerializer(this.config, topic)(object))
+    );
   }
 
-  private genericIsValid(message: InMessage): boolean | undefined {
-    return message.topicIDs && message.topicIDs.length === 1 && message.data && message.data.length <= GOSSIP_MAX_SIZE;
+  /**
+   * Subscribe to a `GossipTopic`
+   */
+  public subscribeTopic(topic: GossipTopic): void {
+    this.logger.verbose("Subscribe to topic", toJson(topic));
+    this.subscribe(this.getGossipTopicString(topic));
   }
 
-  private getLodestarTopicValidator(topic: string): GossipMessageValidatorFn {
-    if (isAttestationSubnetTopic(topic)) {
-      return this.validator.isValidIncomingCommitteeAttestation as GossipMessageValidatorFn;
-    }
-
-    let result: (...args: never[]) => Promise<ExtendedValidatorResult>;
-    const gossipEvent = topicToGossipEvent(topic);
-    switch (gossipEvent) {
-      case GossipEvent.BLOCK:
-        result = this.validator.isValidIncomingBlock;
-        break;
-      case GossipEvent.AGGREGATE_AND_PROOF:
-        result = this.validator.isValidIncomingAggregateAndProof;
-        break;
-      case GossipEvent.ATTESTER_SLASHING:
-        result = this.validator.isValidIncomingAttesterSlashing;
-        break;
-      case GossipEvent.PROPOSER_SLASHING:
-        result = this.validator.isValidIncomingProposerSlashing;
-        break;
-      case GossipEvent.VOLUNTARY_EXIT:
-        result = this.validator.isValidIncomingVoluntaryExit;
-        break;
-      default:
-        throw new Error(`No validator for topic ${topic}`);
-    }
-    return result as GossipMessageValidatorFn;
+  /**
+   * Unsubscribe to a `GossipTopic`
+   */
+  public unsubscribeTopic(topic: GossipTopic): void {
+    this.logger.verbose("Unsubscribe to topic", toJson(topic));
+    this.unsubscribe(this.getGossipTopicString(topic));
   }
 
-  private deserializeGossipMessage(topic: string, msg: InMessage): {object: GossipObject; subnet?: number} {
-    const data = decodeMessageData(topic, msg.data);
-
-    if (isAttestationSubnetTopic(topic)) {
-      const subnet = getSubnetFromAttestationSubnetTopic(topic);
-      return {object: this.config.types.phase0.Attestation.deserialize(data), subnet};
-    }
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let objType: {deserialize: (data: Uint8Array) => any};
-    const gossipEvent = topicToGossipEvent(topic);
-    switch (gossipEvent) {
-      case GossipEvent.BLOCK:
-        objType = (this.config.types.phase0.SignedBeaconBlock as CompositeType<phase0.SignedBeaconBlock>).tree;
-        break;
-      case GossipEvent.AGGREGATE_AND_PROOF:
-        objType = this.config.types.phase0.SignedAggregateAndProof;
-        break;
-      case GossipEvent.ATTESTER_SLASHING:
-        objType = this.config.types.phase0.AttesterSlashing;
-        break;
-      case GossipEvent.PROPOSER_SLASHING:
-        objType = this.config.types.phase0.ProposerSlashing;
-        break;
-      case GossipEvent.VOLUNTARY_EXIT:
-        objType = this.config.types.phase0.SignedVoluntaryExit;
-        break;
-      default:
-        throw new Error(`Don't know how to deserialize object received under topic ${topic}`);
-    }
-    return {object: objType.deserialize(data)};
+  /**
+   * Attach a handler to a `GossipTopic`
+   */
+  public handleTopic(topic: GossipTopic, handler: GossipHandlerFn): void {
+    this.on(this.getGossipTopicString(topic), handler);
   }
 
-  private cleanUp(): void {
-    const keysToDelete: string[] = [];
-    for (const [key, val] of this.transformedObjects) {
-      if (Date.now() - val.createdAt.getTime() > this.timeToLive) {
-        keysToDelete.push(key);
+  /**
+   * Remove a handler from a `GossipTopic`
+   */
+  public unhandleTopic(topic: GossipTopic, handler: GossipHandlerFn): void {
+    this.off(this.getGossipTopicString(topic), handler);
+  }
+
+  public async publishBeaconBlock(signedBlock: phase0.SignedBeaconBlock): Promise<void> {
+    await this.publishObject(
+      {
+        type: GossipType.beacon_block,
+        fork: this.config.getForkName(signedBlock.message.slot),
+      },
+      signedBlock
+    );
+  }
+
+  public async publishBeaconAggregateAndProof(aggregateAndProof: phase0.SignedAggregateAndProof): Promise<void> {
+    await this.publishObject(
+      {
+        type: GossipType.beacon_aggregate_and_proof,
+        fork: this.config.getForkName(aggregateAndProof.message.aggregate.data.slot),
+      },
+      aggregateAndProof
+    );
+  }
+
+  public async publishBeaconAttestation(attestation: phase0.Attestation, subnet: number): Promise<void> {
+    await this.publishObject(
+      {
+        type: GossipType.beacon_attestation,
+        fork: this.config.getForkName(attestation.data.slot),
+        subnet,
+      },
+      attestation
+    );
+  }
+
+  public async publishVoluntaryExit(voluntaryExit: phase0.SignedVoluntaryExit): Promise<void> {
+    await this.publishObject(
+      {
+        type: GossipType.voluntary_exit,
+        fork: this.config.getForkName(computeEpochAtSlot(this.config, voluntaryExit.message.epoch)),
+      },
+      voluntaryExit
+    );
+  }
+
+  public async publishProposerSlashing(proposerSlashing: phase0.ProposerSlashing): Promise<void> {
+    await this.publishObject(
+      {
+        type: GossipType.proposer_slashing,
+        fork: this.config.getForkName(proposerSlashing.signedHeader1.message.slot),
+      },
+      proposerSlashing
+    );
+  }
+
+  public async publishAttesterSlashing(attesterSlashing: phase0.AttesterSlashing): Promise<void> {
+    await this.publishObject(
+      {
+        type: GossipType.proposer_slashing,
+        fork: this.config.getForkName(attesterSlashing.attestation1.data.slot),
+      },
+      attesterSlashing
+    );
+  }
+
+  private getGossipTopicString(topic: GossipTopic): string {
+    return getGossipTopicString(this.config, topic, this.genesisValidatorsRoot);
+  }
+
+  private getGossipTopic(topicString: string): GossipTopic {
+    let topic = this.gossipTopics.get(topicString);
+    if (topic == null) {
+      topic = getGossipTopic(this.config, topicString, this.genesisValidatorsRoot);
+      this.gossipTopics.set(topicString, topic);
+    }
+    return topic;
+  }
+
+  private logSubscriptions = (): void => {
+    if (this.metrics) {
+      // beacon attestation mesh gets counted separately so we can track mesh peers by subnet
+      // zero out all gossip type & subnet choices, so the dashboard will register them
+      for (const gossipType of Object.values(GossipType)) {
+        this.metrics.gossipMeshPeersByType.set({gossipType}, 0);
+      }
+      for (let subnet = 0; subnet < ATTESTATION_SUBNET_COUNT; subnet++) {
+        this.metrics.gossipMeshPeersByBeaconAttestationSubnet.set({subnet}, 0);
+      }
+      // loop through all mesh entries, count each set size
+      for (const [topicString, peers] of this.mesh.entries()) {
+        const topic = this.getGossipTopic(topicString);
+        if (topic.type === GossipType.beacon_attestation) {
+          this.metrics.gossipMeshPeersByBeaconAttestationSubnet.set({subnet: topic.subnet}, peers.size);
+        } else {
+          this.metrics.gossipMeshPeersByType.set({gossipType: topic.type}, peers.size);
+        }
       }
     }
-    for (const key of keysToDelete) {
-      this.transformedObjects.delete(key);
-    }
-  }
+    this.logger.info("Current gossip subscriptions", {
+      subscriptions: Array.from(this.subscriptions),
+    });
+  };
 }

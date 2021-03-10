@@ -11,7 +11,7 @@ import {generateValidators} from "../../../../utils/validator";
 import {getAttestationDeltas} from "../../../../../src/phase0/naive/epoch/balanceUpdates/attestation";
 import {generateEmptyAttestation} from "../../../../utils/attestation";
 
-describe("process epoch - balance updates", function () {
+describe.skip("process epoch - balance updates", function () {
   const sandbox = sinon.createSandbox();
 
   let getAttestingBalanceStub: any,

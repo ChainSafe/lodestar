@@ -1,10 +1,8 @@
 {
-  "extends": "../../tsconfig",
+  "extends": "../../tsconfig.build.json",
   "include": ["src"],
-  "exclude": [],
   "compilerOptions": {
-    "typeRoots": ["../../node_modules/@types", "../../node_modules/libp2p-ts/types"],
     "outDir": "lib",
-    "rootDir": "./src"
+    "typeRoots": ["../../node_modules/@types", "../../node_modules/libp2p-ts/types", "./node_modules/@types"]
   }
 }

@@ -58,12 +58,12 @@ export class BlockRepository {
 
   public async batchDelete(ids: {root: Uint8Array; slot: Slot}[]): Promise<void> {
     const idsByFork = {} as Record<IForkName, Uint8Array[]>;
-    ids.forEach(({root, slot}) => {
+    for (const {root, slot} of ids) {
       const forkName = this.config.getForkName(slot);
       if (!idsByFork[forkName]) idsByFork[forkName] = [];
 
       idsByFork[forkName].push(root);
-    });
+    }
     await Promise.all(
       Object.keys(idsByFork).map((forkName) =>
         this.getRepositoryByForkName(forkName as IForkName).batchDelete(idsByFork[forkName as IForkName])

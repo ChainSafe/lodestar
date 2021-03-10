@@ -17,15 +17,15 @@
     "lib/**/*.d.ts"
   ],
   "scripts": {
-    "clean": "rm -rf lib && rm -f tsconfig.tsbuildinfo",
+    "clean": "rm -rf lib && rm -f *.tsbuildinfo",
     "build": "concurrently \"yarn build:lib\" \"yarn build:types\"",
     "build:release": "yarn clean && yarn build && yarn build:typedocs",
-    "build:types": "tsc --declaration --incremental --emitDeclarationOnly",
-    "build:types:watch": "yarn run build:types --watch --preserveWatchOutput",
+    "build:types": "tsc -p tsconfig.build.json",
+    "build:types:watch": "yarn run build:types --watch",
     "build:lib": "babel src -x .ts -d lib --source-maps",
     "build:lib:watch": "yarn run build:lib --watch",
     "build:typedocs": "typedoc --out typedocs src",
-    "check-types": "tsc --noEmit",
+    "check-types": "tsc",
     "lint": "eslint --color --ext .ts src/",
     "lint:fix": "yarn run lint --fix",
     "prepublishOnly": "yarn build"

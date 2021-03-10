@@ -1,62 +1,62 @@
-import {generateEmptySignedBlock} from "../../../utils/block";
-import {config} from "@chainsafe/lodestar-config/minimal";
-import {InMessage} from "libp2p-interfaces/src/pubsub";
-import {getGossipTopic} from "../../../../src/network/gossip/utils";
-import {ExtendedValidatorResult, GossipEvent} from "../../../../src/network/gossip/constants";
-import {IGossipMessageValidator} from "../../../../src/network/gossip/interface";
-import sinon from "sinon";
-import {LodestarGossipsub} from "../../../../src/network/gossip/gossipsub";
-import {WinstonLogger} from "@chainsafe/lodestar-utils";
 import {expect, assert} from "chai";
 import Libp2p from "libp2p";
-import {createNode} from "../../../utils/network";
-import {GossipEncoding} from "../../../../src/network/gossip/encoding";
+import {InMessage} from "libp2p-interfaces/src/pubsub";
 import {ERR_TOPIC_VALIDATOR_REJECT} from "libp2p-gossipsub/src/constants";
+import {config} from "@chainsafe/lodestar-config/minimal";
 
-const forkValue = Buffer.alloc(4);
+import {
+  Eth2Gossipsub,
+  getGossipTopicString,
+  GossipType,
+  TopicValidatorFn,
+  GossipValidationError,
+  encodeMessageData,
+  GossipEncoding,
+} from "../../../../src/network/gossip";
+
+import {generateEmptySignedBlock} from "../../../utils/block";
+import {createNode} from "../../../utils/network";
+import {testLogger} from "../../../utils/logger";
 
 describe("gossipsub", function () {
-  const sandbox = sinon.createSandbox();
-  let validator: IGossipMessageValidator;
-  let gossipSub: LodestarGossipsub;
+  let validatorFns: Map<string, TopicValidatorFn>;
+  let gossipSub: Eth2Gossipsub;
   let message: InMessage;
+  let topicString: string;
+  let libp2p: Libp2p;
+  const genesisValidatorsRoot = Buffer.alloc(32);
 
   beforeEach(async function () {
-    const signedBLock = generateEmptySignedBlock();
+    const signedBlock = generateEmptySignedBlock();
+    topicString = getGossipTopicString(config, {type: GossipType.beacon_block, fork: "phase0"}, genesisValidatorsRoot);
     message = {
-      data: config.types.phase0.SignedBeaconBlock.serialize(signedBLock),
-      from: "0",
+      data: encodeMessageData(GossipEncoding.ssz_snappy, config.types.phase0.SignedBeaconBlock.serialize(signedBlock)),
       receivedFrom: "0",
-      seqno: new Uint8Array(),
-      topicIDs: [getGossipTopic(GossipEvent.BLOCK, forkValue, GossipEncoding.SSZ)],
-      signature: undefined,
-      key: undefined,
+      topicIDs: [topicString],
     };
 
-    validator = {} as IGossipMessageValidator;
+    validatorFns = new Map();
     const multiaddr = "/ip4/127.0.0.1/tcp/0";
-    const libp2p = await createNode(multiaddr);
-    gossipSub = new LodestarGossipsub(config, validator, new WinstonLogger(), (libp2p as unknown) as Libp2p, {});
+    libp2p = await createNode(multiaddr);
   });
 
-  afterEach(function () {
-    sandbox.restore();
-  });
-
-  it("should throw exception because of failed validation", async () => {
-    validator.isValidIncomingBlock = () => Promise.resolve(ExtendedValidatorResult.reject);
+  it("should throw on failed validation", async () => {
+    validatorFns.set(topicString, () => {
+      throw new GossipValidationError(ERR_TOPIC_VALIDATOR_REJECT);
+    });
+    gossipSub = new Eth2Gossipsub({config, genesisValidatorsRoot, validatorFns, logger: testLogger(), libp2p});
 
     try {
-      await gossipSub.libP2pTopicValidator(message.topicIDs[0], message);
+      await gossipSub.validate(message);
       assert.fail("Expect error here");
     } catch (e) {
       expect(e.code).to.be.equal(ERR_TOPIC_VALIDATOR_REJECT);
     }
   });
 
-  it("should return true if pass validator function", async () => {
-    validator.isValidIncomingBlock = () => Promise.resolve(ExtendedValidatorResult.accept);
-    await gossipSub.libP2pTopicValidator(message.topicIDs[0], message);
+  it("should not throw on successful validation", async () => {
+    gossipSub = new Eth2Gossipsub({config, genesisValidatorsRoot, validatorFns, logger: testLogger(), libp2p});
+    await gossipSub.validate(message);
     // no error means pass validation
   });
 });

@@ -8,7 +8,7 @@ import {generateEmptyBlock} from "../../../utils/block";
 import {generateState} from "../../../utils/state";
 import {generateValidators} from "../../../utils/validator";
 
-describe("process block - randao", function () {
+describe.skip("process block - randao", function () {
   const sandbox = sinon.createSandbox();
 
   let getBeaconProposerStub: any;

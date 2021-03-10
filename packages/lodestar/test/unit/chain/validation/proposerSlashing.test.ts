@@ -9,7 +9,7 @@ import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {BeaconChain} from "../../../../src/chain";
 import {StubbedBeaconDb, StubbedChain} from "../../../utils/stub";
 import {generateState} from "../../../utils/state";
-import {ProposerSlashingErrorCode} from "../../../../src/chain/errors/proposerSlahingError";
+import {ProposerSlashingErrorCode} from "../../../../src/chain/errors/proposerSlashingError";
 import {validateGossipProposerSlashing} from "../../../../src/chain/validation/proposerSlashing";
 
 describe("validate proposer slashing", () => {

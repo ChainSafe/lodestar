@@ -8,7 +8,7 @@ import LibP2p from "libp2p";
 import Multiaddr from "multiaddr";
 import PeerId from "peer-id";
 import StrictEventEmitter from "strict-event-emitter-types";
-import {IGossip} from "./gossip/interface";
+import {Eth2Gossipsub} from "./gossip";
 import {MetadataController} from "./metadata";
 import {IPeerMetadataStore} from "./peers";
 import {IPeerRpcScoreStore} from "./peers/score";
@@ -46,7 +46,7 @@ export type PeerSearchOptions = {
 
 export interface INetwork extends NetworkEventEmitter {
   reqResp: IReqResp;
-  gossip: IGossip;
+  gossip: Eth2Gossipsub;
   metadata: MetadataController;
   peerMetadata: IPeerMetadataStore;
   peerRpcScores: IPeerRpcScoreStore;

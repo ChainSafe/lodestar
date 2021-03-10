@@ -10,9 +10,9 @@ Make sure lodestar is installed in your local environment. The following command
 
 For a complete list of beacon node CLI commands and options, see the [Command Line Reference](../../reference/cli/)
 
-For a list of available testnets to use for the `--network` flag (as shown anywhere below where `--network $NETWORK_NAME` is shown), look for the `testnet` option as listed with the `--help` flag above.  You should see something like this:
+For a list of available testnets to use for the `--network` flag (as shown anywhere below where `--network $NETWORK_NAME` is shown), look for the `testnet` option as listed with the `--help` flag above. You should see something like this:
 
-> --network                    Use a network configuration [string] [choices: "pyrmont", "mainnet"]
+> --network Use a network configuration [string][choices: "pyrmont", "mainnet"]
 
 In this case, the two networks that are available are the pyrmont multiclient testnet, and the eth2 mainnet.
 
@@ -85,13 +85,13 @@ To start a Lodestar validator run the command:
 ./lodestar validator --network $NETWORK_NAME
 ```
 
-You should see confirmation that modules have started. 
+You should see confirmation that modules have started.
 
 ```bash
-2020-08-07 14:14:24  []                 info: Decrypted 2 validator keystores 
-2020-08-07 14:14:24  [VALIDATOR 0X8BAC4815] info: Setting up validator client... 
-2020-08-07 14:14:24  [VALIDATOR 0X8BAC4815] info: Setting up RPC connection... 
-2020-08-07 14:14:24  []                 info: Checking genesis time and beacon node connection 
-2020-08-07 14:14:24  [VALIDATOR 0X8E44237B] info: Setting up validator client... 
-2020-08-07 14:14:24  [VALIDATOR 0X8E44237B] info: Setting up RPC connection... 
+2020-08-07 14:14:24  []                 info: Decrypted 2 validator keystores
+2020-08-07 14:14:24  [VALIDATOR 0X8BAC4815] info: Setting up validator client...
+2020-08-07 14:14:24  [VALIDATOR 0X8BAC4815] info: Setting up RPC connection...
+2020-08-07 14:14:24  []                 info: Checking genesis time and beacon node connection
+2020-08-07 14:14:24  [VALIDATOR 0X8E44237B] info: Setting up validator client...
+2020-08-07 14:14:24  [VALIDATOR 0X8E44237B] info: Setting up RPC connection...
 ```

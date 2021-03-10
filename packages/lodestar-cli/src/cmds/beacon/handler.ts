@@ -1,10 +1,8 @@
 import {AbortController} from "abort-controller";
 
-import {consoleTransport, fileTransport, WinstonLogger} from "@chainsafe/lodestar-utils";
+import {consoleTransport, ErrorAborted, fileTransport, WinstonLogger} from "@chainsafe/lodestar-utils";
 import {LevelDbController} from "@chainsafe/lodestar-db";
-import {createNodeJsLibp2p} from "@chainsafe/lodestar/lib/network/nodejs";
-import {BeaconNode} from "@chainsafe/lodestar/lib/node";
-import {BeaconDb} from "@chainsafe/lodestar/lib/db";
+import {BeaconNode, BeaconDb, createNodeJsLibp2p} from "@chainsafe/lodestar";
 
 import {IGlobalArgs} from "../../options";
 import {parseEnrArgs} from "../../options/enrOptions";
@@ -41,7 +39,7 @@ export async function beaconHandler(args: IBeaconArgs & IGlobalArgs): Promise<vo
   const abortController = new AbortController();
 
   // Logger setup
-  const logger = new WinstonLogger({}, [
+  const logger = new WinstonLogger({level: args.logLevel}, [
     consoleTransport,
     ...(beaconPaths.logFile ? [fileTransport(beaconPaths.logFile)] : []),
   ]);
@@ -54,20 +52,29 @@ export async function beaconHandler(args: IBeaconArgs & IGlobalArgs): Promise<vo
     config,
     controller: new LevelDbController(options.db, {logger: logger.child(options.logger.db)}),
   });
-  const dbClose = (): Promise<void> => db.stop();
-  abortController.signal.addEventListener("abort", dbClose, {once: true});
+
   await db.start();
 
   // BeaconNode setup
-  const anchorState = await initBeaconState(options, args, config, db, logger, abortController.signal);
-  const node = await BeaconNode.init({
-    opts: options,
-    config,
-    db,
-    logger,
-    libp2p: await createNodeJsLibp2p(peerId, options.network, beaconPaths.peerStoreDir),
-    anchorState,
-  });
-  abortController.signal.removeEventListener("abort", dbClose);
-  abortController.signal.addEventListener("abort", () => node.close(), {once: true});
+  try {
+    const anchorState = await initBeaconState(options, args, config, db, logger, abortController.signal);
+    const node = await BeaconNode.init({
+      opts: options,
+      config,
+      db,
+      logger,
+      libp2p: await createNodeJsLibp2p(peerId, options.network, beaconPaths.peerStoreDir),
+      anchorState,
+    });
+
+    abortController.signal.addEventListener("abort", () => node.close(), {once: true});
+  } catch (e) {
+    await db.stop();
+
+    if (e instanceof ErrorAborted) {
+      logger.info(e.message); // Let the user know the abort was received but don't print as error
+    } else {
+      throw e;
+    }
+  }
 }

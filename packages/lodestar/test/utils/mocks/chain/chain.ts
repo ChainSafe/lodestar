@@ -3,8 +3,8 @@ import sinon from "sinon";
 
 import {TreeBacked} from "@chainsafe/ssz";
 import {ForkDigest, Number64, Slot, Uint16, Uint64} from "@chainsafe/lodestar-types";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {computeForkDigest} from "@chainsafe/lodestar-beacon-state-transition";
+import {IBeaconConfig, IForkName} from "@chainsafe/lodestar-config";
+import {computeForkDigest, computeForkNameFromForkDigest} from "@chainsafe/lodestar-beacon-state-transition";
 import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 
@@ -125,6 +125,10 @@ export class MockBeaconChain implements IBeaconChain {
 
   public getForkDigest(): ForkDigest {
     return computeForkDigest(this.config, this.state.fork.currentVersion, this.state.genesisValidatorsRoot);
+  }
+
+  public getForkName(): IForkName {
+    return computeForkNameFromForkDigest(this.config, this.state.genesisValidatorsRoot, this.getForkDigest());
   }
 
   public getENRForkID(): phase0.ENRForkID {

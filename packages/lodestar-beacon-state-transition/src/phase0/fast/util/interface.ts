@@ -1,6 +1,6 @@
 import {ValidatorIndex, Slot, phase0} from "@chainsafe/lodestar-types";
 import {ByteVector, readOnlyForEach} from "@chainsafe/ssz";
-import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
+import {config} from "@chainsafe/lodestar-config/mainnet";
 import {Vector} from "@chainsafe/persistent-ts";
 import {IFlatValidator, createIFlatValidator} from "./flatValidator";
 import {IReadonlyEpochShuffling} from ".";

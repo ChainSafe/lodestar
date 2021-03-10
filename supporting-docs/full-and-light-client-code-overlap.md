@@ -3,11 +3,13 @@ Last edited: 18/07/19
 # Lodestar Full Client <> Light Client Architecture
 
 ## Abstract
+
 This document outlines the structural differences between the Lodestar Full Client and Light Client. Clear distinctions will be made on the overlap between the two clients and how they share related packages. A description of each package is provided, in plain english (non-technical) where possible.
 
-
 ## Directory Structure
+
 The following is the current directory structure for the Lodestar Full Client. Beside every directory is a hyphen with an acknowledgement whether or not Light Client will utilse it. The client is written in such a way that every directory is considered to be its own exportable module. For those that know Golang, the client mimics the package directory structure. This was planned months in advance in order to ensure that code can easily be shared between Lodestar tools and future devtooling tools alike. Modularity is key.
+
 ```
 packages/lodestar/src
 ├── chain - no
@@ -22,14 +24,15 @@ packages/lodestar/src
 ├── opPool - no
 ├── params - needed
 ├── rpc - needed
-├── sszTypes - needed 
+├── sszTypes - needed
 ├── sync - potnetially
-├── types - needed 
+├── types - needed
 ├── util - potentially
 └── validator - no
 ```
 
 ## Module Definitions
+
 - **Chain:** The chain module contains the ETH2.0 consensus rules. This isn't used by the Light Client, but because the spec is frozen, and we are already at the latest version v0.8, there is very little to change here.
 - **CLI:** The CLI is the command line interface. There is a little overlap surrounding ETH1.x deposits. The added overhead of maintaining it is low regardless, since all the main commands already exist.
 - **Config:** Config contains the blockchain configurations that allow us to customize the chain for both testing and production needs. The Light Client will need to use these.

@@ -10,7 +10,7 @@ import {generateState} from "../../../utils/state";
 import {generateValidator} from "../../../utils/validator";
 import {intDiv} from "@chainsafe/lodestar-utils";
 
-describe("process epoch - slashings", function () {
+describe.skip("process epoch - slashings", function () {
   const sandbox = sinon.createSandbox();
 
   let getCurrentEpochStub: any, getTotalBalanceStub: any, decreaseBalanceStub: any;

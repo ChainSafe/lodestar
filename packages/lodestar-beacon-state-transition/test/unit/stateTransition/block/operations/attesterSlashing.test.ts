@@ -33,7 +33,7 @@ describe("process block - attester slashings", function () {
     expect(() => phase0.processAttesterSlashing(config, state, attesterSlashing)).to.throw;
   });
 
-  it("should fail to process slashings - data incorrect", function () {
+  it.skip("should fail to process slashings - data incorrect", function () {
     const state = generateState();
     const attesterSlashing = generateEmptyAttesterSlashing();
     attesterSlashing.attestation1.signature = Buffer.alloc(96, 1);
@@ -51,7 +51,7 @@ describe("process block - attester slashings", function () {
     }
   });
 
-  it("should fail to process slashings - data2 incorrect", function () {
+  it.skip("should fail to process slashings - data2 incorrect", function () {
     const state = generateState();
     const attesterSlashing = generateEmptyAttesterSlashing();
     attesterSlashing.attestation1.data.source.epoch = 2;
@@ -67,7 +67,7 @@ describe("process block - attester slashings", function () {
     }
   });
 
-  it("should fail to process slashings - nothing slashed", function () {
+  it.skip("should fail to process slashings - nothing slashed", function () {
     const state = generateState();
     const attesterSlashing = generateEmptyAttesterSlashing();
     attesterSlashing.attestation1.data.source.epoch = 2;
@@ -82,7 +82,7 @@ describe("process block - attester slashings", function () {
     }
   });
 
-  it("should process slashings", function () {
+  it.skip("should process slashings", function () {
     const state = generateState();
     const attesterSlashing = generateEmptyAttesterSlashing();
     attesterSlashing.attestation1.attestingIndices = [1, 2, 3] as List<number>;

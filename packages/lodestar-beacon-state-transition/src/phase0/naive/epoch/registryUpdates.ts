@@ -44,8 +44,8 @@ export function processRegistryUpdates(config: IBeaconConfig, state: phase0.Beac
     .sort((a, b) => a.val.activationEligibilityEpoch - b.val.activationEligibilityEpoch || a.index - b.index)
     .map((obj) => obj.val);
   // Dequeued validators for activation up to churn limit
-  activationQueue.slice(0, getValidatorChurnLimit(config, state)).forEach((validator) => {
+  for (const validator of activationQueue.slice(0, getValidatorChurnLimit(config, state))) {
     validator.activationEpoch = computeActivationExitEpoch(config, currentEpoch);
-  });
+  }
   return state;
 }

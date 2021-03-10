@@ -10,9 +10,16 @@ import {
 
 export type IForkName = "phase0" | "lightclient" | "phase1";
 
+export interface IForkInfo {
+  name: IForkName;
+  slot: Slot;
+  version: Version;
+}
+
 export interface IBeaconConfig {
   params: IBeaconParams;
   types: IBeaconSSZTypes;
+  getForkInfoRecord(): Record<IForkName, IForkInfo>;
   /**
    * Get the hard-fork name at a given slot
    */
