@@ -1,5 +1,6 @@
 import {ApiController} from "../types";
-import {objectToExpectedCase} from "@chainsafe/lodestar-utils";
+
+/* eslint-disable @typescript-eslint/naming-convention */
 
 export const getNetworkIdentity: ApiController = {
   url: "/identity",
@@ -11,7 +12,10 @@ export const getNetworkIdentity: ApiController = {
     const metadataJson = this.config.types.phase0.Metadata.toJson(identity.metadata, {case: "snake"});
     resp.status(200).send({
       data: {
-        ...objectToExpectedCase(identity, "snake"),
+        peer_id: identity.peerId,
+        enr: identity.enr,
+        p2p_addresses: identity.p2pAddresses,
+        discovery_addresses: identity.discoveryAddresses,
         metadata: metadataJson,
       },
     });
