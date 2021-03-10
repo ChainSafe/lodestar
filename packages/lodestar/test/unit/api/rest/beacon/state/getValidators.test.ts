@@ -6,10 +6,21 @@ import {generateValidator} from "../../../../../utils/validator";
 import {urlJoin} from "../../utils";
 import {BEACON_PREFIX} from "../../index.test";
 import {phase0} from "@chainsafe/lodestar-types";
+import {SinonStubbedInstance} from "sinon";
+import {RestApi} from "../../../../../../src/api";
+import {BeaconStateApi} from "../../../../../../src/api/impl/beacon/state";
 
 describe("rest - beacon - getStateValidators", function () {
+  let beaconStateStub: SinonStubbedInstance<BeaconStateApi>;
+  let restApi: RestApi;
+
+  beforeEach(function () {
+    beaconStateStub = this.test?.ctx?.beaconStateStub;
+    restApi = this.test?.ctx?.restApi;
+  });
+
   it("should success", async function () {
-    this.test?.ctx?.beaconStateStub.getStateValidators.withArgs("head").resolves([
+    beaconStateStub.getStateValidators.withArgs("head").resolves([
       {
         index: 1,
         balance: BigInt(3200000),
@@ -17,7 +28,7 @@ describe("rest - beacon - getStateValidators", function () {
         validator: generateValidator(),
       },
     ]);
-    const response = await supertest(this.test?.ctx?.restApi.server.server)
+    const response = await supertest(restApi.server.server)
       .get(urlJoin(BEACON_PREFIX, getStateValidators.url.replace(":stateId", "head")))
       .expect(200)
       .expect("Content-Type", "application/json; charset=utf-8");
@@ -26,10 +37,10 @@ describe("rest - beacon - getStateValidators", function () {
   });
 
   it("should not found state", async function () {
-    this.test?.ctx?.beaconStateStub.getStateValidators.withArgs("4").throws(new StateNotFound());
-    await supertest(this.test?.ctx?.restApi.server.server)
+    beaconStateStub.getStateValidators.withArgs("4").throws(new StateNotFound());
+    await supertest(restApi.server.server)
       .get(urlJoin(BEACON_PREFIX, getStateValidators.url.replace(":stateId", "4")))
       .expect(404);
-    expect(this.test?.ctx?.beaconStateStub.getStateValidators.calledOnce).to.be.true;
+    expect(beaconStateStub.getStateValidators.calledOnce).to.be.true;
   });
 });

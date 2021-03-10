@@ -3,12 +3,20 @@ import supertest from "supertest";
 import {ZERO_HASH} from "@chainsafe/lodestar-beacon-state-transition";
 import {SinonStubbedInstance} from "sinon";
 import {DebugBeaconApi} from "../../../../../../src/api/impl/debug/beacon";
+import {RestApi} from "../../../../../../src/api";
 
 describe("rest - debug - beacon - getHeads", function () {
+  let debugBeaconStub: SinonStubbedInstance<DebugBeaconApi>;
+  let restApi: RestApi;
+
+  beforeEach(function () {
+    debugBeaconStub = this.test?.ctx?.debugBeaconStub;
+    restApi = this.test?.ctx?.restApi;
+  });
+
   it("should succeed", async function () {
-    const debugBeaconStub = this.api.debug.beacon as SinonStubbedInstance<DebugBeaconApi>;
     debugBeaconStub.getHeads.resolves([{slot: 100, root: ZERO_HASH}]);
-    const response = await supertest(this.test?.ctx?.restApi.server.server)
+    const response = await supertest(restApi.server.server)
       .get("/eth/v1/debug/beacon/heads")
       .expect(200)
       .expect("Content-Type", "application/json; charset=utf-8");
@@ -16,8 +24,7 @@ describe("rest - debug - beacon - getHeads", function () {
   });
 
   it("should not found heads", async function () {
-    const debugBeaconStub = this.api.debug.beacon as SinonStubbedInstance<DebugBeaconApi>;
     debugBeaconStub.getHeads.resolves(null);
-    await supertest(this.test?.ctx?.restApi.server.server).get("/eth/v1/debug/beacon/heads").expect(404);
+    await supertest(restApi.server.server).get("/eth/v1/debug/beacon/heads").expect(404);
   });
 });

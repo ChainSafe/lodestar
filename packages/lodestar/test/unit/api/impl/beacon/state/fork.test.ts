@@ -20,7 +20,6 @@ describe("beacon api impl - state - get fork", function () {
         db: this.test?.ctx?.dbStub,
       }
     );
-    // console.log('this.test?.ctx?.dbStub: ', this.test?.ctx?.dbStub)
   });
 
   afterEach(function () {

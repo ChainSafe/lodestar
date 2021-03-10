@@ -3,11 +3,21 @@ import supertest from "supertest";
 import {urlJoin} from "../utils";
 import {VALIDATOR_PREFIX} from "../index.test";
 import {prepareCommitteeSubnet} from "../../../../../src/api/rest/controllers/validator/prepareCommitteeSubnet";
+import {SinonStubbedInstance} from "sinon";
+import {RestApi, ValidatorApi} from "../../../../../src/api";
 
 describe("rest - validator - prepareCommitteeSubnet", function () {
+  let restApi: RestApi;
+  let validatorStub: SinonStubbedInstance<ValidatorApi>;
+
+  beforeEach(function () {
+    validatorStub = this.test?.ctx?.validatorStub;
+    restApi = this.test?.ctx?.restApi;
+  });
+
   it("should succeed", async function () {
-    this.test?.ctx?.api.validator.prepareBeaconCommitteeSubnet.resolves();
-    await supertest(this.test?.ctx?.restApi.server.server)
+    validatorStub.prepareBeaconCommitteeSubnet.resolves();
+    await supertest(restApi.server.server)
       .post(urlJoin(VALIDATOR_PREFIX, prepareCommitteeSubnet.url))
       .send([
         {
@@ -24,7 +34,7 @@ describe("rest - validator - prepareCommitteeSubnet", function () {
       ])
       .expect(200);
     expect(
-      this.test?.ctx?.api.validator.prepareBeaconCommitteeSubnet.withArgs([
+      validatorStub.prepareBeaconCommitteeSubnet.withArgs([
         {
           validatorIndex: 1,
           committeeIndex: 2,
@@ -37,7 +47,7 @@ describe("rest - validator - prepareCommitteeSubnet", function () {
   });
 
   it("missing param", async function () {
-    await supertest(this.test?.ctx?.restApi.server.server)
+    await supertest(restApi.server.server)
       .post(urlJoin(VALIDATOR_PREFIX, prepareCommitteeSubnet.url))
       .send([
         {

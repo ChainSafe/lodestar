@@ -12,9 +12,12 @@ import {generateInitialMaxBalances} from "../../../../../utils/balances";
 import {generateState} from "../../../../../utils/state";
 import {IBeaconSync} from "../../../../../../src/sync";
 import {generateValidators} from "../../../../../utils/validator";
+import {StubbedBeaconDb} from "../../../../../utils/stub";
 
 describe("get proposers api impl", function () {
-  let chainStub: SinonStubbedInstance<IBeaconChain>, syncStub: SinonStubbedInstance<IBeaconSync>;
+  let chainStub: SinonStubbedInstance<IBeaconChain>,
+    syncStub: SinonStubbedInstance<IBeaconSync>,
+    dbStub: StubbedBeaconDb;
 
   let api: IValidatorApi;
 
@@ -23,8 +26,9 @@ describe("get proposers api impl", function () {
     syncStub = this.test?.ctx?.syncStub;
     chainStub.clock = this.test?.ctx?.sandbox.createStubInstance(LocalClock);
     chainStub.forkChoice = this.test?.ctx?.sandbox.createStubInstance(ForkChoice);
+    dbStub = this.test?.ctx?.dbStub;
     // @ts-ignore
-    api = new ValidatorApi({}, {db: this.test?.ctx?.dbStub, chain: chainStub, sync: syncStub, config});
+    api = new ValidatorApi({}, {db: dbStub, chain: chainStub, sync: syncStub, config});
   });
 
   afterEach(function () {
@@ -60,7 +64,7 @@ describe("get proposers api impl", function () {
     syncStub.isSynced.returns(true);
     this.test?.ctx?.sandbox.stub(chainStub.clock, "currentEpoch").get(() => 0);
     this.test?.ctx?.sandbox.stub(chainStub.clock, "currentSlot").get(() => 0);
-    this.test?.ctx?.dbStub.block.get.resolves({message: {stateRoot: Buffer.alloc(32)}} as any);
+    dbStub.block.get.resolves({message: {stateRoot: Buffer.alloc(32)}} as any);
     const state = generateState({
       slot: 0,
       validators: generateValidators(25, {

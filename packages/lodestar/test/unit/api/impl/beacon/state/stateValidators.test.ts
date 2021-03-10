@@ -4,17 +4,21 @@ import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {List} from "@chainsafe/ssz";
 import {expect, use} from "chai";
 import chaiAsPromised from "chai-as-promised";
-import sinon, {SinonStubbedMember} from "sinon";
+import sinon, {SinonStubbedInstance, SinonStubbedMember} from "sinon";
 import {BeaconStateApi} from "../../../../../../src/api/impl/beacon/state";
 import * as stateApiUtils from "../../../../../../src/api/impl/beacon/state/utils";
 import {generateState} from "../../../../../utils/state";
 import {generateValidator, generateValidators} from "../../../../../utils/validator";
+import {BeaconChain} from "../../../../../../src/chain";
+import {StubbedBeaconDb} from "../../../../../utils/stub";
 
 use(chaiAsPromised);
 
 describe("beacon api impl - state - validators", function () {
   let resolveStateIdStub: SinonStubbedMember<typeof stateApiUtils["resolveStateId"]>;
   let toValidatorResponseStub: SinonStubbedMember<typeof stateApiUtils["toValidatorResponse"]>;
+  let dbStub: StubbedBeaconDb;
+  let chainStub: SinonStubbedInstance<BeaconChain>;
 
   const sandbox = sinon.createSandbox();
 
@@ -27,6 +31,8 @@ describe("beacon api impl - state - validators", function () {
       status: phase0.ValidatorStatus.ACTIVE_ONGOING,
       validator: generateValidator(),
     });
+    dbStub = this.test?.ctx?.dbStub;
+    chainStub = this.test?.ctx?.chainStub;
   });
 
   afterEach(function () {
@@ -36,7 +42,7 @@ describe("beacon api impl - state - validators", function () {
   describe("get validators", function () {
     it("state not found", async function () {
       resolveStateIdStub.resolves(null);
-      const api = new BeaconStateApi({}, {config, db: this.test?.ctx?.dbStub, chain: this.test?.ctx?.chainStub});
+      const api = new BeaconStateApi({}, {config, db: dbStub, chain: chainStub});
       await expect(api.getStateValidators("notfound")).to.be.rejectedWith("State not found");
     });
 
@@ -44,7 +50,7 @@ describe("beacon api impl - state - validators", function () {
       resolveStateIdStub.resolves({
         state: generateState({validators: generateValidators(10)}),
       });
-      const api = new BeaconStateApi({}, {config, db: this.test?.ctx?.dbStub, chain: this.test?.ctx?.chainStub});
+      const api = new BeaconStateApi({}, {config, db: dbStub, chain: chainStub});
       const validators = api.getStateValidators("someState", {indices: [0, 1, 123]});
       expect((await validators).length).to.equal(2);
     });
@@ -59,7 +65,7 @@ describe("beacon api impl - state - validators", function () {
         status: phase0.ValidatorStatus.EXITED_SLASHED,
         validator: generateValidator(),
       });
-      const api = new BeaconStateApi({}, {config, db: this.test?.ctx?.dbStub, chain: this.test?.ctx?.chainStub});
+      const api = new BeaconStateApi({}, {config, db: dbStub, chain: chainStub});
       const validators = api.getStateValidators("someState", {statuses: [phase0.ValidatorStatus.ACTIVE_ONGOING]});
       expect((await validators).length).to.equal(9);
     });
@@ -68,7 +74,7 @@ describe("beacon api impl - state - validators", function () {
       resolveStateIdStub.resolves({
         state: generateState({validators: generateValidators(10)}),
       });
-      const api = new BeaconStateApi({}, {config, db: this.test?.ctx?.dbStub, chain: this.test?.ctx?.chainStub});
+      const api = new BeaconStateApi({}, {config, db: dbStub, chain: chainStub});
       const validators = api.getStateValidators("someState");
       expect((await validators).length).to.equal(10);
     });
@@ -77,45 +83,45 @@ describe("beacon api impl - state - validators", function () {
   describe("get validator", function () {
     it("state not found", async function () {
       resolveStateIdStub.resolves(null);
-      const api = new BeaconStateApi({}, {config, db: this.test?.ctx?.dbStub, chain: this.test?.ctx?.chainStub});
+      const api = new BeaconStateApi({}, {config, db: dbStub, chain: chainStub});
       await expect(api.getStateValidator("notfound", 1)).to.be.rejectedWith("State not found");
     });
     it("validator by index not found", async function () {
       resolveStateIdStub.resolves({
         state: generateState({validators: generateValidators(10)}),
       });
-      const api = new BeaconStateApi({}, {config, db: this.test?.ctx?.dbStub, chain: this.test?.ctx?.chainStub});
+      const api = new BeaconStateApi({}, {config, db: dbStub, chain: chainStub});
       await expect(api.getStateValidator("someState", 15)).to.be.rejectedWith("Validator not found");
     });
     it("validator by index found", async function () {
       resolveStateIdStub.resolves({
         state: generateState({validators: generateValidators(10)}),
       });
-      const api = new BeaconStateApi({}, {config, db: this.test?.ctx?.dbStub, chain: this.test?.ctx?.chainStub});
+      const api = new BeaconStateApi({}, {config, db: dbStub, chain: chainStub});
       expect(await api.getStateValidator("someState", 1)).to.not.be.null;
     });
     it("validator by root not found", async function () {
       resolveStateIdStub.resolves({
         state: generateState({validators: generateValidators(10)}),
       });
-      this.test?.ctx?.chainStub.getHeadEpochContext.returns({
+      chainStub.getHeadEpochContext.returns({
         pubkey2index: {
           get: () => undefined,
         } as any,
       } as phase0.EpochContext);
-      const api = new BeaconStateApi({}, {config, db: this.test?.ctx?.dbStub, chain: this.test?.ctx?.chainStub});
+      const api = new BeaconStateApi({}, {config, db: dbStub, chain: chainStub});
       await expect(api.getStateValidator("someState", Buffer.alloc(32, 1))).to.be.rejectedWith("Validator not found");
     });
     it("validator by root found", async function () {
       resolveStateIdStub.resolves({
         state: generateState({validators: generateValidators(10)}),
       });
-      this.test?.ctx?.chainStub.getHeadEpochContext.returns({
+      chainStub.getHeadEpochContext.returns({
         pubkey2index: {
           get: () => 2,
         } as any,
       } as phase0.EpochContext);
-      const api = new BeaconStateApi({}, {config, db: this.test?.ctx?.dbStub, chain: this.test?.ctx?.chainStub});
+      const api = new BeaconStateApi({}, {config, db: dbStub, chain: chainStub});
       expect(await api.getStateValidator("someState", Buffer.alloc(32, 1))).to.not.be.null;
     });
   });
@@ -123,7 +129,7 @@ describe("beacon api impl - state - validators", function () {
   describe("get validators balances", function () {
     it("state not found", async function () {
       resolveStateIdStub.resolves(null);
-      const api = new BeaconStateApi({}, {config, db: this.test?.ctx?.dbStub, chain: this.test?.ctx?.chainStub});
+      const api = new BeaconStateApi({}, {config, db: dbStub, chain: chainStub});
       await expect(api.getStateValidatorBalances("notfound")).to.be.rejectedWith("State not found");
     });
 
@@ -137,10 +143,10 @@ describe("beacon api impl - state - validators", function () {
       const pubkey2IndexStub = sinon.createStubInstance(phase0.PubkeyIndexMap);
       pubkey2IndexStub.get.withArgs(Buffer.alloc(32, 1)).returns(3);
       pubkey2IndexStub.get.withArgs(Buffer.alloc(32, 2)).returns(25);
-      this.test?.ctx?.chainStub.getHeadEpochContext.returns({
+      chainStub.getHeadEpochContext.returns({
         pubkey2index: (pubkey2IndexStub as unknown) as phase0.PubkeyIndexMap,
       } as phase0.EpochContext);
-      const api = new BeaconStateApi({}, {config, db: this.test?.ctx?.dbStub, chain: this.test?.ctx?.chainStub});
+      const api = new BeaconStateApi({}, {config, db: dbStub, chain: chainStub});
       const balances = await api.getStateValidatorBalances("somestate", [
         1,
         24,
@@ -159,7 +165,7 @@ describe("beacon api impl - state - validators", function () {
           balances: Array.from({length: 10}, () => BigInt(10)) as List<Gwei>,
         }),
       });
-      const api = new BeaconStateApi({}, {config, db: this.test?.ctx?.dbStub, chain: this.test?.ctx?.chainStub});
+      const api = new BeaconStateApi({}, {config, db: dbStub, chain: chainStub});
       const balances = await api.getStateValidatorBalances("somestate");
       expect(balances.length).to.equal(10);
       expect(balances[0].index).to.equal(0);

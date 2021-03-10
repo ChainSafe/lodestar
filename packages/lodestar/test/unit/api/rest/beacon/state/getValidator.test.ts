@@ -8,19 +8,28 @@ import {generateValidator} from "../../../../../utils/validator";
 import {urlJoin} from "../../utils";
 import {BEACON_PREFIX} from "../../index.test";
 import {phase0} from "@chainsafe/lodestar-types";
+import {BeaconStateApi} from "../../../../../../src/api/impl/beacon/state";
+import {SinonStubbedInstance} from "sinon";
+import {RestApi} from "../../../../../../src/api";
 
 describe("rest - beacon - getStateValidator", function () {
+  let beaconStateStub: SinonStubbedInstance<BeaconStateApi>;
+  let restApi: RestApi;
+
+  beforeEach(function () {
+    beaconStateStub = this.test?.ctx?.beaconStateStub;
+    restApi = this.test?.ctx?.restApi;
+  });
+
   it("should get by root", async function () {
     const pubkey = toHexString(Buffer.alloc(48, 1));
-    this.test?.ctx?.beaconStateStub.getStateValidator
-      .withArgs("head", config.types.BLSPubkey.fromJson(pubkey))
-      .resolves({
-        index: 1,
-        balance: BigInt(3200000),
-        status: phase0.ValidatorStatus.ACTIVE_ONGOING,
-        validator: generateValidator(),
-      });
-    const response = await supertest(this.test?.ctx?.restApi.server.server)
+    beaconStateStub.getStateValidator.withArgs("head", config.types.BLSPubkey.fromJson(pubkey)).resolves({
+      index: 1,
+      balance: BigInt(3200000),
+      status: phase0.ValidatorStatus.ACTIVE_ONGOING,
+      validator: generateValidator(),
+    });
+    const response = await supertest(restApi.server.server)
       .get(urlJoin(BEACON_PREFIX, getStateValidator.url.replace(":stateId", "head").replace(":validatorId", pubkey)))
       .expect(200)
       .expect("Content-Type", "application/json; charset=utf-8");
@@ -29,13 +38,13 @@ describe("rest - beacon - getStateValidator", function () {
   });
 
   it("should get by index", async function () {
-    this.test?.ctx?.beaconStateStub.getStateValidator.withArgs("head", 1).resolves({
+    beaconStateStub.getStateValidator.withArgs("head", 1).resolves({
       index: 1,
       balance: BigInt(3200000),
       status: phase0.ValidatorStatus.ACTIVE_ONGOING,
       validator: generateValidator(),
     });
-    const response = await supertest(this.test?.ctx?.restApi.server.server)
+    const response = await supertest(restApi.server.server)
       .get(urlJoin(BEACON_PREFIX, getStateValidator.url.replace(":stateId", "head").replace(":validatorId", "1")))
       .expect(200)
       .expect("Content-Type", "application/json; charset=utf-8");
@@ -44,18 +53,18 @@ describe("rest - beacon - getStateValidator", function () {
   });
 
   it("should not found validator", async function () {
-    this.test?.ctx?.beaconStateStub.getStateValidator.withArgs("4", 1).resolves(null);
-    await supertest(this.test?.ctx?.restApi.server.server)
+    beaconStateStub.getStateValidator.withArgs("4", 1).resolves(null);
+    await supertest(restApi.server.server)
       .get(urlJoin(BEACON_PREFIX, getStateValidator.url.replace(":stateId", "4").replace(":validatorId", "1")))
       .expect(404);
-    expect(this.test?.ctx?.beaconStateStub.getStateValidator.calledOnce).to.be.true;
+    expect(beaconStateStub.getStateValidator.calledOnce).to.be.true;
   });
 
   it("should not found state", async function () {
-    this.test?.ctx?.beaconStateStub.getStateValidator.withArgs("4", 1).throws(new StateNotFound());
-    await supertest(this.test?.ctx?.restApi.server.server)
+    beaconStateStub.getStateValidator.withArgs("4", 1).throws(new StateNotFound());
+    await supertest(restApi.server.server)
       .get(urlJoin(BEACON_PREFIX, getStateValidator.url.replace(":stateId", "4").replace(":validatorId", "1")))
       .expect(404);
-    expect(this.test?.ctx?.beaconStateStub.getStateValidator.calledOnce).to.be.true;
+    expect(beaconStateStub.getStateValidator.calledOnce).to.be.true;
   });
 });

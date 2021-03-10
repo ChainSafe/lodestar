@@ -6,12 +6,22 @@ import {produceAggregatedAttestation} from "../../../../../src/api/rest/controll
 import {generateEmptyAttestation} from "../../../../utils/attestation";
 import {urlJoin} from "../utils";
 import {VALIDATOR_PREFIX} from "../index.test";
+import {SinonStubbedInstance} from "sinon";
+import {RestApi, ValidatorApi} from "../../../../../src/api";
 
 describe("rest - validator - produceAggregatedAttestation", function () {
+  let restApi: RestApi;
+  let validatorStub: SinonStubbedInstance<ValidatorApi>;
+
+  beforeEach(function () {
+    validatorStub = this.test?.ctx?.validatorStub;
+    restApi = this.test?.ctx?.restApi;
+  });
+
   it("should succeed", async function () {
     const root = config.types.Root.defaultValue();
-    this.test?.ctx?.validatorStub.getAggregatedAttestation.resolves(generateEmptyAttestation());
-    const response = await supertest(this.test?.ctx?.restApi.server.server)
+    validatorStub.getAggregatedAttestation.resolves(generateEmptyAttestation());
+    const response = await supertest(restApi.server.server)
       .get(urlJoin(VALIDATOR_PREFIX, produceAggregatedAttestation.url))
       .query({
         // eslint-disable-next-line @typescript-eslint/naming-convention
@@ -21,17 +31,17 @@ describe("rest - validator - produceAggregatedAttestation", function () {
       .expect(200);
     expect(response.body.data).to.not.be.undefined;
     expect(response.body.data).to.not.be.undefined;
-    expect(this.test?.ctx?.validatorStub.getAggregatedAttestation.withArgs(root, 0).calledOnce).to.be.true;
+    expect(validatorStub.getAggregatedAttestation.withArgs(root, 0).calledOnce).to.be.true;
   });
 
   it("missing param", async function () {
-    this.test?.ctx?.validatorStub.getAggregatedAttestation.resolves();
-    await supertest(this.test?.ctx?.restApi.server.server)
+    validatorStub.getAggregatedAttestation.resolves();
+    await supertest(restApi.server.server)
       .get(urlJoin(VALIDATOR_PREFIX, produceAggregatedAttestation.url))
       .query({
         slot: 0,
       })
       .expect(400);
-    expect(this.test?.ctx?.validatorStub.getAggregatedAttestation.notCalled).to.be.true;
+    expect(validatorStub.getAggregatedAttestation.notCalled).to.be.true;
   });
 });

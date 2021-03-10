@@ -6,45 +6,52 @@ import {IGossip} from "../../../../../../src/network/gossip/interface";
 import {BeaconBlockApi} from "../../../../../../src/api/impl/beacon/blocks";
 import {generateEmptySignedBlock} from "../../../../../utils/block";
 import {SignedBeaconBlock} from "@chainsafe/lodestar-types/lib/allForks";
+import {BeaconChain} from "../../../../../../src/chain";
+import {BeaconSync} from "../../../../../../src/sync";
 
 use(chaiAsPromised);
 
 describe("api - beacon - publishBlock", function () {
   let gossipStub: SinonStubbedInstance<IGossip>;
   let block: SignedBeaconBlock;
+  let blockApi: BeaconBlockApi;
+  let chainStub: SinonStubbedInstance<BeaconChain>;
+  let syncStub: SinonStubbedInstance<BeaconSync>;
 
   beforeEach(() => {
     gossipStub = sinon.createStubInstance(Gossip);
     gossipStub.publishBlock = sinon.stub();
     this.ctx.networkStub.gossip = gossipStub;
-    this.ctx.blockApi = new BeaconBlockApi(
+    chainStub = this.ctx.chainStub;
+    syncStub = this.ctx.syncStub;
+    blockApi = new BeaconBlockApi(
       {},
       {
-        chain: this.ctx.chainStub,
+        chain: chainStub,
         config: this.ctx.config,
         db: this.ctx.dbStub,
         network: this.ctx.networkStub,
-        sync: this.ctx.syncStub,
+        sync: syncStub,
       }
     );
     block = generateEmptySignedBlock();
   });
 
   it("successful publish", async function () {
-    this.test?.ctx?.syncStub.isSynced.returns(true);
-    await expect(this.test?.ctx?.blockApi.publishBlock(block)).to.be.fulfilled;
-    expect(this.test?.ctx?.chainStub.receiveBlock.calledOnceWith(block)).to.be.true;
+    syncStub.isSynced.returns(true);
+    await expect(blockApi.publishBlock(block)).to.be.fulfilled;
+    expect(chainStub.receiveBlock.calledOnceWith(block)).to.be.true;
     expect(gossipStub.publishBlock.calledOnceWith(block)).to.be.true;
   });
 
   it("node is syncing", async function () {
-    this.test?.ctx?.syncStub.isSynced.returns(false);
-    this.test?.ctx?.syncStub.getSyncStatus.returns({
+    syncStub.isSynced.returns(false);
+    syncStub.getSyncStatus.returns({
       syncDistance: BigInt(50),
       headSlot: BigInt(0),
     });
-    await expect(this.test?.ctx?.blockApi.publishBlock(block)).to.be.rejected;
-    expect(this.test?.ctx?.chainStub.receiveBlock.called).to.be.false;
+    await expect(blockApi.publishBlock(block)).to.be.rejected;
+    expect(chainStub.receiveBlock.called).to.be.false;
     expect(gossipStub.publishBlock.called).to.be.false;
   });
 });

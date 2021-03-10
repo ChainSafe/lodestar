@@ -5,6 +5,7 @@ import {ApiNamespace, RestApi} from "../../../../src/api";
 import {StubbedApi} from "../../../utils/stub/api";
 import {testLogger} from "../../../utils/logger";
 import {DebugBeaconApi} from "../../../../src/api/impl/debug/beacon";
+import {BeaconStateApi} from "../../../../src/api/impl/beacon/state";
 
 export const BEACON_PREFIX = "/eth/v1/beacon";
 export const CONFIG_PREFIX = "/eth/v1/config";
@@ -38,7 +39,7 @@ beforeEach(async function () {
   this.beaconBlocksStub = this.api.beacon.blocks;
   this.configStub = this.api.config;
   this.beaconStub = this.api.beacon;
-  this.beaconStateStub = this.api.beacon.state;
+  this.beaconStateStub = this.api.beacon.state as SinonStubbedInstance<BeaconStateApi>;
   this.beaconPoolStub = this.api.beacon.pool;
   this.nodeStub = this.api.node;
   this.validatorStub = this.api.validator;
