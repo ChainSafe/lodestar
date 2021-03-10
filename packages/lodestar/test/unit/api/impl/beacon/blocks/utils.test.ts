@@ -1,4 +1,4 @@
-import sinon, {SinonStubbedInstance} from "sinon";
+import {SinonStubbedInstance} from "sinon";
 import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {resolveBlockId} from "../../../../../../src/api/impl/beacon/blocks/utils";
 import {config} from "@chainsafe/lodestar-config/minimal";
@@ -12,66 +12,66 @@ import {bufferEqualsMatcher} from "../../../../../utils/sinon/matcher";
 
 use(chaiAsPromised);
 
-describe("utils tests", () => {
+describe("block api utils", function () {
   describe("resolveBlockId", function () {
-    let localForkChoiceStub: SinonStubbedInstance<ForkChoice>;
-    let localDbStub: StubbedBeaconDb;
+    let forkChoiceStub: SinonStubbedInstance<ForkChoice>;
+    let dbStub: StubbedBeaconDb;
     const expectedBuffer = Buffer.alloc(32, 2);
 
     beforeEach(function () {
-      localForkChoiceStub = sinon.createStubInstance(ForkChoice);
-      localDbStub = new StubbedBeaconDb(sinon, config);
+      forkChoiceStub = this.test?.ctx?.forkChoiceStub;
+      dbStub = this.test?.ctx?.dbStub;
     });
 
     it("should resolve head", async function () {
-      localForkChoiceStub.getHeadRoot.returns(expectedBuffer);
-      await resolveBlockId(config, localForkChoiceStub, localDbStub, "head");
-      expect(localDbStub.block.get.withArgs(expectedBuffer).calledOnce).to.be.true;
+      forkChoiceStub.getHeadRoot.returns(expectedBuffer);
+      await resolveBlockId(config, forkChoiceStub, dbStub, "head");
+      expect(dbStub.block.get.withArgs(expectedBuffer).calledOnce).to.be.true;
     });
 
     it("should resolve genesis", async function () {
-      await resolveBlockId(config, localForkChoiceStub, localDbStub, "genesis");
-      expect(localDbStub.blockArchive.get.withArgs(GENESIS_SLOT).calledOnce).to.be.true;
+      await resolveBlockId(config, forkChoiceStub, dbStub, "genesis");
+      expect(dbStub.blockArchive.get.withArgs(GENESIS_SLOT).calledOnce).to.be.true;
     });
 
     it("should resolve finalized", async function () {
-      localForkChoiceStub.getFinalizedCheckpoint.returns({epoch: 0, root: expectedBuffer});
-      await resolveBlockId(config, localForkChoiceStub, localDbStub, "finalized");
-      expect(localDbStub.block.get.withArgs(expectedBuffer).calledOnce).to.be.true;
+      forkChoiceStub.getFinalizedCheckpoint.returns({epoch: 0, root: expectedBuffer});
+      await resolveBlockId(config, forkChoiceStub, dbStub, "finalized");
+      expect(dbStub.block.get.withArgs(expectedBuffer).calledOnce).to.be.true;
     });
 
     it("should resolve finalized block root", async function () {
-      localDbStub.block.get.withArgs(bufferEqualsMatcher(expectedBuffer)).resolves(null);
-      await resolveBlockId(config, localForkChoiceStub, localDbStub, toHexString(expectedBuffer));
-      expect(localDbStub.block.get.withArgs(bufferEqualsMatcher(expectedBuffer)).calledOnce).to.be.true;
-      expect(localDbStub.blockArchive.getByRoot.withArgs(bufferEqualsMatcher(expectedBuffer)).calledOnce).to.be.true;
+      dbStub.block.get.withArgs(bufferEqualsMatcher(expectedBuffer)).resolves(null);
+      await resolveBlockId(config, forkChoiceStub, dbStub, toHexString(expectedBuffer));
+      expect(dbStub.block.get.withArgs(bufferEqualsMatcher(expectedBuffer)).calledOnce).to.be.true;
+      expect(dbStub.blockArchive.getByRoot.withArgs(bufferEqualsMatcher(expectedBuffer)).calledOnce).to.be.true;
     });
 
     it("should resolve non finalized block root", async function () {
-      localDbStub.block.get.withArgs(bufferEqualsMatcher(expectedBuffer)).resolves(generateEmptySignedBlock());
-      await resolveBlockId(config, localForkChoiceStub, localDbStub, toHexString(expectedBuffer));
-      expect(localDbStub.block.get.withArgs(bufferEqualsMatcher(expectedBuffer)).calledOnce).to.be.true;
-      expect(localDbStub.blockArchive.getByRoot.withArgs(bufferEqualsMatcher(expectedBuffer)).notCalled).to.be.true;
+      dbStub.block.get.withArgs(bufferEqualsMatcher(expectedBuffer)).resolves(generateEmptySignedBlock());
+      await resolveBlockId(config, forkChoiceStub, dbStub, toHexString(expectedBuffer));
+      expect(dbStub.block.get.withArgs(bufferEqualsMatcher(expectedBuffer)).calledOnce).to.be.true;
+      expect(dbStub.blockArchive.getByRoot.withArgs(bufferEqualsMatcher(expectedBuffer)).notCalled).to.be.true;
     });
 
     it("should resolve non finalized slot", async function () {
-      localForkChoiceStub.getCanonicalBlockSummaryAtSlot.withArgs(2).returns({
+      forkChoiceStub.getCanonicalBlockSummaryAtSlot.withArgs(2).returns({
         ...generateBlockSummary(),
         blockRoot: expectedBuffer,
       });
-      await resolveBlockId(config, localForkChoiceStub, localDbStub, "2");
-      expect(localForkChoiceStub.getCanonicalBlockSummaryAtSlot.withArgs(2).calledOnce).to.be.true;
+      await resolveBlockId(config, forkChoiceStub, dbStub, "2");
+      expect(forkChoiceStub.getCanonicalBlockSummaryAtSlot.withArgs(2).calledOnce).to.be.true;
     });
 
     it("should resolve finalized slot", async function () {
-      localForkChoiceStub.getCanonicalBlockSummaryAtSlot.withArgs(2).returns(null);
-      await resolveBlockId(config, localForkChoiceStub, localDbStub, "2");
-      expect(localForkChoiceStub.getCanonicalBlockSummaryAtSlot.withArgs(2).calledOnce).to.be.true;
-      expect(localDbStub.blockArchive.get.withArgs(2).calledOnce).to.be.true;
+      forkChoiceStub.getCanonicalBlockSummaryAtSlot.withArgs(2).returns(null);
+      await resolveBlockId(config, forkChoiceStub, dbStub, "2");
+      expect(forkChoiceStub.getCanonicalBlockSummaryAtSlot.withArgs(2).calledOnce).to.be.true;
+      expect(dbStub.blockArchive.get.withArgs(2).calledOnce).to.be.true;
     });
 
     it("should trow on invalid", async function () {
-      await expect(resolveBlockId(config, localForkChoiceStub, localDbStub, "asbc")).to.eventually.be.rejected;
+      await expect(resolveBlockId(config, forkChoiceStub, dbStub, "asbc")).to.eventually.be.rejected;
     });
   });
 });
