@@ -6,28 +6,38 @@ import {BEACON_PREFIX} from "../../index.test";
 import {generateEmptyProposerSlashing} from "../../../../../utils/slashings";
 import {submitProposerSlashing} from "../../../../../../src/api/rest/controllers/beacon/pool/submitProposerSlashing";
 import {ProposerSlashing} from "@chainsafe/lodestar-types/lib/phase0";
+import {SinonStubbedInstance} from "sinon";
+import {RestApi} from "../../../../../../src/api";
+import {BeaconPoolApi} from "../../../../../../src/api/impl/beacon/pool";
 
 describe("rest - beacon - submitProposerSlashing", function () {
   let slashing: ProposerSlashing;
+  let restApi: RestApi;
+  let beaconPoolStub: SinonStubbedInstance<BeaconPoolApi>;
 
   before(function () {
     slashing = generateEmptyProposerSlashing();
   });
 
+  beforeEach(function () {
+    restApi = this.test?.ctx?.restApi;
+    beaconPoolStub = this.test?.ctx?.beaconPoolStub;
+  });
+
   it("should succeed", async function () {
-    await supertest(this.test?.ctx?.restApi.server.server)
+    await supertest(restApi.server.server)
       .post(urlJoin(BEACON_PREFIX, submitProposerSlashing.url))
       .send(config.types.phase0.ProposerSlashing.toJson(slashing, {case: "snake"}) as Record<string, unknown>)
       .expect(200);
-    expect(this.test?.ctx?.beaconPoolStub.submitProposerSlashing.calledOnce).to.be.true;
+    expect(beaconPoolStub.submitProposerSlashing.calledOnce).to.be.true;
   });
 
   it("should fail to parse body", async function () {
-    await supertest(this.test?.ctx?.restApi.server.server)
+    await supertest(restApi.server.server)
       .post(urlJoin(BEACON_PREFIX, submitProposerSlashing.url))
       .send(config.types.phase0.ProposerSlashing.toJson(slashing, {case: "camel"}) as Record<string, unknown>)
       .expect(400)
       .expect("Content-Type", "application/json; charset=utf-8");
-    expect(this.test?.ctx?.beaconPoolStub.submitProposerSlashing.notCalled).to.be.true;
+    expect(beaconPoolStub.submitProposerSlashing.notCalled).to.be.true;
   });
 });

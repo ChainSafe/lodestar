@@ -31,10 +31,6 @@ describe("get proposers api impl", function () {
     api = new ValidatorApi({}, {db: dbStub, chain: chainStub, sync: syncStub, config});
   });
 
-  afterEach(function () {
-    this.test?.ctx?.sandbox.restore();
-  });
-
   it("should throw error when node is syncing", async function () {
     syncStub.isSynced.returns(false);
     syncStub.getSyncStatus.returns({
