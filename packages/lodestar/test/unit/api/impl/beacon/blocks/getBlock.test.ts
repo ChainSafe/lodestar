@@ -14,7 +14,7 @@ describe("api - beacon - getBlock", function () {
 
   beforeEach(() => {
     resolveBlockIdStub = this.ctx.sandbox.stub(blockUtils, "resolveBlockId");
-    blockApi = this.ctx?.blockApi;
+    blockApi = this.ctx.blockApi;
   });
 
   it("block not found", async function () {

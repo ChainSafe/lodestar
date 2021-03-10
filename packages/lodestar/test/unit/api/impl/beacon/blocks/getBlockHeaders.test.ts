@@ -1,6 +1,6 @@
 import {BeaconBlockApi} from "../../../../../../src/api/impl/beacon/blocks";
-import sinon, {SinonStubbedInstance} from "sinon";
-import {BeaconChain, IBeaconChain} from "../../../../../../src/chain";
+import {SinonStubbedInstance} from "sinon";
+import {IBeaconChain} from "../../../../../../src/chain";
 import {ForkChoice, IBlockSummary} from "@chainsafe/lodestar-fork-choice";
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {
@@ -13,10 +13,7 @@ import {
 import deepmerge from "deepmerge";
 import {StubbedBeaconDb} from "../../../../../utils/stub";
 import {expect} from "chai";
-import {Network} from "../../../../../../src/network/network";
-import {BeaconSync} from "../../../../../../src/sync/sync";
 
-// @TODO: figure out how to get this one to use the index-level test data
 describe("api - beacon - getBlockHeaders", function () {
   let blockApi: BeaconBlockApi;
   let chainStub: SinonStubbedInstance<IBeaconChain>;
@@ -24,20 +21,11 @@ describe("api - beacon - getBlockHeaders", function () {
   let forkChoiceStub: SinonStubbedInstance<ForkChoice>;
 
   beforeEach(function () {
-    forkChoiceStub = sinon.createStubInstance(ForkChoice);
-    chainStub = sinon.createStubInstance(BeaconChain);
+    forkChoiceStub = this.test?.ctx?.forkChoiceStub;
+    chainStub = this.test?.ctx?.chainStub;
     chainStub.forkChoice = forkChoiceStub;
-    dbStub = new StubbedBeaconDb(sinon, config);
-    blockApi = new BeaconBlockApi(
-      {},
-      {
-        chain: chainStub,
-        config,
-        db: dbStub,
-        network: sinon.createStubInstance(Network),
-        sync: sinon.createStubInstance(BeaconSync),
-      }
-    );
+    dbStub = this.test?.ctx?.dbStub;
+    blockApi = this.test?.ctx?.blockApi;
   });
 
   it("no filters - assume head slot", async function () {
