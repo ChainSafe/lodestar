@@ -18,19 +18,19 @@ export interface IApiClientOverInstanceOpts {
 }
 
 export class ApiClientOverInstance extends AbstractApiClient {
-  public url = "inmemory";
+  url = "inmemory";
 
-  public beacon: IBeaconApi;
+  beacon: IBeaconApi;
 
-  public node: INodeApi;
+  node: INodeApi;
 
-  public events: IEventsApi;
+  events: IEventsApi;
 
-  public validator: IValidatorApi;
+  validator: IValidatorApi;
 
-  public configApi: IConfigApi;
+  configApi: IConfigApi;
 
-  public constructor(opts: IApiClientOverInstanceOpts) {
+  constructor(opts: IApiClientOverInstanceOpts) {
     super(opts.config, opts.logger || new WinstonLogger());
     this.beacon = opts.beacon;
     this.validator = opts.validator;
@@ -39,11 +39,11 @@ export class ApiClientOverInstance extends AbstractApiClient {
     this.configApi = opts.configApi;
   }
 
-  public async connect(): Promise<void> {
+  async connect(): Promise<void> {
     await super.connect();
   }
 
-  public async disconnect(): Promise<void> {
+  async disconnect(): Promise<void> {
     await super.disconnect();
   }
 }

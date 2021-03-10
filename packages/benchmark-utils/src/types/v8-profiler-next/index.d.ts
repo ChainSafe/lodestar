@@ -4,7 +4,7 @@ declare module "v8-profile-next" {
   }
 
   export default class {
-    public static startProfiling(profileId: string): void;
-    public static stopProfiling(profileId: string): IProfileResult;
+    static startProfiling(profileId: string): void;
+    static stopProfiling(profileId: string): IProfileResult;
   }
 }

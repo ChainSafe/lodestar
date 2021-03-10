@@ -18,11 +18,11 @@ export interface IKeyValueSummary<K, V, S> extends IKeyValue<K, V> {
  * Stores finalized blocks. Block slot is identifier.
  */
 export class BlockArchiveRepository extends Repository<Slot, phase0.SignedBeaconBlock> {
-  public constructor(config: IBeaconConfig, db: IDatabaseController<Buffer, Buffer>) {
+  constructor(config: IBeaconConfig, db: IDatabaseController<Buffer, Buffer>) {
     super(config, db, Bucket.phase0_blockArchive, config.types.phase0.SignedBeaconBlock);
   }
 
-  public async put(key: Slot, value: phase0.SignedBeaconBlock): Promise<void> {
+  async put(key: Slot, value: phase0.SignedBeaconBlock): Promise<void> {
     const blockRoot = this.config.types.phase0.BeaconBlock.hashTreeRoot(value.message);
     const slot = value.message.slot;
     await Promise.all([
@@ -32,7 +32,7 @@ export class BlockArchiveRepository extends Repository<Slot, phase0.SignedBeacon
     ]);
   }
 
-  public async batchPut(items: ArrayLike<IKeyValue<Slot, phase0.SignedBeaconBlock>>): Promise<void> {
+  async batchPut(items: ArrayLike<IKeyValue<Slot, phase0.SignedBeaconBlock>>): Promise<void> {
     await Promise.all([
       super.batchPut(items),
       Array.from(items).map((item) => {
@@ -48,7 +48,7 @@ export class BlockArchiveRepository extends Repository<Slot, phase0.SignedBeacon
     ]);
   }
 
-  public async batchPutBinary(items: ArrayLike<IKeyValueSummary<Slot, Buffer, IBlockSummary>>): Promise<void> {
+  async batchPutBinary(items: ArrayLike<IKeyValueSummary<Slot, Buffer, IBlockSummary>>): Promise<void> {
     await Promise.all([
       super.batchPutBinary(items),
       Array.from(items).map((item) => this.storeRootIndex(item.summary.slot, item.summary.blockRoot)),
@@ -56,11 +56,11 @@ export class BlockArchiveRepository extends Repository<Slot, phase0.SignedBeacon
     ]);
   }
 
-  public async remove(value: phase0.SignedBeaconBlock): Promise<void> {
+  async remove(value: phase0.SignedBeaconBlock): Promise<void> {
     await Promise.all([super.remove(value), this.deleteRootIndex(value), this.deleteParentRootIndex(value)]);
   }
 
-  public async batchRemove(values: ArrayLike<phase0.SignedBeaconBlock>): Promise<void> {
+  async batchRemove(values: ArrayLike<phase0.SignedBeaconBlock>): Promise<void> {
     await Promise.all([
       super.batchRemove(values),
       Array.from(values).map((value) => this.deleteRootIndex(value)),
@@ -68,7 +68,7 @@ export class BlockArchiveRepository extends Repository<Slot, phase0.SignedBeacon
     ]);
   }
 
-  public async getByRoot(root: Root): Promise<phase0.SignedBeaconBlock | null> {
+  async getByRoot(root: Root): Promise<phase0.SignedBeaconBlock | null> {
     const slot = await this.getSlotByRoot(root);
     if (slot !== null && Number.isInteger(slot)) {
       return this.get(slot);
@@ -76,7 +76,7 @@ export class BlockArchiveRepository extends Repository<Slot, phase0.SignedBeacon
     return null;
   }
 
-  public async getByParentRoot(root: Root): Promise<phase0.SignedBeaconBlock | null> {
+  async getByParentRoot(root: Root): Promise<phase0.SignedBeaconBlock | null> {
     const slot = await this.getSlotByParentRoot(root);
     if (slot !== null && Number.isInteger(slot)) {
       return this.get(slot);
@@ -84,7 +84,7 @@ export class BlockArchiveRepository extends Repository<Slot, phase0.SignedBeacon
     return null;
   }
 
-  public async getSlotByRoot(root: Root): Promise<Slot | null> {
+  async getSlotByRoot(root: Root): Promise<Slot | null> {
     const value = await this.db.get(this.getRootIndexKey(root));
     if (value) {
       return bytesToInt(value, "be");
@@ -92,7 +92,7 @@ export class BlockArchiveRepository extends Repository<Slot, phase0.SignedBeacon
     return null;
   }
 
-  public async getSlotByParentRoot(root: Root): Promise<Slot | null> {
+  async getSlotByParentRoot(root: Root): Promise<Slot | null> {
     const value = await this.db.get(this.getParentRootIndexKey(root));
     if (value) {
       return bytesToInt(value, "be");
@@ -100,19 +100,19 @@ export class BlockArchiveRepository extends Repository<Slot, phase0.SignedBeacon
     return null;
   }
 
-  public decodeKey(data: Buffer): number {
+  decodeKey(data: Buffer): number {
     return bytesToInt((super.decodeKey(data) as unknown) as Uint8Array, "be");
   }
 
-  public getId(value: phase0.SignedBeaconBlock): Slot {
+  getId(value: phase0.SignedBeaconBlock): Slot {
     return value.message.slot;
   }
 
-  public async values(opts?: IBlockFilterOptions): Promise<phase0.SignedBeaconBlock[]> {
+  async values(opts?: IBlockFilterOptions): Promise<phase0.SignedBeaconBlock[]> {
     return await all(this.valuesStream(opts));
   }
 
-  public async *valuesStream(opts?: IBlockFilterOptions): AsyncIterable<phase0.SignedBeaconBlock> {
+  async *valuesStream(opts?: IBlockFilterOptions): AsyncIterable<phase0.SignedBeaconBlock> {
     const dbFilterOpts = this.dbFilterOptions(opts);
     const firstSlot = dbFilterOpts.gt
       ? this.decodeKey(dbFilterOpts.gt) + 1

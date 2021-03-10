@@ -9,8 +9,8 @@ import {ChainEvent} from "../emitter";
  * IForkChoiceStore implementer which emits forkChoice events on updated justified and finalized checkpoints.
  */
 export class ForkChoiceStore implements IForkChoiceStore {
-  public currentSlot: Slot;
-  public bestJustifiedCheckpoint: phase0.Checkpoint;
+  currentSlot: Slot;
+  bestJustifiedCheckpoint: phase0.Checkpoint;
 
   private _justifiedCheckpoint: phase0.Checkpoint;
   private _finalizedCheckpoint: phase0.Checkpoint;
@@ -33,20 +33,20 @@ export class ForkChoiceStore implements IForkChoiceStore {
     this._finalizedCheckpoint = finalizedCheckpoint;
   }
 
-  public get justifiedCheckpoint(): phase0.Checkpoint {
+  get justifiedCheckpoint(): phase0.Checkpoint {
     return this._justifiedCheckpoint;
   }
 
-  public set justifiedCheckpoint(checkpoint: phase0.Checkpoint) {
+  set justifiedCheckpoint(checkpoint: phase0.Checkpoint) {
     this._justifiedCheckpoint = checkpoint;
     this.emitter.emit(ChainEvent.forkChoiceJustified, checkpoint);
   }
 
-  public get finalizedCheckpoint(): phase0.Checkpoint {
+  get finalizedCheckpoint(): phase0.Checkpoint {
     return this._finalizedCheckpoint;
   }
 
-  public set finalizedCheckpoint(checkpoint: phase0.Checkpoint) {
+  set finalizedCheckpoint(checkpoint: phase0.Checkpoint) {
     this._finalizedCheckpoint = checkpoint;
     this.emitter.emit(ChainEvent.forkChoiceFinalized, checkpoint);
   }

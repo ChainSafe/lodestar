@@ -22,31 +22,31 @@ export class DiversifyPeersBySubnetTask {
   private testInterval?: NodeJS.Timeout;
   private isSynced: boolean;
 
-  public constructor(config: IBeaconConfig, modules: IDiversifyPeersModules) {
+  constructor(config: IBeaconConfig, modules: IDiversifyPeersModules) {
     this.config = config;
     this.network = modules.network;
     this.logger = modules.logger;
     this.isSynced = false;
   }
 
-  public start(): void {
+  start(): void {
     this.testInterval = setInterval(
       this.run,
       1 * this.config.params.SLOTS_PER_EPOCH * this.config.params.SECONDS_PER_SLOT * 1000
     );
   }
 
-  public stop(): void {
+  stop(): void {
     if (this.testInterval) {
       clearInterval(this.testInterval);
     }
   }
 
-  public handleSyncCompleted(): void {
+  handleSyncCompleted(): void {
     this.isSynced = true;
   }
 
-  public run = async (): Promise<void> => {
+  run = async (): Promise<void> => {
     this.logger.verbose("Running DiversifyPeersBySubnetTask");
     // network getPeers() is expensive, we don't want to call it multiple times
     const connectedPeers = this.network.getPeers();

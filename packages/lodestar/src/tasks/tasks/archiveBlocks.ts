@@ -25,7 +25,7 @@ export class ArchiveBlocksTask implements ITask {
 
   private finalized: phase0.Checkpoint;
 
-  public constructor(config: IBeaconConfig, modules: IArchiveBlockModules, finalized: phase0.Checkpoint) {
+  constructor(config: IBeaconConfig, modules: IArchiveBlockModules, finalized: phase0.Checkpoint) {
     this.config = config;
     this.db = modules.db;
     this.forkChoice = modules.forkChoice;
@@ -36,7 +36,7 @@ export class ArchiveBlocksTask implements ITask {
   /**
    * Only archive blocks on the same chain to the finalized checkpoint.
    */
-  public async run(): Promise<void> {
+  async run(): Promise<void> {
     // Use fork choice to determine the blocks to archive and delete
     const allCanonicalSummaries = this.forkChoice.iterateBlockSummaries(this.finalized.root);
     let i = 0;

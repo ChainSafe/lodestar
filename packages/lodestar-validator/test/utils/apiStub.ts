@@ -15,10 +15,10 @@ import {RestBeaconPoolApi} from "../../src/api/impl/rest/beacon/pool";
 import {IConfigApi} from "../../src/api/interface/config";
 
 class SinonStubbedBeaconApi implements IBeaconApi {
-  public getGenesis: SinonStubbedMember<IBeaconApi["getGenesis"]>;
-  public state: SinonStubbedInstance<IBeaconStateApi>;
-  public blocks: SinonStubbedInstance<IBeaconBlocksApi>;
-  public pool: SinonStubbedInstance<IBeaconPoolApi>;
+  getGenesis: SinonStubbedMember<IBeaconApi["getGenesis"]>;
+  state: SinonStubbedInstance<IBeaconStateApi>;
+  blocks: SinonStubbedInstance<IBeaconBlocksApi>;
+  pool: SinonStubbedInstance<IBeaconPoolApi>;
 
   constructor(sandbox: SinonSandbox = sinon) {
     this.getGenesis = sandbox.stub();

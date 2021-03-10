@@ -30,13 +30,13 @@ export class LevelDbController implements IDatabaseController<Buffer, Buffer> {
 
   private logger: ILogger;
 
-  public constructor(opts: ILevelDBOptions, {logger}: {logger: ILogger}) {
+  constructor(opts: ILevelDBOptions, {logger}: {logger: ILogger}) {
     this.opts = opts;
     this.logger = logger;
     this.db = opts.db || level(opts.name || "beaconchain", {keyEncoding: "binary", valueEncoding: "binary"});
   }
 
-  public async start(): Promise<void> {
+  async start(): Promise<void> {
     if (this.status === Status.started) return;
     this.status = Status.started;
 
@@ -44,18 +44,18 @@ export class LevelDbController implements IDatabaseController<Buffer, Buffer> {
     this.logger.info("Connected to LevelDB database", {name: this.opts.name});
   }
 
-  public async stop(): Promise<void> {
+  async stop(): Promise<void> {
     if (this.status === Status.stopped) return;
     this.status = Status.stopped;
 
     await this.db.close();
   }
 
-  public async clear(): Promise<void> {
+  async clear(): Promise<void> {
     await this.db.clear();
   }
 
-  public async get(key: Buffer): Promise<Buffer | null> {
+  async get(key: Buffer): Promise<Buffer | null> {
     try {
       return await this.db.get(key);
     } catch (e) {
@@ -66,27 +66,27 @@ export class LevelDbController implements IDatabaseController<Buffer, Buffer> {
     }
   }
 
-  public async put(key: Buffer, value: Buffer): Promise<void> {
+  async put(key: Buffer, value: Buffer): Promise<void> {
     await this.db.put(key, value);
   }
 
-  public async delete(key: Buffer): Promise<void> {
+  async delete(key: Buffer): Promise<void> {
     await this.db.del(key);
   }
 
-  public async batchPut(items: IKeyValue<Buffer, Buffer>[]): Promise<void> {
+  async batchPut(items: IKeyValue<Buffer, Buffer>[]): Promise<void> {
     const batch = this.db.batch();
     for (const item of items) batch.put(item.key, item.value);
     await batch.write();
   }
 
-  public async batchDelete(keys: Buffer[]): Promise<void> {
+  async batchDelete(keys: Buffer[]): Promise<void> {
     const batch = this.db.batch();
     for (const key of keys) batch.del(key);
     await batch.write();
   }
 
-  public keysStream(opts?: IFilterOptions<Buffer>): Pushable<Buffer> {
+  keysStream(opts?: IFilterOptions<Buffer>): Pushable<Buffer> {
     const source: Pushable<Buffer> = pushable();
     this.db
       .createKeyStream({...opts})
@@ -102,11 +102,11 @@ export class LevelDbController implements IDatabaseController<Buffer, Buffer> {
     return source;
   }
 
-  public async keys(opts?: IFilterOptions<Buffer>): Promise<Buffer[]> {
+  async keys(opts?: IFilterOptions<Buffer>): Promise<Buffer[]> {
     return all(this.keysStream(opts));
   }
 
-  public valuesStream(opts?: IFilterOptions<Buffer>): Pushable<Buffer> {
+  valuesStream(opts?: IFilterOptions<Buffer>): Pushable<Buffer> {
     const source: Pushable<Buffer> = pushable();
     this.db
       .createValueStream({...opts})
@@ -122,11 +122,11 @@ export class LevelDbController implements IDatabaseController<Buffer, Buffer> {
     return source;
   }
 
-  public async values(opts?: IFilterOptions<Buffer>): Promise<Buffer[]> {
+  async values(opts?: IFilterOptions<Buffer>): Promise<Buffer[]> {
     return all(this.valuesStream(opts));
   }
 
-  public entriesStream(opts?: IFilterOptions<Buffer>): Pushable<IKeyValue<Buffer, Buffer>> {
+  entriesStream(opts?: IFilterOptions<Buffer>): Pushable<IKeyValue<Buffer, Buffer>> {
     const source: Pushable<IKeyValue<Buffer, Buffer>> = pushable();
     this.db
       .createReadStream({...opts})
@@ -142,7 +142,7 @@ export class LevelDbController implements IDatabaseController<Buffer, Buffer> {
     return source;
   }
 
-  public async entries(opts?: IFilterOptions<Buffer>): Promise<IKeyValue<Buffer, Buffer>[]> {
+  async entries(opts?: IFilterOptions<Buffer>): Promise<IKeyValue<Buffer, Buffer>[]> {
     return all(this.entriesStream(opts));
   }
 }

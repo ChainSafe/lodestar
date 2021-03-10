@@ -28,7 +28,7 @@ export class WinstonLogger implements ILogger {
   private _level: LogLevel;
   private _silent: boolean;
 
-  public constructor(options?: Partial<ILoggerOptions>, transports?: TransportStream[]) {
+  constructor(options?: Partial<ILoggerOptions>, transports?: TransportStream[]) {
     options = {
       level: defaultLogLevel,
       module: "",
@@ -51,60 +51,60 @@ export class WinstonLogger implements ILogger {
     }
   }
 
-  public error(message: string, context?: Context, error?: Error): void {
+  error(message: string, context?: Context, error?: Error): void {
     this.createLogEntry(LogLevel.error, message, context, error);
   }
 
-  public warn(message: string, context?: Context, error?: Error): void {
+  warn(message: string, context?: Context, error?: Error): void {
     this.createLogEntry(LogLevel.warn, message, context, error);
   }
 
-  public info(message: string, context?: Context, error?: Error): void {
+  info(message: string, context?: Context, error?: Error): void {
     this.createLogEntry(LogLevel.info, message, context, error);
   }
 
-  public important(message: string, context?: Context, error?: Error): void {
+  important(message: string, context?: Context, error?: Error): void {
     this.createLogEntry(LogLevel.info, chalk.red(message as string), context, error);
   }
 
-  public verbose(message: string, context?: Context, error?: Error): void {
+  verbose(message: string, context?: Context, error?: Error): void {
     this.createLogEntry(LogLevel.verbose, message, context, error);
   }
 
-  public debug(message: string, context?: Context, error?: Error): void {
+  debug(message: string, context?: Context, error?: Error): void {
     this.createLogEntry(LogLevel.debug, message, context, error);
   }
 
-  public silly(message: string, context?: Context, error?: Error): void {
+  silly(message: string, context?: Context, error?: Error): void {
     this.createLogEntry(LogLevel.silly, message, context, error);
   }
 
-  public profile(message: string, option?: {level: string; message: string}): void {
+  profile(message: string, option?: {level: string; message: string}): void {
     this.winston.profile(message, option);
   }
 
-  public stream(): Writable {
+  stream(): Writable {
     throw Error("Not implemented");
   }
 
-  public set level(level: LogLevel) {
+  set level(level: LogLevel) {
     this.winston.level = LogLevel[level];
     this._level = level;
   }
 
-  public get level(): LogLevel {
+  get level(): LogLevel {
     return this._level;
   }
 
-  public set silent(silent: boolean) {
+  set silent(silent: boolean) {
     this._silent = silent;
   }
 
-  public get silent(): boolean {
+  get silent(): boolean {
     return this._silent;
   }
 
-  public child(options: ILoggerOptions): WinstonLogger {
+  child(options: ILoggerOptions): WinstonLogger {
     const logger = Object.create(WinstonLogger.prototype);
     const winston = this.winston.child({namespace: options.module, level: options.level});
     //use more verbose log

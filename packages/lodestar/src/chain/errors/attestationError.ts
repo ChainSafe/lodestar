@@ -171,7 +171,7 @@ type IJobObject = {
 };
 
 export class AttestationError extends LodestarError<AttestationErrorType> {
-  public job: IAttestationJob;
+  job: IAttestationJob;
 
   constructor({job, ...type}: AttestationErrorType & IJobObject) {
     super(type);

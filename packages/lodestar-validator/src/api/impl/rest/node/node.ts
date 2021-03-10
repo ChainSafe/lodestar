@@ -10,16 +10,16 @@ export class RestNodeApi implements INodeApi {
 
   private readonly config: IBeaconConfig;
 
-  public constructor(config: IBeaconConfig, restUrl: string, logger: ILogger) {
+  constructor(config: IBeaconConfig, restUrl: string, logger: ILogger) {
     this.client = new HttpClient({urlPrefix: urlJoin(restUrl, "/eth/v1/node")}, {logger});
     this.config = config;
   }
 
-  public async getVersion(): Promise<string> {
+  async getVersion(): Promise<string> {
     return (await this.client.get<{data: {version: string}}>("/version")).data.version;
   }
 
-  public async getSyncingStatus(): Promise<phase0.SyncingStatus> {
+  async getSyncingStatus(): Promise<phase0.SyncingStatus> {
     return this.config.types.phase0.SyncingStatus.fromJson((await this.client.get<{data: Json}>("/syncing")).data, {
       case: "snake",
     });

@@ -12,7 +12,7 @@ import {IEth1Options} from "./options";
 import {depositEventTopics, parseDepositLog} from "./utils/depositContract";
 
 export class Eth1Provider extends Eth1JsonRpcClient implements IEth1Provider {
-  public deployBlock: number;
+  deployBlock: number;
   private address: string;
   private config: IBeaconConfig;
 

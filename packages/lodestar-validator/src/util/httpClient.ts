@@ -15,7 +15,7 @@ export class HttpClient {
   private client: AxiosInstance;
   private logger: ILogger;
 
-  public constructor(opt: Partial<IHttpClientOptions>, {logger}: {logger: ILogger}) {
+  constructor(opt: Partial<IHttpClientOptions>, {logger}: {logger: ILogger}) {
     this.client = Axios.create({
       baseURL: opt.urlPrefix || "",
       timeout: 4000,
@@ -23,7 +23,7 @@ export class HttpClient {
     this.logger = logger;
   }
 
-  public async get<T>(url: string, query?: IHttpQuery, opts?: AxiosRequestConfig): Promise<T> {
+  async get<T>(url: string, query?: IHttpQuery, opts?: AxiosRequestConfig): Promise<T> {
     try {
       if (query) url += "?" + querystring.stringify(query);
       const result: AxiosResponse<T> = await this.client.get<T>(url, opts);
@@ -35,7 +35,7 @@ export class HttpClient {
     }
   }
 
-  public async post<T, T2>(url: string, data: T, query?: IHttpQuery): Promise<T2> {
+  async post<T, T2>(url: string, data: T, query?: IHttpQuery): Promise<T2> {
     try {
       if (query) url += "?" + querystring.stringify(query);
       const result: AxiosResponse<T2> = await this.client.post(url, data);

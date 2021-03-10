@@ -21,7 +21,7 @@ export interface IKeyValueSummary<K, V, S> extends IKeyValue<K, V> {
 export class GenericBlockArchiveRepository extends Repository<Slot, allForks.SignedBeaconBlock> {
   protected type: ContainerType<allForks.SignedBeaconBlock>;
 
-  public constructor(
+  constructor(
     config: IBeaconConfig,
     db: IDatabaseController<Buffer, Buffer>,
     bucket: Bucket,
@@ -32,7 +32,7 @@ export class GenericBlockArchiveRepository extends Repository<Slot, allForks.Sig
     this.type = type;
   }
 
-  public async put(key: Slot, value: allForks.SignedBeaconBlock): Promise<void> {
+  async put(key: Slot, value: allForks.SignedBeaconBlock): Promise<void> {
     const blockRoot = this.type.fields["message"].hashTreeRoot(value.message);
     const slot = value.message.slot;
     await Promise.all([
@@ -42,7 +42,7 @@ export class GenericBlockArchiveRepository extends Repository<Slot, allForks.Sig
     ]);
   }
 
-  public async batchPut(items: ArrayLike<IKeyValue<Slot, allForks.SignedBeaconBlock>>): Promise<void> {
+  async batchPut(items: ArrayLike<IKeyValue<Slot, allForks.SignedBeaconBlock>>): Promise<void> {
     await Promise.all([
       super.batchPut(items),
       Array.from(items).map((item) => {
@@ -58,7 +58,7 @@ export class GenericBlockArchiveRepository extends Repository<Slot, allForks.Sig
     ]);
   }
 
-  public async batchPutBinary(items: ArrayLike<IKeyValueSummary<Slot, Buffer, IBlockSummary>>): Promise<void> {
+  async batchPutBinary(items: ArrayLike<IKeyValueSummary<Slot, Buffer, IBlockSummary>>): Promise<void> {
     await Promise.all([
       super.batchPutBinary(items),
       Array.from(items).map((item) => storeRootIndex(this.db, item.summary.slot, item.summary.blockRoot)),
@@ -66,7 +66,7 @@ export class GenericBlockArchiveRepository extends Repository<Slot, allForks.Sig
     ]);
   }
 
-  public async remove(value: allForks.SignedBeaconBlock): Promise<void> {
+  async remove(value: allForks.SignedBeaconBlock): Promise<void> {
     await Promise.all([
       super.remove(value),
       deleteRootIndex(this.db, this.type, value),
@@ -74,7 +74,7 @@ export class GenericBlockArchiveRepository extends Repository<Slot, allForks.Sig
     ]);
   }
 
-  public async batchRemove(values: ArrayLike<allForks.SignedBeaconBlock>): Promise<void> {
+  async batchRemove(values: ArrayLike<allForks.SignedBeaconBlock>): Promise<void> {
     await Promise.all([
       super.batchRemove(values),
       Array.from(values).map((value) => deleteRootIndex(this.db, this.type, value)),
@@ -82,19 +82,19 @@ export class GenericBlockArchiveRepository extends Repository<Slot, allForks.Sig
     ]);
   }
 
-  public decodeKey(data: Buffer): number {
+  decodeKey(data: Buffer): number {
     return bytesToInt((super.decodeKey(data) as unknown) as Uint8Array, "be");
   }
 
-  public getId(value: allForks.SignedBeaconBlock): Slot {
+  getId(value: allForks.SignedBeaconBlock): Slot {
     return value.message.slot;
   }
 
-  public async values(opts?: IBlockFilterOptions): Promise<allForks.SignedBeaconBlock[]> {
+  async values(opts?: IBlockFilterOptions): Promise<allForks.SignedBeaconBlock[]> {
     return all(this.valuesStream(opts));
   }
 
-  public async *valuesStream(opts?: IBlockFilterOptions): AsyncIterable<allForks.SignedBeaconBlock> {
+  async *valuesStream(opts?: IBlockFilterOptions): AsyncIterable<allForks.SignedBeaconBlock> {
     const dbFilterOpts = this.dbFilterOptions(opts);
     const firstSlot = dbFilterOpts.gt
       ? this.decodeKey(dbFilterOpts.gt) + 1

@@ -110,7 +110,7 @@ export class ForkChoice implements IForkChoice {
    *
    * https://github.com/ethereum/eth2.0-specs/blob/v0.12.1/specs/phase0/fork-choice.md#get_ancestor
    */
-  public getAncestor(blockRoot: phase0.Root, ancestorSlot: Slot): Uint8Array {
+  getAncestor(blockRoot: phase0.Root, ancestorSlot: Slot): Uint8Array {
     const block = this.protoArray.getBlock(toHexString(blockRoot));
     if (!block) {
       throw new ForkChoiceError({
@@ -147,12 +147,12 @@ export class ForkChoice implements IForkChoice {
    *
    * https://github.com/ethereum/eth2.0-specs/blob/v0.12.2/specs/phase0/fork-choice.md#get_head
    */
-  public getHeadRoot(): Uint8Array {
+  getHeadRoot(): Uint8Array {
     const head = this.getHead();
     return head.blockRoot;
   }
 
-  public getHead(): IBlockSummary {
+  getHead(): IBlockSummary {
     // balances is not changed but votes are changed
     if (!this.synced) {
       const deltas = computeDeltas(this.protoArray.indices, this.votes, this.justifiedBalances, this.justifiedBalances);
@@ -181,15 +181,15 @@ export class ForkChoice implements IForkChoice {
     return toBlockSummary(headNode);
   }
 
-  public getHeads(): IBlockSummary[] {
+  getHeads(): IBlockSummary[] {
     return this.protoArray.nodes.filter((node) => !node.bestChild).map(toBlockSummary);
   }
 
-  public getFinalizedCheckpoint(): phase0.Checkpoint {
+  getFinalizedCheckpoint(): phase0.Checkpoint {
     return this.fcStore.finalizedCheckpoint;
   }
 
-  public getJustifiedCheckpoint(): phase0.Checkpoint {
+  getJustifiedCheckpoint(): phase0.Checkpoint {
     return this.fcStore.justifiedCheckpoint;
   }
 
@@ -212,7 +212,7 @@ export class ForkChoice implements IForkChoice {
    * `justifiedBalances` balances of justified state which is updated synchronously.
    * This ensures that the forkchoice is never out of sync.
    */
-  public onBlock(block: phase0.BeaconBlock, state: phase0.BeaconState, justifiedBalances?: Gwei[]): void {
+  onBlock(block: phase0.BeaconBlock, state: phase0.BeaconState, justifiedBalances?: Gwei[]): void {
     // Parent block must be known
     if (!this.protoArray.hasBlock(toHexString(block.parentRoot))) {
       throw new ForkChoiceError({
@@ -354,7 +354,7 @@ export class ForkChoice implements IForkChoice {
    * The supplied `attestation` **must** pass the `in_valid_indexed_attestation` function as it
    * will not be run here.
    */
-  public onAttestation(attestation: phase0.IndexedAttestation): void {
+  onAttestation(attestation: phase0.IndexedAttestation): void {
     // Ignore any attestations to the zero hash.
     //
     // This is an edge case that results from the spec aliasing the zero hash to the genesis
@@ -397,7 +397,7 @@ export class ForkChoice implements IForkChoice {
     }
   }
 
-  public getLatestMessage(validatorIndex: ValidatorIndex): ILatestMessage | undefined {
+  getLatestMessage(validatorIndex: ValidatorIndex): ILatestMessage | undefined {
     const vote = this.votes[validatorIndex];
     if (!vote) {
       return undefined;
@@ -411,7 +411,7 @@ export class ForkChoice implements IForkChoice {
   /**
    * Call `onTick` for all slots between `fcStore.getCurrentSlot()` and the provided `currentSlot`.
    */
-  public updateTime(currentSlot: Slot): void {
+  updateTime(currentSlot: Slot): void {
     while (this.fcStore.currentSlot < currentSlot) {
       const previousSlot = this.fcStore.currentSlot;
       // Note: we are relying upon `onTick` to update `fcStore.time` to ensure we don't get stuck in a loop.
@@ -422,21 +422,21 @@ export class ForkChoice implements IForkChoice {
     this.processAttestationQueue();
   }
 
-  public getTime(): Slot {
+  getTime(): Slot {
     return this.fcStore.currentSlot;
   }
 
   /**
    * Returns `true` if the block is known **and** a descendant of the finalized root.
    */
-  public hasBlock(blockRoot: phase0.Root): boolean {
+  hasBlock(blockRoot: phase0.Root): boolean {
     return this.protoArray.hasBlock(toHexString(blockRoot)) && this.isDescendantOfFinalized(blockRoot);
   }
 
   /**
    * Returns a `IBlockSummary` if the block is known **and** a descendant of the finalized root.
    */
-  public getBlock(blockRoot: phase0.Root): IBlockSummary | null {
+  getBlock(blockRoot: phase0.Root): IBlockSummary | null {
     const block = this.protoArray.getBlock(toHexString(blockRoot));
     if (!block) {
       return null;
@@ -450,7 +450,7 @@ export class ForkChoice implements IForkChoice {
     return toBlockSummary(block);
   }
 
-  public getFinalizedBlock(): IBlockSummary {
+  getFinalizedBlock(): IBlockSummary {
     const block = this.getBlock(this.fcStore.finalizedCheckpoint.root);
     if (!block) {
       throw new ForkChoiceError({
@@ -464,7 +464,7 @@ export class ForkChoice implements IForkChoice {
   /**
    * Return `true` if `block_root` is equal to the finalized root, or a known descendant of it.
    */
-  public isDescendantOfFinalized(blockRoot: phase0.Root): boolean {
+  isDescendantOfFinalized(blockRoot: phase0.Root): boolean {
     return this.protoArray.isDescendant(toHexString(this.fcStore.finalizedCheckpoint.root), toHexString(blockRoot));
   }
 
@@ -474,47 +474,47 @@ export class ForkChoice implements IForkChoice {
    * Always returns `false` if either input roots are unknown.
    * Still returns `true` if `ancestorRoot===descendantRoot` (and the roots are known)
    */
-  public isDescendant(ancestorRoot: phase0.Root, descendantRoot: phase0.Root): boolean {
+  isDescendant(ancestorRoot: phase0.Root, descendantRoot: phase0.Root): boolean {
     return this.protoArray.isDescendant(toHexString(ancestorRoot), toHexString(descendantRoot));
   }
 
-  public prune(finalizedRoot: phase0.Root): IBlockSummary[] {
+  prune(finalizedRoot: phase0.Root): IBlockSummary[] {
     return this.protoArray.maybePrune(toHexString(finalizedRoot)).map(toBlockSummary);
   }
 
-  public setPruneThreshold(threshold: number): void {
+  setPruneThreshold(threshold: number): void {
     this.protoArray.pruneThreshold = threshold;
   }
 
   /**
    * Iterates backwards through block summaries, starting from a block root
    */
-  public iterateBlockSummaries(blockRoot: phase0.Root): IBlockSummary[] {
+  iterateBlockSummaries(blockRoot: phase0.Root): IBlockSummary[] {
     return this.protoArray.iterateNodes(toHexString(blockRoot)).map(toBlockSummary);
   }
 
   /**
    * The same to iterateBlockSummaries but this gets non-ancestor nodes instead of ancestor nodes.
    */
-  public iterateNonAncestors(blockRoot: phase0.Root): IBlockSummary[] {
+  iterateNonAncestors(blockRoot: phase0.Root): IBlockSummary[] {
     return this.protoArray.iterateNonAncestorNodes(toHexString(blockRoot)).map(toBlockSummary);
   }
 
-  public getCanonicalBlockSummaryAtSlot(slot: Slot): IBlockSummary | null {
+  getCanonicalBlockSummaryAtSlot(slot: Slot): IBlockSummary | null {
     const head = this.getHeadRoot();
     return this.iterateBlockSummaries(head).find((summary) => summary.slot === slot) || null;
   }
 
-  public forwardIterateBlockSummaries(): IBlockSummary[] {
+  forwardIterateBlockSummaries(): IBlockSummary[] {
     return this.protoArray.nodes.map(toBlockSummary);
   }
 
-  public getBlockSummariesByParentRoot(parentRoot: phase0.Root): IBlockSummary[] {
+  getBlockSummariesByParentRoot(parentRoot: phase0.Root): IBlockSummary[] {
     const hexParentRoot = toHexString(parentRoot);
     return this.protoArray.nodes.filter((node) => node.parentRoot === hexParentRoot).map(toBlockSummary);
   }
 
-  public getBlockSummariesAtSlot(slot: Slot): IBlockSummary[] {
+  getBlockSummariesAtSlot(slot: Slot): IBlockSummary[] {
     return this.protoArray.nodes.filter((node) => node.slot === slot).map(toBlockSummary);
   }
 

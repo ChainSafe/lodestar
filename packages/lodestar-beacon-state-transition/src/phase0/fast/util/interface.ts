@@ -50,7 +50,7 @@ export class CachedValidatorsBeaconState {
     this._cachedValidators = cachedValidators;
   }
 
-  public createProxy(): CachedValidatorsBeaconState {
+  createProxy(): CachedValidatorsBeaconState {
     return new Proxy(this, new CachedValidatorsBeaconStateProxyHandler());
   }
 
@@ -58,7 +58,7 @@ export class CachedValidatorsBeaconState {
    * Write to both the cached validator and BeaconState.
    * _cachedValidators refers to a new instance
    */
-  public updateValidator(i: ValidatorIndex, value: Partial<IFlatValidator>): void {
+  updateValidator(i: ValidatorIndex, value: Partial<IFlatValidator>): void {
     if (this._cachedValidators) {
       const validator = this._cachedValidators.get(i);
       this._cachedValidators = this._cachedValidators.set(i, {...validator!, ...value});
@@ -71,7 +71,7 @@ export class CachedValidatorsBeaconState {
    * Add validator to both the cache and BeaconState
    * _cachedValidators refers to a new instance
    */
-  public addValidator(validator: phase0.Validator): void {
+  addValidator(validator: phase0.Validator): void {
     this._cachedValidators = this._cachedValidators.append(createIFlatValidator(validator));
     this._state.validators.push(validator);
   }
@@ -79,20 +79,20 @@ export class CachedValidatorsBeaconState {
   /**
    * Loop through the cached validators, not the TreeBacked validators inside BeaconState.
    */
-  public flatValidators(): Vector<IFlatValidator> {
+  flatValidators(): Vector<IFlatValidator> {
     return this._cachedValidators;
   }
 
   /**
    * This is very cheap thanks to persistent-merkle-tree and persistent-vector.
    */
-  public clone(): CachedValidatorsBeaconState {
+  clone(): CachedValidatorsBeaconState {
     const clonedState = config.types.phase0.BeaconState.clone(this._state);
     const clonedCachedValidators = this._cachedValidators.clone();
     return new CachedValidatorsBeaconState(clonedState, clonedCachedValidators).createProxy();
   }
 
-  public getOriginalState(): phase0.BeaconState {
+  getOriginalState(): phase0.BeaconState {
     return this._state;
   }
 }
@@ -114,7 +114,7 @@ class CachedValidatorsBeaconStateProxyHandler implements ProxyHandler<CachedVali
    * Forward all BeaconState property getters to _state.
    */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  public get(target: CachedValidatorsBeaconState, p: keyof phase0.BeaconState): any {
+  get(target: CachedValidatorsBeaconState, p: keyof phase0.BeaconState): any {
     if (target[p] !== undefined) {
       return target[p];
     }
@@ -125,7 +125,7 @@ class CachedValidatorsBeaconStateProxyHandler implements ProxyHandler<CachedVali
    * Forward all BeaconState property setters to _state.
    */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  public set(target: CachedValidatorsBeaconState, p: keyof phase0.BeaconState, value: any): boolean {
+  set(target: CachedValidatorsBeaconState, p: keyof phase0.BeaconState, value: any): boolean {
     if (target[p] !== undefined) {
       target[p] = value;
     } else {

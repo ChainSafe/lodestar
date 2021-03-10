@@ -7,22 +7,22 @@ export class SyncStats implements ISyncStats {
   private readonly chainEvents: ChainEventEmitter;
   private readonly rateCounter: RateCounter;
 
-  public constructor(chainEvents: ChainEventEmitter, rateCounter?: RateCounter) {
+  constructor(chainEvents: ChainEventEmitter, rateCounter?: RateCounter) {
     this.chainEvents = chainEvents;
     this.rateCounter = rateCounter || new RateCounter(30);
   }
 
-  public start(): void {
+  start(): void {
     this.rateCounter.start();
     this.chainEvents.on(ChainEvent.block, this.onBlockProcessed);
   }
 
-  public stop(): void {
+  stop(): void {
     this.chainEvents.off(ChainEvent.block, this.onBlockProcessed);
     this.rateCounter.stop();
   }
 
-  public getEstimate(headSlot: Slot, targetSlot: Slot): number {
+  getEstimate(headSlot: Slot, targetSlot: Slot): number {
     const rate = this.getSyncSpeed();
     if (rate === 0) {
       return Infinity;
@@ -34,7 +34,7 @@ export class SyncStats implements ISyncStats {
     return 0;
   }
 
-  public getSyncSpeed(): number {
+  getSyncSpeed(): number {
     return Math.round(this.rateCounter.rate() * 10) / 10;
   }
 

@@ -44,11 +44,11 @@ export class BlockProcessor {
     this.jobQueue = new JobQueue({queueSize, signal, onJobDone: this.onJobDone});
   }
 
-  public async processBlockJob(job: IBlockJob): Promise<void> {
+  async processBlockJob(job: IBlockJob): Promise<void> {
     return await this.jobQueue.enqueueJob(async () => await processBlockJob(this.modules, job));
   }
 
-  public async processChainSegment(job: IChainSegmentJob): Promise<void> {
+  async processChainSegment(job: IChainSegmentJob): Promise<void> {
     return await this.jobQueue.enqueueJob(async () => await processChainSegmentJob(this.modules, job));
   }
 

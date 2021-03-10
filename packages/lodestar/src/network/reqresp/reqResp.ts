@@ -41,10 +41,7 @@ export class ReqResp implements IReqResp {
    */
   private performRequestHandler: ReqRespHandler | null;
 
-  public constructor(
-    {config, libp2p, peerMetadata, peerRpcScores, logger}: IReqRespModules,
-    options?: IReqRespOptions
-  ) {
+  constructor({config, libp2p, peerMetadata, peerRpcScores, logger}: IReqRespModules, options?: IReqRespOptions) {
     this.config = config;
     this.libp2p = libp2p;
     this.peerMetadata = peerMetadata;
@@ -55,7 +52,7 @@ export class ReqResp implements IReqResp {
     this.performRequestHandler = null;
   }
 
-  public start(): void {
+  start(): void {
     this.controller = new AbortController();
     for (const method of Object.values(Method)) {
       for (const encoding of Object.values(ReqRespEncoding)) {
@@ -110,7 +107,7 @@ export class ReqResp implements IReqResp {
     return handler;
   }
 
-  public stop(): void {
+  stop(): void {
     for (const method of Object.values(Method)) {
       for (const encoding of Object.values(ReqRespEncoding)) {
         this.libp2p.unhandle(createRpcProtocol(method, encoding));
@@ -119,23 +116,23 @@ export class ReqResp implements IReqResp {
     this.controller?.abort();
   }
 
-  public async status(peerId: PeerId, request: phase0.Status): Promise<phase0.Status> {
+  async status(peerId: PeerId, request: phase0.Status): Promise<phase0.Status> {
     return await this.sendRequest<phase0.Status>(peerId, Method.Status, request);
   }
 
-  public async goodbye(peerId: PeerId, request: phase0.Goodbye): Promise<void> {
+  async goodbye(peerId: PeerId, request: phase0.Goodbye): Promise<void> {
     await this.sendRequest<phase0.Goodbye>(peerId, Method.Goodbye, request);
   }
 
-  public async ping(peerId: PeerId, request: phase0.Ping): Promise<phase0.Ping> {
+  async ping(peerId: PeerId, request: phase0.Ping): Promise<phase0.Ping> {
     return await this.sendRequest<phase0.Ping>(peerId, Method.Ping, request);
   }
 
-  public async metadata(peerId: PeerId): Promise<phase0.Metadata> {
+  async metadata(peerId: PeerId): Promise<phase0.Metadata> {
     return await this.sendRequest<phase0.Metadata>(peerId, Method.Metadata, null);
   }
 
-  public async beaconBlocksByRange(
+  async beaconBlocksByRange(
     peerId: PeerId,
     request: phase0.BeaconBlocksByRangeRequest
   ): Promise<phase0.SignedBeaconBlock[]> {
@@ -149,7 +146,7 @@ export class ReqResp implements IReqResp {
     return blocks;
   }
 
-  public async beaconBlocksByRoot(
+  async beaconBlocksByRoot(
     peerId: PeerId,
     request: phase0.BeaconBlocksByRootRequest
   ): Promise<phase0.SignedBeaconBlock[]> {

@@ -58,22 +58,22 @@ export enum BeaconNodeStatus {
  * eth2 ecosystem as well as systems for getting beacon node metadata.
  */
 export class BeaconNode {
-  public opts: IBeaconNodeOptions;
-  public config: IBeaconConfig;
-  public db: IBeaconDb;
-  public metrics?: IBeaconMetrics;
-  public metricsServer?: HttpMetricsServer;
-  public network: INetwork;
-  public chain: IBeaconChain;
-  public api: IApi;
-  public restApi?: RestApi;
-  public sync: IBeaconSync;
-  public chores: TasksService;
+  opts: IBeaconNodeOptions;
+  config: IBeaconConfig;
+  db: IBeaconDb;
+  metrics?: IBeaconMetrics;
+  metricsServer?: HttpMetricsServer;
+  network: INetwork;
+  chain: IBeaconChain;
+  api: IApi;
+  restApi?: RestApi;
+  sync: IBeaconSync;
+  chores: TasksService;
 
-  public status: BeaconNodeStatus;
+  status: BeaconNodeStatus;
   private controller?: AbortController;
 
-  public constructor({
+  constructor({
     opts,
     config,
     db,
@@ -107,7 +107,7 @@ export class BeaconNode {
    * Initialize a beacon node.  Initializes and `start`s the varied sub-component services of the
    * beacon node
    */
-  public static async init<T extends BeaconNode = BeaconNode>({
+  static async init<T extends BeaconNode = BeaconNode>({
     opts,
     config,
     db,
@@ -221,7 +221,7 @@ export class BeaconNode {
   /**
    * Stop beacon node and its sub-components.
    */
-  public async close(): Promise<void> {
+  async close(): Promise<void> {
     if (this.status === BeaconNodeStatus.started) {
       this.status = BeaconNodeStatus.closing;
       await this.chores.stop();

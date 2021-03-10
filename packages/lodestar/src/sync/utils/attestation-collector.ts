@@ -23,7 +23,7 @@ export class AttestationCollector {
   private timers: NodeJS.Timeout[] = [];
   private aggregationDuties: Map<Slot, Set<CommitteeIndex>> = new Map();
 
-  public constructor(config: IBeaconConfig, modules: IAttestationCollectorModules) {
+  constructor(config: IBeaconConfig, modules: IAttestationCollectorModules) {
     this.config = config;
     this.chain = modules.chain;
     this.network = modules.network;
@@ -31,7 +31,7 @@ export class AttestationCollector {
     this.logger = modules.logger;
   }
 
-  public start(): void {
+  start(): void {
     this.chain.emitter.on(ChainEvent.clockSlot, this.checkDuties);
     for (let subnet = 0; subnet < ATTESTATION_SUBNET_COUNT; subnet++) {
       this.network.gossip.handleTopic(
@@ -41,7 +41,7 @@ export class AttestationCollector {
     }
   }
 
-  public stop(): void {
+  stop(): void {
     for (const timer of this.timers) clearTimeout(timer);
     for (let subnet = 0; subnet < ATTESTATION_SUBNET_COUNT; subnet++) {
       this.network.gossip.unhandleTopic(
@@ -52,7 +52,7 @@ export class AttestationCollector {
     this.chain.emitter.off(ChainEvent.clockSlot, this.checkDuties);
   }
 
-  public subscribeToCommitteeAttestations(slot: Slot, committeeIndex: CommitteeIndex): void {
+  subscribeToCommitteeAttestations(slot: Slot, committeeIndex: CommitteeIndex): void {
     const fork = this.chain.getForkName();
     const headState = this.chain.getHeadState();
     const subnet = computeSubnetForSlot(this.config, headState, slot, committeeIndex);

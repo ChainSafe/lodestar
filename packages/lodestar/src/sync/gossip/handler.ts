@@ -41,7 +41,7 @@ export class BeaconGossipHandler {
   /**
    * Subscribe to all gossip events
    */
-  public start(): void {
+  start(): void {
     if (this.state.status === GossipHandlerStatus.Started) {
       return;
     }
@@ -55,7 +55,7 @@ export class BeaconGossipHandler {
   /**
    * Unsubscribe from all gossip events
    */
-  public stop(): void {
+  stop(): void {
     if (this.state.status !== GossipHandlerStatus.Started) {
       return;
     }
@@ -65,23 +65,23 @@ export class BeaconGossipHandler {
     this.state = {status: GossipHandlerStatus.Stopped};
   }
 
-  public onBlock = (block: phase0.SignedBeaconBlock): void => {
+  onBlock = (block: phase0.SignedBeaconBlock): void => {
     this.chain.receiveBlock(block);
   };
 
-  public onAggregatedAttestation = async (aggregate: phase0.SignedAggregateAndProof): Promise<void> => {
+  onAggregatedAttestation = async (aggregate: phase0.SignedAggregateAndProof): Promise<void> => {
     await this.db.aggregateAndProof.add(aggregate.message);
   };
 
-  public onAttesterSlashing = async (attesterSlashing: phase0.AttesterSlashing): Promise<void> => {
+  onAttesterSlashing = async (attesterSlashing: phase0.AttesterSlashing): Promise<void> => {
     await this.db.attesterSlashing.add(attesterSlashing);
   };
 
-  public onProposerSlashing = async (proposerSlashing: phase0.ProposerSlashing): Promise<void> => {
+  onProposerSlashing = async (proposerSlashing: phase0.ProposerSlashing): Promise<void> => {
     await this.db.proposerSlashing.add(proposerSlashing);
   };
 
-  public onVoluntaryExit = async (exit: phase0.SignedVoluntaryExit): Promise<void> => {
+  onVoluntaryExit = async (exit: phase0.SignedVoluntaryExit): Promise<void> => {
     await this.db.voluntaryExit.add(exit);
   };
 

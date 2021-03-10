@@ -8,13 +8,13 @@ import {IMetrics, IMetricsServer} from "../interface";
 import {IMetricsOptions} from "../options";
 
 export class HttpMetricsServer implements IMetricsServer {
-  public http: http.Server;
+  http: http.Server;
   private terminator: HttpTerminator;
   private opts: IMetricsOptions;
   private metrics: IMetrics;
   private logger: ILogger;
 
-  public constructor(opts: IMetricsOptions, {metrics, logger}: {metrics: IMetrics; logger: ILogger}) {
+  constructor(opts: IMetricsOptions, {metrics, logger}: {metrics: IMetrics; logger: ILogger}) {
     this.opts = opts;
     this.logger = logger;
     this.metrics = metrics;
@@ -22,7 +22,7 @@ export class HttpMetricsServer implements IMetricsServer {
     this.terminator = createHttpTerminator({server: this.http});
   }
 
-  public async start(): Promise<void> {
+  async start(): Promise<void> {
     if (this.opts.enabled) {
       const {serverPort, listenAddr} = this.opts;
       this.logger.info("Starting metrics HTTP server", {port: serverPort || null});
@@ -32,7 +32,7 @@ export class HttpMetricsServer implements IMetricsServer {
       });
     }
   }
-  public async stop(): Promise<void> {
+  async stop(): Promise<void> {
     if (this.opts.enabled) {
       try {
         await this.terminator.terminate();

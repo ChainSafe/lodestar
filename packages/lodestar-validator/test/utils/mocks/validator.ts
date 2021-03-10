@@ -19,7 +19,7 @@ export class MockValidatorApi implements IValidatorApi {
   private attestations: phase0.Attestation[];
   private head: phase0.SignedBeaconBlock;
 
-  public constructor(opts?: IMockValidatorAPIOpts) {
+  constructor(opts?: IMockValidatorAPIOpts) {
     this.attestations = (opts && opts.pendingAttestations) || [];
     this.head = (opts && opts.head) || {message: generateEmptyBlock(), signature: Buffer.alloc(96)};
     this.chainId = (opts && opts.chainId) || 0;

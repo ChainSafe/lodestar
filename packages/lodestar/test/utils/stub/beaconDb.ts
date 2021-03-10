@@ -22,27 +22,27 @@ import {minimalConfig} from "@chainsafe/lodestar-config/minimal";
 import {PendingBlockRepository} from "../../../src/db/api/beacon/repositories/pendingBlock";
 
 export class StubbedBeaconDb extends BeaconDb {
-  public db!: SinonStubbedInstance<LevelDbController>;
+  db!: SinonStubbedInstance<LevelDbController>;
 
-  public badBlock: SinonStubbedInstance<BadBlockRepository> & BadBlockRepository;
-  public block: SinonStubbedInstance<BlockRepository> & BlockRepository;
-  public pendingBlock: SinonStubbedInstance<PendingBlockRepository> & PendingBlockRepository;
-  public blockArchive: SinonStubbedInstance<BlockArchiveRepository> & BlockArchiveRepository;
-  public stateArchive: SinonStubbedInstance<StateArchiveRepository> & StateArchiveRepository;
+  badBlock: SinonStubbedInstance<BadBlockRepository> & BadBlockRepository;
+  block: SinonStubbedInstance<BlockRepository> & BlockRepository;
+  pendingBlock: SinonStubbedInstance<PendingBlockRepository> & PendingBlockRepository;
+  blockArchive: SinonStubbedInstance<BlockArchiveRepository> & BlockArchiveRepository;
+  stateArchive: SinonStubbedInstance<StateArchiveRepository> & StateArchiveRepository;
 
-  public attestation: SinonStubbedInstance<AttestationRepository> & AttestationRepository;
-  public aggregateAndProof: SinonStubbedInstance<AggregateAndProofRepository> & AggregateAndProofRepository;
-  public voluntaryExit: SinonStubbedInstance<VoluntaryExitRepository> & VoluntaryExitRepository;
-  public proposerSlashing: SinonStubbedInstance<ProposerSlashingRepository> & ProposerSlashingRepository;
-  public attesterSlashing: SinonStubbedInstance<AttesterSlashingRepository> & AttesterSlashingRepository;
-  public depositEvent: SinonStubbedInstance<DepositEventRepository> & DepositEventRepository;
+  attestation: SinonStubbedInstance<AttestationRepository> & AttestationRepository;
+  aggregateAndProof: SinonStubbedInstance<AggregateAndProofRepository> & AggregateAndProofRepository;
+  voluntaryExit: SinonStubbedInstance<VoluntaryExitRepository> & VoluntaryExitRepository;
+  proposerSlashing: SinonStubbedInstance<ProposerSlashingRepository> & ProposerSlashingRepository;
+  attesterSlashing: SinonStubbedInstance<AttesterSlashingRepository> & AttesterSlashingRepository;
+  depositEvent: SinonStubbedInstance<DepositEventRepository> & DepositEventRepository;
 
-  public depositDataRoot: SinonStubbedInstance<DepositDataRootRepository> & DepositDataRootRepository;
-  public eth1Data: SinonStubbedInstance<Eth1DataRepository> & Eth1DataRepository;
+  depositDataRoot: SinonStubbedInstance<DepositDataRootRepository> & DepositDataRootRepository;
+  eth1Data: SinonStubbedInstance<Eth1DataRepository> & Eth1DataRepository;
 
-  public seenAttestationCache: SinonStubbedInstance<SeenAttestationCache> & SeenAttestationCache;
+  seenAttestationCache: SinonStubbedInstance<SeenAttestationCache> & SeenAttestationCache;
 
-  public processBlockOperations: SinonStubbedInstance<(signedBlock: phase0.SignedBeaconBlock) => Promise<void>> &
+  processBlockOperations: SinonStubbedInstance<(signedBlock: phase0.SignedBeaconBlock) => Promise<void>> &
     ((signedBlock: phase0.SignedBeaconBlock) => Promise<void>);
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars

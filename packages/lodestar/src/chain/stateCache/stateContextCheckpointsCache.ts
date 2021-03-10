@@ -23,7 +23,7 @@ export class CheckpointStateCache {
     this.epochIndex = {};
   }
 
-  public get(cp: phase0.Checkpoint): ITreeStateContext | null {
+  get(cp: phase0.Checkpoint): ITreeStateContext | null {
     const item = this.cache[toHexString(this.config.types.phase0.Checkpoint.hashTreeRoot(cp))];
     if (!item) {
       return null;
@@ -31,7 +31,7 @@ export class CheckpointStateCache {
     return this.clone(item);
   }
 
-  public add(cp: phase0.Checkpoint, item: ITreeStateContext): void {
+  add(cp: phase0.Checkpoint, item: ITreeStateContext): void {
     const key = toHexString(this.config.types.phase0.Checkpoint.hashTreeRoot(cp));
     if (this.cache[key]) {
       return;
@@ -48,7 +48,7 @@ export class CheckpointStateCache {
   /**
    * Searches for the latest cached state with a `root`, starting with `epoch` and descending
    */
-  public getLatest({root, epoch}: phase0.Checkpoint): ITreeStateContext | null {
+  getLatest({root, epoch}: phase0.Checkpoint): ITreeStateContext | null {
     const hexRoot = toHexString(root);
     // sort epochs in descending order, only consider epochs lte `epoch`
     const epochs = Object.keys(this.epochIndex)
@@ -64,7 +64,7 @@ export class CheckpointStateCache {
     return null;
   }
 
-  public pruneFinalized(finalizedEpoch: Epoch): void {
+  pruneFinalized(finalizedEpoch: Epoch): void {
     for (const epoch of Object.keys(this.epochIndex).map(Number)) {
       if (epoch < finalizedEpoch) {
         this.deleteAllEpochItems(epoch);
@@ -72,7 +72,7 @@ export class CheckpointStateCache {
     }
   }
 
-  public prune(finalizedEpoch: Epoch, justifiedEpoch: Epoch): void {
+  prune(finalizedEpoch: Epoch, justifiedEpoch: Epoch): void {
     const epochs = Object.keys(this.epochIndex)
       .map(Number)
       .filter((epoch) => epoch !== finalizedEpoch && epoch !== justifiedEpoch);
@@ -84,7 +84,7 @@ export class CheckpointStateCache {
     }
   }
 
-  public delete(cp: phase0.Checkpoint): void {
+  delete(cp: phase0.Checkpoint): void {
     const key = toHexString(this.config.types.phase0.Checkpoint.hashTreeRoot(cp));
     delete this.cache[key];
     const epochKey = toHexString(cp.root);
@@ -94,7 +94,7 @@ export class CheckpointStateCache {
     }
   }
 
-  public deleteAllEpochItems(epoch: Epoch): void {
+  deleteAllEpochItems(epoch: Epoch): void {
     for (const hexRoot of this.epochIndex[epoch] || []) {
       delete this.cache[
         toHexString(this.config.types.phase0.Checkpoint.hashTreeRoot({root: fromHexString(hexRoot), epoch}))
@@ -103,7 +103,7 @@ export class CheckpointStateCache {
     delete this.epochIndex[epoch];
   }
 
-  public clear(): void {
+  clear(): void {
     this.cache = {};
     this.epochIndex = {};
   }

@@ -17,20 +17,17 @@ import {IBeaconStateApi} from "./state/interface";
 import {BeaconStateApi} from "./state/state";
 
 export class BeaconApi implements IBeaconApi {
-  public namespace: ApiNamespace;
-  public state: IBeaconStateApi;
-  public blocks: IBeaconBlocksApi;
-  public pool: IBeaconPoolApi;
+  namespace: ApiNamespace;
+  state: IBeaconStateApi;
+  blocks: IBeaconBlocksApi;
+  pool: IBeaconPoolApi;
 
   private readonly config: IBeaconConfig;
   private readonly chain: IBeaconChain;
   private readonly db: IBeaconDb;
   private readonly sync: IBeaconSync;
 
-  public constructor(
-    opts: Partial<IApiOptions>,
-    modules: Pick<IApiModules, "config" | "chain" | "db" | "network" | "sync">
-  ) {
+  constructor(opts: Partial<IApiOptions>, modules: Pick<IApiModules, "config" | "chain" | "db" | "network" | "sync">) {
     this.namespace = ApiNamespace.BEACON;
     this.config = modules.config;
     this.chain = modules.chain;
@@ -41,7 +38,7 @@ export class BeaconApi implements IBeaconApi {
     this.pool = new BeaconPoolApi(opts, modules);
   }
 
-  public async getGenesis(): Promise<phase0.Genesis | null> {
+  async getGenesis(): Promise<phase0.Genesis | null> {
     const state = this.chain.getHeadState();
     if (state) {
       return {
@@ -53,7 +50,7 @@ export class BeaconApi implements IBeaconApi {
     return null;
   }
 
-  public getBlockStream(): LodestarEventIterator<phase0.SignedBeaconBlock> {
+  getBlockStream(): LodestarEventIterator<phase0.SignedBeaconBlock> {
     return new LodestarEventIterator<phase0.SignedBeaconBlock>(({push}) => {
       this.chain.emitter.on(ChainEvent.block, push);
       return () => {

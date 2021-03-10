@@ -11,18 +11,18 @@ import {formatNodePeer} from "./utils";
 import {INodeApi} from "./interface";
 
 export class NodeApi implements INodeApi {
-  public namespace = ApiNamespace.NODE;
+  namespace = ApiNamespace.NODE;
 
   private readonly network: INetwork;
   private readonly sync: IBeaconSync;
 
-  public constructor(opts: Partial<IApiOptions>, modules: Pick<IApiModules, "network" | "sync">) {
+  constructor(opts: Partial<IApiOptions>, modules: Pick<IApiModules, "network" | "sync">) {
     this.namespace = ApiNamespace.BEACON;
     this.network = modules.network;
     this.sync = modules.sync;
   }
 
-  public async getNodeIdentity(): Promise<NodeIdentity> {
+  async getNodeIdentity(): Promise<NodeIdentity> {
     const enr = this.network.getEnr();
     const keypair = createKeypairFromPeerId(this.network.peerId);
     const discoveryAddresses = [
@@ -39,17 +39,17 @@ export class NodeApi implements INodeApi {
     };
   }
 
-  public async getNodeStatus(): Promise<"ready" | "syncing" | "error"> {
+  async getNodeStatus(): Promise<"ready" | "syncing" | "error"> {
     return this.sync.isSynced() ? "ready" : "syncing";
   }
 
-  public async getPeer(peerIdStr: string): Promise<NodePeer | null> {
+  async getPeer(peerIdStr: string): Promise<NodePeer | null> {
     const connections = this.network.getConnectionsByPeer().get(peerIdStr);
     if (!connections) return null; // Node has not seen this peer
     return formatNodePeer(peerIdStr, connections);
   }
 
-  public async getPeers(state?: PeerState[], direction?: PeerDirection[]): Promise<NodePeer[]> {
+  async getPeers(state?: PeerState[], direction?: PeerDirection[]): Promise<NodePeer[]> {
     return Array.from(this.network.getConnectionsByPeer().entries())
       .map(([peerIdStr, connections]) => formatNodePeer(peerIdStr, connections))
       .filter(
@@ -59,11 +59,11 @@ export class NodeApi implements INodeApi {
       );
   }
 
-  public async getSyncingStatus(): Promise<phase0.SyncingStatus> {
+  async getSyncingStatus(): Promise<phase0.SyncingStatus> {
     return this.sync.getSyncStatus();
   }
 
-  public async getVersion(): Promise<string> {
+  async getVersion(): Promise<string> {
     return `Lodestar/${process.env.npm_package_version || "dev"}`;
   }
 }
