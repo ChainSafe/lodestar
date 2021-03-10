@@ -1,6 +1,7 @@
 import {ApiController} from "../types";
-import {objectToExpectedCase} from "@chainsafe/lodestar-utils";
 import {DefaultQuery} from "fastify";
+
+/* eslint-disable @typescript-eslint/naming-convention */
 
 export const getPeer: ApiController<DefaultQuery, {peerId: string}> = {
   url: "/peers/:peerId",
@@ -23,7 +24,13 @@ export const getPeer: ApiController<DefaultQuery, {peerId: string}> = {
       return resp.status(404).send();
     }
     resp.status(200).send({
-      data: objectToExpectedCase(peer, "snake"),
+      data: {
+        peer_id: peer.peerId,
+        enr: peer.enr,
+        last_seen_p2p_address: peer.lastSeenP2pAddress,
+        state: peer.state,
+        direction: peer.direction,
+      },
     });
   },
 };
