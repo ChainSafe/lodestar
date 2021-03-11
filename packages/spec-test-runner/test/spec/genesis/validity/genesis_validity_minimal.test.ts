@@ -4,7 +4,7 @@ import {join} from "path";
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {phase0} from "@chainsafe/lodestar-types";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
-import {isValidGenesisState} from "@chainsafe/lodestar/lib/chain/genesis/util";
+import {isValidGenesisState} from "@chainsafe/lodestar-beacon-state-transition";
 import {SPEC_TEST_LOCATION} from "../../../utils/specTestCases";
 
 interface IGenesisValidityTestCase {

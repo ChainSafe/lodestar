@@ -3,22 +3,21 @@
  */
 
 import {TreeBacked, List} from "@chainsafe/ssz";
-import {Number64, Bytes32, Root, phase0} from "@chainsafe/lodestar-types";
+import {Root, phase0} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {AbortSignal} from "abort-controller";
-import {getTemporaryBlockHeader} from "@chainsafe/lodestar-beacon-state-transition";
-import {ILogger} from "@chainsafe/lodestar-utils";
-import {IEth1StreamParams, IEth1Provider, getDepositsAndBlockStreamForGenesis, getDepositsStream} from "../../eth1";
-import {IGenesisBuilder, IGenesisBuilderKwargs, IGenesisResult} from "./interface";
 import {
+  getTemporaryBlockHeader,
   getGenesisBeaconState,
-  getEmptyBlock,
   applyDeposits,
   applyTimestamp,
   applyEth1BlockHash,
   isValidGenesisState,
   isValidGenesisValidators,
-} from "./util";
+} from "@chainsafe/lodestar-beacon-state-transition";
+import {ILogger} from "@chainsafe/lodestar-utils";
+import {IEth1StreamParams, IEth1Provider, getDepositsAndBlockStreamForGenesis, getDepositsStream} from "../../eth1";
+import {IGenesisBuilder, IGenesisBuilderKwargs, IGenesisResult} from "./interface";
 
 export class GenesisBuilder implements IGenesisBuilder {
   private readonly config: IBeaconConfig;
@@ -45,7 +44,7 @@ export class GenesisBuilder implements IGenesisBuilder {
     this.state = getGenesisBeaconState(
       config,
       config.types.phase0.Eth1Data.defaultValue(),
-      getTemporaryBlockHeader(config, getEmptyBlock())
+      getTemporaryBlockHeader(config, config.types.phase0.BeaconBlock.defaultValue())
     );
     this.depositTree = config.types.phase0.DepositDataRootList.tree.defaultValue();
     this.depositCache = new Set<number>();
@@ -130,32 +129,4 @@ export class GenesisBuilder implements IGenesisBuilder {
 
     // TODO: If necessary persist deposits here to this.db.depositData, this.db.depositDataRoot
   }
-}
-
-/**
- * Mainly used for spec test.
- * @param config
- * @param eth1BlockHash
- * @param eth1Timestamp
- * @param deposits
- */
-export function initializeBeaconStateFromEth1(
-  config: IBeaconConfig,
-  eth1BlockHash: Bytes32,
-  eth1Timestamp: Number64,
-  deposits: phase0.Deposit[]
-): TreeBacked<phase0.BeaconState> {
-  const state = getGenesisBeaconState(
-    config,
-    config.types.phase0.Eth1Data.defaultValue(),
-    getTemporaryBlockHeader(config, getEmptyBlock())
-  );
-
-  applyTimestamp(config, state, eth1Timestamp);
-  applyEth1BlockHash(config, state, eth1BlockHash);
-
-  // Process deposits
-  applyDeposits(config, state, deposits);
-
-  return state;
 }
