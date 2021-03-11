@@ -3,15 +3,17 @@ import {BeaconParams} from "@chainsafe/lodestar-params";
 import {urlJoin} from "@chainsafe/lodestar-validator/src/util";
 import {expect} from "chai";
 import supertest from "supertest";
-import {CONFIG_PREFIX} from "../index.test";
+import {CONFIG_PREFIX, setupRestApiTestServer} from "../index.test";
 import {getSpec} from "../../../../../src/api/rest/controllers/config";
+import {SinonStubbedInstance} from "sinon";
+import {ConfigApi} from "../../../../../lib/api/impl/config";
 
 describe("rest - config - getSpec", function () {
   it("ready", async function () {
-    this.test?.ctx?.configStub.getSpec.resolves(config.params);
-    const response = await supertest(this.test?.ctx?.restApi.server.server)
-      .get(urlJoin(CONFIG_PREFIX, getSpec.url))
-      .expect(200);
+    const restApi = await setupRestApiTestServer();
+    const configStub = restApi.server.api.config as SinonStubbedInstance<ConfigApi>;
+    configStub.getSpec.resolves(config.params);
+    const response = await supertest(restApi.server.server).get(urlJoin(CONFIG_PREFIX, getSpec.url)).expect(200);
     expect(response.body.data).to.not.be.undefined;
     expect(response.body.data).to.deep.equal(BeaconParams.toJson(config.params));
   });

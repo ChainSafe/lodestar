@@ -4,7 +4,7 @@ import {config} from "@chainsafe/lodestar-config/mainnet";
 
 import {getGenesis} from "../../../../../src/api/rest/controllers/beacon";
 import {urlJoin} from "../utils";
-import {BEACON_PREFIX} from "../index.test";
+import {BEACON_PREFIX, setupRestApiTestServer} from "../index.test";
 import {BeaconApi, RestApi} from "../../../../../src/api";
 import {SinonStubbedInstance} from "sinon";
 
@@ -12,9 +12,9 @@ describe("rest - beacon - getGenesis", function () {
   let beaconStub: SinonStubbedInstance<BeaconApi>;
   let restApi: RestApi;
 
-  beforeEach(function () {
-    beaconStub = this.test?.ctx?.beaconStub;
-    restApi = this.test?.ctx?.restApi;
+  before(async function () {
+    restApi = await setupRestApiTestServer();
+    beaconStub = restApi.server.api.beacon as SinonStubbedInstance<BeaconApi>;
   });
 
   it("should get genesis object", async function () {

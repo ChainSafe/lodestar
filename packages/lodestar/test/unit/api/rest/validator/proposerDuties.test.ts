@@ -3,7 +3,7 @@ import {expect} from "chai";
 import supertest from "supertest";
 import {proposerDutiesController} from "../../../../../src/api/rest/controllers/validator";
 import {urlJoin} from "../utils";
-import {VALIDATOR_PREFIX} from "../index.test";
+import {setupRestApiTestServer, VALIDATOR_PREFIX} from "../index.test";
 import {RestApi, ValidatorApi} from "../../../../../src/api";
 import {SinonStubbedInstance} from "sinon";
 
@@ -11,9 +11,9 @@ describe("rest - validator - proposerDuties", function () {
   let restApi: RestApi;
   let validatorStub: SinonStubbedInstance<ValidatorApi>;
 
-  beforeEach(function () {
-    validatorStub = this.test?.ctx?.validatorStub;
-    restApi = this.test?.ctx?.restApi;
+  before(async function () {
+    restApi = await setupRestApiTestServer();
+    validatorStub = restApi.server.api.validator as SinonStubbedInstance<ValidatorApi>;
   });
 
   it("should succeed", async function () {

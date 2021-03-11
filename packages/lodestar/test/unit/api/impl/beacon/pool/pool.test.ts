@@ -3,7 +3,6 @@ import {expect} from "chai";
 import sinon, {SinonStub} from "sinon";
 import {BeaconPoolApi} from "../../../../../../src/api/impl/beacon/pool";
 import {Network} from "../../../../../../src/network/network";
-import {BeaconSync} from "../../../../../../src/sync/sync";
 import {
   generateAttestation,
   generateAttestationData,
@@ -16,11 +15,11 @@ import * as attesterSlashingValidation from "../../../../../../src/chain/validat
 import * as proposerSlashingValidation from "../../../../../../src/chain/validation/proposerSlashing";
 import * as voluntaryExitValidation from "../../../../../../src/chain/validation/voluntaryExit";
 
-import {BeaconChain} from "../../../../../../src/chain/chain";
 import {phase0, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {List} from "@chainsafe/ssz";
 import {Eth2Gossipsub} from "../../../../../../src/network/gossip";
 import {generateEmptySignedBlockHeader} from "../../../../../utils/block";
+import {setupApiImplTestServer} from "../../index.test";
 
 describe("beacon pool api impl", function () {
   let poolApi: BeaconPoolApi;
@@ -33,20 +32,21 @@ describe("beacon pool api impl", function () {
   let validateVoluntaryExit: SinonStub;
 
   beforeEach(function () {
-    dbStub = new StubbedBeaconDb(sinon, config);
-    chainStub = sinon.createStubInstance(BeaconChain);
+    const server = setupApiImplTestServer();
+    dbStub = server.dbStub;
+    chainStub = server.chainStub;
     gossipStub = sinon.createStubInstance(Eth2Gossipsub);
     gossipStub.publishAttesterSlashing = sinon.stub();
     gossipStub.publishProposerSlashing = sinon.stub();
     gossipStub.publishVoluntaryExit = sinon.stub();
-    networkStub = sinon.createStubInstance(Network);
+    networkStub = server.networkStub;
     networkStub.gossip = (gossipStub as unknown) as Eth2Gossipsub;
     poolApi = new BeaconPoolApi(
       {},
       {
         config,
-        db: dbStub,
-        sync: sinon.createStubInstance(BeaconSync),
+        db: server.dbStub,
+        sync: server.syncStub,
         network: networkStub,
         chain: chainStub,
       }

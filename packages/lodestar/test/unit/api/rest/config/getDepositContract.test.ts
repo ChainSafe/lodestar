@@ -2,11 +2,15 @@ import {config} from "@chainsafe/lodestar-config/minimal";
 import {urlJoin} from "@chainsafe/lodestar-validator/src/util";
 import {expect} from "chai";
 import supertest from "supertest";
-import {CONFIG_PREFIX} from "../index.test";
+import {CONFIG_PREFIX, setupRestApiTestServer} from "../index.test";
 import {getDepositContract} from "../../../../../src/api/rest/controllers/config";
+import {ConfigApi} from "../../../../../lib/api/impl/config";
+import {SinonStubbedInstance} from "sinon";
 
 describe("rest - config - getDepositContract", function () {
   it("ready", async function () {
+    const restApi = await setupRestApiTestServer();
+    const configStub = restApi.server.api.config as SinonStubbedInstance<ConfigApi>;
     const depositContract = {
       chainId: config.params.DEPOSIT_CHAIN_ID,
       address: config.params.DEPOSIT_CONTRACT_ADDRESS,
@@ -15,8 +19,8 @@ describe("rest - config - getDepositContract", function () {
       string,
       unknown
     >;
-    this.test?.ctx?.configStub.getDepositContract.resolves(depositContract);
-    const response = await supertest(this.test?.ctx?.restApi.server.server)
+    configStub.getDepositContract.resolves(depositContract);
+    const response = await supertest(restApi.server.server)
       .get(urlJoin(CONFIG_PREFIX, getDepositContract.url))
       .expect(200);
     expect(response.body.data).to.not.be.undefined;

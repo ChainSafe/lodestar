@@ -3,7 +3,7 @@ import supertest from "supertest";
 
 import {getPeer} from "../../../../../src/api/rest/controllers/node";
 import {urlJoin} from "../utils";
-import {NODE_PREFIX} from "../index.test";
+import {NODE_PREFIX, setupRestApiTestServer} from "../index.test";
 import {RestApi} from "../../../../../src/api";
 import {StubbedNodeApi} from "../../../../utils/stub/nodeApi";
 
@@ -11,9 +11,9 @@ describe("rest - node - getPeer", function () {
   let nodeStub: StubbedNodeApi;
   let restApi: RestApi;
 
-  beforeEach(function () {
-    nodeStub = this.test?.ctx?.nodeStub;
-    restApi = this.test?.ctx?.restApi;
+  before(async function () {
+    restApi = await setupRestApiTestServer();
+    nodeStub = restApi.server.api.node as StubbedNodeApi;
   });
 
   it("should succeed", async function () {

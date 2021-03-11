@@ -17,6 +17,7 @@ import {generateCachedState, generateState} from "../../../../../utils/state";
 import {StubbedBeaconDb} from "../../../../../utils/stub";
 import {StubbedBeaconChain} from "../../../../../utils/stub/chain";
 import {generateValidator} from "../../../../../utils/validator";
+import {setupApiImplTestServer, ApiImplTestServer} from "../../index.test";
 
 use(chaiAsPromised);
 
@@ -25,10 +26,15 @@ describe("beacon state api utils", function () {
     const epochCtx = ({} as unknown) as phase0.EpochContext;
     let chainStub: StubbedBeaconChain;
     let dbStub: StubbedBeaconDb;
+    let server: ApiImplTestServer;
+
+    before(function () {
+      server = setupApiImplTestServer();
+    });
 
     beforeEach(function () {
       chainStub = new StubbedBeaconChain(sinon, config);
-      dbStub = this.test?.ctx?.dbStub;
+      dbStub = server.dbStub;
     });
 
     it("resolve head state id - success", async function () {

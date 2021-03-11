@@ -8,18 +8,22 @@ import {getBlockAttestations} from "../../../../../../src/api/rest/controllers/b
 import {generateSignedBlock} from "../../../../../utils/block";
 import {generateEmptyAttestation} from "../../../../../utils/attestation";
 import {urlJoin} from "../../utils";
-import {BEACON_PREFIX} from "../../index.test";
+import {BEACON_PREFIX, setupRestApiTestServer} from "../../index.test";
 import {SinonStubbedInstance} from "sinon";
 import {RestApi} from "../../../../../../src/api";
-import {BeaconBlockApi} from "../../../../../../src/api/impl/beacon/blocks";
+import {BeaconBlockApi, IBeaconBlocksApi} from "../../../../../../src/api/impl/beacon/blocks";
 
 describe("rest - beacon - getBlockAttestations", function () {
-  let beaconBlocksStub: SinonStubbedInstance<BeaconBlockApi>;
+  let beaconBlocksStub: SinonStubbedInstance<IBeaconBlocksApi>;
   let restApi: RestApi;
 
-  beforeEach(function () {
-    beaconBlocksStub = this.test?.ctx?.beaconBlocksStub;
-    restApi = this.test?.ctx?.restApi;
+  before(async function () {
+    restApi = await setupRestApiTestServer();
+    beaconBlocksStub = restApi.server.api.beacon.blocks as SinonStubbedInstance<BeaconBlockApi>;
+  });
+
+  after(async function () {
+    await restApi.close();
   });
 
   it("should succeed", async function () {

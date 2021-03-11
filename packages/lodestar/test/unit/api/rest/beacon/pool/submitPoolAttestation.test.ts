@@ -2,7 +2,7 @@ import {config} from "@chainsafe/lodestar-config/minimal";
 import {expect} from "chai";
 import supertest from "supertest";
 import {urlJoin} from "../../utils";
-import {BEACON_PREFIX} from "../../index.test";
+import {BEACON_PREFIX, setupRestApiTestServer} from "../../index.test";
 import {generateAttestation} from "../../../../../utils/attestation";
 import {submitPoolAttestation} from "../../../../../../src/api/rest/controllers/beacon/pool/submitPoolAttestation";
 import {Attestation} from "@chainsafe/lodestar-types/lib/phase0";
@@ -19,9 +19,9 @@ describe("rest - beacon - submitAttestation", function () {
     attestation = generateAttestation();
   });
 
-  beforeEach(function () {
-    restApi = this.test?.ctx?.restApi;
-    beaconPoolStub = this.test?.ctx?.beaconPoolStub;
+  beforeEach(async function () {
+    restApi = await setupRestApiTestServer();
+    beaconPoolStub = restApi.server.api.beacon.pool as SinonStubbedInstance<BeaconPoolApi>;
   });
 
   it("should succeed", async function () {

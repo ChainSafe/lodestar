@@ -5,7 +5,7 @@ import supertest from "supertest";
 import {StateNotFound} from "../../../../../../src/api/impl/errors/api";
 import {getStateBeaconCommittees} from "../../../../../../src/api/rest/controllers/beacon/state";
 import {urlJoin} from "../../utils";
-import {BEACON_PREFIX} from "../../index.test";
+import {BEACON_PREFIX, setupRestApiTestServer} from "../../index.test";
 import {SinonStubbedInstance} from "sinon";
 import {RestApi} from "../../../../../../src/api";
 import {BeaconStateApi} from "../../../../../../src/api/impl/beacon/state";
@@ -14,9 +14,9 @@ describe("rest - beacon - getStateBeaconCommittees", function () {
   let beaconStateStub: SinonStubbedInstance<BeaconStateApi>;
   let restApi: RestApi;
 
-  beforeEach(function () {
-    beaconStateStub = this.test?.ctx?.beaconStateStub;
-    restApi = this.test?.ctx?.restApi;
+  beforeEach(async function () {
+    restApi = await setupRestApiTestServer();
+    beaconStateStub = restApi.server.api.beacon.state as SinonStubbedInstance<BeaconStateApi>;
   });
 
   it("should succeed without filters", async function () {

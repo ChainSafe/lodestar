@@ -4,7 +4,7 @@ import supertest from "supertest";
 import {produceBlockController} from "../../../../../src/api/rest/controllers/validator/produceBlock";
 import {generateEmptyBlock} from "../../../../utils/block";
 import {urlJoin} from "../utils";
-import {VALIDATOR_PREFIX} from "../index.test";
+import {setupRestApiTestServer, VALIDATOR_PREFIX} from "../index.test";
 import {SinonStubbedInstance} from "sinon";
 import {RestApi, ValidatorApi} from "../../../../../src/api";
 
@@ -12,9 +12,9 @@ describe("rest - validator - produceBlock", function () {
   let restApi: RestApi;
   let validatorStub: SinonStubbedInstance<ValidatorApi>;
 
-  beforeEach(function () {
-    validatorStub = this.test?.ctx?.validatorStub;
-    restApi = this.test?.ctx?.restApi;
+  beforeEach(async function () {
+    restApi = await setupRestApiTestServer();
+    validatorStub = restApi.server.api.validator as SinonStubbedInstance<ValidatorApi>;
   });
 
   it("should succeed", async function () {

@@ -2,7 +2,7 @@ import supertest from "supertest";
 
 import {getHealth} from "../../../../../src/api/rest/controllers/node";
 import {urlJoin} from "../utils";
-import {NODE_PREFIX} from "../index.test";
+import {NODE_PREFIX, setupRestApiTestServer} from "../index.test";
 import {StubbedNodeApi} from "../../../../utils/stub/nodeApi";
 import {RestApi} from "../../../../../src/api";
 
@@ -10,9 +10,9 @@ describe("rest - node - getHealth", function () {
   let nodeStub: StubbedNodeApi;
   let restApi: RestApi;
 
-  beforeEach(function () {
-    nodeStub = this.test?.ctx?.nodeStub;
-    restApi = this.test?.ctx?.restApi;
+  before(async function () {
+    restApi = await setupRestApiTestServer();
+    nodeStub = restApi.server.api.node as StubbedNodeApi;
   });
 
   it("ready", async function () {

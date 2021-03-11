@@ -3,15 +3,19 @@ import supertest from "supertest";
 
 import {getSyncingStatus} from "../../../../../src/api/rest/controllers/node";
 import {urlJoin} from "../utils";
-import {NODE_PREFIX} from "../index.test";
+import {NODE_PREFIX, setupRestApiTestServer} from "../index.test";
+import {StubbedNodeApi} from "../../../../utils/stub/nodeApi";
 
 describe("rest - node - getSyncingStatus", function () {
   it("should succeed", async function () {
-    this.test?.ctx?.api.node.getSyncingStatus.resolves({
+    const restApi = await setupRestApiTestServer();
+    const nodeStub = restApi.server.api.node as StubbedNodeApi;
+
+    nodeStub.getSyncingStatus.resolves({
       headSlot: BigInt(3),
       syncDistance: BigInt(2),
     });
-    const response = await supertest(this.test?.ctx?.restApi.server.server)
+    const response = await supertest(restApi.server.server)
       .get(urlJoin(NODE_PREFIX, getSyncingStatus.url))
       .expect(200)
       .expect("Content-Type", "application/json; charset=utf-8");

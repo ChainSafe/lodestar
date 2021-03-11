@@ -7,6 +7,7 @@ import {Eth2Gossipsub} from "../../../../../../src/network/gossip";
 import {generateEmptySignedBlock} from "../../../../../utils/block";
 import {SignedBeaconBlock} from "@chainsafe/lodestar-types/lib/allForks";
 import {BeaconSync} from "../../../../../../src/sync";
+import {setupApiImplTestServer, ApiImplTestServer} from "../../index.test";
 
 use(chaiAsPromised);
 
@@ -16,24 +17,29 @@ describe("api - beacon - publishBlock", function () {
   let blockApi: BeaconBlockApi;
   let chainStub: SinonStubbedInstance<BeaconChain>;
   let syncStub: SinonStubbedInstance<BeaconSync>;
+  let server: ApiImplTestServer;
 
-  beforeEach(() => {
+  before(function () {
+    block = generateEmptySignedBlock();
+  });
+
+  beforeEach(function () {
+    server = setupApiImplTestServer();
     gossipStub = sinon.createStubInstance(Eth2Gossipsub);
     gossipStub.publishBeaconBlock = sinon.stub();
-    this.ctx.networkStub.gossip = (gossipStub as unknown) as Eth2Gossipsub;
-    chainStub = this.ctx.chainStub;
-    syncStub = this.ctx.syncStub;
+    server.networkStub.gossip = (gossipStub as unknown) as Eth2Gossipsub;
+    chainStub = server.chainStub;
+    syncStub = server.syncStub;
     blockApi = new BeaconBlockApi(
       {},
       {
         chain: chainStub,
-        config: this.ctx.config,
-        db: this.ctx.dbStub,
-        network: this.ctx.networkStub,
+        config: server.config,
+        db: server.dbStub,
+        network: server.networkStub,
         sync: syncStub,
       }
     );
-    block = generateEmptySignedBlock();
   });
 
   it("successful publish", async function () {

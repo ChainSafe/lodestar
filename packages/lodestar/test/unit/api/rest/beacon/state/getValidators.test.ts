@@ -4,7 +4,7 @@ import {StateNotFound} from "../../../../../../src/api/impl/errors/api";
 import {getStateValidators} from "../../../../../../src/api/rest/controllers/beacon";
 import {generateValidator} from "../../../../../utils/validator";
 import {urlJoin} from "../../utils";
-import {BEACON_PREFIX} from "../../index.test";
+import {BEACON_PREFIX, setupRestApiTestServer} from "../../index.test";
 import {phase0} from "@chainsafe/lodestar-types";
 import {SinonStubbedInstance} from "sinon";
 import {RestApi} from "../../../../../../src/api";
@@ -14,9 +14,9 @@ describe("rest - beacon - getStateValidators", function () {
   let beaconStateStub: SinonStubbedInstance<BeaconStateApi>;
   let restApi: RestApi;
 
-  beforeEach(function () {
-    beaconStateStub = this.test?.ctx?.beaconStateStub;
-    restApi = this.test?.ctx?.restApi;
+  beforeEach(async function () {
+    restApi = await setupRestApiTestServer();
+    beaconStateStub = restApi.server.api.beacon.state as SinonStubbedInstance<BeaconStateApi>;
   });
 
   it("should success", async function () {

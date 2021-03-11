@@ -5,7 +5,7 @@ import supertest from "supertest";
 import {submitAttesterSlashing} from "../../../../../../src/api/rest/controllers/beacon/pool";
 import {generateEmptyAttesterSlashing} from "../../../../../utils/slashings";
 import {urlJoin} from "../../utils";
-import {BEACON_PREFIX} from "../../index.test";
+import {BEACON_PREFIX, setupRestApiTestServer} from "../../index.test";
 import {RestApi} from "../../../../../../src/api";
 import {SinonStubbedInstance} from "sinon";
 import {BeaconPoolApi} from "../../../../../../src/api/impl/beacon/pool";
@@ -19,9 +19,9 @@ describe("rest - beacon - submitAttesterSlashing", function () {
     slashing = generateEmptyAttesterSlashing();
   });
 
-  beforeEach(function () {
-    restApi = this.test?.ctx?.restApi;
-    beaconPoolStub = this.test?.ctx?.beaconPoolStub;
+  beforeEach(async function () {
+    restApi = await setupRestApiTestServer();
+    beaconPoolStub = restApi.server.api.beacon.pool as SinonStubbedInstance<BeaconPoolApi>;
   });
 
   it("should succeed", async function () {

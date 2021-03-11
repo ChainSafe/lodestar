@@ -5,10 +5,16 @@ import {IBeaconStateApi} from "../../../../../../src/api/impl/beacon/state/inter
 import * as stateApiUtils from "../../../../../../src/api/impl/beacon/state/utils";
 import {generateState} from "../../../../../utils/state";
 import {expect} from "chai";
+import {setupApiImplTestServer, ApiImplTestServer} from "../../index.test";
 
 describe("beacon api impl - state - get fork", function () {
   let api: IBeaconStateApi;
   let resolveStateIdStub: SinonStubbedMember<typeof stateApiUtils["resolveStateId"]>;
+  let server: ApiImplTestServer;
+
+  before(function () {
+    server = setupApiImplTestServer();
+  });
 
   beforeEach(function () {
     resolveStateIdStub = sinon.stub(stateApiUtils, "resolveStateId");
@@ -16,8 +22,8 @@ describe("beacon api impl - state - get fork", function () {
       {},
       {
         config,
-        chain: this.test?.ctx?.chainStub,
-        db: this.test?.ctx?.dbStub,
+        chain: server.chainStub,
+        db: server.dbStub,
       }
     );
   });

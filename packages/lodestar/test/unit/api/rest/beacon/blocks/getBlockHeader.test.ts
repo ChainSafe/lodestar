@@ -3,18 +3,22 @@ import supertest from "supertest";
 import {getBlockHeader} from "../../../../../../src/api/rest/controllers/beacon/blocks";
 import {generateSignedBeaconHeaderResponse} from "../../../../../utils/api";
 import {urlJoin} from "../../utils";
-import {BEACON_PREFIX} from "../../index.test";
+import {BEACON_PREFIX, setupRestApiTestServer} from "../../index.test";
 import {SinonStubbedInstance} from "sinon";
 import {RestApi} from "../../../../../../src/api";
-import {BeaconBlockApi} from "../../../../../../src/api/impl/beacon/blocks";
+import {BeaconBlockApi, IBeaconBlocksApi} from "../../../../../../src/api/impl/beacon/blocks";
 
 describe("rest - beacon - getBlockHeader", function () {
-  let beaconBlocksStub: SinonStubbedInstance<BeaconBlockApi>;
+  let beaconBlocksStub: SinonStubbedInstance<IBeaconBlocksApi>;
   let restApi: RestApi;
 
-  beforeEach(function () {
-    beaconBlocksStub = this.test?.ctx?.beaconBlocksStub;
-    restApi = this.test?.ctx?.restApi;
+  before(async function () {
+    restApi = await setupRestApiTestServer();
+    beaconBlocksStub = restApi.server.api.beacon.blocks as SinonStubbedInstance<BeaconBlockApi>;
+  });
+
+  after(async function () {
+    await restApi.close();
   });
 
   it("should succeed", async function () {

@@ -4,14 +4,15 @@ import {ZERO_HASH} from "@chainsafe/lodestar-beacon-state-transition";
 import {SinonStubbedInstance} from "sinon";
 import {DebugBeaconApi} from "../../../../../../src/api/impl/debug/beacon";
 import {RestApi} from "../../../../../../src/api";
+import {setupRestApiTestServer} from "../../index.test";
 
 describe("rest - debug - beacon - getHeads", function () {
   let debugBeaconStub: SinonStubbedInstance<DebugBeaconApi>;
   let restApi: RestApi;
 
-  beforeEach(function () {
-    debugBeaconStub = this.test?.ctx?.debugBeaconStub;
-    restApi = this.test?.ctx?.restApi;
+  before(async function () {
+    restApi = await setupRestApiTestServer();
+    debugBeaconStub = restApi.server.api.debug.beacon as SinonStubbedInstance<DebugBeaconApi>;
   });
 
   it("should succeed", async function () {

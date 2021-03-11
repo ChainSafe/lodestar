@@ -11,6 +11,7 @@ import {generateState} from "../../../../../utils/state";
 import {generateValidator, generateValidators} from "../../../../../utils/validator";
 import {BeaconChain} from "../../../../../../src/chain";
 import {StubbedBeaconDb} from "../../../../../utils/stub";
+import {setupApiImplTestServer, ApiImplTestServer} from "../../index.test";
 
 use(chaiAsPromised);
 
@@ -19,24 +20,27 @@ describe("beacon api impl - state - validators", function () {
   let toValidatorResponseStub: SinonStubbedMember<typeof stateApiUtils["toValidatorResponse"]>;
   let dbStub: StubbedBeaconDb;
   let chainStub: SinonStubbedInstance<BeaconChain>;
+  let server: ApiImplTestServer;
 
-  const sandbox = sinon.createSandbox();
+  before(function () {
+    server = setupApiImplTestServer();
+  });
 
   beforeEach(function () {
-    resolveStateIdStub = sandbox.stub(stateApiUtils, "resolveStateId");
-    toValidatorResponseStub = sandbox.stub(stateApiUtils, "toValidatorResponse");
+    resolveStateIdStub = server.sandbox.stub(stateApiUtils, "resolveStateId");
+    toValidatorResponseStub = server.sandbox.stub(stateApiUtils, "toValidatorResponse");
     toValidatorResponseStub.returns({
       index: 1,
       balance: BigInt(3200000),
       status: phase0.ValidatorStatus.ACTIVE_ONGOING,
       validator: generateValidator(),
     });
-    dbStub = this.test?.ctx?.dbStub;
-    chainStub = this.test?.ctx?.chainStub;
+    dbStub = server.dbStub;
+    chainStub = server.chainStub;
   });
 
   afterEach(function () {
-    sandbox.restore();
+    server.sandbox.restore();
   });
 
   describe("get validators", function () {

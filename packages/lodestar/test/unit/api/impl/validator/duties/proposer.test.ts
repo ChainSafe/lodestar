@@ -13,6 +13,7 @@ import {generateState} from "../../../../../utils/state";
 import {IBeaconSync} from "../../../../../../src/sync";
 import {generateValidators} from "../../../../../utils/validator";
 import {StubbedBeaconDb} from "../../../../../utils/stub";
+import {setupApiImplTestServer, ApiImplTestServer} from "../../index.test";
 
 describe("get proposers api impl", function () {
   let chainStub: SinonStubbedInstance<IBeaconChain>,
@@ -20,13 +21,15 @@ describe("get proposers api impl", function () {
     dbStub: StubbedBeaconDb;
 
   let api: IValidatorApi;
+  let server: ApiImplTestServer;
 
-  beforeEach(function () {
-    chainStub = this.test?.ctx?.chainStub;
-    syncStub = this.test?.ctx?.syncStub;
-    chainStub.clock = this.test?.ctx?.sandbox.createStubInstance(LocalClock);
-    chainStub.forkChoice = this.test?.ctx?.sandbox.createStubInstance(ForkChoice);
-    dbStub = this.test?.ctx?.dbStub;
+  before(function () {
+    server = setupApiImplTestServer();
+    chainStub = server.chainStub;
+    syncStub = server.syncStub;
+    chainStub.clock = server.sandbox.createStubInstance(LocalClock);
+    chainStub.forkChoice = server.sandbox.createStubInstance(ForkChoice);
+    dbStub = server.dbStub;
     // @ts-ignore
     api = new ValidatorApi({}, {db: dbStub, chain: chainStub, sync: syncStub, config});
   });
@@ -58,8 +61,8 @@ describe("get proposers api impl", function () {
 
   it("should get proposers", async function () {
     syncStub.isSynced.returns(true);
-    this.test?.ctx?.sandbox.stub(chainStub.clock, "currentEpoch").get(() => 0);
-    this.test?.ctx?.sandbox.stub(chainStub.clock, "currentSlot").get(() => 0);
+    server.sandbox.stub(chainStub.clock, "currentEpoch").get(() => 0);
+    server.sandbox.stub(chainStub.clock, "currentSlot").get(() => 0);
     dbStub.block.get.resolves({message: {stateRoot: Buffer.alloc(32)}} as any);
     const state = generateState({
       slot: 0,

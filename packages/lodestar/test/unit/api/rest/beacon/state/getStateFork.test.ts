@@ -2,7 +2,7 @@ import {expect} from "chai";
 import supertest from "supertest";
 import {generateState} from "../../../../../utils/state";
 import {urlJoin} from "../../utils";
-import {BEACON_PREFIX} from "../../index.test";
+import {BEACON_PREFIX, setupRestApiTestServer} from "../../index.test";
 import {getStateFork} from "../../../../../../src/api/rest/controllers/beacon/state/getStateFork";
 import {SinonStubbedInstance} from "sinon";
 import {BeaconStateApi} from "../../../../../../src/api/impl/beacon/state";
@@ -12,9 +12,9 @@ describe("rest - beacon - getStateFork", function () {
   let beaconStateStub: SinonStubbedInstance<BeaconStateApi>;
   let restApi: RestApi;
 
-  beforeEach(function () {
-    beaconStateStub = this.test?.ctx?.beaconStateStub;
-    restApi = this.test?.ctx?.restApi;
+  beforeEach(async function () {
+    restApi = await setupRestApiTestServer();
+    beaconStateStub = restApi.server.api.beacon.state as SinonStubbedInstance<BeaconStateApi>;
   });
 
   it("should succeed", async function () {
