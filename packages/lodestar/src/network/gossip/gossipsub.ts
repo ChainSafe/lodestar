@@ -90,12 +90,12 @@ export class Eth2Gossipsub extends Gossipsub {
     }
   }
 
-  public start(): void {
+  start(): void {
     super.start();
     this.statusInterval = setInterval(this.logSubscriptions, 12000);
   }
 
-  public stop(): void {
+  stop(): void {
     try {
       super.stop();
       if (this.statusInterval) {
@@ -111,14 +111,14 @@ export class Eth2Gossipsub extends Gossipsub {
   /**
    * @override Use eth2 msg id and cache results to the msg
    */
-  public getMsgId(msg: IGossipMessage): Uint8Array {
+  getMsgId(msg: IGossipMessage): Uint8Array {
     return getMsgId(msg);
   }
 
   /**
    * @override
    */
-  public async validate(message: IGossipMessage): Promise<void> {
+  async validate(message: IGossipMessage): Promise<void> {
     try {
       // message sanity check
       if (!messageIsValid(message)) {
@@ -155,7 +155,7 @@ export class Eth2Gossipsub extends Gossipsub {
    *
    * Instead of emitting `InMessage`, emit `GossipObject`
    */
-  public _emitMessage(message: InMessage): void {
+  _emitMessage(message: InMessage): void {
     const topic = message.topicIDs[0];
     const msgIdStr = msgIdToString(this.getMsgId(message));
     const gossipObject = this.gossipObjects.get(msgIdStr);
@@ -175,7 +175,7 @@ export class Eth2Gossipsub extends Gossipsub {
    *
    * See https://github.com/libp2p/js-libp2p-interfaces/blob/v0.8.3/src/pubsub/index.js#L720
    */
-  public unsubscribe(topic: string): void {
+  unsubscribe(topic: string): void {
     if (!this.started) {
       throw new Error("Pubsub is not started");
     }
@@ -189,7 +189,7 @@ export class Eth2Gossipsub extends Gossipsub {
   /**
    * Publish a `GossipObject` on a `GossipTopic`
    */
-  public async publishObject(topic: GossipTopic, object: GossipObject): Promise<void> {
+  async publishObject(topic: GossipTopic, object: GossipObject): Promise<void> {
     this.logger.verbose("Publish to topic", toJson(topic));
     await this.publish(
       this.getGossipTopicString(topic),
@@ -200,7 +200,7 @@ export class Eth2Gossipsub extends Gossipsub {
   /**
    * Subscribe to a `GossipTopic`
    */
-  public subscribeTopic(topic: GossipTopic): void {
+  subscribeTopic(topic: GossipTopic): void {
     this.logger.verbose("Subscribe to topic", toJson(topic));
     this.subscribe(this.getGossipTopicString(topic));
   }
@@ -208,7 +208,7 @@ export class Eth2Gossipsub extends Gossipsub {
   /**
    * Unsubscribe to a `GossipTopic`
    */
-  public unsubscribeTopic(topic: GossipTopic): void {
+  unsubscribeTopic(topic: GossipTopic): void {
     this.logger.verbose("Unsubscribe to topic", toJson(topic));
     this.unsubscribe(this.getGossipTopicString(topic));
   }
@@ -216,18 +216,18 @@ export class Eth2Gossipsub extends Gossipsub {
   /**
    * Attach a handler to a `GossipTopic`
    */
-  public handleTopic(topic: GossipTopic, handler: GossipHandlerFn): void {
+  handleTopic(topic: GossipTopic, handler: GossipHandlerFn): void {
     this.on(this.getGossipTopicString(topic), handler);
   }
 
   /**
    * Remove a handler from a `GossipTopic`
    */
-  public unhandleTopic(topic: GossipTopic, handler: GossipHandlerFn): void {
+  unhandleTopic(topic: GossipTopic, handler: GossipHandlerFn): void {
     this.off(this.getGossipTopicString(topic), handler);
   }
 
-  public async publishBeaconBlock(signedBlock: phase0.SignedBeaconBlock): Promise<void> {
+  async publishBeaconBlock(signedBlock: phase0.SignedBeaconBlock): Promise<void> {
     await this.publishObject(
       {
         type: GossipType.beacon_block,
@@ -237,7 +237,7 @@ export class Eth2Gossipsub extends Gossipsub {
     );
   }
 
-  public async publishBeaconAggregateAndProof(aggregateAndProof: phase0.SignedAggregateAndProof): Promise<void> {
+  async publishBeaconAggregateAndProof(aggregateAndProof: phase0.SignedAggregateAndProof): Promise<void> {
     await this.publishObject(
       {
         type: GossipType.beacon_aggregate_and_proof,
@@ -247,7 +247,7 @@ export class Eth2Gossipsub extends Gossipsub {
     );
   }
 
-  public async publishBeaconAttestation(attestation: phase0.Attestation, subnet: number): Promise<void> {
+  async publishBeaconAttestation(attestation: phase0.Attestation, subnet: number): Promise<void> {
     await this.publishObject(
       {
         type: GossipType.beacon_attestation,
@@ -258,7 +258,7 @@ export class Eth2Gossipsub extends Gossipsub {
     );
   }
 
-  public async publishVoluntaryExit(voluntaryExit: phase0.SignedVoluntaryExit): Promise<void> {
+  async publishVoluntaryExit(voluntaryExit: phase0.SignedVoluntaryExit): Promise<void> {
     await this.publishObject(
       {
         type: GossipType.voluntary_exit,
@@ -268,7 +268,7 @@ export class Eth2Gossipsub extends Gossipsub {
     );
   }
 
-  public async publishProposerSlashing(proposerSlashing: phase0.ProposerSlashing): Promise<void> {
+  async publishProposerSlashing(proposerSlashing: phase0.ProposerSlashing): Promise<void> {
     await this.publishObject(
       {
         type: GossipType.proposer_slashing,
@@ -278,7 +278,7 @@ export class Eth2Gossipsub extends Gossipsub {
     );
   }
 
-  public async publishAttesterSlashing(attesterSlashing: phase0.AttesterSlashing): Promise<void> {
+  async publishAttesterSlashing(attesterSlashing: phase0.AttesterSlashing): Promise<void> {
     await this.publishObject(
       {
         type: GossipType.proposer_slashing,

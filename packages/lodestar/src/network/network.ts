@@ -34,13 +34,13 @@ interface ILibp2pModules {
 }
 
 export class Network extends (EventEmitter as {new (): NetworkEventEmitter}) implements INetwork {
-  public peerId: PeerId;
-  public localMultiaddrs!: Multiaddr[];
-  public reqResp: ReqResp;
-  public gossip: Eth2Gossipsub;
-  public metadata: MetadataController;
-  public peerMetadata: IPeerMetadataStore;
-  public peerRpcScores: IPeerRpcScoreStore;
+  peerId: PeerId;
+  localMultiaddrs!: Multiaddr[];
+  reqResp: ReqResp;
+  gossip: Eth2Gossipsub;
+  metadata: MetadataController;
+  peerMetadata: IPeerMetadataStore;
+  peerRpcScores: IPeerRpcScoreStore;
 
   private opts: INetworkOptions;
   private config: IBeaconConfig;
@@ -52,10 +52,7 @@ export class Network extends (EventEmitter as {new (): NetworkEventEmitter}) imp
   /** To count total number of unique seen peers */
   private seenPeers = new Set();
 
-  public constructor(
-    opts: INetworkOptions & IReqRespOptions,
-    {config, libp2p, logger, metrics, chain, db}: ILibp2pModules
-  ) {
+  constructor(opts: INetworkOptions & IReqRespOptions, {config, libp2p, logger, metrics, chain, db}: ILibp2pModules) {
     super();
     this.opts = opts;
     this.config = config;
@@ -88,7 +85,7 @@ export class Network extends (EventEmitter as {new (): NetworkEventEmitter}) imp
     });
   }
 
-  public async start(): Promise<void> {
+  async start(): Promise<void> {
     this.libp2p.connectionManager.on(NetworkEvent.peerConnect, this.emitPeerConnect);
     this.libp2p.connectionManager.on(NetworkEvent.peerDisconnect, this.emitPeerDisconnect);
     await this.libp2p.start();
@@ -102,7 +99,7 @@ export class Network extends (EventEmitter as {new (): NetworkEventEmitter}) imp
     this.logger.info(`PeerId ${this.libp2p.peerId.toB58String()}, Multiaddrs ${multiaddresses}`);
   }
 
-  public async stop(): Promise<void> {
+  async stop(): Promise<void> {
     this.libp2p.connectionManager.removeListener(NetworkEvent.peerConnect, this.emitPeerConnect);
     this.libp2p.connectionManager.removeListener(NetworkEvent.peerDisconnect, this.emitPeerDisconnect);
     await Promise.all([this.diversifyPeersTask.stop(), this.checkPeerAliveTask.stop()]);
@@ -112,16 +109,16 @@ export class Network extends (EventEmitter as {new (): NetworkEventEmitter}) imp
     await this.libp2p.stop();
   }
 
-  public async handleSyncCompleted(): Promise<void> {
+  async handleSyncCompleted(): Promise<void> {
     await Promise.all([this.checkPeerAliveTask.start(), this.diversifyPeersTask.handleSyncCompleted()]);
   }
 
-  public getEnr(): ENR | undefined {
+  getEnr(): ENR | undefined {
     const discv5Discovery = this.libp2p._discovery.get("discv5") as Discv5Discovery;
     return discv5Discovery?.discv5?.enr ?? undefined;
   }
 
-  public getConnectionsByPeer(): Map<string, LibP2pConnection[]> {
+  getConnectionsByPeer(): Map<string, LibP2pConnection[]> {
     return this.libp2p.connectionManager.connections;
   }
 
@@ -129,7 +126,7 @@ export class Network extends (EventEmitter as {new (): NetworkEventEmitter}) imp
    * Get connected peers.
    * @param opts PeerSearchOptions
    */
-  public getPeers(opts: Partial<PeerSearchOptions> = {}): LibP2p.Peer[] {
+  getPeers(opts: Partial<PeerSearchOptions> = {}): LibP2p.Peer[] {
     const peerIdStrs = Array.from(this.libp2p.connectionManager.connections.keys());
     const peerIds = peerIdStrs
       .map((peerIdStr) => createFromCID(peerIdStr))
@@ -157,11 +154,11 @@ export class Network extends (EventEmitter as {new (): NetworkEventEmitter}) imp
     return peers.slice(0, opts?.count ?? peers.length) || [];
   }
 
-  public getMaxPeer(): number {
+  getMaxPeer(): number {
     return this.opts.maxPeers;
   }
 
-  public hasPeer(peerId: PeerId, connected = false): boolean {
+  hasPeer(peerId: PeerId, connected = false): boolean {
     const peer = this.libp2p.peerStore.get(peerId);
     if (!peer) {
       return false;
@@ -177,11 +174,11 @@ export class Network extends (EventEmitter as {new (): NetworkEventEmitter}) imp
     return true;
   }
 
-  public getPeerConnection(peerId: PeerId): LibP2pConnection | null {
+  getPeerConnection(peerId: PeerId): LibP2pConnection | null {
     return this.libp2p.connectionManager.get(peerId);
   }
 
-  public async connect(peerId: PeerId, localMultiaddrs?: Multiaddr[]): Promise<void> {
+  async connect(peerId: PeerId, localMultiaddrs?: Multiaddr[]): Promise<void> {
     if (localMultiaddrs) {
       this.libp2p.peerStore.addressBook.add(peerId, localMultiaddrs);
     }
@@ -189,7 +186,7 @@ export class Network extends (EventEmitter as {new (): NetworkEventEmitter}) imp
     await this.libp2p.dial(peerId);
   }
 
-  public async disconnect(peerId: PeerId): Promise<void> {
+  async disconnect(peerId: PeerId): Promise<void> {
     try {
       await this.libp2p.hangUp(peerId);
     } catch (e) {
@@ -197,7 +194,7 @@ export class Network extends (EventEmitter as {new (): NetworkEventEmitter}) imp
     }
   }
 
-  public async searchSubnetPeers(subnets: string[]): Promise<void> {
+  async searchSubnetPeers(subnets: string[]): Promise<void> {
     const connectedPeerIds = this.getPeers().map((peer) => peer.id);
 
     const peerCountBySubnet = getPeerCountBySubnet(connectedPeerIds, this.peerMetadata, subnets);

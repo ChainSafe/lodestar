@@ -36,15 +36,15 @@ export class EpochContext {
   // TODO: this is a hack, we need a safety mechanism in case a bad eth1 majority vote is in,
   // or handle non finalized data differently, or use an immutable.js structure for cheap copies
   // Warning: may contain pubkeys that do not yet exist in the current state, but do in a later processed state.
-  public pubkey2index: PubkeyIndexMap;
+  pubkey2index: PubkeyIndexMap;
   // Warning: may contain indices that do not yet exist in the current state, but do in a later processed state.
-  public index2pubkey: PublicKey[];
-  public proposers: number[];
+  index2pubkey: PublicKey[];
+  proposers: number[];
   // Per spec definition, shuffling will always be defined. They are never called before loadState()
-  public previousShuffling!: IEpochShuffling;
-  public currentShuffling!: IEpochShuffling;
-  public nextShuffling!: IEpochShuffling;
-  public config: IBeaconConfig;
+  previousShuffling!: IEpochShuffling;
+  currentShuffling!: IEpochShuffling;
+  nextShuffling!: IEpochShuffling;
+  config: IBeaconConfig;
 
   constructor(config: IBeaconConfig) {
     this.config = config;
@@ -56,7 +56,7 @@ export class EpochContext {
   /**
    * Precomputes the data for the given state.
    */
-  public loadState(state: phase0.BeaconState): void {
+  loadState(state: phase0.BeaconState): void {
     this.syncPubkeys(state);
     const currentEpoch = computeEpochAtSlot(this.config, state.slot);
     const previousEpoch = currentEpoch === GENESIS_EPOCH ? GENESIS_EPOCH : currentEpoch - 1;
@@ -82,7 +82,7 @@ export class EpochContext {
   /**
    * Copies a given EpochContext while avoiding copying its immutable parts.
    */
-  public copy(): EpochContext {
+  copy(): EpochContext {
     const ctx = new EpochContext(this.config);
     // warning: pubkey cache is not copied, it is shared, as eth1 is not expected to reorder validators.
     ctx.pubkey2index = this.pubkey2index;
@@ -99,7 +99,7 @@ export class EpochContext {
    * Checks the precomputed data (from loadState) against a state, and then adds missing pubkeys (strictly append-only
    * however, not meant to fork this information).
    */
-  public syncPubkeys(state: phase0.BeaconState): void {
+  syncPubkeys(state: phase0.BeaconState): void {
     if (!this.pubkey2index) {
       this.pubkey2index = new PubkeyIndexMap();
     }
@@ -122,7 +122,7 @@ export class EpochContext {
    * Called to re-use information, such as the shuffling of the next epoch, after transitioning into a
    * new epoch.
    */
-  public rotateEpochs(state: CachedValidatorsBeaconState): void {
+  rotateEpochs(state: CachedValidatorsBeaconState): void {
     this.previousShuffling = this.currentShuffling;
     this.currentShuffling = this.nextShuffling;
     const nextEpoch = this.currentShuffling.epoch + 1;
@@ -136,7 +136,7 @@ export class EpochContext {
   /**
    * Return the beacon committee at slot for index.
    */
-  public getBeaconCommittee(slot: Slot, index: CommitteeIndex): ValidatorIndex[] {
+  getBeaconCommittee(slot: Slot, index: CommitteeIndex): ValidatorIndex[] {
     const slotCommittees = this._getSlotCommittees(slot);
     if (index >= slotCommittees.length) {
       throw new Error(`crosslink committee retrieval: out of range committee index: ${index}`);
@@ -144,11 +144,11 @@ export class EpochContext {
     return slotCommittees[index];
   }
 
-  public getCommitteeCountAtSlot(slot: Slot): number {
+  getCommitteeCountAtSlot(slot: Slot): number {
     return this._getSlotCommittees(slot).length;
   }
 
-  public getBeaconProposer(slot: Slot): ValidatorIndex {
+  getBeaconProposer(slot: Slot): ValidatorIndex {
     const epoch = computeEpochAtSlot(this.config, slot);
     if (epoch !== this.currentShuffling.epoch) {
       throw new Error("beacon proposer index out of range");
@@ -159,7 +159,7 @@ export class EpochContext {
   /**
    * Return the indexed attestation corresponding to ``attestation``.
    */
-  public getIndexedAttestation(attestation: phase0.Attestation): phase0.IndexedAttestation {
+  getIndexedAttestation(attestation: phase0.Attestation): phase0.IndexedAttestation {
     const data = attestation.data;
     const bits = readOnlyMap(attestation.aggregationBits, (b) => b);
     const committee = this.getBeaconCommittee(data.slot, data.index);
@@ -179,7 +179,7 @@ export class EpochContext {
     };
   }
 
-  public getAttestingIndices(data: phase0.AttestationData, bits: BitList): ValidatorIndex[] {
+  getAttestingIndices(data: phase0.AttestationData, bits: BitList): ValidatorIndex[] {
     const committee = this.getBeaconCommittee(data.slot, data.index);
     return getAttestingIndicesFromCommittee(committee, readOnlyMap(bits, (b) => b) as List<boolean>);
   }
@@ -214,7 +214,7 @@ export class EpochContext {
     return null;
   }
 
-  public isAggregator(slot: Slot, index: CommitteeIndex, slotSignature: BLSSignature): boolean {
+  isAggregator(slot: Slot, index: CommitteeIndex, slotSignature: BLSSignature): boolean {
     const committee = this.getBeaconCommittee(slot, index);
     return isAggregatorFromCommitteeLength(this.config, committee.length, slotSignature);
   }

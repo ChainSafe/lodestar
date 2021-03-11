@@ -13,7 +13,7 @@ export class StateContextCache {
   /**
    * Max number of states allowed in the cache
    */
-  public maxStates: number;
+  maxStates: number;
 
   private cache: Record<string, ITreeStateContext>;
   /**
@@ -27,7 +27,7 @@ export class StateContextCache {
     this.maxStates = maxStates;
   }
 
-  public get(root: ByteVector): ITreeStateContext | null {
+  get(root: ByteVector): ITreeStateContext | null {
     const item = this.cache[toHexString(root)];
     if (!item) {
       return null;
@@ -35,7 +35,7 @@ export class StateContextCache {
     return this.clone(item);
   }
 
-  public add(item: ITreeStateContext): void {
+  add(item: ITreeStateContext): void {
     const key = toHexString((item.state.getOriginalState() as TreeBacked<phase0.BeaconState>).hashTreeRoot());
     if (this.cache[key]) {
       return;
@@ -49,7 +49,7 @@ export class StateContextCache {
     }
   }
 
-  public delete(root: ByteVector): void {
+  delete(root: ByteVector): void {
     const key = toHexString(root);
     const item = this.cache[key];
     if (!item) return;
@@ -57,15 +57,15 @@ export class StateContextCache {
     delete this.cache[key];
   }
 
-  public batchDelete(roots: ByteVector[]): void {
+  batchDelete(roots: ByteVector[]): void {
     roots.map((root) => this.delete(root));
   }
 
-  public clear(): void {
+  clear(): void {
     this.cache = {};
   }
 
-  public get size(): number {
+  get size(): number {
     return Object.keys(this.cache).length;
   }
 
@@ -73,7 +73,7 @@ export class StateContextCache {
    * TODO make this more robust.
    * Without more thought, this currently breaks our assumptions about recent state availablity
    */
-  public prune(headStateRoot: ByteVector): void {
+  prune(headStateRoot: ByteVector): void {
     const keys = Object.keys(this.cache);
     if (keys.length > this.maxStates) {
       const headStateRootHex = toHexString(headStateRoot);
@@ -91,7 +91,7 @@ export class StateContextCache {
   /**
    * Prune per finalized epoch.
    */
-  public async deleteAllBeforeEpoch(finalizedEpoch: Epoch): Promise<void> {
+  async deleteAllBeforeEpoch(finalizedEpoch: Epoch): Promise<void> {
     for (const epoch of Object.keys(this.epochIndex).map(Number)) {
       if (epoch < finalizedEpoch) {
         this.deleteAllEpochItems(epoch);
@@ -103,7 +103,7 @@ export class StateContextCache {
    * Should only use this with care as this is expensive.
    * @param epoch
    */
-  public valuesUnsafe(): ITreeStateContext[] {
+  valuesUnsafe(): ITreeStateContext[] {
     return Object.values(this.cache).map((item) => this.clone(item));
   }
 

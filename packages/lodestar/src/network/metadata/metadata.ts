@@ -34,7 +34,7 @@ export class MetadataController {
     this._metadata = opts.metadata || this.config.types.phase0.Metadata.defaultValue();
   }
 
-  public start(enr: ENR): void {
+  start(enr: ENR): void {
     this.enr = enr;
     if (this.enr) {
       this.enr.set(
@@ -46,7 +46,7 @@ export class MetadataController {
     this.chain.emitter.on(ChainEvent.forkVersion, this.handleForkVersion);
   }
 
-  public stop(): void {
+  stop(): void {
     this.chain.emitter.off(ChainEvent.forkVersion, this.handleForkVersion);
   }
 

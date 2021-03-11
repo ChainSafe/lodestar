@@ -16,18 +16,18 @@ import {LodestarEventIterator} from "@chainsafe/lodestar-utils";
 import {BeaconEventType, BeaconEvent} from "./types";
 
 export class EventsApi implements IEventsApi {
-  public namespace: ApiNamespace;
+  namespace: ApiNamespace;
 
   private readonly config: IBeaconConfig;
   private readonly chain: IBeaconChain;
 
-  public constructor(opts: Partial<IApiOptions>, modules: Pick<IApiModules, "config" | "chain">) {
+  constructor(opts: Partial<IApiOptions>, modules: Pick<IApiModules, "config" | "chain">) {
     this.namespace = ApiNamespace.EVENTS;
     this.config = modules.config;
     this.chain = modules.chain;
   }
 
-  public getEventStream(topics: BeaconEventType[]): LodestarEventIterator<BeaconEvent> {
+  getEventStream(topics: BeaconEventType[]): LodestarEventIterator<BeaconEvent> {
     return new LodestarEventIterator<BeaconEvent>(({push}) => {
       const eventHandlerMapping = getEventHandlerMapping(this.config, push);
 

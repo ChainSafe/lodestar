@@ -20,11 +20,11 @@ type AttestationProcessorModules = {
 export class AttestationProcessor {
   private modules: AttestationProcessorModules;
 
-  public constructor(modules: AttestationProcessorModules) {
+  constructor(modules: AttestationProcessorModules) {
     this.modules = modules;
   }
 
-  public async processAttestationJob(job: IAttestationJob): Promise<void> {
+  async processAttestationJob(job: IAttestationJob): Promise<void> {
     await processAttestationJob(this.modules, job);
   }
 }

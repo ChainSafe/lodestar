@@ -52,7 +52,7 @@ export class BeaconSync implements IBeaconSync {
     this.processingRoots = new Set();
   }
 
-  public async start(): Promise<void> {
+  async start(): Promise<void> {
     this.mode = SyncMode.WAITING_PEERS as SyncMode;
     await this.reqResp.start();
     this.attestationCollector.start();
@@ -86,7 +86,7 @@ export class BeaconSync implements IBeaconSync {
     this.startRegularSync();
   }
 
-  public async stop(): Promise<void> {
+  async stop(): Promise<void> {
     this.controller.abort();
     if (this.mode === SyncMode.STOPPED) {
       return;
@@ -102,7 +102,7 @@ export class BeaconSync implements IBeaconSync {
     this.gossip.close();
   }
 
-  public getSyncStatus(): phase0.SyncingStatus {
+  getSyncStatus(): phase0.SyncingStatus {
     const currentSlot = this.chain.clock.currentSlot;
     const headSlot = this.chain.forkChoice.getHead().slot;
     switch (this.mode) {
@@ -123,7 +123,7 @@ export class BeaconSync implements IBeaconSync {
     }
   }
 
-  public isSynced(): boolean {
+  isSynced(): boolean {
     return this.mode === SyncMode.SYNCED;
   }
 
@@ -131,7 +131,7 @@ export class BeaconSync implements IBeaconSync {
     return this.mode;
   }
 
-  public collectAttestations(slot: Slot, committeeIndex: CommitteeIndex): void {
+  collectAttestations(slot: Slot, committeeIndex: CommitteeIndex): void {
     if (!(this.mode === SyncMode.REGULAR_SYNCING || this.mode === SyncMode.SYNCED)) {
       throw new Error("Cannot collect attestations before regular sync");
     }
@@ -139,7 +139,7 @@ export class BeaconSync implements IBeaconSync {
   }
 
   private processChainSegment: ProcessChainSegment = async (blocks) => {
-    const trusted = true; // TODO: Verify signatures
+    const trusted = false; // Verify signatures
     await this.chain.processChainSegment(blocks, trusted);
   };
 

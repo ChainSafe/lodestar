@@ -12,11 +12,11 @@ import {phase0} from "@chainsafe/lodestar-types";
 import {FAR_FUTURE_EPOCH} from "@chainsafe/lodestar-beacon-state-transition";
 
 export class StubbedBeaconChain extends BeaconChain {
-  public forkChoice: SinonStubbedInstance<ForkChoice> & ForkChoice;
-  public stateCache: SinonStubbedInstance<StateContextCache> & StateContextCache;
-  public checkpointStateCache: SinonStubbedInstance<CheckpointStateCache> & CheckpointStateCache;
-  public clock: SinonStubbedInstance<LocalClock> & LocalClock;
-  public regen: SinonStubbedInstance<StateRegenerator> & StateRegenerator;
+  forkChoice: SinonStubbedInstance<ForkChoice> & ForkChoice;
+  stateCache: SinonStubbedInstance<StateContextCache> & StateContextCache;
+  checkpointStateCache: SinonStubbedInstance<CheckpointStateCache> & CheckpointStateCache;
+  clock: SinonStubbedInstance<LocalClock> & LocalClock;
+  regen: SinonStubbedInstance<StateRegenerator> & StateRegenerator;
 
   constructor(sinon: SinonSandbox, config = minimalConfig) {
     super({

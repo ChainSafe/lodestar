@@ -13,16 +13,16 @@ import {errorHandler} from "./routes/error";
  * REST API powered by `fastify` server.
  */
 export class RestApi {
-  public server: FastifyInstance;
+  server: FastifyInstance;
 
-  public constructor(server: FastifyInstance) {
+  constructor(server: FastifyInstance) {
     this.server = server;
   }
 
   /**
    * Initialize and start the REST API server.
    */
-  public static async init(opts: Partial<IRestApiOptions>, modules: IRestApiModules): Promise<RestApi> {
+  static async init(opts: Partial<IRestApiOptions>, modules: IRestApiModules): Promise<RestApi> {
     const _opts = {...defaultApiRestOptions, ...opts};
     const api = new RestApi(setupServer(_opts, modules));
     const logger = modules.logger;
@@ -41,7 +41,7 @@ export class RestApi {
   /**
    * Close the server instance.
    */
-  public async close(): Promise<void> {
+  async close(): Promise<void> {
     await this.server.close();
   }
 }

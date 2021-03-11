@@ -17,14 +17,14 @@ export class BeaconStateApi implements IBeaconStateApi {
   private readonly forkChoice: IForkChoice;
   private readonly chain: IBeaconChain;
 
-  public constructor(opts: Partial<IApiOptions>, modules: Pick<IApiModules, "config" | "db" | "chain">) {
+  constructor(opts: Partial<IApiOptions>, modules: Pick<IApiModules, "config" | "db" | "chain">) {
     this.config = modules.config;
     this.db = modules.db;
     this.forkChoice = modules.chain.forkChoice;
     this.chain = modules.chain;
   }
 
-  public async getStateRoot(stateId: StateId): Promise<Root | null> {
+  async getStateRoot(stateId: StateId): Promise<Root | null> {
     const state = await this.getState(stateId);
     if (!state) {
       return null;
@@ -32,7 +32,7 @@ export class BeaconStateApi implements IBeaconStateApi {
     return this.config.types.phase0.BeaconState.hashTreeRoot(state);
   }
 
-  public async getStateFinalityCheckpoints(stateId: StateId): Promise<phase0.FinalityCheckpoints | null> {
+  async getStateFinalityCheckpoints(stateId: StateId): Promise<phase0.FinalityCheckpoints | null> {
     const state = await this.getState(stateId);
     if (!state) {
       return null;
@@ -45,7 +45,7 @@ export class BeaconStateApi implements IBeaconStateApi {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  public async getStateValidators(stateId: StateId, filters?: IValidatorFilters): Promise<phase0.ValidatorResponse[]> {
+  async getStateValidators(stateId: StateId, filters?: IValidatorFilters): Promise<phase0.ValidatorResponse[]> {
     const state = await resolveStateId(this.chain, this.db, stateId);
     if (!state) {
       throw new StateNotFound();
@@ -56,7 +56,7 @@ export class BeaconStateApi implements IBeaconStateApi {
     );
   }
 
-  public async getStateValidator(
+  async getStateValidator(
     stateId: StateId,
     validatorId: phase0.ValidatorIndex | Root
   ): Promise<phase0.ValidatorResponse | null> {
@@ -87,7 +87,7 @@ export class BeaconStateApi implements IBeaconStateApi {
     );
   }
 
-  public async getStateValidatorBalances(
+  async getStateValidatorBalances(
     stateId: StateId,
     indices?: (phase0.ValidatorIndex | Root)[]
   ): Promise<phase0.ValidatorBalance[]> {
@@ -121,10 +121,7 @@ export class BeaconStateApi implements IBeaconStateApi {
     });
   }
 
-  public async getStateCommittees(
-    stateId: StateId,
-    filters?: ICommitteesFilters
-  ): Promise<phase0.BeaconCommitteeResponse[]> {
+  async getStateCommittees(stateId: StateId, filters?: ICommitteesFilters): Promise<phase0.BeaconCommitteeResponse[]> {
     const stateContext = await resolveStateId(this.chain, this.db, stateId);
     if (!stateContext) {
       throw new StateNotFound();
@@ -154,11 +151,11 @@ export class BeaconStateApi implements IBeaconStateApi {
     });
   }
 
-  public async getState(stateId: StateId): Promise<phase0.BeaconState | null> {
+  async getState(stateId: StateId): Promise<phase0.BeaconState | null> {
     return (await resolveStateId(this.chain, this.db, stateId))?.state ?? null;
   }
 
-  public async getFork(stateId: StateId): Promise<phase0.Fork | null> {
+  async getFork(stateId: StateId): Promise<phase0.Fork | null> {
     return (await this.getState(stateId))?.fork ?? null;
   }
 }

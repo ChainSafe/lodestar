@@ -6,7 +6,7 @@ export interface IStoppableEventIterable<T> extends AsyncIterable<T> {
 }
 
 export class LodestarEventIterator<T> implements IStoppableEventIterable<T> {
-  public [Symbol.asyncIterator]: () => AsyncIterator<T>;
+  [Symbol.asyncIterator]: () => AsyncIterator<T>;
   private stopCallback?: () => void;
 
   constructor(listenHandler: ListenHandler<T>, options: Partial<EventIteratorOptions> = {}) {
@@ -18,7 +18,7 @@ export class LodestarEventIterator<T> implements IStoppableEventIterable<T> {
     this[Symbol.asyncIterator] = () => iterator[Symbol.asyncIterator]();
   }
 
-  public stop(): void {
+  stop(): void {
     if (this.stopCallback) {
       this.stopCallback();
     }

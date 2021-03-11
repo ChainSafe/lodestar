@@ -112,7 +112,7 @@ export async function sendRequest<T extends phase0.ResponseBody | phase0.Respons
     logger.debug("Req  request sent", logCtx);
 
     const responses = await pipe(
-      abortSource(stream.source, signal),
+      stream.source,
       responseTimeoutsHandler(responseDecode(config, method, encoding), options),
       collectResponses(method, maxResponses)
     );

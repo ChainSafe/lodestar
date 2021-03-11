@@ -13,15 +13,15 @@ import {RestConfigApi} from "./config/config";
 import {IConfigApi} from "../../interface/config";
 
 export class ApiClientOverRest extends AbstractApiClient {
-  public beacon: IBeaconApi;
-  public node: INodeApi;
-  public events: IEventsApi;
-  public validator: IValidatorApi;
-  public configApi: IConfigApi;
+  beacon: IBeaconApi;
+  node: INodeApi;
+  events: IEventsApi;
+  validator: IValidatorApi;
+  configApi: IConfigApi;
 
-  public url: string;
+  url: string;
 
-  public constructor(config: IBeaconConfig, restUrl: string, logger: ILogger) {
+  constructor(config: IBeaconConfig, restUrl: string, logger: ILogger) {
     super(config, logger);
     this.url = restUrl;
     this.validator = new RestValidatorApi(config, restUrl, logger);

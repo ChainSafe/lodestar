@@ -10,14 +10,14 @@ export class PushMetricsServer implements IMetricsServer {
   private metrics: IMetrics;
   private opts: IMetricsOptions;
   private gateway: Pushgateway | null = null;
-  public constructor(opts: IMetricsOptions, {metrics}: {metrics: IMetrics}) {
+  constructor(opts: IMetricsOptions, {metrics}: {metrics: IMetrics}) {
     this.opts = opts;
     this.metrics = metrics;
   }
-  public start(): void {
+  start(): void {
     this.gateway = new Pushgateway(this.opts.gatewayUrl as string, {}, this.metrics.registry);
   }
-  public stop(): void {
+  stop(): void {
     this.gateway = null;
   }
 }

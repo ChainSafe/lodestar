@@ -5,9 +5,9 @@ import {IDebugBeaconApi} from "./beacon/interface";
 import {IDebugApi} from "./interface";
 
 export class DebugApi implements IDebugApi {
-  public beacon: IDebugBeaconApi;
+  beacon: IDebugBeaconApi;
 
-  public constructor(opts: Partial<IApiOptions>, modules: Pick<IApiModules, "config" | "logger" | "chain" | "db">) {
+  constructor(opts: Partial<IApiOptions>, modules: Pick<IApiModules, "config" | "logger" | "chain" | "db">) {
     this.beacon = new DebugBeaconApi(opts, modules);
   }
 }

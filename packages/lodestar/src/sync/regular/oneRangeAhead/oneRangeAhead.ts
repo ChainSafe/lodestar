@@ -39,7 +39,7 @@ export class ORARegularSync extends (EventEmitter as {new (): RegularSyncEventEm
     this.blockBuffer = [];
   }
 
-  public start(): void {
+  start(): void {
     const headSlot = this.chain.forkChoice.getHead().slot;
     const currentSlot = this.chain.clock.currentSlot;
     this.logger.verbose("Started regular syncing", {currentSlot, headSlot});
@@ -57,7 +57,7 @@ export class ORARegularSync extends (EventEmitter as {new (): RegularSyncEventEm
     });
   }
 
-  public stop(): void {
+  stop(): void {
     if (this.controller && !this.controller.signal.aborted) {
       this.controller.abort();
     }
@@ -68,11 +68,11 @@ export class ORARegularSync extends (EventEmitter as {new (): RegularSyncEventEm
     this.chain.emitter.off(ChainEvent.block, this.onProcessedBlock);
   }
 
-  public setLastProcessedBlock(lastProcessedBlock: phase0.SlotRoot): void {
+  setLastProcessedBlock(lastProcessedBlock: phase0.SlotRoot): void {
     this.fetcher.setLastProcessedBlock(lastProcessedBlock);
   }
 
-  public getHighestBlock(): Slot {
+  getHighestBlock(): Slot {
     const lastBlock = this.blockBuffer.length > 0 ? this.blockBuffer[this.blockBuffer.length - 1].message.slot : 0;
     return lastBlock ?? this.chain.forkChoice.getHead().slot;
   }

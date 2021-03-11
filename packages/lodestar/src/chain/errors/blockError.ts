@@ -109,7 +109,7 @@ type BlockJobObject = {
 };
 
 export class BlockError extends LodestarError<BlockErrorType> {
-  public job: IBlockJob;
+  job: IBlockJob;
 
   constructor({job, ...type}: BlockErrorType & BlockJobObject) {
     super(type);
@@ -123,11 +123,11 @@ type ChainSegmentJobObject = {
 };
 
 export class ChainSegmentError extends LodestarError<BlockErrorType> {
-  public job: IChainSegmentJob;
+  job: IChainSegmentJob;
   /**
    * Number of blocks successfully imported before the error
    */
-  public importedBlocks: number;
+  importedBlocks: number;
 
   constructor({job, importedBlocks, ...type}: BlockErrorType & ChainSegmentJobObject) {
     super(type);

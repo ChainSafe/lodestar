@@ -15,7 +15,7 @@ export class SnappyFramesUncompress {
    * @param chunk
    * @return Buffer if there is one or more whole frames, null if it's partial
    */
-  public uncompress(chunk: Buffer): Buffer | null {
+  uncompress(chunk: Buffer): Buffer | null {
     this.buffer.append(chunk);
     const result = new BufferList();
     while (this.buffer.length > 0) {

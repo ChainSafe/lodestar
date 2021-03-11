@@ -17,7 +17,7 @@ export class BlockArchiveRepository {
 
   protected repositories: Map<IForkName, Repository<Slot, allForks.SignedBeaconBlock>>;
 
-  public constructor(config: IBeaconConfig, db: IDatabaseController<Buffer, Buffer>) {
+  constructor(config: IBeaconConfig, db: IDatabaseController<Buffer, Buffer>) {
     this.config = config;
     this.db = db;
     this.repositories = new Map([
@@ -42,33 +42,33 @@ export class BlockArchiveRepository {
     ]);
   }
 
-  public async get(slot: Slot): Promise<allForks.SignedBeaconBlock | null> {
+  async get(slot: Slot): Promise<allForks.SignedBeaconBlock | null> {
     return await this.getRepository(slot).get(slot);
   }
 
-  public async getByRoot(root: Root): Promise<allForks.SignedBeaconBlock | null> {
+  async getByRoot(root: Root): Promise<allForks.SignedBeaconBlock | null> {
     const slot = await this.getSlotByRoot(root);
     return slot !== null ? await this.get(slot) : null;
   }
 
-  public async getByParentRoot(root: Root): Promise<allForks.SignedBeaconBlock | null> {
+  async getByParentRoot(root: Root): Promise<allForks.SignedBeaconBlock | null> {
     const slot = await this.getSlotByParentRoot(root);
     return slot !== null ? await this.get(slot) : null;
   }
 
-  public async getSlotByRoot(root: Root): Promise<Slot | null> {
+  async getSlotByRoot(root: Root): Promise<Slot | null> {
     return this.parseSlot(await this.db.get(getRootIndexKey(root)));
   }
 
-  public async getSlotByParentRoot(root: Root): Promise<Slot | null> {
+  async getSlotByParentRoot(root: Root): Promise<Slot | null> {
     return this.parseSlot(await this.db.get(getParentRootIndexKey(root)));
   }
 
-  public async add(value: allForks.SignedBeaconBlock): Promise<void> {
+  async add(value: allForks.SignedBeaconBlock): Promise<void> {
     await this.getRepository(value.message.slot).add(value);
   }
 
-  public async batchPut(items: Array<IKeyValue<Slot, allForks.SignedBeaconBlock>>): Promise<void> {
+  async batchPut(items: Array<IKeyValue<Slot, allForks.SignedBeaconBlock>>): Promise<void> {
     await Promise.all(
       Object.entries(this.groupByFork(items)).map(([forkName, items]) =>
         this.getRepositoryByForkName(forkName as IForkName).batchPut(items)
@@ -76,7 +76,7 @@ export class BlockArchiveRepository {
     );
   }
 
-  public async batchPutBinary(items: Array<IKeyValueSummary<Slot, Buffer, IBlockSummary>>): Promise<void> {
+  async batchPutBinary(items: Array<IKeyValueSummary<Slot, Buffer, IBlockSummary>>): Promise<void> {
     await Promise.all(
       Object.entries(this.groupByFork(items)).map(([forkName, items]) =>
         this.getRepositoryByForkName(forkName as IForkName).batchPutBinary(items)
@@ -84,21 +84,21 @@ export class BlockArchiveRepository {
     );
   }
 
-  public async *keysStream(opts?: IFilterOptions<Slot>): AsyncIterable<Slot> {
+  async *keysStream(opts?: IFilterOptions<Slot>): AsyncIterable<Slot> {
     const repos = this.repositories.values();
     for (const repo of repos) {
       yield* repo.keysStream(opts);
     }
   }
 
-  public async *valuesStream(opts?: IBlockFilterOptions): AsyncIterable<allForks.SignedBeaconBlock> {
+  async *valuesStream(opts?: IBlockFilterOptions): AsyncIterable<allForks.SignedBeaconBlock> {
     const repos = this.repositories.values();
     for (const repo of repos) {
       yield* repo.valuesStream(opts);
     }
   }
 
-  public async values(opts?: IBlockFilterOptions): Promise<allForks.SignedBeaconBlock[]> {
+  async values(opts?: IBlockFilterOptions): Promise<allForks.SignedBeaconBlock[]> {
     return all(this.valuesStream(opts));
   }
 
