@@ -7,7 +7,7 @@ export class RestBeaconStateApi extends RestApi implements IBeaconStateApi {
   /**
    * Fetch given validator from a given state
    */
-  public async getStateValidator(
+  async getStateValidator(
     stateId: "head",
     validatorId: ValidatorIndex | BLSPubkey
   ): Promise<phase0.ValidatorResponse | null> {
@@ -30,7 +30,7 @@ export class RestBeaconStateApi extends RestApi implements IBeaconStateApi {
     }
   }
 
-  public async getFork(stateId: "head"): Promise<phase0.Fork | null> {
+  async getFork(stateId: "head"): Promise<phase0.Fork | null> {
     try {
       return this.config.types.phase0.Fork.fromJson(
         (await this.client.get<{data: Json}>(`/states/${stateId}/fork`)).data,

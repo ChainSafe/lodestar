@@ -29,7 +29,7 @@ import {BeaconCommitteeSubscription, IValidatorApi} from "./interface";
  * See `@chainsafe/lodestar-validator/src/api` for the client implementation).
  */
 export class ValidatorApi implements IValidatorApi {
-  public namespace: ApiNamespace;
+  namespace: ApiNamespace;
 
   private config: IBeaconConfig;
   private chain: IBeaconChain;
@@ -39,7 +39,7 @@ export class ValidatorApi implements IValidatorApi {
   private sync: IBeaconSync;
   private logger: ILogger;
 
-  public constructor(
+  constructor(
     opts: Partial<IApiOptions>,
     modules: Pick<IApiModules, "config" | "chain" | "db" | "eth1" | "sync" | "network" | "logger">
   ) {
@@ -53,7 +53,7 @@ export class ValidatorApi implements IValidatorApi {
     this.logger = modules.logger;
   }
 
-  public async produceBlock(slot: Slot, randaoReveal: Bytes96, graffiti = ""): Promise<phase0.BeaconBlock> {
+  async produceBlock(slot: Slot, randaoReveal: Bytes96, graffiti = ""): Promise<phase0.BeaconBlock> {
     await checkSyncStatus(this.config, this.sync);
     return await assembleBlock(
       this.config,
@@ -66,7 +66,7 @@ export class ValidatorApi implements IValidatorApi {
     );
   }
 
-  public async produceAttestationData(committeeIndex: CommitteeIndex, slot: Slot): Promise<phase0.AttestationData> {
+  async produceAttestationData(committeeIndex: CommitteeIndex, slot: Slot): Promise<phase0.AttestationData> {
     try {
       await checkSyncStatus(this.config, this.sync);
       const headRoot = this.chain.forkChoice.getHeadRoot();
@@ -84,7 +84,7 @@ export class ValidatorApi implements IValidatorApi {
     }
   }
 
-  public async getProposerDuties(epoch: Epoch): Promise<phase0.ProposerDuty[]> {
+  async getProposerDuties(epoch: Epoch): Promise<phase0.ProposerDuty[]> {
     await checkSyncStatus(this.config, this.sync);
     assert.gte(epoch, 0, "Epoch must be positive");
     assert.lte(epoch, this.chain.clock.currentEpoch, "Must get proposer duties in current epoch");
@@ -99,7 +99,7 @@ export class ValidatorApi implements IValidatorApi {
     return duties;
   }
 
-  public async getAttesterDuties(epoch: number, validatorIndices: ValidatorIndex[]): Promise<phase0.AttesterDuty[]> {
+  async getAttesterDuties(epoch: number, validatorIndices: ValidatorIndex[]): Promise<phase0.AttesterDuty[]> {
     await checkSyncStatus(this.config, this.sync);
     if (validatorIndices.length === 0) throw new ApiError(400, "No validator to get attester duties");
     if (epoch > this.chain.clock.currentEpoch + 1)
@@ -116,7 +116,7 @@ export class ValidatorApi implements IValidatorApi {
       .filter((duty): duty is phase0.AttesterDuty => duty != null);
   }
 
-  public async getAggregatedAttestation(attestationDataRoot: Root, slot: Slot): Promise<phase0.Attestation> {
+  async getAggregatedAttestation(attestationDataRoot: Root, slot: Slot): Promise<phase0.Attestation> {
     await checkSyncStatus(this.config, this.sync);
     const attestations = await this.db.attestation.getAttestationsByDataRoot(slot, attestationDataRoot);
 
@@ -150,7 +150,7 @@ export class ValidatorApi implements IValidatorApi {
     };
   }
 
-  public async publishAggregateAndProofs(signedAggregateAndProofs: phase0.SignedAggregateAndProof[]): Promise<void> {
+  async publishAggregateAndProofs(signedAggregateAndProofs: phase0.SignedAggregateAndProof[]): Promise<void> {
     await checkSyncStatus(this.config, this.sync);
     await Promise.all(
       signedAggregateAndProofs.map(async (signedAggregateAndProof) => {
@@ -179,7 +179,7 @@ export class ValidatorApi implements IValidatorApi {
     );
   }
 
-  public async prepareBeaconCommitteeSubnet(subscriptions: BeaconCommitteeSubscription[]): Promise<void> {
+  async prepareBeaconCommitteeSubnet(subscriptions: BeaconCommitteeSubscription[]): Promise<void> {
     await checkSyncStatus(this.config, this.sync);
 
     for (const {isAggregator, slot, committeeIndex, committeesAtSlot} of subscriptions) {

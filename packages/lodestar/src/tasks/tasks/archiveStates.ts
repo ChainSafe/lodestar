@@ -29,7 +29,7 @@ export class ArchiveStatesTask implements ITask {
 
   private finalized: phase0.Checkpoint;
 
-  public constructor(config: IBeaconConfig, modules: IArchiveStatesModules, finalized: phase0.Checkpoint) {
+  constructor(config: IBeaconConfig, modules: IArchiveStatesModules, finalized: phase0.Checkpoint) {
     this.chain = modules.chain;
     this.db = modules.db;
     this.logger = modules.logger;
@@ -37,7 +37,7 @@ export class ArchiveStatesTask implements ITask {
     this.finalized = finalized;
   }
 
-  public async run(): Promise<void> {
+  async run(): Promise<void> {
     // store the state of finalized checkpoint
     const stateCache = this.chain.checkpointStateCache.get(this.finalized);
     if (!stateCache) {

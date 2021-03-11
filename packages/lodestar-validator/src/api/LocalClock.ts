@@ -16,7 +16,7 @@ export class LocalClock implements IBeaconClock {
   private readonly signal?: AbortSignal;
   private _currentSlot: number;
 
-  public constructor({
+  constructor({
     config,
     genesisTime,
     emitter,
@@ -38,11 +38,11 @@ export class LocalClock implements IBeaconClock {
     }
   }
 
-  public get currentSlot(): Slot {
+  get currentSlot(): Slot {
     return getCurrentSlot(this.config, this.genesisTime);
   }
 
-  public get currentEpoch(): Epoch {
+  get currentEpoch(): Epoch {
     return computeEpochAtSlot(this.config, this.currentSlot);
   }
 

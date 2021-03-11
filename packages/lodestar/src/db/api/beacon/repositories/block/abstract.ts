@@ -11,7 +11,7 @@ import {allForks} from "@chainsafe/lodestar-types";
 export class GenericBlockRepository extends Repository<Uint8Array, allForks.SignedBeaconBlock> {
   protected type: ContainerType<allForks.SignedBeaconBlock>;
 
-  public constructor(
+  constructor(
     config: IBeaconConfig,
     db: IDatabaseController<Buffer, Buffer>,
     bucket: Bucket,
@@ -24,7 +24,7 @@ export class GenericBlockRepository extends Repository<Uint8Array, allForks.Sign
   /**
    * Id is hashTreeRoot of unsigned BeaconBlock
    */
-  public getId(value: allForks.SignedBeaconBlock): Uint8Array {
+  getId(value: allForks.SignedBeaconBlock): Uint8Array {
     return this.type.fields["message"].hashTreeRoot(value.message);
   }
 }

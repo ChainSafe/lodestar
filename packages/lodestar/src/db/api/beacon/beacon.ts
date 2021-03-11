@@ -23,24 +23,24 @@ import {SeenAttestationCache} from "./seenAttestationCache";
 import {PendingBlockRepository} from "./repositories/pendingBlock";
 
 export class BeaconDb extends DatabaseService implements IBeaconDb {
-  public badBlock: BadBlockRepository;
-  public block: BlockRepository;
-  public pendingBlock: PendingBlockRepository;
-  public seenAttestationCache: SeenAttestationCache;
-  public blockArchive: BlockArchiveRepository;
-  public stateArchive: StateArchiveRepository;
+  badBlock: BadBlockRepository;
+  block: BlockRepository;
+  pendingBlock: PendingBlockRepository;
+  seenAttestationCache: SeenAttestationCache;
+  blockArchive: BlockArchiveRepository;
+  stateArchive: StateArchiveRepository;
 
-  public attestation: AttestationRepository;
-  public aggregateAndProof: AggregateAndProofRepository;
-  public voluntaryExit: VoluntaryExitRepository;
-  public proposerSlashing: ProposerSlashingRepository;
-  public attesterSlashing: AttesterSlashingRepository;
-  public depositEvent: DepositEventRepository;
+  attestation: AttestationRepository;
+  aggregateAndProof: AggregateAndProofRepository;
+  voluntaryExit: VoluntaryExitRepository;
+  proposerSlashing: ProposerSlashingRepository;
+  attesterSlashing: AttesterSlashingRepository;
+  depositEvent: DepositEventRepository;
 
-  public depositDataRoot: DepositDataRootRepository;
-  public eth1Data: Eth1DataRepository;
+  depositDataRoot: DepositDataRootRepository;
+  eth1Data: Eth1DataRepository;
 
-  public constructor(opts: IDatabaseApiOptions) {
+  constructor(opts: IDatabaseApiOptions) {
     super(opts);
     this.badBlock = new BadBlockRepository(this.config, this.db);
     this.block = new BlockRepository(this.config, this.db);
@@ -61,7 +61,7 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
   /**
    * Remove stored operations based on a newly processed block
    */
-  public async processBlockOperations(signedBlock: phase0.SignedBeaconBlock): Promise<void> {
+  async processBlockOperations(signedBlock: phase0.SignedBeaconBlock): Promise<void> {
     await Promise.all([
       this.voluntaryExit.batchRemove(signedBlock.message.body.voluntaryExits),
       this.depositEvent.deleteOld(signedBlock.message.body.eth1Data.depositCount),
@@ -71,7 +71,7 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
     ]);
   }
 
-  public async stop(): Promise<void> {
+  async stop(): Promise<void> {
     await super.stop();
   }
 }

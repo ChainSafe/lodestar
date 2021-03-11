@@ -14,18 +14,18 @@ export class RestValidatorApi implements IValidatorApi {
 
   private readonly config: IBeaconConfig;
 
-  public constructor(config: IBeaconConfig, restUrl: string, logger: ILogger) {
+  constructor(config: IBeaconConfig, restUrl: string, logger: ILogger) {
     this.clientV2 = new HttpClient({urlPrefix: urlJoin(restUrl, "/eth/v1/validator")}, {logger});
     this.config = config;
   }
 
-  public async getProposerDuties(epoch: Epoch): Promise<phase0.ProposerDuty[]> {
+  async getProposerDuties(epoch: Epoch): Promise<phase0.ProposerDuty[]> {
     const url = `/duties/proposer/${epoch.toString()}`;
     const responseData = await this.clientV2.get<{data: Json[]}>(url);
     return responseData.data.map((value) => this.config.types.phase0.ProposerDuty.fromJson(value, {case: "snake"}));
   }
 
-  public async getAttesterDuties(epoch: Epoch, indices: ValidatorIndex[]): Promise<phase0.AttesterDuty[]> {
+  async getAttesterDuties(epoch: Epoch, indices: ValidatorIndex[]): Promise<phase0.AttesterDuty[]> {
     const url = `/duties/attester/${epoch.toString()}`;
     const responseData = await this.clientV2.post<string[], {data: Json[]}>(
       url,
@@ -34,7 +34,7 @@ export class RestValidatorApi implements IValidatorApi {
     return responseData.data.map((value) => this.config.types.phase0.AttesterDuty.fromJson(value, {case: "snake"}));
   }
 
-  public async produceBlock(slot: Slot, randaoReveal: Uint8Array, graffiti: string): Promise<phase0.BeaconBlock> {
+  async produceBlock(slot: Slot, randaoReveal: Uint8Array, graffiti: string): Promise<phase0.BeaconBlock> {
     const query = {
       randao_reveal: toHexString(randaoReveal),
       graffiti: graffiti,
@@ -43,12 +43,12 @@ export class RestValidatorApi implements IValidatorApi {
     return this.config.types.phase0.BeaconBlock.fromJson(responseData.data, {case: "snake"});
   }
 
-  public async produceAttestationData(index: CommitteeIndex, slot: Slot): Promise<phase0.AttestationData> {
+  async produceAttestationData(index: CommitteeIndex, slot: Slot): Promise<phase0.AttestationData> {
     const responseData = await this.clientV2.get<{data: Json[]}>("/attestation_data", {committee_index: index, slot});
     return this.config.types.phase0.AttestationData.fromJson(responseData.data, {case: "snake"});
   }
 
-  public async getAggregatedAttestation(attestationDataRoot: Root, slot: Slot): Promise<phase0.Attestation> {
+  async getAggregatedAttestation(attestationDataRoot: Root, slot: Slot): Promise<phase0.Attestation> {
     const responseData = await this.clientV2.get<{data: Json[]}>("/aggregate_attestation", {
       attestation_data_root: this.config.types.Root.toJson(attestationDataRoot) as string,
       slot,
@@ -56,14 +56,14 @@ export class RestValidatorApi implements IValidatorApi {
     return this.config.types.phase0.Attestation.fromJson(responseData.data, {case: "snake"});
   }
 
-  public async publishAggregateAndProofs(signedAggregateAndProofs: phase0.SignedAggregateAndProof[]): Promise<void> {
+  async publishAggregateAndProofs(signedAggregateAndProofs: phase0.SignedAggregateAndProof[]): Promise<void> {
     return await this.clientV2.post<Json[], void>(
       "/aggregate_and_proofs",
       signedAggregateAndProofs.map((a) => this.config.types.phase0.SignedAggregateAndProof.toJson(a, {case: "snake"}))
     );
   }
 
-  public async prepareBeaconCommitteeSubnet(subscriptions: BeaconCommitteeSubscription[]): Promise<void> {
+  async prepareBeaconCommitteeSubnet(subscriptions: BeaconCommitteeSubscription[]): Promise<void> {
     return await this.clientV2.post<Json[], void>("/beacon_committee_subscriptions", subscriptions);
   }
 }

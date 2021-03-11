@@ -45,14 +45,14 @@ export class BlockRangeFetcher implements IBlockRangeFetcher {
     this.lastFetchCheckpoint = {root: ZERO_HASH, slot: 0};
   }
 
-  public setLastProcessedBlock(lastFetchCheckpoint: phase0.SlotRoot): void {
+  setLastProcessedBlock(lastFetchCheckpoint: phase0.SlotRoot): void {
     this.lastFetchCheckpoint = lastFetchCheckpoint;
   }
 
   /**
    * Get next block range.
    */
-  public async getNextBlockRange(): Promise<phase0.SignedBeaconBlock[]> {
+  async getNextBlockRange(): Promise<phase0.SignedBeaconBlock[]> {
     this.updateNextRange();
     let result: phase0.SignedBeaconBlock[] | null = null;
     let peer: PeerId | null = null;

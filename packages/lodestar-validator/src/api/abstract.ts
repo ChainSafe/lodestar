@@ -14,8 +14,8 @@ import {LocalClock} from "./LocalClock";
 
 export abstract class AbstractApiClient extends (EventEmitter as {new (): ApiClientEventEmitter})
   implements IApiClient {
-  public clock!: IBeaconClock;
-  public genesisValidatorsRoot!: Root;
+  clock!: IBeaconClock;
+  genesisValidatorsRoot!: Root;
 
   protected config: IBeaconConfig;
   protected logger: ILogger;
@@ -28,7 +28,7 @@ export abstract class AbstractApiClient extends (EventEmitter as {new (): ApiCli
   private stream?: IStoppableEventIterable<BeaconEvent>;
   private streamPromise?: Promise<void>;
 
-  public abstract url: string;
+  abstract url: string;
   abstract beacon: IBeaconApi;
   abstract node: INodeApi;
   abstract events: IEventsApi;
@@ -41,7 +41,7 @@ export abstract class AbstractApiClient extends (EventEmitter as {new (): ApiCli
     this.logger = logger;
   }
 
-  public async connect(): Promise<void> {
+  async connect(): Promise<void> {
     if (!this.beaconNodeInterval) {
       this.controller = new AbortController();
       this.running = true;
@@ -50,7 +50,7 @@ export abstract class AbstractApiClient extends (EventEmitter as {new (): ApiCli
     }
   }
 
-  public async disconnect(): Promise<void> {
+  async disconnect(): Promise<void> {
     this.running = false;
     if (this.beaconNodeInterval) {
       clearInterval(this.beaconNodeInterval);

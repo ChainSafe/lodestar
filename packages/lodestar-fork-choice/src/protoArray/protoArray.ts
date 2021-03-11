@@ -8,11 +8,11 @@ export const DEFAULT_PRUNE_THRESHOLD = 0;
 export class ProtoArray {
   // Do not attempt to prune the tree unless it has at least this many nodes.
   // Small prunes simply waste time
-  public pruneThreshold: number;
-  public justifiedEpoch: Epoch;
-  public finalizedEpoch: Epoch;
-  public nodes: IProtoNode[];
-  public indices: Map<HexRoot, number>;
+  pruneThreshold: number;
+  justifiedEpoch: Epoch;
+  finalizedEpoch: Epoch;
+  nodes: IProtoNode[];
+  indices: Map<HexRoot, number>;
 
   constructor({
     pruneThreshold,

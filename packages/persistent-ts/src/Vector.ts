@@ -50,13 +50,13 @@ export class Vector<T> implements Iterable<T> {
     private readonly root: IBranch<T>,
     private readonly levelShift: number,
     private readonly tail: T[],
-    public readonly length: number
+    readonly length: number
   ) {}
 
   /**
    * Create an empty vector of a certain type.
    */
-  public static empty<T>(): Vector<T> {
+  static empty<T>(): Vector<T> {
     return new Vector(emptyBranch(), DEFAULT_LEVEL_SHIFT, Array(BRANCH_SIZE).fill(null), 0);
   }
 
@@ -65,7 +65,7 @@ export class Vector<T> implements Iterable<T> {
    *
    * @param values the values that this vector will contain
    */
-  public static from<T>(values: Iterable<T>): Vector<T> {
+  static from<T>(values: Iterable<T>): Vector<T> {
     let acc = Vector.empty<T>();
     for (const v of values) acc = acc.append(v);
     return acc;
@@ -78,7 +78,7 @@ export class Vector<T> implements Iterable<T> {
    *
    * @param index the index to look up
    */
-  public get(index: number): T | null {
+  get(index: number): T | null {
     if (index < 0 || index >= this.length) return null;
     if (index >= this.getTailOffset()) {
       return this.tail[index % BRANCH_SIZE];
@@ -101,7 +101,7 @@ export class Vector<T> implements Iterable<T> {
    * @param index the index to set
    * @param value the value to set at that index
    */
-  public set(index: number, value: T): Vector<T> {
+  set(index: number, value: T): Vector<T> {
     if (index < 0 || index >= this.length) return this;
     if (index >= this.getTailOffset()) {
       const newTail = [...this.tail];
@@ -132,7 +132,7 @@ export class Vector<T> implements Iterable<T> {
    *
    * @param value the value to push to the end of the vector
    */
-  public append(value: T): Vector<T> {
+  append(value: T): Vector<T> {
     if (this.length - this.getTailOffset() < BRANCH_SIZE) {
       // has space in tail
       const newTail = [...this.tail];
@@ -176,7 +176,7 @@ export class Vector<T> implements Iterable<T> {
    *
    * This does nothing if the Vector contains no elements.
    */
-  public pop(): Vector<T> {
+  pop(): Vector<T> {
     if (this.length === 0) return this;
     // we always have a non-empty tail
     const tailLength = this.getTailLength();
@@ -221,7 +221,7 @@ export class Vector<T> implements Iterable<T> {
   /**
    * Implement Iterable interface.
    */
-  public *[Symbol.iterator](): Generator<T> {
+  *[Symbol.iterator](): Generator<T> {
     let toYield = this.getTailOffset();
     function* iterNode(node: INode<T>): Generator<T> {
       if (node.leaf) {
@@ -247,7 +247,7 @@ export class Vector<T> implements Iterable<T> {
    * Faster way to loop than the regular loop above.
    * Same to iterator function but this doesn't yield to improve performance.
    */
-  public readOnlyForEach(func: (t: T, i: number) => void): void {
+  readOnlyForEach(func: (t: T, i: number) => void): void {
     let index = 0;
     const tailOffset = this.getTailOffset();
     const iterNode = (node: INode<T>): void => {
@@ -279,7 +279,7 @@ export class Vector<T> implements Iterable<T> {
   /**
    * Map to an array of T2.
    */
-  public readOnlyMap<T2>(func: (t: T, i: number) => T2): T2[] {
+  readOnlyMap<T2>(func: (t: T, i: number) => T2): T2[] {
     const result: T2[] = [];
     let index = 0;
     const tailOffset = this.getTailOffset();
@@ -313,14 +313,14 @@ export class Vector<T> implements Iterable<T> {
   /**
    * Convert to regular typescript array
    */
-  public toTS(): Array<T> {
+  toTS(): Array<T> {
     return this.readOnlyMap<T>((v) => v);
   }
 
   /**
    * Clone to a new vector.
    */
-  public clone(): Vector<T> {
+  clone(): Vector<T> {
     return new Vector(this.root, this.levelShift, this.tail, this.length);
   }
 

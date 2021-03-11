@@ -29,7 +29,7 @@ export class AttestationService {
   private nextAttesterDuties: Map<Slot, Map<PublicKeyHex, IAttesterDuty>> = new Map();
   private controller: AbortController | undefined;
 
-  public constructor(
+  constructor(
     config: IBeaconConfig,
     validators: Map<PublicKeyHex, ValidatorAndSecret>,
     rpcClient: IApiClient,
@@ -46,7 +46,7 @@ export class AttestationService {
   /**
    * Starts the AttestationService by updating the validator attester duties and turning on the relevant listeners for clock events.
    */
-  public start = async (): Promise<void> => {
+  start = async (): Promise<void> => {
     this.controller = new AbortController();
     const currentEpoch = this.provider.clock.currentEpoch;
     await this.updateValidators();
@@ -61,7 +61,7 @@ export class AttestationService {
   /**
    * Stops the AttestationService by turning off the relevant listeners for clock events.
    */
-  public stop = async (): Promise<void> => {
+  stop = async (): Promise<void> => {
     if (this.controller) {
       this.controller.abort();
     }
@@ -73,7 +73,7 @@ export class AttestationService {
   /**
    * Update validator attester duties on each clock epoch.
    */
-  public onClockEpoch = async ({epoch}: {epoch: Epoch}): Promise<void> => {
+  onClockEpoch = async ({epoch}: {epoch: Epoch}): Promise<void> => {
     await this.updateValidators();
     await this.updateDuties(epoch + 1);
   };
@@ -81,7 +81,7 @@ export class AttestationService {
   /**
    * Perform attestation duties if the validator is an attester for a given clock slot.
    */
-  public onClockSlot = async ({slot}: {slot: Slot}): Promise<void> => {
+  onClockSlot = async ({slot}: {slot: Slot}): Promise<void> => {
     const duties = this.nextAttesterDuties.get(slot);
     if (duties && duties.size > 0) {
       this.nextAttesterDuties.delete(slot);
@@ -92,7 +92,7 @@ export class AttestationService {
   /**
    * Update list of attester duties on head upate.
    */
-  public onHead = async ({slot, epochTransition}: {slot: Slot; epochTransition: boolean}): Promise<void> => {
+  onHead = async ({slot, epochTransition}: {slot: Slot; epochTransition: boolean}): Promise<void> => {
     if (epochTransition) {
       // refetch next epoch's duties
       await this.updateDuties(computeEpochAtSlot(this.config, slot) + 1);
@@ -102,7 +102,7 @@ export class AttestationService {
   /**
    * Fetch validator attester duties from the validator api and update local list of attester duties accordingly.
    */
-  public async updateDuties(epoch: Epoch): Promise<void> {
+  async updateDuties(epoch: Epoch): Promise<void> {
     let attesterDuties: phase0.AttesterDuty[] | undefined;
     try {
       const indices: ValidatorIndex[] = [];

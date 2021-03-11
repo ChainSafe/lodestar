@@ -53,7 +53,7 @@ export class GenesisBuilder implements IGenesisBuilder {
   /**
    * Get eth1 deposit events and blocks and apply to this.state until we found genesis.
    */
-  public async waitForGenesis(): Promise<IGenesisResult> {
+  async waitForGenesis(): Promise<IGenesisResult> {
     await this.eth1Provider.validateContract();
 
     // TODO: Load data from data from this.db.depositData, this.db.depositDataRoot

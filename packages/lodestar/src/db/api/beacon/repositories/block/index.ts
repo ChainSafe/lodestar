@@ -15,7 +15,7 @@ export class BlockRepository {
 
   protected repositories: Map<IForkName, Repository<Uint8Array, allForks.SignedBeaconBlock>>;
 
-  public constructor(config: IBeaconConfig, db: IDatabaseController<Buffer, Buffer>) {
+  constructor(config: IBeaconConfig, db: IDatabaseController<Buffer, Buffer>) {
     this.config = config;
     this.db = db;
     this.repositories = new Map([
@@ -40,23 +40,23 @@ export class BlockRepository {
     ]);
   }
 
-  public async get(id: Uint8Array, slot: Slot): Promise<allForks.SignedBeaconBlock | null> {
+  async get(id: Uint8Array, slot: Slot): Promise<allForks.SignedBeaconBlock | null> {
     return await this.getRepository(slot).get(id);
   }
 
-  public async getBinary(id: Uint8Array, slot: Slot): Promise<Buffer | null> {
+  async getBinary(id: Uint8Array, slot: Slot): Promise<Buffer | null> {
     return await this.getRepository(slot).getBinary(id);
   }
 
-  public async add(value: allForks.SignedBeaconBlock): Promise<void> {
+  async add(value: allForks.SignedBeaconBlock): Promise<void> {
     return this.getRepository(value.message.slot).add(value);
   }
 
-  public async remove(value: allForks.SignedBeaconBlock): Promise<void> {
+  async remove(value: allForks.SignedBeaconBlock): Promise<void> {
     return this.getRepository(value.message.slot).remove(value);
   }
 
-  public async batchDelete(ids: {root: Uint8Array; slot: Slot}[]): Promise<void> {
+  async batchDelete(ids: {root: Uint8Array; slot: Slot}[]): Promise<void> {
     const idsByFork = {} as Record<IForkName, Uint8Array[]>;
     for (const {root, slot} of ids) {
       const forkName = this.config.getForkName(slot);

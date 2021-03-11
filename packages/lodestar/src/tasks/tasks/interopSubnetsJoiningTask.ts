@@ -24,7 +24,7 @@ export class InteropSubnetsJoiningTask {
   private nextForkTimers: NodeJS.Timeout[] = [];
   private nextForkSubsTimer?: NodeJS.Timeout;
 
-  public constructor(config: IBeaconConfig, modules: IInteropSubnetsJoiningModules) {
+  constructor(config: IBeaconConfig, modules: IInteropSubnetsJoiningModules) {
     this.config = config;
     this.network = modules.network;
     this.chain = modules.chain;
@@ -33,14 +33,14 @@ export class InteropSubnetsJoiningTask {
     this.nextForkSubnets = new Set();
   }
 
-  public start(): void {
+  start(): void {
     this.currentFork = this.chain.getForkName();
     this.chain.emitter.on(ChainEvent.forkVersion, this.handleForkVersion);
     this.run(this.currentFork);
     this.scheduleNextForkSubscription();
   }
 
-  public stop(): void {
+  stop(): void {
     this.chain.emitter.off(ChainEvent.forkVersion, this.handleForkVersion);
     if (this.nextForkSubsTimer) {
       clearTimeout(this.nextForkSubsTimer);

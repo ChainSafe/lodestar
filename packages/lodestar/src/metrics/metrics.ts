@@ -8,12 +8,12 @@ import {IMetrics} from "./interface";
 import {IMetricsOptions} from "./options";
 
 export class Metrics implements IMetrics {
-  public registry: Registry;
+  registry: Registry;
 
   private defaultInterval: NodeJS.Timeout | null = null;
   private opts: IMetricsOptions;
 
-  public constructor(opts: IMetricsOptions) {
+  constructor(opts: IMetricsOptions) {
     this.opts = opts;
     this.registry = new Registry();
 
@@ -29,7 +29,7 @@ export class Metrics implements IMetrics {
     gcStats(this.registry)();
   }
 
-  public close(): void {
+  close(): void {
     clearInterval(this.defaultInterval as NodeJS.Timeout);
   }
 }

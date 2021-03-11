@@ -26,7 +26,7 @@ export class AttestationPool {
    */
   private attestationsBySlot: Map<Slot, Map<AttestationRootHex, IAttestationJob>>;
 
-  public constructor({config}: {config: IBeaconConfig}) {
+  constructor({config}: {config: IBeaconConfig}) {
     this.config = config;
 
     this.attestations = new Map();
@@ -34,7 +34,7 @@ export class AttestationPool {
     this.attestationsBySlot = new Map();
   }
 
-  public putByBlock(blockRoot: Root, job: IAttestationJob): void {
+  putByBlock(blockRoot: Root, job: IAttestationJob): void {
     // put attestation in two indices:
     // attestations
     const attestationKey = this.getAttestationKey(job.attestation);
@@ -51,7 +51,7 @@ export class AttestationPool {
     attestationsAtBlock.set(attestationKey, job);
   }
 
-  public putBySlot(slot: Slot, job: IAttestationJob): void {
+  putBySlot(slot: Slot, job: IAttestationJob): void {
     // put attestation in two indices:
     // attestations
     const attestationKey = this.getAttestationKey(job.attestation);
@@ -67,7 +67,7 @@ export class AttestationPool {
     attestationsAtSlot.set(attestationKey, job);
   }
 
-  public remove(job: IAttestationJob): void {
+  remove(job: IAttestationJob): void {
     // remove block from three indices:
     // attestations
     const attestationKey = this.getAttestationKey(job.attestation);
@@ -104,19 +104,19 @@ export class AttestationPool {
     }
   }
 
-  public get(attestationRoot: Root): IAttestationJob | undefined {
+  get(attestationRoot: Root): IAttestationJob | undefined {
     return this.attestations.get(toHexString(attestationRoot));
   }
 
-  public has(attestationRoot: Root): boolean {
+  has(attestationRoot: Root): boolean {
     return Boolean(this.get(attestationRoot));
   }
 
-  public getByBlock(blockRoot: Root): IAttestationJob[] {
+  getByBlock(blockRoot: Root): IAttestationJob[] {
     return Array.from(this.attestationsByBlock.get(toHexString(blockRoot))?.values() ?? []);
   }
 
-  public getBySlot(slot: Slot): IAttestationJob[] {
+  getBySlot(slot: Slot): IAttestationJob[] {
     return Array.from(this.attestationsBySlot.get(slot)?.values() ?? []);
   }
 

@@ -7,27 +7,27 @@ import {IDatabaseController, Bucket, Repository, IKeyValue} from "@chainsafe/lod
 export class DepositDataRootRepository extends Repository<number, Root> {
   private depositRootTree?: TreeBacked<List<Root>>;
 
-  public constructor(config: IBeaconConfig, db: IDatabaseController<Buffer, Buffer>) {
+  constructor(config: IBeaconConfig, db: IDatabaseController<Buffer, Buffer>) {
     super(config, db, Bucket.index_depositDataRoot, config.types.Root);
   }
 
-  public decodeKey(data: Buffer): number {
+  decodeKey(data: Buffer): number {
     return bytesToInt((super.decodeKey(data) as unknown) as Uint8Array, "be");
   }
 
   // depositDataRoots stored by depositData index
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  public getId(value: Root): number {
+  getId(value: Root): number {
     throw new Error("Unable to create depositIndex from root");
   }
 
-  public async put(id: number, value: Root): Promise<void> {
+  async put(id: number, value: Root): Promise<void> {
     const depositRootTree = await this.getDepositRootTree();
     await super.put(id, value);
     depositRootTree[id] = value as TreeBacked<Root>;
   }
 
-  public async batchPut(items: IKeyValue<number, Root>[]): Promise<void> {
+  async batchPut(items: IKeyValue<number, Root>[]): Promise<void> {
     const depositRootTree = await this.getDepositRootTree();
     await super.batchPut(items);
     for (const {key, value} of items) {
@@ -35,11 +35,11 @@ export class DepositDataRootRepository extends Repository<number, Root> {
     }
   }
 
-  public async putList(list: List<Root>): Promise<void> {
+  async putList(list: List<Root>): Promise<void> {
     await this.batchPut(readOnlyMap(list, (value, key) => ({key, value})));
   }
 
-  public async batchPutValues(values: {index: number; root: Root}[]): Promise<void> {
+  async batchPutValues(values: {index: number; root: Root}[]): Promise<void> {
     await this.batchPut(
       values.map(({index, root}) => ({
         key: index,
@@ -48,7 +48,7 @@ export class DepositDataRootRepository extends Repository<number, Root> {
     );
   }
 
-  public async getTreeBacked(depositIndex: number): Promise<TreeBacked<List<Root>>> {
+  async getTreeBacked(depositIndex: number): Promise<TreeBacked<List<Root>>> {
     const depositRootTree = await this.getDepositRootTree();
     const tree = depositRootTree.clone();
     let maxIndex = tree.length - 1;
@@ -62,7 +62,7 @@ export class DepositDataRootRepository extends Repository<number, Root> {
     return tree;
   }
 
-  public async getDepositRootTree(): Promise<TreeBacked<List<Root>>> {
+  async getDepositRootTree(): Promise<TreeBacked<List<Root>>> {
     if (!this.depositRootTree) {
       const values = (await this.values()) as List<Vector<number>>;
       this.depositRootTree = this.config.types.phase0.DepositDataRootList.tree.createValue(values);

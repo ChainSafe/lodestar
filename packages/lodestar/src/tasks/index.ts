@@ -41,7 +41,7 @@ export class TasksService {
 
   private interopSubnetsTask: InteropSubnetsJoiningTask;
 
-  public constructor(config: IBeaconConfig, modules: ITasksModules) {
+  constructor(config: IBeaconConfig, modules: ITasksModules) {
     this.config = config;
     this.db = modules.db;
     this.chain = modules.chain;
@@ -54,14 +54,14 @@ export class TasksService {
     });
   }
 
-  public start(): void {
+  start(): void {
     this.chain.emitter.on(ChainEvent.forkChoiceFinalized, this.onFinalizedCheckpoint);
     this.chain.emitter.on(ChainEvent.checkpoint, this.onCheckpoint);
     this.network.gossip.on(NetworkEvent.gossipStart, this.handleGossipStart);
     this.network.gossip.on(NetworkEvent.gossipStop, this.handleGossipStop);
   }
 
-  public async stop(): Promise<void> {
+  async stop(): Promise<void> {
     this.chain.emitter.off(ChainEvent.forkChoiceFinalized, this.onFinalizedCheckpoint);
     this.chain.emitter.off(ChainEvent.checkpoint, this.onCheckpoint);
     this.network.gossip.off(NetworkEvent.gossipStart, this.handleGossipStart);

@@ -10,34 +10,34 @@ import {readLodestarGitData} from "./gitData";
 import {ILogger} from "@chainsafe/lodestar-utils";
 
 export class BeaconMetrics extends Metrics implements IBeaconMetrics {
-  public peers: Gauge;
-  public slot: Gauge;
-  public headSlot: Gauge;
-  public headRoot: Gauge;
-  public finalizedEpoch: Gauge;
-  public finalizedRoot: Gauge;
-  public currentJustifiedEpoch: Gauge;
-  public currentJustifiedRoot: Gauge;
-  public previousJustifiedEpoch: Gauge;
-  public previousJustifiedRoot: Gauge;
-  public currentValidators: Gauge;
-  public previousValidators: Gauge;
-  public currentLiveValidators: Gauge;
-  public previousLiveValidators: Gauge;
-  public pendingDeposits: Gauge;
-  public processedDepositsTotal: Gauge;
-  public pendingExits: Gauge;
-  public previousEpochOrphanedBlocks: Gauge;
-  public reorgEventsTotal: Counter;
-  public currentEpochActiveGwei: Gauge;
-  public currentEpochSourceGwei: Gauge;
-  public currentEpochTargetGwei: Gauge;
-  public previousEpochActiveGwei: Gauge;
-  public previousEpochSourceGwei: Gauge;
-  public previousEpochTargetGwei: Gauge;
-  public observedEpochAttesters: Gauge;
-  public observedEpochAggregators: Gauge;
-  public blockProcessorTotalAsyncTime: Gauge;
+  peers: Gauge;
+  slot: Gauge;
+  headSlot: Gauge;
+  headRoot: Gauge;
+  finalizedEpoch: Gauge;
+  finalizedRoot: Gauge;
+  currentJustifiedEpoch: Gauge;
+  currentJustifiedRoot: Gauge;
+  previousJustifiedEpoch: Gauge;
+  previousJustifiedRoot: Gauge;
+  currentValidators: Gauge;
+  previousValidators: Gauge;
+  currentLiveValidators: Gauge;
+  previousLiveValidators: Gauge;
+  pendingDeposits: Gauge;
+  processedDepositsTotal: Gauge;
+  pendingExits: Gauge;
+  previousEpochOrphanedBlocks: Gauge;
+  reorgEventsTotal: Counter;
+  currentEpochActiveGwei: Gauge;
+  currentEpochSourceGwei: Gauge;
+  currentEpochTargetGwei: Gauge;
+  previousEpochActiveGwei: Gauge;
+  previousEpochSourceGwei: Gauge;
+  previousEpochTargetGwei: Gauge;
+  observedEpochAttesters: Gauge;
+  observedEpochAggregators: Gauge;
+  blockProcessorTotalAsyncTime: Gauge;
   peersByDirection: Gauge;
   peerConnectedEvent: Gauge;
   peerDisconnectedEvent: Gauge;
@@ -50,7 +50,7 @@ export class BeaconMetrics extends Metrics implements IBeaconMetrics {
   private lodestarVersion: Gauge;
   private logger: ILogger;
 
-  public constructor(opts: IMetricsOptions, {logger}: {logger: ILogger}) {
+  constructor(opts: IMetricsOptions, {logger}: {logger: ILogger}) {
     super(opts);
     const registers = [this.registry];
     this.logger = logger;
@@ -265,7 +265,7 @@ export class BeaconMetrics extends Metrics implements IBeaconMetrics {
     this.lodestarVersion.set(readLodestarGitData(), 1);
   }
 
-  public close(): void {
+  close(): void {
     super.close();
   }
 }

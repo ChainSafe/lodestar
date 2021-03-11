@@ -20,7 +20,7 @@ export class List<T> implements Iterable<T> {
   /**
    * O(1) Create a new empty list.
    */
-  public static empty<T>(): List<T> {
+  static empty<T>(): List<T> {
     return new List(EMPTY_NODE as Node<T>);
   }
 
@@ -29,7 +29,7 @@ export class List<T> implements Iterable<T> {
    *
    * @param values an array of values the list will contain, in the same order
    */
-  public static of<T>(...values: T[]): List<T> {
+  static of<T>(...values: T[]): List<T> {
     let ret = List.empty<T>();
     for (let i = values.length - 1; i >= 0; --i) {
       ret = ret.prepend(values[i]);
@@ -42,7 +42,7 @@ export class List<T> implements Iterable<T> {
    *
    * This is equivalent to checking if a list has no elements.
    */
-  public isEmpty(): boolean {
+  isEmpty(): boolean {
     return !this._node.next;
   }
 
@@ -51,7 +51,7 @@ export class List<T> implements Iterable<T> {
    *
    * @param value the value to add to the front of the list
    */
-  public prepend(value: T): List<T> {
+  prepend(value: T): List<T> {
     return new List({value, next: this._node});
   }
 
@@ -64,7 +64,7 @@ export class List<T> implements Iterable<T> {
    * be `null` inside the list, because this function may return `null`
    * even if the list isn't empty.
    */
-  public head(): T | null {
+  head(): T | null {
     return this._node.next ? this._node.value : null;
   }
 
@@ -77,7 +77,7 @@ export class List<T> implements Iterable<T> {
    *
    * `l.tail().prepend(l.head())` will always be `l` for any non-empty list `l`.
    */
-  public tail(): List<T> {
+  tail(): List<T> {
     return this._node.next ? new List(this._node.next) : this;
   }
 
@@ -91,7 +91,7 @@ export class List<T> implements Iterable<T> {
    *
    * @param amount the number of elements to take from the front of the list
    */
-  public take(amount: number): List<T> {
+  take(amount: number): List<T> {
     if (amount <= 0 || !this._node.next) return List.empty();
     const base: Node<T> = {
       value: this._node.value,
@@ -125,7 +125,7 @@ export class List<T> implements Iterable<T> {
    *
    * @param amount the number of elements to drop
    */
-  public drop(amount: number): List<T> {
+  drop(amount: number): List<T> {
     // eslint-disable-next-line @typescript-eslint/no-this-alias
     let list: List<T> = this;
     for (let i = 0; i < amount; ++i) {
@@ -147,7 +147,7 @@ export class List<T> implements Iterable<T> {
    *
    * @param that the list to append to this list
    */
-  public concat(that: List<T>): List<T> {
+  concat(that: List<T>): List<T> {
     if (!this._node.next) return that;
     const base: Node<T> = {
       value: this._node.value,
@@ -167,7 +167,7 @@ export class List<T> implements Iterable<T> {
     return new List(base);
   }
 
-  public *[Symbol.iterator](): Iterator<T> {
+  *[Symbol.iterator](): Iterator<T> {
     let node = this._node;
     while (node.next) {
       yield node.value;
@@ -183,7 +183,7 @@ export class List<T> implements Iterable<T> {
    *
    * @param that the list to compare for equality with this one.
    */
-  public equals(that: List<T>): boolean {
+  equals(that: List<T>): boolean {
     let thisNode = this._node;
     let thatNode = that._node;
     while (thisNode.next) {

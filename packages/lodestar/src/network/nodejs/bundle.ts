@@ -33,7 +33,7 @@ export interface ILibp2pOptions {
 }
 
 export class NodejsNode extends LibP2p {
-  public constructor(options: ILibp2pOptions) {
+  constructor(options: ILibp2pOptions) {
     const defaults = {
       peerId: options.peerId,
       addresses: {

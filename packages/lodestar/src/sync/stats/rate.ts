@@ -20,22 +20,22 @@ export class RateCounter {
     this.since = Date.now();
   }
 
-  public start(): void {
+  start(): void {
     this.resetRate();
     this.timer = setInterval(this.resetRate, this.timePeriod * 1000);
   }
 
-  public stop(): void {
+  stop(): void {
     if (this.timer) {
       clearInterval(this.timer);
     }
   }
 
-  public increment(inc = 1): void {
+  increment(inc = 1): void {
     this.count += inc;
   }
 
-  public rate(): number {
+  rate(): number {
     if (this.count == 0) {
       return 0;
     }
