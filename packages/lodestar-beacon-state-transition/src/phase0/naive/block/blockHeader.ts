@@ -2,11 +2,10 @@
  * @module chain/stateTransition/block
  */
 
-import {phase0} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {phase0} from "@chainsafe/lodestar-types";
 import {assert} from "@chainsafe/lodestar-utils";
-
-import {getTemporaryBlockHeader, getBeaconProposerIndex} from "../../../util";
+import {getBeaconProposerIndex, getTemporaryBlockHeader} from "../../../util";
 
 export function processBlockHeader(config: IBeaconConfig, state: phase0.BeaconState, block: phase0.BeaconBlock): void {
   // Verify that the slots match

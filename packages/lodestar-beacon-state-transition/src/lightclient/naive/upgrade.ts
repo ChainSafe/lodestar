@@ -6,15 +6,14 @@ import {getCurrentEpoch} from "../../util";
 
 export function upgrade(config: IBeaconConfig, pre: phase0.BeaconState): lightclient.BeaconState {
   const epoch = getCurrentEpoch(config, pre);
+  const {previousEpochAttestations: _1, currentEpochAttestations: _2, ...old} = pre;
   return {
-    ...pre,
+    ...(old as Omit<phase0.BeaconState, "previousEpochAttestations" | "currentEpochAttestations">),
     fork: {
       previousVersion: pre.fork.currentVersion,
       currentVersion: config.params.LIGHTCLIENT_PATCH_FORK_VERSION,
       epoch,
     },
-    previousEpochAttestations: new Array<phase0.PendingAttestation>() as List<phase0.PendingAttestation>,
-    currentEpochAttestations: new Array<phase0.PendingAttestation>() as List<phase0.PendingAttestation>,
     previousEpochParticipation: Array.from({length: pre.validators.length}, () => 0) as List<ValidatorFlag>,
     currentEpochParticipation: Array.from({length: pre.validators.length}, () => 0) as List<ValidatorFlag>,
     currentSyncCommittee: config.types.lightclient.SyncCommittee.defaultValue(),

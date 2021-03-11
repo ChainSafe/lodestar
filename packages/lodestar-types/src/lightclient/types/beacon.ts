@@ -17,7 +17,8 @@ export interface SignedBeaconBlock extends phase0.SignedBeaconBlock {
   message: BeaconBlock;
 }
 
-export interface BeaconState extends phase0.BeaconState {
+export interface BeaconState
+  extends Omit<phase0.BeaconState, "previousEpochAttestations" | "currentEpochAttestations"> {
   // Participation
   previousEpochParticipation: List<ValidatorFlag>;
   currentEpochParticipation: List<ValidatorFlag>;

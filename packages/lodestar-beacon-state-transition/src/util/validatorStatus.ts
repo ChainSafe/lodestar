@@ -2,7 +2,7 @@
  * @module chain/stateTransition/util
  */
 
-import {ValidatorIndex, phase0} from "@chainsafe/lodestar-types";
+import {ValidatorIndex, phase0, allForks} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import bls from "@chainsafe/bls";
 
@@ -19,7 +19,7 @@ import {computeSigningRoot} from "./signingRoot";
  *
  * Note: that this function mutates state.
  */
-export function initiateValidatorExit(config: IBeaconConfig, state: phase0.BeaconState, index: ValidatorIndex): void {
+export function initiateValidatorExit(config: IBeaconConfig, state: allForks.BeaconState, index: ValidatorIndex): void {
   const validator = state.validators[index];
 
   // Return if validator already initiated exit
@@ -52,7 +52,7 @@ export function initiateValidatorExit(config: IBeaconConfig, state: phase0.Beaco
  */
 export function slashValidator(
   config: IBeaconConfig,
-  state: phase0.BeaconState,
+  state: allForks.BeaconState,
   slashedIndex: ValidatorIndex,
   whistleblowerIndex: ValidatorIndex | null = null
 ): void {
@@ -85,7 +85,7 @@ export function slashValidator(
 
 export function isValidAttesterSlashing(
   config: IBeaconConfig,
-  state: phase0.BeaconState,
+  state: allForks.BeaconState,
   attesterSlashing: phase0.AttesterSlashing,
   verifySignatures = true
 ): boolean {
@@ -100,7 +100,7 @@ export function isValidAttesterSlashing(
 
 export function isValidProposerSlashing(
   config: IBeaconConfig,
-  state: phase0.BeaconState,
+  state: allForks.BeaconState,
   proposerSlashing: phase0.ProposerSlashing,
   verifySignatures = true
 ): boolean {
@@ -169,7 +169,7 @@ export function isValidProposerSlashing(
 
 export function isValidVoluntaryExit(
   config: IBeaconConfig,
-  state: phase0.BeaconState,
+  state: allForks.BeaconState,
   signedExit: phase0.SignedVoluntaryExit,
   verifySignature = true
 ): boolean {

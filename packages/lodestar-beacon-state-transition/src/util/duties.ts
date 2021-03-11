@@ -2,13 +2,12 @@
  * @module chain/stateTransition/util
  */
 
-import {List} from "@chainsafe/ssz";
-import {phase0, Epoch, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {allForks, Epoch, phase0, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {assert} from "@chainsafe/lodestar-utils";
-
-import {computeEpochAtSlot, computeStartSlotAtEpoch, getCurrentEpoch} from "./epoch";
+import {List} from "@chainsafe/ssz";
 import {getBeaconCommittee, getCommitteeCountAtSlot} from "./committee";
+import {computeEpochAtSlot, computeStartSlotAtEpoch, getCurrentEpoch} from "./epoch";
 import {getBeaconProposerIndex} from "./proposer";
 
 /**
@@ -21,7 +20,7 @@ import {getBeaconProposerIndex} from "./proposer";
  */
 export function getCommitteeAssignment(
   config: IBeaconConfig,
-  state: phase0.BeaconState,
+  state: allForks.BeaconState,
   epoch: Epoch,
   validatorIndex: ValidatorIndex
 ): phase0.CommitteeAssignment | null {
@@ -51,7 +50,7 @@ export function getCommitteeAssignment(
  */
 export function isProposerAtSlot(
   config: IBeaconConfig,
-  state: phase0.BeaconState,
+  state: allForks.BeaconState,
   slot: Slot,
   validatorIndex: ValidatorIndex
 ): boolean {

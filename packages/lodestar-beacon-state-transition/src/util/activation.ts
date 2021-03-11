@@ -1,5 +1,5 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {phase0} from "@chainsafe/lodestar-types";
+import {phase0, allForks} from "@chainsafe/lodestar-types";
 
 import {FAR_FUTURE_EPOCH} from "../constants";
 
@@ -18,7 +18,7 @@ export function isEligibleForActivationQueue(config: IBeaconConfig, validator: p
  */
 export function isEligibleForActivation(
   config: IBeaconConfig,
-  state: phase0.BeaconState,
+  state: allForks.BeaconState,
   validator: phase0.Validator
 ): boolean {
   return (

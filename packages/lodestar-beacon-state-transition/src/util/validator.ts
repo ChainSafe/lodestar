@@ -3,7 +3,16 @@
  */
 
 import {hash} from "@chainsafe/ssz";
-import {BLSSignature, CommitteeIndex, Epoch, Slot, Uint64, phase0, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {
+  BLSSignature,
+  CommitteeIndex,
+  Epoch,
+  Slot,
+  Uint64,
+  phase0,
+  ValidatorIndex,
+  allForks,
+} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {getCurrentEpoch} from "./epoch";
 import {intDiv, bytesToInt} from "@chainsafe/lodestar-utils";
@@ -38,7 +47,7 @@ export function isSlashableValidator(validator: phase0.Validator, epoch: Epoch):
 /**
  * Return the sequence of active validator indices at [[epoch]].
  */
-export function getActiveValidatorIndices(state: phase0.BeaconState, epoch: Epoch): ValidatorIndex[] {
+export function getActiveValidatorIndices(state: allForks.BeaconState, epoch: Epoch): ValidatorIndex[] {
   const indices: ValidatorIndex[] = [];
   state.validators.forEach((validator, index) => {
     if (isActiveValidator(validator, epoch)) {
@@ -58,13 +67,13 @@ export function getChurnLimit(config: IBeaconConfig, activeValidatorCount: numbe
 /**
  * Return the validator churn limit for the current epoch.
  */
-export function getValidatorChurnLimit(config: IBeaconConfig, state: phase0.BeaconState): number {
+export function getValidatorChurnLimit(config: IBeaconConfig, state: allForks.BeaconState): number {
   return getChurnLimit(config, getActiveValidatorIndices(state, getCurrentEpoch(config, state)).length);
 }
 
 export function isAggregator(
   config: IBeaconConfig,
-  state: phase0.BeaconState,
+  state: allForks.BeaconState,
   slot: Slot,
   index: CommitteeIndex,
   slotSignature: BLSSignature

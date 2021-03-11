@@ -4,8 +4,9 @@ import {
   // MAX_VALID_LIGHT_CLIENT_UPDATES,
   // FINALIZED_ROOT_INDEX,
   IBeaconParams,
+  JUSTIFICATION_BITS_LENGTH,
 } from "@chainsafe/lodestar-params";
-import {BitVectorType, ContainerType, VectorType, ListType} from "@chainsafe/ssz";
+import {BitVectorType, ContainerType, VectorType, ListType, RootType} from "@chainsafe/ssz";
 import {IPhase0SSZTypes} from "../../phase0";
 import * as lightclient from "../types";
 import {ILightclientSSZTypes} from "./interface";
@@ -70,8 +71,8 @@ export const SignedBeaconBlock: LightClientTypesGenerator<ContainerType<lightcli
 ) => {
   return new ContainerType({
     fields: {
-      ...phase0Types.SignedBeaconBlock.fields,
       message: lightclientTypes.BeaconBlock,
+      signature: phase0Types.BLSSignature,
     },
   });
 };
@@ -81,9 +82,50 @@ export const BeaconState: LightClientTypesGenerator<ContainerType<lightclient.Be
   phase0Types,
   lightclientTypes
 ) => {
-  return new ContainerType({
+  //we don't reuse phase0.BeaconState fields since we need to replace some keys
+  //and we cannot keep order doing that
+  const container = new ContainerType<lightclient.BeaconState>({
     fields: {
-      ...phase0Types.BeaconState.fields,
+      genesisTime: phase0Types.Number64,
+      genesisValidatorsRoot: phase0Types.Root,
+      slot: phase0Types.Slot,
+      fork: phase0Types.Fork,
+      // History
+      latestBlockHeader: phase0Types.BeaconBlockHeader,
+      blockRoots: phase0Types.HistoricalBlockRoots,
+      stateRoots: phase0Types.HistoricalStateRoots,
+      historicalRoots: new ListType({
+        elementType: new RootType({
+          expandedType: phase0Types.HistoricalBatch,
+        }),
+        limit: params.HISTORICAL_ROOTS_LIMIT,
+      }),
+      // Eth1
+      eth1Data: phase0Types.Eth1Data,
+      eth1DataVotes: new ListType({
+        elementType: phase0Types.Eth1Data,
+        limit: params.EPOCHS_PER_ETH1_VOTING_PERIOD * params.SLOTS_PER_EPOCH,
+      }),
+      eth1DepositIndex: phase0Types.Number64,
+      // Registry
+      validators: new ListType({
+        elementType: phase0Types.Validator,
+        limit: params.VALIDATOR_REGISTRY_LIMIT,
+      }),
+      balances: new ListType({
+        elementType: phase0Types.Gwei,
+        limit: params.VALIDATOR_REGISTRY_LIMIT,
+      }),
+      randaoMixes: new VectorType({
+        elementType: phase0Types.Bytes32,
+        length: params.EPOCHS_PER_HISTORICAL_VECTOR,
+      }),
+      // Slashings
+      slashings: new VectorType({
+        elementType: phase0Types.Gwei,
+        length: params.EPOCHS_PER_SLASHINGS_VECTOR,
+      }),
+      // Attestations
       previousEpochParticipation: new ListType({
         elementType: phase0Types.ValidatorFlag,
         limit: params.VALIDATOR_REGISTRY_LIMIT,
@@ -92,10 +134,19 @@ export const BeaconState: LightClientTypesGenerator<ContainerType<lightclient.Be
         elementType: phase0Types.ValidatorFlag,
         limit: params.VALIDATOR_REGISTRY_LIMIT,
       }),
+      // Finality
+      justificationBits: new BitVectorType({
+        length: JUSTIFICATION_BITS_LENGTH,
+      }),
+      previousJustifiedCheckpoint: phase0Types.Checkpoint,
+      currentJustifiedCheckpoint: phase0Types.Checkpoint,
+      finalizedCheckpoint: phase0Types.Checkpoint,
+
       currentSyncCommittee: lightclientTypes.SyncCommittee,
       nextSyncCommittee: lightclientTypes.SyncCommittee,
     },
   });
+  return container;
 };
 
 export const LightclientSnapshot: LightClientTypesGenerator<ContainerType<lightclient.LightclientSnapshot>> = (
