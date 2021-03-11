@@ -2,8 +2,6 @@
  * @module chain/stateTransition/util
  */
 
-import {phase0, lightclient} from "@chainsafe/lodestar-types";
-
 export * from "./epoch";
 export * from "./fork";
 export * from "./domain";
@@ -22,5 +20,3 @@ export * from "./slot";
 export * from "./activation";
 export * from "./shuffle";
 export * from "./genesis";
-
-export type BeaconState = phase0.BeaconState | lightclient.BeaconState;

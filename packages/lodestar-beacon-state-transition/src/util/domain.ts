@@ -1,14 +1,13 @@
 /**
  * @module chain/stateTransition/util
  */
-import {Epoch, Version, Root, DomainType} from "@chainsafe/lodestar-types";
+import {Epoch, Version, Root, DomainType, allForks} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
 import {ZERO_HASH} from "../constants";
 
 import {getCurrentEpoch} from "./epoch";
 import {computeForkDataRoot} from "./fork";
-import {BeaconState} from ".";
 
 /**
  * Return the domain for the [[domainType]] and [[forkVersion]].
@@ -31,7 +30,7 @@ export function computeDomain(
  */
 export function getDomain(
   config: IBeaconConfig,
-  state: BeaconState,
+  state: allForks.BeaconState,
   domainType: DomainType,
   messageEpoch: Epoch | null = null
 ): Buffer {

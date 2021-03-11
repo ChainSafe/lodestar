@@ -2,13 +2,12 @@
  * @module chain/stateTransition/util
  */
 
-import {ValidatorIndex, CommitteeIndex, Slot, Bytes32} from "@chainsafe/lodestar-types";
+import {ValidatorIndex, CommitteeIndex, Slot, Bytes32, allForks} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {computeShuffledIndex, getSeed} from "./seed";
 import {getActiveValidatorIndices} from "./validator";
 import {computeEpochAtSlot} from "./epoch";
 import {intDiv} from "@chainsafe/lodestar-utils";
-import {BeaconState} from ".";
 
 /**
  * Return the [[index]]'th shuffled committee out of a total [[count]]
@@ -32,7 +31,7 @@ export function computeCommittee(
  * Return the number of committees at [[epoch]].
  * Return the number of committees at [[slot]].
  */
-export function getCommitteeCountAtSlot(config: IBeaconConfig, state: BeaconState, slot: Slot): number {
+export function getCommitteeCountAtSlot(config: IBeaconConfig, state: allForks.BeaconState, slot: Slot): number {
   const epoch = computeEpochAtSlot(config, slot);
   const activeValidatorIndices = getActiveValidatorIndices(state, epoch);
   return Math.max(
@@ -49,7 +48,7 @@ export function getCommitteeCountAtSlot(config: IBeaconConfig, state: BeaconStat
  */
 export function getBeaconCommittee(
   config: IBeaconConfig,
-  state: BeaconState,
+  state: allForks.BeaconState,
   slot: Slot,
   index: CommitteeIndex
 ): ValidatorIndex[] {

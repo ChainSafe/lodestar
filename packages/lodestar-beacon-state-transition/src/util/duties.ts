@@ -3,10 +3,9 @@
  */
 
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {Epoch, phase0, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {allForks, Epoch, phase0, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {assert} from "@chainsafe/lodestar-utils";
 import {List} from "@chainsafe/ssz";
-import {BeaconState} from ".";
 import {getBeaconCommittee, getCommitteeCountAtSlot} from "./committee";
 import {computeEpochAtSlot, computeStartSlotAtEpoch, getCurrentEpoch} from "./epoch";
 import {getBeaconProposerIndex} from "./proposer";
@@ -21,7 +20,7 @@ import {getBeaconProposerIndex} from "./proposer";
  */
 export function getCommitteeAssignment(
   config: IBeaconConfig,
-  state: BeaconState,
+  state: allForks.BeaconState,
   epoch: Epoch,
   validatorIndex: ValidatorIndex
 ): phase0.CommitteeAssignment | null {
@@ -51,7 +50,7 @@ export function getCommitteeAssignment(
  */
 export function isProposerAtSlot(
   config: IBeaconConfig,
-  state: BeaconState,
+  state: allForks.BeaconState,
   slot: Slot,
   validatorIndex: ValidatorIndex
 ): boolean {

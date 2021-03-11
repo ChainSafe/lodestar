@@ -1,13 +1,12 @@
 import bls from "@chainsafe/bls";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {phase0} from "@chainsafe/lodestar-types";
+import {allForks, phase0} from "@chainsafe/lodestar-types";
 import {getDomain} from "./domain";
 import {computeSigningRoot} from "./signingRoot";
-import {BeaconState} from ".";
 
 export function verifyBlockSignature(
   config: IBeaconConfig,
-  state: BeaconState,
+  state: allForks.BeaconState,
   signedBlock: phase0.SignedBeaconBlock
 ): boolean {
   const domain = getDomain(config, state as phase0.BeaconState, config.params.DOMAIN_BEACON_PROPOSER);
