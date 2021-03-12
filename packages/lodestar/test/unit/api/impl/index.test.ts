@@ -9,14 +9,14 @@ import {StubbedBeaconDb} from "../../../utils/stub";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
 export class ApiImplTestServer {
-  public sandbox: SinonSandbox;
-  public forkChoiceStub: SinonStubbedInstance<ForkChoice>;
-  public chainStub: SinonStubbedInstance<BeaconChain>;
-  public syncStub: SinonStubbedInstance<BeaconSync>;
-  public dbStub: StubbedBeaconDb;
-  public networkStub: SinonStubbedInstance<Network>;
-  public blockApi: BeaconBlockApi;
-  public config: IBeaconConfig;
+  sandbox: SinonSandbox;
+  forkChoiceStub: SinonStubbedInstance<ForkChoice>;
+  chainStub: SinonStubbedInstance<BeaconChain>;
+  syncStub: SinonStubbedInstance<BeaconSync>;
+  dbStub: StubbedBeaconDb;
+  networkStub: SinonStubbedInstance<Network>;
+  blockApi: BeaconBlockApi;
+  config: IBeaconConfig;
 
   constructor() {
     this.sandbox = sinon.createSandbox();
