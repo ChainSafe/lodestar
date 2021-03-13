@@ -1,5 +1,5 @@
 import {config} from "@chainsafe/lodestar-config/mainnet";
-import {WinstonLogger} from "@chainsafe/lodestar-utils";
+import {Logger} from "@chainsafe/lodestar-utils";
 import {List} from "@chainsafe/ssz";
 import {expect} from "chai";
 import {generatePerformanceBlock, generatePerformanceState, initBLS} from "../../../util";
@@ -8,7 +8,7 @@ import {phase0} from "../../../../../src";
 describe("Process Blocks Performance Test", function () {
   this.timeout(0);
   let stateCtx: phase0.fast.IStateContext;
-  const logger = new WinstonLogger();
+  const logger = new Logger();
   before(async () => {
     await initBLS();
     const origState = await generatePerformanceState();

@@ -1,6 +1,6 @@
 import {AbortController} from "abort-controller";
 
-import {consoleTransport, ErrorAborted, fileTransport, WinstonLogger} from "@chainsafe/lodestar-utils";
+import {consoleTransport, ErrorAborted, fileTransport, Logger} from "@chainsafe/lodestar-utils";
 import {LevelDbController} from "@chainsafe/lodestar-db";
 import {BeaconNode, BeaconDb, createNodeJsLibp2p} from "@chainsafe/lodestar";
 
@@ -39,7 +39,7 @@ export async function beaconHandler(args: IBeaconArgs & IGlobalArgs): Promise<vo
   const abortController = new AbortController();
 
   // Logger setup
-  const logger = new WinstonLogger({level: args.logLevel}, [
+  const logger = new Logger({level: args.logLevel}, [
     consoleTransport,
     ...(beaconPaths.logFile ? [fileTransport(beaconPaths.logFile)] : []),
   ]);

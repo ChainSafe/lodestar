@@ -4,7 +4,7 @@ import {promisify} from "util";
 import rimraf from "rimraf";
 import {join} from "path";
 import {BeaconNode, BeaconDb, initStateFromAnchorState, createNodeJsLibp2p, nodeUtils} from "@chainsafe/lodestar";
-import {WinstonLogger} from "@chainsafe/lodestar-utils";
+import {Logger} from "@chainsafe/lodestar-utils";
 import {Validator} from "@chainsafe/lodestar-validator";
 import {LevelDbController} from "@chainsafe/lodestar-db";
 import {getInteropValidator} from "../validator/utils/interop/validator";
@@ -44,7 +44,7 @@ export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
 
   // BeaconNode setup
   const libp2p = await createNodeJsLibp2p(peerId, options.network);
-  const logger = new WinstonLogger({level: args.logLevel});
+  const logger = new Logger({level: args.logLevel});
 
   const db = new BeaconDb({config, controller: new LevelDbController(options.db, {logger})});
   await db.start();

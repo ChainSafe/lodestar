@@ -4,7 +4,7 @@ import {SecretKey, PublicKey} from "@chainsafe/bls";
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {computeDomain, computeSigningRoot} from "@chainsafe/lodestar-beacon-state-transition";
 import {ValidatorIndex, phase0} from "@chainsafe/lodestar-types";
-import {ErrorAborted, WinstonLogger, interopSecretKey} from "@chainsafe/lodestar-utils";
+import {ErrorAborted, Logger, interopSecretKey} from "@chainsafe/lodestar-utils";
 import {toHexString} from "@chainsafe/ssz";
 import {AbortController} from "abort-controller";
 import {IEth1Provider} from "../../../../src/eth1";
@@ -68,7 +68,7 @@ describe("genesis builder", function () {
 
     const genesisBuilder = new GenesisBuilder(schlesiConfig, {
       eth1Provider,
-      logger: new WinstonLogger(),
+      logger: new Logger(),
       // eslint-disable-next-line @typescript-eslint/naming-convention
       MAX_BLOCKS_PER_POLL: 1,
     });
@@ -102,7 +102,7 @@ describe("genesis builder", function () {
 
     const genesisBuilder = new GenesisBuilder(schlesiConfig, {
       eth1Provider,
-      logger: new WinstonLogger(),
+      logger: new Logger(),
       signal: controller.signal,
       // eslint-disable-next-line @typescript-eslint/naming-convention
       MAX_BLOCKS_PER_POLL: 1,

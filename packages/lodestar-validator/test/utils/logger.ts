@@ -1,4 +1,4 @@
-import {WinstonLogger, LogLevel} from "@chainsafe/lodestar-utils";
+import {Logger, LogLevel} from "@chainsafe/lodestar-utils";
 
 /**
  * Run the test with ENVs to control log level:
@@ -8,8 +8,8 @@ import {WinstonLogger, LogLevel} from "@chainsafe/lodestar-utils";
  * VERBOSE=1 mocha .ts
  * ```
  */
-export function testLogger(module?: string): WinstonLogger {
-  return new WinstonLogger({level: getLogLevel(), module});
+export function testLogger(module?: string): Logger {
+  return new Logger({level: getLogLevel(), module});
 }
 
 function getLogLevel(): LogLevel {

@@ -3,7 +3,7 @@ import chaiAsPromised from "chai-as-promised";
 import {fromHexString} from "@chainsafe/ssz";
 import {phase0} from "@chainsafe/lodestar-types";
 import {LevelDbController} from "@chainsafe/lodestar-db";
-import {LogLevel, WinstonLogger} from "@chainsafe/lodestar-utils";
+import {LogLevel, Logger} from "@chainsafe/lodestar-utils";
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import {ZERO_HASH} from "@chainsafe/lodestar-beacon-state-transition";
 // Test files
@@ -22,7 +22,7 @@ describe("slashing-protection-interchange-tests", () => {
   const testCases = loadTestCases();
 
   const dbLocation = "./.__testdb";
-  const controller = new LevelDbController({name: dbLocation}, {logger: new WinstonLogger({level: LogLevel.error})});
+  const controller = new LevelDbController({name: dbLocation}, {logger: new Logger({level: LogLevel.error})});
 
   for (const testCase of testCases) {
     describe(testCase.name, async () => {

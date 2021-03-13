@@ -6,7 +6,7 @@ import sinon from "sinon";
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {BeaconChain, ChainEventEmitter, ForkChoice, IBeaconChain} from "../../../../../src/chain";
 import {INetwork, Network} from "../../../../../src/network";
-import {WinstonLogger} from "@chainsafe/lodestar-utils";
+import {Logger} from "@chainsafe/lodestar-utils";
 import {generateBlockSummary, generateEmptySignedBlock} from "../../../../utils/block";
 import {expect} from "chai";
 import {Eth2Gossipsub} from "../../../../../src/network/gossip";
@@ -24,7 +24,7 @@ describe("ORARegularSync", function () {
   let networkStub: SinonStubbedInstance<INetwork>;
   let gossipStub: SinonStubbedInstance<Eth2Gossipsub>;
   let getCurrentSlotStub: SinonStub;
-  const logger = new WinstonLogger({module: "ORARegularSync"});
+  const logger = new Logger({module: "ORARegularSync"});
 
   beforeEach(() => {
     forkChoiceStub = sinon.createStubInstance(ForkChoice);

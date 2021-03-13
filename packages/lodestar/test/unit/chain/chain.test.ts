@@ -2,7 +2,7 @@ import {expect} from "chai";
 import sinon, {SinonStubbedInstance} from "sinon";
 
 import {config} from "@chainsafe/lodestar-config/minimal";
-import {WinstonLogger} from "@chainsafe/lodestar-utils";
+import {Logger} from "@chainsafe/lodestar-utils";
 import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
 
 import {BeaconChain, IBeaconChain} from "../../../src/chain";
@@ -17,7 +17,7 @@ import {StateContextCache} from "../../../src/chain/stateCache";
 describe("BeaconChain", function () {
   const sandbox = sinon.createSandbox();
   let dbStub: StubbedBeaconDb, metrics: any;
-  const logger = new WinstonLogger();
+  const logger = new Logger();
   let chain: IBeaconChain;
 
   beforeEach(() => {

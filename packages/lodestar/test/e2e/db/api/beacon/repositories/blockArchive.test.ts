@@ -1,7 +1,7 @@
 import {BeaconDb} from "../../../../../../src/db";
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import {LevelDbController} from "@chainsafe/lodestar-db";
-import {ILogger, WinstonLogger} from "@chainsafe/lodestar-utils";
+import {ILogger, Logger} from "@chainsafe/lodestar-utils";
 import {generateSignedBlock} from "../../../../../utils/block";
 import {fromHexString} from "@chainsafe/ssz";
 import {IBlockSummary} from "@chainsafe/lodestar-fork-choice";
@@ -32,7 +32,7 @@ describe("BlockArchiveRepository", function () {
       "0xa11dd7547cfda02799745e305ec149d8a90d3ff12cac5a9cb60b0e07bb7e1b06117b0055822099b78422c982cc2f5148023a3fe61a7505f08857b9d30f675600e404f4993ecc4ef75d657e6c84e859aefcd458fb544fb2caa773e916297d6124"
     ),
   });
-  const logger: ILogger = new WinstonLogger();
+  const logger: ILogger = new Logger();
 
   before(async () => {
     db = new BeaconDb({

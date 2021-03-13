@@ -1,4 +1,4 @@
-import {Context, ILogger, LodestarError, LogFormat, logFormats, WinstonLogger} from "../../../src";
+import {Context, ILogger, LodestarError, LogFormat, logFormats, Logger} from "../../../src";
 import TransportStream from "winston-transport";
 import {MESSAGE} from "triple-beam";
 import {expect} from "chai";
@@ -72,7 +72,7 @@ describe("winston logger", () => {
         it(`${id} ${format} output`, () => {
           let allOutput = "";
           const callbackTransport = new CallbackTransport((data: any) => (allOutput += data));
-          const logger = new WinstonLogger({format, hideTimestamp: true}, [callbackTransport]);
+          const logger = new Logger({format, hideTimestamp: true}, [callbackTransport]);
           logger.warn(message, context, error);
           expect(allOutput).to.equal(output[format]);
         });
@@ -81,7 +81,7 @@ describe("winston logger", () => {
   });
 
   it("should log profile", () => {
-    const logger: ILogger = new WinstonLogger();
+    const logger: ILogger = new Logger();
 
     logger.profile("test");
 

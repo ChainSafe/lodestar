@@ -1,5 +1,5 @@
 import {IBeaconParams} from "@chainsafe/lodestar-params";
-import {WinstonLogger} from "@chainsafe/lodestar-utils";
+import {Logger} from "@chainsafe/lodestar-utils";
 import {getDevBeaconNode} from "../utils/node/beacon";
 import {waitForEvent} from "../utils/events/resolver";
 import {phase0} from "@chainsafe/lodestar-types";
@@ -31,7 +31,7 @@ describe("Run multi node single thread interop validators (no eth1) until checkp
       const minGenesisTime = Math.floor(Date.now() / 1000);
       const genesisDelay = 2 * beaconParams.SECONDS_PER_SLOT;
       const genesisTime = minGenesisTime + genesisDelay;
-      const logger = new WinstonLogger();
+      const logger = new Logger();
 
       for (let i = 0; i < nodeCount; i++) {
         const node = await getDevBeaconNode({

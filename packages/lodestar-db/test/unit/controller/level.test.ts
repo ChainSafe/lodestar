@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import {WinstonLogger} from "@chainsafe/lodestar-utils";
+import {Logger} from "@chainsafe/lodestar-utils";
 // @ts-ignore
 import leveldown from "leveldown";
 import all from "it-all";
@@ -7,7 +7,7 @@ import {LevelDbController} from "../../../src/controller";
 
 describe("LevelDB controller", () => {
   const dbLocation = "./.__testdb";
-  const db = new LevelDbController({name: dbLocation}, {logger: new WinstonLogger()});
+  const db = new LevelDbController({name: dbLocation}, {logger: new Logger()});
 
   before(async () => {
     await db.start();

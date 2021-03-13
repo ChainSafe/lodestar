@@ -2,7 +2,7 @@ import sinon, {SinonStubbedInstance} from "sinon";
 import {CheckPeerAliveTask} from "../../../../src/network/tasks/checkPeerAliveTask";
 import {INetwork, IReqResp, Network} from "../../../../src/network";
 import {ReqResp} from "../../../../src/network/reqresp/reqResp";
-import {WinstonLogger} from "@chainsafe/lodestar-utils";
+import {Logger} from "@chainsafe/lodestar-utils";
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import {expect} from "chai";
 import PeerId from "peer-id";
@@ -22,7 +22,7 @@ describe("CheckPeerAliveTask", function () {
     peerMetadataStub = getStubbedMetadataStore();
     networkStub.peerMetadata = peerMetadataStub;
     task = new CheckPeerAliveTask(config, {
-      logger: new WinstonLogger(),
+      logger: new Logger(),
       network: networkStub,
     });
 

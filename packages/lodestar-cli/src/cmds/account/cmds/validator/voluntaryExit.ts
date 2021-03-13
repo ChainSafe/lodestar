@@ -1,6 +1,6 @@
 import {ICliCommand, initBLS, YargsError} from "../../../../util";
 import {IGlobalArgs} from "../../../../options";
-import {WinstonLogger} from "@chainsafe/lodestar-utils";
+import {Logger} from "@chainsafe/lodestar-utils";
 import {Validator} from "@chainsafe/lodestar-validator";
 import {ValidatorDirManager} from "../../../../validatorDir";
 import {getAccountPaths} from "../../paths";
@@ -107,7 +107,7 @@ BE UNTIL AT LEAST TWO YEARS AFTER THE PHASE 0 MAINNET LAUNCH.
       config,
       api: args.server,
       secretKeys: [secretKey],
-      logger: new WinstonLogger(),
+      logger: new Logger(),
       graffiti: args.graffiti,
     });
 

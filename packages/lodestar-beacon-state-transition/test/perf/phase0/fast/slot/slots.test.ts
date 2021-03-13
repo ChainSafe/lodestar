@@ -1,12 +1,12 @@
 import {config} from "@chainsafe/lodestar-config/mainnet";
-import {WinstonLogger} from "@chainsafe/lodestar-utils";
+import {Logger} from "@chainsafe/lodestar-utils";
 import {expect} from "chai";
 import {phase0} from "../../../../../src";
 import {initBLS, generatePerformanceState} from "../../../util";
 
 describe("Process Slots Performance Test", function () {
   this.timeout(0);
-  const logger = new WinstonLogger();
+  const logger = new Logger();
   let state: phase0.fast.CachedValidatorsBeaconState;
   let epochCtx: phase0.fast.EpochContext;
 

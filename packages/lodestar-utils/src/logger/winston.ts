@@ -23,7 +23,7 @@ export const fileTransport = (filename: string): TransportStream => {
   });
 };
 
-export class WinstonLogger implements ILogger {
+export class Logger implements ILogger {
   private winston: Logger;
   private _level: LogLevel;
   private _silent: boolean;
@@ -104,8 +104,8 @@ export class WinstonLogger implements ILogger {
     return this._silent;
   }
 
-  child(options: ILoggerOptions): WinstonLogger {
-    const logger = Object.create(WinstonLogger.prototype);
+  child(options: ILoggerOptions): Logger {
+    const logger = Object.create(Logger.prototype);
     const winston = this.winston.child({namespace: options.module, level: options.level});
     //use more verbose log
     if (this.winston.levels[this._level] > this.winston.levels[options.level ?? LogLevel.error]) {

@@ -1,5 +1,5 @@
 import {LevelDbController} from "@chainsafe/lodestar-db";
-import {ILogger, intDiv, LogLevel, WinstonLogger, interopSecretKey} from "@chainsafe/lodestar-utils";
+import {ILogger, intDiv, LogLevel, Logger, interopSecretKey} from "@chainsafe/lodestar-utils";
 import {IEventsApi} from "@chainsafe/lodestar-validator/lib/api/interface/events";
 import {ApiClientOverInstance, IApiClient, SlashingProtection, Validator} from "@chainsafe/lodestar-validator";
 import tmp from "tmp";
@@ -61,7 +61,7 @@ export function getDevValidator({
   logger?: ILogger;
   useRestApi?: boolean;
 }): Validator {
-  if (!logger) logger = new WinstonLogger({level: LogLevel.info, module: "validator"});
+  if (!logger) logger = new Logger({level: LogLevel.info, module: "validator"});
   const tmpDir = tmp.dirSync({unsafeCleanup: true});
   return new Validator({
     config: node.config,
