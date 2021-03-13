@@ -51,4 +51,8 @@ export interface ILibP2pStream {
    * `libp2p-mplex`: Close immediately for reading and writing (remote error)
    */
   reset: () => void;
+  /**
+   * `libp2p-mplex`: Close for reading and writing (local error)
+   */
+  abort: (err: Error) => void;
 }

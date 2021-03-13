@@ -71,7 +71,9 @@ export async function sendRequest<T extends phase0.ResponseBody | phase0.Respons
       async (timeoutAndParentSignal) => {
         const conn = await libp2p.dialProtocol(peerId, protocol, {signal: timeoutAndParentSignal});
         if (!conn) throw Error("dialProtocol timeout");
-        return (conn as {stream: ILibP2pStream}).stream;
+        // TODO: libp2p-ts type Stream does not declare .abort() and requires casting to unknown here
+        // Remove when https://github.com/ChainSafe/lodestar/issues/2167
+        return ((conn as unknown) as {stream: ILibP2pStream}).stream;
       },
       DIAL_TIMEOUT,
       signal
@@ -96,7 +98,7 @@ export async function sendRequest<T extends phase0.ResponseBody | phase0.Respons
       signal
     ).catch((e) => {
       // Must close the stream read side (stream.source) manually AND the write side
-      stream.reset();
+      stream.abort(e);
 
       if (e instanceof TimeoutError) {
         throw new RequestInternalError({code: RequestErrorCode.REQUEST_TIMEOUT});
@@ -117,7 +119,7 @@ export async function sendRequest<T extends phase0.ResponseBody | phase0.Respons
 
       // NOTE: Only log once per request to verbose, intermediate steps to debug
       // NOTE: Do not log the response, logs get extremely cluttered
-      // NOTE: add double space after "Req  " to match "Resp "
+      // NOTE: add double space after "Req  " to align log with the "Resp " log
       logger.verbose("Req  done", logCtx);
 
       return responses as T;
