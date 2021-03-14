@@ -1,6 +1,6 @@
+import path from "path";
 import {IGlobalArgs} from "../../options";
 import {IGlobalPaths, getGlobalPaths} from "../../paths/global";
-import {joinIfRelative} from "../../util";
 
 export interface IAccountPaths {
   keystoresDir: string;
@@ -39,9 +39,9 @@ export function getAccountPaths(
   const globalPaths = getGlobalPaths(args);
 
   const rootDir = globalPaths.rootDir;
-  const keystoresDir = joinIfRelative(rootDir, args.keystoresDir || "keystores");
-  const secretsDir = joinIfRelative(rootDir, args.secretsDir || "secrets");
-  const walletsDir = joinIfRelative(rootDir, args.walletsDir || "wallets");
+  const keystoresDir = args.keystoresDir || path.join(rootDir, "keystores");
+  const secretsDir = args.secretsDir || path.join(rootDir, "secrets");
+  const walletsDir = args.walletsDir || path.join(rootDir, "wallets");
   return {
     ...globalPaths,
     keystoresDir,
