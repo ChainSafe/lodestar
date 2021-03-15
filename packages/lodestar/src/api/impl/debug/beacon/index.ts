@@ -35,8 +35,7 @@ export class DebugBeaconApi implements IDebugBeaconApi {
 
   async getState(stateId: StateId): Promise<phase0.BeaconState | null> {
     try {
-      const stateContext = await resolveStateId(this.chain, this.db, stateId);
-      return stateContext?.state || null;
+      return await resolveStateId(this.chain, this.db, stateId);
     } catch (e) {
       this.logger.error("Failed to resolve state", {state: stateId, error: e});
       throw e;

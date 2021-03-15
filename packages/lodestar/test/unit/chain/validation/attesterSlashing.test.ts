@@ -8,7 +8,7 @@ import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
 
 import {BeaconChain} from "../../../../src/chain";
 import {StubbedBeaconDb, StubbedChain} from "../../../utils/stub";
-import {generateState} from "../../../utils/state";
+import {generateCachedState} from "../../../utils/state";
 import {validateGossipAttesterSlashing} from "../../../../src/chain/validation/attesterSlashing";
 import {AttesterSlashingErrorCode} from "../../../../src/chain/errors/attesterSlashingError";
 
@@ -41,7 +41,7 @@ describe("GossipMessageValidator", () => {
     it("should return invalid attester slashing - invalid", async () => {
       const slashing = generateEmptyAttesterSlashing();
       dbStub.attesterSlashing.hasAll.resolves(false);
-      const state = generateState();
+      const state = generateCachedState();
       chainStub.getHeadState.returns(state);
       isValidIncomingAttesterSlashingStub.returns(false);
       try {
@@ -54,7 +54,7 @@ describe("GossipMessageValidator", () => {
     it("should return valid attester slashing", async () => {
       const slashing = generateEmptyAttesterSlashing();
       dbStub.attesterSlashing.hasAll.resolves(false);
-      const state = generateState();
+      const state = generateCachedState();
       chainStub.getHeadState.returns(state);
       isValidIncomingAttesterSlashingStub.returns(true);
       const validationTest = await validateGossipAttesterSlashing(config, chainStub, dbStub, slashing);

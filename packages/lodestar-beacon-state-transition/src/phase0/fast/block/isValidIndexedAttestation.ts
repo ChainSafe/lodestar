@@ -1,18 +1,17 @@
 import {phase0} from "@chainsafe/lodestar-types";
 import {computeSigningRoot, getDomain} from "../../../util";
 import {ISignatureSet, SignatureSetType, verifySignatureSet} from "../signatureSets";
-import {EpochContext} from "../util";
+import {CachedBeaconState} from "../util";
 
 /**
  * Check if `indexedAttestation` has sorted and unique indices and a valid aggregate signature.
  */
 export function isValidIndexedAttestation(
-  epochCtx: EpochContext,
-  state: phase0.BeaconState,
+  state: CachedBeaconState<phase0.BeaconState>,
   indexedAttestation: phase0.IndexedAttestation,
   verifySignature = true
 ): boolean {
-  const config = epochCtx.config;
+  const {config} = state;
   const {MAX_VALIDATORS_PER_COMMITTEE} = config.params;
   const indices = getIndices(indexedAttestation);
 
@@ -37,7 +36,7 @@ export function isValidIndexedAttestation(
     return true;
   }
 
-  const signatureSet = getIndexedAttestationSignatureSet(epochCtx, state, indexedAttestation, indices);
+  const signatureSet = getIndexedAttestationSignatureSet(state, indexedAttestation, indices);
   try {
     return verifySignatureSet(signatureSet);
   } catch (e) {
@@ -46,12 +45,11 @@ export function isValidIndexedAttestation(
 }
 
 export function getIndexedAttestationSignatureSet(
-  epochCtx: EpochContext,
-  state: phase0.BeaconState,
+  state: CachedBeaconState<phase0.BeaconState>,
   indexedAttestation: phase0.IndexedAttestation,
   indices?: number[]
 ): ISignatureSet {
-  const config = epochCtx.config;
+  const {config, epochCtx} = state;
   const domain = getDomain(config, state, config.params.DOMAIN_BEACON_ATTESTER, indexedAttestation.data.target.epoch);
 
   if (!indices) indices = getIndices(indexedAttestation);

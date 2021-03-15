@@ -4,8 +4,8 @@
 
 import {AbortSignal} from "abort-controller";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {TreeBacked} from "@chainsafe/ssz";
 import {phase0} from "@chainsafe/lodestar-types";
+import {CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
 
 export interface IEth1Provider {
   deployBlock: number;
@@ -18,7 +18,7 @@ export interface IEth1Provider {
 
 export interface IEth1ForBlockProduction {
   getEth1DataAndDeposits(
-    state: TreeBacked<phase0.BeaconState>
+    state: CachedBeaconState<phase0.BeaconState>
   ): Promise<{
     eth1Data: phase0.Eth1Data;
     deposits: phase0.Deposit[];

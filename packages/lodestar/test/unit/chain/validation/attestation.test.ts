@@ -232,10 +232,7 @@ describe("gossip attestation validation", function () {
     });
     db.seenAttestationCache.hasCommitteeAttestation.returns(false);
     forkChoice.hasBlock.returns(true);
-    const attestationPreState = {
-      state: generateCachedState(),
-      epochCtx: new phase0.fast.EpochContext(config),
-    };
+    const attestationPreState = generateCachedState();
     regen.getCheckpointState.resolves(attestationPreState);
     computeAttestationSubnetStub.returns(5);
     try {
@@ -253,7 +250,7 @@ describe("gossip attestation validation", function () {
       expect(error.type).to.have.property("code", AttestationErrorCode.INVALID_SUBNET_ID);
     }
     expect(chain.receiveAttestation.called).to.be.false;
-    expect(computeAttestationSubnetStub.calledOnceWith(config, attestationPreState.epochCtx, attestation)).to.be.true;
+    expect(computeAttestationSubnetStub.calledOnceWith(config, attestationPreState, attestation)).to.be.true;
   });
 
   it("should throw error - invalid indexed attestation", async function () {
@@ -262,10 +259,7 @@ describe("gossip attestation validation", function () {
     });
     db.seenAttestationCache.hasCommitteeAttestation.returns(false);
     forkChoice.hasBlock.returns(true);
-    const attestationPreState = {
-      state: generateCachedState(),
-      epochCtx: new phase0.fast.EpochContext(config),
-    };
+    const attestationPreState = generateCachedState();
     attestationPreState.epochCtx.getIndexedAttestation = () => toIndexedAttestation(attestation);
     regen.getCheckpointState.resolves(attestationPreState);
     computeAttestationSubnetStub.returns(0);
@@ -297,10 +291,7 @@ describe("gossip attestation validation", function () {
     });
     db.seenAttestationCache.hasCommitteeAttestation.returns(false);
     forkChoice.hasBlock.returns(true);
-    const attestationPreState = {
-      state: generateCachedState(),
-      epochCtx: new phase0.fast.EpochContext(config),
-    };
+    const attestationPreState = generateCachedState();
     attestationPreState.epochCtx.previousShuffling = {
       epoch: 0,
     } as phase0.fast.IEpochShuffling;
@@ -335,10 +326,7 @@ describe("gossip attestation validation", function () {
     });
     db.seenAttestationCache.hasCommitteeAttestation.returns(false);
     forkChoice.hasBlock.returns(true);
-    const attestationPreState = {
-      state: generateCachedState(),
-      epochCtx: new phase0.fast.EpochContext(config),
-    };
+    const attestationPreState = generateCachedState();
     attestationPreState.epochCtx.previousShuffling = {
       epoch: 10,
     } as phase0.fast.IEpochShuffling;
@@ -376,10 +364,7 @@ describe("gossip attestation validation", function () {
     });
     db.seenAttestationCache.hasCommitteeAttestation.returns(false);
     forkChoice.hasBlock.returns(true);
-    const attestationPreState = {
-      state: generateCachedState(),
-      epochCtx: new phase0.fast.EpochContext(config),
-    };
+    const attestationPreState = generateCachedState();
     attestationPreState.epochCtx.previousShuffling = {
       epoch: 0,
       committees: [[[]]],
@@ -420,10 +405,7 @@ describe("gossip attestation validation", function () {
     });
     db.seenAttestationCache.hasCommitteeAttestation.returns(false);
     forkChoice.hasBlock.returns(true);
-    const attestationPreState = {
-      state: generateCachedState(),
-      epochCtx: new phase0.fast.EpochContext(config),
-    };
+    const attestationPreState = generateCachedState();
     attestationPreState.epochCtx.previousShuffling = {
       epoch: 0,
     } as phase0.fast.IEpochShuffling;
@@ -482,10 +464,7 @@ describe("gossip attestation validation", function () {
     });
     db.seenAttestationCache.hasCommitteeAttestation.returns(false);
     forkChoice.hasBlock.returns(true);
-    const attestationPreState = {
-      state: generateCachedState(),
-      epochCtx: new phase0.fast.EpochContext(config),
-    };
+    const attestationPreState = generateCachedState();
     attestationPreState.epochCtx.previousShuffling = {
       activeIndices: [],
       epoch: 0,
@@ -522,10 +501,7 @@ describe("gossip attestation validation", function () {
     forkChoice.hasBlock.returns(true);
     forkChoice.isDescendant.returns(true);
     forkChoice.isDescendantOfFinalized.returns(false);
-    const attestationPreState = {
-      state: generateCachedState(),
-      epochCtx: new phase0.fast.EpochContext(config),
-    };
+    const attestationPreState = generateCachedState();
     attestationPreState.epochCtx.previousShuffling = {
       activeIndices: [],
       epoch: 0,
@@ -555,11 +531,7 @@ describe("gossip attestation validation", function () {
     const attestation = generateAttestation({
       aggregationBits: [true] as BitList,
     });
-    const state = generateCachedState();
-    const attestationPreState = {
-      state,
-      epochCtx: new phase0.fast.EpochContext(config),
-    };
+    const attestationPreState = generateCachedState();
     attestationPreState.epochCtx.previousShuffling = {
       activeIndices: [],
       epoch: 0,

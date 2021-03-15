@@ -1,8 +1,10 @@
 import {join} from "path";
 import {expect} from "chai";
+
+import {TreeBacked} from "@chainsafe/ssz";
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
-import {describeDirectorySpecTest} from "@chainsafe/lodestar-spec-test-util";
+import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
 import {IProcessVoluntaryExitTestCase} from "./type";
 import {SPEC_TEST_LOCATION} from "../../../utils/specTestCases";
 
@@ -10,14 +12,24 @@ describeDirectorySpecTest<IProcessVoluntaryExitTestCase, phase0.BeaconState>(
   "process voluntary exit mainnet",
   join(SPEC_TEST_LOCATION, "/tests/mainnet/phase0/operations/voluntary_exit/pyspec_tests"),
   (testcase) => {
-    const state = testcase.pre;
-    const epochCtx = new phase0.fast.EpochContext(config);
-    epochCtx.loadState(state);
-    const wrappedState = phase0.fast.createCachedValidatorsBeaconState(state);
-    phase0.fast.processVoluntaryExit(epochCtx, wrappedState, testcase.voluntary_exit);
-    return state;
+    const wrappedState = phase0.fast.createCachedBeaconState<phase0.BeaconState>(
+      config,
+      testcase.pre as TreeBacked<phase0.BeaconState>
+    );
+    phase0.fast.processVoluntaryExit(wrappedState, testcase.voluntary_exit);
+    return wrappedState;
   },
   {
+    inputTypes: {
+      pre: {
+        type: InputType.SSZ,
+        treeBacked: true,
+      },
+      post: {
+        type: InputType.SSZ,
+        treeBacked: true,
+      },
+    },
     sszTypes: {
       pre: config.types.phase0.BeaconState,
       post: config.types.phase0.BeaconState,

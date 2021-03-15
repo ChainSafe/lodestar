@@ -1,4 +1,4 @@
-import {ArrayLike, TreeBacked} from "@chainsafe/ssz";
+import {ArrayLike} from "@chainsafe/ssz";
 import {phase0, ValidatorIndex, Epoch} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {computeStartSlotAtEpoch, isValidAttestationSlot} from "@chainsafe/lodestar-beacon-state-transition";
@@ -22,7 +22,7 @@ export class AggregateAndProofRepository extends Repository<Uint8Array, phase0.A
     return this.config.types.phase0.Attestation.hashTreeRoot(value.aggregate);
   }
 
-  async getBlockAttestations(state: TreeBacked<phase0.BeaconState>): Promise<phase0.Attestation[]> {
+  async getBlockAttestations(state: phase0.BeaconState): Promise<phase0.Attestation[]> {
     const aggregates: phase0.AggregateAndProof[] = await this.values();
     return aggregates
       .map((aggregate) => aggregate.aggregate)

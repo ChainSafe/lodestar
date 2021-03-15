@@ -3,7 +3,7 @@ import {expect} from "chai";
 
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import {assembleBody} from "../../../../../src/chain/factory/block/body";
-import {generateState} from "../../../../utils/state";
+import {generateCachedState} from "../../../../utils/state";
 import {generateEmptyAttesterSlashing, generateEmptyProposerSlashing} from "../../../../utils/slashings";
 import {generateEmptyAttestation} from "../../../../utils/attestation";
 import {generateEmptySignedVoluntaryExit} from "../../../../utils/voluntaryExits";
@@ -15,7 +15,7 @@ describe("blockAssembly - body", function () {
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   function getStubs() {
     const sandbox = sinon.createSandbox();
-    const state = generateState();
+    const state = generateCachedState();
     const eth1 = sandbox.createStubInstance(Eth1ForBlockProduction);
     eth1.getEth1DataAndDeposits.resolves({eth1Data: state.eth1Data, deposits: [generateDeposit()]});
 
@@ -30,7 +30,14 @@ describe("blockAssembly - body", function () {
     dbStub.voluntaryExit.values.resolves([generateEmptySignedVoluntaryExit()]);
     dbStub.depositDataRoot.getTreeBacked.resolves(config.types.phase0.DepositDataRootList.tree.defaultValue());
 
-    const result = await assembleBody(config, dbStub, eth1, generateState(), Buffer.alloc(96, 0), Buffer.alloc(32, 0));
+    const result = await assembleBody(
+      config,
+      dbStub,
+      eth1,
+      generateCachedState(),
+      Buffer.alloc(96, 0),
+      Buffer.alloc(32, 0)
+    );
     expect(result).to.not.be.null;
     expect(result.randaoReveal.length).to.be.equal(96);
     expect(result.attestations.length).to.be.equal(1);
@@ -55,7 +62,14 @@ describe("blockAssembly - body", function () {
       Array.from({length: config.params.MAX_VOLUNTARY_EXITS}, generateEmptySignedVoluntaryExit)
     );
 
-    const result = await assembleBody(config, dbStub, eth1, generateState(), Buffer.alloc(96, 0), Buffer.alloc(32, 0));
+    const result = await assembleBody(
+      config,
+      dbStub,
+      eth1,
+      generateCachedState(),
+      Buffer.alloc(96, 0),
+      Buffer.alloc(32, 0)
+    );
     expect(result).to.not.be.null;
     expect(result.randaoReveal.length).to.be.equal(96);
     expect(result.attestations.length).to.be.equal(config.params.MAX_ATTESTATIONS);

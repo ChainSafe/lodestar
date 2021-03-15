@@ -41,6 +41,7 @@
     "@chainsafe/lodestar-params": "^0.17.0",
     "@chainsafe/lodestar-types": "^0.17.0",
     "@chainsafe/lodestar-utils": "^0.17.0",
+    "@chainsafe/persistent-merkle-tree": "^0.2.3",
     "@chainsafe/persistent-ts": "^0.17.0",
     "@chainsafe/ssz": "^0.7.0",
     "bigint-buffer": "^1.1.5",

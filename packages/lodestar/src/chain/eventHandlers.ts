@@ -3,9 +3,10 @@ import {readOnlyMap, toHexString} from "@chainsafe/ssz";
 import {phase0, Slot, Version} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {IBlockSummary} from "@chainsafe/lodestar-fork-choice";
+import {CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
 
 import {AttestationError, AttestationErrorCode, BlockError, BlockErrorCode} from "./errors";
-import {IBlockJob, ITreeStateContext} from "./interface";
+import {IBlockJob} from "./interface";
 import {ChainEvent, ChainEventEmitter, IChainEvents} from "./emitter";
 import {BeaconChain} from "./chain";
 
@@ -141,32 +142,40 @@ export function onForkVersion(this: BeaconChain, version: Version): void {
   this.logger.verbose("New fork version", this.config.types.Version.toJson(version));
 }
 
-export function onCheckpoint(this: BeaconChain, cp: phase0.Checkpoint, stateContext: ITreeStateContext): void {
+export function onCheckpoint(
+  this: BeaconChain,
+  cp: phase0.Checkpoint,
+  state: CachedBeaconState<phase0.BeaconState>
+): void {
   this.logger.verbose("Checkpoint processed", this.config.types.phase0.Checkpoint.toJson(cp));
-  this.checkpointStateCache.add(cp, stateContext);
+  this.checkpointStateCache.add(cp, state);
 
-  this.metrics?.currentValidators.set({status: "active"}, stateContext.epochCtx.currentShuffling.activeIndices.length);
-  const parentBlockSummary = this.forkChoice.getBlock(stateContext.state.latestBlockHeader.parentRoot);
+  this.metrics?.currentValidators.set({status: "active"}, state.currentShuffling.activeIndices.length);
+  const parentBlockSummary = this.forkChoice.getBlock(state.latestBlockHeader.parentRoot);
 
   if (parentBlockSummary) {
-    const justifiedCheckpoint = stateContext.state.currentJustifiedCheckpoint;
+    const justifiedCheckpoint = state.currentJustifiedCheckpoint;
     const justifiedEpoch = justifiedCheckpoint.epoch;
     const preJustifiedEpoch = parentBlockSummary.justifiedEpoch;
     if (justifiedEpoch > preJustifiedEpoch) {
-      this.internalEmitter.emit(ChainEvent.justified, justifiedCheckpoint, stateContext);
+      this.internalEmitter.emit(ChainEvent.justified, justifiedCheckpoint, state);
     }
-    const finalizedCheckpoint = stateContext.state.finalizedCheckpoint;
+    const finalizedCheckpoint = state.finalizedCheckpoint;
     const finalizedEpoch = finalizedCheckpoint.epoch;
     const preFinalizedEpoch = parentBlockSummary.finalizedEpoch;
     if (finalizedEpoch > preFinalizedEpoch) {
-      this.internalEmitter.emit(ChainEvent.finalized, finalizedCheckpoint, stateContext);
+      this.internalEmitter.emit(ChainEvent.finalized, finalizedCheckpoint, state);
     }
   }
 }
 
-export function onJustified(this: BeaconChain, cp: phase0.Checkpoint, stateContext: ITreeStateContext): void {
+export function onJustified(
+  this: BeaconChain,
+  cp: phase0.Checkpoint,
+  state: CachedBeaconState<phase0.BeaconState>
+): void {
   this.logger.verbose("Checkpoint justified", this.config.types.phase0.Checkpoint.toJson(cp));
-  this.metrics?.previousJustifiedEpoch.set(stateContext.state.previousJustifiedCheckpoint.epoch);
+  this.metrics?.previousJustifiedEpoch.set(state.previousJustifiedCheckpoint.epoch);
   this.metrics?.currentJustifiedEpoch.set(cp.epoch);
 }
 
@@ -207,7 +216,7 @@ export function onAttestation(this: BeaconChain, attestation: phase0.Attestation
 export async function onBlock(
   this: BeaconChain,
   block: phase0.SignedBeaconBlock,
-  postStateContext: ITreeStateContext,
+  postState: CachedBeaconState<phase0.BeaconState>,
   job: IBlockJob
 ): Promise<void> {
   const blockRoot = this.config.types.phase0.BeaconBlock.hashTreeRoot(block.message);
@@ -216,7 +225,7 @@ export async function onBlock(
     root: toHexString(blockRoot),
   });
 
-  this.stateCache.add(postStateContext);
+  this.stateCache.add(postState);
   if (!job.reprocess) {
     await this.db.block.add(block);
   }

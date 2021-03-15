@@ -2,7 +2,7 @@ import sinon, {SinonStubbedInstance} from "sinon";
 import {expect} from "chai";
 
 import {config} from "@chainsafe/lodestar-config/minimal";
-import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
+import {createCachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
 
 import {BeaconChain, ForkChoice, IBeaconChain} from "../../../../../../src/chain";
 import {LocalClock} from "../../../../../../src/chain/clock";
@@ -67,22 +67,21 @@ describe("get proposers api impl", function () {
     sandbox.stub(chainStub.clock, "currentEpoch").get(() => 0);
     sandbox.stub(chainStub.clock, "currentSlot").get(() => 0);
     dbStub.block.get.resolves({message: {stateRoot: Buffer.alloc(32)}} as any);
-    const state = generateState({
-      slot: 0,
-      validators: generateValidators(25, {
-        effectiveBalance: config.params.MAX_EFFECTIVE_BALANCE,
-        activationEpoch: 0,
-        exitEpoch: FAR_FUTURE_EPOCH,
-      }),
-      balances: generateInitialMaxBalances(config, 25),
-    });
-    const epochCtx = new phase0.EpochContext(config);
-    epochCtx.loadState(state);
-    chainStub.getHeadStateContextAtCurrentEpoch.resolves({
-      state: phase0.fast.createCachedValidatorsBeaconState(state),
-      epochCtx,
-    });
-    sinon.stub(epochCtx, "getBeaconProposer").returns(1);
+    const state = generateState(
+      {
+        slot: 0,
+        validators: generateValidators(25, {
+          effectiveBalance: config.params.MAX_EFFECTIVE_BALANCE,
+          activationEpoch: 0,
+          exitEpoch: FAR_FUTURE_EPOCH,
+        }),
+        balances: generateInitialMaxBalances(config, 25),
+      },
+      config
+    );
+    const cachedState = createCachedBeaconState(config, state);
+    chainStub.getHeadStateAtCurrentEpoch.resolves(cachedState);
+    sinon.stub(cachedState.epochCtx, "getBeaconProposer").returns(1);
     const result = await api.getProposerDuties(0);
     expect(result.length).to.be.equal(config.params.SLOTS_PER_EPOCH);
   });

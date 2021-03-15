@@ -3,6 +3,7 @@
  */
 
 import {
+  CachedBeaconState,
   computeEpochAtSlot,
   computeForkDigest,
   computeForkNameFromForkDigest,
@@ -24,7 +25,7 @@ import {BlockPool, BlockProcessor} from "./blocks";
 import {IBeaconClock, LocalClock} from "./clock";
 import {ChainEventEmitter} from "./emitter";
 import {handleChainEvents} from "./eventHandlers";
-import {IBeaconChain, ITreeStateContext} from "./interface";
+import {IBeaconChain} from "./interface";
 import {IChainOptions} from "./options";
 import {IStateRegenerator, QueuedStateRegenerator} from "./regen";
 import {LodestarForkChoice} from "./forkChoice";
@@ -137,7 +138,7 @@ export class BeaconChain implements IBeaconChain {
     return this.genesisTime;
   }
 
-  getHeadStateContext(): ITreeStateContext {
+  getHeadState(): CachedBeaconState<phase0.BeaconState> {
     // head state should always exist
     const head = this.forkChoice.getHead();
     const headState =
@@ -148,23 +149,15 @@ export class BeaconChain implements IBeaconChain {
     if (!headState) throw Error("headState does not exist");
     return headState;
   }
-  getHeadState(): TreeBacked<phase0.BeaconState> {
-    //head state should always have epoch ctx
-    return this.getHeadStateContext().state.getOriginalState() as TreeBacked<phase0.BeaconState>;
-  }
-  getHeadEpochContext(): phase0.fast.EpochContext {
-    // head should always have epoch ctx
-    return this.getHeadStateContext().epochCtx;
-  }
 
-  async getHeadStateContextAtCurrentEpoch(): Promise<ITreeStateContext> {
+  async getHeadStateAtCurrentEpoch(): Promise<CachedBeaconState<phase0.BeaconState>> {
     const currentEpochStartSlot = computeStartSlotAtEpoch(this.config, this.clock.currentEpoch);
     const head = this.forkChoice.getHead();
     const bestSlot = currentEpochStartSlot > head.slot ? currentEpochStartSlot : head.slot;
     return await this.regen.getBlockSlotState(head.blockRoot, bestSlot);
   }
 
-  async getHeadStateContextAtCurrentSlot(): Promise<ITreeStateContext> {
+  async getHeadStateAtCurrentSlot(): Promise<CachedBeaconState<phase0.BeaconState>> {
     return await this.regen.getBlockSlotState(this.forkChoice.getHeadRoot(), this.clock.currentSlot);
   }
 
@@ -189,7 +182,7 @@ export class BeaconChain implements IBeaconChain {
     return await this.db.block.get(summary.blockRoot);
   }
 
-  async getStateContextByBlockRoot(blockRoot: Root): Promise<ITreeStateContext | null> {
+  async getStateByBlockRoot(blockRoot: Root): Promise<CachedBeaconState<phase0.BeaconState> | null> {
     const blockSummary = this.forkChoice.getBlock(blockRoot);
     if (!blockSummary) {
       return null;
@@ -254,12 +247,12 @@ export class BeaconChain implements IBeaconChain {
   }
 
   getForkDigest(): ForkDigest {
-    const {state} = this.getHeadStateContext();
+    const state = this.getHeadState();
     return computeForkDigest(this.config, state.fork.currentVersion, state.genesisValidatorsRoot);
   }
 
   getForkName(): IForkName {
-    const {state} = this.getHeadStateContext();
+    const state = this.getHeadState();
     return computeForkNameFromForkDigest(this.config, state.genesisValidatorsRoot, this.getForkDigest());
   }
 

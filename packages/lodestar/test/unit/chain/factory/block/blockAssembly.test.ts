@@ -1,8 +1,7 @@
 import sinon, {SinonStub, SinonStubbedInstance} from "sinon";
 import {expect} from "chai";
 
-import {config} from "@chainsafe/lodestar-config/mainnet";
-import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
+import {config} from "@chainsafe/lodestar-config/minimal";
 import * as processBlock from "@chainsafe/lodestar-beacon-state-transition/lib/phase0/fast/block";
 import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
 
@@ -13,7 +12,7 @@ import * as blockBodyAssembly from "../../../../../src/chain/factory/block/body"
 import {StateRegenerator} from "../../../../../src/chain/regen";
 import {Eth1ForBlockProduction} from "../../../../../src/eth1/";
 import {generateBlockSummary, generateEmptyBlock} from "../../../../utils/block";
-import {generateCachedState, generateState} from "../../../../utils/state";
+import {generateCachedState} from "../../../../utils/state";
 import {StubbedBeaconDb, StubbedChain} from "../../../../utils/stub";
 
 describe("block assembly", function () {
@@ -45,15 +44,11 @@ describe("block assembly", function () {
   it("should assemble block", async function () {
     sandbox.stub(chainStub.clock, "currentSlot").get(() => 1);
     forkChoiceStub.getHead.returns(generateBlockSummary());
-    const epochCtx = new phase0.fast.EpochContext(config);
-    sinon.stub(epochCtx).getBeaconProposer.returns(2);
-    regenStub.getBlockSlotState.resolves({
-      state: generateCachedState({slot: 1}),
-      epochCtx: epochCtx,
-    });
+    const state = generateCachedState({slot: 1});
+    sinon.stub(state.epochCtx, "getBeaconProposer").returns(2);
+    regenStub.getBlockSlotState.resolves(state);
     beaconDB.depositDataRoot.getTreeBacked.resolves(config.types.phase0.DepositDataRootList.tree.defaultValue());
     assembleBodyStub.resolves(generateEmptyBlock().body);
-    const state = generateState();
 
     const eth1 = sandbox.createStubInstance(Eth1ForBlockProduction);
     eth1.getEth1DataAndDeposits.resolves({eth1Data: state.eth1Data, deposits: []});

@@ -41,8 +41,3 @@ export interface ICommitteesFilters {
   index?: CommitteeIndex;
   slot?: Slot;
 }
-
-export type ApiStateContext = {
-  state: phase0.BeaconState;
-  epochCtx?: phase0.fast.EpochContext;
-};

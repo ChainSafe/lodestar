@@ -1,6 +1,6 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBeaconDb} from "../../db/api";
-import {IAttestationJob, IBeaconChain, ITreeStateContext} from "..";
+import {IAttestationJob, IBeaconChain} from "..";
 import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {AttestationError, AttestationErrorCode} from "../errors";
@@ -73,9 +73,9 @@ export async function validateGossipAttestation(
     });
   }
 
-  let attestationPreStateContext;
+  let attestationPreState;
   try {
-    attestationPreStateContext = await chain.regen.getCheckpointState(attestation.data.target);
+    attestationPreState = await chain.regen.getCheckpointState(attestation.data.target);
   } catch (e) {
     throw new AttestationError({
       code: AttestationErrorCode.MISSING_ATTESTATION_PRESTATE,
@@ -83,11 +83,7 @@ export async function validateGossipAttestation(
     });
   }
 
-  const expectedSubnet = phase0.fast.computeSubnetForAttestation(
-    config,
-    attestationPreStateContext.epochCtx,
-    attestation
-  );
+  const expectedSubnet = phase0.fast.computeSubnetForAttestation(config, attestationPreState, attestation);
   if (subnet !== expectedSubnet) {
     throw new AttestationError({
       code: AttestationErrorCode.INVALID_SUBNET_ID,
@@ -99,9 +95,8 @@ export async function validateGossipAttestation(
 
   if (
     !phase0.fast.isValidIndexedAttestation(
-      attestationPreStateContext.epochCtx,
-      attestationPreStateContext.state,
-      attestationPreStateContext.epochCtx.getIndexedAttestation(attestation),
+      attestationPreState,
+      attestationPreState.getIndexedAttestation(attestation),
       true
     )
   ) {
@@ -119,7 +114,7 @@ export async function validateGossipAttestation(
   }
 
   try {
-    if (!isCommitteeIndexWithinRange(attestationPreStateContext.epochCtx, attestation.data)) {
+    if (!isCommitteeIndexWithinRange(attestationPreState, attestation.data)) {
       throw new AttestationError({
         code: AttestationErrorCode.COMMITTEE_INDEX_OUT_OF_RANGE,
         index: attestation.data.index,
@@ -134,7 +129,7 @@ export async function validateGossipAttestation(
     });
   }
 
-  if (!doAggregationBitsMatchCommitteeSize(attestationPreStateContext, attestation)) {
+  if (!doAggregationBitsMatchCommitteeSize(attestationPreState, attestation)) {
     throw new AttestationError({
       code: AttestationErrorCode.WRONG_NUMBER_OF_AGGREGATION_BITS,
       job: attestationJob,
@@ -175,11 +170,11 @@ export function isCommitteeIndexWithinRange(
 }
 
 export function doAggregationBitsMatchCommitteeSize(
-  attestationPreStateContext: ITreeStateContext,
+  epochCtx: phase0.fast.EpochContext,
   attestation: phase0.Attestation
 ): boolean {
   return (
     attestation.aggregationBits.length ===
-    attestationPreStateContext.epochCtx.getBeaconCommittee(attestation.data.slot, attestation.data.index).length
+    epochCtx.getBeaconCommittee(attestation.data.slot, attestation.data.index).length
   );
 }

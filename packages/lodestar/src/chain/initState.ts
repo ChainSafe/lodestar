@@ -3,7 +3,12 @@
  */
 
 import {AbortSignal} from "abort-controller";
-import {blockToHeader, computeEpochAtSlot, phase0} from "@chainsafe/lodestar-beacon-state-transition";
+import {
+  blockToHeader,
+  computeEpochAtSlot,
+  createCachedBeaconState,
+  phase0,
+} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {toHexString, TreeBacked} from "@chainsafe/ssz";
@@ -100,7 +105,7 @@ export async function initStateFromDb(
     stateRoot: toHexString(config.types.phase0.BeaconState.hashTreeRoot(state)),
   });
 
-  return state;
+  return state as TreeBacked<phase0.BeaconState>;
 }
 
 /**
@@ -133,14 +138,12 @@ export function restoreStateCaches(
   state: TreeBacked<phase0.BeaconState>
 ): void {
   const {checkpoint} = computeAnchorCheckpoint(config, state);
-  const epochCtx = new phase0.fast.EpochContext(config);
-  epochCtx.loadState(state);
 
-  const stateCtx = {state: phase0.fast.createCachedValidatorsBeaconState(state), epochCtx};
+  const cachedBeaconState = createCachedBeaconState(config, state);
 
   // store state in state caches
-  void stateCache.add(stateCtx);
-  checkpointStateCache.add(checkpoint, stateCtx);
+  void stateCache.add(cachedBeaconState);
+  checkpointStateCache.add(checkpoint, cachedBeaconState);
 }
 
 export function initBeaconMetrics(metrics: IBeaconMetrics, state: TreeBacked<phase0.BeaconState>): void {

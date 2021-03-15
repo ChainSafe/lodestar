@@ -7,7 +7,7 @@ import {computeStartSlotAtEpoch, computeSubnetForCommitteesAtSlot} from "@chains
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Bytes96, CommitteeIndex, Epoch, Root, phase0, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {assert, ILogger} from "@chainsafe/lodestar-utils";
-import {readOnlyForEach, TreeBacked} from "@chainsafe/ssz";
+import {readOnlyForEach} from "@chainsafe/ssz";
 import {IAttestationJob, IBeaconChain} from "../../../chain";
 import {assembleAttestationData} from "../../../chain/factory/attestation";
 import {assembleBlock} from "../../../chain/factory/block";
@@ -70,14 +70,8 @@ export class ValidatorApi implements IValidatorApi {
     try {
       await checkSyncStatus(this.config, this.sync);
       const headRoot = this.chain.forkChoice.getHeadRoot();
-      const {state, epochCtx} = await this.chain.regen.getBlockSlotState(headRoot, slot);
-      return assembleAttestationData(
-        epochCtx.config,
-        state.getOriginalState() as TreeBacked<phase0.BeaconState>,
-        headRoot,
-        slot,
-        committeeIndex
-      );
+      const state = await this.chain.regen.getBlockSlotState(headRoot, slot);
+      return assembleAttestationData(state.config, state, headRoot, slot, committeeIndex);
     } catch (e) {
       this.logger.warn("Failed to produce attestation data", e);
       throw e;
@@ -88,12 +82,12 @@ export class ValidatorApi implements IValidatorApi {
     await checkSyncStatus(this.config, this.sync);
     assert.gte(epoch, 0, "Epoch must be positive");
     assert.lte(epoch, this.chain.clock.currentEpoch, "Must get proposer duties in current epoch");
-    const {state, epochCtx} = await this.chain.getHeadStateContextAtCurrentEpoch();
+    const state = await this.chain.getHeadStateAtCurrentEpoch();
     const startSlot = computeStartSlotAtEpoch(this.config, epoch);
     const duties: phase0.ProposerDuty[] = [];
 
     for (let slot = startSlot; slot < startSlot + this.config.params.SLOTS_PER_EPOCH; slot++) {
-      const blockProposerIndex = epochCtx.getBeaconProposer(slot);
+      const blockProposerIndex = state.getBeaconProposer(slot);
       duties.push({slot, validatorIndex: blockProposerIndex, pubkey: state.validators[blockProposerIndex].pubkey});
     }
     return duties;
@@ -104,14 +98,19 @@ export class ValidatorApi implements IValidatorApi {
     if (validatorIndices.length === 0) throw new ApiError(400, "No validator to get attester duties");
     if (epoch > this.chain.clock.currentEpoch + 1)
       throw new ApiError(400, "Cannot get duties for epoch more than one ahead");
-    const {epochCtx, state} = await this.chain.getHeadStateContextAtCurrentEpoch();
+    const state = await this.chain.getHeadStateAtCurrentEpoch();
     return validatorIndices
       .map((validatorIndex) => {
         const validator = state.validators[validatorIndex];
         if (!validator) {
           throw new ApiError(400, `Validator index ${validatorIndex} not in state`);
         }
-        return assembleAttesterDuty(this.config, {pubkey: validator.pubkey, index: validatorIndex}, epochCtx, epoch);
+        return assembleAttesterDuty(
+          this.config,
+          {pubkey: validator.pubkey, index: validatorIndex},
+          state.epochCtx,
+          epoch
+        );
       })
       .filter((duty): duty is phase0.AttesterDuty => duty != null);
   }
