@@ -1,6 +1,5 @@
 import {ZERO_HASH} from "@chainsafe/lodestar-beacon-state-transition";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
-import {WinstonLogger} from "@chainsafe/lodestar-utils";
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {expect} from "chai";
 import sinon, {SinonStub} from "sinon";
@@ -11,6 +10,7 @@ import {BeaconChain, IBeaconChain, LodestarForkChoice} from "../../../../../../s
 import {generateBlockSummary} from "../../../../../utils/block";
 import {StubbedBeaconDb} from "../../../../../utils/stub";
 import {generateState} from "../../../../../utils/state";
+import {testLogger} from "../../../../../utils/logger";
 
 describe("api - debug - beacon", function () {
   let debugApi: DebugBeaconApi;
@@ -18,7 +18,7 @@ describe("api - debug - beacon", function () {
   let forkchoiceStub: SinonStubbedInstance<IForkChoice>;
   let dbStub: StubbedBeaconDb;
   let resolveStateIdStub: SinonStub;
-  const logger = new WinstonLogger();
+  const logger = testLogger();
 
   beforeEach(() => {
     resolveStateIdStub = sinon.stub(stateApiUtils, "resolveStateId");

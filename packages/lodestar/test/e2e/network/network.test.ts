@@ -4,7 +4,7 @@ import {expect} from "chai";
 import PeerId from "peer-id";
 import {Discv5Discovery, ENR} from "@chainsafe/discv5";
 import {config} from "@chainsafe/lodestar-config/mainnet";
-import {ILogger, sleep, WinstonLogger} from "@chainsafe/lodestar-utils";
+import {sleep} from "@chainsafe/lodestar-utils";
 
 import {IBeaconChain} from "../../../src/chain";
 import {IBeaconDb} from "../../../src/db";
@@ -17,6 +17,7 @@ import {MockBeaconChain} from "../../utils/mocks/chain/chain";
 import {createNode} from "../../utils/network";
 import {generateState} from "../../utils/state";
 import {StubbedBeaconDb} from "../../utils/stub";
+import {testLogger} from "../../utils/logger";
 
 const multiaddr = "/ip4/127.0.0.1/tcp/0";
 
@@ -36,7 +37,7 @@ describe("[network] network", function () {
   let peerIdB: PeerId;
   let libP2pA: LibP2p;
   let libP2pB: LibP2p;
-  const logger: ILogger = new WinstonLogger();
+  const logger = testLogger();
   logger.silent = true;
   const metrics = new BeaconMetrics({enabled: true, timeout: 5000, pushGateway: false}, {logger});
   let db: StubbedBeaconDb & IBeaconDb;
