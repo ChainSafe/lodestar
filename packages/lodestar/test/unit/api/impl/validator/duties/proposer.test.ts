@@ -13,7 +13,7 @@ import {generateState} from "../../../../../utils/state";
 import {IBeaconSync} from "../../../../../../src/sync";
 import {generateValidators} from "../../../../../utils/validator";
 import {StubbedBeaconDb} from "../../../../../utils/stub";
-import {setupApiImplTestServer, ApiImplTestServer} from "../../index.test";
+import {setupApiImplTestServer, ApiImplTestModules} from "../../index.test";
 
 describe("get proposers api impl", function () {
   let chainStub: SinonStubbedInstance<IBeaconChain>,
@@ -21,7 +21,7 @@ describe("get proposers api impl", function () {
     dbStub: StubbedBeaconDb;
 
   let api: IValidatorApi;
-  let server: ApiImplTestServer;
+  let server: ApiImplTestModules;
 
   before(function () {
     server = setupApiImplTestServer();

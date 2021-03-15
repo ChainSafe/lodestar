@@ -11,7 +11,7 @@ import {generateState} from "../../../../../utils/state";
 import {generateValidator, generateValidators} from "../../../../../utils/validator";
 import {BeaconChain} from "../../../../../../src/chain";
 import {StubbedBeaconDb} from "../../../../../utils/stub";
-import {setupApiImplTestServer, ApiImplTestServer} from "../../index.test";
+import {setupApiImplTestServer, ApiImplTestModules} from "../../index.test";
 
 use(chaiAsPromised);
 
@@ -20,7 +20,7 @@ describe("beacon api impl - state - validators", function () {
   let toValidatorResponseStub: SinonStubbedMember<typeof stateApiUtils["toValidatorResponse"]>;
   let dbStub: StubbedBeaconDb;
   let chainStub: SinonStubbedInstance<BeaconChain>;
-  let server: ApiImplTestServer;
+  let server: ApiImplTestModules;
 
   before(function () {
     server = setupApiImplTestServer();

@@ -9,7 +9,7 @@ import chaiAsPromised from "chai-as-promised";
 import {StubbedBeaconDb} from "../../../../../utils/stub";
 import {GENESIS_SLOT} from "../../../../../../src/constants";
 import {bufferEqualsMatcher} from "../../../../../utils/sinon/matcher";
-import {setupApiImplTestServer, ApiImplTestServer} from "../../index.test";
+import {setupApiImplTestServer, ApiImplTestModules} from "../../index.test";
 
 use(chaiAsPromised);
 
@@ -17,7 +17,7 @@ describe("block api utils", function () {
   describe("resolveBlockId", function () {
     let forkChoiceStub: SinonStubbedInstance<ForkChoice>;
     let dbStub: StubbedBeaconDb;
-    let server: ApiImplTestServer;
+    let server: ApiImplTestModules;
     let expectedBuffer: Buffer;
 
     before(function () {

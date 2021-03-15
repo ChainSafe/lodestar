@@ -4,12 +4,12 @@ import {StubbedBeaconDb} from "../../../../utils/stub";
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {expect} from "chai";
 import {generateState} from "../../../../utils/state";
-import {setupApiImplTestServer, ApiImplTestServer} from "../index.test";
+import {setupApiImplTestServer, ApiImplTestModules} from "../index.test";
 
 describe("beacon api implementation", function () {
   let api: BeaconApi;
   let dbStub: StubbedBeaconDb;
-  let server: ApiImplTestServer;
+  let server: ApiImplTestModules;
 
   before(function () {
     server = setupApiImplTestServer();

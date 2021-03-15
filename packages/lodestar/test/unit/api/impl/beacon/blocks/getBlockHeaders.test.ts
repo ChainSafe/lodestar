@@ -9,10 +9,10 @@ import {
 } from "../../../../../utils/block";
 import deepmerge from "deepmerge";
 import {expect} from "chai";
-import {setupApiImplTestServer, ApiImplTestServer} from "../../index.test";
+import {setupApiImplTestServer, ApiImplTestModules} from "../../index.test";
 
 describe("api - beacon - getBlockHeaders", function () {
-  let server: ApiImplTestServer;
+  let server: ApiImplTestModules;
 
   beforeEach(function () {
     server = setupApiImplTestServer();

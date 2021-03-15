@@ -5,12 +5,12 @@ import {IBeaconStateApi} from "../../../../../../src/api/impl/beacon/state/inter
 import * as stateApiUtils from "../../../../../../src/api/impl/beacon/state/utils";
 import {generateState} from "../../../../../utils/state";
 import {expect} from "chai";
-import {setupApiImplTestServer, ApiImplTestServer} from "../../index.test";
+import {setupApiImplTestServer, ApiImplTestModules} from "../../index.test";
 
 describe("beacon api impl - state - get fork", function () {
   let api: IBeaconStateApi;
   let resolveStateIdStub: SinonStubbedMember<typeof stateApiUtils["resolveStateId"]>;
-  let server: ApiImplTestServer;
+  let server: ApiImplTestModules;
 
   before(function () {
     server = setupApiImplTestServer();

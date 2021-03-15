@@ -7,7 +7,7 @@ import {IEth1ForBlockProduction} from "../../../../../src/eth1";
 import {testLogger} from "../../../../utils/logger";
 import chaiAsPromised from "chai-as-promised";
 import {use, expect} from "chai";
-import {ApiImplTestServer, setupApiImplTestServer} from "../index.test";
+import {ApiImplTestModules, setupApiImplTestServer} from "../index.test";
 
 use(chaiAsPromised);
 
@@ -15,7 +15,7 @@ describe("api - validator - produceAttestationData", function () {
   let eth1Stub: SinonStubbedInstance<IEth1ForBlockProduction>;
   let syncStub: SinonStubbedInstance<IBeaconSync>;
   let modules!: IApiModules;
-  let server: ApiImplTestServer;
+  let server: ApiImplTestModules;
 
   before(function () {
     server = setupApiImplTestServer();

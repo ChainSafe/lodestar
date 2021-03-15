@@ -4,13 +4,13 @@ import {config} from "@chainsafe/lodestar-config/minimal";
 import {expect, use} from "chai";
 import chaiAsPromised from "chai-as-promised";
 import {generateEmptySignedBlock} from "../../../../../utils/block";
-import {ApiImplTestServer, setupApiImplTestServer} from "../../index.test";
+import {ApiImplTestModules, setupApiImplTestServer} from "../../index.test";
 
 use(chaiAsPromised);
 
 describe("api - beacon - getBlockHeader", function () {
   let resolveBlockIdStub: SinonStub;
-  let server: ApiImplTestServer;
+  let server: ApiImplTestModules;
 
   before(function () {
     server = setupApiImplTestServer();

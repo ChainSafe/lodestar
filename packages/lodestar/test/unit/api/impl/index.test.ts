@@ -8,7 +8,7 @@ import {BeaconSync} from "../../../../src/sync";
 import {StubbedBeaconDb} from "../../../utils/stub";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
-export class ApiImplTestServer {
+export type ApiImplTestModules = {
   sandbox: SinonSandbox;
   forkChoiceStub: SinonStubbedInstance<ForkChoice>;
   chainStub: SinonStubbedInstance<BeaconChain>;
@@ -17,30 +17,34 @@ export class ApiImplTestServer {
   networkStub: SinonStubbedInstance<Network>;
   blockApi: BeaconBlockApi;
   config: IBeaconConfig;
+};
 
-  constructor() {
-    this.sandbox = sinon.createSandbox();
-    this.forkChoiceStub = sinon.createStubInstance(ForkChoice);
-    this.chainStub = sinon.createStubInstance(BeaconChain);
-    this.syncStub = sinon.createStubInstance(BeaconSync);
-    this.chainStub.forkChoice = this.forkChoiceStub;
-    this.dbStub = new StubbedBeaconDb(sinon, config);
-    this.networkStub = sinon.createStubInstance(Network);
-    this.config = config;
-
-    this.blockApi = new BeaconBlockApi(
-      {},
-      {
-        chain: this.chainStub,
-        config,
-        db: this.dbStub,
-        network: this.networkStub,
-        sync: this.syncStub,
-      }
-    );
-  }
-}
-
-export function setupApiImplTestServer(): ApiImplTestServer {
-  return new ApiImplTestServer();
+export function setupApiImplTestServer(): ApiImplTestModules {
+  const sandbox = sinon.createSandbox();
+  const forkChoiceStub = sinon.createStubInstance(ForkChoice);
+  const chainStub = sinon.createStubInstance(BeaconChain);
+  const syncStub = sinon.createStubInstance(BeaconSync);
+  const dbStub = new StubbedBeaconDb(sinon, config);
+  const networkStub = sinon.createStubInstance(Network);
+  const blockApi = new BeaconBlockApi(
+    {},
+    {
+      chain: chainStub,
+      config,
+      db: dbStub,
+      network: networkStub,
+      sync: syncStub,
+    }
+  );
+  chainStub.forkChoice = forkChoiceStub;
+  return {
+    sandbox,
+    forkChoiceStub,
+    chainStub,
+    syncStub,
+    dbStub,
+    networkStub,
+    blockApi,
+    config,
+  };
 }

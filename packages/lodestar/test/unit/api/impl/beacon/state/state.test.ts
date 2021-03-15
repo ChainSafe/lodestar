@@ -6,13 +6,13 @@ import {IBeaconStateApi} from "../../../../../../src/api/impl/beacon/state/inter
 import * as stateApiUtils from "../../../../../../src/api/impl/beacon/state/utils";
 import {generateState} from "../../../../../utils/state";
 import {expect} from "chai";
-import {ApiImplTestServer, setupApiImplTestServer} from "../../index.test";
+import {ApiImplTestModules, setupApiImplTestServer} from "../../index.test";
 
 describe("beacon api impl - states", function () {
   let api: IBeaconStateApi;
   let resolveStateIdStub: SinonStub;
   let getEpochBeaconCommitteesStub: SinonStub;
-  let server: ApiImplTestServer;
+  let server: ApiImplTestModules;
 
   before(function () {
     server = setupApiImplTestServer();
