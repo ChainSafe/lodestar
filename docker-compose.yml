@@ -10,7 +10,7 @@ services:
     ports:
       - "9000:9000" # P2P port
       - "9596:9596" # REST API port
-    command: beacon --rootDir /data --api.rest.host 0.0.0.0 --network ${NETWORK} --metrics.enabled true
+    command: beacon --rootDir /data --api.rest.host 0.0.0.0 --metrics.enabled true
 
   prometheus:
     build: docker/prometheus
