@@ -47,7 +47,7 @@ describe("paths / global", () => {
       args: {paramsFile: "custom-config.yaml"},
       globalPaths: {
         rootDir: defaultRootDir,
-        paramsFile: "/my-root-dir/lodestar/mainnet/custom-config.yaml",
+        paramsFile: "custom-config.yaml",
       },
     },
   ];

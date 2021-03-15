@@ -27,7 +27,6 @@ export const importCmd: ICliCommand<IImportArgs, ISlashingProtectionArgs & IAcco
     file: {
       description: "The slashing protection interchange file to import (.json).",
       demandOption: true,
-      normalize: true,
       type: "string",
     },
   },

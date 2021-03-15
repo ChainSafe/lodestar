@@ -43,7 +43,6 @@ and pre-computed deposit RPL data",
       description: "A path to a file containing the password which will unlock the wallet.",
       alias: ["p"],
       demandOption: true,
-      normalize: true,
       type: "string",
     },
 

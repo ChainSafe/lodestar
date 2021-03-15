@@ -1,6 +1,6 @@
+import path from "path";
 import {IGlobalArgs} from "../../options";
 import {IGlobalPaths, getGlobalPaths} from "../../paths/global";
-import {joinIfRelative} from "../../util";
 
 export type IValidatorPaths = {
   validatorsDbDir: string;
@@ -22,7 +22,7 @@ export function getValidatorPaths(
   const globalPaths = getGlobalPaths(args);
 
   const rootDir = globalPaths.rootDir;
-  const validatorsDbDir = joinIfRelative(rootDir, args.validatorsDbDir || "validator-db");
+  const validatorsDbDir = args.validatorsDbDir || path.join(rootDir, "validator-db");
   return {
     ...globalPaths,
     validatorsDbDir,

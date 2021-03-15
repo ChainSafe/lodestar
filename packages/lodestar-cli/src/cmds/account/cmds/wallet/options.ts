@@ -9,7 +9,6 @@ export const accountWalletsOptions: ICliCommandOptions<IAccountWalletArgs> = {
   walletsDir: {
     description: "Directory for storing wallets.",
     defaultDescription: defaultAccountPaths.walletsDir,
-    normalize: true,
     type: "string",
   },
 };
