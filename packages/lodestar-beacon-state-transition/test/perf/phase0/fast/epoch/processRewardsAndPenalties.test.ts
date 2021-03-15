@@ -1,14 +1,14 @@
 import {config} from "@chainsafe/lodestar-config/mainnet";
-import {WinstonLogger} from "@chainsafe/lodestar-utils";
 import {generatePerformanceState, initBLS} from "../../../util";
 import {expect} from "chai";
 import {phase0} from "../../../../../src";
+import {profilerLogger} from "../../../../utils/logger";
 
 describe("processRewardsAndPenalties", function () {
   let state: phase0.fast.CachedValidatorsBeaconState;
   let epochCtx: phase0.EpochContext;
   let epochProcess: phase0.fast.IEpochProcess;
-  const logger = new WinstonLogger();
+  const logger = profilerLogger();
 
   before(async function () {
     this.timeout(0);

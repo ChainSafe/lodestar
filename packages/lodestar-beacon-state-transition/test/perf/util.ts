@@ -1,13 +1,14 @@
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import {Gwei, phase0} from "@chainsafe/lodestar-types";
 import {init} from "@chainsafe/bls";
-import {WinstonLogger, interopSecretKeys} from "@chainsafe/lodestar-utils";
+import {interopSecretKeys} from "@chainsafe/lodestar-utils";
 import {fromHexString, List, TreeBacked} from "@chainsafe/ssz";
 import {getBeaconProposerIndex} from "../../src/util/proposer";
+import {profilerLogger} from "../utils/logger";
 
 let archivedState: TreeBacked<phase0.BeaconState> | null = null;
 let signedBlock: TreeBacked<phase0.SignedBeaconBlock> | null = null;
-const logger = new WinstonLogger();
+const logger = profilerLogger();
 
 /**
  * This is generated from Medalla state 756416
