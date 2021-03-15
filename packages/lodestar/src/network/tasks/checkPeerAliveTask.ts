@@ -20,26 +20,26 @@ export class CheckPeerAliveTask {
 
   private interval?: NodeJS.Timeout;
 
-  public constructor(config: IBeaconConfig, modules: ICheckPeerAliveModules) {
+  constructor(config: IBeaconConfig, modules: ICheckPeerAliveModules) {
     this.config = config;
     this.network = modules.network;
     this.logger = modules.logger;
   }
 
-  public start(): void {
+  start(): void {
     this.interval = setInterval(
       this.run,
       this.config.params.SLOTS_PER_EPOCH * this.config.params.SECONDS_PER_SLOT * 1000
     );
   }
 
-  public stop(): void {
+  stop(): void {
     if (this.interval) {
       clearInterval(this.interval);
     }
   }
 
-  public run = async (): Promise<void> => {
+  run = async (): Promise<void> => {
     this.logger.verbose("Running CheckPeerAliveTask");
     const peers = this.network.getPeers().map((peer) => peer.id);
     const seq = this.network.metadata.seqNumber;

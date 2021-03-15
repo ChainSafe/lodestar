@@ -2,14 +2,10 @@ import {phase0} from "@chainsafe/lodestar-types";
 import {List, readOnlyMap} from "@chainsafe/ssz";
 import {bigIntMin, intDiv} from "@chainsafe/lodestar-utils";
 import {getRandaoMix} from "../../../util";
-import {EpochContext, IEpochProcess, CachedValidatorsBeaconState} from "../util";
+import {IEpochProcess, CachedBeaconState} from "../util";
 
-export function processFinalUpdates(
-  epochCtx: EpochContext,
-  process: IEpochProcess,
-  state: CachedValidatorsBeaconState
-): void {
-  const config = epochCtx.config;
+export function processFinalUpdates(state: CachedBeaconState<phase0.BeaconState>, process: IEpochProcess): void {
+  const {config, validators} = state;
   const currentEpoch = process.currentEpoch;
   const nextEpoch = currentEpoch + 1;
   const {
@@ -23,7 +19,7 @@ export function processFinalUpdates(
     MAX_EFFECTIVE_BALANCE,
     SLOTS_PER_HISTORICAL_ROOT,
     SLOTS_PER_EPOCH,
-  } = epochCtx.config.params;
+  } = config.params;
   const HYSTERESIS_INCREMENT = EFFECTIVE_BALANCE_INCREMENT / BigInt(HYSTERESIS_QUOTIENT);
   const DOWNWARD_THRESHOLD = HYSTERESIS_INCREMENT * BigInt(HYSTERESIS_DOWNWARD_MULTIPLIER);
   const UPWARD_THRESHOLD = HYSTERESIS_INCREMENT * BigInt(HYSTERESIS_UPWARD_MULTIPLIER);
@@ -43,7 +39,7 @@ export function processFinalUpdates(
     const balance = balances[i];
     const effectiveBalance = status.validator.effectiveBalance;
     if (balance + DOWNWARD_THRESHOLD < effectiveBalance || effectiveBalance + UPWARD_THRESHOLD < balance) {
-      state.updateValidator(i, {
+      validators.update(i, {
         effectiveBalance: bigIntMin(balance - (balance % EFFECTIVE_BALANCE_INCREMENT), MAX_EFFECTIVE_BALANCE),
       });
     }

@@ -1,6 +1,6 @@
-import {TreeBacked} from "@chainsafe/ssz";
 import {phase0} from "@chainsafe/lodestar-types";
 import {IEth1ForBlockProduction} from "./interface";
+import {CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
 
 /**
  * Disabled version of Eth1ForBlockProduction
@@ -12,7 +12,7 @@ export class Eth1ForBlockProductionDisabled implements IEth1ForBlockProduction {
    * May produce invalid blocks if deposits have to be added
    */
   async getEth1DataAndDeposits(
-    state: TreeBacked<phase0.BeaconState>
+    state: CachedBeaconState<phase0.BeaconState>
   ): Promise<{
     eth1Data: phase0.Eth1Data;
     deposits: phase0.Deposit[];

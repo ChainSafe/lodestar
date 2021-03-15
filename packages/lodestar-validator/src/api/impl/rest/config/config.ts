@@ -10,12 +10,12 @@ export class RestConfigApi implements IConfigApi {
 
   private readonly config: IBeaconConfig;
 
-  public constructor(config: IBeaconConfig, restUrl: string, logger: ILogger) {
+  constructor(config: IBeaconConfig, restUrl: string, logger: ILogger) {
     this.client = new HttpClient({urlPrefix: urlJoin(restUrl, "/eth/v1/config")}, {logger});
     this.config = config;
   }
 
-  public async getForkSchedule(): Promise<phase0.Fork[]> {
+  async getForkSchedule(): Promise<phase0.Fork[]> {
     const data = (await this.client.get<{data: Json}>("/fork_schedule")).data as [];
     return data.map((fork) => this.config.types.phase0.Fork.fromJson(fork));
   }

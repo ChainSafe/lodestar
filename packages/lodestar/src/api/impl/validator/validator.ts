@@ -7,7 +7,7 @@ import {computeStartSlotAtEpoch, computeSubnetForCommitteesAtSlot} from "@chains
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Bytes96, CommitteeIndex, Epoch, Root, phase0, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {assert, ILogger} from "@chainsafe/lodestar-utils";
-import {readOnlyForEach, TreeBacked} from "@chainsafe/ssz";
+import {readOnlyForEach} from "@chainsafe/ssz";
 import {IAttestationJob, IBeaconChain} from "../../../chain";
 import {assembleAttestationData} from "../../../chain/factory/attestation";
 import {assembleBlock} from "../../../chain/factory/block";
@@ -29,7 +29,7 @@ import {BeaconCommitteeSubscription, IValidatorApi} from "./interface";
  * See `@chainsafe/lodestar-validator/src/api` for the client implementation).
  */
 export class ValidatorApi implements IValidatorApi {
-  public namespace: ApiNamespace;
+  namespace: ApiNamespace;
 
   private config: IBeaconConfig;
   private chain: IBeaconChain;
@@ -39,7 +39,7 @@ export class ValidatorApi implements IValidatorApi {
   private sync: IBeaconSync;
   private logger: ILogger;
 
-  public constructor(
+  constructor(
     opts: Partial<IApiOptions>,
     modules: Pick<IApiModules, "config" | "chain" | "db" | "eth1" | "sync" | "network" | "logger">
   ) {
@@ -53,7 +53,7 @@ export class ValidatorApi implements IValidatorApi {
     this.logger = modules.logger;
   }
 
-  public async produceBlock(slot: Slot, randaoReveal: Bytes96, graffiti = ""): Promise<phase0.BeaconBlock> {
+  async produceBlock(slot: Slot, randaoReveal: Bytes96, graffiti = ""): Promise<phase0.BeaconBlock> {
     await checkSyncStatus(this.config, this.sync);
     return await assembleBlock(
       this.config,
@@ -66,57 +66,56 @@ export class ValidatorApi implements IValidatorApi {
     );
   }
 
-  public async produceAttestationData(committeeIndex: CommitteeIndex, slot: Slot): Promise<phase0.AttestationData> {
+  async produceAttestationData(committeeIndex: CommitteeIndex, slot: Slot): Promise<phase0.AttestationData> {
     try {
       await checkSyncStatus(this.config, this.sync);
       const headRoot = this.chain.forkChoice.getHeadRoot();
-      const {state, epochCtx} = await this.chain.regen.getBlockSlotState(headRoot, slot);
-      return assembleAttestationData(
-        epochCtx.config,
-        state.getOriginalState() as TreeBacked<phase0.BeaconState>,
-        headRoot,
-        slot,
-        committeeIndex
-      );
+      const state = await this.chain.regen.getBlockSlotState(headRoot, slot);
+      return assembleAttestationData(state.config, state, headRoot, slot, committeeIndex);
     } catch (e) {
       this.logger.warn("Failed to produce attestation data", e);
       throw e;
     }
   }
 
-  public async getProposerDuties(epoch: Epoch): Promise<phase0.ProposerDuty[]> {
+  async getProposerDuties(epoch: Epoch): Promise<phase0.ProposerDuty[]> {
     await checkSyncStatus(this.config, this.sync);
     assert.gte(epoch, 0, "Epoch must be positive");
     assert.lte(epoch, this.chain.clock.currentEpoch, "Must get proposer duties in current epoch");
-    const {state, epochCtx} = await this.chain.getHeadStateContextAtCurrentEpoch();
+    const state = await this.chain.getHeadStateAtCurrentEpoch();
     const startSlot = computeStartSlotAtEpoch(this.config, epoch);
     const duties: phase0.ProposerDuty[] = [];
 
     for (let slot = startSlot; slot < startSlot + this.config.params.SLOTS_PER_EPOCH; slot++) {
-      const blockProposerIndex = epochCtx.getBeaconProposer(slot);
+      const blockProposerIndex = state.getBeaconProposer(slot);
       duties.push({slot, validatorIndex: blockProposerIndex, pubkey: state.validators[blockProposerIndex].pubkey});
     }
     return duties;
   }
 
-  public async getAttesterDuties(epoch: number, validatorIndices: ValidatorIndex[]): Promise<phase0.AttesterDuty[]> {
+  async getAttesterDuties(epoch: number, validatorIndices: ValidatorIndex[]): Promise<phase0.AttesterDuty[]> {
     await checkSyncStatus(this.config, this.sync);
     if (validatorIndices.length === 0) throw new ApiError(400, "No validator to get attester duties");
     if (epoch > this.chain.clock.currentEpoch + 1)
       throw new ApiError(400, "Cannot get duties for epoch more than one ahead");
-    const {epochCtx, state} = await this.chain.getHeadStateContextAtCurrentEpoch();
+    const state = await this.chain.getHeadStateAtCurrentEpoch();
     return validatorIndices
       .map((validatorIndex) => {
         const validator = state.validators[validatorIndex];
         if (!validator) {
           throw new ApiError(400, `Validator index ${validatorIndex} not in state`);
         }
-        return assembleAttesterDuty(this.config, {pubkey: validator.pubkey, index: validatorIndex}, epochCtx, epoch);
+        return assembleAttesterDuty(
+          this.config,
+          {pubkey: validator.pubkey, index: validatorIndex},
+          state.epochCtx,
+          epoch
+        );
       })
       .filter((duty): duty is phase0.AttesterDuty => duty != null);
   }
 
-  public async getAggregatedAttestation(attestationDataRoot: Root, slot: Slot): Promise<phase0.Attestation> {
+  async getAggregatedAttestation(attestationDataRoot: Root, slot: Slot): Promise<phase0.Attestation> {
     await checkSyncStatus(this.config, this.sync);
     const attestations = await this.db.attestation.getAttestationsByDataRoot(slot, attestationDataRoot);
 
@@ -150,7 +149,7 @@ export class ValidatorApi implements IValidatorApi {
     };
   }
 
-  public async publishAggregateAndProofs(signedAggregateAndProofs: phase0.SignedAggregateAndProof[]): Promise<void> {
+  async publishAggregateAndProofs(signedAggregateAndProofs: phase0.SignedAggregateAndProof[]): Promise<void> {
     await checkSyncStatus(this.config, this.sync);
     await Promise.all(
       signedAggregateAndProofs.map(async (signedAggregateAndProof) => {
@@ -179,7 +178,7 @@ export class ValidatorApi implements IValidatorApi {
     );
   }
 
-  public async prepareBeaconCommitteeSubnet(subscriptions: BeaconCommitteeSubscription[]): Promise<void> {
+  async prepareBeaconCommitteeSubnet(subscriptions: BeaconCommitteeSubscription[]): Promise<void> {
     await checkSyncStatus(this.config, this.sync);
 
     for (const {isAggregator, slot, committeeIndex, committeesAtSlot} of subscriptions) {

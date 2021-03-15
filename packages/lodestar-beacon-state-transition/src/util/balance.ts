@@ -2,17 +2,17 @@
  * @module chain/stateTransition/util
  */
 
-import {phase0, Gwei, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {allForks, Gwei, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {bigIntMax} from "@chainsafe/lodestar-utils";
 import {getCurrentEpoch} from "./epoch";
 import {getActiveValidatorIndices} from "./validator";
-import {bigIntMax} from "@chainsafe/lodestar-utils";
 
 /**
  * Return the combined effective balance of the [[indices]].
  * `EFFECTIVE_BALANCE_INCREMENT` Gwei minimum to avoid divisions by zero.
  */
-export function getTotalBalance(config: IBeaconConfig, state: phase0.BeaconState, indices: ValidatorIndex[]): Gwei {
+export function getTotalBalance(config: IBeaconConfig, state: allForks.BeaconState, indices: ValidatorIndex[]): Gwei {
   return bigIntMax(
     config.params.EFFECTIVE_BALANCE_INCREMENT,
     indices.reduce(
@@ -26,14 +26,14 @@ export function getTotalBalance(config: IBeaconConfig, state: phase0.BeaconState
  * Return the combined effective balance of the active validators.
  * Note: `getTotalBalance` returns `EFFECTIVE_BALANCE_INCREMENT` Gwei minimum to avoid divisions by zero.
  */
-export function getTotalActiveBalance(config: IBeaconConfig, state: phase0.BeaconState): Gwei {
+export function getTotalActiveBalance(config: IBeaconConfig, state: allForks.BeaconState): Gwei {
   return getTotalBalance(config, state, getActiveValidatorIndices(state, getCurrentEpoch(config, state)));
 }
 
 /**
  * Increase the balance for a validator with the given ``index`` by ``delta``.
  */
-export function increaseBalance(state: phase0.BeaconState, index: ValidatorIndex, delta: Gwei): void {
+export function increaseBalance(state: allForks.BeaconState, index: ValidatorIndex, delta: Gwei): void {
   state.balances[index] = state.balances[index] + delta;
 }
 
@@ -42,7 +42,7 @@ export function increaseBalance(state: phase0.BeaconState, index: ValidatorIndex
  *
  * Set to ``0`` when underflow.
  */
-export function decreaseBalance(state: phase0.BeaconState, index: ValidatorIndex, delta: Gwei): void {
+export function decreaseBalance(state: allForks.BeaconState, index: ValidatorIndex, delta: Gwei): void {
   const currentBalance = state.balances[index];
   state.balances[index] = delta > currentBalance ? BigInt(0) : currentBalance - delta;
 }

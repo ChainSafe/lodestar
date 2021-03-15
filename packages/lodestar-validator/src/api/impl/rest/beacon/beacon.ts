@@ -9,15 +9,15 @@ import {RestBeaconStateApi} from "./state";
 import {RestBeaconPoolApi} from "./pool";
 
 export class RestBeaconApi implements IBeaconApi {
-  public readonly state: IBeaconStateApi;
-  public readonly blocks: IBeaconBlocksApi;
-  public readonly pool: IBeaconPoolApi;
+  readonly state: IBeaconStateApi;
+  readonly blocks: IBeaconBlocksApi;
+  readonly pool: IBeaconPoolApi;
 
   private readonly clientV2: HttpClient;
   private readonly logger: ILogger;
   private readonly config: IBeaconConfig;
 
-  public constructor(config: IBeaconConfig, restUrl: string, logger: ILogger) {
+  constructor(config: IBeaconConfig, restUrl: string, logger: ILogger) {
     this.clientV2 = new HttpClient({urlPrefix: urlJoin(restUrl, "/eth/v1/beacon")}, {logger});
     this.logger = logger;
     this.config = config;
@@ -26,7 +26,7 @@ export class RestBeaconApi implements IBeaconApi {
     this.pool = new RestBeaconPoolApi(this.config, this.clientV2, this.logger);
   }
 
-  public async getGenesis(): Promise<phase0.Genesis | null> {
+  async getGenesis(): Promise<phase0.Genesis | null> {
     try {
       const genesisResponse = await this.clientV2.get<{data: Json}>("/genesis");
       return this.config.types.phase0.Genesis.fromJson(genesisResponse.data, {case: "snake"});
@@ -36,10 +36,10 @@ export class RestBeaconApi implements IBeaconApi {
     }
   }
 
-  public async getChainHead(): Promise<phase0.BeaconBlock> {
+  async getChainHead(): Promise<phase0.BeaconBlock> {
     throw new Error("Method not implemented.");
   }
-  public async getBeaconState(): Promise<phase0.BeaconState> {
+  async getBeaconState(): Promise<phase0.BeaconState> {
     throw new Error("Method not implemented.");
   }
 }

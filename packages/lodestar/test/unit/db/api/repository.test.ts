@@ -26,7 +26,7 @@ const TestSSZType = new ContainerType<TestType>({
 });
 
 class TestRepository extends Repository<string, TestType> {
-  public constructor(db: IDatabaseController<Buffer, Buffer>) {
+  constructor(db: IDatabaseController<Buffer, Buffer>) {
     super(config, db, Bucket.phase0_depositEvent, TestSSZType);
   }
 }

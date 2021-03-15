@@ -1,15 +1,15 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {lightclient} from "@chainsafe/lodestar-types";
 import {
   GENESIS_EPOCH,
+  getBlockRoot,
   getCurrentEpoch,
   getPreviousEpoch,
-  getTotalBalance,
   getTotalActiveBalance,
-  getBlockRoot,
+  getTotalBalance,
 } from "../../..";
 import {TIMELY_TARGET_FLAG} from "../../constants";
 import {getUnslashedParticipatingIndices} from "../../state_accessor";
-import {lightclient} from "@chainsafe/lodestar-types";
 
 export function processJustificationAndFinalization(config: IBeaconConfig, state: lightclient.BeaconState): void {
   const currentEpoch = getCurrentEpoch(config, state);
@@ -18,6 +18,8 @@ export function processJustificationAndFinalization(config: IBeaconConfig, state
   }
   const previousEpoch = getPreviousEpoch(config, state);
   const bits = state.justificationBits;
+  const oldPreviousJustifiedCheckpoint = state.previousJustifiedCheckpoint;
+  const oldCurrentJustifiedCheckpoint = state.currentJustifiedCheckpoint;
 
   // Process justifications
   state.previousJustifiedCheckpoint = state.currentJustifiedCheckpoint;
@@ -57,8 +59,7 @@ export function processJustificationAndFinalization(config: IBeaconConfig, state
   }
 
   state.justificationBits = bits;
-  const oldPreviousJustifiedCheckpoint = state.previousJustifiedCheckpoint;
-  const oldCurrentJustifiedCheckpoint = state.currentJustifiedCheckpoint;
+
   // Process finalizations
   // The 2nd/3rd/4th most recent epochs are all justified, the 2nd using the 4th as source
   if (bits[1] && bits[2] && bits[3] && oldPreviousJustifiedCheckpoint.epoch + 3 === currentEpoch) {

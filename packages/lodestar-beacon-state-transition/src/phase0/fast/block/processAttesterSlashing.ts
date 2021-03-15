@@ -1,26 +1,25 @@
 import {phase0, ValidatorIndex} from "@chainsafe/lodestar-types";
 
 import {isSlashableValidator, isSlashableAttestationData} from "../../../util";
-import {CachedValidatorsBeaconState, EpochContext} from "../util";
+import {CachedBeaconState} from "../util";
 import {slashValidator} from "./slashValidator";
 import {isValidIndexedAttestation} from "./isValidIndexedAttestation";
 
 export function processAttesterSlashing(
-  epochCtx: EpochContext,
-  state: CachedValidatorsBeaconState,
+  state: CachedBeaconState<phase0.BeaconState>,
   attesterSlashing: phase0.AttesterSlashing,
   verifySignatures = true
 ): void {
-  const config = epochCtx.config;
+  const {config, epochCtx} = state;
   const attestation1 = attesterSlashing.attestation1;
   const attestation2 = attesterSlashing.attestation2;
   if (!isSlashableAttestationData(config, attestation1.data, attestation2.data)) {
     throw new Error("AttesterSlashing is not slashable");
   }
-  if (!isValidIndexedAttestation(epochCtx, state, attestation1, verifySignatures)) {
+  if (!isValidIndexedAttestation(state, attestation1, verifySignatures)) {
     throw new Error("AttesterSlashing attestation1 is not a valid IndexedAttestation");
   }
-  if (!isValidIndexedAttestation(epochCtx, state, attestation2, verifySignatures)) {
+  if (!isValidIndexedAttestation(state, attestation2, verifySignatures)) {
     throw new Error("AttesterSlashing attestation2 is not a valid IndexedAttestation");
   }
 
@@ -36,7 +35,7 @@ export function processAttesterSlashing(
   const validators = state.validators;
   for (const index of indices.sort((a, b) => a - b)) {
     if (isSlashableValidator(validators[index], epochCtx.currentShuffling.epoch)) {
-      slashValidator(epochCtx, state, index);
+      slashValidator(state, index);
       slashedAny = true;
     }
   }

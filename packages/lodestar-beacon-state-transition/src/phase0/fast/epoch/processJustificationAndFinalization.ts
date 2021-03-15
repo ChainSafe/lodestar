@@ -2,14 +2,13 @@ import {phase0} from "@chainsafe/lodestar-types";
 
 import {GENESIS_EPOCH} from "../../../constants";
 import {getBlockRoot} from "../../../util";
-import {EpochContext, IEpochProcess} from "../util";
+import {CachedBeaconState, IEpochProcess} from "../util";
 
 export function processJustificationAndFinalization(
-  epochCtx: EpochContext,
-  process: IEpochProcess,
-  state: phase0.BeaconState
+  state: CachedBeaconState<phase0.BeaconState>,
+  process: IEpochProcess
 ): void {
-  const config = epochCtx.config;
+  const config = state.config;
   const previousEpoch = process.prevEpoch;
   const currentEpoch = process.currentEpoch;
 

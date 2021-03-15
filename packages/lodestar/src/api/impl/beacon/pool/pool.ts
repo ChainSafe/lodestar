@@ -21,10 +21,7 @@ export class BeaconPoolApi implements IBeaconPoolApi {
   private readonly network: INetwork;
   private readonly chain: IBeaconChain;
 
-  public constructor(
-    opts: Partial<IApiOptions>,
-    modules: Pick<IApiModules, "config" | "chain" | "sync" | "network" | "db">
-  ) {
+  constructor(opts: Partial<IApiOptions>, modules: Pick<IApiModules, "config" | "chain" | "sync" | "network" | "db">) {
     this.config = modules.config;
     this.db = modules.db;
     this.sync = modules.sync;
@@ -32,7 +29,7 @@ export class BeaconPoolApi implements IBeaconPoolApi {
     this.chain = modules.chain;
   }
 
-  public async getAttestations(filters: Partial<IAttestationFilters> = {}): Promise<phase0.Attestation[]> {
+  async getAttestations(filters: Partial<IAttestationFilters> = {}): Promise<phase0.Attestation[]> {
     return (await this.db.attestation.values()).filter((attestation) => {
       if (filters.slot && filters.slot !== attestation.data.slot) {
         return false;
@@ -44,26 +41,22 @@ export class BeaconPoolApi implements IBeaconPoolApi {
     });
   }
 
-  public async submitAttestation(attestation: phase0.Attestation): Promise<void> {
+  async submitAttestation(attestation: phase0.Attestation): Promise<void> {
     await checkSyncStatus(this.config, this.sync);
     const attestationJob = {
       attestation,
       validSignature: false,
     } as IAttestationJob;
-    let attestationPreStateContext;
+    let attestationPreState;
     try {
-      attestationPreStateContext = await this.chain.regen.getCheckpointState(attestation.data.target);
+      attestationPreState = await this.chain.regen.getCheckpointState(attestation.data.target);
     } catch (e) {
       throw new AttestationError({
         code: AttestationErrorCode.MISSING_ATTESTATION_PRESTATE,
         job: attestationJob,
       });
     }
-    const subnet = phase0.fast.computeSubnetForAttestation(
-      this.config,
-      attestationPreStateContext.epochCtx,
-      attestation
-    );
+    const subnet = phase0.fast.computeSubnetForAttestation(this.config, attestationPreState.epochCtx, attestation);
     await validateGossipAttestation(this.config, this.chain, this.db, attestationJob, subnet);
     await Promise.all([
       this.network.gossip.publishBeaconAttestation(attestation, subnet),
@@ -71,29 +64,29 @@ export class BeaconPoolApi implements IBeaconPoolApi {
     ]);
   }
 
-  public async getAttesterSlashings(): Promise<phase0.AttesterSlashing[]> {
+  async getAttesterSlashings(): Promise<phase0.AttesterSlashing[]> {
     return this.db.attesterSlashing.values();
   }
 
-  public async submitAttesterSlashing(slashing: phase0.AttesterSlashing): Promise<void> {
+  async submitAttesterSlashing(slashing: phase0.AttesterSlashing): Promise<void> {
     await validateGossipAttesterSlashing(this.config, this.chain, this.db, slashing);
     await Promise.all([this.network.gossip.publishAttesterSlashing(slashing), this.db.attesterSlashing.add(slashing)]);
   }
 
-  public async getProposerSlashings(): Promise<phase0.ProposerSlashing[]> {
+  async getProposerSlashings(): Promise<phase0.ProposerSlashing[]> {
     return this.db.proposerSlashing.values();
   }
 
-  public async submitProposerSlashing(slashing: phase0.ProposerSlashing): Promise<void> {
+  async submitProposerSlashing(slashing: phase0.ProposerSlashing): Promise<void> {
     await validateGossipProposerSlashing(this.config, this.chain, this.db, slashing);
     await Promise.all([this.network.gossip.publishProposerSlashing(slashing), this.db.proposerSlashing.add(slashing)]);
   }
 
-  public async getVoluntaryExits(): Promise<phase0.SignedVoluntaryExit[]> {
+  async getVoluntaryExits(): Promise<phase0.SignedVoluntaryExit[]> {
     return this.db.voluntaryExit.values();
   }
 
-  public async submitVoluntaryExit(exit: phase0.SignedVoluntaryExit): Promise<void> {
+  async submitVoluntaryExit(exit: phase0.SignedVoluntaryExit): Promise<void> {
     await validateGossipVoluntaryExit(this.config, this.chain, this.db, exit);
     await Promise.all([this.network.gossip.publishVoluntaryExit(exit), this.db.voluntaryExit.add(exit)]);
   }

@@ -17,7 +17,7 @@ export async function validateGossipVoluntaryExit(
     });
   }
 
-  const {state} = await chain.regen.getCheckpointState({
+  const state = await chain.regen.getCheckpointState({
     root: chain.forkChoice.getHeadRoot(),
     epoch: voluntaryExit.message.epoch,
   });

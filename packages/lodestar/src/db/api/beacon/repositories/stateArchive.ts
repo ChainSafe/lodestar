@@ -1,36 +1,47 @@
-import {TreeBacked, CompositeType} from "@chainsafe/ssz";
+import {CompositeType, ITreeBacked} from "@chainsafe/ssz";
 import {phase0, Epoch, Root, Slot} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {bytesToInt, intToBytes} from "@chainsafe/lodestar-utils";
 import {IDatabaseController, Bucket, Repository, encodeKey} from "@chainsafe/lodestar-db";
 
-export class StateArchiveRepository extends Repository<Slot, TreeBacked<phase0.BeaconState>> {
-  public constructor(config: IBeaconConfig, db: IDatabaseController<Buffer, Buffer>) {
+/**
+ * A more relaxed form of `TreeBacked<T>`
+ *
+ * TreeBacked<T> creates incompatibilities with nested values
+ * (due to `TreeBacked<T>[keyof TreeBacked<T>]` not being equivilent to `T[keyof T]`)
+ *
+ * A future version of ssz should not recursively TreeBackedify values to avoid this issue
+ */
+// eslint-disable-next-line @typescript-eslint/ban-types
+export type RelaxedTreeBacked<T extends object> = ITreeBacked<T> & T;
+
+export class StateArchiveRepository extends Repository<Slot, RelaxedTreeBacked<phase0.BeaconState>> {
+  constructor(config: IBeaconConfig, db: IDatabaseController<Buffer, Buffer>) {
     super(
       config,
       db,
       Bucket.phase0_stateArchive,
-      (config.types.phase0.BeaconState as unknown) as CompositeType<TreeBacked<phase0.BeaconState>>
+      (config.types.phase0.BeaconState as unknown) as CompositeType<RelaxedTreeBacked<phase0.BeaconState>>
     );
   }
 
-  public async put(key: Slot, value: TreeBacked<phase0.BeaconState>): Promise<void> {
+  async put(key: Slot, value: RelaxedTreeBacked<phase0.BeaconState>): Promise<void> {
     await Promise.all([super.put(key, value), this.storeRootIndex(key, value.hashTreeRoot())]);
   }
 
-  public getId(state: TreeBacked<phase0.BeaconState>): Epoch {
+  getId(state: RelaxedTreeBacked<phase0.BeaconState>): Epoch {
     return state.slot;
   }
 
-  public decodeKey(data: Buffer): number {
+  decodeKey(data: Buffer): number {
     return bytesToInt((super.decodeKey(data) as unknown) as Uint8Array, "be");
   }
 
-  public decodeValue(data: Buffer): TreeBacked<phase0.BeaconState> {
+  decodeValue(data: Buffer): RelaxedTreeBacked<phase0.BeaconState> {
     return ((this.type as unknown) as CompositeType<phase0.BeaconState>).tree.deserialize(data);
   }
 
-  public async getByRoot(stateRoot: Root): Promise<TreeBacked<phase0.BeaconState> | null> {
+  async getByRoot(stateRoot: Root): Promise<RelaxedTreeBacked<phase0.BeaconState> | null> {
     const slot = await this.getSlotByRoot(stateRoot);
     if (slot !== null && Number.isInteger(slot)) {
       return this.get(slot);

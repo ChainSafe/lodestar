@@ -9,15 +9,15 @@ import {ConfigApi, IConfigApi} from "./config";
 import {LodestarApi, ILodestarApi} from "./lodestar";
 
 export class Api implements IApi {
-  public beacon: IBeaconApi;
-  public node: INodeApi;
-  public validator: IValidatorApi;
-  public events: IEventsApi;
-  public debug: IDebugApi;
-  public config: IConfigApi;
-  public lodestar: ILodestarApi;
+  beacon: IBeaconApi;
+  node: INodeApi;
+  validator: IValidatorApi;
+  events: IEventsApi;
+  debug: IDebugApi;
+  config: IConfigApi;
+  lodestar: ILodestarApi;
 
-  public constructor(opts: Partial<IApiOptions>, modules: IApiModules) {
+  constructor(opts: Partial<IApiOptions>, modules: IApiModules) {
     this.beacon = new BeaconApi(opts, modules);
     this.node = new NodeApi(opts, modules);
     this.validator = new ValidatorApi(opts, modules);

@@ -9,7 +9,7 @@ import {LocalClock} from "../../../../src/chain/clock/LocalClock";
 import {ChainEventEmitter} from "../../../../src/chain/emitter";
 import {Eth2Gossipsub, GossipType} from "../../../../src/network/gossip";
 import {BeaconDb} from "../../../../src/db";
-import {generateState} from "../../../utils/state";
+import {generateCachedState} from "../../../utils/state";
 import {testLogger} from "../../../utils/logger";
 
 describe("Attestation collector", function () {
@@ -38,7 +38,7 @@ describe("Attestation collector", function () {
       // @ts-ignore
       chain: {
         clock: realClock,
-        getHeadState: () => generateState(),
+        getHeadState: () => generateCachedState(),
         getForkName: () => "phase0",
         emitter,
       },
@@ -80,7 +80,7 @@ describe("Attestation collector", function () {
       // @ts-ignore
       chain: {
         clock: realClock,
-        getHeadState: () => generateState(),
+        getHeadState: () => generateCachedState(),
         getForkName: () => "phase0",
         emitter,
       },

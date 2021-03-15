@@ -1,7 +1,7 @@
 import {List, TreeBacked} from "@chainsafe/ssz";
 import {phase0, Root} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {initializeBeaconStateFromEth1} from "../../../chain/genesis/genesis";
+import {initializeBeaconStateFromEth1} from "@chainsafe/lodestar-beacon-state-transition";
 
 const INTEROP_BLOCK_HASH = Buffer.alloc(32, "B");
 const INTEROP_TIMESTAMP = Math.pow(2, 40);

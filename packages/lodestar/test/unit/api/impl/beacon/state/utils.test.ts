@@ -1,10 +1,9 @@
 import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {config} from "@chainsafe/lodestar-config/minimal";
-import {List, toHexString} from "@chainsafe/ssz";
+import {toHexString} from "@chainsafe/ssz";
 import {expect, use} from "chai";
 import chaiAsPromised from "chai-as-promised";
 import sinon, {SinonStubbedInstance} from "sinon";
-import {ApiStateContext} from "../../../../../../src/api/impl/beacon/state/interface";
 import {
   getEpochBeaconCommittees,
   resolveStateId,
@@ -16,14 +15,13 @@ import {generateBlockSummary} from "../../../../../utils/block";
 import {generateCachedState, generateState} from "../../../../../utils/state";
 import {StubbedBeaconDb} from "../../../../../utils/stub";
 import {StubbedBeaconChain} from "../../../../../utils/stub/chain";
-import {generateValidator} from "../../../../../utils/validator";
 import {setupApiImplTestServer, ApiImplTestModules} from "../../index.test";
+import {generateValidators} from "../../../../../utils/validator";
 
 use(chaiAsPromised);
 
 describe("beacon state api utils", function () {
   describe("resolve state id", function () {
-    const epochCtx = ({} as unknown) as phase0.EpochContext;
     let chainStub: StubbedBeaconChain;
     let dbStub: StubbedBeaconDb;
     let server: ApiImplTestModules;
@@ -39,7 +37,7 @@ describe("beacon state api utils", function () {
 
     it("resolve head state id - success", async function () {
       chainStub.forkChoice.getHead.returns(generateBlockSummary({stateRoot: Buffer.alloc(32, 1)}));
-      chainStub.stateCache.get.returns({state: generateCachedState(), epochCtx});
+      chainStub.stateCache.get.returns(generateCachedState());
       const state = await resolveStateId(chainStub, dbStub, "head");
       expect(state).to.not.be.null;
       expect(chainStub.forkChoice.getHead.calledOnce).to.be.true;
@@ -59,7 +57,7 @@ describe("beacon state api utils", function () {
       });
 
       it("resolve finalized state id - success", async function () {
-        chainStub.stateCache.get.returns({state: generateCachedState(), epochCtx});
+        chainStub.stateCache.get.returns(generateCachedState());
         const state = await resolveStateId(chainStub, dbStub, "finalized");
         expect(state).to.not.be.null;
         expect(chainStub.forkChoice.getFinalizedCheckpoint.calledOnce).to.be.true;
@@ -81,7 +79,7 @@ describe("beacon state api utils", function () {
       });
 
       it("resolve justified state id - success", async function () {
-        chainStub.stateCache.get.returns({state: generateCachedState(), epochCtx});
+        chainStub.stateCache.get.returns(generateCachedState());
         const state = await resolveStateId(chainStub, dbStub, "justified");
         expect(state).to.not.be.null;
         expect(chainStub.forkChoice.getJustifiedCheckpoint.calledOnce).to.be.true;
@@ -98,14 +96,14 @@ describe("beacon state api utils", function () {
     });
 
     it("resolve state by root", async function () {
-      chainStub.stateCache.get.returns({state: generateCachedState(), epochCtx});
+      chainStub.stateCache.get.returns(generateCachedState());
       const state = await resolveStateId(chainStub, dbStub, toHexString(Buffer.alloc(32, 1)));
       expect(state).to.not.be.null;
       expect(chainStub.stateCache.get.calledOnce).to.be.true;
     });
 
     it.skip("resolve finalized state by root", async function () {
-      chainStub.stateCache.get.returns({state: generateCachedState(), epochCtx});
+      chainStub.stateCache.get.returns(generateCachedState());
       const state = await resolveStateId(chainStub, dbStub, toHexString(Buffer.alloc(32, 1)));
       expect(state).to.be.null;
       expect(chainStub.stateCache.get.calledOnce).to.be.true;
@@ -120,7 +118,7 @@ describe("beacon state api utils", function () {
       chainStub.forkChoice.getCanonicalBlockSummaryAtSlot
         .withArgs(123)
         .returns(generateBlockSummary({stateRoot: Buffer.alloc(32, 1)}));
-      chainStub.stateCache.get.returns({state: generateCachedState(), epochCtx});
+      chainStub.stateCache.get.returns(generateCachedState());
       const state = await resolveStateId(chainStub, dbStub, "123");
       expect(state).to.not.be.null;
       expect(chainStub.forkChoice.getCanonicalBlockSummaryAtSlot.withArgs(123).calledOnce).to.be.true;
@@ -235,78 +233,32 @@ describe("beacon state api utils", function () {
       chainStub.clock = {
         currentEpoch: 1,
       } as IBeaconClock;
-      const stateContext = getApiContext();
-      const committees = getEpochBeaconCommittees(config, chainStub, stateContext, 1);
-      expect(committees).to.be.deep.equal(stateContext.epochCtx?.currentShuffling.committees);
+      const state = generateCachedState({}, config);
+      const committees = getEpochBeaconCommittees(config, chainStub, state, 1);
+      expect(committees).to.be.deep.equal(state.currentShuffling.committees);
     });
 
     it("previous epoch with epoch context", function () {
       chainStub.clock = {
         currentEpoch: 2,
       } as IBeaconClock;
-      const stateContext = getApiContext();
-      const committees = getEpochBeaconCommittees(config, chainStub, stateContext, 1);
-      expect(committees).to.be.deep.equal(stateContext.epochCtx?.previousShuffling.committees);
+      const state = generateCachedState({}, config);
+      const committees = getEpochBeaconCommittees(config, chainStub, state, 1);
+      expect(committees).to.be.deep.equal(state.previousShuffling.committees);
     });
 
     it("old/new epoch with epoch context", function () {
       chainStub.clock = {
         currentEpoch: 3,
       } as IBeaconClock;
-      const stateContext = getApiContext();
-      stateContext.state = generateState({
-        slot: 0,
-        validators: Array.from({length: 24}, () => generateValidator({activationEpoch: 0, exitEpoch: 10})) as List<
-          phase0.Validator
-        >,
-      });
-      const committees = getEpochBeaconCommittees(config, chainStub, stateContext, 1);
+      const state = generateCachedState(
+        {
+          validators: generateValidators(24, {activationEpoch: 0, exitEpoch: 10}),
+        },
+        config
+      );
+      const committees = getEpochBeaconCommittees(config, chainStub, state, 1);
       expect(committees[0][0][0]).to.not.be.undefined;
     });
-
-    it("no epoch context", function () {
-      chainStub.clock = {
-        currentEpoch: 1,
-      } as IBeaconClock;
-      const stateContext = getApiContext();
-      stateContext.state = generateState({
-        slot: 0,
-        validators: Array.from({length: 20}, () => generateValidator({activationEpoch: 1})) as List<phase0.Validator>,
-      });
-      const committees = getEpochBeaconCommittees(config, chainStub, stateContext, 1);
-      expect(committees[0][0][0]).to.not.be.undefined;
-    });
-
-    function getApiContext(): ApiStateContext {
-      return {
-        state: generateCachedState(),
-        epochCtx: {
-          currentShuffling: {
-            committees: [
-              [
-                [2, 5, 6],
-                [7, 19, 21],
-              ],
-              [
-                [1, 3, 4],
-                [8, 12, 22],
-              ],
-            ],
-          } as phase0.fast.IEpochShuffling,
-          previousShuffling: {
-            committees: [
-              [
-                [1, 2, 4],
-                [7, 19, 21],
-              ],
-              [
-                [1, 5, 9],
-                [8, 12, 22],
-              ],
-            ],
-          } as phase0.fast.IEpochShuffling,
-        } as phase0.EpochContext,
-      };
-    }
   });
 });

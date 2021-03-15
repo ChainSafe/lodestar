@@ -7,7 +7,7 @@ import bls from "@chainsafe/bls";
 import {bigIntToBytes} from "@chainsafe/lodestar-utils";
 import {config} from "@chainsafe/lodestar-config/minimal";
 import * as validatorUtils from "@chainsafe/lodestar-beacon-state-transition/lib/util/validator";
-import {phase0, getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
+import {getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import * as blockUtils from "@chainsafe/lodestar-beacon-state-transition/lib/phase0/fast/block/isValidIndexedAttestation";
 
 import {BeaconChain, IAttestationJob, IBeaconChain} from "../../../../src/chain";
@@ -229,12 +229,8 @@ describe("gossip aggregate and proof test", function () {
       },
     });
     const state = generateCachedState();
-    const epochCtx = sinon.createStubInstance(phase0.fast.EpochContext);
-    regen.getBlockSlotState.resolves({
-      state,
-      epochCtx: (epochCtx as unknown) as phase0.fast.EpochContext,
-    });
-    epochCtx.getBeaconCommittee.returns([]);
+    sinon.stub(state.epochCtx, "getBeaconCommittee").returns([]);
+    regen.getBlockSlotState.resolves(state);
     try {
       await validateGossipAggregateAndProof(config, chain, db, item, {
         attestation: item.message.aggregate,
@@ -244,8 +240,10 @@ describe("gossip aggregate and proof test", function () {
       expect(error.type).to.have.property("code", AttestationErrorCode.AGGREGATOR_NOT_IN_COMMITTEE);
     }
     expect(
-      epochCtx.getBeaconCommittee.withArgs(item.message.aggregate.data.slot, item.message.aggregate.data.index)
-        .calledOnce
+      (state.getBeaconCommittee as SinonStub).withArgs(
+        item.message.aggregate.data.slot,
+        item.message.aggregate.data.index
+      ).calledOnce
     ).to.be.true;
   });
 
@@ -259,12 +257,8 @@ describe("gossip aggregate and proof test", function () {
       },
     });
     const state = generateCachedState();
-    const epochCtx = sinon.createStubInstance(phase0.fast.EpochContext);
-    regen.getBlockSlotState.resolves({
-      state,
-      epochCtx: (epochCtx as unknown) as phase0.fast.EpochContext,
-    });
-    epochCtx.getBeaconCommittee.returns([item.message.aggregatorIndex]);
+    sinon.stub(state.epochCtx, "getBeaconCommittee").returns([item.message.aggregatorIndex]);
+    regen.getBlockSlotState.resolves(state);
     isAggregatorStub.returns(false);
     try {
       await validateGossipAggregateAndProof(config, chain, db, item, {
@@ -294,15 +288,10 @@ describe("gossip aggregate and proof test", function () {
       },
     });
     const state = generateCachedState();
-    const epochCtx = sinon.createStubInstance(phase0.fast.EpochContext);
-    epochCtx.index2pubkey = [];
     const privateKey = bls.SecretKey.fromBytes(bigIntToBytes(BigInt(1), 32));
-    epochCtx.index2pubkey[item.message.aggregatorIndex] = privateKey.toPublicKey();
-    regen.getBlockSlotState.resolves({
-      state,
-      epochCtx: (epochCtx as unknown) as phase0.fast.EpochContext,
-    });
-    epochCtx.getBeaconCommittee.returns([item.message.aggregatorIndex]);
+    state.index2pubkey[item.message.aggregatorIndex] = privateKey.toPublicKey();
+    sinon.stub(state.epochCtx, "getBeaconCommittee").returns([item.message.aggregatorIndex]);
+    regen.getBlockSlotState.resolves(state);
 
     await expectRejectedWithLodestarError(
       validateGossipAggregateAndProof(config, chain, db, item, {
@@ -330,15 +319,10 @@ describe("gossip aggregate and proof test", function () {
       },
     });
     const state = generateCachedState();
-    const epochCtx = sinon.createStubInstance(phase0.fast.EpochContext);
-    epochCtx.index2pubkey = [];
     const privateKey = bls.SecretKey.fromBytes(bigIntToBytes(BigInt(1), 32));
-    epochCtx.index2pubkey[item.message.aggregatorIndex] = privateKey.toPublicKey();
-    regen.getBlockSlotState.resolves({
-      state,
-      epochCtx: (epochCtx as unknown) as phase0.fast.EpochContext,
-    });
-    epochCtx.getBeaconCommittee.returns([item.message.aggregatorIndex]);
+    state.index2pubkey[item.message.aggregatorIndex] = privateKey.toPublicKey();
+    sinon.stub(state.epochCtx, "getBeaconCommittee").returns([item.message.aggregatorIndex]);
+    regen.getBlockSlotState.resolves(state);
 
     await expectRejectedWithLodestarError(
       validateGossipAggregateAndProof(config, chain, db, item, {
@@ -366,15 +350,10 @@ describe("gossip aggregate and proof test", function () {
       },
     });
     const state = generateCachedState();
-    const epochCtx = sinon.createStubInstance(phase0.fast.EpochContext);
-    epochCtx.index2pubkey = [];
     const privateKey = bls.SecretKey.fromBytes(bigIntToBytes(BigInt(1), 32));
-    epochCtx.index2pubkey[item.message.aggregatorIndex] = privateKey.toPublicKey();
-    regen.getBlockSlotState.resolves({
-      state,
-      epochCtx: (epochCtx as unknown) as phase0.fast.EpochContext,
-    });
-    epochCtx.getBeaconCommittee.returns([item.message.aggregatorIndex]);
+    state.index2pubkey[item.message.aggregatorIndex] = privateKey.toPublicKey();
+    sinon.stub(state.epochCtx, "getBeaconCommittee").returns([item.message.aggregatorIndex]);
+    regen.getBlockSlotState.resolves(state);
 
     await expectRejectedWithLodestarError(
       validateGossipAggregateAndProof(config, chain, db, item, {
@@ -402,15 +381,10 @@ describe("gossip aggregate and proof test", function () {
       },
     });
     const state = generateCachedState();
-    const epochCtx = sinon.createStubInstance(phase0.fast.EpochContext);
-    epochCtx.index2pubkey = [];
     const privateKey = bls.SecretKey.fromKeygen();
-    epochCtx.index2pubkey[item.message.aggregatorIndex] = privateKey.toPublicKey();
-    regen.getBlockSlotState.resolves({
-      state,
-      epochCtx: (epochCtx as unknown) as phase0.fast.EpochContext,
-    });
-    epochCtx.getBeaconCommittee.returns([item.message.aggregatorIndex]);
+    state.index2pubkey[item.message.aggregatorIndex] = privateKey.toPublicKey();
+    sinon.stub(state.epochCtx, "getBeaconCommittee").returns([item.message.aggregatorIndex]);
+    regen.getBlockSlotState.resolves(state);
 
     expect(
       await validateGossipAggregateAndProof(config, chain, db, item, {

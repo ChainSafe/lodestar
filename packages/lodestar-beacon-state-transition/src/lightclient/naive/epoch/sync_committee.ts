@@ -1,7 +1,7 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {lightclient} from "@chainsafe/lodestar-types";
-import {getCurrentEpoch} from "../../../util";
 import {getSyncCommittee} from "../..";
+import {getCurrentEpoch} from "../../../util";
 
 /**
  * Call to ``proces_sync_committee_updates`` added to ``process_epoch`` in HF1

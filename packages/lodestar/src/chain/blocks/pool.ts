@@ -32,7 +32,7 @@ export class BlockPool {
     this.blocksBySlot = new Map();
   }
 
-  public addByParent(signedBlock: phase0.SignedBeaconBlock): void {
+  addByParent(signedBlock: phase0.SignedBeaconBlock): void {
     // put block in two indices:
     // blocks
     const blockKey = this.getBlockKey(signedBlock);
@@ -50,7 +50,7 @@ export class BlockPool {
     blocksWithParent.add(blockKey);
   }
 
-  public addBySlot(signedBlock: phase0.SignedBeaconBlock): void {
+  addBySlot(signedBlock: phase0.SignedBeaconBlock): void {
     // put block in two indices:
     // blocks
     const blockKey = this.getBlockKey(signedBlock);
@@ -68,7 +68,7 @@ export class BlockPool {
     blocksAtSlot.add(blockKey);
   }
 
-  public remove(signedBlock: phase0.SignedBeaconBlock): void {
+  remove(signedBlock: phase0.SignedBeaconBlock): void {
     // remove block from three indices:
     // blocks
     const blockKey = this.getBlockKey(signedBlock);
@@ -97,20 +97,20 @@ export class BlockPool {
     }
   }
 
-  public getTotalPendingBlocks(): number {
+  getTotalPendingBlocks(): number {
     return this.blocks.size;
   }
 
-  public has(blockRoot: Root): boolean {
+  has(blockRoot: Root): boolean {
     return Boolean(this.blocks.get(this.getBlockKeyByRoot(blockRoot)));
   }
 
-  public getByParent(parentRoot: Root): Uint8Array[] {
+  getByParent(parentRoot: Root): Uint8Array[] {
     const hexArr = Array.from(this.blocksByParent.get(toHexString(parentRoot))?.values() ?? []);
     return hexArr.map((hex) => fromHexString(hex));
   }
 
-  public getBySlot(slot: Slot): Uint8Array[] {
+  getBySlot(slot: Slot): Uint8Array[] {
     const slots = Array.from(this.blocksBySlot.keys()).filter((cachedSlot) => cachedSlot <= slot);
     const hexArr: string[] = [];
     for (const cachedSlot of slots) {

@@ -1,6 +1,6 @@
 import {phase0} from "@chainsafe/lodestar-types";
 import {getRandaoRevealSignatureSet} from "../block/processRandao";
-import {EpochContext, getBlockSignatureSet} from "../util";
+import {CachedBeaconState, getBlockSignatureSet} from "../util";
 import {ISignatureSet} from "./types";
 import {getProposerSlashingsSignatureSets} from "./proposerSlashings";
 import {getAttesterSlashingsSignatureSets} from "./attesterSlashings";
@@ -15,14 +15,10 @@ export * from "./verify";
  * Deposits are not included because they can legally have invalid signatures.
  */
 export function getAllBlockSignatureSets(
-  epochCtx: EpochContext,
-  state: phase0.BeaconState,
+  state: CachedBeaconState<phase0.BeaconState>,
   signedBlock: phase0.SignedBeaconBlock
 ): ISignatureSet[] {
-  return [
-    getBlockSignatureSet(epochCtx, state, signedBlock),
-    ...getAllBlockSignatureSetsExceptProposer(epochCtx, state, signedBlock),
-  ];
+  return [getBlockSignatureSet(state, signedBlock), ...getAllBlockSignatureSetsExceptProposer(state, signedBlock)];
 }
 
 /**
@@ -30,15 +26,14 @@ export function getAllBlockSignatureSets(
  * Useful since block proposer signature is verified beforehand on gossip validation
  */
 export function getAllBlockSignatureSetsExceptProposer(
-  epochCtx: EpochContext,
-  state: phase0.BeaconState,
+  state: CachedBeaconState<phase0.BeaconState>,
   signedBlock: phase0.SignedBeaconBlock
 ): ISignatureSet[] {
   return [
-    getRandaoRevealSignatureSet(epochCtx, state, signedBlock.message),
-    ...getProposerSlashingsSignatureSets(epochCtx, state, signedBlock),
-    ...getAttesterSlashingsSignatureSets(epochCtx, state, signedBlock),
-    ...getAttestationsSignatureSets(epochCtx, state, signedBlock),
-    ...getVoluntaryExitsSignatureSets(epochCtx, state, signedBlock),
+    getRandaoRevealSignatureSet(state, signedBlock.message),
+    ...getProposerSlashingsSignatureSets(state, signedBlock),
+    ...getAttesterSlashingsSignatureSets(state, signedBlock),
+    ...getAttestationsSignatureSets(state, signedBlock),
+    ...getVoluntaryExitsSignatureSets(state, signedBlock),
   ];
 }

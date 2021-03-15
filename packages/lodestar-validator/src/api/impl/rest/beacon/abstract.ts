@@ -7,7 +7,7 @@ export abstract class RestApi {
   protected readonly logger: ILogger;
   protected readonly config: IBeaconConfig;
 
-  public constructor(config: IBeaconConfig, client: HttpClient, logger: ILogger) {
+  constructor(config: IBeaconConfig, client: HttpClient, logger: ILogger) {
     this.client = client;
     this.logger = logger;
     this.config = config;

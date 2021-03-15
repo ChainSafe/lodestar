@@ -7,9 +7,9 @@ import {ILogger} from "@chainsafe/lodestar-utils";
  * Logs REST API request/response messages.
  */
 export class FastifyLogger {
-  public readonly stream: Stream;
+  readonly stream: Stream;
 
-  public readonly serializers = {
+  readonly serializers = {
     req: (request: IncomingMessage & FastifyRequest) => {
       return {
         // eslint-disable-next-line max-len

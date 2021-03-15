@@ -10,11 +10,11 @@ import {IDatabaseController, Bucket, Repository} from "@chainsafe/lodestar-db";
  * Removed when included on chain or old
  */
 export class AttestationRepository extends Repository<Uint8Array, phase0.Attestation> {
-  public constructor(config: IBeaconConfig, db: IDatabaseController<Buffer, Buffer>) {
+  constructor(config: IBeaconConfig, db: IDatabaseController<Buffer, Buffer>) {
     super(config, db, Bucket.phase0_attestation, config.types.phase0.Attestation);
   }
 
-  public async getCommiteeAttestations(epoch: Epoch, committeeIndex: CommitteeIndex): Promise<phase0.Attestation[]> {
+  async getCommiteeAttestations(epoch: Epoch, committeeIndex: CommitteeIndex): Promise<phase0.Attestation[]> {
     const attestations = await this.values();
     return attestations.filter((attestation) => {
       return (
@@ -26,7 +26,7 @@ export class AttestationRepository extends Repository<Uint8Array, phase0.Attesta
     });
   }
 
-  public async getAttestationsByDataRoot(slot: Slot, attestationDataRoot: Root): Promise<phase0.Attestation[]> {
+  async getAttestationsByDataRoot(slot: Slot, attestationDataRoot: Root): Promise<phase0.Attestation[]> {
     const attestations = await this.values();
     //TODO: add secondary index slot => root => AttestationData
     return attestations.filter((attestation) => {
@@ -37,12 +37,12 @@ export class AttestationRepository extends Repository<Uint8Array, phase0.Attesta
     });
   }
 
-  public async geAttestationsByTargetEpoch(epoch: Epoch): Promise<phase0.Attestation[]> {
+  async geAttestationsByTargetEpoch(epoch: Epoch): Promise<phase0.Attestation[]> {
     const attestations = (await this.values()) || [];
     return attestations.filter((attestation) => attestation.data.target.epoch === epoch);
   }
 
-  public async pruneFinalized(finalizedEpoch: Epoch): Promise<void> {
+  async pruneFinalized(finalizedEpoch: Epoch): Promise<void> {
     const finalizedEpochStartSlot = computeStartSlotAtEpoch(this.config, finalizedEpoch);
     const attestations: phase0.Attestation[] = await this.values();
     await this.batchRemove(

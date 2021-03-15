@@ -1,5 +1,5 @@
 import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
-import {config} from "@chainsafe/lodestar-config/mainnet";
+import {config} from "@chainsafe/lodestar-config/minimal";
 import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {phase0} from "@chainsafe/lodestar-types";
 import {expect} from "chai";

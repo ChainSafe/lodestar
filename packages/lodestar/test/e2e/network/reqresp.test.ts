@@ -2,7 +2,7 @@ import sinon from "sinon";
 import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
 import {AbortController} from "abort-controller";
-import {config} from "@chainsafe/lodestar-config/mainnet";
+import {config} from "@chainsafe/lodestar-config/minimal";
 import {LogLevel, sleep, WinstonLogger} from "@chainsafe/lodestar-utils";
 import {phase0} from "@chainsafe/lodestar-types";
 import {Method, ReqRespEncoding} from "../../../src/constants";

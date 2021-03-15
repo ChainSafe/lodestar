@@ -2,17 +2,18 @@
  * @module chain/stateTransition/util
  */
 
-import {Epoch, Slot, Root, phase0} from "@chainsafe/lodestar-types";
+import {Epoch, Slot, Root, phase0, lightclient, allForks} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {assert} from "@chainsafe/lodestar-utils";
 
 import {ZERO_HASH} from "../constants";
 import {computeStartSlotAtEpoch} from "./epoch";
+import {ContainerType} from "@chainsafe/ssz";
 
 /**
  * Return the block root at a recent [[slot]].
  */
-export function getBlockRootAtSlot(config: IBeaconConfig, state: phase0.BeaconState, slot: Slot): Root {
+export function getBlockRootAtSlot(config: IBeaconConfig, state: allForks.BeaconState, slot: Slot): Root {
   assert.lt(slot, state.slot, "Cannot get block root for slot in the future");
   assert.lte(
     state.slot,
@@ -25,20 +26,25 @@ export function getBlockRootAtSlot(config: IBeaconConfig, state: phase0.BeaconSt
 /**
  * Return the block root at the start of a recent [[epoch]].
  */
-export function getBlockRoot(config: IBeaconConfig, state: phase0.BeaconState, epoch: Epoch): Root {
+export function getBlockRoot(config: IBeaconConfig, state: allForks.BeaconState, epoch: Epoch): Root {
   return getBlockRootAtSlot(config, state, computeStartSlotAtEpoch(config, epoch));
 }
 /**
  * Return the block header corresponding to a block with ``state_root`` set to ``ZERO_HASH``.
  */
-export function getTemporaryBlockHeader(config: IBeaconConfig, block: phase0.BeaconBlock): phase0.BeaconBlockHeader {
+export function getTemporaryBlockHeader(
+  config: IBeaconConfig,
+  block: phase0.BeaconBlock | lightclient.BeaconBlock
+): phase0.BeaconBlockHeader {
   return {
     slot: block.slot,
     proposerIndex: block.proposerIndex,
     parentRoot: block.parentRoot,
     // `state_root` is zeroed and overwritten in the next `process_slot` call
     stateRoot: ZERO_HASH,
-    bodyRoot: config.types.phase0.BeaconBlockBody.hashTreeRoot(block.body),
+    bodyRoot: (config.getTypes(block.slot).BeaconBlockBody as ContainerType<allForks.BeaconBlockBody>).hashTreeRoot(
+      block.body
+    ),
   };
 }
 

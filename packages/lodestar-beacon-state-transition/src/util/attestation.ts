@@ -4,7 +4,14 @@
 
 import bls from "@chainsafe/bls";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {ATTESTATION_SUBNET_COUNT, phase0, Slot, ValidatorIndex, CommitteeIndex} from "@chainsafe/lodestar-types";
+import {
+  ATTESTATION_SUBNET_COUNT,
+  phase0,
+  Slot,
+  ValidatorIndex,
+  CommitteeIndex,
+  allForks,
+} from "@chainsafe/lodestar-types";
 import {isSorted} from "@chainsafe/lodestar-utils";
 import {BitList, List} from "@chainsafe/ssz";
 import {getBeaconCommittee, getCommitteeCountAtSlot} from "./committee";
@@ -33,7 +40,7 @@ export function isSlashableAttestationData(
  */
 export function isValidIndexedAttestation(
   config: IBeaconConfig,
-  state: phase0.BeaconState,
+  state: allForks.BeaconState,
   indexedAttestation: phase0.IndexedAttestation,
   verifySignature = true
 ): boolean {
@@ -65,7 +72,7 @@ export function isValidIndexedAttestation(
  */
 export function getAttestingIndices(
   config: IBeaconConfig,
-  state: phase0.BeaconState,
+  state: allForks.BeaconState,
   data: phase0.AttestationData,
   bits: BitList
 ): ValidatorIndex[] {
@@ -87,7 +94,7 @@ export function getAttestingIndicesFromCommittee(committee: ValidatorIndex[], bi
  */
 export function getIndexedAttestation(
   config: IBeaconConfig,
-  state: phase0.BeaconState,
+  state: allForks.BeaconState,
   attestation: phase0.Attestation
 ): phase0.IndexedAttestation {
   const attestingIndices = getAttestingIndices(config, state, attestation.data, attestation.aggregationBits);
@@ -124,7 +131,7 @@ export function isUnaggregatedAttestation(attestation: phase0.Attestation): bool
  */
 export function computeSubnetForAttestation(
   config: IBeaconConfig,
-  state: phase0.BeaconState,
+  state: allForks.BeaconState,
   attestation: phase0.Attestation
 ): number {
   const {slot, index} = attestation.data;
@@ -136,7 +143,7 @@ export function computeSubnetForAttestation(
  */
 export function computeSubnetForSlot(
   config: IBeaconConfig,
-  state: phase0.BeaconState,
+  state: allForks.BeaconState,
   slot: number,
   committeeIndex: number
 ): number {

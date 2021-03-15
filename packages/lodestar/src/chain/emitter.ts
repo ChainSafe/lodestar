@@ -4,8 +4,9 @@ import StrictEventEmitter from "strict-event-emitter-types";
 import {phase0, Epoch, Slot, Version} from "@chainsafe/lodestar-types";
 import {IBlockSummary} from "@chainsafe/lodestar-fork-choice";
 import {IForkName} from "@chainsafe/lodestar-config";
-import {IBlockJob, ITreeStateContext} from "./interface";
+import {IBlockJob} from "./interface";
 import {AttestationError, BlockError} from "./errors";
+import {CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
 
 /**
  * Important chain events that occur during normal chain operation.
@@ -39,13 +40,13 @@ export enum ChainEvent {
   /**
    * This event signals that the chain has processed (or reprocessed) a checkpoint state with an updated justified checkpoint.
    *
-   * This event is a derivative of the `checkpoint` event. Eg: in cases where the `checkpoint` stateContext has an updated justified checkpoint, this event is triggered.
+   * This event is a derivative of the `checkpoint` event. Eg: in cases where the `checkpoint` state has an updated justified checkpoint, this event is triggered.
    */
   justified = "justified",
   /**
    * This event signals that the chain has processed (or reprocessed) a checkpoint state with an updated finalized checkpoint.
    *
-   * This event is a derivative of the `checkpoint` event. Eg: in cases where the `checkpoint` stateContext has an updated finalized checkpoint, this event is triggered.
+   * This event is a derivative of the `checkpoint` event. Eg: in cases where the `checkpoint` state has an updated finalized checkpoint, this event is triggered.
    */
   finalized = "finalized",
   /**
@@ -108,15 +109,15 @@ export interface IChainEvents {
   [ChainEvent.attestation]: (attestation: phase0.Attestation) => void;
   [ChainEvent.block]: (
     signedBlock: phase0.SignedBeaconBlock,
-    postStateContext: ITreeStateContext,
+    postState: CachedBeaconState<phase0.BeaconState>,
     job: IBlockJob
   ) => void;
   [ChainEvent.errorAttestation]: (error: AttestationError) => void;
   [ChainEvent.errorBlock]: (error: BlockError) => void;
 
-  [ChainEvent.checkpoint]: (checkpoint: phase0.Checkpoint, stateContext: ITreeStateContext) => void;
-  [ChainEvent.justified]: (checkpoint: phase0.Checkpoint, stateContext: ITreeStateContext) => void;
-  [ChainEvent.finalized]: (checkpoint: phase0.Checkpoint, stateContext: ITreeStateContext) => void;
+  [ChainEvent.checkpoint]: (checkpoint: phase0.Checkpoint, state: CachedBeaconState<phase0.BeaconState>) => void;
+  [ChainEvent.justified]: (checkpoint: phase0.Checkpoint, state: CachedBeaconState<phase0.BeaconState>) => void;
+  [ChainEvent.finalized]: (checkpoint: phase0.Checkpoint, state: CachedBeaconState<phase0.BeaconState>) => void;
   [ChainEvent.forkVersion]: (version: Version, fork: IForkName) => void;
 
   [ChainEvent.clockSlot]: (slot: Slot) => void;

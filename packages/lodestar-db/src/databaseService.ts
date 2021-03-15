@@ -15,11 +15,11 @@ export abstract class DatabaseService {
     this.db = opts.controller;
   }
 
-  public async start(): Promise<void> {
+  async start(): Promise<void> {
     await this.db.start();
   }
 
-  public async stop(): Promise<void> {
+  async stop(): Promise<void> {
     await this.db.stop();
   }
 }

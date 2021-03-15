@@ -5,8 +5,7 @@ import {expect} from "chai";
 import {phase0} from "../../../../../src";
 
 describe("processRewardsAndPenalties", function () {
-  let state: phase0.fast.CachedValidatorsBeaconState;
-  let epochCtx: phase0.EpochContext;
+  let state: phase0.fast.CachedBeaconState<phase0.BeaconState>;
   let epochProcess: phase0.fast.IEpochProcess;
   const logger = new WinstonLogger();
 
@@ -16,21 +15,19 @@ describe("processRewardsAndPenalties", function () {
     const origState = await generatePerformanceState();
     // go back 1 slot to process epoch
     origState.slot -= 1;
-    epochCtx = new phase0.EpochContext(config);
-    epochCtx.loadState(origState);
-    state = phase0.fast.createCachedValidatorsBeaconState(origState);
+    state = phase0.fast.createCachedBeaconState(config, origState);
   });
 
   it("should processRewardsAndPenalties", function () {
     this.timeout(0);
-    epochProcess = phase0.fast.prepareEpochProcessState(epochCtx, state);
+    epochProcess = phase0.fast.prepareEpochProcessState(state);
     let minTime = Number.MAX_SAFE_INTEGER;
     let maxTime = 0;
     const MAX_TRY = 10000;
     const from = process.hrtime.bigint();
     for (let i = 0; i < MAX_TRY; i++) {
       const start = Date.now();
-      phase0.fast.processRewardsAndPenalties(epochCtx, epochProcess, state);
+      phase0.fast.processRewardsAndPenalties(state, epochProcess);
       const duration = Date.now() - start;
       if (duration < minTime) minTime = duration;
       if (duration > maxTime) maxTime = duration;

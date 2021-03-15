@@ -15,14 +15,14 @@ export class DebugBeaconApi implements IDebugBeaconApi {
   private readonly db: IBeaconDb;
   private readonly logger: ILogger;
 
-  public constructor(opts: Partial<IApiOptions>, modules: Pick<IApiModules, "config" | "logger" | "chain" | "db">) {
+  constructor(opts: Partial<IApiOptions>, modules: Pick<IApiModules, "config" | "logger" | "chain" | "db">) {
     this.config = modules.config;
     this.logger = modules.logger;
     this.chain = modules.chain;
     this.db = modules.db;
   }
 
-  public async getHeads(): Promise<phase0.SlotRoot[] | null> {
+  async getHeads(): Promise<phase0.SlotRoot[] | null> {
     try {
       return this.chain.forkChoice
         .getHeads()
@@ -33,10 +33,9 @@ export class DebugBeaconApi implements IDebugBeaconApi {
     }
   }
 
-  public async getState(stateId: StateId): Promise<phase0.BeaconState | null> {
+  async getState(stateId: StateId): Promise<phase0.BeaconState | null> {
     try {
-      const stateContext = await resolveStateId(this.chain, this.db, stateId);
-      return stateContext?.state || null;
+      return await resolveStateId(this.chain, this.db, stateId);
     } catch (e) {
       this.logger.error("Failed to resolve state", {state: stateId, error: e});
       throw e;

@@ -2,19 +2,15 @@ import {phase0} from "@chainsafe/lodestar-types";
 import {readOnlyMap, List} from "@chainsafe/ssz";
 
 import {GENESIS_EPOCH} from "../../../constants";
-import {EpochContext, IEpochProcess} from "../util";
+import {CachedBeaconState, IEpochProcess} from "../util";
 import {getAttestationDeltas} from "./getAttestationDeltas";
 
-export function processRewardsAndPenalties(
-  epochCtx: EpochContext,
-  process: IEpochProcess,
-  state: phase0.BeaconState
-): void {
+export function processRewardsAndPenalties(state: CachedBeaconState<phase0.BeaconState>, process: IEpochProcess): void {
   // No rewards are applied at the end of `GENESIS_EPOCH` because rewards are for work done in the previous epoch
   if (process.currentEpoch === GENESIS_EPOCH) {
     return;
   }
-  const [rewards, penalties] = getAttestationDeltas(epochCtx, process, state);
+  const [rewards, penalties] = getAttestationDeltas(state, process);
   const newBalances = readOnlyMap(state.balances, (balance, i) => {
     const newBalance = balance + BigInt(rewards[i] - penalties[i]);
     return newBalance < 0 ? BigInt(0) : newBalance;

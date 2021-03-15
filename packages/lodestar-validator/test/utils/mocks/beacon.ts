@@ -15,16 +15,16 @@ export interface IMockBeaconApiOpts {
 }
 
 export class MockBeaconApi implements IBeaconApi {
-  public state: SinonStubbedInstance<IBeaconStateApi>;
-  public blocks: SinonStubbedInstance<IBeaconBlocksApi>;
-  public pool: SinonStubbedInstance<IBeaconPoolApi>;
+  state: SinonStubbedInstance<IBeaconStateApi>;
+  blocks: SinonStubbedInstance<IBeaconBlocksApi>;
+  pool: SinonStubbedInstance<IBeaconPoolApi>;
 
   private version: Bytes32;
   private fork: phase0.Fork;
   private head: phase0.BeaconBlock;
   private genesisTime: Number64;
 
-  public constructor(opts?: IMockBeaconApiOpts) {
+  constructor(opts?: IMockBeaconApiOpts) {
     this.version = (opts && opts.version) || Buffer.alloc(0);
     this.fork = (opts && opts.fork) || {previousVersion: Buffer.alloc(0), currentVersion: Buffer.alloc(0), epoch: 0};
     this.head = (opts && opts.head) || generateEmptyBlock();
@@ -34,11 +34,11 @@ export class MockBeaconApi implements IBeaconApi {
     this.pool = sinon.createStubInstance(RestBeaconPoolApi);
   }
 
-  public async getValidator(): Promise<any> {
+  async getValidator(): Promise<any> {
     throw new Error("Method not implemented.");
   }
 
-  public async getGenesis(): Promise<phase0.Genesis | null> {
+  async getGenesis(): Promise<phase0.Genesis | null> {
     return {
       genesisTime: BigInt(this.genesisTime),
       genesisForkVersion: Buffer.alloc(8, 1),

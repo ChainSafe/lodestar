@@ -1,6 +1,6 @@
 import {aggregatePublicKeys, verifyAggregate} from "@chainsafe/bls";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {Epoch, lightclient, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {Epoch, lightclient, ValidatorIndex, allForks} from "@chainsafe/lodestar-types";
 import {assert, intDiv, intToBytes} from "@chainsafe/lodestar-utils";
 import {hash} from "@chainsafe/ssz";
 
@@ -22,8 +22,9 @@ const MAX_RANDOM_BYTE = BigInt(2 ** 8 - 1);
 
 export function processSyncCommittee(
   config: IBeaconConfig,
-  state: lightclient.BeaconState,
-  block: lightclient.BeaconBlock
+  state: lightclient.BeaconState & phase0.BeaconState,
+  block: lightclient.BeaconBlock,
+  verifySignatures = true
 ): void {
   const previousSlot = Math.max(state.slot, 1) - 1;
   const currentEpoch = getCurrentEpoch(config, state);
@@ -43,14 +44,16 @@ export function processSyncCommittee(
     getBlockRootAtSlot(config, state, previousSlot),
     domain
   );
-  assert.true(
-    verifyAggregate(
-      participantPubkeys.map((pubkey) => pubkey.valueOf() as Uint8Array),
-      signingRoot,
-      block.body.syncCommitteeSignature.valueOf() as Uint8Array
-    ),
-    "Sync committee signature invalid"
-  );
+  if (verifySignatures) {
+    assert.true(
+      verifyAggregate(
+        participantPubkeys.map((pubkey) => pubkey.valueOf() as Uint8Array),
+        signingRoot,
+        block.body.syncCommitteeSignature.valueOf() as Uint8Array
+      ),
+      "Sync committee signature invalid"
+    );
+  }
 
   let participantRewards = BigInt(0);
   const activeValidatorCount = BigInt(getActiveValidatorIndices(state, currentEpoch).length);
@@ -73,7 +76,7 @@ export function processSyncCommittee(
  */
 export function getSyncCommitteeIndices(
   config: IBeaconConfig,
-  state: lightclient.BeaconState,
+  state: allForks.BeaconState,
   epoch: Epoch
 ): ValidatorIndex[] {
   const baseEpoch =
@@ -88,7 +91,7 @@ export function getSyncCommitteeIndices(
   while (syncCommitteeIndices.length < config.params.SYNC_COMMITTEE_SIZE) {
     const shuffledIndex = computeShuffledIndex(config, i % activeValidatorCount, activeValidatorCount, seed);
     const candidateIndex = activeValidatorIndices[shuffledIndex];
-    const randomByte = hash(Buffer.concat([seed, intToBytes(intDiv(i, activeValidatorCount), 4, "le")]))[i % 32];
+    const randomByte = hash(Buffer.concat([seed, intToBytes(intDiv(i, 32), 8, "le")]))[i % 32];
     const effectiveBalance = state.validators[candidateIndex].effectiveBalance;
     if (effectiveBalance * MAX_RANDOM_BYTE >= config.params.MAX_EFFECTIVE_BALANCE * BigInt(randomByte)) {
       syncCommitteeIndices.push(candidateIndex);
@@ -103,7 +106,7 @@ export function getSyncCommitteeIndices(
  */
 export function getSyncCommittee(
   config: IBeaconConfig,
-  state: lightclient.BeaconState,
+  state: allForks.BeaconState,
   epoch: Epoch
 ): lightclient.SyncCommittee {
   const indices = getSyncCommitteeIndices(config, state, epoch);

@@ -85,6 +85,7 @@ module.exports = {
     "@typescript-eslint/semi": "error",
     "@typescript-eslint/type-annotation-spacing": "error",
     "@typescript-eslint/no-floating-promises": "error",
+    "@typescript-eslint/explicit-member-accessibility": ["error", {accessibility: "no-public"}],
     "import/no-extraneous-dependencies": [
       "error",
       {

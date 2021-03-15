@@ -30,33 +30,29 @@ export abstract class Repository<I extends Id, T> {
     this.type = type;
   }
 
-  public encodeValue(value: T): Buffer {
+  encodeValue(value: T): Buffer {
     return this.type.serialize(value) as Buffer;
   }
 
-  public decodeValue(data: Buffer): T {
+  decodeValue(data: Buffer): T {
     return this.type.deserialize(data);
   }
 
-  public encodeKey(id: I): Buffer {
+  encodeKey(id: I): Buffer {
     return _encodeKey(this.bucket, id);
   }
 
-  public decodeKey(key: Buffer): I {
+  decodeKey(key: Buffer): I {
     return (key.slice(BUCKET_LENGTH) as Uint8Array) as I;
   }
 
-  public async get(id: I): Promise<T | null> {
-    try {
-      const value = await this.db.get(this.encodeKey(id));
-      if (!value) return null;
-      return this.decodeValue(value);
-    } catch (e) {
-      return null;
-    }
+  async get(id: I): Promise<T | null> {
+    const value = await this.db.get(this.encodeKey(id));
+    if (!value) return null;
+    return this.decodeValue(value);
   }
 
-  public async getBinary(id: I): Promise<Buffer | null> {
+  async getBinary(id: I): Promise<Buffer | null> {
     try {
       const value = await this.db.get(this.encodeKey(id));
       if (!value) return null;
@@ -66,36 +62,36 @@ export abstract class Repository<I extends Id, T> {
     }
   }
 
-  public async has(id: I): Promise<boolean> {
+  async has(id: I): Promise<boolean> {
     return (await this.get(id)) !== null;
   }
 
-  public async put(id: I, value: T): Promise<void> {
+  async put(id: I, value: T): Promise<void> {
     await this.db.put(this.encodeKey(id), this.encodeValue(value));
   }
 
-  public async putBinary(id: I, value: Buffer): Promise<void> {
+  async putBinary(id: I, value: Buffer): Promise<void> {
     await this.db.put(this.encodeKey(id), value);
   }
 
-  public async delete(id: I): Promise<void> {
+  async delete(id: I): Promise<void> {
     await this.db.delete(this.encodeKey(id));
   }
 
   // The Id can be inferred from the value
-  public getId(value: T): I {
+  getId(value: T): I {
     return this.type.hashTreeRoot(value) as I;
   }
 
-  public async add(value: T): Promise<void> {
+  async add(value: T): Promise<void> {
     await this.put(this.getId(value), value);
   }
 
-  public async remove(value: T): Promise<void> {
+  async remove(value: T): Promise<void> {
     await this.delete(this.getId(value));
   }
 
-  public async batchPut(items: ArrayLike<IKeyValue<I, T>>): Promise<void> {
+  async batchPut(items: ArrayLike<IKeyValue<I, T>>): Promise<void> {
     await this.db.batchPut(
       Array.from({length: items.length}, (ignored, i) => ({
         key: this.encodeKey(items[i].key),
@@ -105,7 +101,7 @@ export abstract class Repository<I extends Id, T> {
   }
 
   // Similar to batchPut but we support value as Buffer
-  public async batchPutBinary(items: ArrayLike<IKeyValue<I, Buffer>>): Promise<void> {
+  async batchPutBinary(items: ArrayLike<IKeyValue<I, Buffer>>): Promise<void> {
     await this.db.batchPut(
       Array.from({length: items.length}, (ignored, i) => ({
         key: this.encodeKey(items[i].key),
@@ -114,11 +110,11 @@ export abstract class Repository<I extends Id, T> {
     );
   }
 
-  public async batchDelete(ids: ArrayLike<I>): Promise<void> {
+  async batchDelete(ids: ArrayLike<I>): Promise<void> {
     await this.db.batchDelete(Array.from({length: ids.length}, (ignored, i) => this.encodeKey(ids[i])));
   }
 
-  public async batchAdd(values: ArrayLike<T>): Promise<void> {
+  async batchAdd(values: ArrayLike<T>): Promise<void> {
     await this.batchPut(
       Array.from({length: values.length}, (ignored, i) => ({
         key: this.getId(values[i]),
@@ -127,40 +123,40 @@ export abstract class Repository<I extends Id, T> {
     );
   }
 
-  public async batchRemove(values: ArrayLike<T>): Promise<void> {
+  async batchRemove(values: ArrayLike<T>): Promise<void> {
     await this.batchDelete(Array.from({length: values.length}, (ignored, i) => this.getId(values[i])));
   }
 
-  public async keys(opts?: IFilterOptions<I>): Promise<I[]> {
+  async keys(opts?: IFilterOptions<I>): Promise<I[]> {
     const data = await this.db.keys(this.dbFilterOptions(opts));
     return (data || []).map((data) => this.decodeKey(data));
   }
-  public async *keysStream(opts?: IFilterOptions<I>): AsyncIterable<I> {
+  async *keysStream(opts?: IFilterOptions<I>): AsyncIterable<I> {
     const keysStream = this.db.keysStream(this.dbFilterOptions(opts));
     const decodeKey = this.decodeKey.bind(this);
     for await (const key of keysStream) {
       yield decodeKey(key);
     }
   }
-  public async values(opts?: IFilterOptions<I>): Promise<T[]> {
+  async values(opts?: IFilterOptions<I>): Promise<T[]> {
     const data = await this.db.values(this.dbFilterOptions(opts));
     return (data || []).map((data) => this.decodeValue(data));
   }
-  public async *valuesStream(opts?: IFilterOptions<I>): AsyncIterable<T> {
+  async *valuesStream(opts?: IFilterOptions<I>): AsyncIterable<T> {
     const valuesStream = this.db.valuesStream(this.dbFilterOptions(opts));
     const decodeValue = this.decodeValue.bind(this);
     for await (const value of valuesStream) {
       yield decodeValue(value);
     }
   }
-  public async entries(opts?: IFilterOptions<I>): Promise<IKeyValue<I, T>[]> {
+  async entries(opts?: IFilterOptions<I>): Promise<IKeyValue<I, T>[]> {
     const data = await this.db.entries(this.dbFilterOptions(opts));
     return (data || []).map((data) => ({
       key: this.decodeKey(data.key),
       value: this.decodeValue(data.value),
     }));
   }
-  public async *entriesStream(opts?: IFilterOptions<I>): AsyncIterable<IKeyValue<I, T>> {
+  async *entriesStream(opts?: IFilterOptions<I>): AsyncIterable<IKeyValue<I, T>> {
     const entriesStream = this.db.entriesStream(this.dbFilterOptions(opts));
     const decodeKey = this.decodeKey.bind(this);
     const decodeValue = this.decodeValue.bind(this);
@@ -172,7 +168,7 @@ export abstract class Repository<I extends Id, T> {
     }
   }
 
-  public async firstKey(): Promise<I | null> {
+  async firstKey(): Promise<I | null> {
     const keys = await this.keys({limit: 1});
     if (!keys.length) {
       return null;
@@ -180,7 +176,7 @@ export abstract class Repository<I extends Id, T> {
     return keys[0];
   }
 
-  public async lastKey(): Promise<I | null> {
+  async lastKey(): Promise<I | null> {
     const keys = await this.keys({limit: 1, reverse: true});
     if (!keys.length) {
       return null;
@@ -188,7 +184,7 @@ export abstract class Repository<I extends Id, T> {
     return keys[0];
   }
 
-  public async firstValue(): Promise<T | null> {
+  async firstValue(): Promise<T | null> {
     const values = await this.values({limit: 1});
     if (!values.length) {
       return null;
@@ -196,7 +192,7 @@ export abstract class Repository<I extends Id, T> {
     return values[0];
   }
 
-  public async lastValue(): Promise<T | null> {
+  async lastValue(): Promise<T | null> {
     const values = await this.values({limit: 1, reverse: true});
     if (!values.length) {
       return null;
@@ -204,7 +200,7 @@ export abstract class Repository<I extends Id, T> {
     return values[0];
   }
 
-  public async firstEntry(): Promise<IKeyValue<I, T> | null> {
+  async firstEntry(): Promise<IKeyValue<I, T> | null> {
     const entries = await this.entries({limit: 1});
     if (!entries.length) {
       return null;
@@ -212,7 +208,7 @@ export abstract class Repository<I extends Id, T> {
     return entries[0];
   }
 
-  public async lastEntry(): Promise<IKeyValue<I, T> | null> {
+  async lastEntry(): Promise<IKeyValue<I, T> | null> {
     const entries = await this.entries({limit: 1, reverse: true});
     if (!entries.length) {
       return null;

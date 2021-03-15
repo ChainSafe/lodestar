@@ -14,18 +14,18 @@ export class MockConfigApi implements IConfigApi {
     this.config = opts.config;
   }
 
-  public async getForkSchedule(): Promise<phase0.Fork[]> {
+  async getForkSchedule(): Promise<phase0.Fork[]> {
     return [];
   }
 
-  public async getDepositContract(): Promise<phase0.Contract> {
+  async getDepositContract(): Promise<phase0.Contract> {
     return {
       chainId: this.config.params.DEPOSIT_CHAIN_ID,
       address: this.config.params.DEPOSIT_CONTRACT_ADDRESS,
     };
   }
 
-  public async getSpec(): Promise<IBeaconParams> {
+  async getSpec(): Promise<IBeaconParams> {
     return this.config.params;
   }
 }

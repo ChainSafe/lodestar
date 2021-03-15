@@ -1,7 +1,6 @@
 import {Number64, Root, Slot} from "@chainsafe/lodestar-types";
-import {TreeBacked} from "@chainsafe/ssz";
 import {IForkName} from "@chainsafe/lodestar-config";
-import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
+import {phase0, CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 
 import {IBeaconClock} from "./clock/interface";
@@ -10,12 +9,6 @@ import {IStateRegenerator} from "./regen";
 import {BlockPool} from "./blocks";
 import {AttestationPool} from "./attestation";
 import {StateContextCache, CheckpointStateCache} from "./stateCache";
-
-// Lodestar specifc state context
-export interface ITreeStateContext {
-  state: phase0.fast.CachedValidatorsBeaconState;
-  epochCtx: phase0.fast.EpochContext;
-}
 
 interface IProcessBlock {
   /**
@@ -72,9 +65,7 @@ export interface IBeaconChain {
    */
   close(): void;
 
-  getHeadStateContext(): ITreeStateContext;
-  getHeadState(): TreeBacked<phase0.BeaconState>;
-  getHeadEpochContext(): phase0.fast.EpochContext;
+  getHeadState(): CachedBeaconState<phase0.BeaconState>;
   /**
    * Get ForkDigest from the head state
    */
@@ -90,11 +81,11 @@ export interface IBeaconChain {
   getGenesisTime(): Number64;
   getStatus(): phase0.Status;
 
-  getHeadStateContextAtCurrentEpoch(): Promise<ITreeStateContext>;
-  getHeadStateContextAtCurrentSlot(): Promise<ITreeStateContext>;
+  getHeadStateAtCurrentEpoch(): Promise<CachedBeaconState<phase0.BeaconState>>;
+  getHeadStateAtCurrentSlot(): Promise<CachedBeaconState<phase0.BeaconState>>;
   getHeadBlock(): Promise<phase0.SignedBeaconBlock | null>;
 
-  getStateContextByBlockRoot(blockRoot: Root): Promise<ITreeStateContext | null>;
+  getStateByBlockRoot(blockRoot: Root): Promise<CachedBeaconState<phase0.BeaconState> | null>;
 
   getFinalizedCheckpoint(): phase0.Checkpoint;
 

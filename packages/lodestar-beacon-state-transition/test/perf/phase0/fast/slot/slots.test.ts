@@ -7,8 +7,7 @@ import {initBLS, generatePerformanceState} from "../../../util";
 describe("Process Slots Performance Test", function () {
   this.timeout(0);
   const logger = new WinstonLogger();
-  let state: phase0.fast.CachedValidatorsBeaconState;
-  let epochCtx: phase0.fast.EpochContext;
+  let state: phase0.fast.CachedBeaconState<phase0.BeaconState>;
 
   before(async () => {
     await initBLS();
@@ -16,16 +15,14 @@ describe("Process Slots Performance Test", function () {
 
   beforeEach(async () => {
     const origState = await generatePerformanceState();
-    epochCtx = new phase0.fast.EpochContext(config);
-    epochCtx.loadState(origState);
-    state = phase0.fast.createCachedValidatorsBeaconState(origState);
+    state = phase0.fast.createCachedBeaconState(config, origState);
   });
 
   it("process 1 empty epoch", async () => {
     const numSlot = 32;
     logger.profile(`Process ${numSlot} slots`);
     const start = Date.now();
-    phase0.fast.processSlots(epochCtx, state, state.slot + numSlot);
+    phase0.fast.processSlots(state, state.slot + numSlot);
     logger.profile(`Process ${numSlot} slots`);
     expect(Date.now() - start).lt(570);
   });
@@ -34,7 +31,7 @@ describe("Process Slots Performance Test", function () {
     const numSlot = 64;
     logger.profile(`Process ${numSlot} slots`);
     const start = Date.now();
-    phase0.fast.processSlots(epochCtx, state, state.slot + numSlot);
+    phase0.fast.processSlots(state, state.slot + numSlot);
     logger.profile(`Process ${numSlot} slots`);
     expect(Date.now() - start).lt(1200);
   });
@@ -43,7 +40,7 @@ describe("Process Slots Performance Test", function () {
     const numSlot = 128;
     logger.profile(`Process ${numSlot} slots`);
     const start = Date.now();
-    phase0.fast.processSlots(epochCtx, state, state.slot + numSlot);
+    phase0.fast.processSlots(state, state.slot + numSlot);
     logger.profile(`Process ${numSlot} slots`);
     expect(Date.now() - start).lt(2000);
   });

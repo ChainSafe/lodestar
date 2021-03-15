@@ -3,11 +3,11 @@ export class RoundRobinArray<T> {
 
   private index = 0;
 
-  public constructor(array: T[]) {
+  constructor(array: T[]) {
     this.array = this.shuffle(array);
   }
 
-  public next(): T | null {
+  next(): T | null {
     const item = this.array[this.index++];
     if (item) {
       return item;

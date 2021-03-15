@@ -61,7 +61,7 @@ export class BeaconReqRespHandler implements IReqRespHandler {
   private metrics?: IBeaconMetrics;
   private logger: ILogger;
 
-  public constructor({config, db, chain, network, metrics, logger}: IReqRespHandlerModules) {
+  constructor({config, db, chain, network, metrics, logger}: IReqRespHandlerModules) {
     this.config = config;
     this.db = db;
     this.chain = chain;
@@ -70,14 +70,14 @@ export class BeaconReqRespHandler implements IReqRespHandler {
     this.logger = logger;
   }
 
-  public async start(): Promise<void> {
+  async start(): Promise<void> {
     this.network.reqResp.registerHandler(this.onRequest.bind(this));
     this.network.on(NetworkEvent.peerConnect, this.handshake);
     const myStatus = this.chain.getStatus();
     await syncPeersStatus(this.network, myStatus);
   }
 
-  public async stop(): Promise<void> {
+  async stop(): Promise<void> {
     this.network.off(NetworkEvent.peerConnect, this.handshake);
     await Promise.all(
       this.network
@@ -93,7 +93,7 @@ export class BeaconReqRespHandler implements IReqRespHandler {
     this.network.reqResp.unregisterHandler();
   }
 
-  public async *onRequest(
+  async *onRequest(
     method: Method,
     requestBody: phase0.RequestBody,
     peerId: PeerId

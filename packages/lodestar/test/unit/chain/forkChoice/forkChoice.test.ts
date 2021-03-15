@@ -1,7 +1,7 @@
 import {ChainEventEmitter, computeAnchorCheckpoint, LodestarForkChoice} from "../../../../src/chain";
 import {generateState} from "../../../utils/state";
 import {config} from "@chainsafe/lodestar-config/minimal";
-import {Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {Gwei, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {generateSignedBlock} from "../../../utils/block";
 import {computeEpochAtSlot, getTemporaryBlockHeader, phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {expect} from "chai";
@@ -9,7 +9,10 @@ import {List} from "@chainsafe/ssz";
 
 describe("LodestarForkChoice", function () {
   let forkChoice: LodestarForkChoice;
-  const anchorState = generateState();
+  const anchorState = generateState({
+    validators: ([] as unknown) as List<phase0.Validator>,
+    balances: ([] as unknown) as List<Gwei>,
+  });
   // Jan 01 2020
   anchorState.genesisTime = 1577836800;
 

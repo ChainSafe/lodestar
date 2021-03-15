@@ -1,11 +1,11 @@
-import {ByteVector, toHexString, TreeBacked} from "@chainsafe/ssz";
+import {ByteVector, toHexString} from "@chainsafe/ssz";
 import {phase0, Epoch} from "@chainsafe/lodestar-types";
-import {ITreeStateContext} from "../interface";
+import {CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
 
 const MAX_STATES = 96;
 
 /**
- * In memory cache of BeaconState and connected EpochContext
+ * In memory cache of CachedBeaconState
  *
  * Similar API to Repository
  */
@@ -13,9 +13,9 @@ export class StateContextCache {
   /**
    * Max number of states allowed in the cache
    */
-  public maxStates: number;
+  maxStates: number;
 
-  private cache: Record<string, ITreeStateContext>;
+  private cache: Record<string, CachedBeaconState<phase0.BeaconState>>;
   /**
    * Epoch -> Set<blockRoot>
    */
@@ -27,20 +27,20 @@ export class StateContextCache {
     this.maxStates = maxStates;
   }
 
-  public get(root: ByteVector): ITreeStateContext | null {
+  get(root: ByteVector): CachedBeaconState<phase0.BeaconState> | null {
     const item = this.cache[toHexString(root)];
     if (!item) {
       return null;
     }
-    return this.clone(item);
+    return item.clone();
   }
 
-  public add(item: ITreeStateContext): void {
-    const key = toHexString((item.state.getOriginalState() as TreeBacked<phase0.BeaconState>).hashTreeRoot());
+  add(item: CachedBeaconState<phase0.BeaconState>): void {
+    const key = toHexString(item.hashTreeRoot());
     if (this.cache[key]) {
       return;
     }
-    this.cache[key] = this.clone(item);
+    this.cache[key] = item.clone();
     const epoch = item.epochCtx.currentShuffling.epoch;
     if (this.epochIndex[epoch]) {
       this.epochIndex[epoch].add(key);
@@ -49,7 +49,7 @@ export class StateContextCache {
     }
   }
 
-  public delete(root: ByteVector): void {
+  delete(root: ByteVector): void {
     const key = toHexString(root);
     const item = this.cache[key];
     if (!item) return;
@@ -57,15 +57,15 @@ export class StateContextCache {
     delete this.cache[key];
   }
 
-  public batchDelete(roots: ByteVector[]): void {
+  batchDelete(roots: ByteVector[]): void {
     roots.map((root) => this.delete(root));
   }
 
-  public clear(): void {
+  clear(): void {
     this.cache = {};
   }
 
-  public get size(): number {
+  get size(): number {
     return Object.keys(this.cache).length;
   }
 
@@ -73,7 +73,7 @@ export class StateContextCache {
    * TODO make this more robust.
    * Without more thought, this currently breaks our assumptions about recent state availablity
    */
-  public prune(headStateRoot: ByteVector): void {
+  prune(headStateRoot: ByteVector): void {
     const keys = Object.keys(this.cache);
     if (keys.length > this.maxStates) {
       const headStateRootHex = toHexString(headStateRoot);
@@ -91,7 +91,7 @@ export class StateContextCache {
   /**
    * Prune per finalized epoch.
    */
-  public async deleteAllBeforeEpoch(finalizedEpoch: Epoch): Promise<void> {
+  async deleteAllBeforeEpoch(finalizedEpoch: Epoch): Promise<void> {
     for (const epoch of Object.keys(this.epochIndex).map(Number)) {
       if (epoch < finalizedEpoch) {
         this.deleteAllEpochItems(epoch);
@@ -103,8 +103,8 @@ export class StateContextCache {
    * Should only use this with care as this is expensive.
    * @param epoch
    */
-  public valuesUnsafe(): ITreeStateContext[] {
-    return Object.values(this.cache).map((item) => this.clone(item));
+  valuesUnsafe(): CachedBeaconState<phase0.BeaconState>[] {
+    return Object.values(this.cache).map((item) => item.clone());
   }
 
   private deleteAllEpochItems(epoch: Epoch): void {
@@ -112,12 +112,5 @@ export class StateContextCache {
       delete this.cache[hexRoot];
     }
     delete this.epochIndex[epoch];
-  }
-
-  private clone(item: ITreeStateContext): ITreeStateContext {
-    return {
-      state: item.state.clone(),
-      epochCtx: item.epochCtx.copy(),
-    };
   }
 }

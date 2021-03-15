@@ -1,8 +1,14 @@
 import {List, readOnlyForEach, readOnlyMap} from "@chainsafe/ssz";
-import {Epoch, ValidatorIndex, Gwei, phase0} from "@chainsafe/lodestar-types";
+import {Epoch, ValidatorIndex, Gwei, phase0, allForks} from "@chainsafe/lodestar-types";
 import {intDiv} from "@chainsafe/lodestar-utils";
 
-import {computeActivationExitEpoch, getBlockRootAtSlot, computeStartSlotAtEpoch, getChurnLimit} from "../../../util";
+import {
+  computeActivationExitEpoch,
+  getBlockRootAtSlot,
+  computeStartSlotAtEpoch,
+  getChurnLimit,
+  isActiveValidator,
+} from "../../../util";
 import {FAR_FUTURE_EPOCH} from "../../../constants";
 import {
   IAttesterStatus,
@@ -18,9 +24,7 @@ import {
   FLAG_CURR_HEAD_ATTESTER,
 } from "./attesterStatus";
 import {IEpochStakeSummary} from "./epochStakeSummary";
-import {isActiveIFlatValidator} from "./flatValidator";
-import {CachedValidatorsBeaconState} from "./interface";
-import {EpochContext} from "./epochContext";
+import {CachedBeaconState} from "./cachedBeaconState";
 
 /**
  * The AttesterStatus (and FlatValidator under status.validator) objects and
@@ -71,10 +75,11 @@ export function createIEpochProcess(): IEpochProcess {
   };
 }
 
-export function prepareEpochProcessState(epochCtx: EpochContext, state: CachedValidatorsBeaconState): IEpochProcess {
+export function prepareEpochProcessState<T extends allForks.BeaconState>(state: CachedBeaconState<T>): IEpochProcess {
   const out = createIEpochProcess();
 
-  const config = epochCtx.config;
+  const {config, epochCtx, validators} = state;
+  const forkName = config.getForkName(state.slot);
   const rootType = config.types.Root;
   const {
     EPOCHS_PER_SLASHINGS_VECTOR,
@@ -91,7 +96,7 @@ export function prepareEpochProcessState(epochCtx: EpochContext, state: CachedVa
   let exitQueueEnd = computeActivationExitEpoch(config, currentEpoch);
 
   let activeCount = 0;
-  state.flatValidators().readOnlyForEach((v, i) => {
+  validators.forEach((v, i) => {
     const status = createIAttesterStatus(v);
 
     if (v.slashed) {
@@ -102,11 +107,11 @@ export function prepareEpochProcessState(epochCtx: EpochContext, state: CachedVa
       status.flags |= FLAG_UNSLASHED;
     }
 
-    if (isActiveIFlatValidator(v, prevEpoch) || (v.slashed && prevEpoch + 1 < v.withdrawableEpoch)) {
+    if (isActiveValidator(v, prevEpoch) || (v.slashed && prevEpoch + 1 < v.withdrawableEpoch)) {
       status.flags |= FLAG_ELIGIBLE_ATTESTER;
     }
 
-    const active = isActiveIFlatValidator(v, currentEpoch);
+    const active = isActiveValidator(v, currentEpoch);
     if (active) {
       status.active = true;
       out.totalActiveStake += v.effectiveBalance;
@@ -224,22 +229,24 @@ export function prepareEpochProcessState(epochCtx: EpochContext, state: CachedVa
       }
     });
   };
-  statusProcessEpoch(
-    out.statuses,
-    state.previousEpochAttestations,
-    prevEpoch,
-    FLAG_PREV_SOURCE_ATTESTER,
-    FLAG_PREV_TARGET_ATTESTER,
-    FLAG_PREV_HEAD_ATTESTER
-  );
-  statusProcessEpoch(
-    out.statuses,
-    state.currentEpochAttestations,
-    currentEpoch,
-    FLAG_CURR_SOURCE_ATTESTER,
-    FLAG_CURR_TARGET_ATTESTER,
-    FLAG_CURR_HEAD_ATTESTER
-  );
+  if (forkName === "phase0") {
+    statusProcessEpoch(
+      out.statuses,
+      ((state as unknown) as CachedBeaconState<phase0.BeaconState>).previousEpochAttestations,
+      prevEpoch,
+      FLAG_PREV_SOURCE_ATTESTER,
+      FLAG_PREV_TARGET_ATTESTER,
+      FLAG_PREV_HEAD_ATTESTER
+    );
+    statusProcessEpoch(
+      out.statuses,
+      ((state as unknown) as CachedBeaconState<phase0.BeaconState>).currentEpochAttestations,
+      currentEpoch,
+      FLAG_CURR_SOURCE_ATTESTER,
+      FLAG_CURR_TARGET_ATTESTER,
+      FLAG_CURR_HEAD_ATTESTER
+    );
+  }
 
   let prevSourceUnslStake = BigInt(0);
   let prevTargetUnslStake = BigInt(0);

@@ -5,7 +5,7 @@ import {config} from "@chainsafe/lodestar-config/minimal";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {phase0, Uint64, Root} from "@chainsafe/lodestar-types";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
-import {initializeBeaconStateFromEth1} from "@chainsafe/lodestar/lib/chain/genesis/genesis";
+import {initializeBeaconStateFromEth1} from "@chainsafe/lodestar-beacon-state-transition";
 
 import {SPEC_TEST_LOCATION} from "../../../utils/specTestCases";
 

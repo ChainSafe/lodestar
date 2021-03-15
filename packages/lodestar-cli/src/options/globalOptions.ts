@@ -15,7 +15,6 @@ export const defaultNetwork: NetworkName = "mainnet";
 const globalSingleOptions: ICliCommandOptions<IGlobalSingleArgs> = {
   rootDir: {
     description: "Lodestar root directory",
-    normalize: true,
     type: "string",
   },
 

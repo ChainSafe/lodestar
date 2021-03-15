@@ -20,7 +20,7 @@ export class LocalClock implements IBeaconClock {
   private readonly signal: AbortSignal;
   private _currentSlot: number;
 
-  public constructor({
+  constructor({
     config,
     genesisTime,
     emitter,
@@ -40,7 +40,7 @@ export class LocalClock implements IBeaconClock {
     this.signal.addEventListener("abort", () => clearTimeout(this.timeoutId), {once: true});
   }
 
-  public get currentSlot(): Slot {
+  get currentSlot(): Slot {
     return getCurrentSlot(this.config, this.genesisTime);
   }
 
@@ -48,17 +48,17 @@ export class LocalClock implements IBeaconClock {
    * If it's too close to next slot given MAXIMUM_GOSSIP_CLOCK_DISPARITY, return currentSlot + 1.
    * Otherwise return currentSlot
    */
-  public get currentSlotWithGossipDisparity(): Slot {
+  get currentSlotWithGossipDisparity(): Slot {
     const currentSlot = this.currentSlot;
     const nextSlotTime = computeTimeAtSlot(this.config, currentSlot + 1, this.genesisTime) * 1000;
     return nextSlotTime - Date.now() < MAXIMUM_GOSSIP_CLOCK_DISPARITY ? currentSlot + 1 : currentSlot;
   }
 
-  public get currentEpoch(): Epoch {
+  get currentEpoch(): Epoch {
     return computeEpochAtSlot(this.config, this.currentSlot);
   }
 
-  public async waitForSlot(slot: Slot): Promise<void> {
+  async waitForSlot(slot: Slot): Promise<void> {
     if (this.signal.aborted) {
       throw new ErrorAborted();
     }

@@ -5,11 +5,10 @@ import {
   getBlockRootAtSlot,
   getCurrentEpoch,
 } from "@chainsafe/lodestar-beacon-state-transition";
-import {TreeBacked} from "@chainsafe/ssz";
 
 export function assembleAttestationData(
   config: IBeaconConfig,
-  headState: TreeBacked<phase0.BeaconState>,
+  headState: phase0.BeaconState,
   headBlockRoot: Uint8Array,
   slot: Slot,
   index: CommitteeIndex

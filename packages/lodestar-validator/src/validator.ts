@@ -37,7 +37,7 @@ export class Validator {
   private slashingProtection: ISlashingProtection;
   private logger: ILogger;
 
-  public constructor(opts: IValidatorOptions) {
+  constructor(opts: IValidatorOptions) {
     this.opts = opts;
     this.config = opts.config;
     this.logger = opts.logger;
@@ -48,7 +48,7 @@ export class Validator {
   /**
    * Instantiates block and attestation services and runs them once the chain has been started.
    */
-  public async start(): Promise<void> {
+  async start(): Promise<void> {
     await this.setup();
     this.logger.info("Checking if chain has started...");
     this.apiClient.once("beaconChainStarted", this.run);
@@ -58,7 +58,7 @@ export class Validator {
    * Start the blockService and attestationService.
    * Should only be called once the beacon chain has been started.
    */
-  public run = async (): Promise<void> => {
+  run = async (): Promise<void> => {
     this.logger.info("Chain start has occured!");
     if (!this.blockService) throw Error("blockService not setup");
     if (!this.attestationService) throw Error("attestationService not setup");
@@ -69,16 +69,16 @@ export class Validator {
   /**
    * Stops all validator functions.
    */
-  public async stop(): Promise<void> {
+  async stop(): Promise<void> {
     await this.apiClient.disconnect();
     if (this.attestationService) await this.attestationService.stop();
     if (this.blockService) await this.blockService.stop();
   }
 
   /**
-   * Perform a voluntary exit for the given validator by its public key.
+   * Perform a voluntary exit for the given validator by its key.
    */
-  public async voluntaryExit(publicKey: string, exitEpoch: number): Promise<void> {
+  async voluntaryExit(publicKey: string, exitEpoch: number): Promise<void> {
     await this.apiClient.connect();
 
     const stateValidator = await this.apiClient.beacon.state.getStateValidator(
