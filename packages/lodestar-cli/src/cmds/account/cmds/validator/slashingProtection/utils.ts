@@ -1,5 +1,4 @@
 import {Root} from "@chainsafe/lodestar-types";
-import {LogLevel, WinstonLogger} from "@chainsafe/lodestar-utils";
 import {SlashingProtection} from "@chainsafe/lodestar-validator";
 import {LevelDbController} from "@chainsafe/lodestar-db";
 import {ApiClientOverRest} from "@chainsafe/lodestar-validator";
@@ -8,6 +7,7 @@ import {IGlobalArgs} from "../../../../../options";
 import {getValidatorPaths} from "../../../../validator/paths";
 import {getBeaconConfigFromArgs} from "../../../../../config";
 import {ISlashingProtectionArgs} from "./options";
+import {errorLogger} from "../../../../../util/logger";
 
 /**
  * Returns a new SlashingProtection object instance based on global args.
@@ -16,9 +16,9 @@ export function getSlashingProtection(args: IGlobalArgs): SlashingProtection {
   const validatorPaths = getValidatorPaths(args);
   const dbPath = validatorPaths.validatorsDbDir;
   const config = getBeaconConfigFromArgs(args);
-  const logger = new WinstonLogger({level: LogLevel.error});
+  const logger = errorLogger();
   return new SlashingProtection({
-    config: config,
+    config,
     controller: new LevelDbController({name: dbPath}, {logger}),
   });
 }
@@ -30,8 +30,7 @@ export async function getGenesisValidatorsRoot(args: IGlobalArgs & ISlashingProt
   const server = args.server;
 
   const config = getBeaconConfigFromArgs(args);
-  const logger = new WinstonLogger({level: LogLevel.error});
-
+  const logger = errorLogger();
   const api = new ApiClientOverRest(config, server, logger);
   const genesis = await api.beacon.getGenesis();
 

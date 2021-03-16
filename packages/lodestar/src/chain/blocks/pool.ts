@@ -97,6 +97,16 @@ export class BlockPool {
     }
   }
 
+  getMissingAncestor(blockRoot: Root): Root {
+    let root = toHexString(blockRoot);
+
+    while (this.blocks.has(root)) {
+      root = this.blocks.get(root)!;
+    }
+
+    return fromHexString(root);
+  }
+
   getTotalPendingBlocks(): number {
     return this.blocks.size;
   }

@@ -3,13 +3,14 @@
  */
 
 import {toHexString} from "@chainsafe/ssz";
-import {phase0, Slot} from "@chainsafe/lodestar-types";
+import {Slot} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ForkChoice, ProtoArray} from "@chainsafe/lodestar-fork-choice";
 
 import {computeAnchorCheckpoint} from "../initState";
 import {ChainEventEmitter} from "../emitter";
 import {ForkChoiceStore} from "./store";
+import {getEffectiveBalances, phase0, CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
 
 /**
  * Fork Choice extended with a ChainEventEmitter
@@ -19,14 +20,14 @@ export class LodestarForkChoice extends ForkChoice {
     config,
     emitter,
     currentSlot,
-    anchorState,
+    state,
   }: {
     config: IBeaconConfig;
     emitter: ChainEventEmitter;
     currentSlot: Slot;
-    anchorState: phase0.BeaconState;
+    state: CachedBeaconState<phase0.BeaconState>;
   }) {
-    const {blockHeader, checkpoint} = computeAnchorCheckpoint(config, anchorState);
+    const {blockHeader, checkpoint} = computeAnchorCheckpoint(config, state);
     const finalizedCheckpoint = {...checkpoint};
     const justifiedCheckpoint = {
       ...checkpoint,
@@ -36,6 +37,7 @@ export class LodestarForkChoice extends ForkChoice {
       // with the head not matching the fork choice justified and finalized epochs.
       epoch: checkpoint.epoch === 0 ? checkpoint.epoch : checkpoint.epoch + 1,
     };
+    const justifiedBalances = getEffectiveBalances(state);
     super({
       config,
 
@@ -56,6 +58,7 @@ export class LodestarForkChoice extends ForkChoice {
       }),
 
       queuedAttestations: new Set(),
+      justifiedBalances,
     });
   }
 }

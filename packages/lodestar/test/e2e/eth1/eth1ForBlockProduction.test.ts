@@ -4,12 +4,13 @@ import {promisify} from "es6-promisify";
 // @ts-ignore
 import leveldown from "leveldown";
 import {AbortController} from "abort-controller";
-import {WinstonLogger, LogLevel, sleep} from "@chainsafe/lodestar-utils";
+import {sleep} from "@chainsafe/lodestar-utils";
 import {LevelDbController} from "@chainsafe/lodestar-db";
 
 import {Eth1ForBlockProduction, Eth1Provider} from "../../../src/eth1";
 import {IEth1Options} from "../../../src/eth1/options";
 import {getTestnetConfig, testnet} from "../../utils/testnet";
+import {testLogger} from "../../utils/logger";
 import {BeaconDb} from "../../../src/db";
 import {generateState} from "../../utils/state";
 import {fromHexString, List, toHexString} from "@chainsafe/ssz";
@@ -37,7 +38,7 @@ describe("eth1 / Eth1Provider", function () {
   const controller = new AbortController();
 
   const config = getTestnetConfig();
-  const logger = new WinstonLogger({level: LogLevel.verbose});
+  const logger = testLogger();
   const eth1Provider = new Eth1Provider(config, eth1Options);
 
   let db: BeaconDb;

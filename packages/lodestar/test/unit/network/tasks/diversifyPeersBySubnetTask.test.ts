@@ -3,10 +3,10 @@ import {INetwork, IReqResp, Network} from "../../../../src/network";
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import {ReqResp} from "../../../../src/network/reqresp/reqResp";
 import {DiversifyPeersBySubnetTask} from "../../../../src/network/tasks/diversifyPeersBySubnetTask";
-import {WinstonLogger} from "@chainsafe/lodestar-utils";
 import {expect} from "chai";
 import PeerId from "peer-id";
 import {getStubbedMetadataStore, StubbedIPeerMetadataStore} from "../../../utils/peer";
+import {testLogger} from "../../../utils/logger";
 
 describe("DiversifyPeersBySubnetTask", function () {
   let networkStub: SinonStubbedInstance<INetwork>;
@@ -21,7 +21,7 @@ describe("DiversifyPeersBySubnetTask", function () {
     peerMetadataStore = getStubbedMetadataStore();
     networkStub.peerMetadata = peerMetadataStore;
     task = new DiversifyPeersBySubnetTask(config, {
-      logger: new WinstonLogger(),
+      logger: testLogger(),
       network: networkStub,
     });
   });

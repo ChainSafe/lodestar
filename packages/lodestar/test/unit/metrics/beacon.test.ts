@@ -1,9 +1,9 @@
 import {expect} from "chai";
 import {BeaconMetrics} from "../../../src/metrics";
-import {ILogger, WinstonLogger} from "@chainsafe/lodestar-utils";
+import {testLogger} from "../../utils/logger";
 
 describe("BeaconMetrics", () => {
-  const logger: ILogger = new WinstonLogger();
+  const logger = testLogger();
   it("updated metrics should be reflected in the registry", () => {
     const m = new BeaconMetrics({enabled: true, timeout: 5000, pushGateway: false, serverPort: 0}, {logger});
     // basic assumptions

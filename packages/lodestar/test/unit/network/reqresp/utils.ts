@@ -63,4 +63,5 @@ export class MockLibP2pStream implements ILibP2pStream {
   // eslint-disable-next-line @typescript-eslint/no-empty-function
   close: ILibP2pStream["close"] = () => {};
   reset: ILibP2pStream["reset"] = () => this.close();
+  abort: ILibP2pStream["abort"] = () => this.close();
 }

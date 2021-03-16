@@ -3,30 +3,58 @@ import {generateState} from "../../../utils/state";
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {Gwei, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {generateSignedBlock} from "../../../utils/block";
-import {computeEpochAtSlot, getTemporaryBlockHeader, phase0} from "@chainsafe/lodestar-beacon-state-transition";
+import {
+  computeEpochAtSlot,
+  getTemporaryBlockHeader,
+  phase0,
+  CachedBeaconState,
+  createCachedBeaconState,
+  FAR_FUTURE_EPOCH,
+} from "@chainsafe/lodestar-beacon-state-transition";
 import {expect} from "chai";
 import {List} from "@chainsafe/ssz";
+import {generateValidators} from "../../../utils/validator";
 
 describe("LodestarForkChoice", function () {
   let forkChoice: LodestarForkChoice;
-  const anchorState = generateState({
-    validators: ([] as unknown) as List<phase0.Validator>,
-    balances: ([] as unknown) as List<Gwei>,
+  const anchorState = generateState(
+    {
+      slot: 0,
+      validators: generateValidators(3, {
+        effectiveBalance: config.params.MAX_EFFECTIVE_BALANCE,
+        activationEpoch: 0,
+        exitEpoch: FAR_FUTURE_EPOCH,
+        withdrawableEpoch: FAR_FUTURE_EPOCH,
+      }),
+      balances: [BigInt(0), BigInt(0), BigInt(0)] as List<Gwei>,
+      // Jan 01 2020
+      genesisTime: 1577836800,
+    },
+    config
+  );
+
+  let state: CachedBeaconState<phase0.BeaconState>;
+
+  before(() => {
+    state = createCachedBeaconState(config, anchorState);
   });
-  // Jan 01 2020
-  anchorState.genesisTime = 1577836800;
 
   beforeEach(() => {
     const emitter = new ChainEventEmitter();
     const currentSlot = 0;
-    forkChoice = new LodestarForkChoice({config, emitter, currentSlot, anchorState});
+    forkChoice = new LodestarForkChoice({
+      config,
+      emitter,
+      currentSlot,
+      state,
+    });
   });
 
   describe("forkchoice", function () {
     /**
-     * slot 32(checkpoint) - orphaned (33)
+     * slot 32(checkpoint) - orphaned (36)
      *                     \
-     *                       parent (34) - child (35)
+     *                       parent (37) - child (38)
      */
     it("getHead - should not consider orphaned block as head", () => {
       const {blockHeader} = computeAnchorCheckpoint(config, anchorState);
@@ -36,14 +64,14 @@ describe("LodestarForkChoice", function () {
       //
       const targetState = runStateTransition(anchorState, targetBlock);
       targetBlock.message.stateRoot = config.types.phase0.BeaconState.hashTreeRoot(targetState);
-      const {block: orphanedBlock, state: orphanedState} = makeChild({block: targetBlock, state: targetState}, 33);
-      const {block: parentBlock, state: parentState} = makeChild({block: targetBlock, state: targetState}, 34);
-      const {block: childBlock, state: childState} = makeChild({block: parentBlock, state: parentState}, 35);
+      const {block: orphanedBlock, state: orphanedState} = makeChild({block: targetBlock, state: targetState}, 36);
+      const {block: parentBlock, state: parentState} = makeChild({block: targetBlock, state: targetState}, 37);
+      const {block: childBlock, state: childState} = makeChild({block: parentBlock, state: parentState}, 38);
       const parentBlockHex = config.types.phase0.BeaconBlock.hashTreeRoot(parentBlock.message);
       const orphanedBlockHex = config.types.phase0.BeaconBlock.hashTreeRoot(orphanedBlock.message);
       // forkchoice tie-break condition is based on root hex
       expect(orphanedBlockHex > parentBlockHex).to.be.true;
-      forkChoice.updateTime(35);
+      forkChoice.updateTime(childBlock.message.slot);
       // 3 validators involved
       const justifiedBalances = [BigInt(1), BigInt(2), BigInt(3)];
       forkChoice.onBlock(targetBlock.message, targetState, justifiedBalances);
