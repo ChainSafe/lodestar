@@ -1,11 +1,12 @@
-import {ICliCommand, readFileIfExists} from "../../../../util";
+import * as fs from "fs";
+import {ICliCommand} from "../../../../util";
 import {IGlobalArgs} from "../../../../options";
 import inquirer from "inquirer";
 import {createWalletFromArgsAndMnemonic, printUuidData} from "./utils";
 import {IWalletCreateArgs, walletCreateOptions} from "./create";
 
 export type IWalletRecoverArgs = IWalletCreateArgs & {
-  mnemonicPath: string;
+  mnemonicInputPath: string;
 };
 
 export type ReturnType = string[];
@@ -24,20 +25,20 @@ export const recover: ICliCommand<IWalletRecoverArgs, IGlobalArgs, ReturnType> =
 
   options: {
     ...walletCreateOptions,
-    mnemonicPath: {
+    mnemonicInputPath: {
       description: "If present, the mnemonic will be read in from this file.",
       type: "string",
     },
   },
 
   handler: async (args) => {
-    const {mnemonicPath} = args;
+    const {mnemonicInputPath} = args;
     let mnemonic;
 
     console.log("\nWARNING: KEY RECOVERY CAN LEAD TO DUPLICATING VALIDATORS KEYS, WHICH CAN LEAD TO SLASHING.\n");
 
-    if (mnemonicPath) {
-      mnemonic = readFileIfExists(mnemonicPath);
+    if (mnemonicInputPath) {
+      mnemonic = await fs.promises.readFile(mnemonicInputPath, "utf8");
     } else {
       const input = await inquirer.prompt([
         {
