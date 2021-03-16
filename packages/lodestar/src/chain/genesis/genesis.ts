@@ -17,37 +17,61 @@ import {
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {IEth1StreamParams, IEth1Provider, getDepositsAndBlockStreamForGenesis, getDepositsStream} from "../../eth1";
-import {IGenesisBuilder, IGenesisBuilderKwargs, IGenesisResult} from "./interface";
+import {IGenesisBuilder, IGenesisResult} from "./interface";
+
+export interface IGenesisBuilderKwargs {
+  config: IBeaconConfig;
+  eth1Provider: IEth1Provider;
+  logger: ILogger;
+
+  /** Use to restore pending progress */
+  pendingStatus?: {
+    state: TreeBacked<phase0.BeaconState>;
+    depositTree: TreeBacked<List<Root>>;
+    lastProcessedBlockNumber: number;
+  };
+
+  signal?: AbortSignal;
+  maxBlocksPerPoll?: number;
+}
 
 export class GenesisBuilder implements IGenesisBuilder {
+  // Expose state to persist on error
+  state: TreeBacked<phase0.BeaconState>;
+  depositTree: TreeBacked<List<Root>>;
+  lastProcessedBlockNumber: number;
+
   private readonly config: IBeaconConfig;
   private readonly eth1Provider: IEth1Provider;
   private readonly logger: ILogger;
   private readonly signal?: AbortSignal;
   private readonly eth1Params: IEth1StreamParams;
-  private state: TreeBacked<phase0.BeaconState>;
-  private depositTree: TreeBacked<List<Root>>;
-  private depositCache: Set<number>;
+  private readonly depositCache = new Set<number>();
 
-  // eslint-disable-next-line @typescript-eslint/naming-convention
-  constructor(config: IBeaconConfig, {eth1Provider, logger, signal, MAX_BLOCKS_PER_POLL}: IGenesisBuilderKwargs) {
+  constructor({config, eth1Provider, logger, signal, pendingStatus, maxBlocksPerPoll}: IGenesisBuilderKwargs) {
     this.config = config;
     this.eth1Provider = eth1Provider;
     this.logger = logger;
     this.signal = signal;
     this.eth1Params = {
       ...config.params,
-      // eslint-disable-next-line @typescript-eslint/naming-convention
-      MAX_BLOCKS_PER_POLL: MAX_BLOCKS_PER_POLL || 10000,
+      maxBlocksPerPoll: maxBlocksPerPoll || 10000,
     };
 
-    this.state = getGenesisBeaconState(
-      config,
-      config.types.phase0.Eth1Data.defaultValue(),
-      getTemporaryBlockHeader(config, config.types.phase0.BeaconBlock.defaultValue())
-    );
-    this.depositTree = config.types.phase0.DepositDataRootList.tree.defaultValue();
-    this.depositCache = new Set<number>();
+    if (pendingStatus) {
+      this.logger.info("Restoring pending genesis state", {block: pendingStatus.lastProcessedBlockNumber});
+      this.state = pendingStatus.state;
+      this.depositTree = pendingStatus.depositTree;
+      this.lastProcessedBlockNumber = pendingStatus.lastProcessedBlockNumber;
+    } else {
+      this.state = getGenesisBeaconState(
+        config,
+        config.types.phase0.Eth1Data.defaultValue(),
+        getTemporaryBlockHeader(config, config.types.phase0.BeaconBlock.defaultValue())
+      );
+      this.depositTree = config.types.phase0.DepositDataRootList.tree.defaultValue();
+      this.lastProcessedBlockNumber = this.eth1Provider.deployBlock;
+    }
   }
 
   /**
@@ -56,11 +80,9 @@ export class GenesisBuilder implements IGenesisBuilder {
   async waitForGenesis(): Promise<IGenesisResult> {
     await this.eth1Provider.validateContract();
 
-    // TODO: Load data from data from this.db.depositData, this.db.depositDataRoot
+    // Load data from data from this.db.depositData, this.db.depositDataRoot
     // And start from a more recent fromBlock
-    const blockNumberLastestInDb = this.eth1Provider.deployBlock;
-
-    const blockNumberValidatorGenesis = await this.waitForGenesisValidators(blockNumberLastestInDb);
+    const blockNumberValidatorGenesis = await this.waitForGenesisValidators(this.lastProcessedBlockNumber);
 
     const depositsAndBlocksStream = getDepositsAndBlockStreamForGenesis(
       blockNumberValidatorGenesis,
@@ -73,6 +95,8 @@ export class GenesisBuilder implements IGenesisBuilder {
       this.applyDeposits(depositEvents);
       applyTimestamp(this.config, this.state, block.timestamp);
       applyEth1BlockHash(this.config, this.state, block.blockHash);
+      this.lastProcessedBlockNumber = block.blockNumber;
+
       if (isValidGenesisState(this.config, this.state)) {
         this.logger.info("Found genesis state", {blockNumber: block.blockNumber});
         return {
@@ -98,6 +122,8 @@ export class GenesisBuilder implements IGenesisBuilder {
 
     for await (const {depositEvents, blockNumber} of depositsStream) {
       this.applyDeposits(depositEvents);
+      this.lastProcessedBlockNumber = blockNumber;
+
       if (isValidGenesisValidators(this.config, this.state)) {
         this.logger.info("Found enough genesis validators", {blockNumber});
         return blockNumber;

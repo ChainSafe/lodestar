@@ -24,7 +24,7 @@ export async function* getDepositsStream(
 
   while (true) {
     const remoteFollowBlock = await getRemoteFollowBlock(provider, params);
-    const toBlock = Math.min(remoteFollowBlock, fromBlock + params.MAX_BLOCKS_PER_POLL);
+    const toBlock = Math.min(remoteFollowBlock, fromBlock + params.maxBlocksPerPoll);
     const logs = await provider.getDepositEvents(fromBlock, toBlock);
     for (const batchedDeposits of groupDepositEventsByBlock(logs)) {
       yield batchedDeposits;
@@ -62,7 +62,7 @@ export async function* getDepositsAndBlockStreamForGenesis(
     const remoteFollowBlock = await getRemoteFollowBlock(provider, params);
     const nextBlockDiff = optimizeNextBlockDiffForGenesis(block, params);
     fromBlock = toBlock;
-    toBlock = Math.min(remoteFollowBlock, fromBlock + Math.min(nextBlockDiff, params.MAX_BLOCKS_PER_POLL));
+    toBlock = Math.min(remoteFollowBlock, fromBlock + Math.min(nextBlockDiff, params.maxBlocksPerPoll));
 
     // If reached head, sleep for an eth1 block. Throws if signal is aborted
     await sleep(toBlock >= remoteFollowBlock ? params.SECONDS_PER_ETH1_BLOCK * 1000 : 10, signal);

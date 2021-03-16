@@ -66,11 +66,11 @@ describe("genesis builder", function () {
       },
     };
 
-    const genesisBuilder = new GenesisBuilder(schlesiConfig, {
+    const genesisBuilder = new GenesisBuilder({
+      config: schlesiConfig,
       eth1Provider,
       logger: new WinstonLogger(),
-      // eslint-disable-next-line @typescript-eslint/naming-convention
-      MAX_BLOCKS_PER_POLL: 1,
+      maxBlocksPerPoll: 1,
     });
 
     const {state} = await genesisBuilder.waitForGenesis();
@@ -100,12 +100,12 @@ describe("genesis builder", function () {
       },
     };
 
-    const genesisBuilder = new GenesisBuilder(schlesiConfig, {
+    const genesisBuilder = new GenesisBuilder({
+      config: schlesiConfig,
       eth1Provider,
       logger: new WinstonLogger(),
       signal: controller.signal,
-      // eslint-disable-next-line @typescript-eslint/naming-convention
-      MAX_BLOCKS_PER_POLL: 1,
+      maxBlocksPerPoll: 1,
     });
 
     await expect(genesisBuilder.waitForGenesis()).to.rejectedWith(ErrorAborted);
