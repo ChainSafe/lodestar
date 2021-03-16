@@ -55,9 +55,7 @@ export class Libp2pPeerMetadataStore implements IPeerMetadataStore {
       },
       get: (peer: PeerId): T | undefined => {
         const value = this.metabook.getValue(peer, key);
-        if (value) {
-          return type.deserialize(value);
-        }
+        return value ? type.deserialize(value) : undefined;
       },
     };
   }

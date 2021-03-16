@@ -1,13 +1,16 @@
 version: "3.4"
 services:
-  lodestar:
+  beacon_node:
     build: .
+    image: lodestar
     restart: always
     volumes:
-      - lodestar:/root/.local/share/lodestar
-    command: beacon
+      - beacon_node:/data
+    env_file: .env
     ports:
-      - "9000:9000"
+      - "9000:9000" # P2P port
+      - "9596:9596" # REST API port
+    command: beacon --rootDir /data --api.rest.host 0.0.0.0 --metrics.enabled true
 
   prometheus:
     build: docker/prometheus
@@ -15,7 +18,7 @@ services:
     volumes:
       - "prometheus:/prometheus"
     depends_on:
-      - lodestar
+      - beacon_node
 
   grafana:
     build: docker/grafana
@@ -28,6 +31,6 @@ services:
       - prometheus
 
 volumes:
-  lodestar:
+  beacon_node:
   prometheus:
   grafana:

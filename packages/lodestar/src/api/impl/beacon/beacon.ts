@@ -39,15 +39,11 @@ export class BeaconApi implements IBeaconApi {
   }
 
   async getGenesis(): Promise<phase0.Genesis | null> {
-    const state = this.chain.getHeadState();
-    if (state) {
-      return {
-        genesisForkVersion: this.config.params.GENESIS_FORK_VERSION,
-        genesisTime: BigInt(state.genesisTime),
-        genesisValidatorsRoot: state.genesisValidatorsRoot,
-      };
-    }
-    return null;
+    return {
+      genesisForkVersion: this.config.params.GENESIS_FORK_VERSION,
+      genesisTime: BigInt(this.chain.genesisTime),
+      genesisValidatorsRoot: this.chain.genesisValidatorsRoot,
+    };
   }
 
   getBlockStream(): LodestarEventIterator<phase0.SignedBeaconBlock> {

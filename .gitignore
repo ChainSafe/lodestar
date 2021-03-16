@@ -41,3 +41,6 @@ packages/lodestar/.tmpdb/
 
 # Wallet CLI artifacts
 .pass
+
+# docker-compose .env file
+.env

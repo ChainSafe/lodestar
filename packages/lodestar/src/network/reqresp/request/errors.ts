@@ -85,5 +85,7 @@ function renderErrorMessage(type: RequestErrorType): string | undefined {
     case RequestErrorCode.SERVER_ERROR:
     case RequestErrorCode.UNKNOWN_ERROR_STATUS:
       return `${type.code}: ${type.errorMessage}`;
+    default:
+      return type.code;
   }
 }

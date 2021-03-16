@@ -92,6 +92,8 @@ export const CachedBeaconStateProxyHandler: ProxyHandler<CachedBeaconState<allFo
     } else if (key in target.type.tree) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       return (target.type.tree as any)[key].bind(target.type.tree, target.tree);
+    } else {
+      return undefined;
     }
   },
   set(target: CachedBeaconState<allForks.BeaconState>, key: string, value: unknown): boolean {

@@ -41,6 +41,9 @@ export interface IBeaconChainModules {
 }
 
 export class BeaconChain implements IBeaconChain {
+  readonly genesisTime: Number64;
+  readonly genesisValidatorsRoot: Root;
+
   forkChoice: IForkChoice;
   clock: IBeaconClock;
   emitter: ChainEventEmitter;
@@ -57,7 +60,6 @@ export class BeaconChain implements IBeaconChain {
   protected readonly logger: ILogger;
   protected readonly metrics?: IBeaconMetrics;
   protected readonly opts: IChainOptions;
-  protected readonly genesisTime: Number64;
   /**
    * Internal event emitter is used internally to the chain to update chain state
    * Once event have been handled internally, they are re-emitted externally for downstream consumers
@@ -73,6 +75,7 @@ export class BeaconChain implements IBeaconChain {
     this.metrics = metrics;
 
     this.genesisTime = anchorState.genesisTime;
+    this.genesisValidatorsRoot = anchorState.genesisValidatorsRoot.valueOf() as Uint8Array;
     this.abortController = new AbortController();
 
     this.emitter = new ChainEventEmitter();
@@ -248,12 +251,11 @@ export class BeaconChain implements IBeaconChain {
 
   getForkDigest(): ForkDigest {
     const state = this.getHeadState();
-    return computeForkDigest(this.config, state.fork.currentVersion, state.genesisValidatorsRoot);
+    return computeForkDigest(this.config, state.fork.currentVersion, this.genesisValidatorsRoot);
   }
 
   getForkName(): IForkName {
-    const state = this.getHeadState();
-    return computeForkNameFromForkDigest(this.config, state.genesisValidatorsRoot, this.getForkDigest());
+    return computeForkNameFromForkDigest(this.config, this.genesisValidatorsRoot, this.getForkDigest());
   }
 
   getENRForkID(): phase0.ENRForkID {

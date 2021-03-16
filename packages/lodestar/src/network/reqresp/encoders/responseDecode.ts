@@ -39,7 +39,7 @@ export function responseDecode(
       // Stream is only allowed to end at the start of a <response_chunk> block
       // The happens when source ends before readResultHeader() can fetch 1 byte
       if (status === StreamStatus.Ended) {
-        return null;
+        break;
       }
 
       // For multiple chunks, only the last chunk is allowed to have a non-zero error

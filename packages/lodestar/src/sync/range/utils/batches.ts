@@ -40,7 +40,7 @@ export function validateBatchesStatus(batches: Batch[]): void {
  * Return the next batch to process if any.
  * @see validateBatchesStatus for batches state description
  */
-export function getNextBatchToProcess(batches: Batch[]): Batch | undefined {
+export function getNextBatchToProcess(batches: Batch[]): Batch | null {
   for (const batch of batches) {
     switch (batch.state.status) {
       // If an AwaitingProcessing batch exists it can only be preceeded by AwaitingValidation
@@ -54,9 +54,11 @@ export function getNextBatchToProcess(batches: Batch[]): Batch | undefined {
       case BatchStatus.AwaitingDownload:
       case BatchStatus.Downloading:
       case BatchStatus.Processing:
-        return;
+        return null;
     }
   }
+  // Exhausted batches
+  return null;
 }
 
 /**

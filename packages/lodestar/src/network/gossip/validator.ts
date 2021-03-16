@@ -314,7 +314,7 @@ export function createTopicValidatorFn(
 
 export function createTopicValidatorFnMap(modules: IObjectValidatorModules): Map<string, TopicValidatorFn> {
   const validatorFns = new Map<string, TopicValidatorFn>();
-  const genesisValidatorsRoot = modules.chain.getHeadState().genesisValidatorsRoot;
+  const genesisValidatorsRoot = modules.chain.genesisValidatorsRoot;
   // TODO: other fork topics should get added here
   // phase0
   const fork = "phase0";
