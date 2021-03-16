@@ -32,28 +32,24 @@ export function responseDecode(
 
     const bufferedSource = new BufferedSource(source as AsyncGenerator<Buffer>);
 
-    try {
-      // Consumers of `responseDecode()` may limit the number of <response_chunk> and break out of the while loop
-      while (!bufferedSource.isDone) {
-        const status = await readResultHeader(bufferedSource);
+    // Consumers of `responseDecode()` may limit the number of <response_chunk> and break out of the while loop
+    while (!bufferedSource.isDone) {
+      const status = await readResultHeader(bufferedSource);
 
-        // Stream is only allowed to end at the start of a <response_chunk> block
-        // The happens when source ends before readResultHeader() can fetch 1 byte
-        if (status === StreamStatus.Ended) {
-          return null;
-        }
-
-        // For multiple chunks, only the last chunk is allowed to have a non-zero error
-        // code (i.e. The chunk stream is terminated once an error occurs
-        if (status !== RpcResponseStatus.SUCCESS) {
-          const errorMessage = await readErrorMessage(bufferedSource);
-          throw new ResponseError(status, errorMessage);
-        }
-
-        yield await readEncodedPayload<phase0.ResponseBody>(bufferedSource, encoding, type, {isSszTree});
+      // Stream is only allowed to end at the start of a <response_chunk> block
+      // The happens when source ends before readResultHeader() can fetch 1 byte
+      if (status === StreamStatus.Ended) {
+        return null;
       }
-    } finally {
-      await bufferedSource.return();
+
+      // For multiple chunks, only the last chunk is allowed to have a non-zero error
+      // code (i.e. The chunk stream is terminated once an error occurs
+      if (status !== RpcResponseStatus.SUCCESS) {
+        const errorMessage = await readErrorMessage(bufferedSource);
+        throw new ResponseError(status, errorMessage);
+      }
+
+      yield await readEncodedPayload<phase0.ResponseBody>(bufferedSource, encoding, type, {isSszTree});
     }
   };
 }

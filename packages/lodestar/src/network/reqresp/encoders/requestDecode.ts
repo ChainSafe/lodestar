@@ -25,10 +25,6 @@ export function requestDecode(
 
     // Request has a single payload, so return immediately
     const bufferedSource = new BufferedSource(source as AsyncGenerator<Buffer>);
-    try {
-      return await readEncodedPayload<phase0.RequestBody>(bufferedSource, encoding, type);
-    } finally {
-      await bufferedSource.return();
-    }
+    return await readEncodedPayload<phase0.RequestBody>(bufferedSource, encoding, type);
   };
 }

@@ -218,7 +218,7 @@ describe("[sync] rpc", function () {
   it("should return invalid request status code", async () => {
     const protocol = createRpcProtocol(Method.Status, ReqRespEncoding.SSZ_SNAPPY);
     await netA.connect(netB.peerId, netB.localMultiaddrs);
-    const {stream} = (await libP2pA.dialProtocol(netB.peerId, protocol)) as {stream: ILibP2pStream};
+    const {stream} = ((await libP2pA.dialProtocol(netB.peerId, protocol)) as unknown) as {stream: ILibP2pStream};
 
     // Bad encoding, 9e23 exceeds the max 10 varint bytes
     const requestBytes = [Buffer.from(encode(99999999999999999999999))];
