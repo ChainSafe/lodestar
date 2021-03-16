@@ -107,7 +107,8 @@ function generateTestCase<TestCase, Result>(
   it(name, function () {
     const testCase = loadInputFiles(testCaseDirectoryPath, options);
     if (options.shouldSkip && options.shouldSkip(testCase, name, index)) {
-      return this.skip();
+      this.skip();
+      return;
     }
     if (options.shouldError && options.shouldError(testCase)) {
       try {

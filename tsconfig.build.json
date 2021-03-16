@@ -4,8 +4,17 @@
     "module": "commonjs",
     "pretty": true,
     "lib": ["es2020", "esnext.bigint", "es2020.string", "es2020.symbol.wellknown"],
+
     "strict": true,
+    "alwaysStrict": true,
     "strictNullChecks": true,
+    "strictFunctionTypes": true,
+    "strictBindCallApply": true,
+    "strictPropertyInitialization": true,
+    "noImplicitAny": true,
+    "noImplicitThis": true,
+    "noImplicitReturns": true,
+
     "esModuleInterop": true,
     // Babel builds source, Typescript is used only for .d.ts files
     "declaration": true,
