@@ -8,7 +8,7 @@ import {expect} from "chai";
 import {generateCachedState} from "../../../../utils/state";
 import {Network} from "../../../../../src/network/network";
 
-describe("beacon api implementation", function () {
+describe.only("beacon api implementation", function () {
   let api: BeaconApi;
   let chainStub: SinonStubbedInstance<IBeaconChain>;
   let dbStub: StubbedBeaconDb;
@@ -31,14 +31,9 @@ describe("beacon api implementation", function () {
   });
 
   describe("getGenesis", function () {
-    it("genesis has not yet occured", async function () {
-      chainStub.getHeadState.returns(undefined as any);
-      const genesis = await api.getGenesis();
-      expect(genesis).to.be.null;
-    });
-
     it("success", async function () {
-      chainStub.getHeadState.returns(generateCachedState());
+      (chainStub as any).genesisTime = 0;
+      (chainStub as any).genesisValidatorsRoot = Buffer.alloc(32);
       const genesis = await api.getGenesis();
       if (!genesis) throw Error("Genesis is nullish");
       expect(genesis.genesisForkVersion).to.not.be.undefined;
