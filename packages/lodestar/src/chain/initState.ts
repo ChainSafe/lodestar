@@ -70,21 +70,49 @@ export async function initStateFromEth1(
 ): Promise<TreeBacked<phase0.BeaconState>> {
   logger.info("Listening to eth1 for genesis state");
 
-  const builder = new GenesisBuilder(config, {eth1Provider, logger, signal});
+  const statePreGenesis = await db.preGenesisState.get();
+  const depositTree = await db.depositDataRoot.getDepositRootTree();
+  const lastProcessedBlockNumber = await db.preGenesisStateLastProcessedBlock.get();
 
-  const genesisResult = await builder.waitForGenesis();
-  const genesisBlock = createGenesisBlock(config, genesisResult.state);
-  const stateRoot = config.types.phase0.BeaconState.hashTreeRoot(genesisResult.state);
-  const blockRoot = config.types.phase0.BeaconBlock.hashTreeRoot(genesisBlock.message);
-
-  logger.info("Initializing genesis state", {
-    stateRoot: toHexString(stateRoot),
-    blockRoot: toHexString(blockRoot),
-    validatorCount: genesisResult.state.validators.length,
+  const builder = new GenesisBuilder({
+    config,
+    eth1Provider,
+    logger,
+    signal,
+    pendingStatus:
+      statePreGenesis && depositTree && lastProcessedBlockNumber != null
+        ? {state: statePreGenesis, depositTree, lastProcessedBlockNumber}
+        : undefined,
   });
 
-  await persistGenesisResult(db, genesisResult, genesisBlock);
-  return genesisResult.state;
+  try {
+    const genesisResult = await builder.waitForGenesis();
+    const genesisBlock = createGenesisBlock(config, genesisResult.state);
+    const stateRoot = config.types.phase0.BeaconState.hashTreeRoot(genesisResult.state);
+    const blockRoot = config.types.phase0.BeaconBlock.hashTreeRoot(genesisBlock.message);
+
+    logger.info("Initializing genesis state", {
+      stateRoot: toHexString(stateRoot),
+      blockRoot: toHexString(blockRoot),
+      validatorCount: genesisResult.state.validators.length,
+    });
+
+    await persistGenesisResult(db, genesisResult, genesisBlock);
+
+    logger.verbose("Clearing pending genesis state if any");
+    await db.preGenesisState.delete();
+    await db.preGenesisStateLastProcessedBlock.delete();
+
+    return genesisResult.state;
+  } catch (e) {
+    if (builder.lastProcessedBlockNumber != null) {
+      logger.info("Persisting genesis state", {block: builder.lastProcessedBlockNumber});
+      await db.preGenesisState.put(builder.state);
+      await db.depositDataRoot.putList(builder.depositTree);
+      await db.preGenesisStateLastProcessedBlock.put(builder.lastProcessedBlockNumber);
+    }
+    throw e;
+  }
 }
 
 /**

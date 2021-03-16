@@ -18,6 +18,7 @@ import {
   StateArchiveRepository,
   VoluntaryExitRepository,
 } from "./repositories";
+import {PreGenesisState, PreGenesisStateLastProcessedBlock} from "./single";
 import {SeenAttestationCache} from "./seenAttestationCache";
 import {PendingBlockRepository} from "./repositories/pendingBlock";
 
@@ -54,6 +55,8 @@ export interface IBeaconDb {
   depositEvent: DepositEventRepository;
 
   // eth1 processing
+  preGenesisState: PreGenesisState;
+  preGenesisStateLastProcessedBlock: PreGenesisStateLastProcessedBlock;
 
   // all deposit data roots and merkle tree
   depositDataRoot: DepositDataRootRepository;

@@ -39,8 +39,7 @@ export type IEth1StreamParams = Pick<
   IBeaconConfig["params"],
   "ETH1_FOLLOW_DISTANCE" | "MIN_GENESIS_TIME" | "GENESIS_DELAY" | "SECONDS_PER_ETH1_BLOCK"
 > & {
-  // eslint-disable-next-line @typescript-eslint/naming-convention
-  MAX_BLOCKS_PER_POLL: number;
+  maxBlocksPerPoll: number;
 };
 
 export type IJson = string | number | boolean | undefined | IJson[] | {[key: string]: IJson};

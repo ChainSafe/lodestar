@@ -26,6 +26,8 @@ export enum Bucket {
   phase0_eth1Data = 8, // timestamp -> Eth1Data
   index_depositDataRoot = 9, // depositIndex -> Root<DepositData>
   phase0_depositEvent = 19, // depositIndex -> DepositEvent
+  phase0_preGenesisState = 30, // Single = phase0.BeaconState
+  phase0_preGenesisStateLastProcessedBlock = 31, // Single = Uint8
   // op pool
   phase0_attestation = 10, // Root -> Attestation
   phase0_aggregateAndProof = 11, // Root -> AggregateAndProof
