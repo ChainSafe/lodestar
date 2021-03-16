@@ -185,7 +185,7 @@ function deserializeTestCase<TestCase, Result>(
 
 function generateProfileReport(profile: profiler.CpuProfile, directory: string, profileId: string): void {
   profile.export((error, result) => {
-    if (error) {
+    if (error || result === undefined) {
       return;
     }
     writeFile(`${directory}/${profileId}`, result as string, () => {
