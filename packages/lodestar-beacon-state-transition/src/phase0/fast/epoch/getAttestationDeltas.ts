@@ -3,7 +3,6 @@ import {bigIntSqrt, bigIntMax, intDiv} from "@chainsafe/lodestar-utils";
 import {BASE_REWARDS_PER_EPOCH as BASE_REWARDS_PER_EPOCH_CONST} from "../../../constants";
 
 import {
-  EpochContext,
   IEpochProcess,
   hasMarkers,
   FLAG_ELIGIBLE_ATTESTER,
@@ -11,17 +10,17 @@ import {
   FLAG_PREV_SOURCE_ATTESTER,
   FLAG_PREV_TARGET_ATTESTER,
   FLAG_PREV_HEAD_ATTESTER,
+  CachedBeaconState,
 } from "../util";
 
 /**
  * Return attestation reward/penalty deltas for each validator.
  */
 export function getAttestationDeltas(
-  epochCtx: EpochContext,
-  process: IEpochProcess,
-  state: phase0.BeaconState
+  state: CachedBeaconState<phase0.BeaconState>,
+  process: IEpochProcess
 ): [number[], number[]] {
-  const params = epochCtx.config.params;
+  const params = state.config.params;
   const validatorCount = process.statuses.length;
   const rewards = Array.from({length: validatorCount}, () => 0);
   const penalties = Array.from({length: validatorCount}, () => 0);

@@ -1,6 +1,7 @@
 import {join} from "path";
 import {expect} from "chai";
 
+import {TreeBacked} from "@chainsafe/ssz";
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
@@ -11,18 +12,24 @@ describeDirectorySpecTest<IStateTestCase, phase0.BeaconState>(
   "rewards and penalties minimal",
   join(SPEC_TEST_LOCATION, "tests/minimal/phase0/epoch_processing/rewards_and_penalties/pyspec_tests"),
   (testcase) => {
-    const state = testcase.pre;
-    const epochCtx = new phase0.fast.EpochContext(config);
-    epochCtx.loadState(state);
-    const wrappedState = phase0.fast.createCachedValidatorsBeaconState(state);
-    const process = phase0.fast.prepareEpochProcessState(epochCtx, wrappedState);
-    phase0.fast.processRewardsAndPenalties(epochCtx, process, wrappedState);
-    return state;
+    const wrappedState = phase0.fast.createCachedBeaconState<phase0.BeaconState>(
+      config,
+      testcase.pre as TreeBacked<phase0.BeaconState>
+    );
+    const process = phase0.fast.prepareEpochProcessState(wrappedState);
+    phase0.fast.processRewardsAndPenalties(wrappedState, process);
+    return wrappedState;
   },
   {
     inputTypes: {
-      pre: InputType.SSZ,
-      post: InputType.SSZ,
+      pre: {
+        type: InputType.SSZ,
+        treeBacked: true,
+      },
+      post: {
+        type: InputType.SSZ,
+        treeBacked: true,
+      },
     },
     sszTypes: {
       pre: config.types.phase0.BeaconState,

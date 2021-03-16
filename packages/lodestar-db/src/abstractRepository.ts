@@ -47,13 +47,9 @@ export abstract class Repository<I extends Id, T> {
   }
 
   async get(id: I): Promise<T | null> {
-    try {
-      const value = await this.db.get(this.encodeKey(id));
-      if (!value) return null;
-      return this.decodeValue(value);
-    } catch (e) {
-      return null;
-    }
+    const value = await this.db.get(this.encodeKey(id));
+    if (!value) return null;
+    return this.decodeValue(value);
   }
 
   async getBinary(id: I): Promise<Buffer | null> {

@@ -1,5 +1,7 @@
 import {join} from "path";
 import {expect} from "chai";
+
+import {TreeBacked} from "@chainsafe/ssz";
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
@@ -10,16 +12,24 @@ describeDirectorySpecTest<IProcessSlotsTestCase, phase0.BeaconState>(
   "slot sanity mainnet",
   join(SPEC_TEST_LOCATION, "/tests/mainnet/phase0/sanity/slots/pyspec_tests"),
   (testcase) => {
-    const state = config.types.phase0.BeaconState.tree.createValue(testcase.pre);
-    const epochCtx = new phase0.fast.EpochContext(config);
-    epochCtx.loadState(state);
-    const wrappedState = phase0.fast.createCachedValidatorsBeaconState(state);
-    phase0.fast.processSlots(epochCtx, wrappedState, state.slot + Number(testcase.slots));
-    return state;
+    const wrappedState = phase0.fast.createCachedBeaconState<phase0.BeaconState>(
+      config,
+      testcase.pre as TreeBacked<phase0.BeaconState>
+    );
+    phase0.fast.processSlots(wrappedState, wrappedState.slot + Number(testcase.slots));
+    return wrappedState;
   },
   {
     // @ts-ignore
     inputTypes: {
+      pre: {
+        type: InputType.SSZ,
+        treeBacked: true,
+      },
+      post: {
+        type: InputType.SSZ,
+        treeBacked: true,
+      },
       slots: InputType.YAML,
     },
     // @ts-ignore

@@ -8,7 +8,12 @@ import {FAR_FUTURE_EPOCH, ZERO_HASH} from "../../../../../src/constants";
 import {generateBlockSummary, generateEmptySignedBlock} from "../../../../utils/block";
 import {generateState} from "../../../../utils/state";
 import {assembleBlock} from "../../../../../src/chain/factory/block";
-import {getBeaconProposerIndex, signedBlockToSignedHeader, phase0} from "@chainsafe/lodestar-beacon-state-transition";
+import {
+  getBeaconProposerIndex,
+  signedBlockToSignedHeader,
+  phase0,
+  createCachedBeaconState,
+} from "@chainsafe/lodestar-beacon-state-transition";
 import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {generateValidator} from "../../../../utils/validator";
 import {generateDeposit} from "../../../../utils/deposit";
@@ -53,22 +58,24 @@ describe("produce block", function () {
       parentRoot: parentBlock.message.parentRoot.valueOf() as Uint8Array,
       stateRoot: parentBlock.message.stateRoot.valueOf() as Uint8Array,
     });
-    const state = generateState({
-      validators: validators as List<phase0.Validator>,
-      balances: balances as List<bigint>,
-      latestBlockHeader: parentHeader.message,
-    });
+    const state = createCachedBeaconState(
+      config,
+      generateState(
+        {
+          validators: validators as List<phase0.Validator>,
+          balances: balances as List<bigint>,
+          latestBlockHeader: parentHeader.message,
+        },
+        config
+      )
+    );
     const depositDataRootList = config.types.phase0.DepositDataRootList.tree.defaultValue();
     const tree = depositDataRootList.tree();
     depositDataRootList.push(config.types.phase0.DepositData.hashTreeRoot(generateDeposit().data));
-    const epochCtx = new phase0.EpochContext(config);
-    epochCtx.loadState(state);
-    sinon.stub(epochCtx, "getBeaconProposer").returns(20);
     const slotState = state.clone();
     slotState.slot = 1;
-    regenStub.getBlockSlotState
-      .withArgs(sinon.match.any, 1)
-      .resolves({state: phase0.fast.createCachedValidatorsBeaconState(slotState), epochCtx});
+    sinon.stub(slotState.epochCtx, "getBeaconProposer").returns(20);
+    regenStub.getBlockSlotState.withArgs(sinon.match.any, 1).resolves(slotState);
     forkChoiceStub.getHead.returns(parentBlockSummary);
     dbStub.depositDataRoot.getTreeBacked.resolves(depositDataRootList);
     dbStub.proposerSlashing.values.resolves([]);
@@ -79,7 +86,7 @@ describe("produce block", function () {
       eth1Data: {depositCount: 1, depositRoot: tree.root, blockHash: Buffer.alloc(32)},
       deposits: [],
     });
-    const validatorIndex = getBeaconProposerIndex(config, {...state, slot: 1});
+    const validatorIndex = getBeaconProposerIndex(config, slotState);
 
     const secretKey = secretKeys[validatorIndex];
     const blockProposingService = getBlockProposingService(secretKey);
@@ -93,10 +100,7 @@ describe("produce block", function () {
       state.fork,
       ZERO_HASH
     );
-    const wrappedState = phase0.fast.createCachedValidatorsBeaconState(state);
-    expect(() =>
-      phase0.fast.fastStateTransition({state: wrappedState, epochCtx}, block!, {verifyStateRoot: false})
-    ).to.not.throw();
+    expect(() => phase0.fast.fastStateTransition(state, block!, {verifyStateRoot: false})).to.not.throw();
   });
 
   function getBlockProposingService(secretKey: SecretKey): BlockProposingService {

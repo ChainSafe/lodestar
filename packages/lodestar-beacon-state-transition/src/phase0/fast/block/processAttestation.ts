@@ -1,16 +1,15 @@
 import {phase0} from "@chainsafe/lodestar-types";
 
 import {computeEpochAtSlot} from "../../../util";
-import {EpochContext} from "../util";
+import {CachedBeaconState} from "../util";
 import {isValidIndexedAttestation} from "./isValidIndexedAttestation";
 
 export function processAttestation(
-  epochCtx: EpochContext,
-  state: phase0.BeaconState,
+  state: CachedBeaconState<phase0.BeaconState>,
   attestation: phase0.Attestation,
   verifySignature = true
 ): void {
-  const config = epochCtx.config;
+  const {config, epochCtx} = state;
   const {MIN_ATTESTATION_INCLUSION_DELAY, SLOTS_PER_EPOCH} = config.params;
   const slot = state.slot;
   const data = attestation.data;
@@ -78,7 +77,7 @@ export function processAttestation(
     state.previousEpochAttestations.push(pendingAttestation);
   }
 
-  if (!isValidIndexedAttestation(epochCtx, state, epochCtx.getIndexedAttestation(attestation), verifySignature)) {
+  if (!isValidIndexedAttestation(state, epochCtx.getIndexedAttestation(attestation), verifySignature)) {
     throw new Error("Attestation is not valid");
   }
 }

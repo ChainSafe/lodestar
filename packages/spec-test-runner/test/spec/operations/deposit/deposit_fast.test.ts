@@ -1,6 +1,7 @@
+import {TreeBacked} from "@chainsafe/ssz";
 import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {config} from "@chainsafe/lodestar-config/mainnet";
-import {describeDirectorySpecTest} from "@chainsafe/lodestar-spec-test-util";
+import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
 import {expect} from "chai";
 import {join} from "path";
 import {SPEC_TEST_LOCATION} from "../../../utils/specTestCases";
@@ -10,14 +11,24 @@ describeDirectorySpecTest<IProcessDepositTestCase, phase0.BeaconState>(
   "process deposit mainnet",
   join(SPEC_TEST_LOCATION, "/tests/mainnet/phase0/operations/deposit/pyspec_tests"),
   (testcase) => {
-    const state = testcase.pre;
-    const epochCtx = new phase0.fast.EpochContext(config);
-    epochCtx.loadState(state);
-    const wrappedState = phase0.fast.createCachedValidatorsBeaconState(state);
-    phase0.fast.processDeposit(epochCtx, wrappedState, testcase.deposit);
-    return state;
+    const wrappedState = phase0.fast.createCachedBeaconState<phase0.BeaconState>(
+      config,
+      testcase.pre as TreeBacked<phase0.BeaconState>
+    );
+    phase0.fast.processDeposit(wrappedState, testcase.deposit);
+    return wrappedState;
   },
   {
+    inputTypes: {
+      pre: {
+        type: InputType.SSZ,
+        treeBacked: true,
+      },
+      post: {
+        type: InputType.SSZ,
+        treeBacked: true,
+      },
+    },
     sszTypes: {
       pre: config.types.phase0.BeaconState,
       post: config.types.phase0.BeaconState,

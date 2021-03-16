@@ -5,7 +5,7 @@ import {BeaconSync, IBeaconSync} from "../../../../../src/sync";
 import {StubbedBeaconDb} from "../../../../utils/stub";
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {expect} from "chai";
-import {generateState} from "../../../../utils/state";
+import {generateCachedState} from "../../../../utils/state";
 import {Network} from "../../../../../src/network/network";
 
 describe("beacon api implementation", function () {
@@ -38,7 +38,7 @@ describe("beacon api implementation", function () {
     });
 
     it("success", async function () {
-      chainStub.getHeadState.returns(generateState());
+      chainStub.getHeadState.returns(generateCachedState());
       const genesis = await api.getGenesis();
       if (!genesis) throw Error("Genesis is nullish");
       expect(genesis.genesisForkVersion).to.not.be.undefined;

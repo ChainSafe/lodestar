@@ -28,7 +28,6 @@ export const exportCmd: ICliCommand<IExportArgs, ISlashingProtectionArgs & IAcco
     file: {
       description: "The slashing protection interchange file to export to (.json).",
       demandOption: true,
-      normalize: true,
       type: "string",
     },
   },

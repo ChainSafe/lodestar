@@ -1,20 +1,20 @@
 // this will need async once we wan't to resolve archive slot
-import {GENESIS_SLOT, FAR_FUTURE_EPOCH} from "@chainsafe/lodestar-beacon-state-transition";
+import {GENESIS_SLOT, FAR_FUTURE_EPOCH, CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
 import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {Epoch, ValidatorIndex, Gwei, Slot} from "@chainsafe/lodestar-types";
-import {fromHexString, readOnlyMap, TreeBacked} from "@chainsafe/ssz";
+import {fromHexString, readOnlyMap} from "@chainsafe/ssz";
 import {IBeaconChain} from "../../../../chain";
 import {StateContextCache} from "../../../../chain/stateCache";
 import {IBeaconDb} from "../../../../db/api";
-import {ApiStateContext, StateId} from "./interface";
+import {StateId} from "./interface";
 
 export async function resolveStateId(
   chain: IBeaconChain,
   db: IBeaconDb,
   stateId: StateId
-): Promise<ApiStateContext | null> {
+): Promise<phase0.BeaconState | null> {
   stateId = stateId.toLowerCase();
   if (stateId === "head" || stateId === "genesis" || stateId === "finalized" || stateId === "justified") {
     return await stateByName(db, chain.stateCache, chain.forkChoice, stateId);
@@ -84,30 +84,30 @@ export function toValidatorResponse(
 export function getEpochBeaconCommittees(
   config: IBeaconConfig,
   chain: IBeaconChain,
-  stateContext: ApiStateContext,
+  state: phase0.BeaconState | CachedBeaconState<phase0.BeaconState>,
   epoch: Epoch
 ): ValidatorIndex[][][] {
   let committees: ValidatorIndex[][][] | null = null;
-  if (stateContext.epochCtx) {
+  if ((state as CachedBeaconState<phase0.BeaconState>).epochCtx) {
     switch (epoch) {
       case chain.clock.currentEpoch: {
-        committees = stateContext.epochCtx.currentShuffling.committees;
+        committees = (state as CachedBeaconState<phase0.BeaconState>).currentShuffling.committees;
         break;
       }
       case chain.clock.currentEpoch - 1: {
-        committees = stateContext.epochCtx.previousShuffling.committees;
+        committees = (state as CachedBeaconState<phase0.BeaconState>).previousShuffling.committees;
         break;
       }
     }
   }
   if (!committees) {
-    const indicesBounded: [ValidatorIndex, Epoch, Epoch][] = readOnlyMap(stateContext.state.validators, (v, i) => [
+    const indicesBounded: [ValidatorIndex, Epoch, Epoch][] = readOnlyMap(state.validators, (v, i) => [
       i,
       v.activationEpoch,
       v.exitEpoch,
     ]);
 
-    const shuffling = phase0.fast.computeEpochShuffling(config, stateContext.state, indicesBounded, epoch);
+    const shuffling = phase0.fast.computeEpochShuffling(config, state, indicesBounded, epoch);
     committees = shuffling.committees;
   }
   return committees;
@@ -118,14 +118,12 @@ async function stateByName(
   stateCache: StateContextCache,
   forkChoice: IForkChoice,
   stateId: StateId
-): Promise<ApiStateContext | null> {
-  let state: TreeBacked<phase0.BeaconState> | null = null;
+): Promise<phase0.BeaconState | null> {
   switch (stateId) {
     case "head":
       return stateCache.get(forkChoice.getHead().stateRoot) ?? null;
     case "genesis":
-      state = await db.stateArchive.get(GENESIS_SLOT);
-      return state ? {state} : null;
+      return await db.stateArchive.get(GENESIS_SLOT);
     case "finalized":
       return stateCache.get(forkChoice.getFinalizedCheckpoint().root) ?? null;
     case "justified":
@@ -139,13 +137,12 @@ async function stateByRoot(
   db: IBeaconDb,
   stateCache: StateContextCache,
   stateId: StateId
-): Promise<ApiStateContext | null> {
+): Promise<phase0.BeaconState | null> {
   if (stateId.startsWith("0x")) {
     const stateRoot = fromHexString(stateId);
     const cachedStateCtx = stateCache.get(stateRoot);
     if (cachedStateCtx) return cachedStateCtx;
-    const finalizedState = await db.stateArchive.getByRoot(stateRoot);
-    return finalizedState ? {state: finalizedState} : null;
+    return await db.stateArchive.getByRoot(stateRoot);
   } else {
     throw new Error("not a root state id");
   }
@@ -156,12 +153,11 @@ async function stateBySlot(
   stateCache: StateContextCache,
   forkChoice: IForkChoice,
   slot: Slot
-): Promise<ApiStateContext | null> {
+): Promise<phase0.BeaconState | null> {
   const blockSummary = forkChoice.getCanonicalBlockSummaryAtSlot(slot);
   if (blockSummary) {
     return stateCache.get(blockSummary.stateRoot) ?? null;
   } else {
-    const finalizedState = await db.stateArchive.get(slot);
-    return finalizedState ? {state: finalizedState} : null;
+    return await db.stateArchive.get(slot);
   }
 }

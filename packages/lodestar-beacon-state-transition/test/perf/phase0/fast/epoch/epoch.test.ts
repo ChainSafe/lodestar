@@ -5,8 +5,7 @@ import {expect} from "chai";
 import {phase0} from "../../../../../src";
 
 describe("Epoch Processing Performance Tests", function () {
-  let state: phase0.fast.CachedValidatorsBeaconState;
-  let epochCtx: phase0.fast.EpochContext;
+  let state: phase0.fast.CachedBeaconState<phase0.BeaconState>;
   let process: phase0.fast.IEpochProcess;
   const logger = profilerLogger();
 
@@ -16,15 +15,13 @@ describe("Epoch Processing Performance Tests", function () {
     const origState = await generatePerformanceState();
     // go back 1 slot to process epoch
     origState.slot -= 1;
-    epochCtx = new phase0.fast.EpochContext(config);
-    epochCtx.loadState(origState);
-    state = phase0.fast.createCachedValidatorsBeaconState(origState);
+    state = phase0.fast.createCachedBeaconState(config, origState);
   });
 
   it("prepareEpochProcessState", async () => {
     const start = Date.now();
     logger.profile("prepareEpochProcessState");
-    process = phase0.fast.prepareEpochProcessState(epochCtx, state);
+    process = phase0.fast.prepareEpochProcessState(state);
     logger.profile("prepareEpochProcessState");
     // not stable, sometimes < 1400, sometimes > 2000
     expect(Date.now() - start).lt(100);
@@ -33,7 +30,7 @@ describe("Epoch Processing Performance Tests", function () {
   it("processJustificationAndFinalization", async () => {
     const start = Date.now();
     logger.profile("processJustificationAndFinalization");
-    phase0.fast.processJustificationAndFinalization(epochCtx, process, state);
+    phase0.fast.processJustificationAndFinalization(state, process);
     logger.profile("processJustificationAndFinalization");
     expect(Date.now() - start).lte(2);
   });
@@ -41,7 +38,7 @@ describe("Epoch Processing Performance Tests", function () {
   it("processRewardsAndPenalties", async () => {
     const start = Date.now();
     logger.profile("processRewardsAndPenalties");
-    phase0.fast.processRewardsAndPenalties(epochCtx, process, state);
+    phase0.fast.processRewardsAndPenalties(state, process);
     logger.profile("processRewardsAndPenalties");
     expect(Date.now() - start).lt(250);
   });
@@ -49,7 +46,7 @@ describe("Epoch Processing Performance Tests", function () {
   it("processRegistryUpdates", async () => {
     const start = Date.now();
     logger.profile("processRegistryUpdates");
-    phase0.fast.processRegistryUpdates(epochCtx, process, state);
+    phase0.fast.processRegistryUpdates(state, process);
     logger.profile("processRegistryUpdates");
     expect(Date.now() - start).lte(2);
   });
@@ -57,7 +54,7 @@ describe("Epoch Processing Performance Tests", function () {
   it("processSlashings", async () => {
     const start = Date.now();
     logger.profile("processSlashings");
-    phase0.fast.processSlashings(epochCtx, process, state);
+    phase0.fast.processSlashings(state, process);
     logger.profile("processSlashings");
     expect(Date.now() - start).lte(25);
   });
@@ -65,7 +62,7 @@ describe("Epoch Processing Performance Tests", function () {
   it("processFinalUpdates", async () => {
     const start = Date.now();
     logger.profile("processFinalUpdates");
-    phase0.fast.processFinalUpdates(epochCtx, process, state);
+    phase0.fast.processFinalUpdates(state, process);
     logger.profile("processFinalUpdates");
     expect(Date.now() - start).lte(30);
   });

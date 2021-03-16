@@ -1,5 +1,7 @@
 import {join} from "path";
 import {expect} from "chai";
+
+import {TreeBacked} from "@chainsafe/ssz";
 import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
@@ -11,15 +13,14 @@ describeDirectorySpecTest<IBlockSanityTestCase, phase0.BeaconState>(
   "block sanity mainnet",
   join(SPEC_TEST_LOCATION, "/tests/mainnet/phase0/sanity/blocks/pyspec_tests"),
   (testcase) => {
-    const state = config.types.phase0.BeaconState.tree.createValue(testcase.pre);
-    const wrappedState = phase0.fast.createCachedValidatorsBeaconState(state);
-    const epochCtx = new phase0.fast.EpochContext(config);
-    epochCtx.loadState(wrappedState);
-    let stateContext = {epochCtx, state: wrappedState};
+    let wrappedState = phase0.fast.createCachedBeaconState<phase0.BeaconState>(
+      config,
+      testcase.pre as TreeBacked<phase0.BeaconState>
+    );
     const verify = !!testcase.meta && !!testcase.meta.blsSetting && testcase.meta.blsSetting === BigInt(1);
     for (let i = 0; i < Number(testcase.meta.blocksCount); i++) {
-      stateContext = phase0.fast.fastStateTransition(
-        stateContext,
+      wrappedState = phase0.fast.fastStateTransition(
+        wrappedState,
         testcase[`blocks_${i}`] as phase0.SignedBeaconBlock,
         {
           verifyStateRoot: verify,
@@ -28,10 +29,18 @@ describeDirectorySpecTest<IBlockSanityTestCase, phase0.BeaconState>(
         }
       );
     }
-    return stateContext.state.getOriginalState();
+    return wrappedState;
   },
   {
     inputTypes: {
+      pre: {
+        type: InputType.SSZ,
+        treeBacked: true,
+      },
+      post: {
+        type: InputType.SSZ,
+        treeBacked: true,
+      },
       meta: InputType.YAML,
     },
     sszTypes: {

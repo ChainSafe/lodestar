@@ -47,9 +47,8 @@ describe("processAttestation", function () {
   it("should throw on errored getIndexedAttestation", async function () {
     const attestation = generateAttestation();
     const state = generateCachedState();
-    const epochCtx = sinon.createStubInstance(phase0.EpochContext);
-    epochCtx.getIndexedAttestation.throws();
-    regen.getCheckpointState.resolves({state, epochCtx: (epochCtx as unknown) as phase0.EpochContext});
+    sinon.stub(state.epochCtx, "getIndexedAttestation").throws();
+    regen.getCheckpointState.resolves(state);
     try {
       await processAttestation({
         emitter,
@@ -66,9 +65,8 @@ describe("processAttestation", function () {
   it("should throw on invalid indexed attestation", async function () {
     const attestation = generateAttestation();
     const state = generateCachedState();
-    const epochCtx = sinon.createStubInstance(phase0.EpochContext);
-    epochCtx.getIndexedAttestation.returns({} as phase0.IndexedAttestation);
-    regen.getCheckpointState.resolves({state, epochCtx: (epochCtx as unknown) as phase0.EpochContext});
+    sinon.stub(state.epochCtx, "getIndexedAttestation").returns({} as phase0.IndexedAttestation);
+    regen.getCheckpointState.resolves(state);
     isValidIndexedAttestationStub.returns(false);
     try {
       await processAttestation({
@@ -86,9 +84,8 @@ describe("processAttestation", function () {
   it("should emit 'attestation' event on processed attestation", async function () {
     const attestation = generateAttestation();
     const state = generateCachedState();
-    const epochCtx = sinon.createStubInstance(phase0.fast.EpochContext);
-    epochCtx.getIndexedAttestation.returns({} as phase0.IndexedAttestation);
-    regen.getCheckpointState.resolves({state, epochCtx: (epochCtx as unknown) as phase0.EpochContext});
+    sinon.stub(state.epochCtx, "getIndexedAttestation").returns({} as phase0.IndexedAttestation);
+    regen.getCheckpointState.resolves(state);
     isValidIndexedAttestationStub.returns(true);
     forkChoice.onAttestation.returns();
 

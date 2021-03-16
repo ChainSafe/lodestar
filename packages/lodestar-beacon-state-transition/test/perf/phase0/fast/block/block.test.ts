@@ -7,21 +7,19 @@ import {profilerLogger} from "../../../../utils/logger";
 
 describe("Process Blocks Performance Test", function () {
   this.timeout(0);
-  let stateCtx: phase0.fast.IStateContext;
+  let state: phase0.fast.CachedBeaconState<phase0.BeaconState>;
   const logger = profilerLogger();
   before(async () => {
     await initBLS();
     const origState = await generatePerformanceState();
-    const epochCtx = new phase0.fast.EpochContext(config);
-    epochCtx.loadState(origState);
-    stateCtx = {state: phase0.fast.createCachedValidatorsBeaconState(origState), epochCtx};
+    state = phase0.fast.createCachedBeaconState(config, origState);
   });
 
   it("should process block", async () => {
     const signedBlock = await generatePerformanceBlock();
     logger.profile(`Process block ${signedBlock.message.slot}`);
     const start = Date.now();
-    phase0.fast.fastStateTransition(stateCtx, signedBlock, {
+    phase0.fast.fastStateTransition(state, signedBlock, {
       verifyProposer: false,
       verifySignatures: false,
       verifyStateRoot: false,
@@ -32,7 +30,7 @@ describe("Process Blocks Performance Test", function () {
 
   it("should process multiple validator exits in same block", async () => {
     const signedBlock: phase0.SignedBeaconBlock = await generatePerformanceBlock();
-    const exitEpoch = stateCtx.epochCtx.currentShuffling.epoch;
+    const exitEpoch = state.epochCtx.currentShuffling.epoch;
     const voluntaryExits: phase0.SignedVoluntaryExit[] = [];
     const numValidatorExits = config.params.MAX_VOLUNTARY_EXITS;
     for (let i = 0; i < numValidatorExits; i++) {
@@ -44,7 +42,7 @@ describe("Process Blocks Performance Test", function () {
     signedBlock.message.body.voluntaryExits = (voluntaryExits as unknown) as List<phase0.SignedVoluntaryExit>;
     const start = Date.now();
     logger.profile(`Process block ${signedBlock.message.slot} with ${numValidatorExits} validator exits`);
-    phase0.fast.fastStateTransition(stateCtx, signedBlock, {
+    phase0.fast.fastStateTransition(state, signedBlock, {
       verifyProposer: false,
       verifySignatures: false,
       verifyStateRoot: false,

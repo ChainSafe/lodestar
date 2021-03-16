@@ -7,7 +7,6 @@ export * from "./fs";
 export * from "./graffiti";
 export * from "./object";
 export * from "./passphrase";
-export * from "./paths";
 export * from "./randomPassword";
 export * from "./recursivelyFind";
 export * from "./sleep";

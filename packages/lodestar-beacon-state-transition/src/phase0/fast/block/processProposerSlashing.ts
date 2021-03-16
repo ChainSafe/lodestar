@@ -1,16 +1,15 @@
 import {phase0} from "@chainsafe/lodestar-types";
 import {computeEpochAtSlot, computeSigningRoot, getDomain, isSlashableValidator} from "../../../util";
-import {CachedValidatorsBeaconState, EpochContext} from "../util";
+import {CachedBeaconState} from "../util";
 import {slashValidator} from "./slashValidator";
 import {ISignatureSet, SignatureSetType, verifySignatureSet} from "../signatureSets";
 
 export function processProposerSlashing(
-  epochCtx: EpochContext,
-  state: CachedValidatorsBeaconState,
+  state: CachedBeaconState<phase0.BeaconState>,
   proposerSlashing: phase0.ProposerSlashing,
   verifySignatures = true
 ): void {
-  const config = epochCtx.config;
+  const {config, epochCtx} = state;
   const {BeaconBlockHeader} = config.types.phase0;
   const header1 = proposerSlashing.signedHeader1.message;
   const header2 = proposerSlashing.signedHeader2.message;
@@ -38,25 +37,24 @@ export function processProposerSlashing(
 
   // verify signatures
   if (verifySignatures) {
-    for (const [i, signatureSet] of getProposerSlashingSignatureSets(epochCtx, state, proposerSlashing).entries()) {
+    for (const [i, signatureSet] of getProposerSlashingSignatureSets(state, proposerSlashing).entries()) {
       if (!verifySignatureSet(signatureSet)) {
         throw new Error(`ProposerSlashing header${i + 1} signature invalid`);
       }
     }
   }
 
-  slashValidator(epochCtx, state, header1.proposerIndex);
+  slashValidator(state, header1.proposerIndex);
 }
 
 /**
  * Extract signatures to allow validating all block signatures at once
  */
 export function getProposerSlashingSignatureSets(
-  epochCtx: EpochContext,
-  state: phase0.BeaconState,
+  state: CachedBeaconState<phase0.BeaconState>,
   proposerSlashing: phase0.ProposerSlashing
 ): ISignatureSet[] {
-  const config = epochCtx.config;
+  const {config, epochCtx} = state;
   const pubkey = epochCtx.index2pubkey[proposerSlashing.signedHeader1.message.proposerIndex];
 
   return [proposerSlashing.signedHeader1, proposerSlashing.signedHeader2].map(

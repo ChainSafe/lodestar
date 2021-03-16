@@ -3,7 +3,7 @@ import {expect} from "chai";
 import {readdirSync, readFileSync, writeFile} from "fs";
 import {basename, join, parse} from "path";
 import profiler from "v8-profiler-next";
-import {Type} from "@chainsafe/ssz";
+import {Type, CompositeType} from "@chainsafe/ssz";
 
 import {isDirectory, loadYamlFile} from "./util";
 
@@ -12,12 +12,27 @@ export enum InputType {
   YAML = "yaml",
 }
 
+export type ExpandedInputType = {
+  type: InputType;
+  treeBacked: boolean;
+};
+
+export function toExpandedInputType(inputType: InputType | ExpandedInputType): ExpandedInputType {
+  if ((inputType as ExpandedInputType).type) {
+    return inputType as ExpandedInputType;
+  }
+  return {
+    type: inputType as InputType,
+    treeBacked: false,
+  };
+}
+
 export interface ISpecTestOptions<TestCase, Result> {
   /**
    * If directory contains both ssz or yaml file version,
    * you can choose which one to use. Default is ssz.
    */
-  inputTypes?: {[K in keyof NonNullable<TestCase>]?: InputType};
+  inputTypes?: {[K in keyof NonNullable<TestCase>]?: InputType | ExpandedInputType};
 
   sszTypes?: {[K in keyof NonNullable<TestCase>]?: Type<any>};
 
@@ -130,7 +145,10 @@ function loadInputFiles<TestCase, Result>(directory: string, options: ISpecTestO
       }
       if (!options.inputTypes) throw Error("inputTypes is not defined");
       const name = parse(file).name as keyof NonNullable<TestCase>;
-      const extension = (options.inputTypes[name] || InputType.SSZ) as string;
+      const inputType = toExpandedInputType(options.inputTypes[name] ?? InputType.SSZ);
+      // set options.inputTypes[name] with expanded input type
+      options.inputTypes[name] = inputType;
+      const extension = inputType.type as string;
       return file.endsWith(extension);
     })
     .forEach((file) => {
@@ -154,7 +172,12 @@ function deserializeTestCase<TestCase, Result>(
 ): Record<string, unknown> {
   if (file.endsWith(InputType.SSZ)) {
     if (!options.sszTypes) throw Error("sszTypes is not defined");
-    return options.sszTypes[inputName as keyof NonNullable<TestCase>]?.deserialize(readFileSync(file));
+    const data = readFileSync(file);
+    if ((options.inputTypes![inputName as keyof TestCase]! as ExpandedInputType).treeBacked) {
+      return (options.sszTypes[inputName as keyof NonNullable<TestCase>] as CompositeType<any>).tree.deserialize(data);
+    } else {
+      return options.sszTypes[inputName as keyof NonNullable<TestCase>]?.deserialize(data);
+    }
   } else {
     return loadYamlFile(file);
   }
