@@ -8,6 +8,7 @@ import {
   computeEpochAtSlot,
   createCachedBeaconState,
   phase0,
+  CachedBeaconState,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils";
@@ -136,7 +137,7 @@ export function restoreStateCaches(
   stateCache: StateContextCache,
   checkpointStateCache: CheckpointStateCache,
   state: TreeBacked<phase0.BeaconState>
-): void {
+): CachedBeaconState<phase0.BeaconState> {
   const {checkpoint} = computeAnchorCheckpoint(config, state);
 
   const cachedBeaconState = createCachedBeaconState(config, state);
@@ -144,6 +145,7 @@ export function restoreStateCaches(
   // store state in state caches
   void stateCache.add(cachedBeaconState);
   checkpointStateCache.add(checkpoint, cachedBeaconState);
+  return cachedBeaconState;
 }
 
 export function initBeaconMetrics(metrics: IBeaconMetrics, state: TreeBacked<phase0.BeaconState>): void {

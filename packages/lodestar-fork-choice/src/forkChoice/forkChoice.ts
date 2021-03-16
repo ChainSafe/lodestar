@@ -84,18 +84,20 @@ export class ForkChoice implements IForkChoice {
     fcStore,
     protoArray,
     queuedAttestations,
+    justifiedBalances,
   }: {
     config: IBeaconConfig;
     fcStore: IForkChoiceStore;
     protoArray: ProtoArray;
     queuedAttestations: Set<IQueuedAttestation>;
+    justifiedBalances: Gwei[];
   }) {
     this.config = config;
     this.fcStore = fcStore;
     this.protoArray = protoArray;
     this.votes = [];
-    this.justifiedBalances = [];
-    this.bestJustifiedBalances = [];
+    this.justifiedBalances = justifiedBalances;
+    this.bestJustifiedBalances = justifiedBalances;
     this.queuedAttestations = queuedAttestations;
     this.synced = false;
   }
