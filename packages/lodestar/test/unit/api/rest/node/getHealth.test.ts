@@ -1,51 +1,32 @@
 import supertest from "supertest";
-import {config} from "@chainsafe/lodestar-config/minimal";
 
-import {ApiNamespace, RestApi} from "../../../../../src/api";
 import {getHealth} from "../../../../../src/api/rest/controllers/node";
-import {StubbedApi} from "../../../../utils/stub/api";
-import {testLogger} from "../../../../utils/logger";
 import {urlJoin} from "../utils";
-import {NODE_PREFIX} from "./index";
+import {NODE_PREFIX, setupRestApiTestServer} from "../index.test";
+import {StubbedNodeApi} from "../../../../utils/stub/nodeApi";
+import {RestApi} from "../../../../../src/api";
 
 describe("rest - node - getHealth", function () {
+  let nodeStub: StubbedNodeApi;
   let restApi: RestApi;
-  let api: StubbedApi;
 
-  beforeEach(async function () {
-    api = new StubbedApi();
-    restApi = await RestApi.init(
-      {
-        api: [ApiNamespace.NODE],
-        cors: "*",
-        enabled: true,
-        host: "127.0.0.1",
-        port: 0,
-      },
-      {
-        config,
-        logger: testLogger(),
-        api,
-      }
-    );
-  });
-
-  afterEach(async function () {
-    await restApi.close();
+  before(async function () {
+    restApi = await setupRestApiTestServer();
+    nodeStub = restApi.server.api.node as StubbedNodeApi;
   });
 
   it("ready", async function () {
-    api.node.getNodeStatus.resolves("ready");
+    nodeStub.getNodeStatus.resolves("ready");
     await supertest(restApi.server.server).get(urlJoin(NODE_PREFIX, getHealth.url)).expect(200);
   });
 
   it("syncing", async function () {
-    api.node.getNodeStatus.resolves("syncing");
+    nodeStub.getNodeStatus.resolves("syncing");
     await supertest(restApi.server.server).get(urlJoin(NODE_PREFIX, getHealth.url)).expect(206);
   });
 
   it("error", async function () {
-    api.node.getNodeStatus.resolves("error");
+    nodeStub.getNodeStatus.resolves("error");
     await supertest(restApi.server.server).get(urlJoin(NODE_PREFIX, getHealth.url)).expect(503);
   });
 });

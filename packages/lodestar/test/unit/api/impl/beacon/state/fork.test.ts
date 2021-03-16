@@ -1,16 +1,20 @@
 import {BeaconStateApi} from "../../../../../../src/api/impl/beacon/state/state";
 import {config} from "@chainsafe/lodestar-config/minimal";
-import {BeaconChain} from "../../../../../../src/chain";
-import {StubbedBeaconDb} from "../../../../../utils/stub";
 import sinon, {SinonStubbedMember} from "sinon";
 import {IBeaconStateApi} from "../../../../../../src/api/impl/beacon/state/interface";
 import * as stateApiUtils from "../../../../../../src/api/impl/beacon/state/utils";
 import {generateCachedState} from "../../../../../utils/state";
 import {expect} from "chai";
+import {setupApiImplTestServer, ApiImplTestModules} from "../../index.test";
 
 describe("beacon api impl - state - get fork", function () {
   let api: IBeaconStateApi;
   let resolveStateIdStub: SinonStubbedMember<typeof stateApiUtils["resolveStateId"]>;
+  let server: ApiImplTestModules;
+
+  before(function () {
+    server = setupApiImplTestServer();
+  });
 
   beforeEach(function () {
     resolveStateIdStub = sinon.stub(stateApiUtils, "resolveStateId");
@@ -18,8 +22,8 @@ describe("beacon api impl - state - get fork", function () {
       {},
       {
         config,
-        chain: sinon.createStubInstance(BeaconChain),
-        db: new StubbedBeaconDb(sinon, config),
+        chain: server.chainStub,
+        db: server.dbStub,
       }
     );
   });

@@ -1,41 +1,22 @@
-import {config} from "@chainsafe/lodestar-config/minimal";
 import {expect} from "chai";
 import supertest from "supertest";
-import {ApiNamespace, RestApi} from "../../../../../src/api";
-import {testLogger} from "../../../../utils/logger";
-import {StubbedApi} from "../../../../utils/stub/api";
 import {urlJoin} from "../utils";
-import {VALIDATOR_PREFIX} from "./index.test";
+import {setupRestApiTestServer, VALIDATOR_PREFIX} from "../index.test";
 import {prepareCommitteeSubnet} from "../../../../../src/api/rest/controllers/validator/prepareCommitteeSubnet";
+import {SinonStubbedInstance} from "sinon";
+import {RestApi, ValidatorApi} from "../../../../../src/api";
 
 describe("rest - validator - prepareCommitteeSubnet", function () {
   let restApi: RestApi;
-  let api: StubbedApi;
+  let validatorStub: SinonStubbedInstance<ValidatorApi>;
 
-  beforeEach(async function () {
-    api = new StubbedApi();
-    restApi = await RestApi.init(
-      {
-        api: [ApiNamespace.VALIDATOR],
-        cors: "*",
-        enabled: true,
-        host: "127.0.0.1",
-        port: 0,
-      },
-      {
-        config,
-        logger: testLogger(),
-        api,
-      }
-    );
-  });
-
-  afterEach(async function () {
-    await restApi.close();
+  before(async function () {
+    restApi = await setupRestApiTestServer();
+    validatorStub = restApi.server.api.validator as SinonStubbedInstance<ValidatorApi>;
   });
 
   it("should succeed", async function () {
-    api.validator.prepareBeaconCommitteeSubnet.resolves();
+    validatorStub.prepareBeaconCommitteeSubnet.resolves();
     await supertest(restApi.server.server)
       .post(urlJoin(VALIDATOR_PREFIX, prepareCommitteeSubnet.url))
       .send([
@@ -53,7 +34,7 @@ describe("rest - validator - prepareCommitteeSubnet", function () {
       ])
       .expect(200);
     expect(
-      api.validator.prepareBeaconCommitteeSubnet.withArgs([
+      validatorStub.prepareBeaconCommitteeSubnet.withArgs([
         {
           validatorIndex: 1,
           committeeIndex: 2,

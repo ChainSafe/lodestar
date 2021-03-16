@@ -1,41 +1,23 @@
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {expect} from "chai";
 import supertest from "supertest";
-import {ApiNamespace, RestApi} from "../../../../../src/api";
 import {attesterDutiesController} from "../../../../../src/api/rest/controllers/validator/duties/attesterDuties";
-import {testLogger} from "../../../../utils/logger";
-import {StubbedApi} from "../../../../utils/stub/api";
 import {urlJoin} from "../utils";
-import {VALIDATOR_PREFIX} from "./index.test";
+import {setupRestApiTestServer, VALIDATOR_PREFIX} from "../index.test";
+import {SinonStubbedInstance} from "sinon";
+import {RestApi, ValidatorApi} from "../../../../../src/api";
 
 describe("rest - validator - attesterDuties", function () {
   let restApi: RestApi;
-  let api: StubbedApi;
+  let validatorStub: SinonStubbedInstance<ValidatorApi>;
 
-  beforeEach(async function () {
-    api = new StubbedApi();
-    restApi = await RestApi.init(
-      {
-        api: [ApiNamespace.VALIDATOR],
-        cors: "*",
-        enabled: true,
-        host: "127.0.0.1",
-        port: 0,
-      },
-      {
-        config,
-        logger: testLogger(),
-        api,
-      }
-    );
-  });
-
-  afterEach(async function () {
-    await restApi.close();
+  before(async function () {
+    restApi = await setupRestApiTestServer();
+    validatorStub = restApi.server.api.validator as SinonStubbedInstance<ValidatorApi>;
   });
 
   it("should succeed", async function () {
-    api.validator.getAttesterDuties.resolves([
+    validatorStub.getAttesterDuties.resolves([
       config.types.phase0.AttesterDuty.defaultValue(),
       config.types.phase0.AttesterDuty.defaultValue(),
     ]);
@@ -46,11 +28,11 @@ describe("rest - validator - attesterDuties", function () {
       .expect("Content-Type", "application/json; charset=utf-8");
     expect(response.body.data).to.be.instanceOf(Array);
     expect(response.body.data).to.have.length(2);
-    expect(api.validator.getAttesterDuties.withArgs(0, [1, 4]).calledOnce).to.be.true;
+    expect(validatorStub.getAttesterDuties.withArgs(0, [1, 4]).calledOnce).to.be.true;
   });
 
   it("invalid epoch", async function () {
-    api.validator.getAttesterDuties.resolves([
+    validatorStub.getAttesterDuties.resolves([
       config.types.phase0.AttesterDuty.defaultValue(),
       config.types.phase0.AttesterDuty.defaultValue(),
     ]);
@@ -62,7 +44,7 @@ describe("rest - validator - attesterDuties", function () {
   });
 
   it("no validator indices", async function () {
-    api.validator.getAttesterDuties.resolves([
+    validatorStub.getAttesterDuties.resolves([
       config.types.phase0.AttesterDuty.defaultValue(),
       config.types.phase0.AttesterDuty.defaultValue(),
     ]);
@@ -74,7 +56,7 @@ describe("rest - validator - attesterDuties", function () {
   });
 
   it("invalid validator index", async function () {
-    api.validator.getAttesterDuties.resolves([
+    validatorStub.getAttesterDuties.resolves([
       config.types.phase0.AttesterDuty.defaultValue(),
       config.types.phase0.AttesterDuty.defaultValue(),
     ]);

@@ -4,37 +4,34 @@ import {expect} from "chai";
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {createCachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
 
-import {BeaconChain, ForkChoice, IBeaconChain} from "../../../../../../src/chain";
+import {ForkChoice, IBeaconChain} from "../../../../../../src/chain";
 import {LocalClock} from "../../../../../../src/chain/clock";
 import {FAR_FUTURE_EPOCH} from "../../../../../../src/constants";
 import {IValidatorApi, ValidatorApi} from "../../../../../../src/api/impl/validator";
 import {generateInitialMaxBalances} from "../../../../../utils/balances";
 import {generateState} from "../../../../../utils/state";
-import {StubbedBeaconDb} from "../../../../../utils/stub";
-import {BeaconSync, IBeaconSync} from "../../../../../../src/sync";
+import {IBeaconSync} from "../../../../../../src/sync";
 import {generateValidators} from "../../../../../utils/validator";
+import {StubbedBeaconDb} from "../../../../../utils/stub";
+import {setupApiImplTestServer, ApiImplTestModules} from "../../index.test";
 
 describe("get proposers api impl", function () {
-  const sandbox = sinon.createSandbox();
-
-  let dbStub: StubbedBeaconDb,
-    chainStub: SinonStubbedInstance<IBeaconChain>,
-    syncStub: SinonStubbedInstance<IBeaconSync>;
+  let chainStub: SinonStubbedInstance<IBeaconChain>,
+    syncStub: SinonStubbedInstance<IBeaconSync>,
+    dbStub: StubbedBeaconDb;
 
   let api: IValidatorApi;
+  let server: ApiImplTestModules;
 
-  beforeEach(function () {
-    dbStub = new StubbedBeaconDb(sandbox, config);
-    chainStub = sandbox.createStubInstance(BeaconChain);
-    chainStub.clock = sandbox.createStubInstance(LocalClock);
-    chainStub.forkChoice = sandbox.createStubInstance(ForkChoice);
-    syncStub = sandbox.createStubInstance(BeaconSync);
+  before(function () {
+    server = setupApiImplTestServer();
+    chainStub = server.chainStub;
+    syncStub = server.syncStub;
+    chainStub.clock = server.sandbox.createStubInstance(LocalClock);
+    chainStub.forkChoice = server.sandbox.createStubInstance(ForkChoice);
+    dbStub = server.dbStub;
     // @ts-ignore
     api = new ValidatorApi({}, {db: dbStub, chain: chainStub, sync: syncStub, config});
-  });
-
-  afterEach(function () {
-    sandbox.restore();
   });
 
   it("should throw error when node is syncing", async function () {
@@ -64,8 +61,8 @@ describe("get proposers api impl", function () {
 
   it("should get proposers", async function () {
     syncStub.isSynced.returns(true);
-    sandbox.stub(chainStub.clock, "currentEpoch").get(() => 0);
-    sandbox.stub(chainStub.clock, "currentSlot").get(() => 0);
+    server.sandbox.stub(chainStub.clock, "currentEpoch").get(() => 0);
+    server.sandbox.stub(chainStub.clock, "currentSlot").get(() => 0);
     dbStub.block.get.resolves({message: {stateRoot: Buffer.alloc(32)}} as any);
     const state = generateState(
       {

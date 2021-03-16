@@ -1,56 +1,43 @@
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {expect} from "chai";
 import supertest from "supertest";
-import {ApiNamespace, RestApi} from "../../../../../../src/api";
-import {testLogger} from "../../../../../utils/logger";
-import {StubbedApi} from "../../../../../utils/stub/api";
 import {urlJoin} from "../../utils";
-import {BEACON_PREFIX} from "../index.test";
+import {BEACON_PREFIX, setupRestApiTestServer} from "../../index.test";
 import {generateAttestation} from "../../../../../utils/attestation";
 import {submitPoolAttestation} from "../../../../../../src/api/rest/controllers/beacon/pool/submitPoolAttestation";
+import {Attestation} from "@chainsafe/lodestar-types/lib/phase0";
+import {SinonStubbedInstance} from "sinon";
+import {RestApi} from "../../../../../../src/api";
+import {BeaconPoolApi} from "../../../../../../src/api/impl/beacon/pool";
 
 describe("rest - beacon - submitAttestation", function () {
+  let attestation: Attestation;
   let restApi: RestApi;
-  let api: StubbedApi;
+  let beaconPoolStub: SinonStubbedInstance<BeaconPoolApi>;
 
-  beforeEach(async function () {
-    api = new StubbedApi();
-    restApi = await RestApi.init(
-      {
-        api: [ApiNamespace.BEACON],
-        cors: "*",
-        enabled: true,
-        host: "127.0.0.1",
-        port: 0,
-      },
-      {
-        config,
-        logger: testLogger(),
-        api,
-      }
-    );
+  before(function () {
+    attestation = generateAttestation();
   });
 
-  afterEach(async function () {
-    await restApi.close();
+  beforeEach(async function () {
+    restApi = await setupRestApiTestServer();
+    beaconPoolStub = restApi.server.api.beacon.pool as SinonStubbedInstance<BeaconPoolApi>;
   });
 
   it("should succeed", async function () {
-    const attestation = generateAttestation();
     await supertest(restApi.server.server)
       .post(urlJoin(BEACON_PREFIX, submitPoolAttestation.url))
       .send(config.types.phase0.Attestation.toJson(attestation, {case: "snake"}) as Record<string, unknown>)
       .expect(200);
-    expect(api.beacon.pool.submitAttestation.calledOnce).to.be.true;
+    expect(beaconPoolStub.submitAttestation.calledOnce).to.be.true;
   });
 
   it("should fail to parse body", async function () {
-    const attestation = generateAttestation();
     await supertest(restApi.server.server)
       .post(urlJoin(BEACON_PREFIX, submitPoolAttestation.url))
       .send(config.types.phase0.Attestation.toJson(attestation, {case: "camel"}) as Record<string, unknown>)
       .expect(400)
       .expect("Content-Type", "application/json; charset=utf-8");
-    expect(api.beacon.pool.submitAttestation.notCalled).to.be.true;
+    expect(beaconPoolStub.submitAttestation.notCalled).to.be.true;
   });
 });

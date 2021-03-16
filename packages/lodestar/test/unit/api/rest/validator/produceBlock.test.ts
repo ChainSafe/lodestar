@@ -1,43 +1,24 @@
-import {config} from "@chainsafe/lodestar-config/minimal";
 import {toHexString} from "@chainsafe/ssz";
 import {expect} from "chai";
 import supertest from "supertest";
-import {ApiNamespace, RestApi} from "../../../../../src/api";
 import {produceBlockController} from "../../../../../src/api/rest/controllers/validator/produceBlock";
 import {generateEmptyBlock} from "../../../../utils/block";
-import {testLogger} from "../../../../utils/logger";
-import {StubbedApi} from "../../../../utils/stub/api";
 import {urlJoin} from "../utils";
-import {VALIDATOR_PREFIX} from "./index.test";
+import {setupRestApiTestServer, VALIDATOR_PREFIX} from "../index.test";
+import {SinonStubbedInstance} from "sinon";
+import {RestApi, ValidatorApi} from "../../../../../src/api";
 
 describe("rest - validator - produceBlock", function () {
   let restApi: RestApi;
-  let api: StubbedApi;
+  let validatorStub: SinonStubbedInstance<ValidatorApi>;
 
   beforeEach(async function () {
-    api = new StubbedApi();
-    restApi = await RestApi.init(
-      {
-        api: [ApiNamespace.VALIDATOR],
-        cors: "*",
-        enabled: true,
-        host: "127.0.0.1",
-        port: 0,
-      },
-      {
-        config,
-        logger: testLogger(),
-        api,
-      }
-    );
-  });
-
-  afterEach(async function () {
-    await restApi.close();
+    restApi = await setupRestApiTestServer();
+    validatorStub = restApi.server.api.validator as SinonStubbedInstance<ValidatorApi>;
   });
 
   it("should succeed", async function () {
-    api.validator.produceBlock.resolves(generateEmptyBlock());
+    validatorStub.produceBlock.resolves(generateEmptyBlock());
     const response = await supertest(restApi.server.server)
       .get(urlJoin(VALIDATOR_PREFIX, produceBlockController.url.replace(":slot", "5")))
       .query({
@@ -48,7 +29,7 @@ describe("rest - validator - produceBlock", function () {
       .expect(200)
       .expect("Content-Type", "application/json; charset=utf-8");
     expect(response.body.data).to.not.be.undefined;
-    expect(api.validator.produceBlock.withArgs(5, Buffer.alloc(32, 1), "0x2123"));
+    expect(validatorStub.produceBlock.withArgs(5, Buffer.alloc(32, 1), "0x2123"));
   });
 
   it("missing randao reveal", async function () {

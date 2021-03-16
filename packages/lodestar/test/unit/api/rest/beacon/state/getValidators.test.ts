@@ -1,44 +1,26 @@
-import {config} from "@chainsafe/lodestar-config/minimal";
 import {expect} from "chai";
 import supertest from "supertest";
-import {ApiNamespace, RestApi} from "../../../../../../src/api";
 import {StateNotFound} from "../../../../../../src/api/impl/errors/api";
 import {getStateValidators} from "../../../../../../src/api/rest/controllers/beacon";
-import {testLogger} from "../../../../../utils/logger";
-import {StubbedApi} from "../../../../../utils/stub/api";
 import {generateValidator} from "../../../../../utils/validator";
 import {urlJoin} from "../../utils";
-import {BEACON_PREFIX} from "../index.test";
+import {BEACON_PREFIX, setupRestApiTestServer} from "../../index.test";
 import {phase0} from "@chainsafe/lodestar-types";
+import {SinonStubbedInstance} from "sinon";
+import {RestApi} from "../../../../../../src/api";
+import {BeaconStateApi} from "../../../../../../src/api/impl/beacon/state";
 
 describe("rest - beacon - getStateValidators", function () {
+  let beaconStateStub: SinonStubbedInstance<BeaconStateApi>;
   let restApi: RestApi;
-  let api: StubbedApi;
 
   beforeEach(async function () {
-    api = new StubbedApi();
-    restApi = await RestApi.init(
-      {
-        api: [ApiNamespace.BEACON],
-        cors: "*",
-        enabled: true,
-        host: "127.0.0.1",
-        port: 0,
-      },
-      {
-        config,
-        logger: testLogger(),
-        api,
-      }
-    );
-  });
-
-  afterEach(async function () {
-    await restApi.close();
+    restApi = await setupRestApiTestServer();
+    beaconStateStub = restApi.server.api.beacon.state as SinonStubbedInstance<BeaconStateApi>;
   });
 
   it("should success", async function () {
-    api.beacon.state.getStateValidators.withArgs("head").resolves([
+    beaconStateStub.getStateValidators.withArgs("head").resolves([
       {
         index: 1,
         balance: BigInt(3200000),
@@ -55,10 +37,10 @@ describe("rest - beacon - getStateValidators", function () {
   });
 
   it("should not found state", async function () {
-    api.beacon.state.getStateValidators.withArgs("4").throws(new StateNotFound());
+    beaconStateStub.getStateValidators.withArgs("4").throws(new StateNotFound());
     await supertest(restApi.server.server)
       .get(urlJoin(BEACON_PREFIX, getStateValidators.url.replace(":stateId", "4")))
       .expect(404);
-    expect(api.beacon.state.getStateValidators.calledOnce).to.be.true;
+    expect(beaconStateStub.getStateValidators.calledOnce).to.be.true;
   });
 });

@@ -12,6 +12,7 @@ import {generateState} from "../../../../../utils/state";
 describe("rest - debug - beacon - getState", function () {
   let restApi: RestApi;
   let api: StubbedApi;
+  let debugBeaconStub: SinonStubbedInstance<DebugBeaconApi>;
 
   beforeEach(async function () {
     api = new StubbedApi();
@@ -29,6 +30,7 @@ describe("rest - debug - beacon - getState", function () {
         api,
       }
     );
+    debugBeaconStub = api.debug.beacon as SinonStubbedInstance<DebugBeaconApi>;
   });
 
   afterEach(async function () {
@@ -36,7 +38,6 @@ describe("rest - debug - beacon - getState", function () {
   });
 
   it("should get state json successfully", async function () {
-    const debugBeaconStub = api.debug.beacon as SinonStubbedInstance<DebugBeaconApi>;
     debugBeaconStub.getState.resolves(generateState());
     const response = await supertest(restApi.server.server)
       .get("/eth/v1/debug/beacon/states/0xSomething")
@@ -46,7 +47,6 @@ describe("rest - debug - beacon - getState", function () {
   });
 
   it("should get state ssz successfully", async function () {
-    const debugBeaconStub = api.debug.beacon as SinonStubbedInstance<DebugBeaconApi>;
     const state = generateState();
     debugBeaconStub.getState.resolves(state);
     const response = await supertest(restApi.server.server)
@@ -58,13 +58,11 @@ describe("rest - debug - beacon - getState", function () {
   });
 
   it("should return status code 404", async function () {
-    const debugBeaconStub = api.debug.beacon as SinonStubbedInstance<DebugBeaconApi>;
     debugBeaconStub.getState.resolves(null);
     await supertest(restApi.server.server).get("/eth/v1/debug/beacon/states/0xSomething").expect(404);
   });
 
   it("should return status code 400", async function () {
-    const debugBeaconStub = api.debug.beacon as SinonStubbedInstance<DebugBeaconApi>;
     debugBeaconStub.getState.throws(new Error("Invalid state id"));
     await supertest(restApi.server.server).get("/eth/v1/debug/beacon/states/1000x").expect(400);
   });

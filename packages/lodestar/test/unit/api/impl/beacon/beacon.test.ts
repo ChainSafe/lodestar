@@ -1,38 +1,34 @@
 import {BeaconApi} from "../../../../../src/api/impl/beacon";
-import sinon, {SinonStubbedInstance} from "sinon";
-import {BeaconChain, IBeaconChain} from "../../../../../src/chain";
-import {BeaconSync, IBeaconSync} from "../../../../../src/sync";
+import sinon from "sinon";
 import {StubbedBeaconDb} from "../../../../utils/stub";
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {expect} from "chai";
-import {Network} from "../../../../../src/network/network";
+import {setupApiImplTestServer, ApiImplTestModules} from "../index.test";
 
 describe("beacon api implementation", function () {
   let api: BeaconApi;
-  let chainStub: SinonStubbedInstance<IBeaconChain>;
   let dbStub: StubbedBeaconDb;
-  let syncStub: SinonStubbedInstance<IBeaconSync>;
+  let server: ApiImplTestModules;
 
-  beforeEach(function () {
-    chainStub = sinon.createStubInstance(BeaconChain);
+  before(function () {
+    server = setupApiImplTestServer();
     dbStub = new StubbedBeaconDb(sinon);
-    syncStub = sinon.createStubInstance(BeaconSync);
     api = new BeaconApi(
       {},
       {
         config,
-        chain: chainStub,
+        chain: server.chainStub,
         db: dbStub,
-        network: sinon.createStubInstance(Network),
-        sync: syncStub,
+        network: server.networkStub,
+        sync: server.syncStub,
       }
     );
   });
 
   describe("getGenesis", function () {
     it("success", async function () {
-      (chainStub as any).genesisTime = 0;
-      (chainStub as any).genesisValidatorsRoot = Buffer.alloc(32);
+      (server.chainStub as any).genesisTime = 0;
+      (server.chainStub as any).genesisValidatorsRoot = Buffer.alloc(32);
       const genesis = await api.getGenesis();
       if (!genesis) throw Error("Genesis is nullish");
       expect(genesis.genesisForkVersion).to.not.be.undefined;

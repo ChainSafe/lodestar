@@ -1,41 +1,23 @@
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {expect} from "chai";
 import supertest from "supertest";
-import {ApiNamespace, RestApi} from "../../../../../src/api";
 import {proposerDutiesController} from "../../../../../src/api/rest/controllers/validator";
-import {testLogger} from "../../../../utils/logger";
-import {StubbedApi} from "../../../../utils/stub/api";
 import {urlJoin} from "../utils";
-import {VALIDATOR_PREFIX} from "./index.test";
+import {setupRestApiTestServer, VALIDATOR_PREFIX} from "../index.test";
+import {RestApi, ValidatorApi} from "../../../../../src/api";
+import {SinonStubbedInstance} from "sinon";
 
 describe("rest - validator - proposerDuties", function () {
   let restApi: RestApi;
-  let api: StubbedApi;
+  let validatorStub: SinonStubbedInstance<ValidatorApi>;
 
-  beforeEach(async function () {
-    api = new StubbedApi();
-    restApi = await RestApi.init(
-      {
-        api: [ApiNamespace.VALIDATOR],
-        cors: "*",
-        enabled: true,
-        host: "127.0.0.1",
-        port: 0,
-      },
-      {
-        config,
-        logger: testLogger(),
-        api,
-      }
-    );
-  });
-
-  afterEach(async function () {
-    await restApi.close();
+  before(async function () {
+    restApi = await setupRestApiTestServer();
+    validatorStub = restApi.server.api.validator as SinonStubbedInstance<ValidatorApi>;
   });
 
   it("should succeed", async function () {
-    api.validator.getProposerDuties.resolves([
+    validatorStub.getProposerDuties.resolves([
       config.types.phase0.ProposerDuty.defaultValue(),
       config.types.phase0.ProposerDuty.defaultValue(),
     ]);
@@ -45,7 +27,7 @@ describe("rest - validator - proposerDuties", function () {
       .expect("Content-Type", "application/json; charset=utf-8");
     expect(response.body.data).to.be.instanceOf(Array);
     expect(response.body.data).to.have.length(2);
-    expect(api.validator.getProposerDuties.withArgs(1).calledOnce).to.be.true;
+    expect(validatorStub.getProposerDuties.withArgs(1).calledOnce).to.be.true;
   });
 
   it("invalid epoch", async function () {

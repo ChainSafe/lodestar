@@ -1,17 +1,22 @@
 import {BeaconStateApi} from "../../../../../../src/api/impl/beacon/state/state";
 import {config} from "@chainsafe/lodestar-config/minimal";
-import {BeaconChain} from "../../../../../../src/chain";
 import {StubbedBeaconDb} from "../../../../../utils/stub";
 import sinon, {SinonStub} from "sinon";
 import {IBeaconStateApi} from "../../../../../../src/api/impl/beacon/state/interface";
 import * as stateApiUtils from "../../../../../../src/api/impl/beacon/state/utils";
 import {generateState} from "../../../../../utils/state";
 import {expect} from "chai";
+import {ApiImplTestModules, setupApiImplTestServer} from "../../index.test";
 
 describe("beacon api impl - states", function () {
   let api: IBeaconStateApi;
   let resolveStateIdStub: SinonStub;
   let getEpochBeaconCommitteesStub: SinonStub;
+  let server: ApiImplTestModules;
+
+  before(function () {
+    server = setupApiImplTestServer();
+  });
 
   beforeEach(function () {
     resolveStateIdStub = sinon.stub(stateApiUtils, "resolveStateId");
@@ -20,7 +25,7 @@ describe("beacon api impl - states", function () {
       {},
       {
         config,
-        chain: sinon.createStubInstance(BeaconChain),
+        chain: server.chainStub,
         db: new StubbedBeaconDb(sinon, config),
       }
     );
@@ -50,14 +55,17 @@ describe("beacon api impl - states", function () {
       resolveStateIdStub.resolves(null);
       await expect(api.getStateCommittees("blem")).to.be.eventually.rejectedWith("State not found");
     });
+
+    const state = generateState();
+
     it("no filters", async function () {
-      resolveStateIdStub.resolves({state: generateState()});
+      resolveStateIdStub.resolves({state});
       getEpochBeaconCommitteesStub.returns([[[1, 4, 5]], [[2, 3, 6]]]);
       const committees = await api.getStateCommittees("blem");
       expect(committees).to.have.length(2);
     });
     it("slot and committee filter", async function () {
-      resolveStateIdStub.resolves({state: generateState()});
+      resolveStateIdStub.resolves({state});
       getEpochBeaconCommitteesStub.returns([
         [[1, 4, 5]],
         [

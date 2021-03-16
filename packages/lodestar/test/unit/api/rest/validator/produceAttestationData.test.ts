@@ -1,42 +1,23 @@
-import {config} from "@chainsafe/lodestar-config/minimal";
 import {expect} from "chai";
 import supertest from "supertest";
-import {ApiNamespace, RestApi} from "../../../../../src/api";
 import {produceAttestationData} from "../../../../../src/api/rest/controllers/validator/produceAttestationData";
 import {generateEmptyAttestation} from "../../../../utils/attestation";
-import {testLogger} from "../../../../utils/logger";
-import {StubbedApi} from "../../../../utils/stub/api";
 import {urlJoin} from "../utils";
-import {VALIDATOR_PREFIX} from "./index.test";
+import {setupRestApiTestServer, VALIDATOR_PREFIX} from "../index.test";
+import {SinonStubbedInstance} from "sinon";
+import {RestApi, ValidatorApi} from "../../../../../src/api";
 
 describe("rest - validator - produceAttestationData", function () {
   let restApi: RestApi;
-  let api: StubbedApi;
+  let validatorStub: SinonStubbedInstance<ValidatorApi>;
 
   beforeEach(async function () {
-    api = new StubbedApi();
-    restApi = await RestApi.init(
-      {
-        api: [ApiNamespace.VALIDATOR],
-        cors: "*",
-        enabled: true,
-        host: "127.0.0.1",
-        port: 0,
-      },
-      {
-        config,
-        logger: testLogger(),
-        api,
-      }
-    );
-  });
-
-  afterEach(async function () {
-    await restApi.close();
+    restApi = await setupRestApiTestServer();
+    validatorStub = restApi.server.api.validator as SinonStubbedInstance<ValidatorApi>;
   });
 
   it("should succeed", async function () {
-    api.validator.produceAttestationData.resolves(generateEmptyAttestation().data);
+    validatorStub.produceAttestationData.resolves(generateEmptyAttestation().data);
     const response = await supertest(restApi.server.server)
       .get(urlJoin(VALIDATOR_PREFIX, produceAttestationData.url))
       .query({
@@ -47,17 +28,17 @@ describe("rest - validator - produceAttestationData", function () {
       .expect(200);
     expect(response.body.data).to.not.be.undefined;
     expect(response.body.data).to.not.be.undefined;
-    expect(api.validator.produceAttestationData.withArgs(1, 0).calledOnce).to.be.true;
+    expect(validatorStub.produceAttestationData.withArgs(1, 0).calledOnce).to.be.true;
   });
 
   it("missing param", async function () {
-    api.validator.getAggregatedAttestation.resolves();
+    validatorStub.getAggregatedAttestation.resolves();
     await supertest(restApi.server.server)
       .get(urlJoin(VALIDATOR_PREFIX, produceAttestationData.url))
       .query({
         slot: 0,
       })
       .expect(400);
-    expect(api.validator.produceAttestationData.notCalled).to.be.true;
+    expect(validatorStub.produceAttestationData.notCalled).to.be.true;
   });
 });

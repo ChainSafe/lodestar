@@ -1,44 +1,26 @@
-import {config} from "@chainsafe/lodestar-config/minimal";
 import {ValidatorIndex} from "@chainsafe/lodestar-types";
 import {List} from "@chainsafe/ssz";
 import {expect} from "chai";
 import supertest from "supertest";
-import {ApiNamespace, RestApi} from "../../../../../../src/api";
 import {StateNotFound} from "../../../../../../src/api/impl/errors/api";
 import {getStateBeaconCommittees} from "../../../../../../src/api/rest/controllers/beacon/state";
-import {testLogger} from "../../../../../utils/logger";
-import {StubbedApi} from "../../../../../utils/stub/api";
 import {urlJoin} from "../../utils";
-import {BEACON_PREFIX} from "../index.test";
+import {BEACON_PREFIX, setupRestApiTestServer} from "../../index.test";
+import {SinonStubbedInstance} from "sinon";
+import {RestApi} from "../../../../../../src/api";
+import {BeaconStateApi} from "../../../../../../src/api/impl/beacon/state";
 
 describe("rest - beacon - getStateBeaconCommittees", function () {
+  let beaconStateStub: SinonStubbedInstance<BeaconStateApi>;
   let restApi: RestApi;
-  let api: StubbedApi;
 
   beforeEach(async function () {
-    api = new StubbedApi();
-    restApi = await RestApi.init(
-      {
-        api: [ApiNamespace.BEACON],
-        cors: "*",
-        enabled: true,
-        host: "127.0.0.1",
-        port: 0,
-      },
-      {
-        config,
-        logger: testLogger(),
-        api,
-      }
-    );
-  });
-
-  afterEach(async function () {
-    await restApi.close();
+    restApi = await setupRestApiTestServer();
+    beaconStateStub = restApi.server.api.beacon.state as SinonStubbedInstance<BeaconStateApi>;
   });
 
   it("should succeed without filters", async function () {
-    api.beacon.state.getStateCommittees.withArgs("head").resolves([
+    beaconStateStub.getStateCommittees.withArgs("head").resolves([
       {
         index: 0,
         slot: 1,
@@ -54,7 +36,7 @@ describe("rest - beacon - getStateBeaconCommittees", function () {
   });
 
   it("should succeed with filters", async function () {
-    api.beacon.state.getStateCommittees.withArgs("head", {slot: 1, epoch: 0, index: 10}).resolves([
+    beaconStateStub.getStateCommittees.withArgs("head", {slot: 1, epoch: 0, index: 10}).resolves([
       {
         index: 0,
         slot: 1,
@@ -99,10 +81,10 @@ describe("rest - beacon - getStateBeaconCommittees", function () {
   });
 
   it("should not found state", async function () {
-    api.beacon.state.getStateCommittees.withArgs("4").throws(new StateNotFound());
+    beaconStateStub.getStateCommittees.withArgs("4").throws(new StateNotFound());
     await supertest(restApi.server.server)
       .get(urlJoin(BEACON_PREFIX, getStateBeaconCommittees.url.replace(":stateId", "4")))
       .expect(404);
-    expect(api.beacon.state.getStateCommittees.calledOnce).to.be.true;
+    expect(beaconStateStub.getStateCommittees.calledOnce).to.be.true;
   });
 });

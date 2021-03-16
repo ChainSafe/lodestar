@@ -15,18 +15,24 @@ import {generateBlockSummary} from "../../../../../utils/block";
 import {generateCachedState, generateState} from "../../../../../utils/state";
 import {StubbedBeaconDb} from "../../../../../utils/stub";
 import {StubbedBeaconChain} from "../../../../../utils/stub/chain";
+import {setupApiImplTestServer, ApiImplTestModules} from "../../index.test";
 import {generateValidators} from "../../../../../utils/validator";
 
 use(chaiAsPromised);
 
 describe("beacon state api utils", function () {
   describe("resolve state id", function () {
-    let dbStub: StubbedBeaconDb;
     let chainStub: StubbedBeaconChain;
+    let dbStub: StubbedBeaconDb;
+    let server: ApiImplTestModules;
+
+    before(function () {
+      server = setupApiImplTestServer();
+    });
 
     beforeEach(function () {
-      dbStub = new StubbedBeaconDb(sinon, config);
       chainStub = new StubbedBeaconChain(sinon, config);
+      dbStub = server.dbStub;
     });
 
     it("resolve head state id - success", async function () {
@@ -45,40 +51,48 @@ describe("beacon state api utils", function () {
       expect(dbStub.stateArchive.get.withArgs(0).calledOnce).to.be.true;
     });
 
-    it("resolve finalized state id - success", async function () {
-      chainStub.forkChoice.getFinalizedCheckpoint.returns({root: Buffer.alloc(32, 1), epoch: 1});
-      chainStub.stateCache.get.returns(generateCachedState());
-      const state = await resolveStateId(chainStub, dbStub, "finalized");
-      expect(state).to.not.be.null;
-      expect(chainStub.forkChoice.getFinalizedCheckpoint.calledOnce).to.be.true;
-      expect(chainStub.stateCache.get.calledOnce).to.be.true;
+    describe("resolve finalized state id", function () {
+      beforeEach(function () {
+        chainStub.forkChoice.getFinalizedCheckpoint.returns({root: Buffer.alloc(32, 1), epoch: 1});
+      });
+
+      it("resolve finalized state id - success", async function () {
+        chainStub.stateCache.get.returns(generateCachedState());
+        const state = await resolveStateId(chainStub, dbStub, "finalized");
+        expect(state).to.not.be.null;
+        expect(chainStub.forkChoice.getFinalizedCheckpoint.calledOnce).to.be.true;
+        expect(chainStub.stateCache.get.calledOnce).to.be.true;
+      });
+
+      it("resolve finalized state id - missing state", async function () {
+        chainStub.stateCache.get.returns(null);
+        const state = await resolveStateId(chainStub, dbStub, "finalized");
+        expect(state).to.be.null;
+        expect(chainStub.forkChoice.getFinalizedCheckpoint.calledOnce).to.be.true;
+        expect(chainStub.stateCache.get.calledOnce).to.be.true;
+      });
     });
 
-    it("resolve finalized state id - missing state", async function () {
-      chainStub.forkChoice.getFinalizedCheckpoint.returns({root: Buffer.alloc(32, 1), epoch: 1});
-      chainStub.stateCache.get.returns(null);
-      const state = await resolveStateId(chainStub, dbStub, "finalized");
-      expect(state).to.be.null;
-      expect(chainStub.forkChoice.getFinalizedCheckpoint.calledOnce).to.be.true;
-      expect(chainStub.stateCache.get.calledOnce).to.be.true;
-    });
+    describe("resolve justified state id", function () {
+      beforeEach(function () {
+        chainStub.forkChoice.getJustifiedCheckpoint.returns({root: Buffer.alloc(32, 1), epoch: 1});
+      });
 
-    it("resolve justified state id - success", async function () {
-      chainStub.forkChoice.getJustifiedCheckpoint.returns({root: Buffer.alloc(32, 1), epoch: 1});
-      chainStub.stateCache.get.returns(generateCachedState());
-      const state = await resolveStateId(chainStub, dbStub, "justified");
-      expect(state).to.not.be.null;
-      expect(chainStub.forkChoice.getJustifiedCheckpoint.calledOnce).to.be.true;
-      expect(chainStub.stateCache.get.calledOnce).to.be.true;
-    });
+      it("resolve justified state id - success", async function () {
+        chainStub.stateCache.get.returns(generateCachedState());
+        const state = await resolveStateId(chainStub, dbStub, "justified");
+        expect(state).to.not.be.null;
+        expect(chainStub.forkChoice.getJustifiedCheckpoint.calledOnce).to.be.true;
+        expect(chainStub.stateCache.get.calledOnce).to.be.true;
+      });
 
-    it("resolve justified state id - missing state", async function () {
-      chainStub.forkChoice.getJustifiedCheckpoint.returns({root: Buffer.alloc(32, 1), epoch: 1});
-      chainStub.stateCache.get.returns(null);
-      const state = await resolveStateId(chainStub, dbStub, "justified");
-      expect(state).to.be.null;
-      expect(chainStub.forkChoice.getJustifiedCheckpoint.calledOnce).to.be.true;
-      expect(chainStub.stateCache.get.calledOnce).to.be.true;
+      it("resolve justified state id - missing state", async function () {
+        chainStub.stateCache.get.returns(null);
+        const state = await resolveStateId(chainStub, dbStub, "justified");
+        expect(state).to.be.null;
+        expect(chainStub.forkChoice.getJustifiedCheckpoint.calledOnce).to.be.true;
+        expect(chainStub.stateCache.get.calledOnce).to.be.true;
+      });
     });
 
     it("resolve state by root", async function () {
