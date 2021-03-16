@@ -1,0 +1,17 @@
+version: "3.4"
+services:
+  validator:
+    build: .
+    image: lodestar
+    restart: always
+    depends_on:
+      - beacon_node
+    volumes:
+      - validator:/data
+      - ./keystores:/keystores
+      - ./secrets:/secrets
+    env_file: .env
+    command: validator --rootDir /data --keystoresDir /keystores --secretsDir /secrets --server http://beacon_node:9596
+
+volumes:
+  validator:

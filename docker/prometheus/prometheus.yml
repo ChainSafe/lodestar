@@ -4,5 +4,5 @@ scrape_configs:
     scrape_timeout: 20s
     metrics_path: /metrics
     static_configs:
-      # Run in a docker-compose context with a "lodestar" service. Uses internal docker DNS
-      - targets: ["lodestar:8008"]
+      # Run in a docker-compose context with a "beacon_node" service. Uses internal docker DNS
+      - targets: ["beacon_node:8008"]
