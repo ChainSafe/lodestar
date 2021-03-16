@@ -40,6 +40,19 @@ export type ReqRespHandler = (
 export interface ILibP2pStream {
   source: AsyncIterable<Buffer>;
   sink: (source: AsyncIterable<Buffer>) => Promise<void>;
+  /**
+   * `libp2p-mplex`: Close for reading
+   * ```ts
+   * () => stream.source.end()
+   * ```
+   */
   close: () => void;
+  /**
+   * `libp2p-mplex`: Close immediately for reading and writing (remote error)
+   */
   reset: () => void;
+  /**
+   * `libp2p-mplex`: Close for reading and writing (local error)
+   */
+  abort: (err: Error) => void;
 }

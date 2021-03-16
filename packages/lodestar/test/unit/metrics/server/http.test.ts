@@ -1,8 +1,9 @@
 import request from "supertest";
 import {Metrics, HttpMetricsServer} from "../../../../src/metrics";
-import {ILogger, WinstonLogger} from "@chainsafe/lodestar-utils";
+import {testLogger} from "../../../utils/logger";
+
 describe("HttpMetricsServer", () => {
-  const logger: ILogger = new WinstonLogger();
+  const logger = testLogger();
   it("should serve metrics on /metrics", async () => {
     const options = {enabled: true, timeout: 5000, serverPort: 0, pushGateway: false};
     const metrics = new Metrics(options);

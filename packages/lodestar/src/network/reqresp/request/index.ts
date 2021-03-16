@@ -1,5 +1,4 @@
 import {AbortSignal} from "abort-controller";
-import {source as abortSource} from "abortable-iterator";
 import pipe from "it-pipe";
 import PeerId from "peer-id";
 import {phase0} from "@chainsafe/lodestar-types";
@@ -72,7 +71,9 @@ export async function sendRequest<T extends phase0.ResponseBody | phase0.Respons
       async (timeoutAndParentSignal) => {
         const conn = await libp2p.dialProtocol(peerId, protocol, {signal: timeoutAndParentSignal});
         if (!conn) throw Error("dialProtocol timeout");
-        return (conn as {stream: ILibP2pStream}).stream;
+        // TODO: libp2p-ts type Stream does not declare .abort() and requires casting to unknown here
+        // Remove when https://github.com/ChainSafe/lodestar/issues/2167
+        return ((conn as unknown) as {stream: ILibP2pStream}).stream;
       },
       DIAL_TIMEOUT,
       signal
@@ -87,20 +88,17 @@ export async function sendRequest<T extends phase0.ResponseBody | phase0.Respons
     logger.debug("Req  sending request", {...logCtx, requestBody} as Context);
 
     // Spec: The requester MUST close the write side of the stream once it finishes writing the request message
-    // Impl: stream.sink should be closed automatically by js-libp2p-mplex when piped source returns
+    // Impl: stream.sink is closed automatically by js-libp2p-mplex when piped source is exhausted
 
     // REQUEST_TIMEOUT: Non-spec timeout from sending request until write stream closed by responder
+    // Note: libp2p.stop() will close all connections, so not necessary to abort this pipe on parent stop
     await withTimeout(
-      async (timeoutAndParentSignal) =>
-        await pipe(
-          abortSource(requestEncode(config, method, encoding, requestBody), timeoutAndParentSignal),
-          stream.sink
-        ),
+      async () => await pipe(requestEncode(config, method, encoding, requestBody), stream.sink),
       REQUEST_TIMEOUT,
       signal
     ).catch((e) => {
-      // Must close the stream read side (stream.source) manually
-      stream.close();
+      // Must close the stream read side (stream.source) manually AND the write side
+      stream.abort(e);
 
       if (e instanceof TimeoutError) {
         throw new RequestInternalError({code: RequestErrorCode.REQUEST_TIMEOUT});
@@ -111,21 +109,26 @@ export async function sendRequest<T extends phase0.ResponseBody | phase0.Respons
 
     logger.debug("Req  request sent", logCtx);
 
-    const responses = await pipe(
-      stream.source,
-      responseTimeoutsHandler(responseDecode(config, method, encoding), options),
-      collectResponses(method, maxResponses)
-    );
+    try {
+      // Note: libp2p.stop() will close all connections, so not necessary to abort this pipe on parent stop
+      const responses = await pipe(
+        stream.source,
+        responseTimeoutsHandler(responseDecode(config, method, encoding), options),
+        collectResponses(method, maxResponses)
+      );
 
-    // NOTE: Only log once per request to verbose, intermediate steps to debug
-    // NOTE: Do not log the response, logs get extremely cluttered
-    // NOTE: add double space after "Req  " to match "Resp "
-    logger.verbose("Req  done", logCtx);
+      // NOTE: Only log once per request to verbose, intermediate steps to debug
+      // NOTE: Do not log the response, logs get extremely cluttered
+      // NOTE: add double space after "Req  " to align log with the "Resp " log
+      logger.verbose("Req  done", logCtx);
 
-    return responses as T;
-
-    // No need to call `stream.close()` here on finally {} to handle stream.source,
-    // libp2p-mplex will .end() the source (it-pushable instance) for errors and returns
+      return responses as T;
+    } finally {
+      // Necessary to call `stream.close()` since collectResponses() may break out of the source before exhausting it
+      // `stream.close()` libp2p-mplex will .end() the source (it-pushable instance)
+      // If collectResponses() exhausts the source, it-pushable.end() can be safely called multiple times
+      stream.close();
+    }
   } catch (e) {
     logger.verbose("Req  error", logCtx, e);
 

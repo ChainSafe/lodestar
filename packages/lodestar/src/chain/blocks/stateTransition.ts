@@ -5,8 +5,8 @@ import {
   CachedBeaconState,
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
-  isActiveValidator,
   phase0,
+  getEffectiveBalances,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {IBlockSummary, IForkChoice} from "@chainsafe/lodestar-fork-choice";
 
@@ -142,13 +142,10 @@ export async function runStateTransition(
 
   // current justified checkpoint should be prev epoch or current epoch if it's just updated
   // it should always have epochBalances there bc it's a checkpoint state, ie got through processEpoch
-  const justifiedBalances: Gwei[] = [];
+  let justifiedBalances: Gwei[] = [];
   if (postState.currentJustifiedCheckpoint.epoch > forkChoice.getJustifiedCheckpoint().epoch) {
     const justifiedState = checkpointStateCache.get(postState.currentJustifiedCheckpoint);
-    const justifiedEpoch = justifiedState?.currentShuffling.epoch;
-    justifiedState?.validators.forEach((v) => {
-      justifiedBalances.push(isActiveValidator(v, justifiedEpoch!) ? v.effectiveBalance : BigInt(0));
-    });
+    justifiedBalances = getEffectiveBalances(justifiedState!);
   }
   forkChoice.onBlock(job.signedBlock.message, postState, justifiedBalances);
 

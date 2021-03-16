@@ -4,15 +4,17 @@ import {SecretKey, PublicKey} from "@chainsafe/bls";
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {computeDomain, computeSigningRoot} from "@chainsafe/lodestar-beacon-state-transition";
 import {ValidatorIndex, phase0} from "@chainsafe/lodestar-types";
-import {ErrorAborted, WinstonLogger, interopSecretKey} from "@chainsafe/lodestar-utils";
+import {ErrorAborted, interopSecretKey} from "@chainsafe/lodestar-utils";
 import {toHexString} from "@chainsafe/ssz";
 import {AbortController} from "abort-controller";
 import {IEth1Provider} from "../../../../src/eth1";
 import {GenesisBuilder} from "../../../../src/chain/genesis/genesis";
+import {testLogger} from "../../../utils/logger";
 
 chai.use(chaiAsPromised);
 
 describe("genesis builder", function () {
+  const logger = testLogger();
   const schlesiConfig = Object.assign({}, {params: config.params}, config);
   schlesiConfig.params = Object.assign({}, config.params, {
     // eslint-disable-next-line @typescript-eslint/naming-convention
@@ -69,7 +71,7 @@ describe("genesis builder", function () {
     const genesisBuilder = new GenesisBuilder({
       config: schlesiConfig,
       eth1Provider,
-      logger: new WinstonLogger(),
+      logger,
       maxBlocksPerPoll: 1,
     });
 
@@ -103,7 +105,7 @@ describe("genesis builder", function () {
     const genesisBuilder = new GenesisBuilder({
       config: schlesiConfig,
       eth1Provider,
-      logger: new WinstonLogger(),
+      logger,
       signal: controller.signal,
       maxBlocksPerPoll: 1,
     });

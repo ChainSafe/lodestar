@@ -5,7 +5,7 @@ import sinon from "sinon";
 import {ChainEvent, IBeaconChain} from "../../../src/chain";
 import {Eth2Gossipsub} from "../../../src/network/gossip";
 import {InteropSubnetsJoiningTask} from "../../../src/tasks/tasks/interopSubnetsJoiningTask";
-import {WinstonLogger} from "@chainsafe/lodestar-utils";
+import {testLogger} from "../../utils/logger";
 import {expect} from "chai";
 import {MockBeaconChain} from "../../utils/mocks/chain/chain";
 import {generateState} from "../../utils/state";
@@ -21,7 +21,7 @@ describe("interopSubnetsJoiningTask", () => {
   let gossipStub: SinonStubbedInstance<Eth2Gossipsub>;
 
   let chain: IBeaconChain;
-  const logger = new WinstonLogger();
+  const logger = testLogger();
   let task: InteropSubnetsJoiningTask;
   let state: phase0.BeaconState;
 
