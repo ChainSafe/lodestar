@@ -36,10 +36,10 @@ describe("block api utils", function () {
     });
 
     it("should resolve finalized", async function () {
-      const expected = Buffer.alloc(32, 2);
-      forkChoiceStub.getFinalizedCheckpoint.returns({epoch: 0, root: expected});
+      const expected = 0;
+      forkChoiceStub.getFinalizedCheckpoint.returns({epoch: expected, root: Buffer.alloc(32, 2)});
       await resolveBlockId(config, forkChoiceStub, dbStub, "finalized");
-      expect(dbStub.block.get.withArgs(expected).calledOnce).to.be.true;
+      expect(dbStub.blockArchive.get.withArgs(expected).calledOnce).to.be.true;
     });
 
     it("should resolve finalized block root", async function () {
