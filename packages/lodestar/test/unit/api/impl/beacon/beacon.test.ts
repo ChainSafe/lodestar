@@ -5,10 +5,9 @@ import {BeaconSync, IBeaconSync} from "../../../../../src/sync";
 import {StubbedBeaconDb} from "../../../../utils/stub";
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {expect} from "chai";
-import {generateCachedState} from "../../../../utils/state";
 import {Network} from "../../../../../src/network/network";
 
-describe.only("beacon api implementation", function () {
+describe("beacon api implementation", function () {
   let api: BeaconApi;
   let chainStub: SinonStubbedInstance<IBeaconChain>;
   let dbStub: StubbedBeaconDb;
