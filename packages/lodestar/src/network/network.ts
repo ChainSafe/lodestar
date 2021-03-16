@@ -69,7 +69,7 @@ export class Network extends (EventEmitter as {new (): NetworkEventEmitter}) imp
     this.metadata = new MetadataController({}, {config, chain, logger});
     this.gossip = new Eth2Gossipsub({
       config,
-      genesisValidatorsRoot: chain.getHeadState().genesisValidatorsRoot,
+      genesisValidatorsRoot: chain.genesisValidatorsRoot,
       libp2p,
       validatorFns: createTopicValidatorFnMap({config, chain, db, logger}),
       logger,

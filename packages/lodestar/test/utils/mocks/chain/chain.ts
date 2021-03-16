@@ -2,7 +2,7 @@ import {AbortController} from "abort-controller";
 import sinon from "sinon";
 
 import {TreeBacked} from "@chainsafe/ssz";
-import {ForkDigest, Number64, Slot, Uint16, Uint64} from "@chainsafe/lodestar-types";
+import {ForkDigest, Number64, Root, Slot, Uint16, Uint64} from "@chainsafe/lodestar-types";
 import {IBeaconConfig, IForkName} from "@chainsafe/lodestar-config";
 import {
   CachedBeaconState,
@@ -32,6 +32,9 @@ export interface IMockChainParams {
 }
 
 export class MockBeaconChain implements IBeaconChain {
+  readonly genesisTime: Number64;
+  readonly genesisValidatorsRoot: Root;
+
   forkChoice!: IForkChoice;
   stateCache: StateContextCache;
   checkpointStateCache: CheckpointStateCache;
@@ -48,6 +51,8 @@ export class MockBeaconChain implements IBeaconChain {
   private abortController: AbortController;
 
   constructor({genesisTime, chainId, networkId, state, config}: IMockChainParams) {
+    this.genesisTime = genesisTime ?? state.genesisTime;
+    this.genesisValidatorsRoot = state.genesisValidatorsRoot;
     this.chainId = chainId || 0;
     this.networkId = networkId || BigInt(0);
     this.state = state;
@@ -112,11 +117,11 @@ export class MockBeaconChain implements IBeaconChain {
   }
 
   getForkDigest(): ForkDigest {
-    return computeForkDigest(this.config, this.state.fork.currentVersion, this.state.genesisValidatorsRoot);
+    return computeForkDigest(this.config, this.state.fork.currentVersion, this.genesisValidatorsRoot);
   }
 
   getForkName(): IForkName {
-    return computeForkNameFromForkDigest(this.config, this.state.genesisValidatorsRoot, this.getForkDigest());
+    return computeForkNameFromForkDigest(this.config, this.genesisValidatorsRoot, this.getForkDigest());
   }
 
   getENRForkID(): phase0.ENRForkID {

@@ -51,6 +51,8 @@ export interface IAttestationJob {
  * and applying the fork choice rule to update the chain head
  */
 export interface IBeaconChain {
+  readonly genesisTime: Number64;
+  readonly genesisValidatorsRoot: Root;
   emitter: ChainEventEmitter;
   clock: IBeaconClock;
   forkChoice: IForkChoice;
