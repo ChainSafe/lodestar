@@ -3,7 +3,7 @@ import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
 import {AbortController} from "abort-controller";
 import {config} from "@chainsafe/lodestar-config/minimal";
-import {LogLevel, sleep, WinstonLogger} from "@chainsafe/lodestar-utils";
+import {sleep} from "@chainsafe/lodestar-utils";
 import {phase0} from "@chainsafe/lodestar-types";
 import {Method, ReqRespEncoding} from "../../../src/constants";
 import {BeaconMetrics} from "../../../src/metrics";
@@ -35,7 +35,7 @@ describe("[network] network", function () {
     disconnectTimeout: 5000,
     localMultiaddrs: [],
   };
-  const logger = new WinstonLogger({level: LogLevel.error});
+  const logger = testLogger();
   const metrics = new BeaconMetrics({enabled: true, timeout: 5000, pushGateway: false}, {logger});
   const state = generateState();
   const chain = new MockBeaconChain({genesisTime: 0, chainId: 0, networkId: BigInt(0), state, config});

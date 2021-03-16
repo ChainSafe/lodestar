@@ -2,19 +2,19 @@ import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
 import PeerId from "peer-id";
 import {config} from "@chainsafe/lodestar-config/minimal";
-import {LodestarError, LogLevel, WinstonLogger} from "@chainsafe/lodestar-utils";
+import {LodestarError} from "@chainsafe/lodestar-utils";
 import {Method, ReqRespEncoding, RpcResponseStatus} from "../../../../../src/constants";
 import {ReqRespHandler} from "../../../../../src/network";
 import {handleRequest} from "../../../../../src/network/reqresp/response";
 import {expectRejectedWithLodestarError} from "../../../../utils/errors";
 import {expectEqualByteChunks, MockLibP2pStream} from "../utils";
 import {sszSnappyPing} from "../encodingStrategies/sszSnappy/testData";
+import {testLogger} from "../../../../utils/logger";
 
 chai.use(chaiAsPromised);
 
 describe("network / reqresp / response / handleRequest", () => {
-  // Use LogLevel.verbose to debug tests if necessary
-  const logger = new WinstonLogger({level: LogLevel.error});
+  const logger = testLogger();
   const peerId = new PeerId(new Uint8Array([1]));
 
   const testCases: {
