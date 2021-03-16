@@ -125,7 +125,7 @@ describe("sync / range / batches", () => {
         const _batches = batches.map(createBatch);
         const nextBatchToProcess = getNextBatchToProcess(_batches);
         if (nextBatchToProcessIndex === undefined) {
-          expect(nextBatchToProcess).to.equal(undefined);
+          expect(nextBatchToProcess).to.equal(null);
         } else {
           expect(nextBatchToProcess).to.equal(_batches[nextBatchToProcessIndex]);
         }
