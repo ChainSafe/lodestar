@@ -70,7 +70,7 @@ export async function initStateFromEth1(
   logger.info("Listening to eth1 for genesis state");
 
   const statePreGenesis = await db.preGenesisState.get();
-  const depositDataRoot = await db.depositDataRoot.getDepositRootTree();
+  const depositTree = await db.depositDataRoot.getDepositRootTree();
   const lastProcessedBlockNumber = await db.preGenesisStateLastProcessedBlock.get();
 
   const builder = new GenesisBuilder({
@@ -79,8 +79,8 @@ export async function initStateFromEth1(
     logger,
     signal,
     pendingStatus:
-      statePreGenesis && depositDataRoot && lastProcessedBlockNumber != null
-        ? {state: statePreGenesis, depositTree: depositDataRoot, lastProcessedBlockNumber}
+      statePreGenesis && depositTree && lastProcessedBlockNumber != null
+        ? {state: statePreGenesis, depositTree, lastProcessedBlockNumber}
         : undefined,
   });
 
@@ -104,10 +104,12 @@ export async function initStateFromEth1(
 
     return genesisResult.state;
   } catch (e) {
-    logger.info("Persisting genesis state", {block: builder.lastProcessedBlockNumber});
-    await db.preGenesisState.put(builder.state);
-    await db.depositDataRoot.putList(builder.depositTree);
-    await db.preGenesisStateLastProcessedBlock.put(builder.lastProcessedBlockNumber);
+    if (builder.lastProcessedBlockNumber != null) {
+      logger.info("Persisting genesis state", {block: builder.lastProcessedBlockNumber});
+      await db.preGenesisState.put(builder.state);
+      await db.depositDataRoot.putList(builder.depositTree);
+      await db.preGenesisStateLastProcessedBlock.put(builder.lastProcessedBlockNumber);
+    }
     throw e;
   }
 }
