@@ -66,7 +66,7 @@ export async function processSlotsToNearestCheckpoint(
     nextEpochSlot += SLOTS_PER_EPOCH
   ) {
     phase0.fast.processSlots(postState, nextEpochSlot);
-    emitCheckpointEvent(emitter, postState.clone());
+    setImmediate(() => emitCheckpointEvent(emitter, postState.clone()));
     // this avoids keeping our node busy processing blocks
     await sleep(0);
   }
@@ -127,36 +127,43 @@ export async function runStateTransition(
   preState: CachedBeaconState<phase0.BeaconState>,
   job: IBlockJob
 ): Promise<CachedBeaconState<phase0.BeaconState>> {
-  const config = preState.config;
-  const {SLOTS_PER_EPOCH} = config.params;
-  const postSlot = job.signedBlock.message.slot;
-
   // if block is trusted don't verify proposer or op signature
   const postState = phase0.fast.fastStateTransition(preState, job.signedBlock, {
     verifyStateRoot: true,
     verifyProposer: !job.validSignatures && !job.validProposerSignature,
     verifySignatures: !job.validSignatures,
   });
-
-  const oldHead = forkChoice.getHead();
-
-  // current justified checkpoint should be prev epoch or current epoch if it's just updated
-  // it should always have epochBalances there bc it's a checkpoint state, ie got through processEpoch
-  let justifiedBalances: Gwei[] = [];
-  if (postState.currentJustifiedCheckpoint.epoch > forkChoice.getJustifiedCheckpoint().epoch) {
-    const justifiedState = checkpointStateCache.get(postState.currentJustifiedCheckpoint);
-    justifiedBalances = getEffectiveBalances(justifiedState!);
-  }
-  forkChoice.onBlock(job.signedBlock.message, postState, justifiedBalances);
-
-  if (postSlot % SLOTS_PER_EPOCH === 0) {
-    emitCheckpointEvent(emitter, postState);
-  }
-
-  emitBlockEvent(emitter, job, postState);
-  emitForkChoiceHeadEvents(emitter, forkChoice, forkChoice.getHead(), oldHead);
-
+  // running postStateTransition directly somehow make the state being retained in memory
+  setImmediate(() => postStateTransition(emitter, forkChoice, checkpointStateCache, job, postState.clone()));
   // this avoids keeping our node busy processing blocks
   await sleep(0);
   return postState;
+}
+
+/**
+ * Emit nececessary events and their handlers.
+ * The event handlers are asynchronous function so we don't want to run this function in a promise.
+ */
+async function postStateTransition(
+  emitter: ChainEventEmitter,
+  forkChoice: IForkChoice,
+  checkpointStateCache: CheckpointStateCache,
+  job: IBlockJob,
+  emittedState: CachedBeaconState<phase0.BeaconState>
+): Promise<void> {
+  const config = emittedState.config;
+  if (emittedState.slot % config.params.SLOTS_PER_EPOCH === 0) {
+    emitCheckpointEvent(emitter, emittedState);
+  }
+  emitBlockEvent(emitter, job, emittedState);
+  const oldHead = forkChoice.getHead();
+  emitForkChoiceHeadEvents(emitter, forkChoice, forkChoice.getHead(), oldHead);
+  // current justified checkpoint should be prev epoch or current epoch if it's just updated
+  // it should always have epochBalances there bc it's a checkpoint state, ie got through processEpoch
+  let justifiedBalances: Gwei[] = [];
+  if (emittedState.currentJustifiedCheckpoint.epoch > forkChoice.getJustifiedCheckpoint().epoch) {
+    const justifiedState = checkpointStateCache.get(emittedState.currentJustifiedCheckpoint);
+    justifiedBalances = getEffectiveBalances(justifiedState!);
+  }
+  forkChoice.onBlock(job.signedBlock.message, emittedState, justifiedBalances);
 }
