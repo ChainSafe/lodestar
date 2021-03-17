@@ -28,6 +28,7 @@ describe("beacon api implementation", function () {
 
   describe("getGenesis", function () {
     it("success", async function () {
+      /** eslint-disable @typescript-eslint/no-unsafe-member-access */
       (server.chainStub as any).genesisTime = 0;
       (server.chainStub as any).genesisValidatorsRoot = Buffer.alloc(32);
       const genesis = await api.getGenesis();
