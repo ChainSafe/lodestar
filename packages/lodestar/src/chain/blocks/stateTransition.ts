@@ -152,10 +152,6 @@ async function postStateTransition(
   emittedState: CachedBeaconState<phase0.BeaconState>
 ): Promise<void> {
   const config = emittedState.config;
-  if (emittedState.slot % config.params.SLOTS_PER_EPOCH === 0) {
-    emitCheckpointEvent(emitter, emittedState);
-  }
-  emitBlockEvent(emitter, job, emittedState);
   // current justified checkpoint should be prev epoch or current epoch if it's just updated
   // it should always have epochBalances there bc it's a checkpoint state, ie got through processEpoch
   let justifiedBalances: Gwei[] = [];
@@ -165,5 +161,9 @@ async function postStateTransition(
   }
   const oldHead = forkChoice.getHead();
   forkChoice.onBlock(job.signedBlock.message, emittedState, justifiedBalances);
+  if (emittedState.slot % config.params.SLOTS_PER_EPOCH === 0) {
+    emitCheckpointEvent(emitter, emittedState);
+  }
+  emitBlockEvent(emitter, job, emittedState);
   emitForkChoiceHeadEvents(emitter, forkChoice, forkChoice.getHead(), oldHead);
 }
