@@ -156,8 +156,6 @@ async function postStateTransition(
     emitCheckpointEvent(emitter, emittedState);
   }
   emitBlockEvent(emitter, job, emittedState);
-  const oldHead = forkChoice.getHead();
-  emitForkChoiceHeadEvents(emitter, forkChoice, forkChoice.getHead(), oldHead);
   // current justified checkpoint should be prev epoch or current epoch if it's just updated
   // it should always have epochBalances there bc it's a checkpoint state, ie got through processEpoch
   let justifiedBalances: Gwei[] = [];
@@ -165,5 +163,7 @@ async function postStateTransition(
     const justifiedState = checkpointStateCache.get(emittedState.currentJustifiedCheckpoint);
     justifiedBalances = getEffectiveBalances(justifiedState!);
   }
+  const oldHead = forkChoice.getHead();
   forkChoice.onBlock(job.signedBlock.message, emittedState, justifiedBalances);
+  emitForkChoiceHeadEvents(emitter, forkChoice, forkChoice.getHead(), oldHead);
 }
