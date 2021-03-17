@@ -1,11 +1,9 @@
-import fs from "fs";
-import {consoleTransport, fileTransport, LogLevel, WinstonLogger} from "@chainsafe/lodestar-utils";
 import {ApiClientOverRest} from "@chainsafe/lodestar-validator";
 import {Validator, SlashingProtection} from "@chainsafe/lodestar-validator";
 import {LevelDbController} from "@chainsafe/lodestar-db";
 import {getBeaconConfigFromArgs} from "../../config";
 import {IGlobalArgs} from "../../options";
-import {YargsError, getDefaultGraffiti, initBLS} from "../../util";
+import {YargsError, getDefaultGraffiti, initBLS, mkdir, getCliLogger} from "../../util";
 import {ValidatorDirManager} from "../../validatorDir";
 import {getAccountPaths} from "../account/paths";
 import {getValidatorPaths} from "./paths";
@@ -24,13 +22,10 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
   const graffiti = args.graffiti || getDefaultGraffiti();
   const accountPaths = getAccountPaths(args);
   const validatorPaths = getValidatorPaths(args);
+  const beaconPaths = getBeaconPaths(args);
   const config = getBeaconConfigFromArgs(args);
-  const logFilePath = getBeaconPaths(args).logFile;
 
-  const logger = new WinstonLogger({level: args.logLevel as LogLevel}, [
-    consoleTransport,
-    ...(logFilePath ? [fileTransport(logFilePath)] : []),
-  ]);
+  const logger = getCliLogger(args, beaconPaths);
 
   const validatorDirManager = new ValidatorDirManager(accountPaths);
   const secretKeys = await validatorDirManager.decryptAllValidators({force});
@@ -39,7 +34,7 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
   logger.info(`Decrypted ${secretKeys.length} validator keystores`);
 
   const dbPath = validatorPaths.validatorsDbDir;
-  fs.mkdirSync(dbPath, {recursive: true});
+  mkdir(dbPath);
 
   const api = new ApiClientOverRest(config, server, logger);
 

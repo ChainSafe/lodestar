@@ -51,9 +51,6 @@ export type Context =
 export type LogHandler = (message: string, context?: Context, error?: Error) => void;
 
 export interface ILogger {
-  level: LogLevel;
-  silent: boolean;
-
   error: LogHandler;
   warn: LogHandler;
   info: LogHandler;

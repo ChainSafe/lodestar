@@ -1,8 +1,8 @@
-import {defaultLogLevel, LogLevel, LogLevels} from "@chainsafe/lodestar-utils";
+import {LogLevel} from "@chainsafe/lodestar-utils";
 import {ICliCommandOptions} from "../../util";
 import {defaultValidatorPaths} from "./paths";
 import {accountValidatorOptions, IAccountValidatorArgs} from "../account/cmds/validator/options";
-import {beaconOptions} from "../beacon/options";
+import {beaconExtraOptions, beaconPathsOptions} from "../beacon/options";
 
 export type IValidatorCliArgs = IAccountValidatorArgs & {
   validatorsDbDir?: string;
@@ -11,11 +11,14 @@ export type IValidatorCliArgs = IAccountValidatorArgs & {
   graffiti: string;
   logFile: string;
   logLevel: LogLevel;
+  logLevelFile: LogLevel;
 };
 
 export const validatorOptions: ICliCommandOptions<IValidatorCliArgs> = {
   ...accountValidatorOptions,
-  logFile: beaconOptions.logFile,
+  logFile: beaconPathsOptions.logFile,
+  logLevel: beaconExtraOptions.logLevel,
+  logLevelFile: beaconExtraOptions.logLevelFile,
 
   validatorsDbDir: {
     description: "Data directory for validator databases.",
@@ -37,13 +40,6 @@ export const validatorOptions: ICliCommandOptions<IValidatorCliArgs> = {
   graffiti: {
     description: "Specify your custom graffiti to be included in blocks (plain UTF8 text, 32 characters max)",
     // Don't use a default here since it should be computed only if necessary by getDefaultGraffiti()
-    type: "string",
-  },
-
-  logLevel: {
-    choices: LogLevels,
-    description: "Logging verbosity level",
-    defaultDescription: defaultLogLevel,
     type: "string",
   },
 };

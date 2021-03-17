@@ -38,7 +38,6 @@ describe("[network] network", function () {
   let libP2pA: LibP2p;
   let libP2pB: LibP2p;
   const logger = testLogger();
-  logger.silent = true;
   const metrics = new BeaconMetrics({enabled: true, timeout: 5000, pushGateway: false}, {logger});
   let db: StubbedBeaconDb & IBeaconDb;
   let chain: IBeaconChain;

@@ -7,6 +7,7 @@ import {expect} from "chai";
 import {ChainEvent} from "../../src/chain";
 import {IRestApiOptions} from "../../src/api/rest/options";
 import {testLogger, LogLevel} from "../utils/logger";
+import {logFiles} from "./params";
 
 describe("Run single node single thread interop validators (no eth1) until checkpoint", function () {
   const timeout = 120 * 1000;
@@ -22,8 +23,8 @@ describe("Run single node single thread interop validators (no eth1) until check
     TARGET_AGGREGATORS_PER_COMMITTEE: 1,
   };
 
-  const loggerNodeA = testLogger("Node-A", LogLevel.info);
-  const loggerValiA = testLogger("Vali-A", LogLevel.info);
+  const loggerNodeA = testLogger("Node-A", LogLevel.info, logFiles.singlenodeSinglethread);
+  const loggerValiA = testLogger("Vali-A", LogLevel.info, logFiles.singlenodeSinglethread);
 
   const testCases: {
     vc: number;

@@ -8,10 +8,11 @@ interface IBeaconExtraArgs {
   forceGenesis?: boolean;
   genesisStateFile?: string;
   weakSubjectivityStateFile?: string;
-  logLevel: LogLevel;
+  logLevel?: LogLevel;
+  logLevelFile?: LogLevel;
 }
 
-const beaconExtraOptions: ICliCommandOptions<IBeaconExtraArgs> = {
+export const beaconExtraOptions: ICliCommandOptions<IBeaconExtraArgs> = {
   forceGenesis: {
     description: "Force beacon to create genesis without file",
     type: "boolean",
@@ -33,9 +34,16 @@ const beaconExtraOptions: ICliCommandOptions<IBeaconExtraArgs> = {
     defaultDescription: defaultLogLevel,
     type: "string",
   },
+
+  logLevelFile: {
+    choices: LogLevels,
+    description: "Logging verbosity level for file transport",
+    defaultDescription: defaultLogLevel,
+    type: "string",
+  },
 };
 
-const beaconPathsOptions: ICliCommandOptions<IBeaconPaths> = {
+export const beaconPathsOptions: ICliCommandOptions<IBeaconPaths> = {
   beaconDir: {
     description: "Beacon root directory",
     defaultDescription: defaultBeaconPaths.beaconDir,

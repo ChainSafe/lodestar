@@ -1,4 +1,4 @@
-import {WinstonLogger, LogLevel} from "@chainsafe/lodestar-utils";
+import {WinstonLogger, LogLevel, TransportType} from "@chainsafe/lodestar-utils";
 export {LogLevel};
 
 /**
@@ -9,8 +9,11 @@ export {LogLevel};
  * VERBOSE=1 mocha .ts
  * ```
  */
-export function testLogger(module?: string, defaultLogLevel = LogLevel.error): WinstonLogger {
-  return new WinstonLogger({level: getLogLevelFromEnvs() || defaultLogLevel, module});
+export function testLogger(module?: string, defaultLogLevel = LogLevel.error, logFile?: string): WinstonLogger {
+  return new WinstonLogger({level: getLogLevelFromEnvs() || defaultLogLevel, module}, [
+    {type: TransportType.console},
+    ...(logFile ? [{type: TransportType.file, filename: logFile, level: LogLevel.debug}] : []),
+  ]);
 }
 
 function getLogLevelFromEnvs(): LogLevel | null {

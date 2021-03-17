@@ -2,53 +2,30 @@
  * @module logger
  */
 
-import {createLogger, Logger, transports as winstonTransports} from "winston";
+import {createLogger, Logger} from "winston";
 import {Context, defaultLogLevel, ILogger, ILoggerOptions, LogLevel} from "./interface";
 import chalk from "chalk";
 import {getFormat} from "./format";
-import TransportStream from "winston-transport";
 import {Writable} from "stream";
+import {TransportOpts, TransportType, fromTransportOpts} from "./transport";
 
-export const consoleTransport: TransportStream = new winstonTransports.Console({
-  debugStdout: true,
-  level: "silly",
-  handleExceptions: true,
-});
-
-export const fileTransport = (filename: string): TransportStream => {
-  return new winstonTransports.File({
-    level: "silly",
-    filename,
-    handleExceptions: true,
-  });
-};
+const defaultTransportOpts: TransportOpts = {type: TransportType.console};
 
 export class WinstonLogger implements ILogger {
   private winston: Logger;
   private _level: LogLevel;
-  private _silent: boolean;
 
-  constructor(options?: Partial<ILoggerOptions>, transports?: TransportStream[]) {
-    options = {
-      level: defaultLogLevel,
-      module: "",
-      ...options,
-    };
-
+  constructor(options: Partial<ILoggerOptions> = {}, transportOptsArr: TransportOpts[] = [defaultTransportOpts]) {
     this.winston = createLogger({
-      level: options.level, // log level switching handled in `createLogEntry`
+      level: options?.level || defaultLogLevel,
       defaultMeta: {
-        module: options.module || "",
+        module: options?.module || "",
       },
-      format: getFormat(options),
-      transports: transports || [consoleTransport],
+      format: getFormat(options || {}),
+      transports: transportOptsArr.map(fromTransportOpts),
       exitOnError: false,
     });
-    this._level = options.level || LogLevel.info;
-    this._silent = false;
-    if (typeof process !== "undefined" && typeof process.env !== "undefined") {
-      this._silent = process.env.LODESTAR_SILENCE === "true";
-    }
+    this._level = this.getMinLevel(transportOptsArr.map((opts) => opts.level || defaultLogLevel));
   }
 
   error(message: string, context?: Context, error?: Error): void {
@@ -64,7 +41,7 @@ export class WinstonLogger implements ILogger {
   }
 
   important(message: string, context?: Context, error?: Error): void {
-    this.createLogEntry(LogLevel.info, chalk.red(message as string), context, error);
+    this.createLogEntry(LogLevel.info, chalk.red(message), context, error);
   }
 
   verbose(message: string, context?: Context, error?: Error): void {
@@ -87,23 +64,6 @@ export class WinstonLogger implements ILogger {
     throw Error("Not implemented");
   }
 
-  set level(level: LogLevel) {
-    this.winston.level = LogLevel[level];
-    this._level = level;
-  }
-
-  get level(): LogLevel {
-    return this._level;
-  }
-
-  set silent(silent: boolean) {
-    this._silent = silent;
-  }
-
-  get silent(): boolean {
-    return this._silent;
-  }
-
   child(options: ILoggerOptions): WinstonLogger {
     const logger = Object.create(WinstonLogger.prototype);
     const winston = this.winston.child({namespace: options.module, level: options.level});
@@ -116,15 +76,23 @@ export class WinstonLogger implements ILogger {
     return Object.assign(logger, {
       winston,
       _level: winston.level,
-      _silent: this._silent,
     });
   }
 
   private createLogEntry(level: LogLevel, message: string, context?: Context, error?: Error): void {
-    //don't propagate if silenced or message level is more detailed than logger level
-    if (this.silent || this.winston.levels[level] > this.winston.levels[this._level]) {
+    // don't propagate if silenced or message level is more detailed than logger level
+    if (this.winston.levels[level] > this.winston.levels[this._level]) {
       return;
     }
     this.winston[level](message, {context, error});
+  }
+
+  /** Return the min LogLevel from multiple transports */
+  private getMinLevel(levels: LogLevel[]): LogLevel {
+    return levels.reduce(
+      // error: 0, warn: 1, info: 2, ...
+      (minLevel, level) => (this.winston.levels[level] > this.winston.levels[minLevel] ? level : minLevel),
+      defaultLogLevel
+    );
   }
 }

@@ -1,10 +1,8 @@
 import fs from "fs";
-import path from "path";
 import {promisify} from "util";
 import rimraf from "rimraf";
 import {join} from "path";
 import {BeaconNode, BeaconDb, initStateFromAnchorState, createNodeJsLibp2p, nodeUtils} from "@chainsafe/lodestar";
-import {WinstonLogger} from "@chainsafe/lodestar-utils";
 import {Validator} from "@chainsafe/lodestar-validator";
 import {LevelDbController} from "@chainsafe/lodestar-db";
 import {getInteropValidator} from "../validator/utils/interop/validator";
@@ -14,7 +12,9 @@ import {createEnr, createPeerId} from "../../config";
 import {IGlobalArgs} from "../../options";
 import {IDevArgs} from "./options";
 import {initializeOptionsAndConfig} from "../init/handler";
-import {mkdir, initBLS} from "../../util";
+import {mkdir, initBLS, getCliLogger} from "../../util";
+import {getBeaconPaths} from "../beacon/paths";
+import {getValidatorPaths} from "../validator/paths";
 
 /**
  * Run a beacon node with validator
@@ -30,21 +30,23 @@ export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
   beaconNodeOptions.set({network: {discv5: {enr}}});
 
   // Custom paths different than regular beacon, validator paths
-  const rootDir = path.join(args.rootDir || "./.lodestar", "dev");
-  const chainDir = path.join(rootDir, "beacon");
-  const validatorsDir = path.join(rootDir, "validators");
-  const dbPath = path.join(chainDir, "db-" + peerId.toB58String());
+  // network="dev" will store all data in separate dir than other networks
+  args.network = "dev";
+  const beaconPaths = getBeaconPaths(args);
+  const validatorPaths = getValidatorPaths(args);
+  const beaconDbDir = beaconPaths.dbDir;
+  const validatorsDbDir = validatorPaths.validatorsDbDir;
 
-  mkdir(chainDir);
-  mkdir(validatorsDir);
+  mkdir(beaconDbDir);
+  mkdir(validatorsDbDir);
 
   // TODO: Rename db.name to db.path or db.location
-  beaconNodeOptions.set({db: {name: dbPath}});
+  beaconNodeOptions.set({db: {name: beaconPaths.dbDir}});
   const options = beaconNodeOptions.getWithDefaults();
 
   // BeaconNode setup
   const libp2p = await createNodeJsLibp2p(peerId, options.network);
-  const logger = new WinstonLogger({level: args.logLevel});
+  const logger = getCliLogger(args, beaconPaths);
 
   const db = new BeaconDb({config, controller: new LevelDbController(options.db, {logger})});
   await db.start();
@@ -81,16 +83,16 @@ export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
     await Promise.all([Promise.all(validators.map((v) => v.stop())), node.close()]);
     if (args.reset) {
       logger.info("Cleaning db directories");
-      await promisify(rimraf)(chainDir);
-      await promisify(rimraf)(validatorsDir);
+      await promisify(rimraf)(beaconDbDir);
+      await promisify(rimraf)(validatorsDbDir);
     }
   }, logger.info.bind(logger));
 
   if (args.startValidators) {
-    const [fromIndex, toIndex] = args.startValidators!.split(":").map((s) => parseInt(s));
+    const [fromIndex, toIndex] = args.startValidators.split(":").map((s) => parseInt(s));
     const api = getValidatorApiClient(args.server, logger, node);
     for (let i = fromIndex; i < toIndex; i++) {
-      validators.push(getInteropValidator(node.config, validatorsDir, {api, logger}, i));
+      validators.push(getInteropValidator(node.config, validatorsDbDir, {api, logger}, i));
     }
     await Promise.all(validators.map((validator) => validator.start()));
   }

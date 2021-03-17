@@ -7,6 +7,9 @@ import {Validator} from "@chainsafe/lodestar-validator/lib";
 import {BeaconNode} from "../../src/node";
 import {ChainEvent} from "../../src/chain";
 import {testLogger, LogLevel} from "../utils/logger";
+import {logFiles} from "./params";
+
+/* eslint-disable no-console */
 
 describe("Run multi node single thread interop validators (no eth1) until checkpoint", function () {
   const checkpointEvent = ChainEvent.justified;
@@ -30,15 +33,15 @@ describe("Run multi node single thread interop validators (no eth1) until checkp
       const minGenesisTime = Math.floor(Date.now() / 1000);
       const genesisDelay = 2 * beaconParams.SECONDS_PER_SLOT;
       const genesisTime = minGenesisTime + genesisDelay;
-      const logger = testLogger();
 
       for (let i = 0; i < nodeCount; i++) {
+        const logger = testLogger(`Node ${i}`, LogLevel.info, logFiles.multinodeSinglethread);
         const node = await getDevBeaconNode({
           params: beaconParams,
           options: {sync: {minPeers: 1}},
           validatorCount: nodeCount * validatorsPerNode,
           genesisTime,
-          logger: testLogger(`Node ${i}`, LogLevel.info),
+          logger,
         });
 
         const startIndex = i * validatorsPerNode;
@@ -59,12 +62,12 @@ describe("Run multi node single thread interop validators (no eth1) until checkp
 
       onDoneHandlers.push(async () => {
         await Promise.all(validators.map((validator) => validator.stop()));
-        logger.info("Stopped all validators");
+        console.log("--- Stopped all validators ---");
         // wait for 1 slot
         await new Promise((r) => setTimeout(r, 1 * beaconParams.SECONDS_PER_SLOT * 1000));
 
         await Promise.all(nodes.map((node) => node.close()));
-        logger.info("Stopped all nodes");
+        console.log("--- Stopped all nodes ---");
         // Wait a bit for nodes to shutdown
         await new Promise((r) => setTimeout(r, 3000));
       });
@@ -85,7 +88,7 @@ describe("Run multi node single thread interop validators (no eth1) until checkp
       await Promise.all(
         nodes.map((node) => waitForEvent<phase0.Checkpoint>(node.chain.emitter, checkpointEvent, 240000))
       );
-      logger.info("All nodes reached justified checkpoint");
+      console.log("--- All nodes reached justified checkpoint ---");
     });
   }
 
