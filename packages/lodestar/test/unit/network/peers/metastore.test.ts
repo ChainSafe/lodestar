@@ -14,7 +14,7 @@ describe("Libp2pPeerMetadataStore", function () {
   beforeEach(function () {
     let stored: Buffer;
     metabookStub = {
-      data: new Map(),
+      data: new Map<string, Map<string, Buffer>>(),
       delete: sinon.stub(),
       deleteValue: sinon.stub(),
       get: sinon.stub(),

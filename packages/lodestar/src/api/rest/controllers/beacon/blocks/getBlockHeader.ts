@@ -15,8 +15,8 @@ export const getBlockHeader: ApiController<DefaultQuery, {blockId: string}> = {
         data: this.config.types.phase0.SignedBeaconHeaderResponse.toJson(data, {case: "snake"}),
       });
     } catch (e) {
-      if (e.message === "Invalid block id") {
-        throw toRestValidationError("block_id", e.message);
+      if ((e as Error).message === "Invalid block id") {
+        throw toRestValidationError("block_id", (e as Error).message);
       }
       throw e;
     }

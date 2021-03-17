@@ -105,13 +105,19 @@ describe("database repository", function () {
 
   it("should delete given items", async function () {
     await repository.batchDelete(["1", "2", "3"]);
-    expect(controller.batchDelete.withArgs(sinon.match((criteria) => criteria.length === 3)).calledOnce).to.be.true;
+    expect(
+      controller.batchDelete.withArgs(sinon.match((criteria: ContainerType<TestType>[]) => criteria.length === 3))
+        .calledOnce
+    ).to.be.true;
   });
 
   it("should delete given items by value", async function () {
     const item = {bool: true, bytes: Buffer.alloc(32)};
     await repository.batchRemove([item, item]);
-    expect(controller.batchDelete.withArgs(sinon.match((criteria) => criteria.length === 2)).calledOnce).to.be.true;
+    expect(
+      controller.batchDelete.withArgs(sinon.match((criteria: ContainerType<TestType>[]) => criteria.length === 2))
+        .calledOnce
+    ).to.be.true;
   });
 
   it("should add multiple values", async function () {
@@ -119,7 +125,10 @@ describe("database repository", function () {
       {bool: true, bytes: Buffer.alloc(32)},
       {bool: false, bytes: Buffer.alloc(32)},
     ]);
-    expect(controller.batchPut.withArgs(sinon.match((criteria) => criteria.length === 2)).calledOnce).to.be.true;
+    expect(
+      controller.batchPut.withArgs(sinon.match((criteria: ContainerType<TestType>[]) => criteria.length === 2))
+        .calledOnce
+    ).to.be.true;
   });
 
   it("should fetch values stream", async function () {

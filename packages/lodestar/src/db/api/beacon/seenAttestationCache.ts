@@ -15,7 +15,7 @@ export class SeenAttestationCache {
 
   constructor(maxSize = 1000) {
     this.maxSize = maxSize;
-    this.cache = new Map();
+    this.cache = new Map<string, boolean>();
   }
 
   addCommitteeAttestation(attestation: phase0.Attestation): void {

@@ -39,8 +39,8 @@ export async function handleRequest(
     // in case request whose body is a List fails at chunk_i > 0, without breaking out of the for..await..of
     (async function* () {
       try {
-        const requestBody = await pipe(stream.source, requestDecode(config, method, encoding)).catch((e) => {
-          throw new ResponseError(RpcResponseStatus.INVALID_REQUEST, e.message);
+        const requestBody = await pipe(stream.source, requestDecode(config, method, encoding)).catch((e: unknown) => {
+          throw new ResponseError(RpcResponseStatus.INVALID_REQUEST, (e as Error).message);
         });
 
         logger.debug("Resp received request", {...logCtx, requestBody} as Context);
@@ -53,11 +53,11 @@ export async function handleRequest(
         );
       } catch (e) {
         const status = e instanceof ResponseError ? e.status : RpcResponseStatus.SERVER_ERROR;
-        yield* responseEncodeError(status, e.message);
+        yield* responseEncodeError(status, (e as Error).message);
 
         // Should not throw an error here or libp2p-mplex throws with 'AbortError: stream reset'
         // throw e;
-        responseError = e;
+        responseError = e as Error;
       }
     })(),
     stream.sink

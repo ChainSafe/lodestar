@@ -96,7 +96,10 @@ export class BlockRangeFetcher implements IBlockRangeFetcher {
           if (result.length > 1) checkLinearChainSegment(this.config, result);
         }
       } catch (e) {
-        this.logger.verbose("Regular Sync: Failed to get block range ", {...(slotRange ?? {}), error: e.message});
+        this.logger.verbose("Regular Sync: Failed to get block range ", {
+          ...(slotRange ?? {}),
+          error: (e as Error).message,
+        });
         // sync is stopped for whatever reasons
         if (e instanceof ErrorAborted) return [];
         result = null;

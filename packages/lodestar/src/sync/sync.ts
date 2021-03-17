@@ -254,7 +254,7 @@ export class BeaconSync implements IBeaconSync {
         this.logger.verbose("Failed to get unknown ancestor root from peer", {
           parentRootHex,
           peer: peer.toB58String(),
-          error: e.message,
+          error: (e as Error).message,
           maxRetry,
           retry,
         });

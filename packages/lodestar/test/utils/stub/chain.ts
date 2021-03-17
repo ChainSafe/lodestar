@@ -37,10 +37,15 @@ export class StubbedBeaconChain extends BeaconChain {
         balances: Array.from({length: 64}, () => BigInt(0)),
       } as phase0.BeaconState),
     });
-    this.forkChoice = sinon.createStubInstance(ForkChoice) as any;
-    this.stateCache = sinon.createStubInstance(StateContextCache) as any;
-    this.checkpointStateCache = sinon.createStubInstance(CheckpointStateCache) as any;
-    this.clock = sinon.createStubInstance(LocalClock) as any;
-    this.regen = sinon.createStubInstance(StateRegenerator) as any;
+    this.forkChoice = sinon.createStubInstance(ForkChoice) as SinonStubbedInstance<ForkChoice> & ForkChoice;
+    this.stateCache = sinon.createStubInstance(StateContextCache) as SinonStubbedInstance<StateContextCache> &
+      StateContextCache;
+    this.checkpointStateCache = sinon.createStubInstance(CheckpointStateCache) as SinonStubbedInstance<
+      CheckpointStateCache
+    > &
+      CheckpointStateCache;
+    this.clock = sinon.createStubInstance(LocalClock) as SinonStubbedInstance<LocalClock> & LocalClock;
+    this.regen = sinon.createStubInstance(StateRegenerator) as SinonStubbedInstance<StateRegenerator> &
+      StateRegenerator;
   }
 }

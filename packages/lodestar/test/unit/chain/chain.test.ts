@@ -6,7 +6,7 @@ import {createCachedBeaconState} from "@chainsafe/lodestar-beacon-state-transiti
 
 import {BeaconChain, IBeaconChain} from "../../../src/chain";
 import {defaultChainOptions} from "../../../src/chain/options";
-import {BeaconMetrics} from "../../../src/metrics";
+import {BeaconMetrics, IBeaconMetrics} from "../../../src/metrics";
 import {generateBlockSummary} from "../../utils/block";
 import {generateState} from "../../utils/state";
 import {StubbedBeaconDb} from "../../utils/stub";
@@ -15,7 +15,7 @@ import {testLogger} from "../../utils/logger";
 
 describe("BeaconChain", function () {
   const sandbox = sinon.createSandbox();
-  let dbStub: StubbedBeaconDb, metrics: any;
+  let dbStub: StubbedBeaconDb, metrics: IBeaconMetrics | undefined;
   const logger = testLogger();
   let chain: IBeaconChain;
 

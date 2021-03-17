@@ -1,4 +1,4 @@
-import {BeaconEventType, EventsApi} from "../../../../../src/api/impl/events";
+import {BeaconEvent, BeaconEventType, EventsApi} from "../../../../../src/api/impl/events";
 import {config} from "@chainsafe/lodestar-config/minimal";
 import sinon, {SinonStubbedInstance} from "sinon";
 import {BeaconChain, ChainEvent, ChainEventEmitter, IBeaconChain} from "../../../../../src/chain";
@@ -27,8 +27,8 @@ describe("Events api impl", function () {
       chainEventEmmitter.emit(ChainEvent.forkChoiceHead, headSummary);
       const event = await stream[Symbol.asyncIterator]().next();
       expect(event?.value).to.not.be.null;
-      expect(event.value.type).to.equal(BeaconEventType.HEAD);
-      expect(event.value.message).to.not.be.null;
+      expect((event.value as BeaconEvent).type).to.equal(BeaconEventType.HEAD);
+      expect((event.value as BeaconEvent).message).to.not.be.null;
       stream.stop();
     });
 
@@ -38,8 +38,8 @@ describe("Events api impl", function () {
       chainEventEmmitter.emit(ChainEvent.forkChoiceHead, headSummary);
       const event = await stream[Symbol.asyncIterator]().next();
       expect(event?.value).to.not.be.null;
-      expect(event.value.type).to.equal(BeaconEventType.HEAD);
-      expect(event.value.message).to.not.be.null;
+      expect((event.value as BeaconEvent).type).to.equal(BeaconEventType.HEAD);
+      expect((event.value as BeaconEvent).message).to.not.be.null;
       stream.stop();
     });
 
@@ -49,8 +49,8 @@ describe("Events api impl", function () {
       chainEventEmmitter.emit(ChainEvent.block, block, null as any, null as any);
       const event = await stream[Symbol.asyncIterator]().next();
       expect(event?.value).to.not.be.null;
-      expect(event.value.type).to.equal(BeaconEventType.BLOCK);
-      expect(event.value.message).to.not.be.null;
+      expect((event.value as BeaconEvent).type).to.equal(BeaconEventType.BLOCK);
+      expect((event.value as BeaconEvent).message).to.not.be.null;
       stream.stop();
     });
 
@@ -60,8 +60,8 @@ describe("Events api impl", function () {
       chainEventEmmitter.emit(ChainEvent.attestation, attestation);
       const event = await stream[Symbol.asyncIterator]().next();
       expect(event?.value).to.not.be.null;
-      expect(event.value.type).to.equal(BeaconEventType.ATTESTATION);
-      expect(event.value.message).to.equal(attestation);
+      expect((event.value as BeaconEvent).type).to.equal(BeaconEventType.ATTESTATION);
+      expect((event.value as BeaconEvent).message).to.equal(attestation);
       stream.stop();
     });
 
@@ -73,8 +73,8 @@ describe("Events api impl", function () {
       chainEventEmmitter.emit(ChainEvent.block, block, null as any, null as any);
       const event = await stream[Symbol.asyncIterator]().next();
       expect(event?.value).to.not.be.null;
-      expect(event.value.type).to.equal(BeaconEventType.VOLUNTARY_EXIT);
-      expect(event.value.message).to.equal(exit);
+      expect((event.value as BeaconEvent).type).to.equal(BeaconEventType.VOLUNTARY_EXIT);
+      expect((event.value as BeaconEvent).message).to.equal(exit);
       stream.stop();
     });
 
@@ -84,8 +84,8 @@ describe("Events api impl", function () {
       chainEventEmmitter.emit(ChainEvent.finalized, checkpoint, null as any);
       const event = await stream[Symbol.asyncIterator]().next();
       expect(event?.value).to.not.be.null;
-      expect(event.value.type).to.equal(BeaconEventType.FINALIZED_CHECKPOINT);
-      expect(event.value.message).to.not.be.null;
+      expect((event.value as BeaconEvent).type).to.equal(BeaconEventType.FINALIZED_CHECKPOINT);
+      expect((event.value as BeaconEvent).message).to.not.be.null;
       stream.stop();
     });
 
@@ -96,9 +96,9 @@ describe("Events api impl", function () {
       chainEventEmmitter.emit(ChainEvent.forkChoiceReorg, oldHead, newHead, 3);
       const event = await stream[Symbol.asyncIterator]().next();
       expect(event?.value).to.not.be.null;
-      expect(event.value.type).to.equal(BeaconEventType.CHAIN_REORG);
-      expect(event.value.message).to.not.be.null;
-      expect(event.value.message.depth).to.equal(3);
+      expect((event.value as BeaconEvent).type).to.equal(BeaconEventType.CHAIN_REORG);
+      expect((event.value as BeaconEvent).message).to.not.be.null;
+      expect((event.value as BeaconEvent).message.depth).to.equal(3);
       stream.stop();
     });
   });

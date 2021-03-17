@@ -26,8 +26,8 @@ export class PeerSet {
  * Also, uses a WeakMap to reduce unnecessary calls to `PeerId.toB58String()`
  */
 export class PeerMap<T> {
-  private map: Map<string, T> = new Map();
-  private peers: Map<string, PeerId> = new Map();
+  private map: Map<string, T> = new Map<string, T>();
+  private peers: Map<string, PeerId> = new Map<string, PeerId>();
 
   static from(peers: PeerId[]): PeerMap<void> {
     const peerMap = new PeerMap<void>();

@@ -74,14 +74,14 @@ export class DiversifyPeersBySubnetTask {
       try {
         await Promise.all(toDiscPeers.map((peer) => this.network.disconnect(peer)));
       } catch (e) {
-        this.logger.warn("Cannot disconnect peers", {error: e.message});
+        this.logger.warn("Cannot disconnect peers", {error: (e as Error).message});
       }
     }
 
     try {
       await this.network.searchSubnetPeers(missingSubnets.map((subnet) => String(subnet)));
     } catch (e) {
-      this.logger.warn("Cannot connect to peers on subnet", {subnet: missingSubnets, error: e.message});
+      this.logger.warn("Cannot connect to peers on subnet", {subnet: missingSubnets, error: (e as Error).message});
     }
   };
 }

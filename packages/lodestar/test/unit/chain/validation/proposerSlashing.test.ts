@@ -11,6 +11,7 @@ import {StubbedBeaconDb, StubbedChain} from "../../../utils/stub";
 import {generateCachedState} from "../../../utils/state";
 import {ProposerSlashingErrorCode} from "../../../../src/chain/errors/proposerSlashingError";
 import {validateGossipProposerSlashing} from "../../../../src/chain/validation/proposerSlashing";
+import {LodestarError} from "@chainsafe/lodestar-utils";
 
 describe("validate proposer slashing", () => {
   const sandbox = sinon.createSandbox();
@@ -33,7 +34,10 @@ describe("validate proposer slashing", () => {
     try {
       await validateGossipProposerSlashing(config, chainStub, dbStub, slashing);
     } catch (error) {
-      expect(error.type).to.have.property("code", ProposerSlashingErrorCode.SLASHING_ALREADY_EXISTS);
+      expect((error as LodestarError<{code: string}>).type).to.have.property(
+        "code",
+        ProposerSlashingErrorCode.SLASHING_ALREADY_EXISTS
+      );
     }
   });
 
@@ -46,7 +50,10 @@ describe("validate proposer slashing", () => {
     try {
       await validateGossipProposerSlashing(config, chainStub, dbStub, slashing);
     } catch (error) {
-      expect(error.type).to.have.property("code", ProposerSlashingErrorCode.INVALID_SLASHING);
+      expect((error as LodestarError<{code: string}>).type).to.have.property(
+        "code",
+        ProposerSlashingErrorCode.INVALID_SLASHING
+      );
     }
   });
 

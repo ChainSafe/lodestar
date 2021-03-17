@@ -53,7 +53,7 @@ export function responseTimeoutsHandler<T>(
       );
     } catch (e) {
       // Rethrow error properly typed so the peer score can pick it up
-      switch (e.message) {
+      switch ((e as Error).message) {
         case RequestErrorCode.TTFB_TIMEOUT:
           throw new RequestInternalError({code: RequestErrorCode.TTFB_TIMEOUT});
         case RequestErrorCode.RESP_TIMEOUT:

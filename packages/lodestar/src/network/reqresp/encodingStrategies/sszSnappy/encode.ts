@@ -44,6 +44,6 @@ function serializeSszBody<T extends RequestOrResponseBody>(body: T, type: Reques
     const bytes = type.serialize(body as any);
     return Buffer.from(bytes.buffer, bytes.byteOffset, bytes.length);
   } catch (e) {
-    throw new SszSnappyError({code: SszSnappyErrorCode.SERIALIZE_ERROR, serializeError: e});
+    throw new SszSnappyError({code: SszSnappyErrorCode.SERIALIZE_ERROR, serializeError: e as Error});
   }
 }

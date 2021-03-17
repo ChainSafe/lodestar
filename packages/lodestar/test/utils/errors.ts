@@ -2,7 +2,7 @@ import {expect} from "chai";
 import {LodestarError, mapValues} from "@chainsafe/lodestar-utils";
 import {Json} from "@chainsafe/ssz";
 
-export function expectThrowsLodestarError(fn: () => any, expectedErr: LodestarError<any>): void {
+export function expectThrowsLodestarError(fn: () => void, expectedErr: LodestarError<any>): void {
   try {
     const value = fn();
     const json = JSON.stringify(value, null, 2);
@@ -13,7 +13,7 @@ export function expectThrowsLodestarError(fn: () => any, expectedErr: LodestarEr
 }
 
 export async function expectRejectedWithLodestarError(
-  promise: Promise<any>,
+  promise: Promise<unknown>,
   expectedErr: LodestarError<any> | string
 ): Promise<void> {
   try {

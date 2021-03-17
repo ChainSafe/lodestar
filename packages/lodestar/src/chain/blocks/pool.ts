@@ -27,9 +27,9 @@ export class BlockPool {
   constructor({config}: {config: IBeaconConfig}) {
     this.config = config;
 
-    this.blocks = new Map();
-    this.blocksByParent = new Map();
-    this.blocksBySlot = new Map();
+    this.blocks = new Map<string, string>();
+    this.blocksByParent = new Map<string, Set<string>>();
+    this.blocksBySlot = new Map<number, Set<string>>();
   }
 
   addByParent(signedBlock: phase0.SignedBeaconBlock): void {

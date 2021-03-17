@@ -26,7 +26,7 @@ export async function retry<A>(fn: (attempt: number) => A | Promise<A>, opts?: I
     try {
       return await fn(i);
     } catch (e) {
-      lastError = e;
+      lastError = e as Error;
       if (shouldRetry && !shouldRetry(lastError)) {
         break;
       }

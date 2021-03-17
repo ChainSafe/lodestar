@@ -2,7 +2,7 @@ import "mocha";
 import {expect} from "chai";
 import {promisify} from "es6-promisify";
 // @ts-ignore
-import leveldown from "leveldown";
+import {destroy} from "leveldown";
 import {AbortController} from "abort-controller";
 import {sleep} from "@chainsafe/lodestar-utils";
 import {LevelDbController} from "@chainsafe/lodestar-db";
@@ -47,7 +47,7 @@ describe("eth1 / Eth1Provider", function () {
 
   before(async () => {
     // Nuke DB to make sure it's empty
-    await promisify<void, string>(leveldown.destroy)(dbLocation);
+    await promisify<void, string>(destroy)(dbLocation);
 
     dbController = new LevelDbController({name: dbLocation}, {logger});
     db = new BeaconDb({
@@ -62,7 +62,7 @@ describe("eth1 / Eth1Provider", function () {
     clearInterval(interval);
     controller.abort();
     await db.stop();
-    await promisify<void, string>(leveldown.destroy)(dbLocation);
+    await promisify<void, string>(destroy)(dbLocation);
   });
 
   it("Should fetch real Pyrmont eth1 data for block proposing", async function () {

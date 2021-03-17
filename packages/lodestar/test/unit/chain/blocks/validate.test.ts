@@ -8,6 +8,7 @@ import {validateBlock} from "../../../../src/chain/blocks/validate";
 import {LocalClock} from "../../../../src/chain/clock";
 import {BlockErrorCode} from "../../../../src/chain/errors";
 import {getNewBlockJob} from "../../../utils/block";
+import {LodestarError} from "@chainsafe/lodestar-utils";
 
 describe("validateBlock", function () {
   let forkChoice: SinonStubbedInstance<ForkChoice>;
@@ -29,7 +30,7 @@ describe("validateBlock", function () {
       validateBlock({config, forkChoice, clock, job});
       expect.fail("block should throw");
     } catch (e) {
-      expect(e.type.code).to.equal(BlockErrorCode.GENESIS_BLOCK);
+      expect((e as LodestarError<{code: string}>).type.code).to.equal(BlockErrorCode.GENESIS_BLOCK);
     }
   });
 
@@ -42,7 +43,7 @@ describe("validateBlock", function () {
       validateBlock({config, forkChoice, clock, job});
       expect.fail("block should throw");
     } catch (e) {
-      expect(e.type.code).to.equal(BlockErrorCode.BLOCK_IS_ALREADY_KNOWN);
+      expect((e as LodestarError<{code: string}>).type.code).to.equal(BlockErrorCode.BLOCK_IS_ALREADY_KNOWN);
     }
   });
 
@@ -56,7 +57,7 @@ describe("validateBlock", function () {
       validateBlock({config, forkChoice, clock, job});
       expect.fail("block should throw");
     } catch (e) {
-      expect(e.type.code).to.equal(BlockErrorCode.WOULD_REVERT_FINALIZED_SLOT);
+      expect((e as LodestarError<{code: string}>).type.code).to.equal(BlockErrorCode.WOULD_REVERT_FINALIZED_SLOT);
     }
   });
 
@@ -71,7 +72,7 @@ describe("validateBlock", function () {
       validateBlock({config, forkChoice, clock, job});
       expect.fail("block should throw");
     } catch (e) {
-      expect(e.type.code).to.equal(BlockErrorCode.FUTURE_SLOT);
+      expect((e as LodestarError<{code: string}>).type.code).to.equal(BlockErrorCode.FUTURE_SLOT);
     }
   });
 });

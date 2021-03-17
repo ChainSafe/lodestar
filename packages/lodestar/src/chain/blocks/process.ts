@@ -65,7 +65,7 @@ export async function processBlock({
 
     throw new BlockError({
       code: BlockErrorCode.BEACON_CHAIN_ERROR,
-      error: e,
+      error: e as Error,
       job,
     });
   }
@@ -166,7 +166,7 @@ export async function processChainSegment({
 
       throw new ChainSegmentError({
         code: BlockErrorCode.BEACON_CHAIN_ERROR,
-        error: e,
+        error: e as Error,
         job,
         importedBlocks,
       });

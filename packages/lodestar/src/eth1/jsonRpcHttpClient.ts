@@ -90,7 +90,7 @@ async function fetchJson<R, T = unknown>(url: string, json: T, signal?: AbortSig
  */
 function parseJson<T>(json: string): T {
   try {
-    return JSON.parse(json);
+    return JSON.parse(json) as T;
   } catch (e) {
     throw new ErrorParseJson(json, e);
   }

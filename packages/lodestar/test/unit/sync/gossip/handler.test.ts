@@ -10,6 +10,7 @@ import {
   GossipEncoding,
   GossipType,
   encodeMessageData,
+  TopicValidatorFn,
 } from "../../../../src/network/gossip";
 import {BeaconGossipHandler} from "../../../../src/sync/gossip";
 
@@ -35,7 +36,7 @@ describe("gossip handler", function () {
       config,
       genesisValidatorsRoot,
       libp2p,
-      validatorFns: new Map(),
+      validatorFns: new Map<string, TopicValidatorFn>(),
       logger: testLogger(),
     });
     networkStub.gossip = gossipsub;

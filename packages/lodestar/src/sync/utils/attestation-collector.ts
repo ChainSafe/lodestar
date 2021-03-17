@@ -21,7 +21,7 @@ export class AttestationCollector {
   private readonly db: IBeaconDb;
   private readonly logger: ILogger;
   private timers: NodeJS.Timeout[] = [];
-  private aggregationDuties: Map<Slot, Set<CommitteeIndex>> = new Map();
+  private aggregationDuties: Map<Slot, Set<CommitteeIndex>> = new Map<Slot, Set<CommitteeIndex>>();
 
   constructor(config: IBeaconConfig, modules: IAttestationCollectorModules) {
     this.config = config;

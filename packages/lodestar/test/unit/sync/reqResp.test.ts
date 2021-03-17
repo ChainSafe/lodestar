@@ -18,6 +18,9 @@ import {generatePeer} from "../../utils/peer";
 import {generateState} from "../../utils/state";
 import {StubbedBeaconChain, StubbedBeaconDb} from "../../utils/stub";
 import {getStubbedMetadataStore, StubbedIPeerMetadataStore} from "../../utils/peer";
+import {Gauge} from "prom-client";
+import {CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
+import {LocalClock} from "../../../src/chain/clock";
 
 chai.use(chaiAsPromised);
 
@@ -26,7 +29,7 @@ describe("sync req resp", function () {
   const logger = testLogger();
   const sandbox = sinon.createSandbox();
   const metrics = sandbox.createStubInstance(BeaconMetrics);
-  metrics.peerGoodbyeReceived = {inc: sinon.stub()} as any;
+  metrics.peerGoodbyeReceived = ({inc: sinon.stub()} as unknown) as Gauge;
   let syncRpc: BeaconReqRespHandler;
   let chainStub: StubbedBeaconChain,
     networkStub: SinonStubbedInstance<Network>,
@@ -80,8 +83,8 @@ describe("sync req resp", function () {
       headRoot: Buffer.alloc(32),
       headSlot: 1,
     };
-    chainStub.stateCache.get.returns(generateState() as any);
-    chainStub.clock = {currentSlot: 0} as any;
+    chainStub.stateCache.get.returns((generateState() as unknown) as CachedBeaconState<phase0.BeaconState> | null);
+    chainStub.clock = {currentSlot: 0} as SinonStubbedInstance<LocalClock> & LocalClock;
 
     const res = await all(syncRpc.onRequest(Method.Status, body, peerId));
     expect(res).have.length(1, "Wrong number of chunks responded");
@@ -137,7 +140,7 @@ describe("sync req resp", function () {
         slots.push((chunk as phase0.SignedBeaconBlock).message.slot);
       }
     } catch (e) {
-      console.log({e});
+      console.log({e: e as Error});
       //
     }
 

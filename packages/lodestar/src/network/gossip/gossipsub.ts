@@ -4,7 +4,7 @@ import {InMessage} from "libp2p-interfaces/src/pubsub";
 import Libp2p from "libp2p";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ATTESTATION_SUBNET_COUNT, phase0, Root} from "@chainsafe/lodestar-types";
-import {ILogger, toJson} from "@chainsafe/lodestar-utils";
+import {ILogger, LodestarError, toJson} from "@chainsafe/lodestar-utils";
 import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 
 import {IBeaconMetrics} from "../../metrics";
@@ -23,6 +23,7 @@ import {encodeMessageData, decodeMessageData} from "./encoding";
 import {DEFAULT_ENCODING} from "./constants";
 import {GossipValidationError} from "./errors";
 import {ERR_TOPIC_VALIDATOR_REJECT} from "libp2p-gossipsub/src/constants";
+import {BlockError} from "../../chain/errors";
 
 interface IGossipsubModules {
   config: IBeaconConfig;
@@ -82,8 +83,8 @@ export class Eth2Gossipsub extends Gossipsub {
     this.logger = logger;
     this.metrics = metrics;
 
-    this.gossipObjects = new Map();
-    this.gossipTopics = new Map();
+    this.gossipObjects = new Map<string, GossipObject>();
+    this.gossipTopics = new Map<string, GossipTopic>();
 
     for (const [topic, validatorFn] of validatorFns.entries()) {
       this.topicValidators.set(topic, validatorFn);
@@ -102,7 +103,7 @@ export class Eth2Gossipsub extends Gossipsub {
         clearInterval(this.statusInterval);
       }
     } catch (error) {
-      if (error.code !== "ERR_HEARTBEAT_NO_RUNNING") {
+      if ((error as GossipValidationError).code !== "ERR_HEARTBEAT_NO_RUNNING") {
         throw error;
       }
     }

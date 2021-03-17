@@ -18,7 +18,7 @@ import {StubbedBeaconDb, StubbedChain} from "../../../../utils/stub";
 describe("block assembly", function () {
   const sandbox = sinon.createSandbox();
 
-  let assembleBodyStub: any,
+  let assembleBodyStub: SinonStub,
     chainStub: StubbedChain,
     forkChoiceStub: SinonStubbedInstance<ForkChoice>,
     regenStub: SinonStubbedInstance<StateRegenerator>,

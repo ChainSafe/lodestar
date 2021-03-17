@@ -55,7 +55,7 @@ export class JobQueue {
     } else {
       const start = Date.now();
       try {
-        const result = await job();
+        const result = (await job()) as Job;
         resolve(result);
       } catch (e) {
         reject(e);

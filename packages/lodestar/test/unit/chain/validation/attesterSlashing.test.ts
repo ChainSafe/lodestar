@@ -11,6 +11,7 @@ import {StubbedBeaconDb, StubbedChain} from "../../../utils/stub";
 import {generateCachedState} from "../../../utils/state";
 import {validateGossipAttesterSlashing} from "../../../../src/chain/validation/attesterSlashing";
 import {AttesterSlashingErrorCode} from "../../../../src/chain/errors/attesterSlashingError";
+import {LodestarError} from "@chainsafe/lodestar-utils";
 
 describe("GossipMessageValidator", () => {
   const sandbox = sinon.createSandbox();
@@ -34,7 +35,10 @@ describe("GossipMessageValidator", () => {
       try {
         await validateGossipAttesterSlashing(config, chainStub, dbStub, slashing);
       } catch (error) {
-        expect(error.type).to.have.property("code", AttesterSlashingErrorCode.SLASHING_ALREADY_EXISTS);
+        expect((error as LodestarError<{code: string}>).type).to.have.property(
+          "code",
+          AttesterSlashingErrorCode.SLASHING_ALREADY_EXISTS
+        );
       }
     });
 
@@ -47,7 +51,10 @@ describe("GossipMessageValidator", () => {
       try {
         await validateGossipAttesterSlashing(config, chainStub, dbStub, slashing);
       } catch (error) {
-        expect(error.type).to.have.property("code", AttesterSlashingErrorCode.INVALID_SLASHING);
+        expect((error as LodestarError<{code: string}>).type).to.have.property(
+          "code",
+          AttesterSlashingErrorCode.INVALID_SLASHING
+        );
       }
     });
 

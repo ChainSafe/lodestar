@@ -67,7 +67,7 @@ export class SyncChain {
   private batchProcessor = new ItTrigger();
   private maybeStuckTimeout!: NodeJS.Timeout; // clearTimeout(undefined) is okay
   /** Sorted map of batches undergoing some kind of processing. */
-  private batches: Map<Epoch, Batch> = new Map();
+  private batches: Map<Epoch, Batch> = new Map<Epoch, Batch>();
 
   private logger: ILogger;
   private config: IBeaconConfig;

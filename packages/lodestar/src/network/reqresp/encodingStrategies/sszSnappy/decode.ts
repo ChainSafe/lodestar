@@ -95,7 +95,7 @@ async function readSszSnappyBody(bufferedSource: BufferedSource, sszDataLength: 
         uncompressedData.append(uncompressed);
       }
     } catch (e) {
-      throw new SszSnappyError({code: SszSnappyErrorCode.DECOMPRESSOR_ERROR, decompressorError: e});
+      throw new SszSnappyError({code: SszSnappyErrorCode.DECOMPRESSOR_ERROR, decompressorError: e as Error});
     }
 
     // SHOULD consider invalid reading more bytes than `n` SSZ bytes
@@ -132,6 +132,6 @@ function deserializeSszBody<T extends RequestOrResponseBody>(
       return type.deserialize(bytes) as T;
     }
   } catch (e) {
-    throw new SszSnappyError({code: SszSnappyErrorCode.DESERIALIZE_ERROR, deserializeError: e});
+    throw new SszSnappyError({code: SszSnappyErrorCode.DESERIALIZE_ERROR, deserializeError: e as Error});
   }
 }

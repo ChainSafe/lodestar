@@ -10,6 +10,7 @@ import {CheckpointStateCache} from "../../../../src/chain/stateCache";
 import {processBlock} from "../../../../src/chain/blocks/process";
 import {RegenError, RegenErrorCode, StateRegenerator} from "../../../../src/chain/regen";
 import {getNewBlockJob} from "../../../utils/block";
+import {LodestarError} from "@chainsafe/lodestar-utils";
 
 describe("processBlock", function () {
   const emitter = new ChainEventEmitter();
@@ -42,7 +43,7 @@ describe("processBlock", function () {
       });
       expect.fail("block should throw");
     } catch (e) {
-      expect(e.type.code).to.equal(BlockErrorCode.PARENT_UNKNOWN);
+      expect((e as LodestarError<{code: string}>).type.code).to.equal(BlockErrorCode.PARENT_UNKNOWN);
     }
   });
 
@@ -62,7 +63,7 @@ describe("processBlock", function () {
       });
       expect.fail("block should throw");
     } catch (e) {
-      expect(e.type.code).to.equal(BlockErrorCode.PRESTATE_MISSING);
+      expect((e as LodestarError<{code: string}>).type.code).to.equal(BlockErrorCode.PRESTATE_MISSING);
     }
   });
 });

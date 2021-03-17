@@ -12,6 +12,7 @@ import {generateValidator, generateValidators} from "../../../../../utils/valida
 import {BeaconChain} from "../../../../../../src/chain";
 import {StubbedBeaconDb} from "../../../../../utils/stub";
 import {setupApiImplTestServer, ApiImplTestModules} from "../../index.test";
+import {PubkeyIndexMap} from "@chainsafe/lodestar-beacon-state-transition/lib/phase0/fast";
 
 use(chaiAsPromised);
 
@@ -97,9 +98,9 @@ describe("beacon api impl - state - validators", function () {
     it("validator by root not found", async function () {
       resolveStateIdStub.resolves(generateState({validators: generateValidators(10)}));
       chainStub.getHeadState.returns({
-        pubkey2index: {
+        pubkey2index: ({
           get: () => undefined,
-        } as any,
+        } as unknown) as PubkeyIndexMap,
       } as CachedBeaconState<phase0.BeaconState>);
       const api = new BeaconStateApi({}, {config, db: dbStub, chain: chainStub});
       await expect(api.getStateValidator("someState", Buffer.alloc(32, 1))).to.be.rejectedWith("Validator not found");
@@ -107,9 +108,9 @@ describe("beacon api impl - state - validators", function () {
     it("validator by root found", async function () {
       resolveStateIdStub.resolves(generateState({validators: generateValidators(10)}));
       chainStub.getHeadState.returns({
-        pubkey2index: {
+        pubkey2index: ({
           get: () => 2,
-        } as any,
+        } as unknown) as PubkeyIndexMap,
       } as CachedBeaconState<phase0.BeaconState>);
       const api = new BeaconStateApi({}, {config, db: dbStub, chain: chainStub});
       expect(await api.getStateValidator("someState", Buffer.alloc(32, 1))).to.not.be.null;

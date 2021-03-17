@@ -4,7 +4,7 @@ import {rewiremock} from "../../../rewiremock";
 
 import {List} from "@chainsafe/ssz";
 import bls from "@chainsafe/bls";
-import {bigIntToBytes} from "@chainsafe/lodestar-utils";
+import {bigIntToBytes, LodestarError} from "@chainsafe/lodestar-utils";
 import {config} from "@chainsafe/lodestar-config/minimal";
 import * as validatorUtils from "@chainsafe/lodestar-beacon-state-transition/lib/util/validator";
 import {getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
@@ -109,7 +109,7 @@ describe("gossip aggregate and proof test", function () {
         validSignature: false,
       } as IAttestationJob);
     } catch (error) {
-      expect(error.type).to.have.property("code", AttestationErrorCode.PAST_SLOT);
+      expect((error as LodestarError<{code: string}>).type).to.have.property("code", AttestationErrorCode.PAST_SLOT);
     }
   });
 
@@ -132,7 +132,7 @@ describe("gossip aggregate and proof test", function () {
         validSignature: false,
       } as IAttestationJob);
     } catch (error) {
-      expect(error.type).to.have.property("code", AttestationErrorCode.FUTURE_SLOT);
+      expect((error as LodestarError<{code: string}>).type).to.have.property("code", AttestationErrorCode.FUTURE_SLOT);
     }
   });
 
@@ -151,7 +151,10 @@ describe("gossip aggregate and proof test", function () {
         validSignature: false,
       } as IAttestationJob);
     } catch (error) {
-      expect(error.type).to.have.property("code", AttestationErrorCode.AGGREGATE_ALREADY_KNOWN);
+      expect((error as LodestarError<{code: string}>).type).to.have.property(
+        "code",
+        AttestationErrorCode.AGGREGATE_ALREADY_KNOWN
+      );
     }
     expect(db.seenAttestationCache.hasAggregateAndProof.withArgs(item.message).calledOnce).to.be.true;
   });
@@ -171,7 +174,10 @@ describe("gossip aggregate and proof test", function () {
         validSignature: false,
       } as IAttestationJob);
     } catch (error) {
-      expect(error.type).to.have.property("code", AttestationErrorCode.WRONG_NUMBER_OF_AGGREGATION_BITS);
+      expect((error as LodestarError<{code: string}>).type).to.have.property(
+        "code",
+        AttestationErrorCode.WRONG_NUMBER_OF_AGGREGATION_BITS
+      );
     }
   });
 
@@ -191,7 +197,10 @@ describe("gossip aggregate and proof test", function () {
         validSignature: false,
       } as IAttestationJob);
     } catch (error) {
-      expect(error.type).to.have.property("code", AttestationErrorCode.KNOWN_BAD_BLOCK);
+      expect((error as LodestarError<{code: string}>).type).to.have.property(
+        "code",
+        AttestationErrorCode.KNOWN_BAD_BLOCK
+      );
     }
     expect(db.badBlock.has.withArgs(item.message.aggregate.data.beaconBlockRoot.valueOf() as Uint8Array).calledOnce).to
       .be.true;
@@ -213,7 +222,10 @@ describe("gossip aggregate and proof test", function () {
         validSignature: false,
       } as IAttestationJob);
     } catch (error) {
-      expect(error.type).to.have.property("code", AttestationErrorCode.MISSING_ATTESTATION_PRESTATE);
+      expect((error as LodestarError<{code: string}>).type).to.have.property(
+        "code",
+        AttestationErrorCode.MISSING_ATTESTATION_PRESTATE
+      );
     }
     expect(regen.getBlockSlotState.withArgs(item.message.aggregate.data.target.root, sinon.match.any).calledOnce).to.be
       .true;
@@ -237,7 +249,10 @@ describe("gossip aggregate and proof test", function () {
         validSignature: false,
       } as IAttestationJob);
     } catch (error) {
-      expect(error.type).to.have.property("code", AttestationErrorCode.AGGREGATOR_NOT_IN_COMMITTEE);
+      expect((error as LodestarError<{code: string}>).type).to.have.property(
+        "code",
+        AttestationErrorCode.AGGREGATOR_NOT_IN_COMMITTEE
+      );
     }
     expect(
       (state.getBeaconCommittee as SinonStub).withArgs(
@@ -266,7 +281,10 @@ describe("gossip aggregate and proof test", function () {
         validSignature: false,
       } as IAttestationJob);
     } catch (error) {
-      expect(error.type).to.have.property("code", AttestationErrorCode.INVALID_AGGREGATOR);
+      expect((error as LodestarError<{code: string}>).type).to.have.property(
+        "code",
+        AttestationErrorCode.INVALID_AGGREGATOR
+      );
     }
     expect(isAggregatorStub.withArgs(config, 1, item.message.selectionProof).calledOnce).to.be.true;
   });

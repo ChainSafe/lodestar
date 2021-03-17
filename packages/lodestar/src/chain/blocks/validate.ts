@@ -62,7 +62,7 @@ export function validateBlock({
 
     throw new BlockError({
       code: BlockErrorCode.BEACON_CHAIN_ERROR,
-      error: e,
+      error: e as Error,
       job,
     });
   }

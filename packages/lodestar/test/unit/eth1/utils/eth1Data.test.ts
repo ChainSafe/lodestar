@@ -13,6 +13,7 @@ import {
   ErrorNoDepositsForBlockRange,
   ErrorNotEnoughDepositRoots,
 } from "../../../../src/eth1/utils/eth1Data";
+import {DepositData} from "@chainsafe/lodestar-types/phase0";
 
 chai.use(chaiAsPromised);
 
@@ -24,7 +25,7 @@ describe("eth1 / util / getEth1DataForBlocks", function () {
     depositRootTree: TreeBacked<List<Root>>;
     lastProcessedDepositBlockNumber: number;
     expectedEth1Data?: Partial<phase0.Eth1Data & phase0.Eth1Block>[];
-    error?: any;
+    error?: unknown;
   }
 
   const testCases: (() => ITestCase)[] = [
@@ -120,7 +121,7 @@ describe("eth1 / util / getEth1DataForBlocks", function () {
         const eth1DatasPartial = eth1Datas.map((eth1Data) => pick(eth1Data, Object.keys(expectedEth1Data[0])));
         expect(eth1DatasPartial).to.deep.equal(expectedEth1Data);
       } else if (error) {
-        await expect(eth1DatasPromise).to.be.rejectedWith(error);
+        await expect(eth1DatasPromise).to.be.rejectedWith(error as Error);
       } else {
         throw Error("Test case must have 'expectedEth1Data' or 'error'");
       }
@@ -273,6 +274,6 @@ function getMockDeposit({blockNumber, index}: {blockNumber: number; index: numbe
   return {
     blockNumber,
     index,
-    depositData: {} as any, // Not used
+    depositData: {} as DepositData, // Not used
   };
 }

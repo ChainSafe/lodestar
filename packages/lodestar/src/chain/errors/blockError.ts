@@ -117,7 +117,7 @@ export class BlockError extends LodestarError<BlockErrorType> {
   }
 }
 
-type ChainSegmentJobObject = {
+export type ChainSegmentJobObject = {
   job: IChainSegmentJob;
   importedBlocks: number;
 };
