@@ -281,7 +281,7 @@ export class Eth2Gossipsub extends Gossipsub {
   async publishAttesterSlashing(attesterSlashing: phase0.AttesterSlashing): Promise<void> {
     await this.publishObject(
       {
-        type: GossipType.proposer_slashing,
+        type: GossipType.attester_slashing,
         fork: this.config.getForkName(attesterSlashing.attestation1.data.slot),
       },
       attesterSlashing
