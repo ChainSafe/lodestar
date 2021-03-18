@@ -2,31 +2,35 @@
 import {GENESIS_SLOT, FAR_FUTURE_EPOCH, CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
 import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
-import {Epoch, ValidatorIndex, Gwei, Slot} from "@chainsafe/lodestar-types";
+import {Epoch, ValidatorIndex, Gwei, Slot, Root} from "@chainsafe/lodestar-types";
 import {fromHexString, readOnlyMap} from "@chainsafe/ssz";
 import {IBeaconChain} from "../../../../chain";
-import {StateContextCache} from "../../../../chain/stateCache";
 import {IBeaconDb} from "../../../../db/api";
 import {StateId} from "./interface";
+
+export enum RegenType {
+  CacheOnly,
+  AllowRegen,
+}
 
 export async function resolveStateId(
   chain: IBeaconChain,
   db: IBeaconDb,
-  stateId: StateId
+  stateId: StateId,
+  type: RegenType = RegenType.CacheOnly
 ): Promise<phase0.BeaconState | null> {
   stateId = stateId.toLowerCase();
   if (stateId === "head" || stateId === "genesis" || stateId === "finalized" || stateId === "justified") {
-    return await stateByName(db, chain.stateCache, chain.forkChoice, stateId);
+    return await stateByName(db, chain, stateId, type);
   } else if (stateId.startsWith("0x")) {
-    return await stateByRoot(db, chain.stateCache, stateId);
+    return await stateByRoot(db, chain, fromHexString(stateId), type);
   } else {
     // state id must be slot
     const slot = parseInt(stateId, 10);
     if (isNaN(slot) && isNaN(slot - 0)) {
       throw new Error("Invalid state id");
     }
-    return await stateBySlot(db, chain.stateCache, chain.forkChoice, slot);
+    return await stateBySlot(db, chain, slot, type);
   }
 }
 
@@ -115,19 +119,19 @@ export function getEpochBeaconCommittees(
 
 async function stateByName(
   db: IBeaconDb,
-  stateCache: StateContextCache,
-  forkChoice: IForkChoice,
-  stateId: StateId
+  chain: IBeaconChain,
+  stateId: StateId,
+  type: RegenType
 ): Promise<phase0.BeaconState | null> {
   switch (stateId) {
     case "head":
-      return stateCache.get(forkChoice.getHead().stateRoot) ?? null;
+      return await stateByRoot(db, chain, chain.forkChoice.getHead().stateRoot, type);
     case "genesis":
       return await db.stateArchive.get(GENESIS_SLOT);
     case "finalized":
-      return stateCache.get(forkChoice.getFinalizedCheckpoint().root) ?? null;
+      return await stateByRoot(db, chain, chain.forkChoice.getFinalizedCheckpoint().root, type);
     case "justified":
-      return stateCache.get(forkChoice.getJustifiedCheckpoint().root) ?? null;
+      return await stateByRoot(db, chain, chain.forkChoice.getJustifiedCheckpoint().root, type);
     default:
       throw new Error("not a named state id");
   }
@@ -135,29 +139,41 @@ async function stateByName(
 
 async function stateByRoot(
   db: IBeaconDb,
-  stateCache: StateContextCache,
-  stateId: StateId
+  chain: IBeaconChain,
+  stateRoot: Root,
+  type: RegenType
 ): Promise<phase0.BeaconState | null> {
-  if (stateId.startsWith("0x")) {
-    const stateRoot = fromHexString(stateId);
-    const cachedStateCtx = stateCache.get(stateRoot);
+  if (type === RegenType.AllowRegen) {
+    return await chain.regen.getState(stateRoot);
+  } else {
+    const cachedStateCtx = chain.stateCache.get(stateRoot);
     if (cachedStateCtx) return cachedStateCtx;
     return await db.stateArchive.getByRoot(stateRoot);
-  } else {
-    throw new Error("not a root state id");
   }
 }
 
 async function stateBySlot(
   db: IBeaconDb,
-  stateCache: StateContextCache,
-  forkChoice: IForkChoice,
-  slot: Slot
+  chain: IBeaconChain,
+  slot: Slot,
+  type: RegenType
 ): Promise<phase0.BeaconState | null> {
-  const blockSummary = forkChoice.getCanonicalBlockSummaryAtSlot(slot);
-  if (blockSummary) {
-    return stateCache.get(blockSummary.stateRoot) ?? null;
+  const blockSummary = chain.forkChoice.getCanonicalBlockSummaryAtSlot(slot);
+  if (type === RegenType.AllowRegen) {
+    let stateRoot: Root;
+    if (blockSummary) {
+      stateRoot = blockSummary.stateRoot;
+    } else {
+      const block = await db.blockArchive.get(slot);
+      if (!block) return null;
+      stateRoot = block.message.stateRoot;
+    }
+    return await chain.regen.getState(stateRoot);
   } else {
-    return await db.stateArchive.get(slot);
+    if (blockSummary) {
+      return chain.stateCache.get(blockSummary.stateRoot) ?? null;
+    } else {
+      return await db.stateArchive.get(slot);
+    }
   }
 }

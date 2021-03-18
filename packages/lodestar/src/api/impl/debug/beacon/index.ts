@@ -5,7 +5,7 @@ import {IBeaconChain} from "../../../../chain";
 import {IBeaconDb} from "../../../../db";
 import {IApiOptions} from "../../../options";
 import {StateId} from "../../beacon/state";
-import {resolveStateId} from "../../beacon/state/utils";
+import {RegenType, resolveStateId} from "../../beacon/state/utils";
 import {IApiModules} from "../../interface";
 import {IDebugBeaconApi} from "./interface";
 
@@ -35,7 +35,7 @@ export class DebugBeaconApi implements IDebugBeaconApi {
 
   async getState(stateId: StateId): Promise<phase0.BeaconState | null> {
     try {
-      return await resolveStateId(this.chain, this.db, stateId);
+      return await resolveStateId(this.chain, this.db, stateId, RegenType.AllowRegen);
     } catch (e) {
       this.logger.error("Failed to resolve state", {state: stateId, error: e});
       throw e;
