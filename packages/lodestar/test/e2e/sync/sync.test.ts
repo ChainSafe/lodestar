@@ -31,7 +31,13 @@ describe("syncing", function () {
       logger: loggerNodeA,
     });
     const finalizationEventListener = waitForEvent<phase0.Checkpoint>(bn.chain.emitter, ChainEvent.finalized, 240000);
-    const validators = getDevValidators(bn, 8, 1, false, loggerValiA);
+    const validators = getDevValidators({
+      node: bn,
+      count: 8,
+      validatorClientCount: 1,
+      useRestApi: false,
+      logger: loggerValiA,
+    });
 
     await Promise.all(validators.map((validator) => validator.start()));
 

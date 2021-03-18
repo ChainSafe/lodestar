@@ -13,13 +13,19 @@ import {BeaconNode} from "../../../src/node";
 import {ConfigApi} from "../../../src/api/impl/config";
 import {testLogger} from "../logger";
 
-export function getDevValidators(
-  node: BeaconNode,
+export function getDevValidators({
+  node,
   count = 8,
   validatorClientCount = 1,
-  useRestApi = false,
-  logger?: ILogger
-): Validator[] {
+  useRestApi,
+  logger,
+}: {
+  node: BeaconNode;
+  count: number;
+  validatorClientCount: number;
+  useRestApi?: boolean;
+  logger?: ILogger;
+}): Validator[] {
   const validatorsPerValidatorClient = intDiv(count, validatorClientCount);
   const vcs: Validator[] = [];
   while (count > 0) {
