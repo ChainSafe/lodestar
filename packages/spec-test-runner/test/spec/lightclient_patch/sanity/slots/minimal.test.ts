@@ -1,7 +1,7 @@
 import {join} from "path";
 import {expect} from "chai";
 import {config} from "@chainsafe/lodestar-config/minimal";
-import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util/lib/single";
+import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
 import {IProcessSlotsTestCase} from "./type";
 import {SPEC_TEST_LOCATION} from "../../../../utils/specTestCases";
 import {lightclient as lightclientTypes} from "@chainsafe/lodestar-types";

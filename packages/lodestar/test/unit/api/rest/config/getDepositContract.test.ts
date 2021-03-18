@@ -4,7 +4,7 @@ import {expect} from "chai";
 import supertest from "supertest";
 import {CONFIG_PREFIX, setupRestApiTestServer} from "../index.test";
 import {getDepositContract} from "../../../../../src/api/rest/controllers/config";
-import {ConfigApi} from "../../../../../lib/api/impl/config";
+import {ConfigApi} from "../../../../../src/api/impl/config";
 import {SinonStubbedInstance} from "sinon";
 
 describe("rest - config - getDepositContract", function () {

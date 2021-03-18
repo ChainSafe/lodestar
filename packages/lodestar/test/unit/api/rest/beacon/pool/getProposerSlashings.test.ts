@@ -5,7 +5,7 @@ import {generateEmptyProposerSlashing} from "../../../../../utils/slashings";
 import {urlJoin} from "../../utils";
 import {BEACON_PREFIX, setupRestApiTestServer} from "../../index.test";
 import {SinonStubbedInstance} from "sinon";
-import {BeaconPoolApi} from "../../../../../../lib/api/impl/beacon/pool";
+import {BeaconPoolApi} from "../../../../../../src/api/impl/beacon/pool";
 
 describe("rest - beacon - getProposerSlashings", function () {
   it("should succeed", async function () {

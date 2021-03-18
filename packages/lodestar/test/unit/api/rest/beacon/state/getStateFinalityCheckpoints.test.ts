@@ -6,7 +6,7 @@ import {urlJoin} from "../../utils";
 import {BEACON_PREFIX, setupRestApiTestServer} from "../../index.test";
 import {BeaconStateApi} from "../../../../../../src/api/impl/beacon/state";
 import {SinonStubbedInstance} from "sinon";
-import {RestApi} from "../../../../../../lib/api";
+import {RestApi} from "../../../../../../src/api";
 
 describe("rest - beacon - getStateFinalityCheckpoints", function () {
   let beaconStateStub: SinonStubbedInstance<BeaconStateApi>;
