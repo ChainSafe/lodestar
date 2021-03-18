@@ -68,7 +68,7 @@ describe("sync req resp", function () {
     networkStub.hasPeer.returns(true);
     networkStub.getPeers.returns([generatePeer(peerId), generatePeer(peerId)]);
 
-    await syncRpc.start();
+    syncRpc.start();
     await syncRpc.stop();
   });
 

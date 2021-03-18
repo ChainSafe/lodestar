@@ -54,7 +54,7 @@ export class BeaconSync implements IBeaconSync {
 
   async start(): Promise<void> {
     this.mode = SyncMode.WAITING_PEERS as SyncMode;
-    await this.reqResp.start();
+    this.reqResp.start();
     this.attestationCollector.start();
     if (this.mode === SyncMode.STOPPED) {
       return;
@@ -79,11 +79,16 @@ export class BeaconSync implements IBeaconSync {
       this.controller.signal
     );
 
-    await initialSync.sync();
-
-    // Reset state cache size after initial sync
-    this.chain.stateCache.maxStates = maxStates;
-    this.startRegularSync();
+    initialSync
+      .sync()
+      .then(() => {
+        // Reset state cache size after initial sync
+        this.chain.stateCache.maxStates = maxStates;
+        this.startRegularSync();
+      })
+      .catch((e) => {
+        this.logger.error("Error on initial sync", {}, e);
+      });
   }
 
   async stop(): Promise<void> {
