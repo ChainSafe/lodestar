@@ -61,7 +61,6 @@ export async function getDevBeaconNode({
         sync: {minPeers: 1},
         eth1: {enabled: false},
         metrics: {enabled: false},
-        logger: {},
       } as Partial<IBeaconNodeOptions>,
       options
     )
@@ -69,15 +68,7 @@ export async function getDevBeaconNode({
 
   const anchorState = await initDevState(config, db, validatorCount, genesisTime);
   return await BeaconNode.init({
-    opts: deepmerge(
-      {
-        db: {name: tmpDir.name},
-        sync: {minPeers: 1},
-        eth1: {enabled: false},
-        metrics: {enabled: false},
-      } as Partial<IBeaconNodeOptions>,
-      options
-    ) as IBeaconNodeOptions,
+    opts: options as IBeaconNodeOptions,
     config,
     db,
     logger,
