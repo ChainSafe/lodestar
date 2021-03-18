@@ -321,7 +321,7 @@ export class Eth2Gossipsub extends Gossipsub {
         }
       }
     }
-    this.logger.info("Current gossip subscriptions", {
+    this.logger.verbose("Current gossip subscriptions", {
       subscriptions: Array.from(this.subscriptions),
     });
   };

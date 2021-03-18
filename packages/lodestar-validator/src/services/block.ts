@@ -79,7 +79,7 @@ export default class BlockProposingService {
     const proposerPubKey = this.nextProposals.get(slot);
     if (proposerPubKey && slot !== 0) {
       this.nextProposals.delete(slot);
-      this.logger.info("Validator is proposer!", {
+      this.logger.verbose("Validator is proposer!", {
         slot,
         validator: toHexString(proposerPubKey),
       });
@@ -109,7 +109,7 @@ export default class BlockProposingService {
    * Fetch validator block proposal duties from the validator api and update local list of block duties accordingly.
    */
   updateDuties = async (epoch: Epoch): Promise<void> => {
-    this.logger.info("on new block epoch", {epoch, validator: toHexString(this.validators.keys().next().value)});
+    this.logger.debug("on new block epoch", {epoch, validator: toHexString(this.validators.keys().next().value)});
     const proposerDuties = await this.provider.validator.getProposerDuties(epoch, []).catch((e) => {
       this.logger.error("Failed to obtain proposer duties", e);
       return null;
@@ -174,7 +174,7 @@ export default class BlockProposingService {
     };
     try {
       await this.provider.beacon.blocks.publishBlock(signedBlock);
-      this.logger.info("Proposed block", {
+      this.logger.info("Published block", {
         hash: toHexString(this.config.types.phase0.BeaconBlock.hashTreeRoot(block)),
         slot,
       });

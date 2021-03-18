@@ -49,6 +49,8 @@ export class GenesisBuilder implements IGenesisBuilder {
   private readonly eth1Params: IEth1StreamParams;
   private readonly depositCache = new Set<number>();
   private readonly fromBlock: number;
+  private readonly logEvery = 30 * 1000;
+  private lastLog = 0;
 
   constructor({config, eth1Provider, logger, signal, pendingStatus, maxBlocksPerPoll}: IGenesisBuilderKwargs) {
     this.config = config;
@@ -107,7 +109,7 @@ export class GenesisBuilder implements IGenesisBuilder {
           block,
         };
       } else {
-        this.logger.info(`Waiting for min genesis time ${block.timestamp} / ${this.config.params.MIN_GENESIS_TIME}`);
+        this.throttledLog(`Waiting for min genesis time ${block.timestamp} / ${this.config.params.MIN_GENESIS_TIME}`);
       }
     }
 
@@ -130,7 +132,7 @@ export class GenesisBuilder implements IGenesisBuilder {
         this.logger.info("Found enough genesis validators", {blockNumber});
         return blockNumber;
       } else {
-        this.logger.info(
+        this.throttledLog(
           `Found ${this.state.validators.length} / ${this.config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT} validators to genesis`
         );
       }
@@ -156,5 +158,13 @@ export class GenesisBuilder implements IGenesisBuilder {
     applyDeposits(this.config, this.state, newDeposits, this.depositTree);
 
     // TODO: If necessary persist deposits here to this.db.depositData, this.db.depositDataRoot
+  }
+
+  /** Throttle genesis generation status log to prevent spamming */
+  private throttledLog(message: string): void {
+    if (Date.now() - this.lastLog > this.logEvery) {
+      this.lastLog = Date.now();
+      this.logger.info(message);
+    }
   }
 }

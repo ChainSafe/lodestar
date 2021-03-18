@@ -167,7 +167,7 @@ export class AttestationService {
     // TODO: is this how we should handle a non-matching validator?
     if (!validator) return;
 
-    this.logger.info("Handling attestation duty", {
+    this.logger.debug("Handling attestation duty", {
       slot: duty.slot,
       committee: duty.committeeIndex,
       validator: toHexString(duty.pubkey),
@@ -215,7 +215,7 @@ export class AttestationService {
     }
     try {
       await this.provider.beacon.pool.submitAttestation(attestation);
-      this.logger.info("Published new attestation", {
+      this.logger.info("Published attestation", {
         slot: attestation.data.slot,
         committee: attestation.data.index,
         attestation: toHexString(this.config.types.phase0.Attestation.hashTreeRoot(attestation)),
@@ -270,7 +270,7 @@ export class AttestationService {
     genesisValidatorsRoot: Root,
     validator: ValidatorAndSecret
   ): Promise<void> => {
-    this.logger.info("Aggregating attestations", {committeeIndex: duty.committeeIndex, slot: duty.slot});
+    this.logger.verbose("Aggregating attestations", {committeeIndex: duty.committeeIndex, slot: duty.slot});
     let aggregate: phase0.Attestation;
     try {
       aggregate = await this.provider.validator.getAggregatedAttestation(
@@ -293,7 +293,7 @@ export class AttestationService {
     };
     try {
       await this.provider.validator.publishAggregateAndProofs([signedAggregateAndProof]);
-      this.logger.info("Published signed aggregate and proof", {committeeIndex: duty.committeeIndex, slot: duty.slot});
+      this.logger.info("Published aggregateAndProof", {committeeIndex: duty.committeeIndex, slot: duty.slot});
     } catch (e) {
       this.logger.error(
         "Failed to publish aggregate and proof",
@@ -380,7 +380,7 @@ export class AttestationService {
       data: attestationData,
       signature: validator.secretKey.sign(signingRoot).toBytes(),
     };
-    this.logger.info("Signed new attestation", {
+    this.logger.verbose("Signed new attestation", {
       block: toHexString(attestation.data.target.root),
       committeeIndex,
       slot,
