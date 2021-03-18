@@ -53,7 +53,7 @@ export class WalletManager {
       .filter((file) => isUuid(file) && fs.statSync(path.join(this.walletsDir, file)).isDirectory())
       .map((walletUuid) => {
         const walletInfoPath = path.join(this.walletsDir, walletUuid, walletUuid);
-        const walletInfo = JSON.parse(fs.readFileSync(walletInfoPath, "utf8"));
+        const walletInfo = JSON.parse(fs.readFileSync(walletInfoPath, "utf8")) as IWalletKeystoreJson;
         if (walletInfo.uuid !== walletUuid)
           throw new YargsError(`Wallet UUID mismatch, ${walletInfo.uuid} !== ${walletUuid}`);
 

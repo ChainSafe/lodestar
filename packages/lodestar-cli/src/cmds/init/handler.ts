@@ -44,7 +44,7 @@ export async function initializeOptionsAndConfig(args: IBeaconArgs & IGlobalArgs
       beaconNodeOptions.set({network: {discv5: {bootEnrs}}});
     } catch (e) {
       // eslint-disable-next-line no-console
-      console.error(`Error fetching latest bootnodes: ${e.stack}`);
+      console.error(`Error fetching latest bootnodes: ${(e as Error).stack}`);
     }
   }
 

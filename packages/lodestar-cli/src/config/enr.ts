@@ -40,7 +40,7 @@ export function overwriteEnrWithCliArgs(enr: ENR, enrArgs: IENRJson, options: IB
         enr.tcp = tcpOpts.port;
       }
     } catch (e) {
-      throw new Error(`Invalid tcp multiaddr: ${e.message}`);
+      throw new Error(`Invalid tcp multiaddr: ${(e as Error).message}`);
     }
   }
 
@@ -51,7 +51,7 @@ export function overwriteEnrWithCliArgs(enr: ENR, enrArgs: IENRJson, options: IB
         enr.udp = udpOpts.port;
       }
     } catch (e) {
-      throw new Error(`Invalid udp multiaddr: ${e.message}`);
+      throw new Error(`Invalid udp multiaddr: ${(e as Error).message}`);
     }
   }
 
