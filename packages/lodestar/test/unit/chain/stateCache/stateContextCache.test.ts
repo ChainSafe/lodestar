@@ -24,20 +24,20 @@ describe("StateContextCache", function () {
   });
 
   it("should prune", function () {
-    expect(cache.size).to.be.equal(2);
+    expect(cache.size).to.be.equal(2, "Size must be same as initial 2");
     const state3 = generateCachedState({slot: 2 * config.params.SLOTS_PER_EPOCH});
     state3.epochCtx.currentShuffling = {epoch: 2, activeIndices: [], shuffling: [], committees: []};
 
     cache.add(state3);
-    expect(cache.size).to.be.equal(3);
+    expect(cache.size).to.be.equal(3, "Size must be 2+1 after .add()");
     cache.prune(ZERO_HASH);
-    expect(cache.size).to.be.equal(2);
-    expect(cache.get(key1)).to.be.not.undefined;
-    expect(cache.get(key2)).to.be.not.undefined;
+    expect(cache.size).to.be.equal(2, "Size should reduce to initial 2 after prunning");
+    expect(cache.get(key1), "must have key1").to.be.not.undefined;
+    expect(cache.get(key2), "must have key2").to.be.not.undefined;
   });
 
   it("should deleteAllBeforeEpoch", async function () {
     await cache.deleteAllBeforeEpoch(2);
-    expect(cache.size).to.be.equal(0);
+    expect(cache.size).to.be.equal(0, "size must be 0 after delete all");
   });
 });
