@@ -1,5 +1,5 @@
 import {config} from "@chainsafe/lodestar-config/minimal";
-import {AttesterSlashing} from "@chainsafe/lodestar-types/lib/phase0";
+import {AttesterSlashing} from "@chainsafe/lodestar-types/phase0";
 import {expect} from "chai";
 import supertest from "supertest";
 import {submitAttesterSlashing} from "../../../../../../src/api/rest/controllers/beacon/pool";

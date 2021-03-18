@@ -2,7 +2,7 @@ import {join} from "path";
 import {expect} from "chai";
 import {lightclient} from "@chainsafe/lodestar-beacon-state-transition";
 import {lightclient as lightclientTypes} from "@chainsafe/lodestar-types";
-import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util/lib/single";
+import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
 import {IBeaconConfig, createIBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBlockSanityTestCase} from "./types";
 import {SPEC_TEST_LOCATION} from "../../../../utils/specTestCases";

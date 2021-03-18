@@ -5,7 +5,7 @@ import {urlJoin} from "../../utils";
 import {BEACON_PREFIX, setupRestApiTestServer} from "../../index.test";
 import {generateEmptyProposerSlashing} from "../../../../../utils/slashings";
 import {submitProposerSlashing} from "../../../../../../src/api/rest/controllers/beacon/pool/submitProposerSlashing";
-import {ProposerSlashing} from "@chainsafe/lodestar-types/lib/phase0";
+import {ProposerSlashing} from "@chainsafe/lodestar-types/phase0";
 import {SinonStubbedInstance} from "sinon";
 import {RestApi} from "../../../../../../src/api";
 import {BeaconPoolApi} from "../../../../../../src/api/impl/beacon/pool";

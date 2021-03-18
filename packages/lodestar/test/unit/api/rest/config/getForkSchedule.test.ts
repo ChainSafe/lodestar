@@ -5,7 +5,7 @@ import supertest from "supertest";
 import {CONFIG_PREFIX, setupRestApiTestServer} from "../index.test";
 import {getForkSchedule} from "../../../../../src/api/rest/controllers/config";
 import {SinonStubbedInstance} from "sinon";
-import {ConfigApi} from "../../../../../lib/api/impl/config";
+import {ConfigApi} from "../../../../../src/api/impl/config";
 
 describe("rest - config - getForkSchedule", function () {
   it("ready", async function () {

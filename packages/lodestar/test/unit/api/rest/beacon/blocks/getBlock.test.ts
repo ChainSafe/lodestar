@@ -8,7 +8,7 @@ import {BEACON_PREFIX, setupRestApiTestServer} from "../../index.test";
 import {SinonStubbedInstance} from "sinon";
 import {IBeaconBlocksApi} from "../../../../../../src/api/impl/beacon/blocks";
 import {RestApi} from "../../../../../../src/api";
-import {BeaconBlockApi} from "../../../../../../lib/api/impl/beacon/blocks";
+import {BeaconBlockApi} from "../../../../../../src/api/impl/beacon/blocks";
 
 describe("rest - beacon - getBlock", function () {
   let beaconBlocksStub: SinonStubbedInstance<IBeaconBlocksApi>;
