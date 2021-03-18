@@ -3,6 +3,8 @@ import {phase0, Epoch} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
 
+const MAX_EPOCHS = 10;
+
 /**
  * In memory cache of CachedBeaconState
  * belonging to checkpoint
@@ -11,37 +13,31 @@ import {CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
  */
 export class CheckpointStateCache {
   private readonly config: IBeaconConfig;
-  private cache: Record<string, CachedBeaconState<phase0.BeaconState>>;
-  /**
-   * Epoch -> Set<blockRoot>
-   */
-  private epochIndex: Record<Epoch, Set<string>>;
+  private cache = new Map<string, CachedBeaconState<phase0.BeaconState>>();
+  /** Epoch -> Set<blockRoot> */
+  private epochIndex = new Map<Epoch, Set<string>>();
 
   constructor(config: IBeaconConfig) {
     this.config = config;
-    this.cache = {};
-    this.epochIndex = {};
   }
 
   get(cp: phase0.Checkpoint): CachedBeaconState<phase0.BeaconState> | null {
-    const item = this.cache[toHexString(this.config.types.phase0.Checkpoint.hashTreeRoot(cp))];
-    if (!item) {
-      return null;
-    }
-    return item.clone();
+    const item = this.cache.get(toHexString(this.config.types.phase0.Checkpoint.hashTreeRoot(cp)));
+    return item ? item.clone() : null;
   }
 
   add(cp: phase0.Checkpoint, item: CachedBeaconState<phase0.BeaconState>): void {
     const key = toHexString(this.config.types.phase0.Checkpoint.hashTreeRoot(cp));
-    if (this.cache[key]) {
+    if (this.cache.has(key)) {
       return;
     }
-    this.cache[key] = item.clone();
+    this.cache.set(key, item.clone());
     const epochKey = toHexString(cp.root);
-    if (this.epochIndex[cp.epoch]) {
-      this.epochIndex[cp.epoch].add(epochKey);
+    const value = this.epochIndex.get(cp.epoch);
+    if (value) {
+      value.add(epochKey);
     } else {
-      this.epochIndex[cp.epoch] = new Set([epochKey]);
+      this.epochIndex.set(cp.epoch, new Set([epochKey]));
     }
   }
 
@@ -51,12 +47,11 @@ export class CheckpointStateCache {
   getLatest({root, epoch}: phase0.Checkpoint): CachedBeaconState<phase0.BeaconState> | null {
     const hexRoot = toHexString(root);
     // sort epochs in descending order, only consider epochs lte `epoch`
-    const epochs = Object.keys(this.epochIndex)
-      .map(Number)
+    const epochs = Array.from(this.epochIndex.keys())
       .sort((a, b) => b - a)
       .filter((e) => e <= epoch);
     for (const epoch of epochs) {
-      const rootSet = this.epochIndex[epoch];
+      const rootSet = this.epochIndex.get(epoch);
       if (rootSet && rootSet.has(hexRoot)) {
         return this.get({root, epoch});
       }
@@ -65,7 +60,7 @@ export class CheckpointStateCache {
   }
 
   pruneFinalized(finalizedEpoch: Epoch): void {
-    for (const epoch of Object.keys(this.epochIndex).map(Number)) {
+    for (const epoch of this.epochIndex.keys()) {
       if (epoch < finalizedEpoch) {
         this.deleteAllEpochItems(epoch);
       }
@@ -73,10 +68,9 @@ export class CheckpointStateCache {
   }
 
   prune(finalizedEpoch: Epoch, justifiedEpoch: Epoch): void {
-    const epochs = Object.keys(this.epochIndex)
-      .map(Number)
-      .filter((epoch) => epoch !== finalizedEpoch && epoch !== justifiedEpoch);
-    const MAX_EPOCHS = 10;
+    const epochs = Array.from(this.epochIndex.keys()).filter(
+      (epoch) => epoch !== finalizedEpoch && epoch !== justifiedEpoch
+    );
     if (epochs.length > MAX_EPOCHS) {
       for (const epoch of epochs.slice(0, epochs.length - MAX_EPOCHS)) {
         this.deleteAllEpochItems(epoch);
@@ -86,25 +80,28 @@ export class CheckpointStateCache {
 
   delete(cp: phase0.Checkpoint): void {
     const key = toHexString(this.config.types.phase0.Checkpoint.hashTreeRoot(cp));
-    delete this.cache[key];
+    this.cache.delete(key);
     const epochKey = toHexString(cp.root);
-    this.epochIndex[cp.epoch]?.delete(epochKey);
-    if (!this.epochIndex[cp.epoch]?.size) {
-      delete this.epochIndex[cp.epoch];
+    const value = this.epochIndex.get(cp.epoch);
+    if (value) {
+      value.delete(epochKey);
+      if (value.size === 0) {
+        this.epochIndex.delete(cp.epoch);
+      }
     }
   }
 
   deleteAllEpochItems(epoch: Epoch): void {
-    for (const hexRoot of this.epochIndex[epoch] || []) {
-      delete this.cache[
+    for (const hexRoot of this.epochIndex.get(epoch) || []) {
+      this.cache.delete(
         toHexString(this.config.types.phase0.Checkpoint.hashTreeRoot({root: fromHexString(hexRoot), epoch}))
-      ];
+      );
     }
-    delete this.epochIndex[epoch];
+    this.epochIndex.delete(epoch);
   }
 
   clear(): void {
-    this.cache = {};
-    this.epochIndex = {};
+    this.cache.clear();
+    this.epochIndex.clear();
   }
 }

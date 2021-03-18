@@ -15,20 +15,16 @@ export class StateContextCache {
    */
   maxStates: number;
 
-  private cache: Record<string, CachedBeaconState<phase0.BeaconState>>;
-  /**
-   * Epoch -> Set<blockRoot>
-   */
-  private epochIndex: Record<Epoch, Set<string>>;
+  private cache = new Map<string, CachedBeaconState<phase0.BeaconState>>();
+  /** Epoch -> Set<blockRoot> */
+  private epochIndex = new Map<Epoch, Set<string>>();
 
   constructor(maxStates = MAX_STATES) {
-    this.cache = {};
-    this.epochIndex = {};
     this.maxStates = maxStates;
   }
 
   get(root: ByteVector): CachedBeaconState<phase0.BeaconState> | null {
-    const item = this.cache[toHexString(root)];
+    const item = this.cache.get(toHexString(root));
     if (!item) {
       return null;
     }
@@ -37,24 +33,25 @@ export class StateContextCache {
 
   add(item: CachedBeaconState<phase0.BeaconState>): void {
     const key = toHexString(item.hashTreeRoot());
-    if (this.cache[key]) {
+    if (this.cache.get(key)) {
       return;
     }
-    this.cache[key] = item.clone();
+    this.cache.set(key, item.clone());
     const epoch = item.epochCtx.currentShuffling.epoch;
-    if (this.epochIndex[epoch]) {
-      this.epochIndex[epoch].add(key);
+    const blockRoots = this.epochIndex.get(epoch);
+    if (blockRoots) {
+      blockRoots.add(key);
     } else {
-      this.epochIndex[epoch] = new Set([key]);
+      this.epochIndex.set(epoch, new Set([key]));
     }
   }
 
   delete(root: ByteVector): void {
     const key = toHexString(root);
-    const item = this.cache[key];
+    const item = this.cache.get(key);
     if (!item) return;
-    this.epochIndex[item.epochCtx.currentShuffling.epoch].delete(key);
-    delete this.cache[key];
+    this.epochIndex.get(item.epochCtx.currentShuffling.epoch)?.delete(key);
+    this.cache.delete(key);
   }
 
   batchDelete(roots: ByteVector[]): void {
@@ -62,11 +59,11 @@ export class StateContextCache {
   }
 
   clear(): void {
-    this.cache = {};
+    this.cache.clear();
   }
 
   get size(): number {
-    return Object.keys(this.cache).length;
+    return this.cache.size;
   }
 
   /**
@@ -74,15 +71,17 @@ export class StateContextCache {
    * Without more thought, this currently breaks our assumptions about recent state availablity
    */
   prune(headStateRoot: ByteVector): void {
-    const keys = Object.keys(this.cache);
+    const keys = Array.from(this.cache.keys());
     if (keys.length > this.maxStates) {
       const headStateRootHex = toHexString(headStateRoot);
       // object keys are stored in insertion order, delete keys starting from the front
       for (const key of keys.slice(0, keys.length - this.maxStates)) {
         if (key !== headStateRootHex) {
-          const item = this.cache[key];
-          this.epochIndex[item.epochCtx.currentShuffling.epoch].delete(key);
-          delete this.cache[key];
+          const item = this.cache.get(key);
+          if (item) {
+            this.epochIndex.get(item.epochCtx.currentShuffling.epoch)?.delete(key);
+            this.cache.delete(key);
+          }
         }
       }
     }
@@ -92,25 +91,17 @@ export class StateContextCache {
    * Prune per finalized epoch.
    */
   async deleteAllBeforeEpoch(finalizedEpoch: Epoch): Promise<void> {
-    for (const epoch of Object.keys(this.epochIndex).map(Number)) {
+    for (const epoch of this.epochIndex.keys()) {
       if (epoch < finalizedEpoch) {
         this.deleteAllEpochItems(epoch);
       }
     }
   }
 
-  /**
-   * Should only use this with care as this is expensive.
-   * @param epoch
-   */
-  valuesUnsafe(): CachedBeaconState<phase0.BeaconState>[] {
-    return Object.values(this.cache).map((item) => item.clone());
-  }
-
   private deleteAllEpochItems(epoch: Epoch): void {
-    for (const hexRoot of this.epochIndex[epoch] || []) {
-      delete this.cache[hexRoot];
+    for (const hexRoot of this.epochIndex.get(epoch) || []) {
+      this.cache.delete(hexRoot);
     }
-    delete this.epochIndex[epoch];
+    this.epochIndex.delete(epoch);
   }
 }
