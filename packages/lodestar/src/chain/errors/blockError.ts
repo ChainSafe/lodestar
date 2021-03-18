@@ -90,7 +90,7 @@ export type BlockErrorType =
   | {code: BlockErrorCode.STATE_ROOT_MISMATCH}
   | {code: BlockErrorCode.GENESIS_BLOCK}
   | {code: BlockErrorCode.WOULD_REVERT_FINALIZED_SLOT; blockSlot: Slot; finalizedSlot: Slot}
-  | {code: BlockErrorCode.BLOCK_IS_ALREADY_KNOWN}
+  | {code: BlockErrorCode.BLOCK_IS_ALREADY_KNOWN; root: Root}
   | {code: BlockErrorCode.REPEAT_PROPOSAL; proposer: ValidatorIndex}
   | {code: BlockErrorCode.BLOCK_SLOT_LIMIT_REACHED}
   | {code: BlockErrorCode.INCORRECT_PROPOSER; blockProposer: ValidatorIndex}
