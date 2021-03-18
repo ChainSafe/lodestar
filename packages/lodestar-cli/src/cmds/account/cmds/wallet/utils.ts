@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import {IGlobalArgs} from "../../../../options";
-import {YargsError, writeFile600Perm, randomPassword, readPassphraseFile, initBLS} from "../../../../util";
+import {YargsError, writeFile600Perm, randomPassword, readPassphraseFile} from "../../../../util";
 import {WalletManager} from "../../../../wallet";
 import {getAccountPaths} from "../../paths";
 import {IWalletRecoverArgs} from "./recover";
@@ -10,8 +10,6 @@ export async function createWalletFromArgsAndMnemonic(
   args: Pick<IWalletRecoverArgs & IGlobalArgs, "name" | "type" | "passphraseFile" | "mnemonicOutputPath" | "rootDir">,
   mnemonic: string
 ): Promise<{uuid: string; password: string}> {
-  await initBLS();
-
   const {name, type, passphraseFile, mnemonicOutputPath} = args;
   const accountPaths = getAccountPaths(args);
 
@@ -34,13 +32,4 @@ export async function createWalletFromArgsAndMnemonic(
   }
 
   return {uuid, password};
-}
-
-export function printUuidData(uuid: string): string {
-  return `
-Your wallet's UUID is:
-
-\t${uuid}
-
-You do not need to backup your UUID or keep it secret.`;
 }

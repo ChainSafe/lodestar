@@ -1,8 +1,8 @@
 import * as fs from "fs";
-import {ICliCommand} from "../../../../util";
+import {ICliCommand, initBLS} from "../../../../util";
 import {IGlobalArgs} from "../../../../options";
 import inquirer from "inquirer";
-import {createWalletFromArgsAndMnemonic, printUuidData} from "./utils";
+import {createWalletFromArgsAndMnemonic} from "./utils";
 import {IWalletCreateArgs, walletCreateOptions} from "./create";
 
 export type IWalletRecoverArgs = IWalletCreateArgs & {
@@ -32,6 +32,8 @@ export const recover: ICliCommand<IWalletRecoverArgs, IGlobalArgs, ReturnType> =
   },
 
   handler: async (args) => {
+    await initBLS();
+
     const {mnemonicInputPath} = args;
     let mnemonic;
 
@@ -52,7 +54,13 @@ export const recover: ICliCommand<IWalletRecoverArgs, IGlobalArgs, ReturnType> =
 
     const {uuid} = await createWalletFromArgsAndMnemonic(args, mnemonic);
 
-    console.log!("Your wallet has been successfully recovered.", printUuidData(uuid));
+    console.log!(`Your wallet has been successfully recovered.
+Your wallet's UUID is:
+
+\t${uuid}
+
+You do not need to backup your UUID or keep it secret.
+`);
 
     return [uuid];
   },

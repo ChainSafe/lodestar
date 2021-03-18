@@ -1,8 +1,8 @@
 import * as bip39 from "bip39";
-import {ICliCommand, ICliCommandOptions} from "../../../../util";
+import {ICliCommand, ICliCommandOptions, initBLS} from "../../../../util";
 import {IGlobalArgs} from "../../../../options";
 import {accountWalletsOptions, IAccountWalletArgs} from "./options";
-import {createWalletFromArgsAndMnemonic, printUuidData} from "./utils";
+import {createWalletFromArgsAndMnemonic} from "./utils";
 
 export const command = "create";
 
@@ -72,6 +72,8 @@ export const create: ICliCommand<IWalletCreateArgs, IAccountWalletArgs & IGlobal
   options: walletCreateOptions,
 
   handler: async (args) => {
+    await initBLS();
+
     // Create a new random mnemonic.
     const mnemonic = bip39.generateMnemonic();
 
@@ -95,8 +97,11 @@ export const create: ICliCommand<IWalletCreateArgs, IAccountWalletArgs & IGlobal
   recover your private keys in the case of data loss. Writing it on 
   a piece of paper and storing it in a safe place would be prudent.
 
-  `,
-      printUuidData(uuid)
+  Your wallet's UUID is:
+
+  \t${uuid}
+
+  You do not need to backup your UUID or keep it secret.`
     );
 
     // Return values for testing
