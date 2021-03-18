@@ -70,11 +70,13 @@ export class BeaconReqRespHandler implements IReqRespHandler {
     this.logger = logger;
   }
 
-  async start(): Promise<void> {
+  start(): void {
     this.network.reqResp.registerHandler(this.onRequest.bind(this));
     this.network.on(NetworkEvent.peerConnect, this.handshake);
     const myStatus = this.chain.getStatus();
-    await syncPeersStatus(this.network, myStatus);
+    syncPeersStatus(this.network, myStatus).catch((e) => {
+      this.logger.error("Error syncing peer statuses", {}, e);
+    });
   }
 
   async stop(): Promise<void> {

@@ -7,6 +7,6 @@
  * fetching state from the chain and database as needed.
  */
 export interface IReqRespHandler {
-  start: () => Promise<void>;
+  start: () => void;
   stop: () => Promise<void>;
 }
