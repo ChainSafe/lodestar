@@ -1,6 +1,6 @@
 import {generateState} from "../../../utils/state";
 import {expect} from "chai";
-import sinon from "sinon";
+import sinon, {SinonStub} from "sinon";
 
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import * as processEth1Data from "../../../../src/phase0/naive/block/eth1Data";

@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import sinon from "sinon";
+import sinon, {SinonStub} from "sinon";
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import {ZERO_HASH} from "../../../../../src/constants";
 import * as utils from "../../../../../src/util";

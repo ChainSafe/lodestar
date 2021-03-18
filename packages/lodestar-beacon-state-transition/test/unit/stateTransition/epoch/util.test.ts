@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import sinon from "sinon";
+import sinon, {SinonStub} from "sinon";
 
 import {List} from "@chainsafe/ssz";
 import {phase0} from "@chainsafe/lodestar-types";

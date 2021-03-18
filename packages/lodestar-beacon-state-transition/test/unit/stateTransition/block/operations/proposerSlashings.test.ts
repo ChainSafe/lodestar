@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import sinon from "sinon";
+import sinon, {SinonStub} from "sinon";
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import {processProposerSlashing} from "../../../../../src/phase0/naive/block/operations";
 import * as utils from "../../../../../src/util";
