@@ -1,8 +1,8 @@
 import {ERR_TOPIC_VALIDATOR_IGNORE, ERR_TOPIC_VALIDATOR_REJECT} from "libp2p-gossipsub/src/constants";
 import {ATTESTATION_SUBNET_COUNT, phase0} from "@chainsafe/lodestar-types";
-import {toHexString} from "@chainsafe/ssz";
+import {Json, toHexString} from "@chainsafe/ssz";
 
-import {IAttestationJob, IBlockJob} from "../../chain";
+import {IAttestationJob} from "../../chain";
 import {
   validateGossipAggregateAndProof,
   validateGossipAttestation,
@@ -55,21 +55,18 @@ export async function validateBeaconBlock(
   _topic: GossipTopic,
   signedBlock: phase0.SignedBeaconBlock
 ): Promise<void> {
-  const logContext = {
-    blockRoot: toHexString(config.types.phase0.BeaconBlock.hashTreeRoot(signedBlock.message)),
-    blockSlot: signedBlock.message.slot,
-  };
   try {
-    const blockJob: IBlockJob = {
+    await validateGossipBlock(config, chain, db, {
       signedBlock,
       reprocess: false,
       prefinalized: false,
       validSignatures: false,
       validProposerSignature: false,
-    };
-
-    await validateGossipBlock(config, chain, db, blockJob);
-    logger.debug("gossip - Block - accept", logContext);
+    });
+    logger.debug("gossip - Block - accept", {
+      root: toHexString(config.types.phase0.BeaconBlock.hashTreeRoot(signedBlock.message)),
+      slot: signedBlock.message.slot,
+    });
   } catch (e) {
     if (!(e instanceof BlockError)) {
       logger.error("Gossip block validation threw a non-BlockError", e);
@@ -80,7 +77,7 @@ export async function validateBeaconBlock(
       case BlockErrorCode.PROPOSAL_SIGNATURE_INVALID:
       case BlockErrorCode.INCORRECT_PROPOSER:
       case BlockErrorCode.KNOWN_BAD_BLOCK:
-        logger.debug("gossip - Block - reject", logContext, e);
+        logger.debug("gossip - Block - reject", e.type);
         throw new GossipValidationError(ERR_TOPIC_VALIDATOR_REJECT);
 
       case BlockErrorCode.FUTURE_SLOT:
@@ -90,7 +87,7 @@ export async function validateBeaconBlock(
       case BlockErrorCode.WOULD_REVERT_FINALIZED_SLOT:
       case BlockErrorCode.REPEAT_PROPOSAL:
       default:
-        logger.debug("gossip - Block - ignore", logContext, e);
+        logger.debug("gossip - Block - ignore", e.type as Json);
         throw new GossipValidationError(ERR_TOPIC_VALIDATOR_IGNORE);
     }
   }
@@ -102,22 +99,13 @@ export async function validateAggregatedAttestation(
   signedAggregateAndProof: phase0.SignedAggregateAndProof
 ): Promise<void> {
   const attestation = signedAggregateAndProof.message.aggregate;
-  const logContext = {
-    attestationSlot: attestation.data.slot,
-    aggregatorIndex: signedAggregateAndProof.message.aggregatorIndex,
-    aggregateRoot: toHexString(config.types.phase0.AggregateAndProof.hashTreeRoot(signedAggregateAndProof.message)),
-    attestationRoot: toHexString(config.types.phase0.Attestation.hashTreeRoot(attestation)),
-    targetEpoch: attestation.data.target.epoch,
-  };
 
   try {
-    const attestationJob: IAttestationJob = {
+    await validateGossipAggregateAndProof(config, chain, db, signedAggregateAndProof, {
       attestation: attestation,
       validSignature: false,
-    };
-
-    await validateGossipAggregateAndProof(config, chain, db, signedAggregateAndProof, attestationJob);
-    logger.debug("gossip - AggregateAndProof - accept", logContext);
+    });
+    logger.debug("gossip - AggregateAndProof - accept");
   } catch (e) {
     if (!(e instanceof AttestationError)) {
       logger.error("Gossip aggregate and proof validation threw a non-AttestationError", e);
@@ -131,7 +119,7 @@ export async function validateAggregatedAttestation(
       case AttestationErrorCode.INVALID_SELECTION_PROOF:
       case AttestationErrorCode.INVALID_SIGNATURE:
       case AttestationErrorCode.INVALID_AGGREGATOR:
-        logger.debug("gossip - AggregateAndProof - reject", logContext, e);
+        logger.debug("gossip - AggregateAndProof - reject", e.type);
         throw new GossipValidationError(ERR_TOPIC_VALIDATOR_REJECT);
 
       case AttestationErrorCode.FUTURE_SLOT: // IGNORE
@@ -141,7 +129,7 @@ export async function validateAggregatedAttestation(
       case AttestationErrorCode.AGGREGATE_ALREADY_KNOWN:
       case AttestationErrorCode.MISSING_ATTESTATION_PRESTATE:
       default:
-        logger.debug("gossip - AggregateAndProof - ignore", logContext, e);
+        logger.debug("gossip - AggregateAndProof - ignore", e.type as Json);
         throw new GossipValidationError(ERR_TOPIC_VALIDATOR_IGNORE);
     }
   } finally {
@@ -156,13 +144,6 @@ export async function validateCommitteeAttestation(
 ): Promise<void> {
   const subnet = topic.subnet;
 
-  const logContext = {
-    attestationSlot: attestation.data.slot,
-    attestationBlockRoot: toHexString(attestation.data.beaconBlockRoot),
-    attestationRoot: toHexString(config.types.phase0.Attestation.hashTreeRoot(attestation)),
-    subnet,
-  };
-
   try {
     const attestationJob: IAttestationJob = {
       attestation,
@@ -170,7 +151,7 @@ export async function validateCommitteeAttestation(
     };
 
     await validateGossipAttestation(config, chain, db, attestationJob, subnet);
-    logger.debug("gossip - Attestation - accept", logContext);
+    logger.debug("gossip - Attestation - accept", {subnet});
   } catch (e) {
     if (!(e instanceof AttestationError)) {
       logger.error("Gossip attestation validation threw a non-AttestationError", e);
@@ -186,7 +167,7 @@ export async function validateCommitteeAttestation(
       case AttestationErrorCode.KNOWN_BAD_BLOCK:
       case AttestationErrorCode.FINALIZED_CHECKPOINT_NOT_AN_ANCESTOR_OF_ROOT:
       case AttestationErrorCode.TARGET_BLOCK_NOT_AN_ANCESTOR_OF_LMD_BLOCK:
-        logger.debug("gossip - Attestation - reject", logContext, e);
+        logger.debug("gossip - Attestation - reject", e.type);
         throw new GossipValidationError(ERR_TOPIC_VALIDATOR_REJECT);
 
       case AttestationErrorCode.UNKNOWN_BEACON_BLOCK_ROOT:
@@ -198,7 +179,7 @@ export async function validateCommitteeAttestation(
       case AttestationErrorCode.FUTURE_SLOT:
       case AttestationErrorCode.ATTESTATION_ALREADY_KNOWN:
       default:
-        logger.debug("gossip - Attestation - ignore", logContext, e);
+        logger.debug("gossip - Attestation - ignore", e.type as Json);
         throw new GossipValidationError(ERR_TOPIC_VALIDATOR_IGNORE);
     }
   } finally {
@@ -213,7 +194,7 @@ export async function validateVoluntaryExit(
 ): Promise<void> {
   try {
     await validateGossipVoluntaryExit(config, chain, db, voluntaryExit);
-    logger.debug("gossip - VoluntaryExit - accept", {});
+    logger.debug("gossip - VoluntaryExit - accept");
   } catch (e) {
     if (!(e instanceof VoluntaryExitError)) {
       logger.error("Gossip voluntary exit validation threw a non-VoluntaryExitError", e);
@@ -222,12 +203,12 @@ export async function validateVoluntaryExit(
 
     switch (e.type.code) {
       case VoluntaryExitErrorCode.INVALID_EXIT:
-        logger.debug("gossip - VoluntaryExit - reject", {}, e);
+        logger.debug("gossip - VoluntaryExit - reject", e.type);
         throw new GossipValidationError(ERR_TOPIC_VALIDATOR_REJECT);
 
       case VoluntaryExitErrorCode.EXIT_ALREADY_EXISTS:
       default:
-        logger.debug("gossip - VoluntaryExit - ignore", {}, e);
+        logger.debug("gossip - VoluntaryExit - ignore", e.type);
         throw new GossipValidationError(ERR_TOPIC_VALIDATOR_IGNORE);
     }
   }
@@ -240,7 +221,7 @@ export async function validateProposerSlashing(
 ): Promise<void> {
   try {
     await validateGossipProposerSlashing(config, chain, db, proposerSlashing);
-    logger.debug("gossip - ProposerSlashing - accept", {});
+    logger.debug("gossip - ProposerSlashing - accept");
   } catch (e) {
     if (!(e instanceof ProposerSlashingError)) {
       logger.error("Gossip proposer slashing validation threw a non-ProposerSlashingError", e);
@@ -249,12 +230,12 @@ export async function validateProposerSlashing(
 
     switch (e.type.code) {
       case ProposerSlashingErrorCode.INVALID_SLASHING:
-        logger.debug("gossip - ProposerSlashing - reject", {}, e);
+        logger.debug("gossip - ProposerSlashing - reject", e.type);
         throw new GossipValidationError(ERR_TOPIC_VALIDATOR_REJECT);
 
       case ProposerSlashingErrorCode.SLASHING_ALREADY_EXISTS:
       default:
-        logger.debug("gossip - ProposerSlashing - ignore", {}, e);
+        logger.debug("gossip - ProposerSlashing - ignore", e.type);
         throw new GossipValidationError(ERR_TOPIC_VALIDATOR_IGNORE);
     }
   }
@@ -267,7 +248,7 @@ export async function validateAttesterSlashing(
 ): Promise<void> {
   try {
     await validateGossipAttesterSlashing(config, chain, db, attesterSlashing);
-    logger.debug("gossip - AttesterSlashing - accept", {});
+    logger.debug("gossip - AttesterSlashing - accept");
   } catch (e) {
     if (!(e instanceof AttesterSlashingError)) {
       logger.error("Gossip attester slashing validation threw a non-AttesterSlashingError", e);
@@ -276,12 +257,12 @@ export async function validateAttesterSlashing(
 
     switch (e.type.code) {
       case AttesterSlashingErrorCode.INVALID_SLASHING:
-        logger.debug("gossip - AttesterSlashing - reject", {}, e);
+        logger.debug("gossip - AttesterSlashing - reject", e.type);
         throw new GossipValidationError(ERR_TOPIC_VALIDATOR_REJECT);
 
       case AttesterSlashingErrorCode.SLASHING_ALREADY_EXISTS:
       default:
-        logger.debug("gossip - AttesterSlashing - ignore", {}, e);
+        logger.debug("gossip - AttesterSlashing - ignore", e.type);
         throw new GossipValidationError(ERR_TOPIC_VALIDATOR_IGNORE);
     }
   }
