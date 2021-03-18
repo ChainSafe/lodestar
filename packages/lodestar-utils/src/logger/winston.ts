@@ -2,7 +2,7 @@
  * @module logger
  */
 
-import {createLogger, Logger, transports as winstonTransports} from "winston";
+import {createLogger, LogEntry, Logger, transports as winstonTransports} from "winston";
 import {Context, defaultLogLevel, ILogger, ILoggerOptions, LogLevel} from "./interface";
 import chalk from "chalk";
 import {getFormat} from "./format";
@@ -80,7 +80,7 @@ export class WinstonLogger implements ILogger {
   }
 
   profile(message: string, option?: {level: string; message: string}): void {
-    this.winston.profile(message, option);
+    this.winston.profile(message, {level: LogLevel.verbose, ...option} as LogEntry);
   }
 
   stream(): Writable {
