@@ -50,7 +50,7 @@ export class Validator {
    */
   async start(): Promise<void> {
     await this.setup();
-    this.logger.info("Checking if chain has started...");
+    this.logger.info("Waiting for chain start...");
     this.apiClient.once("beaconChainStarted", this.run);
   }
 
@@ -59,7 +59,7 @@ export class Validator {
    * Should only be called once the beacon chain has been started.
    */
   run = async (): Promise<void> => {
-    this.logger.info("Chain start has occured!");
+    this.logger.info("Chain has started");
     if (!this.blockService) throw Error("blockService not setup");
     if (!this.attestationService) throw Error("attestationService not setup");
     // Run both services at once to prevent missing first attestation
@@ -118,9 +118,8 @@ export class Validator {
     };
 
     try {
-      this.logger.info(`Waiting for voluntary exit request for validator ${publicKey} to be submitted...`);
       await this.apiClient.beacon.pool.submitVoluntaryExit(signedVoluntaryExit);
-      this.logger.info("Submitted voluntary exit to the network.");
+      this.logger.info(`Submitted voluntary exit for ${publicKey} to the network`);
     } finally {
       await this.apiClient.disconnect();
     }
@@ -140,7 +139,6 @@ export class Validator {
    * Creates a new block processing service and attestation service.
    */
   private async setup(): Promise<void> {
-    this.logger.info("Setting up validator client...");
     await this.setupAPI();
     const validators = mapSecretKeysToValidators(this.opts.secretKeys);
 
@@ -166,7 +164,6 @@ export class Validator {
    * Establishes a connection to a specified beacon chain url.
    */
   private async setupAPI(): Promise<void> {
-    this.logger.info("RPC connection setting up");
     await this.apiClient.connect();
     this.logger.info("RPC connection successfully established", {url: this.apiClient.url});
   }
