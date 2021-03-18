@@ -16,8 +16,8 @@ describe("rest - node - getVersion", function () {
       .get(urlJoin(NODE_PREFIX, getVersion.url))
       .expect(200)
       .expect("Content-Type", "application/json; charset=utf-8");
-    expect(response.body.data).to.not.be.undefined;
-    expect(response.body.data).to.not.be.empty;
-    expect(response.body.data.version).to.equal("test");
+    expect((response.body as ApiResponseBody).data).to.not.be.undefined;
+    expect((response.body as ApiResponseBody).data).to.not.be.empty;
+    expect((response.body as ApiResponseBody).data.version).to.equal("test");
   });
 });

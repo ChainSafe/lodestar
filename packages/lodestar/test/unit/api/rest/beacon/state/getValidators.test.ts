@@ -3,7 +3,7 @@ import supertest from "supertest";
 import {StateNotFound} from "../../../../../../src/api/impl/errors/api";
 import {getStateValidators} from "../../../../../../src/api/rest/controllers/beacon";
 import {generateValidator} from "../../../../../utils/validator";
-import {urlJoin} from "../../utils";
+import {ApiResponseBody, urlJoin} from "../../utils";
 import {BEACON_PREFIX, setupRestApiTestServer} from "../../index.test";
 import {phase0} from "@chainsafe/lodestar-types";
 import {SinonStubbedInstance} from "sinon";
@@ -32,8 +32,8 @@ describe("rest - beacon - getStateValidators", function () {
       .get(urlJoin(BEACON_PREFIX, getStateValidators.url.replace(":stateId", "head")))
       .expect(200)
       .expect("Content-Type", "application/json; charset=utf-8");
-    expect(response.body.data).to.not.be.undefined;
-    expect(response.body.data.length).to.equal(1);
+    expect((response.body as ApiResponseBody).data).to.not.be.undefined;
+    expect((response.body as ApiResponseBody).data.length).to.equal(1);
   });
 
   it("should not found state", async function () {

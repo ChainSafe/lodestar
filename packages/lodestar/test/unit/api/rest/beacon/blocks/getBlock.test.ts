@@ -3,7 +3,7 @@ import supertest from "supertest";
 
 import {getBlock} from "../../../../../../src/api/rest/controllers/beacon/blocks";
 import {generateEmptySignedBlock} from "../../../../../utils/block";
-import {urlJoin} from "../../utils";
+import {ApiResponseBody, urlJoin} from "../../utils";
 import {BEACON_PREFIX, setupRestApiTestServer} from "../../index.test";
 import {SinonStubbedInstance} from "sinon";
 import {IBeaconBlocksApi} from "../../../../../../src/api/impl/beacon/blocks";
@@ -29,7 +29,7 @@ describe("rest - beacon - getBlock", function () {
       .get(urlJoin(BEACON_PREFIX, getBlock.url.replace(":blockId", "head")))
       .expect(200)
       .expect("Content-Type", "application/json; charset=utf-8");
-    expect(response.body.data).to.not.be.undefined;
+    expect((response.body as ApiResponseBody).data).to.not.be.undefined;
   });
 
   it("should not found block header", async function () {

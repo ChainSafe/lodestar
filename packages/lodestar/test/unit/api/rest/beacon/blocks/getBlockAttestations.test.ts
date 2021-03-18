@@ -7,7 +7,7 @@ import {phase0} from "@chainsafe/lodestar-types";
 import {getBlockAttestations} from "../../../../../../src/api/rest/controllers/beacon/blocks";
 import {generateSignedBlock} from "../../../../../utils/block";
 import {generateEmptyAttestation} from "../../../../../utils/attestation";
-import {urlJoin} from "../../utils";
+import {ApiResponseBody, urlJoin} from "../../utils";
 import {BEACON_PREFIX, setupRestApiTestServer} from "../../index.test";
 import {SinonStubbedInstance} from "sinon";
 import {RestApi} from "../../../../../../src/api";
@@ -40,8 +40,8 @@ describe("rest - beacon - getBlockAttestations", function () {
       .get(urlJoin(BEACON_PREFIX, getBlockAttestations.url.replace(":blockId", "head")))
       .expect(200)
       .expect("Content-Type", "application/json; charset=utf-8");
-    expect(response.body.data).to.not.be.undefined;
-    expect(response.body.data.length).to.equal(2);
+    expect((response.body as ApiResponseBody).data).to.not.be.undefined;
+    expect((response.body as ApiResponseBody).data.length).to.equal(2);
   });
 
   it("should not found block", async function () {

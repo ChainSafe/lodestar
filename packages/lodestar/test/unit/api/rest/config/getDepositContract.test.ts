@@ -6,6 +6,7 @@ import {CONFIG_PREFIX, setupRestApiTestServer} from "../index.test";
 import {getDepositContract} from "../../../../../src/api/rest/controllers/config";
 import {ConfigApi} from "../../../../../src/api/impl/config";
 import {SinonStubbedInstance} from "sinon";
+import {ApiResponseBody} from "../utils";
 
 describe("rest - config - getDepositContract", function () {
   it("ready", async function () {
@@ -23,9 +24,11 @@ describe("rest - config - getDepositContract", function () {
     const response = await supertest(restApi.server.server)
       .get(urlJoin(CONFIG_PREFIX, getDepositContract.url))
       .expect(200);
-    expect(response.body.data).to.not.be.undefined;
-    expect(Object.keys(response.body.data).length).to.equal(2);
+    expect((response.body as ApiResponseBody).data).to.not.be.undefined;
+    expect(Object.keys((response.body as ApiResponseBody).data).length).to.equal(2);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     expect(response.body.data.chain_id).to.equal(Object.values(expectedJson)[0]);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     expect(response.body.data.address).to.equal(Object.values(expectedJson)[1]);
   });
 });

@@ -4,7 +4,7 @@ import {toHexString} from "@chainsafe/ssz";
 
 import {getBlockHeaders} from "../../../../../../src/api/rest/controllers/beacon/blocks";
 import {generateSignedBeaconHeaderResponse} from "../../../../../utils/api";
-import {urlJoin} from "../../utils";
+import {ApiResponseBody, urlJoin} from "../../utils";
 import {BEACON_PREFIX, setupRestApiTestServer} from "../../index.test";
 import {SinonStubbedInstance} from "sinon";
 import {RestApi} from "../../../../../../src/api";
@@ -29,7 +29,7 @@ describe("rest - beacon - getBlockHeaders", function () {
       .get(urlJoin(BEACON_PREFIX, getBlockHeaders.url))
       .expect(200)
       .expect("Content-Type", "application/json; charset=utf-8");
-    expect(response.body.data.length).to.be.equal(1);
+    expect((response.body as ApiResponseBody).data.length).to.be.equal(1);
   });
 
   it("should parse slot param", async function () {
@@ -41,7 +41,7 @@ describe("rest - beacon - getBlockHeaders", function () {
       .query({slot: "1"})
       .expect(200)
       .expect("Content-Type", "application/json; charset=utf-8");
-    expect(response.body.data.length).to.be.equal(1);
+    expect((response.body as ApiResponseBody).data.length).to.be.equal(1);
   });
 
   it("should parse parentRoot param", async function () {
@@ -54,7 +54,7 @@ describe("rest - beacon - getBlockHeaders", function () {
       .query({parent_root: toHexString(Buffer.alloc(32, 1))})
       .expect(200)
       .expect("Content-Type", "application/json; charset=utf-8");
-    expect(response.body.data.length).to.be.equal(1);
+    expect((response.body as ApiResponseBody).data.length).to.be.equal(1);
   });
 
   it("should throw validation error on invalid slot", async function () {

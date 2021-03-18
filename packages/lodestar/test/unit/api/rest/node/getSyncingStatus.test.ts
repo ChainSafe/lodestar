@@ -19,9 +19,9 @@ describe("rest - node - getSyncingStatus", function () {
       .get(urlJoin(NODE_PREFIX, getSyncingStatus.url))
       .expect(200)
       .expect("Content-Type", "application/json; charset=utf-8");
-    expect(response.body.data).to.not.be.undefined;
-    expect(response.body.data).to.not.be.empty;
-    expect(response.body.data.head_slot).to.equal("3");
-    expect(response.body.data.sync_distance).to.equal("2");
+    expect((response.body as ApiResponseBody).data).to.not.be.undefined;
+    expect((response.body as ApiResponseBody).data).to.not.be.empty;
+    expect((response.body as ApiResponseBody).data.head_slot).to.equal("3");
+    expect((response.body as ApiResponseBody).data.sync_distance).to.equal("2");
   });
 });
