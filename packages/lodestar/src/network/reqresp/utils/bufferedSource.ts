@@ -32,6 +32,7 @@ export class BufferedSource {
           return {done: false, value: that.buffer};
         }
 
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         const {done, value: chunk} = await that.source.next();
         if (done === true) {
           that.isDone = true;

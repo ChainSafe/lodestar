@@ -11,7 +11,7 @@ export class PreGenesisStateLastProcessedBlock {
   constructor(config: IBeaconConfig, db: IDatabaseController<Buffer, Buffer>) {
     this.db = db;
     this.type = config.types.Number64;
-    this.bucket = Bucket.phase0_preGenesisStateLastProcessedBlock;
+    this.bucket = Bucket.phase0_preGenesisStateLastProcessedBlock as Bucket;
     this.key = Buffer.from(new Uint8Array([this.bucket]));
   }
 

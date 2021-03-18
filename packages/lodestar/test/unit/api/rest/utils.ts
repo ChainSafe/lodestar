@@ -1,5 +1,3 @@
-import { Type } from "@chainsafe/ssz";
-
 export function urlJoin(...args: string[]): string {
   return (
     args
@@ -10,4 +8,4 @@ export function urlJoin(...args: string[]): string {
   );
 }
 
-export type ApiResponseBody = {data: [Type<JSON>]};
+export type ApiResponseBody = {data: [JSON]};

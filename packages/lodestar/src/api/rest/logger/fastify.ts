@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import {Stream} from "stream";
 import {IncomingMessage} from "http";
 import {FastifyRequest} from "fastify";
@@ -28,14 +29,8 @@ export class FastifyLogger {
   }
 
   private handle = (chunk: string): void => {
-    const log: {
-      level: number;
-      msg: string;
-      responseTime: number;
-      reqId: number;
-      req?: {msg: string};
-      res?: {statusCode: number};
-    } = JSON.parse(chunk);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    const log = JSON.parse(chunk);
     if (log.req) {
       this.log.debug(log.req.msg);
     } else if (log.res) {

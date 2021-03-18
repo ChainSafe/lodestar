@@ -1,5 +1,6 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import {BeaconApi} from "../../../../../src/api/impl/beacon";
-import sinon, {SinonStubbedInstance} from "sinon";
+import sinon from "sinon";
 import {StubbedBeaconDb} from "../../../../utils/stub";
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {expect} from "chai";
@@ -27,7 +28,6 @@ describe("beacon api implementation", function () {
 
   describe("getGenesis", function () {
     it("success", async function () {
-      /** eslint-disable @typescript-eslint/no-unsafe-member-access */
       (server.chainStub as any).genesisTime = 0;
       (server.chainStub as any).genesisValidatorsRoot = Buffer.alloc(32);
       const genesis = await api.getGenesis();

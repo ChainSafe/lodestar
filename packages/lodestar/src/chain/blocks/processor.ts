@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import {AbortSignal} from "abort-controller";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
@@ -14,7 +16,6 @@ import {IBeaconMetrics} from "../../metrics";
 
 import {processBlock, processChainSegment} from "./process";
 import {validateBlock} from "./validate";
-import {LodestarError} from "@chainsafe/lodestar-utils";
 
 type BlockProcessorModules = {
   config: IBeaconConfig;

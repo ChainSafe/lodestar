@@ -6,7 +6,7 @@ import {ApiResponseBody, urlJoin} from "../utils";
 import {NODE_PREFIX, setupRestApiTestServer} from "../index.test";
 import {StubbedNodeApi} from "../../../../utils/stub/nodeApi";
 
-describe.only("rest - node - getPeers", function () {
+describe("rest - node - getPeers", function () {
   it("should succeed", async function () {
     const restApi = await setupRestApiTestServer();
     const nodeStub = restApi.server.api.node as StubbedNodeApi;
@@ -28,6 +28,7 @@ describe.only("rest - node - getPeers", function () {
     expect((response.body as ApiResponseBody).data).to.not.be.undefined;
     expect((response.body as ApiResponseBody).data).to.not.be.empty;
     expect((response.body as ApiResponseBody).data.length).to.equal(1);
-    expect((response.body as ApiResponseBody).data[0].peer_id).to.equal("16");
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+    expect(response.body.data[0].peer_id).to.equal("16");
   });
 });

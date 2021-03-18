@@ -30,7 +30,8 @@ describe("rest - node - getPeer", function () {
       .expect("Content-Type", "application/json; charset=utf-8");
     expect((response.body as ApiResponseBody).data).to.not.be.undefined;
     expect((response.body as ApiResponseBody).data).to.not.be.empty;
-    expect((response.body as ApiResponseBody).data.peer_id).to.equal("16");
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+    expect(response.body.data.peer_id).to.equal("16");
   });
 
   it("peer not found", async function () {
