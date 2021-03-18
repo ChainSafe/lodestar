@@ -14,19 +14,19 @@ import {testLogger, LogLevel} from "../../utils/logger";
   // Related issue: https://github.com/nodejs/node/issues/21783#issuecomment-429637117
   await init("herumi");
 
-  const {nodeIndex, validatorsPerNode, startIndex, checkpointEvent} = workerData.options;
+  const {nodeIndex, validatorsPerNode, startIndex, checkpointEvent, logFile} = workerData.options;
   const endIndex = startIndex + validatorsPerNode - 1;
 
   const node = await getDevBeaconNode({
     ...workerData.options,
-    logger: testLogger(`Node ${nodeIndex}`, LogLevel.info),
+    logger: testLogger(`Node ${nodeIndex}`, LogLevel.info, logFile),
   });
 
   const validator = getDevValidator({
     node,
     startIndex,
     count: validatorsPerNode,
-    logger: testLogger(`Vali ${startIndex}-${endIndex}`, LogLevel.info),
+    logger: testLogger(`Vali ${startIndex}-${endIndex}`, LogLevel.info, logFile),
   });
 
   await validator.start();

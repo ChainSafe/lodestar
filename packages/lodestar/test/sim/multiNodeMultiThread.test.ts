@@ -5,6 +5,7 @@ import {IBeaconParams} from "@chainsafe/lodestar-params";
 import {phase0} from "@chainsafe/lodestar-types";
 import {waitForEvent} from "../utils/events/resolver";
 import {ChainEvent} from "../../src/chain";
+import {logFiles} from "./params";
 
 /* eslint-disable no-console */
 
@@ -44,6 +45,7 @@ describe("Run multi node multi thread interop validators (no eth1) until checkpo
           startIndex: i * validatorsPerNode,
           validatorsPerNode,
           checkpointEvent,
+          logFile: logFiles.multinodeMultithread,
         };
 
         workers.push(

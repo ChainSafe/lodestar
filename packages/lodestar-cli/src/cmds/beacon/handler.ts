@@ -1,6 +1,6 @@
 import {AbortController} from "abort-controller";
 
-import {consoleTransport, ErrorAborted, fileTransport, WinstonLogger} from "@chainsafe/lodestar-utils";
+import {ErrorAborted} from "@chainsafe/lodestar-utils";
 import {LevelDbController} from "@chainsafe/lodestar-db";
 import {BeaconNode, BeaconDb, createNodeJsLibp2p} from "@chainsafe/lodestar";
 
@@ -9,8 +9,7 @@ import {parseEnrArgs} from "../../options/enrOptions";
 import {initializeOptionsAndConfig, persistOptionsAndConfig} from "../init/handler";
 import {IBeaconArgs} from "./options";
 import {getBeaconPaths} from "./paths";
-import {onGracefulShutdown} from "../../util/process";
-import {initBLS} from "../../util";
+import {initBLS, onGracefulShutdown, getCliLogger} from "../../util";
 import {FileENR, overwriteEnrWithCliArgs, readPeerId} from "../../config";
 import {initBeaconState} from "./initBeaconState";
 
@@ -37,12 +36,7 @@ export async function beaconHandler(args: IBeaconArgs & IGlobalArgs): Promise<vo
   const options = beaconNodeOptions.getWithDefaults();
 
   const abortController = new AbortController();
-
-  // Logger setup
-  const logger = new WinstonLogger({level: args.logLevel}, [
-    consoleTransport,
-    ...(beaconPaths.logFile ? [fileTransport(beaconPaths.logFile)] : []),
-  ]);
+  const logger = getCliLogger(args, beaconPaths);
 
   onGracefulShutdown(async () => {
     abortController.abort();

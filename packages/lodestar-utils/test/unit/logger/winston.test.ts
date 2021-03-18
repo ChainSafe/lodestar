@@ -1,24 +1,17 @@
+import fs from "fs";
+import path from "path";
+import rimraf from "rimraf";
 import {Context, ILogger, LodestarError, LogFormat, logFormats, WinstonLogger} from "../../../src";
-import TransportStream from "winston-transport";
-import {MESSAGE} from "triple-beam";
 import {expect} from "chai";
-
-/**
- * Transport logging to provided callback
- */
-class CallbackTransport extends TransportStream {
-  callback: (data: string) => void;
-  constructor(callback: (data: string) => void) {
-    super();
-    this.callback = callback;
-  }
-  log(info: any): void {
-    this.callback(info[MESSAGE]);
-  }
-}
+import {TransportType} from "../../../src/logger/transport";
 
 describe("winston logger", () => {
   describe("winston logger format and options", () => {
+    const tmpDir = fs.mkdtempSync("lodestar-winston-test");
+    after(() => {
+      rimraf.sync(tmpDir);
+    });
+
     interface ITestCase {
       id: string;
       message: string;
@@ -69,11 +62,16 @@ describe("winston logger", () => {
     for (const testCase of testCases) {
       const {id, message, context, error, output} = typeof testCase === "function" ? testCase() : testCase;
       for (const format of logFormats) {
-        it(`${id} ${format} output`, () => {
-          let allOutput = "";
-          const callbackTransport = new CallbackTransport((data: any) => (allOutput += data));
-          const logger = new WinstonLogger({format, hideTimestamp: true}, [callbackTransport]);
+        it(`${id} ${format} output`, async () => {
+          const filename = path.join(tmpDir, `${id.replace(/\s+/g, "-")}-${format}.txt`);
+
+          const logger = new WinstonLogger({format, hideTimestamp: true}, [{type: TransportType.file, filename}]);
           logger.warn(message, context, error);
+
+          // Allow the file transport to persist the file
+          await new Promise((r) => setTimeout(r, 10));
+
+          const allOutput = fs.readFileSync(filename, "utf8").trim();
           expect(allOutput).to.equal(output[format]);
         });
       }

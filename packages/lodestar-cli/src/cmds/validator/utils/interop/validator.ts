@@ -17,7 +17,7 @@ export function getInteropValidator(
   modules: IValidatorModules,
   index: number
 ): Validator {
-  const logger = modules.logger.child({module: "Validator #" + index, level: modules.logger.level}) as ILogger;
+  const logger = modules.logger.child({module: "Validator #" + index});
   const dbPath = join(rootDir, "validators", index.toString());
   mkdirSync(dbPath, {recursive: true});
   const secretKey = interopSecretKey(index);

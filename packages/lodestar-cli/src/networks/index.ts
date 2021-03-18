@@ -6,7 +6,7 @@ import * as mainnet from "./mainnet";
 import * as pyrmont from "./pyrmont";
 import * as prater from "./prater";
 
-export type NetworkName = "mainnet" | "pyrmont" | "prater";
+export type NetworkName = "mainnet" | "pyrmont" | "prater" | "dev";
 export const networkNames: NetworkName[] = ["mainnet", "pyrmont", "prater"];
 
 function getNetworkData(
