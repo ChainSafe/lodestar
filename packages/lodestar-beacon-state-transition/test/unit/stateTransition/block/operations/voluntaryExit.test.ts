@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import sinon from "sinon";
+import sinon, {SinonStub} from "sinon";
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import {FAR_FUTURE_EPOCH} from "../../../../../src/constants";
 import * as utils from "../../../../../src/util";
@@ -13,7 +13,7 @@ import {generateState} from "../../../../utils/state";
 describe("process block - voluntary exits", function () {
   const sandbox = sinon.createSandbox();
 
-  let isActiveValidatorStub: any, initiateValidatorExitStub: any;
+  let isActiveValidatorStub: SinonStub, initiateValidatorExitStub: SinonStub;
 
   beforeEach(() => {
     isActiveValidatorStub = sandbox.stub(validatorUtils, "isActiveValidator");

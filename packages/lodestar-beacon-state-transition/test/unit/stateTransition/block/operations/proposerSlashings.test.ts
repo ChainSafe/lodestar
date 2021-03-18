@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import sinon from "sinon";
+import sinon, {SinonStub} from "sinon";
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import {processProposerSlashing} from "../../../../../src/phase0/naive/block/operations";
 import * as utils from "../../../../../src/util";
@@ -13,7 +13,7 @@ import {generateState} from "../../../../utils/state";
 describe("process block - proposer slashings", function () {
   const sandbox = sinon.createSandbox();
 
-  let isSlashableValidatorStub: any, slashValidatorStub: any;
+  let isSlashableValidatorStub: SinonStub, slashValidatorStub: SinonStub;
 
   beforeEach(() => {
     isSlashableValidatorStub = sandbox.stub(validatorUtils, "isSlashableValidator");

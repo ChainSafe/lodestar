@@ -1,4 +1,4 @@
-import sinon from "sinon";
+import sinon, {SinonStub} from "sinon";
 import {expect} from "chai";
 
 import {List} from "@chainsafe/ssz";
@@ -12,7 +12,7 @@ import {generateValidator} from "../../../utils/validator";
 describe.skip("process epoch - slashings", function () {
   const sandbox = sinon.createSandbox();
 
-  let getCurrentEpochStub: any, isActiveValidatorStub: any, initiateValidatorExitStub: any;
+  let getCurrentEpochStub: SinonStub, isActiveValidatorStub: SinonStub, initiateValidatorExitStub: SinonStub;
 
   beforeEach(() => {
     getCurrentEpochStub = sandbox.stub(utils, "getCurrentEpoch");

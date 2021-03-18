@@ -8,11 +8,15 @@ import {bigIntMin, intToBytes, assert} from "@chainsafe/lodestar-utils";
 import {generateState} from "../../../../utils/state";
 import {generateDeposit} from "../../../../utils/deposit";
 import {generateValidator} from "../../../../utils/validator";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {phase0} from "@chainsafe/lodestar-types";
 
 describe("process block - deposits", function () {
   const sandbox = sinon.createSandbox();
   const verifyMerkleBranchStub = sinon.stub();
-  let processDeposit: any, getTemporaryBlockHeaderStub, getBeaconProposeIndexStub;
+  let processDeposit: (config: IBeaconConfig, state: phase0.BeaconState, deposit: phase0.Deposit) => void,
+    getTemporaryBlockHeaderStub,
+    getBeaconProposeIndexStub;
   const blsStub = sinon.stub();
 
   before(function () {

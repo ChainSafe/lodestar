@@ -26,7 +26,10 @@ export class AttestationService {
   private readonly slashingProtection: ISlashingProtection;
   private readonly logger: ILogger;
 
-  private nextAttesterDuties: Map<Slot, Map<PublicKeyHex, IAttesterDuty>> = new Map();
+  private nextAttesterDuties: Map<Slot, Map<PublicKeyHex, IAttesterDuty>> = new Map<
+    Slot,
+    Map<PublicKeyHex, IAttesterDuty>
+  >();
   private controller: AbortController | undefined;
 
   constructor(
@@ -111,7 +114,7 @@ export class AttestationService {
       }
       attesterDuties = await this.provider.validator.getAttesterDuties(epoch, indices);
     } catch (e) {
-      this.logger.error("Failed to obtain attester duty", {epoch, error: e.message});
+      this.logger.error("Failed to obtain attester duty", {epoch, error: (e as Error).message});
       return;
     }
     const fork = await this.provider.beacon.state.getFork("head");
@@ -186,7 +189,7 @@ export class AttestationService {
       this.logger.error("Failed to produce attestation", {
         slot: duty.slot,
         committee: duty.committeeIndex,
-        error: e.message,
+        error: (e as Error).message,
       });
     }
     if (!attestation) {
@@ -352,7 +355,9 @@ export class AttestationService {
     try {
       attestationData = await this.provider.validator.produceAttestationData(committeeIndex, slot);
     } catch (e) {
-      e.message = `Failed to obtain attestation data at slot ${slot} and committee ${committeeIndex}: ${e.message}`;
+      (e as Error).message = `Failed to obtain attestation data at slot ${slot} and committee ${committeeIndex}: ${
+        (e as Error).message
+      }`;
       throw e;
     }
 

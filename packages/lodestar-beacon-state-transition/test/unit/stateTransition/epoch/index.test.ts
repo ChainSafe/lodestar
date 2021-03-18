@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import sinon from "sinon";
+import sinon, {SinonStub} from "sinon";
 
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import {GENESIS_SLOT} from "../../../../src/constants";
@@ -15,10 +15,10 @@ import {generateState} from "../../../utils/state";
 describe("process epoch - crosslinks", function () {
   const sandbox = sinon.createSandbox();
 
-  let processJustificationAndFinalizationStub: any,
-    processRewardsAndPenaltiesStub: any,
-    processRegistryUpdatesStub: any,
-    processSlashingsStub: any;
+  let processJustificationAndFinalizationStub: SinonStub,
+    processRewardsAndPenaltiesStub: SinonStub,
+    processRegistryUpdatesStub: SinonStub,
+    processSlashingsStub: SinonStub;
 
   beforeEach(() => {
     processJustificationAndFinalizationStub = sandbox.stub(justificationUtils, "processJustificationAndFinalization");

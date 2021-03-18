@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import sinon from "sinon";
+import sinon, {SinonStub} from "sinon";
 
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import * as utilsEpoch from "../../../../../src/phase0/naive/epoch/util";
@@ -14,16 +14,16 @@ import {generateEmptyAttestation} from "../../../../utils/attestation";
 describe.skip("process epoch - balance updates", function () {
   const sandbox = sinon.createSandbox();
 
-  let getAttestingBalanceStub: any,
-    getMatchingHeadAttestationsStub: any,
-    getMatchingSourceAttestationsStub: any,
-    getMatchingTargetAttestationsStub: any,
-    getTotalActiveBalanceStub: any,
-    getUnslashedAttestingIndicesStub: any,
-    getBaseRewardStub: any,
-    getAttestingIndicesStub: any,
-    getPreviousEpochStub: any,
-    isActiveValidatorStub: any;
+  let getAttestingBalanceStub: SinonStub,
+    getMatchingHeadAttestationsStub: SinonStub,
+    getMatchingSourceAttestationsStub: SinonStub,
+    getMatchingTargetAttestationsStub: SinonStub,
+    getTotalActiveBalanceStub: SinonStub,
+    getUnslashedAttestingIndicesStub: SinonStub,
+    getBaseRewardStub: SinonStub,
+    getAttestingIndicesStub: SinonStub,
+    getPreviousEpochStub: SinonStub,
+    isActiveValidatorStub: SinonStub;
 
   beforeEach(() => {
     getAttestingBalanceStub = sandbox.stub(utilsEpoch, "getAttestingBalance");

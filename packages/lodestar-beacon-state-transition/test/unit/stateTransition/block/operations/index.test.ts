@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import sinon from "sinon";
+import sinon, {SinonStub} from "sinon";
 import {List} from "@chainsafe/ssz";
 import {phase0} from "@chainsafe/lodestar-types";
 import {config} from "@chainsafe/lodestar-config/mainnet";
@@ -22,11 +22,11 @@ import {generateEmptySignedVoluntaryExit} from "../../../../utils/voluntaryExits
 describe("process block - process operations", function () {
   const sandbox = sinon.createSandbox();
 
-  let processProposerSlashingStub: any,
-    processAttesterSlashingStub: any,
-    processAttestationStub: any,
-    processDepositStub: any,
-    processVoluntaryExitStub: any;
+  let processProposerSlashingStub: SinonStub,
+    processAttesterSlashingStub: SinonStub,
+    processAttestationStub: SinonStub,
+    processDepositStub: SinonStub,
+    processVoluntaryExitStub: SinonStub;
 
   beforeEach(() => {
     processProposerSlashingStub = sandbox.stub(processProposerSlashing, "processProposerSlashing");

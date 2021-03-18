@@ -1,6 +1,6 @@
 import {generateState} from "../../../utils/state";
 import {expect} from "chai";
-import sinon from "sinon";
+import sinon, {SinonStub} from "sinon";
 
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import * as processEth1Data from "../../../../src/phase0/naive/block/eth1Data";
@@ -13,7 +13,10 @@ import {generateEmptyBlock} from "../../../utils/block";
 describe("process block", function () {
   const sandbox = sinon.createSandbox();
 
-  let processEth1Stub: any, processBlockHeaderStub: any, processRandaoStub: any, processOperationsStub: any;
+  let processEth1Stub: SinonStub,
+    processBlockHeaderStub: SinonStub,
+    processRandaoStub: SinonStub,
+    processOperationsStub: SinonStub;
 
   beforeEach(() => {
     processBlockHeaderStub = sandbox.stub(processBlockHeader, "processBlockHeader");

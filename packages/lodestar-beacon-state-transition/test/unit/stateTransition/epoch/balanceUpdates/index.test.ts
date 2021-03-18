@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import sinon from "sinon";
+import sinon, {SinonStub} from "sinon";
 
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import * as utils from "../../../../../src/util";
@@ -11,7 +11,10 @@ import {generateState} from "../../../../utils/state";
 
 describe("process epoch - balance updates", function () {
   const sandbox = sinon.createSandbox();
-  let getCurrentEpochStub: any, getAttestationDeltasStub: any, increaseBalanceStub: any, decreaseBalanceStub: any;
+  let getCurrentEpochStub: SinonStub,
+    getAttestationDeltasStub: SinonStub,
+    increaseBalanceStub: SinonStub,
+    decreaseBalanceStub: SinonStub;
 
   beforeEach(() => {
     getCurrentEpochStub = sandbox.stub(utils, "getCurrentEpoch");

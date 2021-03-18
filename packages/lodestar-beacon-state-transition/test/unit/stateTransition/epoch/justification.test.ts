@@ -1,4 +1,4 @@
-import sinon from "sinon";
+import sinon, {SinonStub} from "sinon";
 import {expect} from "chai";
 
 import {config} from "@chainsafe/lodestar-config/mainnet";
@@ -10,12 +10,12 @@ import {processJustificationAndFinalization} from "../../../../src/phase0/naive/
 describe.skip("process epoch - justification and finalization", function () {
   const sandbox = sinon.createSandbox();
 
-  let getBlockRootStub: any,
-    getCurrentEpochStub: any,
-    getPreviousEpochStub: any,
-    getAttestingBalanceStub: any,
-    getMatchingTargetAttestationsStub: any,
-    getTotalActiveBalanceStub: any;
+  let getBlockRootStub: SinonStub,
+    getCurrentEpochStub: SinonStub,
+    getPreviousEpochStub: SinonStub,
+    getAttestingBalanceStub: SinonStub,
+    getMatchingTargetAttestationsStub: SinonStub,
+    getTotalActiveBalanceStub: SinonStub;
 
   beforeEach(() => {
     getBlockRootStub = sandbox.stub(utils1, "getBlockRoot");

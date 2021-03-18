@@ -16,6 +16,7 @@ describe("LevelDB controller", () => {
   after(async () => {
     await db.stop();
     await new Promise<void>((resolve, reject) => {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
       leveldown.destroy(dbLocation, (err: Error) => {
         if (err) reject(err);
         else resolve();

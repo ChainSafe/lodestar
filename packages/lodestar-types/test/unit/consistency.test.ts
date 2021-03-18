@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-return */
 import {assert} from "chai";
 import fs from "fs";
 import path from "path";
@@ -24,9 +25,9 @@ describe("@chainsafe/lodestar-types phase0", () => {
       .replace(/\/\/.*\n/g, "")
       // remove multiline comments
       .replace(/\/\*[\s\S]*?\*\//gm, "");
-    let match;
+    let match: RegExpExecArray | null;
     // extract interface definitions
-    const interfaceRe: any = /export interface (.*) {([\s\S]*?)}/g;
+    const interfaceRe = /export interface (.*) {([\s\S]*?)}/g;
     // eslint-disable-next-line no-cond-assign
     while ((match = interfaceRe.exec(fileStr))) {
       const name = match[1];
@@ -38,9 +39,9 @@ describe("@chainsafe/lodestar-types phase0", () => {
         // split fields by ;
         .split(";")
         // remove blank matches
-        .filter((s: any) => s)
+        .filter((s: string) => s)
         // separate the field name from type
-        .map((s: any) => {
+        .map((s: string) => {
           // eslint-disable-next-line prefer-const
           let [name, type] = s.split(":");
           // replace string [] with real []

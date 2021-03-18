@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import sinon from "sinon";
+import sinon, {SinonStub} from "sinon";
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import {ZERO_HASH} from "../../../../../src/constants";
 import * as utils from "../../../../../src/util";
@@ -10,11 +10,11 @@ import {generateEmptyAttestation} from "../../../../utils/attestation";
 describe("process block - attestation", function () {
   const sandbox = sinon.createSandbox();
 
-  let currentEpochStub: any,
-    previousEpochStub: any,
-    validateIndexedAttestationStub: any,
-    getBeaconProposerIndexStub: any,
-    getBeaconComitteeStub: any;
+  let currentEpochStub: SinonStub,
+    previousEpochStub: SinonStub,
+    validateIndexedAttestationStub: SinonStub,
+    getBeaconProposerIndexStub: SinonStub,
+    getBeaconComitteeStub: SinonStub;
 
   beforeEach(() => {
     currentEpochStub = sandbox.stub(utils, "getCurrentEpoch");

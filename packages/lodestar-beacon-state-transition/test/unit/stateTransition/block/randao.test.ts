@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import sinon from "sinon";
+import sinon, {SinonStub} from "sinon";
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import {processRandao} from "../../../../src/phase0/naive/block";
 import * as utils from "../../../../src/util";
@@ -11,7 +11,7 @@ import {generateValidators} from "../../../utils/validator";
 describe.skip("process block - randao", function () {
   const sandbox = sinon.createSandbox();
 
-  let getBeaconProposerStub: any;
+  let getBeaconProposerStub: SinonStub;
 
   beforeEach(() => {
     getBeaconProposerStub = sandbox.stub(utils, "getBeaconProposerIndex");

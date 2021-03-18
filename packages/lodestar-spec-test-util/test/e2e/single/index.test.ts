@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import {unlinkSync, writeFileSync} from "fs";
 import {join} from "path";
 
@@ -54,6 +55,7 @@ describeDirectorySpecTest<ISimpleCase, number>(
 );
 
 function yamlToSSZ(file: string, sszSchema: Type<any>): void {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
   const input: any = sszSchema.fromJson(loadYamlFile(file) as Json);
   if (input.number) {
     input.number = Number(input.number);

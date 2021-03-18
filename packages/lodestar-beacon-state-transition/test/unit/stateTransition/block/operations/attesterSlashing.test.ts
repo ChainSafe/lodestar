@@ -1,6 +1,6 @@
 import {generateState} from "../../../../utils/state";
 import {expect} from "chai";
-import sinon from "sinon";
+import sinon, {SinonStub} from "sinon";
 import {List} from "@chainsafe/ssz";
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import * as utils from "../../../../../src/util";
@@ -10,10 +10,10 @@ import {phase0} from "../../../../../src";
 describe("process block - attester slashings", function () {
   const sandbox = sinon.createSandbox();
 
-  let isSlashableAttestationStub: any,
-    validateIndexedAttestationStub: any,
-    isSlashableValidatorStub: any,
-    slashValidatorStub: any;
+  let isSlashableAttestationStub: SinonStub,
+    validateIndexedAttestationStub: SinonStub,
+    isSlashableValidatorStub: SinonStub,
+    slashValidatorStub: SinonStub;
 
   beforeEach(() => {
     isSlashableAttestationStub = sandbox.stub(utils, "isSlashableAttestationData");

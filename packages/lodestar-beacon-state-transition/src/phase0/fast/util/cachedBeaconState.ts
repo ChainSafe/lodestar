@@ -90,7 +90,7 @@ export const CachedBeaconStateProxyHandler: ProxyHandler<CachedBeaconState<allFo
     } else if (key in target) {
       return target[key as keyof CachedBeaconState<allForks.BeaconState>];
     } else if (key in target.type.tree) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
       return (target.type.tree as any)[key].bind(target.type.tree, target.tree);
     } else {
       return undefined;

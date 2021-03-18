@@ -1,4 +1,4 @@
-import sinon from "sinon";
+import sinon, {SinonStub} from "sinon";
 import {expect} from "chai";
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import * as utils from "../../../../src/util";
@@ -13,7 +13,7 @@ import {generateValidator} from "../../../utils/validator";
 describe("process block - block header", function () {
   const sandbox = sinon.createSandbox();
 
-  let getBeaconProposeIndexStub: any;
+  let getBeaconProposeIndexStub: SinonStub;
 
   beforeEach(() => {
     getBeaconProposeIndexStub = sandbox.stub(utils, "getBeaconProposerIndex");
