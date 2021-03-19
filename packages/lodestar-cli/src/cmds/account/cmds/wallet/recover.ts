@@ -42,7 +42,7 @@ export const recover: ICliCommand<IWalletRecoverArgs, IGlobalArgs, ReturnType> =
     if (mnemonicInputPath) {
       mnemonic = await fs.promises.readFile(mnemonicInputPath, "utf8");
     } else {
-      const input = await inquirer.prompt([
+      const input = await inquirer.prompt<{mnemonic: string}>([
         {
           name: "mnemonic",
           type: "input",
