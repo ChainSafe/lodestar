@@ -31,7 +31,7 @@ describe("rest - node - getPeer", function () {
     expect((response.body as ApiResponseBody).data).to.not.be.undefined;
     expect((response.body as ApiResponseBody).data).to.not.be.empty;
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-    expect(response.body.data).to.equal("16");
+    expect(response.body.data.peer_id).to.equal("16");
   });
 
   it("peer not found", async function () {
