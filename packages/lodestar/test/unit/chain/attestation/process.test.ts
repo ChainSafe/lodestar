@@ -11,8 +11,8 @@ import {StateRegenerator} from "../../../../src/chain/regen";
 import {AttestationErrorCode} from "../../../../src/chain/errors";
 import {generateAttestation} from "../../../utils/attestation";
 import {generateCachedState} from "../../../utils/state";
-import {LodestarError} from "@chainsafe/lodestar-utils";
 import {SinonStubFn} from "../../../utils/types";
+import {AttestationError} from "../../../../lib/chain/errors";
 
 describe("processAttestation", function () {
   const emitter = new ChainEventEmitter();
@@ -42,7 +42,7 @@ describe("processAttestation", function () {
       });
       expect.fail("attestation should throw");
     } catch (e) {
-      expect((e as LodestarError<{code: string}>).type.code).to.equal(AttestationErrorCode.TARGET_STATE_MISSING);
+      expect((e as AttestationError).type.code).to.equal(AttestationErrorCode.TARGET_STATE_MISSING);
     }
   });
 
@@ -60,9 +60,7 @@ describe("processAttestation", function () {
       });
       expect.fail("attestation should throw");
     } catch (e) {
-      expect((e as LodestarError<{code: string}>).type.code).to.equal(
-        AttestationErrorCode.NO_COMMITTEE_FOR_SLOT_AND_INDEX
-      );
+      expect((e as AttestationError).type.code).to.equal(AttestationErrorCode.NO_COMMITTEE_FOR_SLOT_AND_INDEX);
     }
   });
 
@@ -81,7 +79,7 @@ describe("processAttestation", function () {
       });
       expect.fail("attestation should throw");
     } catch (e) {
-      expect((e as LodestarError<{code: string}>).type.code).to.equal(AttestationErrorCode.INVALID_SIGNATURE);
+      expect((e as AttestationError).type.code).to.equal(AttestationErrorCode.INVALID_SIGNATURE);
     }
   });
 

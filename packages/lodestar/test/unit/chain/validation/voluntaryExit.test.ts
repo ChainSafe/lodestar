@@ -15,8 +15,8 @@ import {generateState} from "../../../utils/state";
 import {generateEmptySignedVoluntaryExit} from "../../../utils/attestation";
 import {validateGossipVoluntaryExit} from "../../../../src/chain/validation/voluntaryExit";
 import {VoluntaryExitErrorCode} from "../../../../src/chain/errors/voluntaryExitError";
-import {LodestarError} from "@chainsafe/lodestar-utils";
 import {SinonStubFn} from "../../../utils/types";
+import {VoluntaryExitError} from "../../../../lib/chain/errors";
 
 describe("validate voluntary exit", () => {
   const sandbox = sinon.createSandbox();
@@ -55,10 +55,7 @@ describe("validate voluntary exit", () => {
     try {
       await validateGossipVoluntaryExit(config, chainStub, dbStub, voluntaryExit);
     } catch (error) {
-      expect((error as LodestarError<{code: string}>).type).to.have.property(
-        "code",
-        VoluntaryExitErrorCode.EXIT_ALREADY_EXISTS
-      );
+      expect((error as VoluntaryExitError).type).to.have.property("code", VoluntaryExitErrorCode.EXIT_ALREADY_EXISTS);
     }
   });
 
@@ -81,10 +78,7 @@ describe("validate voluntary exit", () => {
     try {
       await validateGossipVoluntaryExit(config, chainStub, dbStub, voluntaryExit);
     } catch (error) {
-      expect((error as LodestarError<{code: string}>).type).to.have.property(
-        "code",
-        VoluntaryExitErrorCode.INVALID_EXIT
-      );
+      expect((error as VoluntaryExitError).type).to.have.property("code", VoluntaryExitErrorCode.INVALID_EXIT);
     }
   });
 

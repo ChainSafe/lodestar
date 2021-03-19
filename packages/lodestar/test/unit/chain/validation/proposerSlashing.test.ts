@@ -9,9 +9,8 @@ import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {BeaconChain} from "../../../../src/chain";
 import {StubbedBeaconDb, StubbedChain} from "../../../utils/stub";
 import {generateCachedState} from "../../../utils/state";
-import {ProposerSlashingErrorCode} from "../../../../src/chain/errors/proposerSlashingError";
+import {ProposerSlashingError, ProposerSlashingErrorCode} from "../../../../src/chain/errors/proposerSlashingError";
 import {validateGossipProposerSlashing} from "../../../../src/chain/validation/proposerSlashing";
-import {LodestarError} from "@chainsafe/lodestar-utils";
 import {SinonStubFn} from "../../../utils/types";
 
 describe("validate proposer slashing", () => {
@@ -37,7 +36,7 @@ describe("validate proposer slashing", () => {
     try {
       await validateGossipProposerSlashing(config, chainStub, dbStub, slashing);
     } catch (error) {
-      expect((error as LodestarError<{code: string}>).type).to.have.property(
+      expect((error as ProposerSlashingError).type).to.have.property(
         "code",
         ProposerSlashingErrorCode.SLASHING_ALREADY_EXISTS
       );
@@ -53,7 +52,7 @@ describe("validate proposer slashing", () => {
     try {
       await validateGossipProposerSlashing(config, chainStub, dbStub, slashing);
     } catch (error) {
-      expect((error as LodestarError<{code: string}>).type).to.have.property(
+      expect((error as ProposerSlashingError).type).to.have.property(
         "code",
         ProposerSlashingErrorCode.INVALID_SLASHING
       );

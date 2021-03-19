@@ -19,9 +19,9 @@ import {generateCachedState} from "../../../utils/state";
 import {LocalClock} from "../../../../src/chain/clock";
 import {AttestationErrorCode} from "../../../../src/chain/errors";
 import {Gwei} from "@chainsafe/lodestar-types";
-import {LodestarError} from "@chainsafe/lodestar-utils";
 import {IEpochShuffling} from "@chainsafe/lodestar-beacon-state-transition/lib/phase0/fast";
 import {SinonStubFn} from "../../../utils/types";
+import {AttestationError} from "../../../../lib/chain/errors";
 
 describe("gossip attestation validation", function () {
   let chain: SinonStubbedInstance<IBeaconChain>;
@@ -72,7 +72,7 @@ describe("gossip attestation validation", function () {
         0
       );
     } catch (error) {
-      expect((error as LodestarError<{code: string}>).type).to.have.property(
+      expect((error as AttestationError).type).to.have.property(
         "code",
         AttestationErrorCode.NOT_EXACTLY_ONE_AGGREGATION_BIT_SET
       );
@@ -93,7 +93,7 @@ describe("gossip attestation validation", function () {
         0
       );
     } catch (error) {
-      expect((error as LodestarError<{code: string}>).type).to.have.property(
+      expect((error as AttestationError).type).to.have.property(
         "code",
         AttestationErrorCode.NOT_EXACTLY_ONE_AGGREGATION_BIT_SET
       );
@@ -115,10 +115,7 @@ describe("gossip attestation validation", function () {
         0
       );
     } catch (error) {
-      expect((error as LodestarError<{code: string}>).type).to.have.property(
-        "code",
-        AttestationErrorCode.KNOWN_BAD_BLOCK
-      );
+      expect((error as AttestationError).type).to.have.property("code", AttestationErrorCode.KNOWN_BAD_BLOCK);
     }
     expect(db.badBlock.has.calledOnceWith(attestation.data.beaconBlockRoot.valueOf() as Uint8Array)).to.be.true;
   });
@@ -142,7 +139,7 @@ describe("gossip attestation validation", function () {
         0
       );
     } catch (error) {
-      expect((error as LodestarError<{code: string}>).type).to.have.property("code", AttestationErrorCode.PAST_SLOT);
+      expect((error as AttestationError).type).to.have.property("code", AttestationErrorCode.PAST_SLOT);
     }
   });
 
@@ -165,7 +162,7 @@ describe("gossip attestation validation", function () {
         0
       );
     } catch (error) {
-      expect((error as LodestarError<{code: string}>).type).to.have.property("code", AttestationErrorCode.FUTURE_SLOT);
+      expect((error as AttestationError).type).to.have.property("code", AttestationErrorCode.FUTURE_SLOT);
     }
   });
 
@@ -186,10 +183,7 @@ describe("gossip attestation validation", function () {
         0
       );
     } catch (error) {
-      expect((error as LodestarError<{code: string}>).type).to.have.property(
-        "code",
-        AttestationErrorCode.ATTESTATION_ALREADY_KNOWN
-      );
+      expect((error as AttestationError).type).to.have.property("code", AttestationErrorCode.ATTESTATION_ALREADY_KNOWN);
     }
     expect(chain.receiveAttestation.called).to.be.false;
     expect(db.seenAttestationCache.hasCommitteeAttestation.calledOnceWith(attestation)).to.be.true;
@@ -213,10 +207,7 @@ describe("gossip attestation validation", function () {
         0
       );
     } catch (error) {
-      expect((error as LodestarError<{code: string}>).type).to.have.property(
-        "code",
-        AttestationErrorCode.UNKNOWN_BEACON_BLOCK_ROOT
-      );
+      expect((error as AttestationError).type).to.have.property("code", AttestationErrorCode.UNKNOWN_BEACON_BLOCK_ROOT);
     }
     expect(forkChoice.hasBlock.calledOnceWith(attestation.data.beaconBlockRoot)).to.be.true;
   });
@@ -240,7 +231,7 @@ describe("gossip attestation validation", function () {
         0
       );
     } catch (error) {
-      expect((error as LodestarError<{code: string}>).type).to.have.property(
+      expect((error as AttestationError).type).to.have.property(
         "code",
         AttestationErrorCode.MISSING_ATTESTATION_PRESTATE
       );
@@ -269,10 +260,7 @@ describe("gossip attestation validation", function () {
         0
       );
     } catch (error) {
-      expect((error as LodestarError<{code: string}>).type).to.have.property(
-        "code",
-        AttestationErrorCode.INVALID_SUBNET_ID
-      );
+      expect((error as AttestationError).type).to.have.property("code", AttestationErrorCode.INVALID_SUBNET_ID);
     }
     expect(chain.receiveAttestation.called).to.be.false;
     expect(computeAttestationSubnetStub.calledOnceWith(config, attestationPreState, attestation)).to.be.true;
@@ -301,10 +289,7 @@ describe("gossip attestation validation", function () {
         0
       );
     } catch (error) {
-      expect((error as LodestarError<{code: string}>).type).to.have.property(
-        "code",
-        AttestationErrorCode.INVALID_SIGNATURE
-      );
+      expect((error as AttestationError).type).to.have.property("code", AttestationErrorCode.INVALID_SIGNATURE);
     }
     expect(chain.receiveAttestation.called).to.be.false;
     expect(isValidIndexedAttestationStub.calledOnce).to.be.true;
@@ -339,7 +324,7 @@ describe("gossip attestation validation", function () {
         0
       );
     } catch (error) {
-      expect((error as LodestarError<{code: string}>).type).to.have.property(
+      expect((error as AttestationError).type).to.have.property(
         "code",
         AttestationErrorCode.COMMITTEE_INDEX_OUT_OF_RANGE
       );
@@ -383,7 +368,7 @@ describe("gossip attestation validation", function () {
         0
       );
     } catch (error) {
-      expect((error as LodestarError<{code: string}>).type).to.have.property(
+      expect((error as AttestationError).type).to.have.property(
         "code",
         AttestationErrorCode.COMMITTEE_INDEX_OUT_OF_RANGE
       );
@@ -421,7 +406,7 @@ describe("gossip attestation validation", function () {
         0
       );
     } catch (error) {
-      expect((error as LodestarError<{code: string}>).type).to.have.property(
+      expect((error as AttestationError).type).to.have.property(
         "code",
         AttestationErrorCode.WRONG_NUMBER_OF_AGGREGATION_BITS
       );
@@ -462,10 +447,7 @@ describe("gossip attestation validation", function () {
         0
       );
     } catch (error) {
-      expect((error as LodestarError<{code: string}>).type).to.have.property(
-        "code",
-        AttestationErrorCode.BAD_TARGET_EPOCH
-      );
+      expect((error as AttestationError).type).to.have.property("code", AttestationErrorCode.BAD_TARGET_EPOCH);
     }
   });
 
@@ -528,7 +510,7 @@ describe("gossip attestation validation", function () {
         0
       );
     } catch (error) {
-      expect((error as LodestarError<{code: string}>).type).to.have.property(
+      expect((error as AttestationError).type).to.have.property(
         "code",
         AttestationErrorCode.TARGET_BLOCK_NOT_AN_ANCESTOR_OF_LMD_BLOCK
       );
@@ -569,7 +551,7 @@ describe("gossip attestation validation", function () {
         0
       );
     } catch (error) {
-      expect((error as LodestarError<{code: string}>).type).to.have.property(
+      expect((error as AttestationError).type).to.have.property(
         "code",
         AttestationErrorCode.FINALIZED_CHECKPOINT_NOT_AN_ANCESTOR_OF_ROOT
       );
