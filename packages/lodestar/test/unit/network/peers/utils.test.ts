@@ -176,7 +176,9 @@ describe("network peer utils", function () {
       scoreTrackerStub.getScore.withArgs(peers[0]).returns(10);
       scoreTrackerStub.getScore.withArgs(peers[1]).returns(20);
       scoreTrackerStub.getScore.withArgs(peers[2]).returns(30);
-      const connectedPeers = peers.map((peerId) => ({id: peerId} as Pick<LibP2p.Peer, "id">)) as LibP2p.Peer[];
+      const connectedPeers = peers.map(
+        (peerId) => ({id: peerId, protocols: getSyncProtocols()} as Pick<LibP2p.Peer, "id" | "protocols">)
+      ) as LibP2p.Peer[];
       expect(syncPeersToDisconnect(connectedPeers, networkStub)).to.be.deep.equal([peer1, peer2]);
     });
 
