@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import sinon, {SinonStub, SinonStubbedInstance} from "sinon";
+import sinon, {SinonStubbedInstance} from "sinon";
 
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {createCachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
@@ -16,11 +16,12 @@ import {generateEmptySignedVoluntaryExit} from "../../../utils/attestation";
 import {validateGossipVoluntaryExit} from "../../../../src/chain/validation/voluntaryExit";
 import {VoluntaryExitErrorCode} from "../../../../src/chain/errors/voluntaryExitError";
 import {LodestarError} from "@chainsafe/lodestar-utils";
+import {SinonStubFn} from "../../../utils/types";
 
 describe("validate voluntary exit", () => {
   const sandbox = sinon.createSandbox();
   let dbStub: StubbedBeaconDb,
-    isValidIncomingVoluntaryExitStub: SinonStub,
+    isValidIncomingVoluntaryExitStub: SinonStubFn<typeof validatorStatusUtils["isValidVoluntaryExit"]>,
     chainStub: StubbedChain,
     regenStub: SinonStubbedInstance<StateRegenerator>;
 

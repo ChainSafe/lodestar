@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import sinon, {SinonStub} from "sinon";
+import sinon from "sinon";
 
 import {List} from "@chainsafe/ssz";
 import {phase0} from "@chainsafe/lodestar-types";
@@ -16,15 +16,16 @@ import {FAR_FUTURE_EPOCH} from "../../../../src/constants";
 import {generateEmptyAttestation} from "../../../utils/attestation";
 import {generateValidator} from "../../../utils/validator";
 import {generateState} from "../../../utils/state";
+import {SinonStubFn} from "../../../utils/types";
 
 describe("process epoch - crosslinks", function () {
   const sandbox = sinon.createSandbox();
 
-  let getActiveValidatorIndicesStub: SinonStub,
-    getTotalBalanceStub: SinonStub,
-    getBlockRootStub: SinonStub,
-    getBlockRootAtSlotStub: SinonStub,
-    getAttestingIndicesStub: SinonStub;
+  let getActiveValidatorIndicesStub: SinonStubFn<typeof utils["getActiveValidatorIndices"]>,
+    getTotalBalanceStub: SinonStubFn<typeof utils["getTotalBalance"]>,
+    getBlockRootStub: SinonStubFn<typeof utils["getBlockRoot"]>,
+    getBlockRootAtSlotStub: SinonStubFn<typeof utils["getBlockRootAtSlot"]>,
+    getAttestingIndicesStub: SinonStubFn<typeof utils["getAttestingIndices"]>;
 
   beforeEach(() => {
     getActiveValidatorIndicesStub = sandbox.stub(utils, "getActiveValidatorIndices");

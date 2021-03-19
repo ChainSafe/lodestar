@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import sinon, {SinonStub} from "sinon";
+import sinon from "sinon";
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import {processProposerSlashing} from "../../../../../src/phase0/naive/block/operations";
 import * as utils from "../../../../../src/util";
@@ -7,13 +7,15 @@ import * as validatorUtils from "../../../../../src/util/validator";
 import {generateEmptyProposerSlashing} from "../../../../utils/slashings";
 import {generateValidators} from "../../../../utils/validator";
 import {generateState} from "../../../../utils/state";
+import {SinonStubFn} from "../../../../utils/types";
 
 /* eslint-disable no-empty */
 
 describe("process block - proposer slashings", function () {
   const sandbox = sinon.createSandbox();
 
-  let isSlashableValidatorStub: SinonStub, slashValidatorStub: SinonStub;
+  let isSlashableValidatorStub: SinonStubFn<typeof validatorUtils["isSlashableValidator"]>,
+    slashValidatorStub: SinonStubFn<typeof utils["slashValidator"]>;
 
   beforeEach(() => {
     isSlashableValidatorStub = sandbox.stub(validatorUtils, "isSlashableValidator");

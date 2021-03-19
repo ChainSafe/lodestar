@@ -13,6 +13,7 @@ import {generateEmptySignedBlock} from "../../../../utils/block";
 import {phase0} from "@chainsafe/lodestar-types";
 import {getStubbedMetadataStore, StubbedIPeerMetadataStore} from "../../../../utils/peer";
 import {testLogger} from "../../../../utils/logger";
+import {SinonStubFn} from "../../../../utils/types";
 
 describe("BlockRangeFetcher", function () {
   let fetcher: BlockRangeFetcher;
@@ -20,8 +21,8 @@ describe("BlockRangeFetcher", function () {
   let clockStub: SinonStubbedInstance<IBeaconClock>;
   let networkStub: SinonStubbedInstance<INetwork>;
   let metadataStub: StubbedIPeerMetadataStore;
-  let getBlockRangeStub: SinonStub;
-  let getCurrentSlotStub: SinonStub;
+  let getBlockRangeStub: SinonStubFn<typeof blockUtils["getBlockRange"]>;
+  let getCurrentSlotStub: SinonStubFn<typeof slotUtils["getCurrentSlot"]>;
   const logger = testLogger();
   const sandbox = sinon.createSandbox();
   let getPeers: SinonStub;

@@ -1,6 +1,6 @@
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {expect} from "chai";
-import sinon, {SinonStub} from "sinon";
+import sinon from "sinon";
 import {BeaconPoolApi} from "../../../../../../src/api/impl/beacon/pool";
 import {Network} from "../../../../../../src/network/network";
 import {
@@ -20,6 +20,7 @@ import {List} from "@chainsafe/ssz";
 import {Eth2Gossipsub} from "../../../../../../src/network/gossip";
 import {generateEmptySignedBlockHeader} from "../../../../../utils/block";
 import {setupApiImplTestServer} from "../../index.test";
+import {SinonStubFn} from "../../../../../utils/types";
 
 describe("beacon pool api impl", function () {
   let poolApi: BeaconPoolApi;
@@ -27,9 +28,9 @@ describe("beacon pool api impl", function () {
   let chainStub: SinonStubbedInstance<IBeaconChain>;
   let networkStub: SinonStubbedInstance<Network>;
   let gossipStub: SinonStubbedInstance<Eth2Gossipsub>;
-  let validateGossipAttesterSlashing: SinonStub;
-  let validateGossipProposerSlashing: SinonStub;
-  let validateVoluntaryExit: SinonStub;
+  let validateGossipAttesterSlashing: SinonStubFn<typeof attesterSlashingValidation["validateGossipAttesterSlashing"]>;
+  let validateGossipProposerSlashing: SinonStubFn<typeof proposerSlashingValidation["validateGossipProposerSlashing"]>;
+  let validateVoluntaryExit: SinonStubFn<typeof voluntaryExitValidation["validateGossipVoluntaryExit"]>;
 
   beforeEach(function () {
     const server = setupApiImplTestServer();

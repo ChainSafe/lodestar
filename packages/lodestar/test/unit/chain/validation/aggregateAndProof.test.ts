@@ -1,4 +1,4 @@
-import sinon, {SinonStub, SinonStubbedInstance} from "sinon";
+import sinon, {SinonStubbedInstance} from "sinon";
 import {expect} from "chai";
 import {rewiremock} from "../../../rewiremock";
 
@@ -21,15 +21,16 @@ import {generateCachedState} from "../../../utils/state";
 import {StubbedBeaconDb} from "../../../utils/stub";
 import {AttestationErrorCode} from "../../../../src/chain/errors";
 import {expectRejectedWithLodestarError} from "../../../utils/errors";
+import {SinonStubFn} from "../../../utils/types";
 
 describe("gossip aggregate and proof test", function () {
   let chain: SinonStubbedInstance<IBeaconChain>;
   let regen: SinonStubbedInstance<IStateRegenerator>;
   let db: StubbedBeaconDb;
-  let isAggregatorStub: SinonStub;
-  let isValidSelectionProofStub: SinonStub;
-  let isValidSignatureStub: SinonStub;
-  let isValidIndexedAttestationStub: SinonStub;
+  let isAggregatorStub: SinonStubFn<typeof validatorUtils["isAggregatorFromCommitteeLength"]>;
+  let isValidSelectionProofStub: SinonStubFn<typeof validationUtils["isValidSelectionProofSignature"]>;
+  let isValidSignatureStub: SinonStubFn<typeof validationUtils["isValidAggregateAndProofSignature"]>;
+  let isValidIndexedAttestationStub: SinonStubFn<typeof blockUtils["isValidIndexedAttestation"]>;
 
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async function mockValidateGossipAggregateAndProof({
@@ -255,7 +256,7 @@ describe("gossip aggregate and proof test", function () {
       );
     }
     expect(
-      (state.getBeaconCommittee as SinonStub).withArgs(
+      (state.getBeaconCommittee as SinonStubFn<typeof state["getBeaconCommittee"]>).withArgs(
         item.message.aggregate.data.slot,
         item.message.aggregate.data.index
       ).calledOnce

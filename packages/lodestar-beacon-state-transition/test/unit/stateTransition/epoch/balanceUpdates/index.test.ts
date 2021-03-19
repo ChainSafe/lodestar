@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import sinon, {SinonStub} from "sinon";
+import sinon from "sinon";
 
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import * as utils from "../../../../../src/util";
@@ -8,13 +8,14 @@ import {processRewardsAndPenalties} from "../../../../../src/phase0/naive/epoch/
 import * as attestationDeltas from "../../../../../src/phase0/naive/epoch/balanceUpdates/attestation";
 import {generateValidator} from "../../../../utils/validator";
 import {generateState} from "../../../../utils/state";
+import {SinonStubFn} from "../../../../utils/types";
 
 describe("process epoch - balance updates", function () {
   const sandbox = sinon.createSandbox();
-  let getCurrentEpochStub: SinonStub,
-    getAttestationDeltasStub: SinonStub,
-    increaseBalanceStub: SinonStub,
-    decreaseBalanceStub: SinonStub;
+  let getCurrentEpochStub: SinonStubFn<typeof utils["getCurrentEpoch"]>,
+    getAttestationDeltasStub: SinonStubFn<typeof attestationDeltas["getAttestationDeltas"]>,
+    increaseBalanceStub: SinonStubFn<typeof utils["increaseBalance"]>,
+    decreaseBalanceStub: SinonStubFn<typeof utils["decreaseBalance"]>;
 
   beforeEach(() => {
     getCurrentEpochStub = sandbox.stub(utils, "getCurrentEpoch");

@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import sinon, {SinonStub, SinonStubbedInstance} from "sinon";
+import sinon, {SinonStubbedInstance} from "sinon";
 
 import {config} from "@chainsafe/lodestar-config/minimal";
 import * as specUtils from "@chainsafe/lodestar-beacon-state-transition/lib/phase0/fast/util/block";
@@ -13,13 +13,14 @@ import {StubbedBeaconDb} from "../../../utils/stub";
 import {generateCachedState} from "../../../utils/state";
 import {BlockErrorCode} from "../../../../src/chain/errors";
 import {LodestarError} from "@chainsafe/lodestar-utils";
+import {SinonStubFn} from "../../../utils/types";
 
 describe("gossip block validation", function () {
   let chainStub: SinonStubbedInstance<IBeaconChain>;
   let forkChoiceStub: SinonStubbedInstance<ForkChoice>;
   let regenStub: SinonStubbedInstance<StateRegenerator>;
   let dbStub: StubbedBeaconDb;
-  let verifySignatureStub: SinonStub;
+  let verifySignatureStub: SinonStubFn<typeof specUtils["verifyBlockSignature"]>;
 
   beforeEach(function () {
     chainStub = sinon.createStubInstance(BeaconChain);
@@ -165,7 +166,11 @@ describe("gossip block validation", function () {
     expect(regenStub.getBlockSlotState.calledOnce).to.be.true;
     expect(chainStub.receiveBlock.calledOnce).to.be.false;
     expect(verifySignatureStub.calledOnce).to.be.true;
-    expect((state.epochCtx.getBeaconProposer as SinonStub).withArgs(signedBlock.message.slot).calledOnce).to.be.true;
+    expect(
+      (state.epochCtx.getBeaconProposer as SinonStubFn<typeof state.epochCtx["getBeaconProposer"]>).withArgs(
+        signedBlock.message.slot
+      ).calledOnce
+    ).to.be.true;
   });
 
   it("should accept - valid block", async function () {
@@ -190,6 +195,10 @@ describe("gossip block validation", function () {
     expect(dbStub.badBlock.has.withArgs(sinon.match.defined).calledOnce).to.be.true;
     expect(regenStub.getBlockSlotState.calledOnce).to.be.true;
     expect(verifySignatureStub.calledOnce).to.be.true;
-    expect((state.epochCtx.getBeaconProposer as SinonStub).withArgs(signedBlock.message.slot).calledOnce).to.be.true;
+    expect(
+      (state.epochCtx.getBeaconProposer as SinonStubFn<typeof state.epochCtx["getBeaconProposer"]>).withArgs(
+        signedBlock.message.slot
+      ).calledOnce
+    ).to.be.true;
   });
 });

@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import sinon, {SinonStub} from "sinon";
+import sinon from "sinon";
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import {processRandao} from "../../../../src/phase0/naive/block";
 import * as utils from "../../../../src/util";
@@ -7,11 +7,12 @@ import {getCurrentEpoch} from "../../../../src/util";
 import {generateEmptyBlock} from "../../../utils/block";
 import {generateState} from "../../../utils/state";
 import {generateValidators} from "../../../utils/validator";
+import {SinonStubFn} from "../../../utils/types";
 
 describe.skip("process block - randao", function () {
   const sandbox = sinon.createSandbox();
 
-  let getBeaconProposerStub: SinonStub;
+  let getBeaconProposerStub: SinonStubFn<typeof utils["getBeaconProposerIndex"]>;
 
   beforeEach(() => {
     getBeaconProposerStub = sandbox.stub(utils, "getBeaconProposerIndex");

@@ -1,15 +1,16 @@
-import sinon, {SinonStub} from "sinon";
+import sinon from "sinon";
 import * as blockUtils from "../../../../../../src/api/impl/beacon/blocks/utils";
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {expect, use} from "chai";
 import chaiAsPromised from "chai-as-promised";
 import {generateEmptySignedBlock} from "../../../../../utils/block";
 import {ApiImplTestModules, setupApiImplTestServer} from "../../index.test";
+import {SinonStubFn} from "../../../../../utils/types";
 
 use(chaiAsPromised);
 
 describe("api - beacon - getBlockHeader", function () {
-  let resolveBlockIdStub: SinonStub;
+  let resolveBlockIdStub: SinonStubFn<typeof blockUtils["resolveBlockId"]>;
   let server: ApiImplTestModules;
 
   before(function () {

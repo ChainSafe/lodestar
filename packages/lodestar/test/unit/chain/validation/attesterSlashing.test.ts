@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import sinon, {SinonStub} from "sinon";
+import sinon from "sinon";
 
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {generateEmptyAttesterSlashing} from "@chainsafe/lodestar-beacon-state-transition/test/utils/slashings";
@@ -12,10 +12,13 @@ import {generateCachedState} from "../../../utils/state";
 import {validateGossipAttesterSlashing} from "../../../../src/chain/validation/attesterSlashing";
 import {AttesterSlashingErrorCode} from "../../../../src/chain/errors/attesterSlashingError";
 import {LodestarError} from "@chainsafe/lodestar-utils";
+import {SinonStubFn} from "../../../utils/types";
 
 describe("GossipMessageValidator", () => {
   const sandbox = sinon.createSandbox();
-  let dbStub: StubbedBeaconDb, isValidIncomingAttesterSlashingStub: SinonStub, chainStub: StubbedChain;
+  let dbStub: StubbedBeaconDb,
+    isValidIncomingAttesterSlashingStub: SinonStubFn<typeof validatorStatusUtils["isValidAttesterSlashing"]>,
+    chainStub: StubbedChain;
 
   beforeEach(() => {
     isValidIncomingAttesterSlashingStub = sandbox.stub(validatorStatusUtils, "isValidAttesterSlashing");

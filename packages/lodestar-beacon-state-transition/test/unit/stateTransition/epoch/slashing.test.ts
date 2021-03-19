@@ -1,4 +1,4 @@
-import sinon, {SinonStub} from "sinon";
+import sinon from "sinon";
 import {expect} from "chai";
 import {List} from "@chainsafe/ssz";
 import {phase0} from "@chainsafe/lodestar-types";
@@ -9,11 +9,14 @@ import {processSlashings} from "../../../../src/phase0/naive/epoch/slashings";
 import {generateState} from "../../../utils/state";
 import {generateValidator} from "../../../utils/validator";
 import {intDiv} from "@chainsafe/lodestar-utils";
+import {SinonStubFn} from "../../../utils/types";
 
 describe.skip("process epoch - slashings", function () {
   const sandbox = sinon.createSandbox();
 
-  let getCurrentEpochStub: SinonStub, getTotalBalanceStub: SinonStub, decreaseBalanceStub: SinonStub;
+  let getCurrentEpochStub: SinonStubFn<typeof utils["getCurrentEpoch"]>,
+    getTotalBalanceStub: SinonStubFn<typeof utils["getTotalBalance"]>,
+    decreaseBalanceStub: SinonStubFn<typeof utils["decreaseBalance"]>;
 
   beforeEach(() => {
     getCurrentEpochStub = sandbox.stub(utils, "getCurrentEpoch");

@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import sinon, {SinonStub} from "sinon";
+import sinon from "sinon";
 import {List} from "@chainsafe/ssz";
 import {phase0} from "@chainsafe/lodestar-types";
 import {config} from "@chainsafe/lodestar-config/mainnet";
@@ -16,17 +16,18 @@ import {generateDeposit} from "../../../../utils/deposit";
 import {generateEmptyAttesterSlashing, generateEmptyProposerSlashing} from "../../../../utils/slashings";
 import {generateEmptyAttestation} from "../../../../utils/attestation";
 import {generateEmptySignedVoluntaryExit} from "../../../../utils/voluntaryExits";
+import {SinonStubFn} from "../../../../utils/types";
 
 /* eslint-disable no-empty */
 
 describe("process block - process operations", function () {
   const sandbox = sinon.createSandbox();
 
-  let processProposerSlashingStub: SinonStub,
-    processAttesterSlashingStub: SinonStub,
-    processAttestationStub: SinonStub,
-    processDepositStub: SinonStub,
-    processVoluntaryExitStub: SinonStub;
+  let processProposerSlashingStub: SinonStubFn<typeof processProposerSlashing["processProposerSlashing"]>,
+    processAttesterSlashingStub: SinonStubFn<typeof processAttesterSlashing["processAttesterSlashing"]>,
+    processAttestationStub: SinonStubFn<typeof processAttestation["processAttestation"]>,
+    processDepositStub: SinonStubFn<typeof processDeposit["processDeposit"]>,
+    processVoluntaryExitStub: SinonStubFn<typeof processVoluntaryExit["processVoluntaryExit"]>;
 
   beforeEach(() => {
     processProposerSlashingStub = sandbox.stub(processProposerSlashing, "processProposerSlashing");
@@ -74,7 +75,7 @@ describe("process block - process operations", function () {
   it("should fail to process operations - attesterSlashings length  exceed maxAttesterSlashings", function () {
     const state = generateState();
     const body = generateEmptyBlock().body;
-    processProposerSlashingStub.returns(0);
+    processProposerSlashingStub.returns();
     body.attesterSlashings = Array.from({length: config.params.MAX_ATTESTER_SLASHINGS + 1}, () =>
       config.types.phase0.AttesterSlashing.defaultValue()
     ) as List<phase0.AttesterSlashing>;
@@ -90,8 +91,8 @@ describe("process block - process operations", function () {
   it("should fail to process operations - attestation length  exceed maxAttestation", function () {
     const state = generateState();
     const body = generateEmptyBlock().body;
-    processProposerSlashingStub.returns(0);
-    processAttesterSlashingStub.returns(0);
+    processProposerSlashingStub.returns();
+    processAttesterSlashingStub.returns();
     body.attestations = Array.from({length: config.params.MAX_ATTESTATIONS + 1}, () =>
       config.types.phase0.Attestation.defaultValue()
     ) as List<phase0.Attestation>;
@@ -123,10 +124,10 @@ describe("process block - process operations", function () {
   it("should fail to process operations - voluntaryExit length  exceed maxVoluntaryExit", function () {
     const state = generateState();
     const body = generateEmptyBlock().body;
-    processProposerSlashingStub.returns(0);
-    processAttesterSlashingStub.returns(0);
-    processAttestationStub.returns(0);
-    processDepositStub.returns(0);
+    processProposerSlashingStub.returns();
+    processAttesterSlashingStub.returns();
+    processAttestationStub.returns();
+    processDepositStub.returns();
     body.voluntaryExits = Array.from({length: config.params.MAX_VOLUNTARY_EXITS + 1}, () =>
       config.types.phase0.SignedVoluntaryExit.defaultValue()
     ) as List<phase0.SignedVoluntaryExit>;
@@ -150,11 +151,11 @@ describe("process block - process operations", function () {
   it("should fail to process operations - transfer length  exceed maxTransfer", function () {
     const state = generateState();
     const body = generateEmptyBlock().body;
-    processProposerSlashingStub.returns(0);
-    processAttesterSlashingStub.returns(0);
-    processAttestationStub.returns(0);
-    processDepositStub.returns(0);
-    processVoluntaryExitStub.returns(0);
+    processProposerSlashingStub.returns();
+    processAttesterSlashingStub.returns();
+    processAttestationStub.returns();
+    processDepositStub.returns();
+    processVoluntaryExitStub.returns();
     body.proposerSlashings.push(generateEmptyProposerSlashing());
     body.attesterSlashings.push(generateEmptyAttesterSlashing());
     body.attestations.push(generateEmptyAttestation());
@@ -177,11 +178,11 @@ describe("process block - process operations", function () {
   it("should  process operations ", function () {
     const state = generateState();
     const body = generateEmptyBlock().body;
-    processProposerSlashingStub.returns(0);
-    processAttesterSlashingStub.returns(0);
-    processAttestationStub.returns(0);
-    processDepositStub.returns(0);
-    processVoluntaryExitStub.returns(0);
+    processProposerSlashingStub.returns();
+    processAttesterSlashingStub.returns();
+    processAttestationStub.returns();
+    processDepositStub.returns();
+    processVoluntaryExitStub.returns();
     body.proposerSlashings.push(generateEmptyProposerSlashing());
     body.attesterSlashings.push(generateEmptyAttesterSlashing());
     body.attestations.push(generateEmptyAttestation());

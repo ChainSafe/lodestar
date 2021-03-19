@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import sinon, {SinonStub} from "sinon";
+import sinon from "sinon";
 
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import * as utils from "../../../../../src/util";
@@ -8,10 +8,11 @@ import {generateValidators} from "../../../../utils/validator";
 import {getBaseReward} from "../../../../../src/phase0/naive/epoch/balanceUpdates/util";
 import {bigIntSqrt} from "@chainsafe/lodestar-utils";
 import {BASE_REWARDS_PER_EPOCH} from "../../../../../src/constants";
+import {SinonStubFn} from "../../../../utils/types";
 
 describe.skip("process epoch - balance updates", function () {
   const sandbox = sinon.createSandbox();
-  let getTotalActiveBalanceStub: SinonStub;
+  let getTotalActiveBalanceStub: SinonStubFn<typeof utils["getTotalActiveBalance"]>;
 
   beforeEach(() => {
     getTotalActiveBalanceStub = sandbox.stub(utils, "getTotalActiveBalance");

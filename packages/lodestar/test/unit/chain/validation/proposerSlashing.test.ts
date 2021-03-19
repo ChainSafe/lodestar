@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import sinon, {SinonStub} from "sinon";
+import sinon from "sinon";
 
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {generateEmptyProposerSlashing} from "@chainsafe/lodestar-beacon-state-transition/test/utils/slashings";
@@ -12,10 +12,13 @@ import {generateCachedState} from "../../../utils/state";
 import {ProposerSlashingErrorCode} from "../../../../src/chain/errors/proposerSlashingError";
 import {validateGossipProposerSlashing} from "../../../../src/chain/validation/proposerSlashing";
 import {LodestarError} from "@chainsafe/lodestar-utils";
+import {SinonStubFn} from "../../../utils/types";
 
 describe("validate proposer slashing", () => {
   const sandbox = sinon.createSandbox();
-  let dbStub: StubbedBeaconDb, isValidIncomingProposerSlashingStub: SinonStub, chainStub: StubbedChain;
+  let dbStub: StubbedBeaconDb,
+    isValidIncomingProposerSlashingStub: SinonStubFn<typeof validatorStatusUtils["isValidProposerSlashing"]>,
+    chainStub: StubbedChain;
 
   beforeEach(() => {
     isValidIncomingProposerSlashingStub = sandbox.stub(validatorStatusUtils, "isValidProposerSlashing");

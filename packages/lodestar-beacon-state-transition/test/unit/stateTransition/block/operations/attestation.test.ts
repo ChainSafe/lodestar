@@ -1,20 +1,21 @@
 import {expect} from "chai";
-import sinon, {SinonStub} from "sinon";
+import sinon from "sinon";
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import {ZERO_HASH} from "../../../../../src/constants";
 import * as utils from "../../../../../src/util";
 import {phase0} from "../../../../../src";
 import {generateState} from "../../../../utils/state";
 import {generateEmptyAttestation} from "../../../../utils/attestation";
+import {SinonStubFn} from "../../../../utils/types";
 
 describe("process block - attestation", function () {
   const sandbox = sinon.createSandbox();
 
-  let currentEpochStub: SinonStub,
-    previousEpochStub: SinonStub,
-    validateIndexedAttestationStub: SinonStub,
-    getBeaconProposerIndexStub: SinonStub,
-    getBeaconComitteeStub: SinonStub;
+  let currentEpochStub: SinonStubFn<typeof utils["getCurrentEpoch"]>,
+    previousEpochStub: SinonStubFn<typeof utils["getPreviousEpoch"]>,
+    validateIndexedAttestationStub: SinonStubFn<typeof utils["isValidIndexedAttestation"]>,
+    getBeaconProposerIndexStub: SinonStubFn<typeof utils["getBeaconProposerIndex"]>,
+    getBeaconComitteeStub: SinonStubFn<typeof utils["getBeaconCommittee"]>;
 
   beforeEach(() => {
     currentEpochStub = sandbox.stub(utils, "getCurrentEpoch");

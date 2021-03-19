@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import sinon, {SinonStub} from "sinon";
+import sinon from "sinon";
 
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import * as utilsEpoch from "../../../../../src/phase0/naive/epoch/util";
@@ -10,20 +10,21 @@ import {generateState} from "../../../../utils/state";
 import {generateValidators} from "../../../../utils/validator";
 import {getAttestationDeltas} from "../../../../../src/phase0/naive/epoch/balanceUpdates/attestation";
 import {generateEmptyAttestation} from "../../../../utils/attestation";
+import {SinonStubFn} from "../../../../utils/types";
 
 describe.skip("process epoch - balance updates", function () {
   const sandbox = sinon.createSandbox();
 
-  let getAttestingBalanceStub: SinonStub,
-    getMatchingHeadAttestationsStub: SinonStub,
-    getMatchingSourceAttestationsStub: SinonStub,
-    getMatchingTargetAttestationsStub: SinonStub,
-    getTotalActiveBalanceStub: SinonStub,
-    getUnslashedAttestingIndicesStub: SinonStub,
-    getBaseRewardStub: SinonStub,
-    getAttestingIndicesStub: SinonStub,
-    getPreviousEpochStub: SinonStub,
-    isActiveValidatorStub: SinonStub;
+  let getAttestingBalanceStub: SinonStubFn<typeof utilsEpoch["getAttestingBalance"]>,
+    getMatchingHeadAttestationsStub: SinonStubFn<typeof utilsEpoch["getMatchingHeadAttestations"]>,
+    getMatchingSourceAttestationsStub: SinonStubFn<typeof utilsEpoch["getMatchingSourceAttestations"]>,
+    getMatchingTargetAttestationsStub: SinonStubFn<typeof utilsEpoch["getMatchingTargetAttestations"]>,
+    getTotalActiveBalanceStub: SinonStubFn<typeof utils["getTotalActiveBalance"]>,
+    getUnslashedAttestingIndicesStub: SinonStubFn<typeof utilsEpoch["getUnslashedAttestingIndices"]>,
+    getBaseRewardStub: SinonStubFn<typeof baseReward["getBaseReward"]>,
+    getAttestingIndicesStub: SinonStubFn<typeof utils["getAttestingIndices"]>,
+    getPreviousEpochStub: SinonStubFn<typeof utils["getPreviousEpoch"]>,
+    isActiveValidatorStub: SinonStubFn<typeof utils["isActiveValidator"]>;
 
   beforeEach(() => {
     getAttestingBalanceStub = sandbox.stub(utilsEpoch, "getAttestingBalance");

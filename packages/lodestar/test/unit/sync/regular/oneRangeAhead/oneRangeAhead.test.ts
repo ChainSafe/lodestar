@@ -1,4 +1,4 @@
-import {SinonStub, SinonStubbedInstance} from "sinon";
+import {SinonStubbedInstance} from "sinon";
 import {ORARegularSync} from "../../../../../src/sync/regular/oneRangeAhead/oneRangeAhead";
 import {IBlockRangeFetcher} from "../../../../../src/sync/regular/oneRangeAhead/interface";
 import {BlockRangeFetcher} from "../../../../../src/sync/regular/oneRangeAhead/fetcher";
@@ -14,6 +14,7 @@ import {IBeaconClock, LocalClock} from "../../../../../src/chain/clock";
 import * as slotUtils from "@chainsafe/lodestar-beacon-state-transition/lib/util/slot";
 import {sleep} from "@chainsafe/lodestar-cli/src/util";
 import {phase0} from "@chainsafe/lodestar-types";
+import {SinonStubFn} from "../../../../utils/types";
 
 describe("ORARegularSync", function () {
   let sync: ORARegularSync;
@@ -23,7 +24,7 @@ describe("ORARegularSync", function () {
   let forkChoiceStub: SinonStubbedInstance<ForkChoice>;
   let networkStub: SinonStubbedInstance<INetwork>;
   let gossipStub: SinonStubbedInstance<Eth2Gossipsub>;
-  let getCurrentSlotStub: SinonStub;
+  let getCurrentSlotStub: SinonStubFn<typeof slotUtils["getCurrentSlot"]>;
   const logger = testLogger("ORARegularSync");
 
   beforeEach(() => {

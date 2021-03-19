@@ -24,6 +24,7 @@ describe("Libp2pPeerMetadataStore", function () {
       set: sinon.stub().callsFake(
         (peerId: PeerId, key: string, value: Buffer): ProtoBook => {
           stored = value;
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-return
           return (metabookStub as unknown) as ProtoBook;
         }
       ) as SinonStub<[PeerId, string, Buffer], ProtoBook>,

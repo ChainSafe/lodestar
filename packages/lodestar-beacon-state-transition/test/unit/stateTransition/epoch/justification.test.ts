@@ -1,4 +1,4 @@
-import sinon, {SinonStub} from "sinon";
+import sinon from "sinon";
 import {expect} from "chai";
 
 import {config} from "@chainsafe/lodestar-config/mainnet";
@@ -6,16 +6,17 @@ import * as utils1 from "../../../../src/util";
 import * as utils2 from "../../../../src/phase0/naive/epoch/util";
 import {generateState} from "../../../utils/state";
 import {processJustificationAndFinalization} from "../../../../src/phase0/naive/epoch/justification";
+import {SinonStubFn} from "../../../utils/types";
 
 describe.skip("process epoch - justification and finalization", function () {
   const sandbox = sinon.createSandbox();
 
-  let getBlockRootStub: SinonStub,
-    getCurrentEpochStub: SinonStub,
-    getPreviousEpochStub: SinonStub,
-    getAttestingBalanceStub: SinonStub,
-    getMatchingTargetAttestationsStub: SinonStub,
-    getTotalActiveBalanceStub: SinonStub;
+  let getBlockRootStub: SinonStubFn<typeof utils1["getBlockRoot"]>,
+    getCurrentEpochStub: SinonStubFn<typeof utils1["getCurrentEpoch"]>,
+    getPreviousEpochStub: SinonStubFn<typeof utils1["getPreviousEpoch"]>,
+    getAttestingBalanceStub: SinonStubFn<typeof utils2["getAttestingBalance"]>,
+    getMatchingTargetAttestationsStub: SinonStubFn<typeof utils2["getMatchingTargetAttestations"]>,
+    getTotalActiveBalanceStub: SinonStubFn<typeof utils1["getTotalActiveBalance"]>;
 
   beforeEach(() => {
     getBlockRootStub = sandbox.stub(utils1, "getBlockRoot");

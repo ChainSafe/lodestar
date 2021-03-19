@@ -2,7 +2,7 @@ import {ZERO_HASH} from "@chainsafe/lodestar-beacon-state-transition";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {expect} from "chai";
-import sinon, {SinonStub} from "sinon";
+import sinon from "sinon";
 import {SinonStubbedInstance} from "sinon";
 import * as stateApiUtils from "../../../../../../src/api/impl/beacon/state/utils";
 import {DebugBeaconApi} from "../../../../../../src/api/impl/debug/beacon";
@@ -12,13 +12,14 @@ import {StubbedBeaconDb} from "../../../../../utils/stub";
 import {generateState} from "../../../../../utils/state";
 import {setupApiImplTestServer} from "../../index.test";
 import {testLogger} from "../../../../../utils/logger";
+import {SinonStubFn} from "../../../../../utils/types";
 
 describe("api - debug - beacon", function () {
   let debugApi: DebugBeaconApi;
   let chainStub: SinonStubbedInstance<IBeaconChain>;
   let forkchoiceStub: SinonStubbedInstance<IForkChoice>;
   let dbStub: StubbedBeaconDb;
-  let resolveStateIdStub: SinonStub;
+  let resolveStateIdStub: SinonStubFn<typeof stateApiUtils["resolveStateId"]>;
   const logger = testLogger();
 
   beforeEach(function () {
@@ -56,7 +57,7 @@ describe("api - debug - beacon", function () {
   });
 
   it("getState - should return state", async function () {
-    resolveStateIdStub.resolves({state: generateState()});
+    resolveStateIdStub.resolves(generateState());
     const state = await debugApi.getState("something");
     expect(state).to.not.be.null;
   });

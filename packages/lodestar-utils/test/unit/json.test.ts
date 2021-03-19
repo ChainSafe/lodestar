@@ -1,5 +1,4 @@
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
 import {fromHexString, Json} from "@chainsafe/ssz";
 import {expect} from "chai";
 import {LodestarError, toJson, toString, CIRCULAR_REFERENCE_TAG} from "../../src";

@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import sinon, {SinonStub} from "sinon";
+import sinon from "sinon";
 
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import {GENESIS_SLOT} from "../../../../src/constants";
@@ -9,16 +9,19 @@ import * as balanceUpdateUtils from "../../../../src/phase0/naive/epoch/balanceU
 import * as registryUpdateUtils from "../../../../src/phase0/naive/epoch/registryUpdates";
 import * as slashingUtils from "../../../../src/phase0/naive/epoch/slashings";
 import {generateState} from "../../../utils/state";
+import {SinonStubFn} from "../../../utils/types";
 
 /* eslint-disable no-empty */
 
 describe("process epoch - crosslinks", function () {
   const sandbox = sinon.createSandbox();
 
-  let processJustificationAndFinalizationStub: SinonStub,
-    processRewardsAndPenaltiesStub: SinonStub,
-    processRegistryUpdatesStub: SinonStub,
-    processSlashingsStub: SinonStub;
+  let processJustificationAndFinalizationStub: SinonStubFn<
+      typeof justificationUtils["processJustificationAndFinalization"]
+    >,
+    processRewardsAndPenaltiesStub: SinonStubFn<typeof balanceUpdateUtils["processRewardsAndPenalties"]>,
+    processRegistryUpdatesStub: SinonStubFn<typeof registryUpdateUtils["processRegistryUpdates"]>,
+    processSlashingsStub: SinonStubFn<typeof slashingUtils["processSlashings"]>;
 
   beforeEach(() => {
     processJustificationAndFinalizationStub = sandbox.stub(justificationUtils, "processJustificationAndFinalization");

@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import sinon, {SinonStub, SinonStubbedInstance} from "sinon";
+import sinon, {SinonStubbedInstance} from "sinon";
 
 import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
@@ -12,12 +12,13 @@ import {AttestationErrorCode} from "../../../../src/chain/errors";
 import {generateAttestation} from "../../../utils/attestation";
 import {generateCachedState} from "../../../utils/state";
 import {LodestarError} from "@chainsafe/lodestar-utils";
+import {SinonStubFn} from "../../../utils/types";
 
 describe("processAttestation", function () {
   const emitter = new ChainEventEmitter();
   let forkChoice: SinonStubbedInstance<ForkChoice>;
   let regen: SinonStubbedInstance<StateRegenerator>;
-  let isValidIndexedAttestationStub: SinonStub;
+  let isValidIndexedAttestationStub: SinonStubFn<typeof attestationUtils["isValidIndexedAttestation"]>;
 
   beforeEach(function () {
     forkChoice = sinon.createStubInstance(ForkChoice);

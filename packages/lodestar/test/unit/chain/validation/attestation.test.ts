@@ -1,4 +1,4 @@
-import sinon, {createStubInstance, SinonStub, SinonStubbedInstance} from "sinon";
+import sinon, {createStubInstance, SinonStubbedInstance} from "sinon";
 import {BeaconChain, ChainEventEmitter, ForkChoiceStore, IBeaconChain} from "../../../../src/chain";
 import {StubbedBeaconDb} from "../../../utils/stub";
 import {expect} from "chai";
@@ -21,14 +21,15 @@ import {AttestationErrorCode} from "../../../../src/chain/errors";
 import {Gwei} from "@chainsafe/lodestar-types";
 import {LodestarError} from "@chainsafe/lodestar-utils";
 import {IEpochShuffling} from "@chainsafe/lodestar-beacon-state-transition/lib/phase0/fast";
+import {SinonStubFn} from "../../../utils/types";
 
 describe("gossip attestation validation", function () {
   let chain: SinonStubbedInstance<IBeaconChain>;
   let forkChoice: SinonStubbedInstance<IForkChoice>;
   let regen: SinonStubbedInstance<IStateRegenerator>;
   let db: StubbedBeaconDb;
-  let computeAttestationSubnetStub: SinonStub;
-  let isValidIndexedAttestationStub: SinonStub;
+  let computeAttestationSubnetStub: SinonStubFn<typeof attestationUtils["computeSubnetForAttestation"]>;
+  let isValidIndexedAttestationStub: SinonStubFn<typeof blockUtils["isValidIndexedAttestation"]>;
   let forkChoiceStub: SinonStubbedInstance<ForkChoice>;
   let toIndexedAttestation: (attestation: phase0.Attestation) => phase0.IndexedAttestation;
 
