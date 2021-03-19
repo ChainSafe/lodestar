@@ -1,4 +1,4 @@
-import sinon, {SinonStub} from "sinon";
+import sinon from "sinon";
 import {expect} from "chai";
 
 import {List} from "@chainsafe/ssz";

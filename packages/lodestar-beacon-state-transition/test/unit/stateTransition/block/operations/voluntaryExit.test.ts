@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import sinon, {SinonStub} from "sinon";
+import sinon from "sinon";
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import {FAR_FUTURE_EPOCH} from "../../../../../src/constants";
 import * as utils from "../../../../../src/util";

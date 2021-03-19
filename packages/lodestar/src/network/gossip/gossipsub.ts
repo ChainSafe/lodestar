@@ -4,7 +4,7 @@ import {InMessage} from "libp2p-interfaces/src/pubsub";
 import Libp2p from "libp2p";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ATTESTATION_SUBNET_COUNT, phase0, Root} from "@chainsafe/lodestar-types";
-import {ILogger, LodestarError, toJson} from "@chainsafe/lodestar-utils";
+import {ILogger, toJson} from "@chainsafe/lodestar-utils";
 import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 
 import {IBeaconMetrics} from "../../metrics";
@@ -23,7 +23,6 @@ import {encodeMessageData, decodeMessageData} from "./encoding";
 import {DEFAULT_ENCODING} from "./constants";
 import {GossipValidationError} from "./errors";
 import {ERR_TOPIC_VALIDATOR_REJECT} from "libp2p-gossipsub/src/constants";
-import {BlockError} from "../../chain/errors";
 
 interface IGossipsubModules {
   config: IBeaconConfig;

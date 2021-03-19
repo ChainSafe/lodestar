@@ -1,4 +1,4 @@
-import sinon, {SinonStub} from "sinon";
+import sinon from "sinon";
 import {expect} from "chai";
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import * as utils from "../../../../src/util";

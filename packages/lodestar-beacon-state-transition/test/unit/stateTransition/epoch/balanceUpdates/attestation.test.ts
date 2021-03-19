@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import sinon, {SinonStub} from "sinon";
+import sinon from "sinon";
 
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import * as utilsEpoch from "../../../../../src/phase0/naive/epoch/util";

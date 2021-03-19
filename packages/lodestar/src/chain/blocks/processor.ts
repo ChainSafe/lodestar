@@ -15,7 +15,6 @@ import {IBeaconMetrics} from "../../metrics";
 
 import {processBlock, processChainSegment} from "./process";
 import {validateBlock} from "./validate";
-import {LodestarError} from "@chainsafe/lodestar-utils";
 
 type BlockProcessorModules = {
   config: IBeaconConfig;
