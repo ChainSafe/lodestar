@@ -7,10 +7,11 @@ import {importCmd} from "./import";
 import {list} from "./list";
 import {slashingProtection} from "./slashingProtection";
 import {voluntaryExit} from "./voluntaryExit";
+import {recover} from "./recover";
 
 export const validator: ICliCommand<IAccountValidatorArgs, IGlobalArgs> = {
   command: "validator <command>",
   describe: "Provides commands for managing Eth2 validators.",
   options: accountValidatorOptions,
-  subcommands: [create, deposit, importCmd, list, slashingProtection, voluntaryExit],
+  subcommands: [create, deposit, importCmd, list, recover, slashingProtection, voluntaryExit],
 };
