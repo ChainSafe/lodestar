@@ -48,6 +48,26 @@ docker-compose -f docker-compose.yml -f docker-compose.validator.yml up -d
 docker-compose -f docker/docker-compose.local.yml up -d
 ```
 
+**Development**
+
+Development image will have the basic packages and current (source) directory mapped to  `/usr/app` to map your code, and `/usr/app/node_modules` to `../dev/lodestar/node_modules` to keep the source clean. Start development container and get the dev shell.
+
+```
+docker-compose -f docker-compose.yml -f development.yml up -d beacon_node
+sudo docker exec -it $(sudo docker ps |grep lodestar:dev|awk '{print $1}') /bin/bash
+```
+
+Now install and build the lodestar codebase.
+
+```
+yarn install
+```
+
+Run the code as beacon or validator (or both opening two seperate shells)
+
+```
+ts-node packages/lodestar-cli/src/index.ts ...
+```
 # First-time Contributor?
 
 Unsure where to begin contributing to Lodestar? Here are some ideas!

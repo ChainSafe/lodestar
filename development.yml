@@ -1,0 +1,10 @@
+version: "3.4"
+services:
+  beacon_node:
+    build:
+      target: development
+    image: lodestar:dev
+    volumes:
+      - ./:/usr/app
+      - ../dev/lodestar/node_modules:/usr/app/node_modules
+    command: tail -F anything
