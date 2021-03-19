@@ -8,6 +8,7 @@ import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-tes
 import {IBlockSanityTestCase} from "./type";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {SPEC_TEST_LOCATION} from "../../../utils/specTestCases";
+import {BeaconState} from "@chainsafe/lodestar-types/phase0";
 
 describeDirectorySpecTest<IBlockSanityTestCase, phase0.BeaconState>(
   "block sanity mainnet",
@@ -52,7 +53,7 @@ describeDirectorySpecTest<IBlockSanityTestCase, phase0.BeaconState>(
       return !testCase.post;
     },
     timeout: 10000000,
-    getExpected: (testCase) => testCase.post,
+    getExpected: (testCase) => testCase.post as BeaconState,
     expectFunc: (testCase, expected, actual) => {
       expect(config.types.phase0.BeaconState.equals(actual, expected)).to.be.true;
     },
@@ -63,7 +64,7 @@ function generateBlocksSZZTypeMapping(
   n: number,
   config: IBeaconConfig
 ): Record<string, typeof config.types.phase0.SignedBeaconBlock> {
-  const blocksMapping: any = {};
+  const blocksMapping: Record<string, typeof config.types.phase0.SignedBeaconBlock> = {};
   for (let i = 0; i < n; i++) {
     blocksMapping[`blocks_${i}`] = config.types.phase0.SignedBeaconBlock;
   }

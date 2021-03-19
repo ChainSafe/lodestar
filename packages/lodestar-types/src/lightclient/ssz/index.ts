@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import {IBeaconParams} from "@chainsafe/lodestar-params";
 
 import {IPhase0SSZTypes} from "../../phase0";

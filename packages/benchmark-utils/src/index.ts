@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import fs, {writeFile} from "fs";
 import {BENCH_DIR} from "./constant";
 import Benchmark from "benchmark";

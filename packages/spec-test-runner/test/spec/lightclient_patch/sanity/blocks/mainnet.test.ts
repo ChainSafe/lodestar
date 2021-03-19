@@ -55,7 +55,7 @@ function generateBlocksSZZTypeMapping(
   n: number,
   config: IBeaconConfig
 ): Record<string, typeof config.types.lightclient.SignedBeaconBlock> {
-  const blocksMapping: any = {};
+  const blocksMapping: Record<string, typeof config.types.lightclient.SignedBeaconBlock> = {};
   for (let i = 0; i < n; i++) {
     blocksMapping[`blocks_${i}`] = config.types.lightclient.SignedBeaconBlock;
   }
