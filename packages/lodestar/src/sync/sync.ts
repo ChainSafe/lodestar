@@ -60,7 +60,6 @@ export class BeaconSync implements IBeaconSync {
       return;
     }
 
-    if ((this.mode as SyncMode) === SyncMode.STOPPED) return;
     this.mode = SyncMode.INITIAL_SYNCING;
     this.startSyncTimer(this.config.params.SLOTS_PER_EPOCH * this.config.params.SECONDS_PER_SLOT * 1000);
 
@@ -89,6 +88,15 @@ export class BeaconSync implements IBeaconSync {
       .catch((e) => {
         this.logger.error("Error on initial sync", {}, e);
       });
+
+    // Hack while RangeSync is not merged
+    // If a node witness the genesis event and has peers consider it synced and start gossip
+    this.chain.emitter.on(ChainEvent.clockEpoch, (epoch) => {
+      if (epoch === 0 && this.network.getPeers().length > 0) {
+        this.initialSyncCompleted();
+        this.regularSyncCompleted();
+      }
+    });
   }
 
   async stop(): Promise<void> {
@@ -98,7 +106,7 @@ export class BeaconSync implements IBeaconSync {
     }
     this.mode = SyncMode.STOPPED;
     this.chain.emitter.off(ChainEvent.errorBlock, this.onUnknownBlockRoot);
-    this.regularSync.off("syncCompleted", this.syncCompleted);
+    this.regularSync.off("syncCompleted", this.regularSyncCompleted);
     this.stopSyncTimer();
     this.regularSync.stop();
     this.attestationCollector.stop();
@@ -170,19 +178,24 @@ export class BeaconSync implements IBeaconSync {
 
   private startRegularSync(): void {
     if (this.mode === SyncMode.STOPPED) return;
-    this.mode = SyncMode.REGULAR_SYNCING;
-    this.startSyncTimer(3 * this.config.params.SECONDS_PER_SLOT * 1000);
-    this.regularSync.on("syncCompleted", this.syncCompleted);
-    this.chain.emitter.on(ChainEvent.errorBlock, this.onUnknownBlockRoot);
-    this.gossip.start();
+    this.regularSync.on("syncCompleted", this.regularSyncCompleted);
     this.regularSync.start();
+    this.initialSyncCompleted();
   }
 
-  private syncCompleted = async (): Promise<void> => {
+  private initialSyncCompleted = (): void => {
+    this.mode = SyncMode.REGULAR_SYNCING;
+    this.startSyncTimer(3 * this.config.params.SECONDS_PER_SLOT * 1000);
+    this.chain.emitter.off(ChainEvent.errorBlock, this.onUnknownBlockRoot);
+    this.chain.emitter.on(ChainEvent.errorBlock, this.onUnknownBlockRoot);
+    this.gossip.start();
+  };
+
+  private regularSyncCompleted = (): void => {
     this.mode = SyncMode.SYNCED;
     this.stopSyncTimer();
     this.gossip.start();
-    await this.network.handleSyncCompleted();
+    void this.network.handleSyncCompleted();
   };
 
   private startSyncTimer(interval: number): void {
