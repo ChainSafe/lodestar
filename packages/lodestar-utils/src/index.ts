@@ -4,6 +4,7 @@ export * from "./yaml";
 export * from "./assert";
 export * from "./bytes";
 export * from "./errors";
+export * from "./format";
 export * from "./math";
 export * from "./objects";
 export * from "./notNullish";

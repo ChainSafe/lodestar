@@ -1,7 +1,5 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {Root} from "@chainsafe/lodestar-types";
-import {ErrorAborted, ILogger, sleep} from "@chainsafe/lodestar-utils";
-import {toHexString} from "@chainsafe/ssz";
+import {ErrorAborted, ILogger, sleep, prettyBytes} from "@chainsafe/lodestar-utils";
 import {AbortSignal} from "abort-controller";
 import {IBeaconChain} from "../chain";
 import {INetwork} from "../network";
@@ -55,8 +53,8 @@ export async function runNodeNotifier({
       timeSeries.addPoint(headSlot, Date.now());
 
       const peersRow = `peers: ${connectedPeerCount}`;
-      const finalizedCheckpointRow = `finalized: ${finalizedEpoch} ${prettyRoot(finalizedRoot)}`;
-      const headRow = `head: ${headInfo.slot} ${prettyRoot(headInfo.blockRoot)}`;
+      const finalizedCheckpointRow = `finalized: ${finalizedEpoch} ${prettyBytes(finalizedRoot)}`;
+      const headRow = `head: ${headInfo.slot} ${prettyBytes(headInfo.blockRoot)}`;
       const currentSlotRow = `currentSlot: ${currentSlot}`;
 
       let nodeState: string[] = [];
@@ -108,9 +106,4 @@ function timeToNextHalfSlot(config: IBeaconConfig, chain: IBeaconChain): number 
   const msFromGenesis = Date.now() - chain.getGenesisTime() * 1000;
   const msToNextSlot = msPerSlot - (msFromGenesis % msPerSlot);
   return msToNextSlot > msPerSlot / 2 ? msToNextSlot - msPerSlot / 2 : msToNextSlot + msPerSlot / 2;
-}
-
-function prettyRoot(root: Root): string {
-  const str = toHexString(root);
-  return `${str.slice(0, 6)}…${str.slice(-4)}`;
 }

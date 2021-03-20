@@ -4,7 +4,7 @@
 import {computeEpochAtSlot, computeSigningRoot, getDomain} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {BLSSignature, Epoch, Root, phase0, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
-import {ILogger} from "@chainsafe/lodestar-utils";
+import {ILogger, prettyBytes} from "@chainsafe/lodestar-utils";
 import {fromHexString, List, toHexString} from "@chainsafe/ssz";
 import {AbortController, AbortSignal} from "abort-controller";
 import {IApiClient} from "../api";
@@ -215,13 +215,7 @@ export class AttestationService {
     }
     try {
       await this.provider.beacon.pool.submitAttestation(attestation);
-      this.logger.info("Published attestation", {
-        slot: attestation.data.slot,
-        committee: attestation.data.index,
-        attestation: toHexString(this.config.types.phase0.Attestation.hashTreeRoot(attestation)),
-        block: toHexString(attestation.data.target.root),
-        validator: toHexString(duty.pubkey),
-      });
+      this.logger.info("Published attestation", {slot: attestation.data.slot, validator: prettyBytes(duty.pubkey)});
     } catch (e) {
       this.logger.error("Failed to publish attestation", e);
     }
@@ -293,7 +287,7 @@ export class AttestationService {
     };
     try {
       await this.provider.validator.publishAggregateAndProofs([signedAggregateAndProof]);
-      this.logger.info("Published aggregateAndProof", {committeeIndex: duty.committeeIndex, slot: duty.slot});
+      this.logger.info("Published aggregateAndProof", {slot: duty.slot, validator: prettyBytes(duty.pubkey)});
     } catch (e) {
       this.logger.error(
         "Failed to publish aggregate and proof",
