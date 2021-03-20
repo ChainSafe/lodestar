@@ -57,7 +57,7 @@ export async function beaconHandler(args: IBeaconArgs & IGlobalArgs): Promise<vo
       config,
       db,
       logger,
-      libp2p: await createNodeJsLibp2p(peerId, options.network, beaconPaths.peerStoreDir),
+      libp2p: await createNodeJsLibp2p(peerId, options.network, {peerStoreDir: beaconPaths.peerStoreDir}),
       anchorState,
     });
 

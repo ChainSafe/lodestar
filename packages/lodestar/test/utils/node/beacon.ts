@@ -14,6 +14,7 @@ import {IBeaconNodeOptions} from "../../../src/node/options";
 import {defaultOptions} from "../../../src/node/options";
 import {BeaconDb} from "../../../src/db";
 import {testLogger} from "../logger";
+import PeerId from "peer-id";
 
 export async function getDevBeaconNode({
   params,
@@ -21,14 +22,16 @@ export async function getDevBeaconNode({
   validatorCount = 8,
   genesisTime,
   logger,
+  peerId,
 }: {
   params: Partial<IBeaconParams>;
   options?: RecursivePartial<IBeaconNodeOptions>;
   validatorCount?: number;
   genesisTime?: number;
   logger?: ILogger;
+  peerId?: PeerId;
 }): Promise<BeaconNode> {
-  const peerId = await createPeerId();
+  if (!peerId) peerId = await createPeerId();
   const tmpDir = tmp.dirSync({unsafeCleanup: true});
   const config = createIBeaconConfig({...minimalParams, ...params});
   logger = logger ?? testLogger();
@@ -42,15 +45,17 @@ export async function getDevBeaconNode({
       discv5: {
         enabled: false,
         enr: createEnr(peerId),
-        bindAddr: "/ip4/127.0.0.1/udp/0",
+        bindAddr: options.network?.discv5?.bindAddr || "/ip4/127.0.0.1/udp/0",
         bootEnrs: [],
       },
-      localMultiaddrs: ["/ip4/127.0.0.1/tcp/0"],
+      localMultiaddrs: options.network?.localMultiaddrs || ["/ip4/127.0.0.1/tcp/0"],
       minPeers: 25,
       maxPeers: 25,
     },
-    undefined,
-    true
+    {
+      autoDial: true,
+      disablePeerDiscovery: true,
+    }
   );
 
   options = deepmerge(

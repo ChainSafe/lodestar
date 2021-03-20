@@ -3,9 +3,12 @@ import os from "os";
 import {Worker} from "worker_threads";
 import {IBeaconParams} from "@chainsafe/lodestar-params";
 import {phase0} from "@chainsafe/lodestar-types";
+import {toHexString} from "@chainsafe/ssz";
 import {waitForEvent} from "../utils/events/resolver";
 import {ChainEvent} from "../../src/chain";
+import {createPeerId} from "../../src/network";
 import {logFiles} from "./params";
+import {NodeWorkerOptions} from "./threaded/types";
 
 /* eslint-disable no-console */
 
@@ -29,16 +32,36 @@ describe("Run multi node multi thread interop validators (no eth1) until checkpo
       );
 
       const workers: Worker[] = [];
+      const p2pPorts: number[] = [];
+      const peerIdPrivkeys: string[] = [];
+      const nodes: NodeWorkerOptions["nodes"] = [];
       // delay a bit so regular sync sees it's up to date and sync is completed from the beginning
       const minGenesisTime = Math.floor(Date.now() / 1000);
       // it takes more time to detect peers in threaded test
-      const genesisDelay = 20 * beaconParams.SECONDS_PER_SLOT;
+      const genesisDelay = 30 * beaconParams.SECONDS_PER_SLOT;
       const genesisTime = minGenesisTime + genesisDelay;
 
       for (let i = 0; i < nodeCount; i++) {
-        const options = {
+        const p2pPort = 10000 + i;
+        const peerId = await createPeerId();
+        const peerIdPrivkey = toHexString(peerId.marshalPrivKey());
+        p2pPorts.push(p2pPort);
+        peerIdPrivkeys.push(peerIdPrivkey);
+        nodes.push({localMultiaddrs: [`/ip4/127.0.0.1/tcp/${p2pPort}`], peerIdPrivkey});
+      }
+
+      for (let i = 0; i < nodeCount; i++) {
+        const p2pPort = p2pPorts[i];
+        const peerIdPrivkey = peerIdPrivkeys[i];
+        const options: NodeWorkerOptions = {
           params: beaconParams,
-          options: {sync: {minPeers: 1}},
+          options: {
+            sync: {minPeers: 1},
+            network: {
+              discv5: {bindAddr: `/ip4/127.0.0.1/udp/${p2pPort}`},
+              localMultiaddrs: [`/ip4/127.0.0.1/tcp/${p2pPort}`],
+            },
+          },
           validatorCount: nodeCount * validatorsPerNode,
           genesisTime,
           nodeIndex: i,
@@ -46,6 +69,8 @@ describe("Run multi node multi thread interop validators (no eth1) until checkpo
           validatorsPerNode,
           checkpointEvent,
           logFile: logFiles.multinodeMultithread,
+          peerIdPrivkey,
+          nodes,
         };
 
         workers.push(

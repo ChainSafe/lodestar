@@ -241,6 +241,8 @@ export class Network extends (EventEmitter as {new (): NetworkEventEmitter}) imp
 
   private searchDiscv5Peers = async (subnet: number): Promise<{peerId: PeerId; multiaddr: Multiaddr}[]> => {
     const discovery: Discv5Discovery = this.libp2p._discovery.get("discv5") as Discv5Discovery;
+    // if disablePeerDiscovery = true, libp2p will not have any "discv5" module
+    if (!discovery) return [];
     const discv5: Discv5 = discovery.discv5;
 
     return await Promise.all(
