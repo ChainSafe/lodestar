@@ -20,6 +20,7 @@ import {
 import {SeenAttestationCache} from "../../../src/db/api/beacon/seenAttestationCache";
 import {minimalConfig} from "@chainsafe/lodestar-config/minimal";
 import {PendingBlockRepository} from "../../../src/db/api/beacon/repositories/pendingBlock";
+import {SignedBeaconBlock} from "@chainsafe/lodestar-types/phase0";
 
 export class StubbedBeaconDb extends BeaconDb {
   db!: SinonStubbedInstance<LevelDbController>;
@@ -48,22 +49,57 @@ export class StubbedBeaconDb extends BeaconDb {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   constructor(sinon: SinonSandbox, config = minimalConfig) {
     super({config, controller: null!});
-    this.badBlock = sinon.createStubInstance(BadBlockRepository) as any;
-    this.block = sinon.createStubInstance(BlockRepository) as any;
-    this.pendingBlock = sinon.createStubInstance(PendingBlockRepository) as any;
-    this.blockArchive = sinon.createStubInstance(BlockArchiveRepository) as any;
-    this.stateArchive = sinon.createStubInstance(StateArchiveRepository) as any;
+    this.badBlock = sinon.createStubInstance(BadBlockRepository) as SinonStubbedInstance<BadBlockRepository> &
+      BadBlockRepository;
+    this.block = sinon.createStubInstance(BlockRepository) as SinonStubbedInstance<BlockRepository> & BlockRepository;
+    this.pendingBlock = sinon.createStubInstance(PendingBlockRepository) as SinonStubbedInstance<
+      PendingBlockRepository
+    > &
+      PendingBlockRepository;
+    this.blockArchive = sinon.createStubInstance(BlockArchiveRepository) as SinonStubbedInstance<
+      BlockArchiveRepository
+    > &
+      BlockArchiveRepository;
+    this.stateArchive = sinon.createStubInstance(StateArchiveRepository) as SinonStubbedInstance<
+      StateArchiveRepository
+    > &
+      StateArchiveRepository;
 
-    this.attestation = sinon.createStubInstance(AttestationRepository) as any;
-    this.aggregateAndProof = sinon.createStubInstance(AggregateAndProofRepository) as any;
-    this.voluntaryExit = sinon.createStubInstance(VoluntaryExitRepository) as any;
-    this.proposerSlashing = sinon.createStubInstance(ProposerSlashingRepository) as any;
-    this.attesterSlashing = sinon.createStubInstance(AttesterSlashingRepository) as any;
-    this.depositEvent = sinon.createStubInstance(DepositEventRepository) as any;
+    this.attestation = sinon.createStubInstance(AttestationRepository) as SinonStubbedInstance<AttestationRepository> &
+      AttestationRepository;
+    this.aggregateAndProof = sinon.createStubInstance(AggregateAndProofRepository) as SinonStubbedInstance<
+      AggregateAndProofRepository
+    > &
+      AggregateAndProofRepository;
+    this.voluntaryExit = sinon.createStubInstance(VoluntaryExitRepository) as SinonStubbedInstance<
+      VoluntaryExitRepository
+    > &
+      VoluntaryExitRepository;
+    this.proposerSlashing = sinon.createStubInstance(ProposerSlashingRepository) as SinonStubbedInstance<
+      ProposerSlashingRepository
+    > &
+      ProposerSlashingRepository;
+    this.attesterSlashing = sinon.createStubInstance(AttesterSlashingRepository) as SinonStubbedInstance<
+      AttesterSlashingRepository
+    > &
+      AttesterSlashingRepository;
+    this.depositEvent = sinon.createStubInstance(DepositEventRepository) as SinonStubbedInstance<
+      DepositEventRepository
+    > &
+      DepositEventRepository;
 
-    this.depositDataRoot = sinon.createStubInstance(DepositDataRootRepository) as any;
-    this.eth1Data = sinon.createStubInstance(Eth1DataRepository) as any;
-    this.seenAttestationCache = sinon.createStubInstance(SeenAttestationCache) as any;
-    this.processBlockOperations = sinon.stub(this, "processBlockOperations") as any;
+    this.depositDataRoot = sinon.createStubInstance(DepositDataRootRepository) as SinonStubbedInstance<
+      DepositDataRootRepository
+    > &
+      DepositDataRootRepository;
+    this.eth1Data = sinon.createStubInstance(Eth1DataRepository) as SinonStubbedInstance<Eth1DataRepository> &
+      Eth1DataRepository;
+    this.seenAttestationCache = sinon.createStubInstance(SeenAttestationCache) as SinonStubbedInstance<
+      SeenAttestationCache
+    > &
+      SeenAttestationCache;
+    this.processBlockOperations = sinon.stub(this, "processBlockOperations") as (
+      signedBlock: SignedBeaconBlock
+    ) => Promise<void>;
   }
 }

@@ -5,6 +5,7 @@ import {SinonStubbedInstance} from "sinon";
 import {DebugBeaconApi} from "../../../../../../src/api/impl/debug/beacon";
 import {RestApi} from "../../../../../../src/api";
 import {setupRestApiTestServer} from "../../index.test";
+import {ApiResponseBody} from "../../utils";
 
 describe("rest - debug - beacon - getHeads", function () {
   let debugBeaconStub: SinonStubbedInstance<DebugBeaconApi>;
@@ -21,7 +22,7 @@ describe("rest - debug - beacon - getHeads", function () {
       .get("/eth/v1/debug/beacon/heads")
       .expect(200)
       .expect("Content-Type", "application/json; charset=utf-8");
-    expect(response.body.data).to.not.be.undefined;
+    expect((response.body as ApiResponseBody).data).to.not.be.undefined;
   });
 
   it("should not found heads", async function () {

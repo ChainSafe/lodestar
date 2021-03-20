@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import sinon, {SinonStub, SinonStubbedInstance} from "sinon";
+import sinon, {SinonStubbedInstance} from "sinon";
 
 import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
@@ -11,12 +11,14 @@ import {StateRegenerator} from "../../../../src/chain/regen";
 import {AttestationErrorCode} from "../../../../src/chain/errors";
 import {generateAttestation} from "../../../utils/attestation";
 import {generateCachedState} from "../../../utils/state";
+import {SinonStubFn} from "../../../utils/types";
+import {AttestationError} from "../../../../lib/chain/errors";
 
 describe("processAttestation", function () {
   const emitter = new ChainEventEmitter();
   let forkChoice: SinonStubbedInstance<ForkChoice>;
   let regen: SinonStubbedInstance<StateRegenerator>;
-  let isValidIndexedAttestationStub: SinonStub;
+  let isValidIndexedAttestationStub: SinonStubFn<typeof attestationUtils["isValidIndexedAttestation"]>;
 
   beforeEach(function () {
     forkChoice = sinon.createStubInstance(ForkChoice);
@@ -40,7 +42,7 @@ describe("processAttestation", function () {
       });
       expect.fail("attestation should throw");
     } catch (e) {
-      expect(e.type.code).to.equal(AttestationErrorCode.TARGET_STATE_MISSING);
+      expect((e as AttestationError).type.code).to.equal(AttestationErrorCode.TARGET_STATE_MISSING);
     }
   });
 
@@ -58,7 +60,7 @@ describe("processAttestation", function () {
       });
       expect.fail("attestation should throw");
     } catch (e) {
-      expect(e.type.code).to.equal(AttestationErrorCode.NO_COMMITTEE_FOR_SLOT_AND_INDEX);
+      expect((e as AttestationError).type.code).to.equal(AttestationErrorCode.NO_COMMITTEE_FOR_SLOT_AND_INDEX);
     }
   });
 
@@ -77,7 +79,7 @@ describe("processAttestation", function () {
       });
       expect.fail("attestation should throw");
     } catch (e) {
-      expect(e.type.code).to.equal(AttestationErrorCode.INVALID_SIGNATURE);
+      expect((e as AttestationError).type.code).to.equal(AttestationErrorCode.INVALID_SIGNATURE);
     }
   });
 

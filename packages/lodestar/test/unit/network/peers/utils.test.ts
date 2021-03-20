@@ -1,4 +1,4 @@
-import sinon, {SinonStub, SinonStubbedInstance} from "sinon";
+import sinon, {SinonStubbedInstance} from "sinon";
 import {getSyncProtocols, INetwork, IReqResp, Network} from "../../../../src/network";
 import PeerId from "peer-id";
 import {expect} from "chai";
@@ -14,13 +14,14 @@ import {testLogger} from "../../../utils/logger";
 import {ReqResp} from "../../../../src/network/reqresp/reqResp";
 import {IPeerRpcScoreStore, PeerRpcScoreStore} from "../../../../src/network/peers";
 import {getStubbedMetadataStore, StubbedIPeerMetadataStore} from "../../../utils/peer";
+import {SinonStubFn} from "../../../utils/types";
 
 describe("network peer utils", function () {
   const logger = testLogger();
   let networkStub: SinonStubbedInstance<INetwork>;
   let peerMetadataStoreStub: StubbedIPeerMetadataStore;
   let scoreTrackerStub: SinonStubbedInstance<IPeerRpcScoreStore>;
-  let getSyncPeersStub: SinonStub;
+  let getSyncPeersStub: SinonStubFn<typeof peersUtil["getSyncPeers"]>;
 
   beforeEach(() => {
     peerMetadataStoreStub = getStubbedMetadataStore();
@@ -161,11 +162,11 @@ describe("network peer utils", function () {
     });
 
     it("should return all non sync peers", () => {
-      networkStub.getPeers.returns(peers.map((peerId) => ({id: peerId} as LibP2p.Peer)));
+      networkStub.getPeers.returns(peers.map((peerId) => ({id: peerId} as Pick<LibP2p.Peer, "id">)) as LibP2p.Peer[]);
 
       // so none of them are good score sync peers
       getSyncPeersStub.returns([]);
-      const connectedPeers = peers.map((peerId) => ({id: peerId} as LibP2p.Peer));
+      const connectedPeers = peers.map((peerId) => ({id: peerId} as Pick<LibP2p.Peer, "id">)) as LibP2p.Peer[];
       expect(syncPeersToDisconnect(connectedPeers, networkStub)).to.be.deep.equal(peers);
     });
 
@@ -175,7 +176,9 @@ describe("network peer utils", function () {
       scoreTrackerStub.getScore.withArgs(peers[0]).returns(10);
       scoreTrackerStub.getScore.withArgs(peers[1]).returns(20);
       scoreTrackerStub.getScore.withArgs(peers[2]).returns(30);
-      const connectedPeers = peers.map((peerId) => ({id: peerId, protocols: getSyncProtocols()} as LibP2p.Peer));
+      const connectedPeers = peers.map(
+        (peerId) => ({id: peerId, protocols: getSyncProtocols()} as Pick<LibP2p.Peer, "id" | "protocols">)
+      ) as LibP2p.Peer[];
       expect(syncPeersToDisconnect(connectedPeers, networkStub)).to.be.deep.equal([peer1, peer2]);
     });
 
@@ -204,7 +207,7 @@ describe("network peer utils", function () {
       peer1 = await PeerId.create();
       peer2 = await PeerId.create();
       peers = [peer1, peer2];
-      connectedPeers = peers.map((peerId) => ({id: peerId} as LibP2p.Peer));
+      connectedPeers = peers.map((peerId) => ({id: peerId} as Pick<LibP2p.Peer, "id">)) as LibP2p.Peer[];
     });
 
     afterEach(() => {

@@ -35,7 +35,7 @@ describe("gossipsub", function () {
       topicIDs: [topicString],
     };
 
-    validatorFns = new Map();
+    validatorFns = new Map<string, TopicValidatorFn>();
     const multiaddr = "/ip4/127.0.0.1/tcp/0";
     libp2p = await createNode(multiaddr);
   });
@@ -50,7 +50,7 @@ describe("gossipsub", function () {
       await gossipSub.validate(message);
       assert.fail("Expect error here");
     } catch (e) {
-      expect(e.code).to.be.equal(ERR_TOPIC_VALIDATOR_REJECT);
+      expect((e as GossipValidationError).code).to.be.equal(ERR_TOPIC_VALIDATOR_REJECT);
     }
   });
 

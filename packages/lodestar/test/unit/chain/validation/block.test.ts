@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import sinon, {SinonStub, SinonStubbedInstance} from "sinon";
+import sinon, {SinonStubbedInstance} from "sinon";
 
 import {config} from "@chainsafe/lodestar-config/minimal";
 import * as specUtils from "@chainsafe/lodestar-beacon-state-transition/lib/phase0/fast/util/block";
@@ -12,13 +12,15 @@ import {generateSignedBlock, getNewBlockJob} from "../../../utils/block";
 import {StubbedBeaconDb} from "../../../utils/stub";
 import {generateCachedState} from "../../../utils/state";
 import {BlockErrorCode} from "../../../../src/chain/errors";
+import {SinonStubFn} from "../../../utils/types";
+import {BlockError} from "../../../../lib/chain/errors";
 
 describe("gossip block validation", function () {
   let chainStub: SinonStubbedInstance<IBeaconChain>;
   let forkChoiceStub: SinonStubbedInstance<ForkChoice>;
   let regenStub: SinonStubbedInstance<StateRegenerator>;
   let dbStub: StubbedBeaconDb;
-  let verifySignatureStub: SinonStub;
+  let verifySignatureStub: SinonStubFn<typeof specUtils["verifyBlockSignature"]>;
 
   beforeEach(function () {
     chainStub = sinon.createStubInstance(BeaconChain);
@@ -44,7 +46,7 @@ describe("gossip block validation", function () {
     try {
       await validateGossipBlock(config, chainStub, dbStub, job);
     } catch (error) {
-      expect(error.type).to.have.property("code", BlockErrorCode.WOULD_REVERT_FINALIZED_SLOT);
+      expect((error as BlockError).type).to.have.property("code", BlockErrorCode.WOULD_REVERT_FINALIZED_SLOT);
     }
     expect(chainStub.getFinalizedCheckpoint.calledOnce).to.be.true;
     expect(chainStub.getGenesisTime.notCalled).to.be.true;
@@ -62,7 +64,7 @@ describe("gossip block validation", function () {
     try {
       await validateGossipBlock(config, chainStub, dbStub, job);
     } catch (error) {
-      expect(error.type).to.have.property("code", BlockErrorCode.KNOWN_BAD_BLOCK);
+      expect((error as BlockError).type).to.have.property("code", BlockErrorCode.KNOWN_BAD_BLOCK);
     }
     expect(chainStub.getFinalizedCheckpoint.calledOnce).to.be.true;
     expect(dbStub.badBlock.has.withArgs(sinon.match.defined).calledOnce).to.be.true;
@@ -82,7 +84,7 @@ describe("gossip block validation", function () {
     try {
       await validateGossipBlock(config, chainStub, dbStub, job);
     } catch (error) {
-      expect(error.type).to.have.property("code", BlockErrorCode.REPEAT_PROPOSAL);
+      expect((error as BlockError).type).to.have.property("code", BlockErrorCode.REPEAT_PROPOSAL);
     }
     expect(chainStub.getFinalizedCheckpoint.calledOnce).to.be.true;
     expect(dbStub.badBlock.has.withArgs(sinon.match.defined).calledOnce).to.be.true;
@@ -103,7 +105,7 @@ describe("gossip block validation", function () {
     try {
       await validateGossipBlock(config, chainStub, dbStub, job);
     } catch (error) {
-      expect(error.type).to.have.property("code", BlockErrorCode.PARENT_UNKNOWN);
+      expect((error as BlockError).type).to.have.property("code", BlockErrorCode.PARENT_UNKNOWN);
     }
     expect(chainStub.getFinalizedCheckpoint.calledOnce).to.be.true;
     expect(dbStub.badBlock.has.withArgs(sinon.match.defined).calledOnce).to.be.true;
@@ -125,7 +127,7 @@ describe("gossip block validation", function () {
     try {
       await validateGossipBlock(config, chainStub, dbStub, job);
     } catch (error) {
-      expect(error.type).to.have.property("code", BlockErrorCode.PROPOSAL_SIGNATURE_INVALID);
+      expect((error as BlockError).type).to.have.property("code", BlockErrorCode.PROPOSAL_SIGNATURE_INVALID);
     }
     expect(chainStub.getFinalizedCheckpoint.calledOnce).to.be.true;
     expect(dbStub.badBlock.has.withArgs(sinon.match.defined).calledOnce).to.be.true;
@@ -151,14 +153,18 @@ describe("gossip block validation", function () {
     try {
       await validateGossipBlock(config, chainStub, dbStub, job);
     } catch (error) {
-      expect(error.type).to.have.property("code", BlockErrorCode.INCORRECT_PROPOSER);
+      expect((error as BlockError).type).to.have.property("code", BlockErrorCode.INCORRECT_PROPOSER);
     }
     expect(chainStub.getFinalizedCheckpoint.calledOnce).to.be.true;
     expect(dbStub.badBlock.has.withArgs(sinon.match.defined).calledOnce).to.be.true;
     expect(regenStub.getBlockSlotState.calledOnce).to.be.true;
     expect(chainStub.receiveBlock.calledOnce).to.be.false;
     expect(verifySignatureStub.calledOnce).to.be.true;
-    expect((state.epochCtx.getBeaconProposer as SinonStub).withArgs(signedBlock.message.slot).calledOnce).to.be.true;
+    expect(
+      (state.epochCtx.getBeaconProposer as SinonStubFn<typeof state.epochCtx["getBeaconProposer"]>).withArgs(
+        signedBlock.message.slot
+      ).calledOnce
+    ).to.be.true;
   });
 
   it("should accept - valid block", async function () {
@@ -183,6 +189,10 @@ describe("gossip block validation", function () {
     expect(dbStub.badBlock.has.withArgs(sinon.match.defined).calledOnce).to.be.true;
     expect(regenStub.getBlockSlotState.calledOnce).to.be.true;
     expect(verifySignatureStub.calledOnce).to.be.true;
-    expect((state.epochCtx.getBeaconProposer as SinonStub).withArgs(signedBlock.message.slot).calledOnce).to.be.true;
+    expect(
+      (state.epochCtx.getBeaconProposer as SinonStubFn<typeof state.epochCtx["getBeaconProposer"]>).withArgs(
+        signedBlock.message.slot
+      ).calledOnce
+    ).to.be.true;
   });
 });

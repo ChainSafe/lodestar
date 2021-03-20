@@ -6,14 +6,15 @@ import {config} from "@chainsafe/lodestar-config/mainnet";
 import * as utils from "../../../../../src/util";
 import {generateEmptyAttesterSlashing} from "../../../../utils/slashings";
 import {phase0} from "../../../../../src";
+import {SinonStubFn} from "../../../../utils/types";
 
 describe("process block - attester slashings", function () {
   const sandbox = sinon.createSandbox();
 
-  let isSlashableAttestationStub: any,
-    validateIndexedAttestationStub: any,
-    isSlashableValidatorStub: any,
-    slashValidatorStub: any;
+  let isSlashableAttestationStub: SinonStubFn<typeof utils["isSlashableAttestationData"]>,
+    validateIndexedAttestationStub: SinonStubFn<typeof utils["isValidIndexedAttestation"]>,
+    isSlashableValidatorStub: SinonStubFn<typeof utils["isSlashableValidator"]>,
+    slashValidatorStub: SinonStubFn<typeof utils["slashValidator"]>;
 
   beforeEach(() => {
     isSlashableAttestationStub = sandbox.stub(utils, "isSlashableAttestationData");
@@ -57,8 +58,8 @@ describe("process block - attester slashings", function () {
     attesterSlashing.attestation1.data.source.epoch = 2;
     attesterSlashing.attestation2.data.source.epoch = 3;
     isSlashableAttestationStub.returns(true);
-    validateIndexedAttestationStub.withArgs(state, attesterSlashing.attestation1).returns(true);
-    validateIndexedAttestationStub.withArgs(state, attesterSlashing.attestation2).returns(false);
+    validateIndexedAttestationStub.withArgs(config, state, attesterSlashing.attestation1).returns(true);
+    validateIndexedAttestationStub.withArgs(config, state, attesterSlashing.attestation2).returns(false);
     try {
       phase0.processAttesterSlashing(config, state, attesterSlashing);
       expect.fail();

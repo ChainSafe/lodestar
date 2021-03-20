@@ -9,11 +9,13 @@ import {processVoluntaryExit} from "../../../../../src/phase0/naive/block/operat
 import {generateValidator} from "../../../../utils/validator";
 import {generateEmptySignedVoluntaryExit} from "../../../../utils/voluntaryExits";
 import {generateState} from "../../../../utils/state";
+import {SinonStubFn} from "../../../../utils/types";
 
 describe("process block - voluntary exits", function () {
   const sandbox = sinon.createSandbox();
 
-  let isActiveValidatorStub: any, initiateValidatorExitStub: any;
+  let isActiveValidatorStub: SinonStubFn<typeof validatorUtils["isActiveValidator"]>,
+    initiateValidatorExitStub: SinonStubFn<typeof utils["initiateValidatorExit"]>;
 
   beforeEach(() => {
     isActiveValidatorStub = sandbox.stub(validatorUtils, "isActiveValidator");

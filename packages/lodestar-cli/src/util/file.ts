@@ -12,6 +12,7 @@ export const yamlSchema = new Schema({
     new Type("tag:yaml.org,2002:str", {
       kind: "scalar",
       construct: function (data) {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-return
         return data !== null ? data : "";
       },
     }),
@@ -38,10 +39,10 @@ export enum FileFormat {
 export function parse<T = Json>(contents: string, fileFormat: FileFormat): T {
   switch (fileFormat) {
     case FileFormat.json:
-      return JSON.parse(contents);
+      return JSON.parse(contents) as T;
     case FileFormat.yaml:
     case FileFormat.yml:
-      return load(contents, {schema: yamlSchema});
+      return load(contents, {schema: yamlSchema}) as T;
     default:
       throw new Error("Invalid filetype");
   }
@@ -96,7 +97,7 @@ export function readFileIfExists<T = Json>(filepath: string): T | null {
   try {
     return readFile(filepath);
   } catch (e) {
-    if (e.code === "ENOENT") {
+    if ((e as {code: string}).code === "ENOENT") {
       return null;
     } else {
       throw e;

@@ -23,8 +23,8 @@ export const getState: ApiController<DefaultQuery, {stateId: string}> = {
         });
       }
     } catch (e) {
-      if (e.message === "Invalid state id") {
-        throw toRestValidationError("state_id", e.message);
+      if ((e as Error).message === "Invalid state id") {
+        throw toRestValidationError("state_id", (e as Error).message);
       }
       throw e;
     }

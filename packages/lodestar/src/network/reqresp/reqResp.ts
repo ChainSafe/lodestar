@@ -81,7 +81,7 @@ export class ReqResp implements IReqResp {
               this.respCount++
             );
             // TODO: Do success peer scoring here
-          } catch (e) {
+          } catch {
             // TODO: Do error peer scoring here
             // Must not throw since this is an event handler
           }
@@ -181,7 +181,7 @@ export class ReqResp implements IReqResp {
 
       return result;
     } catch (e) {
-      const peerAction = onOutgoingReqRespError(e, method);
+      const peerAction = onOutgoingReqRespError(e as Error, method);
       if (peerAction !== null) this.peerRpcScores.applyAction(peerId, peerAction);
 
       throw e;

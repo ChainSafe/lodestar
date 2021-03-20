@@ -5,7 +5,7 @@ import supertest from "supertest";
 import {StateNotFound} from "../../../../../../src/api/impl/errors/api";
 import {getStateValidator} from "../../../../../../src/api/rest/controllers/beacon/state/getValidator";
 import {generateValidator} from "../../../../../utils/validator";
-import {urlJoin} from "../../utils";
+import {ApiResponseBody, urlJoin} from "../../utils";
 import {BEACON_PREFIX, setupRestApiTestServer} from "../../index.test";
 import {phase0} from "@chainsafe/lodestar-types";
 import {BeaconStateApi} from "../../../../../../src/api/impl/beacon/state";
@@ -33,7 +33,8 @@ describe("rest - beacon - getStateValidator", function () {
       .get(urlJoin(BEACON_PREFIX, getStateValidator.url.replace(":stateId", "head").replace(":validatorId", pubkey)))
       .expect(200)
       .expect("Content-Type", "application/json; charset=utf-8");
-    expect(response.body.data).to.not.be.undefined;
+    expect((response.body as ApiResponseBody).data).to.not.be.undefined;
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     expect(response.body.data.balance).to.not.be.undefined;
   });
 
@@ -48,7 +49,8 @@ describe("rest - beacon - getStateValidator", function () {
       .get(urlJoin(BEACON_PREFIX, getStateValidator.url.replace(":stateId", "head").replace(":validatorId", "1")))
       .expect(200)
       .expect("Content-Type", "application/json; charset=utf-8");
-    expect(response.body.data).to.not.be.undefined;
+    expect((response.body as ApiResponseBody).data).to.not.be.undefined;
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     expect(response.body.data.balance).to.not.be.undefined;
   });
 

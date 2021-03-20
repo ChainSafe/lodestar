@@ -27,7 +27,7 @@ export class ProtoArray {
     this.justifiedEpoch = justifiedEpoch;
     this.finalizedEpoch = finalizedEpoch;
     this.nodes = [];
-    this.indices = new Map();
+    this.indices = new Map<string, number>();
   }
 
   static initialize({

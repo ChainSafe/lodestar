@@ -33,6 +33,7 @@ export class LevelDbController implements IDatabaseController<Buffer, Buffer> {
   constructor(opts: ILevelDBOptions, {logger}: {logger: ILogger}) {
     this.opts = opts;
     this.logger = logger;
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment
     this.db = opts.db || level(opts.name || "beaconchain", {keyEncoding: "binary", valueEncoding: "binary"});
   }
 
@@ -57,9 +58,9 @@ export class LevelDbController implements IDatabaseController<Buffer, Buffer> {
 
   async get(key: Buffer): Promise<Buffer | null> {
     try {
-      return await this.db.get(key);
+      return (await this.db.get(key)) as Buffer | null;
     } catch (e) {
-      if (e.notFound) {
+      if ((e as {notFound: unknown}).notFound) {
         return null;
       }
       throw e;

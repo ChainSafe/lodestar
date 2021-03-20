@@ -29,9 +29,9 @@ export class AttestationPool {
   constructor({config}: {config: IBeaconConfig}) {
     this.config = config;
 
-    this.attestations = new Map();
-    this.attestationsByBlock = new Map();
-    this.attestationsBySlot = new Map();
+    this.attestations = new Map<string, IAttestationJob>();
+    this.attestationsByBlock = new Map<string, Map<string, IAttestationJob>>();
+    this.attestationsBySlot = new Map<number, Map<string, IAttestationJob>>();
   }
 
   putByBlock(blockRoot: Root, job: IAttestationJob): void {

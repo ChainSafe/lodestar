@@ -6,15 +6,16 @@ import * as utils from "../../../../../src/util";
 import {phase0} from "../../../../../src";
 import {generateState} from "../../../../utils/state";
 import {generateEmptyAttestation} from "../../../../utils/attestation";
+import {SinonStubFn} from "../../../../utils/types";
 
 describe("process block - attestation", function () {
   const sandbox = sinon.createSandbox();
 
-  let currentEpochStub: any,
-    previousEpochStub: any,
-    validateIndexedAttestationStub: any,
-    getBeaconProposerIndexStub: any,
-    getBeaconComitteeStub: any;
+  let currentEpochStub: SinonStubFn<typeof utils["getCurrentEpoch"]>,
+    previousEpochStub: SinonStubFn<typeof utils["getPreviousEpoch"]>,
+    validateIndexedAttestationStub: SinonStubFn<typeof utils["isValidIndexedAttestation"]>,
+    getBeaconProposerIndexStub: SinonStubFn<typeof utils["getBeaconProposerIndex"]>,
+    getBeaconComitteeStub: SinonStubFn<typeof utils["getBeaconCommittee"]>;
 
   beforeEach(() => {
     currentEpochStub = sandbox.stub(utils, "getCurrentEpoch");

@@ -1,4 +1,4 @@
-import sinon from "sinon";
+import sinon, {SinonFakeTimers, SinonSandbox} from "sinon";
 import {expect} from "chai";
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import {LodestarEventIterator} from "@chainsafe/lodestar-utils";
@@ -13,7 +13,7 @@ import {ClockEventType} from "../../../src/api/interface/clock";
 import {MockConfigApi} from "../../utils/mocks/config";
 
 describe("RpcClientOverInstance test", function () {
-  let clock: any, sandbox: any;
+  let clock: SinonFakeTimers, sandbox: SinonSandbox;
 
   before(() => {
     sandbox = sinon.createSandbox();

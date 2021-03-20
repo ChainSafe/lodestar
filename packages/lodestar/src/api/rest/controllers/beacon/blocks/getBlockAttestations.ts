@@ -17,8 +17,8 @@ export const getBlockAttestations: ApiController<DefaultQuery, {blockId: string}
         }),
       });
     } catch (e) {
-      if (e.message === "Invalid block id") {
-        throw toRestValidationError("block_id", e.message);
+      if ((e as Error).message === "Invalid block id") {
+        throw toRestValidationError("block_id", (e as Error).message);
       }
       throw e;
     }

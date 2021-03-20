@@ -1,4 +1,4 @@
-import sinon, {SinonStub, SinonStubbedInstance} from "sinon";
+import sinon, {SinonStubbedInstance} from "sinon";
 import {expect} from "chai";
 import {rewiremock} from "../../../rewiremock";
 
@@ -21,15 +21,17 @@ import {generateCachedState} from "../../../utils/state";
 import {StubbedBeaconDb} from "../../../utils/stub";
 import {AttestationErrorCode} from "../../../../src/chain/errors";
 import {expectRejectedWithLodestarError} from "../../../utils/errors";
+import {SinonStubFn} from "../../../utils/types";
+import {AttestationError} from "../../../../lib/chain/errors";
 
 describe("gossip aggregate and proof test", function () {
   let chain: SinonStubbedInstance<IBeaconChain>;
   let regen: SinonStubbedInstance<IStateRegenerator>;
   let db: StubbedBeaconDb;
-  let isAggregatorStub: SinonStub;
-  let isValidSelectionProofStub: SinonStub;
-  let isValidSignatureStub: SinonStub;
-  let isValidIndexedAttestationStub: SinonStub;
+  let isAggregatorStub: SinonStubFn<typeof validatorUtils["isAggregatorFromCommitteeLength"]>;
+  let isValidSelectionProofStub: SinonStubFn<typeof validationUtils["isValidSelectionProofSignature"]>;
+  let isValidSignatureStub: SinonStubFn<typeof validationUtils["isValidAggregateAndProofSignature"]>;
+  let isValidIndexedAttestationStub: SinonStubFn<typeof blockUtils["isValidIndexedAttestation"]>;
 
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async function mockValidateGossipAggregateAndProof({
@@ -109,7 +111,7 @@ describe("gossip aggregate and proof test", function () {
         validSignature: false,
       } as IAttestationJob);
     } catch (error) {
-      expect(error.type).to.have.property("code", AttestationErrorCode.PAST_SLOT);
+      expect((error as AttestationError).type).to.have.property("code", AttestationErrorCode.PAST_SLOT);
     }
   });
 
@@ -132,7 +134,7 @@ describe("gossip aggregate and proof test", function () {
         validSignature: false,
       } as IAttestationJob);
     } catch (error) {
-      expect(error.type).to.have.property("code", AttestationErrorCode.FUTURE_SLOT);
+      expect((error as AttestationError).type).to.have.property("code", AttestationErrorCode.FUTURE_SLOT);
     }
   });
 
@@ -151,7 +153,7 @@ describe("gossip aggregate and proof test", function () {
         validSignature: false,
       } as IAttestationJob);
     } catch (error) {
-      expect(error.type).to.have.property("code", AttestationErrorCode.AGGREGATE_ALREADY_KNOWN);
+      expect((error as AttestationError).type).to.have.property("code", AttestationErrorCode.AGGREGATE_ALREADY_KNOWN);
     }
     expect(db.seenAttestationCache.hasAggregateAndProof.withArgs(item.message).calledOnce).to.be.true;
   });
@@ -171,7 +173,10 @@ describe("gossip aggregate and proof test", function () {
         validSignature: false,
       } as IAttestationJob);
     } catch (error) {
-      expect(error.type).to.have.property("code", AttestationErrorCode.WRONG_NUMBER_OF_AGGREGATION_BITS);
+      expect((error as AttestationError).type).to.have.property(
+        "code",
+        AttestationErrorCode.WRONG_NUMBER_OF_AGGREGATION_BITS
+      );
     }
   });
 
@@ -191,7 +196,7 @@ describe("gossip aggregate and proof test", function () {
         validSignature: false,
       } as IAttestationJob);
     } catch (error) {
-      expect(error.type).to.have.property("code", AttestationErrorCode.KNOWN_BAD_BLOCK);
+      expect((error as AttestationError).type).to.have.property("code", AttestationErrorCode.KNOWN_BAD_BLOCK);
     }
     expect(db.badBlock.has.withArgs(item.message.aggregate.data.beaconBlockRoot.valueOf() as Uint8Array).calledOnce).to
       .be.true;
@@ -213,7 +218,10 @@ describe("gossip aggregate and proof test", function () {
         validSignature: false,
       } as IAttestationJob);
     } catch (error) {
-      expect(error.type).to.have.property("code", AttestationErrorCode.MISSING_ATTESTATION_PRESTATE);
+      expect((error as AttestationError).type).to.have.property(
+        "code",
+        AttestationErrorCode.MISSING_ATTESTATION_PRESTATE
+      );
     }
     expect(regen.getBlockSlotState.withArgs(item.message.aggregate.data.target.root, sinon.match.any).calledOnce).to.be
       .true;
@@ -237,10 +245,13 @@ describe("gossip aggregate and proof test", function () {
         validSignature: false,
       } as IAttestationJob);
     } catch (error) {
-      expect(error.type).to.have.property("code", AttestationErrorCode.AGGREGATOR_NOT_IN_COMMITTEE);
+      expect((error as AttestationError).type).to.have.property(
+        "code",
+        AttestationErrorCode.AGGREGATOR_NOT_IN_COMMITTEE
+      );
     }
     expect(
-      (state.getBeaconCommittee as SinonStub).withArgs(
+      (state.getBeaconCommittee as SinonStubFn<typeof state["getBeaconCommittee"]>).withArgs(
         item.message.aggregate.data.slot,
         item.message.aggregate.data.index
       ).calledOnce
@@ -266,7 +277,7 @@ describe("gossip aggregate and proof test", function () {
         validSignature: false,
       } as IAttestationJob);
     } catch (error) {
-      expect(error.type).to.have.property("code", AttestationErrorCode.INVALID_AGGREGATOR);
+      expect((error as AttestationError).type).to.have.property("code", AttestationErrorCode.INVALID_AGGREGATOR);
     }
     expect(isAggregatorStub.withArgs(config, 1, item.message.selectionProof).calledOnce).to.be.true;
   });

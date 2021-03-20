@@ -25,7 +25,7 @@ export default class BlockProposingService {
   private readonly logger: ILogger;
   private readonly graffiti?: string;
 
-  private nextProposals: Map<Slot, BLSPubkey> = new Map();
+  private nextProposals: Map<Slot, BLSPubkey> = new Map<Slot, BLSPubkey>();
 
   constructor(
     config: IBeaconConfig,

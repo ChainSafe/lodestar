@@ -81,7 +81,7 @@ export async function sendRequest<T extends phase0.ResponseBody | phase0.Respons
       if (e instanceof TimeoutError) {
         throw new RequestInternalError({code: RequestErrorCode.DIAL_TIMEOUT});
       } else {
-        throw new RequestInternalError({code: RequestErrorCode.DIAL_ERROR, error: e});
+        throw new RequestInternalError({code: RequestErrorCode.DIAL_ERROR, error: e as Error});
       }
     });
 
@@ -103,7 +103,7 @@ export async function sendRequest<T extends phase0.ResponseBody | phase0.Respons
       if (e instanceof TimeoutError) {
         throw new RequestInternalError({code: RequestErrorCode.REQUEST_TIMEOUT});
       } else {
-        throw new RequestInternalError({code: RequestErrorCode.REQUEST_ERROR, error: e});
+        throw new RequestInternalError({code: RequestErrorCode.REQUEST_ERROR, error: e as Error});
       }
     });
 
@@ -130,7 +130,7 @@ export async function sendRequest<T extends phase0.ResponseBody | phase0.Respons
       stream.close();
     }
   } catch (e) {
-    logger.verbose("Req  error", logCtx, e);
+    logger.verbose("Req  error", logCtx, e as Error);
 
     const metadata: IRequestErrorMetadata = {method, encoding, peer};
 

@@ -8,7 +8,7 @@ export function generatePeer(id: PeerId): Peer {
   return {
     id,
     addresses: [],
-    metadata: new Map(),
+    metadata: new Map<string, Buffer>(),
     protocols: [],
   };
 }

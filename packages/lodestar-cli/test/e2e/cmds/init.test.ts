@@ -23,7 +23,9 @@ describe("cmds / init", function () {
     ]);
 
     expect(fs.existsSync(beaconPaths.configFile), `Must write config file to ${beaconPaths.configFile}`).to.be.true;
-    const beaconConfig: IBeaconNodeOptions = JSON.parse(fs.readFileSync(beaconPaths.configFile, "utf8"));
+    const beaconConfig: IBeaconNodeOptions = JSON.parse(
+      fs.readFileSync(beaconPaths.configFile, "utf8")
+    ) as IBeaconNodeOptions;
 
     expect(beaconConfig.eth1.depositContractDeployBlock).to.equal(
       depositContractDeployBlock,

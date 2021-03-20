@@ -23,11 +23,11 @@ interface IBranch<T> {
 type INode<T> = ILeaf<T> | IBranch<T>;
 
 function emptyBranch<T>(): IBranch<T> {
-  return {leaf: false, nodes: Array(BRANCH_SIZE).fill(null)};
+  return {leaf: false, nodes: Array<INode<T> | null>(BRANCH_SIZE).fill(null)};
 }
 
 function emptyLeaf<T>(): ILeaf<T> {
-  return {leaf: true, values: Array(BRANCH_SIZE).fill(null)};
+  return {leaf: true, values: Array(BRANCH_SIZE).fill(null) as T[]};
 }
 
 function copyNode<T>(vnode: INode<T>): INode<T> {
@@ -57,7 +57,7 @@ export class Vector<T> implements Iterable<T> {
    * Create an empty vector of a certain type.
    */
   static empty<T>(): Vector<T> {
-    return new Vector(emptyBranch(), DEFAULT_LEVEL_SHIFT, Array(BRANCH_SIZE).fill(null), 0);
+    return new Vector<T>(emptyBranch(), DEFAULT_LEVEL_SHIFT, Array(BRANCH_SIZE).fill(null), 0);
   }
 
   /**
@@ -168,7 +168,7 @@ export class Vector<T> implements Iterable<T> {
     }
     // it's safe to update cursor bc "next" is a new instance anyway
     cursor.values = [...this.tail];
-    return new Vector(base, levelShift, [value, ...Array(BRANCH_SIZE - 1).fill(null)], this.length + 1);
+    return new Vector<T>(base, levelShift, [value, ...(Array(BRANCH_SIZE - 1).fill(null) as T[])], this.length + 1);
   }
 
   /**
@@ -183,7 +183,7 @@ export class Vector<T> implements Iterable<T> {
     if (tailLength >= 2) {
       // ignore the last item
       const newTailLength = (this.length - 1) % BRANCH_SIZE;
-      const newTail = [...this.tail.slice(0, newTailLength), ...Array(BRANCH_SIZE - newTailLength).fill(null)];
+      const newTail = [...this.tail.slice(0, newTailLength), ...(Array(BRANCH_SIZE - newTailLength).fill(null) as T[])];
       return new Vector(this.root, this.levelShift, newTail, this.length - 1);
     }
     // tail has exactly 1 item, promote the right most leaf node as tail

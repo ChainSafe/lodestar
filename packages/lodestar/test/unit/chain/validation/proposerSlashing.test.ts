@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import sinon, {SinonStub} from "sinon";
+import sinon from "sinon";
 
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {generateEmptyProposerSlashing} from "@chainsafe/lodestar-beacon-state-transition/test/utils/slashings";
@@ -9,12 +9,15 @@ import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {BeaconChain} from "../../../../src/chain";
 import {StubbedBeaconDb, StubbedChain} from "../../../utils/stub";
 import {generateCachedState} from "../../../utils/state";
-import {ProposerSlashingErrorCode} from "../../../../src/chain/errors/proposerSlashingError";
+import {ProposerSlashingError, ProposerSlashingErrorCode} from "../../../../src/chain/errors/proposerSlashingError";
 import {validateGossipProposerSlashing} from "../../../../src/chain/validation/proposerSlashing";
+import {SinonStubFn} from "../../../utils/types";
 
 describe("validate proposer slashing", () => {
   const sandbox = sinon.createSandbox();
-  let dbStub: StubbedBeaconDb, isValidIncomingProposerSlashingStub: SinonStub, chainStub: StubbedChain;
+  let dbStub: StubbedBeaconDb,
+    isValidIncomingProposerSlashingStub: SinonStubFn<typeof validatorStatusUtils["isValidProposerSlashing"]>,
+    chainStub: StubbedChain;
 
   beforeEach(() => {
     isValidIncomingProposerSlashingStub = sandbox.stub(validatorStatusUtils, "isValidProposerSlashing");
@@ -33,7 +36,10 @@ describe("validate proposer slashing", () => {
     try {
       await validateGossipProposerSlashing(config, chainStub, dbStub, slashing);
     } catch (error) {
-      expect(error.type).to.have.property("code", ProposerSlashingErrorCode.SLASHING_ALREADY_EXISTS);
+      expect((error as ProposerSlashingError).type).to.have.property(
+        "code",
+        ProposerSlashingErrorCode.SLASHING_ALREADY_EXISTS
+      );
     }
   });
 
@@ -46,7 +52,10 @@ describe("validate proposer slashing", () => {
     try {
       await validateGossipProposerSlashing(config, chainStub, dbStub, slashing);
     } catch (error) {
-      expect(error.type).to.have.property("code", ProposerSlashingErrorCode.INVALID_SLASHING);
+      expect((error as ProposerSlashingError).type).to.have.property(
+        "code",
+        ProposerSlashingErrorCode.INVALID_SLASHING
+      );
     }
   });
 

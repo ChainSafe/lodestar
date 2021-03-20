@@ -31,6 +31,7 @@ describe("rest - beacon - getBlockRoot", function () {
       .get(urlJoin(BEACON_PREFIX, getBlockRoot.url.replace(":blockId", "head")))
       .expect(200)
       .expect("Content-Type", "application/json; charset=utf-8");
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     expect(response.body.data.root).to.be.equal(
       toHexString(config.types.phase0.BeaconBlock.hashTreeRoot(block.message))
     );

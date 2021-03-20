@@ -16,7 +16,7 @@ export const publishAggregateAndProof: ApiController<DefaultQuery, DefaultParams
           this.config.types.phase0.SignedAggregateAndProof.fromJson(aggreagteJson, {case: "snake"})
         );
       } catch (e) {
-        this.log.warn("Failed to parse AggregateAndProof", e.message);
+        this.log.warn("Failed to parse AggregateAndProof", (e as Error).message);
       }
     }
     await this.api.validator.publishAggregateAndProofs(signedAggregateAndProofs);

@@ -8,11 +8,14 @@ import * as utils from "../../../../src/util";
 import {processRegistryUpdates} from "../../../../src/phase0/naive/epoch/registryUpdates";
 import {generateState} from "../../../utils/state";
 import {generateValidator} from "../../../utils/validator";
+import {SinonStubFn} from "../../../utils/types";
 
 describe.skip("process epoch - slashings", function () {
   const sandbox = sinon.createSandbox();
 
-  let getCurrentEpochStub: any, isActiveValidatorStub: any, initiateValidatorExitStub: any;
+  let getCurrentEpochStub: SinonStubFn<typeof utils["getCurrentEpoch"]>,
+    isActiveValidatorStub: SinonStubFn<typeof utils["isActiveValidator"]>,
+    initiateValidatorExitStub: SinonStubFn<typeof utils["initiateValidatorExit"]>;
 
   beforeEach(() => {
     getCurrentEpochStub = sandbox.stub(utils, "getCurrentEpoch");

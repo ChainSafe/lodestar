@@ -1,4 +1,4 @@
-import sinon, {SinonStub, SinonStubbedInstance} from "sinon";
+import sinon, {SinonStubbedInstance} from "sinon";
 import {expect} from "chai";
 
 import {config} from "@chainsafe/lodestar-config/minimal";
@@ -14,15 +14,16 @@ import {Eth1ForBlockProduction} from "../../../../../src/eth1/";
 import {generateBlockSummary, generateEmptyBlock} from "../../../../utils/block";
 import {generateCachedState} from "../../../../utils/state";
 import {StubbedBeaconDb, StubbedChain} from "../../../../utils/stub";
+import {SinonStubFn} from "../../../../utils/types";
 
 describe("block assembly", function () {
   const sandbox = sinon.createSandbox();
 
-  let assembleBodyStub: any,
+  let assembleBodyStub: SinonStubFn<typeof blockBodyAssembly["assembleBody"]>,
     chainStub: StubbedChain,
     forkChoiceStub: SinonStubbedInstance<ForkChoice>,
     regenStub: SinonStubbedInstance<StateRegenerator>,
-    processBlockStub: SinonStub,
+    processBlockStub: SinonStubFn<typeof processBlock["processBlock"]>,
     beaconDB: StubbedBeaconDb;
 
   beforeEach(() => {

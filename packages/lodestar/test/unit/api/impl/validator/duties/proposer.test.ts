@@ -44,7 +44,7 @@ describe("get proposers api impl", function () {
       await api.getProposerDuties(1);
       expect.fail("Expect error here");
     } catch (e) {
-      expect(e.message.startsWith("Node is syncing")).to.be.true;
+      expect((e as Error).message.startsWith("Node is syncing")).to.be.true;
     }
   });
 
@@ -55,7 +55,7 @@ describe("get proposers api impl", function () {
       await api.getProposerDuties(1);
       expect.fail("Expect error here");
     } catch (e) {
-      expect(e.message.startsWith("Node is stopped")).to.be.true;
+      expect((e as Error).message.startsWith("Node is stopped")).to.be.true;
     }
   });
 

@@ -1,7 +1,7 @@
 import {expect} from "chai";
 import supertest from "supertest";
 import {generateState} from "../../../../../utils/state";
-import {urlJoin} from "../../utils";
+import {ApiResponseBody, urlJoin} from "../../utils";
 import {BEACON_PREFIX, setupRestApiTestServer} from "../../index.test";
 import {getStateFork} from "../../../../../../src/api/rest/controllers/beacon/state/getStateFork";
 import {SinonStubbedInstance} from "sinon";
@@ -23,7 +23,8 @@ describe("rest - beacon - getStateFork", function () {
       .get(urlJoin(BEACON_PREFIX, getStateFork.url.replace(":stateId", "head")))
       .expect(200)
       .expect("Content-Type", "application/json; charset=utf-8");
-    expect(response.body.data).to.not.be.undefined;
+    expect((response.body as ApiResponseBody).data).to.not.be.undefined;
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     expect(response.body.data.current_version).to.not.be.undefined;
   });
 

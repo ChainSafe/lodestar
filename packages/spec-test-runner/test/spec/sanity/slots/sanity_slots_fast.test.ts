@@ -7,6 +7,7 @@ import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
 import {IProcessSlotsTestCase} from "./type";
 import {SPEC_TEST_LOCATION} from "../../../utils/specTestCases";
+import {BeaconState} from "@chainsafe/lodestar-types/phase0";
 
 describeDirectorySpecTest<IProcessSlotsTestCase, phase0.BeaconState>(
   "slot sanity mainnet",
@@ -41,7 +42,7 @@ describeDirectorySpecTest<IProcessSlotsTestCase, phase0.BeaconState>(
       return !testCase.post;
     },
     timeout: 10000000,
-    getExpected: (testCase) => testCase.post,
+    getExpected: (testCase) => testCase.post as BeaconState,
     expectFunc: (testCase, expected, actual) => {
       expect(config.types.phase0.BeaconState.equals(actual, expected)).to.be.true;
     },

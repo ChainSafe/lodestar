@@ -1,4 +1,5 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment
+, @typescript-eslint/no-explicit-any */
 import {Type, UintType, BigIntUintType, byteType, isCompositeType} from "@chainsafe/ssz";
 
 /**
@@ -30,6 +31,6 @@ export function safeType(type: Type<any>): Type<any> {
     const newtype = Object.create(Object.getPrototypeOf(type), props);
     newtype.structural._type = newtype;
     newtype.tree._type = newtype;
-    return newtype;
+    return newtype as Type<any>;
   }
 }

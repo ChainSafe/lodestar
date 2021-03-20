@@ -7,7 +7,7 @@ import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
 
 import {validateAttestation} from "../../../../src/chain/attestation/validate";
 import {LocalClock} from "../../../../src/chain/clock/LocalClock";
-import {AttestationErrorCode} from "../../../../src/chain/errors";
+import {AttestationError, AttestationErrorCode} from "../../../../src/chain/errors";
 import {generateAttestation} from "../../../utils/attestation";
 
 describe("velidateAttestation", function () {
@@ -37,7 +37,7 @@ describe("velidateAttestation", function () {
       });
       expect.fail("attestation should throw");
     } catch (e) {
-      expect(e.type.code).to.equal(AttestationErrorCode.BAD_TARGET_EPOCH);
+      expect((e as AttestationError).type.code).to.equal(AttestationErrorCode.BAD_TARGET_EPOCH);
     }
   });
 
@@ -56,7 +56,7 @@ describe("velidateAttestation", function () {
       });
       expect.fail("attestation should throw");
     } catch (e) {
-      expect(e.type.code).to.equal(AttestationErrorCode.PAST_EPOCH);
+      expect((e as AttestationError).type.code).to.equal(AttestationErrorCode.PAST_EPOCH);
     }
   });
 
@@ -75,7 +75,7 @@ describe("velidateAttestation", function () {
       });
       expect.fail("attestation should throw");
     } catch (e) {
-      expect(e.type.code).to.equal(AttestationErrorCode.FUTURE_EPOCH);
+      expect((e as AttestationError).type.code).to.equal(AttestationErrorCode.FUTURE_EPOCH);
     }
   });
 
@@ -97,7 +97,7 @@ describe("velidateAttestation", function () {
       });
       expect.fail("attestation should throw");
     } catch (e) {
-      expect(e.type.code).to.equal(AttestationErrorCode.FUTURE_SLOT);
+      expect((e as AttestationError).type.code).to.equal(AttestationErrorCode.FUTURE_SLOT);
     }
   });
 
@@ -120,7 +120,7 @@ describe("velidateAttestation", function () {
       });
       expect.fail("attestation should throw");
     } catch (e) {
-      expect(e.type.code).to.equal(AttestationErrorCode.UNKNOWN_TARGET_ROOT);
+      expect((e as AttestationError).type.code).to.equal(AttestationErrorCode.UNKNOWN_TARGET_ROOT);
     }
   });
 
@@ -150,7 +150,7 @@ describe("velidateAttestation", function () {
       });
       expect.fail("attestation should throw");
     } catch (e) {
-      expect(e.type.code).to.equal(AttestationErrorCode.UNKNOWN_BEACON_BLOCK_ROOT);
+      expect((e as AttestationError).type.code).to.equal(AttestationErrorCode.UNKNOWN_BEACON_BLOCK_ROOT);
     }
   });
 
@@ -177,7 +177,7 @@ describe("velidateAttestation", function () {
       });
       expect.fail("attestation should throw");
     } catch (e) {
-      expect(e.type.code).to.equal(AttestationErrorCode.HEAD_NOT_TARGET_DESCENDANT);
+      expect((e as AttestationError).type.code).to.equal(AttestationErrorCode.HEAD_NOT_TARGET_DESCENDANT);
     }
   });
 });

@@ -62,7 +62,7 @@ function generateBlocksSZZTypeMapping(
   n: number,
   config: IBeaconConfig
 ): Record<string, typeof config.types.phase0.SignedBeaconBlock> {
-  const blocksMapping: any = {};
+  const blocksMapping: Record<string, typeof config.types.phase0.SignedBeaconBlock> = {};
   for (let i = 0; i < n; i++) {
     blocksMapping[`blocks_${i}`] = config.types.phase0.SignedBeaconBlock;
   }

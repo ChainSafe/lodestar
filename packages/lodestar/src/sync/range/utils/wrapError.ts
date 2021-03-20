@@ -17,6 +17,6 @@ export async function wrapError<T>(promise: Promise<T>): Promise<Result<T>> {
   try {
     return {err: null, result: await promise};
   } catch (err) {
-    return {err};
+    return {err: err as Error};
   }
 }

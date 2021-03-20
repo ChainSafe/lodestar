@@ -10,20 +10,21 @@ import {generateState} from "../../../../utils/state";
 import {generateValidators} from "../../../../utils/validator";
 import {getAttestationDeltas} from "../../../../../src/phase0/naive/epoch/balanceUpdates/attestation";
 import {generateEmptyAttestation} from "../../../../utils/attestation";
+import {SinonStubFn} from "../../../../utils/types";
 
 describe.skip("process epoch - balance updates", function () {
   const sandbox = sinon.createSandbox();
 
-  let getAttestingBalanceStub: any,
-    getMatchingHeadAttestationsStub: any,
-    getMatchingSourceAttestationsStub: any,
-    getMatchingTargetAttestationsStub: any,
-    getTotalActiveBalanceStub: any,
-    getUnslashedAttestingIndicesStub: any,
-    getBaseRewardStub: any,
-    getAttestingIndicesStub: any,
-    getPreviousEpochStub: any,
-    isActiveValidatorStub: any;
+  let getAttestingBalanceStub: SinonStubFn<typeof utilsEpoch["getAttestingBalance"]>,
+    getMatchingHeadAttestationsStub: SinonStubFn<typeof utilsEpoch["getMatchingHeadAttestations"]>,
+    getMatchingSourceAttestationsStub: SinonStubFn<typeof utilsEpoch["getMatchingSourceAttestations"]>,
+    getMatchingTargetAttestationsStub: SinonStubFn<typeof utilsEpoch["getMatchingTargetAttestations"]>,
+    getTotalActiveBalanceStub: SinonStubFn<typeof utils["getTotalActiveBalance"]>,
+    getUnslashedAttestingIndicesStub: SinonStubFn<typeof utilsEpoch["getUnslashedAttestingIndices"]>,
+    getBaseRewardStub: SinonStubFn<typeof baseReward["getBaseReward"]>,
+    getAttestingIndicesStub: SinonStubFn<typeof utils["getAttestingIndices"]>,
+    getPreviousEpochStub: SinonStubFn<typeof utils["getPreviousEpoch"]>,
+    isActiveValidatorStub: SinonStubFn<typeof utils["isActiveValidator"]>;
 
   beforeEach(() => {
     getAttestingBalanceStub = sandbox.stub(utilsEpoch, "getAttestingBalance");

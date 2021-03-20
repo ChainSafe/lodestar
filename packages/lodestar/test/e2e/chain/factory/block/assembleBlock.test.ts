@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import sinon from "sinon";
+import sinon, {SinonStub} from "sinon";
 import bls, {SecretKey} from "@chainsafe/bls";
 import {List} from "@chainsafe/ssz";
 import {config} from "@chainsafe/lodestar-config/minimal";
@@ -90,8 +90,8 @@ describe("produce block", function () {
 
     const secretKey = secretKeys[validatorIndex];
     const blockProposingService = getBlockProposingService(secretKey);
-    // @ts-ignore
-    blockProposingService.getRpcClient().validator.produceBlock.callsFake(async (slot, randao) => {
+    const produceBlock = blockProposingService.getRpcClient().validator.produceBlock as SinonStub;
+    produceBlock.callsFake(async (slot, randao) => {
       return await assembleBlock(config, chainStub, dbStub, eth1, slot, randao);
     });
     const block = await blockProposingService.createAndPublishBlock(

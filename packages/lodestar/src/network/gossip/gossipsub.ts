@@ -82,8 +82,8 @@ export class Eth2Gossipsub extends Gossipsub {
     this.logger = logger;
     this.metrics = metrics;
 
-    this.gossipObjects = new Map();
-    this.gossipTopics = new Map();
+    this.gossipObjects = new Map<string, GossipObject>();
+    this.gossipTopics = new Map<string, GossipTopic>();
 
     for (const [topic, validatorFn] of validatorFns.entries()) {
       this.topicValidators.set(topic, validatorFn);
@@ -102,7 +102,7 @@ export class Eth2Gossipsub extends Gossipsub {
         clearInterval(this.statusInterval);
       }
     } catch (error) {
-      if (error.code !== "ERR_HEARTBEAT_NO_RUNNING") {
+      if ((error as GossipValidationError).code !== "ERR_HEARTBEAT_NO_RUNNING") {
         throw error;
       }
     }

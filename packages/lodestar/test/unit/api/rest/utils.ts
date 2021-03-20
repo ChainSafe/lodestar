@@ -7,3 +7,5 @@ export function urlJoin(...args: string[]): string {
       .replace(/^(\/)+/, "/")
   );
 }
+
+export type ApiResponseBody = {data: [JSON]};

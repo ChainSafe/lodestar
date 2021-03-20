@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import {IBeaconParams} from "@chainsafe/lodestar-params";
 
 import {ILightclientSSZTypes} from "../../../lightclient";

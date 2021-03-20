@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import sinon, {SinonStub} from "sinon";
+import sinon from "sinon";
 
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {generateEmptyAttesterSlashing} from "@chainsafe/lodestar-beacon-state-transition/test/utils/slashings";
@@ -11,10 +11,14 @@ import {StubbedBeaconDb, StubbedChain} from "../../../utils/stub";
 import {generateCachedState} from "../../../utils/state";
 import {validateGossipAttesterSlashing} from "../../../../src/chain/validation/attesterSlashing";
 import {AttesterSlashingErrorCode} from "../../../../src/chain/errors/attesterSlashingError";
+import {SinonStubFn} from "../../../utils/types";
+import {AttestationError} from "../../../../lib/chain/errors";
 
 describe("GossipMessageValidator", () => {
   const sandbox = sinon.createSandbox();
-  let dbStub: StubbedBeaconDb, isValidIncomingAttesterSlashingStub: SinonStub, chainStub: StubbedChain;
+  let dbStub: StubbedBeaconDb,
+    isValidIncomingAttesterSlashingStub: SinonStubFn<typeof validatorStatusUtils["isValidAttesterSlashing"]>,
+    chainStub: StubbedChain;
 
   beforeEach(() => {
     isValidIncomingAttesterSlashingStub = sandbox.stub(validatorStatusUtils, "isValidAttesterSlashing");
@@ -34,7 +38,10 @@ describe("GossipMessageValidator", () => {
       try {
         await validateGossipAttesterSlashing(config, chainStub, dbStub, slashing);
       } catch (error) {
-        expect(error.type).to.have.property("code", AttesterSlashingErrorCode.SLASHING_ALREADY_EXISTS);
+        expect((error as AttestationError).type).to.have.property(
+          "code",
+          AttesterSlashingErrorCode.SLASHING_ALREADY_EXISTS
+        );
       }
     });
 
@@ -47,7 +54,7 @@ describe("GossipMessageValidator", () => {
       try {
         await validateGossipAttesterSlashing(config, chainStub, dbStub, slashing);
       } catch (error) {
-        expect(error.type).to.have.property("code", AttesterSlashingErrorCode.INVALID_SLASHING);
+        expect((error as AttestationError).type).to.have.property("code", AttesterSlashingErrorCode.INVALID_SLASHING);
       }
     });
 

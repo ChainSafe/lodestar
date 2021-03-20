@@ -6,6 +6,7 @@ import {urlJoin} from "../utils";
 import {setupRestApiTestServer, VALIDATOR_PREFIX} from "../index.test";
 import {RestApi, ValidatorApi} from "../../../../../src/api";
 import {SinonStubbedInstance} from "sinon";
+import {ProposerDuty} from "@chainsafe/lodestar-types/phase0";
 
 describe("rest - validator - proposerDuties", function () {
   let restApi: RestApi;
@@ -25,8 +26,8 @@ describe("rest - validator - proposerDuties", function () {
       .get(urlJoin(VALIDATOR_PREFIX, proposerDutiesController.url.replace(":epoch", "1")))
       .expect(200)
       .expect("Content-Type", "application/json; charset=utf-8");
-    expect(response.body.data).to.be.instanceOf(Array);
-    expect(response.body.data).to.have.length(2);
+    expect((response.body as {data: ProposerDuty}).data).to.be.instanceOf(Array);
+    expect((response.body as {data: ProposerDuty}).data).to.have.length(2);
     expect(validatorStub.getProposerDuties.withArgs(1).calledOnce).to.be.true;
   });
 

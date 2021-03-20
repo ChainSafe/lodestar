@@ -12,7 +12,7 @@ export class PreGenesisState {
   constructor(config: IBeaconConfig, db: IDatabaseController<Buffer, Buffer>) {
     this.db = db;
     this.type = (config.types.phase0.BeaconState as unknown) as CompositeType<TreeBacked<phase0.BeaconState>>;
-    this.bucket = Bucket.phase0_preGenesisState;
+    this.bucket = Bucket.phase0_preGenesisState as Bucket;
     this.key = Buffer.from(new Uint8Array([this.bucket]));
   }
 

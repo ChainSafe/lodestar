@@ -218,7 +218,7 @@ describe("surroundTests", () => {
               expect(e.type.att2Target).to.equal(slashableEpoch, "Wrong slashableEpoch");
             }
           } else {
-            throw Error(`Wrong error type: ${e.stack}`);
+            throw Error(`Wrong error type: ${(e as Error).stack}`);
           }
         }
       } else {

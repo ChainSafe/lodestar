@@ -65,7 +65,7 @@ export class WinstonLogger implements ILogger {
   }
 
   child(options: ILoggerOptions): WinstonLogger {
-    const logger = Object.create(WinstonLogger.prototype);
+    const logger = Object.create(WinstonLogger.prototype) as WinstonLogger;
     const winston = this.winston.child({namespace: options.module, level: options.level});
     //use more verbose log
     if (this.winston.levels[this._level] > this.winston.levels[options.level ?? LogLevel.error]) {

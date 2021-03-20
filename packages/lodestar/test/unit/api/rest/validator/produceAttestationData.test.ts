@@ -2,7 +2,7 @@ import {expect} from "chai";
 import supertest from "supertest";
 import {produceAttestationData} from "../../../../../src/api/rest/controllers/validator/produceAttestationData";
 import {generateEmptyAttestation} from "../../../../utils/attestation";
-import {urlJoin} from "../utils";
+import {ApiResponseBody, urlJoin} from "../utils";
 import {setupRestApiTestServer, VALIDATOR_PREFIX} from "../index.test";
 import {SinonStubbedInstance} from "sinon";
 import {RestApi, ValidatorApi} from "../../../../../src/api";
@@ -26,8 +26,8 @@ describe("rest - validator - produceAttestationData", function () {
         slot: 0,
       })
       .expect(200);
-    expect(response.body.data).to.not.be.undefined;
-    expect(response.body.data).to.not.be.undefined;
+    expect((response.body as ApiResponseBody).data).to.not.be.undefined;
+    expect((response.body as ApiResponseBody).data).to.not.be.undefined;
     expect(validatorStub.produceAttestationData.withArgs(1, 0).calledOnce).to.be.true;
   });
 

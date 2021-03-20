@@ -7,13 +7,15 @@ import * as validatorUtils from "../../../../../src/util/validator";
 import {generateEmptyProposerSlashing} from "../../../../utils/slashings";
 import {generateValidators} from "../../../../utils/validator";
 import {generateState} from "../../../../utils/state";
+import {SinonStubFn} from "../../../../utils/types";
 
 /* eslint-disable no-empty */
 
 describe("process block - proposer slashings", function () {
   const sandbox = sinon.createSandbox();
 
-  let isSlashableValidatorStub: any, slashValidatorStub: any;
+  let isSlashableValidatorStub: SinonStubFn<typeof validatorUtils["isSlashableValidator"]>,
+    slashValidatorStub: SinonStubFn<typeof utils["slashValidator"]>;
 
   beforeEach(() => {
     isSlashableValidatorStub = sandbox.stub(validatorUtils, "isSlashableValidator");

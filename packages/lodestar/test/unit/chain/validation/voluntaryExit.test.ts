@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import sinon, {SinonStub, SinonStubbedInstance} from "sinon";
+import sinon, {SinonStubbedInstance} from "sinon";
 
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {createCachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
@@ -15,11 +15,13 @@ import {generateState} from "../../../utils/state";
 import {generateEmptySignedVoluntaryExit} from "../../../utils/attestation";
 import {validateGossipVoluntaryExit} from "../../../../src/chain/validation/voluntaryExit";
 import {VoluntaryExitErrorCode} from "../../../../src/chain/errors/voluntaryExitError";
+import {SinonStubFn} from "../../../utils/types";
+import {VoluntaryExitError} from "../../../../lib/chain/errors";
 
 describe("validate voluntary exit", () => {
   const sandbox = sinon.createSandbox();
   let dbStub: StubbedBeaconDb,
-    isValidIncomingVoluntaryExitStub: SinonStub,
+    isValidIncomingVoluntaryExitStub: SinonStubFn<typeof validatorStatusUtils["isValidVoluntaryExit"]>,
     chainStub: StubbedChain,
     regenStub: SinonStubbedInstance<StateRegenerator>;
 
@@ -53,7 +55,7 @@ describe("validate voluntary exit", () => {
     try {
       await validateGossipVoluntaryExit(config, chainStub, dbStub, voluntaryExit);
     } catch (error) {
-      expect(error.type).to.have.property("code", VoluntaryExitErrorCode.EXIT_ALREADY_EXISTS);
+      expect((error as VoluntaryExitError).type).to.have.property("code", VoluntaryExitErrorCode.EXIT_ALREADY_EXISTS);
     }
   });
 
@@ -76,7 +78,7 @@ describe("validate voluntary exit", () => {
     try {
       await validateGossipVoluntaryExit(config, chainStub, dbStub, voluntaryExit);
     } catch (error) {
-      expect(error.type).to.have.property("code", VoluntaryExitErrorCode.INVALID_EXIT);
+      expect((error as VoluntaryExitError).type).to.have.property("code", VoluntaryExitErrorCode.INVALID_EXIT);
     }
   });
 

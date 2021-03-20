@@ -7,11 +7,12 @@ import {getCurrentEpoch} from "../../../../src/util";
 import {generateEmptyBlock} from "../../../utils/block";
 import {generateState} from "../../../utils/state";
 import {generateValidators} from "../../../utils/validator";
+import {SinonStubFn} from "../../../utils/types";
 
 describe.skip("process block - randao", function () {
   const sandbox = sinon.createSandbox();
 
-  let getBeaconProposerStub: any;
+  let getBeaconProposerStub: SinonStubFn<typeof utils["getBeaconProposerIndex"]>;
 
   beforeEach(() => {
     getBeaconProposerStub = sandbox.stub(utils, "getBeaconProposerIndex");

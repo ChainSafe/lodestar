@@ -192,7 +192,7 @@ export class StateRegenerator implements IStateRegenerator {
       } catch (e) {
         throw new RegenError({
           code: RegenErrorCode.STATE_TRANSITION_ERROR,
-          error: e,
+          error: e as Error,
         });
       }
     }

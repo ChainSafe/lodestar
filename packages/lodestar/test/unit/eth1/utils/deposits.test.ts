@@ -26,7 +26,7 @@ describe("eth1 / util / deposits", function () {
       eth1DepositIndex: number;
       depositIndexes: number[];
       expectedReturnedIndexes?: number[];
-      error?: any;
+      error?: unknown;
     }
 
     const {MAX_DEPOSITS} = config.params;
@@ -97,7 +97,7 @@ describe("eth1 / util / deposits", function () {
           const result = await resultPromise;
           expect(result.map((deposit) => deposit.index)).to.deep.equal(expectedReturnedIndexes);
         } else if (error) {
-          await expect(resultPromise).to.be.rejectedWith(error);
+          await expect(resultPromise).to.be.rejectedWith(error as Error);
         } else {
           throw Error("Test case must have 'result' or 'error'");
         }

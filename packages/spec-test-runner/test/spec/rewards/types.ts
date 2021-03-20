@@ -46,7 +46,7 @@ export interface IRewardsTestCase {
 }
 
 export function generateSZZTypeMapping(): Record<string, unknown> {
-  const typeMappings: any = {};
+  const typeMappings: Record<string, unknown> = {};
   typeMappings["source_deltas"] = DeltasType;
   typeMappings["target_deltas"] = DeltasType;
   typeMappings["head_deltas"] = DeltasType;

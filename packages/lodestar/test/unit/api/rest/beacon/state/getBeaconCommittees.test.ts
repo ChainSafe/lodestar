@@ -4,7 +4,7 @@ import {expect} from "chai";
 import supertest from "supertest";
 import {StateNotFound} from "../../../../../../src/api/impl/errors/api";
 import {getStateBeaconCommittees} from "../../../../../../src/api/rest/controllers/beacon/state";
-import {urlJoin} from "../../utils";
+import {ApiResponseBody, urlJoin} from "../../utils";
 import {BEACON_PREFIX, setupRestApiTestServer} from "../../index.test";
 import {SinonStubbedInstance} from "sinon";
 import {RestApi} from "../../../../../../src/api";
@@ -31,8 +31,8 @@ describe("rest - beacon - getStateBeaconCommittees", function () {
       .get(urlJoin(BEACON_PREFIX, getStateBeaconCommittees.url.replace(":stateId", "head")))
       .expect(200)
       .expect("Content-Type", "application/json; charset=utf-8");
-    expect(response.body.data).to.not.be.undefined;
-    expect(response.body.data.length).to.be.equal(1);
+    expect((response.body as ApiResponseBody).data).to.not.be.undefined;
+    expect((response.body as ApiResponseBody).data.length).to.be.equal(1);
   });
 
   it("should succeed with filters", async function () {
@@ -52,8 +52,8 @@ describe("rest - beacon - getStateBeaconCommittees", function () {
       })
       .expect(200)
       .expect("Content-Type", "application/json; charset=utf-8");
-    expect(response.body.data).to.not.be.undefined;
-    expect(response.body.data.length).to.be.equal(1);
+    expect((response.body as ApiResponseBody).data).to.not.be.undefined;
+    expect((response.body as ApiResponseBody).data.length).to.be.equal(1);
   });
 
   it("string slot", async function () {

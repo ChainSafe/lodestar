@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-return */
 import {IBaseCase, describeMultiSpec} from "../../../src";
 import path from "path";
 

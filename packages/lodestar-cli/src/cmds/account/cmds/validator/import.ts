@@ -157,7 +157,7 @@ async function getKeystorePassphrase(keystore: Keystore, passphrasePaths: string
       console.log(`Imported passphrase ${passphraseFile}`);
       return passphrase;
     } catch (e) {
-      console.log(`Imported passphrase ${passphraseFile}, but it's invalid: ${e.message}`);
+      console.log(`Imported passphrase ${passphraseFile}, but it's invalid: ${(e as Error).message}`);
     }
   }
 
@@ -177,7 +177,7 @@ required each time the validator client starts
           await keystore.decrypt(stripOffNewlines(input));
           return true;
         } catch (e) {
-          return `Invalid password: ${e.message}`;
+          return `Invalid password: ${(e as Error).message}`;
         }
       },
     },

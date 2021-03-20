@@ -8,6 +8,7 @@ import {testLogger} from "../../../../../utils/logger";
 import {SinonStubbedInstance} from "sinon";
 import {DebugBeaconApi} from "../../../../../../src/api/impl/debug/beacon";
 import {generateState} from "../../../../../utils/state";
+import {ApiResponseBody} from "../../utils";
 
 describe("rest - debug - beacon - getState", function () {
   let restApi: RestApi;
@@ -43,7 +44,7 @@ describe("rest - debug - beacon - getState", function () {
       .get("/eth/v1/debug/beacon/states/0xSomething")
       .expect(200)
       .expect("Content-Type", "application/json; charset=utf-8");
-    expect(response.body.data).to.not.be.undefined;
+    expect((response.body as ApiResponseBody).data).to.not.be.undefined;
   });
 
   it("should get state ssz successfully", async function () {

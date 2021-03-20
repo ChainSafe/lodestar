@@ -1,6 +1,6 @@
 import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
-import sinon from "sinon";
+import sinon, {SinonStubbedInstance} from "sinon";
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import {LevelDbController} from "@chainsafe/lodestar-db";
 import {BeaconDb} from "../../../../src/db/api";
@@ -29,13 +29,34 @@ describe("beacon db - post block processing", function () {
       config,
       controller: sandbox.createStubInstance(LevelDbController),
     }) as StubbedBeaconDb;
-    dbStub.depositEvent = sandbox.createStubInstance(DepositEventRepository) as any;
-    dbStub.voluntaryExit = sandbox.createStubInstance(VoluntaryExitRepository) as any;
-    dbStub.proposerSlashing = sandbox.createStubInstance(ProposerSlashingRepository) as any;
-    dbStub.attesterSlashing = sandbox.createStubInstance(AttesterSlashingRepository) as any;
-    dbStub.attestation = sandbox.createStubInstance(AttestationRepository) as any;
-    dbStub.aggregateAndProof = sandbox.createStubInstance(AggregateAndProofRepository) as any;
-    dbStub.stateArchive = sandbox.createStubInstance(StateArchiveRepository) as any;
+    dbStub.depositEvent = sandbox.createStubInstance(DepositEventRepository) as SinonStubbedInstance<
+      DepositEventRepository
+    > &
+      DepositEventRepository;
+    dbStub.voluntaryExit = sandbox.createStubInstance(VoluntaryExitRepository) as SinonStubbedInstance<
+      VoluntaryExitRepository
+    > &
+      VoluntaryExitRepository;
+    dbStub.proposerSlashing = sandbox.createStubInstance(ProposerSlashingRepository) as SinonStubbedInstance<
+      ProposerSlashingRepository
+    > &
+      ProposerSlashingRepository;
+    dbStub.attesterSlashing = sandbox.createStubInstance(AttesterSlashingRepository) as SinonStubbedInstance<
+      AttesterSlashingRepository
+    > &
+      AttesterSlashingRepository;
+    dbStub.attestation = sandbox.createStubInstance(AttestationRepository) as SinonStubbedInstance<
+      AttestationRepository
+    > &
+      AttestationRepository;
+    dbStub.aggregateAndProof = sandbox.createStubInstance(AggregateAndProofRepository) as SinonStubbedInstance<
+      AggregateAndProofRepository
+    > &
+      AggregateAndProofRepository;
+    dbStub.stateArchive = sandbox.createStubInstance(StateArchiveRepository) as SinonStubbedInstance<
+      StateArchiveRepository
+    > &
+      StateArchiveRepository;
 
     // Add to state
     dbStub.stateArchive.lastValue.resolves(

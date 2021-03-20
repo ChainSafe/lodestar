@@ -58,7 +58,7 @@ like to choose for the voluntary exit.",
     if (!publicKey) {
       const publicKeys = readdirSync(accountPaths.keystoresDir);
 
-      const validator = await inquirer.prompt([
+      const validator = await inquirer.prompt<{publicKey: string}>([
         {
           name: "publicKey",
           type: "list",
@@ -69,7 +69,7 @@ like to choose for the voluntary exit.",
       publicKey = validator.publicKey;
     }
 
-    const confirmation = await inquirer.prompt([
+    const confirmation = await inquirer.prompt<{choice: string}>([
       {
         name: "choice",
         type: "list",

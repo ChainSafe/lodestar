@@ -112,7 +112,8 @@ describe("eth1 / jsonRpcHttpClient", function () {
   });
 
   for (const testCase of testCases) {
-    const {id, requestListener, abort, error} = testCase;
+    const {id, requestListener, abort} = testCase;
+    const error = testCase.error as Error;
     let {url, payload} = testCase;
 
     it(id, async function () {

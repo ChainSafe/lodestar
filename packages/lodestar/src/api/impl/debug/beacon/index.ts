@@ -1,4 +1,5 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {IBlockSummary} from "@chainsafe/lodestar-fork-choice";
 import {phase0} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {IBeaconChain} from "../../../../chain";
@@ -26,7 +27,7 @@ export class DebugBeaconApi implements IDebugBeaconApi {
     try {
       return this.chain.forkChoice
         .getHeads()
-        .map((blockSummary) => ({slot: blockSummary.slot, root: blockSummary.blockRoot}));
+        .map((blockSummary: IBlockSummary) => ({slot: blockSummary.slot, root: blockSummary.blockRoot}));
     } catch (e) {
       this.logger.error("Failed to get forkchoice heads", e);
       return null;
@@ -37,7 +38,8 @@ export class DebugBeaconApi implements IDebugBeaconApi {
     try {
       return await resolveStateId(this.chain, this.db, stateId);
     } catch (e) {
-      this.logger.error("Failed to resolve state", {state: stateId, error: e});
+      (e as Error).message;
+      this.logger.error("Failed to resolve state", {state: stateId, error: {...(e as Error)}});
       throw e;
     }
   }

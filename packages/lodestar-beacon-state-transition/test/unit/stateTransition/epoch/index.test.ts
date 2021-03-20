@@ -9,16 +9,19 @@ import * as balanceUpdateUtils from "../../../../src/phase0/naive/epoch/balanceU
 import * as registryUpdateUtils from "../../../../src/phase0/naive/epoch/registryUpdates";
 import * as slashingUtils from "../../../../src/phase0/naive/epoch/slashings";
 import {generateState} from "../../../utils/state";
+import {SinonStubFn} from "../../../utils/types";
 
 /* eslint-disable no-empty */
 
 describe("process epoch - crosslinks", function () {
   const sandbox = sinon.createSandbox();
 
-  let processJustificationAndFinalizationStub: any,
-    processRewardsAndPenaltiesStub: any,
-    processRegistryUpdatesStub: any,
-    processSlashingsStub: any;
+  let processJustificationAndFinalizationStub: SinonStubFn<
+      typeof justificationUtils["processJustificationAndFinalization"]
+    >,
+    processRewardsAndPenaltiesStub: SinonStubFn<typeof balanceUpdateUtils["processRewardsAndPenalties"]>,
+    processRegistryUpdatesStub: SinonStubFn<typeof registryUpdateUtils["processRegistryUpdates"]>,
+    processSlashingsStub: SinonStubFn<typeof slashingUtils["processSlashings"]>;
 
   beforeEach(() => {
     processJustificationAndFinalizationStub = sandbox.stub(justificationUtils, "processJustificationAndFinalization");

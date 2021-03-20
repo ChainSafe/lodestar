@@ -7,13 +7,14 @@ import {processBlockHeader} from "../../../../src/phase0/naive/block";
 import {generateState} from "../../../utils/state";
 import {generateEmptyBlock} from "../../../utils/block";
 import {generateValidator} from "../../../utils/validator";
+import {SinonStubFn} from "../../../utils/types";
 
 /* eslint-disable no-empty */
 
 describe("process block - block header", function () {
   const sandbox = sinon.createSandbox();
 
-  let getBeaconProposeIndexStub: any;
+  let getBeaconProposeIndexStub: SinonStubFn<typeof utils["getBeaconProposerIndex"]>;
 
   beforeEach(() => {
     getBeaconProposeIndexStub = sandbox.stub(utils, "getBeaconProposerIndex");

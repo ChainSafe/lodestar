@@ -3,7 +3,7 @@ import {expect} from "chai";
 import supertest from "supertest";
 import {produceBlockController} from "../../../../../src/api/rest/controllers/validator/produceBlock";
 import {generateEmptyBlock} from "../../../../utils/block";
-import {urlJoin} from "../utils";
+import {ApiResponseBody, urlJoin} from "../utils";
 import {setupRestApiTestServer, VALIDATOR_PREFIX} from "../index.test";
 import {SinonStubbedInstance} from "sinon";
 import {RestApi, ValidatorApi} from "../../../../../src/api";
@@ -28,7 +28,7 @@ describe("rest - validator - produceBlock", function () {
       })
       .expect(200)
       .expect("Content-Type", "application/json; charset=utf-8");
-    expect(response.body.data).to.not.be.undefined;
+    expect((response.body as ApiResponseBody).data).to.not.be.undefined;
     expect(validatorStub.produceBlock.withArgs(5, Buffer.alloc(32, 1), "0x2123"));
   });
 

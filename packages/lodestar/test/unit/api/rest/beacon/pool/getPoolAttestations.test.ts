@@ -2,7 +2,7 @@ import {expect} from "chai";
 import supertest from "supertest";
 import {getPoolAttestations} from "../../../../../../src/api/rest/controllers/beacon/pool";
 import {generateAttestation} from "../../../../../utils/attestation";
-import {urlJoin} from "../../utils";
+import {ApiResponseBody, urlJoin} from "../../utils";
 import {BEACON_PREFIX, setupRestApiTestServer} from "../../index.test";
 import {SinonStubbedInstance} from "sinon";
 import {BeaconPoolApi} from "../../../../../../src/api/impl/beacon/pool";
@@ -18,6 +18,6 @@ describe("rest - beacon - getPoolAttestations", function () {
       .query({slot: "1", committee_index: "1"})
       .expect(200)
       .expect("Content-Type", "application/json; charset=utf-8");
-    expect(response.body.data.length).to.be.equal(1);
+    expect((response.body as ApiResponseBody).data.length).to.be.equal(1);
   });
 });
