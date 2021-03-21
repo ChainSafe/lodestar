@@ -9,7 +9,7 @@
   ],
   "scripts": {
     "postinstall": "yarn clean && lerna run build",
-    "clean": "rm -rf ./packages/*/lib ./packages/*/*.tsbuildinfo",
+    "clean": "rm -rf ./packages/*/lib/* ./packages/*/*.tsbuildinfo",
     "build": "lerna run build",
     "build:docs": "yarn clean && lerna run build && lerna run build:typedocs && lerna run build:refdocs && ./scripts/prepare-docs.sh",
     "build:lib:watch": "lerna run build:lib:watch --parallel",
