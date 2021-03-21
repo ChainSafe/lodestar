@@ -12,17 +12,17 @@ export class PeerMapDelay {
     this.interval = interval;
   }
 
-  /** timeToReq = 0 -> Request as soon as pingAndStatusTimeouts() is called */
+  /** lastMs = 0 -> Request as soon as pollNext() is called */
   requestNow(peer: PeerId): void {
     this.requestAfter(peer, -1);
   }
 
-  /** timeToReq = now() -> Request after `INTERVAL` */
+  /** lastMs = now() -> Request after `INTERVAL` */
   requestAfter(peer: PeerId, ms = this.interval): void {
     this.lastMsMap.set(peer, Date.now() - this.interval + ms);
   }
 
-  /** Return array of peers with expired interval + call requestAfter on them */
+  /** Return array of peers with expired interval + calls requestAfter on them */
   pollNext(): PeerId[] {
     const peers: PeerId[] = [];
     for (const [peer, lastMs] of this.lastMsMap.entries()) {

@@ -53,7 +53,7 @@ export function onPeerDisconnect(network: Network): Promise<void> {
  * Generate valid filled attnets BitVector
  */
 export function getAttnets(subnetIds: number[] = []): boolean[] {
-  const attnets = new Array(ATTESTATION_SUBNET_COUNT).fill(false);
+  const attnets = new Array<boolean>(ATTESTATION_SUBNET_COUNT).fill(false);
   for (const subnetId of subnetIds) {
     attnets[subnetId] = true;
   }

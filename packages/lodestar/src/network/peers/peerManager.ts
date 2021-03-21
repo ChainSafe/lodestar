@@ -22,8 +22,8 @@ import {
 /** heartbeat performs regular updates such as updating reputations and performing discovery requests */
 const HEARTBEAT_INTERVAL_MS = 30 * 1000;
 /** The time in seconds between PING events. We do not send a ping if the other peer has PING'd us */
-const PING_INTERVAL_INBOUND_MS = 14 * 1000; // 1 second faster than lighthouse
-const PING_INTERVAL_OUTBOUND_MS = 17 * 1000;
+const PING_INTERVAL_INBOUND_MS = 15 * 1000;
+const PING_INTERVAL_OUTBOUND_MS = 20 * 1000;
 /** The time in seconds between re-status's peers. */
 const STATUS_INTERVAL_MS = 5 * 60 * 1000;
 /** Expect a STATUS request from on inbound peer for some time. Afterwards the node does a request */
@@ -220,7 +220,7 @@ export class PeerManager {
     } catch (e) {
       this.logger.debug("Irrelevant peer", {
         peer: peer.toB58String(),
-        reason: e instanceof LodestarError ? e.getMetadata() : e.message,
+        reason: e instanceof LodestarError ? e.getMetadata() : (e as Error).message,
       });
       void this.goodbyeAndDisconnect(peer, GoodByeReasonCode.IRRELEVANT_NETWORK);
       return;
@@ -278,7 +278,7 @@ export class PeerManager {
     const connectedPeers = this.getConnectedPeerIds();
 
     // ban and disconnect peers with bad score, collect rest of healthy peers
-    const connectedHealthPeers: PeerId[] = [];
+    const connectedHealthyPeers: PeerId[] = [];
     for (const peer of connectedPeers) {
       switch (this.peerRpcScores.getScoreState(peer)) {
         case ScoreState.Banned:
@@ -288,12 +288,12 @@ export class PeerManager {
           void this.goodbyeAndDisconnect(peer, GoodByeReasonCode.SCORE_TOO_LOW);
           break;
         case ScoreState.Healthy:
-          connectedHealthPeers.push(peer);
+          connectedHealthyPeers.push(peer);
       }
     }
 
     const {peersToDisconnect, discv5Queries, peersToConnect} = prioritizePeers(
-      connectedPeers.map((peer) => ({
+      connectedHealthyPeers.map((peer) => ({
         id: peer,
         attnets: this.peerMetadata.metadata.get(peer)?.attnets ?? [],
         score: this.peerRpcScores.getScore(peer),
@@ -370,7 +370,7 @@ export class PeerManager {
     }
     this.pingAndStatusTimeouts();
 
-    this.logger.verbose("peer connected", {peerId: peer.toB58String(), direction, status});
+    this.logger.verbose("peer connected", {peer: peer.toB58String(), direction, status});
     // NOTE: The peerConnect event is not emitted here here, but after asserting peer relevance
     this.metrics?.peerConnectedEvent.inc({direction});
     this.seenPeers.add(peer.toB58String());
@@ -390,17 +390,17 @@ export class PeerManager {
     this.peersToPingOutbound.delete(peer);
     this.peersToStatus.delete(peer);
 
-    this.logger.verbose("peer disconnected", {peerId: peer.toB58String(), direction, status});
+    this.logger.verbose("peer disconnected", {peer: peer.toB58String(), direction, status});
     this.networkEventBus.emit(NetworkEvent.peerDisconnected, peer);
     this.metrics?.peerDisconnectedEvent.inc({direction});
     this.runPeerCountMetrics(); // Last in case it throws
   };
 
-  private async disconnect(peerId: PeerId): Promise<void> {
+  private async disconnect(peer: PeerId): Promise<void> {
     try {
-      await this.libp2p.hangUp(peerId);
+      await this.libp2p.hangUp(peer);
     } catch (e) {
-      this.logger.warn("Unclean disconnect", {reason: e.message});
+      this.logger.warn("Unclean disconnect", {peer: peer.toB58String()}, e);
     }
   }
 
@@ -409,7 +409,7 @@ export class PeerManager {
       this.metrics?.peerGoodbyeSent.inc({reason: GOODBYE_KNOWN_CODES[goodbye.toString()] || ""});
       await this.reqResp.goodbye(peer, BigInt(goodbye));
     } catch (e) {
-      this.logger.verbose("Failed to send goodbye", {error: e.message});
+      this.logger.verbose("Failed to send goodbye", {peer: peer.toB58String()}, e);
     } finally {
       void this.disconnect(peer);
     }
@@ -420,9 +420,9 @@ export class PeerManager {
     let total = 0;
     const peersByDirection = new Map<string, number>();
     for (const connections of this.libp2p.connectionManager.connections.values()) {
-      const cnx = connections.find((cnx) => cnx.stat.status === "open");
-      if (cnx) {
-        const direction = cnx.stat.direction;
+      const openCnx = connections.find((cnx) => cnx.stat.status === "open");
+      if (openCnx) {
+        const direction = openCnx.stat.direction;
         peersByDirection.set(direction, 1 + (peersByDirection.get(direction) ?? 0));
         total++;
       }

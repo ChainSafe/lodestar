@@ -87,6 +87,8 @@ export class PeerDiscovery {
    */
   async getCachedDiscoveryPeersOnSubnet(subnet: number, maxPeersToDiscover: number): Promise<PeerId[]> {
     const discovery: Discv5Discovery = this.libp2p._discovery.get("discv5") as Discv5Discovery;
+    // if disablePeerDiscovery = true, libp2p will not have any "discv5" module
+    if (!discovery) return [];
     const discv5: Discv5 = discovery.discv5;
 
     const peersOnSubnet: PeerId[] = [];
