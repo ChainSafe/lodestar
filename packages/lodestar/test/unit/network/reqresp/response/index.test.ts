@@ -1,6 +1,5 @@
 import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
-import PeerId from "peer-id";
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {LodestarError} from "@chainsafe/lodestar-utils";
 import {Method, ReqRespEncoding, RpcResponseStatus} from "../../../../../src/constants";
@@ -9,12 +8,13 @@ import {expectRejectedWithLodestarError} from "../../../../utils/errors";
 import {expectEqualByteChunks, MockLibP2pStream} from "../utils";
 import {sszSnappyPing} from "../encodingStrategies/sszSnappy/testData";
 import {testLogger} from "../../../../utils/logger";
+import {getValidPeerId} from "../../../../utils/peer";
 
 chai.use(chaiAsPromised);
 
 describe("network / reqresp / response / handleRequest", () => {
   const logger = testLogger();
-  const peerId = new PeerId(new Uint8Array([1]));
+  const peerId = getValidPeerId();
 
   const testCases: {
     id: string;

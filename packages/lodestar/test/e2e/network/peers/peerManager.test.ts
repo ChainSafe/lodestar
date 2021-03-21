@@ -1,6 +1,5 @@
 import {EventEmitter} from "events";
 import sinon from "sinon";
-import PeerId from "peer-id";
 import {expect} from "chai";
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import {IReqResp} from "../../../../src/network/reqresp";
@@ -16,12 +15,12 @@ import {phase0} from "@chainsafe/lodestar-types";
 import {sleep} from "@chainsafe/lodestar-utils";
 import {waitForEvent} from "../../../utils/events/resolver";
 import {testLogger} from "../../../utils/logger";
+import {getValidPeerId} from "../../../utils/peer";
 
 const logger = testLogger();
 
 describe("network / peers / PeerManager", function () {
-  const peerId1 = new PeerId(Buffer.from("lodestar-1"));
-
+  const peerId1 = getValidPeerId();
   const metrics = new BeaconMetrics({enabled: true, timeout: 5000, pushGateway: false}, {logger});
 
   const afterEachCallbacks: (() => Promise<void> | void)[] = [];

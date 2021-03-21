@@ -1,10 +1,10 @@
-import PeerId from "peer-id";
 import {AbortController} from "abort-controller";
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {Epoch, phase0, Slot} from "@chainsafe/lodestar-types";
 import {linspace} from "../../../../src/util/numpy";
 import {generateEmptyBlock, generateEmptySignedBlock} from "../../../utils/block";
 import {testLogger} from "../../../utils/logger";
+import {getValidPeerId} from "../../../utils/peer";
 import {
   SyncChain,
   SyncChainOpts,
@@ -53,6 +53,7 @@ describe("sync / range / chain", () => {
   ];
 
   // Helper variables to trigger errors
+  const peer = getValidPeerId();
   const logger = testLogger();
   const controller = new AbortController();
   const ACCEPT_BLOCK = Buffer.alloc(96, 0);
@@ -90,7 +91,7 @@ describe("sync / range / chain", () => {
         return blocks;
       };
 
-      const peers = [new PeerId(Buffer.from("lodestar"))];
+      const peers = [peer];
       const getPeerSet: GetPeersAndTargetEpoch = () => {
         return {
           peers,
@@ -116,7 +117,7 @@ describe("sync / range / chain", () => {
     const opts: SyncChainOpts = {epochsPerBatch: 2, maybeStuckTimeoutMs: 5};
     const startEpoch = 0;
     const targetEpoch = 16;
-    const peers = [new PeerId(Buffer.from("lodestar"))];
+    const peers = [peer];
     let returnNoPeers = true;
 
     setTimeout(() => {

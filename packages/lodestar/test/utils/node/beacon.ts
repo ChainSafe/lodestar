@@ -24,6 +24,7 @@ export async function getDevBeaconNode({
   genesisTime,
   logger,
   peerId,
+  peerStoreDir,
 }: {
   params: Partial<IBeaconParams>;
   options?: RecursivePartial<IBeaconNodeOptions>;
@@ -31,6 +32,7 @@ export async function getDevBeaconNode({
   genesisTime?: number;
   logger?: ILogger;
   peerId?: PeerId;
+  peerStoreDir?: string;
 }): Promise<BeaconNode> {
   if (!peerId) peerId = await createPeerId();
   const tmpDir = tmp.dirSync({unsafeCleanup: true});
@@ -53,7 +55,7 @@ export async function getDevBeaconNode({
       targetPeers: defaultNetworkOptions.targetPeers,
       maxPeers: defaultNetworkOptions.maxPeers,
     },
-    {disablePeerDiscovery: true}
+    {disablePeerDiscovery: true, peerStoreDir}
   );
 
   options = deepmerge(
