@@ -41,6 +41,8 @@ export type PeerManagerOpts = {
   targetPeers: number;
   /** The maximum number of peers we allow (exceptions for subnet peers) */
   maxPeers: number;
+  /** Don't run discv5 queries, nor connect to cached peers in the peerStore */
+  disablePeerDiscovery?: boolean;
 };
 
 export type PeerManagerModules = {
@@ -303,14 +305,14 @@ export class PeerManager {
       this.opts
     );
 
-    if (discv5Queries.length > 0) {
+    if (discv5Queries.length > 0 && !this.opts.disablePeerDiscovery) {
       // It's a promise due to crypto lib calls only
       this.discovery.discoverSubnetPeers(discv5Queries).catch((e) => {
         this.logger.error("Error on discoverSubnetPeers", {}, e);
       });
     }
 
-    if (peersToConnect > 0) {
+    if (peersToConnect > 0 && !this.opts.disablePeerDiscovery) {
       try {
         this.discovery.discoverPeers(peersToConnect);
       } catch (e) {
