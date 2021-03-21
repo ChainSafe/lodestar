@@ -1,4 +1,4 @@
-import {getSyncProtocols, INetwork} from "../../network";
+import {INetwork} from "../../network";
 import PeerId from "peer-id";
 import {ScoreState} from "../../network/peers";
 
@@ -11,16 +11,9 @@ export function getSyncPeers(
 ): PeerId[] {
   return (
     network
-      .getPeers({
-        supportsProtocols: getSyncProtocols(),
-      })
-      .map((peer) => peer.id)
-      .filter((peer) => {
-        return network.peerRpcScores.getScoreState(peer) === ScoreState.Healthy && condition(peer);
-      })
-      .sort((p1, p2) => {
-        return network.peerRpcScores.getScore(p2) - network.peerRpcScores.getScore(p1);
-      })
+      .getConnectedPeers()
+      .filter((peer) => network.peerRpcScores.getScoreState(peer) === ScoreState.Healthy && condition(peer))
+      .sort((p1, p2) => network.peerRpcScores.getScore(p2) - network.peerRpcScores.getScore(p1))
       // take 10 best peers for sync
       .slice(0, maxPeers)
   );

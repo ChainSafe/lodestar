@@ -1,16 +1,16 @@
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {phase0} from "@chainsafe/lodestar-types";
-import {MockBeaconChain} from "../../../utils/mocks/chain/chain";
+import {MockBeaconChain} from "../../../../utils/mocks/chain/chain";
 import {
   assertPeerRelevance,
   IrrelevantPeerError,
   IrrelevantPeerErrorCode,
-} from "../../../../src/sync/utils/assertPeerRelevance";
-import {IBeaconClock} from "../../../../src/chain/clock";
-import {expectThrowsLodestarError} from "../../../utils/errors";
+} from "../../../../../src/network/peers/utils/assertPeerRelevance";
+import {IBeaconClock} from "../../../../../src/chain/clock";
+import {expectThrowsLodestarError} from "../../../../utils/errors";
 import {toHexString} from "@chainsafe/ssz";
 
-describe("sync / utils / assertPeerRelevance", () => {
+describe("network / peers / utils / assertPeerRelevance", () => {
   const correctForkDigest = Buffer.alloc(4, 0);
   const differentForkDigest = Buffer.alloc(4, 1);
   const ZERO_HASH = Buffer.alloc(32, 0);

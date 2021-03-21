@@ -1,3 +1,4 @@
 export * from "./metastore";
-export * from "./utils";
+export * from "./peerManager";
 export * from "./score";
+export {RequestedSubnet} from "./utils/subnetMap";

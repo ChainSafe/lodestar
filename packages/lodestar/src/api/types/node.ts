@@ -1,4 +1,5 @@
 import {phase0} from "@chainsafe/lodestar-types";
+import {PeerDirection, PeerState} from "../../network";
 
 export type NodeIdentity = {
   peerId: string;
@@ -12,7 +13,7 @@ export type NodePeer = {
   peerId: string;
   enr: string;
   lastSeenP2pAddress: string;
-  state: "disconnected" | "connecting" | "connected" | "disconnecting";
+  state: PeerState;
   // the spec does not specify direction for a disconnected peer, lodestar uses null in that case
-  direction: "inbound" | "outbound" | null;
+  direction: PeerDirection | null;
 };

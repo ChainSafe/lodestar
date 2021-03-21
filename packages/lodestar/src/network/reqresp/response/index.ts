@@ -2,14 +2,21 @@ import PeerId from "peer-id";
 import pipe from "it-pipe";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Context, ILogger} from "@chainsafe/lodestar-utils";
+import {phase0} from "@chainsafe/lodestar-types";
 import {Method, ReqRespEncoding, RpcResponseStatus} from "../../../constants";
 import {onChunk} from "../utils/onChunk";
-import {ILibP2pStream, ReqRespHandler} from "../interface";
+import {ILibP2pStream} from "../interface";
 import {requestDecode} from "../encoders/requestDecode";
 import {responseEncodeError, responseEncodeSuccess} from "../encoders/responseEncode";
 import {ResponseError} from "./errors";
 
 export {ResponseError};
+
+export type PerformRequestHandler = (
+  method: Method,
+  requestBody: phase0.RequestBody,
+  peerId: PeerId
+) => AsyncIterable<phase0.ResponseBody>;
 
 /**
  * Handles a ReqResp request from a peer. Throws on error. Logs each step of the response lifecycle.
@@ -23,7 +30,7 @@ export {ResponseError};
  */
 export async function handleRequest(
   {config, logger}: {config: IBeaconConfig; logger: ILogger},
-  performRequestHandler: ReqRespHandler,
+  performRequestHandler: PerformRequestHandler,
   stream: ILibP2pStream,
   peerId: PeerId,
   method: Method,
@@ -78,6 +85,7 @@ export async function handleRequest(
     logger.verbose("Resp error", logCtx, responseError);
     throw responseError;
   } else {
+    // NOTE: Only log once per request to verbose, intermediate steps to debug
     logger.verbose("Resp done", logCtx);
   }
 }

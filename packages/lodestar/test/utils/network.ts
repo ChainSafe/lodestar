@@ -2,10 +2,12 @@ import {ENR, Discv5Discovery} from "@chainsafe/discv5";
 import Bootstrap from "libp2p-bootstrap";
 import MDNS from "libp2p-mdns";
 import PeerId from "peer-id";
-
+import Multiaddr from "multiaddr";
+import {Network} from "../../src/network";
 import {NodejsNode} from "../../src/network/nodejs";
 import {createPeerId} from "../../src/network";
 import {defaultDiscv5Options} from "../../src/network/options";
+import {ATTESTATION_SUBNET_COUNT, Libp2pEvent} from "../../src/constants";
 
 export async function createNode(
   multiaddr: string,
@@ -19,8 +21,41 @@ export async function createNode(
   return new NodejsNode({
     peerId,
     addresses: {listen: [multiaddr]},
-    autoDial: false,
     discv5: {...defaultDiscv5Options, enr, bindAddr},
     peerDiscovery,
   });
+}
+
+// Helpers to manipulate network's libp2p instance for testing only
+
+export async function connect(network: Network, peer: PeerId, multiaddr: Multiaddr[]): Promise<void> {
+  network["libp2p"].peerStore.addressBook.add(peer, multiaddr);
+  await network["libp2p"].dial(peer);
+}
+
+export async function disconnect(network: Network, peer: PeerId): Promise<void> {
+  await network["libp2p"].hangUp(peer);
+}
+
+export function onPeerConnect(network: Network): Promise<void> {
+  return new Promise<void>((resolve) =>
+    network["libp2p"].connectionManager.on(Libp2pEvent.peerConnect, () => resolve())
+  );
+}
+
+export function onPeerDisconnect(network: Network): Promise<void> {
+  return new Promise<void>((resolve) =>
+    network["libp2p"].connectionManager.on(Libp2pEvent.peerDisconnect, () => resolve())
+  );
+}
+
+/**
+ * Generate valid filled attnets BitVector
+ */
+export function getAttnets(subnetIds: number[] = []): boolean[] {
+  const attnets = new Array(ATTESTATION_SUBNET_COUNT).fill(false);
+  for (const subnetId of subnetIds) {
+    attnets[subnetId] = true;
+  }
+  return attnets;
 }

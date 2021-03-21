@@ -4,8 +4,7 @@ import PeerId from "peer-id";
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {LodestarError} from "@chainsafe/lodestar-utils";
 import {Method, ReqRespEncoding, RpcResponseStatus} from "../../../../../src/constants";
-import {ReqRespHandler} from "../../../../../src/network";
-import {handleRequest} from "../../../../../src/network/reqresp/response";
+import {handleRequest, PerformRequestHandler} from "../../../../../src/network/reqresp/response";
 import {expectRejectedWithLodestarError} from "../../../../utils/errors";
 import {expectEqualByteChunks, MockLibP2pStream} from "../utils";
 import {sszSnappyPing} from "../encodingStrategies/sszSnappy/testData";
@@ -22,7 +21,7 @@ describe("network / reqresp / response / handleRequest", () => {
     method: Method;
     encoding: ReqRespEncoding;
     requestChunks: Buffer[];
-    performRequestHandler: ReqRespHandler;
+    performRequestHandler: PerformRequestHandler;
     expectedResponseChunks: Buffer[];
     expectedError?: LodestarError<any>;
   }[] = [

@@ -52,10 +52,7 @@ export async function getDevBeaconNode({
       minPeers: 25,
       maxPeers: 25,
     },
-    {
-      autoDial: true,
-      disablePeerDiscovery: true,
-    }
+    {disablePeerDiscovery: true}
   );
 
   options = deepmerge(

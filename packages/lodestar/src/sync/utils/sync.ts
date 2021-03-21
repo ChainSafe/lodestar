@@ -1,27 +1,12 @@
 import PeerId from "peer-id";
 import {phase0, Root} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {getStatusProtocols, INetwork} from "../../network";
+import {INetwork} from "../../network";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {toHexString} from "@chainsafe/ssz";
 import {ZERO_HASH} from "../../constants";
 import {IPeerMetadataStore} from "../../network/peers";
 import {getSyncPeers} from "./peers";
-
-export function getStatusFinalizedCheckpoint(status: phase0.Status): phase0.Checkpoint {
-  return {epoch: status.finalizedEpoch, root: status.finalizedRoot};
-}
-
-export async function syncPeersStatus(network: INetwork, status: phase0.Status): Promise<void> {
-  await Promise.all(
-    network.getPeers({supportsProtocols: getStatusProtocols()}).map(async (peer) => {
-      try {
-        network.peerMetadata.status.set(peer.id, await network.reqResp.status(peer.id, status));
-        // eslint-disable-next-line no-empty
-      } catch {}
-    })
-  );
-}
 
 /**
  * Get best head from peers that support beacon_blocks_by_range.

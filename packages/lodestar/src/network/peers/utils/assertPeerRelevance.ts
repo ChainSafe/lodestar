@@ -3,8 +3,8 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Epoch, ForkDigest, Root, phase0} from "@chainsafe/lodestar-types";
 import {LodestarError} from "@chainsafe/lodestar-utils";
 import {toHexString} from "@chainsafe/ssz";
-import {IBeaconChain} from "../../chain";
-import {GENESIS_EPOCH} from "../../constants";
+import {IBeaconChain} from "../../../chain";
+import {GENESIS_EPOCH} from "../../../constants";
 
 // TODO: Why this value? (From Lighthouse)
 const FUTURE_SLOT_TOLERANCE = 1;

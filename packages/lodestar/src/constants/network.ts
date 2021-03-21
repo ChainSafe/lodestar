@@ -140,10 +140,13 @@ export enum GoodByeReasonCode {
   CLIENT_SHUTDOWN = 1,
   IRRELEVANT_NETWORK = 2,
   ERROR = 3,
+  TOO_MANY_PEERS = 129,
+  SCORE_TOO_LOW = 250,
+  BANNED = 251,
 }
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
-export const goodbyeReasonCodeDescriptions: Record<string, string> = {
+export const GOODBYE_KNOWN_CODES: Record<string, string> = {
   0: "Unknown",
 
   // spec-defined codes
@@ -159,3 +162,9 @@ export const goodbyeReasonCodeDescriptions: Record<string, string> = {
   250: "Peer score too low",
   251: "Peer banned this node",
 };
+
+/** Until js-libp2p types its events */
+export enum Libp2pEvent {
+  peerConnect = "peer:connect",
+  peerDisconnect = "peer:disconnect",
+}
