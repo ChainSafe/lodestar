@@ -29,7 +29,7 @@ describe("network / ReqResp", function () {
   const multiaddr = "/ip4/127.0.0.1/tcp/0";
   const networkOptsDefault: INetworkOptions = {
     maxPeers: 1,
-    minPeers: 1,
+    targetPeers: 1,
     bootMultiaddrs: [],
     rpcTimeout: 5000,
     connectTimeout: 5000,

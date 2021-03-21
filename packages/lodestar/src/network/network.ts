@@ -72,7 +72,7 @@ export class Network implements INetwork {
 
     this.peerManager = new PeerManager(
       {libp2p, reqResp: this.reqResp, logger, metrics, chain, config, peerMetadata, peerRpcScores, networkEventBus},
-      {targetPeers: opts.minPeers, maxPeers: opts.maxPeers}
+      opts
     );
   }
 
