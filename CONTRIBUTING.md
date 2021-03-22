@@ -50,7 +50,7 @@ docker-compose -f docker/docker-compose.local.yml up -d
 
 **Development**
 
-Development image will have the basic packages and current (source) directory mapped to  `/usr/app` to map your code, and `/usr/app/node_modules` to `../dev/lodestar/node_modules` to keep the source clean. Start development container and get the dev shell.
+Development image will have the basic packages and current (source) directory mapped to  `/usr/app` to map your code. Start development container (command: tail -f anything doesn't let container shut down) and you can exec into the dev shell.
 
 ```
 docker-compose -f docker-compose.yml -f development.yml up -d beacon_node

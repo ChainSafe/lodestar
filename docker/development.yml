@@ -1,0 +1,109 @@
+version: "3.4"
+volumes:
+
+  devinstall_node_modules:
+
+  devinstall_bu_node_modules:
+  devinstall_bu_lib:
+
+  devinstall_ls_node_modules:
+  devinstall_ls_lib:
+
+  devinstall_ls_bst_node_modules:
+  devinstall_ls_bst_lib:
+
+  devinstall_ls_cli_node_modules:
+  devinstall_ls_cli_lib:
+
+  devinstall_ls_config_node_modules:
+  devinstall_ls_config_lib:
+
+  devinstall_ls_db_node_modules:
+  devinstall_ls_db_lib:
+
+  devinstall_ls_fc_node_modules:
+  devinstall_ls_fc_lib:
+
+  devinstall_ls_lc_node_modules:
+  devinstall_ls_lc_lib:
+
+  devinstall_ls_params_node_modules:
+  devinstall_ls_params_lib:
+
+  devinstall_ls_stu_node_modules:
+  devinstall_ls_stu_lib:
+
+  devinstall_ls_types_node_modules:
+  devinstall_ls_types_lib:
+
+  devinstall_ls_utils_node_modules:
+  devinstall_ls_utils_lib:
+
+  devinstall_ls_val_node_modules:
+  devinstall_ls_val_lib:
+
+  devinstall_persist_node_modules:
+  devinstall_persist_lib:
+
+  devinstall_str_node_modules:
+  devinstall_str_lib:
+
+
+services:
+  beacon_node:
+    build:
+      target: development
+    image: lodestar:dev
+    volumes:
+      - ./:/usr/app
+      - devinstall_node_modules:/usr/app/node_modules
+
+      - devinstall_bu_node_modules:/usr/app/packages/benchmark-utils/node_modules
+      - devinstall_ls_node_modules:/usr/app/packages/benchmark-utils/lib
+
+      - devinstall_ls_node_modules:/usr/app/packages/lodestar/node_modules
+      - devinstall_ls_lib:/usr/app/packages/lodestar/lib
+
+      - devinstall_ls_bst_node_modules:/usr/app/packages/lodestar-beacon-state-transition/node_modules
+      - devinstall_ls_bst_lib:/usr/app/packages/lodestar-beacon-state-transition/lib
+
+      - devinstall_ls_cli_node_modules:/usr/app/packages/lodestar-cli/node_modules
+      - devinstall_ls_cli_lib:/usr/app/packages/lodestar-cli/lib
+
+      - devinstall_ls_config_node_modules:/usr/app/packages/lodestar-config/node_modules
+      - devinstall_ls_config_lib:/usr/app/packages/lodestar-config/lib
+
+      - devinstall_ls_db_node_modules:/usr/app/packages/lodestar-db/node_modules
+      - devinstall_ls_db_lib:/usr/app/packages/lodestar-db/lib
+
+      - devinstall_ls_fc_node_modules:/usr/app/packages/lodestar-fork-choice/node_modules
+      - devinstall_ls_fc_lib:/usr/app/packages/lodestar-fork-choice/lib
+
+      - devinstall_ls_lc_node_modules:/usr/app/packages/lodestar-light-client/node_modules
+      - devinstall_ls_lc_lib:/usr/app/packages/lodestar-light-client/lib
+
+      - devinstall_ls_params_node_modules:/usr/app/packages/lodestar-params/node_modules
+      - devinstall_ls_params_lib:/usr/app/packages/lodestar-params/lib
+
+      - devinstall_ls_stu_node_modules:/usr/app/packages/lodestar-spec-test-util/node_modules
+      - devinstall_ls_stu_lib:/usr/app/packages/lodestar-spec-test-util/lib
+
+      - devinstall_ls_types_node_modules:/usr/app/packages/lodestar-types/node_modules
+      - devinstall_ls_types_lib:/usr/app/packages/lodestar-types/lib
+
+      - devinstall_ls_utils_node_modules:/usr/app/packages/lodestar-utils/node_modules
+      - devinstall_ls_utils_lib:/usr/app/packages/lodestar-utils/lib
+
+      - devinstall_ls_val_node_modules:/usr/app/packages/lodestar-validator/node_modules
+      - devinstall_ls_val_lib:/usr/app/packages/lodestar-validator/lib
+
+      - devinstall_persist_node_modules:/usr/app/packages/persistent-ts/node_modules
+      - devinstall_persist_lib:/usr/app/packages/persistent-ts/lib
+
+      - devinstall_str_node_modules:/usr/app/packages/spec-test-runner/node_modules
+      - devinstall_str_lib:/usr/app/packages/spec-test-runner/lib
+
+
+
+
+    command: tail -F anything
