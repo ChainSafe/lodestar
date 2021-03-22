@@ -11,6 +11,7 @@ import {ZERO_HASH} from "@chainsafe/lodestar-beacon-state-transition";
 import {INetwork, Network} from "../../../../src/network";
 import {IPeerRpcScoreStore, PeerRpcScoreStore, ScoreState} from "../../../../src/network/peers";
 import {getStubbedMetadataStore, StubbedIPeerMetadataStore} from "../../../utils/peer";
+import {createStubInstance} from "../../../utils/types";
 
 describe("sync utils", function () {
   const sandbox = sinon.createSandbox();
@@ -78,10 +79,10 @@ describe("sync utils", function () {
 
     beforeEach(() => {
       metastoreStub = getStubbedMetadataStore();
-      networkStub = sinon.createStubInstance(Network);
+      networkStub = createStubInstance(Network);
       networkStub.peerMetadata = metastoreStub;
-      forkChoiceStub = sinon.createStubInstance(ForkChoice) as SinonStubbedInstance<ForkChoice> & ForkChoice;
-      peerScoreStub = sinon.createStubInstance(PeerRpcScoreStore);
+      forkChoiceStub = createStubInstance(ForkChoice);
+      peerScoreStub = createStubInstance(PeerRpcScoreStore);
       networkStub.peerRpcScores = peerScoreStub;
     });
     afterEach(() => {

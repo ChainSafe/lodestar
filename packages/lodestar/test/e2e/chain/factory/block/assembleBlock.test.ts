@@ -27,16 +27,17 @@ import {ValidatorApi} from "../../../../../src/api/impl/validator";
 import {StubbedBeaconDb} from "../../../../utils/stub";
 import {testLogger} from "../../../../utils/logger";
 import {StateRegenerator} from "../../../../../src/chain/regen";
+import {createStubInstance} from "../../../../utils/types";
 
 describe("produce block", function () {
   this.timeout("10 min");
 
   const dbStub = new StubbedBeaconDb(sinon);
-  const chainStub = sinon.createStubInstance(BeaconChain);
-  chainStub.forkChoice = sinon.createStubInstance(ForkChoice);
-  const regenStub = (chainStub.regen = sinon.createStubInstance(StateRegenerator));
-  const forkChoiceStub = (chainStub.forkChoice = sinon.createStubInstance(ForkChoice));
-  const eth1 = sinon.createStubInstance(Eth1ForBlockProduction);
+  const chainStub = createStubInstance(BeaconChain);
+  chainStub.forkChoice = createStubInstance(ForkChoice);
+  const regenStub = (chainStub.regen = createStubInstance(StateRegenerator));
+  const forkChoiceStub = (chainStub.forkChoice = createStubInstance(ForkChoice));
+  const eth1 = createStubInstance(Eth1ForBlockProduction);
 
   it("should produce valid block - state without valid eth1 votes", async function () {
     const secretKeys = Array.from({length: 64}, () => bls.SecretKey.fromKeygen());
@@ -104,9 +105,9 @@ describe("produce block", function () {
   });
 
   function getBlockProposingService(secretKey: SecretKey): BlockProposingService {
-    const rpcClientStub = sinon.createStubInstance(ApiClientOverInstance);
-    rpcClientStub.validator = sinon.createStubInstance(ValidatorApi);
-    const slashingProtection = sinon.createStubInstance(SlashingProtection);
+    const rpcClientStub = createStubInstance(ApiClientOverInstance);
+    rpcClientStub.validator = createStubInstance(ValidatorApi);
+    const slashingProtection = createStubInstance(SlashingProtection);
     const validators = mapSecretKeysToValidators([secretKey]);
     return new BlockProposingService(config, validators, rpcClientStub, slashingProtection, testLogger());
   }

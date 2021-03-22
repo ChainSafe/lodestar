@@ -12,8 +12,8 @@ import {generateSignedBlock, getNewBlockJob} from "../../../utils/block";
 import {StubbedBeaconDb} from "../../../utils/stub";
 import {generateCachedState} from "../../../utils/state";
 import {BlockErrorCode} from "../../../../src/chain/errors";
-import {SinonStubFn} from "../../../utils/types";
-import {BlockError} from "../../../../lib/chain/errors";
+import {createStubInstance, SinonStubFn} from "../../../utils/types";
+import {BlockError} from "../../../../src/chain/errors";
 
 describe("gossip block validation", function () {
   let chainStub: SinonStubbedInstance<IBeaconChain>;
@@ -23,11 +23,11 @@ describe("gossip block validation", function () {
   let verifySignatureStub: SinonStubFn<typeof specUtils["verifyBlockSignature"]>;
 
   beforeEach(function () {
-    chainStub = sinon.createStubInstance(BeaconChain);
-    chainStub.clock = sinon.createStubInstance(LocalClock);
-    forkChoiceStub = sinon.createStubInstance(ForkChoice);
+    chainStub = createStubInstance(BeaconChain);
+    chainStub.clock = createStubInstance(LocalClock);
+    forkChoiceStub = createStubInstance(ForkChoice);
     chainStub.forkChoice = forkChoiceStub;
-    regenStub = chainStub.regen = sinon.createStubInstance(StateRegenerator);
+    regenStub = chainStub.regen = createStubInstance(StateRegenerator);
     dbStub = new StubbedBeaconDb(sinon, config);
     verifySignatureStub = sinon.stub(specUtils, "verifyBlockSignature");
   });

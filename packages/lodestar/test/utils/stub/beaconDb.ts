@@ -21,6 +21,7 @@ import {SeenAttestationCache} from "../../../src/db/api/beacon/seenAttestationCa
 import {minimalConfig} from "@chainsafe/lodestar-config/minimal";
 import {PendingBlockRepository} from "../../../src/db/api/beacon/repositories/pendingBlock";
 import {SignedBeaconBlock} from "@chainsafe/lodestar-types/phase0";
+import {createStubInstance} from "../types";
 
 export class StubbedBeaconDb extends BeaconDb {
   db!: SinonStubbedInstance<LevelDbController>;
@@ -49,55 +50,22 @@ export class StubbedBeaconDb extends BeaconDb {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   constructor(sinon: SinonSandbox, config = minimalConfig) {
     super({config, controller: null!});
-    this.badBlock = sinon.createStubInstance(BadBlockRepository) as SinonStubbedInstance<BadBlockRepository> &
-      BadBlockRepository;
-    this.block = sinon.createStubInstance(BlockRepository) as SinonStubbedInstance<BlockRepository> & BlockRepository;
-    this.pendingBlock = sinon.createStubInstance(PendingBlockRepository) as SinonStubbedInstance<
-      PendingBlockRepository
-    > &
-      PendingBlockRepository;
-    this.blockArchive = sinon.createStubInstance(BlockArchiveRepository) as SinonStubbedInstance<
-      BlockArchiveRepository
-    > &
-      BlockArchiveRepository;
-    this.stateArchive = sinon.createStubInstance(StateArchiveRepository) as SinonStubbedInstance<
-      StateArchiveRepository
-    > &
-      StateArchiveRepository;
+    this.badBlock = createStubInstance(BadBlockRepository);
+    this.block = createStubInstance(BlockRepository);
+    this.pendingBlock = createStubInstance(PendingBlockRepository);
+    this.blockArchive = createStubInstance(BlockArchiveRepository);
+    this.stateArchive = createStubInstance(StateArchiveRepository);
 
-    this.attestation = sinon.createStubInstance(AttestationRepository) as SinonStubbedInstance<AttestationRepository> &
-      AttestationRepository;
-    this.aggregateAndProof = sinon.createStubInstance(AggregateAndProofRepository) as SinonStubbedInstance<
-      AggregateAndProofRepository
-    > &
-      AggregateAndProofRepository;
-    this.voluntaryExit = sinon.createStubInstance(VoluntaryExitRepository) as SinonStubbedInstance<
-      VoluntaryExitRepository
-    > &
-      VoluntaryExitRepository;
-    this.proposerSlashing = sinon.createStubInstance(ProposerSlashingRepository) as SinonStubbedInstance<
-      ProposerSlashingRepository
-    > &
-      ProposerSlashingRepository;
-    this.attesterSlashing = sinon.createStubInstance(AttesterSlashingRepository) as SinonStubbedInstance<
-      AttesterSlashingRepository
-    > &
-      AttesterSlashingRepository;
-    this.depositEvent = sinon.createStubInstance(DepositEventRepository) as SinonStubbedInstance<
-      DepositEventRepository
-    > &
-      DepositEventRepository;
+    this.attestation = createStubInstance(AttestationRepository);
+    this.aggregateAndProof = createStubInstance(AggregateAndProofRepository);
+    this.voluntaryExit = createStubInstance(VoluntaryExitRepository);
+    this.proposerSlashing = createStubInstance(ProposerSlashingRepository);
+    this.attesterSlashing = createStubInstance(AttesterSlashingRepository);
+    this.depositEvent = createStubInstance(DepositEventRepository);
 
-    this.depositDataRoot = sinon.createStubInstance(DepositDataRootRepository) as SinonStubbedInstance<
-      DepositDataRootRepository
-    > &
-      DepositDataRootRepository;
-    this.eth1Data = sinon.createStubInstance(Eth1DataRepository) as SinonStubbedInstance<Eth1DataRepository> &
-      Eth1DataRepository;
-    this.seenAttestationCache = sinon.createStubInstance(SeenAttestationCache) as SinonStubbedInstance<
-      SeenAttestationCache
-    > &
-      SeenAttestationCache;
+    this.depositDataRoot = createStubInstance(DepositDataRootRepository);
+    this.eth1Data = createStubInstance(Eth1DataRepository);
+    this.seenAttestationCache = createStubInstance(SeenAttestationCache);
     this.processBlockOperations = sinon.stub(this, "processBlockOperations") as (
       signedBlock: SignedBeaconBlock
     ) => Promise<void>;

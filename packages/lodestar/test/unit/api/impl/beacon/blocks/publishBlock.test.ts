@@ -8,6 +8,7 @@ import {generateEmptySignedBlock} from "../../../../../utils/block";
 import {SignedBeaconBlock} from "@chainsafe/lodestar-types/lib/allForks";
 import {BeaconSync} from "../../../../../../src/sync";
 import {setupApiImplTestServer, ApiImplTestModules} from "../../index.test";
+import {createStubInstance} from "../../../../../utils/types";
 
 use(chaiAsPromised);
 
@@ -25,7 +26,7 @@ describe("api - beacon - publishBlock", function () {
 
   beforeEach(function () {
     server = setupApiImplTestServer();
-    gossipStub = sinon.createStubInstance(Eth2Gossipsub);
+    gossipStub = createStubInstance(Eth2Gossipsub);
     gossipStub.publishBeaconBlock = sinon.stub();
     server.networkStub.gossip = (gossipStub as unknown) as Eth2Gossipsub;
     chainStub = server.chainStub;

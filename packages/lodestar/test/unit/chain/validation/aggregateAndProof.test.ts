@@ -21,8 +21,8 @@ import {generateCachedState} from "../../../utils/state";
 import {StubbedBeaconDb} from "../../../utils/stub";
 import {AttestationErrorCode} from "../../../../src/chain/errors";
 import {expectRejectedWithLodestarError} from "../../../utils/errors";
-import {SinonStubFn} from "../../../utils/types";
-import {AttestationError} from "../../../../lib/chain/errors";
+import {createStubInstance, SinonStubFn} from "../../../utils/types";
+import {AttestationError} from "../../../../src/chain/errors";
 
 describe("gossip aggregate and proof test", function () {
   let chain: SinonStubbedInstance<IBeaconChain>;
@@ -64,12 +64,12 @@ describe("gossip aggregate and proof test", function () {
   }
 
   beforeEach(function () {
-    chain = sinon.createStubInstance(BeaconChain);
+    chain = createStubInstance(BeaconChain);
     db = new StubbedBeaconDb(sinon);
     chain.getGenesisTime.returns(Math.floor(Date.now() / 1000));
-    chain.clock = sinon.createStubInstance(LocalClock);
+    chain.clock = createStubInstance(LocalClock);
     sinon.stub(chain.clock, "currentSlot").get(() => 0);
-    regen = chain.regen = sinon.createStubInstance(StateRegenerator);
+    regen = chain.regen = createStubInstance(StateRegenerator);
     db.badBlock.has.resolves(false);
     db.seenAttestationCache.hasAggregateAndProof.returns(false);
     isAggregatorStub = sinon.stub(validatorUtils, "isAggregatorFromCommitteeLength");

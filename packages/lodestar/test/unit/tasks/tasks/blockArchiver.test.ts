@@ -9,6 +9,7 @@ import {ArchiveBlocksTask} from "../../../../src/tasks/tasks/archiveBlocks";
 import {generateBlockSummary, generateEmptySignedBlock} from "../../../utils/block";
 import {StubbedBeaconDb} from "../../../utils/stub";
 import {testLogger} from "../../../utils/logger";
+import {createStubInstance} from "../../../utils/types";
 
 describe("block archiver task", function () {
   const sandbox = sinon.createSandbox();
@@ -19,7 +20,7 @@ describe("block archiver task", function () {
 
   beforeEach(function () {
     dbStub = new StubbedBeaconDb(sandbox);
-    forkChoiceStub = sinon.createStubInstance(ForkChoice);
+    forkChoiceStub = createStubInstance(ForkChoice);
   });
 
   /**

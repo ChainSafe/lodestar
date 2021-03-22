@@ -10,6 +10,7 @@ import {CheckpointStateCache} from "../../../../src/chain/stateCache";
 import {processBlock} from "../../../../src/chain/blocks/process";
 import {RegenError, RegenErrorCode, StateRegenerator} from "../../../../src/chain/regen";
 import {getNewBlockJob} from "../../../utils/block";
+import {createStubInstance} from "../../../utils/types";
 
 describe("processBlock", function () {
   const emitter = new ChainEventEmitter();
@@ -18,9 +19,9 @@ describe("processBlock", function () {
   let regen: SinonStubbedInstance<StateRegenerator>;
 
   beforeEach(function () {
-    forkChoice = sinon.createStubInstance(ForkChoice);
-    checkpointStateCache = sinon.createStubInstance(CheckpointStateCache);
-    regen = sinon.createStubInstance(StateRegenerator);
+    forkChoice = createStubInstance(ForkChoice);
+    checkpointStateCache = createStubInstance(CheckpointStateCache);
+    regen = createStubInstance(StateRegenerator);
   });
 
   afterEach(function () {

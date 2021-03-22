@@ -1,18 +1,18 @@
 import {SinonStubbedInstance} from "sinon";
 import {INetwork, Network} from "../../../../src/network";
-import sinon from "sinon";
 import {getSyncPeers} from "../../../../src/sync/utils/peers";
 import {expect} from "chai";
 import PeerId from "peer-id";
 import {IPeerRpcScoreStore, PeerRpcScoreStore, ScoreState} from "../../../../src/network/peers/score";
+import {createStubInstance} from "../../../utils/types";
 
 describe("sync peer utils", function () {
   let networkStub: SinonStubbedInstance<INetwork>;
   let peerScoreStub: SinonStubbedInstance<IPeerRpcScoreStore>;
 
   beforeEach(function () {
-    networkStub = sinon.createStubInstance(Network);
-    peerScoreStub = sinon.createStubInstance(PeerRpcScoreStore);
+    networkStub = createStubInstance(Network);
+    peerScoreStub = createStubInstance(PeerRpcScoreStore);
     networkStub.peerRpcScores = peerScoreStub;
   });
 

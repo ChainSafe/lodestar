@@ -17,6 +17,7 @@ import {StubbedBeaconDb} from "../../../../../utils/stub";
 import {StubbedBeaconChain} from "../../../../../utils/stub/chain";
 import {setupApiImplTestServer, ApiImplTestModules} from "../../index.test";
 import {generateValidators} from "../../../../../utils/validator";
+import {createStubInstance} from "../../../../../utils/types";
 
 use(chaiAsPromised);
 
@@ -226,7 +227,7 @@ describe("beacon state api utils", function () {
     let chainStub: SinonStubbedInstance<IBeaconChain>;
 
     beforeEach(function () {
-      chainStub = sinon.createStubInstance(BeaconChain);
+      chainStub = createStubInstance(BeaconChain);
     });
 
     it("current epoch with epoch context", function () {

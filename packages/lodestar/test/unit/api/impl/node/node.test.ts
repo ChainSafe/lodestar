@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-return */
 import {INodeApi} from "../../../../../src/api/impl/node";
 import {NodeApi} from "../../../../../src/api/impl/node/node";
 import sinon, {SinonStubbedInstance} from "sinon";
@@ -11,6 +13,7 @@ import {MetadataController} from "../../../../../src/network/metadata";
 import {phase0} from "@chainsafe/lodestar-types";
 import {NodePeer} from "../../../../../src/api/types";
 import {PeerStatus, PeerDirection} from "../../../../../src/network";
+import {createStubInstance} from "../../../../utils/types";
 
 interface IPeerSummary {
   direction: string | null;
@@ -35,8 +38,8 @@ describe("node api implementation", function () {
   let peerId: PeerId;
 
   beforeEach(async function () {
-    networkStub = sinon.createStubInstance(Network);
-    syncStub = sinon.createStubInstance(BeaconSync);
+    networkStub = createStubInstance(Network);
+    syncStub = createStubInstance(BeaconSync);
     api = new NodeApi({}, {network: networkStub, sync: syncStub});
     peerId = await PeerId.create({keyType: "secp256k1"});
     sinon.stub(networkStub, "peerId").get(() => peerId);

@@ -14,7 +14,7 @@ import {IBeaconClock, LocalClock} from "../../../../../src/chain/clock";
 import * as slotUtils from "@chainsafe/lodestar-beacon-state-transition/lib/util/slot";
 import {sleep} from "@chainsafe/lodestar-cli/src/util";
 import {phase0} from "@chainsafe/lodestar-types";
-import {SinonStubFn} from "../../../../utils/types";
+import {createStubInstance, SinonStubFn} from "../../../../utils/types";
 
 describe("ORARegularSync", function () {
   let sync: ORARegularSync;
@@ -28,16 +28,16 @@ describe("ORARegularSync", function () {
   const logger = testLogger("ORARegularSync");
 
   beforeEach(() => {
-    forkChoiceStub = sinon.createStubInstance(ForkChoice);
-    chainStub = sinon.createStubInstance(BeaconChain);
+    forkChoiceStub = createStubInstance(ForkChoice);
+    chainStub = createStubInstance(BeaconChain);
     chainStub.forkChoice = forkChoiceStub;
     chainStub.emitter = new ChainEventEmitter();
-    clockStub = sinon.createStubInstance(LocalClock);
+    clockStub = createStubInstance(LocalClock);
     chainStub.clock = clockStub;
-    networkStub = sinon.createStubInstance(Network);
-    gossipStub = sinon.createStubInstance(Eth2Gossipsub);
+    networkStub = createStubInstance(Network);
+    gossipStub = createStubInstance(Eth2Gossipsub);
     networkStub.gossip = (gossipStub as unknown) as Eth2Gossipsub;
-    fetcherStub = sinon.createStubInstance(BlockRangeFetcher);
+    fetcherStub = createStubInstance(BlockRangeFetcher);
     sync = new ORARegularSync(
       {},
       {

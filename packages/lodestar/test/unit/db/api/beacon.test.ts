@@ -1,6 +1,6 @@
 import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
-import sinon, {SinonStubbedInstance} from "sinon";
+import sinon from "sinon";
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import {LevelDbController} from "@chainsafe/lodestar-db";
 import {BeaconDb} from "../../../../src/db/api";
@@ -17,6 +17,7 @@ import {
   AggregateAndProofRepository,
 } from "../../../../src/db/api/beacon/repositories";
 import {generateValidators} from "../../../utils/validator";
+import {createStubInstance} from "../../../utils/types";
 
 chai.use(chaiAsPromised);
 
@@ -29,34 +30,13 @@ describe("beacon db - post block processing", function () {
       config,
       controller: sandbox.createStubInstance(LevelDbController),
     }) as StubbedBeaconDb;
-    dbStub.depositEvent = sandbox.createStubInstance(DepositEventRepository) as SinonStubbedInstance<
-      DepositEventRepository
-    > &
-      DepositEventRepository;
-    dbStub.voluntaryExit = sandbox.createStubInstance(VoluntaryExitRepository) as SinonStubbedInstance<
-      VoluntaryExitRepository
-    > &
-      VoluntaryExitRepository;
-    dbStub.proposerSlashing = sandbox.createStubInstance(ProposerSlashingRepository) as SinonStubbedInstance<
-      ProposerSlashingRepository
-    > &
-      ProposerSlashingRepository;
-    dbStub.attesterSlashing = sandbox.createStubInstance(AttesterSlashingRepository) as SinonStubbedInstance<
-      AttesterSlashingRepository
-    > &
-      AttesterSlashingRepository;
-    dbStub.attestation = sandbox.createStubInstance(AttestationRepository) as SinonStubbedInstance<
-      AttestationRepository
-    > &
-      AttestationRepository;
-    dbStub.aggregateAndProof = sandbox.createStubInstance(AggregateAndProofRepository) as SinonStubbedInstance<
-      AggregateAndProofRepository
-    > &
-      AggregateAndProofRepository;
-    dbStub.stateArchive = sandbox.createStubInstance(StateArchiveRepository) as SinonStubbedInstance<
-      StateArchiveRepository
-    > &
-      StateArchiveRepository;
+    dbStub.depositEvent = createStubInstance(DepositEventRepository);
+    dbStub.voluntaryExit = createStubInstance(VoluntaryExitRepository);
+    dbStub.proposerSlashing = createStubInstance(ProposerSlashingRepository);
+    dbStub.attesterSlashing = createStubInstance(AttesterSlashingRepository);
+    dbStub.attestation = createStubInstance(AttestationRepository);
+    dbStub.aggregateAndProof = createStubInstance(AggregateAndProofRepository);
+    dbStub.stateArchive = createStubInstance(StateArchiveRepository);
 
     // Add to state
     dbStub.stateArchive.lastValue.resolves(

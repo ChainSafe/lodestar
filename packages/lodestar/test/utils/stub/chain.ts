@@ -10,6 +10,7 @@ import {StubbedBeaconDb} from "./beaconDb";
 import {generateValidators} from "../validator";
 import {phase0} from "@chainsafe/lodestar-types";
 import {FAR_FUTURE_EPOCH} from "@chainsafe/lodestar-beacon-state-transition";
+import {createStubInstance} from "../types";
 
 export class StubbedBeaconChain extends BeaconChain {
   forkChoice: SinonStubbedInstance<ForkChoice> & ForkChoice;
@@ -23,7 +24,7 @@ export class StubbedBeaconChain extends BeaconChain {
       opts: {},
       config,
       logger: testLogger(),
-      metrics: sinon.createStubInstance(BeaconMetrics),
+      metrics: createStubInstance(BeaconMetrics),
       db: new StubbedBeaconDb(sinon, config),
       anchorState: config.types.phase0.BeaconState.tree.createValue({
         ...config.types.phase0.BeaconState.defaultValue(),
@@ -37,15 +38,10 @@ export class StubbedBeaconChain extends BeaconChain {
         balances: Array.from({length: 64}, () => BigInt(0)),
       } as phase0.BeaconState),
     });
-    this.forkChoice = sinon.createStubInstance(ForkChoice) as SinonStubbedInstance<ForkChoice> & ForkChoice;
-    this.stateCache = sinon.createStubInstance(StateContextCache) as SinonStubbedInstance<StateContextCache> &
-      StateContextCache;
-    this.checkpointStateCache = sinon.createStubInstance(CheckpointStateCache) as SinonStubbedInstance<
-      CheckpointStateCache
-    > &
-      CheckpointStateCache;
-    this.clock = sinon.createStubInstance(LocalClock) as SinonStubbedInstance<LocalClock> & LocalClock;
-    this.regen = sinon.createStubInstance(StateRegenerator) as SinonStubbedInstance<StateRegenerator> &
-      StateRegenerator;
+    this.forkChoice = createStubInstance(ForkChoice);
+    this.stateCache = createStubInstance(StateContextCache);
+    this.checkpointStateCache = createStubInstance(CheckpointStateCache);
+    this.clock = createStubInstance(LocalClock);
+    this.regen = createStubInstance(StateRegenerator);
   }
 }

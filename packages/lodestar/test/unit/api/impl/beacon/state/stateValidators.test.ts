@@ -4,7 +4,7 @@ import {CachedBeaconState, phase0} from "@chainsafe/lodestar-beacon-state-transi
 import {List} from "@chainsafe/ssz";
 import {expect, use} from "chai";
 import chaiAsPromised from "chai-as-promised";
-import sinon, {SinonStubbedInstance, SinonStubbedMember} from "sinon";
+import {SinonStubbedInstance, SinonStubbedMember} from "sinon";
 import {BeaconStateApi} from "../../../../../../src/api/impl/beacon/state";
 import * as stateApiUtils from "../../../../../../src/api/impl/beacon/state/utils";
 import {generateState} from "../../../../../utils/state";
@@ -13,6 +13,7 @@ import {BeaconChain} from "../../../../../../src/chain";
 import {StubbedBeaconDb} from "../../../../../utils/stub";
 import {setupApiImplTestServer, ApiImplTestModules} from "../../index.test";
 import {PubkeyIndexMap} from "@chainsafe/lodestar-beacon-state-transition/lib/phase0/fast";
+import {createStubInstance} from "../../../../../utils/types";
 
 use(chaiAsPromised);
 
@@ -131,7 +132,7 @@ describe("beacon api impl - state - validators", function () {
           balances: Array.from({length: 10}, () => BigInt(10)) as List<Gwei>,
         })
       );
-      const pubkey2IndexStub = sinon.createStubInstance(phase0.fast.PubkeyIndexMap);
+      const pubkey2IndexStub = createStubInstance(phase0.fast.PubkeyIndexMap);
       pubkey2IndexStub.get.withArgs(Buffer.alloc(32, 1)).returns(3);
       pubkey2IndexStub.get.withArgs(Buffer.alloc(32, 2)).returns(25);
       chainStub.getHeadState.returns({
