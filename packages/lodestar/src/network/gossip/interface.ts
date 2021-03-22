@@ -10,7 +10,7 @@ import LibP2p from "libp2p";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {InMessage} from "libp2p-interfaces/src/pubsub";
 import {IBeaconChain} from "../../chain";
-import {NetworkEvent} from "../interface";
+import {NetworkEvent} from "../events";
 import {IBeaconDb} from "../../db";
 
 export enum GossipType {

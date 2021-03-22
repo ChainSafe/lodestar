@@ -39,8 +39,8 @@ describe("node api implementation", function () {
     syncStub = sinon.createStubInstance(BeaconSync);
     api = new NodeApi({}, {network: networkStub, sync: syncStub});
     peerId = await PeerId.create({keyType: "secp256k1"});
-    networkStub.peerId = peerId;
-    networkStub.localMultiaddrs = [new Multiaddr("/ip4/127.0.0.1/tcp/36000")];
+    sinon.stub(networkStub, "peerId").get(() => peerId);
+    sinon.stub(networkStub, "localMultiaddrs").get(() => [new Multiaddr("/ip4/127.0.0.1/tcp/36000")]);
   });
 
   describe("getNodeIdentity", function () {

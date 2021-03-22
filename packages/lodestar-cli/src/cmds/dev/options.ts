@@ -57,8 +57,8 @@ const externalOptionsOverrides: {[k: string]: Options} = {
     defaultDescription: undefined,
     default: 1,
   },
-  "network.minPeers": {
-    ...beaconNodeOptions["network.minPeers"],
+  "network.targetPeers": {
+    ...beaconNodeOptions["network.targetPeers"],
     defaultDescription: undefined,
     default: 1,
   },

@@ -8,6 +8,8 @@ import {phase0} from "@chainsafe/lodestar-types";
 import {getDevBeaconNode} from "../../utils/node/beacon";
 import {getDevValidator} from "../../utils/node/validator";
 import {testLogger, LogLevel} from "../../utils/logger";
+import {connect} from "../../utils/network";
+import {Network} from "../../../src/network";
 import {NodeWorkerOptions, Message} from "./types";
 import Multiaddr from "multiaddr";
 import {sleep, withTimeout} from "@chainsafe/lodestar-utils";
@@ -61,7 +63,7 @@ async function runWorker(): Promise<void> {
       loggerNode.info(`Connecting to node ${i}`);
       const multiaddrs = nodeToConnect.localMultiaddrs.map(Multiaddr);
       const peerIdToConn = await createFromPrivKey(fromHexString(nodeToConnect.peerIdPrivkey));
-      await withTimeout(() => node.network.connect(peerIdToConn, multiaddrs), 10 * 1000);
+      await withTimeout(() => connect(node.network as Network, peerIdToConn, multiaddrs), 10 * 1000);
       loggerNode.info(`Connected to node ${i}`);
     })
   );

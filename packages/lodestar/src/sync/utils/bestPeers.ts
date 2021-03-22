@@ -1,7 +1,7 @@
 import PeerId from "peer-id";
 import {phase0} from "@chainsafe/lodestar-types";
 import {toHexString} from "@chainsafe/ssz";
-import {getSyncProtocols, INetwork} from "../../network";
+import {INetwork} from "../../network";
 import {ScoreState} from "../../network/peers";
 
 export interface IPeerWithMetadata {
@@ -24,8 +24,7 @@ export function getPeersInitialSync(network: INetwork): IPeersByCheckpoint<phase
 function getPeersThatSupportSync(network: INetwork): IPeerWithMetadata[] {
   const peers: IPeerWithMetadata[] = [];
 
-  for (const libp2pPeer of network.getPeers({supportsProtocols: getSyncProtocols()})) {
-    const peerId = libp2pPeer.id;
+  for (const peerId of network.getConnectedPeers()) {
     const status = network.peerMetadata.status.get(peerId);
     const score = network.peerRpcScores.getScore(peerId);
     if (status && network.peerRpcScores.getScoreState(peerId) === ScoreState.Healthy) {

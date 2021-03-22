@@ -9,6 +9,7 @@ import {LevelDbController} from "@chainsafe/lodestar-db";
 import {BeaconNode} from "../../../src/node";
 import {createNodeJsLibp2p} from "../../../src/network/nodejs";
 import {createPeerId} from "../../../src/network";
+import {defaultNetworkOptions} from "../../../src/network/options";
 import {initDevState} from "../../../src/node/utils/state";
 import {IBeaconNodeOptions} from "../../../src/node/options";
 import {defaultOptions} from "../../../src/node/options";
@@ -23,6 +24,7 @@ export async function getDevBeaconNode({
   genesisTime,
   logger,
   peerId,
+  peerStoreDir,
 }: {
   params: Partial<IBeaconParams>;
   options?: RecursivePartial<IBeaconNodeOptions>;
@@ -30,6 +32,7 @@ export async function getDevBeaconNode({
   genesisTime?: number;
   logger?: ILogger;
   peerId?: PeerId;
+  peerStoreDir?: string;
 }): Promise<BeaconNode> {
   if (!peerId) peerId = await createPeerId();
   const tmpDir = tmp.dirSync({unsafeCleanup: true});
@@ -49,13 +52,10 @@ export async function getDevBeaconNode({
         bootEnrs: [],
       },
       localMultiaddrs: options.network?.localMultiaddrs || ["/ip4/127.0.0.1/tcp/0"],
-      minPeers: 25,
-      maxPeers: 25,
+      targetPeers: defaultNetworkOptions.targetPeers,
+      maxPeers: defaultNetworkOptions.maxPeers,
     },
-    {
-      autoDial: true,
-      disablePeerDiscovery: true,
-    }
+    {disablePeerDiscovery: true, peerStoreDir}
   );
 
   options = deepmerge(
@@ -66,6 +66,7 @@ export async function getDevBeaconNode({
         sync: {minPeers: 1},
         eth1: {enabled: false},
         metrics: {enabled: false},
+        network: {disablePeerDiscovery: true},
       } as Partial<IBeaconNodeOptions>,
       options
     )

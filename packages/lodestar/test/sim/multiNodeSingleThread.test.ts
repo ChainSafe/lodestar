@@ -1,4 +1,5 @@
 import {IBeaconParams} from "@chainsafe/lodestar-params";
+import {Network} from "../../src/network";
 import {getDevBeaconNode} from "../utils/node/beacon";
 import {waitForEvent} from "../utils/events/resolver";
 import {phase0} from "@chainsafe/lodestar-types";
@@ -7,6 +8,7 @@ import {Validator} from "@chainsafe/lodestar-validator/lib";
 import {BeaconNode} from "../../src/node";
 import {ChainEvent} from "../../src/chain";
 import {testLogger, LogLevel} from "../utils/logger";
+import {connect} from "../utils/network";
 import {logFiles} from "./params";
 
 /* eslint-disable no-console */
@@ -76,7 +78,7 @@ describe("Run multi node single thread interop validators (no eth1) until checkp
       for (let i = 0; i < nodeCount; i++) {
         for (let j = 0; j < nodeCount; j++) {
           if (i !== j) {
-            await nodes[i].network.connect(nodes[j].network.peerId, nodes[j].network.localMultiaddrs);
+            await connect(nodes[i].network as Network, nodes[j].network.peerId, nodes[j].network.localMultiaddrs);
           }
         }
       }

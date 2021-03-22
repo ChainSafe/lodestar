@@ -6,7 +6,7 @@ export interface INetworkArgs {
   "network.discv5.bindAddr": string;
   "network.discv5.bootEnrs": string[];
   "network.maxPeers": number;
-  "network.minPeers": number;
+  "network.targetPeers": number;
   "network.bootMultiaddrs": string[];
   "network.localMultiaddrs": string[];
 }
@@ -20,7 +20,7 @@ export function parseArgs(args: INetworkArgs): IBeaconNodeOptions["network"] {
       bootEnrs: args["network.discv5.bootEnrs"],
     },
     maxPeers: args["network.maxPeers"],
-    minPeers: args["network.minPeers"],
+    targetPeers: args["network.targetPeers"],
     bootMultiaddrs: args["network.bootMultiaddrs"],
     localMultiaddrs: args["network.localMultiaddrs"],
   };
@@ -56,10 +56,10 @@ export const options: ICliCommandOptions<INetworkArgs> = {
     group: "network",
   },
 
-  "network.minPeers": {
+  "network.targetPeers": {
     type: "number",
-    description: "The minimum number of connections to avoid pruning",
-    defaultDescription: String(defaultOptions.network.minPeers),
+    description: "The target connected peers. Above this number peers will be disconnected",
+    defaultDescription: String(defaultOptions.network.targetPeers),
     group: "network",
   },
 

@@ -46,7 +46,7 @@ describe("sync - block utils", function () {
     });
 
     it("no chunks", async function () {
-      const peer1 = new PeerId(Buffer.from("lodestar"));
+      const peer1 = await PeerId.create();
       const peers: PeerId[] = [peer1];
       rpcStub.beaconBlocksByRange.resolves([]);
       const blocks = await getBlockRange(logger, rpcStub, peers, {start: 4, end: 4}, 2);

@@ -2,7 +2,6 @@ import {INetwork} from "../network";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {CommitteeIndex, Slot, phase0} from "@chainsafe/lodestar-types";
 import {IRegularSync} from "./regular";
-import {IReqRespHandler} from "./reqResp";
 import {IBeaconChain} from "../chain";
 import {IBeaconMetrics} from "../metrics";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
@@ -44,7 +43,6 @@ export interface ISyncModules {
   chain: IBeaconChain;
   metrics?: IBeaconMetrics;
   regularSync?: IRegularSync;
-  reqRespHandler?: IReqRespHandler;
   gossipHandler?: BeaconGossipHandler;
   attestationCollector?: AttestationCollector;
 }

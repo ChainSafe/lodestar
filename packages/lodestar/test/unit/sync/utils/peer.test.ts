@@ -3,7 +3,6 @@ import {INetwork, Network} from "../../../../src/network";
 import sinon from "sinon";
 import {getSyncPeers} from "../../../../src/sync/utils/peers";
 import {expect} from "chai";
-import {generatePeer} from "../../../utils/peer";
 import PeerId from "peer-id";
 import {IPeerRpcScoreStore, PeerRpcScoreStore, ScoreState} from "../../../../src/network/peers/score";
 
@@ -18,24 +17,24 @@ describe("sync peer utils", function () {
   });
 
   it("should work without peers", function () {
-    networkStub.getPeers.returns([]);
+    networkStub.getConnectedPeers.returns([]);
     const result = getSyncPeers(networkStub);
     expect(result.length).to.be.equal(0);
   });
 
   it("should filter and sort peers", function () {
     const peers = [
-      generatePeer(PeerId.createFromBytes(Buffer.alloc(32, 0))),
-      generatePeer(PeerId.createFromBytes(Buffer.alloc(32, 1))),
-      generatePeer(PeerId.createFromBytes(Buffer.alloc(32, 2))),
-      generatePeer(PeerId.createFromBytes(Buffer.alloc(32, 3))),
-      generatePeer(PeerId.createFromBytes(Buffer.alloc(32, 4))),
+      PeerId.createFromBytes(Buffer.alloc(32, 0)),
+      PeerId.createFromBytes(Buffer.alloc(32, 1)),
+      PeerId.createFromBytes(Buffer.alloc(32, 2)),
+      PeerId.createFromBytes(Buffer.alloc(32, 3)),
+      PeerId.createFromBytes(Buffer.alloc(32, 4)),
     ];
-    networkStub.getPeers.returns(peers);
+    networkStub.getConnectedPeers.returns(peers);
     peerScoreStub.getScoreState.returns(ScoreState.Banned);
-    peerScoreStub.getScoreState.withArgs(peers[2].id).returns(ScoreState.Healthy);
-    const result = getSyncPeers(networkStub, (id) => id !== peers[1].id, 1);
+    peerScoreStub.getScoreState.withArgs(peers[2]).returns(ScoreState.Healthy);
+    const result = getSyncPeers(networkStub, (id) => id !== peers[1], 1);
     expect(result.length).to.be.equal(1);
-    expect(result[0]).to.be.equal(peers[2].id);
+    expect(result[0]).to.be.equal(peers[2]);
   });
 });
