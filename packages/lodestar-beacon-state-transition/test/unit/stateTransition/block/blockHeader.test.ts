@@ -8,16 +8,21 @@ import {generateState} from "../../../utils/state";
 import {generateEmptyBlock} from "../../../utils/block";
 import {generateValidator} from "../../../utils/validator";
 import {SinonStubFn} from "../../../utils/types";
+import {BeaconBlock, BeaconState} from "@chainsafe/lodestar-types/phase0";
 
 /* eslint-disable no-empty */
 
 describe("process block - block header", function () {
   const sandbox = sinon.createSandbox();
 
-  let getBeaconProposeIndexStub: SinonStubFn<typeof utils["getBeaconProposerIndex"]>;
+  let getBeaconProposeIndexStub: SinonStubFn<typeof utils["getBeaconProposerIndex"]>,
+    state: BeaconState,
+    block: BeaconBlock;
 
   beforeEach(() => {
     getBeaconProposeIndexStub = sandbox.stub(utils, "getBeaconProposerIndex");
+    state = generateState({slot: 5});
+    block = generateEmptyBlock();
   });
 
   afterEach(() => {
@@ -25,8 +30,6 @@ describe("process block - block header", function () {
   });
 
   it("fail to process header - invalid slot", function () {
-    const state = generateState({slot: 5});
-    const block = generateEmptyBlock();
     block.slot = 4;
     try {
       processBlockHeader(config, state, block);
@@ -35,8 +38,6 @@ describe("process block - block header", function () {
   });
 
   it("fail to process header - invalid parent header", function () {
-    const state = generateState({slot: 5});
-    const block = generateEmptyBlock();
     block.slot = 5;
     block.parentRoot = Buffer.alloc(10, 1);
     try {
@@ -46,9 +47,7 @@ describe("process block - block header", function () {
   });
 
   it("fail to process header - proposerSlashed", function () {
-    const state = generateState({slot: 5});
     state.validators.push(generateValidator({activation: 0, exit: 10, slashed: true}));
-    const block = generateEmptyBlock();
     block.slot = 5;
     block.parentRoot = config.types.phase0.BeaconBlockHeader.hashTreeRoot(state.latestBlockHeader);
     try {
@@ -58,9 +57,7 @@ describe("process block - block header", function () {
   });
 
   it.skip("should process block", function () {
-    const state = generateState({slot: 5});
     state.validators.push(generateValidator({activation: 0, exit: 10}));
-    const block = generateEmptyBlock();
     block.slot = 5;
     block.parentRoot = config.types.phase0.BeaconBlockHeader.hashTreeRoot(state.latestBlockHeader);
     getBeaconProposeIndexStub.returns(0);

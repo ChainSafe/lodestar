@@ -19,40 +19,38 @@ describe("validate indexed attestation", () => {
       }),
     })
   );
-  it("should return invalid indexed attestation - empty participants", () => {
-    const attestationData = generateAttestationData(0, 1);
-    const state = createCachedBeaconState(config, treeState.clone());
 
-    const indexedAttestation: phase0.IndexedAttestation = {
-      attestingIndices: ([] as number[]) as List<number>,
-      data: attestationData,
-      signature: EMPTY_SIGNATURE,
-    };
-    expect(phase0.fast.isValidIndexedAttestation(state, indexedAttestation, false)).to.be.false;
-  });
+  const testValues = [
+    {
+      indices: [] as number[],
+      expectedValue: false,
+      name: "should return invalid indexed attestation - empty participants",
+    },
+    {
+      indices: [1, 0],
+      expectedValue: false,
+      name: "should return invalid indexed attestation - indexes not sorted",
+    },
+    {
+      indices: [0, 1, 2, 3],
+      expectedValue: true,
+      name: "should return valid indexed attestation",
+    },
+  ];
 
-  it("should return invalid indexed attestation - indexes not sorted", () => {
-    const attestationData = generateAttestationData(0, 1);
-    const state = createCachedBeaconState(config, treeState.clone());
+  for (const testValue of testValues) {
+    it(testValue.name, function () {
+      const attestationData = generateAttestationData(0, 1);
+      const state = createCachedBeaconState(config, treeState.clone());
 
-    const indexedAttestation: phase0.IndexedAttestation = {
-      attestingIndices: [1, 0] as List<number>,
-      data: attestationData,
-      signature: EMPTY_SIGNATURE,
-    };
-    expect(phase0.fast.isValidIndexedAttestation(state, indexedAttestation, false)).to.be.false;
-  });
-
-  it("should return valid indexed attestation", () => {
-    const attestationData = generateAttestationData(0, 1);
-    const state = createCachedBeaconState(config, treeState.clone());
-
-    const indexedAttestation: phase0.IndexedAttestation = {
-      attestingIndices: [0, 1, 2, 3] as List<number>,
-      data: attestationData,
-      signature: EMPTY_SIGNATURE,
-    };
-
-    expect(phase0.fast.isValidIndexedAttestation(state, indexedAttestation, false)).to.be.true;
-  });
+      const indexedAttestation: phase0.IndexedAttestation = {
+        attestingIndices: testValue.indices as List<number>,
+        data: attestationData,
+        signature: EMPTY_SIGNATURE,
+      };
+      expect(phase0.fast.isValidIndexedAttestation(state, indexedAttestation, false)).to.be.equal(
+        testValue.expectedValue
+      );
+    });
+  }
 });

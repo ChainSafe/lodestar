@@ -1,4 +1,4 @@
-import {assert} from "chai";
+import {assert, expect} from "chai";
 
 import {List} from "@chainsafe/ssz";
 import {phase0} from "@chainsafe/lodestar-types";
@@ -28,46 +28,32 @@ describe("getActiveValidatorIndices", () => {
 });
 
 describe("isActiveValidator", () => {
-  it("should be active", () => {
-    const v: phase0.Validator = generateValidator({activation: 0, exit: 100});
-    const result: boolean = isActiveValidator(v, 0);
-    assert.isTrue(result);
-  });
+  const testValues = [
+    {validatorOpts: {activation: 0, exit: 100}, epoch: 0, expected: true},
+    {validatorOpts: {activation: 10, exit: 101}, epoch: 100, expected: true},
+    {validatorOpts: {activation: 100, exit: 1000}, epoch: 100, expected: true},
+    {validatorOpts: {activation: 1}, epoch: 0, expected: false},
+    {validatorOpts: {activation: 100}, epoch: 5, expected: false},
+    {validatorOpts: {activation: 1, exit: 5}, epoch: 100, expected: false},
+  ];
 
-  it("should be active", () => {
-    const v: phase0.Validator = generateValidator({activation: 10, exit: 101});
-    const result: boolean = isActiveValidator(v, 100);
-    assert.isTrue(result);
-  });
-
-  it("should be active", () => {
-    const v: phase0.Validator = generateValidator({activation: 100, exit: 1000});
-    const result: boolean = isActiveValidator(v, 100);
-    assert.isTrue(result);
-  });
-
-  it("should not be active", () => {
-    const v: phase0.Validator = generateValidator({activation: 1});
-    const result: boolean = isActiveValidator(v, 0);
-    assert.isFalse(result);
-  });
-
-  it("should not be active", () => {
-    const v: phase0.Validator = generateValidator({activation: 100});
-    const result: boolean = isActiveValidator(v, 5);
-    assert.isFalse(result);
-  });
-
-  it("should not be active", () => {
-    const v: phase0.Validator = generateValidator({activation: 1, exit: 5});
-    const result: boolean = isActiveValidator(v, 100);
-    assert.isFalse(result);
-  });
+  for (const testValue of testValues) {
+    it(`should be ${testValue.expected ? "" : "not "}active`, () => {
+      const v: phase0.Validator = generateValidator(testValue.validatorOpts);
+      const result: boolean = isActiveValidator(v, testValue.epoch);
+      expect(result).to.be.equal(testValue.expected);
+    });
+  }
 });
 
 describe("isSlashableValidator", () => {
+  let validator: phase0.Validator;
+
+  beforeEach(function () {
+    validator = generateValidator();
+  });
+
   it("should check validator.slashed", () => {
-    const validator = generateValidator();
     validator.activationEpoch = 0;
     validator.withdrawableEpoch = Infinity;
     validator.slashed = false;
@@ -76,7 +62,6 @@ describe("isSlashableValidator", () => {
     assert(!isSlashableValidator(validator, 0), "slashed validator should not be slashable");
   });
   it("should check validator.activationEpoch", () => {
-    const validator = generateValidator();
     validator.activationEpoch = 10;
     validator.withdrawableEpoch = Infinity;
     assert(
@@ -86,7 +71,6 @@ describe("isSlashableValidator", () => {
     assert(isSlashableValidator(validator, validator.activationEpoch), "activated validator should be slashable");
   });
   it("should check validator.withdrawableEpoch", () => {
-    const validator = generateValidator();
     validator.activationEpoch = 0;
     validator.withdrawableEpoch = 10;
     assert(
