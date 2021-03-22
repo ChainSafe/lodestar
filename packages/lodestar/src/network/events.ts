@@ -6,12 +6,12 @@ import {Method} from "../constants";
 
 export enum NetworkEvent {
   /** A relevant peer has connected or has been re-STATUS'd */
-  peerConnected = "PeerManager-peerConnected",
-  peerDisconnected = "PeerManager-peerDisconnected",
-  gossipStart = "gossip-start",
-  gossipStop = "gossip-stop",
-  gossipHeartbeat = "gossipsub-heartbeat",
-  reqRespRequest = "reqResp-request",
+  peerConnected = "peer-manager.peer-connected",
+  peerDisconnected = "peer-manager.peer-disconnected",
+  gossipStart = "gossip.start",
+  gossipStop = "gossip.stop",
+  gossipHeartbeat = "gossipsub.heartbeat",
+  reqRespRequest = "req-resp.request",
 }
 
 export type NetworkEvents = {
