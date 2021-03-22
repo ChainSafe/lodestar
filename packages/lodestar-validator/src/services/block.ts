@@ -5,7 +5,7 @@
 import {BLSPubkey, Epoch, Root, phase0, Slot} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {SecretKey} from "@chainsafe/bls";
-import {ILogger} from "@chainsafe/lodestar-utils";
+import {ILogger, prettyBytes} from "@chainsafe/lodestar-utils";
 import {toHexString} from "@chainsafe/ssz";
 import {computeEpochAtSlot, computeSigningRoot, getDomain} from "@chainsafe/lodestar-beacon-state-transition";
 import {IApiClient} from "../api";
@@ -174,10 +174,7 @@ export default class BlockProposingService {
     };
     try {
       await this.provider.beacon.blocks.publishBlock(signedBlock);
-      this.logger.info("Published block", {
-        hash: toHexString(this.config.types.phase0.BeaconBlock.hashTreeRoot(block)),
-        slot,
-      });
+      this.logger.info("Published block", {slot, validator: prettyBytes(validatorKeys.publicKey)});
     } catch (e) {
       this.logger.error("Failed to publish block", {slot}, e);
     }
