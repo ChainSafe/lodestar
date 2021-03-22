@@ -68,7 +68,7 @@ export const recover: ICliCommand<IValidatorRecoverArgs, IGlobalArgs, ReturnType
     console.log("\nWARNING: KEY RECOVERY CAN LEAD TO DUPLICATING VALIDATORS KEYS, WHICH CAN LEAD TO SLASHING.\n");
 
     if (mnemonicInputPath) {
-      mnemonic = await fs.promises.readFile(mnemonicInputPath, "utf8");
+      mnemonic = fs.readFileSync(mnemonicInputPath, "utf8").trim();
     } else {
       const input = await inquirer.prompt<{mnemonic: string}>([
         {
