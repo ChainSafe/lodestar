@@ -2,11 +2,11 @@ import {getAccountPaths} from "../../paths";
 import {WalletManager} from "../../../../wallet";
 import {ValidatorDirBuilder} from "../../../../validatorDir";
 import {getBeaconConfigFromArgs} from "../../../../config";
-import {ICliCommand, YargsError, readPassphraseFile, add0xPrefix, initBLS} from "../../../../util";
+import {ICliCommand, YargsError, readPassphraseFile, add0xPrefix, initBLS, ICliCommandOptions} from "../../../../util";
 import {IAccountValidatorArgs} from "./options";
 import {IGlobalArgs} from "../../../../options";
 
-interface IValidatorCreateArgs {
+export interface IValidatorCreateArgs {
   name: string;
   passphraseFile: string;
   depositGwei?: string;
@@ -15,6 +15,43 @@ interface IValidatorCreateArgs {
 }
 
 export type ReturnType = string[];
+
+export const validatorCreateOptions: ICliCommandOptions<IValidatorCreateArgs> = {
+  name: {
+    description: "Use the wallet identified by this name",
+    alias: ["n"],
+    demandOption: true,
+    type: "string",
+  },
+
+  passphraseFile: {
+    description: "A path to a file containing the password which will unlock the wallet.",
+    alias: ["p"],
+    demandOption: true,
+    type: "string",
+  },
+
+  depositGwei: {
+    description:
+      "The GWEI value of the deposit amount. Defaults to the minimum amount \
+required for an active validator (MAX_EFFECTIVE_BALANCE)",
+    type: "string",
+  },
+
+  storeWithdrawalKeystore: {
+    description:
+      "If present, the withdrawal keystore will be stored alongside the voting \
+keypair. It is generally recommended to *not* store the withdrawal key and \
+instead generate them from the wallet seed when required.",
+    type: "boolean",
+  },
+
+  count: {
+    description: "The number of validators to create",
+    default: 1,
+    type: "number",
+  },
+};
 
 export const create: ICliCommand<IValidatorCreateArgs, IAccountValidatorArgs & IGlobalArgs, ReturnType> = {
   command: "create",
@@ -31,42 +68,7 @@ and pre-computed deposit RPL data",
     },
   ],
 
-  options: {
-    name: {
-      description: "Use the wallet identified by this name",
-      alias: ["n"],
-      demandOption: true,
-      type: "string",
-    },
-
-    passphraseFile: {
-      description: "A path to a file containing the password which will unlock the wallet.",
-      alias: ["p"],
-      demandOption: true,
-      type: "string",
-    },
-
-    depositGwei: {
-      description:
-        "The GWEI value of the deposit amount. Defaults to the minimum amount \
-  required for an active validator (MAX_EFFECTIVE_BALANCE)",
-      type: "string",
-    },
-
-    storeWithdrawalKeystore: {
-      description:
-        "If present, the withdrawal keystore will be stored alongside the voting \
-  keypair. It is generally recommended to *not* store the withdrawal key and \
-  instead generate them from the wallet seed when required.",
-      type: "boolean",
-    },
-
-    count: {
-      description: "The number of validators to create",
-      default: 1,
-      type: "number",
-    },
-  },
+  options: validatorCreateOptions,
 
   handler: async (args) => {
     // Necessary to compute validator pubkey from privKey
