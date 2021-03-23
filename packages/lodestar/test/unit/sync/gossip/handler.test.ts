@@ -17,7 +17,6 @@ import {BeaconGossipHandler} from "../../../../src/sync/gossip";
 import {StubbedBeaconDb} from "../../../utils/stub";
 import {testLogger} from "../../../utils/logger";
 import {createNode} from "../../../utils/network";
-import {createStubInstance} from "../../../utils/types";
 
 describe("gossip handler", function () {
   let chainStub: SinonStubbedInstance<IBeaconChain>;
@@ -27,10 +26,10 @@ describe("gossip handler", function () {
   const genesisValidatorsRoot = Buffer.alloc(32);
 
   beforeEach(async function () {
-    chainStub = createStubInstance(BeaconChain);
+    chainStub = sinon.createStubInstance(BeaconChain);
     chainStub.emitter = new ChainEventEmitter();
     chainStub.getForkName.returns("phase0");
-    networkStub = createStubInstance(Network);
+    networkStub = sinon.createStubInstance(Network);
     const multiaddr = "/ip4/127.0.0.1/tcp/0";
     const libp2p = await createNode(multiaddr);
     gossipsub = new Eth2Gossipsub({

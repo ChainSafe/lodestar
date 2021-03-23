@@ -13,7 +13,6 @@ import {MetadataController} from "../../../../../src/network/metadata";
 import {phase0} from "@chainsafe/lodestar-types";
 import {NodePeer} from "../../../../../src/api/types";
 import {PeerStatus, PeerDirection} from "../../../../../src/network";
-import {createStubInstance} from "../../../../utils/types";
 
 interface IPeerSummary {
   direction: string | null;
@@ -38,8 +37,8 @@ describe("node api implementation", function () {
   let peerId: PeerId;
 
   beforeEach(async function () {
-    networkStub = createStubInstance(Network);
-    syncStub = createStubInstance(BeaconSync);
+    networkStub = sinon.createStubInstance(Network);
+    syncStub = sinon.createStubInstance(BeaconSync);
     api = new NodeApi({}, {network: networkStub, sync: syncStub});
     peerId = await PeerId.create({keyType: "secp256k1"});
     sinon.stub(networkStub, "peerId").get(() => peerId);

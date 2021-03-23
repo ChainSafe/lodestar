@@ -20,7 +20,7 @@ import {LocalClock} from "../../../../src/chain/clock";
 import {AttestationErrorCode} from "../../../../src/chain/errors";
 import {Gwei} from "@chainsafe/lodestar-types";
 import {IEpochShuffling} from "@chainsafe/lodestar-beacon-state-transition/lib/phase0/fast";
-import {createStubInstance, SinonStubFn} from "../../../utils/types";
+import {SinonStubFn} from "../../../utils/types";
 import {AttestationError} from "../../../../src/chain/errors";
 
 describe("gossip attestation validation", function () {
@@ -34,17 +34,17 @@ describe("gossip attestation validation", function () {
   let toIndexedAttestation: (attestation: phase0.Attestation) => phase0.IndexedAttestation;
 
   beforeEach(function () {
-    chain = createStubInstance(BeaconChain);
+    chain = sinon.createStubInstance(BeaconChain);
     chain.getGenesisTime.returns(Math.floor(Date.now() / 1000));
-    chain.clock = createStubInstance(LocalClock);
+    chain.clock = sinon.createStubInstance(LocalClock);
     sinon.stub(chain.clock, "currentSlot").get(() => 0);
-    forkChoice = chain.forkChoice = createStubInstance(ForkChoice);
-    regen = chain.regen = createStubInstance(StateRegenerator);
+    forkChoice = chain.forkChoice = sinon.createStubInstance(ForkChoice);
+    regen = chain.regen = sinon.createStubInstance(StateRegenerator);
     db = new StubbedBeaconDb(sinon, config);
     db.badBlock.has.resolves(false);
     computeAttestationSubnetStub = sinon.stub(attestationUtils, "computeSubnetForAttestation");
     isValidIndexedAttestationStub = sinon.stub(blockUtils, "isValidIndexedAttestation");
-    forkChoiceStub = createStubInstance(ForkChoice);
+    forkChoiceStub = sinon.createStubInstance(ForkChoice);
     toIndexedAttestation = (attestation: phase0.Attestation) =>
       ({
         attestingIndices: Object.entries(attestation.aggregationBits).map((value) => (value ? 1 : 0)),

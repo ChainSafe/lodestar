@@ -7,7 +7,6 @@ import {Network} from "../../../../src/network";
 import {BeaconSync} from "../../../../src/sync";
 import {StubbedBeaconDb} from "../../../utils/stub";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {createStubInstance} from "../../../utils/types";
 
 export type ApiImplTestModules = {
   sandbox: SinonSandbox;
@@ -22,11 +21,11 @@ export type ApiImplTestModules = {
 
 export function setupApiImplTestServer(): ApiImplTestModules {
   const sandbox = sinon.createSandbox();
-  const forkChoiceStub = createStubInstance(ForkChoice);
-  const chainStub = createStubInstance(BeaconChain);
-  const syncStub = createStubInstance(BeaconSync);
+  const forkChoiceStub = sinon.createStubInstance(ForkChoice);
+  const chainStub = sinon.createStubInstance(BeaconChain);
+  const syncStub = sinon.createStubInstance(BeaconSync);
   const dbStub = new StubbedBeaconDb(sinon, config);
-  const networkStub = createStubInstance(Network);
+  const networkStub = sinon.createStubInstance(Network);
   const blockApi = new BeaconBlockApi(
     {},
     {

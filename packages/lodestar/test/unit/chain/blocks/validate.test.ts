@@ -8,15 +8,14 @@ import {validateBlock} from "../../../../src/chain/blocks/validate";
 import {LocalClock} from "../../../../src/chain/clock";
 import {BlockError, BlockErrorCode} from "../../../../src/chain/errors";
 import {getNewBlockJob} from "../../../utils/block";
-import {createStubInstance} from "../../../utils/types";
 
 describe("validateBlock", function () {
   let forkChoice: SinonStubbedInstance<ForkChoice>;
   let clock: SinonStubbedInstance<LocalClock>;
 
   beforeEach(function () {
-    forkChoice = createStubInstance(ForkChoice);
-    clock = createStubInstance(LocalClock);
+    forkChoice = sinon.createStubInstance(ForkChoice);
+    clock = sinon.createStubInstance(LocalClock);
   });
 
   afterEach(function () {

@@ -15,7 +15,7 @@ import {generateBlockSummary, generateEmptySignedBlock, generateSignedBlock} fro
 import {expect} from "chai";
 import {generateAttestation, generateEmptySignedVoluntaryExit} from "../../../../utils/attestation";
 import {generateState} from "../../../../utils/state";
-import {createStubInstance} from "../../../../utils/types";
+import sinon from "sinon";
 
 describe("Events api impl", function () {
   describe("beacon event stream", function () {
@@ -24,7 +24,7 @@ describe("Events api impl", function () {
     let api: EventsApi;
 
     beforeEach(function () {
-      chainStub = createStubInstance(BeaconChain);
+      chainStub = sinon.createStubInstance(BeaconChain);
       chainEventEmmitter = new ChainEventEmitter();
       chainStub.emitter = chainEventEmmitter;
       api = new EventsApi({}, {config, chain: chainStub});

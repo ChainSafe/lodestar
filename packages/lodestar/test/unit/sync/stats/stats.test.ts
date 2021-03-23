@@ -4,14 +4,14 @@ import {SinonStubbedInstance} from "sinon";
 import {RateCounter} from "../../../../src/sync/stats/rate";
 import {SyncStats} from "../../../../src/sync/stats";
 import {expect} from "chai";
-import {createStubInstance} from "../../../utils/types";
+import sinon from "sinon";
 
 describe("sync stats", function () {
   let chainEventStub: ChainEventEmitter, rateCounterStub: SinonStubbedInstance<RateCounter>;
 
   beforeEach(function () {
     chainEventStub = new EventEmitter();
-    rateCounterStub = createStubInstance(RateCounter);
+    rateCounterStub = sinon.createStubInstance(RateCounter);
   });
 
   it("should get correct sync speed", function () {

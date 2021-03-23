@@ -24,7 +24,7 @@ export class StubbedBeaconChain extends BeaconChain {
       opts: {},
       config,
       logger: testLogger(),
-      metrics: createStubInstance(BeaconMetrics),
+      metrics: sinon.createStubInstance(BeaconMetrics),
       db: new StubbedBeaconDb(sinon, config),
       anchorState: config.types.phase0.BeaconState.tree.createValue({
         ...config.types.phase0.BeaconState.defaultValue(),

@@ -12,7 +12,7 @@ import {StubbedBeaconDb} from "../../../../../utils/stub";
 import {generateState} from "../../../../../utils/state";
 import {setupApiImplTestServer} from "../../index.test";
 import {testLogger} from "../../../../../utils/logger";
-import {createStubInstance, SinonStubFn} from "../../../../../utils/types";
+import {SinonStubFn} from "../../../../../utils/types";
 
 describe("api - debug - beacon", function () {
   let debugApi: DebugBeaconApi;
@@ -26,7 +26,7 @@ describe("api - debug - beacon", function () {
     const server = setupApiImplTestServer();
     resolveStateIdStub = sinon.stub(stateApiUtils, "resolveStateId");
     chainStub = server.chainStub;
-    forkchoiceStub = createStubInstance(LodestarForkChoice);
+    forkchoiceStub = sinon.createStubInstance(LodestarForkChoice);
     chainStub.forkChoice = forkchoiceStub;
     dbStub = new StubbedBeaconDb(sinon);
     debugApi = new DebugBeaconApi(

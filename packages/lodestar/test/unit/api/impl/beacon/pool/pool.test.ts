@@ -20,7 +20,7 @@ import {List} from "@chainsafe/ssz";
 import {Eth2Gossipsub} from "../../../../../../src/network/gossip";
 import {generateEmptySignedBlockHeader} from "../../../../../utils/block";
 import {setupApiImplTestServer} from "../../index.test";
-import {createStubInstance, SinonStubFn} from "../../../../../utils/types";
+import {SinonStubFn} from "../../../../../utils/types";
 
 describe("beacon pool api impl", function () {
   let poolApi: BeaconPoolApi;
@@ -36,7 +36,7 @@ describe("beacon pool api impl", function () {
     const server = setupApiImplTestServer();
     dbStub = server.dbStub;
     chainStub = server.chainStub;
-    gossipStub = createStubInstance(Eth2Gossipsub);
+    gossipStub = sinon.createStubInstance(Eth2Gossipsub);
     gossipStub.publishAttesterSlashing = sinon.stub();
     gossipStub.publishProposerSlashing = sinon.stub();
     gossipStub.publishVoluntaryExit = sinon.stub();

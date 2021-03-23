@@ -9,15 +9,14 @@ import {validateAttestation} from "../../../../src/chain/attestation/validate";
 import {LocalClock} from "../../../../src/chain/clock/LocalClock";
 import {AttestationError, AttestationErrorCode} from "../../../../src/chain/errors";
 import {generateAttestation} from "../../../utils/attestation";
-import {createStubInstance} from "../../../utils/types";
 
 describe("velidateAttestation", function () {
   let forkChoice: SinonStubbedInstance<ForkChoice>;
   let clock: SinonStubbedInstance<LocalClock>;
 
   beforeEach(function () {
-    clock = createStubInstance(LocalClock);
-    forkChoice = createStubInstance(ForkChoice);
+    clock = sinon.createStubInstance(LocalClock);
+    forkChoice = sinon.createStubInstance(ForkChoice);
   });
 
   afterEach(function () {

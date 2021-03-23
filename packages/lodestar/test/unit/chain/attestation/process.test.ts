@@ -11,7 +11,7 @@ import {StateRegenerator} from "../../../../src/chain/regen";
 import {AttestationErrorCode} from "../../../../src/chain/errors";
 import {generateAttestation} from "../../../utils/attestation";
 import {generateCachedState} from "../../../utils/state";
-import {createStubInstance, SinonStubFn} from "../../../utils/types";
+import {SinonStubFn} from "../../../utils/types";
 import {AttestationError} from "../../../../src/chain/errors";
 
 describe("processAttestation", function () {
@@ -21,8 +21,8 @@ describe("processAttestation", function () {
   let isValidIndexedAttestationStub: SinonStubFn<typeof attestationUtils["isValidIndexedAttestation"]>;
 
   beforeEach(function () {
-    forkChoice = createStubInstance(ForkChoice);
-    regen = createStubInstance(StateRegenerator);
+    forkChoice = sinon.createStubInstance(ForkChoice);
+    regen = sinon.createStubInstance(StateRegenerator);
     isValidIndexedAttestationStub = sinon.stub(attestationUtils, "isValidIndexedAttestation");
   });
 

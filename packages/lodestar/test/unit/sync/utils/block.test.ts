@@ -5,7 +5,6 @@ import {generateEmptySignedBlock} from "../../../utils/block";
 import PeerId from "peer-id";
 import {testLogger} from "../../../utils/logger";
 import {chunkify, getBlockRange, getBlockRangeFromPeer} from "../../../../src/sync/utils";
-import {createStubInstance} from "../../../utils/types";
 
 describe("sync - block utils", function () {
   describe("get block range from multiple peers", function () {
@@ -88,9 +87,9 @@ describe("sync - block utils", function () {
 
   describe("get blocks from peer", function () {
     it("should get block range from peer", async function () {
-      const rpcStub = createStubInstance(ReqResp);
+      const rpcStub = sinon.createStubInstance(ReqResp);
       rpcStub.beaconBlocksByRange.withArgs(sinon.match.any, sinon.match.any).resolves([generateEmptySignedBlock()]);
-      const result = await getBlockRangeFromPeer(rpcStub, createStubInstance(PeerId), {start: 1, end: 4});
+      const result = await getBlockRangeFromPeer(rpcStub, sinon.createStubInstance(PeerId), {start: 1, end: 4});
       if (!result) throw Error("getBlockRangeFromPeer returned null");
       expect(result.length).to.be.greaterThan(0);
       expect(rpcStub.beaconBlocksByRange.calledOnce).to.be.true;

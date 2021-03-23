@@ -79,10 +79,10 @@ describe("sync utils", function () {
 
     beforeEach(() => {
       metastoreStub = getStubbedMetadataStore();
-      networkStub = createStubInstance(Network);
+      networkStub = sinon.createStubInstance(Network);
       networkStub.peerMetadata = metastoreStub;
       forkChoiceStub = createStubInstance(ForkChoice);
-      peerScoreStub = createStubInstance(PeerRpcScoreStore);
+      peerScoreStub = sinon.createStubInstance(PeerRpcScoreStore);
       networkStub.peerRpcScores = peerScoreStub;
     });
     afterEach(() => {
