@@ -395,7 +395,9 @@ export class AttestationService {
     for (const [pk, v] of this.validators) {
       if (!v.validator) {
         requests.push(
-          async () => (v.validator = await this.provider.beacon.state.getStateValidator("head", fromHexString(pk)))
+          this.provider.beacon.state
+            .getStateValidator("head", fromHexString(pk))
+            .then((validator) => (v.validator = validator))
         );
       }
     }
