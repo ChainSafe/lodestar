@@ -8,6 +8,7 @@ describe("Epoch Processing Performance Tests", function () {
   let state: phase0.fast.CachedBeaconState<phase0.BeaconState>;
   let process: phase0.fast.IEpochProcess;
   const logger = profilerLogger();
+  let start: number;
 
   before(async function () {
     this.timeout(0);
@@ -16,54 +17,47 @@ describe("Epoch Processing Performance Tests", function () {
     // go back 1 slot to process epoch
     origState.slot -= 1;
     state = phase0.fast.createCachedBeaconState(config, origState);
-  });
-
-  it("prepareEpochProcessState", async () => {
-    const start = Date.now();
-    logger.profile("prepareEpochProcessState");
     process = phase0.fast.prepareEpochProcessState(state);
-    logger.profile("prepareEpochProcessState");
-    // not stable, sometimes < 1400, sometimes > 2000
-    expect(Date.now() - start).lt(100);
   });
 
-  it("processJustificationAndFinalization", async () => {
-    const start = Date.now();
-    logger.profile("processJustificationAndFinalization");
-    phase0.fast.processJustificationAndFinalization(state, process);
-    logger.profile("processJustificationAndFinalization");
-    expect(Date.now() - start).lte(2);
+  beforeEach(function () {
+    start = Date.now();
   });
 
-  it("processRewardsAndPenalties", async () => {
-    const start = Date.now();
-    logger.profile("processRewardsAndPenalties");
-    phase0.fast.processRewardsAndPenalties(state, process);
-    logger.profile("processRewardsAndPenalties");
-    expect(Date.now() - start).lt(250);
-  });
+  const testValues = [
+    {
+      // not stable, sometimes < 1400, sometimes > 2000
+      expected: 100,
+    },
+    {
+      testFunc: phase0.fast.processJustificationAndFinalization,
+      expected: 2,
+    },
+    {
+      testFunc: phase0.fast.processRewardsAndPenalties,
+      expected: 250,
+    },
+    {
+      testFunc: phase0.fast.processRegistryUpdates,
+      expected: 2,
+    },
+    {
+      testFunc: phase0.fast.processSlashings,
+      expected: 25,
+    },
+    {
+      testFunc: phase0.fast.processFinalUpdates,
+      expected: 30,
+    },
+  ];
 
-  it("processRegistryUpdates", async () => {
-    const start = Date.now();
-    logger.profile("processRegistryUpdates");
-    phase0.fast.processRegistryUpdates(state, process);
-    logger.profile("processRegistryUpdates");
-    expect(Date.now() - start).lte(2);
-  });
-
-  it("processSlashings", async () => {
-    const start = Date.now();
-    logger.profile("processSlashings");
-    phase0.fast.processSlashings(state, process);
-    logger.profile("processSlashings");
-    expect(Date.now() - start).lte(25);
-  });
-
-  it("processFinalUpdates", async () => {
-    const start = Date.now();
-    logger.profile("processFinalUpdates");
-    phase0.fast.processFinalUpdates(state, process);
-    logger.profile("processFinalUpdates");
-    expect(Date.now() - start).lte(30);
-  });
+  for (const testValue of testValues) {
+    const name = testValue.testFunc ? testValue.testFunc.name : "prepareEpochProcessState";
+    it(name, async () => {
+      logger.profile(name);
+      testValue.testFunc && testValue.testFunc(state, process);
+      logger.profile(name);
+      expect(Date.now() - start).lt(testValue.expected);
+    });
+  }
 });

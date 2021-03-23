@@ -22,6 +22,7 @@ import {SinonStubFn} from "../../../../utils/types";
 
 describe("process block - process operations", function () {
   const sandbox = sinon.createSandbox();
+  let state: phase0.BeaconState, body: phase0.BeaconBlockBody;
 
   let processProposerSlashingStub: SinonStubFn<typeof processProposerSlashing["processProposerSlashing"]>,
     processAttesterSlashingStub: SinonStubFn<typeof processAttesterSlashing["processAttesterSlashing"]>,
@@ -35,6 +36,8 @@ describe("process block - process operations", function () {
     processAttestationStub = sandbox.stub(processAttestation, "processAttestation");
     processDepositStub = sandbox.stub(processDeposit, "processDeposit");
     processVoluntaryExitStub = sandbox.stub(processVoluntaryExit, "processVoluntaryExit");
+    state = generateState();
+    body = generateEmptyBlock().body;
   });
 
   afterEach(() => {
@@ -42,8 +45,6 @@ describe("process block - process operations", function () {
   });
 
   it("should fail to process operations - outstanding deposits not processed up to the maximum", function () {
-    const state = generateState();
-    const body = generateEmptyBlock().body;
     body.deposits.push(generateDeposit());
     try {
       processOperations(config, state, body);
@@ -52,8 +53,6 @@ describe("process block - process operations", function () {
   });
 
   it("should fail to process operations - duplicate transfers", function () {
-    const state = generateState();
-    const body = generateEmptyBlock().body;
     try {
       processOperations(config, state, body);
       expect.fail();
@@ -61,8 +60,6 @@ describe("process block - process operations", function () {
   });
 
   it("should fail to process operations - proposerSlashings length  exceed maxProposerSlashings ", function () {
-    const state = generateState();
-    const body = generateEmptyBlock().body;
     body.proposerSlashings = Array.from({length: config.params.MAX_PROPOSER_SLASHINGS + 1}, () =>
       config.types.phase0.ProposerSlashing.defaultValue()
     ) as List<phase0.ProposerSlashing>;
@@ -73,8 +70,6 @@ describe("process block - process operations", function () {
   });
 
   it("should fail to process operations - attesterSlashings length  exceed maxAttesterSlashings", function () {
-    const state = generateState();
-    const body = generateEmptyBlock().body;
     processProposerSlashingStub.returns();
     body.attesterSlashings = Array.from({length: config.params.MAX_ATTESTER_SLASHINGS + 1}, () =>
       config.types.phase0.AttesterSlashing.defaultValue()
@@ -89,8 +84,6 @@ describe("process block - process operations", function () {
   });
 
   it("should fail to process operations - attestation length  exceed maxAttestation", function () {
-    const state = generateState();
-    const body = generateEmptyBlock().body;
     processProposerSlashingStub.returns();
     processAttesterSlashingStub.returns();
     body.attestations = Array.from({length: config.params.MAX_ATTESTATIONS + 1}, () =>
@@ -109,8 +102,6 @@ describe("process block - process operations", function () {
   });
 
   it("should fail to process operations - deposit length  exceed maxDeposit", function () {
-    const state = generateState();
-    const body = generateEmptyBlock().body;
     body.deposits = Array.from({length: config.params.MAX_DEPOSITS + 1}, () =>
       config.types.phase0.Deposit.defaultValue()
     ) as List<phase0.Deposit>;
@@ -122,8 +113,6 @@ describe("process block - process operations", function () {
   });
 
   it("should fail to process operations - voluntaryExit length  exceed maxVoluntaryExit", function () {
-    const state = generateState();
-    const body = generateEmptyBlock().body;
     processProposerSlashingStub.returns();
     processAttesterSlashingStub.returns();
     processAttestationStub.returns();
@@ -149,8 +138,6 @@ describe("process block - process operations", function () {
   });
 
   it("should fail to process operations - transfer length  exceed maxTransfer", function () {
-    const state = generateState();
-    const body = generateEmptyBlock().body;
     processProposerSlashingStub.returns();
     processAttesterSlashingStub.returns();
     processAttestationStub.returns();
@@ -176,8 +163,6 @@ describe("process block - process operations", function () {
   });
 
   it("should  process operations ", function () {
-    const state = generateState();
-    const body = generateEmptyBlock().body;
     processProposerSlashingStub.returns();
     processAttesterSlashingStub.returns();
     processAttestationStub.returns();

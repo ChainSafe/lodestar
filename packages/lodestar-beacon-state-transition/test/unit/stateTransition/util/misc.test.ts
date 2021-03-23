@@ -10,37 +10,37 @@ import {toBigIntLE} from "bigint-buffer";
 import {generateState} from "../../../utils/state";
 
 describe("getDomain", () => {
-  const state = generateState();
-  const fork: phase0.Fork = {
-    epoch: 12,
-    previousVersion: Buffer.from([4, 0, 0, 0]),
-    currentVersion: Buffer.from([5, 0, 0, 0]),
-  };
-  state.fork = fork;
+  const testValues = [
+    {
+      domainValues: [4, 0, 0, 0],
+      messageEpoch: 8,
+      expected: "04000000d6e497b816c27a31acd5d9f3ed670639fef7842fee51f044dfbfb631",
+    },
+    {
+      domainValues: [5, 0, 0, 0],
+      messageEpoch: 13,
+      expected: "05000000c8b9e6acb00f5b32f776f5466510630a94829c965d35074e9d162016",
+    },
+    {
+      domainValues: [5, 0, 0, 0],
+      messageEpoch: 12,
+      expected: "05000000c8b9e6acb00f5b32f776f5466510630a94829c965d35074e9d162016",
+    },
+  ];
 
-  it("epoch before fork epoch should result in domain === previous fork version * 2**32 + domain type", () => {
-    const result = getDomain(config, state, Uint8Array.from([4, 0, 0, 0]), 8);
-    assert.equal(
-      Buffer.from(result).toString("hex"),
-      "04000000d6e497b816c27a31acd5d9f3ed670639fef7842fee51f044dfbfb631"
-    );
-  });
-
-  it("epoch before fork epoch should result in domain === previous fork version * 2**32 + domain type", () => {
-    const result = getDomain(config, state, Uint8Array.from([5, 0, 0, 0]), 13);
-    assert.equal(
-      Buffer.from(result).toString("hex"),
-      "05000000c8b9e6acb00f5b32f776f5466510630a94829c965d35074e9d162016"
-    );
-  });
-
-  it("epoch before fork epoch should result in domain === previous fork version * 2**32 + domain type", () => {
-    const result = getDomain(config, state, Uint8Array.from([5, 0, 0, 0]), 12);
-    assert.equal(
-      Buffer.from(result).toString("hex"),
-      "05000000c8b9e6acb00f5b32f776f5466510630a94829c965d35074e9d162016"
-    );
-  });
+  for (const testValue of testValues) {
+    it("epoch before fork epoch should result in domain === previous fork version * 2**32 + domain type", () => {
+      const state = generateState();
+      const fork: phase0.Fork = {
+        epoch: 12,
+        previousVersion: Buffer.from([4, 0, 0, 0]),
+        currentVersion: Buffer.from([5, 0, 0, 0]),
+      };
+      state.fork = fork;
+      const result = getDomain(config, state, Uint8Array.from(testValue.domainValues), testValue.messageEpoch);
+      assert.equal(Buffer.from(result).toString("hex"), testValue.expected);
+    });
+  }
 });
 
 describe("getBlockRoot", () => {

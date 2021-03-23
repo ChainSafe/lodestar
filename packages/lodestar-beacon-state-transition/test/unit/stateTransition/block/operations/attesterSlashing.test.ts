@@ -10,6 +10,7 @@ import {SinonStubFn} from "../../../../utils/types";
 
 describe("process block - attester slashings", function () {
   const sandbox = sinon.createSandbox();
+  let state: phase0.BeaconState, attesterSlashing: phase0.AttesterSlashing;
 
   let isSlashableAttestationStub: SinonStubFn<typeof utils["isSlashableAttestationData"]>,
     validateIndexedAttestationStub: SinonStubFn<typeof utils["isValidIndexedAttestation"]>,
@@ -21,6 +22,8 @@ describe("process block - attester slashings", function () {
     validateIndexedAttestationStub = sandbox.stub(utils, "isValidIndexedAttestation");
     isSlashableValidatorStub = sandbox.stub(utils, "isSlashableValidator");
     slashValidatorStub = sandbox.stub(utils, "slashValidator");
+    state = generateState();
+    attesterSlashing = generateEmptyAttesterSlashing();
   });
 
   afterEach(() => {
@@ -28,15 +31,11 @@ describe("process block - attester slashings", function () {
   });
 
   it("should fail to process slashings - not conflicting", function () {
-    const state = generateState();
-    const attesterSlashing = generateEmptyAttesterSlashing();
     isSlashableAttestationStub.returns(false);
     expect(() => phase0.processAttesterSlashing(config, state, attesterSlashing)).to.throw;
   });
 
   it.skip("should fail to process slashings - data incorrect", function () {
-    const state = generateState();
-    const attesterSlashing = generateEmptyAttesterSlashing();
     attesterSlashing.attestation1.signature = Buffer.alloc(96, 1);
     attesterSlashing.attestation2.signature = Buffer.alloc(96, 2);
     isSlashableAttestationStub.returns(true);
@@ -53,8 +52,6 @@ describe("process block - attester slashings", function () {
   });
 
   it.skip("should fail to process slashings - data2 incorrect", function () {
-    const state = generateState();
-    const attesterSlashing = generateEmptyAttesterSlashing();
     attesterSlashing.attestation1.data.source.epoch = 2;
     attesterSlashing.attestation2.data.source.epoch = 3;
     isSlashableAttestationStub.returns(true);
@@ -69,8 +66,6 @@ describe("process block - attester slashings", function () {
   });
 
   it.skip("should fail to process slashings - nothing slashed", function () {
-    const state = generateState();
-    const attesterSlashing = generateEmptyAttesterSlashing();
     attesterSlashing.attestation1.data.source.epoch = 2;
     attesterSlashing.attestation2.data.source.epoch = 3;
     isSlashableAttestationStub.returns(true);
@@ -84,8 +79,6 @@ describe("process block - attester slashings", function () {
   });
 
   it.skip("should process slashings", function () {
-    const state = generateState();
-    const attesterSlashing = generateEmptyAttesterSlashing();
     attesterSlashing.attestation1.attestingIndices = [1, 2, 3] as List<number>;
     attesterSlashing.attestation2.attestingIndices = [2, 3, 4] as List<number>;
     isSlashableAttestationStub.returns(true);

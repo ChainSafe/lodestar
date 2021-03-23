@@ -51,26 +51,22 @@ describe("computeStartSlotAtEpoch", () => {
 });
 
 describe("getPreviousEpoch", () => {
-  it("epoch should return previous epoch", () => {
-    const state: phase0.BeaconState = generateState({slot: 512});
-    const expected: Epoch = 15;
-    const result = getPreviousEpoch(config, state);
-    assert.equal(result, expected);
-  });
+  const testValues = [
+    {slot: 512, expectedEpoch: 15},
+    {slot: 256, expectedEpoch: 7},
+    {
+      slot: GENESIS_SLOT,
+      expectedEpoch: computeEpochAtSlot(config, GENESIS_SLOT),
+    },
+  ];
 
-  it("epoch should return previous epoch", () => {
-    const state: phase0.BeaconState = generateState({slot: 256});
-    const expected: Epoch = 7;
-    const result = getPreviousEpoch(config, state);
-    assert.equal(result, expected);
-  });
-
-  it("epoch should return genesis epoch", () => {
-    const state: phase0.BeaconState = generateState({slot: GENESIS_SLOT});
-    const expected: Epoch = computeEpochAtSlot(config, GENESIS_SLOT);
-    const result = getPreviousEpoch(config, state);
-    assert.equal(result, expected);
-  });
+  for (const testValue of testValues) {
+    it("epoch should return previous epoch", () => {
+      const state: phase0.BeaconState = generateState({slot: testValue.slot});
+      const result = getPreviousEpoch(config, state);
+      assert.equal(result, testValue.expectedEpoch);
+    });
+  }
 });
 
 describe("computeActivationExitEpoch", () => {
