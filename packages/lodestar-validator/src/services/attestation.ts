@@ -391,6 +391,7 @@ export class AttestationService {
    * Update the local list of validators based on the current head state.
    */
   private async updateValidators(): Promise<void> {
+    await this.provider.beacon.state.getStateValidators("head", Array.from(this.validators.keys()));
     const requests = [];
     for (const [pk, v] of this.validators) {
       if (!v.validator) {

@@ -1,4 +1,5 @@
 import {BLSPubkey, ValidatorIndex, phase0} from "@chainsafe/lodestar-types";
+import {toJson} from "@chainsafe/lodestar-utils";
 import {Json} from "@chainsafe/ssz";
 import {IBeaconStateApi} from "../../../interface/beacon";
 import {RestApi} from "./abstract";
@@ -26,6 +27,26 @@ export class RestBeaconStateApi extends RestApi implements IBeaconStateApi {
       );
     } catch (e) {
       this.logger.error("Failed to fetch validator", {validatorId: id, error: (e as Error).message});
+      return null;
+    }
+  }
+
+  /**
+   * Fetch the state validators (and filter them if needed)
+   */
+  async getStateValidators(stateId: "head", filters?: string[]): Promise<phase0.ValidatorResponse[] | null> {
+    try {
+      const responseData = await this.client.get<{data: Json[]}>(`/states/${stateId}/validators`, {
+        filters: filters || [],
+      });
+      return responseData.data.map((value) =>
+        this.config.types.phase0.ValidatorResponse.fromJson(value, {case: "snake"})
+      );
+    } catch (e) {
+      this.logger.error("Failed to fetch validators", {
+        filters: toJson(filters),
+        error: (e as Error).message,
+      });
       return null;
     }
   }
