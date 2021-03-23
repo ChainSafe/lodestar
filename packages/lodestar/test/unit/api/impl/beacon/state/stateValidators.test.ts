@@ -13,7 +13,6 @@ import {BeaconChain} from "../../../../../../src/chain";
 import {StubbedBeaconDb} from "../../../../../utils/stub";
 import {setupApiImplTestServer, ApiImplTestModules} from "../../index.test";
 import {PubkeyIndexMap} from "@chainsafe/lodestar-beacon-state-transition/lib/phase0/fast";
-import sinon from "sinon";
 
 use(chaiAsPromised);
 
