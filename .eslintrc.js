@@ -128,7 +128,7 @@ module.exports = {
       },
     },
     {
-      files: ["**/lodestar-types/**/*.ts"],
+      files: ["**/types/**/*.ts"],
       rules: {
         "@typescript-eslint/naming-convention": [
           "off",
