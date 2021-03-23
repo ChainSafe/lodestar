@@ -7,7 +7,8 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBlockSummary, IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {IBeaconDb} from "../../db/api";
-import {ITask} from "../interface";
+import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
+import {IArchivingStatus} from "../interface";
 export interface IArchiveBlockModules {
   db: IBeaconDb;
   forkChoice: IForkChoice;
@@ -17,28 +18,40 @@ export interface IArchiveBlockModules {
 /**
  * Archives finalized blocks from active bucket to archive bucket.
  */
-export class ArchiveBlocksTask implements ITask {
+export class ArchiveBlocksTask {
   private readonly config: IBeaconConfig;
   private readonly db: IBeaconDb;
   private readonly forkChoice: IForkChoice;
   private readonly logger: ILogger;
 
-  private finalized: phase0.Checkpoint;
+  private finalizingSlot: number | null;
+  private lastFinalizedSlot = 0;
+  // beacon_blocks_by_range handlers waiting for this
+  private subscribedPromises: (() => void)[];
 
-  constructor(config: IBeaconConfig, modules: IArchiveBlockModules, finalized: phase0.Checkpoint) {
+  constructor(config: IBeaconConfig, modules: IArchiveBlockModules) {
     this.config = config;
     this.db = modules.db;
     this.forkChoice = modules.forkChoice;
     this.logger = modules.logger;
-    this.finalized = finalized;
+    this.finalizingSlot = null;
+    this.subscribedPromises = [];
+  }
+
+  /**
+   * Initialize the task with a last finalized block from db.
+   */
+  init(lastFinalizedSlot: number): void {
+    this.lastFinalizedSlot = lastFinalizedSlot;
   }
 
   /**
    * Only archive blocks on the same chain to the finalized checkpoint.
    */
-  async run(): Promise<void> {
+  async run(finalizedCheckpoint: phase0.Checkpoint): Promise<void> {
+    this.finalizingSlot = computeStartSlotAtEpoch(this.config, finalizedCheckpoint.epoch);
     // Use fork choice to determine the blocks to archive and delete
-    const allCanonicalSummaries = this.forkChoice.iterateBlockSummaries(this.finalized.root);
+    const allCanonicalSummaries = this.forkChoice.iterateBlockSummaries(finalizedCheckpoint.root);
     let i = 0;
     // this number of blocks per chunk is tested in e2e test blockArchive.test.ts
     const BATCH_SIZE = 1000;
@@ -54,10 +67,33 @@ export class ArchiveBlocksTask implements ITask {
       });
       i = upperBound;
     }
-    await this.deleteNonCanonicalBlocks();
+    await this.deleteNonCanonicalBlocks(finalizedCheckpoint);
     this.logger.verbose("Archiving of finalized blocks complete", {
       totalArchived: allCanonicalSummaries.length,
-      finalizedEpoch: this.finalized.epoch,
+      finalizedEpoch: finalizedCheckpoint.epoch,
+    });
+    this.lastFinalizedSlot = this.finalizingSlot;
+    this.finalizingSlot = null;
+    this.subscribedPromises.forEach((resolve) => resolve());
+    this.subscribedPromises = [];
+  }
+
+  /**
+   * Returns the blocks being moved from blocks db to archivedBlocks db.
+   */
+  getArchivingStatus(): IArchivingStatus {
+    return {
+      lastFinalizedSlot: this.lastFinalizedSlot,
+      finalizingSlot: this.finalizingSlot,
+    };
+  }
+
+  /**
+   * Wait for run() to be done.
+   */
+  waitUntilComplete(): Promise<void> {
+    return new Promise((resolve) => {
+      this.subscribedPromises.push(resolve);
     });
   }
 
@@ -83,9 +119,9 @@ export class ArchiveBlocksTask implements ITask {
     ]);
   }
 
-  private async deleteNonCanonicalBlocks(): Promise<void> {
+  private async deleteNonCanonicalBlocks(finalizedCheckpoint: phase0.Checkpoint): Promise<void> {
     // loop through forkchoice single time
-    const nonCanonicalSummaries = this.forkChoice.iterateNonAncestors(this.finalized.root);
+    const nonCanonicalSummaries = this.forkChoice.iterateNonAncestors(finalizedCheckpoint.root);
     await this.db.block.batchDelete(nonCanonicalSummaries.map((summary) => summary.blockRoot));
   }
 }

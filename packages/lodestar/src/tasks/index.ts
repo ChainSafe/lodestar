@@ -10,15 +10,15 @@ import {IBeaconDb} from "../db/api";
 import {ChainEvent, IBeaconChain} from "../chain";
 import {ArchiveBlocksTask} from "./tasks/archiveBlocks";
 import {StatesArchiver} from "./tasks/archiveStates";
-import {IBeaconSync} from "../sync";
 import {InteropSubnetsJoiningTask} from "./tasks/interopSubnetsJoiningTask";
 import {INetwork, NetworkEvent} from "../network";
+import {GENESIS_SLOT} from "@chainsafe/lodestar-params";
+import {IArchivingStatus, ITaskService} from "./interface";
 
 export interface ITasksModules {
   db: IBeaconDb;
   logger: ILogger;
   chain: IBeaconChain;
-  sync: IBeaconSync;
   network: INetwork;
 }
 
@@ -26,7 +26,7 @@ export interface ITasksModules {
  * Used for running tasks that depends on some events or are executed
  * periodically.
  */
-export class TasksService {
+export class TasksService implements ITaskService {
   private readonly config: IBeaconConfig;
   private readonly db: IBeaconDb;
   private readonly chain: IBeaconChain;
@@ -34,6 +34,7 @@ export class TasksService {
   private readonly logger: ILogger;
 
   private readonly statesArchiver: StatesArchiver;
+  private readonly blockArchiver: ArchiveBlocksTask;
   private readonly interopSubnetsTask: InteropSubnetsJoiningTask;
 
   constructor(config: IBeaconConfig, modules: ITasksModules) {
@@ -43,6 +44,11 @@ export class TasksService {
     this.logger = modules.logger;
     this.network = modules.network;
     this.statesArchiver = new StatesArchiver(this.config, modules);
+    this.blockArchiver = new ArchiveBlocksTask(this.config, {
+      db: this.db,
+      forkChoice: this.chain.forkChoice,
+      logger: this.logger,
+    });
     this.interopSubnetsTask = new InteropSubnetsJoiningTask(this.config, {
       chain: this.chain,
       network: this.network,
@@ -50,7 +56,9 @@ export class TasksService {
     });
   }
 
-  start(): void {
+  async start(): Promise<void> {
+    const lastFinalizedSlot = (await this.db.blockArchive.lastKey()) ?? GENESIS_SLOT;
+    this.blockArchiver.init(lastFinalizedSlot);
     this.chain.emitter.on(ChainEvent.forkChoiceFinalized, this.onFinalizedCheckpoint);
     this.chain.emitter.on(ChainEvent.checkpoint, this.onCheckpoint);
     this.network.gossip.on(NetworkEvent.gossipStart, this.handleGossipStart);
@@ -67,6 +75,14 @@ export class TasksService {
     await this.statesArchiver.archiveState(this.chain.getFinalizedCheckpoint());
   }
 
+  getBlockArchivingStatus(): IArchivingStatus {
+    return this.blockArchiver.getArchivingStatus();
+  }
+
+  async waitForBlockArchiver(): Promise<void> {
+    return await this.blockArchiver.waitUntilComplete();
+  }
+
   private handleGossipStart = (): void => {
     this.interopSubnetsTask.start();
   };
@@ -77,12 +93,7 @@ export class TasksService {
 
   private onFinalizedCheckpoint = async (finalized: phase0.Checkpoint): Promise<void> => {
     try {
-      await new ArchiveBlocksTask(
-        this.config,
-        {db: this.db, forkChoice: this.chain.forkChoice, logger: this.logger},
-        finalized
-      ).run();
-
+      await this.blockArchiver.run(finalized);
       // should be after ArchiveBlocksTask to handle restart cleanly
       await this.statesArchiver.maybeArchiveState(finalized);
 

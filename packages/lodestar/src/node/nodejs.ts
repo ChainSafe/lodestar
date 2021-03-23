@@ -142,22 +142,23 @@ export class BeaconNode {
       metrics,
       chain,
       db,
-      reqRespHandler: new ReqRespHandler({db, chain}),
+      reqRespHandler: new ReqRespHandler({config, db, chain}),
     });
+    const chores = new TasksService(config, {
+      db,
+      chain,
+      network,
+      logger: logger.child(opts.logger.chores),
+    });
+    network.reqResp.reqRespHandler.registerChores(chores);
     const sync = new BeaconSync(opts.sync, {
       config,
       db,
       chain,
       metrics,
       network,
+      chores,
       logger: logger.child(opts.logger.sync),
-    });
-    const chores = new TasksService(config, {
-      db,
-      chain,
-      sync,
-      network,
-      logger: logger.child(opts.logger.chores),
     });
 
     const api = new Api(opts.api, {
@@ -195,7 +196,7 @@ export class BeaconNode {
 
     await network.start();
     await sync.start();
-    chores.start();
+    await chores.start();
 
     void runNodeNotifier({network, chain, sync, config, logger, signal});
 

@@ -9,6 +9,7 @@ import {INetworkEventBus} from "../events";
 import {IReqRespHandler} from "./handlers";
 
 export interface IReqResp {
+  reqRespHandler: IReqRespHandler;
   start(): void;
   stop(): void;
   status(peerId: PeerId, request: phase0.Status): Promise<phase0.Status>;

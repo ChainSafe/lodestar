@@ -38,19 +38,13 @@ describe("block archiver task", function () {
     ];
     forkChoiceStub.iterateBlockSummaries.returns(canonicalBlocks);
     forkChoiceStub.iterateNonAncestors.returns([generateBlockSummary({slot: 3})]);
-    const archiverTask = new ArchiveBlocksTask(
-      config,
-      {
-        db: dbStub,
-        forkChoice: forkChoiceStub,
-        logger,
-      },
-      {
-        epoch: 5,
-        root: ZERO_HASH,
-      }
-    );
-    await archiverTask.run();
+    const archiverTask = new ArchiveBlocksTask(config, {
+      db: dbStub,
+      forkChoice: forkChoiceStub,
+      logger,
+    });
+    archiverTask.init(0);
+    await archiverTask.run({epoch: 5, root: ZERO_HASH});
     expect(
       dbStub.blockArchive.batchPutBinary.calledWith(
         canonicalBlocks.map((summary) => ({

@@ -8,6 +8,7 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBeaconDb} from "../db/api";
 import {AttestationCollector} from "./utils";
 import {BeaconGossipHandler} from "./gossip";
+import {ITaskService} from "../tasks/interface";
 
 export enum SyncMode {
   WAITING_PEERS,
@@ -41,6 +42,7 @@ export interface ISyncModules {
   db: IBeaconDb;
   logger: ILogger;
   chain: IBeaconChain;
+  chores: ITaskService;
   metrics?: IBeaconMetrics;
   regularSync?: IRegularSync;
   gossipHandler?: BeaconGossipHandler;

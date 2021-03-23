@@ -2,7 +2,7 @@ import {EventEmitter} from "events";
 import sinon from "sinon";
 import {expect} from "chai";
 import {config} from "@chainsafe/lodestar-config/mainnet";
-import {IReqResp} from "../../../../src/network/reqresp";
+import {IReqResp, ReqRespHandler} from "../../../../src/network/reqresp";
 import {PeerRpcScoreStore, PeerManager, Libp2pPeerMetadataStore} from "../../../../src/network/peers";
 import {NetworkEvent, NetworkEventBus} from "../../../../src/network";
 import {Method} from "../../../../src/constants";
@@ -79,6 +79,7 @@ describe("network / peers / PeerManager", function () {
     ping = sinon.stub();
     beaconBlocksByRange = sinon.stub();
     beaconBlocksByRoot = sinon.stub();
+    reqRespHandler = sinon.createStubInstance(ReqRespHandler);
   }
 
   it("Should request metadata on receivedPing of unknown peer", async () => {

@@ -27,10 +27,10 @@ export type IReqRespOptions = Partial<typeof timeoutOptions>;
  * https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/p2p-interface.md#the-reqresp-domain
  */
 export class ReqResp implements IReqResp {
+  reqRespHandler: IReqRespHandler;
   private config: IBeaconConfig;
   private libp2p: LibP2p;
   private logger: ILogger;
-  private reqRespHandler: IReqRespHandler;
   private metadataController: MetadataController;
   private peerMetadata: IPeerMetadataStore;
   private peerRpcScores: IPeerRpcScoreStore;

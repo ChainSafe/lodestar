@@ -1,9 +1,8 @@
 import PeerId from "peer-id";
-import {phase0, Root} from "@chainsafe/lodestar-types";
+import {Root} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {INetwork} from "../../network";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
-import {toHexString} from "@chainsafe/ssz";
 import {ZERO_HASH} from "../../constants";
 import {IPeerMetadataStore} from "../../network/peers";
 import {getSyncPeers} from "./peers";
@@ -54,24 +53,4 @@ export function getBestPeerCandidates(forkChoice: IForkChoice, network: INetwork
     },
     10
   );
-}
-
-/**
- * Some clients may send orphaned/non-canonical blocks.
- * Check each block should link to a previous parent block and be a parent of next block.
- * Throw errors if they're not so that it'll fetch again
- */
-export function checkLinearChainSegment(
-  config: IBeaconConfig,
-  blocks: phase0.SignedBeaconBlock[] | null,
-  ancestorRoot: Root | null = null
-): void {
-  if (!blocks || blocks.length <= 1) throw new Error("Not enough blocks to validate");
-  let parentRoot = ancestorRoot;
-  for (const block of blocks) {
-    if (parentRoot && !config.types.Root.equals(block.message.parentRoot, parentRoot)) {
-      throw new Error(`Block ${block.message.slot} does not link to parent ${toHexString(parentRoot)}`);
-    }
-    parentRoot = config.types.phase0.BeaconBlock.hashTreeRoot(block.message);
-  }
 }

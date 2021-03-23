@@ -11,7 +11,7 @@ import {getBlockRange} from "../../utils/blocks";
 import {ISlotRange} from "../../interface";
 import {ZERO_HASH} from "../../../constants";
 import {IBlockRangeFetcher} from "./interface";
-import {checkLinearChainSegment} from "../../utils/sync";
+import {checkLinearChainSegment} from "../../../util/chain";
 
 /**
  * Get next range by issuing beacon_blocks_by_range requests.

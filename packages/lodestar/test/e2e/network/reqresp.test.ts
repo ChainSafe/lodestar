@@ -66,6 +66,8 @@ describe("network / ReqResp", function () {
       onStatus: notImplemented,
       onBeaconBlocksByRange: notImplemented,
       onBeaconBlocksByRoot: notImplemented,
+      // eslint-disable-next-line @typescript-eslint/no-empty-function
+      registerChores: () => {},
       ...reqRespHandlerPartial,
     };
     const opts = {...networkOptsDefault, ...reqRespOpts};
