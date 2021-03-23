@@ -9,13 +9,12 @@ import {
   VoluntaryExitEvent,
 } from "../../../../../src/api/impl/events";
 import {config} from "@chainsafe/lodestar-config/minimal";
-import {SinonStubbedInstance} from "sinon";
+import sinon, {SinonStubbedInstance} from "sinon";
 import {BeaconChain, ChainEvent, ChainEventEmitter, IBeaconChain} from "../../../../../src/chain";
 import {generateBlockSummary, generateEmptySignedBlock, generateSignedBlock} from "../../../../utils/block";
 import {expect} from "chai";
 import {generateAttestation, generateEmptySignedVoluntaryExit} from "../../../../utils/attestation";
 import {generateState} from "../../../../utils/state";
-import sinon from "sinon";
 
 describe("Events api impl", function () {
   describe("beacon event stream", function () {
