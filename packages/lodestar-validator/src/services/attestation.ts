@@ -391,15 +391,18 @@ export class AttestationService {
    * Update the local list of validators based on the current head state.
    */
   private async updateValidators(): Promise<void> {
-    for await (const [pk, v] of this.validators) {
+    const requests = [];
+    for (const [pk, v] of this.validators) {
       if (!v.validator) {
-        try {
-          v.validator = await this.provider.beacon.state.getStateValidator("head", fromHexString(pk));
-        } catch (e) {
-          this.logger.error("Failed to get validator details", e);
-          v.validator = null;
-        }
+        requests.push(
+          this.provider.beacon.state.getStateValidator("head", fromHexString(pk)).then((validator) => {
+            v.validator = validator;
+          })
+        );
       }
     }
+    Promise.all(requests).catch((e) => {
+      this.logger.error("Failed to update validators", e);
+    });
   }
 }
