@@ -4,7 +4,7 @@ import {CachedBeaconState, phase0} from "@chainsafe/lodestar-beacon-state-transi
 import {List} from "@chainsafe/ssz";
 import {expect, use} from "chai";
 import chaiAsPromised from "chai-as-promised";
-import {SinonStubbedInstance, SinonStubbedMember} from "sinon";
+import sinon, {SinonStubbedInstance, SinonStubbedMember} from "sinon";
 import {BeaconStateApi} from "../../../../../../src/api/impl/beacon/state";
 import * as stateApiUtils from "../../../../../../src/api/impl/beacon/state/utils";
 import {generateState} from "../../../../../utils/state";
