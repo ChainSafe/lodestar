@@ -1,7 +1,13 @@
 import {LevelDbController} from "@chainsafe/lodestar-db";
 import {ILogger, intDiv, LogLevel, interopSecretKey} from "@chainsafe/lodestar-utils";
 import {IEventsApi} from "@chainsafe/lodestar-validator/lib/api/interface/events";
-import {ApiClientOverInstance, ApiClientOverRest, IApiClient, SlashingProtection, Validator} from "@chainsafe/lodestar-validator";
+import {
+  ApiClientOverInstance,
+  ApiClientOverRest,
+  IApiClient,
+  SlashingProtection,
+  Validator,
+} from "@chainsafe/lodestar-validator";
 import tmp from "tmp";
 import {BeaconApi} from "../../../src/api/impl/beacon";
 import {EventsApi} from "../../../src/api/impl/events";
