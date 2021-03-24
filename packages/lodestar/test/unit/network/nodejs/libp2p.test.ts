@@ -42,6 +42,7 @@ describe("[network] nodejs libp2p", () => {
     assert(nodeB.connectionManager.get(nodeA.peerId), "nodeB should have connection to nodeA");
 
     // disconnect
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
     const p = new Promise((resolve) => nodeB.connectionManager.once(Libp2pEvent.peerDisconnect, resolve));
     await new Promise((resolve) => setTimeout(resolve, 100));
     await nodeA.hangUp(nodeB.peerId);

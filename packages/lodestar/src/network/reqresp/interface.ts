@@ -1,3 +1,4 @@
+import LibP2p from "libp2p";
 import PeerId from "peer-id";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {phase0} from "@chainsafe/lodestar-types";

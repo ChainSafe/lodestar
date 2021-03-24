@@ -1,3 +1,4 @@
+import LibP2p from "libp2p";
 import PeerId from "peer-id";
 
 /**
