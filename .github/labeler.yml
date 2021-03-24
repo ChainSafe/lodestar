@@ -1,20 +1,20 @@
 StateTransition:
-  - packages/lodestar-beacon-state-transition/**/*
+  - packages/beacon-state-transition/**/*
   - packages/spec-test-runner/**/*
-  - packages/lodestar-spec-test-util/**/*
+  - packages/spec-test-util/**/*
 
 CLI:
-  - packages/lodestar-cli/**/*
+  - packages/cli/**/*
 
 Types:
-  - packages/lodestar-types/**/*
+  - packages/types/**/*
 
 Config:
-  - packages/lodestar-config/**/*
-  - packages/lodestar-params/**/*
+  - packages/config/**/*
+  - packages/params/**/*
 
 Validator:
-  - packages/lodestar-validator/**/*
+  - packages/validator/**/*
 
 Api:
   - packages/lodestar/src/api/**/*
