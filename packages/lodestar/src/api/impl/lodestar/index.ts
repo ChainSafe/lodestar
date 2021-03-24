@@ -1,10 +1,20 @@
 /* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
+import {IBeaconSync} from "../../../sync";
+import {SyncChainDebugState} from "../../../sync/range/chain";
+import {IApiOptions} from "../../options";
+import {IApiModules} from "../interface";
+
 export interface ILodestarApi {
   getWtfNode(): string;
+  getSyncChainsDebugState(): SyncChainDebugState[];
 }
 
 export class LodestarApi implements ILodestarApi {
-  constructor() {
+  private readonly sync: IBeaconSync;
+
+  constructor(opts: Partial<IApiOptions>, modules: Pick<IApiModules, "sync">) {
+    this.sync = modules.sync;
+
     // Allows to load wtfnode listeners immedeatelly. Usefull when dockerized,
     // so after an unexpected restart wtfnode becomes properly loaded again
     if (process?.env?.START_WTF_NODE) {
@@ -33,5 +43,9 @@ export class LodestarApi implements ILodestarApi {
     wtfnode.setLogger("error", logger);
     wtfnode.dump();
     return logs.join("\n");
+  }
+
+  getSyncChainsDebugState(): SyncChainDebugState[] {
+    return this.sync.getSyncChainsDebugState();
   }
 }

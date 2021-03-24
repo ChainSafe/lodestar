@@ -24,6 +24,6 @@ export class Api implements IApi {
     this.events = new EventsApi(opts, modules);
     this.debug = new DebugApi(opts, modules);
     this.config = new ConfigApi(opts, modules);
-    this.lodestar = new LodestarApi();
+    this.lodestar = new LodestarApi(opts, modules);
   }
 }

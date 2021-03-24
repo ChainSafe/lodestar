@@ -234,8 +234,6 @@ export class PeerManager {
     // libp2p.connectionManager.get() returns not null if there's +1 open connections with `peer`
     if (this.libp2p.connectionManager.get(peer)) {
       this.networkEventBus.emit(NetworkEvent.peerConnected, peer, status);
-      // TODO - TEMP: RangeSync refactor may delete peerMetadata.status
-      this.peerMetadata.status.set(peer, status);
     }
   }
 

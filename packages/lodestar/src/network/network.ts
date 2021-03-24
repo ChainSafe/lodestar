@@ -93,6 +93,7 @@ export class Network implements INetwork {
     this.metadata.stop();
     this.gossip.stop();
     this.reqResp.stop();
+    this.gossip.stop();
     await this.libp2p.stop();
   }
 

@@ -42,7 +42,7 @@ describe("Run single node single thread interop validators (no eth1) until check
       this.timeout(timeout);
       const bn = await getDevBeaconNode({
         params: testCase.params,
-        options: {sync: {minPeers: 0}, api: {rest: {enabled: true} as IRestApiOptions}},
+        options: {api: {rest: {enabled: true} as IRestApiOptions}},
         validatorCount: testCase.vc * testCase.validators,
         logger: loggerNodeA,
       });

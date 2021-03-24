@@ -6,14 +6,12 @@ import * as eth1 from "./eth1";
 import * as logger from "./logger";
 import * as metrics from "./metrics";
 import * as network from "./network";
-import * as sync from "./sync";
 
 export type IBeaconNodeArgs = api.IApiArgs &
   eth1.IEth1Args &
   logger.ILoggerArgs &
   metrics.IMetricsArgs &
-  network.INetworkArgs &
-  sync.ISyncArgs;
+  network.INetworkArgs;
 
 export function parseBeaconNodeArgs(args: IBeaconNodeArgs): RecursivePartial<IBeaconNodeOptions> {
   // Remove undefined values to allow deepmerge to inject default values downstream
@@ -25,7 +23,6 @@ export function parseBeaconNodeArgs(args: IBeaconNodeArgs): RecursivePartial<IBe
     logger: logger.parseArgs(args),
     metrics: metrics.parseArgs(args),
     network: network.parseArgs(args),
-    sync: sync.parseArgs(args),
   });
 }
 
@@ -35,5 +32,4 @@ export const beaconNodeOptions = {
   ...logger.options,
   ...metrics.options,
   ...network.options,
-  ...sync.options,
 };

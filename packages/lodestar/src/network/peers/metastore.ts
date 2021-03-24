@@ -13,7 +13,6 @@ export interface IPeerMetadataStore {
   metadata: PeerStoreBucket<phase0.Metadata>;
   rpcScore: PeerStoreBucket<number>;
   rpcScoreLastUpdate: PeerStoreBucket<number>;
-  status: PeerStoreBucket<phase0.Status>;
 }
 
 export type PeerStoreBucket<T> = {
@@ -30,7 +29,6 @@ export class Libp2pPeerMetadataStore implements IPeerMetadataStore {
   metadata: PeerStoreBucket<phase0.Metadata>;
   rpcScore: PeerStoreBucket<number>;
   rpcScoreLastUpdate: PeerStoreBucket<number>;
-  status: PeerStoreBucket<phase0.Status>;
 
   private readonly config: IBeaconConfig;
   private readonly metabook: MetadataBook;
@@ -42,7 +40,6 @@ export class Libp2pPeerMetadataStore implements IPeerMetadataStore {
     this.metadata = this.typedStore("metadata", this.config.types.phase0.Metadata);
     this.rpcScore = this.typedStore("score", this.config.types.Number64);
     this.rpcScoreLastUpdate = this.typedStore("score-last-update", this.config.types.Number64);
-    this.status = this.typedStore("status", this.config.types.phase0.Status);
   }
 
   private typedStore<T>(key: string, type: BasicType<T> | ContainerType<T>): PeerStoreBucket<T> {

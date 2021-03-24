@@ -150,7 +150,6 @@ export class MockBeaconChain implements IBeaconChain {
 
   close(): void {
     this.abortController.abort();
-    return;
   }
 
   async getStateByBlockRoot(): Promise<CachedBeaconState<phase0.BeaconState> | null> {

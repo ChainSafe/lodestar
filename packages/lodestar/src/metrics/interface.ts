@@ -129,6 +129,8 @@ export interface IBeaconMetrics extends IMetrics {
    * `rate(lodestar_block_processor_total_async_time[1m])`
    */
   blockProcessorTotalAsyncTime: Gauge;
+  /** Total number of sync chains started events, labeled by syncType */
+  syncChainsStarted: Gauge;
   /** Peers labeled by direction */
   peersByDirection: Gauge;
   /** Number of peer:connected event, labeled by direction */

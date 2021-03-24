@@ -1,4 +1,5 @@
 import {defaultOptions, IBeaconNodeOptions} from "@chainsafe/lodestar";
+import {ApiNamespace} from "@chainsafe/lodestar/lib/api";
 import {ICliCommandOptions} from "../../util";
 
 export interface IApiArgs {
@@ -24,7 +25,7 @@ export function parseArgs(args: IApiArgs): IBeaconNodeOptions["api"] {
 export const options: ICliCommandOptions<IApiArgs> = {
   "api.rest.api": {
     type: "array",
-    choices: ["beacon", "validator", "node", "events", "debug", "lodestar"],
+    choices: ["beacon", "validator", "node", "events", "debug", "lodestar"] as ApiNamespace[],
     description: "Pick namespaces to expose for HTTP API",
     defaultDescription: JSON.stringify(defaultOptions.api.rest.api),
     group: "api",

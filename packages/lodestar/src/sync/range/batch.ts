@@ -1,16 +1,15 @@
 import PeerId from "peer-id";
 import {Epoch, phase0} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {ILogger, LodestarError} from "@chainsafe/lodestar-utils";
+import {LodestarError} from "@chainsafe/lodestar-utils";
 import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
+import {BATCH_SLOT_OFFSET, MAX_BATCH_DOWNLOAD_ATTEMPTS, MAX_BATCH_PROCESSING_ATTEMPTS} from "../constants";
+import {hashBlocks} from "./utils";
 
 export type BatchOpts = {
   epochsPerBatch: Epoch;
   logAfterAttempts?: number;
 };
-
-/** log.error after trying for N times */
-const LOG_AFTER_ATTEMPTS = 3;
 
 /**
  * Current state of a batch
@@ -37,11 +36,13 @@ export enum BatchStatus {
 export type Attempt = {
   /** The peer that made the attempt */
   peer: PeerId;
+  /** The hash of the blocks of the attempt */
+  hash: Uint8Array;
 };
 
 export type BatchState =
   | {status: BatchStatus.AwaitingDownload}
-  | {status: BatchStatus.Downloading; peer: PeerId; blocks: phase0.SignedBeaconBlock[]}
+  | {status: BatchStatus.Downloading; peer: PeerId}
   | {status: BatchStatus.AwaitingProcessing; peer: PeerId; blocks: phase0.SignedBeaconBlock[]}
   | {status: BatchStatus.Processing; attempt: Attempt}
   | {status: BatchStatus.AwaitingValidation; attempt: Attempt};
@@ -62,31 +63,28 @@ export type BatchMetadata = {
  *       Batch 1       |              Batch 2              |  Batch 3
  */
 export class Batch {
-  startEpoch: Epoch;
+  readonly startEpoch: Epoch;
   /** State of the batch. */
   state: BatchState = {status: BatchStatus.AwaitingDownload};
   /** BeaconBlocksByRangeRequest */
-  request: phase0.BeaconBlocksByRangeRequest;
+  readonly request: phase0.BeaconBlocksByRangeRequest;
   /** The `Attempts` that have been made and failed to send us this batch. */
-  private failedProcessingAttempts: Attempt[] = [];
+  readonly failedProcessingAttempts: Attempt[] = [];
   /** The number of download retries this batch has undergone due to a failed request. */
-  private failedDownloadAttempts: PeerId[] = [];
-  private logger: ILogger;
-  private opts: Pick<Required<BatchOpts>, "logAfterAttempts">;
+  private readonly failedDownloadAttempts: PeerId[] = [];
+  private readonly config: IBeaconConfig;
 
-  constructor(startEpoch: Epoch, config: IBeaconConfig, logger: ILogger, opts: BatchOpts) {
-    const startSlot = computeStartSlotAtEpoch(config, startEpoch) + 1;
+  constructor(startEpoch: Epoch, config: IBeaconConfig, opts: BatchOpts) {
+    const startSlot = computeStartSlotAtEpoch(config, startEpoch) + BATCH_SLOT_OFFSET;
     const endSlot = startSlot + opts.epochsPerBatch * config.params.SLOTS_PER_EPOCH;
 
+    this.config = config;
     this.startEpoch = startEpoch;
     this.request = {
       startSlot: startSlot,
       count: endSlot - startSlot,
       step: 1,
     };
-
-    this.logger = logger;
-    this.opts = {logAfterAttempts: opts?.logAfterAttempts ?? LOG_AFTER_ATTEMPTS};
   }
 
   /**
@@ -105,11 +103,10 @@ export class Batch {
    */
   startDownloading(peer: PeerId): void {
     if (this.state.status !== BatchStatus.AwaitingDownload) {
-      this.logger.error("startDownloading", {}, new WrongStateError(this.getErrorType(BatchStatus.AwaitingDownload)));
+      throw new BatchError(this.wrongStatusErrorType(BatchStatus.AwaitingDownload));
     }
 
-    this.logger.debug("Batch startDownloading", this.getMetadata());
-    this.state = {status: BatchStatus.Downloading, peer, blocks: []};
+    this.state = {status: BatchStatus.Downloading, peer};
   }
 
   /**
@@ -117,27 +114,23 @@ export class Batch {
    */
   downloadingSuccess(blocks: phase0.SignedBeaconBlock[]): void {
     if (this.state.status !== BatchStatus.Downloading) {
-      throw new WrongStateError(this.getErrorType(BatchStatus.Downloading));
+      throw new BatchError(this.wrongStatusErrorType(BatchStatus.Downloading));
     }
 
-    this.logger.debug("Batch downloadingSuccess", {...this.getMetadata(), blocks: blocks.length});
     this.state = {status: BatchStatus.AwaitingProcessing, peer: this.state.peer, blocks};
   }
 
   /**
    * Downloading -> AwaitingDownload
    */
-  downloadingError(e: Error): void {
-    if (this.state.status === BatchStatus.Downloading) {
-      this.failedDownloadAttempts.push(this.state.peer);
-    } else {
-      this.logger.error("downloadingError", {}, new WrongStateError(this.getErrorType(BatchStatus.Downloading)));
+  downloadingError(): void {
+    if (this.state.status !== BatchStatus.Downloading) {
+      throw new BatchError(this.wrongStatusErrorType(BatchStatus.Downloading));
     }
 
-    if (this.failedDownloadAttempts.length > this.opts.logAfterAttempts) {
-      this.logger.error("Batch downloadingError", this.getMetadata(), e);
-    } else {
-      this.logger.debug("Batch downloadingError", this.getMetadata(), e);
+    this.failedDownloadAttempts.push(this.state.peer);
+    if (this.failedDownloadAttempts.length > MAX_BATCH_DOWNLOAD_ATTEMPTS) {
+      throw new BatchError(this.errorType({code: BatchErrorCode.MAX_DOWNLOAD_ATTEMPTS}));
     }
 
     this.state = {status: BatchStatus.AwaitingDownload};
@@ -148,15 +141,12 @@ export class Batch {
    */
   startProcessing(): phase0.SignedBeaconBlock[] {
     if (this.state.status !== BatchStatus.AwaitingProcessing) {
-      throw new WrongStateError(this.getErrorType(BatchStatus.AwaitingProcessing));
+      throw new BatchError(this.wrongStatusErrorType(BatchStatus.AwaitingProcessing));
     }
 
-    this.logger.debug("Batch startProcessing", this.getMetadata());
     const blocks = this.state.blocks;
-    this.state = {
-      status: BatchStatus.Processing,
-      attempt: {peer: this.state.peer},
-    };
+    const hash = hashBlocks(blocks, this.config); // tracks blocks to report peer on processing error
+    this.state = {status: BatchStatus.Processing, attempt: {peer: this.state.peer, hash}};
     return blocks;
   }
 
@@ -165,70 +155,77 @@ export class Batch {
    */
   processingSuccess(): void {
     if (this.state.status !== BatchStatus.Processing) {
-      throw new WrongStateError(this.getErrorType(BatchStatus.Processing));
+      throw new BatchError(this.wrongStatusErrorType(BatchStatus.Processing));
     }
 
-    this.logger.debug("Batch processingSuccess", this.getMetadata());
     this.state = {status: BatchStatus.AwaitingValidation, attempt: this.state.attempt};
   }
 
   /**
    * Processing -> AwaitingDownload
    */
-  processingError(e: Error): void {
-    if (this.state.status === BatchStatus.Processing) {
-      this.failedProcessingAttempts.push(this.state.attempt);
-    } else {
-      this.logger.error("processingError", {}, new WrongStateError(this.getErrorType(BatchStatus.Processing)));
+  processingError(): void {
+    if (this.state.status !== BatchStatus.Processing) {
+      throw new BatchError(this.wrongStatusErrorType(BatchStatus.Processing));
     }
 
-    if (this.failedProcessingAttempts.length > this.opts.logAfterAttempts) {
-      this.logger.error("Batch processingError", this.getMetadata(), e);
-    } else {
-      this.logger.debug("Batch processingError", this.getMetadata(), e);
-    }
-
-    this.state = {status: BatchStatus.AwaitingDownload};
+    this.onProcessingError(this.state.attempt);
   }
 
   /**
    * AwaitingValidation -> AwaitingDownload
    */
   validationError(): void {
-    if (this.state.status === BatchStatus.AwaitingValidation) {
-      this.failedProcessingAttempts.push(this.state.attempt);
-    } else {
-      this.logger.error("validationError", {}, new WrongStateError(this.getErrorType(BatchStatus.AwaitingValidation)));
+    if (this.state.status !== BatchStatus.AwaitingValidation) {
+      throw new BatchError(this.wrongStatusErrorType(BatchStatus.AwaitingValidation));
     }
 
-    if (this.failedProcessingAttempts.length > this.opts.logAfterAttempts) {
-      this.logger.error("Batch validationError", this.getMetadata());
-    } else {
-      this.logger.debug("Batch validationError", this.getMetadata());
+    this.onProcessingError(this.state.attempt);
+  }
+
+  /**
+   * AwaitingValidation -> Done
+   */
+  validationSuccess(): Attempt {
+    if (this.state.status !== BatchStatus.AwaitingValidation) {
+      throw new BatchError(this.wrongStatusErrorType(BatchStatus.AwaitingValidation));
+    }
+    return this.state.attempt;
+  }
+
+  private onProcessingError(attempt: Attempt): void {
+    this.failedProcessingAttempts.push(attempt);
+    if (this.failedProcessingAttempts.length > MAX_BATCH_PROCESSING_ATTEMPTS) {
+      throw new BatchError(this.errorType({code: BatchErrorCode.MAX_PROCESSING_ATTEMPTS}));
     }
 
     this.state = {status: BatchStatus.AwaitingDownload};
   }
 
-  private getErrorType(expectedStatus: BatchStatus): BatchErrorType {
-    return {
-      code: BatchErrorCode.WRONG_STATUS,
-      startEpoch: this.startEpoch,
-      status: this.state.status,
-      expectedStatus,
-    };
+  /** Helper to construct typed BatchError. Stack traces are correct as the error is thrown above */
+  private errorType(type: BatchErrorType): BatchErrorType & BatchErrorMetadata {
+    return {...type, ...this.getMetadata()};
+  }
+
+  private wrongStatusErrorType(expectedStatus: BatchStatus): BatchErrorType & BatchErrorMetadata {
+    return this.errorType({code: BatchErrorCode.WRONG_STATUS, expectedStatus});
   }
 }
 
 export enum BatchErrorCode {
   WRONG_STATUS = "BATCH_ERROR_WRONG_STATUS",
+  MAX_DOWNLOAD_ATTEMPTS = "BATCH_ERROR_MAX_DOWNLOAD_ATTEMPTS",
+  MAX_PROCESSING_ATTEMPTS = "BATCH_ERROR_MAX_PROCESSING_ATTEMPTS",
 }
 
-type BatchErrorType = {
-  code: BatchErrorCode.WRONG_STATUS;
+type BatchErrorType =
+  | {code: BatchErrorCode.WRONG_STATUS; expectedStatus: BatchStatus}
+  | {code: BatchErrorCode.MAX_DOWNLOAD_ATTEMPTS}
+  | {code: BatchErrorCode.MAX_PROCESSING_ATTEMPTS};
+
+type BatchErrorMetadata = {
   startEpoch: number;
   status: BatchStatus;
-  expectedStatus: BatchStatus;
 };
 
-export class WrongStateError extends LodestarError<BatchErrorType> {}
+export class BatchError extends LodestarError<BatchErrorType & BatchErrorMetadata> {}

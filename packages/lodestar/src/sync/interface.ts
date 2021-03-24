@@ -1,29 +1,34 @@
-import {INetwork} from "../network";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {CommitteeIndex, Slot, phase0} from "@chainsafe/lodestar-types";
-import {IRegularSync} from "./regular";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {INetwork} from "../network";
+import {BeaconGossipHandler} from "./gossip";
 import {IBeaconChain} from "../chain";
 import {IBeaconMetrics} from "../metrics";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBeaconDb} from "../db/api";
 import {AttestationCollector} from "./utils";
-import {BeaconGossipHandler} from "./gossip";
-
-export enum SyncMode {
-  WAITING_PEERS,
-  INITIAL_SYNCING,
-  REGULAR_SYNCING,
-  SYNCED,
-  STOPPED,
-}
+import {SyncChainDebugState} from "./range/chain";
+export {SyncChainDebugState};
 
 export interface IBeaconSync {
-  state: SyncMode;
-  start(): Promise<void>;
-  stop(): Promise<void>;
+  state: SyncState;
+  close(): void;
   getSyncStatus(): phase0.SyncingStatus;
   isSynced(): boolean;
+  isSyncing(): boolean;
   collectAttestations(slot: Slot, committeeIndex: CommitteeIndex): void;
+  getSyncChainsDebugState(): SyncChainDebugState[];
+}
+
+export enum SyncState {
+  /** The node is performing a long-range sync over a finalized chain */
+  SyncingFinalized = "SyncingFinalized",
+  /** The node is performing a long-range sync over head chains */
+  SyncingHead = "SyncingHead",
+  /** The node is up to date with all known peers */
+  Synced = "Synced",
+  /** No useful peers are connected */
+  Stalled = "Stalled",
 }
 
 export interface ISyncModule {
@@ -39,10 +44,9 @@ export interface ISyncModules {
   config: IBeaconConfig;
   network: INetwork;
   db: IBeaconDb;
+  metrics?: IBeaconMetrics;
   logger: ILogger;
   chain: IBeaconChain;
-  metrics?: IBeaconMetrics;
-  regularSync?: IRegularSync;
   gossipHandler?: BeaconGossipHandler;
   attestationCollector?: AttestationCollector;
 }
