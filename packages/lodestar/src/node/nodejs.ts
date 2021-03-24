@@ -203,51 +203,16 @@ export class BeaconNode {
 
     // void runNodeNotifier({network, chain, sync, config, logger, signal});
 
+    // we'll not see issue if we comment out the next 7 lines
     await libp2p.start();
     setTimeout(async function () {
       for (let i = 0; ; i++) {
-        const toDialPeers: PeerId[] = [];
-        for (const peer of libp2p.peerStore.peers.values()) {
-          if (!libp2p.connectionManager.get(peer.id)) {
-            toDialPeers.push(peer.id);
-          }
-          if (toDialPeers.length >= 25) break;
-        }
-        logger.info("Run libp2p.dial", {i, toDialPeers: toDialPeers.length});
-        for (const peer of toDialPeers) {
-          // Note: PeerDiscovery adds the multiaddrTCP beforehand
-          logger.info("Dialing discovered peer", {peer: peer.toB58String()});
-
-          // Note: `libp2p.dial()` is what libp2p.connectionManager autoDial calls
-          // Note: You must listen to the connected events to listen for a successful conn upgrade
-          libp2p.dial(peer).catch((e) => {
-            logger.info("Error dialing discovered peer", {peer: peer.toB58String()}, e);
-          });
-        }
+        connectToNewPeers(libp2p, logger, i);
         await sleep(15000);
       }
     }, 1000);
 
-    const slots = await db.stateArchive.keys({reverse: true});
-    const finalizedSlot = slots[1];
-    const state = await db.stateArchive.get(finalizedSlot)!;
-    const blocks = await db.blockArchive.values({gt: finalizedSlot, lt: finalizedSlot + 64});
-    let importedBlocks = 0;
-    const cachedState = createCachedBeaconState(config, state as TreeBacked<phase0.BeaconState>);
-    for (let i = 0; ; i++) {
-      let preState = cachedState.clone();
-      for (const block of blocks) {
-        preState = await runStateTransition3(db, preState, {
-          reprocess: false,
-          prefinalized: true,
-          signedBlock: block,
-          validProposerSignature: true,
-          validSignatures: true,
-        });
-        importedBlocks++;
-      }
-      logger.info("nodejs with libp2p.dial, runStateTransition3 finish loop", {i, importedBlocks});
-    }
+    await reproduceRetainedStateIssue(config, db, logger);
 
     return new this({
       opts,
@@ -282,5 +247,50 @@ export class BeaconNode {
       if (this.controller) this.controller.abort();
       this.status = BeaconNodeStatus.closed;
     }
+  }
+}
+
+async function reproduceRetainedStateIssue(config: IBeaconConfig, db: IBeaconDb, logger: ILogger): Promise<void> {
+  const slots = await db.stateArchive.keys({reverse: true});
+  const finalizedSlot = slots[1];
+  const state = await db.stateArchive.get(finalizedSlot)!;
+  const blocks = await db.blockArchive.values({gt: finalizedSlot, lt: finalizedSlot + 64});
+  let importedBlocks = 0;
+  const cachedState = createCachedBeaconState(config, state as TreeBacked<phase0.BeaconState>);
+  for (let i = 0; ; i++) {
+    let preState = cachedState.clone();
+    for (const block of blocks) {
+      preState = await runStateTransition3(db, preState, {
+        reprocess: false,
+        prefinalized: true,
+        signedBlock: block,
+        validProposerSignature: true,
+        validSignatures: true,
+      });
+      importedBlocks++;
+    }
+    logger.info("nodejs with libp2p.dial, runStateTransition3 finish loop", {i, importedBlocks});
+  }
+}
+
+// simulate network.start
+function connectToNewPeers(libp2p: LibP2p, logger: ILogger, i: number): void {
+  const toDialPeers: PeerId[] = [];
+  for (const peer of libp2p.peerStore.peers.values()) {
+    if (!libp2p.connectionManager.get(peer.id)) {
+      toDialPeers.push(peer.id);
+    }
+    if (toDialPeers.length >= 25) break;
+  }
+  logger.error("Run libp2p.dial", {i, toDialPeers: toDialPeers.length});
+  for (const peer of toDialPeers) {
+    // Note: PeerDiscovery adds the multiaddrTCP beforehand
+    logger.error("Dialing discovered peer", {peer: peer.toB58String()});
+
+    // Note: `libp2p.dial()` is what libp2p.connectionManager autoDial calls
+    // Note: You must listen to the connected events to listen for a successful conn upgrade
+    libp2p.dial(peer).catch((e) => {
+      logger.error("Error dialing discovered peer", {peer: peer.toB58String()}, e);
+    });
   }
 }
