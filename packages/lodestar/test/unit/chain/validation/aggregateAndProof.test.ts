@@ -22,7 +22,7 @@ import {StubbedBeaconDb} from "../../../utils/stub";
 import {AttestationErrorCode} from "../../../../src/chain/errors";
 import {expectRejectedWithLodestarError} from "../../../utils/errors";
 import {SinonStubFn} from "../../../utils/types";
-import {AttestationError} from "../../../../lib/chain/errors";
+import {AttestationError} from "../../../../src/chain/errors";
 
 describe("gossip aggregate and proof test", function () {
   let chain: SinonStubbedInstance<IBeaconChain>;

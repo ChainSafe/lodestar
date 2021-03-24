@@ -12,7 +12,7 @@ import {generateCachedState} from "../../../utils/state";
 import {validateGossipAttesterSlashing} from "../../../../src/chain/validation/attesterSlashing";
 import {AttesterSlashingErrorCode} from "../../../../src/chain/errors/attesterSlashingError";
 import {SinonStubFn} from "../../../utils/types";
-import {AttestationError} from "../../../../lib/chain/errors";
+import {AttestationError} from "../../../../src/chain/errors";
 
 describe("GossipMessageValidator", () => {
   const sandbox = sinon.createSandbox();

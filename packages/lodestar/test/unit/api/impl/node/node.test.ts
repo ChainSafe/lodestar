@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-return */
 import {INodeApi} from "../../../../../src/api/impl/node";
 import {NodeApi} from "../../../../../src/api/impl/node/node";
 import sinon, {SinonStubbedInstance} from "sinon";
