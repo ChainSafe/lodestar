@@ -224,7 +224,7 @@ export class BeaconNode {
             logger.info("Error dialing discovered peer", {peer: peer.toB58String()}, e);
           });
         }
-        await sleep(30000);
+        await sleep(15000);
       }
     }, 1000);
 
