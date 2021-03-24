@@ -8394,16 +8394,6 @@ libp2p-tcp@^0.15.3:
     multiaddr "^8.0.0"
     stream-to-it "^0.2.2"
 
-"libp2p-ts@https://github.com/ChainSafe/libp2p-ts.git":
-  version "0.1.0"
-  resolved "https://github.com/ChainSafe/libp2p-ts.git#86c1d9eca212194c8a5ce1ea6572a3bd694103e5"
-  dependencies:
-    "@chainsafe/discv5" "^0.5.0"
-    "@types/node" "^13.7.0"
-    libp2p-crypto "^0.18.0"
-    multiaddr "^8.0.0"
-    peer-id "^0.14.1"
-
 libp2p-utils@^0.2.0:
   version "0.2.0"
   resolved "https://registry.yarnpkg.com/libp2p-utils/-/libp2p-utils-0.2.0.tgz#9adea1a81943ca7d4d3103aa889796200703f97d"
@@ -13441,4 +13431,3 @@ yocto-queue@^0.1.0:
   version "0.1.0"
   resolved "https://registry.yarnpkg.com/yocto-queue/-/yocto-queue-0.1.0.tgz#0294eb3dee05028d31ee1a5fa2c556a6aaf10a1b"
   integrity sha512-rVksvsnNCdJ/ohGc6xgPwyN8eheCxsiLM8mxuE/t/mOVqJewPuO1miLpTHQiRgTKCLexL4MeAFVagts7HmNZ2Q==
-
