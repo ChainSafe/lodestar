@@ -8,7 +8,7 @@
 
 > This package is part of [ChainSafe's Lodestar](https://lodestar.chainsafe.io) project
 
-Configuration variables for an Eth2 network -- consists of params and ssz types (from [lodestar-params](https://github.com/ChainSafe/lodestar/tree/master/packages/lodestar-params) and [lodestar-types](https://github.com/ChainSafe/lodestar/tree/master/packages/lodestar-types) respectively).
+Configuration variables for an Eth2 network -- consists of params and ssz types (from [lodestar-params](https://github.com/ChainSafe/lodestar/tree/master/packages/params) and [lodestar-types](https://github.com/ChainSafe/lodestar/tree/master/packages/types) respectively).
 
 ## Usage
 
