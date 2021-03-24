@@ -15,6 +15,7 @@ import {CheckpointStateCache} from "../stateCache";
 import {ChainEvent, ChainEventEmitter} from "../emitter";
 import {IBlockJob} from "../interface";
 import {sleep} from "@chainsafe/lodestar-utils";
+import {IBeaconDb} from "../../db";
 
 /**
  * Emits a properly formed "checkpoint" event, given a checkpoint state context
@@ -118,6 +119,20 @@ export function emitBlockEvent(
   postState: CachedBeaconState<phase0.BeaconState>
 ): void {
   emitter.emit(ChainEvent.block, job.signedBlock, postState, job);
+}
+
+export async function runStateTransition3(
+  db: IBeaconDb,
+  preState: CachedBeaconState<phase0.BeaconState>,
+  job: IBlockJob
+): Promise<CachedBeaconState<phase0.BeaconState>> {
+  const postState = phase0.fast.fastStateTransition(preState, job.signedBlock, {
+    verifyStateRoot: true,
+    verifyProposer: !job.validSignatures && !job.validProposerSignature,
+    verifySignatures: !job.validSignatures,
+  });
+  await db.block.add(job.signedBlock);
+  return postState;
 }
 
 export async function runStateTransition(
