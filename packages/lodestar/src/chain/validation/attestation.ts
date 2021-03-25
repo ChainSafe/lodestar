@@ -1,7 +1,7 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBeaconDb} from "../../db/api";
 import {IAttestationJob, IBeaconChain} from "..";
-import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
+import {CachedBeaconState, computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {AttestationError, AttestationErrorCode} from "../errors";
 import {ATTESTATION_PROPAGATION_SLOT_RANGE} from "../../constants";
@@ -73,7 +73,7 @@ export async function validateGossipAttestation(
     });
   }
 
-  let attestationPreState;
+  let attestationPreState: CachedBeaconState<phase0.BeaconState>;
   try {
     attestationPreState = await chain.regen.getCheckpointState(attestation.data.target);
   } catch (e) {
