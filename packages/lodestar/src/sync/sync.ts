@@ -2,6 +2,7 @@ import PeerId from "peer-id";
 import {IBeaconSync, ISyncModules} from "./interface";
 import {INetwork, NetworkEvent} from "../network";
 import {ILogger} from "@chainsafe/lodestar-utils";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {CommitteeIndex, Slot, phase0} from "@chainsafe/lodestar-types";
 import {toHexString} from "@chainsafe/ssz";
 import {ChainEvent, IBeaconChain} from "../chain";
@@ -14,6 +15,7 @@ import {SyncState, SyncChainDebugState} from "./interface";
 export type SyncOptions = Record<string, never>;
 
 export class BeaconSync implements IBeaconSync {
+  private readonly config: IBeaconConfig;
   private readonly logger: ILogger;
   private readonly network: INetwork;
   private readonly chain: IBeaconChain;
@@ -37,6 +39,7 @@ export class BeaconSync implements IBeaconSync {
   private readonly slotImportTolerance: Slot;
 
   constructor(opts: SyncOptions, modules: ISyncModules) {
+    this.config = modules.config;
     this.network = modules.network;
     this.chain = modules.chain;
     this.logger = modules.logger;
@@ -183,11 +186,10 @@ export class BeaconSync implements IBeaconSync {
   };
 
   private onUnknownBlockRoot = async (err: BlockError): Promise<void> => {
-    if (err.type.code !== BlockErrorCode.PARENT_UNKNOWN) {
-      return;
-    }
+    if (err.type.code !== BlockErrorCode.PARENT_UNKNOWN) return;
 
-    const parentRoot = err.type.parentRoot;
+    const blockRoot = this.config.types.phase0.BeaconBlock.hashTreeRoot(err.job.signedBlock.message);
+    const parentRoot = this.chain.pendingBlocks.getMissingAncestor(blockRoot);
     const parentRootHex = toHexString(parentRoot);
 
     if (this.processingRoots.has(parentRootHex)) {
@@ -198,7 +200,7 @@ export class BeaconSync implements IBeaconSync {
     this.logger.verbose("Finding block for unknown ancestor root", {parentRootHex});
 
     try {
-      const block = await fetchUnknownBlockRoot(parentRoot, this.network);
+      const block = await fetchUnknownBlockRoot(parentRoot, this.network, this.logger);
       this.chain.receiveBlock(block);
       this.logger.verbose("Found UnknownBlockRoot", {parentRootHex});
     } catch (e) {
