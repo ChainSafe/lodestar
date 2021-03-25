@@ -59,6 +59,7 @@ export type IPhase0SSZTypes = IPrimitiveSSZTypes & {
   SyncingStatus: ContainerType<phase0.SyncingStatus>;
   AttesterDuty: ContainerType<phase0.AttesterDuty>;
   ProposerDuty: ContainerType<phase0.ProposerDuty>;
+  BeaconCommitteeSubscription: ContainerType<phase0.BeaconCommitteeSubscription>;
   // Validator slashing protection
   SlashingProtectionBlock: ContainerType<phase0.SlashingProtectionBlock>;
   SlashingProtectionAttestation: ContainerType<phase0.SlashingProtectionAttestation>;
@@ -148,6 +149,7 @@ export const phase0TypeNames: (keyof IPhase0SSZTypes)[] = [
   "SyncingStatus",
   "AttesterDuty",
   "ProposerDuty",
+  "BeaconCommitteeSubscription",
   "Genesis",
   "ChainHead",
   "BlockEventPayload",
