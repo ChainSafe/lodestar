@@ -17,7 +17,7 @@ export const getStateValidatorsBalances: ApiController<ValidatorBalancesQuery, P
   handler: async function (req, resp) {
     let indices: (ValidatorIndex | BLSPubkey)[] | undefined;
     if (req.query.id) {
-      mapValidatorIndices(this.config, req.query.id);
+      indices = mapValidatorIndices(this.config, req.query.id);
     }
     const balances = await this.api.beacon.state.getStateValidatorBalances(req.params.stateId, indices);
     return resp.status(200).send({

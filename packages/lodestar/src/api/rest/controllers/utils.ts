@@ -17,7 +17,7 @@ export function toRestValidationError(field: string, message: string): FastifyEr
   } as FastifyError;
 }
 
-export function mapValidatorIndices(config: IBeaconConfig, data: string[]): (ValidatorIndex | BLSPubkey)[] | undefined {
+export function mapValidatorIndices(config: IBeaconConfig, data: string[]): (ValidatorIndex | BLSPubkey)[] {
   return data.map((id) => {
     if (id.toLowerCase().startsWith("0x")) {
       return config.types.BLSPubkey.fromJson(id);
