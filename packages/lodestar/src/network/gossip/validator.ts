@@ -127,7 +127,7 @@ export async function validateAggregatedAttestation(
       /** eslit-disable-next-line no-fallthrough */
       case AttestationErrorCode.PAST_SLOT:
       case AttestationErrorCode.AGGREGATE_ALREADY_KNOWN:
-      case AttestationErrorCode.MISSING_ATTESTATION_PRESTATE:
+      case AttestationErrorCode.MISSING_ATTESTATION_TARGET_STATE:
       default:
         logger.debug("gossip - AggregateAndProof - ignore", e.type as Json);
         throw new GossipValidationError(ERR_TOPIC_VALIDATOR_IGNORE);
@@ -171,7 +171,7 @@ export async function validateCommitteeAttestation(
         throw new GossipValidationError(ERR_TOPIC_VALIDATOR_REJECT);
 
       case AttestationErrorCode.UNKNOWN_BEACON_BLOCK_ROOT:
-      case AttestationErrorCode.MISSING_ATTESTATION_PRESTATE: // IGNORE
+      case AttestationErrorCode.MISSING_ATTESTATION_TARGET_STATE: // IGNORE
         // attestation might be valid after we receive block
         chain.receiveAttestation(attestation);
       /** eslit-disable-next-line no-fallthrough */

@@ -220,7 +220,7 @@ describe("gossip aggregate and proof test", function () {
     } catch (error) {
       expect((error as AttestationError).type).to.have.property(
         "code",
-        AttestationErrorCode.MISSING_ATTESTATION_PRESTATE
+        AttestationErrorCode.MISSING_ATTESTATION_TARGET_STATE
       );
     }
     expect(regen.getCheckpointState.withArgs(item.message.aggregate.data.target).calledOnce).to.be.true;
