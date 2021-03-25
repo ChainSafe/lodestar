@@ -97,7 +97,7 @@ export async function validateGossipAttestation(
     !phase0.fast.isValidIndexedAttestation(
       attestationPreState,
       attestationPreState.getIndexedAttestation(attestation),
-      true
+      !attestationJob.validSignature
     )
   ) {
     throw new AttestationError({
