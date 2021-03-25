@@ -21,7 +21,7 @@ jobs:
 
       - name: Create tag
         id: tag
-        uses: butlerlogic/action-autotag@1.1.1
+        uses: butlerlogic/action-autotag@1.1.2
         with:
           GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
           root: "packages/lodestar" # lerna doesn't update version root package.json and this action cannot read from lerna.json
