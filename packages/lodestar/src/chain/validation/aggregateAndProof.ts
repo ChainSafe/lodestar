@@ -91,6 +91,7 @@ export async function validateAggregateAttestation(
   } catch (e) {
     throw new AttestationError({
       code: AttestationErrorCode.MISSING_ATTESTATION_PRESTATE,
+      error: e as Error,
       job: attestationJob,
     });
   }

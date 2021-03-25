@@ -163,7 +163,7 @@ export type AttestationErrorType =
   | {code: AttestationErrorCode.FINALIZED_CHECKPOINT_NOT_AN_ANCESTOR_OF_ROOT}
   | {code: AttestationErrorCode.TARGET_BLOCK_NOT_AN_ANCESTOR_OF_LMD_BLOCK}
   | {code: AttestationErrorCode.COMMITTEE_INDEX_OUT_OF_RANGE; index: number}
-  | {code: AttestationErrorCode.MISSING_ATTESTATION_PRESTATE}
+  | {code: AttestationErrorCode.MISSING_ATTESTATION_PRESTATE; error: Error}
   | {code: AttestationErrorCode.INVALID_AGGREGATOR};
 
 type IJobObject = {
