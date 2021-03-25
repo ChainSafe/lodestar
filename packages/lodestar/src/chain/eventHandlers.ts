@@ -59,6 +59,7 @@ export function handleChainEvents(this: BeaconChain, signal: AbortSignal): void 
   const emitter = this.emitter;
   const logger = this.logger;
   handlers.set(ChainEvent.clockSlot, wrapHandler(ChainEvent.clockSlot, emitter, logger, onClockSlot.bind(this)));
+  handlers.set(ChainEvent.clockEpoch, wrapHandler(ChainEvent.clockEpoch, emitter, logger, onClockEpoch.bind(this)));
   handlers.set(ChainEvent.forkVersion, wrapHandler(ChainEvent.forkVersion, emitter, logger, onForkVersion.bind(this)));
   handlers.set(ChainEvent.checkpoint, wrapHandler(ChainEvent.checkpoint, emitter, logger, onCheckpoint.bind(this)));
   handlers.set(ChainEvent.justified, wrapHandler(ChainEvent.justified, emitter, logger, onJustified.bind(this)));
@@ -136,6 +137,10 @@ export async function onClockSlot(this: BeaconChain, slot: Slot): Promise<void> 
     pendingBlocks: this.pendingBlocks.getTotalPendingBlocks(),
     currentSlot: this.clock.currentSlot,
   });
+}
+
+export function onClockEpoch(): void {
+  //
 }
 
 export function onForkVersion(this: BeaconChain, version: Version): void {
