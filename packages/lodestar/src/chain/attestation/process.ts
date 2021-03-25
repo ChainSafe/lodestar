@@ -47,9 +47,9 @@ export async function processAttestation({
     });
   }
 
-  //TODO: we could signal to skip this in case it came from validated from gossip or from block
-  // we need to check this again, because gossip validation might put it in pool before it validated signature
-  if (!phase0.fast.isValidIndexedAttestation(targetState, indexedAttestation, true)) {
+  // Only verify signature if necessary. Most attestations come from blocks that did full signature verification
+  // Otherwise, gossip validation might put it in pool before it validating signature
+  if (!phase0.fast.isValidIndexedAttestation(targetState, indexedAttestation, !job.validSignature)) {
     throw new AttestationError({
       code: AttestationErrorCode.INVALID_SIGNATURE,
       job,
