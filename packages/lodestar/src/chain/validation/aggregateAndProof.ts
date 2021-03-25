@@ -87,7 +87,7 @@ export async function validateAggregateAttestation(
   let attestationPreState: CachedBeaconState<phase0.BeaconState>;
   try {
     // the target state, advanced to the attestation slot
-    attestationPreState = await chain.regen.getBlockSlotState(attestation.data.target.root, attestation.data.slot);
+    attestationPreState = await chain.regen.getCheckpointState(attestation.data.target);
   } catch (e) {
     throw new AttestationError({
       code: AttestationErrorCode.MISSING_ATTESTATION_PRESTATE,
