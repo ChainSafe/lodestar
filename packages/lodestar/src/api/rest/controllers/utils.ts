@@ -1,3 +1,5 @@
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {ValidatorIndex, BLSPubkey} from "@chainsafe/lodestar-types";
 import {FastifyError} from "fastify";
 
 /**
@@ -13,4 +15,14 @@ export function toRestValidationError(field: string, message: string): FastifyEr
       },
     ],
   } as FastifyError;
+}
+
+export function mapValidatorIndices(config: IBeaconConfig, data: string[]): (ValidatorIndex | BLSPubkey)[] | undefined {
+  return data.map((id) => {
+    if (id.toLowerCase().startsWith("0x")) {
+      return config.types.BLSPubkey.fromJson(id);
+    } else {
+      return config.types.ValidatorIndex.fromJson(id);
+    }
+  });
 }

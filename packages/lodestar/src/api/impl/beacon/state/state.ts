@@ -1,6 +1,6 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
-import {Root, phase0} from "@chainsafe/lodestar-types";
+import {Root, phase0, BLSPubkey} from "@chainsafe/lodestar-types";
 import {List, readOnlyMap} from "@chainsafe/ssz";
 import {IBeaconChain} from "../../../../chain/interface";
 import {IBeaconDb} from "../../../../db/api";
@@ -44,13 +44,23 @@ export class BeaconStateApi implements IBeaconStateApi {
     };
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async getStateValidators(stateId: StateId, filters?: IValidatorFilters): Promise<phase0.ValidatorResponse[]> {
     const state = await resolveStateId(this.chain, this.db, stateId);
     if (!state) {
       throw new StateNotFound();
     }
-    //TODO: implement filters
+
+    if (filters?.indices) {
+      const validators: phase0.ValidatorResponse[] = [];
+      for (const id of filters.indices) {
+        const stateValidator = await this.getStateValidator(stateId, id);
+        if (stateValidator) validators.push(stateValidator);
+      }
+      return validators;
+    } else if (filters?.statuses) {
+      // TODO: implement status filters when needed
+    }
+
     return readOnlyMap(state.validators, (v, index) =>
       toValidatorResponse(index, v, state.balances[index], getCurrentEpoch(this.config, state))
     );
@@ -89,7 +99,7 @@ export class BeaconStateApi implements IBeaconStateApi {
 
   async getStateValidatorBalances(
     stateId: StateId,
-    indices?: (phase0.ValidatorIndex | Root)[]
+    indices?: (phase0.ValidatorIndex | BLSPubkey)[]
   ): Promise<phase0.ValidatorBalance[]> {
     const state = await resolveStateId(this.chain, this.db, stateId);
     if (!state) {
