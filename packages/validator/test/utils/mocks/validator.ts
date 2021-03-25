@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import {Number64, phase0, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {generateEmptyBlock} from "@chainsafe/lodestar/test/utils/block";
-import {BeaconCommitteeSubscription, IValidatorApi} from "../../../src/api/interface/validators";
+import {IValidatorApi} from "../../../src/api/interface/validators";
 
 export interface IMockValidatorAPIOpts {
   head?: phase0.SignedBeaconBlock;
@@ -37,7 +37,7 @@ export class MockValidatorApi implements IValidatorApi {
   publishAggregateAndProofs(signedAggregateAndProofs: phase0.SignedAggregateAndProof[]): Promise<void> {
     throw new Error("Method not implemented.");
   }
-  prepareBeaconCommitteeSubnet(subscriptions: BeaconCommitteeSubscription[]): Promise<void> {
+  prepareBeaconCommitteeSubnet(subscriptions: phase0.BeaconCommitteeSubscription[]): Promise<void> {
     throw new Error("Method not implemented.");
   }
 
