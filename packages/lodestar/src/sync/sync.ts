@@ -3,7 +3,7 @@ import {IBeaconSync, ISyncModules} from "./interface";
 import {INetwork, NetworkEvent} from "../network";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {CommitteeIndex, Slot, phase0} from "@chainsafe/lodestar-types";
+import {CommitteeIndex, Slot, phase0, Epoch} from "@chainsafe/lodestar-types";
 import {toHexString} from "@chainsafe/ssz";
 import {ChainEvent, IBeaconChain} from "../chain";
 import {BlockError, BlockErrorCode} from "../chain/errors";
@@ -54,14 +54,15 @@ export class BeaconSync implements IBeaconSync {
     this.network.events.on(NetworkEvent.peerDisconnected, this.removePeer);
     // TODO: It's okay to start this on initial sync?
     this.chain.emitter.on(ChainEvent.errorBlock, this.onUnknownBlockRoot);
+    this.chain.emitter.on(ChainEvent.clockEpoch, this.onClockEpoch);
     this.attestationCollector.start();
   }
 
   close(): void {
     this.network.events.off(NetworkEvent.peerConnected, this.addPeer);
     this.network.events.off(NetworkEvent.peerDisconnected, this.removePeer);
-
     this.chain.emitter.off(ChainEvent.errorBlock, this.onUnknownBlockRoot);
+    this.chain.emitter.off(ChainEvent.clockEpoch, this.onClockEpoch);
     this.rangeSync.close();
     this.attestationCollector.stop();
     this.gossip.stop();
@@ -103,7 +104,9 @@ export class BeaconSync implements IBeaconSync {
     const headSlot = this.chain.forkChoice.getHead().slot;
     if (
       currentSlot >= headSlot &&
-      headSlot >= currentSlot - this.slotImportTolerance
+      headSlot >= currentSlot - this.slotImportTolerance &&
+      // Ensure there at least one connected peer to not claim synced if has no peers
+      this.network.hasSomeConnectedPeer()
       // TODO: Consider enabling this condition (used in Lighthouse)
       // && headSlot > 0
     ) {
@@ -173,15 +176,22 @@ export class BeaconSync implements IBeaconSync {
     if (prevState !== SyncState.Synced && currentState === SyncState.Synced) {
       // We have become synced, subscribe to all the gossip core topics
       this.gossip.start();
-      this.logger.info("Subscribed gossip handlers");
+      this.logger.info("Subscribed gossip core topics");
     } else if (prevState === SyncState.Synced && currentState !== SyncState.Synced) {
       // If we stopped being synced and falled significantly behind, stop gossip
       const currentSlot = this.chain.clock.currentSlot;
       const headSlot = this.chain.forkChoice.getHead().slot;
       if (headSlot < currentSlot - this.slotImportTolerance * 2) {
         this.gossip.stop();
-        this.logger.warn("Un-subscribed gossip handlers");
+        this.logger.warn("Un-subscribed gossip core topics");
       }
+    }
+  };
+
+  private onClockEpoch = (epoch: Epoch): void => {
+    // If a node witness the genesis event consider starting gossip
+    if (epoch === 0) {
+      this.updateSyncState();
     }
   };
 

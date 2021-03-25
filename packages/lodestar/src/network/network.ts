@@ -118,6 +118,10 @@ export class Network implements INetwork {
     return this.peerManager.getConnectedPeerIds();
   }
 
+  hasSomeConnectedPeer(): boolean {
+    return this.peerManager.hasSomeConnectedPeer();
+  }
+
   /**
    * Request att subnets up `toSlot`. Network will ensure to mantain some peers for each
    */

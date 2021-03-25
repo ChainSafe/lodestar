@@ -29,6 +29,7 @@ export interface INetwork {
   getEnr(): ENR | undefined;
   getConnectionsByPeer(): Map<string, Connection[]>;
   getConnectedPeers(): PeerId[];
+  hasSomeConnectedPeer(): boolean;
   /** Search peers joining subnets */
   requestAttSubnets(requestedSubnets: RequestedSubnet[]): void;
   reStatusPeers(peers: PeerId[]): void;

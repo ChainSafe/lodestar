@@ -13,6 +13,7 @@ import {PeerDiscovery} from "./discover";
 import {IPeerRpcScoreStore, ScoreState} from "./score";
 import {
   getConnectedPeerIds,
+  hasSomeConnectedPeer,
   PeerMapDelay,
   SubnetMap,
   RequestedSubnet,
@@ -130,6 +131,13 @@ export class PeerManager {
    */
   getConnectedPeerIds(): PeerId[] {
     return getConnectedPeerIds(this.libp2p);
+  }
+
+  /**
+   * Efficiently check if there is at least one peer connected
+   */
+  hasSomeConnectedPeer(): boolean {
+    return hasSomeConnectedPeer(this.libp2p);
   }
 
   async goodbyeAndDisconnectAllPeers(): Promise<void> {
