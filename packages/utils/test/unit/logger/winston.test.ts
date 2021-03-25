@@ -6,12 +6,12 @@ import {expect} from "chai";
 import {TransportType} from "../../../src/logger/transport";
 
 describe("winston logger", () => {
-  describe("winston logger format and options", () => {
-    const tmpDir = fs.mkdtempSync("lodestar-winston-test");
-    after(() => {
-      rimraf.sync(tmpDir);
-    });
+  const tmpDir = fs.mkdtempSync("lodestar-winston-test");
+  after(() => {
+    rimraf.sync(tmpDir);
+  });
 
+  describe("winston logger format and options", () => {
     interface ITestCase {
       id: string;
       message: string;
@@ -78,17 +78,36 @@ describe("winston logger", () => {
     }
   });
 
-  it("should log profile", () => {
-    const logger: ILogger = new WinstonLogger();
+  describe("profile", () => {
+    it("should log profile", () => {
+      const logger: ILogger = new WinstonLogger();
 
-    logger.profile("test");
-
-    setTimeout(function () {
-      //
-      // Stop profile of 'test'. Logging will now take place:
-      //   '17 Jan 21:00:00 - info: test duration=10ms'
-      //
       logger.profile("test");
-    }, 10);
+
+      setTimeout(function () {
+        //
+        // Stop profile of 'test'. Logging will now take place:
+        //   '17 Jan 21:00:00 - info: test duration=10ms'
+        //
+        logger.profile("test");
+      }, 10);
+    });
+  });
+
+  describe("child logger", () => {
+    it("Should parse child module", async () => {
+      const filename = path.join(tmpDir, "child-logger-test.txt");
+
+      const logger = new WinstonLogger({hideTimestamp: true, module: "A"}, [{type: TransportType.file, filename}]);
+      const childB = logger.child({module: "B"});
+      const childC = childB.child({module: "C"});
+      childC.warn("test");
+
+      // Allow the file transport to persist the file
+      await new Promise((r) => setTimeout(r, 10));
+
+      const allOutput = fs.readFileSync(filename, "utf8").trim();
+      expect(allOutput).to.equal("[A B C]            \u001b[33mwarn\u001b[39m: test");
+    });
   });
 });
