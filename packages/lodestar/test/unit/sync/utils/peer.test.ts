@@ -1,10 +1,10 @@
 import {SinonStubbedInstance} from "sinon";
 import {INetwork, Network} from "../../../../src/network";
-import sinon from "sinon";
 import {getSyncPeers} from "../../../../src/sync/utils/peers";
 import {expect} from "chai";
 import PeerId from "peer-id";
 import {IPeerRpcScoreStore, PeerRpcScoreStore, ScoreState} from "../../../../src/network/peers/score";
+import sinon from "sinon";
 
 describe("sync peer utils", function () {
   let networkStub: SinonStubbedInstance<INetwork>;

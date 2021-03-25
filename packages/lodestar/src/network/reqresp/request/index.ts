@@ -1,3 +1,4 @@
+import LibP2p, {Connection} from "libp2p";
 import {AbortSignal} from "abort-controller";
 import pipe from "it-pipe";
 import PeerId from "peer-id";
@@ -69,7 +70,7 @@ export async function sendRequest<T extends phase0.ResponseBody | phase0.Respons
     // DIAL_TIMEOUT: Non-spec timeout from dialing protocol until stream opened
     const stream = await withTimeout(
       async (timeoutAndParentSignal) => {
-        const conn = await libp2p.dialProtocol(peerId, protocol, {signal: timeoutAndParentSignal});
+        const conn = (await libp2p.dialProtocol(peerId, protocol, {signal: timeoutAndParentSignal})) as Connection;
         if (!conn) throw Error("dialProtocol timeout");
         // TODO: libp2p-ts type Stream does not declare .abort() and requires casting to unknown here
         // Remove when https://github.com/ChainSafe/lodestar/issues/2167

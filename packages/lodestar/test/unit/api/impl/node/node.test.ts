@@ -1,3 +1,6 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-return */
+import {Connection} from "libp2p";
 import {INodeApi} from "../../../../../src/api/impl/node";
 import {NodeApi} from "../../../../../src/api/impl/node/node";
 import sinon, {SinonStubbedInstance} from "sinon";
@@ -97,7 +100,7 @@ describe("node api implementation", function () {
     });
 
     it("should return connected and disconnecting peers", async function () {
-      const connectionsByPeer = new Map<string, LibP2pConnection[]>([
+      const connectionsByPeer = new Map<string, Connection[]>([
         [peer1.toB58String(), [libp2pConnection(peer1, "open", "outbound")]],
         [peer2.toB58String(), [libp2pConnection(peer2, "closing", "inbound")]],
       ]);
@@ -112,7 +115,7 @@ describe("node api implementation", function () {
     });
 
     it("should return disconnected peers", async function () {
-      const connectionsByPeer = new Map<string, LibP2pConnection[]>([
+      const connectionsByPeer = new Map<string, Connection[]>([
         [peer1.toB58String(), [libp2pConnection(peer1, "closed", "outbound")]],
         [peer2.toB58String(), []], // peer2 has no connections in the connection manager
       ]);
@@ -131,7 +134,7 @@ describe("node api implementation", function () {
     it("success", async function () {
       const peer1 = await createPeerId();
       const peer2 = await createPeerId();
-      const connectionsByPeer = new Map<string, LibP2pConnection[]>([
+      const connectionsByPeer = new Map<string, Connection[]>([
         [peer1.toB58String(), [libp2pConnection(peer1, "open", "outbound")]],
         [peer2.toB58String(), [libp2pConnection(peer2, "closing", "inbound")]],
       ]);
@@ -148,7 +151,7 @@ describe("node api implementation", function () {
     });
 
     it("peer not found", async function () {
-      const connectionsByPeer = new Map<string, LibP2pConnection[]>();
+      const connectionsByPeer = new Map<string, Connection[]>();
       networkStub.getConnectionsByPeer.returns(connectionsByPeer);
 
       const peer = await api.getPeer("not existent");
@@ -176,7 +179,7 @@ describe("node api implementation", function () {
   });
 });
 
-export function libp2pConnection(peer: PeerId, status: PeerStatus, direction: PeerDirection): LibP2pConnection {
+export function libp2pConnection(peer: PeerId, status: PeerStatus, direction: PeerDirection): Connection {
   return {
     remoteAddr: new Multiaddr(),
     stat: {
@@ -184,5 +187,5 @@ export function libp2pConnection(peer: PeerId, status: PeerStatus, direction: Pe
       direction,
     },
     remotePeer: peer,
-  } as LibP2pConnection;
+  } as Connection;
 }

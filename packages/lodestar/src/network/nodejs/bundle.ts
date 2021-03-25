@@ -62,6 +62,15 @@ export class NodejsNode extends LibP2p {
             enabled: false,
             active: false,
           },
+          advertise: {
+            enabled: false,
+            ttl: 0,
+            bootDelay: 0,
+          },
+          autoRelay: {
+            enabled: false,
+            maxListeners: 0,
+          },
         },
         peerDiscovery: {
           autoDial: false,

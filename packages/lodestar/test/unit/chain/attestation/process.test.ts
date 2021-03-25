@@ -12,7 +12,7 @@ import {AttestationErrorCode} from "../../../../src/chain/errors";
 import {generateAttestation} from "../../../utils/attestation";
 import {generateCachedState} from "../../../utils/state";
 import {SinonStubFn} from "../../../utils/types";
-import {AttestationError} from "../../../../lib/chain/errors";
+import {AttestationError} from "../../../../src/chain/errors";
 
 describe("processAttestation", function () {
   const emitter = new ChainEventEmitter();

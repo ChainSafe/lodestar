@@ -53,6 +53,7 @@ export class BeaconPoolApi implements IBeaconPoolApi {
     } catch (e) {
       throw new AttestationError({
         code: AttestationErrorCode.MISSING_ATTESTATION_PRESTATE,
+        error: e as Error,
         job: attestationJob,
       });
     }

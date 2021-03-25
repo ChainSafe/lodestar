@@ -1,3 +1,4 @@
+import LibP2p from "libp2p";
 import PeerId from "peer-id";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils";
@@ -18,6 +19,8 @@ export type PeerDiscoveryModules = {
   logger: ILogger;
   config: IBeaconConfig;
 };
+
+type PeerIdStr = string;
 
 /**
  * PeerDiscovery discovers and dials new peers, and executes discv5 queries.
@@ -44,12 +47,14 @@ export class PeerDiscovery {
    * Request to find peers. First, looked at cached peers in peerStore
    */
   discoverPeers(maxPeersToDiscover: number): void {
-    const notConnectedPeers = Array.from(this.libp2p.peerStore.peers.values()).filter(
-      (peer) => !this.libp2p.connectionManager.get(peer.id)
+    // To remove self peer if present
+    const ownPeerIdStr = this.libp2p.peerId.toB58String();
+    const notConnectedPeers = this.getStoredPeerIdStr().filter(
+      (peerIdStr) => !this.isPeerConnected(peerIdStr) && peerIdStr !== ownPeerIdStr
     );
 
     const discPeers = shuffle(notConnectedPeers).slice(0, maxPeersToDiscover);
-    this.peersDiscovered(discPeers.map((peer) => peer.id));
+    this.peersDiscovered(discPeers);
 
     // TODO: Run a general discv5 query
   }
@@ -85,13 +90,13 @@ export class PeerDiscovery {
   /**
    * List existing peers that declare being part of a target subnet
    */
-  async getCachedDiscoveryPeersOnSubnet(subnet: number, maxPeersToDiscover: number): Promise<PeerId[]> {
+  async getCachedDiscoveryPeersOnSubnet(subnet: number, maxPeersToDiscover: number): Promise<PeerIdStr[]> {
     const discovery: Discv5Discovery = this.libp2p._discovery.get("discv5") as Discv5Discovery;
     // if disablePeerDiscovery = true, libp2p will not have any "discv5" module
     if (!discovery) return [];
     const discv5: Discv5 = discovery.discv5;
 
-    const peersOnSubnet: PeerId[] = [];
+    const peersOnSubnet: PeerIdStr[] = [];
 
     // TODO: Should kadValues() be shuffle'd?
     for (const enr of discv5.kadValues()) {
@@ -113,7 +118,7 @@ export class PeerDiscovery {
             // Must add the multiaddrs array to the address book before dialing
             // https://github.com/libp2p/js-libp2p/blob/aec8e3d3bb1b245051b60c2a890550d262d5b062/src/index.js#L638
             this.libp2p.peerStore.addressBook.add(peerId, [multiaddrTCP]);
-            peersOnSubnet.push(peerId);
+            peersOnSubnet.push(peerId.toB58String());
           }
         }
       } catch (e) {
@@ -133,14 +138,15 @@ export class PeerDiscovery {
    * Handles DiscoveryEvent::QueryResult
    * Peers that have been returned by discovery requests are dialed here if they are suitable.
    */
-  private peersDiscovered(discoveredPeers: PeerId[]): void {
+  private peersDiscovered(discoveredPeers: PeerIdStr[]): void {
     const connectedPeersCount = getConnectedPeerIds(this.libp2p).length;
     const toDialPeers: PeerId[] = [];
 
-    for (const peer of discoveredPeers) {
+    for (const peerIdStr of discoveredPeers) {
+      const peer = PeerId.createFromCID(peerIdStr);
       if (
         connectedPeersCount + toDialPeers.length < this.maxPeers &&
-        !this.libp2p.connectionManager.get(peer) &&
+        !this.isPeerConnected(peerIdStr) &&
         // Ensure peer is not banner or disconnected. New peers are healthy by default
         this.peerRpcScores.getScoreState(peer) === ScoreState.Healthy
       ) {
@@ -161,4 +167,19 @@ export class PeerDiscovery {
       });
     }
   }
+
+  /** Return stored peerIdStr, may return self peerIdStr */
+  private getStoredPeerIdStr(): PeerIdStr[] {
+    return Array.from(((this.libp2p.peerStore as unknown) as Libp2pPeerStore).addressBook.data.keys());
+  }
+
+  /** Check if there is 1+ open connection with this peer */
+  private isPeerConnected(peerIdStr: PeerIdStr): boolean {
+    const connections = this.libp2p.connectionManager.connections.get(peerIdStr);
+    return Boolean(connections && connections.some((connection) => connection.stat.status === "open"));
+  }
 }
+
+type Libp2pPeerStore = {
+  addressBook: {data: Map<string, void>};
+};

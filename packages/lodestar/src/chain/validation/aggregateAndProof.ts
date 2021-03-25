@@ -1,8 +1,13 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {ValidatorIndex} from "@chainsafe/lodestar-types";
 import {IAttestationJob, IBeaconChain} from "..";
 import {IBeaconDb} from "../../db/api";
-import {computeEpochAtSlot, isAggregatorFromCommitteeLength} from "@chainsafe/lodestar-beacon-state-transition";
-import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
+import {
+  phase0,
+  CachedBeaconState,
+  computeEpochAtSlot,
+  isAggregatorFromCommitteeLength,
+} from "@chainsafe/lodestar-beacon-state-transition";
 import {isAttestingToInValidBlock} from "./attestation";
 import {isValidAggregateAndProofSignature, isValidSelectionProofSignature} from "./utils";
 import {AttestationError, AttestationErrorCode} from "../errors";
@@ -78,18 +83,20 @@ export async function validateAggregateAttestation(
   attestationJob: IAttestationJob
 ): Promise<void> {
   const attestation = aggregateAndProof.message.aggregate;
-  let attestationPreState;
+
+  let attestationPreState: CachedBeaconState<phase0.BeaconState>;
   try {
     // the target state, advanced to the attestation slot
-    attestationPreState = await chain.regen.getBlockSlotState(attestation.data.target.root, attestation.data.slot);
+    attestationPreState = await chain.regen.getCheckpointState(attestation.data.target);
   } catch (e) {
     throw new AttestationError({
       code: AttestationErrorCode.MISSING_ATTESTATION_PRESTATE,
+      error: e as Error,
       job: attestationJob,
     });
   }
 
-  let committee;
+  let committee: ValidatorIndex[];
   try {
     committee = attestationPreState.getBeaconCommittee(attestation.data.slot, attestation.data.index);
   } catch (error) {

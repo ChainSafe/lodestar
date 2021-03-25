@@ -13,7 +13,7 @@ import {StubbedBeaconDb} from "../../../utils/stub";
 import {generateCachedState} from "../../../utils/state";
 import {BlockErrorCode} from "../../../../src/chain/errors";
 import {SinonStubFn} from "../../../utils/types";
-import {BlockError} from "../../../../lib/chain/errors";
+import {BlockError} from "../../../../src/chain/errors";
 
 describe("gossip block validation", function () {
   let chainStub: SinonStubbedInstance<IBeaconChain>;

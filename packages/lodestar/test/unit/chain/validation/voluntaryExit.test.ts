@@ -16,7 +16,7 @@ import {generateEmptySignedVoluntaryExit} from "../../../utils/attestation";
 import {validateGossipVoluntaryExit} from "../../../../src/chain/validation/voluntaryExit";
 import {VoluntaryExitErrorCode} from "../../../../src/chain/errors/voluntaryExitError";
 import {SinonStubFn} from "../../../utils/types";
-import {VoluntaryExitError} from "../../../../lib/chain/errors";
+import {VoluntaryExitError} from "../../../../src/chain/errors";
 
 describe("validate voluntary exit", () => {
   const sandbox = sinon.createSandbox();

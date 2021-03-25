@@ -1,6 +1,7 @@
 /**
  * @module network
  */
+import {Connection} from "libp2p";
 import {ENR} from "@chainsafe/discv5/lib";
 import Multiaddr from "multiaddr";
 import PeerId from "peer-id";
@@ -26,7 +27,7 @@ export interface INetwork {
   peerId: PeerId;
   localMultiaddrs: Multiaddr[];
   getEnr(): ENR | undefined;
-  getConnectionsByPeer(): Map<string, LibP2pConnection[]>;
+  getConnectionsByPeer(): Map<string, Connection[]>;
   getConnectedPeers(): PeerId[];
   /** Search peers joining subnets */
   requestAttSubnets(requestedSubnets: RequestedSubnet[]): void;
@@ -36,6 +37,6 @@ export interface INetwork {
   stop(): Promise<void>;
 }
 
-export type PeerDirection = LibP2pConnection["stat"]["direction"];
-export type PeerStatus = LibP2pConnection["stat"]["status"];
+export type PeerDirection = Connection["stat"]["direction"];
+export type PeerStatus = Connection["stat"]["status"];
 export type PeerState = "disconnected" | "connecting" | "connected" | "disconnecting";
