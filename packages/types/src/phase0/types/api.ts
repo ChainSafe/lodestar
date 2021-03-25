@@ -50,6 +50,14 @@ export interface ProposerDuty {
   pubkey: BLSPubkey;
 }
 
+export interface BeaconCommitteeSubscription {
+  validatorIndex: number;
+  committeeIndex: number;
+  committeesAtSlot: number;
+  slot: number;
+  isAggregator: boolean;
+}
+
 export interface SyncingStatus {
   // Head slot node is trying to reach
   headSlot: Uint64;

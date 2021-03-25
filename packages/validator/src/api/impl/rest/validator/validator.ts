@@ -4,7 +4,7 @@ import {CommitteeIndex, Epoch, Root, phase0, Slot, ValidatorIndex} from "@chains
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {Json, toHexString} from "@chainsafe/ssz";
 import {HttpClient, urlJoin} from "../../../../util";
-import {BeaconCommitteeSubscription, IValidatorApi} from "../../../interface/validators";
+import {IValidatorApi} from "../../../interface/validators";
 
 /**
  * Rest API class for fetching and performing validator duties
@@ -63,7 +63,10 @@ export class RestValidatorApi implements IValidatorApi {
     );
   }
 
-  async prepareBeaconCommitteeSubnet(subscriptions: BeaconCommitteeSubscription[]): Promise<void> {
-    return await this.clientV2.post<Json[], void>("/beacon_committee_subscriptions", subscriptions);
+  async prepareBeaconCommitteeSubnet(subscriptions: phase0.BeaconCommitteeSubscription[]): Promise<void> {
+    return await this.clientV2.post<Json[], void>(
+      "/beacon_committee_subscriptions",
+      subscriptions.map((s) => this.config.types.phase0.BeaconCommitteeSubscription.toJson(s, {case: "snake"}))
+    );
   }
 }

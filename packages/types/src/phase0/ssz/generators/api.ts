@@ -44,6 +44,17 @@ export const ProposerDuty = (ssz: IPhase0SSZTypes): ContainerType =>
     },
   });
 
+export const BeaconCommitteeSubscription = (ssz: IPhase0SSZTypes): ContainerType =>
+  new ContainerType({
+    fields: {
+      validatorIndex: ssz.ValidatorIndex,
+      committeeIndex: ssz.CommitteeIndex,
+      committeesAtSlot: ssz.Slot,
+      slot: ssz.Slot,
+      isAggregator: ssz.Boolean,
+    },
+  });
+
 export const SyncingStatus = (ssz: IPhase0SSZTypes): ContainerType =>
   new ContainerType({
     fields: {
