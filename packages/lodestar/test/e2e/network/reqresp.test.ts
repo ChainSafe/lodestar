@@ -55,6 +55,7 @@ describe("network / ReqResp", function () {
     reqRespHandlerPartial?: Partial<IReqRespHandler>,
     reqRespOpts?: IReqRespOptions
   ): Promise<[Network, Network]> {
+    const controller = new AbortController();
     const peerIdB = await createPeerId();
     const [libp2pA, libp2pB] = await Promise.all([createNode(multiaddr), createNode(multiaddr, peerIdB)]);
 
@@ -69,7 +70,7 @@ describe("network / ReqResp", function () {
       ...reqRespHandlerPartial,
     };
     const opts = {...networkOptsDefault, ...reqRespOpts};
-    const modules = {config, metrics, db, chain, reqRespHandler};
+    const modules = {config, metrics, db, chain, reqRespHandler, signal: controller.signal};
     const netA = new Network(opts, {...modules, libp2p: libp2pA, logger: testLogger("A")});
     const netB = new Network(opts, {...modules, libp2p: libp2pB, logger: testLogger("B")});
     await Promise.all([netA.start(), netB.start()]);
@@ -80,6 +81,7 @@ describe("network / ReqResp", function () {
 
     afterEachCallbacks.push(async () => {
       chain.close();
+      controller.abort();
       await Promise.all([netA.stop(), netB.stop()]);
     });
 

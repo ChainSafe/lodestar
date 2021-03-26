@@ -4,12 +4,12 @@ import {Json} from "@chainsafe/ssz";
 import {IAttestationJob} from "../../../chain";
 import {validateGossipAttestation} from "../../../chain/validation";
 import {AttestationError, AttestationErrorCode} from "../../../chain/errors";
-import {IObjectValidatorModules, IBeaconAttestationTopic} from "../interface";
+import {IObjectValidatorModules, GossipTopicMap, GossipType} from "../interface";
 import {GossipValidationError} from "../errors";
 
 export async function validateCommitteeAttestation(
   {chain, db, config, logger}: IObjectValidatorModules,
-  topic: IBeaconAttestationTopic,
+  topic: GossipTopicMap[GossipType.beacon_attestation],
   attestation: phase0.Attestation
 ): Promise<void> {
   const subnet = topic.subnet;

@@ -67,7 +67,7 @@ describe("network", function () {
     const loggerA = testLogger("A");
     const loggerB = testLogger("B");
 
-    const modules = {config, metrics, chain, db, reqRespHandler};
+    const modules = {config, metrics, chain, db, reqRespHandler, signal: controller.signal};
     const netA = new Network(opts, {...modules, libp2p: libp2pA, logger: loggerA});
     const netB = new Network(opts, {...modules, libp2p: libp2pB, logger: loggerB});
 

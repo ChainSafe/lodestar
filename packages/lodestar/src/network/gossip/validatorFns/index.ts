@@ -6,7 +6,7 @@ import {validateBeaconBlock} from "./block";
 import {validateProposerSlashing} from "./proposerSlashing";
 import {validateVoluntaryExit} from "./voluntaryExit";
 
-export const objectValidatorFns = {
+export const validatorFns = {
   [GossipType.beacon_block]: validateBeaconBlock,
   [GossipType.beacon_aggregate_and_proof]: validateCommitteeAttestation,
   [GossipType.beacon_attestation]: validateAggregatedAttestation,

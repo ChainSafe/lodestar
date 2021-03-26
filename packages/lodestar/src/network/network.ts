@@ -22,6 +22,7 @@ import {IBeaconDb} from "../db";
 import {createTopicValidatorFnMap, Eth2Gossipsub} from "./gossip";
 import {IReqRespHandler} from "./reqresp/handlers";
 import {INetworkEventBus, NetworkEventBus} from "./events";
+import {AbortSignal} from "abort-controller";
 
 interface INetworkModules {
   config: IBeaconConfig;
@@ -31,6 +32,7 @@ interface INetworkModules {
   chain: IBeaconChain;
   db: IBeaconDb;
   reqRespHandler: IReqRespHandler;
+  signal: AbortSignal;
 }
 
 export class Network implements INetwork {
@@ -46,7 +48,7 @@ export class Network implements INetwork {
   private logger: ILogger;
 
   constructor(opts: INetworkOptions & IReqRespOptions, modules: INetworkModules) {
-    const {config, libp2p, logger, metrics, chain, db, reqRespHandler} = modules;
+    const {config, libp2p, logger, metrics, chain, db, reqRespHandler, signal} = modules;
     this.logger = logger;
     this.libp2p = libp2p;
     const networkEventBus = new NetworkEventBus();
@@ -65,7 +67,7 @@ export class Network implements INetwork {
       config,
       genesisValidatorsRoot: chain.genesisValidatorsRoot,
       libp2p,
-      validatorFns: createTopicValidatorFnMap({config, chain, db, logger}),
+      validatorFns: createTopicValidatorFnMap({config, chain, db, logger}, metrics, signal),
       logger,
       metrics,
     });
