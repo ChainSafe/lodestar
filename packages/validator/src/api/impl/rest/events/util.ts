@@ -16,6 +16,11 @@ export function deserializeBeaconEventMessage(config: IBeaconConfig, msg: Messag
         type: BeaconEventType.CHAIN_REORG,
         message: deserializeEventData(config.types.phase0.ChainReorg, msg.data),
       };
+    case BeaconEventType.HEAD:
+      return {
+        type: BeaconEventType.HEAD,
+        message: deserializeEventData(config.types.phase0.ChainHead, msg.data),
+      };
     default:
       throw new Error("Unsupported beacon event type " + msg.type);
   }

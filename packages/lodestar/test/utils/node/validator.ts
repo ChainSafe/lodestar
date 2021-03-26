@@ -1,5 +1,5 @@
 import {LevelDbController} from "@chainsafe/lodestar-db";
-import {ILogger, intDiv, LogLevel, interopSecretKey} from "@chainsafe/lodestar-utils";
+import {ILogger, LogLevel, interopSecretKey} from "@chainsafe/lodestar-utils";
 import {IEventsApi} from "@chainsafe/lodestar-validator/lib/api/interface/events";
 import {
   ApiClientOverInstance,
@@ -31,31 +31,17 @@ export function getDevValidators({
   useRestApi?: boolean;
   logger?: ILogger;
 }): Validator[] {
-  const validatorsPerValidatorClient = intDiv(count, validatorClientCount);
   const vcs: Validator[] = [];
-  while (count > 0) {
-    if (count > validatorsPerValidatorClient) {
-      vcs.push(
-        getDevValidator({
-          node,
-          startIndex: vcs.length * validatorsPerValidatorClient,
-          count: validatorsPerValidatorClient,
-          useRestApi,
-          logger,
-        })
-      );
-    } else {
-      vcs.push(
-        getDevValidator({
-          node,
-          startIndex: vcs.length * validatorsPerValidatorClient,
-          count,
-          useRestApi,
-          logger,
-        })
-      );
-    }
-    count = count - validatorsPerValidatorClient;
+  for (let i = 0; i < count; i++) {
+    vcs.push(
+      getDevValidator({
+        node,
+        startIndex: i * validatorClientCount,
+        count: validatorClientCount,
+        useRestApi,
+        logger,
+      })
+    );
   }
   return vcs;
 }
