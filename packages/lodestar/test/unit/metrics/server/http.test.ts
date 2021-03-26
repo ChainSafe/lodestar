@@ -11,6 +11,5 @@ describe("HttpMetricsServer", () => {
     await server.start();
     await request(server.http).get("/metrics").expect(200);
     await server.stop();
-    metrics.close();
   });
 });
