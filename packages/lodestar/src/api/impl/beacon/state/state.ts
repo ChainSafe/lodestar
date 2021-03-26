@@ -10,6 +10,7 @@ import {IApiModules} from "../../interface";
 import {IBeaconStateApi, ICommitteesFilters, IValidatorFilters, StateId} from "./interface";
 import {getEpochBeaconCommittees, resolveStateId, toValidatorResponse} from "./utils";
 import {computeEpochAtSlot, getCurrentEpoch} from "@chainsafe/lodestar-beacon-state-transition";
+import {getStateValidatorIndex} from "../../utils";
 
 export class BeaconStateApi implements IBeaconStateApi {
   private readonly config: IBeaconConfig;
@@ -53,8 +54,16 @@ export class BeaconStateApi implements IBeaconStateApi {
     if (filters?.indices) {
       const validators: phase0.ValidatorResponse[] = [];
       for (const id of filters.indices) {
-        const stateValidator = await this.getStateValidator(stateId, id);
-        if (stateValidator) validators.push(stateValidator);
+        const validatorIndex = getStateValidatorIndex(id, state, this.chain);
+        if (validatorIndex) {
+          const validatorResponse = toValidatorResponse(
+            validatorIndex,
+            state.validators[validatorIndex],
+            state.balances[validatorIndex],
+            getCurrentEpoch(this.config, state)
+          );
+          validators.push(validatorResponse);
+        }
       }
       return validators;
     } else if (filters?.statuses) {
@@ -74,18 +83,7 @@ export class BeaconStateApi implements IBeaconStateApi {
     if (!state) {
       throw new StateNotFound();
     }
-    let validatorIndex: phase0.ValidatorIndex | undefined;
-    if (typeof validatorId === "number") {
-      if (state.validators.length > validatorId) {
-        validatorIndex = validatorId;
-      }
-    } else {
-      validatorIndex = this.chain.getHeadState().pubkey2index.get(validatorId) ?? undefined;
-      // validator added later than given stateId
-      if (validatorIndex && validatorIndex >= state.validators.length) {
-        validatorIndex = undefined;
-      }
-    }
+    const validatorIndex = getStateValidatorIndex(validatorId, state, this.chain);
     if (validatorIndex == null) {
       throw new ApiError(404, "Validator not found");
     }

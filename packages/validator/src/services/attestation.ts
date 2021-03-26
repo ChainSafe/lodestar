@@ -400,7 +400,7 @@ export class AttestationService {
     if (validatorResponses) {
       for (const [pk, v] of this.validators) {
         if (!v.validator) {
-          v.validator = validatorResponses.find((v) => toHexString(v.validator.pubkey) === pk) || null;
+          v.validator = validatorResponses.find((vr) => toHexString(vr.validator.pubkey) === pk) || null;
         }
       }
     }

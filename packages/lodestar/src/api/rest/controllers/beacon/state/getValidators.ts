@@ -7,7 +7,7 @@ type Params = {
 };
 
 type ValidatorsQuery = {
-  indices?: string[] | string;
+  indices?: string[];
   statuses?: string[];
 };
 
@@ -47,7 +47,7 @@ export const getStateValidators: ApiController<ValidatorsQuery, Params> = {
         required: [],
         properties: {
           indices: {
-            types: "array",
+            types: "string",
             uniqueItems: true,
             items: {
               type: "string",
