@@ -16,14 +16,16 @@ export class RestEventsApi implements IEventsApi {
 
   getEventStream(topics: BeaconEventType[]): IStoppableEventIterable<BeaconEvent> {
     const eventSource = new EventSource(
-      urlJoin(this.baseUrl, "/v1/events?" + topics.map((topic) => `topics=${topic}`).join("&"))
+      urlJoin(this.baseUrl, "/eth/v1/events?" + topics.map((topic) => `topics=${topic}`).join("&"))
     );
     return new LodestarEventIterator(({push}) => {
-      eventSource.onmessage = (event) => {
-        if (topics.includes(event.type as BeaconEventType)) {
-          push(deserializeBeaconEventMessage(this.config, event));
-        }
-      };
+      for (const evt of [BeaconEventType.BLOCK, BeaconEventType.CHAIN_REORG, BeaconEventType.HEAD]) {
+        eventSource.addEventListener(evt, ((event: MessageEvent) => {
+          if (topics.includes(event.type as BeaconEventType)) {
+            push(deserializeBeaconEventMessage(this.config, event));
+          }
+        }) as EventListener);
+      }
       return () => {
         eventSource.close();
       };
