@@ -82,7 +82,7 @@ export function getDevValidator({
       config: node.config,
       controller: new LevelDbController({name: tmpDir.name}, {logger}),
     }),
-    logger: logger,
+    logger,
     secretKeys: Array.from({length: count}, (_, i) => interopSecretKey(i + startIndex)),
   });
 }
@@ -95,20 +95,15 @@ export function getDevValidatorRestApiClient(node: BeaconNode, logger: ILogger):
   );
 }
 
-export function getDevValidatorInstanceApiClient(node: BeaconNode, logger: ILogger): IApiClient {
+export function getDevValidatorInstanceApiClient(node: BeaconNode, parentLogger: ILogger): IApiClient {
+  const logger = parentLogger.child({module: "api", level: LogLevel.warn});
   return new ApiClientOverInstance({
     config: node.config,
-    validator: new ValidatorApi(
-      {},
-      {
-        ...node,
-        logger: logger.child({module: "api", level: LogLevel.warn}),
-        eth1: new Eth1ForBlockProductionDisabled(),
-      }
-    ),
+    validator: new ValidatorApi({}, {...node, logger, eth1: new Eth1ForBlockProductionDisabled()}),
     node: new NodeApi({}, {...node}),
     events: new EventsApi({}, {...node}) as IEventsApi,
     beacon: new BeaconApi({}, {...node}),
     configApi: new ConfigApi({}, {config: node.config}),
+    logger,
   });
 }

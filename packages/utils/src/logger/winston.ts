@@ -11,21 +11,28 @@ import {TransportOpts, TransportType, fromTransportOpts} from "./transport";
 
 const defaultTransportOpts: TransportOpts = {type: TransportType.console};
 
+type DefaultMeta = {
+  module: string;
+};
+
 export class WinstonLogger implements ILogger {
   private winston: Logger;
   private _level: LogLevel;
+  private _options: Partial<ILoggerOptions>;
+  private _transportOptsArr: TransportOpts[];
 
   constructor(options: Partial<ILoggerOptions> = {}, transportOptsArr: TransportOpts[] = [defaultTransportOpts]) {
     this.winston = createLogger({
       level: options?.level || defaultLogLevel,
-      defaultMeta: {
-        module: options?.module || "",
-      },
+      defaultMeta: {module: options?.module || ""} as DefaultMeta,
       format: getFormat(options || {}),
       transports: transportOptsArr.map(fromTransportOpts),
       exitOnError: false,
     });
     this._level = this.getMinLevel(transportOptsArr.map((opts) => opts.level || defaultLogLevel));
+    // Store for child logger
+    this._options = options;
+    this._transportOptsArr = transportOptsArr;
   }
 
   error(message: string, context?: Context, error?: Error): void {
@@ -65,18 +72,9 @@ export class WinstonLogger implements ILogger {
   }
 
   child(options: ILoggerOptions): WinstonLogger {
-    const logger = Object.create(WinstonLogger.prototype) as WinstonLogger;
-    const winston = this.winston.child({namespace: options.module, level: options.level});
-    //use more verbose log
-    if (this.winston.levels[this._level] > this.winston.levels[options.level ?? LogLevel.error]) {
-      winston.level = this._level;
-    } else {
-      winston.level = options.level ?? this._level;
-    }
-    return Object.assign(logger, {
-      winston,
-      _level: winston.level,
-    });
+    // Concat module tags
+    if (options.module) options.module = [this._options.module, options.module].filter(Boolean).join(" ");
+    return new WinstonLogger({...this._options, ...options}, this._transportOptsArr);
   }
 
   private createLogEntry(level: LogLevel, message: string, context?: Context, error?: Error): void {
