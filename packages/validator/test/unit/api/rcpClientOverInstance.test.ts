@@ -63,7 +63,7 @@ describe("RpcClientOverInstance test", function () {
   it("should properly notify on new slot", async function () {
     const rpcClient = getRpcClient();
     const cb = sandbox.spy();
-    await rpcClient.connect();
+    await Promise.all([rpcClient.connect(), clock.tickAsync(3000)]);
     rpcClient.on(ClockEventType.CLOCK_SLOT, cb);
     const slotEvent = new Promise((resolve) => {
       rpcClient.on(ClockEventType.CLOCK_SLOT, resolve);
@@ -77,7 +77,7 @@ describe("RpcClientOverInstance test", function () {
     const rpcClient = getRpcClient();
     const cb = sandbox.spy();
     rpcClient.on(ClockEventType.CLOCK_SLOT, cb);
-    await rpcClient.connect();
+    await Promise.all([rpcClient.connect(), clock.tickAsync(3000)]);
     clock.tick((config.params.SECONDS_PER_SLOT + 1) * 1000);
     clock.tick((config.params.SECONDS_PER_SLOT + 1) * 1000);
     expect(cb.withArgs({slot: 1}).called).to.be.true;
@@ -88,7 +88,7 @@ describe("RpcClientOverInstance test", function () {
     const rpcClient = getRpcClient();
     const cb = sandbox.spy();
     rpcClient.on(ClockEventType.CLOCK_EPOCH, cb);
-    await rpcClient.connect();
+    await Promise.all([rpcClient.connect(), clock.tickAsync(3000)]);
     clock.tick((config.params.SLOTS_PER_EPOCH - 1) * config.params.SECONDS_PER_SLOT * 1000);
     expect(cb.notCalled).to.be.true;
   });
@@ -97,7 +97,7 @@ describe("RpcClientOverInstance test", function () {
     const rpcClient = getRpcClient();
     const cb = sandbox.spy();
     rpcClient.on(ClockEventType.CLOCK_EPOCH, cb);
-    await rpcClient.connect();
+    await Promise.all([rpcClient.connect(), clock.tickAsync(3000)]);
     clock.tick((config.params.SLOTS_PER_EPOCH + 1) * config.params.SECONDS_PER_SLOT * 1000);
     expect(cb.withArgs({epoch: 1}).called).to.be.true;
   });
@@ -106,7 +106,7 @@ describe("RpcClientOverInstance test", function () {
     const rpcClient = getRpcClient();
     const cb = sandbox.spy();
     rpcClient.on(ClockEventType.CLOCK_EPOCH, cb);
-    await rpcClient.connect();
+    await Promise.all([rpcClient.connect(), clock.tickAsync(3000)]);
     clock.tick((config.params.SLOTS_PER_EPOCH + 1) * config.params.SECONDS_PER_SLOT * 1000);
     clock.tick((config.params.SLOTS_PER_EPOCH + 1) * config.params.SECONDS_PER_SLOT * 1000);
     expect(cb.withArgs({epoch: 1}).called).to.be.true;

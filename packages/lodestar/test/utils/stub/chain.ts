@@ -1,7 +1,6 @@
 import {minimalConfig} from "@chainsafe/lodestar-config/minimal";
 import {SinonSandbox, SinonStubbedInstance} from "sinon";
 import {BeaconChain, ForkChoice} from "../../../src/chain";
-import {BeaconMetrics} from "../../../src/metrics";
 import {LocalClock} from "../../../src/chain/clock";
 import {StateRegenerator} from "../../../src/chain/regen";
 import {CheckpointStateCache, StateContextCache} from "../../../src/chain/stateCache";
@@ -24,7 +23,6 @@ export class StubbedBeaconChain extends BeaconChain {
       opts: {},
       config,
       logger: testLogger(),
-      metrics: sinon.createStubInstance(BeaconMetrics),
       db: new StubbedBeaconDb(sinon, config),
       anchorState: config.types.phase0.BeaconState.tree.createValue({
         ...config.types.phase0.BeaconState.defaultValue(),

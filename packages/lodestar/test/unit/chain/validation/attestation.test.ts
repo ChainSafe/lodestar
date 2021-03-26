@@ -233,7 +233,7 @@ describe("gossip attestation validation", function () {
     } catch (error) {
       expect((error as AttestationError).type).to.have.property(
         "code",
-        AttestationErrorCode.MISSING_ATTESTATION_PRESTATE
+        AttestationErrorCode.MISSING_ATTESTATION_TARGET_STATE
       );
     }
     expect(regen.getCheckpointState.calledOnceWith(attestation.data.target)).to.be.true;
@@ -245,8 +245,8 @@ describe("gossip attestation validation", function () {
     });
     db.seenAttestationCache.hasCommitteeAttestation.returns(false);
     forkChoice.hasBlock.returns(true);
-    const attestationPreState = generateCachedState();
-    regen.getCheckpointState.resolves(attestationPreState);
+    const attestationTargetState = generateCachedState();
+    regen.getCheckpointState.resolves(attestationTargetState);
     computeAttestationSubnetStub.returns(5);
     try {
       await validateGossipAttestation(
@@ -263,7 +263,7 @@ describe("gossip attestation validation", function () {
       expect((error as AttestationError).type).to.have.property("code", AttestationErrorCode.INVALID_SUBNET_ID);
     }
     expect(chain.receiveAttestation.called).to.be.false;
-    expect(computeAttestationSubnetStub.calledOnceWith(config, attestationPreState, attestation)).to.be.true;
+    expect(computeAttestationSubnetStub.calledOnceWith(config, attestationTargetState, attestation)).to.be.true;
   });
 
   it("should throw error - invalid indexed attestation", async function () {
@@ -272,9 +272,9 @@ describe("gossip attestation validation", function () {
     });
     db.seenAttestationCache.hasCommitteeAttestation.returns(false);
     forkChoice.hasBlock.returns(true);
-    const attestationPreState = generateCachedState();
-    attestationPreState.epochCtx.getIndexedAttestation = () => toIndexedAttestation(attestation);
-    regen.getCheckpointState.resolves(attestationPreState);
+    const attestationTargetState = generateCachedState();
+    attestationTargetState.epochCtx.getIndexedAttestation = () => toIndexedAttestation(attestation);
+    regen.getCheckpointState.resolves(attestationTargetState);
     computeAttestationSubnetStub.returns(0);
     isValidIndexedAttestationStub.returns(false);
     try {
@@ -304,12 +304,12 @@ describe("gossip attestation validation", function () {
     });
     db.seenAttestationCache.hasCommitteeAttestation.returns(false);
     forkChoice.hasBlock.returns(true);
-    const attestationPreState = generateCachedState();
-    attestationPreState.epochCtx.previousShuffling = {
+    const attestationTargetState = generateCachedState();
+    attestationTargetState.epochCtx.previousShuffling = {
       epoch: 0,
     } as phase0.fast.IEpochShuffling;
-    attestationPreState.epochCtx.getIndexedAttestation = () => toIndexedAttestation(attestation);
-    regen.getCheckpointState.resolves(attestationPreState);
+    attestationTargetState.epochCtx.getIndexedAttestation = () => toIndexedAttestation(attestation);
+    regen.getCheckpointState.resolves(attestationTargetState);
     computeAttestationSubnetStub.returns(0);
     isValidIndexedAttestationStub.returns(true);
     try {
@@ -342,18 +342,18 @@ describe("gossip attestation validation", function () {
     });
     db.seenAttestationCache.hasCommitteeAttestation.returns(false);
     forkChoice.hasBlock.returns(true);
-    const attestationPreState = generateCachedState();
-    attestationPreState.epochCtx.previousShuffling = {
+    const attestationTargetState = generateCachedState();
+    attestationTargetState.epochCtx.previousShuffling = {
       epoch: 10,
     } as phase0.fast.IEpochShuffling;
-    attestationPreState.epochCtx.currentShuffling = {
+    attestationTargetState.epochCtx.currentShuffling = {
       epoch: 10,
     } as phase0.fast.IEpochShuffling;
-    attestationPreState.epochCtx.nextShuffling = {
+    attestationTargetState.epochCtx.nextShuffling = {
       epoch: 10,
     } as phase0.fast.IEpochShuffling;
-    attestationPreState.epochCtx.getIndexedAttestation = () => toIndexedAttestation(attestation);
-    regen.getCheckpointState.resolves(attestationPreState);
+    attestationTargetState.epochCtx.getIndexedAttestation = () => toIndexedAttestation(attestation);
+    regen.getCheckpointState.resolves(attestationTargetState);
     computeAttestationSubnetStub.returns(0);
     isValidIndexedAttestationStub.returns(true);
     try {
@@ -383,15 +383,15 @@ describe("gossip attestation validation", function () {
     });
     db.seenAttestationCache.hasCommitteeAttestation.returns(false);
     forkChoice.hasBlock.returns(true);
-    const attestationPreState = generateCachedState();
-    attestationPreState.epochCtx.previousShuffling = {
+    const attestationTargetState = generateCachedState();
+    attestationTargetState.epochCtx.previousShuffling = {
       epoch: 0,
       committees: [[[]]],
       activeIndices: [],
       shuffling: [],
     };
-    attestationPreState.epochCtx.getIndexedAttestation = () => toIndexedAttestation(attestation);
-    regen.getCheckpointState.resolves(attestationPreState);
+    attestationTargetState.epochCtx.getIndexedAttestation = () => toIndexedAttestation(attestation);
+    regen.getCheckpointState.resolves(attestationTargetState);
     computeAttestationSubnetStub.returns(0);
     isValidIndexedAttestationStub.returns(true);
     try {
@@ -427,12 +427,12 @@ describe("gossip attestation validation", function () {
     });
     db.seenAttestationCache.hasCommitteeAttestation.returns(false);
     forkChoice.hasBlock.returns(true);
-    const attestationPreState = generateCachedState();
-    attestationPreState.epochCtx.previousShuffling = {
+    const attestationTargetState = generateCachedState();
+    attestationTargetState.epochCtx.previousShuffling = {
       epoch: 0,
     } as phase0.fast.IEpochShuffling;
-    attestationPreState.epochCtx.getIndexedAttestation = () => toIndexedAttestation(attestation);
-    regen.getCheckpointState.resolves(attestationPreState);
+    attestationTargetState.epochCtx.getIndexedAttestation = () => toIndexedAttestation(attestation);
+    regen.getCheckpointState.resolves(attestationTargetState);
     computeAttestationSubnetStub.returns(0);
     isValidIndexedAttestationStub.returns(true);
     try {
@@ -487,15 +487,15 @@ describe("gossip attestation validation", function () {
     });
     db.seenAttestationCache.hasCommitteeAttestation.returns(false);
     forkChoice.hasBlock.returns(true);
-    const attestationPreState = generateCachedState();
-    attestationPreState.epochCtx.previousShuffling = {
+    const attestationTargetState = generateCachedState();
+    attestationTargetState.epochCtx.previousShuffling = {
       activeIndices: [],
       epoch: 0,
       committees: [[[1]]],
       shuffling: [],
     } as IEpochShuffling;
-    attestationPreState.epochCtx.getIndexedAttestation = () => toIndexedAttestation(attestation);
-    regen.getCheckpointState.resolves(attestationPreState);
+    attestationTargetState.epochCtx.getIndexedAttestation = () => toIndexedAttestation(attestation);
+    regen.getCheckpointState.resolves(attestationTargetState);
     computeAttestationSubnetStub.returns(0);
     isValidIndexedAttestationStub.returns(true);
     try {
@@ -528,15 +528,15 @@ describe("gossip attestation validation", function () {
     forkChoice.hasBlock.returns(true);
     forkChoice.isDescendant.returns(true);
     forkChoice.isDescendantOfFinalized.returns(false);
-    const attestationPreState = generateCachedState();
-    attestationPreState.epochCtx.previousShuffling = {
+    const attestationTargetState = generateCachedState();
+    attestationTargetState.epochCtx.previousShuffling = {
       activeIndices: [],
       epoch: 0,
       committees: [[[1]]],
       shuffling: [],
     } as IEpochShuffling;
-    attestationPreState.epochCtx.getIndexedAttestation = () => toIndexedAttestation(attestation);
-    regen.getCheckpointState.resolves(attestationPreState);
+    attestationTargetState.epochCtx.getIndexedAttestation = () => toIndexedAttestation(attestation);
+    regen.getCheckpointState.resolves(attestationTargetState);
     computeAttestationSubnetStub.returns(0);
     isValidIndexedAttestationStub.returns(true);
     try {
@@ -562,15 +562,15 @@ describe("gossip attestation validation", function () {
     const attestation = generateAttestation({
       aggregationBits: [true] as BitList,
     });
-    const attestationPreState = generateCachedState();
-    attestationPreState.epochCtx.previousShuffling = {
+    const attestationTargetState = generateCachedState();
+    attestationTargetState.epochCtx.previousShuffling = {
       activeIndices: [],
       epoch: 0,
       committees: [[[1]]],
       shuffling: [],
     } as IEpochShuffling;
-    attestationPreState.epochCtx.getIndexedAttestation = () => toIndexedAttestation(attestation);
-    regen.getCheckpointState.resolves(attestationPreState);
+    attestationTargetState.epochCtx.getIndexedAttestation = () => toIndexedAttestation(attestation);
+    regen.getCheckpointState.resolves(attestationTargetState);
     computeAttestationSubnetStub.returns(0);
     isValidIndexedAttestationStub.returns(true);
     chain.getFinalizedCheckpoint.returns({epoch: 0, root: Buffer.alloc(32)});

@@ -16,6 +16,8 @@ import {IBeaconMetrics} from "../../metrics";
 import {processBlock, processChainSegment} from "./process";
 import {validateBlock} from "./validate";
 
+const metricsPrefix = "lodestar_block_processor_queue";
+
 type BlockProcessorModules = {
   config: IBeaconConfig;
   forkChoice: IForkChoice;
@@ -35,27 +37,23 @@ export class BlockProcessor {
 
   constructor({
     signal,
-    queueSize = 256,
+    maxLength = 256,
     ...modules
   }: BlockProcessorModules & {
     signal: AbortSignal;
-    queueSize?: number;
+    maxLength?: number;
   }) {
     this.modules = modules;
-    this.jobQueue = new JobQueue({queueSize, signal, onJobDone: this.onJobDone});
+    this.jobQueue = new JobQueue({maxLength, signal}, {metrics: modules.metrics, prefix: metricsPrefix});
   }
 
   async processBlockJob(job: IBlockJob): Promise<void> {
-    return await this.jobQueue.enqueueJob(async () => await processBlockJob(this.modules, job));
+    await this.jobQueue.push(async () => await processBlockJob(this.modules, job));
   }
 
   async processChainSegment(job: IChainSegmentJob): Promise<void> {
-    return await this.jobQueue.enqueueJob(async () => await processChainSegmentJob(this.modules, job));
+    await this.jobQueue.push(async () => await processChainSegmentJob(this.modules, job));
   }
-
-  private onJobDone = ({ms}: {ms: number}): void => {
-    this.modules.metrics?.blockProcessorTotalAsyncTime.inc(ms / 1000);
-  };
 }
 
 /**

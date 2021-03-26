@@ -4,17 +4,20 @@ import {testLogger} from "../../utils/logger";
 
 describe("BeaconMetrics", () => {
   const logger = testLogger();
-  it("updated metrics should be reflected in the registry", () => {
+  it("updated metrics should be reflected in the registry", async () => {
     const m = new BeaconMetrics({enabled: true, timeout: 5000, pushGateway: false, serverPort: 0}, {logger});
+    const metricsAsArray = await m.registry.getMetricsAsArray();
+    const metricsAsText = await m.registry.metrics();
+
     // basic assumptions
-    expect(m.registry.getMetricsAsArray().length).to.be.gt(0);
-    expect(m.registry.metrics()).to.not.equal("");
+    expect(metricsAsArray.length).to.be.gt(0);
+    expect(metricsAsText).to.not.equal("");
+
     // check updating beacon-specific metrics
-    expect(m.registry.getSingleMetricAsString("libp2p_peers").match(/libp2p_peers 0/)).to.not.be.null;
+    expect((await m.registry.getSingleMetricAsString("libp2p_peers")).includes("libp2p_peers 0"));
     m.peers.set(1);
-    expect(m.registry.getSingleMetricAsString("libp2p_peers").match(/libp2p_peers 1/)).to.not.be.null;
+    expect((await m.registry.getSingleMetricAsString("libp2p_peers")).includes("libp2p_peers 1"));
     m.peers.set(20);
-    expect(m.registry.getSingleMetricAsString("libp2p_peers").match(/libp2p_peers 20/)).to.not.be.null;
-    m.close();
+    expect((await m.registry.getSingleMetricAsString("libp2p_peers")).includes("libp2p_peers 20"));
   });
 });

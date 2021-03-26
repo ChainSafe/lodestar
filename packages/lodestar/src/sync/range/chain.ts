@@ -5,6 +5,7 @@ import {ErrorAborted, ILogger} from "@chainsafe/lodestar-utils";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ChainSegmentError} from "../../chain/errors";
 import {ItTrigger} from "../../util/itTrigger";
+import {wrapError} from "../../util/wrapError";
 import {Batch, BatchOpts, BatchMetadata, BatchStatus} from "./batch";
 import {
   validateBatchesStatus,
@@ -12,7 +13,6 @@ import {
   toBeProcessedStartEpoch,
   toBeDownloadedStartEpoch,
   toArr,
-  wrapError,
   ChainPeersBalancer,
 } from "./utils";
 

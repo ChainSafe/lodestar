@@ -45,7 +45,6 @@ export abstract class AbstractApiClient extends (EventEmitter as {new (): ApiCli
     if (!this.beaconNodeInterval) {
       this.controller = new AbortController();
       this.running = true;
-      await this.pollBeaconNode();
       this.beaconNodeInterval = setInterval(this.pollBeaconNode.bind(this), 3000);
     }
   }

@@ -16,137 +16,130 @@ export interface IBeaconMetrics extends IMetrics {
   /**
    * Tracks the number of libp2p peers
    */
-  peers: Gauge;
+  peers: Gauge<string>;
   /**
    * Latest slot of the beacon chain state
    */
-  slot: Gauge;
+  slot: Gauge<string>;
   /**
    * Slot of the head block of the beacon chain
    */
-  headSlot: Gauge;
+  headSlot: Gauge<string>;
   /**
    * Root of the head block of the beacon chain
    */
-  headRoot: Gauge;
+  headRoot: Gauge<string>;
   /**
    * Current finalized epoch
    */
-  finalizedEpoch: Gauge;
+  finalizedEpoch: Gauge<string>;
   /**
    * Current finalized root
    */
-  finalizedRoot: Gauge;
+  finalizedRoot: Gauge<string>;
   /**
    * Current justified epoch
    */
-  currentJustifiedEpoch: Gauge;
+  currentJustifiedEpoch: Gauge<string>;
   /**
    * Current justified root
    */
-  currentJustifiedRoot: Gauge;
+  currentJustifiedRoot: Gauge<string>;
   /**
    * Current previously justified epoch
    */
-  previousJustifiedEpoch: Gauge;
+  previousJustifiedEpoch: Gauge<string>;
   /**
    * Current previously justified root
    */
-  previousJustifiedRoot: Gauge;
+  previousJustifiedRoot: Gauge<string>;
   /**
    * Number of `status="pending|active|exited|withdrawable" validators in current epoch
    */
-  currentValidators: Gauge;
+  currentValidators: Gauge<string>;
   /**
    * Number of `status="pending|active|exited|withdrawable" validators in current epoch
    */
-  previousValidators: Gauge;
+  previousValidators: Gauge<string>;
   /**
    * Number of active validators that successfully included attestation on chain for current epoch
    */
-  currentLiveValidators: Gauge;
+  currentLiveValidators: Gauge<string>;
   /**
    * Number of active validators that successfully included attestation on chain for previous epoch
    */
-  previousLiveValidators: Gauge;
+  previousLiveValidators: Gauge<string>;
   /**
    * Number of pending deposits (`state.eth1Data.depositCount - state.eth1DepositIndex`)
    */
-  pendingDeposits: Gauge;
+  pendingDeposits: Gauge<string>;
   /**
    * Number of total deposits included on chain
    */
-  processedDepositsTotal: Gauge;
+  processedDepositsTotal: Gauge<string>;
   /**
    * Number of pending voluntary exits in local operation pool
    */
-  pendingExits: Gauge;
+  pendingExits: Gauge<string>;
   /**
    * Number of blocks orphaned in the previous epoch
    */
-  previousEpochOrphanedBlocks: Gauge;
+  previousEpochOrphanedBlocks: Gauge<string>;
   /**
    * Total occurances of reorganizations of the chain
    */
-  reorgEventsTotal: Counter;
+  reorgEventsTotal: Counter<string>;
   /**
    * Track current epoch active balances
    */
-  currentEpochActiveGwei: Gauge;
+  currentEpochActiveGwei: Gauge<string>;
   /**
    * Track current epoch active balances
    */
-  currentEpochSourceGwei: Gauge;
+  currentEpochSourceGwei: Gauge<string>;
   /**
    * Track current epoch active balances
    */
-  currentEpochTargetGwei: Gauge;
+  currentEpochTargetGwei: Gauge<string>;
   /**
    * Track previous epoch active balances
    */
-  previousEpochActiveGwei: Gauge;
+  previousEpochActiveGwei: Gauge<string>;
   /**
    * Track previous epoch active balances
    */
-  previousEpochSourceGwei: Gauge;
+  previousEpochSourceGwei: Gauge<string>;
   /**
    * Track previous epoch active balances
    */
-  previousEpochTargetGwei: Gauge;
+  previousEpochTargetGwei: Gauge<string>;
   /**
    * Track number of attesters for which we have seen an attestation.
    * That attestation is not necessarily included on chain.
    */
-  observedEpochAttesters: Gauge;
+  observedEpochAttesters: Gauge<string>;
   /**
    * Track number of aggregators for which we have seen an attestation.
    * That attestation is not necessarily included on chain.
    */
-  observedEpochAggregators: Gauge;
-  /**
-   * Total number of seconds spent completing block processor async jobs
-   * Useful to compute the utilitzation ratio of the blockProcessor with:
-   * `rate(lodestar_block_processor_total_async_time[1m])`
-   */
-  blockProcessorTotalAsyncTime: Gauge;
+  observedEpochAggregators: Gauge<string>;
   /** Peers labeled by direction */
-  peersByDirection: Gauge;
+  peersByDirection: Gauge<string>;
   /** Number of peer:connected event, labeled by direction */
-  peerConnectedEvent: Gauge;
+  peerConnectedEvent: Gauge<string>;
   /** Number of peer:disconnected event, labeled by direction */
-  peerDisconnectedEvent: Gauge;
+  peerDisconnectedEvent: Gauge<string>;
   /** Number of goodbye received, labeled by reason */
-  peerGoodbyeReceived: Gauge;
+  peerGoodbyeReceived: Gauge<string>;
   /** Number of goodbye sent, labeled by reason */
-  peerGoodbyeSent: Gauge;
+  peerGoodbyeSent: Gauge<string>;
   /** Total number of unique peers that have had a connection with */
-  peersTotalUniqueConnected: Gauge;
+  peersTotalUniqueConnected: Gauge<string>;
 
   /** Gossip mesh peer count by GossipType */
-  gossipMeshPeersByType: Gauge;
+  gossipMeshPeersByType: Gauge<string>;
   /** Gossip mesh peer count by beacon attestation subnet */
-  gossipMeshPeersByBeaconAttestationSubnet: Gauge;
-  close(): void;
+  gossipMeshPeersByBeaconAttestationSubnet: Gauge<string>;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-empty-interface

@@ -1,5 +1,5 @@
 import {LevelDbController} from "@chainsafe/lodestar-db";
-import {ILogger, intDiv, LogLevel, interopSecretKey} from "@chainsafe/lodestar-utils";
+import {ILogger, LogLevel, interopSecretKey} from "@chainsafe/lodestar-utils";
 import {IEventsApi} from "@chainsafe/lodestar-validator/lib/api/interface/events";
 import {
   ApiClientOverInstance,
@@ -31,31 +31,17 @@ export function getDevValidators({
   useRestApi?: boolean;
   logger?: ILogger;
 }): Validator[] {
-  const validatorsPerValidatorClient = intDiv(count, validatorClientCount);
   const vcs: Validator[] = [];
-  while (count > 0) {
-    if (count > validatorsPerValidatorClient) {
-      vcs.push(
-        getDevValidator({
-          node,
-          startIndex: vcs.length * validatorsPerValidatorClient,
-          count: validatorsPerValidatorClient,
-          useRestApi,
-          logger,
-        })
-      );
-    } else {
-      vcs.push(
-        getDevValidator({
-          node,
-          startIndex: vcs.length * validatorsPerValidatorClient,
-          count,
-          useRestApi,
-          logger,
-        })
-      );
-    }
-    count = count - validatorsPerValidatorClient;
+  for (let i = 0; i < count; i++) {
+    vcs.push(
+      getDevValidator({
+        node,
+        startIndex: i * validatorClientCount,
+        count: validatorClientCount,
+        useRestApi,
+        logger,
+      })
+    );
   }
   return vcs;
 }
@@ -82,7 +68,7 @@ export function getDevValidator({
       config: node.config,
       controller: new LevelDbController({name: tmpDir.name}, {logger}),
     }),
-    logger: logger,
+    logger,
     secretKeys: Array.from({length: count}, (_, i) => interopSecretKey(i + startIndex)),
   });
 }
@@ -95,20 +81,15 @@ export function getDevValidatorRestApiClient(node: BeaconNode, logger: ILogger):
   );
 }
 
-export function getDevValidatorInstanceApiClient(node: BeaconNode, logger: ILogger): IApiClient {
+export function getDevValidatorInstanceApiClient(node: BeaconNode, parentLogger: ILogger): IApiClient {
+  const logger = parentLogger.child({module: "api", level: LogLevel.warn});
   return new ApiClientOverInstance({
     config: node.config,
-    validator: new ValidatorApi(
-      {},
-      {
-        ...node,
-        logger: logger.child({module: "api", level: LogLevel.warn}),
-        eth1: new Eth1ForBlockProductionDisabled(),
-      }
-    ),
+    validator: new ValidatorApi({}, {...node, logger, eth1: new Eth1ForBlockProductionDisabled()}),
     node: new NodeApi({}, {...node}),
     events: new EventsApi({}, {...node}) as IEventsApi,
     beacon: new BeaconApi({}, {...node}),
     configApi: new ConfigApi({}, {config: node.config}),
+    logger,
   });
 }
