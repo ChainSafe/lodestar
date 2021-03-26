@@ -84,13 +84,13 @@ export async function validateAggregateAttestation(
 ): Promise<void> {
   const attestation = aggregateAndProof.message.aggregate;
 
-  let attestationPreState: CachedBeaconState<phase0.BeaconState>;
+  let attestationTargetState: CachedBeaconState<phase0.BeaconState>;
   try {
     // the target state, advanced to the attestation slot
-    attestationPreState = await chain.regen.getCheckpointState(attestation.data.target);
+    attestationTargetState = await chain.regen.getCheckpointState(attestation.data.target);
   } catch (e) {
     throw new AttestationError({
-      code: AttestationErrorCode.MISSING_ATTESTATION_PRESTATE,
+      code: AttestationErrorCode.MISSING_ATTESTATION_TARGET_STATE,
       error: e as Error,
       job: attestationJob,
     });
@@ -98,7 +98,7 @@ export async function validateAggregateAttestation(
 
   let committee: ValidatorIndex[];
   try {
-    committee = attestationPreState.getBeaconCommittee(attestation.data.slot, attestation.data.index);
+    committee = attestationTargetState.getBeaconCommittee(attestation.data.slot, attestation.data.index);
   } catch (error) {
     throw new AttestationError({
       code: AttestationErrorCode.AGGREGATOR_NOT_IN_COMMITTEE,
@@ -120,11 +120,11 @@ export async function validateAggregateAttestation(
     });
   }
 
-  const aggregator = attestationPreState.index2pubkey[aggregateAndProof.message.aggregatorIndex];
+  const aggregator = attestationTargetState.index2pubkey[aggregateAndProof.message.aggregatorIndex];
   if (
     !isValidSelectionProofSignature(
       config,
-      attestationPreState,
+      attestationTargetState,
       attestation.data.slot,
       aggregator,
       aggregateAndProof.message.selectionProof.valueOf() as Uint8Array
@@ -139,7 +139,7 @@ export async function validateAggregateAttestation(
   if (
     !isValidAggregateAndProofSignature(
       config,
-      attestationPreState,
+      attestationTargetState,
       computeEpochAtSlot(config, attestation.data.slot),
       aggregator,
       aggregateAndProof
@@ -154,7 +154,10 @@ export async function validateAggregateAttestation(
   // TODO: once we have pool, check if aggregate block is seen and has target as ancestor
 
   if (
-    !phase0.fast.isValidIndexedAttestation(attestationPreState, attestationPreState.getIndexedAttestation(attestation))
+    !phase0.fast.isValidIndexedAttestation(
+      attestationTargetState,
+      attestationTargetState.getIndexedAttestation(attestation)
+    )
   ) {
     throw new AttestationError({
       code: AttestationErrorCode.INVALID_SIGNATURE,
