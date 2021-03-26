@@ -156,7 +156,5 @@ export async function runStateTransition(
   emitBlockEvent(emitter, job, postState);
   emitForkChoiceHeadEvents(emitter, forkChoice, forkChoice.getHead(), oldHead);
 
-  // this avoids keeping our node busy processing blocks
-  await sleep(0);
   return postState;
 }

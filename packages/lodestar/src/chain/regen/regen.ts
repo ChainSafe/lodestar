@@ -6,6 +6,7 @@ import {
   computeStartSlotAtEpoch,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
+import {sleep} from "@chainsafe/lodestar-utils";
 
 import {CheckpointStateCache, StateContextCache} from "../stateCache";
 import {ChainEventEmitter} from "../emitter";
@@ -189,6 +190,8 @@ export class StateRegenerator implements IStateRegenerator {
           validSignatures: true,
           validProposerSignature: true,
         });
+        // this avoids keeping our node busy processing blocks
+        await sleep(0);
       } catch (e) {
         throw new RegenError({
           code: RegenErrorCode.STATE_TRANSITION_ERROR,
