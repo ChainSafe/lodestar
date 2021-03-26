@@ -2631,7 +2631,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "rate(lodestar_block_processor_total_async_time[$__rate_interval])",
+              "expr": "rate(lodestar_block_processor_queue_job_time_seconds[$__rate_interval])",
               "instant": false,
               "interval": "",
               "legendFormat": "",

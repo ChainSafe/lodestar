@@ -10,44 +10,43 @@ import {readLodestarGitData} from "./gitData";
 import {ILogger} from "@chainsafe/lodestar-utils";
 
 export class BeaconMetrics extends Metrics implements IBeaconMetrics {
-  peers: Gauge;
-  slot: Gauge;
-  headSlot: Gauge;
-  headRoot: Gauge;
-  finalizedEpoch: Gauge;
-  finalizedRoot: Gauge;
-  currentJustifiedEpoch: Gauge;
-  currentJustifiedRoot: Gauge;
-  previousJustifiedEpoch: Gauge;
-  previousJustifiedRoot: Gauge;
-  currentValidators: Gauge;
-  previousValidators: Gauge;
-  currentLiveValidators: Gauge;
-  previousLiveValidators: Gauge;
-  pendingDeposits: Gauge;
-  processedDepositsTotal: Gauge;
-  pendingExits: Gauge;
-  previousEpochOrphanedBlocks: Gauge;
-  reorgEventsTotal: Counter;
-  currentEpochActiveGwei: Gauge;
-  currentEpochSourceGwei: Gauge;
-  currentEpochTargetGwei: Gauge;
-  previousEpochActiveGwei: Gauge;
-  previousEpochSourceGwei: Gauge;
-  previousEpochTargetGwei: Gauge;
-  observedEpochAttesters: Gauge;
-  observedEpochAggregators: Gauge;
-  blockProcessorTotalAsyncTime: Gauge;
-  peersByDirection: Gauge;
-  peerConnectedEvent: Gauge;
-  peerDisconnectedEvent: Gauge;
-  peerGoodbyeReceived: Gauge;
-  peerGoodbyeSent: Gauge;
-  peersTotalUniqueConnected: Gauge;
-  gossipMeshPeersByType: Gauge;
-  gossipMeshPeersByBeaconAttestationSubnet: Gauge;
+  peers: Gauge<string>;
+  slot: Gauge<string>;
+  headSlot: Gauge<string>;
+  headRoot: Gauge<string>;
+  finalizedEpoch: Gauge<string>;
+  finalizedRoot: Gauge<string>;
+  currentJustifiedEpoch: Gauge<string>;
+  currentJustifiedRoot: Gauge<string>;
+  previousJustifiedEpoch: Gauge<string>;
+  previousJustifiedRoot: Gauge<string>;
+  currentValidators: Gauge<string>;
+  previousValidators: Gauge<string>;
+  currentLiveValidators: Gauge<string>;
+  previousLiveValidators: Gauge<string>;
+  pendingDeposits: Gauge<string>;
+  processedDepositsTotal: Gauge<string>;
+  pendingExits: Gauge<string>;
+  previousEpochOrphanedBlocks: Gauge<string>;
+  reorgEventsTotal: Counter<string>;
+  currentEpochActiveGwei: Gauge<string>;
+  currentEpochSourceGwei: Gauge<string>;
+  currentEpochTargetGwei: Gauge<string>;
+  previousEpochActiveGwei: Gauge<string>;
+  previousEpochSourceGwei: Gauge<string>;
+  previousEpochTargetGwei: Gauge<string>;
+  observedEpochAttesters: Gauge<string>;
+  observedEpochAggregators: Gauge<string>;
+  peersByDirection: Gauge<string>;
+  peerConnectedEvent: Gauge<string>;
+  peerDisconnectedEvent: Gauge<string>;
+  peerGoodbyeReceived: Gauge<string>;
+  peerGoodbyeSent: Gauge<string>;
+  peersTotalUniqueConnected: Gauge<string>;
+  gossipMeshPeersByType: Gauge<string>;
+  gossipMeshPeersByBeaconAttestationSubnet: Gauge<string>;
 
-  private lodestarVersion: Gauge;
+  private lodestarVersion: Gauge<string>;
   private logger: ILogger;
 
   constructor(opts: IMetricsOptions, {logger}: {logger: ILogger}) {
@@ -194,12 +193,6 @@ export class BeaconMetrics extends Metrics implements IBeaconMetrics {
 
     // Extra Lodestar custom metrics
 
-    this.blockProcessorTotalAsyncTime = new Gauge({
-      name: "lodestar_block_processor_total_async_time",
-      help: "Total number of seconds spent completing block processor async jobs",
-      registers,
-    });
-
     this.peersByDirection = new Gauge({
       name: "lodestar_peers_by_direction",
       help: "number of peers, labeled by direction",
@@ -263,9 +256,5 @@ export class BeaconMetrics extends Metrics implements IBeaconMetrics {
       registers,
     });
     this.lodestarVersion.set(readLodestarGitData(), 1);
-  }
-
-  close(): void {
-    super.close();
   }
 }

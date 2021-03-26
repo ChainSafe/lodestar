@@ -28,7 +28,7 @@ export class QueuedStateRegenerator implements IStateRegenerator {
     checkpointStateCache,
     db,
     signal,
-    queueSize = 256,
+    maxLength = 256,
   }: {
     config: IBeaconConfig;
     emitter: ChainEventEmitter;
@@ -37,25 +37,25 @@ export class QueuedStateRegenerator implements IStateRegenerator {
     checkpointStateCache: CheckpointStateCache;
     db: IBeaconDb;
     signal: AbortSignal;
-    queueSize?: number;
+    maxLength?: number;
   }) {
     this.regen = new StateRegenerator({config, emitter, forkChoice, stateCache, checkpointStateCache, db});
-    this.jobQueue = new JobQueue({queueSize, signal});
+    this.jobQueue = new JobQueue({maxLength, signal});
   }
 
   async getPreState(block: phase0.BeaconBlock): Promise<CachedBeaconState<phase0.BeaconState>> {
-    return await this.jobQueue.enqueueJob(async () => await this.regen.getPreState(block));
+    return await this.jobQueue.push(async () => await this.regen.getPreState(block));
   }
 
   async getCheckpointState(cp: phase0.Checkpoint): Promise<CachedBeaconState<phase0.BeaconState>> {
-    return await this.jobQueue.enqueueJob(async () => await this.regen.getCheckpointState(cp));
+    return await this.jobQueue.push(async () => await this.regen.getCheckpointState(cp));
   }
 
   async getBlockSlotState(blockRoot: Root, slot: Slot): Promise<CachedBeaconState<phase0.BeaconState>> {
-    return await this.jobQueue.enqueueJob(async () => await this.regen.getBlockSlotState(blockRoot, slot));
+    return await this.jobQueue.push(async () => await this.regen.getBlockSlotState(blockRoot, slot));
   }
 
   async getState(stateRoot: Root): Promise<CachedBeaconState<phase0.BeaconState>> {
-    return await this.jobQueue.enqueueJob(async () => await this.regen.getState(stateRoot));
+    return await this.jobQueue.push(async () => await this.regen.getState(stateRoot));
   }
 }

@@ -6,6 +6,7 @@ import {createHttpTerminator, HttpTerminator} from "http-terminator";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {IMetrics, IMetricsServer} from "../interface";
 import {IMetricsOptions} from "../options";
+import {wrapError} from "../../util/wrapError";
 
 export class HttpMetricsServer implements IMetricsServer {
   http: http.Server;
@@ -42,13 +43,16 @@ export class HttpMetricsServer implements IMetricsServer {
     }
   }
 
-  private onRequest(req: http.IncomingMessage, res: http.ServerResponse): void {
+  private async onRequest(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
     if (req.method === "GET" && req.url && req.url.includes("/metrics")) {
-      res.writeHead(200, {"content-type": this.metrics.registry.contentType});
-      res.end(this.metrics.registry.metrics());
+      const metricsRes = await wrapError(this.metrics.registry.metrics());
+      if (metricsRes.err) {
+        res.writeHead(500, {"content-type": "text/plain"}).end(metricsRes.err.stack);
+      } else {
+        res.writeHead(200, {"content-type": this.metrics.registry.contentType}).end(metricsRes.result);
+      }
     } else {
-      res.writeHead(404);
-      res.end();
+      res.writeHead(404).end();
     }
   }
 }
