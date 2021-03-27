@@ -30,7 +30,7 @@ export function getFormat(opts: ILoggerOptions): Format {
 
 function humanReadableLogFormat(opts: ILoggerOptions): Format {
   return format.combine(
-    ...(opts.hideTimestamp ? [] : [format.timestamp({format: "YYYY-MM-DD HH:mm:ss"})]),
+    ...(opts.hideTimestamp ? [] : [format.timestamp({format: "YYYY-MMM-DD HH:mm:ss.SSS"})]),
     format.colorize(),
     format.printf(humanReadableTemplateFn)
   );
