@@ -27,12 +27,12 @@ const gossipQueueOpts: {[K in GossipType]: {maxLength: number; type: QueueType}}
 };
 
 const gossipMetricsPrefix: {[K in GossipType]: string} = {
-  [GossipType.beacon_block]: "lodestar_gossip_beacon_block",
-  [GossipType.beacon_aggregate_and_proof]: "lodestar_gossip_beacon_aggregate_and_proof",
-  [GossipType.beacon_attestation]: "lodestar_gossip_beacon_attestation",
-  [GossipType.voluntary_exit]: "lodestar_gossip_voluntary_exit",
-  [GossipType.proposer_slashing]: "lodestar_gossip_proposer_slashing",
-  [GossipType.attester_slashing]: "lodestar_gossip_attester_slashing",
+  [GossipType.beacon_block]: "lodestar_gossip_beacon_block_queue",
+  [GossipType.beacon_aggregate_and_proof]: "lodestar_gossip_beacon_aggregate_and_proof_queue",
+  [GossipType.beacon_attestation]: "lodestar_gossip_beacon_attestation_queue",
+  [GossipType.voluntary_exit]: "lodestar_gossip_voluntary_exit_queue",
+  [GossipType.proposer_slashing]: "lodestar_gossip_proposer_slashing_queue",
+  [GossipType.attester_slashing]: "lodestar_gossip_attester_slashing_queue",
 };
 
 export function createTopicValidatorFnMap(
