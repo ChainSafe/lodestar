@@ -65,8 +65,8 @@ export class MockBeaconChain implements IBeaconChain {
       emitter: this.emitter,
       signal: this.abortController.signal,
     });
-    this.stateCache = new StateContextCache();
-    this.checkpointStateCache = new CheckpointStateCache(this.config);
+    this.stateCache = new StateContextCache({});
+    this.checkpointStateCache = new CheckpointStateCache({config});
     this.pendingBlocks = new BlockPool({
       config: this.config,
     });

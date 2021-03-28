@@ -87,8 +87,8 @@ export class BeaconChain implements IBeaconChain {
       genesisTime: this.genesisTime,
       signal: this.abortController.signal,
     });
-    this.stateCache = new StateContextCache();
-    this.checkpointStateCache = new CheckpointStateCache(this.config);
+    this.stateCache = new StateContextCache({metrics});
+    this.checkpointStateCache = new CheckpointStateCache({metrics, config});
     const cachedState = restoreStateCaches(config, this.stateCache, this.checkpointStateCache, anchorState);
     this.forkChoice = new LodestarForkChoice({
       config,

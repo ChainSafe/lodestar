@@ -12,7 +12,7 @@ describe("StateContextCache", function () {
 
   beforeEach(function () {
     // max 2 items
-    cache = new StateContextCache(2);
+    cache = new StateContextCache({}, {maxStates: 2});
     const state1 = generateCachedState({slot: 0});
     key1 = state1.hashTreeRoot();
     state1.epochCtx.currentShuffling = {epoch: 0, activeIndices: [], shuffling: [], committees: []};

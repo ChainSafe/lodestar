@@ -140,6 +140,9 @@ export interface IBeaconMetrics extends IMetrics {
   gossipMeshPeersByType: Gauge<string>;
   /** Gossip mesh peer count by beacon attestation subnet */
   gossipMeshPeersByBeaconAttestationSubnet: Gauge<string>;
+
+  stateCacheGetTotal: Gauge<string>;
+  stateCacheHitTotal: Gauge<string>;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-empty-interface

@@ -1,6 +1,7 @@
 import {ByteVector, toHexString} from "@chainsafe/ssz";
 import {phase0, Epoch} from "@chainsafe/lodestar-types";
 import {CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
+import {IBeaconMetrics} from "../../metrics";
 
 const MAX_STATES = 96;
 
@@ -15,19 +16,25 @@ export class StateContextCache {
    */
   maxStates: number;
 
+  private readonly metrics?: IBeaconMetrics;
   private cache = new Map<string, CachedBeaconState<phase0.BeaconState>>();
   /** Epoch -> Set<blockRoot> */
   private epochIndex = new Map<Epoch, Set<string>>();
 
-  constructor(maxStates = MAX_STATES) {
-    this.maxStates = maxStates;
+  constructor(modules: {metrics?: IBeaconMetrics}, opts?: {maxStates: number}) {
+    this.maxStates = opts?.maxStates ?? MAX_STATES;
+    this.metrics = modules.metrics;
   }
 
   get(root: ByteVector): CachedBeaconState<phase0.BeaconState> | null {
+    this.metrics?.stateCacheGetTotal.inc();
+
     const item = this.cache.get(toHexString(root));
     if (!item) {
       return null;
     }
+
+    this.metrics?.stateCacheHitTotal.inc();
     return item.clone();
   }
 

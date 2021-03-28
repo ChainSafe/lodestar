@@ -45,6 +45,8 @@ export class BeaconMetrics extends Metrics implements IBeaconMetrics {
   peersTotalUniqueConnected: Gauge<string>;
   gossipMeshPeersByType: Gauge<string>;
   gossipMeshPeersByBeaconAttestationSubnet: Gauge<string>;
+  stateCacheGetTotal: Gauge<string>;
+  stateCacheHitTotal: Gauge<string>;
 
   private lodestarVersion: Gauge<string>;
   private logger: ILogger;
@@ -245,6 +247,17 @@ export class BeaconMetrics extends Metrics implements IBeaconMetrics {
       name: "lodestar_gossip_mesh_peers_by_beacon_attestation_subnet",
       help: "Number of connected mesh peers per beacon attestation subnet",
       labelNames: ["subnet"],
+      registers,
+    });
+
+    this.stateCacheGetTotal = new Gauge({
+      name: "lodestar_state_cache_get_total",
+      help: "Total number of states requested from the cache",
+      registers,
+    });
+    this.stateCacheHitTotal = new Gauge({
+      name: "lodestar_state_cache_hit_total",
+      help: "Total number of hits to the state cache",
       registers,
     });
 
