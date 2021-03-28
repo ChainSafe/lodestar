@@ -1,4 +1,4 @@
-import {CollectFunction, Gauge, Histogram} from "prom-client";
+import {Gauge, Histogram} from "prom-client";
 import {IBeaconMetrics} from "../../metrics";
 
 export type QueueMetricsOpts = {
@@ -29,9 +29,9 @@ export function createQueueMetrics(
       name: `${prefix}_length`,
       help: `Count of total queue length of ${prefix}`,
       registers: [metrics.registry],
-      collect: ((lengthGauge: Gauge<string>) => {
-        lengthGauge.set(hooks.getQueueLength());
-      }) as CollectFunction<Gauge<string>>,
+      collect() {
+        this.set(hooks.getQueueLength());
+      },
     }),
 
     droppedJobs: new Gauge({
