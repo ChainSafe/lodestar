@@ -17,13 +17,14 @@ import {
   GossipTypeMap,
 } from "./interface";
 
+// Numbers from https://github.com/sigp/lighthouse/blob/b34a79dc0b02e04441ba01fd0f304d1e203d877d/beacon_node/network/src/beacon_processor/mod.rs#L69
 const gossipQueueOpts: {[K in GossipType]: {maxLength: number; type: QueueType}} = {
-  [GossipType.beacon_block]: {maxLength: 256, type: QueueType.FIFO},
-  [GossipType.beacon_aggregate_and_proof]: {maxLength: 256, type: QueueType.LIFO},
-  [GossipType.beacon_attestation]: {maxLength: 256, type: QueueType.LIFO},
-  [GossipType.voluntary_exit]: {maxLength: 256, type: QueueType.FIFO},
-  [GossipType.proposer_slashing]: {maxLength: 256, type: QueueType.FIFO},
-  [GossipType.attester_slashing]: {maxLength: 256, type: QueueType.FIFO},
+  [GossipType.beacon_block]: {maxLength: 1024, type: QueueType.FIFO},
+  [GossipType.beacon_aggregate_and_proof]: {maxLength: 1024, type: QueueType.LIFO},
+  [GossipType.beacon_attestation]: {maxLength: 16384, type: QueueType.LIFO},
+  [GossipType.voluntary_exit]: {maxLength: 4096, type: QueueType.FIFO},
+  [GossipType.proposer_slashing]: {maxLength: 4096, type: QueueType.FIFO},
+  [GossipType.attester_slashing]: {maxLength: 4096, type: QueueType.FIFO},
 };
 
 const gossipMetricsPrefix: {[K in GossipType]: string} = {
