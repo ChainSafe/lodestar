@@ -17,14 +17,12 @@ export function fromTransportOpts(transportOpts: TransportOpts): TransportStream
       return new transports.Console({
         debugStdout: true,
         level: transportOpts.level,
-        handleExceptions: true,
       });
 
     case TransportType.file:
       return new transports.File({
         level: transportOpts.level,
         filename: transportOpts.filename,
-        handleExceptions: true,
       });
   }
 }
