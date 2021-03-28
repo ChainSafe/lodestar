@@ -3,7 +3,7 @@ import {hash} from "@chainsafe/ssz";
 import {phase0} from "@chainsafe/lodestar-types";
 import {computeEpochAtSlot, computeSigningRoot, getDomain, getRandaoMix} from "../../../util";
 import {CachedBeaconState} from "../util";
-import {ISignatureSet, SignatureSetType, verifySignatureSet} from "../signatureSets";
+import {ISignatureSet, SignatureSetType, verifySignatureSet} from "../../../util/signatureSets";
 
 export function processRandao(
   state: CachedBeaconState<phase0.BeaconState>,

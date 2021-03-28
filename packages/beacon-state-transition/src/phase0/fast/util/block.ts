@@ -1,6 +1,6 @@
 import {phase0} from "@chainsafe/lodestar-types";
 import {computeSigningRoot, getDomain} from "../../../util";
-import {ISignatureSet, SignatureSetType, verifySignatureSet} from "../signatureSets";
+import {ISignatureSet, SignatureSetType, verifySignatureSet} from "../../../util/signatureSets";
 import {CachedBeaconState} from "./cachedBeaconState";
 
 export function verifyBlockSignature(

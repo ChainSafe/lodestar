@@ -1,14 +1,11 @@
 import {phase0} from "@chainsafe/lodestar-types";
+import {ISignatureSet} from "../../../util";
 import {getRandaoRevealSignatureSet} from "../block/processRandao";
 import {CachedBeaconState, getBlockSignatureSet} from "../util";
-import {ISignatureSet} from "./types";
 import {getProposerSlashingsSignatureSets} from "./proposerSlashings";
 import {getAttesterSlashingsSignatureSets} from "./attesterSlashings";
 import {getAttestationsSignatureSets} from "./attestations";
 import {getVoluntaryExitsSignatureSets} from "./voluntaryExits";
-
-export * from "./types";
-export * from "./verify";
 
 /**
  * Includes all signatures on the block (except the deposit signatures) for verification.

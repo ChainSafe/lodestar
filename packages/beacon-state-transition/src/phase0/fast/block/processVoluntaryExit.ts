@@ -1,7 +1,7 @@
 import {phase0} from "@chainsafe/lodestar-types";
 import {FAR_FUTURE_EPOCH} from "../../../constants";
 import {computeSigningRoot, getDomain, isActiveValidator} from "../../../util";
-import {ISignatureSet, SignatureSetType, verifySignatureSet} from "../signatureSets";
+import {ISignatureSet, SignatureSetType, verifySignatureSet} from "../../../util/signatureSets";
 import {CachedBeaconState} from "../util";
 import {initiateValidatorExit} from "./initiateValidatorExit";
 

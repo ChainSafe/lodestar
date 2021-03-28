@@ -7,7 +7,7 @@ import {IStateRegenerator, RegenError} from "../regen";
 import {BlockError, BlockErrorCode, ChainSegmentError} from "../errors";
 import {verifySignatureSetsBatch} from "../bls";
 import {groupBlocksByEpoch} from "./util";
-import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
+import {phase0, ISignatureSet} from "@chainsafe/lodestar-beacon-state-transition";
 import {CheckpointStateCache} from "../stateCache";
 
 export async function processBlock({
@@ -119,7 +119,7 @@ export async function processChainSegment({
 
       // Verify the signature of the blocks, returning early if the signature is invalid.
       if (!job.validSignatures) {
-        const signatureSets: phase0.fast.ISignatureSet[] = [];
+        const signatureSets: ISignatureSet[] = [];
         for (const block of blocksInEpoch) {
           signatureSets.push(
             ...(job.validProposerSignature

@@ -12,7 +12,7 @@ import {processProposerSlashing} from "./processProposerSlashing";
 import {processVoluntaryExit} from "./processVoluntaryExit";
 
 // Extra utils used by other modules
-export {isValidIndexedAttestation} from "./isValidIndexedAttestation";
+export {isValidIndexedAttestation, getIndexedAttestationSignatureSet} from "./isValidIndexedAttestation";
 export {getNewEth1Data} from "./processEth1Data";
 
 export {

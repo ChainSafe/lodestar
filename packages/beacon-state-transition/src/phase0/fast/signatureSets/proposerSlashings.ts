@@ -1,6 +1,6 @@
 import {readOnlyMap} from "@chainsafe/ssz";
 import {phase0} from "@chainsafe/lodestar-types";
-import {ISignatureSet} from "./types";
+import {ISignatureSet} from "../../../util";
 import {CachedBeaconState} from "../util";
 import {getProposerSlashingSignatureSets} from "../block/processProposerSlashing";
 
