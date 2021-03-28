@@ -6,7 +6,6 @@ import {config} from "@chainsafe/lodestar-config/minimal";
 import {sleep} from "@chainsafe/lodestar-utils";
 import {phase0} from "@chainsafe/lodestar-types";
 import {Method, ReqRespEncoding} from "../../../src/constants";
-import {BeaconMetrics} from "../../../src/metrics";
 import {createPeerId, IReqRespOptions, Network} from "../../../src/network";
 import {INetworkOptions} from "../../../src/network/options";
 import {IReqRespHandler} from "../../../src/network/reqresp/handlers";
@@ -36,8 +35,6 @@ describe("network / ReqResp", function () {
     disconnectTimeout: 5000,
     localMultiaddrs: [],
   };
-  const logger = testLogger();
-  const metrics = new BeaconMetrics({enabled: true, timeout: 5000, pushGateway: false}, {logger});
   const state = generateState();
   const chain = new MockBeaconChain({genesisTime: 0, chainId: 0, networkId: BigInt(0), state, config});
   const db = new StubbedBeaconDb(sinon);
@@ -70,7 +67,7 @@ describe("network / ReqResp", function () {
       ...reqRespHandlerPartial,
     };
     const opts = {...networkOptsDefault, ...reqRespOpts};
-    const modules = {config, metrics, db, chain, reqRespHandler, signal: controller.signal};
+    const modules = {config, db, chain, reqRespHandler, signal: controller.signal};
     const netA = new Network(opts, {...modules, libp2p: libp2pA, logger: testLogger("A")});
     const netB = new Network(opts, {...modules, libp2p: libp2pB, logger: testLogger("B")});
     await Promise.all([netA.start(), netB.start()]);

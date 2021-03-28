@@ -8,7 +8,6 @@ import {config} from "@chainsafe/lodestar-config/minimal";
 import {phase0} from "@chainsafe/lodestar-types";
 import {sleep} from "@chainsafe/lodestar-utils";
 
-import {BeaconMetrics} from "../../../src/metrics";
 import {Network, NetworkEvent, ReqRespHandler} from "../../../src/network";
 import {INetworkOptions} from "../../../src/network/options";
 import {GoodByeReasonCode, Method} from "../../../src/constants";
@@ -35,9 +34,6 @@ const opts: INetworkOptions = {
 
 describe("network", function () {
   if (this.timeout() < 5000) this.timeout(5000);
-
-  const logger = testLogger();
-  const metrics = new BeaconMetrics({enabled: true, timeout: 5000, pushGateway: false}, {logger});
 
   const afterEachCallbacks: (() => Promise<void> | void)[] = [];
   afterEach(async () => {
@@ -67,7 +63,7 @@ describe("network", function () {
     const loggerA = testLogger("A");
     const loggerB = testLogger("B");
 
-    const modules = {config, metrics, chain, db, reqRespHandler, signal: controller.signal};
+    const modules = {config, chain, db, reqRespHandler, signal: controller.signal};
     const netA = new Network(opts, {...modules, libp2p: libp2pA, logger: loggerA});
     const netB = new Network(opts, {...modules, libp2p: libp2pB, logger: loggerB});
 
