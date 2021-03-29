@@ -9,7 +9,8 @@ import {
   isAggregatorFromCommitteeLength,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {isAttestingToInValidBlock} from "./attestation";
-import {isValidAggregateAndProofSignature, isValidSelectionProofSignature} from "./utils";
+import {getSelectionProofSignatureSet, getAggregateAndProofSignatureSet} from "./utils";
+import {verifySignatureSetsBatch} from "../bls";
 import {AttestationError, AttestationErrorCode} from "../errors";
 import {ATTESTATION_PROPAGATION_SLOT_RANGE} from "../../constants";
 
@@ -120,31 +121,18 @@ export async function validateAggregateAttestation(
     });
   }
 
+  const slot = attestation.data.slot;
+  const epoch = computeEpochAtSlot(config, slot);
+  const indexedAttestation = attestationTargetState.getIndexedAttestation(attestation);
   const aggregator = attestationTargetState.index2pubkey[aggregateAndProof.message.aggregatorIndex];
-  if (
-    !isValidSelectionProofSignature(
-      config,
-      attestationTargetState,
-      attestation.data.slot,
-      aggregator,
-      aggregateAndProof.message.selectionProof.valueOf() as Uint8Array
-    )
-  ) {
-    throw new AttestationError({
-      code: AttestationErrorCode.INVALID_SELECTION_PROOF,
-      job: attestationJob,
-    });
-  }
 
-  if (
-    !isValidAggregateAndProofSignature(
-      config,
-      attestationTargetState,
-      computeEpochAtSlot(config, attestation.data.slot),
-      aggregator,
-      aggregateAndProof
-    )
-  ) {
+  const signatureSets = [
+    getSelectionProofSignatureSet(config, attestationTargetState, slot, aggregator, aggregateAndProof),
+    getAggregateAndProofSignatureSet(config, attestationTargetState, epoch, aggregator, aggregateAndProof),
+    phase0.fast.getIndexedAttestationSignatureSet(attestationTargetState, indexedAttestation),
+  ];
+
+  if (!verifySignatureSetsBatch(signatureSets)) {
     throw new AttestationError({
       code: AttestationErrorCode.INVALID_SIGNATURE,
       job: attestationJob,
@@ -153,14 +141,10 @@ export async function validateAggregateAttestation(
 
   // TODO: once we have pool, check if aggregate block is seen and has target as ancestor
 
-  if (
-    !phase0.fast.isValidIndexedAttestation(
-      attestationTargetState,
-      attestationTargetState.getIndexedAttestation(attestation)
-    )
-  ) {
+  // verifySignature = false, verified in batch above
+  if (!phase0.fast.isValidIndexedAttestation(attestationTargetState, indexedAttestation, false)) {
     throw new AttestationError({
-      code: AttestationErrorCode.INVALID_SIGNATURE,
+      code: AttestationErrorCode.INVALID_INDEXED_ATTESTATION,
       job: attestationJob,
     });
   }

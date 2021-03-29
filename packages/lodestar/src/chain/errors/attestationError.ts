@@ -22,10 +22,6 @@ export enum AttestationErrorCode {
    */
   EMPTY_AGGREGATION_BITFIELD = "ATTESTATION_ERROR_EMPTY_AGGREGATION_BITFIELD",
   /**
-   * The `selection_proof` on the aggregate attestation does not elect it as an aggregator.
-   */
-  INVALID_SELECTION_PROOF = "ATTESTATION_ERROR_INVALID_SELECTION_PROOF",
-  /**
    * The `selection_proof` on the aggregate attestation selects it as a validator,
    * however the aggregator index is not in the committee for that attestation.
    */
@@ -131,6 +127,10 @@ export enum AttestationErrorCode {
    * Invalid aggregator.
    */
   INVALID_AGGREGATOR = "ATTESTATION_ERROR_INVALID_AGGREGATOR",
+  /**
+   * Invalid attestation indexes: not sorted or unique
+   */
+  INVALID_INDEXED_ATTESTATION = "ATTESTATION_ERROR_INVALID_INDEXED_ATTESTATION",
 }
 
 export type AttestationErrorType =
@@ -138,7 +138,6 @@ export type AttestationErrorType =
   | {code: AttestationErrorCode.FUTURE_SLOT; attestationSlot: Slot; latestPermissibleSlot: Slot}
   | {code: AttestationErrorCode.PAST_SLOT; attestationSlot: Slot; earliestPermissibleSlot: Slot}
   | {code: AttestationErrorCode.EMPTY_AGGREGATION_BITFIELD}
-  | {code: AttestationErrorCode.INVALID_SELECTION_PROOF}
   | {code: AttestationErrorCode.AGGREGATOR_NOT_IN_COMMITTEE}
   | {code: AttestationErrorCode.AGGREGATOR_PUBKEY_UNKNOWN; aggregatorIndex: ValidatorIndex}
   | {code: AttestationErrorCode.ATTESTATION_ALREADY_KNOWN; root: Uint8Array}
@@ -164,7 +163,8 @@ export type AttestationErrorType =
   | {code: AttestationErrorCode.TARGET_BLOCK_NOT_AN_ANCESTOR_OF_LMD_BLOCK}
   | {code: AttestationErrorCode.COMMITTEE_INDEX_OUT_OF_RANGE; index: number}
   | {code: AttestationErrorCode.MISSING_ATTESTATION_TARGET_STATE; error: Error}
-  | {code: AttestationErrorCode.INVALID_AGGREGATOR};
+  | {code: AttestationErrorCode.INVALID_AGGREGATOR}
+  | {code: AttestationErrorCode.INVALID_INDEXED_ATTESTATION};
 
 type IJobObject = {
   job: IAttestationJob;

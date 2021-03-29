@@ -2,7 +2,7 @@ import {phase0} from "@chainsafe/lodestar-types";
 import {computeEpochAtSlot, computeSigningRoot, getDomain, isSlashableValidator} from "../../../util";
 import {CachedBeaconState} from "../util";
 import {slashValidator} from "./slashValidator";
-import {ISignatureSet, SignatureSetType, verifySignatureSet} from "../signatureSets";
+import {ISignatureSet, SignatureSetType, verifySignatureSet} from "../../../util/signatureSets";
 
 export function processProposerSlashing(
   state: CachedBeaconState<phase0.BeaconState>,

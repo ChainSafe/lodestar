@@ -1,6 +1,6 @@
 import {readonlyValues} from "@chainsafe/ssz";
 import {phase0} from "@chainsafe/lodestar-types";
-import {ISignatureSet} from "./types";
+import {ISignatureSet} from "../../../util";
 import {getIndexedAttestationSignatureSet} from "../block/isValidIndexedAttestation";
 import {CachedBeaconState} from "../util";
 
