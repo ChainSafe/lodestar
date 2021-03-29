@@ -1,12 +1,13 @@
 import fs from "fs";
 import path from "path";
-import lockFile from "lockfile";
 import bls, {SecretKey} from "@chainsafe/bls";
 import {Keystore} from "@chainsafe/bls-keystore";
 import {phase0} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {YargsError, readValidatorPassphrase} from "../util";
 import {decodeEth1TxData} from "../depositContract/depositData";
+import {add0xPrefix} from "../util/format";
+import {getLockFile} from "../util/lockfile";
 import {
   VOTING_KEYSTORE_FILE,
   WITHDRAWAL_KEYSTORE_FILE,
@@ -15,7 +16,6 @@ import {
   ETH1_DEPOSIT_AMOUNT_FILE,
   ETH1_DEPOSIT_TX_HASH_FILE,
 } from "./paths";
-import {add0xPrefix} from "../util/format";
 
 export interface IValidatorDirOptions {
   force: boolean;
@@ -65,6 +65,7 @@ export class ValidatorDir {
 
     if (!fs.existsSync(this.dir)) throw new YargsError(`Validator directory ${this.dir} does not exist`);
 
+    const lockFile = getLockFile();
     try {
       lockFile.lockSync(this.lockfilePath);
     } catch (e) {
@@ -80,7 +81,7 @@ export class ValidatorDir {
    * Removes the lockfile associated with this validator dir
    */
   close(): void {
-    lockFile.unlockSync(this.lockfilePath);
+    getLockFile().unlockSync(this.lockfilePath);
   }
 
   /**
