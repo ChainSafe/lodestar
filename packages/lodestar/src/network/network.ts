@@ -2,7 +2,7 @@
  * @module network
  */
 
-import LibP2p from "libp2p";
+import LibP2p, {Connection} from "libp2p";
 import PeerId from "peer-id";
 import Multiaddr from "multiaddr";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
@@ -109,7 +109,7 @@ export class Network implements INetwork {
     return discv5Discovery?.discv5?.enr ?? undefined;
   }
 
-  getConnectionsByPeer(): Map<string, LibP2pConnection[]> {
+  getConnectionsByPeer(): Map<string, Connection[]> {
     return this.libp2p.connectionManager.connections;
   }
 

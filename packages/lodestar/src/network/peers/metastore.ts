@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/naming-convention */
+import MetadataBook from "libp2p/src/peer-store/metadata-book";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import PeerId from "peer-id";
 import {phase0} from "@chainsafe/lodestar-types";
@@ -49,6 +50,8 @@ export class Libp2pPeerMetadataStore implements IPeerMetadataStore {
     return {
       set: (peer: PeerId, value: T): void => {
         if (value != null) {
+          // TODO: fix upstream type (which also contains @ts-ignore)
+          // @ts-ignore
           this.metabook.set(peer, key, Buffer.from(type.serialize(value)));
         } else {
           this.metabook.deleteValue(peer, key);

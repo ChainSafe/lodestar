@@ -1,3 +1,4 @@
+import LibP2p, {Connection} from "libp2p";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {phase0} from "@chainsafe/lodestar-types";
 import {ILogger, LodestarError} from "@chainsafe/lodestar-utils";
@@ -352,7 +353,7 @@ export class PeerManager {
    * Registers a peer as connected. The `direction` parameter determines if the peer is being
    * dialed or connecting to us.
    */
-  private onLibp2pPeerConnect = (libp2pConnection: LibP2pConnection): void => {
+  private onLibp2pPeerConnect = (libp2pConnection: Connection): void => {
     const {direction, status} = libp2pConnection.stat;
     const peer = libp2pConnection.remotePeer;
 
@@ -383,7 +384,7 @@ export class PeerManager {
   /**
    * The libp2p Upgrader has ended a connection
    */
-  private onLibp2pPeerDisconnect = (libp2pConnection: LibP2pConnection): void => {
+  private onLibp2pPeerDisconnect = (libp2pConnection: Connection): void => {
     const {direction, status} = libp2pConnection.stat;
     const peer = libp2pConnection.remotePeer;
 

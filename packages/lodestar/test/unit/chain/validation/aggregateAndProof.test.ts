@@ -211,7 +211,7 @@ describe("gossip aggregate and proof test", function () {
         },
       },
     });
-    regen.getBlockSlotState.throws();
+    regen.getCheckpointState.throws();
     try {
       await validateGossipAggregateAndProof(config, chain, db, item, {
         attestation: item.message.aggregate,
@@ -220,11 +220,10 @@ describe("gossip aggregate and proof test", function () {
     } catch (error) {
       expect((error as AttestationError).type).to.have.property(
         "code",
-        AttestationErrorCode.MISSING_ATTESTATION_PRESTATE
+        AttestationErrorCode.MISSING_ATTESTATION_TARGET_STATE
       );
     }
-    expect(regen.getBlockSlotState.withArgs(item.message.aggregate.data.target.root, sinon.match.any).calledOnce).to.be
-      .true;
+    expect(regen.getCheckpointState.withArgs(item.message.aggregate.data.target).calledOnce).to.be.true;
   });
 
   it("should throw error - aggregator not in committee", async function () {
@@ -238,7 +237,7 @@ describe("gossip aggregate and proof test", function () {
     });
     const state = generateCachedState();
     sinon.stub(state.epochCtx, "getBeaconCommittee").returns([]);
-    regen.getBlockSlotState.resolves(state);
+    regen.getCheckpointState.resolves(state);
     try {
       await validateGossipAggregateAndProof(config, chain, db, item, {
         attestation: item.message.aggregate,
@@ -269,7 +268,7 @@ describe("gossip aggregate and proof test", function () {
     });
     const state = generateCachedState();
     sinon.stub(state.epochCtx, "getBeaconCommittee").returns([item.message.aggregatorIndex]);
-    regen.getBlockSlotState.resolves(state);
+    regen.getCheckpointState.resolves(state);
     isAggregatorStub.returns(false);
     try {
       await validateGossipAggregateAndProof(config, chain, db, item, {
@@ -302,7 +301,7 @@ describe("gossip aggregate and proof test", function () {
     const privateKey = bls.SecretKey.fromBytes(bigIntToBytes(BigInt(1), 32));
     state.index2pubkey[item.message.aggregatorIndex] = privateKey.toPublicKey();
     sinon.stub(state.epochCtx, "getBeaconCommittee").returns([item.message.aggregatorIndex]);
-    regen.getBlockSlotState.resolves(state);
+    regen.getCheckpointState.resolves(state);
 
     await expectRejectedWithLodestarError(
       validateGossipAggregateAndProof(config, chain, db, item, {
@@ -333,7 +332,7 @@ describe("gossip aggregate and proof test", function () {
     const privateKey = bls.SecretKey.fromBytes(bigIntToBytes(BigInt(1), 32));
     state.index2pubkey[item.message.aggregatorIndex] = privateKey.toPublicKey();
     sinon.stub(state.epochCtx, "getBeaconCommittee").returns([item.message.aggregatorIndex]);
-    regen.getBlockSlotState.resolves(state);
+    regen.getCheckpointState.resolves(state);
 
     await expectRejectedWithLodestarError(
       validateGossipAggregateAndProof(config, chain, db, item, {
@@ -364,7 +363,7 @@ describe("gossip aggregate and proof test", function () {
     const privateKey = bls.SecretKey.fromBytes(bigIntToBytes(BigInt(1), 32));
     state.index2pubkey[item.message.aggregatorIndex] = privateKey.toPublicKey();
     sinon.stub(state.epochCtx, "getBeaconCommittee").returns([item.message.aggregatorIndex]);
-    regen.getBlockSlotState.resolves(state);
+    regen.getCheckpointState.resolves(state);
 
     await expectRejectedWithLodestarError(
       validateGossipAggregateAndProof(config, chain, db, item, {
@@ -395,7 +394,7 @@ describe("gossip aggregate and proof test", function () {
     const privateKey = bls.SecretKey.fromKeygen();
     state.index2pubkey[item.message.aggregatorIndex] = privateKey.toPublicKey();
     sinon.stub(state.epochCtx, "getBeaconCommittee").returns([item.message.aggregatorIndex]);
-    regen.getBlockSlotState.resolves(state);
+    regen.getCheckpointState.resolves(state);
 
     expect(
       await validateGossipAggregateAndProof(config, chain, db, item, {

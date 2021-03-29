@@ -1,10 +1,11 @@
+import {Connection} from "libp2p";
 import {PeerStatus, PeerState} from "../../../network";
 import {NodePeer} from "../../types";
 
 /**
  * Format a list of connections from libp2p connections manager into the API's format NodePeer
  */
-export function formatNodePeer(peerIdStr: string, connections: LibP2pConnection[]): NodePeer {
+export function formatNodePeer(peerIdStr: string, connections: Connection[]): NodePeer {
   const conn = getRevelantConnection(connections);
 
   return {
@@ -23,8 +24,8 @@ export function formatNodePeer(peerIdStr: string, connections: LibP2pConnection[
  * - Otherwise, the first closing connection
  * - Otherwise, the first closed connection
  */
-function getRevelantConnection(connections: LibP2pConnection[]): LibP2pConnection | null {
-  const byStatus = new Map<PeerStatus, LibP2pConnection>();
+function getRevelantConnection(connections: Connection[]): Connection | null {
+  const byStatus = new Map<PeerStatus, Connection>();
   for (const conn of connections) {
     if (conn.stat.status === "open") return conn;
     if (!byStatus.has(conn.stat.status)) byStatus.set(conn.stat.status, conn);

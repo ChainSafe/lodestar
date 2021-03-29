@@ -22,7 +22,7 @@ import {IApiOptions} from "../../options";
 import {ApiError} from "../errors/api";
 import {ApiNamespace, IApiModules} from "../interface";
 import {checkSyncStatus} from "../utils";
-import {BeaconCommitteeSubscription, IValidatorApi} from "./interface";
+import {IValidatorApi} from "./interface";
 
 /**
  * Server implementation for handling validator duties.
@@ -180,7 +180,7 @@ export class ValidatorApi implements IValidatorApi {
     );
   }
 
-  async prepareBeaconCommitteeSubnet(subscriptions: BeaconCommitteeSubscription[]): Promise<void> {
+  async prepareBeaconCommitteeSubnet(subscriptions: phase0.BeaconCommitteeSubscription[]): Promise<void> {
     await checkSyncStatus(this.config, this.sync);
 
     // Determine if the validator is an aggregator. If so, we subscribe to the subnet and

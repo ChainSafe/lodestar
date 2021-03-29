@@ -85,7 +85,7 @@
     "libp2p-tcp": "^0.15.3",
     "multiaddr": "^8.1.2",
     "peer-id": "^0.14.3",
-    "prom-client": "^11.5.3",
+    "prom-client": "^13.1.0",
     "prometheus-gc-stats": "^0.6.3",
     "snappyjs": "^0.6.0",
     "stream-to-it": "^0.2.0",
@@ -106,7 +106,6 @@
     "@types/varint": "^5.0.0",
     "benchmark": "^2.1.4",
     "eventsource": "^1.0.7",
-    "libp2p-ts": "https://github.com/ChainSafe/libp2p-ts.git",
     "rewiremock": "^3.14.3",
     "rimraf": "^3.0.2",
     "tmp": "^0.2.1"

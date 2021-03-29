@@ -10,13 +10,9 @@ import {IBlockJob} from "./interface";
 import {ChainEvent, ChainEventEmitter, IChainEvents} from "./emitter";
 import {BeaconChain} from "./chain";
 
-interface IEventMap<Events, Event extends keyof Events = keyof Events, Callback extends Events[Event] = Events[Event]>
-  extends Map<Event, Callback> {
-  set<Event extends keyof Events>(key: Event, value: Events[Event]): this;
-}
-
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type ListenerType<T> = [T] extends [(...args: infer U) => any] ? U : [T] extends [void] ? [] : [T];
+type AnyCallback = () => Promise<void>;
 
 /**
  * Returns a function that runs an async handler function with input args,
@@ -55,48 +51,40 @@ function wrapHandler<
  * Once a chain event emitter is completed, the same event, with the same args, is emitted on `chain.emitter`, for consumption by external parties.
  */
 export function handleChainEvents(this: BeaconChain, signal: AbortSignal): void {
-  const handlers: IEventMap<IChainEvents> = new Map();
+  const handlersObj: {
+    [K in keyof IChainEvents]: IChainEvents[K];
+  } = {
+    [ChainEvent.attestation]: onAttestation,
+    [ChainEvent.block]: onBlock,
+    [ChainEvent.checkpoint]: onCheckpoint,
+    [ChainEvent.clockEpoch]: onClockEpoch,
+    [ChainEvent.clockSlot]: onClockSlot,
+    [ChainEvent.errorAttestation]: onErrorAttestation,
+    [ChainEvent.errorBlock]: onErrorBlock,
+    [ChainEvent.finalized]: onFinalized,
+    [ChainEvent.forkChoiceFinalized]: onForkChoiceFinalized,
+    [ChainEvent.forkChoiceHead]: onForkChoiceHead,
+    [ChainEvent.forkChoiceJustified]: onForkChoiceJustified,
+    [ChainEvent.forkChoiceReorg]: onForkChoiceReorg,
+    [ChainEvent.forkVersion]: onForkVersion,
+    [ChainEvent.justified]: onJustified,
+  };
+
   const emitter = this.emitter;
   const logger = this.logger;
-  handlers.set(ChainEvent.clockSlot, wrapHandler(ChainEvent.clockSlot, emitter, logger, onClockSlot.bind(this)));
-  handlers.set(ChainEvent.forkVersion, wrapHandler(ChainEvent.forkVersion, emitter, logger, onForkVersion.bind(this)));
-  handlers.set(ChainEvent.checkpoint, wrapHandler(ChainEvent.checkpoint, emitter, logger, onCheckpoint.bind(this)));
-  handlers.set(ChainEvent.justified, wrapHandler(ChainEvent.justified, emitter, logger, onJustified.bind(this)));
-  handlers.set(ChainEvent.finalized, wrapHandler(ChainEvent.finalized, emitter, logger, onFinalized.bind(this)));
-  handlers.set(
-    ChainEvent.forkChoiceJustified,
-    wrapHandler(ChainEvent.forkChoiceJustified, emitter, logger, onForkChoiceJustified.bind(this))
-  );
-  handlers.set(
-    ChainEvent.forkChoiceFinalized,
-    wrapHandler(ChainEvent.forkChoiceFinalized, emitter, logger, onForkChoiceFinalized.bind(this))
-  );
-  handlers.set(
-    ChainEvent.forkChoiceHead,
-    wrapHandler(ChainEvent.forkChoiceHead, emitter, logger, onForkChoiceHead.bind(this))
-  );
-  handlers.set(
-    ChainEvent.forkChoiceReorg,
-    wrapHandler(ChainEvent.forkChoiceReorg, emitter, logger, onForkChoiceReorg.bind(this))
-  );
-  handlers.set(ChainEvent.attestation, wrapHandler(ChainEvent.attestation, emitter, logger, onAttestation.bind(this)));
-  handlers.set(ChainEvent.block, wrapHandler(ChainEvent.block, emitter, logger, onBlock.bind(this)));
-  handlers.set(
-    ChainEvent.errorAttestation,
-    wrapHandler(ChainEvent.errorAttestation, emitter, logger, onErrorAttestation.bind(this))
-  );
-  handlers.set(ChainEvent.errorBlock, wrapHandler(ChainEvent.errorBlock, emitter, logger, onErrorBlock.bind(this)));
+  const onAbort: (() => void)[] = [];
 
-  for (const [event, handler] of handlers.entries()) {
-    this.internalEmitter.on(event, handler);
+  for (const [eventStr, handler] of Object.entries(handlersObj)) {
+    const event = eventStr as ChainEvent;
+    const wrappedHandler = wrapHandler(event, emitter, logger, handler.bind(this) as AnyCallback) as AnyCallback;
+    this.internalEmitter.on(event, wrappedHandler);
+    onAbort.push(() => this.internalEmitter.off(event, wrappedHandler));
   }
 
   signal.addEventListener(
     "abort",
     () => {
-      for (const [event, handler] of handlers.entries()) {
-        this.internalEmitter.off(event, handler);
-      }
+      for (const fn of onAbort) fn();
     },
     {once: true}
   );
@@ -136,6 +124,10 @@ export async function onClockSlot(this: BeaconChain, slot: Slot): Promise<void> 
     pendingBlocks: this.pendingBlocks.getTotalPendingBlocks(),
     currentSlot: this.clock.currentSlot,
   });
+}
+
+export function onClockEpoch(): void {
+  //
 }
 
 export function onForkVersion(this: BeaconChain, version: Version): void {

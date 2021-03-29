@@ -47,16 +47,17 @@ export class BeaconPoolApi implements IBeaconPoolApi {
       attestation,
       validSignature: false,
     } as IAttestationJob;
-    let attestationPreState;
+    let attestationTargetState;
     try {
-      attestationPreState = await this.chain.regen.getCheckpointState(attestation.data.target);
+      attestationTargetState = await this.chain.regen.getCheckpointState(attestation.data.target);
     } catch (e) {
       throw new AttestationError({
-        code: AttestationErrorCode.MISSING_ATTESTATION_PRESTATE,
+        code: AttestationErrorCode.MISSING_ATTESTATION_TARGET_STATE,
+        error: e as Error,
         job: attestationJob,
       });
     }
-    const subnet = phase0.fast.computeSubnetForAttestation(this.config, attestationPreState.epochCtx, attestation);
+    const subnet = phase0.fast.computeSubnetForAttestation(this.config, attestationTargetState.epochCtx, attestation);
     await validateGossipAttestation(this.config, this.chain, this.db, attestationJob, subnet);
     await Promise.all([
       this.network.gossip.publishBeaconAttestation(attestation, subnet),

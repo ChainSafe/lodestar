@@ -1,3 +1,4 @@
+import {Connection} from "libp2p";
 import {EventEmitter} from "events";
 import sinon from "sinon";
 import {expect} from "chai";
@@ -109,7 +110,7 @@ describe("network / peers / PeerManager", function () {
   const libp2pConnectionOutboud = {
     stat: {direction: "outbound", status: "open"},
     remotePeer: peerId1,
-  } as LibP2pConnection;
+  } as Connection;
 
   it("Should emit peer connected event on relevant peer status", async function () {
     const {chain, libp2p, networkEventBus} = await mockModules();
