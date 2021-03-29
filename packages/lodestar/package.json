@@ -46,7 +46,7 @@
   },
   "dependencies": {
     "@chainsafe/bls": "5.1.0",
-    "@chainsafe/discv5": "^0.5.0",
+    "@chainsafe/discv5": "^0.5.1",
     "@chainsafe/lodestar-beacon-state-transition": "^0.18.0",
     "@chainsafe/lodestar-config": "^0.18.0",
     "@chainsafe/lodestar-db": "^0.18.0",
