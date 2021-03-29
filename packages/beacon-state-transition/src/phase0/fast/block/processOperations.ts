@@ -1,4 +1,4 @@
-import {List, readOnlyForEach} from "@chainsafe/ssz";
+import {List, readonlyValues} from "@chainsafe/ssz";
 import {phase0} from "@chainsafe/lodestar-types";
 
 import {CachedBeaconState} from "../util";
@@ -36,8 +36,8 @@ export function processOperations(
     [body.deposits, processDeposit],
     [body.voluntaryExits, processVoluntaryExit],
   ] as [List<Operation>, OperationFunction][]) {
-    readOnlyForEach(operations, (op) => {
+    for (const op of readonlyValues(operations)) {
       processOp(state, op, verifySignatures);
-    });
+    }
   }
 }

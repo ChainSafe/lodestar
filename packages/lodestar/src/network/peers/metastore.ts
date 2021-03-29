@@ -1,7 +1,8 @@
+/* eslint-disable @typescript-eslint/naming-convention */
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import PeerId from "peer-id";
 import {phase0} from "@chainsafe/lodestar-types";
-import {BasicType, ContainerType, Json} from "@chainsafe/ssz";
+import {BasicType, ContainerType} from "@chainsafe/ssz";
 import {ReqRespEncoding} from "../../constants";
 
 /**
@@ -37,7 +38,7 @@ export class Libp2pPeerMetadataStore implements IPeerMetadataStore {
   constructor(config: IBeaconConfig, metabook: MetadataBook) {
     this.config = config;
     this.metabook = metabook;
-    this.encoding = this.typedStore("encoding", new StringType());
+    this.encoding = this.typedStore("encoding", new StringType()) as PeerStoreBucket<ReqRespEncoding>;
     this.metadata = this.typedStore("metadata", this.config.types.phase0.Metadata);
     this.rpcScore = this.typedStore("score", this.config.types.Number64);
     this.rpcScoreLastUpdate = this.typedStore("score-last-update", this.config.types.Number64);
@@ -64,31 +65,37 @@ export class Libp2pPeerMetadataStore implements IPeerMetadataStore {
 /**
  * Dedicated string type only used here, so not worth to keep it in `lodestar-types`
  */
-class StringType<T extends string> extends BasicType<T> {
-  defaultValue(): T {
-    return "" as T;
-  }
-  assertValidValue(value: unknown): value is T {
-    throw new Error("not implemented");
-  }
-  fromJson(value: Json): T {
-    return value as T;
-  }
-  toJson(value: T): Json {
-    return value as Json;
-  }
+class StringType<T extends string = string> extends BasicType<T> {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  toBytes(value: T, output: Uint8Array, offset: number): number {
-    throw new Error("not implemented");
+  struct_getSerializedLength(data?: string): number {
+    throw new Error("unsupported ssz operation");
   }
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  fromBytes(data: Uint8Array, offset: number): T {
-    throw new Error("not implemented");
+
+  struct_convertToJson(value: T): string {
+    return value;
   }
+
+  struct_convertFromJson(data: string): T {
+    return data as T;
+  }
+
+  struct_assertValidValue(data: unknown): data is T {
+    throw new Error("unsupported ssz operation");
+  }
+
   serialize(value: T): Uint8Array {
     return Buffer.from(value);
   }
-  deserialize(data: Uint8Array): T {
+
+  struct_serializeToBytes(): number {
+    throw new Error("unsupported ssz type for serialization");
+  }
+
+  struct_deserializeFromBytes(data: Uint8Array): T {
     return (Buffer.from(data).toString() as unknown) as T;
+  }
+
+  struct_defaultValue(): T {
+    return "something" as T;
   }
 }

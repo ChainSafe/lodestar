@@ -1,4 +1,4 @@
-import {List, readOnlyForEach, readOnlyMap} from "@chainsafe/ssz";
+import {List, readonlyValues} from "@chainsafe/ssz";
 import {Epoch, ValidatorIndex, Gwei, phase0, allForks} from "@chainsafe/lodestar-types";
 import {intDiv} from "@chainsafe/lodestar-utils";
 
@@ -174,7 +174,7 @@ export function prepareEpochProcessState<T extends allForks.BeaconState>(state: 
     headFlag: number
   ): void => {
     const actualTargetBlockRoot = getBlockRootAtSlot(config, state, computeStartSlotAtEpoch(config, epoch));
-    readOnlyForEach(attestations, (att) => {
+    for (const att of readonlyValues(attestations)) {
       // Load all the attestation details from the state tree once, do not reload for each participant
       const aggregationBits = att.aggregationBits;
       const attData = att.data;
@@ -185,7 +185,7 @@ export function prepareEpochProcessState<T extends allForks.BeaconState>(state: 
       const attBeaconBlockRoot = attData.beaconBlockRoot;
       const attTarget = attData.target;
 
-      const attBits = readOnlyMap(aggregationBits, (b) => b);
+      const attBits = Array.from(readonlyValues(aggregationBits));
       const attVotedTargetRoot = rootType.equals(attTarget.root, actualTargetBlockRoot);
       const attVotedHeadRoot = rootType.equals(attBeaconBlockRoot, getBlockRootAtSlot(config, state, attSlot));
 
@@ -227,7 +227,7 @@ export function prepareEpochProcessState<T extends allForks.BeaconState>(state: 
           }
         }
       }
-    });
+    }
   };
   if (forkName === "phase0") {
     statusProcessEpoch(

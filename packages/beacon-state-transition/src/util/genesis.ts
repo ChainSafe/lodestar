@@ -43,7 +43,7 @@ export function getGenesisBeaconState(
   // Seed RANDAO with Eth1 entropy
   const randaoMixes = Array<Bytes32>(config.params.EPOCHS_PER_HISTORICAL_VECTOR).fill(genesisEth1Data.blockHash);
 
-  const state: phase0.BeaconState = config.types.phase0.BeaconState.tree.defaultValue();
+  const state: phase0.BeaconState = config.types.phase0.BeaconState.defaultTreeBacked();
   // MISC
   state.slot = GENESIS_SLOT;
   state.fork = {
@@ -132,7 +132,10 @@ export function applyDeposits(
   }
 
   // Process activations
-  state.validators.forEach((validator, index) => {
+  // validators are edited, so we're not iterating (read-only) through the validators
+  const validatorLength = state.validators.length;
+  for (let index = 0; index < validatorLength; index++) {
+    const validator = state.validators[index];
     const balance = state.balances[index];
     validator.effectiveBalance = bigIntMin(
       balance - (balance % config.params.EFFECTIVE_BALANCE_INCREMENT),
@@ -143,7 +146,7 @@ export function applyDeposits(
       validator.activationEligibilityEpoch = computeEpochAtSlot(config, GENESIS_SLOT);
       validator.activationEpoch = computeEpochAtSlot(config, GENESIS_SLOT);
     }
-  });
+  }
 
   // Set genesis validators root for domain separation and chain versioning
   state.genesisValidatorsRoot = config.types.phase0.BeaconState.fields.validators.hashTreeRoot(state.validators);

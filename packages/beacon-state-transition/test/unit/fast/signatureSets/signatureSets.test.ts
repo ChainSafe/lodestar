@@ -69,7 +69,7 @@ describe("signatureSets", () => {
 
     const state = createCachedBeaconState(
       config,
-      config.types.phase0.BeaconState.tree.createValue(generateState({validators}))
+      config.types.phase0.BeaconState.createTreeBackedFromStruct(generateState({validators}))
     );
 
     const signatureSets = phase0.fast.getAllBlockSignatureSets(state, signedBlock);

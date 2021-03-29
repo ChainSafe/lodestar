@@ -26,7 +26,7 @@ describe("LodestarForkChoice", function () {
         exitEpoch: FAR_FUTURE_EPOCH,
         withdrawableEpoch: FAR_FUTURE_EPOCH,
       }),
-      balances: [BigInt(0), BigInt(0), BigInt(0)] as List<Gwei>,
+      balances: Array.from({length: 3}, () => BigInt(0)) as List<Gwei>,
       // Jan 01 2020
       genesisTime: 1577836800,
     },

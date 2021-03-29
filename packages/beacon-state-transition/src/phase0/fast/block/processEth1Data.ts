@@ -1,5 +1,5 @@
-import {readOnlyMap} from "@chainsafe/ssz";
 import {phase0} from "@chainsafe/lodestar-types";
+import {readonlyValues} from "@chainsafe/ssz";
 import {CachedBeaconState} from "../util";
 
 export function processEth1Data(state: CachedBeaconState<phase0.BeaconState>, body: phase0.BeaconBlockBody): void {
@@ -30,7 +30,7 @@ export function getNewEth1Data(
   if (config.types.phase0.Eth1Data.equals(state.eth1Data, newEth1Data)) {
     return null; // Nothing to do if the state already has this as eth1data (happens a lot after majority vote is in)
   }
-  const sameVotesCount = readOnlyMap(state.eth1DataVotes, (v) => v).filter((e) =>
+  const sameVotesCount = Array.from(readonlyValues(state.eth1DataVotes)).filter((e) =>
     config.types.phase0.Eth1Data.equals(e, newEth1Data)
   ).length;
 

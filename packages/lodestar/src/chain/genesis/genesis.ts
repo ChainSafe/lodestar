@@ -73,7 +73,7 @@ export class GenesisBuilder implements IGenesisBuilder {
         config.types.phase0.Eth1Data.defaultValue(),
         getTemporaryBlockHeader(config, config.types.phase0.BeaconBlock.defaultValue())
       );
-      this.depositTree = config.types.phase0.DepositDataRootList.tree.defaultValue();
+      this.depositTree = config.types.phase0.DepositDataRootList.defaultTreeBacked();
       this.fromBlock = this.eth1Provider.deployBlock;
     }
   }
@@ -148,9 +148,7 @@ export class GenesisBuilder implements IGenesisBuilder {
         this.depositCache.add(depositEvent.index);
         this.depositTree.push(this.config.types.phase0.DepositData.hashTreeRoot(depositEvent.depositData));
         return {
-          proof: this.depositTree
-            .tree()
-            .getSingleProof(this.depositTree.type().tree.gindexOfProperty(depositEvent.index)),
+          proof: this.depositTree.tree.getSingleProof(this.depositTree.type.getPropertyGindex(depositEvent.index)),
           data: depositEvent.depositData,
         };
       });

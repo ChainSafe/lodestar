@@ -12,7 +12,7 @@ export function interopDeposits(
   depositDataRootList: TreeBacked<List<Root>>,
   validatorCount: number
 ): phase0.Deposit[] {
-  const tree = depositDataRootList.tree();
+  const tree = depositDataRootList.tree;
   return interopSecretKeys(validatorCount).map((secretKey, i) => {
     const pubkey = secretKey.toPublicKey().toBytes();
     // create DepositData
@@ -28,7 +28,7 @@ export function interopDeposits(
     // Add to merkle tree
     depositDataRootList.push(config.types.phase0.DepositData.hashTreeRoot(data));
     return {
-      proof: tree.getSingleProof(depositDataRootList.type().tree.gindexOfProperty(i)),
+      proof: tree.getSingleProof(depositDataRootList.type.getPropertyGindex(i)),
       data,
     };
   });

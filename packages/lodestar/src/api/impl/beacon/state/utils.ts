@@ -4,7 +4,7 @@ import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {Epoch, ValidatorIndex, Gwei, Slot} from "@chainsafe/lodestar-types";
-import {fromHexString, readOnlyMap} from "@chainsafe/ssz";
+import {fromHexString, readonlyValues} from "@chainsafe/ssz";
 import {IBeaconChain} from "../../../../chain";
 import {StateContextCache} from "../../../../chain/stateCache";
 import {IBeaconDb} from "../../../../db/api";
@@ -101,7 +101,7 @@ export function getEpochBeaconCommittees(
     }
   }
   if (!committees) {
-    const indicesBounded: [ValidatorIndex, Epoch, Epoch][] = readOnlyMap(state.validators, (v, i) => [
+    const indicesBounded: [ValidatorIndex, Epoch, Epoch][] = Array.from(readonlyValues(state.validators), (v, i) => [
       i,
       v.activationEpoch,
       v.exitEpoch,

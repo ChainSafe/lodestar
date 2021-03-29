@@ -7,7 +7,7 @@ import {computeStartSlotAtEpoch, computeSubnetForCommitteesAtSlot} from "@chains
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Bytes96, CommitteeIndex, Epoch, Root, phase0, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {assert, ILogger} from "@chainsafe/lodestar-utils";
-import {readOnlyForEach} from "@chainsafe/ssz";
+import {readonlyValues} from "@chainsafe/ssz";
 import {IAttestationJob, IBeaconChain} from "../../../chain";
 import {assembleAttestationData} from "../../../chain/factory/attestation";
 import {assembleBlock} from "../../../chain/factory/block";
@@ -131,11 +131,13 @@ export class ValidatorApi implements IValidatorApi {
       try {
         const signature = bls.Signature.fromBytes(attestation.signature.valueOf() as Uint8Array);
         signatures.push(signature);
-        readOnlyForEach(attestation.aggregationBits, (bit, index) => {
+        let index = 0;
+        for (const bit of readonlyValues(attestation.aggregationBits)) {
           if (bit) {
             aggregationBits[index] = true;
           }
-        });
+          index++;
+        }
       } catch (e) {
         this.logger.verbose("Invalid attestation signature", e);
       }

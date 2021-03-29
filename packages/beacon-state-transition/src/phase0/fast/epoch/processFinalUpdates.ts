@@ -1,5 +1,5 @@
 import {phase0} from "@chainsafe/lodestar-types";
-import {List, readOnlyMap} from "@chainsafe/ssz";
+import {List, readonlyValues} from "@chainsafe/ssz";
 import {bigIntMin, intDiv} from "@chainsafe/lodestar-utils";
 import {getRandaoMix} from "../../../util";
 import {IEpochProcess, CachedBeaconState} from "../util";
@@ -31,9 +31,7 @@ export function processFinalUpdates(state: CachedBeaconState<phase0.BeaconState>
 
   // update effective balances with hysteresis
   const balances =
-    process.balances && process.balances.length > 0
-      ? process.balances
-      : readOnlyMap(state.balances, (balance) => balance);
+    process.balances && process.balances.length > 0 ? process.balances : Array.from(readonlyValues(state.balances));
   for (let i = 0; i < process.statuses.length; i++) {
     const status = process.statuses[i];
     const balance = balances[i];

@@ -29,7 +29,7 @@ describe("CachedBeaconState", function () {
       });
     }
     const defaultState = generateState({validators: validators as List<phase0.Validator>});
-    state = config.types.phase0.BeaconState.tree.createValue(defaultState);
+    state = config.types.phase0.BeaconState.createTreeBackedFromStruct(defaultState);
   });
 
   beforeEach(() => {
