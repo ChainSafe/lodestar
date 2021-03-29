@@ -8,7 +8,7 @@ export async function storeRootIndex(
   slot: Slot,
   blockRoot: Root
 ): Promise<void> {
-  return db.put(getRootIndexKey(blockRoot), intToBytes(slot, 64, "be"));
+  return db.put(getRootIndexKey(blockRoot), intToBytes(slot, 8, "be"));
 }
 
 export async function storeParentRootIndex(
@@ -16,7 +16,7 @@ export async function storeParentRootIndex(
   slot: Slot,
   parentRoot: Root
 ): Promise<void> {
-  return db.put(getParentRootIndexKey(parentRoot), intToBytes(slot, 64, "be"));
+  return db.put(getParentRootIndexKey(parentRoot), intToBytes(slot, 8, "be"));
 }
 
 export async function deleteRootIndex(

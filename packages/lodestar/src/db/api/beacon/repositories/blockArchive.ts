@@ -131,11 +131,11 @@ export class BlockArchiveRepository extends Repository<Slot, phase0.SignedBeacon
   }
 
   private async storeRootIndex(slot: Slot, blockRoot: Root): Promise<void> {
-    return await this.db.put(this.getRootIndexKey(blockRoot), intToBytes(slot, 64, "be"));
+    return await this.db.put(this.getRootIndexKey(blockRoot), intToBytes(slot, 8, "be"));
   }
 
   private async storeParentRootIndex(slot: Slot, parentRoot: Root): Promise<void> {
-    return await this.db.put(this.getParentRootIndexKey(parentRoot), intToBytes(slot, 64, "be"));
+    return await this.db.put(this.getParentRootIndexKey(parentRoot), intToBytes(slot, 8, "be"));
   }
 
   private async deleteRootIndex(block: phase0.SignedBeaconBlock): Promise<void> {
