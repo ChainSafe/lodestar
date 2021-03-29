@@ -4,7 +4,7 @@ import {ContainerType} from "@chainsafe/ssz";
 
 import {IBeaconParams} from "./interface";
 import {Phase0Params} from "./phase0";
-import {LightclientParams} from "./lightclient";
+import {LightclientParams} from "./altair";
 import {Phase1Params} from "./phase1";
 
 export const BeaconParams = new ContainerType<IBeaconParams>({

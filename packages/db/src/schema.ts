@@ -49,8 +49,8 @@ export enum Bucket {
 
   index_stateArchiveRootIndex = 26, // State Root -> slot
 
-  lightclient_block = 27, // Root -> lightclient.SignedBeaconBlock
-  lightclient_blockArchive = 28, // Slot -> lightclient.SignedBeaconBlock
+  altair_block = 27, // Root -> altair.SignedBeaconBlock
+  altair_blockArchive = 28, // Slot -> altair.SignedBeaconBlock
 }
 
 export enum Key {

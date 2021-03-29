@@ -8,7 +8,7 @@ import {
   Version,
 } from "@chainsafe/lodestar-types";
 
-export type IForkName = "phase0" | "lightclient" | "phase1";
+export type IForkName = "phase0" | "altair" | "phase1";
 
 export interface IForkInfo {
   name: IForkName;

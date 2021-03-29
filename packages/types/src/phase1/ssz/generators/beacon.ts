@@ -5,12 +5,12 @@ import {Phase1Generator} from "./interface";
 
 export const BeaconBlockBody: Phase1Generator<ContainerType<phase1.BeaconBlockBody>> = (
   params,
-  lightclientTypes,
+  altairTypes,
   phase1Types
 ) => {
   return new ContainerType({
     fields: {
-      ...lightclientTypes.BeaconBlockBody.fields,
+      ...altairTypes.BeaconBlockBody.fields,
       //override old types
       attestations: new ListType({
         elementType: phase1Types.Attestation,
@@ -46,19 +46,19 @@ export const BeaconBlockBody: Phase1Generator<ContainerType<phase1.BeaconBlockBo
         length: params.MAX_SHARDS,
       }),
       lightClientBits: new BitVectorType({length: params.LIGHT_CLIENT_COMMITTEE_SIZE}),
-      lightClientSignature: lightclientTypes.BLSSignature,
+      lightClientSignature: altairTypes.BLSSignature,
     },
   });
 };
 
 export const BeaconBlock: Phase1Generator<ContainerType<phase1.BeaconBlock>> = (
   params,
-  lightclientTypes,
+  altairTypes,
   phase1Types
 ) => {
   return new ContainerType({
     fields: {
-      ...lightclientTypes.BeaconBlock.fields,
+      ...altairTypes.BeaconBlock.fields,
       body: phase1Types.BeaconBlockBody,
     },
   });
@@ -66,12 +66,12 @@ export const BeaconBlock: Phase1Generator<ContainerType<phase1.BeaconBlock>> = (
 
 export const SignedBeaconBlock: Phase1Generator<ContainerType<phase1.SignedBeaconBlock>> = (
   params,
-  lightclientTypes,
+  altairTypes,
   phase1Types
 ) => {
   return new ContainerType({
     fields: {
-      ...lightclientTypes.SignedBeaconBlock.fields,
+      ...altairTypes.SignedBeaconBlock.fields,
       message: phase1Types.BeaconBlock,
     },
   });
@@ -79,12 +79,12 @@ export const SignedBeaconBlock: Phase1Generator<ContainerType<phase1.SignedBeaco
 
 export const BeaconState: Phase1Generator<ContainerType<phase1.BeaconState>> = (
   params,
-  lightclientTypes,
+  altairTypes,
   phase1Types
 ) => {
   return new ContainerType({
     fields: {
-      ...lightclientTypes.BeaconState.fields,
+      ...altairTypes.BeaconState.fields,
       validator: phase1Types.Validator,
       previousEpochAttestations: new ListType({
         elementType: phase1Types.PendingAttestation,
@@ -108,7 +108,7 @@ export const BeaconState: Phase1Generator<ContainerType<phase1.BeaconState>> = (
       nextLightCommittee: phase1Types.CompactCommittee,
       exposedDerivedSecrets: new VectorType({
         elementType: new ListType({
-          elementType: lightclientTypes.ValidatorIndex,
+          elementType: altairTypes.ValidatorIndex,
           limit: params.MAX_EARLY_DERIVED_SECRET_REVEALS * params.SLOTS_PER_EPOCH,
         }),
         length: params.EARLY_DERIVED_SECRET_PENALTY_MAX_FUTURE_EPOCHS,
@@ -117,7 +117,7 @@ export const BeaconState: Phase1Generator<ContainerType<phase1.BeaconState>> = (
         elementType: phase1Types.CustodyChunkChallengeRecord,
         limit: params.MAX_CUSTODY_CHUNK_CHALLENGE_RECORDS,
       }),
-      custodyChunkChallengeIndex: lightclientTypes.Uint64,
+      custodyChunkChallengeIndex: altairTypes.Uint64,
     },
   });
 };

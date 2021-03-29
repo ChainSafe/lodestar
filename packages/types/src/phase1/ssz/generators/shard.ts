@@ -4,18 +4,18 @@ import {Phase1Generator} from "./interface";
 
 export const ShardBlock: Phase1Generator<ContainerType<phase1.ShardBlock>> = (
   params,
-  lightclientTypes,
+  altairTypes,
   phase1Types
 ) => {
   return new ContainerType({
     fields: {
-      shardParentRoot: lightclientTypes.Root,
-      beaconParentRoot: lightclientTypes.Root,
-      slot: lightclientTypes.Slot,
+      shardParentRoot: altairTypes.Root,
+      beaconParentRoot: altairTypes.Root,
+      slot: altairTypes.Slot,
       shard: phase1Types.Shard,
-      proposerIndex: lightclientTypes.ValidatorIndex,
+      proposerIndex: altairTypes.ValidatorIndex,
       body: new ListType({
-        elementType: lightclientTypes.Uint8,
+        elementType: altairTypes.Uint8,
         limit: params.MAX_SHARD_BLOCK_SIZE,
       }),
     },
@@ -24,65 +24,65 @@ export const ShardBlock: Phase1Generator<ContainerType<phase1.ShardBlock>> = (
 
 export const SignedShardBlock: Phase1Generator<ContainerType<phase1.SignedShardBlock>> = (
   params,
-  lightclientTypes,
+  altairTypes,
   phase1Types
 ) => {
   return new ContainerType({
     fields: {
       message: phase1Types.ShardBlock,
-      signature: lightclientTypes.BLSSignature,
+      signature: altairTypes.BLSSignature,
     },
   });
 };
 
 export const ShardBlockHeader: Phase1Generator<ContainerType<phase1.ShardBlockHeader>> = (
   params,
-  lightclientTypes,
+  altairTypes,
   phase1Types
 ) => {
   return new ContainerType({
     fields: {
-      shardParentRoot: lightclientTypes.Root,
-      beaconParentRoot: lightclientTypes.Root,
-      slot: lightclientTypes.Slot,
+      shardParentRoot: altairTypes.Root,
+      beaconParentRoot: altairTypes.Root,
+      slot: altairTypes.Slot,
       shard: phase1Types.Shard,
-      proposerIndex: lightclientTypes.ValidatorIndex,
-      bodyRoot: lightclientTypes.Root,
+      proposerIndex: altairTypes.ValidatorIndex,
+      bodyRoot: altairTypes.Root,
     },
   });
 };
 
-export const ShardState: Phase1Generator<ContainerType<phase1.ShardState>> = (params, lightclientTypes) => {
+export const ShardState: Phase1Generator<ContainerType<phase1.ShardState>> = (params, altairTypes) => {
   return new ContainerType({
     fields: {
-      slot: lightclientTypes.Slot,
-      gasprice: lightclientTypes.Gwei,
-      latestBlockRoot: lightclientTypes.Root,
+      slot: altairTypes.Slot,
+      gasprice: altairTypes.Gwei,
+      latestBlockRoot: altairTypes.Root,
     },
   });
 };
 
 export const ShardTransition: Phase1Generator<ContainerType<phase1.ShardTransition>> = (
   params,
-  lightclientTypes,
+  altairTypes,
   phase1Types
 ) => {
   return new ContainerType({
     fields: {
-      startSlot: lightclientTypes.Slot,
+      startSlot: altairTypes.Slot,
       shardBlockLengths: new ListType({
-        elementType: lightclientTypes.Uint64,
+        elementType: altairTypes.Uint64,
         limit: params.MAX_SHARD_BLOCKS_PER_ATTESTATION,
       }),
       shardDataRoots: new ListType({
-        elementType: lightclientTypes.Bytes32,
+        elementType: altairTypes.Bytes32,
         limit: params.MAX_SHARD_BLOCKS_PER_ATTESTATION,
       }),
       shardStates: new ListType({
         elementType: phase1Types.ShardState,
         limit: params.MAX_SHARD_BLOCKS_PER_ATTESTATION,
       }),
-      proposerSignatureAggregate: lightclientTypes.BLSSignature,
+      proposerSignatureAggregate: altairTypes.BLSSignature,
     },
   });
 };

@@ -29,12 +29,12 @@ export class BlockRepository {
         ),
       ],
       [
-        "lightclient",
+        "altair",
         new GenericBlockRepository(
           config,
           db,
-          Bucket.lightclient_block,
-          config.types.lightclient.SignedBeaconBlock as ContainerType<allForks.SignedBeaconBlock>
+          Bucket.altair_block,
+          config.types.altair.SignedBeaconBlock as ContainerType<allForks.SignedBeaconBlock>
         ),
       ],
     ]);

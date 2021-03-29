@@ -31,12 +31,12 @@ export class BlockArchiveRepository {
         ),
       ],
       [
-        "lightclient",
+        "altair",
         new GenericBlockArchiveRepository(
           config,
           db,
-          Bucket.lightclient_blockArchive,
-          config.types.lightclient.SignedBeaconBlock as ContainerType<allForks.SignedBeaconBlock>
+          Bucket.altair_blockArchive,
+          config.types.altair.SignedBeaconBlock as ContainerType<allForks.SignedBeaconBlock>
         ),
       ],
     ]);

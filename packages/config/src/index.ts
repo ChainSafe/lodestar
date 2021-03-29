@@ -24,8 +24,8 @@ export function createIBeaconConfig(params: IBeaconParams): IBeaconConfig {
           slot: GENESIS_SLOT,
           version: params.GENESIS_FORK_VERSION,
         },
-        lightclient: {
-          name: "lightclient",
+        altair: {
+          name: "altair",
           slot: params.LIGHTCLIENT_PATCH_FORK_SLOT,
           version: params.LIGHTCLIENT_PATCH_FORK_VERSION,
         },
@@ -40,7 +40,7 @@ export function createIBeaconConfig(params: IBeaconParams): IBeaconConfig {
       if (slot < params.LIGHTCLIENT_PATCH_FORK_SLOT) {
         return "phase0";
       } else if (slot < params.PHASE_1_FORK_SLOT) {
-        return "lightclient";
+        return "altair";
       } else {
         return "phase1";
       }
