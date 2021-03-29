@@ -12,6 +12,7 @@ import {
   GossipValidationError,
   encodeMessageData,
   GossipEncoding,
+  TopicValidatorFnMap,
 } from "../../../../src/network/gossip";
 
 import {generateEmptySignedBlock} from "../../../utils/block";
@@ -19,7 +20,7 @@ import {createNode} from "../../../utils/network";
 import {testLogger} from "../../../utils/logger";
 
 describe("gossipsub", function () {
-  let validatorFns: Map<string, TopicValidatorFn>;
+  let validatorFns: TopicValidatorFnMap;
   let gossipSub: Eth2Gossipsub;
   let message: InMessage;
   let topicString: string;

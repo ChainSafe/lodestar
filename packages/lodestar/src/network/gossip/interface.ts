@@ -36,49 +36,39 @@ export interface IGossipTopic {
   encoding?: GossipEncoding;
 }
 
-export interface IBeaconBlockTopic extends IGossipTopic {
-  type: GossipType.beacon_block;
-}
-
-export interface IBeaconAggregateAndProofTopic extends IGossipTopic {
-  type: GossipType.beacon_aggregate_and_proof;
-}
-
-export interface IBeaconAttestationTopic extends IGossipTopic {
-  type: GossipType.beacon_attestation;
-  subnet: number;
-}
-
-export interface IVoluntaryExitTopic extends IGossipTopic {
-  type: GossipType.voluntary_exit;
-}
-
-export interface IProposerSlashingTopic extends IGossipTopic {
-  type: GossipType.proposer_slashing;
-}
-
-export interface IAttesterSlashingTopic extends IGossipTopic {
-  type: GossipType.attester_slashing;
-}
+export type GossipTopicMap = {
+  [GossipType.beacon_block]: IGossipTopic & {type: GossipType.beacon_block};
+  [GossipType.beacon_aggregate_and_proof]: IGossipTopic & {type: GossipType.beacon_aggregate_and_proof};
+  [GossipType.beacon_attestation]: IGossipTopic & {type: GossipType.beacon_attestation; subnet: number};
+  [GossipType.voluntary_exit]: IGossipTopic & {type: GossipType.voluntary_exit};
+  [GossipType.proposer_slashing]: IGossipTopic & {type: GossipType.proposer_slashing};
+  [GossipType.attester_slashing]: IGossipTopic & {type: GossipType.attester_slashing};
+};
 
 /**
  * Gossip topic split into a struct
  */
-export type GossipTopic =
-  | IBeaconBlockTopic
-  | IBeaconAggregateAndProofTopic
-  | IBeaconAttestationTopic
-  | IVoluntaryExitTopic
-  | IProposerSlashingTopic
-  | IAttesterSlashingTopic;
+export type GossipTopic = GossipTopicMap[keyof GossipTopicMap];
 
-export type GossipFn =
-  | ((signedBlock: phase0.SignedBeaconBlock) => Promise<void> | void)
-  | ((attestation: phase0.SignedAggregateAndProof) => Promise<void> | void)
-  | ((attestation: phase0.Attestation) => Promise<void> | void)
-  | ((voluntaryExit: phase0.SignedVoluntaryExit) => Promise<void> | void)
-  | ((proposerSlashing: phase0.ProposerSlashing) => Promise<void> | void)
-  | ((attesterSlashing: phase0.AttesterSlashing) => Promise<void> | void);
+export type GossipTypeMap = {
+  [GossipType.beacon_block]: phase0.SignedBeaconBlock;
+  [GossipType.beacon_aggregate_and_proof]: phase0.SignedAggregateAndProof;
+  [GossipType.beacon_attestation]: phase0.Attestation;
+  [GossipType.voluntary_exit]: phase0.SignedVoluntaryExit;
+  [GossipType.proposer_slashing]: phase0.ProposerSlashing;
+  [GossipType.attester_slashing]: phase0.AttesterSlashing;
+};
+
+export type GossipFnByType = {
+  [GossipType.beacon_block]: (signedBlock: phase0.SignedBeaconBlock) => Promise<void> | void;
+  [GossipType.beacon_aggregate_and_proof]: (aggregateAndProof: phase0.SignedAggregateAndProof) => Promise<void> | void;
+  [GossipType.beacon_attestation]: (attestation: phase0.Attestation) => Promise<void> | void;
+  [GossipType.voluntary_exit]: (voluntaryExit: phase0.SignedVoluntaryExit) => Promise<void> | void;
+  [GossipType.proposer_slashing]: (proposerSlashing: phase0.ProposerSlashing) => Promise<void> | void;
+  [GossipType.attester_slashing]: (attesterSlashing: phase0.AttesterSlashing) => Promise<void> | void;
+};
+
+export type GossipFn = GossipFnByType[keyof GossipFnByType];
 
 export interface IGossipEvents {
   [topic: string]: GossipFn;
@@ -123,22 +113,16 @@ export interface IObjectValidatorModules {
 }
 
 /**
- * Intermediate type for gossip validation functions.
- *
- * Gossip validation functions defined with this signature are easier to unit test
- */
-export type ObjectValidatorFn = (
-  modules: IObjectValidatorModules,
-  topic: GossipTopic,
-  object: GossipObject
-) => Promise<void>;
-
-/**
  * Top-level type for gossip validation functions
  *
  * js-libp2p-gossipsub expects validation functions that look like this
  */
 export type TopicValidatorFn = (topic: string, message: InMessage) => Promise<void>;
+
+/**
+ * Map of TopicValidatorFn by topic string. What js-libp2p-gossipsub requires
+ */
+export type TopicValidatorFnMap = Map<string, TopicValidatorFn>;
 
 /**
  * Overridden `InMessage`
