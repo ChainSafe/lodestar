@@ -26,7 +26,7 @@ describe.skip("process epoch - balance updates", function () {
     const state = generateState();
     getTotalActiveBalanceStub.returns(BigInt(100));
     state.validators = generateValidators(10);
-    state.validators.forEach((value, index) => {
+    for (let index = 0; index < state.validators.length; index++) {
       state.validators[index].effectiveBalance = BigInt(index);
       const result = getBaseReward(config, state, index);
       const actual =
@@ -34,6 +34,6 @@ describe.skip("process epoch - balance updates", function () {
         bigIntSqrt(BigInt(100)) /
         BigInt(BASE_REWARDS_PER_EPOCH);
       expect(result === actual).to.be.true;
-    });
+    }
   });
 });

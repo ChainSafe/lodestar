@@ -1,5 +1,5 @@
 import {phase0} from "@chainsafe/lodestar-types";
-import {readOnlyMap, List} from "@chainsafe/ssz";
+import {List, readonlyValues} from "@chainsafe/ssz";
 
 import {GENESIS_EPOCH} from "../../../constants";
 import {CachedBeaconState, IEpochProcess} from "../util";
@@ -11,7 +11,7 @@ export function processRewardsAndPenalties(state: CachedBeaconState<phase0.Beaco
     return;
   }
   const [rewards, penalties] = getAttestationDeltas(state, process);
-  const newBalances = readOnlyMap(state.balances, (balance, i) => {
+  const newBalances = Array.from(readonlyValues(state.balances), (balance, i) => {
     const newBalance = balance + BigInt(rewards[i] - penalties[i]);
     return newBalance < 0 ? BigInt(0) : newBalance;
   });

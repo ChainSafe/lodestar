@@ -1,15 +1,20 @@
 import {BasicType} from "@chainsafe/ssz";
 
 export class StringType<T extends string = string> extends BasicType<T> {
-  toJson(value: T): string {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  struct_getSerializedLength(data?: string): number {
+    throw new Error("unsupported ssz operation");
+  }
+
+  struct_convertToJson(value: T): string {
     return value;
   }
 
-  fromJson(data: string): T {
+  struct_convertFromJson(data: string): T {
     return data as T;
   }
 
-  assertValidValue(data: unknown): data is T {
+  struct_assertValidValue(data: unknown): data is T {
     throw new Error("unsupported ssz operation");
   }
 
@@ -17,15 +22,15 @@ export class StringType<T extends string = string> extends BasicType<T> {
     throw new Error("unsupported ssz type for serialization");
   }
 
-  toBytes(): number {
+  struct_serializeToBytes(): number {
     throw new Error("unsupported ssz type for serialization");
   }
 
-  fromBytes(): T {
+  struct_deserializeFromBytes(): T {
     throw new Error("unsupported ssz operation");
   }
 
-  defaultValue(): T {
+  struct_defaultValue(): T {
     return "something" as T;
   }
 }

@@ -1175,10 +1175,10 @@
     rlp "^2.2.6"
     strict-event-emitter-types "^2.0.0"
 
-"@chainsafe/persistent-merkle-tree@^0.2.3":
-  version "0.2.3"
-  resolved "https://registry.yarnpkg.com/@chainsafe/persistent-merkle-tree/-/persistent-merkle-tree-0.2.3.tgz#ab94436d620ec80f849e6c3362f3e94cb4408e11"
-  integrity sha512-Cgqh1taB9ItxFHhcK4xg+Sna+qHTyey79BI1869scJS0VlA6xL0Vga2FcYGYW2t4FZ4o54zjCwGGS/0ZZxD4Lw==
+"@chainsafe/persistent-merkle-tree@^0.3.0":
+  version "0.3.0"
+  resolved "https://registry.yarnpkg.com/@chainsafe/persistent-merkle-tree/-/persistent-merkle-tree-0.3.0.tgz#a289a0e58dc07f37580c1d3ab70de9a0ebdb0bc8"
+  integrity sha512-iaWCSldEuoJ3wOUxQYAjgXz+4Ry7VvkI+h8LnOdSoci4l81cfmTk6nglEi8WLX7ER4RqvAO/SVPOPovLzoVc6A==
   dependencies:
     "@chainsafe/as-sha256" "^0.2.0"
 
@@ -1204,13 +1204,13 @@
     fast-crc32c "^1.0.1"
     snappy "6.3.4"
 
-"@chainsafe/ssz@^0.7.0":
-  version "0.7.0"
-  resolved "https://registry.yarnpkg.com/@chainsafe/ssz/-/ssz-0.7.0.tgz#f5eb76274bdb140cf337cef9099e3067eb3cb276"
-  integrity sha512-BOP5tvkRULXGi6UJsON2x27yln5oMP7OYq31wr1w35eyIynIM6O8GOWl55HuE3Ysz7Mmb9RC3i8zQhZ5tkpePQ==
+"@chainsafe/ssz@^0.8.0":
+  version "0.8.0"
+  resolved "https://registry.yarnpkg.com/@chainsafe/ssz/-/ssz-0.8.0.tgz#266b542aed82d19b7b85fc8b0c7ff660b462641f"
+  integrity sha512-XRExzFfe0tz3fa4h755IfH9ftotFmZAR3D+F3pgKiGhA4ZeOgG6kjfQbGZ6jTJ3lfD+JHx4By/gvUvgKkrdiUQ==
   dependencies:
     "@chainsafe/as-sha256" "^0.2.0"
-    "@chainsafe/persistent-merkle-tree" "^0.2.3"
+    "@chainsafe/persistent-merkle-tree" "^0.3.0"
     case "^1.6.3"
 
 "@dabh/diagnostics@^2.0.2":

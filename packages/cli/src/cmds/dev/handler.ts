@@ -60,7 +60,7 @@ export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
       config,
       db,
       logger,
-      config.types.phase0.BeaconState.tree.deserialize(
+      config.types.phase0.BeaconState.createTreeBackedFromBytes(
         await fs.promises.readFile(join(args.rootDir, args.genesisStateFile))
       )
     );

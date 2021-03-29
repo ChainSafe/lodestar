@@ -29,8 +29,6 @@ export function safeType(type: Type<any>): Type<any> {
       }
     }
     const newtype = Object.create(Object.getPrototypeOf(type), props);
-    newtype.structural._type = newtype;
-    newtype.tree._type = newtype;
     return newtype as Type<any>;
   }
 }

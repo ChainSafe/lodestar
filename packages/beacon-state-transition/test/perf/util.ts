@@ -84,7 +84,7 @@ export async function generatePerformanceState(): Promise<TreeBacked<phase0.Beac
       root: fromHexString("0x122b8ff579d0c8f8a8b66326bdfec3f685007d2842f01615a0768870961ccc17"),
     };
 
-    archivedState = config.types.phase0.BeaconState.tree.createValue(state);
+    archivedState = config.types.phase0.BeaconState.createTreeBackedFromStruct(state);
     logger.info("Loaded state", {
       slot: archivedState.slot,
       numValidators: archivedState.validators.length,
@@ -112,7 +112,7 @@ export async function generatePerformanceBlock(): Promise<TreeBacked<phase0.Sign
       "0x8a5d2673c48f22f6ed19462efec35645db490df29eed2f56321dbe4a89b2463b0c902095a7ab74a2dc5b7f67edb1a19507ea3d4361d5af9cb0a524945c91638dfd6568841486813a2c45142659d6d9403f5081febb123a7931edbc248b9d0025"
     );
     // eth1Data, graffiti, attestations
-    signedBlock = config.types.phase0.SignedBeaconBlock.tree.createValue(block);
+    signedBlock = config.types.phase0.SignedBeaconBlock.createTreeBackedFromStruct(block);
     logger.info("Loaded block", {slot: signedBlock.message.slot});
   }
   return signedBlock.clone();

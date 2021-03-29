@@ -13,7 +13,7 @@ export async function initDevState(
   validatorCount: number,
   genesisTime?: number
 ): Promise<TreeBacked<phase0.BeaconState>> {
-  const deposits = interopDeposits(config, config.types.phase0.DepositDataRootList.tree.defaultValue(), validatorCount);
+  const deposits = interopDeposits(config, config.types.phase0.DepositDataRootList.defaultTreeBacked(), validatorCount);
   await storeDeposits(config, db, deposits);
   const state = getInteropState(
     config,

@@ -22,7 +22,7 @@ export class PreGenesisState {
 
   async get(): Promise<TreeBacked<phase0.BeaconState> | null> {
     const value = await this.db.get(this.key);
-    return value ? this.type.tree.deserialize(value) : null;
+    return value ? this.type.createTreeBackedFromBytes(value) : null;
   }
 
   async delete(): Promise<void> {

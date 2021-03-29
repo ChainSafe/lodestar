@@ -1,4 +1,13 @@
-import {ContainerType, ITreeBacked, List, readOnlyMap, TreeBacked} from "@chainsafe/ssz";
+import {
+  CompositeListType,
+  CompositeValue,
+  ContainerType,
+  isCompositeType,
+  isTreeBacked,
+  ITreeBacked,
+  List,
+  TreeBacked,
+} from "@chainsafe/ssz";
 import {allForks} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Tree} from "@chainsafe/persistent-merkle-tree";
@@ -31,10 +40,10 @@ export function createCachedBeaconState<T extends allForks.BeaconState>(
   config: IBeaconConfig,
   state: TreeBacked<T>
 ): CachedBeaconState<T> {
-  const cachedValidators = MutableVector.from(readOnlyMap(state.validators, (v) => createFlat(v)));
+  const cachedValidators = MutableVector.from(Array.from(state.validators, (v) => createFlat(v)));
   const epochCtx = createEpochContext(config, state, cachedValidators);
   return new Proxy(
-    new BeaconStateContext(state, cachedValidators, epochCtx),
+    new BeaconStateContext(state.type as ContainerType<T>, state.tree, cachedValidators, epochCtx),
     (CachedBeaconStateProxyHandler as unknown) as ProxyHandler<BeaconStateContext<T>>
   ) as CachedBeaconState<T>;
 }
@@ -50,10 +59,15 @@ export class BeaconStateContext<T extends allForks.BeaconState> {
   // immutable and shared across BeaconStates for most of the validators
   protected _validatorCache: MutableVector<T["validators"][number]>;
 
-  constructor(state: TreeBacked<T>, validatorCache: MutableVector<T["validators"][number]>, epochCtx: EpochContext) {
+  constructor(
+    type: ContainerType<T>,
+    tree: Tree,
+    validatorCache: MutableVector<T["validators"][number]>,
+    epochCtx: EpochContext
+  ) {
     this.config = epochCtx.config;
-    this.type = state.type() as ContainerType<T>;
-    this.tree = state.tree();
+    this.type = type;
+    this.tree = tree;
     this.epochCtx = epochCtx;
     this._validatorCache = validatorCache;
   }
@@ -61,7 +75,8 @@ export class BeaconStateContext<T extends allForks.BeaconState> {
   get validators(): CachedValidatorList<T["validators"][number]> & T["validators"] {
     return (new Proxy(
       new CachedValidatorList(
-        (this.type.tree.getProperty(this.tree, "validators") as unknown) as TreeBacked<List<T["validators"][number]>>,
+        this.type.fields["validators"] as CompositeListType<List<T["validators"][number]>>,
+        this.type.tree_getProperty(this.tree, "validators") as Tree,
         this._validatorCache
       ),
       CachedValidatorListProxyHandler
@@ -69,10 +84,8 @@ export class BeaconStateContext<T extends allForks.BeaconState> {
   }
 
   clone(): CachedBeaconState<T> {
-    const state = this.type.tree.clone(this.tree);
-    const validators = this._validatorCache.clone();
     return new Proxy(
-      new BeaconStateContext(state, validators, this.epochCtx.copy()),
+      new BeaconStateContext(this.type, this.tree.clone(), this._validatorCache.clone(), this.epochCtx.copy()),
       (CachedBeaconStateProxyHandler as unknown) as ProxyHandler<BeaconStateContext<T>>
     ) as CachedBeaconState<T>;
   }
@@ -84,23 +97,43 @@ export const CachedBeaconStateProxyHandler: ProxyHandler<CachedBeaconState<allFo
     if (key === "validators") {
       return target.validators;
     } else if (target.type.fields[key]) {
-      return target.type.tree.getProperty(target.tree, key as keyof allForks.BeaconState);
+      const propType = target.type.fields[key];
+      const propValue = target.type.tree_getProperty(target.tree, key);
+      if (!isCompositeType(propType)) {
+        return propValue;
+      } else {
+        return propType.createTreeBacked(propValue as Tree);
+      }
     } else if (key in target.epochCtx) {
       return target.epochCtx[key as keyof EpochContext];
     } else if (key in target) {
       return target[key as keyof CachedBeaconState<allForks.BeaconState>];
-    } else if (key in target.type.tree) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-      return (target.type.tree as any)[key].bind(target.type.tree, target.tree);
     } else {
-      return undefined;
+      const treeBacked = target.type.createTreeBacked(target.tree);
+      if (key in treeBacked) {
+        return treeBacked[key as keyof TreeBacked<allForks.BeaconState>];
+      }
     }
+    return undefined;
   },
   set(target: CachedBeaconState<allForks.BeaconState>, key: string, value: unknown): boolean {
     if (key === "validators") {
       throw new Error("Cannot set validators");
     } else if (target.type.fields[key]) {
-      return target.type.tree.set(target.tree, key as keyof allForks.BeaconState, value);
+      const propType = target.type.fields[key];
+      if (!isCompositeType(propType)) {
+        return target.type.tree_setProperty(target.tree, key, value);
+      } else {
+        if (isTreeBacked(value)) {
+          return target.type.tree_setProperty(target.tree, key, value.tree);
+        } else {
+          return target.type.tree_setProperty(
+            target.tree,
+            key,
+            propType.struct_convertToTree((value as unknown) as CompositeValue)
+          );
+        }
+      }
     }
     return false;
   },

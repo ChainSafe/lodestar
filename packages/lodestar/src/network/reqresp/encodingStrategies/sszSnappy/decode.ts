@@ -51,8 +51,8 @@ async function readSszSnappyHeader(bufferedSource: BufferedSource, type: Request
     buffer.consume(varintBytes);
 
     // MUST validate: the length-prefix is within the expected size bounds derived from the payload SSZ type.
-    const minSize = type.minSize();
-    const maxSize = type.maxSize();
+    const minSize = type.getMinSerializedLength();
+    const maxSize = type.getMaxSerializedLength();
     if (sszDataLength < minSize) {
       throw new SszSnappyError({code: SszSnappyErrorCode.UNDER_SSZ_MIN_SIZE, minSize, sszDataLength});
     }
@@ -127,7 +127,9 @@ function deserializeSszBody<T extends RequestOrResponseBody>(
 ): T {
   try {
     if (options?.isSszTree) {
-      return (((type as unknown) as CompositeType<Record<string, unknown>>).tree.deserialize(bytes) as unknown) as T;
+      return (((type as unknown) as CompositeType<Record<string, unknown>>).createTreeBackedFromBytes(
+        bytes
+      ) as unknown) as T;
     } else {
       return type.deserialize(bytes) as T;
     }

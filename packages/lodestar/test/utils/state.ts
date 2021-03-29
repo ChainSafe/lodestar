@@ -77,7 +77,7 @@ export function generateState(opts: TestBeaconState = {}, config = minimalConfig
       root: ZERO_HASH,
     },
   };
-  const state = states.get(config) ?? config.types.phase0.BeaconState.tree.createValue(defaultState);
+  const state = states.get(config) ?? config.types.phase0.BeaconState.createTreeBackedFromStruct(defaultState);
   states.set(config, state);
   const resultState = state.clone();
   for (const key in opts) {

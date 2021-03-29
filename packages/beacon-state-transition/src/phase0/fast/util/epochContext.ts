@@ -1,4 +1,4 @@
-import {ByteVector, hash, toHexString, readOnlyMap, BitList, List} from "@chainsafe/ssz";
+import {ByteVector, hash, toHexString, BitList, List, readonlyValues} from "@chainsafe/ssz";
 import bls, {PublicKey} from "@chainsafe/bls";
 import {BLSSignature, CommitteeIndex, Epoch, Slot, ValidatorIndex, phase0, allForks} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
@@ -215,7 +215,7 @@ export class EpochContext {
    */
   getIndexedAttestation(attestation: phase0.Attestation): phase0.IndexedAttestation {
     const data = attestation.data;
-    const bits = readOnlyMap(attestation.aggregationBits, (b) => b);
+    const bits = Array.from(readonlyValues(attestation.aggregationBits));
     const committee = this.getBeaconCommittee(data.slot, data.index);
     // No need for a Set, the indices in the committee are already unique.
     const attestingIndices: ValidatorIndex[] = [];
@@ -235,7 +235,7 @@ export class EpochContext {
 
   getAttestingIndices(data: phase0.AttestationData, bits: BitList): ValidatorIndex[] {
     const committee = this.getBeaconCommittee(data.slot, data.index);
-    return getAttestingIndicesFromCommittee(committee, readOnlyMap(bits, (b) => b) as List<boolean>);
+    return getAttestingIndicesFromCommittee(committee, Array.from(readonlyValues(bits)) as List<boolean>);
   }
 
   /**

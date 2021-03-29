@@ -23,14 +23,16 @@ export function processRegistryUpdates(config: IBeaconConfig, state: phase0.Beac
   const currentEpoch = getCurrentEpoch(config, state);
   // Process activation eligibility and ejections
   const ejectionBalance = config.params.EJECTION_BALANCE;
-  state.validators.forEach((validator, index) => {
+  const validatorsLength = state.validators.length;
+  for (let index = 0; index < validatorsLength; index++) {
+    const validator = state.validators[index];
     if (isEligibleForActivationQueue(config, validator)) {
       validator.activationEligibilityEpoch = currentEpoch + 1;
     }
     if (isActiveValidator(validator, currentEpoch) && validator.effectiveBalance <= ejectionBalance) {
       initiateValidatorExit(config, state, index);
     }
-  });
+  }
 
   // Queue validators eligible for activation and not yet dequeued for activation
   const activationQueue = Array.from(state.validators)

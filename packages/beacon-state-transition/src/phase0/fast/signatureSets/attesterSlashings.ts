@@ -1,4 +1,4 @@
-import {readOnlyMap} from "@chainsafe/ssz";
+import {readonlyValues} from "@chainsafe/ssz";
 import {phase0} from "@chainsafe/lodestar-types";
 import {ISignatureSet} from "./types";
 import {getIndexedAttestationSignatureSet} from "../block/isValidIndexedAttestation";
@@ -8,7 +8,7 @@ export function getAttesterSlashingsSignatureSets(
   state: CachedBeaconState<phase0.BeaconState>,
   signedBlock: phase0.SignedBeaconBlock
 ): ISignatureSet[] {
-  return readOnlyMap(signedBlock.message.body.attesterSlashings, (attesterSlashing) =>
+  return Array.from(readonlyValues(signedBlock.message.body.attesterSlashings), (attesterSlashing) =>
     [attesterSlashing.attestation1, attesterSlashing.attestation2].map((attestation) =>
       getIndexedAttestationSignatureSet(state, attestation)
     )

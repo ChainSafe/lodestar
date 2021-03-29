@@ -66,9 +66,9 @@ export function testStatic(type: keyof IBeaconSSZTypes["phase0"]): void {
           }
           const structural = sszType.deserialize(testCase.serialized_raw);
           // @ts-ignore
-          const tree = sszType.tree.deserialize(testCase.serialized_raw);
+          const tree = sszType.createTreeBackedFromBytes(testCase.serialized_raw);
           // @ts-ignore
-          const treeFromStructural = sszType.tree.createValue(structural);
+          const treeFromStructural = sszType.createTreeBackedFromStruct(structural);
           expect(tree.serialize(), "tree serialization != structural serialization").to.deep.equal(
             sszType.serialize(structural)
           );

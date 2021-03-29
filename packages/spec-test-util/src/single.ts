@@ -170,12 +170,15 @@ function deserializeTestCase<TestCase, Result>(
   file: string,
   inputName: string,
   options: ISpecTestOptions<TestCase, Result>
-): Record<string, unknown> {
+): any {
   if (file.endsWith(InputType.SSZ)) {
     if (!options.sszTypes) throw Error("sszTypes is not defined");
     const data = readFileSync(file);
     if ((options.inputTypes![inputName as keyof TestCase]! as ExpandedInputType).treeBacked) {
-      return (options.sszTypes[inputName as keyof NonNullable<TestCase>] as CompositeType<any>).tree.deserialize(data);
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+      return (options.sszTypes[inputName as keyof NonNullable<TestCase>] as CompositeType<
+        any
+      >).createTreeBackedFromBytes(data);
     } else {
       return options.sszTypes[inputName as keyof NonNullable<TestCase>]?.deserialize(data);
     }

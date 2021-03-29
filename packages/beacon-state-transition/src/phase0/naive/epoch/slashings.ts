@@ -20,7 +20,8 @@ export function processSlashings(config: IBeaconConfig, state: phase0.BeaconStat
   const adjustedTotalSlashingBalance = bigIntMin(totalSlashings * proportionalSlashingMultiplier, totalBalance);
   const increment = BigInt(config.params.EFFECTIVE_BALANCE_INCREMENT);
 
-  state.validators.forEach((validator, index) => {
+  let index = 0;
+  for (const validator of state.validators) {
     if (
       validator.slashed &&
       currentEpoch + intDiv(config.params.EPOCHS_PER_SLASHINGS_VECTOR, 2) === validator.withdrawableEpoch
@@ -29,7 +30,8 @@ export function processSlashings(config: IBeaconConfig, state: phase0.BeaconStat
       const penalty = (penaltyNumerator / totalBalance) * increment;
       decreaseBalance(state, index, penalty);
     }
-  });
+    index++;
+  }
 }
 
 export function processSlashingsReset(config: IBeaconConfig, state: phase0.BeaconState): void {
