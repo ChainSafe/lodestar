@@ -1,7 +1,7 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {Root, phase0, BLSPubkey} from "@chainsafe/lodestar-types";
-import {List, readOnlyMap} from "@chainsafe/ssz";
+import {List, readonlyValues} from "@chainsafe/ssz";
 import {IBeaconChain} from "../../../../chain/interface";
 import {IBeaconDb} from "../../../../db/api";
 import {IApiOptions} from "../../../options";
@@ -70,9 +70,13 @@ export class BeaconStateApi implements IBeaconStateApi {
       // TODO: implement status filters when needed
     }
 
-    return readOnlyMap(state.validators, (v, index) =>
-      toValidatorResponse(index, v, state.balances[index], getCurrentEpoch(this.config, state))
-    );
+    let index = 0;
+    const resp: phase0.ValidatorResponse[] = [];
+    for (const v of readonlyValues(state.validators)) {
+      resp.push(toValidatorResponse(index, v, state.balances[index], getCurrentEpoch(this.config, state)));
+      index++;
+    }
+    return resp;
   }
 
   async getStateValidator(
@@ -121,10 +125,10 @@ export class BeaconStateApi implements IBeaconStateApi {
       }
       return balances;
     }
-    return readOnlyMap(state.validators, (v, index) => {
+    return Array.from(readonlyValues(state.balances), (balance, index) => {
       return {
         index,
-        balance: state.balances[index],
+        balance,
       };
     });
   }

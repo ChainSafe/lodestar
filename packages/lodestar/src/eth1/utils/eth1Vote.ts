@@ -1,7 +1,7 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {phase0} from "@chainsafe/lodestar-types";
 import {computeTimeAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
-import {toHexString, readOnlyMap} from "@chainsafe/ssz";
+import {readonlyValues, toHexString} from "@chainsafe/ssz";
 import {mostFrequent} from "../../util/objects";
 
 export type Eth1DataGetter = ({
@@ -41,7 +41,7 @@ export function pickEth1Vote(
   const votesToConsiderHashMap = new Set<string>();
   for (const eth1Data of votesToConsider) votesToConsiderHashMap.add(serializeEth1Data(eth1Data));
 
-  const validVotes = readOnlyMap(state.eth1DataVotes, (eth1Data) => eth1Data).filter((eth1Data) =>
+  const validVotes = Array.from(readonlyValues(state.eth1DataVotes)).filter((eth1Data) =>
     votesToConsiderHashMap.has(serializeEth1Data(eth1Data))
   );
 

@@ -34,7 +34,7 @@ export async function initBeaconState(
   signal: AbortSignal
 ): Promise<TreeBacked<phase0.BeaconState>> {
   async function initFromFile(pathOrUrl: string): Promise<TreeBacked<phase0.BeaconState>> {
-    const anchorState = config.types.phase0.BeaconState.tree.deserialize(await downloadOrLoadFile(pathOrUrl));
+    const anchorState = config.types.phase0.BeaconState.createTreeBackedFromBytes(await downloadOrLoadFile(pathOrUrl));
     return await initStateFromAnchorState(config, db, logger, anchorState);
   }
 

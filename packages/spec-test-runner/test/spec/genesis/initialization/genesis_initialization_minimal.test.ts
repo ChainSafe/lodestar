@@ -46,6 +46,7 @@ describeDirectorySpecTest<IGenesisInitSpecTest, phase0.BeaconState>(
     expectFunc: (testCase, expected, actual) => {
       expect(config.types.phase0.BeaconState.equals(actual, expected)).to.be.true;
     },
+    //shouldSkip: (_, __, index) => index !== 0,
   }
 );
 

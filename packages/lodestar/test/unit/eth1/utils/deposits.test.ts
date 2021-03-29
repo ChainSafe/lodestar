@@ -108,7 +108,7 @@ describe("eth1 / util / deposits", function () {
   describe("getDepositsWithProofs", () => {
     it("return empty array if no pending deposits", function () {
       const initialValues = [Buffer.alloc(32)] as List<Root>;
-      const depositRootTree = config.types.phase0.DepositDataRootList.tree.createValue(initialValues);
+      const depositRootTree = config.types.phase0.DepositDataRootList.createTreeBackedFromStruct(initialValues);
       const depositCount = 0;
       const eth1Data = generateEth1Data(depositCount, depositRootTree);
 
@@ -126,7 +126,7 @@ describe("eth1 / util / deposits", function () {
         })
       );
 
-      const depositRootTree = config.types.phase0.DepositDataRootList.tree.defaultValue();
+      const depositRootTree = config.types.phase0.DepositDataRootList.defaultTreeBacked();
       for (const depositEvent of depositEvents) {
         depositRootTree.push(config.types.phase0.DepositData.hashTreeRoot(depositEvent.depositData));
       }

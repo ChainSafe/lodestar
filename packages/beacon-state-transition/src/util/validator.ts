@@ -2,7 +2,7 @@
  * @module chain/stateTransition/util
  */
 
-import {hash} from "@chainsafe/ssz";
+import {hash, readonlyValues} from "@chainsafe/ssz";
 import {
   BLSSignature,
   CommitteeIndex,
@@ -49,11 +49,13 @@ export function isSlashableValidator(validator: phase0.Validator, epoch: Epoch):
  */
 export function getActiveValidatorIndices(state: allForks.BeaconState, epoch: Epoch): ValidatorIndex[] {
   const indices: ValidatorIndex[] = [];
-  state.validators.forEach((validator, index) => {
+  let index = 0;
+  for (const validator of readonlyValues(state.validators)) {
     if (isActiveValidator(validator, epoch)) {
       indices.push(index);
     }
-  });
+    index++;
+  }
   return indices;
 }
 

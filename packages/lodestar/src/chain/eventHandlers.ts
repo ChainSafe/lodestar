@@ -1,5 +1,5 @@
 import {AbortSignal} from "abort-controller";
-import {readOnlyMap, toHexString} from "@chainsafe/ssz";
+import {readonlyValues, toHexString} from "@chainsafe/ssz";
 import {phase0, Slot, Version} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {IBlockSummary} from "@chainsafe/lodestar-fork-choice";
@@ -226,7 +226,7 @@ export async function onBlock(
     // Only process attestations in response to an non-prefinalized block
     await Promise.all([
       // process the attestations in the block
-      ...readOnlyMap(block.message.body.attestations, (attestation) => {
+      ...Array.from(readonlyValues(block.message.body.attestations), (attestation) => {
         return this.attestationProcessor.processAttestationJob({
           attestation,
           // attestation signatures from blocks have already been verified

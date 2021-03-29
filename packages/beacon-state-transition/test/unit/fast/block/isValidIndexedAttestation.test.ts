@@ -9,7 +9,7 @@ import {generateValidators} from "../../../utils/validator";
 import {FAR_FUTURE_EPOCH} from "@chainsafe/lodestar-params";
 
 describe("validate indexed attestation", () => {
-  const treeState = config.types.phase0.BeaconState.tree.createValue(
+  const treeState = config.types.phase0.BeaconState.createTreeBackedFromStruct(
     generateState({
       validators: generateValidators(100, {
         balance: config.params.MAX_EFFECTIVE_BALANCE,

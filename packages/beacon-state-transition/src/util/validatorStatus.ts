@@ -41,8 +41,11 @@ export function initiateValidatorExit(config: IBeaconConfig, state: allForks.Bea
   }
 
   // Set validator exit epoch and withdrawable epoch
-  validator.exitEpoch = exitQueueEpoch;
-  validator.withdrawableEpoch = validator.exitEpoch + config.params.MIN_VALIDATOR_WITHDRAWABILITY_DELAY;
+  state.validators[index] = {
+    ...validator,
+    exitEpoch: exitQueueEpoch,
+    withdrawableEpoch: exitQueueEpoch + config.params.MIN_VALIDATOR_WITHDRAWABILITY_DELAY,
+  };
 }
 
 /**

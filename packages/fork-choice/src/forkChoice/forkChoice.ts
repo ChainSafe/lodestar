@@ -1,5 +1,5 @@
 /* eslint-disable max-len */
-import {fromHexString, toHexString, readOnlyForEach, readOnlyMap} from "@chainsafe/ssz";
+import {fromHexString, readonlyValues, toHexString} from "@chainsafe/ssz";
 import {Slot, ValidatorIndex, Gwei, phase0} from "@chainsafe/lodestar-types";
 import {
   computeSlotsSinceEpochStart,
@@ -377,12 +377,12 @@ export class ForkChoice implements IForkChoice {
     this.validateOnAttestation(attestation);
 
     if (attestation.data.slot < this.fcStore.currentSlot) {
-      readOnlyForEach(attestation.attestingIndices, (validatorIndex) => {
+      for (const validatorIndex of readonlyValues(attestation.attestingIndices)) {
         this.addLatestMessage(validatorIndex, {
           root: attestation.data.beaconBlockRoot,
           epoch: attestation.data.target.epoch,
         });
-      });
+      }
     } else {
       // The spec declares:
       //
@@ -392,7 +392,7 @@ export class ForkChoice implements IForkChoice {
       // ```
       this.queuedAttestations.add({
         slot: attestation.data.slot,
-        attestingIndices: readOnlyMap(attestation.attestingIndices, (x) => x),
+        attestingIndices: Array.from(readonlyValues(attestation.attestingIndices)),
         blockRoot: attestation.data.beaconBlockRoot.valueOf() as Uint8Array,
         targetEpoch: attestation.data.target.epoch,
       });

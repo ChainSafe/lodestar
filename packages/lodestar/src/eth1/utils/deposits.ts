@@ -47,7 +47,7 @@ export function getDepositsWithProofs(
   }
 
   return depositEvents.map((log) => ({
-    proof: treeAtDepositCount.tree().getSingleProof(treeAtDepositCount.type().tree.gindexOfProperty(log.index)),
+    proof: treeAtDepositCount.tree.getSingleProof(treeAtDepositCount.type.getPropertyGindex(log.index)),
     data: log.depositData,
   }));
 }

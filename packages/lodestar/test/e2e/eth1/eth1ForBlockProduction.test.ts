@@ -99,7 +99,7 @@ describe("eth1 / Eth1Provider", function () {
     const periodStart = maxTimestamp + SECONDS_PER_ETH1_BLOCK * ETH1_FOLLOW_DISTANCE;
 
     // Compute correct deposit root tree
-    const depositRootTree = config.types.phase0.DepositDataRootList.tree.createValue(
+    const depositRootTree = config.types.phase0.DepositDataRootList.createTreeBackedFromStruct(
       pyrmontDepositsDataRoot.map((root) => fromHexString(root)) as List<Root>
     );
 

@@ -17,8 +17,9 @@ export function processRewardsAndPenalties(config: IBeaconConfig, state: phase0.
     return;
   }
   const [rewards, penalties] = getAttestationDeltas(config, state);
-  state.validators.forEach((_, index) => {
+  const validatorsLength = state.validators.length;
+  for (let index = 0; index < validatorsLength; index++) {
     increaseBalance(state, index, rewards[index]);
     decreaseBalance(state, index, penalties[index]);
-  });
+  }
 }

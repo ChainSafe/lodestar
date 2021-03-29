@@ -9,7 +9,9 @@ RUN yarn install --non-interactive --frozen-lockfile --ignore-scripts
 COPY . .
 RUN yarn install --non-interactive --frozen-lockfile
 
-RUN node ./scripts/getGitData /usr/app/.git-data.json
+# rm .git afterwards to prevent copying it to the final layer (~350MB)
+RUN node ./scripts/getGitData /usr/app/.git-data.json && rm -r .git
+
 
 # Copy built src + node_modules to a new layer to prune unnecessary fs
 # Previous layer weights 7.25GB, while this final 488MB (as of Oct 2020)

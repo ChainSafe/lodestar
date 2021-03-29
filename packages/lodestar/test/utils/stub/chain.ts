@@ -24,7 +24,7 @@ export class StubbedBeaconChain extends BeaconChain {
       config,
       logger: testLogger(),
       db: new StubbedBeaconDb(sinon, config),
-      anchorState: config.types.phase0.BeaconState.tree.createValue({
+      anchorState: config.types.phase0.BeaconState.createTreeBackedFromStruct({
         ...config.types.phase0.BeaconState.defaultValue(),
         validators: generateValidators(64, {
           effectiveBalance: BigInt(config.params.MAX_EFFECTIVE_BALANCE),
