@@ -3,7 +3,7 @@ export * from "./phase0/ssz";
 // Export namespaced phase0 types
 export * as phase0 from "./phase0";
 
-// Export ILightclientSSZTypes interface & constants
+// Export IAltairSSZTypes interface & constants
 export * from "./altair/ssz";
 // Export namespaced phase0 types
 export * as altair from "./altair";

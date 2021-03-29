@@ -11,7 +11,7 @@ export function upgrade(config: IBeaconConfig, pre: phase0.BeaconState): altair.
     ...(old as Omit<phase0.BeaconState, "previousEpochAttestations" | "currentEpochAttestations">),
     fork: {
       previousVersion: pre.fork.currentVersion,
-      currentVersion: config.params.LIGHTCLIENT_PATCH_FORK_VERSION,
+      currentVersion: config.params.ALTAIR_FORK_VERSION,
       epoch,
     },
     previousEpochParticipation: Array.from({length: pre.validators.length}, () => 0) as List<ValidatorFlag>,

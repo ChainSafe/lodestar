@@ -1,7 +1,7 @@
 import {IBeaconParams} from "@chainsafe/lodestar-params";
 import {
   IBeaconSSZTypes,
-  ILightclientSSZTypes,
+  IAltairSSZTypes,
   IPhase0SSZTypes,
   IPhase1SSZTypes,
   Slot,
@@ -31,5 +31,5 @@ export interface IBeaconConfig {
   /**
    * Get SSZ types by hard-fork
    */
-  getTypes(slot: Slot): IPhase0SSZTypes | ILightclientSSZTypes | IPhase1SSZTypes;
+  getTypes(slot: Slot): IPhase0SSZTypes | IAltairSSZTypes | IPhase1SSZTypes;
 }

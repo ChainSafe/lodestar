@@ -1,6 +1,6 @@
 import {altair} from "@chainsafe/lodestar-types";
 
-export interface ILightclientStateTestCase {
+export interface IAltairStateTestCase {
   pre: altair.BeaconState;
   post: altair.BeaconState;
 }

@@ -14,10 +14,10 @@ import {
   computeSigningRoot,
 } from "@chainsafe/lodestar-beacon-state-transition";
 
-export function isValidLightclientUpdate(
+export function isValidAltairUpdate(
   config: IBeaconConfig,
-  snapshot: altair.LightclientSnapshot,
-  update: altair.LightclientUpdate
+  snapshot: altair.AltairSnapshot,
+  update: altair.AltairUpdate
 ): boolean {
   assert.gt(update.header.slot, snapshot.header.slot, "update slot is less or equal snapshot slot");
   const snapshotPeriod = intDiv(

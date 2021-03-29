@@ -1,10 +1,10 @@
 import {NumberUintType, ContainerType} from "@chainsafe/ssz";
 
-import {ILightclientSSZTypes} from "../../altair";
+import {IAltairSSZTypes} from "../../altair";
 import * as phase1 from "../types";
 
 export type IPhase1SSZTypes = Omit<
-  ILightclientSSZTypes,
+  IAltairSSZTypes,
   | "AttestationData"
   | "Attestation"
   | "PendingAttestation"

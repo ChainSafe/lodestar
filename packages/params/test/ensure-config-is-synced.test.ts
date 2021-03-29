@@ -25,8 +25,8 @@ describe("Ensure config is synced", function () {
   // Items added here are intentionally either not added, or are different
   // eslint-disable-next-line prettier/prettier
   const blacklist = [
-    "LIGHTCLIENT_PATCH_FORK_SLOT",
-    "LIGHTCLIENT_PATCH_FORK_VERSION",
+    "ALTAIR_FORK_SLOT",
+    "ALTAIR_FORK_VERSION",
     "HF1_INACTIVITY_PENALTY_QUOTIENT",
     "HF1_MIN_SLASHING_PENALTY_QUOTIENT",
     "HF1_PROPORTIONAL_SLASHING_MULTIPLIER",

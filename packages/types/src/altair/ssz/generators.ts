@@ -9,7 +9,7 @@ import {
 import {BitVectorType, ContainerType, VectorType, ListType, RootType} from "@chainsafe/ssz";
 import {IPhase0SSZTypes} from "../../phase0";
 import * as altair from "../types";
-import {ILightclientSSZTypes} from "./interface";
+import {IAltairSSZTypes} from "./interface";
 
 const NEXT_SYNC_COMMITTEE_INDEX = 0;
 const MAX_VALID_LIGHT_CLIENT_UPDATES = 0;
@@ -18,7 +18,7 @@ const FINALIZED_ROOT_INDEX = 0;
 type LightClientTypesGenerator<T> = (
   params: IBeaconParams,
   phase0Types: IPhase0SSZTypes,
-  altairTypes: ILightclientSSZTypes
+  altairTypes: IAltairSSZTypes
 ) => T;
 
 export const SyncCommittee: LightClientTypesGenerator<ContainerType<altair.SyncCommittee>> = (
@@ -149,7 +149,7 @@ export const BeaconState: LightClientTypesGenerator<ContainerType<altair.BeaconS
   return container;
 };
 
-export const LightclientSnapshot: LightClientTypesGenerator<ContainerType<altair.LightclientSnapshot>> = (
+export const AltairSnapshot: LightClientTypesGenerator<ContainerType<altair.AltairSnapshot>> = (
   params,
   phase0Types,
   altairTypes
@@ -163,7 +163,7 @@ export const LightclientSnapshot: LightClientTypesGenerator<ContainerType<altair
   });
 };
 
-export const LightclientUpdate: LightClientTypesGenerator<ContainerType<altair.LightclientUpdate>> = (
+export const AltairUpdate: LightClientTypesGenerator<ContainerType<altair.AltairUpdate>> = (
   params,
   phase0Types,
   altairTypes
@@ -188,16 +188,16 @@ export const LightclientUpdate: LightClientTypesGenerator<ContainerType<altair.L
   });
 };
 
-export const LightclientStore: LightClientTypesGenerator<ContainerType<altair.LightclientStore>> = (
+export const AltairStore: LightClientTypesGenerator<ContainerType<altair.AltairStore>> = (
   params,
   phase0Types,
   altairTypes
 ) => {
   return new ContainerType({
     fields: {
-      snapshot: altairTypes.LightclientSnapshot,
+      snapshot: altairTypes.AltairSnapshot,
       validUpdates: new ListType({
-        elementType: altairTypes.LightclientUpdate,
+        elementType: altairTypes.AltairUpdate,
         limit: MAX_VALID_LIGHT_CLIENT_UPDATES,
       }),
     },

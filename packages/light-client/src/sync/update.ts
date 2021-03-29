@@ -4,12 +4,12 @@ import {altair, Slot} from "@chainsafe/lodestar-types";
 import {assert, intDiv} from "@chainsafe/lodestar-utils";
 import {ArrayLike, List} from "@chainsafe/ssz";
 import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
-import {isValidLightclientUpdate} from "./validation";
+import {isValidAltairUpdate} from "./validation";
 
 export function applyLightClientUpdate(
   config: IBeaconConfig,
-  snapshot: altair.LightclientSnapshot,
-  update: altair.LightclientUpdate
+  snapshot: altair.AltairSnapshot,
+  update: altair.AltairUpdate
 ): void {
   const snapshotPeriod = intDiv(
     computeEpochAtSlot(config, snapshot.header.slot),
@@ -26,28 +26,28 @@ export function applyLightClientUpdate(
   snapshot.header = update.header;
 }
 
-export function processLightclientUpdate(
+export function processAltairUpdate(
   config: IBeaconConfig,
-  store: altair.LightclientStore,
-  update: altair.LightclientUpdate,
+  store: altair.AltairStore,
+  update: altair.AltairUpdate,
   currentSlot: Slot
 ): void {
-  assert.true(isValidLightclientUpdate(config, store.snapshot, update));
+  assert.true(isValidAltairUpdate(config, store.snapshot, update));
   store.validUpdates.push(update);
   if (
     sumBits(update.syncCommitteeBits) * 3 > update.syncCommitteeBits.length * 2 &&
     !config.types.altair.BeaconBlockHeader.equals(update.header, update.finalityHeader)
   ) {
     applyLightClientUpdate(config, store.snapshot, update);
-    store.validUpdates = new Array<altair.LightclientUpdate>() as List<altair.LightclientUpdate>;
+    store.validUpdates = new Array<altair.AltairUpdate>() as List<altair.AltairUpdate>;
   } else if (currentSlot > store.snapshot.header.slot + LIGHT_CLIENT_UPDATE_TIMEOUT) {
     applyLightClientUpdate(config, store.snapshot, bestUpdate(Array.from(store.validUpdates))!);
-    store.validUpdates = new Array<altair.LightclientUpdate>() as List<altair.LightclientUpdate>;
+    store.validUpdates = new Array<altair.AltairUpdate>() as List<altair.AltairUpdate>;
   }
 }
 
-function bestUpdate(updates: altair.LightclientUpdate[]): altair.LightclientUpdate | null {
-  return updates.reduce<{update: altair.LightclientUpdate | null; sum: number}>(
+function bestUpdate(updates: altair.AltairUpdate[]): altair.AltairUpdate | null {
+  return updates.reduce<{update: altair.AltairUpdate | null; sum: number}>(
     (agg, update) => {
       const participantsCount = sumBits(update.syncCommitteeBits);
       if (participantsCount > agg.sum) {

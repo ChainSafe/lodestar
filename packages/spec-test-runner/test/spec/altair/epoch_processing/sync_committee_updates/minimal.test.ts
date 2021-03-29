@@ -6,9 +6,9 @@ import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-tes
 import {altair} from "@chainsafe/lodestar-beacon-state-transition";
 import {altair as altairTypes} from "@chainsafe/lodestar-types";
 import {SPEC_TEST_LOCATION} from "../../../../utils/specTestCases";
-import {ILightclientStateTestCase} from "../../stateTestCase";
+import {IAltairStateTestCase} from "../../stateTestCase";
 
-describeDirectorySpecTest<ILightclientStateTestCase, altairTypes.BeaconState>(
+describeDirectorySpecTest<IAltairStateTestCase, altairTypes.BeaconState>(
   "altair epoch sync committee updates minimal",
   join(SPEC_TEST_LOCATION, "tests/minimal/lightclient_patch/epoch_processing/sync_committee_updates/pyspec_tests"),
   (testcase) => {

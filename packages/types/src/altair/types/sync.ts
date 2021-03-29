@@ -4,13 +4,13 @@ import * as primitive from "../../primitive/types";
 import * as phase0 from "../../phase0/types";
 import {SyncCommittee} from "./committee";
 
-export interface LightclientSnapshot {
+export interface AltairSnapshot {
   header: phase0.BeaconBlockHeader;
   currentSyncCommittee: SyncCommittee;
   nextSyncCommittee: SyncCommittee;
 }
 
-export interface LightclientUpdate {
+export interface AltairUpdate {
   header: phase0.BeaconBlockHeader;
   nextSyncCommittee: SyncCommittee;
   nextSyncCommitteeBranch: Vector<primitive.Bytes32>;
@@ -21,7 +21,7 @@ export interface LightclientUpdate {
   forkVersion: primitive.Version;
 }
 
-export interface LightclientStore {
-  snapshot: LightclientSnapshot;
-  validUpdates: List<LightclientUpdate>;
+export interface AltairStore {
+  snapshot: AltairSnapshot;
+  validUpdates: List<AltairUpdate>;
 }

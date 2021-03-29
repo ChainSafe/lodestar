@@ -1,7 +1,7 @@
 import {GENESIS_SLOT, IBeaconParams} from "@chainsafe/lodestar-params";
 import {
   createIBeaconSSZTypes,
-  ILightclientSSZTypes,
+  IAltairSSZTypes,
   IPhase0SSZTypes,
   IPhase1SSZTypes,
   Slot,
@@ -26,8 +26,8 @@ export function createIBeaconConfig(params: IBeaconParams): IBeaconConfig {
         },
         altair: {
           name: "altair",
-          slot: params.LIGHTCLIENT_PATCH_FORK_SLOT,
-          version: params.LIGHTCLIENT_PATCH_FORK_VERSION,
+          slot: params.ALTAIR_FORK_SLOT,
+          version: params.ALTAIR_FORK_VERSION,
         },
         phase1: {
           name: "phase1",
@@ -37,7 +37,7 @@ export function createIBeaconConfig(params: IBeaconParams): IBeaconConfig {
       };
     },
     getForkName(slot: Slot): IForkName {
-      if (slot < params.LIGHTCLIENT_PATCH_FORK_SLOT) {
+      if (slot < params.ALTAIR_FORK_SLOT) {
         return "phase0";
       } else if (slot < params.PHASE_1_FORK_SLOT) {
         return "altair";
@@ -46,15 +46,15 @@ export function createIBeaconConfig(params: IBeaconParams): IBeaconConfig {
       }
     },
     getForkVersion(slot: Slot): Version {
-      if (slot < params.LIGHTCLIENT_PATCH_FORK_SLOT) {
+      if (slot < params.ALTAIR_FORK_SLOT) {
         return params.GENESIS_FORK_VERSION;
       } else if (slot < params.PHASE_1_FORK_SLOT) {
-        return params.LIGHTCLIENT_PATCH_FORK_VERSION;
+        return params.ALTAIR_FORK_VERSION;
       } else {
         return params.PHASE_1_FORK_VERSION;
       }
     },
-    getTypes(slot: Slot): IPhase0SSZTypes | ILightclientSSZTypes | IPhase1SSZTypes {
+    getTypes(slot: Slot): IPhase0SSZTypes | IAltairSSZTypes | IPhase1SSZTypes {
       return types[this.getForkName(slot)];
     },
   };
