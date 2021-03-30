@@ -17,10 +17,7 @@ export const getStateValidators: ApiController<ValidatorsQuery, Params> = {
   handler: async function (req, resp) {
     const filters: IValidatorFilters = {};
     if (req.query.indices) {
-      filters.indices = mapValidatorIndices(
-        this.config,
-        typeof req.query.indices === "string" ? [req.query.indices] : req.query.indices
-      );
+      filters.indices = mapValidatorIndices(this.config, req.query.indices);
     }
     if (req.query.statuses) {
       filters.statuses = req.query.statuses as ValidatorStatus[];
@@ -47,7 +44,7 @@ export const getStateValidators: ApiController<ValidatorsQuery, Params> = {
         required: [],
         properties: {
           indices: {
-            types: "string",
+            type: "array",
             uniqueItems: true,
             items: {
               type: "string",
