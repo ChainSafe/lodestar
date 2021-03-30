@@ -280,6 +280,8 @@ export class ForkChoice implements IForkChoice {
         });
       }
       if (state.currentJustifiedCheckpoint.epoch > this.fcStore.bestJustifiedCheckpoint.epoch) {
+        // `valueOf` coerses the checkpoint, which may be tree-backed, into a javascript object
+        // See https://github.com/ChainSafe/lodestar/issues/2258
         this.updateBestJustified(state.currentJustifiedCheckpoint.valueOf() as phase0.Checkpoint, justifiedBalances);
       }
       if (this.shouldUpdateJustifiedCheckpoint(state)) {
@@ -290,6 +292,8 @@ export class ForkChoice implements IForkChoice {
 
     // Update finalized checkpoint.
     if (state.finalizedCheckpoint.epoch > this.fcStore.finalizedCheckpoint.epoch) {
+      // `valueOf` coerses the checkpoint, which may be tree-backed, into a javascript object
+      // See https://github.com/ChainSafe/lodestar/issues/2258
       this.fcStore.finalizedCheckpoint = state.finalizedCheckpoint.valueOf() as phase0.Checkpoint;
       const finalizedSlot = computeStartSlotAtEpoch(this.config, this.fcStore.finalizedCheckpoint.epoch);
 
@@ -316,6 +320,8 @@ export class ForkChoice implements IForkChoice {
           error: new Error("No validator balances supplied"),
         });
       }
+      // `valueOf` coerses the checkpoint, which may be tree-backed, into a javascript object
+      // See https://github.com/ChainSafe/lodestar/issues/2258
       this.updateJustified(state.currentJustifiedCheckpoint.valueOf() as phase0.Checkpoint, justifiedBalances);
     }
 
