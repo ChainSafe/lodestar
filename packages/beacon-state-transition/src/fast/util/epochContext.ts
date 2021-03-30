@@ -4,7 +4,7 @@ import {BLSSignature, CommitteeIndex, Epoch, Slot, ValidatorIndex, phase0, allFo
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {intToBytes, assert} from "@chainsafe/lodestar-utils";
 
-import {GENESIS_EPOCH} from "../../../constants";
+import {GENESIS_EPOCH} from "../../constants";
 import {
   computeEpochAtSlot,
   computeProposerIndex,
@@ -12,7 +12,7 @@ import {
   getAttestingIndicesFromCommittee,
   getSeed,
   isAggregatorFromCommitteeLength,
-} from "../../../util";
+} from "../../util";
 import {computeEpochShuffling, IEpochShuffling} from "./epochShuffling";
 import {MutableVector} from "@chainsafe/persistent-ts";
 import {CachedValidatorList} from "./cachedValidatorList";

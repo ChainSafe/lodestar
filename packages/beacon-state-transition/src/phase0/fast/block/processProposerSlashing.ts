@@ -1,8 +1,8 @@
-import {phase0} from "@chainsafe/lodestar-types";
-import {computeEpochAtSlot, computeSigningRoot, getDomain, isSlashableValidator} from "../../../util";
-import {CachedBeaconState} from "../util";
+import {allForks, phase0} from "@chainsafe/lodestar-types";
+import {isSlashableValidator} from "../../../util";
+import {CachedBeaconState, getProposerSlashingSignatureSets} from "../../../fast";
 import {slashValidator} from "./slashValidator";
-import {ISignatureSet, SignatureSetType, verifySignatureSet} from "../../../util/signatureSets";
+import {verifySignatureSet} from "../../../util/signatureSets";
 
 export function processProposerSlashing(
   state: CachedBeaconState<phase0.BeaconState>,
@@ -37,7 +37,10 @@ export function processProposerSlashing(
 
   // verify signatures
   if (verifySignatures) {
-    for (const [i, signatureSet] of getProposerSlashingSignatureSets(state, proposerSlashing).entries()) {
+    for (const [i, signatureSet] of getProposerSlashingSignatureSets(
+      state as CachedBeaconState<allForks.BeaconState>,
+      proposerSlashing
+    ).entries()) {
       if (!verifySignatureSet(signatureSet)) {
         throw new Error(`ProposerSlashing header${i + 1} signature invalid`);
       }
@@ -45,29 +48,4 @@ export function processProposerSlashing(
   }
 
   slashValidator(state, header1.proposerIndex);
-}
-
-/**
- * Extract signatures to allow validating all block signatures at once
- */
-export function getProposerSlashingSignatureSets(
-  state: CachedBeaconState<phase0.BeaconState>,
-  proposerSlashing: phase0.ProposerSlashing
-): ISignatureSet[] {
-  const {config, epochCtx} = state;
-  const pubkey = epochCtx.index2pubkey[proposerSlashing.signedHeader1.message.proposerIndex];
-
-  return [proposerSlashing.signedHeader1, proposerSlashing.signedHeader2].map(
-    (signedHeader): ISignatureSet => {
-      const epoch = computeEpochAtSlot(config, signedHeader.message.slot);
-      const domain = getDomain(config, state, config.params.DOMAIN_BEACON_PROPOSER, epoch);
-
-      return {
-        type: SignatureSetType.single,
-        pubkey,
-        signingRoot: computeSigningRoot(config, config.types.phase0.BeaconBlockHeader, signedHeader.message, domain),
-        signature: signedHeader.signature,
-      };
-    }
-  );
 }

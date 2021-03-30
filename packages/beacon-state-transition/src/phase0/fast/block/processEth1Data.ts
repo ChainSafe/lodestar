@@ -1,6 +1,6 @@
 import {phase0} from "@chainsafe/lodestar-types";
 import {readonlyValues} from "@chainsafe/ssz";
-import {CachedBeaconState} from "../util";
+import {CachedBeaconState} from "../../../fast";
 
 export function processEth1Data(state: CachedBeaconState<phase0.BeaconState>, body: phase0.BeaconBlockBody): void {
   const newEth1Data = getNewEth1Data(state, body.eth1Data);

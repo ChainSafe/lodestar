@@ -1,6 +1,6 @@
 import {phase0} from "@chainsafe/lodestar-types";
 
-import {CachedBeaconState} from "../util";
+import {CachedBeaconState} from "../../../fast";
 
 export function processBlockHeader(state: CachedBeaconState<phase0.BeaconState>, block: phase0.BeaconBlock): void {
   const types = state.config.types;

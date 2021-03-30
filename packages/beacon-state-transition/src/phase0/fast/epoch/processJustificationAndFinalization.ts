@@ -2,7 +2,7 @@ import {phase0} from "@chainsafe/lodestar-types";
 
 import {GENESIS_EPOCH} from "../../../constants";
 import {getBlockRoot} from "../../../util";
-import {CachedBeaconState, IEpochProcess} from "../util";
+import {CachedBeaconState, IEpochProcess} from "../../../fast";
 
 export function processJustificationAndFinalization(
   state: CachedBeaconState<phase0.BeaconState>,

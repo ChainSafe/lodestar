@@ -1,5 +1,5 @@
 import {TreeBacked} from "@chainsafe/ssz";
-import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
+import {fast, phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
 import {expect} from "chai";
@@ -11,7 +11,7 @@ describeDirectorySpecTest<IProcessDepositTestCase, phase0.BeaconState>(
   "process deposit mainnet",
   join(SPEC_TEST_LOCATION, "/tests/mainnet/phase0/operations/deposit/pyspec_tests"),
   (testcase) => {
-    const wrappedState = phase0.fast.createCachedBeaconState<phase0.BeaconState>(
+    const wrappedState = fast.createCachedBeaconState<phase0.BeaconState>(
       config,
       testcase.pre as TreeBacked<phase0.BeaconState>
     );

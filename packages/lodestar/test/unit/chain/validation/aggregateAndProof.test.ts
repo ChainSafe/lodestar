@@ -9,6 +9,7 @@ import {config} from "@chainsafe/lodestar-config/minimal";
 import * as validatorUtils from "@chainsafe/lodestar-beacon-state-transition/lib/util/validator";
 import {getCurrentSlot, ISignatureSet} from "@chainsafe/lodestar-beacon-state-transition";
 import * as indexedAttUtils from "@chainsafe/lodestar-beacon-state-transition/lib/phase0/fast/block/isValidIndexedAttestation";
+import * as indexedAttSigSet from "@chainsafe/lodestar-beacon-state-transition/lib/fast/signatureSets/indexedAttestation";
 
 import {BeaconChain, IAttestationJob, IBeaconChain} from "../../../../src/chain";
 import {LocalClock} from "../../../../src/chain/clock";
@@ -31,7 +32,7 @@ describe("gossip aggregate and proof test", function () {
   let isAggregatorStub: SinonStubFn<typeof validatorUtils["isAggregatorFromCommitteeLength"]>;
   let isValidIndexedAttestationStub: SinonStubFn<typeof indexedAttUtils["isValidIndexedAttestation"]>;
   // This util it not relevant for testing since only the result of verifySignatureSetsBatch() matters
-  const getIndexedAttestationSignatureSet: typeof indexedAttUtils["getIndexedAttestationSignatureSet"] = () =>
+  const getIndexedAttestationSignatureSet: typeof indexedAttSigSet["getIndexedAttestationSignatureSet"] = () =>
     ({} as ISignatureSet);
 
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
@@ -53,7 +54,10 @@ describe("gossip aggregate and proof test", function () {
         mock(() =>
           import("@chainsafe/lodestar-beacon-state-transition/lib/phase0/fast/block/isValidIndexedAttestation")
         )
-          .with({isValidIndexedAttestation, getIndexedAttestationSignatureSet})
+          .with({isValidIndexedAttestation})
+          .toBeUsed();
+        mock(() => import("@chainsafe/lodestar-beacon-state-transition/lib/fast/signatureSets/indexedAttestation"))
+          .with({getIndexedAttestationSignatureSet})
           .toBeUsed();
         mock(() => import("../../../../src/chain/bls"))
           .with({verifySignatureSetsBatch})

@@ -20,6 +20,7 @@
     "lib/**/*.js.map"
   ],
   "scripts": {
+    "check-types": "tsc --noEmit",
     "download-test-cases": "node -r ts-node/register test/downloadTests.ts",
     "test:ssz": "mocha 'test/spec/ssz/**/*.test.ts'",
     "test:bls": "mocha 'test/spec/bls/**/*.test.ts'",

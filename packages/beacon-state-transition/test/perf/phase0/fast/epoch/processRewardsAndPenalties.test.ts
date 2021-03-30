@@ -1,12 +1,12 @@
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import {generatePerformanceState, initBLS} from "../../../util";
 import {expect} from "chai";
-import {phase0} from "../../../../../src";
+import {phase0, fast} from "../../../../../src";
 import {profilerLogger} from "../../../../utils/logger";
 
 describe("processRewardsAndPenalties", function () {
-  let state: phase0.fast.CachedBeaconState<phase0.BeaconState>;
-  let epochProcess: phase0.fast.IEpochProcess;
+  let state: fast.CachedBeaconState<phase0.BeaconState>;
+  let epochProcess: fast.IEpochProcess;
   const logger = profilerLogger();
 
   before(async function () {
@@ -15,12 +15,12 @@ describe("processRewardsAndPenalties", function () {
     const origState = await generatePerformanceState();
     // go back 1 slot to process epoch
     origState.slot -= 1;
-    state = phase0.fast.createCachedBeaconState(config, origState);
+    state = fast.createCachedBeaconState(config, origState);
   });
 
   it("should processRewardsAndPenalties", function () {
     this.timeout(0);
-    epochProcess = phase0.fast.prepareEpochProcessState(state);
+    epochProcess = fast.prepareEpochProcessState(state);
     let minTime = Number.MAX_SAFE_INTEGER;
     let maxTime = 0;
     const MAX_TRY = 10000;

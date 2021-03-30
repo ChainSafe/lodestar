@@ -3,7 +3,7 @@ import {expect} from "chai";
 
 import {TreeBacked} from "@chainsafe/ssz";
 import {config} from "@chainsafe/lodestar-config/mainnet";
-import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
+import {fast, phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
 import {IStateTestCase} from "../../../utils/specTestTypes/stateTestCase";
 import {SPEC_TEST_LOCATION} from "../../../utils/specTestCases";
@@ -12,11 +12,11 @@ describeDirectorySpecTest<IStateTestCase, phase0.BeaconState>(
   "epoch slashings mainnet",
   join(SPEC_TEST_LOCATION, "/tests/mainnet/phase0/epoch_processing/slashings/pyspec_tests"),
   (testcase) => {
-    const wrappedState = phase0.fast.createCachedBeaconState<phase0.BeaconState>(
+    const wrappedState = fast.createCachedBeaconState<phase0.BeaconState>(
       config,
       testcase.pre as TreeBacked<phase0.BeaconState>
     );
-    const process = phase0.fast.prepareEpochProcessState(wrappedState);
+    const process = fast.prepareEpochProcessState(wrappedState);
     phase0.fast.processSlashings(wrappedState, process);
     return wrappedState;
   },

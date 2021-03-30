@@ -1,12 +1,13 @@
-import {List} from "@chainsafe/ssz";
+import {List, TreeBacked} from "@chainsafe/ssz";
 import {config} from "@chainsafe/lodestar-config/mainnet";
+import {FAR_FUTURE_EPOCH} from "@chainsafe/lodestar-params";
+import {allForks} from "@chainsafe/lodestar-types";
 import {generateAttestationData} from "../../../utils/attestation";
 import {expect} from "chai";
 import {EMPTY_SIGNATURE} from "../../../../src";
 import {phase0, createCachedBeaconState} from "../../../../src";
 import {generateState} from "../../../utils/state";
 import {generateValidators} from "../../../utils/validator";
-import {FAR_FUTURE_EPOCH} from "@chainsafe/lodestar-params";
 
 describe("validate indexed attestation", () => {
   const treeState = config.types.phase0.BeaconState.createTreeBackedFromStruct(
@@ -41,7 +42,7 @@ describe("validate indexed attestation", () => {
   for (const testValue of testValues) {
     it(testValue.name, function () {
       const attestationData = generateAttestationData(0, 1);
-      const state = createCachedBeaconState(config, treeState.clone());
+      const state = createCachedBeaconState(config, treeState.clone() as TreeBacked<allForks.BeaconState>);
 
       const indexedAttestation: phase0.IndexedAttestation = {
         attestingIndices: testValue.indices as List<number>,

@@ -1,21 +1,29 @@
-import {phase0} from "@chainsafe/lodestar-types";
-import {ISignatureSet} from "../../../util";
-import {getRandaoRevealSignatureSet} from "../block/processRandao";
-import {CachedBeaconState, getBlockSignatureSet} from "../util";
+import {allForks} from "@chainsafe/lodestar-types";
+import {ISignatureSet} from "../../util";
+import {CachedBeaconState} from "../util";
 import {getProposerSlashingsSignatureSets} from "./proposerSlashings";
 import {getAttesterSlashingsSignatureSets} from "./attesterSlashings";
-import {getAttestationsSignatureSets} from "./attestations";
+import {getAttestationsSignatureSets} from "./indexedAttestation";
+import {getProposerSignatureSet} from "./proposer";
+import {getRandaoRevealSignatureSet} from "./randao";
 import {getVoluntaryExitsSignatureSets} from "./voluntaryExits";
+
+export * from "./attesterSlashings";
+export * from "./indexedAttestation";
+export * from "./proposer";
+export * from "./proposerSlashings";
+export * from "./randao";
+export * from "./voluntaryExits";
 
 /**
  * Includes all signatures on the block (except the deposit signatures) for verification.
  * Deposits are not included because they can legally have invalid signatures.
  */
 export function getAllBlockSignatureSets(
-  state: CachedBeaconState<phase0.BeaconState>,
-  signedBlock: phase0.SignedBeaconBlock
+  state: CachedBeaconState<allForks.BeaconState>,
+  signedBlock: allForks.SignedBeaconBlock
 ): ISignatureSet[] {
-  return [getBlockSignatureSet(state, signedBlock), ...getAllBlockSignatureSetsExceptProposer(state, signedBlock)];
+  return [getProposerSignatureSet(state, signedBlock), ...getAllBlockSignatureSetsExceptProposer(state, signedBlock)];
 }
 
 /**
@@ -23,8 +31,8 @@ export function getAllBlockSignatureSets(
  * Useful since block proposer signature is verified beforehand on gossip validation
  */
 export function getAllBlockSignatureSetsExceptProposer(
-  state: CachedBeaconState<phase0.BeaconState>,
-  signedBlock: phase0.SignedBeaconBlock
+  state: CachedBeaconState<allForks.BeaconState>,
+  signedBlock: allForks.SignedBeaconBlock
 ): ISignatureSet[] {
   return [
     getRandaoRevealSignatureSet(state, signedBlock.message),

@@ -8,8 +8,8 @@ import {
   computeStartSlotAtEpoch,
   getChurnLimit,
   isActiveValidator,
-} from "../../../util";
-import {FAR_FUTURE_EPOCH} from "../../../constants";
+} from "../../util";
+import {FAR_FUTURE_EPOCH} from "../../constants";
 import {
   IAttesterStatus,
   createIAttesterStatus,

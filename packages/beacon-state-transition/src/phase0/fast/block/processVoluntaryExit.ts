@@ -1,8 +1,7 @@
-import {phase0} from "@chainsafe/lodestar-types";
+import {allForks, phase0} from "@chainsafe/lodestar-types";
 import {FAR_FUTURE_EPOCH} from "../../../constants";
-import {computeSigningRoot, getDomain, isActiveValidator} from "../../../util";
-import {ISignatureSet, SignatureSetType, verifySignatureSet} from "../../../util/signatureSets";
-import {CachedBeaconState} from "../util";
+import {isActiveValidator} from "../../../util";
+import {CachedBeaconState, verifyVoluntaryExitSignature} from "../../../fast";
 import {initiateValidatorExit} from "./initiateValidatorExit";
 
 export function processVoluntaryExit(
@@ -35,30 +34,11 @@ export function processVoluntaryExit(
 
   // verify signature
   if (verifySignature) {
-    const signatureSet = getVoluntaryExitSignatureSet(state, signedVoluntaryExit);
-    if (!verifySignatureSet(signatureSet)) {
+    if (!verifyVoluntaryExitSignature(state as CachedBeaconState<allForks.BeaconState>, signedVoluntaryExit)) {
       throw new Error("VoluntaryExit has an invalid signature");
     }
   }
 
   // initiate exit
   initiateValidatorExit(state, voluntaryExit.validatorIndex);
-}
-
-/**
- * Extract signatures to allow validating all block signatures at once
- */
-export function getVoluntaryExitSignatureSet(
-  state: CachedBeaconState<phase0.BeaconState>,
-  signedVoluntaryExit: phase0.SignedVoluntaryExit
-): ISignatureSet {
-  const {config, epochCtx} = state;
-  const domain = getDomain(config, state, config.params.DOMAIN_VOLUNTARY_EXIT, signedVoluntaryExit.message.epoch);
-
-  return {
-    type: SignatureSetType.single,
-    pubkey: epochCtx.index2pubkey[signedVoluntaryExit.message.validatorIndex],
-    signingRoot: computeSigningRoot(config, config.types.phase0.VoluntaryExit, signedVoluntaryExit.message, domain),
-    signature: signedVoluntaryExit.signature,
-  };
 }

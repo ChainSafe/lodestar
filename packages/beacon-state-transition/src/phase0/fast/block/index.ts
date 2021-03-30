@@ -1,6 +1,6 @@
-import {CachedBeaconState} from "../util";
 import {phase0} from "@chainsafe/lodestar-types";
 
+import {CachedBeaconState} from "../../../fast";
 import {processBlockHeader} from "./processBlockHeader";
 import {processRandao} from "./processRandao";
 import {processEth1Data} from "./processEth1Data";
@@ -12,7 +12,7 @@ import {processProposerSlashing} from "./processProposerSlashing";
 import {processVoluntaryExit} from "./processVoluntaryExit";
 
 // Extra utils used by other modules
-export {isValidIndexedAttestation, getIndexedAttestationSignatureSet} from "./isValidIndexedAttestation";
+export {isValidIndexedAttestation} from "./isValidIndexedAttestation";
 export {getNewEth1Data} from "./processEth1Data";
 
 export {
