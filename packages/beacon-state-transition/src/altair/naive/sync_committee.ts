@@ -112,11 +112,11 @@ export function getSyncCommittee(
   const indices = getSyncCommitteeIndices(config, state, epoch);
   const pubkeys = indices.map((index) => state.validators[index].pubkey);
   const aggregates = [];
-  for (let i = 0; i < pubkeys.length; i += config.params.SYNC_COMMITTEE_PUBKEY_AGGREGATES_SIZE) {
+  for (let i = 0; i < pubkeys.length; i += config.params.SYNC_PUBKEYS_PER_AGGREGATE) {
     aggregates.push(
       aggregatePublicKeys(
         pubkeys
-          .slice(i, i + config.params.SYNC_COMMITTEE_PUBKEY_AGGREGATES_SIZE)
+          .slice(i, i + config.params.SYNC_PUBKEYS_PER_AGGREGATE)
           .map((pubkey) => pubkey.valueOf() as Uint8Array)
       )
     );

@@ -6,7 +6,7 @@ import * as minimal from "../src/presets/minimal";
 
 async function downloadRemoteConfig(preset: "mainnet" | "minimal", commit: string): Promise<Record<string, unknown>> {
   const phase0Url = `https://raw.githubusercontent.com/ethereum/eth2.0-specs/${commit}/configs/${preset}/phase0.yaml`;
-  const altairUrl = `https://raw.githubusercontent.com/ethereum/eth2.0-specs/${commit}/configs/${preset}/altair_patch.yaml`;
+  const altairUrl = `https://raw.githubusercontent.com/ethereum/eth2.0-specs/${commit}/configs/${preset}/altair.yaml`;
   const phase1Url = `https://raw.githubusercontent.com/ethereum/eth2.0-specs/${commit}/configs/${preset}/phase1.yaml`;
   const phase0Res = await axios({url: phase0Url, timeout: 30 * 1000});
   const altairRes = await axios({url: altairUrl, timeout: 30 * 1000});

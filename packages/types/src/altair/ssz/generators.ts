@@ -30,7 +30,7 @@ export const SyncCommittee: LightClientTypesGenerator<ContainerType<altair.SyncC
       }),
       pubkeyAggregates: new VectorType({
         elementType: phase0Types.BLSPubkey,
-        length: Math.floor(params.SYNC_COMMITTEE_SIZE / params.SYNC_COMMITTEE_PUBKEY_AGGREGATES_SIZE),
+        length: Math.floor(params.SYNC_COMMITTEE_SIZE / params.SYNC_PUBKEYS_PER_AGGREGATE),
       }),
     },
   });

@@ -11,7 +11,7 @@ const ByteVector4 = new ByteVectorType({length: 4});
 export const AltairParams = new ContainerType<IAltairParams>({
   fields: {
     SYNC_COMMITTEE_SIZE: Number64,
-    SYNC_COMMITTEE_PUBKEY_AGGREGATES_SIZE: Number64,
+    SYNC_PUBKEYS_PER_AGGREGATE: Number64,
     EPOCHS_PER_SYNC_COMMITTEE_PERIOD: Number64,
     DOMAIN_SYNC_COMMITTEE: ByteVector4,
     ALTAIR_FORK_VERSION: ByteVector4,
