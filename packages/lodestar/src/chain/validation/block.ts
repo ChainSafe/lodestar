@@ -59,7 +59,7 @@ export async function validateGossipBlock(
   } catch (e) {
     throw new BlockError({
       code: BlockErrorCode.PARENT_UNKNOWN,
-      parentRoot: block.message.parentRoot,
+      parentRoot: block.message.parentRoot.valueOf() as Uint8Array,
       job: blockJob,
     });
   }
