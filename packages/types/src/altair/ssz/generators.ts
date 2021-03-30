@@ -21,10 +21,7 @@ type LightClientTypesGenerator<T> = (
   altairTypes: IAltairSSZTypes
 ) => T;
 
-export const SyncCommittee: LightClientTypesGenerator<ContainerType<altair.SyncCommittee>> = (
-  params,
-  phase0Types
-) => {
+export const SyncCommittee: LightClientTypesGenerator<ContainerType<altair.SyncCommittee>> = (params, phase0Types) => {
   return new ContainerType({
     fields: {
       pubkeys: new VectorType({

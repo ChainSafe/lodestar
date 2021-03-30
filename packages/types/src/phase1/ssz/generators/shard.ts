@@ -2,11 +2,7 @@ import {ContainerType, ListType} from "@chainsafe/ssz";
 import * as phase1 from "../../types";
 import {Phase1Generator} from "./interface";
 
-export const ShardBlock: Phase1Generator<ContainerType<phase1.ShardBlock>> = (
-  params,
-  altairTypes,
-  phase1Types
-) => {
+export const ShardBlock: Phase1Generator<ContainerType<phase1.ShardBlock>> = (params, altairTypes, phase1Types) => {
   return new ContainerType({
     fields: {
       shardParentRoot: altairTypes.Root,

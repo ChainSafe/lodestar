@@ -18,16 +18,11 @@ describeDirectorySpecTest<IBlockSanityTestCase, altairTypes.BeaconState>(
     let state = testcase.pre;
     const verify = !!testcase.meta && !!testcase.meta.blsSetting && testcase.meta.blsSetting === BigInt(1);
     for (let i = 0; i < Number(testcase.meta.blocksCount); i++) {
-      state = altair.stateTransition(
-        config,
-        state,
-        testcase[`blocks_${i}`] as altairTypes.SignedBeaconBlock,
-        {
-          verifyStateRoot: verify,
-          verifyProposer: verify,
-          verifySignatures: verify,
-        }
-      );
+      state = altair.stateTransition(config, state, testcase[`blocks_${i}`] as altairTypes.SignedBeaconBlock, {
+        verifyStateRoot: verify,
+        verifyProposer: verify,
+        verifySignatures: verify,
+      });
     }
     return state;
   },

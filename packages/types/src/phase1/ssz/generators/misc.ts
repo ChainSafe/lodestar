@@ -17,11 +17,7 @@ export const AttestationData: Phase1Generator<ContainerType<phase1.AttestationDa
   });
 };
 
-export const Attestation: Phase1Generator<ContainerType<phase1.Attestation>> = (
-  params,
-  altairTypes,
-  phase1Types
-) => {
+export const Attestation: Phase1Generator<ContainerType<phase1.Attestation>> = (params, altairTypes, phase1Types) => {
   return new ContainerType({
     fields: {
       ...altairTypes.Attestation.fields,

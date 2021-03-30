@@ -29,8 +29,7 @@ export function stateTransition(
   const {verifyStateRoot = true, verifyProposer = true, verifySignatures = true} = options || {};
 
   // Clone state because process slots and block are not pure
-  const postState = config.types.altair.BeaconState.clone(state) as altair.BeaconState &
-    phase0Types.BeaconState;
+  const postState = config.types.altair.BeaconState.clone(state) as altair.BeaconState & phase0Types.BeaconState;
   // Process slots (including those with no blocks) since block
   processSlots(config, postState, signedBlock.message.slot);
 
@@ -43,10 +42,7 @@ export function stateTransition(
   // Validate state root (`validate_state_root == True` in production)
   if (verifyStateRoot) {
     assert.true(
-      config.types.Root.equals(
-        signedBlock.message.stateRoot,
-        config.types.altair.BeaconState.hashTreeRoot(postState)
-      ),
+      config.types.Root.equals(signedBlock.message.stateRoot, config.types.altair.BeaconState.hashTreeRoot(postState)),
       "State root is not valid"
     );
   }

@@ -51,11 +51,7 @@ export const BeaconBlockBody: Phase1Generator<ContainerType<phase1.BeaconBlockBo
   });
 };
 
-export const BeaconBlock: Phase1Generator<ContainerType<phase1.BeaconBlock>> = (
-  params,
-  altairTypes,
-  phase1Types
-) => {
+export const BeaconBlock: Phase1Generator<ContainerType<phase1.BeaconBlock>> = (params, altairTypes, phase1Types) => {
   return new ContainerType({
     fields: {
       ...altairTypes.BeaconBlock.fields,
@@ -77,11 +73,7 @@ export const SignedBeaconBlock: Phase1Generator<ContainerType<phase1.SignedBeaco
   });
 };
 
-export const BeaconState: Phase1Generator<ContainerType<phase1.BeaconState>> = (
-  params,
-  altairTypes,
-  phase1Types
-) => {
+export const BeaconState: Phase1Generator<ContainerType<phase1.BeaconState>> = (params, altairTypes, phase1Types) => {
   return new ContainerType({
     fields: {
       ...altairTypes.BeaconState.fields,
