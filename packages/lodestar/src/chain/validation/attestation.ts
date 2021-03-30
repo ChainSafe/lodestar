@@ -160,7 +160,7 @@ export async function isAttestingToInValidBlock(db: IBeaconDb, attestation: phas
 }
 
 export function getAttestationAttesterCount(attestation: phase0.Attestation): number {
-  return Array.from(attestation.aggregationBits).filter((bit) => !!bit).length;
+  return Array.from(attestation.aggregationBits || []).filter((bit) => !!bit).length;
 }
 
 export function isCommitteeIndexWithinRange(
