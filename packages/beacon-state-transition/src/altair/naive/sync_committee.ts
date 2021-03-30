@@ -115,9 +115,7 @@ export function getSyncCommittee(
   for (let i = 0; i < pubkeys.length; i += config.params.SYNC_PUBKEYS_PER_AGGREGATE) {
     aggregates.push(
       aggregatePublicKeys(
-        pubkeys
-          .slice(i, i + config.params.SYNC_PUBKEYS_PER_AGGREGATE)
-          .map((pubkey) => pubkey.valueOf() as Uint8Array)
+        pubkeys.slice(i, i + config.params.SYNC_PUBKEYS_PER_AGGREGATE).map((pubkey) => pubkey.valueOf() as Uint8Array)
       )
     );
   }
