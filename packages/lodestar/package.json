@@ -94,7 +94,6 @@
     "wtfnode": "^0.8.4"
   },
   "devDependencies": {
-    "@chainsafe/benchmark-utils": "^0.18.0",
     "@types/bl": "^2.1.0",
     "@types/es6-promisify": "6.0.0",
     "@types/eventsource": "^1.1.5",

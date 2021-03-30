@@ -27,7 +27,6 @@ Eth1:
   - packages/lodestar/src/eth1/**/*
 
 Benchmarks:
-  - packages/benchmark-utils/**/*
   - packages/lodestar/test/benchmarks/**/*
 
 CI:
