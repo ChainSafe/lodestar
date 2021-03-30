@@ -9,6 +9,6 @@ export * from "../../primitive/types";
 // Re-export phase0 unchanging
 // TODO reorganize phase0 files
 //export * from "../../phase0/types/misc";
-// Re-export lightclient unchanging
-export * from "../../lightclient/types/sync";
-export * from "../../lightclient/types/committee";
+// Re-export altair unchanging
+export * from "../../altair/types/sync";
+export * from "../../altair/types/committee";

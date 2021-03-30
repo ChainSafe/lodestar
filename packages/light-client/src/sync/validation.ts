@@ -1,5 +1,5 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {lightclient} from "@chainsafe/lodestar-types";
+import {altair} from "@chainsafe/lodestar-types";
 import {assert, intDiv, verifyMerkleBranch} from "@chainsafe/lodestar-utils";
 import {
   FINALIZED_ROOT_INDEX,
@@ -14,10 +14,10 @@ import {
   computeSigningRoot,
 } from "@chainsafe/lodestar-beacon-state-transition";
 
-export function isValidLightclientUpdate(
+export function isValidAltairUpdate(
   config: IBeaconConfig,
-  snapshot: lightclient.LightclientSnapshot,
-  update: lightclient.LightclientUpdate
+  snapshot: altair.AltairSnapshot,
+  update: altair.AltairUpdate
 ): boolean {
   assert.gt(update.header.slot, snapshot.header.slot, "update slot is less or equal snapshot slot");
   const snapshotPeriod = intDiv(
@@ -34,9 +34,9 @@ export function isValidLightclientUpdate(
   );
   let signedHeader;
   if (
-    config.types.lightclient.BeaconBlockHeader.equals(
+    config.types.altair.BeaconBlockHeader.equals(
       update.finalityHeader,
-      config.types.lightclient.BeaconBlockHeader.defaultValue()
+      config.types.altair.BeaconBlockHeader.defaultValue()
     )
   ) {
     signedHeader = update.header;
@@ -47,14 +47,14 @@ export function isValidLightclientUpdate(
   } else {
     signedHeader = update.finalityHeader;
     verifyMerkleBranch(
-      config.types.lightclient.BeaconBlockHeader.hashTreeRoot(update.header),
+      config.types.altair.BeaconBlockHeader.hashTreeRoot(update.header),
       Array.from(update.finalityBranch).map((i) => i.valueOf() as Uint8Array),
       Math.log2(FINALIZED_ROOT_INDEX),
       FINALIZED_ROOT_INDEX % 2 ** Math.log2(FINALIZED_ROOT_INDEX),
       update.finalityHeader.stateRoot.valueOf() as Uint8Array
     );
   }
-  let syncCommittee: lightclient.SyncCommittee;
+  let syncCommittee: altair.SyncCommittee;
   if (updatePeriod === snapshotPeriod) {
     syncCommittee = snapshot.currentSyncCommittee;
     assert.equal(update.nextSyncCommitteeBranch.length, Math.log2(NEXT_SYNC_COMMITTEE_INDEX));
@@ -64,7 +64,7 @@ export function isValidLightclientUpdate(
   } else {
     syncCommittee = snapshot.nextSyncCommittee;
     verifyMerkleBranch(
-      config.types.lightclient.SyncCommittee.hashTreeRoot(update.nextSyncCommittee),
+      config.types.altair.SyncCommittee.hashTreeRoot(update.nextSyncCommittee),
       Array.from(update.nextSyncCommitteeBranch).map((i) => i.valueOf() as Uint8Array),
       Math.log2(NEXT_SYNC_COMMITTEE_INDEX),
       NEXT_SYNC_COMMITTEE_INDEX % 2 ** Math.log2(NEXT_SYNC_COMMITTEE_INDEX),
@@ -79,7 +79,7 @@ export function isValidLightclientUpdate(
     }
   }
   const domain = computeDomain(config, config.params.DOMAIN_SYNC_COMMITTEE, update.forkVersion);
-  const signingRoot = computeSigningRoot(config, config.types.lightclient.BeaconBlockHeader, signedHeader, domain);
+  const signingRoot = computeSigningRoot(config, config.types.altair.BeaconBlockHeader, signedHeader, domain);
   assert.true(verifyAggregate(participantPubkeys, signingRoot, update.syncCommitteeSignature.valueOf() as Uint8Array));
   return true;
 }

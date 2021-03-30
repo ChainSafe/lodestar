@@ -4,7 +4,7 @@
  */
 
 import {IPhase0Params} from "./phase0";
-import {ILightclientParams} from "./lightclient";
+import {IAltairParams} from "./altair";
 import {IPhase1Params} from "./phase1";
 
-export type IBeaconParams = IPhase0Params & ILightclientParams & IPhase1Params;
+export type IBeaconParams = IPhase0Params & IAltairParams & IPhase1Params;

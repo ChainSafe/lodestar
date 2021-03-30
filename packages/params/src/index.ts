@@ -3,7 +3,7 @@
  */
 
 export * from "./phase0";
-export * from "./lightclient";
+export * from "./altair";
 export * from "./phase1";
 export * from "./interface";
 export * from "./beaconParams";

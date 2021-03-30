@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import {IBeaconParams} from "@chainsafe/lodestar-params";
 
-import {ILightclientSSZTypes} from "../../../lightclient";
+import {IAltairSSZTypes} from "../../../altair";
 import {IPhase1SSZTypes} from "../interface";
 
 import * as primitive from "./primitive";
@@ -17,8 +17,8 @@ const allGenerators = {
   ...beacon,
 };
 
-export function createIPhase1SSZTypes(params: IBeaconParams, lightclientTypes: ILightclientSSZTypes): IPhase1SSZTypes {
-  const types = ({...lightclientTypes} as unknown) as IPhase1SSZTypes;
+export function createIPhase1SSZTypes(params: IBeaconParams, altairTypes: IAltairSSZTypes): IPhase1SSZTypes {
+  const types = ({...altairTypes} as unknown) as IPhase1SSZTypes;
 
   for (const typeName of Object.keys(primitive)) {
     // @ts-ignore
@@ -28,7 +28,7 @@ export function createIPhase1SSZTypes(params: IBeaconParams, lightclientTypes: I
 
   for (const [typeName, generator] of Object.entries(allGenerators)) {
     // @ts-ignore
-    types[typeName] = generator(params, lightclientTypes, types);
+    types[typeName] = generator(params, altairTypes, types);
   }
 
   return types;
