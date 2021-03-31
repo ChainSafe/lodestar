@@ -7,7 +7,7 @@ import PeerId from "peer-id";
 import Multiaddr from "multiaddr";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils";
-import {IBeaconMetrics} from "../metrics";
+import {IMetrics} from "../metrics";
 import {ReqResp, IReqResp, IReqRespOptions} from "./reqresp";
 import {INetworkOptions} from "./options";
 import {INetwork} from "./interface";
@@ -28,7 +28,7 @@ interface INetworkModules {
   config: IBeaconConfig;
   libp2p: LibP2p;
   logger: ILogger;
-  metrics?: IBeaconMetrics;
+  metrics?: IMetrics;
   chain: IBeaconChain;
   db: IBeaconDb;
   reqRespHandler: IReqRespHandler;

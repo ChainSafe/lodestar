@@ -4,7 +4,6 @@ import {ICliCommandOptions} from "../../util";
 export interface IMetricsArgs {
   "metrics.enabled": boolean;
   "metrics.gatewayUrl": string;
-  "metrics.pushGateway": boolean;
   "metrics.serverPort": number;
   "metrics.timeout": number;
   "metrics.listenAddr": string;
@@ -14,7 +13,6 @@ export function parseArgs(args: IMetricsArgs): IBeaconNodeOptions["metrics"] {
   return {
     enabled: args["metrics.enabled"],
     gatewayUrl: args["metrics.gatewayUrl"],
-    pushGateway: args["metrics.pushGateway"],
     serverPort: args["metrics.serverPort"],
     timeout: args["metrics.timeout"],
     listenAddr: args["metrics.listenAddr"],
@@ -33,13 +31,6 @@ export const options: ICliCommandOptions<IMetricsArgs> = {
     type: "string",
     description: "Gateway URL for metrics",
     defaultDescription: defaultOptions.metrics.gatewayUrl || "",
-    group: "metrics",
-  },
-
-  "metrics.pushGateway": {
-    type: "boolean",
-    description: "Enable/disable Prometheus Pushgateway for metrics",
-    defaultDescription: String(defaultOptions.metrics.pushGateway),
     group: "metrics",
   },
 

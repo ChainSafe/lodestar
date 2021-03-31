@@ -14,7 +14,7 @@ import {IBeaconDb} from "../db";
 import {INetwork, Network, ReqRespHandler} from "../network";
 import {BeaconSync, IBeaconSync} from "../sync";
 import {BeaconChain, IBeaconChain, initBeaconMetrics} from "../chain";
-import {BeaconMetrics, HttpMetricsServer, IBeaconMetrics} from "../metrics";
+import {createMetrics, IMetrics, HttpMetricsServer} from "../metrics";
 import {Api, IApi, RestApi} from "../api";
 import {TasksService} from "../tasks";
 import {IBeaconNodeOptions} from "./options";
@@ -27,7 +27,7 @@ export interface IBeaconNodeModules {
   opts: IBeaconNodeOptions;
   config: IBeaconConfig;
   db: IBeaconDb;
-  metrics?: IBeaconMetrics;
+  metrics?: IMetrics;
   network: INetwork;
   chain: IBeaconChain;
   api: IApi;
@@ -61,7 +61,7 @@ export class BeaconNode {
   opts: IBeaconNodeOptions;
   config: IBeaconConfig;
   db: IBeaconDb;
-  metrics?: IBeaconMetrics;
+  metrics?: IMetrics;
   metricsServer?: HttpMetricsServer;
   network: INetwork;
   chain: IBeaconChain;
@@ -121,9 +121,8 @@ export class BeaconNode {
     // start db if not already started
     await db.start();
 
-    let metrics;
-    if (opts.metrics.enabled) {
-      metrics = new BeaconMetrics(opts.metrics, {logger: logger.child(opts.logger.metrics)});
+    const metrics = opts.metrics.enabled ? createMetrics() : undefined;
+    if (metrics) {
       initBeaconMetrics(metrics, anchorState);
     }
 
@@ -180,14 +179,13 @@ export class BeaconNode {
       chain,
     });
 
-    let metricsServer;
-    if (metrics) {
-      metricsServer = new HttpMetricsServer(opts.metrics, {
-        metrics: metrics,
-        logger: logger.child(opts.logger.metrics),
-      });
+    const metricsServer = metrics
+      ? new HttpMetricsServer(opts.metrics, {metrics, logger: logger.child(opts.logger.metrics)})
+      : undefined;
+    if (metricsServer) {
       await metricsServer.start();
     }
+
     const restApi = await RestApi.init(opts.api.rest, {
       config,
       logger: logger.child(opts.logger.api),
