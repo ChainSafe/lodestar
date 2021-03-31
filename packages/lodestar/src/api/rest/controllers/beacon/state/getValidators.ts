@@ -50,6 +50,13 @@ export const getStateValidators: ApiController<ValidatorsQuery, Params> = {
               type: "string",
             },
           },
+          statuses: {
+            type: "array",
+            uniqueItems: true,
+            items: {
+              type: "string",
+            },
+          },
         },
       },
     },

@@ -37,13 +37,11 @@ export class RestBeaconStateApi extends RestApi implements IBeaconStateApi {
         indices.push(this.convertIdToString(index));
       }
     }
-    if (filters?.statuses) {
-      // TODO: account for statuses when needed
-    }
 
     try {
       const responseData = await this.client.get<{data: Json[]}>(`/states/${stateId}/validators`, {
         indices,
+        statuses: filters?.statuses as string[],
       });
       return responseData.data.map((value) =>
         this.config.types.phase0.ValidatorResponse.fromJson(value, {case: "snake"})

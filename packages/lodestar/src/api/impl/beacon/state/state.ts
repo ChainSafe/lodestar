@@ -8,7 +8,7 @@ import {IApiOptions} from "../../../options";
 import {ApiError, StateNotFound} from "../../errors/api";
 import {IApiModules} from "../../interface";
 import {IBeaconStateApi, ICommitteesFilters, IValidatorFilters, StateId} from "./interface";
-import {getEpochBeaconCommittees, resolveStateId, toValidatorResponse} from "./utils";
+import {filterStateValidatorsByStatuses, getEpochBeaconCommittees, resolveStateId, toValidatorResponse} from "./utils";
 import {computeEpochAtSlot, getCurrentEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 import {getStateValidatorIndex} from "../../utils";
 
@@ -51,8 +51,10 @@ export class BeaconStateApi implements IBeaconStateApi {
       throw new StateNotFound();
     }
 
+    const currentEpoch = getCurrentEpoch(this.config, state);
+
+    const validators: phase0.ValidatorResponse[] = [];
     if (filters?.indices) {
-      const validators: phase0.ValidatorResponse[] = [];
       for (const id of filters.indices) {
         const validatorIndex = getStateValidatorIndex(id, state, this.chain);
         if (validatorIndex) {
@@ -60,20 +62,28 @@ export class BeaconStateApi implements IBeaconStateApi {
             validatorIndex,
             state.validators[validatorIndex],
             state.balances[validatorIndex],
-            getCurrentEpoch(this.config, state)
+            currentEpoch
           );
           validators.push(validatorResponse);
         }
       }
       return validators;
-    } else if (filters?.statuses) {
-      // TODO: implement status filters when needed
+    }
+    if (filters?.statuses) {
+      const validatorsByStatus = filterStateValidatorsByStatuses(
+        filters.statuses,
+        state,
+        this.chain,
+        this.config,
+        currentEpoch
+      );
+      return validatorsByStatus;
     }
 
     let index = 0;
     const resp: phase0.ValidatorResponse[] = [];
     for (const v of readonlyValues(state.validators)) {
-      resp.push(toValidatorResponse(index, v, state.balances[index], getCurrentEpoch(this.config, state)));
+      resp.push(toValidatorResponse(index, v, state.balances[index], currentEpoch));
       index++;
     }
     return resp;
