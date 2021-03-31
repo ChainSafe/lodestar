@@ -16,7 +16,7 @@ import {toHexString, TreeBacked} from "@chainsafe/ssz";
 import {GENESIS_SLOT, ZERO_HASH} from "../constants";
 import {IBeaconDb} from "../db";
 import {Eth1Provider} from "../eth1";
-import {IBeaconMetrics} from "../metrics";
+import {IMetrics} from "../metrics";
 import {GenesisBuilder} from "./genesis/genesis";
 import {IGenesisResult} from "./genesis/interface";
 import {CheckpointStateCache, StateContextCache} from "./stateCache";
@@ -176,7 +176,7 @@ export function restoreStateCaches(
   return cachedBeaconState;
 }
 
-export function initBeaconMetrics(metrics: IBeaconMetrics, state: TreeBacked<phase0.BeaconState>): void {
+export function initBeaconMetrics(metrics: IMetrics, state: TreeBacked<phase0.BeaconState>): void {
   metrics.headSlot.set(state.slot);
   metrics.previousJustifiedEpoch.set(state.previousJustifiedCheckpoint.epoch);
   metrics.currentJustifiedEpoch.set(state.currentJustifiedCheckpoint.epoch);

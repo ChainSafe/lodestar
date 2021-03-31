@@ -5,7 +5,7 @@ import {ILogger, LodestarError} from "@chainsafe/lodestar-utils";
 import PeerId from "peer-id";
 import {IBeaconChain} from "../../chain";
 import {GoodByeReasonCode, GOODBYE_KNOWN_CODES, Libp2pEvent, Method} from "../../constants";
-import {IBeaconMetrics} from "../../metrics";
+import {IMetrics} from "../../metrics";
 import {NetworkEvent, INetworkEventBus} from "../events";
 import {IReqResp} from "../reqresp";
 import {Libp2pPeerMetadataStore} from "./metastore";
@@ -49,7 +49,7 @@ export type PeerManagerOpts = {
 export type PeerManagerModules = {
   libp2p: LibP2p;
   logger: ILogger;
-  metrics?: IBeaconMetrics;
+  metrics?: IMetrics;
   reqResp: IReqResp;
   chain: IBeaconChain;
   config: IBeaconConfig;
@@ -69,7 +69,7 @@ export type PeerManagerModules = {
 export class PeerManager {
   private libp2p: LibP2p;
   private logger: ILogger;
-  private metrics?: IBeaconMetrics;
+  private metrics?: IMetrics;
   private reqResp: IReqResp;
   private chain: IBeaconChain;
   private config: IBeaconConfig;

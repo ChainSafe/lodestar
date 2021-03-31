@@ -1,7 +1,7 @@
 import {AbortSignal} from "abort-controller";
 import {ATTESTATION_SUBNET_COUNT} from "@chainsafe/lodestar-types";
 import {mapValues} from "@chainsafe/lodestar-utils";
-import {IBeaconMetrics} from "../../metrics";
+import {IMetrics} from "../../metrics";
 import {JobQueue, JobQueueOpts, QueueType} from "../../util/queue";
 import {getGossipTopicString} from "./topic";
 import {DEFAULT_ENCODING} from "./constants";
@@ -27,28 +27,13 @@ const gossipQueueOpts: {[K in GossipType]: {maxLength: number; type: QueueType}}
   [GossipType.attester_slashing]: {maxLength: 4096, type: QueueType.FIFO},
 };
 
-const gossipMetricsPrefix: {[K in GossipType]: string} = {
-  [GossipType.beacon_block]: "lodestar_gossip_beacon_block_queue",
-  [GossipType.beacon_aggregate_and_proof]: "lodestar_gossip_beacon_aggregate_and_proof_queue",
-  [GossipType.beacon_attestation]: "lodestar_gossip_beacon_attestation_queue",
-  [GossipType.voluntary_exit]: "lodestar_gossip_voluntary_exit_queue",
-  [GossipType.proposer_slashing]: "lodestar_gossip_proposer_slashing_queue",
-  [GossipType.attester_slashing]: "lodestar_gossip_attester_slashing_queue",
-};
-
 export function createTopicValidatorFnMap(
   modules: IObjectValidatorModules,
-  metrics: IBeaconMetrics | undefined,
+  metrics: IMetrics | undefined,
   signal: AbortSignal
 ): TopicValidatorFnMap {
   const wrappedValidatorFns = mapValues(validatorFns, (validatorFn, type) =>
-    wrapWithQueue(
-      validatorFn as ValidatorFn<typeof type>,
-      modules,
-      {signal, ...gossipQueueOpts[type]},
-      metrics,
-      gossipMetricsPrefix[type]
-    )
+    wrapWithQueue(validatorFn as ValidatorFn<typeof type>, modules, {signal, ...gossipQueueOpts[type]}, metrics, type)
   );
 
   return createValidatorFnsByTopic(modules, wrappedValidatorFns);
@@ -72,10 +57,17 @@ export function wrapWithQueue<K extends GossipType>(
   validatorFn: ValidatorFn<K>,
   modules: IObjectValidatorModules,
   queueOpts: JobQueueOpts,
-  metrics: IBeaconMetrics | undefined,
-  metricsPrefix: string
+  metrics: IMetrics | undefined,
+  type: GossipType
 ): TopicValidatorFn {
-  const jobQueue = new JobQueue(queueOpts, {metrics, prefix: metricsPrefix});
+  const jobQueue = new JobQueue(
+    queueOpts,
+    metrics && {
+      length: metrics.gossipValidationQueueLength.child({topic: type}),
+      droppedJobs: metrics.gossipValidationQueueDroppedJobs.child({topic: type}),
+      jobTime: metrics.gossipValidationQueueJobTime.child({topic: type}),
+    }
+  );
   return async function (_topicStr, gossipMsg) {
     const {gossipTopic, gossipObject} = parseGossipMsg<K>(gossipMsg);
     await jobQueue.push(async () => await validatorFn(modules, gossipTopic, gossipObject));

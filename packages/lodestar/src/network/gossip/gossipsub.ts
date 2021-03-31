@@ -7,7 +7,7 @@ import {ATTESTATION_SUBNET_COUNT, phase0, Root} from "@chainsafe/lodestar-types"
 import {ILogger, toJson} from "@chainsafe/lodestar-utils";
 import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 
-import {IBeaconMetrics} from "../../metrics";
+import {IMetrics} from "../../metrics";
 import {GossipHandlerFn, GossipObject, GossipTopic, GossipType, IGossipMessage, TopicValidatorFnMap} from "./interface";
 import {msgIdToString, getMsgId, messageIsValid} from "./utils";
 import {getGossipSSZSerializer, getGossipTopic, getGossipTopicString} from "./topic";
@@ -23,7 +23,7 @@ interface IGossipsubModules {
   libp2p: Libp2p;
   validatorFns: TopicValidatorFnMap;
   logger: ILogger;
-  metrics?: IBeaconMetrics;
+  metrics?: IMetrics;
 }
 
 /**
@@ -43,7 +43,7 @@ export class Eth2Gossipsub extends Gossipsub {
   private readonly config: IBeaconConfig;
   private readonly genesisValidatorsRoot: Root;
   private readonly logger: ILogger;
-  private readonly metrics?: IBeaconMetrics;
+  private readonly metrics?: IMetrics;
   /**
    * Cached gossip objects
    *

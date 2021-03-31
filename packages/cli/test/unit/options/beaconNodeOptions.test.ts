@@ -22,7 +22,6 @@ describe("options / beaconNodeOptions", () => {
 
       "metrics.enabled": true,
       "metrics.gatewayUrl": "http://localhost:8000",
-      "metrics.pushGateway": true,
       "metrics.serverPort": 8765,
       "metrics.timeout": 5000,
       "metrics.listenAddr": "0.0.0.0",
@@ -61,7 +60,6 @@ describe("options / beaconNodeOptions", () => {
       metrics: {
         enabled: true,
         gatewayUrl: "http://localhost:8000",
-        pushGateway: true,
         serverPort: 8765,
         timeout: 5000,
         listenAddr: "0.0.0.0",
