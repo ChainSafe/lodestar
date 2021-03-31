@@ -25,14 +25,16 @@ export class AttestationRepository extends Repository<Uint8Array, phase0.Attesta
     const slot = value.data.slot;
     const dataRootHex = toHexString(attestationDataRoot);
     const rootHex = toHexString(key);
-    if (!this.dataRootIndex.get(slot)) {
-      this.dataRootIndex.set(slot, new Map());
+    let slotIndex = this.dataRootIndex.get(slot);
+    if (!slotIndex) {
+      slotIndex = new Map();
+      this.dataRootIndex.set(slot, slotIndex);
     }
-    if (!this.dataRootIndex.get(slot)?.get(dataRootHex)) {
-      this.dataRootIndex.get(slot)?.set(dataRootHex, [rootHex]);
+    if (!slotIndex.get(dataRootHex)) {
+      slotIndex.set(dataRootHex, [rootHex]);
     } else {
-      const rootHexes = new Set([rootHex, ...(this.dataRootIndex.get(slot)?.get(dataRootHex) || [])]);
-      this.dataRootIndex.get(slot)?.set(dataRootHex, Array.from(rootHexes));
+      const rootHexes = new Set([rootHex, ...(slotIndex.get(dataRootHex) || [])]);
+      slotIndex.set(dataRootHex, Array.from(rootHexes));
     }
     await super.put(key, value);
   }
@@ -54,12 +56,7 @@ export class AttestationRepository extends Repository<Uint8Array, phase0.Attesta
     if (!dataRootsAtSlot) return [];
     const rootHexes = dataRootsAtSlot.get(toHexString(attestationDataRoot));
     if (!rootHexes) return [];
-    const attestations = await Promise.all(
-      rootHexes.map((rootHex) => {
-        const root = fromHexString(rootHex);
-        return this.get(root);
-      })
-    );
+    const attestations = await Promise.all(rootHexes.map((rootHex) => this.get(fromHexString(rootHex))));
     return attestations.filter(notNullish);
   }
 
@@ -76,8 +73,7 @@ export class AttestationRepository extends Repository<Uint8Array, phase0.Attesta
         return a.data.slot < finalizedEpochStartSlot;
       })
     );
-    const indexedSlots = Array.from(this.dataRootIndex.keys());
-    for (const slot of indexedSlots) {
+    for (const slot of this.dataRootIndex.keys()) {
       if (slot < finalizedEpochStartSlot) this.dataRootIndex.delete(slot);
     }
   }
