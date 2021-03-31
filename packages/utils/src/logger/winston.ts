@@ -3,7 +3,7 @@
  */
 
 import {createLogger, Logger} from "winston";
-import {Context, defaultLogLevel, ILogger, ILoggerOptions, LogLevel} from "./interface";
+import {Context, defaultLogLevel, ILogger, ILoggerOptions, LogLevel, logLevelNum} from "./interface";
 import chalk from "chalk";
 import {getFormat} from "./format";
 import {Writable} from "stream";
@@ -22,14 +22,21 @@ export class WinstonLogger implements ILogger {
   private _transportOptsArr: TransportOpts[];
 
   constructor(options: Partial<ILoggerOptions> = {}, transportOptsArr: TransportOpts[] = [defaultTransportOpts]) {
+    // `options.level` can override the level in the transport
+    // This is necessary for child logger opts to take effect
+    let minLevel = options?.level || defaultLogLevel;
+    for (const transportOpts of transportOptsArr) {
+      transportOpts.level = minLevel = getMinLevel([minLevel, transportOpts.level || defaultLogLevel]);
+    }
+
     this.winston = createLogger({
       level: options?.level || defaultLogLevel,
       defaultMeta: {module: options?.module || ""} as DefaultMeta,
       format: getFormat(options || {}),
-      transports: transportOptsArr.map(fromTransportOpts),
+      transports: transportOptsArr.map((transportOpts) => fromTransportOpts(transportOpts)),
       exitOnError: false,
     });
-    this._level = this.getMinLevel(transportOptsArr.map((opts) => opts.level || defaultLogLevel));
+    this._level = minLevel;
     // Store for child logger
     this._options = options;
     this._transportOptsArr = transportOptsArr;
@@ -79,18 +86,18 @@ export class WinstonLogger implements ILogger {
 
   private createLogEntry(level: LogLevel, message: string, context?: Context, error?: Error): void {
     // don't propagate if silenced or message level is more detailed than logger level
-    if (this.winston.levels[level] > this.winston.levels[this._level]) {
+    if (logLevelNum[level] > logLevelNum[this._level]) {
       return;
     }
     this.winston[level](message, {context, error});
   }
+}
 
-  /** Return the min LogLevel from multiple transports */
-  private getMinLevel(levels: LogLevel[]): LogLevel {
-    return levels.reduce(
-      // error: 0, warn: 1, info: 2, ...
-      (minLevel, level) => (this.winston.levels[level] > this.winston.levels[minLevel] ? level : minLevel),
-      defaultLogLevel
-    );
-  }
+/** Return the min LogLevel from multiple transports */
+function getMinLevel(levels: LogLevel[]): LogLevel {
+  return levels.reduce(
+    // error: 0, warn: 1, info: 2, ...
+    (minLevel, level) => (logLevelNum[level] > logLevelNum[minLevel] ? level : minLevel),
+    defaultLogLevel
+  );
 }

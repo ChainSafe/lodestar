@@ -13,6 +13,15 @@ export enum LogLevel {
   silly = "silly",
 }
 
+export const logLevelNum: {[K in LogLevel]: number} = {
+  [LogLevel.error]: 0,
+  [LogLevel.warn]: 1,
+  [LogLevel.info]: 2,
+  [LogLevel.verbose]: 3,
+  [LogLevel.debug]: 4,
+  [LogLevel.silly]: 5,
+};
+
 // eslint-disable-next-line @typescript-eslint/naming-convention
 export const LogLevels = Object.values(LogLevel);
 

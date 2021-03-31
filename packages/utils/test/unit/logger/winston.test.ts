@@ -2,8 +2,8 @@ import fs from "fs";
 import path from "path";
 import rimraf from "rimraf";
 import {Writable} from "stream";
-import {Context, ILogger, LodestarError, LogFormat, logFormats, WinstonLogger} from "../../../src";
 import {expect} from "chai";
+import {Context, LodestarError, LogFormat, logFormats, LogLevel, sleep, WinstonLogger} from "../../../src";
 import {TransportType} from "../../../src/logger/transport";
 
 /**
@@ -77,26 +77,25 @@ describe("winston logger", () => {
           const logger = new WinstonLogger({format, hideTimestamp: true}, [{type: TransportType.stream, stream}]);
           logger.warn(message, context, error);
 
-          const allOutput = stream.getAsString().trim();
-          expect(allOutput).to.equal(output[format]);
+          expect(stream.getAsString().trim()).to.equal(output[format]);
         });
       }
     }
   });
 
   describe("profile", () => {
-    it("should log profile", () => {
-      const logger: ILogger = new WinstonLogger();
+    it("should log profile", async () => {
+      const stream = new WritableMemory();
+      const logger = new WinstonLogger({hideTimestamp: true, module: "A"}, [{type: TransportType.stream, stream}]);
 
       logger.profile("test");
+      await sleep(10);
+      // Stop profile of 'test'. Logging will now take place:
+      // '2021-03-31 20:47:09 []                 info: test  - duration=10ms'
+      logger.profile("test");
 
-      setTimeout(function () {
-        //
-        // Stop profile of 'test'. Logging will now take place:
-        //   '17 Jan 21:00:00 - info: test duration=10ms'
-        //
-        logger.profile("test");
-      }, 10);
+      // Do not include the time since it can vary
+      expect(stream.getAsString().trim()).to.include("\u001b[32minfo\u001b[39m: test  - duration=");
     });
   });
 
@@ -108,16 +107,30 @@ describe("winston logger", () => {
       const childC = childB.child({module: "C"});
       childC.warn("test");
 
-      // Allow the file transport to persist the file
-      await new Promise((r) => setTimeout(r, 10));
+      expect(stream.getAsString().trim()).to.equal("[A B C]            \u001b[33mwarn\u001b[39m: test");
+    });
 
-      const allOutput = stream.getAsString().trim();
-      expect(allOutput).to.equal("[A B C]            \u001b[33mwarn\u001b[39m: test");
+    it("Should log to child at a lower logLevel", () => {
+      const stream = new WritableMemory();
+      const logger = new WinstonLogger({hideTimestamp: true, module: "A"}, [
+        {type: TransportType.stream, stream, level: LogLevel.info},
+      ]);
+
+      const childB = logger.child({module: "B", level: LogLevel.debug});
+
+      logger.debug("Should not be logged");
+      childB.debug("Should be logged");
+
+      expect(stream.getAsString().trim()).to.equal("[A B]             \u001b[34mdebug\u001b[39m: Should be logged");
     });
   });
 
   describe("Log to file", () => {
-    const tmpDir = fs.mkdtempSync("lodestar-winston-test");
+    let tmpDir: string;
+
+    before(() => {
+      tmpDir = fs.mkdtempSync("test-lodestar-winston-test");
+    });
 
     it("Should log to file", async () => {
       const filename = path.join(tmpDir, "child-logger-test.txt");
@@ -131,8 +144,8 @@ describe("winston logger", () => {
         if (fs.existsSync(filename)) break;
       }
 
-      const allOutput = fs.readFileSync(filename, "utf8").trim();
-      expect(allOutput).to.equal("[A]                \u001b[33mwarn\u001b[39m: test");
+      const output = fs.readFileSync(filename, "utf8").trim();
+      expect(output).to.equal("[A]                \u001b[33mwarn\u001b[39m: test");
     });
 
     after(() => {
