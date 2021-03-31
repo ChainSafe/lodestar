@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
-import {WinstonLogger, LogLevel, TransportType} from "@chainsafe/lodestar-utils";
+import {WinstonLogger, LogLevel, TransportType, TransportOpts} from "@chainsafe/lodestar-utils";
 export {LogLevel};
 
 /**
@@ -11,10 +11,12 @@ export {LogLevel};
  * ```
  */
 export function testLogger(module?: string, defaultLogLevel = LogLevel.error, logFile?: string): WinstonLogger {
-  return new WinstonLogger({level: getLogLevelFromEnvs() || defaultLogLevel, module}, [
-    {type: TransportType.console},
-    ...(logFile ? [{type: TransportType.file, filename: logFile, level: LogLevel.debug}] : []),
-  ]);
+  const transports: TransportOpts[] = [{type: TransportType.console}];
+  if (logFile) {
+    transports.push({type: TransportType.file, filename: logFile, level: LogLevel.debug});
+  }
+
+  return new WinstonLogger({level: getLogLevelFromEnvs() || defaultLogLevel, module}, transports);
 }
 
 function getLogLevelFromEnvs(): LogLevel | null {
