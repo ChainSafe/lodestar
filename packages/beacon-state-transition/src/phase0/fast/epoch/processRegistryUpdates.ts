@@ -1,6 +1,6 @@
 import {phase0} from "@chainsafe/lodestar-types";
 import {computeActivationExitEpoch} from "../../../util";
-import {IEpochProcess, CachedBeaconState} from "../util";
+import {IEpochProcess, CachedBeaconState} from "../../../fast";
 
 export function processRegistryUpdates(state: CachedBeaconState<phase0.BeaconState>, process: IEpochProcess): void {
   const {config, validators, epochCtx} = state;

@@ -13,7 +13,7 @@ export class ConfigApi implements IConfigApi {
   }
 
   async getForkSchedule(): Promise<phase0.Fork[]> {
-    // @TODO: implement the actual fork schedule data get from config params once marin's lightclient PRs have been merged
+    // @TODO: implement the actual fork schedule data get from config params once marin's altair PRs have been merged
     return [];
   }
 

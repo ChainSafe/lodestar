@@ -2,7 +2,7 @@
  * @module chain/stateTransition/util
  */
 
-import {Epoch, Slot, Root, phase0, lightclient, allForks} from "@chainsafe/lodestar-types";
+import {Epoch, Slot, Root, phase0, altair, allForks} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {assert} from "@chainsafe/lodestar-utils";
 
@@ -34,7 +34,7 @@ export function getBlockRoot(config: IBeaconConfig, state: allForks.BeaconState,
  */
 export function getTemporaryBlockHeader(
   config: IBeaconConfig,
-  block: phase0.BeaconBlock | lightclient.BeaconBlock
+  block: phase0.BeaconBlock | altair.BeaconBlock
 ): phase0.BeaconBlockHeader {
   return {
     slot: block.slot,

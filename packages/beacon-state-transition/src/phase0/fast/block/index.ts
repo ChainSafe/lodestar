@@ -1,6 +1,6 @@
-import {CachedBeaconState} from "../util";
 import {phase0} from "@chainsafe/lodestar-types";
 
+import {CachedBeaconState} from "../../../fast";
 import {processBlockHeader} from "./processBlockHeader";
 import {processRandao} from "./processRandao";
 import {processEth1Data} from "./processEth1Data";

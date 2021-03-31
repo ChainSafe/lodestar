@@ -127,7 +127,7 @@ export class BeaconGossipHandler {
       const topic = {type, fork: "phase0"};
       this.network.gossip.handleTopic(topic as GossipTopic, handler as GossipHandlerFn);
     }
-    // TODO lightclient
+    // TODO altair
   }
 
   private removeGossipHandlers(): void {
@@ -146,6 +146,6 @@ export class BeaconGossipHandler {
       const topic = {type, fork: "phase0"};
       this.network.gossip.unhandleTopic(topic as GossipTopic, handler as GossipHandlerFn);
     }
-    // TODO lightclient
+    // TODO altair
   }
 }

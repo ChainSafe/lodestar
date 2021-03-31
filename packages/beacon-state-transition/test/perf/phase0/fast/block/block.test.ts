@@ -1,25 +1,26 @@
 import {config} from "@chainsafe/lodestar-config/mainnet";
-import {List} from "@chainsafe/ssz";
+import {List, TreeBacked} from "@chainsafe/ssz";
+import {allForks} from "@chainsafe/lodestar-types";
 import {expect} from "chai";
 import {generatePerformanceBlock, generatePerformanceState, initBLS} from "../../../util";
-import {phase0} from "../../../../../src";
+import {phase0, fast} from "../../../../../src";
 import {profilerLogger} from "../../../../utils/logger";
 
 describe("Process Blocks Performance Test", function () {
   this.timeout(0);
-  let state: phase0.fast.CachedBeaconState<phase0.BeaconState>;
+  let state: fast.CachedBeaconState<allForks.BeaconState>;
   const logger = profilerLogger();
   before(async () => {
     await initBLS();
     const origState = await generatePerformanceState();
-    state = phase0.fast.createCachedBeaconState(config, origState);
+    state = fast.createCachedBeaconState(config, origState as TreeBacked<allForks.BeaconState>);
   });
 
   it("should process block", async () => {
     const signedBlock = await generatePerformanceBlock();
     logger.profile(`Process block ${signedBlock.message.slot}`);
     const start = Date.now();
-    phase0.fast.fastStateTransition(state, signedBlock, {
+    fast.fastStateTransition(state, signedBlock, {
       verifyProposer: false,
       verifySignatures: false,
       verifyStateRoot: false,
@@ -42,7 +43,7 @@ describe("Process Blocks Performance Test", function () {
     signedBlock.message.body.voluntaryExits = (voluntaryExits as unknown) as List<phase0.SignedVoluntaryExit>;
     const start = Date.now();
     logger.profile(`Process block ${signedBlock.message.slot} with ${numValidatorExits} validator exits`);
-    phase0.fast.fastStateTransition(state, signedBlock, {
+    fast.fastStateTransition(state, signedBlock, {
       verifyProposer: false,
       verifySignatures: false,
       verifyStateRoot: false,

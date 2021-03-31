@@ -1,38 +1,51 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Epoch, phase0, Slot} from "@chainsafe/lodestar-types";
-import bls, {PublicKey} from "@chainsafe/bls";
-import {computeEpochAtSlot, computeSigningRoot, getDomain} from "@chainsafe/lodestar-beacon-state-transition";
+import {PublicKey} from "@chainsafe/bls";
+import {
+  computeEpochAtSlot,
+  computeSigningRoot,
+  getDomain,
+  ISignatureSet,
+  SignatureSetType,
+} from "@chainsafe/lodestar-beacon-state-transition";
 
-export function isValidSelectionProofSignature(
+export function getSelectionProofSignatureSet(
   config: IBeaconConfig,
   state: phase0.BeaconState,
   slot: Slot,
   aggregator: PublicKey,
-  signature: Uint8Array
-): boolean {
+  aggregateAndProof: phase0.SignedAggregateAndProof
+): ISignatureSet {
   const epoch = computeEpochAtSlot(config, slot);
   const selectionProofDomain = getDomain(config, state, config.params.DOMAIN_SELECTION_PROOF, epoch);
-  const selectionProofSigningRoot = computeSigningRoot(config, config.types.Slot, slot, selectionProofDomain);
-  return bls.Signature.fromBytes(signature).verify(aggregator, selectionProofSigningRoot);
+
+  return {
+    type: SignatureSetType.single,
+    pubkey: aggregator,
+    signingRoot: computeSigningRoot(config, config.types.Slot, slot, selectionProofDomain),
+    signature: aggregateAndProof.message.selectionProof.valueOf() as Uint8Array,
+  };
 }
 
-export function isValidAggregateAndProofSignature(
+export function getAggregateAndProofSignatureSet(
   config: IBeaconConfig,
   state: phase0.BeaconState,
   epoch: Epoch,
   aggregator: PublicKey,
   aggregateAndProof: phase0.SignedAggregateAndProof
-): boolean {
+): ISignatureSet {
   const aggregatorDomain = getDomain(config, state, config.params.DOMAIN_AGGREGATE_AND_PROOF, epoch);
-  const aggregatorSigningRoot = computeSigningRoot(
+  const signingRoot = computeSigningRoot(
     config,
     config.types.phase0.AggregateAndProof,
     aggregateAndProof.message,
     aggregatorDomain
   );
 
-  return bls.Signature.fromBytes(aggregateAndProof.signature.valueOf() as Uint8Array).verify(
-    aggregator,
-    aggregatorSigningRoot
-  );
+  return {
+    type: SignatureSetType.single,
+    pubkey: aggregator,
+    signingRoot,
+    signature: aggregateAndProof.signature.valueOf() as Uint8Array,
+  };
 }

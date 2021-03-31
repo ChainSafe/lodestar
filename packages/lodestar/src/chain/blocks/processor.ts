@@ -11,19 +11,17 @@ import {IStateRegenerator} from "../regen";
 import {JobQueue} from "../../util/queue";
 import {CheckpointStateCache} from "../stateCache";
 import {BlockError, BlockErrorCode, ChainSegmentError} from "../errors";
-import {IBeaconMetrics} from "../../metrics";
+import {IMetrics} from "../../metrics";
 
 import {processBlock, processChainSegment} from "./process";
 import {validateBlock} from "./validate";
-
-const metricsPrefix = "lodestar_block_processor_queue";
 
 type BlockProcessorModules = {
   config: IBeaconConfig;
   forkChoice: IForkChoice;
   regen: IStateRegenerator;
   emitter: ChainEventEmitter;
-  metrics?: IBeaconMetrics;
+  metrics?: IMetrics;
   clock: IBeaconClock;
   checkpointStateCache: CheckpointStateCache;
 };
@@ -44,7 +42,14 @@ export class BlockProcessor {
     maxLength?: number;
   }) {
     this.modules = modules;
-    this.jobQueue = new JobQueue({maxLength, signal}, {metrics: modules.metrics, prefix: metricsPrefix});
+    this.jobQueue = new JobQueue(
+      {maxLength, signal},
+      modules.metrics && {
+        length: modules.metrics.blockProcessorQueueLength,
+        droppedJobs: modules.metrics.blockProcessorQueueDroppedJobs,
+        jobTime: modules.metrics.blockProcessorQueueJobTime,
+      }
+    );
   }
 
   async processBlockJob(job: IBlockJob): Promise<void> {

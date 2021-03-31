@@ -7,7 +7,7 @@ import PeerId from "peer-id";
 import Multiaddr from "multiaddr";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils";
-import {IBeaconMetrics} from "../metrics";
+import {IMetrics} from "../metrics";
 import {ReqResp, IReqResp, IReqRespOptions} from "./reqresp";
 import {INetworkOptions} from "./options";
 import {INetwork} from "./interface";
@@ -22,15 +22,17 @@ import {IBeaconDb} from "../db";
 import {createTopicValidatorFnMap, Eth2Gossipsub} from "./gossip";
 import {IReqRespHandler} from "./reqresp/handlers";
 import {INetworkEventBus, NetworkEventBus} from "./events";
+import {AbortSignal} from "abort-controller";
 
 interface INetworkModules {
   config: IBeaconConfig;
   libp2p: LibP2p;
   logger: ILogger;
-  metrics?: IBeaconMetrics;
+  metrics?: IMetrics;
   chain: IBeaconChain;
   db: IBeaconDb;
   reqRespHandler: IReqRespHandler;
+  signal: AbortSignal;
 }
 
 export class Network implements INetwork {
@@ -46,7 +48,7 @@ export class Network implements INetwork {
   private logger: ILogger;
 
   constructor(opts: INetworkOptions & IReqRespOptions, modules: INetworkModules) {
-    const {config, libp2p, logger, metrics, chain, db, reqRespHandler} = modules;
+    const {config, libp2p, logger, metrics, chain, db, reqRespHandler, signal} = modules;
     this.logger = logger;
     this.libp2p = libp2p;
     const networkEventBus = new NetworkEventBus();
@@ -65,7 +67,7 @@ export class Network implements INetwork {
       config,
       genesisValidatorsRoot: chain.genesisValidatorsRoot,
       libp2p,
-      validatorFns: createTopicValidatorFnMap({config, chain, db, logger}),
+      validatorFns: createTopicValidatorFnMap({config, chain, db, logger}, metrics, signal),
       logger,
       metrics,
     });

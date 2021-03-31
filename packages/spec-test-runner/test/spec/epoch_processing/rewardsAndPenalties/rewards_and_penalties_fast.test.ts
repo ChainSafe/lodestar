@@ -3,7 +3,7 @@ import {expect} from "chai";
 
 import {TreeBacked} from "@chainsafe/ssz";
 import {config} from "@chainsafe/lodestar-config/minimal";
-import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
+import {fast, phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
 import {IStateTestCase} from "../../../utils/specTestTypes/stateTestCase";
 import {SPEC_TEST_LOCATION} from "../../../utils/specTestCases";
@@ -12,11 +12,11 @@ describeDirectorySpecTest<IStateTestCase, phase0.BeaconState>(
   "rewards and penalties minimal",
   join(SPEC_TEST_LOCATION, "tests/minimal/phase0/epoch_processing/rewards_and_penalties/pyspec_tests"),
   (testcase) => {
-    const wrappedState = phase0.fast.createCachedBeaconState<phase0.BeaconState>(
+    const wrappedState = fast.createCachedBeaconState<phase0.BeaconState>(
       config,
       testcase.pre as TreeBacked<phase0.BeaconState>
     );
-    const process = phase0.fast.prepareEpochProcessState(wrappedState);
+    const process = fast.prepareEpochProcessState(wrappedState);
     phase0.fast.processRewardsAndPenalties(wrappedState, process);
     return wrappedState;
   },

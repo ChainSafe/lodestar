@@ -12,7 +12,7 @@ import {generateValidator, generateValidators} from "../../../../../utils/valida
 import {BeaconChain} from "../../../../../../src/chain";
 import {StubbedBeaconDb} from "../../../../../utils/stub";
 import {setupApiImplTestServer, ApiImplTestModules} from "../../index.test";
-import {PubkeyIndexMap} from "@chainsafe/lodestar-beacon-state-transition/lib/phase0/fast";
+import {fast} from "@chainsafe/lodestar-beacon-state-transition";
 
 use(chaiAsPromised);
 
@@ -100,7 +100,7 @@ describe("beacon api impl - state - validators", function () {
       chainStub.getHeadState.returns({
         pubkey2index: ({
           get: () => undefined,
-        } as unknown) as PubkeyIndexMap,
+        } as unknown) as fast.PubkeyIndexMap,
       } as CachedBeaconState<phase0.BeaconState>);
       const api = new BeaconStateApi({}, {config, db: dbStub, chain: chainStub});
       await expect(api.getStateValidator("someState", Buffer.alloc(32, 1))).to.be.rejectedWith("Validator not found");
@@ -110,7 +110,7 @@ describe("beacon api impl - state - validators", function () {
       chainStub.getHeadState.returns({
         pubkey2index: ({
           get: () => 2,
-        } as unknown) as PubkeyIndexMap,
+        } as unknown) as fast.PubkeyIndexMap,
       } as CachedBeaconState<phase0.BeaconState>);
       const api = new BeaconStateApi({}, {config, db: dbStub, chain: chainStub});
       expect(await api.getStateValidator("someState", Buffer.alloc(32, 1))).to.not.be.null;
@@ -131,11 +131,11 @@ describe("beacon api impl - state - validators", function () {
           balances: Array.from({length: 10}, () => BigInt(10)) as List<Gwei>,
         })
       );
-      const pubkey2IndexStub = sinon.createStubInstance(phase0.fast.PubkeyIndexMap);
+      const pubkey2IndexStub = sinon.createStubInstance(fast.PubkeyIndexMap);
       pubkey2IndexStub.get.withArgs(Buffer.alloc(32, 1)).returns(3);
       pubkey2IndexStub.get.withArgs(Buffer.alloc(32, 2)).returns(25);
       chainStub.getHeadState.returns({
-        pubkey2index: (pubkey2IndexStub as unknown) as phase0.fast.PubkeyIndexMap,
+        pubkey2index: (pubkey2IndexStub as unknown) as fast.PubkeyIndexMap,
       } as CachedBeaconState<phase0.BeaconState>);
       const api = new BeaconStateApi({}, {config, db: dbStub, chain: chainStub});
       const balances = await api.getStateValidatorBalances("somestate", [

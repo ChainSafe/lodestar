@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unsafe-return */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
 import {CompositeType, TreeBacked} from "@chainsafe/ssz";
 import {phase0, Epoch, Root, Slot} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
@@ -47,7 +49,7 @@ export class StateArchiveRepository extends Repository<Slot, TreeBacked<phase0.B
   }
 
   private storeRootIndex(slot: Slot, stateRoot: Root): Promise<void> {
-    return this.db.put(this.getRootIndexKey(stateRoot), intToBytes(slot, 64, "be"));
+    return this.db.put(this.getRootIndexKey(stateRoot), intToBytes(slot, 8, "be"));
   }
 
   private getRootIndexKey(root: Root): Buffer {

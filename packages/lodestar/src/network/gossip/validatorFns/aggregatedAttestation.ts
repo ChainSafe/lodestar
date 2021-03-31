@@ -29,9 +29,9 @@ export async function validateAggregatedAttestation(
       case AttestationErrorCode.WRONG_NUMBER_OF_AGGREGATION_BITS:
       case AttestationErrorCode.KNOWN_BAD_BLOCK:
       case AttestationErrorCode.AGGREGATOR_NOT_IN_COMMITTEE:
-      case AttestationErrorCode.INVALID_SELECTION_PROOF:
       case AttestationErrorCode.INVALID_SIGNATURE:
       case AttestationErrorCode.INVALID_AGGREGATOR:
+      case AttestationErrorCode.INVALID_INDEXED_ATTESTATION:
         logger.debug("gossip - AggregateAndProof - reject", e.type);
         throw new GossipValidationError(ERR_TOPIC_VALIDATOR_REJECT);
 

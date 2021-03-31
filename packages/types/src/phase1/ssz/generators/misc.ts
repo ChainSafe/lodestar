@@ -4,27 +4,23 @@ import {Phase1Generator} from "./interface";
 
 export const AttestationData: Phase1Generator<ContainerType<phase1.AttestationData>> = (
   params,
-  lightclientTypes,
+  altairTypes,
   phase1Types
 ) => {
   return new ContainerType({
     fields: {
-      ...lightclientTypes.AttestationData.fields,
+      ...altairTypes.AttestationData.fields,
       shard: phase1Types.Shard,
-      shardHeadRoot: lightclientTypes.Root,
-      shardTransitionRoot: lightclientTypes.Root,
+      shardHeadRoot: altairTypes.Root,
+      shardTransitionRoot: altairTypes.Root,
     },
   });
 };
 
-export const Attestation: Phase1Generator<ContainerType<phase1.Attestation>> = (
-  params,
-  lightclientTypes,
-  phase1Types
-) => {
+export const Attestation: Phase1Generator<ContainerType<phase1.Attestation>> = (params, altairTypes, phase1Types) => {
   return new ContainerType({
     fields: {
-      ...lightclientTypes.Attestation.fields,
+      ...altairTypes.Attestation.fields,
       data: phase1Types.AttestationData,
     },
   });
@@ -32,12 +28,12 @@ export const Attestation: Phase1Generator<ContainerType<phase1.Attestation>> = (
 
 export const IndexedAttestation: Phase1Generator<ContainerType<phase1.IndexedAttestation>> = (
   params,
-  lightclientTypes,
+  altairTypes,
   phase1Types
 ) => {
   return new ContainerType({
     fields: {
-      ...lightclientTypes.IndexedAttestation.fields,
+      ...altairTypes.IndexedAttestation.fields,
       data: phase1Types.AttestationData,
     },
   });
@@ -45,38 +41,38 @@ export const IndexedAttestation: Phase1Generator<ContainerType<phase1.IndexedAtt
 
 export const PendingAttestation: Phase1Generator<ContainerType<phase1.PendingAttestation>> = (
   params,
-  lightclientTypes,
+  altairTypes,
   phase1Types
 ) => {
   return new ContainerType({
     fields: {
-      ...lightclientTypes.PendingAttestation.fields,
+      ...altairTypes.PendingAttestation.fields,
       data: phase1Types.AttestationData,
-      crosslinkSuccess: lightclientTypes.Boolean,
+      crosslinkSuccess: altairTypes.Boolean,
     },
   });
 };
 
 export const AttesterSlashing: Phase1Generator<ContainerType<phase1.AttesterSlashing>> = (
   params,
-  lightclientTypes,
+  altairTypes,
   phase1Types
 ) => {
   return new ContainerType({
     fields: {
-      ...lightclientTypes.AttesterSlashing.fields,
+      ...altairTypes.AttesterSlashing.fields,
       attestation1: phase1Types.IndexedAttestation,
       attestation2: phase1Types.IndexedAttestation,
     },
   });
 };
 
-export const Validator: Phase1Generator<ContainerType<phase1.Validator>> = (params, lightclientTypes) => {
+export const Validator: Phase1Generator<ContainerType<phase1.Validator>> = (params, altairTypes) => {
   return new ContainerType({
     fields: {
-      ...lightclientTypes.Validator.fields,
-      nextCustodySecretToReveal: lightclientTypes.Uint64,
-      allCustodySecretsRevealedEpoch: lightclientTypes.Epoch,
+      ...altairTypes.Validator.fields,
+      nextCustodySecretToReveal: altairTypes.Uint64,
+      allCustodySecretsRevealedEpoch: altairTypes.Epoch,
     },
   });
 };

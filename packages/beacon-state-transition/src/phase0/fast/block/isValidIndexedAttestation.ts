@@ -1,19 +1,18 @@
-import {phase0} from "@chainsafe/lodestar-types";
-import {computeSigningRoot, getDomain} from "../../../util";
-import {ISignatureSet, SignatureSetType, verifySignatureSet} from "../signatureSets";
-import {CachedBeaconState} from "../util";
+import {readonlyValues} from "@chainsafe/ssz";
+import {allForks, phase0} from "@chainsafe/lodestar-types";
+import {CachedBeaconState, verifyIndexedAttestationSignature} from "../../../fast";
 
 /**
  * Check if `indexedAttestation` has sorted and unique indices and a valid aggregate signature.
  */
 export function isValidIndexedAttestation(
-  state: CachedBeaconState<phase0.BeaconState>,
+  state: CachedBeaconState<allForks.BeaconState>,
   indexedAttestation: phase0.IndexedAttestation,
   verifySignature = true
 ): boolean {
   const {config} = state;
   const {MAX_VALIDATORS_PER_COMMITTEE} = config.params;
-  const indices = getIndices(indexedAttestation);
+  const indices = Array.from(readonlyValues(indexedAttestation.attestingIndices));
 
   // verify max number of indices
   if (!(indices.length > 0 && indices.length <= MAX_VALIDATORS_PER_COMMITTEE)) {
@@ -36,31 +35,5 @@ export function isValidIndexedAttestation(
     return true;
   }
 
-  const signatureSet = getIndexedAttestationSignatureSet(state, indexedAttestation, indices);
-  try {
-    return verifySignatureSet(signatureSet);
-  } catch (e) {
-    return false;
-  }
-}
-
-export function getIndexedAttestationSignatureSet(
-  state: CachedBeaconState<phase0.BeaconState>,
-  indexedAttestation: phase0.IndexedAttestation,
-  indices?: number[]
-): ISignatureSet {
-  const {config, epochCtx} = state;
-  const domain = getDomain(config, state, config.params.DOMAIN_BEACON_ATTESTER, indexedAttestation.data.target.epoch);
-
-  if (!indices) indices = getIndices(indexedAttestation);
-  return {
-    type: SignatureSetType.aggregate,
-    pubkeys: indices.map((i) => epochCtx.index2pubkey[i]),
-    signingRoot: computeSigningRoot(config, config.types.phase0.AttestationData, indexedAttestation.data, domain),
-    signature: indexedAttestation.signature.valueOf() as Uint8Array,
-  };
-}
-
-function getIndices(indexedAttestation: phase0.IndexedAttestation): number[] {
-  return Array.from(indexedAttestation.attestingIndices);
+  return verifyIndexedAttestationSignature(state, indexedAttestation, indices);
 }

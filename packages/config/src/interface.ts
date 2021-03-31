@@ -1,14 +1,7 @@
 import {IBeaconParams} from "@chainsafe/lodestar-params";
-import {
-  IBeaconSSZTypes,
-  ILightclientSSZTypes,
-  IPhase0SSZTypes,
-  IPhase1SSZTypes,
-  Slot,
-  Version,
-} from "@chainsafe/lodestar-types";
+import {IAllForksSSZTypes, IBeaconSSZTypes, Slot, Version} from "@chainsafe/lodestar-types";
 
-export type IForkName = "phase0" | "lightclient" | "phase1";
+export type IForkName = "phase0" | "altair" | "phase1";
 
 export interface IForkInfo {
   name: IForkName;
@@ -31,5 +24,5 @@ export interface IBeaconConfig {
   /**
    * Get SSZ types by hard-fork
    */
-  getTypes(slot: Slot): IPhase0SSZTypes | ILightclientSSZTypes | IPhase1SSZTypes;
+  getTypes(slot: Slot): IAllForksSSZTypes;
 }

@@ -2,8 +2,8 @@ import {AbortSignal} from "abort-controller";
 import {sleep} from "@chainsafe/lodestar-utils";
 import {wrapError} from "../wrapError";
 import {QueueError, QueueErrorCode} from "./errors";
-import {QueueMetricsOpts, IQueueMetrics, createQueueMetrics} from "./metrics";
-export {QueueError, QueueErrorCode, QueueMetricsOpts};
+import {IGauge, IHistogram} from "../../metrics";
+export {QueueError, QueueErrorCode};
 
 export type JobQueueOpts = {
   maxLength: number;
@@ -23,6 +23,13 @@ enum QueueState {
   Yielding,
 }
 
+export interface IQueueMetrics {
+  length: IGauge;
+  droppedJobs: IGauge;
+  /** Compute async utilization rate with `rate(metrics_name[1m])` */
+  jobTime: IHistogram;
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Job<R> = (...args: any) => Promise<R>;
 
@@ -39,10 +46,14 @@ export class JobQueue {
   private readonly jobs: JobQueueItem<any, Job<any>>[] = [];
   private readonly metrics?: IQueueMetrics;
 
-  constructor(opts: JobQueueOpts, metricsOpts?: QueueMetricsOpts) {
+  constructor(opts: JobQueueOpts, metrics?: IQueueMetrics) {
     this.opts = opts;
     this.opts.signal.addEventListener("abort", this.abortAllJobs, {once: true});
-    this.metrics = metricsOpts && createQueueMetrics(metricsOpts, {getQueueLength: () => this.jobs.length});
+
+    if (metrics) {
+      this.metrics = metrics;
+      metrics.length.addCollect(() => metrics.length.set(this.jobs.length));
+    }
   }
 
   async push<R, Fn extends Job<R> = Job<R>>(job: Fn): Promise<R> {

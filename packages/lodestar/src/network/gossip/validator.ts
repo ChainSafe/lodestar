@@ -1,17 +1,78 @@
-import {ERR_TOPIC_VALIDATOR_REJECT} from "libp2p-gossipsub/src/constants";
+import {AbortSignal} from "abort-controller";
 import {ATTESTATION_SUBNET_COUNT} from "@chainsafe/lodestar-types";
+import {mapValues} from "@chainsafe/lodestar-utils";
+import {IMetrics} from "../../metrics";
+import {JobQueue, JobQueueOpts, QueueType} from "../../util/queue";
+import {getGossipTopicString} from "./topic";
+import {DEFAULT_ENCODING} from "./constants";
+import {validatorFns} from "./validatorFns";
+import {parseGossipMsg} from "./message";
 import {
   GossipType,
-  IGossipMessage,
   TopicValidatorFn,
-  ObjectValidatorFn,
   IObjectValidatorModules,
   GossipTopic,
+  TopicValidatorFnMap,
+  GossipTopicMap,
+  GossipTypeMap,
 } from "./interface";
-import {getGossipTopicString} from "./topic";
-import {GossipValidationError} from "./errors";
-import {DEFAULT_ENCODING} from "./constants";
-import {objectValidatorFns} from "./validatorFns";
+
+// Numbers from https://github.com/sigp/lighthouse/blob/b34a79dc0b02e04441ba01fd0f304d1e203d877d/beacon_node/network/src/beacon_processor/mod.rs#L69
+const gossipQueueOpts: {[K in GossipType]: {maxLength: number; type: QueueType}} = {
+  [GossipType.beacon_block]: {maxLength: 1024, type: QueueType.FIFO},
+  [GossipType.beacon_aggregate_and_proof]: {maxLength: 1024, type: QueueType.LIFO},
+  [GossipType.beacon_attestation]: {maxLength: 16384, type: QueueType.LIFO},
+  [GossipType.voluntary_exit]: {maxLength: 4096, type: QueueType.FIFO},
+  [GossipType.proposer_slashing]: {maxLength: 4096, type: QueueType.FIFO},
+  [GossipType.attester_slashing]: {maxLength: 4096, type: QueueType.FIFO},
+};
+
+export function createTopicValidatorFnMap(
+  modules: IObjectValidatorModules,
+  metrics: IMetrics | undefined,
+  signal: AbortSignal
+): TopicValidatorFnMap {
+  const wrappedValidatorFns = mapValues(validatorFns, (validatorFn, type) =>
+    wrapWithQueue(validatorFn as ValidatorFn<typeof type>, modules, {signal, ...gossipQueueOpts[type]}, metrics, type)
+  );
+
+  return createValidatorFnsByTopic(modules, wrappedValidatorFns);
+}
+
+/**
+ * Intermediate type for gossip validation functions.
+ * Gossip validation functions defined with this signature are easier to unit test
+ */
+export type ValidatorFn<K extends GossipType> = (
+  modules: IObjectValidatorModules,
+  topic: GossipTopicMap[K],
+  object: GossipTypeMap[K]
+) => Promise<void>;
+
+/**
+ * Wraps an ObjectValidatorFn as a TopicValidatorFn
+ * See TopicValidatorFn here https://github.com/libp2p/js-libp2p-interfaces/blob/v0.5.2/src/pubsub/index.js#L529
+ */
+export function wrapWithQueue<K extends GossipType>(
+  validatorFn: ValidatorFn<K>,
+  modules: IObjectValidatorModules,
+  queueOpts: JobQueueOpts,
+  metrics: IMetrics | undefined,
+  type: GossipType
+): TopicValidatorFn {
+  const jobQueue = new JobQueue(
+    queueOpts,
+    metrics && {
+      length: metrics.gossipValidationQueueLength.child({topic: type}),
+      droppedJobs: metrics.gossipValidationQueueDroppedJobs.child({topic: type}),
+      jobTime: metrics.gossipValidationQueueJobTime.child({topic: type}),
+    }
+  );
+  return async function (_topicStr, gossipMsg) {
+    const {gossipTopic, gossipObject} = parseGossipMsg<K>(gossipMsg);
+    await jobQueue.push(async () => await validatorFn(modules, gossipTopic, gossipObject));
+  };
+}
 
 // Gossip validation functions are wrappers around chain-level validation functions
 // With a few additional elements:
@@ -26,32 +87,13 @@ import {objectValidatorFns} from "./validatorFns";
 //   This data must be deserialized into the proper type, determined by the topic (fork digest)
 //   This deserialization must have happened prior to the topic validator running.
 
-/**
- * Wrap an ObjectValidatorFn as a TopicValidatorFn
- *
- * See TopicValidatorFn here https://github.com/libp2p/js-libp2p-interfaces/blob/v0.5.2/src/pubsub/index.js#L529
- */
-export function createTopicValidatorFn(
+export function createValidatorFnsByTopic(
   modules: IObjectValidatorModules,
-  objectValidatorFn: ObjectValidatorFn
-): TopicValidatorFn {
-  return async (topicString: string, msg: IGossipMessage): Promise<void> => {
-    const gossipTopic = msg.gossipTopic;
-    const gossipObject = msg.gossipObject;
-    if (gossipTopic == null || gossipObject == null) {
-      throw new GossipValidationError(ERR_TOPIC_VALIDATOR_REJECT);
-    }
-    await objectValidatorFn(modules, gossipTopic, gossipObject);
-  };
-}
-
-export function createTopicValidatorFnMap(modules: IObjectValidatorModules): Map<string, TopicValidatorFn> {
-  const validatorFns = new Map<string, TopicValidatorFn>();
+  validatorFnsByType: {[K in GossipType]: TopicValidatorFn}
+): TopicValidatorFnMap {
+  const validatorFnsByTopic = new Map<string, TopicValidatorFn>();
   const genesisValidatorsRoot = modules.chain.genesisValidatorsRoot;
 
-  // TODO: other fork topics should get added here
-  // phase0
-  const fork = "phase0";
   const staticGossipTypes: GossipType[] = [
     GossipType.beacon_block,
     GossipType.beacon_aggregate_and_proof,
@@ -60,13 +102,16 @@ export function createTopicValidatorFnMap(modules: IObjectValidatorModules): Map
     GossipType.attester_slashing,
   ];
 
+  // TODO: other fork topics should get added here
+  // phase0
+  const fork = "phase0";
+
   for (const type of staticGossipTypes) {
-    const objectValidatorFn = objectValidatorFns[type];
     const topic = {type, fork, encoding: DEFAULT_ENCODING} as GossipTopic;
     const topicString = getGossipTopicString(modules.config, topic, genesisValidatorsRoot);
-    const topicValidatorFn = createTopicValidatorFn(modules, objectValidatorFn as ObjectValidatorFn);
-    validatorFns.set(topicString, topicValidatorFn);
+    validatorFnsByTopic.set(topicString, validatorFnsByType[type]);
   }
+
   // create an entry for every committee subnet - phase0
   for (let subnet = 0; subnet < ATTESTATION_SUBNET_COUNT; subnet++) {
     const topic = {
@@ -76,11 +121,9 @@ export function createTopicValidatorFnMap(modules: IObjectValidatorModules): Map
       subnet,
     } as GossipTopic;
     const topicString = getGossipTopicString(modules.config, topic, genesisValidatorsRoot);
-    const topicValidatorFn = createTopicValidatorFn(
-      modules,
-      objectValidatorFns[GossipType.beacon_attestation] as ObjectValidatorFn
-    );
-    validatorFns.set(topicString, topicValidatorFn);
+    const topicValidatorFn = validatorFnsByType[GossipType.beacon_attestation];
+    validatorFnsByTopic.set(topicString, topicValidatorFn);
   }
-  return validatorFns;
+
+  return validatorFnsByTopic;
 }

@@ -115,13 +115,13 @@ describe("block archive repository", function () {
     expect(
       spy.withArgs(
         encodeKey(Bucket.index_blockArchiveRootIndex, config.types.phase0.BeaconBlock.hashTreeRoot(block.message)),
-        intToBytes(block.message.slot, 64, "be")
+        intToBytes(block.message.slot, 8, "be")
       ).calledOnce
     ).to.be.true;
     expect(
       spy.withArgs(
         encodeKey(Bucket.index_blockArchiveParentRootIndex, block.message.parentRoot.valueOf() as Uint8Array),
-        intToBytes(block.message.slot, 64, "be")
+        intToBytes(block.message.slot, 8, "be")
       ).calledOnce
     ).to.be.true;
   });
@@ -133,13 +133,13 @@ describe("block archive repository", function () {
     expect(
       spy.withArgs(
         encodeKey(Bucket.index_blockArchiveRootIndex, config.types.phase0.BeaconBlock.hashTreeRoot(blocks[0].message)),
-        intToBytes(blocks[0].message.slot, 64, "be")
+        intToBytes(blocks[0].message.slot, 8, "be")
       ).calledTwice
     ).to.be.true;
     expect(
       spy.withArgs(
         encodeKey(Bucket.index_blockArchiveParentRootIndex, blocks[0].message.parentRoot.valueOf() as Uint8Array),
-        intToBytes(blocks[0].message.slot, 64, "be")
+        intToBytes(blocks[0].message.slot, 8, "be")
       ).calledTwice
     ).to.be.true;
   });

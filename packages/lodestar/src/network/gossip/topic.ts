@@ -15,7 +15,7 @@ import {
   GossipSerializer,
   GossipType,
   GossipTopic,
-  IBeaconBlockTopic,
+  GossipTopicMap,
 } from "./interface";
 import {DEFAULT_ENCODING} from "./constants";
 
@@ -81,7 +81,7 @@ export function getGossipTopic(config: IBeaconConfig, topic: string, genesisVali
     type,
     fork,
     encoding,
-  } as IBeaconBlockTopic;
+  } as GossipTopicMap[GossipType.beacon_block];
 }
 
 export function getGossipSSZType<T extends GossipObject>(config: IBeaconConfig, topic: GossipTopic): ContainerType<T> {

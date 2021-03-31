@@ -1,13 +1,13 @@
 import crypto from "crypto";
 import bls, {init} from "@chainsafe/bls";
-import {BitList, List} from "@chainsafe/ssz";
+import {BitList, List, TreeBacked} from "@chainsafe/ssz";
 import {config} from "@chainsafe/lodestar-config/mainnet";
-import {ValidatorIndex, BLSSignature} from "@chainsafe/lodestar-types";
+import {ValidatorIndex, BLSSignature, allForks} from "@chainsafe/lodestar-types";
 import {ZERO_HASH, FAR_FUTURE_EPOCH} from "../../../../src/constants";
 import {generateState} from "../../../utils/state";
 import {generateValidators} from "../../../utils/validator";
 import {expect} from "chai";
-import {phase0, createCachedBeaconState} from "../../../../src";
+import {phase0, createCachedBeaconState, fast} from "../../../../src";
 
 describe("signatureSets", () => {
   before("Init BLS", async () => {
@@ -69,10 +69,12 @@ describe("signatureSets", () => {
 
     const state = createCachedBeaconState(
       config,
-      config.types.phase0.BeaconState.createTreeBackedFromStruct(generateState({validators}))
+      config.types.phase0.BeaconState.createTreeBackedFromStruct(generateState({validators})) as TreeBacked<
+        allForks.BeaconState
+      >
     );
 
-    const signatureSets = phase0.fast.getAllBlockSignatureSets(state, signedBlock);
+    const signatureSets = fast.getAllBlockSignatureSets(state, signedBlock);
     expect(signatureSets.length).to.equal(
       // block signature
       1 +

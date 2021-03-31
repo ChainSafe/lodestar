@@ -7,7 +7,7 @@ import {IReqResp} from "../../../../src/network/reqresp";
 import {PeerRpcScoreStore, PeerManager, Libp2pPeerMetadataStore} from "../../../../src/network/peers";
 import {NetworkEvent, NetworkEventBus} from "../../../../src/network";
 import {Method} from "../../../../src/constants";
-import {BeaconMetrics} from "../../../../src/metrics";
+import {createMetrics} from "../../../../src/metrics";
 import {createNode, getAttnets} from "../../../utils/network";
 import {MockBeaconChain} from "../../../utils/mocks/chain/chain";
 import {generateEmptySignedBlock} from "../../../utils/block";
@@ -22,7 +22,7 @@ const logger = testLogger();
 
 describe("network / peers / PeerManager", function () {
   const peerId1 = getValidPeerId();
-  const metrics = new BeaconMetrics({enabled: true, timeout: 5000, pushGateway: false}, {logger});
+  const metrics = createMetrics();
 
   const afterEachCallbacks: (() => Promise<void> | void)[] = [];
   afterEach(async () => {

@@ -19,7 +19,7 @@ import {AbortController} from "abort-controller";
 import {FAR_FUTURE_EPOCH, GENESIS_EPOCH, ZERO_HASH} from "../constants";
 import {IBeaconDb} from "../db";
 import {CheckpointStateCache, StateContextCache} from "./stateCache";
-import {IBeaconMetrics} from "../metrics";
+import {IMetrics} from "../metrics";
 import {AttestationPool, AttestationProcessor} from "./attestation";
 import {BlockPool, BlockProcessor} from "./blocks";
 import {IBeaconClock, LocalClock} from "./clock";
@@ -36,7 +36,7 @@ export interface IBeaconChainModules {
   config: IBeaconConfig;
   db: IBeaconDb;
   logger: ILogger;
-  metrics?: IBeaconMetrics;
+  metrics?: IMetrics;
   anchorState: TreeBacked<phase0.BeaconState>;
 }
 
@@ -58,7 +58,7 @@ export class BeaconChain implements IBeaconChain {
   protected readonly config: IBeaconConfig;
   protected readonly db: IBeaconDb;
   protected readonly logger: ILogger;
-  protected readonly metrics?: IBeaconMetrics;
+  protected readonly metrics?: IMetrics;
   protected readonly opts: IChainOptions;
   /**
    * Internal event emitter is used internally to the chain to update chain state

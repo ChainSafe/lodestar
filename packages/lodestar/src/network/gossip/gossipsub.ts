@@ -7,30 +7,23 @@ import {ATTESTATION_SUBNET_COUNT, phase0, Root} from "@chainsafe/lodestar-types"
 import {ILogger, toJson} from "@chainsafe/lodestar-utils";
 import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 
-import {IBeaconMetrics} from "../../metrics";
-import {
-  GossipEncoding,
-  GossipHandlerFn,
-  GossipObject,
-  GossipTopic,
-  GossipType,
-  IGossipMessage,
-  TopicValidatorFn,
-} from "./interface";
+import {IMetrics} from "../../metrics";
+import {GossipHandlerFn, GossipObject, GossipTopic, GossipType, IGossipMessage, TopicValidatorFnMap} from "./interface";
 import {msgIdToString, getMsgId, messageIsValid} from "./utils";
-import {getGossipSSZDeserializer, getGossipSSZSerializer, getGossipTopic, getGossipTopicString} from "./topic";
-import {encodeMessageData, decodeMessageData} from "./encoding";
+import {getGossipSSZSerializer, getGossipTopic, getGossipTopicString} from "./topic";
+import {encodeMessageData} from "./encoding";
 import {DEFAULT_ENCODING} from "./constants";
 import {GossipValidationError} from "./errors";
 import {ERR_TOPIC_VALIDATOR_REJECT} from "libp2p-gossipsub/src/constants";
+import {prepareGossipMsg} from "./message";
 
 interface IGossipsubModules {
   config: IBeaconConfig;
   genesisValidatorsRoot: Root;
   libp2p: Libp2p;
-  validatorFns: Map<string, TopicValidatorFn>;
+  validatorFns: TopicValidatorFnMap;
   logger: ILogger;
-  metrics?: IBeaconMetrics;
+  metrics?: IMetrics;
 }
 
 /**
@@ -50,7 +43,7 @@ export class Eth2Gossipsub extends Gossipsub {
   private readonly config: IBeaconConfig;
   private readonly genesisValidatorsRoot: Root;
   private readonly logger: ILogger;
-  private readonly metrics?: IBeaconMetrics;
+  private readonly metrics?: IMetrics;
   /**
    * Cached gossip objects
    *
@@ -126,13 +119,7 @@ export class Eth2Gossipsub extends Gossipsub {
       }
       // get GossipTopic and GossipObject, set on IGossipMessage
       const gossipTopic = this.getGossipTopic(message.topicIDs[0]);
-      const gossipObject = getGossipSSZDeserializer(
-        this.config,
-        gossipTopic
-      )(decodeMessageData(gossipTopic.encoding as GossipEncoding, message.data));
-      // Lodestar ObjectValidatorFns rely on these properties being set
-      message.gossipObject = gossipObject;
-      message.gossipTopic = gossipTopic;
+      prepareGossipMsg(message, gossipTopic, this.config);
     } catch (e) {
       const err = new GossipValidationError(ERR_TOPIC_VALIDATOR_REJECT);
       // must set gossip scores manually, since this usually happens in super.validate

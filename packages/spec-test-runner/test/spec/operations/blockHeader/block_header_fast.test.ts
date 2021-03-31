@@ -3,7 +3,7 @@ import {expect} from "chai";
 
 import {TreeBacked} from "@chainsafe/ssz";
 import {config} from "@chainsafe/lodestar-config/mainnet";
-import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
+import {fast, phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
 import {IProcessBlockHeader} from "./type";
 import {SPEC_TEST_LOCATION} from "../../../utils/specTestCases";
@@ -12,7 +12,7 @@ describeDirectorySpecTest<IProcessBlockHeader, phase0.BeaconState>(
   "process block header mainnet",
   join(SPEC_TEST_LOCATION, "/tests/mainnet/phase0/operations/block_header/pyspec_tests"),
   (testcase) => {
-    const wrappedState = phase0.fast.createCachedBeaconState<phase0.BeaconState>(
+    const wrappedState = fast.createCachedBeaconState<phase0.BeaconState>(
       config,
       testcase.pre as TreeBacked<phase0.BeaconState>
     );

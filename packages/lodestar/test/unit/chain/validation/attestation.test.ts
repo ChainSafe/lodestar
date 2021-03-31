@@ -5,7 +5,7 @@ import {expect} from "chai";
 
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {phase0, getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
-import * as attestationUtils from "@chainsafe/lodestar-beacon-state-transition/lib/phase0/fast/util/attestation";
+import * as attestationUtils from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util/attestation";
 import * as blockUtils from "@chainsafe/lodestar-beacon-state-transition/lib/phase0/fast/block/isValidIndexedAttestation";
 import {BitList, toHexString} from "@chainsafe/ssz";
 import {ProtoArray} from "@chainsafe/lodestar-fork-choice";
@@ -19,7 +19,7 @@ import {generateCachedState} from "../../../utils/state";
 import {LocalClock} from "../../../../src/chain/clock";
 import {AttestationErrorCode} from "../../../../src/chain/errors";
 import {Gwei} from "@chainsafe/lodestar-types";
-import {IEpochShuffling} from "@chainsafe/lodestar-beacon-state-transition/lib/phase0/fast";
+import {fast} from "@chainsafe/lodestar-beacon-state-transition";
 import {SinonStubFn} from "../../../utils/types";
 import {AttestationError} from "../../../../src/chain/errors";
 
@@ -307,7 +307,7 @@ describe("gossip attestation validation", function () {
     const attestationTargetState = generateCachedState();
     attestationTargetState.epochCtx.previousShuffling = {
       epoch: 0,
-    } as phase0.fast.IEpochShuffling;
+    } as fast.IEpochShuffling;
     attestationTargetState.epochCtx.getIndexedAttestation = () => toIndexedAttestation(attestation);
     regen.getCheckpointState.resolves(attestationTargetState);
     computeAttestationSubnetStub.returns(0);
@@ -345,13 +345,13 @@ describe("gossip attestation validation", function () {
     const attestationTargetState = generateCachedState();
     attestationTargetState.epochCtx.previousShuffling = {
       epoch: 10,
-    } as phase0.fast.IEpochShuffling;
+    } as fast.IEpochShuffling;
     attestationTargetState.epochCtx.currentShuffling = {
       epoch: 10,
-    } as phase0.fast.IEpochShuffling;
+    } as fast.IEpochShuffling;
     attestationTargetState.epochCtx.nextShuffling = {
       epoch: 10,
-    } as phase0.fast.IEpochShuffling;
+    } as fast.IEpochShuffling;
     attestationTargetState.epochCtx.getIndexedAttestation = () => toIndexedAttestation(attestation);
     regen.getCheckpointState.resolves(attestationTargetState);
     computeAttestationSubnetStub.returns(0);
@@ -430,7 +430,7 @@ describe("gossip attestation validation", function () {
     const attestationTargetState = generateCachedState();
     attestationTargetState.epochCtx.previousShuffling = {
       epoch: 0,
-    } as phase0.fast.IEpochShuffling;
+    } as fast.IEpochShuffling;
     attestationTargetState.epochCtx.getIndexedAttestation = () => toIndexedAttestation(attestation);
     regen.getCheckpointState.resolves(attestationTargetState);
     computeAttestationSubnetStub.returns(0);
@@ -493,7 +493,7 @@ describe("gossip attestation validation", function () {
       epoch: 0,
       committees: [[[1]]],
       shuffling: [],
-    } as IEpochShuffling;
+    } as fast.IEpochShuffling;
     attestationTargetState.epochCtx.getIndexedAttestation = () => toIndexedAttestation(attestation);
     regen.getCheckpointState.resolves(attestationTargetState);
     computeAttestationSubnetStub.returns(0);
@@ -534,7 +534,7 @@ describe("gossip attestation validation", function () {
       epoch: 0,
       committees: [[[1]]],
       shuffling: [],
-    } as IEpochShuffling;
+    } as fast.IEpochShuffling;
     attestationTargetState.epochCtx.getIndexedAttestation = () => toIndexedAttestation(attestation);
     regen.getCheckpointState.resolves(attestationTargetState);
     computeAttestationSubnetStub.returns(0);
@@ -568,7 +568,7 @@ describe("gossip attestation validation", function () {
       epoch: 0,
       committees: [[[1]]],
       shuffling: [],
-    } as IEpochShuffling;
+    } as fast.IEpochShuffling;
     attestationTargetState.epochCtx.getIndexedAttestation = () => toIndexedAttestation(attestation);
     regen.getCheckpointState.resolves(attestationTargetState);
     computeAttestationSubnetStub.returns(0);
