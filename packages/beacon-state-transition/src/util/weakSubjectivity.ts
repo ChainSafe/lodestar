@@ -12,9 +12,17 @@ export function getLatestWeakSubjectivityCheckpointEpoch(
   state: allForks.BeaconState,
   safetyDecay = 0.1
 ): Epoch {
-  let weakSubjectivityMod = config.params.MIN_VALIDATOR_WITHDRAWABILITY_DELAY;
   const valCount = getActiveValidatorIndices(state, getCurrentEpoch(config, state)).length;
+  return getEpochFromValCount(config, state, safetyDecay, valCount);
+}
 
+export function getEpochFromValCount(
+  config: IBeaconConfig,
+  state: allForks.BeaconState,
+  safetyDecay = 0.1,
+  valCount: number
+): Epoch {
+  let weakSubjectivityMod = config.params.MIN_VALIDATOR_WITHDRAWABILITY_DELAY;
   if (valCount >= config.params.MIN_PER_EPOCH_CHURN_LIMIT * config.params.CHURN_LIMIT_QUOTIENT) {
     weakSubjectivityMod += 256 * Math.floor((safetyDecay * config.params.CHURN_LIMIT_QUOTIENT) / 2 / 256);
   } else {
