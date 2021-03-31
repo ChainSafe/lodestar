@@ -15,6 +15,8 @@ export * as phase1 from "./phase1";
 
 // Export union types
 export * as allForks from "./allForks";
+// Export IAllForksSSZTypes
+export {IAllForksSSZTypes} from "./allForks";
 
 // Export non-namespaced primitive types
 export * from "./primitive/types";
