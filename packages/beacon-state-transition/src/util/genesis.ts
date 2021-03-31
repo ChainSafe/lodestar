@@ -1,7 +1,7 @@
 import {List, TreeBacked} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {GENESIS_SLOT} from "@chainsafe/lodestar-params";
-import {Bytes32, Number64, phase0, Root} from "@chainsafe/lodestar-types";
+import {allForks, Bytes32, Number64, phase0, Root} from "@chainsafe/lodestar-types";
 import {bigIntMin} from "@chainsafe/lodestar-utils";
 
 import {processDeposit} from "../phase0/naive";
@@ -16,7 +16,7 @@ import {getTemporaryBlockHeader} from "./blockRoot";
  * @param config
  * @param state
  */
-export function isValidGenesisState(config: IBeaconConfig, state: phase0.BeaconState): boolean {
+export function isValidGenesisState(config: IBeaconConfig, state: allForks.BeaconState): boolean {
   return state.genesisTime >= config.params.MIN_GENESIS_TIME && isValidGenesisValidators(config, state);
 }
 
@@ -25,7 +25,7 @@ export function isValidGenesisState(config: IBeaconConfig, state: phase0.BeaconS
  * @param config
  * @param state
  */
-export function isValidGenesisValidators(config: IBeaconConfig, state: phase0.BeaconState): boolean {
+export function isValidGenesisValidators(config: IBeaconConfig, state: allForks.BeaconState): boolean {
   return (
     getActiveValidatorIndices(state, computeEpochAtSlot(config, GENESIS_SLOT)).length >=
     config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT
@@ -39,11 +39,11 @@ export function getGenesisBeaconState(
   config: IBeaconConfig,
   genesisEth1Data: phase0.Eth1Data,
   latestBlockHeader: phase0.BeaconBlockHeader
-): TreeBacked<phase0.BeaconState> {
+): TreeBacked<allForks.BeaconState> {
   // Seed RANDAO with Eth1 entropy
   const randaoMixes = Array<Bytes32>(config.params.EPOCHS_PER_HISTORICAL_VECTOR).fill(genesisEth1Data.blockHash);
 
-  const state: phase0.BeaconState = config.types.phase0.BeaconState.defaultTreeBacked();
+  const state: allForks.BeaconState = config.getTypes(GENESIS_SLOT).BeaconState.defaultTreeBacked();
   // MISC
   state.slot = GENESIS_SLOT;
   state.fork = {
@@ -61,7 +61,7 @@ export function getGenesisBeaconState(
   state.eth1Data = genesisEth1Data;
   state.randaoMixes = randaoMixes;
 
-  return state as TreeBacked<phase0.BeaconState>;
+  return state as TreeBacked<allForks.BeaconState>;
 }
 
 /**
@@ -70,7 +70,7 @@ export function getGenesisBeaconState(
  * @param state BeaconState
  * @param eth1BlockHash eth1 block hash
  */
-export function applyEth1BlockHash(config: IBeaconConfig, state: phase0.BeaconState, eth1BlockHash: Bytes32): void {
+export function applyEth1BlockHash(config: IBeaconConfig, state: allForks.BeaconState, eth1BlockHash: Bytes32): void {
   state.eth1Data.blockHash = eth1BlockHash;
   state.randaoMixes = Array<Bytes32>(config.params.EPOCHS_PER_HISTORICAL_VECTOR).fill(eth1BlockHash);
 }
@@ -83,7 +83,7 @@ export function applyEth1BlockHash(config: IBeaconConfig, state: phase0.BeaconSt
  */
 export function applyTimestamp(
   config: IBeaconConfig,
-  state: TreeBacked<phase0.BeaconState>,
+  state: TreeBacked<allForks.BeaconState>,
   eth1Timestamp: number
 ): void {
   state.genesisTime = eth1Timestamp + config.params.GENESIS_DELAY;
@@ -100,7 +100,7 @@ export function applyTimestamp(
  */
 export function applyDeposits(
   config: IBeaconConfig,
-  state: phase0.BeaconState,
+  state: allForks.BeaconState,
   newDeposits: phase0.Deposit[],
   fullDepositDataRootList?: TreeBacked<List<Root>>
 ): void {
@@ -128,7 +128,7 @@ export function applyDeposits(
     }
 
     state.eth1Data.depositCount += 1;
-    processDeposit(config, state, deposit);
+    processDeposit(config, state as phase0.BeaconState, deposit);
   }
 
   // Process activations
@@ -164,7 +164,7 @@ export function initializeBeaconStateFromEth1(
   eth1BlockHash: Bytes32,
   eth1Timestamp: Number64,
   deposits: phase0.Deposit[]
-): TreeBacked<phase0.BeaconState> {
+): TreeBacked<allForks.BeaconState> {
   const state = getGenesisBeaconState(
     config,
     config.types.phase0.Eth1Data.defaultValue(),

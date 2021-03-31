@@ -3,7 +3,8 @@
  */
 
 import {TreeBacked, List} from "@chainsafe/ssz";
-import {Root, phase0} from "@chainsafe/lodestar-types";
+import {GENESIS_SLOT} from "@chainsafe/lodestar-params";
+import {Root, phase0, allForks} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {AbortSignal} from "abort-controller";
 import {
@@ -26,7 +27,7 @@ export interface IGenesisBuilderKwargs {
 
   /** Use to restore pending progress */
   pendingStatus?: {
-    state: TreeBacked<phase0.BeaconState>;
+    state: TreeBacked<allForks.BeaconState>;
     depositTree: TreeBacked<List<Root>>;
     lastProcessedBlockNumber: number;
   };
@@ -37,7 +38,7 @@ export interface IGenesisBuilderKwargs {
 
 export class GenesisBuilder implements IGenesisBuilder {
   // Expose state to persist on error
-  state: TreeBacked<phase0.BeaconState>;
+  state: TreeBacked<allForks.BeaconState>;
   depositTree: TreeBacked<List<Root>>;
   /** Is null if no block has been processed yet */
   lastProcessedBlockNumber: number | null = null;
@@ -71,7 +72,7 @@ export class GenesisBuilder implements IGenesisBuilder {
       this.state = getGenesisBeaconState(
         config,
         config.types.phase0.Eth1Data.defaultValue(),
-        getTemporaryBlockHeader(config, config.types.phase0.BeaconBlock.defaultValue())
+        getTemporaryBlockHeader(config, config.getTypes(GENESIS_SLOT).BeaconBlock.defaultValue())
       );
       this.depositTree = config.types.phase0.DepositDataRootList.defaultTreeBacked();
       this.fromBlock = this.eth1Provider.deployBlock;

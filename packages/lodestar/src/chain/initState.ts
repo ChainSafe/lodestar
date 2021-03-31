@@ -10,6 +10,7 @@ import {
   phase0,
   CachedBeaconState,
 } from "@chainsafe/lodestar-beacon-state-transition";
+import {allForks} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {toHexString, TreeBacked} from "@chainsafe/ssz";
@@ -27,7 +28,7 @@ export async function persistGenesisResult(
   genesisBlock: phase0.SignedBeaconBlock
 ): Promise<void> {
   await Promise.all([
-    db.stateArchive.add(genesisResult.state),
+    db.stateArchive.add(genesisResult.state as TreeBacked<phase0.BeaconState>),
     db.blockArchive.add(genesisBlock),
     db.depositDataRoot.putList(genesisResult.depositTree),
     db.eth1Data.put(genesisResult.block.timestamp, {
@@ -41,19 +42,26 @@ export async function persistGenesisResult(
 export async function persistAnchorState(
   config: IBeaconConfig,
   db: IBeaconDb,
-  anchorState: TreeBacked<phase0.BeaconState>
+  anchorState: TreeBacked<allForks.BeaconState>
 ): Promise<void> {
   if (anchorState.slot === GENESIS_SLOT) {
     const genesisBlock = createGenesisBlock(config, anchorState);
-    await Promise.all([db.blockArchive.add(genesisBlock), db.stateArchive.add(anchorState)]);
+    await Promise.all([
+      db.blockArchive.add(genesisBlock),
+      db.stateArchive.add(anchorState as TreeBacked<phase0.BeaconState>),
+    ]);
   } else {
-    await db.stateArchive.add(anchorState);
+    await db.stateArchive.add(anchorState as TreeBacked<phase0.BeaconState>);
   }
 }
 
-export function createGenesisBlock(config: IBeaconConfig, genesisState: phase0.BeaconState): phase0.SignedBeaconBlock {
-  const genesisBlock = config.types.phase0.SignedBeaconBlock.defaultValue();
-  const stateRoot = config.types.phase0.BeaconState.hashTreeRoot(genesisState);
+export function createGenesisBlock(
+  config: IBeaconConfig,
+  genesisState: allForks.BeaconState
+): allForks.SignedBeaconBlock {
+  const types = config.getTypes(GENESIS_SLOT);
+  const genesisBlock = types.SignedBeaconBlock.defaultValue();
+  const stateRoot = types.BeaconState.hashTreeRoot(genesisState);
   genesisBlock.message.stateRoot = stateRoot;
   return genesisBlock;
 }
@@ -67,7 +75,7 @@ export async function initStateFromEth1(
   logger: ILogger,
   eth1Provider: Eth1Provider,
   signal: AbortSignal
-): Promise<TreeBacked<phase0.BeaconState>> {
+): Promise<TreeBacked<allForks.BeaconState>> {
   logger.info("Listening to eth1 for genesis state");
 
   const statePreGenesis = await db.preGenesisState.get();
@@ -88,8 +96,9 @@ export async function initStateFromEth1(
   try {
     const genesisResult = await builder.waitForGenesis();
     const genesisBlock = createGenesisBlock(config, genesisResult.state);
-    const stateRoot = config.types.phase0.BeaconState.hashTreeRoot(genesisResult.state);
-    const blockRoot = config.types.phase0.BeaconBlock.hashTreeRoot(genesisBlock.message);
+    const types = config.getTypes(GENESIS_SLOT);
+    const stateRoot = types.BeaconState.hashTreeRoot(genesisResult.state);
+    const blockRoot = types.BeaconBlock.hashTreeRoot(genesisBlock.message);
 
     logger.info("Initializing genesis state", {
       stateRoot: toHexString(stateRoot),
@@ -122,7 +131,7 @@ export async function initStateFromDb(
   config: IBeaconConfig,
   db: IBeaconDb,
   logger: ILogger
-): Promise<TreeBacked<phase0.BeaconState>> {
+): Promise<TreeBacked<allForks.BeaconState>> {
   const state = await db.stateArchive.lastValue();
   if (!state) {
     throw new Error("No state exists in database");
@@ -131,10 +140,10 @@ export async function initStateFromDb(
   logger.info("Initializing beacon state from db", {
     slot: state.slot,
     epoch: computeEpochAtSlot(config, state.slot),
-    stateRoot: toHexString(config.types.phase0.BeaconState.hashTreeRoot(state)),
+    stateRoot: toHexString(config.getTypes(state.slot).BeaconState.hashTreeRoot(state)),
   });
 
-  return state as TreeBacked<phase0.BeaconState>;
+  return state as TreeBacked<allForks.BeaconState>;
 }
 
 /**
@@ -144,12 +153,12 @@ export async function initStateFromAnchorState(
   config: IBeaconConfig,
   db: IBeaconDb,
   logger: ILogger,
-  anchorState: TreeBacked<phase0.BeaconState>
-): Promise<TreeBacked<phase0.BeaconState>> {
+  anchorState: TreeBacked<allForks.BeaconState>
+): Promise<TreeBacked<allForks.BeaconState>> {
   logger.info("Initializing beacon state", {
     slot: anchorState.slot,
     epoch: computeEpochAtSlot(config, anchorState.slot),
-    stateRoot: toHexString(config.types.phase0.BeaconState.hashTreeRoot(anchorState)),
+    stateRoot: toHexString(config.getTypes(anchorState.slot).BeaconState.hashTreeRoot(anchorState)),
   });
 
   await persistAnchorState(config, db, anchorState);
@@ -164,8 +173,8 @@ export function restoreStateCaches(
   config: IBeaconConfig,
   stateCache: StateContextCache,
   checkpointStateCache: CheckpointStateCache,
-  state: TreeBacked<phase0.BeaconState>
-): CachedBeaconState<phase0.BeaconState> {
+  state: TreeBacked<allForks.BeaconState>
+): CachedBeaconState<allForks.BeaconState> {
   const {checkpoint} = computeAnchorCheckpoint(config, state);
 
   const cachedBeaconState = createCachedBeaconState(config, state);
@@ -176,7 +185,7 @@ export function restoreStateCaches(
   return cachedBeaconState;
 }
 
-export function initBeaconMetrics(metrics: IMetrics, state: TreeBacked<phase0.BeaconState>): void {
+export function initBeaconMetrics(metrics: IMetrics, state: TreeBacked<allForks.BeaconState>): void {
   metrics.headSlot.set(state.slot);
   metrics.previousJustifiedEpoch.set(state.previousJustifiedCheckpoint.epoch);
   metrics.currentJustifiedEpoch.set(state.currentJustifiedCheckpoint.epoch);
@@ -185,21 +194,23 @@ export function initBeaconMetrics(metrics: IMetrics, state: TreeBacked<phase0.Be
 
 export function computeAnchorCheckpoint(
   config: IBeaconConfig,
-  anchorState: phase0.BeaconState
+  anchorState: allForks.BeaconState
 ): {checkpoint: phase0.Checkpoint; blockHeader: phase0.BeaconBlockHeader} {
   let blockHeader;
   let root;
+  const blockTypes = config.getTypes(anchorState.latestBlockHeader.slot);
+  const stateTypes = config.getTypes(anchorState.slot);
   if (anchorState.latestBlockHeader.slot === GENESIS_SLOT) {
-    const block = config.types.phase0.BeaconBlock.defaultValue();
-    block.stateRoot = config.types.phase0.BeaconState.hashTreeRoot(anchorState);
+    const block = blockTypes.BeaconBlock.defaultValue();
+    block.stateRoot = stateTypes.BeaconState.hashTreeRoot(anchorState);
     blockHeader = blockToHeader(config, block);
-    root = config.types.phase0.BeaconBlockHeader.hashTreeRoot(blockHeader);
+    root = stateTypes.BeaconBlockHeader.hashTreeRoot(blockHeader);
   } else {
-    blockHeader = config.types.phase0.BeaconBlockHeader.clone(anchorState.latestBlockHeader);
+    blockHeader = blockTypes.BeaconBlockHeader.clone(anchorState.latestBlockHeader);
     if (config.types.Root.equals(blockHeader.stateRoot, ZERO_HASH)) {
-      blockHeader.stateRoot = config.types.phase0.BeaconState.hashTreeRoot(anchorState);
+      blockHeader.stateRoot = stateTypes.BeaconState.hashTreeRoot(anchorState);
     }
-    root = config.types.phase0.BeaconBlockHeader.hashTreeRoot(blockHeader);
+    root = stateTypes.BeaconBlockHeader.hashTreeRoot(blockHeader);
   }
 
   return {

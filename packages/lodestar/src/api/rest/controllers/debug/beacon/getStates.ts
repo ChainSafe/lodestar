@@ -15,11 +15,11 @@ export const getState: ApiController<DefaultQuery, {stateId: string}> = {
         return;
       }
       if (req.headers[HttpHeader.ACCEPT] === SSZ_MIME_TYPE) {
-        const stateSsz = this.config.types.phase0.BeaconState.serialize(state);
+        const stateSsz = this.config.getTypes(state.slot).BeaconState.serialize(state);
         resp.status(200).header(HttpHeader.CONTENT_TYPE, SSZ_MIME_TYPE).send(Buffer.from(stateSsz));
       } else {
         resp.status(200).send({
-          data: this.config.types.phase0.BeaconState.toJson(state, {case: "snake"}),
+          data: this.config.getTypes(state.slot).BeaconState.toJson(state, {case: "snake"}),
         });
       }
     } catch (e) {

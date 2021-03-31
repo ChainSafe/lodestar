@@ -27,7 +27,12 @@ describeDirectorySpecTest<IGenesisInitSpecTest, phase0.BeaconState>(
     for (let i = 0; i < Number(testcase.meta.depositsCount); i++) {
       deposits.push(testcase[`deposits_${i}`] as phase0.Deposit);
     }
-    return initializeBeaconStateFromEth1(config, testcase.eth1_block_hash, Number(testcase.eth1_timestamp), deposits);
+    return initializeBeaconStateFromEth1(
+      config,
+      testcase.eth1_block_hash,
+      Number(testcase.eth1_timestamp),
+      deposits
+    ) as phase0.BeaconState;
   },
   {
     // @ts-ignore

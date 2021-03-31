@@ -3,7 +3,7 @@
  */
 
 import {List} from "@chainsafe/ssz";
-import {Bytes96, Bytes32, phase0} from "@chainsafe/lodestar-types";
+import {Bytes96, Bytes32, phase0, allForks} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
 
@@ -25,7 +25,7 @@ export async function assembleBody(
       .getBlockAttestations(currentState)
       .then((value) => value.slice(0, config.params.MAX_ATTESTATIONS)),
     db.voluntaryExit.values({limit: config.params.MAX_VOLUNTARY_EXITS}),
-    eth1.getEth1DataAndDeposits(currentState),
+    eth1.getEth1DataAndDeposits(currentState as CachedBeaconState<allForks.BeaconState>),
   ]);
 
   return {

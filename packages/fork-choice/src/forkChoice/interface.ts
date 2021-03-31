@@ -1,4 +1,4 @@
-import {Epoch, Gwei, Slot, ValidatorIndex, phase0} from "@chainsafe/lodestar-types";
+import {Epoch, Gwei, Slot, ValidatorIndex, phase0, allForks} from "@chainsafe/lodestar-types";
 import {IBlockSummary} from "./blockSummary";
 
 export interface IForkChoice {
@@ -49,7 +49,7 @@ export interface IForkChoice {
    * `justifiedBalances` validator balances of justified checkpoint which is updated synchronously.
    * This ensures that the forkchoice is never out of sync.
    */
-  onBlock(block: phase0.BeaconBlock, state: phase0.BeaconState, justifiedBalances?: Gwei[]): void;
+  onBlock(block: allForks.BeaconBlock, state: allForks.BeaconState, justifiedBalances?: Gwei[]): void;
   /**
    * Register `attestation` with the fork choice DAG so that it may influence future calls to `getHead`.
    *

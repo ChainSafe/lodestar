@@ -28,9 +28,9 @@ export async function assembleBlock(
     proposerIndex: state.getBeaconProposer(slot),
     parentRoot: head.blockRoot,
     stateRoot: ZERO_HASH,
-    body: await assembleBody(config, db, eth1, state, randaoReveal, graffiti),
+    body: await assembleBody(config, db, eth1, state as CachedBeaconState<phase0.BeaconState>, randaoReveal, graffiti),
   };
-  block.stateRoot = computeNewStateRoot(config, state, block);
+  block.stateRoot = computeNewStateRoot(config, state as CachedBeaconState<phase0.BeaconState>, block);
 
   return block;
 }

@@ -9,7 +9,7 @@ import {testLogger} from "../../utils/logger";
 import {expect} from "chai";
 import {MockBeaconChain} from "../../utils/mocks/chain/chain";
 import {generateState} from "../../utils/state";
-import {phase0} from "@chainsafe/lodestar-types";
+import {allForks} from "@chainsafe/lodestar-types";
 import {MetadataController} from "../../../src/network/metadata";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {TreeBacked} from "@chainsafe/ssz";
@@ -23,7 +23,7 @@ describe("interopSubnetsJoiningTask", () => {
   let chain: IBeaconChain;
   const logger = testLogger();
   let task: InteropSubnetsJoiningTask;
-  let state: phase0.BeaconState;
+  let state: allForks.BeaconState;
 
   // eslint-disable-next-line @typescript-eslint/naming-convention
   const params = Object.assign({}, minimalConfig.params);
@@ -39,7 +39,7 @@ describe("interopSubnetsJoiningTask", () => {
       genesisTime: 0,
       chainId: 0,
       networkId: BigInt(0),
-      state: state as TreeBacked<phase0.BeaconState>,
+      state: state as TreeBacked<allForks.BeaconState>,
       config,
     });
     networkStub.metadata = new MetadataController({}, {config, chain, logger});

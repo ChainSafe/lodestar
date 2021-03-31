@@ -1,6 +1,8 @@
 import sinon from "sinon";
 import {expect} from "chai";
 
+import {phase0} from "@chainsafe/lodestar-types";
+import {CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import {assembleBody} from "../../../../../src/chain/factory/block/body";
 import {generateCachedState} from "../../../../utils/state";
@@ -34,7 +36,7 @@ describe("blockAssembly - body", function () {
       config,
       dbStub,
       eth1,
-      generateCachedState(),
+      generateCachedState() as CachedBeaconState<phase0.BeaconState>,
       Buffer.alloc(96, 0),
       Buffer.alloc(32, 0)
     );
@@ -66,7 +68,7 @@ describe("blockAssembly - body", function () {
       config,
       dbStub,
       eth1,
-      generateCachedState(),
+      generateCachedState() as CachedBeaconState<phase0.BeaconState>,
       Buffer.alloc(96, 0),
       Buffer.alloc(32, 0)
     );

@@ -1,6 +1,6 @@
 import {AbortSignal} from "abort-controller";
 import {readonlyValues, toHexString} from "@chainsafe/ssz";
-import {phase0, Slot, Version} from "@chainsafe/lodestar-types";
+import {allForks, phase0, Slot, Version} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {IBlockSummary} from "@chainsafe/lodestar-fork-choice";
 import {CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
@@ -137,7 +137,7 @@ export function onForkVersion(this: BeaconChain, version: Version): void {
 export function onCheckpoint(
   this: BeaconChain,
   cp: phase0.Checkpoint,
-  state: CachedBeaconState<phase0.BeaconState>
+  state: CachedBeaconState<allForks.BeaconState>
 ): void {
   this.logger.verbose("Checkpoint processed", this.config.types.phase0.Checkpoint.toJson(cp));
   this.checkpointStateCache.add(cp, state);
@@ -164,7 +164,7 @@ export function onCheckpoint(
 export function onJustified(
   this: BeaconChain,
   cp: phase0.Checkpoint,
-  state: CachedBeaconState<phase0.BeaconState>
+  state: CachedBeaconState<allForks.BeaconState>
 ): void {
   this.logger.verbose("Checkpoint justified", this.config.types.phase0.Checkpoint.toJson(cp));
   this.metrics?.previousJustifiedEpoch.set(state.previousJustifiedCheckpoint.epoch);
@@ -207,11 +207,11 @@ export function onAttestation(this: BeaconChain, attestation: phase0.Attestation
 
 export async function onBlock(
   this: BeaconChain,
-  block: phase0.SignedBeaconBlock,
-  postState: CachedBeaconState<phase0.BeaconState>,
+  block: allForks.SignedBeaconBlock,
+  postState: CachedBeaconState<allForks.BeaconState>,
   job: IBlockJob
 ): Promise<void> {
-  const blockRoot = this.config.types.phase0.BeaconBlock.hashTreeRoot(block.message);
+  const blockRoot = this.config.getTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message);
   this.logger.verbose("Block processed", {
     slot: block.message.slot,
     root: toHexString(blockRoot),
@@ -303,7 +303,9 @@ export async function onErrorBlock(this: BeaconChain, err: BlockError): Promise<
   }
 
   this.logger.error("Block error", {slot: err.job.signedBlock.message.slot}, err);
-  const blockRoot = this.config.types.phase0.BeaconBlock.hashTreeRoot(err.job.signedBlock.message);
+  const blockRoot = this.config
+    .getTypes(err.job.signedBlock.message.slot)
+    .BeaconBlock.hashTreeRoot(err.job.signedBlock.message);
 
   switch (err.type.code) {
     case BlockErrorCode.FUTURE_SLOT:

@@ -2,7 +2,7 @@ import {AbortController} from "abort-controller";
 import sinon from "sinon";
 
 import {TreeBacked} from "@chainsafe/ssz";
-import {ForkDigest, Number64, Root, Slot, Uint16, Uint64} from "@chainsafe/lodestar-types";
+import {allForks, ForkDigest, Number64, Root, Slot, Uint16, Uint64} from "@chainsafe/lodestar-types";
 import {IBeaconConfig, IForkName} from "@chainsafe/lodestar-config";
 import {
   CachedBeaconState,
@@ -27,7 +27,7 @@ export interface IMockChainParams {
   genesisTime?: Number64;
   chainId: Uint16;
   networkId: Uint64;
-  state: TreeBacked<phase0.BeaconState>;
+  state: TreeBacked<allForks.BeaconState>;
   config: IBeaconConfig;
 }
 
@@ -46,7 +46,7 @@ export class MockBeaconChain implements IBeaconChain {
   pendingBlocks: BlockPool;
   pendingAttestations: AttestationPool;
 
-  private state: TreeBacked<phase0.BeaconState>;
+  private state: TreeBacked<allForks.BeaconState>;
   private config: IBeaconConfig;
   private abortController: AbortController;
 
@@ -87,25 +87,25 @@ export class MockBeaconChain implements IBeaconChain {
     return null;
   }
 
-  getHeadState(): CachedBeaconState<phase0.BeaconState> {
+  getHeadState(): CachedBeaconState<allForks.BeaconState> {
     return createCachedBeaconState(this.config, this.state);
   }
 
-  async getHeadStateAtCurrentEpoch(): Promise<CachedBeaconState<phase0.BeaconState>> {
+  async getHeadStateAtCurrentEpoch(): Promise<CachedBeaconState<allForks.BeaconState>> {
     return createCachedBeaconState(this.config, this.state);
   }
 
-  async getHeadStateAtCurrentSlot(): Promise<CachedBeaconState<phase0.BeaconState>> {
+  async getHeadStateAtCurrentSlot(): Promise<CachedBeaconState<allForks.BeaconState>> {
     return createCachedBeaconState(this.config, this.state);
   }
 
-  async getCanonicalBlockAtSlot(slot: Slot): Promise<phase0.SignedBeaconBlock> {
+  async getCanonicalBlockAtSlot(slot: Slot): Promise<allForks.SignedBeaconBlock> {
     const block = generateEmptySignedBlock();
     block.message.slot = slot;
     return block;
   }
 
-  async getUnfinalizedBlocksAtSlots(slots: Slot[]): Promise<phase0.SignedBeaconBlock[]> {
+  async getUnfinalizedBlocksAtSlots(slots: Slot[]): Promise<allForks.SignedBeaconBlock[]> {
     if (!slots) {
       return [];
     }
@@ -153,7 +153,7 @@ export class MockBeaconChain implements IBeaconChain {
     return;
   }
 
-  async getStateByBlockRoot(): Promise<CachedBeaconState<phase0.BeaconState> | null> {
+  async getStateByBlockRoot(): Promise<CachedBeaconState<allForks.BeaconState> | null> {
     return null;
   }
 

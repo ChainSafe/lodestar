@@ -1,9 +1,9 @@
-import {BLSPubkey, CommitteeIndex, Epoch, Root, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {allForks, BLSPubkey, CommitteeIndex, Epoch, Root, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
 
 export interface IBeaconStateApi {
   getStateRoot(stateId: StateId): Promise<Root | null>;
-  getState(stateId: StateId): Promise<phase0.BeaconState | null>;
+  getState(stateId: StateId): Promise<allForks.BeaconState | null>;
   getStateFinalityCheckpoints(stateId: StateId): Promise<phase0.FinalityCheckpoints | null>;
   getStateValidators(stateId: StateId, filters?: IValidatorFilters): Promise<phase0.ValidatorResponse[]>;
   getStateValidator(

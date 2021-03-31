@@ -5,7 +5,6 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {allForks, Gwei, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {bigIntMax} from "@chainsafe/lodestar-utils";
-import {phase0} from "../index";
 import {CachedBeaconState} from "../fast";
 import {getCurrentEpoch} from "./epoch";
 import {getActiveValidatorIndices, isActiveValidator} from "./validator";
@@ -52,11 +51,11 @@ export function decreaseBalance(state: allForks.BeaconState, index: ValidatorInd
 /**
  * This method is used to get justified balances from a justified state.
  */
-export function getEffectiveBalances(justifiedState: CachedBeaconState<phase0.BeaconState>): Gwei[] {
-  const justifiedEpoch = justifiedState?.currentShuffling.epoch;
+export function getEffectiveBalances(justifiedState: CachedBeaconState<allForks.BeaconState>): Gwei[] {
+  const justifiedEpoch = justifiedState.currentShuffling.epoch;
   const effectiveBalances: Gwei[] = [];
-  justifiedState?.validators.forEach((v) => {
-    effectiveBalances.push(isActiveValidator(v, justifiedEpoch!) ? v.effectiveBalance : BigInt(0));
+  justifiedState.validators.forEach((v) => {
+    effectiveBalances.push(isActiveValidator(v, justifiedEpoch) ? v.effectiveBalance : BigInt(0));
   });
   return effectiveBalances;
 }

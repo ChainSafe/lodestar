@@ -12,7 +12,7 @@ import {
 import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig, IForkName} from "@chainsafe/lodestar-config";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
-import {ForkDigest, Number64, Root, Slot} from "@chainsafe/lodestar-types";
+import {allForks, ForkDigest, Number64, Root, Slot} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {TreeBacked} from "@chainsafe/ssz";
 import {AbortController} from "abort-controller";
@@ -37,7 +37,7 @@ export interface IBeaconChainModules {
   db: IBeaconDb;
   logger: ILogger;
   metrics?: IMetrics;
-  anchorState: TreeBacked<phase0.BeaconState>;
+  anchorState: TreeBacked<allForks.BeaconState>;
 }
 
 export class BeaconChain implements IBeaconChain {
@@ -141,7 +141,7 @@ export class BeaconChain implements IBeaconChain {
     return this.genesisTime;
   }
 
-  getHeadState(): CachedBeaconState<phase0.BeaconState> {
+  getHeadState(): CachedBeaconState<allForks.BeaconState> {
     // head state should always exist
     const head = this.forkChoice.getHead();
     const headState =
@@ -153,18 +153,18 @@ export class BeaconChain implements IBeaconChain {
     return headState;
   }
 
-  async getHeadStateAtCurrentEpoch(): Promise<CachedBeaconState<phase0.BeaconState>> {
+  async getHeadStateAtCurrentEpoch(): Promise<CachedBeaconState<allForks.BeaconState>> {
     const currentEpochStartSlot = computeStartSlotAtEpoch(this.config, this.clock.currentEpoch);
     const head = this.forkChoice.getHead();
     const bestSlot = currentEpochStartSlot > head.slot ? currentEpochStartSlot : head.slot;
     return await this.regen.getBlockSlotState(head.blockRoot, bestSlot);
   }
 
-  async getHeadStateAtCurrentSlot(): Promise<CachedBeaconState<phase0.BeaconState>> {
+  async getHeadStateAtCurrentSlot(): Promise<CachedBeaconState<allForks.BeaconState>> {
     return await this.regen.getBlockSlotState(this.forkChoice.getHeadRoot(), this.clock.currentSlot);
   }
 
-  async getHeadBlock(): Promise<phase0.SignedBeaconBlock | null> {
+  async getHeadBlock(): Promise<allForks.SignedBeaconBlock | null> {
     const headSummary = this.forkChoice.getHead();
     const unfinalizedBlock = await this.db.block.get(headSummary.blockRoot);
     if (unfinalizedBlock) {
@@ -173,7 +173,7 @@ export class BeaconChain implements IBeaconChain {
     return await this.db.blockArchive.get(headSummary.slot);
   }
 
-  async getCanonicalBlockAtSlot(slot: Slot): Promise<phase0.SignedBeaconBlock | null> {
+  async getCanonicalBlockAtSlot(slot: Slot): Promise<allForks.SignedBeaconBlock | null> {
     const finalizedCheckpoint = this.forkChoice.getFinalizedCheckpoint();
     if (finalizedCheckpoint.epoch > computeEpochAtSlot(this.config, slot)) {
       return this.db.blockArchive.get(slot);
@@ -185,7 +185,7 @@ export class BeaconChain implements IBeaconChain {
     return await this.db.block.get(summary.blockRoot);
   }
 
-  async getStateByBlockRoot(blockRoot: Root): Promise<CachedBeaconState<phase0.BeaconState> | null> {
+  async getStateByBlockRoot(blockRoot: Root): Promise<CachedBeaconState<allForks.BeaconState> | null> {
     const blockSummary = this.forkChoice.getBlock(blockRoot);
     if (!blockSummary) {
       return null;
@@ -198,13 +198,13 @@ export class BeaconChain implements IBeaconChain {
   }
 
   /** Returned blocks have the same ordering as `slots` */
-  async getUnfinalizedBlocksAtSlots(slots: Slot[]): Promise<phase0.SignedBeaconBlock[]> {
+  async getUnfinalizedBlocksAtSlots(slots: Slot[]): Promise<allForks.SignedBeaconBlock[]> {
     if (slots.length === 0) {
       return [];
     }
 
     const slotsSet = new Set(slots);
-    const blockRootsPerSlot = new Map<Slot, Promise<phase0.SignedBeaconBlock | null>>();
+    const blockRootsPerSlot = new Map<Slot, Promise<allForks.SignedBeaconBlock | null>>();
 
     // these blocks are on the same chain to head
     for (const summary of this.forkChoice.iterateBlockSummaries(this.forkChoice.getHeadRoot())) {
@@ -214,7 +214,7 @@ export class BeaconChain implements IBeaconChain {
     }
 
     const unfinalizedBlocks = await Promise.all(slots.map((slot) => blockRootsPerSlot.get(slot)));
-    return unfinalizedBlocks.filter((block): block is phase0.SignedBeaconBlock => block != null);
+    return unfinalizedBlocks.filter((block): block is allForks.SignedBeaconBlock => block != null);
   }
 
   getFinalizedCheckpoint(): phase0.Checkpoint {
@@ -227,7 +227,7 @@ export class BeaconChain implements IBeaconChain {
       .catch(() => /* unreachable */ ({}));
   }
 
-  receiveBlock(signedBlock: phase0.SignedBeaconBlock, trusted = false): void {
+  receiveBlock(signedBlock: allForks.SignedBeaconBlock, trusted = false): void {
     this.blockProcessor
       .processBlockJob({
         signedBlock,
@@ -239,7 +239,7 @@ export class BeaconChain implements IBeaconChain {
       .catch(() => /* unreachable */ ({}));
   }
 
-  async processChainSegment(signedBlocks: phase0.SignedBeaconBlock[], trusted = false): Promise<void> {
+  async processChainSegment(signedBlocks: allForks.SignedBeaconBlock[], trusted = false): Promise<void> {
     return await this.blockProcessor.processChainSegment({
       signedBlocks,
       reprocess: false,

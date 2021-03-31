@@ -1,7 +1,7 @@
 import {ChainEventEmitter, computeAnchorCheckpoint, LodestarForkChoice} from "../../../../src/chain";
 import {generateState} from "../../../utils/state";
 import {config} from "@chainsafe/lodestar-config/minimal";
-import {Gwei, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {allForks, Gwei, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {generateSignedBlock} from "../../../utils/block";
 import {
   computeEpochAtSlot,
@@ -33,7 +33,7 @@ describe("LodestarForkChoice", function () {
     config
   );
 
-  let state: CachedBeaconState<phase0.BeaconState>;
+  let state: CachedBeaconState<allForks.BeaconState>;
 
   before(() => {
     state = createCachedBeaconState(config, anchorState);
@@ -63,7 +63,7 @@ describe("LodestarForkChoice", function () {
       targetBlock.message.parentRoot = finalizedRoot;
       //
       const targetState = runStateTransition(anchorState, targetBlock);
-      targetBlock.message.stateRoot = config.types.phase0.BeaconState.hashTreeRoot(targetState);
+      targetBlock.message.stateRoot = config.getTypes(targetState.slot).BeaconState.hashTreeRoot(targetState);
       const {block: orphanedBlock, state: orphanedState} = makeChild({block: targetBlock, state: targetState}, 36);
       const {block: parentBlock, state: parentState} = makeChild({block: targetBlock, state: targetState}, 37);
       const {block: childBlock, state: childState} = makeChild({block: parentBlock, state: parentState}, 38);
@@ -110,7 +110,7 @@ describe("LodestarForkChoice", function () {
       const block08 = generateSignedBlock({message: {slot: 8}});
       block08.message.parentRoot = finalizedRoot;
       const state08 = runStateTransition(anchorState, block08);
-      block08.message.stateRoot = config.types.phase0.BeaconState.hashTreeRoot(state08);
+      block08.message.stateRoot = config.getTypes(state08.slot).BeaconState.hashTreeRoot(state08);
 
       const {block: block12, state: state12} = makeChild({block: block08, state: state08}, 12);
       const {block: block16, state: state16} = makeChild({block: block12, state: state12}, 16);
@@ -176,7 +176,7 @@ describe("LodestarForkChoice", function () {
       const targetBlock = generateSignedBlock({message: {slot: 32}});
       targetBlock.message.parentRoot = finalizedRoot;
       const targetState = runStateTransition(anchorState, targetBlock);
-      targetBlock.message.stateRoot = config.types.phase0.BeaconState.hashTreeRoot(targetState);
+      targetBlock.message.stateRoot = config.getTypes(targetState.slot).BeaconState.hashTreeRoot(targetState);
       const {block: orphanedBlock, state: orphanedState} = makeChild({block: targetBlock, state: targetState}, 33);
       const {block: parentBlock, state: parentState} = makeChild({block: targetBlock, state: targetState}, 34);
       const {block: childBlock, state: childState} = makeChild({block: parentBlock, state: parentState}, 35);
@@ -202,11 +202,14 @@ describe("LodestarForkChoice", function () {
 });
 
 // lightweight state transtion function for this test
-function runStateTransition(preState: phase0.BeaconState, signedBlock: phase0.SignedBeaconBlock): phase0.BeaconState {
+function runStateTransition(
+  preState: allForks.BeaconState,
+  signedBlock: phase0.SignedBeaconBlock
+): allForks.BeaconState {
   // Clone state because process slots and block are not pure
-  const postState = config.types.phase0.BeaconState.clone(preState);
+  const postState = config.types.phase0.BeaconState.clone(preState as phase0.BeaconState);
   // Process slots (including those with no blocks) since block
-  phase0.processSlots(config, postState, signedBlock.message.slot);
+  phase0.processSlots(config, postState as phase0.BeaconState, signedBlock.message.slot);
   // processBlock
   postState.latestBlockHeader = getTemporaryBlockHeader(config, signedBlock.message);
   return config.types.phase0.BeaconState.clone(postState);
@@ -214,9 +217,9 @@ function runStateTransition(preState: phase0.BeaconState, signedBlock: phase0.Si
 
 // create a child block/state from a parent block/state and a provided slot
 function makeChild(
-  parent: {block: phase0.SignedBeaconBlock; state: phase0.BeaconState},
+  parent: {block: phase0.SignedBeaconBlock; state: allForks.BeaconState},
   slot: Slot
-): {block: phase0.SignedBeaconBlock; state: phase0.BeaconState} {
+): {block: phase0.SignedBeaconBlock; state: allForks.BeaconState} {
   const childBlock = generateSignedBlock({message: {slot}});
   const parentRoot = config.types.phase0.BeaconBlock.hashTreeRoot(parent.block.message);
   childBlock.message.parentRoot = parentRoot;
