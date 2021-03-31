@@ -1,3 +1,4 @@
+import {allForks} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {CachedBeaconState, phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {ILogger, sleep} from "@chainsafe/lodestar-utils";
@@ -66,7 +67,7 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
    * Return eth1Data and deposits ready for block production for a given state
    */
   async getEth1DataAndDeposits(
-    state: CachedBeaconState<phase0.BeaconState>
+    state: CachedBeaconState<allForks.BeaconState>
   ): Promise<{
     eth1Data: phase0.Eth1Data;
     deposits: phase0.Deposit[];
@@ -80,7 +81,7 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
    * Returns an eth1Data vote for a given state.
    * Requires internal caches to be updated regularly to return good results
    */
-  private async getEth1Data(state: phase0.BeaconState): Promise<phase0.Eth1Data> {
+  private async getEth1Data(state: allForks.BeaconState): Promise<phase0.Eth1Data> {
     const eth1VotesToConsider = await getEth1VotesToConsider(
       this.config,
       state,
@@ -94,11 +95,12 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
    * Requires internal caches to be updated regularly to return good results
    */
   private async getDeposits(
-    state: CachedBeaconState<phase0.BeaconState>,
+    state: CachedBeaconState<allForks.BeaconState>,
     eth1DataVote: phase0.Eth1Data
   ): Promise<phase0.Deposit[]> {
     // Eth1 data may change due to the vote included in this block
-    const newEth1Data = phase0.fast.getNewEth1Data(state, eth1DataVote) || state.eth1Data;
+    const newEth1Data =
+      phase0.fast.getNewEth1Data(state as CachedBeaconState<phase0.BeaconState>, eth1DataVote) || state.eth1Data;
     return await getDeposits(this.config, state, newEth1Data, this.depositsCache.get.bind(this.depositsCache));
   }
 

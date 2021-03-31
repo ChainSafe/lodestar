@@ -2,6 +2,7 @@ import fs from "fs";
 import {promisify} from "util";
 import rimraf from "rimraf";
 import {join} from "path";
+import {GENESIS_SLOT} from "@chainsafe/lodestar-params";
 import {BeaconNode, BeaconDb, initStateFromAnchorState, createNodeJsLibp2p, nodeUtils} from "@chainsafe/lodestar";
 import {Validator} from "@chainsafe/lodestar-validator";
 import {LevelDbController} from "@chainsafe/lodestar-db";
@@ -60,9 +61,9 @@ export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
       config,
       db,
       logger,
-      config.types.phase0.BeaconState.createTreeBackedFromBytes(
-        await fs.promises.readFile(join(args.rootDir, args.genesisStateFile))
-      )
+      config
+        .getTypes(GENESIS_SLOT)
+        .BeaconState.createTreeBackedFromBytes(await fs.promises.readFile(join(args.rootDir, args.genesisStateFile)))
     );
   } else {
     throw new Error("Unable to start node: no available genesis state");

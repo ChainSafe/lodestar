@@ -3,14 +3,14 @@
  */
 
 import {toHexString} from "@chainsafe/ssz";
-import {Slot} from "@chainsafe/lodestar-types";
+import {allForks, Slot} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ForkChoice, ProtoArray} from "@chainsafe/lodestar-fork-choice";
 
 import {computeAnchorCheckpoint} from "../initState";
 import {ChainEventEmitter} from "../emitter";
 import {ForkChoiceStore} from "./store";
-import {getEffectiveBalances, phase0, CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
+import {getEffectiveBalances, CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
 
 /**
  * Fork Choice extended with a ChainEventEmitter
@@ -25,7 +25,7 @@ export class LodestarForkChoice extends ForkChoice {
     config: IBeaconConfig;
     emitter: ChainEventEmitter;
     currentSlot: Slot;
-    state: CachedBeaconState<phase0.BeaconState>;
+    state: CachedBeaconState<allForks.BeaconState>;
   }) {
     const {blockHeader, checkpoint} = computeAnchorCheckpoint(config, state);
     const finalizedCheckpoint = {...checkpoint};

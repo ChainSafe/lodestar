@@ -3,7 +3,11 @@
  */
 
 import bls, {Signature} from "@chainsafe/bls";
-import {computeStartSlotAtEpoch, computeSubnetForCommitteesAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
+import {
+  CachedBeaconState,
+  computeStartSlotAtEpoch,
+  computeSubnetForCommitteesAtSlot,
+} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Bytes96, CommitteeIndex, Epoch, Root, phase0, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {assert, ILogger} from "@chainsafe/lodestar-utils";
@@ -71,7 +75,13 @@ export class ValidatorApi implements IValidatorApi {
       await checkSyncStatus(this.config, this.sync);
       const headRoot = this.chain.forkChoice.getHeadRoot();
       const state = await this.chain.regen.getBlockSlotState(headRoot, slot);
-      return assembleAttestationData(state.config, state, headRoot, slot, committeeIndex);
+      return assembleAttestationData(
+        state.config,
+        state as CachedBeaconState<phase0.BeaconState>,
+        headRoot,
+        slot,
+        committeeIndex
+      );
     } catch (e) {
       this.logger.warn("Failed to produce attestation data", e);
       throw e;

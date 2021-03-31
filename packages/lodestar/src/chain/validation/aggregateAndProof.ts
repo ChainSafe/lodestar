@@ -86,7 +86,7 @@ export async function validateAggregateAttestation(
 ): Promise<void> {
   const attestation = aggregateAndProof.message.aggregate;
 
-  let attestationTargetState: CachedBeaconState<phase0.BeaconState>;
+  let attestationTargetState: CachedBeaconState<allForks.BeaconState>;
   try {
     // the target state, advanced to the attestation slot
     attestationTargetState = await chain.regen.getCheckpointState(attestation.data.target);

@@ -1,5 +1,5 @@
 import {toHexString, fromHexString} from "@chainsafe/ssz";
-import {phase0, Epoch} from "@chainsafe/lodestar-types";
+import {phase0, Epoch, allForks} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
 
@@ -13,7 +13,7 @@ const MAX_EPOCHS = 10;
  */
 export class CheckpointStateCache {
   private readonly config: IBeaconConfig;
-  private cache = new Map<string, CachedBeaconState<phase0.BeaconState>>();
+  private cache = new Map<string, CachedBeaconState<allForks.BeaconState>>();
   /** Epoch -> Set<blockRoot> */
   private epochIndex = new Map<Epoch, Set<string>>();
 
@@ -21,12 +21,12 @@ export class CheckpointStateCache {
     this.config = config;
   }
 
-  get(cp: phase0.Checkpoint): CachedBeaconState<phase0.BeaconState> | null {
+  get(cp: phase0.Checkpoint): CachedBeaconState<allForks.BeaconState> | null {
     const item = this.cache.get(toHexString(this.config.types.phase0.Checkpoint.hashTreeRoot(cp)));
     return item ? item.clone() : null;
   }
 
-  add(cp: phase0.Checkpoint, item: CachedBeaconState<phase0.BeaconState>): void {
+  add(cp: phase0.Checkpoint, item: CachedBeaconState<allForks.BeaconState>): void {
     const key = toHexString(this.config.types.phase0.Checkpoint.hashTreeRoot(cp));
     if (this.cache.has(key)) {
       return;
@@ -44,7 +44,7 @@ export class CheckpointStateCache {
   /**
    * Searches for the latest cached state with a `root`, starting with `epoch` and descending
    */
-  getLatest({root, epoch}: phase0.Checkpoint): CachedBeaconState<phase0.BeaconState> | null {
+  getLatest({root, epoch}: phase0.Checkpoint): CachedBeaconState<allForks.BeaconState> | null {
     const hexRoot = toHexString(root);
     // sort epochs in descending order, only consider epochs lte `epoch`
     const epochs = Array.from(this.epochIndex.keys())

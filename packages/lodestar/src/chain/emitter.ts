@@ -1,7 +1,7 @@
 import {EventEmitter} from "events";
 import StrictEventEmitter from "strict-event-emitter-types";
 
-import {phase0, Epoch, Slot, Version} from "@chainsafe/lodestar-types";
+import {phase0, Epoch, Slot, Version, allForks} from "@chainsafe/lodestar-types";
 import {IBlockSummary} from "@chainsafe/lodestar-fork-choice";
 import {IForkName} from "@chainsafe/lodestar-config";
 import {IBlockJob} from "./interface";
@@ -108,16 +108,16 @@ export enum ChainEvent {
 export interface IChainEvents {
   [ChainEvent.attestation]: (attestation: phase0.Attestation) => void;
   [ChainEvent.block]: (
-    signedBlock: phase0.SignedBeaconBlock,
-    postState: CachedBeaconState<phase0.BeaconState>,
+    signedBlock: allForks.SignedBeaconBlock,
+    postState: CachedBeaconState<allForks.BeaconState>,
     job: IBlockJob
   ) => void;
   [ChainEvent.errorAttestation]: (error: AttestationError) => void;
   [ChainEvent.errorBlock]: (error: BlockError) => void;
 
-  [ChainEvent.checkpoint]: (checkpoint: phase0.Checkpoint, state: CachedBeaconState<phase0.BeaconState>) => void;
-  [ChainEvent.justified]: (checkpoint: phase0.Checkpoint, state: CachedBeaconState<phase0.BeaconState>) => void;
-  [ChainEvent.finalized]: (checkpoint: phase0.Checkpoint, state: CachedBeaconState<phase0.BeaconState>) => void;
+  [ChainEvent.checkpoint]: (checkpoint: phase0.Checkpoint, state: CachedBeaconState<allForks.BeaconState>) => void;
+  [ChainEvent.justified]: (checkpoint: phase0.Checkpoint, state: CachedBeaconState<allForks.BeaconState>) => void;
+  [ChainEvent.finalized]: (checkpoint: phase0.Checkpoint, state: CachedBeaconState<allForks.BeaconState>) => void;
   [ChainEvent.forkVersion]: (version: Version, fork: IForkName) => void;
 
   [ChainEvent.clockSlot]: (slot: Slot) => void;

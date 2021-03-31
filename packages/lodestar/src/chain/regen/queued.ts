@@ -1,5 +1,5 @@
 import {AbortSignal} from "abort-controller";
-import {Root, phase0, Slot} from "@chainsafe/lodestar-types";
+import {Root, phase0, Slot, allForks} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
@@ -43,19 +43,19 @@ export class QueuedStateRegenerator implements IStateRegenerator {
     this.jobQueue = new JobQueue({maxLength, signal});
   }
 
-  async getPreState(block: phase0.BeaconBlock): Promise<CachedBeaconState<phase0.BeaconState>> {
+  async getPreState(block: allForks.BeaconBlock): Promise<CachedBeaconState<allForks.BeaconState>> {
     return await this.jobQueue.push(async () => await this.regen.getPreState(block));
   }
 
-  async getCheckpointState(cp: phase0.Checkpoint): Promise<CachedBeaconState<phase0.BeaconState>> {
+  async getCheckpointState(cp: phase0.Checkpoint): Promise<CachedBeaconState<allForks.BeaconState>> {
     return await this.jobQueue.push(async () => await this.regen.getCheckpointState(cp));
   }
 
-  async getBlockSlotState(blockRoot: Root, slot: Slot): Promise<CachedBeaconState<phase0.BeaconState>> {
+  async getBlockSlotState(blockRoot: Root, slot: Slot): Promise<CachedBeaconState<allForks.BeaconState>> {
     return await this.jobQueue.push(async () => await this.regen.getBlockSlotState(blockRoot, slot));
   }
 
-  async getState(stateRoot: Root): Promise<CachedBeaconState<phase0.BeaconState>> {
+  async getState(stateRoot: Root): Promise<CachedBeaconState<allForks.BeaconState>> {
     return await this.jobQueue.push(async () => await this.regen.getState(stateRoot));
   }
 }

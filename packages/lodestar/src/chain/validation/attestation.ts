@@ -74,7 +74,7 @@ export async function validateGossipAttestation(
     });
   }
 
-  let attestationTargetState: CachedBeaconState<phase0.BeaconState>;
+  let attestationTargetState: CachedBeaconState<allForks.BeaconState>;
   try {
     attestationTargetState = await chain.regen.getCheckpointState(attestation.data.target);
   } catch (e) {

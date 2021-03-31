@@ -1,3 +1,4 @@
+import {TreeBacked} from "@chainsafe/ssz";
 import {minimalConfig} from "@chainsafe/lodestar-config/minimal";
 import {SinonSandbox, SinonStubbedInstance} from "sinon";
 import {BeaconChain, ForkChoice} from "../../../src/chain";
@@ -7,7 +8,7 @@ import {CheckpointStateCache, StateContextCache} from "../../../src/chain/stateC
 import {testLogger} from "../logger";
 import {StubbedBeaconDb} from "./beaconDb";
 import {generateValidators} from "../validator";
-import {phase0} from "@chainsafe/lodestar-types";
+import {allForks, phase0} from "@chainsafe/lodestar-types";
 import {FAR_FUTURE_EPOCH} from "@chainsafe/lodestar-beacon-state-transition";
 import {createStubInstance} from "../types";
 
@@ -34,7 +35,7 @@ export class StubbedBeaconChain extends BeaconChain {
           exitEpoch: FAR_FUTURE_EPOCH,
         }),
         balances: Array.from({length: 64}, () => BigInt(0)),
-      } as phase0.BeaconState),
+      } as phase0.BeaconState) as TreeBacked<allForks.BeaconState>,
     });
     this.forkChoice = createStubInstance(ForkChoice);
     this.stateCache = createStubInstance(StateContextCache);

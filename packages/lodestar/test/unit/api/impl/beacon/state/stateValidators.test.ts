@@ -1,5 +1,5 @@
 import {config} from "@chainsafe/lodestar-config/minimal";
-import {Gwei} from "@chainsafe/lodestar-types";
+import {allForks, Gwei} from "@chainsafe/lodestar-types";
 import {CachedBeaconState, phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {List} from "@chainsafe/ssz";
 import {expect, use} from "chai";
@@ -101,7 +101,7 @@ describe("beacon api impl - state - validators", function () {
         pubkey2index: ({
           get: () => undefined,
         } as unknown) as fast.PubkeyIndexMap,
-      } as CachedBeaconState<phase0.BeaconState>);
+      } as CachedBeaconState<allForks.BeaconState>);
       const api = new BeaconStateApi({}, {config, db: dbStub, chain: chainStub});
       await expect(api.getStateValidator("someState", Buffer.alloc(32, 1))).to.be.rejectedWith("Validator not found");
     });
@@ -111,7 +111,7 @@ describe("beacon api impl - state - validators", function () {
         pubkey2index: ({
           get: () => 2,
         } as unknown) as fast.PubkeyIndexMap,
-      } as CachedBeaconState<phase0.BeaconState>);
+      } as CachedBeaconState<allForks.BeaconState>);
       const api = new BeaconStateApi({}, {config, db: dbStub, chain: chainStub});
       expect(await api.getStateValidator("someState", Buffer.alloc(32, 1))).to.not.be.null;
     });
@@ -136,7 +136,7 @@ describe("beacon api impl - state - validators", function () {
       pubkey2IndexStub.get.withArgs(Buffer.alloc(32, 2)).returns(25);
       chainStub.getHeadState.returns({
         pubkey2index: (pubkey2IndexStub as unknown) as fast.PubkeyIndexMap,
-      } as CachedBeaconState<phase0.BeaconState>);
+      } as CachedBeaconState<allForks.BeaconState>);
       const api = new BeaconStateApi({}, {config, db: dbStub, chain: chainStub});
       const balances = await api.getStateValidatorBalances("somestate", [
         1,

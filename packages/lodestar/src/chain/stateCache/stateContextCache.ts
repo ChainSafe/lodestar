@@ -1,5 +1,5 @@
 import {ByteVector, toHexString} from "@chainsafe/ssz";
-import {phase0, Epoch} from "@chainsafe/lodestar-types";
+import {Epoch, allForks} from "@chainsafe/lodestar-types";
 import {CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
 
 const MAX_STATES = 96;
@@ -15,7 +15,7 @@ export class StateContextCache {
    */
   maxStates: number;
 
-  private cache = new Map<string, CachedBeaconState<phase0.BeaconState>>();
+  private cache = new Map<string, CachedBeaconState<allForks.BeaconState>>();
   /** Epoch -> Set<blockRoot> */
   private epochIndex = new Map<Epoch, Set<string>>();
 
@@ -23,7 +23,7 @@ export class StateContextCache {
     this.maxStates = maxStates;
   }
 
-  get(root: ByteVector): CachedBeaconState<phase0.BeaconState> | null {
+  get(root: ByteVector): CachedBeaconState<allForks.BeaconState> | null {
     const item = this.cache.get(toHexString(root));
     if (!item) {
       return null;
@@ -31,7 +31,7 @@ export class StateContextCache {
     return item.clone();
   }
 
-  add(item: CachedBeaconState<phase0.BeaconState>): void {
+  add(item: CachedBeaconState<allForks.BeaconState>): void {
     const key = toHexString(item.hashTreeRoot());
     if (this.cache.get(key)) {
       return;
