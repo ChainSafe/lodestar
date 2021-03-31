@@ -1,4 +1,4 @@
-import {Number64, Root, Slot} from "@chainsafe/lodestar-types";
+import {allForks, Number64, Root, Slot} from "@chainsafe/lodestar-types";
 import {IForkName} from "@chainsafe/lodestar-config";
 import {phase0, CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
@@ -31,11 +31,11 @@ interface IProcessBlock {
 }
 
 export interface IChainSegmentJob extends IProcessBlock {
-  signedBlocks: phase0.SignedBeaconBlock[];
+  signedBlocks: allForks.SignedBeaconBlock[];
 }
 
 export interface IBlockJob extends IProcessBlock {
-  signedBlock: phase0.SignedBeaconBlock;
+  signedBlock: allForks.SignedBeaconBlock;
 }
 
 export interface IAttestationJob {
@@ -67,7 +67,7 @@ export interface IBeaconChain {
    */
   close(): void;
 
-  getHeadState(): CachedBeaconState<phase0.BeaconState>;
+  getHeadState(): CachedBeaconState<allForks.BeaconState>;
   /**
    * Get ForkDigest from the head state
    */
@@ -83,11 +83,11 @@ export interface IBeaconChain {
   getGenesisTime(): Number64;
   getStatus(): phase0.Status;
 
-  getHeadStateAtCurrentEpoch(): Promise<CachedBeaconState<phase0.BeaconState>>;
-  getHeadStateAtCurrentSlot(): Promise<CachedBeaconState<phase0.BeaconState>>;
-  getHeadBlock(): Promise<phase0.SignedBeaconBlock | null>;
+  getHeadStateAtCurrentEpoch(): Promise<CachedBeaconState<allForks.BeaconState>>;
+  getHeadStateAtCurrentSlot(): Promise<CachedBeaconState<allForks.BeaconState>>;
+  getHeadBlock(): Promise<allForks.SignedBeaconBlock | null>;
 
-  getStateByBlockRoot(blockRoot: Root): Promise<CachedBeaconState<phase0.BeaconState> | null>;
+  getStateByBlockRoot(blockRoot: Root): Promise<CachedBeaconState<allForks.BeaconState> | null>;
 
   getFinalizedCheckpoint(): phase0.Checkpoint;
 
@@ -97,9 +97,9 @@ export interface IBeaconChain {
    * forkchoice. Works for finalized slots as well
    * @param slot
    */
-  getCanonicalBlockAtSlot(slot: Slot): Promise<phase0.SignedBeaconBlock | null>;
+  getCanonicalBlockAtSlot(slot: Slot): Promise<allForks.SignedBeaconBlock | null>;
 
-  getUnfinalizedBlocksAtSlots(slots: Slot[]): Promise<phase0.SignedBeaconBlock[]>;
+  getUnfinalizedBlocksAtSlots(slots: Slot[]): Promise<allForks.SignedBeaconBlock[]>;
 
   /**
    * Add attestation to the fork-choice rule
@@ -109,9 +109,9 @@ export interface IBeaconChain {
   /**
    * Pre-process and run the per slot state transition function
    */
-  receiveBlock(signedBlock: phase0.SignedBeaconBlock, trusted?: boolean): void;
+  receiveBlock(signedBlock: allForks.SignedBeaconBlock, trusted?: boolean): void;
   /**
    * Process a chain of blocks until complete.
    */
-  processChainSegment(signedBlocks: phase0.SignedBeaconBlock[], trusted?: boolean): Promise<void>;
+  processChainSegment(signedBlocks: allForks.SignedBeaconBlock[], trusted?: boolean): Promise<void>;
 }

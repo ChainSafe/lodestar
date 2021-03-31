@@ -1,4 +1,4 @@
-import {phase0, Root, Slot} from "@chainsafe/lodestar-types";
+import {allForks, phase0, Root, Slot} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {
   CachedBeaconState,
@@ -48,7 +48,7 @@ export class StateRegenerator implements IStateRegenerator {
     this.db = db;
   }
 
-  async getPreState(block: phase0.BeaconBlock): Promise<CachedBeaconState<phase0.BeaconState>> {
+  async getPreState(block: phase0.BeaconBlock): Promise<CachedBeaconState<allForks.BeaconState>> {
     const parentBlock = this.forkChoice.getBlock(block.parentRoot);
     if (!parentBlock) {
       throw new RegenError({
@@ -77,12 +77,12 @@ export class StateRegenerator implements IStateRegenerator {
     return await this.getState(parentBlock.stateRoot);
   }
 
-  async getCheckpointState(cp: phase0.Checkpoint): Promise<CachedBeaconState<phase0.BeaconState>> {
+  async getCheckpointState(cp: phase0.Checkpoint): Promise<CachedBeaconState<allForks.BeaconState>> {
     const checkpointStartSlot = computeStartSlotAtEpoch(this.config, cp.epoch);
     return await this.getBlockSlotState(cp.root, checkpointStartSlot);
   }
 
-  async getBlockSlotState(blockRoot: Root, slot: Slot): Promise<CachedBeaconState<phase0.BeaconState>> {
+  async getBlockSlotState(blockRoot: Root, slot: Slot): Promise<CachedBeaconState<allForks.BeaconState>> {
     const block = this.forkChoice.getBlock(blockRoot);
     if (!block) {
       throw new RegenError({
@@ -117,7 +117,7 @@ export class StateRegenerator implements IStateRegenerator {
     return await processSlotsByCheckpoint(this.emitter, blockStateCtx, slot);
   }
 
-  async getState(stateRoot: Root): Promise<CachedBeaconState<phase0.BeaconState>> {
+  async getState(stateRoot: Root): Promise<CachedBeaconState<allForks.BeaconState>> {
     // Trivial case, state at stateRoot is already cached
     const cachedStateCtx = this.stateCache.get(stateRoot);
     if (cachedStateCtx) {
@@ -142,7 +142,7 @@ export class StateRegenerator implements IStateRegenerator {
     // blocks to replay, ordered highest to lowest
     // gets reversed when replayed
     const blocksToReplay = [block];
-    let state: CachedBeaconState<phase0.BeaconState> | null = null;
+    let state: CachedBeaconState<allForks.BeaconState> | null = null;
     for (const b of this.forkChoice.iterateBlockSummaries(block.parentRoot)) {
       state = this.stateCache.get(b.stateRoot);
       if (state) {
@@ -197,6 +197,6 @@ export class StateRegenerator implements IStateRegenerator {
       }
     }
 
-    return state as CachedBeaconState<phase0.BeaconState>;
+    return state as CachedBeaconState<allForks.BeaconState>;
   }
 }

@@ -1,16 +1,26 @@
 import fs from "fs";
 import path from "path";
 import rimraf from "rimraf";
-import {Context, ILogger, LodestarError, LogFormat, logFormats, WinstonLogger} from "../../../src";
+import {Writable} from "stream";
 import {expect} from "chai";
+import {Context, LodestarError, LogFormat, logFormats, LogLevel, sleep, WinstonLogger} from "../../../src";
 import {TransportType} from "../../../src/logger/transport";
 
-describe("winston logger", () => {
-  const tmpDir = fs.mkdtempSync("lodestar-winston-test");
-  after(() => {
-    rimraf.sync(tmpDir);
-  });
+/**
+ * To capture Winston output in memory
+ */
+class WritableMemory extends Writable {
+  chunks: Buffer[] = [];
+  _write(chunk: Buffer): void {
+    this.chunks.push(chunk);
+  }
 
+  getAsString(): string {
+    return Buffer.concat(this.chunks).toString("utf8");
+  }
+}
+
+describe("winston logger", () => {
   describe("winston logger format and options", () => {
     interface ITestCase {
       id: string;
@@ -63,51 +73,83 @@ describe("winston logger", () => {
       const {id, message, context, error, output} = typeof testCase === "function" ? testCase() : testCase;
       for (const format of logFormats) {
         it(`${id} ${format} output`, async () => {
-          const filename = path.join(tmpDir, `${id.replace(/\s+/g, "-")}-${format}.txt`);
-
-          const logger = new WinstonLogger({format, hideTimestamp: true}, [{type: TransportType.file, filename}]);
+          const stream = new WritableMemory();
+          const logger = new WinstonLogger({format, hideTimestamp: true}, [{type: TransportType.stream, stream}]);
           logger.warn(message, context, error);
 
-          // Allow the file transport to persist the file
-          await new Promise((r) => setTimeout(r, 10));
-
-          const allOutput = fs.readFileSync(filename, "utf8").trim();
-          expect(allOutput).to.equal(output[format]);
+          expect(stream.getAsString().trim()).to.equal(output[format]);
         });
       }
     }
   });
 
   describe("profile", () => {
-    it("should log profile", () => {
-      const logger: ILogger = new WinstonLogger();
+    it("should log profile", async () => {
+      const stream = new WritableMemory();
+      const logger = new WinstonLogger({hideTimestamp: true, module: "A"}, [{type: TransportType.stream, stream}]);
 
       logger.profile("test");
+      await sleep(10);
+      // Stop profile of 'test'. Logging will now take place:
+      // '2021-03-31 20:47:09 []                 info: test  - duration=10ms'
+      logger.profile("test");
 
-      setTimeout(function () {
-        //
-        // Stop profile of 'test'. Logging will now take place:
-        //   '17 Jan 21:00:00 - info: test duration=10ms'
-        //
-        logger.profile("test");
-      }, 10);
+      // Do not include the time since it can vary
+      expect(stream.getAsString().trim()).to.include("\u001b[32minfo\u001b[39m: test  - duration=");
     });
   });
 
   describe("child logger", () => {
     it("Should parse child module", async () => {
-      const filename = path.join(tmpDir, "child-logger-test.txt");
-
-      const logger = new WinstonLogger({hideTimestamp: true, module: "A"}, [{type: TransportType.file, filename}]);
+      const stream = new WritableMemory();
+      const logger = new WinstonLogger({hideTimestamp: true, module: "A"}, [{type: TransportType.stream, stream}]);
       const childB = logger.child({module: "B"});
       const childC = childB.child({module: "C"});
       childC.warn("test");
 
-      // Allow the file transport to persist the file
-      await new Promise((r) => setTimeout(r, 10));
+      expect(stream.getAsString().trim()).to.equal("[A B C]            \u001b[33mwarn\u001b[39m: test");
+    });
 
-      const allOutput = fs.readFileSync(filename, "utf8").trim();
-      expect(allOutput).to.equal("[A B C]            \u001b[33mwarn\u001b[39m: test");
+    it("Should log to child at a lower logLevel", () => {
+      const stream = new WritableMemory();
+      const logger = new WinstonLogger({hideTimestamp: true, module: "A"}, [
+        {type: TransportType.stream, stream, level: LogLevel.info},
+      ]);
+
+      const childB = logger.child({module: "B", level: LogLevel.debug});
+
+      logger.debug("Should not be logged");
+      childB.debug("Should be logged");
+
+      expect(stream.getAsString().trim()).to.equal("[A B]             \u001b[34mdebug\u001b[39m: Should be logged");
+    });
+  });
+
+  describe("Log to file", () => {
+    let tmpDir: string;
+
+    before(() => {
+      tmpDir = fs.mkdtempSync("test-lodestar-winston-test");
+    });
+
+    it("Should log to file", async () => {
+      const filename = path.join(tmpDir, "child-logger-test.txt");
+
+      const logger = new WinstonLogger({hideTimestamp: true, module: "A"}, [{type: TransportType.file, filename}]);
+      logger.warn("test");
+
+      // Wait for file to exist
+      for (let i = 0; i < 200; i++) {
+        await new Promise((r) => setTimeout(r, 10));
+        if (fs.existsSync(filename)) break;
+      }
+
+      const output = fs.readFileSync(filename, "utf8").trim();
+      expect(output).to.equal("[A]                \u001b[33mwarn\u001b[39m: test");
+    });
+
+    after(() => {
+      rimraf.sync(tmpDir);
     });
   });
 });

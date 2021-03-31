@@ -1,5 +1,6 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {BeaconState, ValidatorIndex} from "@chainsafe/lodestar-types/phase0";
+import {allForks} from "@chainsafe/lodestar-types";
+import {ValidatorIndex} from "@chainsafe/lodestar-types/phase0";
 import {ByteVector} from "@chainsafe/ssz";
 import {IBeaconChain} from "../../chain/interface";
 import {IBeaconSync} from "../../sync";
@@ -27,7 +28,7 @@ export async function checkSyncStatus(config: IBeaconConfig, sync: IBeaconSync):
 
 export function getStateValidatorIndex(
   id: number | ByteVector,
-  state: BeaconState,
+  state: allForks.BeaconState,
   chain: IBeaconChain
 ): number | undefined {
   let validatorIndex: ValidatorIndex | undefined;

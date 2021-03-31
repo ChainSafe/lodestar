@@ -7,7 +7,7 @@ import LibP2p from "libp2p";
 
 import {TreeBacked} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {phase0} from "@chainsafe/lodestar-types";
+import {allForks} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
 
 import {IBeaconDb} from "../db";
@@ -44,7 +44,7 @@ export interface IBeaconNodeInitModules {
   db: IBeaconDb;
   logger: ILogger;
   libp2p: LibP2p;
-  anchorState: TreeBacked<phase0.BeaconState>;
+  anchorState: TreeBacked<allForks.BeaconState>;
 }
 
 export enum BeaconNodeStatus {

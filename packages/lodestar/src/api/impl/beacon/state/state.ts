@@ -1,6 +1,6 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
-import {Root, phase0, BLSPubkey} from "@chainsafe/lodestar-types";
+import {Root, phase0, allForks, BLSPubkey} from "@chainsafe/lodestar-types";
 import {List, readonlyValues} from "@chainsafe/ssz";
 import {IBeaconChain} from "../../../../chain/interface";
 import {IBeaconDb} from "../../../../db/api";
@@ -30,7 +30,7 @@ export class BeaconStateApi implements IBeaconStateApi {
     if (!state) {
       return null;
     }
-    return this.config.types.phase0.BeaconState.hashTreeRoot(state);
+    return this.config.getTypes(state.slot).BeaconState.hashTreeRoot(state);
   }
 
   async getStateFinalityCheckpoints(stateId: StateId): Promise<phase0.FinalityCheckpoints | null> {
@@ -173,7 +173,7 @@ export class BeaconStateApi implements IBeaconStateApi {
     });
   }
 
-  async getState(stateId: StateId): Promise<phase0.BeaconState | null> {
+  async getState(stateId: StateId): Promise<allForks.BeaconState | null> {
     return await resolveStateId(this.chain, this.db, stateId);
   }
 

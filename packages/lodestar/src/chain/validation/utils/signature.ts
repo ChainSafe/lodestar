@@ -1,5 +1,5 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {Epoch, phase0, Slot} from "@chainsafe/lodestar-types";
+import {allForks, Epoch, phase0, Slot} from "@chainsafe/lodestar-types";
 import {PublicKey} from "@chainsafe/bls";
 import {
   computeEpochAtSlot,
@@ -11,7 +11,7 @@ import {
 
 export function getSelectionProofSignatureSet(
   config: IBeaconConfig,
-  state: phase0.BeaconState,
+  state: allForks.BeaconState,
   slot: Slot,
   aggregator: PublicKey,
   aggregateAndProof: phase0.SignedAggregateAndProof
@@ -29,7 +29,7 @@ export function getSelectionProofSignatureSet(
 
 export function getAggregateAndProofSignatureSet(
   config: IBeaconConfig,
-  state: phase0.BeaconState,
+  state: allForks.BeaconState,
   epoch: Epoch,
   aggregator: PublicKey,
   aggregateAndProof: phase0.SignedAggregateAndProof

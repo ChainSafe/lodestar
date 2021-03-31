@@ -1,7 +1,7 @@
 import {expect} from "chai";
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {List, TreeBacked} from "@chainsafe/ssz";
-import {phase0} from "@chainsafe/lodestar-types";
+import {allForks, phase0} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {generateState} from "../../../utils/state";
 import {filterBy} from "../../../utils/db";
@@ -94,7 +94,7 @@ describe("eth1 / util / eth1Vote", function () {
     // Function array to scope votes in each test case defintion
     const testCases: (() => {
       id: string;
-      state: TreeBacked<phase0.BeaconState>;
+      state: TreeBacked<allForks.BeaconState>;
       eth1Datas: IEth1DataWithTimestamp[];
       expectedVotesToConsider: phase0.Eth1Data[];
     })[] = [
@@ -161,7 +161,7 @@ function getEth1DataBlock(eth1DataBlock: Partial<IEth1DataWithTimestamp>): IEth1
  * @param config
  * @param state
  */
-function getTimestampInRange(config: IBeaconConfig, state: TreeBacked<phase0.BeaconState>): number {
+function getTimestampInRange(config: IBeaconConfig, state: TreeBacked<allForks.BeaconState>): number {
   const {SECONDS_PER_ETH1_BLOCK, ETH1_FOLLOW_DISTANCE} = config.params;
   const periodStart = votingPeriodStartTime(config, state);
   return periodStart - SECONDS_PER_ETH1_BLOCK * ETH1_FOLLOW_DISTANCE;
