@@ -1,11 +1,11 @@
+import sinon from "sinon";
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import {List} from "@chainsafe/ssz";
-import sinon from "sinon";
+import {phase0} from "@chainsafe/lodestar-types";
+import {BeaconState} from "@chainsafe/lodestar-types/lib/allForks";
 import {getLatestWeakSubjectivityCheckpointEpoch} from "../../../../src/util/weakSubjectivity";
 import {generateState} from "../../../utils/state";
-import {phase0} from "@chainsafe/lodestar-types";
 import {generateValidator} from "../../../utils/validator";
-import {BeaconState} from "@chainsafe/lodestar-types/lib/allForks";
 import {expect} from "chai";
 
 describe("getLatestWeakSubjectivityCheckpointEpoch", () => {
