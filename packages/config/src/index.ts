@@ -1,12 +1,5 @@
 import {GENESIS_SLOT, IBeaconParams} from "@chainsafe/lodestar-params";
-import {
-  createIBeaconSSZTypes,
-  IAltairSSZTypes,
-  IPhase0SSZTypes,
-  IPhase1SSZTypes,
-  Slot,
-  Version,
-} from "@chainsafe/lodestar-types";
+import {createIBeaconSSZTypes, IAllForksSSZTypes, Slot, Version} from "@chainsafe/lodestar-types";
 
 import {IBeaconConfig, IForkInfo, IForkName} from "./interface";
 
@@ -54,8 +47,8 @@ export function createIBeaconConfig(params: IBeaconParams): IBeaconConfig {
         return params.PHASE_1_FORK_VERSION;
       }
     },
-    getTypes(slot: Slot): IPhase0SSZTypes | IAltairSSZTypes | IPhase1SSZTypes {
-      return types[this.getForkName(slot)];
+    getTypes(slot: Slot): IAllForksSSZTypes {
+      return types[this.getForkName(slot)] as IAllForksSSZTypes;
     },
   };
 }
