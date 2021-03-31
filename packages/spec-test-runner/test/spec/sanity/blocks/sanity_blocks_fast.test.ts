@@ -2,33 +2,30 @@ import {join} from "path";
 import {expect} from "chai";
 
 import {TreeBacked} from "@chainsafe/ssz";
-import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
+import {fast, phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
 import {IBlockSanityTestCase} from "./type";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {SPEC_TEST_LOCATION} from "../../../utils/specTestCases";
 import {BeaconState} from "@chainsafe/lodestar-types/phase0";
+import {allForks} from "@chainsafe/lodestar-types";
 
-describeDirectorySpecTest<IBlockSanityTestCase, phase0.BeaconState>(
+describeDirectorySpecTest<IBlockSanityTestCase, allForks.BeaconState>(
   "block sanity mainnet",
   join(SPEC_TEST_LOCATION, "/tests/mainnet/phase0/sanity/blocks/pyspec_tests"),
   (testcase) => {
-    let wrappedState = phase0.fast.createCachedBeaconState<phase0.BeaconState>(
+    let wrappedState = fast.createCachedBeaconState<allForks.BeaconState>(
       config,
-      testcase.pre as TreeBacked<phase0.BeaconState>
+      testcase.pre as TreeBacked<allForks.BeaconState>
     );
     const verify = !!testcase.meta && !!testcase.meta.blsSetting && testcase.meta.blsSetting === BigInt(1);
     for (let i = 0; i < Number(testcase.meta.blocksCount); i++) {
-      wrappedState = phase0.fast.fastStateTransition(
-        wrappedState,
-        testcase[`blocks_${i}`] as phase0.SignedBeaconBlock,
-        {
-          verifyStateRoot: verify,
-          verifyProposer: verify,
-          verifySignatures: verify,
-        }
-      );
+      wrappedState = fast.fastStateTransition(wrappedState, testcase[`blocks_${i}`] as phase0.SignedBeaconBlock, {
+        verifyStateRoot: verify,
+        verifyProposer: verify,
+        verifySignatures: verify,
+      });
     }
     return wrappedState;
   },

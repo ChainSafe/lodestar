@@ -2,6 +2,7 @@ import {expect} from "chai";
 import sinon, {SinonStub} from "sinon";
 import bls, {SecretKey} from "@chainsafe/bls";
 import {List} from "@chainsafe/ssz";
+import {allForks} from "@chainsafe/lodestar-types";
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {SlashingProtection} from "@chainsafe/lodestar-validator";
 import {FAR_FUTURE_EPOCH, ZERO_HASH} from "../../../../../src/constants";
@@ -11,8 +12,10 @@ import {assembleBlock} from "../../../../../src/chain/factory/block";
 import {
   getBeaconProposerIndex,
   signedBlockToSignedHeader,
+  fast,
   phase0,
   createCachedBeaconState,
+  CachedBeaconState,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {generateValidator} from "../../../../utils/validator";
@@ -105,7 +108,9 @@ describe("produce block", function () {
       state.fork,
       ZERO_HASH
     );
-    expect(() => phase0.fast.fastStateTransition(state, block!, {verifyStateRoot: false})).to.not.throw();
+    expect(() =>
+      fast.fastStateTransition(state as CachedBeaconState<allForks.BeaconState>, block!, {verifyStateRoot: false})
+    ).to.not.throw();
   });
 
   function getBlockProposingService(secretKey: SecretKey): BlockProposingService {

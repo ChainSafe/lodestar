@@ -1,4 +1,4 @@
-import {prepareEpochProcessState, CachedBeaconState} from "../util";
+import {prepareEpochProcessState, CachedBeaconState} from "../../../fast";
 import {processJustificationAndFinalization} from "./processJustificationAndFinalization";
 import {processRewardsAndPenalties} from "./processRewardsAndPenalties";
 import {processRegistryUpdates} from "./processRegistryUpdates";

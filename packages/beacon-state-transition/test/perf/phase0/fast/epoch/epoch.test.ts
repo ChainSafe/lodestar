@@ -2,11 +2,11 @@ import {config} from "@chainsafe/lodestar-config/mainnet";
 import {profilerLogger} from "../../../../utils/logger";
 import {generatePerformanceState, initBLS} from "../../../util";
 import {expect} from "chai";
-import {phase0} from "../../../../../src";
+import {phase0, fast} from "../../../../../src";
 
 describe("Epoch Processing Performance Tests", function () {
-  let state: phase0.fast.CachedBeaconState<phase0.BeaconState>;
-  let process: phase0.fast.IEpochProcess;
+  let state: fast.CachedBeaconState<phase0.BeaconState>;
+  let process: fast.IEpochProcess;
   const logger = profilerLogger();
   let start: number;
 
@@ -16,8 +16,8 @@ describe("Epoch Processing Performance Tests", function () {
     const origState = await generatePerformanceState();
     // go back 1 slot to process epoch
     origState.slot -= 1;
-    state = phase0.fast.createCachedBeaconState(config, origState);
-    process = phase0.fast.prepareEpochProcessState(state);
+    state = fast.createCachedBeaconState(config, origState);
+    process = fast.prepareEpochProcessState(state);
   });
 
   beforeEach(function () {

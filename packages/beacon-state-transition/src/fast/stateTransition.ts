@@ -1,0 +1,61 @@
+import {allForks, phase0} from "@chainsafe/lodestar-types";
+import {processBlock, processSlots} from "../phase0/fast";
+import {verifyProposerSignature} from "./signatureSets";
+import {CachedBeaconState} from "./util";
+
+// Multifork capable state transition
+
+/**
+ * Implementation of protolambda's eth2fastspec (https://github.com/protolambda/eth2fastspec)
+ */
+export function fastStateTransition(
+  state: CachedBeaconState<allForks.BeaconState>,
+  signedBlock: allForks.SignedBeaconBlock,
+  options?: {verifyStateRoot?: boolean; verifyProposer?: boolean; verifySignatures?: boolean}
+): CachedBeaconState<allForks.BeaconState> {
+  const {verifyStateRoot = true, verifyProposer = true, verifySignatures = true} = options || {};
+  const {config} = state;
+
+  const preSlot = state.slot;
+  const preFork = config.getForkName(preSlot);
+  const block = signedBlock.message;
+  const blockSlot = block.slot;
+  const blockFork = config.getForkName(blockSlot);
+  const postState = state.clone();
+
+  // process slots (including those with no blocks) since block
+  switch (preFork) {
+    case "phase0":
+      processSlots(postState as CachedBeaconState<phase0.BeaconState>, block.slot);
+      break;
+    default:
+      throw new Error(`Slot processing not implemented for fork ${preFork}`);
+  }
+
+  // perform state upgrades
+  // TODO
+
+  // verify signature
+  if (verifyProposer) {
+    if (!verifyProposerSignature(postState, signedBlock)) {
+      throw new Error("Invalid block signature");
+    }
+  }
+
+  // process block
+  switch (blockFork) {
+    case "phase0":
+      processBlock(postState as CachedBeaconState<phase0.BeaconState>, block as phase0.BeaconBlock, verifySignatures);
+      break;
+    default:
+      throw new Error(`Block processing not implemented for fork ${blockFork}`);
+  }
+
+  // verify state root
+  if (verifyStateRoot) {
+    if (!config.types.Root.equals(block.stateRoot, postState.tree.root)) {
+      throw new Error("Invalid state root");
+    }
+  }
+  return postState;
+}

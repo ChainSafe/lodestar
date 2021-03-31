@@ -2,7 +2,8 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBeaconDb} from "../../db/api";
 import {IAttestationJob, IBeaconChain} from "..";
 import {CachedBeaconState, computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
-import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
+import {allForks} from "@chainsafe/lodestar-types";
+import {fast, phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {AttestationError, AttestationErrorCode} from "../errors";
 import {ATTESTATION_PROPAGATION_SLOT_RANGE} from "../../constants";
 
@@ -84,7 +85,7 @@ export async function validateGossipAttestation(
     });
   }
 
-  const expectedSubnet = phase0.fast.computeSubnetForAttestation(config, attestationTargetState, attestation);
+  const expectedSubnet = fast.computeSubnetForAttestation(config, attestationTargetState, attestation);
   if (subnet !== expectedSubnet) {
     throw new AttestationError({
       code: AttestationErrorCode.INVALID_SUBNET_ID,
@@ -96,7 +97,7 @@ export async function validateGossipAttestation(
 
   if (
     !phase0.fast.isValidIndexedAttestation(
-      attestationTargetState,
+      attestationTargetState as CachedBeaconState<allForks.BeaconState>,
       attestationTargetState.getIndexedAttestation(attestation),
       !attestationJob.validSignature
     )
@@ -164,14 +165,14 @@ export function getAttestationAttesterCount(attestation: phase0.Attestation): nu
 }
 
 export function isCommitteeIndexWithinRange(
-  epochCtx: phase0.fast.EpochContext,
+  epochCtx: fast.EpochContext,
   attestationData: phase0.AttestationData
 ): boolean {
   return attestationData.index < epochCtx.getCommitteeCountAtSlot(attestationData.slot);
 }
 
 export function doAggregationBitsMatchCommitteeSize(
-  epochCtx: phase0.fast.EpochContext,
+  epochCtx: fast.EpochContext,
   attestation: phase0.Attestation
 ): boolean {
   return (

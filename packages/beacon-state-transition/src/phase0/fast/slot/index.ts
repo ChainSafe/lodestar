@@ -2,7 +2,7 @@ import {phase0, Slot} from "@chainsafe/lodestar-types";
 
 import {processEpoch} from "../epoch";
 import {processSlot} from "./processSlot";
-import {CachedBeaconState, rotateEpochs} from "../util";
+import {CachedBeaconState, rotateEpochs} from "../../../fast";
 
 export {processSlot};
 

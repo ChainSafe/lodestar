@@ -2,7 +2,7 @@ import {phase0} from "@chainsafe/lodestar-types";
 import {List, readonlyValues} from "@chainsafe/ssz";
 import {bigIntMin, intDiv} from "@chainsafe/lodestar-utils";
 import {getRandaoMix} from "../../../util";
-import {IEpochProcess, CachedBeaconState} from "../util";
+import {IEpochProcess, CachedBeaconState} from "../../../fast";
 
 export function processFinalUpdates(state: CachedBeaconState<phase0.BeaconState>, process: IEpochProcess): void {
   const {config, validators} = state;

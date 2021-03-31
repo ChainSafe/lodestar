@@ -2,7 +2,7 @@ import {expect} from "chai";
 import sinon, {SinonStubbedInstance} from "sinon";
 
 import {config} from "@chainsafe/lodestar-config/minimal";
-import * as specUtils from "@chainsafe/lodestar-beacon-state-transition/lib/phase0/fast/util/block";
+import * as specUtils from "@chainsafe/lodestar-beacon-state-transition/lib/fast/signatureSets/proposer";
 
 import {BeaconChain, ForkChoice, IBeaconChain} from "../../../../src/chain";
 import {LocalClock} from "../../../../src/chain/clock";
@@ -20,7 +20,7 @@ describe("gossip block validation", function () {
   let forkChoiceStub: SinonStubbedInstance<ForkChoice>;
   let regenStub: SinonStubbedInstance<StateRegenerator>;
   let dbStub: StubbedBeaconDb;
-  let verifySignatureStub: SinonStubFn<typeof specUtils["verifyBlockSignature"]>;
+  let verifySignatureStub: SinonStubFn<typeof specUtils["verifyProposerSignature"]>;
 
   beforeEach(function () {
     chainStub = sinon.createStubInstance(BeaconChain);
@@ -29,7 +29,7 @@ describe("gossip block validation", function () {
     chainStub.forkChoice = forkChoiceStub;
     regenStub = chainStub.regen = sinon.createStubInstance(StateRegenerator);
     dbStub = new StubbedBeaconDb(sinon, config);
-    verifySignatureStub = sinon.stub(specUtils, "verifyBlockSignature");
+    verifySignatureStub = sinon.stub(specUtils, "verifyProposerSignature");
   });
 
   afterEach(function () {

@@ -1,5 +1,5 @@
 import {TreeBacked} from "@chainsafe/ssz";
-import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
+import {fast, phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
 import {join} from "path";
@@ -12,11 +12,11 @@ for (const testSuite of ["basic", "leak", "random"]) {
     "process attestation mainnet",
     join(SPEC_TEST_LOCATION, `/tests/mainnet/phase0/rewards/${testSuite}/pyspec_tests`),
     (testcase) => {
-      const wrappedState = phase0.fast.createCachedBeaconState<phase0.BeaconState>(
+      const wrappedState = fast.createCachedBeaconState<phase0.BeaconState>(
         config,
         testcase.pre as TreeBacked<phase0.BeaconState>
       );
-      const process = phase0.fast.prepareEpochProcessState(wrappedState);
+      const process = fast.prepareEpochProcessState(wrappedState);
       const [rewards, penalties] = phase0.fast.getAttestationDeltas(wrappedState, process);
       return {
         rewards: rewards.map((reward) => BigInt(reward)),

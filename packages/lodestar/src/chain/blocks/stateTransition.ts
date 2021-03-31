@@ -1,10 +1,11 @@
 import {byteArrayEquals} from "@chainsafe/ssz";
-import {Gwei, Slot} from "@chainsafe/lodestar-types";
+import {allForks, Gwei, Slot} from "@chainsafe/lodestar-types";
 import {assert} from "@chainsafe/lodestar-utils";
 import {
   CachedBeaconState,
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
+  fast,
   phase0,
   getEffectiveBalances,
 } from "@chainsafe/lodestar-beacon-state-transition";
@@ -132,11 +133,11 @@ export async function runStateTransition(
   const postSlot = job.signedBlock.message.slot;
 
   // if block is trusted don't verify proposer or op signature
-  const postState = phase0.fast.fastStateTransition(preState, job.signedBlock, {
+  const postState = fast.fastStateTransition(preState as CachedBeaconState<allForks.BeaconState>, job.signedBlock, {
     verifyStateRoot: true,
     verifyProposer: !job.validSignatures && !job.validProposerSignature,
     verifySignatures: !job.validSignatures,
-  });
+  }) as CachedBeaconState<phase0.BeaconState>;
 
   const oldHead = forkChoice.getHead();
 

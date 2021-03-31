@@ -1,4 +1,3 @@
-export * from "./block";
 export * from "./attestation";
 export * from "./attesterStatus";
 export * from "./epochContext";

@@ -1,3 +1,4 @@
+import {allForks} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {ChainEventEmitter} from "../emitter";
@@ -7,7 +8,7 @@ import {IStateRegenerator, RegenError} from "../regen";
 import {BlockError, BlockErrorCode, ChainSegmentError} from "../errors";
 import {verifySignatureSetsBatch} from "../bls";
 import {groupBlocksByEpoch} from "./util";
-import {phase0, ISignatureSet} from "@chainsafe/lodestar-beacon-state-transition";
+import {fast, ISignatureSet, CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
 import {CheckpointStateCache} from "../stateCache";
 
 export async function processBlock({
@@ -36,8 +37,11 @@ export async function processBlock({
 
     if (!job.validSignatures) {
       const signatureSets = job.validProposerSignature
-        ? phase0.fast.getAllBlockSignatureSetsExceptProposer(preState, job.signedBlock)
-        : phase0.fast.getAllBlockSignatureSets(preState, job.signedBlock);
+        ? fast.getAllBlockSignatureSetsExceptProposer(
+            preState as CachedBeaconState<allForks.BeaconState>,
+            job.signedBlock
+          )
+        : fast.getAllBlockSignatureSets(preState as CachedBeaconState<allForks.BeaconState>, job.signedBlock);
 
       if (!verifySignatureSetsBatch(signatureSets)) {
         throw new BlockError({
@@ -123,8 +127,8 @@ export async function processChainSegment({
         for (const block of blocksInEpoch) {
           signatureSets.push(
             ...(job.validProposerSignature
-              ? phase0.fast.getAllBlockSignatureSetsExceptProposer(preState, block)
-              : phase0.fast.getAllBlockSignatureSets(preState, block))
+              ? fast.getAllBlockSignatureSetsExceptProposer(preState as CachedBeaconState<allForks.BeaconState>, block)
+              : fast.getAllBlockSignatureSets(preState as CachedBeaconState<allForks.BeaconState>, block))
           );
         }
 

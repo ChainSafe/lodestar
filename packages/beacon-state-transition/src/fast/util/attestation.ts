@@ -1,10 +1,10 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {phase0, ATTESTATION_SUBNET_COUNT} from "@chainsafe/lodestar-types";
-import {computeSlotsSinceEpochStart} from "../../../util";
-import {EpochContext} from "../index";
+import {computeSlotsSinceEpochStart} from "../../util";
+import {EpochContext} from "./epochContext";
 
 /**
- * Compute the correct subnet for an attestation for Phase 0.
+ * Compute the correct subnet for an attestation
  */
 export function computeSubnetForAttestation(
   config: IBeaconConfig,
@@ -16,7 +16,7 @@ export function computeSubnetForAttestation(
 }
 
 /**
- * Compute the correct subnet for a slot/committee index for Phase 0.
+ * Compute the correct subnet for a slot/committee index
  */
 export function computeSubnetForSlot(
   config: IBeaconConfig,

@@ -11,7 +11,7 @@ import {
   FLAG_PREV_TARGET_ATTESTER,
   FLAG_PREV_HEAD_ATTESTER,
   CachedBeaconState,
-} from "../util";
+} from "../../../fast";
 
 /**
  * Return attestation reward/penalty deltas for each validator.

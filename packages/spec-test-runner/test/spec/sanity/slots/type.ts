@@ -1,7 +1,7 @@
-import {BeaconState, Uint64} from "@chainsafe/lodestar-types";
+import {phase0, Uint64} from "@chainsafe/lodestar-types";
 
 export interface IProcessSlotsTestCase {
-  pre: BeaconState;
-  post?: BeaconState;
+  pre: phase0.BeaconState;
+  post?: phase0.BeaconState;
   slots: Uint64;
 }

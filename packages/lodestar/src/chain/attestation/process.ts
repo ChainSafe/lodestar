@@ -1,4 +1,5 @@
-import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
+import {allForks} from "@chainsafe/lodestar-types";
+import {CachedBeaconState, phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 
 import {IAttestationJob} from "../interface";
@@ -49,7 +50,13 @@ export async function processAttestation({
 
   // Only verify signature if necessary. Most attestations come from blocks that did full signature verification
   // Otherwise, gossip validation might put it in pool before it validating signature
-  if (!phase0.fast.isValidIndexedAttestation(targetState, indexedAttestation, !job.validSignature)) {
+  if (
+    !phase0.fast.isValidIndexedAttestation(
+      targetState as CachedBeaconState<allForks.BeaconState>,
+      indexedAttestation,
+      !job.validSignature
+    )
+  ) {
     throw new AttestationError({
       code: AttestationErrorCode.INVALID_SIGNATURE,
       job,

@@ -2,7 +2,7 @@ import {Epoch, ValidatorIndex, allForks} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {intDiv} from "@chainsafe/lodestar-utils";
 
-import {getSeed, unshuffleList} from "../../../util";
+import {getSeed, unshuffleList} from "../../util";
 
 /**
  * Readonly interface for IEpochShuffling.

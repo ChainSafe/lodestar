@@ -1,7 +1,7 @@
-import {phase0, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {allForks, phase0, ValidatorIndex} from "@chainsafe/lodestar-types";
 
 import {isSlashableValidator, isSlashableAttestationData} from "../../../util";
-import {CachedBeaconState} from "../util";
+import {CachedBeaconState} from "../../../fast";
 import {slashValidator} from "./slashValidator";
 import {isValidIndexedAttestation} from "./isValidIndexedAttestation";
 
@@ -16,10 +16,10 @@ export function processAttesterSlashing(
   if (!isSlashableAttestationData(config, attestation1.data, attestation2.data)) {
     throw new Error("AttesterSlashing is not slashable");
   }
-  if (!isValidIndexedAttestation(state, attestation1, verifySignatures)) {
+  if (!isValidIndexedAttestation(state as CachedBeaconState<allForks.BeaconState>, attestation1, verifySignatures)) {
     throw new Error("AttesterSlashing attestation1 is not a valid IndexedAttestation");
   }
-  if (!isValidIndexedAttestation(state, attestation2, verifySignatures)) {
+  if (!isValidIndexedAttestation(state as CachedBeaconState<allForks.BeaconState>, attestation2, verifySignatures)) {
     throw new Error("AttesterSlashing attestation2 is not a valid IndexedAttestation");
   }
 
