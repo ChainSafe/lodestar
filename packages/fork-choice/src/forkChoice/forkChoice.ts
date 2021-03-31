@@ -720,6 +720,17 @@ export class ForkChoice implements IForkChoice {
         },
       });
     }
+
+    if (this.fcStore.currentSlot < indexedAttestation.data.slot + 1) {
+      throw new ForkChoiceError({
+        code: ForkChoiceErrorCode.INVALID_ATTESTATION,
+        err: {
+          code: InvalidAttestationCode.FUTURE_SLOT,
+          attestationSlot: indexedAttestation.data.slot,
+          latestPermissibleSlot: this.fcStore.currentSlot - 1,
+        },
+      });
+    }
   }
 
   /**

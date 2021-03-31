@@ -48,6 +48,11 @@ export enum InvalidAttestationCode {
    * The attestation is attesting to a state that is later than itself. (Viz., attesting to the future).
    */
   ATTESTS_TO_FUTURE_BLOCK = "ATTESTS_TO_FUTURE_BLOCK",
+  /**
+   * Attestations can only affect the fork choice of subsequent slots.
+   * Delay consideration in the fork choice until their slot is in the past.
+   */
+  FUTURE_SLOT = "FUTURE_SLOT",
 }
 
 export type InvalidAttestation =
@@ -58,7 +63,8 @@ export type InvalidAttestation =
   | {code: InvalidAttestationCode.FUTURE_EPOCH; attestationEpoch: Epoch; currentEpoch: Epoch}
   | {code: InvalidAttestationCode.PAST_EPOCH; attestationEpoch: Epoch; currentEpoch: Epoch}
   | {code: InvalidAttestationCode.INVALID_TARGET; attestation: Uint8Array; local: Uint8Array}
-  | {code: InvalidAttestationCode.ATTESTS_TO_FUTURE_BLOCK; block: Slot; attestation: Slot};
+  | {code: InvalidAttestationCode.ATTESTS_TO_FUTURE_BLOCK; block: Slot; attestation: Slot}
+  | {code: InvalidAttestationCode.FUTURE_SLOT; attestationSlot: Slot; latestPermissibleSlot: Slot};
 
 export enum ForkChoiceErrorCode {
   INVALID_ATTESTATION = "FORKCHOICE_ERROR_INVALID_ATTESTATION",
