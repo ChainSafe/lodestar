@@ -1,5 +1,5 @@
 import {SinonStubbedInstance} from "sinon";
-import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
+import {ForkChoice, IBlockSummary} from "@chainsafe/lodestar-fork-choice";
 import {resolveBlockId} from "../../../../../../src/api/impl/beacon/blocks/utils";
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {expect, use} from "chai";
@@ -19,9 +19,19 @@ describe("block api utils", function () {
     let dbStub: StubbedBeaconDb;
     let server: ApiImplTestModules;
     let expectedBuffer: Buffer;
+    let expectedSummary: IBlockSummary;
 
     before(function () {
       expectedBuffer = Buffer.alloc(32, 2);
+      expectedSummary = {
+        blockRoot: expectedBuffer,
+        parentRoot: expectedBuffer,
+        targetRoot: expectedBuffer,
+        stateRoot: expectedBuffer,
+        finalizedEpoch: 0,
+        justifiedEpoch: 0,
+        slot: 0,
+      };
     });
 
     beforeEach(function () {
@@ -31,9 +41,9 @@ describe("block api utils", function () {
     });
 
     it("should resolve head", async function () {
-      forkChoiceStub.getHeadRoot.returns(expectedBuffer);
+      forkChoiceStub.getHead.returns(expectedSummary);
       await resolveBlockId(config, forkChoiceStub, dbStub, "head");
-      expect(dbStub.block.get.withArgs(expectedBuffer).calledOnce).to.be.true;
+      expect(dbStub.block.get.withArgs(expectedBuffer, 0).calledOnce).to.be.true;
     });
 
     it("should resolve genesis", async function () {
@@ -49,17 +59,17 @@ describe("block api utils", function () {
     });
 
     it("should resolve finalized block root", async function () {
-      dbStub.block.get.withArgs(bufferEqualsMatcher(expectedBuffer)).resolves(null);
+      forkChoiceStub.getBlock.returns(expectedSummary);
+      dbStub.block.get.withArgs(bufferEqualsMatcher(expectedBuffer), 0).resolves(null);
       await resolveBlockId(config, forkChoiceStub, dbStub, toHexString(expectedBuffer));
-      expect(dbStub.block.get.withArgs(bufferEqualsMatcher(expectedBuffer)).calledOnce).to.be.true;
-      expect(dbStub.blockArchive.getByRoot.withArgs(bufferEqualsMatcher(expectedBuffer)).calledOnce).to.be.true;
+      expect(dbStub.block.get.withArgs(bufferEqualsMatcher(expectedBuffer), 0).calledOnce).to.be.true;
     });
 
     it("should resolve non finalized block root", async function () {
-      dbStub.block.get.withArgs(bufferEqualsMatcher(expectedBuffer)).resolves(generateEmptySignedBlock());
+      forkChoiceStub.getBlock.returns(null);
+      dbStub.block.get.withArgs(bufferEqualsMatcher(expectedBuffer), 0).resolves(generateEmptySignedBlock());
       await resolveBlockId(config, forkChoiceStub, dbStub, toHexString(expectedBuffer));
-      expect(dbStub.block.get.withArgs(bufferEqualsMatcher(expectedBuffer)).calledOnce).to.be.true;
-      expect(dbStub.blockArchive.getByRoot.withArgs(bufferEqualsMatcher(expectedBuffer)).notCalled).to.be.true;
+      expect(dbStub.blockArchive.getByRoot.withArgs(bufferEqualsMatcher(expectedBuffer)).calledOnce).to.be.true;
     });
 
     it("should resolve non finalized slot", async function () {

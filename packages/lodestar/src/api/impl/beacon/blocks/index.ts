@@ -42,7 +42,7 @@ export class BeaconBlockApi implements IBeaconBlocksApi {
       );
       await Promise.all(
         nonFinalizedBlockSummaries.map(async (summary) => {
-          const block = await this.db.block.get(summary.blockRoot);
+          const block = await this.db.block.get(summary.blockRoot, summary.slot);
           if (block) {
             const cannonical = this.chain.forkChoice.getCanonicalBlockSummaryAtSlot(block.message.slot);
             if (cannonical) {
@@ -87,7 +87,7 @@ export class BeaconBlockApi implements IBeaconBlocksApi {
       await Promise.all(
         this.chain.forkChoice.getBlockSummariesAtSlot(filters.slot).map(async (summary) => {
           if (!this.config.types.Root.equals(summary.blockRoot, canonicalRoot)) {
-            const block = await this.db.block.get(summary.blockRoot);
+            const block = await this.db.block.get(summary.blockRoot, summary.slot);
             if (block) {
               result.push(toBeaconHeaderResponse(this.config, block));
             }

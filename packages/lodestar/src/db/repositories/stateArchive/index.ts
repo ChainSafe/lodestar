@@ -1,0 +1,156 @@
+import all from "it-all";
+import {ContainerType, TreeBacked} from "@chainsafe/ssz";
+import {IBeaconConfig, IForkName} from "@chainsafe/lodestar-config";
+import {IDatabaseController, Repository, IKeyValue, IFilterOptions, Bucket} from "@chainsafe/lodestar-db";
+import {Slot, Root, allForks} from "@chainsafe/lodestar-types";
+import {bytesToInt} from "@chainsafe/lodestar-utils";
+import {GenericStateArchiveRepository} from "./abstract";
+import {getRootIndexKey} from "./db-index";
+
+/**
+ * Stores finalized states. State slot is identifier.
+ */
+export class StateArchiveRepository {
+  protected config: IBeaconConfig;
+  protected db: IDatabaseController<Buffer, Buffer>;
+
+  protected repositories: Map<IForkName, Repository<Slot, TreeBacked<allForks.BeaconState>>>;
+
+  constructor(config: IBeaconConfig, db: IDatabaseController<Buffer, Buffer>) {
+    this.config = config;
+    this.db = db;
+    this.repositories = new Map([
+      [
+        "phase0",
+        new GenericStateArchiveRepository(
+          config,
+          db,
+          Bucket.phase0_stateArchive,
+          config.types.phase0.BeaconState as ContainerType<allForks.BeaconState>
+        ),
+      ],
+      [
+        "altair",
+        new GenericStateArchiveRepository(
+          config,
+          db,
+          Bucket.altair_stateArchive,
+          config.types.altair.BeaconState as ContainerType<allForks.BeaconState>
+        ),
+      ],
+    ]);
+  }
+
+  async get(slot: Slot): Promise<TreeBacked<allForks.BeaconState> | null> {
+    return await this.getRepository(slot).get(slot);
+  }
+
+  async getByRoot(root: Root): Promise<TreeBacked<allForks.BeaconState> | null> {
+    const slot = await this.getSlotByRoot(root);
+    return slot !== null ? await this.get(slot) : null;
+  }
+
+  async getSlotByRoot(root: Root): Promise<Slot | null> {
+    return this.parseSlot(await this.db.get(getRootIndexKey(root)));
+  }
+
+  async put(slot: Slot, value: TreeBacked<allForks.BeaconState>): Promise<void> {
+    await this.getRepository(slot).put(slot, value);
+  }
+
+  async add(value: TreeBacked<allForks.BeaconState>): Promise<void> {
+    await this.getRepository(value.slot).add(value);
+  }
+
+  async batchPut(items: IKeyValue<Slot, TreeBacked<allForks.BeaconState>>[]): Promise<void> {
+    await Promise.all(
+      Object.entries(this.groupItemsByFork(items)).map(([forkName, items]) =>
+        this.getRepositoryByForkName(forkName as IForkName).batchPut(items)
+      )
+    );
+  }
+
+  async batchDelete(keys: Slot[]): Promise<void> {
+    await Promise.all(
+      Object.entries(this.groupKeysByFork(keys)).map(([forkName, keys]) =>
+        this.getRepositoryByForkName(forkName as IForkName).batchDelete(keys)
+      )
+    );
+  }
+
+  async *keysStream(opts?: IFilterOptions<Slot>): AsyncIterable<Slot> {
+    const repos = this.repositories.values();
+    for (const repo of repos) {
+      yield* repo.keysStream(opts);
+    }
+  }
+
+  async keys(opts?: IFilterOptions<Slot>): Promise<Slot[]> {
+    return all(this.keysStream(opts));
+  }
+
+  async lastKey(): Promise<Slot | null> {
+    for await (const slot of this.keysStream({limit: 1, reverse: true})) {
+      return slot;
+    }
+    return null;
+  }
+
+  async *valuesStream(opts?: IFilterOptions<Slot>): AsyncIterable<TreeBacked<allForks.BeaconState>> {
+    const repos = Array.from(this.repositories.values());
+    if (opts?.reverse) repos.reverse();
+    for (const repo of repos) {
+      yield* repo.valuesStream(opts);
+    }
+  }
+
+  async values(opts?: IFilterOptions<Slot>): Promise<TreeBacked<allForks.BeaconState>[]> {
+    return all(this.valuesStream(opts));
+  }
+
+  async lastValue(): Promise<TreeBacked<allForks.BeaconState> | null> {
+    for await (const state of this.valuesStream({limit: 1, reverse: true})) {
+      return state;
+    }
+    return null;
+  }
+
+  private getRepositoryByForkName(forkName: IForkName): Repository<Slot, TreeBacked<allForks.BeaconState>> {
+    const repo = this.repositories.get(forkName);
+    if (!repo) {
+      throw new Error("No supported block archive repository for fork: " + forkName);
+    }
+    return repo;
+  }
+
+  private getRepository(slot: Slot): Repository<Slot, TreeBacked<allForks.BeaconState>> {
+    return this.getRepositoryByForkName(this.config.getForkName(slot));
+  }
+
+  private groupItemsByFork<T>(items: IKeyValue<Slot, T>[]): Record<IForkName, IKeyValue<Slot, T>[]> {
+    const itemsByFork = {} as Record<IForkName, IKeyValue<Slot, T>[]>;
+    for (const kv of items) {
+      const forkName = this.config.getForkName(kv.key);
+      if (!itemsByFork[forkName]) itemsByFork[forkName] = [];
+      itemsByFork[forkName].push(kv);
+    }
+    return itemsByFork;
+  }
+
+  private groupKeysByFork(keys: Slot[]): Record<IForkName, Slot[]> {
+    const keysByFork = {} as Record<IForkName, Slot[]>;
+    for (const key of keys) {
+      const forkName = this.config.getForkName(key);
+      if (!keysByFork[forkName]) keysByFork[forkName] = [];
+      keysByFork[forkName].push(key);
+    }
+    return keysByFork;
+  }
+
+  private parseSlot(slotBytes: Buffer | null): Slot | null {
+    if (!slotBytes) return null;
+    const slot = bytesToInt(slotBytes, "be");
+    // TODO: Is this necessary? How can bytesToInt return a non-integer?
+    return Number.isInteger(slot) ? slot : null;
+  }
+}

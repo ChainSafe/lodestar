@@ -32,6 +32,6 @@ export class ReqRespHandler implements IReqRespHandler {
   }
 
   async *onBeaconBlocksByRoot(req: phase0.BeaconBlocksByRootRequest): AsyncIterable<phase0.SignedBeaconBlock> {
-    yield* onBeaconBlocksByRoot(req, this.db);
+    yield* onBeaconBlocksByRoot(req, this.chain, this.db);
   }
 }

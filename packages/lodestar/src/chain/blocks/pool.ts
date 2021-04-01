@@ -12,9 +12,9 @@ import {Root, phase0, Slot} from "@chainsafe/lodestar-types";
 export class BlockPool {
   private readonly config: IBeaconConfig;
   /**
-   * Map of root as key and parentRoot as value
+   * Block metadata indexed by block root
    */
-  private blocks: Map<string, string>;
+  private blocks: Map<string, {parentRoot: string; slot: Slot}>;
   /**
    * Blocks indexed by parentRoot, then blockRoot
    */
@@ -27,7 +27,7 @@ export class BlockPool {
   constructor({config}: {config: IBeaconConfig}) {
     this.config = config;
 
-    this.blocks = new Map<string, string>();
+    this.blocks = new Map<string, {parentRoot: string; slot: Slot}>();
     this.blocksByParent = new Map<string, Set<string>>();
     this.blocksBySlot = new Map<number, Set<string>>();
   }
@@ -36,7 +36,10 @@ export class BlockPool {
     // put block in two indices:
     // blocks
     const blockKey = this.getBlockKey(signedBlock);
-    this.blocks.set(blockKey, toHexString(signedBlock.message.parentRoot));
+    this.blocks.set(blockKey, {
+      parentRoot: toHexString(signedBlock.message.parentRoot),
+      slot: signedBlock.message.slot,
+    });
 
     // blocks by parent
     const parentKey = this.getParentKey(signedBlock);
@@ -54,7 +57,10 @@ export class BlockPool {
     // put block in two indices:
     // blocks
     const blockKey = this.getBlockKey(signedBlock);
-    this.blocks.set(blockKey, toHexString(signedBlock.message.parentRoot));
+    this.blocks.set(blockKey, {
+      parentRoot: toHexString(signedBlock.message.parentRoot),
+      slot: signedBlock.message.slot,
+    });
 
     // blocks by slot
     const slotKey = this.getSlotKey(signedBlock);
@@ -101,7 +107,7 @@ export class BlockPool {
     let root = toHexString(blockRoot);
 
     while (this.blocks.has(root)) {
-      root = this.blocks.get(root)!;
+      root = this.blocks.get(root)!.parentRoot;
     }
 
     return fromHexString(root);
@@ -115,18 +121,24 @@ export class BlockPool {
     return Boolean(this.blocks.get(this.getBlockKeyByRoot(blockRoot)));
   }
 
-  getByParent(parentRoot: Root): Uint8Array[] {
-    const hexArr = Array.from(this.blocksByParent.get(toHexString(parentRoot))?.values() ?? []);
-    return hexArr.map((hex) => fromHexString(hex));
+  getByParent(parentRoot: Root): {root: Uint8Array; slot: Slot}[] {
+    const blockRoots = Array.from(this.blocksByParent.get(toHexString(parentRoot))?.values() ?? []);
+    return blockRoots.map((root) => ({
+      root: fromHexString(root),
+      slot: this.blocks.get(root)!.slot,
+    }));
   }
 
-  getBySlot(slot: Slot): Uint8Array[] {
+  getBySlot(slot: Slot): {root: Uint8Array; slot: Slot}[] {
     const slots = Array.from(this.blocksBySlot.keys()).filter((cachedSlot) => cachedSlot <= slot);
-    const hexArr: string[] = [];
+    const blockRoots: string[] = [];
     for (const cachedSlot of slots) {
-      hexArr.push(...Array.from(this.blocksBySlot.get(cachedSlot)?.values() ?? []));
+      blockRoots.push(...Array.from(this.blocksBySlot.get(cachedSlot)?.values() ?? []));
     }
-    return Array.from(new Set(hexArr)).map((hex) => fromHexString(hex));
+    return Array.from(new Set(blockRoots)).map((root) => ({
+      root: fromHexString(root),
+      slot: this.blocks.get(root)!.slot,
+    }));
   }
 
   private getParentKey(block: phase0.SignedBeaconBlock): string {

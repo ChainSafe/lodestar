@@ -104,11 +104,11 @@ export async function onClockSlot(this: BeaconChain, slot: Slot): Promise<void> 
   );
 
   await Promise.all(
-    this.pendingBlocks.getBySlot(slot).map(async (root) => {
-      const pendingBlock = await this.db.pendingBlock.get(root);
+    this.pendingBlocks.getBySlot(slot).map(async ({root, slot}) => {
+      const pendingBlock = await this.db.pendingBlock.get(root, slot);
       if (pendingBlock) {
         this.pendingBlocks.remove(pendingBlock);
-        await this.db.pendingBlock.delete(root);
+        await this.db.pendingBlock.delete(root, slot);
         return this.blockProcessor.processBlockJob({
           signedBlock: pendingBlock,
           reprocess: false,
@@ -244,11 +244,11 @@ export async function onBlock(
   await this.db.processBlockOperations(block);
 
   await Promise.all(
-    this.pendingBlocks.getByParent(blockRoot).map(async (root) => {
-      const pendingBlock = await this.db.pendingBlock.get(root);
+    this.pendingBlocks.getByParent(blockRoot).map(async ({root, slot}) => {
+      const pendingBlock = await this.db.pendingBlock.get(root, slot);
       if (pendingBlock) {
         this.pendingBlocks.remove(pendingBlock);
-        await this.db.pendingBlock.delete(root);
+        await this.db.pendingBlock.delete(root, slot);
         return this.blockProcessor.processBlockJob({
           signedBlock: pendingBlock,
           reprocess: false,

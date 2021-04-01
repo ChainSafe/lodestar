@@ -7,9 +7,9 @@ import {GenericBlockRepository} from "./abstract";
 /**
  * Blocks by root
  *
- * Used to store unfinalized blocks
+ * Used to store pending blocks
  */
-export class BlockRepository {
+export class PendingBlockRepository {
   protected config: IBeaconConfig;
   protected db: IDatabaseController<Buffer, Buffer>;
 
@@ -49,15 +49,15 @@ export class BlockRepository {
   }
 
   async add(value: allForks.SignedBeaconBlock): Promise<void> {
-    return this.getRepository(value.message.slot).add(value);
+    await this.getRepository(value.message.slot).add(value);
   }
 
   async delete(key: Uint8Array, slot: Slot): Promise<void> {
-    return this.getRepository(slot).delete(key);
+    await this.getRepository(slot).delete(key);
   }
 
   async remove(value: allForks.SignedBeaconBlock): Promise<void> {
-    return this.getRepository(value.message.slot).remove(value);
+    await this.getRepository(value.message.slot).remove(value);
   }
 
   async batchDelete(ids: {root: Uint8Array; slot: Slot}[]): Promise<void> {
