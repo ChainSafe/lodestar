@@ -41,7 +41,7 @@ export class RestBeaconStateApi extends RestApi implements IBeaconStateApi {
     try {
       const responseData = await this.client.get<{data: Json[]}>(`/states/${stateId}/validators`, {
         indices,
-        statuses: filters?.statuses as string[],
+        ...(filters?.statuses && {statuses: filters.statuses as string[]}),
       });
       return responseData.data.map((value) =>
         this.config.types.phase0.ValidatorResponse.fromJson(value, {case: "snake"})

@@ -169,12 +169,11 @@ export function filterStateValidatorsByStatuses(
   statuses: string[],
   state: allForks.BeaconState,
   chain: IBeaconChain,
-  config: IBeaconConfig,
   currentEpoch: Epoch
 ): ValidatorResponse[] {
   const responses: ValidatorResponse[] = [];
-  const validatorArray = Array.from(state.validators);
-  const filteredValidators = validatorArray.filter((v) => statuses.includes(getValidatorStatus(v, currentEpoch)));
+  const validators = Array.from(state.validators);
+  const filteredValidators = validators.filter((v) => statuses.includes(getValidatorStatus(v, currentEpoch)));
   for (const validator of readonlyValues(filteredValidators)) {
     const validatorIndex = getStateValidatorIndex(validator.pubkey, state, chain);
     if (validatorIndex && statuses?.includes(getValidatorStatus(validator, currentEpoch))) {

@@ -8,7 +8,13 @@ import {IApiOptions} from "../../../options";
 import {ApiError, StateNotFound} from "../../errors/api";
 import {IApiModules} from "../../interface";
 import {IBeaconStateApi, ICommitteesFilters, IValidatorFilters, StateId} from "./interface";
-import {filterStateValidatorsByStatuses, getEpochBeaconCommittees, resolveStateId, toValidatorResponse} from "./utils";
+import {
+  filterStateValidatorsByStatuses,
+  getEpochBeaconCommittees,
+  getValidatorStatus,
+  resolveStateId,
+  toValidatorResponse,
+} from "./utils";
 import {computeEpochAtSlot, getCurrentEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 import {getStateValidatorIndex} from "../../utils";
 
@@ -58,9 +64,13 @@ export class BeaconStateApi implements IBeaconStateApi {
       for (const id of filters.indices) {
         const validatorIndex = getStateValidatorIndex(id, state, this.chain);
         if (validatorIndex) {
+          const validator = state.validators[validatorIndex];
+          if (filters.statuses && !filters.statuses.includes(getValidatorStatus(validator, currentEpoch))) {
+            continue;
+          }
           const validatorResponse = toValidatorResponse(
             validatorIndex,
-            state.validators[validatorIndex],
+            validator,
             state.balances[validatorIndex],
             currentEpoch
           );
@@ -68,15 +78,8 @@ export class BeaconStateApi implements IBeaconStateApi {
         }
       }
       return validators;
-    }
-    if (filters?.statuses) {
-      const validatorsByStatus = filterStateValidatorsByStatuses(
-        filters.statuses,
-        state,
-        this.chain,
-        this.config,
-        currentEpoch
-      );
+    } else if (filters?.statuses) {
+      const validatorsByStatus = filterStateValidatorsByStatuses(filters.statuses, state, this.chain, currentEpoch);
       return validatorsByStatus;
     }
 
