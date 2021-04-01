@@ -19,6 +19,7 @@ import {
   assertPeerRelevance,
   prioritizePeers,
 } from "./utils";
+import {prettyPrintPeerId} from "../util";
 
 /** heartbeat performs regular updates such as updating reputations and performing discovery requests */
 const HEARTBEAT_INTERVAL_MS = 30 * 1000;
@@ -203,7 +204,7 @@ export class PeerManager {
    */
   private onGoodbye(peer: PeerId, goodbye: phase0.Goodbye): void {
     const reason = GOODBYE_KNOWN_CODES[goodbye.toString()] || "";
-    this.logger.verbose("Received goodbye request", {peer: peer.toB58String(), goodbye, reason});
+    this.logger.verbose("Received goodbye request", {peer: prettyPrintPeerId(peer), goodbye, reason});
     this.metrics?.peerGoodbyeReceived.inc({reason});
 
     // TODO: Consider register that we are banned, if discovery keeps attempting to connect to the same peers
@@ -222,7 +223,7 @@ export class PeerManager {
       assertPeerRelevance(status, this.chain, this.config);
     } catch (e) {
       this.logger.debug("Irrelevant peer", {
-        peer: peer.toB58String(),
+        peer: prettyPrintPeerId(peer),
         reason: e instanceof LodestarError ? e.getMetadata() : (e as Error).message,
       });
       void this.goodbyeAndDisconnect(peer, GoodByeReasonCode.IRRELEVANT_NETWORK);
@@ -373,7 +374,7 @@ export class PeerManager {
     }
     this.pingAndStatusTimeouts();
 
-    this.logger.verbose("peer connected", {peer: peer.toB58String(), direction, status});
+    this.logger.verbose("peer connected", {peer: prettyPrintPeerId(peer), direction, status});
     // NOTE: The peerConnect event is not emitted here here, but after asserting peer relevance
     this.metrics?.peerConnectedEvent.inc({direction});
     this.seenPeers.add(peer.toB58String());
@@ -393,7 +394,7 @@ export class PeerManager {
     this.peersToPingOutbound.delete(peer);
     this.peersToStatus.delete(peer);
 
-    this.logger.verbose("peer disconnected", {peer: peer.toB58String(), direction, status});
+    this.logger.verbose("peer disconnected", {peer: prettyPrintPeerId(peer), direction, status});
     this.networkEventBus.emit(NetworkEvent.peerDisconnected, peer);
     this.metrics?.peerDisconnectedEvent.inc({direction});
     this.runPeerCountMetrics(); // Last in case it throws
@@ -403,7 +404,7 @@ export class PeerManager {
     try {
       await this.libp2p.hangUp(peer);
     } catch (e) {
-      this.logger.warn("Unclean disconnect", {peer: peer.toB58String()}, e);
+      this.logger.warn("Unclean disconnect", {peer: prettyPrintPeerId(peer)}, e);
     }
   }
 
@@ -412,7 +413,7 @@ export class PeerManager {
       this.metrics?.peerGoodbyeSent.inc({reason: GOODBYE_KNOWN_CODES[goodbye.toString()] || ""});
       await this.reqResp.goodbye(peer, BigInt(goodbye));
     } catch (e) {
-      this.logger.verbose("Failed to send goodbye", {peer: peer.toB58String()}, e);
+      this.logger.verbose("Failed to send goodbye", {peer: prettyPrintPeerId(peer)}, e);
     } finally {
       void this.disconnect(peer);
     }

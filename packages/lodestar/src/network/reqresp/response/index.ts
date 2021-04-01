@@ -9,6 +9,8 @@ import {ILibP2pStream} from "../interface";
 import {requestDecode} from "../encoders/requestDecode";
 import {responseEncodeError, responseEncodeSuccess} from "../encoders/responseEncode";
 import {ResponseError} from "./errors";
+import {getAgentVersionFromPeerStore, prettyPrintPeerId} from "../..";
+import {Libp2p} from "libp2p/src/connection-manager";
 
 export {ResponseError};
 
@@ -29,7 +31,7 @@ export type PerformRequestHandler = (
  * 4b. On error, encode and write an error `<response_chunk>` and stop
  */
 export async function handleRequest(
-  {config, logger}: {config: IBeaconConfig; logger: ILogger},
+  {config, logger, libp2p}: {config: IBeaconConfig; logger: ILogger; libp2p: Libp2p},
   performRequestHandler: PerformRequestHandler,
   stream: ILibP2pStream,
   peerId: PeerId,
@@ -37,7 +39,8 @@ export async function handleRequest(
   encoding: ReqRespEncoding,
   requestId = 0
 ): Promise<void> {
-  const logCtx = {method, encoding, peer: peerId.toB58String(), requestId};
+  const agentVersion = getAgentVersionFromPeerStore(peerId, libp2p.peerStore);
+  const logCtx = {method, encoding, agentVersion, peer: prettyPrintPeerId(peerId), requestId};
 
   let responseError: Error | null = null;
   await pipe(

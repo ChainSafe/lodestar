@@ -6,6 +6,7 @@ import {Discv5, Discv5Discovery} from "@chainsafe/discv5";
 import {shuffle} from "../../util/shuffle";
 import {getConnectedPeerIds} from "./utils";
 import {IPeerRpcScoreStore, ScoreState} from "./score";
+import {prettyPrintPeerId} from "..";
 
 export type AttSubnetQuery = {subnetId: number; maxPeersToDiscover: number};
 
@@ -158,12 +159,12 @@ export class PeerDiscovery {
 
     for (const peer of toDialPeers) {
       // Note: PeerDiscovery adds the multiaddrTCP beforehand
-      this.logger.debug("Dialing discovered peer", {peer: peer.toB58String()});
+      this.logger.debug("Dialing discovered peer", {peer: prettyPrintPeerId(peer)});
 
       // Note: `libp2p.dial()` is what libp2p.connectionManager autoDial calls
       // Note: You must listen to the connected events to listen for a successful conn upgrade
       this.libp2p.dial(peer).catch((e) => {
-        this.logger.debug("Error dialing discovered peer", {peer: peer.toB58String()}, e);
+        this.logger.debug("Error dialing discovered peer", {peer: prettyPrintPeerId(peer)}, e);
       });
     }
   }
