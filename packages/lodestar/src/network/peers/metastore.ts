@@ -15,8 +15,6 @@ export interface IPeerMetadataStore {
   rpcScore: PeerStoreBucket<number>;
   rpcScoreLastUpdate: PeerStoreBucket<number>;
   status: PeerStoreBucket<phase0.Status>;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  // agentVersion: PeerStoreBucket<any>;
 }
 
 export type PeerStoreBucket<T> = {
@@ -34,8 +32,6 @@ export class Libp2pPeerMetadataStore implements IPeerMetadataStore {
   rpcScore: PeerStoreBucket<number>;
   rpcScoreLastUpdate: PeerStoreBucket<number>;
   status: PeerStoreBucket<phase0.Status>;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  // agentVersion: PeerStoreBucket<any>;
 
   private readonly config: IBeaconConfig;
   private readonly metabook: MetadataBook;
@@ -48,7 +44,6 @@ export class Libp2pPeerMetadataStore implements IPeerMetadataStore {
     this.rpcScore = this.typedStore("score", this.config.types.Number64);
     this.rpcScoreLastUpdate = this.typedStore("score-last-update", this.config.types.Number64);
     this.status = this.typedStore("status", this.config.types.phase0.Status);
-    // this.agentVersion = this.typedStore("AgentVersion", new StringType());
   }
 
   private typedStore<T>(key: string, type: BasicType<T> | ContainerType<T>): PeerStoreBucket<T> {
