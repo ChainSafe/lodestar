@@ -2,4 +2,5 @@
  * @module db
  */
 
-export {BeaconDb, IBeaconDb} from "./api";
+export {IBeaconDb} from "./interface";
+export {BeaconDb} from "./beacon";

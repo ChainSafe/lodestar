@@ -3,8 +3,7 @@ import chaiAsPromised from "chai-as-promised";
 import sinon from "sinon";
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import {LevelDbController} from "@chainsafe/lodestar-db";
-import {BeaconDb} from "../../../../src/db/api";
-import {StateArchiveRepository} from "../../../../src/db/api/beacon/repositories";
+import {BeaconDb} from "../../../../src/db";
 import {generateEmptySignedBlock} from "../../../utils/block";
 import {generateState} from "../../../utils/state";
 import {StubbedBeaconDb} from "../../../utils/stub";
@@ -15,7 +14,8 @@ import {
   VoluntaryExitRepository,
   AttestationRepository,
   AggregateAndProofRepository,
-} from "../../../../src/db/api/beacon/repositories";
+  StateArchiveRepository,
+} from "../../../../src/db/repositories";
 import {generateValidators} from "../../../utils/validator";
 import {createStubInstance} from "../../../utils/types";
 

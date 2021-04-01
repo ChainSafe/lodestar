@@ -1,6 +1,6 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBeaconChain, IBlockJob} from "..";
-import {IBeaconDb} from "../../db/api";
+import {IBeaconDb} from "../../db";
 import {allForks, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {CachedBeaconState, computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 import {fast, phase0} from "@chainsafe/lodestar-beacon-state-transition";

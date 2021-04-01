@@ -2,7 +2,7 @@ import {Root, phase0, Slot} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
 import {IBeaconChain} from "../../../../chain";
-import {IBeaconDb} from "../../../../db/api";
+import {IBeaconDb} from "../../../../db";
 import {IApiOptions} from "../../../options";
 import {IApiModules} from "../../interface";
 import {BlockId, IBeaconBlocksApi} from "./interface";

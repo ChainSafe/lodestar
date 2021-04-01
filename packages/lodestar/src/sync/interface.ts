@@ -5,7 +5,7 @@ import {IRegularSync} from "./regular";
 import {IBeaconChain} from "../chain";
 import {IMetrics} from "../metrics";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {IBeaconDb} from "../db/api";
+import {IBeaconDb} from "../db";
 import {AttestationCollector} from "./utils";
 import {BeaconGossipHandler} from "./gossip";
 

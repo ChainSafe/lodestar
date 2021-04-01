@@ -6,7 +6,7 @@ import {phase0} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils";
 
-import {IBeaconDb} from "../db/api";
+import {IBeaconDb} from "../db";
 import {ChainEvent, IBeaconChain} from "../chain";
 import {ArchiveBlocksTask} from "./tasks/archiveBlocks";
 import {StatesArchiver} from "./tasks/archiveStates";

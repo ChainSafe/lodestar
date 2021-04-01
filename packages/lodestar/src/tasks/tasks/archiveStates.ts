@@ -6,7 +6,7 @@ import {ILogger} from "@chainsafe/lodestar-utils";
 import {phase0} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {CachedBeaconState, computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
-import {IBeaconDb} from "../../db/api";
+import {IBeaconDb} from "../../db";
 import {IBeaconChain} from "../../chain";
 
 /**

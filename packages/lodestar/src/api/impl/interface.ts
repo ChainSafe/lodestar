@@ -2,7 +2,7 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils";
 
 import {IBeaconChain} from "../../chain";
-import {IBeaconDb} from "../../db/api";
+import {IBeaconDb} from "../../db";
 import {IBeaconSync} from "../../sync";
 import {INetwork} from "../../network";
 import {IEth1ForBlockProduction} from "../../eth1";
