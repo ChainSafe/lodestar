@@ -16,10 +16,10 @@ import {
   ProposerSlashingRepository,
   StateArchiveRepository,
   VoluntaryExitRepository,
-} from "../../../src/db/api/beacon/repositories";
-import {SeenAttestationCache} from "../../../src/db/api/beacon/seenAttestationCache";
+  PendingBlockRepository,
+} from "../../../src/db/repositories";
+import {SeenAttestationCache} from "../../../src/db/seenAttestationCache";
 import {minimalConfig} from "@chainsafe/lodestar-config/minimal";
-import {PendingBlockRepository} from "../../../src/db/api/beacon/repositories/pendingBlock";
 import {SignedBeaconBlock} from "@chainsafe/lodestar-types/phase0";
 import {createStubInstance} from "../types";
 

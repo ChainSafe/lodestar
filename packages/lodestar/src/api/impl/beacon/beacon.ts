@@ -6,7 +6,7 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {phase0} from "@chainsafe/lodestar-types";
 import {LodestarEventIterator} from "@chainsafe/lodestar-utils";
 import {ChainEvent, IBeaconChain} from "../../../chain";
-import {IBeaconDb} from "../../../db/api";
+import {IBeaconDb} from "../../../db";
 import {IBeaconSync} from "../../../sync";
 import {IApiOptions} from "../../options";
 import {ApiNamespace, IApiModules} from "../interface";

@@ -3,7 +3,7 @@ import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {Root, phase0, allForks, BLSPubkey} from "@chainsafe/lodestar-types";
 import {List, readonlyValues} from "@chainsafe/ssz";
 import {IBeaconChain} from "../../../../chain/interface";
-import {IBeaconDb} from "../../../../db/api";
+import {IBeaconDb} from "../../../../db";
 import {IApiOptions} from "../../../options";
 import {ApiError, StateNotFound} from "../../errors/api";
 import {IApiModules} from "../../interface";

@@ -5,7 +5,7 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Bytes96, Root, Slot} from "@chainsafe/lodestar-types";
 import {ZERO_HASH} from "../../../constants";
-import {IBeaconDb} from "../../../db/api";
+import {IBeaconDb} from "../../../db";
 import {IEth1ForBlockProduction} from "../../../eth1";
 import {IBeaconChain} from "../../interface";
 import {assembleBody} from "./body";

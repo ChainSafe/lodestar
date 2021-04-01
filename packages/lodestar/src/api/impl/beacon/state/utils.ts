@@ -9,7 +9,7 @@ import {ValidatorResponse} from "@chainsafe/lodestar-types/phase0";
 import {fromHexString, readonlyValues} from "@chainsafe/ssz";
 import {IBeaconChain} from "../../../../chain";
 import {StateContextCache} from "../../../../chain/stateCache";
-import {IBeaconDb} from "../../../../db/api";
+import {IBeaconDb} from "../../../../db";
 import {getStateValidatorIndex} from "../../utils";
 import {StateId} from "./interface";
 

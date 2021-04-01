@@ -1,6 +1,6 @@
 import {GENESIS_SLOT} from "@chainsafe/lodestar-beacon-state-transition";
 import {MAX_REQUEST_BLOCKS, phase0} from "@chainsafe/lodestar-types";
-import {IBlockFilterOptions} from "../../../db/api/beacon/repositories";
+import {IBlockFilterOptions} from "../../../db/repositories";
 import {IBeaconChain} from "../../../chain";
 import {IBeaconDb} from "../../../db";
 import {RpcResponseStatus} from "../../../constants";
