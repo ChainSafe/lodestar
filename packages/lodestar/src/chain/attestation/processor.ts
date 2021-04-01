@@ -4,6 +4,7 @@ import {
   ForkChoiceError,
   ForkChoiceErrorCode,
   InvalidAttestationCode,
+  InvalidAttestation,
 } from "@chainsafe/lodestar-fork-choice";
 
 import {IAttestationJob} from "../interface";
@@ -56,67 +57,20 @@ export async function processAttestationJob(modules: AttestationProcessorModules
 
 /**
  * Map ForkChoice attestation error to lodestar version.
+ * Return null if the error is not an attestation error.
  */
-function mapAttestationError(e: Error, job: IAttestationJob): AttestationError | null {
+export function mapAttestationError(e: Error, job: IAttestationJob): AttestationError | null {
   if (e instanceof ForkChoiceError && e.type.code === ForkChoiceErrorCode.INVALID_ATTESTATION) {
-    const attError = e.type.err;
-    switch (attError.code) {
-      case InvalidAttestationCode.EMPTY_AGGREGATION_BITFIELD:
-        return new AttestationError({
-          code: AttestationErrorCode.EMPTY_AGGREGATION_BITFIELD,
-          job,
-        });
-      case InvalidAttestationCode.FUTURE_EPOCH:
-        return new AttestationError({
-          code: AttestationErrorCode.FUTURE_EPOCH,
-          attestationEpoch: attError.attestationEpoch,
-          currentEpoch: attError.currentEpoch,
-          job,
-        });
-      case InvalidAttestationCode.PAST_EPOCH:
-        return new AttestationError({
-          code: AttestationErrorCode.PAST_EPOCH,
-          attestationEpoch: attError.attestationEpoch,
-          currentEpoch: attError.currentEpoch,
-          job,
-        });
-      case InvalidAttestationCode.BAD_TARGET_EPOCH:
-        return new AttestationError({
-          code: AttestationErrorCode.BAD_TARGET_EPOCH,
-          job,
-        });
-      case InvalidAttestationCode.UNKNOWN_TARGET_ROOT:
-        return new AttestationError({
-          code: AttestationErrorCode.UNKNOWN_TARGET_ROOT,
-          root: attError.root,
-          job,
-        });
-      case InvalidAttestationCode.UNKNOWN_HEAD_BLOCK:
-        return new AttestationError({
-          code: AttestationErrorCode.UNKNOWN_BEACON_BLOCK_ROOT,
-          beaconBlockRoot: attError.beaconBlockRoot,
-          job,
-        });
-      case InvalidAttestationCode.INVALID_TARGET:
-        return new AttestationError({
-          code: AttestationErrorCode.HEAD_NOT_TARGET_DESCENDANT,
-          job,
-        });
-      case InvalidAttestationCode.ATTESTS_TO_FUTURE_BLOCK:
-        return new AttestationError({
-          code: AttestationErrorCode.ATTESTS_TO_FUTURE_BLOCK,
-          block: attError.block,
-          attestation: attError.attestation,
-          job,
-        });
-      case InvalidAttestationCode.FUTURE_SLOT:
-        return new AttestationError({
-          code: AttestationErrorCode.FUTURE_SLOT,
-          attestationSlot: attError.attestationSlot,
-          latestPermissibleSlot: attError.latestPermissibleSlot,
-          job,
-        });
-    }
+    const attError = ((e as ForkChoiceError).type as {err: InvalidAttestation}).err as InvalidAttestation;
+    // Map InvalidAttestationCode of forkchoice to lodestar AttestationErrorCode, other properties are the same
+    const codeName = Object.keys(InvalidAttestationCode).find(
+      (key) => InvalidAttestationCode[key as keyof typeof InvalidAttestationCode] === attError.code
+    );
+    const code = AttestationErrorCode[codeName as keyof typeof AttestationErrorCode];
+    // @ts-ignore
+    const lodestarErr = new AttestationError({job, ...attError, code});
+    lodestarErr.stack = e.stack;
+    return lodestarErr;
   }
   return null;
 }
