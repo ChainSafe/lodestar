@@ -1,7 +1,7 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {allForks, Epoch} from "@chainsafe/lodestar-types";
 import {CachedBeaconState} from ".";
-import {getEpochFromValCount} from "../../util/weakSubjectivity";
+import {getWeakSubjectivityCheckpointEpoch} from "../../util/weakSubjectivity";
 
 /**
  * Returns the epoch of the latest weak subjectivity checkpoint for the given
@@ -13,5 +13,5 @@ export function getLatestWeakSubjectivityCheckpointEpoch(
   safetyDecay = 0.1
 ): Epoch {
   const valCount = state.epochCtx.currentShuffling.activeIndices.length;
-  return getEpochFromValCount(config, state, safetyDecay, valCount);
+  return getWeakSubjectivityCheckpointEpoch(config, state.finalizedCheckpoint.epoch, valCount, safetyDecay);
 }
