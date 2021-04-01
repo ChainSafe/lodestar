@@ -5,7 +5,7 @@ import {validateGossipAttestation} from "../../../../chain/validation";
 import {validateGossipAttesterSlashing} from "../../../../chain/validation/attesterSlashing";
 import {validateGossipProposerSlashing} from "../../../../chain/validation/proposerSlashing";
 import {validateGossipVoluntaryExit} from "../../../../chain/validation/voluntaryExit";
-import {IBeaconDb} from "../../../../db/api";
+import {IBeaconDb} from "../../../../db";
 import {INetwork} from "../../../../network";
 import {IBeaconSync} from "../../../../sync";
 import {IApiOptions} from "../../../options";

@@ -5,7 +5,7 @@ import {intToBytes} from "@chainsafe/lodestar-utils";
 import {LevelDbController, Bucket, encodeKey} from "@chainsafe/lodestar-db";
 
 import {generateEmptySignedBlock} from "../../../../utils/block";
-import {BlockArchiveRepository} from "../../../../../src/db/api/beacon/repositories";
+import {BlockArchiveRepository} from "../../../../../src/db/repositories";
 import sinon from "sinon";
 import {testLogger} from "../../../../utils/logger";
 

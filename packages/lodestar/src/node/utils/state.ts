@@ -4,7 +4,7 @@ import {interopDeposits} from "./interop/deposits";
 import {getInteropState} from "./interop/state";
 import {mkdirSync, writeFileSync} from "fs";
 import {dirname} from "path";
-import {IBeaconDb} from "../../db/api";
+import {IBeaconDb} from "../../db";
 import {TreeBacked} from "@chainsafe/ssz";
 
 export async function initDevState(

@@ -8,7 +8,7 @@ import {Epoch, ValidatorIndex, Gwei, Slot} from "@chainsafe/lodestar-types";
 import {fromHexString, readonlyValues} from "@chainsafe/ssz";
 import {IBeaconChain} from "../../../../chain";
 import {StateContextCache} from "../../../../chain/stateCache";
-import {IBeaconDb} from "../../../../db/api";
+import {IBeaconDb} from "../../../../db";
 import {StateId} from "./interface";
 
 export async function resolveStateId(

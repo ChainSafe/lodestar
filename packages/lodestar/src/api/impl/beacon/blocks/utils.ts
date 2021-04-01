@@ -3,7 +3,7 @@ import {blockToHeader} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {BlockId} from "./interface";
-import {IBeaconDb} from "../../../../db/api";
+import {IBeaconDb} from "../../../../db";
 import {GENESIS_SLOT} from "../../../../constants";
 import {fromHexString} from "@chainsafe/ssz";
 

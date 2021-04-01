@@ -1,7 +1,7 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {allForks, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {IAttestationJob, IBeaconChain} from "..";
-import {IBeaconDb} from "../../db/api";
+import {IBeaconDb} from "../../db";
 import {
   phase0,
   fast,
