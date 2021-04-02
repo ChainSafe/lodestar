@@ -45,7 +45,6 @@
     "blockchain"
   ],
   "dependencies": {
-    "@chainsafe/bls": "5.1.0",
     "@chainsafe/lodestar-utils": "^0.18.0",
     "@chainsafe/ssz": "^0.8.0",
     "axios": "^0.21.0",
