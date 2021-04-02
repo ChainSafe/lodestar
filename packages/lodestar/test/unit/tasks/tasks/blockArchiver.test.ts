@@ -61,8 +61,15 @@ describe("block archiver task", function () {
       )
     ).to.be.true;
     // delete canonical blocks
-    expect(dbStub.block.batchDelete.calledWith([ZERO_HASH, ZERO_HASH, ZERO_HASH, ZERO_HASH])).to.be.true;
+    expect(
+      dbStub.block.batchDelete.calledWith([
+        {root: ZERO_HASH, slot: 5},
+        {root: ZERO_HASH, slot: 4},
+        {root: ZERO_HASH, slot: 2},
+        {root: ZERO_HASH, slot: 1},
+      ])
+    ).to.be.true;
     // delete non canonical blocks
-    expect(dbStub.block.batchDelete.calledWith([ZERO_HASH])).to.be.true;
+    expect(dbStub.block.batchDelete.calledWith([{root: ZERO_HASH, slot: 3}])).to.be.true;
   });
 });

@@ -8,6 +8,8 @@ import {bytesToInt} from "@chainsafe/lodestar-utils";
 import all from "it-all";
 import {ContainerType} from "@chainsafe/ssz";
 
+export {IBlockFilterOptions} from "./abstract";
+
 /**
  * Stores finalized blocks. Block slot is identifier.
  */
@@ -70,15 +72,23 @@ export class BlockArchiveRepository {
 
   async batchPut(items: Array<IKeyValue<Slot, allForks.SignedBeaconBlock>>): Promise<void> {
     await Promise.all(
-      Object.entries(this.groupByFork(items)).map(([forkName, items]) =>
+      Object.entries(this.groupItemsByFork(items)).map(([forkName, items]) =>
         this.getRepositoryByForkName(forkName as IForkName).batchPut(items)
+      )
+    );
+  }
+
+  async batchAdd(values: allForks.SignedBeaconBlock[]): Promise<void> {
+    await Promise.all(
+      Object.entries(this.groupValuesByFork(values)).map(([forkName, values]) =>
+        this.getRepositoryByForkName(forkName as IForkName).batchAdd(values)
       )
     );
   }
 
   async batchPutBinary(items: Array<IKeyValueSummary<Slot, Buffer, IBlockSummary>>): Promise<void> {
     await Promise.all(
-      Object.entries(this.groupByFork(items)).map(([forkName, items]) =>
+      Object.entries(this.groupItemsByFork(items)).map(([forkName, items]) =>
         this.getRepositoryByForkName(forkName as IForkName).batchPutBinary(items)
       )
     );
@@ -114,7 +124,17 @@ export class BlockArchiveRepository {
     return this.getRepositoryByForkName(this.config.getForkName(slot));
   }
 
-  private groupByFork<T>(items: Array<IKeyValue<Slot, T>>): Record<IForkName, IKeyValue<Slot, T>[]> {
+  private groupValuesByFork(values: allForks.SignedBeaconBlock[]): Record<IForkName, allForks.SignedBeaconBlock[]> {
+    const valuesByFork = {} as Record<IForkName, allForks.SignedBeaconBlock[]>;
+    for (const value of values) {
+      const forkName = this.config.getForkName(value.message.slot);
+      if (!valuesByFork[forkName]) valuesByFork[forkName] = [];
+      valuesByFork[forkName].push(value);
+    }
+    return valuesByFork;
+  }
+
+  private groupItemsByFork<T>(items: Array<IKeyValue<Slot, T>>): Record<IForkName, IKeyValue<Slot, T>[]> {
     const itemsByFork = {} as Record<IForkName, IKeyValue<Slot, T>[]>;
     for (const kv of items) {
       const forkName = this.config.getForkName(kv.key);

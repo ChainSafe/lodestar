@@ -5,7 +5,7 @@
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {phase0} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {CachedBeaconState, computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
+import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconDb} from "../../db";
 import {IBeaconChain} from "../../chain";
 
@@ -83,7 +83,7 @@ export class StatesArchiver {
     if (!finalizedState) {
       throw Error("No state in cache for finalized checkpoint state epoch #" + finalized.epoch);
     }
-    await this.db.stateArchive.put(finalizedState.slot, finalizedState as CachedBeaconState<phase0.BeaconState>);
+    await this.db.stateArchive.put(finalizedState.slot, finalizedState);
     // don't delete states before the finalized state, auto-prune will take care of it
     this.logger.verbose("Archive states completed", {finalizedEpoch: finalized.epoch});
   }

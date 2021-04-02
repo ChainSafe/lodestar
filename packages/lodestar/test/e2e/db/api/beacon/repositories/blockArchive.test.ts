@@ -85,12 +85,14 @@ describe("BlockArchiveRepository", function () {
     const blockSummaries = signedBlocks.map(toBlockSummary);
     // old way
     logger.profile("batchPut");
-    const savedBlocks = notNull(await Promise.all(blockSummaries.map((summary) => db.block.get(summary.blockRoot))));
+    const savedBlocks = notNull(
+      await Promise.all(blockSummaries.map((summary) => db.block.get(summary.blockRoot, summary.slot)))
+    );
     await db.blockArchive.batchPut(savedBlocks.map((block) => ({key: block.message.slot, value: block})));
     logger.profile("batchPut");
     logger.profile("batchPutBinary");
     const blockBinaries = notNull(
-      await Promise.all(blockSummaries.map((summary) => db.block.getBinary(summary.blockRoot)))
+      await Promise.all(blockSummaries.map((summary) => db.block.getBinary(summary.blockRoot, summary.slot)))
     );
     await db.blockArchive.batchPutBinary(
       blockSummaries.map((summary, i) => ({

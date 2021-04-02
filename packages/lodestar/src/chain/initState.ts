@@ -28,7 +28,7 @@ export async function persistGenesisResult(
   genesisBlock: phase0.SignedBeaconBlock
 ): Promise<void> {
   await Promise.all([
-    db.stateArchive.add(genesisResult.state as TreeBacked<phase0.BeaconState>),
+    db.stateArchive.add(genesisResult.state),
     db.blockArchive.add(genesisBlock),
     db.depositDataRoot.putList(genesisResult.depositTree),
     db.eth1Data.put(genesisResult.block.timestamp, {
@@ -46,12 +46,9 @@ export async function persistAnchorState(
 ): Promise<void> {
   if (anchorState.slot === GENESIS_SLOT) {
     const genesisBlock = createGenesisBlock(config, anchorState);
-    await Promise.all([
-      db.blockArchive.add(genesisBlock),
-      db.stateArchive.add(anchorState as TreeBacked<phase0.BeaconState>),
-    ]);
+    await Promise.all([db.blockArchive.add(genesisBlock), db.stateArchive.add(anchorState)]);
   } else {
-    await db.stateArchive.add(anchorState as TreeBacked<phase0.BeaconState>);
+    await db.stateArchive.add(anchorState);
   }
 }
 

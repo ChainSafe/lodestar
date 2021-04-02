@@ -51,6 +51,8 @@ export enum Bucket {
 
   altair_block = 27, // Root -> altair.SignedBeaconBlock
   altair_blockArchive = 28, // Slot -> altair.SignedBeaconBlock
+  altair_pendingBlock = 29, // Slot -> altair.SignedBeaconBlock
+  altair_stateArchive = 30, // Slot -> altair.BeaconState
 }
 
 export enum Key {

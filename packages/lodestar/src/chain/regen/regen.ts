@@ -173,7 +173,7 @@ export class StateRegenerator implements IStateRegenerator {
     }
 
     for (const b of blocksToReplay.reverse()) {
-      const block = await this.db.block.get(b.blockRoot);
+      const block = await this.db.block.get(b.blockRoot, b.slot);
       if (!block) {
         throw new RegenError({
           code: RegenErrorCode.BLOCK_NOT_IN_DB,

@@ -1,7 +1,7 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBeaconChain, IBlockJob} from "..";
 import {IBeaconDb} from "../../db";
-import {allForks, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {allForks} from "@chainsafe/lodestar-types";
 import {CachedBeaconState, computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 import {fast, phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {BlockError, BlockErrorCode} from "../errors";
@@ -44,7 +44,8 @@ export async function validateGossipBlock(
     });
   }
 
-  if (await hasProposerAlreadyProposed(db, blockRoot, block.message.proposerIndex)) {
+  const existingBlock = await db.block.get(blockRoot, block.message.slot);
+  if (existingBlock?.message.proposerIndex === block.message.proposerIndex) {
     throw new BlockError({
       code: BlockErrorCode.REPEAT_PROPOSAL,
       proposer: block.message.proposerIndex,
@@ -87,15 +88,6 @@ export async function validateGossipBlock(
       job: blockJob,
     });
   }
-}
-
-export async function hasProposerAlreadyProposed(
-  db: IBeaconDb,
-  blockRoot: Uint8Array,
-  proposerIndex: ValidatorIndex
-): Promise<boolean> {
-  const existingBlock = await db.block.get(blockRoot);
-  return existingBlock?.message.proposerIndex === proposerIndex;
 }
 
 export function isExpectedProposer(epochCtx: fast.EpochContext, block: phase0.BeaconBlock): boolean {

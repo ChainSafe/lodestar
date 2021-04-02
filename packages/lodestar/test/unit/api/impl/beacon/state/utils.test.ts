@@ -1,6 +1,6 @@
 import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {config} from "@chainsafe/lodestar-config/minimal";
-import {toHexString, TreeBacked} from "@chainsafe/ssz";
+import {toHexString} from "@chainsafe/ssz";
 import {expect, use} from "chai";
 import chaiAsPromised from "chai-as-promised";
 import sinon, {SinonStubbedInstance} from "sinon";
@@ -45,7 +45,7 @@ describe("beacon state api utils", function () {
     });
 
     it("resolve genesis state id - success", async function () {
-      dbStub.stateArchive.get.withArgs(0).resolves(generateState() as TreeBacked<phase0.BeaconState>);
+      dbStub.stateArchive.get.withArgs(0).resolves(generateState());
       const state = await resolveStateId(chainStub, dbStub, "genesis");
       expect(state).to.not.be.null;
       expect(dbStub.stateArchive.get.withArgs(0).calledOnce).to.be.true;

@@ -166,7 +166,7 @@ export class BeaconChain implements IBeaconChain {
 
   async getHeadBlock(): Promise<allForks.SignedBeaconBlock | null> {
     const headSummary = this.forkChoice.getHead();
-    const unfinalizedBlock = await this.db.block.get(headSummary.blockRoot);
+    const unfinalizedBlock = await this.db.block.get(headSummary.blockRoot, headSummary.slot);
     if (unfinalizedBlock) {
       return unfinalizedBlock;
     }
@@ -182,7 +182,7 @@ export class BeaconChain implements IBeaconChain {
     if (!summary) {
       return null;
     }
-    return await this.db.block.get(summary.blockRoot);
+    return await this.db.block.get(summary.blockRoot, summary.slot);
   }
 
   async getStateByBlockRoot(blockRoot: Root): Promise<CachedBeaconState<allForks.BeaconState> | null> {
@@ -209,7 +209,7 @@ export class BeaconChain implements IBeaconChain {
     // these blocks are on the same chain to head
     for (const summary of this.forkChoice.iterateBlockSummaries(this.forkChoice.getHeadRoot())) {
       if (slotsSet.has(summary.slot)) {
-        blockRootsPerSlot.set(summary.slot, this.db.block.get(summary.blockRoot));
+        blockRootsPerSlot.set(summary.slot, this.db.block.get(summary.blockRoot, summary.slot));
       }
     }
 
