@@ -63,7 +63,7 @@ export class BeaconStateApi implements IBeaconStateApi {
     if (filters?.indices) {
       for (const id of filters.indices) {
         const validatorIndex = getStateValidatorIndex(id, state, this.chain);
-        if (validatorIndex) {
+        if (validatorIndex != null) {
           const validator = state.validators[validatorIndex];
           if (filters.statuses && !filters.statuses.includes(getValidatorStatus(validator, currentEpoch))) {
             continue;

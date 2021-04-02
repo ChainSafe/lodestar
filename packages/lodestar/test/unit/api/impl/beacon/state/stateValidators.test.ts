@@ -51,31 +51,61 @@ describe("beacon api impl - state - validators", function () {
       await expect(api.getStateValidators("notfound")).to.be.rejectedWith("State not found");
     });
 
-    it.skip("indices filter", async function () {
+    it("indices filter", async function () {
       resolveStateIdStub.resolves(generateState({validators: generateValidators(10)}));
       const api = new BeaconStateApi({}, {config, db: dbStub, chain: chainStub});
-      const validators = api.getStateValidators("someState", {indices: [0, 1, 123]});
-      expect((await validators).length).to.equal(2);
+      const validators = await api.getStateValidators("someState", {indices: [0, 1, 123]});
+      expect(validators.length).to.equal(2);
     });
 
-    it.skip("status filter", async function () {
-      resolveStateIdStub.resolves(generateState({validators: generateValidators(10)}));
+    it("status filter", async function () {
+      const numValidators = 10;
+      resolveStateIdStub.resolves(generateState({validators: generateValidators(numValidators)}));
       toValidatorResponseStub.onFirstCall().returns({
         index: 1,
         balance: BigInt(3200000),
         status: phase0.ValidatorStatus.EXITED_SLASHED,
         validator: generateValidator(),
       });
+      for (let i = 0; i < 10; i++) {
+        chainStub.getHeadState.onCall(i).returns({
+          pubkey2index: ({
+            get: () => i,
+          } as unknown) as fast.PubkeyIndexMap,
+        } as CachedBeaconState<allForks.BeaconState>);
+      }
       const api = new BeaconStateApi({}, {config, db: dbStub, chain: chainStub});
-      const validators = api.getStateValidators("someState", {statuses: [phase0.ValidatorStatus.ACTIVE_ONGOING]});
-      expect((await validators).length).to.equal(9);
+      const validators = await api.getStateValidators("someState", {
+        statuses: [phase0.ValidatorStatus.PENDING_INITIALIZED],
+      });
+      expect(validators.length).to.equal(9);
+    });
+
+    it("statuses and indices filters", async function () {
+      const numValidators = 10;
+      const validators = generateValidators(numValidators);
+      validators[0].exitEpoch = 0;
+      resolveStateIdStub.resolves(generateState({validators}));
+      for (let i = 0; i < 10; i++) {
+        chainStub.getHeadState.onCall(i).returns({
+          pubkey2index: ({
+            get: () => i,
+          } as unknown) as fast.PubkeyIndexMap,
+        } as CachedBeaconState<allForks.BeaconState>);
+      }
+      const api = new BeaconStateApi({}, {config, db: dbStub, chain: chainStub});
+      const stateValidators = await api.getStateValidators("someState", {
+        indices: [0, 1, 2, 123],
+        statuses: [phase0.ValidatorStatus.PENDING_INITIALIZED],
+      });
+      expect(stateValidators.length).to.equal(3);
     });
 
     it("success", async function () {
       resolveStateIdStub.resolves(generateState({validators: generateValidators(10)}));
       const api = new BeaconStateApi({}, {config, db: dbStub, chain: chainStub});
-      const validators = api.getStateValidators("someState");
-      expect((await validators).length).to.equal(10);
+      const validators = await api.getStateValidators("someState");
+      expect(validators.length).to.equal(10);
     });
   });
 
