@@ -1,7 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any,@typescript-eslint/no-unused-vars */
 import {writeFile} from "fs";
 import {expect} from "chai";
-import profiler from "v8-profiler-next";
 import {loadYamlFile} from "./util";
 
 export interface IBaseCase {
@@ -71,23 +70,7 @@ export function describeMultiSpec<TestCase extends IBaseCase, Result>(
         if (shouldError(testCase, index)) {
           expect(testFunc.bind(null, ...inputs)).to.throw();
         } else {
-          const profileId = `${description}-${Date.now()}.profile`;
-          if (env.GEN_PROFILE_DIR) {
-            profiler.startProfiling(profileId);
-          }
           const result = testFunc(...inputs);
-          if (env.GEN_PROFILE_DIR) {
-            const profile = profiler.stopProfiling(profileId);
-            const directory = env.GEN_PROFILE_DIR || __dirname;
-            profile.export((error, result) => {
-              if (error || result === undefined) {
-                return;
-              }
-              writeFile(`${directory}/${profileId}`, result, () => {
-                profile.delete();
-              });
-            });
-          }
           const actual = getActual(result);
           const expected = getExpected(testCase);
           expectFunc(testCase, expect, expected, actual);

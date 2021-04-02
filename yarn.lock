@@ -12883,13 +12883,6 @@ v8-compile-cache@^2.0.3:
   resolved "https://registry.yarnpkg.com/v8-compile-cache/-/v8-compile-cache-2.1.0.tgz#e14de37b31a6d194f5690d67efc4e7f6fc6ab30e"
   integrity sha512-usZBT3PW+LOjM25wbqIlZwPeJV+3OSz3M1k1Ws8snlW39dZyYL9lOGC5FgPVHfk0jKmjiDV8Z0mIbVQPiwFs7g==
 
-v8-profiler-next@^1.1.1:
-  version "1.2.2"
-  resolved "https://registry.yarnpkg.com/v8-profiler-next/-/v8-profiler-next-1.2.2.tgz#9eae99b8ae62658fd862c4530e6a6a7df72ca699"
-  integrity sha512-I9qiU6UfNJz5QIeXpx31kTh4ypH3r5W0ljgX92jBjfmEYRpSK2DK5OaPQYUr7mKnDgJALtG2eBX9j8fDp+b62w==
-  dependencies:
-    nan "^2.14.0"
-
 validate-npm-package-license@^3.0.1, validate-npm-package-license@^3.0.3:
   version "3.0.4"
   resolved "https://registry.yarnpkg.com/validate-npm-package-license/-/validate-npm-package-license-3.0.4.tgz#fc91f6b9c7ba15c857f4cb2c5defeec39d4f410a"

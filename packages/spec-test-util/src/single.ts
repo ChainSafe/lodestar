@@ -1,8 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return, @typescript-eslint/no-explicit-any */
 import {expect} from "chai";
-import {readdirSync, readFileSync, writeFile} from "fs";
+import {readdirSync, readFileSync} from "fs";
 import {basename, join, parse} from "path";
-import profiler from "v8-profiler-next";
 import {Type, CompositeType} from "@chainsafe/ssz";
 
 import {isDirectory, loadYamlFile} from "./util";
@@ -117,17 +116,7 @@ function generateTestCase<TestCase, Result>(
         return;
       }
     } else {
-      const profileId = `${name}-${Date.now()}.profile`;
-      const profilingDirectory = process.env.GEN_PROFILE_DIR;
-      if (profilingDirectory) {
-        profiler.startProfiling(profileId);
-      }
       const result = testFunction(testCase, name);
-      if (profilingDirectory) {
-        const profile = profiler.stopProfiling(profileId);
-
-        generateProfileReport(profile, profilingDirectory, profileId);
-      }
       if (!options.getExpected) throw Error("getExpected is not defined");
       if (!options.expectFunc) throw Error("expectFunc is not defined");
       const expected = options.getExpected(testCase);
@@ -185,15 +174,4 @@ function deserializeTestCase<TestCase, Result>(
   } else {
     return loadYamlFile(file);
   }
-}
-
-function generateProfileReport(profile: profiler.CpuProfile, directory: string, profileId: string): void {
-  profile.export((error, result) => {
-    if (error || result === undefined) {
-      return;
-    }
-    writeFile(`${directory}/${profileId}`, result as string, () => {
-      profile.delete();
-    });
-  });
 }
