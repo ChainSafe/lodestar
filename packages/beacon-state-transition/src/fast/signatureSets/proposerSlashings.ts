@@ -22,7 +22,7 @@ export function getProposerSlashingSignatureSets(
         type: SignatureSetType.single,
         pubkey,
         signingRoot: computeSigningRoot(config, config.types.phase0.BeaconBlockHeader, signedHeader.message, domain),
-        signature: signedHeader.signature,
+        signature: signedHeader.signature.valueOf() as Uint8Array,
       };
     }
   );

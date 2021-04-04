@@ -87,6 +87,9 @@ export function syncPubkeys(
   for (let i = currentCount; i < newCount; i++) {
     const pubkey = state.validators[i].pubkey.valueOf() as Uint8Array;
     pubkey2index.set(pubkey, i);
+    // Pubkeys must be checked for group + inf. This must be done only once when the validator deposit is processed.
+    // Afterwards any public key is the state consider validated.
+    // > Do not do any validation here
     index2pubkey.push(bls.PublicKey.fromBytes(pubkey));
   }
 }

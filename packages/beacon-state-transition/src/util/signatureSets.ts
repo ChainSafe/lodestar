@@ -1,5 +1,5 @@
 import bls, {PublicKey} from "@chainsafe/bls";
-import {BLSSignature, Root} from "@chainsafe/lodestar-types";
+import {Root} from "@chainsafe/lodestar-types";
 
 export enum SignatureSetType {
   single = "single",
@@ -11,17 +11,17 @@ export type ISignatureSet =
       type: SignatureSetType.single;
       pubkey: PublicKey;
       signingRoot: Root;
-      signature: BLSSignature;
+      signature: Uint8Array;
     }
   | {
       type: SignatureSetType.aggregate;
       pubkeys: PublicKey[];
       signingRoot: Root;
-      signature: BLSSignature;
+      signature: Uint8Array;
     };
 
 export function verifySignatureSet(signatureSet: ISignatureSet): boolean {
-  const signature = bls.Signature.fromBytes(signatureSet.signature.valueOf() as Uint8Array);
+  const signature = bls.Signature.fromBytes(signatureSet.signature);
 
   switch (signatureSet.type) {
     case SignatureSetType.single:
