@@ -1,4 +1,4 @@
-import bls from "@chainsafe/bls";
+import bls, {CoordType} from "@chainsafe/bls";
 import {phase0} from "@chainsafe/lodestar-types";
 import {verifyMerkleBranch, bigIntMin} from "@chainsafe/lodestar-utils";
 
@@ -38,10 +38,18 @@ export function processDeposit(state: CachedBeaconState<phase0.BeaconState>, dep
     // fork-agnostic domain since deposits are valid across forks
     const domain = computeDomain(config, config.params.DOMAIN_DEPOSIT);
     const signingRoot = computeSigningRoot(config, config.types.phase0.DepositMessage, depositMessage, domain);
-    // Pubkeys must be checked for group + inf. This must be done only once when the validator deposit is processed
-    // > Check group + inf here
-    if (!bls.verify(pubkey, signingRoot, deposit.data.signature.valueOf() as Uint8Array)) {
-      return;
+    try {
+      // Pubkeys must be checked for group + inf. This must be done only once when the validator deposit is processed
+      // > Check group + inf here
+      // !!! UNTIL MERGED https://github.com/ChainSafe/bls/pull/91
+      // @ts-ignore
+      const publicKey = bls.PublicKey.fromBytes(pubkey, CoordType.affine, true);
+      const signature = bls.Signature.fromBytes(deposit.data.signature.valueOf() as Uint8Array, CoordType.affine, true);
+      if (!signature.verify(publicKey, signingRoot)) {
+        return;
+      }
+    } catch (e) {
+      return; // Catch all BLS errors: failed key validation, failed signature validation, invalid signature
     }
 
     // add validator and balance entries
