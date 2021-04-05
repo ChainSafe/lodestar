@@ -6,7 +6,7 @@ import {config} from "@chainsafe/lodestar-config/minimal";
 import {sleep} from "@chainsafe/lodestar-utils";
 import {phase0} from "@chainsafe/lodestar-types";
 import {Method, ReqRespEncoding} from "../../../src/constants";
-import {createPeerId, IReqRespOptions, Network} from "../../../src/network";
+import {createPeerId, IReqRespOptions, Network, prettyPrintPeerId} from "../../../src/network";
 import {INetworkOptions} from "../../../src/network/options";
 import {IReqRespHandler} from "../../../src/network/reqresp/handlers";
 import {RequestError, RequestErrorCode} from "../../../src/network/reqresp/request";
@@ -172,7 +172,7 @@ describe("network / ReqResp", function () {
       netA.reqResp.beaconBlocksByRange(netB.peerId, {startSlot: 0, step: 1, count: 3}),
       new RequestError(
         {code: RequestErrorCode.SERVER_ERROR, errorMessage: testErrorMessage},
-        {method: Method.BeaconBlocksByRange, encoding: ReqRespEncoding.SSZ_SNAPPY, peer: netB.peerId.toB58String()}
+        {method: Method.BeaconBlocksByRange, encoding: ReqRespEncoding.SSZ_SNAPPY, peer: prettyPrintPeerId(netB.peerId)}
       )
     );
   });
@@ -191,7 +191,7 @@ describe("network / ReqResp", function () {
       netA.reqResp.beaconBlocksByRange(netB.peerId, {startSlot: 0, step: 1, count: 3}),
       new RequestError(
         {code: RequestErrorCode.SERVER_ERROR, errorMessage: testErrorMessage},
-        {method: Method.BeaconBlocksByRange, encoding: ReqRespEncoding.SSZ_SNAPPY, peer: netB.peerId.toB58String()}
+        {method: Method.BeaconBlocksByRange, encoding: ReqRespEncoding.SSZ_SNAPPY, peer: prettyPrintPeerId(netB.peerId)}
       )
     );
   });
@@ -217,7 +217,7 @@ describe("network / ReqResp", function () {
       netA.reqResp.beaconBlocksByRange(netB.peerId, {startSlot: 0, step: 1, count: 1}),
       new RequestError(
         {code: RequestErrorCode.TTFB_TIMEOUT},
-        {method: Method.BeaconBlocksByRange, encoding: ReqRespEncoding.SSZ_SNAPPY, peer: netB.peerId.toB58String()}
+        {method: Method.BeaconBlocksByRange, encoding: ReqRespEncoding.SSZ_SNAPPY, peer: prettyPrintPeerId(netB.peerId)}
       )
     );
   });
@@ -244,7 +244,7 @@ describe("network / ReqResp", function () {
       netA.reqResp.beaconBlocksByRange(netB.peerId, {startSlot: 0, step: 1, count: 2}),
       new RequestError(
         {code: RequestErrorCode.RESP_TIMEOUT},
-        {method: Method.BeaconBlocksByRange, encoding: ReqRespEncoding.SSZ_SNAPPY, peer: netB.peerId.toB58String()}
+        {method: Method.BeaconBlocksByRange, encoding: ReqRespEncoding.SSZ_SNAPPY, peer: prettyPrintPeerId(netB.peerId)}
       )
     );
   });
