@@ -13,6 +13,7 @@ export * from "./duties";
 export * from "./epoch";
 export * from "./fork";
 export * from "./genesis";
+export * from "./interop";
 export * from "./proposer";
 export * from "./seed";
 export * from "./shuffle";
