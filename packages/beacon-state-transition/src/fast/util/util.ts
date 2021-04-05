@@ -1,9 +1,10 @@
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import {Gwei, phase0} from "@chainsafe/lodestar-types";
 import {init} from "@chainsafe/bls";
-import {WinstonLogger, interopSecretKeys} from "@chainsafe/lodestar-utils";
+import {WinstonLogger} from "@chainsafe/lodestar-utils";
 import {fromHexString, List, TreeBacked} from "@chainsafe/ssz";
 import {getBeaconProposerIndex} from "../../util";
+import {interopSecretKeys} from "../../util/interop";
 
 let archivedState: TreeBacked<phase0.BeaconState> | null = null;
 let signedBlock: TreeBacked<phase0.SignedBeaconBlock> | null = null;

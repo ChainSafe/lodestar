@@ -14,4 +14,3 @@ export * from "./timeout";
 export * from "./types";
 export * from "./verifyMerkleBranch";
 export * from "./json";
-export * from "./interop";

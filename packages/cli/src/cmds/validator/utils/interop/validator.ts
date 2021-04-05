@@ -1,5 +1,6 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {ILogger, interopSecretKey} from "@chainsafe/lodestar-utils";
+import {ILogger} from "@chainsafe/lodestar-utils";
+import {interopSecretKey} from "@chainsafe/lodestar-beacon-state-transition";
 import {Validator, SlashingProtection} from "@chainsafe/lodestar-validator";
 import {IApiClient} from "@chainsafe/lodestar-validator/lib";
 import {LevelDbController} from "@chainsafe/lodestar-db";

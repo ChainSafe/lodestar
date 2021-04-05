@@ -1,5 +1,6 @@
 import {LevelDbController} from "@chainsafe/lodestar-db";
-import {ILogger, LogLevel, interopSecretKey} from "@chainsafe/lodestar-utils";
+import {ILogger, LogLevel} from "@chainsafe/lodestar-utils";
+import {interopSecretKey} from "@chainsafe/lodestar-beacon-state-transition";
 import {IEventsApi} from "@chainsafe/lodestar-validator/lib/api/interface/events";
 import {
   ApiClientOverInstance,
