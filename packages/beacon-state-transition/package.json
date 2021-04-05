@@ -36,7 +36,7 @@
   },
   "types": "lib/index.d.ts",
   "dependencies": {
-    "@chainsafe/bls": "5.1.0",
+    "@chainsafe/bls": "6.0.0",
     "@chainsafe/lodestar-config": "^0.18.0",
     "@chainsafe/lodestar-params": "^0.18.0",
     "@chainsafe/lodestar-types": "^0.18.0",

@@ -45,7 +45,7 @@
     "test:sim:multiThread": "mocha 'test/sim/multiNodeMultiThread.test.ts'"
   },
   "dependencies": {
-    "@chainsafe/bls": "5.1.0",
+    "@chainsafe/bls": "6.0.0",
     "@chainsafe/discv5": "^0.5.1",
     "@chainsafe/lodestar-beacon-state-transition": "^0.18.0",
     "@chainsafe/lodestar-config": "^0.18.0",
