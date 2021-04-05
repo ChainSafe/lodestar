@@ -30,6 +30,7 @@ import {IChainOptions} from "./options";
 import {IStateRegenerator, QueuedStateRegenerator} from "./regen";
 import {LodestarForkChoice} from "./forkChoice";
 import {restoreStateCaches} from "./initState";
+import {BlsVerifier, IBlsVerifier} from "./bls";
 
 export interface IBeaconChainModules {
   opts: IChainOptions;
@@ -44,14 +45,15 @@ export class BeaconChain implements IBeaconChain {
   readonly genesisTime: Number64;
   readonly genesisValidatorsRoot: Root;
 
-  forkChoice: IForkChoice;
-  clock: IBeaconClock;
-  emitter: ChainEventEmitter;
-  stateCache: StateContextCache;
-  checkpointStateCache: CheckpointStateCache;
-  regen: IStateRegenerator;
-  pendingAttestations: AttestationPool;
-  pendingBlocks: BlockPool;
+  readonly bls: IBlsVerifier;
+  readonly forkChoice: IForkChoice;
+  readonly clock: IBeaconClock;
+  readonly emitter: ChainEventEmitter;
+  readonly stateCache: StateContextCache;
+  readonly checkpointStateCache: CheckpointStateCache;
+  readonly regen: IStateRegenerator;
+  readonly pendingAttestations: AttestationPool;
+  readonly pendingBlocks: BlockPool;
 
   protected attestationProcessor: AttestationProcessor;
   protected blockProcessor: BlockProcessor;
@@ -80,6 +82,8 @@ export class BeaconChain implements IBeaconChain {
 
     this.emitter = new ChainEventEmitter();
     this.internalEmitter = new ChainEventEmitter();
+
+    this.bls = new BlsVerifier(logger);
 
     this.clock = new LocalClock({
       config: this.config,
@@ -123,6 +127,7 @@ export class BeaconChain implements IBeaconChain {
       forkChoice: this.forkChoice,
       clock: this.clock,
       regen: this.regen,
+      bls: this.bls,
       metrics: this.metrics,
       emitter: this.internalEmitter,
       checkpointStateCache: this.checkpointStateCache,

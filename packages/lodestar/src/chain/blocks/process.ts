@@ -6,7 +6,7 @@ import {IBlockJob, IChainSegmentJob} from "../interface";
 import {runStateTransition} from "./stateTransition";
 import {IStateRegenerator, RegenError} from "../regen";
 import {BlockError, BlockErrorCode, ChainSegmentError} from "../errors";
-import {verifySignatureSetsBatch} from "../bls";
+import {IBlsVerifier} from "../bls";
 import {groupBlocksByEpoch} from "./util";
 import {fast, ISignatureSet, CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
 import {CheckpointStateCache} from "../stateCache";
@@ -16,12 +16,14 @@ export async function processBlock({
   regen,
   emitter,
   checkpointStateCache,
+  bls,
   job,
 }: {
   forkChoice: IForkChoice;
   regen: IStateRegenerator;
   emitter: ChainEventEmitter;
   checkpointStateCache: CheckpointStateCache;
+  bls: IBlsVerifier;
   job: IBlockJob;
 }): Promise<void> {
   if (!forkChoice.hasBlock(job.signedBlock.message.parentRoot)) {
@@ -43,7 +45,7 @@ export async function processBlock({
           )
         : fast.getAllBlockSignatureSets(preState as CachedBeaconState<allForks.BeaconState>, job.signedBlock);
 
-      if (!verifySignatureSetsBatch(signatureSets)) {
+      if (!(await bls.verifySignatureSetsBatch(signatureSets))) {
         throw new BlockError({
           code: BlockErrorCode.INVALID_SIGNATURE,
           job,
@@ -81,6 +83,7 @@ export async function processChainSegment({
   regen,
   emitter,
   checkpointStateCache,
+  bls,
   job,
 }: {
   config: IBeaconConfig;
@@ -88,6 +91,7 @@ export async function processChainSegment({
   regen: IStateRegenerator;
   emitter: ChainEventEmitter;
   checkpointStateCache: CheckpointStateCache;
+  bls: IBlsVerifier;
   job: IChainSegmentJob;
 }): Promise<void> {
   let importedBlocks = 0;
@@ -132,7 +136,7 @@ export async function processChainSegment({
           );
         }
 
-        if (!verifySignatureSetsBatch(signatureSets)) {
+        if (!(await bls.verifySignatureSetsBatch(signatureSets))) {
           throw new ChainSegmentError({
             code: BlockErrorCode.INVALID_SIGNATURE,
             job,

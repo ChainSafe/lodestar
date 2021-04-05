@@ -11,7 +11,6 @@ import {
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {isAttestingToInValidBlock} from "./attestation";
 import {getSelectionProofSignatureSet, getAggregateAndProofSignatureSet} from "./utils";
-import {verifySignatureSetsBatch} from "../bls";
 import {AttestationError, AttestationErrorCode} from "../errors";
 import {ATTESTATION_PROPAGATION_SLOT_RANGE} from "../../constants";
 
@@ -136,7 +135,7 @@ export async function validateAggregateAttestation(
     ),
   ];
 
-  if (!verifySignatureSetsBatch(signatureSets)) {
+  if (!(await chain.bls.verifySignatureSetsBatch(signatureSets))) {
     throw new AttestationError({
       code: AttestationErrorCode.INVALID_SIGNATURE,
       job: attestationJob,

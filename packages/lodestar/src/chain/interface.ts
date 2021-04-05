@@ -9,6 +9,7 @@ import {IStateRegenerator} from "./regen";
 import {BlockPool} from "./blocks";
 import {AttestationPool} from "./attestation";
 import {StateContextCache, CheckpointStateCache} from "./stateCache";
+import {IBlsVerifier} from "./bls";
 
 interface IProcessBlock {
   /**
@@ -53,14 +54,15 @@ export interface IAttestationJob {
 export interface IBeaconChain {
   readonly genesisTime: Number64;
   readonly genesisValidatorsRoot: Root;
-  emitter: ChainEventEmitter;
-  clock: IBeaconClock;
-  forkChoice: IForkChoice;
-  stateCache: StateContextCache;
-  checkpointStateCache: CheckpointStateCache;
-  regen: IStateRegenerator;
-  pendingBlocks: BlockPool;
-  pendingAttestations: AttestationPool;
+  readonly bls: IBlsVerifier;
+  readonly emitter: ChainEventEmitter;
+  readonly clock: IBeaconClock;
+  readonly forkChoice: IForkChoice;
+  readonly stateCache: StateContextCache;
+  readonly checkpointStateCache: CheckpointStateCache;
+  readonly regen: IStateRegenerator;
+  readonly pendingBlocks: BlockPool;
+  readonly pendingAttestations: AttestationPool;
 
   /**
    * Stop beacon chain processing

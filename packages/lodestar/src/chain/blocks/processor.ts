@@ -12,6 +12,7 @@ import {JobQueue} from "../../util/queue";
 import {CheckpointStateCache} from "../stateCache";
 import {BlockError, BlockErrorCode, ChainSegmentError} from "../errors";
 import {IMetrics} from "../../metrics";
+import {IBlsVerifier} from "../bls";
 
 import {processBlock, processChainSegment} from "./process";
 import {validateBlock} from "./validate";
@@ -21,6 +22,7 @@ type BlockProcessorModules = {
   forkChoice: IForkChoice;
   regen: IStateRegenerator;
   emitter: ChainEventEmitter;
+  bls: IBlsVerifier;
   metrics?: IMetrics;
   clock: IBeaconClock;
   checkpointStateCache: CheckpointStateCache;
