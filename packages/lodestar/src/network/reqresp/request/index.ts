@@ -48,7 +48,8 @@ export async function sendRequest<T extends phase0.ResponseBody | phase0.Respons
   const {REQUEST_TIMEOUT, DIAL_TIMEOUT} = {...timeoutOptions, ...options};
   const peer = prettyPrintPeerId(peerId);
 
-  const agentVersion = getAgentVersionFromPeerStore(peerId, libp2p.peerStore);
+  const agentVersion = getAgentVersionFromPeerStore(peerId, libp2p.peerStore.metadataBook);
+
   const logCtx = {method, encoding, agentVersion, peer, requestId};
   const protocol = createRpcProtocol(method, encoding);
 

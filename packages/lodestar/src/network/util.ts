@@ -8,7 +8,7 @@ import {Method, MethodResponseType, Methods, ReqRespEncoding, RequestId} from ".
 import Multiaddr from "multiaddr";
 import {networkInterfaces} from "os";
 import {ENR} from "@chainsafe/discv5";
-import PeerStore from "libp2p/src/peer-store";
+import MetadataBook from "libp2p/src/peer-store/metadata-book";
 
 // req/resp
 
@@ -107,6 +107,6 @@ export function prettyPrintPeerId(peerId: PeerId): string {
   return `${id.substr(0, 2)}...${id.substr(id.length - 6, id.length)}`;
 }
 
-export function getAgentVersionFromPeerStore(peerId: PeerId, peerStore: PeerStore): string {
-  return peerStore.get(peerId)?.metadata?.get("AgentVersion")?.toString() || "";
+export function getAgentVersionFromPeerStore(peerId: PeerId, metadataBook: MetadataBook): string {
+  return new TextDecoder().decode(metadataBook.getValue(peerId, "AgentVersion")) || "N/A";
 }

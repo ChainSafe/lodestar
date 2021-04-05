@@ -39,7 +39,7 @@ export async function handleRequest(
   encoding: ReqRespEncoding,
   requestId = 0
 ): Promise<void> {
-  const agentVersion = getAgentVersionFromPeerStore(peerId, libp2p.peerStore);
+  const agentVersion = getAgentVersionFromPeerStore(peerId, libp2p.peerStore.metadataBook);
   const logCtx = {method, encoding, agentVersion, peer: prettyPrintPeerId(peerId), requestId};
 
   let responseError: Error | null = null;

@@ -51,8 +51,8 @@ describe("ReqResp protocolID parse / render", () => {
   }
 });
 
-describe("getAgentVersionFromPeerStore benchmark", () => {
-  it("should not take longer than 10ms to fetch a peer's AgentVersion", async function () {
+describe("getAgentVersionFromPeerStore", () => {
+  it("should get the peer's AgentVersion", async function () {
     this.timeout(0);
     const peerId = await createPeerId();
     const libp2p = await createNodeJsLibp2p(
@@ -80,11 +80,10 @@ describe("getAgentVersionFromPeerStore benchmark", () => {
 
       // start the benchmark
       const start = Date.now();
-      const version = getAgentVersionFromPeerStore(node.peerId, libp2p.peerStore);
+      const version = getAgentVersionFromPeerStore(node.peerId, libp2p.peerStore.metadataBook);
       const timeDiff = Date.now() - start;
-      // TODO: not sure what value to use here.  longest timeDiff i've seen so far is 7ms
-      expect(timeDiff).to.be.lt(10);
-      expect(version).to.be.equal(testAgentVersion.toString());
+      if (timeDiff > 0) console.log("timeDiff: ", timeDiff);
+      expect(version).to.be.equal(new TextDecoder().decode(testAgentVersion));
     }
   });
 });
