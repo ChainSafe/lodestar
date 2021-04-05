@@ -55,14 +55,14 @@ export interface IBeaconChain {
   readonly genesisTime: Number64;
   readonly genesisValidatorsRoot: Root;
   readonly bls: IBlsVerifier;
-  readonly emitter: ChainEventEmitter;
-  readonly clock: IBeaconClock;
-  readonly forkChoice: IForkChoice;
-  readonly stateCache: StateContextCache;
-  readonly checkpointStateCache: CheckpointStateCache;
-  readonly regen: IStateRegenerator;
-  readonly pendingBlocks: BlockPool;
-  readonly pendingAttestations: AttestationPool;
+  emitter: ChainEventEmitter;
+  clock: IBeaconClock;
+  forkChoice: IForkChoice;
+  stateCache: StateContextCache;
+  checkpointStateCache: CheckpointStateCache;
+  regen: IStateRegenerator;
+  pendingBlocks: BlockPool;
+  pendingAttestations: AttestationPool;
 
   /**
    * Stop beacon chain processing

@@ -46,14 +46,14 @@ export class BeaconChain implements IBeaconChain {
   readonly genesisValidatorsRoot: Root;
 
   readonly bls: IBlsVerifier;
-  readonly forkChoice: IForkChoice;
-  readonly clock: IBeaconClock;
-  readonly emitter: ChainEventEmitter;
-  readonly stateCache: StateContextCache;
-  readonly checkpointStateCache: CheckpointStateCache;
-  readonly regen: IStateRegenerator;
-  readonly pendingAttestations: AttestationPool;
-  readonly pendingBlocks: BlockPool;
+  forkChoice: IForkChoice;
+  clock: IBeaconClock;
+  emitter: ChainEventEmitter;
+  stateCache: StateContextCache;
+  checkpointStateCache: CheckpointStateCache;
+  regen: IStateRegenerator;
+  pendingAttestations: AttestationPool;
+  pendingBlocks: BlockPool;
 
   protected attestationProcessor: AttestationProcessor;
   protected blockProcessor: BlockProcessor;

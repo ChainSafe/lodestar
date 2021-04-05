@@ -16,7 +16,6 @@ import {LocalClock} from "../../../../src/chain/clock";
 import {IStateRegenerator, StateRegenerator} from "../../../../src/chain/regen";
 import {validateGossipAggregateAndProof} from "../../../../src/chain/validation";
 import {ATTESTATION_PROPAGATION_SLOT_RANGE, MAXIMUM_GOSSIP_CLOCK_DISPARITY} from "../../../../src/constants";
-import * as blsUtils from "../../../../src/chain/bls";
 import {generateSignedAggregateAndProof} from "../../../utils/aggregateAndProof";
 import {generateCachedState} from "../../../utils/state";
 import {StubbedBeaconDb} from "../../../utils/stub";
@@ -39,11 +38,9 @@ describe("gossip aggregate and proof test", function () {
   async function mockValidateGossipAggregateAndProof({
     isAggregatorFromCommitteeLength,
     isValidIndexedAttestation,
-    verifySignatureSetsBatch,
   }: {
     isAggregatorFromCommitteeLength: typeof validatorUtils.isAggregatorFromCommitteeLength;
     isValidIndexedAttestation: typeof indexedAttUtils.isValidIndexedAttestation;
-    verifySignatureSetsBatch: typeof blsUtils.verifySignatureSetsBatch;
   }) {
     return await rewiremock.around(
       () => import("../../../../src/chain/validation"),
@@ -58,9 +55,6 @@ describe("gossip aggregate and proof test", function () {
           .toBeUsed();
         mock(() => import("@chainsafe/lodestar-beacon-state-transition/lib/fast/signatureSets/indexedAttestation"))
           .with({getIndexedAttestationSignatureSet})
-          .toBeUsed();
-        mock(() => import("../../../../src/chain/bls"))
-          .with({verifySignatureSetsBatch})
           .toBeUsed();
       }
     );
