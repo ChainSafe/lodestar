@@ -1,8 +1,9 @@
-import {phase0} from "@chainsafe/lodestar-types";
+import {allForks, phase0} from "@chainsafe/lodestar-types";
 import {readonlyValues} from "@chainsafe/ssz";
-import {CachedBeaconState} from "../../../fast";
 
-export function processEth1Data(state: CachedBeaconState<phase0.BeaconState>, body: phase0.BeaconBlockBody): void {
+import {CachedBeaconState} from "../util";
+
+export function processEth1Data(state: CachedBeaconState<allForks.BeaconState>, body: allForks.BeaconBlockBody): void {
   const newEth1Data = getNewEth1Data(state, body.eth1Data);
   if (newEth1Data) {
     state.eth1Data = body.eth1Data;
@@ -16,7 +17,7 @@ export function processEth1Data(state: CachedBeaconState<phase0.BeaconState>, bo
  * result in a change to `state.eth1Data`.
  */
 export function getNewEth1Data(
-  state: CachedBeaconState<phase0.BeaconState>,
+  state: CachedBeaconState<allForks.BeaconState>,
   newEth1Data: phase0.Eth1Data
 ): phase0.Eth1Data | null {
   const {config} = state;

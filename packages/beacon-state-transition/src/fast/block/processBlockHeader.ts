@@ -1,9 +1,7 @@
-import {phase0} from "@chainsafe/lodestar-types";
+import {allForks} from "@chainsafe/lodestar-types";
+import {CachedBeaconState} from "../util";
 
-import {CachedBeaconState} from "../../../fast";
-
-export function processBlockHeader(state: CachedBeaconState<phase0.BeaconState>, block: phase0.BeaconBlock): void {
-  const types = state.config.types;
+export function processBlockHeader(state: CachedBeaconState<allForks.BeaconState>, block: allForks.BeaconBlock): void {
   const slot = state.slot;
   // verify that the slots match
   if (block.slot !== slot) {
@@ -24,8 +22,10 @@ export function processBlockHeader(state: CachedBeaconState<phase0.BeaconState>,
         `blockProposerIndex=${block.proposerIndex} stateProposerIndex=${proposerIndex}`
     );
   }
+
+  const types = state.config.getTypes(slot);
   // verify that the parent matches
-  if (!types.Root.equals(block.parentRoot, types.phase0.BeaconBlockHeader.hashTreeRoot(state.latestBlockHeader))) {
+  if (!types.Root.equals(block.parentRoot, types.BeaconBlockHeader.hashTreeRoot(state.latestBlockHeader))) {
     throw new Error("Block parent root does not match state latest block");
   }
   // cache current block as the new latest block
@@ -34,7 +34,7 @@ export function processBlockHeader(state: CachedBeaconState<phase0.BeaconState>,
     proposerIndex: block.proposerIndex,
     parentRoot: block.parentRoot,
     stateRoot: new Uint8Array(32),
-    bodyRoot: types.phase0.BeaconBlockBody.hashTreeRoot(block.body),
+    bodyRoot: types.BeaconBlockBody.hashTreeRoot(block.body),
   };
 
   // verify proposer is not slashed
