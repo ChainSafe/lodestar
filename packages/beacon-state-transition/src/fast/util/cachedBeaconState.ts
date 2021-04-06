@@ -56,6 +56,8 @@ export class BeaconStateContext<T extends allForks.BeaconState> {
   type: ContainerType<T>;
   // the original BeaconState as a Tree
   tree: Tree;
+  // return a proxy to CachedValidatorList
+  validators: CachedValidatorList<T["validators"][number]> & T["validators"];
   // immutable and shared across BeaconStates for most of the validators
   protected _validatorCache: MutableVector<T["validators"][number]>;
 
@@ -70,10 +72,7 @@ export class BeaconStateContext<T extends allForks.BeaconState> {
     this.tree = tree;
     this.epochCtx = epochCtx;
     this._validatorCache = validatorCache;
-  }
-
-  get validators(): CachedValidatorList<T["validators"][number]> & T["validators"] {
-    return (new Proxy(
+    this.validators = (new Proxy(
       new CachedValidatorList(
         this.type.fields["validators"] as CompositeListType<List<T["validators"][number]>>,
         this.type.tree_getProperty(this.tree, "validators") as Tree,
