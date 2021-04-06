@@ -25,6 +25,7 @@ describe("createFlat", function () {
     });
     const flatValidators = validators.map((v) => createFlat(v));
     const flatValidators2 = validators.map((v) => createValidatorFlat(v));
+    // the result from createFlat and createValidatorFlat are the same
     expect(flatValidators).to.be.deep.equal(flatValidators2);
     let start = Date.now();
     for (let i = 0; i < 16; i++) {
@@ -32,6 +33,8 @@ describe("createFlat", function () {
     }
     console.log("@@@ map using createFlat in ", Date.now() - start);
     start = Date.now();
+    // this simulate 16 validator exits in a block
+    // using regular array instead of persistent-ts to isolate the issue
     for (let i = 0; i < 16; i++) {
       flatValidators2.map((v) => v.exitEpoch);
     }
