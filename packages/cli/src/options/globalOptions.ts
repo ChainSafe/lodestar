@@ -5,7 +5,7 @@ import {ICliCommandOptions} from "../util";
 
 interface IGlobalSingleArgs {
   rootDir: string;
-  network?: NetworkName;
+  network: NetworkName;
   preset: string;
   paramsFile: string;
 }

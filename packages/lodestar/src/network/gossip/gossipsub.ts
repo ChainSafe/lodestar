@@ -296,13 +296,13 @@ export class Eth2Gossipsub extends Gossipsub {
         this.metrics.gossipMeshPeersByType.set({gossipType}, 0);
       }
       for (let subnet = 0; subnet < ATTESTATION_SUBNET_COUNT; subnet++) {
-        this.metrics.gossipMeshPeersByBeaconAttestationSubnet.set({subnet}, 0);
+        this.metrics.gossipMeshPeersByBeaconAttestationSubnet.set({subnet: subnetLabel(subnet)}, 0);
       }
       // loop through all mesh entries, count each set size
       for (const [topicString, peers] of this.mesh.entries()) {
         const topic = this.getGossipTopic(topicString);
         if (topic.type === GossipType.beacon_attestation) {
-          this.metrics.gossipMeshPeersByBeaconAttestationSubnet.set({subnet: topic.subnet}, peers.size);
+          this.metrics.gossipMeshPeersByBeaconAttestationSubnet.set({subnet: subnetLabel(topic.subnet)}, peers.size);
         } else {
           this.metrics.gossipMeshPeersByType.set({gossipType: topic.type}, peers.size);
         }
@@ -312,4 +312,13 @@ export class Eth2Gossipsub extends Gossipsub {
       subscriptions: Array.from(this.subscriptions),
     });
   };
+}
+
+/**
+ * Left pad subnets to two characters. Assumes ATTESTATION_SUBNET_COUNT < 99
+ * Otherwise grafana sorts the mesh peers chart as: [1,11,12,13,...]
+ */
+function subnetLabel(subnet: number): string {
+  if (subnet > 9) return String(subnet);
+  else return `0${subnet}`;
 }

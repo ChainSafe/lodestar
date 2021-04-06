@@ -121,7 +121,7 @@ export class BeaconNode {
     // start db if not already started
     await db.start();
 
-    const metrics = opts.metrics.enabled ? createMetrics() : undefined;
+    const metrics = opts.metrics.enabled ? createMetrics(opts.metrics) : undefined;
     if (metrics) {
       initBeaconMetrics(metrics, anchorState);
     }

@@ -5,14 +5,15 @@ import {collectDefaultMetrics, Registry} from "prom-client";
 import gcStats from "prometheus-gc-stats";
 import {createBeaconMetrics, IBeaconMetrics} from "./metrics/beacon";
 import {createLodestarMetrics, ILodestarMetrics} from "./metrics/lodestar";
+import {IMetricsOptions} from "./options";
 import {RegistryMetricCreator} from "./utils/registryMetricCreator";
 
 export type IMetrics = IBeaconMetrics & ILodestarMetrics & {register: Registry};
 
-export function createMetrics(): IMetrics {
+export function createMetrics(opts?: IMetricsOptions): IMetrics {
   const register = new RegistryMetricCreator();
   const beacon = createBeaconMetrics(register);
-  const lodestar = createLodestarMetrics(register);
+  const lodestar = createLodestarMetrics(register, opts?.metadata);
 
   collectDefaultMetrics({
     register,

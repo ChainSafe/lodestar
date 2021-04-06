@@ -1,5 +1,5 @@
 import {RegistryMetricCreator} from "../utils/registryMetricCreator";
-import {readLodestarGitData} from "../utils/gitData";
+import {IMetricsOptions} from "../options";
 
 export type ILodestarMetrics = ReturnType<typeof createLodestarMetrics>;
 
@@ -7,13 +7,14 @@ export type ILodestarMetrics = ReturnType<typeof createLodestarMetrics>;
  * Extra Lodestar custom metrics
  */
 // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types, @typescript-eslint/explicit-function-return-type
-export function createLodestarMetrics(register: RegistryMetricCreator) {
-  // Private - only used once now
-  register.static<"semver" | "branch" | "commit" | "version">({
-    name: "lodestar_version",
-    help: "Lodestar version",
-    value: readLodestarGitData(),
-  });
+export function createLodestarMetrics(register: RegistryMetricCreator, metadata: IMetricsOptions["metadata"]) {
+  if (metadata) {
+    register.static<"semver" | "branch" | "commit" | "version" | "network">({
+      name: "lodestar_version",
+      help: "Lodestar version",
+      value: metadata,
+    });
+  }
 
   return {
     peersByDirection: register.gauge<"direction">({

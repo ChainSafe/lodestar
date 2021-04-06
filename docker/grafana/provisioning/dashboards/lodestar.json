@@ -15,7 +15,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "id": 1,
+  "id": 3,
   "links": [],
   "panels": [
     {
@@ -71,7 +71,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.4.3",
+      "pluginVersion": "7.4.5",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -148,7 +148,7 @@
       },
       "gridPos": {
         "h": 3,
-        "w": 3,
+        "w": 2,
         "x": 12,
         "y": 1
       },
@@ -166,7 +166,7 @@
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "7.4.3",
+      "pluginVersion": "7.4.5",
       "targets": [
         {
           "expr": "libp2p_peers",
@@ -201,8 +201,8 @@
       },
       "gridPos": {
         "h": 3,
-        "w": 3,
-        "x": 15,
+        "w": 2,
+        "x": 14,
         "y": 1
       },
       "id": 4,
@@ -219,7 +219,7 @@
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "7.4.3",
+      "pluginVersion": "7.4.5",
       "targets": [
         {
           "expr": "beacon_head_slot",
@@ -253,8 +253,8 @@
       },
       "gridPos": {
         "h": 3,
-        "w": 3,
-        "x": 18,
+        "w": 2,
+        "x": 16,
         "y": 1
       },
       "id": 20,
@@ -271,7 +271,7 @@
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "7.4.3",
+      "pluginVersion": "7.4.5",
       "targets": [
         {
           "expr": "beacon_finalized_epoch",
@@ -282,7 +282,7 @@
       ],
       "timeFrom": null,
       "timeShift": null,
-      "title": "Current Finalized Epoch",
+      "title": "Finalized Epoch",
       "type": "stat"
     },
     {
@@ -305,8 +305,8 @@
       },
       "gridPos": {
         "h": 3,
-        "w": 3,
-        "x": 21,
+        "w": 2,
+        "x": 18,
         "y": 1
       },
       "id": 22,
@@ -323,7 +323,7 @@
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "7.4.3",
+      "pluginVersion": "7.4.5",
       "targets": [
         {
           "expr": "rate(beacon_head_slot[2m])",
@@ -335,6 +335,112 @@
       "timeFrom": null,
       "timeShift": null,
       "title": "Slots / sec",
+      "type": "stat"
+    },
+    {
+      "datasource": null,
+      "fieldConfig": {
+        "defaults": {
+          "custom": {},
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "percentunit"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 2,
+        "x": 20,
+        "y": 1
+      },
+      "id": 72,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        },
+        "text": {},
+        "textMode": "value"
+      },
+      "pluginVersion": "7.4.5",
+      "targets": [
+        {
+          "expr": "rate(process_cpu_user_seconds_total[1m])",
+          "interval": "",
+          "legendFormat": "",
+          "refId": "A"
+        }
+      ],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "CPU %",
+      "type": "stat"
+    },
+    {
+      "datasource": null,
+      "fieldConfig": {
+        "defaults": {
+          "custom": {},
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "decbytes"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 2,
+        "x": 22,
+        "y": 1
+      },
+      "id": 73,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        },
+        "text": {},
+        "textMode": "value"
+      },
+      "pluginVersion": "7.4.5",
+      "targets": [
+        {
+          "expr": "process_heap_bytes",
+          "interval": "",
+          "legendFormat": "",
+          "refId": "A"
+        }
+      ],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "Heap",
       "type": "stat"
     },
     {
@@ -362,7 +468,7 @@
       },
       "gridPos": {
         "h": 2,
-        "w": 3,
+        "w": 2,
         "x": 12,
         "y": 4
       },
@@ -380,7 +486,7 @@
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "7.4.3",
+      "pluginVersion": "7.4.5",
       "targets": [
         {
           "expr": "process_start_time_seconds*1000",
@@ -393,62 +499,6 @@
       "timeFrom": null,
       "timeShift": null,
       "title": "Uptime since",
-      "type": "stat"
-    },
-    {
-      "datasource": null,
-      "fieldConfig": {
-        "defaults": {
-          "custom": {},
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 2,
-        "w": 6,
-        "x": 15,
-        "y": 4
-      },
-      "id": 54,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": ["mean"],
-          "fields": "",
-          "values": false
-        },
-        "text": {},
-        "textMode": "name"
-      },
-      "pluginVersion": "7.4.3",
-      "targets": [
-        {
-          "expr": "lodestar_version",
-          "interval": "",
-          "legendFormat": "{{version}}",
-          "refId": "A"
-        }
-      ],
-      "timeFrom": null,
-      "timeShift": null,
-      "title": "Lodestar version",
       "type": "stat"
     },
     {
@@ -478,8 +528,8 @@
       },
       "gridPos": {
         "h": 2,
-        "w": 3,
-        "x": 21,
+        "w": 2,
+        "x": 14,
         "y": 4
       },
       "id": 56,
@@ -496,7 +546,7 @@
         "text": {},
         "textMode": "name"
       },
-      "pluginVersion": "7.4.3",
+      "pluginVersion": "7.4.5",
       "targets": [
         {
           "expr": "nodejs_version_info",
@@ -505,7 +555,136 @@
           "refId": "A"
         }
       ],
-      "title": "NodeJS version",
+      "title": "NodeJS",
+      "type": "stat"
+    },
+    {
+      "datasource": null,
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {},
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 2,
+        "w": 2,
+        "x": 16,
+        "y": 4
+      },
+      "id": 71,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        },
+        "text": {},
+        "textMode": "name"
+      },
+      "pluginVersion": "7.4.5",
+      "targets": [
+        {
+          "expr": "lodestar_version",
+          "format": "time_series",
+          "instant": false,
+          "interval": "",
+          "legendFormat": "{{network}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Network",
+      "type": "stat"
+    },
+    {
+      "datasource": null,
+      "fieldConfig": {
+        "defaults": {
+          "custom": {},
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 2,
+        "w": 6,
+        "x": 18,
+        "y": 4
+      },
+      "id": 54,
+      "interval": null,
+      "maxDataPoints": null,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        },
+        "text": {},
+        "textMode": "name"
+      },
+      "pluginVersion": "7.4.5",
+      "targets": [
+        {
+          "expr": "lodestar_version",
+          "format": "time_series",
+          "instant": false,
+          "interval": "",
+          "legendFormat": "{{version}}",
+          "refId": "A"
+        }
+      ],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "Lodestar version",
+      "transformations": [
+        {
+          "id": "reduce",
+          "options": {
+            "includeTimeField": false,
+            "mode": "reduceFields",
+            "reducers": []
+          }
+        }
+      ],
       "type": "stat"
     },
     {
@@ -547,7 +726,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.4.3",
+      "pluginVersion": "7.4.5",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -644,7 +823,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.4.3",
+      "pluginVersion": "7.4.5",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -732,7 +911,7 @@
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 2
+            "y": 18
           },
           "hiddenSeries": false,
           "id": 14,
@@ -752,7 +931,7 @@
             "alertThreshold": true
           },
           "percentage": false,
-          "pluginVersion": "7.4.3",
+          "pluginVersion": "7.4.5",
           "pointradius": 2,
           "points": false,
           "renderer": "flot",
@@ -828,7 +1007,7 @@
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 2
+            "y": 18
           },
           "hiddenSeries": false,
           "id": 16,
@@ -848,7 +1027,7 @@
             "alertThreshold": true
           },
           "percentage": false,
-          "pluginVersion": "7.4.3",
+          "pluginVersion": "7.4.5",
           "pointradius": 2,
           "points": false,
           "renderer": "flot",
@@ -929,7 +1108,7 @@
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 10
+            "y": 26
           },
           "hiddenSeries": false,
           "id": 44,
@@ -949,7 +1128,7 @@
             "alertThreshold": true
           },
           "percentage": false,
-          "pluginVersion": "7.4.3",
+          "pluginVersion": "7.4.5",
           "pointradius": 2,
           "points": false,
           "renderer": "flot",
@@ -986,6 +1165,7 @@
           },
           "yaxes": [
             {
+              "$$hashKey": "object:153",
               "format": "decbytes",
               "label": null,
               "logBase": 1,
@@ -994,6 +1174,7 @@
               "show": true
             },
             {
+              "$$hashKey": "object:154",
               "format": "short",
               "label": null,
               "logBase": 1,
@@ -1025,7 +1206,7 @@
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 10
+            "y": 26
           },
           "hiddenSeries": false,
           "id": 58,
@@ -1045,7 +1226,7 @@
             "alertThreshold": true
           },
           "percentage": false,
-          "pluginVersion": "7.4.3",
+          "pluginVersion": "7.4.5",
           "pointradius": 2,
           "points": false,
           "renderer": "flot",
@@ -1120,7 +1301,7 @@
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 18
+            "y": 34
           },
           "hiddenSeries": false,
           "id": 60,
@@ -1140,7 +1321,7 @@
             "alertThreshold": true
           },
           "percentage": false,
-          "pluginVersion": "7.4.3",
+          "pluginVersion": "7.4.5",
           "pointradius": 2,
           "points": false,
           "renderer": "flot",
@@ -1215,7 +1396,7 @@
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 18
+            "y": 34
           },
           "hiddenSeries": false,
           "id": 62,
@@ -1235,7 +1416,7 @@
             "alertThreshold": true
           },
           "percentage": false,
-          "pluginVersion": "7.4.3",
+          "pluginVersion": "7.4.5",
           "pointradius": 2,
           "points": false,
           "renderer": "flot",
@@ -1310,7 +1491,7 @@
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 26
+            "y": 42
           },
           "hiddenSeries": false,
           "id": 64,
@@ -1330,7 +1511,7 @@
             "alertThreshold": true
           },
           "percentage": false,
-          "pluginVersion": "7.4.3",
+          "pluginVersion": "7.4.5",
           "pointradius": 2,
           "points": false,
           "renderer": "flot",
@@ -1347,7 +1528,9 @@
             }
           ],
           "thresholds": [],
+          "timeFrom": null,
           "timeRegions": [],
+          "timeShift": null,
           "title": "Active requests",
           "tooltip": {
             "shared": true,
@@ -1435,7 +1618,7 @@
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 26
+            "y": 42
           },
           "hiddenSeries": false,
           "id": 40,
@@ -1455,7 +1638,7 @@
             "alertThreshold": true
           },
           "percentage": false,
-          "pluginVersion": "7.4.3",
+          "pluginVersion": "7.4.5",
           "pointradius": 2,
           "points": false,
           "renderer": "flot",
@@ -1540,7 +1723,7 @@
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 34
+            "y": 50
           },
           "hiddenSeries": false,
           "id": 6,
@@ -1560,7 +1743,7 @@
             "alertThreshold": true
           },
           "percentage": false,
-          "pluginVersion": "7.4.3",
+          "pluginVersion": "7.4.5",
           "pointradius": 2,
           "points": false,
           "renderer": "flot",
@@ -1637,7 +1820,7 @@
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 34
+            "y": 50
           },
           "hiddenSeries": false,
           "id": 42,
@@ -1657,7 +1840,7 @@
             "alertThreshold": true
           },
           "percentage": false,
-          "pluginVersion": "7.4.3",
+          "pluginVersion": "7.4.5",
           "pointradius": 2,
           "points": false,
           "renderer": "flot",
@@ -1693,6 +1876,7 @@
           },
           "yaxes": [
             {
+              "$$hashKey": "object:116",
               "format": "percentunit",
               "label": null,
               "logBase": 1,
@@ -1701,6 +1885,7 @@
               "show": true
             },
             {
+              "$$hashKey": "object:117",
               "format": "percent",
               "label": null,
               "logBase": 1,
@@ -1751,7 +1936,7 @@
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 43
+            "y": 3
           },
           "hiddenSeries": false,
           "id": 48,
@@ -1771,7 +1956,7 @@
             "alertThreshold": true
           },
           "percentage": false,
-          "pluginVersion": "7.4.3",
+          "pluginVersion": "7.4.5",
           "pointradius": 2,
           "points": false,
           "renderer": "flot",
@@ -1849,7 +2034,7 @@
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 43
+            "y": 3
           },
           "hiddenSeries": false,
           "id": 50,
@@ -1869,7 +2054,7 @@
             "alertThreshold": true
           },
           "percentage": false,
-          "pluginVersion": "7.4.3",
+          "pluginVersion": "7.4.5",
           "pointradius": 2,
           "points": false,
           "renderer": "flot",
@@ -1965,7 +2150,7 @@
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 44
+            "y": 4
           },
           "hiddenSeries": false,
           "id": 30,
@@ -1987,7 +2172,7 @@
             "alertThreshold": true
           },
           "percentage": false,
-          "pluginVersion": "7.4.3",
+          "pluginVersion": "7.4.5",
           "pointradius": 2,
           "points": false,
           "renderer": "flot",
@@ -2069,7 +2254,7 @@
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 44
+            "y": 4
           },
           "hiddenSeries": false,
           "id": 34,
@@ -2091,7 +2276,7 @@
             "alertThreshold": true
           },
           "percentage": false,
-          "pluginVersion": "7.4.3",
+          "pluginVersion": "7.4.5",
           "pointradius": 2,
           "points": false,
           "renderer": "flot",
@@ -2174,7 +2359,7 @@
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 52
+            "y": 12
           },
           "hiddenSeries": false,
           "id": 32,
@@ -2196,7 +2381,7 @@
             "alertThreshold": true
           },
           "percentage": false,
-          "pluginVersion": "7.4.3",
+          "pluginVersion": "7.4.5",
           "pointradius": 2,
           "points": false,
           "renderer": "flot",
@@ -2278,7 +2463,7 @@
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 52
+            "y": 12
           },
           "hiddenSeries": false,
           "id": 36,
@@ -2300,7 +2485,7 @@
             "alertThreshold": true
           },
           "percentage": false,
-          "pluginVersion": "7.4.3",
+          "pluginVersion": "7.4.5",
           "pointradius": 2,
           "points": false,
           "renderer": "flot",
@@ -2382,7 +2567,7 @@
             "h": 6,
             "w": 12,
             "x": 0,
-            "y": 60
+            "y": 20
           },
           "hiddenSeries": false,
           "id": 37,
@@ -2404,7 +2589,7 @@
             "alertThreshold": true
           },
           "percentage": false,
-          "pluginVersion": "7.4.3",
+          "pluginVersion": "7.4.5",
           "pointradius": 2,
           "points": false,
           "renderer": "flot",
@@ -2486,7 +2671,7 @@
             "h": 6,
             "w": 12,
             "x": 12,
-            "y": 60
+            "y": 20
           },
           "hiddenSeries": false,
           "id": 38,
@@ -2508,7 +2693,7 @@
             "alertThreshold": true
           },
           "percentage": false,
-          "pluginVersion": "7.4.3",
+          "pluginVersion": "7.4.5",
           "pointradius": 2,
           "points": false,
           "renderer": "flot",
@@ -2601,7 +2786,7 @@
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 53
+            "y": 5
           },
           "hiddenSeries": false,
           "id": 26,
@@ -2621,7 +2806,7 @@
             "alertThreshold": true
           },
           "percentage": false,
-          "pluginVersion": "7.4.3",
+          "pluginVersion": "7.4.5",
           "pointradius": 2,
           "points": false,
           "renderer": "flot",
@@ -2634,7 +2819,7 @@
               "expr": "rate(lodestar_block_processor_queue_job_time_seconds_sum[$__rate_interval])",
               "instant": false,
               "interval": "",
-              "legendFormat": "",
+              "legendFormat": "block_processor",
               "refId": "A"
             }
           ],
@@ -2642,7 +2827,7 @@
           "timeFrom": null,
           "timeRegions": [],
           "timeShift": null,
-          "title": "Block processor utilization ratio",
+          "title": "Block processor queue utilization rate",
           "tooltip": {
             "shared": true,
             "sort": 0,
@@ -2658,6 +2843,7 @@
           },
           "yaxes": [
             {
+              "$$hashKey": "object:560",
               "format": "percentunit",
               "label": null,
               "logBase": 1,
@@ -2666,6 +2852,106 @@
               "show": true
             },
             {
+              "$$hashKey": "object:561",
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": null,
+          "fieldConfig": {
+            "defaults": {
+              "custom": {},
+              "links": []
+            },
+            "overrides": []
+          },
+          "fill": 1,
+          "fillGradient": 3,
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 5
+          },
+          "hiddenSeries": false,
+          "id": 81,
+          "legend": {
+            "avg": true,
+            "current": false,
+            "max": false,
+            "min": false,
+            "show": true,
+            "total": false,
+            "values": true
+          },
+          "lines": true,
+          "linewidth": 1,
+          "nullPointMode": "null",
+          "options": {
+            "alertThreshold": true
+          },
+          "percentage": false,
+          "pluginVersion": "7.4.5",
+          "pointradius": 2,
+          "points": false,
+          "renderer": "flot",
+          "seriesOverrides": [],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "lodestar_block_processor_queue_job_time_seconds_sum/lodestar_block_processor_queue_job_time_seconds_count",
+              "instant": false,
+              "interval": "",
+              "legendFormat": "block_processor",
+              "refId": "A"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "Block processor job time (async)",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "$$hashKey": "object:560",
+              "format": "s",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            },
+            {
+              "$$hashKey": "object:561",
               "format": "short",
               "label": null,
               "logBase": 1,
@@ -2680,7 +2966,7 @@
           }
         }
       ],
-      "title": "Sync stats",
+      "title": "Block processor",
       "type": "row"
     },
     {
@@ -2692,32 +2978,440 @@
         "x": 0,
         "y": 21
       },
+      "id": 75,
+      "panels": [
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": null,
+          "fieldConfig": {
+            "defaults": {
+              "custom": {}
+            },
+            "overrides": []
+          },
+          "fill": 1,
+          "fillGradient": 0,
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 6
+          },
+          "hiddenSeries": false,
+          "id": 77,
+          "legend": {
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "show": true,
+            "total": false,
+            "values": false
+          },
+          "lines": true,
+          "linewidth": 1,
+          "nullPointMode": "null",
+          "options": {
+            "alertThreshold": true
+          },
+          "percentage": false,
+          "pluginVersion": "7.4.5",
+          "pointradius": 2,
+          "points": false,
+          "renderer": "flot",
+          "seriesOverrides": [],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "rate(lodestar_gossip_validation_queue_job_time_seconds_sum[$__rate_interval])",
+              "interval": "",
+              "legendFormat": "{{topic}}",
+              "refId": "A"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "Gossip validation queue utilization rate",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "$$hashKey": "object:186",
+              "format": "percentunit",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            },
+            {
+              "$$hashKey": "object:187",
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": null,
+          "fieldConfig": {
+            "defaults": {
+              "custom": {}
+            },
+            "overrides": []
+          },
+          "fill": 1,
+          "fillGradient": 0,
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 6
+          },
+          "hiddenSeries": false,
+          "id": 80,
+          "legend": {
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "show": true,
+            "total": false,
+            "values": false
+          },
+          "lines": true,
+          "linewidth": 1,
+          "nullPointMode": "null",
+          "options": {
+            "alertThreshold": true
+          },
+          "percentage": false,
+          "pluginVersion": "7.4.5",
+          "pointradius": 2,
+          "points": false,
+          "renderer": "flot",
+          "seriesOverrides": [],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "rate(lodestar_gossip_validation_queue_job_time_seconds_count[$__rate_interval])",
+              "interval": "",
+              "legendFormat": "{{topic}}",
+              "refId": "A"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "Gossip validation processed jobs / sec",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "$$hashKey": "object:186",
+              "format": "none",
+              "label": null,
+              "logBase": 2,
+              "max": null,
+              "min": null,
+              "show": true
+            },
+            {
+              "$$hashKey": "object:187",
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": null,
+          "fieldConfig": {
+            "defaults": {
+              "custom": {}
+            },
+            "overrides": []
+          },
+          "fill": 1,
+          "fillGradient": 0,
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 14
+          },
+          "hiddenSeries": false,
+          "id": 79,
+          "legend": {
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "show": true,
+            "total": false,
+            "values": false
+          },
+          "lines": true,
+          "linewidth": 1,
+          "nullPointMode": "null",
+          "options": {
+            "alertThreshold": true
+          },
+          "percentage": false,
+          "pluginVersion": "7.4.5",
+          "pointradius": 2,
+          "points": false,
+          "renderer": "flot",
+          "seriesOverrides": [
+            {
+              "$$hashKey": "object:301",
+              "alias": "beacon_block",
+              "yaxis": 2
+            }
+          ],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "lodestar_gossip_validation_queue_job_time_seconds_sum{topic!~\"beacon_block\"}/lodestar_gossip_validation_queue_job_time_seconds_count{topic!~\"beacon_block\"}",
+              "format": "time_series",
+              "interval": "",
+              "legendFormat": "{{topic}}",
+              "refId": "A"
+            },
+            {
+              "expr": "lodestar_gossip_validation_queue_job_time_seconds_sum{topic=\"beacon_block\"}/lodestar_gossip_validation_queue_job_time_seconds_count{topic=\"beacon_block\"}",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "{{topic}}",
+              "refId": "B"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "Gossip validation job time (async) [NOTE: dual axis]",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "$$hashKey": "object:186",
+              "format": "s",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            },
+            {
+              "$$hashKey": "object:187",
+              "format": "s",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": null,
+          "fieldConfig": {
+            "defaults": {
+              "custom": {}
+            },
+            "overrides": []
+          },
+          "fill": 1,
+          "fillGradient": 0,
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 14
+          },
+          "hiddenSeries": false,
+          "id": 78,
+          "legend": {
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "show": true,
+            "total": false,
+            "values": false
+          },
+          "lines": true,
+          "linewidth": 1,
+          "nullPointMode": "null",
+          "options": {
+            "alertThreshold": true
+          },
+          "percentage": false,
+          "pluginVersion": "7.4.5",
+          "pointradius": 2,
+          "points": false,
+          "renderer": "flot",
+          "seriesOverrides": [],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "lodestar_gossip_validation_queue_dropped_jobs_total/(lodestar_gossip_validation_queue_job_time_seconds_count+lodestar_gossip_validation_queue_dropped_jobs_total)",
+              "interval": "",
+              "legendFormat": "{{topic}}",
+              "refId": "A"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "Gossip validation queue dropped jobs %",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "$$hashKey": "object:186",
+              "format": "percentunit",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            },
+            {
+              "$$hashKey": "object:187",
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        }
+      ],
+      "title": "Gossip validation",
+      "type": "row"
+    },
+    {
+      "collapsed": true,
+      "datasource": null,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 22
+      },
       "id": 66,
       "panels": [
         {
           "datasource": null,
           "fieldConfig": {
             "defaults": {
+              "color": {
+                "mode": "thresholds"
+              },
               "custom": {},
               "mappings": [],
               "thresholds": {
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
+                    "color": "semi-dark-green",
                     "value": null
-                  },
-                  {
-                    "color": "red",
-                    "value": 0
-                  },
-                  {
-                    "color": "yellow",
-                    "value": 2
-                  },
-                  {
-                    "color": "green",
-                    "value": 4
                   }
                 ]
               }
@@ -2725,26 +3419,27 @@
             "overrides": []
           },
           "gridPos": {
-            "h": 8,
-            "w": 12,
+            "h": 7,
+            "w": 10,
             "x": 0,
-            "y": 22
+            "y": 23
           },
           "id": 68,
           "options": {
-            "displayMode": "basic",
+            "displayMode": "lcd",
             "orientation": "auto",
             "reduceOptions": {
               "calcs": ["last"],
               "fields": "",
               "values": false
             },
-            "showUnfilled": true
+            "showUnfilled": true,
+            "text": {}
           },
-          "pluginVersion": "7.4.3",
+          "pluginVersion": "7.4.5",
           "targets": [
             {
-              "expr": "lodestar_gossip_mesh_peers_by_type",
+              "expr": "lodestar_gossip_mesh_peers_by_type{gossipType!~\"beacon_attestation\"}",
               "format": "time_series",
               "interval": "",
               "legendFormat": "{{gossipType}}",
@@ -2760,13 +3455,16 @@
           "datasource": null,
           "fieldConfig": {
             "defaults": {
+              "color": {
+                "mode": "thresholds"
+              },
               "custom": {},
               "mappings": [],
               "thresholds": {
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
+                    "color": "semi-dark-green",
                     "value": null
                   }
                 ]
@@ -2775,23 +3473,24 @@
             "overrides": []
           },
           "gridPos": {
-            "h": 8,
-            "w": 24,
-            "x": 0,
-            "y": 30
+            "h": 7,
+            "w": 14,
+            "x": 10,
+            "y": 23
           },
           "id": 70,
           "options": {
-            "displayMode": "basic",
+            "displayMode": "lcd",
             "orientation": "auto",
             "reduceOptions": {
               "calcs": ["last"],
               "fields": "",
               "values": false
             },
-            "showUnfilled": true
+            "showUnfilled": true,
+            "text": {}
           },
-          "pluginVersion": "7.4.3",
+          "pluginVersion": "7.4.5",
           "targets": [
             {
               "expr": "lodestar_gossip_mesh_peers_by_beacon_attestation_subnet",
@@ -2827,5 +3526,5 @@
   "timezone": "",
   "title": "Lodestar",
   "uid": "lodestar",
-  "version": 2
+  "version": 3
 }
