@@ -1,5 +1,11 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
+import {
+  IForkChoice,
+  ForkChoiceError,
+  ForkChoiceErrorCode,
+  InvalidAttestationCode,
+  InvalidAttestation,
+} from "@chainsafe/lodestar-fork-choice";
 
 import {IAttestationJob} from "../interface";
 import {IBeaconClock} from "../clock";
@@ -7,7 +13,7 @@ import {ChainEvent, ChainEventEmitter} from "../emitter";
 import {IStateRegenerator} from "../regen";
 
 import {processAttestation} from "./process";
-import {validateAttestation} from "./validate";
+import {AttestationError, AttestationErrorCode} from "../errors";
 
 type AttestationProcessorModules = {
   config: IBeaconConfig;
@@ -41,10 +47,30 @@ export class AttestationProcessor {
  */
 export async function processAttestationJob(modules: AttestationProcessorModules, job: IAttestationJob): Promise<void> {
   try {
-    validateAttestation({...modules, job});
+    // validate attestation in the forkchoice
     await processAttestation({...modules, job});
   } catch (e) {
-    // above functions only throw AttestationError
-    modules.emitter.emit(ChainEvent.errorAttestation, e);
+    // above functions ForkChoice attestation error, we have to map it to AttestationError
+    modules.emitter.emit(ChainEvent.errorAttestation, mapAttestationError(e, job) || e);
   }
+}
+
+/**
+ * Map ForkChoice attestation error to lodestar version.
+ * Return null if the error is not an attestation error.
+ */
+export function mapAttestationError(e: Error, job: IAttestationJob): AttestationError | null {
+  if (e instanceof ForkChoiceError && e.type.code === ForkChoiceErrorCode.INVALID_ATTESTATION) {
+    const attError = ((e as ForkChoiceError).type as {err: InvalidAttestation}).err as InvalidAttestation;
+    // Map InvalidAttestationCode of forkchoice to lodestar AttestationErrorCode, other properties are the same
+    const codeName = Object.keys(InvalidAttestationCode).find(
+      (key) => InvalidAttestationCode[key as keyof typeof InvalidAttestationCode] === attError.code
+    );
+    const code = AttestationErrorCode[codeName as keyof typeof AttestationErrorCode];
+    // @ts-ignore
+    const lodestarErr = new AttestationError({job, ...attError, code});
+    lodestarErr.stack = e.stack;
+    return lodestarErr;
+  }
+  return null;
 }
