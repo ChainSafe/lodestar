@@ -1,4 +1,4 @@
-import bls from "@chainsafe/bls";
+import bls, {CoordType} from "@chainsafe/bls";
 import {phase0} from "@chainsafe/lodestar-types";
 import {verifyMerkleBranch, bigIntMin} from "@chainsafe/lodestar-utils";
 
@@ -25,27 +25,37 @@ export function processDeposit(state: CachedBeaconState<phase0.BeaconState>, dep
   // deposits must be processed in order
   state.eth1DepositIndex += 1;
 
-  const pubkey = deposit.data.pubkey;
+  const pubkey = deposit.data.pubkey.valueOf() as Uint8Array; // Drop tree
   const amount = deposit.data.amount;
   const cachedIndex = epochCtx.pubkey2index.get(pubkey);
   if (cachedIndex === undefined || !Number.isSafeInteger(cachedIndex) || cachedIndex >= validators.length) {
     // verify the deposit signature (proof of posession) which is not checked by the deposit contract
     const depositMessage = {
-      pubkey: deposit.data.pubkey,
-      withdrawalCredentials: deposit.data.withdrawalCredentials,
+      pubkey: deposit.data.pubkey, // Retain tree for hashing
+      withdrawalCredentials: deposit.data.withdrawalCredentials, // Retain tree for hashing
       amount: deposit.data.amount,
     };
     // fork-agnostic domain since deposits are valid across forks
     const domain = computeDomain(config, config.params.DOMAIN_DEPOSIT);
     const signingRoot = computeSigningRoot(config, config.types.phase0.DepositMessage, depositMessage, domain);
-    if (!bls.verify(pubkey.valueOf() as Uint8Array, signingRoot, deposit.data.signature.valueOf() as Uint8Array)) {
-      return;
+    try {
+      // Pubkeys must be checked for group + inf. This must be done only once when the validator deposit is processed
+      // > Check group + inf here
+      // !!! UNTIL MERGED https://github.com/ChainSafe/bls/pull/91
+      // @ts-ignore
+      const publicKey = bls.PublicKey.fromBytes(pubkey, CoordType.affine, true);
+      const signature = bls.Signature.fromBytes(deposit.data.signature.valueOf() as Uint8Array, CoordType.affine, true);
+      if (!signature.verify(publicKey, signingRoot)) {
+        return;
+      }
+    } catch (e) {
+      return; // Catch all BLS errors: failed key validation, failed signature validation, invalid signature
     }
 
     // add validator and balance entries
     validators.push({
-      pubkey: pubkey,
-      withdrawalCredentials: deposit.data.withdrawalCredentials,
+      pubkey,
+      withdrawalCredentials: deposit.data.withdrawalCredentials.valueOf() as Uint8Array, // Drop tree
       activationEligibilityEpoch: FAR_FUTURE_EPOCH,
       activationEpoch: FAR_FUTURE_EPOCH,
       exitEpoch: FAR_FUTURE_EPOCH,
@@ -56,7 +66,7 @@ export function processDeposit(state: CachedBeaconState<phase0.BeaconState>, dep
     state.balances.push(amount);
 
     // now that there is a new validator, update the epoch context with the new pubkey
-    epochCtx.addPubkey(validators.length - 1, pubkey.valueOf() as Uint8Array);
+    epochCtx.addPubkey(validators.length - 1, pubkey);
   } else {
     // increase balance by deposit amount
     increaseBalance(state, cachedIndex, amount);

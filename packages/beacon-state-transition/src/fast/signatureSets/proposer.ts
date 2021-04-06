@@ -27,6 +27,6 @@ export function getProposerSignatureSet(
       signedBlock.message,
       domain
     ),
-    signature: signedBlock.signature,
+    signature: signedBlock.signature.valueOf() as Uint8Array,
   };
 }

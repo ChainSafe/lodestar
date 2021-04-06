@@ -9,6 +9,7 @@ import {IStateRegenerator} from "./regen";
 import {BlockPool} from "./blocks";
 import {AttestationPool} from "./attestation";
 import {StateContextCache, CheckpointStateCache} from "./stateCache";
+import {IBlsVerifier} from "./bls";
 
 interface IProcessBlock {
   /**
@@ -53,6 +54,7 @@ export interface IAttestationJob {
 export interface IBeaconChain {
   readonly genesisTime: Number64;
   readonly genesisValidatorsRoot: Root;
+  bls: IBlsVerifier;
   emitter: ChainEventEmitter;
   clock: IBeaconClock;
   forkChoice: IForkChoice;

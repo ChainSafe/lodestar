@@ -1,5 +1,5 @@
 import {ByteVector, hash, toHexString, BitList, List, readonlyValues} from "@chainsafe/ssz";
-import bls, {PublicKey} from "@chainsafe/bls";
+import bls, {CoordType, PublicKey} from "@chainsafe/bls";
 import {BLSSignature, CommitteeIndex, Epoch, Slot, ValidatorIndex, phase0, allForks} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {intToBytes, assert} from "@chainsafe/lodestar-utils";
@@ -87,7 +87,10 @@ export function syncPubkeys(
   for (let i = currentCount; i < newCount; i++) {
     const pubkey = state.validators[i].pubkey.valueOf() as Uint8Array;
     pubkey2index.set(pubkey, i);
-    index2pubkey.push(bls.PublicKey.fromBytes(pubkey));
+    // Pubkeys must be checked for group + inf. This must be done only once when the validator deposit is processed.
+    // Afterwards any public key is the state consider validated.
+    // > Do not do any validation here
+    index2pubkey.push(bls.PublicKey.fromBytes(pubkey, CoordType.jacobian)); // Optimize for aggregation
   }
 }
 
@@ -275,7 +278,7 @@ export class EpochContext {
 
   addPubkey(index: ValidatorIndex, pubkey: Uint8Array): void {
     this.pubkey2index.set(pubkey, index);
-    this.index2pubkey[index] = bls.PublicKey.fromBytes(pubkey);
+    this.index2pubkey[index] = bls.PublicKey.fromBytes(pubkey, CoordType.jacobian); // Optimize for aggregation
   }
 
   private _getSlotCommittees(slot: Slot): ValidatorIndex[][] {

@@ -16,7 +16,6 @@ import {LocalClock} from "../../../../src/chain/clock";
 import {IStateRegenerator, StateRegenerator} from "../../../../src/chain/regen";
 import {validateGossipAggregateAndProof} from "../../../../src/chain/validation";
 import {ATTESTATION_PROPAGATION_SLOT_RANGE, MAXIMUM_GOSSIP_CLOCK_DISPARITY} from "../../../../src/constants";
-import * as blsUtils from "../../../../src/chain/bls";
 import {generateSignedAggregateAndProof} from "../../../utils/aggregateAndProof";
 import {generateCachedState} from "../../../utils/state";
 import {StubbedBeaconDb} from "../../../utils/stub";
@@ -39,11 +38,9 @@ describe("gossip aggregate and proof test", function () {
   async function mockValidateGossipAggregateAndProof({
     isAggregatorFromCommitteeLength,
     isValidIndexedAttestation,
-    verifySignatureSetsBatch,
   }: {
     isAggregatorFromCommitteeLength: typeof validatorUtils.isAggregatorFromCommitteeLength;
     isValidIndexedAttestation: typeof indexedAttUtils.isValidIndexedAttestation;
-    verifySignatureSetsBatch: typeof blsUtils.verifySignatureSetsBatch;
   }) {
     return await rewiremock.around(
       () => import("../../../../src/chain/validation"),
@@ -59,9 +56,6 @@ describe("gossip aggregate and proof test", function () {
         mock(() => import("@chainsafe/lodestar-beacon-state-transition/lib/fast/signatureSets/indexedAttestation"))
           .with({getIndexedAttestationSignatureSet})
           .toBeUsed();
-        mock(() => import("../../../../src/chain/bls"))
-          .with({verifySignatureSetsBatch})
-          .toBeUsed();
       }
     );
   }
@@ -73,6 +67,7 @@ describe("gossip aggregate and proof test", function () {
     chain.clock = sinon.createStubInstance(LocalClock);
     sinon.stub(chain.clock, "currentSlot").get(() => 0);
     regen = chain.regen = sinon.createStubInstance(StateRegenerator);
+    chain.bls = {verifySignatureSetsBatch: async () => true};
     db.badBlock.has.resolves(false);
     db.seenAttestationCache.hasAggregateAndProof.returns(false);
     isAggregatorStub = sinon.stub(validatorUtils, "isAggregatorFromCommitteeLength");
@@ -284,8 +279,8 @@ describe("gossip aggregate and proof test", function () {
     const {validateGossipAggregateAndProof} = await mockValidateGossipAggregateAndProof({
       isAggregatorFromCommitteeLength: sinon.stub().returns(true),
       isValidIndexedAttestation: sinon.stub().returns(true),
-      verifySignatureSetsBatch: sinon.stub().returns(false),
     });
+    chain.bls.verifySignatureSetsBatch = async () => false;
 
     const item = generateSignedAggregateAndProof({
       aggregate: {
@@ -314,8 +309,8 @@ describe("gossip aggregate and proof test", function () {
     const {validateGossipAggregateAndProof} = await mockValidateGossipAggregateAndProof({
       isAggregatorFromCommitteeLength: sinon.stub().returns(true),
       isValidIndexedAttestation: sinon.stub().returns(true),
-      verifySignatureSetsBatch: sinon.stub().returns(false),
     });
+    chain.bls.verifySignatureSetsBatch = async () => false;
 
     const item = generateSignedAggregateAndProof({
       aggregate: {
@@ -344,8 +339,8 @@ describe("gossip aggregate and proof test", function () {
     const {validateGossipAggregateAndProof} = await mockValidateGossipAggregateAndProof({
       isAggregatorFromCommitteeLength: sinon.stub().returns(true),
       isValidIndexedAttestation: sinon.stub().returns(false),
-      verifySignatureSetsBatch: sinon.stub().returns(true),
     });
+    chain.bls.verifySignatureSetsBatch = async () => true;
 
     const item = generateSignedAggregateAndProof({
       aggregate: {
@@ -374,8 +369,8 @@ describe("gossip aggregate and proof test", function () {
     const {validateGossipAggregateAndProof} = await mockValidateGossipAggregateAndProof({
       isAggregatorFromCommitteeLength: sinon.stub().returns(true),
       isValidIndexedAttestation: sinon.stub().returns(true),
-      verifySignatureSetsBatch: sinon.stub().returns(true),
     });
+    chain.bls.verifySignatureSetsBatch = async () => true;
 
     const item = generateSignedAggregateAndProof({
       aggregate: {
