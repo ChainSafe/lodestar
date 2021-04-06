@@ -1,12 +1,13 @@
 import xor from "buffer-xor";
 import {hash} from "@chainsafe/ssz";
-import {allForks, phase0} from "@chainsafe/lodestar-types";
-import {getRandaoMix} from "../../../util";
-import {CachedBeaconState, verifyRandaoSignature} from "../../../fast";
+import {allForks} from "@chainsafe/lodestar-types";
+import {getRandaoMix} from "../../util";
+import {verifyRandaoSignature} from "../signatureSets";
+import {CachedBeaconState} from "../util";
 
 export function processRandao(
-  state: CachedBeaconState<phase0.BeaconState>,
-  block: phase0.BeaconBlock,
+  state: CachedBeaconState<allForks.BeaconState>,
+  block: allForks.BeaconBlock,
   verifySignature = true
 ): void {
   const {config, epochCtx} = state;
