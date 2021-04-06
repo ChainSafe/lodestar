@@ -1,6 +1,5 @@
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import {interopSecretKeys} from "../../../src/util";
-import {ContainerType} from "@chainsafe/ssz";
 import {expect} from "chai";
 import {createFlat, createValidatorFlat} from "../../../src/fast";
 
@@ -42,28 +41,4 @@ describe("createFlat", function () {
 
   });
 
-  it("exitEpoch only", function () {
-    const numValidators = 114038;
-    const type = new ContainerType({
-      fields: {
-        exitEpoch: config.types.phase0.Epoch,
-      }
-    });
-    const validators = Array.from({length: numValidators}, (_, i) => (type.createTreeBackedFromStruct({
-      exitEpoch: Infinity,
-    })));
-    const createFlatValidators = validators.map((v) => createFlat(v));
-    const cachedValidators2 = validators.map((v) => ({exitEpoch: v.exitEpoch}));
-    let start = Date.now();
-    for (let i = 0; i < 16; i++) {
-      createFlatValidators.map((v) => v.exitEpoch);
-    }
-    console.log("@@@ map using createFlat in ", Date.now() - start);
-    start = Date.now();
-    start = Date.now();
-    for (let i = 0; i < 16; i++) {
-      cachedValidators2.map((v) => v.exitEpoch);
-    }
-    console.log("@@@ map using v => exitEpoch directly in ", Date.now() - start);
-  });
 });
