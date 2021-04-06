@@ -8,6 +8,7 @@ import {Method, MethodResponseType, Methods, ReqRespEncoding, RequestId} from ".
 import Multiaddr from "multiaddr";
 import {networkInterfaces} from "os";
 import {ENR} from "@chainsafe/discv5";
+import MetadataBook from "libp2p/src/peer-store/metadata-book";
 
 // req/resp
 
@@ -99,4 +100,13 @@ export function clearMultiaddrUDP(enr: ENR): void {
   enr.delete("udp");
   enr.delete("ip6");
   enr.delete("udp6");
+}
+
+export function prettyPrintPeerId(peerId: PeerId): string {
+  const id = peerId.toB58String();
+  return `${id.substr(0, 2)}...${id.substr(id.length - 6, id.length)}`;
+}
+
+export function getAgentVersionFromPeerStore(peerId: PeerId, metadataBook: MetadataBook): string {
+  return new TextDecoder().decode(metadataBook.getValue(peerId, "AgentVersion")) || "N/A";
 }

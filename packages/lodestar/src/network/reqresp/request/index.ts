@@ -6,7 +6,7 @@ import {phase0} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ErrorAborted, ILogger, Context, withTimeout, TimeoutError} from "@chainsafe/lodestar-utils";
 import {Method, ReqRespEncoding, timeoutOptions} from "../../../constants";
-import {createRpcProtocol} from "../../util";
+import {createRpcProtocol, getAgentVersionFromPeerStore, prettyPrintPeerId} from "../../util";
 import {ResponseError} from "../response";
 import {requestEncode} from "../encoders/requestEncode";
 import {responseDecode} from "../encoders/responseDecode";
@@ -46,8 +46,10 @@ export async function sendRequest<T extends phase0.ResponseBody | phase0.Respons
   requestId = 0
 ): Promise<T> {
   const {REQUEST_TIMEOUT, DIAL_TIMEOUT} = {...timeoutOptions, ...options};
-  const peer = peerId.toB58String();
-  const logCtx = {method, encoding, peer, requestId};
+  const peer = prettyPrintPeerId(peerId);
+  const agentVersion = getAgentVersionFromPeerStore(peerId, libp2p.peerStore.metadataBook);
+
+  const logCtx = {method, encoding, agentVersion, peer, requestId};
   const protocol = createRpcProtocol(method, encoding);
 
   if (signal?.aborted) {

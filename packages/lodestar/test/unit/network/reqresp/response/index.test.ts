@@ -9,12 +9,15 @@ import {expectEqualByteChunks, MockLibP2pStream} from "../utils";
 import {sszSnappyPing} from "../encodingStrategies/sszSnappy/testData";
 import {testLogger} from "../../../../utils/logger";
 import {getValidPeerId} from "../../../../utils/peer";
+import {createNode} from "../../../../utils/network";
 
 chai.use(chaiAsPromised);
 
-describe("network / reqresp / response / handleRequest", () => {
+describe("network / reqresp / response / handleRequest", async () => {
   const logger = testLogger();
   const peerId = getValidPeerId();
+  const multiaddr = "/ip4/127.0.0.1/tcp/0";
+  const libp2p = await createNode(multiaddr);
 
   const testCases: {
     id: string;
@@ -62,7 +65,14 @@ describe("network / reqresp / response / handleRequest", () => {
     it(id, async () => {
       const stream = new MockLibP2pStream(requestChunks);
 
-      const resultPromise = handleRequest({config, logger}, performRequestHandler, stream, peerId, method, encoding);
+      const resultPromise = handleRequest(
+        {config, logger, libp2p},
+        performRequestHandler,
+        stream,
+        peerId,
+        method,
+        encoding
+      );
 
       // Make sure the test error-ed with expected error, otherwise it's hard to debug with responseChunks
       if (expectedError) {

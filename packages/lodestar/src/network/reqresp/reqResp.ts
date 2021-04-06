@@ -70,7 +70,7 @@ export class ReqResp implements IReqResp {
 
             try {
               await handleRequest(
-                {config: this.config, logger: this.logger},
+                {config: this.config, logger: this.logger, libp2p: this.libp2p},
                 this.onRequest.bind(this),
                 stream,
                 peerId,
