@@ -5,8 +5,6 @@ import {WorkerData, BlsWorkCode, BlsWorkReq, WorkResult, WorkResultCode} from ".
 
 /* eslint-disable no-console */
 
-// Unique integer identifying the worker
-worker.threadId;
 // Cloned data from instatiation
 const workerData = worker.workerData as WorkerData;
 if (!workerData) throw Error("workerData must be defined");
@@ -21,9 +19,6 @@ expose({
     return `${hello} world`;
   },
 });
-
-//
-//
 
 function doManyBlsWorkReq(workReqArr: BlsWorkReq[]): WorkResult<boolean>[] {
   return workReqArr.map((workReq) => {
