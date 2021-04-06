@@ -606,7 +606,9 @@
       "pluginVersion": "7.4.5",
       "targets": [
         {
-          "expr": "lodestar_network",
+          "expr": "lodestar_version",
+          "format": "time_series",
+          "instant": false,
           "interval": "",
           "legendFormat": "{{network}}",
           "refId": "A"
