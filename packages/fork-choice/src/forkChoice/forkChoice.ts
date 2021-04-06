@@ -655,6 +655,17 @@ export class ForkChoice implements IForkChoice {
       });
     }
 
+    if (this.fcStore.currentSlot < indexedAttestation.data.slot + 1) {
+      throw new ForkChoiceError({
+        code: ForkChoiceErrorCode.INVALID_ATTESTATION,
+        err: {
+          code: InvalidAttestationCode.FUTURE_SLOT,
+          attestationSlot: indexedAttestation.data.slot,
+          latestPermissibleSlot: this.fcStore.currentSlot - 1,
+        },
+      });
+    }
+
     // Attestation target must be for a known block.
     //
     // We do not delay the block for later processing to reduce complexity and DoS attack
@@ -717,17 +728,6 @@ export class ForkChoice implements IForkChoice {
           code: InvalidAttestationCode.ATTESTS_TO_FUTURE_BLOCK,
           block: block.slot,
           attestation: indexedAttestation.data.slot,
-        },
-      });
-    }
-
-    if (this.fcStore.currentSlot < indexedAttestation.data.slot + 1) {
-      throw new ForkChoiceError({
-        code: ForkChoiceErrorCode.INVALID_ATTESTATION,
-        err: {
-          code: InvalidAttestationCode.FUTURE_SLOT,
-          attestationSlot: indexedAttestation.data.slot,
-          latestPermissibleSlot: this.fcStore.currentSlot - 1,
         },
       });
     }
