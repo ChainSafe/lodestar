@@ -67,6 +67,7 @@ describe("gossip aggregate and proof test", function () {
     chain.clock = sinon.createStubInstance(LocalClock);
     sinon.stub(chain.clock, "currentSlot").get(() => 0);
     regen = chain.regen = sinon.createStubInstance(StateRegenerator);
+    chain.bls = {verifySignatureSetsBatch: async () => true};
     db.badBlock.has.resolves(false);
     db.seenAttestationCache.hasAggregateAndProof.returns(false);
     isAggregatorStub = sinon.stub(validatorUtils, "isAggregatorFromCommitteeLength");
@@ -278,8 +279,8 @@ describe("gossip aggregate and proof test", function () {
     const {validateGossipAggregateAndProof} = await mockValidateGossipAggregateAndProof({
       isAggregatorFromCommitteeLength: sinon.stub().returns(true),
       isValidIndexedAttestation: sinon.stub().returns(true),
-      verifySignatureSetsBatch: sinon.stub().returns(false),
     });
+    chain.bls.verifySignatureSetsBatch = async () => false;
 
     const item = generateSignedAggregateAndProof({
       aggregate: {
@@ -308,8 +309,8 @@ describe("gossip aggregate and proof test", function () {
     const {validateGossipAggregateAndProof} = await mockValidateGossipAggregateAndProof({
       isAggregatorFromCommitteeLength: sinon.stub().returns(true),
       isValidIndexedAttestation: sinon.stub().returns(true),
-      verifySignatureSetsBatch: sinon.stub().returns(false),
     });
+    chain.bls.verifySignatureSetsBatch = async () => false;
 
     const item = generateSignedAggregateAndProof({
       aggregate: {
@@ -338,8 +339,8 @@ describe("gossip aggregate and proof test", function () {
     const {validateGossipAggregateAndProof} = await mockValidateGossipAggregateAndProof({
       isAggregatorFromCommitteeLength: sinon.stub().returns(true),
       isValidIndexedAttestation: sinon.stub().returns(false),
-      verifySignatureSetsBatch: sinon.stub().returns(true),
     });
+    chain.bls.verifySignatureSetsBatch = async () => true;
 
     const item = generateSignedAggregateAndProof({
       aggregate: {
@@ -368,8 +369,8 @@ describe("gossip aggregate and proof test", function () {
     const {validateGossipAggregateAndProof} = await mockValidateGossipAggregateAndProof({
       isAggregatorFromCommitteeLength: sinon.stub().returns(true),
       isValidIndexedAttestation: sinon.stub().returns(true),
-      verifySignatureSetsBatch: sinon.stub().returns(true),
     });
+    chain.bls.verifySignatureSetsBatch = async () => true;
 
     const item = generateSignedAggregateAndProof({
       aggregate: {

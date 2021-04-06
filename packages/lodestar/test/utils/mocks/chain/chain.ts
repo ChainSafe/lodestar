@@ -22,6 +22,7 @@ import {IStateRegenerator, StateRegenerator} from "../../../../src/chain/regen";
 import {StubbedBeaconDb} from "../../stub";
 import {BlockPool} from "../../../../src/chain/blocks";
 import {AttestationPool} from "../../../../src/chain/attestation";
+import {BlsVerifier, IBlsVerifier} from "../../../../src/chain/bls";
 
 export interface IMockChainParams {
   genesisTime?: Number64;
@@ -34,7 +35,7 @@ export interface IMockChainParams {
 export class MockBeaconChain implements IBeaconChain {
   readonly genesisTime: Number64;
   readonly genesisValidatorsRoot: Root;
-
+  readonly bls: IBlsVerifier;
   forkChoice!: IForkChoice;
   stateCache: StateContextCache;
   checkpointStateCache: CheckpointStateCache;
@@ -53,6 +54,7 @@ export class MockBeaconChain implements IBeaconChain {
   constructor({genesisTime, chainId, networkId, state, config}: IMockChainParams) {
     this.genesisTime = genesisTime ?? state.genesisTime;
     this.genesisValidatorsRoot = state.genesisValidatorsRoot;
+    this.bls = sinon.createStubInstance(BlsVerifier);
     this.chainId = chainId || 0;
     this.networkId = networkId || BigInt(0);
     this.state = state;

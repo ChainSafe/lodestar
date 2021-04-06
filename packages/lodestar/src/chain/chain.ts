@@ -45,7 +45,7 @@ export class BeaconChain implements IBeaconChain {
   readonly genesisTime: Number64;
   readonly genesisValidatorsRoot: Root;
 
-  readonly bls: IBlsVerifier;
+  bls: IBlsVerifier;
   forkChoice: IForkChoice;
   clock: IBeaconClock;
   emitter: ChainEventEmitter;

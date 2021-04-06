@@ -54,7 +54,7 @@ export interface IAttestationJob {
 export interface IBeaconChain {
   readonly genesisTime: Number64;
   readonly genesisValidatorsRoot: Root;
-  readonly bls: IBlsVerifier;
+  bls: IBlsVerifier;
   emitter: ChainEventEmitter;
   clock: IBeaconClock;
   forkChoice: IForkChoice;
