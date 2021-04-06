@@ -1,6 +1,6 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
-import {Root, phase0, allForks} from "@chainsafe/lodestar-types";
+import {Root, phase0, allForks, BLSPubkey} from "@chainsafe/lodestar-types";
 import {List, readonlyValues} from "@chainsafe/ssz";
 import {IBeaconChain} from "../../../../chain/interface";
 import {IBeaconDb} from "../../../../db";
@@ -8,8 +8,15 @@ import {IApiOptions} from "../../../options";
 import {ApiError, StateNotFound} from "../../errors/api";
 import {IApiModules} from "../../interface";
 import {IBeaconStateApi, ICommitteesFilters, IValidatorFilters, StateId} from "./interface";
-import {getEpochBeaconCommittees, resolveStateId, toValidatorResponse} from "./utils";
+import {
+  filterStateValidatorsByStatuses,
+  getEpochBeaconCommittees,
+  getValidatorStatus,
+  resolveStateId,
+  toValidatorResponse,
+} from "./utils";
 import {computeEpochAtSlot, getCurrentEpoch} from "@chainsafe/lodestar-beacon-state-transition";
+import {getStateValidatorIndex} from "../../utils";
 
 export class BeaconStateApi implements IBeaconStateApi {
   private readonly config: IBeaconConfig;
@@ -44,17 +51,42 @@ export class BeaconStateApi implements IBeaconStateApi {
     };
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async getStateValidators(stateId: StateId, filters?: IValidatorFilters): Promise<phase0.ValidatorResponse[]> {
     const state = await resolveStateId(this.chain, this.db, stateId);
     if (!state) {
       throw new StateNotFound();
     }
-    //TODO: implement filters
+
+    const currentEpoch = getCurrentEpoch(this.config, state);
+
+    const validators: phase0.ValidatorResponse[] = [];
+    if (filters?.indices) {
+      for (const id of filters.indices) {
+        const validatorIndex = getStateValidatorIndex(id, state, this.chain);
+        if (validatorIndex != null) {
+          const validator = state.validators[validatorIndex];
+          if (filters.statuses && !filters.statuses.includes(getValidatorStatus(validator, currentEpoch))) {
+            continue;
+          }
+          const validatorResponse = toValidatorResponse(
+            validatorIndex,
+            validator,
+            state.balances[validatorIndex],
+            currentEpoch
+          );
+          validators.push(validatorResponse);
+        }
+      }
+      return validators;
+    } else if (filters?.statuses) {
+      const validatorsByStatus = filterStateValidatorsByStatuses(filters.statuses, state, this.chain, currentEpoch);
+      return validatorsByStatus;
+    }
+
     let index = 0;
     const resp: phase0.ValidatorResponse[] = [];
     for (const v of readonlyValues(state.validators)) {
-      resp.push(toValidatorResponse(index, v, state.balances[index], getCurrentEpoch(this.config, state)));
+      resp.push(toValidatorResponse(index, v, state.balances[index], currentEpoch));
       index++;
     }
     return resp;
@@ -68,18 +100,7 @@ export class BeaconStateApi implements IBeaconStateApi {
     if (!state) {
       throw new StateNotFound();
     }
-    let validatorIndex: phase0.ValidatorIndex | undefined;
-    if (typeof validatorId === "number") {
-      if (state.validators.length > validatorId) {
-        validatorIndex = validatorId;
-      }
-    } else {
-      validatorIndex = this.chain.getHeadState().pubkey2index.get(validatorId) ?? undefined;
-      // validator added later than given stateId
-      if (validatorIndex && validatorIndex >= state.validators.length) {
-        validatorIndex = undefined;
-      }
-    }
+    const validatorIndex = getStateValidatorIndex(validatorId, state, this.chain);
     if (validatorIndex == null) {
       throw new ApiError(404, "Validator not found");
     }
@@ -93,7 +114,7 @@ export class BeaconStateApi implements IBeaconStateApi {
 
   async getStateValidatorBalances(
     stateId: StateId,
-    indices?: (phase0.ValidatorIndex | Root)[]
+    indices?: (phase0.ValidatorIndex | BLSPubkey)[]
   ): Promise<phase0.ValidatorBalance[]> {
     const state = await resolveStateId(this.chain, this.db, stateId);
     if (!state) {

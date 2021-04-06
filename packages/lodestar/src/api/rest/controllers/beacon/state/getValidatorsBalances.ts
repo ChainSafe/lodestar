@@ -1,28 +1,23 @@
 import {ValidatorIndex, BLSPubkey} from "@chainsafe/lodestar-types";
 import {StateId} from "../../../../impl/beacon/state";
 import {ApiController} from "../../types";
+import {mapValidatorIndices} from "../../utils";
 
 type Params = {
   stateId: StateId;
 };
 
-type Query = {
+type ValidatorBalancesQuery = {
   id?: string[];
 };
 
-export const getStateValidatorsBalances: ApiController<Query, Params> = {
+export const getStateValidatorsBalances: ApiController<ValidatorBalancesQuery, Params> = {
   url: "/states/:stateId/validator_balances",
 
   handler: async function (req, resp) {
     let indices: (ValidatorIndex | BLSPubkey)[] | undefined;
     if (req.query.id) {
-      indices = req.query.id.map((id) => {
-        if (id.toLowerCase().startsWith("0x")) {
-          return this.config.types.BLSPubkey.fromJson(id);
-        } else {
-          return this.config.types.ValidatorIndex.fromJson(id);
-        }
-      });
+      indices = mapValidatorIndices(this.config, req.query.id);
     }
     const balances = await this.api.beacon.state.getStateValidatorBalances(req.params.stateId, indices);
     return resp.status(200).send({

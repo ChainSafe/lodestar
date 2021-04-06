@@ -60,6 +60,10 @@ describe("validator attestation service", function () {
       logger
     );
     rpcClientStub.validator.getAttesterDuties.resolves([]);
+    const defaultValidator = config.types.phase0.ValidatorResponse.defaultValue();
+    rpcClientStub.beacon.state.getStateValidators.resolves([
+      {...defaultValidator, validator: {...defaultValidator.validator, pubkey: secretKeys[0].toPublicKey().toBytes()}},
+    ]);
     await service.onClockEpoch({epoch: 1});
     expect(rpcClientStub.validator.getAttesterDuties.withArgs(2, [0]).calledOnce).to.be.true;
   });
@@ -83,6 +87,10 @@ describe("validator attestation service", function () {
       pubkey: secretKeys[0].toPublicKey().toBytes(),
     };
     rpcClientStub.validator.getAttesterDuties.resolves([duty]);
+    const defaultValidator = config.types.phase0.ValidatorResponse.defaultValue();
+    rpcClientStub.beacon.state.getStateValidators.resolves([
+      {...defaultValidator, validator: {...defaultValidator.validator, pubkey: secretKeys[0].toPublicKey().toBytes()}},
+    ]);
     await service.onClockEpoch({epoch: 1});
     expect(rpcClientStub.validator.getAttesterDuties.withArgs(2, [0]).calledOnce).to.be.true;
     expect(rpcClientStub.beacon.state.getFork.calledOnce).to.be.true;

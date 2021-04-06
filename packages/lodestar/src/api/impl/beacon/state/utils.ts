@@ -5,10 +5,12 @@ import {fast} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {Epoch, ValidatorIndex, Gwei, Slot} from "@chainsafe/lodestar-types";
+import {ValidatorResponse} from "@chainsafe/lodestar-types/phase0";
 import {fromHexString, readonlyValues} from "@chainsafe/ssz";
 import {IBeaconChain} from "../../../../chain";
 import {StateContextCache} from "../../../../chain/stateCache";
 import {IBeaconDb} from "../../../../db";
+import {getStateValidatorIndex} from "../../utils";
 import {StateId} from "./interface";
 
 export async function resolveStateId(
@@ -161,4 +163,22 @@ async function stateBySlot(
   } else {
     return await db.stateArchive.get(slot);
   }
+}
+
+export function filterStateValidatorsByStatuses(
+  statuses: string[],
+  state: allForks.BeaconState,
+  chain: IBeaconChain,
+  currentEpoch: Epoch
+): ValidatorResponse[] {
+  const responses: ValidatorResponse[] = [];
+  const validators = Array.from(state.validators);
+  const filteredValidators = validators.filter((v) => statuses.includes(getValidatorStatus(v, currentEpoch)));
+  for (const validator of readonlyValues(filteredValidators)) {
+    const validatorIndex = getStateValidatorIndex(validator.pubkey, state, chain);
+    if (validatorIndex && statuses?.includes(getValidatorStatus(validator, currentEpoch))) {
+      responses.push(toValidatorResponse(validatorIndex, validator, state.balances[validatorIndex], currentEpoch));
+    }
+  }
+  return responses;
 }

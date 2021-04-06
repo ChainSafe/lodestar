@@ -1,4 +1,5 @@
 import {BLSPubkey, ValidatorIndex, phase0} from "@chainsafe/lodestar-types";
+import {IValidatorFilters} from "../../util";
 
 export interface IBeaconApi {
   state: IBeaconStateApi;
@@ -11,6 +12,7 @@ export interface IBeaconApi {
 export interface IBeaconStateApi {
   getFork(stateId: "head"): Promise<phase0.Fork | null>;
   getStateValidator(stateId: "head", validatorId: ValidatorIndex | BLSPubkey): Promise<phase0.ValidatorResponse | null>;
+  getStateValidators(stateId: "head", filters?: IValidatorFilters): Promise<phase0.ValidatorResponse[] | null>;
 }
 
 export interface IBeaconBlocksApi {

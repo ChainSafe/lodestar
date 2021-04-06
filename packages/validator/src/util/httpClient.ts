@@ -2,6 +2,13 @@
 import Axios, {AxiosError, AxiosInstance, AxiosRequestConfig, AxiosResponse} from "axios";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import querystring from "querystring";
+import {BLSPubkey, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {ValidatorStatus} from "@chainsafe/lodestar-types/phase0";
+
+export interface IValidatorFilters {
+  indices?: (BLSPubkey | ValidatorIndex)[];
+  statuses?: ValidatorStatus[];
+}
 
 export interface IHttpClientOptions {
   // Add more options if needed

@@ -12,6 +12,7 @@ import {ClockEventType} from "../api/interface/clock";
 import {BeaconEventType} from "../api/interface/events";
 import {ISlashingProtection} from "../slashingProtection";
 import {IAttesterDuty, PublicKeyHex, ValidatorAndSecret} from "../types";
+import {IValidatorFilters} from "../util";
 import {isValidatorAggregator, getAggregatorModulo} from "../util/aggregator";
 import {abortableTimeout} from "../util/misc";
 import {getAggregationBits} from "./utils";
@@ -391,13 +392,15 @@ export class AttestationService {
    * Update the local list of validators based on the current head state.
    */
   private async updateValidators(): Promise<void> {
-    for await (const [pk, v] of this.validators) {
-      if (!v.validator) {
-        try {
-          v.validator = await this.provider.beacon.state.getStateValidator("head", fromHexString(pk));
-        } catch (e) {
-          this.logger.error("Failed to get validator details", e);
-          v.validator = null;
+    const data: IValidatorFilters = {indices: []};
+    for (const [pk] of this.validators) {
+      data.indices?.push(fromHexString(pk));
+    }
+    const validatorResponses = await this.provider.beacon.state.getStateValidators("head", data);
+    if (validatorResponses) {
+      for (const [pk, v] of this.validators) {
+        if (!v.validator) {
+          v.validator = validatorResponses.find((vr) => toHexString(vr.validator.pubkey) === pk) || null;
         }
       }
     }
