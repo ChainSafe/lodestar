@@ -1,5 +1,9 @@
 import {spawn, Pool, Worker} from "threads";
 import {ThreadsWorkerOptions} from "threads/dist/types/master";
+// `threads` library creates self global variable which breaks `timeout-abort-controller` https://github.com/jacobheun/timeout-abort-controller/issues/9
+// @ts-ignore
+// eslint-disable-next-line
+self = undefined;
 import {Implementation, PointFormat, PublicKey} from "@chainsafe/bls";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {BlsWorkReq, WorkerData, WorkResult, BlsWorkCode, WorkResultCode} from "./types";
