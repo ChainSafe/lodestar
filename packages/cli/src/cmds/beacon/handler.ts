@@ -23,11 +23,12 @@ export async function beaconHandler(args: IBeaconArgs & IGlobalArgs): Promise<vo
   const {beaconNodeOptions, config} = await initializeOptionsAndConfig(args);
   await persistOptionsAndConfig(args, beaconNodeOptions, config);
 
+  const lodestarGitData = readLodestarGitData();
   const beaconPaths = getBeaconPaths(args);
   // TODO: Rename db.name to db.path or db.location
   beaconNodeOptions.set({db: {name: beaconPaths.dbDir}});
   // Add metrics metadata to show versioning + network info in Prometheus + Grafana
-  beaconNodeOptions.set({metrics: {metadata: {...readLodestarGitData(), network: args.network}}});
+  beaconNodeOptions.set({metrics: {metadata: {...lodestarGitData, network: args.network}}});
 
   // ENR setup
   const peerId = await readPeerId(beaconPaths.peerIdFile);
@@ -44,6 +45,8 @@ export async function beaconHandler(args: IBeaconArgs & IGlobalArgs): Promise<vo
   onGracefulShutdown(async () => {
     abortController.abort();
   }, logger.info.bind(logger));
+
+  logger.info("Lodestar", {version: lodestarGitData.version, network: args.network});
 
   const db = new BeaconDb({
     config,
