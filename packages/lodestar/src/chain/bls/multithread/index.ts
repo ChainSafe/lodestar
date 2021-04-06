@@ -1,5 +1,4 @@
 import {spawn, Pool, Worker} from "threads";
-import {ThreadsWorkerOptions} from "threads/dist/types/master";
 // `threads` library creates self global variable which breaks `timeout-abort-controller` https://github.com/jacobheun/timeout-abort-controller/issues/9
 // @ts-ignore
 // eslint-disable-next-line
@@ -29,7 +28,7 @@ export class BlsMultiThreadNaive {
 
     const workerData: WorkerData = {implementation};
     this.pool = Pool(() =>
-      spawn(new Worker("./worker", {workerData} as ThreadsWorkerOptions), {
+      spawn(new Worker("./worker", {workerData} as ConstructorParameters<typeof Worker>[1]), {
         // A Lodestar Node may do very expensive task at start blocking the event loop and causing
         // the initialization to timeout. The number below is big enough to almost disable the timeout
         timeout: 5 * 60 * 1000,
