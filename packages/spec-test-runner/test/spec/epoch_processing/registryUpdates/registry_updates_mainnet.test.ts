@@ -17,8 +17,8 @@ describeDirectorySpecTest<IStateTestCase, phase0.BeaconState>(
   },
   {
     inputTypes: {
-      pre: InputType.SSZ,
-      post: InputType.SSZ,
+      pre: InputType.SSZ_SNAPPY,
+      post: InputType.SSZ_SNAPPY,
     },
     sszTypes: {
       pre: config.types.phase0.BeaconState,

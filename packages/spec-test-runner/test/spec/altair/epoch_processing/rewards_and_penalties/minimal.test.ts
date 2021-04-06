@@ -10,7 +10,7 @@ import {IAltairStateTestCase} from "../../stateTestCase";
 
 describeDirectorySpecTest<IAltairStateTestCase, altairTypes.BeaconState>(
   "altair epoch rewards and penalties minimal",
-  join(SPEC_TEST_LOCATION, "tests/minimal/lightclient_patch/epoch_processing/rewards_and_penalties/pyspec_tests"),
+  join(SPEC_TEST_LOCATION, "tests/minimal/altair/epoch_processing/rewards_and_penalties/pyspec_tests"),
   (testcase) => {
     const state = testcase.pre;
     altair.processRewardsAndPenalties(config, state);
@@ -18,8 +18,8 @@ describeDirectorySpecTest<IAltairStateTestCase, altairTypes.BeaconState>(
   },
   {
     inputTypes: {
-      pre: InputType.SSZ,
-      post: InputType.SSZ,
+      pre: InputType.SSZ_SNAPPY,
+      post: InputType.SSZ_SNAPPY,
     },
     sszTypes: {
       pre: config.types.altair.BeaconState,

@@ -21,7 +21,7 @@ describeDirectorySpecTest<IGenesisValidityTestCase, boolean>(
   {
     inputTypes: {
       is_valid: InputType.YAML,
-      genesis: InputType.SSZ,
+      genesis: InputType.SSZ_SNAPPY,
     },
     // @ts-ignore
     sszTypes: {

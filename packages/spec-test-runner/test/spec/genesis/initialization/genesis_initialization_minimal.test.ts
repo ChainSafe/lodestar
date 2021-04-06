@@ -29,8 +29,10 @@ describeDirectorySpecTest<IGenesisInitSpecTest, phase0.BeaconState>(
     }
     return initializeBeaconStateFromEth1(
       config,
-      testcase.eth1_block_hash,
-      Number(testcase.eth1_timestamp),
+      // @ts-ignore
+      config.types.Root.fromJson(testcase.eth1.eth1BlockHash),
+      // @ts-ignore
+      Number(testcase.eth1.eth1Timestamp),
       deposits
     ) as phase0.BeaconState;
   },
@@ -38,7 +40,7 @@ describeDirectorySpecTest<IGenesisInitSpecTest, phase0.BeaconState>(
     // @ts-ignore
     inputTypes: {
       meta: InputType.YAML,
-      eth1_timestamp: InputType.YAML,
+      eth1: InputType.YAML,
     },
     // @ts-ignore
     sszTypes: {

@@ -24,11 +24,11 @@ describeDirectorySpecTest<IProcessSlotsTestCase, phase0.BeaconState>(
     // @ts-ignore
     inputTypes: {
       pre: {
-        type: InputType.SSZ,
+        type: InputType.SSZ_SNAPPY,
         treeBacked: true,
       },
       post: {
-        type: InputType.SSZ,
+        type: InputType.SSZ_SNAPPY,
         treeBacked: true,
       },
       slots: InputType.YAML,
