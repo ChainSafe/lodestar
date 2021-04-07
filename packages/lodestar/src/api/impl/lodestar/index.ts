@@ -1,10 +1,23 @@
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {Epoch} from "@chainsafe/lodestar-types";
+import {IApiModules} from "..";
+import {getLatestWeakSubjectivityCheckpointEpoch} from "../../../../../beacon-state-transition/lib/fast/util/weakSubjectivity";
+import {IBeaconChain} from "../../../chain";
+
 /* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
 export interface ILodestarApi {
   getWtfNode(): string;
+  getLatestWeakSubjectivityCheckpointEpoch(): Promise<Epoch>;
 }
 
 export class LodestarApi implements ILodestarApi {
-  constructor() {
+  private readonly config: IBeaconConfig;
+  private readonly chain: IBeaconChain;
+
+  constructor(modules: Pick<IApiModules, "config" | "chain">) {
+    this.config = modules.config;
+    this.chain = modules.chain;
+
     // Allows to load wtfnode listeners immedeatelly. Usefull when dockerized,
     // so after an unexpected restart wtfnode becomes properly loaded again
     if (process?.env?.START_WTF_NODE) {
@@ -33,5 +46,10 @@ export class LodestarApi implements ILodestarApi {
     wtfnode.setLogger("error", logger);
     wtfnode.dump();
     return logs.join("\n");
+  }
+
+  async getLatestWeakSubjectivityCheckpointEpoch(): Promise<Epoch> {
+    const state = this.chain.getHeadState();
+    return getLatestWeakSubjectivityCheckpointEpoch(this.config, state);
   }
 }

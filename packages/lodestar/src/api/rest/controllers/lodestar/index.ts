@@ -8,3 +8,11 @@ export const getWtfNode: ApiController<DefaultQuery> = {
   },
   opts: {},
 };
+
+export const getLatestWeakSubjectivityCheckpointEpoch: ApiController<DefaultQuery> = {
+  url: "/ws_epoch/",
+  handler: async function (req, resp) {
+    return resp.status(200).send(this.api.lodestar.getLatestWeakSubjectivityCheckpointEpoch);
+  },
+  opts: {},
+};
