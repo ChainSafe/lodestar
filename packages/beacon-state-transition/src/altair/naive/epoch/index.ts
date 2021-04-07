@@ -5,6 +5,8 @@ import {processRewardsAndPenalties} from "./rewards_and_penalties";
 import {phase0} from "../../..";
 import {processSyncCommitteeUpdates} from "./sync_committee";
 import {processParticipationFlagUpdates} from "./flag";
+import {processInactivityUpdates} from "./inactivity_updates";
+import {processSlashings} from "./slashings";
 
 export * from "./justification_finalization";
 export * from "./rewards_and_penalties";
@@ -18,6 +20,8 @@ export function processEpoch(
   // Justification
   processJustificationAndFinalization(config, state);
 
+  processInactivityUpdates(config, state);
+
   // Rewards and penalties
   processRewardsAndPenalties(config, state);
 
@@ -25,7 +29,7 @@ export function processEpoch(
   phase0.processRegistryUpdates(config, state);
 
   // Slashings
-  phase0.processSlashings(config, state);
+  processSlashings(config, state);
 
   phase0.processEth1DataReset(config, state);
 

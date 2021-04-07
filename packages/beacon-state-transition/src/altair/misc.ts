@@ -1,25 +1,26 @@
-import {ValidatorFlag} from "@chainsafe/lodestar-types";
+import {ParticipationFlags} from "@chainsafe/lodestar-types";
 import {
-  TIMELY_HEAD_FLAG,
-  TIMELY_HEAD_NUMERATOR,
-  TIMELY_SOURCE_NUMERATOR,
-  TIMELY_TARGET_NUMERATOR,
-  TIMELY_SOURCE_FLAG,
-  TIMELY_TARGET_FLAG,
+  TIMELY_HEAD_FLAG_INDEX,
+  TIMELY_HEAD_WEIGHT,
+  TIMELY_SOURCE_FLAG_INDEX,
+  TIMELY_SOURCE_WEIGHT,
+  TIMELY_TARGET_FLAG_INDEX,
+  TIMELY_TARGET_WEIGHT,
 } from "./constants";
 
-export function addValidatorFlags(flags: ValidatorFlag, add: ValidatorFlag): ValidatorFlag {
-  return flags | add;
-}
-
-export function hasValidatorFlags(flags: ValidatorFlag, has: ValidatorFlag): boolean {
-  return (flags & has) == has;
-}
-
-export function getFlagsAndNumerators(): [ValidatorFlag, number][] {
+export function getFlagIndicesAndWeights(): [number, bigint][] {
   return [
-    [TIMELY_HEAD_FLAG, TIMELY_HEAD_NUMERATOR],
-    [TIMELY_SOURCE_FLAG, TIMELY_SOURCE_NUMERATOR],
-    [TIMELY_TARGET_FLAG, TIMELY_TARGET_NUMERATOR],
+    [TIMELY_HEAD_FLAG_INDEX, TIMELY_HEAD_WEIGHT],
+    [TIMELY_SOURCE_FLAG_INDEX, TIMELY_SOURCE_WEIGHT],
+    [TIMELY_TARGET_FLAG_INDEX, TIMELY_TARGET_WEIGHT],
   ];
+}
+export function addFlag(flags: ParticipationFlags, flagIndex: number): ParticipationFlags {
+  const flag = 2 ** flagIndex;
+  return flags | flag;
+}
+
+export function hasFlag(flags: ParticipationFlags, flagIndex: number): boolean {
+  const flag = 2 ** flagIndex;
+  return (flags & flag) == flag;
 }

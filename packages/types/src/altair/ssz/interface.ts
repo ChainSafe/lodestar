@@ -9,6 +9,7 @@ export type IAltairSSZTypes = Omit<
 > & {
   // altair
   SyncCommittee: ContainerType<altair.SyncCommittee>;
+  SyncAggregate: ContainerType<altair.SyncAggregate>;
   BeaconBlockBody: ContainerType<altair.BeaconBlockBody>;
   BeaconBlock: ContainerType<altair.BeaconBlock>;
   SignedBeaconBlock: ContainerType<altair.SignedBeaconBlock>;

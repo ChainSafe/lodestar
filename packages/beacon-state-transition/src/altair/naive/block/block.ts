@@ -1,11 +1,11 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {altair, phase0 as phase0Types} from "@chainsafe/lodestar-types";
-import {phase0} from "../../..";
-import {processSyncCommittee} from "..";
-import {processAttesterSlashing} from "./attesterSlashing";
-import {processProposerSlashing} from "./proposerSlashing";
 import {List} from "@chainsafe/ssz";
 import {assert} from "@chainsafe/lodestar-utils";
+import {phase0} from "../../..";
+import {processSyncCommittee} from "./sync_committee";
+import {processAttesterSlashing} from "./attesterSlashing";
+import {processProposerSlashing} from "./proposerSlashing";
 import {processAttestation} from "./attestation";
 import {processDeposit} from "./deposit";
 
@@ -19,7 +19,7 @@ export function processBlock(
   phase0.processRandao(config, state, block.body);
   phase0.processEth1Data(config, state, block.body);
   processOperations(config, state, block.body, verifySignatures);
-  processSyncCommittee(config, state, block, verifySignatures);
+  processSyncCommittee(config, state, block.body.syncAggregate, verifySignatures);
 }
 
 type Operation =

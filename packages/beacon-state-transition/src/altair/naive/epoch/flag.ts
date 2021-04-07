@@ -1,5 +1,5 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {altair, ValidatorFlag} from "@chainsafe/lodestar-types";
+import {altair, ParticipationFlags} from "@chainsafe/lodestar-types";
 import {List} from "@chainsafe/ssz";
 
 /**
@@ -7,5 +7,5 @@ import {List} from "@chainsafe/ssz";
  */
 export function processParticipationFlagUpdates(config: IBeaconConfig, state: altair.BeaconState): void {
   state.previousEpochParticipation = state.currentEpochParticipation;
-  state.currentEpochParticipation = Array.from({length: state.validators.length}, () => 0) as List<ValidatorFlag>;
+  state.currentEpochParticipation = Array.from({length: state.validators.length}, () => 0) as List<ParticipationFlags>;
 }

@@ -1,7 +1,7 @@
 import {IBeaconParams} from "@chainsafe/lodestar-params";
 import {IAllForksSSZTypes, IBeaconSSZTypes, Slot, Version} from "@chainsafe/lodestar-types";
 
-export type IForkName = "phase0" | "altair" | "phase1";
+export type IForkName = "phase0" | "altair";
 
 export interface IForkInfo {
   name: IForkName;

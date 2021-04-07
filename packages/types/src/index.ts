@@ -8,11 +8,6 @@ export * from "./altair/ssz";
 // Export namespaced phase0 types
 export * as altair from "./altair";
 
-// Export IPhase1SSZTypes interface & constants
-export * from "./phase1/ssz";
-// Export namespaced phase0 types
-export * as phase1 from "./phase1";
-
 // Export union types
 export * as allForks from "./allForks";
 // Export IAllForksSSZTypes

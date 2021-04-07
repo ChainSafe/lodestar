@@ -1,12 +1,15 @@
 import {BitVector, List} from "@chainsafe/ssz";
-import {ValidatorFlag} from "../..";
+import {Number64, ParticipationFlags} from "../../primitive/types";
 import * as phase0 from "../../phase0";
 import {SyncCommittee} from "./committee";
 
-export interface BeaconBlockBody extends phase0.BeaconBlockBody {
-  // Sync committee aggregate signature
+export interface SyncAggregate {
   syncCommitteeBits: BitVector;
   syncCommitteeSignature: phase0.BLSSignature;
+}
+
+export interface BeaconBlockBody extends phase0.BeaconBlockBody {
+  syncAggregate: SyncAggregate;
 }
 
 export interface BeaconBlock extends phase0.BeaconBlock {
@@ -20,9 +23,11 @@ export interface SignedBeaconBlock extends phase0.SignedBeaconBlock {
 export interface BeaconState
   extends Omit<phase0.BeaconState, "previousEpochAttestations" | "currentEpochAttestations"> {
   // Participation
-  previousEpochParticipation: List<ValidatorFlag>;
-  currentEpochParticipation: List<ValidatorFlag>;
-  // Sync committees
+  previousEpochParticipation: List<ParticipationFlags>;
+  currentEpochParticipation: List<ParticipationFlags>;
+  // Inactivity
+  inactivityScores: List<Number64>;
+  // Sync
   currentSyncCommittee: SyncCommittee;
   nextSyncCommittee: SyncCommittee;
 }

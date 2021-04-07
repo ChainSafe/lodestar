@@ -22,29 +22,20 @@ export function createIBeaconConfig(params: IBeaconParams): IBeaconConfig {
           slot: params.ALTAIR_FORK_SLOT,
           version: params.ALTAIR_FORK_VERSION,
         },
-        phase1: {
-          name: "phase1",
-          slot: params.PHASE_1_FORK_SLOT,
-          version: params.PHASE_1_FORK_VERSION,
-        },
       };
     },
     getForkName(slot: Slot): IForkName {
       if (slot < params.ALTAIR_FORK_SLOT) {
         return "phase0";
-      } else if (slot < params.PHASE_1_FORK_SLOT) {
-        return "altair";
       } else {
-        return "phase1";
+        return "altair";
       }
     },
     getForkVersion(slot: Slot): Version {
       if (slot < params.ALTAIR_FORK_SLOT) {
         return params.GENESIS_FORK_VERSION;
-      } else if (slot < params.PHASE_1_FORK_SLOT) {
-        return params.ALTAIR_FORK_VERSION;
       } else {
-        return params.PHASE_1_FORK_VERSION;
+        return params.ALTAIR_FORK_VERSION;
       }
     },
     getTypes(slot: Slot): IAllForksSSZTypes {

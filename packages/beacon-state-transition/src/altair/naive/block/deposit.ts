@@ -54,6 +54,7 @@ export function processDeposit(config: IBeaconConfig, state: altair.BeaconState,
     state.balances.push(amount);
     state.previousEpochParticipation.push(0);
     state.currentEpochParticipation.push(0);
+    state.inactivityScores.push(0);
   } else {
     // Increase balance by deposit amount
     increaseBalance(state, validatorIndex, amount);

@@ -36,15 +36,24 @@ export const SyncCommittee: LightClientTypesGenerator<ContainerType<altair.SyncC
   });
 };
 
+export const SyncAggregate: LightClientTypesGenerator<ContainerType<altair.SyncAggregate>> = (params, phase0Types) => {
+  return new ContainerType({
+    fields: {
+      syncCommitteeBits: new BitVectorType({length: params.SYNC_COMMITTEE_SIZE}),
+      syncCommitteeSignature: phase0Types.BLSSignature,
+    },
+  });
+};
+
 export const BeaconBlockBody: LightClientTypesGenerator<ContainerType<altair.BeaconBlockBody>> = (
   params,
-  phase0Types
+  phase0Types,
+  altairTypes
 ) => {
   return new ContainerType({
     fields: {
       ...phase0Types.BeaconBlockBody.fields,
-      syncCommitteeBits: new BitVectorType({length: params.SYNC_COMMITTEE_SIZE}),
-      syncCommitteeSignature: phase0Types.BLSSignature,
+      syncAggregate: altairTypes.SyncAggregate,
     },
   });
 };
@@ -122,13 +131,13 @@ export const BeaconState: LightClientTypesGenerator<ContainerType<altair.BeaconS
         elementType: phase0Types.Gwei,
         length: params.EPOCHS_PER_SLASHINGS_VECTOR,
       }),
-      // Attestations
+      // Participation
       previousEpochParticipation: new ListType({
-        elementType: phase0Types.ValidatorFlag,
+        elementType: phase0Types.ParticipationFlags,
         limit: params.VALIDATOR_REGISTRY_LIMIT,
       }),
       currentEpochParticipation: new ListType({
-        elementType: phase0Types.ValidatorFlag,
+        elementType: phase0Types.ParticipationFlags,
         limit: params.VALIDATOR_REGISTRY_LIMIT,
       }),
       // Finality
@@ -138,7 +147,12 @@ export const BeaconState: LightClientTypesGenerator<ContainerType<altair.BeaconS
       previousJustifiedCheckpoint: phase0Types.Checkpoint,
       currentJustifiedCheckpoint: phase0Types.Checkpoint,
       finalizedCheckpoint: phase0Types.Checkpoint,
-
+      // Inactivity
+      inactivityScores: new ListType({
+        elementType: phase0Types.Number64,
+        limit: params.VALIDATOR_REGISTRY_LIMIT,
+      }),
+      // Sync
       currentSyncCommittee: altairTypes.SyncCommittee,
       nextSyncCommittee: altairTypes.SyncCommittee,
     },

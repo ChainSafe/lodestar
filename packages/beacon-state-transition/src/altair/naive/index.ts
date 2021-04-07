@@ -8,7 +8,7 @@ import {processSlots} from "./slot";
 export * from "./block";
 export * from "./epoch";
 export * from "./slot";
-export * from "./sync_committee";
+export * from "./block/sync_committee";
 export * from "./upgrade";
 
 /**
