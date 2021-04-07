@@ -68,8 +68,6 @@ export async function validateGossipAggregateAndProof(
     });
   }
 
-  // TODO: check pool of aggregates if already seen (not a dos vector check)
-
   await validateAggregateAttestation(config, chain, signedAggregateAndProof, attestationJob);
 }
 

@@ -3,6 +3,8 @@
  *
  */
 import {phase0} from "@chainsafe/lodestar-types";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {toHexString} from "@chainsafe/ssz";
 
 /**
  * USed to verify gossip attestation. When there are multiple
@@ -10,10 +12,11 @@ import {phase0} from "@chainsafe/lodestar-types";
  */
 export class SeenAttestationCache {
   private cache: Map<string, boolean>;
-
+  private readonly config: IBeaconConfig;
   private readonly maxSize: number;
 
-  constructor(maxSize = 1000) {
+  constructor(config: IBeaconConfig, maxSize = 1000) {
+    this.config = config;
     this.maxSize = maxSize;
     this.cache = new Map<string, boolean>();
   }
@@ -59,8 +62,10 @@ export class SeenAttestationCache {
     );
   }
 
-  // serialize aggregate key as concatenation of interested properties
-  private aggregateAndProofKey(aggreate: phase0.AggregateAndProof): string {
-    return "" + aggreate.aggregatorIndex + aggreate.aggregate.data.target.epoch;
+  /**
+   * We're only interested in the Attestation inside AggregateAndProof.
+   */
+  private aggregateAndProofKey(value: phase0.AggregateAndProof): string {
+    return toHexString(this.config.types.phase0.Attestation.hashTreeRoot(value.aggregate));
   }
 }
