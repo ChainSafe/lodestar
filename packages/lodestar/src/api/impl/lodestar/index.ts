@@ -1,6 +1,5 @@
-import {CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {allForks, Epoch} from "@chainsafe/lodestar-types";
+import {Epoch} from "@chainsafe/lodestar-types";
 import {IApiModules} from "..";
 import {getLatestWeakSubjectivityCheckpointEpoch} from "../../../../../beacon-state-transition/lib/fast/util/weakSubjectivity";
 import {IBeaconChain} from "../../../chain";
@@ -51,6 +50,6 @@ export class LodestarApi implements ILodestarApi {
 
   async getLatestWeakSubjectivityCheckpointEpoch(): Promise<Epoch> {
     const state = this.chain.getHeadState();
-    return getLatestWeakSubjectivityCheckpointEpoch(this.config, state as CachedBeaconState<allForks.BeaconState>);
+    return getLatestWeakSubjectivityCheckpointEpoch(this.config, state);
   }
 }
