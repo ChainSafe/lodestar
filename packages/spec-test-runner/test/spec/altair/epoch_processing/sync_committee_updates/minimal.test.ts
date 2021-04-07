@@ -10,7 +10,10 @@ import {IAltairStateTestCase} from "../../stateTestCase";
 
 describeDirectorySpecTest<IAltairStateTestCase, altairTypes.BeaconState>(
   "altair epoch sync committee updates minimal",
-  join(SPEC_TEST_LOCATION, "tests/minimal/altair/epoch_processing/sync_committee_updates/pyspec_tests/sync_committees_progress"),
+  join(
+    SPEC_TEST_LOCATION,
+    "tests/minimal/altair/epoch_processing/sync_committee_updates/pyspec_tests/sync_committees_progress"
+  ),
   (testcase) => {
     const state = testcase.pre;
     altair.processSyncCommitteeUpdates(config, state);
