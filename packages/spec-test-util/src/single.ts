@@ -5,6 +5,7 @@ import {basename, join, parse} from "path";
 import {Type, CompositeType} from "@chainsafe/ssz";
 // @ts-ignore
 import {uncompress} from "snappyjs";
+declare function uncompress(data: Buffer): Buffer;
 
 import {isDirectory, loadYamlFile} from "./util";
 
