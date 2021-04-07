@@ -4,7 +4,7 @@ import {join} from "path";
 
 import {ContainerType, Type, Json} from "@chainsafe/ssz";
 import {Boolean, Number64} from "@chainsafe/lodestar-types/lib/primitive/ssz";
-import {describeDirectorySpecTest} from "../../../src/single";
+import {describeDirectorySpecTest, InputType} from "../../../src/single";
 import {loadYamlFile} from "../../../src/util";
 
 export interface ISimpleStruct {
@@ -45,6 +45,10 @@ describeDirectorySpecTest<ISimpleCase, number>(
     return testCase.input.number;
   },
   {
+    inputTypes: {
+      input: InputType.YAML,
+      output: InputType.YAML,
+    },
     sszTypes: {
       input: inputSchema,
       output: Number64,
