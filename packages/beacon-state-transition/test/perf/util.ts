@@ -4,7 +4,7 @@ import {init} from "@chainsafe/bls";
 import {fromHexString, List, TreeBacked} from "@chainsafe/ssz";
 import {getBeaconProposerIndex} from "../../src/util/proposer";
 import {profilerLogger} from "../utils/logger";
-import {interopSecretKeys} from "../../src/util/interop";
+import {interopPubkeysCached} from "../utils/interop";
 
 let archivedState: TreeBacked<phase0.BeaconState> | null = null;
 let signedBlock: TreeBacked<phase0.SignedBeaconBlock> | null = null;
@@ -53,19 +53,17 @@ export async function generatePerformanceState(): Promise<TreeBacked<phase0.Beac
     state.eth1DepositIndex = 114038;
     const numValidators = 114038;
     const numKeyPairs = 100;
-    const secretKeys = interopSecretKeys(numKeyPairs);
-    state.validators = (Array.from({length: numValidators}, (_, i) => {
-      return {
-        pubkey: secretKeys[i % numKeyPairs].toPublicKey().toBytes(),
-        withdrawalCredentials: Buffer.alloc(32, i),
-        effectiveBalance: BigInt(31000000000),
-        slashed: false,
-        activationEligibilityEpoch: 0,
-        activationEpoch: 0,
-        exitEpoch: Infinity,
-        withdrawableEpoch: Infinity,
-      };
-    }) as unknown) as List<phase0.Validator>;
+    const pubkeys = interopPubkeysCached(numKeyPairs);
+    state.validators = (Array.from({length: numValidators}, (_, i) => ({
+      pubkey: pubkeys[i % numKeyPairs],
+      withdrawalCredentials: Buffer.alloc(32, i),
+      effectiveBalance: BigInt(31000000000),
+      slashed: false,
+      activationEligibilityEpoch: 0,
+      activationEpoch: 0,
+      exitEpoch: Infinity,
+      withdrawableEpoch: Infinity,
+    })) as phase0.Validator[]) as List<phase0.Validator>;
     state.balances = Array.from({length: numValidators}, () => BigInt(31217089836)) as List<Gwei>;
     state.randaoMixes = Array.from({length: config.params.EPOCHS_PER_HISTORICAL_VECTOR}, (_, i) => Buffer.alloc(32, i));
     // no slashings
