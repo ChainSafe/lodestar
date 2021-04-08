@@ -50,4 +50,9 @@ describe("Process Blocks Performance Test", function () {
     expect(Date.now() - start).lt(200);
     logger.profile(`Process block ${signedBlock.message.slot} with ${numValidatorExits} validator exits`);
   });
+
+  // Uncomment to hang test forever to view detailed source info in Chrome devtools profiler
+  // after(async () => {
+  //   await new Promise((r) => setTimeout(r, 1e8));
+  // });
 });
