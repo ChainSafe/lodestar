@@ -1,8 +1,8 @@
 import {config} from "@chainsafe/lodestar-config/mainnet";
-import {List, TreeBacked} from "@chainsafe/ssz";
+import {List} from "@chainsafe/ssz";
 import {allForks} from "@chainsafe/lodestar-types";
 import {expect} from "chai";
-import {generatePerformanceBlock, generatePerformanceState, initBLS} from "../../../util";
+import {generatePerformanceBlock, generatePerfTestCachedBeaconState, initBLS} from "../../../util";
 import {phase0, fast} from "../../../../../src";
 import {profilerLogger} from "../../../../utils/logger";
 
@@ -12,8 +12,7 @@ describe("Process Blocks Performance Test", function () {
   const logger = profilerLogger();
   before(async () => {
     await initBLS();
-    const origState = generatePerformanceState();
-    state = fast.createCachedBeaconState(config, origState as TreeBacked<allForks.BeaconState>);
+    state = generatePerfTestCachedBeaconState();
   });
 
   it("should process block", async () => {

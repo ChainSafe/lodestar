@@ -1,8 +1,10 @@
 import {config} from "@chainsafe/lodestar-config/mainnet";
-import {Gwei, phase0} from "@chainsafe/lodestar-types";
-import {init} from "@chainsafe/bls";
+import {Gwei, phase0, allForks} from "@chainsafe/lodestar-types";
+import bls, {CoordType, init, PublicKey} from "@chainsafe/bls";
 import {fromHexString, List, TreeBacked} from "@chainsafe/ssz";
 import {getBeaconProposerIndex} from "../../src/util/proposer";
+import {fast} from "../../src";
+import {PubkeyIndexMap} from "../../src/fast";
 import {profilerLogger} from "../utils/logger";
 import {interopPubkeysCached} from "../utils/interop";
 
@@ -13,8 +15,46 @@ const logger = profilerLogger();
 /**
  * This is generated from Medalla state 756416
  */
-export function generatePerformanceState(): TreeBacked<phase0.BeaconState> {
+const numValidators = 114038;
+const numKeyPairs = 100;
+
+// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
+function getPubkeys() {
+  const pubkeysMod = interopPubkeysCached(numKeyPairs);
+  const pubkeysModObj = pubkeysMod.map((pk) => bls.PublicKey.fromBytes(pk, CoordType.jacobian));
+  const pubkeys = Array.from({length: numValidators}, (_, i) => pubkeysMod[i % numKeyPairs]);
+  return {pubkeysMod, pubkeysModObj, pubkeys};
+}
+
+export function generatePerfTestCachedBeaconState(): fast.CachedBeaconState<allForks.BeaconState> {
+  // Generate only some publicKeys
+  const {pubkeys, pubkeysMod, pubkeysModObj} = getPubkeys();
+  const origState = generatePerformanceState(pubkeys);
+
+  const cachedState = fast.createCachedBeaconState(config, origState, {skipSyncPubkeys: true});
+  // Manually sync pubkeys to prevent doing BLS opts 110_000 times
+  const pubkey2index = new PubkeyIndexMap();
+  const index2pubkey = [] as PublicKey[];
+  const newCount = cachedState.validators.length;
+  for (let i = 0; i < newCount; i++) {
+    const pubkey = pubkeysMod[i % numKeyPairs];
+    const pubkeyObj = pubkeysModObj[i % numKeyPairs];
+    pubkey2index.set(pubkey, i);
+    index2pubkey.push(pubkeyObj);
+  }
+  cachedState.pubkey2index = pubkey2index;
+  cachedState.index2pubkey = index2pubkey;
+
+  return cachedState as fast.CachedBeaconState<allForks.BeaconState>;
+}
+
+/**
+ * This is generated from Medalla state 756416
+ */
+export function generatePerformanceState(pubkeysArg?: Uint8Array[]): TreeBacked<phase0.BeaconState> {
   if (!archivedState) {
+    const pubkeys = pubkeysArg || getPubkeys().pubkeys;
+
     const state = config.types.phase0.BeaconState.defaultValue();
     state.genesisTime = 1596546008;
     state.genesisValidatorsRoot = fromHexString("0x04700007fabc8282644aed6d1c7c9e21d38a03a0c4ba193f3afe428824b3a673");
@@ -35,7 +75,7 @@ export function generatePerformanceState(): TreeBacked<phase0.BeaconState> {
     state.stateRoots = Array.from({length: config.params.SLOTS_PER_HISTORICAL_ROOT}, (_, i) => Buffer.alloc(32, i));
     // historicalRoots
     state.eth1Data = {
-      depositCount: 114038,
+      depositCount: pubkeys.length,
       depositRoot: fromHexString("0xcb1f89a924cfd31224823db5a41b1643f10faa7aedf231f1e28887f6ee98c047"),
       blockHash: fromHexString("0x701fb2869ce16d0f1d14f6705725adb0dec6799da29006dfc6fff83960298f21"),
     };
@@ -50,12 +90,9 @@ export function generatePerformanceState(): TreeBacked<phase0.BeaconState> {
         };
       }
     ) as unknown) as List<phase0.Eth1Data>;
-    state.eth1DepositIndex = 114038;
-    const numValidators = 114038;
-    const numKeyPairs = 100;
-    const pubkeys = interopPubkeysCached(numKeyPairs);
-    state.validators = (Array.from({length: numValidators}, (_, i) => ({
-      pubkey: pubkeys[i % numKeyPairs],
+    state.eth1DepositIndex = pubkeys.length;
+    state.validators = pubkeys.map((_, i) => ({
+      pubkey: pubkeys[i],
       withdrawalCredentials: Buffer.alloc(32, i),
       effectiveBalance: BigInt(31000000000),
       slashed: false,
@@ -63,8 +100,8 @@ export function generatePerformanceState(): TreeBacked<phase0.BeaconState> {
       activationEpoch: 0,
       exitEpoch: Infinity,
       withdrawableEpoch: Infinity,
-    })) as phase0.Validator[]) as List<phase0.Validator>;
-    state.balances = Array.from({length: numValidators}, () => BigInt(31217089836)) as List<Gwei>;
+    })) as List<phase0.Validator>;
+    state.balances = Array.from({length: pubkeys.length}, () => BigInt(31217089836)) as List<Gwei>;
     state.randaoMixes = Array.from({length: config.params.EPOCHS_PER_HISTORICAL_VECTOR}, (_, i) => Buffer.alloc(32, i));
     // no slashings
     // no attestations
