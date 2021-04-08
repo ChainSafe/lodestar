@@ -1,5 +1,5 @@
 import {phase0} from "@chainsafe/lodestar-types";
-import {bigIntSqrt, bigIntMax, intDiv} from "@chainsafe/lodestar-utils";
+import {bigIntSqrt, bigIntMax} from "@chainsafe/lodestar-utils";
 import {BASE_REWARDS_PER_EPOCH as BASE_REWARDS_PER_EPOCH_CONST} from "../../../constants";
 
 import {
@@ -48,13 +48,13 @@ export function getAttestationDeltas(
   for (const [i, status] of process.statuses.entries()) {
     const effBalance = status.validator.effectiveBalance;
     const baseReward = Number((effBalance * BASE_REWARD_FACTOR) / balanceSqRoot / BASE_REWARDS_PER_EPOCH);
-    const proposerReward = intDiv(baseReward, params.PROPOSER_REWARD_QUOTIENT);
+    const proposerReward = Math.floor(baseReward / params.PROPOSER_REWARD_QUOTIENT);
 
     // inclusion speed bonus
     if (hasMarkers(status.flags, FLAG_PREV_SOURCE_ATTESTER | FLAG_UNSLASHED)) {
       rewards[status.proposerIndex] += proposerReward;
       const maxAttesterReward = baseReward - proposerReward;
-      rewards[i] += intDiv(maxAttesterReward, status.inclusionDelay);
+      rewards[i] += Math.floor(maxAttesterReward / status.inclusionDelay);
     }
     if (hasMarkers(status.flags, FLAG_ELIGIBLE_ATTESTER)) {
       // expected FFG source

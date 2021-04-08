@@ -5,7 +5,7 @@
 import {hash} from "@chainsafe/ssz";
 import {Epoch, Bytes32, DomainType, allForks} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {assert, bytesToBigInt, intToBytes, intDiv} from "@chainsafe/lodestar-utils";
+import {assert, bytesToBigInt, intToBytes} from "@chainsafe/lodestar-utils";
 
 /**
  * Return the shuffled validator index corresponding to ``seed`` (and ``index_count``).
@@ -26,8 +26,8 @@ export function computeShuffledIndex(config: IBeaconConfig, index: number, index
     );
     const flip = (pivot + indexCount - permuted) % indexCount;
     const position = Math.max(permuted, flip);
-    const source = hash(Buffer.concat([_seed, intToBytes(i, 1), intToBytes(intDiv(position, 256), 4)]));
-    const byte = source[intDiv(position % 256, 8)];
+    const source = hash(Buffer.concat([_seed, intToBytes(i, 1), intToBytes(Math.floor(position / 256), 4)]));
+    const byte = source[Math.floor((position % 256) / 8)];
     const bit = (byte >> position % 8) % 2;
     permuted = bit ? flip : permuted;
   }
