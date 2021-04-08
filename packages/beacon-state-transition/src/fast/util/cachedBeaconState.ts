@@ -1,4 +1,5 @@
 import {
+  BasicListType,
   CompositeListType,
   CompositeValue,
   ContainerType,
@@ -6,6 +7,7 @@ import {
   isTreeBacked,
   ITreeBacked,
   List,
+  readonlyValues,
   TreeBacked,
 } from "@chainsafe/ssz";
 import {allForks} from "@chainsafe/lodestar-types";
@@ -15,6 +17,7 @@ import {MutableVector} from "@chainsafe/persistent-ts";
 import {createFlat} from "./flat";
 import {createEpochContext, EpochContext} from "./epochContext";
 import {CachedValidatorList, CachedValidatorListProxyHandler} from "./cachedValidatorList";
+import {CachedBalanceList, CachedBalanceListProxyHandler} from "./cachedBalanceList";
 
 /**
  * `BeaconState` with various caches
@@ -40,10 +43,11 @@ export function createCachedBeaconState<T extends allForks.BeaconState>(
   config: IBeaconConfig,
   state: TreeBacked<T>
 ): CachedBeaconState<T> {
-  const cachedValidators = MutableVector.from(Array.from(state.validators, (v) => createFlat(v)));
+  const cachedValidators = MutableVector.from(Array.from(readonlyValues(state.validators), (v) => createFlat(v)));
+  const cachedBalances = MutableVector.from(readonlyValues(state.balances));
   const epochCtx = createEpochContext(config, state, cachedValidators);
   return new Proxy(
-    new BeaconStateContext(state.type as ContainerType<T>, state.tree, cachedValidators, epochCtx),
+    new BeaconStateContext(state.type as ContainerType<T>, state.tree, cachedValidators, cachedBalances, epochCtx),
     (CachedBeaconStateProxyHandler as unknown) as ProxyHandler<BeaconStateContext<T>>
   ) as CachedBeaconState<T>;
 }
@@ -58,33 +62,47 @@ export class BeaconStateContext<T extends allForks.BeaconState> {
   tree: Tree;
   // return a proxy to CachedValidatorList
   validators: CachedValidatorList<T["validators"][number]> & T["validators"];
-  // immutable and shared across BeaconStates for most of the validators
-  protected _validatorCache: MutableVector<T["validators"][number]>;
+  // return a proxy to CachedBalanceList
+  balances: CachedBalanceList & T["balances"];
 
   constructor(
     type: ContainerType<T>,
     tree: Tree,
     validatorCache: MutableVector<T["validators"][number]>,
+    balanceCache: MutableVector<T["balances"][number]>,
     epochCtx: EpochContext
   ) {
     this.config = epochCtx.config;
     this.type = type;
     this.tree = tree;
     this.epochCtx = epochCtx;
-    this._validatorCache = validatorCache;
     this.validators = (new Proxy(
       new CachedValidatorList(
         this.type.fields["validators"] as CompositeListType<List<T["validators"][number]>>,
         this.type.tree_getProperty(this.tree, "validators") as Tree,
-        this._validatorCache
+        validatorCache
       ),
       CachedValidatorListProxyHandler
     ) as unknown) as CachedValidatorList<T["validators"][number]> & T["validators"];
+    this.balances = (new Proxy(
+      new CachedBalanceList(
+        this.type.fields["balances"] as BasicListType<List<T["balances"][number]>>,
+        this.type.tree_getProperty(this.tree, "balances") as Tree,
+        balanceCache
+      ),
+      CachedBalanceListProxyHandler
+    ) as unknown) as CachedBalanceList & T["balances"];
   }
 
   clone(): CachedBeaconState<T> {
     return new Proxy(
-      new BeaconStateContext(this.type, this.tree.clone(), this._validatorCache.clone(), this.epochCtx.copy()),
+      new BeaconStateContext(
+        this.type,
+        this.tree.clone(),
+        this.validators.persistent.clone(),
+        this.balances.persistent.clone(),
+        this.epochCtx.copy()
+      ),
       (CachedBeaconStateProxyHandler as unknown) as ProxyHandler<BeaconStateContext<T>>
     ) as CachedBeaconState<T>;
   }
@@ -95,6 +113,8 @@ export const CachedBeaconStateProxyHandler: ProxyHandler<CachedBeaconState<allFo
   get(target: CachedBeaconState<allForks.BeaconState>, key: string): unknown {
     if (key === "validators") {
       return target.validators;
+    } else if (key === "balances") {
+      return target.balances;
     } else if (target.type.fields[key]) {
       const propType = target.type.fields[key];
       const propValue = target.type.tree_getProperty(target.tree, key);
@@ -118,6 +138,8 @@ export const CachedBeaconStateProxyHandler: ProxyHandler<CachedBeaconState<allFo
   set(target: CachedBeaconState<allForks.BeaconState>, key: string, value: unknown): boolean {
     if (key === "validators") {
       throw new Error("Cannot set validators");
+    } else if (key === "balances") {
+      throw new Error("Cannot set balances");
     } else if (target.type.fields[key]) {
       const propType = target.type.fields[key];
       if (!isCompositeType(propType)) {

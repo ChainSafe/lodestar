@@ -1,5 +1,4 @@
 import {phase0} from "@chainsafe/lodestar-types";
-import {List, readonlyValues} from "@chainsafe/ssz";
 
 import {GENESIS_EPOCH} from "../../../constants";
 import {CachedBeaconState, IEpochProcess} from "../../../fast";
@@ -11,13 +10,15 @@ export function processRewardsAndPenalties(state: CachedBeaconState<phase0.Beaco
     return;
   }
   const [rewards, penalties] = getAttestationDeltas(state, process);
-  const newBalances = Array.from(readonlyValues(state.balances), (balance, i) => {
+  const newBalances = new BigUint64Array(process.statuses.length);
+  state.balances.forEach((balance, i) => {
     const newBalance = balance + BigInt(rewards[i] - penalties[i]);
-    return newBalance < 0 ? BigInt(0) : newBalance;
+    if (newBalance > 0) {
+      newBalances[i] = newBalance;
+    }
   });
 
-  process.balances = newBalances;
   // important: do not change state one balance at a time
   // set them all at once, constructing the tree in one go
-  state.balances = newBalances as List<bigint>;
+  state.balances.updateAll(newBalances);
 }
