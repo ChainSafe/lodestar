@@ -4,7 +4,8 @@
  */
 import {phase0} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {toHexString} from "@chainsafe/ssz";
+import {readonlyValues, toHexString} from "@chainsafe/ssz";
+import {assert} from "@chainsafe/lodestar-utils";
 
 /**
  * USed to verify gossip attestation. When there are multiple
@@ -12,6 +13,8 @@ import {toHexString} from "@chainsafe/ssz";
  */
 export class SeenAttestationCache {
   private cache: Map<string, boolean>;
+  // key as AttestationDelta root hex, value as aggregationBits
+  private attDataCache: Map<string, boolean[]>;
   private readonly config: IBeaconConfig;
   private readonly maxSize: number;
 
@@ -19,6 +22,7 @@ export class SeenAttestationCache {
     this.config = config;
     this.maxSize = maxSize;
     this.cache = new Map<string, boolean>();
+    this.attDataCache = new Map<string, boolean[]>();
   }
 
   addCommitteeAttestation(attestation: phase0.Attestation): void {
@@ -28,7 +32,25 @@ export class SeenAttestationCache {
 
   addAggregateAndProof(aggregateAndProof: phase0.AggregateAndProof): void {
     const key = this.aggregateAndProofKey(aggregateAndProof);
-    this.add(key);
+    const cachedAggBit = this.attDataCache.get(key);
+    const aggBit = Array.from(readonlyValues(aggregateAndProof.aggregate.aggregationBits));
+    if (!cachedAggBit) {
+      this.attDataCache.set(key, aggBit);
+    } else {
+      assert.equal(
+        aggBit.length,
+        cachedAggBit.length,
+        "Length of AggregateAndProof aggregationBits is not the same to cache"
+      );
+      this.attDataCache.set(
+        key,
+        aggBit.map((_, i) => aggBit[i] || cachedAggBit[i])
+      );
+    }
+    // delete oldest key if needed
+    if (this.attDataCache.size > this.maxSize) {
+      this.attDataCache.delete(this.attDataCache.keys().next().value);
+    }
   }
 
   hasCommitteeAttestation(attestation: phase0.Attestation): boolean {
@@ -38,7 +60,16 @@ export class SeenAttestationCache {
 
   hasAggregateAndProof(aggregateAndProof: phase0.AggregateAndProof): boolean {
     const key = this.aggregateAndProofKey(aggregateAndProof);
-    return this.cache.has(key);
+    const cachedAggBits = this.attDataCache.get(key);
+    if (!cachedAggBits) return false;
+    const aggBits = aggregateAndProof.aggregate.aggregationBits;
+    assert.equal(
+      aggBits.length,
+      cachedAggBits.length,
+      "Length of AggregateAndProof aggregationBits is not the same to cache"
+    );
+    // if there's any attester in aggregateAndProof not in cache then return false
+    return !cachedAggBits.some((bit, i) => !bit && aggBits[i]);
   }
 
   private add(key: string): void {
@@ -63,9 +94,9 @@ export class SeenAttestationCache {
   }
 
   /**
-   * We're only interested in the Attestation inside AggregateAndProof.
+   * We're only interested in the AttestationData + aggregationBits inside AggregateAndProof.
    */
   private aggregateAndProofKey(value: phase0.AggregateAndProof): string {
-    return toHexString(this.config.types.phase0.Attestation.hashTreeRoot(value.aggregate));
+    return toHexString(this.config.types.phase0.AttestationData.hashTreeRoot(value.aggregate.data));
   }
 }
