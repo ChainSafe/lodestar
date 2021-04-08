@@ -29,7 +29,7 @@ describe("Process Slots Performance Test", function () {
   });
 
   beforeEach(async () => {
-    const origState = await generatePerformanceState();
+    const origState = generatePerformanceState();
     state = fast.createCachedBeaconState(config, origState);
   });
 

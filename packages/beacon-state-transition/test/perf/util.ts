@@ -13,7 +13,7 @@ const logger = profilerLogger();
 /**
  * This is generated from Medalla state 756416
  */
-export async function generatePerformanceState(): Promise<TreeBacked<phase0.BeaconState>> {
+export function generatePerformanceState(): TreeBacked<phase0.BeaconState> {
   if (!archivedState) {
     const state = config.types.phase0.BeaconState.defaultValue();
     state.genesisTime = 1596546008;
@@ -96,10 +96,10 @@ export async function generatePerformanceState(): Promise<TreeBacked<phase0.Beac
 /**
  * This is generated from Medalla block 756417
  */
-export async function generatePerformanceBlock(): Promise<TreeBacked<phase0.SignedBeaconBlock>> {
+export function generatePerformanceBlock(): TreeBacked<phase0.SignedBeaconBlock> {
   if (!signedBlock) {
     const block = config.types.phase0.SignedBeaconBlock.defaultValue();
-    const parentState = await generatePerformanceState();
+    const parentState = generatePerformanceState();
     const newState = parentState.clone();
     newState.slot++;
     block.message.slot = newState.slot;

@@ -12,12 +12,12 @@ describe("Process Blocks Performance Test", function () {
   const logger = profilerLogger();
   before(async () => {
     await initBLS();
-    const origState = await generatePerformanceState();
+    const origState = generatePerformanceState();
     state = fast.createCachedBeaconState(config, origState as TreeBacked<allForks.BeaconState>);
   });
 
   it("should process block", async () => {
-    const signedBlock = await generatePerformanceBlock();
+    const signedBlock = generatePerformanceBlock();
     logger.profile(`Process block ${signedBlock.message.slot}`);
     const start = Date.now();
     fast.fastStateTransition(state, signedBlock, {
@@ -30,7 +30,7 @@ describe("Process Blocks Performance Test", function () {
   });
 
   it("should process multiple validator exits in same block", async () => {
-    const signedBlock: phase0.SignedBeaconBlock = await generatePerformanceBlock();
+    const signedBlock: phase0.SignedBeaconBlock = generatePerformanceBlock();
     const exitEpoch = state.epochCtx.currentShuffling.epoch;
     const voluntaryExits: phase0.SignedVoluntaryExit[] = [];
     const numValidatorExits = config.params.MAX_VOLUNTARY_EXITS;

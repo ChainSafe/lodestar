@@ -12,7 +12,7 @@ describe("processRewardsAndPenalties", function () {
   before(async function () {
     this.timeout(0);
     await initBLS();
-    const origState = await generatePerformanceState();
+    const origState = generatePerformanceState();
     // go back 1 slot to process epoch
     origState.slot -= 1;
     state = fast.createCachedBeaconState(config, origState);
