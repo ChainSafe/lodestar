@@ -1,11 +1,17 @@
 import fs from "fs";
+import path from "path";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {interopSecretKey} from "../../src";
 
-const interopPubkeysCachedPath = "interop-pubkeys.json";
+const interopPubkeysCachedPath = path.join(__dirname, "../../test-cache/interop-pubkeys.json");
 
 export function interopPubkeysCached(validatorCount: number): Uint8Array[] {
-  const cachedKeysHex = JSON.parse(fs.readFileSync(interopPubkeysCachedPath, "utf8")) as string[];
+  fs.mkdirSync(path.dirname(interopPubkeysCachedPath), {recursive: true});
+
+  const cachedKeysHex = fs.existsSync(interopPubkeysCachedPath)
+    ? (JSON.parse(fs.readFileSync(interopPubkeysCachedPath, "utf8")) as string[])
+    : ([] as string[]);
+
   const keys = cachedKeysHex.slice(0, validatorCount).map((hex) => fromHexString(hex));
 
   if (cachedKeysHex.length < validatorCount) {
