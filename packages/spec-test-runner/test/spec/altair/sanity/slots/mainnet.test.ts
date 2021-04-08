@@ -8,8 +8,8 @@ import {altair as altairTypes} from "@chainsafe/lodestar-types";
 import {altair} from "@chainsafe/lodestar-beacon-state-transition";
 
 describeDirectorySpecTest<IProcessSlotsTestCase, altairTypes.BeaconState>(
-  "altair slot sanity minimal",
-  join(SPEC_TEST_LOCATION, "/tests/minimal/lightclient_patch/sanity/slots/pyspec_tests"),
+  "altair slot sanity mainnet",
+  join(SPEC_TEST_LOCATION, "/tests/minimal/altair/sanity/slots/pyspec_tests"),
   (testcase) => {
     const state = testcase.pre;
     altair.processSlots(config, state, state.slot + Number(testcase.slots));

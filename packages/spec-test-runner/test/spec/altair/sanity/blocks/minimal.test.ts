@@ -13,7 +13,7 @@ const config = createIBeaconConfig({...params, ALTAIR_FORK_SLOT: 0});
 
 describeDirectorySpecTest<IBlockSanityTestCase, altairTypes.BeaconState>(
   "altair block sanity minimal",
-  join(SPEC_TEST_LOCATION, "/tests/minimal/lightclient_patch/sanity/blocks/pyspec_tests"),
+  join(SPEC_TEST_LOCATION, "/tests/minimal/altair/sanity/blocks/pyspec_tests"),
   (testcase) => {
     let state = testcase.pre;
     const verify = !!testcase.meta && !!testcase.meta.blsSetting && testcase.meta.blsSetting === BigInt(1);

@@ -3,11 +3,15 @@ import {expect} from "chai";
 import {readdirSync, readFileSync} from "fs";
 import {basename, join, parse} from "path";
 import {Type, CompositeType} from "@chainsafe/ssz";
+// @ts-ignore
+import {uncompress} from "snappyjs";
+declare function uncompress(data: Buffer): Buffer;
 
 import {isDirectory, loadYamlFile} from "./util";
 
 export enum InputType {
   SSZ = "ssz",
+  SSZ_SNAPPY = "ssz_snappy",
   YAML = "yaml",
 }
 
@@ -29,7 +33,7 @@ export function toExpandedInputType(inputType: InputType | ExpandedInputType): E
 export interface ISpecTestOptions<TestCase, Result> {
   /**
    * If directory contains both ssz or yaml file version,
-   * you can choose which one to use. Default is ssz.
+   * you can choose which one to use. Default is ssz snappy.
    */
   inputTypes?: {[K in keyof NonNullable<TestCase>]?: InputType | ExpandedInputType};
 
@@ -135,17 +139,23 @@ function loadInputFiles<TestCase, Result>(directory: string, options: ISpecTestO
       }
       if (!options.inputTypes) throw Error("inputTypes is not defined");
       const name = parse(file).name as keyof NonNullable<TestCase>;
-      const inputType = toExpandedInputType(options.inputTypes[name] ?? InputType.SSZ);
+      const inputType = toExpandedInputType(options.inputTypes[name] ?? InputType.SSZ_SNAPPY);
       // set options.inputTypes[name] with expanded input type
       options.inputTypes[name] = inputType;
       const extension = inputType.type as string;
       return file.endsWith(extension);
     })
     .forEach((file) => {
-      const inputName = basename(file).replace(".ssz", "").replace(".yaml", "");
-      testCase[inputName] = deserializeTestCase(file, inputName, options);
-      if (file.endsWith(InputType.SSZ)) {
-        testCase[`${inputName}_raw`] = readFileSync(file);
+      const inputName = basename(file).replace(".ssz_snappy", "").replace(".ssz", "").replace(".yaml", "");
+      const inputType = getInputType(file);
+      testCase[inputName] = deserializeTestCase(file, inputName, inputType, options);
+      switch (inputType) {
+        case InputType.SSZ:
+          testCase[`${inputName}_raw`] = readFileSync(file);
+          break;
+        case InputType.SSZ_SNAPPY:
+          testCase[`${inputName}_raw`] = uncompress(readFileSync(file));
+          break;
       }
       if (!options.inputProcessing) throw Error("inputProcessing is not defined");
       if (options.inputProcessing[inputName]) {
@@ -155,14 +165,31 @@ function loadInputFiles<TestCase, Result>(directory: string, options: ISpecTestO
   return testCase as TestCase;
 }
 
+function getInputType(filename: string): InputType {
+  if (filename.endsWith(InputType.YAML)) {
+    return InputType.YAML;
+  } else if (filename.endsWith(InputType.SSZ_SNAPPY)) {
+    return InputType.SSZ_SNAPPY;
+  } else if (filename.endsWith(InputType.SSZ)) {
+    return InputType.SSZ;
+  }
+  throw new Error(`Could not get InputType from ${filename}`);
+}
+
 function deserializeTestCase<TestCase, Result>(
   file: string,
   inputName: string,
+  inputType: InputType,
   options: ISpecTestOptions<TestCase, Result>
 ): any {
-  if (file.endsWith(InputType.SSZ)) {
+  if (inputType === InputType.YAML) {
+    return loadYamlFile(file);
+  } else if (inputType === InputType.SSZ || inputType === InputType.SSZ_SNAPPY) {
     if (!options.sszTypes) throw Error("sszTypes is not defined");
-    const data = readFileSync(file);
+    let data = readFileSync(file);
+    if (inputType === InputType.SSZ_SNAPPY) {
+      data = uncompress(data);
+    }
     if ((options.inputTypes![inputName as keyof TestCase]! as ExpandedInputType).treeBacked) {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-call
       return (options.sszTypes[inputName as keyof NonNullable<TestCase>] as CompositeType<
@@ -171,7 +198,5 @@ function deserializeTestCase<TestCase, Result>(
     } else {
       return options.sszTypes[inputName as keyof NonNullable<TestCase>]?.deserialize(data);
     }
-  } else {
-    return loadYamlFile(file);
   }
 }

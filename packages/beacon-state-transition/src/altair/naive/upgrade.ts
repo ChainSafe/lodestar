@@ -1,6 +1,6 @@
 import {List} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {phase0, altair, ValidatorFlag} from "@chainsafe/lodestar-types";
+import {phase0, altair, ParticipationFlags, Uint8} from "@chainsafe/lodestar-types";
 
 import {getCurrentEpoch} from "../../util";
 
@@ -14,8 +14,9 @@ export function upgrade(config: IBeaconConfig, pre: phase0.BeaconState): altair.
       currentVersion: config.params.ALTAIR_FORK_VERSION,
       epoch,
     },
-    previousEpochParticipation: Array.from({length: pre.validators.length}, () => 0) as List<ValidatorFlag>,
-    currentEpochParticipation: Array.from({length: pre.validators.length}, () => 0) as List<ValidatorFlag>,
+    previousEpochParticipation: Array.from({length: pre.validators.length}, () => 0) as List<ParticipationFlags>,
+    currentEpochParticipation: Array.from({length: pre.validators.length}, () => 0) as List<ParticipationFlags>,
+    inactivityScores: Array.from({length: pre.validators.length}, () => 0) as List<Uint8>,
     currentSyncCommittee: config.types.altair.SyncCommittee.defaultValue(),
     nextSyncCommittee: config.types.altair.SyncCommittee.defaultValue(),
   };

@@ -32,11 +32,11 @@ describeDirectorySpecTest<IBlockSanityTestCase, allForks.BeaconState>(
   {
     inputTypes: {
       pre: {
-        type: InputType.SSZ,
+        type: InputType.SSZ_SNAPPY,
         treeBacked: true,
       },
       post: {
-        type: InputType.SSZ,
+        type: InputType.SSZ_SNAPPY,
         treeBacked: true,
       },
       meta: InputType.YAML,

@@ -7,6 +7,7 @@ import {
   getBeaconProposerIndex,
   increaseBalance,
 } from "../../util";
+import {PROPOSER_WEIGHT, WEIGHT_DENOMINATOR} from "../constants";
 
 /**
  * Slash the validator with index ``slashed_index``.
@@ -35,7 +36,7 @@ export function slashValidator(
   decreaseBalance(
     state,
     slashedIndex,
-    state.validators[slashedIndex].effectiveBalance / BigInt(config.params.HF1_MIN_SLASHING_PENALTY_QUOTIENT)
+    state.validators[slashedIndex].effectiveBalance / BigInt(config.params.MIN_SLASHING_PENALTY_QUOTIENT_ALTAIR)
   );
 
   const proposerIndex = getBeaconProposerIndex(config, state);
@@ -43,7 +44,7 @@ export function slashValidator(
     whistleblowerIndex = proposerIndex;
   }
   const whistleblowingReward = slashedBalance / BigInt(config.params.WHISTLEBLOWER_REWARD_QUOTIENT);
-  const proposerReward = whistleblowingReward / BigInt(config.params.PROPOSER_REWARD_QUOTIENT);
+  const proposerReward = (whistleblowingReward * PROPOSER_WEIGHT) / WEIGHT_DENOMINATOR;
   increaseBalance(state, proposerIndex, proposerReward);
   increaseBalance(state, whistleblowerIndex, whistleblowingReward - proposerReward);
 }

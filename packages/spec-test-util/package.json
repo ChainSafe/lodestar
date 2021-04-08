@@ -51,6 +51,7 @@
     "chai": "^4.2.0",
     "mocha": "^8.1.1",
     "rimraf": "^3.0.2",
+    "snappyjs": "^0.6.0",
     "tar": "^6.0.5"
   },
   "devDependencies": {

@@ -8,7 +8,7 @@ import {
   getTotalActiveBalance,
   getTotalBalance,
 } from "../../..";
-import {TIMELY_TARGET_FLAG} from "../../constants";
+import {TIMELY_TARGET_FLAG_INDEX} from "../../constants";
 import {getUnslashedParticipatingIndices} from "../../state_accessor";
 
 export function processJustificationAndFinalization(config: IBeaconConfig, state: altair.BeaconState): void {
@@ -32,7 +32,7 @@ export function processJustificationAndFinalization(config: IBeaconConfig, state
   const matchingPreviousTargetIndices = getUnslashedParticipatingIndices(
     config,
     state,
-    TIMELY_TARGET_FLAG,
+    TIMELY_TARGET_FLAG_INDEX,
     previousEpoch
   );
   const totalActiveBalance = getTotalActiveBalance(config, state);
@@ -47,7 +47,7 @@ export function processJustificationAndFinalization(config: IBeaconConfig, state
   const matchingCurrentTargetIndices = getUnslashedParticipatingIndices(
     config,
     state,
-    TIMELY_TARGET_FLAG,
+    TIMELY_TARGET_FLAG_INDEX,
     currentEpoch
   );
   if (getTotalBalance(config, state, matchingCurrentTargetIndices) * BigInt(3) >= totalActiveBalance * BigInt(2)) {

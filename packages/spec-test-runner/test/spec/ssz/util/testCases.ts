@@ -39,7 +39,7 @@ export function testStatic(type: keyof IBeaconSSZTypes["phase0"]): void {
       {
         inputTypes: {
           roots: InputType.YAML,
-          serialized: InputType.SSZ,
+          serialized: InputType.SSZ_SNAPPY,
         },
         sszTypes: {
           serialized: sszType,
