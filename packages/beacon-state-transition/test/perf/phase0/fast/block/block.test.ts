@@ -12,7 +12,7 @@ describe("Process Blocks Performance Test", function () {
   const logger = profilerLogger();
   before(async () => {
     await initBLS();
-    state = generatePerfTestCachedBeaconState();
+    state = generatePerfTestCachedBeaconState() as fast.CachedBeaconState<allForks.BeaconState>;
   });
 
   it("should process block", async () => {

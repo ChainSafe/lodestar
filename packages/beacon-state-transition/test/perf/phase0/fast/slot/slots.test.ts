@@ -1,9 +1,8 @@
-import {config} from "@chainsafe/lodestar-config/mainnet";
 import {Slot} from "@chainsafe/lodestar-types";
 import {expect} from "chai";
 import {phase0, fast} from "../../../../../src";
 import {profilerLogger} from "../../../../utils/logger";
-import {initBLS, generatePerformanceState} from "../../../util";
+import {initBLS, generatePerfTestCachedBeaconState} from "../../../util";
 
 describe("Process Slots Performance Test", function () {
   this.timeout(0);
@@ -29,8 +28,7 @@ describe("Process Slots Performance Test", function () {
   });
 
   beforeEach(async () => {
-    const origState = generatePerformanceState();
-    state = fast.createCachedBeaconState(config, origState);
+    state = generatePerfTestCachedBeaconState();
   });
 
   for (const testValue of testValues) {

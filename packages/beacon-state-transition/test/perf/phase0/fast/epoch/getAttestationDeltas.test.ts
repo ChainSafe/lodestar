@@ -1,5 +1,4 @@
-import {config} from "@chainsafe/lodestar-config/mainnet";
-import {generatePerformanceState, initBLS} from "../../../util";
+import {generatePerfTestCachedBeaconState, initBLS} from "../../../util";
 import {expect} from "chai";
 import {phase0, fast} from "../../../../../src";
 import {profilerLogger} from "../../../../utils/logger";
@@ -12,10 +11,7 @@ describe("getAttestationDeltas", function () {
   before(async function () {
     this.timeout(0);
     await initBLS();
-    const origState = generatePerformanceState();
-    // go back 1 slot to process epoch
-    origState.slot -= 1;
-    state = fast.createCachedBeaconState(config, origState);
+    state = generatePerfTestCachedBeaconState({goBackOneSlot: true});
   });
 
   it("should getAttestationDeltas", function () {

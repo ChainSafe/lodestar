@@ -1,5 +1,5 @@
 import {config} from "@chainsafe/lodestar-config/mainnet";
-import {Gwei, phase0, allForks} from "@chainsafe/lodestar-types";
+import {Gwei, phase0} from "@chainsafe/lodestar-types";
 import bls, {CoordType, init, PublicKey} from "@chainsafe/bls";
 import {fromHexString, List, TreeBacked} from "@chainsafe/ssz";
 import {getBeaconProposerIndex} from "../../src/util/proposer";
@@ -26,26 +26,34 @@ function getPubkeys() {
   return {pubkeysMod, pubkeysModObj, pubkeys};
 }
 
-export function generatePerfTestCachedBeaconState(): fast.CachedBeaconState<allForks.BeaconState> {
+export function generatePerfTestCachedBeaconState(opts?: {
+  goBackOneSlot: boolean;
+}): fast.CachedBeaconState<phase0.BeaconState> {
   // Generate only some publicKeys
   const {pubkeys, pubkeysMod, pubkeysModObj} = getPubkeys();
   const origState = generatePerformanceState(pubkeys);
 
-  const cachedState = fast.createCachedBeaconState(config, origState, {skipSyncPubkeys: true});
+  if (opts?.goBackOneSlot) {
+    // go back 1 slot to process epoch
+    origState.slot -= 1;
+  }
+
   // Manually sync pubkeys to prevent doing BLS opts 110_000 times
   const pubkey2index = new PubkeyIndexMap();
   const index2pubkey = [] as PublicKey[];
-  const newCount = cachedState.validators.length;
-  for (let i = 0; i < newCount; i++) {
+  for (let i = 0; i < numValidators; i++) {
     const pubkey = pubkeysMod[i % numKeyPairs];
     const pubkeyObj = pubkeysModObj[i % numKeyPairs];
     pubkey2index.set(pubkey, i);
     index2pubkey.push(pubkeyObj);
   }
-  cachedState.pubkey2index = pubkey2index;
-  cachedState.index2pubkey = index2pubkey;
 
-  return cachedState as fast.CachedBeaconState<allForks.BeaconState>;
+  const cachedState = fast.createCachedBeaconState(config, origState, {
+    pubkey2index,
+    index2pubkey,
+    skipSyncPubkeys: true,
+  });
+  return cachedState;
 }
 
 /**

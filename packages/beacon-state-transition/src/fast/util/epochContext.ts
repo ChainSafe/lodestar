@@ -18,7 +18,9 @@ import {MutableVector} from "@chainsafe/persistent-ts";
 import {CachedValidatorList} from "./cachedValidatorList";
 
 export type EpochContextOpts = {
-  skipSyncPubkeys: boolean;
+  pubkey2index?: PubkeyIndexMap;
+  index2pubkey?: PublicKey[];
+  skipSyncPubkeys?: boolean;
 };
 
 export class PubkeyIndexMap extends Map<ByteVector, ValidatorIndex> {
@@ -40,8 +42,8 @@ export function createEpochContext(
   validators: MutableVector<phase0.Validator>,
   opts?: EpochContextOpts
 ): EpochContext {
-  const pubkey2index = new PubkeyIndexMap();
-  const index2pubkey = [] as PublicKey[];
+  const pubkey2index = opts?.pubkey2index || new PubkeyIndexMap();
+  const index2pubkey = opts?.index2pubkey || ([] as PublicKey[]);
   if (!opts?.skipSyncPubkeys) {
     syncPubkeys(state, pubkey2index, index2pubkey);
   }
@@ -89,7 +91,7 @@ export function syncPubkeys(
 ): void {
   const currentCount = pubkey2index.size;
   if (currentCount !== index2pubkey.length) {
-    throw new Error("Pubkey indices have fallen out of sync");
+    throw new Error(`Pubkey indices have fallen out of sync: ${currentCount} != ${index2pubkey.length}`);
   }
   const newCount = state.validators.length;
   for (let i = currentCount; i < newCount; i++) {
