@@ -3,6 +3,7 @@ import {altair, Gwei, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {bigIntSqrt} from "@chainsafe/lodestar-utils";
 import {getUnslashedParticipatingIndices} from "./index";
 import {getPreviousEpoch} from "../../util/epoch";
+import {newZeroedBigIntArray} from "../../../src/util";
 import {getTotalBalance, getTotalActiveBalance} from "../../util/balance";
 import {TIMELY_TARGET_FLAG_INDEX, WEIGHT_DENOMINATOR} from "../constants";
 import {getFlagIndicesAndWeights} from "../misc";
@@ -17,8 +18,9 @@ export function getFlagIndexDeltas(
   flagIndex: number,
   weight: bigint
 ): [Gwei[], Gwei[]] {
-  const rewards = Array.from({length: state.validators.length}, () => BigInt(0));
-  const penalties = Array.from({length: state.validators.length}, () => BigInt(0));
+  const validatorCount = state.validators.length;
+  const rewards = newZeroedBigIntArray(validatorCount);
+  const penalties = newZeroedBigIntArray(validatorCount);
 
   const unslashedParticipatingIndices = getUnslashedParticipatingIndices(
     config,
@@ -50,8 +52,9 @@ export function getFlagIndexDeltas(
  * Return the inactivity penalty deltas by considering timely target participation flags and inactivity scores.
  */
 export function getInactivityPenaltyDeltas(config: IBeaconConfig, state: altair.BeaconState): [Gwei[], Gwei[]] {
-  const rewards = Array.from({length: state.validators.length}, () => BigInt(0));
-  const penalties = Array.from({length: state.validators.length}, () => BigInt(0));
+  const validatorCount = state.validators.length;
+  const rewards = newZeroedBigIntArray(validatorCount);
+  const penalties = newZeroedBigIntArray(validatorCount);
   const previousEpoch = getPreviousEpoch(config, state);
 
   if (phase0.isInInactivityLeak(config, (state as unknown) as phase0.BeaconState)) {

@@ -1,7 +1,7 @@
 import {phase0} from "@chainsafe/lodestar-types";
 import {bigIntSqrt, bigIntMax, intDiv} from "@chainsafe/lodestar-utils";
 import {BASE_REWARDS_PER_EPOCH as BASE_REWARDS_PER_EPOCH_CONST} from "../../../constants";
-
+import {newZeroedArray} from "../../../util";
 import {
   IEpochProcess,
   hasMarkers,
@@ -22,8 +22,8 @@ export function getAttestationDeltas(
 ): [number[], number[]] {
   const params = state.config.params;
   const validatorCount = process.statuses.length;
-  const rewards = Array.from({length: validatorCount}, () => 0);
-  const penalties = Array.from({length: validatorCount}, () => 0);
+  const rewards = newZeroedArray(validatorCount);
+  const penalties = newZeroedArray(validatorCount);
 
   const increment = params.EFFECTIVE_BALANCE_INCREMENT;
   let totalBalance = bigIntMax(process.totalActiveStake, increment);
