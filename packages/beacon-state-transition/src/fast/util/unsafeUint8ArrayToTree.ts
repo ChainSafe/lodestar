@@ -3,7 +3,7 @@ import {LeafNode, Node, subtreeFillToContents} from "@chainsafe/persistent-merkl
 /**
  * Convert a Uint8Array to a merkle tree, using the underlying array's underlying ArrayBuffer
  *
- * The array MUST NOT be modified after this, or risk the merkle nodes being modified.
+ * `data` MUST NOT be modified after this, or risk the merkle nodes being modified.
  */
 export function unsafeUint8ArrayToTree(data: Uint8Array, depth: number): Node {
   const leaves: LeafNode[] = [];
