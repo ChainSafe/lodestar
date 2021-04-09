@@ -67,12 +67,9 @@ export class AttestationRepository extends Repository<Uint8Array, phase0.Attesta
 
   async pruneFinalized(finalizedEpoch: Epoch): Promise<void> {
     const finalizedEpochStartSlot = computeStartSlotAtEpoch(this.config, finalizedEpoch);
-    const attestations: phase0.Attestation[] = await this.values();
-    await this.batchRemove(
-      attestations.filter((a) => {
-        return a.data.slot < finalizedEpochStartSlot;
-      })
-    );
+    const entries = await this.entries();
+    const idsToDelete = entries.filter((e) => e.value.data.slot < finalizedEpochStartSlot).map((e) => e.key);
+    await this.batchDelete(idsToDelete);
     for (const slot of this.dataRootIndex.keys()) {
       if (slot < finalizedEpochStartSlot) this.dataRootIndex.delete(slot);
     }
