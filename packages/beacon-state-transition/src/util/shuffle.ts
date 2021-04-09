@@ -64,6 +64,14 @@ Go: https://github.com/protolambda/eth2-shuffle
 All three implemented by @protolambda, but meant for public use, like the original spec version.
 */
 
+function setPositionUint32(value: number, buf: Buffer): void {
+  // Little endian, optimized version
+  buf[_SHUFFLE_H_PIVOT_VIEW_SIZE] = (value >> 0) & 0xff;
+  buf[_SHUFFLE_H_PIVOT_VIEW_SIZE + 1] = (value >> 8) & 0xff;
+  buf[_SHUFFLE_H_PIVOT_VIEW_SIZE + 2] = (value >> 16) & 0xff;
+  buf[_SHUFFLE_H_PIVOT_VIEW_SIZE + 3] = (value >> 24) & 0xff;
+}
+
 // Shuffles or unshuffles, depending on the `dir` (true for shuffling, false for unshuffling
 function innerShuffleList(config: IBeaconConfig, input: ValidatorIndex[], seed: Bytes32, dir: boolean): void {
   if (input.length <= 1) {
@@ -92,46 +100,9 @@ function innerShuffleList(config: IBeaconConfig, input: ValidatorIndex[], seed: 
   const _seed = seed.valueOf() as Uint8Array;
   Buffer.from(_seed).copy(buf, 0, 0, _SHUFFLE_H_SEED_SIZE);
 
-  function setPositionUint32(value: number): void {
-    // Little endian, optimized version
-    buf[_SHUFFLE_H_PIVOT_VIEW_SIZE] = (value >> 0) & 0xff;
-    buf[_SHUFFLE_H_PIVOT_VIEW_SIZE + 1] = (value >> 8) & 0xff;
-    buf[_SHUFFLE_H_PIVOT_VIEW_SIZE + 2] = (value >> 16) & 0xff;
-    buf[_SHUFFLE_H_PIVOT_VIEW_SIZE + 3] = (value >> 24) & 0xff;
-  }
-
   // initial values here are not used: overwritten first within the inner for loop.
   let source = seed; // just setting it to a Bytes32
-  let i = 0;
-  let j = 0;
   let byteV = 0;
-
-  function step(): void {
-    // The pair is i,j. With j being the bigger of the two, hence the "position" identifier of the pair.
-    // Every 256th bit (aligned to j).
-    if ((j & 0xff) == 0xff) {
-      // just overwrite the last part of the buffer, reuse the start (seed, round)
-      setPositionUint32(j >> 8);
-      source = hash(buf);
-    }
-
-    // Same trick with byte retrieval. Only every 8th.
-    if ((j & 0x7) == 0x7) {
-      byteV = source[(j & 0xff) >> 3];
-    }
-
-    const bitV = (byteV >> (j & 0x7)) & 0x1;
-
-    if (bitV == 1) {
-      // swap the pair items
-      const tmp = input[j];
-      input[j] = input[i];
-      input[i] = tmp;
-    }
-
-    i = i + 1;
-    j = j - 1;
-  }
 
   // eslint-disable-next-line no-constant-condition
   while (true) {
@@ -162,14 +133,35 @@ function innerShuffleList(config: IBeaconConfig, input: ValidatorIndex[], seed: 
     //   which will be used later to select a bit from the resulting hash.
     // We start from the pivot position, and work back to the mirror position (of the part left to the pivot).
     // This makes us process each pear exactly once (instead of unnecessarily twice, like in the spec)
-    setPositionUint32(pivot >> 8); // already using first pivot byte below.
+    setPositionUint32(pivot >> 8, buf); // already using first pivot byte below.
     source = hash(buf);
     byteV = source[(pivot & 0xff) >> 3];
-    i = 0;
-    j = pivot;
 
-    while (i < mirror) {
-      step();
+    for (let i = 0, j; i < mirror; i++) {
+      j = pivot - i;
+      // -- step() fn start
+      // The pair is i,j. With j being the bigger of the two, hence the "position" identifier of the pair.
+      // Every 256th bit (aligned to j).
+      if ((j & 0xff) == 0xff) {
+        // just overwrite the last part of the buffer, reuse the start (seed, round)
+        setPositionUint32(j >> 8, buf);
+        source = hash(buf);
+      }
+
+      // Same trick with byte retrieval. Only every 8th.
+      if ((j & 0x7) == 0x7) {
+        byteV = source[(j & 0xff) >> 3];
+      }
+
+      const bitV = (byteV >> (j & 0x7)) & 0x1;
+
+      if (bitV == 1) {
+        // swap the pair items
+        const tmp = input[j];
+        input[j] = input[i];
+        input[i] = tmp;
+      }
+      // -- step() fn end
     }
 
     // Now repeat, but for the part after the pivot.
@@ -178,13 +170,34 @@ function innerShuffleList(config: IBeaconConfig, input: ValidatorIndex[], seed: 
     // Again, seed and round input is in place, just update the position.
     // We start at the end, and work back to the mirror point.
     // This makes us process each pear exactly once (instead of unnecessarily twice, like in the spec)
-    setPositionUint32(end >> 8);
+    setPositionUint32(end >> 8, buf);
     source = hash(buf);
     byteV = source[(end & 0xff) >> 3];
-    i = pivot + 1;
-    j = end;
-    while (i < mirror) {
-      step();
+    for (let i = pivot + 1, j; i < mirror; i++) {
+      j = end - i + pivot + 1;
+      // -- step() fn start
+      // The pair is i,j. With j being the bigger of the two, hence the "position" identifier of the pair.
+      // Every 256th bit (aligned to j).
+      if ((j & 0xff) == 0xff) {
+        // just overwrite the last part of the buffer, reuse the start (seed, round)
+        setPositionUint32(j >> 8, buf);
+        source = hash(buf);
+      }
+
+      // Same trick with byte retrieval. Only every 8th.
+      if ((j & 0x7) == 0x7) {
+        byteV = source[(j & 0xff) >> 3];
+      }
+
+      const bitV = (byteV >> (j & 0x7)) & 0x1;
+
+      if (bitV == 1) {
+        // swap the pair items
+        const tmp = input[j];
+        input[j] = input[i];
+        input[i] = tmp;
+      }
+      // -- step() fn end
     }
 
     // go forwards?
