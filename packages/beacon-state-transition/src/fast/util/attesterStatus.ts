@@ -8,6 +8,10 @@ export const FLAG_CURR_TARGET_ATTESTER = 1 << 4;
 export const FLAG_CURR_HEAD_ATTESTER = 1 << 5;
 export const FLAG_UNSLASHED = 1 << 6;
 export const FLAG_ELIGIBLE_ATTESTER = 1 << 7;
+// Precompute OR flags
+export const FLAG_PREV_SOURCE_ATTESTER_OR_UNSLASHED = FLAG_PREV_SOURCE_ATTESTER | FLAG_UNSLASHED;
+export const FLAG_PREV_TARGET_ATTESTER_OR_UNSLASHED = FLAG_PREV_TARGET_ATTESTER | FLAG_UNSLASHED;
+export const FLAG_PREV_HEAD_ATTESTER_OR_UNSLASHED = FLAG_PREV_HEAD_ATTESTER | FLAG_UNSLASHED;
 
 /**
  * During the epoch transition, additional data is precomputed to avoid traversing any state a second

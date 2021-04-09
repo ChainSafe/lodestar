@@ -13,6 +13,10 @@ const FLAG_PREV_HEAD_ATTESTER = 1 << 2;
 const FLAG_UNSLASHED = 1 << 6;
 const FLAG_ELIGIBLE_ATTESTER = 1 << 7;
 
+const FLAG_PREV_SOURCE_ATTESTER_OR_UNSLASHED = FLAG_PREV_SOURCE_ATTESTER | FLAG_UNSLASHED;
+const FLAG_PREV_TARGET_ATTESTER_OR_UNSLASHED = FLAG_PREV_TARGET_ATTESTER | FLAG_UNSLASHED;
+const FLAG_PREV_HEAD_ATTESTER_OR_UNSLASHED = FLAG_PREV_HEAD_ATTESTER | FLAG_UNSLASHED;
+
 /**
  * Return attestation reward/penalty deltas for each validator.
  */
@@ -51,14 +55,14 @@ export function getAttestationDeltas(
     const proposerReward = Math.floor(baseReward / params.PROPOSER_REWARD_QUOTIENT);
 
     // inclusion speed bonus
-    if (hasMarkers(status.flags, FLAG_PREV_SOURCE_ATTESTER | FLAG_UNSLASHED)) {
+    if (hasMarkers(status.flags, FLAG_PREV_SOURCE_ATTESTER_OR_UNSLASHED)) {
       rewards[status.proposerIndex] += proposerReward;
       const maxAttesterReward = baseReward - proposerReward;
       rewards[i] += Math.floor(maxAttesterReward / status.inclusionDelay);
     }
     if (hasMarkers(status.flags, FLAG_ELIGIBLE_ATTESTER)) {
       // expected FFG source
-      if (hasMarkers(status.flags, FLAG_PREV_SOURCE_ATTESTER | FLAG_UNSLASHED)) {
+      if (hasMarkers(status.flags, FLAG_PREV_SOURCE_ATTESTER_OR_UNSLASHED)) {
         // justification-participation reward
         rewards[i] += isInInactivityLeak
           ? baseReward
@@ -69,7 +73,7 @@ export function getAttestationDeltas(
       }
 
       // expected FFG target
-      if (hasMarkers(status.flags, FLAG_PREV_TARGET_ATTESTER | FLAG_UNSLASHED)) {
+      if (hasMarkers(status.flags, FLAG_PREV_TARGET_ATTESTER_OR_UNSLASHED)) {
         // boundary-attestation reward
         rewards[i] += isInInactivityLeak
           ? baseReward
@@ -80,7 +84,7 @@ export function getAttestationDeltas(
       }
 
       // expected head
-      if (hasMarkers(status.flags, FLAG_PREV_HEAD_ATTESTER | FLAG_UNSLASHED)) {
+      if (hasMarkers(status.flags, FLAG_PREV_HEAD_ATTESTER_OR_UNSLASHED)) {
         // canonical-participation reward
         rewards[i] += isInInactivityLeak
           ? baseReward
@@ -94,7 +98,7 @@ export function getAttestationDeltas(
       if (isInInactivityLeak) {
         penalties[i] += baseReward * BASE_REWARDS_PER_EPOCH_CONST - proposerReward;
 
-        if (!hasMarkers(status.flags, FLAG_PREV_TARGET_ATTESTER | FLAG_UNSLASHED)) {
+        if (!hasMarkers(status.flags, FLAG_PREV_TARGET_ATTESTER_OR_UNSLASHED)) {
           penalties[i] += Number((effBalance * finalityDelay) / INACTIVITY_PENALTY_QUOTIENT);
         }
       }
