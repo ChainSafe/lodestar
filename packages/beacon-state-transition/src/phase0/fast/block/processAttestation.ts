@@ -50,12 +50,12 @@ export function processAttestation(
     );
   }
 
-  const pendingAttestation = {
+  const pendingAttestation = state.config.types.phase0.PendingAttestation.createTreeBackedFromStruct({
     data: data,
     aggregationBits: attestation.aggregationBits,
     inclusionDelay: slot - data.slot,
     proposerIndex: epochCtx.getBeaconProposer(slot),
-  };
+  });
 
   if (data.target.epoch === epochCtx.currentShuffling.epoch) {
     if (!config.types.phase0.Checkpoint.equals(data.source, state.currentJustifiedCheckpoint)) {

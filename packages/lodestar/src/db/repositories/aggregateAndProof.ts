@@ -1,5 +1,5 @@
 import {ArrayLike} from "@chainsafe/ssz";
-import {phase0, ValidatorIndex, Epoch} from "@chainsafe/lodestar-types";
+import {phase0, Epoch} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {computeStartSlotAtEpoch, isValidAttestationSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {IDatabaseController, Bucket, Repository} from "@chainsafe/lodestar-db";
@@ -27,28 +27,16 @@ export class AggregateAndProofRepository extends Repository<Uint8Array, phase0.A
     return aggregates
       .map((aggregate) => aggregate.aggregate)
       .filter((a: phase0.Attestation) => {
-        //TODO: filter out duplicates
+        // Attestation should be unique because we store by its id
         return isValidAttestationSlot(this.config, a.data.slot, state.slot);
       })
       .sort((a, b) => {
-        // prefer aggregated attestations
-        return b.aggregationBits.length - a.aggregationBits.length;
+        // prefer attestations with more participants
+        return (
+          Array.from(b.aggregationBits).filter((bit) => bit).length -
+          Array.from(a.aggregationBits).filter((bit) => bit).length
+        );
       });
-  }
-
-  async getByAggregatorAndEpoch(aggregatorIndex: ValidatorIndex, epoch: Epoch): Promise<phase0.Attestation[]> {
-    const aggregates: phase0.AggregateAndProof[] = (await this.values()) || [];
-    return aggregates
-      .filter(
-        (aggregate) => aggregate.aggregate.data.target.epoch === epoch && aggregate.aggregatorIndex === aggregatorIndex
-      )
-      .map((aggregate) => aggregate.aggregate);
-  }
-
-  async hasAttestation(attestation: phase0.Attestation): Promise<boolean> {
-    const id = this.config.types.phase0.Attestation.hashTreeRoot(attestation);
-    const found = await this.get(id);
-    return !!found;
   }
 
   async removeIncluded(attestations: ArrayLike<phase0.Attestation>): Promise<void> {
@@ -62,11 +50,8 @@ export class AggregateAndProofRepository extends Repository<Uint8Array, phase0.A
 
   async pruneFinalized(finalizedEpoch: Epoch): Promise<void> {
     const finalizedEpochStartSlot = computeStartSlotAtEpoch(this.config, finalizedEpoch);
-    const aggregates: phase0.AggregateAndProof[] = await this.values();
-    await this.batchRemove(
-      aggregates.filter((a) => {
-        return a.aggregate.data.slot < finalizedEpochStartSlot;
-      })
-    );
+    const entries = await this.entries();
+    const idsToDelete = entries.filter((e) => e.value.aggregate.data.slot < finalizedEpochStartSlot).map((e) => e.key);
+    await this.batchDelete(idsToDelete);
   }
 }
