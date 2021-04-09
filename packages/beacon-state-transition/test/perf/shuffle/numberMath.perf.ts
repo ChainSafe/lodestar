@@ -10,8 +10,13 @@ import {BenchmarkRunner} from "../runner";
   const j = 12354233;
   const forRuns = 1e5;
 
+  const arrSize = 2e5;
   const input: number[] = [];
-  for (let i = 0; i < 2e5; i++) input[i] = i;
+  const inputUint32Array = new Uint32Array(arrSize);
+  for (let i = 0; i < arrSize; i++) {
+    input[i] = i;
+    inputUint32Array[i] = i;
+  }
 
   await runner.run({
     id: "bit opts",
@@ -56,6 +61,17 @@ import {BenchmarkRunner} from "../runner";
         const tmp = input[j];
         input[j] = input[i];
         input[i] = tmp;
+      }
+    },
+  });
+
+  await runner.run({
+    id: "swap item in Uint32Array",
+    run: () => {
+      for (let i = 0; i < forRuns; i++) {
+        const tmp = inputUint32Array[j];
+        inputUint32Array[j] = inputUint32Array[i];
+        inputUint32Array[i] = tmp;
       }
     },
   });
