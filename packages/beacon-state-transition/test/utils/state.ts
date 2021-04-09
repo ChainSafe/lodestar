@@ -1,11 +1,11 @@
 import {List, Vector} from "@chainsafe/ssz";
 import {phase0} from "@chainsafe/lodestar-types";
+import {config} from "@chainsafe/lodestar-config/mainnet";
 
 import {GENESIS_EPOCH, GENESIS_SLOT, ZERO_HASH} from "../../src/constants";
+import {newZeroedBigIntArray} from "../../src/util";
 
 import {generateEmptyBlock} from "./block";
-
-import {config} from "@chainsafe/lodestar-config/mainnet";
 
 /**
  * Copy of BeaconState, but all fields are marked optional to allow for swapping out variables as needed.
@@ -48,7 +48,7 @@ export function generateState(opts?: TestBeaconState): phase0.BeaconState {
     validators: ([] as phase0.Validator[]) as List<phase0.Validator>,
     balances: ([] as bigint[]) as List<bigint>,
     randaoMixes: Array.from({length: config.params.EPOCHS_PER_HISTORICAL_VECTOR}, () => ZERO_HASH),
-    slashings: Array.from({length: config.params.EPOCHS_PER_SLASHINGS_VECTOR}, () => BigInt(0)),
+    slashings: newZeroedBigIntArray(config.params.EPOCHS_PER_SLASHINGS_VECTOR),
     previousEpochAttestations: ([] as phase0.PendingAttestation[]) as List<phase0.PendingAttestation>,
     currentEpochAttestations: ([] as phase0.PendingAttestation[]) as List<phase0.PendingAttestation>,
     justificationBits: [false, false, false, false],

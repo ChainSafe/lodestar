@@ -1,8 +1,8 @@
 import {config} from "@chainsafe/lodestar-config/mainnet";
-import {List, TreeBacked} from "@chainsafe/ssz";
+import {List} from "@chainsafe/ssz";
 import {allForks} from "@chainsafe/lodestar-types";
 import {expect} from "chai";
-import {generatePerformanceBlock, generatePerformanceState, initBLS} from "../../../util";
+import {generatePerformanceBlock, generatePerfTestCachedBeaconState, initBLS} from "../../../util";
 import {phase0, fast} from "../../../../../src";
 import {profilerLogger} from "../../../../utils/logger";
 
@@ -12,12 +12,11 @@ describe("Process Blocks Performance Test", function () {
   const logger = profilerLogger();
   before(async () => {
     await initBLS();
-    const origState = await generatePerformanceState();
-    state = fast.createCachedBeaconState(config, origState as TreeBacked<allForks.BeaconState>);
+    state = generatePerfTestCachedBeaconState() as fast.CachedBeaconState<allForks.BeaconState>;
   });
 
   it("should process block", async () => {
-    const signedBlock = await generatePerformanceBlock();
+    const signedBlock = generatePerformanceBlock();
     logger.profile(`Process block ${signedBlock.message.slot}`);
     const start = Date.now();
     fast.fastStateTransition(state, signedBlock, {
@@ -30,7 +29,7 @@ describe("Process Blocks Performance Test", function () {
   });
 
   it("should process multiple validator exits in same block", async () => {
-    const signedBlock: phase0.SignedBeaconBlock = await generatePerformanceBlock();
+    const signedBlock: phase0.SignedBeaconBlock = generatePerformanceBlock();
     const exitEpoch = state.epochCtx.currentShuffling.epoch;
     const voluntaryExits: phase0.SignedVoluntaryExit[] = [];
     const numValidatorExits = config.params.MAX_VOLUNTARY_EXITS;
@@ -51,4 +50,9 @@ describe("Process Blocks Performance Test", function () {
     expect(Date.now() - start).lt(200);
     logger.profile(`Process block ${signedBlock.message.slot} with ${numValidatorExits} validator exits`);
   });
+
+  // Uncomment to hang test forever to view detailed source info in Chrome devtools profiler
+  // after(async () => {
+  //   await new Promise((r) => setTimeout(r, 1e8));
+  // });
 });

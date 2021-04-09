@@ -13,7 +13,7 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Tree} from "@chainsafe/persistent-merkle-tree";
 import {MutableVector} from "@chainsafe/persistent-ts";
 import {createFlat} from "./flat";
-import {createEpochContext, EpochContext} from "./epochContext";
+import {createEpochContext, EpochContext, EpochContextOpts} from "./epochContext";
 import {CachedValidatorList, CachedValidatorListProxyHandler} from "./cachedValidatorList";
 
 /**
@@ -38,10 +38,11 @@ export type CachedBeaconState<T extends allForks.BeaconState> =
 
 export function createCachedBeaconState<T extends allForks.BeaconState>(
   config: IBeaconConfig,
-  state: TreeBacked<T>
+  state: TreeBacked<T>,
+  opts?: EpochContextOpts
 ): CachedBeaconState<T> {
   const cachedValidators = MutableVector.from(Array.from(state.validators, (v) => createFlat(v)));
-  const epochCtx = createEpochContext(config, state, cachedValidators);
+  const epochCtx = createEpochContext(config, state, cachedValidators, opts);
   return new Proxy(
     new BeaconStateContext(state.type as ContainerType<T>, state.tree, cachedValidators, epochCtx),
     (CachedBeaconStateProxyHandler as unknown) as ProxyHandler<BeaconStateContext<T>>

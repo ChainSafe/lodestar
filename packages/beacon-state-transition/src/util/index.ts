@@ -3,6 +3,7 @@
  */
 
 export * from "./activation";
+export * from "./array";
 export * from "./attestation";
 export * from "./balance";
 export * from "./block";

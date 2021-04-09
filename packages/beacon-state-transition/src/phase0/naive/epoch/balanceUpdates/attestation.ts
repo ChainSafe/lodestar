@@ -12,6 +12,7 @@ import {
   getTotalActiveBalance,
   getTotalBalance,
   isActiveValidator,
+  newZeroedBigIntArray,
 } from "../../../../util";
 
 import {
@@ -47,8 +48,9 @@ export function getAttestationComponentDeltas(
 ): [bigint[], bigint[]] {
   const unslashedAttestingIndices = getUnslashedAttestingIndices(config, state, attestations);
   const attestingBalance = getTotalBalance(config, state, unslashedAttestingIndices);
-  const rewards = Array.from({length: state.validators.length}, () => BigInt(0));
-  const penalties = Array.from({length: state.validators.length}, () => BigInt(0));
+  const validatorCount = state.validators.length;
+  const rewards = newZeroedBigIntArray(validatorCount);
+  const penalties = newZeroedBigIntArray(validatorCount);
   const totalBalance = getTotalActiveBalance(config, state);
 
   for (const index of getEligibleValidatorIndices(config, state)) {
@@ -101,7 +103,7 @@ export function getHeadDeltas(config: IBeaconConfig, state: phase0.BeaconState):
  */
 export function getInclusionDelayDeltas(config: IBeaconConfig, state: phase0.BeaconState): bigint[] {
   const previousEpoch = getPreviousEpoch(config, state);
-  const rewards = Array.from({length: state.validators.length}, () => BigInt(0));
+  const rewards = newZeroedBigIntArray(state.validators.length);
   const matchingSourceAttestations = getMatchingSourceAttestations(config, state, previousEpoch);
 
   for (const index of getUnslashedAttestingIndices(config, state, matchingSourceAttestations)) {
@@ -123,7 +125,7 @@ export function getInclusionDelayDeltas(config: IBeaconConfig, state: phase0.Bea
  * Return inactivity reward/penalty deltas for each validator.
  */
 export function getInactivityPenaltyDeltas(config: IBeaconConfig, state: phase0.BeaconState): bigint[] {
-  const penalties = Array.from({length: state.validators.length}, () => BigInt(0));
+  const penalties = newZeroedBigIntArray(state.validators.length);
   const previousEpoch = getPreviousEpoch(config, state);
   const matchingTargetAttestations = getMatchingTargetAttestations(config, state, previousEpoch);
   if (isInInactivityLeak(config, state)) {
