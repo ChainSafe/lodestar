@@ -1,12 +1,11 @@
 import {phase0} from "@chainsafe/lodestar-types";
 
-export const FLAG_PREV_HEAD_ATTESTER = 1 << 0;
-export const FLAG_PREV_SOURCE_ATTESTER = 1 << 1;
-export const FLAG_PREV_TARGET_ATTESTER = 1 << 2;
-
-export const FLAG_CURR_HEAD_ATTESTER = 1 << 3;
-export const FLAG_CURR_SOURCE_ATTESTER = 1 << 4;
-export const FLAG_CURR_TARGET_ATTESTER = 1 << 5;
+export const FLAG_PREV_SOURCE_ATTESTER = 1 << 0;
+export const FLAG_PREV_TARGET_ATTESTER = 1 << 1;
+export const FLAG_PREV_HEAD_ATTESTER = 1 << 2;
+export const FLAG_CURR_SOURCE_ATTESTER = 1 << 3;
+export const FLAG_CURR_TARGET_ATTESTER = 1 << 4;
+export const FLAG_CURR_HEAD_ATTESTER = 1 << 5;
 
 export const FLAG_UNSLASHED = 1 << 6;
 export const FLAG_ELIGIBLE_ATTESTER = 1 << 7;
