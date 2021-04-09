@@ -58,8 +58,8 @@ import {BenchmarkRunner} from "../runner";
     id: "swap item in array",
     run: () => {
       for (let i = 0; i < forRuns; i++) {
-        const tmp = input[j];
-        input[j] = input[i];
+        const tmp = input[forRuns - i];
+        input[forRuns - i] = input[i];
         input[i] = tmp;
       }
     },
@@ -69,8 +69,8 @@ import {BenchmarkRunner} from "../runner";
     id: "swap item in Uint32Array",
     run: () => {
       for (let i = 0; i < forRuns; i++) {
-        const tmp = inputUint32Array[j];
-        inputUint32Array[j] = inputUint32Array[i];
+        const tmp = inputUint32Array[forRuns - i];
+        inputUint32Array[forRuns - i] = inputUint32Array[i];
         inputUint32Array[i] = tmp;
       }
     },
