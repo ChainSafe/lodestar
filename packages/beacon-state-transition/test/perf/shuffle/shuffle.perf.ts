@@ -9,12 +9,8 @@ import {BenchmarkRunner} from "../runner";
 
 // eslint-disable-next-line @typescript-eslint/no-floating-promises
 (async function () {
-  const config = {
-    params: {
-      // eslint-disable-next-line @typescript-eslint/naming-convention
-      SHUFFLE_ROUND_COUNT: 90,
-    },
-  } as IBeaconConfig;
+  // eslint-disable-next-line @typescript-eslint/naming-convention
+  const config = {params: {SHUFFLE_ROUND_COUNT: 90}} as IBeaconConfig;
   const seed = new Uint8Array([42, 32]);
 
   const runner = new BenchmarkRunner("shuffle list", {
