@@ -1,6 +1,7 @@
 import {allForks} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
+import {sleep} from "@chainsafe/lodestar-utils";
 import {ChainEventEmitter} from "../emitter";
 import {IBlockJob, IChainSegmentJob} from "../interface";
 import {runStateTransition} from "./stateTransition";
@@ -154,6 +155,8 @@ export async function processChainSegment({
           validSignatures: true,
         });
         importedBlocks++;
+        // this avoids keeping our node busy processing blocks
+        await sleep(0);
       }
     } catch (e) {
       if (e instanceof RegenError) {
