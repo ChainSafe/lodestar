@@ -1,12 +1,11 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Number64, Slot, Epoch} from "@chainsafe/lodestar-types";
-import {intDiv} from "@chainsafe/lodestar-utils";
 import {computeStartSlotAtEpoch, computeEpochAtSlot} from ".";
 import {GENESIS_SLOT} from "../constants";
 
 export function getSlotsSinceGenesis(config: IBeaconConfig, genesisTime: Number64): Slot {
   const diffInSeconds = Date.now() / 1000 - genesisTime;
-  return intDiv(diffInSeconds, config.params.SECONDS_PER_SLOT);
+  return Math.floor(diffInSeconds / config.params.SECONDS_PER_SLOT);
 }
 
 export function getCurrentSlot(config: IBeaconConfig, genesisTime: Number64): Slot {
