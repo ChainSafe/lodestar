@@ -17,6 +17,12 @@ import {computeEpochShuffling, IEpochShuffling} from "./epochShuffling";
 import {MutableVector} from "@chainsafe/persistent-ts";
 import {CachedValidatorList} from "./cachedValidatorList";
 
+export type EpochContextOpts = {
+  pubkey2index?: PubkeyIndexMap;
+  index2pubkey?: PublicKey[];
+  skipSyncPubkeys?: boolean;
+};
+
 export class PubkeyIndexMap extends Map<ByteVector, ValidatorIndex> {
   get(key: ByteVector): ValidatorIndex | undefined {
     return super.get((toHexString(key) as unknown) as ByteVector);
@@ -33,11 +39,15 @@ export class PubkeyIndexMap extends Map<ByteVector, ValidatorIndex> {
 export function createEpochContext(
   config: IBeaconConfig,
   state: allForks.BeaconState,
-  validators: MutableVector<phase0.Validator>
+  validators: MutableVector<phase0.Validator>,
+  opts?: EpochContextOpts
 ): EpochContext {
-  const pubkey2index = new PubkeyIndexMap();
-  const index2pubkey = [] as PublicKey[];
-  syncPubkeys(state, pubkey2index, index2pubkey);
+  const pubkey2index = opts?.pubkey2index || new PubkeyIndexMap();
+  const index2pubkey = opts?.index2pubkey || ([] as PublicKey[]);
+  if (!opts?.skipSyncPubkeys) {
+    syncPubkeys(state, pubkey2index, index2pubkey);
+  }
+
   const currentEpoch = computeEpochAtSlot(config, state.slot);
   const previousEpoch = currentEpoch === GENESIS_EPOCH ? GENESIS_EPOCH : currentEpoch - 1;
   const nextEpoch = currentEpoch + 1;
@@ -81,7 +91,7 @@ export function syncPubkeys(
 ): void {
   const currentCount = pubkey2index.size;
   if (currentCount !== index2pubkey.length) {
-    throw new Error("Pubkey indices have fallen out of sync");
+    throw new Error(`Pubkey indices have fallen out of sync: ${currentCount} != ${index2pubkey.length}`);
   }
   const newCount = state.validators.length;
   for (let i = currentCount; i < newCount; i++) {
