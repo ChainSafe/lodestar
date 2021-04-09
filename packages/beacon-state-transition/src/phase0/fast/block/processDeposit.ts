@@ -13,7 +13,7 @@ export function processDeposit(state: CachedBeaconState<phase0.BeaconState>, dep
   if (
     !verifyMerkleBranch(
       config.types.phase0.DepositData.hashTreeRoot(deposit.data),
-      Array.from({length: deposit.proof.length}, (_, i) => deposit.proof[i].valueOf() as Uint8Array),
+      Array.from(deposit.proof).map((p) => p.valueOf() as Uint8Array),
       DEPOSIT_CONTRACT_TREE_DEPTH + 1,
       state.eth1DepositIndex,
       state.eth1Data.depositRoot.valueOf() as Uint8Array
