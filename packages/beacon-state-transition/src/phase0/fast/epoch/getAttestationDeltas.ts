@@ -2,16 +2,16 @@ import {phase0} from "@chainsafe/lodestar-types";
 import {bigIntSqrt, bigIntMax} from "@chainsafe/lodestar-utils";
 import {BASE_REWARDS_PER_EPOCH as BASE_REWARDS_PER_EPOCH_CONST} from "../../../constants";
 import {newZeroedArray} from "../../../util";
-import {
-  IEpochProcess,
-  hasMarkers,
-  FLAG_ELIGIBLE_ATTESTER,
-  FLAG_UNSLASHED,
-  FLAG_PREV_SOURCE_ATTESTER,
-  FLAG_PREV_TARGET_ATTESTER,
-  FLAG_PREV_HEAD_ATTESTER,
-  CachedBeaconState,
-} from "../../../fast";
+import {IEpochProcess, hasMarkers, CachedBeaconState} from "../../../fast/util";
+
+/**
+ * Redefine constants in attesterStatus to improve performance
+ */
+const FLAG_PREV_SOURCE_ATTESTER = 1 << 0;
+const FLAG_PREV_TARGET_ATTESTER = 1 << 1;
+const FLAG_PREV_HEAD_ATTESTER = 1 << 2;
+const FLAG_UNSLASHED = 1 << 6;
+const FLAG_ELIGIBLE_ATTESTER = 1 << 7;
 
 /**
  * Return attestation reward/penalty deltas for each validator.
