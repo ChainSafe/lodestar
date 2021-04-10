@@ -13,7 +13,7 @@ import {assert} from "@chainsafe/lodestar-utils";
  */
 export class SeenAttestationCache {
   private cache: Map<string, boolean>;
-  // key as AttestationDelta root hex, value as aggregationBits
+  // key as AttestationData root hex, value as aggregationBits
   private attDataCache: Map<string, boolean[]>;
   private readonly config: IBeaconConfig;
   private readonly maxSize: number;
@@ -42,10 +42,9 @@ export class SeenAttestationCache {
         cachedAggBit.length,
         "Length of AggregateAndProof aggregationBits is not the same to cache"
       );
-      this.attDataCache.set(
-        key,
-        aggBit.map((_, i) => aggBit[i] || cachedAggBit[i])
-      );
+      for (const [i, bit] of aggBit.entries()) {
+        if (bit) cachedAggBit[i] = true;
+      }
     }
     // delete oldest key if needed
     if (this.attDataCache.size > this.maxSize) {
@@ -97,6 +96,8 @@ export class SeenAttestationCache {
    * We're only interested in the AttestationData + aggregationBits inside AggregateAndProof.
    */
   private aggregateAndProofKey(value: phase0.AggregateAndProof): string {
-    return toHexString(this.config.types.phase0.AttestationData.hashTreeRoot(value.aggregate.data));
+    return toHexString(
+      this.config.getTypes(value.aggregate.data.slot).AttestationData.hashTreeRoot(value.aggregate.data)
+    );
   }
 }
