@@ -3,11 +3,11 @@ import {altair, Gwei, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {bigIntSqrt} from "@chainsafe/lodestar-utils";
 import {getUnslashedParticipatingIndices} from "./index";
 import {getPreviousEpoch} from "../../util/epoch";
-import {newZeroedBigIntArray} from "../../../src/util";
 import {getTotalBalance, getTotalActiveBalance} from "../../util/balance";
 import {TIMELY_TARGET_FLAG_INDEX, WEIGHT_DENOMINATOR} from "../constants";
 import {getFlagIndicesAndWeights} from "../misc";
 import {phase0} from "../..";
+import {newZeroedBigIntArray} from "../../util/array";
 
 /**
  * Return the deltas for a given flag index by scanning through the participation flags.
