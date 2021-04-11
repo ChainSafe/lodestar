@@ -1,0 +1,158 @@
+import {BasicListType, List, TreeBacked} from "@chainsafe/ssz";
+import {ParticipationFlags, Uint8} from "@chainsafe/lodestar-types";
+import {MutableVector, Vector} from "@chainsafe/persistent-ts";
+import {Tree} from "@chainsafe/persistent-merkle-tree";
+import {unsafeUint8ArrayToTree} from "./unsafeUint8ArrayToTree";
+
+export interface IParticipationStatus {
+  timelyHead: boolean;
+  timelyTarget: boolean;
+  timelySource: boolean;
+}
+
+const TIMELY_HEAD = 1 << 0;
+const TIMELY_SOURCE = 1 << 1;
+const TIMELY_TARGET = 1 << 2;
+
+export function toParticipationFlags(data: IParticipationStatus): ParticipationFlags {
+  return (
+    ((data.timelySource && TIMELY_SOURCE) as number) |
+    ((data.timelyHead && TIMELY_HEAD) as number) |
+    ((data.timelyTarget && TIMELY_TARGET) as number)
+  );
+}
+
+export function fromParticipationFlags(flags: ParticipationFlags): IParticipationStatus {
+  return {
+    timelyHead: (TIMELY_HEAD & flags) === TIMELY_HEAD,
+    timelySource: (TIMELY_SOURCE & flags) === TIMELY_SOURCE,
+    timelyTarget: (TIMELY_TARGET & flags) === TIMELY_TARGET,
+  };
+}
+
+interface ICachedEpochParticipationOpts {
+  type?: BasicListType<List<Uint8>>;
+  tree?: Tree;
+  persistent: MutableVector<IParticipationStatus>;
+}
+
+export class CachedEpochParticipation implements List<ParticipationFlags> {
+  [index: number]: ParticipationFlags;
+  type?: BasicListType<List<Uint8>>;
+  tree?: Tree;
+  persistent: MutableVector<IParticipationStatus>;
+
+  constructor(opts: ICachedEpochParticipationOpts) {
+    this.type = opts.type;
+    this.tree = opts.tree;
+    this.persistent = opts.persistent;
+  }
+
+  get length(): number {
+    return this.persistent.length;
+  }
+
+  get(index: number): ParticipationFlags | undefined {
+    const inclusionData = this.getStatus(index);
+    if (!inclusionData) return undefined;
+    return toParticipationFlags(inclusionData);
+  }
+
+  set(index: number, value: ParticipationFlags): void {
+    this.persistent.set(index, fromParticipationFlags(value));
+    if (this.type && this.tree) this.type.tree_setProperty(this.tree, index, value);
+  }
+
+  getStatus(index: number): IParticipationStatus | undefined {
+    return this.persistent.get(index) ?? undefined;
+  }
+
+  setStatus(index: number, data: IParticipationStatus): void {
+    if (this.type && this.tree) this.type.tree_setProperty(this.tree, index, toParticipationFlags(data));
+    return this.persistent.set(index, data);
+  }
+
+  updateAllStatus(data: Vector<IParticipationStatus>): void {
+    this.persistent.vector = data;
+
+    if (this.type && this.tree) {
+      const packedData = new Uint8Array(data.length);
+      data.readOnlyForEach((d, i) => (packedData[i] = toParticipationFlags(d)));
+      this.tree.rootNode = unsafeUint8ArrayToTree(packedData, this.type.getChunkDepth());
+      this.type.tree_setLength(this.tree, data.length);
+    }
+  }
+
+  pushStatus(data: IParticipationStatus): void {
+    this.persistent.push(data);
+    if (this.type && this.tree) this.type.tree_push(this.tree, toParticipationFlags(data));
+  }
+
+  push(value: ParticipationFlags): number {
+    this.pushStatus(fromParticipationFlags(value));
+    return this.persistent.length;
+  }
+
+  pop(): ParticipationFlags {
+    const popped = this.persistent.pop();
+    if (this.type && this.tree) this.type.tree_pop(this.tree);
+    if (!popped) return (undefined as unknown) as ParticipationFlags;
+    return toParticipationFlags(popped);
+  }
+
+  *[Symbol.iterator](): Iterator<ParticipationFlags> {
+    for (const data of this.persistent) {
+      yield toParticipationFlags(data);
+    }
+  }
+
+  *iterateStatus(): Generator<IParticipationStatus> {
+    yield* this.persistent[Symbol.iterator]();
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  find(fn: (value: ParticipationFlags, index: number, list: this) => boolean): ParticipationFlags | undefined {
+    return;
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  findIndex(fn: (value: ParticipationFlags, index: number, list: this) => boolean): number {
+    return -1;
+  }
+
+  forEach(fn: (value: ParticipationFlags, index: number, list: this) => void): void {
+    this.persistent.forEach((value, index) =>
+      (fn as (value: ParticipationFlags, index: number) => void)(toParticipationFlags(value), index)
+    );
+  }
+
+  map<T>(fn: (value: ParticipationFlags, index: number) => T): T[] {
+    return this.persistent.map((value, index) => fn(toParticipationFlags(value), index));
+  }
+}
+
+// eslint-disable-next-line @typescript-eslint/naming-convention
+export const CachedEpochParticipationProxyHandler: ProxyHandler<CachedEpochParticipation> = {
+  get(target: CachedEpochParticipation, key: PropertyKey): unknown {
+    if (!Number.isNaN(Number(String(key)))) {
+      return target.get(key as number);
+    } else if (target[key as keyof CachedEpochParticipation]) {
+      return target[key as keyof CachedEpochParticipation];
+    } else {
+      if (target.type && target.tree) {
+        const treeBacked = target.type.createTreeBacked(target.tree);
+        if (key in treeBacked) {
+          return treeBacked[key as keyof TreeBacked<List<ParticipationFlags>>];
+        }
+      }
+      return undefined;
+    }
+  },
+  set(target: CachedEpochParticipation, key: PropertyKey, value: ParticipationFlags): boolean {
+    if (!Number.isNaN(Number(key))) {
+      target.set(key as number, value);
+      return true;
+    }
+    return false;
+  },
+};

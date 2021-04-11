@@ -65,6 +65,12 @@ export function processDeposit(state: CachedBeaconState<phase0.BeaconState>, dep
     });
     state.balances.push(amount);
 
+    // add participation caches
+    state.previousEpochParticipation.pushStatus({timelyHead: false, timelySource: false, timelyTarget: false});
+    state.currentEpochParticipation.pushStatus({timelyHead: false, timelySource: false, timelyTarget: false});
+    state.previousInclusionData?.push({proposerIndex: -1, inclusionDelay: 0});
+    state.currentInclusionData?.push({proposerIndex: -1, inclusionDelay: 0});
+
     // now that there is a new validator, update the epoch context with the new pubkey
     epochCtx.addPubkey(validators.length - 1, pubkey);
   } else {

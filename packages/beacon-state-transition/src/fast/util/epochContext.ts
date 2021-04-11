@@ -9,13 +9,13 @@ import {
   computeEpochAtSlot,
   computeProposerIndex,
   computeStartSlotAtEpoch,
-  getAttestingIndicesFromCommittee,
   getSeed,
   isAggregatorFromCommitteeLength,
 } from "../../util";
 import {computeEpochShuffling, IEpochShuffling} from "./epochShuffling";
 import {MutableVector} from "@chainsafe/persistent-ts";
 import {CachedValidatorList} from "./cachedValidatorList";
+import {IInclusionData} from "./cachedInclusionData";
 
 export type EpochContextOpts = {
   pubkey2index?: PubkeyIndexMap;
@@ -68,6 +68,19 @@ export function createEpochContext(
   }
   const nextShuffling = computeEpochShuffling(config, state, indicesBounded, nextEpoch);
   const proposers = computeProposers(config, state, currentShuffling);
+
+  // phase0 inclusion data
+  let previousInclusionData, currentInclusionData;
+  const forkName = config.getForkName(state.slot);
+  if (forkName === "phase0") {
+    previousInclusionData = MutableVector.from(
+      Array.from({length: state.validators.length}, () => ({proposerIndex: -1, inclusionDelay: 0}))
+    );
+    currentInclusionData = MutableVector.from(
+      Array.from({length: state.validators.length}, () => ({proposerIndex: -1, inclusionDelay: 0}))
+    );
+  }
+
   return new EpochContext({
     config,
     pubkey2index,
@@ -76,6 +89,8 @@ export function createEpochContext(
     previousShuffling,
     currentShuffling,
     nextShuffling,
+    previousInclusionData,
+    currentInclusionData,
   });
 }
 
@@ -147,6 +162,20 @@ export function rotateEpochs(
   ]);
   epochCtx.nextShuffling = computeEpochShuffling(epochCtx.config, state, indicesBounded, nextEpoch);
   epochCtx.proposers = computeProposers(epochCtx.config, state, epochCtx.currentShuffling);
+
+  const forkName = epochCtx.config.getForkName(state.slot);
+  if (forkName === "phase0") {
+    epochCtx.previousInclusionData = epochCtx.currentInclusionData;
+    epochCtx.currentInclusionData = MutableVector.from(
+      Array.from({length: epochCtx.previousInclusionData!.length}, () => ({
+        proposerIndex: -1,
+        inclusionDelay: 0,
+      }))
+    );
+  } else {
+    epochCtx.previousInclusionData = undefined;
+    epochCtx.currentInclusionData = undefined;
+  }
 }
 
 interface IEpochContextParams {
@@ -157,6 +186,9 @@ interface IEpochContextParams {
   previousShuffling: IEpochShuffling;
   currentShuffling: IEpochShuffling;
   nextShuffling: IEpochShuffling;
+
+  previousInclusionData?: MutableVector<IInclusionData>;
+  currentInclusionData?: MutableVector<IInclusionData>;
 }
 
 /**
@@ -167,6 +199,8 @@ interface IEpochContextParams {
  * available.
  **/
 export class EpochContext {
+  config: IBeaconConfig;
+
   // TODO: this is a hack, we need a safety mechanism in case a bad eth1 majority vote is in,
   // or handle non finalized data differently, or use an immutable.js structure for cheap copies
   // Warning: may contain pubkeys that do not yet exist in the current state, but do in a later processed state.
@@ -178,7 +212,10 @@ export class EpochContext {
   previousShuffling: IEpochShuffling;
   currentShuffling: IEpochShuffling;
   nextShuffling: IEpochShuffling;
-  config: IBeaconConfig;
+
+  // For phase0, cache inclusion data, will be updated per processed attestation
+  previousInclusionData?: MutableVector<IInclusionData>;
+  currentInclusionData?: MutableVector<IInclusionData>;
 
   constructor(params: IEpochContextParams) {
     this.config = params.config;
@@ -188,6 +225,8 @@ export class EpochContext {
     this.previousShuffling = params.previousShuffling;
     this.currentShuffling = params.currentShuffling;
     this.nextShuffling = params.nextShuffling;
+    this.previousInclusionData = params.previousInclusionData;
+    this.currentInclusionData = params.currentInclusionData;
   }
 
   /**
@@ -197,7 +236,10 @@ export class EpochContext {
     // warning: pubkey cache is not copied, it is shared, as eth1 is not expected to reorder validators.
     // Shallow copy all data from current epoch context to the next
     // All data is completely replaced, or only-appended
-    return new EpochContext(this);
+    const epochCtx = new EpochContext(this);
+    epochCtx.previousInclusionData = epochCtx.previousInclusionData?.clone();
+    epochCtx.currentInclusionData = epochCtx.currentInclusionData?.clone();
+    return epochCtx;
   }
 
   /**
@@ -246,9 +288,19 @@ export class EpochContext {
     };
   }
 
-  getAttestingIndices(data: phase0.AttestationData, bits: BitList): ValidatorIndex[] {
+  getAttestingIndices(data: phase0.AttestationData, aggregationBits: BitList): ValidatorIndex[] {
     const committee = this.getBeaconCommittee(data.slot, data.index);
-    return getAttestingIndicesFromCommittee(committee, Array.from(readonlyValues(bits)) as List<boolean>);
+    //return getAttestingIndicesFromCommittee(committee, Array.from(readonlyValues(bits)) as List<boolean>);
+
+    const bits = Array.from(readonlyValues(aggregationBits));
+    // No need for a Set, the indices in the committee are already unique.
+    const attestingIndices: ValidatorIndex[] = [];
+    for (const [i, index] of committee.entries()) {
+      if (bits[i]) {
+        attestingIndices.push(index);
+      }
+    }
+    return attestingIndices.sort((a, b) => a - b);
   }
 
   /**

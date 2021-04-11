@@ -1,12 +1,14 @@
 import {allForks} from "@chainsafe/lodestar-types";
 import {bigIntMin} from "@chainsafe/lodestar-utils";
 import {IEpochProcess, CachedBeaconState} from "../util";
+import {zipIterators} from "../util/zipIterators";
 
 export function processEffectiveBalanceUpdates(
   state: CachedBeaconState<allForks.BeaconState>,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   process: IEpochProcess
 ): void {
-  const {config, validators} = state;
+  const {balances, config, validators} = state;
   const {
     EFFECTIVE_BALANCE_INCREMENT,
     HYSTERESIS_QUOTIENT,
@@ -19,13 +21,12 @@ export function processEffectiveBalanceUpdates(
   const UPWARD_THRESHOLD = HYSTERESIS_INCREMENT * BigInt(HYSTERESIS_UPWARD_MULTIPLIER);
 
   // update effective balances with hysteresis
-  state.balances.forEach((balance, i) => {
-    const status = process.statuses[i];
-    const effectiveBalance = status.validator.effectiveBalance;
+  for (const [i, balance, validator] of zipIterators(validators.keys(), balances, validators)) {
+    const effectiveBalance = validator.effectiveBalance;
     if (balance + DOWNWARD_THRESHOLD < effectiveBalance || effectiveBalance + UPWARD_THRESHOLD < balance) {
       validators.update(i, {
         effectiveBalance: bigIntMin(balance - (balance % EFFECTIVE_BALANCE_INCREMENT), MAX_EFFECTIVE_BALANCE),
       });
     }
-  });
+  }
 }

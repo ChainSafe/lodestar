@@ -49,7 +49,17 @@ export class CachedValidatorList<T extends phase0.Validator> implements List<T> 
     return this.persistent.pop() as T;
   }
 
-  *[Symbol.iterator](): Iterator<T> {
+  *[Symbol.iterator](): IterableIterator<T> {
+    yield* this.persistent[Symbol.iterator]();
+  }
+
+  *keys(): IterableIterator<number> {
+    for (let i = 0; i < this.persistent.length; i++) {
+      yield i;
+    }
+  }
+
+  *values(): IterableIterator<T> {
     yield* this.persistent[Symbol.iterator]();
   }
 
