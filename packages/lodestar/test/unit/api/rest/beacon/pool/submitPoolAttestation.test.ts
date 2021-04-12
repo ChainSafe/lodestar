@@ -27,7 +27,7 @@ describe("rest - beacon - submitAttestations", function () {
   it("should succeed", async function () {
     await supertest(restApi.server.server)
       .post(urlJoin(BEACON_PREFIX, submitPoolAttestation.url))
-      .send(config.types.phase0.Attestation.toJson(attestation, {case: "snake"}) as Record<string, unknown>)
+      .send([config.types.phase0.Attestation.toJson(attestation, {case: "snake"}) as Record<string, unknown>])
       .expect(200);
     expect(beaconPoolStub.submitAttestations.calledOnce).to.be.true;
   });
@@ -35,7 +35,7 @@ describe("rest - beacon - submitAttestations", function () {
   it("should fail to parse body", async function () {
     await supertest(restApi.server.server)
       .post(urlJoin(BEACON_PREFIX, submitPoolAttestation.url))
-      .send(config.types.phase0.Attestation.toJson(attestation, {case: "camel"}) as Record<string, unknown>)
+      .send([config.types.phase0.Attestation.toJson(attestation, {case: "camel"}) as Record<string, unknown>])
       .expect(400)
       .expect("Content-Type", "application/json; charset=utf-8");
     expect(beaconPoolStub.submitAttestations.notCalled).to.be.true;
