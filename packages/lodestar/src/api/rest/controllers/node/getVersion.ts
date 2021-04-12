@@ -4,13 +4,11 @@ export const getVersion: ApiController = {
   url: "/version",
   method: "GET",
 
-  handler: async function (req, resp) {
-    const version = await this.api.node.getVersion();
-
-    resp.status(200).send({
+  handler: async function () {
+    return {
       data: {
-        version,
+        version: await this.api.node.getVersion(),
       },
-    });
+    };
   },
 };

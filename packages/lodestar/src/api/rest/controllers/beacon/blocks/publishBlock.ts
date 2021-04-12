@@ -6,7 +6,7 @@ export const publishBlock: ApiController = {
   url: "/blocks",
   method: "POST",
 
-  handler: async function (req, resp) {
+  handler: async function (req) {
     let block: phase0.SignedBeaconBlock;
     try {
       block = this.config.types.phase0.SignedBeaconBlock.fromJson(req.body, {case: "snake"});
@@ -14,7 +14,7 @@ export const publishBlock: ApiController = {
       throw new ValidationError("Failed to deserialize block");
     }
     await this.api.beacon.blocks.publishBlock(block);
-    resp.code(200).type("application/json").send();
+    return {};
   },
 
   schema: {

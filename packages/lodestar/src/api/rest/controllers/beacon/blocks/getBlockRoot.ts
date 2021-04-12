@@ -12,11 +12,11 @@ export const getBlockRoot: ApiController<DefaultQuery, {blockId: string}> = {
       if (!data) {
         return resp.status(404).send();
       }
-      return resp.status(200).send({
+      return {
         data: {
           root: this.config.types.Root.toJson(this.config.types.phase0.BeaconBlock.hashTreeRoot(data.message)),
         },
-      });
+      };
     } catch (e) {
       if ((e as Error).message === "Invalid block id") {
         throw toRestValidationError("block_id", (e as Error).message);

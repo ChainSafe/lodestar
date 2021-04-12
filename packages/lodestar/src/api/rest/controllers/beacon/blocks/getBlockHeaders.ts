@@ -6,7 +6,7 @@ export const getBlockHeaders: ApiController<{slot?: string | number; parent_root
   url: "/headers",
   method: "GET",
 
-  handler: async function (req, resp) {
+  handler: async function (req) {
     let slot: Slot | undefined;
     if (req.query.slot || req.query.slot === 0) {
       slot = this.config.types.Slot.fromJson(req.query.slot);
@@ -16,9 +16,9 @@ export const getBlockHeaders: ApiController<{slot?: string | number; parent_root
       parentRoot = this.config.types.Root.fromJson(req.query.parent_root);
     }
     const data = await this.api.beacon.blocks.getBlockHeaders({slot, parentRoot});
-    resp.status(200).send({
+    return {
       data: data.map((item) => this.config.types.phase0.SignedBeaconHeaderResponse.toJson(item, {case: "snake"})),
-    });
+    };
   },
 
   schema: {

@@ -4,12 +4,10 @@ export const getVoluntaryExits: ApiController = {
   url: "/pool/voluntary_exits",
   method: "GET",
 
-  handler: async function (req, resp) {
+  handler: async function () {
     const exits = await this.api.beacon.pool.getVoluntaryExits();
-    resp.status(200).send({
-      data: exits.map((exit) => {
-        return this.config.types.phase0.SignedVoluntaryExit.toJson(exit, {case: "snake"});
-      }),
-    });
+    return {
+      data: exits.map((exit) => this.config.types.phase0.SignedVoluntaryExit.toJson(exit, {case: "snake"})),
+    };
   },
 };

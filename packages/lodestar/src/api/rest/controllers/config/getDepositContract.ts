@@ -4,10 +4,10 @@ export const getDepositContract: ApiController = {
   url: "/deposit_contract",
   method: "GET",
 
-  handler: async function (req, resp) {
+  handler: async function () {
     const depositContract = await this.api.config.getDepositContract();
-    return resp.status(200).send({
+    return {
       data: this.config.types.phase0.Contract.toJson(depositContract, {case: "snake"}),
-    });
+    };
   },
 };

@@ -4,12 +4,12 @@ export const getAttesterSlashings: ApiController = {
   url: "/pool/attester_slashings",
   method: "GET",
 
-  handler: async function (req, resp) {
+  handler: async function () {
     const attesterSlashings = await this.api.beacon.pool.getAttesterSlashings();
-    resp.status(200).send({
-      data: attesterSlashings.map((slashing) => {
-        return this.config.types.phase0.AttesterSlashing.toJson(slashing, {case: "snake"});
-      }),
-    });
+    return {
+      data: attesterSlashings.map((slashing) =>
+        this.config.types.phase0.AttesterSlashing.toJson(slashing, {case: "snake"})
+      ),
+    };
   },
 };

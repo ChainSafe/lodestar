@@ -1,33 +1,18 @@
-/* eslint-disable @typescript-eslint/naming-convention */
+import {Json} from "@chainsafe/ssz";
 import {ApiController} from "../types";
 import {DefaultParams, DefaultQuery} from "fastify";
 
-type CommitteeSubnetRequest = {
-  validator_index: number;
-  committee_index: number;
-  committees_at_slot: number;
-  slot: number;
-  is_aggregator: boolean;
-};
+/* eslint-disable @typescript-eslint/naming-convention */
 
-type Body = CommitteeSubnetRequest[];
-
-export const prepareCommitteeSubnet: ApiController<DefaultQuery, DefaultParams, Body> = {
+export const prepareCommitteeSubnet: ApiController<DefaultQuery, DefaultParams, Json[]> = {
   url: "/beacon_committee_subscriptions",
   method: "POST",
 
-  handler: async function (req, resp) {
+  handler: async function (req) {
     await this.api.validator.prepareBeaconCommitteeSubnet(
-      req.body.map((item) => ({
-        validatorIndex: item.validator_index,
-        committeeIndex: item.committee_index,
-        committeesAtSlot: item.committees_at_slot,
-        slot: item.slot,
-        isAggregator: item.is_aggregator,
-      }))
+      req.body.map((item) => this.config.types.phase0.BeaconCommitteeSubscription.fromJson(item, {case: "snake"}))
     );
-
-    resp.status(200).send();
+    return {};
   },
 
   schema: {

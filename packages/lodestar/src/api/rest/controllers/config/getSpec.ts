@@ -5,10 +5,10 @@ export const getSpec: ApiController = {
   url: "/spec",
   method: "GET",
 
-  handler: async function (req, resp) {
+  handler: async function () {
     const spec = await this.api.config.getSpec();
-    return resp.status(200).send({
+    return {
       data: BeaconParams.toJson(spec),
-    });
+    };
   },
 };

@@ -1,20 +1,21 @@
 import {ApiController} from "../../types";
 
-// eslint-disable-next-line @typescript-eslint/naming-convention
+/* eslint-disable @typescript-eslint/naming-convention */
+
 export const getPoolAttestations: ApiController<{slot: string; committee_index: string}> = {
   url: "/pool/attestations",
   method: "GET",
 
-  handler: async function (req, resp) {
+  handler: async function (req) {
     const attestations = await this.api.beacon.pool.getAttestations({
       slot: Number(req.query.slot),
       committeeIndex: Number(req.query.committee_index),
     });
-    resp.status(200).send({
-      data: attestations.map((attestation) => {
-        return this.config.types.phase0.Attestation.toJson(attestation, {case: "snake"});
-      }),
-    });
+    return {
+      data: attestations.map((attestation) =>
+        this.config.types.phase0.Attestation.toJson(attestation, {case: "snake"})
+      ),
+    };
   },
 
   schema: {
@@ -26,7 +27,6 @@ export const getPoolAttestations: ApiController<{slot: string; committee_index: 
           types: "number",
           min: 0,
         },
-        // eslint-disable-next-line @typescript-eslint/naming-convention
         committee_index: {
           types: "number",
           min: 0,

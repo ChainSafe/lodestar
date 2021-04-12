@@ -9,16 +9,11 @@ export const proposerDutiesController: ApiController<DefaultQuery, Params> = {
   url: "/duties/proposer/:epoch",
   method: "GET",
 
-  handler: async function (req, resp) {
+  handler: async function (req) {
     const duties = await this.api.validator.getProposerDuties(req.params.epoch);
-    resp
-      .code(200)
-      .type("application/json")
-      .send({
-        data: duties.map((d) => {
-          return this.config.types.phase0.ProposerDuty.toJson(d, {case: "snake"});
-        }),
-      });
+    return {
+      data: duties.map((d) => this.config.types.phase0.ProposerDuty.toJson(d, {case: "snake"})),
+    };
   },
 
   schema: {

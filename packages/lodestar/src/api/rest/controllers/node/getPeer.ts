@@ -10,10 +10,9 @@ export const getPeer: ApiController<DefaultQuery, {peerId: string}> = {
   handler: async function (req, resp) {
     const peer = await this.api.node.getPeer(req.params.peerId);
     if (!peer) {
-      resp.status(404).send();
-      return;
+      return resp.status(404).send();
     }
-    resp.status(200).send({
+    return {
       data: {
         peer_id: peer.peerId,
         enr: peer.enr,
@@ -21,7 +20,7 @@ export const getPeer: ApiController<DefaultQuery, {peerId: string}> = {
         state: peer.state,
         direction: peer.direction,
       },
-    });
+    };
   },
 
   schema: {

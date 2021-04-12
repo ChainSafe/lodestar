@@ -1,27 +1,18 @@
-import {phase0} from "@chainsafe/lodestar-types";
 import {Json} from "@chainsafe/ssz";
 import {DefaultParams, DefaultQuery} from "fastify";
 import {ApiController} from "../types";
 
-type Body = Json[];
-
-export const publishAggregateAndProof: ApiController<DefaultQuery, DefaultParams, Body> = {
+export const publishAggregateAndProof: ApiController<DefaultQuery, DefaultParams, Json[]> = {
   url: "/aggregate_and_proofs",
   method: "POST",
 
-  handler: async function (req, resp) {
-    const signedAggregateAndProofs: phase0.SignedAggregateAndProof[] = [];
-    for (const aggreagteJson of req.body) {
-      try {
-        signedAggregateAndProofs.push(
-          this.config.types.phase0.SignedAggregateAndProof.fromJson(aggreagteJson, {case: "snake"})
-        );
-      } catch (e) {
-        this.log.warn("Failed to parse AggregateAndProof", (e as Error).message);
-      }
-    }
+  handler: async function (req) {
+    const signedAggregateAndProofs = req.body.map((item) =>
+      this.config.types.phase0.SignedAggregateAndProof.fromJson(item, {case: "snake"})
+    );
+
     await this.api.validator.publishAggregateAndProofs(signedAggregateAndProofs);
-    resp.status(200).send();
+    return {};
   },
 
   schema: {

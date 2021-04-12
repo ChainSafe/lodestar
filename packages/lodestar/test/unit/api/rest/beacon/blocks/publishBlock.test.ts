@@ -25,7 +25,7 @@ describe("rest - beacon - publishBlock", function () {
       .post(urlJoin(BEACON_PREFIX, publishBlock.url))
       .send(config.types.phase0.SignedBeaconBlock.toJson(block, {case: "snake"}) as Record<string, unknown>)
       .expect(200)
-      .expect("Content-Type", "application/json");
+      .expect("Content-Type", "application/json; charset=utf-8");
   });
 
   it("bad body", async function () {

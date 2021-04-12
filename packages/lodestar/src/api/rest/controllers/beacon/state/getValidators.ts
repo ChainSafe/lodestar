@@ -15,7 +15,7 @@ export const getStateValidators: ApiController<ValidatorsQuery, Params> = {
   url: "/states/:stateId/validators",
   method: "GET",
 
-  handler: async function (req, resp) {
+  handler: async function (req) {
     const filters: IValidatorFilters = {};
     if (req.query.indices) {
       filters.indices = mapValidatorIndices(this.config, req.query.indices);
@@ -24,9 +24,9 @@ export const getStateValidators: ApiController<ValidatorsQuery, Params> = {
       filters.statuses = req.query.statuses as ValidatorStatus[];
     }
     const validators = await this.api.beacon.state.getStateValidators(req.params.stateId, filters);
-    return resp.status(200).send({
+    return {
       data: validators.map((v) => v && this.config.types.phase0.ValidatorResponse.toJson(v, {case: "snake"})),
-    });
+    };
   },
 
   schema: {

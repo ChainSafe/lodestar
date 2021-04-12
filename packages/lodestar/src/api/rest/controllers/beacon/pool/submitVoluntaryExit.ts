@@ -6,7 +6,7 @@ export const submitVoluntaryExit: ApiController = {
   url: "/pool/voluntary_exits",
   method: "POST",
 
-  handler: async function (req, resp) {
+  handler: async function (req) {
     let exit: phase0.SignedVoluntaryExit;
     try {
       exit = this.config.types.phase0.SignedVoluntaryExit.fromJson(req.body, {case: "snake"});
@@ -14,7 +14,7 @@ export const submitVoluntaryExit: ApiController = {
       throw new ValidationError("Failed to deserialize voluntary exit");
     }
     await this.api.beacon.pool.submitVoluntaryExit(exit);
-    resp.status(200).send();
+    return {};
   },
 
   schema: {
