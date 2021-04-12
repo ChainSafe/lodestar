@@ -6,8 +6,6 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {phase0} from "@chainsafe/lodestar-types";
 import {LodestarEventIterator} from "@chainsafe/lodestar-utils";
 import {ChainEvent, IBeaconChain} from "../../../chain";
-import {IBeaconDb} from "../../../db";
-import {IBeaconSync} from "../../../sync";
 import {IApiOptions} from "../../options";
 import {ApiNamespace, IApiModules} from "../interface";
 import {BeaconBlockApi, IBeaconBlocksApi} from "./blocks";
@@ -24,21 +22,17 @@ export class BeaconApi implements IBeaconApi {
 
   private readonly config: IBeaconConfig;
   private readonly chain: IBeaconChain;
-  private readonly db: IBeaconDb;
-  private readonly sync: IBeaconSync;
 
   constructor(opts: Partial<IApiOptions>, modules: Pick<IApiModules, "config" | "chain" | "db" | "network" | "sync">) {
     this.namespace = ApiNamespace.BEACON;
     this.config = modules.config;
     this.chain = modules.chain;
-    this.db = modules.db;
-    this.sync = modules.sync;
     this.state = new BeaconStateApi(opts, modules);
     this.blocks = new BeaconBlockApi(opts, modules);
     this.pool = new BeaconPoolApi(opts, modules);
   }
 
-  async getGenesis(): Promise<phase0.Genesis | null> {
+  async getGenesis(): Promise<phase0.Genesis> {
     return {
       genesisForkVersion: this.config.params.GENESIS_FORK_VERSION,
       genesisTime: BigInt(this.chain.genesisTime),

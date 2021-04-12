@@ -33,9 +33,4 @@ describe("rest - beacon - getGenesis", function () {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     expect(response.body.data.genesis_validators_root).to.not.be.empty;
   });
-
-  it("should return 404 if no genesis", async function () {
-    beaconStub.getGenesis.resolves(null);
-    await supertest(restApi.server.server).get(urlJoin(BEACON_PREFIX, getGenesis.url)).expect(404);
-  });
 });

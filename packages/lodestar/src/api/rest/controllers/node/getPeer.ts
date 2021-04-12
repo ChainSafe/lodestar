@@ -7,11 +7,8 @@ export const getPeer: ApiController<DefaultQuery, {peerId: string}> = {
   url: "/peers/:peerId",
   method: "GET",
 
-  handler: async function (req, resp) {
+  handler: async function (req) {
     const peer = await this.api.node.getPeer(req.params.peerId);
-    if (!peer) {
-      return resp.status(404).send();
-    }
     return {
       data: {
         peer_id: peer.peerId,

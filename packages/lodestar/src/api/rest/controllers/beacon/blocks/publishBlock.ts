@@ -1,6 +1,6 @@
-import {ApiController} from "../../types";
 import {phase0} from "@chainsafe/lodestar-types";
-import {ValidationError} from "../../../../impl/errors/validation";
+import {ApiController} from "../../types";
+import {ValidationError} from "../../../../impl/errors";
 
 export const publishBlock: ApiController = {
   url: "/blocks",
@@ -11,7 +11,7 @@ export const publishBlock: ApiController = {
     try {
       block = this.config.types.phase0.SignedBeaconBlock.fromJson(req.body, {case: "snake"});
     } catch (e) {
-      throw new ValidationError("Failed to deserialize block");
+      throw new ValidationError(`Failed to deserialize block: ${(e as Error).message}`);
     }
     await this.api.beacon.blocks.publishBlock(block);
     return {};

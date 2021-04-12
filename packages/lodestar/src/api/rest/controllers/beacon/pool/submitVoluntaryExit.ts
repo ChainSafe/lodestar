@@ -1,5 +1,5 @@
 import {phase0} from "@chainsafe/lodestar-types";
-import {ValidationError} from "../../../../impl/errors/validation";
+import {ValidationError} from "../../../../impl/errors";
 import {ApiController} from "../../types";
 
 export const submitVoluntaryExit: ApiController = {
@@ -11,7 +11,7 @@ export const submitVoluntaryExit: ApiController = {
     try {
       exit = this.config.types.phase0.SignedVoluntaryExit.fromJson(req.body, {case: "snake"});
     } catch (e) {
-      throw new ValidationError("Failed to deserialize voluntary exit");
+      throw new ValidationError(`SSZ deserialize error: ${(e as Error).message}`);
     }
     await this.api.beacon.pool.submitVoluntaryExit(exit);
     return {};

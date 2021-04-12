@@ -16,3 +16,11 @@ export class DataNotAvailable extends ApiError {
     super(404, "Requested data cannot be served");
   }
 }
+
+export class ValidationError extends ApiError {
+  dataPath?: string;
+  constructor(message?: string, dataPath?: string) {
+    super(400, message);
+    this.dataPath = dataPath;
+  }
+}

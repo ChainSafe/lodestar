@@ -2,20 +2,17 @@ import {allForks, BLSPubkey, CommitteeIndex, Epoch, Root, Slot, ValidatorIndex} 
 import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
 
 export interface IBeaconStateApi {
-  getStateRoot(stateId: StateId): Promise<Root | null>;
-  getState(stateId: StateId): Promise<allForks.BeaconState | null>;
-  getStateFinalityCheckpoints(stateId: StateId): Promise<phase0.FinalityCheckpoints | null>;
+  getStateRoot(stateId: StateId): Promise<Root>;
+  getState(stateId: StateId): Promise<allForks.BeaconState>;
+  getStateFinalityCheckpoints(stateId: StateId): Promise<phase0.FinalityCheckpoints>;
   getStateValidators(stateId: StateId, filters?: IValidatorFilters): Promise<phase0.ValidatorResponse[]>;
-  getStateValidator(
-    stateId: StateId,
-    validatorId: BLSPubkey | ValidatorIndex
-  ): Promise<phase0.ValidatorResponse | null>;
+  getStateValidator(stateId: StateId, validatorId: BLSPubkey | ValidatorIndex): Promise<phase0.ValidatorResponse>;
   getStateValidatorBalances(
     stateId: StateId,
     indices?: (BLSPubkey | ValidatorIndex)[]
   ): Promise<phase0.ValidatorBalance[]>;
   getStateCommittees(stateId: StateId, filters?: ICommitteesFilters): Promise<phase0.BeaconCommitteeResponse[]>;
-  getFork(stateId: StateId): Promise<phase0.Fork | null>;
+  getFork(stateId: StateId): Promise<phase0.Fork>;
 }
 
 export type StateId = string | "head" | "genesis" | "finalized" | "justified";

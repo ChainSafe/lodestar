@@ -1,6 +1,6 @@
 import {FastifyError, FastifyReply, FastifyRequest} from "fastify";
 import {ServerResponse} from "http";
-import {ApiError} from "../../impl/errors/api";
+import {ApiError} from "../../impl/errors";
 
 export function errorHandler(e: Error, req: FastifyRequest, resp: FastifyReply<ServerResponse>): void {
   if ((e as FastifyError).validation) {

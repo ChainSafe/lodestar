@@ -37,10 +37,4 @@ describe("beacon api impl - state - get fork", function () {
     const fork = await api.getFork("something");
     expect(fork).to.not.be.null;
   });
-
-  it("state doesn't exist", async function () {
-    resolveStateIdStub.resolves(null);
-    const fork = await api.getFork("something");
-    expect(fork).to.be.null;
-  });
 });

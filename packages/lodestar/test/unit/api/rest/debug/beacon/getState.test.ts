@@ -57,14 +57,4 @@ describe("rest - debug - beacon - getState", function () {
       .expect("Content-Type", "application/octet-stream");
     expect(response.body).to.be.deep.equal(config.getTypes(state.slot).BeaconState.serialize(state));
   });
-
-  it("should return status code 404", async function () {
-    debugBeaconStub.getState.resolves(null);
-    await supertest(restApi.server.server).get("/eth/v1/debug/beacon/states/0xSomething").expect(404);
-  });
-
-  it("should return status code 400", async function () {
-    debugBeaconStub.getState.throws(new Error("Invalid state id"));
-    await supertest(restApi.server.server).get("/eth/v1/debug/beacon/states/1000x").expect(400);
-  });
 });

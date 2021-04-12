@@ -27,11 +27,4 @@ describe("rest - beacon - getStateFork", function () {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     expect(response.body.data.current_version).to.not.be.undefined;
   });
-
-  it("should not found state", async function () {
-    beaconStateStub.getFork.withArgs("4").resolves(null);
-    await supertest(restApi.server.server)
-      .get(urlJoin(BEACON_PREFIX, getStateFork.url.replace(":stateId", "4")))
-      .expect(404);
-  });
 });

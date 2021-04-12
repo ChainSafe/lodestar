@@ -1,5 +1,5 @@
 import {phase0} from "@chainsafe/lodestar-types";
-import {ValidationError} from "../../../../impl/errors/validation";
+import {ValidationError} from "../../../../impl/errors";
 import {ApiController} from "../../types";
 
 export const submitPoolAttestation: ApiController = {
@@ -11,7 +11,7 @@ export const submitPoolAttestation: ApiController = {
     try {
       attestation = this.config.types.phase0.Attestation.fromJson(req.body, {case: "snake"});
     } catch (e) {
-      throw new ValidationError("Failed to deserialize attestation");
+      throw new ValidationError(`SSZ deserialize error: ${(e as Error).message}`);
     }
     await this.api.beacon.pool.submitAttestation(attestation);
     return {};
