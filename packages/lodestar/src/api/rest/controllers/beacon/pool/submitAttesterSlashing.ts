@@ -6,7 +6,7 @@ export const submitAttesterSlashing: ApiController = {
   url: "/pool/attester_slashings",
   method: "POST",
 
-  handler: async function (req, resp) {
+  handler: async function (req) {
     let slashing: phase0.AttesterSlashing;
     try {
       slashing = this.config.types.phase0.AttesterSlashing.fromJson(req.body, {case: "snake"});
@@ -14,7 +14,7 @@ export const submitAttesterSlashing: ApiController = {
       throw new ValidationError("Failed to deserialize attester slashing");
     }
     await this.api.beacon.pool.submitAttesterSlashing(slashing);
-    resp.status(200).send();
+    return {};
   },
 
   schema: {

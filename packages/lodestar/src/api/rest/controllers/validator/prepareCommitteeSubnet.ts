@@ -12,6 +12,7 @@ export const prepareCommitteeSubnet: ApiController<DefaultQuery, DefaultParams, 
     await this.api.validator.prepareBeaconCommitteeSubnet(
       req.body.map((item) => this.config.types.phase0.BeaconCommitteeSubscription.fromJson(item, {case: "snake"}))
     );
+    return {};
   },
 
   schema: {

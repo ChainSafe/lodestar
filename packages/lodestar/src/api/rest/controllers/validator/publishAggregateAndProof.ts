@@ -6,13 +6,13 @@ export const publishAggregateAndProof: ApiController<DefaultQuery, DefaultParams
   url: "/aggregate_and_proofs",
   method: "POST",
 
-  handler: async function (req, resp) {
+  handler: async function (req) {
     const signedAggregateAndProofs = req.body.map((item) =>
       this.config.types.phase0.SignedAggregateAndProof.fromJson(item, {case: "snake"})
     );
 
     await this.api.validator.publishAggregateAndProofs(signedAggregateAndProofs);
-    resp.send();
+    return {};
   },
 
   schema: {
