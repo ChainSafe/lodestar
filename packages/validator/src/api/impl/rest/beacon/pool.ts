@@ -3,10 +3,10 @@ import {IBeaconPoolApi} from "../../../interface/beacon";
 import {RestApi} from "./abstract";
 
 export class RestBeaconPoolApi extends RestApi implements IBeaconPoolApi {
-  async submitAttestation(attestation: phase0.Attestation): Promise<void> {
+  async submitAttestations(attestations: phase0.Attestation[]): Promise<void> {
     return this.client.post(
       "/pool/attestations",
-      this.config.types.phase0.Attestation.toJson(attestation, {case: "snake"})
+      attestations.map((attestation) => this.config.types.phase0.Attestation.toJson(attestation, {case: "snake"}))
     );
   }
 

@@ -218,7 +218,7 @@ export class AttestationService {
       }, (this.config.params.SECONDS_PER_SLOT / 3) * 1000);
     }
     try {
-      await this.provider.beacon.pool.submitAttestation(attestation);
+      await this.provider.beacon.pool.submitAttestations([attestation]);
       this.logger.info("Published attestation", {slot: attestation.data.slot, validator: prettyBytes(duty.pubkey)});
     } catch (e) {
       this.logger.error("Failed to publish attestation", e);

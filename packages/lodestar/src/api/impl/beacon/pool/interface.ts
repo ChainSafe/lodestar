@@ -7,7 +7,7 @@ export interface IAttestationFilters {
 
 export interface IBeaconPoolApi {
   getAttestations(filters?: Partial<IAttestationFilters>): Promise<phase0.Attestation[]>;
-  submitAttestation(attestation: phase0.Attestation): Promise<void>;
+  submitAttestations(attestations: phase0.Attestation[]): Promise<void>;
   getAttesterSlashings(): Promise<phase0.AttesterSlashing[]>;
   submitAttesterSlashing(slashing: phase0.AttesterSlashing): Promise<void>;
   getProposerSlashings(): Promise<phase0.ProposerSlashing[]>;
