@@ -12,6 +12,9 @@ import {StateContextCache} from "../../../../chain/stateCache";
 import {IBeaconDb} from "../../../../db";
 import {getStateValidatorIndex} from "../../utils";
 import {StateId} from "./interface";
+import {sleep, assert} from "@chainsafe/lodestar-utils";
+import {processSlots} from "@chainsafe/lodestar-beacon-state-transition/lib/phase0/fast";
+import {PERSIST_STATE_EVERY_EPOCHS} from "../../../../tasks/tasks/archiveStates";
 
 export async function resolveStateId(
   chain: IBeaconChain,
@@ -161,7 +164,8 @@ async function stateBySlot(
   if (blockSummary) {
     return stateCache.get(blockSummary.stateRoot) ?? null;
   } else {
-    return await db.stateArchive.get(slot);
+    // return await db.stateArchive.get(slot);
+    return await getFinalizedState(db, stateCache, forkChoice, slot);
   }
 }
 
@@ -181,4 +185,52 @@ export function filterStateValidatorsByStatuses(
     }
   }
   return responses;
+}
+
+async function assertSlotIsFinalized(forkChoice: IForkChoice, slot: Slot): void {
+  // @TODO: we should probably use SLOTS_PER_EPOCH instead of hard-coding `32`, but i'm not sure ohw without passing the config all the way from all the upstream calls
+  assert.lte(slot, forkChoice.getFinalizedCheckpoint().epoch * 32);
+}
+
+/**
+ * Get the archived state nearest to `slot`.
+ */
+function getNearestArchivedState(
+  stateCache: StateContextCache,
+  forkChoice: IForkChoice,
+  slot: Slot
+): CachedBeaconState<allForks.BeaconState> {
+  const lowerDiff = slot % PERSIST_STATE_EVERY_EPOCHS;
+  const upperDiff = PERSIST_STATE_EVERY_EPOCHS - lowerDiff;
+  const nearestArchivedStateSlot = lowerDiff < upperDiff ? slot - lowerDiff : slot + upperDiff;
+
+  let state: CachedBeaconState<allForks.BeaconState> | null = null;
+  const blockSummary = forkChoice.getCanonicalBlockSummaryAtSlot(nearestArchivedStateSlot);
+  if (blockSummary) {
+    state = stateCache.get(blockSummary.stateRoot);
+  }
+  if (state === null) throw new Error("getFinalizedState: cannot find state");
+  return state;
+}
+
+async function getFinalizedState(
+  db: IBeaconDb,
+  stateCache: StateContextCache,
+  forkChoice: IForkChoice,
+  slot: Slot
+): Promise<CachedBeaconState<allForks.BeaconState>> {
+  assertSlotIsFinalized(forkChoice, slot);
+  let state = getNearestArchivedState(stateCache, forkChoice, slot);
+
+  // process blocks up to the requested slot
+  for await (const block of db.blockArchive.valuesStream({gt: state.slot, lte: slot})) {
+    state = fast.fastStateTransition(state, block);
+    // yield to the event loop
+    await sleep(0);
+  }
+  // due to skip slots, may need to process empty slots to reach the requested slot
+  if (state.slot < slot) {
+    processSlots(state as CachedBeaconState<phase0.BeaconState>, slot);
+  }
+  return state;
 }

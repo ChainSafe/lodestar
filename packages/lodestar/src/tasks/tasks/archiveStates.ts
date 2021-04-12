@@ -12,7 +12,7 @@ import {IBeaconChain} from "../../chain";
 /**
  * Minimum number of epochs between archived states
  */
-const PERSIST_STATE_EVERY_EPOCHS = 1024;
+export const PERSIST_STATE_EVERY_EPOCHS = 1024;
 /**
  * Minimum number of epochs between single temp archived states
  * These states will be pruned once a new state is persisted
