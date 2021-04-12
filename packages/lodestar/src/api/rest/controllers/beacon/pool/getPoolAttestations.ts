@@ -3,6 +3,7 @@ import {ApiController} from "../../types";
 // eslint-disable-next-line @typescript-eslint/naming-convention
 export const getPoolAttestations: ApiController<{slot: string; committee_index: string}> = {
   url: "/pool/attestations",
+  method: "GET",
 
   handler: async function (req, resp) {
     const attestations = await this.api.beacon.pool.getAttestations({

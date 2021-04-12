@@ -7,6 +7,7 @@ type Params = {
 
 export const proposerDutiesController: ApiController<DefaultQuery, Params> = {
   url: "/duties/proposer/:epoch",
+  method: "GET",
 
   handler: async function (req, resp) {
     const duties = await this.api.validator.getProposerDuties(req.params.epoch);

@@ -2,6 +2,7 @@ import {ApiController} from "../types";
 
 export const getForkSchedule: ApiController = {
   url: "/fork_schedule",
+  method: "GET",
 
   handler: async function (req, resp) {
     const forkSchedule = await this.api.config.getForkSchedule();

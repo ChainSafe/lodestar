@@ -1,4 +1,12 @@
-import {DefaultBody, DefaultHeaders, DefaultParams, DefaultQuery, RequestHandler, RouteShorthandOptions} from "fastify";
+import {
+  DefaultBody,
+  DefaultHeaders,
+  DefaultParams,
+  DefaultQuery,
+  HTTPMethod,
+  RequestHandler,
+  RouteShorthandOptions,
+} from "fastify";
 import {IncomingMessage, Server, ServerResponse} from "http";
 
 export type ApiHandler<
@@ -18,6 +26,7 @@ export interface ApiController<
   opts: RouteShorthandOptions<Server, IncomingMessage, ServerResponse, Query, Params, Headers, Body>;
   handler: ApiHandler<Query, Params, Body, Headers>;
   url: string;
+  method: HTTPMethod;
 }
 
 export enum HttpHeader {

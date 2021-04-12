@@ -9,6 +9,7 @@ type Query = {
 
 export const produceAggregatedAttestation: ApiController<Query> = {
   url: "/aggregate_attestation",
+  method: "GET",
 
   handler: async function (req, resp) {
     const aggregate = await this.api.validator.getAggregatedAttestation(

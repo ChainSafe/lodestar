@@ -6,6 +6,7 @@ const SSZ_MIME_TYPE = "application/octet-stream";
 
 export const getState: ApiController<DefaultQuery, {stateId: string}> = {
   url: "/beacon/states/:stateId",
+  method: "GET",
 
   handler: async function (req, resp) {
     try {

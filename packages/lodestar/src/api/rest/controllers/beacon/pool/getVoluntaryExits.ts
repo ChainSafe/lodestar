@@ -2,6 +2,7 @@ import {ApiController} from "../../types";
 
 export const getVoluntaryExits: ApiController = {
   url: "/pool/voluntary_exits",
+  method: "GET",
 
   handler: async function (req, resp) {
     const exits = await this.api.beacon.pool.getVoluntaryExits();

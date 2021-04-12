@@ -4,6 +4,7 @@ import {ApiController} from "../../types";
 // eslint-disable-next-line @typescript-eslint/naming-convention
 export const getBlockHeaders: ApiController<{slot?: string | number; parent_root?: string}> = {
   url: "/headers",
+  method: "GET",
 
   handler: async function (req, resp) {
     let slot: Slot | undefined;

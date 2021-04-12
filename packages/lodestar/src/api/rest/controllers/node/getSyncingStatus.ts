@@ -2,6 +2,7 @@ import {ApiController} from "../types";
 
 export const getSyncingStatus: ApiController = {
   url: "/syncing",
+  method: "GET",
   opts: {
     schema: {},
   },

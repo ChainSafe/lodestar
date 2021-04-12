@@ -13,6 +13,7 @@ type Query = {
 
 export const getStateBeaconCommittees: ApiController<Query, Params> = {
   url: "/states/:stateId/committees",
+  method: "GET",
 
   handler: async function (req, resp) {
     const committees = await this.api.beacon.state.getStateCommittees(req.params.stateId, {...req.query});

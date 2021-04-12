@@ -4,6 +4,7 @@ import {ApiController} from "../../types";
 
 export const submitAttesterSlashing: ApiController = {
   url: "/pool/attester_slashings",
+  method: "POST",
 
   handler: async function (req, resp) {
     let slashing: phase0.AttesterSlashing;

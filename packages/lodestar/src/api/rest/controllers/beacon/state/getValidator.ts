@@ -11,6 +11,7 @@ type Params = {
 
 export const getStateValidator: ApiController<DefaultQuery, Params> = {
   url: "/states/:stateId/validators/:validatorId",
+  method: "GET",
 
   handler: async function (req, resp) {
     let validator: phase0.ValidatorResponse | undefined;

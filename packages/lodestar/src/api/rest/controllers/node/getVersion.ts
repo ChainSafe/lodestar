@@ -2,6 +2,7 @@ import {ApiController} from "../types";
 
 export const getVersion: ApiController = {
   url: "/version",
+  method: "GET",
   opts: {
     schema: {},
   },
