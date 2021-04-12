@@ -10,7 +10,7 @@ import {SinonStubbedInstance} from "sinon";
 import {RestApi} from "../../../../../../src/api";
 import {BeaconPoolApi} from "../../../../../../src/api/impl/beacon/pool";
 
-describe("rest - beacon - submitAttestation", function () {
+describe("rest - beacon - submitAttestations", function () {
   let attestation: Attestation;
   let restApi: RestApi;
   let beaconPoolStub: SinonStubbedInstance<BeaconPoolApi>;
@@ -29,7 +29,7 @@ describe("rest - beacon - submitAttestation", function () {
       .post(urlJoin(BEACON_PREFIX, submitPoolAttestation.url))
       .send(config.types.phase0.Attestation.toJson(attestation, {case: "snake"}) as Record<string, unknown>)
       .expect(200);
-    expect(beaconPoolStub.submitAttestation.calledOnce).to.be.true;
+    expect(beaconPoolStub.submitAttestations.calledOnce).to.be.true;
   });
 
   it("should fail to parse body", async function () {
@@ -38,6 +38,6 @@ describe("rest - beacon - submitAttestation", function () {
       .send(config.types.phase0.Attestation.toJson(attestation, {case: "camel"}) as Record<string, unknown>)
       .expect(400)
       .expect("Content-Type", "application/json; charset=utf-8");
-    expect(beaconPoolStub.submitAttestation.notCalled).to.be.true;
+    expect(beaconPoolStub.submitAttestations.notCalled).to.be.true;
   });
 });

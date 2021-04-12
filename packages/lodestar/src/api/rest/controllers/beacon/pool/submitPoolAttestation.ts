@@ -1,25 +1,31 @@
-import {phase0} from "@chainsafe/lodestar-types";
+import {Json} from "@chainsafe/ssz";
 import {ValidationError} from "../../../../impl/errors";
 import {ApiController} from "../../types";
 
-export const submitPoolAttestation: ApiController = {
+export const submitPoolAttestation: ApiController<null, null, Json[]> = {
   url: "/pool/attestations",
   method: "POST",
 
   handler: async function (req) {
-    let attestation: phase0.Attestation;
-    try {
-      attestation = this.config.types.phase0.Attestation.fromJson(req.body, {case: "snake"});
-    } catch (e) {
-      throw new ValidationError(`SSZ deserialize error: ${(e as Error).message}`);
-    }
-    await this.api.beacon.pool.submitAttestation(attestation);
+    const attestations = req.body.map((attestation) => {
+      try {
+        return this.config.types.phase0.Attestation.fromJson(attestation, {case: "snake"});
+      } catch (e) {
+        throw new ValidationError(`SSZ deserialize error: ${(e as Error).message}`);
+      }
+    });
+
+    await this.api.beacon.pool.submitAttestations(attestations);
     return {};
   },
 
   schema: {
     body: {
-      type: "object",
+      type: "array",
+      minItems: 1,
+      items: {
+        type: "object",
+      },
     },
   },
 };
