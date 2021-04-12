@@ -204,7 +204,7 @@ function getNearestArchivedState(
   if (blockSummary) {
     state = stateCache.get(blockSummary.stateRoot);
   }
-  if (state === null) throw new Error("getFinalizedState: cannot find state");
+  if (state === null) throw new Error("getNearestArchivedState: cannot find state");
   return state;
 }
 
