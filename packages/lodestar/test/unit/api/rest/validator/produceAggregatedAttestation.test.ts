@@ -2,7 +2,7 @@ import {config} from "@chainsafe/lodestar-config/minimal";
 import {toHexString} from "@chainsafe/ssz";
 import {expect} from "chai";
 import supertest from "supertest";
-import {produceAggregatedAttestation} from "../../../../../src/api/rest/routes/validator/produceAggregatedAttestation";
+import {produceAggregatedAttestation} from "../../../../../src/api/rest/validator/produceAggregatedAttestation";
 import {generateEmptyAttestation} from "../../../../utils/attestation";
 import {ApiResponseBody, urlJoin} from "../utils";
 import {setupRestApiTestServer, VALIDATOR_PREFIX} from "../index.test";

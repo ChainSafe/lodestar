@@ -2,7 +2,7 @@ import {expect} from "chai";
 import supertest from "supertest";
 import {urlJoin} from "../utils";
 import {setupRestApiTestServer, VALIDATOR_PREFIX} from "../index.test";
-import {prepareCommitteeSubnet} from "../../../../../src/api/rest/routes/validator/prepareCommitteeSubnet";
+import {prepareCommitteeSubnet} from "../../../../../src/api/rest/validator/prepareCommitteeSubnet";
 import {SinonStubbedInstance} from "sinon";
 import {RestApi, ValidatorApi} from "../../../../../src/api";
 

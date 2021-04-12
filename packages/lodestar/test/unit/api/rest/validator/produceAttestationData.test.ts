@@ -1,6 +1,6 @@
 import {expect} from "chai";
 import supertest from "supertest";
-import {produceAttestationData} from "../../../../../src/api/rest/routes/validator/produceAttestationData";
+import {produceAttestationData} from "../../../../../src/api/rest/validator/produceAttestationData";
 import {generateEmptyAttestation} from "../../../../utils/attestation";
 import {ApiResponseBody, urlJoin} from "../utils";
 import {setupRestApiTestServer, VALIDATOR_PREFIX} from "../index.test";

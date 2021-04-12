@@ -2,7 +2,7 @@ import supertest from "supertest";
 import {expect} from "chai";
 import {config} from "@chainsafe/lodestar-config/mainnet";
 
-import {getGenesis} from "../../../../../src/api/rest/routes/beacon/getGenesis";
+import {getGenesis} from "../../../../../src/api/rest/beacon/getGenesis";
 import {ApiResponseBody, urlJoin} from "../utils";
 import {BEACON_PREFIX, setupRestApiTestServer} from "../index.test";
 import {BeaconApi, RestApi} from "../../../../../src/api";

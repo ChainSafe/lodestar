@@ -3,7 +3,7 @@ import {urlJoin} from "@chainsafe/lodestar-validator/src/util";
 import {expect} from "chai";
 import supertest from "supertest";
 import {CONFIG_PREFIX, setupRestApiTestServer} from "../index.test";
-import {getDepositContract} from "../../../../../src/api/rest/routes/config/getDepositContract";
+import {getDepositContract} from "../../../../../src/api/rest/config/getDepositContract";
 import {ConfigApi} from "../../../../../src/api/impl/config";
 import {SinonStubbedInstance} from "sinon";
 import {ApiResponseBody} from "../utils";

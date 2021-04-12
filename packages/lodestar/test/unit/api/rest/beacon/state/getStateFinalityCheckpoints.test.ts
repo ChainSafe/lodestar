@@ -1,6 +1,6 @@
 import {expect} from "chai";
 import supertest from "supertest";
-import {getStateFinalityCheckpoints} from "../../../../../../src/api/rest/routes/beacon/state/getStateFinalityCheckpoints";
+import {getStateFinalityCheckpoints} from "../../../../../../src/api/rest/beacon/state/getStateFinalityCheckpoints";
 import {generateState} from "../../../../../utils/state";
 import {ApiResponseBody, urlJoin} from "../../utils";
 import {BEACON_PREFIX, setupRestApiTestServer} from "../../index.test";

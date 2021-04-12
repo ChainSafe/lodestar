@@ -1,6 +1,6 @@
 import {expect} from "chai";
 import supertest from "supertest";
-import {getPoolAttestations} from "../../../../../../src/api/rest/routes/beacon/pool/getPoolAttestations";
+import {getPoolAttestations} from "../../../../../../src/api/rest/beacon/pool/getPoolAttestations";
 import {generateAttestation} from "../../../../../utils/attestation";
 import {ApiResponseBody, urlJoin} from "../../utils";
 import {BEACON_PREFIX, setupRestApiTestServer} from "../../index.test";

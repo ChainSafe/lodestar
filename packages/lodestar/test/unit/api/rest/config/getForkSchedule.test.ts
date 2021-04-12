@@ -3,7 +3,7 @@ import {urlJoin} from "@chainsafe/lodestar-validator/src/util";
 import {expect} from "chai";
 import supertest from "supertest";
 import {CONFIG_PREFIX, setupRestApiTestServer} from "../index.test";
-import {getForkSchedule} from "../../../../../src/api/rest/routes/config/getForkSchedule";
+import {getForkSchedule} from "../../../../../src/api/rest/config/getForkSchedule";
 import {SinonStubbedInstance} from "sinon";
 import {ConfigApi} from "../../../../../src/api/impl/config";
 import {ApiResponseBody} from "../utils";

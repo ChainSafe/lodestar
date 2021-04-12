@@ -1,7 +1,7 @@
 import {expect} from "chai";
 import supertest from "supertest";
 
-import {getSyncingStatus} from "../../../../../src/api/rest/routes/node/getSyncingStatus";
+import {getSyncingStatus} from "../../../../../src/api/rest/node/getSyncingStatus";
 import {ApiResponseBody, urlJoin} from "../utils";
 import {NODE_PREFIX, setupRestApiTestServer} from "../index.test";
 import {StubbedNodeApi} from "../../../../utils/stub/nodeApi";

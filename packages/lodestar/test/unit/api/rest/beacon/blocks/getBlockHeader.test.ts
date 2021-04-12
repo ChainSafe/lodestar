@@ -1,6 +1,6 @@
 import {expect} from "chai";
 import supertest from "supertest";
-import {getBlockHeader} from "../../../../../../src/api/rest/routes/beacon/blocks/getBlockHeader";
+import {getBlockHeader} from "../../../../../../src/api/rest/beacon/blocks/getBlockHeader";
 import {generateSignedBeaconHeaderResponse} from "../../../../../utils/api";
 import {ApiResponseBody, urlJoin} from "../../utils";
 import {BEACON_PREFIX, setupRestApiTestServer} from "../../index.test";
