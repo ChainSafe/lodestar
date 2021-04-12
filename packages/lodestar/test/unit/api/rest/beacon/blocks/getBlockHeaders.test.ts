@@ -2,7 +2,7 @@ import {expect} from "chai";
 import supertest from "supertest";
 import {toHexString} from "@chainsafe/ssz";
 
-import {getBlockHeaders} from "../../../../../../src/api/rest/controllers/beacon/blocks";
+import {getBlockHeaders} from "../../../../../../src/api/rest/beacon/blocks/getBlockHeaders";
 import {generateSignedBeaconHeaderResponse} from "../../../../../utils/api";
 import {ApiResponseBody, urlJoin} from "../../utils";
 import {BEACON_PREFIX, setupRestApiTestServer} from "../../index.test";

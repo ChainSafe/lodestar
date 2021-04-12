@@ -1,6 +1,6 @@
 import {expect} from "chai";
 import supertest from "supertest";
-import {getVoluntaryExits} from "../../../../../../src/api/rest/controllers/beacon/pool/getVoluntaryExits";
+import {getVoluntaryExits} from "../../../../../../src/api/rest/beacon/pool/getVoluntaryExits";
 import {generateEmptySignedVoluntaryExit} from "../../../../../utils/attestation";
 import {ApiResponseBody, urlJoin} from "../../utils";
 import {BEACON_PREFIX, setupRestApiTestServer} from "../../index.test";

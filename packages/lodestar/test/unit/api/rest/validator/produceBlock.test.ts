@@ -1,7 +1,7 @@
 import {toHexString} from "@chainsafe/ssz";
 import {expect} from "chai";
 import supertest from "supertest";
-import {produceBlockController} from "../../../../../src/api/rest/controllers/validator/produceBlock";
+import {produceBlockController} from "../../../../../src/api/rest/validator/produceBlock";
 import {generateEmptyBlock} from "../../../../utils/block";
 import {ApiResponseBody, urlJoin} from "../utils";
 import {setupRestApiTestServer, VALIDATOR_PREFIX} from "../index.test";

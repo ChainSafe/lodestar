@@ -4,10 +4,10 @@ import {FastifySSEPlugin} from "fastify-sse-v2";
 import {IncomingMessage, Server, ServerResponse} from "http";
 import * as querystring from "querystring";
 import {IRestApiModules} from "./interface";
-import {FastifyLogger} from "./logger/fastify";
+import {FastifyLogger} from "./logger";
 import {defaultApiRestOptions, IRestApiOptions} from "./options";
 import {registerRoutes} from "./routes";
-import {errorHandler} from "./routes/error";
+import {errorHandler} from "./errorHandler";
 
 /**
  * REST API powered by `fastify` server.

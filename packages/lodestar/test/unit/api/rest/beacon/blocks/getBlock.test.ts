@@ -1,7 +1,7 @@
 import {expect} from "chai";
 import supertest from "supertest";
 
-import {getBlock} from "../../../../../../src/api/rest/controllers/beacon/blocks";
+import {getBlock} from "../../../../../../src/api/rest/beacon/blocks/getBlock";
 import {generateEmptySignedBlock} from "../../../../../utils/block";
 import {ApiResponseBody, urlJoin} from "../../utils";
 import {BEACON_PREFIX, setupRestApiTestServer} from "../../index.test";

@@ -3,7 +3,7 @@ import supertest from "supertest";
 import {generateState} from "../../../../../utils/state";
 import {ApiResponseBody, urlJoin} from "../../utils";
 import {BEACON_PREFIX, setupRestApiTestServer} from "../../index.test";
-import {getStateFork} from "../../../../../../src/api/rest/controllers/beacon/state/getStateFork";
+import {getStateFork} from "../../../../../../src/api/rest/beacon/state/getStateFork";
 import {SinonStubbedInstance} from "sinon";
 import {BeaconStateApi} from "../../../../../../src/api/impl/beacon/state";
 import {RestApi} from "../../../../../../src/api";
