@@ -1,8 +1,9 @@
 import {ApiController} from "../types";
 
+/* eslint-disable @typescript-eslint/naming-convention */
+
 type Query = {
   slot: number;
-  // eslint-disable-next-line @typescript-eslint/naming-convention
   committee_index: number;
 };
 
@@ -10,11 +11,11 @@ export const produceAttestationData: ApiController<Query> = {
   url: "/attestation_data",
   method: "GET",
 
-  handler: async function (req, resp) {
+  handler: async function (req) {
     const attestationData = await this.api.validator.produceAttestationData(req.query.committee_index, req.query.slot);
-    resp.send({
+    return {
       data: this.config.types.phase0.AttestationData.toJson(attestationData, {case: "snake"}),
-    });
+    };
   },
 
   schema: {
@@ -26,7 +27,6 @@ export const produceAttestationData: ApiController<Query> = {
           type: "number",
           minimum: 0,
         },
-        // eslint-disable-next-line @typescript-eslint/naming-convention
         committee_index: {
           type: "number",
           minimum: 0,

@@ -5,8 +5,8 @@ export const getWtfNode: ApiController<DefaultQuery> = {
   url: "/wtfnode/",
   method: "GET",
 
-  handler: function (req, resp) {
-    resp.status(200).send(this.api.lodestar.getWtfNode());
+  handler: async function () {
+    return this.api.lodestar.getWtfNode();
   },
 };
 
@@ -14,7 +14,7 @@ export const getLatestWeakSubjectivityCheckpointEpoch: ApiController<DefaultQuer
   url: "/ws_epoch/",
   method: "GET",
 
-  handler: async function (req, resp) {
-    return resp.status(200).send(this.api.lodestar.getLatestWeakSubjectivityCheckpointEpoch);
+  handler: async function () {
+    return this.api.lodestar.getLatestWeakSubjectivityCheckpointEpoch;
   },
 };

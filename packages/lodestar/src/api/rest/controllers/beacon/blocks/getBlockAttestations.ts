@@ -12,11 +12,11 @@ export const getBlockAttestations: ApiController<DefaultQuery, {blockId: string}
       if (!data) {
         return resp.status(404).send();
       }
-      return resp.status(200).send({
+      return {
         data: Array.from(data.message.body.attestations).map((attestations) => {
           this.config.types.phase0.Attestation.toJson(attestations, {case: "snake"});
         }),
-      });
+      };
     } catch (e) {
       if ((e as Error).message === "Invalid block id") {
         throw toRestValidationError("block_id", (e as Error).message);

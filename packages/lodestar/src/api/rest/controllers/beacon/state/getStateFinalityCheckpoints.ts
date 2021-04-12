@@ -3,6 +3,8 @@ import {DefaultQuery} from "fastify";
 import {StateId} from "../../../../impl/beacon/state";
 import {toRestValidationError} from "../../utils";
 
+/* eslint-disable @typescript-eslint/naming-convention */
+
 type Params = {
   stateId: StateId;
 };
@@ -17,19 +19,14 @@ export const getStateFinalityCheckpoints: ApiController<DefaultQuery, Params> = 
       if (!state) {
         return resp.status(404).send();
       }
-      return resp.status(200).send({
+      const checkpointType = this.config.types.phase0.Checkpoint;
+      return {
         data: {
-          // eslint-disable-next-line @typescript-eslint/naming-convention
-          previous_justified: this.config.types.phase0.Checkpoint.toJson(state.previousJustifiedCheckpoint, {
-            case: "snake",
-          }),
-          // eslint-disable-next-line @typescript-eslint/naming-convention
-          current_justified: this.config.types.phase0.Checkpoint.toJson(state.currentJustifiedCheckpoint, {
-            case: "snake",
-          }),
-          finalized: this.config.types.phase0.Checkpoint.toJson(state.finalizedCheckpoint, {case: "snake"}),
+          previous_justified: checkpointType.toJson(state.previousJustifiedCheckpoint, {case: "snake"}),
+          current_justified: checkpointType.toJson(state.currentJustifiedCheckpoint, {case: "snake"}),
+          finalized: checkpointType.toJson(state.finalizedCheckpoint, {case: "snake"}),
         },
-      });
+      };
     } catch (e) {
       if ((e as Error).message === "Invalid state id") {
         throw toRestValidationError("state_id", (e as Error).message);

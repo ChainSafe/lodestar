@@ -13,7 +13,7 @@ export const getStateValidator: ApiController<DefaultQuery, Params> = {
   url: "/states/:stateId/validators/:validatorId",
   method: "GET",
 
-  handler: async function (req, resp) {
+  handler: async function (req) {
     let validator: phase0.ValidatorResponse | undefined;
     if (req.params.validatorId.toLowerCase().startsWith("0x")) {
       validator =
@@ -31,9 +31,9 @@ export const getStateValidator: ApiController<DefaultQuery, Params> = {
     if (!validator) {
       throw new ApiError(404, "Validator not found");
     }
-    return resp.status(200).send({
+    return {
       data: this.config.types.phase0.ValidatorResponse.toJson(validator, {case: "snake"}),
-    });
+    };
   },
 
   schema: {

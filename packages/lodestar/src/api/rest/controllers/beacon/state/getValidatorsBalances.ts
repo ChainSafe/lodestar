@@ -15,15 +15,15 @@ export const getStateValidatorsBalances: ApiController<ValidatorBalancesQuery, P
   url: "/states/:stateId/validator_balances",
   method: "GET",
 
-  handler: async function (req, resp) {
+  handler: async function (req) {
     let indices: (ValidatorIndex | BLSPubkey)[] | undefined;
     if (req.query.id) {
       indices = mapValidatorIndices(this.config, req.query.id);
     }
     const balances = await this.api.beacon.state.getStateValidatorBalances(req.params.stateId, indices);
-    return resp.status(200).send({
+    return {
       data: balances.map((b) => this.config.types.phase0.ValidatorBalance.toJson(b, {case: "snake"})),
-    });
+    };
   },
 
   schema: {

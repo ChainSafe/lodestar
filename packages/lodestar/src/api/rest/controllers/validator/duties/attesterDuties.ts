@@ -12,16 +12,11 @@ export const attesterDutiesController: ApiController<DefaultQuery, Params, Body>
   url: "/duties/attester/:epoch",
   method: "POST",
 
-  handler: async function (req, resp) {
+  handler: async function (req) {
     const responseValue = await this.api.validator.getAttesterDuties(req.params.epoch, req.body);
-    resp
-      .code(200)
-      .type("application/json")
-      .send({
-        data: responseValue.map((value) => {
-          return this.config.types.phase0.AttesterDuty.toJson(value, {case: "snake"});
-        }),
-      });
+    return {
+      data: responseValue.map((value) => this.config.types.phase0.AttesterDuty.toJson(value, {case: "snake"})),
+    };
   },
 
   schema: {

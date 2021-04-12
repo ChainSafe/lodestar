@@ -14,7 +14,7 @@ export const publishBlock: ApiController = {
       throw new ValidationError("Failed to deserialize block");
     }
     await this.api.beacon.blocks.publishBlock(block);
-    resp.code(200).type("application/json").send();
+    resp.code(200).send();
   },
 
   schema: {

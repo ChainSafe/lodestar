@@ -6,10 +6,10 @@ export const getNetworkIdentity: ApiController = {
   url: "/identity",
   method: "GET",
 
-  handler: async function (req, resp) {
+  handler: async function () {
     const identity = await this.api.node.getNodeIdentity();
     const metadataJson = this.config.types.phase0.Metadata.toJson(identity.metadata, {case: "snake"});
-    resp.status(200).send({
+    return {
       data: {
         peer_id: identity.peerId,
         enr: identity.enr,
@@ -17,6 +17,6 @@ export const getNetworkIdentity: ApiController = {
         discovery_addresses: identity.discoveryAddresses,
         metadata: metadataJson,
       },
-    });
+    };
   },
 };

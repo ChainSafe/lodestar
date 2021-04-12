@@ -4,11 +4,10 @@ export const getSyncingStatus: ApiController = {
   url: "/syncing",
   method: "GET",
 
-  handler: async function (req, resp) {
+  handler: async function () {
     const status = await this.api.node.getSyncingStatus();
-
-    resp.status(200).send({
+    return {
       data: this.config.types.phase0.SyncingStatus.toJson(status, {case: "snake"}),
-    });
+    };
   },
 };

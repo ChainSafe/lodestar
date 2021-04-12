@@ -9,8 +9,8 @@ export const getGenesis: ApiController = {
     if (!genesis) {
       return resp.status(404).send();
     }
-    return resp.status(200).send({
+    return {
       data: this.config.types.phase0.Genesis.toJson(genesis, {case: "snake"}),
-    });
+    };
   },
 };

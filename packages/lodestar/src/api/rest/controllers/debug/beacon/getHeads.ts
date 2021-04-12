@@ -9,9 +9,8 @@ export const getHeads: ApiController = {
     if (!heads) {
       return resp.status(404).send();
     }
-    const headJsons = heads.map((head) => this.config.types.phase0.SlotRoot.toJson(head, {case: "snake"}));
-    return resp.status(200).send({
-      data: headJsons,
-    });
+    return {
+      data: heads.map((head) => this.config.types.phase0.SlotRoot.toJson(head, {case: "snake"})),
+    };
   },
 };
