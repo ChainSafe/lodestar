@@ -1,8 +1,8 @@
-import {CompositeListType, List, TreeBacked} from "@chainsafe/ssz";
+import {CompositeListType, isTreeBacked, List, TreeBacked} from "@chainsafe/ssz";
 import {phase0} from "@chainsafe/lodestar-types";
 import {Tree} from "@chainsafe/persistent-merkle-tree";
 import {MutableVector} from "@chainsafe/persistent-ts";
-import {createFlat} from "./flat";
+import {createValidatorFlat} from "./flat";
 
 /**
  * Validator registry that synchronizes changes between two underlying implementations:
@@ -29,7 +29,7 @@ export class CachedValidatorList<T extends phase0.Validator> implements List<T> 
   }
 
   set(index: number, value: T): void {
-    this.persistent.set(index, createFlat(value as TreeBacked<T>));
+    this.persistent.set(index, createValidatorFlat(value) as T);
     this.type.tree_setProperty(this.tree, index, this.type.elementType.struct_convertToTree(value));
   }
 
@@ -39,7 +39,8 @@ export class CachedValidatorList<T extends phase0.Validator> implements List<T> 
   }
 
   push(value: T): number {
-    this.persistent.push(createFlat(value));
+    const flat = isTreeBacked(value) ? (createValidatorFlat(value) as T) : value;
+    this.persistent.push(flat);
     return this.type.tree_push(this.tree, this.type.elementType.struct_convertToTree(value));
   }
 
