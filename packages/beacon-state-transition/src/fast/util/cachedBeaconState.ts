@@ -83,8 +83,7 @@ export class BeaconStateContext<T extends allForks.BeaconState> {
       new CachedValidatorList(
         this.type.fields["validators"] as CompositeListType<List<T["validators"][number]>>,
         this.type.tree_getProperty(this.tree, "validators") as Tree,
-        validatorCache,
-        createValidatorFlat
+        validatorCache
       ),
       CachedValidatorListProxyHandler
     ) as unknown) as CachedValidatorList<T["validators"][number]> & T["validators"];

@@ -2,6 +2,7 @@ import {CompositeListType, isTreeBacked, List, TreeBacked} from "@chainsafe/ssz"
 import {phase0} from "@chainsafe/lodestar-types";
 import {Tree} from "@chainsafe/persistent-merkle-tree";
 import {MutableVector} from "@chainsafe/persistent-ts";
+import {createValidatorFlat} from "./flat";
 
 /**
  * Validator registry that synchronizes changes between two underlying implementations:
@@ -12,18 +13,11 @@ export class CachedValidatorList<T extends phase0.Validator> implements List<T> 
   tree: Tree;
   type: CompositeListType<List<T>>;
   persistent: MutableVector<T>;
-  createFlat: (t: TreeBacked<T>) => T;
 
-  constructor(
-    type: CompositeListType<List<T>>,
-    tree: Tree,
-    persistent: MutableVector<T>,
-    createFlat: (t: TreeBacked<T>) => T
-  ) {
+  constructor(type: CompositeListType<List<T>>, tree: Tree, persistent: MutableVector<T>) {
     this.type = type;
     this.tree = tree;
     this.persistent = persistent;
-    this.createFlat = createFlat;
   }
 
   get length(): number {
@@ -35,7 +29,7 @@ export class CachedValidatorList<T extends phase0.Validator> implements List<T> 
   }
 
   set(index: number, value: T): void {
-    this.persistent.set(index, this.createFlat(value as TreeBacked<T>));
+    this.persistent.set(index, createValidatorFlat(value) as T);
     this.type.tree_setProperty(this.tree, index, this.type.elementType.struct_convertToTree(value));
   }
 
@@ -45,7 +39,7 @@ export class CachedValidatorList<T extends phase0.Validator> implements List<T> 
   }
 
   push(value: T): number {
-    const flat = isTreeBacked(value) ? this.createFlat(value as TreeBacked<T>) : value;
+    const flat = isTreeBacked(value) ? (createValidatorFlat(value) as T) : value;
     this.persistent.push(flat);
     return this.type.tree_push(this.tree, this.type.elementType.struct_convertToTree(value));
   }
