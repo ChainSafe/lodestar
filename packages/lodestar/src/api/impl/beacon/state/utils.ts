@@ -187,11 +187,6 @@ export function filterStateValidatorsByStatuses(
   return responses;
 }
 
-async function assertSlotIsFinalized(forkChoice: IForkChoice, slot: Slot): void {
-  // @TODO: we should probably use SLOTS_PER_EPOCH instead of hard-coding `32`, but i'm not sure ohw without passing the config all the way from all the upstream calls
-  assert.lte(slot, forkChoice.getFinalizedCheckpoint().epoch * 32);
-}
-
 /**
  * Get the archived state nearest to `slot`.
  */
@@ -219,7 +214,8 @@ async function getFinalizedState(
   forkChoice: IForkChoice,
   slot: Slot
 ): Promise<CachedBeaconState<allForks.BeaconState>> {
-  assertSlotIsFinalized(forkChoice, slot);
+  // @TODO: we should probably use SLOTS_PER_EPOCH instead of hard-coding `32`, but i'm not sure how without passing the config all the way from all the upstream calls
+  assert.lte(slot, forkChoice.getFinalizedCheckpoint().epoch * 32);
   let state = getNearestArchivedState(stateCache, forkChoice, slot);
 
   // process blocks up to the requested slot
