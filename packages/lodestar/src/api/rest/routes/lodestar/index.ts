@@ -18,3 +18,5 @@ export const getLatestWeakSubjectivityCheckpointEpoch: ApiController<DefaultQuer
     return this.api.lodestar.getLatestWeakSubjectivityCheckpointEpoch;
   },
 };
+
+export const lodestarRoutes = [getWtfNode, getLatestWeakSubjectivityCheckpointEpoch];

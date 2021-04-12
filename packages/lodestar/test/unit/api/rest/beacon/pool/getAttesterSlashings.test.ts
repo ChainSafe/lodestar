@@ -1,6 +1,6 @@
 import {expect} from "chai";
 import supertest from "supertest";
-import {getAttesterSlashings} from "../../../../../../src/api/rest/controllers/beacon/pool/getAttesterSlashings";
+import {getAttesterSlashings} from "../../../../../../src/api/rest/routes/beacon/pool/getAttesterSlashings";
 import {generateEmptyAttesterSlashing} from "../../../../../utils/slashings";
 import {ApiResponseBody, urlJoin} from "../../utils";
 import {BEACON_PREFIX, setupRestApiTestServer} from "../../index.test";

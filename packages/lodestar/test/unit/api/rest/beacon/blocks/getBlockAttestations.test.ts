@@ -4,7 +4,7 @@ import supertest from "supertest";
 import {List} from "@chainsafe/ssz";
 import {phase0} from "@chainsafe/lodestar-types";
 
-import {getBlockAttestations} from "../../../../../../src/api/rest/controllers/beacon/blocks";
+import {getBlockAttestations} from "../../../../../../src/api/rest/routes/beacon/blocks/getBlockAttestations";
 import {generateSignedBlock} from "../../../../../utils/block";
 import {generateEmptyAttestation} from "../../../../../utils/attestation";
 import {ApiResponseBody, urlJoin} from "../../utils";

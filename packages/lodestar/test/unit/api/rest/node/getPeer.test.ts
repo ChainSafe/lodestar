@@ -1,7 +1,7 @@
 import {expect} from "chai";
 import supertest from "supertest";
 
-import {getPeer} from "../../../../../src/api/rest/controllers/node";
+import {getPeer} from "../../../../../src/api/rest/routes/node/getPeer";
 import {ApiResponseBody, urlJoin} from "../utils";
 import {NODE_PREFIX, setupRestApiTestServer} from "../index.test";
 import {RestApi} from "../../../../../src/api";

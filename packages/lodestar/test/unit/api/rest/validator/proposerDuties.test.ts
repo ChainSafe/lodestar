@@ -1,7 +1,7 @@
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {expect} from "chai";
 import supertest from "supertest";
-import {proposerDutiesController} from "../../../../../src/api/rest/controllers/validator";
+import {proposerDutiesController} from "../../../../../src/api/rest/routes/validator/duties/proposerDuties";
 import {urlJoin} from "../utils";
 import {setupRestApiTestServer, VALIDATOR_PREFIX} from "../index.test";
 import {RestApi, ValidatorApi} from "../../../../../src/api";

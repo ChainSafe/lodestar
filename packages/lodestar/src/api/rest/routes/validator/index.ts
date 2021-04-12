@@ -1,26 +1,16 @@
-import {FastifyInstance} from "fastify";
-import {registerRoutesToServer} from "../util";
-import {
+import {attesterDutiesController, proposerDutiesController} from "./duties";
+import {produceAttestationData} from "./produceAttestationData";
+import {prepareCommitteeSubnet} from "./prepareCommitteeSubnet";
+import {produceAggregatedAttestation} from "./produceAggregatedAttestation";
+import {publishAggregateAndProof} from "./publishAggregateAndProof";
+import {produceBlockController} from "./produceBlock";
+
+export const validatorRoutes = [
   attesterDutiesController,
-  produceAggregatedAttestation,
-  produceAttestationData,
-  produceBlockController,
   proposerDutiesController,
+  produceAttestationData,
+  prepareCommitteeSubnet,
+  produceAggregatedAttestation,
   publishAggregateAndProof,
-} from "../../controllers/validator";
-import {prepareCommitteeSubnet} from "../../controllers/validator/prepareCommitteeSubnet";
-
-//new
-export function registerValidatorRoutes(server: FastifyInstance): void {
-  const routes = [
-    produceBlockController,
-    proposerDutiesController,
-    produceAttestationData,
-    produceAggregatedAttestation,
-    attesterDutiesController,
-    prepareCommitteeSubnet,
-    publishAggregateAndProof,
-  ];
-
-  registerRoutesToServer(server, routes, "/v1/validator");
-}
+  produceBlockController,
+];

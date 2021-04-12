@@ -1,9 +1,3 @@
-//new
-import {FastifyInstance} from "fastify";
-import {registerRoutesToServer} from "../util";
-import {getEventStream} from "../../controllers/events";
+import {getEventStream} from "./getEventStream";
 
-export function registerEventsRoutes(server: FastifyInstance): void {
-  const routes = [getEventStream];
-  registerRoutesToServer(server, routes, "/v1/events");
-}
+export const eventsRoutes = [getEventStream];

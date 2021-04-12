@@ -3,7 +3,7 @@ import {List} from "@chainsafe/ssz";
 import {expect} from "chai";
 import supertest from "supertest";
 import {StateNotFound} from "../../../../../../src/api/impl/errors";
-import {getStateBeaconCommittees} from "../../../../../../src/api/rest/controllers/beacon/state";
+import {getStateBeaconCommittees} from "../../../../../../src/api/rest/routes/beacon/state/getBeaconCommittees";
 import {ApiResponseBody, urlJoin} from "../../utils";
 import {BEACON_PREFIX, setupRestApiTestServer} from "../../index.test";
 import {SinonStubbedInstance} from "sinon";

@@ -3,7 +3,7 @@ import {toHexString} from "@chainsafe/ssz";
 import {expect} from "chai";
 import supertest from "supertest";
 import {StateNotFound} from "../../../../../../src/api/impl/errors";
-import {getStateValidator} from "../../../../../../src/api/rest/controllers/beacon/state/getValidator";
+import {getStateValidator} from "../../../../../../src/api/rest/routes/beacon/state/getValidator";
 import {generateValidator} from "../../../../../utils/validator";
 import {ApiResponseBody, urlJoin} from "../../utils";
 import {BEACON_PREFIX, setupRestApiTestServer} from "../../index.test";

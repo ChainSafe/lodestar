@@ -2,7 +2,7 @@ import {config} from "@chainsafe/lodestar-config/minimal";
 import {AttesterSlashing} from "@chainsafe/lodestar-types/phase0";
 import {expect} from "chai";
 import supertest from "supertest";
-import {submitAttesterSlashing} from "../../../../../../src/api/rest/controllers/beacon/pool";
+import {submitAttesterSlashing} from "../../../../../../src/api/rest/routes/beacon/pool/submitAttesterSlashing";
 import {generateEmptyAttesterSlashing} from "../../../../../utils/slashings";
 import {urlJoin} from "../../utils";
 import {BEACON_PREFIX, setupRestApiTestServer} from "../../index.test";

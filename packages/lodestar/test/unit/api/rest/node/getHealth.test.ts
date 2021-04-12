@@ -1,6 +1,6 @@
 import supertest from "supertest";
 
-import {getHealth} from "../../../../../src/api/rest/controllers/node";
+import {getHealth} from "../../../../../src/api/rest/routes/node/getHealth";
 import {urlJoin} from "../utils";
 import {NODE_PREFIX, setupRestApiTestServer} from "../index.test";
 import {StubbedNodeApi} from "../../../../utils/stub/nodeApi";

@@ -1,7 +1,7 @@
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {expect} from "chai";
 import supertest from "supertest";
-import {publishBlock} from "../../../../../../src/api/rest/controllers/beacon/blocks/publishBlock";
+import {publishBlock} from "../../../../../../src/api/rest/routes/beacon/blocks/publishBlock";
 import {generateEmptySignedBlock} from "../../../../../utils/block";
 import {urlJoin} from "../../utils";
 import {BEACON_PREFIX, setupRestApiTestServer} from "../../index.test";
