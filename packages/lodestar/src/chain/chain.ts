@@ -246,8 +246,7 @@ export class BeaconChain implements IBeaconChain {
 
   async processChainSegment(
     signedBlocks: allForks.SignedBeaconBlock[],
-    prefinalized = true,
-    trusted = false
+    {prefinalized, trusted = false}: {prefinalized: boolean; trusted: boolean}
   ): Promise<void> {
     return await this.blockProcessor.processChainSegment({
       signedBlocks,

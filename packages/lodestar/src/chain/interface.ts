@@ -117,7 +117,6 @@ export interface IBeaconChain {
    */
   processChainSegment(
     signedBlocks: allForks.SignedBeaconBlock[],
-    prefinalized?: boolean,
-    trusted?: boolean
+    flags: {prefinalized: boolean; trusted?: boolean}
   ): Promise<void>;
 }
