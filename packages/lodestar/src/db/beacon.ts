@@ -48,7 +48,7 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
     this.badBlock = new BadBlockRepository(this.config, this.db);
     this.block = new BlockRepository(this.config, this.db);
     this.pendingBlock = new PendingBlockRepository(this.config, this.db);
-    this.seenAttestationCache = new SeenAttestationCache(5000);
+    this.seenAttestationCache = new SeenAttestationCache(this.config, 2048);
     this.blockArchive = new BlockArchiveRepository(this.config, this.db);
     this.stateArchive = new StateArchiveRepository(this.config, this.db);
     this.attestation = new AttestationRepository(this.config, this.db);
