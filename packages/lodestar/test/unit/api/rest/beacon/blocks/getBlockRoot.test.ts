@@ -36,19 +36,4 @@ describe("rest - beacon - getBlockRoot", function () {
       toHexString(config.types.phase0.BeaconBlock.hashTreeRoot(block.message))
     );
   });
-
-  it("should not found block header", async function () {
-    beaconBlocksStub.getBlock.withArgs("4").resolves(null);
-    await supertest(restApi.server.server)
-      .get(urlJoin(BEACON_PREFIX, getBlockRoot.url.replace(":blockId", "4")))
-      .expect(404);
-  });
-
-  it("should fail validation", async function () {
-    beaconBlocksStub.getBlock.throws(new Error("Invalid block id"));
-    await supertest(restApi.server.server)
-      .get(urlJoin(BEACON_PREFIX, getBlockRoot.url.replace(":blockId", "abc")))
-      .expect(400)
-      .expect("Content-Type", "application/json; charset=utf-8");
-  });
 });

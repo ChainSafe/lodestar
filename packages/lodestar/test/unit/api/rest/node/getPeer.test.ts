@@ -33,11 +33,4 @@ describe("rest - node - getPeer", function () {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     expect(response.body.data.peer_id).to.equal("16");
   });
-
-  it("peer not found", async function () {
-    nodeStub.getPeer.resolves(null);
-    await supertest(restApi.server.server)
-      .get(urlJoin(NODE_PREFIX, getPeer.url.replace(":peerId", "16")))
-      .expect(404);
-  });
 });

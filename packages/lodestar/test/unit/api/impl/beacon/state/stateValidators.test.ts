@@ -45,12 +45,6 @@ describe("beacon api impl - state - validators", function () {
   });
 
   describe("get validators", function () {
-    it("state not found", async function () {
-      resolveStateIdStub.resolves(null);
-      const api = new BeaconStateApi({}, {config, db: dbStub, chain: chainStub});
-      await expect(api.getStateValidators("notfound")).to.be.rejectedWith("State not found");
-    });
-
     it("indices filter", async function () {
       resolveStateIdStub.resolves(generateState({validators: generateValidators(10)}));
       const api = new BeaconStateApi({}, {config, db: dbStub, chain: chainStub});
@@ -110,11 +104,6 @@ describe("beacon api impl - state - validators", function () {
   });
 
   describe("get validator", function () {
-    it("state not found", async function () {
-      resolveStateIdStub.resolves(null);
-      const api = new BeaconStateApi({}, {config, db: dbStub, chain: chainStub});
-      await expect(api.getStateValidator("notfound", 1)).to.be.rejectedWith("State not found");
-    });
     it("validator by index not found", async function () {
       resolveStateIdStub.resolves(generateState({validators: generateValidators(10)}));
       const api = new BeaconStateApi({}, {config, db: dbStub, chain: chainStub});
@@ -148,12 +137,6 @@ describe("beacon api impl - state - validators", function () {
   });
 
   describe("get validators balances", function () {
-    it("state not found", async function () {
-      resolveStateIdStub.resolves(null);
-      const api = new BeaconStateApi({}, {config, db: dbStub, chain: chainStub});
-      await expect(api.getStateValidatorBalances("notfound")).to.be.rejectedWith("State not found");
-    });
-
     it("indices filters", async function () {
       resolveStateIdStub.resolves(
         generateState({

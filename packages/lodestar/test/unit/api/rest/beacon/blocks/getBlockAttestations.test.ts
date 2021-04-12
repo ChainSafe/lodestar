@@ -43,19 +43,4 @@ describe("rest - beacon - getBlockAttestations", function () {
     expect((response.body as ApiResponseBody).data).to.not.be.undefined;
     expect((response.body as ApiResponseBody).data.length).to.equal(2);
   });
-
-  it("should not found block", async function () {
-    beaconBlocksStub.getBlock.withArgs("4").resolves(null);
-    await supertest(restApi.server.server)
-      .get(urlJoin(BEACON_PREFIX, getBlockAttestations.url.replace(":blockId", "4")))
-      .expect(404);
-  });
-
-  it("should fail validation", async function () {
-    beaconBlocksStub.getBlock.throws(new Error("Invalid block id"));
-    await supertest(restApi.server.server)
-      .get(urlJoin(BEACON_PREFIX, getBlockAttestations.url.replace(":blockId", "abc")))
-      .expect(400)
-      .expect("Content-Type", "application/json; charset=utf-8");
-  });
 });

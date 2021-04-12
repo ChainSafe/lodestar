@@ -1,6 +1,5 @@
 import {ZERO_HASH} from "@chainsafe/lodestar-beacon-state-transition";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
-import {config} from "@chainsafe/lodestar-config/minimal";
 import {expect} from "chai";
 import sinon from "sinon";
 import {SinonStubbedInstance} from "sinon";
@@ -11,7 +10,6 @@ import {generateBlockSummary} from "../../../../../utils/block";
 import {StubbedBeaconDb} from "../../../../../utils/stub";
 import {generateState} from "../../../../../utils/state";
 import {setupApiImplTestServer} from "../../index.test";
-import {testLogger} from "../../../../../utils/logger";
 import {SinonStubFn} from "../../../../../utils/types";
 
 describe("api - debug - beacon", function () {
@@ -20,7 +18,6 @@ describe("api - debug - beacon", function () {
   let forkchoiceStub: SinonStubbedInstance<IForkChoice>;
   let dbStub: StubbedBeaconDb;
   let resolveStateIdStub: SinonStubFn<typeof stateApiUtils["resolveStateId"]>;
-  const logger = testLogger();
 
   beforeEach(function () {
     const server = setupApiImplTestServer();
@@ -29,15 +26,7 @@ describe("api - debug - beacon", function () {
     forkchoiceStub = sinon.createStubInstance(LodestarForkChoice);
     chainStub.forkChoice = forkchoiceStub;
     dbStub = new StubbedBeaconDb(sinon);
-    debugApi = new DebugBeaconApi(
-      {},
-      {
-        config,
-        logger,
-        chain: chainStub,
-        db: dbStub,
-      }
-    );
+    debugApi = new DebugBeaconApi({}, {chain: chainStub, db: dbStub});
   });
 
   afterEach(function () {
@@ -50,21 +39,9 @@ describe("api - debug - beacon", function () {
     expect(heads).to.be.deep.equal([{slot: 1000, root: ZERO_HASH}]);
   });
 
-  it("getHeads - should return null", async function () {
-    forkchoiceStub.getHeads.throws("error from unit test");
-    const heads = await debugApi.getHeads();
-    expect(heads).to.be.null;
-  });
-
   it("getState - should return state", async function () {
     resolveStateIdStub.resolves(generateState());
     const state = await debugApi.getState("something");
     expect(state).to.not.be.null;
-  });
-
-  it("getState - should return null", async function () {
-    resolveStateIdStub.resolves(null);
-    const state = await debugApi.getState("something");
-    expect(state).to.be.null;
   });
 });

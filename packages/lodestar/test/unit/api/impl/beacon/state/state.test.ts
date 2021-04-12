@@ -43,20 +43,9 @@ describe("beacon api impl - states", function () {
       const state = await api.getState("something");
       expect(state).to.not.be.null;
     });
-
-    it("state doesn't exist", async function () {
-      resolveStateIdStub.resolves(null);
-      const state = await api.getState("something");
-      expect(state).to.be.null;
-    });
   });
 
   describe("getStateCommittes", function () {
-    it("no state context", async function () {
-      resolveStateIdStub.resolves(null);
-      await expect(api.getStateCommittees("blem")).to.be.eventually.rejectedWith("State not found");
-    });
-
     const state = generateState();
 
     it("no filters", async function () {

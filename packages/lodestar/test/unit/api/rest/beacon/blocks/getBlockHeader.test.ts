@@ -29,19 +29,4 @@ describe("rest - beacon - getBlockHeader", function () {
       .expect("Content-Type", "application/json; charset=utf-8");
     expect((response.body as ApiResponseBody).data).to.not.be.undefined;
   });
-
-  it("should not found block header", async function () {
-    beaconBlocksStub.getBlockHeader.withArgs("4").resolves(null);
-    await supertest(restApi.server.server)
-      .get(urlJoin(BEACON_PREFIX, getBlockHeader.url.replace(":blockId", "4")))
-      .expect(404);
-  });
-
-  it("should fail validation", async function () {
-    beaconBlocksStub.getBlockHeader.throws(new Error("Invalid block id"));
-    await supertest(restApi.server.server)
-      .get(urlJoin(BEACON_PREFIX, getBlockHeader.url.replace(":blockId", "abc")))
-      .expect(400)
-      .expect("Content-Type", "application/json; charset=utf-8");
-  });
 });

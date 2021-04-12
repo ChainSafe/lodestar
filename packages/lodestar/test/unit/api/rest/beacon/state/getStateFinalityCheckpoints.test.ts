@@ -27,11 +27,4 @@ describe("rest - beacon - getStateFinalityCheckpoints", function () {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     expect(response.body.data.finalized).to.not.be.undefined;
   });
-
-  it("should not found state", async function () {
-    beaconStateStub.getState.withArgs("4").resolves(null);
-    await supertest(restApi.server.server)
-      .get(urlJoin(BEACON_PREFIX, getStateFinalityCheckpoints.url.replace(":stateId", "4")))
-      .expect(404);
-  });
 });
