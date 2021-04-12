@@ -195,8 +195,9 @@ function getNearestArchivedState(
   forkChoice: IForkChoice,
   slot: Slot
 ): CachedBeaconState<allForks.BeaconState> {
-  const lowerDiff = slot % PERSIST_STATE_EVERY_EPOCHS;
-  const upperDiff = PERSIST_STATE_EVERY_EPOCHS - lowerDiff;
+  const persistentStateSlotBoundary = PERSIST_STATE_EVERY_EPOCHS * 32;
+  const lowerDiff = slot % persistentStateSlotBoundary;
+  const upperDiff = persistentStateSlotBoundary - lowerDiff;
   const nearestArchivedStateSlot = lowerDiff < upperDiff ? slot - lowerDiff : slot + upperDiff;
 
   let state: CachedBeaconState<allForks.BeaconState> | null = null;
