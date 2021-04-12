@@ -5,6 +5,6 @@ export interface IDebugBeaconApi {
   /**
    * API wrapper function for `getHeads` in `@chainsafe/lodestar-fork-choice`.
    * */
-  getHeads(): Promise<phase0.SlotRoot[] | null>;
-  getState(stateId: StateId): Promise<allForks.BeaconState | null>;
+  getHeads(): Promise<phase0.SlotRoot[]>;
+  getState(stateId: StateId): Promise<allForks.BeaconState>;
 }

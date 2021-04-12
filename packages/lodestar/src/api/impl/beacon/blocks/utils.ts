@@ -6,6 +6,7 @@ import {BlockId} from "./interface";
 import {IBeaconDb} from "../../../../db";
 import {GENESIS_SLOT} from "../../../../constants";
 import {fromHexString} from "@chainsafe/ssz";
+import {ApiError, ValidationError} from "../../errors";
 
 export function toBeaconHeaderResponse(
   config: IBeaconConfig,
@@ -23,7 +24,19 @@ export function toBeaconHeaderResponse(
 }
 
 export async function resolveBlockId(
-  config: IBeaconConfig,
+  forkChoice: IForkChoice,
+  db: IBeaconDb,
+  blockId: BlockId
+): Promise<phase0.SignedBeaconBlock> {
+  const block = await resolveBlockIdOrNull(forkChoice, db, blockId);
+  if (!block) {
+    throw new ApiError(404, `No block found for id '${blockId}'`);
+  }
+
+  return block;
+}
+
+async function resolveBlockIdOrNull(
   forkChoice: IForkChoice,
   db: IBeaconDb,
   blockId: BlockId
@@ -33,12 +46,15 @@ export async function resolveBlockId(
     const head = forkChoice.getHead();
     return db.block.get(head.blockRoot, head.slot);
   }
+
   if (blockId === "genesis") {
     return db.blockArchive.get(GENESIS_SLOT);
   }
+
   if (blockId === "finalized") {
     return await db.blockArchive.get(forkChoice.getFinalizedCheckpoint().epoch);
   }
+
   if (blockId.startsWith("0x")) {
     const root = fromHexString(blockId);
     const summary = forkChoice.getBlock(root);
@@ -48,14 +64,17 @@ export async function resolveBlockId(
       return await db.blockArchive.getByRoot(root);
     }
   }
+
   // block id must be slot
   const slot = parseInt(blockId, 10);
   if (isNaN(slot) && isNaN(slot - 0)) {
-    throw new Error("Invalid block id");
+    throw new ValidationError(`Invalid block id '${blockId}'`, "blockId");
   }
+
   const blockSummary = forkChoice.getCanonicalBlockSummaryAtSlot(slot);
   if (blockSummary) {
     return db.block.get(blockSummary.blockRoot, blockSummary.slot);
+  } else {
+    return await db.blockArchive.get(slot);
   }
-  return await db.blockArchive.get(slot);
 }

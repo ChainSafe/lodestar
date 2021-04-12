@@ -4,7 +4,7 @@ import {ValidatorIndex} from "@chainsafe/lodestar-types/phase0";
 import {ByteVector} from "@chainsafe/ssz";
 import {IBeaconChain} from "../../chain/interface";
 import {IBeaconSync} from "../../sync";
-import {ApiError} from "./errors/api";
+import {ApiError} from "./errors/errors";
 
 /**
  * Check the sync status of the beacon chain.

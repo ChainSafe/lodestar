@@ -1,8 +1,7 @@
 import {DefaultQuery} from "fastify";
-import {StateId} from "../../../../impl/beacon/state/interface";
-import {ApiError} from "../../../../impl/errors/api";
-import {ApiController} from "../../types";
 import {phase0} from "@chainsafe/lodestar-types";
+import {StateId} from "../../../../impl/beacon/state/interface";
+import {ApiController} from "../../types";
 
 type Params = {
   stateId: StateId;
@@ -14,23 +13,19 @@ export const getStateValidator: ApiController<DefaultQuery, Params> = {
   method: "GET",
 
   handler: async function (req) {
-    let validator: phase0.ValidatorResponse | undefined;
+    let validator: phase0.ValidatorResponse;
     if (req.params.validatorId.toLowerCase().startsWith("0x")) {
-      validator =
-        (await this.api.beacon.state.getStateValidator(
-          req.params.stateId,
-          this.config.types.BLSPubkey.fromJson(req.params.validatorId)
-        )) ?? undefined;
+      validator = await this.api.beacon.state.getStateValidator(
+        req.params.stateId,
+        this.config.types.BLSPubkey.fromJson(req.params.validatorId)
+      );
     } else {
-      validator =
-        (await this.api.beacon.state.getStateValidator(
-          req.params.stateId,
-          this.config.types.ValidatorIndex.fromJson(req.params.validatorId)
-        )) ?? undefined;
+      validator = await this.api.beacon.state.getStateValidator(
+        req.params.stateId,
+        this.config.types.ValidatorIndex.fromJson(req.params.validatorId)
+      );
     }
-    if (!validator) {
-      throw new ApiError(404, "Validator not found");
-    }
+
     return {
       data: this.config.types.phase0.ValidatorResponse.toJson(validator, {case: "snake"}),
     };

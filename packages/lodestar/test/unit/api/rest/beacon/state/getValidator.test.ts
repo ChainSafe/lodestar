@@ -2,7 +2,7 @@ import {config} from "@chainsafe/lodestar-config/minimal";
 import {toHexString} from "@chainsafe/ssz";
 import {expect} from "chai";
 import supertest from "supertest";
-import {StateNotFound} from "../../../../../../src/api/impl/errors/api";
+import {StateNotFound} from "../../../../../../src/api/impl/errors/errors";
 import {getStateValidator} from "../../../../../../src/api/rest/controllers/beacon/state/getValidator";
 import {generateValidator} from "../../../../../utils/validator";
 import {ApiResponseBody, urlJoin} from "../../utils";

@@ -12,8 +12,6 @@ export interface IBeaconApi {
   blocks: IBeaconBlocksApi;
   state: IBeaconStateApi;
   pool: IBeaconPoolApi;
-
-  getGenesis(): Promise<phase0.Genesis | null>;
-
+  getGenesis(): Promise<phase0.Genesis>;
   getBlockStream(): IStoppableEventIterable<phase0.SignedBeaconBlock>;
 }

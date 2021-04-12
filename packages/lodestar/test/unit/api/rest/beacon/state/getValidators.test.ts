@@ -1,6 +1,6 @@
 import {expect} from "chai";
 import supertest from "supertest";
-import {StateNotFound} from "../../../../../../src/api/impl/errors/api";
+import {StateNotFound} from "../../../../../../src/api/impl/errors/errors";
 import {getStateValidators} from "../../../../../../src/api/rest/controllers/beacon";
 import {generateValidator} from "../../../../../utils/validator";
 import {ApiResponseBody, urlJoin} from "../../utils";
