@@ -14,7 +14,7 @@ import {allForks} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Tree} from "@chainsafe/persistent-merkle-tree";
 import {MutableVector} from "@chainsafe/persistent-ts";
-import {createFlat} from "./flat";
+import {createValidatorFlat} from "./flat";
 import {createEpochContext, EpochContext, EpochContextOpts} from "./epochContext";
 import {CachedValidatorList, CachedValidatorListProxyHandler} from "./cachedValidatorList";
 import {CachedBalanceList, CachedBalanceListProxyHandler} from "./cachedBalanceList";
@@ -44,7 +44,9 @@ export function createCachedBeaconState<T extends allForks.BeaconState>(
   state: TreeBacked<T>,
   opts?: EpochContextOpts
 ): CachedBeaconState<T> {
-  const cachedValidators = MutableVector.from(Array.from(readonlyValues(state.validators), (v) => createFlat(v)));
+  const cachedValidators = MutableVector.from(
+    Array.from(readonlyValues(state.validators), (v) => createValidatorFlat(v))
+  );
   const cachedBalances = MutableVector.from(readonlyValues(state.balances));
   const epochCtx = createEpochContext(config, state, cachedValidators, opts);
   return new Proxy(
@@ -81,7 +83,8 @@ export class BeaconStateContext<T extends allForks.BeaconState> {
       new CachedValidatorList(
         this.type.fields["validators"] as CompositeListType<List<T["validators"][number]>>,
         this.type.tree_getProperty(this.tree, "validators") as Tree,
-        validatorCache
+        validatorCache,
+        createValidatorFlat
       ),
       CachedValidatorListProxyHandler
     ) as unknown) as CachedValidatorList<T["validators"][number]> & T["validators"];
