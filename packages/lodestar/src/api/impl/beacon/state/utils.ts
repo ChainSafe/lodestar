@@ -195,10 +195,11 @@ function getNearestArchivedState(
   forkChoice: IForkChoice,
   slot: Slot
 ): CachedBeaconState<allForks.BeaconState> {
+  // @TODO: use config instead of hardcoding 32
   const persistentStateSlotBoundary = PERSIST_STATE_EVERY_EPOCHS * 32;
   const lowerDiff = slot % persistentStateSlotBoundary;
   const upperDiff = persistentStateSlotBoundary - lowerDiff;
-  const nearestArchivedStateSlot = lowerDiff < upperDiff ? slot - lowerDiff : slot + upperDiff;
+  const nearestArchivedStateSlot = lowerDiff <= upperDiff ? slot - lowerDiff : slot + upperDiff;
 
   let state: CachedBeaconState<allForks.BeaconState> | null = null;
   const blockSummary = forkChoice.getCanonicalBlockSummaryAtSlot(nearestArchivedStateSlot);

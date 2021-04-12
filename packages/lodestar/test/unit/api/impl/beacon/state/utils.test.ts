@@ -11,12 +11,13 @@ import {
 } from "../../../../../../src/api/impl/beacon/state/utils";
 import {BeaconChain, IBeaconChain} from "../../../../../../src/chain";
 import {IBeaconClock} from "../../../../../../src/chain/clock/interface";
-import {generateBlockSummary} from "../../../../../utils/block";
+import {generateBlockSummary, generateEmptySignedBlock} from "../../../../../utils/block";
 import {generateCachedState, generateState} from "../../../../../utils/state";
 import {StubbedBeaconDb} from "../../../../../utils/stub";
 import {StubbedBeaconChain} from "../../../../../utils/stub/chain";
 import {setupApiImplTestServer, ApiImplTestModules} from "../../index.test";
 import {generateValidators} from "../../../../../utils/validator";
+import {PERSIST_STATE_EVERY_EPOCHS} from "../../../../../../src/tasks/tasks/archiveStates";
 
 use(chaiAsPromised);
 
@@ -122,6 +123,35 @@ describe("beacon state api utils", function () {
       const state = await resolveStateId(chainStub, dbStub, "123");
       expect(state).to.not.be.null;
       expect(chainStub.forkChoice.getCanonicalBlockSummaryAtSlot.withArgs(123).calledOnce).to.be.true;
+    });
+
+    it("resolve state by on unarchived finalized slot", async function () {
+      const nearestArchiveSlot = PERSIST_STATE_EVERY_EPOCHS * 32;
+      const finalizedEpoch = 1028;
+      const requestedSlot = 1026 * 32;
+
+      chainStub.forkChoice.getFinalizedCheckpoint.returns({root: Buffer.alloc(32, 1), epoch: finalizedEpoch});
+      chainStub.forkChoice.getCanonicalBlockSummaryAtSlot
+        .withArgs(nearestArchiveSlot)
+        .returns(generateBlockSummary({stateRoot: Buffer.alloc(32, 1)}));
+      chainStub.stateCache.get.returns(generateCachedState({slot: nearestArchiveSlot}));
+      const blocks = Array.from({length: nearestArchiveSlot - requestedSlot}, (_, i) => {
+        const slot = i + nearestArchiveSlot + 1;
+        const block = generateEmptySignedBlock();
+        block.message.slot = slot;
+        return block;
+      });
+      const blocksAsyncIterable = {
+        async *[Symbol.asyncIterator]() {
+          for (const block of blocks) {
+            yield block;
+          }
+        },
+      };
+      dbStub.blockArchive.valuesStream.returns(blocksAsyncIterable);
+      const state = await resolveStateId(chainStub, dbStub, requestedSlot.toString());
+      expect(state).to.not.be.null;
+      expect(state?.slot).to.be.equal(requestedSlot);
     });
   });
 
