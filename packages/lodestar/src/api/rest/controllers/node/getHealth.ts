@@ -3,9 +3,7 @@ import {ApiController} from "../types";
 export const getHealth: ApiController = {
   url: "/health",
   method: "GET",
-  opts: {
-    schema: {},
-  },
+
   handler: async function (req, resp) {
     const status = await this.api.node.getNodeStatus();
     switch (status) {

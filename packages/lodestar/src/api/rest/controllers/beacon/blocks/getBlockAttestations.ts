@@ -25,15 +25,13 @@ export const getBlockAttestations: ApiController<DefaultQuery, {blockId: string}
     }
   },
 
-  opts: {
-    schema: {
-      params: {
-        type: "object",
-        required: ["blockId"],
-        properties: {
-          blockId: {
-            types: "string",
-          },
+  schema: {
+    params: {
+      type: "object",
+      required: ["blockId"],
+      properties: {
+        blockId: {
+          types: "string",
         },
       },
     },

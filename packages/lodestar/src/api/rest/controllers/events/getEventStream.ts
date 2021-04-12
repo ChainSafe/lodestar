@@ -51,17 +51,15 @@ export const getEventStream: ApiController<Query> = {
       .sse(transform(source));
   },
 
-  opts: {
-    schema: {
-      querystring: {
-        type: "object",
-        properties: {
-          topics: {
-            type: "array",
-            items: {
-              type: "string",
-              enum: Object.values(BeaconEventType),
-            },
+  schema: {
+    querystring: {
+      type: "object",
+      properties: {
+        topics: {
+          type: "array",
+          items: {
+            type: "string",
+            enum: Object.values(BeaconEventType),
           },
         },
       },

@@ -5,9 +5,7 @@ import {ApiController} from "../types";
 export const getNetworkIdentity: ApiController = {
   url: "/identity",
   method: "GET",
-  opts: {
-    schema: {},
-  },
+
   handler: async function (req, resp) {
     const identity = await this.api.node.getNodeIdentity();
     const metadataJson = this.config.types.phase0.Metadata.toJson(identity.metadata, {case: "snake"});

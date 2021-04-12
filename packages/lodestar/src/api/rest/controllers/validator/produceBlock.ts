@@ -28,31 +28,29 @@ export const produceBlockController: ApiController<Query, Params> = {
       });
   },
 
-  opts: {
-    schema: {
-      params: {
-        type: "object",
-        required: ["slot"],
-        properties: {
-          slot: {
-            type: "number",
-            minimum: 1,
-          },
+  schema: {
+    params: {
+      type: "object",
+      required: ["slot"],
+      properties: {
+        slot: {
+          type: "number",
+          minimum: 1,
         },
       },
-      querystring: {
-        type: "object",
-        required: ["randao_reveal"],
-        properties: {
-          // eslint-disable-next-line @typescript-eslint/naming-convention
-          randao_reveal: {
-            type: "string",
-            //TODO: add hex string signature regex
-          },
-          graffiti: {
-            type: "string",
-            maxLength: 64,
-          },
+    },
+    querystring: {
+      type: "object",
+      required: ["randao_reveal"],
+      properties: {
+        // eslint-disable-next-line @typescript-eslint/naming-convention
+        randao_reveal: {
+          type: "string",
+          //TODO: add hex string signature regex
+        },
+        graffiti: {
+          type: "string",
+          maxLength: 64,
         },
       },
     },

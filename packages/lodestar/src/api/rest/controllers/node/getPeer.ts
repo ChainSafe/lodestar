@@ -6,19 +6,7 @@ import {DefaultQuery} from "fastify";
 export const getPeer: ApiController<DefaultQuery, {peerId: string}> = {
   url: "/peers/:peerId",
   method: "GET",
-  opts: {
-    schema: {
-      params: {
-        type: "object",
-        required: ["peerId"],
-        properties: {
-          peerId: {
-            types: "string",
-          },
-        },
-      },
-    },
-  },
+
   handler: async function (req, resp) {
     const peer = await this.api.node.getPeer(req.params.peerId);
     if (!peer) {
@@ -34,5 +22,17 @@ export const getPeer: ApiController<DefaultQuery, {peerId: string}> = {
         direction: peer.direction,
       },
     });
+  },
+
+  schema: {
+    params: {
+      type: "object",
+      required: ["peerId"],
+      properties: {
+        peerId: {
+          types: "string",
+        },
+      },
+    },
   },
 };

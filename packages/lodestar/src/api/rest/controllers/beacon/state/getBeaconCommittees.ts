@@ -22,33 +22,31 @@ export const getStateBeaconCommittees: ApiController<Query, Params> = {
     });
   },
 
-  opts: {
-    schema: {
-      params: {
-        type: "object",
-        required: ["stateId"],
-        properties: {
-          stateId: {
-            types: "string",
-          },
+  schema: {
+    params: {
+      type: "object",
+      required: ["stateId"],
+      properties: {
+        stateId: {
+          types: "string",
         },
       },
-      querystring: {
-        type: "object",
-        required: [],
-        properties: {
-          epoch: {
-            type: "number",
-            minimum: 0,
-          },
-          slot: {
-            type: "number",
-            minimum: 0,
-          },
-          index: {
-            type: "number",
-            miminimum: 0,
-          },
+    },
+    querystring: {
+      type: "object",
+      required: [],
+      properties: {
+        epoch: {
+          type: "number",
+          minimum: 0,
+        },
+        slot: {
+          type: "number",
+          minimum: 0,
+        },
+        index: {
+          type: "number",
+          miminimum: 0,
         },
       },
     },

@@ -12,8 +12,4 @@ export const getForkSchedule: ApiController = {
       }),
     });
   },
-
-  opts: {
-    schema: {},
-  },
 };

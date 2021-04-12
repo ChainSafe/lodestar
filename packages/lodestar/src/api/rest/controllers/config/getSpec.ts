@@ -11,8 +11,4 @@ export const getSpec: ApiController = {
       data: BeaconParams.toJson(spec),
     });
   },
-
-  opts: {
-    schema: {},
-  },
 };

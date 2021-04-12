@@ -17,11 +17,9 @@ export const publishBlock: ApiController = {
     resp.code(200).type("application/json").send();
   },
 
-  opts: {
-    schema: {
-      body: {
-        type: "object",
-      },
+  schema: {
+    body: {
+      type: "object",
     },
   },
 };

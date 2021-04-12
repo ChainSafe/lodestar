@@ -24,26 +24,24 @@ export const attesterDutiesController: ApiController<DefaultQuery, Params, Body>
       });
   },
 
-  opts: {
-    schema: {
-      params: {
-        type: "object",
-        required: ["epoch"],
-        properties: {
-          epoch: {
-            type: "number",
-            minimum: 0,
-          },
-        },
-      },
-      body: {
-        type: "array",
-        minItems: 1,
-        maxItems: 100,
-        items: {
+  schema: {
+    params: {
+      type: "object",
+      required: ["epoch"],
+      properties: {
+        epoch: {
           type: "number",
           minimum: 0,
         },
+      },
+    },
+    body: {
+      type: "array",
+      minItems: 1,
+      maxItems: 100,
+      items: {
+        type: "number",
+        minimum: 0,
       },
     },
   },

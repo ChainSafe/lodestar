@@ -21,16 +21,14 @@ export const proposerDutiesController: ApiController<DefaultQuery, Params> = {
       });
   },
 
-  opts: {
-    schema: {
-      params: {
-        type: "object",
-        required: ["epoch"],
-        properties: {
-          epoch: {
-            type: "number",
-            minimum: 0,
-          },
+  schema: {
+    params: {
+      type: "object",
+      required: ["epoch"],
+      properties: {
+        epoch: {
+          type: "number",
+          minimum: 0,
         },
       },
     },

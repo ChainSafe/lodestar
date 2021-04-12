@@ -21,20 +21,18 @@ export const getBlockHeaders: ApiController<{slot?: string | number; parent_root
     });
   },
 
-  opts: {
-    schema: {
-      querystring: {
-        type: "object",
-        required: [],
-        properties: {
-          slot: {
-            type: "number",
-            minimum: 0,
-          },
-          // eslint-disable-next-line @typescript-eslint/naming-convention
-          parent_root: {
-            type: "string",
-          },
+  schema: {
+    querystring: {
+      type: "object",
+      required: [],
+      properties: {
+        slot: {
+          type: "number",
+          minimum: 0,
+        },
+        // eslint-disable-next-line @typescript-eslint/naming-convention
+        parent_root: {
+          type: "string",
         },
       },
     },

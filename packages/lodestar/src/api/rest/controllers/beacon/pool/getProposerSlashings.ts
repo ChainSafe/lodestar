@@ -12,8 +12,4 @@ export const getProposerSlashings: ApiController = {
       }),
     });
   },
-
-  opts: {
-    schema: {},
-  },
 };

@@ -5,34 +5,7 @@ import {ApiController} from "../types";
 export const getPeers: ApiController<{state: string[] | string; direction: string[] | string}> = {
   url: "/peers",
   method: "GET",
-  opts: {
-    schema: {
-      querystring: {
-        type: "object",
-        required: [],
-        properties: {
-          state: {
-            types: "array",
-            uniqueItems: true,
-            maxItems: 4,
-            items: {
-              type: "string",
-              enum: ["disconnected", "connecting", "connected", "disconnecting"],
-            },
-          },
-          direction: {
-            types: "array",
-            uniqueItems: true,
-            maxItems: 2,
-            items: {
-              type: "string",
-              enum: ["inbound", "outbound"],
-            },
-          },
-        },
-      },
-    },
-  },
+
   handler: async function (req, resp) {
     const peers = await this.api.node.getPeers(
       typeof req.query.state === "string" ? [req.query.state] : req.query.state,
@@ -47,5 +20,32 @@ export const getPeers: ApiController<{state: string[] | string; direction: strin
         direction: peer.direction,
       })),
     });
+  },
+
+  schema: {
+    querystring: {
+      type: "object",
+      required: [],
+      properties: {
+        state: {
+          types: "array",
+          uniqueItems: true,
+          maxItems: 4,
+          items: {
+            type: "string",
+            enum: ["disconnected", "connecting", "connected", "disconnecting"],
+          },
+        },
+        direction: {
+          types: "array",
+          uniqueItems: true,
+          maxItems: 2,
+          items: {
+            type: "string",
+            enum: ["inbound", "outbound"],
+          },
+        },
+      },
+    },
   },
 };
