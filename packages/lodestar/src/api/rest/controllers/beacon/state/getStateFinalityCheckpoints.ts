@@ -38,15 +38,13 @@ export const getStateFinalityCheckpoints: ApiController<DefaultQuery, Params> = 
     }
   },
 
-  opts: {
-    schema: {
-      params: {
-        type: "object",
-        required: ["stateId"],
-        properties: {
-          stateId: {
-            types: "string",
-          },
+  schema: {
+    params: {
+      type: "object",
+      required: ["stateId"],
+      properties: {
+        stateId: {
+          types: "string",
         },
       },
     },

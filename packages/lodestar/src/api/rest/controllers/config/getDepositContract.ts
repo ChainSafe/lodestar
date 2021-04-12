@@ -10,8 +10,4 @@ export const getDepositContract: ApiController = {
       data: this.config.types.phase0.Contract.toJson(depositContract, {case: "snake"}),
     });
   },
-
-  opts: {
-    schema: {},
-  },
 };

@@ -36,18 +36,16 @@ export const getStateValidator: ApiController<DefaultQuery, Params> = {
     });
   },
 
-  opts: {
-    schema: {
-      params: {
-        type: "object",
-        required: ["stateId", "validatorId"],
-        properties: {
-          stateId: {
-            types: "string",
-          },
-          validatorId: {
-            types: "string",
-          },
+  schema: {
+    params: {
+      type: "object",
+      required: ["stateId", "validatorId"],
+      properties: {
+        stateId: {
+          types: "string",
+        },
+        validatorId: {
+          types: "string",
         },
       },
     },

@@ -12,8 +12,4 @@ export const getVoluntaryExits: ApiController = {
       }),
     });
   },
-
-  opts: {
-    schema: {},
-  },
 };

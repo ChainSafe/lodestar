@@ -21,20 +21,18 @@ export const produceAggregatedAttestation: ApiController<Query> = {
     });
   },
 
-  opts: {
-    schema: {
-      querystring: {
-        type: "object",
-        required: ["attestation_data_root", "slot"],
-        properties: {
-          // eslint-disable-next-line @typescript-eslint/naming-convention
-          attestation_data_root: {
-            type: "string",
-          },
-          slot: {
-            type: "number",
-            minimum: 0,
-          },
+  schema: {
+    querystring: {
+      type: "object",
+      required: ["attestation_data_root", "slot"],
+      properties: {
+        // eslint-disable-next-line @typescript-eslint/naming-convention
+        attestation_data_root: {
+          type: "string",
+        },
+        slot: {
+          type: "number",
+          minimum: 0,
         },
       },
     },

@@ -26,28 +26,26 @@ export const getStateValidatorsBalances: ApiController<ValidatorBalancesQuery, P
     });
   },
 
-  opts: {
-    schema: {
-      params: {
-        type: "object",
-        required: ["stateId"],
-        properties: {
-          stateId: {
-            types: "string",
-          },
+  schema: {
+    params: {
+      type: "object",
+      required: ["stateId"],
+      properties: {
+        stateId: {
+          types: "string",
         },
       },
-      querystring: {
-        type: "object",
-        required: [],
-        properties: {
-          id: {
-            types: "array",
-            uniqueItems: true,
-            maxItems: 30,
-            items: {
-              type: "string",
-            },
+    },
+    querystring: {
+      type: "object",
+      required: [],
+      properties: {
+        id: {
+          types: "array",
+          uniqueItems: true,
+          maxItems: 30,
+          items: {
+            type: "string",
           },
         },
       },

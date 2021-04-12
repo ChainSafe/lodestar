@@ -17,21 +17,19 @@ export const produceAttestationData: ApiController<Query> = {
     });
   },
 
-  opts: {
-    schema: {
-      querystring: {
-        type: "object",
-        required: ["committee_index", "slot"],
-        properties: {
-          slot: {
-            type: "number",
-            minimum: 0,
-          },
-          // eslint-disable-next-line @typescript-eslint/naming-convention
-          committee_index: {
-            type: "number",
-            minimum: 0,
-          },
+  schema: {
+    querystring: {
+      type: "object",
+      required: ["committee_index", "slot"],
+      properties: {
+        slot: {
+          type: "number",
+          minimum: 0,
+        },
+        // eslint-disable-next-line @typescript-eslint/naming-convention
+        committee_index: {
+          type: "number",
+          minimum: 0,
         },
       },
     },

@@ -14,7 +14,7 @@ export function registerRoutesToServer(
           url: route.url,
           method: route.method,
           handler: route.handler,
-          ...route.opts,
+          schema: route.schema,
         });
       }
     },

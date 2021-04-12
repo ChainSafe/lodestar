@@ -13,8 +13,4 @@ export const getGenesis: ApiController = {
       data: this.config.types.phase0.Genesis.toJson(genesis, {case: "snake"}),
     });
   },
-
-  opts: {
-    schema: {},
-  },
 };

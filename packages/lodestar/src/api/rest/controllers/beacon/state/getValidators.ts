@@ -29,34 +29,32 @@ export const getStateValidators: ApiController<ValidatorsQuery, Params> = {
     });
   },
 
-  opts: {
-    schema: {
-      params: {
-        type: "object",
-        required: ["stateId"],
-        properties: {
-          stateId: {
-            types: "string",
-          },
+  schema: {
+    params: {
+      type: "object",
+      required: ["stateId"],
+      properties: {
+        stateId: {
+          types: "string",
         },
       },
-      querystring: {
-        type: "object",
-        required: [],
-        properties: {
-          indices: {
-            type: "array",
-            uniqueItems: true,
-            items: {
-              type: "string",
-            },
+    },
+    querystring: {
+      type: "object",
+      required: [],
+      properties: {
+        indices: {
+          type: "array",
+          uniqueItems: true,
+          items: {
+            type: "string",
           },
-          statuses: {
-            type: "array",
-            uniqueItems: true,
-            items: {
-              type: "string",
-            },
+        },
+        statuses: {
+          type: "array",
+          uniqueItems: true,
+          items: {
+            type: "string",
           },
         },
       },

@@ -23,10 +23,10 @@ export interface ApiController<
   Body = DefaultBody,
   Headers = DefaultHeaders
 > {
-  opts: RouteShorthandOptions<Server, IncomingMessage, ServerResponse, Query, Params, Headers, Body>;
-  handler: ApiHandler<Query, Params, Body, Headers>;
   url: string;
   method: HTTPMethod;
+  handler: ApiHandler<Query, Params, Body, Headers>;
+  schema?: RouteShorthandOptions<Server, IncomingMessage, ServerResponse, Query, Params, Headers, Body>["schema"];
 }
 
 export enum HttpHeader {

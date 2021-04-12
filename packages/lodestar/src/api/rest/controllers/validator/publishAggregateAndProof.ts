@@ -24,14 +24,12 @@ export const publishAggregateAndProof: ApiController<DefaultQuery, DefaultParams
     resp.status(200).send();
   },
 
-  opts: {
-    schema: {
-      body: {
-        type: "array",
-        minItems: 1,
-        items: {
-          type: "object",
-        },
+  schema: {
+    body: {
+      type: "array",
+      minItems: 1,
+      items: {
+        type: "object",
       },
     },
   },

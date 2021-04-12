@@ -17,11 +17,9 @@ export const submitProposerSlashing: ApiController = {
     resp.status(200).send();
   },
 
-  opts: {
-    schema: {
-      body: {
-        type: "object",
-      },
+  schema: {
+    body: {
+      type: "object",
     },
   },
 };

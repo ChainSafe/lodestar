@@ -14,8 +14,4 @@ export const getHeads: ApiController = {
       data: headJsons,
     });
   },
-
-  opts: {
-    schema: {},
-  },
 };

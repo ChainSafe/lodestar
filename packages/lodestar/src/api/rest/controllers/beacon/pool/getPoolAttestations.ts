@@ -17,21 +17,19 @@ export const getPoolAttestations: ApiController<{slot: string; committee_index: 
     });
   },
 
-  opts: {
-    schema: {
-      querystring: {
-        type: "object",
-        required: [],
-        properties: {
-          slot: {
-            types: "number",
-            min: 0,
-          },
-          // eslint-disable-next-line @typescript-eslint/naming-convention
-          committee_index: {
-            types: "number",
-            min: 0,
-          },
+  schema: {
+    querystring: {
+      type: "object",
+      required: [],
+      properties: {
+        slot: {
+          types: "number",
+          min: 0,
+        },
+        // eslint-disable-next-line @typescript-eslint/naming-convention
+        committee_index: {
+          types: "number",
+          min: 0,
         },
       },
     },

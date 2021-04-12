@@ -31,15 +31,13 @@ export const getState: ApiController<DefaultQuery, {stateId: string}> = {
     }
   },
 
-  opts: {
-    schema: {
-      params: {
-        type: "object",
-        required: ["stateId"],
-        properties: {
-          blockId: {
-            types: "string",
-          },
+  schema: {
+    params: {
+      type: "object",
+      required: ["stateId"],
+      properties: {
+        blockId: {
+          types: "string",
         },
       },
     },

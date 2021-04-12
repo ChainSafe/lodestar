@@ -12,8 +12,4 @@ export const getAttesterSlashings: ApiController = {
       }),
     });
   },
-
-  opts: {
-    schema: {},
-  },
 };
