@@ -4,6 +4,7 @@ import {toRestValidationError} from "../../utils";
 
 export const getBlockRoot: ApiController<DefaultQuery, {blockId: string}> = {
   url: "/blocks/:blockId/root",
+  method: "GET",
 
   handler: async function (req, resp) {
     try {

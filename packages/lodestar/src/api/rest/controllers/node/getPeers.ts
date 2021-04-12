@@ -4,6 +4,7 @@ import {ApiController} from "../types";
 
 export const getPeers: ApiController<{state: string[] | string; direction: string[] | string}> = {
   url: "/peers",
+  method: "GET",
   opts: {
     schema: {
       querystring: {

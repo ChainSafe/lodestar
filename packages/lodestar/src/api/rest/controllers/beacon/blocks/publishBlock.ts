@@ -4,6 +4,7 @@ import {ValidationError} from "../../../../impl/errors/validation";
 
 export const publishBlock: ApiController = {
   url: "/blocks",
+  method: "POST",
 
   handler: async function (req, resp) {
     let block: phase0.SignedBeaconBlock;

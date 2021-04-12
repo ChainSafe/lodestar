@@ -13,6 +13,7 @@ type ValidatorBalancesQuery = {
 
 export const getStateValidatorsBalances: ApiController<ValidatorBalancesQuery, Params> = {
   url: "/states/:stateId/validator_balances",
+  method: "GET",
 
   handler: async function (req, resp) {
     let indices: (ValidatorIndex | BLSPubkey)[] | undefined;

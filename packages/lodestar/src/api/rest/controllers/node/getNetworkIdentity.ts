@@ -4,6 +4,7 @@ import {ApiController} from "../types";
 
 export const getNetworkIdentity: ApiController = {
   url: "/identity",
+  method: "GET",
   opts: {
     schema: {},
   },

@@ -4,6 +4,7 @@ import {phase0} from "@chainsafe/lodestar-types";
 
 export const submitPoolAttestation: ApiController = {
   url: "/pool/attestations",
+  method: "POST",
 
   handler: async function (req, resp) {
     let attestation: phase0.Attestation;

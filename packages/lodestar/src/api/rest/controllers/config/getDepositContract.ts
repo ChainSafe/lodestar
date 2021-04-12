@@ -2,6 +2,7 @@ import {ApiController} from "../types";
 
 export const getDepositContract: ApiController = {
   url: "/deposit_contract",
+  method: "GET",
 
   handler: async function (req, resp) {
     const depositContract = await this.api.config.getDepositContract();

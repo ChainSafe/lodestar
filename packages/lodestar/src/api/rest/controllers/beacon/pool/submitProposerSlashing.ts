@@ -4,6 +4,7 @@ import {ApiController} from "../../types";
 
 export const submitProposerSlashing: ApiController = {
   url: "/pool/proposer_slashings",
+  method: "POST",
 
   handler: async function (req, resp) {
     let slashing: phase0.ProposerSlashing;

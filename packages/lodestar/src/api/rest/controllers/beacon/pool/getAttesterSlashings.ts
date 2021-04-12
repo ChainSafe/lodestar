@@ -2,6 +2,7 @@ import {ApiController} from "../../types";
 
 export const getAttesterSlashings: ApiController = {
   url: "/pool/attester_slashings",
+  method: "GET",
 
   handler: async function (req, resp) {
     const attesterSlashings = await this.api.beacon.pool.getAttesterSlashings();

@@ -9,6 +9,7 @@ type Params = {
 
 export const getStateFinalityCheckpoints: ApiController<DefaultQuery, Params> = {
   url: "/states/:stateId/finality_checkpoints",
+  method: "GET",
 
   handler: async function (req, resp) {
     try {

@@ -14,6 +14,7 @@ type Body = CommitteeSubnetRequest[];
 
 export const prepareCommitteeSubnet: ApiController<DefaultQuery, DefaultParams, Body> = {
   url: "/beacon_committee_subscriptions",
+  method: "POST",
 
   handler: async function (req, resp) {
     await this.api.validator.prepareBeaconCommitteeSubnet(

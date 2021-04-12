@@ -2,6 +2,7 @@ import {ApiController} from "../types";
 
 export const getHealth: ApiController = {
   url: "/health",
+  method: "GET",
   opts: {
     schema: {},
   },

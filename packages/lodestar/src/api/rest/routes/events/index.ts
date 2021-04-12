@@ -1,12 +1,9 @@
 //new
 import {FastifyInstance} from "fastify";
+import {registerRoutesToServer} from "../util";
 import {getEventStream} from "../../controllers/events";
 
 export function registerEventsRoutes(server: FastifyInstance): void {
-  server.register(
-    async function (fastify) {
-      fastify.get(getEventStream.url, getEventStream.opts, getEventStream.handler);
-    },
-    {prefix: "/v1/events"}
-  );
+  const routes = [getEventStream];
+  registerRoutesToServer(server, routes, "/v1/events");
 }

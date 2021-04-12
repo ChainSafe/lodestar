@@ -7,6 +7,7 @@ type Body = Json[];
 
 export const publishAggregateAndProof: ApiController<DefaultQuery, DefaultParams, Body> = {
   url: "/aggregate_and_proofs",
+  method: "POST",
 
   handler: async function (req, resp) {
     const signedAggregateAndProofs: phase0.SignedAggregateAndProof[] = [];

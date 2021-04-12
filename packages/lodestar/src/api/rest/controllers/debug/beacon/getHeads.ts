@@ -2,6 +2,7 @@ import {ApiController} from "../../types";
 
 export const getHeads: ApiController = {
   url: "/beacon/heads",
+  method: "GET",
 
   handler: async function (req, resp) {
     const heads = await this.api.debug.beacon.getHeads();

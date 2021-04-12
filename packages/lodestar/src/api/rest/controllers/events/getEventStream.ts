@@ -9,6 +9,7 @@ type Query = {
 
 export const getEventStream: ApiController<Query> = {
   url: "/",
+  method: "GET",
 
   handler: async function (req, resp) {
     resp.sent = true;

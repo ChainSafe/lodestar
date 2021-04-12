@@ -4,6 +4,7 @@ import {ApiController} from "../../types";
 
 export const submitVoluntaryExit: ApiController = {
   url: "/pool/voluntary_exits",
+  method: "POST",
 
   handler: async function (req, resp) {
     let exit: phase0.SignedVoluntaryExit;

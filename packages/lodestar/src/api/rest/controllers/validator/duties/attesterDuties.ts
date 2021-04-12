@@ -10,6 +10,7 @@ type Body = number[];
 
 export const attesterDutiesController: ApiController<DefaultQuery, Params, Body> = {
   url: "/duties/attester/:epoch",
+  method: "POST",
 
   handler: async function (req, resp) {
     const responseValue = await this.api.validator.getAttesterDuties(req.params.epoch, req.body);

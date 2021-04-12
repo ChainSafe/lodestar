@@ -5,6 +5,7 @@ import {DefaultQuery} from "fastify";
 
 export const getPeer: ApiController<DefaultQuery, {peerId: string}> = {
   url: "/peers/:peerId",
+  method: "GET",
   opts: {
     schema: {
       params: {

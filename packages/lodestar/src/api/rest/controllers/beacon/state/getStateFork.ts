@@ -9,6 +9,7 @@ type Params = {
 
 export const getStateFork: ApiController<DefaultQuery, Params> = {
   url: "/states/:stateId/fork",
+  method: "GET",
 
   handler: async function (req, resp) {
     try {

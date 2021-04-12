@@ -13,6 +13,7 @@ type ValidatorsQuery = {
 
 export const getStateValidators: ApiController<ValidatorsQuery, Params> = {
   url: "/states/:stateId/validators",
+  method: "GET",
 
   handler: async function (req, resp) {
     const filters: IValidatorFilters = {};

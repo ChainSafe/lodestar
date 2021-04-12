@@ -12,6 +12,7 @@ type Query = {
 
 export const produceBlockController: ApiController<Query, Params> = {
   url: "/blocks/:slot",
+  method: "GET",
 
   handler: async function (req, resp) {
     const block = await this.api.validator.produceBlock(
