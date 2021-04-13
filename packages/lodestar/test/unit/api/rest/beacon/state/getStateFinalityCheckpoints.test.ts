@@ -1,6 +1,6 @@
 import {expect} from "chai";
 import supertest from "supertest";
-import {getStateFinalityCheckpoints} from "../../../../../../src/api/rest/controllers/beacon/state";
+import {getStateFinalityCheckpoints} from "../../../../../../src/api/rest/beacon/state/getStateFinalityCheckpoints";
 import {generateState} from "../../../../../utils/state";
 import {ApiResponseBody, urlJoin} from "../../utils";
 import {BEACON_PREFIX, setupRestApiTestServer} from "../../index.test";
@@ -26,12 +26,5 @@ describe("rest - beacon - getStateFinalityCheckpoints", function () {
     expect((response.body as ApiResponseBody).data).to.not.be.undefined;
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     expect(response.body.data.finalized).to.not.be.undefined;
-  });
-
-  it("should not found state", async function () {
-    beaconStateStub.getState.withArgs("4").resolves(null);
-    await supertest(restApi.server.server)
-      .get(urlJoin(BEACON_PREFIX, getStateFinalityCheckpoints.url.replace(":stateId", "4")))
-      .expect(404);
   });
 });

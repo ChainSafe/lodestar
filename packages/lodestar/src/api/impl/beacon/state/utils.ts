@@ -11,6 +11,7 @@ import {IBeaconChain} from "../../../../chain";
 import {StateContextCache} from "../../../../chain/stateCache";
 import {IBeaconDb} from "../../../../db";
 import {getStateValidatorIndex} from "../../utils";
+import {ApiError, ValidationError} from "../../errors";
 import {StateId} from "./interface";
 import {sleep, assert} from "@chainsafe/lodestar-utils";
 import {processSlots} from "@chainsafe/lodestar-beacon-state-transition/lib/phase0/fast";
@@ -20,20 +21,35 @@ export async function resolveStateId(
   chain: IBeaconChain,
   db: IBeaconDb,
   stateId: StateId
+): Promise<allForks.BeaconState> {
+  const state = await resolveStateIdOrNull(chain, db, stateId);
+  if (!state) {
+    throw new ApiError(404, `No state found for id '${stateId}'`);
+  }
+
+  return state;
+}
+
+async function resolveStateIdOrNull(
+  chain: IBeaconChain,
+  db: IBeaconDb,
+  stateId: StateId
 ): Promise<allForks.BeaconState | null> {
   stateId = stateId.toLowerCase();
   if (stateId === "head" || stateId === "genesis" || stateId === "finalized" || stateId === "justified") {
     return await stateByName(db, chain.stateCache, chain.forkChoice, stateId);
-  } else if (stateId.startsWith("0x")) {
-    return await stateByRoot(db, chain.stateCache, stateId);
-  } else {
-    // state id must be slot
-    const slot = parseInt(stateId, 10);
-    if (isNaN(slot) && isNaN(slot - 0)) {
-      throw new Error("Invalid state id");
-    }
-    return await stateBySlot(db, chain.stateCache, chain.forkChoice, slot);
   }
+
+  if (stateId.startsWith("0x")) {
+    return await stateByRoot(db, chain.stateCache, stateId);
+  }
+
+  // state id must be slot
+  const slot = parseInt(stateId, 10);
+  if (isNaN(slot) && isNaN(slot - 0)) {
+    throw new ValidationError(`Invalid state id '${stateId}'`, "stateId");
+  }
+  return await stateBySlot(db, chain.stateCache, chain.forkChoice, slot);
 }
 
 /**

@@ -9,6 +9,7 @@ import {IApiOptions} from "../../options";
 import {ApiNamespace, IApiModules} from "../interface";
 import {formatNodePeer} from "./utils";
 import {INodeApi} from "./interface";
+import {ApiError} from "../errors";
 
 export class NodeApi implements INodeApi {
   namespace = ApiNamespace.NODE;
@@ -43,9 +44,11 @@ export class NodeApi implements INodeApi {
     return this.sync.isSynced() ? "ready" : "syncing";
   }
 
-  async getPeer(peerIdStr: string): Promise<NodePeer | null> {
+  async getPeer(peerIdStr: string): Promise<NodePeer> {
     const connections = this.network.getConnectionsByPeer().get(peerIdStr);
-    if (!connections) return null; // Node has not seen this peer
+    if (!connections) {
+      throw new ApiError(404, "Node has not seen this peer");
+    }
     return formatNodePeer(peerIdStr, connections);
   }
 

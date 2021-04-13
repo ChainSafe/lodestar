@@ -2,8 +2,8 @@ import {config} from "@chainsafe/lodestar-config/minimal";
 import {toHexString} from "@chainsafe/ssz";
 import {expect} from "chai";
 import supertest from "supertest";
-import {StateNotFound} from "../../../../../../src/api/impl/errors/api";
-import {getStateValidator} from "../../../../../../src/api/rest/controllers/beacon/state/getValidator";
+import {StateNotFound} from "../../../../../../src/api/impl/errors";
+import {getStateValidator} from "../../../../../../src/api/rest/beacon/state/getValidator";
 import {generateValidator} from "../../../../../utils/validator";
 import {ApiResponseBody, urlJoin} from "../../utils";
 import {BEACON_PREFIX, setupRestApiTestServer} from "../../index.test";
@@ -52,14 +52,6 @@ describe("rest - beacon - getStateValidator", function () {
     expect((response.body as ApiResponseBody).data).to.not.be.undefined;
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     expect(response.body.data.balance).to.not.be.undefined;
-  });
-
-  it("should not found validator", async function () {
-    beaconStateStub.getStateValidator.withArgs("4", 1).resolves(null);
-    await supertest(restApi.server.server)
-      .get(urlJoin(BEACON_PREFIX, getStateValidator.url.replace(":stateId", "4").replace(":validatorId", "1")))
-      .expect(404);
-    expect(beaconStateStub.getStateValidator.calledOnce).to.be.true;
   });
 
   it("should not found state", async function () {

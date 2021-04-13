@@ -42,28 +42,30 @@ export class BeaconPoolApi implements IBeaconPoolApi {
     });
   }
 
-  async submitAttestation(attestation: phase0.Attestation): Promise<void> {
+  async submitAttestations(attestations: phase0.Attestation[]): Promise<void> {
     await checkSyncStatus(this.config, this.sync);
-    const attestationJob = {
-      attestation,
-      validSignature: false,
-    } as IAttestationJob;
-    let attestationTargetState;
-    try {
-      attestationTargetState = await this.chain.regen.getCheckpointState(attestation.data.target);
-    } catch (e) {
-      throw new AttestationError({
-        code: AttestationErrorCode.MISSING_ATTESTATION_TARGET_STATE,
-        error: e as Error,
-        job: attestationJob,
-      });
+    for (const attestation of attestations) {
+      const attestationJob = {
+        attestation,
+        validSignature: false,
+      } as IAttestationJob;
+      let attestationTargetState;
+      try {
+        attestationTargetState = await this.chain.regen.getCheckpointState(attestation.data.target);
+      } catch (e) {
+        throw new AttestationError({
+          code: AttestationErrorCode.MISSING_ATTESTATION_TARGET_STATE,
+          error: e as Error,
+          job: attestationJob,
+        });
+      }
+      const subnet = fast.computeSubnetForAttestation(this.config, attestationTargetState.epochCtx, attestation);
+      await validateGossipAttestation(this.config, this.chain, this.db, attestationJob, subnet);
+      await Promise.all([
+        this.network.gossip.publishBeaconAttestation(attestation, subnet),
+        this.db.attestation.add(attestation),
+      ]);
     }
-    const subnet = fast.computeSubnetForAttestation(this.config, attestationTargetState.epochCtx, attestation);
-    await validateGossipAttestation(this.config, this.chain, this.db, attestationJob, subnet);
-    await Promise.all([
-      this.network.gossip.publishBeaconAttestation(attestation, subnet),
-      this.db.attestation.add(attestation),
-    ]);
   }
 
   async getAttesterSlashings(): Promise<phase0.AttesterSlashing[]> {

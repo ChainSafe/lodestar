@@ -4,7 +4,7 @@ import {urlJoin} from "@chainsafe/lodestar-validator/src/util";
 import {expect} from "chai";
 import supertest from "supertest";
 import {CONFIG_PREFIX, setupRestApiTestServer} from "../index.test";
-import {getSpec} from "../../../../../src/api/rest/controllers/config";
+import {getSpec} from "../../../../../src/api/rest/config/getSpec";
 import {SinonStubbedInstance} from "sinon";
 import {ConfigApi} from "../../../../../src/api/impl/config";
 import {ApiResponseBody} from "../utils";

@@ -24,9 +24,4 @@ describe("rest - debug - beacon - getHeads", function () {
       .expect("Content-Type", "application/json; charset=utf-8");
     expect((response.body as ApiResponseBody).data).to.not.be.undefined;
   });
-
-  it("should not found heads", async function () {
-    debugBeaconStub.getHeads.resolves(null);
-    await supertest(restApi.server.server).get("/eth/v1/debug/beacon/heads").expect(404);
-  });
 });

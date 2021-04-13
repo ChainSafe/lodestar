@@ -1,6 +1,6 @@
 import supertest from "supertest";
 
-import {getLatestWeakSubjectivityCheckpointEpoch} from "../../../../../src/api/rest/controllers/lodestar";
+import {getLatestWeakSubjectivityCheckpointEpoch} from "../../../../../src/api/rest/lodestar";
 import {urlJoin} from "../utils";
 import {LODESTAR_PREFIX, setupRestApiTestServer} from "../index.test";
 import {RestApi} from "../../../../../src/api";

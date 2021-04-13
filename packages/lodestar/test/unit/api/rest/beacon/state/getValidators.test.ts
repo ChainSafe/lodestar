@@ -1,7 +1,7 @@
 import {expect} from "chai";
 import supertest from "supertest";
-import {StateNotFound} from "../../../../../../src/api/impl/errors/api";
-import {getStateValidators} from "../../../../../../src/api/rest/controllers/beacon";
+import {StateNotFound} from "../../../../../../src/api/impl/errors";
+import {getStateValidators} from "../../../../../../src/api/rest/beacon/state/getValidators";
 import {generateValidator} from "../../../../../utils/validator";
 import {ApiResponseBody, urlJoin} from "../../utils";
 import {BEACON_PREFIX, setupRestApiTestServer} from "../../index.test";

@@ -22,19 +22,13 @@ describe("api - beacon - getBlockHeader", function () {
     server.sandbox.restore();
   });
 
-  it("block not found", async function () {
-    resolveBlockIdStub.withArgs(config, sinon.match.any, sinon.match.any, "1").resolves(null);
-    const result = await server.blockApi.getBlockHeader("1");
-    expect(result).to.be.null;
-  });
-
   it("invalid block id", async function () {
-    resolveBlockIdStub.withArgs(config, sinon.match.any, sinon.match.any, "abc").throwsException();
+    resolveBlockIdStub.withArgs(sinon.match.any, sinon.match.any, "abc").throwsException();
     await expect(server.blockApi.getBlockHeader("abc")).to.eventually.be.rejected;
   });
 
   it("success for block", async function () {
-    resolveBlockIdStub.withArgs(config, sinon.match.any, sinon.match.any, "head").resolves(generateEmptySignedBlock());
+    resolveBlockIdStub.withArgs(sinon.match.any, sinon.match.any, "head").resolves(generateEmptySignedBlock());
     const result = await server.blockApi.getBlockHeader("head");
     expect(result).to.not.be.null;
     expect(() => config.types.phase0.SignedBeaconHeaderResponse.assertValidValue(result)).to.not.throw();

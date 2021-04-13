@@ -8,12 +8,15 @@ import {createPeerId, INetwork, Network} from "../../../../../src/network";
 import {BeaconSync, IBeaconSync} from "../../../../../src/sync";
 import {createKeypairFromPeerId, ENR} from "@chainsafe/discv5/lib";
 import PeerId from "peer-id";
-import {expect} from "chai";
+import {expect, use} from "chai";
+import chaiAsPromised from "chai-as-promised";
 import Multiaddr from "multiaddr";
 import {MetadataController} from "../../../../../src/network/metadata";
 import {phase0} from "@chainsafe/lodestar-types";
 import {NodePeer} from "../../../../../src/api/types";
 import {PeerStatus, PeerDirection} from "../../../../../src/network";
+
+use(chaiAsPromised);
 
 interface IPeerSummary {
   direction: string | null;
@@ -153,9 +156,7 @@ describe("node api implementation", function () {
     it("peer not found", async function () {
       const connectionsByPeer = new Map<string, Connection[]>();
       networkStub.getConnectionsByPeer.returns(connectionsByPeer);
-
-      const peer = await api.getPeer("not existent");
-      expect(peer).to.be.null;
+      await expect(api.getPeer("not existent")).to.be.rejectedWith();
     });
   });
 

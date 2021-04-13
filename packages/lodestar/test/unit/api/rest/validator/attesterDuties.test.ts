@@ -1,7 +1,7 @@
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {expect} from "chai";
 import supertest from "supertest";
-import {attesterDutiesController} from "../../../../../src/api/rest/controllers/validator/duties/attesterDuties";
+import {attesterDutiesController} from "../../../../../src/api/rest/validator/duties/attesterDuties";
 import {ApiResponseBody, urlJoin} from "../utils";
 import {setupRestApiTestServer, VALIDATOR_PREFIX} from "../index.test";
 import {SinonStubbedInstance} from "sinon";

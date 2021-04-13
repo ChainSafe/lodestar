@@ -134,13 +134,13 @@ describe("validator attestation service", function () {
     service["nextAttesterDuties"].set(1, new Map([[toHexString(pubkey), {...duty, isAggregator: false}]]));
     rpcClientStub.beacon.state.getFork.resolves(generateFork());
     rpcClientStub.validator.produceAttestationData.resolves(generateEmptyAttestation().data);
-    rpcClientStub.beacon.pool.submitAttestation.resolves();
+    rpcClientStub.beacon.pool.submitAttestations.resolves();
     slashingProtectionStub.checkAndInsertAttestation.resolves();
     const promise = service.onClockSlot({slot: 1});
     clock.tick(4000);
     await Promise.resolve(promise);
     expect(rpcClientStub.validator.produceAttestationData.withArgs(2, 1).calledOnce).to.be.true;
-    expect(rpcClientStub.beacon.pool.submitAttestation.calledOnce).to.be.true;
+    expect(rpcClientStub.beacon.pool.submitAttestations.calledOnce).to.be.true;
     expect(slashingProtectionStub.checkAndInsertAttestation.calledOnce).to.be.true;
   });
 
@@ -172,7 +172,7 @@ describe("validator attestation service", function () {
     // Simulate double vote detection
     const attestation1 = generateAttestation({data: generateAttestationData(0, 1)});
     rpcClientStub.validator.produceAttestationData.resolves(attestation1.data);
-    rpcClientStub.beacon.pool.submitAttestation.resolves();
+    rpcClientStub.beacon.pool.submitAttestations.resolves();
     slashingProtectionStub.checkAndInsertAttestation.rejects(
       new InvalidAttestationError({code: InvalidAttestationErrorCode.DOUBLE_VOTE} as any)
     );
@@ -181,7 +181,7 @@ describe("validator attestation service", function () {
     clock.tick(4000);
     await Promise.resolve(promise);
     expect(rpcClientStub.validator.produceAttestationData.withArgs(3, 1).calledOnce).to.be.true;
-    expect(rpcClientStub.beacon.pool.submitAttestation.notCalled).to.be.true;
+    expect(rpcClientStub.beacon.pool.submitAttestations.notCalled).to.be.true;
   });
 
   it("on new slot - with duty - SSE message comes before 1/3 slot time", async function () {
@@ -209,7 +209,7 @@ describe("validator attestation service", function () {
     service["nextAttesterDuties"].set(10, new Map([[toHexString(pubkey), {...duty, isAggregator: false}]]));
     rpcClientStub.beacon.state.getFork.resolves(generateFork());
     rpcClientStub.validator.produceAttestationData.resolves(generateEmptyAttestation().data);
-    rpcClientStub.beacon.pool.submitAttestation.resolves();
+    rpcClientStub.beacon.pool.submitAttestations.resolves();
     slashingProtectionStub.checkAndInsertAttestation.resolves();
     const promise = service.onClockSlot({slot: 10});
     rpcClientStub.emit(BeaconEventType.BLOCK, {block: new Uint8Array(32), slot: 10});

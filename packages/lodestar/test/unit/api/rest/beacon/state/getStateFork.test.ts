@@ -3,7 +3,7 @@ import supertest from "supertest";
 import {generateState} from "../../../../../utils/state";
 import {ApiResponseBody, urlJoin} from "../../utils";
 import {BEACON_PREFIX, setupRestApiTestServer} from "../../index.test";
-import {getStateFork} from "../../../../../../src/api/rest/controllers/beacon/state/getStateFork";
+import {getStateFork} from "../../../../../../src/api/rest/beacon/state/getStateFork";
 import {SinonStubbedInstance} from "sinon";
 import {BeaconStateApi} from "../../../../../../src/api/impl/beacon/state";
 import {RestApi} from "../../../../../../src/api";
@@ -26,12 +26,5 @@ describe("rest - beacon - getStateFork", function () {
     expect((response.body as ApiResponseBody).data).to.not.be.undefined;
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     expect(response.body.data.current_version).to.not.be.undefined;
-  });
-
-  it("should not found state", async function () {
-    beaconStateStub.getFork.withArgs("4").resolves(null);
-    await supertest(restApi.server.server)
-      .get(urlJoin(BEACON_PREFIX, getStateFork.url.replace(":stateId", "4")))
-      .expect(404);
   });
 });

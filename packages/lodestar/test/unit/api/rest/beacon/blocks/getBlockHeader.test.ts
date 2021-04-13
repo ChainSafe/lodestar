@@ -1,6 +1,6 @@
 import {expect} from "chai";
 import supertest from "supertest";
-import {getBlockHeader} from "../../../../../../src/api/rest/controllers/beacon/blocks";
+import {getBlockHeader} from "../../../../../../src/api/rest/beacon/blocks/getBlockHeader";
 import {generateSignedBeaconHeaderResponse} from "../../../../../utils/api";
 import {ApiResponseBody, urlJoin} from "../../utils";
 import {BEACON_PREFIX, setupRestApiTestServer} from "../../index.test";
@@ -28,20 +28,5 @@ describe("rest - beacon - getBlockHeader", function () {
       .expect(200)
       .expect("Content-Type", "application/json; charset=utf-8");
     expect((response.body as ApiResponseBody).data).to.not.be.undefined;
-  });
-
-  it("should not found block header", async function () {
-    beaconBlocksStub.getBlockHeader.withArgs("4").resolves(null);
-    await supertest(restApi.server.server)
-      .get(urlJoin(BEACON_PREFIX, getBlockHeader.url.replace(":blockId", "4")))
-      .expect(404);
-  });
-
-  it("should fail validation", async function () {
-    beaconBlocksStub.getBlockHeader.throws(new Error("Invalid block id"));
-    await supertest(restApi.server.server)
-      .get(urlJoin(BEACON_PREFIX, getBlockHeader.url.replace(":blockId", "abc")))
-      .expect(400)
-      .expect("Content-Type", "application/json; charset=utf-8");
   });
 });

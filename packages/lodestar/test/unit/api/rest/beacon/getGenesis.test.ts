@@ -2,7 +2,7 @@ import supertest from "supertest";
 import {expect} from "chai";
 import {config} from "@chainsafe/lodestar-config/mainnet";
 
-import {getGenesis} from "../../../../../src/api/rest/controllers/beacon";
+import {getGenesis} from "../../../../../src/api/rest/beacon/getGenesis";
 import {ApiResponseBody, urlJoin} from "../utils";
 import {BEACON_PREFIX, setupRestApiTestServer} from "../index.test";
 import {BeaconApi, RestApi} from "../../../../../src/api";
@@ -32,10 +32,5 @@ describe("rest - beacon - getGenesis", function () {
     expect(response.body.data.genesis_time).to.equal("0");
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     expect(response.body.data.genesis_validators_root).to.not.be.empty;
-  });
-
-  it("should return 404 if no genesis", async function () {
-    beaconStub.getGenesis.resolves(null);
-    await supertest(restApi.server.server).get(urlJoin(BEACON_PREFIX, getGenesis.url)).expect(404);
   });
 });

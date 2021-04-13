@@ -20,6 +20,6 @@ export interface IBeaconBlocksApi {
 }
 
 export interface IBeaconPoolApi {
-  submitAttestation(attestation: phase0.Attestation): Promise<void>;
+  submitAttestations(attestation: phase0.Attestation[]): Promise<void>;
   submitVoluntaryExit(signedVoluntaryExit: phase0.SignedVoluntaryExit): Promise<void>;
 }

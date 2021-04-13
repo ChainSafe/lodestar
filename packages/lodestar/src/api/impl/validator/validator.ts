@@ -23,7 +23,7 @@ import {INetwork} from "../../../network";
 import {IBeaconSync} from "../../../sync";
 import {toGraffitiBuffer} from "../../../util/graffiti";
 import {IApiOptions} from "../../options";
-import {ApiError} from "../errors/api";
+import {ApiError} from "../errors";
 import {ApiNamespace, IApiModules} from "../interface";
 import {checkSyncStatus} from "../utils";
 import {IValidatorApi} from "./interface";

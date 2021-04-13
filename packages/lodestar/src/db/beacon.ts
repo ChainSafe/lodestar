@@ -45,10 +45,11 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
 
   constructor(opts: IDatabaseApiOptions) {
     super(opts);
+    // Warning: If code is ever run in the constructor, must change this stub to not extend 'packages/lodestar/test/utils/stub/beaconDb.ts' -
     this.badBlock = new BadBlockRepository(this.config, this.db);
     this.block = new BlockRepository(this.config, this.db);
     this.pendingBlock = new PendingBlockRepository(this.config, this.db);
-    this.seenAttestationCache = new SeenAttestationCache(5000);
+    this.seenAttestationCache = new SeenAttestationCache(this.config, 2048);
     this.blockArchive = new BlockArchiveRepository(this.config, this.db);
     this.stateArchive = new StateArchiveRepository(this.config, this.db);
     this.attestation = new AttestationRepository(this.config, this.db);

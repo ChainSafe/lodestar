@@ -8,7 +8,7 @@ import {NodeIdentity, NodePeer} from "../../types";
 export interface INodeApi {
   getNodeIdentity(): Promise<NodeIdentity>;
   getPeers(state?: string[], direction?: string[]): Promise<NodePeer[]>;
-  getPeer(peerId: string): Promise<NodePeer | null>;
+  getPeer(peerId: string): Promise<NodePeer>;
   /**
    * Gets the beacon node version.  Format of version string is derived from schema used by other
    * eth2 clients.

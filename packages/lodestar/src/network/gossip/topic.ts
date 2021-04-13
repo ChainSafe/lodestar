@@ -111,9 +111,9 @@ export function getGossipSSZDeserializer(config: IBeaconConfig, topic: GossipTop
 
   switch (topic.type) {
     case GossipType.beacon_block:
-      // Deserialize tree-backed block, all other gossip can be deserialized to struct
-      return sszType.createTreeBackedFromBytes.bind(sszType);
     case GossipType.beacon_aggregate_and_proof:
+      // all other gossip can be deserialized to struct
+      return sszType.createTreeBackedFromBytes.bind(sszType);
     case GossipType.beacon_attestation:
     case GossipType.proposer_slashing:
     case GossipType.attester_slashing:
