@@ -1,5 +1,5 @@
 import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
-import {config} from "@chainsafe/lodestar-config/minimal";
+import {config} from "@chainsafe/lodestar-config/mainnet";
 import {toHexString} from "@chainsafe/ssz";
 import {expect, use} from "chai";
 import chaiAsPromised from "chai-as-promised";
@@ -31,7 +31,7 @@ describe("beacon state api utils", function () {
         stateCache: {get},
       } as unknown) as IBeaconChain;
 
-      const state = await resolveStateId(chainStub, dbStub, "head");
+      const state = await resolveStateId(config, chainStub, dbStub, "head");
       expect(state).to.not.be.null;
       expect(getHead.calledOnce).to.be.true;
       expect(get.calledOnce).to.be.true;
@@ -45,7 +45,7 @@ describe("beacon state api utils", function () {
         stateCache: {get},
       } as unknown) as IBeaconChain;
 
-      const state = await resolveStateId(chainStub, dbStub, "finalized");
+      const state = await resolveStateId(config, chainStub, dbStub, "finalized");
       expect(state).to.not.be.null;
       expect(getFinalizedCheckpoint.calledOnce).to.be.true;
       expect(get.calledOnce).to.be.true;
@@ -59,7 +59,7 @@ describe("beacon state api utils", function () {
         stateCache: {get},
       } as unknown) as IBeaconChain;
 
-      const state = await resolveStateId(chainStub, dbStub, "justified");
+      const state = await resolveStateId(config, chainStub, dbStub, "justified");
       expect(state).to.not.be.null;
       expect(getJustifiedCheckpoint.calledOnce).to.be.true;
       expect(get.calledOnce).to.be.true;
@@ -69,7 +69,7 @@ describe("beacon state api utils", function () {
       const get = sinon.stub().returns(generateCachedState());
       const chainStub = ({stateCache: {get}} as unknown) as IBeaconChain;
 
-      const state = await resolveStateId(chainStub, dbStub, toHexString(Buffer.alloc(32, 1)));
+      const state = await resolveStateId(config, chainStub, dbStub, toHexString(Buffer.alloc(32, 1)));
       expect(state).to.not.be.null;
       expect(get.calledOnce).to.be.true;
     });
@@ -85,24 +85,29 @@ describe("beacon state api utils", function () {
         stateCache: {get},
       } as unknown) as IBeaconChain;
 
-      const state = await resolveStateId(chainStub, dbStub, "123");
+      const state = await resolveStateId(config, chainStub, dbStub, "123");
       expect(state).to.not.be.null;
       expect(getCanonicalBlockSummaryAtSlot.withArgs(123).calledOnce).to.be.true;
     });
 
     it("resolve state by on unarchived finalized slot", async function () {
-      const nearestArchiveSlot = PERSIST_STATE_EVERY_EPOCHS * 32;
+      const nearestArchiveSlot = PERSIST_STATE_EVERY_EPOCHS * config.params.SLOTS_PER_EPOCH;
       const finalizedEpoch = 1028;
-      const requestedSlot = 1026 * 32;
+      const requestedSlot = 1026 * config.params.SLOTS_PER_EPOCH;
 
-      chainStub.forkChoice.getFinalizedCheckpoint.returns({root: Buffer.alloc(32, 1), epoch: finalizedEpoch});
-      chainStub.forkChoice.getCanonicalBlockSummaryAtSlot
-        .withArgs(nearestArchiveSlot)
+      const getFinalizedCheckpoint = sinon.stub().returns({root: Buffer.alloc(32, 1), epoch: finalizedEpoch});
+      const getCanonicalBlockSummaryAtSlot = sinon
+        .stub()
+        .onSecondCall()
         .returns(generateBlockSummary({stateRoot: Buffer.alloc(32, 1)}));
-      chainStub.stateCache.get.returns(generateCachedState({slot: nearestArchiveSlot}));
+      const get = sinon.stub().returns(generateCachedState({slot: nearestArchiveSlot}));
+      const chainStub = ({
+        forkChoice: {getCanonicalBlockSummaryAtSlot, getFinalizedCheckpoint},
+        stateCache: {get},
+      } as unknown) as IBeaconChain;
       // eslint-disable-next-line @typescript-eslint/no-empty-function
       dbStub.blockArchive.valuesStream.returns({async *[Symbol.asyncIterator]() {}});
-      const state = await resolveStateId(chainStub, dbStub, requestedSlot.toString());
+      const state = await resolveStateId(config, chainStub, dbStub, requestedSlot.toString());
       expect(state).to.not.be.null;
       expect(state?.slot).to.be.equal(requestedSlot);
     });

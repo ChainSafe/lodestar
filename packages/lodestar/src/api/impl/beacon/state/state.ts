@@ -43,7 +43,7 @@ export class BeaconStateApi implements IBeaconStateApi {
   }
 
   async getStateValidators(stateId: StateId, filters?: IValidatorFilters): Promise<phase0.ValidatorResponse[]> {
-    const state = await resolveStateId(this.chain, this.db, stateId);
+    const state = await resolveStateId(this.config, this.chain, this.db, stateId);
     const currentEpoch = getCurrentEpoch(this.config, state);
 
     const validators: phase0.ValidatorResponse[] = [];
@@ -83,7 +83,7 @@ export class BeaconStateApi implements IBeaconStateApi {
     stateId: StateId,
     validatorId: phase0.ValidatorIndex | Root
   ): Promise<phase0.ValidatorResponse> {
-    const state = await resolveStateId(this.chain, this.db, stateId);
+    const state = await resolveStateId(this.config, this.chain, this.db, stateId);
 
     const validatorIndex = getStateValidatorIndex(validatorId, state, this.chain);
     if (validatorIndex == null) {
@@ -102,7 +102,7 @@ export class BeaconStateApi implements IBeaconStateApi {
     stateId: StateId,
     indices?: (phase0.ValidatorIndex | BLSPubkey)[]
   ): Promise<phase0.ValidatorBalance[]> {
-    const state = await resolveStateId(this.chain, this.db, stateId);
+    const state = await resolveStateId(this.config, this.chain, this.db, stateId);
 
     if (indices) {
       const headState = this.chain.getHeadState();
@@ -131,7 +131,7 @@ export class BeaconStateApi implements IBeaconStateApi {
   }
 
   async getStateCommittees(stateId: StateId, filters?: ICommitteesFilters): Promise<phase0.BeaconCommitteeResponse[]> {
-    const state = await resolveStateId(this.chain, this.db, stateId);
+    const state = await resolveStateId(this.config, this.chain, this.db, stateId);
 
     const committes: phase0.ValidatorIndex[][][] = getEpochBeaconCommittees(
       this.config,
@@ -159,7 +159,7 @@ export class BeaconStateApi implements IBeaconStateApi {
   }
 
   async getState(stateId: StateId): Promise<allForks.BeaconState> {
-    return await resolveStateId(this.chain, this.db, stateId);
+    return await resolveStateId(this.config, this.chain, this.db, stateId);
   }
 
   async getFork(stateId: StateId): Promise<phase0.Fork> {

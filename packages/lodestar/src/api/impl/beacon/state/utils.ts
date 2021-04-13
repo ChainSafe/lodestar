@@ -1,6 +1,7 @@
 // this will need async once we wan't to resolve archive slot
 import {GENESIS_SLOT, FAR_FUTURE_EPOCH, CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
 import {allForks, phase0} from "@chainsafe/lodestar-types";
+import {phase0 as beaconStateTransitionPhase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {fast} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
@@ -14,15 +15,15 @@ import {getStateValidatorIndex} from "../../utils";
 import {ApiError, ValidationError} from "../../errors";
 import {StateId} from "./interface";
 import {sleep, assert} from "@chainsafe/lodestar-utils";
-import {processSlots} from "@chainsafe/lodestar-beacon-state-transition/lib/phase0/fast";
 import {PERSIST_STATE_EVERY_EPOCHS} from "../../../../tasks/tasks/archiveStates";
 
 export async function resolveStateId(
+  config: IBeaconConfig,
   chain: IBeaconChain,
   db: IBeaconDb,
   stateId: StateId
 ): Promise<allForks.BeaconState> {
-  const state = await resolveStateIdOrNull(chain, db, stateId);
+  const state = await resolveStateIdOrNull(config, chain, db, stateId);
   if (!state) {
     throw new ApiError(404, `No state found for id '${stateId}'`);
   }
@@ -31,6 +32,7 @@ export async function resolveStateId(
 }
 
 async function resolveStateIdOrNull(
+  config: IBeaconConfig,
   chain: IBeaconChain,
   db: IBeaconDb,
   stateId: StateId
@@ -49,7 +51,7 @@ async function resolveStateIdOrNull(
   if (isNaN(slot) && isNaN(slot - 0)) {
     throw new ValidationError(`Invalid state id '${stateId}'`, "stateId");
   }
-  return await stateBySlot(db, chain.stateCache, chain.forkChoice, slot);
+  return await stateBySlot(config, db, chain.stateCache, chain.forkChoice, slot);
 }
 
 /**
@@ -171,6 +173,7 @@ async function stateByRoot(
 }
 
 async function stateBySlot(
+  config: IBeaconConfig,
   db: IBeaconDb,
   stateCache: StateContextCache,
   forkChoice: IForkChoice,
@@ -180,7 +183,7 @@ async function stateBySlot(
   if (blockSummary) {
     return stateCache.get(blockSummary.stateRoot) ?? null;
   } else {
-    return await getFinalizedState(db, stateCache, forkChoice, slot);
+    return await getFinalizedState(config, db, stateCache, forkChoice, slot);
   }
 }
 
@@ -206,12 +209,12 @@ export function filterStateValidatorsByStatuses(
  * Get the archived state nearest to `slot`.
  */
 function getNearestArchivedState(
+  config: IBeaconConfig,
   stateCache: StateContextCache,
   forkChoice: IForkChoice,
   slot: Slot
 ): CachedBeaconState<allForks.BeaconState> {
-  // @TODO: use config instead of hardcoding 32
-  const nearestArchivedStateSlot = slot - (slot % (PERSIST_STATE_EVERY_EPOCHS * 32));
+  const nearestArchivedStateSlot = slot - (slot % (PERSIST_STATE_EVERY_EPOCHS * config.params.SLOTS_PER_EPOCH));
 
   let state: CachedBeaconState<allForks.BeaconState> | null = null;
   const blockSummary = forkChoice.getCanonicalBlockSummaryAtSlot(nearestArchivedStateSlot);
@@ -223,14 +226,14 @@ function getNearestArchivedState(
 }
 
 async function getFinalizedState(
+  config: IBeaconConfig,
   db: IBeaconDb,
   stateCache: StateContextCache,
   forkChoice: IForkChoice,
   slot: Slot
 ): Promise<CachedBeaconState<allForks.BeaconState>> {
-  // @TODO: we should probably use SLOTS_PER_EPOCH instead of hard-coding `32`, but i'm not sure how without passing the config all the way from all the upstream calls
-  assert.lte(slot, forkChoice.getFinalizedCheckpoint().epoch * 32);
-  let state = getNearestArchivedState(stateCache, forkChoice, slot);
+  assert.lte(slot, forkChoice.getFinalizedCheckpoint().epoch * config.params.SLOTS_PER_EPOCH);
+  let state = getNearestArchivedState(config, stateCache, forkChoice, slot);
 
   // process blocks up to the requested slot
   for await (const block of db.blockArchive.valuesStream({gt: state.slot, lte: slot})) {
@@ -240,7 +243,7 @@ async function getFinalizedState(
   }
   // due to skip slots, may need to process empty slots to reach the requested slot
   if (state.slot < slot) {
-    processSlots(state as CachedBeaconState<phase0.BeaconState>, slot);
+    beaconStateTransitionPhase0.fast.processSlots(state as CachedBeaconState<phase0.BeaconState>, slot);
   }
   return state;
 }
