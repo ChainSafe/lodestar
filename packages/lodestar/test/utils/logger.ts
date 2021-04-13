@@ -10,13 +10,13 @@ export {LogLevel};
  * VERBOSE=1 mocha .ts
  * ```
  */
-export function testLogger(module?: string, defaultLogLevel = LogLevel.error, logFile?: string): WinstonLogger {
-  const transports: TransportOpts[] = [{type: TransportType.console}];
+export function testLogger(module?: string, logLevel = LogLevel.error, logFile?: string): WinstonLogger {
+  const transports: TransportOpts[] = [{type: TransportType.console, level: getLogLevelFromEnvs() || logLevel}];
   if (logFile) {
     transports.push({type: TransportType.file, filename: logFile, level: LogLevel.debug});
   }
 
-  return new WinstonLogger({level: getLogLevelFromEnvs() || defaultLogLevel, module}, transports);
+  return new WinstonLogger({module}, transports);
 }
 
 function getLogLevelFromEnvs(): LogLevel | null {
