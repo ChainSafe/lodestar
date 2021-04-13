@@ -1,5 +1,5 @@
 import {phase0} from "@chainsafe/lodestar-types";
-import {Vector} from "@chainsafe/persistent-ts";
+import {PersistentVector} from "@chainsafe/persistent-ts";
 import {List} from "@chainsafe/ssz";
 import {CachedBeaconState} from "../../../fast";
 
@@ -10,7 +10,7 @@ export function processParticipationRecordUpdates(state: CachedBeaconState<phase
   // rotate participation caches
   state.previousEpochParticipation.updateAllStatus(state.currentEpochParticipation.persistent.vector);
   state.currentEpochParticipation.updateAllStatus(
-    Vector.from(
+    PersistentVector.from(
       Array.from({length: state.validators.length}, () => ({
         timelyHead: false,
         timelySource: false,

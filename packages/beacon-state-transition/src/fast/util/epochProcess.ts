@@ -5,7 +5,6 @@ import {computeActivationExitEpoch, getChurnLimit, isActiveValidator} from "../.
 import {FAR_FUTURE_EPOCH} from "../../constants";
 import {IEpochStakeSummary} from "./epochStakeSummary";
 import {CachedBeaconState} from "./cachedBeaconState";
-import {zipIterators} from "./zipIterators";
 
 /**
  * The AttesterStatus (and FlatValidator under status.validator) objects and
@@ -80,12 +79,14 @@ export function prepareEpochProcessState<T extends allForks.BeaconState>(state: 
 
   let currTargetUnslStake = BigInt(0);
 
-  for (const [i, validator, previousInclusionData, currentInclusionData] of zipIterators(
-    validators.keys(),
-    validators.values(),
-    previousEpochParticipation.iterateStatus(),
-    currentEpochParticipation.iterateStatus()
-  )) {
+  const flatValidators = validators.persistent.toArray();
+  const flatPreviousEpochParticipation = previousEpochParticipation.persistent.toArray();
+  const flatCurrentEpochParticipation = currentEpochParticipation.persistent.toArray();
+  for (let i = 0; i < flatValidators.length; i++) {
+    const validator = flatValidators[i];
+    const previousParticipation = flatPreviousEpochParticipation[i];
+    const currentParticipation = flatCurrentEpochParticipation[i];
+
     if (validator.slashed) {
       if (slashingsEpoch === validator.withdrawableEpoch) {
         out.indicesToSlash.push(i);
@@ -122,16 +123,16 @@ export function prepareEpochProcessState<T extends allForks.BeaconState>(state: 
     }
 
     if (!validator.slashed) {
-      if (previousInclusionData.timelySource) {
+      if (previousParticipation.timelySource) {
         prevSourceUnslStake += validator.effectiveBalance;
-        if (previousInclusionData.timelyTarget) {
+        if (previousParticipation.timelyTarget) {
           prevTargetUnslStake += validator.effectiveBalance;
-          if (previousInclusionData.timelyHead) {
+          if (previousParticipation.timelyHead) {
             prevHeadUnslStake += validator.effectiveBalance;
           }
         }
       }
-      if (currentInclusionData.timelyTarget) {
+      if (currentParticipation.timelyTarget) {
         currTargetUnslStake += validator.effectiveBalance;
       }
     }

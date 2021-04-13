@@ -15,7 +15,7 @@ import {
 import {computeEpochShuffling, IEpochShuffling} from "./epochShuffling";
 import {MutableVector} from "@chainsafe/persistent-ts";
 import {CachedValidatorList} from "./cachedValidatorList";
-import {IInclusionData} from "./cachedInclusionData";
+import {IInclusionData} from "./inclusionData";
 
 export type EpochContextOpts = {
   pubkey2index?: PubkeyIndexMap;

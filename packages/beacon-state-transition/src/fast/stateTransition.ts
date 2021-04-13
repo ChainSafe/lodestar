@@ -23,6 +23,8 @@ export function fastStateTransition(
   const blockFork = config.getForkName(blockSlot);
   const postState = state.clone();
 
+  setStateCachesAsTransient(postState);
+
   // process slots (including those with no blocks) since block
   switch (preFork) {
     case "phase0":
@@ -57,5 +59,32 @@ export function fastStateTransition(
       throw new Error("Invalid state root");
     }
   }
+
+  setStateCachesAsPersistent(postState);
+
   return postState;
+}
+
+/**
+ * Toggle all `MutableVector` caches to use `TransientVector`
+ */
+function setStateCachesAsTransient(state: CachedBeaconState<allForks.BeaconState>): void {
+  state.validators.persistent.asTransient();
+  state.balances.persistent.asTransient();
+  state.previousEpochParticipation.persistent.asTransient();
+  state.currentEpochParticipation.persistent.asTransient();
+  state.previousInclusionData?.asTransient();
+  state.currentInclusionData?.asTransient();
+}
+
+/**
+ * Toggle all `MutableVector` caches to use `PersistentVector`
+ */
+function setStateCachesAsPersistent(state: CachedBeaconState<allForks.BeaconState>): void {
+  state.validators.persistent.asPersistent();
+  state.balances.persistent.asPersistent();
+  state.previousEpochParticipation.persistent.asPersistent();
+  state.currentEpochParticipation.persistent.asPersistent();
+  state.previousInclusionData?.asPersistent();
+  state.currentInclusionData?.asPersistent();
 }

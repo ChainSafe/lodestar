@@ -1,6 +1,6 @@
 import {BasicListType, List, TreeBacked} from "@chainsafe/ssz";
 import {ParticipationFlags, Uint8} from "@chainsafe/lodestar-types";
-import {MutableVector, Vector} from "@chainsafe/persistent-ts";
+import {MutableVector, PersistentVector, TransientVector} from "@chainsafe/persistent-ts";
 import {Tree} from "@chainsafe/persistent-merkle-tree";
 import {unsafeUint8ArrayToTree} from "./unsafeUint8ArrayToTree";
 
@@ -72,12 +72,12 @@ export class CachedEpochParticipation implements List<ParticipationFlags> {
     return this.persistent.set(index, data);
   }
 
-  updateAllStatus(data: Vector<IParticipationStatus>): void {
+  updateAllStatus(data: PersistentVector<IParticipationStatus> | TransientVector<IParticipationStatus>): void {
     this.persistent.vector = data;
 
     if (this.type && this.tree) {
       const packedData = new Uint8Array(data.length);
-      data.readOnlyForEach((d, i) => (packedData[i] = toParticipationFlags(d)));
+      data.forEach((d, i) => (packedData[i] = toParticipationFlags(d)));
       this.tree.rootNode = unsafeUint8ArrayToTree(packedData, this.type.getChunkDepth());
       this.type.tree_setLength(this.tree, data.length);
     }
@@ -106,7 +106,7 @@ export class CachedEpochParticipation implements List<ParticipationFlags> {
     }
   }
 
-  *iterateStatus(): Generator<IParticipationStatus> {
+  *iterateStatus(): IterableIterator<IParticipationStatus> {
     yield* this.persistent[Symbol.iterator]();
   }
 

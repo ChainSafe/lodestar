@@ -4,7 +4,7 @@ import {computeEpochAtSlot, getBlockRoot, getBlockRootAtSlot} from "../../../uti
 import {CachedBeaconState} from "../../../fast";
 import {isValidIndexedAttestation} from "./isValidIndexedAttestation";
 import {MutableVector} from "@chainsafe/persistent-ts";
-import {IInclusionData} from "../../../fast/util/cachedInclusionData";
+import {IInclusionData} from "../../../fast/util/inclusionData";
 import {CachedEpochParticipation, IParticipationStatus} from "../../../fast/util/cachedEpochParticipation";
 
 export function processAttestation(

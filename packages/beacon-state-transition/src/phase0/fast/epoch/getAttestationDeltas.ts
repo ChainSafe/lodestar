@@ -3,7 +3,6 @@ import {bigIntSqrt, bigIntMax} from "@chainsafe/lodestar-utils";
 import {BASE_REWARDS_PER_EPOCH as BASE_REWARDS_PER_EPOCH_CONST} from "../../../constants";
 
 import {IEpochProcess, CachedBeaconState} from "../../../fast";
-import {zipIterators} from "../../../fast/util/zipIterators";
 import {isActiveValidator} from "../../../util";
 import {newZeroedArray} from "../../../util/array";
 
@@ -41,21 +40,23 @@ export function getAttestationDeltas(
   const INACTIVITY_PENALTY_QUOTIENT = params.INACTIVITY_PENALTY_QUOTIENT;
   const isInInactivityLeak = finalityDelay > MIN_EPOCHS_TO_INACTIVITY_PENALTY;
 
-  for (const [i, validator, status, inclusionData] of zipIterators(
-    validators.keys(),
-    validators.values(),
-    state.previousEpochParticipation.iterateStatus(),
-    state.previousInclusionData!
-  )) {
+  const flatValidators = validators.persistent.toArray();
+  const flatPreviousEpochParticipation = state.previousEpochParticipation.persistent.toArray();
+  const flatPreviousInclusionData = state.previousInclusionData!.toArray();
+  for (let i = 0; i < flatValidators.length; i++) {
+    const validator = flatValidators[i];
+    const previousParticipation = flatPreviousEpochParticipation[i];
+    const previousInclusionData = flatPreviousInclusionData[i];
+
     const effBalance = validator.effectiveBalance;
     const baseReward = Number((effBalance * BASE_REWARD_FACTOR) / balanceSqRoot / BASE_REWARDS_PER_EPOCH);
     const proposerReward = Math.floor(baseReward / params.PROPOSER_REWARD_QUOTIENT);
 
     // inclusion delay rewards
-    if (status.timelySource && !validator.slashed) {
-      rewards[inclusionData.proposerIndex] += proposerReward;
+    if (previousParticipation.timelySource && !validator.slashed) {
+      rewards[previousInclusionData.proposerIndex] += proposerReward;
       const maxAttesterReward = baseReward - proposerReward;
-      rewards[i] += Math.floor(maxAttesterReward / inclusionData.inclusionDelay);
+      rewards[i] += Math.floor(maxAttesterReward / previousInclusionData.inclusionDelay);
     }
 
     // if the validator is eligible
@@ -71,7 +72,7 @@ export function getAttestationDeltas(
         }
       } else {
         // expected FFG source
-        if (status.timelySource) {
+        if (previousParticipation.timelySource) {
           // justification-participation reward
           rewards[i] += isInInactivityLeak
             ? baseReward
@@ -81,7 +82,7 @@ export function getAttestationDeltas(
         }
 
         // expected FFG target
-        if (status.timelyTarget) {
+        if (previousParticipation.timelyTarget) {
           // boundary-attestation reward
           rewards[i] += isInInactivityLeak
             ? baseReward
@@ -92,7 +93,7 @@ export function getAttestationDeltas(
         }
 
         // expected head
-        if (status.timelyHead) {
+        if (previousParticipation.timelyHead) {
           // canonical-participation reward
           rewards[i] += isInInactivityLeak
             ? baseReward
@@ -106,7 +107,7 @@ export function getAttestationDeltas(
         if (isInInactivityLeak) {
           penalties[i] += baseReward * BASE_REWARDS_PER_EPOCH_CONST - proposerReward;
 
-          if (!status.timelyTarget) {
+          if (!previousParticipation.timelyTarget) {
             penalties[i] += Number((effBalance * finalityDelay) / INACTIVITY_PENALTY_QUOTIENT);
           }
         }

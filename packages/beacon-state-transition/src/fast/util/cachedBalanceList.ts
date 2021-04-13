@@ -1,7 +1,7 @@
 import {BasicListType, List, TreeBacked} from "@chainsafe/ssz";
 import {Gwei} from "@chainsafe/lodestar-types";
 import {Tree} from "@chainsafe/persistent-merkle-tree";
-import {MutableVector, Vector} from "@chainsafe/persistent-ts";
+import {MutableVector, PersistentVector} from "@chainsafe/persistent-ts";
 import {unsafeUint8ArrayToTree} from "./unsafeUint8ArrayToTree";
 
 /**
@@ -34,7 +34,7 @@ export class CachedBalanceList implements List<Gwei> {
   }
 
   updateAll(balances: BigUint64Array): void {
-    this.persistent.vector = Vector.from(balances);
+    this.persistent.vector = PersistentVector.from(balances);
     this.tree.rootNode = unsafeUint8ArrayToTree(
       new Uint8Array(balances.buffer, balances.byteOffset, balances.byteLength),
       this.type.getChunkDepth()
