@@ -144,8 +144,8 @@ export class BeaconSync implements IBeaconSync {
   }
 
   private processChainSegment: ProcessChainSegment = async (blocks) => {
-    // trusted = false: Verify signatures
-    await this.chain.processChainSegment(blocks, {prefinalized: true, trusted: false});
+    const trusted = false; // Verify signatures
+    await this.chain.processChainSegment(blocks, {prefinalized: true, trusted});
   };
 
   private downloadBeaconBlocksByRange: DownloadBeaconBlocksByRange = async (peerId, request) => {
