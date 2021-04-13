@@ -31,7 +31,7 @@ describe("Epoch Processing Performance Tests", function () {
     },
     {
       testFunc: phase0.fast.processRewardsAndPenalties,
-      expected: 250,
+      expected: 110,
     },
     {
       testFunc: phase0.fast.processRegistryUpdates,
@@ -39,11 +39,11 @@ describe("Epoch Processing Performance Tests", function () {
     },
     {
       testFunc: phase0.fast.processSlashings,
-      expected: 25,
+      expected: 8,
     },
     {
       testFunc: phase0.fast.processFinalUpdates,
-      expected: 30,
+      expected: 15,
     },
   ];
 

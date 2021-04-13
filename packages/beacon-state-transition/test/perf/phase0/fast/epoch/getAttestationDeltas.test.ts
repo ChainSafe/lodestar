@@ -31,8 +31,8 @@ describe("getAttestationDeltas", function () {
     const to = process.hrtime.bigint();
     const average = Number((to - from) / BigInt(MAX_TRY) / BigInt(1000000));
     logger.info("getAttestationDeltas in ms", {minTime, maxTime, average, maxTry: MAX_TRY});
-    expect(minTime).to.be.lte(64, "Minimal getAttestationDeltas is not less than 67ms");
-    expect(maxTime).to.be.lte(500, "Maximal getAttestationDeltas is not less than 500ms");
-    expect(average).to.be.lte(79, "Average getAttestationDeltas is not less than 75ms");
+    expect(minTime).to.be.lte(28, "Minimal getAttestationDeltas is not less than 28ms");
+    expect(maxTime).to.be.lte(800, "Maximal getAttestationDeltas is not less than 800ms");
+    expect(average).to.be.lte(33, "Average getAttestationDeltas is not less than 33ms");
   });
 });
