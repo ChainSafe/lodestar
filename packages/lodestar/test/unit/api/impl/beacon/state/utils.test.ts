@@ -11,7 +11,7 @@ import {
 } from "../../../../../../src/api/impl/beacon/state/utils";
 import {BeaconChain, IBeaconChain} from "../../../../../../src/chain";
 import {IBeaconClock} from "../../../../../../src/chain/clock/interface";
-import {generateBlockSummary, generateEmptySignedBlock} from "../../../../../utils/block";
+import {generateBlockSummary} from "../../../../../utils/block";
 import {generateCachedState, generateState} from "../../../../../utils/state";
 import {StubbedBeaconDb} from "../../../../../utils/stub";
 import {StubbedBeaconChain} from "../../../../../utils/stub/chain";
@@ -135,20 +135,8 @@ describe("beacon state api utils", function () {
         .withArgs(nearestArchiveSlot)
         .returns(generateBlockSummary({stateRoot: Buffer.alloc(32, 1)}));
       chainStub.stateCache.get.returns(generateCachedState({slot: nearestArchiveSlot}));
-      const blocks = Array.from({length: nearestArchiveSlot - requestedSlot}, (_, i) => {
-        const slot = i + nearestArchiveSlot + 1;
-        const block = generateEmptySignedBlock();
-        block.message.slot = slot;
-        return block;
-      });
-      const blocksAsyncIterable = {
-        async *[Symbol.asyncIterator]() {
-          for (const block of blocks) {
-            yield block;
-          }
-        },
-      };
-      dbStub.blockArchive.valuesStream.returns(blocksAsyncIterable);
+      // eslint-disable-next-line @typescript-eslint/no-empty-function
+      dbStub.blockArchive.valuesStream.returns({async *[Symbol.asyncIterator]() {}});
       const state = await resolveStateId(chainStub, dbStub, requestedSlot.toString());
       expect(state).to.not.be.null;
       expect(state?.slot).to.be.equal(requestedSlot);
