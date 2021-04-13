@@ -24,9 +24,10 @@ export class WinstonLogger implements ILogger {
   constructor(options: Partial<ILoggerOptions> = {}, transportOptsArr: TransportOpts[] = [defaultTransportOpts]) {
     // `options.level` can override the level in the transport
     // This is necessary for child logger opts to take effect
-    let minLevel = options?.level || defaultLogLevel;
+    let minLevel = options?.level;
     for (const transportOpts of transportOptsArr) {
-      transportOpts.level = minLevel = getMinLevel([minLevel, transportOpts.level || defaultLogLevel]);
+      transportOpts.level = getMinLevel(options?.level, transportOpts.level); // General level may override transport level
+      minLevel = getMinLevel(minLevel, transportOpts.level); // Compute the minLevel from general and all transports
     }
 
     this.winston = createLogger({
@@ -36,7 +37,7 @@ export class WinstonLogger implements ILogger {
       transports: transportOptsArr.map((transportOpts) => fromTransportOpts(transportOpts)),
       exitOnError: false,
     });
-    this._level = minLevel;
+    this._level = minLevel || defaultLogLevel;
     // Store for child logger
     this._options = options;
     this._transportOptsArr = transportOptsArr;
@@ -94,10 +95,14 @@ export class WinstonLogger implements ILogger {
 }
 
 /** Return the min LogLevel from multiple transports */
-function getMinLevel(levels: LogLevel[]): LogLevel {
+function getMinLevel(...levelsArg: (LogLevel | undefined)[]): LogLevel {
+  const levels = levelsArg.filter((level): level is LogLevel => Boolean(level));
+
+  // Only if there are no levels to compute min from, consider defaultLogLevel
+  if (levels.length === 0) return defaultLogLevel;
+
   return levels.reduce(
     // error: 0, warn: 1, info: 2, ...
-    (minLevel, level) => (logLevelNum[level] > logLevelNum[minLevel] ? level : minLevel),
-    defaultLogLevel
+    (minLevel, level) => (logLevelNum[level] > logLevelNum[minLevel] ? level : minLevel)
   );
 }
