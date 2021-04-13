@@ -195,6 +195,10 @@ export class ForkChoice implements IForkChoice {
     return this.fcStore.justifiedCheckpoint;
   }
 
+  getBestJustifiedCheckpoint(): phase0.Checkpoint {
+    return this.fcStore.bestJustifiedCheckpoint;
+  }
+
   /**
    * Add `block` to the fork choice DAG.
    *

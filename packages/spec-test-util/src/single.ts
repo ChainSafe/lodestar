@@ -37,7 +37,13 @@ export interface ISpecTestOptions<TestCase, Result> {
    */
   inputTypes?: {[K in keyof NonNullable<TestCase>]?: InputType | ExpandedInputType};
 
-  sszTypes?: {[K in keyof NonNullable<TestCase>]?: Type<any>};
+  sszTypes?: Record<string, Type<any>>;
+
+  /**
+   * loadInputFiles sometimes not create TestCase due to abnormal input file names.
+   * Use this to map to real test case.
+   */
+  mapToTestCase?: (t: Record<string, any>) => TestCase;
 
   /**
    * Optionally
@@ -108,7 +114,8 @@ function generateTestCase<TestCase, Result>(
 ): void {
   const name = basename(testCaseDirectoryPath);
   it(name, function () {
-    const testCase = loadInputFiles(testCaseDirectoryPath, options);
+    let testCase = loadInputFiles(testCaseDirectoryPath, options);
+    if (options.mapToTestCase) testCase = options.mapToTestCase(testCase);
     if (options.shouldSkip && options.shouldSkip(testCase, name, index)) {
       this.skip();
       return;
@@ -148,7 +155,7 @@ function loadInputFiles<TestCase, Result>(directory: string, options: ISpecTestO
     .forEach((file) => {
       const inputName = basename(file).replace(".ssz_snappy", "").replace(".ssz", "").replace(".yaml", "");
       const inputType = getInputType(file);
-      testCase[inputName] = deserializeTestCase(file, inputName, inputType, options);
+      testCase[inputName] = deserializeInputFile(file, inputName, inputType, options);
       switch (inputType) {
         case InputType.SSZ:
           testCase[`${inputName}_raw`] = readFileSync(file);
@@ -176,7 +183,7 @@ function getInputType(filename: string): InputType {
   throw new Error(`Could not get InputType from ${filename}`);
 }
 
-function deserializeTestCase<TestCase, Result>(
+function deserializeInputFile<TestCase, Result>(
   file: string,
   inputName: string,
   inputType: InputType,
@@ -190,13 +197,22 @@ function deserializeTestCase<TestCase, Result>(
     if (inputType === InputType.SSZ_SNAPPY) {
       data = uncompress(data);
     }
-    if ((options.inputTypes![inputName as keyof TestCase]! as ExpandedInputType).treeBacked) {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
-      return (options.sszTypes[inputName as keyof NonNullable<TestCase>] as CompositeType<
-        any
-      >).createTreeBackedFromBytes(data);
+    let sszType: Type<any> | undefined;
+    for (const key of Object.keys(options.sszTypes)) {
+      if (inputName.match(key)) {
+        sszType = options.sszTypes[key];
+        break;
+      }
+    }
+    if (sszType) {
+      if ((options.inputTypes![inputName as keyof TestCase]! as ExpandedInputType).treeBacked) {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+        return (sszType as CompositeType<any>).createTreeBackedFromBytes(data);
+      } else {
+        return sszType.deserialize(data);
+      }
     } else {
-      return options.sszTypes[inputName as keyof NonNullable<TestCase>]?.deserialize(data);
+      throw Error("Cannot find ssz type for inputName" + inputName);
     }
   }
 }
