@@ -164,7 +164,6 @@ async function stateBySlot(
   if (blockSummary) {
     return stateCache.get(blockSummary.stateRoot) ?? null;
   } else {
-    // return await db.stateArchive.get(slot);
     return await getFinalizedState(db, stateCache, forkChoice, slot);
   }
 }
