@@ -19,6 +19,7 @@ export interface IPrimitiveSSZTypes {
   Slot: NumberUintType;
   Epoch: NumberUintType;
   CommitteeIndex: NumberUintType;
+  SubCommitteeIndex: NumberUintType;
   ValidatorIndex: NumberUintType;
   Gwei: BigIntUintType;
   Root: ByteVectorType;

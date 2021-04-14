@@ -6,7 +6,7 @@ import {
   IBeaconParams,
   JUSTIFICATION_BITS_LENGTH,
 } from "@chainsafe/lodestar-params";
-import {BitVectorType, ContainerType, VectorType, ListType, RootType} from "@chainsafe/ssz";
+import {BitVectorType, ContainerType, VectorType, ListType, RootType, BitListType} from "@chainsafe/ssz";
 import {IPhase0SSZTypes} from "../../phase0";
 import * as altair from "../types";
 import {IAltairSSZTypes} from "./interface";
@@ -32,6 +32,62 @@ export const SyncCommittee: LightClientTypesGenerator<ContainerType<altair.SyncC
         elementType: phase0Types.BLSPubkey,
         length: Math.floor(params.SYNC_COMMITTEE_SIZE / params.SYNC_PUBKEYS_PER_AGGREGATE),
       }),
+    },
+  });
+};
+
+export const SyncCommitteeSignature: LightClientTypesGenerator<ContainerType<altair.SyncCommitteeSignature>> = (params, phase0Types) => {
+  return new ContainerType({
+    fields: {
+      slot: phase0Types.Slot,
+      beaconBlockRoot: phase0Types.Root,
+      validatorIndex: phase0Types.ValidatorIndex,
+      signature: phase0Types.BLSSignature,
+    },
+  });
+};
+
+export const SyncCommitteeBits: LightClientTypesGenerator<BitListType> = (params) => {
+  return new BitListType({
+    limit: params.SYNC_COMMITTEE_SIZE / params.SYNC_COMMITTEE_SUBNET_COUNT,
+  });
+};
+
+export const SyncCommitteeContribution: LightClientTypesGenerator<ContainerType<altair.SyncCommitteeContribution>> = (params, phase0Types, altairTypes) => {
+  return new ContainerType({
+    fields: {
+      slot: phase0Types.Slot,
+      beaconBlockRoot: phase0Types.Root,
+      subCommitteeIndex: phase0Types.SubCommitteeIndex,
+      aggregationBits: altairTypes.SyncCommiteeBits,
+      signature: phase0Types.BLSSignature,
+    },
+  });
+};
+
+export const ContributionAndProof: LightClientTypesGenerator<ContainerType<altair.ContributionAndProof>> = (params, phase0Types, altairTypes) => {
+  return new ContainerType({
+    fields: {
+      aggregatorIndex: phase0Types.ValidatorIndex,
+      contribution: altairTypes.SyncCommitteeContribution,
+    },
+  });
+};
+
+export const SignedContributionAndProof: LightClientTypesGenerator<ContainerType<altair.SignedContributionAndProof>> = (params, phase0Types, altairTypes) => {
+  return new ContainerType({
+    fields: {
+      message: altairTypes.ContributionAndProof,
+      signature: phase0Types.BLSSignature,
+    },
+  });
+};
+
+export const SyncCommitteeSigningData: LightClientTypesGenerator<ContainerType<altair.SyncCommitteeSigningData>> = (params, phase0Types, altairTypes) => {
+  return new ContainerType({
+    fields: {
+      slot: phase0Types.Slot,
+      subCommitteeIndex: phase0Types.SubCommitteeIndex,
     },
   });
 };
