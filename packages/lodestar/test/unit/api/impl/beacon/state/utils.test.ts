@@ -106,8 +106,11 @@ describe("beacon state api utils", function () {
         stateCache: {get},
       } as unknown) as IBeaconChain;
       // eslint-disable-next-line @typescript-eslint/no-empty-function
-      dbStub.blockArchive.valuesStream.returns({async *[Symbol.asyncIterator]() {}});
-      const state = await resolveStateId(config, chainStub, dbStub, requestedSlot.toString());
+      const valuesStream = sinon.stub().returns({async *[Symbol.asyncIterator]() {}});
+      const tempDbStub = {
+        blockArchive: {valuesStream},
+      } as StubbedBeaconDb;
+      const state = await resolveStateId(config, chainStub, tempDbStub, requestedSlot.toString());
       expect(state).to.not.be.null;
       expect(state?.slot).to.be.equal(requestedSlot);
     });
