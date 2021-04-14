@@ -14,7 +14,7 @@ export const getLatestWeakSubjectivityCheckpointEpoch: ApiController = {
   method: "GET",
 
   handler: async function () {
-    return {data: this.api.lodestar.getLatestWeakSubjectivityCheckpointEpoch()};
+    return this.api.lodestar.getLatestWeakSubjectivityCheckpointEpoch();
   },
 };
 
