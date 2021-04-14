@@ -12,7 +12,7 @@ import {
 import {BeaconChain, IBeaconChain} from "../../../../../../src/chain";
 import {IBeaconClock} from "../../../../../../src/chain/clock/interface";
 import {generateBlockSummary} from "../../../../../utils/block";
-import {generateCachedState} from "../../../../../utils/state";
+import {generateCachedState, generateState} from "../../../../../utils/state";
 import {StubbedBeaconDb} from "../../../../../utils/stub";
 import {generateValidators} from "../../../../../utils/validator";
 import {PERSIST_STATE_EVERY_EPOCHS} from "../../../../../../src/tasks/tasks/archiveStates";
@@ -90,7 +90,7 @@ describe("beacon state api utils", function () {
       expect(getCanonicalBlockSummaryAtSlot.withArgs(123).calledOnce).to.be.true;
     });
 
-    it("resolve state by on unarchived finalized slot", async function () {
+    it("resolve state on unarchived finalized slot", async function () {
       const nearestArchiveSlot = PERSIST_STATE_EVERY_EPOCHS * config.params.SLOTS_PER_EPOCH;
       const finalizedEpoch = 1028;
       const requestedSlot = 1026 * config.params.SLOTS_PER_EPOCH;
@@ -100,15 +100,15 @@ describe("beacon state api utils", function () {
         .stub()
         .onSecondCall()
         .returns(generateBlockSummary({stateRoot: Buffer.alloc(32, 1)}));
-      const get = sinon.stub().returns(generateCachedState({slot: nearestArchiveSlot}));
       const chainStub = ({
         forkChoice: {getCanonicalBlockSummaryAtSlot, getFinalizedCheckpoint},
-        stateCache: {get},
       } as unknown) as IBeaconChain;
       // eslint-disable-next-line @typescript-eslint/no-empty-function
       const valuesStream = sinon.stub().returns({async *[Symbol.asyncIterator]() {}});
+      const get = sinon.stub().returns(generateState({slot: nearestArchiveSlot}));
       const tempDbStub = {
         blockArchive: {valuesStream},
+        stateArchive: {get},
       } as StubbedBeaconDb;
       const state = await resolveStateId(config, chainStub, tempDbStub, requestedSlot.toString());
       expect(state).to.not.be.null;

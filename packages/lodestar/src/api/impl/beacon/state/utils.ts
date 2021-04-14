@@ -1,5 +1,10 @@
 // this will need async once we wan't to resolve archive slot
-import {GENESIS_SLOT, FAR_FUTURE_EPOCH, CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
+import {
+  GENESIS_SLOT,
+  FAR_FUTURE_EPOCH,
+  CachedBeaconState,
+  createCachedBeaconState,
+} from "@chainsafe/lodestar-beacon-state-transition";
 import {allForks, phase0} from "@chainsafe/lodestar-types";
 import {phase0 as beaconStateTransitionPhase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {fast} from "@chainsafe/lodestar-beacon-state-transition";
@@ -183,7 +188,7 @@ async function stateBySlot(
   if (blockSummary) {
     return stateCache.get(blockSummary.stateRoot) ?? null;
   } else {
-    return await getFinalizedState(config, db, stateCache, forkChoice, slot);
+    return await getFinalizedState(config, db, forkChoice, slot);
   }
 }
 
@@ -208,32 +213,25 @@ export function filterStateValidatorsByStatuses(
 /**
  * Get the archived state nearest to `slot`.
  */
-function getNearestArchivedState(
+async function getNearestArchivedState(
   config: IBeaconConfig,
-  stateCache: StateContextCache,
-  forkChoice: IForkChoice,
+  db: IBeaconDb,
   slot: Slot
-): CachedBeaconState<allForks.BeaconState> {
+): Promise<CachedBeaconState<allForks.BeaconState>> {
   const nearestArchivedStateSlot = slot - (slot % (PERSIST_STATE_EVERY_EPOCHS * config.params.SLOTS_PER_EPOCH));
-
-  let state: CachedBeaconState<allForks.BeaconState> | null = null;
-  const blockSummary = forkChoice.getCanonicalBlockSummaryAtSlot(nearestArchivedStateSlot);
-  if (blockSummary) {
-    state = stateCache.get(blockSummary.stateRoot);
-  }
-  if (state === null) throw new Error("getNearestArchivedState: cannot find state");
-  return state;
+  const state = await db.stateArchive.get(nearestArchivedStateSlot);
+  if (state == null) throw new Error(`getNearestArchivedState: cannot find state.  slot=${nearestArchivedStateSlot}`);
+  return createCachedBeaconState(config, state);
 }
 
 async function getFinalizedState(
   config: IBeaconConfig,
   db: IBeaconDb,
-  stateCache: StateContextCache,
   forkChoice: IForkChoice,
   slot: Slot
 ): Promise<CachedBeaconState<allForks.BeaconState>> {
   assert.lte(slot, forkChoice.getFinalizedCheckpoint().epoch * config.params.SLOTS_PER_EPOCH);
-  let state = getNearestArchivedState(config, stateCache, forkChoice, slot);
+  let state = await getNearestArchivedState(config, db, slot);
 
   // process blocks up to the requested slot
   for await (const block of db.blockArchive.valuesStream({gt: state.slot, lte: slot})) {
