@@ -27,6 +27,7 @@ export type Uint256 = bigint;
 export type Slot = Number64;
 export type Epoch = Number64;
 export type CommitteeIndex = Number64;
+export type SubCommitteeIndex = Number64;
 export type ValidatorIndex = Number64;
 export type Gwei = Uint64;
 export type Root = Bytes32;
