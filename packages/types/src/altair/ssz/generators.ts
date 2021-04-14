@@ -36,7 +36,10 @@ export const SyncCommittee: LightClientTypesGenerator<ContainerType<altair.SyncC
   });
 };
 
-export const SyncCommitteeSignature: LightClientTypesGenerator<ContainerType<altair.SyncCommitteeSignature>> = (params, phase0Types) => {
+export const SyncCommitteeSignature: LightClientTypesGenerator<ContainerType<altair.SyncCommitteeSignature>> = (
+  params,
+  phase0Types
+) => {
   return new ContainerType({
     fields: {
       slot: phase0Types.Slot,
@@ -53,7 +56,11 @@ export const SyncCommitteeBits: LightClientTypesGenerator<BitListType> = (params
   });
 };
 
-export const SyncCommitteeContribution: LightClientTypesGenerator<ContainerType<altair.SyncCommitteeContribution>> = (params, phase0Types, altairTypes) => {
+export const SyncCommitteeContribution: LightClientTypesGenerator<ContainerType<altair.SyncCommitteeContribution>> = (
+  params,
+  phase0Types,
+  altairTypes
+) => {
   return new ContainerType({
     fields: {
       slot: phase0Types.Slot,
@@ -65,7 +72,11 @@ export const SyncCommitteeContribution: LightClientTypesGenerator<ContainerType<
   });
 };
 
-export const ContributionAndProof: LightClientTypesGenerator<ContainerType<altair.ContributionAndProof>> = (params, phase0Types, altairTypes) => {
+export const ContributionAndProof: LightClientTypesGenerator<ContainerType<altair.ContributionAndProof>> = (
+  params,
+  phase0Types,
+  altairTypes
+) => {
   return new ContainerType({
     fields: {
       aggregatorIndex: phase0Types.ValidatorIndex,
@@ -74,7 +85,11 @@ export const ContributionAndProof: LightClientTypesGenerator<ContainerType<altai
   });
 };
 
-export const SignedContributionAndProof: LightClientTypesGenerator<ContainerType<altair.SignedContributionAndProof>> = (params, phase0Types, altairTypes) => {
+export const SignedContributionAndProof: LightClientTypesGenerator<ContainerType<altair.SignedContributionAndProof>> = (
+  params,
+  phase0Types,
+  altairTypes
+) => {
   return new ContainerType({
     fields: {
       message: altairTypes.ContributionAndProof,
@@ -83,7 +98,10 @@ export const SignedContributionAndProof: LightClientTypesGenerator<ContainerType
   });
 };
 
-export const SyncCommitteeSigningData: LightClientTypesGenerator<ContainerType<altair.SyncCommitteeSigningData>> = (params, phase0Types, altairTypes) => {
+export const SyncCommitteeSigningData: LightClientTypesGenerator<ContainerType<altair.SyncCommitteeSigningData>> = (
+  params,
+  phase0Types
+) => {
   return new ContainerType({
     fields: {
       slot: phase0Types.Slot,
