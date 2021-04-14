@@ -86,16 +86,19 @@ export class TasksService {
       // should be after ArchiveBlocksTask to handle restart cleanly
       await this.statesArchiver.maybeArchiveState(finalized);
 
+      const finalizedEpoch = finalized.epoch;
       await Promise.all([
-        this.chain.checkpointStateCache.pruneFinalized(finalized.epoch),
-        this.chain.stateCache.deleteAllBeforeEpoch(finalized.epoch),
-        this.db.attestation.pruneFinalized(finalized.epoch),
-        this.db.aggregateAndProof.pruneFinalized(finalized.epoch),
+        this.chain.checkpointStateCache.pruneFinalized(finalizedEpoch),
+        this.chain.stateCache.deleteAllBeforeEpoch(finalizedEpoch),
+        this.db.attestation.pruneFinalized(finalizedEpoch),
+        this.db.aggregateAndProof.pruneFinalized(finalizedEpoch),
+        this.db.syncCommitteeSignature.pruneFinalized(finalizedEpoch),
+        this.db.contributionAndProof.pruneFinalized(finalizedEpoch),
       ]);
 
       // tasks rely on extended fork choice
       this.chain.forkChoice.prune(finalized.root);
-      this.logger.verbose("Finish processing finalized checkpoint", {epoch: finalized.epoch});
+      this.logger.verbose("Finish processing finalized checkpoint", {epoch: finalizedEpoch});
     } catch (e) {
       this.logger.error("Error processing finalized checkpoint", {epoch: finalized.epoch}, e);
     }

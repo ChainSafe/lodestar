@@ -22,6 +22,8 @@ import {
 import {PreGenesisState, PreGenesisStateLastProcessedBlock} from "./single";
 import {SeenAttestationCache} from "./seenAttestationCache";
 import {PendingBlockRepository} from "./repositories/pendingBlock";
+import {SyncCommitteeSignatureRepository} from "./repositories/syncCommitteeSignature";
+import {ContributionAndProofRepository} from "./repositories/contributionAndProof";
 
 export class BeaconDb extends DatabaseService implements IBeaconDb {
   badBlock: BadBlockRepository;
@@ -43,6 +45,10 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
   preGenesisState: PreGenesisState;
   preGenesisStateLastProcessedBlock: PreGenesisStateLastProcessedBlock;
 
+  // altair
+  syncCommitteeSignature: SyncCommitteeSignatureRepository;
+  contributionAndProof: ContributionAndProofRepository;
+
   constructor(opts: IDatabaseApiOptions) {
     super(opts);
     // Warning: If code is ever run in the constructor, must change this stub to not extend 'packages/lodestar/test/utils/stub/beaconDb.ts' -
@@ -62,6 +68,9 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
     this.eth1Data = new Eth1DataRepository(this.config, this.db);
     this.preGenesisState = new PreGenesisState(this.config, this.db);
     this.preGenesisStateLastProcessedBlock = new PreGenesisStateLastProcessedBlock(this.config, this.db);
+    // altair
+    this.syncCommitteeSignature = new SyncCommitteeSignatureRepository(this.config, this.db);
+    this.contributionAndProof = new ContributionAndProofRepository(this.config, this.db);
   }
 
   /**
