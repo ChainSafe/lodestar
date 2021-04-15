@@ -20,7 +20,6 @@ import {getStateValidatorIndex} from "../../utils";
 import {ApiError, ValidationError} from "../../errors";
 import {StateId} from "./interface";
 import {sleep, assert} from "@chainsafe/lodestar-utils";
-import {PERSIST_STATE_EVERY_EPOCHS} from "../../../../tasks/tasks/archiveStates";
 
 export async function resolveStateId(
   config: IBeaconConfig,
@@ -224,9 +223,13 @@ async function getNearestArchivedState(
   db: IBeaconDb,
   slot: Slot
 ): Promise<CachedBeaconState<allForks.BeaconState>> {
-  const nearestArchivedStateSlot = slot - (slot % (PERSIST_STATE_EVERY_EPOCHS * config.params.SLOTS_PER_EPOCH));
+  const keys = await db.stateArchive.keys({gt: 0, lte: slot});
+  const nearestArchivedStateSlot = keys[keys.length - 1];
+
   const state = await db.stateArchive.get(nearestArchivedStateSlot);
-  if (state == null) throw new Error(`getNearestArchivedState: cannot find state.  slot=${nearestArchivedStateSlot}`);
+  if (state == null) {
+    throw new Error(`getNearestArchivedState: cannot find state.  slot=${nearestArchivedStateSlot}`);
+  }
   return createCachedBeaconState(config, state);
 }
 
