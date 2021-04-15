@@ -101,7 +101,7 @@ export class ORARegularSync extends (EventEmitter as {new (): RegularSyncEventEm
       const lastSlot = this.blockBuffer[this.blockBuffer.length - 1].message.slot;
       const result = await Promise.all([
         this.fetcher.getNextBlockRange(),
-        this.chain.processChainSegment(this.blockBuffer),
+        this.chain.processChainSegment(this.blockBuffer, {prefinalized: false, trusted: false}),
       ]);
       if (!result[0] || !result[0].length) {
         // node is stopped
