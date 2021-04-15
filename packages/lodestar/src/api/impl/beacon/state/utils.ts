@@ -191,8 +191,10 @@ async function stateBySlot(
   if (blockSummary) {
     return stateCache.get(blockSummary.stateRoot) ?? null;
   } else {
-    if (fallbackToArchive) return await getFinalizedState(config, db, forkChoice, slot);
-    else return await db.stateArchive.get(slot);
+    if (fallbackToArchive) {
+      return await getFinalizedState(config, db, forkChoice, slot);
+    }
+    return await db.stateArchive.get(slot);
   }
 }
 
