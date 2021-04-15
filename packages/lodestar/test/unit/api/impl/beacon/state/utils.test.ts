@@ -106,9 +106,10 @@ describe("beacon state api utils", function () {
       // eslint-disable-next-line @typescript-eslint/no-empty-function
       const valuesStream = sinon.stub().returns({async *[Symbol.asyncIterator]() {}});
       const get = sinon.stub().returns(generateState({slot: nearestArchiveSlot}));
+      const keys = sinon.stub().returns([nearestArchiveSlot]);
       const tempDbStub = {
         blockArchive: {valuesStream},
-        stateArchive: {get},
+        stateArchive: {get, keys},
       } as StubbedBeaconDb;
       const state = await resolveStateId(config, chainStub, tempDbStub, requestedSlot.toString(), true);
       expect(state).to.not.be.null;
