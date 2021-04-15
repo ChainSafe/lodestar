@@ -26,9 +26,10 @@ export async function resolveStateId(
   config: IBeaconConfig,
   chain: IBeaconChain,
   db: IBeaconDb,
-  stateId: StateId
+  stateId: StateId,
+  fallbackToArchive = false
 ): Promise<allForks.BeaconState> {
-  const state = await resolveStateIdOrNull(config, chain, db, stateId);
+  const state = await resolveStateIdOrNull(config, chain, db, stateId, fallbackToArchive);
   if (!state) {
     throw new ApiError(404, `No state found for id '${stateId}'`);
   }
@@ -40,7 +41,8 @@ async function resolveStateIdOrNull(
   config: IBeaconConfig,
   chain: IBeaconChain,
   db: IBeaconDb,
-  stateId: StateId
+  stateId: StateId,
+  fallbackToArchive: boolean
 ): Promise<allForks.BeaconState | null> {
   stateId = stateId.toLowerCase();
   if (stateId === "head" || stateId === "genesis" || stateId === "finalized" || stateId === "justified") {
@@ -56,7 +58,7 @@ async function resolveStateIdOrNull(
   if (isNaN(slot) && isNaN(slot - 0)) {
     throw new ValidationError(`Invalid state id '${stateId}'`, "stateId");
   }
-  return await stateBySlot(config, db, chain.stateCache, chain.forkChoice, slot);
+  return await stateBySlot(config, db, chain.stateCache, chain.forkChoice, slot, fallbackToArchive);
 }
 
 /**
@@ -182,13 +184,15 @@ async function stateBySlot(
   db: IBeaconDb,
   stateCache: StateContextCache,
   forkChoice: IForkChoice,
-  slot: Slot
+  slot: Slot,
+  fallbackToArchive: boolean
 ): Promise<allForks.BeaconState | null> {
   const blockSummary = forkChoice.getCanonicalBlockSummaryAtSlot(slot);
   if (blockSummary) {
     return stateCache.get(blockSummary.stateRoot) ?? null;
   } else {
-    return await getFinalizedState(config, db, forkChoice, slot);
+    if (fallbackToArchive) return await getFinalizedState(config, db, forkChoice, slot);
+    else return await db.stateArchive.get(slot);
   }
 }
 
