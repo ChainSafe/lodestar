@@ -5,6 +5,12 @@ import {timeoutOptions} from "../../../constants";
 import {onChunk} from "../utils/onChunk";
 import {RequestErrorCode, RequestInternalError} from "./errors";
 
+/** Returns the maximum total timeout possible for a response. See @responseTimeoutsHandler */
+export function maxTotalResponseTimeout(maxResponses = 1, options?: Partial<typeof timeoutOptions>): number {
+  const {TTFB_TIMEOUT, RESP_TIMEOUT} = {...timeoutOptions, ...options};
+  return TTFB_TIMEOUT + maxResponses * RESP_TIMEOUT;
+}
+
 /**
  * Wraps responseDecoder to isolate the logic that handles response timeouts.
  * - TTFB_TIMEOUT: The requester MUST wait a maximum of TTFB_TIMEOUT for the first response byte to arrive
