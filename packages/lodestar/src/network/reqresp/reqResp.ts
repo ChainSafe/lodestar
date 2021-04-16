@@ -76,6 +76,7 @@ export class ReqResp implements IReqResp {
                 peerId,
                 method,
                 encoding,
+                this.controller.signal,
                 this.respCount++
               );
               // TODO: Do success peer scoring here
