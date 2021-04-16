@@ -1,9 +1,10 @@
 import PeerId from "peer-id";
 import pipe from "it-pipe";
+import {AbortSignal} from "abort-controller";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {Context, ILogger} from "@chainsafe/lodestar-utils";
+import {Context, ILogger, TimeoutError, withTimeout} from "@chainsafe/lodestar-utils";
 import {phase0} from "@chainsafe/lodestar-types";
-import {Method, ReqRespEncoding, RpcResponseStatus} from "../../../constants";
+import {Method, ReqRespEncoding, REQUEST_TIMEOUT, RpcResponseStatus} from "../../../constants";
 import {onChunk} from "../utils/onChunk";
 import {ILibP2pStream} from "../interface";
 import {requestDecode} from "../encoders/requestDecode";
@@ -37,6 +38,7 @@ export async function handleRequest(
   peerId: PeerId,
   method: Method,
   encoding: ReqRespEncoding,
+  signal?: AbortSignal,
   requestId = 0
 ): Promise<void> {
   const agentVersion = getAgentVersionFromPeerStore(peerId, libp2p.peerStore.metadataBook);
@@ -49,8 +51,16 @@ export async function handleRequest(
     // in case request whose body is a List fails at chunk_i > 0, without breaking out of the for..await..of
     (async function* () {
       try {
-        const requestBody = await pipe(stream.source, requestDecode(config, method, encoding)).catch((e: unknown) => {
-          throw new ResponseError(RpcResponseStatus.INVALID_REQUEST, (e as Error).message);
+        const requestBody = await withTimeout(
+          () => pipe(stream.source, requestDecode(config, method, encoding)),
+          REQUEST_TIMEOUT,
+          signal
+        ).catch((e: unknown) => {
+          if (e instanceof TimeoutError) {
+            throw e; // Let outter catch {} re-type the error as SERVER_ERROR
+          } else {
+            throw new ResponseError(RpcResponseStatus.INVALID_REQUEST, (e as Error).message);
+          }
         });
 
         logger.debug("Resp received request", {...logCtx, requestBody} as Context);

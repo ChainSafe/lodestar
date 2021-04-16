@@ -76,6 +76,7 @@ export class ReqResp implements IReqResp {
                 peerId,
                 method,
                 encoding,
+                this.controller.signal,
                 this.respCount++
               );
               // TODO: Do success peer scoring here
@@ -145,7 +146,7 @@ export class ReqResp implements IReqResp {
     peerId: PeerId,
     method: Method,
     body: phase0.RequestBody,
-    maxResponses?: number
+    maxResponses = 1
   ): Promise<T> {
     try {
       const encoding = this.peerMetadata.encoding.get(peerId) ?? ReqRespEncoding.SSZ_SNAPPY;

@@ -12,7 +12,7 @@ import {requestEncode} from "../encoders/requestEncode";
 import {responseDecode} from "../encoders/responseDecode";
 import {ILibP2pStream} from "../interface";
 import {collectResponses} from "./collectResponses";
-import {responseTimeoutsHandler} from "./responseTimeoutsHandler";
+import {maxTotalResponseTimeout, responseTimeoutsHandler} from "./responseTimeoutsHandler";
 import {
   RequestError,
   RequestErrorCode,
@@ -40,7 +40,7 @@ export async function sendRequest<T extends phase0.ResponseBody | phase0.Respons
   method: Method,
   encoding: ReqRespEncoding,
   requestBody: phase0.RequestBody,
-  maxResponses?: number,
+  maxResponses: number,
   signal?: AbortSignal,
   options?: Partial<typeof timeoutOptions>,
   requestId = 0
@@ -96,7 +96,7 @@ export async function sendRequest<T extends phase0.ResponseBody | phase0.Respons
     // REQUEST_TIMEOUT: Non-spec timeout from sending request until write stream closed by responder
     // Note: libp2p.stop() will close all connections, so not necessary to abort this pipe on parent stop
     await withTimeout(
-      async () => await pipe(requestEncode(config, method, encoding, requestBody), stream.sink),
+      () => pipe(requestEncode(config, method, encoding, requestBody), stream.sink),
       REQUEST_TIMEOUT,
       signal
     ).catch((e) => {
@@ -114,11 +114,22 @@ export async function sendRequest<T extends phase0.ResponseBody | phase0.Respons
 
     try {
       // Note: libp2p.stop() will close all connections, so not necessary to abort this pipe on parent stop
-      const responses = await pipe(
-        stream.source,
-        responseTimeoutsHandler(responseDecode(config, method, encoding), options),
-        collectResponses(method, maxResponses)
-      );
+      const responses = await withTimeout(
+        () =>
+          pipe(
+            stream.source,
+            responseTimeoutsHandler(responseDecode(config, method, encoding), options),
+            collectResponses(method, maxResponses)
+          ),
+        maxTotalResponseTimeout(maxResponses, options)
+      ).catch((e) => {
+        // No need to close the stream here, the outter finally {} block will
+        if (e instanceof TimeoutError) {
+          throw new RequestInternalError({code: RequestErrorCode.RESPONSE_TIMEOUT});
+        } else {
+          throw e; // The error will be typed in the outter catch {} block
+        }
+      });
 
       // NOTE: Only log once per request to verbose, intermediate steps to debug
       // NOTE: Do not log the response, logs get extremely cluttered

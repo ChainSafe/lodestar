@@ -1,5 +1,6 @@
 import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
+import {AbortController} from "abort-controller";
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {LodestarError} from "@chainsafe/lodestar-utils";
 import {Method, ReqRespEncoding, RpcResponseStatus} from "../../../../../src/constants";
@@ -18,6 +19,10 @@ describe("network / reqresp / response / handleRequest", async () => {
   const peerId = getValidPeerId();
   const multiaddr = "/ip4/127.0.0.1/tcp/0";
   const libp2p = await createNode(multiaddr);
+
+  let controller: AbortController;
+  beforeEach(() => (controller = new AbortController()));
+  afterEach(() => controller.abort());
 
   const testCases: {
     id: string;
@@ -71,7 +76,8 @@ describe("network / reqresp / response / handleRequest", async () => {
         stream,
         peerId,
         method,
-        encoding
+        encoding,
+        controller.signal
       );
 
       // Make sure the test error-ed with expected error, otherwise it's hard to debug with responseChunks
