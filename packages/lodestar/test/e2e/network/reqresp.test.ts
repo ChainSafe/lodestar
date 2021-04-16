@@ -3,7 +3,7 @@ import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
 import {AbortController} from "abort-controller";
 import {config} from "@chainsafe/lodestar-config/minimal";
-import {sleep} from "@chainsafe/lodestar-utils";
+import {sleep as _sleep} from "@chainsafe/lodestar-utils";
 import {phase0} from "@chainsafe/lodestar-types";
 import {Method, ReqRespEncoding} from "../../../src/constants";
 import {createPeerId, IReqRespOptions, Network, prettyPrintPeerId} from "../../../src/network";
@@ -21,6 +21,8 @@ import {connect, onPeerConnect} from "../../utils/network";
 import {StubbedBeaconDb} from "../../utils/stub";
 
 chai.use(chaiAsPromised);
+
+/* eslint-disable require-yield, @typescript-eslint/naming-convention */
 
 describe("network / ReqResp", function () {
   if (this.timeout() < 5000) this.timeout(5000);
@@ -40,13 +42,19 @@ describe("network / ReqResp", function () {
   const db = new StubbedBeaconDb(sinon);
 
   const afterEachCallbacks: (() => Promise<void> | void)[] = [];
-
   afterEach(async () => {
     while (afterEachCallbacks.length > 0) {
       const callback = afterEachCallbacks.pop();
       if (callback) await callback();
     }
   });
+
+  let controller: AbortController;
+  beforeEach(() => (controller = new AbortController()));
+  afterEach(() => controller.abort());
+  async function sleep(ms: number): Promise<void> {
+    await _sleep(ms, controller.signal);
+  }
 
   async function createAndConnectPeers(
     reqRespHandlerPartial?: Partial<IReqRespHandler>,
@@ -162,7 +170,6 @@ describe("network / ReqResp", function () {
   it("should handle a server error", async function () {
     const testErrorMessage = "TEST_EXAMPLE_ERROR_1234";
     const [netA, netB] = await createAndConnectPeers({
-      // eslint-disable-next-line require-yield
       onBeaconBlocksByRange: async function* onRequest() {
         throw Error(testErrorMessage);
       },
@@ -197,19 +204,16 @@ describe("network / ReqResp", function () {
   });
 
   it("trigger a TTFB_TIMEOUT error", async function () {
-    const controller = new AbortController();
-    afterEachCallbacks.push(() => controller.abort());
     const TTFB_TIMEOUT = 250;
 
     const [netA, netB] = await createAndConnectPeers(
       {
         onBeaconBlocksByRange: async function* onRequest() {
           // Wait for too long before sending first response chunk
-          await sleep(TTFB_TIMEOUT * 10, controller.signal);
+          await sleep(TTFB_TIMEOUT * 10);
           yield generateEmptySignedBlock();
         },
       },
-      // eslint-disable-next-line @typescript-eslint/naming-convention
       {TTFB_TIMEOUT}
     );
 
@@ -223,8 +227,6 @@ describe("network / ReqResp", function () {
   });
 
   it("trigger a RESP_TIMEOUT error", async function () {
-    const controller = new AbortController();
-    afterEachCallbacks.push(() => controller.abort());
     const RESP_TIMEOUT = 250;
 
     const [netA, netB] = await createAndConnectPeers(
@@ -232,12 +234,50 @@ describe("network / ReqResp", function () {
         onBeaconBlocksByRange: async function* onRequest() {
           yield generateEmptySignedBlock();
           // Wait for too long before sending second response chunk
-          await sleep(RESP_TIMEOUT * 5, controller.signal);
+          await sleep(RESP_TIMEOUT * 5);
           yield generateEmptySignedBlock();
         },
       },
-      // eslint-disable-next-line @typescript-eslint/naming-convention
       {RESP_TIMEOUT}
+    );
+
+    await expectRejectedWithLodestarError(
+      netA.reqResp.beaconBlocksByRange(netB.peerId, {startSlot: 0, step: 1, count: 2}),
+      new RequestError(
+        {code: RequestErrorCode.RESP_TIMEOUT},
+        {method: Method.BeaconBlocksByRange, encoding: ReqRespEncoding.SSZ_SNAPPY, peer: prettyPrintPeerId(netB.peerId)}
+      )
+    );
+  });
+
+  it("Sleep infinite on first byte", async function () {
+    const [netA, netB] = await createAndConnectPeers(
+      {
+        onBeaconBlocksByRange: async function* onRequest() {
+          await sleep(100000000);
+        },
+      },
+      {RESP_TIMEOUT: 250, TTFB_TIMEOUT: 250}
+    );
+
+    await expectRejectedWithLodestarError(
+      netA.reqResp.beaconBlocksByRange(netB.peerId, {startSlot: 0, step: 1, count: 2}),
+      new RequestError(
+        {code: RequestErrorCode.TTFB_TIMEOUT},
+        {method: Method.BeaconBlocksByRange, encoding: ReqRespEncoding.SSZ_SNAPPY, peer: prettyPrintPeerId(netB.peerId)}
+      )
+    );
+  });
+
+  it("Sleep infinite on second response chunk", async function () {
+    const [netA, netB] = await createAndConnectPeers(
+      {
+        onBeaconBlocksByRange: async function* onRequest() {
+          yield generateEmptySignedBlock();
+          await sleep(100000000);
+        },
+      },
+      {RESP_TIMEOUT: 250, TTFB_TIMEOUT: 250}
     );
 
     await expectRejectedWithLodestarError(
