@@ -1,7 +1,7 @@
 import {AbortController} from "abort-controller";
-import {source as abortSource} from "abortable-iterator";
 import pipe from "it-pipe";
 import {timeoutOptions} from "../../../constants";
+import {abortableSource} from "../../../util/abortableSource";
 import {onChunk} from "../utils/onChunk";
 import {RequestErrorCode, RequestInternalError} from "./errors";
 
@@ -31,10 +31,17 @@ export function responseTimeoutsHandler<T>(
 
     try {
       yield* pipe(
-        abortSource(source, [
-          {signal: ttfbTimeoutController.signal, options: {abortMessage: RequestErrorCode.TTFB_TIMEOUT}},
-          {signal: respTimeoutController.signal, options: {abortMessage: RequestErrorCode.RESP_TIMEOUT}},
+        abortableSource(source, [
+          {
+            signal: ttfbTimeoutController.signal,
+            getError: () => new RequestInternalError({code: RequestErrorCode.TTFB_TIMEOUT}),
+          },
+          {
+            signal: respTimeoutController.signal,
+            getError: () => new RequestInternalError({code: RequestErrorCode.RESP_TIMEOUT}),
+          },
         ]),
+
         onChunk((bytesChunk) => {
           // Ignore null and empty chunks
           if (isFirstByte && bytesChunk.length > 0) {
@@ -45,22 +52,14 @@ export function responseTimeoutsHandler<T>(
           }
         }),
 
+        // Transforms `Buffer` chunks to yield `ResponseBody` chunks
         responseDecoder,
+
         onChunk(() => {
           // On <response_chunk>, cancel this chunk's RESP_TIMEOUT and start next's
           restartRespTimeout();
         })
       );
-    } catch (e) {
-      // Rethrow error properly typed so the peer score can pick it up
-      switch ((e as Error).message) {
-        case RequestErrorCode.TTFB_TIMEOUT:
-          throw new RequestInternalError({code: RequestErrorCode.TTFB_TIMEOUT});
-        case RequestErrorCode.RESP_TIMEOUT:
-          throw new RequestInternalError({code: RequestErrorCode.RESP_TIMEOUT});
-        default:
-          throw e;
-      }
     } finally {
       clearTimeout(timeoutTTFB);
       if (timeoutRESP) clearTimeout(timeoutRESP);

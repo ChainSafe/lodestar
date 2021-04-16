@@ -7,6 +7,8 @@ import {responseTimeoutsHandler} from "../../../../../src/network/reqresp/reques
 import {RequestErrorCode, RequestInternalError} from "../../../../../src/network/reqresp/request/errors";
 import {expectRejectedWithLodestarError} from "../../../../utils/errors";
 
+/* eslint-disable require-yield */
+
 describe("network / reqresp / request / responseTimeoutsHandler", () => {
   let controller: AbortController;
   beforeEach(() => (controller = new AbortController()));
@@ -70,7 +72,6 @@ describe("network / reqresp / request / responseTimeoutsHandler", () => {
           await sleep(20);
         }
       },
-      // eslint-disable-next-line require-yield
       responseDecoder: async function* (source) {
         for await (const _ of source) {
           // Never yield a response_chunk
@@ -78,7 +79,30 @@ describe("network / reqresp / request / responseTimeoutsHandler", () => {
       },
       error: new RequestInternalError({code: RequestErrorCode.RESP_TIMEOUT}),
     },
-    // TODO: Test a `sleep(100000)`
+    {
+      // Upstream "abortable-iterator" never throws with an infinite sleep.
+      id: "Infinite sleep on first byte",
+      timeouts: {TTFB_TIMEOUT: 1, RESP_TIMEOUT: 1},
+      source: async function* () {
+        await sleep(100000);
+      },
+      responseDecoder: async function* (source) {
+        yield* source;
+      },
+      error: new RequestInternalError({code: RequestErrorCode.TTFB_TIMEOUT}),
+    },
+    {
+      id: "Infinite sleep on second chunk",
+      timeouts: {TTFB_TIMEOUT: 1, RESP_TIMEOUT: 1},
+      source: async function* () {
+        yield Buffer.from([0]);
+        await sleep(100000);
+      },
+      responseDecoder: async function* (source) {
+        yield* source;
+      },
+      error: new RequestInternalError({code: RequestErrorCode.RESP_TIMEOUT}),
+    },
   ];
   /* eslint-enable @typescript-eslint/naming-convention */
 

@@ -52,7 +52,6 @@
     "@chainsafe/lodestar-utils": "^0.19.0",
     "@chainsafe/ssz": "^0.8.2",
     "abort-controller": "^3.0.0",
-    "abortable-iterator": "^3.0.0",
     "axios": "^0.21.1",
     "axios-mock-adapter": "^1.17.0",
     "bigint-buffer": "^1.1.5",
