@@ -5,6 +5,7 @@ import {ApiController} from "../../types";
 export const publishBlock: ApiController = {
   url: "/blocks",
   method: "POST",
+  id: "publishBlock",
 
   handler: async function (req) {
     let block: phase0.SignedBeaconBlock;

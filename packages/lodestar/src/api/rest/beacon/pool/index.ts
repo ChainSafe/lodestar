@@ -1,19 +1,19 @@
-import {getAttesterSlashings} from "./getAttesterSlashings";
 import {getPoolAttestations} from "./getPoolAttestations";
-import {getProposerSlashings} from "./getProposerSlashings";
-import {getVoluntaryExits} from "./getVoluntaryExits";
-import {submitAttesterSlashing} from "./submitAttesterSlashing";
-import {submitPoolAttestation} from "./submitPoolAttestation";
-import {submitProposerSlashing} from "./submitProposerSlashing";
-import {submitVoluntaryExit} from "./submitVoluntaryExit";
+import {getPoolAttesterSlashings} from "./getPoolAttesterSlashings";
+import {getPoolProposerSlashings} from "./getPoolProposerSlashings";
+import {getPoolVoluntaryExits} from "./getPoolVoluntaryExits";
+import {submitPoolAttestations} from "./submitPoolAttestations";
+import {submitPoolAttesterSlashings} from "./submitPoolAttesterSlashings";
+import {submitPoolProposerSlashings} from "./submitPoolProposerSlashings";
+import {submitPoolVoluntaryExit} from "./submitPoolVoluntaryExit";
 
 export const beaconPoolRoutes = [
-  getAttesterSlashings,
   getPoolAttestations,
-  getProposerSlashings,
-  getVoluntaryExits,
-  submitAttesterSlashing,
-  submitPoolAttestation,
-  submitProposerSlashing,
-  submitVoluntaryExit,
+  getPoolAttesterSlashings,
+  getPoolProposerSlashings,
+  getPoolVoluntaryExits,
+  submitPoolAttestations,
+  submitPoolAttesterSlashings,
+  submitPoolProposerSlashings,
+  submitPoolVoluntaryExit,
 ];

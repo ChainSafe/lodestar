@@ -3,6 +3,7 @@ import {ApiController} from "../../types";
 export const getBlockHeader: ApiController<null, {blockId: string}> = {
   url: "/headers/:blockId",
   method: "GET",
+  id: "getBlockHeader",
 
   handler: async function (req) {
     const data = await this.api.beacon.blocks.getBlockHeader(req.params.blockId);

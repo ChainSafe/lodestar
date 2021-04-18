@@ -1,16 +1,17 @@
-import {attesterDutiesController, proposerDutiesController} from "./duties";
+import {getAttesterDuties} from "./duties/getAttesterDuties";
+import {getProposerDuties} from "./duties/getProposerDuties";
+import {getAggregatedAttestation} from "./getAggregatedAttestation";
+import {prepareBeaconCommitteeSubnet} from "./prepareBeaconCommitteeSubnet";
 import {produceAttestationData} from "./produceAttestationData";
-import {prepareCommitteeSubnet} from "./prepareCommitteeSubnet";
-import {produceAggregatedAttestation} from "./produceAggregatedAttestation";
+import {produceBlock} from "./produceBlock";
 import {publishAggregateAndProof} from "./publishAggregateAndProof";
-import {produceBlockController} from "./produceBlock";
 
 export const validatorRoutes = [
-  attesterDutiesController,
-  proposerDutiesController,
+  getAttesterDuties,
+  getProposerDuties,
+  getAggregatedAttestation,
+  prepareBeaconCommitteeSubnet,
   produceAttestationData,
-  prepareCommitteeSubnet,
-  produceAggregatedAttestation,
+  produceBlock,
   publishAggregateAndProof,
-  produceBlockController,
 ];

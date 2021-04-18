@@ -4,6 +4,7 @@ import {ApiController} from "../types";
 export const publishAggregateAndProof: ApiController<null, null, Json[]> = {
   url: "/aggregate_and_proofs",
   method: "POST",
+  id: "publishAggregateAndProofs",
 
   handler: async function (req) {
     const signedAggregateAndProofs = req.body.map((item) =>

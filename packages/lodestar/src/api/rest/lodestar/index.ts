@@ -6,6 +6,7 @@ import {ApiController} from "../types";
 export const getWtfNode: ApiController = {
   url: "/wtfnode/",
   method: "GET",
+  id: "getWtfNode",
 
   handler: async function () {
     return this.api.lodestar.getWtfNode();
@@ -15,6 +16,7 @@ export const getWtfNode: ApiController = {
 export const getLatestWeakSubjectivityCheckpointEpoch: ApiController = {
   url: "/ws_epoch/",
   method: "GET",
+  id: "getLatestWeakSubjectivityCheckpointEpoch",
 
   handler: async function () {
     return this.api.lodestar.getLatestWeakSubjectivityCheckpointEpoch();
@@ -24,6 +26,7 @@ export const getLatestWeakSubjectivityCheckpointEpoch: ApiController = {
 export const createProof: ApiController<{paths: (string | number)[][]}, {stateId: string}> = {
   url: "/proof/:stateId",
   method: "GET",
+  id: "createProof",
 
   handler: async function (req) {
     const state = (await this.api.debug.beacon.getState(req.params.stateId)) as TreeBacked<allForks.BeaconState>;

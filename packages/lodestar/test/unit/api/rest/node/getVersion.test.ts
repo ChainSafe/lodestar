@@ -1,19 +1,19 @@
 import {expect} from "chai";
 import supertest from "supertest";
 
-import {getVersion} from "../../../../../src/api/rest/node/getVersion";
+import {getNodeVersion} from "../../../../../src/api/rest/node/getNodeVersion";
 import {ApiResponseBody, urlJoin} from "../utils";
 import {NODE_PREFIX, setupRestApiTestServer} from "../index.test";
 import {StubbedNodeApi} from "../../../../utils/stub/nodeApi";
 
-describe("rest - node - getVersion", function () {
+describe("rest - node - getNodeVersion", function () {
   it("should succeed", async function () {
     const restApi = await setupRestApiTestServer();
     const nodeStub = restApi.server.api.node as StubbedNodeApi;
 
     nodeStub.getVersion.resolves("test");
     const response = await supertest(restApi.server.server)
-      .get(urlJoin(NODE_PREFIX, getVersion.url))
+      .get(urlJoin(NODE_PREFIX, getNodeVersion.url))
       .expect(200)
       .expect("Content-Type", "application/json; charset=utf-8");
     expect((response.body as ApiResponseBody).data).to.not.be.undefined;

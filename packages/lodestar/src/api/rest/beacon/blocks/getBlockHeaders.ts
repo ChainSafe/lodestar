@@ -6,6 +6,7 @@ import {ApiController} from "../../types";
 export const getBlockHeaders: ApiController<{slot?: string | number; parent_root?: string}> = {
   url: "/headers",
   method: "GET",
+  id: "getBlockHeaders",
 
   handler: async function (req) {
     let slot: Slot | undefined;

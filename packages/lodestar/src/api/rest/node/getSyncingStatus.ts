@@ -3,6 +3,7 @@ import {ApiController} from "../types";
 export const getSyncingStatus: ApiController = {
   url: "/syncing",
   method: "GET",
+  id: "getSyncingStatus",
 
   handler: async function () {
     const status = await this.api.node.getSyncingStatus();

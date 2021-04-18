@@ -1,14 +1,16 @@
-import {getStateBeaconCommittees} from "./getBeaconCommittees";
+import {getEpochCommittees} from "./getEpochCommittees";
 import {getStateFinalityCheckpoints} from "./getStateFinalityCheckpoints";
 import {getStateFork} from "./getStateFork";
-import {getStateValidator} from "./getValidator";
-import {getStateValidators} from "./getValidators";
-import {getStateValidatorsBalances} from "./getValidatorsBalances";
+import {getStateRoot} from "./getStateRoot";
+import {getStateValidator} from "./getStateValidator";
+import {getStateValidators} from "./getStateValidators";
+import {getStateValidatorsBalances} from "./getStateValidatorBalances";
 
 export const beaconStateRoutes = [
-  getStateBeaconCommittees,
+  getEpochCommittees,
   getStateFinalityCheckpoints,
   getStateFork,
+  getStateRoot,
   getStateValidator,
   getStateValidators,
   getStateValidatorsBalances,

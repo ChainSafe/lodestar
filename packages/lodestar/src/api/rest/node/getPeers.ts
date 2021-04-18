@@ -5,6 +5,7 @@ import {ApiController} from "../types";
 export const getPeers: ApiController<{state: string[] | string; direction: string[] | string}> = {
   url: "/peers",
   method: "GET",
+  id: "getPeers",
 
   handler: async function (req) {
     const peers = await this.api.node.getPeers(
