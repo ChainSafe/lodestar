@@ -12,7 +12,7 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {Epoch, ValidatorIndex, Gwei, Slot} from "@chainsafe/lodestar-types";
 import {ValidatorResponse} from "@chainsafe/lodestar-types/phase0";
-import {fromHexString, readonlyValues} from "@chainsafe/ssz";
+import {fromHexString, readonlyValues, TreeBacked} from "@chainsafe/ssz";
 import {IBeaconChain} from "../../../../chain";
 import {StateContextCache} from "../../../../chain/stateCache";
 import {IBeaconDb} from "../../../../db";
@@ -223,13 +223,8 @@ async function getNearestArchivedState(
   db: IBeaconDb,
   slot: Slot
 ): Promise<CachedBeaconState<allForks.BeaconState>> {
-  const keys = await db.stateArchive.keys({gt: 0, lte: slot});
-  const nearestArchivedStateSlot = keys[keys.length - 1];
-
-  const state = await db.stateArchive.get(nearestArchivedStateSlot);
-  if (state == null) {
-    throw new Error(`getNearestArchivedState: cannot find state.  slot=${nearestArchivedStateSlot}`);
-  }
+  const states = db.stateArchive.valuesStream({lte: slot, gt: 0, reverse: true});
+  const state = (await states[Symbol.asyncIterator]().next()).value as TreeBacked<allForks.BeaconState>;
   return createCachedBeaconState(config, state);
 }
 
