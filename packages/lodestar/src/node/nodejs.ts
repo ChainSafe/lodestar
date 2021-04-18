@@ -190,6 +190,7 @@ export class BeaconNode {
       config,
       logger: logger.child(opts.logger.api),
       api,
+      metrics,
     });
 
     await network.start();

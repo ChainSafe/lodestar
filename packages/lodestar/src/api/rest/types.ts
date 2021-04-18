@@ -28,3 +28,7 @@ export enum HttpHeader {
   ACCEPT = "accept",
   CONTENT_TYPE = "Content-Type",
 }
+
+export type RouteConfig = {
+  operationId: ApiController["id"];
+};

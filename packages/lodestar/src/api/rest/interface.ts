@@ -5,6 +5,7 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils";
 
 import {IApi, IBeaconApi, IValidatorApi} from "../impl";
+import {IMetrics} from "../../metrics";
 
 export interface ILodestarApiOpts {
   // path prefix
@@ -22,4 +23,5 @@ export interface IRestApiModules {
   config: IBeaconConfig;
   logger: ILogger;
   api: IApi;
+  metrics?: IMetrics;
 }
