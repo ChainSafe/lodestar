@@ -103,13 +103,18 @@ describe("beacon state api utils", function () {
       const chainStub = ({
         forkChoice: {getCanonicalBlockSummaryAtSlot, getFinalizedCheckpoint},
       } as unknown) as IBeaconChain;
+      const nearestState = generateState({slot: nearestArchiveSlot});
       // eslint-disable-next-line @typescript-eslint/no-empty-function
-      const valuesStream = sinon.stub().returns({async *[Symbol.asyncIterator]() {}});
-      const get = sinon.stub().returns(generateState({slot: nearestArchiveSlot}));
-      const keys = sinon.stub().returns([nearestArchiveSlot]);
+      const blockArchiveValuesStream = sinon.stub().returns({async *[Symbol.asyncIterator]() {}});
+      const stateArchiveValuesStream = sinon.stub().returns({
+        async *[Symbol.asyncIterator]() {
+          yield nearestState;
+        },
+      });
+      const get = sinon.stub().returns(nearestState);
       const tempDbStub = {
-        blockArchive: {valuesStream},
-        stateArchive: {get, keys},
+        blockArchive: {valuesStream: blockArchiveValuesStream},
+        stateArchive: {get, valuesStream: stateArchiveValuesStream},
       } as StubbedBeaconDb;
       const state = await resolveStateId(config, chainStub, tempDbStub, requestedSlot.toString(), true);
       expect(state).to.not.be.null;
