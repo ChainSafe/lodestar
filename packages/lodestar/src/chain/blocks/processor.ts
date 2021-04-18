@@ -50,6 +50,7 @@ export class BlockProcessor {
         length: modules.metrics.blockProcessorQueueLength,
         droppedJobs: modules.metrics.blockProcessorQueueDroppedJobs,
         jobTime: modules.metrics.blockProcessorQueueJobTime,
+        jobWaitTime: modules.metrics.blockProcessorQueueJobWaitTime,
       }
     );
   }

@@ -73,21 +73,29 @@ export function createLodestarMetrics(register: RegistryMetricCreator, metadata:
       help: "Time to process gossip validation queue job in seconds",
       labelNames: ["topic"],
     }),
+    gossipValidationQueueJobWaitTime: register.histogram<"topic">({
+      name: "lodestar_gossip_validation_queue_job_wait_time_seconds",
+      help: "Time from job added to the queue to starting the job in seconds",
+      labelNames: ["topic"],
+      buckets: [0.1, 1, 10, 100],
+    }),
 
-    blockProcessorQueueLength: register.gauge<"topic">({
+    blockProcessorQueueLength: register.gauge({
       name: "lodestar_block_processor_queue_length",
       help: "Count of total block processor queue length",
-      labelNames: ["topic"],
     }),
-    blockProcessorQueueDroppedJobs: register.gauge<"topic">({
+    blockProcessorQueueDroppedJobs: register.gauge({
       name: "lodestar_block_processor_queue_dropped_jobs_total",
       help: "Count of total block processor queue dropped jobs",
-      labelNames: ["topic"],
     }),
-    blockProcessorQueueJobTime: register.histogram<"topic">({
+    blockProcessorQueueJobTime: register.histogram({
       name: "lodestar_block_processor_queue_job_time_seconds",
       help: "Time to process block processor queue job in seconds",
-      labelNames: ["topic"],
+    }),
+    blockProcessorQueueJobWaitTime: register.histogram({
+      name: "lodestar_block_processor_queue_job_wait_time_seconds",
+      help: "Time from job added to the queue to starting the job in seconds",
+      buckets: [0.1, 1, 10, 100],
     }),
   };
 }
