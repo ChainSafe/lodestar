@@ -67,6 +67,7 @@ export function wrapWithQueue<K extends GossipType>(
       length: metrics.gossipValidationQueueLength.child({topic: type}),
       droppedJobs: metrics.gossipValidationQueueDroppedJobs.child({topic: type}),
       jobTime: metrics.gossipValidationQueueJobTime.child({topic: type}),
+      jobWaitTime: metrics.gossipValidationQueueJobWaitTime.child({topic: type}),
     }
   );
   return async function (_topicStr, gossipMsg) {

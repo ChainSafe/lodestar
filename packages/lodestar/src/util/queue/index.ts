@@ -28,6 +28,7 @@ export interface IQueueMetrics {
   droppedJobs: IGauge;
   /** Compute async utilization rate with `rate(metrics_name[1m])` */
   jobTime: IHistogram;
+  jobWaitTime: IHistogram;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -37,6 +38,7 @@ type JobQueueItem<R, Fn extends Job<R>> = {
   job: Fn;
   resolve: (result: R | PromiseLike<R>) => void;
   reject: (error?: Error) => void;
+  addedTimeMs: number;
 };
 
 export class JobQueue {
@@ -67,7 +69,7 @@ export class JobQueue {
     }
 
     return await new Promise<R>((resolve, reject) => {
-      this.jobs.push({job, resolve, reject});
+      this.jobs.push({job, resolve, reject, addedTimeMs: Date.now()});
       setTimeout(this.runJob, 0);
     });
   }
@@ -86,6 +88,7 @@ export class JobQueue {
     this.state = QueueState.Running;
 
     const timer = this.metrics?.jobTime.startTimer();
+    this.metrics?.jobWaitTime.observe((Date.now() - job.addedTimeMs) / 1000);
 
     const res = await wrapError<unknown>(job.job());
     if (res.err) job.reject(res.err);
