@@ -18,6 +18,7 @@ export * from "./interop";
 export * from "./proposer";
 export * from "./seed";
 export * from "./shuffle";
+export * from "./shufflingDecisionRoot";
 export * from "./signatureSets";
 export * from "./signingRoot";
 export * from "./slot";

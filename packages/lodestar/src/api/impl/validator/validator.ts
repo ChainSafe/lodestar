@@ -7,10 +7,13 @@ import {
   CachedBeaconState,
   computeStartSlotAtEpoch,
   computeSubnetForCommitteesAtSlot,
+  proposerShufflingDecisionRoot,
+  attesterShufflingDecisionRoot,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {GENESIS_SLOT} from "@chainsafe/lodestar-params";
 import {Bytes96, CommitteeIndex, Epoch, Root, phase0, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
-import {assert, ILogger} from "@chainsafe/lodestar-utils";
+import {ILogger} from "@chainsafe/lodestar-utils";
 import {readonlyValues} from "@chainsafe/ssz";
 import {IAttestationJob, IBeaconChain} from "../../../chain";
 import {assembleAttestationData} from "../../../chain/factory/attestation";
@@ -42,6 +45,8 @@ export class ValidatorApi implements IValidatorApi {
   private network: INetwork;
   private sync: IBeaconSync;
   private logger: ILogger;
+  // Cached for duties
+  private genesisBlockRoot: Root | null = null;
 
   constructor(
     opts: Partial<IApiOptions>,
@@ -88,41 +93,68 @@ export class ValidatorApi implements IValidatorApi {
     }
   }
 
-  async getProposerDuties(epoch: Epoch): Promise<phase0.ProposerDuty[]> {
+  async getProposerDuties(epoch: Epoch): Promise<{data: phase0.ProposerDuty[]; dependentRoot: Root}> {
     await checkSyncStatus(this.config, this.sync);
-    assert.gte(epoch, 0, "Epoch must be positive");
-    assert.lte(epoch, this.chain.clock.currentEpoch, "Must get proposer duties in current epoch");
+
     const state = await this.chain.getHeadStateAtCurrentEpoch();
     const startSlot = computeStartSlotAtEpoch(this.config, epoch);
     const duties: phase0.ProposerDuty[] = [];
 
     for (let slot = startSlot; slot < startSlot + this.config.params.SLOTS_PER_EPOCH; slot++) {
+      // getBeaconProposer ensures the requested epoch is correct
       const blockProposerIndex = state.getBeaconProposer(slot);
       duties.push({slot, validatorIndex: blockProposerIndex, pubkey: state.validators[blockProposerIndex].pubkey});
     }
-    return duties;
+
+    // Returns `null` on the one-off scenario where the genesis block decides its own shuffling.
+    // It should be set to the latest block applied to `self` or the genesis block root.
+    const dependentRoot = proposerShufflingDecisionRoot(this.config, state) || (await this.getGenesisBlockRoot());
+
+    return {
+      data: duties,
+      dependentRoot,
+    };
   }
 
-  async getAttesterDuties(epoch: number, validatorIndices: ValidatorIndex[]): Promise<phase0.AttesterDuty[]> {
+  async getAttesterDuties(
+    epoch: number,
+    validatorIndices: ValidatorIndex[]
+  ): Promise<{data: phase0.AttesterDuty[]; dependentRoot: Root}> {
     await checkSyncStatus(this.config, this.sync);
     if (validatorIndices.length === 0) throw new ApiError(400, "No validator to get attester duties");
     if (epoch > this.chain.clock.currentEpoch + 1)
       throw new ApiError(400, "Cannot get duties for epoch more than one ahead");
     const state = await this.chain.getHeadStateAtCurrentEpoch();
-    return validatorIndices
-      .map((validatorIndex) => {
-        const validator = state.validators[validatorIndex];
-        if (!validator) {
-          throw new ApiError(400, `Validator index ${validatorIndex} not in state`);
-        }
-        return assembleAttesterDuty(
-          this.config,
-          {pubkey: validator.pubkey, index: validatorIndex},
-          state.epochCtx,
-          epoch
-        );
-      })
-      .filter((duty): duty is phase0.AttesterDuty => duty != null);
+
+    // TODO: Determine what the current epoch would be if we fast-forward our system clock by
+    // `MAXIMUM_GOSSIP_CLOCK_DISPARITY`.
+    //
+    // Most of the time, `tolerantCurrentEpoch` will be equal to `currentEpoch`. However, during
+    // the first `MAXIMUM_GOSSIP_CLOCK_DISPARITY` duration of the epoch `tolerantCurrentEpoch`
+    // will equal `currentEpoch + 1`
+
+    const duties: phase0.AttesterDuty[] = [];
+    for (const validatorIndex of validatorIndices) {
+      const validator = state.validators[validatorIndex];
+      if (!validator) {
+        throw new ApiError(400, `Validator index ${validatorIndex} not in state`);
+      }
+      const duty = assembleAttesterDuty(
+        this.config,
+        {pubkey: validator.pubkey, index: validatorIndex},
+        state.epochCtx,
+        epoch
+      );
+      if (duty) duties.push(duty);
+    }
+
+    const dependentRoot =
+      attesterShufflingDecisionRoot(this.config, state, epoch) || (await this.getGenesisBlockRoot());
+
+    return {
+      data: duties,
+      dependentRoot,
+    };
   }
 
   async getAggregatedAttestation(attestationDataRoot: Root, slot: Slot): Promise<phase0.Attestation> {
@@ -218,5 +250,17 @@ export class ValidatorApi implements IValidatorApi {
     // TODO:
     // If the discovery mechanism isn't disabled, attempt to set up a peer discovery for the
     // required subnets.
+  }
+
+  /** Compute and cache the genesis block root */
+  private async getGenesisBlockRoot(): Promise<Root> {
+    if (!this.genesisBlockRoot) {
+      const genesisBlock = await this.chain.getCanonicalBlockAtSlot(GENESIS_SLOT);
+      if (!genesisBlock) {
+        throw Error("Genesis block not available");
+      }
+      this.genesisBlockRoot = this.config.types.phase0.SignedBeaconBlock.hashTreeRoot(genesisBlock);
+    }
+    return this.genesisBlockRoot;
   }
 }
