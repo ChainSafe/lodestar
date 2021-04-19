@@ -10,6 +10,8 @@ import {ChainEvent} from "../../src/chain";
 import {testLogger, LogLevel} from "../utils/logger";
 import {connect} from "../utils/network";
 import {logFiles} from "./params";
+import {simTestInfoTracker} from "../utils/node/simTest";
+import {ILogger, sleep} from "@chainsafe/lodestar-utils";
 
 /* eslint-disable no-console */
 
@@ -31,6 +33,7 @@ describe("Run multi node single thread interop validators (no eth1) until checkp
 
       const nodes: BeaconNode[] = [];
       const validators: Validator[] = [];
+      const loggers: ILogger[] = [];
       // delay a bit so regular sync sees it's up to date and sync is completed from the beginning
       const minGenesisTime = Math.floor(Date.now() / 1000);
       const genesisDelay = 2 * beaconParams.SECONDS_PER_SLOT;
@@ -55,20 +58,24 @@ describe("Run multi node single thread interop validators (no eth1) until checkp
           logFile: logFiles.multinodeSinglethread,
         });
 
-        validators.push(...nodeValidators);
+        loggers.push(logger);
         nodes.push(node);
+        validators.push(...nodeValidators);
       }
+
+      const stopInfoTracker = simTestInfoTracker(nodes[0], loggers[0]);
 
       onDoneHandlers.push(async () => {
         await Promise.all(validators.map((validator) => validator.stop()));
         console.log("--- Stopped all validators ---");
         // wait for 1 slot
-        await new Promise((r) => setTimeout(r, 1 * beaconParams.SECONDS_PER_SLOT * 1000));
+        await sleep(1 * beaconParams.SECONDS_PER_SLOT * 1000);
 
+        stopInfoTracker();
         await Promise.all(nodes.map((node) => node.close()));
         console.log("--- Stopped all nodes ---");
         // Wait a bit for nodes to shutdown
-        await new Promise((r) => setTimeout(r, 3000));
+        await sleep(3000);
       });
 
       // Connect all nodes with each other

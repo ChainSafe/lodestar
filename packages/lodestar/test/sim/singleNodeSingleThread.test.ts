@@ -7,6 +7,10 @@ import {ChainEvent} from "../../src/chain";
 import {IRestApiOptions} from "../../src/api/rest/options";
 import {testLogger, LogLevel} from "../utils/logger";
 import {logFiles} from "./params";
+import {simTestInfoTracker} from "../utils/node/simTest";
+import {sleep} from "@chainsafe/lodestar-utils";
+
+/* eslint-disable no-console */
 
 describe("Run single node single thread interop validators (no eth1) until checkpoint", function () {
   const timeout = 120 * 1000;
@@ -45,6 +49,8 @@ describe("Run single node single thread interop validators (no eth1) until check
         logger: loggerNodeA,
       });
 
+      const stopInfoTracker = simTestInfoTracker(bn, loggerNodeA);
+
       const justificationEventListener = waitForEvent<phase0.Checkpoint>(
         bn.chain.emitter,
         testCase.event,
@@ -66,12 +72,19 @@ describe("Run single node single thread interop validators (no eth1) until check
 
       try {
         await justificationEventListener;
+        console.log(`\nGot event ${testCase.event}, stopping validators and nodes\n`);
       } catch (e) {
         (e as Error).message = `failed to get event: ${testCase.event}: ${(e as Error).message}`;
         throw e;
       } finally {
         await Promise.all(validators.map((v) => v.stop()));
+
+        // wait for 1 slot
+        await sleep(1 * bn.config.params.SECONDS_PER_SLOT * 1000);
+        stopInfoTracker();
         await bn.close();
+        console.log("\n\nDone\n\n");
+        await sleep(1000);
       }
     });
   }

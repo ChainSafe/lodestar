@@ -15,6 +15,7 @@ import Multiaddr from "multiaddr";
 import {sleep, withTimeout} from "@chainsafe/lodestar-utils";
 import {fromHexString} from "@chainsafe/ssz";
 import {createFromPrivKey} from "peer-id";
+import {simTestInfoTracker} from "../../utils/node/simTest";
 
 /* eslint-disable no-console */
 
@@ -46,6 +47,9 @@ async function runWorker(): Promise<void> {
     peerId: await createFromPrivKey(fromHexString(options.peerIdPrivkey)),
   });
 
+  // Only run for the first node
+  const stopInfoTracker = nodeIndex === 0 ? simTestInfoTracker(node, loggerNode) : null;
+
   const validators = getDevValidators({
     node,
     validatorClientCount: 1,
@@ -59,22 +63,23 @@ async function runWorker(): Promise<void> {
 
   // wait a bit before attempting to connect to the nodes
   const waitMsBeforeConnecting = Math.max(0, (1000 * options.genesisTime - Date.now()) / 2);
-  loggerNode.info(`Waiting ${waitMsBeforeConnecting} ms before connecting to nodes`);
+  loggerNode.info(`Waiting ${waitMsBeforeConnecting} ms before connecting to nodes...`);
   await sleep(waitMsBeforeConnecting);
 
   await Promise.all(
     nodes.map(async (nodeToConnect, i) => {
       if (i === nodeIndex) return; // Don't dial self
-      loggerNode.info(`Connecting to node ${i}`);
+      loggerNode.info(`Connecting node ${nodeIndex} -> ${i}`);
       const multiaddrs = nodeToConnect.localMultiaddrs.map(Multiaddr);
       const peerIdToConn = await createFromPrivKey(fromHexString(nodeToConnect.peerIdPrivkey));
       await withTimeout(() => connect(node.network as Network, peerIdToConn, multiaddrs), 10 * 1000);
-      loggerNode.info(`Connected to node ${i}`);
+      loggerNode.info(`Connected node ${nodeIndex} -> ${i}`);
     })
   );
 
   node.chain.emitter.on(checkpointEvent, async (checkpoint) => {
     await Promise.all(validators.map((validator) => validator.stop()));
+    if (stopInfoTracker) stopInfoTracker();
     await node.close();
     parent.postMessage({
       event: checkpointEvent,
