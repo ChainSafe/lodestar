@@ -3,12 +3,13 @@
  */
 
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {allForks, Epoch, phase0, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {allForks, altair, Epoch, phase0, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {assert} from "@chainsafe/lodestar-utils";
-import {List} from "@chainsafe/ssz";
+import {List, readonlyValues} from "@chainsafe/ssz";
 import {getBeaconCommittee, getCommitteeCountAtSlot} from "./committee";
 import {computeEpochAtSlot, computeStartSlotAtEpoch, getCurrentEpoch} from "./epoch";
 import {getBeaconProposerIndex} from "./proposer";
+import {computeSyncCommitteePeriod} from "./syncCommittee";
 
 /**
  * Return the committee assignment in the ``epoch`` for ``validator_index``.
@@ -59,4 +60,31 @@ export function isProposerAtSlot(
   assert.equal(computeEpochAtSlot(config, slot), currentEpoch, "Must request for current epoch");
 
   return getBeaconProposerIndex(config, state) === validatorIndex;
+}
+
+/**
+ * Check if a validator is part of a sync committee.
+ * @returns
+ */
+export function isAssignedToSyncCommittee(
+  config: IBeaconConfig,
+  state: altair.BeaconState,
+  epoch: Epoch,
+  validatorIndex: ValidatorIndex
+): boolean {
+  const syncCommitteePeriod = computeSyncCommitteePeriod(config, epoch);
+  const currentEpoch = computeEpochAtSlot(config, state.slot);
+  const currentSyncCommitteePeriod = computeSyncCommitteePeriod(config, currentEpoch);
+  const nextSyncCommitteePeriod = currentSyncCommitteePeriod + 1;
+  const expectedPeriods = [currentSyncCommitteePeriod, nextSyncCommitteePeriod];
+  assert.true(
+    expectedPeriods.includes(syncCommitteePeriod),
+    `Epoch ${epoch} is not in sync committee period ${expectedPeriods}`
+  );
+  const pubkey = state.validators[validatorIndex].pubkey;
+  if (syncCommitteePeriod === currentSyncCommitteePeriod) {
+    return Array.from(readonlyValues(state.currentSyncCommittee.pubkeys)).includes(pubkey);
+  } else {
+    return Array.from(readonlyValues(state.nextSyncCommittee.pubkeys)).includes(pubkey);
+  }
 }
