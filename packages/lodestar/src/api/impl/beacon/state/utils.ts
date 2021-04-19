@@ -21,14 +21,18 @@ import {ApiError, ValidationError} from "../../errors";
 import {StateId} from "./interface";
 import {sleep, assert} from "@chainsafe/lodestar-utils";
 
+type ResolveStateIdOpts = {
+  fallbackToArchive: boolean;
+};
+
 export async function resolveStateId(
   config: IBeaconConfig,
   chain: IBeaconChain,
   db: IBeaconDb,
   stateId: StateId,
-  fallbackToArchive = false
+  opts: ResolveStateIdOpts = {fallbackToArchive: false}
 ): Promise<allForks.BeaconState> {
-  const state = await resolveStateIdOrNull(config, chain, db, stateId, fallbackToArchive);
+  const state = await resolveStateIdOrNull(config, chain, db, stateId, opts);
   if (!state) {
     throw new ApiError(404, `No state found for id '${stateId}'`);
   }
@@ -41,7 +45,7 @@ async function resolveStateIdOrNull(
   chain: IBeaconChain,
   db: IBeaconDb,
   stateId: StateId,
-  fallbackToArchive: boolean
+  opts: ResolveStateIdOpts
 ): Promise<allForks.BeaconState | null> {
   stateId = stateId.toLowerCase();
   if (stateId === "head" || stateId === "genesis" || stateId === "finalized" || stateId === "justified") {
@@ -57,7 +61,7 @@ async function resolveStateIdOrNull(
   if (isNaN(slot) && isNaN(slot - 0)) {
     throw new ValidationError(`Invalid state id '${stateId}'`, "stateId");
   }
-  return await stateBySlot(config, db, chain.stateCache, chain.forkChoice, slot, fallbackToArchive);
+  return await stateBySlot(config, db, chain.stateCache, chain.forkChoice, slot, opts);
 }
 
 /**
@@ -184,13 +188,13 @@ async function stateBySlot(
   stateCache: StateContextCache,
   forkChoice: IForkChoice,
   slot: Slot,
-  fallbackToArchive: boolean
+  opts: ResolveStateIdOpts
 ): Promise<allForks.BeaconState | null> {
   const blockSummary = forkChoice.getCanonicalBlockSummaryAtSlot(slot);
   if (blockSummary) {
     return stateCache.get(blockSummary.stateRoot) ?? null;
   } else {
-    if (fallbackToArchive) {
+    if (opts.fallbackToArchive) {
       return await getFinalizedState(config, db, forkChoice, slot);
     }
     return await db.stateArchive.get(slot);

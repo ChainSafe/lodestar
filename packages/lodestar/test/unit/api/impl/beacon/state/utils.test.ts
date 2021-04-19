@@ -116,7 +116,9 @@ describe("beacon state api utils", function () {
         blockArchive: {valuesStream: blockArchiveValuesStream},
         stateArchive: {get, valuesStream: stateArchiveValuesStream},
       } as StubbedBeaconDb;
-      const state = await resolveStateId(config, chainStub, tempDbStub, requestedSlot.toString(), true);
+      const state = await resolveStateId(config, chainStub, tempDbStub, requestedSlot.toString(), {
+        fallbackToArchive: true,
+      });
       expect(state).to.not.be.null;
       expect(state?.slot).to.be.equal(requestedSlot);
     });
