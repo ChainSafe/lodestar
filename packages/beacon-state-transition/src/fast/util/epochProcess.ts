@@ -22,6 +22,8 @@ import {
   FLAG_CURR_SOURCE_ATTESTER,
   FLAG_CURR_TARGET_ATTESTER,
   FLAG_CURR_HEAD_ATTESTER,
+  FLAG_PREV_SOURCE_ATTESTER_OR_UNSLASHED,
+  FLAG_CURR_TARGET_ATTESTER_OR_UNSLASHED,
 } from "./attesterStatus";
 import {IEpochStakeSummary} from "./epochStakeSummary";
 import {CachedBeaconState} from "./cachedBeaconState";
@@ -252,7 +254,7 @@ export function prepareEpochProcessState<T extends allForks.BeaconState>(state: 
   let currTargetUnslStake = BigInt(0);
 
   for (const status of out.statuses) {
-    if (hasMarkers(status.flags, FLAG_PREV_SOURCE_ATTESTER | FLAG_UNSLASHED)) {
+    if (hasMarkers(status.flags, FLAG_PREV_SOURCE_ATTESTER_OR_UNSLASHED)) {
       prevSourceUnslStake += status.validator.effectiveBalance;
       if (hasMarkers(status.flags, FLAG_PREV_TARGET_ATTESTER)) {
         prevTargetUnslStake += status.validator.effectiveBalance;
@@ -261,7 +263,7 @@ export function prepareEpochProcessState<T extends allForks.BeaconState>(state: 
         }
       }
     }
-    if (hasMarkers(status.flags, FLAG_CURR_TARGET_ATTESTER | FLAG_UNSLASHED)) {
+    if (hasMarkers(status.flags, FLAG_CURR_TARGET_ATTESTER_OR_UNSLASHED)) {
       currTargetUnslStake += status.validator.effectiveBalance;
     }
   }
