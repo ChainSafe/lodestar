@@ -13,6 +13,7 @@ import {
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {GENESIS_SLOT} from "@chainsafe/lodestar-params";
 import {Bytes96, CommitteeIndex, Epoch, Root, phase0, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {BeaconState} from "@chainsafe/lodestar-types/lib/allForks";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {readonlyValues} from "@chainsafe/ssz";
 import {IAttestationJob, IBeaconChain} from "../../../chain";
@@ -20,6 +21,7 @@ import {assembleAttestationData} from "../../../chain/factory/attestation";
 import {assembleBlock} from "../../../chain/factory/block";
 import {assembleAttesterDuty} from "../../../chain/factory/duties";
 import {validateGossipAggregateAndProof} from "../../../chain/validation";
+import {ZERO_HASH} from "../../../constants";
 import {IBeaconDb} from "../../../db";
 import {IEth1ForBlockProduction} from "../../../eth1";
 import {INetwork} from "../../../network";
@@ -108,7 +110,7 @@ export class ValidatorApi implements IValidatorApi {
 
     // Returns `null` on the one-off scenario where the genesis block decides its own shuffling.
     // It should be set to the latest block applied to `self` or the genesis block root.
-    const dependentRoot = proposerShufflingDecisionRoot(this.config, state) || (await this.getGenesisBlockRoot());
+    const dependentRoot = proposerShufflingDecisionRoot(this.config, state) || (await this.getGenesisBlockRoot(state));
 
     return {
       data: duties,
@@ -146,7 +148,7 @@ export class ValidatorApi implements IValidatorApi {
     }
 
     const dependentRoot =
-      attesterShufflingDecisionRoot(this.config, state, epoch) || (await this.getGenesisBlockRoot());
+      attesterShufflingDecisionRoot(this.config, state, epoch) || (await this.getGenesisBlockRoot(state));
 
     return {
       data: duties,
@@ -250,14 +252,21 @@ export class ValidatorApi implements IValidatorApi {
   }
 
   /** Compute and cache the genesis block root */
-  private async getGenesisBlockRoot(): Promise<Root> {
+  private async getGenesisBlockRoot(state: CachedBeaconState<BeaconState>): Promise<Root> {
     if (!this.genesisBlockRoot) {
-      const genesisBlock = await this.chain.getCanonicalBlockAtSlot(GENESIS_SLOT);
-      if (!genesisBlock) {
-        throw Error("Genesis block not available");
+      // Close to genesis the genesis block may not be available in the DB
+      if (state.slot < this.config.params.SLOTS_PER_HISTORICAL_ROOT) {
+        this.genesisBlockRoot = state.blockRoots[0];
       }
-      this.genesisBlockRoot = this.config.types.phase0.SignedBeaconBlock.hashTreeRoot(genesisBlock);
+
+      const genesisBlock = await this.chain.getCanonicalBlockAtSlot(GENESIS_SLOT);
+      if (genesisBlock) {
+        this.genesisBlockRoot = this.config.types.phase0.SignedBeaconBlock.hashTreeRoot(genesisBlock);
+      }
     }
-    return this.genesisBlockRoot;
+
+    // If for some reason the genesisBlockRoot is not able don't prevent validators from
+    // proposing or attesting. If the genesisBlockRoot is wrong, at worst it may trigger a re-fetch of the duties
+    return this.genesisBlockRoot || ZERO_HASH;
   }
 }
