@@ -7,6 +7,7 @@ import {setupRestApiTestServer, VALIDATOR_PREFIX} from "../index.test";
 import {RestApi, ValidatorApi} from "../../../../../src/api";
 import {SinonStubbedInstance} from "sinon";
 import {ProposerDuty} from "@chainsafe/lodestar-types/phase0";
+import {ZERO_HASH} from "../../../../../src/constants";
 
 describe("rest - validator - getProposerDuties", function () {
   let restApi: RestApi;
@@ -18,10 +19,10 @@ describe("rest - validator - getProposerDuties", function () {
   });
 
   it("should succeed", async function () {
-    validatorStub.getProposerDuties.resolves([
-      config.types.phase0.ProposerDuty.defaultValue(),
-      config.types.phase0.ProposerDuty.defaultValue(),
-    ]);
+    validatorStub.getProposerDuties.resolves({
+      dependentRoot: ZERO_HASH,
+      data: [config.types.phase0.ProposerDuty.defaultValue(), config.types.phase0.ProposerDuty.defaultValue()],
+    });
     const response = await supertest(restApi.server.server)
       .get(urlJoin(VALIDATOR_PREFIX, getProposerDuties.url.replace(":epoch", "1")))
       .expect(200)

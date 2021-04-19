@@ -9,19 +9,19 @@ export function ValidatorApi(types: IBeaconSSZTypes, client: HttpClient): IApiCl
   const prefix = "/eth/v1/validator";
 
   return {
-    async getProposerDuties(epoch: Epoch): Promise<phase0.ProposerDuty[]> {
+    async getProposerDuties(epoch: Epoch): Promise<phase0.ProposerDutiesApi> {
       const res = await client.get<{data: Json[]; dependentRoot: string}>(
         prefix + `/duties/proposer/${epoch.toString()}`
       );
-      return res.data.map((value) => types.phase0.ProposerDuty.fromJson(value, {case: "snake"}));
+      return types.phase0.ProposerDutiesApi.fromJson(res, {case: "snake"});
     },
 
-    async getAttesterDuties(epoch: Epoch, indices: ValidatorIndex[]): Promise<phase0.AttesterDuty[]> {
+    async getAttesterDuties(epoch: Epoch, indices: ValidatorIndex[]): Promise<phase0.AttesterDutiesApi> {
       const res = await client.post<string[], {data: Json[]; dependentRoot: string}>(
         prefix + `/duties/attester/${epoch.toString()}`,
         indices.map((index) => types.ValidatorIndex.toJson(index) as string)
       );
-      return res.data.map((value) => types.phase0.AttesterDuty.fromJson(value, {case: "snake"}));
+      return types.phase0.AttesterDutiesApi.fromJson(res, {case: "snake"});
     },
 
     async produceBlock(slot: Slot, randaoReveal: Uint8Array, graffiti: string): Promise<phase0.BeaconBlock> {

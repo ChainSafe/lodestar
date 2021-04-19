@@ -93,7 +93,7 @@ export class ValidatorApi implements IValidatorApi {
     }
   }
 
-  async getProposerDuties(epoch: Epoch): Promise<{data: phase0.ProposerDuty[]; dependentRoot: Root}> {
+  async getProposerDuties(epoch: Epoch): Promise<phase0.ProposerDutiesApi> {
     await checkSyncStatus(this.config, this.sync);
 
     const state = await this.chain.getHeadStateAtCurrentEpoch();
@@ -116,10 +116,7 @@ export class ValidatorApi implements IValidatorApi {
     };
   }
 
-  async getAttesterDuties(
-    epoch: number,
-    validatorIndices: ValidatorIndex[]
-  ): Promise<{data: phase0.AttesterDuty[]; dependentRoot: Root}> {
+  async getAttesterDuties(epoch: number, validatorIndices: ValidatorIndex[]): Promise<phase0.AttesterDutiesApi> {
     await checkSyncStatus(this.config, this.sync);
     if (validatorIndices.length === 0) throw new ApiError(400, "No validator to get attester duties");
     if (epoch > this.chain.clock.currentEpoch + 1)

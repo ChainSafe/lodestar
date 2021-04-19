@@ -50,6 +50,16 @@ export interface ProposerDuty {
   pubkey: BLSPubkey;
 }
 
+export interface AttesterDutiesApi {
+  data: AttesterDuty[];
+  dependentRoot: Root;
+}
+
+export interface ProposerDutiesApi {
+  data: ProposerDuty[];
+  dependentRoot: Root;
+}
+
 export interface BeaconCommitteeSubscription {
   validatorIndex: number;
   committeeIndex: number;

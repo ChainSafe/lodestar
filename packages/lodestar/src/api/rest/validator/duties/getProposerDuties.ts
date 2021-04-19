@@ -6,10 +6,8 @@ export const getProposerDuties: ApiController<null, {epoch: number}> = {
   id: "getProposerDuties",
 
   handler: async function (req) {
-    const duties = await this.api.validator.getProposerDuties(req.params.epoch);
-    return {
-      data: duties.map((d) => this.config.types.phase0.ProposerDuty.toJson(d, {case: "snake"})),
-    };
+    const value = await this.api.validator.getProposerDuties(req.params.epoch);
+    return this.config.types.phase0.ProposerDutiesApi.toJson(value, {case: "snake"});
   },
 
   schema: {
