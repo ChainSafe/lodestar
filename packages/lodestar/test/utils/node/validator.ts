@@ -1,23 +1,12 @@
 import {LevelDbController} from "@chainsafe/lodestar-db";
 import {ILogger, LogLevel} from "@chainsafe/lodestar-utils";
 import {interopSecretKey} from "@chainsafe/lodestar-beacon-state-transition";
-import {IEventsApi} from "@chainsafe/lodestar-validator/lib/api/interface/events";
-import {
-  ApiClientOverInstance,
-  ApiClientOverRest,
-  IApiClient,
-  SlashingProtection,
-  Validator,
-} from "@chainsafe/lodestar-validator";
+import {IApiClient, SlashingProtection, Validator} from "@chainsafe/lodestar-validator";
 import tmp from "tmp";
-import {BeaconApi} from "../../../src/api/impl/beacon";
-import {EventsApi} from "../../../src/api/impl/events";
-import {NodeApi} from "../../../src/api/impl/node/node";
-import {ValidatorApi} from "../../../src/api/impl/validator";
 import {Eth1ForBlockProductionDisabled} from "../../../src/eth1";
 import {BeaconNode} from "../../../src/node";
-import {ConfigApi} from "../../../src/api/impl/config";
 import {testLogger} from "../logger";
+import {Api} from "../../../src/api";
 
 export function getDevValidators({
   node,
@@ -64,7 +53,7 @@ export function getDevValidator({
   const tmpDir = tmp.dirSync({unsafeCleanup: true});
   return new Validator({
     config: node.config,
-    api: useRestApi ? getDevValidatorRestApiClient(node, logger) : getDevValidatorInstanceApiClient(node, logger),
+    api: useRestApi ? getNodeApiUrl(node) : getApiInstance(node, logger),
     slashingProtection: new SlashingProtection({
       config: node.config,
       controller: new LevelDbController({name: tmpDir.name}, {logger}),
@@ -74,23 +63,20 @@ export function getDevValidator({
   });
 }
 
-export function getDevValidatorRestApiClient(node: BeaconNode, logger: ILogger): IApiClient {
-  return new ApiClientOverRest(
-    node.config,
-    "http://127.0.0.1:9596",
-    logger.child({module: "api", level: LogLevel.warn})
-  );
+export function getNodeApiUrl(node: BeaconNode): string {
+  const host = node.opts.api.rest.host || "127.0.0.1";
+  const port = node.opts.api.rest.port || 9596;
+  return `http://${host}:${port}`;
 }
 
-export function getDevValidatorInstanceApiClient(node: BeaconNode, parentLogger: ILogger): IApiClient {
-  const logger = parentLogger.child({module: "api", level: LogLevel.warn});
-  return new ApiClientOverInstance({
-    config: node.config,
-    validator: new ValidatorApi({}, {...node, logger, eth1: new Eth1ForBlockProductionDisabled()}),
-    node: new NodeApi({}, {...node}),
-    events: new EventsApi({}, {...node}) as IEventsApi,
-    beacon: new BeaconApi({}, {...node}),
-    configApi: new ConfigApi({}, {config: node.config}),
-    logger,
-  });
+export function getApiInstance(node: BeaconNode, parentLogger: ILogger): IApiClient {
+  return new Api(
+    {},
+    {
+      ...node,
+      logger: parentLogger.child({module: "api", level: LogLevel.warn}),
+      eth1: new Eth1ForBlockProductionDisabled(),
+    }
+    // TODO: Review why this casting is necessary
+  ) as IApiClient;
 }
