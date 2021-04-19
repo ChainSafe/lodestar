@@ -16,11 +16,6 @@ import {InteropSubnetsJoiningTask} from "./tasks/interopSubnetsJoiningTask";
 import {INetwork, NetworkEvent} from "../network";
 import {JobQueue} from "../util/queue";
 
-/**
- * Minimum number of epochs between archived states
- */
-export const MIN_EPOCHS_PER_DB_STATE = 1024;
-
 export interface ITasksModules {
   db: IBeaconDb;
   logger: ILogger;
