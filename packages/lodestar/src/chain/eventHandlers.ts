@@ -240,25 +240,26 @@ export async function onBlock(
       }),
     ]);
   }
-
-  await this.db.processBlockOperations(block);
-
-  await Promise.all(
-    this.pendingBlocks.getByParent(blockRoot).map(async ({root, slot}) => {
-      const pendingBlock = await this.db.pendingBlock.get(root, slot);
-      if (pendingBlock) {
-        this.pendingBlocks.remove(pendingBlock);
-        await this.db.pendingBlock.delete(root, slot);
-        return this.blockProcessor.processBlockJob({
-          signedBlock: pendingBlock,
-          reprocess: false,
-          prefinalized: false,
-          validSignatures: false,
-          validProposerSignature: false,
-        });
-      }
-    })
-  );
+  // if reprocess job, don't have to reprocess block operations or pending blocks
+  if (!job.reprocess) {
+    await this.db.processBlockOperations(block);
+    await Promise.all(
+      this.pendingBlocks.getByParent(blockRoot).map(async ({root, slot}) => {
+        const pendingBlock = await this.db.pendingBlock.get(root, slot);
+        if (pendingBlock) {
+          this.pendingBlocks.remove(pendingBlock);
+          await this.db.pendingBlock.delete(root, slot);
+          return this.blockProcessor.processBlockJob({
+            signedBlock: pendingBlock,
+            reprocess: false,
+            prefinalized: false,
+            validSignatures: false,
+            validProposerSignature: false,
+          });
+        }
+      })
+    );
+  }
 }
 
 export async function onErrorAttestation(this: BeaconChain, err: AttestationError): Promise<void> {
