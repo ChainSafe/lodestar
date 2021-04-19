@@ -24,7 +24,6 @@ describe("sync", function () {
 
     const loggerNodeA = testLogger("Node-A", LogLevel.info);
     const loggerNodeB = testLogger("Node-B", LogLevel.info);
-    const loggerValiA = testLogger("Vali-A", LogLevel.info);
 
     const bn = await getDevBeaconNode({
       params: beaconParams,
@@ -35,10 +34,11 @@ describe("sync", function () {
     const finalizationEventListener = waitForEvent<phase0.Checkpoint>(bn.chain.emitter, ChainEvent.finalized, 240000);
     const validators = getDevValidators({
       node: bn,
-      count: 8,
+      validatorsPerClient: 8,
       validatorClientCount: 1,
+      startIndex: 0,
       useRestApi: false,
-      logger: loggerValiA,
+      logLevel: LogLevel.info,
     });
 
     await Promise.all(validators.map((validator) => validator.start()));
@@ -56,11 +56,15 @@ describe("sync", function () {
       genesisTime: bn.chain.getHeadState().genesisTime,
       logger: loggerNodeB,
     });
-    const head = await bn.chain.getHeadBlock()!;
+
+    const head = await bn.chain.getHeadBlock();
+    if (!head) throw Error("First beacon node has not head block");
     const waitForSynced = waitForEvent<phase0.SignedBeaconBlock>(bn2.chain.emitter, ChainEvent.block, 100000, (block) =>
-      config.types.phase0.SignedBeaconBlock.equals(block, head!)
+      config.types.phase0.SignedBeaconBlock.equals(block, head)
     );
+
     await connect(bn2.network as Network, bn.network.peerId, bn.network.localMultiaddrs);
+
     try {
       await waitForSynced;
     } catch (e) {

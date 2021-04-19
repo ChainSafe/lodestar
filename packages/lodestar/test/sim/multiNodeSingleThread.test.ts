@@ -3,7 +3,7 @@ import {Network} from "../../src/network";
 import {getDevBeaconNode} from "../utils/node/beacon";
 import {waitForEvent} from "../utils/events/resolver";
 import {phase0} from "@chainsafe/lodestar-types";
-import {getDevValidator} from "../utils/node/validator";
+import {getDevValidators} from "../utils/node/validator";
 import {Validator} from "@chainsafe/lodestar-validator/lib";
 import {BeaconNode} from "../../src/node";
 import {ChainEvent} from "../../src/chain";
@@ -46,19 +46,16 @@ describe("Run multi node single thread interop validators (no eth1) until checkp
           logger,
         });
 
-        const startIndex = i * validatorsPerNode;
-        const endIndex = i * validatorsPerNode + validatorsPerNode - 1;
-        validators.push(
-          getDevValidator({
-            node,
-            startIndex,
-            count: validatorsPerNode,
-            logger: logger.child({
-              module: `Vali ${startIndex}-${endIndex}`,
-            }),
-          })
-        );
+        const nodeValidators = getDevValidators({
+          node,
+          validatorsPerClient: validatorsPerNode,
+          validatorClientCount: 1,
+          startIndex: i * validatorsPerNode,
+          logLevel: LogLevel.info,
+          logFile: logFiles.multinodeSinglethread,
+        });
 
+        validators.push(...nodeValidators);
         nodes.push(node);
       }
 

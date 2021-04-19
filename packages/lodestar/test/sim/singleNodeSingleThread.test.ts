@@ -1,9 +1,8 @@
 import {IBeaconParams} from "@chainsafe/lodestar-params";
+import {phase0} from "@chainsafe/lodestar-types";
 import {getDevBeaconNode} from "../utils/node/beacon";
 import {waitForEvent} from "../utils/events/resolver";
-import {phase0} from "@chainsafe/lodestar-types";
 import {getDevValidators} from "../utils/node/validator";
-import {expect} from "chai";
 import {ChainEvent} from "../../src/chain";
 import {IRestApiOptions} from "../../src/api/rest/options";
 import {testLogger, LogLevel} from "../utils/logger";
@@ -24,51 +23,56 @@ describe("Run single node single thread interop validators (no eth1) until check
   };
 
   const loggerNodeA = testLogger("Node-A", LogLevel.info, logFiles.singlenodeSinglethread);
-  const loggerValiA = testLogger("Vali-A", LogLevel.info, logFiles.singlenodeSinglethread);
 
   const testCases: {
-    vc: number;
-    validators: number;
+    validatorClientCount: number;
+    validatorsPerClient: number;
     event: ChainEvent.justified | ChainEvent.finalized;
     params: Partial<IBeaconParams>;
   }[] = [
-    {vc: 8, validators: 8, event: ChainEvent.justified, params: testParams},
-    {vc: 8, validators: 8, event: ChainEvent.finalized, params: testParams},
-    {vc: 1, validators: 32, event: ChainEvent.justified, params: manyValidatorParams},
+    {validatorClientCount: 8, validatorsPerClient: 8, event: ChainEvent.justified, params: testParams},
+    {validatorClientCount: 8, validatorsPerClient: 8, event: ChainEvent.finalized, params: testParams},
+    {validatorClientCount: 1, validatorsPerClient: 32, event: ChainEvent.justified, params: manyValidatorParams},
   ];
 
   for (const testCase of testCases) {
-    it(`${testCase.vc} vc / ${testCase.validators} validator > until ${testCase.event}`, async function () {
+    it(`${testCase.validatorClientCount} vc / ${testCase.validatorsPerClient} validator > until ${testCase.event}`, async function () {
       this.timeout(timeout);
       const bn = await getDevBeaconNode({
         params: testCase.params,
         options: {sync: {minPeers: 0}, api: {rest: {enabled: true} as IRestApiOptions}},
-        validatorCount: testCase.vc * testCase.validators,
+        validatorCount: testCase.validatorClientCount * testCase.validatorsPerClient,
         logger: loggerNodeA,
       });
+
       const justificationEventListener = waitForEvent<phase0.Checkpoint>(
         bn.chain.emitter,
         testCase.event,
         timeout - 10 * 1000
       );
+
       const validators = getDevValidators({
         node: bn,
-        count: testCase.validators,
-        validatorClientCount: testCase.vc,
+        validatorsPerClient: testCase.validatorsPerClient,
+        validatorClientCount: testCase.validatorClientCount,
+        startIndex: 0,
         // At least one sim test must use the REST API for beacon <-> validator comms
         useRestApi: true,
-        logger: loggerValiA,
+        logLevel: LogLevel.info,
+        logFile: logFiles.singlenodeSinglethread,
       });
+
       await Promise.all(validators.map((v) => v.start()));
+
       try {
         await justificationEventListener;
       } catch (e) {
+        (e as Error).message = `failed to get event: ${testCase.event}: ${(e as Error).message}`;
+        throw e;
+      } finally {
         await Promise.all(validators.map((v) => v.stop()));
         await bn.close();
-        expect.fail(`failed to get event: ${testCase.event}`);
       }
-      await Promise.all(validators.map((v) => v.stop()));
-      await bn.close();
     });
   }
 });
