@@ -58,7 +58,7 @@ describe("sync", function () {
     });
 
     const head = await bn.chain.getHeadBlock();
-    if (!head) throw Error("First beacon node has not head block");
+    if (!head) throw Error("First beacon node has no head block");
     const waitForSynced = waitForEvent<phase0.SignedBeaconBlock>(bn2.chain.emitter, ChainEvent.block, 100000, (block) =>
       config.types.phase0.SignedBeaconBlock.equals(block, head)
     );
