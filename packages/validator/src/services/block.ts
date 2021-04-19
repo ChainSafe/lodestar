@@ -8,9 +8,7 @@ import {SecretKey} from "@chainsafe/bls";
 import {ILogger, prettyBytes} from "@chainsafe/lodestar-utils";
 import {toHexString} from "@chainsafe/ssz";
 import {computeEpochAtSlot, computeSigningRoot, getDomain} from "@chainsafe/lodestar-beacon-state-transition";
-import {IApiClient} from "../api";
-import {BeaconEventType} from "../api/interface/events";
-import {ClockEventType} from "../api/interface/clock";
+import {IApiClientProvider, BeaconEventType, ClockEventType} from "../api";
 import {ISlashingProtection} from "../slashingProtection";
 import {PublicKeyHex, ValidatorAndSecret} from "../types";
 
@@ -19,7 +17,7 @@ import {PublicKeyHex, ValidatorAndSecret} from "../types";
  */
 export default class BlockProposingService {
   private readonly config: IBeaconConfig;
-  private readonly provider: IApiClient;
+  private readonly provider: IApiClientProvider;
   private readonly validators: Map<PublicKeyHex, ValidatorAndSecret>;
   private readonly slashingProtection: ISlashingProtection;
   private readonly logger: ILogger;
@@ -30,7 +28,7 @@ export default class BlockProposingService {
   constructor(
     config: IBeaconConfig,
     validators: Map<PublicKeyHex, ValidatorAndSecret>,
-    provider: IApiClient,
+    provider: IApiClientProvider,
     slashingProtection: ISlashingProtection,
     logger: ILogger,
     graffiti?: string
@@ -110,7 +108,7 @@ export default class BlockProposingService {
    */
   updateDuties = async (epoch: Epoch): Promise<void> => {
     this.logger.debug("on new block epoch", {epoch, validator: toHexString(this.validators.keys().next().value)});
-    const proposerDuties = await this.provider.validator.getProposerDuties(epoch, []).catch((e) => {
+    const proposerDuties = await this.provider.validator.getProposerDuties(epoch).catch((e) => {
       this.logger.error("Failed to obtain proposer duties", e);
       return null;
     });
@@ -181,7 +179,7 @@ export default class BlockProposingService {
     return signedBlock;
   }
 
-  getRpcClient(): IApiClient {
+  getRpcClient(): IApiClientProvider {
     return this.provider;
   }
 }

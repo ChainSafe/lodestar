@@ -1,9 +1,11 @@
-/* eslint-disable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
-import Axios, {AxiosError, AxiosInstance, AxiosRequestConfig, AxiosResponse} from "axios";
-import {ILogger} from "@chainsafe/lodestar-utils";
+import Axios, {AxiosError, AxiosInstance, AxiosResponse, CancelToken, Method} from "axios";
 import querystring from "querystring";
+import {AbortSignal} from "abort-controller";
 import {BLSPubkey, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {ValidatorStatus} from "@chainsafe/lodestar-types/phase0";
+import {ErrorAborted} from "@chainsafe/lodestar-utils";
+
+/* eslint-disable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
 
 export interface IValidatorFilters {
   indices?: (BLSPubkey | ValidatorIndex)[];
@@ -11,8 +13,8 @@ export interface IValidatorFilters {
 }
 
 export interface IHttpClientOptions {
-  // Add more options if needed
-  urlPrefix: string;
+  baseUrl: string;
+  timeout?: number;
 }
 
 export interface IHttpQuery {
@@ -20,37 +22,49 @@ export interface IHttpQuery {
 }
 
 export class HttpClient {
+  readonly baseUrl: string;
   private client: AxiosInstance;
-  private logger: ILogger;
+  private cancelToken?: CancelToken;
 
-  constructor(opt: Partial<IHttpClientOptions>, {logger}: {logger: ILogger}) {
+  constructor(opt: IHttpClientOptions) {
+    this.baseUrl = opt.baseUrl;
     this.client = Axios.create({
-      baseURL: opt.urlPrefix || "",
-      timeout: 4000,
+      baseURL: opt.baseUrl,
+      timeout: opt.timeout,
     });
-    this.logger = logger;
   }
 
-  async get<T>(url: string, query?: IHttpQuery, opts?: AxiosRequestConfig): Promise<T> {
-    try {
-      if (query) url += "?" + querystring.stringify(query);
-      const result: AxiosResponse<T> = await this.client.get<T>(url, opts);
-      this.logger.verbose("HttpClient GET", {url, result: JSON.stringify(result.data)});
-      return result.data;
-    } catch (e) {
-      this.logger.verbose("HttpClient GET error", {url}, e);
-      throw this.handleError(e);
-    }
+  registerAbortSignal(signal: AbortSignal): void {
+    const source = Axios.CancelToken.source();
+    signal.addEventListener("abort", () => source.cancel("Aborted"), {once: true});
+    this.cancelToken = source.token;
+  }
+
+  async get<T>(url: string, query?: IHttpQuery): Promise<T> {
+    return this.request(url, "GET", query);
   }
 
   async post<T, T2>(url: string, data: T, query?: IHttpQuery): Promise<T2> {
+    return this.request(url, "POST", query, data);
+  }
+
+  async request<T, T2>(url: string, method: Method, query?: IHttpQuery, data?: T): Promise<T2> {
     try {
-      if (query) url += "?" + querystring.stringify(query);
-      const result: AxiosResponse<T2> = await this.client.post(url, data);
-      this.logger.verbose("HttpClient POST", {url, result: JSON.stringify(result.data)});
+      if (query) {
+        url += "?" + querystring.stringify(query);
+      }
+
+      const result: AxiosResponse<T2> = await this.client.request({
+        method,
+        url,
+        data,
+        cancelToken: this.cancelToken,
+      });
       return result.data;
     } catch (e) {
-      this.logger.verbose("HttpClient POST error", {url}, e);
+      if (Axios.isCancel(e)) {
+        throw new ErrorAborted("Validator REST client");
+      }
       throw this.handleError(e);
     }
   }

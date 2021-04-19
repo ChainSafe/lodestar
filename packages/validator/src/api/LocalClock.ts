@@ -3,7 +3,7 @@ import {Epoch, Slot} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {computeEpochAtSlot, getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {ApiClientEventEmitter, IBeaconClock} from "./interface";
-import {ClockEventType} from "./interface/clock";
+import {ClockEventType} from "./interface";
 
 /**
  * A local clock, the clock time is assumed to be trusted

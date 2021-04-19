@@ -1,4 +1,3 @@
-import {ApiClientOverRest} from "@chainsafe/lodestar-validator";
 import {Validator, SlashingProtection} from "@chainsafe/lodestar-validator";
 import {LevelDbController} from "@chainsafe/lodestar-db";
 import {getBeaconConfigFromArgs} from "../../config";
@@ -17,8 +16,6 @@ import {getBeaconPaths} from "../beacon/paths";
 export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): Promise<void> {
   await initBLS();
 
-  const server = args.server;
-  const force = args.force;
   const graffiti = args.graffiti || getDefaultGraffiti();
   const accountPaths = getAccountPaths(args);
   const validatorPaths = getValidatorPaths(args);
@@ -28,7 +25,7 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
   const logger = getCliLogger(args, beaconPaths);
 
   const validatorDirManager = new ValidatorDirManager(accountPaths);
-  const secretKeys = await validatorDirManager.decryptAllValidators({force});
+  const secretKeys = await validatorDirManager.decryptAllValidators({force: args.force});
 
   if (secretKeys.length === 0) throw new YargsError("No validator keystores found");
   logger.info(`Decrypted ${secretKeys.length} validator keystores`);
@@ -36,15 +33,13 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
   const dbPath = validatorPaths.validatorsDbDir;
   mkdir(dbPath);
 
-  const api = new ApiClientOverRest(config, server, logger);
-
   const validator = new Validator({
     config,
     slashingProtection: new SlashingProtection({
       config: config,
       controller: new LevelDbController({name: dbPath}, {logger}),
     }),
-    api,
+    api: args.server,
     logger,
     secretKeys,
     graffiti,

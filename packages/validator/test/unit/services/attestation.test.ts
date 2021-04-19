@@ -12,7 +12,7 @@ import {toBufferBE} from "bigint-buffer";
 import {expect} from "chai";
 import sinon from "sinon";
 import {InvalidAttestationError, InvalidAttestationErrorCode, SlashingProtection} from "../../../src";
-import {BeaconEventType} from "../../../src/api/interface/events";
+import {BeaconEventType} from "../../../src/api";
 import {LocalClock} from "../../../src/api/LocalClock";
 import {AttestationService} from "../../../src/services/attestation";
 import {mapSecretKeysToValidators} from "../../../src/services/utils";
@@ -39,7 +39,7 @@ describe("validator attestation service", function () {
       })
     );
     slashingProtectionStub = sandbox.createStubInstance(SlashingProtection);
-    rpcClientStub.beacon.state.getStateValidator.resolves(config.types.phase0.ValidatorResponse.defaultValue());
+    rpcClientStub.beacon.state.getStateValidators.resolves([config.types.phase0.ValidatorResponse.defaultValue()]);
   });
 
   afterEach(() => {
