@@ -40,8 +40,8 @@ export function getAttestationDeltas(
   const INACTIVITY_PENALTY_QUOTIENT = params.INACTIVITY_PENALTY_QUOTIENT;
   const isInInactivityLeak = finalityDelay > MIN_EPOCHS_TO_INACTIVITY_PENALTY;
 
-  const flatValidators = validators.persistent.toArray();
-  const flatPreviousEpochParticipation = state.previousEpochParticipation.persistent.toArray();
+  const flatValidators = process.validators ?? validators.persistent.toArray();
+  const flatPreviousEpochParticipation = process.previousEpochParticipation ?? state.previousEpochParticipation.persistent.toArray();
   const flatPreviousInclusionData = state.previousInclusionData!.toArray();
   for (let i = 0; i < flatValidators.length; i++) {
     const validator = flatValidators[i];

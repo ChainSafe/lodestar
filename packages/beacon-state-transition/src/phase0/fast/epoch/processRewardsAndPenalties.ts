@@ -22,4 +22,6 @@ export function processRewardsAndPenalties(state: CachedBeaconState<phase0.Beaco
   // important: do not change state one balance at a time
   // set them all at once, constructing the tree in one go
   balances.updateAll(newBalances);
+  // cache the balances array, too
+  process.balances = newBalances;
 }

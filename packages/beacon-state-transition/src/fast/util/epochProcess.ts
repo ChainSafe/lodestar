@@ -1,10 +1,11 @@
-import {Epoch, ValidatorIndex, Gwei, allForks} from "@chainsafe/lodestar-types";
+import {Epoch, ValidatorIndex, Gwei, allForks, phase0} from "@chainsafe/lodestar-types";
 import {intDiv} from "@chainsafe/lodestar-utils";
 
 import {computeActivationExitEpoch, getChurnLimit, isActiveValidator} from "../../util";
 import {FAR_FUTURE_EPOCH} from "../../constants";
 import {IEpochStakeSummary} from "./epochStakeSummary";
 import {CachedBeaconState} from "./cachedBeaconState";
+import {IParticipationStatus} from "./cachedEpochParticipation";
 
 /**
  * The AttesterStatus (and FlatValidator under status.validator) objects and
@@ -27,6 +28,10 @@ export interface IEpochProcess {
   exitQueueEnd: Epoch;
   exitQueueEndChurn: number;
   churnLimit: number;
+  validators?: phase0.Validator[];
+  previousEpochParticipation?: IParticipationStatus[];
+  currentEpochParticipation?: IParticipationStatus[];
+  balances?: ArrayLike<bigint>;
 }
 
 export function createIEpochProcess(): IEpochProcess {
@@ -79,9 +84,9 @@ export function prepareEpochProcessState<T extends allForks.BeaconState>(state: 
 
   let currTargetUnslStake = BigInt(0);
 
-  const flatValidators = validators.persistent.toArray();
-  const flatPreviousEpochParticipation = previousEpochParticipation.persistent.toArray();
-  const flatCurrentEpochParticipation = currentEpochParticipation.persistent.toArray();
+  const flatValidators = (out.validators = validators.persistent.toArray());
+  const flatPreviousEpochParticipation = (out.previousEpochParticipation = previousEpochParticipation.persistent.toArray());
+  const flatCurrentEpochParticipation = (out.currentEpochParticipation = currentEpochParticipation.persistent.toArray());
   for (let i = 0; i < flatValidators.length; i++) {
     const validator = flatValidators[i];
     const previousParticipation = flatPreviousEpochParticipation[i];

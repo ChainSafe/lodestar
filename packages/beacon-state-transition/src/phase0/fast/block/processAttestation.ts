@@ -16,36 +16,37 @@ export function processAttestation(
   const {MIN_ATTESTATION_INCLUSION_DELAY, SLOTS_PER_EPOCH} = config.params;
   const slot = state.slot;
   const data = attestation.data;
-  const committeeCount = epochCtx.getCommitteeCountAtSlot(data.slot);
-  if (!(data.index < committeeCount)) {
+  const attIndex = data.index;
+  const attSlot = data.slot;
+  const targetEpoch = data.target.epoch;
+  const committeeCount = epochCtx.getCommitteeCountAtSlot(attSlot);
+  if (!(attIndex < committeeCount)) {
     throw new Error(
       "Attestation committee index not within current committee count: " +
-        `committeeIndex=${data.index} committeeCount=${committeeCount}`
+        `committeeIndex=${attIndex} committeeCount=${committeeCount}`
     );
   }
-  if (
-    !(data.target.epoch === epochCtx.previousShuffling.epoch || data.target.epoch === epochCtx.currentShuffling.epoch)
-  ) {
+  if (!(targetEpoch === epochCtx.previousShuffling.epoch || targetEpoch === epochCtx.currentShuffling.epoch)) {
     throw new Error(
       "Attestation target epoch not in previous or current epoch: " +
-        `targetEpoch=${data.target.epoch} currentEpoch=${epochCtx.currentShuffling.epoch}`
+        `targetEpoch=${targetEpoch} currentEpoch=${epochCtx.currentShuffling.epoch}`
     );
   }
-  const computedEpoch = computeEpochAtSlot(config, data.slot);
-  if (!(data.target.epoch === computedEpoch)) {
+  const computedEpoch = computeEpochAtSlot(config, attSlot);
+  if (!(targetEpoch === computedEpoch)) {
     throw new Error(
       "Attestation target epoch does not match epoch computed from slot: " +
-        `targetEpoch=${data.target.epoch} computedEpoch=${computedEpoch}`
+        `targetEpoch=${targetEpoch} computedEpoch=${computedEpoch}`
     );
   }
-  if (!(data.slot + MIN_ATTESTATION_INCLUSION_DELAY <= slot && slot <= data.slot + SLOTS_PER_EPOCH)) {
+  if (!(attSlot + MIN_ATTESTATION_INCLUSION_DELAY <= slot && slot <= attSlot + SLOTS_PER_EPOCH)) {
     throw new Error(
       "Attestation slot not within inclusion window: " +
-        `slot=${data.slot} window=${data.slot + MIN_ATTESTATION_INCLUSION_DELAY}..${data.slot + SLOTS_PER_EPOCH}`
+        `slot=${attSlot} window=${attSlot + MIN_ATTESTATION_INCLUSION_DELAY}..${attSlot + SLOTS_PER_EPOCH}`
     );
   }
 
-  const committee = epochCtx.getBeaconCommittee(data.slot, data.index);
+  const committee = epochCtx.getBeaconCommittee(attSlot, attIndex);
   if (attestation.aggregationBits.length !== committee.length) {
     throw new Error(
       "Attestation aggregation bits length does not match committee length: " +
@@ -64,7 +65,7 @@ export function processAttestation(
     epochParticipation: CachedEpochParticipation,
     epochInclusion: MutableVector<IInclusionData>;
 
-  if (data.target.epoch === epochCtx.currentShuffling.epoch) {
+  if (targetEpoch === epochCtx.currentShuffling.epoch) {
     // current
     justifiedCheckpoint = state.currentJustifiedCheckpoint;
     epochAttestations = state.currentEpochAttestations;
@@ -94,7 +95,7 @@ export function processAttestation(
     throw new Error("Attestation is not valid");
   }
 
-  const inclusionDelay = slot - data.slot;
+  const inclusionDelay = slot - attSlot;
   const proposerIndex = epochCtx.getBeaconProposer(slot);
   const pendingAttestation = {
     data: data,
@@ -128,8 +129,10 @@ export function processAttestationParticipation(
   // The source vote always matches the justified checkpoint (else its invalid) (already checked)
   // The target vote should match the most recent checkpoint (eg: the first root of the epoch)
   // The head vote should match the root at the attestation slot (eg: the root at data.slot)
-  const isMatchingHead = config.types.Root.equals(data.beaconBlockRoot, getBlockRootAtSlot(config, state, data.slot));
   const isMatchingTarget = config.types.Root.equals(data.target.root, getBlockRoot(config, state, data.target.epoch));
+  // a timely head is only be set if the target is _also_ matching
+  const isMatchingHead =
+    config.types.Root.equals(data.beaconBlockRoot, getBlockRootAtSlot(config, state, data.slot)) && isMatchingTarget;
 
   // Retrieve the validator indices from the attestation participation bitfield
   const attestingIndices = epochCtx.getAttestingIndices(attestation.data, attestation.aggregationBits);
@@ -149,9 +152,9 @@ export function processAttestationParticipation(
     const status = epochParticipation.getStatus(index) as IParticipationStatus;
     const newStatus = {
       // a timely head is only be set if the target is _also_ matching
-      timelyHead: status.timelyHead || (isMatchingTarget && isMatchingHead),
+      timelyHead: isMatchingHead || status.timelyHead,
       timelySource: true,
-      timelyTarget: status.timelyTarget || isMatchingTarget,
+      timelyTarget: isMatchingTarget || status.timelyTarget,
     };
     epochParticipation.setStatus(index, newStatus);
 

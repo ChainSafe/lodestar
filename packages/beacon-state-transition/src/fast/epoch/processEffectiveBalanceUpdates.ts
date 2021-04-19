@@ -20,8 +20,8 @@ export function processEffectiveBalanceUpdates(
   const UPWARD_THRESHOLD = HYSTERESIS_INCREMENT * BigInt(HYSTERESIS_UPWARD_MULTIPLIER);
 
   // update effective balances with hysteresis
-  const flatValidators = validators.persistent.toArray();
-  const flatBalances = balances.persistent.toArray();
+  const flatValidators = process.validators ?? validators.persistent.toArray();
+  const flatBalances = process.balances ?? balances.persistent.toArray();
   for (let i = 0; i < flatValidators.length; i++) {
     const validator = flatValidators[i];
     const balance = flatBalances[i];
