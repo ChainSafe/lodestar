@@ -1,13 +1,11 @@
 import fs from "fs";
 import {promisify} from "util";
 import rimraf from "rimraf";
-import {join} from "path";
+import path from "path";
 import {GENESIS_SLOT} from "@chainsafe/lodestar-params";
 import {BeaconNode, BeaconDb, initStateFromAnchorState, createNodeJsLibp2p, nodeUtils} from "@chainsafe/lodestar";
-import {Validator} from "@chainsafe/lodestar-validator";
+import {IApiClient, SlashingProtection, Validator} from "@chainsafe/lodestar-validator";
 import {LevelDbController} from "@chainsafe/lodestar-db";
-import {getInteropValidator} from "../validator/utils/interop/validator";
-import {getValidatorApiClient} from "./utils/validator";
 import {onGracefulShutdown} from "../../util/process";
 import {createEnr, createPeerId} from "../../config";
 import {IGlobalArgs} from "../../options";
@@ -16,6 +14,8 @@ import {initializeOptionsAndConfig} from "../init/handler";
 import {mkdir, initBLS, getCliLogger} from "../../util";
 import {getBeaconPaths} from "../beacon/paths";
 import {getValidatorPaths} from "../validator/paths";
+import {interopSecretKey} from "@chainsafe/lodestar-beacon-state-transition";
+import {SecretKey} from "@chainsafe/bls";
 
 /**
  * Run a beacon node with validator
@@ -55,7 +55,7 @@ export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
   let anchorState;
   if (args.genesisValidators) {
     anchorState = await nodeUtils.initDevState(config, db, args.genesisValidators);
-    nodeUtils.storeSSZState(config, anchorState, join(args.rootDir, "dev", "genesis.ssz"));
+    nodeUtils.storeSSZState(config, anchorState, path.join(args.rootDir, "dev", "genesis.ssz"));
   } else if (args.genesisStateFile) {
     anchorState = await initStateFromAnchorState(
       config,
@@ -63,7 +63,9 @@ export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
       logger,
       config
         .getTypes(GENESIS_SLOT)
-        .BeaconState.createTreeBackedFromBytes(await fs.promises.readFile(join(args.rootDir, args.genesisStateFile)))
+        .BeaconState.createTreeBackedFromBytes(
+          await fs.promises.readFile(path.join(args.rootDir, args.genesisStateFile))
+        )
     );
   } else {
     throw new Error("Unable to start node: no available genesis state");
@@ -80,7 +82,9 @@ export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
     anchorState,
   });
 
+  const onGracefulShutdownCbs: (() => Promise<void>)[] = [];
   onGracefulShutdown(async () => {
+    for (const cb of onGracefulShutdownCbs) await cb();
     await Promise.all([Promise.all(validators.map((v) => v.stop())), node.close()]);
     if (args.reset) {
       logger.info("Cleaning db directories");
@@ -90,11 +94,24 @@ export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
   }, logger.info.bind(logger));
 
   if (args.startValidators) {
+    const secretKeys: SecretKey[] = [];
     const [fromIndex, toIndex] = args.startValidators.split(":").map((s) => parseInt(s));
-    const api = getValidatorApiClient(args.server, logger, node);
     for (let i = fromIndex; i < toIndex; i++) {
-      validators.push(getInteropValidator(node.config, validatorsDbDir, {api, logger}, i));
+      secretKeys.push(interopSecretKey(i));
     }
-    await Promise.all(validators.map((validator) => validator.start()));
+
+    const dbPath = path.join(validatorsDbDir, "validators");
+    fs.mkdirSync(dbPath, {recursive: true});
+
+    const api = args.server === "memory" ? (node.api as IApiClient) : args.server;
+    const slashingProtection = new SlashingProtection({
+      config: config,
+      controller: new LevelDbController({name: dbPath}, {logger}),
+    });
+
+    const validator = new Validator({config, slashingProtection, api, logger, secretKeys});
+
+    onGracefulShutdownCbs.push(() => validator.stop());
+    await validator.start();
   }
 }
