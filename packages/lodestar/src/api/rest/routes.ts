@@ -6,7 +6,7 @@ import {debugRoutes} from "./debug";
 import {eventsRoutes} from "./events";
 import {lodestarRoutes} from "./lodestar";
 import {nodeRoutes} from "./node";
-import {ApiController} from "./types";
+import {ApiController, RouteConfig} from "./types";
 import {validatorRoutes} from "./validator";
 
 const routesGroups = [
@@ -46,6 +46,7 @@ function registerRoutesToServer(
           method: route.method,
           handler: route.handler,
           schema: route.schema,
+          config: {operationId: route.id} as RouteConfig,
         });
       }
     },

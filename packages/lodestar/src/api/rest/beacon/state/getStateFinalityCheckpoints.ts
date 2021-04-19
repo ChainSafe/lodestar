@@ -6,6 +6,7 @@ import {ApiController} from "../../types";
 export const getStateFinalityCheckpoints: ApiController<null, {stateId: StateId}> = {
   url: "/states/:stateId/finality_checkpoints",
   method: "GET",
+  id: "getStateFinalityCheckpoints",
 
   handler: async function (req) {
     const state = await this.api.beacon.state.getState(req.params.stateId);

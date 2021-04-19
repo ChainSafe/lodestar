@@ -2,12 +2,13 @@ import fastify, {FastifyInstance, ServerOptions} from "fastify";
 import fastifyCors from "fastify-cors";
 import {FastifySSEPlugin} from "fastify-sse-v2";
 import {IncomingMessage, Server, ServerResponse} from "http";
-import * as querystring from "querystring";
+import querystring from "querystring";
 import {IRestApiModules} from "./interface";
 import {FastifyLogger} from "./logger";
 import {defaultApiRestOptions, IRestApiOptions} from "./options";
 import {registerRoutes} from "./routes";
 import {errorHandler} from "./errorHandler";
+import {RouteConfig} from "./types";
 
 /**
  * REST API powered by `fastify` server.
@@ -71,6 +72,13 @@ function setupServer(opts: IRestApiOptions, modules: IRestApiModules): FastifyIn
   server.register(async function (instance) {
     registerRoutes(instance, enabledApiNamespaces);
   });
+
+  if (modules.metrics) {
+    server.addHook("onResponse", async (request, reply) => {
+      const config = reply.context.config as RouteConfig;
+      modules.metrics?.apiRestResponseTime.observe({operationId: config.operationId}, reply.getResponseTime() / 1000);
+    });
+  }
 
   return server;
 }

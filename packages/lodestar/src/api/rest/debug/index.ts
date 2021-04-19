@@ -1,4 +1,4 @@
-import {getHeads} from "./beacon/getHeads";
-import {getState} from "./beacon/getStates";
+import {getDebugChainHeads} from "./getDebugChainHeads";
+import {getState} from "./getStates";
 
-export const debugRoutes = [getHeads, getState];
+export const debugRoutes = [getDebugChainHeads, getState];

@@ -10,6 +10,7 @@ type Query = {
 export const produceAttestationData: ApiController<Query> = {
   url: "/attestation_data",
   method: "GET",
+  id: "produceAttestationData",
 
   handler: async function (req) {
     const attestationData = await this.api.validator.produceAttestationData(req.query.committee_index, req.query.slot);

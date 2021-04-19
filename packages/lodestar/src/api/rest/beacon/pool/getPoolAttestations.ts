@@ -5,6 +5,7 @@ import {ApiController} from "../../types";
 export const getPoolAttestations: ApiController<{slot: string; committee_index: string}> = {
   url: "/pool/attestations",
   method: "GET",
+  id: "getPoolAttestations",
 
   handler: async function (req) {
     const attestations = await this.api.beacon.pool.getAttestations({

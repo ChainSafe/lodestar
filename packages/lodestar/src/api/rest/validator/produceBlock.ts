@@ -11,9 +11,10 @@ type Query = {
   grafitti: string;
 };
 
-export const produceBlockController: ApiController<Query, Params> = {
+export const produceBlock: ApiController<Query, Params> = {
   url: "/blocks/:slot",
   method: "GET",
+  id: "produceBlock",
 
   handler: async function (req) {
     const block = await this.api.validator.produceBlock(

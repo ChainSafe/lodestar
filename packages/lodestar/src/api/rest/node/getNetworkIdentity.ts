@@ -5,6 +5,7 @@ import {ApiController} from "../types";
 export const getNetworkIdentity: ApiController = {
   url: "/identity",
   method: "GET",
+  id: "getNetworkIdentity",
 
   handler: async function () {
     const identity = await this.api.node.getNodeIdentity();

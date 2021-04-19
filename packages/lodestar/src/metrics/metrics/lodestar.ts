@@ -89,5 +89,13 @@ export function createLodestarMetrics(register: RegistryMetricCreator, metadata:
       help: "Time to process block processor queue job in seconds",
       labelNames: ["topic"],
     }),
+
+    apiRestResponseTime: register.histogram<"operationId">({
+      name: "lodestar_api_rest_response_time_seconds",
+      help: "Time to fullfill a request to the REST api labeled by operationId",
+      labelNames: ["operationId"],
+      // Request times range between 1ms to 100ms in normal conditions. Can get to 1-5 seconds if overloaded
+      buckets: [0.01, 0.1, 0.5, 1, 5, 10],
+    }),
   };
 }
