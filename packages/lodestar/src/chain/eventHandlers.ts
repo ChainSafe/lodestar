@@ -240,6 +240,7 @@ export async function onBlock(
       }),
     ]);
   }
+  // if reprocess job, don't have to reprocess block operations or pending blocks
   if (!job.reprocess) {
     await this.db.processBlockOperations(block);
     await Promise.all(
