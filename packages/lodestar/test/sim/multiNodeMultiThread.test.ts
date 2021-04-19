@@ -103,11 +103,11 @@ describe("Run multi node multi thread interop validators (no eth1) until checkpo
           )
         );
         console.log("Success: Terminating workers");
-        await Promise.all(workers.map((worker) => worker.terminate()));
       } catch (e) {
         console.log("Failure: Terminating workers. Error:", e);
-        await Promise.all(workers.map((worker) => worker.terminate()));
         throw e;
+      } finally {
+        await Promise.all(workers.map((worker) => worker.terminate()));
       }
     });
   }
