@@ -13,17 +13,16 @@
  * 7. Wait for new role
  * 8. Repeat step 5
  */
-import BlockProposingService from "./services/block";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {IApiClient} from "./api";
-import {AttestationService} from "./services/attestation";
+import {phase0} from "@chainsafe/lodestar-types";
 import {fromHex, ILogger} from "@chainsafe/lodestar-utils";
+import {computeSigningRoot, computeDomain} from "@chainsafe/lodestar-beacon-state-transition";
+import BlockProposingService from "./services/block";
+import {ApiClientProvider, IApiClientProvider} from "./api";
+import {AttestationService} from "./services/attestation";
 import {IValidatorOptions} from "./options";
-import {ApiClientOverRest} from "./api/impl/rest/apiClient";
 import {ISlashingProtection} from "./slashingProtection";
 import {mapSecretKeysToValidators} from "./services/utils";
-import {computeSigningRoot, computeDomain} from "@chainsafe/lodestar-beacon-state-transition";
-import {phase0} from "@chainsafe/lodestar-types";
 
 /**
  * Main class for the Validator client.
@@ -31,7 +30,7 @@ import {phase0} from "@chainsafe/lodestar-types";
 export class Validator {
   private opts: IValidatorOptions;
   private config: IBeaconConfig;
-  private apiClient: IApiClient;
+  private provider: IApiClientProvider;
   private blockService?: BlockProposingService;
   private attestationService?: AttestationService;
   private slashingProtection: ISlashingProtection;
@@ -42,7 +41,7 @@ export class Validator {
     this.config = opts.config;
     this.logger = opts.logger;
     this.slashingProtection = opts.slashingProtection;
-    this.apiClient = this.initApiClient(opts.api);
+    this.provider = new ApiClientProvider(opts.config, opts.logger, opts.api);
   }
 
   /**
@@ -51,7 +50,7 @@ export class Validator {
   async start(): Promise<void> {
     await this.setup();
     this.logger.info("Waiting for chain start...");
-    this.apiClient.once("beaconChainStarted", this.run);
+    this.provider.once("beaconChainStarted", this.run);
   }
 
   /**
@@ -70,7 +69,7 @@ export class Validator {
    * Stops all validator functions.
    */
   async stop(): Promise<void> {
-    await this.apiClient.disconnect();
+    await this.provider.disconnect();
     if (this.attestationService) await this.attestationService.stop();
     if (this.blockService) await this.blockService.stop();
   }
@@ -79,25 +78,24 @@ export class Validator {
    * Perform a voluntary exit for the given validator by its key.
    */
   async voluntaryExit(publicKey: string, exitEpoch: number): Promise<void> {
-    await this.apiClient.connect();
+    await this.provider.connect();
 
-    const stateValidator = await this.apiClient.beacon.state.getStateValidator(
-      "head",
-      this.config.types.BLSPubkey.fromJson(publicKey)
-    );
+    const [stateValidator] = await this.provider.beacon.state.getStateValidators("head", {
+      indices: [this.config.types.BLSPubkey.fromJson(publicKey)],
+    });
     if (!stateValidator) throw new Error("Validator not found in beacon chain.");
 
-    const epoch = exitEpoch || this.apiClient.clock.currentEpoch;
+    const epoch = exitEpoch || this.provider.clock.currentEpoch;
 
     const voluntaryExit = {
       epoch,
       validatorIndex: stateValidator.index,
     };
 
-    const forkSchedule = await this.apiClient.configApi.getForkSchedule();
-    const fork = forkSchedule[0] || (await this.apiClient.beacon.state.getFork("head"));
+    const forkSchedule = await this.provider.config.getForkSchedule();
+    const fork = forkSchedule[0] || (await this.provider.beacon.state.getFork("head"));
     if (!fork) throw new Error("VoluntaryExit: Fork not found");
-    const genesisValidatorsRoot = (await this.apiClient.beacon.getGenesis())?.genesisValidatorsRoot;
+    const genesisValidatorsRoot = (await this.provider.beacon.getGenesis())?.genesisValidatorsRoot;
     const domain = computeDomain(
       this.config,
       this.config.params.DOMAIN_VOLUNTARY_EXIT,
@@ -118,21 +116,11 @@ export class Validator {
     };
 
     try {
-      await this.apiClient.beacon.pool.submitVoluntaryExit(signedVoluntaryExit);
+      await this.provider.beacon.pool.submitVoluntaryExit(signedVoluntaryExit);
       this.logger.info(`Submitted voluntary exit for ${publicKey} to the network`);
     } finally {
-      await this.apiClient.disconnect();
+      await this.provider.disconnect();
     }
-  }
-
-  /**
-   * Create and return a new rest API client.
-   */
-  private initApiClient(api: string | IApiClient): IApiClient {
-    if (typeof api === "string") {
-      return new ApiClientOverRest(this.config, api, this.logger);
-    }
-    return api;
   }
 
   /**
@@ -145,7 +133,7 @@ export class Validator {
     this.blockService = new BlockProposingService(
       this.config,
       validators,
-      this.apiClient,
+      this.provider,
       this.slashingProtection,
       this.logger,
       this.opts.graffiti
@@ -154,7 +142,7 @@ export class Validator {
     this.attestationService = new AttestationService(
       this.config,
       validators,
-      this.apiClient,
+      this.provider,
       this.slashingProtection,
       this.logger
     );
@@ -164,7 +152,7 @@ export class Validator {
    * Establishes a connection to a specified beacon chain url.
    */
   private async setupAPI(): Promise<void> {
-    await this.apiClient.connect();
-    this.logger.info("RPC connection successfully established", {url: this.apiClient.url});
+    await this.provider.connect();
+    this.logger.info("RPC connection successfully established", {url: this.provider.url});
   }
 }

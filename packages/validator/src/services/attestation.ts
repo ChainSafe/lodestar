@@ -7,9 +7,7 @@ import {BLSSignature, Epoch, Root, phase0, Slot, ValidatorIndex} from "@chainsaf
 import {ILogger, prettyBytes} from "@chainsafe/lodestar-utils";
 import {fromHexString, List, toHexString} from "@chainsafe/ssz";
 import {AbortController, AbortSignal} from "abort-controller";
-import {IApiClient} from "../api";
-import {ClockEventType} from "../api/interface/clock";
-import {BeaconEventType} from "../api/interface/events";
+import {ClockEventType, BeaconEventType, IApiClientProvider} from "../api";
 import {ISlashingProtection} from "../slashingProtection";
 import {IAttesterDuty, PublicKeyHex, ValidatorAndSecret} from "../types";
 import {IValidatorFilters} from "../util";
@@ -22,7 +20,7 @@ import {getAggregationBits} from "./utils";
  */
 export class AttestationService {
   private readonly config: IBeaconConfig;
-  private readonly provider: IApiClient;
+  private readonly provider: IApiClientProvider;
   private readonly validators: Map<PublicKeyHex, ValidatorAndSecret>;
   private readonly slashingProtection: ISlashingProtection;
   private readonly logger: ILogger;
@@ -36,12 +34,12 @@ export class AttestationService {
   constructor(
     config: IBeaconConfig,
     validators: Map<PublicKeyHex, ValidatorAndSecret>,
-    rpcClient: IApiClient,
+    provider: IApiClientProvider,
     slashingProtection: ISlashingProtection,
     logger: ILogger
   ) {
     this.config = config;
-    this.provider = rpcClient;
+    this.provider = provider;
     this.validators = validators;
     this.slashingProtection = slashingProtection;
     this.logger = logger;

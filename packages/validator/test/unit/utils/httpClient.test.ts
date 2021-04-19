@@ -2,7 +2,6 @@ import {assert} from "chai";
 import Axios from "axios";
 import MockAdapter from "axios-mock-adapter";
 import {HttpClient} from "../../../src/util";
-import {testLogger} from "../../utils/logger";
 
 interface IUser {
   id?: number;
@@ -15,7 +14,7 @@ describe("httpClient test", () => {
 
   beforeEach(() => {
     mock = new MockAdapter(Axios);
-    httpClient = new HttpClient({}, {logger: testLogger()});
+    httpClient = new HttpClient({baseUrl: ""});
   });
 
   it("should handle successful GET request correctly", async () => {
