@@ -31,8 +31,8 @@
     "lint:fix": "yarn run lint --fix",
     "prepublishOnly": "yarn build",
     "test": "yarn run check-types",
-    "test:unit": "mocha 'test/**/*.test.ts'",
-    "test:e2e": "mocha 'test/**/*.test.ts'"
+    "test:unit": "mocha 'test/unit/**/*.test.ts'",
+    "test:e2e": "mocha 'test/e2e/**/*.test.ts'"
   },
   "repository": {
     "type": "git",

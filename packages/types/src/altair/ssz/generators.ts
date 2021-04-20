@@ -1,19 +1,14 @@
 import {
-  // TODO add these to params?
-  // NEXT_SYNC_COMMITTEE_INDEX,
-  // MAX_VALID_LIGHT_CLIENT_UPDATES,
-  // FINALIZED_ROOT_INDEX,
   IBeaconParams,
   JUSTIFICATION_BITS_LENGTH,
+  MAX_VALID_LIGHT_CLIENT_UPDATES,
+  FINALIZED_ROOT_INDEX_FLOORLOG2,
+  NEXT_SYNC_COMMITTEE_INDEX_FLOORLOG2,
 } from "@chainsafe/lodestar-params";
 import {BitVectorType, ContainerType, VectorType, ListType, RootType, BitListType} from "@chainsafe/ssz";
 import {IPhase0SSZTypes} from "../../phase0";
 import * as altair from "../types";
 import {IAltairSSZTypes} from "./interface";
-
-const NEXT_SYNC_COMMITTEE_INDEX = 0;
-const MAX_VALID_LIGHT_CLIENT_UPDATES = 0;
-const FINALIZED_ROOT_INDEX = 0;
 
 type LightClientTypesGenerator<T> = (
   params: IBeaconParams,
@@ -234,7 +229,7 @@ export const BeaconState: LightClientTypesGenerator<ContainerType<altair.BeaconS
   return container;
 };
 
-export const AltairSnapshot: LightClientTypesGenerator<ContainerType<altair.AltairSnapshot>> = (
+export const LightClientSnapshot: LightClientTypesGenerator<ContainerType<altair.LightClientSnapshot>> = (
   params,
   phase0Types,
   altairTypes
@@ -248,7 +243,7 @@ export const AltairSnapshot: LightClientTypesGenerator<ContainerType<altair.Alta
   });
 };
 
-export const AltairUpdate: LightClientTypesGenerator<ContainerType<altair.AltairUpdate>> = (
+export const LightClientUpdate: LightClientTypesGenerator<ContainerType<altair.LightClientUpdate>> = (
   params,
   phase0Types,
   altairTypes
@@ -259,12 +254,12 @@ export const AltairUpdate: LightClientTypesGenerator<ContainerType<altair.Altair
       nextSyncCommittee: altairTypes.SyncCommittee,
       nextSyncCommitteeBranch: new VectorType({
         elementType: phase0Types.Bytes32,
-        length: Math.log2(NEXT_SYNC_COMMITTEE_INDEX),
+        length: NEXT_SYNC_COMMITTEE_INDEX_FLOORLOG2,
       }),
       finalityHeader: altairTypes.BeaconBlockHeader,
       finalityBranch: new VectorType({
         elementType: phase0Types.Bytes32,
-        length: Math.log2(FINALIZED_ROOT_INDEX),
+        length: FINALIZED_ROOT_INDEX_FLOORLOG2,
       }),
       syncCommitteeBits: new BitVectorType({length: params.SYNC_COMMITTEE_SIZE}),
       syncCommitteeSignature: phase0Types.BLSSignature,
@@ -273,16 +268,16 @@ export const AltairUpdate: LightClientTypesGenerator<ContainerType<altair.Altair
   });
 };
 
-export const AltairStore: LightClientTypesGenerator<ContainerType<altair.AltairStore>> = (
+export const LightClientStore: LightClientTypesGenerator<ContainerType<altair.LightClientStore>> = (
   params,
   phase0Types,
   altairTypes
 ) => {
   return new ContainerType({
     fields: {
-      snapshot: altairTypes.AltairSnapshot,
+      snapshot: altairTypes.LightClientSnapshot,
       validUpdates: new ListType({
-        elementType: altairTypes.AltairUpdate,
+        elementType: altairTypes.LightClientUpdate,
         limit: MAX_VALID_LIGHT_CLIENT_UPDATES,
       }),
     },

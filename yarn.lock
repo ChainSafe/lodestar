@@ -1138,15 +1138,6 @@
     bls-eth-wasm "^0.4.4"
     randombytes "^2.1.0"
 
-"@chainsafe/bls@^5.1.1":
-  version "5.1.1"
-  resolved "https://registry.yarnpkg.com/@chainsafe/bls/-/bls-5.1.1.tgz#c4efab9d139c69a64b91dda51b9f2d997a8081dc"
-  integrity sha512-l8ep0BsX+8h3oRVtTUMcCPC1gaYn4AzsLfx5pjSkuFe0QwAuxSJsN/d+M6o0Knc9LnXATW276ACSEhJMB1x96A==
-  dependencies:
-    "@chainsafe/bls-keygen" "^0.3.0"
-    bls-eth-wasm "^0.4.4"
-    randombytes "^2.1.0"
-
 "@chainsafe/blst@^0.2.0":
   version "0.2.0"
   resolved "https://registry.yarnpkg.com/@chainsafe/blst/-/blst-0.2.0.tgz#5e2d2707c2c0d56ff077a00179a5255eaca14099"

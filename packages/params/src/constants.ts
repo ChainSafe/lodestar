@@ -5,12 +5,39 @@ export const BASE_REWARDS_PER_EPOCH = 4;
 export const DEPOSIT_CONTRACT_TREE_DEPTH = 32;
 export const JUSTIFICATION_BITS_LENGTH = 4;
 
-//TODO: use ssz to calculate Path(BeaconState)/'finalized_checkpoint'/'root'
-export const FINALIZED_ROOT_INDEX = 105;
-//TODO: use ssz to calculate Path(BeaconState)/'next_sync_committee'
-export const NEXT_SYNC_COMMITTEE_INDEX = 54;
-// BigInt(2 ** 64) - BigInt(1);
-export const MAX_VALID_LIGHT_CLIENT_UPDATES = Number.MAX_SAFE_INTEGER;
 export const MIN_SYNC_COMMITTEE_PARTICIPANTS = 1;
 //~27 hours
 export const LIGHT_CLIENT_UPDATE_TIMEOUT = 2 ** 13;
+
+// Lightclient pre-computed
+/**
+ * ```ts
+ * BigInt(2 ** 64) - BigInt(1);
+ * ```
+ * But approximated to `Number.MAX_SAFE_INTEGER`
+ */
+export const MAX_VALID_LIGHT_CLIENT_UPDATES = Number.MAX_SAFE_INTEGER;
+/**
+ * ```ts
+ * config.types.altair.BeaconState.getPathGindex(["finalizedCheckpoint", "root"])
+ * ```
+ */
+export const FINALIZED_ROOT_INDEX = 105;
+/**
+ * ```ts
+ * Math.floor(Math.log2(FINALIZED_ROOT_INDEX))
+ * ```
+ */
+export const FINALIZED_ROOT_INDEX_FLOORLOG2 = 6;
+/**
+ * ```ts
+ * config.types.altair.BeaconState.getPathGindex(["nextSyncCommittee"])
+ * ```
+ */
+export const NEXT_SYNC_COMMITTEE_INDEX = 55;
+/**
+ * ```ts
+ * Math.floor(Math.log2(NEXT_SYNC_COMMITTEE_INDEX))
+ * ```
+ */
+export const NEXT_SYNC_COMMITTEE_INDEX_FLOORLOG2 = 5;
