@@ -22,7 +22,11 @@ import {StateId} from "./interface";
 import {sleep, assert} from "@chainsafe/lodestar-utils";
 
 type ResolveStateIdOpts = {
-  fallbackToArchive?: boolean;
+  /**
+   * triggers a fetch of the nearest finalized state from the archive if the state at the desired
+   * stateId is not in the archive and run the state transition up to the desired slot
+   */
+  processNearestState?: boolean;
 };
 
 export async function resolveStateId(
@@ -194,7 +198,7 @@ async function stateBySlot(
   if (blockSummary) {
     return stateCache.get(blockSummary.stateRoot) ?? null;
   } else {
-    if (opts?.fallbackToArchive) {
+    if (opts?.processNearestState) {
       return await getFinalizedState(config, db, forkChoice, slot);
     }
     return await db.stateArchive.get(slot);
