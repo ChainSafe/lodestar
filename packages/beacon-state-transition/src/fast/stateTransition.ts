@@ -26,10 +26,7 @@ export function fastStateTransition(
   // process slots (including those with no blocks) since block
   switch (preFork) {
     case "phase0":
-      if (postState.slot < block.slot) {
-        // a cached checkpoint state doesn't need to process slots
-        processSlots(postState as CachedBeaconState<phase0.BeaconState>, block.slot);
-      }
+      processSlots(postState as CachedBeaconState<phase0.BeaconState>, block.slot);
       break;
     default:
       throw new Error(`Slot processing not implemented for fork ${preFork}`);
