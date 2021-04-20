@@ -26,6 +26,13 @@ export function computeDomain(
 }
 
 /**
+ * Return the ForkVersion at an epoch from a Fork type
+ */
+export function getForkVersion(fork: allForks.BeaconState["fork"], epoch: Epoch): Version {
+  return epoch < fork.epoch ? fork.previousVersion : fork.currentVersion;
+}
+
+/**
  * Return the signature domain (fork version concatenated with domain type) of a message.
  */
 export function getDomain(
@@ -35,6 +42,6 @@ export function getDomain(
   messageEpoch: Epoch | null = null
 ): Buffer {
   const epoch = messageEpoch || getCurrentEpoch(config, state);
-  const forkVersion = epoch < state.fork.epoch ? state.fork.previousVersion : state.fork.currentVersion;
+  const forkVersion = getForkVersion(state.fork, epoch);
   return computeDomain(config, domainType, forkVersion, state.genesisValidatorsRoot);
 }

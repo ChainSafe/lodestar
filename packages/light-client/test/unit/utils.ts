@@ -1,7 +1,7 @@
 import {SecretKey, Signature} from "@chainsafe/bls";
 import {computeDomain, computeSigningRoot} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {altair, Root, Slot} from "@chainsafe/lodestar-types";
+import {altair, Bytes4, Root, Slot} from "@chainsafe/lodestar-types";
 
 export function signAndAggregate(message: Uint8Array, sks: SecretKey[]): altair.SyncAggregate {
   const sigs = sks.map((sk) => sk.sign(message));
@@ -15,10 +15,10 @@ export function signAndAggregate(message: Uint8Array, sks: SecretKey[]): altair.
 export function getSyncAggregateSigningRoot(
   config: IBeaconConfig,
   genesisValidatorsRoot: Root,
+  forkVersion: Bytes4,
   syncAttestedBlockHeader: altair.BeaconBlockHeader
 ): Uint8Array {
-  const fork = config.types.altair.Fork.defaultValue();
-  const domain = computeDomain(config, config.params.DOMAIN_SYNC_COMMITTEE, fork.currentVersion, genesisValidatorsRoot);
+  const domain = computeDomain(config, config.params.DOMAIN_SYNC_COMMITTEE, forkVersion, genesisValidatorsRoot);
   return computeSigningRoot(config, config.types.altair.BeaconBlockHeader, syncAttestedBlockHeader, domain);
 }
 

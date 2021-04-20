@@ -1,11 +1,12 @@
 import {SecretKey} from "@chainsafe/bls";
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {altair} from "@chainsafe/lodestar-types";
-import {validateAltairUpdate} from "../../src/sync";
+import {FINALIZED_ROOT_INDEX, NEXT_SYNC_COMMITTEE_INDEX} from "@chainsafe/lodestar-params";
+import {validateAltairUpdate} from "../../src";
 import {defaultBeaconBlockHeader, getSyncAggregateSigningRoot, signAndAggregate} from "./utils";
 
 describe("validateAltairUpdate", () => {
-  const genesisValidatorsRoot = Buffer.alloc(32, 9);
+  const genValiRoot = Buffer.alloc(32, 9);
 
   it("Validate valid update", () => {
     // Update slot must > snapshot slot
@@ -14,20 +15,25 @@ describe("validateAltairUpdate", () => {
     const updateHeaderSlot = config.params.EPOCHS_PER_SYNC_COMMITTEE_PERIOD * config.params.SLOTS_PER_EPOCH + 1;
     const attestedHeaderSlot = updateHeaderSlot + 1;
 
-    const syncAttestedForkVersion = config.types.Bytes4.defaultValue();
-    const sks = Array.from({length: 2}).map((_, i) => SecretKey.fromBytes(Buffer.alloc(32, i + 1)));
+    const sks = Array.from({length: config.params.SYNC_COMMITTEE_SIZE}).map((_, i) =>
+      SecretKey.fromBytes(Buffer.alloc(32, i + 1))
+    );
     const pks = sks.map((sk) => sk.toPublicKey().toBytes());
 
     // Create a sync committee with the keys that will sign the `syncAggregate`
-    const nextSyncCommittee: altair.SyncCommittee = {pubkeys: pks, pubkeyAggregates: []};
+    const pubkeyAggregatesCount = Math.fround(
+      config.params.SYNC_COMMITTEE_SIZE / config.params.SYNC_PUBKEYS_PER_AGGREGATE
+    );
+    const nextSyncCommittee: altair.SyncCommittee = {
+      pubkeys: pks,
+      pubkeyAggregates: pks.slice(0, pubkeyAggregatesCount),
+    };
 
     // finalizedCheckpointState must have `nextSyncCommittee`
     const finalizedCheckpointState = config.types.altair.BeaconState.defaultTreeBacked();
     finalizedCheckpointState.nextSyncCommittee = nextSyncCommittee;
     // Prove it
-    const nextSyncCommitteeBranch = finalizedCheckpointState.tree.getSingleProof(
-      finalizedCheckpointState.type.getPathGindex(["nextSyncCommittee"])
-    );
+    const nextSyncCommitteeBranch = finalizedCheckpointState.tree.getSingleProof(BigInt(NEXT_SYNC_COMMITTEE_INDEX));
 
     // update.header must have stateRoot to finalizedCheckpointState
     const header = defaultBeaconBlockHeader(config, updateHeaderSlot);
@@ -40,15 +46,14 @@ describe("validateAltairUpdate", () => {
       root: config.types.altair.BeaconBlockHeader.hashTreeRoot(header),
     };
     // Prove it
-    const finalityBranch = syncAttestedState.tree.getSingleProof(
-      syncAttestedState.type.getPathGindex(["finalizedCheckpoint", "root"])
-    );
+    const finalityBranch = syncAttestedState.tree.getSingleProof(BigInt(FINALIZED_ROOT_INDEX));
 
     // finalityHeader must have stateRoot to syncAttestedState
     const syncAttestedBlockHeader = defaultBeaconBlockHeader(config, attestedHeaderSlot);
     syncAttestedBlockHeader.stateRoot = config.types.altair.BeaconState.hashTreeRoot(syncAttestedState);
 
-    const signingRoot = getSyncAggregateSigningRoot(config, genesisValidatorsRoot, syncAttestedBlockHeader);
+    const forkVersion = config.types.Bytes4.defaultValue();
+    const signingRoot = getSyncAggregateSigningRoot(config, genValiRoot, forkVersion, syncAttestedBlockHeader);
     const syncAggregate = signAndAggregate(signingRoot, sks);
 
     const update: altair.AltairUpdate = {
@@ -59,7 +64,7 @@ describe("validateAltairUpdate", () => {
       finalityBranch: finalityBranch,
       syncCommitteeBits: syncAggregate.syncCommitteeBits,
       syncCommitteeSignature: syncAggregate.syncCommitteeSignature,
-      forkVersion: syncAttestedForkVersion,
+      forkVersion,
     };
 
     const snapshot: altair.AltairSnapshot = {
@@ -68,6 +73,6 @@ describe("validateAltairUpdate", () => {
       nextSyncCommittee,
     };
 
-    validateAltairUpdate(config, snapshot, update, genesisValidatorsRoot);
+    validateAltairUpdate(config, snapshot, update, genValiRoot);
   });
 });

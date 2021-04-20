@@ -1,19 +1,14 @@
 import {
-  // TODO add these to params?
-  // NEXT_SYNC_COMMITTEE_INDEX,
-  // MAX_VALID_LIGHT_CLIENT_UPDATES,
-  // FINALIZED_ROOT_INDEX,
   IBeaconParams,
   JUSTIFICATION_BITS_LENGTH,
+  MAX_VALID_LIGHT_CLIENT_UPDATES,
+  FINALIZED_ROOT_INDEX_FLOORLOG2,
+  NEXT_SYNC_COMMITTEE_INDEX_FLOORLOG2,
 } from "@chainsafe/lodestar-params";
 import {BitVectorType, ContainerType, VectorType, ListType, RootType, BitListType} from "@chainsafe/ssz";
 import {IPhase0SSZTypes} from "../../phase0";
 import * as altair from "../types";
 import {IAltairSSZTypes} from "./interface";
-
-const NEXT_SYNC_COMMITTEE_INDEX = 0;
-const MAX_VALID_LIGHT_CLIENT_UPDATES = 0;
-const FINALIZED_ROOT_INDEX = 0;
 
 type LightClientTypesGenerator<T> = (
   params: IBeaconParams,
@@ -259,12 +254,12 @@ export const AltairUpdate: LightClientTypesGenerator<ContainerType<altair.Altair
       nextSyncCommittee: altairTypes.SyncCommittee,
       nextSyncCommitteeBranch: new VectorType({
         elementType: phase0Types.Bytes32,
-        length: Math.log2(NEXT_SYNC_COMMITTEE_INDEX),
+        length: NEXT_SYNC_COMMITTEE_INDEX_FLOORLOG2,
       }),
       finalityHeader: altairTypes.BeaconBlockHeader,
       finalityBranch: new VectorType({
         elementType: phase0Types.Bytes32,
-        length: Math.log2(FINALIZED_ROOT_INDEX),
+        length: FINALIZED_ROOT_INDEX_FLOORLOG2,
       }),
       syncCommitteeBits: new BitVectorType({length: params.SYNC_COMMITTEE_SIZE}),
       syncCommitteeSignature: phase0Types.BLSSignature,

@@ -1,15 +1,16 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {altair, BLSPubkey} from "@chainsafe/lodestar-types";
+import {altair} from "@chainsafe/lodestar-types";
 import {assert, intDiv, verifyMerkleBranch} from "@chainsafe/lodestar-utils";
+import {computeEpochAtSlot, computeDomain, computeSigningRoot} from "@chainsafe/lodestar-beacon-state-transition";
+import {verifyAggregate} from "@chainsafe/bls";
 import {
   FINALIZED_ROOT_INDEX,
   NEXT_SYNC_COMMITTEE_INDEX,
   MIN_SYNC_COMMITTEE_PARTICIPANTS,
+  FINALIZED_ROOT_INDEX_FLOORLOG2,
+  NEXT_SYNC_COMMITTEE_INDEX_FLOORLOG2,
 } from "@chainsafe/lodestar-params";
-import {verifyAggregate} from "@chainsafe/bls";
-import {computeEpochAtSlot, computeDomain, computeSigningRoot} from "@chainsafe/lodestar-beacon-state-transition";
-import {assertZeroHashes, floorlog2, getParticipantPubkeys} from "./utils";
-import {BitVector} from "@chainsafe/ssz";
+import {assertZeroHashes, getParticipantPubkeys} from "./utils";
 
 /**
  * Spec v1.0.1
@@ -33,9 +34,6 @@ export function validateAltairUpdate(
     throw Error("Update skips a sync committee period");
   }
 
-  const FINALIZED_ROOT_INDEX_LOG2 = floorlog2(FINALIZED_ROOT_INDEX);
-  const NEXT_SYNC_COMMITTEE_INDEX_LOG2 = floorlog2(NEXT_SYNC_COMMITTEE_INDEX);
-
   // Verify update header root is the finalized root of the finality header, if specified
   const emptyHeader = config.types.altair.BeaconBlockHeader.defaultValue();
   const finalityHeaderSpecified = !config.types.altair.BeaconBlockHeader.equals(update.finalityHeader, emptyHeader);
@@ -51,14 +49,14 @@ export function validateAltairUpdate(
       verifyMerkleBranch(
         config.types.altair.BeaconBlockHeader.hashTreeRoot(update.header),
         Array.from(update.finalityBranch).map((i) => i.valueOf() as Uint8Array),
-        FINALIZED_ROOT_INDEX_LOG2,
-        FINALIZED_ROOT_INDEX % 2 ** FINALIZED_ROOT_INDEX_LOG2,
+        FINALIZED_ROOT_INDEX_FLOORLOG2,
+        FINALIZED_ROOT_INDEX % 2 ** FINALIZED_ROOT_INDEX_FLOORLOG2,
         update.finalityHeader.stateRoot.valueOf() as Uint8Array
       ),
       "Invalid finality header merkle branch"
     );
   } else {
-    assertZeroHashes(update.finalityBranch, FINALIZED_ROOT_INDEX_LOG2, "finalityBranches");
+    assertZeroHashes(update.finalityBranch, FINALIZED_ROOT_INDEX_FLOORLOG2, "finalityBranches");
   }
 
   // Verify update next sync committee if the update period incremented
@@ -75,14 +73,14 @@ export function validateAltairUpdate(
       verifyMerkleBranch(
         config.types.altair.SyncCommittee.hashTreeRoot(update.nextSyncCommittee),
         Array.from(update.nextSyncCommitteeBranch).map((i) => i.valueOf() as Uint8Array),
-        NEXT_SYNC_COMMITTEE_INDEX_LOG2,
-        NEXT_SYNC_COMMITTEE_INDEX % 2 ** NEXT_SYNC_COMMITTEE_INDEX_LOG2,
+        NEXT_SYNC_COMMITTEE_INDEX_FLOORLOG2,
+        NEXT_SYNC_COMMITTEE_INDEX % 2 ** NEXT_SYNC_COMMITTEE_INDEX_FLOORLOG2,
         update.header.stateRoot.valueOf() as Uint8Array
       ),
       "Invalid next sync committee merkle branch"
     );
   } else {
-    assertZeroHashes(update.nextSyncCommitteeBranch, NEXT_SYNC_COMMITTEE_INDEX_LOG2, "nextSyncCommitteeBranches");
+    assertZeroHashes(update.nextSyncCommitteeBranch, NEXT_SYNC_COMMITTEE_INDEX_FLOORLOG2, "nextSyncCommitteeBranches");
   }
 
   // Verify sync committee has sufficient participants

@@ -1,10 +1,6 @@
 import {BLSPubkey, Root} from "@chainsafe/lodestar-types";
 import {ArrayLike, BitVector} from "@chainsafe/ssz";
 
-export function floorlog2(num: number): number {
-  return Math.floor(Math.log2(num));
-}
-
 export function sumBits(bits: ArrayLike<boolean>): number {
   let sum = 0;
   for (const bit of bits) {
