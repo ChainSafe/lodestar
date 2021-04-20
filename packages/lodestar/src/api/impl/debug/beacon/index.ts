@@ -27,6 +27,6 @@ export class DebugBeaconApi implements IDebugBeaconApi {
   }
 
   async getState(stateId: StateId): Promise<allForks.BeaconState> {
-    return await resolveStateId(this.config, this.chain, this.db, stateId, {processNearestState: true});
+    return await resolveStateId(this.config, this.chain, this.db, stateId, {regenFinalizedState: true});
   }
 }

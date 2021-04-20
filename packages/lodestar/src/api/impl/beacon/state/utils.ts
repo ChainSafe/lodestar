@@ -25,8 +25,9 @@ type ResolveStateIdOpts = {
   /**
    * triggers a fetch of the nearest finalized state from the archive if the state at the desired
    * stateId is not in the archive and run the state transition up to the desired slot
+   * NOTE: this is not related to chain.regen, which handles regenerating un-finalized states
    */
-  processNearestState?: boolean;
+  regenFinalizedState?: boolean;
 };
 
 export async function resolveStateId(
@@ -198,7 +199,7 @@ async function stateBySlot(
   if (blockSummary) {
     return stateCache.get(blockSummary.stateRoot) ?? null;
   } else {
-    if (opts?.processNearestState) {
+    if (opts?.regenFinalizedState) {
       return await getFinalizedState(config, db, forkChoice, slot);
     }
     return await db.stateArchive.get(slot);
