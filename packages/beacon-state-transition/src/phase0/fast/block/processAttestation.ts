@@ -3,9 +3,8 @@ import {allForks, phase0} from "@chainsafe/lodestar-types";
 import {computeEpochAtSlot, getBlockRoot, getBlockRootAtSlot} from "../../../util";
 import {CachedBeaconState} from "../../../fast";
 import {isValidIndexedAttestation} from "./isValidIndexedAttestation";
-import {MutableVector} from "@chainsafe/persistent-ts";
 import {IInclusionData} from "../../../fast/util/inclusionData";
-import {CachedEpochParticipation, IParticipationStatus} from "../../../fast/util/cachedEpochParticipation";
+import {IParticipationStatus} from "../../../fast/util/cachedEpochParticipation";
 
 export function processAttestation(
   state: CachedBeaconState<phase0.BeaconState>,
@@ -58,25 +57,16 @@ export function processAttestation(
   // Downstream logic is relative to the previous or current checkpoint
 
   // These are part of the state
-  let justifiedCheckpoint: phase0.Checkpoint,
-    epochAttestations: List<phase0.PendingAttestation>,
-    // These are not part of the state, merely additional caches that need updating
-    // In altair, epoch participation is included in the consensus state
-    epochParticipation: CachedEpochParticipation,
-    epochInclusion: MutableVector<IInclusionData>;
+  let justifiedCheckpoint: phase0.Checkpoint, epochAttestations: List<phase0.PendingAttestation>;
 
   if (targetEpoch === epochCtx.currentShuffling.epoch) {
     // current
     justifiedCheckpoint = state.currentJustifiedCheckpoint;
     epochAttestations = state.currentEpochAttestations;
-    epochParticipation = state.currentEpochParticipation;
-    epochInclusion = state.currentInclusionData!;
   } else {
     // previous
     justifiedCheckpoint = state.previousJustifiedCheckpoint;
     epochAttestations = state.previousEpochAttestations;
-    epochParticipation = state.previousEpochParticipation;
-    epochInclusion = state.previousInclusionData!;
   }
 
   const isMatchingSource = config.types.phase0.Checkpoint.equals(data.source, justifiedCheckpoint);
@@ -106,7 +96,7 @@ export function processAttestation(
 
   // This doesn't update the state, just state caches
   // It performs the function to altair's up-front participation tracking
-  processAttestationParticipation(state, epochParticipation, epochInclusion, pendingAttestation);
+  //processAttestationParticipation(state, epochParticipation, epochInclusion, pendingAttestation);
 
   // Add the PendingAttestation to the state
   // During epoch processing, we will rely on our participation cache to update balances, etc. instead of these attestations
@@ -116,8 +106,8 @@ export function processAttestation(
 
 export function processAttestationParticipation(
   state: CachedBeaconState<phase0.BeaconState>,
-  epochParticipation: CachedEpochParticipation,
-  epochInclusion: MutableVector<IInclusionData>,
+  epochParticipation: IParticipationStatus[],
+  epochInclusion: IInclusionData[],
   attestation: phase0.PendingAttestation
 ): void {
   const {config, epochCtx} = state;
@@ -149,19 +139,19 @@ export function processAttestationParticipation(
   const proposerIndex = attestation.proposerIndex;
 
   for (const index of attestingIndices) {
-    const status = epochParticipation.getStatus(index) as IParticipationStatus;
+    const status = epochParticipation[index];
     const newStatus = {
       // a timely head is only be set if the target is _also_ matching
       timelyHead: isMatchingHead || status.timelyHead,
       timelySource: true,
       timelyTarget: isMatchingTarget || status.timelyTarget,
     };
-    epochParticipation.setStatus(index, newStatus);
+    epochParticipation[index] = newStatus;
 
-    const inclusionData = epochInclusion.get(index) as IInclusionData;
+    const inclusionData = epochInclusion[index];
     const isLowerInclusionDelay = !inclusionData.inclusionDelay || inclusionDelay < inclusionData.inclusionDelay;
     if (isLowerInclusionDelay) {
-      epochInclusion.set(index, {inclusionDelay, proposerIndex});
+      epochInclusion[index] = {inclusionDelay, proposerIndex};
     }
   }
 }

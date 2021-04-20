@@ -1,3 +1,4 @@
+import {readonlyValues} from "@chainsafe/ssz";
 import {Epoch, ValidatorIndex, Gwei, allForks, phase0} from "@chainsafe/lodestar-types";
 import {intDiv} from "@chainsafe/lodestar-utils";
 
@@ -6,6 +7,8 @@ import {FAR_FUTURE_EPOCH} from "../../constants";
 import {IEpochStakeSummary} from "./epochStakeSummary";
 import {CachedBeaconState} from "./cachedBeaconState";
 import {IParticipationStatus} from "./cachedEpochParticipation";
+import {processAttestationParticipation} from "../../phase0/fast/block/processAttestation";
+import {IInclusionData} from "./inclusionData";
 
 /**
  * The AttesterStatus (and FlatValidator under status.validator) objects and
@@ -28,10 +31,13 @@ export interface IEpochProcess {
   exitQueueEnd: Epoch;
   exitQueueEndChurn: number;
   churnLimit: number;
+
   validators?: phase0.Validator[];
+  balances?: ArrayLike<bigint>;
   previousEpochParticipation?: IParticipationStatus[];
   currentEpochParticipation?: IParticipationStatus[];
-  balances?: ArrayLike<bigint>;
+  previousInclusionData?: IInclusionData[];
+  currentInclusionData?: IInclusionData[];
 }
 
 export function createIEpochProcess(): IEpochProcess {
@@ -65,6 +71,7 @@ export function prepareEpochProcessState<T extends allForks.BeaconState>(state: 
     EFFECTIVE_BALANCE_INCREMENT,
     EJECTION_BALANCE,
   } = config.params;
+  const forkName = config.getForkName(state.slot);
   const currentEpoch = epochCtx.currentShuffling.epoch;
   const prevEpoch = epochCtx.previousShuffling.epoch;
   out.currentEpoch = currentEpoch;
@@ -87,6 +94,34 @@ export function prepareEpochProcessState<T extends allForks.BeaconState>(state: 
   const flatValidators = (out.validators = validators.persistent.toArray());
   const flatPreviousEpochParticipation = (out.previousEpochParticipation = previousEpochParticipation.persistent.toArray());
   const flatCurrentEpochParticipation = (out.currentEpochParticipation = currentEpochParticipation.persistent.toArray());
+  const flatPreviousInclusionData = (out.previousInclusionData = epochCtx.previousInclusionData!.toArray());
+  const flatCurrentInclusionData = (out.currentInclusionData = epochCtx.currentInclusionData!.toArray());
+
+  switch (forkName) {
+    case "phase0":
+      for (const attestation of readonlyValues(
+        ((state as unknown) as CachedBeaconState<phase0.BeaconState>).previousEpochAttestations
+      )) {
+        processAttestationParticipation(
+          (state as unknown) as CachedBeaconState<phase0.BeaconState>,
+          flatPreviousEpochParticipation,
+          flatPreviousInclusionData,
+          attestation
+        );
+      }
+      for (const attestation of readonlyValues(
+        ((state as unknown) as CachedBeaconState<phase0.BeaconState>).currentEpochAttestations
+      )) {
+        processAttestationParticipation(
+          (state as unknown) as CachedBeaconState<phase0.BeaconState>,
+          flatCurrentEpochParticipation,
+          flatCurrentInclusionData,
+          attestation
+        );
+      }
+      break;
+  }
+
   for (let i = 0; i < flatValidators.length; i++) {
     const validator = flatValidators[i];
     const previousParticipation = flatPreviousEpochParticipation[i];

@@ -61,7 +61,7 @@ export function createCachedBeaconState<T extends allForks.BeaconState>(
     Array.from({length: cachedValidators.length}, () => ({timelyHead: false, timelySource: false, timelyTarget: false}))
   );
   const epochCtx = createEpochContext(config, state, cachedValidators, opts);
-  const cachedState = new Proxy(
+  return new Proxy(
     new BeaconStateContext(
       state.type as ContainerType<T>,
       state.tree,
@@ -73,37 +73,6 @@ export function createCachedBeaconState<T extends allForks.BeaconState>(
     ),
     (CachedBeaconStateProxyHandler as unknown) as ProxyHandler<BeaconStateContext<T>>
   ) as CachedBeaconState<T>;
-
-  const forkName = config.getForkName(state.slot);
-  if (forkName === "phase0") {
-    // initialize participation caches in phase0
-    const {
-      previousEpochAttestations,
-      previousEpochParticipation,
-      previousInclusionData,
-      currentEpochAttestations,
-      currentEpochParticipation,
-      currentInclusionData,
-    } = (cachedState as unknown) as CachedBeaconState<phase0.BeaconState>;
-
-    for (const pendingAttestation of previousEpochAttestations) {
-      processAttestationParticipation(
-        (cachedState as unknown) as CachedBeaconState<phase0.BeaconState>,
-        previousEpochParticipation,
-        previousInclusionData!,
-        pendingAttestation
-      );
-    }
-    for (const pendingAttestation of currentEpochAttestations) {
-      processAttestationParticipation(
-        (cachedState as unknown) as CachedBeaconState<phase0.BeaconState>,
-        currentEpochParticipation,
-        currentInclusionData!,
-        pendingAttestation
-      );
-    }
-  }
-  return cachedState;
 }
 
 export class BeaconStateContext<T extends allForks.BeaconState> {
