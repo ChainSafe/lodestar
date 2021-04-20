@@ -61,7 +61,9 @@ function attesterShufflingDecisionSlot(config: IBeaconConfig, state: BeaconState
 }
 
 /**
- * Returns the epoch at which the proposer shuffling was decided.
+ * Returns the epoch at which the attester shuffling was decided.
+ *
+ * Spec ref: https://github.com/ethereum/eth2.0-APIs/blob/46d2b82127cb1ffce51bbc748a7df2677fc0215a/apis/validator/duties/attester.yaml#L15
  *
  * Throws an error when:
  * - `EpochTooLow` when `requestedEpoch` is more than 1 prior to `currentEpoch`.
