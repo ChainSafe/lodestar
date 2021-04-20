@@ -22,7 +22,7 @@ import {StateId} from "./interface";
 import {sleep, assert} from "@chainsafe/lodestar-utils";
 
 type ResolveStateIdOpts = {
-  fallbackToArchive: boolean;
+  fallbackToArchive?: boolean;
 };
 
 export async function resolveStateId(
@@ -30,7 +30,7 @@ export async function resolveStateId(
   chain: IBeaconChain,
   db: IBeaconDb,
   stateId: StateId,
-  opts: ResolveStateIdOpts = {fallbackToArchive: false}
+  opts: ResolveStateIdOpts
 ): Promise<allForks.BeaconState> {
   const state = await resolveStateIdOrNull(config, chain, db, stateId, opts);
   if (!state) {
@@ -194,7 +194,7 @@ async function stateBySlot(
   if (blockSummary) {
     return stateCache.get(blockSummary.stateRoot) ?? null;
   } else {
-    if (opts.fallbackToArchive) {
+    if (opts?.fallbackToArchive) {
       return await getFinalizedState(config, db, forkChoice, slot);
     }
     return await db.stateArchive.get(slot);
@@ -243,7 +243,11 @@ async function getFinalizedState(
 
   // process blocks up to the requested slot
   for await (const block of db.blockArchive.valuesStream({gt: state.slot, lte: slot})) {
-    state = fast.fastStateTransition(state, block);
+    state = fast.fastStateTransition(state, block, {
+      verifyStateRoot: false,
+      verifyProposer: false,
+      verifySignatures: false,
+    });
     // yield to the event loop
     await sleep(0);
   }
