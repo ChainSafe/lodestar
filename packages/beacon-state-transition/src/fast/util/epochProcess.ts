@@ -94,8 +94,14 @@ export function prepareEpochProcessState<T extends allForks.BeaconState>(state: 
   const flatValidators = (out.validators = validators.persistent.toArray());
   const flatPreviousEpochParticipation = (out.previousEpochParticipation = previousEpochParticipation.persistent.toArray());
   const flatCurrentEpochParticipation = (out.currentEpochParticipation = currentEpochParticipation.persistent.toArray());
-  const flatPreviousInclusionData = (out.previousInclusionData = epochCtx.previousInclusionData!.toArray());
-  const flatCurrentInclusionData = (out.currentInclusionData = epochCtx.currentInclusionData!.toArray());
+  const flatPreviousInclusionData = (out.previousInclusionData = Array.from({length: flatValidators.length}, () => ({
+    proposerIndex: -1,
+    inclusionDelay: 0,
+  })));
+  const flatCurrentInclusionData = (out.currentInclusionData = Array.from({length: flatValidators.length}, () => ({
+    proposerIndex: -1,
+    inclusionDelay: 0,
+  })));
 
   switch (forkName) {
     case "phase0":

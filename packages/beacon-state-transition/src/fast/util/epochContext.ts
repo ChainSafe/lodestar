@@ -15,7 +15,6 @@ import {
 import {computeEpochShuffling, IEpochShuffling} from "./epochShuffling";
 import {MutableVector} from "@chainsafe/persistent-ts";
 import {CachedValidatorList} from "./cachedValidatorList";
-import {IInclusionData} from "./inclusionData";
 
 export type EpochContextOpts = {
   pubkey2index?: PubkeyIndexMap;
@@ -69,18 +68,6 @@ export function createEpochContext(
   const nextShuffling = computeEpochShuffling(config, state, indicesBounded, nextEpoch);
   const proposers = computeProposers(config, state, currentShuffling);
 
-  // phase0 inclusion data
-  let previousInclusionData, currentInclusionData;
-  const forkName = config.getForkName(state.slot);
-  if (forkName === "phase0") {
-    previousInclusionData = MutableVector.from(
-      Array.from({length: state.validators.length}, () => ({proposerIndex: -1, inclusionDelay: 0}))
-    );
-    currentInclusionData = MutableVector.from(
-      Array.from({length: state.validators.length}, () => ({proposerIndex: -1, inclusionDelay: 0}))
-    );
-  }
-
   return new EpochContext({
     config,
     pubkey2index,
@@ -89,8 +76,6 @@ export function createEpochContext(
     previousShuffling,
     currentShuffling,
     nextShuffling,
-    previousInclusionData,
-    currentInclusionData,
   });
 }
 
@@ -162,20 +147,6 @@ export function rotateEpochs(
   ]);
   epochCtx.nextShuffling = computeEpochShuffling(epochCtx.config, state, indicesBounded, nextEpoch);
   epochCtx.proposers = computeProposers(epochCtx.config, state, epochCtx.currentShuffling);
-
-  const forkName = epochCtx.config.getForkName(state.slot);
-  if (forkName === "phase0") {
-    epochCtx.previousInclusionData = epochCtx.currentInclusionData;
-    epochCtx.currentInclusionData = MutableVector.from(
-      Array.from({length: epochCtx.previousInclusionData!.length}, () => ({
-        proposerIndex: -1,
-        inclusionDelay: 0,
-      }))
-    );
-  } else {
-    epochCtx.previousInclusionData = undefined;
-    epochCtx.currentInclusionData = undefined;
-  }
 }
 
 interface IEpochContextParams {
@@ -186,9 +157,6 @@ interface IEpochContextParams {
   previousShuffling: IEpochShuffling;
   currentShuffling: IEpochShuffling;
   nextShuffling: IEpochShuffling;
-
-  previousInclusionData?: MutableVector<IInclusionData>;
-  currentInclusionData?: MutableVector<IInclusionData>;
 }
 
 /**
@@ -213,10 +181,6 @@ export class EpochContext {
   currentShuffling: IEpochShuffling;
   nextShuffling: IEpochShuffling;
 
-  // For phase0, cache inclusion data, will be updated per processed attestation
-  previousInclusionData?: MutableVector<IInclusionData>;
-  currentInclusionData?: MutableVector<IInclusionData>;
-
   constructor(params: IEpochContextParams) {
     this.config = params.config;
     this.pubkey2index = params.pubkey2index;
@@ -225,8 +189,6 @@ export class EpochContext {
     this.previousShuffling = params.previousShuffling;
     this.currentShuffling = params.currentShuffling;
     this.nextShuffling = params.nextShuffling;
-    this.previousInclusionData = params.previousInclusionData;
-    this.currentInclusionData = params.currentInclusionData;
   }
 
   /**
@@ -236,10 +198,7 @@ export class EpochContext {
     // warning: pubkey cache is not copied, it is shared, as eth1 is not expected to reorder validators.
     // Shallow copy all data from current epoch context to the next
     // All data is completely replaced, or only-appended
-    const epochCtx = new EpochContext(this);
-    epochCtx.previousInclusionData = epochCtx.previousInclusionData?.clone();
-    epochCtx.currentInclusionData = epochCtx.currentInclusionData?.clone();
-    return epochCtx;
+    return new EpochContext(this);
   }
 
   /**

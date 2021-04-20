@@ -73,8 +73,6 @@ function setStateCachesAsTransient(state: CachedBeaconState<allForks.BeaconState
   state.balances.persistent.asTransient();
   state.previousEpochParticipation.persistent.asTransient();
   state.currentEpochParticipation.persistent.asTransient();
-  state.previousInclusionData?.asTransient();
-  state.currentInclusionData?.asTransient();
 }
 
 /**
@@ -85,6 +83,4 @@ function setStateCachesAsPersistent(state: CachedBeaconState<allForks.BeaconStat
   state.balances.persistent.asPersistent();
   state.previousEpochParticipation.persistent.asPersistent();
   state.currentEpochParticipation.persistent.asPersistent();
-  state.previousInclusionData?.asPersistent();
-  state.currentInclusionData?.asPersistent();
 }

@@ -10,7 +10,7 @@ import {
   readonlyValues,
   TreeBacked,
 } from "@chainsafe/ssz";
-import {allForks, ParticipationFlags, phase0} from "@chainsafe/lodestar-types";
+import {allForks, ParticipationFlags} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Tree} from "@chainsafe/persistent-merkle-tree";
 import {MutableVector} from "@chainsafe/persistent-ts";
@@ -23,7 +23,6 @@ import {
   CachedEpochParticipationProxyHandler,
   IParticipationStatus,
 } from "./cachedEpochParticipation";
-import {processAttestationParticipation} from "../../phase0/fast/block/processAttestation";
 
 /**
  * `BeaconState` with various caches
