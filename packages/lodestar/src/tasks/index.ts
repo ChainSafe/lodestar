@@ -3,6 +3,7 @@
  */
 
 import {phase0} from "@chainsafe/lodestar-types";
+import {AbortSignal} from "abort-controller";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils";
 
@@ -13,6 +14,7 @@ import {StatesArchiver} from "./tasks/archiveStates";
 import {IBeaconSync} from "../sync";
 import {InteropSubnetsJoiningTask} from "./tasks/interopSubnetsJoiningTask";
 import {INetwork, NetworkEvent} from "../network";
+import {JobQueue} from "../util/queue";
 
 export interface ITasksModules {
   db: IBeaconDb;
@@ -32,11 +34,21 @@ export class TasksService {
   private readonly chain: IBeaconChain;
   private readonly network: INetwork;
   private readonly logger: ILogger;
+  private jobQueue: JobQueue;
 
   private readonly statesArchiver: StatesArchiver;
   private readonly interopSubnetsTask: InteropSubnetsJoiningTask;
 
-  constructor(config: IBeaconConfig, modules: ITasksModules) {
+  constructor({
+    config,
+    signal,
+    maxLength = 256,
+    ...modules
+  }: ITasksModules & {
+    config: IBeaconConfig;
+    signal: AbortSignal;
+    maxLength?: number;
+  }) {
     this.config = config;
     this.db = modules.db;
     this.chain = modules.chain;
@@ -48,6 +60,7 @@ export class TasksService {
       network: this.network,
       logger: this.logger,
     });
+    this.jobQueue = new JobQueue({maxLength, signal});
   }
 
   start(): void {
@@ -76,6 +89,10 @@ export class TasksService {
   };
 
   private onFinalizedCheckpoint = async (finalized: phase0.Checkpoint): Promise<void> => {
+    return this.jobQueue.push(async () => await this.processFinalizedCheckpoint(finalized));
+  };
+
+  private processFinalizedCheckpoint = async (finalized: phase0.Checkpoint): Promise<void> => {
     try {
       await new ArchiveBlocksTask(
         this.config,
