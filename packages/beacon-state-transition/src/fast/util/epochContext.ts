@@ -9,6 +9,7 @@ import {
   computeEpochAtSlot,
   computeProposerIndex,
   computeStartSlotAtEpoch,
+  getAttestingIndicesFromCommittee,
   getSeed,
   isAggregatorFromCommitteeLength,
 } from "../../util";
@@ -67,7 +68,6 @@ export function createEpochContext(
   }
   const nextShuffling = computeEpochShuffling(config, state, indicesBounded, nextEpoch);
   const proposers = computeProposers(config, state, currentShuffling);
-
   return new EpochContext({
     config,
     pubkey2index,
@@ -167,8 +167,6 @@ interface IEpochContextParams {
  * available.
  **/
 export class EpochContext {
-  config: IBeaconConfig;
-
   // TODO: this is a hack, we need a safety mechanism in case a bad eth1 majority vote is in,
   // or handle non finalized data differently, or use an immutable.js structure for cheap copies
   // Warning: may contain pubkeys that do not yet exist in the current state, but do in a later processed state.
@@ -180,6 +178,7 @@ export class EpochContext {
   previousShuffling: IEpochShuffling;
   currentShuffling: IEpochShuffling;
   nextShuffling: IEpochShuffling;
+  config: IBeaconConfig;
 
   constructor(params: IEpochContextParams) {
     this.config = params.config;
@@ -247,19 +246,9 @@ export class EpochContext {
     };
   }
 
-  getAttestingIndices(data: phase0.AttestationData, aggregationBits: BitList): ValidatorIndex[] {
+  getAttestingIndices(data: phase0.AttestationData, bits: BitList): ValidatorIndex[] {
     const committee = this.getBeaconCommittee(data.slot, data.index);
-    //return getAttestingIndicesFromCommittee(committee, Array.from(readonlyValues(bits)) as List<boolean>);
-
-    const bits = Array.from(readonlyValues(aggregationBits));
-    // No need for a Set, the indices in the committee are already unique.
-    const attestingIndices: ValidatorIndex[] = [];
-    for (const [i, index] of committee.entries()) {
-      if (bits[i]) {
-        attestingIndices.push(index);
-      }
-    }
-    return attestingIndices.sort((a, b) => a - b);
+    return getAttestingIndicesFromCommittee(committee, Array.from(readonlyValues(bits)) as List<boolean>);
   }
 
   /**
