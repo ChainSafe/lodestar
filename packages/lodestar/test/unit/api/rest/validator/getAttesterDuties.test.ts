@@ -6,6 +6,7 @@ import {ApiResponseBody, urlJoin} from "../utils";
 import {setupRestApiTestServer, VALIDATOR_PREFIX} from "../index.test";
 import {SinonStubbedInstance} from "sinon";
 import {RestApi, ValidatorApi} from "../../../../../src/api";
+import {ZERO_HASH} from "../../../../../src/constants";
 
 describe("rest - validator - getAttesterDuties", function () {
   let restApi: RestApi;
@@ -17,10 +18,10 @@ describe("rest - validator - getAttesterDuties", function () {
   });
 
   it("should succeed", async function () {
-    validatorStub.getAttesterDuties.resolves([
-      config.types.phase0.AttesterDuty.defaultValue(),
-      config.types.phase0.AttesterDuty.defaultValue(),
-    ]);
+    validatorStub.getAttesterDuties.resolves({
+      dependentRoot: ZERO_HASH,
+      data: [config.types.phase0.AttesterDuty.defaultValue(), config.types.phase0.AttesterDuty.defaultValue()],
+    });
     const response = await supertest(restApi.server.server)
       .post(urlJoin(VALIDATOR_PREFIX, getAttesterDuties.url.replace(":epoch", "0")))
       .send(["1", "4"])
@@ -32,10 +33,10 @@ describe("rest - validator - getAttesterDuties", function () {
   });
 
   it("invalid epoch", async function () {
-    validatorStub.getAttesterDuties.resolves([
-      config.types.phase0.AttesterDuty.defaultValue(),
-      config.types.phase0.AttesterDuty.defaultValue(),
-    ]);
+    validatorStub.getAttesterDuties.resolves({
+      dependentRoot: ZERO_HASH,
+      data: [config.types.phase0.AttesterDuty.defaultValue(), config.types.phase0.AttesterDuty.defaultValue()],
+    });
     await supertest(restApi.server.server)
       .post(urlJoin(VALIDATOR_PREFIX, getAttesterDuties.url.replace(":epoch", "a")))
       .send(["1", "4"])
@@ -44,10 +45,10 @@ describe("rest - validator - getAttesterDuties", function () {
   });
 
   it("no validator indices", async function () {
-    validatorStub.getAttesterDuties.resolves([
-      config.types.phase0.AttesterDuty.defaultValue(),
-      config.types.phase0.AttesterDuty.defaultValue(),
-    ]);
+    validatorStub.getAttesterDuties.resolves({
+      dependentRoot: ZERO_HASH,
+      data: [config.types.phase0.AttesterDuty.defaultValue(), config.types.phase0.AttesterDuty.defaultValue()],
+    });
     await supertest(restApi.server.server)
       .post(urlJoin(VALIDATOR_PREFIX, getAttesterDuties.url.replace(":epoch", "1")))
       .send([])
@@ -56,10 +57,10 @@ describe("rest - validator - getAttesterDuties", function () {
   });
 
   it("invalid validator index", async function () {
-    validatorStub.getAttesterDuties.resolves([
-      config.types.phase0.AttesterDuty.defaultValue(),
-      config.types.phase0.AttesterDuty.defaultValue(),
-    ]);
+    validatorStub.getAttesterDuties.resolves({
+      dependentRoot: ZERO_HASH,
+      data: [config.types.phase0.AttesterDuty.defaultValue(), config.types.phase0.AttesterDuty.defaultValue()],
+    });
     await supertest(restApi.server.server)
       .post(urlJoin(VALIDATOR_PREFIX, getAttesterDuties.url.replace(":epoch", "1")))
       .send([1, "a"])

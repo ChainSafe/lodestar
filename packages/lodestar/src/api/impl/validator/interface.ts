@@ -7,8 +7,8 @@ import {BLSSignature, CommitteeIndex, Epoch, Root, phase0, Slot, ValidatorIndex}
  * The API interface defines the calls that can be made from a Validator
  */
 export interface IValidatorApi {
-  getProposerDuties(epoch: Epoch): Promise<phase0.ProposerDuty[]>;
-  getAttesterDuties(epoch: Epoch, validatorIndices: ValidatorIndex[]): Promise<phase0.AttesterDuty[]>;
+  getProposerDuties(epoch: Epoch): Promise<phase0.ProposerDutiesApi>;
+  getAttesterDuties(epoch: Epoch, validatorIndices: ValidatorIndex[]): Promise<phase0.AttesterDutiesApi>;
   /**
    * Requests a BeaconNode to produce a valid block,
    * which can then be signed by a ValidatorClient.

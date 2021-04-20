@@ -20,6 +20,7 @@ import {SinonStubbedApi} from "../../utils/apiStub";
 import {generateFork} from "../../utils/fork";
 import {testLogger} from "../../utils/logger";
 
+const ZERO_HASH = Buffer.alloc(32, 0);
 const clock = sinon.useFakeTimers({now: Date.now(), shouldAdvanceTime: true, toFake: ["setTimeout"]});
 
 describe("validator attestation service", function () {
@@ -59,7 +60,7 @@ describe("validator attestation service", function () {
       slashingProtectionStub,
       logger
     );
-    rpcClientStub.validator.getAttesterDuties.resolves([]);
+    rpcClientStub.validator.getAttesterDuties.resolves({dependentRoot: ZERO_HASH, data: []});
     const defaultValidator = config.types.phase0.ValidatorResponse.defaultValue();
     rpcClientStub.beacon.state.getStateValidators.resolves([
       {...defaultValidator, validator: {...defaultValidator.validator, pubkey: secretKeys[0].toPublicKey().toBytes()}},
@@ -86,7 +87,7 @@ describe("validator attestation service", function () {
       validatorIndex: 0,
       pubkey: secretKeys[0].toPublicKey().toBytes(),
     };
-    rpcClientStub.validator.getAttesterDuties.resolves([duty]);
+    rpcClientStub.validator.getAttesterDuties.resolves({dependentRoot: ZERO_HASH, data: [duty]});
     const defaultValidator = config.types.phase0.ValidatorResponse.defaultValue();
     rpcClientStub.beacon.state.getStateValidators.resolves([
       {...defaultValidator, validator: {...defaultValidator.validator, pubkey: secretKeys[0].toPublicKey().toBytes()}},
@@ -105,7 +106,7 @@ describe("validator attestation service", function () {
       slashingProtectionStub,
       logger
     );
-    rpcClientStub.validator.getAttesterDuties.resolves([]);
+    rpcClientStub.validator.getAttesterDuties.resolves({dependentRoot: ZERO_HASH, data: []});
     await service.onClockSlot({slot: 0});
   });
 
@@ -118,7 +119,7 @@ describe("validator attestation service", function () {
       slashingProtectionStub,
       logger
     );
-    rpcClientStub.validator.getAttesterDuties.resolves([]);
+    rpcClientStub.validator.getAttesterDuties.resolves({dependentRoot: ZERO_HASH, data: []});
     sandbox.stub(rpcClientStub.clock, "currentEpoch").get(() => 1);
     await service.start();
     const pubkey = secretKeys[0].toPublicKey().toBytes();
@@ -153,7 +154,7 @@ describe("validator attestation service", function () {
       slashingProtectionStub,
       logger
     );
-    rpcClientStub.validator.getAttesterDuties.resolves([]);
+    rpcClientStub.validator.getAttesterDuties.resolves({dependentRoot: ZERO_HASH, data: []});
     sandbox.stub(rpcClientStub.clock, "currentEpoch").get(() => 1);
     await service.start();
     const pubkey = secretKeys[0].toPublicKey().toBytes();
@@ -193,7 +194,7 @@ describe("validator attestation service", function () {
       slashingProtectionStub,
       logger
     );
-    rpcClientStub.validator.getAttesterDuties.resolves([]);
+    rpcClientStub.validator.getAttesterDuties.resolves({dependentRoot: ZERO_HASH, data: []});
     sandbox.stub(rpcClientStub.clock, "currentEpoch").get(() => 1);
     await service.start();
     const pubkey = secretKeys[0].toPublicKey().toBytes();

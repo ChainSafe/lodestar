@@ -29,6 +29,7 @@ describe("get proposers api impl", function () {
     syncStub = server.syncStub;
     chainStub.clock = server.sandbox.createStubInstance(LocalClock);
     chainStub.forkChoice = server.sandbox.createStubInstance(ForkChoice);
+    chainStub.getCanonicalBlockAtSlot.resolves(config.types.phase0.SignedBeaconBlock.defaultValue());
     dbStub = server.dbStub;
     // @ts-ignore
     api = new ValidatorApi({}, {db: dbStub, chain: chainStub, sync: syncStub, config});
@@ -80,6 +81,6 @@ describe("get proposers api impl", function () {
     chainStub.getHeadStateAtCurrentEpoch.resolves(cachedState);
     sinon.stub(cachedState.epochCtx, "getBeaconProposer").returns(1);
     const result = await api.getProposerDuties(0);
-    expect(result.length).to.be.equal(config.params.SLOTS_PER_EPOCH);
+    expect(result.data.length).to.be.equal(config.params.SLOTS_PER_EPOCH);
   });
 });

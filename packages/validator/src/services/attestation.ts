@@ -111,7 +111,8 @@ export class AttestationService {
       for (const v of this.validators.values()) {
         if (v.validator?.index != null) indices.push(v.validator?.index);
       }
-      attesterDuties = await this.provider.validator.getAttesterDuties(epoch, indices);
+      const res = await this.provider.validator.getAttesterDuties(epoch, indices);
+      attesterDuties = res.data;
     } catch (e) {
       this.logger.error("Failed to obtain attester duty", {epoch, error: (e as Error).message});
       return;

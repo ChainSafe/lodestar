@@ -108,10 +108,11 @@ export default class BlockProposingService {
    */
   updateDuties = async (epoch: Epoch): Promise<void> => {
     this.logger.debug("on new block epoch", {epoch, validator: toHexString(this.validators.keys().next().value)});
-    const proposerDuties = await this.provider.validator.getProposerDuties(epoch).catch((e) => {
+    const res = await this.provider.validator.getProposerDuties(epoch).catch((e) => {
       this.logger.error("Failed to obtain proposer duties", e);
       return null;
     });
+    const proposerDuties = res?.data;
     if (!proposerDuties) {
       return;
     }

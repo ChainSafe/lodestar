@@ -7,10 +7,8 @@ export const getAttesterDuties: ApiController<null, {epoch: number}, ValidatorIn
   id: "getAttesterDuties",
 
   handler: async function (req) {
-    const responseValue = await this.api.validator.getAttesterDuties(req.params.epoch, req.body);
-    return {
-      data: responseValue.map((value) => this.config.types.phase0.AttesterDuty.toJson(value, {case: "snake"})),
-    };
+    const value = await this.api.validator.getAttesterDuties(req.params.epoch, req.body);
+    return this.config.types.phase0.AttesterDutiesApi.toJson(value, {case: "snake"});
   },
 
   schema: {

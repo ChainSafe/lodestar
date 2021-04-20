@@ -1,7 +1,8 @@
-import {ContainerType} from "@chainsafe/ssz";
+import {ContainerType, ListType} from "@chainsafe/ssz";
 import {IPhase0SSZTypes} from "../interface";
 import {StringType} from "../utils";
 import {ValidatorStatus} from "../../types";
+import {IPhase0Params} from "@chainsafe/lodestar-params";
 
 export const SignedBeaconHeaderResponse = (ssz: IPhase0SSZTypes): ContainerType =>
   new ContainerType({
@@ -41,6 +42,28 @@ export const ProposerDuty = (ssz: IPhase0SSZTypes): ContainerType =>
       slot: ssz.Slot,
       validatorIndex: ssz.ValidatorIndex,
       pubkey: ssz.BLSPubkey,
+    },
+  });
+
+export const AttesterDutiesApi = (ssz: IPhase0SSZTypes, params: IPhase0Params): ContainerType =>
+  new ContainerType({
+    fields: {
+      data: new ListType({
+        elementType: ssz.AttesterDuty,
+        limit: params.VALIDATOR_REGISTRY_LIMIT,
+      }),
+      dependentRoot: ssz.Root,
+    },
+  });
+
+export const ProposerDutiesApi = (ssz: IPhase0SSZTypes, params: IPhase0Params): ContainerType =>
+  new ContainerType({
+    fields: {
+      data: new ListType({
+        elementType: ssz.ProposerDuty,
+        limit: params.VALIDATOR_REGISTRY_LIMIT,
+      }),
+      dependentRoot: ssz.Root,
     },
   });
 

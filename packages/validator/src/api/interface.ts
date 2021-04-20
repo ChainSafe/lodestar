@@ -87,8 +87,8 @@ export interface IApiClient {
   };
 
   validator: {
-    getProposerDuties(epoch: Epoch): Promise<phase0.ProposerDuty[]>;
-    getAttesterDuties(epoch: Epoch, validatorIndices: ValidatorIndex[]): Promise<phase0.AttesterDuty[]>;
+    getProposerDuties(epoch: Epoch): Promise<phase0.ProposerDutiesApi>;
+    getAttesterDuties(epoch: Epoch, validatorIndices: ValidatorIndex[]): Promise<phase0.AttesterDutiesApi>;
     produceBlock(slot: Slot, randaoReveal: BLSSignature, graffiti: string): Promise<phase0.BeaconBlock>;
     produceAttestationData(index: CommitteeIndex, slot: Slot): Promise<phase0.AttestationData>;
     getAggregatedAttestation(attestationDataRoot: Root, slot: Slot): Promise<phase0.Attestation>;
