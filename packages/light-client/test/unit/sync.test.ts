@@ -1,16 +1,17 @@
 import {expect} from "chai";
 import {SecretKey} from "@chainsafe/bls";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {config} from "@chainsafe/lodestar-config/minimal";
 import {altair, BLSPubkey, Root} from "@chainsafe/lodestar-types";
 import {toHexString, TreeBacked, List} from "@chainsafe/ssz";
-import {prepareUpdate, IBeaconChainLc} from "./prepareUpdate";
 import {processAltairUpdate} from "../../src";
-import {getSyncAggregateSigningRoot, signAndAggregate} from "./utils";
+import {prepareUpdate, IBeaconChainLc} from "../prepareUpdate";
+import {createExtraMinimalConfig, getSyncAggregateSigningRoot, signAndAggregate} from "../utils";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
 describe("Lightclient flow", () => {
+  const config = createExtraMinimalConfig();
+
   before("BLS sanity check", () => {
     const sk = SecretKey.fromBytes(Buffer.alloc(32, 1));
     expect(sk.toPublicKey().toHex()).to.equal(
@@ -103,6 +104,10 @@ describe("Lightclient flow", () => {
   });
 });
 
+/**
+ * Mock BeaconChainLc interface that returns the blockHeaders and states given at the constructor.
+ * Throws for any unknown root
+ */
 class MockBeaconChainLc implements IBeaconChainLc {
   private readonly config: IBeaconConfig;
   private readonly blockHeaders = new Map<string, altair.BeaconBlockHeader>();

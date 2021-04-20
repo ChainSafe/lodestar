@@ -1,14 +1,22 @@
 import {SecretKey} from "@chainsafe/bls";
-import {config} from "@chainsafe/lodestar-config/minimal";
 import {altair} from "@chainsafe/lodestar-types";
 import {FINALIZED_ROOT_INDEX, NEXT_SYNC_COMMITTEE_INDEX} from "@chainsafe/lodestar-params";
 import {validateAltairUpdate} from "../../src";
-import {defaultBeaconBlockHeader, getSyncAggregateSigningRoot, signAndAggregate} from "./utils";
+import {
+  createExtraMinimalConfig,
+  defaultBeaconBlockHeader,
+  getSyncAggregateSigningRoot,
+  signAndAggregate,
+} from "../utils";
 
 describe("validateAltairUpdate", () => {
+  const config = createExtraMinimalConfig();
   const genValiRoot = Buffer.alloc(32, 9);
 
-  it("Validate valid update", () => {
+  let update: altair.AltairUpdate;
+  let snapshot: altair.AltairSnapshot;
+
+  before("Prepare data", () => {
     // Update slot must > snapshot slot
     // updatePeriod must == snapshotPeriod + 1
     const snapshotHeaderSlot = 1;
@@ -56,7 +64,7 @@ describe("validateAltairUpdate", () => {
     const signingRoot = getSyncAggregateSigningRoot(config, genValiRoot, forkVersion, syncAttestedBlockHeader);
     const syncAggregate = signAndAggregate(signingRoot, sks);
 
-    const update: altair.AltairUpdate = {
+    update = {
       header,
       nextSyncCommittee: nextSyncCommittee,
       nextSyncCommitteeBranch: nextSyncCommitteeBranch,
@@ -67,12 +75,14 @@ describe("validateAltairUpdate", () => {
       forkVersion,
     };
 
-    const snapshot: altair.AltairSnapshot = {
+    snapshot = {
       header: defaultBeaconBlockHeader(config, snapshotHeaderSlot),
       currentSyncCommittee: {pubkeys: [], pubkeyAggregates: []},
       nextSyncCommittee,
     };
+  });
 
+  it("Validate valid update", () => {
     validateAltairUpdate(config, snapshot, update, genValiRoot);
   });
 });

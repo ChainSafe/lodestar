@@ -1,7 +1,21 @@
 import {SecretKey, Signature} from "@chainsafe/bls";
 import {computeDomain, computeSigningRoot} from "@chainsafe/lodestar-beacon-state-transition";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {IBeaconConfig, createIBeaconConfig} from "@chainsafe/lodestar-config";
+import {params as minimalParams} from "@chainsafe/lodestar-params/minimal";
 import {altair, Bytes4, Root, Slot} from "@chainsafe/lodestar-types";
+
+/* eslint-disable @typescript-eslint/naming-convention */
+
+/**
+ * Create extra minimal sync committee config to make tests faster
+ */
+export function createExtraMinimalConfig(): IBeaconConfig {
+  return createIBeaconConfig({
+    ...minimalParams,
+    SYNC_COMMITTEE_SIZE: 4,
+    SYNC_PUBKEYS_PER_AGGREGATE: 2,
+  });
+}
 
 export function signAndAggregate(message: Uint8Array, sks: SecretKey[]): altair.SyncAggregate {
   const sigs = sks.map((sk) => sk.sign(message));
