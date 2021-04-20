@@ -1,25 +1,43 @@
 // this will need async once we wan't to resolve archive slot
-import {GENESIS_SLOT, FAR_FUTURE_EPOCH, CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
+import {
+  GENESIS_SLOT,
+  FAR_FUTURE_EPOCH,
+  CachedBeaconState,
+  createCachedBeaconState,
+} from "@chainsafe/lodestar-beacon-state-transition";
 import {allForks, phase0} from "@chainsafe/lodestar-types";
+import {phase0 as beaconStateTransitionPhase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {fast} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {Epoch, ValidatorIndex, Gwei, Slot} from "@chainsafe/lodestar-types";
 import {ValidatorResponse} from "@chainsafe/lodestar-types/phase0";
-import {fromHexString, readonlyValues} from "@chainsafe/ssz";
+import {fromHexString, readonlyValues, TreeBacked} from "@chainsafe/ssz";
 import {IBeaconChain} from "../../../../chain";
 import {StateContextCache} from "../../../../chain/stateCache";
 import {IBeaconDb} from "../../../../db";
 import {getStateValidatorIndex} from "../../utils";
 import {ApiError, ValidationError} from "../../errors";
 import {StateId} from "./interface";
+import {sleep, assert} from "@chainsafe/lodestar-utils";
+
+type ResolveStateIdOpts = {
+  /**
+   * triggers a fetch of the nearest finalized state from the archive if the state at the desired
+   * stateId is not in the archive and run the state transition up to the desired slot
+   * NOTE: this is not related to chain.regen, which handles regenerating un-finalized states
+   */
+  regenFinalizedState?: boolean;
+};
 
 export async function resolveStateId(
+  config: IBeaconConfig,
   chain: IBeaconChain,
   db: IBeaconDb,
-  stateId: StateId
+  stateId: StateId,
+  opts?: ResolveStateIdOpts
 ): Promise<allForks.BeaconState> {
-  const state = await resolveStateIdOrNull(chain, db, stateId);
+  const state = await resolveStateIdOrNull(config, chain, db, stateId, opts);
   if (!state) {
     throw new ApiError(404, `No state found for id '${stateId}'`);
   }
@@ -28,9 +46,11 @@ export async function resolveStateId(
 }
 
 async function resolveStateIdOrNull(
+  config: IBeaconConfig,
   chain: IBeaconChain,
   db: IBeaconDb,
-  stateId: StateId
+  stateId: StateId,
+  opts?: ResolveStateIdOpts
 ): Promise<allForks.BeaconState | null> {
   stateId = stateId.toLowerCase();
   if (stateId === "head" || stateId === "genesis" || stateId === "finalized" || stateId === "justified") {
@@ -46,7 +66,7 @@ async function resolveStateIdOrNull(
   if (isNaN(slot) && isNaN(slot - 0)) {
     throw new ValidationError(`Invalid state id '${stateId}'`, "stateId");
   }
-  return await stateBySlot(db, chain.stateCache, chain.forkChoice, slot);
+  return await stateBySlot(config, db, chain.stateCache, chain.forkChoice, slot, opts);
 }
 
 /**
@@ -168,15 +188,20 @@ async function stateByRoot(
 }
 
 async function stateBySlot(
+  config: IBeaconConfig,
   db: IBeaconDb,
   stateCache: StateContextCache,
   forkChoice: IForkChoice,
-  slot: Slot
+  slot: Slot,
+  opts?: ResolveStateIdOpts
 ): Promise<allForks.BeaconState | null> {
   const blockSummary = forkChoice.getCanonicalBlockSummaryAtSlot(slot);
   if (blockSummary) {
     return stateCache.get(blockSummary.stateRoot) ?? null;
   } else {
+    if (opts?.regenFinalizedState) {
+      return await getFinalizedState(config, db, forkChoice, slot);
+    }
     return await db.stateArchive.get(slot);
   }
 }
@@ -197,4 +222,43 @@ export function filterStateValidatorsByStatuses(
     }
   }
   return responses;
+}
+
+/**
+ * Get the archived state nearest to `slot`.
+ */
+async function getNearestArchivedState(
+  config: IBeaconConfig,
+  db: IBeaconDb,
+  slot: Slot
+): Promise<CachedBeaconState<allForks.BeaconState>> {
+  const states = db.stateArchive.valuesStream({lte: slot, gt: 0, reverse: true});
+  const state = (await states[Symbol.asyncIterator]().next()).value as TreeBacked<allForks.BeaconState>;
+  return createCachedBeaconState(config, state);
+}
+
+async function getFinalizedState(
+  config: IBeaconConfig,
+  db: IBeaconDb,
+  forkChoice: IForkChoice,
+  slot: Slot
+): Promise<CachedBeaconState<allForks.BeaconState>> {
+  assert.lte(slot, forkChoice.getFinalizedCheckpoint().epoch * config.params.SLOTS_PER_EPOCH);
+  let state = await getNearestArchivedState(config, db, slot);
+
+  // process blocks up to the requested slot
+  for await (const block of db.blockArchive.valuesStream({gt: state.slot, lte: slot})) {
+    state = fast.fastStateTransition(state, block, {
+      verifyStateRoot: false,
+      verifyProposer: false,
+      verifySignatures: false,
+    });
+    // yield to the event loop
+    await sleep(0);
+  }
+  // due to skip slots, may need to process empty slots to reach the requested slot
+  if (state.slot < slot) {
+    beaconStateTransitionPhase0.fast.processSlots(state as CachedBeaconState<phase0.BeaconState>, slot);
+  }
+  return state;
 }

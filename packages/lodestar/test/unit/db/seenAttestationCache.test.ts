@@ -1,7 +1,7 @@
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {BitList} from "@chainsafe/ssz";
 import {expect} from "chai";
-import {SeenAttestationCache} from "../../../lib/db/seenAttestationCache";
+import {SeenAttestationCache} from "../../../src/db/seenAttestationCache";
 import {generateEmptyAggregateAndProof} from "../../utils/attestation";
 
 describe("SeenAttestationCache", function () {

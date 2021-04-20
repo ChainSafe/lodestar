@@ -1,3 +1,4 @@
+import {config} from "@chainsafe/lodestar-config/mainnet";
 import {ZERO_HASH} from "@chainsafe/lodestar-beacon-state-transition";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {expect} from "chai";
@@ -26,7 +27,7 @@ describe("api - debug - beacon", function () {
     forkchoiceStub = sinon.createStubInstance(LodestarForkChoice);
     chainStub.forkChoice = forkchoiceStub;
     dbStub = new StubbedBeaconDb(sinon);
-    debugApi = new DebugBeaconApi({}, {chain: chainStub, db: dbStub});
+    debugApi = new DebugBeaconApi({}, {chain: chainStub, db: dbStub, config});
   });
 
   afterEach(function () {

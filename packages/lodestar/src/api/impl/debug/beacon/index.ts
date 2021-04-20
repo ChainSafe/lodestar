@@ -1,3 +1,4 @@
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBlockSummary} from "@chainsafe/lodestar-fork-choice";
 import {allForks, phase0} from "@chainsafe/lodestar-types";
 import {IBeaconChain} from "../../../../chain";
@@ -11,10 +12,12 @@ import {IDebugBeaconApi} from "./interface";
 export class DebugBeaconApi implements IDebugBeaconApi {
   private readonly chain: IBeaconChain;
   private readonly db: IBeaconDb;
+  private readonly config: IBeaconConfig;
 
-  constructor(opts: Partial<IApiOptions>, modules: Pick<IApiModules, "chain" | "db">) {
+  constructor(opts: Partial<IApiOptions>, modules: Pick<IApiModules, "chain" | "db" | "config">) {
     this.chain = modules.chain;
     this.db = modules.db;
+    this.config = modules.config;
   }
 
   async getHeads(): Promise<phase0.SlotRoot[]> {
@@ -24,6 +27,6 @@ export class DebugBeaconApi implements IDebugBeaconApi {
   }
 
   async getState(stateId: StateId): Promise<allForks.BeaconState> {
-    return await resolveStateId(this.chain, this.db, stateId);
+    return await resolveStateId(this.config, this.chain, this.db, stateId, {regenFinalizedState: true});
   }
 }

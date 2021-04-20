@@ -12,9 +12,10 @@ import {
 import {BeaconChain, IBeaconChain} from "../../../../../../src/chain";
 import {IBeaconClock} from "../../../../../../src/chain/clock/interface";
 import {generateBlockSummary} from "../../../../../utils/block";
-import {generateCachedState} from "../../../../../utils/state";
+import {generateCachedState, generateState} from "../../../../../utils/state";
 import {StubbedBeaconDb} from "../../../../../utils/stub";
 import {generateValidators} from "../../../../../utils/validator";
+import {PERSIST_STATE_EVERY_EPOCHS} from "../../../../../../src/tasks/tasks/archiveStates";
 
 use(chaiAsPromised);
 
@@ -30,7 +31,7 @@ describe("beacon state api utils", function () {
         stateCache: {get},
       } as unknown) as IBeaconChain;
 
-      const state = await resolveStateId(chainStub, dbStub, "head");
+      const state = await resolveStateId(config, chainStub, dbStub, "head");
       expect(state).to.not.be.null;
       expect(getHead.calledOnce).to.be.true;
       expect(get.calledOnce).to.be.true;
@@ -44,7 +45,7 @@ describe("beacon state api utils", function () {
         stateCache: {get},
       } as unknown) as IBeaconChain;
 
-      const state = await resolveStateId(chainStub, dbStub, "finalized");
+      const state = await resolveStateId(config, chainStub, dbStub, "finalized");
       expect(state).to.not.be.null;
       expect(getFinalizedCheckpoint.calledOnce).to.be.true;
       expect(get.calledOnce).to.be.true;
@@ -58,7 +59,7 @@ describe("beacon state api utils", function () {
         stateCache: {get},
       } as unknown) as IBeaconChain;
 
-      const state = await resolveStateId(chainStub, dbStub, "justified");
+      const state = await resolveStateId(config, chainStub, dbStub, "justified");
       expect(state).to.not.be.null;
       expect(getJustifiedCheckpoint.calledOnce).to.be.true;
       expect(get.calledOnce).to.be.true;
@@ -68,7 +69,7 @@ describe("beacon state api utils", function () {
       const get = sinon.stub().returns(generateCachedState());
       const chainStub = ({stateCache: {get}} as unknown) as IBeaconChain;
 
-      const state = await resolveStateId(chainStub, dbStub, toHexString(Buffer.alloc(32, 1)));
+      const state = await resolveStateId(config, chainStub, dbStub, toHexString(Buffer.alloc(32, 1)));
       expect(state).to.not.be.null;
       expect(get.calledOnce).to.be.true;
     });
@@ -84,9 +85,42 @@ describe("beacon state api utils", function () {
         stateCache: {get},
       } as unknown) as IBeaconChain;
 
-      const state = await resolveStateId(chainStub, dbStub, "123");
+      const state = await resolveStateId(config, chainStub, dbStub, "123");
       expect(state).to.not.be.null;
       expect(getCanonicalBlockSummaryAtSlot.withArgs(123).calledOnce).to.be.true;
+    });
+
+    it("resolve state on unarchived finalized slot", async function () {
+      const nearestArchiveSlot = PERSIST_STATE_EVERY_EPOCHS * config.params.SLOTS_PER_EPOCH;
+      const finalizedEpoch = 1028;
+      const requestedSlot = 1026 * config.params.SLOTS_PER_EPOCH;
+
+      const getFinalizedCheckpoint = sinon.stub().returns({root: Buffer.alloc(32, 1), epoch: finalizedEpoch});
+      const getCanonicalBlockSummaryAtSlot = sinon
+        .stub()
+        .onSecondCall()
+        .returns(generateBlockSummary({stateRoot: Buffer.alloc(32, 1)}));
+      const chainStub = ({
+        forkChoice: {getCanonicalBlockSummaryAtSlot, getFinalizedCheckpoint},
+      } as unknown) as IBeaconChain;
+      const nearestState = generateState({slot: nearestArchiveSlot});
+      // eslint-disable-next-line @typescript-eslint/no-empty-function
+      const blockArchiveValuesStream = sinon.stub().returns({async *[Symbol.asyncIterator]() {}});
+      const stateArchiveValuesStream = sinon.stub().returns({
+        async *[Symbol.asyncIterator]() {
+          yield nearestState;
+        },
+      });
+      const get = sinon.stub().returns(nearestState);
+      const tempDbStub = {
+        blockArchive: {valuesStream: blockArchiveValuesStream},
+        stateArchive: {get, valuesStream: stateArchiveValuesStream},
+      } as StubbedBeaconDb;
+      const state = await resolveStateId(config, chainStub, tempDbStub, requestedSlot.toString(), {
+        regenFinalizedState: true,
+      });
+      expect(state).to.not.be.null;
+      expect(state?.slot).to.be.equal(requestedSlot);
     });
   });
 
