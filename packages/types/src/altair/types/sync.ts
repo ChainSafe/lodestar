@@ -7,7 +7,7 @@ import {SyncCommittee} from "./committee";
 /**
  * Spec v1.0.1
  */
-export interface AltairSnapshot {
+export interface LightClientSnapshot {
   /** Beacon block header */
   header: phase0.BeaconBlockHeader;
   /** Sync committees corresponding to the header */
@@ -18,7 +18,7 @@ export interface AltairSnapshot {
 /**
  * Spec v1.0.1
  */
-export interface AltairUpdate {
+export interface LightClientUpdate {
   /** Update beacon block header */
   header: phase0.BeaconBlockHeader;
   /** Next sync committee corresponding to the header */
@@ -37,7 +37,7 @@ export interface AltairUpdate {
 /**
  * Spec v1.0.1
  */
-export interface AltairStore {
-  snapshot: AltairSnapshot;
-  validUpdates: List<AltairUpdate>;
+export interface LightClientStore {
+  snapshot: LightClientSnapshot;
+  validUpdates: List<LightClientUpdate>;
 }

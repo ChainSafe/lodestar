@@ -1,7 +1,7 @@
 import {SecretKey} from "@chainsafe/bls";
 import {altair} from "@chainsafe/lodestar-types";
 import {FINALIZED_ROOT_INDEX, NEXT_SYNC_COMMITTEE_INDEX} from "@chainsafe/lodestar-params";
-import {validateAltairUpdate} from "../../src";
+import {validateLightClientUpdate} from "../../src";
 import {
   createExtraMinimalConfig,
   defaultBeaconBlockHeader,
@@ -9,12 +9,12 @@ import {
   signAndAggregate,
 } from "../utils";
 
-describe("validateAltairUpdate", () => {
+describe("validateLightClientUpdate", () => {
   const config = createExtraMinimalConfig();
   const genValiRoot = Buffer.alloc(32, 9);
 
-  let update: altair.AltairUpdate;
-  let snapshot: altair.AltairSnapshot;
+  let update: altair.LightClientUpdate;
+  let snapshot: altair.LightClientSnapshot;
 
   before("Prepare data", () => {
     // Update slot must > snapshot slot
@@ -83,6 +83,6 @@ describe("validateAltairUpdate", () => {
   });
 
   it("Validate valid update", () => {
-    validateAltairUpdate(config, snapshot, update, genValiRoot);
+    validateLightClientUpdate(config, snapshot, update, genValiRoot);
   });
 });

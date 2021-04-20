@@ -4,7 +4,7 @@ import {altair, Slot} from "@chainsafe/lodestar-types";
 import {intDiv} from "@chainsafe/lodestar-utils";
 import {List} from "@chainsafe/ssz";
 import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
-import {validateAltairUpdate} from "./validation";
+import {validateLightClientUpdate} from "./validation";
 import {sumBits} from "./utils";
 
 /**
@@ -12,14 +12,14 @@ import {sumBits} from "./utils";
  * Every update triggers process_light_client_update(store, update, current_slot) where current_slot is the current slot based on some local clock.
  * Spec v1.0.1
  */
-export function processAltairUpdate(
+export function processLightClientUpdate(
   config: IBeaconConfig,
-  store: altair.AltairStore,
-  update: altair.AltairUpdate,
+  store: altair.LightClientStore,
+  update: altair.LightClientUpdate,
   currentSlot: Slot,
   genesisValidatorsRoot: altair.Root
 ): void {
-  validateAltairUpdate(config, store.snapshot, update, genesisValidatorsRoot);
+  validateLightClientUpdate(config, store.snapshot, update, genesisValidatorsRoot);
   store.validUpdates.push(update);
 
   // Apply update if (1) 2/3 quorum is reached and (2) we have a finality proof.
@@ -30,7 +30,7 @@ export function processAltairUpdate(
     !config.types.altair.BeaconBlockHeader.equals(update.header, update.finalityHeader)
   ) {
     applyLightClientUpdate(config, store.snapshot, update);
-    store.validUpdates = ([] as altair.AltairUpdate[]) as List<altair.AltairUpdate>;
+    store.validUpdates = ([] as altair.LightClientUpdate[]) as List<altair.LightClientUpdate>;
   }
 
   // Forced best update when the update timeout has elapsed
@@ -38,7 +38,7 @@ export function processAltairUpdate(
     const bestUpdate = getBestUpdate(Array.from(store.validUpdates));
     if (bestUpdate) {
       applyLightClientUpdate(config, store.snapshot, bestUpdate);
-      store.validUpdates = ([] as altair.AltairUpdate[]) as List<altair.AltairUpdate>;
+      store.validUpdates = ([] as altair.LightClientUpdate[]) as List<altair.LightClientUpdate>;
     }
   }
 }
@@ -48,8 +48,8 @@ export function processAltairUpdate(
  */
 export function applyLightClientUpdate(
   config: IBeaconConfig,
-  snapshot: altair.AltairSnapshot,
-  update: altair.AltairUpdate
+  snapshot: altair.LightClientSnapshot,
+  update: altair.LightClientUpdate
 ): void {
   const {EPOCHS_PER_SYNC_COMMITTEE_PERIOD} = config.params;
   const snapshotPeriod = intDiv(computeEpochAtSlot(config, snapshot.header.slot), EPOCHS_PER_SYNC_COMMITTEE_PERIOD);
@@ -62,15 +62,15 @@ export function applyLightClientUpdate(
 }
 
 /**
- * Return the `altair.AltairUpdate` with the most true syncCommitteeBits
+ * Return the `altair.LightClientUpdate` with the most true syncCommitteeBits
  *
  * Spec v1.0.1
  * ```python
  * max(store.valid_updates, key=lambda update: sum(update.sync_committee_bits)))
  * ```
  */
-function getBestUpdate(updates: altair.AltairUpdate[]): altair.AltairUpdate | null {
-  return updates.reduce<{update: altair.AltairUpdate | null; sum: number}>(
+function getBestUpdate(updates: altair.LightClientUpdate[]): altair.LightClientUpdate | null {
+  return updates.reduce<{update: altair.LightClientUpdate | null; sum: number}>(
     (agg, update) => {
       const participantsCount = sumBits(update.syncCommitteeBits);
       if (participantsCount > agg.sum) {

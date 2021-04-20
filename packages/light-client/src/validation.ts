@@ -15,10 +15,10 @@ import {assertZeroHashes, getParticipantPubkeys} from "./utils";
 /**
  * Spec v1.0.1
  */
-export function validateAltairUpdate(
+export function validateLightClientUpdate(
   config: IBeaconConfig,
-  snapshot: altair.AltairSnapshot,
-  update: altair.AltairUpdate,
+  snapshot: altair.LightClientSnapshot,
+  update: altair.LightClientUpdate,
   genesisValidatorsRoot: altair.Root
 ): void {
   // Verify update slot is larger than snapshot slot
@@ -41,7 +41,9 @@ export function validateAltairUpdate(
   if (finalityHeaderSpecified) {
     // Proof that the state referenced in `update.finalityHeader.stateRoot` includes
     // state = {
-    //      : update.header
+    //   finalizedCheckpoint: {
+    //     root: update.header
+    //   }
     // }
     //
     // Where `hashTreeRoot(state) == update.finalityHeader.stateRoot`

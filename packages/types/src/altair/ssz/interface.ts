@@ -20,7 +20,7 @@ export type IAltairSSZTypes = Omit<
   BeaconBlock: ContainerType<altair.BeaconBlock>;
   SignedBeaconBlock: ContainerType<altair.SignedBeaconBlock>;
   BeaconState: ContainerType<altair.BeaconState>;
-  AltairSnapshot: ContainerType<altair.AltairSnapshot>;
-  AltairUpdate: ContainerType<altair.AltairUpdate>;
-  AltairStore: ContainerType<altair.AltairStore>;
+  LightClientSnapshot: ContainerType<altair.LightClientSnapshot>;
+  LightClientUpdate: ContainerType<altair.LightClientUpdate>;
+  LightClientStore: ContainerType<altair.LightClientStore>;
 };

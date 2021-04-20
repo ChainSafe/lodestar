@@ -3,7 +3,7 @@ import {SecretKey} from "@chainsafe/bls";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {altair, BLSPubkey, Root} from "@chainsafe/lodestar-types";
 import {toHexString, TreeBacked, List} from "@chainsafe/ssz";
-import {processAltairUpdate} from "../../src";
+import {processLightClientUpdate} from "../../src";
 import {prepareUpdate, IBeaconChainLc} from "../prepareUpdate";
 import {createExtraMinimalConfig, getSyncAggregateSigningRoot, signAndAggregate} from "../utils";
 
@@ -24,7 +24,7 @@ describe("Lightclient flow", () => {
   const currentSlot = 1;
   let committeeKeys: {sks: SecretKey[]; pks: BLSPubkey[]}[];
   let updateData: {chain: IBeaconChainLc; blockWithSyncAggregate: altair.BeaconBlock};
-  let update: altair.AltairUpdate;
+  let update: altair.LightClientUpdate;
 
   before("Generate crypto", () => {
     // Create two committees with different keys
@@ -91,16 +91,16 @@ describe("Lightclient flow", () => {
   it("Process altair update", () => {
     if (!update) throw Error("Prev test failed");
 
-    const store: altair.AltairStore = {
+    const store: altair.LightClientStore = {
       snapshot: {
         header: config.types.altair.BeaconBlockHeader.defaultValue(),
         currentSyncCommittee: {pubkeys: [], pubkeyAggregates: []},
         nextSyncCommittee: {pubkeys: committeeKeys[0].pks, pubkeyAggregates: []},
       },
-      validUpdates: ([] as altair.AltairUpdate[]) as List<altair.AltairUpdate>,
+      validUpdates: ([] as altair.LightClientUpdate[]) as List<altair.LightClientUpdate>,
     };
 
-    processAltairUpdate(config, store, update, currentSlot, genValiRoot);
+    processLightClientUpdate(config, store, update, currentSlot, genValiRoot);
   });
 });
 

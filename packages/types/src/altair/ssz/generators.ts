@@ -229,7 +229,7 @@ export const BeaconState: LightClientTypesGenerator<ContainerType<altair.BeaconS
   return container;
 };
 
-export const AltairSnapshot: LightClientTypesGenerator<ContainerType<altair.AltairSnapshot>> = (
+export const LightClientSnapshot: LightClientTypesGenerator<ContainerType<altair.LightClientSnapshot>> = (
   params,
   phase0Types,
   altairTypes
@@ -243,7 +243,7 @@ export const AltairSnapshot: LightClientTypesGenerator<ContainerType<altair.Alta
   });
 };
 
-export const AltairUpdate: LightClientTypesGenerator<ContainerType<altair.AltairUpdate>> = (
+export const LightClientUpdate: LightClientTypesGenerator<ContainerType<altair.LightClientUpdate>> = (
   params,
   phase0Types,
   altairTypes
@@ -268,16 +268,16 @@ export const AltairUpdate: LightClientTypesGenerator<ContainerType<altair.Altair
   });
 };
 
-export const AltairStore: LightClientTypesGenerator<ContainerType<altair.AltairStore>> = (
+export const LightClientStore: LightClientTypesGenerator<ContainerType<altair.LightClientStore>> = (
   params,
   phase0Types,
   altairTypes
 ) => {
   return new ContainerType({
     fields: {
-      snapshot: altairTypes.AltairSnapshot,
+      snapshot: altairTypes.LightClientSnapshot,
       validUpdates: new ListType({
-        elementType: altairTypes.AltairUpdate,
+        elementType: altairTypes.LightClientUpdate,
         limit: MAX_VALID_LIGHT_CLIENT_UPDATES,
       }),
     },

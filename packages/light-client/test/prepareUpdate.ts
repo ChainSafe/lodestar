@@ -17,7 +17,7 @@ export async function prepareUpdate(
   config: IBeaconConfig,
   chain: IBeaconChainLc,
   blockWithSyncAggregate: altair.BeaconBlock
-): Promise<altair.AltairUpdate> {
+): Promise<altair.LightClientUpdate> {
   // update.syncCommitteeSignature signs over the block at the previous slot of the state it is included
   // ```py
   // previous_slot = max(state.slot, Slot(1)) - Slot(1)
