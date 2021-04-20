@@ -8,10 +8,8 @@ import {computeEpochAtSlot, computeStartSlotAtEpoch, getCurrentEpoch, getPreviou
  * Returns the block root which decided the proposer shuffling for the current epoch. This root
  * can be used to key this proposer shuffling.
  *
- * ## Notes
- *
  * Returns `null` on the one-off scenario where the genesis block decides its own shuffling.
- * It should be set to the latest block applied to `self` or the genesis block root.
+ * It should be set to the latest block applied to this `state` or the genesis block root.
  */
 export function proposerShufflingDecisionRoot(config: IBeaconConfig, state: BeaconState): Root | null {
   const decisionSlot = proposerShufflingDecisionSlot(config, state);
@@ -33,13 +31,11 @@ function proposerShufflingDecisionSlot(config: IBeaconConfig, state: BeaconState
 }
 
 /**
- * Returns the block root which decided the attester shuffling for the given `relativeEpoch`.
+ * Returns the block root which decided the attester shuffling for the given `requestedEpoch`.
  * This root can be used to key that attester shuffling.
  *
- * ## Notes
- *
  * Returns `null` on the one-off scenario where the genesis block decides its own shuffling.
- * It should be set to the latest block applied to `self` or the genesis block root.
+ * It should be set to the latest block applied to this `state` or the genesis block root.
  */
 export function attesterShufflingDecisionRoot(
   config: IBeaconConfig,
@@ -65,13 +61,11 @@ function attesterShufflingDecisionSlot(config: IBeaconConfig, state: BeaconState
 }
 
 /**
- * Converts the `other` epoch into a `RelativeEpoch`, with respect to `base`
+ * Returns the epoch at which the proposer shuffling was decided.
  *
- * ## Errors
- * Returns an error when:
- * - `EpochTooLow` when `other` is more than 1 prior to `base`.
- * - `EpochTooHigh` when `other` is more than 1 after `base`.
- *
+ * Throws an error when:
+ * - `EpochTooLow` when `requestedEpoch` is more than 1 prior to `currentEpoch`.
+ * - `EpochTooHigh` when `requestedEpoch` is more than 1 after `currentEpoch`.
  */
 function attesterShufflingDecisionEpoch(config: IBeaconConfig, state: BeaconState, requestedEpoch: Epoch): Epoch {
   const currentEpoch = getCurrentEpoch(config, state);
