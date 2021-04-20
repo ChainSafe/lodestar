@@ -30,7 +30,7 @@ export async function resolveStateId(
   chain: IBeaconChain,
   db: IBeaconDb,
   stateId: StateId,
-  opts: ResolveStateIdOpts
+  opts?: ResolveStateIdOpts
 ): Promise<allForks.BeaconState> {
   const state = await resolveStateIdOrNull(config, chain, db, stateId, opts);
   if (!state) {
@@ -45,7 +45,7 @@ async function resolveStateIdOrNull(
   chain: IBeaconChain,
   db: IBeaconDb,
   stateId: StateId,
-  opts: ResolveStateIdOpts
+  opts?: ResolveStateIdOpts
 ): Promise<allForks.BeaconState | null> {
   stateId = stateId.toLowerCase();
   if (stateId === "head" || stateId === "genesis" || stateId === "finalized" || stateId === "justified") {
@@ -188,7 +188,7 @@ async function stateBySlot(
   stateCache: StateContextCache,
   forkChoice: IForkChoice,
   slot: Slot,
-  opts: ResolveStateIdOpts
+  opts?: ResolveStateIdOpts
 ): Promise<allForks.BeaconState | null> {
   const blockSummary = forkChoice.getCanonicalBlockSummaryAtSlot(slot);
   if (blockSummary) {
