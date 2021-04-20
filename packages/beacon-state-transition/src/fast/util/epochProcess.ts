@@ -2,7 +2,7 @@ import {readonlyValues} from "@chainsafe/ssz";
 import {Epoch, ValidatorIndex, Gwei, allForks, phase0} from "@chainsafe/lodestar-types";
 import {intDiv} from "@chainsafe/lodestar-utils";
 
-import {computeActivationExitEpoch, getChurnLimit, isActiveValidator} from "../../util";
+import {computeActivationExitEpoch, getBlockRoot, getChurnLimit, isActiveValidator} from "../../util";
 import {FAR_FUTURE_EPOCH} from "../../constants";
 import {IEpochStakeSummary} from "./epochStakeSummary";
 import {CachedBeaconState} from "./cachedBeaconState";
@@ -32,12 +32,12 @@ export interface IEpochProcess {
   exitQueueEndChurn: number;
   churnLimit: number;
 
-  validators?: phase0.Validator[];
-  balances?: ArrayLike<bigint>;
-  previousEpochParticipation?: IParticipationStatus[];
-  currentEpochParticipation?: IParticipationStatus[];
-  previousInclusionData?: IInclusionData[];
-  currentInclusionData?: IInclusionData[];
+  validators: phase0.Validator[];
+  balances: ArrayLike<bigint>;
+  previousEpochParticipation: IParticipationStatus[];
+  currentEpochParticipation: IParticipationStatus[];
+  previousInclusionData: IInclusionData[];
+  currentInclusionData: IInclusionData[];
 }
 
 export function createIEpochProcess(): IEpochProcess {
@@ -58,6 +58,13 @@ export function createIEpochProcess(): IEpochProcess {
     exitQueueEnd: 0,
     exitQueueEndChurn: 0,
     churnLimit: 0,
+
+    validators: [],
+    balances: [],
+    previousEpochParticipation: [],
+    currentEpochParticipation: [],
+    previousInclusionData: [],
+    currentInclusionData: [],
   };
 }
 
@@ -103,6 +110,8 @@ export function prepareEpochProcessState<T extends allForks.BeaconState>(state: 
     inclusionDelay: 0,
   })));
 
+  const prevTargetRoot = getBlockRoot(config, state, prevEpoch);
+  const currTargetRoot = getBlockRoot(config, state, currentEpoch);
   switch (forkName) {
     case "phase0":
       for (const attestation of readonlyValues(
@@ -112,7 +121,9 @@ export function prepareEpochProcessState<T extends allForks.BeaconState>(state: 
           (state as unknown) as CachedBeaconState<phase0.BeaconState>,
           flatPreviousEpochParticipation,
           flatPreviousInclusionData,
-          attestation
+          attestation,
+          prevTargetRoot,
+          true
         );
       }
       for (const attestation of readonlyValues(
@@ -122,7 +133,9 @@ export function prepareEpochProcessState<T extends allForks.BeaconState>(state: 
           (state as unknown) as CachedBeaconState<phase0.BeaconState>,
           flatCurrentEpochParticipation,
           flatCurrentInclusionData,
-          attestation
+          attestation,
+          currTargetRoot,
+          false
         );
       }
       break;

@@ -1,6 +1,6 @@
 import {List} from "@chainsafe/ssz";
-import {allForks, phase0} from "@chainsafe/lodestar-types";
-import {computeEpochAtSlot, getBlockRoot, getBlockRootAtSlot} from "../../../util";
+import {allForks, phase0, Root} from "@chainsafe/lodestar-types";
+import {computeEpochAtSlot, getBlockRootAtSlot} from "../../../util";
 import {CachedBeaconState} from "../../../fast";
 import {isValidIndexedAttestation} from "./isValidIndexedAttestation";
 import {IInclusionData} from "../../../fast/util/inclusionData";
@@ -108,7 +108,9 @@ export function processAttestationParticipation(
   state: CachedBeaconState<phase0.BeaconState>,
   epochParticipation: IParticipationStatus[],
   epochInclusion: IInclusionData[],
-  attestation: phase0.PendingAttestation
+  attestation: phase0.PendingAttestation,
+  targetRoot: Root,
+  isPreviousEpoch: boolean
 ): void {
   const {config, epochCtx} = state;
   const data = attestation.data;
@@ -119,7 +121,7 @@ export function processAttestationParticipation(
   // The source vote always matches the justified checkpoint (else its invalid) (already checked)
   // The target vote should match the most recent checkpoint (eg: the first root of the epoch)
   // The head vote should match the root at the attestation slot (eg: the root at data.slot)
-  const isMatchingTarget = config.types.Root.equals(data.target.root, getBlockRoot(config, state, data.target.epoch));
+  const isMatchingTarget = config.types.Root.equals(data.target.root, targetRoot);
   // a timely head is only be set if the target is _also_ matching
   const isMatchingHead =
     config.types.Root.equals(data.beaconBlockRoot, getBlockRootAtSlot(config, state, data.slot)) && isMatchingTarget;
@@ -148,10 +150,13 @@ export function processAttestationParticipation(
     };
     epochParticipation[index] = newStatus;
 
-    const inclusionData = epochInclusion[index];
-    const isLowerInclusionDelay = !inclusionData.inclusionDelay || inclusionDelay < inclusionData.inclusionDelay;
-    if (isLowerInclusionDelay) {
-      epochInclusion[index] = {inclusionDelay, proposerIndex};
+    // inclusion data is only relevant for the previous epoch
+    if (isPreviousEpoch) {
+      const inclusionData = epochInclusion[index];
+      const isLowerInclusionDelay = !inclusionData.inclusionDelay || inclusionDelay < inclusionData.inclusionDelay;
+      if (isLowerInclusionDelay) {
+        epochInclusion[index] = {inclusionDelay, proposerIndex};
+      }
     }
   }
 }

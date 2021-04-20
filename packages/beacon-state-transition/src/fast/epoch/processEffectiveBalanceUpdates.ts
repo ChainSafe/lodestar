@@ -4,10 +4,9 @@ import {IEpochProcess, CachedBeaconState} from "../util";
 
 export function processEffectiveBalanceUpdates(
   state: CachedBeaconState<allForks.BeaconState>,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   process: IEpochProcess
 ): void {
-  const {balances, config, validators} = state;
+  const {config, validators} = state;
   const {
     EFFECTIVE_BALANCE_INCREMENT,
     HYSTERESIS_QUOTIENT,
@@ -20,8 +19,8 @@ export function processEffectiveBalanceUpdates(
   const UPWARD_THRESHOLD = HYSTERESIS_INCREMENT * BigInt(HYSTERESIS_UPWARD_MULTIPLIER);
 
   // update effective balances with hysteresis
-  const flatValidators = process.validators ?? validators.persistent.toArray();
-  const flatBalances = process.balances ?? balances.persistent.toArray();
+  const flatValidators = process.validators;
+  const flatBalances = process.balances;
   for (let i = 0; i < flatValidators.length; i++) {
     const validator = flatValidators[i];
     const balance = flatBalances[i];
