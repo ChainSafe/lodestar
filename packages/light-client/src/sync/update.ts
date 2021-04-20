@@ -2,38 +2,24 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {LIGHT_CLIENT_UPDATE_TIMEOUT} from "@chainsafe/lodestar-params";
 import {altair, Slot} from "@chainsafe/lodestar-types";
 import {intDiv} from "@chainsafe/lodestar-utils";
-import {ArrayLike, List} from "@chainsafe/ssz";
+import {List} from "@chainsafe/ssz";
 import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {validateAltairUpdate} from "./validation";
+import {sumBits} from "./utils";
 
 /**
- * Spec v1.0.1
- */
-export function applyLightClientUpdate(
-  config: IBeaconConfig,
-  snapshot: altair.AltairSnapshot,
-  update: altair.AltairUpdate
-): void {
-  const {EPOCHS_PER_SYNC_COMMITTEE_PERIOD} = config.params;
-  const snapshotPeriod = intDiv(computeEpochAtSlot(config, snapshot.header.slot), EPOCHS_PER_SYNC_COMMITTEE_PERIOD);
-  const updatePeriod = intDiv(computeEpochAtSlot(config, update.header.slot), EPOCHS_PER_SYNC_COMMITTEE_PERIOD);
-  if (updatePeriod === snapshotPeriod + 1) {
-    snapshot.currentSyncCommittee = snapshot.nextSyncCommittee;
-    snapshot.nextSyncCommittee = update.nextSyncCommittee;
-  }
-  snapshot.header = update.header;
-}
-
-/**
+ * A light client maintains its state in a store object of type LightClientStore and receives update objects of type LightClientUpdate.
+ * Every update triggers process_light_client_update(store, update, current_slot) where current_slot is the current slot based on some local clock.
  * Spec v1.0.1
  */
 export function processAltairUpdate(
   config: IBeaconConfig,
   store: altair.AltairStore,
   update: altair.AltairUpdate,
-  currentSlot: Slot
+  currentSlot: Slot,
+  genesisValidatorsRoot: altair.Root
 ): void {
-  validateAltairUpdate(config, store.snapshot, update);
+  validateAltairUpdate(config, store.snapshot, update, genesisValidatorsRoot);
   store.validUpdates.push(update);
 
   // Apply update if (1) 2/3 quorum is reached and (2) we have a finality proof.
@@ -58,6 +44,24 @@ export function processAltairUpdate(
 }
 
 /**
+ * Spec v1.0.1
+ */
+export function applyLightClientUpdate(
+  config: IBeaconConfig,
+  snapshot: altair.AltairSnapshot,
+  update: altair.AltairUpdate
+): void {
+  const {EPOCHS_PER_SYNC_COMMITTEE_PERIOD} = config.params;
+  const snapshotPeriod = intDiv(computeEpochAtSlot(config, snapshot.header.slot), EPOCHS_PER_SYNC_COMMITTEE_PERIOD);
+  const updatePeriod = intDiv(computeEpochAtSlot(config, update.header.slot), EPOCHS_PER_SYNC_COMMITTEE_PERIOD);
+  if (updatePeriod === snapshotPeriod + 1) {
+    snapshot.currentSyncCommittee = snapshot.nextSyncCommittee;
+    snapshot.nextSyncCommittee = update.nextSyncCommittee;
+  }
+  snapshot.header = update.header;
+}
+
+/**
  * Return the `altair.AltairUpdate` with the most true syncCommitteeBits
  *
  * Spec v1.0.1
@@ -77,14 +81,4 @@ function getBestUpdate(updates: altair.AltairUpdate[]): altair.AltairUpdate | nu
     },
     {update: null, sum: 0}
   ).update;
-}
-
-function sumBits(bits: ArrayLike<boolean>): number {
-  let sum = 0;
-  for (const bit of bits) {
-    if (bit) {
-      sum++;
-    }
-  }
-  return sum;
 }

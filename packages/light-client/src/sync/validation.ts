@@ -1,5 +1,5 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {altair} from "@chainsafe/lodestar-types";
+import {altair, BLSPubkey} from "@chainsafe/lodestar-types";
 import {assert, intDiv, verifyMerkleBranch} from "@chainsafe/lodestar-utils";
 import {
   FINALIZED_ROOT_INDEX,
@@ -7,23 +7,18 @@ import {
   MIN_SYNC_COMMITTEE_PARTICIPANTS,
 } from "@chainsafe/lodestar-params";
 import {verifyAggregate} from "@chainsafe/bls";
-import {
-  computeEpochAtSlot,
-  ZERO_HASH,
-  computeDomain,
-  computeSigningRoot,
-} from "@chainsafe/lodestar-beacon-state-transition";
+import {computeEpochAtSlot, computeDomain, computeSigningRoot} from "@chainsafe/lodestar-beacon-state-transition";
+import {assertZeroHashes, floorlog2, getParticipantPubkeys} from "./utils";
+import {BitVector} from "@chainsafe/ssz";
 
 /**
- * A light client maintains its state in a store object of type LightClientStore and receives update objects of type LightClientUpdate.
- * Every update triggers process_light_client_update(store, update, current_slot) where current_slot is the current slot based on some local clock.
- *
  * Spec v1.0.1
  */
 export function validateAltairUpdate(
   config: IBeaconConfig,
   snapshot: altair.AltairSnapshot,
-  update: altair.AltairUpdate
+  update: altair.AltairUpdate,
+  genesisValidatorsRoot: altair.Root
 ): void {
   // Verify update slot is larger than snapshot slot
   if (update.header.slot <= snapshot.header.slot) {
@@ -34,25 +29,24 @@ export function validateAltairUpdate(
   const {EPOCHS_PER_SYNC_COMMITTEE_PERIOD} = config.params;
   const snapshotPeriod = intDiv(computeEpochAtSlot(config, snapshot.header.slot), EPOCHS_PER_SYNC_COMMITTEE_PERIOD);
   const updatePeriod = intDiv(computeEpochAtSlot(config, update.header.slot), EPOCHS_PER_SYNC_COMMITTEE_PERIOD);
-  assert.true(
-    snapshotPeriod <= updatePeriod && updatePeriod <= snapshotPeriod + 1,
-    "Update skips a sync committee period"
-  );
+  if (updatePeriod !== snapshotPeriod && updatePeriod !== snapshotPeriod + 1) {
+    throw Error("Update skips a sync committee period");
+  }
 
-  const FINALIZED_ROOT_INDEX_LOG2 = Math.log2(FINALIZED_ROOT_INDEX);
-  const NEXT_SYNC_COMMITTEE_INDEX_LOG2 = Math.log2(NEXT_SYNC_COMMITTEE_INDEX);
+  const FINALIZED_ROOT_INDEX_LOG2 = floorlog2(FINALIZED_ROOT_INDEX);
+  const NEXT_SYNC_COMMITTEE_INDEX_LOG2 = floorlog2(NEXT_SYNC_COMMITTEE_INDEX);
 
   // Verify update header root is the finalized root of the finality header, if specified
   const emptyHeader = config.types.altair.BeaconBlockHeader.defaultValue();
-  let signedHeader: altair.BeaconBlockHeader;
-  if (config.types.altair.BeaconBlockHeader.equals(update.finalityHeader, emptyHeader)) {
-    signedHeader = update.header;
-    assert.equal(update.finalityBranch.length, FINALIZED_ROOT_INDEX_LOG2, "Wrong finalityBranch length");
-    for (const root of update.finalityBranch) {
-      assert.true(config.types.Root.equals(root, ZERO_HASH), "finalityBranches must be zeroed");
-    }
-  } else {
-    signedHeader = update.finalityHeader;
+  const finalityHeaderSpecified = !config.types.altair.BeaconBlockHeader.equals(update.finalityHeader, emptyHeader);
+  const signedHeader = finalityHeaderSpecified ? update.finalityHeader : update.header;
+  if (finalityHeaderSpecified) {
+    // Proof that the state referenced in `update.finalityHeader.stateRoot` includes
+    // state = {
+    //      : update.header
+    // }
+    //
+    // Where `hashTreeRoot(state) == update.finalityHeader.stateRoot`
     assert.true(
       verifyMerkleBranch(
         config.types.altair.BeaconBlockHeader.hashTreeRoot(update.header),
@@ -63,22 +57,20 @@ export function validateAltairUpdate(
       ),
       "Invalid finality header merkle branch"
     );
+  } else {
+    assertZeroHashes(update.finalityBranch, FINALIZED_ROOT_INDEX_LOG2, "finalityBranches");
   }
 
   // Verify update next sync committee if the update period incremented
-  let syncCommittee: altair.SyncCommittee;
-  if (updatePeriod === snapshotPeriod) {
-    syncCommittee = snapshot.currentSyncCommittee;
-    assert.equal(
-      update.nextSyncCommitteeBranch.length,
-      NEXT_SYNC_COMMITTEE_INDEX_LOG2,
-      "Wrong nextSyncCommitteeBranch length"
-    );
-    for (const root of update.nextSyncCommitteeBranch) {
-      assert.true(config.types.Root.equals(root, ZERO_HASH), "nextSyncCommitteeBranches must be zeroed");
-    }
-  } else {
-    syncCommittee = snapshot.nextSyncCommittee;
+  const updatePeriodIncremented = updatePeriod > snapshotPeriod;
+  const syncCommittee = updatePeriodIncremented ? snapshot.nextSyncCommittee : snapshot.currentSyncCommittee;
+  if (updatePeriodIncremented) {
+    // Proof that the state referenced in `update.header.stateRoot` includes
+    // state = {
+    //   nextSyncCommittee: update.nextSyncCommittee
+    // }
+    //
+    // Where `hashTreeRoot(state) == update.header.stateRoot`
     assert.true(
       verifyMerkleBranch(
         config.types.altair.SyncCommittee.hashTreeRoot(update.nextSyncCommittee),
@@ -89,6 +81,8 @@ export function validateAltairUpdate(
       ),
       "Invalid next sync committee merkle branch"
     );
+  } else {
+    assertZeroHashes(update.nextSyncCommitteeBranch, NEXT_SYNC_COMMITTEE_INDEX_LOG2, "nextSyncCommitteeBranches");
   }
 
   // Verify sync committee has sufficient participants
@@ -96,8 +90,17 @@ export function validateAltairUpdate(
   assert.gte(syncCommitteeBitsCount, MIN_SYNC_COMMITTEE_PARTICIPANTS, "Sync committee has not sufficient participants");
 
   // Verify sync committee aggregate signature
-  const participantPubkeys = Array.from(syncCommittee.pubkeys).filter((_, i) => update.syncCommitteeBits[i]);
-  const domain = computeDomain(config, config.params.DOMAIN_SYNC_COMMITTEE, update.forkVersion);
+  //
+  // update.syncCommitteeSignature signs over the block at the previous slot of the state it is included
+  //
+  // ```py
+  // previous_slot = max(state.slot, Slot(1)) - Slot(1)
+  // domain = get_domain(state, DOMAIN_SYNC_COMMITTEE, compute_epoch_at_slot(previous_slot))
+  // signing_root = compute_signing_root(get_block_root_at_slot(state, previous_slot), domain)
+  // ```
+  // Ref: https://github.com/ethereum/eth2.0-specs/blob/dev/specs/altair/beacon-chain.md#sync-committee-processing
+  const participantPubkeys = getParticipantPubkeys(syncCommittee.pubkeys, update.syncCommitteeBits);
+  const domain = computeDomain(config, config.params.DOMAIN_SYNC_COMMITTEE, update.forkVersion, genesisValidatorsRoot);
   const signingRoot = computeSigningRoot(config, config.types.altair.BeaconBlockHeader, signedHeader, domain);
   assert.true(
     verifyAggregate(
