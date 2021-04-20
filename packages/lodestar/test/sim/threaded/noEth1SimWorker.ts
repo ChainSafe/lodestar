@@ -23,10 +23,13 @@ async function runWorker(): Promise<void> {
   const parent = parentPort;
   if (!parent) throw Error("Must be run in worker_thread");
 
-  // blst Native bindings don't work right on worker threads. It errors with
-  // (node:1692547) UnhandledPromiseRejectionWarning: Error: Module did not self-register: '/home/cayman/Code/bls/node_modules/@chainsafe/blst/prebuild/linux-x64-72-binding.node'.
-  // Related issue: https://github.com/nodejs/node/issues/21783#issuecomment-429637117
-  await init("blst-native");
+  // blst Native bindings do work in multi-thread now but sometimes they randomnly fail on Github Actions runners when stopping the test
+  // ```
+  // Segmentation fault (core dumped)
+  // error Command failed with exit code 139.
+  // ```
+  // Since we really need stability in tests we will use herumi until this test fails <1% of times on GA runners
+  await init("herumi");
 
   const options = workerData.options as NodeWorkerOptions;
   const {nodeIndex, validatorsPerNode, startIndex, checkpointEvent, logFile, nodes} = options;
