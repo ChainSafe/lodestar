@@ -1,14 +1,30 @@
-import {readonlyValues} from "@chainsafe/ssz";
-import {Epoch, ValidatorIndex, Gwei, allForks, phase0} from "@chainsafe/lodestar-types";
+import {List, readonlyValues} from "@chainsafe/ssz";
+import {Epoch, ValidatorIndex, Gwei, phase0, allForks} from "@chainsafe/lodestar-types";
 import {intDiv} from "@chainsafe/lodestar-utils";
 
-import {computeActivationExitEpoch, getBlockRoot, getChurnLimit, isActiveValidator} from "../../util";
+import {
+  computeActivationExitEpoch,
+  getBlockRootAtSlot,
+  computeStartSlotAtEpoch,
+  getChurnLimit,
+  isActiveValidator,
+} from "../../util";
 import {FAR_FUTURE_EPOCH} from "../../constants";
+import {
+  IAttesterStatus,
+  createIAttesterStatus,
+  hasMarkers,
+  FLAG_UNSLASHED,
+  FLAG_ELIGIBLE_ATTESTER,
+  FLAG_PREV_SOURCE_ATTESTER,
+  FLAG_PREV_TARGET_ATTESTER,
+  FLAG_PREV_HEAD_ATTESTER,
+  FLAG_CURR_SOURCE_ATTESTER,
+  FLAG_CURR_TARGET_ATTESTER,
+  FLAG_CURR_HEAD_ATTESTER,
+} from "./attesterStatus";
 import {IEpochStakeSummary} from "./epochStakeSummary";
 import {CachedBeaconState} from "./cachedBeaconState";
-import {IParticipationStatus} from "./cachedEpochParticipation";
-import {processAttestationParticipation} from "../../phase0/fast/block/processAttestation";
-import {IInclusionData} from "./inclusionData";
 
 /**
  * The AttesterStatus (and FlatValidator under status.validator) objects and
@@ -18,6 +34,7 @@ import {IInclusionData} from "./inclusionData";
 export interface IEpochProcess {
   prevEpoch: Epoch;
   currentEpoch: Epoch;
+  statuses: IAttesterStatus[];
   totalActiveStake: Gwei;
   prevEpochUnslashedStake: IEpochStakeSummary;
   currEpochUnslashedTargetStake: Gwei;
@@ -31,19 +48,13 @@ export interface IEpochProcess {
   exitQueueEnd: Epoch;
   exitQueueEndChurn: number;
   churnLimit: number;
-
-  validators: phase0.Validator[];
-  balances: ArrayLike<bigint>;
-  previousEpochParticipation: IParticipationStatus[];
-  currentEpochParticipation: IParticipationStatus[];
-  previousInclusionData: IInclusionData[];
-  currentInclusionData: IInclusionData[];
 }
 
 export function createIEpochProcess(): IEpochProcess {
   return {
     prevEpoch: 0,
     currentEpoch: 0,
+    statuses: [],
     totalActiveStake: BigInt(0),
     prevEpochUnslashedStake: {
       sourceStake: BigInt(0),
@@ -58,27 +69,21 @@ export function createIEpochProcess(): IEpochProcess {
     exitQueueEnd: 0,
     exitQueueEndChurn: 0,
     churnLimit: 0,
-
-    validators: [],
-    balances: [],
-    previousEpochParticipation: [],
-    currentEpochParticipation: [],
-    previousInclusionData: [],
-    currentInclusionData: [],
   };
 }
 
 export function prepareEpochProcessState<T extends allForks.BeaconState>(state: CachedBeaconState<T>): IEpochProcess {
   const out = createIEpochProcess();
 
-  const {config, epochCtx, validators, previousEpochParticipation, currentEpochParticipation} = state;
+  const {config, epochCtx, validators} = state;
+  const forkName = config.getForkName(state.slot);
+  const rootType = config.types.Root;
   const {
     EPOCHS_PER_SLASHINGS_VECTOR,
     MAX_EFFECTIVE_BALANCE,
     EFFECTIVE_BALANCE_INCREMENT,
     EJECTION_BALANCE,
   } = config.params;
-  const forkName = config.getForkName(state.slot);
   const currentEpoch = epochCtx.currentShuffling.epoch;
   const prevEpoch = epochCtx.previousShuffling.epoch;
   out.currentEpoch = currentEpoch;
@@ -88,123 +93,64 @@ export function prepareEpochProcessState<T extends allForks.BeaconState>(state: 
   let exitQueueEnd = computeActivationExitEpoch(config, currentEpoch);
 
   let activeCount = 0;
+  validators.forEach((v, i) => {
+    const status = createIAttesterStatus(v);
 
-  const indicesAndValidatorsToMaybeActivate: [number, T["validators"][number]][] = [];
-  let exitQueueEndChurn = 0;
-
-  let prevSourceUnslStake = BigInt(0);
-  let prevTargetUnslStake = BigInt(0);
-  let prevHeadUnslStake = BigInt(0);
-
-  let currTargetUnslStake = BigInt(0);
-
-  const flatValidators = (out.validators = validators.persistent.toArray());
-  const flatPreviousEpochParticipation = (out.previousEpochParticipation = previousEpochParticipation.persistent.toArray());
-  const flatCurrentEpochParticipation = (out.currentEpochParticipation = currentEpochParticipation.persistent.toArray());
-  const flatPreviousInclusionData = (out.previousInclusionData = Array.from({length: flatValidators.length}, () => ({
-    proposerIndex: -1,
-    inclusionDelay: 0,
-  })));
-  const flatCurrentInclusionData = (out.currentInclusionData = Array.from({length: flatValidators.length}, () => ({
-    proposerIndex: -1,
-    inclusionDelay: 0,
-  })));
-
-  const prevTargetRoot = getBlockRoot(config, state, prevEpoch);
-  const currTargetRoot = getBlockRoot(config, state, currentEpoch);
-  switch (forkName) {
-    case "phase0":
-      for (const attestation of readonlyValues(
-        ((state as unknown) as CachedBeaconState<phase0.BeaconState>).previousEpochAttestations
-      )) {
-        processAttestationParticipation(
-          (state as unknown) as CachedBeaconState<phase0.BeaconState>,
-          flatPreviousEpochParticipation,
-          flatPreviousInclusionData,
-          attestation,
-          prevTargetRoot,
-          true
-        );
-      }
-      for (const attestation of readonlyValues(
-        ((state as unknown) as CachedBeaconState<phase0.BeaconState>).currentEpochAttestations
-      )) {
-        processAttestationParticipation(
-          (state as unknown) as CachedBeaconState<phase0.BeaconState>,
-          flatCurrentEpochParticipation,
-          flatCurrentInclusionData,
-          attestation,
-          currTargetRoot,
-          false
-        );
-      }
-      break;
-  }
-
-  for (let i = 0; i < flatValidators.length; i++) {
-    const validator = flatValidators[i];
-    const previousParticipation = flatPreviousEpochParticipation[i];
-    const currentParticipation = flatCurrentEpochParticipation[i];
-
-    if (validator.slashed) {
-      if (slashingsEpoch === validator.withdrawableEpoch) {
+    if (v.slashed) {
+      if (slashingsEpoch === v.withdrawableEpoch) {
         out.indicesToSlash.push(i);
       }
+    } else {
+      status.flags |= FLAG_UNSLASHED;
     }
 
-    const active = isActiveValidator(validator, currentEpoch);
+    if (isActiveValidator(v, prevEpoch) || (v.slashed && prevEpoch + 1 < v.withdrawableEpoch)) {
+      status.flags |= FLAG_ELIGIBLE_ATTESTER;
+    }
+
+    const active = isActiveValidator(v, currentEpoch);
     if (active) {
-      out.totalActiveStake += validator.effectiveBalance;
+      status.active = true;
+      out.totalActiveStake += v.effectiveBalance;
       activeCount += 1;
     }
 
-    if (validator.exitEpoch !== FAR_FUTURE_EPOCH && validator.exitEpoch > exitQueueEnd) {
-      exitQueueEnd = validator.exitEpoch;
+    if (v.exitEpoch !== FAR_FUTURE_EPOCH && v.exitEpoch > exitQueueEnd) {
+      exitQueueEnd = v.exitEpoch;
     }
 
-    if (
-      validator.activationEligibilityEpoch === FAR_FUTURE_EPOCH &&
-      validator.effectiveBalance === MAX_EFFECTIVE_BALANCE
-    ) {
+    if (v.activationEligibilityEpoch === FAR_FUTURE_EPOCH && v.effectiveBalance === MAX_EFFECTIVE_BALANCE) {
       out.indicesToSetActivationEligibility.push(i);
     }
 
-    if (validator.activationEpoch === FAR_FUTURE_EPOCH && validator.activationEligibilityEpoch <= currentEpoch) {
-      indicesAndValidatorsToMaybeActivate.push([i, validator]);
+    if (v.activationEpoch === FAR_FUTURE_EPOCH && v.activationEligibilityEpoch <= currentEpoch) {
+      out.indicesToMaybeActivate.push(i);
     }
 
-    if (active && validator.exitEpoch === FAR_FUTURE_EPOCH && validator.effectiveBalance <= EJECTION_BALANCE) {
+    if (status.active && v.exitEpoch === FAR_FUTURE_EPOCH && v.effectiveBalance <= EJECTION_BALANCE) {
       out.indicesToEject.push(i);
     }
 
-    if (validator.exitEpoch === exitQueueEnd) {
-      exitQueueEndChurn += 1;
-    }
-
-    if (!validator.slashed) {
-      if (previousParticipation.timelySource) {
-        prevSourceUnslStake += validator.effectiveBalance;
-        if (previousParticipation.timelyTarget) {
-          prevTargetUnslStake += validator.effectiveBalance;
-          if (previousParticipation.timelyHead) {
-            prevHeadUnslStake += validator.effectiveBalance;
-          }
-        }
-      }
-      if (currentParticipation.timelyTarget) {
-        currTargetUnslStake += validator.effectiveBalance;
-      }
-    }
-  }
+    out.statuses.push(status);
+  });
 
   if (out.totalActiveStake < EFFECTIVE_BALANCE_INCREMENT) {
     out.totalActiveStake = EFFECTIVE_BALANCE_INCREMENT;
   }
 
-  out.indicesToMaybeActivate = indicesAndValidatorsToMaybeActivate
-    // order by activationEligibilityEpoch, then validator index
-    .sort((a, b) => a[1].activationEligibilityEpoch - b[1].activationEligibilityEpoch || a[0] - b[0])
-    .map((i) => i[0]);
+  // order by sequence of activationEligibilityEpoch setting and then index
+  out.indicesToMaybeActivate.sort(
+    (a, b) =>
+      out.statuses[a].validator.activationEligibilityEpoch - out.statuses[b].validator.activationEligibilityEpoch ||
+      a - b
+  );
+
+  let exitQueueEndChurn = 0;
+  for (const status of out.statuses) {
+    if (status.validator.exitEpoch === exitQueueEnd) {
+      exitQueueEndChurn += 1;
+    }
+  }
 
   const churnLimit = getChurnLimit(config, activeCount);
   if (exitQueueEndChurn >= churnLimit) {
@@ -216,6 +162,109 @@ export function prepareEpochProcessState<T extends allForks.BeaconState>(state: 
   out.exitQueueEnd = exitQueueEnd;
   out.churnLimit = churnLimit;
 
+  const statusProcessEpoch = (
+    statuses: IAttesterStatus[],
+    attestations: List<phase0.PendingAttestation>,
+    epoch: Epoch,
+    sourceFlag: number,
+    targetFlag: number,
+    headFlag: number
+  ): void => {
+    const actualTargetBlockRoot = getBlockRootAtSlot(config, state, computeStartSlotAtEpoch(config, epoch));
+    for (const att of readonlyValues(attestations)) {
+      // Load all the attestation details from the state tree once, do not reload for each participant
+      const aggregationBits = att.aggregationBits;
+      const attData = att.data;
+      const inclusionDelay = att.inclusionDelay;
+      const proposerIndex = att.proposerIndex;
+      const attSlot = attData.slot;
+      const committeeIndex = attData.index;
+      const attBeaconBlockRoot = attData.beaconBlockRoot;
+      const attTarget = attData.target;
+
+      const attBits = Array.from(readonlyValues(aggregationBits));
+      const attVotedTargetRoot = rootType.equals(attTarget.root, actualTargetBlockRoot);
+      const attVotedHeadRoot = rootType.equals(attBeaconBlockRoot, getBlockRootAtSlot(config, state, attSlot));
+
+      // attestation-target is already known to be this epoch, get it from the pre-computed shuffling directly.
+      const committee = epochCtx.getBeaconCommittee(attSlot, committeeIndex);
+
+      const participants: ValidatorIndex[] = [];
+      for (const [i, index] of committee.entries()) {
+        if (attBits[i]) {
+          participants.push(index);
+        }
+      }
+
+      if (epoch === prevEpoch) {
+        for (const p of participants) {
+          const status = statuses[p];
+
+          // If the attestation is the earliest, i.e. has the smallest delay
+          if (status.proposerIndex === -1 || status.inclusionDelay > inclusionDelay) {
+            status.proposerIndex = proposerIndex;
+            status.inclusionDelay = inclusionDelay;
+          }
+        }
+      }
+
+      for (const p of participants) {
+        const status = statuses[p];
+
+        // remember the participant as one of the good validators
+        status.flags |= sourceFlag;
+
+        // if the attestation is for the boundary
+        if (attVotedTargetRoot) {
+          status.flags |= targetFlag;
+
+          // head votes must be a subset of target votes
+          if (attVotedHeadRoot) {
+            status.flags |= headFlag;
+          }
+        }
+      }
+    }
+  };
+  if (forkName === "phase0") {
+    statusProcessEpoch(
+      out.statuses,
+      ((state as unknown) as CachedBeaconState<phase0.BeaconState>).previousEpochAttestations,
+      prevEpoch,
+      FLAG_PREV_SOURCE_ATTESTER,
+      FLAG_PREV_TARGET_ATTESTER,
+      FLAG_PREV_HEAD_ATTESTER
+    );
+    statusProcessEpoch(
+      out.statuses,
+      ((state as unknown) as CachedBeaconState<phase0.BeaconState>).currentEpochAttestations,
+      currentEpoch,
+      FLAG_CURR_SOURCE_ATTESTER,
+      FLAG_CURR_TARGET_ATTESTER,
+      FLAG_CURR_HEAD_ATTESTER
+    );
+  }
+
+  let prevSourceUnslStake = BigInt(0);
+  let prevTargetUnslStake = BigInt(0);
+  let prevHeadUnslStake = BigInt(0);
+
+  let currTargetUnslStake = BigInt(0);
+
+  for (const status of out.statuses) {
+    if (hasMarkers(status.flags, FLAG_PREV_SOURCE_ATTESTER | FLAG_UNSLASHED)) {
+      prevSourceUnslStake += status.validator.effectiveBalance;
+      if (hasMarkers(status.flags, FLAG_PREV_TARGET_ATTESTER)) {
+        prevTargetUnslStake += status.validator.effectiveBalance;
+        if (hasMarkers(status.flags, FLAG_PREV_HEAD_ATTESTER)) {
+          prevHeadUnslStake += status.validator.effectiveBalance;
+        }
+      }
+    }
+    if (hasMarkers(status.flags, FLAG_CURR_TARGET_ATTESTER | FLAG_UNSLASHED)) {
+      currTargetUnslStake += status.validator.effectiveBalance;
+    }
+  }
   // As per spec of `get_total_balance`:
   // EFFECTIVE_BALANCE_INCREMENT Gwei minimum to avoid divisions by zero.
   // Math safe up to ~10B ETH, afterwhich this overflows uint64.
