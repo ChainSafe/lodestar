@@ -11,11 +11,9 @@ export class FastifyLogger {
   readonly stream: Stream;
 
   readonly serializers = {
-    req: (request: IncomingMessage & FastifyRequest) => {
-      return {
-        // eslint-disable-next-line max-len
-        msg: `Request: ${request.ip} -> ${request.hostname}\t${request.method}:${request.url}\tRequestId: ${request.id}`,
-      };
+    req: (req: IncomingMessage & FastifyRequest): {msg: string} => {
+      const url = req.url ? req.url.split("?")[0] : "-";
+      return {msg: `Req ${req.id} ${req.ip} ${req.method}:${url}`};
     },
   };
 
@@ -34,10 +32,7 @@ export class FastifyLogger {
     if (log.req) {
       this.log.debug(log.req.msg);
     } else if (log.res) {
-      this.log.debug(
-        `Response: StatusCode: ${log.res.statusCode}\tResponseTime:` +
-          ` ${log.responseTime} ms\tRequestId: ${log.reqId}`
-      );
+      this.log.debug(`Res ${log.reqId} - ${log.res.statusCode} ${log.responseTime}`);
     } else {
       if (log.level === 50) {
         this.log.error(log.msg);
