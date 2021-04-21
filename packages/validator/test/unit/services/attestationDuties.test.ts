@@ -31,7 +31,7 @@ describe("AttestationDutiesService", function () {
     const secretKeys = [bls.SecretKey.fromBytes(toBufferBE(BigInt(98), 32))];
     pubkeys = secretKeys.map((sk) => sk.toPublicKey().toBytes());
     validatorStore.votingPubkeys.returns(pubkeys);
-    validatorStore.produceSelectionProof.resolves(ZERO_HASH);
+    validatorStore.signSelectionProof.resolves(ZERO_HASH);
   });
 
   let controller: AbortController; // To stop clock

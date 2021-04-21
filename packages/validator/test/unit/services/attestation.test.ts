@@ -33,7 +33,7 @@ describe("AttestationService", function () {
     const secretKeys = Array.from({length: 1}, (_, i) => bls.SecretKey.fromBytes(Buffer.alloc(32, i + 1)));
     pubkeys = secretKeys.map((sk) => sk.toPublicKey().toBytes());
     validatorStore.votingPubkeys.returns(pubkeys);
-    validatorStore.produceSelectionProof.resolves(ZERO_HASH);
+    validatorStore.signSelectionProof.resolves(ZERO_HASH);
   });
 
   let controller: AbortController; // To stop clock
@@ -76,8 +76,8 @@ describe("AttestationService", function () {
     apiClient.validator.publishAggregateAndProofs.resolves();
 
     // Mock signing service
-    validatorStore.createAndSignAttestation.resolves(attestation);
-    validatorStore.createAndSignAggregateAndProof.resolves(aggregate);
+    validatorStore.signAttestation.resolves(attestation);
+    validatorStore.signAggregateAndProof.resolves(aggregate);
 
     // Trigger clock onSlot for slot 0
     for (const fn of clock["fns"]) await fn.fn(0, controller.signal);

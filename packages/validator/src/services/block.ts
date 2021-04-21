@@ -70,7 +70,7 @@ export class BlockProposingService {
 
     // Wrap with try catch here to re-use `logCtx`
     try {
-      const randaoReveal = await this.validatorStore.randaoReveal(pubkey, slot);
+      const randaoReveal = await this.validatorStore.signRandao(pubkey, slot);
       const graffiti = this.graffiti || "";
 
       this.logger.debug("Producing block", logCtx);

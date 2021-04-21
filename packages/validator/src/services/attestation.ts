@@ -104,7 +104,7 @@ export class AttestationService {
 
     for (const {duty} of validatorDuties) {
       try {
-        signedAttestations.push(await this.validatorStore.createAndSignAttestation(duty, attestation, currentEpoch));
+        signedAttestations.push(await this.validatorStore.signAttestation(duty, attestation, currentEpoch));
       } catch (e) {
         if (notAborted(e))
           this.logger.error("Error signing attestation", {...logCtx, validator: prettyBytes(duty.pubkey)}, e);
@@ -158,7 +158,7 @@ export class AttestationService {
         // Produce signed aggregates only for validators that are subscribed aggregators.
         if (selectionProof !== null)
           signedAggregateAndProofs.push(
-            await this.validatorStore.createAndSignAggregateAndProof(duty, selectionProof, aggregate)
+            await this.validatorStore.signAggregateAndProof(duty, selectionProof, aggregate)
           );
       } catch (e) {
         if (notAborted(e))

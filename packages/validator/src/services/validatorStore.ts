@@ -62,7 +62,7 @@ export class ValidatorStore {
     };
   }
 
-  async randaoReveal(pubkey: BLSPubkey, slot: Slot): Promise<BLSSignature> {
+  async signRandao(pubkey: BLSPubkey, slot: Slot): Promise<BLSSignature> {
     const epoch = computeEpochAtSlot(this.config, slot);
     const randaoDomain = await this.getDomain(this.config.params.DOMAIN_RANDAO, epoch);
     const randaoSigningRoot = computeSigningRoot(this.config, this.config.types.Epoch, epoch, randaoDomain);
@@ -70,7 +70,7 @@ export class ValidatorStore {
     return this.getSecretKey(pubkey).sign(randaoSigningRoot).toBytes();
   }
 
-  async createAndSignAttestation(
+  async signAttestation(
     duty: phase0.AttesterDuty,
     attestationData: phase0.AttestationData,
     currentEpoch: Epoch
@@ -106,7 +106,7 @@ export class ValidatorStore {
     };
   }
 
-  async createAndSignAggregateAndProof(
+  async signAggregateAndProof(
     duty: phase0.AttesterDuty,
     selectionProof: BLSSignature,
     aggregate: phase0.Attestation
@@ -136,7 +136,7 @@ export class ValidatorStore {
     };
   }
 
-  async produceSelectionProof(pubkey: BLSPubkey, slot: Slot): Promise<BLSSignature> {
+  async signSelectionProof(pubkey: BLSPubkey, slot: Slot): Promise<BLSSignature> {
     const domain = await this.getDomain(
       this.config.params.DOMAIN_SELECTION_PROOF,
       computeEpochAtSlot(this.config, slot)
