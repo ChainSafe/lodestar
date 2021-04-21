@@ -37,6 +37,10 @@ export class ValidatorStore {
     return Array.from(this.validators.values()).map((keypair) => keypair.publicKey);
   }
 
+  hasVotingPubkey(pubkeyHex: PubkeyHex): boolean {
+    return this.validators.has(pubkeyHex);
+  }
+
   async signBlock(pubkey: BLSPubkey, block: phase0.BeaconBlock, currentSlot: Slot): Promise<phase0.SignedBeaconBlock> {
     // Make sure the block slot is not higher than the current slot to avoid potential attacks.
     if (block.slot > currentSlot) {

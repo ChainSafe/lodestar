@@ -125,9 +125,12 @@ export class AttestationDutiesService {
 
     for (const epoch of [currentEpoch, nextEpoch]) {
       // Download the duties and update the duties for the current and next epoch.
-      await this.pollBeaconAttestersForEpoch(epoch, localIndices, localPubkeys).catch((e) => {
-        if (notAborted(e)) this.logger.error("Failed to download attester duties", {epoch}, e);
-      });
+      // No need to bother the BN if we don't have any validators.
+      if (localIndices.length > 0) {
+        await this.pollBeaconAttestersForEpoch(epoch, localIndices).catch((e) => {
+          if (notAborted(e)) this.logger.error("Failed to download attester duties", {epoch}, e);
+        });
+      }
     }
 
     // This vector is likely to be a little oversized, but it won't reallocate.
@@ -174,23 +177,15 @@ export class AttestationDutiesService {
 
   /** For the given `localIndices` and `localPubkeys`, download the duties for the given `epoch` and
       store them in `this.attesters`. */
-  private async pollBeaconAttestersForEpoch(
-    epoch: Epoch,
-    localIndices: ValidatorIndex[],
-    localPubkeys: BLSPubkey[]
-  ): Promise<void> {
-    // No need to bother the BN if we don't have any validators.
-    if (localIndices.length === 0) {
-      return;
-    }
-
+  private async pollBeaconAttestersForEpoch(epoch: Epoch, localIndices: ValidatorIndex[]): Promise<void> {
     // TODO: Implement dependentRoot logic
     const attesterDuties = await this.apiClient.validator.getAttesterDuties(epoch, localIndices).catch((e) => {
       throw extendError(e, "Failed to obtain attester duty");
     });
     const dependentRoot = attesterDuties.dependentRoot;
-    const pubkeysSet = new Set(localPubkeys.map((pk) => toHexString(pk)));
-    const relevantDuties = attesterDuties.data.filter((duty) => pubkeysSet.has(toHexString(duty.pubkey)));
+    const relevantDuties = attesterDuties.data.filter((duty) =>
+      this.validatorStore.hasVotingPubkey(toHexString(duty.pubkey))
+    );
 
     this.logger.debug("Downloaded attester duties", {
       epoch,
