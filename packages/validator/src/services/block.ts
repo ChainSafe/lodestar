@@ -8,7 +8,7 @@ import {ValidatorStore} from "./validatorStore";
 import {BlockDutiesService} from "./blockDuties";
 import {IClock} from "../util/clock";
 
-const GENESIS_SLOT = 0;
+const GENESIS_SLOT = 0; // Re-declaring to not have to depend on `lodestar-params` just for this 0
 
 /**
  * Service that sets up and handles validator block proposal duties.
@@ -44,6 +44,10 @@ export class BlockProposingService {
     );
   }
 
+  /**
+   * `BlockDutiesService` must call this fn to trigger block creation
+   * This function may run more than once at a time, rationale in `BlockDutiesService.pollBeaconProposers`
+   */
   private notifyBlockProductionFn = (slot: Slot, proposers: BLSPubkey[]): void => {
     if (slot === GENESIS_SLOT) {
       this.logger.debug("Not producing block at genesis slot");
@@ -64,6 +68,7 @@ export class BlockProposingService {
     const pubkeyHex = toHexString(pubkey);
     const logCtx = {slot, validator: prettyBytes(pubkeyHex)};
 
+    // Wrap with try catch here to re-use `logCtx`
     try {
       const randaoReveal = await this.validatorStore.randaoReveal(pubkey, slot);
       const graffiti = this.graffiti || "";

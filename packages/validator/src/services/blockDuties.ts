@@ -12,7 +12,6 @@ import {ValidatorStore} from "./validatorStore";
 /** Only retain `HISTORICAL_DUTIES_EPOCHS` duties prior to the current epoch */
 const HISTORICAL_DUTIES_EPOCHS = 2;
 
-// To assist with readability
 type BlockDutyAtEpoch = {dependentRoot: Root; data: phase0.ProposerDuty[]};
 type NotifyBlockProductionFn = (slot: Slot, proposers: BLSPubkey[]) => void;
 
@@ -73,6 +72,8 @@ export class BlockDutiesService {
     await this.pollBeaconProposers(slot).catch((e) => {
       if (notAborted(e)) this.logger.error("Error on pollBeaconProposers", {}, e);
     });
+
+    this.pruneOldDuties(computeEpochAtSlot(this.config, slot));
   };
 
   /**
@@ -138,16 +139,14 @@ export class BlockDutiesService {
       }
     }
 
-    // Compute the block proposers for this slot again, now that we've received an update from
-    // the BN.
+    // Compute the block proposers for this slot again, now that we've received an update from the BN.
     //
     // Then, compute the difference between these two sets to obtain a set of block proposers
     // which were not included in the initial notification to the `BlockService`.
     const newBlockProducers = this.getblockProposersAtSlot(currentSlot);
     const additionalBlockProducers = differenceHex(initialBlockProposers, newBlockProducers);
 
-    // If there are any new proposers for this slot, send a notification so they produce a
-    // block.
+    // If there are any new proposers for this slot, send a notification so they produce a block.
     //
     // See the function-level documentation for more reasoning about this behaviour.
     if (additionalBlockProducers.length > 0) {
@@ -156,8 +155,10 @@ export class BlockDutiesService {
       // TODO: Add Metrics
       // this.metrics.proposalChanged.inc();
     }
+  }
 
-    // Prune old duties.
+  /** Run once per epoch to prune `this.proposers` map */
+  private pruneOldDuties(currentEpoch: Epoch): void {
     for (const epoch of this.proposers.keys()) {
       if (epoch + HISTORICAL_DUTIES_EPOCHS < currentEpoch) {
         this.proposers.delete(epoch);
