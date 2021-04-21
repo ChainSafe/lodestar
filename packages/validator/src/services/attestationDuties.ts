@@ -1,6 +1,6 @@
 import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {BLSPubkey, BLSSignature, Epoch, phase0, Root, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {BLSSignature, Epoch, phase0, Root, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {toHexString} from "@chainsafe/ssz";
 import {IApiClient} from "../api";
@@ -65,40 +65,49 @@ export class AttestationDutiesService {
   }
 
   private runAttesterDutiesTasks = async (epoch: Epoch): Promise<void> => {
-    // Run this poll before the wait, this should hopefully download all the indices
-    // before the block/attestation tasks need them.
-    await this.pollValidatorIndices().catch((e) => {
-      if (notAborted(e)) this.logger.error("Error on pollValidatorIndices", {}, e);
-    });
-    await this.pollBeaconAttesters(epoch).catch((e) => {
-      if (notAborted(e)) this.logger.error("Error on pollBeaconAttesters", {}, e);
-    });
+    await Promise.all([
+      // Run pollBeaconAttesters immeditelly for all known local indices
+      this.pollBeaconAttesters(epoch, this.getAllLocalIndices()).catch((e) => {
+        if (notAborted(e)) this.logger.error("Error on poll attesters", {epoch}, e);
+      }),
+
+      // At the same time fetch any remaining unknown validator indices, then poll duties for those newIndices only
+      this.pollValidatorIndices()
+        .then((newIndices) => this.pollBeaconAttesters(epoch, newIndices))
+        .catch((e) => {
+          if (notAborted(e)) this.logger.error("Error on poll indices and attesters", {epoch}, e);
+        }),
+    ]);
+
+    // After both, prune once per epoch
+    this.pruneOldDuties(epoch);
   };
 
   /** Iterate through all the voting pubkeys in the `ValidatorStore` and attempt to learn any unknown
-      validator indices. */
-  private async pollValidatorIndices(): Promise<void> {
-    const pubkeys = this.validatorStore.votingPubkeys();
-
-    const pubkeysToPoll: BLSPubkey[] = [];
-    for (const pubkey of pubkeys) {
-      if (!this.indices.has(toHexString(pubkey))) {
-        pubkeysToPoll.push(pubkey);
-      }
-    }
+      validator indices. Returns the new discovered indexes */
+  private async pollValidatorIndices(): Promise<ValidatorIndex[]> {
+    const pubkeysToPoll = this.validatorStore
+      .votingPubkeys()
+      .filter((pubkey) => !this.indices.has(toHexString(pubkey)));
 
     if (pubkeysToPoll.length === 0) {
-      return;
+      return [];
     }
 
     // Query the remote BN to resolve a pubkey to a validator index.
     const validatorsState = await this.apiClient.beacon.state.getStateValidators("head", {indices: pubkeysToPoll});
 
+    const newIndices = [];
     for (const validatorState of validatorsState) {
       const pubkeyHex = toHexString(validatorState.validator.pubkey);
-      this.logger.debug("Discovered validator", {pubkey: pubkeyHex, index: validatorState.index});
-      this.indices.set(pubkeyHex, validatorState.index);
+      if (!this.indices.has(pubkeyHex)) {
+        this.logger.debug("Discovered validator", {pubkey: pubkeyHex, index: validatorState.index});
+        this.indices.set(pubkeyHex, validatorState.index);
+        newIndices.push(validatorState.index);
+      }
     }
+
+    return newIndices;
   }
 
   /**
@@ -111,26 +120,19 @@ export class AttestationDutiesService {
    * 3. Push out any attestation subnet subscriptions to the BN.
    * 4. Prune old entries from `this.attesters`.
    */
-  private async pollBeaconAttesters(currentEpoch: Epoch): Promise<void> {
+  private async pollBeaconAttesters(currentEpoch: Epoch, indexArr: ValidatorIndex[]): Promise<void> {
     const nextEpoch = currentEpoch + 1;
 
-    const localPubkeys = this.validatorStore.votingPubkeys();
-    const localIndices: ValidatorIndex[] = [];
-    for (const pubkey of localPubkeys) {
-      const index = this.indices.get(toHexString(pubkey));
-      if (index !== undefined) {
-        localIndices.push(index);
-      }
+    // No need to bother the BN if we don't have any validators.
+    if (indexArr.length === 0) {
+      return;
     }
 
     for (const epoch of [currentEpoch, nextEpoch]) {
       // Download the duties and update the duties for the current and next epoch.
-      // No need to bother the BN if we don't have any validators.
-      if (localIndices.length > 0) {
-        await this.pollBeaconAttestersForEpoch(epoch, localIndices).catch((e) => {
-          if (notAborted(e)) this.logger.error("Failed to download attester duties", {epoch}, e);
-        });
-      }
+      await this.pollBeaconAttestersForEpoch(epoch, indexArr).catch((e) => {
+        if (notAborted(e)) this.logger.error("Failed to download attester duties", {epoch}, e);
+      });
     }
 
     // This vector is likely to be a little oversized, but it won't reallocate.
@@ -141,18 +143,21 @@ export class AttestationDutiesService {
     // We are *always* pushing out subscriptions, even if we've subscribed before. This is
     // potentially excessive on the BN in normal cases, but it will help with fast re-subscriptions
     // if the BN goes offline or we swap to a different one.
+    const indexSet = new Set(indexArr);
     for (const epoch of [currentEpoch, nextEpoch]) {
       for (const attMap of this.attesters.values()) {
         const dutyAtEpoch = attMap.get(epoch);
         if (dutyAtEpoch) {
           const {duty, selectionProof} = dutyAtEpoch.dutyAndProof;
-          beaconCommitteeSubscriptions.push({
-            validatorIndex: duty.validatorIndex,
-            committeesAtSlot: duty.committeesAtSlot,
-            committeeIndex: duty.committeeIndex,
-            slot: duty.slot,
-            isAggregator: selectionProof !== null,
-          });
+          if (indexSet.has(duty.validatorIndex)) {
+            beaconCommitteeSubscriptions.push({
+              validatorIndex: duty.validatorIndex,
+              committeesAtSlot: duty.committeesAtSlot,
+              committeeIndex: duty.committeeIndex,
+              slot: duty.slot,
+              isAggregator: selectionProof !== null,
+            });
+          }
         }
       }
     }
@@ -164,22 +169,13 @@ export class AttestationDutiesService {
         throw extendError(e, "Failed to subscribe to committee subnet");
       });
     }
-
-    // Prune old duties
-    for (const attMap of this.attesters.values()) {
-      for (const epoch of attMap.keys()) {
-        if (epoch + HISTORICAL_DUTIES_EPOCHS < currentEpoch) {
-          attMap.delete(epoch);
-        }
-      }
-    }
   }
 
-  /** For the given `localIndices` and `localPubkeys`, download the duties for the given `epoch` and
+  /** For the given `indexArr`, download the duties for the given `epoch` and
       store them in `this.attesters`. */
-  private async pollBeaconAttestersForEpoch(epoch: Epoch, localIndices: ValidatorIndex[]): Promise<void> {
+  private async pollBeaconAttestersForEpoch(epoch: Epoch, indexArr: ValidatorIndex[]): Promise<void> {
     // TODO: Implement dependentRoot logic
-    const attesterDuties = await this.apiClient.validator.getAttesterDuties(epoch, localIndices).catch((e) => {
+    const attesterDuties = await this.apiClient.validator.getAttesterDuties(epoch, indexArr).catch((e) => {
       throw extendError(e, "Failed to obtain attester duty");
     });
     const dependentRoot = attesterDuties.dependentRoot;
@@ -236,5 +232,24 @@ export class AttestationDutiesService {
       // selectionProof === null is used to check if is aggregator
       selectionProof: isAggregator ? selectionProof : null,
     };
+  }
+
+  /** Return all known indices from the validatorStore pubkeys */
+  private getAllLocalIndices(): ValidatorIndex[] {
+    return this.validatorStore
+      .votingPubkeys()
+      .map((pubkey) => this.indices.get(toHexString(pubkey)))
+      .filter((index): index is ValidatorIndex => index !== undefined);
+  }
+
+  /** Run once per epoch to prune `this.attesters` map */
+  private pruneOldDuties(currentEpoch: Epoch): void {
+    for (const attMap of this.attesters.values()) {
+      for (const epoch of attMap.keys()) {
+        if (epoch + HISTORICAL_DUTIES_EPOCHS < currentEpoch) {
+          attMap.delete(epoch);
+        }
+      }
+    }
   }
 }
