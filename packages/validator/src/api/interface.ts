@@ -17,45 +17,13 @@ export type BeaconChainReorgEvent = {type: typeof BeaconEventType.CHAIN_REORG; m
 export type HeadEvent = {type: typeof BeaconEventType.HEAD; message: phase0.ChainHead};
 export type BeaconEvent = BeaconBlockEvent | BeaconChainReorgEvent | HeadEvent;
 
-export enum ClockEventType {
-  CLOCK_SLOT = "clock_slot",
-  CLOCK_EPOCH = "clock_epoch",
-}
-
-export type ClockSlotEvent = {type: typeof ClockEventType.CLOCK_SLOT; message: {slot: number}};
-export type ClockEpochEvent = {type: typeof ClockEventType.CLOCK_EPOCH; message: {epoch: number}};
-
 export interface IApiClientEvents {
-  beaconChainStarted: () => void;
   [BeaconEventType.BLOCK]: (evt: BeaconBlockEvent["message"]) => void;
   [BeaconEventType.CHAIN_REORG]: (evt: BeaconChainReorgEvent["message"]) => void;
   [BeaconEventType.HEAD]: (evt: HeadEvent["message"]) => void;
-  [ClockEventType.CLOCK_SLOT]: (evt: ClockSlotEvent["message"]) => void;
-  [ClockEventType.CLOCK_EPOCH]: (evt: ClockEpochEvent["message"]) => void;
 }
 
 export type ApiClientEventEmitter = StrictEventEmitter<EventEmitter, IApiClientEvents>;
-
-export interface IBeaconClock {
-  currentSlot: Slot;
-  currentEpoch: Epoch;
-}
-
-export interface IApiClientProvider extends ApiClientEventEmitter, IApiClient {
-  clock: IBeaconClock;
-  genesisValidatorsRoot: Root;
-  url: string;
-
-  /**
-   * Initiates connection to rpc server.
-   */
-  connect(): Promise<void>;
-
-  /**
-   * Destroys connection to rpc server.
-   */
-  disconnect(): Promise<void>;
-}
 
 export interface IApiClient {
   beacon: {
@@ -98,5 +66,6 @@ export interface IApiClient {
 }
 
 export interface IApiClientValidator extends IApiClient {
-  registerAbortSignal?(signal: AbortSignal): void;
+  url: string;
+  registerAbortSignal(signal: AbortSignal): void;
 }

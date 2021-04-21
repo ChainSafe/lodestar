@@ -1,10 +1,12 @@
 import {SecretKey} from "@chainsafe/bls";
-import {PublicKeyHex, ValidatorAndSecret} from "../types";
+import {toHexString} from "@chainsafe/ssz";
+import {PubkeyHex, BLSKeypair} from "../types";
 
-export function mapSecretKeysToValidators(secretKeys: SecretKey[]): Map<PublicKeyHex, ValidatorAndSecret> {
-  const validators: Map<PublicKeyHex, ValidatorAndSecret> = new Map<PublicKeyHex, ValidatorAndSecret>();
+export function mapSecretKeysToValidators(secretKeys: SecretKey[]): Map<PubkeyHex, BLSKeypair> {
+  const validators: Map<PubkeyHex, BLSKeypair> = new Map<PubkeyHex, BLSKeypair>();
   for (const secretKey of secretKeys) {
-    validators.set(secretKey.toPublicKey().toHex(), {validator: null, secretKey});
+    const publicKey = secretKey.toPublicKey().toBytes();
+    validators.set(toHexString(publicKey), {publicKey, secretKey});
   }
   return validators;
 }

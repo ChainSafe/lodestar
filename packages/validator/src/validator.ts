@@ -1,158 +1,96 @@
-/**
- * @module validator
- */
-
-// This file makes some naive assumptions surrounding the way RPC like calls will be made in ETH2.0
-/**
- * 1. Setup any necessary connections (RPC,...)
- * 2. Check if the chain start log has been emitted
- * 3. Get the validator index
- * 4. Setup block processing and attestation services
- * 5. Wait for role change
- * 6. Execute role
- * 7. Wait for new role
- * 8. Repeat step 5
- */
+import {AbortController, AbortSignal} from "abort-controller";
+import {SecretKey} from "@chainsafe/bls";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {phase0} from "@chainsafe/lodestar-types";
+import {Genesis} from "@chainsafe/lodestar-types/phase0";
 import {fromHex, ILogger} from "@chainsafe/lodestar-utils";
-import {computeSigningRoot, computeDomain} from "@chainsafe/lodestar-beacon-state-transition";
-import BlockProposingService from "./services/block";
-import {ApiClientProvider, IApiClientProvider} from "./api";
-import {AttestationService} from "./services/attestation";
+import {ApiClientOverInstance, IApiClientValidator} from "./api";
+import {ApiClientOverRest} from "./api/rest";
 import {IValidatorOptions} from "./options";
-import {ISlashingProtection} from "./slashingProtection";
-import {mapSecretKeysToValidators} from "./services/utils";
+import {Clock, IClock} from "./util/clock";
+import {signAndSubmitVoluntaryExit} from "./voluntaryExit";
+import {ForkService} from "./services/fork";
+import {ValidatorStore} from "./services/validatorStore";
+import {BlockProposingService} from "./services/block";
+import {AttestationService} from "./services/attestation";
+import {waitForGenesisAndGenesisTime} from "./genesis";
+
+// TODO: Extend the timeout, and let it be customizable
+/// The global timeout for HTTP requests to the beacon node.
+// const HTTP_TIMEOUT_MS = 12 * 1000;
+
+enum Status {
+  running,
+  stopped,
+}
+
+type State = {status: Status.running; controller: AbortController} | {status: Status.stopped};
 
 /**
  * Main class for the Validator client.
  */
 export class Validator {
-  private opts: IValidatorOptions;
-  private config: IBeaconConfig;
-  private provider: IApiClientProvider;
-  private blockService?: BlockProposingService;
-  private attestationService?: AttestationService;
-  private slashingProtection: ISlashingProtection;
-  private logger: ILogger;
+  private readonly config: IBeaconConfig;
+  private readonly apiClient: IApiClientValidator;
+  private readonly secretKeys: SecretKey[];
+  private readonly clock: IClock;
+  private readonly logger: ILogger;
+  private state: State = {status: Status.stopped};
 
-  constructor(opts: IValidatorOptions) {
-    this.opts = opts;
-    this.config = opts.config;
-    this.logger = opts.logger;
-    this.slashingProtection = opts.slashingProtection;
-    this.provider = new ApiClientProvider(opts.config, opts.logger, opts.api);
+  constructor(opts: IValidatorOptions, genesis: Genesis) {
+    const {config, logger, slashingProtection, secretKeys, graffiti} = opts;
+
+    const apiClient =
+      typeof opts.api === "string" ? ApiClientOverRest(config, opts.api) : ApiClientOverInstance(opts.api);
+    const clock = new Clock(config, logger, {genesisTime: Number(genesis.genesisTime)});
+    const forkService = new ForkService(apiClient, logger, clock);
+    const validatorStore = new ValidatorStore(config, forkService, slashingProtection, secretKeys, genesis);
+    new BlockProposingService(config, logger, apiClient, clock, validatorStore, graffiti);
+    new AttestationService(config, logger, apiClient, clock, validatorStore);
+
+    this.config = config;
+    this.logger = logger;
+    this.apiClient = apiClient;
+    this.clock = clock;
+    this.secretKeys = secretKeys;
+  }
+
+  /** Waits for genesis and genesis time */
+  static async initializeFromBeaconNode(opts: IValidatorOptions, signal?: AbortSignal): Promise<Validator> {
+    const genesis = await waitForGenesisAndGenesisTime(opts, signal);
+    return new Validator(opts, genesis);
   }
 
   /**
    * Instantiates block and attestation services and runs them once the chain has been started.
    */
   async start(): Promise<void> {
-    await this.setup();
-    this.logger.info("Waiting for chain start...");
-    this.provider.once("beaconChainStarted", this.run);
-  }
+    if (this.state.status === Status.running) return;
+    const controller = new AbortController();
+    this.state = {status: Status.running, controller};
 
-  /**
-   * Start the blockService and attestationService.
-   * Should only be called once the beacon chain has been started.
-   */
-  run = async (): Promise<void> => {
-    this.logger.info("Chain has started");
-    if (!this.blockService) throw Error("blockService not setup");
-    if (!this.attestationService) throw Error("attestationService not setup");
-    // Run both services at once to prevent missing first attestation
-    await Promise.all([this.blockService.start(), this.attestationService.start()]);
-  };
+    this.clock.start(controller.signal);
+    this.apiClient.registerAbortSignal(controller.signal);
+  }
 
   /**
    * Stops all validator functions.
    */
   async stop(): Promise<void> {
-    await this.provider.disconnect();
-    if (this.attestationService) await this.attestationService.stop();
-    if (this.blockService) await this.blockService.stop();
+    if (this.state.status === Status.stopped) return;
+    this.state.controller.abort();
+    this.state = {status: Status.stopped};
   }
 
   /**
    * Perform a voluntary exit for the given validator by its key.
    */
   async voluntaryExit(publicKey: string, exitEpoch: number): Promise<void> {
-    await this.provider.connect();
-
-    const [stateValidator] = await this.provider.beacon.state.getStateValidators("head", {
-      indices: [this.config.types.BLSPubkey.fromJson(publicKey)],
-    });
-    if (!stateValidator) throw new Error("Validator not found in beacon chain.");
-
-    const epoch = exitEpoch || this.provider.clock.currentEpoch;
-
-    const voluntaryExit = {
-      epoch,
-      validatorIndex: stateValidator.index,
-    };
-
-    const forkSchedule = await this.provider.config.getForkSchedule();
-    const fork = forkSchedule[0] || (await this.provider.beacon.state.getFork("head"));
-    if (!fork) throw new Error("VoluntaryExit: Fork not found");
-    const genesisValidatorsRoot = (await this.provider.beacon.getGenesis())?.genesisValidatorsRoot;
-    const domain = computeDomain(
-      this.config,
-      this.config.params.DOMAIN_VOLUNTARY_EXIT,
-      fork.currentVersion,
-      genesisValidatorsRoot
+    const secretKey = this.secretKeys.find((sk) =>
+      this.config.types.BLSPubkey.equals(sk.toPublicKey().toBytes(), fromHex(publicKey))
     );
-    const signingRoot = computeSigningRoot(this.config, this.config.types.phase0.VoluntaryExit, voluntaryExit, domain);
-
-    let secretKey;
-    for (const sk of this.opts.secretKeys) {
-      if (this.config.types.BLSPubkey.equals(sk.toPublicKey().toBytes(), fromHex(publicKey))) secretKey = sk;
-    }
     if (!secretKey) throw new Error(`No matching secret key found for public key ${publicKey}`);
 
-    const signedVoluntaryExit: phase0.SignedVoluntaryExit = {
-      message: voluntaryExit,
-      signature: secretKey.sign(signingRoot).toBytes(),
-    };
-
-    try {
-      await this.provider.beacon.pool.submitVoluntaryExit(signedVoluntaryExit);
-      this.logger.info(`Submitted voluntary exit for ${publicKey} to the network`);
-    } finally {
-      await this.provider.disconnect();
-    }
-  }
-
-  /**
-   * Creates a new block processing service and attestation service.
-   */
-  private async setup(): Promise<void> {
-    await this.setupAPI();
-    const validators = mapSecretKeysToValidators(this.opts.secretKeys);
-
-    this.blockService = new BlockProposingService(
-      this.config,
-      validators,
-      this.provider,
-      this.slashingProtection,
-      this.logger,
-      this.opts.graffiti
-    );
-
-    this.attestationService = new AttestationService(
-      this.config,
-      validators,
-      this.provider,
-      this.slashingProtection,
-      this.logger
-    );
-  }
-
-  /**
-   * Establishes a connection to a specified beacon chain url.
-   */
-  private async setupAPI(): Promise<void> {
-    await this.provider.connect();
-    this.logger.info("RPC connection successfully established", {url: this.provider.url});
+    await signAndSubmitVoluntaryExit(publicKey, exitEpoch, secretKey, this.apiClient, this.config);
+    this.logger.info(`Submitted voluntary exit for ${publicKey} to the network`);
   }
 }

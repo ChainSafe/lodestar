@@ -6,7 +6,7 @@ import {init} from "@chainsafe/bls";
 import {phase0} from "@chainsafe/lodestar-types";
 
 import {getDevBeaconNode} from "../../utils/node/beacon";
-import {getDevValidators} from "../../utils/node/validator";
+import {getAndInitDevValidators} from "../../utils/node/validator";
 import {testLogger, LogLevel, TestLoggerOpts} from "../../utils/logger";
 import {connect} from "../../utils/network";
 import {Network} from "../../../src/network";
@@ -63,7 +63,7 @@ async function runWorker(): Promise<void> {
   // Only run for the first node
   const stopInfoTracker = nodeIndex === 0 ? simTestInfoTracker(node, loggerNode) : null;
 
-  const validators = getDevValidators({
+  const validators = await getAndInitDevValidators({
     node,
     validatorClientCount: 1,
     validatorsPerClient: validatorsPerNode,

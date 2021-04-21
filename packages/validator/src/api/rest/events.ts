@@ -3,6 +3,7 @@ import {IStoppableEventIterable, LodestarEventIterator} from "@chainsafe/lodesta
 import {HttpClient, urlJoin} from "../../util";
 import {BeaconEvent, BeaconEventType, IApiClient} from "../interface";
 import {ContainerType} from "@chainsafe/ssz";
+import {ApiClientEventEmitter} from "../interface";
 import {IBeaconSSZTypes} from "@chainsafe/lodestar-types";
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
@@ -55,4 +56,15 @@ function deserializeBeaconEventMessage(types: IBeaconSSZTypes, msg: MessageEvent
 
 function deserializeEventData<T extends BeaconEvent["message"]>(type: ContainerType<T>, data: string): T {
   return type.fromJson(JSON.parse(data));
+}
+
+export async function pipeToEmitter<
+  T extends BeaconEvent["type"] = BeaconEventType.BLOCK | BeaconEventType.HEAD | BeaconEventType.CHAIN_REORG
+>(stream: IStoppableEventIterable<BeaconEvent>, emitter: ApiClientEventEmitter): Promise<void> {
+  for await (const evt of stream) {
+    emitter.emit<BeaconEvent["type"], ApiClientEventEmitter>(
+      evt.type,
+      evt.message as ({type: T} extends BeaconEvent ? BeaconEvent : never)["message"]
+    );
+  }
 }

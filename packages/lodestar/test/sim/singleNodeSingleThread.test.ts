@@ -2,7 +2,7 @@ import {IBeaconParams} from "@chainsafe/lodestar-params";
 import {phase0} from "@chainsafe/lodestar-types";
 import {getDevBeaconNode} from "../utils/node/beacon";
 import {waitForEvent} from "../utils/events/resolver";
-import {getDevValidators} from "../utils/node/validator";
+import {getAndInitDevValidators} from "../utils/node/validator";
 import {ChainEvent} from "../../src/chain";
 import {IRestApiOptions} from "../../src/api/rest/options";
 import {testLogger, TestLoggerOpts, LogLevel} from "../utils/logger";
@@ -68,8 +68,7 @@ describe("Run single node single thread interop validators (no eth1) until check
         testCase.event,
         timeout - 10 * 1000
       );
-
-      const validators = getDevValidators({
+      const validators = await getAndInitDevValidators({
         node: bn,
         validatorsPerClient: testCase.validatorsPerClient,
         validatorClientCount: testCase.validatorClientCount,

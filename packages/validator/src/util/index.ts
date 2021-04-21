@@ -1,3 +1,4 @@
+export * from "./aggregator";
+export * from "./error";
 export * from "./httpClient";
-export * from "./misc";
 export * from "./url";
