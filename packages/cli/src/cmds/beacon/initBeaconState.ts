@@ -1,3 +1,4 @@
+// import ipfsClient from "ipfs-http-client";
 import {AbortSignal} from "abort-controller";
 
 import {TreeBacked} from "@chainsafe/ssz";
@@ -40,7 +41,10 @@ export async function initBeaconState(
 
   const dbHasSomeState = (await db.stateArchive.lastKey()) != null;
 
-  if (args.weakSubjectivityStateFile) {
+  if (args.fetchWeakSubjectivityState) {
+    console.log("it aint no joke!");
+    return await initFromFile("https://ipfs.io/ipfs/QmYLX8QtzbF8eSYm9gQWL4t17ufAoZs14wC2wjJS9QGUm3/state.ssz");
+  } else if (args.weakSubjectivityStateFile) {
     return await initFromFile(args.weakSubjectivityStateFile);
   } else if (dbHasSomeState) {
     return await initStateFromDb(config, db, logger);
