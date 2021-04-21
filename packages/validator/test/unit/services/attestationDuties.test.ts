@@ -5,13 +5,12 @@ import sinon from "sinon";
 import bls from "@chainsafe/bls";
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import {phase0} from "@chainsafe/lodestar-types";
-import {sleep} from "@chainsafe/lodestar-utils";
 import {toHexString} from "@chainsafe/ssz";
 import {AttestationDutiesService} from "../../../src/services/attestationDuties";
 import {ValidatorStore} from "../../../src/services/validatorStore";
-import {Clock} from "../../../src/util/clock";
 import {ApiClientStub} from "../../utils/apiStub";
 import {testLogger} from "../../utils/logger";
+import {ClockMock} from "../../utils/clock";
 
 describe("AttestationDutiesService", function () {
   const sandbox = sinon.createSandbox();
@@ -31,6 +30,7 @@ describe("AttestationDutiesService", function () {
     const secretKeys = [bls.SecretKey.fromBytes(toBufferBE(BigInt(98), 32))];
     pubkeys = secretKeys.map((sk) => sk.toPublicKey().toBytes());
     validatorStore.votingPubkeys.returns(pubkeys);
+    validatorStore.hasVotingPubkey.returns(true);
     validatorStore.signSelectionProof.resolves(ZERO_HASH);
   });
 
@@ -64,12 +64,11 @@ describe("AttestationDutiesService", function () {
     apiClient.validator.prepareBeaconCommitteeSubnet.resolves();
 
     // Clock will call runAttesterDutiesTasks() immediatelly
-    const clock = new Clock(config, logger, {genesisTime: Date.now() / 1000});
+    const clock = new ClockMock();
     const dutiesService = new AttestationDutiesService(config, logger, apiClient, clock, validatorStore);
-    clock.start(controller.signal);
 
-    // Resolve all promises
-    await sleep(20, controller.signal);
+    // Trigger clock onSlot for slot 0
+    await clock.tickEpochFns(0, controller.signal);
 
     // Validator index should be persisted
     expect(Object.fromEntries(dutiesService["indices"])).to.deep.equal(

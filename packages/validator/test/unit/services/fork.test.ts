@@ -2,10 +2,10 @@ import sinon from "sinon";
 import {AbortController} from "abort-controller";
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import {ForkService} from "../../../src/services/fork";
-import {Clock} from "../../../src/util/clock";
 import {ApiClientStub} from "../../utils/apiStub";
 import {testLogger} from "../../utils/logger";
 import {expect} from "chai";
+import {ClockMock} from "../../utils/clock";
 
 describe("ForkService", () => {
   const sandbox = sinon.createSandbox();
@@ -17,15 +17,15 @@ describe("ForkService", () => {
   afterEach(() => controller.abort());
 
   it("Should only fetch the fork once", async () => {
-    // Clock will call runAttesterDutiesTasks() immediatelly
-    const clock = new Clock(config, logger, {genesisTime: Date.now() / 1000});
-
+    const clock = new ClockMock();
     const forkService = new ForkService(apiClient, logger, clock);
 
     const fork = config.types.phase0.Fork.defaultValue();
     apiClient.beacon.state.getFork.resolves(fork);
 
-    clock.start(controller.signal);
+    // Trigger clock onSlot for slot 0
+    // Don't resolve the promise immediatelly to check the promise caching mechanism
+    void clock.tickEpochFns(0, controller.signal);
 
     // Call getFork() multiple times at once
     await Promise.all(

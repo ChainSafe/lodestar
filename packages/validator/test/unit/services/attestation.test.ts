@@ -10,9 +10,9 @@ import {
 import {AttestationService} from "../../../src/services/attestation";
 import {DutyAndProof} from "../../../src/services/attestationDuties";
 import {ValidatorStore} from "../../../src/services/validatorStore";
-import {Clock} from "../../../src/util/clock";
 import {ApiClientStub} from "../../utils/apiStub";
 import {testLogger} from "../../utils/logger";
+import {ClockMock} from "../../utils/clock";
 
 describe("AttestationService", function () {
   const sandbox = sinon.createSandbox();
@@ -41,7 +41,7 @@ describe("AttestationService", function () {
   afterEach(() => controller.abort());
 
   it("Should produce, sign, and publish an attestation + aggregate", async () => {
-    const clock = new Clock(config, logger, {genesisTime: Date.now() / 1000});
+    const clock = new ClockMock();
     const attestationService = new AttestationService(config, logger, apiClient, clock, validatorStore);
 
     const attestation = generateEmptyAttestation();
@@ -80,7 +80,7 @@ describe("AttestationService", function () {
     validatorStore.signAggregateAndProof.resolves(aggregate);
 
     // Trigger clock onSlot for slot 0
-    for (const fn of clock["fns"]) await fn.fn(0, controller.signal);
+    await clock.tickSlotFns(0, controller.signal);
 
     // Must submit the attestation received through produceAttestationData()
     expect(apiClient.beacon.pool.submitAttestations.callCount).to.equal(1, "submitAttestations() must be called once");

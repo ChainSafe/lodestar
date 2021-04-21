@@ -4,12 +4,11 @@ import sinon from "sinon";
 import bls from "@chainsafe/bls";
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import {phase0, Root} from "@chainsafe/lodestar-types";
-import {sleep} from "@chainsafe/lodestar-utils";
 import {BlockDutiesService} from "../../../src/services/blockDuties";
 import {ValidatorStore} from "../../../src/services/validatorStore";
-import {Clock} from "../../../src/util/clock";
 import {ApiClientStub} from "../../utils/apiStub";
 import {testLogger} from "../../utils/logger";
+import {ClockMock} from "../../utils/clock";
 
 type ProposerDutiesRes = {dependentRoot: Root; data: phase0.ProposerDuty[]};
 
@@ -44,8 +43,7 @@ describe("BlockDutiesService", function () {
 
     const notifyBlockProductionFn = sinon.stub(); // Returns void
 
-    // Clock will call runAttesterDutiesTasks() immediatelly
-    const clock = new Clock(config, logger, {genesisTime: Date.now() / 1000});
+    const clock = new ClockMock();
     const dutiesService = new BlockDutiesService(
       config,
       logger,
@@ -54,10 +52,9 @@ describe("BlockDutiesService", function () {
       validatorStore,
       notifyBlockProductionFn
     );
-    clock.start(controller.signal);
 
-    // Resolve all promises
-    await sleep(20, controller.signal);
+    // Trigger clock onSlot for slot 0
+    await clock.tickSlotFns(0, controller.signal);
 
     // Duties for this epoch should be persisted
     expect(Object.fromEntries(dutiesService["proposers"])).to.deep.equal(
@@ -88,7 +85,7 @@ describe("BlockDutiesService", function () {
     const notifyBlockProductionFn = sinon.stub(); // Returns void
 
     // Clock will call runAttesterDutiesTasks() immediatelly
-    const clock = new Clock(config, logger, {genesisTime: Date.now() / 1000});
+    const clock = new ClockMock();
     const dutiesService = new BlockDutiesService(
       config,
       logger,
@@ -100,11 +97,11 @@ describe("BlockDutiesService", function () {
 
     // Trigger clock onSlot for slot 0
     apiClient.validator.getProposerDuties.resolves(dutiesBeforeReorg);
-    for (const fn of clock["fns"]) await fn.fn(0, controller.signal);
+    await clock.tickSlotFns(0, controller.signal);
 
     // Trigger clock onSlot for slot 1 - Return different duties for slot 1
     apiClient.validator.getProposerDuties.resolves(dutiesAfterReorg);
-    for (const fn of clock["fns"]) await fn.fn(1, controller.signal);
+    await clock.tickSlotFns(1, controller.signal);
 
     // Should persist the dutiesAfterReorg
     expect(Object.fromEntries(dutiesService["proposers"])).to.deep.equal(

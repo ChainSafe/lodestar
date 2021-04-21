@@ -8,9 +8,9 @@ import {sleep} from "@chainsafe/lodestar-utils";
 import {generateEmptySignedBlock} from "@chainsafe/lodestar/test/utils/block";
 import {BlockProposingService} from "../../../src/services/block";
 import {ValidatorStore} from "../../../src/services/validatorStore";
-import {Clock} from "../../../src/util/clock";
 import {ApiClientStub} from "../../utils/apiStub";
 import {testLogger} from "../../utils/logger";
+import {ClockMock} from "../../utils/clock";
 
 type ProposerDutiesRes = {dependentRoot: Root; data: phase0.ProposerDuty[]};
 
@@ -43,8 +43,7 @@ describe("BlockDutiesService", function () {
     };
     apiClient.validator.getProposerDuties.resolves(duties);
 
-    // Clock will call runAttesterDutiesTasks() immediatelly
-    const clock = new Clock(config, logger, {genesisTime: Date.now() / 1000});
+    const clock = new ClockMock();
     const blockService = new BlockProposingService(config, logger, apiClient, clock, validatorStore);
 
     const signedBlock = generateEmptySignedBlock();
