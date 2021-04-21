@@ -1,22 +1,13 @@
 import {AbortSignal} from "abort-controller";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {BLSSignature, phase0, Slot} from "@chainsafe/lodestar-types";
+import {phase0, Slot, CommitteeIndex} from "@chainsafe/lodestar-types";
+import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {ILogger, prettyBytes, sleep} from "@chainsafe/lodestar-utils";
 import {IApiClient} from "../api";
-import {extendError, notAborted} from "../util";
+import {extendError, notAborted, IClock} from "../util";
 import {ValidatorStore} from "./validatorStore";
-import {AttestationDutiesService} from "./attestationDuties";
-import {IClock} from "../util/clock";
-import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
-
-type CommitteeIndex = number;
-
-/** Neatly joins the server-generated `AttesterData` with the locally-generated `selection_proof`. */
-type DutyAndProof = {
-  duty: phase0.AttesterDuty;
-  /** This value is only set to not null if the proof indicates that the validator is an aggregator. */
-  selectionProof: BLSSignature | null;
-};
+import {AttestationDutiesService, DutyAndProof} from "./attestationDuties";
+import {groupDutiesByCommitteeIndex} from "./utils";
 
 /**
  * Service that sets up and handles validator attester duties.
@@ -51,16 +42,7 @@ export class AttestationService {
     // Lighthouse recommends to always wait to 1/3 of the slot, even if the block comes early
     await sleep(this.clock.msToSlotFraction(slot, 1 / 3), signal);
 
-    const dutiesByCommitteeIndex = new Map<CommitteeIndex, DutyAndProof[]>();
-    for (const dutyAndProof of this.dutiesService.getAttestersAtSlot(slot)) {
-      const {committeeIndex} = dutyAndProof.duty;
-      const dutyAndProofArr = dutiesByCommitteeIndex.get(committeeIndex);
-      if (dutyAndProofArr) {
-        dutyAndProofArr.push(dutyAndProof);
-      } else {
-        dutiesByCommitteeIndex.set(committeeIndex, [dutyAndProof]);
-      }
-    }
+    const dutiesByCommitteeIndex = groupDutiesByCommitteeIndex(this.dutiesService.getAttestersAtSlot(slot));
 
     // await for all so if the Beacon node is overloaded it auto-throttles
     // TODO: This approach is convervative to reduce the node's load, review
@@ -92,7 +74,7 @@ export class AttestationService {
 
     // Then download, sign and publish a `SignedAggregateAndProof` for each
     // validator that is elected to aggregate for this `slot` and
-    // `committee_index`.
+    // `committeeIndex`.
     await this.produceAndPublishAggregates(attestation, validatorDuties);
   }
 
@@ -102,12 +84,7 @@ export class AttestationService {
    *
    * https://github.com/ethereum/eth2.0-specs/blob/v0.12.1/specs/phase0/validator.md#attesting
    *
-   * ## Detail
-   *
-   * The given `validator_duties` should already be filtered to only contain those that match
-   * `slot` and `committee_index`. Critical errors will be logged if this is not the case.
-   *
-   * Only one `Attestation` is downloaded from the BN. It is then cloned and signed by each
+   * Only one `Attestation` is downloaded from the BN. It is then signed by each
    * validator and the list of individually-signed `Attestation` objects is returned to the BN.
    */
   private async produceAndPublishAttestations(
@@ -127,7 +104,6 @@ export class AttestationService {
 
     for (const {duty} of validatorDuties) {
       try {
-        this.validateAttestationDuty(duty, attestation);
         signedAttestations.push(await this.validatorStore.createAndSignAttestation(duty, attestation, currentEpoch));
       } catch (e) {
         if (notAborted(e))
@@ -153,12 +129,7 @@ export class AttestationService {
    *
    * https://github.com/ethereum/eth2.0-specs/blob/v0.12.1/specs/phase0/validator.md#broadcast-aggregate
    *
-   * ## Detail
-   *
-   * The given `validator_duties` should already be filtered to only contain those that match
-   * `slot` and `committee_index`. Critical errors will be logged if this is not the case.
-   *
-   * Only one aggregated `Attestation` is downloaded from the BN. It is then cloned and signed
+   * Only one aggregated `Attestation` is downloaded from the BN. It is then signed
    * by each validator and the list of individually-signed `SignedAggregateAndProof` objects is
    * returned to the BN.
    */
@@ -184,15 +155,11 @@ export class AttestationService {
 
     for (const {duty, selectionProof} of validatorDuties) {
       try {
-        if (selectionProof === null) {
-          // Do not produce a signed aggregate for validators that are not subscribed aggregators.
-          continue;
-        }
-
-        this.validateAttestationDuty(duty, attestation);
-        signedAggregateAndProofs.push(
-          await this.validatorStore.createAndSignAggregateAndProof(duty, selectionProof, aggregate)
-        );
+        // Produce signed aggregates only for validators that are subscribed aggregators.
+        if (selectionProof !== null)
+          signedAggregateAndProofs.push(
+            await this.validatorStore.createAndSignAggregateAndProof(duty, selectionProof, aggregate)
+          );
       } catch (e) {
         if (notAborted(e))
           this.logger.error("Error signing aggregateAndProofs", {...logCtx, validator: prettyBytes(duty.pubkey)}, e);
@@ -206,19 +173,6 @@ export class AttestationService {
       } catch (e) {
         if (notAborted(e)) this.logger.error("Error publishing aggregateAndProofs", logCtx, e);
       }
-    }
-  }
-
-  private validateAttestationDuty(duty: phase0.AttesterDuty, attestationData: phase0.AttestationData): void {
-    if (duty.slot !== attestationData.slot) {
-      throw Error(
-        `Inconsistent validator duties during signing: duty.slot ${duty.slot} != att.slot ${attestationData.slot}`
-      );
-    }
-    if (duty.committeeIndex != attestationData.index) {
-      throw Error(
-        `Inconsistent validator duties during signing: duty.committeeIndex ${duty.committeeIndex} != att.committeeIndex ${attestationData.index}`
-      );
     }
   }
 }

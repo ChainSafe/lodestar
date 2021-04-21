@@ -76,7 +76,7 @@ export class BlockDutiesService {
   };
 
   /**
-   * Download the proposer duties for the current epoch and store them in `duties_service.proposers`.
+   * Download the proposer duties for the current epoch and store them in `this.proposers`.
    * If there are any proposer for this slot, send out a notification to the block proposers.
    *
    * ## Note
@@ -153,8 +153,8 @@ export class BlockDutiesService {
     if (additionalBlockProducers.length > 0) {
       this.notifyBlockProductionFn(currentSlot, additionalBlockProducers);
       this.logger.debug("Detected new block proposer", {currentSlot});
-      // TODO: Metrics
-      // metrics::inc_counter(metrics::PROPOSAL_CHANGED);
+      // TODO: Add Metrics
+      // this.metrics.proposalChanged.inc();
     }
 
     // Prune old duties.

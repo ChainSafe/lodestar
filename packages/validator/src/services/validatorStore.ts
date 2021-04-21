@@ -78,6 +78,8 @@ export class ValidatorStore {
       );
     }
 
+    this.validateAttestationDuty(duty, attestationData);
+
     const domain = await this.getDomain(this.config.params.DOMAIN_BEACON_ATTESTER, attestationData.target.epoch);
     const signingRoot = computeSigningRoot(
       this.config,
@@ -105,6 +107,8 @@ export class ValidatorStore {
     selectionProof: BLSSignature,
     aggregate: phase0.Attestation
   ): Promise<phase0.SignedAggregateAndProof> {
+    this.validateAttestationDuty(duty, aggregate.data);
+
     const aggregateAndProof: phase0.AggregateAndProof = {
       aggregate,
       aggregatorIndex: duty.validatorIndex,
@@ -153,5 +157,17 @@ export class ValidatorStore {
     }
 
     return validator.secretKey;
+  }
+
+  /** Prevent signing bad data sent by the Beacon node */
+  private validateAttestationDuty(duty: phase0.AttesterDuty, data: phase0.AttestationData): void {
+    if (duty.slot !== data.slot) {
+      throw Error(`Inconsistent duties during signing: duty.slot ${duty.slot} != att.slot ${data.slot}`);
+    }
+    if (duty.committeeIndex != data.index) {
+      throw Error(
+        `Inconsistent duties during signing: duty.committeeIndex ${duty.committeeIndex} != att.committeeIndex ${data.index}`
+      );
+    }
   }
 }

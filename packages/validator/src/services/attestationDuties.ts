@@ -11,7 +11,7 @@ import {ValidatorStore} from "./validatorStore";
 /** Only retain `HISTORICAL_DUTIES_EPOCHS` duties prior to the current epoch. */
 const HISTORICAL_DUTIES_EPOCHS = 2;
 
-/** Neatly joins the server-generated `AttesterData` with the locally-generated `selection_proof`. */
+/** Neatly joins the server-generated `AttesterData` with the locally-generated `selectionProof`. */
 export type DutyAndProof = {
   duty: phase0.AttesterDuty;
   /** This value is only set to not null if the proof indicates that the validator is an aggregator. */
@@ -106,10 +106,10 @@ export class AttestationDutiesService {
    *
    * This function will perform (in the following order):
    *
-   * 1. Poll for current-epoch duties and update the local `duties_service.attesters` map.
+   * 1. Poll for current-epoch duties and update the local `this.attesters` map.
    * 2. As above, but for the next-epoch.
    * 3. Push out any attestation subnet subscriptions to the BN.
-   * 4. Prune old entries from `duties_service.attesters`.
+   * 4. Prune old entries from `this.attesters`.
    */
   private async pollBeaconAttesters(currentEpoch: Epoch): Promise<void> {
     const nextEpoch = currentEpoch + 1;
@@ -173,7 +173,7 @@ export class AttestationDutiesService {
   }
 
   /** For the given `localIndices` and `localPubkeys`, download the duties for the given `epoch` and
-      store them in `duties_service.attesters`. */
+      store them in `this.attesters`. */
   private async pollBeaconAttestersForEpoch(
     epoch: Epoch,
     localIndices: ValidatorIndex[],
