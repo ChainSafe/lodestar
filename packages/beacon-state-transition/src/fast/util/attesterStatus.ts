@@ -1,5 +1,3 @@
-import {phase0} from "@chainsafe/lodestar-types";
-
 export const FLAG_PREV_SOURCE_ATTESTER = 1 << 0;
 export const FLAG_PREV_TARGET_ATTESTER = 1 << 1;
 export const FLAG_PREV_HEAD_ATTESTER = 1 << 2;
@@ -23,16 +21,14 @@ export interface IAttesterStatus {
   flags: number;
   proposerIndex: number; // -1 when not included by any proposer
   inclusionDelay: number;
-  validator: phase0.Validator;
   active: boolean;
 }
 
-export function createIAttesterStatus(v: phase0.Validator): IAttesterStatus {
+export function createIAttesterStatus(): IAttesterStatus {
   return {
     flags: 0,
     proposerIndex: -1,
     inclusionDelay: 0,
-    validator: v,
     active: false,
   };
 }

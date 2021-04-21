@@ -6,7 +6,6 @@ import {decreaseBalance} from "../../../util";
 import {CachedBeaconState, IEpochProcess} from "../../../fast";
 
 export function processSlashings(state: CachedBeaconState<phase0.BeaconState>, process: IEpochProcess): void {
-  const {validators} = state;
   const params = state.config.params;
   const totalBalance = process.totalActiveStake;
   const totalSlashings = Array.from(readonlyValues(state.slashings)).reduce((a, b) => a + b, BigInt(0));
@@ -14,7 +13,7 @@ export function processSlashings(state: CachedBeaconState<phase0.BeaconState>, p
   const adjustedTotalSlashingBalance = bigIntMin(totalSlashings * proportionalSlashingMultiplier, totalBalance);
   const increment = BigInt(params.EFFECTIVE_BALANCE_INCREMENT);
   for (const index of process.indicesToSlash) {
-    const effectiveBalance = validators[index].effectiveBalance;
+    const effectiveBalance = process.validators[index].effectiveBalance;
     const penaltyNumerator = (effectiveBalance / increment) * adjustedTotalSlashingBalance;
     const penalty = (penaltyNumerator / totalBalance) * increment;
     decreaseBalance(state, index, penalty);
