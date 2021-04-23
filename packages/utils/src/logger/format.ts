@@ -1,7 +1,8 @@
 import {Json} from "@chainsafe/ssz";
 import {format} from "winston";
 import {toJson, toString} from "../json";
-import {Context, ILoggerOptions} from "./interface";
+import {Context, ILoggerOptions, TimestampFormatCode} from "./interface";
+import {formatEpochSlotTime} from "./util";
 
 type Format = ReturnType<typeof format.combine>;
 
@@ -30,10 +31,28 @@ export function getFormat(opts: ILoggerOptions): Format {
 
 function humanReadableLogFormat(opts: ILoggerOptions): Format {
   return format.combine(
-    ...(opts.hideTimestamp ? [] : [format.timestamp({format: "MMM-DD HH:mm:ss.SSS"})]),
+    ...(opts.hideTimestamp ? [] : [formatTimestamp(opts)]),
     format.colorize(),
     format.printf(humanReadableTemplateFn)
   );
+}
+
+function formatTimestamp(opts: ILoggerOptions): Format {
+  const {timestampFormat} = opts;
+
+  switch (timestampFormat?.format) {
+    case TimestampFormatCode.EpochSlot:
+      return {
+        transform: (info) => {
+          info.timestamp = formatEpochSlotTime(timestampFormat);
+          return info;
+        },
+      };
+
+    case TimestampFormatCode.DateRegular:
+    default:
+      return format.timestamp({format: "MMM-DD HH:mm:ss.SSS"});
+  }
 }
 
 function jsonLogFormat(opts: ILoggerOptions): Format {

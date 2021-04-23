@@ -5,7 +5,7 @@ import {interopSecretKey} from "@chainsafe/lodestar-beacon-state-transition";
 import {IApiClient, SlashingProtection, Validator} from "@chainsafe/lodestar-validator";
 import {Eth1ForBlockProductionDisabled} from "../../../src/eth1";
 import {BeaconNode} from "../../../src/node";
-import {testLogger} from "../logger";
+import {testLogger, TestLoggerOpts} from "../logger";
 import {Api} from "../../../src/api";
 
 export function getDevValidators({
@@ -14,22 +14,20 @@ export function getDevValidators({
   validatorClientCount = 1,
   startIndex = 0,
   useRestApi,
-  logLevel,
-  logFile,
+  testLoggerOpts,
 }: {
   node: BeaconNode;
   validatorsPerClient: number;
   validatorClientCount: number;
   startIndex: number;
   useRestApi?: boolean;
-  logLevel?: LogLevel;
-  logFile?: string | undefined;
+  testLoggerOpts?: TestLoggerOpts;
 }): Validator[] {
   const vcs: Validator[] = [];
   for (let i = 0; i < validatorClientCount; i++) {
     const startIndexVc = startIndex + i * validatorClientCount;
     const endIndex = startIndexVc + validatorsPerClient - 1;
-    const logger = testLogger(`Vali ${startIndexVc}-${endIndex}`, logLevel, logFile);
+    const logger = testLogger(`Vali ${startIndexVc}-${endIndex}`, testLoggerOpts);
 
     const tmpDir = tmp.dirSync({unsafeCleanup: true});
 

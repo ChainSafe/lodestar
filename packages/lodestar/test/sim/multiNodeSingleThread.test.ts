@@ -7,21 +7,19 @@ import {getDevValidators} from "../utils/node/validator";
 import {Validator} from "@chainsafe/lodestar-validator/lib";
 import {BeaconNode} from "../../src/node";
 import {ChainEvent} from "../../src/chain";
-import {testLogger, LogLevel} from "../utils/logger";
+import {testLogger, LogLevel, TestLoggerOpts} from "../utils/logger";
 import {connect} from "../utils/network";
 import {logFiles} from "./params";
 import {simTestInfoTracker} from "../utils/node/simTest";
-import {ILogger, sleep} from "@chainsafe/lodestar-utils";
+import {ILogger, sleep, TimestampFormatCode} from "@chainsafe/lodestar-utils";
 
-/* eslint-disable no-console */
+/* eslint-disable no-console, @typescript-eslint/naming-convention */
 
 describe("Run multi node single thread interop validators (no eth1) until checkpoint", function () {
   const checkpointEvent = ChainEvent.justified;
   const validatorsPerNode = 8;
   const beaconParams: Pick<IBeaconParams, "SECONDS_PER_SLOT" | "SLOTS_PER_EPOCH"> = {
-    // eslint-disable-next-line @typescript-eslint/naming-convention
     SECONDS_PER_SLOT: 3,
-    // eslint-disable-next-line @typescript-eslint/naming-convention
     SLOTS_PER_EPOCH: 8,
   };
 
@@ -40,7 +38,18 @@ describe("Run multi node single thread interop validators (no eth1) until checkp
       const genesisTime = minGenesisTime + genesisDelay;
 
       for (let i = 0; i < nodeCount; i++) {
-        const logger = testLogger(`Node ${i}`, LogLevel.info, logFiles.multinodeSinglethread);
+        const testLoggerOpts: TestLoggerOpts = {
+          logLevel: LogLevel.info,
+          logFile: logFiles.multinodeSinglethread,
+          timestampFormat: {
+            format: TimestampFormatCode.EpochSlot,
+            genesisTime,
+            slotsPerEpoch: beaconParams.SLOTS_PER_EPOCH,
+            secondsPerSlot: beaconParams.SECONDS_PER_SLOT,
+          },
+        };
+        const logger = testLogger(`Node ${i}`, testLoggerOpts);
+
         const node = await getDevBeaconNode({
           params: beaconParams,
           options: {sync: {minPeers: 1}},
@@ -54,8 +63,7 @@ describe("Run multi node single thread interop validators (no eth1) until checkp
           validatorsPerClient: validatorsPerNode,
           validatorClientCount: 1,
           startIndex: i * validatorsPerNode,
-          logLevel: LogLevel.info,
-          logFile: logFiles.multinodeSinglethread,
+          testLoggerOpts,
         });
 
         loggers.push(logger);
