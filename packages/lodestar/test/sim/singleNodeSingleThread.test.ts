@@ -5,28 +5,23 @@ import {waitForEvent} from "../utils/events/resolver";
 import {getDevValidators} from "../utils/node/validator";
 import {ChainEvent} from "../../src/chain";
 import {IRestApiOptions} from "../../src/api/rest/options";
-import {testLogger, LogLevel} from "../utils/logger";
+import {testLogger, TestLoggerOpts, LogLevel} from "../utils/logger";
 import {logFiles} from "./params";
 import {simTestInfoTracker} from "../utils/node/simTest";
-import {sleep} from "@chainsafe/lodestar-utils";
+import {sleep, TimestampFormatCode} from "@chainsafe/lodestar-utils";
 
-/* eslint-disable no-console */
+/* eslint-disable no-console, @typescript-eslint/naming-convention */
 
 describe("Run single node single thread interop validators (no eth1) until checkpoint", function () {
   const timeout = 120 * 1000;
-  const testParams: Partial<IBeaconParams> = {
-    // eslint-disable-next-line @typescript-eslint/naming-convention
+  const testParams: Pick<IBeaconParams, "SECONDS_PER_SLOT" | "SLOTS_PER_EPOCH"> = {
     SECONDS_PER_SLOT: 2,
-    // eslint-disable-next-line @typescript-eslint/naming-convention
     SLOTS_PER_EPOCH: 8,
   };
   const manyValidatorParams: Partial<IBeaconParams> = {
     ...testParams,
-    // eslint-disable-next-line @typescript-eslint/naming-convention
     TARGET_AGGREGATORS_PER_COMMITTEE: 1,
   };
-
-  const loggerNodeA = testLogger("Node-A", LogLevel.info, logFiles.singlenodeSinglethread);
 
   const testCases: {
     validatorClientCount: number;
@@ -34,19 +29,36 @@ describe("Run single node single thread interop validators (no eth1) until check
     event: ChainEvent.justified | ChainEvent.finalized;
     params: Partial<IBeaconParams>;
   }[] = [
+    {validatorClientCount: 1, validatorsPerClient: 32, event: ChainEvent.justified, params: manyValidatorParams},
     {validatorClientCount: 8, validatorsPerClient: 8, event: ChainEvent.justified, params: testParams},
     {validatorClientCount: 8, validatorsPerClient: 8, event: ChainEvent.finalized, params: testParams},
-    {validatorClientCount: 1, validatorsPerClient: 32, event: ChainEvent.justified, params: manyValidatorParams},
   ];
 
   for (const testCase of testCases) {
     it(`${testCase.validatorClientCount} vc / ${testCase.validatorsPerClient} validator > until ${testCase.event}`, async function () {
       this.timeout(timeout);
+      // delay a bit so regular sync sees it's up to date and sync is completed from the beginning
+      const genesisSlotsDelay = 3;
+      const genesisTime = Math.floor(Date.now() / 1000) + genesisSlotsDelay * testParams.SECONDS_PER_SLOT;
+
+      const testLoggerOpts: TestLoggerOpts = {
+        logLevel: LogLevel.info,
+        logFile: logFiles.singlenodeSinglethread,
+        timestampFormat: {
+          format: TimestampFormatCode.EpochSlot,
+          genesisTime,
+          slotsPerEpoch: testParams.SLOTS_PER_EPOCH,
+          secondsPerSlot: testParams.SECONDS_PER_SLOT,
+        },
+      };
+      const loggerNodeA = testLogger("Node-A", testLoggerOpts);
+
       const bn = await getDevBeaconNode({
         params: testCase.params,
         options: {sync: {minPeers: 0}, api: {rest: {enabled: true} as IRestApiOptions}},
         validatorCount: testCase.validatorClientCount * testCase.validatorsPerClient,
         logger: loggerNodeA,
+        genesisTime,
       });
 
       const stopInfoTracker = simTestInfoTracker(bn, loggerNodeA);
@@ -64,8 +76,7 @@ describe("Run single node single thread interop validators (no eth1) until check
         startIndex: 0,
         // At least one sim test must use the REST API for beacon <-> validator comms
         useRestApi: true,
-        logLevel: LogLevel.info,
-        logFile: logFiles.singlenodeSinglethread,
+        testLoggerOpts,
       });
 
       await Promise.all(validators.map((v) => v.start()));

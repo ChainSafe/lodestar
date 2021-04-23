@@ -8,7 +8,7 @@ import {config} from "@chainsafe/lodestar-config/minimal";
 import {ChainEvent} from "../../../src/chain";
 import {Network} from "../../../src/network";
 import {connect} from "../../utils/network";
-import {testLogger, LogLevel} from "../../utils/logger";
+import {testLogger, LogLevel, TestLoggerOpts} from "../../utils/logger";
 
 describe("sync", function () {
   const validatorCount = 8;
@@ -22,8 +22,9 @@ describe("sync", function () {
   it("should sync from other BN", async function () {
     this.timeout("10 min");
 
-    const loggerNodeA = testLogger("Node-A", LogLevel.info);
-    const loggerNodeB = testLogger("Node-B", LogLevel.info);
+    const testLoggerOpts: TestLoggerOpts = {logLevel: LogLevel.info};
+    const loggerNodeA = testLogger("Node-A", testLoggerOpts);
+    const loggerNodeB = testLogger("Node-B", testLoggerOpts);
 
     const bn = await getDevBeaconNode({
       params: beaconParams,
@@ -38,7 +39,7 @@ describe("sync", function () {
       validatorClientCount: 1,
       startIndex: 0,
       useRestApi: false,
-      logLevel: LogLevel.info,
+      testLoggerOpts,
     });
 
     await Promise.all(validators.map((validator) => validator.start()));

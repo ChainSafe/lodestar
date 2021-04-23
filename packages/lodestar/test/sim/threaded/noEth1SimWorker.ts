@@ -7,12 +7,12 @@ import {phase0} from "@chainsafe/lodestar-types";
 
 import {getDevBeaconNode} from "../../utils/node/beacon";
 import {getDevValidators} from "../../utils/node/validator";
-import {testLogger, LogLevel} from "../../utils/logger";
+import {testLogger, LogLevel, TestLoggerOpts} from "../../utils/logger";
 import {connect} from "../../utils/network";
 import {Network} from "../../../src/network";
 import {NodeWorkerOptions, Message} from "./types";
 import Multiaddr from "multiaddr";
-import {sleep, withTimeout} from "@chainsafe/lodestar-utils";
+import {sleep, TimestampFormatCode, withTimeout} from "@chainsafe/lodestar-utils";
 import {fromHexString} from "@chainsafe/ssz";
 import {createFromPrivKey} from "peer-id";
 import {simTestInfoTracker} from "../../utils/node/simTest";
@@ -34,7 +34,17 @@ async function runWorker(): Promise<void> {
   const options = workerData.options as NodeWorkerOptions;
   const {nodeIndex, validatorsPerNode, startIndex, checkpointEvent, logFile, nodes} = options;
 
-  const loggerNode = testLogger(`Node ${nodeIndex}`, LogLevel.info, logFile);
+  const testLoggerOpts: TestLoggerOpts = {
+    logLevel: LogLevel.info,
+    logFile: logFile,
+    timestampFormat: {
+      format: TimestampFormatCode.EpochSlot,
+      genesisTime: options.genesisTime,
+      slotsPerEpoch: options.params.SLOTS_PER_EPOCH,
+      secondsPerSlot: options.params.SECONDS_PER_SLOT,
+    },
+  };
+  const loggerNode = testLogger(`Node ${nodeIndex}`, testLoggerOpts);
   loggerNode.info("Thread started", {
     now: Math.floor(Date.now() / 1000),
     genesisTime: options.genesisTime,
@@ -58,8 +68,7 @@ async function runWorker(): Promise<void> {
     validatorClientCount: 1,
     validatorsPerClient: validatorsPerNode,
     startIndex,
-    logLevel: LogLevel.info,
-    logFile,
+    testLoggerOpts,
   });
 
   await Promise.all(validators.map((validator) => validator.start()));

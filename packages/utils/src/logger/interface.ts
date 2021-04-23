@@ -39,11 +39,25 @@ export const defaultLogLevel = LogLevel.info;
 export type LogFormat = "human" | "json";
 export const logFormats: LogFormat[] = ["human", "json"];
 
+export type EpochSlotOpts = {
+  genesisTime: number;
+  secondsPerSlot: number;
+  slotsPerEpoch: number;
+};
+export enum TimestampFormatCode {
+  DateRegular,
+  EpochSlot,
+}
+export type TimestampFormat =
+  | {format: TimestampFormatCode.DateRegular}
+  | ({format: TimestampFormatCode.EpochSlot} & EpochSlotOpts);
+
 export interface ILoggerOptions {
   level?: LogLevel;
   module?: string;
   format?: LogFormat;
   hideTimestamp?: boolean;
+  timestampFormat?: TimestampFormat;
 }
 
 export type Context =
