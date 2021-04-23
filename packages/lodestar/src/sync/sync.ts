@@ -4,7 +4,7 @@ import {IBeaconSync, ISyncModules, SyncMode} from "./interface";
 import {defaultSyncOptions, ISyncOptions} from "./options";
 import {INetwork} from "../network";
 import {ILogger} from "@chainsafe/lodestar-utils";
-import {CommitteeIndex, Root, Slot, phase0} from "@chainsafe/lodestar-types";
+import {Root, phase0} from "@chainsafe/lodestar-types";
 import {IRegularSync} from "./regular";
 import {BeaconGossipHandler} from "./gossip";
 import {ChainEvent, IBeaconChain} from "../chain";
@@ -134,13 +134,6 @@ export class BeaconSync implements IBeaconSync {
 
   get state(): SyncMode {
     return this.mode;
-  }
-
-  collectAttestations(slot: Slot, committeeIndex: CommitteeIndex): void {
-    if (!(this.mode === SyncMode.REGULAR_SYNCING || this.mode === SyncMode.SYNCED)) {
-      throw new Error("Cannot collect attestations before regular sync");
-    }
-    this.attestationCollector.subscribeToCommitteeAttestations(slot, committeeIndex);
   }
 
   private processChainSegment: ProcessChainSegment = async (blocks) => {

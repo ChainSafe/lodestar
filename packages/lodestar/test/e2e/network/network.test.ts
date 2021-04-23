@@ -116,7 +116,7 @@ describe("network", function () {
     // let discv5 of A know enr of B
     const discovery: Discv5Discovery = netA["libp2p"]._discovery.get("discv5") as Discv5Discovery;
     discovery.discv5.addEnr(enrB);
-    netA.requestAttSubnets([{subnetId, toSlot: Infinity}]);
+    netA.prepareBeaconCommitteeSubnet([{subnetId, toSlot: Infinity}]);
     await connected;
 
     expect(netA.getConnectionsByPeer().has(netB.peerId.toB58String())).to.be.equal(

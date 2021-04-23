@@ -16,23 +16,46 @@ export class SubnetMap {
   /** Map of subnets and the slot until they are needed */
   private subnets = new Map<number, Slot>();
 
-  /** Register requested subnets */
-  request(requestedSubnets: RequestedSubnet[]): void {
-    for (const {subnetId, toSlot} of requestedSubnets) {
-      this.subnets.set(subnetId, toSlot);
-    }
+  /**
+   * Register requested subnets, extends toSlot if same subnet.
+   **/
+  request(requestedSubnets: RequestedSubnet): void {
+    const {subnetId, toSlot} = requestedSubnets;
+    this.subnets.set(subnetId, Math.max(this.subnets.get(subnetId) || 0, toSlot));
+  }
+
+  /**
+   * Get last active slot of a subnet.
+   */
+  getToSlot(subnet: number): number | undefined {
+    return this.subnets.get(subnet);
   }
 
   /** Return subnetIds with a `toSlot` equal greater than `currentSlot` */
   getActive(currentSlot: Slot): number[] {
+    return this.getSubnets(currentSlot, (toSlot: Slot, currentSlot: Slot) => toSlot >= currentSlot);
+  }
+
+  /** Return subnetIds with a `toSlot` less than `currentSlot` */
+  getInactive(currentSlot: Slot): number[] {
+    return this.getSubnets(currentSlot, (toSlot: Slot, currentSlot: Slot) => toSlot < currentSlot);
+  }
+
+  getAll(): number[] {
+    return Array.from(this.subnets.keys());
+  }
+
+  prune(subnet: number): void {
+    this.subnets.delete(subnet);
+  }
+
+  /** Return subnetIds with a `toSlot` equal greater than `currentSlot` */
+  private getSubnets(currentSlot: Slot, predicate: (toSlot: Slot, currentSlot: Slot) => boolean): number[] {
     const activeSubnetIds: number[] = [];
 
     for (const [subnetId, toSlot] of this.subnets.entries()) {
-      if (toSlot >= currentSlot) {
+      if (predicate(toSlot, currentSlot)) {
         activeSubnetIds.push(subnetId);
-      } else {
-        // Prune expired subnets
-        this.subnets.delete(subnetId);
       }
     }
 
