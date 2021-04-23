@@ -109,7 +109,7 @@ function printEpochGrid(maps: Record<string, Map<Epoch, number>>, title: string)
     const epoch = Array.from(map.keys())[map.size - 1];
     return epoch > max ? epoch : max;
   }, 0);
-  const epochGrid = mapValues(maps, (map) => linspace(0, lastEpoch).map((epoch) => map.get(epoch) || "NA"));
+  const epochGrid = linspace(0, lastEpoch).map((epoch) => mapValues(maps, (val, key) => maps[key].get(epoch)));
   console.log(renderTitle(title));
   console.table(epochGrid);
 }
