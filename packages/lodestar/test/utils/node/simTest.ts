@@ -15,7 +15,7 @@ export function simTestInfoTracker(bn: BeaconNode, logger: ILogger): () => void 
   let lastSeenEpoch = 0;
 
   const attestationsPerBlock = new Map<Slot, number>();
-  const inclusionDelayPerBlock = new Map<Slot, number | null>();
+  const inclusionDelayPerBlock = new Map<Slot, number>();
   const prevParticipationPerEpoch = new Map<Epoch, number>();
   const currParticipationPerEpoch = new Map<Epoch, number>();
 
@@ -78,13 +78,13 @@ function sumAttestationBits(block: BeaconBlock): number {
   );
 }
 
-function avgInclusionDelay(block: BeaconBlock): number | null {
+function avgInclusionDelay(block: BeaconBlock): number {
   const inclDelay = Array.from(block.body.attestations).map((att) => block.slot - att.data.slot);
   return avg(inclDelay);
 }
 
-function avg(arr: number[]): number | null {
-  return arr.length === 0 ? null : arr.reduce((p, c) => p + c, 0) / arr.length;
+function avg(arr: number[]): number {
+  return arr.length === 0 ? 0 : arr.reduce((p, c) => p + c, 0) / arr.length;
 }
 
 /**
