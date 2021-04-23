@@ -7,7 +7,7 @@ describe("logger / util / formatEpochSlotTime", () => {
     const genesisTime = (now - 1235423) / 1000;
     const secondsPerSlot = 12;
     const slotsPerEpoch = 32;
-    const expectLog = "3/6 11.423";
+    const expectLog = "Eph 3/6 11.423";
 
     expect(formatEpochSlotTime({genesisTime, secondsPerSlot, slotsPerEpoch}, now)).to.equal(expectLog);
   });

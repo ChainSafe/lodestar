@@ -10,5 +10,5 @@ export function formatEpochSlotTime(opts: EpochSlotOpts, now = Date.now()): stri
   const slotIndex = slot % opts.slotsPerEpoch;
   const slotSec = secSinceGenesis % opts.secondsPerSlot;
 
-  return `${epoch}/${slotIndex} ${slotSec.toFixed(3)}`;
+  return `Eph ${epoch}/${slotIndex} ${slotSec.toFixed(3)}`;
 }
