@@ -37,8 +37,10 @@ describe("Run single node single thread interop validators (no eth1) until check
   for (const testCase of testCases) {
     it(`${testCase.validatorClientCount} vc / ${testCase.validatorsPerClient} validator > until ${testCase.event}`, async function () {
       this.timeout(timeout);
+      // delay a bit so regular sync sees it's up to date and sync is completed from the beginning
+      const genesisSlotsDelay = 3;
+      const genesisTime = Math.floor(Date.now() / 1000) + genesisSlotsDelay * testParams.SECONDS_PER_SLOT;
 
-      const genesisTime = Math.floor(Date.now() / 1000);
       const testLoggerOpts: TestLoggerOpts = {
         logLevel: LogLevel.info,
         logFile: logFiles.singlenodeSinglethread,
