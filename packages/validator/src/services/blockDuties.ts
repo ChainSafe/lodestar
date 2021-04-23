@@ -102,6 +102,11 @@ export class BlockDutiesService {
    * function is as fast as possible.
    */
   private async pollBeaconProposers(currentSlot: Slot): Promise<void> {
+    // TODO: On genesis case it is possible to get the duties beforehand. Implement
+    if (currentSlot < 0) {
+      return;
+    }
+
     const currentEpoch = computeEpochAtSlot(this.config, currentSlot);
 
     // Notify the block proposal service for any proposals that we have in our cache.

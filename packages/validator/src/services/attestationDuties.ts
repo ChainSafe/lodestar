@@ -174,6 +174,11 @@ export class AttestationDutiesService {
   /** For the given `indexArr`, download the duties for the given `epoch` and
       store them in `this.attesters`. */
   private async pollBeaconAttestersForEpoch(epoch: Epoch, indexArr: ValidatorIndex[]): Promise<void> {
+    // Don't fetch duties for epochs before genesis. However, should fetch epoch 0 duties at epoch -1
+    if (epoch < 0) {
+      return;
+    }
+
     // TODO: Implement dependentRoot logic
     const attesterDuties = await this.apiClient.validator.getAttesterDuties(epoch, indexArr).catch((e) => {
       throw extendError(e, "Failed to obtain attester duty");

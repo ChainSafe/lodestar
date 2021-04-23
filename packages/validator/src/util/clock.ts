@@ -62,6 +62,7 @@ export class Clock implements IClock {
     while (!signal.aborted) {
       // Run immediatelly first
       const slot = getCurrentSlot(this.config, this.genesisTime);
+
       const slotOrEpoch = timeItem === TimeItem.Slot ? slot : computeEpochAtSlot(this.config, slot);
       await fn(slotOrEpoch, signal);
 
