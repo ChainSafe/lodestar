@@ -13,14 +13,15 @@ import {sleep, TimestampFormatCode} from "@chainsafe/lodestar-utils";
 /* eslint-disable no-console, @typescript-eslint/naming-convention */
 
 describe("Run single node single thread interop validators (no eth1) until checkpoint", function () {
-  const timeout = 120 * 1000;
   const testParams: Pick<IBeaconParams, "SECONDS_PER_SLOT" | "SLOTS_PER_EPOCH"> = {
     SECONDS_PER_SLOT: 2,
     SLOTS_PER_EPOCH: 8,
   };
   const manyValidatorParams: Partial<IBeaconParams> = {
     ...testParams,
-    TARGET_AGGREGATORS_PER_COMMITTEE: 1,
+    // Reduce from 16 of minimal but ensure there's almost always an aggregator per committee
+    // otherwise block producers won't be able to include attestations
+    TARGET_AGGREGATORS_PER_COMMITTEE: 4,
   };
 
   const testCases: {
@@ -36,9 +37,22 @@ describe("Run single node single thread interop validators (no eth1) until check
 
   for (const testCase of testCases) {
     it(`${testCase.validatorClientCount} vc / ${testCase.validatorsPerClient} validator > until ${testCase.event}`, async function () {
-      this.timeout(timeout);
+      // Should reach justification in 3 epochs max, and finalization in 4 epochs max
+      const expectedEpochsToFinish = testCase.event === ChainEvent.justified ? 3 : 4;
+      // 1 epoch of margin of error
+      const epochsOfMargin = 1;
+      const timeoutSetupMargin = 5 * 1000; // Give extra 5 seconds of margin
+
       // delay a bit so regular sync sees it's up to date and sync is completed from the beginning
       const genesisSlotsDelay = 3;
+
+      const timeout =
+        ((epochsOfMargin + expectedEpochsToFinish) * testParams.SLOTS_PER_EPOCH + genesisSlotsDelay) *
+        testParams.SECONDS_PER_SLOT *
+        1000;
+
+      this.timeout(timeout + 2 * timeoutSetupMargin);
+
       const genesisTime = Math.floor(Date.now() / 1000) + genesisSlotsDelay * testParams.SECONDS_PER_SLOT;
 
       const testLoggerOpts: TestLoggerOpts = {
@@ -63,11 +77,7 @@ describe("Run single node single thread interop validators (no eth1) until check
 
       const stopInfoTracker = simTestInfoTracker(bn, loggerNodeA);
 
-      const justificationEventListener = waitForEvent<phase0.Checkpoint>(
-        bn.chain.emitter,
-        testCase.event,
-        timeout - 10 * 1000
-      );
+      const justificationEventListener = waitForEvent<phase0.Checkpoint>(bn.chain.emitter, testCase.event, timeout);
       const validators = await getAndInitDevValidators({
         node: bn,
         validatorsPerClient: testCase.validatorsPerClient,
