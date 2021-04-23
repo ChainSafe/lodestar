@@ -13,7 +13,7 @@ export function processSlashings(state: CachedBeaconState<phase0.BeaconState>, p
   const adjustedTotalSlashingBalance = bigIntMin(totalSlashings * proportionalSlashingMultiplier, totalBalance);
   const increment = BigInt(params.EFFECTIVE_BALANCE_INCREMENT);
   for (const index of process.indicesToSlash) {
-    const effectiveBalance = process.statuses[index].validator.effectiveBalance;
+    const effectiveBalance = process.validators[index].effectiveBalance;
     const penaltyNumerator = (effectiveBalance / increment) * adjustedTotalSlashingBalance;
     const penalty = (penaltyNumerator / totalBalance) * increment;
     decreaseBalance(state, index, penalty);
