@@ -42,7 +42,7 @@ export async function initBeaconState(
   const dbHasSomeState = (await db.stateArchive.lastKey()) != null;
 
   if (args.fetchWeakSubjectivityState) {
-    return await initFromFile("https://ipfs.io/ipfs/QmaS59RVhDGr1M8EBFAof4rQmAk72kmWeycZdpM9RMHXi5/state.ssz");
+    return await initFromFile("https://ipfs.io/ipns/k51qzi5uqu5dkn6uk4d02pnkwvzcj8a4ro3x1pbs720m6bbrwbuoczmnj3o1u0");
   } else if (args.weakSubjectivityStateFile) {
     return await initFromFile(args.weakSubjectivityStateFile);
   } else if (dbHasSomeState) {
