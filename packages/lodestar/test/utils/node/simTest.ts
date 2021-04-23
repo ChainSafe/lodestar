@@ -1,9 +1,10 @@
-import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
-import {prepareEpochProcessState} from "@chainsafe/lodestar-beacon-state-transition/lib/fast";
+import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
+import {CachedBeaconState, prepareEpochProcessState} from "@chainsafe/lodestar-beacon-state-transition/lib/fast";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBlockSummary} from "@chainsafe/lodestar-fork-choice";
-import {Epoch, Slot} from "@chainsafe/lodestar-types";
+import {allForks, Epoch, Slot} from "@chainsafe/lodestar-types";
 import {BeaconBlock} from "@chainsafe/lodestar-types/lib/allForks";
+import {Checkpoint} from "@chainsafe/lodestar-types/phase0";
 import {ILogger, mapValues} from "@chainsafe/lodestar-utils";
 import {BeaconNode} from "../../../src";
 import {ChainEvent} from "../../../src/chain";
@@ -21,7 +22,6 @@ export function simTestInfoTracker(bn: BeaconNode, logger: ILogger): () => void 
 
   async function onHead(head: IBlockSummary): Promise<void> {
     const slot = head.slot;
-    const epoch = computeEpochAtSlot(bn.config, slot);
 
     // For each block
     // Check if there was a proposed block and how many attestations it includes
@@ -33,35 +33,44 @@ export function simTestInfoTracker(bn: BeaconNode, logger: ILogger): () => void 
       inclusionDelayPerBlock.set(slot, inclDelay);
       logger.info("> Block attestations", {slot, bits, inclDelay});
     }
+  }
 
-    // For each epoch
-    if (epoch > lastSeenEpoch) {
-      lastSeenEpoch = epoch;
+  function logParticipation(state: CachedBeaconState<allForks.BeaconState>): void {
+    // Compute participation (takes 5ms with 64 validators)
+    // Need a CachedBeaconState<allForks.BeaconState> where (state.slot + 1) % SLOTS_EPOCH == 0
+    const process = prepareEpochProcessState(state);
+    const epoch = computeEpochAtSlot(bn.config, state.slot);
 
-      // Compute participation (takes 5ms with 64 validators)
-      const state = await bn.chain.getStateByBlockRoot(head.parentRoot);
-      if (state) {
-        // Need a CachedBeaconState<allForks.BeaconState> where (state.slot + 1) % SLOTS_EPOCH == 0
-        const process = prepareEpochProcessState(state);
+    const prevParticipation = Number(process.prevEpochUnslashedStake.targetStake) / Number(process.totalActiveStake);
+    const currParticipation = Number(process.currEpochUnslashedTargetStake) / Number(process.totalActiveStake);
+    prevParticipationPerEpoch.set(epoch - 1, prevParticipation);
+    currParticipationPerEpoch.set(epoch, currParticipation);
+    logger.info("> Participation", {
+      slot: `${state.slot}/${computeEpochAtSlot(bn.config, state.slot)}`,
+      prev: prevParticipation,
+      curr: currParticipation,
+    });
+  }
 
-        const prevParticipation =
-          Number(process.prevEpochUnslashedStake.targetStake) / Number(process.totalActiveStake);
-        const currParticipation = Number(process.currEpochUnslashedTargetStake) / Number(process.totalActiveStake);
-        prevParticipationPerEpoch.set(epoch - 1, prevParticipation);
-        currParticipationPerEpoch.set(epoch - 1, currParticipation);
-        logger.info("> Participation", {
-          slot: `${head.slot}/${computeEpochAtSlot(bn.config, head.slot)}`,
-          prev: prevParticipation,
-          curr: currParticipation,
-        });
-      }
-    }
+  async function onCheckpoint(checkpoint: Checkpoint): Promise<void> {
+    // Skip epochs on duplicated checkpoint events
+    if (checkpoint.epoch <= lastSeenEpoch) return;
+    lastSeenEpoch = checkpoint.epoch;
+
+    // Recover the pre-epoch transition state
+    const checkpointState = await bn.chain.regen.getCheckpointState(checkpoint);
+    const lastSlot = computeStartSlotAtEpoch(bn.config, checkpoint.epoch) - 1;
+    const lastStateRoot = checkpointState.stateRoots[lastSlot % bn.config.params.SLOTS_PER_HISTORICAL_ROOT];
+    const lastState = await bn.chain.regen.getState(lastStateRoot);
+    logParticipation(lastState);
   }
 
   bn.chain.emitter.on(ChainEvent.forkChoiceHead, onHead);
+  bn.chain.emitter.on(ChainEvent.checkpoint, onCheckpoint);
 
   return function stop() {
     bn.chain.emitter.off(ChainEvent.forkChoiceHead, onHead);
+    bn.chain.emitter.off(ChainEvent.checkpoint, onCheckpoint);
 
     // Write report
     console.log("\nEnd of sim test report\n");
