@@ -30,7 +30,6 @@ import {toGraffitiBuffer} from "../../../util/graffiti";
 import {IApiOptions} from "../../options";
 import {ApiError} from "../errors";
 import {ApiNamespace, IApiModules} from "../interface";
-import {checkSyncStatus} from "../utils";
 import {IValidatorApi} from "./interface";
 
 /**
@@ -71,7 +70,8 @@ export class ValidatorApi implements IValidatorApi {
   }
 
   async produceBlock(slot: Slot, randaoReveal: Bytes96, graffiti = ""): Promise<phase0.BeaconBlock> {
-    await checkSyncStatus(this.config, this.sync);
+    this.notWhileSyncing();
+
     await this.waitForRequestedSlot(slot);
 
     return await assembleBlock(
@@ -86,7 +86,8 @@ export class ValidatorApi implements IValidatorApi {
   }
 
   async produceAttestationData(committeeIndex: CommitteeIndex, slot: Slot): Promise<phase0.AttestationData> {
-    await checkSyncStatus(this.config, this.sync);
+    this.notWhileSyncing();
+
     await this.waitForRequestedSlot(slot);
 
     const headRoot = this.chain.forkChoice.getHeadRoot();
@@ -101,7 +102,7 @@ export class ValidatorApi implements IValidatorApi {
   }
 
   async getProposerDuties(epoch: Epoch): Promise<phase0.ProposerDutiesApi> {
-    await checkSyncStatus(this.config, this.sync);
+    this.notWhileSyncing();
 
     const startSlot = computeStartSlotAtEpoch(this.config, epoch);
     await this.waitForRequestedSlot(startSlot);
@@ -126,7 +127,7 @@ export class ValidatorApi implements IValidatorApi {
   }
 
   async getAttesterDuties(epoch: number, validatorIndices: ValidatorIndex[]): Promise<phase0.AttesterDutiesApi> {
-    await checkSyncStatus(this.config, this.sync);
+    this.notWhileSyncing();
 
     if (validatorIndices.length === 0) {
       throw new ApiError(400, "No validator to get attester duties");
@@ -173,7 +174,8 @@ export class ValidatorApi implements IValidatorApi {
   }
 
   async getAggregatedAttestation(attestationDataRoot: Root, slot: Slot): Promise<phase0.Attestation> {
-    await checkSyncStatus(this.config, this.sync);
+    this.notWhileSyncing();
+
     await this.waitForRequestedSlot(slot);
 
     const attestations = await this.db.attestation.getAttestationsByDataRoot(slot, attestationDataRoot);
@@ -211,7 +213,8 @@ export class ValidatorApi implements IValidatorApi {
   }
 
   async publishAggregateAndProofs(signedAggregateAndProofs: phase0.SignedAggregateAndProof[]): Promise<void> {
-    await checkSyncStatus(this.config, this.sync);
+    this.notWhileSyncing();
+
     await Promise.all(
       signedAggregateAndProofs.map(async (signedAggregateAndProof) => {
         try {
@@ -240,7 +243,7 @@ export class ValidatorApi implements IValidatorApi {
   }
 
   async prepareBeaconCommitteeSubnet(subscriptions: phase0.BeaconCommitteeSubscription[]): Promise<void> {
-    await checkSyncStatus(this.config, this.sync);
+    this.notWhileSyncing();
 
     // Determine if the validator is an aggregator. If so, we subscribe to the subnet and
     // if successful add the validator to a mapping of known aggregators for that exact
@@ -296,6 +299,31 @@ export class ValidatorApi implements IValidatorApi {
     const currentSlot = this.chain.clock.currentSlot;
     if (slot > currentSlot && slot <= currentSlot + MAX_SLOT_DIFF_WAIT) {
       await this.chain.clock.waitForSlot(slot);
+    }
+  }
+
+  /**
+   * Reject any request while the node is syncing
+   */
+  private notWhileSyncing(): void {
+    // Consider node synced before or close to genesis
+    if (this.chain.clock.currentSlot < this.config.params.SLOTS_PER_EPOCH) {
+      return;
+    }
+
+    if (!this.sync.isSynced()) {
+      let syncStatus;
+      try {
+        syncStatus = this.sync.getSyncStatus();
+      } catch (e) {
+        throw new ApiError(503, "Node is stopped");
+      }
+      if (syncStatus.syncDistance > this.config.params.SLOTS_PER_EPOCH) {
+        throw new ApiError(
+          503,
+          `Node is syncing, status: ${JSON.stringify(this.config.types.phase0.SyncingStatus.toJson(syncStatus))}`
+        );
+      }
     }
   }
 }

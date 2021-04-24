@@ -8,7 +8,6 @@ import {IApiModules} from "../../interface";
 import {BlockId, IBeaconBlocksApi} from "./interface";
 import {resolveBlockId, toBeaconHeaderResponse} from "./utils";
 import {IBeaconSync} from "../../../../sync";
-import {checkSyncStatus} from "../../utils";
 import {INetwork} from "../../../../network/interface";
 
 export * from "./interface";
@@ -109,7 +108,6 @@ export class BeaconBlockApi implements IBeaconBlocksApi {
   }
 
   async publishBlock(signedBlock: phase0.SignedBeaconBlock): Promise<void> {
-    await checkSyncStatus(this.config, this.sync);
     await Promise.all([this.chain.receiveBlock(signedBlock), this.network.gossip.publishBeaconBlock(signedBlock)]);
   }
 }
