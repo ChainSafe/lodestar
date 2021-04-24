@@ -25,7 +25,7 @@ import {ZERO_HASH} from "../../../constants";
 import {IBeaconDb} from "../../../db";
 import {IEth1ForBlockProduction} from "../../../eth1";
 import {INetwork} from "../../../network";
-import {IBeaconSync} from "../../../sync";
+import {IBeaconSync, SyncMode} from "../../../sync";
 import {toGraffitiBuffer} from "../../../util/graffiti";
 import {IApiOptions} from "../../options";
 import {ApiError} from "../errors";
@@ -37,6 +37,15 @@ import {IValidatorApi} from "./interface";
  * Once we are certain that long periods of thread blocking don't happen, reduce to 1.
  */
 const MAX_SLOT_DIFF_WAIT = 2;
+
+/**
+ * If the node is within this many epochs from the head, we declare it to be synced regardless of
+ * the network sync state.
+ *
+ * This helps prevent attacks where nodes can convince us that we're syncing some non-existent
+ * finalized head.
+ */
+const SYNC_TOLERANCE_EPOCHS = 8;
 
 /**
  * Server implementation for handling validator duties.
@@ -311,19 +320,27 @@ export class ValidatorApi implements IValidatorApi {
       return;
     }
 
-    if (!this.sync.isSynced()) {
-      let syncStatus;
-      try {
-        syncStatus = this.sync.getSyncStatus();
-      } catch (e) {
+    const syncState = this.sync.state;
+    switch (syncState) {
+      case SyncMode.INITIAL_SYNCING:
+      case SyncMode.REGULAR_SYNCING: {
+        const currentSlot = this.chain.clock.currentSlot;
+        const headSlot = this.chain.forkChoice.getHead().slot;
+        if (currentSlot - headSlot > SYNC_TOLERANCE_EPOCHS * this.config.params.SLOTS_PER_EPOCH) {
+          throw new ApiError(503, `Node is syncing, headSlot ${headSlot} currentSlot ${currentSlot}`);
+        } else {
+          return;
+        }
+      }
+
+      case SyncMode.SYNCED:
+        return;
+
+      case SyncMode.WAITING_PEERS:
+        throw new ApiError(503, "Node is waiting for peers");
+
+      case SyncMode.STOPPED:
         throw new ApiError(503, "Node is stopped");
-      }
-      if (syncStatus.syncDistance > this.config.params.SLOTS_PER_EPOCH) {
-        throw new ApiError(
-          503,
-          `Node is syncing, status: ${JSON.stringify(this.config.types.phase0.SyncingStatus.toJson(syncStatus))}`
-        );
-      }
     }
   }
 }
