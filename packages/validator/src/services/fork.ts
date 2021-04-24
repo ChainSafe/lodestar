@@ -1,4 +1,4 @@
-import {phase0} from "@chainsafe/lodestar-types";
+import {Epoch, phase0} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {IApiClient} from "../api";
 import {notAborted} from "../util";
@@ -38,8 +38,13 @@ export class ForkService implements IForkService {
     throw Error("Fork not available");
   }
 
-  private updateFork = async (): Promise<void> => {
+  private updateFork = async (epoch: Epoch): Promise<void> => {
     if (this.forkPromisePending) {
+      return;
+    }
+
+    // Don't fetch fork again if before genesis
+    if (this.fork && epoch < 0) {
       return;
     }
 

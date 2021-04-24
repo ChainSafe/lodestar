@@ -12,7 +12,7 @@ import {ForkService} from "./services/fork";
 import {ValidatorStore} from "./services/validatorStore";
 import {BlockProposingService} from "./services/block";
 import {AttestationService} from "./services/attestation";
-import {waitForGenesisAndGenesisTime} from "./genesis";
+import {waitForGenesis} from "./genesis";
 
 // TODO: Extend the timeout, and let it be customizable
 /// The global timeout for HTTP requests to the beacon node.
@@ -56,7 +56,9 @@ export class Validator {
 
   /** Waits for genesis and genesis time */
   static async initializeFromBeaconNode(opts: IValidatorOptions, signal?: AbortSignal): Promise<Validator> {
-    const genesis = await waitForGenesisAndGenesisTime(opts, signal);
+    const apiClient = typeof opts.api === "string" ? ApiClientOverRest(opts.config, opts.api) : opts.api;
+    const genesis = await waitForGenesis(apiClient, opts.logger, signal);
+    opts.logger.info("Genesis available");
     return new Validator(opts, genesis);
   }
 
