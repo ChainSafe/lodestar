@@ -5,10 +5,8 @@ import {toHexString} from "@chainsafe/ssz";
 import {IApiClient} from "../api";
 import {extendError, notAborted} from "../util";
 import {ValidatorStore} from "./validatorStore";
-import {BlockDutiesService} from "./blockDuties";
+import {BlockDutiesService, GENESIS_SLOT} from "./blockDuties";
 import {IClock} from "../util/clock";
-
-const GENESIS_SLOT = 0; // Re-declaring to not have to depend on `lodestar-params` just for this 0
 
 /**
  * Service that sets up and handles validator block proposal duties.
@@ -49,8 +47,8 @@ export class BlockProposingService {
    * This function may run more than once at a time, rationale in `BlockDutiesService.pollBeaconProposers`
    */
   private notifyBlockProductionFn = (slot: Slot, proposers: BLSPubkey[]): void => {
-    if (slot === GENESIS_SLOT) {
-      this.logger.debug("Not producing block at genesis slot");
+    if (slot <= GENESIS_SLOT) {
+      this.logger.debug("Not producing block before or at genesis slot");
       return;
     }
 

@@ -11,6 +11,9 @@ import {ValidatorStore} from "./validatorStore";
 
 /** Only retain `HISTORICAL_DUTIES_EPOCHS` duties prior to the current epoch */
 const HISTORICAL_DUTIES_EPOCHS = 2;
+// Re-declaring to not have to depend on `lodestar-params` just for this 0
+const GENESIS_EPOCH = 0;
+export const GENESIS_SLOT = 0;
 
 type BlockDutyAtEpoch = {dependentRoot: Root; data: phase0.ProposerDuty[]};
 type NotifyBlockProductionFn = (slot: Slot, proposers: BLSPubkey[]) => void;
@@ -69,7 +72,13 @@ export class BlockDutiesService {
   }
 
   private runBlockDutiesTask = async (slot: Slot): Promise<void> => {
-    await this.pollBeaconProposers(slot).catch((e) => {
+    // If BlockDutiesService is not aware of genesis epoch duties, and before genesis fetch them
+    if (slot < 0 && !this.proposers.has(GENESIS_EPOCH)) {
+      await this.pollBeaconProposers(GENESIS_EPOCH);
+      return;
+    }
+
+    await this.pollBeaconProposersAndNotify(slot).catch((e) => {
       if (notAborted(e)) this.logger.error("Error on pollBeaconProposers", {}, e);
     });
 
@@ -101,48 +110,15 @@ export class BlockDutiesService {
    * download and process the duties from the BN. This means it is very important to ensure this
    * function is as fast as possible.
    */
-  private async pollBeaconProposers(currentSlot: Slot): Promise<void> {
-    // TODO: On genesis case it is possible to get the duties beforehand. Implement
-    if (currentSlot < 0) {
-      return;
-    }
-
-    const currentEpoch = computeEpochAtSlot(this.config, currentSlot);
-
+  private async pollBeaconProposersAndNotify(currentSlot: Slot): Promise<void> {
     // Notify the block proposal service for any proposals that we have in our cache.
     const initialBlockProposers = this.getblockProposersAtSlot(currentSlot);
     if (initialBlockProposers.length > 0) {
       this.notifyBlockProductionFn(currentSlot, initialBlockProposers);
     }
 
-    const localPubkeys = this.validatorStore.votingPubkeys();
-
-    // Only download duties and push out additional block production events if we have some
-    // validators.
-    if (localPubkeys.length > 0) {
-      const proposerDuties = await this.apiClient.validator.getProposerDuties(currentEpoch).catch((e) => {
-        throw extendError(e, "Error on getProposerDuties");
-      });
-      const dependentRoot = proposerDuties.dependentRoot;
-      const pubkeysSet = new Set(localPubkeys.map((pk) => toHexString(pk)));
-      const relevantDuties = proposerDuties.data.filter((duty) => pubkeysSet.has(toHexString(duty.pubkey)));
-
-      this.logger.debug("Downloaded proposer duties", {
-        epoch: currentEpoch,
-        dependentRoot: toHexString(dependentRoot),
-        count: relevantDuties.length,
-      });
-
-      const prior = this.proposers.get(currentEpoch);
-      this.proposers.set(currentEpoch, {dependentRoot, data: relevantDuties});
-
-      if (prior && !this.config.types.Root.equals(prior.dependentRoot, dependentRoot)) {
-        this.logger.warn("Proposer duties re-org. This may happen from time to time", {
-          priorDependentRoot: toHexString(prior.dependentRoot),
-          dependentRoot: toHexString(dependentRoot),
-        });
-      }
-    }
+    // Poll proposers again for the same epoch
+    await this.pollBeaconProposers(computeEpochAtSlot(this.config, currentSlot));
 
     // Compute the block proposers for this slot again, now that we've received an update from the BN.
     //
@@ -159,6 +135,37 @@ export class BlockDutiesService {
       this.logger.debug("Detected new block proposer", {currentSlot});
       // TODO: Add Metrics
       // this.metrics.proposalChanged.inc();
+    }
+  }
+
+  private async pollBeaconProposers(epoch: Epoch): Promise<void> {
+    const localPubkeys = this.validatorStore.votingPubkeys();
+
+    // Only download duties and push out additional block production events if we have some
+    // validators.
+    if (localPubkeys.length > 0) {
+      const proposerDuties = await this.apiClient.validator.getProposerDuties(epoch).catch((e) => {
+        throw extendError(e, "Error on getProposerDuties");
+      });
+      const dependentRoot = proposerDuties.dependentRoot;
+      const pubkeysSet = new Set(localPubkeys.map((pk) => toHexString(pk)));
+      const relevantDuties = proposerDuties.data.filter((duty) => pubkeysSet.has(toHexString(duty.pubkey)));
+
+      this.logger.debug("Downloaded proposer duties", {
+        epoch,
+        dependentRoot: toHexString(dependentRoot),
+        count: relevantDuties.length,
+      });
+
+      const prior = this.proposers.get(epoch);
+      this.proposers.set(epoch, {dependentRoot, data: relevantDuties});
+
+      if (prior && !this.config.types.Root.equals(prior.dependentRoot, dependentRoot)) {
+        this.logger.warn("Proposer duties re-org. This may happen from time to time", {
+          priorDependentRoot: toHexString(prior.dependentRoot),
+          dependentRoot: toHexString(dependentRoot),
+        });
+      }
     }
   }
 
