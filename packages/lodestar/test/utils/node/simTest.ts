@@ -104,7 +104,7 @@ function printEpochSlotGrid<T>(map: Map<Slot, T>, config: IBeaconConfig, title: 
   const lastEpoch = computeEpochAtSlot(config, lastSlot);
   const rowsByEpochBySlot = linspace(0, lastEpoch).map((epoch) => {
     const slots = linspace(epoch * config.params.SLOTS_PER_EPOCH, (epoch + 1) * config.params.SLOTS_PER_EPOCH - 1);
-    return slots.map((slot) => map.get(slot));
+    return slots.map((slot) => formatValue(map.get(slot)));
   });
   console.log(renderTitle(title));
   console.table(rowsByEpochBySlot);
@@ -118,11 +118,18 @@ function printEpochGrid(maps: Record<string, Map<Epoch, number>>, title: string)
     const epoch = Array.from(map.keys())[map.size - 1];
     return epoch > max ? epoch : max;
   }, 0);
-  const epochGrid = linspace(0, lastEpoch).map((epoch) => mapValues(maps, (val, key) => maps[key].get(epoch)));
+  const epochGrid = linspace(0, lastEpoch).map((epoch) =>
+    mapValues(maps, (val, key) => formatValue(maps[key].get(epoch)))
+  );
   console.log(renderTitle(title));
   console.table(epochGrid);
 }
 
 function renderTitle(title: string): string {
   return `${title}\n${"=".repeat(title.length)}`;
+}
+
+/** Represent undefined values as "-" to make the tables shorter. The word "undefined" is too wide */
+function formatValue<T>(val: T | undefined): T | string {
+  return val === undefined ? "-" : val;
 }
