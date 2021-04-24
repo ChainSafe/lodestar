@@ -103,11 +103,12 @@ export class AttestationService {
     const signedAttestations: phase0.Attestation[] = [];
 
     for (const {duty} of validatorDuties) {
+      const logCtxValidator = {...logCtx, validator: prettyBytes(duty.pubkey)};
       try {
         signedAttestations.push(await this.validatorStore.signAttestation(duty, attestation, currentEpoch));
+        this.logger.debug("Signed attestation", logCtxValidator);
       } catch (e) {
-        if (notAborted(e))
-          this.logger.error("Error signing attestation", {...logCtx, validator: prettyBytes(duty.pubkey)}, e);
+        if (notAborted(e)) this.logger.error("Error signing attestation", logCtxValidator, e);
       }
     }
 
@@ -154,15 +155,17 @@ export class AttestationService {
     const signedAggregateAndProofs: phase0.SignedAggregateAndProof[] = [];
 
     for (const {duty, selectionProof} of validatorDuties) {
+      const logCtxValidator = {...logCtx, validator: prettyBytes(duty.pubkey)};
       try {
         // Produce signed aggregates only for validators that are subscribed aggregators.
-        if (selectionProof !== null)
+        if (selectionProof !== null) {
           signedAggregateAndProofs.push(
             await this.validatorStore.signAggregateAndProof(duty, selectionProof, aggregate)
           );
+          this.logger.debug("Signed aggregateAndProofs", logCtxValidator);
+        }
       } catch (e) {
-        if (notAborted(e))
-          this.logger.error("Error signing aggregateAndProofs", {...logCtx, validator: prettyBytes(duty.pubkey)}, e);
+        if (notAborted(e)) this.logger.error("Error signing aggregateAndProofs", logCtxValidator, e);
       }
     }
 
