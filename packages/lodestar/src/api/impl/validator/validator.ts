@@ -33,10 +33,10 @@ import {ApiNamespace, IApiModules} from "../interface";
 import {IValidatorApi} from "./interface";
 
 /**
- * 2 Slots is likely excessive but our node single thread can get very overloaded.
- * Once we are certain that long periods of thread blocking don't happen, reduce to 1.
+ * Validator clock may be advanced from beacon's clock. If the validator requests a resource in a
+ * future slot, wait some time instead of rejecting the request because it's in the future
  */
-const MAX_SLOT_DIFF_WAIT = 2;
+const MAX_API_CLOCK_DISPARITY_MS = 1000;
 
 /**
  * If the node is within this many epochs from the head, we declare it to be synced regardless of
@@ -81,7 +81,7 @@ export class ValidatorApi implements IValidatorApi {
   async produceBlock(slot: Slot, randaoReveal: Bytes96, graffiti = ""): Promise<phase0.BeaconBlock> {
     this.notWhileSyncing();
 
-    await this.waitForRequestedSlot(slot);
+    await this.waitForSlot(slot); // Must never request for a future slot > currentSlot
 
     return await assembleBlock(
       this.config,
@@ -97,7 +97,7 @@ export class ValidatorApi implements IValidatorApi {
   async produceAttestationData(committeeIndex: CommitteeIndex, slot: Slot): Promise<phase0.AttestationData> {
     this.notWhileSyncing();
 
-    await this.waitForRequestedSlot(slot);
+    await this.waitForSlot(slot); // Must never request for a future slot > currentSlot
 
     const headRoot = this.chain.forkChoice.getHeadRoot();
     const state = await this.chain.regen.getBlockSlotState(headRoot, slot);
@@ -114,7 +114,7 @@ export class ValidatorApi implements IValidatorApi {
     this.notWhileSyncing();
 
     const startSlot = computeStartSlotAtEpoch(this.config, epoch);
-    await this.waitForRequestedSlot(startSlot);
+    await this.waitForSlot(startSlot); // Must never request for a future slot > currentSlot
 
     const state = await this.chain.getHeadStateAtCurrentEpoch();
     const duties: phase0.ProposerDuty[] = [];
@@ -142,7 +142,8 @@ export class ValidatorApi implements IValidatorApi {
       throw new ApiError(400, "No validator to get attester duties");
     }
 
-    await this.waitForRequestedSlot(computeStartSlotAtEpoch(this.config, epoch));
+    // May request for an epoch that's in the future
+    await this.waitForNextClosestEpoch();
 
     // Check if the epoch is in the future after waiting for requested slot
     if (epoch > this.chain.clock.currentEpoch + 1) {
@@ -185,7 +186,7 @@ export class ValidatorApi implements IValidatorApi {
   async getAggregatedAttestation(attestationDataRoot: Root, slot: Slot): Promise<phase0.Attestation> {
     this.notWhileSyncing();
 
-    await this.waitForRequestedSlot(slot);
+    await this.waitForSlot(slot); // Must never request for a future slot > currentSlot
 
     const attestations = await this.db.attestation.getAttestationsByDataRoot(slot, attestationDataRoot);
 
@@ -301,13 +302,28 @@ export class ValidatorApi implements IValidatorApi {
   }
 
   /**
-   * Validator client's clock may not be in sync with beacon's clock. Wait for the request slot
+   * If advancing the local clock `MAX_API_CLOCK_DISPARITY_MS` ticks to the requested slot, wait for its start
+   * Prevents the validator from getting errors from the API if the clock is a bit advanced
    */
-  private async waitForRequestedSlot(slot: Slot): Promise<void> {
-    // Store currentSlot as variable to ensure it's the same in the if conditions
-    const currentSlot = this.chain.clock.currentSlot;
-    if (slot > currentSlot && slot <= currentSlot + MAX_SLOT_DIFF_WAIT) {
+  private async waitForSlot(slot: Slot): Promise<void> {
+    const slotStartSec = this.chain.genesisTime + slot * this.config.params.SECONDS_PER_SLOT;
+    const msToSlot = slotStartSec * 1000 - Date.now();
+    if (msToSlot > 0 && msToSlot < MAX_API_CLOCK_DISPARITY_MS) {
       await this.chain.clock.waitForSlot(slot);
+    }
+  }
+
+  /**
+   * If advancing the local clock `MAX_API_CLOCK_DISPARITY_MS` ticks to the next epoch, wait for slot 0 of the next epoch.
+   * Prevents a validator from not being able to get the attestater duties correctly if the beacon and validator clocks are off
+   */
+  private async waitForNextClosestEpoch(): Promise<void> {
+    const nextEpoch = this.chain.clock.currentEpoch + 1;
+    const secPerEpoch = this.config.params.SLOTS_PER_EPOCH * this.config.params.SECONDS_PER_SLOT;
+    const nextEpochStartSec = this.chain.genesisTime + nextEpoch * secPerEpoch;
+    const msToNextEpoch = nextEpochStartSec * 1000 - Date.now();
+    if (msToNextEpoch > 0 && msToNextEpoch < MAX_API_CLOCK_DISPARITY_MS) {
+      await this.chain.clock.waitForSlot(computeStartSlotAtEpoch(this.config, nextEpoch));
     }
   }
 
