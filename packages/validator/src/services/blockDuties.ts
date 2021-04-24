@@ -72,17 +72,19 @@ export class BlockDutiesService {
   }
 
   private runBlockDutiesTask = async (slot: Slot): Promise<void> => {
-    // If BlockDutiesService is not aware of genesis epoch duties, and before genesis fetch them
-    if (slot < 0 && !this.proposers.has(GENESIS_EPOCH)) {
-      await this.pollBeaconProposers(GENESIS_EPOCH);
-      return;
+    if (slot < 0) {
+      // Before genesis, fetch the genesis duties but don't notify block production
+      // Only fetch duties once since there is not possible to re-org. TODO: Review
+      if (!this.proposers.has(GENESIS_EPOCH)) {
+        await this.pollBeaconProposers(GENESIS_EPOCH);
+      }
+    } else {
+      await this.pollBeaconProposersAndNotify(slot).catch((e) => {
+        if (notAborted(e)) this.logger.error("Error on pollBeaconProposers", {}, e);
+      });
+
+      this.pruneOldDuties(computeEpochAtSlot(this.config, slot));
     }
-
-    await this.pollBeaconProposersAndNotify(slot).catch((e) => {
-      if (notAborted(e)) this.logger.error("Error on pollBeaconProposers", {}, e);
-    });
-
-    this.pruneOldDuties(computeEpochAtSlot(this.config, slot));
   };
 
   /**
