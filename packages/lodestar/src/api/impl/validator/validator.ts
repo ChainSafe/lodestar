@@ -34,6 +34,12 @@ import {checkSyncStatus} from "../utils";
 import {IValidatorApi} from "./interface";
 
 /**
+ * 2 Slots is likely excessive but our node single thread can get very overloaded.
+ * Once we are certain that long periods of thread blocking don't happen, reduce to 1.
+ */
+const MAX_SLOT_DIFF_WAIT = 2;
+
+/**
  * Server implementation for handling validator duties.
  * See `@chainsafe/lodestar-validator/src/api` for the client implementation).
  */
@@ -66,6 +72,8 @@ export class ValidatorApi implements IValidatorApi {
 
   async produceBlock(slot: Slot, randaoReveal: Bytes96, graffiti = ""): Promise<phase0.BeaconBlock> {
     await checkSyncStatus(this.config, this.sync);
+    await this.waitForRequestedSlot(slot);
+
     return await assembleBlock(
       this.config,
       this.chain,
@@ -78,28 +86,27 @@ export class ValidatorApi implements IValidatorApi {
   }
 
   async produceAttestationData(committeeIndex: CommitteeIndex, slot: Slot): Promise<phase0.AttestationData> {
-    try {
-      await checkSyncStatus(this.config, this.sync);
-      const headRoot = this.chain.forkChoice.getHeadRoot();
-      const state = await this.chain.regen.getBlockSlotState(headRoot, slot);
-      return assembleAttestationData(
-        state.config,
-        state as CachedBeaconState<phase0.BeaconState>,
-        headRoot,
-        slot,
-        committeeIndex
-      );
-    } catch (e) {
-      this.logger.warn("Failed to produce attestation data", e);
-      throw e;
-    }
+    await checkSyncStatus(this.config, this.sync);
+    await this.waitForRequestedSlot(slot);
+
+    const headRoot = this.chain.forkChoice.getHeadRoot();
+    const state = await this.chain.regen.getBlockSlotState(headRoot, slot);
+    return assembleAttestationData(
+      state.config,
+      state as CachedBeaconState<phase0.BeaconState>,
+      headRoot,
+      slot,
+      committeeIndex
+    );
   }
 
   async getProposerDuties(epoch: Epoch): Promise<phase0.ProposerDutiesApi> {
     await checkSyncStatus(this.config, this.sync);
 
-    const state = await this.chain.getHeadStateAtCurrentEpoch();
     const startSlot = computeStartSlotAtEpoch(this.config, epoch);
+    await this.waitForRequestedSlot(startSlot);
+
+    const state = await this.chain.getHeadStateAtCurrentEpoch();
     const duties: phase0.ProposerDuty[] = [];
 
     for (let slot = startSlot; slot < startSlot + this.config.params.SLOTS_PER_EPOCH; slot++) {
@@ -120,9 +127,18 @@ export class ValidatorApi implements IValidatorApi {
 
   async getAttesterDuties(epoch: number, validatorIndices: ValidatorIndex[]): Promise<phase0.AttesterDutiesApi> {
     await checkSyncStatus(this.config, this.sync);
-    if (validatorIndices.length === 0) throw new ApiError(400, "No validator to get attester duties");
-    if (epoch > this.chain.clock.currentEpoch + 1)
+
+    if (validatorIndices.length === 0) {
+      throw new ApiError(400, "No validator to get attester duties");
+    }
+
+    await this.waitForRequestedSlot(computeStartSlotAtEpoch(this.config, epoch));
+
+    // Check if the epoch is in the future after waiting for requested slot
+    if (epoch > this.chain.clock.currentEpoch + 1) {
       throw new ApiError(400, "Cannot get duties for epoch more than one ahead");
+    }
+
     const state = await this.chain.getHeadStateAtCurrentEpoch();
 
     // TODO: Determine what the current epoch would be if we fast-forward our system clock by
@@ -158,6 +174,8 @@ export class ValidatorApi implements IValidatorApi {
 
   async getAggregatedAttestation(attestationDataRoot: Root, slot: Slot): Promise<phase0.Attestation> {
     await checkSyncStatus(this.config, this.sync);
+    await this.waitForRequestedSlot(slot);
+
     const attestations = await this.db.attestation.getAttestationsByDataRoot(slot, attestationDataRoot);
 
     if (attestations.length === 0) {
@@ -268,5 +286,16 @@ export class ValidatorApi implements IValidatorApi {
     // If for some reason the genesisBlockRoot is not able don't prevent validators from
     // proposing or attesting. If the genesisBlockRoot is wrong, at worst it may trigger a re-fetch of the duties
     return this.genesisBlockRoot || ZERO_HASH;
+  }
+
+  /**
+   * Validator client's clock may not be in sync with beacon's clock. Wait for the request slot
+   */
+  private async waitForRequestedSlot(slot: Slot): Promise<void> {
+    // Store currentSlot as variable to ensure it's the same in the if conditions
+    const currentSlot = this.chain.clock.currentSlot;
+    if (slot > currentSlot && slot <= currentSlot + MAX_SLOT_DIFF_WAIT) {
+      await this.chain.clock.waitForSlot(slot);
+    }
   }
 }
