@@ -33,10 +33,6 @@ function doManyBlsWorkReq(workReqArr: BlsWorkReq[]): WorkResult<boolean>[] {
 }
 
 function verifySignatureSetsMaybeBatch(workReq: BlsWorkReq): boolean {
-  if (workReq.sets.length === 0) {
-    throw Error("Empty signature set");
-  }
-
   if (workReq.sets.length >= MIN_SET_COUNT_TO_BATCH) {
     return bls.Signature.verifyMultipleSignatures(
       workReq.sets.map((s) => ({
@@ -45,6 +41,11 @@ function verifySignatureSetsMaybeBatch(workReq: BlsWorkReq): boolean {
         signature: bls.Signature.fromBytes(s.signature, CoordType.affine, workReq.validateSignature),
       }))
     );
+  }
+
+  // .every on an empty array returns true
+  if (workReq.sets.length === 0) {
+    throw Error("Empty signature set");
   }
 
   // If too few signature sets verify them without batching

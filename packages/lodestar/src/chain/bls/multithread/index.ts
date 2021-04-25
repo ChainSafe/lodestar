@@ -6,7 +6,16 @@ self = undefined;
 import {Implementation, PointFormat, PublicKey} from "@chainsafe/bls";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {BlsWorkReq, WorkerData, WorkResult, WorkResultCode} from "./types";
-import {chunkify} from "./utils";
+import {chunkifyMaximizeChunkSize} from "./utils";
+
+/**
+ * Split big signature sets into smaller sets so they can be sent to multiple workers.
+ * The biggest sets happen during sync, on mainnet batches of 64 blocks have around ~8000 signatures.
+ * The latency cost of sending the job to and from the worker is aprox a single sig verification.
+ * If you split a big signature into 2, the extra time cost is `(2+2N)/(1+2N)`.
+ * For 128, the extra time cost is about 0.3%. No specific reasoning for `128`, it's just good enough.
+ */
+const MAX_SIGNATURE_SETS_PER_JOB = 128;
 
 type WorkerApi = {
   doManyBlsWorkReq(workReqArr: BlsWorkReq[]): Promise<WorkResult<boolean>[]>;
@@ -50,24 +59,12 @@ export class BlsMultiThreadNaive {
     await this.pool.terminate(true);
   }
 
-  async verify(
-    publicKey: PublicKey,
-    message: Uint8Array,
-    signature: Uint8Array,
-    validateSignature: boolean
-  ): Promise<boolean> {
-    return await this.queueBlsWork({
-      validateSignature,
-      sets: [{publicKey: publicKey.toBytes(this.format), message, signature: signature}],
-    });
-  }
-
-  async verifyMultipleAggregateSignatures(
+  async verifySignatureSets(
     sets: {publicKey: PublicKey; message: Uint8Array; signature: Uint8Array}[],
     validateSignature: boolean
   ): Promise<boolean> {
     const results = await Promise.all(
-      chunkify(sets, 32).map((setsWorker) =>
+      chunkifyMaximizeChunkSize(sets, MAX_SIGNATURE_SETS_PER_JOB).map((setsWorker) =>
         this.queueBlsWork({
           validateSignature,
           sets: setsWorker.map((s) => ({
@@ -79,6 +76,11 @@ export class BlsMultiThreadNaive {
       )
     );
 
+    // .every on an empty array returns true
+    if (results.length === 0) {
+      throw Error("Empty results array");
+    }
+
     return results.every((isValid) => isValid === true);
   }
 
@@ -89,6 +91,10 @@ export class BlsMultiThreadNaive {
 
     const result = results[0];
     if (result.code === WorkResultCode.success) {
+      // Metrics
+      // this.metrics.blsMultiThreadSigCount.add(workReq.sets.length);
+      // this.metrics.blsMultiThreadWorkerTiem.add(result.workerJobTimeMs);
+
       return result.result;
     } else {
       throw Error(result.error.message);

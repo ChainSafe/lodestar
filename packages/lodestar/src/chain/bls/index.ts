@@ -38,7 +38,7 @@ export class BlsVerifier implements IBlsVerifier {
     // Public keys have already been checked for subgroup and infinity
     // Signatures have already been checked for subgroup
     // Signature checks above could be done here for convienence as well
-    return this.pool.verifyMultipleAggregateSignatures(
+    return this.pool.verifySignatureSets(
       signatureSets.map((signatureSet) => ({
         publicKey: getAggregatedPubkey(signatureSet),
         message: signatureSet.signingRoot as Uint8Array,
