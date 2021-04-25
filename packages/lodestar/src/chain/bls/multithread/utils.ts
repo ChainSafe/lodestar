@@ -17,3 +17,19 @@ export function chunkifyMaximizeChunkSize<T>(arr: T[], minPerChunk: number): T[]
 
   return arrArr;
 }
+
+/**
+ * Cross-platform fetch an aprox number of logical cores
+ */
+export function getDefaultPoolSize(): number {
+  if (typeof navigator !== "undefined") {
+    return navigator.hardwareConcurrency ?? 4;
+  }
+
+  if (typeof require !== "undefined") {
+    // eslint-disable-next-line
+    return require("os").cpus().length;
+  }
+
+  return 8;
+}

@@ -16,7 +16,7 @@ import {generateEmptySignedVoluntaryExit} from "../../../utils/attestation";
 import {validateGossipVoluntaryExit} from "../../../../src/chain/validation/voluntaryExit";
 import {VoluntaryExitErrorCode} from "../../../../src/chain/errors/voluntaryExitError";
 import {SinonStubFn} from "../../../utils/types";
-import {VoluntaryExitError} from "../../../../src/chain/errors";
+import {expectRejectedWithLodestarError} from "../../../utils/errors";
 
 describe("validate voluntary exit", () => {
   const sandbox = sinon.createSandbox();
@@ -29,6 +29,7 @@ describe("validate voluntary exit", () => {
     isValidIncomingVoluntaryExitStub = sandbox.stub(validatorStatusUtils, "isValidVoluntaryExit");
     chainStub = sandbox.createStubInstance(BeaconChain) as StubbedChain;
     chainStub.forkChoice = sandbox.createStubInstance(ForkChoice);
+    chainStub.bls = {verifySignatureSets: async () => true};
     regenStub = chainStub.regen = sandbox.createStubInstance(StateRegenerator);
     dbStub = new StubbedBeaconDb(sandbox);
   });
@@ -52,11 +53,11 @@ describe("validate voluntary exit", () => {
       config
     );
     regenStub.getCheckpointState.resolves(createCachedBeaconState(config, state));
-    try {
-      await validateGossipVoluntaryExit(config, chainStub, dbStub, voluntaryExit);
-    } catch (error) {
-      expect((error as VoluntaryExitError).type).to.have.property("code", VoluntaryExitErrorCode.EXIT_ALREADY_EXISTS);
-    }
+
+    await expectRejectedWithLodestarError(
+      validateGossipVoluntaryExit(config, chainStub, dbStub, voluntaryExit),
+      VoluntaryExitErrorCode.EXIT_ALREADY_EXISTS
+    );
   });
 
   it("should return invalid Voluntary Exit - invalid", async () => {
@@ -75,11 +76,11 @@ describe("validate voluntary exit", () => {
     );
     regenStub.getCheckpointState.resolves(createCachedBeaconState(config, state));
     isValidIncomingVoluntaryExitStub.returns(false);
-    try {
-      await validateGossipVoluntaryExit(config, chainStub, dbStub, voluntaryExit);
-    } catch (error) {
-      expect((error as VoluntaryExitError).type).to.have.property("code", VoluntaryExitErrorCode.INVALID_EXIT);
-    }
+
+    await expectRejectedWithLodestarError(
+      validateGossipVoluntaryExit(config, chainStub, dbStub, voluntaryExit),
+      VoluntaryExitErrorCode.INVALID_EXIT
+    );
   });
 
   it("should return valid Voluntary Exit", async () => {

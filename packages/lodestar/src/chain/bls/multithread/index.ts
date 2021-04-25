@@ -1,5 +1,4 @@
 import {spawn, Worker} from "threads";
-import {defaultPoolSize} from "threads/dist/master/implementation";
 // `threads` library creates self global variable which breaks `timeout-abort-controller` https://github.com/jacobheun/timeout-abort-controller/issues/9
 // Don't add an eslint disable here as a reminder that this has to be fixed eventually
 // @ts-ignore
@@ -11,7 +10,7 @@ import {ILogger} from "@chainsafe/lodestar-utils";
 import {QueueError, QueueErrorCode} from "../../../util/queue";
 import {wrapError} from "../../../util/wrapError";
 import {BlsWorkReq, WorkerData, WorkResult, WorkResultCode} from "./types";
-import {chunkifyMaximizeChunkSize} from "./utils";
+import {chunkifyMaximizeChunkSize, getDefaultPoolSize} from "./utils";
 import {IMetrics} from "../../../metrics";
 
 export type BlsMultiThreadWorkerPoolModules = {
@@ -86,7 +85,7 @@ export class BlsMultiThreadWorkerPool {
     // THe worker is not able to deserialize from uncompressed
     // `Error: err _wrapDeserialize`
     this.format = implementation === "blst-native" ? PointFormat.uncompressed : PointFormat.compressed;
-    this.workers = this.createWorkers(implementation, defaultPoolSize);
+    this.workers = this.createWorkers(implementation, getDefaultPoolSize());
 
     this.signal.addEventListener("abort", this.abortAllJobs, {once: true});
     this.signal.addEventListener("abort", this.terminateAllWorkers, {once: true});

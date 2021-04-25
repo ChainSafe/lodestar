@@ -12,7 +12,7 @@ import {generateCachedState} from "../../../utils/state";
 import {validateGossipAttesterSlashing} from "../../../../src/chain/validation/attesterSlashing";
 import {AttesterSlashingErrorCode} from "../../../../src/chain/errors/attesterSlashingError";
 import {SinonStubFn} from "../../../utils/types";
-import {AttestationError} from "../../../../src/chain/errors";
+import {expectRejectedWithLodestarError} from "../../../utils/errors";
 
 describe("GossipMessageValidator", () => {
   const sandbox = sinon.createSandbox();
@@ -24,6 +24,7 @@ describe("GossipMessageValidator", () => {
     isValidIncomingAttesterSlashingStub = sandbox.stub(validatorStatusUtils, "isValidAttesterSlashing");
     chainStub = sandbox.createStubInstance(BeaconChain) as StubbedChain;
     chainStub.forkChoice = sandbox.createStubInstance(ForkChoice);
+    chainStub.bls = {verifySignatureSets: async () => true};
     dbStub = new StubbedBeaconDb(sandbox);
   });
 
@@ -35,14 +36,11 @@ describe("GossipMessageValidator", () => {
     it("should return invalid attester slashing - already exisits", async () => {
       const slashing = generateEmptyAttesterSlashing();
       dbStub.attesterSlashing.hasAll.resolves(true);
-      try {
-        await validateGossipAttesterSlashing(config, chainStub, dbStub, slashing);
-      } catch (error) {
-        expect((error as AttestationError).type).to.have.property(
-          "code",
-          AttesterSlashingErrorCode.SLASHING_ALREADY_EXISTS
-        );
-      }
+
+      await expectRejectedWithLodestarError(
+        validateGossipAttesterSlashing(config, chainStub, dbStub, slashing),
+        AttesterSlashingErrorCode.SLASHING_ALREADY_EXISTS
+      );
     });
 
     it("should return invalid attester slashing - invalid", async () => {
@@ -51,11 +49,11 @@ describe("GossipMessageValidator", () => {
       const state = generateCachedState();
       chainStub.getHeadState.returns(state);
       isValidIncomingAttesterSlashingStub.returns(false);
-      try {
-        await validateGossipAttesterSlashing(config, chainStub, dbStub, slashing);
-      } catch (error) {
-        expect((error as AttestationError).type).to.have.property("code", AttesterSlashingErrorCode.INVALID_SLASHING);
-      }
+
+      await expectRejectedWithLodestarError(
+        validateGossipAttesterSlashing(config, chainStub, dbStub, slashing),
+        AttesterSlashingErrorCode.INVALID_SLASHING
+      );
     });
 
     it("should return valid attester slashing", async () => {
