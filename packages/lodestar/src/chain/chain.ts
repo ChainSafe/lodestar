@@ -83,7 +83,7 @@ export class BeaconChain implements IBeaconChain {
     this.emitter = new ChainEventEmitter();
     this.internalEmitter = new ChainEventEmitter();
 
-    this.bls = new BlsVerifier(logger, this.abortController.signal);
+    this.bls = new BlsVerifier({logger, metrics, signal: this.abortController.signal});
 
     this.clock = new LocalClock({
       config: this.config,

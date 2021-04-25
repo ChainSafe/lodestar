@@ -12,6 +12,13 @@ import {QueueError, QueueErrorCode} from "../../../util/queue";
 import {wrapError} from "../../../util/wrapError";
 import {BlsWorkReq, WorkerData, WorkResult, WorkResultCode} from "./types";
 import {chunkifyMaximizeChunkSize} from "./utils";
+import {IMetrics} from "../../../metrics";
+
+export type BlsMultiThreadWorkerPoolModules = {
+  logger: ILogger;
+  metrics?: IMetrics;
+  signal: AbortSignal;
+};
 
 /**
  * Split big signature sets into smaller sets so they can be sent to multiple workers.
@@ -63,15 +70,17 @@ type WorkerDescriptor = {
  */
 export class BlsMultiThreadWorkerPool {
   private readonly logger: ILogger;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private readonly format: PointFormat;
+  private readonly metrics?: IMetrics;
   private readonly signal: AbortSignal;
+
+  private readonly format: PointFormat;
   private readonly jobs: JobQueueItem[] = [];
   private readonly workers: WorkerDescriptor[];
 
-  constructor(logger: ILogger, implementation: Implementation, signal: AbortSignal) {
-    this.logger = logger;
-    this.signal = signal;
+  constructor(implementation: Implementation, modules: BlsMultiThreadWorkerPoolModules) {
+    this.logger = modules.logger;
+    this.metrics = modules.metrics;
+    this.signal = modules.signal;
 
     // Use compressed for herumi for now.
     // THe worker is not able to deserialize from uncompressed
@@ -145,10 +154,7 @@ export class BlsMultiThreadWorkerPool {
   }
 
   /**
-   * Queue a task and return a promise that resolves once the task has been dequeued,
-   * started and finished.
-   *
-   * @param task An async function that takes a thread instance and invokes it.
+   * Register BLS work to be done eventually in a worker
    */
   private async queueBlsWork(workReq: BlsWorkReq): Promise<boolean> {
     if (this.signal.aborted) {
@@ -159,7 +165,6 @@ export class BlsMultiThreadWorkerPool {
     // It would be bad to reject signatures because the node is slow.
     // However, if the worker communication broke jobs won't ever finish
 
-    // TODO: Throw only if all validators have failed
     if (
       this.workers.length > 0 &&
       this.workers[0].status.code === WorkerStatusCode.initializationError &&
@@ -175,6 +180,9 @@ export class BlsMultiThreadWorkerPool {
     });
   }
 
+  /**
+   * Potentially submit jobs to an idle worker, only if there's a worker and jobs
+   */
   private runJob = async (): Promise<void> => {
     if (this.signal.aborted) {
       return;
@@ -192,16 +200,19 @@ export class BlsMultiThreadWorkerPool {
       return;
     }
 
-    // TODO: Metrics
-    // for (const job of jobs) {
-    //   this.metrics?.jobWaitTime.observe((Date.now() - job.addedTimeMs) / 1000);
-    // }
+    for (const job of jobs) {
+      this.metrics?.blsThreadPoolJobWaitTime.observe((Date.now() - job.addedTimeMs) / 1000);
+    }
 
     // TODO: After sending the work to the worker the main thread can drop the job arguments
-    // and free-up memory, only need to keep the job's Promise handlers
+    // and free-up memory, only needs to keep the job's Promise handlers.
+    // Maybe it's not useful since all data referenced in jobs is likely referenced by others
 
     const workerApi = worker.status.workerApi;
     worker.status = {code: WorkerStatusCode.running, workerApi};
+
+    this.metrics?.blsThreadPoolTotalJobsGroupsStarted.inc(1);
+    this.metrics?.blsThreadPoolTotalJobsStarted.inc(jobs.length);
 
     // Send work package to the worker
     const workerResult = await wrapError(workerApi.doManyBlsWorkReq(jobs.map((job) => job.workReq)));
@@ -209,6 +220,8 @@ export class BlsMultiThreadWorkerPool {
     worker.status = {code: WorkerStatusCode.idle, workerApi};
 
     if (workerResult.err) {
+      // Worker communications should never reject
+      if (!this.signal.aborted) this.logger.error("BlsMultiThreadWorkerPool error", {}, workerResult.err);
       // Reject all
       for (const job of jobs) {
         job.reject(workerResult.err);
@@ -219,9 +232,8 @@ export class BlsMultiThreadWorkerPool {
       for (const [i, result] of results.entries()) {
         const job = jobs[i];
         if (result.code === WorkResultCode.success) {
-          // Metrics
-          // this.metrics.blsMultiThreadSigCount.add(workReq.sets.length);
-          // this.metrics.blsMultiThreadWorkerTiem.add(result.workerJobTimeMs);
+          this.metrics?.blsThreadPoolSuccessJobsSignatureSetsCount.inc(job.workReq.sets.length);
+          this.metrics?.blsThreadPoolSuccessJobsWorkerTime.inc(result.workerJobTimeMs);
 
           job.resolve(result.result);
         } else {
