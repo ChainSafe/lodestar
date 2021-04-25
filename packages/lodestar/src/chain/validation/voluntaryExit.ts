@@ -1,4 +1,4 @@
-import {isValidVoluntaryExit} from "@chainsafe/lodestar-beacon-state-transition";
+import {isValidVoluntaryExit, fast} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {phase0} from "@chainsafe/lodestar-types";
 import {IBeaconChain} from "..";
@@ -22,7 +22,15 @@ export async function validateGossipVoluntaryExit(
     epoch: voluntaryExit.message.epoch,
   });
 
-  if (!isValidVoluntaryExit(config, state, voluntaryExit)) {
+  // verifySignature = false, verified in batch below
+  if (!isValidVoluntaryExit(config, state, voluntaryExit, false)) {
+    throw new VoluntaryExitError({
+      code: VoluntaryExitErrorCode.INVALID_EXIT,
+    });
+  }
+
+  const signatureSet = fast.getVoluntaryExitSignatureSet(state, voluntaryExit);
+  if (!(await chain.bls.verifySignatureSetsBatch([signatureSet]))) {
     throw new VoluntaryExitError({
       code: VoluntaryExitErrorCode.INVALID_EXIT,
     });

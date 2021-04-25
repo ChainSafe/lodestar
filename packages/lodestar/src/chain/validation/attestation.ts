@@ -95,15 +95,23 @@ export async function validateGossipAttestation(
     });
   }
 
-  if (
-    !phase0.fast.isValidIndexedAttestation(
-      attestationTargetState as CachedBeaconState<allForks.BeaconState>,
-      attestationTargetState.getIndexedAttestation(attestation),
-      !attestationJob.validSignature
-    )
-  ) {
+  const indexedAttestation = attestationTargetState.getIndexedAttestation(attestation);
+
+  // Do verify signature
+  if (!attestationJob.validSignature) {
+    const signatureSet = fast.getIndexedAttestationSignatureSet(attestationTargetState, indexedAttestation);
+    if (!(await chain.bls.verifySignatureSetsBatch([signatureSet]))) {
+      throw new AttestationError({
+        code: AttestationErrorCode.INVALID_SIGNATURE,
+        job: attestationJob,
+      });
+    }
+  }
+
+  // verifySignature = false, verified above
+  if (!phase0.fast.isValidIndexedAttestation(attestationTargetState, indexedAttestation, false)) {
     throw new AttestationError({
-      code: AttestationErrorCode.INVALID_SIGNATURE,
+      code: AttestationErrorCode.INVALID_INDEXED_ATTESTATION,
       job: attestationJob,
     });
   }

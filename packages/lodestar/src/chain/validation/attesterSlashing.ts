@@ -1,4 +1,4 @@
-import {isValidAttesterSlashing} from "@chainsafe/lodestar-beacon-state-transition/";
+import {isValidAttesterSlashing, fast} from "@chainsafe/lodestar-beacon-state-transition/";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {phase0, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {IBeaconChain} from "..";
@@ -25,7 +25,16 @@ export async function validateGossipAttesterSlashing(
   }
 
   const state = chain.getHeadState();
-  if (!isValidAttesterSlashing(config, state, attesterSlashing)) {
+
+  // verifySignature = false, verified in batch below
+  if (!isValidAttesterSlashing(config, state, attesterSlashing, false)) {
+    throw new AttesterSlashingError({
+      code: AttesterSlashingErrorCode.INVALID_SLASHING,
+    });
+  }
+
+  const signatureSets = fast.getAttesterSlashingSignatureSets(state, attesterSlashing);
+  if (!(await chain.bls.verifySignatureSetsBatch(signatureSets))) {
     throw new AttesterSlashingError({
       code: AttesterSlashingErrorCode.INVALID_SLASHING,
     });
