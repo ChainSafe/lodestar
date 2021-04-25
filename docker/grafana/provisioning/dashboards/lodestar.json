@@ -15,7 +15,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "id": 3,
+  "id": 1,
   "links": [],
   "panels": [
     {
@@ -911,7 +911,7 @@
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 18
+            "y": 3
           },
           "hiddenSeries": false,
           "id": 14,
@@ -1007,7 +1007,7 @@
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 18
+            "y": 3
           },
           "hiddenSeries": false,
           "id": 16,
@@ -1108,7 +1108,7 @@
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 26
+            "y": 11
           },
           "hiddenSeries": false,
           "id": 44,
@@ -1165,7 +1165,6 @@
           },
           "yaxes": [
             {
-              "$$hashKey": "object:153",
               "format": "decbytes",
               "label": null,
               "logBase": 1,
@@ -1174,7 +1173,6 @@
               "show": true
             },
             {
-              "$$hashKey": "object:154",
               "format": "short",
               "label": null,
               "logBase": 1,
@@ -1206,7 +1204,7 @@
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 26
+            "y": 11
           },
           "hiddenSeries": false,
           "id": 58,
@@ -1301,7 +1299,7 @@
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 34
+            "y": 19
           },
           "hiddenSeries": false,
           "id": 60,
@@ -1396,7 +1394,7 @@
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 34
+            "y": 19
           },
           "hiddenSeries": false,
           "id": 62,
@@ -1491,7 +1489,7 @@
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 42
+            "y": 27
           },
           "hiddenSeries": false,
           "id": 64,
@@ -1618,7 +1616,7 @@
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 42
+            "y": 27
           },
           "hiddenSeries": false,
           "id": 40,
@@ -1723,7 +1721,7 @@
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 50
+            "y": 35
           },
           "hiddenSeries": false,
           "id": 6,
@@ -1820,7 +1818,7 @@
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 50
+            "y": 35
           },
           "hiddenSeries": false,
           "id": 42,
@@ -1876,7 +1874,6 @@
           },
           "yaxes": [
             {
-              "$$hashKey": "object:116",
               "format": "percentunit",
               "label": null,
               "logBase": 1,
@@ -1885,7 +1882,6 @@
               "show": true
             },
             {
-              "$$hashKey": "object:117",
               "format": "percent",
               "label": null,
               "logBase": 1,
@@ -1936,7 +1932,7 @@
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 3
+            "y": 4
           },
           "hiddenSeries": false,
           "id": 48,
@@ -2034,7 +2030,7 @@
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 3
+            "y": 4
           },
           "hiddenSeries": false,
           "id": 50,
@@ -2150,7 +2146,7 @@
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 4
+            "y": 5
           },
           "hiddenSeries": false,
           "id": 30,
@@ -2254,7 +2250,7 @@
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 4
+            "y": 5
           },
           "hiddenSeries": false,
           "id": 34,
@@ -2359,7 +2355,7 @@
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 12
+            "y": 13
           },
           "hiddenSeries": false,
           "id": 32,
@@ -2463,7 +2459,7 @@
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 12
+            "y": 13
           },
           "hiddenSeries": false,
           "id": 36,
@@ -2567,7 +2563,7 @@
             "h": 6,
             "w": 12,
             "x": 0,
-            "y": 20
+            "y": 21
           },
           "hiddenSeries": false,
           "id": 37,
@@ -2671,7 +2667,7 @@
             "h": 6,
             "w": 12,
             "x": 12,
-            "y": 20
+            "y": 21
           },
           "hiddenSeries": false,
           "id": 38,
@@ -2843,7 +2839,6 @@
           },
           "yaxes": [
             {
-              "$$hashKey": "object:560",
               "format": "percentunit",
               "label": null,
               "logBase": 1,
@@ -2852,7 +2847,6 @@
               "show": true
             },
             {
-              "$$hashKey": "object:561",
               "format": "short",
               "label": null,
               "logBase": 1,
@@ -2915,7 +2909,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "lodestar_block_processor_queue_job_time_seconds_sum/lodestar_block_processor_queue_job_time_seconds_count",
+              "expr": "delta(lodestar_block_processor_queue_job_time_seconds_sum[$__rate_interval])/delta(lodestar_block_processor_queue_job_time_seconds_count[$__rate_interval])",
               "instant": false,
               "interval": "",
               "legendFormat": "block_processor",
@@ -2942,7 +2936,6 @@
           },
           "yaxes": [
             {
-              "$$hashKey": "object:560",
               "format": "s",
               "label": null,
               "logBase": 1,
@@ -2951,7 +2944,6 @@
               "show": true
             },
             {
-              "$$hashKey": "object:561",
               "format": "short",
               "label": null,
               "logBase": 1,
@@ -2998,7 +2990,7 @@
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 6
+            "y": 14
           },
           "hiddenSeries": false,
           "id": 77,
@@ -3054,7 +3046,6 @@
           },
           "yaxes": [
             {
-              "$$hashKey": "object:186",
               "format": "percentunit",
               "label": null,
               "logBase": 1,
@@ -3063,7 +3054,6 @@
               "show": true
             },
             {
-              "$$hashKey": "object:187",
               "format": "short",
               "label": null,
               "logBase": 1,
@@ -3095,7 +3085,7 @@
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 6
+            "y": 14
           },
           "hiddenSeries": false,
           "id": 80,
@@ -3151,7 +3141,6 @@
           },
           "yaxes": [
             {
-              "$$hashKey": "object:186",
               "format": "none",
               "label": null,
               "logBase": 2,
@@ -3160,7 +3149,6 @@
               "show": true
             },
             {
-              "$$hashKey": "object:187",
               "format": "short",
               "label": null,
               "logBase": 1,
@@ -3192,7 +3180,7 @@
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 14
+            "y": 22
           },
           "hiddenSeries": false,
           "id": 79,
@@ -3216,37 +3204,23 @@
           "pointradius": 2,
           "points": false,
           "renderer": "flot",
-          "seriesOverrides": [
-            {
-              "$$hashKey": "object:301",
-              "alias": "beacon_block",
-              "yaxis": 2
-            }
-          ],
           "spaceLength": 10,
           "stack": false,
           "steppedLine": false,
           "targets": [
             {
-              "expr": "lodestar_gossip_validation_queue_job_time_seconds_sum{topic!~\"beacon_block\"}/lodestar_gossip_validation_queue_job_time_seconds_count{topic!~\"beacon_block\"}",
+              "expr": "delta(lodestar_gossip_validation_queue_job_time_seconds_sum[$__rate_interval])/delta(lodestar_gossip_validation_queue_job_time_seconds_count[$__rate_interval])",
               "format": "time_series",
               "interval": "",
               "legendFormat": "{{topic}}",
               "refId": "A"
-            },
-            {
-              "expr": "lodestar_gossip_validation_queue_job_time_seconds_sum{topic=\"beacon_block\"}/lodestar_gossip_validation_queue_job_time_seconds_count{topic=\"beacon_block\"}",
-              "hide": false,
-              "interval": "",
-              "legendFormat": "{{topic}}",
-              "refId": "B"
             }
           ],
           "thresholds": [],
           "timeFrom": null,
           "timeRegions": [],
           "timeShift": null,
-          "title": "Gossip validation job time (async) [NOTE: dual axis]",
+          "title": "Gossip validation job time (async)",
           "tooltip": {
             "shared": true,
             "sort": 0,
@@ -3262,7 +3236,6 @@
           },
           "yaxes": [
             {
-              "$$hashKey": "object:186",
               "format": "s",
               "label": null,
               "logBase": 1,
@@ -3271,13 +3244,12 @@
               "show": true
             },
             {
-              "$$hashKey": "object:187",
               "format": "s",
               "label": null,
               "logBase": 1,
               "max": null,
               "min": null,
-              "show": true
+              "show": false
             }
           ],
           "yaxis": {
@@ -3303,7 +3275,7 @@
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 14
+            "y": 22
           },
           "hiddenSeries": false,
           "id": 78,
@@ -3359,7 +3331,6 @@
           },
           "yaxes": [
             {
-              "$$hashKey": "object:186",
               "format": "percentunit",
               "label": null,
               "logBase": 1,
@@ -3368,13 +3339,108 @@
               "show": true
             },
             {
-              "$$hashKey": "object:187",
               "format": "short",
               "label": null,
               "logBase": 1,
               "max": null,
               "min": null,
               "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": null,
+          "fieldConfig": {
+            "defaults": {
+              "custom": {}
+            },
+            "overrides": []
+          },
+          "fill": 1,
+          "fillGradient": 0,
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 30
+          },
+          "hiddenSeries": false,
+          "id": 82,
+          "legend": {
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "show": true,
+            "total": false,
+            "values": false
+          },
+          "lines": true,
+          "linewidth": 1,
+          "nullPointMode": "null",
+          "options": {
+            "alertThreshold": true
+          },
+          "percentage": false,
+          "pluginVersion": "7.4.5",
+          "pointradius": 2,
+          "points": false,
+          "renderer": "flot",
+          "seriesOverrides": [],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "delta(lodestar_gossip_validation_queue_job_wait_time_seconds_sum[$__rate_interval])/delta(lodestar_gossip_validation_queue_job_wait_time_seconds_count[$__rate_interval])",
+              "format": "time_series",
+              "interval": "",
+              "legendFormat": "{{topic}}",
+              "refId": "A"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "Gossip validation queue wait time",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "s",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            },
+            {
+              "format": "s",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": false
             }
           ],
           "yaxis": {
@@ -3394,6 +3460,218 @@
         "w": 24,
         "x": 0,
         "y": 22
+      },
+      "id": 86,
+      "panels": [
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": null,
+          "fieldConfig": {
+            "defaults": {
+              "color": {},
+              "custom": {},
+              "thresholds": {
+                "mode": "absolute",
+                "steps": []
+              },
+              "unit": "s"
+            },
+            "overrides": []
+          },
+          "fill": 1,
+          "fillGradient": 0,
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 15
+          },
+          "hiddenSeries": false,
+          "id": 84,
+          "legend": {
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "show": true,
+            "total": false,
+            "values": false
+          },
+          "lines": true,
+          "linewidth": 1,
+          "nullPointMode": "null",
+          "options": {
+            "alertThreshold": true
+          },
+          "percentage": false,
+          "pluginVersion": "7.4.5",
+          "pointradius": 2,
+          "points": false,
+          "renderer": "flot",
+          "seriesOverrides": [],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "delta(lodestar_api_rest_response_time_seconds_sum[$__rate_interval])/delta(lodestar_api_rest_response_time_seconds_count[$__rate_interval])",
+              "format": "time_series",
+              "interval": "",
+              "legendFormat": "{{operationId}}",
+              "refId": "A"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "REST API response times",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "s",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            },
+            {
+              "format": "s",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": false
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": null,
+          "fieldConfig": {
+            "defaults": {
+              "custom": {}
+            },
+            "overrides": []
+          },
+          "fill": 1,
+          "fillGradient": 0,
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 15
+          },
+          "hiddenSeries": false,
+          "id": 87,
+          "legend": {
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "show": true,
+            "total": false,
+            "values": false
+          },
+          "lines": true,
+          "linewidth": 1,
+          "nullPointMode": "null",
+          "options": {
+            "alertThreshold": true
+          },
+          "percentage": false,
+          "pluginVersion": "7.4.5",
+          "pointradius": 2,
+          "points": false,
+          "renderer": "flot",
+          "seriesOverrides": [],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "rate(lodestar_api_rest_response_time_seconds_count[$__rate_interval])",
+              "interval": "",
+              "legendFormat": "{{operationId}}",
+              "refId": "A"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "RESP API queries / sec",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "none",
+              "label": null,
+              "logBase": 2,
+              "max": null,
+              "min": null,
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        }
+      ],
+      "title": "REST API",
+      "type": "row"
+    },
+    {
+      "collapsed": true,
+      "datasource": null,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 23
       },
       "id": 66,
       "panels": [
@@ -3422,7 +3700,7 @@
             "h": 7,
             "w": 10,
             "x": 0,
-            "y": 23
+            "y": 8
           },
           "id": 68,
           "options": {
@@ -3476,7 +3754,7 @@
             "h": 7,
             "w": 14,
             "x": 10,
-            "y": 23
+            "y": 8
           },
           "id": 70,
           "options": {
@@ -3526,5 +3804,5 @@
   "timezone": "",
   "title": "Lodestar",
   "uid": "lodestar",
-  "version": 3
+  "version": 4
 }
