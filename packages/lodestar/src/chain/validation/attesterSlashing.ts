@@ -34,7 +34,7 @@ export async function validateGossipAttesterSlashing(
   }
 
   const signatureSets = fast.getAttesterSlashingSignatureSets(state, attesterSlashing);
-  if (!(await chain.bls.verifySignatureSetsBatch(signatureSets))) {
+  if (!(await chain.bls.verifySignatureSets(signatureSets))) {
     throw new AttesterSlashingError({
       code: AttesterSlashingErrorCode.INVALID_SLASHING,
     });

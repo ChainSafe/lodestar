@@ -30,7 +30,7 @@ describe("gossip aggregate and proof test", function () {
   let db: StubbedBeaconDb;
   let isAggregatorStub: SinonStubFn<typeof validatorUtils["isAggregatorFromCommitteeLength"]>;
   let isValidIndexedAttestationStub: SinonStubFn<typeof indexedAttUtils["isValidIndexedAttestation"]>;
-  // This util it not relevant for testing since only the result of verifySignatureSetsBatch() matters
+  // This util it not relevant for testing since only the result of verifySignatureSets() matters
   const getIndexedAttestationSignatureSet: typeof indexedAttSigSet["getIndexedAttestationSignatureSet"] = () =>
     ({} as ISignatureSet);
 
@@ -67,7 +67,7 @@ describe("gossip aggregate and proof test", function () {
     chain.clock = sinon.createStubInstance(LocalClock);
     sinon.stub(chain.clock, "currentSlot").get(() => 0);
     regen = chain.regen = sinon.createStubInstance(StateRegenerator);
-    chain.bls = {verifySignatureSetsBatch: async () => true};
+    chain.bls = {verifySignatureSets: async () => true};
     db.badBlock.has.resolves(false);
     db.seenAttestationCache.hasAggregateAndProof.returns(false);
     isAggregatorStub = sinon.stub(validatorUtils, "isAggregatorFromCommitteeLength");
@@ -280,7 +280,7 @@ describe("gossip aggregate and proof test", function () {
       isAggregatorFromCommitteeLength: sinon.stub().returns(true),
       isValidIndexedAttestation: sinon.stub().returns(true),
     });
-    chain.bls.verifySignatureSetsBatch = async () => false;
+    chain.bls.verifySignatureSets = async () => false;
 
     const item = generateSignedAggregateAndProof({
       aggregate: {
@@ -310,7 +310,7 @@ describe("gossip aggregate and proof test", function () {
       isAggregatorFromCommitteeLength: sinon.stub().returns(true),
       isValidIndexedAttestation: sinon.stub().returns(true),
     });
-    chain.bls.verifySignatureSetsBatch = async () => false;
+    chain.bls.verifySignatureSets = async () => false;
 
     const item = generateSignedAggregateAndProof({
       aggregate: {
@@ -340,7 +340,7 @@ describe("gossip aggregate and proof test", function () {
       isAggregatorFromCommitteeLength: sinon.stub().returns(true),
       isValidIndexedAttestation: sinon.stub().returns(false),
     });
-    chain.bls.verifySignatureSetsBatch = async () => true;
+    chain.bls.verifySignatureSets = async () => true;
 
     const item = generateSignedAggregateAndProof({
       aggregate: {
@@ -370,7 +370,7 @@ describe("gossip aggregate and proof test", function () {
       isAggregatorFromCommitteeLength: sinon.stub().returns(true),
       isValidIndexedAttestation: sinon.stub().returns(true),
     });
-    chain.bls.verifySignatureSetsBatch = async () => true;
+    chain.bls.verifySignatureSets = async () => true;
 
     const item = generateSignedAggregateAndProof({
       aggregate: {

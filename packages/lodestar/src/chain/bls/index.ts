@@ -4,7 +4,7 @@ import {ILogger} from "@chainsafe/lodestar-utils";
 import {BlsMultiThreadNaive} from "./multithread";
 
 export interface IBlsVerifier {
-  verifySignatureSetsBatch(signatureSets: ISignatureSet[]): Promise<boolean>;
+  verifySignatureSets(signatureSets: ISignatureSet[]): Promise<boolean>;
 }
 
 export class BlsVerifier implements IBlsVerifier {
@@ -13,7 +13,14 @@ export class BlsVerifier implements IBlsVerifier {
     this.pool = new BlsMultiThreadNaive(logger, bls.implementation);
   }
 
-  verifySignatureSetsBatch(signatureSets: ISignatureSet[]): Promise<boolean> {
+  /**
+   * Verify 1 or more signature sets. Sets may be verified on batch or not depending on their count
+   */
+  verifySignatureSets(signatureSets: ISignatureSet[], validateSignature = true): Promise<boolean> {
+    if (signatureSets.length === 0) {
+      throw Error("Empty signature set");
+    }
+
     // Signatures all come from the wire (untrusted) are all bytes compressed, must be:
     // - Parsed from bytes
     // - Uncompressed
@@ -36,7 +43,8 @@ export class BlsVerifier implements IBlsVerifier {
         publicKey: getAggregatedPubkey(signatureSet),
         message: signatureSet.signingRoot as Uint8Array,
         signature: signatureSet.signature,
-      }))
+      })),
+      validateSignature
     );
   }
 }

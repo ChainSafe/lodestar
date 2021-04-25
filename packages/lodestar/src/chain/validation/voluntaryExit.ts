@@ -30,7 +30,7 @@ export async function validateGossipVoluntaryExit(
   }
 
   const signatureSet = fast.getVoluntaryExitSignatureSet(state, voluntaryExit);
-  if (!(await chain.bls.verifySignatureSetsBatch([signatureSet]))) {
+  if (!(await chain.bls.verifySignatureSets([signatureSet]))) {
     throw new VoluntaryExitError({
       code: VoluntaryExitErrorCode.INVALID_EXIT,
     });

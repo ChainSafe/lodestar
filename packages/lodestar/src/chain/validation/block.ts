@@ -65,7 +65,7 @@ export async function validateGossipBlock(
   }
 
   const signatureSet = fast.getProposerSignatureSet(blockState, block);
-  if (!(await chain.bls.verifySignatureSetsBatch([signatureSet]))) {
+  if (!(await chain.bls.verifySignatureSets([signatureSet]))) {
     throw new BlockError({
       code: BlockErrorCode.PROPOSAL_SIGNATURE_INVALID,
       job: blockJob,

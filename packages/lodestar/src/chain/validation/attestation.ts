@@ -100,7 +100,7 @@ export async function validateGossipAttestation(
   // Do verify signature
   if (!attestationJob.validSignature) {
     const signatureSet = fast.getIndexedAttestationSignatureSet(attestationTargetState, indexedAttestation);
-    if (!(await chain.bls.verifySignatureSetsBatch([signatureSet]))) {
+    if (!(await chain.bls.verifySignatureSets([signatureSet]))) {
       throw new AttestationError({
         code: AttestationErrorCode.INVALID_SIGNATURE,
         job: attestationJob,

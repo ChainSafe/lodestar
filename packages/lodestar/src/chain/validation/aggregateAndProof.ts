@@ -130,7 +130,7 @@ export async function validateAggregateAttestation(
     fast.getIndexedAttestationSignatureSet(attestationTargetState, indexedAttestation),
   ];
 
-  if (!(await chain.bls.verifySignatureSetsBatch(signatureSets))) {
+  if (!(await chain.bls.verifySignatureSets(signatureSets))) {
     throw new AttestationError({
       code: AttestationErrorCode.INVALID_SIGNATURE,
       job: attestationJob,

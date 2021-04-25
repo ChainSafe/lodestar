@@ -27,7 +27,7 @@ export async function validateGossipProposerSlashing(
   }
 
   const signatureSets = fast.getProposerSlashingSignatureSets(state, proposerSlashing);
-  if (!(await chain.bls.verifySignatureSetsBatch(signatureSets))) {
+  if (!(await chain.bls.verifySignatureSets(signatureSets))) {
     throw new ProposerSlashingError({
       code: ProposerSlashingErrorCode.INVALID_SLASHING,
     });
