@@ -1,16 +1,17 @@
+import {AbortSignal} from "abort-controller";
 import {bls, PublicKey} from "@chainsafe/bls";
 import {ISignatureSet, SignatureSetType} from "@chainsafe/lodestar-beacon-state-transition";
 import {ILogger} from "@chainsafe/lodestar-utils";
-import {BlsMultiThreadNaive} from "./multithread";
+import {BlsMultiThreadWorkerPool} from "./multithread";
 
 export interface IBlsVerifier {
   verifySignatureSets(signatureSets: ISignatureSet[]): Promise<boolean>;
 }
 
 export class BlsVerifier implements IBlsVerifier {
-  private readonly pool: BlsMultiThreadNaive;
-  constructor(logger: ILogger) {
-    this.pool = new BlsMultiThreadNaive(logger, bls.implementation);
+  private readonly pool: BlsMultiThreadWorkerPool;
+  constructor(logger: ILogger, signal: AbortSignal) {
+    this.pool = new BlsMultiThreadWorkerPool(logger, bls.implementation, signal);
   }
 
   /**
@@ -41,7 +42,7 @@ export class BlsVerifier implements IBlsVerifier {
     return this.pool.verifySignatureSets(
       signatureSets.map((signatureSet) => ({
         publicKey: getAggregatedPubkey(signatureSet),
-        message: signatureSet.signingRoot as Uint8Array,
+        message: signatureSet.signingRoot.valueOf() as Uint8Array,
         signature: signatureSet.signature,
       })),
       validateSignature
