@@ -1,3 +1,5 @@
+import {AbortController} from "abort-controller";
+import {ApiClientOverRest} from "@chainsafe/lodestar-validator";
 import {Validator, SlashingProtection} from "@chainsafe/lodestar-validator";
 import {LevelDbController} from "@chainsafe/lodestar-db";
 import {getBeaconConfigFromArgs} from "../../config";
@@ -33,21 +35,25 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
   const dbPath = validatorPaths.validatorsDbDir;
   mkdir(dbPath);
 
-  const validator = new Validator({
-    config,
-    slashingProtection: new SlashingProtection({
-      config: config,
-      controller: new LevelDbController({name: dbPath}, {logger}),
-    }),
-    api: args.server,
-    logger,
-    secretKeys,
-    graffiti,
-  });
-
+  const onGracefulShutdownCbs: (() => Promise<void>)[] = [];
   onGracefulShutdown(async () => {
-    await validator.stop();
+    for (const cb of onGracefulShutdownCbs) await cb();
   }, logger.info.bind(logger));
 
+  // This AbortController interrupts the sleep() calls when waiting for genesis
+  const controller = new AbortController();
+  onGracefulShutdownCbs.push(async () => controller.abort());
+
+  const api = ApiClientOverRest(config, args.server);
+  const slashingProtection = new SlashingProtection({
+    config: config,
+    controller: new LevelDbController({name: dbPath}, {logger}),
+  });
+  const validator = await Validator.initializeFromBeaconNode(
+    {config, slashingProtection, api, logger, secretKeys, graffiti},
+    controller.signal
+  );
+
+  onGracefulShutdownCbs.push(async () => await validator.stop());
   await validator.start();
 }

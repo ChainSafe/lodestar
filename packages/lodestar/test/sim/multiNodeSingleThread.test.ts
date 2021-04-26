@@ -3,7 +3,7 @@ import {Network} from "../../src/network";
 import {getDevBeaconNode} from "../utils/node/beacon";
 import {waitForEvent} from "../utils/events/resolver";
 import {phase0} from "@chainsafe/lodestar-types";
-import {getDevValidators} from "../utils/node/validator";
+import {getAndInitDevValidators} from "../utils/node/validator";
 import {Validator} from "@chainsafe/lodestar-validator/lib";
 import {BeaconNode} from "../../src/node";
 import {ChainEvent} from "../../src/chain";
@@ -57,7 +57,7 @@ describe("Run multi node single thread interop validators (no eth1) until checkp
           logger,
         });
 
-        const nodeValidators = getDevValidators({
+        const nodeValidators = await getAndInitDevValidators({
           node,
           validatorsPerClient: validatorsPerNode,
           validatorClientCount: 1,

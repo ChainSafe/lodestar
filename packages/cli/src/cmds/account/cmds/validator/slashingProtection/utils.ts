@@ -1,7 +1,6 @@
 import {Root} from "@chainsafe/lodestar-types";
-import {SlashingProtection} from "@chainsafe/lodestar-validator";
+import {ApiClientOverRest, SlashingProtection} from "@chainsafe/lodestar-validator";
 import {LevelDbController} from "@chainsafe/lodestar-db";
-import {ApiClientProvider} from "@chainsafe/lodestar-validator";
 import {YargsError} from "../../../../../util";
 import {IGlobalArgs} from "../../../../../options";
 import {getValidatorPaths} from "../../../../validator/paths";
@@ -30,8 +29,7 @@ export async function getGenesisValidatorsRoot(args: IGlobalArgs & ISlashingProt
   const server = args.server;
 
   const config = getBeaconConfigFromArgs(args);
-  const logger = errorLogger();
-  const api = new ApiClientProvider(config, logger, server);
+  const api = ApiClientOverRest(config, server);
   const genesis = await api.beacon.getGenesis();
 
   if (genesis) {

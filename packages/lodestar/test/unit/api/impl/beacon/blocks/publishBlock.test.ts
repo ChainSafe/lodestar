@@ -48,15 +48,4 @@ describe("api - beacon - publishBlock", function () {
     expect(chainStub.receiveBlock.calledOnceWith(block)).to.be.true;
     expect(gossipStub.publishBeaconBlock.calledOnceWith(block)).to.be.true;
   });
-
-  it("node is syncing", async function () {
-    syncStub.isSynced.returns(false);
-    syncStub.getSyncStatus.returns({
-      syncDistance: BigInt(50),
-      headSlot: BigInt(0),
-    });
-    await expect(blockApi.publishBlock(block)).to.be.rejected;
-    expect(chainStub.receiveBlock.called).to.be.false;
-    expect(gossipStub.publishBeaconBlock.called).to.be.false;
-  });
 });

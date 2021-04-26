@@ -10,7 +10,6 @@ import {INetwork} from "../../../../network";
 import {IBeaconSync} from "../../../../sync";
 import {IApiOptions} from "../../../options";
 import {IApiModules} from "../../interface";
-import {checkSyncStatus} from "../../utils";
 import {IAttestationFilters, IBeaconPoolApi} from "./interface";
 import {phase0} from "@chainsafe/lodestar-types";
 import {fast} from "@chainsafe/lodestar-beacon-state-transition";
@@ -43,7 +42,6 @@ export class BeaconPoolApi implements IBeaconPoolApi {
   }
 
   async submitAttestations(attestations: phase0.Attestation[]): Promise<void> {
-    await checkSyncStatus(this.config, this.sync);
     for (const attestation of attestations) {
       const attestationJob = {
         attestation,

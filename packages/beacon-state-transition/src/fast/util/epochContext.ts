@@ -2,7 +2,7 @@ import {ByteVector, hash, toHexString, BitList, List, readonlyValues} from "@cha
 import bls, {CoordType, PublicKey} from "@chainsafe/bls";
 import {BLSSignature, CommitteeIndex, Epoch, Slot, ValidatorIndex, phase0, allForks} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {intToBytes, assert} from "@chainsafe/lodestar-utils";
+import {intToBytes} from "@chainsafe/lodestar-utils";
 
 import {GENESIS_EPOCH} from "../../constants";
 import {
@@ -206,7 +206,7 @@ export class EpochContext {
   getBeaconCommittee(slot: Slot, index: CommitteeIndex): ValidatorIndex[] {
     const slotCommittees = this._getSlotCommittees(slot);
     if (index >= slotCommittees.length) {
-      throw new Error(`crosslink committee retrieval: out of range committee index: ${index}`);
+      throw new Error(`Requesting beacon committee index ${index} over slot committees len ${slotCommittees.length}`);
     }
     return slotCommittees[index];
   }
@@ -218,7 +218,9 @@ export class EpochContext {
   getBeaconProposer(slot: Slot): ValidatorIndex {
     const epoch = computeEpochAtSlot(this.config, slot);
     if (epoch !== this.currentShuffling.epoch) {
-      throw new Error("beacon proposer index out of range");
+      throw new Error(
+        `Requesting beacon proposer for different epoch current shuffling: ${epoch} != ${this.currentShuffling.epoch}`
+      );
     }
     return this.proposers[slot % this.config.params.SLOTS_PER_EPOCH];
   }
@@ -260,8 +262,11 @@ export class EpochContext {
    * Return null if no assignment..
    */
   getCommitteeAssignment(epoch: Epoch, validatorIndex: ValidatorIndex): phase0.CommitteeAssignment | null {
-    const nextEpoch = this.currentShuffling.epoch + 1;
-    assert.lte(epoch, nextEpoch, "Cannot get committee assignment for epoch more than 1 ahead");
+    if (epoch > this.currentShuffling.epoch + 1) {
+      throw Error(
+        `Requesting committee assignment for more than 1 epoch ahead: ${epoch} > ${this.currentShuffling.epoch} + 1`
+      );
+    }
 
     const epochStartSlot = computeStartSlotAtEpoch(this.config, epoch);
     for (let slot = epochStartSlot; slot < epochStartSlot + this.config.params.SLOTS_PER_EPOCH; slot++) {
@@ -301,7 +306,7 @@ export class EpochContext {
     } else if (epoch === this.nextShuffling.epoch) {
       return this.nextShuffling.committees[epochSlot];
     } else {
-      throw new Error(`crosslink committee retrieval: out of range epoch: ${epoch}`);
+      throw new Error(`Requesting slot committee out of range epoch: ${epoch} current: ${this.currentShuffling.epoch}`);
     }
   }
 }
