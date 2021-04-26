@@ -122,7 +122,7 @@ export class BeaconGossipHandler {
       {type: GossipType.attester_slashing, handler: this.onAttesterSlashing},
     ];
     for (const {type, handler} of topicHandlers) {
-      const topic = {type, fork: "phase0"};
+      const topic = {type, fork: ForkName.phase0};
       this.network.gossip.handleTopic(topic as GossipTopic, handler as GossipHandlerFn);
     }
     // TODO altair
@@ -141,7 +141,7 @@ export class BeaconGossipHandler {
       {type: GossipType.attester_slashing, handler: this.onAttesterSlashing},
     ];
     for (const {type, handler} of topicHandlers) {
-      const topic = {type, fork: "phase0"};
+      const topic = {type, fork: ForkName.phase0};
       this.network.gossip.unhandleTopic(topic as GossipTopic, handler as GossipHandlerFn);
     }
     // TODO altair

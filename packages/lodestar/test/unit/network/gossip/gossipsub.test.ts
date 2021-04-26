@@ -3,6 +3,7 @@ import Libp2p from "libp2p";
 import {InMessage} from "libp2p-interfaces/src/pubsub";
 import {ERR_TOPIC_VALIDATOR_REJECT} from "libp2p-gossipsub/src/constants";
 import {config} from "@chainsafe/lodestar-config/minimal";
+import {ForkName} from "@chainsafe/lodestar-config";
 
 import {
   Eth2Gossipsub,
@@ -29,7 +30,11 @@ describe("gossipsub", function () {
 
   beforeEach(async function () {
     const signedBlock = generateEmptySignedBlock();
-    topicString = getGossipTopicString(config, {type: GossipType.beacon_block, fork: "phase0"}, genesisValidatorsRoot);
+    topicString = getGossipTopicString(
+      config,
+      {type: GossipType.beacon_block, fork: ForkName.phase0},
+      genesisValidatorsRoot
+    );
     message = {
       data: encodeMessageData(GossipEncoding.ssz_snappy, config.types.phase0.SignedBeaconBlock.serialize(signedBlock)),
       receivedFrom: "0",

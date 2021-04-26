@@ -1,3 +1,4 @@
+import {ForkName} from "@chainsafe/lodestar-config";
 import {allForks, phase0} from "@chainsafe/lodestar-types";
 import {processBlock, processSlots} from "../phase0/fast";
 import {verifyProposerSignature} from "./signatureSets";
@@ -27,7 +28,7 @@ export function fastStateTransition(
 
   // process slots (including those with no blocks) since block
   switch (preFork) {
-    case "phase0":
+    case ForkName.phase0:
       processSlots(postState as CachedBeaconState<phase0.BeaconState>, block.slot);
       break;
     default:
@@ -46,7 +47,7 @@ export function fastStateTransition(
 
   // process block
   switch (blockFork) {
-    case "phase0":
+    case ForkName.phase0:
       processBlock(postState as CachedBeaconState<phase0.BeaconState>, block as phase0.BeaconBlock, verifySignatures);
       break;
     default:
