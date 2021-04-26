@@ -1,5 +1,5 @@
 import {allForks, Number64, Root, Slot} from "@chainsafe/lodestar-types";
-import {IForkName} from "@chainsafe/lodestar-config";
+import {ForkName} from "@chainsafe/lodestar-config";
 import {phase0, CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 
@@ -75,9 +75,9 @@ export interface IBeaconChain {
    */
   getForkDigest(): phase0.ForkDigest;
   /**
-   * Get the IForkName from the head state
+   * Get the ForkName from the head state
    */
-  getForkName(): IForkName;
+  getForkName(): ForkName;
   /**
    * Get ENRForkID from the head state
    */

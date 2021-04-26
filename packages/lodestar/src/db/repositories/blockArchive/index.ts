@@ -1,4 +1,4 @@
-import {IBeaconConfig, IForkName} from "@chainsafe/lodestar-config";
+import {IBeaconConfig, ForkName} from "@chainsafe/lodestar-config";
 import {IDatabaseController, Repository, IKeyValue, IFilterOptions, Bucket} from "@chainsafe/lodestar-db";
 import {IBlockSummary} from "@chainsafe/lodestar-fork-choice";
 import {Slot, Root, allForks} from "@chainsafe/lodestar-types";
@@ -17,14 +17,14 @@ export class BlockArchiveRepository {
   protected config: IBeaconConfig;
   protected db: IDatabaseController<Buffer, Buffer>;
 
-  protected repositories: Map<IForkName, Repository<Slot, allForks.SignedBeaconBlock>>;
+  protected repositories: Map<ForkName, Repository<Slot, allForks.SignedBeaconBlock>>;
 
   constructor(config: IBeaconConfig, db: IDatabaseController<Buffer, Buffer>) {
     this.config = config;
     this.db = db;
     this.repositories = new Map([
       [
-        "phase0",
+        ForkName.phase0,
         new GenericBlockArchiveRepository(
           config,
           db,
@@ -33,7 +33,7 @@ export class BlockArchiveRepository {
         ),
       ],
       [
-        "altair",
+        ForkName.altair,
         new GenericBlockArchiveRepository(
           config,
           db,
@@ -73,7 +73,7 @@ export class BlockArchiveRepository {
   async batchPut(items: Array<IKeyValue<Slot, allForks.SignedBeaconBlock>>): Promise<void> {
     await Promise.all(
       Object.entries(this.groupItemsByFork(items)).map(([forkName, items]) =>
-        this.getRepositoryByForkName(forkName as IForkName).batchPut(items)
+        this.getRepositoryByForkName(forkName as ForkName).batchPut(items)
       )
     );
   }
@@ -81,7 +81,7 @@ export class BlockArchiveRepository {
   async batchAdd(values: allForks.SignedBeaconBlock[]): Promise<void> {
     await Promise.all(
       Object.entries(this.groupValuesByFork(values)).map(([forkName, values]) =>
-        this.getRepositoryByForkName(forkName as IForkName).batchAdd(values)
+        this.getRepositoryByForkName(forkName as ForkName).batchAdd(values)
       )
     );
   }
@@ -89,7 +89,7 @@ export class BlockArchiveRepository {
   async batchPutBinary(items: Array<IKeyValueSummary<Slot, Buffer, IBlockSummary>>): Promise<void> {
     await Promise.all(
       Object.entries(this.groupItemsByFork(items)).map(([forkName, items]) =>
-        this.getRepositoryByForkName(forkName as IForkName).batchPutBinary(items)
+        this.getRepositoryByForkName(forkName as ForkName).batchPutBinary(items)
       )
     );
   }
@@ -112,7 +112,7 @@ export class BlockArchiveRepository {
     return all(this.valuesStream(opts));
   }
 
-  private getRepositoryByForkName(forkName: IForkName): Repository<Slot, allForks.SignedBeaconBlock> {
+  private getRepositoryByForkName(forkName: ForkName): Repository<Slot, allForks.SignedBeaconBlock> {
     const repo = this.repositories.get(forkName);
     if (!repo) {
       throw new Error("No supported block archive repository for fork: " + forkName);
@@ -124,8 +124,8 @@ export class BlockArchiveRepository {
     return this.getRepositoryByForkName(this.config.getForkName(slot));
   }
 
-  private groupValuesByFork(values: allForks.SignedBeaconBlock[]): Record<IForkName, allForks.SignedBeaconBlock[]> {
-    const valuesByFork = {} as Record<IForkName, allForks.SignedBeaconBlock[]>;
+  private groupValuesByFork(values: allForks.SignedBeaconBlock[]): Record<ForkName, allForks.SignedBeaconBlock[]> {
+    const valuesByFork = {} as Record<ForkName, allForks.SignedBeaconBlock[]>;
     for (const value of values) {
       const forkName = this.config.getForkName(value.message.slot);
       if (!valuesByFork[forkName]) valuesByFork[forkName] = [];
@@ -134,8 +134,8 @@ export class BlockArchiveRepository {
     return valuesByFork;
   }
 
-  private groupItemsByFork<T>(items: Array<IKeyValue<Slot, T>>): Record<IForkName, IKeyValue<Slot, T>[]> {
-    const itemsByFork = {} as Record<IForkName, IKeyValue<Slot, T>[]>;
+  private groupItemsByFork<T>(items: Array<IKeyValue<Slot, T>>): Record<ForkName, IKeyValue<Slot, T>[]> {
+    const itemsByFork = {} as Record<ForkName, IKeyValue<Slot, T>[]>;
     for (const kv of items) {
       const forkName = this.config.getForkName(kv.key);
       if (!itemsByFork[forkName]) itemsByFork[forkName] = [];

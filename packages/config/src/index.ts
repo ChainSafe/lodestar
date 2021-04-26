@@ -1,7 +1,7 @@
 import {GENESIS_SLOT, IBeaconParams} from "@chainsafe/lodestar-params";
 import {createIBeaconSSZTypes, IAllForksSSZTypes, Slot, Version} from "@chainsafe/lodestar-types";
 
-import {IBeaconConfig, IForkInfo, IForkName} from "./interface";
+import {IBeaconConfig, IForkInfo, ForkName} from "./interface";
 
 export * from "./interface";
 
@@ -10,25 +10,25 @@ export function createIBeaconConfig(params: IBeaconParams): IBeaconConfig {
   return {
     params,
     types,
-    getForkInfoRecord(): Record<IForkName, IForkInfo> {
+    getForkInfoRecord(): Record<ForkName, IForkInfo> {
       return {
         phase0: {
-          name: "phase0",
+          name: ForkName.phase0,
           slot: GENESIS_SLOT,
           version: params.GENESIS_FORK_VERSION,
         },
         altair: {
-          name: "altair",
+          name: ForkName.altair,
           slot: params.ALTAIR_FORK_SLOT,
           version: params.ALTAIR_FORK_VERSION,
         },
       };
     },
-    getForkName(slot: Slot): IForkName {
+    getForkName(slot: Slot): ForkName {
       if (slot < params.ALTAIR_FORK_SLOT) {
-        return "phase0";
+        return ForkName.phase0;
       } else {
-        return "altair";
+        return ForkName.altair;
       }
     },
     getForkVersion(slot: Slot): Version {

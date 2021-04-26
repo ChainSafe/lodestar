@@ -10,7 +10,7 @@ import {
   computeStartSlotAtEpoch,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
-import {IBeaconConfig, IForkName} from "@chainsafe/lodestar-config";
+import {IBeaconConfig, ForkName} from "@chainsafe/lodestar-config";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {allForks, ForkDigest, Number64, Root, Slot} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
@@ -262,7 +262,7 @@ export class BeaconChain implements IBeaconChain {
     return computeForkDigest(this.config, state.fork.currentVersion, this.genesisValidatorsRoot);
   }
 
-  getForkName(): IForkName {
+  getForkName(): ForkName {
     return computeForkNameFromForkDigest(this.config, this.genesisValidatorsRoot, this.getForkDigest());
   }
 

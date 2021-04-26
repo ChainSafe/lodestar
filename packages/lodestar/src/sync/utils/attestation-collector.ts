@@ -1,6 +1,6 @@
 import {ChainEvent, IBeaconChain} from "../../chain";
 import {IBeaconDb} from "../../db";
-import {IBeaconConfig, IForkName} from "@chainsafe/lodestar-config";
+import {IBeaconConfig, ForkName} from "@chainsafe/lodestar-config";
 import {phase0, CommitteeIndex, Slot, ATTESTATION_SUBNET_COUNT} from "@chainsafe/lodestar-types";
 import {INetwork} from "../../network";
 import {computeSubnetForSlot} from "@chainsafe/lodestar-beacon-state-transition";
@@ -35,7 +35,7 @@ export class AttestationCollector {
     this.chain.emitter.on(ChainEvent.clockSlot, this.checkDuties);
     for (let subnet = 0; subnet < ATTESTATION_SUBNET_COUNT; subnet++) {
       this.network.gossip.handleTopic(
-        {type: GossipType.beacon_attestation, fork: "phase0", subnet},
+        {type: GossipType.beacon_attestation, fork: ForkName.phase0, subnet},
         this.handleCommitteeAttestation as GossipHandlerFn
       );
     }
@@ -45,7 +45,7 @@ export class AttestationCollector {
     for (const timer of this.timers) clearTimeout(timer);
     for (let subnet = 0; subnet < ATTESTATION_SUBNET_COUNT; subnet++) {
       this.network.gossip.unhandleTopic(
-        {type: GossipType.beacon_attestation, fork: "phase0", subnet},
+        {type: GossipType.beacon_attestation, fork: ForkName.phase0, subnet},
         this.handleCommitteeAttestation as GossipHandlerFn
       );
     }
@@ -85,7 +85,7 @@ export class AttestationCollector {
     this.aggregationDuties.delete(slot);
   };
 
-  private unsubscribeSubnet = (subnet: number, fork: IForkName): void => {
+  private unsubscribeSubnet = (subnet: number, fork: ForkName): void => {
     try {
       this.network.gossip.unsubscribeTopic({type: GossipType.beacon_attestation, fork, subnet});
     } catch (e) {

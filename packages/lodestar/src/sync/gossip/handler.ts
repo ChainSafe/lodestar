@@ -1,5 +1,5 @@
 import {phase0, Version} from "@chainsafe/lodestar-types";
-import {IBeaconConfig, IForkName} from "@chainsafe/lodestar-config";
+import {IBeaconConfig, ForkName} from "@chainsafe/lodestar-config";
 
 import {INetwork} from "../../network";
 import {ChainEvent, IBeaconChain} from "../../chain";
@@ -11,9 +11,7 @@ enum GossipHandlerStatus {
   Stopped = "Stopped",
 }
 
-type GossipHandlerState =
-  | {status: GossipHandlerStatus.Stopped}
-  | {status: GossipHandlerStatus.Started; fork: IForkName};
+type GossipHandlerState = {status: GossipHandlerStatus.Stopped} | {status: GossipHandlerStatus.Started; fork: ForkName};
 
 export class BeaconGossipHandler {
   private readonly config: IBeaconConfig;
@@ -85,7 +83,7 @@ export class BeaconGossipHandler {
     await this.db.voluntaryExit.add(exit);
   };
 
-  private subscribeAtFork = (fork: IForkName): void => {
+  private subscribeAtFork = (fork: ForkName): void => {
     this.network.gossip.subscribeTopic({type: GossipType.beacon_block, fork});
     this.network.gossip.subscribeTopic({type: GossipType.beacon_aggregate_and_proof, fork});
     this.network.gossip.subscribeTopic({type: GossipType.voluntary_exit, fork});
@@ -93,7 +91,7 @@ export class BeaconGossipHandler {
     this.network.gossip.subscribeTopic({type: GossipType.attester_slashing, fork});
   };
 
-  private unsubscribeAtFork = (fork: IForkName): void => {
+  private unsubscribeAtFork = (fork: ForkName): void => {
     this.network.gossip.unsubscribeTopic({type: GossipType.beacon_block, fork});
     this.network.gossip.unsubscribeTopic({type: GossipType.beacon_aggregate_and_proof, fork});
     this.network.gossip.unsubscribeTopic({type: GossipType.voluntary_exit, fork});
@@ -101,7 +99,7 @@ export class BeaconGossipHandler {
     this.network.gossip.unsubscribeTopic({type: GossipType.attester_slashing, fork});
   };
 
-  private handleForkVersion = (_forkVersion: Version, fork: IForkName): void => {
+  private handleForkVersion = (_forkVersion: Version, fork: ForkName): void => {
     if (this.state.status !== GossipHandlerStatus.Started) {
       return;
     }
