@@ -1,5 +1,5 @@
 import {INetwork} from "../../network";
-import {IBeaconConfig, IForkName} from "@chainsafe/lodestar-config";
+import {IBeaconConfig, ForkName} from "@chainsafe/lodestar-config";
 import {ATTESTATION_SUBNET_COUNT} from "../../constants";
 import {randBetween, ILogger} from "@chainsafe/lodestar-utils";
 import {ChainEvent, IBeaconChain} from "../../chain";
@@ -18,7 +18,7 @@ export class InteropSubnetsJoiningTask {
   private readonly logger: ILogger;
   private currentSubnets: Set<number>;
   private nextForkSubnets: Set<number>;
-  private currentFork!: IForkName;
+  private currentFork!: ForkName;
 
   private currentTimers: NodeJS.Timeout[] = [];
   private nextForkTimers: NodeJS.Timeout[] = [];
@@ -53,7 +53,7 @@ export class InteropSubnetsJoiningTask {
     this.cleanUpCurrentSubscriptions();
   }
 
-  private run = (fork: IForkName): void => {
+  private run = (fork: ForkName): void => {
     for (let i = 0; i < this.config.params.RANDOM_SUBNETS_PER_VALIDATOR; i++) {
       this.subscribeToRandomSubnet(fork);
     }
@@ -125,7 +125,7 @@ export class InteropSubnetsJoiningTask {
    * This can be either for the current fork or next fork.
    * @return choosen subnet
    */
-  private subscribeToRandomSubnet(fork: IForkName): number {
+  private subscribeToRandomSubnet(fork: ForkName): number {
     const subnet = randBetween(0, ATTESTATION_SUBNET_COUNT);
     this.network.gossip.subscribeTopic({type: GossipType.beacon_attestation, fork, subnet});
     const attnets = this.network.metadata.attnets;
@@ -151,7 +151,7 @@ export class InteropSubnetsJoiningTask {
     return subnet;
   }
 
-  private handleChangeSubnets = (fork: IForkName, subnet: number): void => {
+  private handleChangeSubnets = (fork: ForkName, subnet: number): void => {
     this.network.gossip.unsubscribeTopic({type: GossipType.beacon_attestation, fork, subnet});
     const attnets = this.network.metadata.attnets;
     if (attnets[subnet]) {

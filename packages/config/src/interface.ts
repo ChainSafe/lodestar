@@ -1,10 +1,13 @@
 import {IBeaconParams} from "@chainsafe/lodestar-params";
 import {IAllForksSSZTypes, IBeaconSSZTypes, Slot, Version} from "@chainsafe/lodestar-types";
 
-export type IForkName = "phase0" | "altair";
+export enum ForkName {
+  phase0 = "phase0",
+  altair = "altair",
+}
 
 export interface IForkInfo {
-  name: IForkName;
+  name: ForkName;
   slot: Slot;
   version: Version;
 }
@@ -12,11 +15,11 @@ export interface IForkInfo {
 export interface IBeaconConfig {
   params: IBeaconParams;
   types: IBeaconSSZTypes;
-  getForkInfoRecord(): Record<IForkName, IForkInfo>;
+  getForkInfoRecord(): Record<ForkName, IForkInfo>;
   /**
    * Get the hard-fork name at a given slot
    */
-  getForkName(slot: Slot): IForkName;
+  getForkName(slot: Slot): ForkName;
   /**
    * Get the hard-fork version at a given slot
    */

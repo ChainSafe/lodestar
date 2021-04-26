@@ -11,7 +11,7 @@ import {MockBeaconChain} from "../../utils/mocks/chain/chain";
 import {generateState} from "../../utils/state";
 import {allForks} from "@chainsafe/lodestar-types";
 import {MetadataController} from "../../../src/network/metadata";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {ForkName, IBeaconConfig} from "@chainsafe/lodestar-config";
 import {TreeBacked} from "@chainsafe/ssz";
 
 describe("interopSubnetsJoiningTask", () => {
@@ -65,7 +65,7 @@ describe("interopSubnetsJoiningTask", () => {
     expect(config.types.ForkDigest.equals(oldForkDigest, chain.getForkDigest())).to.be.false;
     // not subscribe, just unsubscribe at that time
     const unSubscribePromise = new Promise((resolve) => gossipStub.unsubscribeTopic.callsFake(resolve));
-    chain.emitter.emit(ChainEvent.forkVersion, state.fork.currentVersion, "phase0");
+    chain.emitter.emit(ChainEvent.forkVersion, state.fork.currentVersion, ForkName.phase0);
     await unSubscribePromise;
     expect(gossipStub.unsubscribeTopic.callCount).to.be.equal(config.params.RANDOM_SUBNETS_PER_VALIDATOR);
   });

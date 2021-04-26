@@ -1,3 +1,4 @@
+import {ForkName} from "@chainsafe/lodestar-config";
 import {List, readonlyValues} from "@chainsafe/ssz";
 import {Epoch, ValidatorIndex, Gwei, phase0, allForks} from "@chainsafe/lodestar-types";
 import {intDiv} from "@chainsafe/lodestar-utils";
@@ -230,7 +231,7 @@ export function prepareEpochProcessState<T extends allForks.BeaconState>(state: 
       }
     }
   };
-  if (forkName === "phase0") {
+  if (forkName === ForkName.phase0) {
     statusProcessEpoch(
       out.statuses,
       ((state as unknown) as CachedBeaconState<phase0.BeaconState>).previousEpochAttestations,

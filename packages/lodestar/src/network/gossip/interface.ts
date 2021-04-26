@@ -5,7 +5,7 @@
 import {phase0} from "@chainsafe/lodestar-types";
 import StrictEventEmitter from "strict-event-emitter-types";
 import {EventEmitter} from "events";
-import {IBeaconConfig, IForkName} from "@chainsafe/lodestar-config";
+import {IBeaconConfig, ForkName} from "@chainsafe/lodestar-config";
 import LibP2p from "libp2p";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {InMessage} from "libp2p-interfaces/src/pubsub";
@@ -32,7 +32,7 @@ export enum GossipEncoding {
  */
 export interface IGossipTopic {
   type: GossipType;
-  fork: IForkName;
+  fork: ForkName;
   encoding?: GossipEncoding;
 }
 
