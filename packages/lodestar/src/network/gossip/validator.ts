@@ -1,4 +1,5 @@
 import {AbortSignal} from "abort-controller";
+import {ForkName} from "@chainsafe/lodestar-config";
 import {ATTESTATION_SUBNET_COUNT} from "@chainsafe/lodestar-types";
 import {mapValues} from "@chainsafe/lodestar-utils";
 import {IMetrics} from "../../metrics";
@@ -106,7 +107,7 @@ export function createValidatorFnsByTopic(
 
   // TODO: other fork topics should get added here
   // phase0
-  const fork = "phase0";
+  const fork = ForkName.phase0;
 
   for (const type of staticGossipTypes) {
     const topic = {type, fork, encoding: DEFAULT_ENCODING} as GossipTopic;

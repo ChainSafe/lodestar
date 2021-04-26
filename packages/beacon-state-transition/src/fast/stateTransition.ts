@@ -1,3 +1,4 @@
+import {ForkName} from "@chainsafe/lodestar-config";
 import {allForks, phase0} from "@chainsafe/lodestar-types";
 import {processBlock, processSlots} from "../phase0/fast";
 import {verifyProposerSignature} from "./signatureSets";
@@ -23,9 +24,11 @@ export function fastStateTransition(
   const blockFork = config.getForkName(blockSlot);
   const postState = state.clone();
 
+  setStateCachesAsTransient(postState);
+
   // process slots (including those with no blocks) since block
   switch (preFork) {
-    case "phase0":
+    case ForkName.phase0:
       processSlots(postState as CachedBeaconState<phase0.BeaconState>, block.slot);
       break;
     default:
@@ -44,7 +47,7 @@ export function fastStateTransition(
 
   // process block
   switch (blockFork) {
-    case "phase0":
+    case ForkName.phase0:
       processBlock(postState as CachedBeaconState<phase0.BeaconState>, block as phase0.BeaconBlock, verifySignatures);
       break;
     default:
@@ -57,5 +60,28 @@ export function fastStateTransition(
       throw new Error("Invalid state root");
     }
   }
+
+  setStateCachesAsPersistent(postState);
+
   return postState;
+}
+
+/**
+ * Toggle all `MutableVector` caches to use `TransientVector`
+ */
+function setStateCachesAsTransient(state: CachedBeaconState<allForks.BeaconState>): void {
+  state.validators.persistent.asTransient();
+  state.balances.persistent.asTransient();
+  state.previousEpochParticipation.persistent.asTransient();
+  state.currentEpochParticipation.persistent.asTransient();
+}
+
+/**
+ * Toggle all `MutableVector` caches to use `PersistentVector`
+ */
+function setStateCachesAsPersistent(state: CachedBeaconState<allForks.BeaconState>): void {
+  state.validators.persistent.asPersistent();
+  state.balances.persistent.asPersistent();
+  state.previousEpochParticipation.persistent.asPersistent();
+  state.currentEpochParticipation.persistent.asPersistent();
 }

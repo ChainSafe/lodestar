@@ -20,4 +20,4 @@ WORKDIR /usr/app
 COPY --from=build /usr/app .
 ENV DOCKER_LODESTAR_GIT_DATA_FILEPATH /usr/app/.git-data.json
 
-ENTRYPOINT ["node", "./packages/cli/bin/lodestar"]
+ENTRYPOINT ["node", "--max-old-space-size=8192", "./packages/cli/bin/lodestar"]

@@ -3,7 +3,7 @@ import sinon from "sinon";
 
 import {TreeBacked} from "@chainsafe/ssz";
 import {allForks, ForkDigest, Number64, Root, Slot, Uint16, Uint64} from "@chainsafe/lodestar-types";
-import {IBeaconConfig, IForkName} from "@chainsafe/lodestar-config";
+import {IBeaconConfig, ForkName} from "@chainsafe/lodestar-config";
 import {
   CachedBeaconState,
   computeForkDigest,
@@ -122,7 +122,7 @@ export class MockBeaconChain implements IBeaconChain {
     return computeForkDigest(this.config, this.state.fork.currentVersion, this.genesisValidatorsRoot);
   }
 
-  getForkName(): IForkName {
+  getForkName(): ForkName {
     return computeForkNameFromForkDigest(this.config, this.genesisValidatorsRoot, this.getForkDigest());
   }
 

@@ -1099,13 +1099,13 @@
   dependencies:
     assert "^2.0.0"
 
-"@chainsafe/bls-hd-key@^0.2.0":
-  version "0.2.0"
-  resolved "https://registry.yarnpkg.com/@chainsafe/bls-hd-key/-/bls-hd-key-0.2.0.tgz#90aaf030150de64099e1fb27582b27bbe5ce5309"
-  integrity sha512-ps10jd99UWcm1qPo4spD/6hxFor9fsDgB0s2wJuFKqPdM2R+4LCowhv5kdGgGs3VIN1H8l+CgO08yC7X0WlBDQ==
+"@chainsafe/bls-hd-key@0.2.1":
+  version "0.2.1"
+  resolved "https://registry.yarnpkg.com/@chainsafe/bls-hd-key/-/bls-hd-key-0.2.1.tgz#3387a63f36f3cac20276bef40bb16a46294e6724"
+  integrity sha512-FGmRLcOd9KxfH9q7x+FT20lJy9ooQ/Xd5fFLFGpPaf9GW4AnE0oGPGakPuV5//g8db7OzZ3ZfVMKtB4M7qq/wA==
   dependencies:
     assert "^2.0.0"
-    bcrypto "^5.0.4"
+    bcrypto "^5.4.0"
     bn.js "^5.1.1"
     buffer "^5.4.3"
 
@@ -1173,10 +1173,10 @@
   dependencies:
     "@chainsafe/as-sha256" "^0.2.0"
 
-"@chainsafe/persistent-ts@^0.18.0":
-  version "0.18.0"
-  resolved "https://registry.yarnpkg.com/@chainsafe/persistent-ts/-/persistent-ts-0.18.0.tgz#657f7a8ed54e2df9d8f656bd5be29dc00af33de3"
-  integrity sha512-5zijoPnXITAK24qX8JQfNhFIBJO3JoKoqh1zo33mOX2Smg6ja0Mj1ro+GvamyRqyb0MtZ8ZSWQtAOLq8VfctzQ==
+"@chainsafe/persistent-ts@^0.19.0":
+  version "0.19.0"
+  resolved "https://registry.yarnpkg.com/@chainsafe/persistent-ts/-/persistent-ts-0.19.0.tgz#9cc7e93f91329e0c9a8a035ec99880b77d503abf"
+  integrity sha512-A3q/o9aMoMkfX11JzEMfjO3+Ms0F+gVDBsNpM90i2HWvIYQYRnbzGe5UUPMleRj3LQkAjFjipQ7L27fdDUf+rw==
 
 "@chainsafe/slashing-protection-interchange-tests@^4.0.0":
   version "4.0.0"
@@ -3803,14 +3803,6 @@ bcrypt-pbkdf@^1.0.0:
   integrity sha1-pDAdOJtqQ/m2f/PKEaP2Y342Dp4=
   dependencies:
     tweetnacl "^0.14.3"
-
-bcrypto@^5.0.4:
-  version "5.2.0"
-  resolved "https://registry.yarnpkg.com/bcrypto/-/bcrypto-5.2.0.tgz#7cc944d2cc2b7beeff04c74f8611a001612a981d"
-  integrity sha512-yy+kDrUG6aXP7NIYq7kKIwlrXtx/51488IGfuqhyM6FYF8zNI1mPRwvAPvQ1RfE5e7WW7fVdZt4yHlmN4HJ4Hg==
-  dependencies:
-    bufio "~1.0.7"
-    loady "~0.0.1"
 
 bcrypto@^5.4.0:
   version "5.4.0"

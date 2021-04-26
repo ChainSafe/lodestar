@@ -1,8 +1,9 @@
 import {ContainerType} from "@chainsafe/ssz";
-import {IBeaconConfig, IForkName} from "@chainsafe/lodestar-config";
+import {IBeaconConfig, ForkName} from "@chainsafe/lodestar-config";
 import {Bucket, IDatabaseController, Repository} from "@chainsafe/lodestar-db";
 import {allForks, Slot} from "@chainsafe/lodestar-types";
 import {GenericBlockRepository} from "./abstract";
+import {groupByFork} from "../../../util/forkName";
 
 /**
  * Blocks by root
@@ -13,14 +14,14 @@ export class PendingBlockRepository {
   protected config: IBeaconConfig;
   protected db: IDatabaseController<Buffer, Buffer>;
 
-  protected repositories: Map<IForkName, Repository<Uint8Array, allForks.SignedBeaconBlock>>;
+  protected repositories: Map<ForkName, Repository<Uint8Array, allForks.SignedBeaconBlock>>;
 
   constructor(config: IBeaconConfig, db: IDatabaseController<Buffer, Buffer>) {
     this.config = config;
     this.db = db;
     this.repositories = new Map([
       [
-        "phase0",
+        ForkName.phase0,
         new GenericBlockRepository(
           config,
           db,
@@ -29,7 +30,7 @@ export class PendingBlockRepository {
         ),
       ],
       [
-        "altair",
+        ForkName.altair,
         new GenericBlockRepository(
           config,
           db,
@@ -61,21 +62,15 @@ export class PendingBlockRepository {
   }
 
   async batchDelete(ids: {root: Uint8Array; slot: Slot}[]): Promise<void> {
-    const idsByFork = {} as Record<IForkName, Uint8Array[]>;
-    for (const {root, slot} of ids) {
-      const forkName = this.config.getForkName(slot);
-      if (!idsByFork[forkName]) idsByFork[forkName] = [];
-
-      idsByFork[forkName].push(root);
-    }
+    const idsByFork = groupByFork(this.config, ids, (id) => id.slot);
     await Promise.all(
-      Object.keys(idsByFork).map((forkName) =>
-        this.getRepositoryByForkName(forkName as IForkName).batchDelete(idsByFork[forkName as IForkName])
+      Array.from(idsByFork.entries()).map(([forkName, idsInFork]) =>
+        this.getRepositoryByForkName(forkName).batchDelete(idsInFork.map((id) => id.root))
       )
     );
   }
 
-  private getRepositoryByForkName(forkName: IForkName): Repository<Uint8Array, allForks.SignedBeaconBlock> {
+  private getRepositoryByForkName(forkName: ForkName): Repository<Uint8Array, allForks.SignedBeaconBlock> {
     const repo = this.repositories.get(forkName);
     if (!repo) {
       throw new Error("No supported block repository for fork: " + forkName);

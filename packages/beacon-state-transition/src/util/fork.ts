@@ -1,5 +1,5 @@
 import {Version, Root, phase0, ForkDigest} from "@chainsafe/lodestar-types";
-import {IBeaconConfig, IForkName} from "@chainsafe/lodestar-config";
+import {IBeaconConfig, ForkName} from "@chainsafe/lodestar-config";
 import {byteArrayEquals, toHexString} from "@chainsafe/ssz";
 
 /**
@@ -26,7 +26,7 @@ export function computeForkNameFromForkDigest(
   config: IBeaconConfig,
   genesisValidatorsRoot: Root,
   forkDigest: ForkDigest
-): IForkName {
+): ForkName {
   for (const {name, version} of Object.values(config.getForkInfoRecord())) {
     if (
       byteArrayEquals(forkDigest as Uint8Array, computeForkDigest(config, version, genesisValidatorsRoot) as Uint8Array)

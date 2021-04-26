@@ -1,11 +1,12 @@
 import all from "it-all";
 import {ContainerType, TreeBacked} from "@chainsafe/ssz";
-import {IBeaconConfig, IForkName} from "@chainsafe/lodestar-config";
+import {IBeaconConfig, ForkName} from "@chainsafe/lodestar-config";
 import {IDatabaseController, Repository, IKeyValue, IFilterOptions, Bucket} from "@chainsafe/lodestar-db";
 import {Slot, Root, allForks} from "@chainsafe/lodestar-types";
 import {bytesToInt} from "@chainsafe/lodestar-utils";
 import {GenericStateArchiveRepository} from "./abstract";
 import {getRootIndexKey} from "./db-index";
+import {groupByFork} from "../../../util/forkName";
 
 /**
  * Stores finalized states. State slot is identifier.
@@ -14,14 +15,14 @@ export class StateArchiveRepository {
   protected config: IBeaconConfig;
   protected db: IDatabaseController<Buffer, Buffer>;
 
-  protected repositories: Map<IForkName, Repository<Slot, TreeBacked<allForks.BeaconState>>>;
+  protected repositories: Map<ForkName, Repository<Slot, TreeBacked<allForks.BeaconState>>>;
 
   constructor(config: IBeaconConfig, db: IDatabaseController<Buffer, Buffer>) {
     this.config = config;
     this.db = db;
     this.repositories = new Map([
       [
-        "phase0",
+        ForkName.phase0,
         new GenericStateArchiveRepository(
           config,
           db,
@@ -30,7 +31,7 @@ export class StateArchiveRepository {
         ),
       ],
       [
-        "altair",
+        ForkName.altair,
         new GenericStateArchiveRepository(
           config,
           db,
@@ -64,16 +65,16 @@ export class StateArchiveRepository {
 
   async batchPut(items: IKeyValue<Slot, TreeBacked<allForks.BeaconState>>[]): Promise<void> {
     await Promise.all(
-      Object.entries(this.groupItemsByFork(items)).map(([forkName, items]) =>
-        this.getRepositoryByForkName(forkName as IForkName).batchPut(items)
+      Array.from(groupByFork(this.config, items, (item) => item.key).entries()).map(([forkName, items]) =>
+        this.getRepositoryByForkName(forkName).batchPut(items)
       )
     );
   }
 
   async batchDelete(keys: Slot[]): Promise<void> {
     await Promise.all(
-      Object.entries(this.groupKeysByFork(keys)).map(([forkName, keys]) =>
-        this.getRepositoryByForkName(forkName as IForkName).batchDelete(keys)
+      Array.from(groupByFork(this.config, keys, (key) => key).entries()).map(([forkName, keys]) =>
+        this.getRepositoryByForkName(forkName).batchDelete(keys)
       )
     );
   }
@@ -115,7 +116,7 @@ export class StateArchiveRepository {
     return null;
   }
 
-  private getRepositoryByForkName(forkName: IForkName): Repository<Slot, TreeBacked<allForks.BeaconState>> {
+  private getRepositoryByForkName(forkName: ForkName): Repository<Slot, TreeBacked<allForks.BeaconState>> {
     const repo = this.repositories.get(forkName);
     if (!repo) {
       throw new Error("No supported block archive repository for fork: " + forkName);
@@ -125,26 +126,6 @@ export class StateArchiveRepository {
 
   private getRepository(slot: Slot): Repository<Slot, TreeBacked<allForks.BeaconState>> {
     return this.getRepositoryByForkName(this.config.getForkName(slot));
-  }
-
-  private groupItemsByFork<T>(items: IKeyValue<Slot, T>[]): Record<IForkName, IKeyValue<Slot, T>[]> {
-    const itemsByFork = {} as Record<IForkName, IKeyValue<Slot, T>[]>;
-    for (const kv of items) {
-      const forkName = this.config.getForkName(kv.key);
-      if (!itemsByFork[forkName]) itemsByFork[forkName] = [];
-      itemsByFork[forkName].push(kv);
-    }
-    return itemsByFork;
-  }
-
-  private groupKeysByFork(keys: Slot[]): Record<IForkName, Slot[]> {
-    const keysByFork = {} as Record<IForkName, Slot[]>;
-    for (const key of keys) {
-      const forkName = this.config.getForkName(key);
-      if (!keysByFork[forkName]) keysByFork[forkName] = [];
-      keysByFork[forkName].push(key);
-    }
-    return keysByFork;
   }
 
   private parseSlot(slotBytes: Buffer | null): Slot | null {

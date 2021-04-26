@@ -11,6 +11,7 @@ import {Eth2Gossipsub, GossipType} from "../../../../src/network/gossip";
 import {BeaconDb} from "../../../../src/db";
 import {generateCachedState} from "../../../utils/state";
 import {testLogger} from "../../../utils/logger";
+import {ForkName} from "@chainsafe/lodestar-config";
 
 describe("Attestation collector", function () {
   const sandbox = sinon.createSandbox();
@@ -39,7 +40,7 @@ describe("Attestation collector", function () {
       chain: {
         clock: realClock,
         getHeadState: () => generateCachedState(),
-        getForkName: () => "phase0",
+        getForkName: () => ForkName.phase0,
         emitter,
       },
       // @ts-ignore
@@ -54,13 +55,15 @@ describe("Attestation collector", function () {
     });
     collector.subscribeToCommitteeAttestations(1, 1);
     expect(
-      fakeGossip.subscribeTopic.withArgs({type: GossipType.beacon_attestation, fork: "phase0", subnet: 10}).calledOnce
+      fakeGossip.subscribeTopic.withArgs({type: GossipType.beacon_attestation, fork: ForkName.phase0, subnet: 10})
+        .calledOnce
     ).to.be.true;
     sandbox.clock.tick(config.params.SECONDS_PER_SLOT * 1000);
     await subscribed;
     sandbox.clock.tick(config.params.SECONDS_PER_SLOT * 1000);
     expect(
-      fakeGossip.unsubscribeTopic.withArgs({type: GossipType.beacon_attestation, fork: "phase0", subnet: 10}).calledOnce
+      fakeGossip.unsubscribeTopic.withArgs({type: GossipType.beacon_attestation, fork: ForkName.phase0, subnet: 10})
+        .calledOnce
     ).to.be.true;
     collector.stop();
     abortController.abort();
@@ -81,7 +84,7 @@ describe("Attestation collector", function () {
       chain: {
         clock: realClock,
         getHeadState: () => generateCachedState(),
-        getForkName: () => "phase0",
+        getForkName: () => ForkName.phase0,
         emitter,
       },
       // @ts-ignore

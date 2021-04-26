@@ -50,7 +50,7 @@ export function getAttestationDeltas(
   const isInInactivityLeak = finalityDelay > MIN_EPOCHS_TO_INACTIVITY_PENALTY;
 
   for (const [i, status] of process.statuses.entries()) {
-    const effBalance = status.validator.effectiveBalance;
+    const effBalance = process.validators[i].effectiveBalance;
     const baseReward = Number((effBalance * BASE_REWARD_FACTOR) / balanceSqRoot / BASE_REWARDS_PER_EPOCH);
     const proposerReward = Math.floor(baseReward / params.PROPOSER_REWARD_QUOTIENT);
 

@@ -10,15 +10,13 @@ import {createPeerId} from "../../src/network";
 import {logFiles} from "./params";
 import {NodeWorkerOptions} from "./threaded/types";
 
-/* eslint-disable no-console */
+/* eslint-disable no-console, @typescript-eslint/naming-convention */
 
 describe("Run multi node multi thread interop validators (no eth1) until checkpoint", function () {
   const checkpointEvent = ChainEvent.justified;
   const validatorsPerNode = 8;
   const beaconParams: Pick<IBeaconParams, "SECONDS_PER_SLOT" | "SLOTS_PER_EPOCH"> = {
-    // eslint-disable-next-line @typescript-eslint/naming-convention
     SECONDS_PER_SLOT: 2,
-    // eslint-disable-next-line @typescript-eslint/naming-convention
     SLOTS_PER_EPOCH: 8,
   };
 
@@ -36,10 +34,10 @@ describe("Run multi node multi thread interop validators (no eth1) until checkpo
       const peerIdPrivkeys: string[] = [];
       const nodes: NodeWorkerOptions["nodes"] = [];
       // delay a bit so regular sync sees it's up to date and sync is completed from the beginning
-      const minGenesisTime = Math.floor(Date.now() / 1000);
-      // it takes more time to detect peers in threaded test
-      const genesisDelay = 30 * beaconParams.SECONDS_PER_SLOT;
-      const genesisTime = minGenesisTime + genesisDelay;
+      // When running multi-thread each thread has to compile the entire codebase from Typescript
+      // so it takes a long time before each node is started
+      const genesisSlotsDelay = 30;
+      const genesisTime = Math.floor(Date.now() / 1000) + genesisSlotsDelay * beaconParams.SECONDS_PER_SLOT;
 
       for (let i = 0; i < nodeCount; i++) {
         const p2pPort = 10000 + i;

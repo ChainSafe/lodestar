@@ -1,6 +1,7 @@
 import sinon, {SinonStubbedInstance} from "sinon";
 import {expect} from "chai";
 import {config} from "@chainsafe/lodestar-config/mainnet";
+import {ForkName} from "@chainsafe/lodestar-config";
 
 import {BeaconChain, ChainEventEmitter, IBeaconChain} from "../../../../src/chain";
 import {INetwork, Network} from "../../../../src/network";
@@ -28,7 +29,7 @@ describe("gossip handler", function () {
   beforeEach(async function () {
     chainStub = sinon.createStubInstance(BeaconChain);
     chainStub.emitter = new ChainEventEmitter();
-    chainStub.getForkName.returns("phase0");
+    chainStub.getForkName.returns(ForkName.phase0);
     networkStub = sinon.createStubInstance(Network);
     const multiaddr = "/ip4/127.0.0.1/tcp/0";
     const libp2p = await createNode(multiaddr);
@@ -61,7 +62,7 @@ describe("gossip handler", function () {
   it("should handle incoming gossip objects", async function () {
     const handler = new BeaconGossipHandler(config, chainStub, networkStub, dbStub);
     handler.start();
-    const fork = "phase0";
+    const fork = ForkName.phase0;
     const {
       SignedBeaconBlock,
       SignedAggregateAndProof,

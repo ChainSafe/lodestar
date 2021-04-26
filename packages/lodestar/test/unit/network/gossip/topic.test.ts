@@ -1,5 +1,6 @@
 import {expect} from "chai";
 import {config} from "@chainsafe/lodestar-config/minimal";
+import {ForkName} from "@chainsafe/lodestar-config";
 
 import {
   getGossipTopic,
@@ -13,12 +14,12 @@ describe("GossipTopic", function () {
   it("should round trip encode/decode gossip topics", async () => {
     const genesisValidatorsRoot = Buffer.alloc(32);
     const topics: GossipTopic[] = [
-      {type: GossipType.beacon_block, fork: "phase0", encoding: DEFAULT_ENCODING},
-      {type: GossipType.beacon_aggregate_and_proof, fork: "phase0", encoding: DEFAULT_ENCODING},
-      {type: GossipType.beacon_attestation, fork: "phase0", subnet: 5, encoding: DEFAULT_ENCODING},
-      {type: GossipType.voluntary_exit, fork: "phase0", encoding: DEFAULT_ENCODING},
-      {type: GossipType.proposer_slashing, fork: "phase0", encoding: DEFAULT_ENCODING},
-      {type: GossipType.attester_slashing, fork: "phase0", encoding: DEFAULT_ENCODING},
+      {type: GossipType.beacon_block, fork: ForkName.phase0, encoding: DEFAULT_ENCODING},
+      {type: GossipType.beacon_aggregate_and_proof, fork: ForkName.phase0, encoding: DEFAULT_ENCODING},
+      {type: GossipType.beacon_attestation, fork: ForkName.phase0, subnet: 5, encoding: DEFAULT_ENCODING},
+      {type: GossipType.voluntary_exit, fork: ForkName.phase0, encoding: DEFAULT_ENCODING},
+      {type: GossipType.proposer_slashing, fork: ForkName.phase0, encoding: DEFAULT_ENCODING},
+      {type: GossipType.attester_slashing, fork: ForkName.phase0, encoding: DEFAULT_ENCODING},
     ];
     for (const topic of topics) {
       const topicString = getGossipTopicString(config, topic, genesisValidatorsRoot);

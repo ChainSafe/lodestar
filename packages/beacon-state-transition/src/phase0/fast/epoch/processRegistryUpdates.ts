@@ -33,7 +33,7 @@ export function processRegistryUpdates(state: CachedBeaconState<phase0.BeaconSta
   // dequeue validators for activation up to churn limit
   for (const index of process.indicesToMaybeActivate.slice(0, process.churnLimit)) {
     // placement in queue is finalized
-    if (process.statuses[index].validator.activationEligibilityEpoch > finalityEpoch) {
+    if (process.validators[index].activationEligibilityEpoch > finalityEpoch) {
       break; // remaining validators all have an activationEligibilityEpoch that is higher anyway, break early
     }
     validators.update(index, {

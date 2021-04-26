@@ -5,7 +5,7 @@ import {IBeaconNodeOptions} from "../../../src/node/options";
 import {Json} from "@chainsafe/ssz";
 
 export type NodeWorkerOptions = {
-  params: Partial<IBeaconParams>;
+  params: Pick<IBeaconParams, "SECONDS_PER_SLOT" | "SLOTS_PER_EPOCH">;
   options: RecursivePartial<IBeaconNodeOptions>;
   validatorCount: number;
   genesisTime: number;
