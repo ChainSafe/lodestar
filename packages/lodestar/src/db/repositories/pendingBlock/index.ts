@@ -3,6 +3,7 @@ import {IBeaconConfig, ForkName} from "@chainsafe/lodestar-config";
 import {Bucket, IDatabaseController, Repository} from "@chainsafe/lodestar-db";
 import {allForks, Slot} from "@chainsafe/lodestar-types";
 import {GenericBlockRepository} from "./abstract";
+import {groupByFork} from "../../../util/forkName";
 
 /**
  * Blocks by root
@@ -61,16 +62,10 @@ export class PendingBlockRepository {
   }
 
   async batchDelete(ids: {root: Uint8Array; slot: Slot}[]): Promise<void> {
-    const idsByFork = {} as Record<ForkName, Uint8Array[]>;
-    for (const {root, slot} of ids) {
-      const forkName = this.config.getForkName(slot);
-      if (!idsByFork[forkName]) idsByFork[forkName] = [];
-
-      idsByFork[forkName].push(root);
-    }
+    const idsByFork = groupByFork(this.config, ids, (id) => id.slot);
     await Promise.all(
-      Object.keys(idsByFork).map((forkName) =>
-        this.getRepositoryByForkName(forkName as ForkName).batchDelete(idsByFork[forkName as ForkName])
+      Array.from(idsByFork.entries()).map(([forkName, idsInFork]) =>
+        this.getRepositoryByForkName(forkName).batchDelete(idsInFork.map((id) => id.root))
       )
     );
   }

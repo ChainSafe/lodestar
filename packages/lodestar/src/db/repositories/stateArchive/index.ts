@@ -6,6 +6,7 @@ import {Slot, Root, allForks} from "@chainsafe/lodestar-types";
 import {bytesToInt} from "@chainsafe/lodestar-utils";
 import {GenericStateArchiveRepository} from "./abstract";
 import {getRootIndexKey} from "./db-index";
+import {groupByFork} from "../../../util/forkName";
 
 /**
  * Stores finalized states. State slot is identifier.
@@ -64,16 +65,16 @@ export class StateArchiveRepository {
 
   async batchPut(items: IKeyValue<Slot, TreeBacked<allForks.BeaconState>>[]): Promise<void> {
     await Promise.all(
-      Object.entries(this.groupItemsByFork(items)).map(([forkName, items]) =>
-        this.getRepositoryByForkName(forkName as ForkName).batchPut(items)
+      Array.from(groupByFork(this.config, items, (item) => item.key).entries()).map(([forkName, items]) =>
+        this.getRepositoryByForkName(forkName).batchPut(items)
       )
     );
   }
 
   async batchDelete(keys: Slot[]): Promise<void> {
     await Promise.all(
-      Object.entries(this.groupKeysByFork(keys)).map(([forkName, keys]) =>
-        this.getRepositoryByForkName(forkName as ForkName).batchDelete(keys)
+      Array.from(groupByFork(this.config, keys, (key) => key).entries()).map(([forkName, keys]) =>
+        this.getRepositoryByForkName(forkName).batchDelete(keys)
       )
     );
   }
@@ -125,26 +126,6 @@ export class StateArchiveRepository {
 
   private getRepository(slot: Slot): Repository<Slot, TreeBacked<allForks.BeaconState>> {
     return this.getRepositoryByForkName(this.config.getForkName(slot));
-  }
-
-  private groupItemsByFork<T>(items: IKeyValue<Slot, T>[]): Record<ForkName, IKeyValue<Slot, T>[]> {
-    const itemsByFork = {} as Record<ForkName, IKeyValue<Slot, T>[]>;
-    for (const kv of items) {
-      const forkName = this.config.getForkName(kv.key);
-      if (!itemsByFork[forkName]) itemsByFork[forkName] = [];
-      itemsByFork[forkName].push(kv);
-    }
-    return itemsByFork;
-  }
-
-  private groupKeysByFork(keys: Slot[]): Record<ForkName, Slot[]> {
-    const keysByFork = {} as Record<ForkName, Slot[]>;
-    for (const key of keys) {
-      const forkName = this.config.getForkName(key);
-      if (!keysByFork[forkName]) keysByFork[forkName] = [];
-      keysByFork[forkName].push(key);
-    }
-    return keysByFork;
   }
 
   private parseSlot(slotBytes: Buffer | null): Slot | null {

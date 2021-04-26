@@ -1,12 +1,13 @@
+import all from "it-all";
 import {IBeaconConfig, ForkName} from "@chainsafe/lodestar-config";
 import {IDatabaseController, Repository, IKeyValue, IFilterOptions, Bucket} from "@chainsafe/lodestar-db";
 import {IBlockSummary} from "@chainsafe/lodestar-fork-choice";
 import {Slot, Root, allForks} from "@chainsafe/lodestar-types";
+import {bytesToInt} from "@chainsafe/lodestar-utils";
+import {ContainerType} from "@chainsafe/ssz";
 import {IKeyValueSummary, IBlockFilterOptions, GenericBlockArchiveRepository} from "./abstract";
 import {getRootIndexKey, getParentRootIndexKey} from "./db-index";
-import {bytesToInt} from "@chainsafe/lodestar-utils";
-import all from "it-all";
-import {ContainerType} from "@chainsafe/ssz";
+import {groupByFork} from "../../../util/forkName";
 
 export {IBlockFilterOptions} from "./abstract";
 
@@ -72,38 +73,36 @@ export class BlockArchiveRepository {
 
   async batchPut(items: Array<IKeyValue<Slot, allForks.SignedBeaconBlock>>): Promise<void> {
     await Promise.all(
-      Object.entries(this.groupItemsByFork(items)).map(([forkName, items]) =>
-        this.getRepositoryByForkName(forkName as ForkName).batchPut(items)
+      Array.from(this.groupItemsByFork(items).entries()).map(([forkName, items]) =>
+        this.getRepositoryByForkName(forkName).batchPut(items)
       )
     );
   }
 
   async batchAdd(values: allForks.SignedBeaconBlock[]): Promise<void> {
     await Promise.all(
-      Object.entries(this.groupValuesByFork(values)).map(([forkName, values]) =>
-        this.getRepositoryByForkName(forkName as ForkName).batchAdd(values)
+      Array.from(groupByFork(this.config, values, (block) => block.message.slot).entries()).map(([forkName, values]) =>
+        this.getRepositoryByForkName(forkName).batchAdd(values)
       )
     );
   }
 
   async batchPutBinary(items: Array<IKeyValueSummary<Slot, Buffer, IBlockSummary>>): Promise<void> {
     await Promise.all(
-      Object.entries(this.groupItemsByFork(items)).map(([forkName, items]) =>
-        this.getRepositoryByForkName(forkName as ForkName).batchPutBinary(items)
+      Array.from(this.groupItemsByFork(items).entries()).map(([forkName, items]) =>
+        this.getRepositoryByForkName(forkName).batchPutBinary(items)
       )
     );
   }
 
   async *keysStream(opts?: IFilterOptions<Slot>): AsyncIterable<Slot> {
-    const repos = this.repositories.values();
-    for (const repo of repos) {
+    for (const repo of this.repositories.values()) {
       yield* repo.keysStream(opts);
     }
   }
 
   async *valuesStream(opts?: IBlockFilterOptions): AsyncIterable<allForks.SignedBeaconBlock> {
-    const repos = this.repositories.values();
-    for (const repo of repos) {
+    for (const repo of this.repositories.values()) {
       yield* repo.valuesStream(opts);
     }
   }
@@ -124,24 +123,8 @@ export class BlockArchiveRepository {
     return this.getRepositoryByForkName(this.config.getForkName(slot));
   }
 
-  private groupValuesByFork(values: allForks.SignedBeaconBlock[]): Record<ForkName, allForks.SignedBeaconBlock[]> {
-    const valuesByFork = {} as Record<ForkName, allForks.SignedBeaconBlock[]>;
-    for (const value of values) {
-      const forkName = this.config.getForkName(value.message.slot);
-      if (!valuesByFork[forkName]) valuesByFork[forkName] = [];
-      valuesByFork[forkName].push(value);
-    }
-    return valuesByFork;
-  }
-
-  private groupItemsByFork<T>(items: Array<IKeyValue<Slot, T>>): Record<ForkName, IKeyValue<Slot, T>[]> {
-    const itemsByFork = {} as Record<ForkName, IKeyValue<Slot, T>[]>;
-    for (const kv of items) {
-      const forkName = this.config.getForkName(kv.key);
-      if (!itemsByFork[forkName]) itemsByFork[forkName] = [];
-      itemsByFork[forkName].push(kv);
-    }
-    return itemsByFork;
+  private groupItemsByFork<T>(items: Array<IKeyValue<Slot, T>>): Map<ForkName, IKeyValue<Slot, T>[]> {
+    return groupByFork(this.config, items, (item) => item.key);
   }
 
   private parseSlot(slotBytes: Buffer | null): Slot | null {
