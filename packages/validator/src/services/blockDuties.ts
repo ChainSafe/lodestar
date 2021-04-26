@@ -119,7 +119,7 @@ export class BlockDutiesService {
       this.notifyBlockProductionFn(currentSlot, initialBlockProposers);
     }
 
-    // Poll proposers again for the same epoch
+    // Poll proposers again for the same slot
     await this.pollBeaconProposers(computeEpochAtSlot(this.config, currentSlot));
 
     // Compute the block proposers for this slot again, now that we've received an update from the BN.
