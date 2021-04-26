@@ -138,13 +138,7 @@ describe("winston logger", () => {
       const logger = new WinstonLogger({hideTimestamp: true, module: "A"}, [{type: TransportType.file, filename}]);
       logger.warn("test");
 
-      // Wait for file to exist
-      for (let i = 0; i < 200; i++) {
-        await new Promise((r) => setTimeout(r, 10));
-        if (fs.existsSync(filename)) break;
-      }
-
-      const output = fs.readFileSync(filename, "utf8").trim();
+      const output = await readFileWhenExists(filename);
       expect(output).to.equal("[A]                \u001b[33mwarn\u001b[39m: test");
     });
 
@@ -153,3 +147,18 @@ describe("winston logger", () => {
     });
   });
 });
+
+/** Wait for file to exist and return its contents */
+async function readFileWhenExists(filepath: string): Promise<string> {
+  for (let i = 0; i < 200; i++) {
+    await new Promise((r) => setTimeout(r, 10));
+    try {
+      return fs.readFileSync(filepath, "utf8").trim();
+    } catch (e) {
+      if ((e as IoError).code !== "ENOENT") throw e;
+    }
+  }
+  throw Error("Timeout");
+}
+
+type IoError = {code: string};
