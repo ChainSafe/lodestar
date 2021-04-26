@@ -65,7 +65,13 @@ export class JobQueue {
 
     if (this.jobs.length + 1 > this.opts.maxLength) {
       this.metrics?.droppedJobs.inc();
-      throw new QueueError({code: QueueErrorCode.QUEUE_MAX_LENGTH});
+      if (this.opts.type === QueueType.LIFO) {
+        // In LIFO queues keep the latest job and drop the oldest
+        this.jobs.shift();
+      } else {
+        // In FIFO queues drop the latest job
+        throw new QueueError({code: QueueErrorCode.QUEUE_MAX_LENGTH});
+      }
     }
 
     return await new Promise<R>((resolve, reject) => {
