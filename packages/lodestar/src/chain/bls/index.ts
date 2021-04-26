@@ -1,19 +1,25 @@
 import {bls, PublicKey} from "@chainsafe/bls";
 import {ISignatureSet, SignatureSetType} from "@chainsafe/lodestar-beacon-state-transition";
-import {ILogger} from "@chainsafe/lodestar-utils";
-import {BlsMultiThreadNaive} from "./multithread";
+import {BlsMultiThreadWorkerPool, BlsMultiThreadWorkerPoolModules} from "./multithread";
 
 export interface IBlsVerifier {
-  verifySignatureSetsBatch(signatureSets: ISignatureSet[]): Promise<boolean>;
+  verifySignatureSets(signatureSets: ISignatureSet[]): Promise<boolean>;
 }
 
 export class BlsVerifier implements IBlsVerifier {
-  private readonly pool: BlsMultiThreadNaive;
-  constructor(logger: ILogger) {
-    this.pool = new BlsMultiThreadNaive(logger, bls.implementation);
+  private readonly pool: BlsMultiThreadWorkerPool;
+  constructor(modules: BlsMultiThreadWorkerPoolModules) {
+    this.pool = new BlsMultiThreadWorkerPool(bls.implementation, modules);
   }
 
-  verifySignatureSetsBatch(signatureSets: ISignatureSet[]): Promise<boolean> {
+  /**
+   * Verify 1 or more signature sets. Sets may be verified on batch or not depending on their count
+   */
+  verifySignatureSets(signatureSets: ISignatureSet[], validateSignature = true): Promise<boolean> {
+    if (signatureSets.length === 0) {
+      throw Error("Empty signature set");
+    }
+
     // Signatures all come from the wire (untrusted) are all bytes compressed, must be:
     // - Parsed from bytes
     // - Uncompressed
@@ -31,12 +37,13 @@ export class BlsVerifier implements IBlsVerifier {
     // Public keys have already been checked for subgroup and infinity
     // Signatures have already been checked for subgroup
     // Signature checks above could be done here for convienence as well
-    return this.pool.verifyMultipleAggregateSignatures(
+    return this.pool.verifySignatureSets(
       signatureSets.map((signatureSet) => ({
         publicKey: getAggregatedPubkey(signatureSet),
-        message: signatureSet.signingRoot as Uint8Array,
+        message: signatureSet.signingRoot.valueOf() as Uint8Array,
         signature: signatureSet.signature,
-      }))
+      })),
+      validateSignature
     );
   }
 }

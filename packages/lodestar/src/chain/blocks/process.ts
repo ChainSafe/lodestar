@@ -46,7 +46,7 @@ export async function processBlock({
           )
         : fast.getAllBlockSignatureSets(preState as CachedBeaconState<allForks.BeaconState>, job.signedBlock);
 
-      if (!(await bls.verifySignatureSetsBatch(signatureSets))) {
+      if (signatureSets.length > 0 && !(await bls.verifySignatureSets(signatureSets))) {
         throw new BlockError({
           code: BlockErrorCode.INVALID_SIGNATURE,
           job,
@@ -137,7 +137,7 @@ export async function processChainSegment({
           );
         }
 
-        if (!(await bls.verifySignatureSetsBatch(signatureSets))) {
+        if (signatureSets.length > 0 && !(await bls.verifySignatureSets(signatureSets))) {
           throw new ChainSegmentError({
             code: BlockErrorCode.INVALID_SIGNATURE,
             job,

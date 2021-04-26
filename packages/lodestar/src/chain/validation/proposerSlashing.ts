@@ -1,4 +1,4 @@
-import {isValidProposerSlashing} from "@chainsafe/lodestar-beacon-state-transition";
+import {isValidProposerSlashing, fast} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {phase0} from "@chainsafe/lodestar-types";
 import {IBeaconChain} from "..";
@@ -18,7 +18,16 @@ export async function validateGossipProposerSlashing(
   }
 
   const state = chain.getHeadState();
-  if (!isValidProposerSlashing(config, state, proposerSlashing)) {
+
+  // verifySignature = false, verified in batch below
+  if (!isValidProposerSlashing(config, state, proposerSlashing, false)) {
+    throw new ProposerSlashingError({
+      code: ProposerSlashingErrorCode.INVALID_SLASHING,
+    });
+  }
+
+  const signatureSets = fast.getProposerSlashingSignatureSets(state, proposerSlashing);
+  if (!(await chain.bls.verifySignatureSets(signatureSets))) {
     throw new ProposerSlashingError({
       code: ProposerSlashingErrorCode.INVALID_SLASHING,
     });
