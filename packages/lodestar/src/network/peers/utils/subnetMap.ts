@@ -1,3 +1,4 @@
+import {IForkName} from "@chainsafe/lodestar-config";
 import {Slot} from "@chainsafe/lodestar-types";
 
 export type RequestedSubnet = {
@@ -15,12 +16,16 @@ export type RequestedSubnet = {
 export class SubnetMap {
   /** Map of subnets and the slot until they are needed */
   private subnets = new Map<number, Slot>();
+  private forkName: IForkName;
+  constructor(forkName: IForkName) {
+    this.forkName = forkName;
+  }
 
   /**
    * Register requested subnets, extends toSlot if same subnet.
    **/
-  request(requestedSubnets: RequestedSubnet): void {
-    const {subnetId, toSlot} = requestedSubnets;
+  request(requestedSubnet: RequestedSubnet): void {
+    const {subnetId, toSlot} = requestedSubnet;
     this.subnets.set(subnetId, Math.max(this.subnets.get(subnetId) || 0, toSlot));
   }
 
@@ -29,6 +34,13 @@ export class SubnetMap {
    */
   getToSlot(subnet: number): number | undefined {
     return this.subnets.get(subnet);
+  }
+
+  /**
+   * Get fork name
+   */
+  getForkName(): IForkName {
+    return this.forkName;
   }
 
   /** Return subnetIds with a `toSlot` equal greater than `currentSlot` */
