@@ -75,7 +75,7 @@ export function handleFinalizedCheckpointEvent(
       message: {
         block: payload.root,
         epoch: payload.epoch,
-        state: config.getTypes(state.slot).BeaconState.hashTreeRoot(state),
+        state: state.hashTreeRoot(),
       },
     });
   };
