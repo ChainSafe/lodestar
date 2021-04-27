@@ -179,7 +179,7 @@ export class StateRegenerator implements IStateRegenerator {
     }
 
     for (const b of blocksToReplay.reverse()) {
-      const structBlock = (await this.db.block.get(b.blockRoot, b.slot))!;
+      const structBlock = (await this.db.block.get(b.blockRoot))!;
       const block = this.config.getTypes(b.slot).SignedBeaconBlock.createTreeBackedFromStruct(structBlock);
       if (!block) {
         throw new RegenError({

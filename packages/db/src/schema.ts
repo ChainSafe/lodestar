@@ -8,11 +8,11 @@ import {BUCKET_LENGTH} from "./const";
 export enum Bucket {
   // beacon chain
   // finalized states
-  phase0_stateArchive = 0, // Root -> phase0.BeaconState
+  allForks_stateArchive = 0, // Root -> phase0.BeaconState
   // unfinalized blocks
-  phase0_block = 1, // Root -> phase0.SignedBeaconBlock
+  allForks_block = 1, // Root -> phase0.SignedBeaconBlock
   // finalized blocks
-  phase0_blockArchive = 2, // Slot -> phase0.SignedBeaconBlock
+  allForks_blockArchive = 2, // Slot -> phase0.SignedBeaconBlock
   // finalized block additional indices
   index_blockArchiveParentRootIndex = 3, // parent Root -> Slot
   index_blockArchiveRootIndex = 4, // Root -> Slot
@@ -45,14 +45,10 @@ export enum Bucket {
   phase0_slashingProtectionAttestationLowerBound = 22,
   index_slashingProtectionMinSpanDistance = 23,
   index_slashingProtectionMaxSpanDistance = 24,
-  phase0_pendingBlock = 25, // Root -> SignedBeaconBlock
+  allForks_pendingBlock = 25, // Root -> SignedBeaconBlock
 
   index_stateArchiveRootIndex = 26, // State Root -> slot
 
-  altair_block = 27, // Root -> altair.SignedBeaconBlock
-  altair_blockArchive = 28, // Slot -> altair.SignedBeaconBlock
-  altair_pendingBlock = 29, // Slot -> altair.SignedBeaconBlock
-  altair_stateArchive = 30, // Slot -> altair.BeaconState
   altair_syncCommitteeSignature = 31, // Root => SyncCommitteeSignature
   altair_contributionAndProof = 32, // Root => ContributionAndProof
 }

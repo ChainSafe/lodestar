@@ -43,7 +43,7 @@ export async function validateGossipBlock(
     });
   }
 
-  const existingBlock = await db.block.get(blockRoot, block.message.slot);
+  const existingBlock = await db.block.get(blockRoot);
   if (existingBlock?.message.proposerIndex === block.message.proposerIndex) {
     throw new BlockError({
       code: BlockErrorCode.REPEAT_PROPOSAL,

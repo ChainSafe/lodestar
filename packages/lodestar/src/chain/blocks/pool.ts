@@ -121,24 +121,18 @@ export class BlockPool {
     return Boolean(this.blocks.get(this.getBlockKeyByRoot(blockRoot)));
   }
 
-  getByParent(parentRoot: Root): {root: Uint8Array; slot: Slot}[] {
+  getByParent(parentRoot: Root): Uint8Array[] {
     const blockRoots = Array.from(this.blocksByParent.get(toHexString(parentRoot))?.values() ?? []);
-    return blockRoots.map((root) => ({
-      root: fromHexString(root),
-      slot: this.blocks.get(root)!.slot,
-    }));
+    return blockRoots.map((root) => fromHexString(root));
   }
 
-  getBySlot(slot: Slot): {root: Uint8Array; slot: Slot}[] {
+  getBySlot(slot: Slot): Uint8Array[] {
     const slots = Array.from(this.blocksBySlot.keys()).filter((cachedSlot) => cachedSlot <= slot);
     const blockRoots: string[] = [];
     for (const cachedSlot of slots) {
       blockRoots.push(...Array.from(this.blocksBySlot.get(cachedSlot)?.values() ?? []));
     }
-    return Array.from(new Set(blockRoots)).map((root) => ({
-      root: fromHexString(root),
-      slot: this.blocks.get(root)!.slot,
-    }));
+    return Array.from(new Set(blockRoots)).map((root) => fromHexString(root));
   }
 
   private getParentKey(block: phase0.SignedBeaconBlock): string {
