@@ -57,7 +57,7 @@ export class SubnetMap {
     return Array.from(this.subnets.keys());
   }
 
-  prune(subnet: number): void {
+  delete(subnet: number): void {
     this.subnets.delete(subnet);
   }
 

@@ -1,6 +1,6 @@
 import {computeSubnetForCommitteesAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig, ForkName} from "@chainsafe/lodestar-config";
-import {ATTESTATION_SUBNET_COUNT, phase0} from "@chainsafe/lodestar-types";
+import {ATTESTATION_SUBNET_COUNT, phase0, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {assert, ILogger, randBetween} from "@chainsafe/lodestar-utils";
 import {ChainEvent, IBeaconChain} from "../../chain";
 import {Eth2Gossipsub, GossipType} from "../gossip";
@@ -36,10 +36,10 @@ export class AttestationService implements IAttestationService {
 
   /**
    * A collection of seen validators. These dictate how many random subnets we should be
-   * subscribed to. As these time out, we unsubscribe for the required random subnets and update our ENR
+   * subscribed to. As these time out, we unsubscribe from the required random subnets and update our ENR.
    * This is a map of validator index and its last active slot.
    */
-  private knownValidators = new Map<number, phase0.Slot>();
+  private knownValidators = new Map<number, Slot>();
 
   constructor(modules: IAttestationServiceModules) {
     this.config = modules.config;
@@ -107,7 +107,7 @@ export class AttestationService implements IAttestationService {
   /**
    * Consumed by attestation collector.
    */
-  shouldProcessAttestation(subnet: number, slot: phase0.Slot): boolean {
+  shouldProcessAttestation(subnet: number, slot: Slot): boolean {
     return this.subscribedCommitteeSubnets.getToSlot(subnet) === slot;
   }
 
@@ -137,7 +137,7 @@ export class AttestationService implements IAttestationService {
     }
   }
 
-  private getNextFork(): {name: ForkName; slot: phase0.Slot} | null {
+  private getNextFork(): {name: ForkName; slot: Slot} | null {
     const currentFork = this.chain.getForkName();
     const forkInfoRecord = this.config.getForkInfoRecord();
     const allForks = Object.keys(forkInfoRecord) as ForkName[];
@@ -153,7 +153,7 @@ export class AttestationService implements IAttestationService {
   /**
    * Add validator to knownValidators list.
    */
-  private addKnownValidator(validatorIndex: phase0.ValidatorIndex): void {
+  private addKnownValidator(validatorIndex: ValidatorIndex): void {
     const currentSlot = this.chain.clock.currentSlot;
     const currentFork = this.chain.getForkName();
     if (!this.knownValidators.get(validatorIndex)) {
@@ -213,7 +213,7 @@ export class AttestationService implements IAttestationService {
   /**
    * Run per slot.
    */
-  private onSlot = (slot: phase0.Slot): void => {
+  private onSlot = (slot: Slot): void => {
     try {
       const fork = this.chain.getForkName();
       if (fork !== this.randomSubnets.getForkName() && fork === this.nextForkRandomSubnets?.getForkName()) {
@@ -242,7 +242,7 @@ export class AttestationService implements IAttestationService {
     for (const subnet of activeSubnets) {
       this.randomSubnets.request({
         subnetId: subnet,
-        toSlot: this.nextForkRandomSubnets?.getToSlot(subnet) as phase0.Slot,
+        toSlot: this.nextForkRandomSubnets?.getToSlot(subnet) as Slot,
       });
     }
     // assume 1 hard fork look ahead
@@ -252,7 +252,7 @@ export class AttestationService implements IAttestationService {
   /**
    * Subscribe to a committee subnet.
    */
-  private handleSubscription(subnetId: number, slot: phase0.Slot): void {
+  private handleSubscription(subnetId: number, slot: Slot): void {
     // Check if the subnet currently exists as a long-lasting random subnet
     const randomSubnetToSlot = this.randomSubnets.getToSlot(subnetId);
     const fork = this.chain.getForkName();
@@ -270,7 +270,7 @@ export class AttestationService implements IAttestationService {
    * Unsubscribe to a committee subnet from subscribedCommitteeSubnets.
    * If a random subnet is present, we do not unsubscribe from it.
    */
-  private handleUnsubscriptions(currentSlot: phase0.Slot): void {
+  private handleUnsubscriptions(currentSlot: Slot): void {
     const inactiveSubscribedCommitteeSubnets = this.subscribedCommitteeSubnets.getInactive(currentSlot);
     const activeRandomSubnets = this.randomSubnets.getActive(currentSlot);
     const fork = this.subscribedCommitteeSubnets.getForkName();
@@ -282,8 +282,8 @@ export class AttestationService implements IAttestationService {
     const inactiveCommitteeSubnets = this.committeeSubnets.getInactive(currentSlot);
     // inactiveCommitteeSubnets is superset of inactiveSubscribedCommitteeSubnets
     for (const subnet of inactiveCommitteeSubnets) {
-      this.committeeSubnets.prune(subnet);
-      this.subscribedCommitteeSubnets.prune(subnet);
+      this.committeeSubnets.delete(subnet);
+      this.subscribedCommitteeSubnets.delete(subnet);
     }
   }
 
@@ -292,7 +292,7 @@ export class AttestationService implements IAttestationService {
    * This function selects a new subnet to join, or extends the expiry if there are no more
    * available subnets to choose from.
    */
-  private handleRandomSubnetExpiry(slot: phase0.Slot): void {
+  private handleRandomSubnetExpiry(slot: Slot): void {
     const allRandomSubnets = this.randomSubnets.getAll();
     const inactiveRandomSubnets = this.randomSubnets.getInactive(slot);
     const currentFork = this.chain.getForkName();
@@ -329,8 +329,8 @@ export class AttestationService implements IAttestationService {
    * validators to random subnets. So when a validator goes offline, we can simply remove the
    * allocated amount of random subnets.
    */
-  private handleKnownValidatorExpiry(currentSlot: phase0.Slot): void {
-    const expiredValidators: Set<phase0.ValidatorIndex> = new Set();
+  private handleKnownValidatorExpiry(currentSlot: Slot): void {
+    const expiredValidators: Set<ValidatorIndex> = new Set();
     for (const [index, slot] of this.knownValidators.entries()) {
       if (currentSlot > slot) expiredValidators.add(index);
     }
@@ -356,10 +356,10 @@ export class AttestationService implements IAttestationService {
     }
   }
 
-  private pruneRandomSubnet(subnet: number, currentSlot: phase0.Slot): void {
+  private pruneRandomSubnet(subnet: number, currentSlot: Slot): void {
     const activeSubscribedCommitteeSubnets = this.subscribedCommitteeSubnets.getActive(currentSlot);
     if (!activeSubscribedCommitteeSubnets.includes(subnet)) {
-      const fork = this.randomSubnets.getForkName()!;
+      const fork = this.randomSubnets.getForkName();
       this.gossip.unsubscribeTopic({type: GossipType.beacon_attestation, fork, subnet});
     }
     // Update ENR
@@ -368,11 +368,11 @@ export class AttestationService implements IAttestationService {
       attnets[subnet] = false;
       this.metadata.attnets = attnets;
     }
-    this.randomSubnets.prune(subnet);
+    this.randomSubnets.delete(subnet);
   }
 }
 
-function getSubscriptionSlotForRandomSubnet(config: IBeaconConfig, currentSlot: phase0.Slot): phase0.Slot {
+function getSubscriptionSlotForRandomSubnet(config: IBeaconConfig, currentSlot: Slot): Slot {
   return (
     randBetween(
       config.params.EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION,
