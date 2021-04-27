@@ -15,7 +15,7 @@ import {MAXIMUM_GOSSIP_CLOCK_DISPARITY} from "../../constants";
 export class LocalClock implements IBeaconClock {
   private readonly config: IBeaconConfig;
   private readonly genesisTime: number;
-  private timeoutId: NodeJS.Timeout;
+  private timeoutId: number;
   private readonly emitter: ChainEventEmitter;
   private readonly signal: AbortSignal;
   private _currentSlot: number;
