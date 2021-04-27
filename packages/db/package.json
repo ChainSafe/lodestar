@@ -39,7 +39,6 @@
     "@chainsafe/lodestar-utils": "^0.20.0",
     "@chainsafe/ssz": "^0.8.2",
     "it-all": "^1.0.2",
-    "it-pushable": "^1.4.0",
     "level": "^6.0.1",
     "levelup": "^4.4.0"
   }
