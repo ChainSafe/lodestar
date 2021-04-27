@@ -90,7 +90,6 @@ export class PeerManager {
   private opts: PeerManagerOpts;
   private intervals: NodeJS.Timeout[] = [];
 
-  // private subnets = new SubnetMap();
   private seenPeers = new Set<string>();
 
   constructor(modules: PeerManagerModules, opts: PeerManagerOpts) {

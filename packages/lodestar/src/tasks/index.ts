@@ -12,7 +12,7 @@ import {ChainEvent, IBeaconChain} from "../chain";
 import {ArchiveBlocksTask} from "./tasks/archiveBlocks";
 import {StatesArchiver} from "./tasks/archiveStates";
 import {IBeaconSync} from "../sync";
-import {INetwork, NetworkEvent} from "../network";
+import {INetwork} from "../network";
 import {JobQueue} from "../util/queue";
 
 export interface ITasksModules {

@@ -1,4 +1,4 @@
-import {IForkName} from "@chainsafe/lodestar-config";
+import {ForkName} from "@chainsafe/lodestar-config";
 import {Slot} from "@chainsafe/lodestar-types";
 
 export type RequestedSubnet = {
@@ -16,8 +16,8 @@ export type RequestedSubnet = {
 export class SubnetMap {
   /** Map of subnets and the slot until they are needed */
   private subnets = new Map<number, Slot>();
-  private forkName: IForkName;
-  constructor(forkName: IForkName) {
+  private forkName: ForkName;
+  constructor(forkName: ForkName) {
     this.forkName = forkName;
   }
 
@@ -39,7 +39,7 @@ export class SubnetMap {
   /**
    * Get fork name
    */
-  getForkName(): IForkName {
+  getForkName(): ForkName {
     return this.forkName;
   }
 

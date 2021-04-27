@@ -37,7 +37,10 @@ export class AttestationCollector {
             await this.handleCommitteeAttestation(attestation);
           }
         }) as GossipHandlerFn;
-        this.network.gossip.handleTopic({type: GossipType.beacon_attestation, fork: ForkName.phase0, subnet}, wrapperFn);
+        this.network.gossip.handleTopic(
+          {type: GossipType.beacon_attestation, fork: ForkName.phase0, subnet},
+          wrapperFn
+        );
         this.handlerFns.push(wrapperFn);
       }
     }

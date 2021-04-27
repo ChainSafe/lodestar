@@ -1,5 +1,5 @@
 import {computeSubnetForCommitteesAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
-import {IBeaconConfig, IForkName} from "@chainsafe/lodestar-config";
+import {IBeaconConfig, ForkName} from "@chainsafe/lodestar-config";
 import {ATTESTATION_SUBNET_COUNT, phase0} from "@chainsafe/lodestar-types";
 import {assert, ILogger, randBetween} from "@chainsafe/lodestar-utils";
 import {ChainEvent, IBeaconChain} from "../../chain";
@@ -137,10 +137,10 @@ export class AttestationService implements IAttestationService {
     }
   }
 
-  private getNextFork(): {name: IForkName; slot: phase0.Slot} | null {
+  private getNextFork(): {name: ForkName; slot: phase0.Slot} | null {
     const currentFork = this.chain.getForkName();
     const forkInfoRecord = this.config.getForkInfoRecord();
-    const allForks = Object.keys(forkInfoRecord) as IForkName[];
+    const allForks = Object.keys(forkInfoRecord) as ForkName[];
     const forkIndex = allForks.indexOf(currentFork);
     // there is a planned hard fork
     if (forkIndex !== allForks.length - 1) {
@@ -169,7 +169,7 @@ export class AttestationService implements IAttestationService {
   /**
    * Subscribe to long-lived random subnets and update the local ENR bitfield.
    */
-  private subscribeToRandomSubnet(fork: IForkName): void {
+  private subscribeToRandomSubnet(fork: ForkName): void {
     const currentSlot = this.chain.clock.currentSlot;
     const allSubnets = Array.from({length: ATTESTATION_SUBNET_COUNT}, (_, i) => i);
     const activeSubnets = this.randomSubnets.getActive(currentSlot);
@@ -198,7 +198,7 @@ export class AttestationService implements IAttestationService {
    * No need to update ENR
    * @param nextFork
    */
-  private subscribeToNextForkRandomSubnets(nextFork: IForkName): void {
+  private subscribeToNextForkRandomSubnets(nextFork: ForkName): void {
     const currentSlot = this.chain.clock.currentSlot;
     const activeSubnets = this.randomSubnets.getActive(currentSlot);
     for (const subnet of activeSubnets) {

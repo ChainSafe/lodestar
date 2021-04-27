@@ -1,4 +1,5 @@
 import {allForks, ATTESTATION_SUBNET_COUNT, phase0} from "@chainsafe/lodestar-types";
+import {ForkName} from "@chainsafe/lodestar-config";
 import {getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import * as stateTransitionUtils from "@chainsafe/lodestar-beacon-state-transition/lib/util/attestation";
 import * as mathUtils from "@chainsafe/lodestar-utils/lib/math";
@@ -33,8 +34,6 @@ describe("AttestationService", function () {
   const COMMITTEE_SUBNET_SUBSCRIPTION = 10;
 
   beforeEach(function () {
-    // TODO: remove
-    this.timeout(0);
     sandbox.useFakeTimers(Date.now());
     gossipStub = sandbox.createStubInstance(Eth2Gossipsub);
     computeSubnetUtil = sandbox.stub(stateTransitionUtils, "computeSubnetForCommitteesAtSlot");
@@ -154,8 +153,8 @@ describe("AttestationService", function () {
       service.validatorSubscriptions([subscription]);
       sandbox.clock.tick(4 * SLOTS_PER_EPOCH * SECONDS_PER_SLOT * 1000);
     }
-    // TODO: passed altair, but chain but chain always return "phase0" now
-    sandbox.stub(chain, "getForkName").returns("altair");
+    // TODO: passed altair, but chain always return "phase0" now
+    sandbox.stub(chain, "getForkName").returns(ForkName.altair);
     sandbox.clock.tick(SECONDS_PER_SLOT * 1000);
     // transition to altair
     expect(service.getNextForkRandomSubnets()).to.be.deep.equal([]);
