@@ -2,15 +2,28 @@ import {computeSubnetForCommitteesAtSlot} from "@chainsafe/lodestar-beacon-state
 import {IBeaconConfig, ForkName} from "@chainsafe/lodestar-config";
 import {ATTESTATION_SUBNET_COUNT, phase0, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {assert, ILogger, randBetween} from "@chainsafe/lodestar-utils";
-import {ChainEvent, IBeaconChain} from "../../chain";
-import {Eth2Gossipsub, GossipType} from "../gossip";
-import {MetadataController} from "../metadata";
-import {SubnetMap} from "../peers/utils";
-import {IAttestationService, IAttestationServiceModules} from "./interface";
+import {ChainEvent, IBeaconChain} from "../chain";
+import {Eth2Gossipsub, GossipType} from "./gossip";
+import {MetadataController} from "./metadata";
+import {SubnetMap} from "./peers/utils";
 
 /// The time (in slots) before a last seen validator is considered absent and we unsubscribe from the random
 /// gossip topics that we subscribed to due to the validator connection.
 const LAST_SEEN_VALIDATOR_TIMEOUT = 150;
+
+export interface IAttestationService {
+  validatorSubscriptions(subscriptions: phase0.BeaconCommitteeSubscription[]): void;
+  shouldProcessAttestation(subnet: number, slot: phase0.Slot): boolean;
+  getActiveSubnets(): number[];
+}
+
+export interface IAttestationServiceModules {
+  config: IBeaconConfig;
+  chain: IBeaconChain;
+  logger: ILogger;
+  gossip: Eth2Gossipsub;
+  metadata: MetadataController;
+}
 
 /**
  * Manage random (long lived) subnets and committee (short lived) subnets.
@@ -256,7 +269,7 @@ export class AttestationService implements IAttestationService {
     // Check if the subnet currently exists as a long-lasting random subnet
     const randomSubnetToSlot = this.randomSubnets.getToSlot(subnetId);
     const fork = this.chain.getForkName();
-    if (randomSubnetToSlot && randomSubnetToSlot >= 0) {
+    if (randomSubnetToSlot !== undefined) {
       // just extend the expiry
       this.randomSubnets.request({subnetId, toSlot: slot});
     } else {
@@ -344,11 +357,12 @@ export class AttestationService implements IAttestationService {
     }
 
     const activeRandomSubnets = this.randomSubnets.getActive(currentSlot);
+    let toRemoveIndex = 0;
 
     for (const validator of expiredValidators) {
       for (let i = 0; i < this.config.params.RANDOM_SUBNETS_PER_VALIDATOR; i++) {
-        const toRemoveSubnet = activeRandomSubnets[0];
-        if (toRemoveSubnet >= 0) {
+        const toRemoveSubnet = activeRandomSubnets[toRemoveIndex++];
+        if (toRemoveSubnet !== undefined) {
           this.pruneRandomSubnet(toRemoveSubnet, currentSlot);
         }
         this.knownValidators.delete(validator);

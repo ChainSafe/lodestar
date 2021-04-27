@@ -5,16 +5,16 @@ import * as stateTransitionUtils from "@chainsafe/lodestar-beacon-state-transiti
 import * as mathUtils from "@chainsafe/lodestar-utils/lib/math";
 import {config} from "@chainsafe/lodestar-config/minimal";
 import sinon, {SinonStubbedInstance} from "sinon";
-import {ChainEvent, IBeaconChain} from "../../../../src/chain";
-import {AttestationService} from "../../../../src/network/attestation-service";
-import {Eth2Gossipsub} from "../../../../src/network/gossip";
-import {MockBeaconChain} from "../../../utils/mocks/chain/chain";
-import {generateState} from "../../../utils/state";
-import {MetadataController} from "../../../../src/network/metadata";
+import {MockBeaconChain} from "../../utils/mocks/chain/chain";
+import {generateState} from "../../utils/state";
 import {TreeBacked} from "@chainsafe/ssz";
-import {testLogger} from "../../../utils/logger";
+import {testLogger} from "../../utils/logger";
 import {expect} from "chai";
-import {SinonStubFn} from "../../../utils/types";
+import {SinonStubFn} from "../../utils/types";
+import {MetadataController} from "../../../src/network/metadata";
+import {Eth2Gossipsub} from "../../../src/network/gossip";
+import {AttestationService} from "../../../src/network/attestationService";
+import {ChainEvent, IBeaconChain} from "../../../src/chain";
 
 describe("AttestationService", function () {
   let service: AttestationService;

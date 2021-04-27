@@ -22,8 +22,8 @@ import {createTopicValidatorFnMap, Eth2Gossipsub} from "./gossip";
 import {IReqRespHandler} from "./reqresp/handlers";
 import {INetworkEventBus, NetworkEventBus} from "./events";
 import {AbortSignal} from "abort-controller";
-import {IAttestationService} from "./attestation-service/interface";
-import {AttestationService} from "./attestation-service/service";
+import {IAttestationService} from "./attestationService";
+import {AttestationService} from "./attestationService";
 import {phase0} from "@chainsafe/lodestar-types";
 
 interface INetworkModules {

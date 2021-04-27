@@ -17,7 +17,7 @@ import {sleep} from "@chainsafe/lodestar-utils";
 import {waitForEvent} from "../../../utils/events/resolver";
 import {testLogger} from "../../../utils/logger";
 import {getValidPeerId} from "../../../utils/peer";
-import {IAttestationService} from "../../../../src/network/attestation-service";
+import {IAttestationService} from "../../../../src/network/attestationService";
 
 const logger = testLogger();
 

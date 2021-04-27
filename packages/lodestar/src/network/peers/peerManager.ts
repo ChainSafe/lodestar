@@ -20,7 +20,7 @@ import {
 } from "./utils";
 import {getConnectedPeerIds, PeerMapDelay, assertPeerRelevance, prioritizePeers} from "./utils";
 import {prettyPrintPeerId} from "../util";
-import {IAttestationService} from "../attestation-service/interface";
+import {IAttestationService} from "../attestationService";
 
 /** heartbeat performs regular updates such as updating reputations and performing discovery requests */
 const HEARTBEAT_INTERVAL_MS = 30 * 1000;

@@ -11,7 +11,7 @@ import {MetadataController} from "./metadata";
 import {IPeerRpcScoreStore, IPeerMetadataStore} from "./peers";
 import {IReqResp} from "./reqresp";
 import {phase0} from "@chainsafe/lodestar-types";
-import {IAttestationService} from "./attestation-service/interface";
+import {IAttestationService} from "./attestationService";
 
 export type PeerSearchOptions = {
   supportsProtocols?: string[];
