@@ -3,6 +3,9 @@ import {allForks, phase0, Slot} from "@chainsafe/lodestar-types";
 import {bytesToInt} from "@chainsafe/lodestar-utils";
 import {ContainerType} from "@chainsafe/ssz";
 
+/**
+ * Slot	uint64
+ */
 const SLOT_BYTE_COUNT = 8;
 /**
  * 4 + 96 = 100
@@ -62,7 +65,7 @@ export function getStateTypeFromState(config: IBeaconConfig, state: allForks.Bea
 }
 
 export function getStateTypeFromBytes(config: IBeaconConfig, bytes: Buffer): StateType {
-  const slot = bytesToInt(bytes.slice(SLOT_BYTES_POSITION_IN_BLOCK, SLOT_BYTES_POSITION_IN_BLOCK + SLOT_BYTE_COUNT));
+  const slot = bytesToInt(bytes.slice(SLOT_BYTES_POSITION_IN_STATE, SLOT_BYTES_POSITION_IN_STATE + SLOT_BYTE_COUNT));
   return getStateTypeFromSlot(config, slot);
 }
 

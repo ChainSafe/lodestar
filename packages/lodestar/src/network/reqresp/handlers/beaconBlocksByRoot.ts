@@ -12,7 +12,7 @@ export async function* onBeaconBlocksByRoot(
   for (const blockRoot of requestBody) {
     const root = blockRoot.valueOf() as Uint8Array;
     const summary = chain.forkChoice.getBlock(root);
-    const block = summary ? await getBlock(root, summary.slot) : await getFinalizedBlock(root);
+    const block = summary ? await getBlock(root) : await getFinalizedBlock(root);
     if (block) {
       yield block;
     }

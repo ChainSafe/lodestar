@@ -8,7 +8,7 @@ import {getRootIndexKey, storeRootIndex} from "./stateArchiveIndex";
 
 /* eslint-disable @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call */
 
-export class GenericStateArchiveRepository extends Repository<Slot, TreeBacked<allForks.BeaconState>> {
+export class StateArchiveRepository extends Repository<Slot, TreeBacked<allForks.BeaconState>> {
   constructor(config: IBeaconConfig, db: IDatabaseController<Buffer, Buffer>) {
     const type = (config.types.phase0.BeaconState as unknown) as ContainerType<TreeBacked<allForks.BeaconState>>; // Pick some type but won't be used
     super(config, db, Bucket.allForks_stateArchive, type);

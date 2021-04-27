@@ -44,7 +44,7 @@ async function resolveBlockIdOrNull(
   blockId = blockId.toLowerCase();
   if (blockId === "head") {
     const head = forkChoice.getHead();
-    return db.block.get(head.blockRoot, head.slot);
+    return db.block.get(head.blockRoot);
   }
 
   if (blockId === "genesis") {
@@ -59,7 +59,7 @@ async function resolveBlockIdOrNull(
     const root = fromHexString(blockId);
     const summary = forkChoice.getBlock(root);
     if (summary) {
-      return await db.block.get(summary.blockRoot, summary.slot);
+      return await db.block.get(summary.blockRoot);
     } else {
       return await db.blockArchive.getByRoot(root);
     }
@@ -73,7 +73,7 @@ async function resolveBlockIdOrNull(
 
   const blockSummary = forkChoice.getCanonicalBlockSummaryAtSlot(slot);
   if (blockSummary) {
-    return db.block.get(blockSummary.blockRoot, blockSummary.slot);
+    return db.block.get(blockSummary.blockRoot);
   } else {
     return await db.blockArchive.get(slot);
   }
