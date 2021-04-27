@@ -44,7 +44,7 @@ describe("block api utils", function () {
     it("should resolve head", async function () {
       forkChoiceStub.getHead.returns(expectedSummary);
       await resolveBlockId(forkChoiceStub, dbStub, "head").catch(() => {});
-      expect(dbStub.block.get.withArgs(expectedBuffer, 0).calledOnce).to.be.true;
+      expect(dbStub.block.get.withArgs(expectedBuffer).calledOnce).to.be.true;
     });
 
     it("should resolve genesis", async function () {
@@ -61,14 +61,14 @@ describe("block api utils", function () {
 
     it("should resolve finalized block root", async function () {
       forkChoiceStub.getBlock.returns(expectedSummary);
-      dbStub.block.get.withArgs(bufferEqualsMatcher(expectedBuffer), 0).resolves(null);
+      dbStub.block.get.withArgs(bufferEqualsMatcher(expectedBuffer)).resolves(null);
       await resolveBlockId(forkChoiceStub, dbStub, toHexString(expectedBuffer)).catch(() => {});
-      expect(dbStub.block.get.withArgs(bufferEqualsMatcher(expectedBuffer), 0).calledOnce).to.be.true;
+      expect(dbStub.block.get.withArgs(bufferEqualsMatcher(expectedBuffer)).calledOnce).to.be.true;
     });
 
     it("should resolve non finalized block root", async function () {
       forkChoiceStub.getBlock.returns(null);
-      dbStub.block.get.withArgs(bufferEqualsMatcher(expectedBuffer), 0).resolves(generateEmptySignedBlock());
+      dbStub.block.get.withArgs(bufferEqualsMatcher(expectedBuffer)).resolves(generateEmptySignedBlock());
       await resolveBlockId(forkChoiceStub, dbStub, toHexString(expectedBuffer)).catch(() => {});
       expect(dbStub.blockArchive.getByRoot.withArgs(bufferEqualsMatcher(expectedBuffer)).calledOnce).to.be.true;
     });
