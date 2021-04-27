@@ -167,16 +167,8 @@ export class AttestationService implements IAttestationService {
    * Add validator to knownValidators list.
    */
   private addKnownValidator(validatorIndex: ValidatorIndex): void {
-    const currentSlot = this.chain.clock.currentSlot;
-    const currentFork = this.chain.getForkName();
-    if (!this.knownValidators.get(validatorIndex)) {
-      if (this.randomSubnets.getActive(currentSlot).length < ATTESTATION_SUBNET_COUNT) {
-        for (let i = 0; i < this.config.params.RANDOM_SUBNETS_PER_VALIDATOR; i++) {
-          this.subscribeToRandomSubnet(currentFork);
-        }
-      }
-    }
-    this.knownValidators.set(validatorIndex, currentSlot + LAST_SEEN_VALIDATOR_TIMEOUT);
+    this.knownValidators.set(validatorIndex, this.chain.clock.currentSlot + LAST_SEEN_VALIDATOR_TIMEOUT);
+    this.rebalanceRandomSubnets();
   }
 
   /**
@@ -215,11 +207,13 @@ export class AttestationService implements IAttestationService {
     const currentSlot = this.chain.clock.currentSlot;
     const activeSubnets = this.randomSubnets.getActive(currentSlot);
     for (const subnet of activeSubnets) {
-      this.nextForkRandomSubnets!.request({
-        subnetId: subnet,
-        toSlot: getSubscriptionSlotForRandomSubnet(this.config, currentSlot),
-      });
-      this.gossip.subscribeTopic({type: GossipType.beacon_attestation, fork: nextFork, subnet});
+      if (this.nextForkRandomSubnets) {
+        this.nextForkRandomSubnets.request({
+          subnetId: subnet,
+          toSlot: getSubscriptionSlotForRandomSubnet(this.config, currentSlot),
+        });
+        this.gossip.subscribeTopic({type: GossipType.beacon_attestation, fork: nextFork, subnet});
+      }
     }
   }
 
@@ -343,30 +337,38 @@ export class AttestationService implements IAttestationService {
    * allocated amount of random subnets.
    */
   private handleKnownValidatorExpiry(currentSlot: Slot): void {
-    const expiredValidators: Set<ValidatorIndex> = new Set();
     for (const [index, slot] of this.knownValidators.entries()) {
-      if (currentSlot > slot) expiredValidators.add(index);
+      if (currentSlot > slot) this.knownValidators.delete(index);
     }
-    const numConnectedValidators = this.knownValidators.size - expiredValidators.size;
-    if (numConnectedValidators * this.config.params.RANDOM_SUBNETS_PER_VALIDATOR >= ATTESTATION_SUBNET_COUNT) {
-      // have too many validators
-      for (const validator of expiredValidators) {
-        this.knownValidators.delete(validator);
-      }
-      return;
-    }
+    this.rebalanceRandomSubnets();
+  }
 
+  /**
+   * Called when we have new validators or expired validators.
+   * knownValidators should be updated before this function.
+   */
+  private rebalanceRandomSubnets(): void {
+    const {RANDOM_SUBNETS_PER_VALIDATOR} = this.config.params;
+    const numValidators = this.knownValidators.size;
+    // random subnet is renewed automatically
+    let numRandomSubnets = this.randomSubnets.getAll().length;
+    // subscribe to more random subnets
+    const currentFork = this.chain.getForkName();
+    const targetRandomSubnetCount = numValidators * RANDOM_SUBNETS_PER_VALIDATOR;
+    while (targetRandomSubnetCount > numRandomSubnets && numRandomSubnets < ATTESTATION_SUBNET_COUNT) {
+      this.subscribeToRandomSubnet(currentFork);
+      numRandomSubnets = numRandomSubnets + 1;
+    }
+    const currentSlot = this.chain.clock.currentSlot;
     const activeRandomSubnets = this.randomSubnets.getActive(currentSlot);
     let toRemoveIndex = 0;
-
-    for (const validator of expiredValidators) {
-      for (let i = 0; i < this.config.params.RANDOM_SUBNETS_PER_VALIDATOR; i++) {
-        const toRemoveSubnet = activeRandomSubnets[toRemoveIndex++];
-        if (toRemoveSubnet !== undefined) {
-          this.pruneRandomSubnet(toRemoveSubnet, currentSlot);
-        }
-        this.knownValidators.delete(validator);
+    // unsubscribe some random subnets
+    while (targetRandomSubnetCount < numRandomSubnets) {
+      const toRemoveSubnet = activeRandomSubnets[toRemoveIndex++];
+      if (toRemoveSubnet !== undefined) {
+        this.pruneRandomSubnet(toRemoveSubnet, currentSlot);
       }
+      numRandomSubnets = numRandomSubnets - 1;
     }
   }
 
