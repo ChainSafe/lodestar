@@ -1,7 +1,7 @@
 import LibP2p, {Connection} from "libp2p";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {phase0} from "@chainsafe/lodestar-types";
-import {ILogger, LodestarError} from "@chainsafe/lodestar-utils";
+import {ILogger} from "@chainsafe/lodestar-utils";
 import PeerId from "peer-id";
 import {IBeaconChain} from "../../chain";
 import {GoodByeReasonCode, GOODBYE_KNOWN_CODES, Libp2pEvent, Method} from "../../constants";
@@ -18,6 +18,7 @@ import {
   RequestedSubnet,
   assertPeerRelevance,
   prioritizePeers,
+  IrrelevantPeerError,
 } from "./utils";
 import {prettyPrintPeerId} from "../util";
 
@@ -222,10 +223,12 @@ export class PeerManager {
     try {
       assertPeerRelevance(status, this.chain, this.config);
     } catch (e) {
-      this.logger.debug("Irrelevant peer", {
-        peer: prettyPrintPeerId(peer),
-        reason: e instanceof LodestarError ? e.getMetadata() : (e as Error).message,
-      });
+      if (e instanceof IrrelevantPeerError) {
+        this.logger.debug("Irrelevant peer", {peer: prettyPrintPeerId(peer), reason: e.getMetadata()});
+      } else {
+        this.logger.error("Unexpected error in assertPeerRelevance", {peer: prettyPrintPeerId(peer)}, e);
+      }
+
       void this.goodbyeAndDisconnect(peer, GoodByeReasonCode.IRRELEVANT_NETWORK);
       return;
     }
