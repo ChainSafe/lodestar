@@ -65,7 +65,7 @@ describe("network / peers / PeerManager", function () {
       getActiveSubnets: () => [],
       shouldProcessAttestation: () => true,
       // eslint-disable-next-line @typescript-eslint/no-empty-function
-      validatorSubscriptions: () => {},
+      addBeaconCommitteeSubscriptions: () => {},
     };
 
     const peerManager = new PeerManager(

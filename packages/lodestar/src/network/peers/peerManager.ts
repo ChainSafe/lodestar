@@ -145,7 +145,7 @@ export class PeerManager {
   /**
    * Run after validator subscriptions request.
    */
-  onValidatorSubscriptions(): void {
+  onBeaconCommitteeSubscriptions(): void {
     // TODO:
     // Only if the slot is more than epoch away, add an event to start looking for peers
 

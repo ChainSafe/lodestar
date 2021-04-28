@@ -138,8 +138,8 @@ export class Network implements INetwork {
    * Request att subnets up `toSlot`. Network will ensure to mantain some peers for each
    */
   prepareBeaconCommitteeSubnet(subscriptions: phase0.BeaconCommitteeSubscription[]): void {
-    this.attService.validatorSubscriptions(subscriptions);
-    this.peerManager.onValidatorSubscriptions();
+    this.attService.addBeaconCommitteeSubscriptions(subscriptions);
+    this.peerManager.onBeaconCommitteeSubscriptions();
   }
 
   /**

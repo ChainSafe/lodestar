@@ -85,23 +85,23 @@ describe("AttestationService", function () {
   it("should subscribe to RANDOM_SUBNETS_PER_VALIDATOR per 1 validator", () => {
     randomUtil.withArgs(0, ATTESTATION_SUBNET_COUNT).returns(30);
     randomUtil.withArgs(0, ATTESTATION_SUBNET_COUNT - 1).returns(40);
-    service.validatorSubscriptions([subscription]);
+    service.addBeaconCommitteeSubscriptions([subscription]);
     expect(gossipStub.subscribeTopic.calledOnce).to.be.true;
     expect(metadata.seqNumber).to.be.equal(BigInt(1));
     // subscribe with a different validator
     subscription.validatorIndex = 2022;
-    service.validatorSubscriptions([subscription]);
+    service.addBeaconCommitteeSubscriptions([subscription]);
     expect(gossipStub.subscribeTopic.calledTwice).to.be.true;
     expect(metadata.seqNumber).to.be.equal(BigInt(2));
     // subscribe with same validator
     subscription.validatorIndex = 2021;
-    service.validatorSubscriptions([subscription]);
+    service.addBeaconCommitteeSubscriptions([subscription]);
     expect(gossipStub.subscribeTopic.calledTwice).to.be.true;
     expect(metadata.seqNumber).to.be.equal(BigInt(2));
   });
 
   it("should handle validator expiry", async () => {
-    service.validatorSubscriptions([subscription]);
+    service.addBeaconCommitteeSubscriptions([subscription]);
     expect(metadata.seqNumber).to.be.equal(BigInt(1));
     expect(EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION * SLOTS_PER_EPOCH).to.be.gt(150);
     sandbox.clock.tick(150 * SLOTS_PER_EPOCH * SECONDS_PER_SLOT * 1000);
@@ -111,12 +111,12 @@ describe("AttestationService", function () {
   });
 
   it("should change subnet subscription after 2*EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION", async () => {
-    service.validatorSubscriptions([subscription]);
+    service.addBeaconCommitteeSubscriptions([subscription]);
     expect(gossipStub.subscribeTopic.calledOnce).to.be.true;
     expect(metadata.seqNumber).to.be.equal(BigInt(1));
     for (let numEpoch = 0; numEpoch < 2 * EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION; numEpoch++) {
       // avoid known validator expiry
-      service.validatorSubscriptions([subscription]);
+      service.addBeaconCommitteeSubscriptions([subscription]);
       sandbox.clock.tick(SLOTS_PER_EPOCH * SECONDS_PER_SLOT * 1000);
     }
     // may call 2 times, 1 for committee subnet, 1 for random subnet
@@ -139,18 +139,18 @@ describe("AttestationService", function () {
       metadata,
     });
     service.start();
-    service.validatorSubscriptions([subscription]);
+    service.addBeaconCommitteeSubscriptions([subscription]);
     // run per 32 slots (or any num slots < 150)
     while (chain.clock.currentSlot < altairSlot - EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION * SLOTS_PER_EPOCH) {
       // avoid known validator expiry
-      service.validatorSubscriptions([subscription]);
+      service.addBeaconCommitteeSubscriptions([subscription]);
       sandbox.clock.tick(4 * SLOTS_PER_EPOCH * SECONDS_PER_SLOT * 1000);
     }
     // 1 known validator
     expect(service.getNextForkRandomSubnets().length).to.be.equal(1);
     const randomSubnet = service.getNextForkRandomSubnets()[0];
     while (chain.clock.currentSlot < altairSlot) {
-      service.validatorSubscriptions([subscription]);
+      service.addBeaconCommitteeSubscriptions([subscription]);
       sandbox.clock.tick(4 * SLOTS_PER_EPOCH * SECONDS_PER_SLOT * 1000);
     }
     // TODO: passed altair, but chain always return "phase0" now
@@ -165,7 +165,7 @@ describe("AttestationService", function () {
   it("handle committee subnet the same to random subnet", () => {
     randomUtil.withArgs(0, ATTESTATION_SUBNET_COUNT).returns(COMMITTEE_SUBNET_SUBSCRIPTION);
     const aggregatorSubscription: phase0.BeaconCommitteeSubscription = {...subscription, isAggregator: true};
-    service.validatorSubscriptions([aggregatorSubscription]);
+    service.addBeaconCommitteeSubscriptions([aggregatorSubscription]);
     expect(service.getActiveSubnets()).to.be.deep.equal([COMMITTEE_SUBNET_SUBSCRIPTION]);
     // committee subnet is same to random subnet
     expect(gossipStub.subscribeTopic.calledOnce).to.be.true;

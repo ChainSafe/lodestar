@@ -12,7 +12,7 @@ import {SubnetMap} from "./peers/utils";
 const LAST_SEEN_VALIDATOR_TIMEOUT = 150;
 
 export interface IAttestationService {
-  validatorSubscriptions(subscriptions: phase0.BeaconCommitteeSubscription[]): void;
+  addBeaconCommitteeSubscriptions(subscriptions: phase0.BeaconCommitteeSubscription[]): void;
   shouldProcessAttestation(subnet: number, slot: phase0.Slot): boolean;
   getActiveSubnets(): number[];
 }
@@ -35,14 +35,13 @@ export class AttestationService implements IAttestationService {
   private readonly metadata: MetadataController;
   private readonly logger: ILogger;
 
-  // Map of random subnets and the slot until they are needed of current fork
+  /** Map of random subnets and the slot until they are needed of current fork */
   private randomSubnets: SubnetMap;
-  // Map of random subnets and the slot until they are needed of next fork
-  // TODO: handle multiple hard forks?
+  /** Map of random subnets and the slot until they are needed of next fork */
   private nextForkRandomSubnets: SubnetMap | undefined;
-  // Map of committee subnets and the slot until they are needed
+  /** Map of committee subnets and the slot until they are needed */
   private committeeSubnets: SubnetMap;
-  // subset of committeeSubnets with exact slot for aggregator
+  /** subset of committeeSubnets with exact slot for aggregator */
   private subscribedCommitteeSubnets: SubnetMap;
 
   private nextForkSubscriptionTimer: NodeJS.Timeout | undefined;
@@ -104,7 +103,7 @@ export class AttestationService implements IAttestationService {
   /**
    * Called from /eth/v1/validator/beacon_committee_subscriptions api when validator is an attester.
    */
-  validatorSubscriptions(subscriptions: phase0.BeaconCommitteeSubscription[] = []): void {
+  addBeaconCommitteeSubscriptions(subscriptions: phase0.BeaconCommitteeSubscription[] = []): void {
     for (const {slot, committeesAtSlot, committeeIndex, validatorIndex, isAggregator} of subscriptions) {
       this.addKnownValidator(validatorIndex);
       const subnetId = computeSubnetForCommitteesAtSlot(this.config, slot, committeesAtSlot, committeeIndex);
@@ -174,25 +173,39 @@ export class AttestationService implements IAttestationService {
   /**
    * Subscribe to long-lived random subnets and update the local ENR bitfield.
    */
-  private subscribeToRandomSubnet(fork: ForkName): void {
+  private subscribeToRandomSubnets(fork: ForkName, count: number): void {
     const currentSlot = this.chain.clock.currentSlot;
     const allSubnets = Array.from({length: ATTESTATION_SUBNET_COUNT}, (_, i) => i);
-    const activeSubnets = this.randomSubnets.getActive(currentSlot);
-    const availableSubnets = allSubnets.filter((subnet) => !activeSubnets.includes(subnet));
-    const toSubscribeSubnet = availableSubnets[randBetween(0, availableSubnets.length)];
-    // the heartbeat will help connect to respective peers
-    this.randomSubnets.request({
-      subnetId: toSubscribeSubnet,
-      toSlot: getSubscriptionSlotForRandomSubnet(this.config, currentSlot),
-    });
-    if (!this.subscribedCommitteeSubnets.getActive(currentSlot).includes(toSubscribeSubnet)) {
-      // subscribe to topic
-      this.gossip.subscribeTopic({type: GossipType.beacon_attestation, fork, subnet: toSubscribeSubnet});
+    const toSubscribeSubnets = [];
+    for (let i = 0; i < count; i++) {
+      const activeSubnets = this.randomSubnets.getActive(currentSlot);
+      if (activeSubnets.length >= ATTESTATION_SUBNET_COUNT) {
+        this.logger.info("Reached max number of random subnet", {count, maxSubnet: ATTESTATION_SUBNET_COUNT});
+        break;
+      }
+      const availableSubnets = allSubnets.filter((subnet) => !activeSubnets.includes(subnet));
+      const toSubscribeSubnet = availableSubnets[randBetween(0, availableSubnets.length)];
+      // the heartbeat will help connect to respective peers
+      this.randomSubnets.request({
+        subnetId: toSubscribeSubnet,
+        toSlot: getSubscriptionSlotForRandomSubnet(this.config, currentSlot),
+      });
+      if (!this.subscribedCommitteeSubnets.getActive(currentSlot).includes(toSubscribeSubnet)) {
+        // subscribe to topic
+        this.gossip.subscribeTopic({type: GossipType.beacon_attestation, fork, subnet: toSubscribeSubnet});
+      }
+      toSubscribeSubnets.push(toSubscribeSubnet);
     }
     // Update ENR
     const attnets = this.metadata.attnets;
-    if (!attnets[toSubscribeSubnet]) {
-      attnets[toSubscribeSubnet] = true;
+    let updateENR = false;
+    for (const subnet of toSubscribeSubnets) {
+      if (!attnets[subnet]) {
+        attnets[subnet] = true;
+        updateENR = true;
+      }
+    }
+    if (updateENR) {
       this.metadata.attnets = attnets;
     }
   }
@@ -319,13 +332,15 @@ export class AttestationService implements IAttestationService {
       }
       return;
     }
+    let newRandomSubnets = 0;
     for (const subnet of inactiveRandomSubnets) {
       this.pruneRandomSubnet(subnet, slot);
       // After the fork occurs, let the subnets from the previous fork reach the end of life with no replacements
       if (currentFork === randomSubnetFork) {
-        this.subscribeToRandomSubnet(currentFork);
+        newRandomSubnets = newRandomSubnets + 1;
       }
     }
+    this.subscribeToRandomSubnets(currentFork, newRandomSubnets);
   }
 
   /**
@@ -355,9 +370,8 @@ export class AttestationService implements IAttestationService {
     // subscribe to more random subnets
     const currentFork = this.chain.getForkName();
     const targetRandomSubnetCount = numValidators * RANDOM_SUBNETS_PER_VALIDATOR;
-    while (targetRandomSubnetCount > numRandomSubnets && numRandomSubnets < ATTESTATION_SUBNET_COUNT) {
-      this.subscribeToRandomSubnet(currentFork);
-      numRandomSubnets = numRandomSubnets + 1;
+    if (targetRandomSubnetCount > numRandomSubnets) {
+      this.subscribeToRandomSubnets(currentFork, targetRandomSubnetCount - numRandomSubnets);
     }
     const currentSlot = this.chain.clock.currentSlot;
     const activeRandomSubnets = this.randomSubnets.getActive(currentSlot);
