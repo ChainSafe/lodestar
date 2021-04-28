@@ -1,4 +1,5 @@
 import {expect} from "chai";
+import {ForkName} from "../../src";
 import {config} from "../../src/presets/mainnet";
 
 describe("forks", () => {
@@ -13,5 +14,10 @@ describe("forks", () => {
         `Forks are not sorted ${fork1.name} ${fork1.epoch} -> ${fork2.name} ${fork2.epoch}`
       );
     }
+  });
+
+  it("Get phase0 fork for slot 0", () => {
+    const fork = config.getForkName(0);
+    expect(fork).to.equal(ForkName.phase0);
   });
 });
