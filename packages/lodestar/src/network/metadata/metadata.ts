@@ -4,6 +4,8 @@ import {phase0} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ChainEvent, IBeaconChain} from "../../chain";
 import {ILogger} from "@chainsafe/lodestar-utils";
+import {getENRForkID} from "./utils";
+import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 
 export interface IMetadataOpts {
   metadata?: phase0.Metadata;
@@ -41,7 +43,7 @@ export class MetadataController {
         "attnets",
         Buffer.from(this.config.types.phase0.AttestationSubnets.serialize(this._metadata.attnets))
       );
-      this.enr.set("eth2", Buffer.from(this.config.types.phase0.ENRForkID.serialize(this.chain.getENRForkID())));
+      this.enr.set("eth2", Buffer.from(this.config.types.phase0.ENRForkID.serialize(this.getHeadEnrForkId())));
     }
     this.chain.emitter.on(ChainEvent.forkVersion, this.handleForkVersion);
   }
@@ -71,10 +73,15 @@ export class MetadataController {
   }
 
   private handleForkVersion(): void {
-    const forkDigest = this.chain.getForkDigest();
+    const forkDigest = this.chain.getHeadForkDigest();
     this.logger.verbose(`Metadata: received new fork digest ${toHexString(forkDigest)}`);
     if (this.enr) {
-      this.enr.set("eth2", Buffer.from(this.config.types.phase0.ENRForkID.serialize(this.chain.getENRForkID())));
+      this.enr.set("eth2", Buffer.from(this.config.types.phase0.ENRForkID.serialize(this.getHeadEnrForkId())));
     }
+  }
+
+  private getHeadEnrForkId(): phase0.ENRForkID {
+    const headEpoch = computeEpochAtSlot(this.config, this.chain.forkChoice.getHead().slot);
+    return getENRForkID(this.config, this.chain.forkDigestContext, headEpoch);
   }
 }

@@ -53,7 +53,7 @@ export class AttestationCollector {
   }
 
   subscribeToCommitteeAttestations(slot: Slot, committeeIndex: CommitteeIndex): void {
-    const fork = this.chain.getForkName();
+    const fork = this.chain.getHeadForkName();
     const headState = this.chain.getHeadState();
     const subnet = computeSubnetForSlot(this.config, headState, slot, committeeIndex);
     try {
@@ -70,7 +70,7 @@ export class AttestationCollector {
 
   private checkDuties = (slot: Slot): void => {
     const committees = this.aggregationDuties.get(slot) || new Set();
-    const fork = this.chain.getForkName();
+    const fork = this.chain.getHeadForkName();
     const headState = this.chain.getHeadState();
     this.timers = [];
     for (const committeeIndex of committees) {

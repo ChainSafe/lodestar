@@ -34,7 +34,7 @@ export class InteropSubnetsJoiningTask {
   }
 
   start(): void {
-    this.currentFork = this.chain.getForkName();
+    this.currentFork = this.chain.getHeadForkName();
     this.chain.emitter.on(ChainEvent.forkVersion, this.handleForkVersion);
     this.run(this.currentFork);
     this.scheduleNextForkSubscription();
@@ -88,7 +88,7 @@ export class InteropSubnetsJoiningTask {
    * Transition from current fork to next fork.
    */
   private handleForkVersion = (): void => {
-    const fork = this.chain.getForkName();
+    const fork = this.chain.getHeadForkName();
     this.logger.important(`InteropSubnetsJoiningTask: received new fork ${fork}`);
     // at this time current fork digest and next fork digest subnets are subscribed in parallel
     // this cleans up current fork digest subnets subscription and keep subscribed to next fork digest subnets

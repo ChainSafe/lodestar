@@ -40,7 +40,7 @@ describe("Attestation collector", function () {
       chain: {
         clock: realClock,
         getHeadState: () => generateCachedState(),
-        getForkName: () => ForkName.phase0,
+        getHeadForkName: () => ForkName.phase0,
         emitter,
       },
       // @ts-ignore
@@ -84,7 +84,7 @@ describe("Attestation collector", function () {
       chain: {
         clock: realClock,
         getHeadState: () => generateCachedState(),
-        getForkName: () => ForkName.phase0,
+        getHeadForkName: () => ForkName.phase0,
         emitter,
       },
       // @ts-ignore

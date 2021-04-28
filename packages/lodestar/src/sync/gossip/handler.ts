@@ -44,7 +44,7 @@ export class BeaconGossipHandler {
       return;
     }
 
-    const fork = this.chain.getForkName();
+    const fork = this.chain.getHeadForkName();
     this.subscribeAtFork(fork);
     this.state = {status: GossipHandlerStatus.Started, fork};
     this.chain.emitter.on(ChainEvent.forkVersion, this.handleForkVersion);

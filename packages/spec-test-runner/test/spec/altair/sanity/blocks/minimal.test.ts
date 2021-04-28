@@ -9,7 +9,7 @@ import {IBlockSanityTestCase} from "./types";
 import {SPEC_TEST_LOCATION} from "../../../../utils/specTestCases";
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
-const config = createIBeaconConfig({...params, ALTAIR_FORK_SLOT: 0});
+const config = createIBeaconConfig({...params, ALTAIR_FORK_EPOCH: 0});
 
 describeDirectorySpecTest<IBlockSanityTestCase, altairTypes.BeaconState>(
   "altair block sanity minimal",

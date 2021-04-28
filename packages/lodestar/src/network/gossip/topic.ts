@@ -3,11 +3,8 @@
  */
 
 import {ContainerType, toHexString} from "@chainsafe/ssz";
-import {Root} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {fromHex} from "@chainsafe/lodestar-utils";
-import {computeForkDigest, computeForkNameFromForkDigest} from "@chainsafe/lodestar-beacon-state-transition";
-
+import {IForkDigestContext} from "../../util/forkDigestContext";
 import {
   GossipEncoding,
   GossipDeserializer,
@@ -22,8 +19,8 @@ import {DEFAULT_ENCODING} from "./constants";
 /**
  * Create a gossip topic string
  */
-export function getGossipTopicString(config: IBeaconConfig, topic: GossipTopic, genesisValidatorsRoot: Root): string {
-  const forkDigest = computeForkDigest(config, config.getForkInfoRecord()[topic.fork].version, genesisValidatorsRoot);
+export function getGossipTopicString(forkDigestContext: IForkDigestContext, topic: GossipTopic): string {
+  const forkDigest = forkDigestContext.forkName2ForkDigest(topic.fork);
   const forkDigestHex = toHexString(forkDigest).toLowerCase().substring(2);
   let topicType: string = topic.type;
   if (topic.type === GossipType.beacon_attestation) {
@@ -52,19 +49,28 @@ export function getSubnetFromAttestationSubnetTopic(topic: string): number {
 /**
  * Create a `GossipTopic` from a gossip topic string
  */
-export function getGossipTopic(config: IBeaconConfig, topic: string, genesisValidatorsRoot: Root): GossipTopic {
+export function getGossipTopic(forkDigestContext: IForkDigestContext, topic: string): GossipTopic {
   const groups = topic.match(GossipTopicRegExp);
-  if (!groups || !groups[4]) {
+  if (!groups) {
     throw Error(`Bad gossip topic string: ${topic}`);
   }
 
-  const forkDigest = fromHex(groups[2]);
-  const fork = computeForkNameFromForkDigest(config, genesisValidatorsRoot, forkDigest);
-  const encoding = groups[4] as GossipEncoding;
+  const forkDigestHex = groups[2] as string | undefined;
+  const type = groups[3] as GossipType | undefined;
+  const encoding = groups[4] as GossipEncoding | undefined;
+  if (!forkDigestHex || !type || !encoding) {
+    throw Error(`Bad gossip topic string: ${topic}`);
+  }
+
+  const fork = forkDigestContext.forkDigest2ForkName(forkDigestHex);
+  if (!fork) {
+    throw Error(`forkDigest not supported ${forkDigestHex}`);
+  }
+
   if (GossipEncoding[encoding] == null) {
     throw new Error(`Bad gossip topic encoding: ${encoding}`);
   }
-  const type = groups[3] as GossipType;
+
   if (isAttestationSubnetTopic(topic)) {
     const subnet = getSubnetFromAttestationSubnetTopic(topic);
     return {
