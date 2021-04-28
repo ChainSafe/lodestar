@@ -261,7 +261,7 @@ export class BeaconChain implements IBeaconChain {
   }
 
   getHeadForkName(): ForkName {
-    return this.config.getForkName(this.getHeadState().slot);
+    return this.config.getForkName(this.forkChoice.getHead().slot);
   }
   getClockForkName(): ForkName {
     return this.config.getForkName(this.clock.currentSlot);
