@@ -7,21 +7,32 @@ export * from "./interface";
 
 export function createIBeaconConfig(params: IBeaconParams): IBeaconConfig {
   const types = createIBeaconSSZTypes(params);
+  const phase0 = {
+    name: ForkName.phase0,
+    epoch: GENESIS_EPOCH,
+    version: params.GENESIS_FORK_VERSION,
+  };
+  const altair = {
+    name: ForkName.altair,
+    epoch: params.ALTAIR_FORK_EPOCH,
+    version: params.ALTAIR_FORK_VERSION,
+  };
+  const allForks = [phase0, altair];
   return {
     params,
     types,
     getForkInfoRecord(): Record<ForkName, IForkInfo> {
       return {
-        phase0: {
-          name: ForkName.phase0,
-          epoch: GENESIS_EPOCH,
-          version: params.GENESIS_FORK_VERSION,
-        },
-        altair: {
-          name: ForkName.altair,
-          epoch: params.ALTAIR_FORK_EPOCH,
-          version: params.ALTAIR_FORK_VERSION,
-        },
+        phase0,
+        altair,
+      };
+    },
+    getForkAndNext(forkName: ForkName): {currentFork: IForkInfo; nextFork?: IForkInfo} {
+      const forkIndex = allForks.map((fork) => fork.name).indexOf(forkName);
+      const hasNextFork = forkIndex < allForks.length - 1 && !isFinite(allForks[forkIndex + 1].epoch);
+      return {
+        currentFork: allForks[forkIndex],
+        nextFork: hasNextFork ? allForks[forkIndex + 1] : undefined,
       };
     },
     getForkName(slot: Slot): ForkName {

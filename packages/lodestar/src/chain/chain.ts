@@ -9,7 +9,7 @@ import {
   computeStartSlotAtEpoch,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
-import {IBeaconConfig, ForkName, IForkInfo} from "@chainsafe/lodestar-config";
+import {IBeaconConfig, ForkName} from "@chainsafe/lodestar-config";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {allForks, ForkDigest, Number64, Root, Slot} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
@@ -67,7 +67,7 @@ export class BeaconChain implements IBeaconChain {
    */
   protected internalEmitter: ChainEventEmitter;
   private abortController: AbortController;
-  private forkDigestCache: Map<ForkName, ForkDigest> = new Map<ForkName, ForkDigest>();
+  private forkDigestByForkName: Map<ForkName, ForkDigest> = new Map<ForkName, ForkDigest>();
 
   constructor({opts, config, db, logger, metrics, anchorState}: IBeaconChainModules) {
     this.opts = opts;
@@ -134,7 +134,11 @@ export class BeaconChain implements IBeaconChain {
       signal: this.abortController.signal,
     });
     handleChainEvents.bind(this)(this.abortController.signal);
-    this.initForkDigestCache();
+    this.forkDigestByForkName = computeForkDigestByForkName(
+      this.config,
+      this.getHeadForkName(),
+      this.genesisValidatorsRoot
+    );
   }
 
   close(): void {
@@ -266,7 +270,7 @@ export class BeaconChain implements IBeaconChain {
   }
 
   getForkDigest(forkName: ForkName): phase0.ForkDigest {
-    const forkDigest = this.forkDigestCache.get(forkName);
+    const forkDigest = this.forkDigestByForkName.get(forkName);
     if (forkDigest) return forkDigest;
     throw new Error("No forkDigest for " + forkName);
   }
@@ -280,7 +284,7 @@ export class BeaconChain implements IBeaconChain {
   }
 
   getForkName(forkDigest: ForkDigest): ForkName {
-    for (const [name, value] of this.forkDigestCache.entries()) {
+    for (const [name, value] of this.forkDigestByForkName.entries()) {
       if (byteArrayEquals(forkDigest as Uint8Array, value as Uint8Array)) {
         return name;
       }
@@ -289,7 +293,7 @@ export class BeaconChain implements IBeaconChain {
   }
 
   getENRForkID(): phase0.ENRForkID {
-    const {currentFork, nextFork} = this.getForks();
+    const {currentFork, nextFork} = this.config.getForkAndNext(this.getHeadForkName());
 
     return {
       forkDigest: this.getHeadForkDigest(),
@@ -309,32 +313,21 @@ export class BeaconChain implements IBeaconChain {
       headSlot: head.slot,
     };
   }
+}
 
-  /**
-   * Precompute current fork and next fork if it's available
-   */
-  private initForkDigestCache(): void {
-    const {currentFork, nextFork} = this.getForks();
-    this.forkDigestCache.set(
-      currentFork.name,
-      computeForkDigest(this.config, currentFork.version, this.genesisValidatorsRoot)
-    );
-    if (nextFork) {
-      this.forkDigestCache.set(
-        nextFork.name,
-        computeForkDigest(this.config, nextFork.version, this.genesisValidatorsRoot)
-      );
-    }
+/**
+ * Precompute current fork and next fork if it's available
+ */
+function computeForkDigestByForkName(
+  config: IBeaconConfig,
+  headFork: ForkName,
+  genesisValidatorsRoot: Root
+): Map<ForkName, ForkDigest> {
+  const cache = new Map<ForkName, ForkDigest>();
+  const {currentFork, nextFork} = config.getForkAndNext(headFork);
+  cache.set(currentFork.name, computeForkDigest(config, currentFork.version, genesisValidatorsRoot));
+  if (nextFork) {
+    cache.set(nextFork.name, computeForkDigest(config, nextFork.version, genesisValidatorsRoot));
   }
-
-  private getForks(): {currentFork: IForkInfo; nextFork?: IForkInfo} {
-    const headForkName = this.getHeadForkName();
-    const allForks = Object.values(this.config.getForkInfoRecord());
-    const forkIndex = allForks.map((fork) => fork.name).indexOf(headForkName);
-    const hasNextFork = forkIndex < allForks.length - 1 && !isFinite(allForks[forkIndex + 1].epoch);
-    return {
-      currentFork: allForks[forkIndex],
-      nextFork: hasNextFork ? allForks[forkIndex + 1] : undefined,
-    };
-  }
+  return cache;
 }
