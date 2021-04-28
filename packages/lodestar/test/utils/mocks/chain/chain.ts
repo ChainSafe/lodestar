@@ -19,6 +19,9 @@ import {BlockPool} from "../../../../src/chain/blocks";
 import {AttestationPool} from "../../../../src/chain/attestation";
 import {BlsVerifier, IBlsVerifier} from "../../../../src/chain/bls";
 import {ForkDigestContext, IForkDigestContext} from "../../../../src/util/forkDigestContext";
+import {generateEmptyBlockSummary} from "../../block";
+
+/* eslint-disable @typescript-eslint/no-empty-function */
 
 export interface IMockChainParams {
   genesisTime?: Number64;
@@ -32,7 +35,7 @@ export class MockBeaconChain implements IBeaconChain {
   readonly genesisTime: Number64;
   readonly genesisValidatorsRoot: Root;
   readonly bls: IBlsVerifier;
-  forkChoice!: IForkChoice;
+  forkChoice: IForkChoice;
   stateCache: StateContextCache;
   checkpointStateCache: CheckpointStateCache;
   chainId: Uint16;
@@ -64,6 +67,7 @@ export class MockBeaconChain implements IBeaconChain {
       emitter: this.emitter,
       signal: this.abortController.signal,
     });
+    this.forkChoice = mockForkChoice(config);
     this.stateCache = new StateContextCache();
     this.checkpointStateCache = new CheckpointStateCache(this.config);
     this.pendingBlocks = new BlockPool({
@@ -163,4 +167,37 @@ export class MockBeaconChain implements IBeaconChain {
       headSlot: 0,
     };
   }
+}
+
+function mockForkChoice(config: IBeaconConfig): IForkChoice {
+  const root = config.types.Root.defaultValue() as Uint8Array;
+  const blockSummary = generateEmptyBlockSummary();
+  const checkpoint = config.types.phase0.Checkpoint.defaultValue();
+
+  return {
+    getAncestor: () => root,
+    getHeadRoot: () => root,
+    getHead: () => blockSummary,
+    getHeads: () => [blockSummary],
+    getFinalizedCheckpoint: () => checkpoint,
+    getJustifiedCheckpoint: () => checkpoint,
+    onBlock: () => {},
+    onAttestation: () => {},
+    getLatestMessage: () => undefined,
+    updateTime: () => {},
+    getTime: () => 0,
+    hasBlock: () => true,
+    getBlock: () => blockSummary,
+    getFinalizedBlock: () => blockSummary,
+    isDescendantOfFinalized: () => true,
+    isDescendant: () => true,
+    prune: () => [blockSummary],
+    setPruneThreshold: () => {},
+    iterateBlockSummaries: () => [blockSummary],
+    iterateNonAncestors: () => [blockSummary],
+    getCanonicalBlockSummaryAtSlot: () => blockSummary,
+    forwardIterateBlockSummaries: () => [blockSummary],
+    getBlockSummariesByParentRoot: () => [blockSummary],
+    getBlockSummariesAtSlot: () => [blockSummary],
+  };
 }
