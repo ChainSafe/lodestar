@@ -277,7 +277,7 @@ export class BeaconChain implements IBeaconChain {
     const head = this.forkChoice.getHead();
     const finalizedCheckpoint = this.forkChoice.getFinalizedCheckpoint();
     return {
-      forkDigest: this.getHeadForkDigest(),
+      forkDigest: this.forkDigestContext.forkName2ForkDigest(this.config.getForkName(head.slot)),
       finalizedRoot: finalizedCheckpoint.epoch === GENESIS_EPOCH ? ZERO_HASH : finalizedCheckpoint.root,
       finalizedEpoch: finalizedCheckpoint.epoch,
       headRoot: head.blockRoot,
