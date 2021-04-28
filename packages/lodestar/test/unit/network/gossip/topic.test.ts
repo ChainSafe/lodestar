@@ -1,7 +1,6 @@
 import {expect} from "chai";
-import {config} from "@chainsafe/lodestar-config/minimal";
+import sinon, {SinonStubbedInstance} from "sinon";
 import {ForkName} from "@chainsafe/lodestar-config";
-
 import {
   getGossipTopic,
   getGossipTopicString,
@@ -9,22 +8,13 @@ import {
   GossipTopic,
   DEFAULT_ENCODING,
 } from "../../../../src/network/gossip";
-import {generateState} from "../../../utils/state";
-import {MockBeaconChain} from "../../../utils/mocks/chain/chain";
-import {TreeBacked} from "@chainsafe/ssz";
-import {allForks} from "@chainsafe/lodestar-types";
+import {ForkDigestContext} from "../../../../src/util/forkDigestContext";
 
 describe("GossipTopic", function () {
-  let chain: MockBeaconChain;
+  let forkDigestContext: SinonStubbedInstance<ForkDigestContext>;
+
   beforeEach(() => {
-    const state = generateState();
-    chain = new MockBeaconChain({
-      genesisTime: 0,
-      chainId: 0,
-      networkId: BigInt(0),
-      state: state as TreeBacked<allForks.BeaconState>,
-      config,
-    });
+    forkDigestContext = sinon.createStubInstance(ForkDigestContext);
   });
 
   it("should round trip encode/decode gossip topics", async () => {
@@ -37,8 +27,8 @@ describe("GossipTopic", function () {
       {type: GossipType.attester_slashing, fork: ForkName.phase0, encoding: DEFAULT_ENCODING},
     ];
     for (const topic of topics) {
-      const topicString = getGossipTopicString(chain, topic);
-      const outputTopic = getGossipTopic(chain, topicString);
+      const topicString = getGossipTopicString(forkDigestContext, topic);
+      const outputTopic = getGossipTopic(forkDigestContext, topicString);
       expect(outputTopic).to.deep.equal(topic);
     }
   });
@@ -56,7 +46,7 @@ describe("GossipTopic", function () {
       "/eth2/18ae4ccb/beacon_attestation_5/ssz_supersnappy",
     ];
     for (const topicString of topicStrings) {
-      expect(() => getGossipTopic(chain, topicString), topicString).to.throw();
+      expect(() => getGossipTopic(forkDigestContext, topicString), topicString).to.throw();
     }
   });
 });

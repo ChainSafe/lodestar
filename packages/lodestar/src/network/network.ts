@@ -68,7 +68,7 @@ export class Network implements INetwork {
       libp2p,
       validatorFns: createTopicValidatorFnMap({config, chain, db, logger}, metrics, signal),
       logger,
-      chain,
+      forkDigestContext: chain.forkDigestContext,
       metrics,
     });
 

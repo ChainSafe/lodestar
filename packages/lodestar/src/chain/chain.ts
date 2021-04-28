@@ -5,7 +5,6 @@
 import {
   CachedBeaconState,
   computeEpochAtSlot,
-  computeForkDigest,
   computeStartSlotAtEpoch,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
@@ -13,9 +12,9 @@ import {IBeaconConfig, ForkName} from "@chainsafe/lodestar-config";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {allForks, ForkDigest, Number64, Root, Slot} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
-import {byteArrayEquals, toHexString, TreeBacked} from "@chainsafe/ssz";
+import {TreeBacked} from "@chainsafe/ssz";
 import {AbortController} from "abort-controller";
-import {FAR_FUTURE_EPOCH, GENESIS_EPOCH, ZERO_HASH} from "../constants";
+import {GENESIS_EPOCH, ZERO_HASH} from "../constants";
 import {IBeaconDb} from "../db";
 import {CheckpointStateCache, StateContextCache} from "./stateCache";
 import {IMetrics} from "../metrics";
@@ -30,6 +29,7 @@ import {IStateRegenerator, QueuedStateRegenerator} from "./regen";
 import {LodestarForkChoice} from "./forkChoice";
 import {restoreStateCaches} from "./initState";
 import {BlsVerifier, IBlsVerifier} from "./bls";
+import {ForkDigestContext, IForkDigestContext} from "../util/forkDigestContext";
 
 export interface IBeaconChainModules {
   opts: IChainOptions;
@@ -53,6 +53,7 @@ export class BeaconChain implements IBeaconChain {
   regen: IStateRegenerator;
   pendingAttestations: AttestationPool;
   pendingBlocks: BlockPool;
+  forkDigestContext: IForkDigestContext;
 
   protected attestationProcessor: AttestationProcessor;
   protected blockProcessor: BlockProcessor;
@@ -67,7 +68,6 @@ export class BeaconChain implements IBeaconChain {
    */
   protected internalEmitter: ChainEventEmitter;
   private abortController: AbortController;
-  private forkDigestByForkName: Map<ForkName, ForkDigest> = new Map<ForkName, ForkDigest>();
 
   constructor({opts, config, db, logger, metrics, anchorState}: IBeaconChainModules) {
     this.opts = opts;
@@ -82,6 +82,8 @@ export class BeaconChain implements IBeaconChain {
 
     this.emitter = new ChainEventEmitter();
     this.internalEmitter = new ChainEventEmitter();
+
+    this.forkDigestContext = new ForkDigestContext(config, this.genesisValidatorsRoot);
 
     this.bls = new BlsVerifier({logger, metrics, signal: this.abortController.signal});
 
@@ -133,12 +135,8 @@ export class BeaconChain implements IBeaconChain {
       checkpointStateCache: this.checkpointStateCache,
       signal: this.abortController.signal,
     });
+
     handleChainEvents.bind(this)(this.abortController.signal);
-    this.forkDigestByForkName = computeForkDigestByForkName(
-      this.config,
-      this.getHeadForkName(),
-      this.genesisValidatorsRoot
-    );
   }
 
   close(): void {
@@ -262,44 +260,17 @@ export class BeaconChain implements IBeaconChain {
     });
   }
 
-  getHeadForkDigest(): ForkDigest {
-    return this.getForkDigest(this.getHeadForkName());
-  }
-  getClockForkDigest(): ForkDigest {
-    return this.getForkDigest(this.getClockForkName());
-  }
-
-  getForkDigest(forkName: ForkName): phase0.ForkDigest {
-    const forkDigest = this.forkDigestByForkName.get(forkName);
-    if (forkDigest) return forkDigest;
-    throw new Error("No forkDigest for " + forkName);
-  }
-
   getHeadForkName(): ForkName {
     return this.config.getForkName(this.getHeadState().slot);
   }
-
   getClockForkName(): ForkName {
     return this.config.getForkName(this.clock.currentSlot);
   }
-
-  getForkName(forkDigest: ForkDigest): ForkName {
-    for (const [name, value] of this.forkDigestByForkName.entries()) {
-      if (byteArrayEquals(forkDigest as Uint8Array, value as Uint8Array)) {
-        return name;
-      }
-    }
-    throw new Error("No fork name for fork digest" + toHexString(forkDigest));
+  getHeadForkDigest(): ForkDigest {
+    return this.forkDigestContext.forkName2ForkDigest(this.getHeadForkName());
   }
-
-  getENRForkID(): phase0.ENRForkID {
-    const {currentFork, nextFork} = this.config.getForkAndNext(this.getHeadForkName());
-
-    return {
-      forkDigest: this.getHeadForkDigest(),
-      nextForkVersion: nextFork ? nextFork.version : currentFork.version,
-      nextForkEpoch: nextFork ? nextFork.epoch : FAR_FUTURE_EPOCH,
-    };
+  getClockForkDigest(): ForkDigest {
+    return this.forkDigestContext.forkName2ForkDigest(this.getClockForkName());
   }
 
   getStatus(): phase0.Status {
@@ -313,21 +284,4 @@ export class BeaconChain implements IBeaconChain {
       headSlot: head.slot,
     };
   }
-}
-
-/**
- * Precompute current fork and next fork if it's available
- */
-function computeForkDigestByForkName(
-  config: IBeaconConfig,
-  headFork: ForkName,
-  genesisValidatorsRoot: Root
-): Map<ForkName, ForkDigest> {
-  const cache = new Map<ForkName, ForkDigest>();
-  const {currentFork, nextFork} = config.getForkAndNext(headFork);
-  cache.set(currentFork.name, computeForkDigest(config, currentFork.version, genesisValidatorsRoot));
-  if (nextFork) {
-    cache.set(nextFork.name, computeForkDigest(config, nextFork.version, genesisValidatorsRoot));
-  }
-  return cache;
 }

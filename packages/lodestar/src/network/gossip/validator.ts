@@ -109,7 +109,7 @@ export function createValidatorFnsByTopic(
 
   for (const type of staticGossipTypes) {
     const topic = {type, fork, encoding: DEFAULT_ENCODING} as GossipTopic;
-    const topicString = getGossipTopicString(modules.chain, topic);
+    const topicString = getGossipTopicString(modules.chain.forkDigestContext, topic);
     validatorFnsByTopic.set(topicString, validatorFnsByType[type]);
   }
 
@@ -121,7 +121,7 @@ export function createValidatorFnsByTopic(
       encoding: DEFAULT_ENCODING,
       subnet,
     } as GossipTopic;
-    const topicString = getGossipTopicString(modules.chain, topic);
+    const topicString = getGossipTopicString(modules.chain.forkDigestContext, topic);
     const topicValidatorFn = validatorFnsByType[GossipType.beacon_attestation];
     validatorFnsByTopic.set(topicString, topicValidatorFn);
   }

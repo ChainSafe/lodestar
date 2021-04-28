@@ -62,7 +62,7 @@ describe("interopSubnetsJoiningTask", () => {
     const oldForkDigest = chain.getHeadForkDigest();
     expect(gossipStub.subscribeTopic.callCount).to.be.equal(config.params.RANDOM_SUBNETS_PER_VALIDATOR);
     // fork digest changed due to current version changed
-    state.fork.currentVersion = config.getForkInfoRecord().altair.version;
+    state.fork.currentVersion = config.forks.altair.version;
     expect(config.types.ForkDigest.equals(oldForkDigest, chain.getHeadForkDigest())).to.be.false;
     // not subscribe, just unsubscribe at that time
     const unSubscribePromise = new Promise((resolve) => gossipStub.unsubscribeTopic.callsFake(resolve));

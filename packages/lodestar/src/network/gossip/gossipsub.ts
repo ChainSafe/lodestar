@@ -16,13 +16,13 @@ import {DEFAULT_ENCODING} from "./constants";
 import {GossipValidationError} from "./errors";
 import {ERR_TOPIC_VALIDATOR_REJECT} from "libp2p-gossipsub/src/constants";
 import {prepareGossipMsg} from "./message";
-import {IBeaconChain} from "../../chain";
+import {IForkDigestContext} from "../../util/forkDigestContext";
 
 interface IGossipsubModules {
   config: IBeaconConfig;
   libp2p: Libp2p;
   validatorFns: TopicValidatorFnMap;
-  chain: IBeaconChain;
+  forkDigestContext: IForkDigestContext;
   logger: ILogger;
   metrics?: IMetrics;
 }
@@ -42,7 +42,7 @@ interface IGossipsubModules {
  */
 export class Eth2Gossipsub extends Gossipsub {
   private readonly config: IBeaconConfig;
-  private readonly chain: IBeaconChain;
+  private readonly forkDigestContext: IForkDigestContext;
   private readonly logger: ILogger;
   private readonly metrics?: IMetrics;
   /**
@@ -60,10 +60,10 @@ export class Eth2Gossipsub extends Gossipsub {
    */
   private statusInterval?: NodeJS.Timeout;
 
-  constructor({config, libp2p, validatorFns, logger, chain, metrics}: IGossipsubModules) {
+  constructor(modules: IGossipsubModules) {
     // Gossipsub parameters defined here:
     // https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/p2p-interface.md#the-gossip-domain-gossipsub
-    super(libp2p, {
+    super(modules.libp2p, {
       gossipIncoming: true,
       globalSignaturePolicy: "StrictNoSign" as const,
       D: 8,
@@ -71,15 +71,15 @@ export class Eth2Gossipsub extends Gossipsub {
       Dhi: 12,
       Dlazy: 6,
     });
-    this.config = config;
-    this.chain = chain;
-    this.logger = logger;
-    this.metrics = metrics;
+    this.config = modules.config;
+    this.forkDigestContext = modules.forkDigestContext;
+    this.logger = modules.logger;
+    this.metrics = modules.metrics;
 
     this.gossipObjects = new Map<string, GossipObject>();
     this.gossipTopics = new Map<string, GossipTopic>();
 
-    for (const [topic, validatorFn] of validatorFns.entries()) {
+    for (const [topic, validatorFn] of modules.validatorFns.entries()) {
       this.topicValidators.set(topic, validatorFn);
     }
   }
@@ -277,13 +277,13 @@ export class Eth2Gossipsub extends Gossipsub {
   }
 
   private getGossipTopicString(topic: GossipTopic): string {
-    return getGossipTopicString(this.chain, topic);
+    return getGossipTopicString(this.forkDigestContext, topic);
   }
 
   private getGossipTopic(topicString: string): GossipTopic {
     let topic = this.gossipTopics.get(topicString);
     if (topic == null) {
-      topic = getGossipTopic(this.chain, topicString);
+      topic = getGossipTopic(this.forkDigestContext, topicString);
       this.gossipTopics.set(topicString, topic);
     }
     return topic;
