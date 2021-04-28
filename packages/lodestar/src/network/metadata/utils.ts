@@ -6,9 +6,9 @@ import {IForkDigestContext} from "../../util/forkDigestContext";
 export function getENRForkID(
   config: IBeaconConfig,
   forkDigestContext: IForkDigestContext,
-  currentEpoch: Epoch
+  epoch: Epoch
 ): phase0.ENRForkID {
-  const {currentFork, nextFork} = getCurrentAndNextFork(Object.values(config.forks), currentEpoch);
+  const {currentFork, nextFork} = getCurrentAndNextFork(Object.values(config.forks), epoch);
 
   return {
     // Current fork digest
@@ -22,12 +22,12 @@ export function getENRForkID(
 
 function getCurrentAndNextFork(
   forks: IForkInfo[],
-  currentEpoch: Epoch
+  epoch: Epoch
 ): {currentFork: IForkInfo; nextFork: IForkInfo | undefined} {
   // NOTE: forks must be sorted by descending epoch, latest fork first
   const forksAscending = forks.sort((a, b) => b.epoch - a.epoch);
   // Find the index of the first fork that is over fork epoch
-  const currentForkIdx = forksAscending.findIndex((fork) => currentEpoch > fork.epoch);
+  const currentForkIdx = forksAscending.findIndex((fork) => epoch > fork.epoch);
   const nextForkIdx = currentForkIdx + 1;
   return {
     currentFork: forksAscending[currentForkIdx] || forks[0],
