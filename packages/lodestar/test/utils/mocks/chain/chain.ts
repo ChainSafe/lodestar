@@ -47,7 +47,6 @@ export class MockBeaconChain implements IBeaconChain {
   private state: TreeBacked<allForks.BeaconState>;
   private config: IBeaconConfig;
   private abortController: AbortController;
-  private forkDigestCache: Map<ForkName, ForkDigest> = new Map<ForkName, ForkDigest>();
 
   constructor({genesisTime, chainId, networkId, state, config}: IMockChainParams) {
     this.genesisTime = genesisTime ?? state.genesisTime;
@@ -118,16 +117,16 @@ export class MockBeaconChain implements IBeaconChain {
   }
 
   getHeadForkDigest(): ForkDigest {
-    return Array.from(this.forkDigestCache.values())[0];
+    return this.config.types.ForkDigest.defaultValue();
   }
   getClockForkDigest(): ForkDigest {
-    return this.getHeadForkDigest();
+    return this.config.types.ForkDigest.defaultValue();
   }
   getHeadForkName(): ForkName {
-    return Array.from(this.forkDigestCache.keys())[0];
+    return ForkName.phase0;
   }
   getClockForkName(): ForkName {
-    return this.getHeadForkName();
+    return ForkName.phase0;
   }
 
   getGenesisTime(): Number64 {
