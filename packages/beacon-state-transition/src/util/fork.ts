@@ -1,6 +1,5 @@
 import {Version, Root, phase0, ForkDigest} from "@chainsafe/lodestar-types";
-import {IBeaconConfig, ForkName} from "@chainsafe/lodestar-config";
-import {byteArrayEquals, toHexString} from "@chainsafe/ssz";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
 /**
  * Used primarily in signature domains to avoid collisions across forks/chains.
