@@ -3,10 +3,8 @@
  */
 
 import {ContainerType, toHexString} from "@chainsafe/ssz";
-import {Root} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {fromHex} from "@chainsafe/lodestar-utils";
-import {computeForkDigest, computeForkNameFromForkDigest} from "@chainsafe/lodestar-beacon-state-transition";
 
 import {
   GossipEncoding,
@@ -18,12 +16,13 @@ import {
   GossipTopicMap,
 } from "./interface";
 import {DEFAULT_ENCODING} from "./constants";
+import {IBeaconChain} from "../../../src/chain";
 
 /**
  * Create a gossip topic string
  */
-export function getGossipTopicString(config: IBeaconConfig, topic: GossipTopic, genesisValidatorsRoot: Root): string {
-  const forkDigest = computeForkDigest(config, config.getForkInfoRecord()[topic.fork].version, genesisValidatorsRoot);
+export function getGossipTopicString(chain: IBeaconChain, topic: GossipTopic): string {
+  const forkDigest = chain.getForkDigest(topic.fork);
   const forkDigestHex = toHexString(forkDigest).toLowerCase().substring(2);
   let topicType: string = topic.type;
   if (topic.type === GossipType.beacon_attestation) {
@@ -52,14 +51,14 @@ export function getSubnetFromAttestationSubnetTopic(topic: string): number {
 /**
  * Create a `GossipTopic` from a gossip topic string
  */
-export function getGossipTopic(config: IBeaconConfig, topic: string, genesisValidatorsRoot: Root): GossipTopic {
+export function getGossipTopic(chain: IBeaconChain, topic: string): GossipTopic {
   const groups = topic.match(GossipTopicRegExp);
   if (!groups || !groups[4]) {
     throw Error(`Bad gossip topic string: ${topic}`);
   }
 
   const forkDigest = fromHex(groups[2]);
-  const fork = computeForkNameFromForkDigest(config, genesisValidatorsRoot, forkDigest);
+  const fork = chain.getForkName(forkDigest);
   const encoding = groups[4] as GossipEncoding;
   if (GossipEncoding[encoding] == null) {
     throw new Error(`Bad gossip topic encoding: ${encoding}`);

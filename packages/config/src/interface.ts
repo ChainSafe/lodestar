@@ -1,5 +1,5 @@
 import {IBeaconParams} from "@chainsafe/lodestar-params";
-import {IAllForksSSZTypes, IBeaconSSZTypes, Slot, Version} from "@chainsafe/lodestar-types";
+import {Epoch, IAllForksSSZTypes, IBeaconSSZTypes, Slot, Version} from "@chainsafe/lodestar-types";
 
 export enum ForkName {
   phase0 = "phase0",
@@ -8,7 +8,7 @@ export enum ForkName {
 
 export interface IForkInfo {
   name: ForkName;
-  slot: Slot;
+  epoch: Epoch;
   version: Version;
 }
 

@@ -3,7 +3,7 @@ import Gossipsub from "libp2p-gossipsub";
 import {InMessage} from "libp2p-interfaces/src/pubsub";
 import Libp2p from "libp2p";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {ATTESTATION_SUBNET_COUNT, phase0, Root} from "@chainsafe/lodestar-types";
+import {ATTESTATION_SUBNET_COUNT, phase0} from "@chainsafe/lodestar-types";
 import {ILogger, toJson} from "@chainsafe/lodestar-utils";
 import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 
@@ -16,12 +16,13 @@ import {DEFAULT_ENCODING} from "./constants";
 import {GossipValidationError} from "./errors";
 import {ERR_TOPIC_VALIDATOR_REJECT} from "libp2p-gossipsub/src/constants";
 import {prepareGossipMsg} from "./message";
+import {IBeaconChain} from "../../chain";
 
 interface IGossipsubModules {
   config: IBeaconConfig;
-  genesisValidatorsRoot: Root;
   libp2p: Libp2p;
   validatorFns: TopicValidatorFnMap;
+  chain: IBeaconChain;
   logger: ILogger;
   metrics?: IMetrics;
 }
@@ -41,7 +42,7 @@ interface IGossipsubModules {
  */
 export class Eth2Gossipsub extends Gossipsub {
   private readonly config: IBeaconConfig;
-  private readonly genesisValidatorsRoot: Root;
+  private readonly chain: IBeaconChain;
   private readonly logger: ILogger;
   private readonly metrics?: IMetrics;
   /**
@@ -59,7 +60,7 @@ export class Eth2Gossipsub extends Gossipsub {
    */
   private statusInterval?: NodeJS.Timeout;
 
-  constructor({config, genesisValidatorsRoot, libp2p, validatorFns, logger, metrics}: IGossipsubModules) {
+  constructor({config, libp2p, validatorFns, logger, chain, metrics}: IGossipsubModules) {
     // Gossipsub parameters defined here:
     // https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/p2p-interface.md#the-gossip-domain-gossipsub
     super(libp2p, {
@@ -71,7 +72,7 @@ export class Eth2Gossipsub extends Gossipsub {
       Dlazy: 6,
     });
     this.config = config;
-    this.genesisValidatorsRoot = genesisValidatorsRoot;
+    this.chain = chain;
     this.logger = logger;
     this.metrics = metrics;
 
@@ -276,13 +277,13 @@ export class Eth2Gossipsub extends Gossipsub {
   }
 
   private getGossipTopicString(topic: GossipTopic): string {
-    return getGossipTopicString(this.config, topic, this.genesisValidatorsRoot);
+    return getGossipTopicString(this.chain, topic);
   }
 
   private getGossipTopic(topicString: string): GossipTopic {
     let topic = this.gossipTopics.get(topicString);
     if (topic == null) {
-      topic = getGossipTopic(this.config, topicString, this.genesisValidatorsRoot);
+      topic = getGossipTopic(this.chain, topicString);
       this.gossipTopics.set(topicString, topic);
     }
     return topic;

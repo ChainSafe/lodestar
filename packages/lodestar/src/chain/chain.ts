@@ -6,15 +6,14 @@ import {
   CachedBeaconState,
   computeEpochAtSlot,
   computeForkDigest,
-  computeForkNameFromForkDigest,
   computeStartSlotAtEpoch,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
-import {IBeaconConfig, ForkName} from "@chainsafe/lodestar-config";
+import {IBeaconConfig, ForkName, IForkInfo} from "@chainsafe/lodestar-config";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {allForks, ForkDigest, Number64, Root, Slot} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
-import {TreeBacked} from "@chainsafe/ssz";
+import {byteArrayEquals, toHexString, TreeBacked} from "@chainsafe/ssz";
 import {AbortController} from "abort-controller";
 import {FAR_FUTURE_EPOCH, GENESIS_EPOCH, ZERO_HASH} from "../constants";
 import {IBeaconDb} from "../db";
@@ -68,6 +67,7 @@ export class BeaconChain implements IBeaconChain {
    */
   protected internalEmitter: ChainEventEmitter;
   private abortController: AbortController;
+  private forkDigestCache: Map<ForkName, ForkDigest> = new Map<ForkName, ForkDigest>();
 
   constructor({opts, config, db, logger, metrics, anchorState}: IBeaconChainModules) {
     this.opts = opts;
@@ -134,6 +134,7 @@ export class BeaconChain implements IBeaconChain {
       signal: this.abortController.signal,
     });
     handleChainEvents.bind(this)(this.abortController.signal);
+    this.initForkDigestCache();
   }
 
   close(): void {
@@ -257,26 +258,43 @@ export class BeaconChain implements IBeaconChain {
     });
   }
 
-  getForkDigest(): ForkDigest {
-    const state = this.getHeadState();
-    return computeForkDigest(this.config, state.fork.currentVersion, this.genesisValidatorsRoot);
+  getHeadForkDigest(): ForkDigest {
+    return this.getForkDigest(this.getHeadForkName());
+  }
+  getClockForkDigest(): ForkDigest {
+    return this.getForkDigest(this.getClockForkName());
   }
 
-  getForkName(): ForkName {
-    return computeForkNameFromForkDigest(this.config, this.genesisValidatorsRoot, this.getForkDigest());
+  getForkDigest(forkName: ForkName): phase0.ForkDigest {
+    const forkDigest = this.forkDigestCache.get(forkName);
+    if (forkDigest) return forkDigest;
+    throw new Error("No forkDigest for " + forkName);
+  }
+
+  getHeadForkName(): ForkName {
+    return this.config.getForkName(this.getHeadState().slot);
+  }
+
+  getClockForkName(): ForkName {
+    return this.config.getForkName(this.clock.currentSlot);
+  }
+
+  getForkName(forkDigest: ForkDigest): ForkName {
+    for (const [name, value] of this.forkDigestCache.entries()) {
+      if (byteArrayEquals(forkDigest as Uint8Array, value as Uint8Array)) {
+        return name;
+      }
+    }
+    throw new Error("No fork name for fork digest" + toHexString(forkDigest));
   }
 
   getENRForkID(): phase0.ENRForkID {
-    const state = this.getHeadState();
-    const currentVersion = state.fork.currentVersion;
-
-    const forkDigest = this.getForkDigest();
+    const {currentFork, nextFork} = this.getForks();
 
     return {
-      forkDigest,
-      // TODO figure out forking
-      nextForkVersion: currentVersion.valueOf() as Uint8Array,
-      nextForkEpoch: FAR_FUTURE_EPOCH,
+      forkDigest: this.getHeadForkDigest(),
+      nextForkVersion: nextFork ? nextFork.version : currentFork.version,
+      nextForkEpoch: nextFork ? nextFork.epoch : FAR_FUTURE_EPOCH,
     };
   }
 
@@ -284,11 +302,39 @@ export class BeaconChain implements IBeaconChain {
     const head = this.forkChoice.getHead();
     const finalizedCheckpoint = this.forkChoice.getFinalizedCheckpoint();
     return {
-      forkDigest: this.getForkDigest(),
+      forkDigest: this.getHeadForkDigest(),
       finalizedRoot: finalizedCheckpoint.epoch === GENESIS_EPOCH ? ZERO_HASH : finalizedCheckpoint.root,
       finalizedEpoch: finalizedCheckpoint.epoch,
       headRoot: head.blockRoot,
       headSlot: head.slot,
+    };
+  }
+
+  /**
+   * Precompute current fork and next fork if it's available
+   */
+  private initForkDigestCache(): void {
+    const {currentFork, nextFork} = this.getForks();
+    this.forkDigestCache.set(
+      currentFork.name,
+      computeForkDigest(this.config, currentFork.version, this.genesisValidatorsRoot)
+    );
+    if (nextFork) {
+      this.forkDigestCache.set(
+        nextFork.name,
+        computeForkDigest(this.config, nextFork.version, this.genesisValidatorsRoot)
+      );
+    }
+  }
+
+  private getForks(): {currentFork: IForkInfo; nextFork?: IForkInfo} {
+    const headForkName = this.getHeadForkName();
+    const allForks = Object.values(this.config.getForkInfoRecord());
+    const forkIndex = allForks.map((fork) => fork.name).indexOf(headForkName);
+    const hasNextFork = forkIndex < allForks.length - 1 && !isFinite(allForks[forkIndex + 1].epoch);
+    return {
+      currentFork: allForks[forkIndex],
+      nextFork: hasNextFork ? allForks[forkIndex + 1] : undefined,
     };
   }
 }

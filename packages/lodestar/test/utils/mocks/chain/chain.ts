@@ -1,13 +1,12 @@
 import {AbortController} from "abort-controller";
 import sinon from "sinon";
 
-import {TreeBacked} from "@chainsafe/ssz";
+import {byteArrayEquals, toHexString, TreeBacked} from "@chainsafe/ssz";
 import {allForks, ForkDigest, Number64, Root, Slot, Uint16, Uint64} from "@chainsafe/lodestar-types";
 import {IBeaconConfig, ForkName} from "@chainsafe/lodestar-config";
 import {
   CachedBeaconState,
   computeForkDigest,
-  computeForkNameFromForkDigest,
   createCachedBeaconState,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
@@ -50,6 +49,7 @@ export class MockBeaconChain implements IBeaconChain {
   private state: TreeBacked<allForks.BeaconState>;
   private config: IBeaconConfig;
   private abortController: AbortController;
+  private forkDigestCache: Map<ForkName, ForkDigest> = new Map<ForkName, ForkDigest>();
 
   constructor({genesisTime, chainId, networkId, state, config}: IMockChainParams) {
     this.genesisTime = genesisTime ?? state.genesisTime;
@@ -83,6 +83,8 @@ export class MockBeaconChain implements IBeaconChain {
       checkpointStateCache: this.checkpointStateCache,
       db: new StubbedBeaconDb(sinon),
     });
+    const fork = Object.values(this.config.getForkInfoRecord())[0];
+    this.forkDigestCache.set(fork.name, computeForkDigest(this.config, fork.version, this.genesisValidatorsRoot));
   }
 
   async getHeadBlock(): Promise<null> {
@@ -118,12 +120,32 @@ export class MockBeaconChain implements IBeaconChain {
     return this.state.finalizedCheckpoint;
   }
 
-  getForkDigest(): ForkDigest {
-    return computeForkDigest(this.config, this.state.fork.currentVersion, this.genesisValidatorsRoot);
+  getHeadForkDigest(): ForkDigest {
+    return Array.from(this.forkDigestCache.values())[0];
   }
 
-  getForkName(): ForkName {
-    return computeForkNameFromForkDigest(this.config, this.genesisValidatorsRoot, this.getForkDigest());
+  getClockForkDigest(): ForkDigest {
+    return this.getHeadForkDigest();
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  getForkDigest(_: ForkName): ForkDigest {
+    return this.getHeadForkDigest();
+  }
+
+  getHeadForkName(): ForkName {
+    return Array.from(this.forkDigestCache.keys())[0];
+  }
+
+  getClockForkName(): ForkName {
+    return this.getHeadForkName();
+  }
+
+  getForkName(forkDigest: ForkDigest): ForkName {
+    if (!byteArrayEquals(forkDigest as Uint8Array, this.getHeadForkDigest() as Uint8Array)) {
+      throw new Error("Invalid fork digest " + toHexString(forkDigest));
+    }
+    return this.getHeadForkName();
   }
 
   getENRForkID(): phase0.ENRForkID {
@@ -161,7 +183,7 @@ export class MockBeaconChain implements IBeaconChain {
 
   getStatus(): phase0.Status {
     return {
-      forkDigest: this.getForkDigest(),
+      forkDigest: this.getHeadForkDigest(),
       finalizedRoot: Buffer.alloc(32),
       finalizedEpoch: 0,
       headRoot: Buffer.alloc(32),

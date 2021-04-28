@@ -21,18 +21,3 @@ export function computeForkDigest(
   const root = computeForkDataRoot(config, currentVersion, genesisValidatorsRoot);
   return (root.valueOf() as Uint8Array).slice(0, 4);
 }
-
-export function computeForkNameFromForkDigest(
-  config: IBeaconConfig,
-  genesisValidatorsRoot: Root,
-  forkDigest: ForkDigest
-): ForkName {
-  for (const {name, version} of Object.values(config.getForkInfoRecord())) {
-    if (
-      byteArrayEquals(forkDigest as Uint8Array, computeForkDigest(config, version, genesisValidatorsRoot) as Uint8Array)
-    ) {
-      return name;
-    }
-  }
-  throw new Error(`No known fork for fork digest: ${toHexString(forkDigest)}`);
-}

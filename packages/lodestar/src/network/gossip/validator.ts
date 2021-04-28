@@ -95,8 +95,6 @@ export function createValidatorFnsByTopic(
   validatorFnsByType: {[K in GossipType]: TopicValidatorFn}
 ): TopicValidatorFnMap {
   const validatorFnsByTopic = new Map<string, TopicValidatorFn>();
-  const genesisValidatorsRoot = modules.chain.genesisValidatorsRoot;
-
   const staticGossipTypes: GossipType[] = [
     GossipType.beacon_block,
     GossipType.beacon_aggregate_and_proof,
@@ -111,7 +109,7 @@ export function createValidatorFnsByTopic(
 
   for (const type of staticGossipTypes) {
     const topic = {type, fork, encoding: DEFAULT_ENCODING} as GossipTopic;
-    const topicString = getGossipTopicString(modules.config, topic, genesisValidatorsRoot);
+    const topicString = getGossipTopicString(modules.chain, topic);
     validatorFnsByTopic.set(topicString, validatorFnsByType[type]);
   }
 
@@ -123,7 +121,7 @@ export function createValidatorFnsByTopic(
       encoding: DEFAULT_ENCODING,
       subnet,
     } as GossipTopic;
-    const topicString = getGossipTopicString(modules.config, topic, genesisValidatorsRoot);
+    const topicString = getGossipTopicString(modules.chain, topic);
     const topicValidatorFn = validatorFnsByType[GossipType.beacon_attestation];
     validatorFnsByTopic.set(topicString, topicValidatorFn);
   }

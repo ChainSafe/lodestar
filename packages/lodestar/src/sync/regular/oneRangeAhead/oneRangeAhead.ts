@@ -46,7 +46,7 @@ export class ORARegularSync extends (EventEmitter as {new (): RegularSyncEventEm
     this.logger.verbose("Regular Sync: Current slot at start", {currentSlot});
     this.controller = new AbortController();
     this.network.gossip.handleTopic(
-      {type: GossipType.beacon_block, fork: this.chain.getForkName()},
+      {type: GossipType.beacon_block, fork: this.chain.getHeadForkName()},
       this.onGossipBlock as GossipHandlerFn
     );
     this.chain.emitter.on(ChainEvent.block, this.onProcessedBlock);
@@ -62,7 +62,7 @@ export class ORARegularSync extends (EventEmitter as {new (): RegularSyncEventEm
       this.controller.abort();
     }
     this.network.gossip.unhandleTopic(
-      {type: GossipType.beacon_block, fork: this.chain.getForkName()},
+      {type: GossipType.beacon_block, fork: this.chain.getHeadForkName()},
       this.onGossipBlock as GossipHandlerFn
     );
     this.chain.emitter.off(ChainEvent.block, this.onProcessedBlock);

@@ -71,7 +71,7 @@ export class MetadataController {
   }
 
   private handleForkVersion(): void {
-    const forkDigest = this.chain.getForkDigest();
+    const forkDigest = this.chain.getHeadForkDigest();
     this.logger.verbose(`Metadata: received new fork digest ${toHexString(forkDigest)}`);
     if (this.enr) {
       this.enr.set("eth2", Buffer.from(this.config.types.phase0.ENRForkID.serialize(this.chain.getENRForkID())));
