@@ -148,7 +148,7 @@ export function createLodestarMetrics(
       buckets: [0.1, 1, 10],
     }),
     blsThreadPoolQueueLength: register.gauge({
-      name: "lodestar_block_processor_queue_length",
+      name: "lodestar_bls_thread_pool_queue_length",
       help: "Count of total block processor queue length",
     }),
     blsThreadPoolTotalJobsGroupsStarted: register.gauge({
