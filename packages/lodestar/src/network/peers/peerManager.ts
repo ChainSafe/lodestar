@@ -11,14 +11,7 @@ import {IReqResp} from "../reqresp";
 import {Libp2pPeerMetadataStore} from "./metastore";
 import {PeerDiscovery} from "./discover";
 import {IPeerRpcScoreStore, ScoreState} from "./score";
-import {
-  getConnectedPeerIds,
-  PeerMapDelay,
-  assertPeerRelevance,
-  prioritizePeers,
-  IrrelevantPeerError,
-} from "./utils";
-import {getConnectedPeerIds, PeerMapDelay, assertPeerRelevance, prioritizePeers} from "./utils";
+import {getConnectedPeerIds, PeerMapDelay, assertPeerRelevance, prioritizePeers, IrrelevantPeerError} from "./utils";
 import {prettyPrintPeerId} from "../util";
 import {IAttestationService} from "../attestationService";
 

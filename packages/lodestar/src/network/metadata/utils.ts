@@ -1,7 +1,8 @@
-import {IBeaconConfig, IForkInfo} from "@chainsafe/lodestar-config";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Epoch, phase0} from "@chainsafe/lodestar-types";
 import {FAR_FUTURE_EPOCH} from "../../constants";
 import {IForkDigestContext} from "../../util/forkDigestContext";
+import {getCurrentAndNextFork} from "../util";
 
 export function getENRForkID(
   config: IBeaconConfig,
@@ -17,20 +18,5 @@ export function getENRForkID(
     nextForkVersion: nextFork ? nextFork.version : currentFork.version,
     // next fork epoch
     nextForkEpoch: nextFork ? nextFork.epoch : FAR_FUTURE_EPOCH,
-  };
-}
-
-function getCurrentAndNextFork(
-  forks: IForkInfo[],
-  epoch: Epoch
-): {currentFork: IForkInfo; nextFork: IForkInfo | undefined} {
-  // NOTE: forks must be sorted by descending epoch, latest fork first
-  const forksAscending = forks.sort((a, b) => b.epoch - a.epoch);
-  // Find the index of the first fork that is over fork epoch
-  const currentForkIdx = forksAscending.findIndex((fork) => epoch > fork.epoch);
-  const nextForkIdx = currentForkIdx + 1;
-  return {
-    currentFork: forksAscending[currentForkIdx] || forks[0],
-    nextFork: forksAscending[nextForkIdx],
   };
 }

@@ -1,11 +1,12 @@
-import {computeSubnetForCommitteesAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
-import {IBeaconConfig, ForkName} from "@chainsafe/lodestar-config";
+import {computeEpochAtSlot, computeSubnetForCommitteesAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
+import {IBeaconConfig, ForkName, IForkInfo} from "@chainsafe/lodestar-config";
 import {ATTESTATION_SUBNET_COUNT, phase0, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {assert, ILogger, randBetween} from "@chainsafe/lodestar-utils";
 import {ChainEvent, IBeaconChain} from "../chain";
 import {Eth2Gossipsub, GossipType} from "./gossip";
 import {MetadataController} from "./metadata";
 import {SubnetMap} from "./peers/utils";
+import {getCurrentAndNextFork} from "./util";
 
 /// The time (in slots) before a last seen validator is considered absent and we unsubscribe from the random
 /// gossip topics that we subscribed to due to the validator connection.
@@ -59,7 +60,7 @@ export class AttestationService implements IAttestationService {
     this.gossip = modules.gossip;
     this.metadata = modules.metadata;
     this.logger = modules.logger;
-    const currentFork = this.chain.getForkName();
+    const currentFork = this.chain.getHeadForkName();
     this.randomSubnets = new SubnetMap(currentFork);
     this.committeeSubnets = new SubnetMap(currentFork);
     this.subscribedCommitteeSubnets = new SubnetMap(currentFork);
@@ -132,14 +133,17 @@ export class AttestationService implements IAttestationService {
 
     const nextFork = this.getNextFork();
     // there is a planned hard fork
-    if (nextFork && nextFork.slot !== Infinity) {
+    if (nextFork && nextFork.epoch !== Infinity) {
       let waitingSlots =
-        nextFork.slot - EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION * SLOTS_PER_EPOCH - this.chain.clock.currentSlot;
+        (nextFork.epoch - EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION) * SLOTS_PER_EPOCH - this.chain.clock.currentSlot;
       if (waitingSlots < 0) {
         // we are probably less than EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION to the next hardfork
         waitingSlots = 0;
       }
-      this.logger.info("Preparing for the next fork random subnet subscriptions", {waitingSlots, nextFork});
+      this.logger.info("Preparing for the next fork random subnet subscriptions", {
+        waitingSlots,
+        nextFork: nextFork.name,
+      });
       const timeToPreparedEpoch = waitingSlots * SECONDS_PER_SLOT * 1000;
       if (timeToPreparedEpoch > 0) {
         this.nextForkSubscriptionTimer = setTimeout(() => {
@@ -149,17 +153,10 @@ export class AttestationService implements IAttestationService {
     }
   }
 
-  private getNextFork(): {name: ForkName; slot: Slot} | null {
-    const currentFork = this.chain.getForkName();
-    const forkInfoRecord = this.config.getForkInfoRecord();
-    const allForks = Object.keys(forkInfoRecord) as ForkName[];
-    const forkIndex = allForks.indexOf(currentFork);
-    // there is a planned hard fork
-    if (forkIndex !== allForks.length - 1) {
-      const nextFork = allForks[forkIndex + 1];
-      return forkInfoRecord[nextFork];
-    }
-    return null;
+  private getNextFork(): IForkInfo | undefined {
+    const headEpoch = computeEpochAtSlot(this.config, this.chain.forkChoice.getHead().slot);
+    const {nextFork} = getCurrentAndNextFork(Object.values(this.config.forks), headEpoch);
+    return nextFork;
   }
 
   /**
@@ -235,7 +232,7 @@ export class AttestationService implements IAttestationService {
    */
   private onSlot = (slot: Slot): void => {
     try {
-      const fork = this.chain.getForkName();
+      const fork = this.chain.getHeadForkName();
       if (fork !== this.randomSubnets.getForkName() && fork === this.nextForkRandomSubnets?.getForkName()) {
         this.transitionToNextFork();
       }
@@ -248,7 +245,7 @@ export class AttestationService implements IAttestationService {
   };
 
   private transitionToNextFork(): void {
-    const fork = this.chain.getForkName();
+    const fork = this.chain.getHeadForkName();
     assert.true(this.nextForkRandomSubnets !== undefined, "No next fork random subnets subscriptions");
     assert.equal(
       fork,
@@ -275,7 +272,7 @@ export class AttestationService implements IAttestationService {
   private handleSubscription(subnetId: number, slot: Slot): void {
     // Check if the subnet currently exists as a long-lasting random subnet
     const randomSubnetToSlot = this.randomSubnets.getToSlot(subnetId);
-    const fork = this.chain.getForkName();
+    const fork = this.chain.getHeadForkName();
     if (randomSubnetToSlot !== undefined) {
       // just extend the expiry
       this.randomSubnets.request({subnetId, toSlot: slot});
@@ -315,7 +312,7 @@ export class AttestationService implements IAttestationService {
   private handleRandomSubnetExpiry(slot: Slot): void {
     const allRandomSubnets = this.randomSubnets.getAll();
     const inactiveRandomSubnets = this.randomSubnets.getInactive(slot);
-    const currentFork = this.chain.getForkName();
+    const currentFork = this.chain.getHeadForkName();
     const randomSubnetFork = this.randomSubnets.getForkName();
     if (allRandomSubnets.length === ATTESTATION_SUBNET_COUNT) {
       // We are at capacity, simply increase the timeout of the current subnet
@@ -368,7 +365,7 @@ export class AttestationService implements IAttestationService {
     // random subnet is renewed automatically
     let numRandomSubnets = this.randomSubnets.getAll().length;
     // subscribe to more random subnets
-    const currentFork = this.chain.getForkName();
+    const currentFork = this.chain.getHeadForkName();
     const targetRandomSubnetCount = numValidators * RANDOM_SUBNETS_PER_VALIDATOR;
     if (targetRandomSubnetCount > numRandomSubnets) {
       this.subscribeToRandomSubnets(currentFork, targetRandomSubnetCount - numRandomSubnets);

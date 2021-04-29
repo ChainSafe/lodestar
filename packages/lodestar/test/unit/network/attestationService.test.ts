@@ -126,10 +126,10 @@ describe("AttestationService", function () {
   });
 
   it("should prepare for a hard fork", async () => {
-    const BK_ALTAIR_FORK_SLOT = config.params.ALTAIR_FORK_SLOT;
-    const altairSlot = 3 * EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION * SLOTS_PER_EPOCH;
-    config.params.ALTAIR_FORK_SLOT = altairSlot;
-    expect(config.getForkInfoRecord()["altair"].slot).to.be.equal(altairSlot);
+    const BK_ALTAIR_FORK_EPOCH = config.forks.altair.epoch;
+    const altairEpoch = 3 * EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION;
+    config.forks.altair.epoch = altairEpoch;
+    expect(config.forks.altair.epoch).to.be.equal(altairEpoch);
     service.stop();
     service = new AttestationService({
       config,
@@ -140,8 +140,8 @@ describe("AttestationService", function () {
     });
     service.start();
     service.addBeaconCommitteeSubscriptions([subscription]);
-    // run per 32 slots (or any num slots < 150)
-    while (chain.clock.currentSlot < altairSlot - EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION * SLOTS_PER_EPOCH) {
+    // run per 4 * 32 slots (or any num slots < 150)
+    while (chain.clock.currentSlot < (altairEpoch - EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION) * SLOTS_PER_EPOCH) {
       // avoid known validator expiry
       service.addBeaconCommitteeSubscriptions([subscription]);
       sandbox.clock.tick(4 * SLOTS_PER_EPOCH * SECONDS_PER_SLOT * 1000);
@@ -149,17 +149,17 @@ describe("AttestationService", function () {
     // 1 known validator
     expect(service.getNextForkRandomSubnets().length).to.be.equal(1);
     const randomSubnet = service.getNextForkRandomSubnets()[0];
-    while (chain.clock.currentSlot < altairSlot) {
+    while (chain.clock.currentSlot * SLOTS_PER_EPOCH < altairEpoch) {
       service.addBeaconCommitteeSubscriptions([subscription]);
       sandbox.clock.tick(4 * SLOTS_PER_EPOCH * SECONDS_PER_SLOT * 1000);
     }
     // TODO: passed altair, but chain always return "phase0" now
-    sandbox.stub(chain, "getForkName").returns(ForkName.altair);
+    sandbox.stub(chain, "getHeadForkName").returns(ForkName.altair);
     sandbox.clock.tick(SECONDS_PER_SLOT * 1000);
     // transition to altair
     expect(service.getNextForkRandomSubnets()).to.be.deep.equal([]);
     expect(service.getActiveSubnets().includes(randomSubnet)).to.be.true;
-    config.params.ALTAIR_FORK_SLOT = BK_ALTAIR_FORK_SLOT;
+    config.forks.altair.epoch = BK_ALTAIR_FORK_EPOCH;
   });
 
   it("handle committee subnet the same to random subnet", () => {

@@ -9,6 +9,8 @@ import Multiaddr from "multiaddr";
 import {networkInterfaces} from "os";
 import {ENR} from "@chainsafe/discv5";
 import MetadataBook from "libp2p/src/peer-store/metadata-book";
+import {IForkInfo} from "@chainsafe/lodestar-config";
+import {Epoch} from "@chainsafe/lodestar-types";
 
 // req/resp
 
@@ -109,4 +111,20 @@ export function prettyPrintPeerId(peerId: PeerId): string {
 
 export function getAgentVersionFromPeerStore(peerId: PeerId, metadataBook: MetadataBook): string {
   return new TextDecoder().decode(metadataBook.getValue(peerId, "AgentVersion")) || "N/A";
+}
+
+export function getCurrentAndNextFork(
+  forks: IForkInfo[],
+  epoch: Epoch
+): {currentFork: IForkInfo; nextFork: IForkInfo | undefined} {
+  // NOTE: forks must be sorted by descending epoch, latest fork first
+  const forksDescending = forks.sort((a, b) => b.epoch - a.epoch);
+  // Find the index of the first fork that is over fork epoch
+  const currentForkIdx = forksDescending.findIndex((fork) => epoch >= fork.epoch);
+  const nextForkIdx = currentForkIdx - 1;
+  const hasNextFork = forksDescending[nextForkIdx] && forksDescending[nextForkIdx].epoch !== Infinity;
+  return {
+    currentFork: forksDescending[currentForkIdx] || forks[0],
+    nextFork: hasNextFork ? forksDescending[nextForkIdx] : undefined,
+  };
 }
