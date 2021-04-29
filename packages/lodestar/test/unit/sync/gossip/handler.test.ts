@@ -42,6 +42,7 @@ describe("gossip handler", function () {
       validatorFns: new Map<string, TopicValidatorFn>(),
       logger: testLogger(),
       forkDigestContext,
+      metrics: null,
     });
     networkStub.gossip = gossipsub;
     gossipsub.start();
