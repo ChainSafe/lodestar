@@ -23,7 +23,7 @@ type BlockProcessorModules = {
   regen: IStateRegenerator;
   emitter: ChainEventEmitter;
   bls: IBlsVerifier;
-  metrics?: IMetrics;
+  metrics: IMetrics | null;
   clock: IBeaconClock;
   checkpointStateCache: CheckpointStateCache;
 };
@@ -46,12 +46,14 @@ export class BlockProcessor {
     this.modules = modules;
     this.jobQueue = new JobQueue(
       {maxLength, signal},
-      modules.metrics && {
-        length: modules.metrics.blockProcessorQueueLength,
-        droppedJobs: modules.metrics.blockProcessorQueueDroppedJobs,
-        jobTime: modules.metrics.blockProcessorQueueJobTime,
-        jobWaitTime: modules.metrics.blockProcessorQueueJobWaitTime,
-      }
+      modules.metrics
+        ? {
+            length: modules.metrics.blockProcessorQueueLength,
+            droppedJobs: modules.metrics.blockProcessorQueueDroppedJobs,
+            jobTime: modules.metrics.blockProcessorQueueJobTime,
+            jobWaitTime: modules.metrics.blockProcessorQueueJobWaitTime,
+          }
+        : undefined
     );
   }
 

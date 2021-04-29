@@ -31,7 +31,7 @@ const gossipQueueOpts: {[K in GossipType]: {maxLength: number; type: QueueType}}
 
 export function createTopicValidatorFnMap(
   modules: IObjectValidatorModules,
-  metrics: IMetrics | undefined,
+  metrics: IMetrics | null,
   signal: AbortSignal
 ): TopicValidatorFnMap {
   const wrappedValidatorFns = mapValues(validatorFns, (validatorFn, type) =>
@@ -59,17 +59,19 @@ export function wrapWithQueue<K extends GossipType>(
   validatorFn: ValidatorFn<K>,
   modules: IObjectValidatorModules,
   queueOpts: JobQueueOpts,
-  metrics: IMetrics | undefined,
+  metrics: IMetrics | null,
   type: GossipType
 ): TopicValidatorFn {
   const jobQueue = new JobQueue(
     queueOpts,
-    metrics && {
-      length: metrics.gossipValidationQueueLength.child({topic: type}),
-      droppedJobs: metrics.gossipValidationQueueDroppedJobs.child({topic: type}),
-      jobTime: metrics.gossipValidationQueueJobTime.child({topic: type}),
-      jobWaitTime: metrics.gossipValidationQueueJobWaitTime.child({topic: type}),
-    }
+    metrics
+      ? {
+          length: metrics.gossipValidationQueueLength.child({topic: type}),
+          droppedJobs: metrics.gossipValidationQueueDroppedJobs.child({topic: type}),
+          jobTime: metrics.gossipValidationQueueJobTime.child({topic: type}),
+          jobWaitTime: metrics.gossipValidationQueueJobWaitTime.child({topic: type}),
+        }
+      : undefined
   );
   return async function (_topicStr, gossipMsg) {
     const {gossipTopic, gossipObject} = parseGossipMsg<K>(gossipMsg);
