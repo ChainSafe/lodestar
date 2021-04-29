@@ -3,26 +3,39 @@
 // Definitions by: Jaco Greeff <https://github.com/jacogr>
 // Definitions: https://github.com/DefinitelyTyped/DefinitelyTyped
 
-/// <reference types="libp2p-bootstrap"/>
+// import PeerDiscovery from 'libp2p-interfaces/src/peer-discovery/types';
+// import { Multiaddr } from 'multiaddr';
 
-declare namespace LibP2pMdns {
-  type Options = {
-    broadcast?: boolean,
-    interval?: number,
-    peerInfo: PeerInfo,
-    port?: number,
-    serviceTag?: string
-  };
+// type PeerInfo = {
+//   id: import("peer-id");
+//   multiaddrs: Multiaddr[];
+// };
 
-  type Events = 'peer';
-}
+// declare namespace LibP2pMdns {
+//   type Options = {
+//     broadcast?: boolean,
+//     interval?: number,
+//     peerInfo: PeerInfo,
+//     port?: number,
+//     serviceTag?: string
+//   };
 
-declare class LibP2pMdns extends LibP2pBootstrap {
-  constructor (options: LibP2pMdns.Options);
+//   type Events = 'peer';
+// }
 
-  on (event: LibP2pMdns.Events, cb: (peerInfo: PeerInfo) => any): this;
-}
+// declare class LibP2pMdns extends PeerDiscovery {
+//   constructor (options: LibP2pMdns.Options);
+
+//   on (event: LibP2pMdns.Events, cb: (peerInfo: PeerInfo) => any): this;
+// }
+
+// declare module 'libp2p-mdns' {
+//   export default LibP2pMdns;
+// }
 
 declare module 'libp2p-mdns' {
-export default LibP2pMdns;
+  import { PeerDiscoveryFactory } from 'libp2p-interfaces/src/peer-discovery/types';
+
+  const mdns: PeerDiscoveryFactory;
+  export default mdns;
 }
