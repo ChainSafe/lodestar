@@ -74,7 +74,7 @@
     "js-yaml": "^3.14.0",
     "lockfile": "^1.0.4",
     "lodash": "^4.17.15",
-    "multiaddr": "^8.0.0",
+    "multiaddr": "^9.0.1",
     "peer-id": "^0.14.0",
     "rimraf": "^3.0.0",
     "source-map-support": "^0.5.19",

@@ -3012,11 +3012,6 @@
     mkdirp-promise "^5.0.1"
     mz "^2.5.0"
 
-"@zxing/text-encoding@0.9.0":
-  version "0.9.0"
-  resolved "https://registry.yarnpkg.com/@zxing/text-encoding/-/text-encoding-0.9.0.tgz#fb50ffabc6c7c66a0c96b4c03e3d9be74864b70b"
-  integrity sha512-U/4aVJ2mxI0aDNI8Uq0wEhMgY+u4CNtEb0om3+y3+niDAsoTCOB33UF0sxpzqzdqXLqmvc+vZyAt4O8pPdfkwA==
-
 JSONStream@^1.0.4, JSONStream@^1.3.4:
   version "1.3.5"
   resolved "https://registry.yarnpkg.com/JSONStream/-/JSONStream-1.3.5.tgz#3208c1f08d3a4d99261ab64f92302bc15e111ca0"
@@ -5302,7 +5297,7 @@ err-code@^1.0.0:
   resolved "https://registry.yarnpkg.com/err-code/-/err-code-1.1.2.tgz#06e0116d3028f6aef4806849eb0ea6a748ae6960"
   integrity sha1-BuARbTAo9q70gGhJ6w6mp0iuaWA=
 
-err-code@^2.0.0, err-code@^2.0.3:
+err-code@^2.0.0:
   version "2.0.3"
   resolved "https://registry.yarnpkg.com/err-code/-/err-code-2.0.3.tgz#23c2f3b756ffdfc608d30e27c9a941024807e7f9"
   integrity sha512-2bmlRpNKBxT/CRmPOlyISQpNj+qSeYvcym/uT0Jx2bMOlKLtSy1ZmLuVxSEKKyor/N5yhvp/ZiG1oE3DEYMSFA==
@@ -8974,20 +8969,6 @@ ms@2.1.3, ms@^2.0.0, ms@^2.1.1:
   resolved "https://registry.yarnpkg.com/ms/-/ms-2.1.3.tgz#574c8138ce1d2b5861f0b44579dbadd60c6615b2"
   integrity sha512-6FlzubTLZG3J2a/NVCAleEhjzq5oxgHyaCU9yYXvcLsvoVaHJq/s5xXI6/XXP6tz7R9xAOtHnSO/tXtF3WRTlA==
 
-multiaddr@^8.0.0:
-  version "8.1.2"
-  resolved "https://registry.yarnpkg.com/multiaddr/-/multiaddr-8.1.2.tgz#74060ff8636ba1c01b2cf0ffd53950b852fa9b1f"
-  integrity sha512-r13IzW8+Sv9zab9Gt8RPMIN2WkptIPq99EpAzg4IbJ/zTELhiEwXWr9bAmEatSCI4j/LSA6ESJzvz95JZ+ZYXQ==
-  dependencies:
-    cids "^1.0.0"
-    class-is "^1.1.0"
-    dns-over-http-resolver "^1.0.0"
-    err-code "^2.0.3"
-    is-ip "^3.1.0"
-    multibase "^3.0.0"
-    uint8arrays "^1.1.0"
-    varint "^5.0.0"
-
 multiaddr@^9.0.0, multiaddr@^9.0.1:
   version "9.0.1"
   resolved "https://registry.yarnpkg.com/multiaddr/-/multiaddr-9.0.1.tgz#4a3b5a21b37e4df5b443f2ca957304ea5bfd4604"
@@ -9000,14 +8981,6 @@ multiaddr@^9.0.0, multiaddr@^9.0.1:
     multibase "^4.0.2"
     uint8arrays "^2.1.3"
     varint "^6.0.0"
-
-multibase@^3.0.0:
-  version "3.1.2"
-  resolved "https://registry.yarnpkg.com/multibase/-/multibase-3.1.2.tgz#59314e1e2c35d018db38e4c20bb79026827f0f2f"
-  integrity sha512-bpklWHs70LO3smJUHOjcnzGceJJvn9ui0Vau6Za0B/GBepaXswmW8Ufea0uD9pROf/qCQ4N4lZ3sf3U+SNf0tw==
-  dependencies:
-    "@multiformats/base-x" "^4.0.1"
-    web-encoding "^1.0.6"
 
 multibase@^4.0.1, multibase@^4.0.2, multibase@^4.0.3:
   version "4.0.4"
@@ -10323,9 +10296,9 @@ proto-list@~1.2.1:
   integrity sha1-IS1b/hMYMGpCD2QCuOJv85ZHqEk=
 
 protobufjs@^6.10.1, protobufjs@^6.10.2:
-  version "6.11.0"
-  resolved "https://registry.yarnpkg.com/protobufjs/-/protobufjs-6.11.0.tgz#b890a2d3f64c62f0395e1e000d39ff91634bafb7"
-  integrity sha512-i4usrGD86mtOLnoTwUsVXphDY7yHM2rDiV3JU4Ix43BOtHi0DHy5rSCciX8MRHSYHaxnoc0TcpwEBlrNUAxvQQ==
+  version "6.11.1"
+  resolved "https://registry.yarnpkg.com/protobufjs/-/protobufjs-6.11.1.tgz#327dcee492fbcd421a6cd6200f79bfed6efb2405"
+  integrity sha512-7KCLPvNGF/oDv/OXz+Zn2ViJx8x9WUKs5HrxZ5Gz0F2LD8jSTcsA1z9tBtOlPVVnJELOaFL+zj+oLc/WWSqlzw==
   dependencies:
     "@protobufjs/aspromise" "^1.1.2"
     "@protobufjs/base64" "^1.1.2"
@@ -12374,22 +12347,14 @@ typescript@^4.2.0:
   integrity sha512-V+evlYHZnQkaz8TRBuxTA92yZBPotr5H+WhQ7bD3hZUndx5tGOa1fuCgeSjxAzM1RiN5IzvadIXTVefuuwZCRg==
 
 uglify-js@^3.1.4:
-  version "3.13.4"
-  resolved "https://registry.yarnpkg.com/uglify-js/-/uglify-js-3.13.4.tgz#592588bb9f47ae03b24916e2471218d914955574"
-  integrity sha512-kv7fCkIXyQIilD5/yQy8O+uagsYIOt5cZvs890W40/e/rvjMSzJw81o9Bg0tkURxzZBROtDQhW2LFjOGoK3RZw==
+  version "3.13.5"
+  resolved "https://registry.yarnpkg.com/uglify-js/-/uglify-js-3.13.5.tgz#5d71d6dbba64cf441f32929b1efce7365bb4f113"
+  integrity sha512-xtB8yEqIkn7zmOyS2zUNBsYCBRhDkvlNxMMY2smuJ/qA8NCHeQvKCF3i9Z4k8FJH4+PJvZRtMrPynfZ75+CSZw==
 
 uid-number@0.0.6:
   version "0.0.6"
   resolved "https://registry.yarnpkg.com/uid-number/-/uid-number-0.0.6.tgz#0ea10e8035e8eb5b8e4449f06da1c730663baa81"
   integrity sha1-DqEOgDXo61uOREnwbaHHMGY7qoE=
-
-uint8arrays@^1.1.0:
-  version "1.1.0"
-  resolved "https://registry.yarnpkg.com/uint8arrays/-/uint8arrays-1.1.0.tgz#d034aa65399a9fd213a1579e323f0b29f67d0ed2"
-  integrity sha512-cLdlZ6jnFczsKf5IH1gPHTtcHtPGho5r4CvctohmQjw8K7Q3gFdfIGHxSTdTaCKrL4w09SsPRJTqRS0drYeszA==
-  dependencies:
-    multibase "^3.0.0"
-    web-encoding "^1.0.2"
 
 uint8arrays@^2.0.5, uint8arrays@^2.1.3, uint8arrays@^2.1.4, uint8arrays@^2.1.5:
   version "2.1.5"
@@ -12577,7 +12542,7 @@ util@^0.11.0:
   dependencies:
     inherits "2.0.3"
 
-util@^0.12.0, util@^0.12.3:
+util@^0.12.0:
   version "0.12.3"
   resolved "https://registry.yarnpkg.com/util/-/util-0.12.3.tgz#971bb0292d2cc0c892dab7c6a5d37c2bec707888"
   integrity sha512-I8XkoQwE+fPQEhy9v012V+TSdH2kp9ts29i20TaaDUXsg7x/onePbhFJUExBfv/2ay1ZOp/Vsm3nDlmnFGSAog==
@@ -12680,15 +12645,6 @@ wcwidth@^1.0.0:
   integrity sha1-8LDc+RW8X/FSivrbLA4XtTLaL+g=
   dependencies:
     defaults "^1.0.3"
-
-web-encoding@^1.0.2, web-encoding@^1.0.6:
-  version "1.1.5"
-  resolved "https://registry.yarnpkg.com/web-encoding/-/web-encoding-1.1.5.tgz#fc810cf7667364a6335c939913f5051d3e0c4864"
-  integrity sha512-HYLeVCdJ0+lBYV2FvNZmv3HJ2Nt0QYXqZojk3d9FJOLkwnuhzM9tmamh8d7HPM8QqjKH8DeHkFTx+CFlWpZZDA==
-  dependencies:
-    util "^0.12.3"
-  optionalDependencies:
-    "@zxing/text-encoding" "0.9.0"
 
 webidl-conversions@^4.0.2:
   version "4.0.2"

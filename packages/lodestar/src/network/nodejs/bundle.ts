@@ -10,7 +10,7 @@ import Bootstrap from "libp2p-bootstrap";
 import MDNS from "libp2p-mdns";
 import PeerId from "peer-id";
 import {ENRInput, Discv5Discovery} from "@chainsafe/discv5";
-import { Datastore } from "interface-datastore";
+import {Datastore} from "interface-datastore";
 
 export interface ILibp2pOptions {
   peerId: PeerId;

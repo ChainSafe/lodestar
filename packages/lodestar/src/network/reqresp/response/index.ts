@@ -63,7 +63,7 @@ export async function handleRequest(
           }
         })) as phase0.BeaconBlocksByRootRequest;
 
-        logger.debug("Resp received request", { ...logCtx, requestBody } as unknown as Context);
+        logger.debug("Resp received request", {...logCtx, requestBody} as unknown as Context);
 
         yield* pipe(
           performRequestHandler(method, requestBody, peerId),

@@ -59,7 +59,7 @@ export class ReqResp implements IReqResp {
       for (const encoding of Object.values(ReqRespEncoding)) {
         this.libp2p.handle(
           createRpcProtocol(method, encoding),
-          async ({ connection, stream }: HandlerProps) => {
+          async ({connection, stream}: HandlerProps) => {
             const peerId = connection.remotePeer;
 
             // TODO: Do we really need this now that there is only one encoding?
