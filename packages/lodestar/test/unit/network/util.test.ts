@@ -1,3 +1,4 @@
+import PeerId from "peer-id";
 import Multiaddr from "multiaddr";
 import {expect} from "chai";
 import {
@@ -11,7 +12,6 @@ import {Method, ReqRespEncoding} from "../../../src/constants";
 import {createEnr, createPeerId} from "@chainsafe/lodestar-cli/src/config";
 import {defaultNetworkOptions} from "../../../src/network/options";
 import {fromHexString} from "@chainsafe/ssz";
-import {createNode} from "../../utils/network";
 
 describe("Test isLocalMultiAddr", () => {
   it("should return true for 127.0.0.1", () => {
@@ -72,18 +72,24 @@ describe("getAgentVersionFromPeerStore", () => {
     );
 
     const testAgentVersion = fromHexString("0x1234");
-    const numPeers = 2000;
-    for (let i = 0; i < numPeers; i++) {
-      const node = await createNode("/ip4/127.0.0.1/tcp/0");
-      libp2p.peerStore.addressBook.add(node.peerId, node.multiaddrs);
-      libp2p.peerStore.metadataBook._setValue(node.peerId, "AgentVersion", testAgentVersion);
+    const numPeers = 200;
+    const peers: PeerId[] = [];
 
-      // start the benchmark
-      const start = Date.now();
-      const version = getAgentVersionFromPeerStore(node.peerId, libp2p.peerStore.metadataBook);
-      const timeDiff = Date.now() - start;
-      if (timeDiff > 0) console.log("timeDiff: ", timeDiff);
+    // Write peers to peerStore
+    for (let i = 0; i < numPeers; i++) {
+      const peerId = await createPeerId();
+      libp2p.peerStore.metadataBook._setValue(peerId, "AgentVersion", testAgentVersion);
+      peers.push(peerId);
+    }
+
+    // start the benchmark
+    const start = Date.now();
+    for (const peer of peers) {
+      const version = getAgentVersionFromPeerStore(peer, libp2p.peerStore.metadataBook);
       expect(version).to.be.equal(new TextDecoder().decode(testAgentVersion));
     }
+    const timeDiff = Date.now() - start;
+    // eslint-disable-next-line no-console
+    console.log(`getAgentVersionFromPeerStore x${numPeers}: ${timeDiff} ms`);
   });
 });
