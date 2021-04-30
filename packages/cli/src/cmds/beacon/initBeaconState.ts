@@ -41,12 +41,19 @@ export async function initBeaconState(
 
   const dbHasSomeState = (await db.stateArchive.lastKey()) != null;
 
-  if (args.fetchWeakSubjectivityState) {
-    return await initFromFile("https://ipfs.io/ipns/k51qzi5uqu5dkn6uk4d02pnkwvzcj8a4ro3x1pbs720m6bbrwbuoczmnj3o1u0");
-  } else if (args.weakSubjectivityStateFile) {
+  if (args.weakSubjectivityStateFile) {
     return await initFromFile(args.weakSubjectivityStateFile);
   } else if (dbHasSomeState) {
     return await initStateFromDb(config, db, logger);
+  } else if (args.fetchWeakSubjectivityStateFromIPFS) {
+    const state = await initFromFile("https://ipfs.io/ipfs/QmVsGxwZs4acTDfhQrNYVqccEVxyhALqJuYqgJrbbNAd1Z/state.ssz");
+    const storedStateRoot = await downloadOrLoadFile("./ws-state-root.ssz");
+    state;
+    // verify downloaded state against locally stored state root
+    if (!config.types.Root.equals(state.hashTreeRoot(), storedStateRoot)) {
+      throw new Error("Unable to verify state root downloaded from ");
+    }
+    return state;
   } else {
     const genesisStateFile = args.genesisStateFile || getGenesisFileUrl(args.network || defaultNetwork);
     if (genesisStateFile && !args.forceGenesis) {

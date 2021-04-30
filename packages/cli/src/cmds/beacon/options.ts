@@ -8,7 +8,7 @@ interface IBeaconExtraArgs {
   forceGenesis?: boolean;
   genesisStateFile?: string;
   weakSubjectivityStateFile?: string;
-  fetchWeakSubjectivityState: boolean;
+  fetchWeakSubjectivityStateFromIPFS: boolean;
   logLevel?: LogLevel;
   logLevelFile?: LogLevel;
 }
@@ -29,7 +29,7 @@ export const beaconExtraOptions: ICliCommandOptions<IBeaconExtraArgs> = {
     type: "string",
   },
 
-  fetchWeakSubjectivityState: {
+  fetchWeakSubjectivityStateFromIPFS: {
     description: "Fetch a weak subjectivity state from IPFS to bootstrap the node",
     type: "boolean",
     default: true,
