@@ -1,16 +1,11 @@
-import {BitListType, ContainerType} from "@chainsafe/ssz";
+import {ContainerType} from "@chainsafe/ssz";
 
 import {IPhase0SSZTypes} from "../../phase0";
 import * as altair from "../types";
 
-export type IAltairSSZTypes = Omit<
-  IPhase0SSZTypes,
-  "BeaconBlockBody" | "BeaconBlock" | "SignedBeaconBlock" | "BeaconState"
-> & {
-  // altair
+export type AltairSSZTypeOnly = {
   SyncCommittee: ContainerType<altair.SyncCommittee>;
   SyncCommitteeSignature: ContainerType<altair.SyncCommitteeSignature>;
-  SyncCommiteeBits: BitListType;
   SyncCommitteeContribution: ContainerType<altair.SyncCommitteeContribution>;
   ContributionAndProof: ContainerType<altair.ContributionAndProof>;
   SignedContributionAndProof: ContainerType<altair.SignedContributionAndProof>;
@@ -24,3 +19,9 @@ export type IAltairSSZTypes = Omit<
   LightClientUpdate: ContainerType<altair.LightClientUpdate>;
   LightClientStore: ContainerType<altair.LightClientStore>;
 };
+
+export type IAltairSSZTypes = Omit<
+  IPhase0SSZTypes,
+  "BeaconBlockBody" | "BeaconBlock" | "SignedBeaconBlock" | "BeaconState"
+> &
+  AltairSSZTypeOnly;
