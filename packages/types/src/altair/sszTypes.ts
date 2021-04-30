@@ -6,14 +6,31 @@ import {
   NEXT_SYNC_COMMITTEE_INDEX_FLOORLOG2,
 } from "@chainsafe/lodestar-params";
 import {BitVectorType, ContainerType, VectorType, ListType, RootType, BitListType} from "@chainsafe/ssz";
-import {IPhase0SSZTypes} from "../../phase0";
-import {LazyVariable} from "../../utils/lazyVar";
-import * as altair from "../types";
-import {AltairSSZTypeOnly} from "./interface";
+import {Phase0SSZTypes} from "../phase0";
+import {PrimitiveSSZTypes} from "../primitive";
+import {LazyVariable} from "../utils/lazyVar";
+import * as altair from "./types";
 
-export function getAltairTypes(params: IBeaconParams, phase0: IPhase0SSZTypes): AltairSSZTypeOnly {
+export type AltairSSZTypes = {
+  SyncCommittee: ContainerType<altair.SyncCommittee>;
+  SyncCommitteeSignature: ContainerType<altair.SyncCommitteeSignature>;
+  SyncCommitteeContribution: ContainerType<altair.SyncCommitteeContribution>;
+  ContributionAndProof: ContainerType<altair.ContributionAndProof>;
+  SignedContributionAndProof: ContainerType<altair.SignedContributionAndProof>;
+  SyncCommitteeSigningData: ContainerType<altair.SyncCommitteeSigningData>;
+  SyncAggregate: ContainerType<altair.SyncAggregate>;
+  BeaconBlockBody: ContainerType<altair.BeaconBlockBody>;
+  BeaconBlock: ContainerType<altair.BeaconBlock>;
+  SignedBeaconBlock: ContainerType<altair.SignedBeaconBlock>;
+  BeaconState: ContainerType<altair.BeaconState>;
+  LightClientSnapshot: ContainerType<altair.LightClientSnapshot>;
+  LightClientUpdate: ContainerType<altair.LightClientUpdate>;
+  LightClientStore: ContainerType<altair.LightClientStore>;
+};
+
+export function getAltairTypes(params: IBeaconParams, phase0: Phase0SSZTypes & PrimitiveSSZTypes): AltairSSZTypes {
   // So the expandedRoots can be referenced, and break the circular dependency
-  const typesRef = new LazyVariable<AltairSSZTypeOnly>();
+  const typesRef = new LazyVariable<AltairSSZTypes>();
 
   const SyncCommittee = new ContainerType<altair.SyncCommittee>({
     fields: {
@@ -175,7 +192,7 @@ export function getAltairTypes(params: IBeaconParams, phase0: IPhase0SSZTypes): 
     },
   });
 
-  const altairTypes: AltairSSZTypeOnly = {
+  const altairTypes: AltairSSZTypes = {
     SyncCommittee,
     SyncCommitteeSignature,
     SyncCommitteeContribution,

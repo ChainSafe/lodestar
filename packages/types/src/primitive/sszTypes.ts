@@ -1,10 +1,46 @@
-import {byteType, booleanType, ByteVectorType, BigIntUintType, number32Type, NumberUintType} from "@chainsafe/ssz";
-import {IPrimitiveSSZTypes} from "./IPrimitiveSSZTypes";
-/**
- * @module sszTypes/generators
- */
+import {
+  byteType,
+  booleanType,
+  ByteVectorType,
+  BigIntUintType,
+  number32Type,
+  NumberUintType,
+  BooleanType,
+} from "@chainsafe/ssz";
 
-export function getPrimitiveTypes(): IPrimitiveSSZTypes {
+export interface PrimitiveSSZTypes {
+  Boolean: BooleanType;
+  Bytes4: ByteVectorType;
+  Bytes8: ByteVectorType;
+  Bytes32: ByteVectorType;
+  Bytes48: ByteVectorType;
+  Bytes96: ByteVectorType;
+  Uint8: NumberUintType;
+  Uint16: NumberUintType;
+  Uint32: NumberUintType;
+  Number64: NumberUintType;
+  Uint64: BigIntUintType;
+  Uint128: BigIntUintType;
+  Uint256: BigIntUintType;
+
+  // Custom types, defined for type hinting and readability
+  Slot: NumberUintType;
+  Epoch: NumberUintType;
+  CommitteeIndex: NumberUintType;
+  SubCommitteeIndex: NumberUintType;
+  ValidatorIndex: NumberUintType;
+  Gwei: BigIntUintType;
+  Root: ByteVectorType;
+  Version: ByteVectorType;
+  DomainType: ByteVectorType;
+  ForkDigest: ByteVectorType;
+  BLSPubkey: ByteVectorType;
+  BLSSignature: ByteVectorType;
+  Domain: ByteVectorType;
+  ParticipationFlags: NumberUintType;
+}
+
+export function getPrimitiveTypes(): PrimitiveSSZTypes {
   const Boolean = booleanType;
   const Bytes4 = new ByteVectorType({length: 4});
   const Bytes8 = new ByteVectorType({length: 8});
@@ -20,7 +56,6 @@ export function getPrimitiveTypes(): IPrimitiveSSZTypes {
   const Uint256 = new BigIntUintType({byteLength: 32});
 
   // Custom types, defined for type hinting and readability
-
   const Slot = Number64;
   const Epoch = Number64;
   const CommitteeIndex = Number64;

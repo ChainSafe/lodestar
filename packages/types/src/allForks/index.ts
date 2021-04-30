@@ -14,7 +14,7 @@ export type BeaconState = phase0.BeaconState | altair.BeaconState;
 // IAllSSZTypes["BeaconState"] = ContainerType<phase0.BeaconState & altair.BeaconState & phase1.BeaconState>
 // IAllForksSSZTypes["BeaconState"] = ContainerType<phase0.BeaconState | altair.BeaconState | phase1.BeaconState>
 
-type IAllSSZTypes = phase0.IPhase0SSZTypes | altair.IAltairSSZTypes;
+type IAllSSZTypes = phase0.Phase0SSZTypes | altair.AltairSSZTypes;
 
 export type IAllForksSSZTypes = Omit<
   IAllSSZTypes,
