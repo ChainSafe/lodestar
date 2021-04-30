@@ -4,14 +4,8 @@
 
 import bls from "@chainsafe/bls";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {
-  ATTESTATION_SUBNET_COUNT,
-  phase0,
-  Slot,
-  ValidatorIndex,
-  CommitteeIndex,
-  allForks,
-} from "@chainsafe/lodestar-types";
+import {ATTESTATION_SUBNET_COUNT} from "@chainsafe/lodestar-params";
+import {phase0, Slot, ValidatorIndex, CommitteeIndex, allForks} from "@chainsafe/lodestar-types";
 import {isSorted} from "@chainsafe/lodestar-utils";
 import {BitList, List} from "@chainsafe/ssz";
 import {getBeaconCommittee, getCommitteeCountAtSlot} from "./committee";

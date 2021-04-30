@@ -1,7 +1,8 @@
 import {ChainEvent, IBeaconChain} from "../../chain";
 import {IBeaconDb} from "../../db";
 import {IBeaconConfig, ForkName} from "@chainsafe/lodestar-config";
-import {phase0, CommitteeIndex, Slot, ATTESTATION_SUBNET_COUNT} from "@chainsafe/lodestar-types";
+import {ATTESTATION_SUBNET_COUNT} from "@chainsafe/lodestar-params";
+import {phase0, CommitteeIndex, Slot} from "@chainsafe/lodestar-types";
 import {INetwork} from "../../network";
 import {computeSubnetForSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {ILogger} from "@chainsafe/lodestar-utils";

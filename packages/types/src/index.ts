@@ -13,7 +13,7 @@ export * as altair from "./altair";
 
 // Export union types
 export * as allForks from "./allForks";
-export {IAllForksSSZTypes} from "./allForks";
+export {AllForksSSZTypes} from "./allForks";
 
 /**
  * SSZ Types used throughout Eth2
