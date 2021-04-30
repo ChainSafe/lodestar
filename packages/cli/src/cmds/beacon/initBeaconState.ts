@@ -1,4 +1,3 @@
-// import ipfsClient from "ipfs-http-client";
 import {AbortSignal} from "abort-controller";
 
 import {TreeBacked} from "@chainsafe/ssz";
