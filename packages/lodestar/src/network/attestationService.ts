@@ -155,7 +155,7 @@ export class AttestationService implements IAttestationService {
 
   private getNextFork(): IForkInfo | undefined {
     const headEpoch = computeEpochAtSlot(this.config, this.chain.forkChoice.getHead().slot);
-    const {nextFork} = getCurrentAndNextFork(Object.values(this.config.forks), headEpoch);
+    const {nextFork} = getCurrentAndNextFork(this.config, headEpoch);
     return nextFork;
   }
 

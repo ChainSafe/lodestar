@@ -9,7 +9,7 @@ export function getENRForkID(
   forkDigestContext: IForkDigestContext,
   epoch: Epoch
 ): phase0.ENRForkID {
-  const {currentFork, nextFork} = getCurrentAndNextFork(Object.values(config.forks), epoch);
+  const {currentFork, nextFork} = getCurrentAndNextFork(config, epoch);
 
   return {
     // Current fork digest

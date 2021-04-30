@@ -105,14 +105,14 @@ describe("getCurrentAndNextFork", function () {
 
   it("should return no next fork if altair epoch is infinity", () => {
     config.forks.altair.epoch = Infinity;
-    const {currentFork, nextFork} = getCurrentAndNextFork(Object.values(config.forks), 0);
+    const {currentFork, nextFork} = getCurrentAndNextFork(config, 0);
     expect(currentFork.name).to.be.equal(ForkName.phase0);
     expect(nextFork).to.be.undefined;
   });
 
   it("should return altair as next fork", () => {
     config.forks.altair.epoch = 1000;
-    let forks = getCurrentAndNextFork(Object.values(config.forks), 0);
+    let forks = getCurrentAndNextFork(config, 0);
     expect(forks.currentFork.name).to.be.equal(ForkName.phase0);
     if (forks.nextFork) {
       expect(forks.nextFork.name).to.be.equal(ForkName.altair);
@@ -120,7 +120,7 @@ describe("getCurrentAndNextFork", function () {
       expect.fail("No next fork");
     }
 
-    forks = getCurrentAndNextFork(Object.values(config.forks), 1000);
+    forks = getCurrentAndNextFork(config, 1000);
     expect(forks.currentFork.name).to.be.equal(ForkName.altair);
     expect(forks.nextFork).to.be.undefined;
   });
