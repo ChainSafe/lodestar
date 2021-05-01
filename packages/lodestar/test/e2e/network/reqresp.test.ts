@@ -75,7 +75,7 @@ describe("network / ReqResp", function () {
       ...reqRespHandlerPartial,
     };
     const opts = {...networkOptsDefault, ...reqRespOpts};
-    const modules = {config, db, chain, reqRespHandler, signal: controller.signal};
+    const modules = {config, db, chain, reqRespHandler, signal: controller.signal, metrics: null};
     const netA = new Network(opts, {...modules, libp2p: libp2pA, logger: testLogger("A")});
     const netB = new Network(opts, {...modules, libp2p: libp2pB, logger: testLogger("B")});
     await Promise.all([netA.start(), netB.start()]);

@@ -36,7 +36,7 @@ export interface IBeaconChainModules {
   config: IBeaconConfig;
   db: IBeaconDb;
   logger: ILogger;
-  metrics?: IMetrics;
+  metrics: IMetrics | null;
   anchorState: TreeBacked<allForks.BeaconState>;
 }
 
@@ -60,7 +60,7 @@ export class BeaconChain implements IBeaconChain {
   protected readonly config: IBeaconConfig;
   protected readonly db: IBeaconDb;
   protected readonly logger: ILogger;
-  protected readonly metrics?: IMetrics;
+  protected readonly metrics: IMetrics | null;
   protected readonly opts: IChainOptions;
   /**
    * Internal event emitter is used internally to the chain to update chain state

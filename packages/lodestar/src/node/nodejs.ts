@@ -27,7 +27,7 @@ export interface IBeaconNodeModules {
   opts: IBeaconNodeOptions;
   config: IBeaconConfig;
   db: IBeaconDb;
-  metrics?: IMetrics;
+  metrics: IMetrics | null;
   network: INetwork;
   chain: IBeaconChain;
   api: IApi;
@@ -61,7 +61,7 @@ export class BeaconNode {
   opts: IBeaconNodeOptions;
   config: IBeaconConfig;
   db: IBeaconDb;
-  metrics?: IMetrics;
+  metrics: IMetrics | null;
   metricsServer?: HttpMetricsServer;
   network: INetwork;
   chain: IBeaconChain;
@@ -121,7 +121,7 @@ export class BeaconNode {
     // start db if not already started
     await db.start();
 
-    const metrics = opts.metrics.enabled ? createMetrics(opts.metrics) : undefined;
+    const metrics = opts.metrics.enabled ? createMetrics(opts.metrics) : null;
     if (metrics) {
       initBeaconMetrics(metrics, anchorState);
     }

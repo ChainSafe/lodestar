@@ -28,7 +28,7 @@ interface INetworkModules {
   config: IBeaconConfig;
   libp2p: LibP2p;
   logger: ILogger;
-  metrics?: IMetrics;
+  metrics: IMetrics | null;
   chain: IBeaconChain;
   db: IBeaconDb;
   reqRespHandler: IReqRespHandler;

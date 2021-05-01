@@ -51,7 +51,7 @@ export type PeerManagerOpts = {
 export type PeerManagerModules = {
   libp2p: LibP2p;
   logger: ILogger;
-  metrics?: IMetrics;
+  metrics: IMetrics | null;
   reqResp: IReqResp;
   chain: IBeaconChain;
   config: IBeaconConfig;
@@ -71,7 +71,7 @@ export type PeerManagerModules = {
 export class PeerManager {
   private libp2p: LibP2p;
   private logger: ILogger;
-  private metrics?: IMetrics;
+  private metrics: IMetrics | null;
   private reqResp: IReqResp;
   private chain: IBeaconChain;
   private config: IBeaconConfig;

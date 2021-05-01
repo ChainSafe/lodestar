@@ -23,5 +23,5 @@ export interface IRestApiModules {
   config: IBeaconConfig;
   logger: ILogger;
   api: IApi;
-  metrics?: IMetrics;
+  metrics: IMetrics | null;
 }
