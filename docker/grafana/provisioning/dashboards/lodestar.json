@@ -1959,7 +1959,7 @@
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 4
+            "y": 19
           },
           "hiddenSeries": false,
           "id": 48,
@@ -2057,7 +2057,7 @@
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 4
+            "y": 19
           },
           "hiddenSeries": false,
           "id": 50,
@@ -2808,7 +2808,7 @@
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 61
+            "y": 21
           },
           "hiddenSeries": false,
           "id": 94,
@@ -2903,7 +2903,7 @@
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 61
+            "y": 21
           },
           "hiddenSeries": false,
           "id": 95,
@@ -2998,7 +2998,7 @@
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 69
+            "y": 29
           },
           "hiddenSeries": false,
           "id": 96,
@@ -3093,7 +3093,7 @@
             "h": 4,
             "w": 12,
             "x": 12,
-            "y": 69
+            "y": 29
           },
           "hiddenSeries": false,
           "id": 97,
@@ -3188,7 +3188,7 @@
             "h": 4,
             "w": 12,
             "x": 12,
-            "y": 73
+            "y": 33
           },
           "hiddenSeries": false,
           "id": 98,
@@ -3299,7 +3299,7 @@
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 5
+            "y": 22
           },
           "hiddenSeries": false,
           "id": 26,
@@ -3396,7 +3396,7 @@
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 5
+            "y": 22
           },
           "hiddenSeries": false,
           "id": 81,
@@ -3507,7 +3507,7 @@
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 63
+            "y": 23
           },
           "hiddenSeries": false,
           "id": 77,
@@ -3602,7 +3602,7 @@
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 63
+            "y": 23
           },
           "hiddenSeries": false,
           "id": 80,
@@ -3697,7 +3697,7 @@
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 71
+            "y": 31
           },
           "hiddenSeries": false,
           "id": 79,
@@ -3793,7 +3793,7 @@
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 71
+            "y": 31
           },
           "hiddenSeries": false,
           "id": 78,
@@ -3823,7 +3823,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "lodestar_gossip_validation_queue_dropped_jobs_total/(lodestar_gossip_validation_queue_job_time_seconds_count+lodestar_gossip_validation_queue_dropped_jobs_total)",
+              "expr": "delta(lodestar_gossip_validation_queue_dropped_jobs_total[$__rate_interval])/(delta(lodestar_gossip_validation_queue_job_time_seconds_count[$__rate_interval])+delta(lodestar_gossip_validation_queue_dropped_jobs_total[$__rate_interval]))",
               "interval": "",
               "legendFormat": "{{topic}}",
               "refId": "A"
@@ -3888,7 +3888,7 @@
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 79
+            "y": 39
           },
           "hiddenSeries": false,
           "id": 82,
@@ -3984,7 +3984,7 @@
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 79
+            "y": 39
           },
           "hiddenSeries": false,
           "id": 88,
@@ -4100,7 +4100,7 @@
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 23
+            "y": 24
           },
           "hiddenSeries": false,
           "id": 84,
@@ -4196,7 +4196,7 @@
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 23
+            "y": 24
           },
           "hiddenSeries": false,
           "id": 87,
