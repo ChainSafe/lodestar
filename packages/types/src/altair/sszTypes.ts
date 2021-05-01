@@ -5,32 +5,23 @@ import {
   FINALIZED_ROOT_INDEX_FLOORLOG2,
   NEXT_SYNC_COMMITTEE_INDEX_FLOORLOG2,
 } from "@chainsafe/lodestar-params";
-import {BitVectorType, ContainerType, VectorType, ListType, RootType, BitListType} from "@chainsafe/ssz";
+import {BitVectorType, ContainerType, VectorType, ListType, RootType, BitListType, Vector} from "@chainsafe/ssz";
 import {Phase0SSZTypes} from "../phase0";
 import {PrimitiveSSZTypes} from "../primitive";
 import {LazyVariable} from "../utils/lazyVar";
 import * as altair from "./types";
 
-export type AltairSSZTypes = {
-  SyncCommittee: ContainerType<altair.SyncCommittee>;
-  SyncCommitteeSignature: ContainerType<altair.SyncCommitteeSignature>;
-  SyncCommitteeContribution: ContainerType<altair.SyncCommitteeContribution>;
-  ContributionAndProof: ContainerType<altair.ContributionAndProof>;
-  SignedContributionAndProof: ContainerType<altair.SignedContributionAndProof>;
-  SyncCommitteeSigningData: ContainerType<altair.SyncCommitteeSigningData>;
-  SyncAggregate: ContainerType<altair.SyncAggregate>;
-  BeaconBlockBody: ContainerType<altair.BeaconBlockBody>;
-  BeaconBlock: ContainerType<altair.BeaconBlock>;
-  SignedBeaconBlock: ContainerType<altair.SignedBeaconBlock>;
-  BeaconState: ContainerType<altair.BeaconState>;
-  LightClientSnapshot: ContainerType<altair.LightClientSnapshot>;
-  LightClientUpdate: ContainerType<altair.LightClientUpdate>;
-  LightClientStore: ContainerType<altair.LightClientStore>;
-};
+// Interface is defined in the return of getAltairTypes(), to de-duplicate info
+// To add a new type, create and return it in the body of getAltairTypes()
+export type AltairSSZTypes = ReturnType<typeof getAltairTypes>;
 
-export function getAltairTypes(params: IBeaconParams, phase0: Phase0SSZTypes & PrimitiveSSZTypes): AltairSSZTypes {
+// eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types,@typescript-eslint/explicit-function-return-type
+export function getAltairTypes(params: IBeaconParams, phase0: Phase0SSZTypes & PrimitiveSSZTypes) {
   // So the expandedRoots can be referenced, and break the circular dependency
-  const typesRef = new LazyVariable<AltairSSZTypes>();
+  const typesRef = new LazyVariable<{
+    BeaconBlock: ContainerType<altair.BeaconBlock>;
+    BeaconState: ContainerType<altair.BeaconState>;
+  }>();
 
   const SyncCommittee = new ContainerType<altair.SyncCommittee>({
     fields: {
@@ -89,6 +80,24 @@ export function getAltairTypes(params: IBeaconParams, phase0: Phase0SSZTypes & P
     },
   });
 
+  // Re-declare with the new expanded type
+  const HistoricalBlockRoots = new VectorType<Vector<altair.Root>>({
+    elementType: new RootType({expandedType: () => typesRef.get().BeaconBlock}),
+    length: params.SLOTS_PER_HISTORICAL_ROOT,
+  });
+
+  const HistoricalStateRoots = new VectorType<Vector<altair.Root>>({
+    elementType: new RootType({expandedType: () => typesRef.get().BeaconState}),
+    length: params.SLOTS_PER_HISTORICAL_ROOT,
+  });
+
+  const HistoricalBatch = new ContainerType<altair.HistoricalBatch>({
+    fields: {
+      blockRoots: HistoricalBlockRoots,
+      stateRoots: HistoricalStateRoots,
+    },
+  });
+
   const BeaconBlockBody = new ContainerType<altair.BeaconBlockBody>({
     fields: {
       ...phase0.BeaconBlockBody.fields,
@@ -98,7 +107,11 @@ export function getAltairTypes(params: IBeaconParams, phase0: Phase0SSZTypes & P
 
   const BeaconBlock = new ContainerType<altair.BeaconBlock>({
     fields: {
-      ...phase0.BeaconBlock.fields,
+      slot: phase0.Slot,
+      proposerIndex: phase0.ValidatorIndex,
+      // Reclare expandedType() with altair block and altair state
+      parentRoot: new RootType({expandedType: () => typesRef.get().BeaconBlock}),
+      stateRoot: new RootType({expandedType: () => typesRef.get().BeaconState}),
       body: BeaconBlockBody,
     },
   });
@@ -120,10 +133,10 @@ export function getAltairTypes(params: IBeaconParams, phase0: Phase0SSZTypes & P
       fork: phase0.Fork,
       // History
       latestBlockHeader: phase0.BeaconBlockHeader,
-      blockRoots: phase0.HistoricalBlockRoots,
-      stateRoots: phase0.HistoricalStateRoots,
+      blockRoots: HistoricalBlockRoots,
+      stateRoots: HistoricalStateRoots,
       historicalRoots: new ListType({
-        elementType: new RootType({expandedType: phase0.HistoricalBatch}),
+        elementType: new RootType({expandedType: HistoricalBatch}),
         limit: params.HISTORICAL_ROOTS_LIMIT,
       }),
       // Eth1
@@ -192,7 +205,10 @@ export function getAltairTypes(params: IBeaconParams, phase0: Phase0SSZTypes & P
     },
   });
 
-  const altairTypes: AltairSSZTypes = {
+  // MUST set typesRef here, otherwise expandedType() calls will throw
+  typesRef.set({BeaconBlock, BeaconState});
+
+  return {
     SyncCommittee,
     SyncCommitteeSignature,
     SyncCommitteeContribution,
@@ -208,8 +224,4 @@ export function getAltairTypes(params: IBeaconParams, phase0: Phase0SSZTypes & P
     LightClientUpdate,
     LightClientStore,
   };
-
-  typesRef.set(altairTypes);
-
-  return altairTypes;
 }

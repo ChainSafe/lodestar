@@ -1,46 +1,11 @@
-import {
-  byteType,
-  booleanType,
-  ByteVectorType,
-  BigIntUintType,
-  number32Type,
-  NumberUintType,
-  BooleanType,
-} from "@chainsafe/ssz";
+import {byteType, booleanType, ByteVectorType, BigIntUintType, number32Type, NumberUintType} from "@chainsafe/ssz";
 
-export interface PrimitiveSSZTypes {
-  Boolean: BooleanType;
-  Bytes4: ByteVectorType;
-  Bytes8: ByteVectorType;
-  Bytes32: ByteVectorType;
-  Bytes48: ByteVectorType;
-  Bytes96: ByteVectorType;
-  Uint8: NumberUintType;
-  Uint16: NumberUintType;
-  Uint32: NumberUintType;
-  Number64: NumberUintType;
-  Uint64: BigIntUintType;
-  Uint128: BigIntUintType;
-  Uint256: BigIntUintType;
+// Interface is defined in the return of getPrimitiveTypes(), to de-duplicate info
+// To add a new type, create and return it in the body of getPrimitiveTypes()
+export type PrimitiveSSZTypes = ReturnType<typeof getPrimitiveTypes>;
 
-  // Custom types, defined for type hinting and readability
-  Slot: NumberUintType;
-  Epoch: NumberUintType;
-  CommitteeIndex: NumberUintType;
-  SubCommitteeIndex: NumberUintType;
-  ValidatorIndex: NumberUintType;
-  Gwei: BigIntUintType;
-  Root: ByteVectorType;
-  Version: ByteVectorType;
-  DomainType: ByteVectorType;
-  ForkDigest: ByteVectorType;
-  BLSPubkey: ByteVectorType;
-  BLSSignature: ByteVectorType;
-  Domain: ByteVectorType;
-  ParticipationFlags: NumberUintType;
-}
-
-export function getPrimitiveTypes(): PrimitiveSSZTypes {
+// eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types,@typescript-eslint/explicit-function-return-type
+export function getPrimitiveTypes() {
   const Boolean = booleanType;
   const Bytes4 = new ByteVectorType({length: 4});
   const Bytes8 = new ByteVectorType({length: 8});
