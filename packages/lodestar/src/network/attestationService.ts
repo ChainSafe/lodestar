@@ -96,13 +96,6 @@ export class AttestationService implements IAttestationService {
     return Array.from(allSubnets);
   }
 
-  getNextForkRandomSubnets(): number[] {
-    if (this.nextForkRandomSubnets) {
-      return this.nextForkRandomSubnets.getActive(this.chain.clock.currentSlot);
-    }
-    return [];
-  }
-
   /**
    * Called from /eth/v1/validator/beacon_committee_subscriptions api when validator is an attester.
    */

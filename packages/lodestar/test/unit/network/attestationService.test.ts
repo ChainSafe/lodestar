@@ -147,8 +147,8 @@ describe("AttestationService", function () {
       sandbox.clock.tick(4 * SLOTS_PER_EPOCH * SECONDS_PER_SLOT * 1000);
     }
     // 1 known validator
-    expect(service.getNextForkRandomSubnets().length).to.be.equal(1);
-    const randomSubnet = service.getNextForkRandomSubnets()[0];
+    expect(getNextForkRandomSubnets(service).length).to.be.equal(1);
+    const randomSubnet = getNextForkRandomSubnets(service)[0];
     while (chain.clock.currentSlot * SLOTS_PER_EPOCH < altairEpoch) {
       service.addBeaconCommitteeSubscriptions([subscription]);
       sandbox.clock.tick(4 * SLOTS_PER_EPOCH * SECONDS_PER_SLOT * 1000);
@@ -157,7 +157,7 @@ describe("AttestationService", function () {
     sandbox.stub(chain, "getHeadForkName").returns(ForkName.altair);
     sandbox.clock.tick(SECONDS_PER_SLOT * 1000);
     // transition to altair
-    expect(service.getNextForkRandomSubnets()).to.be.deep.equal([]);
+    expect(getNextForkRandomSubnets(service)).to.be.deep.equal([]);
     expect(service.getActiveSubnets().includes(randomSubnet)).to.be.true;
     config.forks.altair.epoch = BK_ALTAIR_FORK_EPOCH;
   });
@@ -176,3 +176,11 @@ describe("AttestationService", function () {
     expect(gossipStub.unsubscribeTopic.called).to.be.false;
   });
 });
+
+function getNextForkRandomSubnets(service: AttestationService): number[] {
+  const nextForkRandomSubnets = service["nextForkRandomSubnets"];
+  if (nextForkRandomSubnets) {
+    return nextForkRandomSubnets.getActive(service["chain"].clock.currentSlot);
+  }
+  return [];
+}
