@@ -10,6 +10,20 @@ import {IBeaconDb} from "../../db";
 import {JobQueue} from "../../util/queue";
 import {IStateRegenerator} from "./interface";
 import {StateRegenerator} from "./regen";
+import {IMetrics} from "../../metrics";
+
+const REGEN_QUEUE_MAX_LEN = 256;
+
+type QueuedStateRegeneratorModules = {
+  config: IBeaconConfig;
+  emitter: ChainEventEmitter;
+  forkChoice: IForkChoice;
+  stateCache: StateContextCache;
+  checkpointStateCache: CheckpointStateCache;
+  db: IBeaconDb;
+  metrics: IMetrics | null;
+  signal: AbortSignal;
+};
 
 /**
  * Regenerates states that have already been processed by the fork choice
@@ -20,27 +34,12 @@ export class QueuedStateRegenerator implements IStateRegenerator {
   private regen: StateRegenerator;
   private jobQueue: JobQueue;
 
-  constructor({
-    config,
-    emitter,
-    forkChoice,
-    stateCache,
-    checkpointStateCache,
-    db,
-    signal,
-    maxLength = 256,
-  }: {
-    config: IBeaconConfig;
-    emitter: ChainEventEmitter;
-    forkChoice: IForkChoice;
-    stateCache: StateContextCache;
-    checkpointStateCache: CheckpointStateCache;
-    db: IBeaconDb;
-    signal: AbortSignal;
-    maxLength?: number;
-  }) {
-    this.regen = new StateRegenerator({config, emitter, forkChoice, stateCache, checkpointStateCache, db});
-    this.jobQueue = new JobQueue({maxLength, signal});
+  constructor(modules: QueuedStateRegeneratorModules) {
+    this.regen = new StateRegenerator(modules);
+    this.jobQueue = new JobQueue(
+      {maxLength: REGEN_QUEUE_MAX_LEN, signal: modules.signal},
+      modules.metrics ? modules.metrics.regenQueue : undefined
+    );
   }
 
   async getPreState(block: allForks.BeaconBlock): Promise<CachedBeaconState<allForks.BeaconState>> {
