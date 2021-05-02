@@ -1,15 +1,17 @@
 import {computeEpochAtSlot, computeSubnetForCommitteesAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig, ForkName, IForkInfo} from "@chainsafe/lodestar-config";
 import {ATTESTATION_SUBNET_COUNT, phase0, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
-import {assert, ILogger, randBetween} from "@chainsafe/lodestar-utils";
+import {ILogger, randBetween} from "@chainsafe/lodestar-utils";
 import {ChainEvent, IBeaconChain} from "../chain";
 import {Eth2Gossipsub, GossipType} from "./gossip";
 import {MetadataController} from "./metadata";
 import {SubnetMap} from "./peers/utils";
 import {getCurrentAndNextFork} from "./util";
 
-/// The time (in slots) before a last seen validator is considered absent and we unsubscribe from the random
-/// gossip topics that we subscribed to due to the validator connection.
+/**
+ * The time (in slots) before a last seen validator is considered absent and we unsubscribe from the random
+ * gossip topics that we subscribed to due to the validator connection.
+ */
 const LAST_SEEN_VALIDATOR_TIMEOUT = 150;
 
 export interface IAttestationService {
@@ -39,7 +41,7 @@ export class AttestationService implements IAttestationService {
   /** Map of random subnets and the slot until they are needed of current fork */
   private randomSubnets: SubnetMap;
   /** Map of random subnets and the slot until they are needed of next fork */
-  private nextForkRandomSubnets: SubnetMap | undefined;
+  private nextForkRandomSubnets: SubnetMap | null = null;
   /** Map of committee subnets and the slot until they are needed */
   private committeeSubnets: SubnetMap;
   /** subset of committeeSubnets with exact slot for aggregator */
@@ -232,29 +234,28 @@ export class AttestationService implements IAttestationService {
    */
   private onSlot = (slot: Slot): void => {
     try {
-      const fork = this.chain.getHeadForkName();
-      if (fork !== this.randomSubnets.getForkName() && fork === this.nextForkRandomSubnets?.getForkName()) {
-        this.transitionToNextFork();
-      }
       this.handleRandomSubnetExpiry(slot);
       this.handleKnownValidatorExpiry(slot);
       this.handleUnsubscriptions(slot);
+      this.transitionToNextForkMaybe();
     } catch (e) {
       this.logger.error("Error running AttestationService at slot", {slot}, e);
     }
   };
 
-  private transitionToNextFork(): void {
+  private transitionToNextForkMaybe(): void {
     const fork = this.chain.getHeadForkName();
-    assert.true(this.nextForkRandomSubnets !== undefined, "No next fork random subnets subscriptions");
-    assert.equal(
-      fork,
-      this.nextForkRandomSubnets?.getForkName(),
-      "Chain fork name is not same to next fork random subnet"
-    );
+    if (
+      !this.nextForkRandomSubnets ||
+      fork === this.randomSubnets.forkName ||
+      fork !== this.nextForkRandomSubnets.forkName
+    ) {
+      return;
+    }
+
     this.logger.info("Transitioning to next fork", fork);
     const currentSlot = this.chain.clock.currentSlot;
-    const activeSubnets = this.nextForkRandomSubnets!.getActive(currentSlot);
+    const activeSubnets = this.nextForkRandomSubnets.getActive(currentSlot);
     this.randomSubnets = new SubnetMap(fork);
     for (const subnet of activeSubnets) {
       this.randomSubnets.request({
@@ -263,7 +264,7 @@ export class AttestationService implements IAttestationService {
       });
     }
     // assume 1 hard fork look ahead
-    this.nextForkRandomSubnets = undefined;
+    this.nextForkRandomSubnets = null;
   }
 
   /**
@@ -288,17 +289,16 @@ export class AttestationService implements IAttestationService {
    * If a random subnet is present, we do not unsubscribe from it.
    */
   private handleUnsubscriptions(currentSlot: Slot): void {
-    const inactiveSubscribedCommitteeSubnets = this.subscribedCommitteeSubnets.getInactive(currentSlot);
     const activeRandomSubnets = this.randomSubnets.getActive(currentSlot);
-    const fork = this.subscribedCommitteeSubnets.getForkName();
-    for (const subnet of inactiveSubscribedCommitteeSubnets) {
+    const fork = this.subscribedCommitteeSubnets.forkName;
+    for (const subnet of this.subscribedCommitteeSubnets.getExpired(currentSlot)) {
       if (!activeRandomSubnets.includes(subnet)) {
         this.gossip.unsubscribeTopic({type: GossipType.beacon_attestation, fork, subnet});
       }
     }
-    const inactiveCommitteeSubnets = this.committeeSubnets.getInactive(currentSlot);
-    // inactiveCommitteeSubnets is superset of inactiveSubscribedCommitteeSubnets
-    for (const subnet of inactiveCommitteeSubnets) {
+    const expiredCommitteeSubnets = this.committeeSubnets.getExpired(currentSlot);
+    // expiredCommitteeSubnets is superset of expiredSubscribedCommitteeSubnets
+    for (const subnet of expiredCommitteeSubnets) {
       this.committeeSubnets.delete(subnet);
       this.subscribedCommitteeSubnets.delete(subnet);
     }
@@ -311,12 +311,12 @@ export class AttestationService implements IAttestationService {
    */
   private handleRandomSubnetExpiry(slot: Slot): void {
     const allRandomSubnets = this.randomSubnets.getAll();
-    const inactiveRandomSubnets = this.randomSubnets.getInactive(slot);
+    const expiredRandomSubnets = this.randomSubnets.getExpired(slot);
     const currentFork = this.chain.getHeadForkName();
-    const randomSubnetFork = this.randomSubnets.getForkName();
+    const randomSubnetFork = this.randomSubnets.forkName;
     if (allRandomSubnets.length === ATTESTATION_SUBNET_COUNT) {
       // We are at capacity, simply increase the timeout of the current subnet
-      for (const subnet of inactiveRandomSubnets) {
+      for (const subnet of expiredRandomSubnets) {
         // After the fork occurs, let the subnets from the previous fork reach the end of life with no replacements
         if (currentFork === randomSubnetFork) {
           this.randomSubnets.request({
@@ -330,7 +330,7 @@ export class AttestationService implements IAttestationService {
       return;
     }
     let newRandomSubnets = 0;
-    for (const subnet of inactiveRandomSubnets) {
+    for (const subnet of expiredRandomSubnets) {
       this.pruneRandomSubnet(subnet, slot);
       // After the fork occurs, let the subnets from the previous fork reach the end of life with no replacements
       if (currentFork === randomSubnetFork) {
@@ -386,7 +386,7 @@ export class AttestationService implements IAttestationService {
   private pruneRandomSubnet(subnet: number, currentSlot: Slot): void {
     const activeSubscribedCommitteeSubnets = this.subscribedCommitteeSubnets.getActive(currentSlot);
     if (!activeSubscribedCommitteeSubnets.includes(subnet)) {
-      const fork = this.randomSubnets.getForkName();
+      const fork = this.randomSubnets.forkName;
       this.gossip.unsubscribeTopic({type: GossipType.beacon_attestation, fork, subnet});
     }
     // Update ENR

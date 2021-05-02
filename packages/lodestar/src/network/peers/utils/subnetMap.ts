@@ -14,9 +14,9 @@ export type RequestedSubnet = {
  * Track requested subnets by `toSlot`
  */
 export class SubnetMap {
+  readonly forkName: ForkName;
   /** Map of subnets and the slot until they are needed */
   private subnets = new Map<number, Slot>();
-  private forkName: ForkName;
   constructor(forkName: ForkName) {
     this.forkName = forkName;
   }
@@ -36,20 +36,13 @@ export class SubnetMap {
     return this.subnets.get(subnet);
   }
 
-  /**
-   * Get fork name
-   */
-  getForkName(): ForkName {
-    return this.forkName;
-  }
-
   /** Return subnetIds with a `toSlot` equal greater than `currentSlot` */
   getActive(currentSlot: Slot): number[] {
     return this.getSubnets(currentSlot, (toSlot: Slot, currentSlot: Slot) => toSlot >= currentSlot);
   }
 
   /** Return subnetIds with a `toSlot` less than `currentSlot` */
-  getInactive(currentSlot: Slot): number[] {
+  getExpired(currentSlot: Slot): number[] {
     return this.getSubnets(currentSlot, (toSlot: Slot, currentSlot: Slot) => toSlot < currentSlot);
   }
 
