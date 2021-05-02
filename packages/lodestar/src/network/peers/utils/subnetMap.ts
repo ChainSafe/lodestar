@@ -21,6 +21,10 @@ export class SubnetMap {
     this.forkName = forkName;
   }
 
+  get size(): number {
+    return this.subnets.size;
+  }
+
   /**
    * Register requested subnets, extends toSlot if same subnet.
    **/
