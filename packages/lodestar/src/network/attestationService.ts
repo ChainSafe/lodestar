@@ -1,12 +1,13 @@
-import {computeEpochAtSlot, computeSubnetForCommitteesAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
+import {computeSubnetForCommitteesAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition/src/util/epoch";
-import {IBeaconConfig, ForkName, IForkInfo} from "@chainsafe/lodestar-config";
+import {IBeaconConfig, ForkName} from "@chainsafe/lodestar-config";
 import {ATTESTATION_SUBNET_COUNT, Epoch, phase0, Slot} from "@chainsafe/lodestar-types";
 import {ILogger, randBetween} from "@chainsafe/lodestar-utils";
+import {shuffle} from "../util/shuffle";
 import {ChainEvent, IBeaconChain} from "../chain";
 import {Eth2Gossipsub, GossipType} from "./gossip";
 import {MetadataController} from "./metadata";
-import {SubnetMap} from "./peers/utils";
+import {SubnetMap, RequestedSubnet} from "./peers/utils";
 import {getCurrentAndNextFork} from "./util";
 
 /**
@@ -14,6 +15,10 @@ import {getCurrentAndNextFork} from "./util";
  * gossip topics that we subscribed to due to the validator connection.
  */
 const LAST_SEEN_VALIDATOR_TIMEOUT = 150;
+/**
+ * Subscribe topics to the new fork N epochs before the fork. Remove all subscriptions N epochs after the fork
+ */
+const FORK_EPOCH_LOOKAHEAD = 2;
 
 export interface IAttestationService {
   addBeaconCommitteeSubscriptions(subscriptions: phase0.BeaconCommitteeSubscription[]): void;
@@ -39,16 +44,16 @@ export class AttestationService implements IAttestationService {
   private readonly metadata: MetadataController;
   private readonly logger: ILogger;
 
-  /** Map of random subnets and the slot until they are needed of current fork */
-  private randomSubnets: SubnetMap;
-  /** Map of random subnets and the slot until they are needed of next fork */
-  private nextForkRandomSubnets: SubnetMap | null = null;
-  /** Map of committee subnets and the slot until they are needed */
-  private committeeSubnets: SubnetMap;
-  /** subset of committeeSubnets with exact slot for aggregator */
-  private subscribedCommitteeSubnets: SubnetMap;
-
-  private nextForkSubscriptionTimer: NodeJS.Timeout | undefined;
+  /** Committee subnets - PeerManager must find peers for those */
+  private committeeSubnets = new SubnetMap();
+  /**
+   * All currently subscribed short-lived subnets, for attestation aggregation
+   * This class will tell gossip to subscribe and un-subscribe
+   * If a value exists for `SubscriptionId` it means that gossip subscription is active in network.gossip
+   */
+  private subscriptionsCommittee = new SubnetMap();
+  /** Same as `subscriptionsCommittee` but for long-lived subnets. May overlap with `subscriptionsCommittee` */
+  private subscriptionsRandom = new SubnetMap();
 
   /**
    * A collection of seen validators. These dictate how many random subnets we should be
@@ -63,28 +68,16 @@ export class AttestationService implements IAttestationService {
     this.gossip = modules.gossip;
     this.metadata = modules.metadata;
     this.logger = modules.logger;
-    const currentFork = this.chain.getHeadForkName();
-    this.randomSubnets = new SubnetMap(currentFork);
-    this.committeeSubnets = new SubnetMap(currentFork);
-    this.subscribedCommitteeSubnets = new SubnetMap(currentFork);
-    const nextFork = this.getNextFork();
-    if (nextFork) {
-      this.nextForkRandomSubnets = new SubnetMap(nextFork.name);
-    }
   }
 
   start(): void {
     this.chain.emitter.on(ChainEvent.clockSlot, this.onSlot);
     this.chain.emitter.on(ChainEvent.clockEpoch, this.onEpoch);
-    this.scheduleNextForkSubscription();
   }
 
   stop(): void {
     this.chain.emitter.off(ChainEvent.clockSlot, this.onSlot);
     this.chain.emitter.off(ChainEvent.clockEpoch, this.onEpoch);
-    if (this.nextForkSubscriptionTimer) {
-      clearTimeout(this.nextForkSubscriptionTimer);
-    }
   }
 
   /**
@@ -92,11 +85,8 @@ export class AttestationService implements IAttestationService {
    */
   getActiveSubnets(): number[] {
     const currentSlot = this.chain.clock.currentSlot;
-    const allSubnets = new Set([
-      ...this.randomSubnets.getActive(currentSlot),
-      ...this.committeeSubnets.getActive(currentSlot),
-    ]);
-    return Array.from(allSubnets);
+    // Omit subscriptionsRandom, not necessary to force the network component to keep peers on that subnets
+    return this.committeeSubnets.getActive(currentSlot);
   }
 
   /**
@@ -105,19 +95,29 @@ export class AttestationService implements IAttestationService {
   addBeaconCommitteeSubscriptions(subscriptions: phase0.BeaconCommitteeSubscription[] = []): void {
     const currentSlot = this.chain.clock.currentSlot;
     let addedknownValidators = false;
+    const subnetsToSubscribe: RequestedSubnet[] = [];
 
     for (const {slot, committeesAtSlot, committeeIndex, validatorIndex, isAggregator} of subscriptions) {
       // Add known validator
       if (!this.knownValidators.has(validatorIndex)) addedknownValidators = true;
       this.knownValidators.set(validatorIndex, currentSlot);
 
-      const subnetId = computeSubnetForCommitteesAtSlot(this.config, slot, committeesAtSlot, committeeIndex);
+      const subnet = computeSubnetForCommitteesAtSlot(this.config, slot, committeesAtSlot, committeeIndex);
       // the peer-manager heartbeat will help find the subnet
-      this.committeeSubnets.request({subnetId, toSlot: slot + 1});
+      this.committeeSubnets.request({subnet, toSlot: slot + 1});
       if (isAggregator) {
         // need exact slot here
-        this.handleSubscription(subnetId, slot);
+        subnetsToSubscribe.push({subnet, toSlot: slot});
       }
+    }
+
+    // Trigger gossip subscription first, in batch
+    if (subnetsToSubscribe.length > 0) {
+      this.subscribeToSubnets(subnetsToSubscribe.map((sub) => sub.subnet));
+    }
+    // Then, register the subscriptions
+    for (const subscription of subnetsToSubscribe) {
+      this.subscriptionsCommittee.request(subscription);
     }
 
     if (addedknownValidators) this.rebalanceRandomSubnets();
@@ -127,102 +127,7 @@ export class AttestationService implements IAttestationService {
    * Consumed by attestation collector.
    */
   shouldProcessAttestation(subnet: number, slot: Slot): boolean {
-    return this.subscribedCommitteeSubnets.getToSlot(subnet) === slot;
-  }
-
-  /**
-   * When preparing for a hard fork, a validator must select and subscribe to random subnets of the future
-   * fork versioning at least EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION epochs in advance of the fork
-   */
-  private scheduleNextForkSubscription(): void {
-    const {EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION, SLOTS_PER_EPOCH, SECONDS_PER_SLOT} = this.config.params;
-
-    const nextFork = this.getNextFork();
-    // there is a planned hard fork
-    if (nextFork && nextFork.epoch !== Infinity) {
-      let waitingSlots =
-        (nextFork.epoch - EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION) * SLOTS_PER_EPOCH - this.chain.clock.currentSlot;
-      if (waitingSlots < 0) {
-        // we are probably less than EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION to the next hardfork
-        waitingSlots = 0;
-      }
-      this.logger.info("Preparing for the next fork random subnet subscriptions", {
-        waitingSlots,
-        nextFork: nextFork.name,
-      });
-      const timeToPreparedEpoch = waitingSlots * SECONDS_PER_SLOT * 1000;
-      if (timeToPreparedEpoch > 0) {
-        this.nextForkSubscriptionTimer = setTimeout(() => {
-          this.subscribeToNextForkRandomSubnets(nextFork.name);
-        }, timeToPreparedEpoch);
-      }
-    }
-  }
-
-  private getNextFork(): IForkInfo | undefined {
-    const headEpoch = computeEpochAtSlot(this.config, this.chain.forkChoice.getHead().slot);
-    const {nextFork} = getCurrentAndNextFork(this.config, headEpoch);
-    return nextFork;
-  }
-
-  /**
-   * Subscribe to long-lived random subnets and update the local ENR bitfield.
-   */
-  private subscribeToRandomSubnets(fork: ForkName, count: number): void {
-    const currentSlot = this.chain.clock.currentSlot;
-    const allSubnets = Array.from({length: ATTESTATION_SUBNET_COUNT}, (_, i) => i);
-    const toSubscribeSubnets = [];
-    for (let i = 0; i < count; i++) {
-      const activeSubnets = this.randomSubnets.getActive(currentSlot);
-      if (activeSubnets.length >= ATTESTATION_SUBNET_COUNT) {
-        this.logger.info("Reached max number of random subnet", {count, maxSubnet: ATTESTATION_SUBNET_COUNT});
-        break;
-      }
-      const availableSubnets = allSubnets.filter((subnet) => !activeSubnets.includes(subnet));
-      const toSubscribeSubnet = availableSubnets[randBetween(0, availableSubnets.length)];
-      // the heartbeat will help connect to respective peers
-      this.randomSubnets.request({
-        subnetId: toSubscribeSubnet,
-        toSlot: getSubscriptionSlotForRandomSubnet(this.config, currentSlot),
-      });
-      if (!this.subscribedCommitteeSubnets.getActive(currentSlot).includes(toSubscribeSubnet)) {
-        // subscribe to topic
-        this.gossip.subscribeTopic({type: GossipType.beacon_attestation, fork, subnet: toSubscribeSubnet});
-      }
-      toSubscribeSubnets.push(toSubscribeSubnet);
-    }
-    // Update ENR
-    const attnets = this.metadata.attnets;
-    let updateENR = false;
-    for (const subnet of toSubscribeSubnets) {
-      if (!attnets[subnet]) {
-        attnets[subnet] = true;
-        updateENR = true;
-      }
-    }
-    if (updateENR) {
-      this.metadata.attnets = attnets;
-    }
-  }
-
-  /**
-   * Duplicate randomSubnets to nextForkRandomSubnets to make sure same ENR advertisement
-   * Subscribe to respective gossip topics with next fork.
-   * No need to update ENR
-   * @param nextFork
-   */
-  private subscribeToNextForkRandomSubnets(nextFork: ForkName): void {
-    const currentSlot = this.chain.clock.currentSlot;
-    const activeSubnets = this.randomSubnets.getActive(currentSlot);
-    for (const subnet of activeSubnets) {
-      if (this.nextForkRandomSubnets) {
-        this.nextForkRandomSubnets.request({
-          subnetId: subnet,
-          toSlot: getSubscriptionSlotForRandomSubnet(this.config, currentSlot),
-        });
-        this.gossip.subscribeTopic({type: GossipType.beacon_attestation, fork: nextFork, subnet});
-      }
-    }
+    return this.subscriptionsCommittee.isActiveAtSlot(subnet, slot);
   }
 
   /**
@@ -230,7 +135,7 @@ export class AttestationService implements IAttestationService {
    */
   private onSlot = (slot: Slot): void => {
     try {
-      this.handleUnsubscriptions(slot);
+      this.unsubscribeExpiredCommitteeSubnets(slot);
     } catch (e) {
       this.logger.error("Error on AttestationService.onSlot", {slot}, e);
     }
@@ -242,72 +147,46 @@ export class AttestationService implements IAttestationService {
   private onEpoch = (epoch: Epoch): void => {
     try {
       const slot = computeStartSlotAtEpoch(this.config, epoch);
-      this.handleRandomSubnetExpiry(slot);
-      this.handleKnownValidatorExpiry(slot);
-      this.transitionToNextForkMaybe();
+      this.unsubscribeExpiredRandomSubnets(slot);
+      this.pruneExpiredKnownValidators(slot);
+
+      // Compute prev and next fork shifted, so next fork is still next at forkEpoch + FORK_EPOCH_LOOKAHEAD
+      const forks = getCurrentAndNextFork(this.config, epoch - FORK_EPOCH_LOOKAHEAD - 1);
+
+      // Only when fork is scheduled
+      if (forks.nextFork) {
+        const prevFork = forks.currentFork.name;
+        const nextFork = forks.nextFork.name;
+        const forkEpoch = forks.nextFork.epoch;
+
+        // ONLY ONCE: Two epoch before the fork, re-subscribe all existing random subscriptions to the new fork
+        if (epoch === forkEpoch - FORK_EPOCH_LOOKAHEAD) {
+          this.logger.info("Suscribing to random attnets to next fork", {nextFork});
+          for (const subnet of this.subscriptionsRandom.getAll()) {
+            this.gossip.subscribeTopic({type: GossipType.beacon_attestation, fork: nextFork, subnet});
+          }
+        }
+
+        // ONLY ONCE: Two epochs after the fork, un-subscribe all attnets from the old fork
+        if (epoch === forkEpoch + FORK_EPOCH_LOOKAHEAD) {
+          this.logger.info("Unsuscribing to random attnets from prev fork", {prevFork});
+          for (let subnet = 0; subnet < ATTESTATION_SUBNET_COUNT; subnet++) {
+            this.gossip.unsubscribeTopic({type: GossipType.beacon_attestation, fork: prevFork, subnet});
+          }
+        }
+      }
     } catch (e) {
       this.logger.error("Error on AttestationService.onEpoch", {epoch}, e);
     }
   };
 
-  private transitionToNextForkMaybe(): void {
-    const fork = this.chain.getHeadForkName();
-    if (
-      !this.nextForkRandomSubnets ||
-      fork === this.randomSubnets.forkName ||
-      fork !== this.nextForkRandomSubnets.forkName
-    ) {
-      return;
-    }
-
-    this.logger.info("Transitioning to next fork", fork);
-    const currentSlot = this.chain.clock.currentSlot;
-    const activeSubnets = this.nextForkRandomSubnets.getActive(currentSlot);
-    this.randomSubnets = new SubnetMap(fork);
-    for (const subnet of activeSubnets) {
-      this.randomSubnets.request({
-        subnetId: subnet,
-        toSlot: this.nextForkRandomSubnets?.getToSlot(subnet) as Slot,
-      });
-    }
-    // assume 1 hard fork look ahead
-    this.nextForkRandomSubnets = null;
-  }
-
-  /**
-   * Subscribe to a committee subnet.
-   */
-  private handleSubscription(subnetId: number, slot: Slot): void {
-    // Check if the subnet currently exists as a long-lasting random subnet
-    const randomSubnetToSlot = this.randomSubnets.getToSlot(subnetId);
-    const fork = this.chain.getHeadForkName();
-    if (randomSubnetToSlot !== undefined) {
-      // just extend the expiry
-      this.randomSubnets.request({subnetId, toSlot: slot});
-    } else {
-      // subscribe to topic
-      this.gossip.subscribeTopic({type: GossipType.beacon_attestation, fork, subnet: subnetId});
-    }
-    this.subscribedCommitteeSubnets.request({subnetId, toSlot: slot});
-  }
-
   /**
    * Unsubscribe to a committee subnet from subscribedCommitteeSubnets.
    * If a random subnet is present, we do not unsubscribe from it.
    */
-  private handleUnsubscriptions(currentSlot: Slot): void {
-    const activeRandomSubnets = this.randomSubnets.getActive(currentSlot);
-    const fork = this.subscribedCommitteeSubnets.forkName;
-    for (const subnet of this.subscribedCommitteeSubnets.getExpired(currentSlot)) {
-      if (!activeRandomSubnets.includes(subnet)) {
-        this.gossip.unsubscribeTopic({type: GossipType.beacon_attestation, fork, subnet});
-      }
-    }
-    // expiredCommitteeSubnets is superset of expiredSubscribedCommitteeSubnets
-    for (const subnet of this.committeeSubnets.getExpired(currentSlot)) {
-      this.committeeSubnets.delete(subnet);
-      this.subscribedCommitteeSubnets.delete(subnet);
-    }
+  private unsubscribeExpiredCommitteeSubnets(slot: Slot): void {
+    const expired = this.subscriptionsCommittee.getExpired(slot);
+    this.unsubscribeSubnets(expired, slot);
   }
 
   /**
@@ -315,35 +194,12 @@ export class AttestationService implements IAttestationService {
    * This function selects a new subnet to join, or extends the expiry if there are no more
    * available subnets to choose from.
    */
-  private handleRandomSubnetExpiry(slot: Slot): void {
-    const allRandomSubnets = this.randomSubnets.getAll();
-    const expiredRandomSubnets = this.randomSubnets.getExpired(slot);
-    const currentFork = this.chain.getHeadForkName();
-    const randomSubnetFork = this.randomSubnets.forkName;
-    if (allRandomSubnets.length === ATTESTATION_SUBNET_COUNT) {
-      // We are at capacity, simply increase the timeout of the current subnet
-      for (const subnet of expiredRandomSubnets) {
-        // After the fork occurs, let the subnets from the previous fork reach the end of life with no replacements
-        if (currentFork === randomSubnetFork) {
-          this.randomSubnets.request({
-            subnetId: subnet,
-            toSlot: getSubscriptionSlotForRandomSubnet(this.config, slot),
-          });
-        } else {
-          this.pruneRandomSubnet(subnet, slot);
-        }
-      }
-      return;
-    }
-    let newRandomSubnets = 0;
-    for (const subnet of expiredRandomSubnets) {
-      this.pruneRandomSubnet(subnet, slot);
-      // After the fork occurs, let the subnets from the previous fork reach the end of life with no replacements
-      if (currentFork === randomSubnetFork) {
-        newRandomSubnets = newRandomSubnets + 1;
-      }
-    }
-    this.subscribeToRandomSubnets(currentFork, newRandomSubnets);
+  private unsubscribeExpiredRandomSubnets(slot: Slot): void {
+    const expired = this.subscriptionsRandom.getExpired(slot);
+    // TODO: Optimization: If we have to be subcribed to all attnets, no need to unsubscribe. Just extend the timeout
+    // Prune subnets and re-subcribe to new ones
+    this.unsubscribeSubnets(expired, slot);
+    this.rebalanceRandomSubnets();
   }
 
   /**
@@ -354,7 +210,7 @@ export class AttestationService implements IAttestationService {
    * validators to random subnets. So when a validator goes offline, we can simply remove the
    * allocated amount of random subnets.
    */
-  private handleKnownValidatorExpiry(currentSlot: Slot): void {
+  private pruneExpiredKnownValidators(currentSlot: Slot): void {
     let deletedKnownValidators = false;
     for (const [index, slot] of this.knownValidators.entries()) {
       if (currentSlot > slot + LAST_SEEN_VALIDATOR_TIMEOUT) {
@@ -371,50 +227,115 @@ export class AttestationService implements IAttestationService {
    * knownValidators should be updated before this function.
    */
   private rebalanceRandomSubnets(): void {
-    const currentFork = this.chain.getHeadForkName();
-    const targetRandomSubnetCount = this.knownValidators.size * this.config.params.RANDOM_SUBNETS_PER_VALIDATOR;
-    const subnetDiff = targetRandomSubnetCount - this.randomSubnets.size;
+    const slot = this.chain.clock.currentSlot;
+    // By limiting to ATTESTATION_SUBNET_COUNT, if target is still over subnetDiff equals 0
+    const targetRandomSubnetCount = Math.min(
+      this.knownValidators.size * this.config.params.RANDOM_SUBNETS_PER_VALIDATOR,
+      ATTESTATION_SUBNET_COUNT
+    );
+    const subnetDiff = targetRandomSubnetCount - this.subscriptionsRandom.size;
 
     // subscribe to more random subnets
     if (subnetDiff > 0) {
-      this.subscribeToRandomSubnets(currentFork, subnetDiff);
+      const activeSubnets = new Set(this.subscriptionsRandom.getActive(slot));
+      const allSubnets = Array.from({length: ATTESTATION_SUBNET_COUNT}, (_, i) => i);
+      const availableSubnets = allSubnets.filter((subnet) => !activeSubnets.has(subnet));
+      const subnetsToConnect = shuffle(availableSubnets).slice(0, subnetDiff);
+
+      // Tell gossip to connect to the subnets if not connected already
+      this.subscribeToSubnets(subnetsToConnect);
+
+      // Register these new subnets until some future slot
+      for (const subnet of subnetsToConnect) {
+        // the heartbeat will help connect to respective peers
+        this.subscriptionsRandom.request({subnet, toSlot: randomSubscriptionSlotLen(this.config) + slot});
+      }
     }
 
     // unsubscribe some random subnets
     if (subnetDiff < 0) {
-      const currentSlot = this.chain.clock.currentSlot;
-      const activeRandomSubnets = this.randomSubnets.getActive(currentSlot);
+      const activeRandomSubnets = this.subscriptionsRandom.getActive(slot);
       // TODO: Do we want to remove the oldest subnets or the newest subnets?
       // .slice(-2) will extract the last two items of the array
-      for (const subnet of activeRandomSubnets.slice(subnetDiff)) {
-        this.pruneRandomSubnet(subnet, currentSlot);
+      const toRemoveSubnets = activeRandomSubnets.slice(subnetDiff);
+      for (const subnet of toRemoveSubnets) {
+        this.subscriptionsRandom.delete(subnet);
+      }
+      this.unsubscribeSubnets(toRemoveSubnets, slot);
+    }
+
+    // If there has been a change update the local ENR bitfield
+    if (subnetDiff !== 0) {
+      this.updateMetadataAttnets();
+    }
+  }
+
+  /** Update ENR */
+  private updateMetadataAttnets(): void {
+    const attnets = this.config.types.phase0.AttestationSubnets.defaultValue();
+    for (const subnet of this.subscriptionsRandom.getAll()) {
+      attnets[subnet] = true;
+    }
+
+    // Only update attnets if necessary, setting `metadata.attnets` triggers a write to disk
+    if (!this.config.types.phase0.AttestationSubnets.equals(attnets, this.metadata.attnets)) {
+      this.metadata.attnets = attnets;
+    }
+  }
+
+  /** Tigger a gossip subcription only if not already subscribed */
+  private subscribeToSubnets(subnets: number[]): void {
+    const forks = this.getActiveForks();
+    for (const subnet of subnets) {
+      if (!this.subscriptionsCommittee.has(subnet) && !this.subscriptionsRandom.has(subnet)) {
+        for (const fork of forks) {
+          this.gossip.subscribeTopic({type: GossipType.beacon_attestation, fork, subnet});
+        }
       }
     }
   }
 
-  private pruneRandomSubnet(subnet: number, currentSlot: Slot): void {
-    const activeSubscribedCommitteeSubnets = this.subscribedCommitteeSubnets.getActive(currentSlot);
-    if (!activeSubscribedCommitteeSubnets.includes(subnet)) {
-      const fork = this.randomSubnets.forkName;
-      this.gossip.unsubscribeTopic({type: GossipType.beacon_attestation, fork, subnet});
+  /** Trigger a gossip un-subscrition only if no-one is still subscribed */
+  private unsubscribeSubnets(subnets: number[], slot: Slot): void {
+    const forks = this.getActiveForks();
+    for (const subnet of subnets) {
+      if (
+        !this.subscriptionsCommittee.isActiveAtSlot(subnet, slot) &&
+        !this.subscriptionsRandom.isActiveAtSlot(subnet, slot)
+      ) {
+        for (const fork of forks) {
+          this.gossip.unsubscribeTopic({type: GossipType.beacon_attestation, fork, subnet});
+        }
+      }
     }
-    // Update ENR
-    const attnets = this.metadata.attnets;
-    if (attnets[subnet]) {
-      attnets[subnet] = false;
-      this.metadata.attnets = attnets;
+  }
+
+  private getActiveForks(): ForkName[] {
+    const currentEpoch = this.chain.clock.currentEpoch;
+    // Compute prev and next fork shifted, so next fork is still next at forkEpoch + FORK_EPOCH_LOOKAHEAD
+    const forks = getCurrentAndNextFork(this.config, currentEpoch - FORK_EPOCH_LOOKAHEAD - 1);
+
+    // Before fork is scheduled
+    if (!forks.nextFork) {
+      return [forks.currentFork.name];
     }
-    this.randomSubnets.delete(subnet);
+
+    const prevFork = forks.currentFork.name;
+    const nextFork = forks.nextFork.name;
+    const forkEpoch = forks.nextFork.epoch;
+
+    // Way before fork
+    if (currentEpoch < forkEpoch - FORK_EPOCH_LOOKAHEAD) return [prevFork];
+    // Way after fork
+    if (currentEpoch > forkEpoch + FORK_EPOCH_LOOKAHEAD) return [nextFork];
+    // During fork transition
+    return [prevFork, nextFork];
   }
 }
 
-function getSubscriptionSlotForRandomSubnet(config: IBeaconConfig, currentSlot: Slot): Slot {
+function randomSubscriptionSlotLen(config: IBeaconConfig): Slot {
+  const {EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION, SLOTS_PER_EPOCH} = config.params;
   return (
-    randBetween(
-      config.params.EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION,
-      2 * config.params.EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION
-    ) *
-      config.params.SLOTS_PER_EPOCH +
-    currentSlot
+    randBetween(EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION, 2 * EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION) * SLOTS_PER_EPOCH
   );
 }
