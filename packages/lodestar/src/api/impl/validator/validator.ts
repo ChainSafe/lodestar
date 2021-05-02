@@ -6,7 +6,6 @@ import bls, {Signature} from "@chainsafe/bls";
 import {
   CachedBeaconState,
   computeStartSlotAtEpoch,
-  computeSubnetForCommitteesAtSlot,
   proposerShufflingDecisionRoot,
   attesterShufflingDecisionRoot,
 } from "@chainsafe/lodestar-beacon-state-transition";
@@ -255,27 +254,7 @@ export class ValidatorApi implements IValidatorApi {
   async prepareBeaconCommitteeSubnet(subscriptions: phase0.BeaconCommitteeSubscription[]): Promise<void> {
     this.notWhileSyncing();
 
-    // Determine if the validator is an aggregator. If so, we subscribe to the subnet and
-    // if successful add the validator to a mapping of known aggregators for that exact
-    // subnet.
-    for (const {isAggregator, slot, committeeIndex} of subscriptions) {
-      if (isAggregator) {
-        this.sync.collectAttestations(slot, committeeIndex);
-      }
-    }
-
-    this.network.requestAttSubnets(
-      subscriptions.map(({slot, committeesAtSlot, committeeIndex}) => ({
-        subnetId: computeSubnetForCommitteesAtSlot(this.config, slot, committeesAtSlot, committeeIndex),
-        // Network should keep finding peers for this subnet until `toSlot`
-        // add one slot to ensure we keep the peer for the subscription slot
-        toSlot: slot + 1,
-      }))
-    );
-
-    // TODO:
-    // Update the `known_validators` mapping and subscribes to a set of random subnets if required
-    // It must also update the ENR to indicate our long-lived subscription to the subnet
+    this.network.prepareBeaconCommitteeSubnet(subscriptions);
 
     // TODO:
     // If the discovery mechanism isn't disabled, attempt to set up a peer discovery for the

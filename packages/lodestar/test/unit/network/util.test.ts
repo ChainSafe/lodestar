@@ -5,6 +5,7 @@ import {
   createNodeJsLibp2p,
   createRpcProtocol,
   getAgentVersionFromPeerStore,
+  getCurrentAndNextFork,
   isLocalMultiAddr,
   parseProtocolId,
 } from "../../../src/network";
@@ -12,6 +13,8 @@ import {Method, ReqRespEncoding} from "../../../src/constants";
 import {createEnr, createPeerId} from "@chainsafe/lodestar-cli/src/config";
 import {defaultNetworkOptions} from "../../../src/network/options";
 import {fromHexString} from "@chainsafe/ssz";
+import {config} from "@chainsafe/lodestar-config/minimal";
+import {ForkName} from "@chainsafe/lodestar-config";
 
 describe("Test isLocalMultiAddr", () => {
   it("should return true for 127.0.0.1", () => {
@@ -91,5 +94,34 @@ describe("getAgentVersionFromPeerStore", () => {
     const timeDiff = Date.now() - start;
     // eslint-disable-next-line no-console
     console.log(`getAgentVersionFromPeerStore x${numPeers}: ${timeDiff} ms`);
+  });
+});
+
+describe("getCurrentAndNextFork", function () {
+  const altairEpoch = config.forks.altair.epoch;
+  afterEach(() => {
+    config.forks.altair.epoch = altairEpoch;
+  });
+
+  it("should return no next fork if altair epoch is infinity", () => {
+    config.forks.altair.epoch = Infinity;
+    const {currentFork, nextFork} = getCurrentAndNextFork(config, 0);
+    expect(currentFork.name).to.be.equal(ForkName.phase0);
+    expect(nextFork).to.be.undefined;
+  });
+
+  it("should return altair as next fork", () => {
+    config.forks.altair.epoch = 1000;
+    let forks = getCurrentAndNextFork(config, 0);
+    expect(forks.currentFork.name).to.be.equal(ForkName.phase0);
+    if (forks.nextFork) {
+      expect(forks.nextFork.name).to.be.equal(ForkName.altair);
+    } else {
+      expect.fail("No next fork");
+    }
+
+    forks = getCurrentAndNextFork(config, 1000);
+    expect(forks.currentFork.name).to.be.equal(ForkName.altair);
+    expect(forks.nextFork).to.be.undefined;
   });
 });

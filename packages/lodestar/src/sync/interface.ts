@@ -1,6 +1,6 @@
 import {INetwork} from "../network";
 import {ILogger} from "@chainsafe/lodestar-utils";
-import {CommitteeIndex, Slot, phase0} from "@chainsafe/lodestar-types";
+import {Slot, phase0} from "@chainsafe/lodestar-types";
 import {IRegularSync} from "./regular";
 import {IBeaconChain} from "../chain";
 import {IMetrics} from "../metrics";
@@ -23,7 +23,6 @@ export interface IBeaconSync {
   stop(): Promise<void>;
   getSyncStatus(): phase0.SyncingStatus;
   isSynced(): boolean;
-  collectAttestations(slot: Slot, committeeIndex: CommitteeIndex): void;
 }
 
 export interface ISyncModule {

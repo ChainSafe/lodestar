@@ -11,16 +11,9 @@ import {IReqResp} from "../reqresp";
 import {Libp2pPeerMetadataStore} from "./metastore";
 import {PeerDiscovery} from "./discover";
 import {IPeerRpcScoreStore, ScoreState} from "./score";
-import {
-  getConnectedPeerIds,
-  PeerMapDelay,
-  SubnetMap,
-  RequestedSubnet,
-  assertPeerRelevance,
-  prioritizePeers,
-  IrrelevantPeerError,
-} from "./utils";
+import {getConnectedPeerIds, PeerMapDelay, assertPeerRelevance, prioritizePeers, IrrelevantPeerError} from "./utils";
 import {prettyPrintPeerId} from "../util";
+import {IAttestationService} from "../attestationService";
 
 /** heartbeat performs regular updates such as updating reputations and performing discovery requests */
 const HEARTBEAT_INTERVAL_MS = 30 * 1000;
@@ -53,6 +46,7 @@ export type PeerManagerModules = {
   logger: ILogger;
   metrics: IMetrics | null;
   reqResp: IReqResp;
+  attService: IAttestationService;
   chain: IBeaconChain;
   config: IBeaconConfig;
   peerMetadata: Libp2pPeerMetadataStore;
@@ -73,6 +67,7 @@ export class PeerManager {
   private logger: ILogger;
   private metrics: IMetrics | null;
   private reqResp: IReqResp;
+  private attService: IAttestationService;
   private chain: IBeaconChain;
   private config: IBeaconConfig;
   private peerMetadata: Libp2pPeerMetadataStore;
@@ -88,8 +83,6 @@ export class PeerManager {
   private opts: PeerManagerOpts;
   private intervals: NodeJS.Timeout[] = [];
 
-  /** Map of subnets and the slot until they are needed */
-  private subnets = new SubnetMap();
   private seenPeers = new Set<string>();
 
   constructor(modules: PeerManagerModules, opts: PeerManagerOpts) {
@@ -97,6 +90,7 @@ export class PeerManager {
     this.logger = modules.logger;
     this.metrics = modules.metrics;
     this.reqResp = modules.reqResp;
+    this.attService = modules.attService;
     this.chain = modules.chain;
     this.config = modules.config;
     this.peerMetadata = modules.peerMetadata;
@@ -142,11 +136,9 @@ export class PeerManager {
   }
 
   /**
-   * Request to find peers on a given subnet.
+   * Run after validator subscriptions request.
    */
-  requestAttSubnets(requestedSubnets: RequestedSubnet[]): void {
-    this.subnets.request(requestedSubnets);
-
+  onBeaconCommitteeSubscriptions(): void {
     // TODO:
     // Only if the slot is more than epoch away, add an event to start looking for peers
 
@@ -306,7 +298,7 @@ export class PeerManager {
         score: this.peerRpcScores.getScore(peer),
       })),
       // Collect subnets which we need peers for in the current slot
-      this.subnets.getActive(this.chain.clock.currentSlot),
+      this.attService.getActiveSubnets(),
       this.opts
     );
 
