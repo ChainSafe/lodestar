@@ -1,6 +1,7 @@
 /**
  * @module metrics
  */
+import {BeaconState} from "@chainsafe/lodestar-types/lib/allForks";
 import {collectDefaultMetrics, Registry} from "prom-client";
 import gcStats from "prometheus-gc-stats";
 import {createBeaconMetrics, IBeaconMetrics} from "./metrics/beacon";
@@ -10,10 +11,10 @@ import {RegistryMetricCreator} from "./utils/registryMetricCreator";
 
 export type IMetrics = IBeaconMetrics & ILodestarMetrics & {register: Registry};
 
-export function createMetrics(opts?: IMetricsOptions): IMetrics {
+export function createMetrics(opts?: IMetricsOptions, anchorState?: BeaconState): IMetrics {
   const register = new RegistryMetricCreator();
   const beacon = createBeaconMetrics(register);
-  const lodestar = createLodestarMetrics(register, opts?.metadata);
+  const lodestar = createLodestarMetrics(register, opts?.metadata, anchorState);
 
   collectDefaultMetrics({
     register,
