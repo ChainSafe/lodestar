@@ -1,4 +1,5 @@
-import {allForks, ATTESTATION_SUBNET_COUNT, phase0} from "@chainsafe/lodestar-types";
+import {allForks, phase0} from "@chainsafe/lodestar-types";
+import {ATTESTATION_SUBNET_COUNT} from "@chainsafe/lodestar-params";
 import {createIBeaconConfig, ForkName} from "@chainsafe/lodestar-config";
 import {params} from "@chainsafe/lodestar-params/minimal";
 import {getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";

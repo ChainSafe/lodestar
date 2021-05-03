@@ -1,6 +1,6 @@
 import {AbortSignal} from "abort-controller";
 import {ForkName} from "@chainsafe/lodestar-config";
-import {ATTESTATION_SUBNET_COUNT} from "@chainsafe/lodestar-types";
+import {ATTESTATION_SUBNET_COUNT} from "@chainsafe/lodestar-params";
 import {mapValues} from "@chainsafe/lodestar-utils";
 import {IMetrics} from "../../metrics";
 import {JobQueue, JobQueueOpts, QueueType} from "../../util/queue";

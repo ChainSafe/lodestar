@@ -1,7 +1,8 @@
 import {IBeaconChain} from "../../chain";
 import {IBeaconDb} from "../../db";
 import {IBeaconConfig, ForkName} from "@chainsafe/lodestar-config";
-import {phase0, ATTESTATION_SUBNET_COUNT} from "@chainsafe/lodestar-types";
+import {ATTESTATION_SUBNET_COUNT} from "@chainsafe/lodestar-params";
+import {phase0} from "@chainsafe/lodestar-types";
 import {INetwork} from "../../network";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {GossipHandlerFn, GossipType} from "../../network/gossip";

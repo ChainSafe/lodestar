@@ -2,8 +2,11 @@ export const GENESIS_SLOT = 0;
 export const GENESIS_EPOCH = 0;
 export const FAR_FUTURE_EPOCH = Infinity;
 export const BASE_REWARDS_PER_EPOCH = 4;
-export const DEPOSIT_CONTRACT_TREE_DEPTH = 32;
+export const DEPOSIT_CONTRACT_TREE_DEPTH = 2 ** 5; // 32
 export const JUSTIFICATION_BITS_LENGTH = 4;
+export const ATTESTATION_SUBNET_COUNT = 64;
+export const MAX_REQUEST_BLOCKS = 2 ** 10; // 1024
+export const P2P_ERROR_MESSAGE_MAX_LENGTH = 256;
 
 export const MIN_SYNC_COMMITTEE_PARTICIPANTS = 1;
 //~27 hours
