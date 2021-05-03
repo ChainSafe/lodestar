@@ -15,7 +15,7 @@ import {IMetrics} from "../../../metrics";
 
 export type BlsMultiThreadWorkerPoolModules = {
   logger: ILogger;
-  metrics?: IMetrics;
+  metrics: IMetrics | null;
   signal: AbortSignal;
 };
 
@@ -69,7 +69,7 @@ type WorkerDescriptor = {
  */
 export class BlsMultiThreadWorkerPool {
   private readonly logger: ILogger;
-  private readonly metrics?: IMetrics;
+  private readonly metrics: IMetrics | null;
   private readonly signal: AbortSignal;
 
   private readonly format: PointFormat;

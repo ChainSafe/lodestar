@@ -36,7 +36,7 @@ export interface IBeaconChainModules {
   config: IBeaconConfig;
   db: IBeaconDb;
   logger: ILogger;
-  metrics?: IMetrics;
+  metrics: IMetrics | null;
   anchorState: TreeBacked<allForks.BeaconState>;
 }
 
@@ -47,7 +47,7 @@ export class BeaconChain implements IBeaconChain {
   bls: IBlsVerifier;
   forkChoice: IForkChoice;
   clock: IBeaconClock;
-  emitter: ChainEventEmitter;
+  emitter = new ChainEventEmitter();
   stateCache: StateContextCache;
   checkpointStateCache: CheckpointStateCache;
   regen: IStateRegenerator;
@@ -60,14 +60,14 @@ export class BeaconChain implements IBeaconChain {
   protected readonly config: IBeaconConfig;
   protected readonly db: IBeaconDb;
   protected readonly logger: ILogger;
-  protected readonly metrics?: IMetrics;
+  protected readonly metrics: IMetrics | null;
   protected readonly opts: IChainOptions;
   /**
    * Internal event emitter is used internally to the chain to update chain state
    * Once event have been handled internally, they are re-emitted externally for downstream consumers
    */
-  protected internalEmitter: ChainEventEmitter;
-  private abortController: AbortController;
+  protected internalEmitter = new ChainEventEmitter();
+  private abortController = new AbortController();
 
   constructor({opts, config, db, logger, metrics, anchorState}: IBeaconChainModules) {
     this.opts = opts;
@@ -75,66 +75,50 @@ export class BeaconChain implements IBeaconChain {
     this.db = db;
     this.logger = logger;
     this.metrics = metrics;
-
     this.genesisTime = anchorState.genesisTime;
     this.genesisValidatorsRoot = anchorState.genesisValidatorsRoot.valueOf() as Uint8Array;
-    this.abortController = new AbortController();
-
-    this.emitter = new ChainEventEmitter();
-    this.internalEmitter = new ChainEventEmitter();
 
     this.forkDigestContext = new ForkDigestContext(config, this.genesisValidatorsRoot);
 
-    this.bls = new BlsVerifier({logger, metrics, signal: this.abortController.signal});
+    const signal = this.abortController.signal;
+    const emitter = this.internalEmitter; // All internal compoments emit to the internal emitter first
+    const bls = new BlsVerifier({logger, metrics, signal: this.abortController.signal});
 
-    this.clock = new LocalClock({
-      config: this.config,
-      emitter: this.internalEmitter,
-      genesisTime: this.genesisTime,
-      signal: this.abortController.signal,
-    });
-    this.stateCache = new StateContextCache();
-    this.checkpointStateCache = new CheckpointStateCache(this.config);
-    const cachedState = restoreStateCaches(config, this.stateCache, this.checkpointStateCache, anchorState);
-    this.forkChoice = new LodestarForkChoice({
+    const clock = new LocalClock({config, emitter, genesisTime: this.genesisTime, signal});
+    const stateCache = new StateContextCache();
+    const checkpointStateCache = new CheckpointStateCache(config);
+    const cachedState = restoreStateCaches(config, stateCache, checkpointStateCache, anchorState);
+    const forkChoice = new LodestarForkChoice({config, emitter, currentSlot: clock.currentSlot, state: cachedState});
+    const regen = new QueuedStateRegenerator({
       config,
-      emitter: this.internalEmitter,
-      currentSlot: this.clock.currentSlot,
-      state: cachedState,
+      emitter,
+      forkChoice,
+      stateCache,
+      checkpointStateCache,
+      db,
+      signal,
     });
-    this.regen = new QueuedStateRegenerator({
-      config: this.config,
-      emitter: this.internalEmitter,
-      forkChoice: this.forkChoice,
-      stateCache: this.stateCache,
-      checkpointStateCache: this.checkpointStateCache,
-      db: this.db,
-      signal: this.abortController.signal,
-    });
-    this.pendingAttestations = new AttestationPool({
-      config: this.config,
-    });
-    this.pendingBlocks = new BlockPool({
-      config: this.config,
-    });
-    this.attestationProcessor = new AttestationProcessor({
-      config: this.config,
-      forkChoice: this.forkChoice,
-      emitter: this.internalEmitter,
-      clock: this.clock,
-      regen: this.regen,
-    });
+    this.pendingAttestations = new AttestationPool({config});
+    this.pendingBlocks = new BlockPool({config});
+    this.attestationProcessor = new AttestationProcessor({config, forkChoice, emitter, clock, regen});
     this.blockProcessor = new BlockProcessor({
-      config: this.config,
-      forkChoice: this.forkChoice,
-      clock: this.clock,
-      regen: this.regen,
-      bls: this.bls,
-      metrics: this.metrics,
-      emitter: this.internalEmitter,
-      checkpointStateCache: this.checkpointStateCache,
-      signal: this.abortController.signal,
+      config,
+      forkChoice,
+      clock,
+      regen,
+      bls,
+      metrics,
+      emitter,
+      checkpointStateCache,
+      signal,
     });
+
+    this.forkChoice = forkChoice;
+    this.clock = clock;
+    this.regen = regen;
+    this.bls = bls;
+    this.checkpointStateCache = checkpointStateCache;
+    this.stateCache = stateCache;
 
     handleChainEvents.bind(this)(this.abortController.signal);
   }

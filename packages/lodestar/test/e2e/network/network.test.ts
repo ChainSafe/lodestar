@@ -19,6 +19,7 @@ import {generateState} from "../../utils/state";
 import {StubbedBeaconDb} from "../../utils/stub";
 import {connect, disconnect, onPeerConnect, onPeerDisconnect} from "../../utils/network";
 import {testLogger} from "../../utils/logger";
+import {computeSubnetForCommitteesAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 
 const multiaddr = "/ip4/127.0.0.1/tcp/0";
 
@@ -63,7 +64,7 @@ describe("network", function () {
     const loggerA = testLogger("A");
     const loggerB = testLogger("B");
 
-    const modules = {config, chain, db, reqRespHandler, signal: controller.signal};
+    const modules = {config, chain, db, reqRespHandler, signal: controller.signal, metrics: null};
     const netA = new Network(opts, {...modules, libp2p: libp2pA, logger: loggerA});
     const netB = new Network(opts, {...modules, libp2p: libp2pB, logger: loggerB});
 
@@ -104,7 +105,15 @@ describe("network", function () {
   });
 
   it("should connect to new peer by subnet", async function () {
-    const subnetId = 10;
+    const subscription: phase0.BeaconCommitteeSubscription = {
+      validatorIndex: 2000,
+      committeeIndex: 10,
+      committeesAtSlot: 20,
+      slot: 2000,
+      isAggregator: false,
+    };
+    const {slot, committeesAtSlot, committeeIndex} = subscription;
+    const subnetId = computeSubnetForCommitteesAtSlot(config, slot, committeesAtSlot, committeeIndex);
     const {netA, netB} = await mockModules();
     netB.metadata.attnets[subnetId] = true;
     const connected = Promise.all([onPeerConnect(netA), onPeerConnect(netB)]);
@@ -116,13 +125,37 @@ describe("network", function () {
     // let discv5 of A know enr of B
     const discovery: Discv5Discovery = netA["libp2p"]._discovery.get("discv5") as Discv5Discovery;
     discovery.discv5.addEnr(enrB);
-    netA.requestAttSubnets([{subnetId, toSlot: Infinity}]);
+    netA.prepareBeaconCommitteeSubnet([subscription]);
     await connected;
 
     expect(netA.getConnectionsByPeer().has(netB.peerId.toB58String())).to.be.equal(
       true,
       "netA has not connected to peerB"
     );
+  });
+
+  it("Should goodbye peers on stop", async function () {
+    const {netA, netB, controller} = await mockModules();
+
+    const connected = Promise.all([onPeerConnect(netA), onPeerConnect(netB)]);
+    await connect(netA, netB.peerId, netB.localMultiaddrs);
+    await connected;
+
+    // Wait some time and stop netA expecting to goodbye netB
+    await sleep(500, controller.signal);
+
+    const onGoodbyeNetB = sinon.stub<[phase0.Goodbye, PeerId]>();
+    netB.events.on(NetworkEvent.reqRespRequest, (method, request, peer) => {
+      if (method === Method.Goodbye) onGoodbyeNetB(request as phase0.Goodbye, peer);
+    });
+
+    await netA.stop();
+    await sleep(500, controller.signal);
+
+    expect(onGoodbyeNetB.callCount).to.equal(1, "netB must receive 1 goodbye");
+    const [goodbye, peer] = onGoodbyeNetB.getCall(0).args;
+    expect(peer.toB58String()).to.equal(netA.peerId.toB58String(), "netA must be the goodbye requester");
+    expect(goodbye).to.equal(BigInt(GoodByeReasonCode.CLIENT_SHUTDOWN), "goodbye reason must be CLIENT_SHUTDOWN");
   });
 
   it("Should goodbye peers on stop", async function () {

@@ -14,7 +14,6 @@ import {INetwork} from "./interface";
 import {IBeaconChain} from "../chain";
 import {MetadataController} from "./metadata";
 import {Discv5Discovery, ENR} from "@chainsafe/discv5";
-import {RequestedSubnet} from "./peers";
 import {IPeerMetadataStore, Libp2pPeerMetadataStore} from "./peers/metastore";
 import {PeerManager} from "./peers/peerManager";
 import {IPeerRpcScoreStore, PeerRpcScoreStore} from "./peers";
@@ -23,12 +22,15 @@ import {createTopicValidatorFnMap, Eth2Gossipsub} from "./gossip";
 import {IReqRespHandler} from "./reqresp/handlers";
 import {INetworkEventBus, NetworkEventBus} from "./events";
 import {AbortSignal} from "abort-controller";
+import {IAttestationService} from "./attestationService";
+import {AttestationService} from "./attestationService";
+import {phase0} from "@chainsafe/lodestar-types";
 
 interface INetworkModules {
   config: IBeaconConfig;
   libp2p: LibP2p;
   logger: ILogger;
-  metrics?: IMetrics;
+  metrics: IMetrics | null;
   chain: IBeaconChain;
   db: IBeaconDb;
   reqRespHandler: IReqRespHandler;
@@ -38,6 +40,7 @@ interface INetworkModules {
 export class Network implements INetwork {
   events: INetworkEventBus;
   reqResp: IReqResp;
+  attService: IAttestationService;
   gossip: Eth2Gossipsub;
   metadata: MetadataController;
   peerMetadata: IPeerMetadataStore;
@@ -72,8 +75,20 @@ export class Network implements INetwork {
       metrics,
     });
 
+    this.attService = new AttestationService({...modules, gossip: this.gossip, metadata: this.metadata});
     this.peerManager = new PeerManager(
-      {libp2p, reqResp: this.reqResp, logger, metrics, chain, config, peerMetadata, peerRpcScores, networkEventBus},
+      {
+        libp2p,
+        reqResp: this.reqResp,
+        attService: this.attService,
+        logger,
+        metrics,
+        chain,
+        config,
+        peerMetadata,
+        peerRpcScores,
+        networkEventBus,
+      },
       opts
     );
   }
@@ -95,6 +110,7 @@ export class Network implements INetwork {
     this.metadata.stop();
     this.gossip.stop();
     this.reqResp.stop();
+    this.gossip.stop();
     await this.libp2p.stop();
   }
 
@@ -119,11 +135,16 @@ export class Network implements INetwork {
     return this.peerManager.getConnectedPeerIds();
   }
 
+  hasSomeConnectedPeer(): boolean {
+    return this.peerManager.hasSomeConnectedPeer();
+  }
+
   /**
    * Request att subnets up `toSlot`. Network will ensure to mantain some peers for each
    */
-  requestAttSubnets(requestedSubnets: RequestedSubnet[]): void {
-    this.peerManager.requestAttSubnets(requestedSubnets);
+  prepareBeaconCommitteeSubnet(subscriptions: phase0.BeaconCommitteeSubscription[]): void {
+    this.attService.addBeaconCommitteeSubscriptions(subscriptions);
+    this.peerManager.onBeaconCommitteeSubscriptions();
   }
 
   /**

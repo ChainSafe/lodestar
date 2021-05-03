@@ -23,6 +23,8 @@ import {testLogger} from "../../../utils/logger";
 import {ForkDigestContext} from "../../../../src/util/forkDigestContext";
 
 describe("gossipsub", function () {
+  const logger = testLogger();
+  const metrics = null;
   let validatorFns: TopicValidatorFnMap;
   let gossipSub: Eth2Gossipsub;
   let message: InMessage;
@@ -52,7 +54,7 @@ describe("gossipsub", function () {
     validatorFns.set(topicString, () => {
       throw new GossipValidationError(ERR_TOPIC_VALIDATOR_REJECT);
     });
-    gossipSub = new Eth2Gossipsub({config, validatorFns, logger: testLogger(), forkDigestContext, libp2p});
+    gossipSub = new Eth2Gossipsub({config, validatorFns, logger, forkDigestContext, libp2p, metrics});
 
     try {
       await gossipSub.validate(message);
@@ -63,7 +65,7 @@ describe("gossipsub", function () {
   });
 
   it("should not throw on successful validation", async () => {
-    gossipSub = new Eth2Gossipsub({config, validatorFns, logger: testLogger(), forkDigestContext, libp2p});
+    gossipSub = new Eth2Gossipsub({config, validatorFns, logger, forkDigestContext, libp2p, metrics});
     await gossipSub.validate(message);
     // no error means pass validation
   });

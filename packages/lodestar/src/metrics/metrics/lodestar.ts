@@ -1,3 +1,4 @@
+import {BeaconState} from "@chainsafe/lodestar-types/lib/allForks";
 import {RegistryMetricCreator} from "../utils/registryMetricCreator";
 import {IMetricsOptions} from "../options";
 
@@ -7,7 +8,11 @@ export type ILodestarMetrics = ReturnType<typeof createLodestarMetrics>;
  * Extra Lodestar custom metrics
  */
 // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types, @typescript-eslint/explicit-function-return-type
-export function createLodestarMetrics(register: RegistryMetricCreator, metadata: IMetricsOptions["metadata"]) {
+export function createLodestarMetrics(
+  register: RegistryMetricCreator,
+  metadata: IMetricsOptions["metadata"],
+  anchorState?: BeaconState
+) {
   if (metadata) {
     register.static<"semver" | "branch" | "commit" | "version" | "network">({
       name: "lodestar_version",
@@ -16,7 +21,24 @@ export function createLodestarMetrics(register: RegistryMetricCreator, metadata:
     });
   }
 
+  // Initial static metrics
+  if (anchorState) {
+    register
+      .gauge({
+        name: "lodestar_genesis_time",
+        help: "Genesis time in seconds",
+      })
+      .set(anchorState.genesisTime);
+  }
+
   return {
+    clockSlot: register.gauge({
+      name: "lodestar_clock_slot",
+      help: "Current clock slot",
+    }),
+
+    // Peers
+
     peersByDirection: register.gauge<"direction">({
       name: "lodestar_peers_by_direction",
       help: "number of peers, labeled by direction",
@@ -128,6 +150,19 @@ export function createLodestarMetrics(register: RegistryMetricCreator, metadata:
     blsThreadPoolTotalJobsGroupsStarted: register.gauge({
       name: "lodestar_bls_thread_pool_job_groups_started_total",
       help: "Count of total jobs groups started in bls thread pool, job groups include +1 jobs",
+    }),
+
+    // Sync
+
+    syncChainsStarted: register.gauge<"syncType">({
+      name: "lodestar_sync_chains_started",
+      help: "Total number of sync chains started events, labeled by syncType",
+      labelNames: ["syncType"],
+    }),
+
+    syncStatus: register.gauge({
+      name: "lodestar_sync_status",
+      help: "Range sync status: [Stalled, SyncingFinalized, SyncingHead, Synced]",
     }),
   };
 }

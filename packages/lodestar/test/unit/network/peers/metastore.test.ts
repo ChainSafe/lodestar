@@ -43,21 +43,6 @@ describe("Libp2pPeerMetadataStore", function () {
     expect(result).to.be.equal(value);
   });
 
-  it("can store and retrieve status", function () {
-    const store = new Libp2pPeerMetadataStore(config, metabookStub);
-    const value: phase0.Status = {
-      finalizedEpoch: 1,
-      finalizedRoot: Buffer.alloc(32, 1),
-      forkDigest: Buffer.alloc(4),
-      headRoot: Buffer.alloc(32, 2),
-      headSlot: 10,
-    };
-    store.status.set(peerId, value);
-    const result = store.status.get(peerId);
-
-    expect(config.types.phase0.Status.equals(result as phase0.Status, value)).to.be.true;
-  });
-
   it("can store and retrieve metadata", function () {
     const store = new Libp2pPeerMetadataStore(config, metabookStub);
     const value: phase0.Metadata = {

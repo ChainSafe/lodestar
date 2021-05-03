@@ -13,14 +13,14 @@ import {PeerDiscovery} from "./discover";
 import {IPeerRpcScoreStore, ScoreState} from "./score";
 import {
   getConnectedPeerIds,
+  hasSomeConnectedPeer,
   PeerMapDelay,
-  SubnetMap,
-  RequestedSubnet,
   assertPeerRelevance,
   prioritizePeers,
   IrrelevantPeerError,
 } from "./utils";
 import {prettyPrintPeerId} from "../util";
+import {IAttestationService} from "../attestationService";
 
 /** heartbeat performs regular updates such as updating reputations and performing discovery requests */
 const HEARTBEAT_INTERVAL_MS = 30 * 1000;
@@ -51,8 +51,9 @@ export type PeerManagerOpts = {
 export type PeerManagerModules = {
   libp2p: LibP2p;
   logger: ILogger;
-  metrics?: IMetrics;
+  metrics: IMetrics | null;
   reqResp: IReqResp;
+  attService: IAttestationService;
   chain: IBeaconChain;
   config: IBeaconConfig;
   peerMetadata: Libp2pPeerMetadataStore;
@@ -71,8 +72,9 @@ export type PeerManagerModules = {
 export class PeerManager {
   private libp2p: LibP2p;
   private logger: ILogger;
-  private metrics?: IMetrics;
+  private metrics: IMetrics | null;
   private reqResp: IReqResp;
+  private attService: IAttestationService;
   private chain: IBeaconChain;
   private config: IBeaconConfig;
   private peerMetadata: Libp2pPeerMetadataStore;
@@ -88,8 +90,6 @@ export class PeerManager {
   private opts: PeerManagerOpts;
   private intervals: NodeJS.Timeout[] = [];
 
-  /** Map of subnets and the slot until they are needed */
-  private subnets = new SubnetMap();
   private seenPeers = new Set<string>();
 
   constructor(modules: PeerManagerModules, opts: PeerManagerOpts) {
@@ -97,6 +97,7 @@ export class PeerManager {
     this.logger = modules.logger;
     this.metrics = modules.metrics;
     this.reqResp = modules.reqResp;
+    this.attService = modules.attService;
     this.chain = modules.chain;
     this.config = modules.config;
     this.peerMetadata = modules.peerMetadata;
@@ -134,6 +135,13 @@ export class PeerManager {
     return getConnectedPeerIds(this.libp2p);
   }
 
+  /**
+   * Efficiently check if there is at least one peer connected
+   */
+  hasSomeConnectedPeer(): boolean {
+    return hasSomeConnectedPeer(this.libp2p);
+  }
+
   async goodbyeAndDisconnectAllPeers(): Promise<void> {
     await Promise.all(
       // Filter by peers that support the goodbye protocol: {supportsProtocols: [goodbyeProtocol]}
@@ -142,11 +150,9 @@ export class PeerManager {
   }
 
   /**
-   * Request to find peers on a given subnet.
+   * Run after validator subscriptions request.
    */
-  requestAttSubnets(requestedSubnets: RequestedSubnet[]): void {
-    this.subnets.request(requestedSubnets);
-
+  onBeaconCommitteeSubscriptions(): void {
     // TODO:
     // Only if the slot is more than epoch away, add an event to start looking for peers
 
@@ -238,8 +244,6 @@ export class PeerManager {
     // libp2p.connectionManager.get() returns not null if there's +1 open connections with `peer`
     if (this.libp2p.connectionManager.get(peer)) {
       this.networkEventBus.emit(NetworkEvent.peerConnected, peer, status);
-      // TODO - TEMP: RangeSync refactor may delete peerMetadata.status
-      this.peerMetadata.status.set(peer, status);
     }
   }
 
@@ -306,7 +310,7 @@ export class PeerManager {
         score: this.peerRpcScores.getScore(peer),
       })),
       // Collect subnets which we need peers for in the current slot
-      this.subnets.getActive(this.chain.clock.currentSlot),
+      this.attService.getActiveSubnets(),
       this.opts
     );
 

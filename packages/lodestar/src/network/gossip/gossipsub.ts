@@ -25,7 +25,7 @@ interface IGossipsubModules {
   validatorFns: TopicValidatorFnMap;
   forkDigestContext: IForkDigestContext;
   logger: ILogger;
-  metrics?: IMetrics;
+  metrics: IMetrics | null;
 }
 
 /**
@@ -45,7 +45,7 @@ export class Eth2Gossipsub extends Gossipsub {
   private readonly config: IBeaconConfig;
   private readonly forkDigestContext: IForkDigestContext;
   private readonly logger: ILogger;
-  private readonly metrics?: IMetrics;
+  private readonly metrics: IMetrics | null;
   /**
    * Cached gossip objects
    *

@@ -3,7 +3,7 @@ import {ErrorAborted, ILogger, sleep, prettyBytes} from "@chainsafe/lodestar-uti
 import {AbortSignal} from "abort-controller";
 import {IBeaconChain} from "../chain";
 import {INetwork} from "../network";
-import {IBeaconSync, SyncMode} from "../sync";
+import {IBeaconSync, SyncState} from "../sync";
 import {prettyTimeDiff} from "../util/time";
 import {TimeSeries} from "../util/timeSeries";
 
@@ -57,10 +57,10 @@ export async function runNodeNotifier({
       const headRow = `head: ${headInfo.slot} ${prettyBytes(headInfo.blockRoot)}`;
       const currentSlotRow = `currentSlot: ${currentSlot}`;
 
-      let nodeState: string[] = [];
+      let nodeState: string[];
       switch (sync.state) {
-        case SyncMode.INITIAL_SYNCING:
-        case SyncMode.REGULAR_SYNCING: {
+        case SyncState.SyncingFinalized:
+        case SyncState.SyncingHead: {
           const slotsPerSecond = timeSeries.computeLinearSpeed();
           const distance = Math.max(currentSlot - headSlot, 0);
           const secondsLeft = distance / slotsPerSecond;
@@ -77,13 +77,12 @@ export async function runNodeNotifier({
           break;
         }
 
-        case SyncMode.SYNCED: {
+        case SyncState.Synced: {
           nodeState = ["Synced", finalizedCheckpointRow, headRow, peersRow];
           break;
         }
 
-        case SyncMode.STOPPED:
-        case SyncMode.WAITING_PEERS: {
+        case SyncState.Stalled: {
           nodeState = ["Searching for peers", peersRow, finalizedCheckpointRow, headRow, currentSlotRow];
         }
       }

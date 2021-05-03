@@ -33,7 +33,12 @@
       "type": "row"
     },
     {
-      "aliasColors": {},
+      "aliasColors": {
+        "(time() - lodestar_genesis_time) / 12": "rgba(48, 208, 255, 0.51)",
+        "clock slot": "rgba(105, 220, 255, 0.53)",
+        "head slot": "green",
+        "process restart": "dark-red"
+      },
       "bars": false,
       "dashLength": 10,
       "dashes": false,
@@ -75,16 +80,37 @@
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
-      "seriesOverrides": [],
+      "seriesOverrides": [
+        {
+          "alias": "process restart",
+          "yaxis": 2
+        }
+      ],
       "spaceLength": 10,
       "stack": false,
       "steppedLine": false,
       "targets": [
         {
-          "expr": "beacon_head_slot",
+          "expr": "(time() - lodestar_genesis_time) / 12",
+          "hide": false,
+          "instant": false,
           "interval": "",
-          "legendFormat": "",
+          "legendFormat": "clock slot",
+          "refId": "C"
+        },
+        {
+          "expr": "beacon_head_slot",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "head slot",
           "refId": "A"
+        },
+        {
+          "expr": "changes(process_start_time_seconds[5m])",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "process restart",
+          "refId": "B"
         }
       ],
       "thresholds": [],
@@ -115,11 +141,12 @@
           "show": true
         },
         {
+          "decimals": 0,
           "format": "short",
           "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
+          "max": "1",
+          "min": "0.1",
           "show": true
         }
       ],

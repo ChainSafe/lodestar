@@ -63,7 +63,6 @@ export async function getDevBeaconNode({
     deepmerge(
       {
         db: {name: tmpDir.name},
-        sync: {minPeers: 1},
         eth1: {enabled: false},
         metrics: {enabled: false},
         network: {disablePeerDiscovery: true},

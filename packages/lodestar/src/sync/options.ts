@@ -1,16 +1,11 @@
 export interface ISyncOptions {
-  blockPerChunk?: number;
   /**
-   * max slots to import before waiting for
-   * chain to process them
+   * Allow node to consider itself synced without being connected to a peer.
+   * Use only for local networks with a single node, can be dangerous in regular networks.
    */
-  maxSlotImport?: number;
-  minPeers?: number;
+  isSingleNode?: boolean;
 }
 
 export const defaultSyncOptions: Required<ISyncOptions> = {
-  minPeers: 3,
-  // 2 epochs
-  maxSlotImport: 64,
-  blockPerChunk: 64,
+  isSingleNode: false,
 };

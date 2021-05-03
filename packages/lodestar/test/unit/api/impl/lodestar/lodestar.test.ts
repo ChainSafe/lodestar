@@ -16,7 +16,7 @@ describe("Lodestar api impl", function () {
     server = setupApiImplTestServer();
     chainStub = server.chainStub;
     chainStub.getHeadState.returns(createCachedBeaconState(config, generateState()));
-    api = new LodestarApi({config, chain: chainStub});
+    api = new LodestarApi({config, chain: chainStub, sync: server.syncStub});
   });
 
   it("should get latest weak subjectivity checkpoint epoch", async function () {
