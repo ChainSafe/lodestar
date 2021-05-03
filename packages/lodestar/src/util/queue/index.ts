@@ -5,23 +5,27 @@ import {QueueError, QueueErrorCode} from "./errors";
 import {IGauge, IHistogram} from "../../metrics";
 export {QueueError, QueueErrorCode};
 
-export type JobQueueOpts = {
-  maxLength: number;
-  signal: AbortSignal;
-  /** Defaults to FIFO */
-  type?: QueueType;
-};
-
 export enum QueueType {
   FIFO = "FIFO",
   LIFO = "LIFO",
 }
 
-enum QueueState {
-  Idle,
-  Running,
-  Yielding,
-}
+export type JobQueueOpts = {
+  maxLength: number;
+  /** Defaults to 1 */
+  maxConcurrency?: number;
+  /** Yield to the macro queue every at least every N miliseconds */
+  yieldEveryMs?: number;
+  signal: AbortSignal;
+  /** Defaults to FIFO */
+  type?: QueueType;
+};
+
+const defaultQueueOpts: Required<Pick<JobQueueOpts, "maxConcurrency" | "yieldEveryMs" | "type">> = {
+  maxConcurrency: 1,
+  yieldEveryMs: 50,
+  type: QueueType.FIFO,
+};
 
 export interface IQueueMetrics {
   length: IGauge;
@@ -42,14 +46,15 @@ type JobQueueItem<R, Fn extends Job<R>> = {
 };
 
 export class JobQueue {
-  private state = QueueState.Idle;
-  private readonly opts: JobQueueOpts;
+  private readonly opts: Required<JobQueueOpts>;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private readonly jobs: JobQueueItem<any, Job<any>>[] = [];
   private readonly metrics?: IQueueMetrics;
+  private runningJobs = 0;
+  private lastYield = 0;
 
   constructor(opts: JobQueueOpts, metrics?: IQueueMetrics) {
-    this.opts = opts;
+    this.opts = {...defaultQueueOpts, ...opts};
     this.opts.signal.addEventListener("abort", this.abortAllJobs, {once: true});
 
     if (metrics) {
@@ -81,7 +86,7 @@ export class JobQueue {
   }
 
   private runJob = async (): Promise<void> => {
-    if (this.opts.signal.aborted || this.state !== QueueState.Idle) {
+    if (this.opts.signal.aborted || this.runningJobs >= this.opts.maxConcurrency) {
       return;
     }
 
@@ -91,7 +96,7 @@ export class JobQueue {
       return;
     }
 
-    this.state = QueueState.Running;
+    this.runningJobs++;
 
     const timer = this.metrics?.jobTime.startTimer();
     this.metrics?.jobWaitTime.observe((Date.now() - job.addedTimeMs) / 1000);
@@ -103,9 +108,12 @@ export class JobQueue {
     if (timer) timer();
 
     // Yield to the macro queue
-    this.state = QueueState.Yielding;
-    await sleep(0);
-    this.state = QueueState.Idle;
+    if (Date.now() - this.lastYield > this.opts.yieldEveryMs) {
+      this.lastYield = Date.now();
+      await sleep(0);
+    }
+
+    this.runningJobs = Math.max(0, this.runningJobs - 1);
 
     // Potentially run a new job
     void this.runJob();
