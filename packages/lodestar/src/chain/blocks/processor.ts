@@ -46,14 +46,7 @@ export class BlockProcessor {
     this.modules = modules;
     this.jobQueue = new JobQueue(
       {maxLength, signal},
-      modules.metrics
-        ? {
-            length: modules.metrics.blockProcessorQueueLength,
-            droppedJobs: modules.metrics.blockProcessorQueueDroppedJobs,
-            jobTime: modules.metrics.blockProcessorQueueJobTime,
-            jobWaitTime: modules.metrics.blockProcessorQueueJobWaitTime,
-          }
-        : undefined
+      modules.metrics ? modules.metrics.blockProcessorQueue : undefined
     );
   }
 

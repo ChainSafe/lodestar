@@ -96,6 +96,7 @@ export class BeaconChain implements IBeaconChain {
       stateCache,
       checkpointStateCache,
       db,
+      metrics,
       signal,
     });
     this.pendingAttestations = new AttestationPool({config});
