@@ -48,7 +48,7 @@ export function stateTransition(
 
   // Process slots (including those with no blocks) since block.
   // Includes state upgrades
-  postState = processSlotsWithTransientCache(postState, blockSlot, metrics);
+  const res = processSlotsWithTransientCache(postState, blockSlot, metrics);
 
   // Verify proposer signature only
   if (verifyProposer) {
@@ -140,7 +140,9 @@ function processSlotsWithTransientCache(
       const fork = postState.config.getForkName(postState.slot);
       const timer = metrics?.stfnEpochTransition.startTimer();
       try {
-        processEpochByFork[fork](postState);
+        const process = processEpochByFork[fork](postState);
+        metrics?.registerParticipation(process);
+
         postState.slot++;
         rotateEpochs(postState.epochCtx, postState, postState.validators);
       } finally {
