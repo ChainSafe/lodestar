@@ -1,5 +1,4 @@
-import {computeSubnetForCommitteesAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
-import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition/src/util/epoch";
+import {computeSubnetForCommitteesAtSlot, computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig, ForkName} from "@chainsafe/lodestar-config";
 import {ATTESTATION_SUBNET_COUNT, Epoch, phase0, Slot} from "@chainsafe/lodestar-types";
 import {ILogger, randBetween} from "@chainsafe/lodestar-utils";
