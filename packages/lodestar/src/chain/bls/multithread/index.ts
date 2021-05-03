@@ -77,9 +77,10 @@ export class BlsMultiThreadWorkerPool {
   private readonly workers: WorkerDescriptor[];
 
   constructor(implementation: Implementation, modules: BlsMultiThreadWorkerPoolModules) {
-    this.logger = modules.logger;
-    this.metrics = modules.metrics;
-    this.signal = modules.signal;
+    const {logger, metrics, signal} = modules;
+    this.logger = logger;
+    this.metrics = metrics;
+    this.signal = signal;
 
     // Use compressed for herumi for now.
     // THe worker is not able to deserialize from uncompressed
@@ -89,6 +90,10 @@ export class BlsMultiThreadWorkerPool {
 
     this.signal.addEventListener("abort", this.abortAllJobs, {once: true});
     this.signal.addEventListener("abort", this.terminateAllWorkers, {once: true});
+
+    if (metrics) {
+      metrics.blsThreadPoolQueueLength.addCollect(() => metrics.blsThreadPoolQueueLength.set(this.jobs.length));
+    }
   }
 
   async verifySignatureSets(
@@ -120,7 +125,7 @@ export class BlsMultiThreadWorkerPool {
     const workers: WorkerDescriptor[] = [];
 
     for (let i = 0; i < poolSize; i++) {
-      const workerData: WorkerData = {implementation};
+      const workerData: WorkerData = {implementation, workerId: i};
       const worker = new Worker("./worker", {workerData} as ConstructorParameters<typeof Worker>[1]);
 
       const workerDescriptor: WorkerDescriptor = {
@@ -227,16 +232,17 @@ export class BlsMultiThreadWorkerPool {
       }
     } else {
       // Un-wrap work package
-      const results = workerResult.result;
-      for (const [i, result] of results.entries()) {
+      for (const [i, jobResult] of workerResult.result.entries()) {
         const job = jobs[i];
-        if (result.code === WorkResultCode.success) {
-          this.metrics?.blsThreadPoolSuccessJobsSignatureSetsCount.inc(job.workReq.sets.length);
-          this.metrics?.blsThreadPoolSuccessJobsWorkerTime.inc(result.workerJobTimeMs);
-
-          job.resolve(result.result);
+        const sigSetCount = job.workReq.sets.length;
+        if (jobResult.code === WorkResultCode.success) {
+          const {workerId, workerJobTimeMs} = jobResult;
+          this.metrics?.blsThreadPoolSuccessJobsSignatureSetsCount.inc(sigSetCount);
+          this.metrics?.blsThreadPoolSuccessJobsWorkerTime.inc({workerId}, workerJobTimeMs / 1000);
+          job.resolve(jobResult.result);
         } else {
-          job.reject(Error(result.error.message));
+          this.metrics?.blsThreadPoolErrorJobsSignatureSetsCount.inc(sigSetCount);
+          job.reject(Error(jobResult.error.message));
         }
       }
     }

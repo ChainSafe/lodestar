@@ -1,5 +1,6 @@
 export type WorkerData = {
   implementation: "herumi" | "blst-native";
+  workerId: number;
 };
 
 export type BlsWorkReq = {
@@ -15,7 +16,7 @@ export enum WorkResultCode {
 }
 
 export type WorkResult<R> =
-  | {code: WorkResultCode.success; result: R; workerJobTimeMs: number}
+  | {code: WorkResultCode.success; result: R; workerJobTimeMs: number; workerId: number}
   | {code: WorkResultCode.error; error: Error};
 
 export enum WorkerMessageCode {
