@@ -105,20 +105,20 @@ export function createLodestarMetrics(
     regenQueue: {
       length: register.gauge({
         name: "lodestar_regen_queue_length",
-        help: "Count of total block processor queue length",
+        help: "Count of total regen queue length",
       }),
       droppedJobs: register.gauge({
         name: "lodestar_regen_queue_dropped_jobs_total",
-        help: "Count of total block processor queue dropped jobs",
+        help: "Count of total regen queue dropped jobs",
       }),
       jobTime: register.histogram({
         name: "lodestar_regen_queue_job_time_seconds",
-        help: "Time to process block processor queue job in seconds",
+        help: "Time to process regen queue job in seconds",
         buckets: [0.1, 1, 10, 100],
       }),
       jobWaitTime: register.histogram({
         name: "lodestar_regen_queue_job_wait_time_seconds",
-        help: "Time from job added to the queue to starting the job in seconds",
+        help: "Time from job added to the regen queue to starting in seconds",
         buckets: [0.1, 1, 10, 100],
       }),
     },
@@ -138,7 +138,7 @@ export function createLodestarMetrics(
       }),
       jobWaitTime: register.histogram({
         name: "lodestar_block_processor_queue_job_wait_time_seconds",
-        help: "Time from job added to the queue to starting the job in seconds",
+        help: "Time from job added to the block processor queue to starting in seconds",
         buckets: [0.1, 1, 10, 100],
       }),
     },
