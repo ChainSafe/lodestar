@@ -44,7 +44,7 @@ export async function runNodeNotifier({
         hasLowPeerCount = false;
       }
 
-      const currentSlot = chain.clock.currentSlot;
+      const clockSlot = chain.clock.currentSlot;
       const headInfo = chain.forkChoice.getHead();
       const headState = chain.getHeadState();
       const finalizedEpoch = headState.finalizedCheckpoint.epoch;
@@ -55,14 +55,14 @@ export async function runNodeNotifier({
       const peersRow = `peers: ${connectedPeerCount}`;
       const finalizedCheckpointRow = `finalized: ${finalizedEpoch} ${prettyBytes(finalizedRoot)}`;
       const headRow = `head: ${headInfo.slot} ${prettyBytes(headInfo.blockRoot)}`;
-      const currentSlotRow = `currentSlot: ${currentSlot}`;
+      const clockSlotRow = `clockSlot: ${clockSlot}`;
 
       let nodeState: string[];
       switch (sync.state) {
         case SyncState.SyncingFinalized:
         case SyncState.SyncingHead: {
           const slotsPerSecond = timeSeries.computeLinearSpeed();
-          const distance = Math.max(currentSlot - headSlot, 0);
+          const distance = Math.max(clockSlot - headSlot, 0);
           const secondsLeft = distance / slotsPerSecond;
           const timeLeft = isFinite(secondsLeft) ? prettyTimeDiff(1000 * secondsLeft) : "?";
           nodeState = [
@@ -71,19 +71,19 @@ export async function runNodeNotifier({
             `${slotsPerSecond.toPrecision(3)} slots/s`,
             finalizedCheckpointRow,
             headRow,
-            currentSlotRow,
+            clockSlotRow,
             peersRow,
           ];
           break;
         }
 
         case SyncState.Synced: {
-          nodeState = ["Synced", finalizedCheckpointRow, headRow, peersRow];
+          nodeState = ["Synced", finalizedCheckpointRow, headRow, clockSlotRow, peersRow];
           break;
         }
 
         case SyncState.Stalled: {
-          nodeState = ["Searching for peers", peersRow, finalizedCheckpointRow, headRow, currentSlotRow];
+          nodeState = ["Searching for peers", peersRow, finalizedCheckpointRow, headRow, clockSlotRow];
         }
       }
       logger.info(nodeState.join(" - "));
