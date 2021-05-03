@@ -29,6 +29,10 @@ export class BeaconGossipHandler {
     this.addGossipHandlers();
   }
 
+  get isStarted(): boolean {
+    return this.state.status === GossipHandlerStatus.Started;
+  }
+
   close(): void {
     this.removeGossipHandlers();
     if (this.state.status === GossipHandlerStatus.Started) {

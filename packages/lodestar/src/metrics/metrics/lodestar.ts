@@ -129,5 +129,18 @@ export function createLodestarMetrics(register: RegistryMetricCreator, metadata:
       name: "lodestar_bls_thread_pool_job_groups_started_total",
       help: "Count of total jobs groups started in bls thread pool, job groups include +1 jobs",
     }),
+
+    // Sync
+
+    syncChainsStarted: register.gauge<"syncType">({
+      name: "lodestar_sync_chains_started",
+      help: "Total number of sync chains started events, labeled by syncType",
+      labelNames: ["syncType"],
+    }),
+
+    syncStatus: register.gauge({
+      name: "lodestar_sync_status",
+      help: "Range sync status: [Stalled, SyncingFinalized, SyncingHead, Synced]",
+    }),
   };
 }

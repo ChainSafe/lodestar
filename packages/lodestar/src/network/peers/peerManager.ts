@@ -11,7 +11,14 @@ import {IReqResp} from "../reqresp";
 import {Libp2pPeerMetadataStore} from "./metastore";
 import {PeerDiscovery} from "./discover";
 import {IPeerRpcScoreStore, ScoreState} from "./score";
-import {getConnectedPeerIds, PeerMapDelay, assertPeerRelevance, prioritizePeers, IrrelevantPeerError} from "./utils";
+import {
+  getConnectedPeerIds,
+  hasSomeConnectedPeer,
+  PeerMapDelay,
+  assertPeerRelevance,
+  prioritizePeers,
+  IrrelevantPeerError,
+} from "./utils";
 import {prettyPrintPeerId} from "../util";
 import {IAttestationService} from "../attestationService";
 
@@ -128,6 +135,13 @@ export class PeerManager {
     return getConnectedPeerIds(this.libp2p);
   }
 
+  /**
+   * Efficiently check if there is at least one peer connected
+   */
+  hasSomeConnectedPeer(): boolean {
+    return hasSomeConnectedPeer(this.libp2p);
+  }
+
   async goodbyeAndDisconnectAllPeers(): Promise<void> {
     await Promise.all(
       // Filter by peers that support the goodbye protocol: {supportsProtocols: [goodbyeProtocol]}
@@ -230,8 +244,6 @@ export class PeerManager {
     // libp2p.connectionManager.get() returns not null if there's +1 open connections with `peer`
     if (this.libp2p.connectionManager.get(peer)) {
       this.networkEventBus.emit(NetworkEvent.peerConnected, peer, status);
-      // TODO - TEMP: RangeSync refactor may delete peerMetadata.status
-      this.peerMetadata.status.set(peer, status);
     }
   }
 

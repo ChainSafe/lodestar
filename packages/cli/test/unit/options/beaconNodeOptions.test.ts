@@ -34,7 +34,7 @@ describe("options / beaconNodeOptions", () => {
       "network.bootMultiaddrs": [],
       "network.localMultiaddrs": [],
 
-      "sync.minPeers": 17,
+      "sync.isSingleNode": true,
     } as IBeaconNodeArgs;
 
     const expectedOptions: RecursivePartial<IBeaconNodeOptions> = {
@@ -76,7 +76,7 @@ describe("options / beaconNodeOptions", () => {
         localMultiaddrs: [],
       },
       sync: {
-        minPeers: 17,
+        isSingleNode: true,
       },
     };
 

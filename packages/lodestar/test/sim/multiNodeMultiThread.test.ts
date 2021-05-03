@@ -54,7 +54,6 @@ describe("Run multi node multi thread interop validators (no eth1) until checkpo
         const options: NodeWorkerOptions = {
           params: beaconParams,
           options: {
-            sync: {minPeers: 1},
             network: {
               discv5: {bindAddr: `/ip4/127.0.0.1/udp/${p2pPort}`},
               localMultiaddrs: [`/ip4/127.0.0.1/tcp/${p2pPort}`],

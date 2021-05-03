@@ -28,7 +28,7 @@ describe("sync", function () {
 
     const bn = await getDevBeaconNode({
       params: beaconParams,
-      options: {sync: {minPeers: 0}},
+      options: {sync: {isSingleNode: true}},
       validatorCount,
       logger: loggerNodeA,
     });

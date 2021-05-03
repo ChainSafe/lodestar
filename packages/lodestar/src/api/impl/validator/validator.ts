@@ -24,7 +24,7 @@ import {ZERO_HASH} from "../../../constants";
 import {IBeaconDb} from "../../../db";
 import {IEth1ForBlockProduction} from "../../../eth1";
 import {INetwork} from "../../../network";
-import {IBeaconSync, SyncMode} from "../../../sync";
+import {IBeaconSync, SyncState} from "../../../sync";
 import {toGraffitiBuffer} from "../../../util/graffiti";
 import {IApiOptions} from "../../options";
 import {ApiError} from "../errors";
@@ -317,8 +317,8 @@ export class ValidatorApi implements IValidatorApi {
 
     const syncState = this.sync.state;
     switch (syncState) {
-      case SyncMode.INITIAL_SYNCING:
-      case SyncMode.REGULAR_SYNCING: {
+      case SyncState.SyncingFinalized:
+      case SyncState.SyncingHead: {
         const currentSlot = this.chain.clock.currentSlot;
         const headSlot = this.chain.forkChoice.getHead().slot;
         if (currentSlot - headSlot > SYNC_TOLERANCE_EPOCHS * this.config.params.SLOTS_PER_EPOCH) {
@@ -328,14 +328,11 @@ export class ValidatorApi implements IValidatorApi {
         }
       }
 
-      case SyncMode.SYNCED:
+      case SyncState.Synced:
         return;
 
-      case SyncMode.WAITING_PEERS:
+      case SyncState.Stalled:
         throw new ApiError(503, "Node is waiting for peers");
-
-      case SyncMode.STOPPED:
-        throw new ApiError(503, "Node is stopped");
     }
   }
 }
