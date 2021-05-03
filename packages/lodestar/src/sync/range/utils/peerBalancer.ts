@@ -31,8 +31,8 @@ export class ChainPeersBalancer {
     const failedPeers = PeerMap.from(batch.getFailedPeers());
     const sortedBestPeers = sortBy(
       this.peers,
-      (peer) => (failedPeers.has(peer) ? 1 : 0),
-      (peer) => this.activeRequestsByPeer.get(peer) ?? 0
+      (peer) => (failedPeers.has(peer) ? 1 : 0), // Sort by no failed first = 0
+      (peer) => this.activeRequestsByPeer.get(peer) ?? 0 // Sort by least active req
     );
     return sortedBestPeers[0];
   }

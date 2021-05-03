@@ -1,4 +1,3 @@
 export * from "./attestation-collector";
-export * from "./blocks";
-export * from "./robin";
-export * from "./sync";
+export * from "./remoteSyncType";
+export * from "./unknownRoot";

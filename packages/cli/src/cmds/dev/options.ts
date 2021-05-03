@@ -47,10 +47,10 @@ const devOwnOptions: ICliCommandOptions<IDevOwnArgs> = {
  * Note: use beaconNodeOptions and globalOptions to make sure option key is correct
  */
 const externalOptionsOverrides: {[k: string]: Options} = {
-  "sync.minPeers": {
-    ...beaconNodeOptions["sync.minPeers"],
+  "sync.isSingleNode": {
+    ...beaconNodeOptions["sync.isSingleNode"],
     defaultDescription: undefined,
-    default: 0,
+    default: true,
   },
   "network.maxPeers": {
     ...beaconNodeOptions["network.maxPeers"],

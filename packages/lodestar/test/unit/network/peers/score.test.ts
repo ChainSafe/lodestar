@@ -1,6 +1,5 @@
 import {expect} from "chai";
 import PeerId from "peer-id";
-import {phase0} from "@chainsafe/lodestar-types";
 import {PeerAction, ScoreState, PeerRpcScoreStore} from "../../../../src/network/peers/score";
 import {IPeerMetadataStore} from "../../../../src/network/peers";
 
@@ -15,7 +14,6 @@ describe("simple block provider score tracking", function () {
       metadata: new PeerMap<any>(),
       rpcScore: new PeerMap<number>(),
       rpcScoreLastUpdate: new PeerMap<number>(),
-      status: new PeerMap<phase0.Status>(),
     };
     return {store, scoreStore: new PeerRpcScoreStore(store)};
   }

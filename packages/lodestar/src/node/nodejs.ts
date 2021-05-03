@@ -196,7 +196,6 @@ export class BeaconNode {
     });
 
     await network.start();
-    await sync.start();
     chores.start();
 
     void runNodeNotifier({network, chain, sync, config, logger, signal});
@@ -224,7 +223,7 @@ export class BeaconNode {
     if (this.status === BeaconNodeStatus.started) {
       this.status = BeaconNodeStatus.closing;
       await this.chores.stop();
-      await this.sync.stop();
+      this.sync.close();
       await this.network.stop();
       if (this.metricsServer) await this.metricsServer.stop();
       if (this.restApi) await this.restApi.close();

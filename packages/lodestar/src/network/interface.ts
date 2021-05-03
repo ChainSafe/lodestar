@@ -32,6 +32,7 @@ export interface INetwork {
   getEnr(): ENR | undefined;
   getConnectionsByPeer(): Map<string, Connection[]>;
   getConnectedPeers(): PeerId[];
+  hasSomeConnectedPeer(): boolean;
   /** Search peers joining subnets */
   prepareBeaconCommitteeSubnet(subscriptions: phase0.BeaconCommitteeSubscription[]): void;
   reStatusPeers(peers: PeerId[]): void;
