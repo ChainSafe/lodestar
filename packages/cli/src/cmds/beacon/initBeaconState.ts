@@ -1,6 +1,6 @@
 import {AbortSignal} from "abort-controller";
 
-import {TreeBacked} from "@chainsafe/ssz";
+import {toHexString, TreeBacked} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {allForks} from "@chainsafe/lodestar-types";
@@ -12,7 +12,7 @@ import {
   initStateFromDb,
   initStateFromEth1,
 } from "@chainsafe/lodestar";
-import {downloadOrLoadFile} from "../../util";
+import {downloadOrLoadFile, readFile} from "../../util";
 import {IBeaconArgs} from "./options";
 import {defaultNetwork, IGlobalArgs} from "../../options/globalOptions";
 import {getGenesisFileUrl} from "../../networks";
@@ -45,12 +45,11 @@ export async function initBeaconState(
   } else if (dbHasSomeState) {
     return await initStateFromDb(config, db, logger);
   } else if (args.fetchWeakSubjectivityStateFromIPFS) {
-    const state = await initFromFile("https://ipfs.io/ipfs/QmVsGxwZs4acTDfhQrNYVqccEVxyhALqJuYqgJrbbNAd1Z/state.ssz");
-    const storedStateRoot = await downloadOrLoadFile("./ws-state-root.ssz");
-    state;
+    const stateData = readFile("./weakSubjectivityState.json") as {ipfsPath: string; stateRoot: string};
+    const state = await initFromFile("https://ipfs.io" + stateData.ipfsPath);
     // verify downloaded state against locally stored state root
-    if (!config.types.Root.equals(state.hashTreeRoot(), storedStateRoot)) {
-      throw new Error("Unable to verify state root downloaded from ");
+    if (toHexString(state.hashTreeRoot()) !== stateData.stateRoot) {
+      throw new Error("Unable to verify state root downloaded from IPFS");
     }
     return state;
   } else {
