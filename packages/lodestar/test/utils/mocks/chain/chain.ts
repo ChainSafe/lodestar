@@ -83,6 +83,7 @@ export class MockBeaconChain implements IBeaconChain {
       stateCache: this.stateCache,
       checkpointStateCache: this.checkpointStateCache,
       db: new StubbedBeaconDb(sinon),
+      metrics: null,
     });
     this.forkDigestContext = new ForkDigestContext(this.config, this.genesisValidatorsRoot);
   }

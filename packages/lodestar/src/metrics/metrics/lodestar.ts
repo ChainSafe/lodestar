@@ -151,6 +151,19 @@ export function createLodestarMetrics(
       buckets: [0.01, 0.1, 0.5, 1, 5, 10],
     }),
 
+    // Beacon state transition metrics
+
+    stfnEpochTransition: register.histogram({
+      name: "lodestar_stfn_epoch_transition_seconds",
+      help: "Time to process a single epoch transition in seconds",
+      buckets: [0.1, 1, 10],
+    }),
+    stfnProcessBlock: register.histogram({
+      name: "lodestar_stfn_process_block_seconds",
+      help: "Time to process a single block in seconds",
+      buckets: [0.1, 1, 10],
+    }),
+
     // BLS verifier thread pool and queue
 
     blsThreadPoolSuccessJobsSignatureSetsCount: register.gauge({

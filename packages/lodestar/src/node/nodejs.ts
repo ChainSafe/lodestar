@@ -179,6 +179,7 @@ export class BeaconNode {
       sync,
       network,
       chain,
+      metrics,
     });
 
     const metricsServer = metrics

@@ -11,22 +11,22 @@ import {IBlsVerifier} from "../bls";
 import {groupBlocksByEpoch} from "./util";
 import {fast, ISignatureSet, CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
 import {CheckpointStateCache} from "../stateCache";
+import {IMetrics} from "../../metrics";
 
-export async function processBlock({
-  forkChoice,
-  regen,
-  emitter,
-  checkpointStateCache,
-  bls,
-  job,
-}: {
+type BlockProcessorModules = {
+  config: IBeaconConfig;
   forkChoice: IForkChoice;
   regen: IStateRegenerator;
   emitter: ChainEventEmitter;
   checkpointStateCache: CheckpointStateCache;
   bls: IBlsVerifier;
-  job: IBlockJob;
-}): Promise<void> {
+  metrics: IMetrics | null;
+};
+
+export async function processBlock(
+  {forkChoice, regen, emitter, checkpointStateCache, bls, metrics}: BlockProcessorModules,
+  job: IBlockJob
+): Promise<void> {
   if (!forkChoice.hasBlock(job.signedBlock.message.parentRoot)) {
     throw new BlockError({
       code: BlockErrorCode.PARENT_UNKNOWN,
@@ -57,7 +57,7 @@ export async function processBlock({
       job.validSignatures = true;
     }
 
-    await runStateTransition(emitter, forkChoice, checkpointStateCache, preState, job);
+    await runStateTransition({emitter, forkChoice, metrics}, checkpointStateCache, preState, job);
   } catch (e) {
     if (e instanceof RegenError) {
       throw new BlockError({
@@ -78,23 +78,10 @@ export async function processBlock({
   }
 }
 
-export async function processChainSegment({
-  config,
-  forkChoice,
-  regen,
-  emitter,
-  checkpointStateCache,
-  bls,
-  job,
-}: {
-  config: IBeaconConfig;
-  forkChoice: IForkChoice;
-  regen: IStateRegenerator;
-  emitter: ChainEventEmitter;
-  checkpointStateCache: CheckpointStateCache;
-  bls: IBlsVerifier;
-  job: IChainSegmentJob;
-}): Promise<void> {
+export async function processChainSegment(
+  {config, forkChoice, regen, emitter, checkpointStateCache, bls, metrics}: BlockProcessorModules,
+  job: IChainSegmentJob
+): Promise<void> {
   let importedBlocks = 0;
   const blocks = job.signedBlocks;
 
@@ -147,7 +134,7 @@ export async function processChainSegment({
       }
 
       for (const block of blocksInEpoch) {
-        preState = await runStateTransition(emitter, forkChoice, checkpointStateCache, preState, {
+        preState = await runStateTransition({emitter, forkChoice, metrics}, checkpointStateCache, preState, {
           reprocess: job.reprocess,
           prefinalized: job.prefinalized,
           signedBlock: block,

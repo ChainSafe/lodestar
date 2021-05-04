@@ -48,6 +48,7 @@ describe("get proposers api impl", function () {
       logger,
       network: server.networkStub,
       sync: syncStub,
+      metrics: null,
     };
     api = new ValidatorApi({}, modules);
   });

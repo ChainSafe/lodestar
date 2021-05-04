@@ -31,6 +31,7 @@ describe("api - validator - produceAttestationData", function () {
       logger,
       network: server.networkStub,
       sync: syncStub,
+      metrics: null,
     };
   });
 
