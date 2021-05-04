@@ -236,13 +236,13 @@ export class BlsMultiThreadWorkerPool {
         const job = jobs[i];
         const sigSetCount = job.workReq.sets.length;
         if (jobResult.code === WorkResultCode.success) {
+          job.resolve(jobResult.result);
           const {workerId, workerJobTimeMs} = jobResult;
           this.metrics?.blsThreadPoolSuccessJobsSignatureSetsCount.inc(sigSetCount);
           this.metrics?.blsThreadPoolSuccessJobsWorkerTime.inc({workerId}, workerJobTimeMs / 1000);
-          job.resolve(jobResult.result);
         } else {
-          this.metrics?.blsThreadPoolErrorJobsSignatureSetsCount.inc(sigSetCount);
           job.reject(Error(jobResult.error.message));
+          this.metrics?.blsThreadPoolErrorJobsSignatureSetsCount.inc(sigSetCount);
         }
       }
     }

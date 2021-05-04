@@ -173,6 +173,7 @@ export function createLodestarMetrics(
     blsThreadPoolSuccessJobsWorkerTime: register.gauge<"workerId">({
       name: "lodestar_bls_thread_pool_success_time_seconds_sum",
       help: "Total time spent verifying signature sets measured on the worker",
+      labelNames: ["workerId"],
     }),
     blsThreadPoolErrorJobsSignatureSetsCount: register.gauge({
       name: "lodestar_bls_thread_pool_error_jobs_signature_sets_count",
