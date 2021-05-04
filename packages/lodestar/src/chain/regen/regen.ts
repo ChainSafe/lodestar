@@ -67,21 +67,12 @@ export class StateRegenerator implements IStateRegenerator {
     const blockEpoch = computeEpochAtSlot(this.config, block.slot);
 
     // This may save us at least one epoch transition.
-    // If the requested state crosses an epoch boundary and the block isn't a checkpoint block
+    // If the requested state crosses an epoch boundary
     // then we may use the checkpoint state before the block
-    // If block is a checkpoint block, we may have the checkpoint state with parent root inside the checkpoint state cache
+    // We may have the checkpoint state with parent root inside the checkpoint state cache
     // through gossip validation.
     if (parentEpoch < blockEpoch) {
-      const checkpointState = await this.getCheckpointState({root: block.parentRoot, epoch: blockEpoch});
-      if (checkpointState) {
-        return checkpointState;
-      }
-    }
-
-    // If there's more than one epoch to pre-process (but the block is a checkpoint block)
-    // get the checkpoint state as close as possible
-    if (parentEpoch < blockEpoch - 1) {
-      return await this.getCheckpointState({root: block.parentRoot, epoch: blockEpoch - 1});
+      return await this.getCheckpointState({root: block.parentRoot, epoch: blockEpoch});
     }
 
     // Otherwise, get the state normally.
