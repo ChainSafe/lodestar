@@ -1,6 +1,5 @@
 import {AbortSignal} from "abort-controller";
 import {sleep} from "@chainsafe/lodestar-utils";
-import {wrapError} from "../wrapError";
 import {QueueError, QueueErrorCode} from "./errors";
 import {IGauge, IHistogram} from "../../metrics";
 export {QueueError, QueueErrorCode};
@@ -48,7 +47,7 @@ type JobQueueItem<R, Fn extends Job<R>> = {
 export class JobQueue {
   private readonly opts: Required<JobQueueOpts>;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private readonly jobs: JobQueueItem<any, Job<any>>[] = [];
+  private readonly jobs: JobQueueItem<any, Job<unknown>>[] = [];
   private readonly metrics?: IQueueMetrics;
   private runningJobs = 0;
   private lastYield = 0;
@@ -98,19 +97,24 @@ export class JobQueue {
 
     this.runningJobs++;
 
-    const timer = this.metrics?.jobTime.startTimer();
-    this.metrics?.jobWaitTime.observe((Date.now() - job.addedTimeMs) / 1000);
+    // If the job, metrics or any code below throws: the job will reject never going stale.
+    // Only downside is the the job promise may be resolved twice, but that's not an issue
+    try {
+      const timer = this.metrics?.jobTime.startTimer();
+      this.metrics?.jobWaitTime.observe((Date.now() - job.addedTimeMs) / 1000);
 
-    const res = await wrapError<unknown>(job.job());
-    if (res.err) job.reject(res.err);
-    else job.resolve(res.result);
+      const result = await job.job();
+      job.resolve(result);
 
-    if (timer) timer();
+      if (timer) timer();
 
-    // Yield to the macro queue
-    if (Date.now() - this.lastYield > this.opts.yieldEveryMs) {
-      this.lastYield = Date.now();
-      await sleep(0);
+      // Yield to the macro queue
+      if (Date.now() - this.lastYield > this.opts.yieldEveryMs) {
+        this.lastYield = Date.now();
+        await sleep(0);
+      }
+    } catch (e) {
+      job.reject(e);
     }
 
     this.runningJobs = Math.max(0, this.runningJobs - 1);
