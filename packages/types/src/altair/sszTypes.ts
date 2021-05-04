@@ -23,6 +23,10 @@ export function getAltairTypes(params: IBeaconParams, phase0: Phase0SSZTypes & P
     BeaconState: ContainerType<altair.BeaconState>;
   }>();
 
+  const SyncSubnets = new BitVectorType({
+    length: params.EPOCHS_PER_SYNC_COMMITTEE_PERIOD,
+  });
+
   const SyncCommittee = new ContainerType<altair.SyncCommittee>({
     fields: {
       pubkeys: new VectorType({elementType: phase0.BLSPubkey, length: params.SYNC_COMMITTEE_SIZE}),
@@ -209,6 +213,7 @@ export function getAltairTypes(params: IBeaconParams, phase0: Phase0SSZTypes & P
   typesRef.set({BeaconBlock, BeaconState});
 
   return {
+    SyncSubnets,
     SyncCommittee,
     SyncCommitteeSignature,
     SyncCommitteeContribution,

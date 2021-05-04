@@ -56,6 +56,17 @@ export class MetadataController {
     return this._metadata.seqNumber;
   }
 
+  get syncnets(): BitVector {
+    return this._metadata.syncnets;
+  }
+
+  set syncnets(syncnets: BitVector) {
+    if (this.enr) {
+      this.enr.set("syncnets", Buffer.from(this.config.types.altair.SyncSubnets.serialize(syncnets)));
+    }
+    this._metadata.syncnets;
+  }
+
   get attnets(): BitVector {
     return this._metadata.attnets;
   }

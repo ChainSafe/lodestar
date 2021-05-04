@@ -2,7 +2,7 @@ import {List} from "@chainsafe/ssz";
 
 import {Slot, Epoch, Root, Number64, Uint64, ForkDigest, Uint8} from "../../primitive/types";
 import {SignedBeaconBlock} from "./block";
-import {AttestationSubnets} from "./misc";
+import {AttestationSubnets, SyncSubnets} from "./misc";
 
 export type RequestId = string;
 
@@ -33,6 +33,7 @@ export type Ping = Uint64;
 export interface Metadata {
   seqNumber: Uint64;
   attnets: AttestationSubnets;
+  syncnets: SyncSubnets;
 }
 
 export interface BeaconBlocksByRangeRequest {
