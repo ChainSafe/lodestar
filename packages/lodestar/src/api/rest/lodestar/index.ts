@@ -55,4 +55,19 @@ export const createProof: ApiController<{paths: (string | number)[][]}, {stateId
   },
 };
 
-export const lodestarRoutes = [getWtfNode, getLatestWeakSubjectivityCheckpointEpoch, createProof];
+export const getSyncChainsDebugState: ApiController<{paths: (string | number)[][]}, {stateId: string}> = {
+  url: "/sync-chains-debug-state",
+  method: "GET",
+  id: "getSyncChainsDebugState",
+
+  handler: async function () {
+    return this.api.lodestar.getSyncChainsDebugState();
+  },
+};
+
+export const lodestarRoutes = [
+  getWtfNode,
+  getLatestWeakSubjectivityCheckpointEpoch,
+  createProof,
+  getSyncChainsDebugState,
+];

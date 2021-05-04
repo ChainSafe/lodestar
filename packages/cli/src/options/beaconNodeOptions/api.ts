@@ -28,6 +28,8 @@ export const options: ICliCommandOptions<IApiArgs> = {
     description: "Pick namespaces to expose for HTTP API",
     defaultDescription: JSON.stringify(defaultOptions.api.rest.api),
     group: "api",
+    // Parse ["debug,lodestar"] to ["debug", "lodestar"]
+    coerce: (namespaces: string[]): string[] => namespaces.map((val) => val.split(",")).flat(1),
   },
 
   "api.rest.cors": {
