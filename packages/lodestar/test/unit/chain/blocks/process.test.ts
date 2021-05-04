@@ -11,17 +11,19 @@ import {processBlock} from "../../../../src/chain/blocks/process";
 import {BlsVerifier} from "../../../../src/chain/bls";
 import {RegenError, RegenErrorCode, StateRegenerator} from "../../../../src/chain/regen";
 import {getNewBlockJob} from "../../../utils/block";
+import {createStubInstance} from "../../../utils/types";
 
 describe("processBlock", function () {
   const emitter = new ChainEventEmitter();
+  const metrics = null;
   let forkChoice: SinonStubbedInstance<ForkChoice>;
-  let checkpointStateCache: SinonStubbedInstance<CheckpointStateCache>;
+  let checkpointStateCache: SinonStubbedInstance<CheckpointStateCache> & CheckpointStateCache;
   let regen: SinonStubbedInstance<StateRegenerator>;
   let bls: SinonStubbedInstance<BlsVerifier>;
 
   beforeEach(function () {
     forkChoice = sinon.createStubInstance(ForkChoice);
-    checkpointStateCache = sinon.createStubInstance(CheckpointStateCache);
+    checkpointStateCache = createStubInstance(CheckpointStateCache);
     regen = sinon.createStubInstance(StateRegenerator);
     bls = sinon.createStubInstance(BlsVerifier);
   });
@@ -36,14 +38,7 @@ describe("processBlock", function () {
     const job = getNewBlockJob(signedBlock);
     forkChoice.hasBlock.returns(false);
     try {
-      await processBlock({
-        forkChoice,
-        checkpointStateCache: (checkpointStateCache as unknown) as CheckpointStateCache,
-        regen,
-        emitter,
-        bls,
-        job,
-      });
+      await processBlock({config, forkChoice, checkpointStateCache, regen, emitter, bls, metrics}, job);
       expect.fail("block should throw");
     } catch (e) {
       expect((e as BlockError).type.code).to.equal(BlockErrorCode.PARENT_UNKNOWN);
@@ -57,14 +52,7 @@ describe("processBlock", function () {
     forkChoice.hasBlock.returns(true);
     regen.getPreState.rejects(new RegenError({code: RegenErrorCode.STATE_TRANSITION_ERROR, error: new Error()}));
     try {
-      await processBlock({
-        forkChoice,
-        checkpointStateCache: (checkpointStateCache as unknown) as CheckpointStateCache,
-        regen,
-        emitter,
-        bls,
-        job,
-      });
+      await processBlock({config, forkChoice, checkpointStateCache, regen, emitter, bls, metrics}, job);
       expect.fail("block should throw");
     } catch (e) {
       expect((e as BlockError).type.code).to.equal(BlockErrorCode.PRESTATE_MISSING);

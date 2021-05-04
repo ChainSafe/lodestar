@@ -1,5 +1,6 @@
 import {ForkName} from "@chainsafe/lodestar-config";
 import {allForks, phase0} from "@chainsafe/lodestar-types";
+import {IBeaconStateTransitionMetrics} from "../metrics";
 import {processBlock, processSlots} from "../phase0/fast";
 import {verifyProposerSignature} from "./signatureSets";
 import {CachedBeaconState} from "./util";
@@ -12,7 +13,8 @@ import {CachedBeaconState} from "./util";
 export function fastStateTransition(
   state: CachedBeaconState<allForks.BeaconState>,
   signedBlock: allForks.SignedBeaconBlock,
-  options?: {verifyStateRoot?: boolean; verifyProposer?: boolean; verifySignatures?: boolean}
+  options?: {verifyStateRoot?: boolean; verifyProposer?: boolean; verifySignatures?: boolean},
+  metrics?: IBeaconStateTransitionMetrics | null
 ): CachedBeaconState<allForks.BeaconState> {
   const {verifyStateRoot = true, verifyProposer = true, verifySignatures = true} = options || {};
   const {config} = state;
@@ -29,7 +31,7 @@ export function fastStateTransition(
   // process slots (including those with no blocks) since block
   switch (preFork) {
     case ForkName.phase0:
-      processSlots(postState as CachedBeaconState<phase0.BeaconState>, block.slot);
+      processSlots(postState as CachedBeaconState<phase0.BeaconState>, block.slot, metrics);
       break;
     default:
       throw new Error(`Slot processing not implemented for fork ${preFork}`);
@@ -46,9 +48,15 @@ export function fastStateTransition(
   }
 
   // process block
+
   switch (blockFork) {
     case ForkName.phase0:
-      processBlock(postState as CachedBeaconState<phase0.BeaconState>, block as phase0.BeaconBlock, verifySignatures);
+      processBlock(
+        postState as CachedBeaconState<phase0.BeaconState>,
+        block as phase0.BeaconBlock,
+        verifySignatures,
+        metrics
+      );
       break;
     default:
       throw new Error(`Block processing not implemented for fork ${blockFork}`);

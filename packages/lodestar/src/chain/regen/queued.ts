@@ -3,14 +3,13 @@ import {Root, phase0, Slot, allForks} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
-
 import {CheckpointStateCache, StateContextCache} from "../stateCache";
 import {ChainEventEmitter} from "../emitter";
+import {IMetrics} from "../../metrics";
 import {IBeaconDb} from "../../db";
 import {JobQueue} from "../../util/queue";
 import {IStateRegenerator} from "./interface";
 import {StateRegenerator} from "./regen";
-import {IMetrics} from "../../metrics";
 
 const REGEN_QUEUE_MAX_LEN = 256;
 

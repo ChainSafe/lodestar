@@ -14,6 +14,7 @@ import {IEventsApi} from "./events";
 import {IDebugApi} from "./debug/interface";
 import {IConfigApi} from "./config/interface";
 import {ILodestarApi} from "./lodestar";
+import {IMetrics} from "../../metrics";
 
 export const enum ApiNamespace {
   BEACON = "beacon",
@@ -27,12 +28,13 @@ export const enum ApiNamespace {
 
 export interface IApiModules {
   config: IBeaconConfig;
-  logger: ILogger;
   chain: IBeaconChain;
-  sync: IBeaconSync;
-  network: INetwork;
   db: IBeaconDb;
   eth1: IEth1ForBlockProduction;
+  logger: ILogger;
+  metrics: IMetrics | null;
+  network: INetwork;
+  sync: IBeaconSync;
 }
 
 export interface IApi {

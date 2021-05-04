@@ -23,6 +23,7 @@ import {validateGossipAggregateAndProof} from "../../../chain/validation";
 import {ZERO_HASH} from "../../../constants";
 import {IBeaconDb} from "../../../db";
 import {IEth1ForBlockProduction} from "../../../eth1";
+import {IMetrics} from "../../../metrics";
 import {INetwork} from "../../../network";
 import {IBeaconSync, SyncState} from "../../../sync";
 import {toGraffitiBuffer} from "../../../util/graffiti";
@@ -59,13 +60,14 @@ export class ValidatorApi implements IValidatorApi {
   private eth1: IEth1ForBlockProduction;
   private network: INetwork;
   private sync: IBeaconSync;
+  private metrics: IMetrics | null;
   private logger: ILogger;
   // Cached for duties
   private genesisBlockRoot: Root | null = null;
 
   constructor(
     opts: Partial<IApiOptions>,
-    modules: Pick<IApiModules, "config" | "chain" | "db" | "eth1" | "sync" | "network" | "logger">
+    modules: Pick<IApiModules, "config" | "chain" | "db" | "eth1" | "network" | "sync" | "metrics" | "logger">
   ) {
     this.namespace = ApiNamespace.VALIDATOR;
     this.config = modules.config;
@@ -74,6 +76,7 @@ export class ValidatorApi implements IValidatorApi {
     this.eth1 = modules.eth1;
     this.network = modules.network;
     this.sync = modules.sync;
+    this.metrics = modules.metrics;
     this.logger = modules.logger;
   }
 
@@ -83,10 +86,7 @@ export class ValidatorApi implements IValidatorApi {
     await this.waitForSlot(slot); // Must never request for a future slot > currentSlot
 
     return await assembleBlock(
-      this.config,
-      this.chain,
-      this.db,
-      this.eth1,
+      {config: this.config, chain: this.chain, db: this.db, eth1: this.eth1, metrics: this.metrics},
       slot,
       randaoReveal,
       toGraffitiBuffer(graffiti)
