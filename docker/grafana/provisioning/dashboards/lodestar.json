@@ -225,7 +225,7 @@
       ],
       "timeFrom": null,
       "timeShift": null,
-      "title": "Head Slot",
+      "title": "Slot",
       "type": "timeseries"
     },
     {
@@ -860,70 +860,57 @@
       "type": "stat"
     },
     {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
       "datasource": null,
       "fieldConfig": {
         "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 20,
-            "gradientMode": "opacity",
-            "hideFrom": {
-              "graph": false,
-              "legend": false,
-              "tooltip": false
-            },
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "never",
-            "spanNulls": true
-          },
-          "mappings": [],
+          "color": {},
+          "custom": {},
           "thresholds": {
             "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
+            "steps": []
           },
           "unit": "short"
         },
         "overrides": []
       },
+      "fill": 1,
+      "fillGradient": 1,
       "gridPos": {
         "h": 10,
         "w": 12,
         "x": 12,
         "y": 6
       },
+      "hiddenSeries": false,
       "id": 21,
-      "options": {
-        "graph": {},
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom"
-        },
-        "tooltipOptions": {
-          "mode": "multi"
-        }
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
       },
+      "lines": true,
+      "linewidth": 1,
+      "nullPointMode": "null",
+      "options": {
+        "alertThreshold": true
+      },
+      "percentage": false,
       "pluginVersion": "7.4.5",
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": true,
+      "steppedLine": false,
       "targets": [
         {
           "expr": "lodestar_peers_by_direction",
@@ -933,10 +920,46 @@
           "refId": "B"
         }
       ],
+      "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
       "title": "Peer count",
-      "type": "timeseries"
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
     },
     {
       "datasource": null,
@@ -2142,7 +2165,7 @@
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 59
+            "y": 19
           },
           "id": 48,
           "options": {
@@ -2257,7 +2280,7 @@
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 59
+            "y": 19
           },
           "id": 50,
           "options": {
@@ -2321,7 +2344,7 @@
                 },
                 "lineInterpolation": "linear",
                 "lineWidth": 1,
-                "pointSize": 5,
+                "pointSize": 4,
                 "scaleDistribution": {
                   "type": "linear"
                 },
@@ -3146,70 +3169,57 @@
       "id": 25,
       "panels": [
         {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
           "datasource": null,
           "fieldConfig": {
             "defaults": {
-              "color": {
-                "mode": "palette-classic"
-              },
-              "custom": {
-                "axisLabel": "",
-                "axisPlacement": "auto",
-                "barAlignment": 0,
-                "drawStyle": "line",
-                "fillOpacity": 30,
-                "gradientMode": "opacity",
-                "hideFrom": {
-                  "graph": false,
-                  "legend": false,
-                  "tooltip": false
-                },
-                "lineInterpolation": "linear",
-                "lineWidth": 1,
-                "pointSize": 5,
-                "scaleDistribution": {
-                  "type": "linear"
-                },
-                "showPoints": "never",
-                "spanNulls": false
-              },
-              "mappings": [],
+              "color": {},
+              "custom": {},
               "thresholds": {
                 "mode": "absolute",
-                "steps": [
-                  {
-                    "color": "green",
-                    "value": null
-                  },
-                  {
-                    "color": "red",
-                    "value": 80
-                  }
-                ]
+                "steps": []
               },
               "unit": "percentunit"
             },
             "overrides": []
           },
+          "fill": 1,
+          "fillGradient": 1,
           "gridPos": {
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 22
+            "y": 28
           },
+          "hiddenSeries": false,
           "id": 26,
-          "options": {
-            "graph": {},
-            "legend": {
-              "calcs": [],
-              "displayMode": "hidden",
-              "placement": "bottom"
-            },
-            "tooltipOptions": {
-              "mode": "multi"
-            }
+          "legend": {
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "show": true,
+            "total": false,
+            "values": false
           },
+          "lines": true,
+          "linewidth": 1,
+          "nullPointMode": "null",
+          "options": {
+            "alertThreshold": true
+          },
+          "percentage": false,
           "pluginVersion": "7.4.5",
+          "pointradius": 2,
+          "points": false,
+          "renderer": "flot",
+          "seriesOverrides": [],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": false,
           "targets": [
             {
               "expr": "rate(lodestar_block_processor_queue_job_time_seconds_sum[$__rate_interval])",
@@ -3219,10 +3229,46 @@
               "refId": "A"
             }
           ],
+          "thresholds": [],
           "timeFrom": null,
+          "timeRegions": [],
           "timeShift": null,
           "title": "Block processor queue - Utilization rate",
-          "type": "timeseries"
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "percentunit",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
           "datasource": null,
@@ -3274,7 +3320,7 @@
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 22
+            "y": 28
           },
           "id": 81,
           "options": {
@@ -3353,7 +3399,7 @@
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 30
+            "y": 36
           },
           "id": 100,
           "options": {
@@ -3432,7 +3478,7 @@
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 30
+            "y": 36
           },
           "id": 126,
           "options": {
@@ -3481,13 +3527,13 @@
                   "tooltip": false
                 },
                 "lineInterpolation": "linear",
-                "lineWidth": 1,
+                "lineWidth": 2,
                 "pointSize": 5,
                 "scaleDistribution": {
                   "type": "linear"
                 },
                 "showPoints": "never",
-                "spanNulls": true
+                "spanNulls": false
               },
               "mappings": [],
               "thresholds": {
@@ -3511,7 +3557,7 @@
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 38
+            "y": 44
           },
           "id": 127,
           "options": {
@@ -3590,7 +3636,7 @@
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 38
+            "y": 44
           },
           "id": 128,
           "options": {
@@ -3684,7 +3730,7 @@
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 23
+            "y": 29
           },
           "id": 113,
           "options": {
@@ -3762,7 +3808,7 @@
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 23
+            "y": 29
           },
           "id": 114,
           "options": {
@@ -3840,7 +3886,7 @@
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 31
+            "y": 37
           },
           "id": 115,
           "options": {
@@ -3918,7 +3964,7 @@
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 31
+            "y": 37
           },
           "id": 116,
           "options": {
@@ -3996,7 +4042,7 @@
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 39
+            "y": 45
           },
           "id": 112,
           "options": {
@@ -4074,7 +4120,7 @@
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 39
+            "y": 45
           },
           "id": 117,
           "options": {
@@ -4141,7 +4187,7 @@
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 24
+            "y": 54
           },
           "hiddenSeries": false,
           "id": 77,
@@ -4242,7 +4288,7 @@
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 24
+            "y": 54
           },
           "hiddenSeries": false,
           "id": 80,
@@ -4343,7 +4389,7 @@
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 32
+            "y": 62
           },
           "hiddenSeries": false,
           "id": 79,
@@ -4471,7 +4517,7 @@
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 32
+            "y": 62
           },
           "id": 78,
           "options": {
@@ -4523,7 +4569,7 @@
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 40
+            "y": 70
           },
           "hiddenSeries": false,
           "id": 82,
@@ -4625,7 +4671,7 @@
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 40
+            "y": 70
           },
           "hiddenSeries": false,
           "id": 88,
@@ -4877,7 +4923,7 @@
           "timeFrom": null,
           "timeRegions": [],
           "timeShift": null,
-          "title": "RESP API queries / sec",
+          "title": "REST API queries / sec",
           "tooltip": {
             "shared": true,
             "sort": 0,
@@ -5554,5 +5600,5 @@
   "timezone": "",
   "title": "Lodestar",
   "uid": "lodestar",
-  "version": 27
+  "version": 28
 }
