@@ -23,6 +23,7 @@ import {SeenAttestationCache} from "./seenAttestationCache";
 import {PendingBlockRepository} from "./repositories/pendingBlock";
 import {SyncCommitteeSignatureRepository} from "./repositories/syncCommitteeSignature";
 import {ContributionAndProofRepository} from "./repositories/contributionAndProof";
+import {SeenSyncCommitteeCache} from "./seenSyncCommitteeCache";
 
 /**
  * The DB service manages the data layer of the beacon chain
@@ -67,6 +68,7 @@ export interface IBeaconDb {
   // altair
   syncCommitteeSignature: SyncCommitteeSignatureRepository;
   contributionAndProof: ContributionAndProofRepository;
+  seenSyncCommiteeCache: SeenSyncCommitteeCache;
 
   processBlockOperations(signedBlock: phase0.SignedBeaconBlock): Promise<void>;
 

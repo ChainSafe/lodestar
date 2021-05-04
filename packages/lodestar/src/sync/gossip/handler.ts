@@ -1,17 +1,20 @@
-import {phase0, Version} from "@chainsafe/lodestar-types";
+import {allForks, altair, phase0} from "@chainsafe/lodestar-types";
 import {IBeaconConfig, ForkName} from "@chainsafe/lodestar-config";
 
-import {INetwork} from "../../network";
-import {ChainEvent, IBeaconChain} from "../../chain";
+import {getCurrentAndNextFork, INetwork} from "../../network";
+import {IBeaconChain} from "../../chain";
 import {IBeaconDb} from "../../db";
 import {GossipHandlerFn, GossipTopic, GossipType} from "../../network/gossip";
+import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 
 enum GossipHandlerStatus {
   Started = "Started",
   Stopped = "Stopped",
 }
 
-type GossipHandlerState = {status: GossipHandlerStatus.Stopped} | {status: GossipHandlerStatus.Started; fork: ForkName};
+type GossipHandlerState =
+  | {status: GossipHandlerStatus.Stopped}
+  | {status: GossipHandlerStatus.Started; forks: ForkName[]};
 
 export class BeaconGossipHandler {
   private readonly config: IBeaconConfig;
@@ -48,10 +51,15 @@ export class BeaconGossipHandler {
       return;
     }
 
-    const fork = this.chain.getHeadForkName();
-    this.subscribeAtFork(fork);
-    this.state = {status: GossipHandlerStatus.Started, fork};
-    this.chain.emitter.on(ChainEvent.forkVersion, this.handleForkVersion);
+    const epoch = computeEpochAtSlot(this.config, this.chain.forkChoice.getHead().slot);
+    const {currentFork, nextFork} = getCurrentAndNextFork(this.config, epoch);
+    const subscribedForks: ForkName[] = [];
+    subscribedForks.push(currentFork.name);
+    if (nextFork) subscribedForks.push(nextFork.name);
+    for (const fork of subscribedForks) {
+      this.subscribeAtFork(fork);
+    }
+    this.state = {status: GossipHandlerStatus.Started, forks: subscribedForks};
   }
 
   /**
@@ -61,13 +69,13 @@ export class BeaconGossipHandler {
     if (this.state.status !== GossipHandlerStatus.Started) {
       return;
     }
-
-    this.chain.emitter.off(ChainEvent.forkVersion, this.handleForkVersion);
-    this.unsubscribeAtFork(this.state.fork);
+    for (const fork of this.state.forks) {
+      this.unsubscribeAtFork(fork);
+    }
     this.state = {status: GossipHandlerStatus.Stopped};
   }
 
-  onBlock = (block: phase0.SignedBeaconBlock): void => {
+  onBlock = (block: allForks.SignedBeaconBlock): void => {
     this.chain.receiveBlock(block);
   };
 
@@ -87,6 +95,10 @@ export class BeaconGossipHandler {
     await this.db.voluntaryExit.add(exit);
   };
 
+  onSyncCommitteeContribution = async (syncCommitteeContribution: altair.SignedContributionAndProof): Promise<void> => {
+    await this.db.contributionAndProof.add(syncCommitteeContribution.message);
+  };
+
   private subscribeAtFork = (fork: ForkName): void => {
     this.network.gossip.subscribeTopic({type: GossipType.beacon_block, fork});
     this.network.gossip.subscribeTopic({type: GossipType.beacon_aggregate_and_proof, fork});
@@ -103,18 +115,7 @@ export class BeaconGossipHandler {
     this.network.gossip.unsubscribeTopic({type: GossipType.attester_slashing, fork});
   };
 
-  private handleForkVersion = (_forkVersion: Version, fork: ForkName): void => {
-    if (this.state.status !== GossipHandlerStatus.Started) {
-      return;
-    }
-
-    this.unsubscribeAtFork(this.state.fork);
-    this.subscribeAtFork(fork);
-    this.state = {status: GossipHandlerStatus.Started, fork};
-  };
-
   private addGossipHandlers(): void {
-    // phase 0
     const topicHandlers = [
       {type: GossipType.beacon_block, handler: this.onBlock},
       {
@@ -124,16 +125,15 @@ export class BeaconGossipHandler {
       {type: GossipType.voluntary_exit, handler: this.onVoluntaryExit},
       {type: GossipType.proposer_slashing, handler: this.onProposerSlashing},
       {type: GossipType.attester_slashing, handler: this.onAttesterSlashing},
+      {type: GossipType.sync_committee_contribution_and_proof, handler: this.onSyncCommitteeContribution},
     ];
     for (const {type, handler} of topicHandlers) {
       const topic = {type, fork: ForkName.phase0};
       this.network.gossip.handleTopic(topic as GossipTopic, handler as GossipHandlerFn);
     }
-    // TODO altair
   }
 
   private removeGossipHandlers(): void {
-    // phase 0
     const topicHandlers = [
       {type: GossipType.beacon_block, handler: this.onBlock},
       {
@@ -143,11 +143,11 @@ export class BeaconGossipHandler {
       {type: GossipType.voluntary_exit, handler: this.onVoluntaryExit},
       {type: GossipType.proposer_slashing, handler: this.onProposerSlashing},
       {type: GossipType.attester_slashing, handler: this.onAttesterSlashing},
+      {type: GossipType.sync_committee_contribution_and_proof, handler: this.onSyncCommitteeContribution},
     ];
     for (const {type, handler} of topicHandlers) {
       const topic = {type, fork: ForkName.phase0};
       this.network.gossip.unhandleTopic(topic as GossipTopic, handler as GossipHandlerFn);
     }
-    // TODO altair
   }
 }

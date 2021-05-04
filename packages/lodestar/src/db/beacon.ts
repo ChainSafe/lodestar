@@ -24,6 +24,7 @@ import {SeenAttestationCache} from "./seenAttestationCache";
 import {PendingBlockRepository} from "./repositories/pendingBlock";
 import {SyncCommitteeSignatureRepository} from "./repositories/syncCommitteeSignature";
 import {ContributionAndProofRepository} from "./repositories/contributionAndProof";
+import {SeenSyncCommitteeCache} from "./seenSyncCommitteeCache";
 
 export class BeaconDb extends DatabaseService implements IBeaconDb {
   badBlock: BadBlockRepository;
@@ -48,6 +49,7 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
   // altair
   syncCommitteeSignature: SyncCommitteeSignatureRepository;
   contributionAndProof: ContributionAndProofRepository;
+  seenSyncCommiteeCache: SeenSyncCommitteeCache;
 
   constructor(opts: IDatabaseApiOptions) {
     super(opts);
@@ -71,6 +73,7 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
     // altair
     this.syncCommitteeSignature = new SyncCommitteeSignatureRepository(this.config, this.db);
     this.contributionAndProof = new ContributionAndProofRepository(this.config, this.db);
+    this.seenSyncCommiteeCache = new SeenSyncCommitteeCache(this.config, 1024);
   }
 
   /**

@@ -27,6 +27,8 @@ const gossipQueueOpts: {[K in GossipType]: Pick<JobQueueOpts, "maxLength" | "typ
   [GossipType.voluntary_exit]: {maxLength: 4096, type: QueueType.FIFO},
   [GossipType.proposer_slashing]: {maxLength: 4096, type: QueueType.FIFO},
   [GossipType.attester_slashing]: {maxLength: 4096, type: QueueType.FIFO},
+  [GossipType.sync_committee_contribution_and_proof]: {maxLength: 4096, type: QueueType.LIFO},
+  [GossipType.sync_committee]: {maxLength: 4096, type: QueueType.LIFO},
 };
 
 export function createTopicValidatorFnMap(

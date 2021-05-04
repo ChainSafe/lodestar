@@ -56,6 +56,7 @@ export function getAltairTypes(params: IBeaconParams, phase0: Phase0SSZTypes & P
     fields: {
       aggregatorIndex: phase0.ValidatorIndex,
       contribution: SyncCommitteeContribution,
+      selectionProof: phase0.BLSSignature,
     },
   });
 

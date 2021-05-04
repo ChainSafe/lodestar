@@ -22,6 +22,7 @@ import {SeenAttestationCache} from "../../../src/db/seenAttestationCache";
 import {minimalConfig} from "@chainsafe/lodestar-config/minimal";
 import {SignedBeaconBlock} from "@chainsafe/lodestar-types/phase0";
 import {createStubInstance} from "../types";
+import {SeenSyncCommitteeCache} from "../../../src/db/seenSyncCommitteeCache";
 
 export class StubbedBeaconDb extends BeaconDb {
   db!: SinonStubbedInstance<LevelDbController>;
@@ -43,6 +44,7 @@ export class StubbedBeaconDb extends BeaconDb {
   eth1Data: SinonStubbedInstance<Eth1DataRepository> & Eth1DataRepository;
 
   seenAttestationCache: SinonStubbedInstance<SeenAttestationCache> & SeenAttestationCache;
+  seenSyncCommiteeCache: SinonStubbedInstance<SeenSyncCommitteeCache> & SeenSyncCommitteeCache;
 
   processBlockOperations: SinonStubbedInstance<(signedBlock: phase0.SignedBeaconBlock) => Promise<void>> &
     ((signedBlock: phase0.SignedBeaconBlock) => Promise<void>);
@@ -66,6 +68,7 @@ export class StubbedBeaconDb extends BeaconDb {
     this.depositDataRoot = createStubInstance(DepositDataRootRepository);
     this.eth1Data = createStubInstance(Eth1DataRepository);
     this.seenAttestationCache = createStubInstance(SeenAttestationCache);
+    this.seenSyncCommiteeCache = createStubInstance(SeenSyncCommitteeCache);
     this.processBlockOperations = sinon.stub(this, "processBlockOperations") as (
       signedBlock: SignedBeaconBlock
     ) => Promise<void>;

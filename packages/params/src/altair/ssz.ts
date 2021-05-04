@@ -11,6 +11,7 @@ const ByteVector4 = new ByteVectorType({length: 4});
 export const AltairParams = new ContainerType<IAltairParams>({
   fields: {
     SYNC_COMMITTEE_SIZE: Number64,
+    SYNC_COMMITTEE_SUBNET_COUNT: Number64,
     SYNC_PUBKEYS_PER_AGGREGATE: Number64,
     INACTIVITY_SCORE_BIAS: BigInt64,
     EPOCHS_PER_SYNC_COMMITTEE_PERIOD: Number64,
@@ -22,5 +23,6 @@ export const AltairParams = new ContainerType<IAltairParams>({
     INACTIVITY_PENALTY_QUOTIENT_ALTAIR: BigInt64,
     MIN_SLASHING_PENALTY_QUOTIENT_ALTAIR: Number64,
     PROPORTIONAL_SLASHING_MULTIPLIER_ALTAIR: Number64,
+    TARGET_AGGREGATORS_PER_SYNC_SUBCOMMITTEE: Number64,
   },
 });
