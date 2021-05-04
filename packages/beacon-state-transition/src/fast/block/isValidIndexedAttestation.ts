@@ -1,6 +1,7 @@
 import {readonlyValues} from "@chainsafe/ssz";
 import {allForks, phase0} from "@chainsafe/lodestar-types";
-import {CachedBeaconState, verifyIndexedAttestationSignature} from "../../../fast";
+import {CachedBeaconState} from "../util";
+import {verifyIndexedAttestationSignature} from "../signatureSets";
 
 /**
  * Check if `indexedAttestation` has sorted and unique indices and a valid aggregate signature.

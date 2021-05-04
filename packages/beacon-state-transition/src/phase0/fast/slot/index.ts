@@ -1,8 +1,8 @@
-import {phase0, Slot} from "@chainsafe/lodestar-types";
+import {allForks, phase0, Slot} from "@chainsafe/lodestar-types";
 
 import {processEpoch} from "../epoch";
 import {processSlot} from "./processSlot";
-import {CachedBeaconState, rotateEpochs} from "../../../fast";
+import {CachedBeaconState, rotateEpochs} from "../../../fast/util";
 import {assert} from "@chainsafe/lodestar-utils";
 
 export {processSlot};
@@ -15,7 +15,7 @@ export function processSlots(state: CachedBeaconState<phase0.BeaconState>, slot:
     if ((state.slot + 1) % state.config.params.SLOTS_PER_EPOCH === 0) {
       processEpoch(state);
       state.slot += 1;
-      rotateEpochs(state.epochCtx, state, state.validators);
+      rotateEpochs(state.epochCtx, state as CachedBeaconState<allForks.BeaconState>, state.validators);
     } else {
       state.slot += 1;
     }

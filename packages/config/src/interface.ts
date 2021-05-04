@@ -16,6 +16,8 @@ export interface IBeaconConfig {
   params: IBeaconParams;
   types: IBeaconSSZTypes;
   getForkInfoRecord(): Record<ForkName, IForkInfo>;
+  getForkInfos(): IForkInfo[];
+  getForkInfo(slot: Slot): IForkInfo;
   /**
    * Get the hard-fork name at a given slot
    */

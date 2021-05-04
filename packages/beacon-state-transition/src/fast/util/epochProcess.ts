@@ -248,6 +248,19 @@ export function prepareEpochProcessState<T extends allForks.BeaconState>(state: 
       FLAG_CURR_TARGET_ATTESTER,
       FLAG_CURR_HEAD_ATTESTER
     );
+  } else {
+    state.previousEpochParticipation.forEachStatus((status, i) => {
+      out.statuses[i].flags |=
+        ((status.timelySource && FLAG_PREV_SOURCE_ATTESTER) as number) |
+        ((status.timelyTarget && FLAG_PREV_TARGET_ATTESTER) as number) |
+        ((status.timelyHead && FLAG_PREV_HEAD_ATTESTER) as number);
+    });
+    state.currentEpochParticipation.forEachStatus((status, i) => {
+      out.statuses[i].flags |=
+        ((status.timelySource && FLAG_CURR_SOURCE_ATTESTER) as number) |
+        ((status.timelyTarget && FLAG_CURR_TARGET_ATTESTER) as number) |
+        ((status.timelyHead && FLAG_CURR_HEAD_ATTESTER) as number);
+    });
   }
 
   let prevSourceUnslStake = BigInt(0);

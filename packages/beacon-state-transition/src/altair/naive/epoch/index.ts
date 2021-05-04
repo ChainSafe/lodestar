@@ -2,7 +2,7 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {altair} from "@chainsafe/lodestar-types";
 import {processJustificationAndFinalization} from "./justification_finalization";
 import {processRewardsAndPenalties} from "./rewards_and_penalties";
-import {phase0} from "../../..";
+import * as phase0 from "../../../phase0";
 import {processSyncCommitteeUpdates} from "./sync_committee";
 import {processParticipationFlagUpdates} from "./flag";
 import {processInactivityUpdates} from "./inactivity_updates";

@@ -2,7 +2,7 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {altair, Slot, phase0} from "@chainsafe/lodestar-types";
 import {assert} from "@chainsafe/lodestar-utils";
 import {processEpoch} from "./epoch";
-import {ZERO_HASH} from "../..";
+import {ZERO_HASH} from "../../constants";
 
 export function processSlots(config: IBeaconConfig, state: altair.BeaconState, slot: Slot): void {
   assert.lt(state.slot, slot, `Too old slot ${slot}, current=${state.slot}`);

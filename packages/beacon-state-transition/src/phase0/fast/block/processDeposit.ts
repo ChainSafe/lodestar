@@ -4,7 +4,7 @@ import {verifyMerkleBranch, bigIntMin} from "@chainsafe/lodestar-utils";
 
 import {DEPOSIT_CONTRACT_TREE_DEPTH, FAR_FUTURE_EPOCH} from "../../../constants";
 import {computeDomain, computeSigningRoot, increaseBalance} from "../../../util";
-import {CachedBeaconState} from "../../../fast";
+import {CachedBeaconState} from "../../../fast/util";
 
 export function processDeposit(state: CachedBeaconState<phase0.BeaconState>, deposit: phase0.Deposit): void {
   const {config, validators, epochCtx} = state;

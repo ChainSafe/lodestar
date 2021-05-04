@@ -1,9 +1,9 @@
 import {allForks, phase0, ValidatorIndex} from "@chainsafe/lodestar-types";
 
 import {isSlashableValidator, isSlashableAttestationData} from "../../../util";
-import {CachedBeaconState} from "../../../fast";
+import {CachedBeaconState} from "../../../fast/util";
+import {isValidIndexedAttestation} from "../../../fast/block";
 import {slashValidator} from "./slashValidator";
-import {isValidIndexedAttestation} from "./isValidIndexedAttestation";
 
 export function processAttesterSlashing(
   state: CachedBeaconState<phase0.BeaconState>,

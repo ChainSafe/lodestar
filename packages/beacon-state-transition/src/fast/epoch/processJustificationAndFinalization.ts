@@ -1,11 +1,11 @@
-import {phase0} from "@chainsafe/lodestar-types";
+import {allForks} from "@chainsafe/lodestar-types";
 
-import {GENESIS_EPOCH} from "../../../constants";
-import {getBlockRoot} from "../../../util";
-import {CachedBeaconState, IEpochProcess} from "../../../fast";
+import {GENESIS_EPOCH} from "../../constants";
+import {getBlockRoot} from "../../util";
+import {CachedBeaconState, IEpochProcess} from "../util";
 
 export function processJustificationAndFinalization(
-  state: CachedBeaconState<phase0.BeaconState>,
+  state: CachedBeaconState<allForks.BeaconState>,
   process: IEpochProcess
 ): void {
   const config = state.config;

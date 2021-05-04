@@ -1,5 +1,5 @@
 import {phase0} from "@chainsafe/lodestar-types";
-import {CachedBeaconState} from "../../../fast";
+import {CachedBeaconState} from "../../../fast/util";
 
 export function processSlot(state: CachedBeaconState<phase0.BeaconState>): void {
   const config = state.config;

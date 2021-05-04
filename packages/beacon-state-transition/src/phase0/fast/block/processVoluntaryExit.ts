@@ -1,8 +1,9 @@
 import {allForks, phase0} from "@chainsafe/lodestar-types";
 import {FAR_FUTURE_EPOCH} from "../../../constants";
 import {isActiveValidator} from "../../../util";
-import {CachedBeaconState, verifyVoluntaryExitSignature} from "../../../fast";
-import {initiateValidatorExit} from "./initiateValidatorExit";
+import {CachedBeaconState} from "../../../fast/util";
+import {initiateValidatorExit} from "../../../fast/block";
+import {verifyVoluntaryExitSignature} from "../../../fast/signatureSets";
 
 export function processVoluntaryExit(
   state: CachedBeaconState<phase0.BeaconState>,
@@ -40,5 +41,5 @@ export function processVoluntaryExit(
   }
 
   // initiate exit
-  initiateValidatorExit(state, voluntaryExit.validatorIndex);
+  initiateValidatorExit(state as CachedBeaconState<allForks.BeaconState>, voluntaryExit.validatorIndex);
 }

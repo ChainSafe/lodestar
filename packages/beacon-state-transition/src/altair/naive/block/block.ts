@@ -2,7 +2,7 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {altair, phase0 as phase0Types} from "@chainsafe/lodestar-types";
 import {List} from "@chainsafe/ssz";
 import {assert} from "@chainsafe/lodestar-utils";
-import {phase0} from "../../..";
+import * as phase0 from "../../../phase0";
 import {processSyncCommittee} from "./sync_committee";
 import {processAttesterSlashing} from "./attesterSlashing";
 import {processProposerSlashing} from "./proposerSlashing";

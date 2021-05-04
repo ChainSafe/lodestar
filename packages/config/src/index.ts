@@ -24,19 +24,34 @@ export function createIBeaconConfig(params: IBeaconParams): IBeaconConfig {
         },
       };
     },
-    getForkName(slot: Slot): ForkName {
-      if (slot < params.ALTAIR_FORK_SLOT) {
-        return ForkName.phase0;
-      } else {
-        return ForkName.altair;
+    getForkInfos(): IForkInfo[] {
+      return Object.values(this.getForkInfoRecord());
+    },
+    getForkInfo(slot: Slot): IForkInfo {
+      const forkSchedule = this.getForkInfos();
+      if (!forkSchedule.length) {
+        throw new Error("No available fork");
       }
+      // if (forkSchedule.length === 1) return forkSchedule[0];
+
+      // initialize to the first fork
+      let currentFork = forkSchedule[0];
+      // start from 1
+      for (let i = 1; i < forkSchedule.length; i++) {
+        const fork = forkSchedule[i];
+        if (slot >= fork.slot) {
+          currentFork = fork;
+        } else {
+          break;
+        }
+      }
+      return currentFork;
+    },
+    getForkName(slot: Slot): ForkName {
+      return this.getForkInfo(slot).name;
     },
     getForkVersion(slot: Slot): Version {
-      if (slot < params.ALTAIR_FORK_SLOT) {
-        return params.GENESIS_FORK_VERSION;
-      } else {
-        return params.ALTAIR_FORK_VERSION;
-      }
+      return this.getForkInfo(slot).version;
     },
     getTypes(slot: Slot): IAllForksSSZTypes {
       return types[this.getForkName(slot)] as IAllForksSSZTypes;
