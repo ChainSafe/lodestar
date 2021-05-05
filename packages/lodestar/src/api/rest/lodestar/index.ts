@@ -1,7 +1,7 @@
 import {allForks} from "@chainsafe/lodestar-types";
 import {TreeBacked} from "@chainsafe/ssz";
 import {serializeProof} from "@chainsafe/persistent-merkle-tree";
-import {ApiController} from "../types";
+import {ApiController, HttpHeader} from "../types";
 
 export const getWtfNode: ApiController = {
   url: "/wtfnode/",
@@ -23,14 +23,15 @@ export const getLatestWeakSubjectivityCheckpointEpoch: ApiController = {
   },
 };
 
-export const createProof: ApiController<{paths: (string | number)[][]}, {stateId: string}> = {
+export const createProof: ApiController<null, {stateId: string}, {paths: (string | number)[][]}> = {
   url: "/proof/:stateId",
-  method: "GET",
+  method: "POST",
   id: "createProof",
 
-  handler: async function (req) {
+  handler: async function (req, resp) {
     const state = (await this.api.debug.beacon.getState(req.params.stateId)) as TreeBacked<allForks.BeaconState>;
-    return serializeProof(state.createProof(req.query.paths));
+    const serialized = serializeProof(state.createProof(req.body.paths));
+    return resp.status(200).header(HttpHeader.CONTENT_TYPE, "application/octet-stream").send(Buffer.from(serialized));
   },
 
   schema: {
@@ -43,7 +44,7 @@ export const createProof: ApiController<{paths: (string | number)[][]}, {stateId
         },
       },
     },
-    querystring: {
+    body: {
       type: "object",
       required: ["paths"],
       properties: {
