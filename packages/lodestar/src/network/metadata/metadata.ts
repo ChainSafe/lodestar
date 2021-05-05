@@ -70,7 +70,7 @@ export class MetadataController {
     if (this.enr) {
       this.enr.set("syncnets", Buffer.from(this.config.types.altair.SyncSubnets.serialize(syncnets)));
     }
-    this._metadata.altair.syncnets;
+    this._metadata.altair.syncnets = syncnets;
   }
 
   get attnets(): BitVector {
