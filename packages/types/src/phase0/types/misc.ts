@@ -186,4 +186,3 @@ export interface SigningData {
 }
 
 export type AttestationSubnets = BitVector;
-export type SyncSubnets = BitVector;

@@ -25,7 +25,7 @@ export {AllForksSSZTypes} from "./allForks";
 export type IBeaconSSZTypes = PrimitiveSSZTypes & {
   phase0: PrimitiveSSZTypes & Phase0SSZTypes;
   altair: PrimitiveSSZTypes &
-    Omit<Phase0SSZTypes, "BeaconBlockBody" | "BeaconBlock" | "SignedBeaconBlock" | "BeaconState"> &
+    Omit<Phase0SSZTypes, "BeaconBlockBody" | "BeaconBlock" | "SignedBeaconBlock" | "BeaconState" | "Metadata"> &
     AltairSSZTypes;
 };
 

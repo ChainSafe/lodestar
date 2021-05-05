@@ -8,5 +8,5 @@ export * from "../../primitive/types";
 export * from "../../phase0/types/misc";
 export * from "../../phase0/types/operations";
 export * from "../../phase0/types/validator";
-export * from "../../phase0/types/wire";
+export * from "./wire";
 export * from "../../phase0/types/api";
