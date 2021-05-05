@@ -57,8 +57,7 @@ export function processSyncCommitteeContributions(
     for (const [index, participated] of aggBit.entries()) {
       if (participated) {
         const participantIndex =
-          intDiv(config.params.SYNC_COMMITTEE_SIZE, config.params.SYNC_COMMITTEE_SUBNET_COUNT) * subCommitteeIndex +
-          index;
+          intDiv(config.params.SYNC_COMMITTEE_SIZE, altair.SYNC_COMMITTEE_SUBNET_COUNT) * subCommitteeIndex + index;
         syncAggregate.syncCommitteeBits[participantIndex] = true;
         signatures.push(signature);
       }

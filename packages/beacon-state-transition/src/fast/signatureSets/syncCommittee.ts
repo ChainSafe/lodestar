@@ -69,8 +69,8 @@ export function getContributionSignatureSet(
   contribution: altair.SyncCommitteeContribution
 ): ISignatureSet {
   const {config} = state;
-  const {SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_SUBNET_COUNT} = config.params;
-  const subCommitteeSize = intDiv(SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_SUBNET_COUNT);
+  const {SYNC_COMMITTEE_SIZE} = config.params;
+  const subCommitteeSize = intDiv(SYNC_COMMITTEE_SIZE, altair.SYNC_COMMITTEE_SUBNET_COUNT);
   const startIndex = contribution.subCommitteeIndex * subCommitteeSize;
   const aggBits = Array.from(readonlyValues(contribution.aggregationBits));
   const indicesInSyncCommittee: number[] = [];

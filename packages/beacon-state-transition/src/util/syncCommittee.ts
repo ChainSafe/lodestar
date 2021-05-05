@@ -26,16 +26,16 @@ export function computeSubnetsForSyncCommittee(
     index++;
   }
   return syncCommitteeIndices.map((index) =>
-    intDiv(intDiv(index, config.params.SYNC_COMMITTEE_SIZE), config.params.SYNC_COMMITTEE_SUBNET_COUNT)
+    intDiv(intDiv(index, config.params.SYNC_COMMITTEE_SIZE), altair.SYNC_COMMITTEE_SUBNET_COUNT)
   );
 }
 
 export function isSyncCommitteeAggregator(config: IBeaconConfig, selectionProof: BLSSignature): boolean {
-  const {SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_SUBNET_COUNT, TARGET_AGGREGATORS_PER_SYNC_SUBCOMMITTEE} = config.params;
+  const {SYNC_COMMITTEE_SIZE, TARGET_AGGREGATORS_PER_SYNC_SUBCOMMITTEE} = config.params;
 
   const modulo = Math.max(
     1,
-    intDiv(intDiv(SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_SUBNET_COUNT), TARGET_AGGREGATORS_PER_SYNC_SUBCOMMITTEE)
+    intDiv(intDiv(SYNC_COMMITTEE_SIZE, altair.SYNC_COMMITTEE_SUBNET_COUNT), TARGET_AGGREGATORS_PER_SYNC_SUBCOMMITTEE)
   );
   return bytesToInt(hash(selectionProof.valueOf() as Uint8Array).slice(0, 8)) % modulo === 0;
 }
@@ -45,8 +45,8 @@ export function getSyncSubCommitteePubkeys(
   state: altair.BeaconState,
   subCommitteeIndex: number
 ): phase0.BLSPubkey[] {
-  const {SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_SUBNET_COUNT} = config.params;
-  const syncSubCommitteeSize = intDiv(SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_SUBNET_COUNT);
+  const {SYNC_COMMITTEE_SIZE} = config.params;
+  const syncSubCommitteeSize = intDiv(SYNC_COMMITTEE_SIZE, altair.SYNC_COMMITTEE_SUBNET_COUNT);
   const startIndex = subCommitteeIndex * syncSubCommitteeSize;
   return Array.from({length: syncSubCommitteeSize}, (_, i) => state.currentSyncCommittee.pubkeys[i + startIndex]);
 }

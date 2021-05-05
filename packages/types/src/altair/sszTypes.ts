@@ -14,6 +14,7 @@ import * as altair from "./types";
 // Interface is defined in the return of getAltairTypes(), to de-duplicate info
 // To add a new type, create and return it in the body of getAltairTypes()
 export type AltairSSZTypes = ReturnType<typeof getAltairTypes>;
+export const SYNC_COMMITTEE_SUBNET_COUNT = 8;
 
 // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types,@typescript-eslint/explicit-function-return-type
 export function getAltairTypes(params: IBeaconParams, phase0: Phase0SSZTypes & PrimitiveSSZTypes) {
@@ -47,7 +48,7 @@ export function getAltairTypes(params: IBeaconParams, phase0: Phase0SSZTypes & P
       slot: phase0.Slot,
       beaconBlockRoot: phase0.Root,
       subCommitteeIndex: phase0.SubCommitteeIndex,
-      aggregationBits: new BitListType({limit: params.SYNC_COMMITTEE_SIZE / params.SYNC_COMMITTEE_SUBNET_COUNT}),
+      aggregationBits: new BitListType({limit: params.SYNC_COMMITTEE_SIZE / SYNC_COMMITTEE_SUBNET_COUNT}),
       signature: phase0.BLSSignature,
     },
   });

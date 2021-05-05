@@ -2,7 +2,6 @@
 
 export interface IAltairParams {
   SYNC_COMMITTEE_SIZE: number;
-  SYNC_COMMITTEE_SUBNET_COUNT: number;
   SYNC_PUBKEYS_PER_AGGREGATE: number;
   INACTIVITY_SCORE_BIAS: bigint;
   EPOCHS_PER_SYNC_COMMITTEE_PERIOD: number;

@@ -47,7 +47,7 @@ export async function validateGossipContributionAndProof(
     });
   }
 
-  if (contribution.subCommitteeIndex >= config.params.SYNC_COMMITTEE_SUBNET_COUNT) {
+  if (contribution.subCommitteeIndex >= altair.SYNC_COMMITTEE_SUBNET_COUNT) {
     throw new SyncCommitteeError({
       code: SyncCommitteeErrorCode.INVALID_SUB_COMMITTEE_INDEX,
       subCommitteeIndex: contribution.subCommitteeIndex,
