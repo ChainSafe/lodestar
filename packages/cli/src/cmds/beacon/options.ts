@@ -9,6 +9,7 @@ interface IBeaconExtraArgs {
   genesisStateFile?: string;
   weakSubjectivityStateFile?: string;
   fetchWeakSubjectivityStateFromIPFS: boolean;
+  ipfsGatewayUrl: string;
   logLevel?: LogLevel;
   logLevelFile?: LogLevel;
 }
@@ -33,6 +34,12 @@ export const beaconExtraOptions: ICliCommandOptions<IBeaconExtraArgs> = {
     description: "Fetch a weak subjectivity state from IPFS to bootstrap the node",
     type: "boolean",
     default: true,
+  },
+
+  ipfsGatewayUrl: {
+    description: "The gateway to make IPFS requests to",
+    type: "string",
+    default: "https://ipfs.io",
   },
 
   logLevel: {

@@ -46,7 +46,7 @@ export async function initBeaconState(
     return await initStateFromDb(config, db, logger);
   } else if (args.fetchWeakSubjectivityStateFromIPFS) {
     const stateData = readFile("./weakSubjectivityState.json") as {ipfsPath: string; stateRoot: string};
-    const state = await initFromFile("https://ipfs.io" + stateData.ipfsPath);
+    const state = await initFromFile(args.ipfsGatewayUrl + stateData.ipfsPath);
     // verify downloaded state against locally stored state root
     if (toHexString(state.hashTreeRoot()) !== stateData.stateRoot) {
       throw new Error("Unable to verify state root downloaded from IPFS");
