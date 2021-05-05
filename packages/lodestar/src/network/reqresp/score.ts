@@ -1,5 +1,5 @@
-import {Method} from "../../constants";
 import {PeerAction} from "../peers/score";
+import {Method} from "./types";
 import {RequestError, RequestErrorCode} from "./request";
 
 /**

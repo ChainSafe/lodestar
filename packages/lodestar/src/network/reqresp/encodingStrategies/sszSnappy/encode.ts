@@ -1,7 +1,7 @@
 import varint from "varint";
 import {source} from "stream-to-it";
 import {createCompressStream} from "@chainsafe/snappy-stream";
-import {RequestOrResponseBody, RequestOrResponseType} from "../../interface";
+import {RequestOrResponseType, RequestOrResponseBody} from "../../types";
 import {SszSnappyError, SszSnappyErrorCode} from "./errors";
 
 /**

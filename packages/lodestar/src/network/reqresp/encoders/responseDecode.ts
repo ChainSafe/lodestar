@@ -1,10 +1,18 @@
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {phase0} from "@chainsafe/lodestar-types";
-import {Method, Methods, ReqRespEncoding, RpcResponseStatus} from "../../../constants";
-import {BufferedSource} from "../utils/bufferedSource";
+import {ForkName, IBeaconConfig} from "@chainsafe/lodestar-config";
+import {RespStatus} from "../../../constants";
+import {IForkDigestContext} from "../../../util/forkDigestContext";
+import {BufferedSource, decodeErrorMessage} from "../utils";
 import {readEncodedPayload} from "../encodingStrategies";
-import {decodeErrorMessage} from "../utils/errorMessage";
 import {ResponseError} from "../response";
+import {
+  Protocol,
+  ResponseBody,
+  ContextBytesType,
+  deserializeToTreeByMethod,
+  contextBytesTypeByProtocol,
+  getResponseSzzTypeByMethod,
+  CONTEXT_BYTES_FORK_DIGEST_LENGTH,
+} from "../types";
 
 /**
  * Internal helper type to signal stream ended early
@@ -17,19 +25,18 @@ enum StreamStatus {
  * Consumes a stream source to read a `<response>`
  * ```bnf
  * response        ::= <response_chunk>*
- * response_chunk  ::= <result> | <encoding-dependent-header> | <encoded-payload>
+ * response_chunk  ::= <result> | <context-bytes> | <encoding-dependent-header> | <encoded-payload>
  * result          ::= "0" | "1" | "2" | ["128" ... "255"]
  * ```
  */
 export function responseDecode(
   config: IBeaconConfig,
-  method: Method,
-  encoding: ReqRespEncoding
-): (source: AsyncIterable<Buffer>) => AsyncGenerator<phase0.ResponseBody> {
+  forkDigestContext: IForkDigestContext,
+  protocol: Protocol
+): (source: AsyncIterable<Buffer>) => AsyncGenerator<ResponseBody> {
   return async function* (source) {
-    const type = Methods[method].responseSSZType(config);
-    const isSszTree = method === Method.BeaconBlocksByRange || method === Method.BeaconBlocksByRoot;
-
+    const deserializeToTree = deserializeToTreeByMethod[protocol.method];
+    const contextBytesType = contextBytesTypeByProtocol(protocol);
     const bufferedSource = new BufferedSource(source as AsyncGenerator<Buffer>);
 
     // Consumers of `responseDecode()` may limit the number of <response_chunk> and break out of the while loop
@@ -44,12 +51,15 @@ export function responseDecode(
 
       // For multiple chunks, only the last chunk is allowed to have a non-zero error
       // code (i.e. The chunk stream is terminated once an error occurs
-      if (status !== RpcResponseStatus.SUCCESS) {
+      if (status !== RespStatus.SUCCESS) {
         const errorMessage = await readErrorMessage(bufferedSource);
         throw new ResponseError(status, errorMessage);
       }
 
-      yield await readEncodedPayload<phase0.ResponseBody>(bufferedSource, encoding, type, {isSszTree});
+      const forkName = await readForkName(forkDigestContext, bufferedSource, contextBytesType);
+      const type = getResponseSzzTypeByMethod(config, protocol.method, forkName);
+
+      yield await readEncodedPayload(bufferedSource, protocol.encoding, type, {deserializeToTree});
     }
   };
 }
@@ -61,7 +71,7 @@ export function responseDecode(
  * ```
  * `<response_chunk>` starts with a single-byte response code which determines the contents of the response_chunk
  */
-export async function readResultHeader(bufferedSource: BufferedSource): Promise<RpcResponseStatus | StreamStatus> {
+export async function readResultHeader(bufferedSource: BufferedSource): Promise<RespStatus | StreamStatus> {
   for await (const buffer of bufferedSource) {
     const status = buffer.get(0);
     buffer.consume(1);
@@ -100,4 +110,41 @@ export async function readErrorMessage(bufferedSource: BufferedSource): Promise<
 
   // Error message is optional and may not be included in the response stream
   return "";
+}
+
+/**
+ * Consumes a stream source to read a variable length `<context-bytes>` depending on the method.
+ * While `<context-bytes>` has a single type of `ForkDigest`, this function only parses the `ForkName`
+ * of the `ForkDigest` or defaults to `phase0`
+ */
+export async function readForkName(
+  forkDigestContext: IForkDigestContext,
+  bufferedSource: BufferedSource,
+  contextBytes: ContextBytesType
+): Promise<ForkName> {
+  switch (contextBytes) {
+    case ContextBytesType.Empty:
+      return ForkName.phase0;
+
+    case ContextBytesType.ForkDigest: {
+      const forkDigest = await readContextBytesForkDigest(bufferedSource);
+      return forkDigestContext.forkDigest2ForkName(forkDigest);
+    }
+  }
+}
+
+/**
+ * Consumes a stream source to read `<context-bytes>`, where it's a fixed-width 4 byte
+ */
+export async function readContextBytesForkDigest(bufferedSource: BufferedSource): Promise<Buffer> {
+  for await (const buffer of bufferedSource) {
+    if (buffer.length >= CONTEXT_BYTES_FORK_DIGEST_LENGTH) {
+      const bytes = buffer.slice(0, CONTEXT_BYTES_FORK_DIGEST_LENGTH);
+      buffer.consume(CONTEXT_BYTES_FORK_DIGEST_LENGTH);
+      return bytes;
+    }
+  }
+
+  // TODO: Use typed error
+  throw Error("Source ended while reading context bytes");
 }

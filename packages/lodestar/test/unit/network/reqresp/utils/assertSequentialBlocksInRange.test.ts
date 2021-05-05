@@ -3,7 +3,7 @@ import {
   assertSequentialBlocksInRange,
   BlocksByRangeError,
   BlocksByRangeErrorCode,
-} from "../../../../../src/network/reqresp/utils/assertSequentialBlocksInRange";
+} from "../../../../../src/network/reqresp/utils";
 import {generateEmptySignedBlock} from "../../../../utils/block";
 import {expectThrowsLodestarError} from "../../../../utils/errors";
 

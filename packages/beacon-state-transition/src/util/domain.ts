@@ -22,7 +22,7 @@ export function computeDomain(
     forkVersion = config.params.GENESIS_FORK_VERSION;
   }
   const forkDataRoot = computeForkDataRoot(config, forkVersion, genesisValidatorRoot);
-  return Buffer.concat([domainType as Buffer, (forkDataRoot.valueOf() as Uint8Array).slice(0, 28)]);
+  return Buffer.concat([domainType as Buffer, forkDataRoot.slice(0, 28)]);
 }
 
 /**

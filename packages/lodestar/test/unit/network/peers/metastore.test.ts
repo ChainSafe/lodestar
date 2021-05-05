@@ -1,7 +1,7 @@
 import {Libp2pPeerMetadataStore} from "../../../../src/network/peers/metastore";
 import {config} from "@chainsafe/lodestar-config/minimal";
 import sinon, {SinonStub, SinonStubbedInstance} from "sinon";
-import {ReqRespEncoding} from "../../../../src/constants";
+import {ReqRespEncoding} from "../../../../src/network/reqresp";
 import {expect} from "chai";
 import PeerId from "peer-id";
 import {phase0} from "@chainsafe/lodestar-types";

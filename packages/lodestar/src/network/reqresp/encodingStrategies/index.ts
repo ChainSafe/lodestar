@@ -1,6 +1,5 @@
-import {ReqRespEncoding} from "../../../constants";
-import {BufferedSource} from "../utils/bufferedSource";
-import {RequestOrResponseBody, RequestOrResponseType} from "../interface";
+import {Encoding, RequestOrResponseType, RequestOrResponseBody} from "../types";
+import {BufferedSource} from "../utils";
 import {readSszSnappyPayload, ISszSnappyOptions} from "./sszSnappy/decode";
 import {writeSszSnappyPayload} from "./sszSnappy/encode";
 
@@ -17,12 +16,12 @@ import {writeSszSnappyPayload} from "./sszSnappy/encode";
  */
 export async function readEncodedPayload<T extends RequestOrResponseBody>(
   bufferedSource: BufferedSource,
-  encoding: ReqRespEncoding,
+  encoding: Encoding,
   type: RequestOrResponseType,
   options?: ISszSnappyOptions
 ): Promise<T> {
   switch (encoding) {
-    case ReqRespEncoding.SSZ_SNAPPY:
+    case Encoding.SSZ_SNAPPY:
       return await readSszSnappyPayload(bufferedSource, type, options);
 
     default:
@@ -38,11 +37,11 @@ export async function readEncodedPayload<T extends RequestOrResponseBody>(
  */
 export async function* writeEncodedPayload<T extends RequestOrResponseBody>(
   body: T,
-  encoding: ReqRespEncoding,
+  encoding: Encoding,
   type: RequestOrResponseType
 ): AsyncGenerator<Buffer> {
   switch (encoding) {
-    case ReqRespEncoding.SSZ_SNAPPY:
+    case Encoding.SSZ_SNAPPY:
       yield* writeSszSnappyPayload(body, type);
       break;
 

@@ -4,7 +4,11 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 /**
  * Used primarily in signature domains to avoid collisions across forks/chains.
  */
-export function computeForkDataRoot(config: IBeaconConfig, currentVersion: Version, genesisValidatorsRoot: Root): Root {
+export function computeForkDataRoot(
+  config: IBeaconConfig,
+  currentVersion: Version,
+  genesisValidatorsRoot: Root
+): Uint8Array {
   const forkData: phase0.ForkData = {
     currentVersion,
     genesisValidatorsRoot,
@@ -17,6 +21,5 @@ export function computeForkDigest(
   currentVersion: Version,
   genesisValidatorsRoot: Root
 ): ForkDigest {
-  const root = computeForkDataRoot(config, currentVersion, genesisValidatorsRoot);
-  return (root.valueOf() as Uint8Array).slice(0, 4);
+  return computeForkDataRoot(config, currentVersion, genesisValidatorsRoot).slice(0, 4);
 }

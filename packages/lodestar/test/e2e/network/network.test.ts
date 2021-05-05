@@ -8,9 +8,9 @@ import {config} from "@chainsafe/lodestar-config/minimal";
 import {phase0} from "@chainsafe/lodestar-types";
 import {sleep} from "@chainsafe/lodestar-utils";
 
-import {Network, NetworkEvent, ReqRespHandler} from "../../../src/network";
+import {Network, NetworkEvent, ReqRespHandler, ReqRespMethod} from "../../../src/network";
 import {INetworkOptions} from "../../../src/network/options";
-import {GoodByeReasonCode, Method} from "../../../src/constants";
+import {GoodByeReasonCode} from "../../../src/constants";
 
 import {generateEmptySignedBlock} from "../../utils/block";
 import {MockBeaconChain} from "../../utils/mocks/chain/chain";
@@ -145,8 +145,8 @@ describe("network", function () {
     await sleep(500, controller.signal);
 
     const onGoodbyeNetB = sinon.stub<[phase0.Goodbye, PeerId]>();
-    netB.events.on(NetworkEvent.reqRespRequest, (method, request, peer) => {
-      if (method === Method.Goodbye) onGoodbyeNetB(request as phase0.Goodbye, peer);
+    netB.events.on(NetworkEvent.reqRespRequest, (request, peer) => {
+      if (request.method === ReqRespMethod.Goodbye) onGoodbyeNetB(request.body, peer);
     });
 
     await netA.stop();
@@ -169,8 +169,8 @@ describe("network", function () {
     await sleep(500, controller.signal);
 
     const onGoodbyeNetB = sinon.stub<[phase0.Goodbye, PeerId]>();
-    netB.events.on(NetworkEvent.reqRespRequest, (method, request, peer) => {
-      if (method === Method.Goodbye) onGoodbyeNetB(request as phase0.Goodbye, peer);
+    netB.events.on(NetworkEvent.reqRespRequest, (request, peer) => {
+      if (request.method === ReqRespMethod.Goodbye) onGoodbyeNetB(request.body, peer);
     });
 
     await netA.stop();

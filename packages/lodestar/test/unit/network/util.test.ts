@@ -1,20 +1,19 @@
 import PeerId from "peer-id";
 import Multiaddr from "multiaddr";
 import {expect} from "chai";
-import {
-  createNodeJsLibp2p,
-  createRpcProtocol,
-  getAgentVersionFromPeerStore,
-  getCurrentAndNextFork,
-  isLocalMultiAddr,
-  parseProtocolId,
-} from "../../../src/network";
-import {Method, ReqRespEncoding} from "../../../src/constants";
-import {createEnr, createPeerId} from "@chainsafe/lodestar-cli/src/config";
-import {defaultNetworkOptions} from "../../../src/network/options";
 import {fromHexString} from "@chainsafe/ssz";
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {ForkName} from "@chainsafe/lodestar-config";
+import {createEnr, createPeerId} from "@chainsafe/lodestar-cli/src/config";
+import {Method, Version, Encoding} from "../../../src/network/reqresp/types";
+import {defaultNetworkOptions} from "../../../src/network/options";
+import {formatProtocolId, parseProtocolId} from "../../../src/network/reqresp/utils";
+import {
+  createNodeJsLibp2p,
+  getAgentVersionFromPeerStore,
+  getCurrentAndNextFork,
+  isLocalMultiAddr,
+} from "../../../src/network";
 
 describe("Test isLocalMultiAddr", () => {
   it("should return true for 127.0.0.1", () => {
@@ -31,25 +30,31 @@ describe("Test isLocalMultiAddr", () => {
 describe("ReqResp protocolID parse / render", () => {
   const testCases: {
     method: Method;
-    encoding: ReqRespEncoding;
-    version: number;
+    version: Version;
+    encoding: Encoding;
     protocolId: string;
   }[] = [
     {
       method: Method.Status,
-      encoding: ReqRespEncoding.SSZ_SNAPPY,
-      version: 1,
+      version: Version.V1,
+      encoding: Encoding.SSZ_SNAPPY,
       protocolId: "/eth2/beacon_chain/req/status/1/ssz_snappy",
+    },
+    {
+      method: Method.BeaconBlocksByRange,
+      version: Version.V2,
+      encoding: Encoding.SSZ_SNAPPY,
+      protocolId: "/eth2/beacon_chain/req/beacon_blocks_by_range/2/ssz_snappy",
     },
   ];
 
   for (const {method, encoding, version, protocolId} of testCases) {
     it(`Should render ${protocolId}`, () => {
-      expect(createRpcProtocol(method, encoding, version)).to.equal(protocolId);
+      expect(formatProtocolId(method, version, encoding)).to.equal(protocolId);
     });
 
-    it(`Should parse  ${protocolId}`, () => {
-      expect(parseProtocolId(protocolId)).to.deep.equal({method, encoding, version});
+    it(`Should parse ${protocolId}`, () => {
+      expect(parseProtocolId(protocolId)).to.deep.equal({method, version, encoding});
     });
   }
 });

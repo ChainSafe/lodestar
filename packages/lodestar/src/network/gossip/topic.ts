@@ -63,9 +63,6 @@ export function getGossipTopic(forkDigestContext: IForkDigestContext, topic: str
   }
 
   const fork = forkDigestContext.forkDigest2ForkName(forkDigestHex);
-  if (!fork) {
-    throw Error(`forkDigest not supported ${forkDigestHex}`);
-  }
 
   if (GossipEncoding[encoding] == null) {
     throw new Error(`Bad gossip topic encoding: ${encoding}`);

@@ -1,22 +1,7 @@
 import {List} from "@chainsafe/ssz";
 
-import {Slot, Epoch, Root, Number64, Uint64, ForkDigest, Uint8} from "../../primitive/types";
-import {SignedBeaconBlock} from "./block";
+import {Slot, Epoch, Root, Number64, Uint64, ForkDigest} from "../../primitive/types";
 import {AttestationSubnets} from "./misc";
-
-export type RequestId = string;
-
-export interface ReqRespTypes {
-  Status: {request: Status; response: Status};
-  Goodbye: {request: Goodbye; response: Goodbye};
-  Ping: {request: Ping; response: Ping};
-  Metadata: {request: null; response: Metadata};
-  BeaconBlocksByRange: {request: BeaconBlocksByRangeRequest; response: SignedBeaconBlock};
-  BeaconBlocksByRoot: {request: BeaconBlocksByRootRequest; response: SignedBeaconBlock};
-}
-
-export type RequestBody = ReqRespTypes[keyof ReqRespTypes]["request"] | null;
-export type ResponseBody = ReqRespTypes[keyof ReqRespTypes]["response"] | P2pErrorMessage;
 
 export interface Status {
   forkDigest: ForkDigest;
@@ -42,5 +27,3 @@ export interface BeaconBlocksByRangeRequest {
 }
 
 export type BeaconBlocksByRootRequest = List<Root>;
-
-export type P2pErrorMessage = List<Uint8>;

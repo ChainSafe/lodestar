@@ -63,7 +63,17 @@ export class Network implements INetwork {
     this.peerRpcScores = peerRpcScores;
     this.peerMetadata = peerMetadata;
     this.reqResp = new ReqResp(
-      {config, libp2p, reqRespHandler, peerMetadata, metadata, peerRpcScores, logger, networkEventBus},
+      {
+        config,
+        libp2p,
+        forkDigestContext: chain.forkDigestContext,
+        reqRespHandler,
+        peerMetadata,
+        metadata,
+        peerRpcScores,
+        logger,
+        networkEventBus,
+      },
       opts
     );
     this.gossip = new Eth2Gossipsub({

@@ -1,7 +1,7 @@
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {fromHexString, List} from "@chainsafe/ssz";
-import {phase0} from "@chainsafe/lodestar-types";
-import {RequestOrResponseBody, RequestOrResponseType} from "../../../../../../src/network";
+import {altair, phase0} from "@chainsafe/lodestar-types";
+import {RequestOrResponseBody, RequestOrResponseType} from "../../../../../../src/network/reqresp/types";
 
 // This test data generated with code from 'master' at Jan 1st 2021
 // commit: ea3ffab1ffb8093b61a8ebfa4b4432c604c10819
@@ -41,7 +41,7 @@ export const sszSnappyStatus: ISszSnappyTestData<phase0.Status> = {
   ].map(fromHexString) as Buffer[],
 };
 
-export const sszSnappySignedBlock: ISszSnappyTestData<phase0.SignedBeaconBlock> = {
+export const sszSnappySignedBeaconBlockPhase0: ISszSnappyTestData<phase0.SignedBeaconBlock> = {
   id: "SignedBeaconBlock type",
   type: config.types.phase0.SignedBeaconBlock,
   body: {
@@ -71,5 +71,26 @@ export const sszSnappySignedBlock: ISszSnappyTestData<phase0.SignedBeaconBlock> 
     "0x9403",
     "0xff060000734e61507059",
     "0x00340000fff3b3f594031064000000dafe01007a010004090009011108fe6f000054feb4008ab4007e0100fecc0011cc0cdc0000003e0400",
+  ].map(fromHexString) as Buffer[],
+};
+
+export const sszSnappySignedBeaconBlockAltair: ISszSnappyTestData<altair.SignedBeaconBlock> = {
+  id: "SignedBeaconBlock type",
+  type: config.types.phase0.SignedBeaconBlock,
+  body: {
+    ...sszSnappySignedBeaconBlockPhase0.body,
+    message: {
+      ...sszSnappySignedBeaconBlockPhase0.body.message,
+      slot: 90009,
+      body: {
+        ...sszSnappySignedBeaconBlockPhase0.body.message.body,
+        syncAggregate: config.types.altair.SyncAggregate.defaultValue(),
+      },
+    },
+  },
+  chunks: [
+    "0xf803",
+    "0xff060000734e61507059",
+    "0x003f0000ee14ab0df8031064000000dafe01007a01000c995f0100010100090105ee70000d700054ee44000d44fe0100fecc0011cc0c400100003e0400fe01008e0100",
   ].map(fromHexString) as Buffer[],
 };

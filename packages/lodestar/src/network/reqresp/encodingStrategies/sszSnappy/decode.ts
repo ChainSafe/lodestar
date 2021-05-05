@@ -2,14 +2,14 @@ import BufferList from "bl";
 import varint from "varint";
 import {CompositeType} from "@chainsafe/ssz";
 import {MAX_VARINT_BYTES} from "../../../../constants";
+import {BufferedSource} from "../../utils";
+import {RequestOrResponseType, RequestOrResponseBody} from "../../types";
 import {SnappyFramesUncompress} from "./snappyFrames/uncompress";
-import {BufferedSource} from "../../utils/bufferedSource";
-import {RequestOrResponseType, RequestOrResponseBody} from "../../interface";
 import {maxEncodedLen} from "./utils";
 import {SszSnappyError, SszSnappyErrorCode} from "./errors";
 
 export interface ISszSnappyOptions {
-  isSszTree?: boolean;
+  deserializeToTree?: boolean;
 }
 
 /**
@@ -126,10 +126,9 @@ function deserializeSszBody<T extends RequestOrResponseBody>(
   options?: ISszSnappyOptions
 ): T {
   try {
-    if (options?.isSszTree) {
-      return (((type as unknown) as CompositeType<Record<string, unknown>>).createTreeBackedFromBytes(
-        bytes
-      ) as unknown) as T;
+    if (options?.deserializeToTree) {
+      const typeTree = (type as unknown) as CompositeType<Record<string, unknown>>;
+      return (typeTree.createTreeBackedFromBytes(bytes) as unknown) as T;
     } else {
       return type.deserialize(bytes) as T;
     }

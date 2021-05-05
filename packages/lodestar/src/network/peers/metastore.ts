@@ -4,7 +4,7 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import PeerId from "peer-id";
 import {phase0} from "@chainsafe/lodestar-types";
 import {BasicType, ContainerType} from "@chainsafe/ssz";
-import {ReqRespEncoding} from "../../constants";
+import {ReqRespEncoding} from "../reqresp";
 
 /**
  * Get/set data about peers.

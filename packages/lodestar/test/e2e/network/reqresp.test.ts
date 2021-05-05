@@ -2,14 +2,16 @@ import sinon from "sinon";
 import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
 import {AbortController} from "abort-controller";
+import PeerId from "peer-id";
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {sleep as _sleep} from "@chainsafe/lodestar-utils";
 import {phase0} from "@chainsafe/lodestar-types";
-import {Method, ReqRespEncoding} from "../../../src/constants";
 import {createPeerId, IReqRespOptions, Network, prettyPrintPeerId} from "../../../src/network";
 import {INetworkOptions} from "../../../src/network/options";
+import {Method, Encoding} from "../../../src/network/reqresp/types";
 import {IReqRespHandler} from "../../../src/network/reqresp/handlers";
 import {RequestError, RequestErrorCode} from "../../../src/network/reqresp/request";
+import {IRequestErrorMetadata} from "../../../src/network/reqresp/request/errors";
 import {testLogger} from "../../utils/logger";
 import {MockBeaconChain} from "../../utils/mocks/chain/chain";
 import {createNode} from "../../utils/network";
@@ -179,7 +181,7 @@ describe("network / ReqResp", function () {
       netA.reqResp.beaconBlocksByRange(netB.peerId, {startSlot: 0, step: 1, count: 3}),
       new RequestError(
         {code: RequestErrorCode.SERVER_ERROR, errorMessage: testErrorMessage},
-        {method: Method.BeaconBlocksByRange, encoding: ReqRespEncoding.SSZ_SNAPPY, peer: prettyPrintPeerId(netB.peerId)}
+        formatMetadata(Method.BeaconBlocksByRange, Encoding.SSZ_SNAPPY, netB.peerId)
       )
     );
   });
@@ -198,7 +200,7 @@ describe("network / ReqResp", function () {
       netA.reqResp.beaconBlocksByRange(netB.peerId, {startSlot: 0, step: 1, count: 3}),
       new RequestError(
         {code: RequestErrorCode.SERVER_ERROR, errorMessage: testErrorMessage},
-        {method: Method.BeaconBlocksByRange, encoding: ReqRespEncoding.SSZ_SNAPPY, peer: prettyPrintPeerId(netB.peerId)}
+        formatMetadata(Method.BeaconBlocksByRange, Encoding.SSZ_SNAPPY, netB.peerId)
       )
     );
   });
@@ -221,7 +223,7 @@ describe("network / ReqResp", function () {
       netA.reqResp.beaconBlocksByRange(netB.peerId, {startSlot: 0, step: 1, count: 1}),
       new RequestError(
         {code: RequestErrorCode.TTFB_TIMEOUT},
-        {method: Method.BeaconBlocksByRange, encoding: ReqRespEncoding.SSZ_SNAPPY, peer: prettyPrintPeerId(netB.peerId)}
+        formatMetadata(Method.BeaconBlocksByRange, Encoding.SSZ_SNAPPY, netB.peerId)
       )
     );
   });
@@ -245,7 +247,7 @@ describe("network / ReqResp", function () {
       netA.reqResp.beaconBlocksByRange(netB.peerId, {startSlot: 0, step: 1, count: 2}),
       new RequestError(
         {code: RequestErrorCode.RESP_TIMEOUT},
-        {method: Method.BeaconBlocksByRange, encoding: ReqRespEncoding.SSZ_SNAPPY, peer: prettyPrintPeerId(netB.peerId)}
+        formatMetadata(Method.BeaconBlocksByRange, Encoding.SSZ_SNAPPY, netB.peerId)
       )
     );
   });
@@ -264,7 +266,7 @@ describe("network / ReqResp", function () {
       netA.reqResp.beaconBlocksByRange(netB.peerId, {startSlot: 0, step: 1, count: 2}),
       new RequestError(
         {code: RequestErrorCode.TTFB_TIMEOUT},
-        {method: Method.BeaconBlocksByRange, encoding: ReqRespEncoding.SSZ_SNAPPY, peer: prettyPrintPeerId(netB.peerId)}
+        formatMetadata(Method.BeaconBlocksByRange, Encoding.SSZ_SNAPPY, netB.peerId)
       )
     );
   });
@@ -284,8 +286,13 @@ describe("network / ReqResp", function () {
       netA.reqResp.beaconBlocksByRange(netB.peerId, {startSlot: 0, step: 1, count: 2}),
       new RequestError(
         {code: RequestErrorCode.RESP_TIMEOUT},
-        {method: Method.BeaconBlocksByRange, encoding: ReqRespEncoding.SSZ_SNAPPY, peer: prettyPrintPeerId(netB.peerId)}
+        formatMetadata(Method.BeaconBlocksByRange, Encoding.SSZ_SNAPPY, netB.peerId)
       )
     );
   });
 });
+
+/** Helper to reduce code-duplication */
+function formatMetadata(method: Method, encoding: Encoding, peer: PeerId): IRequestErrorMetadata {
+  return {method, encoding, peer: prettyPrintPeerId(peer)};
+}
