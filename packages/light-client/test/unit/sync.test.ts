@@ -145,6 +145,8 @@ describe("Lightclient flow with LightClientUpdater", () => {
         throw e;
       }
     }
+
+    expect(store.snapshot.header.slot).to.equal(149, "Wrong store.snapshot.header.slot after applying updates");
   });
 });
 

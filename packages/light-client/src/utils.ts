@@ -38,12 +38,12 @@ export function assertZeroHashes(rootArray: ArrayLike<Root>, expectedLength: num
 /**
  * Util to guarantee that all bits have a corresponding pubkey
  */
-export function getParticipantPubkeys(pubkeys: ArrayLike<BLSPubkey>, bits: BitVector): BLSPubkey[] {
-  const participantPubkeys: BLSPubkey[] = [];
+export function getParticipantPubkeys(pubkeys: ArrayLike<BLSPubkey>, bits: BitVector): Uint8Array[] {
+  const participantPubkeys: Uint8Array[] = [];
   for (let i = 0; i < bits.length; i++) {
     if (bits[i]) {
       if (!pubkeys[i]) throw Error(`No pubkey ${i} in syncCommittee`);
-      participantPubkeys.push(pubkeys[i]);
+      participantPubkeys.push(pubkeys[i].valueOf() as Uint8Array);
     }
   }
 
