@@ -74,7 +74,7 @@ describe("Lightclient flow with LightClientUpdater", () => {
         const signingRoot = getSyncAggregateSigningRoot(config, genValiRoot, forkVersion, attestedBlock);
         block.body.syncAggregate = signAndAggregate(signingRoot, committeeKeys[0].sks);
       }
-      
+
       block.stateRoot = config.types.altair.BeaconState.hashTreeRoot(state);
 
       // Store new prevBlock
