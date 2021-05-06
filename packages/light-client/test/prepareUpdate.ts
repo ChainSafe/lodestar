@@ -68,7 +68,7 @@ export class LightClientUpdater {
   }
 
   /**
-   * To be called in API route GET /eth/v1/lightclient/best-update/:periods
+   * To be called in API route GET /eth/v1/lightclient/best_update/:periods
    */
   async getBestUpdates(periods: CommitteePeriod[]): Promise<LightClientUpdate[]> {
     const updates: LightClientUpdate[] = [];
@@ -80,16 +80,16 @@ export class LightClientUpdater {
   }
 
   /**
-   * To be called in API route GET /eth/v1/lightclient/latest-header/:period
+   * To be called in API route GET /eth/v1/lightclient/latest_update_finalized/
    */
-  async getLatestFinalizedUpdate(): Promise<LightClientUpdate | null> {
+  async getLatestUpdateFinalized(): Promise<LightClientUpdate | null> {
     return this.db.latestFinalizedUpdate.get();
   }
 
   /**
-   * To be called in API route GET /eth/v1/lightclient/latest-header/:period
+   * To be called in API route GET /eth/v1/lightclient/latest_update_nonfinalized/
    */
-  async getLatestNonFinalizedUpdate(): Promise<LightClientUpdate | null> {
+  async getLatestUpdateNonFinalized(): Promise<LightClientUpdate | null> {
     return this.db.latestNonFinalizedUpdate.get();
   }
 

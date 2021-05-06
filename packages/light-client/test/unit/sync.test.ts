@@ -5,11 +5,13 @@ import {LightClientUpdater, LightClientUpdaterDb, FinalizedCheckpointData} from 
 import {createExtraMinimalConfig, getSyncAggregateSigningRoot, signAndAggregate} from "../utils";
 import {LightClientUpdate} from "@chainsafe/lodestar-types/lib/altair";
 import {computePeriodAtSlot, toBlockHeader} from "../../src/utils";
+import {processLightClientUpdate} from "../../src";
 import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
+import {List} from "@chainsafe/ssz";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
-describe("Lightclient flow", () => {
+describe("Lightclient flow with LightClientUpdater", () => {
   const config = createExtraMinimalConfig();
 
   before("BLS sanity check", () => {
@@ -102,8 +104,8 @@ describe("Lightclient flow", () => {
 
     // Check the current state of updates
     const bestUpdates = await lightClientUpdater.getBestUpdates(periods);
-    const latestFinalizedUpdate = await lightClientUpdater.getLatestFinalizedUpdate();
-    const latestNonFinalizedUpdate = await lightClientUpdater.getLatestNonFinalizedUpdate();
+    const latestFinalizedUpdate = await lightClientUpdater.getLatestUpdateFinalized();
+    const latestNonFinalizedUpdate = await lightClientUpdater.getLatestUpdateNonFinalized();
 
     expect({
       bestUpdates: bestUpdates.map((u) => u.header.slot),
@@ -114,6 +116,21 @@ describe("Lightclient flow", () => {
       latestFinalizedUpdate: 119,
       latestNonFinalizedUpdate: 149,
     });
+
+    // Simulate a Lightclient syncing to latest update with these updates
+
+    const store: altair.LightClientStore = {
+      snapshot: {
+        header: config.types.altair.BeaconBlockHeader.defaultValue(),
+        currentSyncCommittee: {pubkeys: [], pubkeyAggregates: []},
+        nextSyncCommittee: {pubkeys: committeeKeys[0].pks, pubkeyAggregates: []},
+      },
+      validUpdates: ([] as altair.LightClientUpdate[]) as List<altair.LightClientUpdate>,
+    };
+
+    for (const update of bestUpdates) {
+      processLightClientUpdate(config, store, update, toSlot, genValiRoot);
+    }
   });
 });
 
