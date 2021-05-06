@@ -1,4 +1,7 @@
-import {BLSPubkey, Root} from "@chainsafe/lodestar-types";
+import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {altair, BLSPubkey, Epoch, Root, Slot} from "@chainsafe/lodestar-types";
+import {BeaconBlockHeader} from "@chainsafe/lodestar-types/phase0";
 import {ArrayLike, BitVector} from "@chainsafe/ssz";
 
 export function sumBits(bits: ArrayLike<boolean>): number {
@@ -45,4 +48,22 @@ export function getParticipantPubkeys(pubkeys: ArrayLike<BLSPubkey>, bits: BitVe
   }
 
   return participantPubkeys;
+}
+
+export function computePeriodAtSlot(config: IBeaconConfig, slot: Slot): number {
+  return computePeriodAtEpoch(config, computeEpochAtSlot(config, slot));
+}
+
+export function computePeriodAtEpoch(config: IBeaconConfig, epoch: Epoch): number {
+  return Math.floor(epoch / config.params.EPOCHS_PER_SYNC_COMMITTEE_PERIOD);
+}
+
+export function toBlockHeader(config: IBeaconConfig, block: altair.BeaconBlock): BeaconBlockHeader {
+  return {
+    slot: block.slot,
+    proposerIndex: block.proposerIndex,
+    parentRoot: block.parentRoot,
+    stateRoot: block.stateRoot,
+    bodyRoot: config.types.altair.BeaconBlockBody.hashTreeRoot(block.body),
+  };
 }

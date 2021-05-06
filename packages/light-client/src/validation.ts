@@ -1,7 +1,7 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {altair} from "@chainsafe/lodestar-types";
-import {assert, intDiv, verifyMerkleBranch} from "@chainsafe/lodestar-utils";
-import {computeEpochAtSlot, computeDomain, computeSigningRoot} from "@chainsafe/lodestar-beacon-state-transition";
+import {assert, verifyMerkleBranch} from "@chainsafe/lodestar-utils";
+import {computeDomain, computeSigningRoot} from "@chainsafe/lodestar-beacon-state-transition";
 import {verifyAggregate} from "@chainsafe/bls";
 import {
   FINALIZED_ROOT_INDEX,
@@ -10,7 +10,7 @@ import {
   FINALIZED_ROOT_INDEX_FLOORLOG2,
   NEXT_SYNC_COMMITTEE_INDEX_FLOORLOG2,
 } from "@chainsafe/lodestar-params";
-import {assertZeroHashes, getParticipantPubkeys} from "./utils";
+import {assertZeroHashes, computePeriodAtSlot, getParticipantPubkeys} from "./utils";
 
 /**
  * Spec v1.0.1
@@ -27,9 +27,8 @@ export function validateLightClientUpdate(
   }
 
   // Verify update does not skip a sync committee period
-  const {EPOCHS_PER_SYNC_COMMITTEE_PERIOD} = config.params;
-  const snapshotPeriod = intDiv(computeEpochAtSlot(config, snapshot.header.slot), EPOCHS_PER_SYNC_COMMITTEE_PERIOD);
-  const updatePeriod = intDiv(computeEpochAtSlot(config, update.header.slot), EPOCHS_PER_SYNC_COMMITTEE_PERIOD);
+  const snapshotPeriod = computePeriodAtSlot(config, snapshot.header.slot);
+  const updatePeriod = computePeriodAtSlot(config, update.header.slot);
   if (updatePeriod !== snapshotPeriod && updatePeriod !== snapshotPeriod + 1) {
     throw Error("Update skips a sync committee period");
   }

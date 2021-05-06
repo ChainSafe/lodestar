@@ -1,11 +1,11 @@
 import {expect} from "chai";
 import {SecretKey} from "@chainsafe/bls";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {altair, BLSPubkey, Root} from "@chainsafe/lodestar-types";
-import {toHexString, TreeBacked, List} from "@chainsafe/ssz";
-import {processLightClientUpdate} from "../../src";
-import {prepareUpdate, IBeaconChainLc} from "../prepareUpdate";
+import {altair, BLSPubkey, Epoch} from "@chainsafe/lodestar-types";
+import {LightClientUpdater, LightClientUpdaterDb, FinalizedCheckpointData} from "../prepareUpdate";
 import {createExtraMinimalConfig, getSyncAggregateSigningRoot, signAndAggregate} from "../utils";
+import {LightClientUpdate} from "@chainsafe/lodestar-types/lib/altair";
+import {computePeriodAtSlot, toBlockHeader} from "../../src/utils";
+import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
@@ -21,10 +21,7 @@ describe("Lightclient flow", () => {
 
   // Fixed params
   const genValiRoot = Buffer.alloc(32, 9);
-  const currentSlot = 1;
   let committeeKeys: {sks: SecretKey[]; pks: BLSPubkey[]}[];
-  let updateData: {chain: IBeaconChainLc; blockWithSyncAggregate: altair.BeaconBlock};
-  let update: altair.LightClientUpdate;
 
   before("Generate crypto", () => {
     // Create two committees with different keys
@@ -39,99 +36,108 @@ describe("Lightclient flow", () => {
     ];
   });
 
-  before("Generate data for prepareUpdate", () => {
-    // Create a state that has as nextSyncCommittee the committee 2
-    const finalizedBlockSlot = config.params.SLOTS_PER_EPOCH * config.params.EPOCHS_PER_SYNC_COMMITTEE_PERIOD + 1;
-    const finalizedState = config.types.altair.BeaconState.defaultValue();
-    finalizedState.nextSyncCommittee = {
-      pubkeys: committeeKeys[0].pks,
-      pubkeyAggregates: finalizedState.nextSyncCommittee.pubkeyAggregates,
-    };
-    const finalizedBlockHeader = config.types.altair.BeaconBlockHeader.defaultValue();
-    finalizedBlockHeader.slot = finalizedBlockSlot;
-    finalizedBlockHeader.stateRoot = config.types.altair.BeaconState.hashTreeRoot(finalizedState);
+  it("Run chain for a few periods", async () => {
+    const db = getLightClientUpdaterDb();
+    const lightClientUpdater = new LightClientUpdater(config, db);
 
-    // Create a state that has the finalizedState as finalized checkpoint
-    const syncAttestedState = config.types.altair.BeaconState.defaultValue();
-    syncAttestedState.finalizedCheckpoint = {
-      epoch: 0, // Checkpoint { epoch, blockRoot }
-      root: config.types.altair.BeaconBlockHeader.hashTreeRoot(finalizedBlockHeader),
-    };
-    const syncAttestedBlockHeader = config.types.altair.BeaconBlockHeader.defaultValue();
-    syncAttestedBlockHeader.stateRoot = config.types.altair.BeaconState.hashTreeRoot(syncAttestedState);
+    // Create blocks and state
+    const fromSlot = 1;
+    const toSlot = 150;
+    // Compute all periods until toSlot
+    const lastPeriod = computePeriodAtSlot(config, toSlot);
+    const periods = Array.from({length: lastPeriod + 1}, (_, i) => i);
 
-    // Create a state with the block blockWithSyncAggregate
-    const stateWithSyncAggregate = config.types.altair.BeaconState.defaultValue();
-    stateWithSyncAggregate.slot = 1;
-    stateWithSyncAggregate.blockRoots[0] = config.types.altair.BeaconBlockHeader.hashTreeRoot(syncAttestedBlockHeader);
+    let prevBlock: altair.BeaconBlock | null = null;
+    const checkpoints: {block: altair.BeaconBlock; state: altair.BeaconState}[] = [];
+    let finalizedCheckpoint: altair.Checkpoint | null = null;
 
-    // Create a signature from current committee to "attest" syncAttestedBlockHeader
-    const forkVersion = stateWithSyncAggregate.fork.currentVersion;
-    const signingRoot = getSyncAggregateSigningRoot(config, genValiRoot, forkVersion, syncAttestedBlockHeader);
-    const blockWithSyncAggregate = config.types.altair.BeaconBlock.defaultValue();
-    blockWithSyncAggregate.body.syncAggregate = signAndAggregate(signingRoot, committeeKeys[0].sks);
-    blockWithSyncAggregate.stateRoot = config.types.altair.BeaconState.hashTreeRoot(stateWithSyncAggregate);
+    for (let slot = fromSlot; slot <= toSlot; slot++) {
+      // Create a block and postState
+      const block = config.types.altair.BeaconBlock.defaultValue();
+      const state = config.types.altair.BeaconState.defaultValue();
+      block.slot = slot;
+      state.slot = slot;
 
-    // Simulate BeaconChain module with a memory map of blocks and states
-    const chainMock = new MockBeaconChainLc(
-      config,
-      [finalizedBlockHeader, syncAttestedBlockHeader],
-      [finalizedState, syncAttestedState, stateWithSyncAggregate]
-    );
+      // TODO: Point to rolling finalized state
+      if (finalizedCheckpoint) {
+        state.finalizedCheckpoint = finalizedCheckpoint;
+      }
 
-    updateData = {chain: chainMock, blockWithSyncAggregate};
-  });
+      // Add sync aggregate signing over last block
+      if (prevBlock) {
+        const attestedBlock = toBlockHeader(config, prevBlock);
+        const attestedBlockRoot = config.types.altair.BeaconBlock.hashTreeRoot(prevBlock);
+        state.blockRoots[(slot - 1) % config.params.SLOTS_PER_HISTORICAL_ROOT] = attestedBlockRoot;
+        const forkVersion = state.fork.currentVersion;
+        const signingRoot = getSyncAggregateSigningRoot(config, genValiRoot, forkVersion, attestedBlock);
+        block.body.syncAggregate = signAndAggregate(signingRoot, committeeKeys[0].sks);
+      }
 
-  it("Prepare altair update", async () => {
-    if (!updateData) throw Error("Prev test failed");
+      // Store new prevBlock
+      prevBlock = block;
 
-    update = await prepareUpdate(config, updateData.chain, updateData.blockWithSyncAggregate);
-  });
+      // Simulate finalizing a state
+      if ((slot + 1) % config.params.SLOTS_PER_EPOCH === 0) {
+        checkpoints[computeEpochAtSlot(config, slot + 1)] = {block, state};
 
-  it("Process altair update", () => {
-    if (!update) throw Error("Prev test failed");
+        const finalizedEpoch = computeEpochAtSlot(config, slot) - 2;
+        const finalizedData = checkpoints[finalizedEpoch];
+        if (finalizedData) {
+          finalizedCheckpoint = {
+            epoch: finalizedEpoch,
+            root: config.types.altair.BeaconBlock.hashTreeRoot(finalizedData.block),
+          };
 
-    const store: altair.LightClientStore = {
-      snapshot: {
-        header: config.types.altair.BeaconBlockHeader.defaultValue(),
-        currentSyncCommittee: {pubkeys: [], pubkeyAggregates: []},
-        nextSyncCommittee: {pubkeys: committeeKeys[0].pks, pubkeyAggregates: []},
-      },
-      validUpdates: ([] as altair.LightClientUpdate[]) as List<altair.LightClientUpdate>,
-    };
+          // Feed new finalized block and state to the LightClientUpdater
+          lightClientUpdater.onFinalized(
+            finalizedData.block,
+            config.types.altair.BeaconState.createTreeBackedFromStruct(finalizedData.state)
+          );
+        }
+      }
 
-    processLightClientUpdate(config, store, update, currentSlot, genValiRoot);
+      // Feed new block and state to the LightClientUpdater
+      lightClientUpdater.onHead(block, config.types.altair.BeaconState.createTreeBackedFromStruct(state));
+    }
+
+    // Check the current state of updates
+    const bestUpdates = await lightClientUpdater.getBestUpdates(periods);
+    const latestFinalizedUpdate = await lightClientUpdater.getLatestFinalizedUpdate();
+    const latestNonFinalizedUpdate = await lightClientUpdater.getLatestNonFinalizedUpdate();
+
+    expect({
+      bestUpdates: bestUpdates.map((u) => u.header.slot),
+      latestFinalizedUpdate: latestFinalizedUpdate?.header.slot,
+      latestNonFinalizedUpdate: latestNonFinalizedUpdate?.header.slot,
+    }).to.deep.equal({
+      bestUpdates: [63, 119, 149],
+      latestFinalizedUpdate: 119,
+      latestNonFinalizedUpdate: 149,
+    });
   });
 });
 
-/**
- * Mock BeaconChainLc interface that returns the blockHeaders and states given at the constructor.
- * Throws for any unknown root
- */
-class MockBeaconChainLc implements IBeaconChainLc {
-  private readonly config: IBeaconConfig;
-  private readonly blockHeaders = new Map<string, altair.BeaconBlockHeader>();
-  private readonly states = new Map<string, altair.BeaconState>();
-
-  constructor(config: IBeaconConfig, blockHeaders: altair.BeaconBlockHeader[], states: altair.BeaconState[]) {
-    this.config = config;
-    for (const blockHeader of blockHeaders)
-      this.blockHeaders.set(toHexString(config.types.altair.BeaconBlockHeader.hashTreeRoot(blockHeader)), blockHeader);
-    for (const state of states)
-      this.states.set(toHexString(config.types.altair.BeaconState.hashTreeRoot(state)), state);
-  }
-
-  async getBlockHeaderByRoot(blockRoot: Root): Promise<altair.BeaconBlockHeader> {
-    const rootHex = toHexString(blockRoot);
-    const blockHeader = this.blockHeaders.get(rootHex);
-    if (!blockHeader) throw Error(`No blockHeader for ${rootHex}`);
-    return blockHeader;
-  }
-
-  async getStateByRoot(stateRoot: Root): Promise<TreeBacked<altair.BeaconState>> {
-    const rootHex = toHexString(stateRoot);
-    const state = this.states.get(rootHex);
-    if (!state) throw Error(`No state for ${rootHex}`);
-    return this.config.types.altair.BeaconState.createTreeBackedFromStruct(state);
-  }
+function getLightClientUpdaterDb(): LightClientUpdaterDb {
+  const lightclientFinalizedCheckpoint = new Map<Epoch, FinalizedCheckpointData>();
+  const bestUpdatePerCommitteePeriod = new Map<number, LightClientUpdate>();
+  let latestFinalizedUpdate: LightClientUpdate | null = null;
+  let latestNonFinalizedUpdate: LightClientUpdate | null = null;
+  return {
+    lightclientFinalizedCheckpoint: {
+      put: (key, data) => lightclientFinalizedCheckpoint.set(key, data),
+      get: (key) => lightclientFinalizedCheckpoint.get(key) ?? null,
+    },
+    bestUpdatePerCommitteePeriod: {
+      put: (key, data) => bestUpdatePerCommitteePeriod.set(key, data),
+      get: (key) => bestUpdatePerCommitteePeriod.get(key) ?? null,
+    },
+    latestFinalizedUpdate: {
+      put: (data) => (latestFinalizedUpdate = data),
+      get: () => latestFinalizedUpdate,
+    },
+    latestNonFinalizedUpdate: {
+      put: (data) => (latestNonFinalizedUpdate = data),
+      get: () => latestNonFinalizedUpdate,
+    },
+  };
 }
