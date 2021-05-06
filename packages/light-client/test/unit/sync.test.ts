@@ -60,7 +60,11 @@ describe("Lightclient flow with LightClientUpdater", () => {
       block.slot = slot;
       state.slot = slot;
 
-      // TODO: Point to rolling finalized state
+      // Set committeeKeys to static set
+      state.currentSyncCommittee.pubkeys = committeeKeys[0].pks;
+      state.nextSyncCommittee.pubkeys = committeeKeys[0].pks;
+
+      // Point to rolling finalized state
       if (finalizedCheckpoint) {
         state.finalizedCheckpoint = finalizedCheckpoint;
       }
@@ -94,6 +98,7 @@ describe("Lightclient flow with LightClientUpdater", () => {
 
           // Feed new finalized block and state to the LightClientUpdater
           lightClientUpdater.onFinalized(
+            finalizedCheckpoint,
             finalizedData.block,
             config.types.altair.BeaconState.createTreeBackedFromStruct(finalizedData.state)
           );
@@ -114,7 +119,7 @@ describe("Lightclient flow with LightClientUpdater", () => {
       latestFinalizedUpdate: latestFinalizedUpdate?.header.slot,
       latestNonFinalizedUpdate: latestNonFinalizedUpdate?.header.slot,
     }).to.deep.equal({
-      bestUpdates: [63, 119, 149],
+      bestUpdates: [55, 119, 149],
       latestFinalizedUpdate: 119,
       latestNonFinalizedUpdate: 149,
     });
@@ -124,14 +129,21 @@ describe("Lightclient flow with LightClientUpdater", () => {
     const store: altair.LightClientStore = {
       snapshot: {
         header: config.types.altair.BeaconBlockHeader.defaultValue(),
-        currentSyncCommittee: {pubkeys: [], pubkeyAggregates: []},
+        currentSyncCommittee: {pubkeys: committeeKeys[0].pks, pubkeyAggregates: []},
         nextSyncCommittee: {pubkeys: committeeKeys[0].pks, pubkeyAggregates: []},
       },
       validUpdates: ([] as altair.LightClientUpdate[]) as List<altair.LightClientUpdate>,
     };
 
-    for (const update of bestUpdates) {
-      processLightClientUpdate(config, store, update, toSlot, genValiRoot);
+    for (const [i, update] of bestUpdates.entries()) {
+      // Skip first update since it's already known in the snapshot
+      if (i === 0) continue;
+      try {
+        processLightClientUpdate(config, store, update, toSlot, genValiRoot);
+      } catch (e) {
+        (e as Error).message = `Error processing update ${i}: ${(e as Error).message}`;
+        throw e;
+      }
     }
   });
 });

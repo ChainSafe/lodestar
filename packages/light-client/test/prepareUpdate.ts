@@ -3,7 +3,7 @@ import {ByteVector, toHexString, TreeBacked} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {computeEpochAtSlot, getBlockRootAtSlot, getForkVersion} from "@chainsafe/lodestar-beacon-state-transition";
 import {FINALIZED_ROOT_INDEX, NEXT_SYNC_COMMITTEE_INDEX} from "@chainsafe/lodestar-params";
-import {Epoch, LightClientUpdate} from "@chainsafe/lodestar-types/lib/altair";
+import {Checkpoint, Epoch, LightClientUpdate} from "@chainsafe/lodestar-types/lib/altair";
 import {computePeriodAtEpoch, isZeroHash, sumBits, toBlockHeader} from "../src/utils";
 
 type CommitteePeriod = number;
@@ -148,12 +148,9 @@ export class LightClientUpdater {
    * Must subcribe to BeaconChain event `finalizedCheckpoint`.
    * Expects the block from `checkpoint.root` and the post state of the block, `block.stateRoot`
    */
-  onFinalized(block: altair.BeaconBlock, postState: TreeBacked<altair.BeaconState>): void {
-    // TODO: Review if it's the correct epoch
-    const checkpointEpoch = computeEpochAtSlot(this.config, block.slot);
-
+  onFinalized(checkpoint: Checkpoint, block: altair.BeaconBlock, postState: TreeBacked<altair.BeaconState>): void {
     // Pre-compute the nextSyncCommitteeBranch for this checkpoint, it will never change
-    this.db.lightclientFinalizedCheckpoint.put(checkpointEpoch, {
+    this.db.lightclientFinalizedCheckpoint.put(checkpoint.epoch, {
       header: toBlockHeader(this.config, block),
       nextSyncCommittee: postState.nextSyncCommittee,
       // Prove that the `nextSyncCommittee` is included in a finalized state "attested" by the current sync committee
