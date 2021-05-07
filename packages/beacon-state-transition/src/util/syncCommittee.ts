@@ -3,6 +3,12 @@ import {altair, BLSSignature, phase0, ValidatorIndex} from "@chainsafe/lodestar-
 import {bytesToInt, intDiv} from "@chainsafe/lodestar-utils";
 import {hash} from "@chainsafe/ssz";
 
+/**
+ * TODO
+ * This is a naive implementation of SyncCommittee utilities.
+ * We should cache syncCommitteeIndices in CachedBeaconState to make it faster.
+ * */
+
 export function computeSyncCommitteePeriod(config: IBeaconConfig, epoch: phase0.Epoch): number {
   return intDiv(epoch, config.params.EPOCHS_PER_SYNC_COMMITTEE_PERIOD);
 }
@@ -49,4 +55,22 @@ export function getSyncSubCommitteePubkeys(
   const syncSubCommitteeSize = intDiv(SYNC_COMMITTEE_SIZE, altair.SYNC_COMMITTEE_SUBNET_COUNT);
   const startIndex = subCommitteeIndex * syncSubCommitteeSize;
   return Array.from({length: syncSubCommitteeSize}, (_, i) => state.currentSyncCommittee.pubkeys[i + startIndex]);
+}
+
+export function getIndicesInSubSyncCommittee(
+  config: IBeaconConfig,
+  state: altair.BeaconState,
+  subCommitteeIndex: number,
+  validatorIndex: number
+): number[] {
+  const pubkeys = getSyncSubCommitteePubkeys(config, state, subCommitteeIndex);
+  const validatorPubkey = state.validators[validatorIndex].pubkey;
+  // a validator could be included multiple times in a given subcommittee
+  const indices = [];
+  for (const [index, pubkey] of pubkeys.entries()) {
+    if (config.types.phase0.BLSPubkey.equals(pubkey, validatorPubkey)) {
+      indices.push(index);
+    }
+  }
+  return indices;
 }

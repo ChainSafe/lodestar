@@ -96,7 +96,7 @@ export class BeaconGossipHandler {
   };
 
   onSyncCommitteeContribution = async (syncCommitteeContribution: altair.SignedContributionAndProof): Promise<void> => {
-    await this.db.contributionAndProof.add(syncCommitteeContribution.message);
+    this.db.seenSyncCommitteeContributionCache.addContributionAndProof(syncCommitteeContribution.message);
   };
 
   private subscribeAtFork = (fork: ForkName): void => {

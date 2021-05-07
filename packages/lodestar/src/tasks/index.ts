@@ -59,11 +59,13 @@ export class TasksService {
   start(): void {
     this.chain.emitter.on(ChainEvent.forkChoiceFinalized, this.onFinalizedCheckpoint);
     this.chain.emitter.on(ChainEvent.checkpoint, this.onCheckpoint);
+    this.chain.emitter.on(ChainEvent.clockSlot, this.onSlot);
   }
 
   async stop(): Promise<void> {
     this.chain.emitter.off(ChainEvent.forkChoiceFinalized, this.onFinalizedCheckpoint);
     this.chain.emitter.off(ChainEvent.checkpoint, this.onCheckpoint);
+    this.chain.emitter.off(ChainEvent.clockSlot, this.onSlot);
     // Archive latest finalized state
     await this.statesArchiver.archiveState(this.chain.getFinalizedCheckpoint());
   }
@@ -89,8 +91,6 @@ export class TasksService {
         this.chain.stateCache.deleteAllBeforeEpoch(finalizedEpoch),
         this.db.attestation.pruneFinalized(finalizedEpoch),
         this.db.aggregateAndProof.pruneFinalized(finalizedEpoch),
-        this.db.syncCommitteeSignature.pruneFinalized(finalizedEpoch),
-        this.db.contributionAndProof.pruneFinalized(finalizedEpoch),
       ]);
 
       // tasks rely on extended fork choice
@@ -110,5 +110,10 @@ export class TasksService {
       ),
       this.chain.stateCache.prune(headStateRoot),
     ]);
+  };
+
+  private onSlot = async (): Promise<void> => {
+    this.db.seenSyncCommiteeCache.prune();
+    this.db.seenSyncCommitteeContributionCache.prune();
   };
 }

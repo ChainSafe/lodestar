@@ -1,4 +1,9 @@
-import {CachedBeaconState, computeSubnetsForSyncCommittee, fast} from "@chainsafe/lodestar-beacon-state-transition";
+import {
+  CachedBeaconState,
+  computeSubnetsForSyncCommittee,
+  fast,
+  getIndicesInSubSyncCommittee,
+} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {altair} from "@chainsafe/lodestar-types";
 import {IBeaconDb} from "../../db";
@@ -42,7 +47,7 @@ export async function validateGossipSyncCommittee(
   }
 
   // There has been no other valid sync committee signature with same slot and validatorIndex
-  if (db.seenSyncCommiteeCache.hasSyncCommitteeSignature(syncCommittee)) {
+  if (db.seenSyncCommiteeCache.hasSyncCommitteeSignature(subnet, syncCommittee)) {
     throw new SyncCommitteeError({
       code: SyncCommitteeErrorCode.SYNC_COMMITTEE_ALREADY_KNOWN,
       root: config.types.altair.SyncCommitteeSignature.hashTreeRoot(syncCommittee),
@@ -91,4 +96,12 @@ export async function validateGossipSyncCommittee(
       });
     }
   }
+
+  const indicesInSubSyncCommittee = getIndicesInSubSyncCommittee(
+    config,
+    headState as altair.BeaconState,
+    subnet,
+    syncCommittee.validatorIndex
+  );
+  db.seenSyncCommiteeCache.addSyncCommitteeSignature(subnet, syncCommittee, indicesInSubSyncCommittee);
 }

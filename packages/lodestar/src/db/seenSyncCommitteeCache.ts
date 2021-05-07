@@ -1,55 +1,164 @@
+import bls, {Signature} from "@chainsafe/bls";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {altair} from "@chainsafe/lodestar-types";
+import {altair, phase0} from "@chainsafe/lodestar-types";
+import {intDiv} from "@chainsafe/lodestar-utils";
+import {List} from "@chainsafe/ssz";
+import {NUM_SLOTS_IN_CACHE, slotRootKey, SlotRootKey} from "./repositories/utils/syncCommittee";
 
 /**
- * Used to verify gossip SyncCommitteeSignature. When there are multiple
- * items from same validator
+ * Preaggregate SyncCommitteeSignature into SyncCommitteeContribution
+ * and cache seen SyncCommitteeSignature by slot + validator index.
+ * This stays in-memory and should be pruned per slot.
  */
 export class SeenSyncCommitteeCache {
-  private cache: Map<string, boolean>;
   private readonly config: IBeaconConfig;
-  private readonly maxSize: number;
 
-  constructor(config: IBeaconConfig, maxSize = 1000) {
+  /**
+   * Each array item is respective to a subCommitteeIndex.
+   * Preaggregate into SyncCommitteeContribution.
+   * */
+  private contributionCaches: Map<phase0.Slot, Map<SlotRootKey, altair.SyncCommitteeContribution>>[];
+
+  /**
+   * Each array item is respective to a subCommitteeIndex.
+   * A seen SyncCommitteeSignature is decided by slot + validator index.
+   */
+  private seenCaches: Map<phase0.Slot, Set<phase0.ValidatorIndex>>[];
+
+  constructor(config: IBeaconConfig) {
     this.config = config;
-    this.maxSize = maxSize;
-    this.cache = new Map<string, boolean>();
+    this.contributionCaches = Array.from(
+      {length: altair.SYNC_COMMITTEE_SUBNET_COUNT},
+      () => new Map<phase0.Slot, Map<SlotRootKey, altair.SyncCommitteeContribution>>()
+    );
+    this.seenCaches = Array.from(
+      {length: altair.SYNC_COMMITTEE_SUBNET_COUNT},
+      () => new Map<phase0.Slot, Set<phase0.ValidatorIndex>>()
+    );
   }
 
-  addSyncCommitteeSignature(syncCommittee: altair.SyncCommitteeSignature): void {
-    const key = this.syncCommitteeKey(syncCommittee);
-    this.add(key);
+  addSyncCommitteeSignature(
+    subCommitteeIndex: phase0.SubCommitteeIndex,
+    syncCommitteeSignature: altair.SyncCommitteeSignature,
+    indicesInSubSyncCommittee: number[] = []
+  ): void {
+    this.addToContributionCache(subCommitteeIndex, syncCommitteeSignature, indicesInSubSyncCommittee);
+    this.addToSyncCache(subCommitteeIndex, syncCommitteeSignature);
   }
 
-  addContributionAndProof(contributionAndProof: altair.ContributionAndProof): void {
-    const key = this.contributionAndProofKey(contributionAndProof);
-    this.add(key);
-  }
-
-  hasSyncCommitteeSignature(syncCommittee: altair.SyncCommitteeSignature): boolean {
-    const key = this.syncCommitteeKey(syncCommittee);
-    return this.cache.has(key);
-  }
-
-  hasContributionAndProof(contributionAndProof: altair.ContributionAndProof): boolean {
-    const key = this.contributionAndProofKey(contributionAndProof);
-    return this.cache.has(key);
-  }
-
-  private syncCommitteeKey(syncCommittee: altair.SyncCommitteeSignature): string {
-    return "sync_committee" + syncCommittee.slot + "_" + syncCommittee.validatorIndex;
-  }
-
-  private contributionAndProofKey(contributionAndProof: altair.ContributionAndProof): string {
-    const {slot, subCommitteeIndex} = contributionAndProof.contribution;
-    return "contribution_and_proof" + contributionAndProof.aggregatorIndex + "_" + slot + "_" + subCommitteeIndex;
-  }
-
-  private add(key: string): void {
-    this.cache.set(key, true);
-    if (this.cache.size > this.maxSize) {
-      // deletes oldest element added (map keep list of insert order)
-      this.cache.delete(this.cache.keys().next().value);
+  /**
+   * based on slot + validator index
+   */
+  hasSyncCommitteeSignature(
+    subSyncCommitteeIndex: phase0.SubCommitteeIndex,
+    syncCommittee: altair.SyncCommitteeSignature
+  ): boolean {
+    const seenCache = this.seenCaches[subSyncCommitteeIndex];
+    const {slot, validatorIndex} = syncCommittee;
+    const validatorIndices = seenCache.get(slot);
+    if (validatorIndices) {
+      return validatorIndices.has(validatorIndex);
     }
+    return false;
+  }
+
+  /**
+   * This is for the aggregator to produce ContributionAndProof.
+   */
+  getSyncCommitteeContribution(
+    subCommitteeIndex: phase0.SubCommitteeIndex,
+    slot: phase0.Slot,
+    beaconBlockRoot: phase0.Root
+  ): altair.SyncCommitteeContribution | null {
+    const contributionCache = this.contributionCaches[subCommitteeIndex];
+    const slotRootCache = contributionCache.get(slot);
+    if (slotRootCache) {
+      const key = slotRootKey({slot, beaconBlockRoot});
+      return slotRootCache.get(key) || null;
+    }
+    return null;
+  }
+
+  /**
+   * Keep the last NUM_SLOTS_IN_CACHE recent slots
+   */
+  prune(): void {
+    for (
+      let subSyncCommitteeIndex = 0;
+      subSyncCommitteeIndex < altair.SYNC_COMMITTEE_SUBNET_COUNT;
+      subSyncCommitteeIndex++
+    ) {
+      const contributionCache = this.contributionCaches[subSyncCommitteeIndex];
+      const seenCache = this.seenCaches[subSyncCommitteeIndex];
+      const slots = Array.from(contributionCache.keys());
+      // object keys are stored in insertion order
+      for (const slot of slots.slice(0, slots.length - NUM_SLOTS_IN_CACHE)) {
+        contributionCache.delete(slot);
+        seenCache.delete(slot);
+      }
+    }
+  }
+
+  private addToContributionCache(
+    subCommitteeIndex: phase0.SubCommitteeIndex,
+    syncCommitteeSignature: altair.SyncCommitteeSignature,
+    indicesInSubSyncCommittee: number[] = []
+  ): void {
+    const contributionCache = this.contributionCaches[subCommitteeIndex];
+    const {slot, beaconBlockRoot} = syncCommitteeSignature;
+    // preaggregate
+    let slotRootCache = contributionCache.get(slot);
+    if (!slotRootCache) {
+      slotRootCache = new Map<SlotRootKey, altair.SyncCommitteeContribution>();
+      contributionCache.set(slot, slotRootCache);
+    }
+    const key = slotRootKey(syncCommitteeSignature);
+    const preContribution = slotRootCache.get(key);
+    if (preContribution) {
+      const {aggregationBits} = preContribution;
+      for (const index of indicesInSubSyncCommittee) {
+        aggregationBits[index] = true;
+      }
+      const signatures: Signature[] = [
+        bls.Signature.fromBytes(preContribution.signature.valueOf() as Uint8Array),
+        bls.Signature.fromBytes(syncCommitteeSignature.signature.valueOf() as Uint8Array),
+      ];
+      // accumulate the aggregation, same slot and beaconBlockRoot here
+      const newContribution = {
+        slot,
+        beaconBlockRoot,
+        subCommitteeIndex,
+        aggregationBits,
+        signature: bls.Signature.aggregate(signatures).toBytes(),
+      };
+      slotRootCache.set(key, newContribution);
+    } else {
+      const aggregationBits = Array.from(
+        {length: intDiv(this.config.params.SYNC_COMMITTEE_SIZE, altair.SYNC_COMMITTEE_SUBNET_COUNT)},
+        (_, i) => indicesInSubSyncCommittee.includes(i)
+      );
+      // 1st item
+      slotRootCache.set(key, {
+        slot,
+        beaconBlockRoot,
+        subCommitteeIndex,
+        aggregationBits: aggregationBits as List<boolean>,
+        signature: syncCommitteeSignature.signature,
+      });
+    }
+  }
+
+  private addToSyncCache(
+    subCommitteeIndex: phase0.SubCommitteeIndex,
+    syncCommitteeSignature: altair.SyncCommitteeSignature
+  ): void {
+    const seenCache = this.seenCaches[subCommitteeIndex];
+    const {slot, validatorIndex} = syncCommitteeSignature;
+    let validatorIndices = seenCache.get(slot);
+    if (!validatorIndices) {
+      validatorIndices = new Set();
+      seenCache.set(slot, validatorIndices);
+    }
+    validatorIndices?.add(validatorIndex);
   }
 }

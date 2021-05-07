@@ -23,6 +23,7 @@ import {minimalConfig} from "@chainsafe/lodestar-config/minimal";
 import {SignedBeaconBlock} from "@chainsafe/lodestar-types/phase0";
 import {createStubInstance} from "../types";
 import {SeenSyncCommitteeCache} from "../../../src/db/seenSyncCommitteeCache";
+import {SeenSyncCommitteeContributionCache} from "../../../src/db/seenSyncCommitteeContributionCache";
 
 export class StubbedBeaconDb extends BeaconDb {
   db!: SinonStubbedInstance<LevelDbController>;
@@ -45,6 +46,8 @@ export class StubbedBeaconDb extends BeaconDb {
 
   seenAttestationCache: SinonStubbedInstance<SeenAttestationCache> & SeenAttestationCache;
   seenSyncCommiteeCache: SinonStubbedInstance<SeenSyncCommitteeCache> & SeenSyncCommitteeCache;
+  seenSyncCommitteeContributionCache: SinonStubbedInstance<SeenSyncCommitteeContributionCache> &
+    SeenSyncCommitteeContributionCache;
 
   processBlockOperations: SinonStubbedInstance<(signedBlock: phase0.SignedBeaconBlock) => Promise<void>> &
     ((signedBlock: phase0.SignedBeaconBlock) => Promise<void>);
@@ -69,6 +72,7 @@ export class StubbedBeaconDb extends BeaconDb {
     this.eth1Data = createStubInstance(Eth1DataRepository);
     this.seenAttestationCache = createStubInstance(SeenAttestationCache);
     this.seenSyncCommiteeCache = createStubInstance(SeenSyncCommitteeCache);
+    this.seenSyncCommitteeContributionCache = createStubInstance(SeenSyncCommitteeContributionCache);
     this.processBlockOperations = sinon.stub(this, "processBlockOperations") as (
       signedBlock: SignedBeaconBlock
     ) => Promise<void>;

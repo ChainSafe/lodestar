@@ -55,7 +55,7 @@ export async function validateGossipContributionAndProof(
     });
   }
 
-  if (db.seenSyncCommiteeCache.hasContributionAndProof(contributionAndProof)) {
+  if (db.seenSyncCommitteeContributionCache.hasContributionAndProof(contributionAndProof)) {
     throw new SyncCommitteeError({
       code: SyncCommitteeErrorCode.SYNC_COMMITTEE_ALREADY_KNOWN,
       root: config.types.altair.ContributionAndProof.hashTreeRoot(contributionAndProof),
@@ -71,6 +71,7 @@ export async function validateGossipContributionAndProof(
     });
   }
 
+  // TODO: cache subCommitteeIndices inside CachedBeaconState and do the simple `subCommitteeIndices.includes(aggregatorIndex)` check
   const headState = chain.getHeadState();
   const aggregatorPubkey = headState.validators[contributionAndProof.aggregatorIndex].pubkey;
   if (
@@ -102,4 +103,5 @@ export async function validateGossipContributionAndProof(
       job: contributionAndProofJob,
     });
   }
+  // no need to add to seenSyncCommittteeContributionCache here, gossip handler will do that
 }

@@ -22,9 +22,8 @@ import {
 import {PreGenesisState, PreGenesisStateLastProcessedBlock} from "./single";
 import {SeenAttestationCache} from "./seenAttestationCache";
 import {PendingBlockRepository} from "./repositories/pendingBlock";
-import {SyncCommitteeSignatureRepository} from "./repositories/syncCommitteeSignature";
-import {ContributionAndProofRepository} from "./repositories/contributionAndProof";
 import {SeenSyncCommitteeCache} from "./seenSyncCommitteeCache";
+import {SeenSyncCommitteeContributionCache} from "./seenSyncCommitteeContributionCache";
 
 export class BeaconDb extends DatabaseService implements IBeaconDb {
   badBlock: BadBlockRepository;
@@ -47,9 +46,8 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
   preGenesisStateLastProcessedBlock: PreGenesisStateLastProcessedBlock;
 
   // altair
-  syncCommitteeSignature: SyncCommitteeSignatureRepository;
-  contributionAndProof: ContributionAndProofRepository;
   seenSyncCommiteeCache: SeenSyncCommitteeCache;
+  seenSyncCommitteeContributionCache: SeenSyncCommitteeContributionCache;
 
   constructor(opts: IDatabaseApiOptions) {
     super(opts);
@@ -71,9 +69,8 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
     this.preGenesisState = new PreGenesisState(this.config, this.db);
     this.preGenesisStateLastProcessedBlock = new PreGenesisStateLastProcessedBlock(this.config, this.db);
     // altair
-    this.syncCommitteeSignature = new SyncCommitteeSignatureRepository(this.config, this.db);
-    this.contributionAndProof = new ContributionAndProofRepository(this.config, this.db);
-    this.seenSyncCommiteeCache = new SeenSyncCommitteeCache(this.config, 1024);
+    this.seenSyncCommiteeCache = new SeenSyncCommitteeCache(this.config);
+    this.seenSyncCommitteeContributionCache = new SeenSyncCommitteeContributionCache();
   }
 
   /**
