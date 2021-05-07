@@ -41,7 +41,7 @@
     "@chainsafe/lodestar-config": "^0.20.0",
     "@chainsafe/lodestar-types": "^0.20.0",
     "@chainsafe/lodestar-utils": "^0.20.0",
-    "@chainsafe/ssz": "^0.8.2"
+    "@chainsafe/ssz": "^0.8.4"
   },
   "keywords": [
     "ethereum",
