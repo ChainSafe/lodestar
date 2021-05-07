@@ -6,6 +6,7 @@ import {
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {altair} from "@chainsafe/lodestar-types";
+import {readonlyValues} from "@chainsafe/ssz";
 import {IBeaconDb} from "../../db";
 import {ISyncCommitteeJob, SyncCommitteeError, SyncCommitteeErrorCode} from "../errors/syncCommitteeError";
 import {IBeaconChain} from "../interface";
@@ -37,7 +38,7 @@ export async function validateGossipSyncCommittee(
     });
   }
 
-  // The block being signed over has been seen
+  // The block being signed over has not been seen
   if (!chain.forkChoice.hasBlock(syncCommittee.beaconBlockRoot)) {
     throw new SyncCommitteeError({
       code: SyncCommitteeErrorCode.UNKNOWN_BEACON_BLOCK_ROOT,
@@ -50,26 +51,24 @@ export async function validateGossipSyncCommittee(
   if (db.seenSyncCommiteeCache.hasSyncCommitteeSignature(subnet, syncCommittee)) {
     throw new SyncCommitteeError({
       code: SyncCommitteeErrorCode.SYNC_COMMITTEE_ALREADY_KNOWN,
-      root: config.types.altair.SyncCommitteeSignature.hashTreeRoot(syncCommittee),
       job: syncCommitteeJob,
     });
   }
 
   const headState = chain.getHeadState();
-  // TODO: https://github.com/ChainSafe/ssz/issues/102
   // validate validator being part of the current sync committee
-  // const validatorPubkey = headState.validators[syncCommittee.validatorIndex].pubkey;
-  // const currentSyncCommittee = (headState as CachedBeaconState<altair.BeaconState>).currentSyncCommittee;
-  // const syncCommitteePubkeys = Array.from(readonlyValues(currentSyncCommittee.pubkeys));
-  // if (
-  //   syncCommitteePubkeys.findIndex((pubkey) => config.types.phase0.BLSPubkey.equals(pubkey, validatorPubkey)) === -1
-  // ) {
-  //   throw new SyncCommitteeError({
-  //     code: SyncCommitteeErrorCode.VALIDATOR_NOT_IN_SYNC_COMMITTEE,
-  //     validatorIndex: syncCommittee.validatorIndex,
-  //     job: syncCommitteeJob,
-  //   });
-  // }
+  const validatorPubkey = headState.validators[syncCommittee.validatorIndex].pubkey;
+  const currentSyncCommittee = (headState as CachedBeaconState<altair.BeaconState>).currentSyncCommittee;
+  const syncCommitteePubkeys = Array.from(readonlyValues(currentSyncCommittee.pubkeys));
+  if (
+    syncCommitteePubkeys.findIndex((pubkey) => config.types.phase0.BLSPubkey.equals(pubkey, validatorPubkey)) === -1
+  ) {
+    throw new SyncCommitteeError({
+      code: SyncCommitteeErrorCode.VALIDATOR_NOT_IN_SYNC_COMMITTEE,
+      validatorIndex: syncCommittee.validatorIndex,
+      job: syncCommitteeJob,
+    });
+  }
 
   // validate subnet
   const expectedSubnets = computeSubnetsForSyncCommittee(

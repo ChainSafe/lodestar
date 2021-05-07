@@ -1,3 +1,4 @@
+import {config} from "@chainsafe/lodestar-config/minimal";
 import {altair} from "@chainsafe/lodestar-types";
 import {expect} from "chai";
 import {NUM_SLOTS_IN_CACHE} from "../../../src/db/repositories/utils/syncCommittee";
@@ -13,7 +14,7 @@ describe("SeenSyncCommitteeContributionCache", function () {
   });
 
   beforeEach(() => {
-    cache = new SeenSyncCommitteeContributionCache();
+    cache = new SeenSyncCommitteeContributionCache(config);
     cache.addContributionAndProof(contributionAndProof);
   });
 

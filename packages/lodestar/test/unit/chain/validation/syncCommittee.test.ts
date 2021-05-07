@@ -77,17 +77,21 @@ describe("Sync Committee Signature validation", function () {
     );
   });
 
-  // TODO: https://github.com/ChainSafe/ssz/issues/102
-  it.skip("should throw error - the validator is not part of the current sync committee", async function () {
+  it("should throw error - the validator is not part of the current sync committee", async function () {
     const syncCommittee = generateSyncCommitteeSignature({slot: 2, validatorIndex: 1});
     forkChoiceStub.hasBlock.returns(true);
     db.seenSyncCommiteeCache.hasSyncCommitteeSignature.returns(false);
     const state = generateCachedState({}, config, true);
+    // all validators have same pubkey, make validator 0 different
+    state.validators[0].pubkey = Buffer.alloc(48, 1);
     const pubkey0 = state.validators[0].pubkey;
     // syncCommittee has validator 0 but not 1
     const headState = generateCachedState(
       {
-        currentSyncCommittee: {pubkeys: [pubkey0], pubkeyAggregates: [Buffer.alloc(48, 0)]},
+        currentSyncCommittee: {
+          pubkeys: Array.from({length: config.params.SYNC_COMMITTEE_SIZE}, () => pubkey0),
+          pubkeyAggregates: [Buffer.alloc(48, 0)],
+        },
       },
       config,
       true
@@ -105,6 +109,18 @@ describe("Sync Committee Signature validation", function () {
     const syncCommittee = generateSyncCommitteeSignature({slot: 2, validatorIndex: 1});
     forkChoiceStub.hasBlock.returns(true);
     db.seenSyncCommiteeCache.hasSyncCommitteeSignature.returns(false);
+    const commonPubkey = generateCachedState().validators[0].pubkey;
+    const headState = generateCachedState(
+      {
+        currentSyncCommittee: {
+          pubkeys: Array.from({length: config.params.SYNC_COMMITTEE_SIZE}, () => commonPubkey),
+          pubkeyAggregates: [Buffer.alloc(48, 0)],
+        },
+      },
+      config,
+      true
+    );
+    chain.getHeadState.returns(headState);
     await expectRejectedWithLodestarError(
       validateGossipSyncCommittee(config, chain, db, {syncCommittee, validSignature: false}, 0),
       SyncCommitteeErrorCode.INVALID_SUBNET_ID
@@ -116,9 +132,13 @@ describe("Sync Committee Signature validation", function () {
     const syncCommittee = generateSyncCommitteeSignature({slot: 2, validatorIndex: 1});
     forkChoiceStub.hasBlock.returns(true);
     db.seenSyncCommiteeCache.hasSyncCommitteeSignature.returns(false);
+    const commonPubkey = generateCachedState().validators[0].pubkey;
     const headState = generateCachedState(
       {
-        currentSyncCommittee: {pubkeys: [Buffer.alloc(48, 0)], pubkeyAggregates: [Buffer.alloc(48, 0)]},
+        currentSyncCommittee: {
+          pubkeys: Array.from({length: config.params.SYNC_COMMITTEE_SIZE}, () => commonPubkey),
+          pubkeyAggregates: [Buffer.alloc(48, 0)],
+        },
       },
       config,
       true

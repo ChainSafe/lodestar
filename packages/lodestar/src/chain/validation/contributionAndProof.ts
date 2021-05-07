@@ -38,7 +38,7 @@ export async function validateGossipContributionAndProof(
     });
   }
 
-  // The block being signed over has been seen
+  // The block being signed over has not been seen
   if (!chain.forkChoice.hasBlock(contribution.beaconBlockRoot)) {
     throw new SyncCommitteeError({
       code: SyncCommitteeErrorCode.UNKNOWN_BEACON_BLOCK_ROOT,
@@ -58,7 +58,6 @@ export async function validateGossipContributionAndProof(
   if (db.seenSyncCommitteeContributionCache.hasContributionAndProof(contributionAndProof)) {
     throw new SyncCommitteeError({
       code: SyncCommitteeErrorCode.SYNC_COMMITTEE_ALREADY_KNOWN,
-      root: config.types.altair.ContributionAndProof.hashTreeRoot(contributionAndProof),
       job: contributionAndProofJob,
     });
   }

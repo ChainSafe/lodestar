@@ -70,7 +70,7 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
     this.preGenesisStateLastProcessedBlock = new PreGenesisStateLastProcessedBlock(this.config, this.db);
     // altair
     this.seenSyncCommiteeCache = new SeenSyncCommitteeCache(this.config);
-    this.seenSyncCommitteeContributionCache = new SeenSyncCommitteeContributionCache();
+    this.seenSyncCommitteeContributionCache = new SeenSyncCommitteeContributionCache(this.config);
   }
 
   /**

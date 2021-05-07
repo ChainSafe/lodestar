@@ -1,9 +1,13 @@
-import bls, {Signature} from "@chainsafe/bls";
+import bls from "@chainsafe/bls";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {altair, phase0} from "@chainsafe/lodestar-types";
 import {intDiv} from "@chainsafe/lodestar-utils";
 import {List} from "@chainsafe/ssz";
 import {NUM_SLOTS_IN_CACHE, slotRootKey, SlotRootKey} from "./repositories/utils/syncCommittee";
+
+type AggregatedSyncCommitteeContribution = Omit<altair.SyncCommitteeContribution, "signature"> & {
+  signatures: phase0.BLSSignature[];
+};
 
 /**
  * Preaggregate SyncCommitteeSignature into SyncCommitteeContribution
@@ -17,7 +21,7 @@ export class SeenSyncCommitteeCache {
    * Each array item is respective to a subCommitteeIndex.
    * Preaggregate into SyncCommitteeContribution.
    * */
-  private contributionCaches: Map<phase0.Slot, Map<SlotRootKey, altair.SyncCommitteeContribution>>[];
+  private contributionCaches: Map<phase0.Slot, Map<SlotRootKey, AggregatedSyncCommitteeContribution>>[];
 
   /**
    * Each array item is respective to a subCommitteeIndex.
@@ -29,7 +33,7 @@ export class SeenSyncCommitteeCache {
     this.config = config;
     this.contributionCaches = Array.from(
       {length: altair.SYNC_COMMITTEE_SUBNET_COUNT},
-      () => new Map<phase0.Slot, Map<SlotRootKey, altair.SyncCommitteeContribution>>()
+      () => new Map<phase0.Slot, Map<SlotRootKey, AggregatedSyncCommitteeContribution>>()
     );
     this.seenCaches = Array.from(
       {length: altair.SYNC_COMMITTEE_SUBNET_COUNT},
@@ -74,7 +78,17 @@ export class SeenSyncCommitteeCache {
     const slotRootCache = contributionCache.get(slot);
     if (slotRootCache) {
       const key = slotRootKey({slot, beaconBlockRoot});
-      return slotRootCache.get(key) || null;
+      const preAggregatedContribution = slotRootCache.get(key);
+      if (preAggregatedContribution) {
+        const signatures = preAggregatedContribution.signatures.map((signature) =>
+          bls.Signature.fromBytes(signature.valueOf() as Uint8Array)
+        );
+        const aggregatedSignature = bls.Signature.aggregate(signatures).toBytes();
+        return {
+          ...preAggregatedContribution,
+          signature: aggregatedSignature,
+        };
+      }
     }
     return null;
   }
@@ -109,7 +123,7 @@ export class SeenSyncCommitteeCache {
     // preaggregate
     let slotRootCache = contributionCache.get(slot);
     if (!slotRootCache) {
-      slotRootCache = new Map<SlotRootKey, altair.SyncCommitteeContribution>();
+      slotRootCache = new Map<SlotRootKey, AggregatedSyncCommitteeContribution>();
       contributionCache.set(slot, slotRootCache);
     }
     const key = slotRootKey(syncCommitteeSignature);
@@ -119,17 +133,13 @@ export class SeenSyncCommitteeCache {
       for (const index of indicesInSubSyncCommittee) {
         aggregationBits[index] = true;
       }
-      const signatures: Signature[] = [
-        bls.Signature.fromBytes(preContribution.signature.valueOf() as Uint8Array),
-        bls.Signature.fromBytes(syncCommitteeSignature.signature.valueOf() as Uint8Array),
-      ];
       // accumulate the aggregation, same slot and beaconBlockRoot here
       const newContribution = {
         slot,
         beaconBlockRoot,
         subCommitteeIndex,
         aggregationBits,
-        signature: bls.Signature.aggregate(signatures).toBytes(),
+        signatures: [...preContribution.signatures, syncCommitteeSignature.signature],
       };
       slotRootCache.set(key, newContribution);
     } else {
@@ -143,7 +153,7 @@ export class SeenSyncCommitteeCache {
         beaconBlockRoot,
         subCommitteeIndex,
         aggregationBits: aggregationBits as List<boolean>,
-        signature: syncCommitteeSignature.signature,
+        signatures: [syncCommitteeSignature.signature],
       });
     }
   }

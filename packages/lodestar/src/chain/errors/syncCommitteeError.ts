@@ -17,7 +17,7 @@ export type SyncCommitteeErrorType =
   | {code: SyncCommitteeErrorCode.PAST_SLOT; syncCommitteeSlot: Slot; currentSlot: Slot}
   | {code: SyncCommitteeErrorCode.FUTURE_SLOT; syncCommitteeSlot: Slot; currentSlot: Slot}
   | {code: SyncCommitteeErrorCode.UNKNOWN_BEACON_BLOCK_ROOT; beaconBlockRoot: Uint8Array}
-  | {code: SyncCommitteeErrorCode.SYNC_COMMITTEE_ALREADY_KNOWN; root: Uint8Array}
+  | {code: SyncCommitteeErrorCode.SYNC_COMMITTEE_ALREADY_KNOWN}
   | {code: SyncCommitteeErrorCode.VALIDATOR_NOT_IN_SYNC_COMMITTEE; validatorIndex: phase0.ValidatorIndex}
   | {code: SyncCommitteeErrorCode.INVALID_SUBNET_ID; received: number; expected: number[]}
   | {code: SyncCommitteeErrorCode.INVALID_SIGNATURE}
