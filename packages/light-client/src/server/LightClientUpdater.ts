@@ -1,10 +1,16 @@
 import {altair} from "@chainsafe/lodestar-types";
 import {ByteVector, toHexString, TreeBacked} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {computeEpochAtSlot, getBlockRootAtSlot, getForkVersion} from "@chainsafe/lodestar-beacon-state-transition";
+import {
+  computeEpochAtSlot,
+  computeSyncPeriodAtEpoch,
+  computeSyncPeriodAtSlot,
+  getBlockRootAtSlot,
+  getForkVersion,
+} from "@chainsafe/lodestar-beacon-state-transition";
 import {FINALIZED_ROOT_INDEX, NEXT_SYNC_COMMITTEE_INDEX} from "@chainsafe/lodestar-params";
 import {Checkpoint, Epoch, LightClientUpdate} from "@chainsafe/lodestar-types/lib/altair";
-import {computePeriodAtEpoch, isZeroHash, sumBits, toBlockHeader} from "../src/utils";
+import {isZeroHash, sumBits, toBlockHeader} from "../utils/utils";
 
 type CommitteePeriod = number;
 type DbRepo<K, T> = {put(key: K, data: T): void; get(key: K): T | null};
@@ -191,7 +197,7 @@ export class LightClientUpdater {
       forkVersion,
     };
 
-    const committeePeriod = computePeriodAtEpoch(this.config, finalizedEpoch);
+    const committeePeriod = computeSyncPeriodAtEpoch(this.config, finalizedEpoch);
     const prevBestUpdate = this.db.bestUpdatePerCommitteePeriod.get(committeePeriod);
     if (!prevBestUpdate || isBetterUpdate(prevBestUpdate, newUpdate)) {
       this.db.bestUpdatePerCommitteePeriod.put(committeePeriod, newUpdate);
@@ -214,8 +220,7 @@ export class LightClientUpdater {
     forkVersion: ByteVector,
     committeePeriodWithFinalized: CommitteePeriod | null
   ): void {
-    const syncAttestedEpoch = computeEpochAtSlot(this.config, syncAttestedData.header.slot);
-    const committeePeriod = computePeriodAtEpoch(this.config, syncAttestedEpoch);
+    const committeePeriod = computeSyncPeriodAtSlot(this.config, syncAttestedData.header.slot);
 
     const newUpdate: LightClientUpdate = {
       header: syncAttestedData.header,

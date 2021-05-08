@@ -5,7 +5,7 @@ import {intDiv} from "@chainsafe/lodestar-utils";
 import {List} from "@chainsafe/ssz";
 import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {validateLightClientUpdate} from "./validation";
-import {sumBits} from "./utils";
+import {sumBits} from "../utils/utils";
 
 //
 // A lightclient has two types of syncing:

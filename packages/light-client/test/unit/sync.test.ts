@@ -1,12 +1,12 @@
 import {expect} from "chai";
 import {SecretKey} from "@chainsafe/bls";
 import {altair, BLSPubkey, Epoch} from "@chainsafe/lodestar-types";
-import {LightClientUpdater, LightClientUpdaterDb, FinalizedCheckpointData} from "../prepareUpdate";
+import {LightClientUpdater, LightClientUpdaterDb, FinalizedCheckpointData} from "../../src/server/LightClientUpdater";
 import {createExtraMinimalConfig, getSyncAggregateSigningRoot, signAndAggregate} from "../utils";
 import {LightClientUpdate} from "@chainsafe/lodestar-types/lib/altair";
-import {computePeriodAtSlot, toBlockHeader} from "../../src/utils";
-import {processLightClientUpdate} from "../../src";
-import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
+import {toBlockHeader} from "../../src/utils/utils";
+import {processLightClientUpdate} from "../../src/client/update";
+import {computeEpochAtSlot, computeSyncPeriodAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {List} from "@chainsafe/ssz";
 
 /* eslint-disable @typescript-eslint/naming-convention */
@@ -46,7 +46,7 @@ describe("Lightclient flow with LightClientUpdater", () => {
     const fromSlot = 1;
     const toSlot = 150;
     // Compute all periods until toSlot
-    const lastPeriod = computePeriodAtSlot(config, toSlot);
+    const lastPeriod = computeSyncPeriodAtSlot(config, toSlot);
     const periods = Array.from({length: lastPeriod + 1}, (_, i) => i);
 
     let prevBlock: altair.BeaconBlock | null = null;
