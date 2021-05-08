@@ -13,6 +13,7 @@ import {IValidatorApi} from "./validator";
 import {IEventsApi} from "./events";
 import {IDebugApi} from "./debug/interface";
 import {IConfigApi} from "./config/interface";
+import {ILightclientApi} from "./lightclient";
 import {ILodestarApi} from "./lodestar";
 import {IMetrics} from "../../metrics";
 
@@ -23,6 +24,7 @@ export const enum ApiNamespace {
   EVENTS = "events",
   DEBUG = "debug",
   CONFIG = "config",
+  LIGHTCLIENT = "lightclient",
   LODESTAR = "lodestar",
 }
 
@@ -44,5 +46,6 @@ export interface IApi {
   events: IEventsApi;
   debug: IDebugApi;
   config: IConfigApi;
+  lightclient: ILightclientApi;
   lodestar: ILodestarApi;
 }
