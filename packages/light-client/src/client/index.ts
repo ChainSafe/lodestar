@@ -7,7 +7,7 @@ import {IClock} from "../utils/clock";
 import {deserializeSyncCommittee} from "../utils/utils";
 import {LightClientStoreFast} from "./types";
 import {TreeOffsetProof} from "@chainsafe/persistent-merkle-tree";
-import {toHexString} from "@chainsafe/ssz";
+import {Path, toHexString} from "@chainsafe/ssz";
 import {BeaconBlockHeader} from "@chainsafe/lodestar-types/phase0";
 
 export class Lightclient {
@@ -33,7 +33,19 @@ export class Lightclient {
   ): Promise<Lightclient> {
     const {slot, stateRoot} = trustedRoot;
     const apiClient = LightclientApiClient(beaconApiUrl, config.types);
+
+    const paths: Path[] = [];
+    for (let i = 0; i < config.params.SYNC_COMMITTEE_SIZE; i++) {
+      paths.push(["currentSyncCommittee", "pubkeys", 0]);
+      paths.push(["nextSyncCommittee", "pubkeys", 0]);
+    }
+    for (let i = 0; i < Math.floor(config.params.SYNC_COMMITTEE_SIZE / config.params.SYNC_PUBKEYS_PER_AGGREGATE); i++) {
+      paths.push(["currentSyncCommittee", "pubkeyAggregates", 0]);
+      paths.push(["nextSyncCommittee", "pubkeyAggregates", 0]);
+    }
+
     const proof = await apiClient.getStateProof(toHexString(stateRoot), []);
+
     const state = config.types.altair.BeaconState.createTreeBackedFromProof(stateRoot as Uint8Array, proof);
     const store: LightClientStoreFast = {
       validUpdates: [],

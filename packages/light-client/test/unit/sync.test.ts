@@ -10,6 +10,7 @@ import {Lightclient} from "../../src/client";
 import {ServerOpts} from "../lightclientApiServer";
 import {IClock} from "../../src/utils/clock";
 import {altair, Slot} from "@chainsafe/lodestar-types";
+import {Checkpoint} from "@chainsafe/lodestar-types/phase0";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
@@ -32,6 +33,19 @@ describe("Lightclient flow with LightClientUpdater", () => {
   const lastPeriod = computeSyncPeriodAtSlot(config, toSlot);
   const periods = Array.from({length: lastPeriod + 1}, (_, i) => i);
 
+  // Create genesis state and block
+  const genesisState = config.types.altair.BeaconState.defaultTreeBacked();
+  const genesisBlock = config.types.altair.BeaconBlock.defaultValue();
+  const genesisValidatorsRoot = config.types.altair.BeaconState.fields["validators"].hashTreeRoot(
+    genesisState.validators
+  );
+  const genesisStateRoot = config.types.altair.BeaconState.hashTreeRoot(genesisState);
+  genesisBlock.stateRoot = genesisStateRoot;
+  const genesisCheckpoint: Checkpoint = {
+    root: config.types.altair.BeaconBlock.hashTreeRoot(genesisBlock),
+    epoch: 0,
+  };
+
   before("BLS sanity check", () => {
     const sk = SecretKey.fromBytes(Buffer.alloc(32, 1));
     expect(sk.toPublicKey().toHex()).to.equal(
@@ -39,11 +53,12 @@ describe("Lightclient flow with LightClientUpdater", () => {
     );
   });
 
-  // Fixed params
-  const genesisValidatorsRoot = Buffer.alloc(32, 9);
-
   it("Run LightclientMockServer for a few periods", async () => {
-    lightclientServer = new LightclientMockServer(config, genesisValidatorsRoot);
+    lightclientServer = new LightclientMockServer(config, genesisValidatorsRoot, {
+      block: genesisBlock,
+      postState: genesisState,
+      checkpoint: genesisCheckpoint,
+    });
 
     for (let slot = fromSlot; slot <= toSlot; slot++) {
       lightclientServer.createNewBlock(slot);
@@ -86,13 +101,10 @@ describe("Lightclient flow with LightClientUpdater", () => {
       }
     }
 
-    expect(store.snapshot.header.slot).to.equal(
-      49,
-      "Wrong store.snapshot.header.slot after applying updates on processLightClientUpdate"
-    );
+    expect(store.snapshot.header.slot).to.equal(49, "Wrong store.snapshot.header.slot after applying updates");
   });
 
-  it("Simulate a second lightclient syncing over the API", async () => {
+  it("Simulate a second lightclient syncing over the API from trusted snapshot", async () => {
     const serverOpts: ServerOpts = {port: 31000, host: "127.0.0.1"};
     await lightclientServer.startApiServer(serverOpts);
     const beaconApiUrl = `http://${serverOpts.host}:${serverOpts.port}`;
@@ -111,6 +123,27 @@ describe("Lightclient flow with LightClientUpdater", () => {
       genesisValidatorsRoot,
       beaconApiUrl,
       snapshot
+    );
+
+    await lightclient.sync();
+
+    expect(lightclient.getHeader().slot).to.equal(49, "Wrong store.snapshot.header.slot after applying updates");
+  });
+
+  it("Simulate a second lightclient syncing over the API from trusted stateRoot", async () => {
+    const serverOpts: ServerOpts = {port: 31000, host: "127.0.0.1"};
+    await lightclientServer.startApiServer(serverOpts);
+    const beaconApiUrl = `http://${serverOpts.host}:${serverOpts.port}`;
+
+    // Sync lightclient to currentSlot with genesisState root
+
+    const clock = new MockClock(toSlot);
+    const lightclient = await Lightclient.initializeFromTrustedStateRoot(
+      config,
+      clock,
+      genesisValidatorsRoot,
+      beaconApiUrl,
+      {stateRoot: genesisStateRoot, slot: 0}
     );
 
     await lightclient.sync();
