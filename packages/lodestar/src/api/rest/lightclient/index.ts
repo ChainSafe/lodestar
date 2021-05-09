@@ -1,5 +1,3 @@
-import {allForks} from "@chainsafe/lodestar-types";
-import {TreeBacked} from "@chainsafe/ssz";
 import {serializeProof} from "@chainsafe/persistent-merkle-tree";
 import {ApiController, HttpHeader} from "../types";
 import {ApiError} from "../../impl/errors";
@@ -10,8 +8,8 @@ export const createProof: ApiController<null, {stateId: string}, {paths: (string
   id: "createProof",
 
   handler: async function (req, resp) {
-    const state = (await this.api.debug.beacon.getState(req.params.stateId)) as TreeBacked<allForks.BeaconState>;
-    const serialized = serializeProof(state.createProof(req.body.paths));
+    const proof = await this.api.lightclient.createStateProof(req.params.stateId, req.body.paths);
+    const serialized = serializeProof(proof);
     return resp.status(200).header(HttpHeader.CONTENT_TYPE, "application/octet-stream").send(Buffer.from(serialized));
   },
 

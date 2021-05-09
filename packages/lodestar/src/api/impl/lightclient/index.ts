@@ -1,10 +1,12 @@
-import {altair, Root, SyncPeriod} from "@chainsafe/lodestar-types";
-import {TreeBacked} from "@chainsafe/ssz";
+import {altair, SyncPeriod} from "@chainsafe/lodestar-types";
+import {Path, TreeBacked} from "@chainsafe/ssz";
 import {ApiNamespace, IApiModules} from "../interface";
 import {IApiOptions} from "../../options";
 import {Proof} from "@chainsafe/persistent-merkle-tree";
-
-type Paths = (string | number)[];
+import {resolveStateId} from "../beacon/state/utils";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {IBeaconChain} from "../../../chain";
+import {IBeaconDb} from "../../../db";
 
 // TODO: Import from lightclient/server package
 interface ILightClientUpdater {
@@ -17,18 +19,21 @@ export interface ILightclientApi {
   getBestUpdates(from: SyncPeriod, to: SyncPeriod): Promise<altair.LightClientUpdate[]>;
   getLatestUpdateFinalized(): Promise<altair.LightClientUpdate | null>;
   getLatestUpdateNonFinalized(): Promise<altair.LightClientUpdate | null>;
-  createStateProof(stateRoot: Root, paths: Paths): Promise<Proof>;
+  createStateProof(stateId: string, paths: Path[]): Promise<Proof>;
 }
 
 export class LightclientApi implements ILightclientApi {
   namespace = ApiNamespace.LIGHTCLIENT;
 
+  private readonly config: IBeaconConfig;
+  private readonly db: IBeaconDb;
+  private readonly chain: IBeaconChain;
   private readonly lightClientUpdater: ILightClientUpdater;
 
-  constructor(opts: Partial<IApiOptions>, modules: Pick<IApiModules, "network" | "sync">) {
-    this.namespace = ApiNamespace.BEACON;
-    this.network = modules.network;
-    this.sync = modules.sync;
+  constructor(opts: Partial<IApiOptions>, modules: Pick<IApiModules, "config" | "db" | "chain">) {
+    this.config = modules.config;
+    this.db = modules.db;
+    this.chain = modules.chain;
   }
 
   // Sync API
@@ -47,9 +52,9 @@ export class LightclientApi implements ILightclientApi {
 
   // Proofs API
 
-  async createStateProof(stateRoot: Root, paths: Paths): Promise<Proof> {
-    const state = (await this.api.debug.beacon.getState(req.params.stateId)) as TreeBacked<allForks.BeaconState>;
-    return state.createProof(paths);
-    const serialized = serializeProof(state.createProof(req.body.paths));
+  async createStateProof(stateId: string, paths: Path[]): Promise<Proof> {
+    const state = await resolveStateId(this.config, this.chain, this.db, stateId);
+    const stateTreeBacked = this.config.types.altair.BeaconState.createTreeBackedFromStruct(state);
+    return stateTreeBacked.createProof(paths);
   }
 }
