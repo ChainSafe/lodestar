@@ -54,10 +54,20 @@ export function LightclientApiClient(beaconApiUrl: string, types: IBeaconSSZType
      * POST /eth/v1/lodestar/proof/:stateId
      */
     async getStateProof(stateId: string | number, paths: Paths): Promise<TreeOffsetProof> {
-      const res = await fetch(beaconApiUrl + prefix + `/eth/v1/lodestar/proof/${stateId}`, {
+      const res = await fetch(beaconApiUrl + prefix + `/proof/${stateId}`, {
         method: "POST",
         body: JSON.stringify({paths}),
       });
+
+      if (!res.ok) {
+        const errorBody = (await res.json()) as {message: string};
+        if (typeof errorBody === "object" && errorBody.message) {
+          throw Error(errorBody.message);
+        } else {
+          throw Error(res.statusText);
+        }
+      }
+
       const buffer = await res.arrayBuffer();
 
       return deserializeProof(buffer as Uint8Array) as TreeOffsetProof;
