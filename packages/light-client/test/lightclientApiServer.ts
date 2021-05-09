@@ -7,6 +7,10 @@ import {
   RequestHandler,
   RouteShorthandOptions,
 } from "fastify";
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+import {Stream} from "stream";
+import {FastifyRequest} from "fastify";
+import {ILogger} from "@chainsafe/lodestar-utils";
 import {IncomingMessage, Server, ServerResponse} from "http";
 import fastify, {ServerOptions} from "fastify";
 import fastifyCors from "fastify-cors";
@@ -29,6 +33,7 @@ export type ServerOpts = {
 export type ServerModules = {
   config: IBeaconConfig;
   lightClientUpdater: LightClientUpdater;
+  logger: ILogger;
   stateRegen: IStateRegen;
 };
 
@@ -49,6 +54,7 @@ export async function startLightclientApiServer(
   modules: ServerModules
 ): Promise<fastify.FastifyInstance> {
   const server = fastify({
+    logger: new FastifyLogger(modules.logger),
     ajv: {
       customOptions: {
         coerceTypes: "array",
@@ -154,4 +160,45 @@ function parsePeriods(periodsArg: string): number[] {
     const period = parseInt(periodsArg, 10);
     return [period];
   }
+}
+
+/**
+ * Logs REST API request/response messages.
+ */
+export class FastifyLogger {
+  readonly stream: Stream;
+
+  readonly serializers = {
+    req: (req: IncomingMessage & FastifyRequest): {msg: string} => {
+      const url = req.url ? req.url.split("?")[0] : "-";
+      return {msg: `Req ${req.id} ${req.ip} ${req.method}:${url}`};
+    },
+  };
+
+  private log: ILogger;
+
+  constructor(logger: ILogger) {
+    this.log = logger;
+    this.stream = ({
+      write: this.handle,
+    } as unknown) as Stream;
+  }
+
+  private handle = (chunk: string): void => {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    const log = JSON.parse(chunk);
+    if (log.req) {
+      this.log.debug(log.req.msg);
+    } else if (log.res) {
+      this.log.debug(`Res ${log.reqId} - ${log.res.statusCode} ${log.responseTime}`);
+    }
+
+    if (log.err) {
+      if (log.level >= 50) {
+        this.log.error(`Request ${log.reqId} status ${log.res.statusCode}`, {}, log.err);
+      } else {
+        this.log.warn(`Request ${log.reqId} status ${log.res.statusCode}`, {}, log.err);
+      }
+    }
+  };
 }

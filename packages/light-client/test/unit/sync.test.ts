@@ -11,6 +11,7 @@ import {ServerOpts} from "../lightclientApiServer";
 import {IClock} from "../../src/utils/clock";
 import {altair, Slot} from "@chainsafe/lodestar-types";
 import {Checkpoint} from "@chainsafe/lodestar-types/phase0";
+import {WinstonLogger} from "@chainsafe/lodestar-utils";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
@@ -54,9 +55,10 @@ describe("Lightclient flow with LightClientUpdater", () => {
   });
 
   it("Run LightclientMockServer for a few periods", async () => {
-    lightclientServer = new LightclientMockServer(config, genesisValidatorsRoot, {
+    const logger = new WinstonLogger();
+    lightclientServer = new LightclientMockServer(config, logger, genesisValidatorsRoot, {
       block: genesisBlock,
-      postState: genesisState,
+      state: genesisState,
       checkpoint: genesisCheckpoint,
     });
 

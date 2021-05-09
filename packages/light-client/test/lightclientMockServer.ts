@@ -8,6 +8,7 @@ import {toBlockHeader} from "../src/utils/utils";
 import {getInteropSyncCommittee, getSyncAggregateSigningRoot, signAndAggregate, SyncCommitteeKeys} from "./utils";
 import {startLightclientApiServer, IStateRegen, ServerOpts} from "./lightclientApiServer";
 import {Checkpoint} from "@chainsafe/lodestar-types/phase0";
+import {ILogger} from "@chainsafe/lodestar-utils";
 
 enum ApiStatus {
   started = "started",
@@ -31,11 +32,12 @@ export class LightclientMockServer {
 
   constructor(
     private readonly config: IBeaconConfig,
+    private readonly logger: ILogger,
     private readonly genesisValidatorsRoot: Root,
     initialFinalizedCheckpoint?: {
       checkpoint: Checkpoint;
       block: altair.BeaconBlock;
-      postState: TreeBacked<altair.BeaconState>;
+      state: TreeBacked<altair.BeaconState>;
     }
   ) {
     const db = getLightClientUpdaterDb();
@@ -43,11 +45,9 @@ export class LightclientMockServer {
     this.stateRegen = new MockStateRegen(this.stateCache);
 
     if (initialFinalizedCheckpoint) {
-      this.lightClientUpdater.onFinalized(
-        initialFinalizedCheckpoint.checkpoint,
-        initialFinalizedCheckpoint.block,
-        initialFinalizedCheckpoint.postState
-      );
+      const {checkpoint, block, state} = initialFinalizedCheckpoint;
+      this.lightClientUpdater.onFinalized(checkpoint, block, state);
+      this.stateCache.set(toHexString(state.hashTreeRoot()), state);
     }
   }
 
@@ -58,6 +58,7 @@ export class LightclientMockServer {
     const server = await startLightclientApiServer(opts, {
       config: this.config,
       lightClientUpdater: this.lightClientUpdater,
+      logger: this.logger,
       stateRegen: this.stateRegen,
     });
     this.apiState = {status: ApiStatus.started, server};
@@ -139,7 +140,7 @@ export class LightclientMockServer {
 
       // Prune old states
       for (const [key, oldState] of this.stateCache.entries()) {
-        if (computeEpochAtSlot(this.config, oldState.slot) < finalizedEpoch - 1) {
+        if (oldState.slot !== 0 && computeEpochAtSlot(this.config, oldState.slot) < finalizedEpoch - 1) {
           this.stateCache.delete(key);
         }
       }
