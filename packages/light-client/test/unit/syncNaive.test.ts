@@ -3,7 +3,7 @@ import {SecretKey} from "@chainsafe/bls";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {altair, BLSPubkey, Root} from "@chainsafe/lodestar-types";
 import {toHexString, TreeBacked, List} from "@chainsafe/ssz";
-import {processLightClientUpdate} from "../../src";
+import {processLightClientUpdate} from "../../src/client/update";
 import {prepareUpdateNaive, IBeaconChainLc} from "../prepareUpdateNaive";
 import {createExtraMinimalConfig, getSyncAggregateSigningRoot, signAndAggregate} from "../utils";
 
