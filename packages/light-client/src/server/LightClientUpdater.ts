@@ -3,7 +3,6 @@ import {ByteVector, toHexString, TreeBacked} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {
   computeEpochAtSlot,
-  computeSyncPeriodAtEpoch,
   computeSyncPeriodAtSlot,
   getBlockRootAtSlot,
   getForkVersion,
@@ -153,6 +152,8 @@ export class LightClientUpdater {
   /**
    * Must subcribe to BeaconChain event `finalizedCheckpoint`.
    * Expects the block from `checkpoint.root` and the post state of the block, `block.stateRoot`
+   *
+   * NOTE: Must be called also on start with the current finalized checkpoint (may be genesis)
    */
   onFinalized(checkpoint: Checkpoint, block: altair.BeaconBlock, postState: TreeBacked<altair.BeaconState>): void {
     // Pre-compute the nextSyncCommitteeBranch for this checkpoint, it will never change
@@ -186,6 +187,15 @@ export class LightClientUpdater {
       return null;
     }
 
+    // NOTE: The `finalizedData.header` must be in the same SyncPeriod as `syncAttestedData.header`
+    // Otherwise a different committee will be the signer of a previous update and the lightclient
+    // won't be able to validate it because it hasn't switched to the next syncCommittee yet
+    const committeePeriod = computeSyncPeriodAtSlot(this.config, syncAttestedData.header.slot);
+    const committeePeriodSigner = computeSyncPeriodAtSlot(this.config, finalizedData.header.slot);
+    if (committeePeriod !== committeePeriodSigner) {
+      return null;
+    }
+
     const newUpdate: LightClientUpdate = {
       header: finalizedData.header,
       nextSyncCommittee: finalizedData.nextSyncCommittee,
@@ -197,7 +207,6 @@ export class LightClientUpdater {
       forkVersion,
     };
 
-    const committeePeriod = computeSyncPeriodAtEpoch(this.config, finalizedEpoch);
     const prevBestUpdate = this.db.bestUpdatePerCommitteePeriod.get(committeePeriod);
     if (!prevBestUpdate || isBetterUpdate(prevBestUpdate, newUpdate)) {
       this.db.bestUpdatePerCommitteePeriod.put(committeePeriod, newUpdate);

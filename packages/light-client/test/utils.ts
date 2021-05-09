@@ -15,7 +15,7 @@ export function createExtraMinimalConfig(): IBeaconConfig {
     ...minimalParams,
     SYNC_COMMITTEE_SIZE: 4,
     SYNC_PUBKEYS_PER_AGGREGATE: 2,
-    EPOCHS_PER_SYNC_COMMITTEE_PERIOD: 2,
+    EPOCHS_PER_SYNC_COMMITTEE_PERIOD: 4, // Must be higher than 3 to allow finalized updates
     SLOTS_PER_EPOCH: 4,
   });
 }

@@ -6,6 +6,7 @@ import {FinalizedCheckpointData, LightClientUpdater, LightClientUpdaterDb} from 
 import {toBlockHeader} from "../src/utils/utils";
 import {getInteropSyncCommittee, getSyncAggregateSigningRoot, signAndAggregate, SyncCommitteeKeys} from "./utils";
 import {startLightclientApiServer, IStateRegen, ServerOpts} from "./lightclientApiServer";
+import {Checkpoint} from "@chainsafe/lodestar-types/phase0";
 
 export class LightclientMockServer {
   private readonly lightClientUpdater: LightClientUpdater;
@@ -18,10 +19,26 @@ export class LightclientMockServer {
   private finalizedCheckpoint: altair.Checkpoint | null = null;
   private prevBlock: altair.BeaconBlock | null = null;
 
-  constructor(private readonly config: IBeaconConfig, private readonly genesisValidatorsRoot: Root) {
+  constructor(
+    private readonly config: IBeaconConfig,
+    private readonly genesisValidatorsRoot: Root,
+    initialFinalizedCheckpoint?: {
+      checkpoint: Checkpoint;
+      block: altair.BeaconBlock;
+      postState: TreeBacked<altair.BeaconState>;
+    }
+  ) {
     const db = getLightClientUpdaterDb();
     this.lightClientUpdater = new LightClientUpdater(config, db);
     this.stateRegen = new MockStateRegen(this.stateCache);
+
+    if (initialFinalizedCheckpoint) {
+      this.lightClientUpdater.onFinalized(
+        initialFinalizedCheckpoint.checkpoint,
+        initialFinalizedCheckpoint.block,
+        initialFinalizedCheckpoint.postState
+      );
+    }
   }
 
   async startApiServer(opts: ServerOpts): Promise<void> {
@@ -43,11 +60,6 @@ export class LightclientMockServer {
     const currentSyncPeriod = computeSyncPeriodAtSlot(this.config, slot);
     state.currentSyncCommittee = this.getSyncCommittee(currentSyncPeriod).syncCommittee;
     state.nextSyncCommittee = this.getSyncCommittee(currentSyncPeriod + 1).syncCommittee;
-    // console.log({
-    //   currentSyncPeriod,
-    //   currentSyncCommittee: this.getSyncCommittee(currentSyncPeriod).pks.map(toHexString),
-    //   nextSyncCommittee: this.getSyncCommittee(currentSyncPeriod + 1).pks.map(toHexString),
-    // });
 
     // Point to rolling finalized state
     if (this.finalizedCheckpoint) {
@@ -76,10 +88,11 @@ export class LightclientMockServer {
 
     // Simulate finalizing a state
     if ((slot + 1) % this.config.params.SLOTS_PER_EPOCH === 0) {
-      this.checkpoints.set(computeEpochAtSlot(this.config, slot + 1), {block, state});
+      const epoch = computeEpochAtSlot(this.config, slot + 1);
+      this.checkpoints.set(epoch, {block, state});
       this.stateCache.set(toHexString(state.hashTreeRoot()), state);
 
-      const finalizedEpoch = computeEpochAtSlot(this.config, slot) - 2;
+      const finalizedEpoch = epoch - 2; // Simulate perfect network conditions
       const finalizedData = this.checkpoints.get(finalizedEpoch);
       if (finalizedData) {
         this.finalizedCheckpoint = {
