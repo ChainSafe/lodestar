@@ -87,8 +87,8 @@ export class LightclientMockServer {
     this.prevBlock = block;
 
     // Simulate finalizing a state
-    if ((slot + 1) % this.config.params.SLOTS_PER_EPOCH === 0) {
-      const epoch = computeEpochAtSlot(this.config, slot + 1);
+    if (slot % this.config.params.SLOTS_PER_EPOCH === 0) {
+      const epoch = computeEpochAtSlot(this.config, slot);
       this.checkpoints.set(epoch, {block, state});
       this.stateCache.set(toHexString(state.hashTreeRoot()), state);
 

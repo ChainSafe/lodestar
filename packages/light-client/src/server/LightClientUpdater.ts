@@ -8,7 +8,7 @@ import {
   getForkVersion,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {FINALIZED_ROOT_INDEX, NEXT_SYNC_COMMITTEE_INDEX} from "@chainsafe/lodestar-params";
-import {Checkpoint, Epoch, LightClientUpdate} from "@chainsafe/lodestar-types/lib/altair";
+import {Checkpoint, Epoch, LightClientUpdate, Slot} from "@chainsafe/lodestar-types/lib/altair";
 import {isZeroHash, sumBits, toBlockHeader} from "../utils/utils";
 
 type CommitteePeriod = number;
@@ -24,6 +24,12 @@ export type FinalizedCheckpointData = Pick<
   LightClientUpdate,
   "header" | "nextSyncCommittee" | "nextSyncCommitteeBranch"
 >;
+
+type CommitteeSignatureData = {
+  slot: Slot;
+  forkVersion: ByteVector;
+  syncAggregate: altair.SyncAggregate;
+};
 
 export type LightClientUpdaterDb = {
   /**
@@ -120,12 +126,14 @@ export class LightClientUpdater {
     });
 
     // Store syncAggregate associated to the attested blockRoot
-    const syncAttestedSlot = postState.slot - 1;
-    const syncAttestedEpoch = computeEpochAtSlot(this.config, syncAttestedSlot);
-    const syncAttestedBlockRoot = getBlockRootAtSlot(this.config, postState, syncAttestedSlot);
-    const syncAggregate = block.body.syncAggregate;
-    // Get the ForkVersion used in the syncAggregate, as verified in the state transition fn
-    const forkVersion = getForkVersion(postState.fork, syncAttestedEpoch);
+    const syncAttestedBlockRoot = getBlockRootAtSlot(this.config, postState, postState.slot - 1);
+    const signatureData: CommitteeSignatureData = {
+      // Track the signature slot since that's what decides the committeePeriod
+      slot: block.slot,
+      // Get the ForkVersion used in the syncAggregate, as verified in the state transition fn
+      forkVersion: getForkVersion(postState.fork, computeEpochAtSlot(this.config, block.slot)),
+      syncAggregate: block.body.syncAggregate,
+    };
 
     // Recover attested data from prevData cache. If not found, this SyncAggregate is useless
     const syncAttestedData = this.prevHeadData.get(toHexString(syncAttestedBlockRoot));
@@ -134,9 +142,9 @@ export class LightClientUpdater {
     }
 
     // Store the best finalized update per period
-    const committeePeriodWithFinalized = this.persistBestFinalizedUpdate(syncAttestedData, syncAggregate, forkVersion);
+    const committeePeriodWithFinalized = this.persistBestFinalizedUpdate(syncAttestedData, signatureData);
     // Then, store the best non finalized update per period
-    this.persistBestNonFinalizedUpdate(syncAttestedData, syncAggregate, forkVersion, committeePeriodWithFinalized);
+    this.persistBestNonFinalizedUpdate(syncAttestedData, signatureData, committeePeriodWithFinalized);
 
     // Prune old prevHeadData
     if (this.prevHeadData.size > PREV_DATA_MAX_SIZE) {
@@ -173,8 +181,7 @@ export class LightClientUpdater {
    */
   private persistBestFinalizedUpdate(
     syncAttestedData: SyncAttestedData,
-    syncAggregate: altair.SyncAggregate,
-    forkVersion: ByteVector
+    signatureData: CommitteeSignatureData
   ): CommitteePeriod | null {
     // Retrieve finality branch for attested finalized checkpoint
     const finalizedEpoch = syncAttestedData.finalizedCheckpoint.epoch;
@@ -187,12 +194,13 @@ export class LightClientUpdater {
       return null;
     }
 
-    // NOTE: The `finalizedData.header` must be in the same SyncPeriod as `syncAttestedData.header`
+    // NOTE: The `finalizedData.header` must be in the same SyncPeriod as the signature period.
+    // Note, that the `syncAttestedData.header` period is > finalizedData & < signaturePeriod.
     // Otherwise a different committee will be the signer of a previous update and the lightclient
     // won't be able to validate it because it hasn't switched to the next syncCommittee yet
-    const committeePeriod = computeSyncPeriodAtSlot(this.config, syncAttestedData.header.slot);
-    const committeePeriodSigner = computeSyncPeriodAtSlot(this.config, finalizedData.header.slot);
-    if (committeePeriod !== committeePeriodSigner) {
+    const committeePeriod = computeSyncPeriodAtSlot(this.config, finalizedData.header.slot);
+    const signaturePeriod = computeSyncPeriodAtSlot(this.config, signatureData.slot);
+    if (committeePeriod !== signaturePeriod) {
       return null;
     }
 
@@ -202,9 +210,9 @@ export class LightClientUpdater {
       nextSyncCommitteeBranch: finalizedData.nextSyncCommitteeBranch,
       finalityHeader: syncAttestedData.header,
       finalityBranch: syncAttestedData.finalityBranch,
-      syncCommitteeBits: syncAggregate.syncCommitteeBits,
-      syncCommitteeSignature: syncAggregate.syncCommitteeSignature,
-      forkVersion,
+      syncCommitteeBits: signatureData.syncAggregate.syncCommitteeBits,
+      syncCommitteeSignature: signatureData.syncAggregate.syncCommitteeSignature,
+      forkVersion: signatureData.forkVersion,
     };
 
     const prevBestUpdate = this.db.bestUpdatePerCommitteePeriod.get(committeePeriod);
@@ -225,11 +233,14 @@ export class LightClientUpdater {
    */
   private persistBestNonFinalizedUpdate(
     syncAttestedData: SyncAttestedData,
-    syncAggregate: altair.SyncAggregate,
-    forkVersion: ByteVector,
+    signatureData: CommitteeSignatureData,
     committeePeriodWithFinalized: CommitteePeriod | null
   ): void {
     const committeePeriod = computeSyncPeriodAtSlot(this.config, syncAttestedData.header.slot);
+    const signaturePeriod = computeSyncPeriodAtSlot(this.config, signatureData.slot);
+    if (committeePeriod !== signaturePeriod) {
+      return;
+    }
 
     const newUpdate: LightClientUpdate = {
       header: syncAttestedData.header,
@@ -237,9 +248,9 @@ export class LightClientUpdater {
       nextSyncCommitteeBranch: syncAttestedData.nextSyncCommitteeBranch,
       finalityHeader: this.zero.finalityHeader,
       finalityBranch: this.zero.finalityBranch,
-      syncCommitteeBits: syncAggregate.syncCommitteeBits,
-      syncCommitteeSignature: syncAggregate.syncCommitteeSignature,
-      forkVersion,
+      syncCommitteeBits: signatureData.syncAggregate.syncCommitteeBits,
+      syncCommitteeSignature: signatureData.syncAggregate.syncCommitteeSignature,
+      forkVersion: signatureData.forkVersion,
     };
 
     // Optimization: If there's already a finalized update for this committee period, no need to create a non-finalized update

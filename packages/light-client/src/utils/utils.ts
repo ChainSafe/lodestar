@@ -63,3 +63,13 @@ export function toBlockHeader(config: IBeaconConfig, block: altair.BeaconBlock):
 export function deserializePubkeys(pubkeys: altair.LightClientUpdate["nextSyncCommittee"]["pubkeys"]): PublicKey[] {
   return Array.from(pubkeys).map((pk) => PublicKey.fromBytes(pk.valueOf() as Uint8Array));
 }
+
+export function isEmptyHeader(config: IBeaconConfig, header: BeaconBlockHeader): boolean {
+  const emptyValue = config.types.altair.BeaconBlockHeader.defaultValue();
+  return config.types.altair.BeaconBlockHeader.equals(emptyValue, header);
+}
+
+export function isEmptySyncCommitte(config: IBeaconConfig, syncCommittee: altair.SyncCommittee): boolean {
+  const emptyValue = config.types.altair.SyncCommittee.defaultValue();
+  return config.types.altair.SyncCommittee.equals(emptyValue, syncCommittee);
+}

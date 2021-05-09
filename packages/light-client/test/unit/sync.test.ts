@@ -1,6 +1,7 @@
 import {expect} from "chai";
 import {SecretKey} from "@chainsafe/bls";
-import {createExtraMinimalConfig} from "../utils";
+import {params as minimalParams} from "@chainsafe/lodestar-params/minimal";
+import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 import {processLightClientUpdate} from "../../src/client/update";
 import {computeSyncPeriodAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {LightclientMockServer} from "../lightclientMockServer";
@@ -9,7 +10,14 @@ import {LightClientStoreFast} from "../../src/client/types";
 /* eslint-disable @typescript-eslint/naming-convention */
 
 describe("Lightclient flow with LightClientUpdater", () => {
-  const config = createExtraMinimalConfig();
+  const config = createIBeaconConfig({
+    ...minimalParams,
+    SYNC_COMMITTEE_SIZE: 4,
+    SYNC_PUBKEYS_PER_AGGREGATE: 2,
+    // Must be higher than 3 to allow finalized updates
+    EPOCHS_PER_SYNC_COMMITTEE_PERIOD: 4,
+    SLOTS_PER_EPOCH: 4,
+  });
 
   before("BLS sanity check", () => {
     const sk = SecretKey.fromBytes(Buffer.alloc(32, 1));
@@ -46,8 +54,8 @@ describe("Lightclient flow with LightClientUpdater", () => {
       latestFinalizedUpdate: latestFinalizedUpdate?.header.slot,
       latestNonFinalizedUpdate: latestNonFinalizedUpdate?.header.slot,
     }).to.deep.equal({
-      bestUpdates: [3, 11, 19, 27, 35, 47, 49],
-      latestFinalizedUpdate: 35,
+      bestUpdates: [4, 20, 36, 49],
+      latestFinalizedUpdate: 36,
       latestNonFinalizedUpdate: 49,
     });
 
@@ -73,6 +81,6 @@ describe("Lightclient flow with LightClientUpdater", () => {
       }
     }
 
-    expect(store.snapshot.header.slot).to.equal(149, "Wrong store.snapshot.header.slot after applying updates");
+    expect(store.snapshot.header.slot).to.equal(49, "Wrong store.snapshot.header.slot after applying updates");
   });
 });

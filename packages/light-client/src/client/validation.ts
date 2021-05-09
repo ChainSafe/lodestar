@@ -10,7 +10,7 @@ import {
   FINALIZED_ROOT_INDEX_FLOORLOG2,
   NEXT_SYNC_COMMITTEE_INDEX_FLOORLOG2,
 } from "@chainsafe/lodestar-params";
-import {assertZeroHashes, getParticipantPubkeys} from "../utils/utils";
+import {assertZeroHashes, getParticipantPubkeys, isEmptyHeader, isEmptySyncCommitte} from "../utils/utils";
 import {LightClientSnapshotFast} from "./types";
 
 /**
@@ -35,8 +35,7 @@ export function validateLightClientUpdate(
   }
 
   // Verify update header root is the finalized root of the finality header, if specified
-  const emptyHeader = config.types.altair.BeaconBlockHeader.defaultValue();
-  const finalityHeaderSpecified = !config.types.altair.BeaconBlockHeader.equals(update.finalityHeader, emptyHeader);
+  const finalityHeaderSpecified = !isEmptyHeader(config, update.finalityHeader);
   const signedHeader = finalityHeaderSpecified ? update.finalityHeader : update.header;
   if (finalityHeaderSpecified) {
     // Proof that the state referenced in `update.finalityHeader.stateRoot` includes
@@ -57,6 +56,11 @@ export function validateLightClientUpdate(
       ),
       "Invalid finality header merkle branch"
     );
+
+    const updateFinalityPeriod = computeSyncPeriodAtSlot(config, update.finalityHeader.slot);
+    if (updateFinalityPeriod !== updatePeriod) {
+      throw Error(`finalityHeader period ${updateFinalityPeriod} > header period ${updatePeriod}`);
+    }
   } else {
     assertZeroHashes(update.finalityBranch, FINALIZED_ROOT_INDEX_FLOORLOG2, "finalityBranches");
   }
@@ -64,7 +68,12 @@ export function validateLightClientUpdate(
   // Verify update next sync committee if the update period incremented
   const updatePeriodIncremented = updatePeriod > snapshotPeriod;
   const syncCommittee = updatePeriodIncremented ? snapshot.nextSyncCommittee : snapshot.currentSyncCommittee;
-  if (updatePeriodIncremented) {
+
+  // TODO: Diff from spec
+  // I believe the nextSyncCommitteeBranch should be check always not only when updatePeriodIncremented
+  // An update may not increase the period but still be stored in validUpdates and be used latter
+
+  if (!isEmptySyncCommitte(config, update.nextSyncCommittee)) {
     // Proof that the state referenced in `update.header.stateRoot` includes
     // state = {
     //   nextSyncCommittee: update.nextSyncCommittee
@@ -81,8 +90,6 @@ export function validateLightClientUpdate(
       ),
       "Invalid next sync committee merkle branch"
     );
-  } else {
-    assertZeroHashes(update.nextSyncCommitteeBranch, NEXT_SYNC_COMMITTEE_INDEX_FLOORLOG2, "nextSyncCommitteeBranches");
   }
 
   // Verify sync committee has sufficient participants
@@ -102,7 +109,6 @@ export function validateLightClientUpdate(
   const participantPubkeys = getParticipantPubkeys(syncCommittee.pubkeys, update.syncCommitteeBits);
   const domain = computeDomain(config, config.params.DOMAIN_SYNC_COMMITTEE, update.forkVersion, genesisValidatorsRoot);
   const signingRoot = computeSigningRoot(config, config.types.altair.BeaconBlockHeader, signedHeader, domain);
-
   assert.true(
     verifyAggregate(participantPubkeys, signingRoot, update.syncCommitteeSignature.valueOf() as Uint8Array),
     "Invalid aggregate signature"
