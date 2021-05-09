@@ -1,29 +1,21 @@
 import {expect} from "chai";
 import {SecretKey} from "@chainsafe/bls";
-import {params as minimalParams} from "@chainsafe/lodestar-params/minimal";
 import {createIBeaconConfig} from "@chainsafe/lodestar-config";
-import {processLightClientUpdate} from "../../src/client/update";
+import {WinstonLogger} from "@chainsafe/lodestar-utils";
+import {altair, Slot} from "@chainsafe/lodestar-types";
 import {computeSyncPeriodAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {LightclientMockServer} from "../lightclientMockServer";
+import {processLightClientUpdate} from "../../src/client/update";
 import {LightClientStoreFast} from "../../src/client/types";
 import {Lightclient} from "../../src/client";
 import {ServerOpts} from "../lightclientApiServer";
 import {IClock} from "../../src/utils/clock";
-import {altair, Slot} from "@chainsafe/lodestar-types";
-import {Checkpoint} from "@chainsafe/lodestar-types/phase0";
-import {WinstonLogger} from "@chainsafe/lodestar-utils";
+import {leveParams} from "../../src/leve";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
 describe("Lightclient flow with LightClientUpdater", () => {
-  const config = createIBeaconConfig({
-    ...minimalParams,
-    SYNC_COMMITTEE_SIZE: 4,
-    SYNC_PUBKEYS_PER_AGGREGATE: 2,
-    // Must be higher than 3 to allow finalized updates
-    EPOCHS_PER_SYNC_COMMITTEE_PERIOD: 4,
-    SLOTS_PER_EPOCH: 4,
-  });
+  const config = createIBeaconConfig(leveParams);
 
   let lightclientServer: LightclientMockServer;
 
@@ -42,7 +34,7 @@ describe("Lightclient flow with LightClientUpdater", () => {
   );
   const genesisStateRoot = config.types.altair.BeaconState.hashTreeRoot(genesisState);
   genesisBlock.stateRoot = genesisStateRoot;
-  const genesisCheckpoint: Checkpoint = {
+  const genesisCheckpoint: altair.Checkpoint = {
     root: config.types.altair.BeaconBlock.hashTreeRoot(genesisBlock),
     epoch: 0,
   };
