@@ -1,10 +1,11 @@
 import {altair} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {computeSyncPeriodAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
-import {LightclientApiClient} from "./apiClient";
+import {LightclientApiClient, Paths} from "./apiClient";
 import {processLightClientUpdate} from "./update";
 import {IClock} from "../utils/clock";
 import {LightClientStoreFast} from "./types";
+import { TreeOffsetProof } from "@chainsafe/persistent-merkle-tree";
 
 export class Lightclient {
   private readonly apiClient: ReturnType<typeof LightclientApiClient>;
@@ -35,6 +36,10 @@ export class Lightclient {
     if (update) {
       processLightClientUpdate(this.config, this.store, update, this.clock.currentSlot, this.genesisValidatorsRoot);
     }
+  }
+
+  async getStateProof(paths: Paths): Promise<TreeOffsetProof> {
+    return await this.apiClient.getStateProof(this.store.snapshot.header.slot, paths);
   }
 
   onSlot = async (): Promise<void> => {

@@ -1,9 +1,9 @@
 import {fetch} from "cross-fetch";
-import {Json, TreeBacked} from "@chainsafe/ssz";
-import {deserializeProof} from "@chainsafe/persistent-merkle-tree";
+import {Json} from "@chainsafe/ssz";
+import {deserializeProof, TreeOffsetProof} from "@chainsafe/persistent-merkle-tree";
 import {altair, SyncPeriod, IBeaconSSZTypes} from "@chainsafe/lodestar-types";
 
-type Paths = (string | number)[];
+export type Paths = (string | number)[];
 
 // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types, @typescript-eslint/explicit-function-return-type, @typescript-eslint/naming-convention
 export function LightclientApiClient(beaconApiUrl: string, types: IBeaconSSZTypes) {
@@ -42,15 +42,14 @@ export function LightclientApiClient(beaconApiUrl: string, types: IBeaconSSZType
     /**
      * POST /eth/v1/lodestar/proof/:stateId
      */
-    async getStateProof(stateId: string, paths: Paths): Promise<TreeBacked<altair.BeaconState>> {
+    async getStateProof(stateId: string | number, paths: Paths): Promise<TreeOffsetProof> {
       const res = await fetch(beaconApiUrl + prefix + `/eth/v1/lodestar/proof/${stateId}`, {
         method: "POST",
         body: JSON.stringify({paths}),
       });
       const buffer = await res.arrayBuffer();
 
-      const proof = deserializeProof(buffer as Uint8Array);
-      return types.altair.BeaconState.createTreeBackedFromProofUnsafe(proof);
+      return deserializeProof(buffer as Uint8Array) as TreeOffsetProof;
     },
   };
 }

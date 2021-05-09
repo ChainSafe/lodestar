@@ -31,7 +31,7 @@ export function ProofReqResp({client}: {client: Lightclient}): JSX.Element {
           </div>
           <div className="field">
             <div className="control">
-              <button className="button is-primary">Submit</button>
+              <button className="button is-primary" onClick={() => client.getStateProof(paths).then(setProof)}>Submit</button>
             </div>
           </div>
         </div>
