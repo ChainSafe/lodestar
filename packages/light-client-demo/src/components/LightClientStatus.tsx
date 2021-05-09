@@ -7,7 +7,7 @@ import {Lightclient} from "@chainsafe/lodestar-light-client/lib/client";
 
 export function LightClientStatus({client}: {client: Lightclient}): JSX.Element {
   return (
-    <div className="light-client-status container">
+    <div className="section container">
       <div className="title is-3">
         Sync Status
       </div>

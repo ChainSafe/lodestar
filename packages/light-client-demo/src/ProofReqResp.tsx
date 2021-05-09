@@ -15,7 +15,7 @@ export function ProofReqResp({client}: {client: Lightclient}): JSX.Element {
     return path.join(".") + " " + path.reduce((acc, p) => acc[p], state);
   }).join("\n");
   return (
-    <div className="container">
+    <div className="section container">
       <div className="title is-3">
         Proof Req/Resp
       </div>
