@@ -4,7 +4,7 @@ import {altair, Slot} from "@chainsafe/lodestar-types";
 import {intDiv} from "@chainsafe/lodestar-utils";
 import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {validateLightClientUpdate} from "./validation";
-import {deserializePubkeys, sumBits} from "../utils/utils";
+import {deserializeSyncCommittee, sumBits} from "../utils/utils";
 import {LightClientSnapshotFast, LightClientStoreFast} from "./types";
 
 //
@@ -93,10 +93,7 @@ export function applyLightClientUpdate(
   const updatePeriod = intDiv(computeEpochAtSlot(config, update.header.slot), EPOCHS_PER_SYNC_COMMITTEE_PERIOD);
   if (updatePeriod === snapshotPeriod + 1) {
     snapshot.currentSyncCommittee = snapshot.nextSyncCommittee;
-    snapshot.nextSyncCommittee = {
-      pubkeys: deserializePubkeys(update.nextSyncCommittee.pubkeys),
-      pubkeyAggregates: deserializePubkeys(update.nextSyncCommittee.pubkeyAggregates),
-    };
+    snapshot.nextSyncCommittee = deserializeSyncCommittee(update.nextSyncCommittee);
   }
   snapshot.header = update.header;
 }

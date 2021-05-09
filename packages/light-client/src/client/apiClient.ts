@@ -11,7 +11,18 @@ export function LightclientApiClient(beaconApiUrl: string, types: IBeaconSSZType
 
   async function get<T>(url: string): Promise<T> {
     const res = await fetch(beaconApiUrl + prefix + url, {method: "GET"});
-    return (await res.json()) as T;
+    const body = (await res.json()) as T;
+
+    if (!res.ok) {
+      const errorBody = (body as unknown) as {message: string};
+      if (typeof errorBody === "object" && errorBody.message) {
+        throw Error(errorBody.message);
+      } else {
+        throw Error(res.statusText);
+      }
+    }
+
+    return body;
   }
 
   return {
@@ -19,24 +30,24 @@ export function LightclientApiClient(beaconApiUrl: string, types: IBeaconSSZType
      * GET /eth/v1/lightclient/best_updates/:periods
      */
     async getBestUpdates(from: SyncPeriod, to: SyncPeriod): Promise<altair.LightClientUpdate[]> {
-      const res = await get<Json[]>(`/best_updates?from=${from}&to=${to}`);
-      return res.map((item) => types.altair.LightClientUpdate.fromJson(item, {case: "snake"}));
+      const res = await get<{data: Json[]}>(`/best_updates/${from}..${to}`);
+      return res.data.map((item) => types.altair.LightClientUpdate.fromJson(item, {case: "snake"}));
     },
 
     /**
      * GET /eth/v1/lightclient/latest_update_finalized/
      */
     async getLatestUpdateFinalized(): Promise<altair.LightClientUpdate | null> {
-      const res = await get<Json>("/latest_update_finalized/");
-      return types.altair.LightClientUpdate.fromJson(res, {case: "snake"});
+      const res = await get<{data: Json}>("/latest_update_finalized/");
+      return types.altair.LightClientUpdate.fromJson(res.data, {case: "snake"});
     },
 
     /**
      * GET /eth/v1/lightclient/latest_update_nonfinalized/
      */
     async getLatestUpdateNonFinalized(): Promise<altair.LightClientUpdate | null> {
-      const res = await get<Json>("/latest_update_finalized/");
-      return types.altair.LightClientUpdate.fromJson(res, {case: "snake"});
+      const res = await get<{data: Json}>("/latest_update_finalized/");
+      return types.altair.LightClientUpdate.fromJson(res.data, {case: "snake"});
     },
 
     /**

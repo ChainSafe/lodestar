@@ -1,3 +1,4 @@
+import fastify from "fastify";
 import {computeEpochAtSlot, computeSyncPeriodAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {toHexString, TreeBacked} from "@chainsafe/ssz";
@@ -7,6 +8,12 @@ import {toBlockHeader} from "../src/utils/utils";
 import {getInteropSyncCommittee, getSyncAggregateSigningRoot, signAndAggregate, SyncCommitteeKeys} from "./utils";
 import {startLightclientApiServer, IStateRegen, ServerOpts} from "./lightclientApiServer";
 import {Checkpoint} from "@chainsafe/lodestar-types/phase0";
+
+enum ApiStatus {
+  started = "started",
+  stopped = "stopped",
+}
+type ApiState = {status: ApiStatus.started; server: fastify.FastifyInstance} | {status: ApiStatus.stopped};
 
 export class LightclientMockServer {
   private readonly lightClientUpdater: LightClientUpdater;
@@ -18,6 +25,9 @@ export class LightclientMockServer {
   private readonly stateCache = new Map<string, TreeBacked<altair.BeaconState>>();
   private finalizedCheckpoint: altair.Checkpoint | null = null;
   private prevBlock: altair.BeaconBlock | null = null;
+
+  // API state
+  private apiState: ApiState = {status: ApiStatus.stopped};
 
   constructor(
     private readonly config: IBeaconConfig,
@@ -42,11 +52,22 @@ export class LightclientMockServer {
   }
 
   async startApiServer(opts: ServerOpts): Promise<void> {
-    await startLightclientApiServer(opts, {
+    if (this.apiState.status !== ApiStatus.stopped) {
+      return;
+    }
+    const server = await startLightclientApiServer(opts, {
       config: this.config,
       lightClientUpdater: this.lightClientUpdater,
       stateRegen: this.stateRegen,
     });
+    this.apiState = {status: ApiStatus.started, server};
+  }
+
+  async stopApiServer(): Promise<void> {
+    if (this.apiState.status !== ApiStatus.started) {
+      return;
+    }
+    await this.apiState.server.close();
   }
 
   createNewBlock(slot: Slot): void {

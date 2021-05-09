@@ -44,7 +44,10 @@ export type ApiController<
   schema?: RouteShorthandOptions<Server, IncomingMessage, ServerResponse, Query, Params, Headers, Body>["schema"];
 };
 
-export async function startLightclientApiServer(opts: ServerOpts, modules: ServerModules): Promise<void> {
+export async function startLightclientApiServer(
+  opts: ServerOpts,
+  modules: ServerModules
+): Promise<fastify.FastifyInstance> {
   const server = fastify({
     ajv: {
       customOptions: {
@@ -56,8 +59,8 @@ export async function startLightclientApiServer(opts: ServerOpts, modules: Serve
 
   server.register(fastifyCors as any, {origin: "*"});
   registerRoutes(server, modules);
-  const address = await server.listen(opts.port, opts.host);
-  console.log(`Started server, listening ${address}`);
+  await server.listen(opts.port, opts.host);
+  return server;
 }
 
 function registerRoutes(server: fastify.FastifyInstance, modules: ServerModules): void {

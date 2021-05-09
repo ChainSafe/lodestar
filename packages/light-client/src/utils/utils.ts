@@ -3,6 +3,7 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {altair, Root} from "@chainsafe/lodestar-types";
 import {BeaconBlockHeader} from "@chainsafe/lodestar-types/phase0";
 import {ArrayLike, BitVector} from "@chainsafe/ssz";
+import {SyncCommitteeFast} from "../client/types";
 
 export function sumBits(bits: ArrayLike<boolean>): number {
   let sum = 0;
@@ -62,6 +63,13 @@ export function toBlockHeader(config: IBeaconConfig, block: altair.BeaconBlock):
 
 export function deserializePubkeys(pubkeys: altair.LightClientUpdate["nextSyncCommittee"]["pubkeys"]): PublicKey[] {
   return Array.from(pubkeys).map((pk) => PublicKey.fromBytes(pk.valueOf() as Uint8Array));
+}
+
+export function deserializeSyncCommittee(syncCommittee: altair.SyncCommittee): SyncCommitteeFast {
+  return {
+    pubkeys: deserializePubkeys(syncCommittee.pubkeys),
+    pubkeyAggregates: deserializePubkeys(syncCommittee.pubkeyAggregates),
+  };
 }
 
 export function isEmptyHeader(config: IBeaconConfig, header: BeaconBlockHeader): boolean {
