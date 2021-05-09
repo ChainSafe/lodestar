@@ -1,21 +1,11 @@
-import {SecretKey} from "@chainsafe/bls";
-import {
-  computeEpochAtSlot,
-  computeSyncPeriodAtSlot,
-  interopSecretKey,
-} from "@chainsafe/lodestar-beacon-state-transition";
+import {computeEpochAtSlot, computeSyncPeriodAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {toHexString, TreeBacked} from "@chainsafe/ssz";
-import {altair, BLSPubkey, Epoch, Root, Slot, SyncPeriod} from "@chainsafe/lodestar-types";
+import {altair, Epoch, Root, Slot, SyncPeriod} from "@chainsafe/lodestar-types";
 import {FinalizedCheckpointData, LightClientUpdater, LightClientUpdaterDb} from "../src/server/LightClientUpdater";
 import {toBlockHeader} from "../src/utils/utils";
-import {getSyncAggregateSigningRoot, signAndAggregate} from "./utils";
+import {getInteropSyncCommittee, getSyncAggregateSigningRoot, signAndAggregate, SyncCommitteeKeys} from "./utils";
 import {startLightclientApiServer, IStateRegen, ServerOpts} from "./lightclientApiServer";
-
-type SyncCommitteeKeys = {
-  sks: SecretKey[];
-  pks: BLSPubkey[];
-};
 
 export class LightclientMockServer {
   private readonly lightClientUpdater: LightClientUpdater;
@@ -51,13 +41,13 @@ export class LightclientMockServer {
 
     // Set committeeKeys to static set
     const currentSyncPeriod = computeSyncPeriodAtSlot(this.config, slot);
-    state.currentSyncCommittee.pubkeys = this.getSyncCommittee(currentSyncPeriod).pks;
-    state.nextSyncCommittee.pubkeys = this.getSyncCommittee(currentSyncPeriod + 1).pks;
-    console.log({
-      currentSyncPeriod,
-      currentSyncCommittee: this.getSyncCommittee(currentSyncPeriod).pks.map(toHexString),
-      nextSyncCommittee: this.getSyncCommittee(currentSyncPeriod + 1).pks.map(toHexString),
-    });
+    state.currentSyncCommittee = this.getSyncCommittee(currentSyncPeriod).syncCommittee;
+    state.nextSyncCommittee = this.getSyncCommittee(currentSyncPeriod + 1).syncCommittee;
+    // console.log({
+    //   currentSyncPeriod,
+    //   currentSyncCommittee: this.getSyncCommittee(currentSyncPeriod).pks.map(toHexString),
+    //   nextSyncCommittee: this.getSyncCommittee(currentSyncPeriod + 1).pks.map(toHexString),
+    // });
 
     // Point to rolling finalized state
     if (this.finalizedCheckpoint) {
@@ -128,13 +118,7 @@ export class LightclientMockServer {
   private getSyncCommittee(period: SyncPeriod): SyncCommitteeKeys {
     let syncCommitteeKeys = this.syncCommitteesKeys.get(period);
     if (!syncCommitteeKeys) {
-      const fromIndex = period * this.config.params.SYNC_COMMITTEE_SIZE;
-      const toIndex = (period + 1) * this.config.params.SYNC_COMMITTEE_SIZE;
-      const sks: SecretKey[] = [];
-      for (let i = fromIndex; i < toIndex; i++) {
-        sks.push(interopSecretKey(i));
-      }
-      syncCommitteeKeys = {sks, pks: sks.map((sk) => sk.toPublicKey().toBytes())};
+      syncCommitteeKeys = getInteropSyncCommittee(this.config, period);
       this.syncCommitteesKeys.set(period, syncCommitteeKeys);
     }
     return syncCommitteeKeys;

@@ -1,5 +1,6 @@
+import {PublicKey} from "@chainsafe/bls";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {altair, BLSPubkey, Root} from "@chainsafe/lodestar-types";
+import {altair, Root} from "@chainsafe/lodestar-types";
 import {BeaconBlockHeader} from "@chainsafe/lodestar-types/phase0";
 import {ArrayLike, BitVector} from "@chainsafe/ssz";
 
@@ -37,12 +38,12 @@ export function assertZeroHashes(rootArray: ArrayLike<Root>, expectedLength: num
 /**
  * Util to guarantee that all bits have a corresponding pubkey
  */
-export function getParticipantPubkeys(pubkeys: ArrayLike<BLSPubkey>, bits: BitVector): Uint8Array[] {
-  const participantPubkeys: Uint8Array[] = [];
+export function getParticipantPubkeys<T>(pubkeys: ArrayLike<T>, bits: BitVector): T[] {
+  const participantPubkeys: T[] = [];
   for (let i = 0; i < bits.length; i++) {
     if (bits[i]) {
       if (!pubkeys[i]) throw Error(`No pubkey ${i} in syncCommittee`);
-      participantPubkeys.push(pubkeys[i].valueOf() as Uint8Array);
+      participantPubkeys.push(pubkeys[i]);
     }
   }
 
@@ -57,4 +58,8 @@ export function toBlockHeader(config: IBeaconConfig, block: altair.BeaconBlock):
     stateRoot: block.stateRoot,
     bodyRoot: config.types.altair.BeaconBlockBody.hashTreeRoot(block.body),
   };
+}
+
+export function deserializePubkeys(pubkeys: altair.LightClientUpdate["nextSyncCommittee"]["pubkeys"]): PublicKey[] {
+  return Array.from(pubkeys).map((pk) => PublicKey.fromBytes(pk.valueOf() as Uint8Array));
 }

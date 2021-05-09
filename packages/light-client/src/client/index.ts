@@ -4,12 +4,13 @@ import {computeSyncPeriodAtSlot} from "@chainsafe/lodestar-beacon-state-transiti
 import {LightclientApiClient} from "./apiClient";
 import {processLightClientUpdate} from "./update";
 import {IClock} from "../utils/clock";
+import {LightClientStoreFast} from "./types";
 
 export class Lightclient {
   private readonly apiClient: ReturnType<typeof LightclientApiClient>;
 
   constructor(
-    readonly store: altair.LightClientStore,
+    readonly store: LightClientStoreFast,
     private readonly config: IBeaconConfig,
     private readonly clock: IClock,
     private readonly genesisValidatorsRoot: altair.Root,

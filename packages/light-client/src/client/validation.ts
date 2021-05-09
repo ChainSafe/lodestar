@@ -2,7 +2,7 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {altair} from "@chainsafe/lodestar-types";
 import {assert, verifyMerkleBranch} from "@chainsafe/lodestar-utils";
 import {computeDomain, computeSyncPeriodAtSlot, computeSigningRoot} from "@chainsafe/lodestar-beacon-state-transition";
-import {verifyAggregate} from "@chainsafe/bls";
+import {PublicKey, Signature} from "@chainsafe/bls";
 import {
   FINALIZED_ROOT_INDEX,
   NEXT_SYNC_COMMITTEE_INDEX,
@@ -11,13 +11,14 @@ import {
   NEXT_SYNC_COMMITTEE_INDEX_FLOORLOG2,
 } from "@chainsafe/lodestar-params";
 import {assertZeroHashes, getParticipantPubkeys} from "../utils/utils";
+import {LightClientSnapshotFast} from "./types";
 
 /**
  * Spec v1.0.1
  */
 export function validateLightClientUpdate(
   config: IBeaconConfig,
-  snapshot: altair.LightClientSnapshot,
+  snapshot: LightClientSnapshotFast,
   update: altair.LightClientUpdate,
   genesisValidatorsRoot: altair.Root
 ): void {
@@ -101,12 +102,37 @@ export function validateLightClientUpdate(
   const participantPubkeys = getParticipantPubkeys(syncCommittee.pubkeys, update.syncCommitteeBits);
   const domain = computeDomain(config, config.params.DOMAIN_SYNC_COMMITTEE, update.forkVersion, genesisValidatorsRoot);
   const signingRoot = computeSigningRoot(config, config.types.altair.BeaconBlockHeader, signedHeader, domain);
+
   assert.true(
-    verifyAggregate(
-      participantPubkeys as Uint8Array[],
-      signingRoot,
-      update.syncCommitteeSignature.valueOf() as Uint8Array
-    ),
+    verifyAggregate(participantPubkeys, signingRoot, update.syncCommitteeSignature.valueOf() as Uint8Array),
     "Invalid aggregate signature"
   );
+}
+
+/**
+ * Same as BLS.verifyAggregate but with detailed error messages
+ */
+function verifyAggregate(publicKeys: PublicKey[], message: Uint8Array, signature: Uint8Array): boolean {
+  let aggPubkey: PublicKey;
+  try {
+    aggPubkey = PublicKey.aggregate(publicKeys);
+  } catch (e) {
+    (e as Error).message = `Error aggregating pubkeys: ${(e as Error).message}`;
+    throw e;
+  }
+
+  let sig: Signature;
+  try {
+    sig = Signature.fromBytes(signature);
+  } catch (e) {
+    (e as Error).message = `Error deserializing signature: ${(e as Error).message}`;
+    throw e;
+  }
+
+  try {
+    return sig.verify(aggPubkey, message);
+  } catch (e) {
+    (e as Error).message = `Error verifying signature: ${(e as Error).message}`;
+    throw e;
+  }
 }

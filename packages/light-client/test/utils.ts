@@ -1,8 +1,9 @@
-import {SecretKey, Signature} from "@chainsafe/bls";
-import {computeDomain, computeSigningRoot} from "@chainsafe/lodestar-beacon-state-transition";
+import {PublicKey, SecretKey, Signature} from "@chainsafe/bls";
+import {computeDomain, computeSigningRoot, interopSecretKey} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig, createIBeaconConfig} from "@chainsafe/lodestar-config";
 import {params as minimalParams} from "@chainsafe/lodestar-params/minimal";
-import {altair, Bytes4, Root, Slot} from "@chainsafe/lodestar-types";
+import {altair, Bytes4, Root, Slot, SyncPeriod} from "@chainsafe/lodestar-types";
+import {SyncCommitteeFast} from "../src/client/types";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
@@ -42,4 +43,35 @@ export function defaultBeaconBlockHeader(config: IBeaconConfig, slot: Slot): alt
   const header = config.types.altair.BeaconBlockHeader.defaultValue();
   header.slot = slot;
   return header;
+}
+
+export type SyncCommitteeKeys = {
+  sks: SecretKey[];
+  pks: PublicKey[];
+  syncCommittee: altair.SyncCommittee;
+  syncCommitteeFast: SyncCommitteeFast;
+};
+
+export function getInteropSyncCommittee(config: IBeaconConfig, period: SyncPeriod): SyncCommitteeKeys {
+  const fromIndex = period * config.params.SYNC_COMMITTEE_SIZE;
+  const toIndex = (period + 1) * config.params.SYNC_COMMITTEE_SIZE;
+  const sks: SecretKey[] = [];
+  for (let i = fromIndex; i < toIndex; i++) {
+    sks.push(interopSecretKey(i));
+  }
+  const pks = sks.map((sk) => sk.toPublicKey());
+  const pubkeys = pks.map((pk) => pk.toBytes());
+  const pubkeyAggregatesLen = Math.floor(config.params.SYNC_COMMITTEE_SIZE / config.params.SYNC_PUBKEYS_PER_AGGREGATE);
+  return {
+    sks,
+    pks,
+    syncCommittee: {
+      pubkeys,
+      pubkeyAggregates: pubkeys.slice(0, pubkeyAggregatesLen),
+    },
+    syncCommitteeFast: {
+      pubkeys: pks,
+      pubkeyAggregates: pks.slice(0, pubkeyAggregatesLen),
+    },
+  };
 }

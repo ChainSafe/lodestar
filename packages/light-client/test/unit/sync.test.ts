@@ -1,11 +1,10 @@
 import {expect} from "chai";
 import {SecretKey} from "@chainsafe/bls";
-import {altair} from "@chainsafe/lodestar-types";
 import {createExtraMinimalConfig} from "../utils";
 import {processLightClientUpdate} from "../../src/client/update";
 import {computeSyncPeriodAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
-import {List} from "@chainsafe/ssz";
 import {LightclientMockServer} from "../lightclientMockServer";
+import {LightClientStoreFast} from "../../src/client/types";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
@@ -27,7 +26,7 @@ describe("Lightclient flow with LightClientUpdater", () => {
 
     // Create blocks and state
     const fromSlot = 1;
-    const toSlot = 150;
+    const toSlot = 50;
     // Compute all periods until toSlot
     const lastPeriod = computeSyncPeriodAtSlot(config, toSlot);
     const periods = Array.from({length: lastPeriod + 1}, (_, i) => i);
@@ -47,20 +46,20 @@ describe("Lightclient flow with LightClientUpdater", () => {
       latestFinalizedUpdate: latestFinalizedUpdate?.header.slot,
       latestNonFinalizedUpdate: latestNonFinalizedUpdate?.header.slot,
     }).to.deep.equal({
-      bestUpdates: [55, 119, 149],
-      latestFinalizedUpdate: 119,
-      latestNonFinalizedUpdate: 149,
+      bestUpdates: [3, 11, 19, 27, 35, 47, 49],
+      latestFinalizedUpdate: 35,
+      latestNonFinalizedUpdate: 49,
     });
 
     // Simulate a Lightclient syncing to latest update with these updates
 
-    const store: altair.LightClientStore = {
+    const store: LightClientStoreFast = {
       snapshot: {
         header: config.types.altair.BeaconBlockHeader.defaultValue(),
-        currentSyncCommittee: {pubkeys: lightclientServer["getSyncCommittee"](0).pks, pubkeyAggregates: []},
-        nextSyncCommittee: {pubkeys: lightclientServer["getSyncCommittee"](1).pks, pubkeyAggregates: []},
+        currentSyncCommittee: lightclientServer["getSyncCommittee"](0).syncCommitteeFast,
+        nextSyncCommittee: lightclientServer["getSyncCommittee"](1).syncCommitteeFast,
       },
-      validUpdates: ([] as altair.LightClientUpdate[]) as List<altair.LightClientUpdate>,
+      validUpdates: [],
     };
 
     for (const [i, update] of bestUpdates.entries()) {

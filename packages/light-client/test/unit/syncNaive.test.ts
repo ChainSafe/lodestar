@@ -1,11 +1,18 @@
 import {expect} from "chai";
 import {SecretKey} from "@chainsafe/bls";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {altair, BLSPubkey, Root} from "@chainsafe/lodestar-types";
-import {toHexString, TreeBacked, List} from "@chainsafe/ssz";
+import {altair, Root, SyncPeriod} from "@chainsafe/lodestar-types";
+import {toHexString, TreeBacked} from "@chainsafe/ssz";
 import {processLightClientUpdate} from "../../src/client/update";
 import {prepareUpdateNaive, IBeaconChainLc} from "../prepareUpdateNaive";
-import {createExtraMinimalConfig, getSyncAggregateSigningRoot, signAndAggregate} from "../utils";
+import {
+  createExtraMinimalConfig,
+  getInteropSyncCommittee,
+  getSyncAggregateSigningRoot,
+  signAndAggregate,
+  SyncCommitteeKeys,
+} from "../utils";
+import {LightClientStoreFast} from "../../src/client/types";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
@@ -22,31 +29,24 @@ describe("Lightclient flow", () => {
   // Fixed params
   const genValiRoot = Buffer.alloc(32, 9);
   const currentSlot = 1;
-  let committeeKeys: {sks: SecretKey[]; pks: BLSPubkey[]}[];
+  const syncCommitteesKeys = new Map<SyncPeriod, SyncCommitteeKeys>();
   let updateData: {chain: IBeaconChainLc; blockWithSyncAggregate: altair.BeaconBlock};
   let update: altair.LightClientUpdate;
 
-  before("Generate crypto", () => {
-    // Create two committees with different keys
-    const sks = Array.from({length: 2 * config.params.SYNC_COMMITTEE_SIZE}).map((_, i) =>
-      SecretKey.fromBytes(Buffer.alloc(32, i + 1))
-    );
-    const committee1Sks = sks.slice(0, config.params.SYNC_COMMITTEE_SIZE);
-    const committee2Sks = sks.slice(config.params.SYNC_COMMITTEE_SIZE);
-    committeeKeys = [
-      {sks: committee1Sks, pks: committee1Sks.map((sk) => sk.toPublicKey().toBytes())},
-      {sks: committee2Sks, pks: committee1Sks.map((sk) => sk.toPublicKey().toBytes())},
-    ];
-  });
+  function getSyncCommittee(period: SyncPeriod): SyncCommitteeKeys {
+    let syncCommitteeKeys = syncCommitteesKeys.get(period);
+    if (!syncCommitteeKeys) {
+      syncCommitteeKeys = getInteropSyncCommittee(config, period);
+      syncCommitteesKeys.set(period, syncCommitteeKeys);
+    }
+    return syncCommitteeKeys;
+  }
 
   before("Generate data for prepareUpdate", () => {
     // Create a state that has as nextSyncCommittee the committee 2
     const finalizedBlockSlot = config.params.SLOTS_PER_EPOCH * config.params.EPOCHS_PER_SYNC_COMMITTEE_PERIOD + 1;
     const finalizedState = config.types.altair.BeaconState.defaultValue();
-    finalizedState.nextSyncCommittee = {
-      pubkeys: committeeKeys[0].pks,
-      pubkeyAggregates: finalizedState.nextSyncCommittee.pubkeyAggregates,
-    };
+    finalizedState.nextSyncCommittee = getSyncCommittee(0).syncCommittee;
     const finalizedBlockHeader = config.types.altair.BeaconBlockHeader.defaultValue();
     finalizedBlockHeader.slot = finalizedBlockSlot;
     finalizedBlockHeader.stateRoot = config.types.altair.BeaconState.hashTreeRoot(finalizedState);
@@ -69,7 +69,7 @@ describe("Lightclient flow", () => {
     const forkVersion = stateWithSyncAggregate.fork.currentVersion;
     const signingRoot = getSyncAggregateSigningRoot(config, genValiRoot, forkVersion, syncAttestedBlockHeader);
     const blockWithSyncAggregate = config.types.altair.BeaconBlock.defaultValue();
-    blockWithSyncAggregate.body.syncAggregate = signAndAggregate(signingRoot, committeeKeys[0].sks);
+    blockWithSyncAggregate.body.syncAggregate = signAndAggregate(signingRoot, getSyncCommittee(0).sks);
     blockWithSyncAggregate.stateRoot = config.types.altair.BeaconState.hashTreeRoot(stateWithSyncAggregate);
 
     // Simulate BeaconChain module with a memory map of blocks and states
@@ -91,13 +91,13 @@ describe("Lightclient flow", () => {
   it("Process altair update", () => {
     if (!update) throw Error("Prev test failed");
 
-    const store: altair.LightClientStore = {
+    const store: LightClientStoreFast = {
       snapshot: {
         header: config.types.altair.BeaconBlockHeader.defaultValue(),
-        currentSyncCommittee: {pubkeys: [], pubkeyAggregates: []},
-        nextSyncCommittee: {pubkeys: committeeKeys[0].pks, pubkeyAggregates: []},
+        currentSyncCommittee: getSyncCommittee(0).syncCommitteeFast,
+        nextSyncCommittee: getSyncCommittee(0).syncCommitteeFast,
       },
-      validUpdates: ([] as altair.LightClientUpdate[]) as List<altair.LightClientUpdate>,
+      validUpdates: [],
     };
 
     processLightClientUpdate(config, store, update, currentSlot, genValiRoot);

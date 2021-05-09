@@ -2,10 +2,10 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {LIGHT_CLIENT_UPDATE_TIMEOUT} from "@chainsafe/lodestar-params";
 import {altair, Slot} from "@chainsafe/lodestar-types";
 import {intDiv} from "@chainsafe/lodestar-utils";
-import {List} from "@chainsafe/ssz";
 import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {validateLightClientUpdate} from "./validation";
-import {sumBits} from "../utils/utils";
+import {deserializePubkeys, sumBits} from "../utils/utils";
+import {LightClientSnapshotFast, LightClientStoreFast} from "./types";
 
 //
 // A lightclient has two types of syncing:
@@ -51,7 +51,7 @@ import {sumBits} from "../utils/utils";
  */
 export function processLightClientUpdate(
   config: IBeaconConfig,
-  store: altair.LightClientStore,
+  store: LightClientStoreFast,
   update: altair.LightClientUpdate,
   currentSlot: Slot,
   genesisValidatorsRoot: altair.Root
@@ -67,7 +67,7 @@ export function processLightClientUpdate(
     !config.types.altair.BeaconBlockHeader.equals(update.header, update.finalityHeader)
   ) {
     applyLightClientUpdate(config, store.snapshot, update);
-    store.validUpdates = ([] as altair.LightClientUpdate[]) as List<altair.LightClientUpdate>;
+    store.validUpdates = [];
   }
 
   // Forced best update when the update timeout has elapsed
@@ -75,7 +75,7 @@ export function processLightClientUpdate(
     const bestUpdate = getBestUpdate(Array.from(store.validUpdates));
     if (bestUpdate) {
       applyLightClientUpdate(config, store.snapshot, bestUpdate);
-      store.validUpdates = ([] as altair.LightClientUpdate[]) as List<altair.LightClientUpdate>;
+      store.validUpdates = [];
     }
   }
 }
@@ -85,7 +85,7 @@ export function processLightClientUpdate(
  */
 export function applyLightClientUpdate(
   config: IBeaconConfig,
-  snapshot: altair.LightClientSnapshot,
+  snapshot: LightClientSnapshotFast,
   update: altair.LightClientUpdate
 ): void {
   const {EPOCHS_PER_SYNC_COMMITTEE_PERIOD} = config.params;
@@ -93,7 +93,10 @@ export function applyLightClientUpdate(
   const updatePeriod = intDiv(computeEpochAtSlot(config, update.header.slot), EPOCHS_PER_SYNC_COMMITTEE_PERIOD);
   if (updatePeriod === snapshotPeriod + 1) {
     snapshot.currentSyncCommittee = snapshot.nextSyncCommittee;
-    snapshot.nextSyncCommittee = update.nextSyncCommittee;
+    snapshot.nextSyncCommittee = {
+      pubkeys: deserializePubkeys(update.nextSyncCommittee.pubkeys),
+      pubkeyAggregates: deserializePubkeys(update.nextSyncCommittee.pubkeyAggregates),
+    };
   }
   snapshot.header = update.header;
 }
