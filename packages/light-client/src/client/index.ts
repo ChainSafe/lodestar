@@ -11,8 +11,8 @@ export class Lightclient {
 
   constructor(
     readonly store: LightClientStoreFast,
-    private readonly config: IBeaconConfig,
-    private readonly clock: IClock,
+    readonly config: IBeaconConfig,
+    readonly clock: IClock,
     private readonly genesisValidatorsRoot: altair.Root,
     beaconApiUrl: string
   ) {
