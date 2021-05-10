@@ -12,10 +12,30 @@ import {
   initStateFromDb,
   initStateFromEth1,
 } from "@chainsafe/lodestar";
-import {downloadOrLoadFile, readFile} from "../../util";
+import {downloadOrLoadFile} from "../../util";
 import {IBeaconArgs} from "./options";
 import {defaultNetwork, IGlobalArgs} from "../../options/globalOptions";
 import {getGenesisFileUrl} from "../../networks";
+import {praterWeakSubjectivityState, mainnetWeakSubjectivityState} from "../weakSubjectivityState";
+
+async function initAndVerifyWeakSujectivityState(
+  args: IBeaconArgs & IGlobalArgs,
+  weakSubjectivityState: {
+    stateRoot: string;
+    ipfsPath: string;
+  },
+  initFunc: (pathOrUrl: string) => Promise<TreeBacked<allForks.BeaconState>>
+): Promise<TreeBacked<allForks.BeaconState>> {
+  const state = await initFunc(args.ipfsGatewayUrl + weakSubjectivityState.ipfsPath);
+  if (!state) {
+    throw new Error("Weak subjectivity state not found for network " + args.network);
+  }
+  // verify downloaded state against locally stored state root
+  if (toHexString(state.hashTreeRoot()) !== weakSubjectivityState.stateRoot) {
+    throw new Error("Unable to verify state root downloaded from IPFS");
+  }
+  return state;
+}
 
 /**
  * Initialize a beacon state, picking the strategy based on the `IBeaconArgs`
@@ -45,13 +65,13 @@ export async function initBeaconState(
   } else if (dbHasSomeState) {
     return await initStateFromDb(config, db, logger);
   } else if (args.fetchWeakSubjectivityStateFromIPFS) {
-    const stateData = readFile("./weakSubjectivityState.json") as {ipfsPath: string; stateRoot: string};
-    const state = await initFromFile(args.ipfsGatewayUrl + stateData.ipfsPath);
-    // verify downloaded state against locally stored state root
-    if (toHexString(state.hashTreeRoot()) !== stateData.stateRoot) {
-      throw new Error("Unable to verify state root downloaded from IPFS");
+    if (args.network === "prater") {
+      return await initAndVerifyWeakSujectivityState(args, praterWeakSubjectivityState, initFromFile);
+    } else if (args.network === "mainnet") {
+      return await initAndVerifyWeakSujectivityState(args, mainnetWeakSubjectivityState, initFromFile);
+    } else {
+      throw new Error("No matching network with weak subjectivity state.");
     }
-    return state;
   } else {
     const genesisStateFile = args.genesisStateFile || getGenesisFileUrl(args.network || defaultNetwork);
     if (genesisStateFile && !args.forceGenesis) {
