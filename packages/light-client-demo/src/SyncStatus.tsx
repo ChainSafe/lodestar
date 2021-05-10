@@ -6,7 +6,7 @@ import {ReqStatus} from "./types";
 import {config} from "./config";
 import {altair} from "@chainsafe/lodestar-types";
 
-export function LightClientStatus({client}: {client: Lightclient}): JSX.Element {
+export function SyncStatus({client}: {client: Lightclient}): JSX.Element {
   const [reqStatusSync, setReqStatusSync] = useState<ReqStatus<altair.BeaconBlockHeader>>({});
 
   const sync = useCallback(async () => {
@@ -31,8 +31,8 @@ export function LightClientStatus({client}: {client: Lightclient}): JSX.Element 
   });
 
   return (
-    <div className="section container">
-      <div className="title is-3">Sync Status</div>
+    <section>
+      <h2>Sync Status</h2>
 
       {reqStatusSync.result ? (
         <p>Successfully synced!</p>
@@ -42,12 +42,8 @@ export function LightClientStatus({client}: {client: Lightclient}): JSX.Element 
         <p>Syncing Lightclient...</p>
       ) : null}
 
-      <div className="columns">
-        <div className="column section">
-          <div className="subtitle">Latest Synced Snapshot Header</div>
-          <BlockHeader config={client.config} header={client.store.snapshot.header} />
-        </div>
-      </div>
-    </div>
+      <h3>Latest Synced Snapshot Header</h3>
+      <BlockHeader config={client.config} header={client.store.snapshot.header} />
+    </section>
   );
 }

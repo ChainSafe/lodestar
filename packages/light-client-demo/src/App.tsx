@@ -1,13 +1,14 @@
 import React, {useEffect, useState} from "react";
+import {Lightclient} from "@chainsafe/lodestar-light-client/lib/client";
+import {Clock} from "@chainsafe/lodestar-light-client/lib/utils/clock";
+import {init} from "@chainsafe/bls";
 
 import ForkMe from "./components/ForkMe";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
 
-import {LightClientStatus} from "./LightClientStatus";
-import {Lightclient} from "@chainsafe/lodestar-light-client/lib/client";
-import {Clock} from "@chainsafe/lodestar-light-client/lib/utils/clock";
-import {init} from "@chainsafe/bls";
+import {SyncStatus} from "./SyncStatus";
+import {TimeMonitor} from "./TimeMonitor";
 import {ProofReqResp} from "./ProofReqResp";
 import {ErrorView} from "./components/ErrorView";
 import {ReqStatus} from "./types";
@@ -40,19 +41,22 @@ export default function App(): JSX.Element {
 
   return (
     <>
-      <ForkMe />
       <Header />
 
-      {reqStatusInit.result ? (
-        <div className="section">
-          <LightClientStatus client={reqStatusInit.result} />
-          <ProofReqResp client={reqStatusInit.result} />
-        </div>
-      ) : reqStatusInit.error ? (
-        <ErrorView error={reqStatusInit.error} />
-      ) : reqStatusInit.loading ? (
-        <p>Initializing Lightclient...</p>
-      ) : null}
+      <main>
+        <TimeMonitor />
+
+        {reqStatusInit.result ? (
+          <>
+            <SyncStatus client={reqStatusInit.result} />
+            <ProofReqResp client={reqStatusInit.result} />
+          </>
+        ) : reqStatusInit.error ? (
+          <ErrorView error={reqStatusInit.error} />
+        ) : reqStatusInit.loading ? (
+          <p>Initializing Lightclient...</p>
+        ) : null}
+      </main>
 
       <Footer />
     </>

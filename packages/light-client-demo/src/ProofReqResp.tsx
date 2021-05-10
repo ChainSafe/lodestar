@@ -43,11 +43,11 @@ export function ProofReqResp({client}: {client: Lightclient}): JSX.Element {
   }
 
   return (
-    <div className="section container">
-      <div className="title is-3">Proof Req/Resp</div>
-      <div className="columns">
-        <div className="column section">
-          <div className="subtitle">Paths</div>
+    <section>
+      <h2>Proof Req/Resp</h2>
+      <div className="proof-container">
+        <div className="paths">
+          <h3>Paths</h3>
           <div className="field">
             <div className="control">
               <textarea
@@ -64,22 +64,22 @@ export function ProofReqResp({client}: {client: Lightclient}): JSX.Element {
 
           <div className="field">
             <div className="control">
-              <button className="button is-primary" onClick={fetchProof} disabled={reqStatusProof.loading}>
+              <button className="strong-gradient" onClick={fetchProof} disabled={reqStatusProof.loading}>
                 Submit
               </button>
             </div>
           </div>
         </div>
 
-        <div className="column section" style={{whiteSpace: "pre"}}>
-          <div className="subtitle">State</div>
-          {reqStatusProof.result && <div>{reqStatusProof.result.stateStr}</div>}
+        <div className="stateproof" style={{whiteSpace: "pre"}}>
+          <h3>State</h3>
+          {reqStatusProof.result ? <div>{reqStatusProof.result.stateStr}</div> : <p>no state</p>}
 
-          <div className="subtitle">Proof</div>
-          {reqStatusProof.result && <div>{renderProof(reqStatusProof.result.proof)}</div>}
+          <h3>Proof</h3>
+          {reqStatusProof.result ? <div>{renderProof(reqStatusProof.result.proof)}</div> : <p>no proof</p>}
           <br />
         </div>
       </div>
-    </div>
+    </section>
   );
 }

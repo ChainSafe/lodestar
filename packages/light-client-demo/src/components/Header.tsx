@@ -2,10 +2,10 @@ import * as React from "react";
 
 export default function Header(): JSX.Element {
   return (
-    <div className="section">
+    <header>
       <div className="container">
-        <h1 className="title is-family-code">Light client demo</h1>
+        <div>Light client demo</div>
       </div>
-    </div>
+    </header>
   );
 }
