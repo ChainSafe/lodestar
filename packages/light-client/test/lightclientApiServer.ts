@@ -21,6 +21,8 @@ import {LightClientUpdater} from "../src/server/LightClientUpdater";
 import {TreeBacked} from "@chainsafe/ssz";
 import {altair} from "@chainsafe/lodestar-types";
 
+const maxPeriodsPerRequest = 128;
+
 export type IStateRegen = {
   getStateByRoot(stateRoot: string): Promise<TreeBacked<altair.BeaconState>>;
 };
@@ -93,6 +95,9 @@ function registerRoutes(server: fastify.FastifyInstance, modules: ServerModules)
 
     handler: async function (req) {
       const periods = parsePeriods(req.params.periods);
+      if (periods.length > maxPeriodsPerRequest) {
+        throw Error("Too many periods requested");
+      }
       const items = await lightClientUpdater.getBestUpdates(periods);
       return {
         data: items.map((item) => config.types.altair.LightClientUpdate.toJson(item, {case: "snake"})),

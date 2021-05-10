@@ -9,6 +9,9 @@ import {LightClientStoreFast} from "./types";
 import {TreeOffsetProof} from "@chainsafe/persistent-merkle-tree";
 import {Path, toHexString} from "@chainsafe/ssz";
 import {BeaconBlockHeader} from "@chainsafe/lodestar-types/phase0";
+import {chunkifyInclusiveRange} from "../utils/chunkify";
+
+const maxPeriodPerRequest = 32;
 
 export class Lightclient {
   private readonly apiClient: ReturnType<typeof LightclientApiClient>;
@@ -89,9 +92,12 @@ export class Lightclient {
     const currentSlot = this.clock.currentSlot;
     const lastPeriod = computeSyncPeriodAtSlot(this.config, this.store.snapshot.header.slot);
     const currentPeriod = computeSyncPeriodAtSlot(this.config, currentSlot);
-    const updates = await this.apiClient.getBestUpdates(lastPeriod, currentPeriod);
-    for (const update of updates) {
-      processLightClientUpdate(this.config, this.store, update, currentSlot, this.genesisValidatorsRoot);
+    const periodRanges = chunkifyInclusiveRange(lastPeriod, currentPeriod, maxPeriodPerRequest);
+    for (const [fromPeriod, toPeriod] of periodRanges) {
+      const updates = await this.apiClient.getBestUpdates(fromPeriod, toPeriod);
+      for (const update of updates) {
+        processLightClientUpdate(this.config, this.store, update, currentSlot, this.genesisValidatorsRoot);
+      }
     }
   }
 
