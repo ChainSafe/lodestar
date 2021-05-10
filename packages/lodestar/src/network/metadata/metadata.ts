@@ -83,7 +83,7 @@ export class MetadataController {
     return {
       attnets: this._metadata.attnets,
       seqNumber: this._metadata.seqNumber,
-    } as phase0.Metadata;
+    };
   }
 
   get allAltair(): altair.Metadata {
