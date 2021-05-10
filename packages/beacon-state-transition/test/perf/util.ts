@@ -4,18 +4,21 @@ import bls, {CoordType, init, PublicKey} from "@chainsafe/bls";
 import {fromHexString, List, TreeBacked} from "@chainsafe/ssz";
 import {getBeaconProposerIndex} from "../../src/util/proposer";
 import {fast} from "../../src";
-import {PubkeyIndexMap} from "../../src/fast";
+import {computeCommitteeCount, PubkeyIndexMap} from "../../src/fast";
 import {profilerLogger} from "../utils/logger";
 import {interopPubkeysCached} from "../utils/interop";
+import {computeEpochAtSlot} from "../../lib";
+import {PendingAttestation} from "@chainsafe/lodestar-types/phase0";
+import {intDiv} from "@chainsafe/lodestar-utils";
 
 let archivedState: TreeBacked<phase0.BeaconState> | null = null;
 let signedBlock: TreeBacked<phase0.SignedBeaconBlock> | null = null;
 const logger = profilerLogger();
 
 /**
- * This is generated from Medalla state 756416
+ * Number of validators in prater is 210000 as of May 2021
  */
-const numValidators = 114038;
+const numValidators = 250000;
 const numKeyPairs = 100;
 
 // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
@@ -60,6 +63,7 @@ export function generatePerfTestCachedBeaconState(opts?: {
  * This is generated from Medalla state 756416
  */
 export function generatePerformanceState(pubkeysArg?: Uint8Array[]): TreeBacked<phase0.BeaconState> {
+  const {SLOTS_PER_EPOCH, MAX_ATTESTATIONS, MAX_VALIDATORS_PER_COMMITTEE, SLOTS_PER_HISTORICAL_ROOT} = config.params;
   if (!archivedState) {
     const pubkeys = pubkeysArg || getPubkeys().pubkeys;
 
@@ -79,8 +83,8 @@ export function generatePerformanceState(pubkeysArg?: Uint8Array[]): TreeBacked<
       stateRoot: fromHexString("0x2761ae355e8a53c11e0e37d5e417f8984db0c53fa83f1bc65f89c6af35a196a7"),
       bodyRoot: fromHexString("0x249a1962eef90e122fa2447040bfac102798b1dba9c73e5593bc5aa32eb92bfd"),
     };
-    state.blockRoots = Array.from({length: config.params.SLOTS_PER_HISTORICAL_ROOT}, (_, i) => Buffer.alloc(32, i));
-    state.stateRoots = Array.from({length: config.params.SLOTS_PER_HISTORICAL_ROOT}, (_, i) => Buffer.alloc(32, i));
+    state.blockRoots = Array.from({length: SLOTS_PER_HISTORICAL_ROOT}, (_, i) => Buffer.alloc(32, i));
+    state.stateRoots = Array.from({length: SLOTS_PER_HISTORICAL_ROOT}, (_, i) => Buffer.alloc(32, i));
     // historicalRoots
     state.eth1Data = {
       depositCount: pubkeys.length,
@@ -89,7 +93,7 @@ export function generatePerformanceState(pubkeysArg?: Uint8Array[]): TreeBacked<
     };
     state.eth1DataVotes = (Array.from(
       // minus one so that inserting 1 from block works
-      {length: config.params.EPOCHS_PER_ETH1_VOTING_PERIOD * config.params.SLOTS_PER_EPOCH - 1},
+      {length: config.params.EPOCHS_PER_ETH1_VOTING_PERIOD * SLOTS_PER_EPOCH - 1},
       (_, i) => {
         return {
           depositCount: i,
@@ -112,21 +116,60 @@ export function generatePerformanceState(pubkeysArg?: Uint8Array[]): TreeBacked<
     state.balances = Array.from({length: pubkeys.length}, () => BigInt(31217089836)) as List<Gwei>;
     state.randaoMixes = Array.from({length: config.params.EPOCHS_PER_HISTORICAL_VECTOR}, (_, i) => Buffer.alloc(32, i));
     // no slashings
-    // no attestations
-    // no justificationBits
+    const currentEpoch = computeEpochAtSlot(config, state.slot - 1);
+    const previousEpoch = currentEpoch - 1;
     state.previousJustifiedCheckpoint = {
-      epoch: 23635,
+      epoch: currentEpoch - 2,
       root: fromHexString("0x3fe60bf06a57b0956cd1f8181d26649cf8bf79e48bf82f55562e04b33d4785d4"),
     };
     state.currentJustifiedCheckpoint = {
-      epoch: 23636,
+      epoch: currentEpoch - 1,
       root: fromHexString("0x3ba0913d2fb5e4cbcfb0d39eb15803157c1e769d63b8619285d8fdabbd8181c7"),
     };
     state.finalizedCheckpoint = {
-      epoch: 23634,
+      epoch: currentEpoch - 3,
       root: fromHexString("0x122b8ff579d0c8f8a8b66326bdfec3f685007d2842f01615a0768870961ccc17"),
     };
-
+    // previous epoch attestations
+    const numPrevAttestations = SLOTS_PER_EPOCH * MAX_ATTESTATIONS;
+    const activeValidatorCount = pubkeys.length;
+    const committeesPerSlot = computeCommitteeCount(config, activeValidatorCount);
+    state.previousEpochAttestations = Array.from({length: numPrevAttestations}, (_, i) => {
+      const slotInEpoch = intDiv(i, MAX_ATTESTATIONS);
+      return {
+        aggregationBits: Array.from({length: MAX_VALIDATORS_PER_COMMITTEE}, () => true) as List<boolean>,
+        data: {
+          beaconBlockRoot: state.blockRoots[slotInEpoch % SLOTS_PER_HISTORICAL_ROOT],
+          index: i % committeesPerSlot,
+          slot: previousEpoch * SLOTS_PER_EPOCH + slotInEpoch,
+          source: state.previousJustifiedCheckpoint,
+          target: state.currentJustifiedCheckpoint,
+        },
+        inclusionDelay: 1,
+        proposerIndex: i,
+      };
+    }) as List<PendingAttestation>;
+    // current epoch attestations
+    const numCurAttestations = (SLOTS_PER_EPOCH - 1) * MAX_ATTESTATIONS;
+    state.currentEpochAttestations = Array.from({length: numCurAttestations}, (_, i) => {
+      const slotInEpoch = intDiv(i, MAX_ATTESTATIONS);
+      return {
+        aggregationBits: Array.from({length: MAX_VALIDATORS_PER_COMMITTEE}, () => true) as List<boolean>,
+        data: {
+          beaconBlockRoot: state.blockRoots[slotInEpoch % SLOTS_PER_HISTORICAL_ROOT],
+          index: i % committeesPerSlot,
+          slot: currentEpoch * SLOTS_PER_EPOCH + slotInEpoch,
+          source: state.currentJustifiedCheckpoint,
+          target: {
+            epoch: currentEpoch,
+            root: state.blockRoots[(currentEpoch * SLOTS_PER_EPOCH) % SLOTS_PER_HISTORICAL_ROOT],
+          },
+        },
+        inclusionDelay: 1,
+        proposerIndex: i,
+      };
+    }) as List<PendingAttestation>;
+    // no justificationBits
     archivedState = config.types.phase0.BeaconState.createTreeBackedFromStruct(state);
     logger.info("Loaded state", {
       slot: archivedState.slot,

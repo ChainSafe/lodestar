@@ -31,7 +31,7 @@ describe("Epoch Processing Performance Tests", function () {
     },
     {
       testFunc: phase0.fast.processRewardsAndPenalties,
-      expected: 110,
+      expected: 240,
     },
     {
       testFunc: phase0.fast.processRegistryUpdates,
@@ -43,7 +43,7 @@ describe("Epoch Processing Performance Tests", function () {
     },
     {
       testFunc: phase0.fast.processFinalUpdates,
-      expected: 15,
+      expected: 36,
     },
   ];
 
@@ -53,7 +53,7 @@ describe("Epoch Processing Performance Tests", function () {
       logger.profile(name);
       testValue.testFunc && testValue.testFunc(state, process);
       logger.profile(name);
-      expect(Date.now() - start).lt(testValue.expected);
+      expect(Date.now() - start).lte(testValue.expected);
     });
   }
 });
