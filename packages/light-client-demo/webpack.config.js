@@ -57,7 +57,7 @@ const config = {
       filename: "css/[name].bundle.css",
     }),
     new HtmlWebpackPlugin({
-      title: "ENR Viewer | Chainsafe Systems",
+      title: "Lightclient demo | Chainsafe Systems",
       template: "src/index.html",
     }),
     new ProvidePlugin({
