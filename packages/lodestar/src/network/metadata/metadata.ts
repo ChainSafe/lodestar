@@ -8,10 +8,7 @@ import {getENRForkID} from "./utils";
 import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 
 export interface IMetadataOpts {
-  metadata?: {
-    phase0?: phase0.Metadata;
-    altair?: altair.Metadata;
-  };
+  metadata?: altair.Metadata;
 }
 
 export interface IMetadataModules {
@@ -29,17 +26,14 @@ export class MetadataController {
   private enr?: ENR;
   private config: IBeaconConfig;
   private chain: IBeaconChain;
-  private _metadata: {phase0: phase0.Metadata; altair: altair.Metadata};
+  private _metadata: altair.Metadata;
   private logger: ILogger;
 
   constructor(opts: IMetadataOpts, modules: IMetadataModules) {
     this.config = modules.config;
     this.chain = modules.chain;
     this.logger = modules.logger;
-    this._metadata = {
-      phase0: opts.metadata?.phase0 || this.config.types.phase0.Metadata.defaultValue(),
-      altair: opts.metadata?.altair || this.config.types.altair.Metadata.defaultValue(),
-    };
+    this._metadata = opts.metadata || this.config.types.altair.Metadata.defaultValue();
   }
 
   start(enr: ENR): void {
@@ -47,7 +41,7 @@ export class MetadataController {
     if (this.enr) {
       this.enr.set(
         "attnets",
-        Buffer.from(this.config.types.phase0.AttestationSubnets.serialize(this._metadata.phase0.attnets))
+        Buffer.from(this.config.types.phase0.AttestationSubnets.serialize(this._metadata.attnets))
       );
       this.enr.set("eth2", Buffer.from(this.config.types.phase0.ENRForkID.serialize(this.getHeadEnrForkId())));
     }
@@ -59,39 +53,41 @@ export class MetadataController {
   }
 
   get seqNumber(): bigint {
-    return this._metadata.phase0.seqNumber;
+    return this._metadata.seqNumber;
   }
 
   get syncnets(): BitVector {
-    return this._metadata.altair.syncnets;
+    return this._metadata.syncnets;
   }
 
   set syncnets(syncnets: BitVector) {
     if (this.enr) {
       this.enr.set("syncnets", Buffer.from(this.config.types.altair.SyncSubnets.serialize(syncnets)));
     }
-    this._metadata.altair.syncnets = syncnets;
+    this._metadata.syncnets = syncnets;
   }
 
   get attnets(): BitVector {
-    return this._metadata.phase0.attnets;
+    return this._metadata.attnets;
   }
 
   set attnets(attnets: BitVector) {
     if (this.enr) {
       this.enr.set("attnets", Buffer.from(this.config.types.phase0.AttestationSubnets.serialize(attnets)));
     }
-    this._metadata.phase0.seqNumber++;
-    this._metadata.phase0.attnets = attnets;
-    this._metadata.altair.attnets = attnets;
+    this._metadata.seqNumber++;
+    this._metadata.attnets = attnets;
   }
 
   get allPhase0(): phase0.Metadata {
-    return this._metadata.phase0;
+    return {
+      attnets: this._metadata.attnets,
+      seqNumber: this._metadata.seqNumber,
+    } as phase0.Metadata;
   }
 
   get allAltair(): altair.Metadata {
-    return this._metadata.altair;
+    return this._metadata;
   }
 
   private handleForkVersion(): void {
