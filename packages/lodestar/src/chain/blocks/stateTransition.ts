@@ -99,12 +99,14 @@ export async function runStateTransition(
   }
   forkChoice.onBlock(job.signedBlock.message, postState, justifiedBalances);
 
-  if (postSlot % SLOTS_PER_EPOCH === 0) {
-    emitCheckpointEvent(emitter, postState);
-  }
+  if (!job.reprocess) {
+    if (postSlot % SLOTS_PER_EPOCH === 0) {
+      emitCheckpointEvent(emitter, postState);
+    }
 
-  emitBlockEvent(emitter, job, postState);
-  emitForkChoiceHeadEvents(emitter, forkChoice, forkChoice.getHead(), oldHead);
+    emitBlockEvent(emitter, job, postState);
+    emitForkChoiceHeadEvents(emitter, forkChoice, forkChoice.getHead(), oldHead);
+  }
 
   return postState;
 }
