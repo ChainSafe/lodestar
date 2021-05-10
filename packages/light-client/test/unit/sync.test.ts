@@ -29,11 +29,22 @@ describe("Lightclient flow with LightClientUpdater", () => {
   const lastPeriod = computeSyncPeriodAtSlot(config, toSlot);
   const periods = Array.from({length: lastPeriod + 1}, (_, i) => i);
 
+  const serverOpts: ServerOpts = {port: 31000, host: "127.0.0.1"};
+  const beaconApiUrl = `http://${serverOpts.host}:${serverOpts.port}`;
+
   before("BLS sanity check", () => {
     const sk = SecretKey.fromBytes(Buffer.alloc(32, 1));
     expect(sk.toPublicKey().toHex()).to.equal(
       "0xaa1a1c26055a329817a5759d877a2795f9499b97d6056edde0eea39512f24e8bc874b4471f0501127abb1ea0d9f68ac1"
     );
+  });
+
+  const afterCallbacks: (() => Promise<void> | void)[] = [];
+  after(async () => {
+    while (afterCallbacks.length > 0) {
+      const callback = afterCallbacks.pop();
+      if (callback) await callback();
+    }
   });
 
   it("Run LightclientMockServer for a few periods", async () => {
@@ -76,6 +87,11 @@ describe("Lightclient flow with LightClientUpdater", () => {
       latestFinalizedUpdate: 36,
       latestNonFinalizedUpdate: 49,
     });
+
+    // Start API server
+
+    await lightclientServer.startApiServer(serverOpts);
+    afterCallbacks.push(() => lightclientServer.stopApiServer());
   });
 
   it("Simulate a Lightclient syncing to latest update with these updates in memory", async () => {
@@ -102,12 +118,6 @@ describe("Lightclient flow with LightClientUpdater", () => {
   });
 
   it("Simulate a second lightclient syncing over the API from trusted snapshot", async () => {
-    const serverOpts: ServerOpts = {port: 31000, host: "127.0.0.1"};
-    await lightclientServer.startApiServer(serverOpts);
-    const beaconApiUrl = `http://${serverOpts.host}:${serverOpts.port}`;
-
-    // Sync lightclient to currentSlot with genesisState root
-
     const clock = new MockClock(toSlot);
     const snapshot: altair.LightClientSnapshot = {
       header: config.types.altair.BeaconBlockHeader.defaultValue(),
@@ -128,12 +138,6 @@ describe("Lightclient flow with LightClientUpdater", () => {
   });
 
   it("Simulate a second lightclient syncing over the API from trusted stateRoot", async () => {
-    const serverOpts: ServerOpts = {port: 31000, host: "127.0.0.1"};
-    await lightclientServer.startApiServer(serverOpts);
-    const beaconApiUrl = `http://${serverOpts.host}:${serverOpts.port}`;
-
-    // Sync lightclient to currentSlot with genesisState root
-
     const clock = new MockClock(toSlot);
     const lightclient = await Lightclient.initializeFromTrustedStateRoot(
       config,
