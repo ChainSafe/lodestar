@@ -30,7 +30,7 @@ export function ProofReqResp({client}: {client: Lightclient}): JSX.Element {
   const paths: Path[] = JSON.parse(pathsStr);
   const stateStr = renderState(paths, state ?? null);
 
-  async function fetchProof() {
+  async function fetchProof(): Promise<void> {
     try {
       setReqStatusProof({loading: true});
       const proof = await client.getStateProof(paths);

@@ -26,7 +26,7 @@ export class LightclientMockServer {
   private readonly stateCache = new Map<string, TreeBacked<altair.BeaconState>>();
   private finalizedCheckpoint: altair.Checkpoint | null = null;
   private prevBlock: altair.BeaconBlock | null = null;
-  private prevState: TreeBacked<altair.BeaconState> | null = null;
+  private prevState: TreeBacked<altair.BeaconState>;
 
   // API state
   private apiState: ApiState = {status: ApiStatus.stopped};
@@ -35,7 +35,7 @@ export class LightclientMockServer {
     private readonly config: IBeaconConfig,
     private readonly logger: ILogger,
     private readonly genesisValidatorsRoot: Root,
-    initialFinalizedCheckpoint?: {
+    readonly initialFinalizedCheckpoint: {
       checkpoint: Checkpoint;
       block: altair.BeaconBlock;
       state: TreeBacked<altair.BeaconState>;
@@ -45,12 +45,10 @@ export class LightclientMockServer {
     this.lightClientUpdater = new LightClientUpdater(config, db);
     this.stateRegen = new MockStateRegen(this.stateCache);
 
-    if (initialFinalizedCheckpoint) {
-      const {checkpoint, block, state} = initialFinalizedCheckpoint;
-      this.lightClientUpdater.onFinalized(checkpoint, block, state);
-      this.stateCache.set(toHexString(state.hashTreeRoot()), state);
-      this.prevState = config.types.altair.BeaconState.createTreeBackedFromStruct(state);
-    }
+    const {checkpoint, block, state} = initialFinalizedCheckpoint;
+    this.lightClientUpdater.onFinalized(checkpoint, block, state);
+    this.stateCache.set(toHexString(state.hashTreeRoot()), state);
+    this.prevState = config.types.altair.BeaconState.createTreeBackedFromStruct(state);
   }
 
   async startApiServer(opts: ServerOpts): Promise<void> {
@@ -76,7 +74,7 @@ export class LightclientMockServer {
   createNewBlock(slot: Slot): void {
     // Create a block and postState
     const block = this.config.types.altair.BeaconBlock.defaultValue();
-    const state = this.prevState ? this.prevState.clone() : this.config.types.altair.BeaconState.defaultTreeBacked();
+    const state = this.prevState.clone();
     block.slot = slot;
     state.slot = slot;
 

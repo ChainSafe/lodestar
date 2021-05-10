@@ -2,7 +2,7 @@ import {PublicKey, SecretKey, Signature} from "@chainsafe/bls";
 import {computeDomain, computeSigningRoot, interopSecretKey} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig, createIBeaconConfig} from "@chainsafe/lodestar-config";
 import {params as minimalParams} from "@chainsafe/lodestar-params/minimal";
-import {altair, Bytes4, Root, Slot, SyncPeriod} from "@chainsafe/lodestar-types";
+import {altair, Bytes4, Gwei, Root, Slot, SyncPeriod} from "@chainsafe/lodestar-types";
 import {fromHexString, List} from "@chainsafe/ssz";
 import {SyncCommitteeFast} from "../src/client/types";
 
@@ -102,4 +102,8 @@ export function generateValidator(opts: Partial<altair.Validator> = {}): altair.
  */
 export function generateValidators(n: number, opts?: Partial<altair.Validator>): List<altair.Validator> {
   return Array.from({length: n}, () => generateValidator(opts)) as List<altair.Validator>;
+}
+
+export function generateBalances(n: number): List<Gwei> {
+  return Array.from({length: n}, () => BigInt(32000000000)) as List<Gwei>;
 }
