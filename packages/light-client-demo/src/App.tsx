@@ -16,8 +16,6 @@ import {config, genesisTime, genesisValidatorsRoot, beaconApiUrl, trustedRoot} f
 export default function App(): JSX.Element {
   const [reqStatusInit, setReqStatusInit] = useState<ReqStatus<Lightclient>>({});
 
-  const [client, setClient] = useState<Lightclient | undefined>();
-
   useEffect(() => {
     async function initializeFromTrustedStateRoot(): Promise<void> {
       try {
@@ -32,7 +30,6 @@ export default function App(): JSX.Element {
           beaconApiUrl,
           trustedRoot
         );
-        setClient(client);
         setReqStatusInit({result: client});
       } catch (e) {
         setReqStatusInit({error: e});

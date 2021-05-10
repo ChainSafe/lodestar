@@ -1,22 +1,22 @@
 import React, {useState} from "react";
 import {Lightclient} from "@chainsafe/lodestar-light-client/lib/client";
 import {ProofType, TreeOffsetProof} from "@chainsafe/persistent-merkle-tree";
+import {altair} from "@chainsafe/lodestar-types";
 
 type Path = (string | number)[];
+
+function renderState(paths: Path[], state: altair.BeaconState | null): string {
+  if (!state) return "";
+  return paths.map((path) => path.join(".") + " " + path.reduce((acc, p) => acc[p], state)).join("\n");
+}
 
 export function ProofReqResp({client}: {client: Lightclient}): JSX.Element {
   const [pathsStr, setPaths] = useState(JSON.stringify([["slot"], ["validators", 0, "exitEpoch"]], null, 2));
   const [proof, setProof] = useState({type: ProofType.treeOffset, offsets: [], leaves: []} as TreeOffsetProof);
   const paths: Path[] = JSON.parse(pathsStr);
   const validProof = !!proof.leaves.length;
-  const state = !validProof ? {} : client.config.types.altair.BeaconState.createTreeBackedFromProofUnsafe(proof);
-  const stateStr = !validProof
-    ? ""
-    : paths
-        .map((path) => {
-          return path.join(".") + " " + path.reduce((acc, p) => acc[p], state);
-        })
-        .join("\n");
+  const state = validProof ? client.config.types.altair.BeaconState.createTreeBackedFromProofUnsafe(proof) : null;
+  const stateStr = renderState(paths, state);
 
   return (
     <div className="section container">
