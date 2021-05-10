@@ -26,6 +26,7 @@ export class LightclientMockServer {
   private readonly stateCache = new Map<string, TreeBacked<altair.BeaconState>>();
   private finalizedCheckpoint: altair.Checkpoint | null = null;
   private prevBlock: altair.BeaconBlock | null = null;
+  private prevState: TreeBacked<altair.BeaconState> | null = null;
 
   // API state
   private apiState: ApiState = {status: ApiStatus.stopped};
@@ -48,6 +49,7 @@ export class LightclientMockServer {
       const {checkpoint, block, state} = initialFinalizedCheckpoint;
       this.lightClientUpdater.onFinalized(checkpoint, block, state);
       this.stateCache.set(toHexString(state.hashTreeRoot()), state);
+      this.prevState = config.types.altair.BeaconState.createTreeBackedFromStruct(state);
     }
   }
 
@@ -74,7 +76,7 @@ export class LightclientMockServer {
   createNewBlock(slot: Slot): void {
     // Create a block and postState
     const block = this.config.types.altair.BeaconBlock.defaultValue();
-    const state = this.config.types.altair.BeaconState.defaultTreeBacked();
+    const state = this.prevState ? this.prevState.clone() : this.config.types.altair.BeaconState.defaultTreeBacked();
     block.slot = slot;
     state.slot = slot;
 

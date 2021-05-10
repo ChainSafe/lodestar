@@ -49,7 +49,7 @@ export default function App(): JSX.Element {
           <ProofReqResp client={reqStatusInit.result} />
         </div>
       ) : reqStatusInit.error ? (
-        <ErrorView error={reqStatusInit.error}></ErrorView>
+        <ErrorView error={reqStatusInit.error} />
       ) : reqStatusInit.loading ? (
         <p>Initializing Lightclient...</p>
       ) : null}

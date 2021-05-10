@@ -1,7 +1,10 @@
 import React, {useState} from "react";
 import {Lightclient} from "@chainsafe/lodestar-light-client/lib/client";
-import {ProofType, TreeOffsetProof} from "@chainsafe/persistent-merkle-tree";
+import {TreeOffsetProof} from "@chainsafe/persistent-merkle-tree";
 import {altair} from "@chainsafe/lodestar-types";
+import {toHexString} from "@chainsafe/ssz";
+import {ReqStatus} from "./types";
+import {ErrorView} from "./components/ErrorView";
 
 type Path = (string | number)[];
 
@@ -10,13 +13,35 @@ function renderState(paths: Path[], state: altair.BeaconState | null): string {
   return paths.map((path) => path.join(".") + " " + path.reduce((acc, p) => acc[p], state)).join("\n");
 }
 
+function renderProof(proof: TreeOffsetProof): string {
+  const hexJson = {
+    type: proof.type,
+    leaves: proof.leaves.map(toHexString),
+    offsets: proof.offsets,
+  };
+  return JSON.stringify(hexJson, null, 2);
+}
+
 export function ProofReqResp({client}: {client: Lightclient}): JSX.Element {
+  const [reqStatusProof, setReqStatusProof] = useState<ReqStatus<TreeOffsetProof>>({});
   const [pathsStr, setPaths] = useState(JSON.stringify([["slot"], ["validators", 0, "exitEpoch"]], null, 2));
-  const [proof, setProof] = useState({type: ProofType.treeOffset, offsets: [], leaves: []} as TreeOffsetProof);
+  const [state, setState] = useState<altair.BeaconState>();
+
   const paths: Path[] = JSON.parse(pathsStr);
-  const validProof = !!proof.leaves.length;
-  const state = validProof ? client.config.types.altair.BeaconState.createTreeBackedFromProofUnsafe(proof) : null;
-  const stateStr = renderState(paths, state);
+  const stateStr = renderState(paths, state ?? null);
+
+  async function fetchProof() {
+    try {
+      setReqStatusProof({loading: true});
+      const proof = await client.getStateProof(paths);
+      if (proof.leaves.length > 0) {
+        setState(client.config.types.altair.BeaconState.createTreeBackedFromProofUnsafe(proof));
+      }
+      setReqStatusProof({result: proof});
+    } catch (e) {
+      setReqStatusProof({error: e});
+    }
+  }
 
   return (
     <div className="section container">
@@ -34,20 +59,25 @@ export function ProofReqResp({client}: {client: Lightclient}): JSX.Element {
               />
             </div>
           </div>
-          <div className="field">
-            <div className="control">
-              <button className="button is-primary" onClick={() => client.getStateProof(paths).then(setProof)}>
-                Submit
-              </button>
-            </div>
-          </div>
         </div>
-        <div className="column section">
-          <div className="subtitle">Proof</div>
-          <div>{JSON.stringify(proof, null, 2)}</div>
-          <br />
+        <div className="column section" style={{whiteSpace: "pre"}}>
           <div className="subtitle">State</div>
           <div>{stateStr}</div>
+
+          <div className="subtitle">Proof</div>
+          {reqStatusProof.result && <div>{renderProof(reqStatusProof.result)}</div>}
+          <br />
+        </div>
+      </div>
+
+      {reqStatusProof.loading && <p>Fetching proof...</p>}
+      {reqStatusProof.error && <ErrorView error={reqStatusProof.error} />}
+
+      <div className="field">
+        <div className="control">
+          <button className="button is-primary" onClick={fetchProof} disabled={reqStatusProof.loading}>
+            Submit
+          </button>
         </div>
       </div>
     </div>

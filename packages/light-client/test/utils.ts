@@ -3,6 +3,7 @@ import {computeDomain, computeSigningRoot, interopSecretKey} from "@chainsafe/lo
 import {IBeaconConfig, createIBeaconConfig} from "@chainsafe/lodestar-config";
 import {params as minimalParams} from "@chainsafe/lodestar-params/minimal";
 import {altair, Bytes4, Root, Slot, SyncPeriod} from "@chainsafe/lodestar-types";
+import {fromHexString, List} from "@chainsafe/ssz";
 import {SyncCommitteeFast} from "../src/client/types";
 
 /* eslint-disable @typescript-eslint/naming-convention */
@@ -74,4 +75,31 @@ export function getInteropSyncCommittee(config: IBeaconConfig, period: SyncPerio
       pubkeyAggregates: pks.slice(0, pubkeyAggregatesLen),
     },
   };
+}
+
+/**
+ * Generates a single fake validator, for tests purposes only.
+ */
+export function generateValidator(opts: Partial<altair.Validator> = {}): altair.Validator {
+  return {
+    pubkey: fromHexString(
+      // randomly pregenerated pubkey
+      "0x84105a985058fc8740a48bf1ede9d223ef09e8c6b1735ba0a55cf4a9ff2ff92376b778798365e488dab07a652eb04576"
+    ),
+    withdrawalCredentials: Buffer.alloc(32),
+    activationEpoch: 0,
+    activationEligibilityEpoch: 10000,
+    exitEpoch: 10000,
+    withdrawableEpoch: 10000,
+    slashed: opts.slashed || false,
+    effectiveBalance: BigInt(32),
+    ...opts,
+  };
+}
+
+/**
+ * Generates n number of validators, for tests purposes only.
+ */
+export function generateValidators(n: number, opts?: Partial<altair.Validator>): List<altair.Validator> {
+  return Array.from({length: n}, () => generateValidator(opts)) as List<altair.Validator>;
 }

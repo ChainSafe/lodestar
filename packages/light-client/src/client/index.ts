@@ -103,7 +103,7 @@ export class Lightclient {
   }
 
   async getStateProof(paths: Paths): Promise<TreeOffsetProof> {
-    return await this.apiClient.getStateProof(this.store.snapshot.header.slot, paths);
+    return await this.apiClient.getStateProof(toHexString(this.store.snapshot.header.stateRoot), paths);
   }
 
   onSlot = async (): Promise<void> => {

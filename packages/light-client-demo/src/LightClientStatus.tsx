@@ -13,7 +13,6 @@ export function LightClientStatus({client}: {client: Lightclient}): JSX.Element 
     try {
       setReqStatusSync({loading: true});
       await client.sync();
-      console.log({snapshot: client.store.snapshot});
       setReqStatusSync({result: client.store.snapshot.header});
     } catch (e) {
       setReqStatusSync({error: e});
@@ -38,7 +37,7 @@ export function LightClientStatus({client}: {client: Lightclient}): JSX.Element 
       {reqStatusSync.result ? (
         <p>Successfully synced!</p>
       ) : reqStatusSync.error ? (
-        <ErrorView error={reqStatusSync.error}></ErrorView>
+        <ErrorView error={reqStatusSync.error} />
       ) : reqStatusSync.loading ? (
         <p>Syncing Lightclient...</p>
       ) : null}

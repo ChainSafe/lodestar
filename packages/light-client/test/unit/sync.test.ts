@@ -11,7 +11,7 @@ import {Lightclient} from "../../src/client";
 import {ServerOpts} from "../lightclientApiServer";
 import {IClock} from "../../src/utils/clock";
 import {leveParams} from "../../src/leve";
-import {getInteropSyncCommittee} from "../utils";
+import {generateValidators, getInteropSyncCommittee} from "../utils";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
@@ -51,6 +51,7 @@ describe("Lightclient flow with LightClientUpdater", () => {
     // Create genesis state and block
     const genesisState = config.types.altair.BeaconState.defaultTreeBacked();
     const genesisBlock = config.types.altair.BeaconBlock.defaultValue();
+    genesisState.validators = generateValidators(2);
     genesisState.currentSyncCommittee = getInteropSyncCommittee(config, 0).syncCommittee;
     genesisState.nextSyncCommittee = getInteropSyncCommittee(config, 1).syncCommittee;
     genesisValidatorsRoot = config.types.altair.BeaconState.fields["validators"].hashTreeRoot(genesisState.validators);
