@@ -14,11 +14,13 @@
   },
   "dependencies": {
     "@babel/runtime": "^7.5.5",
+    "@chainsafe/bls": "6.0.0",
     "@chainsafe/lodestar-config": "^0.21.0",
     "@chainsafe/lodestar-light-client": "^0.21.0",
     "@chainsafe/lodestar-types": "^0.21.0",
     "@chainsafe/lodestar-utils": "^0.21.0",
     "@chainsafe/persistent-merkle-tree": "^0.3.2",
+    "@chainsafe/ssz": "^0.8.4",
     "@typescript-eslint/eslint-plugin": "^2.32.0",
     "@typescript-eslint/parser": "^2.32.0",
     "buffer": "^6.0.3",

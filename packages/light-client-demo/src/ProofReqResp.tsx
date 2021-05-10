@@ -1,7 +1,4 @@
 import React, {useState} from "react";
-
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {altair} from "@chainsafe/lodestar-types";
 import {Lightclient} from "@chainsafe/lodestar-light-client/lib/client";
 import {ProofType, TreeOffsetProof} from "@chainsafe/persistent-merkle-tree";
 
