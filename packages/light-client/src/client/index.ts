@@ -1,4 +1,4 @@
-import {altair, Root, Slot} from "@chainsafe/lodestar-types";
+import {altair, Root, Slot, SyncPeriod} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {LightclientApiClient, Paths} from "./apiClient";
 import {computeSyncPeriodAtSlot, ZERO_HASH} from "@chainsafe/lodestar-beacon-state-transition";
@@ -53,7 +53,7 @@ export class Lightclient {
 
     const state = config.types.altair.BeaconState.createTreeBackedFromProof(stateRoot as Uint8Array, proof);
     const store: LightClientStoreFast = {
-      validUpdates: [],
+      bestUpdates: new Map<SyncPeriod, altair.LightClientUpdate>(),
       snapshot: {
         header: {slot, proposerIndex: 0, parentRoot: ZERO_HASH, stateRoot, bodyRoot: ZERO_HASH},
         currentSyncCommittee: deserializeSyncCommittee(state.currentSyncCommittee),
@@ -71,7 +71,7 @@ export class Lightclient {
     snapshot: altair.LightClientSnapshot
   ): Lightclient {
     const store: LightClientStoreFast = {
-      validUpdates: [],
+      bestUpdates: new Map<SyncPeriod, altair.LightClientUpdate>(),
       snapshot: {
         header: snapshot.header,
         currentSyncCommittee: deserializeSyncCommittee(snapshot.currentSyncCommittee),

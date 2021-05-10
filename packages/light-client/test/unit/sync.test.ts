@@ -2,7 +2,7 @@ import {expect} from "chai";
 import {SecretKey} from "@chainsafe/bls";
 import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 import {WinstonLogger} from "@chainsafe/lodestar-utils";
-import {altair, Root, Slot} from "@chainsafe/lodestar-types";
+import {altair, Root, Slot, SyncPeriod} from "@chainsafe/lodestar-types";
 import {computeSyncPeriodAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {LightclientMockServer} from "../lightclientMockServer";
 import {processLightClientUpdate} from "../../src/client/update";
@@ -96,12 +96,12 @@ describe("Lightclient flow with LightClientUpdater", () => {
 
   it("Simulate a Lightclient syncing to latest update with these updates in memory", async () => {
     const store: LightClientStoreFast = {
+      bestUpdates: new Map<SyncPeriod, altair.LightClientUpdate>(),
       snapshot: {
         header: config.types.altair.BeaconBlockHeader.defaultValue(),
         currentSyncCommittee: lightclientServer["getSyncCommittee"](0).syncCommitteeFast,
         nextSyncCommittee: lightclientServer["getSyncCommittee"](1).syncCommitteeFast,
       },
-      validUpdates: [],
     };
 
     const bestUpdates = await lightclientServer["lightClientUpdater"].getBestUpdates(periods);
@@ -114,7 +114,7 @@ describe("Lightclient flow with LightClientUpdater", () => {
       }
     }
 
-    expect(store.snapshot.header.slot).to.equal(49, "Wrong store.snapshot.header.slot after applying updates");
+    expect(store.snapshot.header.slot).to.equal(36, "Wrong store.snapshot.header.slot after applying updates");
   });
 
   it("Simulate a second lightclient syncing over the API from trusted snapshot", async () => {
@@ -134,7 +134,7 @@ describe("Lightclient flow with LightClientUpdater", () => {
 
     await lightclient.sync();
 
-    expect(lightclient.getHeader().slot).to.equal(49, "Wrong store.snapshot.header.slot after applying updates");
+    expect(lightclient.getHeader().slot).to.equal(36, "Wrong store.snapshot.header.slot after applying updates");
   });
 
   it("Simulate a second lightclient syncing over the API from trusted stateRoot", async () => {
@@ -149,10 +149,7 @@ describe("Lightclient flow with LightClientUpdater", () => {
 
     await lightclient.sync();
 
-    expect(lightclient.getHeader().slot).to.equal(
-      49,
-      "Wrong store.snapshot.header.slot after applying updates lightclient instance over REST API"
-    );
+    expect(lightclient.getHeader().slot).to.equal(36, "Wrong store.snapshot.header.slot after applying updates");
   });
 });
 

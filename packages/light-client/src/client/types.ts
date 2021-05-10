@@ -1,9 +1,9 @@
 import {PublicKey} from "@chainsafe/bls";
-import {altair, phase0} from "@chainsafe/lodestar-types";
+import {altair, phase0, SyncPeriod} from "@chainsafe/lodestar-types";
 
 export type LightClientStoreFast = {
   snapshot: LightClientSnapshotFast;
-  validUpdates: altair.LightClientUpdate[];
+  bestUpdates: Map<SyncPeriod, altair.LightClientUpdate>;
 };
 
 export type LightClientSnapshotFast = {

@@ -95,12 +95,12 @@ describe("Lightclient flow", () => {
     if (!update) throw Error("Prev test failed");
 
     const store: LightClientStoreFast = {
+      bestUpdates: new Map<SyncPeriod, altair.LightClientUpdate>(),
       snapshot: {
         header: config.types.altair.BeaconBlockHeader.defaultValue(),
         currentSyncCommittee: getSyncCommittee(0).syncCommitteeFast,
         nextSyncCommittee: getSyncCommittee(0).syncCommitteeFast,
       },
-      validUpdates: [],
     };
 
     processLightClientUpdate(config, store, update, currentSlot, genValiRoot);

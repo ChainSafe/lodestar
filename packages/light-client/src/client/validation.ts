@@ -22,10 +22,13 @@ export function validateLightClientUpdate(
   update: altair.LightClientUpdate,
   genesisValidatorsRoot: altair.Root
 ): void {
+  // DIFF FROM SPEC: An update with the same header.slot can be valid and valuable to the lightclient
+  // It may have more consensus and result in a better snapshot whilst not advancing the state
+  // ----
   // Verify update slot is larger than snapshot slot
-  if (update.header.slot <= snapshot.header.slot) {
-    throw Error("update slot is less or equal snapshot slot");
-  }
+  // if (update.header.slot <= snapshot.header.slot) {
+  //   throw Error("update slot is less or equal snapshot slot");
+  // }
 
   // Verify update does not skip a sync committee period
   const snapshotPeriod = computeSyncPeriodAtSlot(config, snapshot.header.slot);
@@ -70,7 +73,7 @@ export function validateLightClientUpdate(
   const updatePeriodIncremented = updatePeriod > snapshotPeriod;
   const syncCommittee = updatePeriodIncremented ? snapshot.nextSyncCommittee : snapshot.currentSyncCommittee;
 
-  // TODO: Diff from spec
+  // DIFF FROM SPEC:
   // I believe the nextSyncCommitteeBranch should be check always not only when updatePeriodIncremented
   // An update may not increase the period but still be stored in validUpdates and be used latter
 
