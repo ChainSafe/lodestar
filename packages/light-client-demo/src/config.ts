@@ -3,7 +3,7 @@ import {leveParams, leveGenesisTime} from "@chainsafe/lodestar-light-client/lib/
 import {fromHexString} from "@chainsafe/ssz";
 
 const leveData = {
-  genesisStateRoot: "0x4035a830faa88d8d54c7772ac60d05c636c280d010b10deb8ae98f44ba5b92a3",
+  genesisStateRoot: "0x015abe432b7c66fb022c76a713c035f6924c90e883edda75c1f7cff285b29497",
   genesisValidatorsRoot: "0xe0316c386ad87391354adbc2bcfa5d4f219d05fed4dddc7171579032055991d7",
 };
 

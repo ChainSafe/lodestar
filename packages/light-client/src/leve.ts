@@ -16,12 +16,12 @@ export const leveParams: IBeaconParams = {
   SYNC_PUBKEYS_PER_AGGREGATE: 2,
   // Must be higher than 3 to allow finalized updates
   EPOCHS_PER_SYNC_COMMITTEE_PERIOD: 4,
-  SLOTS_PER_EPOCH: 4,
-  SECONDS_PER_SLOT: 4,
+  SLOTS_PER_EPOCH: 8,
+  SECONDS_PER_SLOT: 12,
 
-  MIN_GENESIS_TIME: 1620588000,
+  MIN_GENESIS_TIME: 1620648600,
   GENESIS_DELAY: 0,
   GENESIS_FORK_VERSION: Buffer.from("0x00004747"),
 };
 
-export const leveGenesisTime = 1620588000;
+export const leveGenesisTime = 1620648600;
