@@ -4,7 +4,6 @@ import {
   DEPOSIT_CONTRACT_TREE_DEPTH,
   JUSTIFICATION_BITS_LENGTH,
   MAX_REQUEST_BLOCKS,
-  P2P_ERROR_MESSAGE_MAX_LENGTH,
 } from "@chainsafe/lodestar-params";
 import {BitListType, BitVectorType, ContainerType, List, ListType, RootType, Vector, VectorType} from "@chainsafe/ssz";
 import {PrimitiveSSZTypes} from "../primitive";
@@ -24,7 +23,6 @@ export function getPhase0Types(params: IPhase0Params, primitive: PrimitiveSSZTyp
     BLSPubkey,
     Version,
     Slot,
-    Uint8,
     Uint64,
     Root,
     Gwei,
@@ -413,9 +411,6 @@ export function getPhase0Types(params: IPhase0Params, primitive: PrimitiveSSZTyp
 
   const BeaconBlocksByRootRequest = new ListType({elementType: Root, limit: MAX_REQUEST_BLOCKS});
 
-  // TODO: Delete
-  const P2pErrorMessage = new ListType({elementType: Uint8, limit: P2P_ERROR_MESSAGE_MAX_LENGTH});
-
   // Api types
   // =========
 
@@ -651,7 +646,6 @@ export function getPhase0Types(params: IPhase0Params, primitive: PrimitiveSSZTyp
     Metadata,
     BeaconBlocksByRangeRequest,
     BeaconBlocksByRootRequest,
-    P2pErrorMessage,
     // api
     SignedBeaconHeaderResponse,
     SubscribeToCommitteeSubnetPayload,

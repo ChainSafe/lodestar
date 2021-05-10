@@ -3,10 +3,9 @@ import {EventEmitter} from "events";
 import sinon from "sinon";
 import {expect} from "chai";
 import {config} from "@chainsafe/lodestar-config/mainnet";
-import {IReqResp} from "../../../../src/network/reqresp";
+import {IReqResp, ReqRespMethod} from "../../../../src/network/reqresp";
 import {PeerRpcScoreStore, PeerManager, Libp2pPeerMetadataStore} from "../../../../src/network/peers";
 import {NetworkEvent, NetworkEventBus} from "../../../../src/network";
-import {Method} from "../../../../src/constants";
 import {createMetrics} from "../../../../src/metrics";
 import {createNode, getAttnets} from "../../../utils/network";
 import {MockBeaconChain} from "../../../utils/mocks/chain/chain";
@@ -110,7 +109,7 @@ describe("network / peers / PeerManager", function () {
     reqResp.metadata.resolves(metadata);
 
     // We get a ping by peer1, don't have it's metadata so it gets requested
-    networkEventBus.emit(NetworkEvent.reqRespRequest, Method.Ping, seqNumber, peerId1);
+    networkEventBus.emit(NetworkEvent.reqRespRequest, {method: ReqRespMethod.Ping, body: seqNumber}, peerId1);
 
     expect(reqResp.metadata.callCount).to.equal(1, "reqResp.metadata must be called once");
     expect(reqResp.metadata.getCall(0).args[0]).to.equal(peerId1, "reqResp.metadata must be called with peer1");
@@ -120,7 +119,7 @@ describe("network / peers / PeerManager", function () {
 
     // We get another ping by peer1, but with an already known seqNumber
     reqResp.metadata.reset();
-    networkEventBus.emit(NetworkEvent.reqRespRequest, Method.Ping, seqNumber, peerId1);
+    networkEventBus.emit(NetworkEvent.reqRespRequest, {method: ReqRespMethod.Ping, body: seqNumber}, peerId1);
 
     expect(reqResp.metadata.callCount).to.equal(0, "reqResp.metadata must not be called again");
   });
@@ -141,7 +140,7 @@ describe("network / peers / PeerManager", function () {
 
     // Send the local status and remote status, which always passes the assertPeerRelevance function
     const remoteStatus = chain.getStatus();
-    networkEventBus.emit(NetworkEvent.reqRespRequest, Method.Status, remoteStatus, peerId1);
+    networkEventBus.emit(NetworkEvent.reqRespRequest, {method: ReqRespMethod.Status, body: remoteStatus}, peerId1);
 
     await peerConnectedPromise;
   });

@@ -4,10 +4,10 @@ import {phase0} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import PeerId from "peer-id";
 import {IBeaconChain} from "../../chain";
-import {GoodByeReasonCode, GOODBYE_KNOWN_CODES, Libp2pEvent, Method} from "../../constants";
+import {GoodByeReasonCode, GOODBYE_KNOWN_CODES, Libp2pEvent} from "../../constants";
 import {IMetrics} from "../../metrics";
 import {NetworkEvent, INetworkEventBus} from "../events";
-import {IReqResp} from "../reqresp";
+import {IReqResp, ReqRespMethod, RequestTypedContainer} from "../reqresp";
 import {Libp2pPeerMetadataStore} from "./metastore";
 import {PeerDiscovery} from "./discover";
 import {IPeerRpcScoreStore, ScoreState} from "./score";
@@ -171,15 +171,15 @@ export class PeerManager {
   /**
    * Must be called when network ReqResp receives incoming requests
    */
-  private onRequest = (method: Method, requestBody: phase0.RequestBody, peer: PeerId): void => {
+  private onRequest = (request: RequestTypedContainer, peer: PeerId): void => {
     try {
-      switch (method) {
-        case Method.Ping:
-          return this.onPing(peer, requestBody as phase0.Ping);
-        case Method.Goodbye:
-          return this.onGoodbye(peer, requestBody as phase0.Goodbye);
-        case Method.Status:
-          return this.onStatus(peer, requestBody as phase0.Status);
+      switch (request.method) {
+        case ReqRespMethod.Ping:
+          return this.onPing(peer, request.body);
+        case ReqRespMethod.Goodbye:
+          return this.onGoodbye(peer, request.body);
+        case ReqRespMethod.Status:
+          return this.onStatus(peer, request.body);
       }
     } catch (e) {
       this.logger.error("Error onRequest handler", {}, e);

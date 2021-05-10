@@ -3,8 +3,10 @@ import chaiAsPromised from "chai-as-promised";
 import {AbortController} from "abort-controller";
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {LodestarError} from "@chainsafe/lodestar-utils";
-import {Method, ReqRespEncoding, RpcResponseStatus} from "../../../../../src/constants";
+import {RespStatus} from "../../../../../src/constants";
+import {Method, Encoding, Version} from "../../../../../src/network/reqresp/types";
 import {handleRequest, PerformRequestHandler} from "../../../../../src/network/reqresp/response";
+import {ForkDigestContext} from "../../../../../src/util/forkDigestContext";
 import {expectRejectedWithLodestarError} from "../../../../utils/errors";
 import {expectEqualByteChunks, MockLibP2pStream} from "../utils";
 import {sszSnappyPing} from "../encodingStrategies/sszSnappy/testData";
@@ -27,7 +29,7 @@ describe("network / reqresp / response / handleRequest", async () => {
   const testCases: {
     id: string;
     method: Method;
-    encoding: ReqRespEncoding;
+    encoding: Encoding;
     requestChunks: Buffer[];
     performRequestHandler: PerformRequestHandler;
     expectedResponseChunks: Buffer[];
@@ -36,7 +38,7 @@ describe("network / reqresp / response / handleRequest", async () => {
     {
       id: "Yield two chunks, then throw",
       method: Method.Ping,
-      encoding: ReqRespEncoding.SSZ_SNAPPY,
+      encoding: Encoding.SSZ_SNAPPY,
       requestChunks: sszSnappyPing.chunks, // Request Ping: BigInt(1)
       performRequestHandler: async function* () {
         yield sszSnappyPing.body;
@@ -46,17 +48,20 @@ describe("network / reqresp / response / handleRequest", async () => {
       expectedError: new LodestarError({code: "TEST_ERROR"}),
       expectedResponseChunks: [
         // Chunk 0 - success, Ping, BigInt(1)
-        Buffer.from([RpcResponseStatus.SUCCESS]),
+        Buffer.from([RespStatus.SUCCESS]),
         ...sszSnappyPing.chunks,
         // Chunk 1 - success, Ping, BigInt(1)
-        Buffer.from([RpcResponseStatus.SUCCESS]),
+        Buffer.from([RespStatus.SUCCESS]),
         ...sszSnappyPing.chunks,
         // Chunk 2 - error, with errorMessage
-        Buffer.from([RpcResponseStatus.SERVER_ERROR]),
+        Buffer.from([RespStatus.SERVER_ERROR]),
         Buffer.from("TEST_ERROR"),
       ],
     },
   ];
+
+  const version = Version.V1;
+  const forkDigestContext = new ForkDigestContext(config, Buffer.alloc(32, 0));
 
   for (const {
     id,
@@ -71,12 +76,11 @@ describe("network / reqresp / response / handleRequest", async () => {
       const stream = new MockLibP2pStream(requestChunks);
 
       const resultPromise = handleRequest(
-        {config, logger, libp2p},
+        {config, logger, forkDigestContext, libp2p},
         performRequestHandler,
         stream,
         peerId,
-        method,
-        encoding,
+        {method, version, encoding},
         controller.signal
       );
 
