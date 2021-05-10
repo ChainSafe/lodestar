@@ -45,6 +45,8 @@ describe("Lightclient flow", () => {
   before("Generate data for prepareUpdate", () => {
     // Create a state that has as nextSyncCommittee the committee 2
     const finalizedBlockSlot = config.params.SLOTS_PER_EPOCH * config.params.EPOCHS_PER_SYNC_COMMITTEE_PERIOD + 1;
+    const headerBlockSlot = finalizedBlockSlot + 1;
+
     const finalizedState = config.types.altair.BeaconState.defaultValue();
     finalizedState.nextSyncCommittee = getSyncCommittee(0).syncCommittee;
     const finalizedBlockHeader = config.types.altair.BeaconBlockHeader.defaultValue();
@@ -58,6 +60,7 @@ describe("Lightclient flow", () => {
       root: config.types.altair.BeaconBlockHeader.hashTreeRoot(finalizedBlockHeader),
     };
     const syncAttestedBlockHeader = config.types.altair.BeaconBlockHeader.defaultValue();
+    syncAttestedBlockHeader.slot = headerBlockSlot;
     syncAttestedBlockHeader.stateRoot = config.types.altair.BeaconState.hashTreeRoot(syncAttestedState);
 
     // Create a state with the block blockWithSyncAggregate

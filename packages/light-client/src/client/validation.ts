@@ -59,7 +59,7 @@ export function validateLightClientUpdate(
 
     const updateFinalityPeriod = computeSyncPeriodAtSlot(config, update.finalityHeader.slot);
     if (updateFinalityPeriod !== updatePeriod) {
-      throw Error(`finalityHeader period ${updateFinalityPeriod} > header period ${updatePeriod}`);
+      throw Error(`finalityHeader period ${updateFinalityPeriod} != header period ${updatePeriod}`);
     }
   } else {
     assertZeroHashes(update.finalityBranch, FINALIZED_ROOT_INDEX_FLOORLOG2, "finalityBranches");
