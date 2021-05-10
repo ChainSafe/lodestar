@@ -4,7 +4,6 @@ import {
   MAX_VALID_LIGHT_CLIENT_UPDATES,
   FINALIZED_ROOT_INDEX_FLOORLOG2,
   NEXT_SYNC_COMMITTEE_INDEX_FLOORLOG2,
-  ATTESTATION_SUBNET_COUNT,
 } from "@chainsafe/lodestar-params";
 import {BitVectorType, ContainerType, VectorType, ListType, RootType, BitListType, Vector} from "@chainsafe/ssz";
 import {Phase0SSZTypes} from "../phase0";
@@ -24,17 +23,14 @@ export function getAltairTypes(params: IBeaconParams, phase0: Phase0SSZTypes & P
     BeaconState: ContainerType<altair.BeaconState>;
   }>();
 
-  const AttestationSubnets = new BitVectorType({
-    length: ATTESTATION_SUBNET_COUNT,
-  });
-
   const SyncSubnets = new BitVectorType({
     length: params.EPOCHS_PER_SYNC_COMMITTEE_PERIOD,
   });
 
   const Metadata = new ContainerType<altair.Metadata>({
     fields: {
-      attnets: AttestationSubnets,
+      seqNumber: phase0.Uint64,
+      attnets: phase0.AttestationSubnets,
       syncnets: SyncSubnets,
     },
   });
