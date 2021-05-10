@@ -32,7 +32,7 @@ describe("Lightclient flow with LightClientUpdater", () => {
   const lastPeriod = computeSyncPeriodAtSlot(config, toSlot);
   const periods = Array.from({length: lastPeriod + 1}, (_, i) => i);
 
-  const serverOpts: ServerOpts = {port: 31000, host: "127.0.0.1"};
+  const serverOpts: ServerOpts = {port: 31000, host: "0.0.0.0"};
   const beaconApiUrl = `http://${serverOpts.host}:${serverOpts.port}`;
 
   before("BLS sanity check", () => {

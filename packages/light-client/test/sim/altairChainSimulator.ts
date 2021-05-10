@@ -19,7 +19,7 @@ async function runAltairChainSimulator(): Promise<void> {
   // Create blocks and state
   const validatorCount = 4;
 
-  const serverOpts: ServerOpts = {port: 31000, host: "127.0.0.1"};
+  const serverOpts: ServerOpts = {port: 31000, host: "0.0.0.0"};
 
   // Create genesis state and block
   const genesisState = config.types.altair.BeaconState.defaultTreeBacked();
@@ -55,10 +55,11 @@ async function runAltairChainSimulator(): Promise<void> {
   await lightclientServer.startApiServer(serverOpts);
 
   // Compute all periods until currentSlot
+  console.log("Syncing to latest slot...");
   for (let slot = 1; slot <= getCurrentSlot(config, leveGenesisTime); slot++) {
-    console.log("Slot", slot);
     lightclientServer.createNewBlock(slot);
   }
+  console.log("Synced to latest slot");
 
   // Advance the chain every slot
   // eslint-disable-next-line no-constant-condition

@@ -13,4 +13,5 @@ export const genesisValidatorsRoot = fromHexString(leveData.genesisValidatorsRoo
 export const stateRoot = fromHexString(leveData.genesisStateRoot);
 export const trustedRoot = {stateRoot, slot: 0};
 export const genesisTime = leveGenesisTime;
+// Temp PROD: http://161.97.179.211:31000
 export const beaconApiUrl = "http://localhost:31000";
