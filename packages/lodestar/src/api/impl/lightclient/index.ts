@@ -1,5 +1,5 @@
 import {altair, SyncPeriod} from "@chainsafe/lodestar-types";
-import {Path, TreeBacked} from "@chainsafe/ssz";
+import {Path} from "@chainsafe/ssz";
 import {ApiNamespace, IApiModules} from "../interface";
 import {IApiOptions} from "../../options";
 import {Proof} from "@chainsafe/persistent-merkle-tree";
@@ -28,7 +28,7 @@ export class LightclientApi implements ILightclientApi {
   private readonly config: IBeaconConfig;
   private readonly db: IBeaconDb;
   private readonly chain: IBeaconChain;
-  private readonly lightClientUpdater: ILightClientUpdater;
+  private readonly lightClientUpdater!: ILightClientUpdater;
 
   constructor(opts: Partial<IApiOptions>, modules: Pick<IApiModules, "config" | "db" | "chain">) {
     this.config = modules.config;
@@ -54,7 +54,9 @@ export class LightclientApi implements ILightclientApi {
 
   async createStateProof(stateId: string, paths: Path[]): Promise<Proof> {
     const state = await resolveStateId(this.config, this.chain, this.db, stateId);
-    const stateTreeBacked = this.config.types.altair.BeaconState.createTreeBackedFromStruct(state);
+    const stateTreeBacked = this.config.types.altair.BeaconState.createTreeBackedFromStruct(
+      state as altair.BeaconState
+    );
     return stateTreeBacked.createProof(paths);
   }
 }
