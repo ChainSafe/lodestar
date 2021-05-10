@@ -8,48 +8,67 @@ import {params} from "@chainsafe/lodestar-params/minimal";
 import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 import {LightClientStatus} from "./components/LightClientStatus";
 import {Lightclient} from "@chainsafe/lodestar-light-client/lib/client";
+import {leveParams, leveGenesisTime} from "@chainsafe/lodestar-light-client/lib/leve";
 import {Clock} from "@chainsafe/lodestar-light-client/lib/utils/clock";
-import {WinstonLogger} from "@chainsafe/lodestar-utils";
+import {init} from "@chainsafe/bls";
+import {fromHex, WinstonLogger} from "@chainsafe/lodestar-utils";
 import {ProofReqResp} from "./ProofReqResp";
+import {ErrorView} from "./components/ErrorView";
+import {ReqStatus} from "./types";
 
-const config = createIBeaconConfig({
-  ...params,
-  ALTAIR_FORK_EPOCH: 0,
-});
+const config = createIBeaconConfig(leveParams);
 
 const trustedRoot = {
-  stateRoot: config.types.Root.defaultValue(),
+  stateRoot: fromHex("0x96b09c52691647a6fd5f61e63c57c2f80db117096d1dd7e7e0df861e8f12a7d6"),
   slot: 0,
 };
-const genesisTime = 0;
-const genesisValidatorsRoot = config.types.Root.defaultValue();
-const beaconApiUrl = "http://localhost:9596";
+const genesisTime = leveGenesisTime;
+const genesisValidatorsRoot = fromHex("0xea569bcb4fbb2ed26d30e997d7337e7e12a43ac115793e9cbe25da401fcbb725");
+const beaconApiUrl = "http://localhost:31000";
 
 export default function App(): JSX.Element {
+  const [reqStatusInit, setReqStatusInit] = useState<ReqStatus<Lightclient>>({});
+
   const [client, setClient] = useState<Lightclient | undefined>();
+
   useEffect(() => {
-    Lightclient.initializeFromTrustedStateRoot(
-      config,
-      new Clock(config, new WinstonLogger(), genesisTime),
-      genesisValidatorsRoot,
-      beaconApiUrl,
-      trustedRoot,
-    ).then(setClient);
-  });
+    async function initializeFromTrustedStateRoot() {
+      try {
+        await init("herumi");
+
+        setReqStatusInit({loading: true});
+        const client = await Lightclient.initializeFromTrustedStateRoot(
+          config,
+          new Clock(config, new WinstonLogger(), genesisTime),
+          genesisValidatorsRoot,
+          beaconApiUrl,
+          trustedRoot
+        );
+        setClient(client);
+        setReqStatusInit({result: client});
+      } catch (e) {
+        setReqStatusInit({error: e});
+      }
+    }
+    initializeFromTrustedStateRoot();
+  }, []);
+
   return (
     <>
       <ForkMe />
       <Header />
-      {
-        !client ?
-          <div className="container">
-            <div>Initializing...</div>
-          </div> :
-          <div className="section">
-            <LightClientStatus client={client} />
-            <ProofReqResp client={client} />
-          </div>
-      }
+
+      {reqStatusInit.result ? (
+        <div className="section">
+          <LightClientStatus client={reqStatusInit.result} />
+          <ProofReqResp client={reqStatusInit.result} />
+        </div>
+      ) : reqStatusInit.error ? (
+        <ErrorView error={reqStatusInit.error}></ErrorView>
+      ) : reqStatusInit.loading ? (
+        <p>Initializing Lightclient...</p>
+      ) : null}
+
       <Footer />
     </>
   );
