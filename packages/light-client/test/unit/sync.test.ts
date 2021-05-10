@@ -2,7 +2,7 @@ import {expect} from "chai";
 import {SecretKey} from "@chainsafe/bls";
 import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 import {WinstonLogger} from "@chainsafe/lodestar-utils";
-import {altair, Slot} from "@chainsafe/lodestar-types";
+import {altair, Root, Slot} from "@chainsafe/lodestar-types";
 import {computeSyncPeriodAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {LightclientMockServer} from "../lightclientMockServer";
 import {processLightClientUpdate} from "../../src/client/update";
@@ -11,6 +11,7 @@ import {Lightclient} from "../../src/client";
 import {ServerOpts} from "../lightclientApiServer";
 import {IClock} from "../../src/utils/clock";
 import {leveParams} from "../../src/leve";
+import {getInteropSyncCommittee} from "../utils";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
@@ -18,6 +19,8 @@ describe("Lightclient flow with LightClientUpdater", () => {
   const config = createIBeaconConfig(leveParams);
 
   let lightclientServer: LightclientMockServer;
+  let genesisStateRoot: Root;
+  let genesisValidatorsRoot: Root;
 
   // Create blocks and state
   const fromSlot = 1;
@@ -25,19 +28,6 @@ describe("Lightclient flow with LightClientUpdater", () => {
   // Compute all periods until toSlot
   const lastPeriod = computeSyncPeriodAtSlot(config, toSlot);
   const periods = Array.from({length: lastPeriod + 1}, (_, i) => i);
-
-  // Create genesis state and block
-  const genesisState = config.types.altair.BeaconState.defaultTreeBacked();
-  const genesisBlock = config.types.altair.BeaconBlock.defaultValue();
-  const genesisValidatorsRoot = config.types.altair.BeaconState.fields["validators"].hashTreeRoot(
-    genesisState.validators
-  );
-  const genesisStateRoot = config.types.altair.BeaconState.hashTreeRoot(genesisState);
-  genesisBlock.stateRoot = genesisStateRoot;
-  const genesisCheckpoint: altair.Checkpoint = {
-    root: config.types.altair.BeaconBlock.hashTreeRoot(genesisBlock),
-    epoch: 0,
-  };
 
   before("BLS sanity check", () => {
     const sk = SecretKey.fromBytes(Buffer.alloc(32, 1));
@@ -47,6 +37,19 @@ describe("Lightclient flow with LightClientUpdater", () => {
   });
 
   it("Run LightclientMockServer for a few periods", async () => {
+    // Create genesis state and block
+    const genesisState = config.types.altair.BeaconState.defaultTreeBacked();
+    const genesisBlock = config.types.altair.BeaconBlock.defaultValue();
+    genesisState.currentSyncCommittee = getInteropSyncCommittee(config, 0).syncCommittee;
+    genesisState.nextSyncCommittee = getInteropSyncCommittee(config, 1).syncCommittee;
+    genesisValidatorsRoot = config.types.altair.BeaconState.fields["validators"].hashTreeRoot(genesisState.validators);
+    genesisStateRoot = config.types.altair.BeaconState.hashTreeRoot(genesisState);
+    genesisBlock.stateRoot = genesisStateRoot;
+    const genesisCheckpoint: altair.Checkpoint = {
+      root: config.types.altair.BeaconBlock.hashTreeRoot(genesisBlock),
+      epoch: 0,
+    };
+
     const logger = new WinstonLogger();
     lightclientServer = new LightclientMockServer(config, logger, genesisValidatorsRoot, {
       block: genesisBlock,
