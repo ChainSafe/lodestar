@@ -78,7 +78,9 @@ function registerRoutes(server: fastify.FastifyInstance, modules: ServerModules)
 
     handler: async function (req, resp) {
       const state = await stateRegen.getStateByRoot(req.params.stateId);
-      const proof = state.createProof(req.body.paths);
+      // the body isn't already JSON parsed
+      const body = JSON.parse((req.body as unknown) as string) as {paths: (string | number)[][]};
+      const proof = state.createProof(body.paths);
       const serialized = serializeProof(proof);
       return resp.status(200).header("Content-Type", "application/octet-stream").send(Buffer.from(serialized));
     },

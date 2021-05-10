@@ -3,7 +3,7 @@ import {Json} from "@chainsafe/ssz";
 import {deserializeProof, TreeOffsetProof} from "@chainsafe/persistent-merkle-tree";
 import {altair, SyncPeriod, IBeaconSSZTypes} from "@chainsafe/lodestar-types";
 
-export type Paths = (string | number)[];
+export type Paths = (string | number)[][];
 
 // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types, @typescript-eslint/explicit-function-return-type, @typescript-eslint/naming-convention
 export function LightclientApiClient(beaconApiUrl: string, types: IBeaconSSZTypes) {
@@ -70,7 +70,7 @@ export function LightclientApiClient(beaconApiUrl: string, types: IBeaconSSZType
 
       const buffer = await res.arrayBuffer();
 
-      return deserializeProof(buffer as Uint8Array) as TreeOffsetProof;
+      return deserializeProof(new Uint8Array(buffer)) as TreeOffsetProof;
     },
   };
 }
