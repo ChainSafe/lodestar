@@ -7,7 +7,7 @@
   "license": "MIT",
   "scripts": {
     "check-types": "tsc",
-    "dev": "cross-env NODE_ENV=development webpack-dev-server --color --progress",
+    "dev": "cross-env NODE_ENV=development webpack serve --color --progress",
     "build": "cross-env NODE_ENV=production webpack --color --progress",
     "start": "serve dist",
     "lint": "eslint --ext .tsx src/"
@@ -15,12 +15,13 @@
   "dependencies": {
     "@babel/runtime": "^7.5.5",
     "@chainsafe/lodestar-config": "^0.21.0",
+    "@chainsafe/lodestar-light-client": "^0.21.0",
     "@chainsafe/lodestar-types": "^0.21.0",
     "@chainsafe/lodestar-utils": "^0.21.0",
-    "@chainsafe/lodestar-light-client": "^0.21.0",
     "@chainsafe/persistent-merkle-tree": "^0.3.2",
     "@typescript-eslint/eslint-plugin": "^2.32.0",
     "@typescript-eslint/parser": "^2.32.0",
+    "buffer": "^6.0.3",
     "bulma": "^0.7.5",
     "core-js": "2",
     "css-loader": "^2.1.1",

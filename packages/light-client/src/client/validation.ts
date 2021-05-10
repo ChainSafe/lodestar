@@ -1,6 +1,6 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {altair} from "@chainsafe/lodestar-types";
-import {assert, verifyMerkleBranch} from "@chainsafe/lodestar-utils";
+import {isValidMerkleBranch} from "../utils/verifyMerkleBranch";
 import {computeDomain, computeSyncPeriodAtSlot, computeSigningRoot} from "@chainsafe/lodestar-beacon-state-transition";
 import {PublicKey, Signature} from "@chainsafe/bls";
 import {
@@ -46,16 +46,17 @@ export function validateLightClientUpdate(
     // }
     //
     // Where `hashTreeRoot(state) == update.finalityHeader.stateRoot`
-    assert.true(
-      verifyMerkleBranch(
+    if (
+      !isValidMerkleBranch(
         config.types.altair.BeaconBlockHeader.hashTreeRoot(update.header),
         Array.from(update.finalityBranch).map((i) => i.valueOf() as Uint8Array),
         FINALIZED_ROOT_INDEX_FLOORLOG2,
         FINALIZED_ROOT_INDEX % 2 ** FINALIZED_ROOT_INDEX_FLOORLOG2,
         update.finalityHeader.stateRoot.valueOf() as Uint8Array
-      ),
-      "Invalid finality header merkle branch"
-    );
+      )
+    ) {
+      throw Error("Invalid finality header merkle branch");
+    }
 
     const updateFinalityPeriod = computeSyncPeriodAtSlot(config, update.finalityHeader.slot);
     if (updateFinalityPeriod !== updatePeriod) {
@@ -80,21 +81,24 @@ export function validateLightClientUpdate(
     // }
     //
     // Where `hashTreeRoot(state) == update.header.stateRoot`
-    assert.true(
-      verifyMerkleBranch(
+    if (
+      !isValidMerkleBranch(
         config.types.altair.SyncCommittee.hashTreeRoot(update.nextSyncCommittee),
         Array.from(update.nextSyncCommitteeBranch).map((i) => i.valueOf() as Uint8Array),
         NEXT_SYNC_COMMITTEE_INDEX_FLOORLOG2,
         NEXT_SYNC_COMMITTEE_INDEX % 2 ** NEXT_SYNC_COMMITTEE_INDEX_FLOORLOG2,
         update.header.stateRoot.valueOf() as Uint8Array
-      ),
-      "Invalid next sync committee merkle branch"
-    );
+      )
+    ) {
+      throw Error("Invalid next sync committee merkle branch");
+    }
   }
 
   // Verify sync committee has sufficient participants
   const syncCommitteeBitsCount = Array.from(update.syncCommitteeBits).filter((bit) => !!bit).length;
-  assert.gte(syncCommitteeBitsCount, MIN_SYNC_COMMITTEE_PARTICIPANTS, "Sync committee has not sufficient participants");
+  if (syncCommitteeBitsCount < MIN_SYNC_COMMITTEE_PARTICIPANTS) {
+    throw Error("Sync committee has not sufficient participants");
+  }
 
   // Verify sync committee aggregate signature
   //
@@ -109,16 +113,15 @@ export function validateLightClientUpdate(
   const participantPubkeys = getParticipantPubkeys(syncCommittee.pubkeys, update.syncCommitteeBits);
   const domain = computeDomain(config, config.params.DOMAIN_SYNC_COMMITTEE, update.forkVersion, genesisValidatorsRoot);
   const signingRoot = computeSigningRoot(config, config.types.altair.BeaconBlockHeader, signedHeader, domain);
-  assert.true(
-    verifyAggregate(participantPubkeys, signingRoot, update.syncCommitteeSignature.valueOf() as Uint8Array),
-    "Invalid aggregate signature"
-  );
+  if (!isValidBlsAggregate(participantPubkeys, signingRoot, update.syncCommitteeSignature.valueOf() as Uint8Array)) {
+    throw Error("Invalid aggregate signature");
+  }
 }
 
 /**
  * Same as BLS.verifyAggregate but with detailed error messages
  */
-function verifyAggregate(publicKeys: PublicKey[], message: Uint8Array, signature: Uint8Array): boolean {
+function isValidBlsAggregate(publicKeys: PublicKey[], message: Uint8Array, signature: Uint8Array): boolean {
   let aggPubkey: PublicKey;
   try {
     aggPubkey = PublicKey.aggregate(publicKeys);

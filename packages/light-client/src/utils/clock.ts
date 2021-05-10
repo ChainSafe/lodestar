@@ -2,7 +2,8 @@ import {AbortSignal} from "abort-controller";
 import {Slot} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
-import {ErrorAborted, sleep, ILogger} from "@chainsafe/lodestar-utils";
+import {sleep} from "@chainsafe/lodestar-utils/lib/sleep";
+import {ErrorAborted} from "@chainsafe/lodestar-utils/lib/errors";
 
 type OnSlotFn = (slot: Slot, signal: AbortSignal) => Promise<void>;
 
@@ -17,8 +18,8 @@ export class Clock implements IClock {
 
   constructor(
     private readonly config: IBeaconConfig,
-    private readonly logger: ILogger,
-    private readonly genesisTime: number
+    private readonly genesisTime: number,
+    private readonly onError?: (e: Error) => void
   ) {}
 
   get currentSlot(): Slot {
@@ -28,7 +29,7 @@ export class Clock implements IClock {
   start(signal: AbortSignal): void {
     for (const fn of this.fns) {
       this.runAtMostEvery(signal, fn).catch((e) => {
-        this.logger.error("", {}, e);
+        if (this.onError) this.onError(e);
       });
     }
   }

@@ -1,8 +1,7 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {LIGHT_CLIENT_UPDATE_TIMEOUT} from "@chainsafe/lodestar-params";
 import {altair, Slot} from "@chainsafe/lodestar-types";
-import {intDiv} from "@chainsafe/lodestar-utils";
-import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
+import {computeSyncPeriodAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {validateLightClientUpdate} from "./validation";
 import {deserializeSyncCommittee, sumBits} from "../utils/utils";
 import {LightClientSnapshotFast, LightClientStoreFast} from "./types";
@@ -88,9 +87,8 @@ export function applyLightClientUpdate(
   snapshot: LightClientSnapshotFast,
   update: altair.LightClientUpdate
 ): void {
-  const {EPOCHS_PER_SYNC_COMMITTEE_PERIOD} = config.params;
-  const snapshotPeriod = intDiv(computeEpochAtSlot(config, snapshot.header.slot), EPOCHS_PER_SYNC_COMMITTEE_PERIOD);
-  const updatePeriod = intDiv(computeEpochAtSlot(config, update.header.slot), EPOCHS_PER_SYNC_COMMITTEE_PERIOD);
+  const snapshotPeriod = computeSyncPeriodAtSlot(config, snapshot.header.slot);
+  const updatePeriod = computeSyncPeriodAtSlot(config, update.header.slot);
   if (updatePeriod === snapshotPeriod + 1) {
     snapshot.currentSyncCommittee = snapshot.nextSyncCommittee;
     snapshot.nextSyncCommittee = deserializeSyncCommittee(update.nextSyncCommittee);
