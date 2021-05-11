@@ -136,10 +136,7 @@ describe("Lightclient flow with LightClientUpdater", () => {
       nextSyncCommittee: lightclientServer["getSyncCommittee"](1).syncCommittee,
     };
     const lightclient = Lightclient.initializeFromTrustedSnapshot(
-      config,
-      clock,
-      genesisValidatorsRoot,
-      beaconApiUrl,
+      {config, clock, genesisValidatorsRoot, beaconApiUrl},
       snapshot
     );
 
@@ -151,10 +148,7 @@ describe("Lightclient flow with LightClientUpdater", () => {
   it("Simulate a second lightclient syncing over the API from trusted stateRoot", async () => {
     const clock = new MockClock(toSlot);
     const lightclient = await Lightclient.initializeFromTrustedStateRoot(
-      config,
-      clock,
-      genesisValidatorsRoot,
-      beaconApiUrl,
+      {config, clock, genesisValidatorsRoot, beaconApiUrl},
       {stateRoot: genesisStateRoot, slot: 0}
     );
 
