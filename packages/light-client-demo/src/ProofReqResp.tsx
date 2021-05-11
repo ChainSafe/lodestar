@@ -6,11 +6,34 @@ import {toHexString} from "@chainsafe/ssz";
 import {ReqStatus} from "./types";
 import {ErrorView} from "./components/ErrorView";
 
-type Path = (string | number)[];
+const initialPathStr = `[
+  ["slot"],
+  ["validators", 0, "exitEpoch"],
+  ["balances", 0]
+]`;
 
-function renderState(paths: Path[], state: altair.BeaconState | null): string {
-  if (!state) return "";
-  return paths.map((path) => path.join(".") + " " + path.reduce((acc, p) => acc[p], state)).join("\n");
+type Path = (string | number)[];
+type StateRender = {key: string; value: string}[];
+type Json = Record<string | number, string | number>;
+
+function renderState(paths: Path[], state: altair.BeaconState | null): StateRender {
+  if (!state) return [];
+  return paths.map((path) => ({
+    key: path.join("."),
+    value: getStateData(state, path),
+  }));
+}
+
+function getStateData(state: altair.BeaconState, path: Path): string {
+  let value = (state as unknown) as Json;
+  for (const indexer of path) {
+    value = (value[indexer] as unknown) as Json;
+  }
+  if (typeof value === "function" || typeof value === "object" || typeof value === "symbol") {
+    return "-";
+  } else {
+    return String(value);
+  }
 }
 
 function renderProof(proof: TreeOffsetProof): string {
@@ -23,8 +46,8 @@ function renderProof(proof: TreeOffsetProof): string {
 }
 
 export function ProofReqResp({client}: {client: Lightclient}): JSX.Element {
-  const [reqStatusProof, setReqStatusProof] = useState<ReqStatus<{proof: TreeOffsetProof; stateStr: string}>>({});
-  const [pathsStr, setPaths] = useState(JSON.stringify([["slot"], ["validators", 0, "exitEpoch"]], null, 2));
+  const [reqStatusProof, setReqStatusProof] = useState<ReqStatus<{proof: TreeOffsetProof; stateStr: StateRender}>>({});
+  const [pathsStr, setPaths] = useState(initialPathStr);
 
   async function fetchProof(): Promise<void> {
     try {
@@ -50,12 +73,7 @@ export function ProofReqResp({client}: {client: Lightclient}): JSX.Element {
           <h3>Paths</h3>
           <div className="field">
             <div className="control">
-              <textarea
-                className="textarea"
-                rows={10}
-                value={pathsStr}
-                onChange={(evt) => setPaths(evt.target.value)}
-              />
+              <textarea className="textarea" rows={6} value={pathsStr} onChange={(evt) => setPaths(evt.target.value)} />
             </div>
           </div>
 
@@ -71,12 +89,27 @@ export function ProofReqResp({client}: {client: Lightclient}): JSX.Element {
           </div>
         </div>
 
-        <div className="stateproof" style={{whiteSpace: "pre"}}>
+        <div className="state-proof" style={{whiteSpace: "pre"}}>
           <h3>State</h3>
-          {reqStatusProof.result ? <div>{reqStatusProof.result.stateStr}</div> : <p>no state</p>}
+          {reqStatusProof.result ? (
+            <div className="state-render">
+              {reqStatusProof.result.stateStr.map((item, i) => (
+                <React.Fragment key={i}>
+                  <span>{item.key}</span>
+                  <span>{item.value}</span>
+                </React.Fragment>
+              ))}
+            </div>
+          ) : (
+            <p>no state</p>
+          )}
 
           <h3>Proof</h3>
-          {reqStatusProof.result ? <div>{renderProof(reqStatusProof.result.proof)}</div> : <p>no proof</p>}
+          {reqStatusProof.result ? (
+            <div className="proof-render">{renderProof(reqStatusProof.result.proof)}</div>
+          ) : (
+            <p>no proof</p>
+          )}
           <br />
         </div>
       </div>

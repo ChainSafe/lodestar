@@ -64,14 +64,23 @@ footer {
   top: 0;
 }
 
-h2 {
+h1 {
   margin-top: 0.67em;
+  margin-bottom: 0.67em;
+  font-size: 3rem;
+  font-weight: bold;
+}
+
+h2 {
+  margin-top: 0.83em;
+  margin-bottom: 0.83em;
   font-size: 2rem;
   font-weight: bold;
 }
 
 h3 {
-  margin-top: 0.67em;
+  margin-top: 1em;
+  margin-bottom: 1em;
   font-size: 1.4rem;
   font-weight: bold;
 }
@@ -81,6 +90,20 @@ h3 {
 .space-child > *:not(:last-child),
 section > *:not(:last-child) {
   margin-bottom: 1rem;
+}
+
+.proof-container > *:not(:last-child) {
+  margin-bottom: 2rem;
+}
+.proof-render {
+  font-family: monospace;
+}
+.header-render,
+.state-render {
+  display: grid;
+  grid-template-columns: max-content auto;
+  gap: 0.5rem 1rem;
+  font-family: monospace;
 }
 
 // Progress bar

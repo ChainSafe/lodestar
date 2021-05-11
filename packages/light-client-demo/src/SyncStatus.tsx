@@ -1,10 +1,10 @@
 import React, {useEffect, useState, useCallback} from "react";
 import {Lightclient} from "@chainsafe/lodestar-light-client/lib/client";
-import {BlockHeader} from "./components/BlockHeader";
+import {altair} from "@chainsafe/lodestar-types";
+import {toHexString} from "@chainsafe/ssz";
 import {ErrorView} from "./components/ErrorView";
 import {ReqStatus} from "./types";
 import {config} from "./config";
-import {altair} from "@chainsafe/lodestar-types";
 
 export function SyncStatus({client}: {client: Lightclient}): JSX.Element {
   const [reqStatusSync, setReqStatusSync] = useState<ReqStatus<altair.BeaconBlockHeader>>({});
@@ -43,7 +43,12 @@ export function SyncStatus({client}: {client: Lightclient}): JSX.Element {
       ) : null}
 
       <h3>Latest Synced Snapshot Header</h3>
-      <BlockHeader config={client.config} header={client.store.snapshot.header} />
+      <div className="header-render">
+        <span>slot</span>
+        <span>{client.store.snapshot.header.slot}</span>
+        <span>stateRoot</span>
+        <span>{toHexString(client.store.snapshot.header.stateRoot)}</span>
+      </div>
     </section>
   );
 }
