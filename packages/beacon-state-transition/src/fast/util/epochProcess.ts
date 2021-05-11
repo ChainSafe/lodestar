@@ -1,15 +1,8 @@
 import {ForkName} from "@chainsafe/lodestar-config";
-import {List, readonlyValues} from "@chainsafe/ssz";
 import {Epoch, ValidatorIndex, Gwei, phase0, allForks} from "@chainsafe/lodestar-types";
 import {intDiv} from "@chainsafe/lodestar-utils";
 
-import {
-  computeActivationExitEpoch,
-  getBlockRootAtSlot,
-  computeStartSlotAtEpoch,
-  getChurnLimit,
-  isActiveValidator,
-} from "../../util";
+import {computeActivationExitEpoch, getChurnLimit, isActiveValidator} from "../../util";
 import {FAR_FUTURE_EPOCH} from "../../constants";
 import {
   IAttesterStatus,
@@ -26,6 +19,7 @@ import {
 } from "./attesterStatus";
 import {IEpochStakeSummary} from "./epochStakeSummary";
 import {CachedBeaconState} from "./cachedBeaconState";
+import {statusProcessEpoch} from "../../phase0/fast/epoch/processPendingAttestations";
 
 /**
  * The AttesterStatus (and FlatValidator under status.validator) objects and
@@ -82,7 +76,6 @@ export function prepareEpochProcessState<T extends allForks.BeaconState>(state: 
 
   const {config, epochCtx, validators} = state;
   const forkName = config.getForkName(state.slot);
-  const rootType = config.types.Root;
   const {
     EPOCHS_PER_SLASHINGS_VECTOR,
     MAX_EFFECTIVE_BALANCE,
@@ -167,72 +160,9 @@ export function prepareEpochProcessState<T extends allForks.BeaconState>(state: 
   out.exitQueueEnd = exitQueueEnd;
   out.churnLimit = churnLimit;
 
-  const statusProcessEpoch = (
-    statuses: IAttesterStatus[],
-    attestations: List<phase0.PendingAttestation>,
-    epoch: Epoch,
-    sourceFlag: number,
-    targetFlag: number,
-    headFlag: number
-  ): void => {
-    const actualTargetBlockRoot = getBlockRootAtSlot(config, state, computeStartSlotAtEpoch(config, epoch));
-    for (const att of readonlyValues(attestations)) {
-      // Load all the attestation details from the state tree once, do not reload for each participant
-      const aggregationBits = att.aggregationBits;
-      const attData = att.data;
-      const inclusionDelay = att.inclusionDelay;
-      const proposerIndex = att.proposerIndex;
-      const attSlot = attData.slot;
-      const committeeIndex = attData.index;
-      const attBeaconBlockRoot = attData.beaconBlockRoot;
-      const attTarget = attData.target;
-
-      const attBits = Array.from(readonlyValues(aggregationBits));
-      const attVotedTargetRoot = rootType.equals(attTarget.root, actualTargetBlockRoot);
-      const attVotedHeadRoot = rootType.equals(attBeaconBlockRoot, getBlockRootAtSlot(config, state, attSlot));
-
-      // attestation-target is already known to be this epoch, get it from the pre-computed shuffling directly.
-      const committee = epochCtx.getBeaconCommittee(attSlot, committeeIndex);
-
-      const participants: ValidatorIndex[] = [];
-      for (const [i, index] of committee.entries()) {
-        if (attBits[i]) {
-          participants.push(index);
-        }
-      }
-
-      if (epoch === prevEpoch) {
-        for (const p of participants) {
-          const status = statuses[p];
-
-          // If the attestation is the earliest, i.e. has the smallest delay
-          if (status.proposerIndex === -1 || status.inclusionDelay > inclusionDelay) {
-            status.proposerIndex = proposerIndex;
-            status.inclusionDelay = inclusionDelay;
-          }
-        }
-      }
-
-      for (const p of participants) {
-        const status = statuses[p];
-
-        // remember the participant as one of the good validators
-        status.flags |= sourceFlag;
-
-        // if the attestation is for the boundary
-        if (attVotedTargetRoot) {
-          status.flags |= targetFlag;
-
-          // head votes must be a subset of target votes
-          if (attVotedHeadRoot) {
-            status.flags |= headFlag;
-          }
-        }
-      }
-    }
-  };
   if (forkName === ForkName.phase0) {
     statusProcessEpoch(
+      state,
       out.statuses,
       ((state as unknown) as CachedBeaconState<phase0.BeaconState>).previousEpochAttestations,
       prevEpoch,
@@ -241,6 +171,7 @@ export function prepareEpochProcessState<T extends allForks.BeaconState>(state: 
       FLAG_PREV_HEAD_ATTESTER
     );
     statusProcessEpoch(
+      state,
       out.statuses,
       ((state as unknown) as CachedBeaconState<phase0.BeaconState>).currentEpochAttestations,
       currentEpoch,
