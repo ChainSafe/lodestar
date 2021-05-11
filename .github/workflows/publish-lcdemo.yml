@@ -7,11 +7,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-18.04
-    defaults:
-      run:
-        working-directory: packages/admin-ui/
-
+    runs-on: ubuntu-latest
     steps:
       # <common-build> - Uses YAML anchors in the future
       - uses: actions/checkout@v2
