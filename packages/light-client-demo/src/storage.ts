@@ -3,7 +3,7 @@ import {config} from "./config";
 
 /* eslint-disable no-console */
 
-const key = "snapshot-bytes";
+const key = "snapshot-json";
 
 export function readSnapshot(): altair.LightClientSnapshot | null {
   try {

@@ -1,4 +1,5 @@
 import React, {useEffect, useState, useCallback} from "react";
+import {debounce} from "debounce";
 import {Lightclient, LightclientEvent} from "@chainsafe/lodestar-light-client/lib/client";
 import {computeSyncPeriodAtSlot} from "@chainsafe/lodestar-light-client/lib/utils/syncPeriod";
 import {altair} from "@chainsafe/lodestar-types";
@@ -42,7 +43,8 @@ export function SyncStatus({client}: {client: Lightclient}): JSX.Element {
 
   // Subscribe to update sync committee events
   useEffect(() => {
-    const onAdvancedCommittee = (): void => writeSnapshot(client.getSnapshot());
+    // debounce storing the snapshot since it does some expensive serialization
+    const onAdvancedCommittee = debounce((): void => writeSnapshot(client.getSnapshot()), 250);
     client.emitter.on(LightclientEvent.advancedCommittee, onAdvancedCommittee);
     return () => client.emitter.off(LightclientEvent.advancedCommittee, onAdvancedCommittee);
   }, [client]);
