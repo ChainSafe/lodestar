@@ -40,4 +40,4 @@ export async function assembleBody(
   };
 }
 
-/** process_sync_committee_contributions is implemented in SeenSyncCommitteeContributionCache.getSyncAggregate */
+/** process_sync_committee_contributions is implemented in syncCommitteeContribution.getSyncAggregate */

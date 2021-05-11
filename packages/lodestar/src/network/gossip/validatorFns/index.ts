@@ -5,7 +5,7 @@ import {validateAttesterSlashing} from "./attesterSlashing";
 import {validateBeaconBlock} from "./block";
 import {validateProposerSlashing} from "./proposerSlashing";
 import {validateSyncCommitteeContribution} from "./syncCommitteeContribution";
-import {validateSyncCommittee} from "./syncCommitteeSignature";
+import {validateSyncCommittee} from "./syncCommittee";
 import {validateVoluntaryExit} from "./voluntaryExit";
 
 export const validatorFns = {

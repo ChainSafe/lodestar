@@ -9,7 +9,7 @@ import {ChainEvent, IBeaconChain} from "../chain";
 import {BlockError, BlockErrorCode} from "../chain/errors";
 import {BeaconGossipHandler} from "./gossip";
 import {RangeSync, RangeSyncStatus, RangeSyncEvent} from "./range/range";
-import {AttestationCollector, fetchUnknownBlockRoot, getPeerSyncType, PeerSyncType} from "./utils";
+import {fetchUnknownBlockRoot, getPeerSyncType, PeerSyncType} from "./utils";
 import {MIN_EPOCH_TO_START_GOSSIP} from "./constants";
 import {SyncState, SyncChainDebugState, syncStateMetric} from "./interface";
 import {ISyncOptions} from "./options";
@@ -23,7 +23,6 @@ export class BeaconSync implements IBeaconSync {
 
   private readonly rangeSync: RangeSync;
   private readonly gossip: BeaconGossipHandler;
-  private readonly attestationCollector: AttestationCollector;
 
   // avoid finding same root at the same time
   private readonly processingRoots = new Set<string>();
@@ -48,7 +47,6 @@ export class BeaconSync implements IBeaconSync {
     this.rangeSync = new RangeSync(modules);
     this.gossip =
       modules.gossipHandler || new BeaconGossipHandler(modules.config, modules.chain, modules.network, modules.db);
-    this.attestationCollector = modules.attestationCollector || new AttestationCollector(modules.config, modules);
     this.slotImportTolerance = modules.config.params.SLOTS_PER_EPOCH;
 
     // Subscribe to RangeSync completing a SyncChain and recompute sync state
@@ -58,7 +56,6 @@ export class BeaconSync implements IBeaconSync {
     // TODO: It's okay to start this on initial sync?
     this.chain.emitter.on(ChainEvent.errorBlock, this.onUnknownBlockRoot);
     this.chain.emitter.on(ChainEvent.clockEpoch, this.onClockEpoch);
-    this.attestationCollector.start();
 
     if (metrics) {
       metrics.syncStatus.addCollect(() => metrics.syncStatus.set(syncStateMetric[this.state]));
@@ -71,7 +68,6 @@ export class BeaconSync implements IBeaconSync {
     this.chain.emitter.off(ChainEvent.errorBlock, this.onUnknownBlockRoot);
     this.chain.emitter.off(ChainEvent.clockEpoch, this.onClockEpoch);
     this.rangeSync.close();
-    this.attestationCollector.stop();
     this.gossip.stop();
     this.gossip.close();
   }

@@ -3,14 +3,15 @@ import {config} from "@chainsafe/lodestar-config/minimal";
 import {altair} from "@chainsafe/lodestar-types";
 import {toHexString} from "@chainsafe/ssz";
 import {expect} from "chai";
-import {NUM_SLOTS_IN_CACHE} from "../../../src/db/repositories/utils/syncCommittee";
-import {SeenSyncCommitteeCache} from "../../../src/db/seenSyncCommitteeCache";
+import {SyncCommitteeCache} from "../../../src/db/syncCommittee";
 import {generateSyncCommitteeSignature} from "../../utils/syncCommittee";
 
-describe("SeenSyncCommitteeCache", function () {
-  let cache: SeenSyncCommitteeCache;
+const NUM_SLOTS_IN_CACHE = 3;
+
+describe("SyncCommitteeCache", function () {
+  let cache: SyncCommitteeCache;
   const subCommitteeIndex = 2;
-  const indicesInSubSyncCommittee = [4, 5];
+  const indexInSubCommittee = 5;
   const beaconBlockRoot = Buffer.alloc(32, 1);
   const slot = 10;
   let syncCommittee: altair.SyncCommitteeSignature;
@@ -27,8 +28,8 @@ describe("SeenSyncCommitteeCache", function () {
   });
 
   beforeEach(() => {
-    cache = new SeenSyncCommitteeCache(config);
-    cache.addSyncCommitteeSignature(subCommitteeIndex, syncCommittee, indicesInSubSyncCommittee);
+    cache = new SyncCommitteeCache(config);
+    cache.add(subCommitteeIndex, syncCommittee, indexInSubCommittee);
   });
 
   it("should find a sync committee based on same slot and validator index", () => {
@@ -37,10 +38,10 @@ describe("SeenSyncCommitteeCache", function () {
       slot,
       validatorIndex: 2000,
     });
-    expect(cache.hasSyncCommitteeSignature(subCommitteeIndex, newSyncCommittee)).to.be.true;
-    expect(cache.hasSyncCommitteeSignature(subCommitteeIndex + 1, newSyncCommittee)).to.be.false;
+    expect(cache.has(subCommitteeIndex, newSyncCommittee)).to.be.true;
+    expect(cache.has(subCommitteeIndex + 1, newSyncCommittee)).to.be.false;
     newSyncCommittee.slot++;
-    expect(cache.hasSyncCommitteeSignature(subCommitteeIndex, newSyncCommittee)).to.be.false;
+    expect(cache.has(subCommitteeIndex, newSyncCommittee)).to.be.false;
   });
 
   it("should preaggregate SyncCommitteeContribution", () => {
@@ -59,7 +60,7 @@ describe("SeenSyncCommitteeCache", function () {
       signature: newSecretKey.sign(beaconBlockRoot).toBytes(),
     });
     const newIndicesInSubSyncCommittee = [1];
-    cache.addSyncCommitteeSignature(subCommitteeIndex, newSyncCommittee, newIndicesInSubSyncCommittee);
+    cache.add(subCommitteeIndex, newSyncCommittee, indexInSubCommittee);
     contribution = cache.getSyncCommitteeContribution(
       subCommitteeIndex,
       syncCommittee.slot,
@@ -70,7 +71,7 @@ describe("SeenSyncCommitteeCache", function () {
       expect(contribution.slot).to.be.equal(syncCommittee.slot);
       expect(toHexString(contribution.beaconBlockRoot)).to.be.equal(toHexString(syncCommittee.beaconBlockRoot));
       expect(contribution.subCommitteeIndex).to.be.equal(subCommitteeIndex);
-      const newIndices = [...newIndicesInSubSyncCommittee, ...indicesInSubSyncCommittee];
+      const newIndices = [...newIndicesInSubSyncCommittee, indexInSubCommittee];
       const aggregationBits = contribution.aggregationBits;
       for (let index = 0; index < aggregationBits.length; index++) {
         if (newIndices.includes(index)) {
@@ -86,10 +87,10 @@ describe("SeenSyncCommitteeCache", function () {
     for (let i = 0; i < NUM_SLOTS_IN_CACHE; i++) {
       const newSyncCommittee = {...syncCommittee};
       newSyncCommittee.slot = syncCommittee.slot + i + 1;
-      cache.addSyncCommitteeSignature(subCommitteeIndex, newSyncCommittee, [6]);
+      cache.add(subCommitteeIndex, newSyncCommittee, indexInSubCommittee);
     }
-    expect(cache.hasSyncCommitteeSignature(subCommitteeIndex, syncCommittee)).to.be.true;
-    cache.prune();
-    expect(cache.hasSyncCommitteeSignature(subCommitteeIndex, syncCommittee)).to.be.false;
+    expect(cache.has(subCommitteeIndex, syncCommittee)).to.be.true;
+    cache.prune(99);
+    expect(cache.has(subCommitteeIndex, syncCommittee)).to.be.false;
   });
 });

@@ -14,7 +14,6 @@ export * from "./proposer";
 export * from "./proposerSlashings";
 export * from "./randao";
 export * from "./voluntaryExits";
-export * from "./syncCommittee";
 
 /**
  * Includes all signatures on the block (except the deposit signatures) for verification.

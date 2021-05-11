@@ -1,12 +1,13 @@
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {altair} from "@chainsafe/lodestar-types";
 import {expect} from "chai";
-import {NUM_SLOTS_IN_CACHE} from "../../../src/db/repositories/utils/syncCommittee";
-import {SeenSyncCommitteeContributionCache} from "../../../src/db/seenSyncCommitteeContributionCache";
+import {SyncCommitteeContributionCache} from "../../../src/db/syncCommitteeContribution";
 import {generateContributionAndProof} from "../../utils/contributionAndProof";
 
-describe("SeenSyncCommitteeContributionCache", function () {
-  let cache: SeenSyncCommitteeContributionCache;
+const NUM_SLOTS_IN_CACHE = 8;
+
+describe("syncCommitteeContribution", function () {
+  let cache: SyncCommitteeContributionCache;
   const beaconBlockRoot = Buffer.alloc(32, 1);
   const slot = 10;
   const contributionAndProof: altair.ContributionAndProof = generateContributionAndProof({
@@ -14,8 +15,8 @@ describe("SeenSyncCommitteeContributionCache", function () {
   });
 
   beforeEach(() => {
-    cache = new SeenSyncCommitteeContributionCache(config);
-    cache.addContributionAndProof(contributionAndProof);
+    cache = new SyncCommitteeContributionCache(config);
+    cache.add(contributionAndProof);
   });
 
   it("should find a contribution with same slot + aggregatorIndex + subCommittee", () => {
@@ -23,9 +24,9 @@ describe("SeenSyncCommitteeContributionCache", function () {
       // different beaconBlockRoot
       contribution: {slot, beaconBlockRoot: Buffer.alloc(32)},
     });
-    expect(cache.hasContributionAndProof(newContributionAndProof)).to.be.true;
+    expect(cache.has(newContributionAndProof)).to.be.true;
     newContributionAndProof.aggregatorIndex = contributionAndProof.aggregatorIndex + 1;
-    expect(cache.hasContributionAndProof(newContributionAndProof)).to.be.false;
+    expect(cache.has(newContributionAndProof)).to.be.false;
   });
 
   it("should return SyncCommitteeContribution list based on same slot and block root", () => {
@@ -33,13 +34,10 @@ describe("SeenSyncCommitteeContributionCache", function () {
       aggregatorIndex: contributionAndProof.aggregatorIndex + 1,
       contribution: {slot, beaconBlockRoot},
     });
-    cache.addContributionAndProof(newContributionAndProof);
-    const contributions = cache.getSyncCommitteeContributions(slot, beaconBlockRoot);
-    expect(contributions.length).to.be.equal(2);
-    for (const contribution of contributions) {
-      expect(contribution.slot).to.be.equal(slot);
-      expect(contribution.beaconBlockRoot).to.be.deep.equal(beaconBlockRoot);
-    }
+    cache.add(newContributionAndProof);
+    const aggregate = cache.getSyncAggregate(slot, beaconBlockRoot);
+    // TODO Test it's correct. Modify the contributions above so they have 1 bit set to true
+    expect(aggregate.syncCommitteeBits.length).to.be.equal(2);
   });
 
   it("should prune", () => {
@@ -47,10 +45,10 @@ describe("SeenSyncCommitteeContributionCache", function () {
       const newContributionAndProof = generateContributionAndProof({
         contribution: {slot: slot + i + 1, beaconBlockRoot},
       });
-      cache.addContributionAndProof(newContributionAndProof);
+      cache.add(newContributionAndProof);
     }
-    expect(cache.hasContributionAndProof(contributionAndProof)).to.be.true;
-    cache.prune();
-    expect(cache.hasContributionAndProof(contributionAndProof)).to.be.false;
+    expect(cache.has(contributionAndProof)).to.be.true;
+    cache.prune(99);
+    expect(cache.has(contributionAndProof)).to.be.false;
   });
 });

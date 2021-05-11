@@ -13,6 +13,7 @@ import {
   getSeed,
   isAggregatorFromCommitteeLength,
 } from "../../util";
+import {getSyncCommitteeIndices} from "../../altair/state_accessor/sync_committee";
 import {computeEpochShuffling, IEpochShuffling} from "./epochShuffling";
 import {MutableVector} from "@chainsafe/persistent-ts";
 import {CachedValidatorList} from "./cachedValidatorList";
@@ -68,6 +69,13 @@ export function createEpochContext(
   }
   const nextShuffling = computeEpochShuffling(config, state, indicesBounded, nextEpoch);
   const proposers = computeProposers(config, state, currentShuffling);
+
+  // Only after altair, compute the indices of the current sync committee
+  const onAltairFork = currentEpoch >= config.params.ALTAIR_FORK_EPOCH;
+  const nextPeriodEpoch = currentEpoch + config.params.EPOCHS_PER_SYNC_COMMITTEE_PERIOD;
+  const currSyncCommitteeIndexes = onAltairFork ? getSyncCommitteeIndices(config, state, currentEpoch) : [];
+  const nextSyncCommitteeIndexes = onAltairFork ? getSyncCommitteeIndices(config, state, nextPeriodEpoch) : [];
+
   return new EpochContext({
     config,
     pubkey2index,
@@ -76,6 +84,8 @@ export function createEpochContext(
     previousShuffling,
     currentShuffling,
     nextShuffling,
+    currSyncCommitteeIndexes,
+    nextSyncCommitteeIndexes,
   });
 }
 
@@ -139,7 +149,8 @@ export function rotateEpochs(
 ): void {
   epochCtx.previousShuffling = epochCtx.currentShuffling;
   epochCtx.currentShuffling = epochCtx.nextShuffling;
-  const nextEpoch = epochCtx.currentShuffling.epoch + 1;
+  const currEpoch = epochCtx.currentShuffling.epoch;
+  const nextEpoch = currEpoch + 1;
   const indicesBounded: [ValidatorIndex, Epoch, Epoch][] = validators.map((v, i) => [
     i,
     v.activationEpoch,
@@ -147,9 +158,26 @@ export function rotateEpochs(
   ]);
   epochCtx.nextShuffling = computeEpochShuffling(epochCtx.config, state, indicesBounded, nextEpoch);
   epochCtx.proposers = computeProposers(epochCtx.config, state, epochCtx.currentShuffling);
+
+  // State slot has already been += 1
+  if (
+    currEpoch % epochCtx.config.params.EPOCHS_PER_SYNC_COMMITTEE_PERIOD === 0 &&
+    currEpoch > epochCtx.config.params.ALTAIR_FORK_EPOCH
+  ) {
+    const nextPeriodEpoch = currEpoch + epochCtx.config.params.EPOCHS_PER_SYNC_COMMITTEE_PERIOD;
+    epochCtx.currSyncCommitteeIndexes = epochCtx.nextSyncCommitteeIndexes;
+    epochCtx.nextSyncCommitteeIndexes = getSyncCommitteeIndices(epochCtx.config, state, nextPeriodEpoch);
+  }
+
+  // If crossing through the altair fork the caches will be empty, fill them up
+  if (currEpoch === epochCtx.config.params.ALTAIR_FORK_EPOCH) {
+    const nextPeriodEpoch = currEpoch + epochCtx.config.params.EPOCHS_PER_SYNC_COMMITTEE_PERIOD;
+    epochCtx.currSyncCommitteeIndexes = getSyncCommitteeIndices(epochCtx.config, state, currEpoch);
+    epochCtx.nextSyncCommitteeIndexes = getSyncCommitteeIndices(epochCtx.config, state, nextPeriodEpoch);
+  }
 }
 
-interface IEpochContextParams {
+interface IEpochContextData {
   config: IBeaconConfig;
   pubkey2index: PubkeyIndexMap;
   index2pubkey: PublicKey[];
@@ -157,6 +185,8 @@ interface IEpochContextParams {
   previousShuffling: IEpochShuffling;
   currentShuffling: IEpochShuffling;
   nextShuffling: IEpochShuffling;
+  currSyncCommitteeIndexes: ValidatorIndex[];
+  nextSyncCommitteeIndexes: ValidatorIndex[];
 }
 
 /**
@@ -178,16 +208,27 @@ export class EpochContext {
   previousShuffling: IEpochShuffling;
   currentShuffling: IEpochShuffling;
   nextShuffling: IEpochShuffling;
+  /**
+   * Updates every
+   * Memory cost: 1024 Number integers
+   */
+  currSyncCommitteeIndexes: ValidatorIndex[];
+  /**
+   * Memory cost: 1024 Number integers
+   */
+  nextSyncCommitteeIndexes: ValidatorIndex[];
   config: IBeaconConfig;
 
-  constructor(params: IEpochContextParams) {
-    this.config = params.config;
-    this.pubkey2index = params.pubkey2index;
-    this.index2pubkey = params.index2pubkey;
-    this.proposers = params.proposers;
-    this.previousShuffling = params.previousShuffling;
-    this.currentShuffling = params.currentShuffling;
-    this.nextShuffling = params.nextShuffling;
+  constructor(data: IEpochContextData) {
+    this.config = data.config;
+    this.pubkey2index = data.pubkey2index;
+    this.index2pubkey = data.index2pubkey;
+    this.proposers = data.proposers;
+    this.previousShuffling = data.previousShuffling;
+    this.currentShuffling = data.currentShuffling;
+    this.nextShuffling = data.nextShuffling;
+    this.currSyncCommitteeIndexes = data.currSyncCommitteeIndexes;
+    this.nextSyncCommitteeIndexes = data.nextSyncCommitteeIndexes;
   }
 
   /**

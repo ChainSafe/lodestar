@@ -6,7 +6,6 @@ import {BeaconGossipHandler} from "./gossip";
 import {IBeaconChain} from "../chain";
 import {IMetrics} from "../metrics";
 import {IBeaconDb} from "../db";
-import {AttestationCollector} from "./utils";
 import {SyncChainDebugState} from "./range/chain";
 export {SyncChainDebugState};
 
@@ -55,5 +54,4 @@ export interface ISyncModules {
   logger: ILogger;
   chain: IBeaconChain;
   gossipHandler?: BeaconGossipHandler;
-  attestationCollector?: AttestationCollector;
 }

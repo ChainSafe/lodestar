@@ -46,7 +46,7 @@ describe("Sync Committee Signature validation", function () {
     const syncCommittee = generateSyncCommitteeSignature({slot: 1});
     await expectRejectedWithLodestarError(
       validateGossipSyncCommittee(config, chain, db, {syncCommittee, validSignature: false}, 0),
-      SyncCommitteeErrorCode.PAST_SLOT
+      SyncCommitteeErrorCode.NOT_CURRENT_SLOT
     );
   });
 
@@ -54,7 +54,7 @@ describe("Sync Committee Signature validation", function () {
     const syncCommittee = generateSyncCommitteeSignature({slot: 3});
     await expectRejectedWithLodestarError(
       validateGossipSyncCommittee(config, chain, db, {syncCommittee, validSignature: false}, 0),
-      SyncCommitteeErrorCode.FUTURE_SLOT
+      SyncCommitteeErrorCode.NOT_CURRENT_SLOT
     );
   });
 
@@ -70,7 +70,7 @@ describe("Sync Committee Signature validation", function () {
   it("should throw error - there has been another valid sync committee signature for the declared slot", async function () {
     const syncCommittee = generateSyncCommitteeSignature({slot: 2});
     forkChoiceStub.hasBlock.returns(true);
-    db.seenSyncCommiteeCache.hasSyncCommitteeSignature.returns(true);
+    db.seenSyncCommiteeCache.has.returns(true);
     await expectRejectedWithLodestarError(
       validateGossipSyncCommittee(config, chain, db, {syncCommittee, validSignature: false}, 0),
       SyncCommitteeErrorCode.SYNC_COMMITTEE_ALREADY_KNOWN
@@ -80,7 +80,7 @@ describe("Sync Committee Signature validation", function () {
   it("should throw error - the validator is not part of the current sync committee", async function () {
     const syncCommittee = generateSyncCommitteeSignature({slot: 2, validatorIndex: 1});
     forkChoiceStub.hasBlock.returns(true);
-    db.seenSyncCommiteeCache.hasSyncCommitteeSignature.returns(false);
+    db.seenSyncCommiteeCache.has.returns(false);
     const state = generateCachedState({}, config, true);
     // all validators have same pubkey, make validator 0 different
     state.validators[0].pubkey = Buffer.alloc(48, 1);
@@ -108,7 +108,7 @@ describe("Sync Committee Signature validation", function () {
     computeSubnetsForSyncCommitteeStub.returns([10]);
     const syncCommittee = generateSyncCommitteeSignature({slot: 2, validatorIndex: 1});
     forkChoiceStub.hasBlock.returns(true);
-    db.seenSyncCommiteeCache.hasSyncCommitteeSignature.returns(false);
+    db.seenSyncCommiteeCache.has.returns(false);
     const commonPubkey = generateCachedState().validators[0].pubkey;
     const headState = generateCachedState(
       {
@@ -123,7 +123,7 @@ describe("Sync Committee Signature validation", function () {
     chain.getHeadState.returns(headState);
     await expectRejectedWithLodestarError(
       validateGossipSyncCommittee(config, chain, db, {syncCommittee, validSignature: false}, 0),
-      SyncCommitteeErrorCode.INVALID_SUBNET_ID
+      SyncCommitteeErrorCode.VALIDATOR_NOT_IN_SYNC_COMMITTEE
     );
   });
 
@@ -131,7 +131,7 @@ describe("Sync Committee Signature validation", function () {
     computeSubnetsForSyncCommitteeStub.returns([0]);
     const syncCommittee = generateSyncCommitteeSignature({slot: 2, validatorIndex: 1});
     forkChoiceStub.hasBlock.returns(true);
-    db.seenSyncCommiteeCache.hasSyncCommitteeSignature.returns(false);
+    db.seenSyncCommiteeCache.has.returns(false);
     const commonPubkey = generateCachedState().validators[0].pubkey;
     const headState = generateCachedState(
       {

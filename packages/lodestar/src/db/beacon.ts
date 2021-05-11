@@ -22,8 +22,8 @@ import {
 import {PreGenesisState, PreGenesisStateLastProcessedBlock} from "./single";
 import {SeenAttestationCache} from "./seenAttestationCache";
 import {PendingBlockRepository} from "./repositories/pendingBlock";
-import {SeenSyncCommitteeCache} from "./seenSyncCommitteeCache";
-import {SeenSyncCommitteeContributionCache} from "./seenSyncCommitteeContributionCache";
+import {SyncCommitteeCache} from "./syncCommittee";
+import {SyncCommitteeContributionCache} from "./syncCommitteeContribution";
 
 export class BeaconDb extends DatabaseService implements IBeaconDb {
   badBlock: BadBlockRepository;
@@ -46,8 +46,8 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
   preGenesisStateLastProcessedBlock: PreGenesisStateLastProcessedBlock;
 
   // altair
-  seenSyncCommiteeCache: SeenSyncCommitteeCache;
-  seenSyncCommitteeContributionCache: SeenSyncCommitteeContributionCache;
+  syncCommitee: SyncCommitteeCache;
+  syncCommitteeContribution: SyncCommitteeContributionCache;
 
   constructor(opts: IDatabaseApiOptions) {
     super(opts);
@@ -69,8 +69,8 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
     this.preGenesisState = new PreGenesisState(this.config, this.db);
     this.preGenesisStateLastProcessedBlock = new PreGenesisStateLastProcessedBlock(this.config, this.db);
     // altair
-    this.seenSyncCommiteeCache = new SeenSyncCommitteeCache(this.config);
-    this.seenSyncCommitteeContributionCache = new SeenSyncCommitteeContributionCache(this.config);
+    this.syncCommitee = new SyncCommitteeCache(this.config);
+    this.syncCommitteeContribution = new SyncCommitteeContributionCache(this.config);
   }
 
   /**

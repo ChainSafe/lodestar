@@ -51,7 +51,7 @@ describe("Sync Committee Contribution And Proof validation", function () {
         contributionAndProof: signedContributionAndProof,
         validSignature: false,
       }),
-      SyncCommitteeErrorCode.PAST_SLOT
+      SyncCommitteeErrorCode.NOT_CURRENT_SLOT
     );
   });
 
@@ -62,7 +62,7 @@ describe("Sync Committee Contribution And Proof validation", function () {
         contributionAndProof: signedContributionAndProof,
         validSignature: false,
       }),
-      SyncCommitteeErrorCode.FUTURE_SLOT
+      SyncCommitteeErrorCode.NOT_CURRENT_SLOT
     );
   });
 
@@ -97,7 +97,7 @@ describe("Sync Committee Contribution And Proof validation", function () {
   it("should throw error - there is same contribution with same aggregator and index and slot", async function () {
     const signedContributionAndProof = generateSignedContributionAndProof({contribution: {slot: 2}});
     forkChoiceStub.hasBlock.returns(true);
-    db.seenSyncCommitteeContributionCache.hasContributionAndProof.returns(true);
+    db.syncCommitteeContribution.has.returns(true);
     await expectRejectedWithLodestarError(
       validateSyncCommitteeGossipContributionAndProof(config, chain, db, {
         contributionAndProof: signedContributionAndProof,
@@ -110,7 +110,7 @@ describe("Sync Committee Contribution And Proof validation", function () {
   it("should throw error - invalid aggregator", async function () {
     const signedContributionAndProof = generateSignedContributionAndProof({contribution: {slot: 2}});
     forkChoiceStub.hasBlock.returns(true);
-    db.seenSyncCommitteeContributionCache.hasContributionAndProof.returns(false);
+    db.syncCommitteeContribution.has.returns(false);
     isSyncCommitteeAggregatorStub.returns(false);
     await expectRejectedWithLodestarError(
       validateSyncCommitteeGossipContributionAndProof(config, chain, db, {
@@ -124,7 +124,7 @@ describe("Sync Committee Contribution And Proof validation", function () {
   it("should throw error - aggregator index is not in sync committee", async function () {
     const signedContributionAndProof = generateSignedContributionAndProof({contribution: {slot: 2}});
     forkChoiceStub.hasBlock.returns(true);
-    db.seenSyncCommitteeContributionCache.hasContributionAndProof.returns(false);
+    db.syncCommitteeContribution.has.returns(false);
     isSyncCommitteeAggregatorStub.returns(true);
     const headState = generateCachedState({}, config, true);
     chain.getHeadState.returns(headState);
@@ -141,7 +141,7 @@ describe("Sync Committee Contribution And Proof validation", function () {
   it("should throw error - invalid selection_proof signature", async function () {
     const signedContributionAndProof = generateSignedContributionAndProof({contribution: {slot: 2}});
     forkChoiceStub.hasBlock.returns(true);
-    db.seenSyncCommitteeContributionCache.hasContributionAndProof.returns(false);
+    db.syncCommitteeContribution.has.returns(false);
     isSyncCommitteeAggregatorStub.returns(true);
     const headState = generateCachedState({}, config, true);
     chain.getHeadState.returns(headState);

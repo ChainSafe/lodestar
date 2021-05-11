@@ -22,8 +22,8 @@ import {SeenAttestationCache} from "../../../src/db/seenAttestationCache";
 import {minimalConfig} from "@chainsafe/lodestar-config/minimal";
 import {SignedBeaconBlock} from "@chainsafe/lodestar-types/phase0";
 import {createStubInstance} from "../types";
-import {SeenSyncCommitteeCache} from "../../../src/db/seenSyncCommitteeCache";
-import {SeenSyncCommitteeContributionCache} from "../../../src/db/seenSyncCommitteeContributionCache";
+import {SyncCommitteeCache} from "../../../src/db/syncCommittee";
+import {SyncCommitteeContributionCache} from "../../../src/db/syncCommitteeContribution";
 
 export class StubbedBeaconDb extends BeaconDb {
   db!: SinonStubbedInstance<LevelDbController>;
@@ -45,9 +45,8 @@ export class StubbedBeaconDb extends BeaconDb {
   eth1Data: SinonStubbedInstance<Eth1DataRepository> & Eth1DataRepository;
 
   seenAttestationCache: SinonStubbedInstance<SeenAttestationCache> & SeenAttestationCache;
-  seenSyncCommiteeCache: SinonStubbedInstance<SeenSyncCommitteeCache> & SeenSyncCommitteeCache;
-  seenSyncCommitteeContributionCache: SinonStubbedInstance<SeenSyncCommitteeContributionCache> &
-    SeenSyncCommitteeContributionCache;
+  seenSyncCommiteeCache: SinonStubbedInstance<SyncCommitteeCache> & SyncCommitteeCache;
+  syncCommitteeContribution: SinonStubbedInstance<SyncCommitteeContributionCache> & SyncCommitteeContributionCache;
 
   processBlockOperations: SinonStubbedInstance<(signedBlock: phase0.SignedBeaconBlock) => Promise<void>> &
     ((signedBlock: phase0.SignedBeaconBlock) => Promise<void>);
@@ -71,8 +70,8 @@ export class StubbedBeaconDb extends BeaconDb {
     this.depositDataRoot = createStubInstance(DepositDataRootRepository);
     this.eth1Data = createStubInstance(Eth1DataRepository);
     this.seenAttestationCache = createStubInstance(SeenAttestationCache);
-    this.seenSyncCommiteeCache = createStubInstance(SeenSyncCommitteeCache);
-    this.seenSyncCommitteeContributionCache = createStubInstance(SeenSyncCommitteeContributionCache);
+    this.seenSyncCommiteeCache = createStubInstance(SyncCommitteeCache);
+    this.syncCommitteeContribution = createStubInstance(SyncCommitteeContributionCache);
     this.processBlockOperations = sinon.stub(this, "processBlockOperations") as (
       signedBlock: SignedBeaconBlock
     ) => Promise<void>;

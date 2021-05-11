@@ -1,111 +1,106 @@
-import {
-  CachedBeaconState,
-  computeSubnetsForSyncCommittee,
-  getIndicesInSubSyncCommittee,
-} from "@chainsafe/lodestar-beacon-state-transition";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
+import {SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
 import {altair} from "@chainsafe/lodestar-types";
-import {readonlyValues} from "@chainsafe/ssz";
+import {BeaconState} from "@chainsafe/lodestar-types/lib/allForks";
 import {IBeaconDb} from "../../db";
-import {ISyncCommitteeJob, SyncCommitteeError, SyncCommitteeErrorCode} from "../errors/syncCommitteeError";
+import {GossipAction, ISyncCommitteeJob, SyncCommitteeError, SyncCommitteeErrorCode} from "../errors";
 import {IBeaconChain} from "../interface";
 import {getSyncCommitteeSignatureSet} from "./signatureSets";
+
+/** TODO: Do this much better to be able to access this property in the handler */
+export type SyncCommitteeSignatureIndexed = altair.SyncCommitteeSignature & {indexInSubCommittee: number};
+
+type IndexInSubCommittee = number;
 
 /**
  * Spec v1.1.0-alpha.3
  */
 export async function validateGossipSyncCommittee(
-  config: IBeaconConfig,
   chain: IBeaconChain,
   db: IBeaconDb,
-  syncCommitteeJob: ISyncCommitteeJob,
+  job: ISyncCommitteeJob,
   subnet: number
 ): Promise<void> {
-  const {syncCommittee, validSignature} = syncCommitteeJob;
+  const {syncCommittee, validSignature} = job;
+
+  const headState = chain.getHeadState();
+  const indexInSubCommittee = validateGossipSyncCommitteeExceptSig(chain, headState, subnet, syncCommittee);
+
+  // TODO: Do this much better to be able to access this property in the handler
+  (syncCommittee as SyncCommitteeSignatureIndexed).indexInSubCommittee = indexInSubCommittee;
+
   // [IGNORE] The signature's slot is for the current slot, i.e. sync_committee_signature.slot == current_slot.
-  if (chain.clock.currentSlot < syncCommittee.slot) {
-    throw new SyncCommitteeError({
-      code: SyncCommitteeErrorCode.FUTURE_SLOT,
-      currentSlot: chain.clock.currentSlot,
-      syncCommitteeSlot: syncCommittee.slot,
-      job: syncCommitteeJob,
-    });
-  }
-  if (chain.clock.currentSlot > syncCommittee.slot) {
-    throw new SyncCommitteeError({
-      code: SyncCommitteeErrorCode.PAST_SLOT,
-      currentSlot: chain.clock.currentSlot,
-      syncCommitteeSlot: syncCommittee.slot,
-      job: syncCommitteeJob,
-    });
-  }
+  // > Checked in validateGossipSyncCommitteeExceptSig()
 
   // [IGNORE] The block being signed over (sync_committee_signature.beacon_block_root) has been seen (via both gossip and non-gossip sources).
-  if (!chain.forkChoice.hasBlock(syncCommittee.beaconBlockRoot)) {
-    throw new SyncCommitteeError({
-      code: SyncCommitteeErrorCode.UNKNOWN_BEACON_BLOCK_ROOT,
-      beaconBlockRoot: syncCommittee.beaconBlockRoot as Uint8Array,
-      job: syncCommitteeJob,
-    });
-  }
+  // > Checked in validateGossipSyncCommitteeExceptSig()
 
   // [IGNORE] There has been no other valid sync committee signature for the declared slot for the validator referenced
   // by sync_committee_signature.validator_index.
-  if (db.seenSyncCommiteeCache.hasSyncCommitteeSignature(subnet, syncCommittee)) {
-    throw new SyncCommitteeError({
+  if (db.syncCommitee.has(subnet, syncCommittee)) {
+    throw new SyncCommitteeError(GossipAction.IGNORE, {
       code: SyncCommitteeErrorCode.SYNC_COMMITTEE_ALREADY_KNOWN,
-      job: syncCommitteeJob,
     });
   }
 
   // [REJECT] The subnet_id is valid for the given validator, i.e. subnet_id in compute_subnets_for_sync_committee(state, sync_committee_signature.validator_index).
   // Note this validation implies the validator is part of the broader current sync committee along with the correct subcommittee.
-  const headState = chain.getHeadState();
-  const validatorPubkey = headState.validators[syncCommittee.validatorIndex].pubkey;
-  const currentSyncCommittee = (headState as CachedBeaconState<altair.BeaconState>).currentSyncCommittee;
-  const syncCommitteePubkeys = Array.from(readonlyValues(currentSyncCommittee.pubkeys));
-  if (
-    syncCommitteePubkeys.findIndex((pubkey) => config.types.phase0.BLSPubkey.equals(pubkey, validatorPubkey)) === -1
-  ) {
-    throw new SyncCommitteeError({
-      code: SyncCommitteeErrorCode.VALIDATOR_NOT_IN_SYNC_COMMITTEE,
-      validatorIndex: syncCommittee.validatorIndex,
-      job: syncCommitteeJob,
-    });
-  }
-
-  // TODO: This check validates the check above implicitly
-  // validate subnet
-  const expectedSubnets = computeSubnetsForSyncCommittee(
-    config,
-    headState as CachedBeaconState<altair.BeaconState>,
-    syncCommittee.validatorIndex
-  );
-  if (!expectedSubnets.includes(subnet)) {
-    throw new SyncCommitteeError({
-      code: SyncCommitteeErrorCode.INVALID_SUBNET_ID,
-      received: subnet,
-      expected: expectedSubnets,
-      job: syncCommitteeJob,
-    });
-  }
+  // > Checked in validateGossipSyncCommitteeExceptSig()
 
   if (!validSignature) {
     // [REJECT] The signature is valid for the message beacon_block_root for the validator referenced by validator_index.
     const signatureSet = getSyncCommitteeSignatureSet(headState, syncCommittee);
     if (!(await chain.bls.verifySignatureSets([signatureSet]))) {
-      throw new SyncCommitteeError({
+      throw new SyncCommitteeError(GossipAction.REJECT, {
         code: SyncCommitteeErrorCode.INVALID_SIGNATURE,
-        job: syncCommitteeJob,
       });
     }
   }
 
-  const indicesInSubSyncCommittee = getIndicesInSubSyncCommittee(
-    config,
-    headState as altair.BeaconState,
-    subnet,
-    syncCommittee.validatorIndex
+  // Register this valid item as seen
+  db.syncCommitee.seen(subnet, syncCommittee);
+}
+
+/**
+ * Spec v1.1.0-alpha.3
+ */
+export function validateGossipSyncCommitteeExceptSig(
+  chain: IBeaconChain,
+  headState: CachedBeaconState<BeaconState>,
+  subnet: number,
+  data: Pick<altair.SyncCommitteeSignature, "slot" | "beaconBlockRoot" | "validatorIndex">
+): IndexInSubCommittee {
+  // [IGNORE] The signature's slot is for the current slot, i.e. sync_committee_signature.slot == current_slot.
+  if (chain.clock.currentSlot !== data.slot) {
+    throw new SyncCommitteeError(GossipAction.IGNORE, {
+      code: SyncCommitteeErrorCode.NOT_CURRENT_SLOT,
+      currentSlot: chain.clock.currentSlot,
+      slot: data.slot,
+    });
+  }
+
+  // [IGNORE] The block being signed over (sync_committee_signature.beacon_block_root) has been seen (via both gossip and non-gossip sources).
+  if (!chain.forkChoice.hasBlock(data.beaconBlockRoot)) {
+    throw new SyncCommitteeError(GossipAction.IGNORE, {
+      code: SyncCommitteeErrorCode.UNKNOWN_BEACON_BLOCK_ROOT,
+      beaconBlockRoot: data.beaconBlockRoot as Uint8Array,
+    });
+  }
+
+  // [REJECT] The subnet_id is valid for the given validator, i.e. subnet_id in compute_subnets_for_sync_committee(state, sync_committee_signature.validator_index).
+  // Note this validation implies the validator is part of the broader current sync committee along with the correct subcommittee.
+
+  // TODO: Cache the indices per sync committee subnet in a Set to prevent having to slice and .includes() every time
+  const validatorIndexesInSubnet = headState.currSyncCommitteeIndexes.slice(
+    subnet * SYNC_COMMITTEE_SUBNET_COUNT + (subnet + 1) * SYNC_COMMITTEE_SUBNET_COUNT
   );
-  db.seenSyncCommiteeCache.addSyncCommitteeSignature(subnet, syncCommittee, indicesInSubSyncCommittee);
+  const indexInSubCommittee = validatorIndexesInSubnet.indexOf(data.validatorIndex); // -1 -> not found
+  if (indexInSubCommittee < 0) {
+    throw new SyncCommitteeError(GossipAction.REJECT, {
+      code: SyncCommitteeErrorCode.VALIDATOR_NOT_IN_SYNC_COMMITTEE,
+      validatorIndex: data.validatorIndex,
+    });
+  }
+
+  return indexInSubCommittee;
 }
