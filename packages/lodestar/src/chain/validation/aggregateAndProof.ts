@@ -10,7 +10,7 @@ import {
   isAggregatorFromCommitteeLength,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {isAttestingToInValidBlock} from "./attestation";
-import {getSelectionProofSignatureSet, getAggregateAndProofSignatureSet} from "./utils";
+import {getSelectionProofSignatureSet, getAggregateAndProofSignatureSet} from "./signatureSets";
 import {AttestationError, AttestationErrorCode} from "../errors";
 import {ATTESTATION_PROPAGATION_SLOT_RANGE} from "../../constants";
 

@@ -9,7 +9,7 @@ import {SyncCommitteeErrorCode} from "../../../../src/chain/errors/syncCommittee
 import {expectRejectedWithLodestarError} from "../../../utils/errors";
 import {StubbedBeaconDb} from "../../../utils/stub";
 import {generateSignedContributionAndProof} from "../../../utils/contributionAndProof";
-import {validateGossipContributionAndProof} from "../../../../src/chain/validation/contributionAndProof";
+import {validateSyncCommitteeGossipContributionAndProof} from "../../../../src/chain/validation/syncCommitteeContributionAndProof";
 import * as syncCommitteeUtils from "@chainsafe/lodestar-beacon-state-transition/lib/util/syncCommittee";
 import {SinonStubFn} from "../../../utils/types";
 import {generateCachedState} from "../../../utils/state";
@@ -47,7 +47,7 @@ describe("Sync Committee Contribution And Proof validation", function () {
   it("should throw error - the signature's slot is in the past", async function () {
     const signedContributionAndProof = generateSignedContributionAndProof({contribution: {slot: 1}});
     await expectRejectedWithLodestarError(
-      validateGossipContributionAndProof(config, chain, db, {
+      validateSyncCommitteeGossipContributionAndProof(config, chain, db, {
         contributionAndProof: signedContributionAndProof,
         validSignature: false,
       }),
@@ -58,7 +58,7 @@ describe("Sync Committee Contribution And Proof validation", function () {
   it("should throw error - the signature's slot is in the future", async function () {
     const signedContributionAndProof = generateSignedContributionAndProof({contribution: {slot: 3}});
     await expectRejectedWithLodestarError(
-      validateGossipContributionAndProof(config, chain, db, {
+      validateSyncCommitteeGossipContributionAndProof(config, chain, db, {
         contributionAndProof: signedContributionAndProof,
         validSignature: false,
       }),
@@ -71,7 +71,7 @@ describe("Sync Committee Contribution And Proof validation", function () {
     forkChoiceStub.hasBlock.returns(false);
 
     await expectRejectedWithLodestarError(
-      validateGossipContributionAndProof(config, chain, db, {
+      validateSyncCommitteeGossipContributionAndProof(config, chain, db, {
         contributionAndProof: signedContributionAndProof,
         validSignature: false,
       }),
@@ -86,7 +86,7 @@ describe("Sync Committee Contribution And Proof validation", function () {
     forkChoiceStub.hasBlock.returns(true);
 
     await expectRejectedWithLodestarError(
-      validateGossipContributionAndProof(config, chain, db, {
+      validateSyncCommitteeGossipContributionAndProof(config, chain, db, {
         contributionAndProof: signedContributionAndProof,
         validSignature: false,
       }),
@@ -99,7 +99,7 @@ describe("Sync Committee Contribution And Proof validation", function () {
     forkChoiceStub.hasBlock.returns(true);
     db.seenSyncCommitteeContributionCache.hasContributionAndProof.returns(true);
     await expectRejectedWithLodestarError(
-      validateGossipContributionAndProof(config, chain, db, {
+      validateSyncCommitteeGossipContributionAndProof(config, chain, db, {
         contributionAndProof: signedContributionAndProof,
         validSignature: false,
       }),
@@ -113,7 +113,7 @@ describe("Sync Committee Contribution And Proof validation", function () {
     db.seenSyncCommitteeContributionCache.hasContributionAndProof.returns(false);
     isSyncCommitteeAggregatorStub.returns(false);
     await expectRejectedWithLodestarError(
-      validateGossipContributionAndProof(config, chain, db, {
+      validateSyncCommitteeGossipContributionAndProof(config, chain, db, {
         contributionAndProof: signedContributionAndProof,
         validSignature: false,
       }),
@@ -130,7 +130,7 @@ describe("Sync Committee Contribution And Proof validation", function () {
     chain.getHeadState.returns(headState);
     getSyncSubCommitteePubkeysStub.returns([]);
     await expectRejectedWithLodestarError(
-      validateGossipContributionAndProof(config, chain, db, {
+      validateSyncCommitteeGossipContributionAndProof(config, chain, db, {
         contributionAndProof: signedContributionAndProof,
         validSignature: false,
       }),
@@ -148,7 +148,7 @@ describe("Sync Committee Contribution And Proof validation", function () {
     getSyncSubCommitteePubkeysStub.returns([headState.validators[0].pubkey]);
     chain.bls = {verifySignatureSets: async () => false};
     await expectRejectedWithLodestarError(
-      validateGossipContributionAndProof(config, chain, db, {
+      validateSyncCommitteeGossipContributionAndProof(config, chain, db, {
         contributionAndProof: signedContributionAndProof,
         validSignature: false,
       }),

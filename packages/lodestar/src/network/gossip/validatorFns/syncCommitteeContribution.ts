@@ -7,7 +7,7 @@ import {
   SyncCommitteeError,
   SyncCommitteeErrorCode,
 } from "../../../chain/errors/syncCommitteeError";
-import {validateGossipContributionAndProof} from "../../../chain/validation/contributionAndProof";
+import {validateSyncCommitteeGossipContributionAndProof} from "../../../chain/validation/syncCommitteeContributionAndProof";
 import {GossipTopic, IObjectValidatorModules} from "../interface";
 
 export async function validateSyncCommitteeContribution(
@@ -20,7 +20,7 @@ export async function validateSyncCommitteeContribution(
       contributionAndProof: contributionAndProof,
       validSignature: false,
     };
-    await validateGossipContributionAndProof(config, chain, db, contributionAndProofJob);
+    await validateSyncCommitteeGossipContributionAndProof(config, chain, db, contributionAndProofJob);
     logger.debug("gossip - ContributionAndProof - accept", {slot: contributionAndProof.message.contribution.slot});
   } catch (e) {
     if (!(e instanceof SyncCommitteeError)) {
