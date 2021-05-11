@@ -1,5 +1,6 @@
 import React, {useEffect, useState, useCallback} from "react";
-import {Lightclient} from "@chainsafe/lodestar-light-client/lib/client";
+import {Lightclient, LightclientEvent} from "@chainsafe/lodestar-light-client/lib/client";
+import {computeSyncPeriodAtSlot} from "@chainsafe/lodestar-light-client/lib/utils/syncPeriod";
 import {altair} from "@chainsafe/lodestar-types";
 import {toHexString} from "@chainsafe/ssz";
 import {ErrorView} from "./components/ErrorView";
@@ -7,13 +8,14 @@ import {ReqStatus} from "./types";
 import {config} from "./config";
 
 export function SyncStatus({client}: {client: Lightclient}): JSX.Element {
-  const [reqStatusSync, setReqStatusSync] = useState<ReqStatus<altair.BeaconBlockHeader>>({});
+  const [_header, setHeader] = useState<altair.BeaconBlockHeader>();
+  const [reqStatusSync, setReqStatusSync] = useState<ReqStatus>({});
 
   const sync = useCallback(async () => {
     try {
       setReqStatusSync({loading: true});
       await client.sync();
-      setReqStatusSync({result: client.store.snapshot.header});
+      setReqStatusSync({result: true});
     } catch (e) {
       setReqStatusSync({error: e});
     }
@@ -30,9 +32,20 @@ export function SyncStatus({client}: {client: Lightclient}): JSX.Element {
     return () => clearInterval(interval);
   });
 
+  // Subscribe to update events
+  useEffect(() => {
+    const onNewHeader = (newHeader: altair.BeaconBlockHeader): void => setHeader(newHeader);
+    client.emitter.on(LightclientEvent.newHeader, onNewHeader);
+    return () => client.emitter.off(LightclientEvent.newHeader, onNewHeader);
+  }, [client, setHeader]);
+
   return (
     <section>
       <h2>Sync Status</h2>
+      <div className="grid-2col-render">
+        <span>syncPeriod</span>
+        <span>{computeSyncPeriodAtSlot(client.config, client.store.snapshot.header.slot)}</span>
+      </div>
 
       {reqStatusSync.result ? (
         <p>Successfully synced!</p>
@@ -43,7 +56,7 @@ export function SyncStatus({client}: {client: Lightclient}): JSX.Element {
       ) : null}
 
       <h3>Latest Synced Snapshot Header</h3>
-      <div className="header-render">
+      <div className="grid-2col-render">
         <span>slot</span>
         <span>{client.store.snapshot.header.slot}</span>
         <span>stateRoot</span>

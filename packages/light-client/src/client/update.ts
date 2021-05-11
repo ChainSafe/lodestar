@@ -113,6 +113,6 @@ export function applyLightClientUpdate(
  * max(store.valid_updates, key=lambda update: sum(update.sync_committee_bits)))
  * ```
  */
-function isBetterUpdate(prevUpdate: altair.LightClientUpdate, newUpdate: altair.LightClientUpdate): boolean {
+export function isBetterUpdate(prevUpdate: altair.LightClientUpdate, newUpdate: altair.LightClientUpdate): boolean {
   return sumBits(newUpdate.syncCommitteeBits) >= sumBits(prevUpdate.syncCommitteeBits);
 }

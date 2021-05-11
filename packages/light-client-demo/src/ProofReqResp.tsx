@@ -92,7 +92,7 @@ export function ProofReqResp({client}: {client: Lightclient}): JSX.Element {
         <div className="state-proof" style={{whiteSpace: "pre"}}>
           <h3>State</h3>
           {reqStatusProof.result ? (
-            <div className="state-render">
+            <div className="grid-2col-render">
               {reqStatusProof.result.stateStr.map((item, i) => (
                 <React.Fragment key={i}>
                   <span>{item.key}</span>

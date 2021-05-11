@@ -98,8 +98,7 @@ section > *:not(:last-child) {
 .proof-render {
   font-family: monospace;
 }
-.header-render,
-.state-render {
+.grid-2col-render {
   display: grid;
   grid-template-columns: max-content auto;
   gap: 0.5rem 1rem;
