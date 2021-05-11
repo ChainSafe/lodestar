@@ -10,6 +10,8 @@ import {startLightclientApiServer, IStateRegen, ServerOpts} from "./lightclientA
 import {Checkpoint} from "@chainsafe/lodestar-types/phase0";
 import {ILogger} from "@chainsafe/lodestar-utils";
 
+const MAX_STATE_HISTORIC_EPOCHS = 100;
+
 enum ApiStatus {
   started = "started",
   stopped = "stopped",
@@ -148,7 +150,10 @@ export class LightclientMockServer {
 
       // Prune old states
       for (const [key, oldState] of this.stateCache.entries()) {
-        if (oldState.slot !== 0 && computeEpochAtSlot(this.config, oldState.slot) < finalizedEpoch - 1) {
+        if (
+          oldState.slot !== 0 &&
+          computeEpochAtSlot(this.config, oldState.slot) < finalizedEpoch - MAX_STATE_HISTORIC_EPOCHS
+        ) {
           this.stateCache.delete(key);
         }
       }
