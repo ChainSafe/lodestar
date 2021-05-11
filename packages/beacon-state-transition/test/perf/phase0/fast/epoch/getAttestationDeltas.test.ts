@@ -19,7 +19,7 @@ describe("getAttestationDeltas", function () {
     epochProcess = fast.prepareEpochProcessState(state);
     let minTime = Number.MAX_SAFE_INTEGER;
     let maxTime = 0;
-    const MAX_TRY = 10000;
+    const MAX_TRY = 1000;
     const from = process.hrtime.bigint();
     for (let i = 0; i < MAX_TRY; i++) {
       const start = Date.now();
@@ -31,8 +31,8 @@ describe("getAttestationDeltas", function () {
     const to = process.hrtime.bigint();
     const average = Number((to - from) / BigInt(MAX_TRY) / BigInt(1000000));
     logger.info("getAttestationDeltas in ms", {minTime, maxTime, average, maxTry: MAX_TRY});
-    expect(minTime).to.be.lte(28, "Minimal getAttestationDeltas is not less than 28ms");
-    expect(maxTime).to.be.lte(800, "Maximal getAttestationDeltas is not less than 800ms");
-    expect(average).to.be.lte(33, "Average getAttestationDeltas is not less than 33ms");
+    expect(minTime).to.be.lte(96, "Minimal getAttestationDeltas is not less than 96ms");
+    expect(maxTime).to.be.lte(278, "Maximal getAttestationDeltas is not less than 278ms");
+    expect(average).to.be.lte(107, "Average getAttestationDeltas is not less than 107ms");
   });
 });
