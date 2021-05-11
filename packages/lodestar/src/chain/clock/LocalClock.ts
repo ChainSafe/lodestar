@@ -15,7 +15,7 @@ import {MAXIMUM_GOSSIP_CLOCK_DISPARITY} from "../../constants";
 export class LocalClock implements IBeaconClock {
   private readonly config: IBeaconConfig;
   private readonly genesisTime: number;
-  private timeoutId: NodeJS.Timeout;
+  private timeoutId: number;
   private readonly emitter: ChainEventEmitter;
   private readonly signal: AbortSignal;
   private _currentSlot: number;
@@ -41,7 +41,12 @@ export class LocalClock implements IBeaconClock {
   }
 
   get currentSlot(): Slot {
-    return getCurrentSlot(this.config, this.genesisTime);
+    const slot = getCurrentSlot(this.config, this.genesisTime);
+    if (slot > this._currentSlot) {
+      clearTimeout(this.timeoutId);
+      this.onNextSlot(slot);
+    }
+    return slot;
   }
 
   /**
@@ -90,8 +95,8 @@ export class LocalClock implements IBeaconClock {
     });
   }
 
-  private onNextSlot = (): void => {
-    const clockSlot = getCurrentSlot(this.config, this.genesisTime);
+  private onNextSlot = (slot?: Slot): void => {
+    const clockSlot = slot ?? getCurrentSlot(this.config, this.genesisTime);
     // process multiple clock slots in the case the main thread has been saturated for > SECONDS_PER_SLOT
     while (this._currentSlot < clockSlot) {
       const previousSlot = this._currentSlot;

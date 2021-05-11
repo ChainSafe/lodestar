@@ -8,7 +8,7 @@ import {bigIntToBytes} from "@chainsafe/lodestar-utils";
 import {config} from "@chainsafe/lodestar-config/minimal";
 import * as validatorUtils from "@chainsafe/lodestar-beacon-state-transition/lib/util/validator";
 import {getCurrentSlot, ISignatureSet} from "@chainsafe/lodestar-beacon-state-transition";
-import * as indexedAttUtils from "@chainsafe/lodestar-beacon-state-transition/lib/phase0/fast/block/isValidIndexedAttestation";
+import * as indexedAttUtils from "@chainsafe/lodestar-beacon-state-transition/lib/fast/block/isValidIndexedAttestation";
 import * as indexedAttSigSet from "@chainsafe/lodestar-beacon-state-transition/lib/fast/signatureSets/indexedAttestation";
 
 import {BeaconChain, IAttestationJob, IBeaconChain} from "../../../../src/chain";
@@ -47,9 +47,7 @@ describe("gossip aggregate and proof test", function () {
         mock(() => import("@chainsafe/lodestar-beacon-state-transition/lib/util/validator"))
           .with({isAggregatorFromCommitteeLength})
           .toBeUsed();
-        mock(() =>
-          import("@chainsafe/lodestar-beacon-state-transition/lib/phase0/fast/block/isValidIndexedAttestation")
-        )
+        mock(() => import("@chainsafe/lodestar-beacon-state-transition/lib/fast/block/isValidIndexedAttestation"))
           .with({isValidIndexedAttestation})
           .toBeUsed();
         mock(() => import("@chainsafe/lodestar-beacon-state-transition/lib/fast/signatureSets/indexedAttestation"))

@@ -51,7 +51,6 @@ describe("Run multi node single thread interop validators (no eth1) until checkp
 
         const node = await getDevBeaconNode({
           params: beaconParams,
-          options: {sync: {minPeers: 1}},
           validatorCount: nodeCount * validatorsPerNode,
           genesisTime,
           logger,

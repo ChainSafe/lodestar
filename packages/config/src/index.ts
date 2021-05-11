@@ -1,51 +1,33 @@
-import {GENESIS_SLOT, IBeaconParams} from "@chainsafe/lodestar-params";
-import {createIBeaconSSZTypes, IAllForksSSZTypes, Slot, Version} from "@chainsafe/lodestar-types";
-
-import {IBeaconConfig, IForkInfo, ForkName} from "./interface";
+import {GENESIS_EPOCH, IBeaconParams} from "@chainsafe/lodestar-params";
+import {createIBeaconSSZTypes, Slot, AllForksSSZTypes, Version} from "@chainsafe/lodestar-types";
+import {IBeaconConfig, ForkName} from "./interface";
 
 export * from "./interface";
 
 export function createIBeaconConfig(params: IBeaconParams): IBeaconConfig {
   const types = createIBeaconSSZTypes(params);
+
+  const phase0 = {name: ForkName.phase0, epoch: GENESIS_EPOCH, version: params.GENESIS_FORK_VERSION};
+  const altair = {name: ForkName.altair, epoch: params.ALTAIR_FORK_EPOCH, version: params.ALTAIR_FORK_VERSION};
+  // Prevents allocating an array on every getForkInfo() call
+  const forksDescendingEpochOrder = [altair, phase0];
+
   return {
     params,
     types,
-    getForkInfoRecord(): Record<ForkName, IForkInfo> {
-      return {
-        phase0: {
-          name: ForkName.phase0,
-          slot: GENESIS_SLOT,
-          version: params.GENESIS_FORK_VERSION,
-        },
-        altair: {
-          name: ForkName.altair,
-          slot: params.ALTAIR_FORK_SLOT,
-          version: params.ALTAIR_FORK_VERSION,
-        },
-      };
-    },
-    getForkInfos(): IForkInfo[] {
-      return Object.values(this.getForkInfoRecord());
-    },
-    getForkInfo(slot: Slot): IForkInfo {
-      const forkSchedule = this.getForkInfos();
-      if (!forkSchedule.length) {
-        throw new Error("No available fork");
-      }
-      // if (forkSchedule.length === 1) return forkSchedule[0];
 
-      // initialize to the first fork
-      let currentFork = forkSchedule[0];
-      // start from 1
-      for (let i = 1; i < forkSchedule.length; i++) {
-        const fork = forkSchedule[i];
-        if (slot >= fork.slot) {
-          currentFork = fork;
-        } else {
-          break;
-        }
+    /** Forks in order order of occurence, `phase0` first */
+    // Note: Downstream code relies on proper ordering.
+    forks: {phase0, altair},
+
+    // Fork convenience methods
+    getForkInfo(slot: Slot) {
+      const epoch = Math.floor(slot / this.params.SLOTS_PER_EPOCH);
+      // NOTE: forks must be sorted by descending epoch, latest fork first
+      for (const fork of forksDescendingEpochOrder) {
+        if (epoch >= fork.epoch) return fork;
       }
-      return currentFork;
+      return phase0;
     },
     getForkName(slot: Slot): ForkName {
       return this.getForkInfo(slot).name;
@@ -53,8 +35,8 @@ export function createIBeaconConfig(params: IBeaconParams): IBeaconConfig {
     getForkVersion(slot: Slot): Version {
       return this.getForkInfo(slot).version;
     },
-    getTypes(slot: Slot): IAllForksSSZTypes {
-      return types[this.getForkName(slot)] as IAllForksSSZTypes;
+    getTypes(slot: Slot): AllForksSSZTypes {
+      return types[this.getForkName(slot)] as AllForksSSZTypes;
     },
   };
 }

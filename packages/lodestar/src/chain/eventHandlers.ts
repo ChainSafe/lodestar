@@ -93,6 +93,7 @@ export function handleChainEvents(this: BeaconChain, signal: AbortSignal): void 
 export async function onClockSlot(this: BeaconChain, slot: Slot): Promise<void> {
   this.logger.verbose("Clock slot", {slot});
   this.forkChoice.updateTime(slot);
+  this.metrics?.clockSlot.set(slot);
 
   await Promise.all(
     // Attestations can only affect the fork choice of subsequent slots.

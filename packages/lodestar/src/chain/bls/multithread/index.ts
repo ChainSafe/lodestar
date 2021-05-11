@@ -8,14 +8,13 @@ import {AbortSignal} from "abort-controller";
 import {Implementation, PointFormat, PublicKey} from "@chainsafe/bls";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {QueueError, QueueErrorCode} from "../../../util/queue";
-import {wrapError} from "../../../util/wrapError";
 import {BlsWorkReq, WorkerData, WorkResult, WorkResultCode} from "./types";
 import {chunkifyMaximizeChunkSize, getDefaultPoolSize} from "./utils";
 import {IMetrics} from "../../../metrics";
 
 export type BlsMultiThreadWorkerPoolModules = {
   logger: ILogger;
-  metrics?: IMetrics;
+  metrics: IMetrics | null;
   signal: AbortSignal;
 };
 
@@ -69,7 +68,7 @@ type WorkerDescriptor = {
  */
 export class BlsMultiThreadWorkerPool {
   private readonly logger: ILogger;
-  private readonly metrics?: IMetrics;
+  private readonly metrics: IMetrics | null;
   private readonly signal: AbortSignal;
 
   private readonly format: PointFormat;
@@ -77,9 +76,10 @@ export class BlsMultiThreadWorkerPool {
   private readonly workers: WorkerDescriptor[];
 
   constructor(implementation: Implementation, modules: BlsMultiThreadWorkerPoolModules) {
-    this.logger = modules.logger;
-    this.metrics = modules.metrics;
-    this.signal = modules.signal;
+    const {logger, metrics, signal} = modules;
+    this.logger = logger;
+    this.metrics = metrics;
+    this.signal = signal;
 
     // Use compressed for herumi for now.
     // THe worker is not able to deserialize from uncompressed
@@ -89,6 +89,10 @@ export class BlsMultiThreadWorkerPool {
 
     this.signal.addEventListener("abort", this.abortAllJobs, {once: true});
     this.signal.addEventListener("abort", this.terminateAllWorkers, {once: true});
+
+    if (metrics) {
+      metrics.blsThreadPoolQueueLength.addCollect(() => metrics.blsThreadPoolQueueLength.set(this.jobs.length));
+    }
   }
 
   async verifySignatureSets(
@@ -120,7 +124,7 @@ export class BlsMultiThreadWorkerPool {
     const workers: WorkerDescriptor[] = [];
 
     for (let i = 0; i < poolSize; i++) {
-      const workerData: WorkerData = {implementation};
+      const workerData: WorkerData = {implementation, workerId: i};
       const worker = new Worker("./worker", {workerData} as ConstructorParameters<typeof Worker>[1]);
 
       const workerDescriptor: WorkerDescriptor = {
@@ -214,32 +218,35 @@ export class BlsMultiThreadWorkerPool {
     this.metrics?.blsThreadPoolTotalJobsStarted.inc(jobs.length);
 
     // Send work package to the worker
-    const workerResult = await wrapError(workerApi.doManyBlsWorkReq(jobs.map((job) => job.workReq)));
+    // If the job, metrics or any code below throws: the job will reject never going stale.
+    // Only downside is the the job promise may be resolved twice, but that's not an issue
+    try {
+      const result = await workerApi.doManyBlsWorkReq(jobs.map((job) => job.workReq));
 
-    worker.status = {code: WorkerStatusCode.idle, workerApi};
-
-    if (workerResult.err) {
-      // Worker communications should never reject
-      if (!this.signal.aborted) this.logger.error("BlsMultiThreadWorkerPool error", {}, workerResult.err);
-      // Reject all
-      for (const job of jobs) {
-        job.reject(workerResult.err);
-      }
-    } else {
       // Un-wrap work package
-      const results = workerResult.result;
-      for (const [i, result] of results.entries()) {
+      for (const [i, jobResult] of result.entries()) {
         const job = jobs[i];
-        if (result.code === WorkResultCode.success) {
-          this.metrics?.blsThreadPoolSuccessJobsSignatureSetsCount.inc(job.workReq.sets.length);
-          this.metrics?.blsThreadPoolSuccessJobsWorkerTime.inc(result.workerJobTimeMs);
-
-          job.resolve(result.result);
+        const sigSetCount = job.workReq.sets.length;
+        if (jobResult.code === WorkResultCode.success) {
+          job.resolve(jobResult.result);
+          const {workerId, workerJobTimeMs} = jobResult;
+          this.metrics?.blsThreadPoolSuccessJobsSignatureSetsCount.inc(sigSetCount);
+          this.metrics?.blsThreadPoolSuccessJobsWorkerTime.inc({workerId}, workerJobTimeMs / 1000);
         } else {
-          job.reject(Error(result.error.message));
+          job.reject(Error(jobResult.error.message));
+          this.metrics?.blsThreadPoolErrorJobsSignatureSetsCount.inc(sigSetCount);
         }
       }
+    } catch (e) {
+      // Worker communications should never reject
+      if (!this.signal.aborted) this.logger.error("BlsMultiThreadWorkerPool error", {}, e);
+      // Reject all
+      for (const job of jobs) {
+        job.reject(e);
+      }
     }
+
+    worker.status = {code: WorkerStatusCode.idle, workerApi};
 
     // Potentially run a new job
     setTimeout(this.runJob, 0);

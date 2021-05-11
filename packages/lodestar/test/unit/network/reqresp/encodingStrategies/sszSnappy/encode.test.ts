@@ -2,7 +2,7 @@ import all from "it-all";
 import pipe from "it-pipe";
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {LodestarError} from "@chainsafe/lodestar-utils";
-import {RequestOrResponseBody, RequestOrResponseType} from "../../../../../../src/network";
+import {RequestOrResponseBody, RequestOrResponseType} from "../../../../../../src/network/reqresp/types";
 import {
   SszSnappyError,
   SszSnappyErrorCode,
@@ -10,11 +10,11 @@ import {
 } from "../../../../../../src/network/reqresp/encodingStrategies/sszSnappy";
 import {expectRejectedWithLodestarError} from "../../../../../utils/errors";
 import {expectEqualByteChunks} from "../../utils";
-import {sszSnappyPing, sszSnappyStatus, sszSnappySignedBlock} from "./testData";
+import {sszSnappyPing, sszSnappyStatus, sszSnappySignedBeaconBlockPhase0} from "./testData";
 
 describe("network / reqresp / sszSnappy / encode", () => {
   describe("Test data vectors (generated in a previous version)", () => {
-    const testCases = [sszSnappyPing, sszSnappyStatus, sszSnappySignedBlock];
+    const testCases = [sszSnappyPing, sszSnappyStatus, sszSnappySignedBeaconBlockPhase0];
 
     for (const {id, type, body, chunks} of testCases) {
       it(id, async () => {

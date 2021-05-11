@@ -2,7 +2,7 @@ import {AbortController} from "abort-controller";
 import pipe from "it-pipe";
 import {timeoutOptions} from "../../../constants";
 import {abortableSource} from "../../../util/abortableSource";
-import {onChunk} from "../utils/onChunk";
+import {onChunk} from "../utils";
 import {RequestErrorCode, RequestInternalError} from "./errors";
 
 /** Returns the maximum total timeout possible for a response. See @responseTimeoutsHandler */

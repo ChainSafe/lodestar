@@ -19,7 +19,7 @@ describe("processRewardsAndPenalties", function () {
     epochProcess = fast.prepareEpochProcessState(state);
     let minTime = Number.MAX_SAFE_INTEGER;
     let maxTime = 0;
-    const MAX_TRY = 10000;
+    const MAX_TRY = 1000;
     const from = process.hrtime.bigint();
     for (let i = 0; i < MAX_TRY; i++) {
       const start = Date.now();
@@ -31,8 +31,8 @@ describe("processRewardsAndPenalties", function () {
     const to = process.hrtime.bigint();
     const average = Number((to - from) / BigInt(MAX_TRY) / BigInt(1000000));
     logger.info("processRewardsAndPenalties in ms", {minTime, maxTime, average, maxTry: MAX_TRY});
-    expect(minTime).to.be.lte(67, "Minimal processRewardsAndPenalties is not less than 67ms");
-    expect(maxTime).to.be.lte(700, "Maximal processRewardsAndPenalties is not less than 700ms");
-    expect(average).to.be.lte(84, "Average processRewardsAndPenalties is not less than 84ms");
+    expect(minTime).to.be.lte(174, "Minimal processRewardsAndPenalties is not less than 174ms");
+    expect(maxTime).to.be.lte(1300, "Maximal processRewardsAndPenalties is not less than 1300ms");
+    expect(average).to.be.lte(235, "Average processRewardsAndPenalties is not less than 235ms");
   });
 });

@@ -4,36 +4,12 @@
  */
 
 import PeerId from "peer-id";
-import {Method, MethodResponseType, Methods, ReqRespEncoding, RequestId} from "../constants";
 import Multiaddr from "multiaddr";
 import {networkInterfaces} from "os";
 import {ENR} from "@chainsafe/discv5";
 import MetadataBook from "libp2p/src/peer-store/metadata-book";
-
-// req/resp
-
-export function createResponseEvent(id: RequestId): string {
-  return `response ${id}`;
-}
-
-/**
- * Render protocol ID
- */
-export function createRpcProtocol(method: Method, encoding: ReqRespEncoding, version = 1): string {
-  return `/eth2/beacon_chain/req/${method}/${version}/${encoding}`;
-}
-
-export function parseProtocolId(protocolId: string): {method: Method; encoding: ReqRespEncoding; version: number} {
-  const suffix = protocolId.split("eth2/beacon_chain/req/")[1];
-  if (!suffix) throw Error(`Invalid protocolId: ${protocolId}`);
-
-  const [method, version, encoding] = suffix.split("/");
-  return {
-    method: method as Method,
-    version: parseInt(version),
-    encoding: encoding as ReqRespEncoding,
-  };
-}
+import {IBeaconConfig, IForkInfo} from "@chainsafe/lodestar-config";
+import {Epoch} from "@chainsafe/lodestar-types";
 
 // peers
 
@@ -42,22 +18,6 @@ export function parseProtocolId(protocolId: string): {method: Method; encoding: 
  */
 export async function createPeerId(): Promise<PeerId> {
   return await PeerId.create({bits: 256, keyType: "secp256k1"});
-}
-
-export function isRequestSingleChunk(method: Method): boolean {
-  return Methods[method].responseType === MethodResponseType.SingleResponse;
-}
-
-export function getStatusProtocols(): string[] {
-  return [createRpcProtocol(Method.Status, ReqRespEncoding.SSZ_SNAPPY)];
-}
-
-export function getSyncProtocols(): string[] {
-  return [createRpcProtocol(Method.BeaconBlocksByRange, ReqRespEncoding.SSZ_SNAPPY)];
-}
-
-export function getUnknownRootProtocols(): string[] {
-  return [createRpcProtocol(Method.BeaconBlocksByRoot, ReqRespEncoding.SSZ_SNAPPY)];
 }
 
 /**
@@ -109,4 +69,23 @@ export function prettyPrintPeerId(peerId: PeerId): string {
 
 export function getAgentVersionFromPeerStore(peerId: PeerId, metadataBook: MetadataBook): string {
   return new TextDecoder().decode(metadataBook.getValue(peerId, "AgentVersion")) || "N/A";
+}
+
+export function getCurrentAndNextFork(
+  config: IBeaconConfig,
+  epoch: Epoch
+): {currentFork: IForkInfo; nextFork: IForkInfo | undefined} {
+  // NOTE: forks are sorted by ascending epoch, phase0 first
+  const forks = Object.values(config.forks);
+  let currentForkIdx = -1;
+  // findLastIndex
+  for (let i = 0; i < forks.length; i++) {
+    if (epoch >= forks[i].epoch) currentForkIdx = i;
+  }
+  const nextForkIdx = currentForkIdx + 1;
+  const hasNextFork = forks[nextForkIdx] && forks[nextForkIdx].epoch !== Infinity;
+  return {
+    currentFork: forks[currentForkIdx] || forks[0],
+    nextFork: hasNextFork ? forks[nextForkIdx] : undefined,
+  };
 }

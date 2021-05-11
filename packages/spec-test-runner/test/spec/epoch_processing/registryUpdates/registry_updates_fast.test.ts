@@ -2,8 +2,9 @@ import {join} from "path";
 import {expect} from "chai";
 
 import {TreeBacked} from "@chainsafe/ssz";
+import {allForks} from "@chainsafe/lodestar-types";
 import {config} from "@chainsafe/lodestar-config/mainnet";
-import {fast, phase0} from "@chainsafe/lodestar-beacon-state-transition";
+import {CachedBeaconState, fast, phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
 import {IStateTestCase} from "../../../utils/specTestTypes/stateTestCase";
 import {SPEC_TEST_LOCATION} from "../../../utils/specTestCases";
@@ -17,7 +18,7 @@ describeDirectorySpecTest<IStateTestCase, phase0.BeaconState>(
       testcase.pre as TreeBacked<phase0.BeaconState>
     );
     const process = fast.prepareEpochProcessState(wrappedState);
-    phase0.fast.processRegistryUpdates(wrappedState, process);
+    phase0.fast.processRegistryUpdates(wrappedState as CachedBeaconState<allForks.BeaconState>, process);
     return wrappedState;
   },
   {

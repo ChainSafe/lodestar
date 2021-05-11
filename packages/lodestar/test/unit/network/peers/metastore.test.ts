@@ -1,7 +1,7 @@
 import {Libp2pPeerMetadataStore} from "../../../../src/network/peers/metastore";
 import {config} from "@chainsafe/lodestar-config/minimal";
 import sinon, {SinonStub, SinonStubbedInstance} from "sinon";
-import {ReqRespEncoding} from "../../../../src/constants";
+import {ReqRespEncoding} from "../../../../src/network/reqresp";
 import {expect} from "chai";
 import PeerId from "peer-id";
 import {phase0} from "@chainsafe/lodestar-types";
@@ -41,21 +41,6 @@ describe("Libp2pPeerMetadataStore", function () {
     const result = store.encoding.get(peerId);
 
     expect(result).to.be.equal(value);
-  });
-
-  it("can store and retrieve status", function () {
-    const store = new Libp2pPeerMetadataStore(config, metabookStub);
-    const value: phase0.Status = {
-      finalizedEpoch: 1,
-      finalizedRoot: Buffer.alloc(32, 1),
-      forkDigest: Buffer.alloc(4),
-      headRoot: Buffer.alloc(32, 2),
-      headSlot: 10,
-    };
-    store.status.set(peerId, value);
-    const result = store.status.get(peerId);
-
-    expect(config.types.phase0.Status.equals(result as phase0.Status, value)).to.be.true;
   });
 
   it("can store and retrieve metadata", function () {

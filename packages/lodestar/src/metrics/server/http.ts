@@ -50,6 +50,7 @@ export class HttpMetricsServer implements IMetricsServer {
   private async onRequest(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
     if (req.method === "GET" && req.url && req.url.includes("/metrics")) {
       const metricsRes = await wrapError(this.register.metrics());
+      // Ensure we only writeHead once
       if (metricsRes.err) {
         res.writeHead(500, {"content-type": "text/plain"}).end(metricsRes.err.stack);
       } else {

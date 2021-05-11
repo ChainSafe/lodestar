@@ -28,6 +28,5 @@ export function getStubbedMetadataStore(): StubbedIPeerMetadataStore {
     metadata: getStubbedMetadataStoreItem(),
     rpcScore: getStubbedMetadataStoreItem(),
     rpcScoreLastUpdate: getStubbedMetadataStoreItem(),
-    status: getStubbedMetadataStoreItem(),
   };
 }

@@ -1,107 +1,76 @@
 import PeerId from "peer-id";
-import {AbortController} from "abort-controller";
-import {IBeaconSync, ISyncModules, SyncMode} from "./interface";
-import {defaultSyncOptions, ISyncOptions} from "./options";
-import {INetwork} from "../network";
+import {IBeaconSync, ISyncModules} from "./interface";
+import {INetwork, NetworkEvent} from "../network";
 import {ILogger} from "@chainsafe/lodestar-utils";
-import {CommitteeIndex, Root, Slot, phase0} from "@chainsafe/lodestar-types";
-import {IRegularSync} from "./regular";
-import {BeaconGossipHandler} from "./gossip";
-import {ChainEvent, IBeaconChain} from "../chain";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {List, toHexString} from "@chainsafe/ssz";
+import {Slot, phase0} from "@chainsafe/lodestar-types";
+import {toHexString} from "@chainsafe/ssz";
+import {ChainEvent, IBeaconChain} from "../chain";
 import {BlockError, BlockErrorCode} from "../chain/errors";
-import {getPeersInitialSync} from "./utils/bestPeers";
-import {ORARegularSync} from "./regular/oneRangeAhead/oneRangeAhead";
-import {SyncChain, ProcessChainSegment, DownloadBeaconBlocksByRange, GetPeersAndTargetEpoch} from "./range/chain";
-import {AttestationCollector, RoundRobinArray} from "./utils";
-import {ScoreState} from "../network/peers";
+import {BeaconGossipHandler} from "./gossip";
+import {RangeSync, RangeSyncStatus, RangeSyncEvent} from "./range/range";
+import {AttestationCollector, fetchUnknownBlockRoot, getPeerSyncType, PeerSyncType} from "./utils";
+import {MIN_EPOCH_TO_START_GOSSIP} from "./constants";
+import {SyncState, SyncChainDebugState, syncStateMetric} from "./interface";
+import {ISyncOptions} from "./options";
 
 export class BeaconSync implements IBeaconSync {
-  private readonly opts: ISyncOptions;
   private readonly config: IBeaconConfig;
   private readonly logger: ILogger;
   private readonly network: INetwork;
   private readonly chain: IBeaconChain;
+  private readonly opts: ISyncOptions;
 
-  private mode: SyncMode;
-  private regularSync: IRegularSync;
-  private gossip: BeaconGossipHandler;
-  private attestationCollector: AttestationCollector;
+  private readonly rangeSync: RangeSync;
+  private readonly gossip: BeaconGossipHandler;
+  private readonly attestationCollector: AttestationCollector;
 
   // avoid finding same root at the same time
-  private processingRoots: Set<string>;
+  private readonly processingRoots = new Set<string>();
 
-  private controller = new AbortController();
+  /**
+   * The number of slots ahead of us that is allowed before starting a RangeSync
+   * If a peer is within this tolerance (forwards or backwards), it is treated as a fully sync'd peer.
+   *
+   * This means that we consider ourselves synced (and hence subscribe to all subnets and block
+   * gossip if no peers are further than this range ahead of us that we have not already downloaded
+   * blocks for.
+   */
+  private readonly slotImportTolerance: Slot;
 
   constructor(opts: ISyncOptions, modules: ISyncModules) {
+    const {config, chain, metrics, network, logger} = modules;
     this.opts = opts;
-    this.config = modules.config;
-    this.network = modules.network;
-    this.chain = modules.chain;
-    this.logger = modules.logger;
-    this.regularSync = modules.regularSync || new ORARegularSync(opts, modules);
+    this.config = config;
+    this.network = network;
+    this.chain = chain;
+    this.logger = logger;
+    this.rangeSync = new RangeSync(modules);
     this.gossip =
       modules.gossipHandler || new BeaconGossipHandler(modules.config, modules.chain, modules.network, modules.db);
     this.attestationCollector = modules.attestationCollector || new AttestationCollector(modules.config, modules);
-    this.mode = SyncMode.STOPPED;
-    this.processingRoots = new Set();
-  }
+    this.slotImportTolerance = modules.config.params.SLOTS_PER_EPOCH;
 
-  async start(): Promise<void> {
-    this.mode = SyncMode.WAITING_PEERS as SyncMode;
+    // Subscribe to RangeSync completing a SyncChain and recompute sync state
+    this.rangeSync.on(RangeSyncEvent.completedChain, this.updateSyncState);
+    this.network.events.on(NetworkEvent.peerConnected, this.addPeer);
+    this.network.events.on(NetworkEvent.peerDisconnected, this.removePeer);
+    // TODO: It's okay to start this on initial sync?
+    this.chain.emitter.on(ChainEvent.errorBlock, this.onUnknownBlockRoot);
+    this.chain.emitter.on(ChainEvent.clockEpoch, this.onClockEpoch);
     this.attestationCollector.start();
-    if (this.mode === SyncMode.STOPPED) {
-      return;
+
+    if (metrics) {
+      metrics.syncStatus.addCollect(() => metrics.syncStatus.set(syncStateMetric[this.state]));
     }
-
-    this.mode = SyncMode.INITIAL_SYNCING;
-
-    const finalizedBlock = this.chain.forkChoice.getFinalizedBlock();
-    const startEpoch = finalizedBlock.finalizedEpoch;
-    // Set state cache size to 1 during initial sync
-    const maxStates = this.chain.stateCache.maxStates;
-    this.chain.stateCache.maxStates = 1;
-    const initialSync = new SyncChain(
-      startEpoch,
-      this.processChainSegment,
-      this.downloadBeaconBlocksByRange,
-      this.getPeersAndTargetEpoch,
-      this.config,
-      this.logger,
-      this.controller.signal
-    );
-
-    initialSync
-      .sync()
-      .then(() => {
-        // Reset state cache size after initial sync
-        this.chain.stateCache.maxStates = maxStates;
-        this.startRegularSync();
-      })
-      .catch((e) => {
-        this.logger.error("Error on initial sync", {}, e);
-      });
-
-    // Hack while RangeSync is not merged
-    // If a node witness the genesis event and has peers consider it synced and start gossip
-    this.chain.emitter.on(ChainEvent.clockEpoch, (epoch) => {
-      if (epoch === 0 && this.network.getConnectedPeers().length > 0) {
-        this.initialSyncCompleted();
-        this.regularSyncCompleted();
-      }
-    });
   }
 
-  async stop(): Promise<void> {
-    this.controller.abort();
-    if (this.mode === SyncMode.STOPPED) {
-      return;
-    }
-    this.mode = SyncMode.STOPPED;
+  close(): void {
+    this.network.events.off(NetworkEvent.peerConnected, this.addPeer);
+    this.network.events.off(NetworkEvent.peerDisconnected, this.removePeer);
     this.chain.emitter.off(ChainEvent.errorBlock, this.onUnknownBlockRoot);
-    this.regularSync.off("syncCompleted", this.regularSyncCompleted);
-    this.regularSync.stop();
+    this.chain.emitter.off(ChainEvent.clockEpoch, this.onClockEpoch);
+    this.rangeSync.close();
     this.attestationCollector.stop();
     this.gossip.stop();
     this.gossip.close();
@@ -110,15 +79,15 @@ export class BeaconSync implements IBeaconSync {
   getSyncStatus(): phase0.SyncingStatus {
     const currentSlot = this.chain.clock.currentSlot;
     const headSlot = this.chain.forkChoice.getHead().slot;
-    switch (this.mode) {
-      case SyncMode.WAITING_PEERS:
-      case SyncMode.INITIAL_SYNCING:
-      case SyncMode.REGULAR_SYNCING:
+    switch (this.state) {
+      case SyncState.SyncingFinalized:
+      case SyncState.SyncingHead:
+      case SyncState.Stalled:
         return {
           headSlot: BigInt(headSlot),
           syncDistance: BigInt(currentSlot - headSlot),
         };
-      case SyncMode.SYNCED:
+      case SyncState.Synced:
         return {
           headSlot: BigInt(headSlot),
           syncDistance: BigInt(0),
@@ -128,82 +97,112 @@ export class BeaconSync implements IBeaconSync {
     }
   }
 
+  isSyncing(): boolean {
+    const state = this.state; // Don't run the getter twice
+    return state === SyncState.SyncingFinalized || state === SyncState.SyncingHead;
+  }
+
   isSynced(): boolean {
-    return this.mode === SyncMode.SYNCED;
+    return this.state === SyncState.Synced;
   }
 
-  get state(): SyncMode {
-    return this.mode;
-  }
-
-  collectAttestations(slot: Slot, committeeIndex: CommitteeIndex): void {
-    if (!(this.mode === SyncMode.REGULAR_SYNCING || this.mode === SyncMode.SYNCED)) {
-      throw new Error("Cannot collect attestations before regular sync");
+  get state(): SyncState {
+    const currentSlot = this.chain.clock.currentSlot;
+    const headSlot = this.chain.forkChoice.getHead().slot;
+    if (
+      // Consider node synced IF
+      // Before genesis OR
+      (currentSlot < 0 ||
+        // head is behind clock but close enough with some tolerance
+        (headSlot <= currentSlot && headSlot >= currentSlot - this.slotImportTolerance)) &&
+      // Ensure there at least one connected peer to not claim synced if has no peers
+      // Allow to bypass this conditions for local networks with a single node
+      (this.opts.isSingleNode || this.network.hasSomeConnectedPeer())
+      // TODO: Consider enabling this condition (used in Lighthouse)
+      // && headSlot > 0
+    ) {
+      return SyncState.Synced;
     }
-    this.attestationCollector.subscribeToCommitteeAttestations(slot, committeeIndex);
+
+    const rangeSyncState = this.rangeSync.state;
+    switch (rangeSyncState.status) {
+      case RangeSyncStatus.Finalized:
+        return SyncState.SyncingFinalized;
+      case RangeSyncStatus.Head:
+        return SyncState.SyncingHead;
+      case RangeSyncStatus.Idle:
+        return SyncState.Stalled;
+    }
   }
 
-  private processChainSegment: ProcessChainSegment = async (blocks) => {
-    const trusted = false; // Verify signatures
-    await this.chain.processChainSegment(blocks, {prefinalized: true, trusted});
+  /** Full debug state for lodestar API */
+  getSyncChainsDebugState(): SyncChainDebugState[] {
+    return this.rangeSync.getSyncChainsDebugState();
+  }
+
+  /**
+   * A peer has connected which has blocks that are unknown to us.
+   *
+   * This function handles the logic associated with the connection of a new peer. If the peer
+   * is sufficiently ahead of our current head, a range-sync (batch) sync is started and
+   * batches of blocks are queued to download from the peer. Batched blocks begin at our latest
+   * finalized head.
+   *
+   * If the peer is within the `SLOT_IMPORT_TOLERANCE`, then it's head is sufficiently close to
+   * ours that we consider it fully sync'd with respect to our current chain.
+   */
+  private addPeer = (peerId: PeerId, peerStatus: phase0.Status): void => {
+    const localStatus = this.chain.getStatus();
+    const syncType = getPeerSyncType(localStatus, peerStatus, this.chain.forkChoice, this.slotImportTolerance);
+
+    if (syncType === PeerSyncType.Advanced) {
+      this.rangeSync.addPeer(peerId, localStatus, peerStatus);
+    }
+
+    this.updateSyncState();
   };
 
-  private downloadBeaconBlocksByRange: DownloadBeaconBlocksByRange = async (peerId, request) => {
-    return await this.network.reqResp.beaconBlocksByRange(peerId, request);
+  /**
+   * Must be called by libp2p when a peer is removed from the peer manager
+   */
+  private removePeer = (peerId: PeerId): void => {
+    this.rangeSync.removePeer(peerId);
   };
 
-  private getPeersAndTargetEpoch: GetPeersAndTargetEpoch = () => {
-    const minPeers = this.opts.minPeers ?? defaultSyncOptions.minPeers;
-    const peerSet = getPeersInitialSync(this.network);
-    if (!peerSet && minPeers === 0) {
-      this.logger.verbose("minPeers=0, skipping initial sync");
-      return {peers: [], targetEpoch: this.chain.forkChoice.getFinalizedBlock().finalizedEpoch};
-    } else if (!peerSet || peerSet.peers.length < minPeers) {
-      this.logger.verbose(`Waiting for minPeers: ${peerSet?.peers?.length ?? 0}/${minPeers}`);
-      return null;
-    } else {
-      const targetEpoch = peerSet.checkpoint.epoch;
-      this.logger.debug("New peer set", {count: peerSet.peers.length, targetEpoch});
-      return {peers: peerSet.peers.map((p) => p.peerId), targetEpoch};
+  /**
+   * Run this function when the sync state can potentially change.
+   */
+  private updateSyncState = (): void => {
+    const state = this.state; // Don't run the getter twice
+
+    // We have become synced, subscribe to all the gossip core topics
+    if (
+      state === SyncState.Synced &&
+      !this.gossip.isStarted &&
+      this.chain.clock.currentSlot >= MIN_EPOCH_TO_START_GOSSIP
+    ) {
+      this.gossip.start();
+      this.logger.info("Subscribed gossip core topics");
+    }
+
+    // If we stopped being synced and falled significantly behind, stop gossip
+    if (state !== SyncState.Synced && this.gossip.isStarted) {
+      const syncDiff = this.chain.clock.currentSlot - this.chain.forkChoice.getHead().slot;
+      if (syncDiff > this.slotImportTolerance * 2) {
+        this.logger.warn(`Node sync has fallen behind by ${syncDiff} slots`);
+        this.gossip.stop();
+        this.logger.info("Un-subscribed gossip core topics");
+      }
     }
   };
 
-  private startRegularSync(): void {
-    if (this.mode === SyncMode.STOPPED) return;
-    this.regularSync.on("syncCompleted", this.regularSyncCompleted);
-    this.regularSync.start();
-    this.initialSyncCompleted();
-  }
-
-  private initialSyncCompleted = (): void => {
-    this.mode = SyncMode.REGULAR_SYNCING;
-    this.chain.emitter.off(ChainEvent.errorBlock, this.onUnknownBlockRoot);
-    this.chain.emitter.on(ChainEvent.errorBlock, this.onUnknownBlockRoot);
-    this.gossip.start();
+  private onClockEpoch = (): void => {
+    // If a node witness the genesis event consider starting gossip
+    // Also, ensure that updateSyncState is run at least once per epoch.
+    // If the chain gets or very overloaded it could helps to resolve the situation
+    // by realizing it's way behind and turning gossip off.
+    this.updateSyncState();
   };
-
-  private regularSyncCompleted = (): void => {
-    this.mode = SyncMode.SYNCED;
-    this.gossip.start();
-  };
-
-  private getSyncPeers(): PeerId[] {
-    return this.getPeers();
-  }
-
-  private getUnknownRootPeers(): PeerId[] {
-    return this.getPeers();
-  }
-
-  private getPeers(): PeerId[] {
-    return this.network
-      .getConnectedPeers()
-      .filter(
-        (peer) =>
-          !!this.network.peerMetadata.status.get(peer) &&
-          this.network.peerRpcScores.getScoreState(peer) === ScoreState.Healthy
-      );
-  }
 
   private onUnknownBlockRoot = async (err: BlockError): Promise<void> => {
     if (err.type.code !== BlockErrorCode.PARENT_UNKNOWN) return;
@@ -214,39 +213,19 @@ export class BeaconSync implements IBeaconSync {
 
     if (this.processingRoots.has(parentRootHex)) {
       return;
-    } else {
-      this.processingRoots.add(parentRootHex);
-      this.logger.verbose("Finding block for unknown ancestor root", {parentRootHex});
     }
-    const peerBalancer = new RoundRobinArray(this.getUnknownRootPeers());
-    let retry = 0;
-    const maxRetry = this.getUnknownRootPeers().length;
-    let found = false;
-    while (retry < maxRetry) {
-      const peer = peerBalancer.next();
-      if (!peer) {
-        break;
-      }
-      try {
-        const blocks = await this.network.reqResp.beaconBlocksByRoot(peer, [parentRoot] as List<Root>);
-        if (blocks[0]) {
-          this.logger.verbose("Found block for root", {slot: blocks[0].message.slot, parentRootHex});
-          found = true;
-          this.chain.receiveBlock(blocks[0]);
-          break;
-        }
-      } catch (e) {
-        this.logger.verbose("Failed to get unknown ancestor root from peer", {
-          parentRootHex,
-          peer: peer.toB58String(),
-          error: (e as Error).message,
-          maxRetry,
-          retry,
-        });
-      }
-      retry++;
-    } // end while
-    this.processingRoots.delete(parentRootHex);
-    if (!found) this.logger.error("Failed to get unknown ancestor root", {parentRootHex});
+
+    this.processingRoots.add(parentRootHex);
+    this.logger.verbose("Finding block for unknown ancestor root", {parentRootHex});
+
+    try {
+      const block = await fetchUnknownBlockRoot(parentRoot, this.network, this.logger);
+      this.chain.receiveBlock(block);
+      this.logger.verbose("Found UnknownBlockRoot", {parentRootHex});
+    } catch (e) {
+      this.logger.verbose("Error fetching UnknownBlockRoot", {parentRootHex}, e);
+    } finally {
+      this.processingRoots.delete(parentRootHex);
+    }
   };
 }

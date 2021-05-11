@@ -47,7 +47,7 @@ describe("Process Blocks Performance Test", function () {
       verifySignatures: false,
       verifyStateRoot: false,
     });
-    expect(Date.now() - start).lt(180);
+    expect(Date.now() - start).lt(430);
     logger.profile(`Process block ${signedBlock.message.slot} with ${numValidatorExits} validator exits`);
   });
 

@@ -3,7 +3,7 @@ import {ErrorAborted, ILogger, sleep, prettyBytes} from "@chainsafe/lodestar-uti
 import {AbortSignal} from "abort-controller";
 import {IBeaconChain} from "../chain";
 import {INetwork} from "../network";
-import {IBeaconSync, SyncMode} from "../sync";
+import {IBeaconSync, SyncState} from "../sync";
 import {prettyTimeDiff} from "../util/time";
 import {TimeSeries} from "../util/timeSeries";
 
@@ -44,7 +44,7 @@ export async function runNodeNotifier({
         hasLowPeerCount = false;
       }
 
-      const currentSlot = chain.clock.currentSlot;
+      const clockSlot = chain.clock.currentSlot;
       const headInfo = chain.forkChoice.getHead();
       const headState = chain.getHeadState();
       const finalizedEpoch = headState.finalizedCheckpoint.epoch;
@@ -55,14 +55,14 @@ export async function runNodeNotifier({
       const peersRow = `peers: ${connectedPeerCount}`;
       const finalizedCheckpointRow = `finalized: ${finalizedEpoch} ${prettyBytes(finalizedRoot)}`;
       const headRow = `head: ${headInfo.slot} ${prettyBytes(headInfo.blockRoot)}`;
-      const currentSlotRow = `currentSlot: ${currentSlot}`;
+      const clockSlotRow = `clockSlot: ${clockSlot}`;
 
-      let nodeState: string[] = [];
+      let nodeState: string[];
       switch (sync.state) {
-        case SyncMode.INITIAL_SYNCING:
-        case SyncMode.REGULAR_SYNCING: {
+        case SyncState.SyncingFinalized:
+        case SyncState.SyncingHead: {
           const slotsPerSecond = timeSeries.computeLinearSpeed();
-          const distance = Math.max(currentSlot - headSlot, 0);
+          const distance = Math.max(clockSlot - headSlot, 0);
           const secondsLeft = distance / slotsPerSecond;
           const timeLeft = isFinite(secondsLeft) ? prettyTimeDiff(1000 * secondsLeft) : "?";
           nodeState = [
@@ -71,20 +71,19 @@ export async function runNodeNotifier({
             `${slotsPerSecond.toPrecision(3)} slots/s`,
             finalizedCheckpointRow,
             headRow,
-            currentSlotRow,
+            clockSlotRow,
             peersRow,
           ];
           break;
         }
 
-        case SyncMode.SYNCED: {
-          nodeState = ["Synced", finalizedCheckpointRow, headRow, peersRow];
+        case SyncState.Synced: {
+          nodeState = ["Synced", finalizedCheckpointRow, headRow, clockSlotRow, peersRow];
           break;
         }
 
-        case SyncMode.STOPPED:
-        case SyncMode.WAITING_PEERS: {
-          nodeState = ["Searching for peers", peersRow, finalizedCheckpointRow, headRow, currentSlotRow];
+        case SyncState.Stalled: {
+          nodeState = ["Searching for peers", peersRow, finalizedCheckpointRow, headRow, clockSlotRow];
         }
       }
       logger.info(nodeState.join(" - "));

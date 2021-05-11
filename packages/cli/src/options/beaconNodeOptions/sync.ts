@@ -2,20 +2,23 @@ import {defaultOptions, IBeaconNodeOptions} from "@chainsafe/lodestar";
 import {ICliCommandOptions} from "../../util";
 
 export interface ISyncArgs {
-  "sync.minPeers": number;
+  "sync.isSingleNode": boolean;
 }
 
 export function parseArgs(args: ISyncArgs): IBeaconNodeOptions["sync"] {
   return {
-    minPeers: args["sync.minPeers"],
+    isSingleNode: args["sync.isSingleNode"],
   };
 }
 
 export const options: ICliCommandOptions<ISyncArgs> = {
-  "sync.minPeers": {
-    type: "number",
-    description: "Minimum number of peers before the beacon chain starts syncing",
-    defaultDescription: String(defaultOptions.sync.minPeers),
+  "sync.isSingleNode": {
+    hidden: true,
+    type: "boolean",
+    description:
+      "Allow node to consider itself synced without being connected to a peer. \
+Use only for local networks with a single node, can be dangerous in regular networks.",
+    defaultDescription: String(defaultOptions.sync.isSingleNode),
     group: "sync",
   },
 };

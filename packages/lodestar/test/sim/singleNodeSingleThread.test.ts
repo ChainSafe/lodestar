@@ -69,7 +69,7 @@ describe("Run single node single thread interop validators (no eth1) until check
 
       const bn = await getDevBeaconNode({
         params: testCase.params,
-        options: {sync: {minPeers: 0}, api: {rest: {enabled: true} as IRestApiOptions}},
+        options: {api: {rest: {enabled: true} as IRestApiOptions}, sync: {isSingleNode: true}},
         validatorCount: testCase.validatorClientCount * testCase.validatorsPerClient,
         logger: loggerNodeA,
         genesisTime,

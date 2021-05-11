@@ -30,7 +30,7 @@ describe("chain / bls / multithread queue", function () {
       });
     }
 
-    const pool = new BlsMultiThreadWorkerPool("blst-native", {logger, signal: controller.signal});
+    const pool = new BlsMultiThreadWorkerPool("blst-native", {logger, metrics: null, signal: controller.signal});
     const isValidArr = await Promise.all(
       Array.from({length: 8}, (i) => i).map(() => pool.verifySignatureSets(sets, true))
     );

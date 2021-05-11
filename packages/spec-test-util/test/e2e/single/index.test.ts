@@ -3,9 +3,11 @@ import {unlinkSync, writeFileSync} from "fs";
 import {join} from "path";
 
 import {ContainerType, Type, Json} from "@chainsafe/ssz";
-import {Boolean, Number64} from "@chainsafe/lodestar-types/lib/primitive/ssz";
+import {getPrimitiveTypes} from "@chainsafe/lodestar-types/src/primitive";
 import {describeDirectorySpecTest, InputType} from "../../../src/single";
 import {loadYamlFile} from "../../../src/util";
+
+const primitive = getPrimitiveTypes();
 
 export interface ISimpleStruct {
   test: boolean;
@@ -19,16 +21,16 @@ export interface ISimpleCase extends Iterable<string> {
 
 const inputSchema = new ContainerType({
   fields: {
-    test: Boolean,
-    number: Number64,
+    test: primitive.Boolean,
+    number: primitive.Number64,
   },
 });
 
 before(() => {
   yamlToSSZ(join(__dirname, "../_test_files/single/case0/input.yaml"), inputSchema);
-  yamlToSSZ(join(__dirname, "../_test_files/single/case0/output.yaml"), Number64);
+  yamlToSSZ(join(__dirname, "../_test_files/single/case0/output.yaml"), primitive.Number64);
   yamlToSSZ(join(__dirname, "../_test_files/single/case1/input.yaml"), inputSchema);
-  yamlToSSZ(join(__dirname, "../_test_files/single/case1/output.yaml"), Number64);
+  yamlToSSZ(join(__dirname, "../_test_files/single/case1/output.yaml"), primitive.Number64);
 });
 
 after(() => {
@@ -51,7 +53,7 @@ describeDirectorySpecTest<ISimpleCase, number>(
     },
     sszTypes: {
       input: inputSchema,
-      output: Number64,
+      output: primitive.Number64,
     },
     shouldError: (testCase) => !testCase.input.test,
     getExpected: (testCase) => testCase.output,

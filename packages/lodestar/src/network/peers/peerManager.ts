@@ -1,25 +1,26 @@
 import LibP2p, {Connection} from "libp2p";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {phase0} from "@chainsafe/lodestar-types";
-import {ILogger, LodestarError} from "@chainsafe/lodestar-utils";
+import {ILogger} from "@chainsafe/lodestar-utils";
 import PeerId from "peer-id";
 import {IBeaconChain} from "../../chain";
-import {GoodByeReasonCode, GOODBYE_KNOWN_CODES, Libp2pEvent, Method} from "../../constants";
+import {GoodByeReasonCode, GOODBYE_KNOWN_CODES, Libp2pEvent} from "../../constants";
 import {IMetrics} from "../../metrics";
 import {NetworkEvent, INetworkEventBus} from "../events";
-import {IReqResp} from "../reqresp";
+import {IReqResp, ReqRespMethod, RequestTypedContainer} from "../reqresp";
 import {Libp2pPeerMetadataStore} from "./metastore";
 import {PeerDiscovery} from "./discover";
 import {IPeerRpcScoreStore, ScoreState} from "./score";
 import {
   getConnectedPeerIds,
+  hasSomeConnectedPeer,
   PeerMapDelay,
-  SubnetMap,
-  RequestedSubnet,
   assertPeerRelevance,
   prioritizePeers,
+  IrrelevantPeerError,
 } from "./utils";
 import {prettyPrintPeerId} from "../util";
+import {IAttestationService} from "../attestationService";
 
 /** heartbeat performs regular updates such as updating reputations and performing discovery requests */
 const HEARTBEAT_INTERVAL_MS = 30 * 1000;
@@ -50,8 +51,9 @@ export type PeerManagerOpts = {
 export type PeerManagerModules = {
   libp2p: LibP2p;
   logger: ILogger;
-  metrics?: IMetrics;
+  metrics: IMetrics | null;
   reqResp: IReqResp;
+  attService: IAttestationService;
   chain: IBeaconChain;
   config: IBeaconConfig;
   peerMetadata: Libp2pPeerMetadataStore;
@@ -70,8 +72,9 @@ export type PeerManagerModules = {
 export class PeerManager {
   private libp2p: LibP2p;
   private logger: ILogger;
-  private metrics?: IMetrics;
+  private metrics: IMetrics | null;
   private reqResp: IReqResp;
+  private attService: IAttestationService;
   private chain: IBeaconChain;
   private config: IBeaconConfig;
   private peerMetadata: Libp2pPeerMetadataStore;
@@ -87,8 +90,6 @@ export class PeerManager {
   private opts: PeerManagerOpts;
   private intervals: NodeJS.Timeout[] = [];
 
-  /** Map of subnets and the slot until they are needed */
-  private subnets = new SubnetMap();
   private seenPeers = new Set<string>();
 
   constructor(modules: PeerManagerModules, opts: PeerManagerOpts) {
@@ -96,6 +97,7 @@ export class PeerManager {
     this.logger = modules.logger;
     this.metrics = modules.metrics;
     this.reqResp = modules.reqResp;
+    this.attService = modules.attService;
     this.chain = modules.chain;
     this.config = modules.config;
     this.peerMetadata = modules.peerMetadata;
@@ -133,6 +135,13 @@ export class PeerManager {
     return getConnectedPeerIds(this.libp2p);
   }
 
+  /**
+   * Efficiently check if there is at least one peer connected
+   */
+  hasSomeConnectedPeer(): boolean {
+    return hasSomeConnectedPeer(this.libp2p);
+  }
+
   async goodbyeAndDisconnectAllPeers(): Promise<void> {
     await Promise.all(
       // Filter by peers that support the goodbye protocol: {supportsProtocols: [goodbyeProtocol]}
@@ -141,11 +150,9 @@ export class PeerManager {
   }
 
   /**
-   * Request to find peers on a given subnet.
+   * Run after validator subscriptions request.
    */
-  requestAttSubnets(requestedSubnets: RequestedSubnet[]): void {
-    this.subnets.request(requestedSubnets);
-
+  onBeaconCommitteeSubscriptions(): void {
     // TODO:
     // Only if the slot is more than epoch away, add an event to start looking for peers
 
@@ -164,15 +171,15 @@ export class PeerManager {
   /**
    * Must be called when network ReqResp receives incoming requests
    */
-  private onRequest = (method: Method, requestBody: phase0.RequestBody, peer: PeerId): void => {
+  private onRequest = (request: RequestTypedContainer, peer: PeerId): void => {
     try {
-      switch (method) {
-        case Method.Ping:
-          return this.onPing(peer, requestBody as phase0.Ping);
-        case Method.Goodbye:
-          return this.onGoodbye(peer, requestBody as phase0.Goodbye);
-        case Method.Status:
-          return this.onStatus(peer, requestBody as phase0.Status);
+      switch (request.method) {
+        case ReqRespMethod.Ping:
+          return this.onPing(peer, request.body);
+        case ReqRespMethod.Goodbye:
+          return this.onGoodbye(peer, request.body);
+        case ReqRespMethod.Status:
+          return this.onStatus(peer, request.body);
       }
     } catch (e) {
       this.logger.error("Error onRequest handler", {}, e);
@@ -222,10 +229,12 @@ export class PeerManager {
     try {
       assertPeerRelevance(status, this.chain, this.config);
     } catch (e) {
-      this.logger.debug("Irrelevant peer", {
-        peer: prettyPrintPeerId(peer),
-        reason: e instanceof LodestarError ? e.getMetadata() : (e as Error).message,
-      });
+      if (e instanceof IrrelevantPeerError) {
+        this.logger.debug("Irrelevant peer", {peer: prettyPrintPeerId(peer), reason: e.getMetadata()});
+      } else {
+        this.logger.error("Unexpected error in assertPeerRelevance", {peer: prettyPrintPeerId(peer)}, e);
+      }
+
       void this.goodbyeAndDisconnect(peer, GoodByeReasonCode.IRRELEVANT_NETWORK);
       return;
     }
@@ -235,8 +244,6 @@ export class PeerManager {
     // libp2p.connectionManager.get() returns not null if there's +1 open connections with `peer`
     if (this.libp2p.connectionManager.get(peer)) {
       this.networkEventBus.emit(NetworkEvent.peerConnected, peer, status);
-      // TODO - TEMP: RangeSync refactor may delete peerMetadata.status
-      this.peerMetadata.status.set(peer, status);
     }
   }
 
@@ -303,7 +310,7 @@ export class PeerManager {
         score: this.peerRpcScores.getScore(peer),
       })),
       // Collect subnets which we need peers for in the current slot
-      this.subnets.getActive(this.chain.clock.currentSlot),
+      this.attService.getActiveSubnets(),
       this.opts
     );
 

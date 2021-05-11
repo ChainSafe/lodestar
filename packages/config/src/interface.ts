@@ -1,5 +1,5 @@
 import {IBeaconParams} from "@chainsafe/lodestar-params";
-import {IAllForksSSZTypes, IBeaconSSZTypes, Slot, Version} from "@chainsafe/lodestar-types";
+import {Epoch, AllForksSSZTypes, IBeaconSSZTypes, Slot, Version} from "@chainsafe/lodestar-types";
 
 export enum ForkName {
   phase0 = "phase0",
@@ -8,26 +8,21 @@ export enum ForkName {
 
 export interface IForkInfo {
   name: ForkName;
-  slot: Slot;
+  epoch: Epoch;
   version: Version;
 }
 
 export interface IBeaconConfig {
   params: IBeaconParams;
   types: IBeaconSSZTypes;
-  getForkInfoRecord(): Record<ForkName, IForkInfo>;
-  getForkInfos(): IForkInfo[];
+
+  forks: {[K in ForkName]: IForkInfo};
   getForkInfo(slot: Slot): IForkInfo;
-  /**
-   * Get the hard-fork name at a given slot
-   */
+
+  /** Get the hard-fork name at a given slot */
   getForkName(slot: Slot): ForkName;
-  /**
-   * Get the hard-fork version at a given slot
-   */
+  /** Get the hard-fork version at a given slot */
   getForkVersion(slot: Slot): Version;
-  /**
-   * Get SSZ types by hard-fork
-   */
-  getTypes(slot: Slot): IAllForksSSZTypes;
+  /** Get SSZ types by hard-fork */
+  getTypes(slot: Slot): AllForksSSZTypes;
 }

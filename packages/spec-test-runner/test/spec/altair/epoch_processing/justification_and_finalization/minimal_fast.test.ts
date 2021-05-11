@@ -12,7 +12,7 @@ import {TreeBacked} from "@chainsafe/ssz";
 import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
-const config = createIBeaconConfig({...params, ALTAIR_FORK_SLOT: 0});
+const config = createIBeaconConfig({...params, ALTAIR_FORK_EPOCH: 0});
 
 describeDirectorySpecTest<IAltairStateTestCase, altairTypes.BeaconState>(
   "altair epoch justification and finalization minimal",

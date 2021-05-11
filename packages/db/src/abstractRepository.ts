@@ -53,13 +53,9 @@ export abstract class Repository<I extends Id, T> {
   }
 
   async getBinary(id: I): Promise<Buffer | null> {
-    try {
-      const value = await this.db.get(this.encodeKey(id));
-      if (!value) return null;
-      return value;
-    } catch (e) {
-      return null;
-    }
+    const value = await this.db.get(this.encodeKey(id));
+    if (!value) return null;
+    return value;
   }
 
   async has(id: I): Promise<boolean> {
@@ -93,7 +89,7 @@ export abstract class Repository<I extends Id, T> {
 
   async batchPut(items: ArrayLike<IKeyValue<I, T>>): Promise<void> {
     await this.db.batchPut(
-      Array.from({length: items.length}, (ignored, i) => ({
+      Array.from({length: items.length}, (_, i) => ({
         key: this.encodeKey(items[i].key),
         value: this.encodeValue(items[i].value),
       }))
@@ -103,7 +99,7 @@ export abstract class Repository<I extends Id, T> {
   // Similar to batchPut but we support value as Buffer
   async batchPutBinary(items: ArrayLike<IKeyValue<I, Buffer>>): Promise<void> {
     await this.db.batchPut(
-      Array.from({length: items.length}, (ignored, i) => ({
+      Array.from({length: items.length}, (_, i) => ({
         key: this.encodeKey(items[i].key),
         value: items[i].value,
       }))
@@ -111,12 +107,12 @@ export abstract class Repository<I extends Id, T> {
   }
 
   async batchDelete(ids: ArrayLike<I>): Promise<void> {
-    await this.db.batchDelete(Array.from({length: ids.length}, (ignored, i) => this.encodeKey(ids[i])));
+    await this.db.batchDelete(Array.from({length: ids.length}, (_, i) => this.encodeKey(ids[i])));
   }
 
   async batchAdd(values: ArrayLike<T>): Promise<void> {
     await this.batchPut(
-      Array.from({length: values.length}, (ignored, i) => ({
+      Array.from({length: values.length}, (_, i) => ({
         key: this.getId(values[i]),
         value: values[i],
       }))

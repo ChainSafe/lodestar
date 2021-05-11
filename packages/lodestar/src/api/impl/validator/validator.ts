@@ -6,7 +6,6 @@ import bls, {Signature} from "@chainsafe/bls";
 import {
   CachedBeaconState,
   computeStartSlotAtEpoch,
-  computeSubnetForCommitteesAtSlot,
   proposerShufflingDecisionRoot,
   attesterShufflingDecisionRoot,
 } from "@chainsafe/lodestar-beacon-state-transition";
@@ -24,8 +23,9 @@ import {validateGossipAggregateAndProof} from "../../../chain/validation";
 import {ZERO_HASH} from "../../../constants";
 import {IBeaconDb} from "../../../db";
 import {IEth1ForBlockProduction} from "../../../eth1";
+import {IMetrics} from "../../../metrics";
 import {INetwork} from "../../../network";
-import {IBeaconSync, SyncMode} from "../../../sync";
+import {IBeaconSync, SyncState} from "../../../sync";
 import {toGraffitiBuffer} from "../../../util/graffiti";
 import {IApiOptions} from "../../options";
 import {ApiError} from "../errors";
@@ -60,13 +60,14 @@ export class ValidatorApi implements IValidatorApi {
   private eth1: IEth1ForBlockProduction;
   private network: INetwork;
   private sync: IBeaconSync;
+  private metrics: IMetrics | null;
   private logger: ILogger;
   // Cached for duties
   private genesisBlockRoot: Root | null = null;
 
   constructor(
     opts: Partial<IApiOptions>,
-    modules: Pick<IApiModules, "config" | "chain" | "db" | "eth1" | "sync" | "network" | "logger">
+    modules: Pick<IApiModules, "config" | "chain" | "db" | "eth1" | "network" | "sync" | "metrics" | "logger">
   ) {
     this.namespace = ApiNamespace.VALIDATOR;
     this.config = modules.config;
@@ -75,6 +76,7 @@ export class ValidatorApi implements IValidatorApi {
     this.eth1 = modules.eth1;
     this.network = modules.network;
     this.sync = modules.sync;
+    this.metrics = modules.metrics;
     this.logger = modules.logger;
   }
 
@@ -84,10 +86,7 @@ export class ValidatorApi implements IValidatorApi {
     await this.waitForSlot(slot); // Must never request for a future slot > currentSlot
 
     return await assembleBlock(
-      this.config,
-      this.chain,
-      this.db,
-      this.eth1,
+      {config: this.config, chain: this.chain, db: this.db, eth1: this.eth1, metrics: this.metrics},
       slot,
       randaoReveal,
       toGraffitiBuffer(graffiti)
@@ -255,27 +254,7 @@ export class ValidatorApi implements IValidatorApi {
   async prepareBeaconCommitteeSubnet(subscriptions: phase0.BeaconCommitteeSubscription[]): Promise<void> {
     this.notWhileSyncing();
 
-    // Determine if the validator is an aggregator. If so, we subscribe to the subnet and
-    // if successful add the validator to a mapping of known aggregators for that exact
-    // subnet.
-    for (const {isAggregator, slot, committeeIndex} of subscriptions) {
-      if (isAggregator) {
-        this.sync.collectAttestations(slot, committeeIndex);
-      }
-    }
-
-    this.network.requestAttSubnets(
-      subscriptions.map(({slot, committeesAtSlot, committeeIndex}) => ({
-        subnetId: computeSubnetForCommitteesAtSlot(this.config, slot, committeesAtSlot, committeeIndex),
-        // Network should keep finding peers for this subnet until `toSlot`
-        // add one slot to ensure we keep the peer for the subscription slot
-        toSlot: slot + 1,
-      }))
-    );
-
-    // TODO:
-    // Update the `known_validators` mapping and subscribes to a set of random subnets if required
-    // It must also update the ENR to indicate our long-lived subscription to the subnet
+    this.network.prepareBeaconCommitteeSubnet(subscriptions);
 
     // TODO:
     // If the discovery mechanism isn't disabled, attempt to set up a peer discovery for the
@@ -338,8 +317,8 @@ export class ValidatorApi implements IValidatorApi {
 
     const syncState = this.sync.state;
     switch (syncState) {
-      case SyncMode.INITIAL_SYNCING:
-      case SyncMode.REGULAR_SYNCING: {
+      case SyncState.SyncingFinalized:
+      case SyncState.SyncingHead: {
         const currentSlot = this.chain.clock.currentSlot;
         const headSlot = this.chain.forkChoice.getHead().slot;
         if (currentSlot - headSlot > SYNC_TOLERANCE_EPOCHS * this.config.params.SLOTS_PER_EPOCH) {
@@ -349,14 +328,11 @@ export class ValidatorApi implements IValidatorApi {
         }
       }
 
-      case SyncMode.SYNCED:
+      case SyncState.Synced:
         return;
 
-      case SyncMode.WAITING_PEERS:
+      case SyncState.Stalled:
         throw new ApiError(503, "Node is waiting for peers");
-
-      case SyncMode.STOPPED:
-        throw new ApiError(503, "Node is stopped");
     }
   }
 }

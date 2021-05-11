@@ -1,7 +1,7 @@
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {IBlockSummary} from "@chainsafe/lodestar-fork-choice";
 import sinon, {SinonStubbedInstance} from "sinon";
-import {IBeaconSync, SyncMode} from "../../../../../src/sync/interface";
+import {IBeaconSync, SyncState} from "../../../../../src/sync/interface";
 import {IApiModules} from "../../../../../src/api/impl/interface";
 import {ValidatorApi} from "../../../../../src/api/impl/validator/validator";
 import {IEth1ForBlockProduction} from "../../../../../src/eth1";
@@ -31,6 +31,7 @@ describe("api - validator - produceAttestationData", function () {
       logger,
       network: server.networkStub,
       sync: syncStub,
+      metrics: null,
     };
   });
 
@@ -39,7 +40,7 @@ describe("api - validator - produceAttestationData", function () {
     const currentSlot = 100000;
     const headSlot = 0;
     server.chainStub.clock = {currentSlot} as LocalClock;
-    sinon.replaceGetter(syncStub, "state", () => SyncMode.INITIAL_SYNCING);
+    sinon.replaceGetter(syncStub, "state", () => SyncState.SyncingFinalized);
     server.forkChoiceStub.getHead.returns({slot: headSlot} as IBlockSummary);
 
     // Should not allow any call to validator API
@@ -50,10 +51,10 @@ describe("api - validator - produceAttestationData", function () {
   it("Should throw error when node is stopped", async function () {
     const currentSlot = 100000;
     server.chainStub.clock = {currentSlot} as LocalClock;
-    sinon.replaceGetter(syncStub, "state", () => SyncMode.STOPPED);
+    sinon.replaceGetter(syncStub, "state", () => SyncState.Stalled);
 
     // Should not allow any call to validator API
     const api = new ValidatorApi({}, modules);
-    await expect(api.produceAttestationData(0, 0)).to.be.rejectedWith("Node is stopped");
+    await expect(api.produceAttestationData(0, 0)).to.be.rejectedWith("Node is waiting for peers");
   });
 });

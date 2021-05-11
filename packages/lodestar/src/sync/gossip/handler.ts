@@ -29,6 +29,10 @@ export class BeaconGossipHandler {
     this.addGossipHandlers();
   }
 
+  get isStarted(): boolean {
+    return this.state.status === GossipHandlerStatus.Started;
+  }
+
   close(): void {
     this.removeGossipHandlers();
     if (this.state.status === GossipHandlerStatus.Started) {
@@ -44,7 +48,7 @@ export class BeaconGossipHandler {
       return;
     }
 
-    const fork = this.chain.getForkName();
+    const fork = this.chain.getHeadForkName();
     this.subscribeAtFork(fork);
     this.state = {status: GossipHandlerStatus.Started, fork};
     this.chain.emitter.on(ChainEvent.forkVersion, this.handleForkVersion);

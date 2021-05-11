@@ -59,7 +59,7 @@ export class LevelDbController implements IDatabaseController<Buffer, Buffer> {
     try {
       return (await this.db.get(key)) as Buffer | null;
     } catch (e) {
-      if ((e as {notFound: unknown}).notFound) {
+      if ((e as NotFoundError).notFound) {
         return null;
       }
       throw e;
@@ -167,4 +167,10 @@ export class LevelDbController implements IDatabaseController<Buffer, Buffer> {
 type StreamKeysOpts = {
   keys: boolean;
   values: boolean;
+};
+
+/** From https://www.npmjs.com/package/level */
+type NotFoundError = {
+  notFound: true;
+  type: "NotFoundError";
 };

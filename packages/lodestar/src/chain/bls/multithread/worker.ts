@@ -10,7 +10,7 @@ const MIN_SET_COUNT_TO_BATCH = 2;
 // Cloned data from instatiation
 const workerData = worker.workerData as WorkerData;
 if (!workerData) throw Error("workerData must be defined");
-const {implementation} = workerData || {};
+const {implementation, workerId} = workerData || {};
 
 expose({
   async doManyBlsWorkReq(workReqArr: BlsWorkReq[]): Promise<WorkResult<boolean>[]> {
@@ -25,7 +25,7 @@ function doManyBlsWorkReq(workReqArr: BlsWorkReq[]): WorkResult<boolean>[] {
       const start = Date.now();
       const isValid = verifySignatureSetsMaybeBatch(workReq);
       const workerJobTimeMs = Date.now() - start;
-      return {code: WorkResultCode.success, result: isValid, workerJobTimeMs};
+      return {code: WorkResultCode.success, result: isValid, workerJobTimeMs, workerId};
     } catch (e) {
       return {code: WorkResultCode.error, error: e as Error};
     }

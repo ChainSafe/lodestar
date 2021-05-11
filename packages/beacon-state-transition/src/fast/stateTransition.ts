@@ -3,11 +3,16 @@ import {ForkName} from "@chainsafe/lodestar-config";
 import {allForks, Slot} from "@chainsafe/lodestar-types";
 import * as phase0 from "../phase0";
 import * as altair from "../altair";
+import {IBeaconStateTransitionMetrics} from "../metrics";
 import {verifyProposerSignature} from "./signatureSets";
 import {CachedBeaconState} from "./util";
 
 type StateTransitionFunctions = {
-  processSlots(state: CachedBeaconState<allForks.BeaconState>, slot: Slot): CachedBeaconState<allForks.BeaconState>;
+  processSlots(
+    state: CachedBeaconState<allForks.BeaconState>,
+    slot: Slot,
+    metrics?: IBeaconStateTransitionMetrics | null
+  ): CachedBeaconState<allForks.BeaconState>;
   upgradeState(state: CachedBeaconState<allForks.BeaconState>): CachedBeaconState<allForks.BeaconState>;
 };
 
@@ -27,7 +32,8 @@ const implementations: Record<ForkName, StateTransitionFunctions> = {
 export function fastStateTransition(
   state: CachedBeaconState<allForks.BeaconState>,
   signedBlock: allForks.SignedBeaconBlock,
-  options?: {verifyStateRoot?: boolean; verifyProposer?: boolean; verifySignatures?: boolean}
+  options?: {verifyStateRoot?: boolean; verifyProposer?: boolean; verifySignatures?: boolean},
+  metrics?: IBeaconStateTransitionMetrics | null
 ): CachedBeaconState<allForks.BeaconState> {
   const {verifyStateRoot = true, verifyProposer = true, verifySignatures = true} = options || {};
   const {config} = state;
@@ -41,7 +47,7 @@ export function fastStateTransition(
 
   // process slots (including those with no blocks) since block
   // includes state upgrades
-  postState = _processSlots(postState, blockSlot);
+  postState = _processSlots(postState, blockSlot, metrics);
 
   // verify signature
   if (verifyProposer) {
@@ -51,12 +57,14 @@ export function fastStateTransition(
   }
 
   // process block
+
   switch (blockFork) {
     case ForkName.phase0:
       phase0.fast.processBlock(
         postState as CachedBeaconState<phase0.BeaconState>,
         block as phase0.BeaconBlock,
-        verifySignatures
+        verifySignatures,
+        metrics
       );
       break;
     case ForkName.altair:
@@ -89,13 +97,14 @@ export function fastStateTransition(
  */
 export function processSlots(
   state: CachedBeaconState<allForks.BeaconState>,
-  slot: Slot
+  slot: Slot,
+  metrics?: IBeaconStateTransitionMetrics | null
 ): CachedBeaconState<allForks.BeaconState> {
   let postState = state.clone();
 
   postState.setStateCachesAsTransient();
 
-  postState = _processSlots(postState, slot);
+  postState = _processSlots(postState, slot, metrics);
 
   postState.setStateCachesAsPersistent();
 
@@ -105,14 +114,15 @@ export function processSlots(
 // eslint-disable-next-line @typescript-eslint/naming-convention
 function _processSlots(
   state: CachedBeaconState<allForks.BeaconState>,
-  slot: Slot
+  slot: Slot,
+  metrics?: IBeaconStateTransitionMetrics | null
 ): CachedBeaconState<allForks.BeaconState> {
   let postState = state;
   const {config} = state;
   const preSlot = state.slot;
 
   // forks sorted in order
-  const forkInfos = Object.values(config.getForkInfoRecord());
+  const forkInfos = Object.values(config.forks);
   // for each fork
   for (let i = 0; i < forkInfos.length; i++) {
     const currentForkInfo = forkInfos[i];
@@ -127,13 +137,15 @@ function _processSlots(
       impl.processSlots(postState, slot);
       break;
     }
+    const nextForkStartSlot = config.params.SLOTS_PER_EPOCH * nextForkInfo.epoch;
+
     // if the starting state slot is after the current fork, skip to the next fork
-    if (preSlot > nextForkInfo.slot) {
+    if (preSlot > nextForkStartSlot) {
       continue;
     }
     // if the requested slot is not after the next fork, process slots and exit
-    if (slot < nextForkInfo.slot) {
-      impl.processSlots(postState, slot);
+    if (slot < nextForkStartSlot) {
+      impl.processSlots(postState, slot, metrics);
       break;
     }
     const nextImpl = implementations[currentForkInfo.name];
@@ -141,7 +153,7 @@ function _processSlots(
       throw new Error(`Slot processing not implemented for fork ${nextForkInfo.name}`);
     }
     // else (the requested slot is equal or after the next fork), process up to the fork
-    impl.processSlots(postState, nextForkInfo.slot);
+    impl.processSlots(postState, nextForkStartSlot);
 
     postState = nextImpl.upgradeState(postState);
   }

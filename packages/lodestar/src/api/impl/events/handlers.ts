@@ -69,14 +69,13 @@ export function handleFinalizedCheckpointEvent(
   config: IBeaconConfig,
   callback: (value: BeaconEvent) => void
 ): ChainEventListener<ChainEvent.finalized> {
-  return (payload) => {
+  return (payload, state) => {
     callback({
       type: BeaconEventType.FINALIZED_CHECKPOINT,
       message: {
         block: payload.root,
         epoch: payload.epoch,
-        //TODO: add state root to finalized checkpoint event
-        state: Buffer.alloc(32, 0),
+        state: state.hashTreeRoot(),
       },
     });
   };

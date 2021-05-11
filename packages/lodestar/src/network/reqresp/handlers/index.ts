@@ -1,4 +1,4 @@
-import {phase0} from "@chainsafe/lodestar-types";
+import {allForks, phase0} from "@chainsafe/lodestar-types";
 import {IBeaconChain} from "../../../chain";
 import {IBeaconDb} from "../../../db";
 import {onBeaconBlocksByRange} from "./beaconBlocksByRange";
@@ -6,8 +6,8 @@ import {onBeaconBlocksByRoot} from "./beaconBlocksByRoot";
 
 export interface IReqRespHandler {
   onStatus(): AsyncIterable<phase0.Status>;
-  onBeaconBlocksByRange(req: phase0.RequestBody): AsyncIterable<phase0.SignedBeaconBlock>;
-  onBeaconBlocksByRoot(req: phase0.RequestBody): AsyncIterable<phase0.SignedBeaconBlock>;
+  onBeaconBlocksByRange(req: phase0.BeaconBlocksByRangeRequest): AsyncIterable<allForks.SignedBeaconBlock>;
+  onBeaconBlocksByRoot(req: phase0.BeaconBlocksByRootRequest): AsyncIterable<allForks.SignedBeaconBlock>;
 }
 
 /**
@@ -27,11 +27,11 @@ export class ReqRespHandler implements IReqRespHandler {
     yield this.chain.getStatus();
   }
 
-  async *onBeaconBlocksByRange(req: phase0.BeaconBlocksByRangeRequest): AsyncIterable<phase0.SignedBeaconBlock> {
+  async *onBeaconBlocksByRange(req: phase0.BeaconBlocksByRangeRequest): AsyncIterable<allForks.SignedBeaconBlock> {
     yield* onBeaconBlocksByRange(req, this.chain, this.db);
   }
 
-  async *onBeaconBlocksByRoot(req: phase0.BeaconBlocksByRootRequest): AsyncIterable<phase0.SignedBeaconBlock> {
+  async *onBeaconBlocksByRoot(req: phase0.BeaconBlocksByRootRequest): AsyncIterable<allForks.SignedBeaconBlock> {
     yield* onBeaconBlocksByRoot(req, this.chain, this.db);
   }
 }

@@ -14,6 +14,7 @@ import {IBeaconDb} from "../../db";
 import {processSlotsByCheckpoint, runStateTransition} from "../blocks/stateTransition";
 import {IStateRegenerator} from "./interface";
 import {RegenError, RegenErrorCode} from "./errors";
+import {IMetrics} from "../../metrics";
 
 /**
  * Regenerates states that have already been processed by the fork choice
@@ -25,6 +26,7 @@ export class StateRegenerator implements IStateRegenerator {
   private stateCache: StateContextCache;
   private checkpointStateCache: CheckpointStateCache;
   private db: IBeaconDb;
+  private metrics: IMetrics | null;
 
   constructor({
     config,
@@ -33,6 +35,7 @@ export class StateRegenerator implements IStateRegenerator {
     stateCache,
     checkpointStateCache,
     db,
+    metrics,
   }: {
     config: IBeaconConfig;
     emitter: ChainEventEmitter;
@@ -40,6 +43,7 @@ export class StateRegenerator implements IStateRegenerator {
     stateCache: StateContextCache;
     checkpointStateCache: CheckpointStateCache;
     db: IBeaconDb;
+    metrics: IMetrics | null;
   }) {
     this.config = config;
     this.emitter = emitter;
@@ -47,6 +51,7 @@ export class StateRegenerator implements IStateRegenerator {
     this.stateCache = stateCache;
     this.checkpointStateCache = checkpointStateCache;
     this.db = db;
+    this.metrics = metrics;
   }
 
   async getPreState(block: phase0.BeaconBlock): Promise<CachedBeaconState<allForks.BeaconState>> {
@@ -62,21 +67,12 @@ export class StateRegenerator implements IStateRegenerator {
     const blockEpoch = computeEpochAtSlot(this.config, block.slot);
 
     // This may save us at least one epoch transition.
-    // If the requested state crosses an epoch boundary and the block isn't a checkpoint block
+    // If the requested state crosses an epoch boundary
     // then we may use the checkpoint state before the block
-    // If block is a checkpoint block, we may have the checkpoint state with parent root inside the checkpoint state cache
+    // We may have the checkpoint state with parent root inside the checkpoint state cache
     // through gossip validation.
     if (parentEpoch < blockEpoch) {
-      const checkpointState = await this.getCheckpointState({root: block.parentRoot, epoch: blockEpoch});
-      if (checkpointState) {
-        return checkpointState;
-      }
-    }
-
-    // If there's more than one epoch to pre-process (but the block is a checkpoint block)
-    // get the checkpoint state as close as possible
-    if (parentEpoch < blockEpoch - 1) {
-      return await this.getCheckpointState({root: block.parentRoot, epoch: blockEpoch - 1});
+      return await this.getCheckpointState({root: block.parentRoot, epoch: blockEpoch});
     }
 
     // Otherwise, get the state normally.
@@ -113,14 +109,18 @@ export class StateRegenerator implements IStateRegenerator {
     // If a checkpoint state exists with the given checkpoint root, it either is in requested epoch
     // or needs to have empty slots processed until the requested epoch
     if (latestCheckpointStateCtx) {
-      return await processSlotsByCheckpoint(this.emitter, latestCheckpointStateCtx, slot);
+      return await processSlotsByCheckpoint(
+        {emitter: this.emitter, metrics: this.metrics},
+        latestCheckpointStateCtx,
+        slot
+      );
     }
 
     // Otherwise, use the fork choice to get the stateRoot from block at the checkpoint root
     // regenerate that state,
     // then process empty slots until the requested epoch
     const blockStateCtx = await this.getState(block.stateRoot);
-    return await processSlotsByCheckpoint(this.emitter, blockStateCtx, slot);
+    return await processSlotsByCheckpoint({emitter: this.emitter, metrics: this.metrics}, blockStateCtx, slot);
   }
 
   async getState(stateRoot: Root): Promise<CachedBeaconState<allForks.BeaconState>> {
@@ -189,13 +189,12 @@ export class StateRegenerator implements IStateRegenerator {
       }
 
       try {
-        state = await runStateTransition(this.emitter, this.forkChoice, this.checkpointStateCache, state, {
-          signedBlock: block,
-          reprocess: true,
-          prefinalized: true,
-          validSignatures: true,
-          validProposerSignature: true,
-        });
+        state = await runStateTransition(
+          {emitter: this.emitter, forkChoice: this.forkChoice, metrics: this.metrics},
+          this.checkpointStateCache,
+          state,
+          {signedBlock: block, reprocess: true, prefinalized: true, validSignatures: true, validProposerSignature: true}
+        );
         // this avoids keeping our node busy processing blocks
         await sleep(0);
       } catch (e) {

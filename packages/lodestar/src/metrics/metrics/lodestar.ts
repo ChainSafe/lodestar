@@ -1,3 +1,4 @@
+import {BeaconState} from "@chainsafe/lodestar-types/lib/allForks";
 import {RegistryMetricCreator} from "../utils/registryMetricCreator";
 import {IMetricsOptions} from "../options";
 
@@ -7,7 +8,11 @@ export type ILodestarMetrics = ReturnType<typeof createLodestarMetrics>;
  * Extra Lodestar custom metrics
  */
 // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types, @typescript-eslint/explicit-function-return-type
-export function createLodestarMetrics(register: RegistryMetricCreator, metadata: IMetricsOptions["metadata"]) {
+export function createLodestarMetrics(
+  register: RegistryMetricCreator,
+  metadata: IMetricsOptions["metadata"],
+  anchorState?: BeaconState
+) {
   if (metadata) {
     register.static<"semver" | "branch" | "commit" | "version" | "network">({
       name: "lodestar_version",
@@ -16,7 +21,24 @@ export function createLodestarMetrics(register: RegistryMetricCreator, metadata:
     });
   }
 
+  // Initial static metrics
+  if (anchorState) {
+    register
+      .gauge({
+        name: "lodestar_genesis_time",
+        help: "Genesis time in seconds",
+      })
+      .set(anchorState.genesisTime);
+  }
+
   return {
+    clockSlot: register.gauge({
+      name: "lodestar_clock_slot",
+      help: "Current clock slot",
+    }),
+
+    // Peers
+
     peersByDirection: register.gauge<"direction">({
       name: "lodestar_peers_by_direction",
       help: "number of peers, labeled by direction",
@@ -80,23 +102,46 @@ export function createLodestarMetrics(register: RegistryMetricCreator, metadata:
       buckets: [0.1, 1, 10, 100],
     }),
 
-    blockProcessorQueueLength: register.gauge({
-      name: "lodestar_block_processor_queue_length",
-      help: "Count of total block processor queue length",
-    }),
-    blockProcessorQueueDroppedJobs: register.gauge({
-      name: "lodestar_block_processor_queue_dropped_jobs_total",
-      help: "Count of total block processor queue dropped jobs",
-    }),
-    blockProcessorQueueJobTime: register.histogram({
-      name: "lodestar_block_processor_queue_job_time_seconds",
-      help: "Time to process block processor queue job in seconds",
-    }),
-    blockProcessorQueueJobWaitTime: register.histogram({
-      name: "lodestar_block_processor_queue_job_wait_time_seconds",
-      help: "Time from job added to the queue to starting the job in seconds",
-      buckets: [0.1, 1, 10, 100],
-    }),
+    regenQueue: {
+      length: register.gauge({
+        name: "lodestar_regen_queue_length",
+        help: "Count of total regen queue length",
+      }),
+      droppedJobs: register.gauge({
+        name: "lodestar_regen_queue_dropped_jobs_total",
+        help: "Count of total regen queue dropped jobs",
+      }),
+      jobTime: register.histogram({
+        name: "lodestar_regen_queue_job_time_seconds",
+        help: "Time to process regen queue job in seconds",
+        buckets: [0.1, 1, 10, 100],
+      }),
+      jobWaitTime: register.histogram({
+        name: "lodestar_regen_queue_job_wait_time_seconds",
+        help: "Time from job added to the regen queue to starting in seconds",
+        buckets: [0.1, 1, 10, 100],
+      }),
+    },
+
+    blockProcessorQueue: {
+      length: register.gauge({
+        name: "lodestar_block_processor_queue_length",
+        help: "Count of total block processor queue length",
+      }),
+      droppedJobs: register.gauge({
+        name: "lodestar_block_processor_queue_dropped_jobs_total",
+        help: "Count of total block processor queue dropped jobs",
+      }),
+      jobTime: register.histogram({
+        name: "lodestar_block_processor_queue_job_time_seconds",
+        help: "Time to process block processor queue job in seconds",
+      }),
+      jobWaitTime: register.histogram({
+        name: "lodestar_block_processor_queue_job_wait_time_seconds",
+        help: "Time from job added to the block processor queue to starting in seconds",
+        buckets: [0.1, 1, 10, 100],
+      }),
+    },
 
     apiRestResponseTime: register.histogram<"operationId">({
       name: "lodestar_api_rest_response_time_seconds",
@@ -106,28 +151,62 @@ export function createLodestarMetrics(register: RegistryMetricCreator, metadata:
       buckets: [0.01, 0.1, 0.5, 1, 5, 10],
     }),
 
+    // Beacon state transition metrics
+
+    stfnEpochTransition: register.histogram({
+      name: "lodestar_stfn_epoch_transition_seconds",
+      help: "Time to process a single epoch transition in seconds",
+      buckets: [0.1, 1, 10],
+    }),
+    stfnProcessBlock: register.histogram({
+      name: "lodestar_stfn_process_block_seconds",
+      help: "Time to process a single block in seconds",
+      buckets: [0.1, 1, 10],
+    }),
+
     // BLS verifier thread pool and queue
 
     blsThreadPoolSuccessJobsSignatureSetsCount: register.gauge({
       name: "lodestar_bls_thread_pool_success_jobs_signature_sets_count",
       help: "Count of total verified signature sets",
     }),
-    blsThreadPoolSuccessJobsWorkerTime: register.gauge({
+    blsThreadPoolSuccessJobsWorkerTime: register.gauge<"workerId">({
       name: "lodestar_bls_thread_pool_success_time_seconds_sum",
       help: "Total time spent verifying signature sets measured on the worker",
+      labelNames: ["workerId"],
+    }),
+    blsThreadPoolErrorJobsSignatureSetsCount: register.gauge({
+      name: "lodestar_bls_thread_pool_error_jobs_signature_sets_count",
+      help: "Count of total error-ed signature sets",
     }),
     blsThreadPoolJobWaitTime: register.histogram({
       name: "lodestar_bls_thread_pool_queue_job_wait_time_seconds",
       help: "Time from job added to the queue to starting the job in seconds",
       buckets: [0.1, 1, 10],
     }),
-    blsThreadPoolTotalJobsStarted: register.gauge({
-      name: "lodestar_bls_thread_pool_jobs_started_total",
-      help: "Count of total jobs started in bls thread pool, jobs include +1 signature sets",
+    blsThreadPoolQueueLength: register.gauge({
+      name: "lodestar_bls_thread_pool_queue_length",
+      help: "Count of total block processor queue length",
     }),
     blsThreadPoolTotalJobsGroupsStarted: register.gauge({
       name: "lodestar_bls_thread_pool_job_groups_started_total",
       help: "Count of total jobs groups started in bls thread pool, job groups include +1 jobs",
+    }),
+    blsThreadPoolTotalJobsStarted: register.gauge({
+      name: "lodestar_bls_thread_pool_jobs_started_total",
+      help: "Count of total jobs started in bls thread pool, jobs include +1 signature sets",
+    }),
+
+    // Sync
+
+    syncChainsStarted: register.gauge<"syncType">({
+      name: "lodestar_sync_chains_started",
+      help: "Total number of sync chains started events, labeled by syncType",
+      labelNames: ["syncType"],
+    }),
+    syncStatus: register.gauge({
+      name: "lodestar_sync_status",
+      help: "Range sync status: [Stalled, SyncingFinalized, SyncingHead, Synced]",
     }),
   };
 }

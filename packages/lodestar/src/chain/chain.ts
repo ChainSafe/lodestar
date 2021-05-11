@@ -5,8 +5,6 @@
 import {
   CachedBeaconState,
   computeEpochAtSlot,
-  computeForkDigest,
-  computeForkNameFromForkDigest,
   computeStartSlotAtEpoch,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
@@ -16,7 +14,7 @@ import {allForks, ForkDigest, Number64, Root, Slot} from "@chainsafe/lodestar-ty
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {TreeBacked} from "@chainsafe/ssz";
 import {AbortController} from "abort-controller";
-import {FAR_FUTURE_EPOCH, GENESIS_EPOCH, ZERO_HASH} from "../constants";
+import {GENESIS_EPOCH, ZERO_HASH} from "../constants";
 import {IBeaconDb} from "../db";
 import {CheckpointStateCache, StateContextCache} from "./stateCache";
 import {IMetrics} from "../metrics";
@@ -31,13 +29,14 @@ import {IStateRegenerator, QueuedStateRegenerator} from "./regen";
 import {LodestarForkChoice} from "./forkChoice";
 import {restoreStateCaches} from "./initState";
 import {BlsVerifier, IBlsVerifier} from "./bls";
+import {ForkDigestContext, IForkDigestContext} from "../util/forkDigestContext";
 
 export interface IBeaconChainModules {
   opts: IChainOptions;
   config: IBeaconConfig;
   db: IBeaconDb;
   logger: ILogger;
-  metrics?: IMetrics;
+  metrics: IMetrics | null;
   anchorState: TreeBacked<allForks.BeaconState>;
 }
 
@@ -48,26 +47,27 @@ export class BeaconChain implements IBeaconChain {
   bls: IBlsVerifier;
   forkChoice: IForkChoice;
   clock: IBeaconClock;
-  emitter: ChainEventEmitter;
+  emitter = new ChainEventEmitter();
   stateCache: StateContextCache;
   checkpointStateCache: CheckpointStateCache;
   regen: IStateRegenerator;
   pendingAttestations: AttestationPool;
   pendingBlocks: BlockPool;
+  forkDigestContext: IForkDigestContext;
 
   protected attestationProcessor: AttestationProcessor;
   protected blockProcessor: BlockProcessor;
   protected readonly config: IBeaconConfig;
   protected readonly db: IBeaconDb;
   protected readonly logger: ILogger;
-  protected readonly metrics?: IMetrics;
+  protected readonly metrics: IMetrics | null;
   protected readonly opts: IChainOptions;
   /**
    * Internal event emitter is used internally to the chain to update chain state
    * Once event have been handled internally, they are re-emitted externally for downstream consumers
    */
-  protected internalEmitter: ChainEventEmitter;
-  private abortController: AbortController;
+  protected internalEmitter = new ChainEventEmitter();
+  private abortController = new AbortController();
 
   constructor({opts, config, db, logger, metrics, anchorState}: IBeaconChainModules) {
     this.opts = opts;
@@ -75,64 +75,52 @@ export class BeaconChain implements IBeaconChain {
     this.db = db;
     this.logger = logger;
     this.metrics = metrics;
-
     this.genesisTime = anchorState.genesisTime;
     this.genesisValidatorsRoot = anchorState.genesisValidatorsRoot.valueOf() as Uint8Array;
-    this.abortController = new AbortController();
 
-    this.emitter = new ChainEventEmitter();
-    this.internalEmitter = new ChainEventEmitter();
+    this.forkDigestContext = new ForkDigestContext(config, this.genesisValidatorsRoot);
 
-    this.bls = new BlsVerifier({logger, metrics, signal: this.abortController.signal});
+    const signal = this.abortController.signal;
+    const emitter = this.internalEmitter; // All internal compoments emit to the internal emitter first
+    const bls = new BlsVerifier({logger, metrics, signal: this.abortController.signal});
 
-    this.clock = new LocalClock({
-      config: this.config,
-      emitter: this.internalEmitter,
-      genesisTime: this.genesisTime,
-      signal: this.abortController.signal,
-    });
-    this.stateCache = new StateContextCache();
-    this.checkpointStateCache = new CheckpointStateCache(this.config);
-    const cachedState = restoreStateCaches(config, this.stateCache, this.checkpointStateCache, anchorState);
-    this.forkChoice = new LodestarForkChoice({
+    const clock = new LocalClock({config, emitter, genesisTime: this.genesisTime, signal});
+    const stateCache = new StateContextCache();
+    const checkpointStateCache = new CheckpointStateCache(config);
+    const cachedState = restoreStateCaches(config, stateCache, checkpointStateCache, anchorState);
+    const forkChoice = new LodestarForkChoice({config, emitter, currentSlot: clock.currentSlot, state: cachedState});
+    const regen = new QueuedStateRegenerator({
       config,
-      emitter: this.internalEmitter,
-      currentSlot: this.clock.currentSlot,
-      state: cachedState,
+      emitter,
+      forkChoice,
+      stateCache,
+      checkpointStateCache,
+      db,
+      metrics,
+      signal,
     });
-    this.regen = new QueuedStateRegenerator({
-      config: this.config,
-      emitter: this.internalEmitter,
-      forkChoice: this.forkChoice,
-      stateCache: this.stateCache,
-      checkpointStateCache: this.checkpointStateCache,
-      db: this.db,
-      signal: this.abortController.signal,
-    });
-    this.pendingAttestations = new AttestationPool({
-      config: this.config,
-    });
-    this.pendingBlocks = new BlockPool({
-      config: this.config,
-    });
-    this.attestationProcessor = new AttestationProcessor({
-      config: this.config,
-      forkChoice: this.forkChoice,
-      emitter: this.internalEmitter,
-      clock: this.clock,
-      regen: this.regen,
-    });
+    this.pendingAttestations = new AttestationPool({config});
+    this.pendingBlocks = new BlockPool({config});
+    this.attestationProcessor = new AttestationProcessor({config, forkChoice, emitter, clock, regen});
     this.blockProcessor = new BlockProcessor({
-      config: this.config,
-      forkChoice: this.forkChoice,
-      clock: this.clock,
-      regen: this.regen,
-      bls: this.bls,
-      metrics: this.metrics,
-      emitter: this.internalEmitter,
-      checkpointStateCache: this.checkpointStateCache,
-      signal: this.abortController.signal,
+      config,
+      forkChoice,
+      clock,
+      regen,
+      bls,
+      metrics,
+      emitter,
+      checkpointStateCache,
+      signal,
     });
+
+    this.forkChoice = forkChoice;
+    this.clock = clock;
+    this.regen = regen;
+    this.bls = bls;
+    this.checkpointStateCache = checkpointStateCache;
+    this.stateCache = stateCache;
+
     handleChainEvents.bind(this)(this.abortController.signal);
   }
 
@@ -257,34 +245,24 @@ export class BeaconChain implements IBeaconChain {
     });
   }
 
-  getForkDigest(): ForkDigest {
-    const state = this.getHeadState();
-    return computeForkDigest(this.config, state.fork.currentVersion, this.genesisValidatorsRoot);
+  getHeadForkName(): ForkName {
+    return this.config.getForkName(this.forkChoice.getHead().slot);
   }
-
-  getForkName(): ForkName {
-    return computeForkNameFromForkDigest(this.config, this.genesisValidatorsRoot, this.getForkDigest());
+  getClockForkName(): ForkName {
+    return this.config.getForkName(this.clock.currentSlot);
   }
-
-  getENRForkID(): phase0.ENRForkID {
-    const state = this.getHeadState();
-    const currentVersion = state.fork.currentVersion;
-
-    const forkDigest = this.getForkDigest();
-
-    return {
-      forkDigest,
-      // TODO figure out forking
-      nextForkVersion: currentVersion.valueOf() as Uint8Array,
-      nextForkEpoch: FAR_FUTURE_EPOCH,
-    };
+  getHeadForkDigest(): ForkDigest {
+    return this.forkDigestContext.forkName2ForkDigest(this.getHeadForkName());
+  }
+  getClockForkDigest(): ForkDigest {
+    return this.forkDigestContext.forkName2ForkDigest(this.getClockForkName());
   }
 
   getStatus(): phase0.Status {
     const head = this.forkChoice.getHead();
     const finalizedCheckpoint = this.forkChoice.getFinalizedCheckpoint();
     return {
-      forkDigest: this.getForkDigest(),
+      forkDigest: this.forkDigestContext.forkName2ForkDigest(this.config.getForkName(head.slot)),
       finalizedRoot: finalizedCheckpoint.epoch === GENESIS_EPOCH ? ZERO_HASH : finalizedCheckpoint.root,
       finalizedEpoch: finalizedCheckpoint.epoch,
       headRoot: head.blockRoot,

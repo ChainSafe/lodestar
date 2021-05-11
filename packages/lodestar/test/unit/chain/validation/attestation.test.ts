@@ -6,7 +6,7 @@ import {expect} from "chai";
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {phase0, getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import * as attestationUtils from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util/attestation";
-import * as blockUtils from "@chainsafe/lodestar-beacon-state-transition/lib/phase0/fast/block/isValidIndexedAttestation";
+import * as blockUtils from "@chainsafe/lodestar-beacon-state-transition/lib/fast/block/isValidIndexedAttestation";
 import {BitList, toHexString} from "@chainsafe/ssz";
 import {ProtoArray} from "@chainsafe/lodestar-fork-choice";
 import {ForkChoice, IForkChoice} from "@chainsafe/lodestar-fork-choice";

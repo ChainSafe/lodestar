@@ -1,6 +1,5 @@
-import {phase0} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {Method, Methods, ReqRespEncoding} from "../../../constants";
+import {Protocol, getRequestSzzTypeByMethod, RequestBody} from "../types";
 import {writeEncodedPayload} from "../encodingStrategies";
 
 /**
@@ -13,13 +12,12 @@ import {writeEncodedPayload} from "../encodingStrategies";
  */
 export async function* requestEncode(
   config: IBeaconConfig,
-  method: Method,
-  encoding: ReqRespEncoding,
-  requestBody: phase0.RequestBody
+  protocol: Pick<Protocol, "method" | "encoding">,
+  requestBody: RequestBody
 ): AsyncGenerator<Buffer> {
-  const type = Methods[method].requestSSZType(config);
+  const type = getRequestSzzTypeByMethod(config, protocol.method);
 
   if (type && requestBody !== null) {
-    yield* writeEncodedPayload(requestBody, encoding, type);
+    yield* writeEncodedPayload(requestBody, protocol.encoding, type);
   }
 }

@@ -18,31 +18,37 @@ import {BeaconGossipHandler} from "../../../../src/sync/gossip";
 import {StubbedBeaconDb} from "../../../utils/stub";
 import {testLogger} from "../../../utils/logger";
 import {createNode} from "../../../utils/network";
+import {ForkDigestContext} from "../../../../src/util/forkDigestContext";
 
 describe("gossip handler", function () {
+  let forkDigestContext: SinonStubbedInstance<ForkDigestContext>;
   let chainStub: SinonStubbedInstance<IBeaconChain>;
   let networkStub: SinonStubbedInstance<INetwork>;
   let gossipsub: Eth2Gossipsub;
   let dbStub: StubbedBeaconDb;
-  const genesisValidatorsRoot = Buffer.alloc(32);
 
   beforeEach(async function () {
+    forkDigestContext = sinon.createStubInstance(ForkDigestContext);
     chainStub = sinon.createStubInstance(BeaconChain);
     chainStub.emitter = new ChainEventEmitter();
-    chainStub.getForkName.returns(ForkName.phase0);
+    chainStub.getHeadForkName.returns(ForkName.phase0);
+    chainStub.forkDigestContext = forkDigestContext;
     networkStub = sinon.createStubInstance(Network);
     const multiaddr = "/ip4/127.0.0.1/tcp/0";
     const libp2p = await createNode(multiaddr);
     gossipsub = new Eth2Gossipsub({
       config,
-      genesisValidatorsRoot,
       libp2p,
       validatorFns: new Map<string, TopicValidatorFn>(),
       logger: testLogger(),
+      forkDigestContext,
+      metrics: null,
     });
     networkStub.gossip = gossipsub;
     gossipsub.start();
     dbStub = new StubbedBeaconDb(sinon);
+    forkDigestContext.forkName2ForkDigest.returns(Buffer.alloc(4, 1));
+    forkDigestContext.forkDigest2ForkName.returns(ForkName.phase0);
   });
 
   afterEach(() => {
@@ -74,7 +80,7 @@ describe("gossip handler", function () {
     await gossipsub._processRpcMessage({
       data: encodeMessageData(GossipEncoding.ssz_snappy, SignedBeaconBlock.serialize(SignedBeaconBlock.defaultValue())),
       receivedFrom: "foo",
-      topicIDs: [getGossipTopicString(config, {type: GossipType.beacon_block, fork}, genesisValidatorsRoot)],
+      topicIDs: [getGossipTopicString(forkDigestContext, {type: GossipType.beacon_block, fork})],
     });
     expect(chainStub.receiveBlock.calledOnce).to.be.true;
 
@@ -84,9 +90,7 @@ describe("gossip handler", function () {
         SignedAggregateAndProof.serialize(SignedAggregateAndProof.defaultValue())
       ),
       receivedFrom: "foo",
-      topicIDs: [
-        getGossipTopicString(config, {type: GossipType.beacon_aggregate_and_proof, fork}, genesisValidatorsRoot),
-      ],
+      topicIDs: [getGossipTopicString(forkDigestContext, {type: GossipType.beacon_aggregate_and_proof, fork})],
     });
     expect(dbStub.aggregateAndProof.add.calledOnce).to.be.true;
 
@@ -96,21 +100,21 @@ describe("gossip handler", function () {
         SignedVoluntaryExit.serialize(SignedVoluntaryExit.defaultValue())
       ),
       receivedFrom: "foo",
-      topicIDs: [getGossipTopicString(config, {type: GossipType.voluntary_exit, fork}, genesisValidatorsRoot)],
+      topicIDs: [getGossipTopicString(forkDigestContext, {type: GossipType.voluntary_exit, fork})],
     });
     expect(dbStub.voluntaryExit.add.calledOnce).to.be.true;
 
     await gossipsub._processRpcMessage({
       data: encodeMessageData(GossipEncoding.ssz_snappy, ProposerSlashing.serialize(ProposerSlashing.defaultValue())),
       receivedFrom: "foo",
-      topicIDs: [getGossipTopicString(config, {type: GossipType.proposer_slashing, fork}, genesisValidatorsRoot)],
+      topicIDs: [getGossipTopicString(forkDigestContext, {type: GossipType.proposer_slashing, fork})],
     });
     expect(dbStub.proposerSlashing.add.calledOnce).to.be.true;
 
     await gossipsub._processRpcMessage({
       data: encodeMessageData(GossipEncoding.ssz_snappy, AttesterSlashing.serialize(AttesterSlashing.defaultValue())),
       receivedFrom: "foo",
-      topicIDs: [getGossipTopicString(config, {type: GossipType.attester_slashing, fork}, genesisValidatorsRoot)],
+      topicIDs: [getGossipTopicString(forkDigestContext, {type: GossipType.attester_slashing, fork})],
     });
     expect(dbStub.attesterSlashing.add.calledOnce).to.be.true;
 
