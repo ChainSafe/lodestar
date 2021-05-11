@@ -112,8 +112,9 @@ export class LightclientMockServer {
 
     block.stateRoot = this.config.types.altair.BeaconState.hashTreeRoot(state);
 
-    // Store new prevBlock
+    // Store new prevBlock and prevState
     this.prevBlock = block;
+    this.prevState = state;
 
     // Simulate finalizing a state
     if (slot % this.config.params.SLOTS_PER_EPOCH === 0) {
