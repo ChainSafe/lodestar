@@ -1,6 +1,7 @@
 import {expect} from "chai";
 import {SecretKey} from "@chainsafe/bls";
 import {createIBeaconConfig} from "@chainsafe/lodestar-config";
+import {params as minimalParams} from "@chainsafe/lodestar-params/minimal";
 import {toHexString} from "@chainsafe/ssz";
 import {WinstonLogger} from "@chainsafe/lodestar-utils";
 import {altair, Root, Slot, SyncPeriod} from "@chainsafe/lodestar-types";
@@ -11,13 +12,18 @@ import {LightClientStoreFast} from "../../src/client/types";
 import {Lightclient} from "../../src/client";
 import {ServerOpts} from "../lightclientApiServer";
 import {IClock} from "../../src/utils/clock";
-import {leveParams} from "../../src/leve";
 import {generateBalances, generateValidators, getInteropSyncCommittee} from "../utils";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
 describe("Lightclient flow with LightClientUpdater", () => {
-  const config = createIBeaconConfig(leveParams);
+  const config = createIBeaconConfig({
+    ...minimalParams,
+    SYNC_COMMITTEE_SIZE: 4,
+    SYNC_PUBKEYS_PER_AGGREGATE: 2,
+    EPOCHS_PER_SYNC_COMMITTEE_PERIOD: 4, // Must be higher than 3 to allow finalized updates
+    SLOTS_PER_EPOCH: 4,
+  });
 
   let lightclientServer: LightclientMockServer;
   let genesisStateRoot: Root;
