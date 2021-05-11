@@ -194,7 +194,7 @@ export class ReqResp implements IReqResp {
         yield this.metadataController.seqNumber;
         break;
       case Method.Metadata:
-        yield this.metadataController.all;
+        yield this.metadataController.allPhase0;
         break;
       case Method.Goodbye:
         yield BigInt(0);

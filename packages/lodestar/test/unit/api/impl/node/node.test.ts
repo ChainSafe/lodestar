@@ -56,7 +56,7 @@ describe("node api implementation", function () {
       enr.setLocationMultiaddr(new Multiaddr("/ip4/127.0.0.1/tcp/36001"));
       networkStub.getEnr.returns(enr);
       networkStub.metadata = {
-        get all(): phase0.Metadata {
+        get allPhase0(): phase0.Metadata {
           return {
             attnets: [true],
             seqNumber: BigInt(1),
