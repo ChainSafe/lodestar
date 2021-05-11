@@ -8,8 +8,8 @@ import {ErrorView} from "./components/ErrorView";
 
 const initialPathStr = `[
   ["slot"],
-  ["validators", 0, "exitEpoch"],
-  ["balances", 0]
+  ["balances", 0],
+  ["balances", 1]
 ]`;
 
 type Path = (string | number)[];
@@ -27,7 +27,7 @@ function renderState(paths: Path[], state: altair.BeaconState | null): StateRend
 function getStateData(state: altair.BeaconState, path: Path): string {
   let value = (state as unknown) as Json;
   for (const indexer of path) {
-    value = (value[indexer] as unknown) as Json;
+    value = (value[indexer].valueOf() as unknown) as Json;
   }
   if (typeof value === "function" || typeof value === "object" || typeof value === "symbol") {
     return "-";

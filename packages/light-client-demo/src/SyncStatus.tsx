@@ -6,6 +6,7 @@ import {toHexString} from "@chainsafe/ssz";
 import {ErrorView} from "./components/ErrorView";
 import {ReqStatus} from "./types";
 import {config} from "./config";
+import {writeSnapshot} from "./storage";
 
 export function SyncStatus({client}: {client: Lightclient}): JSX.Element {
   const [_header, setHeader] = useState<altair.BeaconBlockHeader>();
@@ -32,12 +33,19 @@ export function SyncStatus({client}: {client: Lightclient}): JSX.Element {
     return () => clearInterval(interval);
   });
 
-  // Subscribe to update events
+  // Subscribe to update head events
   useEffect(() => {
     const onNewHeader = (newHeader: altair.BeaconBlockHeader): void => setHeader(newHeader);
     client.emitter.on(LightclientEvent.newHeader, onNewHeader);
     return () => client.emitter.off(LightclientEvent.newHeader, onNewHeader);
   }, [client, setHeader]);
+
+  // Subscribe to update sync committee events
+  useEffect(() => {
+    const onAdvancedCommittee = (): void => writeSnapshot(client.getSnapshot());
+    client.emitter.on(LightclientEvent.advancedCommittee, onAdvancedCommittee);
+    return () => client.emitter.off(LightclientEvent.advancedCommittee, onAdvancedCommittee);
+  }, [client]);
 
   return (
     <section>

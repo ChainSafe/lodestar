@@ -88,6 +88,13 @@ export class LightclientMockServer {
       state.finalizedCheckpoint = this.finalizedCheckpoint;
     }
 
+    // Increase balances, simulate rewards
+    if (slot % this.config.params.SLOTS_PER_EPOCH === 0) {
+      for (let i = 0, len = state.balances.length; i < len; i++) {
+        state.balances[i] = state.balances[i] + BigInt(Math.round(11430 * (1 + Math.random())));
+      }
+    }
+
     // Add sync aggregate signing over last block
     if (this.prevBlock) {
       const attestedBlock = toBlockHeader(this.config, this.prevBlock);

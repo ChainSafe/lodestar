@@ -8,15 +8,22 @@ import {toHexString} from "@chainsafe/ssz";
 import {BeaconBlockHeader} from "@chainsafe/lodestar-types/phase0";
 import {LightclientApiClient, Paths} from "./apiClient";
 import {IClock} from "../utils/clock";
-import {deserializeSyncCommittee, isEmptyHeader, sumBits} from "../utils/utils";
+import {deserializeSyncCommittee, isEmptyHeader, serializeSyncCommittee, sumBits} from "../utils/utils";
 import {LightClientStoreFast} from "./types";
 import {chunkifyInclusiveRange} from "../utils/chunkify";
 import {LightclientEmitter, LightclientEvent} from "./events";
 import {getSyncCommitteesProofPaths} from "../utils/proof";
 import {validateLightClientUpdate} from "./validation";
 import {isBetterUpdate} from "./update";
-
+// Re-export event types
 export {LightclientEvent} from "./events";
+
+export type LightclientModules = {
+  config: IBeaconConfig;
+  clock: IClock;
+  genesisValidatorsRoot: Root;
+  beaconApiUrl: string;
+};
 
 const maxPeriodPerRequest = 32;
 
@@ -24,24 +31,26 @@ export class Lightclient {
   readonly apiClient: ReturnType<typeof LightclientApiClient>;
   readonly emitter: LightclientEmitter = mitt();
 
-  constructor(
-    readonly store: LightClientStoreFast,
-    readonly config: IBeaconConfig,
-    readonly clock: IClock,
-    readonly genesisValidatorsRoot: Root,
-    readonly beaconApiUrl: string
-  ) {
+  readonly config: IBeaconConfig;
+  readonly clock: IClock;
+  readonly genesisValidatorsRoot: Root;
+  readonly beaconApiUrl: string;
+
+  constructor(modules: LightclientModules, readonly store: LightClientStoreFast) {
+    const {config, clock, genesisValidatorsRoot, beaconApiUrl} = modules;
+    this.config = config;
+    this.clock = clock;
+    this.genesisValidatorsRoot = genesisValidatorsRoot;
+    this.beaconApiUrl = beaconApiUrl;
     this.apiClient = LightclientApiClient(beaconApiUrl, config.types);
     this.clock.runEverySlot(this.syncToLatest);
   }
 
   static async initializeFromTrustedStateRoot(
-    config: IBeaconConfig,
-    clock: IClock,
-    genesisValidatorsRoot: Root,
-    beaconApiUrl: string,
+    modules: LightclientModules,
     trustedRoot: {stateRoot: Root; slot: Slot}
   ): Promise<Lightclient> {
+    const {config, beaconApiUrl} = modules;
     const {slot, stateRoot} = trustedRoot;
     const apiClient = LightclientApiClient(beaconApiUrl, config.types);
 
@@ -57,16 +66,10 @@ export class Lightclient {
         nextSyncCommittee: deserializeSyncCommittee(state.nextSyncCommittee),
       },
     };
-    return new Lightclient(store, config, clock, genesisValidatorsRoot, beaconApiUrl);
+    return new Lightclient(modules, store);
   }
 
-  static initializeFromTrustedSnapshot(
-    config: IBeaconConfig,
-    clock: IClock,
-    genesisValidatorsRoot: Root,
-    beaconApiUrl: string,
-    snapshot: altair.LightClientSnapshot
-  ): Lightclient {
+  static initializeFromTrustedSnapshot(modules: LightclientModules, snapshot: altair.LightClientSnapshot): Lightclient {
     const store: LightClientStoreFast = {
       bestUpdates: new Map<SyncPeriod, altair.LightClientUpdate>(),
       snapshot: {
@@ -75,11 +78,19 @@ export class Lightclient {
         nextSyncCommittee: deserializeSyncCommittee(snapshot.nextSyncCommittee),
       },
     };
-    return new Lightclient(store, config, clock, genesisValidatorsRoot, beaconApiUrl);
+    return new Lightclient(modules, store);
   }
 
   getHeader(): BeaconBlockHeader {
     return this.store.snapshot.header;
+  }
+
+  getSnapshot(): altair.LightClientSnapshot {
+    return {
+      header: this.store.snapshot.header,
+      currentSyncCommittee: serializeSyncCommittee(this.store.snapshot.currentSyncCommittee),
+      nextSyncCommittee: serializeSyncCommittee(this.store.snapshot.nextSyncCommittee),
+    };
   }
 
   async sync(): Promise<void> {
@@ -153,11 +164,13 @@ export class Lightclient {
     if (updatePeriod < snapshotPeriod) {
       throw Error("Cannot rollback sync period");
     }
+    // Update header before dispatching any events
+    this.store.snapshot.header = update.header;
     if (updatePeriod === snapshotPeriod + 1) {
       this.store.snapshot.currentSyncCommittee = this.store.snapshot.nextSyncCommittee;
       this.store.snapshot.nextSyncCommittee = deserializeSyncCommittee(update.nextSyncCommittee);
+      this.emitter.emit(LightclientEvent.advancedCommittee, updatePeriod);
     }
-    this.store.snapshot.header = update.header;
     this.emitter.emit(LightclientEvent.newHeader, update.header);
   }
 }

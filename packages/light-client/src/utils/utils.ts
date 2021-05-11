@@ -61,14 +61,25 @@ export function toBlockHeader(config: IBeaconConfig, block: altair.BeaconBlock):
   };
 }
 
-export function deserializePubkeys(pubkeys: altair.LightClientUpdate["nextSyncCommittee"]["pubkeys"]): PublicKey[] {
+function deserializePubkeys(pubkeys: altair.LightClientUpdate["nextSyncCommittee"]["pubkeys"]): PublicKey[] {
   return Array.from(pubkeys).map((pk) => PublicKey.fromBytes(pk.valueOf() as Uint8Array));
+}
+
+function serializePubkeys(pubkeys: PublicKey[]): altair.LightClientUpdate["nextSyncCommittee"]["pubkeys"] {
+  return pubkeys.map((pk) => pk.toBytes());
 }
 
 export function deserializeSyncCommittee(syncCommittee: altair.SyncCommittee): SyncCommitteeFast {
   return {
     pubkeys: deserializePubkeys(syncCommittee.pubkeys),
     pubkeyAggregates: deserializePubkeys(syncCommittee.pubkeyAggregates),
+  };
+}
+
+export function serializeSyncCommittee(syncCommittee: SyncCommitteeFast): altair.SyncCommittee {
+  return {
+    pubkeys: serializePubkeys(syncCommittee.pubkeys),
+    pubkeyAggregates: serializePubkeys(syncCommittee.pubkeyAggregates),
   };
 }
 
