@@ -1,7 +1,8 @@
 import {SecretKey} from "@chainsafe/bls";
 import {altair} from "@chainsafe/lodestar-types";
 import {FINALIZED_ROOT_INDEX, NEXT_SYNC_COMMITTEE_INDEX} from "@chainsafe/lodestar-params";
-import {validateLightClientUpdate} from "../../src";
+import {validateLightClientUpdate} from "../../src/client/validation";
+import {LightClientSnapshotFast} from "../../src/client/types";
 import {
   createExtraMinimalConfig,
   defaultBeaconBlockHeader,
@@ -14,7 +15,7 @@ describe("validateLightClientUpdate", () => {
   const genValiRoot = Buffer.alloc(32, 9);
 
   let update: altair.LightClientUpdate;
-  let snapshot: altair.LightClientSnapshot;
+  let snapshot: LightClientSnapshotFast;
 
   before("Prepare data", () => {
     // Update slot must > snapshot slot
@@ -26,15 +27,16 @@ describe("validateLightClientUpdate", () => {
     const sks = Array.from({length: config.params.SYNC_COMMITTEE_SIZE}).map((_, i) =>
       SecretKey.fromBytes(Buffer.alloc(32, i + 1))
     );
-    const pks = sks.map((sk) => sk.toPublicKey().toBytes());
+    const pks = sks.map((sk) => sk.toPublicKey());
+    const pubkeys = pks.map((pk) => pk.toBytes());
 
     // Create a sync committee with the keys that will sign the `syncAggregate`
-    const pubkeyAggregatesCount = Math.fround(
+    const pubkeyAggregatesCount = Math.floor(
       config.params.SYNC_COMMITTEE_SIZE / config.params.SYNC_PUBKEYS_PER_AGGREGATE
     );
     const nextSyncCommittee: altair.SyncCommittee = {
-      pubkeys: pks,
-      pubkeyAggregates: pks.slice(0, pubkeyAggregatesCount),
+      pubkeys,
+      pubkeyAggregates: pubkeys.slice(0, pubkeyAggregatesCount),
     };
 
     // finalizedCheckpointState must have `nextSyncCommittee`
@@ -78,7 +80,10 @@ describe("validateLightClientUpdate", () => {
     snapshot = {
       header: defaultBeaconBlockHeader(config, snapshotHeaderSlot),
       currentSyncCommittee: {pubkeys: [], pubkeyAggregates: []},
-      nextSyncCommittee,
+      nextSyncCommittee: {
+        pubkeys: pks,
+        pubkeyAggregates: pks.slice(0, pubkeyAggregatesCount),
+      },
     };
   });
 

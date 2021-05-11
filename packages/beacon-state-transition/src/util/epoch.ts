@@ -3,7 +3,7 @@
  */
 
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {allForks, Epoch, Slot} from "@chainsafe/lodestar-types";
+import {allForks, Epoch, Slot, SyncPeriod} from "@chainsafe/lodestar-types";
 import {GENESIS_EPOCH} from "../constants";
 
 /**
@@ -43,4 +43,18 @@ export function getPreviousEpoch(config: IBeaconConfig, state: allForks.BeaconSt
     return GENESIS_EPOCH;
   }
   return currentEpoch - 1;
+}
+
+/**
+ * Return the sync committee period at slot
+ */
+export function computeSyncPeriodAtSlot(config: IBeaconConfig, slot: Slot): SyncPeriod {
+  return computeSyncPeriodAtEpoch(config, computeEpochAtSlot(config, slot));
+}
+
+/**
+ * Return the sync committee period at epoch
+ */
+export function computeSyncPeriodAtEpoch(config: IBeaconConfig, epoch: Epoch): SyncPeriod {
+  return Math.floor(epoch / config.params.EPOCHS_PER_SYNC_COMMITTEE_PERIOD);
 }

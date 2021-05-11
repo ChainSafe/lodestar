@@ -8,6 +8,7 @@ import {EventsApi} from "../../../src/api/impl/events";
 import {DebugApi} from "../../../src/api/impl/debug";
 import {DebugBeaconApi} from "../../../src/api/impl/debug/beacon";
 import {ConfigApi} from "../../../src/api/impl/config";
+import {LightclientApi} from "../../../src/api/impl/lightclient";
 import {LodestarApi} from "../../../src/api/impl/lodestar";
 import {StubbedConfigApi} from "./configApi";
 
@@ -18,6 +19,7 @@ export class StubbedApi implements SinonStubbedInstance<IApi> {
   events: SinonStubbedInstance<EventsApi>;
   debug: SinonStubbedInstance<DebugApi>;
   config: SinonStubbedInstance<ConfigApi>;
+  lightclient: SinonStubbedInstance<LightclientApi>;
   lodestar: SinonStubbedInstance<LodestarApi>;
 
   constructor(sandbox: SinonSandbox = sinon) {
@@ -28,6 +30,7 @@ export class StubbedApi implements SinonStubbedInstance<IApi> {
     const debugBeacon = sandbox.createStubInstance(DebugBeaconApi);
     this.debug = {beacon: debugBeacon} as SinonStubbedInstance<DebugApi>;
     this.config = new StubbedConfigApi(sandbox);
+    this.lightclient = sandbox.createStubInstance(LightclientApi);
     this.lodestar = sandbox.createStubInstance(LodestarApi);
   }
 }

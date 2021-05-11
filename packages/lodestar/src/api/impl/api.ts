@@ -6,6 +6,7 @@ import {IValidatorApi, ValidatorApi} from "./validator";
 import {EventsApi, IEventsApi} from "./events";
 import {DebugApi, IDebugApi} from "./debug";
 import {ConfigApi, IConfigApi} from "./config";
+import {LightclientApi, ILightclientApi} from "./lightclient";
 import {LodestarApi, ILodestarApi} from "./lodestar";
 
 export class Api implements IApi {
@@ -15,6 +16,7 @@ export class Api implements IApi {
   events: IEventsApi;
   debug: IDebugApi;
   config: IConfigApi;
+  lightclient: ILightclientApi;
   lodestar: ILodestarApi;
 
   constructor(opts: Partial<IApiOptions>, modules: IApiModules) {
@@ -24,6 +26,7 @@ export class Api implements IApi {
     this.events = new EventsApi(opts, modules);
     this.debug = new DebugApi(opts, modules);
     this.config = new ConfigApi(opts, modules);
+    this.lightclient = new LightclientApi(opts, modules);
     this.lodestar = new LodestarApi(modules);
   }
 }

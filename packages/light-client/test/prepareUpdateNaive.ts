@@ -3,6 +3,7 @@ import {TreeBacked} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {computeEpochAtSlot, getBlockRootAtSlot, getForkVersion} from "@chainsafe/lodestar-beacon-state-transition";
 import {FINALIZED_ROOT_INDEX, NEXT_SYNC_COMMITTEE_INDEX} from "@chainsafe/lodestar-params";
+import {LightClientUpdate} from "@chainsafe/lodestar-types/lib/altair";
 
 export interface IBeaconChainLc {
   getBlockHeaderByRoot(blockRoot: Root): Promise<altair.BeaconBlockHeader>;
@@ -13,11 +14,11 @@ export interface IBeaconChainLc {
  * From a TreeBacked state, return an update to be consumed by a light client
  * Spec v1.0.1
  */
-export async function prepareUpdate(
+export async function prepareUpdateNaive(
   config: IBeaconConfig,
   chain: IBeaconChainLc,
   blockWithSyncAggregate: altair.BeaconBlock
-): Promise<altair.LightClientUpdate> {
+): Promise<LightClientUpdate> {
   // update.syncCommitteeSignature signs over the block at the previous slot of the state it is included
   // ```py
   // previous_slot = max(state.slot, Slot(1)) - Slot(1)
@@ -58,7 +59,7 @@ export async function prepareUpdate(
   //                                                     │ state.finalizedCheckpoint
   //                                                     ▼
   //                                                   ┌───────────────────────────────────────────┐
-  //                                                   │         finalizedCheckpointBlock          │
+  //                                                   │         finalizedCheckpointBlock   <<<<   │
   //                                                   └───────────────────────────────────────────┘
   //                                                     │
   //                                                     │ block.stateRoot
