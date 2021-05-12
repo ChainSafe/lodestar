@@ -3,7 +3,7 @@ import {ApiController, HttpHeader} from "../types";
 import {ApiError} from "../../impl/errors";
 
 export const createProof: ApiController<null, {stateId: string}, {paths: (string | number)[][]}> = {
-  url: "/proof/:stateId",
+  url: "/eth/v1/lightclient/proof/:stateId",
   method: "POST",
   id: "createProof",
 
@@ -36,7 +36,7 @@ export const createProof: ApiController<null, {stateId: string}, {paths: (string
 };
 
 export const getBestUpdates: ApiController<null, {periods: string}> = {
-  url: "/best_updates/:periods",
+  url: "/eth/v1/lightclient/best_updates/:periods",
   method: "GET",
   id: "getBestUpdates",
 
@@ -62,7 +62,7 @@ export const getBestUpdates: ApiController<null, {periods: string}> = {
 };
 
 export const getLatestUpdateFinalized: ApiController = {
-  url: "/latest_update_finalized/",
+  url: "/eth/v1/lightclient/latest_update_finalized/",
   method: "GET",
   id: "getLatestUpdateFinalized",
 
@@ -76,7 +76,7 @@ export const getLatestUpdateFinalized: ApiController = {
 };
 
 export const getLatestUpdateNonFinalized: ApiController = {
-  url: "/latest_update_nonfinalized/",
+  url: "/eth/v1/lightclient/latest_update_nonfinalized/",
   method: "GET",
   id: "getLatestUpdateNonFinalized",
 

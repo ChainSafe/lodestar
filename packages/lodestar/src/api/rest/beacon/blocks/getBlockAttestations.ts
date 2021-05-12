@@ -1,7 +1,7 @@
 import {ApiController} from "../../types";
 
 export const getBlockAttestations: ApiController<null, {blockId: string}> = {
-  url: "/blocks/:blockId/attestations",
+  url: "/eth/v1/beacon/blocks/:blockId/attestations",
   method: "GET",
   id: "getBlockAttestations",
 

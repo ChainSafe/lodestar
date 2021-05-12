@@ -3,7 +3,7 @@ import {ApiController} from "../types";
 /* eslint-disable @typescript-eslint/naming-convention */
 
 export const getPeer: ApiController<null, {peerId: string}> = {
-  url: "/peers/:peerId",
+  url: "/eth/v1/node/peers/:peerId",
   method: "GET",
   id: "getPeer",
 

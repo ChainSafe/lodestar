@@ -1,7 +1,7 @@
 import {ApiController} from "../types";
 
 export const getHealth: ApiController = {
-  url: "/health",
+  url: "/eth/v1/node/health",
   method: "GET",
   id: "getHealth",
 

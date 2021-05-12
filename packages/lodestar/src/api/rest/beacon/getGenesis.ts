@@ -1,7 +1,7 @@
 import {ApiController} from "../types";
 
 export const getGenesis: ApiController = {
-  url: "/genesis",
+  url: "/eth/v1/beacon/genesis",
   method: "GET",
   id: "getGenesis",
 

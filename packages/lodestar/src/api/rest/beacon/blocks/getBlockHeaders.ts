@@ -4,7 +4,7 @@ import {ApiController} from "../../types";
 /* eslint-disable @typescript-eslint/naming-convention */
 
 export const getBlockHeaders: ApiController<{slot?: string | number; parent_root?: string}> = {
-  url: "/headers",
+  url: "/eth/v1/beacon/headers",
   method: "GET",
   id: "getBlockHeaders",
 

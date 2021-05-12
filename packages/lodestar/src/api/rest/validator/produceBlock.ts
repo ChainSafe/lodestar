@@ -12,7 +12,7 @@ type Query = {
 };
 
 export const produceBlock: ApiController<Query, Params> = {
-  url: "/blocks/:slot",
+  url: "/eth/v1/validator/blocks/:slot",
   method: "GET",
   id: "produceBlock",
 

@@ -1,7 +1,7 @@
 import {ApiController} from "../types";
 
 export const getDebugChainHeads: ApiController = {
-  url: "/beacon/heads",
+  url: "/eth/v1/debug/beacon/heads",
   method: "GET",
   id: "getDebugChainHeads",
 

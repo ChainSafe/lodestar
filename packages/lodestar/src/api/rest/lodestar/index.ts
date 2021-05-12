@@ -1,7 +1,7 @@
 import {ApiController} from "../types";
 
 export const getWtfNode: ApiController = {
-  url: "/wtfnode/",
+  url: "/eth/v1/lodestar/wtfnode/",
   method: "GET",
   id: "getWtfNode",
 
@@ -11,7 +11,7 @@ export const getWtfNode: ApiController = {
 };
 
 export const getLatestWeakSubjectivityCheckpointEpoch: ApiController = {
-  url: "/ws_epoch/",
+  url: "/eth/v1/lodestar/ws_epoch/",
   method: "GET",
   id: "getLatestWeakSubjectivityCheckpointEpoch",
 
@@ -21,7 +21,7 @@ export const getLatestWeakSubjectivityCheckpointEpoch: ApiController = {
 };
 
 export const getSyncChainsDebugState: ApiController<{paths: (string | number)[][]}, {stateId: string}> = {
-  url: "/sync-chains-debug-state",
+  url: "/eth/v1/lodestar/sync-chains-debug-state",
   method: "GET",
   id: "getSyncChainsDebugState",
 

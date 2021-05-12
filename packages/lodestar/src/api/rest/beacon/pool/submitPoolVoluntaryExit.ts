@@ -3,7 +3,7 @@ import {ValidationError} from "../../../impl/errors";
 import {ApiController} from "../../types";
 
 export const submitPoolVoluntaryExit: ApiController = {
-  url: "/pool/voluntary_exits",
+  url: "/eth/v1/beacon/pool/voluntary_exits",
   method: "POST",
   id: "submitPoolVoluntaryExit",
 

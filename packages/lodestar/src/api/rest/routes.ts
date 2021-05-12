@@ -10,46 +10,35 @@ import {ApiController, RouteConfig} from "./types";
 import {validatorRoutes} from "./validator";
 
 const routesGroups = [
-  {prefix: "/v1/beacon", namespace: ApiNamespace.BEACON, routes: beaconRoutes},
-  {prefix: "/v1/config", namespace: ApiNamespace.CONFIG, routes: configRoutes},
-  {prefix: "/v1/debug", namespace: ApiNamespace.DEBUG, routes: debugRoutes},
-  {prefix: "/v1/events", namespace: ApiNamespace.EVENTS, routes: eventsRoutes},
-  {prefix: "/v1/lodestar", namespace: ApiNamespace.LODESTAR, routes: lodestarRoutes},
-  {prefix: "/v1/node", namespace: ApiNamespace.NODE, routes: nodeRoutes},
-  {prefix: "/v1/validator", namespace: ApiNamespace.VALIDATOR, routes: validatorRoutes},
+  {namespace: ApiNamespace.BEACON, routes: beaconRoutes},
+  {namespace: ApiNamespace.CONFIG, routes: configRoutes},
+  {namespace: ApiNamespace.DEBUG, routes: debugRoutes},
+  {namespace: ApiNamespace.EVENTS, routes: eventsRoutes},
+  {namespace: ApiNamespace.LODESTAR, routes: lodestarRoutes},
+  {namespace: ApiNamespace.NODE, routes: nodeRoutes},
+  {namespace: ApiNamespace.VALIDATOR, routes: validatorRoutes},
 ];
 
-export function registerRoutes(server: FastifyInstance, enabledNamespaces: ApiNamespace[]): void {
-  server.register(
-    async function (fastify) {
-      for (const {prefix, namespace, routes} of routesGroups) {
-        if (enabledNamespaces.includes(namespace)) {
-          registerRoutesToServer(fastify, routes, prefix);
-        }
-      }
-    },
-    {prefix: "/eth"}
-  );
+export function registerRoutes(fastify: FastifyInstance, enabledNamespaces: ApiNamespace[]): void {
+  for (const {namespace, routes} of routesGroups) {
+    if (enabledNamespaces.includes(namespace)) {
+      registerRoutesToServer(fastify, routes);
+    }
+  }
 }
 
 function registerRoutesToServer(
-  server: FastifyInstance,
+  fastify: FastifyInstance,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  routes: ApiController<any, any>[],
-  prefix: string
+  routes: ApiController<any, any>[]
 ): void {
-  server.register(
-    async function (fastify) {
-      for (const route of routes) {
-        fastify.route({
-          url: route.url,
-          method: route.method,
-          handler: route.handler,
-          schema: route.schema,
-          config: {operationId: route.id} as RouteConfig,
-        });
-      }
-    },
-    {prefix}
-  );
+  for (const route of routes) {
+    fastify.route({
+      url: route.url,
+      method: route.method,
+      handler: route.handler,
+      schema: route.schema,
+      config: {operationId: route.id} as RouteConfig,
+    });
+  }
 }

@@ -7,7 +7,7 @@ type Query = {
 
 /** Retrieves the sync committees for the given state. */
 export const getEpochSyncCommittees: ApiController<Query, {stateId: StateId}> = {
-  url: "/states/:stateId/sync_committees",
+  url: "/eth/v1/beacon/states/:stateId/sync_committees",
   method: "GET",
   id: "getEpochSyncCommittees",
 

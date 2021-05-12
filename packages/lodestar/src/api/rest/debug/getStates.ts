@@ -3,7 +3,7 @@ import {ApiController, HttpHeader} from "../types";
 const SSZ_MIME_TYPE = "application/octet-stream";
 
 export const getState: ApiController<null, {stateId: string}> = {
-  url: "/beacon/states/:stateId",
+  url: "/eth/v1/debug/beacon/states/:stateId",
   method: "GET",
   id: "getState",
 

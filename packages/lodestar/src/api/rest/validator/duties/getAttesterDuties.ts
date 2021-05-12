@@ -2,7 +2,7 @@ import {ValidatorIndex} from "@chainsafe/lodestar-types";
 import {ApiController} from "../../types";
 
 export const getAttesterDuties: ApiController<null, {epoch: number}, ValidatorIndex[]> = {
-  url: "/duties/attester/:epoch",
+  url: "/eth/v1/validator/duties/attester/:epoch",
   method: "POST",
   id: "getAttesterDuties",
 
