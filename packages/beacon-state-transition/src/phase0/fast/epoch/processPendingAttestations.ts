@@ -1,13 +1,7 @@
 import {allForks, Epoch, phase0} from "@chainsafe/lodestar-types";
-import {intDiv} from "@chainsafe/lodestar-utils";
 import {BitList, List, readonlyValues, TreeBacked} from "@chainsafe/ssz";
 import {CachedBeaconState, IAttesterStatus} from "../../../fast";
-import {
-  computeStartSlotAtEpoch,
-  getAggregationBytes,
-  getBlockRootAtSlot,
-  PRE_COMPUTED_BYTE_TO_BOOLEAN_ARRAY,
-} from "../../../util";
+import {computeStartSlotAtEpoch, getBlockRootAtSlot, zipIndexesInBitList} from "../../../util";
 
 export function statusProcessEpoch<T extends allForks.BeaconState>(
   state: CachedBeaconState<T>,
@@ -31,23 +25,11 @@ export function statusProcessEpoch<T extends allForks.BeaconState>(
     const committeeIndex = attData.index;
     const attBeaconBlockRoot = attData.beaconBlockRoot;
     const attTarget = attData.target;
-    const attBytes = getAggregationBytes(config, aggregationBits as TreeBacked<BitList>);
     const attVotedTargetRoot = rootType.equals(attTarget.root, actualTargetBlockRoot);
     const attVotedHeadRoot = rootType.equals(attBeaconBlockRoot, getBlockRootAtSlot(config, state, attSlot));
     const committee = epochCtx.getBeaconCommittee(attSlot, committeeIndex);
-    const participants: phase0.ValidatorIndex[] = [];
-    let booleansInByte: boolean[] = [];
-    for (const [i, index] of committee.entries()) {
-      const indexInByte = i % 8;
-      if (indexInByte === 0) {
-        const byte = attBytes[intDiv(i, 8)];
-        booleansInByte = PRE_COMPUTED_BYTE_TO_BOOLEAN_ARRAY[byte];
-      }
-      // using (getAggregationBit(attBytes, i)) takes more time
-      if (booleansInByte[indexInByte]) {
-        participants.push(index);
-      }
-    }
+    const participants = zipIndexesInBitList(config, committee, aggregationBits as TreeBacked<BitList>);
+
     if (epoch === prevEpoch) {
       for (const p of participants) {
         const status = statuses[p];

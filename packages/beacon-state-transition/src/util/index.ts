@@ -3,6 +3,7 @@
  */
 
 export * from "./activation";
+export * from "./aggregationBits";
 export * from "./array";
 export * from "./attestation";
 export * from "./balance";

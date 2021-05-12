@@ -6,8 +6,8 @@ import bls from "@chainsafe/bls";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ATTESTATION_SUBNET_COUNT} from "@chainsafe/lodestar-params";
 import {phase0, Slot, ValidatorIndex, CommitteeIndex, allForks} from "@chainsafe/lodestar-types";
-import {intDiv, isSorted} from "@chainsafe/lodestar-utils";
-import {BitList, List, TreeBacked} from "@chainsafe/ssz";
+import {isSorted} from "@chainsafe/lodestar-utils";
+import {BitList, List} from "@chainsafe/ssz";
 import {getBeaconCommittee, getCommitteeCountAtSlot} from "./committee";
 import {getDomain} from "./domain";
 import {computeSigningRoot} from "./signingRoot";
@@ -154,80 +154,4 @@ export function computeSubnetForCommitteesAtSlot(
   const slotsSinceEpochStart = computeSlotsSinceEpochStart(config, slot);
   const committeesSinceEpochStart = committeesAtSlot * slotsSinceEpochStart;
   return (committeesSinceEpochStart + committeeIndex) % ATTESTATION_SUBNET_COUNT;
-}
-
-/**
- * Given a byte (0 -> 255), return a Array of boolean with length = 8, big endian.
- * Ex: 1 => [true false false false false false false false]
- *     5 => [true false true false false fase false false]
- */
-export const PRE_COMPUTED_BYTE_TO_BOOLEAN_ARRAY: boolean[][] = Array.from({length: 256}, (_, i) => {
-  // this returns little endian
-  const binaryStr = i.toString(2);
-  const binaryLength = binaryStr.length;
-  return Array.from({length: 8}, (_, j) => {
-    if (j < binaryLength) {
-      return binaryStr[binaryLength - j - 1] === "1" ? true : false;
-    } else {
-      return false;
-    }
-  });
-});
-
-/**
- * Get aggregation bit (true/false) from an aggregation bytes array and validator index in committee.
- * Notice: If we want to access the bit in batch, using this method is not efficient, check the performance
- *         test for an example of how to do that.
- */
-export function getAggregationBit(attBytes: number[], indexInCommittee: number): boolean {
-  // 8 validators are grouped in 1 byte
-  const byteIndex = intDiv(indexInCommittee, 8);
-  const byte = attBytes[byteIndex];
-  const indexInByte = indexInCommittee % 8;
-  return PRE_COMPUTED_BYTE_TO_BOOLEAN_ARRAY[byte][indexInByte];
-}
-
-/**
- * readonlyValues returns Iterator<boolean> but there is a performance issue here.
- * This returns aggregation bytes from a TreeBacked aggregationBits which a significantly better performance.
- * Use getAggregationBit() to get a boolean value from a specific index.
- */
-export function getAggregationBytes(config: IBeaconConfig, aggregationBits: TreeBacked<BitList>): number[] {
-  const chunks = getAggregationBitsSSZChunks(config, aggregationBits);
-  let chunkIndex = -1;
-  let chunk = new Uint8Array();
-  // 1 chunk = 32 bytes
-  let byte = 0;
-  let byteIndex = -1;
-  const result: number[] = [];
-  const length = aggregationBits.length;
-  for (let i = 0; i < length; i++) {
-    if (i % 256 === 0) {
-      chunkIndex++;
-      chunk = chunks[chunkIndex];
-      byteIndex = -1;
-    }
-    if (i % 8 === 0) {
-      byteIndex++;
-      byte = chunk[byteIndex];
-      result.push(byte);
-    }
-  }
-  return result;
-}
-
-/**
- * Return array of chunks.
- */
-export function getAggregationBitsSSZChunks(config: IBeaconConfig, aggregationBits: TreeBacked<BitList>): Uint8Array[] {
-  const sszType = config.types.phase0.CommitteeBits;
-  const tree = aggregationBits.tree;
-  const chunkCount = sszType.tree_getChunkCount(tree);
-  const chunkDepth = sszType.getChunkDepth();
-  const nodeIterator = tree.iterateNodesAtDepth(chunkDepth, 0, chunkCount);
-  const chunks: Uint8Array[] = [];
-  for (const node of nodeIterator) {
-    chunks.push(node.root);
-  }
-  return chunks;
 }
