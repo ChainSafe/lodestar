@@ -14,6 +14,7 @@ it("getAggregationBytes", function () {
   for (let i = 0; i < aggregationBits.length; i++) {
     deserializedAggregationBits.push(getAggregationBit(aggregationBytes, i));
   }
+  expect(deserializedAggregationBits).to.be.deep.equal(aggregationBits);
   const logger = profilerLogger();
   let start = Date.now();
   const MAX_TRY = 81920;
