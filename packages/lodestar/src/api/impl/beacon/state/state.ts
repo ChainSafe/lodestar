@@ -1,5 +1,5 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {Root, phase0, allForks, BLSPubkey} from "@chainsafe/lodestar-types";
+import {Root, phase0, allForks, BLSPubkey, Epoch, altair} from "@chainsafe/lodestar-types";
 import {List, readonlyValues} from "@chainsafe/ssz";
 import {computeEpochAtSlot, getCurrentEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconChain} from "../../../../chain/interface";
@@ -156,6 +156,25 @@ export class BeaconStateApi implements IBeaconStateApi {
         ];
       });
     });
+  }
+
+  /**
+   * Retrieves the sync committees for the given state.
+   * @param epoch Fetch sync committees for the given epoch. If not present then the sync committees for the epoch of the state will be obtained.
+   */
+  async getEpochSyncCommittees(stateId: StateId, epoch?: Epoch): Promise<altair.SyncCommittee[]> {
+    // TODO: Should pick a state with the provided epoch too
+    const state = (await resolveStateId(this.config, this.chain, this.db, stateId)) as altair.BeaconState;
+    const stateEpoch = computeEpochAtSlot(this.config, state.slot);
+    if (stateEpoch < this.config.params.ALTAIR_FORK_EPOCH) {
+      throw new ApiError(400, "Requested state before ALTAIR_FORK_EPOCH");
+    }
+
+    if (epoch === undefined || epoch === stateEpoch) {
+      return [state.currentSyncCommittee, state.nextSyncCommittee];
+    } else {
+      throw new ApiError(400, "Epoch out of bounds");
+    }
   }
 
   async getState(stateId: StateId): Promise<allForks.BeaconState> {
