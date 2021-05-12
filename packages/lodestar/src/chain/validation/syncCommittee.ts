@@ -87,12 +87,21 @@ export function validateGossipSyncCommitteeExceptSig(
     });
   }
 
+  // [REJECT] The subcommittee index is in the allowed range, i.e. contribution.subcommittee_index < SYNC_COMMITTEE_SUBNET_COUNT.
+  if (subnet >= SYNC_COMMITTEE_SUBNET_COUNT) {
+    throw new SyncCommitteeError(GossipAction.REJECT, {
+      code: SyncCommitteeErrorCode.INVALID_SUB_COMMITTEE_INDEX,
+      subCommitteeIndex: subnet,
+    });
+  }
+
   // [REJECT] The subnet_id is valid for the given validator, i.e. subnet_id in compute_subnets_for_sync_committee(state, sync_committee_signature.validator_index).
   // Note this validation implies the validator is part of the broader current sync committee along with the correct subcommittee.
 
   // TODO: Cache the indices per sync committee subnet in a Set to prevent having to slice and .includes() every time
   const validatorIndexesInSubnet = headState.currSyncCommitteeIndexes.slice(
-    subnet * SYNC_COMMITTEE_SUBNET_COUNT + (subnet + 1) * SYNC_COMMITTEE_SUBNET_COUNT
+    subnet * SYNC_COMMITTEE_SUBNET_COUNT,
+    (subnet + 1) * SYNC_COMMITTEE_SUBNET_COUNT
   );
   const indexInSubCommittee = validatorIndexesInSubnet.indexOf(data.validatorIndex); // -1 -> not found
   if (indexInSubCommittee < 0) {

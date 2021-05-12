@@ -1,4 +1,5 @@
 import bls, {PointFormat, Signature} from "@chainsafe/bls";
+import {SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {phase0, altair, Slot} from "@chainsafe/lodestar-types";
 import {newFilledArray} from "@chainsafe/lodestar-beacon-state-transition";
@@ -122,7 +123,7 @@ function aggregateContributionInto(
   aggregate: SyncAggregateFast,
   contribution: altair.SyncCommitteeContribution
 ): void {
-  const indexesPerSubnet = Math.floor(config.params.SYNC_COMMITTEE_SIZE / altair.SYNC_COMMITTEE_SUBNET_COUNT);
+  const indexesPerSubnet = Math.floor(config.params.SYNC_COMMITTEE_SIZE / SYNC_COMMITTEE_SUBNET_COUNT);
   const indexOffset = indexesPerSubnet * contribution.subCommitteeIndex;
 
   for (const [index, participated] of Array.from(readonlyValues(contribution.aggregationBits)).entries()) {
@@ -144,7 +145,7 @@ function contributionToAggregate(
   config: IBeaconConfig,
   contribution: altair.SyncCommitteeContribution
 ): SyncAggregateFast {
-  const indexesPerSubnet = Math.floor(config.params.SYNC_COMMITTEE_SIZE / altair.SYNC_COMMITTEE_SUBNET_COUNT);
+  const indexesPerSubnet = Math.floor(config.params.SYNC_COMMITTEE_SIZE / SYNC_COMMITTEE_SUBNET_COUNT);
   const indexOffset = indexesPerSubnet * contribution.subCommitteeIndex;
 
   const syncCommitteeBits = newFilledArray(config.params.SYNC_COMMITTEE_SIZE, false);

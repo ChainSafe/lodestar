@@ -1,6 +1,5 @@
 import {CachedBeaconState, isSyncCommitteeAggregator} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
 import {altair} from "@chainsafe/lodestar-types";
 import {IBeaconDb} from "../../db";
 import {GossipAction, IContributionAndProofJob, SyncCommitteeError, SyncCommitteeErrorCode} from "../errors";
@@ -39,14 +38,6 @@ export async function validateSyncCommitteeGossipContributionAndProof(
 
   // [IGNORE] The block being signed over (contribution.beacon_block_root) has been seen (via both gossip and non-gossip sources).
   // > Checked in validateGossipSyncCommitteeExceptSig()
-
-  // [REJECT] The subcommittee index is in the allowed range, i.e. contribution.subcommittee_index < SYNC_COMMITTEE_SUBNET_COUNT.
-  if (subCommitteeIndex >= SYNC_COMMITTEE_SUBNET_COUNT) {
-    throw new SyncCommitteeError(GossipAction.REJECT, {
-      code: SyncCommitteeErrorCode.INVALID_SUB_COMMITTEE_INDEX,
-      subCommitteeIndex,
-    });
-  }
 
   // [IGNORE] The sync committee contribution is the first valid contribution received for the aggregator with index
   // contribution_and_proof.aggregator_index for the slot contribution.slot and subcommittee index contribution.subcommittee_index.

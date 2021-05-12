@@ -11,7 +11,7 @@ const NUM_SLOTS_IN_CACHE = 3;
 describe("SyncCommitteeCache", function () {
   let cache: SyncCommitteeCache;
   const subCommitteeIndex = 2;
-  const indexInSubCommittee = 5;
+  const indexInSubCommittee = 3;
   const beaconBlockRoot = Buffer.alloc(32, 1);
   const slot = 10;
   let syncCommittee: altair.SyncCommitteeSignature;
@@ -60,7 +60,7 @@ describe("SyncCommitteeCache", function () {
       signature: newSecretKey.sign(beaconBlockRoot).toBytes(),
     });
     const newIndicesInSubSyncCommittee = [1];
-    cache.add(subCommitteeIndex, newSyncCommittee, indexInSubCommittee);
+    cache.add(subCommitteeIndex, newSyncCommittee, newIndicesInSubSyncCommittee[0]);
     contribution = cache.getSyncCommitteeContribution(
       subCommitteeIndex,
       syncCommittee.slot,

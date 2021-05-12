@@ -36,8 +36,10 @@ describe("syncCommitteeContribution", function () {
     });
     cache.add(newContributionAndProof);
     const aggregate = cache.getSyncAggregate(slot, beaconBlockRoot);
+    expect(config.types.altair.SyncAggregate.equals(aggregate, config.types.altair.SyncAggregate.defaultValue())).to.be
+      .false;
     // TODO Test it's correct. Modify the contributions above so they have 1 bit set to true
-    expect(aggregate.syncCommitteeBits.length).to.be.equal(2);
+    expect(aggregate.syncCommitteeBits.length).to.be.equal(32);
   });
 
   it("should prune", () => {

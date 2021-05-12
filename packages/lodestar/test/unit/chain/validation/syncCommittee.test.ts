@@ -11,20 +11,26 @@ import {expectRejectedWithLodestarError} from "../../../utils/errors";
 import {generateCachedState} from "../../../utils/state";
 import {StubbedBeaconDb} from "../../../utils/stub";
 import {generateSyncCommitteeSignature} from "../../../utils/syncCommittee";
-import * as syncCommitteeUtils from "@chainsafe/lodestar-beacon-state-transition/lib/util/syncCommittee";
-import {SinonStubFn} from "../../../utils/types";
+import {phase0} from "@chainsafe/lodestar-types";
 
 // https://github.com/ethereum/eth2.0-specs/blob/v1.1.0-alpha.3/specs/altair/p2p-interface.md
 describe("Sync Committee Signature validation", function () {
   const sandbox = sinon.createSandbox();
   let chain: SinonStubbedInstance<IBeaconChain>;
   let forkChoiceStub: SinonStubbedInstance<IForkChoice>;
-  let computeSubnetsForSyncCommitteeStub: SinonStubFn<typeof syncCommitteeUtils["computeSubnetsForSyncCommittee"]>;
+  // let computeSubnetsForSyncCommitteeStub: SinonStubFn<typeof syncCommitteeUtils["computeSubnetsForSyncCommittee"]>;
   let db: StubbedBeaconDb;
+  let altairForkEpochBk: phase0.Epoch;
+  const altairForkEpoch = 2020;
 
-  // TODO: remove
   before(async function () {
     await initBLS();
+    altairForkEpochBk = config.params.ALTAIR_FORK_EPOCH;
+    config.params.ALTAIR_FORK_EPOCH = altairForkEpoch;
+  });
+
+  after(function () {
+    config.params.ALTAIR_FORK_EPOCH = altairForkEpochBk;
   });
 
   beforeEach(function () {
@@ -35,7 +41,7 @@ describe("Sync Committee Signature validation", function () {
     forkChoiceStub = sandbox.createStubInstance(ForkChoice);
     chain.forkChoice = forkChoiceStub;
     db = new StubbedBeaconDb(sandbox, config);
-    computeSubnetsForSyncCommitteeStub = sandbox.stub(syncCommitteeUtils, "computeSubnetsForSyncCommittee");
+    // computeSubnetsForSyncCommitteeStub = sandbox.stub(syncCommitteeUtils, "computeSubnetsForSyncCommittee");
   });
 
   afterEach(function () {
@@ -45,7 +51,7 @@ describe("Sync Committee Signature validation", function () {
   it("should throw error - the signature's slot is in the past", async function () {
     const syncCommittee = generateSyncCommitteeSignature({slot: 1});
     await expectRejectedWithLodestarError(
-      validateGossipSyncCommittee(config, chain, db, {syncCommittee, validSignature: false}, 0),
+      validateGossipSyncCommittee(chain, db, {syncCommittee, validSignature: false}, 0),
       SyncCommitteeErrorCode.NOT_CURRENT_SLOT
     );
   });
@@ -53,7 +59,7 @@ describe("Sync Committee Signature validation", function () {
   it("should throw error - the signature's slot is in the future", async function () {
     const syncCommittee = generateSyncCommitteeSignature({slot: 3});
     await expectRejectedWithLodestarError(
-      validateGossipSyncCommittee(config, chain, db, {syncCommittee, validSignature: false}, 0),
+      validateGossipSyncCommittee(chain, db, {syncCommittee, validSignature: false}, 0),
       SyncCommitteeErrorCode.NOT_CURRENT_SLOT
     );
   });
@@ -62,7 +68,7 @@ describe("Sync Committee Signature validation", function () {
     const syncCommittee = generateSyncCommitteeSignature({slot: 2});
     forkChoiceStub.hasBlock.returns(false);
     await expectRejectedWithLodestarError(
-      validateGossipSyncCommittee(config, chain, db, {syncCommittee, validSignature: false}, 0),
+      validateGossipSyncCommittee(chain, db, {syncCommittee, validSignature: false}, 0),
       SyncCommitteeErrorCode.UNKNOWN_BEACON_BLOCK_ROOT
     );
   });
@@ -70,83 +76,54 @@ describe("Sync Committee Signature validation", function () {
   it("should throw error - there has been another valid sync committee signature for the declared slot", async function () {
     const syncCommittee = generateSyncCommitteeSignature({slot: 2});
     forkChoiceStub.hasBlock.returns(true);
-    db.seenSyncCommiteeCache.has.returns(true);
+    const headState = generateCachedState({slot: 32 * (altairForkEpoch + 1)}, config, true);
+    chain.getHeadState.returns(headState);
+    db.syncCommitee.has.returns(true);
     await expectRejectedWithLodestarError(
-      validateGossipSyncCommittee(config, chain, db, {syncCommittee, validSignature: false}, 0),
+      validateGossipSyncCommittee(chain, db, {syncCommittee, validSignature: false}, 0),
       SyncCommitteeErrorCode.SYNC_COMMITTEE_ALREADY_KNOWN
     );
   });
 
   it("should throw error - the validator is not part of the current sync committee", async function () {
-    const syncCommittee = generateSyncCommitteeSignature({slot: 2, validatorIndex: 1});
+    const syncCommittee = generateSyncCommitteeSignature({slot: 2, validatorIndex: 100});
     forkChoiceStub.hasBlock.returns(true);
-    db.seenSyncCommiteeCache.has.returns(false);
-    const state = generateCachedState({}, config, true);
-    // all validators have same pubkey, make validator 0 different
-    state.validators[0].pubkey = Buffer.alloc(48, 1);
-    const pubkey0 = state.validators[0].pubkey;
-    // syncCommittee has validator 0 but not 1
-    const headState = generateCachedState(
-      {
-        currentSyncCommittee: {
-          pubkeys: Array.from({length: config.params.SYNC_COMMITTEE_SIZE}, () => pubkey0),
-          pubkeyAggregates: [Buffer.alloc(48, 0)],
-        },
-      },
-      config,
-      true
-    );
+    db.syncCommitee.has.returns(false);
+    const headState = generateCachedState({slot: 32 * (altairForkEpoch + 1)}, config, true);
     chain.getHeadState.returns(headState);
 
     await expectRejectedWithLodestarError(
-      validateGossipSyncCommittee(config, chain, db, {syncCommittee, validSignature: false}, 0),
+      validateGossipSyncCommittee(chain, db, {syncCommittee, validSignature: false}, 0),
       SyncCommitteeErrorCode.VALIDATOR_NOT_IN_SYNC_COMMITTEE
     );
   });
 
-  it("should throw error - incorrect subnet", async function () {
-    computeSubnetsForSyncCommitteeStub.returns([10]);
+  /**
+   * Skip this spec check: [REJECT] The subnet_id is correct, i.e. subnet_id in compute_subnets_for_sync_committee(state, sync_committee_signature.validator_index)
+   * because it's the same to VALIDATOR_NOT_IN_SYNC_COMMITTEE
+   */
+  it.skip("should throw error - incorrect subnet", async function () {
     const syncCommittee = generateSyncCommitteeSignature({slot: 2, validatorIndex: 1});
     forkChoiceStub.hasBlock.returns(true);
-    db.seenSyncCommiteeCache.has.returns(false);
-    const commonPubkey = generateCachedState().validators[0].pubkey;
-    const headState = generateCachedState(
-      {
-        currentSyncCommittee: {
-          pubkeys: Array.from({length: config.params.SYNC_COMMITTEE_SIZE}, () => commonPubkey),
-          pubkeyAggregates: [Buffer.alloc(48, 0)],
-        },
-      },
-      config,
-      true
-    );
+    db.syncCommitee.has.returns(false);
+    const headState = generateCachedState({slot: 32 * (altairForkEpoch + 1)}, config, true);
     chain.getHeadState.returns(headState);
     await expectRejectedWithLodestarError(
-      validateGossipSyncCommittee(config, chain, db, {syncCommittee, validSignature: false}, 0),
-      SyncCommitteeErrorCode.VALIDATOR_NOT_IN_SYNC_COMMITTEE
+      validateGossipSyncCommittee(chain, db, {syncCommittee, validSignature: false}, 0),
+      SyncCommitteeErrorCode.INVALID_SUB_COMMITTEE_INDEX
     );
   });
 
   it("should throw error - invalid signature", async function () {
-    computeSubnetsForSyncCommitteeStub.returns([0]);
     const syncCommittee = generateSyncCommitteeSignature({slot: 2, validatorIndex: 1});
     forkChoiceStub.hasBlock.returns(true);
-    db.seenSyncCommiteeCache.has.returns(false);
-    const commonPubkey = generateCachedState().validators[0].pubkey;
-    const headState = generateCachedState(
-      {
-        currentSyncCommittee: {
-          pubkeys: Array.from({length: config.params.SYNC_COMMITTEE_SIZE}, () => commonPubkey),
-          pubkeyAggregates: [Buffer.alloc(48, 0)],
-        },
-      },
-      config,
-      true
-    );
+    db.syncCommitee.has.returns(false);
+    const headState = generateCachedState({slot: 32 * (altairForkEpoch + 1)}, config, true);
+
     chain.getHeadState.returns(headState);
     chain.bls = {verifySignatureSets: async () => false};
     await expectRejectedWithLodestarError(
-      validateGossipSyncCommittee(config, chain, db, {syncCommittee, validSignature: false}, 0),
+      validateGossipSyncCommittee(chain, db, {syncCommittee, validSignature: false}, 0),
       SyncCommitteeErrorCode.INVALID_SIGNATURE
     );
   });
