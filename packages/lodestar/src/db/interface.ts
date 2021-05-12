@@ -21,8 +21,8 @@ import {
 import {PreGenesisState, PreGenesisStateLastProcessedBlock} from "./single";
 import {SeenAttestationCache} from "./seenAttestationCache";
 import {PendingBlockRepository} from "./repositories/pendingBlock";
-import {SyncCommitteeSignatureRepository} from "./repositories/syncCommitteeSignature";
-import {ContributionAndProofRepository} from "./repositories/contributionAndProof";
+import {SyncCommitteeCache} from "./syncCommittee";
+import {SyncCommitteeContributionCache} from "./syncCommitteeContribution";
 
 /**
  * The DB service manages the data layer of the beacon chain
@@ -65,8 +65,8 @@ export interface IBeaconDb {
   eth1Data: Eth1DataRepository;
 
   // altair
-  syncCommitteeSignature: SyncCommitteeSignatureRepository;
-  contributionAndProof: ContributionAndProofRepository;
+  syncCommitee: SyncCommitteeCache;
+  syncCommitteeContribution: SyncCommitteeContributionCache;
 
   processBlockOperations(signedBlock: phase0.SignedBeaconBlock): Promise<void>;
 

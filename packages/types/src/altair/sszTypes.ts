@@ -4,6 +4,7 @@ import {
   MAX_VALID_LIGHT_CLIENT_UPDATES,
   FINALIZED_ROOT_INDEX_FLOORLOG2,
   NEXT_SYNC_COMMITTEE_INDEX_FLOORLOG2,
+  SYNC_COMMITTEE_SUBNET_COUNT,
 } from "@chainsafe/lodestar-params";
 import {BitVectorType, ContainerType, VectorType, ListType, RootType, BitListType, Vector} from "@chainsafe/ssz";
 import {Phase0SSZTypes} from "../phase0";
@@ -59,7 +60,7 @@ export function getAltairTypes(params: IBeaconParams, phase0: Phase0SSZTypes & P
       slot: phase0.Slot,
       beaconBlockRoot: phase0.Root,
       subCommitteeIndex: phase0.SubCommitteeIndex,
-      aggregationBits: new BitListType({limit: params.SYNC_COMMITTEE_SIZE / params.SYNC_COMMITTEE_SUBNET_COUNT}),
+      aggregationBits: new BitListType({limit: params.SYNC_COMMITTEE_SIZE / SYNC_COMMITTEE_SUBNET_COUNT}),
       signature: phase0.BLSSignature,
     },
   });
@@ -68,6 +69,7 @@ export function getAltairTypes(params: IBeaconParams, phase0: Phase0SSZTypes & P
     fields: {
       aggregatorIndex: phase0.ValidatorIndex,
       contribution: SyncCommitteeContribution,
+      selectionProof: phase0.BLSSignature,
     },
   });
 

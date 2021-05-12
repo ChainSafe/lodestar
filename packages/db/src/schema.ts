@@ -48,9 +48,6 @@ export enum Bucket {
   allForks_pendingBlock = 25, // Root -> SignedBeaconBlock
 
   index_stateArchiveRootIndex = 26, // State Root -> slot
-
-  altair_syncCommitteeSignature = 31, // Root => SyncCommitteeSignature
-  altair_contributionAndProof = 32, // Root => ContributionAndProof
 }
 
 export enum Key {

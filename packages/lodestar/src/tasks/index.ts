@@ -2,7 +2,7 @@
  * @module tasks used for running tasks on specific events
  */
 
-import {phase0} from "@chainsafe/lodestar-types";
+import {phase0, Slot} from "@chainsafe/lodestar-types";
 import {AbortSignal} from "abort-controller";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils";
@@ -59,11 +59,13 @@ export class TasksService {
   start(): void {
     this.chain.emitter.on(ChainEvent.forkChoiceFinalized, this.onFinalizedCheckpoint);
     this.chain.emitter.on(ChainEvent.checkpoint, this.onCheckpoint);
+    this.chain.emitter.on(ChainEvent.clockSlot, this.onSlot);
   }
 
   async stop(): Promise<void> {
     this.chain.emitter.off(ChainEvent.forkChoiceFinalized, this.onFinalizedCheckpoint);
     this.chain.emitter.off(ChainEvent.checkpoint, this.onCheckpoint);
+    this.chain.emitter.off(ChainEvent.clockSlot, this.onSlot);
     // Archive latest finalized state
     await this.statesArchiver.archiveState(this.chain.getFinalizedCheckpoint());
   }
@@ -89,8 +91,6 @@ export class TasksService {
         this.chain.stateCache.deleteAllBeforeEpoch(finalizedEpoch),
         this.db.attestation.pruneFinalized(finalizedEpoch),
         this.db.aggregateAndProof.pruneFinalized(finalizedEpoch),
-        this.db.syncCommitteeSignature.pruneFinalized(finalizedEpoch),
-        this.db.contributionAndProof.pruneFinalized(finalizedEpoch),
       ]);
 
       // tasks rely on extended fork choice
@@ -110,5 +110,11 @@ export class TasksService {
       ),
       this.chain.stateCache.prune(headStateRoot),
     ]);
+  };
+
+  private onSlot = async (slot: Slot): Promise<void> => {
+    this.db.syncCommitee.prune(slot);
+    // TODO: Use the head slot
+    this.db.syncCommitteeContribution.prune(slot);
   };
 }

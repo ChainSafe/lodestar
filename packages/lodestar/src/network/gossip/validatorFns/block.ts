@@ -1,5 +1,5 @@
 import {ERR_TOPIC_VALIDATOR_IGNORE, ERR_TOPIC_VALIDATOR_REJECT} from "libp2p-gossipsub/src/constants";
-import {phase0} from "@chainsafe/lodestar-types";
+import {allForks} from "@chainsafe/lodestar-types";
 import {Json, toHexString} from "@chainsafe/ssz";
 import {validateGossipBlock} from "../../../chain/validation";
 import {BlockError, BlockErrorCode} from "../../../chain/errors";
@@ -9,7 +9,7 @@ import {GossipValidationError} from "../errors";
 export async function validateBeaconBlock(
   {chain, db, config, logger}: IObjectValidatorModules,
   _topic: GossipTopic,
-  signedBlock: phase0.SignedBeaconBlock
+  signedBlock: allForks.SignedBeaconBlock
 ): Promise<void> {
   try {
     await validateGossipBlock(config, chain, db, {

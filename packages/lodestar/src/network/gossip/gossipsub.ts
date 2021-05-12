@@ -4,7 +4,7 @@ import {InMessage} from "libp2p-interfaces/src/pubsub";
 import Libp2p from "libp2p";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ATTESTATION_SUBNET_COUNT} from "@chainsafe/lodestar-params";
-import {phase0} from "@chainsafe/lodestar-types";
+import {allForks, phase0} from "@chainsafe/lodestar-types";
 import {ILogger, toJson} from "@chainsafe/lodestar-utils";
 import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 
@@ -216,7 +216,7 @@ export class Eth2Gossipsub extends Gossipsub {
     this.off(this.getGossipTopicString(topic), handler);
   }
 
-  async publishBeaconBlock(signedBlock: phase0.SignedBeaconBlock): Promise<void> {
+  async publishBeaconBlock(signedBlock: allForks.SignedBeaconBlock): Promise<void> {
     await this.publishObject(
       {
         type: GossipType.beacon_block,

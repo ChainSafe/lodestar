@@ -26,6 +26,9 @@ export function getGossipTopicString(forkDigestContext: IForkDigestContext, topi
   if (topic.type === GossipType.beacon_attestation) {
     topicType += "_" + topic.subnet;
   }
+  if (topic.type === GossipType.sync_committee) {
+    topicType += "_" + topic.subnet;
+  }
   return `/eth2/${forkDigestHex}/${topicType}/${topic.encoding ?? DEFAULT_ENCODING}`;
 }
 
@@ -101,6 +104,10 @@ export function getGossipSSZType<T extends GossipObject>(config: IBeaconConfig, 
       return (config.types[topic.fork].AttesterSlashing as unknown) as ContainerType<T>;
     case GossipType.voluntary_exit:
       return (config.types[topic.fork].SignedVoluntaryExit as unknown) as ContainerType<T>;
+    case GossipType.sync_committee_contribution_and_proof:
+      return (config.types.altair.SignedAggregateAndProof as unknown) as ContainerType<T>;
+    case GossipType.sync_committee:
+      return (config.types.altair.SyncCommitteeSignature as unknown) as ContainerType<T>;
     default:
       throw new Error("Cannot get ssz gossip type");
   }
@@ -121,6 +128,8 @@ export function getGossipSSZDeserializer(config: IBeaconConfig, topic: GossipTop
     case GossipType.proposer_slashing:
     case GossipType.attester_slashing:
     case GossipType.voluntary_exit:
+    case GossipType.sync_committee_contribution_and_proof:
+    case GossipType.sync_committee:
       return sszType.deserialize.bind(sszType);
   }
 }

@@ -24,3 +24,4 @@ export * from "./signingRoot";
 export * from "./slot";
 export * from "./validator";
 export * from "./validatorStatus";
+export * from "./syncCommittee";

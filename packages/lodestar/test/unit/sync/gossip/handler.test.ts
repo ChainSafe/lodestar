@@ -19,6 +19,8 @@ import {StubbedBeaconDb} from "../../../utils/stub";
 import {testLogger} from "../../../utils/logger";
 import {createNode} from "../../../utils/network";
 import {ForkDigestContext} from "../../../../src/util/forkDigestContext";
+import {generateBlockSummary} from "../../../utils/block";
+import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 
 describe("gossip handler", function () {
   let forkDigestContext: SinonStubbedInstance<ForkDigestContext>;
@@ -33,6 +35,7 @@ describe("gossip handler", function () {
     chainStub.emitter = new ChainEventEmitter();
     chainStub.getHeadForkName.returns(ForkName.phase0);
     chainStub.forkDigestContext = forkDigestContext;
+    chainStub.forkChoice = {getHead: () => generateBlockSummary()} as IForkChoice;
     networkStub = sinon.createStubInstance(Network);
     const multiaddr = "/ip4/127.0.0.1/tcp/0";
     const libp2p = await createNode(multiaddr);

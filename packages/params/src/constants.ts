@@ -7,6 +7,9 @@ export const JUSTIFICATION_BITS_LENGTH = 4;
 export const ATTESTATION_SUBNET_COUNT = 64;
 export const MAX_REQUEST_BLOCKS = 2 ** 10; // 1024
 
+// Altair - TODO: Make sure it's not included in the spec
+export const SYNC_COMMITTEE_SUBNET_COUNT = 8;
+
 export const MIN_SYNC_COMMITTEE_PARTICIPANTS = 1;
 //~27 hours
 export const LIGHT_CLIENT_UPDATE_TIMEOUT = 2 ** 13;

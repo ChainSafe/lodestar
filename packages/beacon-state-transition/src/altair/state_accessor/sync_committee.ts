@@ -10,6 +10,7 @@ const MAX_RANDOM_BYTE = BigInt(2 ** 8 - 1);
 
 /**
  * Return the sync committee indices for a given state and epoch.
+ * Aligns `epoch` to `baseEpoch` so the result is the same with any `epoch` within a sync period
  */
 export function getSyncCommitteeIndices(
   config: IBeaconConfig,
