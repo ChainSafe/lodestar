@@ -1,7 +1,7 @@
 // manually copied from the weakSubjectivityState.json ouput in beacon-state-upload
 export const praterWeakSubjectivityState = {
-  stateRoot: "0x8b9aa157856050ed4328dd1cc2bdaad416e285ef29174556036589c41a883a07",
-  ipfsPath: "/ipfs/QmRVrgSdJmdz3fHc2fUY6tu3WqrMxykTn9STfSrxSooGTT/state.ssz",
+  stateRoot: "0x9a4e6155e7341303e595529cd27529b4a61b7be6a38b7f437c68dc2dd9baf3da",
+  ipfsPath: "/ipfs/QmXM4yuVAZxd8jm2st6nfSy8gijnun4owePPDp3kqtHbyd/state.ssz",
 };
 
 // manually copied from the weakSubjectivityState.json ouput in beacon-state-upload
