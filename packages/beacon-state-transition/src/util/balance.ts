@@ -5,7 +5,7 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {allForks, Gwei, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {bigIntMax} from "@chainsafe/lodestar-utils";
-import {CachedBeaconState} from "../fast";
+import {CachedBeaconState} from "../allForks";
 import {getCurrentEpoch} from "./epoch";
 import {getActiveValidatorIndices, isActiveValidator} from "./validator";
 

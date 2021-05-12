@@ -4,7 +4,7 @@ import {GENESIS_SLOT} from "@chainsafe/lodestar-params";
 import {allForks, Bytes32, Number64, phase0, Root} from "@chainsafe/lodestar-types";
 import {bigIntMin} from "@chainsafe/lodestar-utils";
 
-import {processDeposit} from "../phase0/naive";
+import {processDeposit} from "../naive/phase0";
 import {computeEpochAtSlot} from "./epoch";
 import {getActiveValidatorIndices} from "./validator";
 import {getTemporaryBlockHeader} from "./blockRoot";

@@ -7,7 +7,9 @@ import {getTotalBalance, getTotalActiveBalance} from "../../util/balance";
 import {TIMELY_TARGET_FLAG_INDEX, WEIGHT_DENOMINATOR} from "../constants";
 import {getFlagIndicesAndWeights} from "../misc";
 import * as phase0 from "../../phase0";
+import * as naive from "../../naive";
 import {newZeroedBigIntArray} from "../../util/array";
+import {isInInactivityLeak} from "../../util";
 
 /**
  * Return the deltas for a given flag index by scanning through the participation flags.
@@ -31,10 +33,11 @@ export function getFlagIndexDeltas(
   const increment = config.params.EFFECTIVE_BALANCE_INCREMENT;
   const unslashedParticipatingIncrements = getTotalBalance(config, state, unslashedParticipatingIndices) / increment;
   const activeIncrements = getTotalActiveBalance(config, state) / increment;
-  for (const index of phase0.getEligibleValidatorIndices(config, (state as unknown) as phase0.BeaconState)) {
+  // eslint-disable-next-line import/namespace
+  for (const index of naive.phase0.getEligibleValidatorIndices(config, (state as unknown) as phase0.BeaconState)) {
     const baseReward = getBaseReward(config, state, index);
     if (unslashedParticipatingIndices.indexOf(index) !== -1) {
-      if (phase0.isInInactivityLeak(config, (state as unknown) as phase0.BeaconState)) {
+      if (isInInactivityLeak(config, (state as unknown) as phase0.BeaconState)) {
         // This flag reward cancels the inactivity penalty corresponding to the flag index
         rewards[index] += (baseReward * weight) / WEIGHT_DENOMINATOR;
       } else {
@@ -57,14 +60,15 @@ export function getInactivityPenaltyDeltas(config: IBeaconConfig, state: altair.
   const penalties = newZeroedBigIntArray(validatorCount);
   const previousEpoch = getPreviousEpoch(config, state);
 
-  if (phase0.isInInactivityLeak(config, (state as unknown) as phase0.BeaconState)) {
+  if (isInInactivityLeak(config, (state as unknown) as phase0.BeaconState)) {
     const matchingTargetAttestingIndices = getUnslashedParticipatingIndices(
       config,
       state,
       TIMELY_TARGET_FLAG_INDEX,
       previousEpoch
     );
-    for (const index of phase0.getEligibleValidatorIndices(config, (state as unknown) as phase0.BeaconState)) {
+    // eslint-disable-next-line import/namespace
+    for (const index of naive.phase0.getEligibleValidatorIndices(config, (state as unknown) as phase0.BeaconState)) {
       for (const [_, weight] of getFlagIndicesAndWeights()) {
         // This inactivity penalty cancels the flag reward rcorresponding to the flag index
         penalties[index] += (getBaseReward(config, state, index) * weight) / WEIGHT_DENOMINATOR;

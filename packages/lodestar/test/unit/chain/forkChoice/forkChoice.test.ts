@@ -7,6 +7,7 @@ import {
   computeEpochAtSlot,
   getTemporaryBlockHeader,
   phase0,
+  naive,
   CachedBeaconState,
   createCachedBeaconState,
   FAR_FUTURE_EPOCH,
@@ -209,7 +210,7 @@ function runStateTransition(
   // Clone state because process slots and block are not pure
   const postState = config.types.phase0.BeaconState.clone(preState as phase0.BeaconState);
   // Process slots (including those with no blocks) since block
-  phase0.processSlots(config, postState as phase0.BeaconState, signedBlock.message.slot);
+  naive.phase0.processSlots(config, postState as phase0.BeaconState, signedBlock.message.slot);
   // processBlock
   postState.latestBlockHeader = getTemporaryBlockHeader(config, signedBlock.message);
   return config.types.phase0.BeaconState.clone(postState);

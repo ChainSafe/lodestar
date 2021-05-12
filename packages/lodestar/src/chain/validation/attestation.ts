@@ -2,8 +2,7 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBeaconDb} from "../../db";
 import {IAttestationJob, IBeaconChain} from "..";
 import {CachedBeaconState, computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
-import {allForks} from "@chainsafe/lodestar-types";
-import {fast, phase0} from "@chainsafe/lodestar-beacon-state-transition";
+import {allForks, phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {AttestationError, AttestationErrorCode} from "../errors";
 import {ATTESTATION_PROPAGATION_SLOT_RANGE} from "../../constants";
 
@@ -85,7 +84,7 @@ export async function validateGossipAttestation(
     });
   }
 
-  const expectedSubnet = fast.computeSubnetForAttestation(config, attestationTargetState, attestation);
+  const expectedSubnet = allForks.computeSubnetForAttestation(config, attestationTargetState, attestation);
   if (subnet !== expectedSubnet) {
     throw new AttestationError({
       code: AttestationErrorCode.INVALID_SUBNET_ID,
@@ -99,7 +98,7 @@ export async function validateGossipAttestation(
 
   // Do verify signature
   if (!attestationJob.validSignature) {
-    const signatureSet = fast.getIndexedAttestationSignatureSet(attestationTargetState, indexedAttestation);
+    const signatureSet = allForks.getIndexedAttestationSignatureSet(attestationTargetState, indexedAttestation);
     if (!(await chain.bls.verifySignatureSets([signatureSet]))) {
       throw new AttestationError({
         code: AttestationErrorCode.INVALID_SIGNATURE,
@@ -109,7 +108,7 @@ export async function validateGossipAttestation(
   }
 
   // verifySignature = false, verified above
-  if (!phase0.fast.isValidIndexedAttestation(attestationTargetState, indexedAttestation, false)) {
+  if (!phase0.isValidIndexedAttestation(attestationTargetState, indexedAttestation, false)) {
     throw new AttestationError({
       code: AttestationErrorCode.INVALID_INDEXED_ATTESTATION,
       job: attestationJob,
@@ -173,14 +172,14 @@ export function getAttestationAttesterCount(attestation: phase0.Attestation): nu
 }
 
 export function isCommitteeIndexWithinRange(
-  epochCtx: fast.EpochContext,
+  epochCtx: allForks.EpochContext,
   attestationData: phase0.AttestationData
 ): boolean {
   return attestationData.index < epochCtx.getCommitteeCountAtSlot(attestationData.slot);
 }
 
 export function doAggregationBitsMatchCommitteeSize(
-  epochCtx: fast.EpochContext,
+  epochCtx: allForks.EpochContext,
   attestation: phase0.Attestation
 ): boolean {
   return (

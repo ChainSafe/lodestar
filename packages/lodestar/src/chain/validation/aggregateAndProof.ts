@@ -1,10 +1,10 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {allForks, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {ValidatorIndex} from "@chainsafe/lodestar-types";
 import {IAttestationJob, IBeaconChain} from "..";
 import {IBeaconDb} from "../../db";
 import {
   phase0,
-  fast,
+  allForks,
   CachedBeaconState,
   computeEpochAtSlot,
   isAggregatorFromCommitteeLength,
@@ -127,7 +127,7 @@ export async function validateAggregateAttestation(
   const signatureSets = [
     getSelectionProofSignatureSet(config, attestationTargetState, slot, aggregator, aggregateAndProof),
     getAggregateAndProofSignatureSet(config, attestationTargetState, epoch, aggregator, aggregateAndProof),
-    fast.getIndexedAttestationSignatureSet(attestationTargetState, indexedAttestation),
+    allForks.getIndexedAttestationSignatureSet(attestationTargetState, indexedAttestation),
   ];
 
   if (!(await chain.bls.verifySignatureSets(signatureSets))) {
@@ -140,7 +140,7 @@ export async function validateAggregateAttestation(
   // TODO: once we have pool, check if aggregate block is seen and has target as ancestor
 
   // verifySignature = false, verified in batch above
-  if (!phase0.fast.isValidIndexedAttestation(attestationTargetState, indexedAttestation, false)) {
+  if (!phase0.isValidIndexedAttestation(attestationTargetState, indexedAttestation, false)) {
     throw new AttestationError({
       code: AttestationErrorCode.INVALID_INDEXED_ATTESTATION,
       job: attestationJob,
