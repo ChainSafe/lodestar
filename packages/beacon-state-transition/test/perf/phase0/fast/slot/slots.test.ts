@@ -20,13 +20,14 @@ describe("Process Slots Performance Test", function () {
     }
     logger.profile(`Process ${numSlot} slots ${maxTry} times`);
     const average = duration / maxTry;
+    console.log(`Processing ${numSlot} slots in ${average}ms`);
     expect(average).lt(expectedValue, `process ${numSlot} takes longer than ${expectedValue} ms`);
   }
 
   const testValues = [
-    {numSlot: 32, expectedValue: 3700, name: "process 1 empty epoch"},
-    {numSlot: 64, expectedValue: 5600, name: "process double empty epochs"},
-    {numSlot: 128, expectedValue: 8500, name: "process 4 empty epochs"},
+    {numSlot: 32, expectedValue: 1500, name: "process 1 empty epoch"},
+    {numSlot: 64, expectedValue: 2750, name: "process double empty epochs"},
+    {numSlot: 128, expectedValue: 4300, name: "process 4 empty epochs"},
   ];
 
   before(async () => {
@@ -38,4 +39,8 @@ describe("Process Slots Performance Test", function () {
       processEpochTest(testValue.numSlot, testValue.expectedValue);
     });
   }
+
+  // after(async () => {
+  //   await new Promise((r) => setTimeout(r, 1e8));
+  // });
 });
