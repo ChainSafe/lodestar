@@ -2,13 +2,14 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {BitList, TreeBacked} from "@chainsafe/ssz";
 
 const BITS_PER_BYTE = 8;
+/** Globally cache this information. @see getUint8ByteToBitBooleanArray */
+const uint8ByteToBitBooleanArrays: boolean[][] = [];
+
 /**
  * Given a byte (0 -> 255), return a Array of boolean with length = 8, big endian.
  * Ex: 1 => [true false false false false false false false]
  *     5 => [true false true false false fase false false]
  */
-const uint8ByteToBitBooleanArrays: boolean[][] = [];
-
 export function getUint8ByteToBitBooleanArray(byte: number): boolean[] {
   if (!uint8ByteToBitBooleanArrays[byte]) {
     uint8ByteToBitBooleanArrays[byte] = computeUint8ByteToBitBooleanArray(byte);
@@ -16,6 +17,7 @@ export function getUint8ByteToBitBooleanArray(byte: number): boolean[] {
   return uint8ByteToBitBooleanArrays[byte];
 }
 
+/** @see getUint8ByteToBitBooleanArray */
 function computeUint8ByteToBitBooleanArray(byte: number): boolean[] {
   // this returns little endian
   const binaryStr = byte.toString(2);
@@ -29,6 +31,15 @@ function computeUint8ByteToBitBooleanArray(byte: number): boolean[] {
   });
 }
 
+/**
+ * Returns a new `indexes` array with only the indexes that participated in `bitlist`.
+ * Participation of `indexes[i]` means that the bit at position `i` in `bitlist` is true.
+ *
+ * Previously we computed this information with `readonlyValues(TreeBacked<BitList>)`.
+ * However this approach is very inneficient since the SSZ parsing of BitList is not optimized.
+ * This function uses a precomputed array of booleans `Uint8 -> boolean[]` @see uint8ByteToBitBooleanArrays.
+ * This approach is x15 times faster.
+ */
 export function zipIndexesInBitList(config: IBeaconConfig, indexes: number[], bitlist: TreeBacked<BitList>): number[] {
   const attBytes = bitlistToUint8Array(config, bitlist as TreeBacked<BitList>);
 
@@ -50,9 +61,8 @@ export function zipIndexesInBitList(config: IBeaconConfig, indexes: number[], bi
 }
 
 /**
- * readonlyValues returns Iterator<boolean> but there is a performance issue here.
- * This returns aggregation bytes from a TreeBacked aggregationBits which a significantly better performance.
- * Use getAggregationBit() to get a boolean value from a specific index.
+ * Efficiently extract the Uint8Array inside a `TreeBacked<BitList>` structure.
+ * @see zipIndexesInBitList for reasoning and advantatges.
  */
 export function bitlistToUint8Array(config: IBeaconConfig, aggregationBits: TreeBacked<BitList>): Uint8Array {
   const sszType = config.types.phase0.CommitteeBits;
