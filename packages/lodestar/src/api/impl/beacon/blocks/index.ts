@@ -1,4 +1,4 @@
-import {Root, phase0, Slot} from "@chainsafe/lodestar-types";
+import {Root, phase0, allForks, Slot} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
 import {IBeaconChain} from "../../../../chain";
@@ -103,7 +103,7 @@ export class BeaconBlockApi implements IBeaconBlocksApi {
     return toBeaconHeaderResponse(this.config, block, true);
   }
 
-  async getBlock(blockId: BlockId): Promise<phase0.SignedBeaconBlock> {
+  async getBlock(blockId: BlockId): Promise<allForks.SignedBeaconBlock> {
     return await resolveBlockId(this.chain.forkChoice, this.db, blockId);
   }
 

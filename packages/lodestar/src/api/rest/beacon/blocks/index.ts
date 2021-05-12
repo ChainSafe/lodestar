@@ -1,4 +1,4 @@
-import {getBlock} from "./getBlock";
+import {getBlock, getBlockV2} from "./getBlock";
 import {getBlockAttestations} from "./getBlockAttestations";
 import {getBlockHeader} from "./getBlockHeader";
 import {getBlockHeaders} from "./getBlockHeaders";
@@ -7,6 +7,7 @@ import {publishBlock} from "./publishBlock";
 
 export const beaconBlocksRoutes = [
   getBlock,
+  getBlockV2,
   getBlockAttestations,
   getBlockHeader,
   getBlockHeaders,

@@ -1,4 +1,4 @@
 import {getDebugChainHeads} from "./getDebugChainHeads";
-import {getState} from "./getStates";
+import {getState, getStateV2} from "./getStates";
 
-export const debugRoutes = [getDebugChainHeads, getState];
+export const debugRoutes = [getDebugChainHeads, getState, getStateV2];
