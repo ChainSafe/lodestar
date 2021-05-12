@@ -1,13 +1,7 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {altair} from "@chainsafe/lodestar-types";
-import {
-  GENESIS_EPOCH,
-  getBlockRoot,
-  getCurrentEpoch,
-  getPreviousEpoch,
-  getTotalActiveBalance,
-  getTotalBalance,
-} from "../../..";
+import {GENESIS_EPOCH} from "../../../constants";
+import {getBlockRoot, getCurrentEpoch, getPreviousEpoch, getTotalActiveBalance, getTotalBalance} from "../../../util";
 import {TIMELY_TARGET_FLAG_INDEX} from "../../constants";
 import {getUnslashedParticipatingIndices} from "../../state_accessor";
 

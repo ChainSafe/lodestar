@@ -10,8 +10,8 @@ import {
   readonlyValues,
   TreeBacked,
 } from "@chainsafe/ssz";
-import {allForks, ParticipationFlags} from "@chainsafe/lodestar-types";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {allForks, altair, ParticipationFlags} from "@chainsafe/lodestar-types";
+import {ForkName, IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Tree} from "@chainsafe/persistent-merkle-tree";
 import {MutableVector} from "@chainsafe/persistent-ts";
 import {createValidatorFlat} from "./flat";
@@ -21,6 +21,7 @@ import {CachedBalanceList, CachedBalanceListProxyHandler} from "./cachedBalanceL
 import {
   CachedEpochParticipation,
   CachedEpochParticipationProxyHandler,
+  fromParticipationFlags,
   IParticipationStatus,
 } from "./cachedEpochParticipation";
 
@@ -53,12 +54,34 @@ export function createCachedBeaconState<T extends allForks.BeaconState>(
     Array.from(readonlyValues(state.validators), (v) => createValidatorFlat(v))
   );
   const cachedBalances = MutableVector.from(readonlyValues(state.balances));
-  const cachedPreviousParticipation = MutableVector.from(
-    Array.from({length: cachedValidators.length}, () => ({timelyHead: false, timelySource: false, timelyTarget: false}))
-  );
-  const cachedCurrentParticipation = MutableVector.from(
-    Array.from({length: cachedValidators.length}, () => ({timelyHead: false, timelySource: false, timelyTarget: false}))
-  );
+  let cachedPreviousParticipation, cachedCurrentParticipation;
+  const forkName = config.getForkName(state.slot);
+  if (forkName === ForkName.phase0) {
+    const emptyParticipationStatus = {
+      timelyHead: false,
+      timelySource: false,
+      timelyTarget: false,
+    };
+    cachedPreviousParticipation = MutableVector.from(
+      Array.from({length: cachedValidators.length}, () => emptyParticipationStatus)
+    );
+    cachedCurrentParticipation = MutableVector.from(
+      Array.from({length: cachedValidators.length}, () => emptyParticipationStatus)
+    );
+  } else {
+    cachedPreviousParticipation = MutableVector.from(
+      Array.from(
+        readonlyValues(((state as unknown) as TreeBacked<altair.BeaconState>).previousEpochParticipation),
+        fromParticipationFlags
+      )
+    );
+    cachedCurrentParticipation = MutableVector.from(
+      Array.from(
+        readonlyValues(((state as unknown) as TreeBacked<altair.BeaconState>).currentEpochParticipation),
+        fromParticipationFlags
+      )
+    );
+  }
   const epochCtx = createEpochContext(config, state, cachedValidators, opts);
   return new Proxy(
     new BeaconStateContext(
@@ -149,6 +172,25 @@ export class BeaconStateContext<T extends allForks.BeaconState> {
       ),
       (CachedBeaconStateProxyHandler as unknown) as ProxyHandler<BeaconStateContext<T>>
     ) as CachedBeaconState<T>;
+  }
+
+  /**
+   * Toggle all `MutableVector` caches to use `TransientVector`
+   */
+  setStateCachesAsTransient(): void {
+    this.validators.persistent.asTransient();
+    this.balances.persistent.asTransient();
+    this.previousEpochParticipation.persistent.asTransient();
+    this.currentEpochParticipation.persistent.asTransient();
+  }
+
+  /**
+   * Toggle all `MutableVector` caches to use `PersistentVector`
+   */
+  setStateCachesAsPersistent(): void {
+    this.validators.persistent.asPersistent();
+    this.balances.persistent.asPersistent();
+    this.previousEpochParticipation.persistent.asPersistent();
   }
 }
 

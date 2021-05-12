@@ -1,8 +1,8 @@
-import {phase0} from "@chainsafe/lodestar-types";
-import {computeActivationExitEpoch} from "../../../util";
-import {IEpochProcess, CachedBeaconState} from "../../../fast";
+import {allForks} from "@chainsafe/lodestar-types";
+import {computeActivationExitEpoch} from "../../util";
+import {IEpochProcess, CachedBeaconState} from "../util";
 
-export function processRegistryUpdates(state: CachedBeaconState<phase0.BeaconState>, process: IEpochProcess): void {
+export function processRegistryUpdates(state: CachedBeaconState<allForks.BeaconState>, process: IEpochProcess): void {
   const {config, validators, epochCtx} = state;
   let exitEnd = process.exitQueueEnd;
   let endChurn = process.exitQueueEndChurn;

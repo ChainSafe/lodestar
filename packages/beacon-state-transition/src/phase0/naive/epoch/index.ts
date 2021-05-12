@@ -4,7 +4,7 @@
 
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {phase0} from "@chainsafe/lodestar-types";
-import {processEth1DataReset} from "..";
+import {processEth1DataReset} from "./eth1";
 import {processRewardsAndPenalties} from "./balanceUpdates";
 import {processJustificationAndFinalization} from "./justification";
 import {processRegistryUpdates} from "./registryUpdates";

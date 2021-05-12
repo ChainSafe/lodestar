@@ -1,7 +1,7 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {phase0} from "@chainsafe/lodestar-types";
 import {List} from "@chainsafe/ssz";
-import {getCurrentEpoch} from "../../..";
+import {getCurrentEpoch} from "../../../util";
 
 export function processEth1DataReset(config: IBeaconConfig, state: phase0.BeaconState): void {
   const currentEpoch = getCurrentEpoch(config, state);

@@ -1,7 +1,7 @@
 import {List, readonlyValues} from "@chainsafe/ssz";
 import {phase0} from "@chainsafe/lodestar-types";
 
-import {CachedBeaconState} from "../../../fast";
+import {CachedBeaconState} from "../../../fast/util";
 import {processProposerSlashing} from "./processProposerSlashing";
 import {processAttesterSlashing} from "./processAttesterSlashing";
 import {processAttestation} from "./processAttestation";

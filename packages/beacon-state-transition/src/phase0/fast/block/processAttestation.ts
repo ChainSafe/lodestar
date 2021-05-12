@@ -1,8 +1,8 @@
 import {allForks, phase0} from "@chainsafe/lodestar-types";
 
 import {computeEpochAtSlot} from "../../../util";
-import {CachedBeaconState} from "../../../fast";
-import {isValidIndexedAttestation} from "./isValidIndexedAttestation";
+import {CachedBeaconState} from "../../../fast/util";
+import {isValidIndexedAttestation} from "../../../fast/block";
 
 export function processAttestation(
   state: CachedBeaconState<phase0.BeaconState>,

@@ -1,6 +1,6 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {altair} from "@chainsafe/lodestar-types";
-import {getSyncCommittee} from "../..";
+import {getSyncCommittee} from "../../state_accessor";
 import {getCurrentEpoch} from "../../../util";
 
 /**

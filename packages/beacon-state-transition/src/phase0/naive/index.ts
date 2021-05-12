@@ -1,7 +1,7 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {phase0} from "@chainsafe/lodestar-types";
 import {processSlots} from "./slot";
-import {verifyBlockSignature} from "../..";
+import {verifyBlockSignature} from "../../util";
 import {processBlock} from "./block";
 import {assert} from "@chainsafe/lodestar-utils";
 

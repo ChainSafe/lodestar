@@ -1,6 +1,6 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {phase0} from "@chainsafe/lodestar-types";
-import {getCurrentEpoch} from "../../..";
+import {getCurrentEpoch} from "../../../util";
 import {intDiv} from "@chainsafe/lodestar-utils";
 
 export function processHistoricalRootsUpdate(config: IBeaconConfig, state: phase0.BeaconState): void {

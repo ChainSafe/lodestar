@@ -134,7 +134,7 @@ export function computeProposers(
  */
 export function rotateEpochs(
   epochCtx: EpochContext,
-  state: phase0.BeaconState,
+  state: allForks.BeaconState,
   validators: CachedValidatorList<phase0.Validator>
 ): void {
   epochCtx.previousShuffling = epochCtx.currentShuffling;

@@ -13,7 +13,7 @@ import {
   getBeaconProposerIndex,
   increaseBalance,
 } from "../../../util";
-import {phase0} from "../../..";
+import * as phase0 from "../../../phase0";
 import {getSyncCommitteeIndices} from "../../state_accessor";
 
 export function processSyncCommittee(

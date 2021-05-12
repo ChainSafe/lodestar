@@ -1,6 +1,7 @@
 import {allForks, phase0} from "@chainsafe/lodestar-types";
+import {CachedBeaconState} from "../../../fast/util";
+import {processBlockHeader, processEth1Data, processRandao} from "../../../fast/block";
 import {IBeaconStateTransitionMetrics} from "../../../metrics";
-import {CachedBeaconState, processBlockHeader, processEth1Data, processRandao} from "../../../fast";
 import {processOperations} from "./processOperations";
 import {processAttestation} from "./processAttestation";
 import {processAttesterSlashing} from "./processAttesterSlashing";
@@ -9,7 +10,7 @@ import {processProposerSlashing} from "./processProposerSlashing";
 import {processVoluntaryExit} from "./processVoluntaryExit";
 
 // Extra utils used by other modules
-export {isValidIndexedAttestation} from "./isValidIndexedAttestation";
+export {isValidIndexedAttestation} from "../../../fast/block";
 
 export {
   processOperations,

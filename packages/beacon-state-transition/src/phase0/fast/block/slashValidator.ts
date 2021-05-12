@@ -1,8 +1,8 @@
-import {phase0, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {allForks, phase0, ValidatorIndex} from "@chainsafe/lodestar-types";
 
 import {decreaseBalance, increaseBalance} from "../../../util";
-import {CachedBeaconState} from "../../../fast";
-import {initiateValidatorExit} from "./initiateValidatorExit";
+import {CachedBeaconState} from "../../../fast/util";
+import {initiateValidatorExit} from "../../../fast/block";
 
 export function slashValidator(
   state: CachedBeaconState<phase0.BeaconState>,
@@ -17,7 +17,7 @@ export function slashValidator(
     PROPOSER_REWARD_QUOTIENT,
   } = config.params;
   const epoch = epochCtx.currentShuffling.epoch;
-  initiateValidatorExit(state, slashedIndex);
+  initiateValidatorExit(state as CachedBeaconState<allForks.BeaconState>, slashedIndex);
   const validator = validators[slashedIndex];
   validators.update(slashedIndex, {
     slashed: true,
