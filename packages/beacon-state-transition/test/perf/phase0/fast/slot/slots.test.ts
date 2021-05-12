@@ -25,9 +25,9 @@ describe("Process Slots Performance Test", function () {
   }
 
   const testValues = [
-    {numSlot: 32, expectedValue: 1440, name: "process 1 empty epoch"},
-    {numSlot: 64, expectedValue: 2707, name: "process double empty epochs"},
-    {numSlot: 128, expectedValue: 4488, name: "process 4 empty epochs"},
+    {numSlot: 32, expectedValue: 1500, name: "process 1 empty epoch"},
+    {numSlot: 64, expectedValue: 2750, name: "process double empty epochs"},
+    {numSlot: 128, expectedValue: 4300, name: "process 4 empty epochs"},
   ];
 
   before(async () => {

@@ -176,6 +176,8 @@ export const PRE_COMPUTED_BYTE_TO_BOOLEAN_ARRAY: boolean[][] = Array.from({lengt
 
 /**
  * Get aggregation bit (true/false) from an aggregation bytes array and validator index in committee.
+ * Notice: If we want to access the bit in batch, using this method is not efficient, check the performance
+ *         test for an example of how to do that.
  */
 export function getAggregationBit(attBytes: number[], indexInCommittee: number): boolean {
   // 8 validators are grouped in 1 byte

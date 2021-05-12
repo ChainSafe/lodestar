@@ -1,7 +1,8 @@
 import {config} from "@chainsafe/lodestar-config/mainnet";
+import {intDiv} from "@chainsafe/lodestar-utils";
 import {List, readonlyValues} from "@chainsafe/ssz";
 import {expect} from "chai";
-import {getAggregationBit, getAggregationBytes} from "../../../src";
+import {getAggregationBit, getAggregationBytes, PRE_COMPUTED_BYTE_TO_BOOLEAN_ARRAY} from "../../../src";
 import {profilerLogger} from "../../utils/logger";
 
 it("getAggregationBytes", function () {
@@ -26,13 +27,24 @@ it("getAggregationBytes", function () {
   const readOnlyValuesResult = Date.now() - start;
   logger.profile(`Access aggregationBits using getAggregationBytes ${MAX_TRY} times`);
   start = Date.now();
+  let booleansInByte: boolean[] = [];
   for (let i = 0; i < MAX_TRY; i++) {
-    getAggregationBytes(config, tree);
+    const bytes = getAggregationBytes(config, tree);
+    for (let j = 0; j < aggregationBits.length; j++) {
+      const indexInByte = j % 8;
+      if (indexInByte === 0) {
+        const byte = bytes[intDiv(j, 8)];
+        booleansInByte = PRE_COMPUTED_BYTE_TO_BOOLEAN_ARRAY[byte];
+      }
+      booleansInByte[indexInByte];
+      // doing this gives same performance to readonlyValues
+      // getAggregationBit(bytes, j);
+    }
   }
   logger.profile(`Access aggregationBits using getAggregationBytes ${MAX_TRY} times`);
   expect(readOnlyValuesResult).to.be.lt(
     14500,
     `Expect aggregationBits using readonlyValues ${MAX_TRY} times to be less than 14500ms`
   );
-  expect(Date.now() - start).to.be.lt(820, `Expect getAggregationBytes ${MAX_TRY} times to be less than 820ms`);
+  expect(Date.now() - start).to.be.lt(3100, `Expect getAggregationBytes ${MAX_TRY} times to be less than 3100ms`);
 });
