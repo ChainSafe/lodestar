@@ -12,6 +12,7 @@ import {connect} from "../utils/network";
 import {logFiles} from "./params";
 import {simTestInfoTracker} from "../utils/node/simTest";
 import {ILogger, sleep, TimestampFormatCode} from "@chainsafe/lodestar-utils";
+import {clearDomainCache} from "@chainsafe/lodestar-beacon-state-transition/lib/allForks/util";
 
 /* eslint-disable no-console, @typescript-eslint/naming-convention */
 
@@ -24,6 +25,10 @@ describe("Run multi node single thread interop validators (no eth1) until checkp
   };
 
   let onDoneHandlers: (() => Promise<void>)[] = [];
+
+  beforeEach(function () {
+    clearDomainCache();
+  });
 
   for (const nodeCount of [4]) {
     it(`${nodeCount} nodes / ${validatorsPerNode} vc / 1 validator > until ${checkpointEvent}`, async function () {

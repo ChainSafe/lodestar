@@ -277,5 +277,12 @@ export const CachedBeaconStateProxyHandler: ProxyHandler<CachedBeaconState<allFo
   },
 };
 
+/**
+ * Caution: not for production, only used for sim tests.
+ */
+export function clearDomainCache(): void {
+  domainCache.clear();
+}
+
 /** Domain cache, share across beacon states */
 const domainCache = new Map<ForkName, Map<DomainType, Buffer>>();

@@ -9,6 +9,7 @@ import {ChainEvent} from "../../src/chain";
 import {createPeerId} from "../../src/network";
 import {logFiles} from "./params";
 import {NodeWorkerOptions} from "./threaded/types";
+import {clearDomainCache} from "@chainsafe/lodestar-beacon-state-transition/lib/allForks/util";
 
 /* eslint-disable no-console, @typescript-eslint/naming-convention */
 
@@ -19,6 +20,10 @@ describe("Run multi node multi thread interop validators (no eth1) until checkpo
     SECONDS_PER_SLOT: 2,
     SLOTS_PER_EPOCH: 8,
   };
+
+  beforeEach(function () {
+    clearDomainCache();
+  });
 
   for (const nodeCount of [4]) {
     it(`${nodeCount} nodes / ${validatorsPerNode} vc / 1 validator > until ${checkpointEvent}`, async function () {

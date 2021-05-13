@@ -9,6 +9,7 @@ import {testLogger, TestLoggerOpts, LogLevel} from "../utils/logger";
 import {logFiles} from "./params";
 import {simTestInfoTracker} from "../utils/node/simTest";
 import {sleep, TimestampFormatCode} from "@chainsafe/lodestar-utils";
+import {clearDomainCache} from "@chainsafe/lodestar-beacon-state-transition/lib/allForks/util";
 
 /* eslint-disable no-console, @typescript-eslint/naming-convention */
 
@@ -34,6 +35,10 @@ describe("Run single node single thread interop validators (no eth1) until check
     {validatorClientCount: 8, validatorsPerClient: 8, event: ChainEvent.justified, params: testParams},
     {validatorClientCount: 8, validatorsPerClient: 8, event: ChainEvent.finalized, params: testParams},
   ];
+
+  beforeEach(function () {
+    clearDomainCache();
+  });
 
   for (const testCase of testCases) {
     it(`${testCase.validatorClientCount} vc / ${testCase.validatorsPerClient} validator > until ${testCase.event}`, async function () {
