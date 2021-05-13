@@ -1,10 +1,10 @@
 import {ValidatorIndex} from "@chainsafe/lodestar-types";
 import {ApiController} from "../../types";
 
-export const getAttesterDuties: ApiController<null, {epoch: number}, ValidatorIndex[]> = {
+export const getSyncCommitteeDuties: ApiController<null, {epoch: number}, ValidatorIndex[]> = {
   url: "/eth/v1/validator/duties/sync/:epoch",
   method: "POST",
-  id: "getAttesterDuties",
+  id: "getSyncCommitteeDuties",
 
   handler: async function (req) {
     const data = await this.api.validator.getSyncCommitteeDuties(req.params.epoch, req.body);
