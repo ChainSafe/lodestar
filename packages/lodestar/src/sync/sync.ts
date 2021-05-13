@@ -38,15 +38,14 @@ export class BeaconSync implements IBeaconSync {
   private readonly slotImportTolerance: Slot;
 
   constructor(opts: ISyncOptions, modules: ISyncModules) {
-    const {config, chain, metrics, network, logger} = modules;
+    const {config, chain, metrics, network, db, logger} = modules;
     this.opts = opts;
     this.config = config;
     this.network = network;
     this.chain = chain;
     this.logger = logger;
     this.rangeSync = new RangeSync(modules);
-    this.gossip =
-      modules.gossipHandler || new BeaconGossipHandler(modules.config, modules.chain, modules.network, modules.db);
+    this.gossip = modules.gossipHandler || new BeaconGossipHandler(config, chain, network, db, logger);
     this.slotImportTolerance = modules.config.params.SLOTS_PER_EPOCH;
 
     // Subscribe to RangeSync completing a SyncChain and recompute sync state
