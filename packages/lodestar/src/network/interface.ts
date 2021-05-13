@@ -38,6 +38,12 @@ export interface INetwork {
   /** Subscribe, search peers, join long-lived syncnets */
   prepareSyncCommitteeSubnets(subscriptions: CommitteeSubscription[]): void;
   reStatusPeers(peers: PeerId[]): void;
+
+  // Gossip handler
+  subscribeGossipCoreTopics(): void;
+  unsubscribeGossipCoreTopics(): void;
+  isSubscribedToGossipCoreTopics(): boolean;
+
   // Service
   start(): Promise<void>;
   stop(): Promise<void>;

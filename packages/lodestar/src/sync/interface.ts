@@ -2,7 +2,6 @@ import {ILogger} from "@chainsafe/lodestar-utils";
 import {Slot, phase0} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {INetwork} from "../network";
-import {BeaconGossipHandler} from "./gossip";
 import {IBeaconChain} from "../chain";
 import {IMetrics} from "../metrics";
 import {IBeaconDb} from "../db";
@@ -53,5 +52,4 @@ export interface ISyncModules {
   metrics: IMetrics | null;
   logger: ILogger;
   chain: IBeaconChain;
-  gossipHandler?: BeaconGossipHandler;
 }

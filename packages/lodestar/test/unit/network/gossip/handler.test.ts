@@ -13,7 +13,7 @@ import {
   encodeMessageData,
   TopicValidatorFn,
 } from "../../../../src/network/gossip";
-import {BeaconGossipHandler} from "../../../../src/sync/gossip";
+import {GossipHandler} from "../../../../src/network/gossip/handler";
 
 import {StubbedBeaconDb} from "../../../utils/stub";
 import {testLogger} from "../../../utils/logger";
@@ -21,8 +21,10 @@ import {createNode} from "../../../utils/network";
 import {ForkDigestContext} from "../../../../src/util/forkDigestContext";
 import {generateBlockSummary} from "../../../utils/block";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
+import {ISubnetsService} from "../../../../src/network/subnetsService";
 
 describe("gossip handler", function () {
+  const attnetsService = {} as ISubnetsService;
   let forkDigestContext: SinonStubbedInstance<ForkDigestContext>;
   let chainStub: SinonStubbedInstance<IBeaconChain>;
   let networkStub: SinonStubbedInstance<INetwork>;
@@ -59,18 +61,18 @@ describe("gossip handler", function () {
   });
 
   it("should subscribe/unsubscribe on start/stop", function () {
-    const handler = new BeaconGossipHandler(config, chainStub, networkStub, dbStub);
+    const handler = new GossipHandler(config, chainStub, gossipsub, attnetsService, dbStub, networkStub);
     expect(gossipsub.subscriptions.size).to.equal(0);
-    handler.start();
+    handler.subscribeCoreTopics();
     expect(gossipsub.subscriptions.size).to.equal(5);
-    handler.stop();
+    handler.unsubscribeCoreTopics();
     expect(gossipsub.subscriptions.size).to.equal(0);
     handler.close();
   });
 
   it("should handle incoming gossip objects", async function () {
-    const handler = new BeaconGossipHandler(config, chainStub, networkStub, dbStub);
-    handler.start();
+    const handler = new GossipHandler(config, chainStub, gossipsub, attnetsService, dbStub, networkStub);
+    handler.subscribeCoreTopics();
     const fork = ForkName.phase0;
     const {
       SignedBeaconBlock,
@@ -121,7 +123,7 @@ describe("gossip handler", function () {
     });
     expect(dbStub.attesterSlashing.add.calledOnce).to.be.true;
 
-    handler.stop();
+    handler.unsubscribeCoreTopics();
     handler.close();
   });
 });

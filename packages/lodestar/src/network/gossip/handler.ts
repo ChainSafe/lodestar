@@ -1,120 +1,89 @@
 import {allForks, altair, Epoch, phase0} from "@chainsafe/lodestar-types";
 import {ATTESTATION_SUBNET_COUNT, SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
 import {IBeaconConfig, ForkName} from "@chainsafe/lodestar-config";
-
+import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
+import {ILogger} from "@chainsafe/lodestar-utils";
 import {SyncCommitteeSignatureIndexed} from "../../chain/validation/syncCommittee";
-import {getCurrentAndNextFork, INetwork} from "../../network";
+import {getActiveForks, runForkTransitionHooks} from "../forks";
 import {ChainEvent, IBeaconChain} from "../../chain";
 import {IBeaconDb} from "../../db";
-import {GossipHandlerFn, GossipTopic, GossipType} from "../../network/gossip";
-import {ILogger} from "@chainsafe/lodestar-utils";
+import {GossipHandlerFn, GossipTopic, GossipType} from ".";
+import {Eth2Gossipsub} from "./gossipsub";
+import {ISubnetsService} from "../subnetsService";
 
 /**
- * Subscribe topics to the new fork N epochs before the fork. Remove all subscriptions N epochs after the fork
+ * Registers handlers to all possible gossip topics and forks.
+ * Other components control when to subscribe and unsubcribe.
  */
-const FORK_EPOCH_LOOKAHEAD = 2;
-
-enum GossipHandlerStatus {
-  Started = "Started",
-  Stopped = "Stopped",
-}
-
-type GossipHandlerState =
-  | {status: GossipHandlerStatus.Stopped}
-  | {status: GossipHandlerStatus.Started; forks: ForkName[]};
-
-export class BeaconGossipHandler {
+export class GossipHandler {
   private readonly topicHandlers: {topic: GossipTopic; handler: GossipHandlerFn}[] = [];
-  private state: GossipHandlerState = {status: GossipHandlerStatus.Stopped};
+  private subscribedForks = new Set<ForkName>();
 
   constructor(
     private readonly config: IBeaconConfig,
     private readonly chain: IBeaconChain,
-    private readonly network: INetwork,
+    private readonly gossip: Eth2Gossipsub,
+    private readonly attnetsService: ISubnetsService,
     private readonly db: IBeaconDb,
     private readonly logger: ILogger
   ) {
     this.registerGossipHandlers();
-  }
-
-  get isStarted(): boolean {
-    return this.state.status === GossipHandlerStatus.Started;
-  }
-
-  close(): void {
-    for (const {topic, handler} of this.topicHandlers) {
-      this.network.gossip.unhandleTopic(topic, handler);
-    }
-
-    if (this.state.status === GossipHandlerStatus.Started) {
-      this.stop();
-    }
-  }
-
-  /**
-   * Subscribe to all gossip events
-   */
-  start(): void {
-    if (this.state.status === GossipHandlerStatus.Started) {
-      return;
-    }
-
-    const currentSlot = this.chain.forkChoice.getHead().slot;
-    const currentFork = this.config.getForkName(currentSlot);
-    this.subscribeAtFork(currentFork);
-    this.state = {status: GossipHandlerStatus.Started, forks: [currentFork]};
     this.chain.emitter.on(ChainEvent.clockEpoch, this.onEpoch);
   }
 
-  /**
-   * Unsubscribe from all gossip events
-   */
-  stop(): void {
-    if (this.state.status !== GossipHandlerStatus.Started) {
-      return;
-    }
-
-    for (const fork of this.state.forks) {
-      this.unsubscribeAtFork(fork);
-    }
-
+  close(): void {
     this.chain.emitter.off(ChainEvent.clockEpoch, this.onEpoch);
-    this.state = {status: GossipHandlerStatus.Stopped};
+    for (const {topic, handler} of this.topicHandlers) {
+      this.gossip.unhandleTopic(topic, handler);
+    }
+  }
+
+  get isSubscribedToCoreTopics(): boolean {
+    return this.subscribedForks.size > 0;
+  }
+
+  /**
+   * Subscribe to all gossip events. Safe to call multiple times
+   */
+  subscribeCoreTopics(): void {
+    if (!this.isSubscribedToCoreTopics) {
+      this.logger.info("Subscribed gossip core topics");
+    }
+
+    const currentEpoch = computeEpochAtSlot(this.config, this.chain.forkChoice.getHead().slot);
+    for (const fork of getActiveForks(this.config, currentEpoch)) {
+      this.subscribeCoreTopicsAtFork(fork);
+    }
+  }
+
+  /**
+   * Unsubscribe from all gossip events. Safe to call multiple times
+   */
+  unsubscribeCoreTopics(): void {
+    for (const fork of this.subscribedForks.values()) {
+      this.unsubscribeCoreTopicsAtFork(fork);
+    }
   }
 
   // Handle forks
 
   private onEpoch = (epoch: Epoch): void => {
     try {
-      if (this.state.status !== GossipHandlerStatus.Started) {
+      // Don't subscribe to new fork if the node is not subscribed to any topic
+      if (!this.isSubscribedToCoreTopics) {
         return;
       }
 
-      // Compute prev and next fork shifted, so next fork is still next at forkEpoch + FORK_EPOCH_LOOKAHEAD
-      const forks = getCurrentAndNextFork(this.config, epoch - FORK_EPOCH_LOOKAHEAD - 1);
-
-      // Only when fork is scheduled
-      if (!forks.nextFork) {
-        return;
-      }
-
-      const prevFork = forks.currentFork.name;
-      const nextFork = forks.nextFork.name;
-      const forkEpoch = forks.nextFork.epoch;
-
-      // ONLY ONCE: Two epoch before the fork, re-subscribe all existing random subscriptions to the new fork
-      if (epoch === forkEpoch - FORK_EPOCH_LOOKAHEAD) {
-        this.logger.info("Suscribing gossip core topics to next fork", {nextFork});
-        this.subscribeAtFork(nextFork);
-        this.state = {status: GossipHandlerStatus.Started, forks: [prevFork, nextFork]};
-      }
-
-      // ONLY ONCE: Two epochs after the fork, un-subscribe all subnets from the old fork
-      if (epoch === forkEpoch + FORK_EPOCH_LOOKAHEAD) {
-        this.logger.info("Unsuscribing gossip core topics from prev fork", {prevFork});
-        this.unsubscribeAtFork(prevFork);
-        this.state = {status: GossipHandlerStatus.Started, forks: [nextFork]};
-      }
+      runForkTransitionHooks(this.config, epoch, {
+        beforeForkTransition: (nextFork) => {
+          this.logger.info("Suscribing gossip core topics to next fork", {nextFork});
+          this.subscribeCoreTopicsAtFork(nextFork);
+        },
+        afterForkTransition: (prevFork) => {
+          this.logger.info("Unsuscribing gossip core topics from prev fork", {prevFork});
+          this.unsubscribeCoreTopicsAtFork(prevFork);
+        },
+      });
     } catch (e) {
       this.logger.error("Error on BeaconGossipHandler.onEpoch", {epoch}, e);
     }
@@ -148,7 +117,7 @@ export class BeaconGossipHandler {
 
   private onAttestation = async (subnet: number, attestation: phase0.Attestation): Promise<void> => {
     // TODO: Review if it's really necessary to check shouldProcessAttestation()
-    if (this.network.attnetsService.shouldProcess(subnet, attestation.data.slot)) {
+    if (this.attnetsService.shouldProcess(subnet, attestation.data.slot)) {
       await this.db.attestation.add(attestation);
     }
   };
@@ -164,25 +133,31 @@ export class BeaconGossipHandler {
     this.db.syncCommittee.add(subnet, signature, indexInSubCommittee);
   };
 
-  private subscribeAtFork = (fork: ForkName): void => {
-    this.network.gossip.subscribeTopic({type: GossipType.beacon_block, fork});
-    this.network.gossip.subscribeTopic({type: GossipType.beacon_aggregate_and_proof, fork});
-    this.network.gossip.subscribeTopic({type: GossipType.voluntary_exit, fork});
-    this.network.gossip.subscribeTopic({type: GossipType.proposer_slashing, fork});
-    this.network.gossip.subscribeTopic({type: GossipType.attester_slashing, fork});
+  private subscribeCoreTopicsAtFork = (fork: ForkName): void => {
+    if (this.subscribedForks.has(fork)) return;
+    this.subscribedForks.add(fork);
+
+    this.gossip.subscribeTopic({type: GossipType.beacon_block, fork});
+    this.gossip.subscribeTopic({type: GossipType.beacon_aggregate_and_proof, fork});
+    this.gossip.subscribeTopic({type: GossipType.voluntary_exit, fork});
+    this.gossip.subscribeTopic({type: GossipType.proposer_slashing, fork});
+    this.gossip.subscribeTopic({type: GossipType.attester_slashing, fork});
     if (fork === ForkName.altair) {
-      this.network.gossip.subscribeTopic({type: GossipType.sync_committee_contribution_and_proof, fork});
+      this.gossip.subscribeTopic({type: GossipType.sync_committee_contribution_and_proof, fork});
     }
   };
 
-  private unsubscribeAtFork = (fork: ForkName): void => {
-    this.network.gossip.unsubscribeTopic({type: GossipType.beacon_block, fork});
-    this.network.gossip.unsubscribeTopic({type: GossipType.beacon_aggregate_and_proof, fork});
-    this.network.gossip.unsubscribeTopic({type: GossipType.voluntary_exit, fork});
-    this.network.gossip.unsubscribeTopic({type: GossipType.proposer_slashing, fork});
-    this.network.gossip.unsubscribeTopic({type: GossipType.attester_slashing, fork});
+  private unsubscribeCoreTopicsAtFork = (fork: ForkName): void => {
+    if (!this.subscribedForks.has(fork)) return;
+    this.subscribedForks.delete(fork);
+
+    this.gossip.unsubscribeTopic({type: GossipType.beacon_block, fork});
+    this.gossip.unsubscribeTopic({type: GossipType.beacon_aggregate_and_proof, fork});
+    this.gossip.unsubscribeTopic({type: GossipType.voluntary_exit, fork});
+    this.gossip.unsubscribeTopic({type: GossipType.proposer_slashing, fork});
+    this.gossip.unsubscribeTopic({type: GossipType.attester_slashing, fork});
     if (fork === ForkName.altair) {
-      this.network.gossip.unsubscribeTopic({type: GossipType.sync_committee_contribution_and_proof, fork});
+      this.gossip.unsubscribeTopic({type: GossipType.sync_committee_contribution_and_proof, fork});
     }
   };
 
@@ -198,7 +173,7 @@ export class BeaconGossipHandler {
     ];
     for (const {type, handler} of topicHandlers) {
       const topic = {type, fork: ForkName.phase0} as GossipTopic;
-      this.network.gossip.handleTopic(topic, handler as GossipHandlerFn);
+      this.gossip.handleTopic(topic, handler as GossipHandlerFn);
       this.topicHandlers.push({topic, handler: handler as GossipHandlerFn});
     }
 
@@ -206,7 +181,7 @@ export class BeaconGossipHandler {
       const topic = {type: GossipType.beacon_attestation, fork: ForkName.phase0, subnet};
       const handlerWrapped = (async (attestation: phase0.Attestation): Promise<void> =>
         await this.onAttestation(subnet, attestation)) as GossipHandlerFn;
-      this.network.gossip.handleTopic(topic, handlerWrapped);
+      this.gossip.handleTopic(topic, handlerWrapped);
       this.topicHandlers.push({topic, handler: handlerWrapped});
     }
 
@@ -215,7 +190,7 @@ export class BeaconGossipHandler {
       const topic = {type: GossipType.sync_committee, fork: ForkName.altair, subnet};
       const handlerWrapped = (async (signature: altair.SyncCommitteeSignature): Promise<void> =>
         await this.onSyncCommitteeSignature(subnet, signature)) as GossipHandlerFn;
-      this.network.gossip.handleTopic(topic, handlerWrapped);
+      this.gossip.handleTopic(topic, handlerWrapped);
       this.topicHandlers.push({topic, handler: handlerWrapped});
     }
   }
