@@ -374,8 +374,8 @@ export class ValidatorApi implements IValidatorApi {
           subs.push({
             validatorIndex: sub.validatorIndex,
             subnet: subnet,
-            // TODO: Until the start of `untilEpoch` or the end of `untilEpoch`?
-            slot: computeStartSlotAtEpoch(this.config, sub.untilEpoch),
+            // Subscribe until the end of `untilEpoch`: https://github.com/ethereum/eth2.0-APIs/pull/136#issuecomment-840315097
+            slot: computeStartSlotAtEpoch(this.config, sub.untilEpoch + 1),
             isAggregator: true,
           });
         }
