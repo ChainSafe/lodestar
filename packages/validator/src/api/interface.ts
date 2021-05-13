@@ -1,6 +1,15 @@
 import {EventEmitter} from "events";
 import StrictEventEmitter from "strict-event-emitter-types";
-import {Epoch, Slot, Root, phase0, ValidatorIndex, BLSSignature, CommitteeIndex} from "@chainsafe/lodestar-types";
+import {
+  Epoch,
+  Slot,
+  Root,
+  phase0,
+  ValidatorIndex,
+  BLSSignature,
+  CommitteeIndex,
+  altair,
+} from "@chainsafe/lodestar-types";
 import {IStoppableEventIterable} from "@chainsafe/lodestar-utils";
 import {IValidatorFilters} from "../util";
 
@@ -37,6 +46,7 @@ export interface IApiClient {
     pool: {
       submitAttestations(attestation: phase0.Attestation[]): Promise<void>;
       submitVoluntaryExit(signedVoluntaryExit: phase0.SignedVoluntaryExit): Promise<void>;
+      submitSyncCommitteeSignatures(signatures: altair.SyncCommitteeSignature[]): Promise<void>;
     };
     getGenesis(): Promise<phase0.Genesis>;
   };
@@ -57,11 +67,19 @@ export interface IApiClient {
   validator: {
     getProposerDuties(epoch: Epoch): Promise<phase0.ProposerDutiesApi>;
     getAttesterDuties(epoch: Epoch, validatorIndices: ValidatorIndex[]): Promise<phase0.AttesterDutiesApi>;
+    getSyncCommitteeDuties(epoch: number, validatorIndices: ValidatorIndex[]): Promise<altair.SyncDutiesApi>;
     produceBlock(slot: Slot, randaoReveal: BLSSignature, graffiti: string): Promise<phase0.BeaconBlock>;
     produceAttestationData(index: CommitteeIndex, slot: Slot): Promise<phase0.AttestationData>;
+    produceSyncCommitteeContribution(
+      slot: Slot,
+      subcommitteeIndex: number,
+      beaconBlockRoot: Root
+    ): Promise<altair.SyncCommitteeContribution>;
     getAggregatedAttestation(attestationDataRoot: Root, slot: Slot): Promise<phase0.Attestation>;
     publishAggregateAndProofs(signedAggregateAndProofs: phase0.SignedAggregateAndProof[]): Promise<void>;
+    publishContributionAndProofs(contributionAndProofs: altair.SignedContributionAndProof[]): Promise<void>;
     prepareBeaconCommitteeSubnet(subscriptions: phase0.BeaconCommitteeSubscription[]): Promise<void>;
+    prepareSyncCommitteeSubnets(subscriptions: altair.SyncCommitteeSubscription[]): Promise<void>;
   };
 }
 
