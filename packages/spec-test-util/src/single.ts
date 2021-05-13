@@ -5,6 +5,7 @@ import {basename, join, parse} from "path";
 import {Type, CompositeType} from "@chainsafe/ssz";
 // @ts-ignore
 import {uncompress} from "snappyjs";
+import {clearDomainCache} from "@chainsafe/lodestar-beacon-state-transition/lib/allForks/util";
 declare function uncompress(data: Buffer): Buffer;
 
 import {isDirectory, loadYamlFile} from "./util";
@@ -99,6 +100,10 @@ export function describeDirectorySpecTest<TestCase, Result>(
     const testCases = readdirSync(testCaseDirectoryPath)
       .map((name) => join(testCaseDirectoryPath, name))
       .filter(isDirectory);
+
+    beforeEach(function () {
+      clearDomainCache();
+    });
 
     for (const [index, testCaseDirectory] of testCases.entries()) {
       generateTestCase(testCaseDirectory, index, testFunction, options);
