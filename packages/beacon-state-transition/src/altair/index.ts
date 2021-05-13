@@ -1,7 +1,11 @@
-export * from "./naive";
+// fast
+export * from "./block";
+export * from "./epoch";
+export * from "./slot";
+// naive
+export * as naive from "../naive/altair";
 export * from "./state_accessor";
 export * from "./state_mutators";
-export * as fast from "./fast";
 
 // re-export phase0 lodestar types for ergonomic usage downstream
 // eg:

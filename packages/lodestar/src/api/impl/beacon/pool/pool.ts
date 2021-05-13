@@ -12,7 +12,7 @@ import {IApiOptions} from "../../../options";
 import {IApiModules} from "../../interface";
 import {IAttestationFilters, IBeaconPoolApi} from "./interface";
 import {phase0} from "@chainsafe/lodestar-types";
-import {fast} from "@chainsafe/lodestar-beacon-state-transition";
+import {allForks} from "@chainsafe/lodestar-beacon-state-transition";
 
 export class BeaconPoolApi implements IBeaconPoolApi {
   private readonly config: IBeaconConfig;
@@ -57,7 +57,7 @@ export class BeaconPoolApi implements IBeaconPoolApi {
           job: attestationJob,
         });
       }
-      const subnet = fast.computeSubnetForAttestation(this.config, attestationTargetState.epochCtx, attestation);
+      const subnet = allForks.computeSubnetForAttestation(this.config, attestationTargetState.epochCtx, attestation);
       await validateGossipAttestation(this.config, this.chain, this.db, attestationJob, subnet);
       await Promise.all([
         this.network.gossip.publishBeaconAttestation(attestation, subnet),

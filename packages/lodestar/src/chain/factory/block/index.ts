@@ -53,7 +53,7 @@ function computeNewStateRoot(
 ): Root {
   const postState = state.clone();
   // verifySignatures = false since the data to assemble the block is trusted
-  phase0.fast.processBlock(postState, block, false, metrics);
+  phase0.processBlock(postState, block, false, metrics);
 
   return config.types.phase0.BeaconState.hashTreeRoot(postState);
 }

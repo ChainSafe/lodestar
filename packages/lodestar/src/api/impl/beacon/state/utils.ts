@@ -5,9 +5,8 @@ import {
   CachedBeaconState,
   createCachedBeaconState,
 } from "@chainsafe/lodestar-beacon-state-transition";
-import {allForks, phase0} from "@chainsafe/lodestar-types";
-import {phase0 as beaconStateTransitionPhase0} from "@chainsafe/lodestar-beacon-state-transition";
-import {fast} from "@chainsafe/lodestar-beacon-state-transition";
+import {phase0} from "@chainsafe/lodestar-types";
+import {allForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {Epoch, ValidatorIndex, Gwei, Slot} from "@chainsafe/lodestar-types";
@@ -146,7 +145,7 @@ export function getEpochBeaconCommittees(
       v.exitEpoch,
     ]);
 
-    const shuffling = fast.computeEpochShuffling(config, state, indicesBounded, epoch);
+    const shuffling = allForks.computeEpochShuffling(config, state, indicesBounded, epoch);
     committees = shuffling.committees;
   }
   return committees;
@@ -248,7 +247,7 @@ async function getFinalizedState(
 
   // process blocks up to the requested slot
   for await (const block of db.blockArchive.valuesStream({gt: state.slot, lte: slot})) {
-    state = fast.fastStateTransition(state, block, {
+    state = allForks.stateTransition(state, block, {
       verifyStateRoot: false,
       verifyProposer: false,
       verifySignatures: false,
@@ -258,7 +257,7 @@ async function getFinalizedState(
   }
   // due to skip slots, may need to process empty slots to reach the requested slot
   if (state.slot < slot) {
-    beaconStateTransitionPhase0.fast.processSlots(state as CachedBeaconState<phase0.BeaconState>, slot);
+    state = allForks.processSlots(state, slot);
   }
   return state;
 }

@@ -2,7 +2,7 @@ import sinon, {SinonStubbedInstance} from "sinon";
 import {expect} from "chai";
 
 import {config} from "@chainsafe/lodestar-config/minimal";
-import * as processBlock from "@chainsafe/lodestar-beacon-state-transition/lib/phase0/fast/block";
+import * as processBlock from "@chainsafe/lodestar-beacon-state-transition/lib/phase0/block";
 import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
 
 import {BeaconChain} from "../../../../../src/chain";

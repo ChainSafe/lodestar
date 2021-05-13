@@ -32,13 +32,10 @@ jobs:
       - name: Download spec tests
         run: yarn download-test-cases
         working-directory: packages/spec-test-runner
-      - name: Spec min
-        run: yarn test:spec-min
+      - name: Spec tests
+        run: yarn test:spec
         working-directory: packages/spec-test-runner
-      - name: Spec fast
-        run: yarn test:spec-fast
-        working-directory: packages/spec-test-runner
-      - name: Spec main
-        run: yarn test:spec-main
+      - name: Spec tests naive
+        run: yarn test:spec-naive
         if: github.ref == 'ref/head/master' && github.event_name == 'push'
         working-directory: packages/spec-test-runner

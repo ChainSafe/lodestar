@@ -1,4 +1,4 @@
-import {isValidAttesterSlashing, fast} from "@chainsafe/lodestar-beacon-state-transition/";
+import {isValidAttesterSlashing, allForks} from "@chainsafe/lodestar-beacon-state-transition/";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {phase0, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {IBeaconChain} from "..";
@@ -33,7 +33,7 @@ export async function validateGossipAttesterSlashing(
     });
   }
 
-  const signatureSets = fast.getAttesterSlashingSignatureSets(state, attesterSlashing);
+  const signatureSets = allForks.getAttesterSlashingSignatureSets(state, attesterSlashing);
   if (!(await chain.bls.verifySignatureSets(signatureSets))) {
     throw new AttesterSlashingError({
       code: AttesterSlashingErrorCode.INVALID_SLASHING,

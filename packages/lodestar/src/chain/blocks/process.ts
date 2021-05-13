@@ -1,4 +1,3 @@
-import {allForks} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {sleep} from "@chainsafe/lodestar-utils";
@@ -9,7 +8,7 @@ import {IStateRegenerator, RegenError} from "../regen";
 import {BlockError, BlockErrorCode, ChainSegmentError} from "../errors";
 import {IBlsVerifier} from "../bls";
 import {groupBlocksByEpoch} from "./util";
-import {fast, ISignatureSet, CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
+import {allForks, ISignatureSet, CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
 import {CheckpointStateCache} from "../stateCache";
 import {IMetrics} from "../../metrics";
 
@@ -40,11 +39,11 @@ export async function processBlock(
 
     if (!job.validSignatures) {
       const signatureSets = job.validProposerSignature
-        ? fast.getAllBlockSignatureSetsExceptProposer(
+        ? allForks.getAllBlockSignatureSetsExceptProposer(
             preState as CachedBeaconState<allForks.BeaconState>,
             job.signedBlock
           )
-        : fast.getAllBlockSignatureSets(preState as CachedBeaconState<allForks.BeaconState>, job.signedBlock);
+        : allForks.getAllBlockSignatureSets(preState as CachedBeaconState<allForks.BeaconState>, job.signedBlock);
 
       if (signatureSets.length > 0 && !(await bls.verifySignatureSets(signatureSets))) {
         throw new BlockError({
@@ -119,8 +118,8 @@ export async function processChainSegment(
         for (const block of blocksInEpoch) {
           signatureSets.push(
             ...(job.validProposerSignature
-              ? fast.getAllBlockSignatureSetsExceptProposer(preState as CachedBeaconState<allForks.BeaconState>, block)
-              : fast.getAllBlockSignatureSets(preState as CachedBeaconState<allForks.BeaconState>, block))
+              ? allForks.getAllBlockSignatureSetsExceptProposer(preState, block)
+              : allForks.getAllBlockSignatureSets(preState as CachedBeaconState<allForks.BeaconState>, block))
           );
         }
 
