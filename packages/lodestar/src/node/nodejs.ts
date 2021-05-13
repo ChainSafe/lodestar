@@ -27,7 +27,7 @@ export interface IBeaconNodeModules {
   opts: IBeaconNodeOptions;
   config: IBeaconConfig;
   db: IBeaconDb;
-  metrics?: IMetrics;
+  metrics: IMetrics | null;
   network: INetwork;
   chain: IBeaconChain;
   api: IApi;
@@ -61,7 +61,7 @@ export class BeaconNode {
   opts: IBeaconNodeOptions;
   config: IBeaconConfig;
   db: IBeaconDb;
-  metrics?: IMetrics;
+  metrics: IMetrics | null;
   metricsServer?: HttpMetricsServer;
   network: INetwork;
   chain: IBeaconChain;
@@ -121,7 +121,7 @@ export class BeaconNode {
     // start db if not already started
     await db.start();
 
-    const metrics = opts.metrics.enabled ? createMetrics(opts.metrics) : undefined;
+    const metrics = opts.metrics.enabled ? createMetrics(opts.metrics, anchorState) : null;
     if (metrics) {
       initBeaconMetrics(metrics, anchorState);
     }
@@ -179,6 +179,7 @@ export class BeaconNode {
       sync,
       network,
       chain,
+      metrics,
     });
 
     const metricsServer = metrics
@@ -196,7 +197,6 @@ export class BeaconNode {
     });
 
     await network.start();
-    await sync.start();
     chores.start();
 
     void runNodeNotifier({network, chain, sync, config, logger, signal});
@@ -224,7 +224,7 @@ export class BeaconNode {
     if (this.status === BeaconNodeStatus.started) {
       this.status = BeaconNodeStatus.closing;
       await this.chores.stop();
-      await this.sync.stop();
+      this.sync.close();
       await this.network.stop();
       if (this.metricsServer) await this.metricsServer.stop();
       if (this.restApi) await this.restApi.close();

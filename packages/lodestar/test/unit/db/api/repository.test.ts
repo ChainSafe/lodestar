@@ -1,7 +1,6 @@
 import sinon, {SinonStubbedInstance} from "sinon";
 import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
-import pushable, {Pushable} from "it-pushable";
 import all from "it-all";
 
 import {ContainerType} from "@chainsafe/ssz";
@@ -132,12 +131,12 @@ describe("database repository", function () {
   });
 
   it("should fetch values stream", async function () {
-    const source: Pushable<Buffer> = pushable();
-    controller.valuesStream.returns(source);
+    async function* sample(): AsyncGenerator<Buffer> {
+      yield TestSSZType.serialize({bool: true, bytes: Buffer.alloc(32)}) as Buffer;
+      yield TestSSZType.serialize({bool: false, bytes: Buffer.alloc(32)}) as Buffer;
+    }
 
-    source.push(TestSSZType.serialize({bool: true, bytes: Buffer.alloc(32)}) as Buffer);
-    source.push(TestSSZType.serialize({bool: false, bytes: Buffer.alloc(32)}) as Buffer);
-    source.end();
+    controller.valuesStream.returns(sample());
 
     const result = await all(repository.valuesStream());
     expect(result.length).to.be.equal(2);

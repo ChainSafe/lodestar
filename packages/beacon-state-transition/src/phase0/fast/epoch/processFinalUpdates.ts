@@ -1,13 +1,12 @@
 import {allForks, phase0} from "@chainsafe/lodestar-types";
+import {IEpochProcess, CachedBeaconState} from "../../../fast/util";
 import {
-  IEpochProcess,
-  CachedBeaconState,
   processEth1DataReset,
   processEffectiveBalanceUpdates,
   processSlashingsReset,
   processRandaoMixesReset,
   processHistoricalRootsUpdate,
-} from "../../../fast";
+} from "../../../fast/epoch";
 import {processParticipationRecordUpdates} from "./processParticipationRecordUpdates";
 
 export function processFinalUpdates(state: CachedBeaconState<phase0.BeaconState>, process: IEpochProcess): void {

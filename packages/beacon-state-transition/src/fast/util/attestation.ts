@@ -1,5 +1,6 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {phase0, ATTESTATION_SUBNET_COUNT} from "@chainsafe/lodestar-types";
+import {ATTESTATION_SUBNET_COUNT} from "@chainsafe/lodestar-params";
+import {phase0} from "@chainsafe/lodestar-types";
 import {computeSlotsSinceEpochStart} from "../../util";
 import {EpochContext} from "./epochContext";
 

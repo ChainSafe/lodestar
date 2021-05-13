@@ -1,8 +1,7 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBeaconChain, IBlockJob} from "..";
 import {IBeaconDb} from "../../db";
-import {allForks} from "@chainsafe/lodestar-types";
-import {CachedBeaconState, computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
+import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 import {fast, phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {BlockError, BlockErrorCode} from "../errors";
 
@@ -44,7 +43,7 @@ export async function validateGossipBlock(
     });
   }
 
-  const existingBlock = await db.block.get(blockRoot, block.message.slot);
+  const existingBlock = await db.block.get(blockRoot);
   if (existingBlock?.message.proposerIndex === block.message.proposerIndex) {
     throw new BlockError({
       code: BlockErrorCode.REPEAT_PROPOSAL,
@@ -65,7 +64,8 @@ export async function validateGossipBlock(
     });
   }
 
-  if (!fast.verifyProposerSignature(blockState as CachedBeaconState<allForks.BeaconState>, block)) {
+  const signatureSet = fast.getProposerSignatureSet(blockState, block);
+  if (!(await chain.bls.verifySignatureSets([signatureSet]))) {
     throw new BlockError({
       code: BlockErrorCode.PROPOSAL_SIGNATURE_INVALID,
       job: blockJob,

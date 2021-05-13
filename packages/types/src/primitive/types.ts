@@ -1,7 +1,3 @@
-/**
- * @module types
- */
-
 // Each type exported here contains both a compile-time type
 // (a typescript interface) and a run-time ssz type (a javascript variable)
 // For more information, see ./index.ts
@@ -26,6 +22,7 @@ export type Uint256 = bigint;
 
 export type Slot = Number64;
 export type Epoch = Number64;
+export type SyncPeriod = Number64;
 export type CommitteeIndex = Number64;
 export type SubCommitteeIndex = Number64;
 export type ValidatorIndex = Number64;

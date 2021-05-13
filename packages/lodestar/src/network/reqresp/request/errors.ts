@@ -1,5 +1,6 @@
 import {LodestarError} from "@chainsafe/lodestar-utils";
-import {Method, ReqRespEncoding, RpcResponseStatus, RpcResponseStatusError} from "../../../constants";
+import {RespStatus, RpcResponseStatusError} from "../../../constants";
+import {Method, Encoding} from "../types";
 import {ResponseError} from "../response";
 
 export enum RequestErrorCode {
@@ -43,7 +44,7 @@ type RequestErrorType =
 
 export interface IRequestErrorMetadata {
   method: Method;
-  encoding: ReqRespEncoding;
+  encoding: Encoding;
   peer: string;
   // Do not include requestId in error metadata to make the errors deterministic for tests
 }
@@ -70,9 +71,9 @@ export class RequestError extends LodestarError<RequestErrorType & IRequestError
 export function responseStatusErrorToRequestError(e: ResponseError): RequestErrorType {
   const {errorMessage, status} = e;
   switch (status) {
-    case RpcResponseStatus.INVALID_REQUEST:
+    case RespStatus.INVALID_REQUEST:
       return {code: RequestErrorCode.INVALID_REQUEST, errorMessage};
-    case RpcResponseStatus.SERVER_ERROR:
+    case RespStatus.SERVER_ERROR:
       return {code: RequestErrorCode.SERVER_ERROR, errorMessage};
     default:
       return {code: RequestErrorCode.UNKNOWN_ERROR_STATUS, errorMessage, status};

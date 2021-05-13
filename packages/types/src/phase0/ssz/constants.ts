@@ -1,5 +1,0 @@
-export const DEPOSIT_CONTRACT_TREE_DEPTH = 2 ** 5; // 32
-export const JUSTIFICATION_BITS_LENGTH = 4;
-export const ATTESTATION_SUBNET_COUNT = 64;
-export const MAX_REQUEST_BLOCKS = 2 ** 10; // 1024
-export const P2P_ERROR_MESSAGE_MAX_LENGTH = 256;

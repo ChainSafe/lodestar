@@ -2,7 +2,7 @@
  * @module tasks used for running tasks on specific events
  */
 
-import {phase0} from "@chainsafe/lodestar-types";
+import {phase0, Slot} from "@chainsafe/lodestar-types";
 import {AbortSignal} from "abort-controller";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils";
@@ -12,8 +12,7 @@ import {ChainEvent, IBeaconChain} from "../chain";
 import {ArchiveBlocksTask} from "./tasks/archiveBlocks";
 import {StatesArchiver} from "./tasks/archiveStates";
 import {IBeaconSync} from "../sync";
-import {InteropSubnetsJoiningTask} from "./tasks/interopSubnetsJoiningTask";
-import {INetwork, NetworkEvent} from "../network";
+import {INetwork} from "../network";
 import {JobQueue} from "../util/queue";
 
 export interface ITasksModules {
@@ -37,7 +36,6 @@ export class TasksService {
   private jobQueue: JobQueue;
 
   private readonly statesArchiver: StatesArchiver;
-  private readonly interopSubnetsTask: InteropSubnetsJoiningTask;
 
   constructor({
     config,
@@ -55,38 +53,22 @@ export class TasksService {
     this.logger = modules.logger;
     this.network = modules.network;
     this.statesArchiver = new StatesArchiver(this.config, modules);
-    this.interopSubnetsTask = new InteropSubnetsJoiningTask(this.config, {
-      chain: this.chain,
-      network: this.network,
-      logger: this.logger,
-    });
     this.jobQueue = new JobQueue({maxLength, signal});
   }
 
   start(): void {
     this.chain.emitter.on(ChainEvent.forkChoiceFinalized, this.onFinalizedCheckpoint);
     this.chain.emitter.on(ChainEvent.checkpoint, this.onCheckpoint);
-    this.network.gossip.on(NetworkEvent.gossipStart, this.handleGossipStart);
-    this.network.gossip.on(NetworkEvent.gossipStop, this.handleGossipStop);
+    this.chain.emitter.on(ChainEvent.clockSlot, this.onSlot);
   }
 
   async stop(): Promise<void> {
     this.chain.emitter.off(ChainEvent.forkChoiceFinalized, this.onFinalizedCheckpoint);
     this.chain.emitter.off(ChainEvent.checkpoint, this.onCheckpoint);
-    this.network.gossip.off(NetworkEvent.gossipStart, this.handleGossipStart);
-    this.network.gossip.off(NetworkEvent.gossipStop, this.handleGossipStop);
-    this.interopSubnetsTask.stop();
+    this.chain.emitter.off(ChainEvent.clockSlot, this.onSlot);
     // Archive latest finalized state
     await this.statesArchiver.archiveState(this.chain.getFinalizedCheckpoint());
   }
-
-  private handleGossipStart = (): void => {
-    this.interopSubnetsTask.start();
-  };
-
-  private handleGossipStop = (): void => {
-    this.interopSubnetsTask.stop();
-  };
 
   private onFinalizedCheckpoint = async (finalized: phase0.Checkpoint): Promise<void> => {
     return this.jobQueue.push(async () => await this.processFinalizedCheckpoint(finalized));
@@ -109,8 +91,6 @@ export class TasksService {
         this.chain.stateCache.deleteAllBeforeEpoch(finalizedEpoch),
         this.db.attestation.pruneFinalized(finalizedEpoch),
         this.db.aggregateAndProof.pruneFinalized(finalizedEpoch),
-        this.db.syncCommitteeSignature.pruneFinalized(finalizedEpoch),
-        this.db.contributionAndProof.pruneFinalized(finalizedEpoch),
       ]);
 
       // tasks rely on extended fork choice
@@ -130,5 +110,11 @@ export class TasksService {
       ),
       this.chain.stateCache.prune(headStateRoot),
     ]);
+  };
+
+  private onSlot = async (slot: Slot): Promise<void> => {
+    this.db.syncCommitee.prune(slot);
+    // TODO: Use the head slot
+    this.db.syncCommitteeContribution.prune(slot);
   };
 }

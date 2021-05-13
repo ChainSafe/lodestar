@@ -4,6 +4,8 @@ import {validateCommitteeAttestation} from "./attestation";
 import {validateAttesterSlashing} from "./attesterSlashing";
 import {validateBeaconBlock} from "./block";
 import {validateProposerSlashing} from "./proposerSlashing";
+import {validateSyncCommitteeContribution} from "./syncCommitteeContribution";
+import {validateSyncCommittee} from "./syncCommittee";
 import {validateVoluntaryExit} from "./voluntaryExit";
 
 export const validatorFns = {
@@ -13,4 +15,6 @@ export const validatorFns = {
   [GossipType.voluntary_exit]: validateVoluntaryExit,
   [GossipType.proposer_slashing]: validateProposerSlashing,
   [GossipType.attester_slashing]: validateAttesterSlashing,
+  [GossipType.sync_committee_contribution_and_proof]: validateSyncCommitteeContribution,
+  [GossipType.sync_committee]: validateSyncCommittee,
 };

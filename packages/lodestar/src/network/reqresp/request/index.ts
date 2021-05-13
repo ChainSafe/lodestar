@@ -1,16 +1,19 @@
-import LibP2p, {Connection} from "libp2p";
+import {Connection} from "libp2p";
 import {AbortSignal} from "abort-controller";
 import pipe from "it-pipe";
 import PeerId from "peer-id";
-import {phase0} from "@chainsafe/lodestar-types";
+import {Libp2p} from "libp2p/src/connection-manager";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ErrorAborted, ILogger, Context, withTimeout, TimeoutError} from "@chainsafe/lodestar-utils";
-import {Method, ReqRespEncoding, timeoutOptions} from "../../../constants";
-import {createRpcProtocol, getAgentVersionFromPeerStore, prettyPrintPeerId} from "../../util";
+import {IForkDigestContext} from "../../../util/forkDigestContext";
+import {timeoutOptions} from "../../../constants";
+import {getAgentVersionFromPeerStore, prettyPrintPeerId} from "../../util";
+import {Method, Encoding, Protocol, Version, ResponseBody, RequestBody} from "../types";
+import {formatProtocolId} from "../utils";
 import {ResponseError} from "../response";
 import {requestEncode} from "../encoders/requestEncode";
 import {responseDecode} from "../encoders/responseDecode";
-import {ILibP2pStream} from "../interface";
+import {Libp2pConnection} from "../interface";
 import {collectResponses} from "./collectResponses";
 import {maxTotalResponseTimeout, responseTimeoutsHandler} from "./responseTimeoutsHandler";
 import {
@@ -23,6 +26,13 @@ import {
 
 export {RequestError, RequestErrorCode};
 
+type SendRequestModules = {
+  config: IBeaconConfig;
+  logger: ILogger;
+  forkDigestContext: IForkDigestContext;
+  libp2p: Libp2p;
+};
+
 /**
  * Sends ReqResp request to a peer. Throws on error. Logs each step of the request lifecycle.
  *
@@ -34,12 +44,13 @@ export {RequestError, RequestErrorCode};
  *    - Any part of the response_chunk fails validation. Throws a typed error (see `SszSnappyError`)
  *    - The maximum number of requested chunks are read. Does not throw, returns read chunks only.
  */
-export async function sendRequest<T extends phase0.ResponseBody | phase0.ResponseBody[]>(
-  {libp2p, config, logger}: {libp2p: LibP2p; config: IBeaconConfig; logger: ILogger},
+export async function sendRequest<T extends ResponseBody | ResponseBody[]>(
+  {config, logger, forkDigestContext, libp2p}: SendRequestModules,
   peerId: PeerId,
   method: Method,
-  encoding: ReqRespEncoding,
-  requestBody: phase0.RequestBody,
+  encoding: Encoding,
+  versions: Version[],
+  requestBody: RequestBody,
   maxResponses: number,
   signal?: AbortSignal,
   options?: Partial<typeof timeoutOptions>,
@@ -48,9 +59,7 @@ export async function sendRequest<T extends phase0.ResponseBody | phase0.Respons
   const {REQUEST_TIMEOUT, DIAL_TIMEOUT} = {...timeoutOptions, ...options};
   const peer = prettyPrintPeerId(peerId);
   const agentVersion = getAgentVersionFromPeerStore(peerId, libp2p.peerStore.metadataBook);
-
   const logCtx = {method, encoding, agentVersion, peer, requestId};
-  const protocol = createRpcProtocol(method, encoding);
 
   if (signal?.aborted) {
     throw new ErrorAborted("sendRequest");
@@ -59,6 +68,13 @@ export async function sendRequest<T extends phase0.ResponseBody | phase0.Respons
   logger.debug("Req  dialing peer", logCtx);
 
   try {
+    // From Altair block query methods have V1 and V2. Both protocols should be requested.
+    // On stream negotiation `libp2p.dialProtocol` will pick the available protocol and return
+    // the picked protocol in `connection.protocol`
+    const protocols = new Map<string, Protocol>(
+      versions.map((version) => [formatProtocolId(method, version, encoding), {method, version, encoding}])
+    );
+
     // As of October 2020 we can't rely on libp2p.dialProtocol timeout to work so
     // this function wraps the dialProtocol promise with an extra timeout
     //
@@ -70,13 +86,15 @@ export async function sendRequest<T extends phase0.ResponseBody | phase0.Respons
     // https://github.com/ChainSafe/lodestar/issues/1597#issuecomment-703394386
 
     // DIAL_TIMEOUT: Non-spec timeout from dialing protocol until stream opened
-    const stream = await withTimeout(
+    const {stream, protocol: protocolId} = await withTimeout(
       async (timeoutAndParentSignal) => {
-        const conn = (await libp2p.dialProtocol(peerId, protocol, {signal: timeoutAndParentSignal})) as Connection;
+        const protocolIds = Array.from(protocols.keys());
+        const conn = (await libp2p.dialProtocol(peerId, protocolIds, {signal: timeoutAndParentSignal})) as Connection;
         if (!conn) throw Error("dialProtocol timeout");
         // TODO: libp2p-ts type Stream does not declare .abort() and requires casting to unknown here
         // Remove when https://github.com/ChainSafe/lodestar/issues/2167
-        return ((conn as unknown) as {stream: ILibP2pStream}).stream;
+        // After #2167 upstream types are still not good enough, and require casting
+        return (conn as unknown) as Libp2pConnection;
       },
       DIAL_TIMEOUT,
       signal
@@ -88,6 +106,10 @@ export async function sendRequest<T extends phase0.ResponseBody | phase0.Respons
       }
     });
 
+    // Parse protocol selected by the responder
+    const protocol = protocols.get(protocolId);
+    if (!protocol) throw Error(`dialProtocol selected unknown protocolId ${protocolId}`);
+
     logger.debug("Req  sending request", {...logCtx, requestBody} as Context);
 
     // Spec: The requester MUST close the write side of the stream once it finishes writing the request message
@@ -96,7 +118,7 @@ export async function sendRequest<T extends phase0.ResponseBody | phase0.Respons
     // REQUEST_TIMEOUT: Non-spec timeout from sending request until write stream closed by responder
     // Note: libp2p.stop() will close all connections, so not necessary to abort this pipe on parent stop
     await withTimeout(
-      () => pipe(requestEncode(config, method, encoding, requestBody), stream.sink),
+      () => pipe(requestEncode(config, protocol, requestBody), stream.sink),
       REQUEST_TIMEOUT,
       signal
     ).catch((e) => {
@@ -118,7 +140,7 @@ export async function sendRequest<T extends phase0.ResponseBody | phase0.Respons
         () =>
           pipe(
             stream.source,
-            responseTimeoutsHandler(responseDecode(config, method, encoding), options),
+            responseTimeoutsHandler(responseDecode(config, forkDigestContext, protocol), options),
             collectResponses(method, maxResponses)
           ),
         maxTotalResponseTimeout(maxResponses, options)

@@ -6,7 +6,7 @@ import {getPreviousEpoch} from "../../util/epoch";
 import {getTotalBalance, getTotalActiveBalance} from "../../util/balance";
 import {TIMELY_TARGET_FLAG_INDEX, WEIGHT_DENOMINATOR} from "../constants";
 import {getFlagIndicesAndWeights} from "../misc";
-import {phase0} from "../..";
+import * as phase0 from "../../phase0";
 import {newZeroedBigIntArray} from "../../util/array";
 
 /**

@@ -14,7 +14,7 @@ import {BeaconChain, ChainEvent, ChainEventEmitter, IBeaconChain} from "../../..
 import {generateBlockSummary, generateEmptySignedBlock, generateSignedBlock} from "../../../../utils/block";
 import {expect} from "chai";
 import {generateAttestation, generateEmptySignedVoluntaryExit} from "../../../../utils/attestation";
-import {generateState} from "../../../../utils/state";
+import {generateCachedState} from "../../../../utils/state";
 
 describe("Events api impl", function () {
   describe("beacon event stream", function () {
@@ -89,8 +89,9 @@ describe("Events api impl", function () {
 
     it("should process finalized checkpoint event", async function () {
       const stream = api.getEventStream([BeaconEventType.FINALIZED_CHECKPOINT]);
-      const checkpoint = generateState().finalizedCheckpoint;
-      chainEventEmmitter.emit(ChainEvent.finalized, checkpoint, null as any);
+      const state = generateCachedState();
+      const checkpoint = state.finalizedCheckpoint;
+      chainEventEmmitter.emit(ChainEvent.finalized, checkpoint, state);
       const event = await stream[Symbol.asyncIterator]().next();
       expect(event?.value).to.not.be.null;
       expect((event.value as FinalizedCheckpointEvent).type).to.equal(BeaconEventType.FINALIZED_CHECKPOINT);

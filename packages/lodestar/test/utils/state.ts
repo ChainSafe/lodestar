@@ -1,7 +1,7 @@
 import {minimalConfig} from "@chainsafe/lodestar-config/minimal";
 import {CachedBeaconState, createCachedBeaconState, phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {List, TreeBacked} from "@chainsafe/ssz";
-import {allForks, Gwei, Root} from "@chainsafe/lodestar-types";
+import {allForks, altair, Gwei, Root} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {FAR_FUTURE_EPOCH} from "@chainsafe/lodestar-params";
 
@@ -14,7 +14,8 @@ import {generateValidators} from "./validator";
  */
 type TestBeaconState = Partial<allForks.BeaconState>;
 
-const states = new Map<IBeaconConfig, TreeBacked<allForks.BeaconState>>();
+const phase0States = new Map<IBeaconConfig, TreeBacked<allForks.BeaconState>>();
+const altairStates = new Map<IBeaconConfig, TreeBacked<altair.BeaconState>>();
 
 /**
  * Generate beaconState, by default it will generate a mostly empty state with "just enough" to be valid-ish
@@ -25,7 +26,11 @@ const states = new Map<IBeaconConfig, TreeBacked<allForks.BeaconState>>();
  * @param config
  * @returns {BeaconState}
  */
-export function generateState(opts: TestBeaconState = {}, config = minimalConfig): TreeBacked<allForks.BeaconState> {
+export function generateState(
+  opts: TestBeaconState = {},
+  config = minimalConfig,
+  isAltair = false
+): TreeBacked<allForks.BeaconState> {
   const defaultState: phase0.BeaconState = {
     genesisTime: Math.floor(Date.now() / 1000),
     genesisValidatorsRoot: ZERO_HASH,
@@ -77,11 +82,34 @@ export function generateState(opts: TestBeaconState = {}, config = minimalConfig
       root: ZERO_HASH,
     },
   };
-  const state =
-    states.get(config) ??
-    (config.types.phase0.BeaconState.createTreeBackedFromStruct(defaultState) as TreeBacked<allForks.BeaconState>);
-  states.set(config, state);
-  const resultState = state.clone();
+  if (isAltair) {
+    const defaultAltairState: altair.BeaconState = {
+      ...config.types.altair.BeaconState.struct_defaultValue(),
+      ...defaultState,
+    };
+
+    const state =
+      altairStates.get(config) ??
+      (config.types.altair.BeaconState.createTreeBackedFromStruct(defaultAltairState) as TreeBacked<
+        altair.BeaconState
+      >);
+    altairStates.set(config, state);
+  } else {
+    const state =
+      phase0States.get(config) ??
+      (config.types.phase0.BeaconState.createTreeBackedFromStruct(defaultState) as TreeBacked<allForks.BeaconState>);
+    phase0States.set(config, state);
+  }
+  const resultState = (isAltair ? altairStates.get(config)?.clone() : phase0States.get(config)?.clone()) as TreeBacked<
+    allForks.BeaconState
+  >;
+
+  // const state =
+  //   phase0States.get(config) ??
+  //   (config.types.phase0.BeaconState.createTreeBackedFromStruct(defaultState) as TreeBacked<allForks.BeaconState>);
+  // phase0States.set(config, state);
+  // const resultState = state.clone();
+
   for (const key in opts) {
     // @ts-ignore
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
@@ -92,7 +120,8 @@ export function generateState(opts: TestBeaconState = {}, config = minimalConfig
 
 export function generateCachedState(
   opts: TestBeaconState = {},
-  config = minimalConfig
+  config = minimalConfig,
+  isAltair = false
 ): CachedBeaconState<allForks.BeaconState> {
-  return createCachedBeaconState(config, generateState(opts, config));
+  return createCachedBeaconState(config, generateState(opts, config, isAltair));
 }

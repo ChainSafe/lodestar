@@ -1,6 +1,3 @@
-import {allForks} from "@chainsafe/lodestar-types";
-import {TreeBacked} from "@chainsafe/ssz";
-import {serializeProof} from "@chainsafe/persistent-merkle-tree";
 import {ApiController} from "../types";
 
 export const getWtfNode: ApiController = {
@@ -23,36 +20,14 @@ export const getLatestWeakSubjectivityCheckpointEpoch: ApiController = {
   },
 };
 
-export const createProof: ApiController<{paths: (string | number)[][]}, {stateId: string}> = {
-  url: "/proof/:stateId",
+export const getSyncChainsDebugState: ApiController<{paths: (string | number)[][]}, {stateId: string}> = {
+  url: "/sync-chains-debug-state",
   method: "GET",
-  id: "createProof",
+  id: "getSyncChainsDebugState",
 
-  handler: async function (req) {
-    const state = (await this.api.debug.beacon.getState(req.params.stateId)) as TreeBacked<allForks.BeaconState>;
-    return serializeProof(state.createProof(req.query.paths));
-  },
-
-  schema: {
-    params: {
-      type: "object",
-      required: ["stateId"],
-      properties: {
-        stateId: {
-          types: "string",
-        },
-      },
-    },
-    querystring: {
-      type: "object",
-      required: ["paths"],
-      properties: {
-        paths: {
-          type: "array",
-        },
-      },
-    },
+  handler: async function () {
+    return this.api.lodestar.getSyncChainsDebugState();
   },
 };
 
-export const lodestarRoutes = [getWtfNode, getLatestWeakSubjectivityCheckpointEpoch, createProof];
+export const lodestarRoutes = [getWtfNode, getLatestWeakSubjectivityCheckpointEpoch, getSyncChainsDebugState];

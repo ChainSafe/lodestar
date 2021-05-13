@@ -10,6 +10,7 @@ import {BlockPool} from "./blocks";
 import {AttestationPool} from "./attestation";
 import {StateContextCache, CheckpointStateCache} from "./stateCache";
 import {IBlsVerifier} from "./bls";
+import {IForkDigestContext} from "../util/forkDigestContext";
 
 interface IProcessBlock {
   /**
@@ -54,44 +55,26 @@ export interface IAttestationJob {
 export interface IBeaconChain {
   readonly genesisTime: Number64;
   readonly genesisValidatorsRoot: Root;
+
   bls: IBlsVerifier;
-  emitter: ChainEventEmitter;
-  clock: IBeaconClock;
   forkChoice: IForkChoice;
+  clock: IBeaconClock;
+  emitter: ChainEventEmitter;
   stateCache: StateContextCache;
   checkpointStateCache: CheckpointStateCache;
   regen: IStateRegenerator;
   pendingBlocks: BlockPool;
   pendingAttestations: AttestationPool;
+  forkDigestContext: IForkDigestContext;
 
-  /**
-   * Stop beacon chain processing
-   */
+  /** Stop beacon chain processing */
   close(): void;
+  getGenesisTime(): Number64;
 
   getHeadState(): CachedBeaconState<allForks.BeaconState>;
-  /**
-   * Get ForkDigest from the head state
-   */
-  getForkDigest(): phase0.ForkDigest;
-  /**
-   * Get the ForkName from the head state
-   */
-  getForkName(): ForkName;
-  /**
-   * Get ENRForkID from the head state
-   */
-  getENRForkID(): phase0.ENRForkID;
-  getGenesisTime(): Number64;
-  getStatus(): phase0.Status;
-
   getHeadStateAtCurrentEpoch(): Promise<CachedBeaconState<allForks.BeaconState>>;
   getHeadStateAtCurrentSlot(): Promise<CachedBeaconState<allForks.BeaconState>>;
   getHeadBlock(): Promise<allForks.SignedBeaconBlock | null>;
-
-  getStateByBlockRoot(blockRoot: Root): Promise<CachedBeaconState<allForks.BeaconState> | null>;
-
-  getFinalizedCheckpoint(): phase0.Checkpoint;
 
   /**
    * Since we can have multiple parallel chains,
@@ -100,23 +83,28 @@ export interface IBeaconChain {
    * @param slot
    */
   getCanonicalBlockAtSlot(slot: Slot): Promise<allForks.SignedBeaconBlock | null>;
-
+  getStateByBlockRoot(blockRoot: Root): Promise<CachedBeaconState<allForks.BeaconState> | null>;
   getUnfinalizedBlocksAtSlots(slots: Slot[]): Promise<allForks.SignedBeaconBlock[]>;
+  getFinalizedCheckpoint(): phase0.Checkpoint;
 
-  /**
-   * Add attestation to the fork-choice rule
-   */
+  /** Add attestation to the fork-choice rule */
   receiveAttestation(attestation: phase0.Attestation): void;
-
-  /**
-   * Pre-process and run the per slot state transition function
-   */
+  /** Pre-process and run the per slot state transition function */
   receiveBlock(signedBlock: allForks.SignedBeaconBlock, trusted?: boolean): void;
-  /**
-   * Process a chain of blocks until complete.
-   */
+  /** Process a chain of blocks until complete */
   processChainSegment(
     signedBlocks: allForks.SignedBeaconBlock[],
     flags: {prefinalized: boolean; trusted?: boolean}
   ): Promise<void>;
+
+  /** Get the ForkName from the head state */
+  getHeadForkName(): ForkName;
+  /** Get the ForkName from the current slot */
+  getClockForkName(): ForkName;
+  /** Get ForkDigest from the head state */
+  getHeadForkDigest(): phase0.ForkDigest;
+  /** Get ForkDigest from the current slot */
+  getClockForkDigest(): phase0.ForkDigest;
+
+  getStatus(): phase0.Status;
 }

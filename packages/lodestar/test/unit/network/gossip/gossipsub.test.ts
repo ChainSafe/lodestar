@@ -1,4 +1,5 @@
 import {expect, assert} from "chai";
+import sinon, {SinonStubbedInstance} from "sinon";
 import Libp2p from "libp2p";
 import {InMessage} from "libp2p-interfaces/src/pubsub";
 import {ERR_TOPIC_VALIDATOR_REJECT} from "libp2p-gossipsub/src/constants";
@@ -19,22 +20,25 @@ import {
 import {generateEmptySignedBlock} from "../../../utils/block";
 import {createNode} from "../../../utils/network";
 import {testLogger} from "../../../utils/logger";
+import {ForkDigestContext} from "../../../../src/util/forkDigestContext";
 
 describe("gossipsub", function () {
+  const logger = testLogger();
+  const metrics = null;
   let validatorFns: TopicValidatorFnMap;
   let gossipSub: Eth2Gossipsub;
   let message: InMessage;
   let topicString: string;
   let libp2p: Libp2p;
-  const genesisValidatorsRoot = Buffer.alloc(32);
+  let forkDigestContext: SinonStubbedInstance<ForkDigestContext>;
 
   beforeEach(async function () {
+    forkDigestContext = sinon.createStubInstance(ForkDigestContext);
+    forkDigestContext.forkName2ForkDigest.returns(Buffer.alloc(4, 1));
+    forkDigestContext.forkDigest2ForkName.returns(ForkName.phase0);
+
     const signedBlock = generateEmptySignedBlock();
-    topicString = getGossipTopicString(
-      config,
-      {type: GossipType.beacon_block, fork: ForkName.phase0},
-      genesisValidatorsRoot
-    );
+    topicString = getGossipTopicString(forkDigestContext, {type: GossipType.beacon_block, fork: ForkName.phase0});
     message = {
       data: encodeMessageData(GossipEncoding.ssz_snappy, config.types.phase0.SignedBeaconBlock.serialize(signedBlock)),
       receivedFrom: "0",
@@ -50,7 +54,7 @@ describe("gossipsub", function () {
     validatorFns.set(topicString, () => {
       throw new GossipValidationError(ERR_TOPIC_VALIDATOR_REJECT);
     });
-    gossipSub = new Eth2Gossipsub({config, genesisValidatorsRoot, validatorFns, logger: testLogger(), libp2p});
+    gossipSub = new Eth2Gossipsub({config, validatorFns, logger, forkDigestContext, libp2p, metrics});
 
     try {
       await gossipSub.validate(message);
@@ -61,7 +65,7 @@ describe("gossipsub", function () {
   });
 
   it("should not throw on successful validation", async () => {
-    gossipSub = new Eth2Gossipsub({config, genesisValidatorsRoot, validatorFns, logger: testLogger(), libp2p});
+    gossipSub = new Eth2Gossipsub({config, validatorFns, logger, forkDigestContext, libp2p, metrics});
     await gossipSub.validate(message);
     // no error means pass validation
   });

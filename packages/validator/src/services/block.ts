@@ -1,186 +1,89 @@
-/**
- * @module validator
- */
-
-import {BLSPubkey, Epoch, Root, phase0, Slot} from "@chainsafe/lodestar-types";
+import {BLSPubkey, Slot} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {SecretKey} from "@chainsafe/bls";
 import {ILogger, prettyBytes} from "@chainsafe/lodestar-utils";
 import {toHexString} from "@chainsafe/ssz";
-import {computeEpochAtSlot, computeSigningRoot, getDomain} from "@chainsafe/lodestar-beacon-state-transition";
-import {IApiClientProvider, BeaconEventType, ClockEventType} from "../api";
-import {ISlashingProtection} from "../slashingProtection";
-import {PublicKeyHex, ValidatorAndSecret} from "../types";
+import {IApiClient} from "../api";
+import {extendError, notAborted} from "../util";
+import {ValidatorStore} from "./validatorStore";
+import {BlockDutiesService, GENESIS_SLOT} from "./blockDuties";
+import {IClock} from "../util/clock";
 
 /**
  * Service that sets up and handles validator block proposal duties.
  */
-export default class BlockProposingService {
+export class BlockProposingService {
   private readonly config: IBeaconConfig;
-  private readonly provider: IApiClientProvider;
-  private readonly validators: Map<PublicKeyHex, ValidatorAndSecret>;
-  private readonly slashingProtection: ISlashingProtection;
   private readonly logger: ILogger;
+  private readonly apiClient: IApiClient;
+  private readonly validatorStore: ValidatorStore;
+  private readonly dutiesService: BlockDutiesService;
   private readonly graffiti?: string;
-
-  private nextProposals: Map<Slot, BLSPubkey> = new Map<Slot, BLSPubkey>();
 
   constructor(
     config: IBeaconConfig,
-    validators: Map<PublicKeyHex, ValidatorAndSecret>,
-    provider: IApiClientProvider,
-    slashingProtection: ISlashingProtection,
     logger: ILogger,
+    apiClient: IApiClient,
+    clock: IClock,
+    validatorStore: ValidatorStore,
     graffiti?: string
   ) {
     this.config = config;
-    this.validators = validators;
-    this.provider = provider;
-    this.slashingProtection = slashingProtection;
     this.logger = logger;
+    this.apiClient = apiClient;
+    this.validatorStore = validatorStore;
     this.graffiti = graffiti;
+    this.dutiesService = new BlockDutiesService(
+      config,
+      logger,
+      apiClient,
+      clock,
+      validatorStore,
+      this.notifyBlockProductionFn
+    );
   }
 
   /**
-   * Starts the BlockService by updating the validator block proposal duties and turning on the relevant listeners for clock events.
+   * `BlockDutiesService` must call this fn to trigger block creation
+   * This function may run more than once at a time, rationale in `BlockDutiesService.pollBeaconProposers`
    */
-  start = async (): Promise<void> => {
-    const currentEpoch = this.provider.clock.currentEpoch;
-    // trigger getting duties for current epoch
-    await this.updateDuties(currentEpoch);
-
-    this.provider.on(ClockEventType.CLOCK_EPOCH, this.onClockEpoch);
-    this.provider.on(ClockEventType.CLOCK_SLOT, this.onClockSlot);
-    this.provider.on(BeaconEventType.HEAD, this.onHead);
-  };
-
-  /**
-   * Stops the BlockService by turning off the relevant listeners for clock events.
-   */
-  stop = async (): Promise<void> => {
-    this.provider.off(ClockEventType.CLOCK_EPOCH, this.onClockEpoch);
-    this.provider.off(ClockEventType.CLOCK_SLOT, this.onClockSlot);
-    this.provider.off(BeaconEventType.HEAD, this.onHead);
-  };
-
-  /**
-   * Update validator duties on each epoch.
-   */
-  onClockEpoch = async ({epoch}: {epoch: Epoch}): Promise<void> => {
-    await this.updateDuties(epoch);
-  };
-
-  /**
-   * Create and publish a block if the validator is a proposer for a given clock slot.
-   */
-  onClockSlot = async ({slot}: {slot: Slot}): Promise<void> => {
-    const proposerPubKey = this.nextProposals.get(slot);
-    if (proposerPubKey && slot !== 0) {
-      this.nextProposals.delete(slot);
-      this.logger.verbose("Validator is proposer!", {
-        slot,
-        validator: toHexString(proposerPubKey),
-      });
-      const fork = await this.provider.beacon.state.getFork("head");
-      if (!fork) {
-        return;
-      }
-      const validatorAndSecret = this.validators.get(toHexString(proposerPubKey));
-      if (!validatorAndSecret)
-        throw new Error("onClockSlot: Validator chosen for proposal not found in validator list!");
-      const validatorKeys = {publicKey: proposerPubKey, secretKey: validatorAndSecret.secretKey};
-      await this.createAndPublishBlock(validatorKeys, slot, fork, this.provider.genesisValidatorsRoot);
-    }
-  };
-
-  /**
-   * Update list of block proposal duties on head upate.
-   */
-  onHead = async ({slot, epochTransition}: {slot: Slot; epochTransition: boolean}): Promise<void> => {
-    if (epochTransition) {
-      // refetch this epoch's duties
-      await this.updateDuties(computeEpochAtSlot(this.config, slot));
-    }
-  };
-
-  /**
-   * Fetch validator block proposal duties from the validator api and update local list of block duties accordingly.
-   */
-  updateDuties = async (epoch: Epoch): Promise<void> => {
-    this.logger.debug("on new block epoch", {epoch, validator: toHexString(this.validators.keys().next().value)});
-    const res = await this.provider.validator.getProposerDuties(epoch).catch((e) => {
-      this.logger.error("Failed to obtain proposer duties", e);
-      return null;
-    });
-    const proposerDuties = res?.data;
-    if (!proposerDuties) {
+  private notifyBlockProductionFn = (slot: Slot, proposers: BLSPubkey[]): void => {
+    if (slot <= GENESIS_SLOT) {
+      this.logger.debug("Not producing block before or at genesis slot");
       return;
     }
-    for (const duty of proposerDuties) {
-      if (!this.nextProposals.has(duty.slot) && this.validators.get(toHexString(duty.pubkey))) {
-        this.logger.debug("Next proposer duty", {slot: duty.slot, validator: toHexString(duty.pubkey)});
-        this.nextProposals.set(duty.slot, duty.pubkey);
-      }
+
+    if (proposers.length > 1) {
+      this.logger.warn("Multiple block proposers", {slot, count: proposers.length});
     }
+
+    Promise.all(proposers.map((pubkey) => this.createAndPublishBlock(pubkey, slot))).catch((e) => {
+      if (notAborted(e)) this.logger.error("Error on block duties", {slot}, e);
+    });
   };
 
-  /**
-   * IFF a validator is selected, construct a block to propose.
-   */
-  async createAndPublishBlock(
-    validatorKeys: {publicKey: BLSPubkey; secretKey: SecretKey},
-    slot: Slot,
-    fork: phase0.Fork,
-    genesisValidatorsRoot: Root
-  ): Promise<phase0.SignedBeaconBlock | null> {
-    const epoch = computeEpochAtSlot(this.config, slot);
-    const randaoDomain = getDomain(
-      this.config,
-      {fork, genesisValidatorsRoot} as phase0.BeaconState,
-      this.config.params.DOMAIN_RANDAO,
-      epoch
-    );
-    const randaoSigningRoot = computeSigningRoot(this.config, this.config.types.Epoch, epoch, randaoDomain);
-    let block;
+  /** Produce a block at the given slot for pubkey */
+  private async createAndPublishBlock(pubkey: BLSPubkey, slot: Slot): Promise<void> {
+    const pubkeyHex = toHexString(pubkey);
+    const logCtx = {slot, validator: prettyBytes(pubkeyHex)};
+
+    // Wrap with try catch here to re-use `logCtx`
     try {
-      block = await this.provider.validator.produceBlock(
-        slot,
-        validatorKeys.secretKey.sign(randaoSigningRoot).toBytes(),
-        this.graffiti || ""
-      );
+      const randaoReveal = await this.validatorStore.signRandao(pubkey, slot);
+      const graffiti = this.graffiti || "";
+
+      this.logger.debug("Producing block", logCtx);
+      const block = await this.apiClient.validator.produceBlock(slot, randaoReveal, graffiti).catch((e) => {
+        throw extendError(e, "Failed to produce block");
+      });
+      this.logger.debug("Produced block", logCtx);
+
+      const signedBlock = await this.validatorStore.signBlock(pubkey, block, slot);
+      await this.apiClient.beacon.blocks.publishBlock(signedBlock).catch((e) => {
+        throw extendError(e, "Failed to publish block");
+      });
+      this.logger.info("Published block", {...logCtx, graffiti});
     } catch (e) {
-      this.logger.error("Failed to produce block", {slot}, e);
+      if (notAborted(e)) this.logger.error("Error proposing block", logCtx, e);
     }
-    if (!block) {
-      return null;
-    }
-    const proposerDomain = getDomain(
-      this.config,
-      {fork, genesisValidatorsRoot} as phase0.BeaconState,
-      this.config.params.DOMAIN_BEACON_PROPOSER,
-      computeEpochAtSlot(this.config, slot)
-    );
-    const signingRoot = computeSigningRoot(this.config, this.config.types.phase0.BeaconBlock, block, proposerDomain);
-
-    await this.slashingProtection.checkAndInsertBlockProposal(validatorKeys.publicKey, {
-      slot: block.slot,
-      signingRoot,
-    });
-
-    const signedBlock: phase0.SignedBeaconBlock = {
-      message: block,
-      signature: validatorKeys.secretKey.sign(signingRoot).toBytes(),
-    };
-    try {
-      await this.provider.beacon.blocks.publishBlock(signedBlock);
-      this.logger.info("Published block", {slot, validator: prettyBytes(validatorKeys.publicKey)});
-    } catch (e) {
-      this.logger.error("Failed to publish block", {slot}, e);
-    }
-    return signedBlock;
-  }
-
-  getRpcClient(): IApiClientProvider {
-    return this.provider;
   }
 }

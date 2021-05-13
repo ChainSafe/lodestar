@@ -2,21 +2,21 @@ import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
 import varint from "varint";
 import {config} from "@chainsafe/lodestar-config/minimal";
-import {RequestOrResponseType} from "../../../../../../src/network";
-import {BufferedSource} from "../../../../../../src/network/reqresp/utils/bufferedSource";
+import {RequestOrResponseType} from "../../../../../../src/network/reqresp/types";
+import {BufferedSource} from "../../../../../../src/network/reqresp/utils";
 import {
   SszSnappyErrorCode,
   readSszSnappyPayload,
 } from "../../../../../../src/network/reqresp/encodingStrategies/sszSnappy";
 import {isEqualSszType} from "../../../../../utils/ssz";
 import {arrToSource} from "../../utils";
-import {sszSnappyPing, sszSnappyStatus, sszSnappySignedBlock} from "./testData";
+import {sszSnappyPing, sszSnappyStatus, sszSnappySignedBeaconBlockPhase0} from "./testData";
 
 chai.use(chaiAsPromised);
 
 describe("network / reqresp / sszSnappy / decode", () => {
   describe("Test data vectors (generated in a previous version)", () => {
-    const testCases = [sszSnappyPing, sszSnappyStatus, sszSnappySignedBlock];
+    const testCases = [sszSnappyPing, sszSnappyStatus, sszSnappySignedBeaconBlockPhase0];
 
     for (const {id, type, body, chunks} of testCases) {
       it(id, async () => {

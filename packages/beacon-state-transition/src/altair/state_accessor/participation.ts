@@ -1,6 +1,6 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {altair, Epoch, ValidatorIndex} from "@chainsafe/lodestar-types";
-import {getCurrentEpoch, getPreviousEpoch} from "../..";
+import {getCurrentEpoch, getPreviousEpoch} from "../../util";
 import {assert} from "@chainsafe/lodestar-utils";
 import {getActiveValidatorIndices} from "../../util/validator";
 import {hasFlag} from "../misc";

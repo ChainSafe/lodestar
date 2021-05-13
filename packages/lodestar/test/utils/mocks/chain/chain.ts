@@ -4,12 +4,7 @@ import sinon from "sinon";
 import {TreeBacked} from "@chainsafe/ssz";
 import {allForks, ForkDigest, Number64, Root, Slot, Uint16, Uint64} from "@chainsafe/lodestar-types";
 import {IBeaconConfig, ForkName} from "@chainsafe/lodestar-config";
-import {
-  CachedBeaconState,
-  computeForkDigest,
-  computeForkNameFromForkDigest,
-  createCachedBeaconState,
-} from "@chainsafe/lodestar-beacon-state-transition";
+import {CachedBeaconState, createCachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
 import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 
@@ -23,6 +18,10 @@ import {StubbedBeaconDb} from "../../stub";
 import {BlockPool} from "../../../../src/chain/blocks";
 import {AttestationPool} from "../../../../src/chain/attestation";
 import {BlsVerifier, IBlsVerifier} from "../../../../src/chain/bls";
+import {ForkDigestContext, IForkDigestContext} from "../../../../src/util/forkDigestContext";
+import {generateEmptyBlockSummary} from "../../block";
+
+/* eslint-disable @typescript-eslint/no-empty-function */
 
 export interface IMockChainParams {
   genesisTime?: Number64;
@@ -36,7 +35,7 @@ export class MockBeaconChain implements IBeaconChain {
   readonly genesisTime: Number64;
   readonly genesisValidatorsRoot: Root;
   readonly bls: IBlsVerifier;
-  forkChoice!: IForkChoice;
+  forkChoice: IForkChoice;
   stateCache: StateContextCache;
   checkpointStateCache: CheckpointStateCache;
   chainId: Uint16;
@@ -46,6 +45,7 @@ export class MockBeaconChain implements IBeaconChain {
   emitter: ChainEventEmitter;
   pendingBlocks: BlockPool;
   pendingAttestations: AttestationPool;
+  forkDigestContext: IForkDigestContext;
 
   private state: TreeBacked<allForks.BeaconState>;
   private config: IBeaconConfig;
@@ -67,6 +67,7 @@ export class MockBeaconChain implements IBeaconChain {
       emitter: this.emitter,
       signal: this.abortController.signal,
     });
+    this.forkChoice = mockForkChoice(config);
     this.stateCache = new StateContextCache();
     this.checkpointStateCache = new CheckpointStateCache(this.config);
     this.pendingBlocks = new BlockPool({
@@ -82,7 +83,9 @@ export class MockBeaconChain implements IBeaconChain {
       stateCache: this.stateCache,
       checkpointStateCache: this.checkpointStateCache,
       db: new StubbedBeaconDb(sinon),
+      metrics: null,
     });
+    this.forkDigestContext = new ForkDigestContext(this.config, this.genesisValidatorsRoot);
   }
 
   async getHeadBlock(): Promise<null> {
@@ -118,20 +121,17 @@ export class MockBeaconChain implements IBeaconChain {
     return this.state.finalizedCheckpoint;
   }
 
-  getForkDigest(): ForkDigest {
-    return computeForkDigest(this.config, this.state.fork.currentVersion, this.genesisValidatorsRoot);
+  getHeadForkDigest(): ForkDigest {
+    return this.config.types.ForkDigest.defaultValue();
   }
-
-  getForkName(): ForkName {
-    return computeForkNameFromForkDigest(this.config, this.genesisValidatorsRoot, this.getForkDigest());
+  getClockForkDigest(): ForkDigest {
+    return this.config.types.ForkDigest.defaultValue();
   }
-
-  getENRForkID(): phase0.ENRForkID {
-    return {
-      forkDigest: Buffer.alloc(4),
-      nextForkEpoch: 100,
-      nextForkVersion: Buffer.alloc(4),
-    };
+  getHeadForkName(): ForkName {
+    return ForkName.phase0;
+  }
+  getClockForkName(): ForkName {
+    return ForkName.phase0;
   }
 
   getGenesisTime(): Number64 {
@@ -152,7 +152,6 @@ export class MockBeaconChain implements IBeaconChain {
 
   close(): void {
     this.abortController.abort();
-    return;
   }
 
   async getStateByBlockRoot(): Promise<CachedBeaconState<allForks.BeaconState> | null> {
@@ -161,11 +160,44 @@ export class MockBeaconChain implements IBeaconChain {
 
   getStatus(): phase0.Status {
     return {
-      forkDigest: this.getForkDigest(),
+      forkDigest: this.getHeadForkDigest(),
       finalizedRoot: Buffer.alloc(32),
       finalizedEpoch: 0,
       headRoot: Buffer.alloc(32),
       headSlot: 0,
     };
   }
+}
+
+function mockForkChoice(config: IBeaconConfig): IForkChoice {
+  const root = config.types.Root.defaultValue() as Uint8Array;
+  const blockSummary = generateEmptyBlockSummary();
+  const checkpoint = config.types.phase0.Checkpoint.defaultValue();
+
+  return {
+    getAncestor: () => root,
+    getHeadRoot: () => root,
+    getHead: () => blockSummary,
+    getHeads: () => [blockSummary],
+    getFinalizedCheckpoint: () => checkpoint,
+    getJustifiedCheckpoint: () => checkpoint,
+    onBlock: () => {},
+    onAttestation: () => {},
+    getLatestMessage: () => undefined,
+    updateTime: () => {},
+    getTime: () => 0,
+    hasBlock: () => true,
+    getBlock: () => blockSummary,
+    getFinalizedBlock: () => blockSummary,
+    isDescendantOfFinalized: () => true,
+    isDescendant: () => true,
+    prune: () => [blockSummary],
+    setPruneThreshold: () => {},
+    iterateBlockSummaries: () => [blockSummary],
+    iterateNonAncestors: () => [blockSummary],
+    getCanonicalBlockSummaryAtSlot: () => blockSummary,
+    forwardIterateBlockSummaries: () => [blockSummary],
+    getBlockSummariesByParentRoot: () => [blockSummary],
+    getBlockSummariesAtSlot: () => [blockSummary],
+  };
 }

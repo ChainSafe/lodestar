@@ -3,22 +3,32 @@
  */
 import {Connection} from "libp2p";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {phase0} from "@chainsafe/lodestar-types";
+import {allForks, phase0} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {AbortController} from "abort-controller";
 import LibP2p from "libp2p";
 import PeerId from "peer-id";
-import {IReqResp, IReqRespModules, ILibP2pStream} from "./interface";
+import {timeoutOptions} from "../../constants";
+import {IForkDigestContext} from "../../util/forkDigestContext";
+import {IReqResp, IReqRespModules, Libp2pStream} from "./interface";
 import {sendRequest} from "./request";
 import {handleRequest} from "./response";
-import {Method, ReqRespEncoding, timeoutOptions} from "../../constants";
 import {onOutgoingReqRespError} from "./score";
 import {IPeerMetadataStore, IPeerRpcScoreStore} from "../peers";
-import {createRpcProtocol} from "../util";
-import {assertSequentialBlocksInRange} from "./utils/assertSequentialBlocksInRange";
+import {assertSequentialBlocksInRange, formatProtocolId} from "./utils";
 import {MetadataController} from "../metadata";
 import {INetworkEventBus, NetworkEvent} from "../events";
 import {IReqRespHandler} from "./handlers";
+import {
+  Method,
+  Version,
+  Encoding,
+  Protocol,
+  ResponseBody,
+  RequestBody,
+  RequestTypedContainer,
+  protocolsSupported,
+} from "./types";
 
 export type IReqRespOptions = Partial<typeof timeoutOptions>;
 
@@ -31,6 +41,7 @@ export class ReqResp implements IReqResp {
   private config: IBeaconConfig;
   private libp2p: LibP2p;
   private logger: ILogger;
+  private forkDigestContext: IForkDigestContext;
   private reqRespHandler: IReqRespHandler;
   private metadataController: MetadataController;
   private peerMetadata: IPeerMetadataStore;
@@ -45,6 +56,7 @@ export class ReqResp implements IReqResp {
     this.config = modules.config;
     this.libp2p = modules.libp2p;
     this.logger = modules.logger;
+    this.forkDigestContext = modules.forkDigestContext;
     this.reqRespHandler = modules.reqRespHandler;
     this.peerMetadata = modules.peerMetadata;
     this.metadataController = modules.metadata;
@@ -55,73 +67,45 @@ export class ReqResp implements IReqResp {
 
   start(): void {
     this.controller = new AbortController();
-    for (const method of Object.values(Method)) {
-      for (const encoding of Object.values(ReqRespEncoding)) {
-        this.libp2p.handle(
-          createRpcProtocol(method, encoding),
-          async ({connection, stream}: {connection: Connection; stream: ILibP2pStream}) => {
-            const peerId = connection.remotePeer;
-
-            // TODO: Do we really need this now that there is only one encoding?
-            // Remember the prefered encoding of this peer
-            if (method === Method.Status) {
-              this.peerMetadata.encoding.set(peerId, encoding);
-            }
-
-            try {
-              await handleRequest(
-                {config: this.config, logger: this.logger, libp2p: this.libp2p},
-                this.onRequest.bind(this),
-                stream,
-                peerId,
-                method,
-                encoding,
-                this.controller.signal,
-                this.respCount++
-              );
-              // TODO: Do success peer scoring here
-            } catch {
-              // TODO: Do error peer scoring here
-              // Must not throw since this is an event handler
-            }
-          }
-        );
-      }
+    for (const [method, version, encoding] of protocolsSupported) {
+      this.libp2p.handle(
+        formatProtocolId(method, version, encoding),
+        this.getRequestHandler({method, version, encoding})
+      );
     }
   }
 
   stop(): void {
-    for (const method of Object.values(Method)) {
-      for (const encoding of Object.values(ReqRespEncoding)) {
-        this.libp2p.unhandle(createRpcProtocol(method, encoding));
-      }
+    for (const [method, version, encoding] of protocolsSupported) {
+      this.libp2p.unhandle(formatProtocolId(method, version, encoding));
     }
     this.controller.abort();
   }
 
   async status(peerId: PeerId, request: phase0.Status): Promise<phase0.Status> {
-    return await this.sendRequest<phase0.Status>(peerId, Method.Status, request);
+    return await this.sendRequest<phase0.Status>(peerId, Method.Status, [Version.V1], request);
   }
 
   async goodbye(peerId: PeerId, request: phase0.Goodbye): Promise<void> {
-    await this.sendRequest<phase0.Goodbye>(peerId, Method.Goodbye, request);
+    await this.sendRequest<phase0.Goodbye>(peerId, Method.Goodbye, [Version.V1], request);
   }
 
   async ping(peerId: PeerId): Promise<phase0.Ping> {
-    return await this.sendRequest<phase0.Ping>(peerId, Method.Ping, this.metadataController.seqNumber);
+    return await this.sendRequest<phase0.Ping>(peerId, Method.Ping, [Version.V1], this.metadataController.seqNumber);
   }
 
   async metadata(peerId: PeerId): Promise<phase0.Metadata> {
-    return await this.sendRequest<phase0.Metadata>(peerId, Method.Metadata, null);
+    return await this.sendRequest<phase0.Metadata>(peerId, Method.Metadata, [Version.V1], null);
   }
 
   async beaconBlocksByRange(
     peerId: PeerId,
     request: phase0.BeaconBlocksByRangeRequest
-  ): Promise<phase0.SignedBeaconBlock[]> {
-    const blocks = await this.sendRequest<phase0.SignedBeaconBlock[]>(
+  ): Promise<allForks.SignedBeaconBlock[]> {
+    const blocks = await this.sendRequest<allForks.SignedBeaconBlock[]>(
       peerId,
       Method.BeaconBlocksByRange,
+      [Version.V2, Version.V1], // Prioritize V2
       request,
       request.count
     );
@@ -132,29 +116,32 @@ export class ReqResp implements IReqResp {
   async beaconBlocksByRoot(
     peerId: PeerId,
     request: phase0.BeaconBlocksByRootRequest
-  ): Promise<phase0.SignedBeaconBlock[]> {
-    return await this.sendRequest<phase0.SignedBeaconBlock[]>(
+  ): Promise<allForks.SignedBeaconBlock[]> {
+    return await this.sendRequest<allForks.SignedBeaconBlock[]>(
       peerId,
       Method.BeaconBlocksByRoot,
+      [Version.V2, Version.V1], // Prioritize V2
       request,
       request.length
     );
   }
 
   // Helper to reduce code duplication
-  private async sendRequest<T extends phase0.ResponseBody | phase0.ResponseBody[]>(
+  private async sendRequest<T extends ResponseBody | ResponseBody[]>(
     peerId: PeerId,
     method: Method,
-    body: phase0.RequestBody,
+    versions: Version[],
+    body: RequestBody,
     maxResponses = 1
   ): Promise<T> {
     try {
-      const encoding = this.peerMetadata.encoding.get(peerId) ?? ReqRespEncoding.SSZ_SNAPPY;
+      const encoding = this.peerMetadata.encoding.get(peerId) ?? Encoding.SSZ_SNAPPY;
       const result = await sendRequest<T>(
-        {libp2p: this.libp2p, logger: this.logger, config: this.config},
+        {config: this.config, logger: this.logger, libp2p: this.libp2p, forkDigestContext: this.forkDigestContext},
         peerId,
         method,
         encoding,
+        versions,
         body,
         maxResponses,
         this.controller.signal,
@@ -171,20 +158,44 @@ export class ReqResp implements IReqResp {
     }
   }
 
-  private async *onRequest(
-    method: Method,
-    requestBody: phase0.RequestBody,
-    peerId: PeerId
-  ): AsyncIterable<phase0.ResponseBody> {
-    switch (method) {
+  private getRequestHandler({method, version, encoding}: Protocol) {
+    return async ({connection, stream}: {connection: Connection; stream: Libp2pStream}) => {
+      const peerId = connection.remotePeer;
+
+      // TODO: Do we really need this now that there is only one encoding?
+      // Remember the prefered encoding of this peer
+      if (method === Method.Status) {
+        this.peerMetadata.encoding.set(peerId, encoding);
+      }
+
+      try {
+        await handleRequest(
+          {config: this.config, logger: this.logger, libp2p: this.libp2p, forkDigestContext: this.forkDigestContext},
+          this.onRequest.bind(this),
+          stream,
+          peerId,
+          {method, version, encoding},
+          this.controller.signal,
+          this.respCount++
+        );
+        // TODO: Do success peer scoring here
+      } catch {
+        // TODO: Do error peer scoring here
+        // Must not throw since this is an event handler
+      }
+    };
+  }
+
+  private async *onRequest(method: Method, requestBody: RequestBody, peerId: PeerId): AsyncIterable<ResponseBody> {
+    const requestTyped = {method, body: requestBody} as RequestTypedContainer;
+
+    switch (requestTyped.method) {
       case Method.Ping:
         yield this.metadataController.seqNumber;
         break;
-
       case Method.Metadata:
-        yield this.metadataController.all;
+        yield this.metadataController.allPhase0;
         break;
-
       case Method.Goodbye:
         yield BigInt(0);
         break;
@@ -195,10 +206,10 @@ export class ReqResp implements IReqResp {
         yield* this.reqRespHandler.onStatus();
         break;
       case Method.BeaconBlocksByRange:
-        yield* this.reqRespHandler.onBeaconBlocksByRange(requestBody);
+        yield* this.reqRespHandler.onBeaconBlocksByRange(requestTyped.body);
         break;
       case Method.BeaconBlocksByRoot:
-        yield* this.reqRespHandler.onBeaconBlocksByRoot(requestBody);
+        yield* this.reqRespHandler.onBeaconBlocksByRoot(requestTyped.body);
         break;
 
       default:
@@ -208,6 +219,6 @@ export class ReqResp implements IReqResp {
     // Allow onRequest to return and close the stream
     // For Goodbye there may be a race condition where the listener of `receivedGoodbye`
     // disconnects in the same syncronous call, preventing the stream from ending cleanly
-    setTimeout(() => this.networkEventBus.emit(NetworkEvent.reqRespRequest, method, requestBody, peerId), 0);
+    setTimeout(() => this.networkEventBus.emit(NetworkEvent.reqRespRequest, requestTyped, peerId), 0);
   }
 }

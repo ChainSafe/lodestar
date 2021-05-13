@@ -9,26 +9,29 @@ describe("Process Slots Performance Test", function () {
   const logger = profilerLogger();
   let state: fast.CachedBeaconState<phase0.BeaconState>;
 
-  function processEpochTest(numSlot: Slot, expectedValue: number): void {
-    logger.profile(`Process ${numSlot} slots`);
-    const start = Date.now();
-    phase0.fast.processSlots(state, state.slot + numSlot);
-    logger.profile(`Process ${numSlot} slots`);
-    expect(Date.now() - start).lt(expectedValue);
+  function processEpochTest(numSlot: Slot, expectedValue: number, maxTry = 10): void {
+    logger.profile(`Process ${numSlot} slots ${maxTry} times`);
+    let duration = 0;
+    for (let i = 0; i < maxTry; i++) {
+      state = generatePerfTestCachedBeaconState({goBackOneSlot: true});
+      const start = Date.now();
+      phase0.fast.processSlots(state, state.slot + numSlot);
+      duration += Date.now() - start;
+    }
+    logger.profile(`Process ${numSlot} slots ${maxTry} times`);
+    const average = duration / maxTry;
+    console.log(`Processing ${numSlot} slots in ${average}ms`);
+    expect(average).lt(expectedValue, `process ${numSlot} takes longer than ${expectedValue} ms`);
   }
 
   const testValues = [
-    {numSlot: 32, expectedValue: 320, name: "process 1 empty epoch"},
-    {numSlot: 64, expectedValue: 620, name: "process double empty epochs"},
-    {numSlot: 128, expectedValue: 1270, name: "process 4 empty epochs"},
+    {numSlot: 32, expectedValue: 1500, name: "process 1 empty epoch"},
+    {numSlot: 64, expectedValue: 2750, name: "process double empty epochs"},
+    {numSlot: 128, expectedValue: 4300, name: "process 4 empty epochs"},
   ];
 
   before(async () => {
     await initBLS();
-  });
-
-  beforeEach(async () => {
-    state = generatePerfTestCachedBeaconState();
   });
 
   for (const testValue of testValues) {
@@ -36,4 +39,8 @@ describe("Process Slots Performance Test", function () {
       processEpochTest(testValue.numSlot, testValue.expectedValue);
     });
   }
+
+  // after(async () => {
+  //   await new Promise((r) => setTimeout(r, 1e8));
+  // });
 });

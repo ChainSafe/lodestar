@@ -10,7 +10,7 @@ import {
   isAggregatorFromCommitteeLength,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {isAttestingToInValidBlock} from "./attestation";
-import {getSelectionProofSignatureSet, getAggregateAndProofSignatureSet} from "./utils";
+import {getSelectionProofSignatureSet, getAggregateAndProofSignatureSet} from "./signatureSets";
 import {AttestationError, AttestationErrorCode} from "../errors";
 import {ATTESTATION_PROPAGATION_SLOT_RANGE} from "../../constants";
 
@@ -127,13 +127,10 @@ export async function validateAggregateAttestation(
   const signatureSets = [
     getSelectionProofSignatureSet(config, attestationTargetState, slot, aggregator, aggregateAndProof),
     getAggregateAndProofSignatureSet(config, attestationTargetState, epoch, aggregator, aggregateAndProof),
-    fast.getIndexedAttestationSignatureSet(
-      attestationTargetState as CachedBeaconState<allForks.BeaconState>,
-      indexedAttestation
-    ),
+    fast.getIndexedAttestationSignatureSet(attestationTargetState, indexedAttestation),
   ];
 
-  if (!(await chain.bls.verifySignatureSetsBatch(signatureSets))) {
+  if (!(await chain.bls.verifySignatureSets(signatureSets))) {
     throw new AttestationError({
       code: AttestationErrorCode.INVALID_SIGNATURE,
       job: attestationJob,
@@ -143,13 +140,7 @@ export async function validateAggregateAttestation(
   // TODO: once we have pool, check if aggregate block is seen and has target as ancestor
 
   // verifySignature = false, verified in batch above
-  if (
-    !phase0.fast.isValidIndexedAttestation(
-      attestationTargetState as CachedBeaconState<allForks.BeaconState>,
-      indexedAttestation,
-      false
-    )
-  ) {
+  if (!phase0.fast.isValidIndexedAttestation(attestationTargetState, indexedAttestation, false)) {
     throw new AttestationError({
       code: AttestationErrorCode.INVALID_INDEXED_ATTESTATION,
       job: attestationJob,

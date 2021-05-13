@@ -1,5 +1,6 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {phase0, altair, DEPOSIT_CONTRACT_TREE_DEPTH} from "@chainsafe/lodestar-types";
+import {phase0, altair} from "@chainsafe/lodestar-types";
+import {DEPOSIT_CONTRACT_TREE_DEPTH} from "@chainsafe/lodestar-params";
 import {assert, verifyMerkleBranch, bigIntMin} from "@chainsafe/lodestar-utils";
 import {computeSigningRoot, computeDomain, increaseBalance} from "../../../util";
 import bls from "@chainsafe/bls";

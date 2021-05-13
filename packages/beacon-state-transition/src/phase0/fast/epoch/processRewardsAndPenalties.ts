@@ -1,7 +1,7 @@
 import {phase0} from "@chainsafe/lodestar-types";
 
 import {GENESIS_EPOCH} from "../../../constants";
-import {CachedBeaconState, IEpochProcess} from "../../../fast";
+import {CachedBeaconState, IEpochProcess} from "../../../fast/util";
 import {getAttestationDeltas} from "./getAttestationDeltas";
 
 export function processRewardsAndPenalties(state: CachedBeaconState<phase0.BeaconState>, process: IEpochProcess): void {

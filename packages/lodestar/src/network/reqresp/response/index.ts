@@ -1,25 +1,33 @@
 import PeerId from "peer-id";
 import pipe from "it-pipe";
 import {AbortSignal} from "abort-controller";
+import {Libp2p} from "libp2p/src/connection-manager";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Context, ILogger, TimeoutError, withTimeout} from "@chainsafe/lodestar-utils";
-import {phase0} from "@chainsafe/lodestar-types";
-import {Method, ReqRespEncoding, REQUEST_TIMEOUT, RpcResponseStatus} from "../../../constants";
-import {onChunk} from "../utils/onChunk";
-import {ILibP2pStream} from "../interface";
+import {IForkDigestContext} from "../../../util/forkDigestContext";
+import {REQUEST_TIMEOUT, RespStatus} from "../../../constants";
+import {getAgentVersionFromPeerStore, prettyPrintPeerId} from "../../util";
+import {Method, Protocol, RequestBody, ResponseBody} from "../types";
+import {onChunk} from "../utils";
+import {Libp2pStream} from "../interface";
 import {requestDecode} from "../encoders/requestDecode";
 import {responseEncodeError, responseEncodeSuccess} from "../encoders/responseEncode";
 import {ResponseError} from "./errors";
-import {getAgentVersionFromPeerStore, prettyPrintPeerId} from "../..";
-import {Libp2p} from "libp2p/src/connection-manager";
 
 export {ResponseError};
 
 export type PerformRequestHandler = (
   method: Method,
-  requestBody: phase0.RequestBody,
+  requestBody: RequestBody,
   peerId: PeerId
-) => AsyncIterable<phase0.ResponseBody>;
+) => AsyncIterable<ResponseBody>;
+
+type HandleRequestModules = {
+  config: IBeaconConfig;
+  logger: ILogger;
+  forkDigestContext: IForkDigestContext;
+  libp2p: Libp2p;
+};
 
 /**
  * Handles a ReqResp request from a peer. Throws on error. Logs each step of the response lifecycle.
@@ -32,17 +40,16 @@ export type PerformRequestHandler = (
  * 4b. On error, encode and write an error `<response_chunk>` and stop
  */
 export async function handleRequest(
-  {config, logger, libp2p}: {config: IBeaconConfig; logger: ILogger; libp2p: Libp2p},
+  {config, logger, forkDigestContext, libp2p}: HandleRequestModules,
   performRequestHandler: PerformRequestHandler,
-  stream: ILibP2pStream,
+  stream: Libp2pStream,
   peerId: PeerId,
-  method: Method,
-  encoding: ReqRespEncoding,
+  protocol: Protocol,
   signal?: AbortSignal,
   requestId = 0
 ): Promise<void> {
   const agentVersion = getAgentVersionFromPeerStore(peerId, libp2p.peerStore.metadataBook);
-  const logCtx = {method, encoding, agentVersion, peer: prettyPrintPeerId(peerId), requestId};
+  const logCtx = {method: protocol.method, agentVersion, peer: prettyPrintPeerId(peerId), requestId};
 
   let responseError: Error | null = null;
   await pipe(
@@ -52,27 +59,27 @@ export async function handleRequest(
     (async function* () {
       try {
         const requestBody = await withTimeout(
-          () => pipe(stream.source, requestDecode(config, method, encoding)),
+          () => pipe(stream.source, requestDecode(config, protocol)),
           REQUEST_TIMEOUT,
           signal
         ).catch((e: unknown) => {
           if (e instanceof TimeoutError) {
             throw e; // Let outter catch {} re-type the error as SERVER_ERROR
           } else {
-            throw new ResponseError(RpcResponseStatus.INVALID_REQUEST, (e as Error).message);
+            throw new ResponseError(RespStatus.INVALID_REQUEST, (e as Error).message);
           }
         });
 
         logger.debug("Resp received request", {...logCtx, requestBody} as Context);
 
         yield* pipe(
-          performRequestHandler(method, requestBody, peerId),
+          performRequestHandler(protocol.method, requestBody, peerId),
           // NOTE: Do not log the resp chunk contents, logs get extremely cluttered
           onChunk(() => logger.debug("Resp sending chunk", logCtx)),
-          responseEncodeSuccess(config, method, encoding)
+          responseEncodeSuccess(config, forkDigestContext, protocol)
         );
       } catch (e) {
-        const status = e instanceof ResponseError ? e.status : RpcResponseStatus.SERVER_ERROR;
+        const status = e instanceof ResponseError ? e.status : RespStatus.SERVER_ERROR;
         yield* responseEncodeError(status, (e as Error).message);
 
         // Should not throw an error here or libp2p-mplex throws with 'AbortError: stream reset'

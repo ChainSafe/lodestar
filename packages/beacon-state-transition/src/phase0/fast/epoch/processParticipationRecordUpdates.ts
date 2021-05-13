@@ -1,6 +1,6 @@
 import {phase0} from "@chainsafe/lodestar-types";
 import {List} from "@chainsafe/ssz";
-import {CachedBeaconState} from "../../../fast";
+import {CachedBeaconState} from "../../../fast/util";
 
 export function processParticipationRecordUpdates(state: CachedBeaconState<phase0.BeaconState>): void {
   // rotate current/previous epoch attestations

@@ -67,7 +67,7 @@ export class ArchiveBlocksTask implements ITask {
     const canonicalBlockEntries = (
       await Promise.all(
         canonicalSummaries.map(async (summary) => {
-          const blockBuffer = (await this.db.block.getBinary(summary.blockRoot, summary.slot))!;
+          const blockBuffer = (await this.db.block.getBinary(summary.blockRoot))!;
           return {
             key: summary.slot,
             value: blockBuffer,
@@ -79,15 +79,13 @@ export class ArchiveBlocksTask implements ITask {
     // put to blockArchive db and delete block db
     await Promise.all([
       this.db.blockArchive.batchPutBinary(canonicalBlockEntries),
-      this.db.block.batchDelete(canonicalSummaries.map((summary) => ({root: summary.blockRoot, slot: summary.slot}))),
+      this.db.block.batchDelete(canonicalSummaries.map((summary) => summary.blockRoot)),
     ]);
   }
 
   private async deleteNonCanonicalBlocks(): Promise<void> {
     // loop through forkchoice single time
     const nonCanonicalSummaries = this.forkChoice.iterateNonAncestors(this.finalized.root);
-    await this.db.block.batchDelete(
-      nonCanonicalSummaries.map((summary) => ({root: summary.blockRoot, slot: summary.slot}))
-    );
+    await this.db.block.batchDelete(nonCanonicalSummaries.map((summary) => summary.blockRoot));
   }
 }

@@ -3,6 +3,7 @@
  */
 
 export * from "./activation";
+export * from "./aggregationBits";
 export * from "./array";
 export * from "./attestation";
 export * from "./balance";
@@ -24,3 +25,4 @@ export * from "./signingRoot";
 export * from "./slot";
 export * from "./validator";
 export * from "./validatorStatus";
+export * from "./syncCommittee";

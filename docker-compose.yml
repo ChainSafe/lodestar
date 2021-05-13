@@ -6,19 +6,18 @@ services:
     restart: always
     volumes:
       - beacon_node:/data
+      - logs:/logs
     env_file: .env
     ports:
       - "9000:9000" # P2P port
       - "9596:9596" # REST API port
-    command: beacon --rootDir /data --api.rest.host 0.0.0.0 --metrics.enabled
+    command: beacon --rootDir /data --api.rest.host 0.0.0.0 --metrics.enabled --logFile /logs/beacon.log --logLevelFile debug
 
   prometheus:
     build: docker/prometheus
     restart: always
     volumes:
       - "prometheus:/prometheus"
-    depends_on:
-      - beacon_node
 
   grafana:
     build: docker/grafana
@@ -27,10 +26,9 @@ services:
       - "3000:3000"
     volumes:
       - "grafana:/var/lib/grafana"
-    depends_on:
-      - prometheus
 
 volumes:
   beacon_node:
+  logs:
   prometheus:
   grafana:

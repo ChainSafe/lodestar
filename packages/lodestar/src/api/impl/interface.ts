@@ -13,7 +13,9 @@ import {IValidatorApi} from "./validator";
 import {IEventsApi} from "./events";
 import {IDebugApi} from "./debug/interface";
 import {IConfigApi} from "./config/interface";
+import {ILightclientApi} from "./lightclient";
 import {ILodestarApi} from "./lodestar";
+import {IMetrics} from "../../metrics";
 
 export const enum ApiNamespace {
   BEACON = "beacon",
@@ -22,17 +24,19 @@ export const enum ApiNamespace {
   EVENTS = "events",
   DEBUG = "debug",
   CONFIG = "config",
+  LIGHTCLIENT = "lightclient",
   LODESTAR = "lodestar",
 }
 
 export interface IApiModules {
   config: IBeaconConfig;
-  logger: ILogger;
   chain: IBeaconChain;
-  sync: IBeaconSync;
-  network: INetwork;
   db: IBeaconDb;
   eth1: IEth1ForBlockProduction;
+  logger: ILogger;
+  metrics: IMetrics | null;
+  network: INetwork;
+  sync: IBeaconSync;
 }
 
 export interface IApi {
@@ -42,5 +46,6 @@ export interface IApi {
   events: IEventsApi;
   debug: IDebugApi;
   config: IConfigApi;
+  lightclient: ILightclientApi;
   lodestar: ILodestarApi;
 }

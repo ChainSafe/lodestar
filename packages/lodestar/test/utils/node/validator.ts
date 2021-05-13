@@ -6,9 +6,9 @@ import {IApiClient, SlashingProtection, Validator} from "@chainsafe/lodestar-val
 import {Eth1ForBlockProductionDisabled} from "../../../src/eth1";
 import {BeaconNode} from "../../../src/node";
 import {testLogger, TestLoggerOpts} from "../logger";
-import {Api} from "../../../src/api";
+import {Api} from "../../../src/api/impl";
 
-export function getDevValidators({
+export async function getAndInitDevValidators({
   node,
   validatorsPerClient = 8,
   validatorClientCount = 1,
@@ -22,17 +22,16 @@ export function getDevValidators({
   startIndex: number;
   useRestApi?: boolean;
   testLoggerOpts?: TestLoggerOpts;
-}): Validator[] {
-  const vcs: Validator[] = [];
+}): Promise<Validator[]> {
+  const vcs: Promise<Validator>[] = [];
   for (let i = 0; i < validatorClientCount; i++) {
     const startIndexVc = startIndex + i * validatorClientCount;
     const endIndex = startIndexVc + validatorsPerClient - 1;
     const logger = testLogger(`Vali ${startIndexVc}-${endIndex}`, testLoggerOpts);
 
     const tmpDir = tmp.dirSync({unsafeCleanup: true});
-
     vcs.push(
-      new Validator({
+      Validator.initializeFromBeaconNode({
         config: node.config,
         api: useRestApi ? getNodeApiUrl(node) : getApiInstance(node, logger),
         slashingProtection: new SlashingProtection({
@@ -45,7 +44,7 @@ export function getDevValidators({
     );
   }
 
-  return vcs;
+  return await Promise.all(vcs);
 }
 
 function getNodeApiUrl(node: BeaconNode): string {
@@ -54,7 +53,7 @@ function getNodeApiUrl(node: BeaconNode): string {
   return `http://${host}:${port}`;
 }
 
-export function getApiInstance(node: BeaconNode, parentLogger: ILogger): IApiClient {
+function getApiInstance(node: BeaconNode, parentLogger: ILogger): IApiClient {
   return new Api(
     {},
     {

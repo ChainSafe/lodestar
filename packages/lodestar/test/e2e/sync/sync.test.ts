@@ -3,7 +3,7 @@ import {getDevBeaconNode} from "../../utils/node/beacon";
 import {waitForEvent} from "../../utils/events/resolver";
 import {phase0} from "@chainsafe/lodestar-types";
 import assert from "assert";
-import {getDevValidators} from "../../utils/node/validator";
+import {getAndInitDevValidators} from "../../utils/node/validator";
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {ChainEvent} from "../../../src/chain";
 import {Network} from "../../../src/network";
@@ -28,12 +28,12 @@ describe("sync", function () {
 
     const bn = await getDevBeaconNode({
       params: beaconParams,
-      options: {sync: {minPeers: 0}},
+      options: {sync: {isSingleNode: true}},
       validatorCount,
       logger: loggerNodeA,
     });
     const finalizationEventListener = waitForEvent<phase0.Checkpoint>(bn.chain.emitter, ChainEvent.finalized, 240000);
-    const validators = getDevValidators({
+    const validators = await getAndInitDevValidators({
       node: bn,
       validatorsPerClient: 8,
       validatorClientCount: 1,

@@ -3,7 +3,7 @@ import {bigIntMin} from "@chainsafe/lodestar-utils";
 import {readonlyValues} from "@chainsafe/ssz";
 
 import {decreaseBalance} from "../../../util";
-import {CachedBeaconState, IEpochProcess} from "../../../fast";
+import {CachedBeaconState, IEpochProcess} from "../../../fast/util";
 
 export function processSlashings(state: CachedBeaconState<phase0.BeaconState>, process: IEpochProcess): void {
   const params = state.config.params;

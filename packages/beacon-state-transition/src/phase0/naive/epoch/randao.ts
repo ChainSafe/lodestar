@@ -1,6 +1,6 @@
 import {phase0} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {getRandaoMix, getCurrentEpoch} from "../../..";
+import {getRandaoMix, getCurrentEpoch} from "../../../util";
 
 export function processRandaoMixesReset(config: IBeaconConfig, state: phase0.BeaconState): void {
   const currentEpoch = getCurrentEpoch(config, state);

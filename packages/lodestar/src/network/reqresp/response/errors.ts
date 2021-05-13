@@ -1,7 +1,7 @@
 import {LodestarError} from "@chainsafe/lodestar-utils";
-import {RpcResponseStatus, RpcResponseStatusError} from "../../../constants";
+import {RespStatus, RpcResponseStatusError} from "../../../constants";
 
-type RpcResponseStatusNotSuccess = Exclude<RpcResponseStatus, RpcResponseStatus.SUCCESS>;
+type RpcResponseStatusNotSuccess = Exclude<RespStatus, RespStatus.SUCCESS>;
 
 export enum ResponseErrorCode {
   RESPONSE_STATUS_ERROR = "RESPONSE_STATUS_ERROR",
@@ -22,7 +22,7 @@ export class ResponseError extends LodestarError<RequestErrorType> {
   errorMessage: string;
   constructor(status: RpcResponseStatusNotSuccess, errorMessage: string) {
     const type = {code: ResponseErrorCode.RESPONSE_STATUS_ERROR, status, errorMessage};
-    super(type, `RESPONSE_ERROR_${RpcResponseStatus[status]}: ${errorMessage}`);
+    super(type, `RESPONSE_ERROR_${RespStatus[status]}: ${errorMessage}`);
     this.status = status;
     this.errorMessage = errorMessage;
   }

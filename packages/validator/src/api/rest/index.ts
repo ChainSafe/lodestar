@@ -22,6 +22,7 @@ export function ApiClientOverRest(config: IBeaconConfig, baseUrl: string): IApiC
     events: EventsApi(config.types, client),
     validator: ValidatorApi(config.types, client),
 
+    url: baseUrl,
     registerAbortSignal(signal: AbortSignal) {
       client.registerAbortSignal(signal);
     },

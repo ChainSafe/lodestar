@@ -6,7 +6,7 @@ import {expect} from "chai";
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {phase0, getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import * as attestationUtils from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util/attestation";
-import * as blockUtils from "@chainsafe/lodestar-beacon-state-transition/lib/phase0/fast/block/isValidIndexedAttestation";
+import * as blockUtils from "@chainsafe/lodestar-beacon-state-transition/lib/fast/block/isValidIndexedAttestation";
 import {BitList, toHexString} from "@chainsafe/ssz";
 import {ProtoArray} from "@chainsafe/lodestar-fork-choice";
 import {ForkChoice, IForkChoice} from "@chainsafe/lodestar-fork-choice";
@@ -21,7 +21,7 @@ import {AttestationErrorCode} from "../../../../src/chain/errors";
 import {Gwei} from "@chainsafe/lodestar-types";
 import {fast} from "@chainsafe/lodestar-beacon-state-transition";
 import {SinonStubFn} from "../../../utils/types";
-import {AttestationError} from "../../../../src/chain/errors";
+import {expectRejectedWithLodestarError} from "../../../utils/errors";
 
 describe("gossip attestation validation", function () {
   let chain: SinonStubbedInstance<IBeaconChain>;
@@ -40,6 +40,7 @@ describe("gossip attestation validation", function () {
     sinon.stub(chain.clock, "currentSlot").get(() => 0);
     forkChoice = chain.forkChoice = sinon.createStubInstance(ForkChoice);
     regen = chain.regen = sinon.createStubInstance(StateRegenerator);
+    chain.bls = {verifySignatureSets: async () => true};
     db = new StubbedBeaconDb(sinon, config);
     db.badBlock.has.resolves(false);
     computeAttestationSubnetStub = sinon.stub(attestationUtils, "computeSubnetForAttestation");
@@ -60,63 +61,31 @@ describe("gossip attestation validation", function () {
 
   it("should throw error - attestation has empty aggregation bits", async function () {
     const attestation = generateAttestation({aggregationBits: ([] as boolean[]) as BitList});
-    try {
-      await validateGossipAttestation(
-        config,
-        chain,
-        db,
-        {
-          attestation,
-          validSignature: false,
-        },
-        0
-      );
-    } catch (error) {
-      expect((error as AttestationError).type).to.have.property(
-        "code",
-        AttestationErrorCode.NOT_EXACTLY_ONE_AGGREGATION_BIT_SET
-      );
-    }
+
+    await expectRejectedWithLodestarError(
+      validateGossipAttestation(config, chain, db, {attestation, validSignature: false}, 0),
+      AttestationErrorCode.NOT_EXACTLY_ONE_AGGREGATION_BIT_SET
+    );
   });
 
   it("should throw error - attestation has more aggregation bits", async function () {
     const attestation = generateAttestation({aggregationBits: [true, true] as BitList});
-    try {
-      await validateGossipAttestation(
-        config,
-        chain,
-        db,
-        {
-          attestation,
-          validSignature: false,
-        },
-        0
-      );
-    } catch (error) {
-      expect((error as AttestationError).type).to.have.property(
-        "code",
-        AttestationErrorCode.NOT_EXACTLY_ONE_AGGREGATION_BIT_SET
-      );
-    }
+
+    await expectRejectedWithLodestarError(
+      validateGossipAttestation(config, chain, db, {attestation, validSignature: false}, 0),
+      AttestationErrorCode.NOT_EXACTLY_ONE_AGGREGATION_BIT_SET
+    );
   });
 
   it("should throw error - attestation block is invalid", async function () {
     const attestation = generateAttestation({aggregationBits: [true] as BitList});
     db.badBlock.has.resolves(true);
-    try {
-      await validateGossipAttestation(
-        config,
-        chain,
-        db,
-        {
-          attestation,
-          validSignature: false,
-        },
-        0
-      );
-    } catch (error) {
-      expect((error as AttestationError).type).to.have.property("code", AttestationErrorCode.KNOWN_BAD_BLOCK);
-    }
+
+    await expectRejectedWithLodestarError(
+      validateGossipAttestation(config, chain, db, {attestation, validSignature: false}, 0),
+      AttestationErrorCode.KNOWN_BAD_BLOCK
+    );
+
     expect(db.badBlock.has.calledOnceWith(attestation.data.beaconBlockRoot.valueOf() as Uint8Array)).to.be.true;
   });
 
@@ -127,20 +96,11 @@ describe("gossip attestation validation", function () {
         slot: getCurrentSlot(config, chain.getGenesisTime()) - ATTESTATION_PROPAGATION_SLOT_RANGE - 1,
       },
     });
-    try {
-      await validateGossipAttestation(
-        config,
-        chain,
-        db,
-        {
-          attestation,
-          validSignature: false,
-        },
-        0
-      );
-    } catch (error) {
-      expect((error as AttestationError).type).to.have.property("code", AttestationErrorCode.PAST_SLOT);
-    }
+
+    await expectRejectedWithLodestarError(
+      validateGossipAttestation(config, chain, db, {attestation, validSignature: false}, 0),
+      AttestationErrorCode.PAST_SLOT
+    );
   });
 
   it("should throw error - future attestation", async function () {
@@ -150,20 +110,11 @@ describe("gossip attestation validation", function () {
         slot: getCurrentSlot(config, chain.getGenesisTime()) + 5,
       },
     });
-    try {
-      await validateGossipAttestation(
-        config,
-        chain,
-        db,
-        {
-          attestation,
-          validSignature: false,
-        },
-        0
-      );
-    } catch (error) {
-      expect((error as AttestationError).type).to.have.property("code", AttestationErrorCode.FUTURE_SLOT);
-    }
+
+    await expectRejectedWithLodestarError(
+      validateGossipAttestation(config, chain, db, {attestation, validSignature: false}, 0),
+      AttestationErrorCode.FUTURE_SLOT
+    );
   });
 
   it("should throw error - validator already attested to target epoch", async function () {
@@ -171,20 +122,12 @@ describe("gossip attestation validation", function () {
       aggregationBits: [true] as BitList,
     });
     db.seenAttestationCache.hasCommitteeAttestation.returns(true);
-    try {
-      await validateGossipAttestation(
-        config,
-        chain,
-        db,
-        {
-          attestation,
-          validSignature: false,
-        },
-        0
-      );
-    } catch (error) {
-      expect((error as AttestationError).type).to.have.property("code", AttestationErrorCode.ATTESTATION_ALREADY_KNOWN);
-    }
+
+    await expectRejectedWithLodestarError(
+      validateGossipAttestation(config, chain, db, {attestation, validSignature: false}, 0),
+      AttestationErrorCode.ATTESTATION_ALREADY_KNOWN
+    );
+
     expect(chain.receiveAttestation.called).to.be.false;
     expect(db.seenAttestationCache.hasCommitteeAttestation.calledOnceWith(attestation)).to.be.true;
   });
@@ -195,20 +138,12 @@ describe("gossip attestation validation", function () {
     });
     db.seenAttestationCache.hasCommitteeAttestation.returns(false);
     forkChoice.hasBlock.returns(false);
-    try {
-      await validateGossipAttestation(
-        config,
-        chain,
-        db,
-        {
-          attestation,
-          validSignature: false,
-        },
-        0
-      );
-    } catch (error) {
-      expect((error as AttestationError).type).to.have.property("code", AttestationErrorCode.UNKNOWN_BEACON_BLOCK_ROOT);
-    }
+
+    await expectRejectedWithLodestarError(
+      validateGossipAttestation(config, chain, db, {attestation, validSignature: false}, 0),
+      AttestationErrorCode.UNKNOWN_BEACON_BLOCK_ROOT
+    );
+
     expect(forkChoice.hasBlock.calledOnceWith(attestation.data.beaconBlockRoot)).to.be.true;
   });
 
@@ -219,23 +154,12 @@ describe("gossip attestation validation", function () {
     db.seenAttestationCache.hasCommitteeAttestation.returns(false);
     forkChoice.hasBlock.returns(true);
     regen.getCheckpointState.throws();
-    try {
-      await validateGossipAttestation(
-        config,
-        chain,
-        db,
-        {
-          attestation,
-          validSignature: false,
-        },
-        0
-      );
-    } catch (error) {
-      expect((error as AttestationError).type).to.have.property(
-        "code",
-        AttestationErrorCode.MISSING_ATTESTATION_TARGET_STATE
-      );
-    }
+
+    await expectRejectedWithLodestarError(
+      validateGossipAttestation(config, chain, db, {attestation, validSignature: false}, 0),
+      AttestationErrorCode.MISSING_ATTESTATION_TARGET_STATE
+    );
+
     expect(regen.getCheckpointState.calledOnceWith(attestation.data.target)).to.be.true;
   });
 
@@ -248,20 +172,12 @@ describe("gossip attestation validation", function () {
     const attestationTargetState = generateCachedState();
     regen.getCheckpointState.resolves(attestationTargetState);
     computeAttestationSubnetStub.returns(5);
-    try {
-      await validateGossipAttestation(
-        config,
-        chain,
-        db,
-        {
-          attestation,
-          validSignature: false,
-        },
-        0
-      );
-    } catch (error) {
-      expect((error as AttestationError).type).to.have.property("code", AttestationErrorCode.INVALID_SUBNET_ID);
-    }
+
+    await expectRejectedWithLodestarError(
+      validateGossipAttestation(config, chain, db, {attestation, validSignature: false}, 0),
+      AttestationErrorCode.INVALID_SUBNET_ID
+    );
+
     expect(chain.receiveAttestation.called).to.be.false;
     expect(computeAttestationSubnetStub.calledOnceWith(config, attestationTargetState, attestation)).to.be.true;
   });
@@ -277,20 +193,12 @@ describe("gossip attestation validation", function () {
     regen.getCheckpointState.resolves(attestationTargetState);
     computeAttestationSubnetStub.returns(0);
     isValidIndexedAttestationStub.returns(false);
-    try {
-      await validateGossipAttestation(
-        config,
-        chain,
-        db,
-        {
-          attestation,
-          validSignature: false,
-        },
-        0
-      );
-    } catch (error) {
-      expect((error as AttestationError).type).to.have.property("code", AttestationErrorCode.INVALID_SIGNATURE);
-    }
+
+    await expectRejectedWithLodestarError(
+      validateGossipAttestation(config, chain, db, {attestation, validSignature: false}, 0),
+      AttestationErrorCode.INVALID_INDEXED_ATTESTATION
+    );
+
     expect(chain.receiveAttestation.called).to.be.false;
     expect(isValidIndexedAttestationStub.calledOnce).to.be.true;
   });
@@ -312,23 +220,12 @@ describe("gossip attestation validation", function () {
     regen.getCheckpointState.resolves(attestationTargetState);
     computeAttestationSubnetStub.returns(0);
     isValidIndexedAttestationStub.returns(true);
-    try {
-      await validateGossipAttestation(
-        config,
-        chain,
-        db,
-        {
-          attestation,
-          validSignature: false,
-        },
-        0
-      );
-    } catch (error) {
-      expect((error as AttestationError).type).to.have.property(
-        "code",
-        AttestationErrorCode.COMMITTEE_INDEX_OUT_OF_RANGE
-      );
-    }
+
+    await expectRejectedWithLodestarError(
+      validateGossipAttestation(config, chain, db, {attestation, validSignature: false}, 0),
+      AttestationErrorCode.COMMITTEE_INDEX_OUT_OF_RANGE
+    );
+
     expect(chain.receiveAttestation.called).to.be.false;
     expect(isValidIndexedAttestationStub.calledOnce).to.be.true;
   });
@@ -356,23 +253,12 @@ describe("gossip attestation validation", function () {
     regen.getCheckpointState.resolves(attestationTargetState);
     computeAttestationSubnetStub.returns(0);
     isValidIndexedAttestationStub.returns(true);
-    try {
-      await validateGossipAttestation(
-        config,
-        chain,
-        db,
-        {
-          attestation,
-          validSignature: false,
-        },
-        0
-      );
-    } catch (error) {
-      expect((error as AttestationError).type).to.have.property(
-        "code",
-        AttestationErrorCode.COMMITTEE_INDEX_OUT_OF_RANGE
-      );
-    }
+
+    await expectRejectedWithLodestarError(
+      validateGossipAttestation(config, chain, db, {attestation, validSignature: false}, 0),
+      AttestationErrorCode.COMMITTEE_INDEX_OUT_OF_RANGE
+    );
+
     expect(chain.receiveAttestation.called).to.be.false;
     expect(isValidIndexedAttestationStub.calledOnce).to.be.true;
   });
@@ -394,23 +280,12 @@ describe("gossip attestation validation", function () {
     regen.getCheckpointState.resolves(attestationTargetState);
     computeAttestationSubnetStub.returns(0);
     isValidIndexedAttestationStub.returns(true);
-    try {
-      await validateGossipAttestation(
-        config,
-        chain,
-        db,
-        {
-          attestation,
-          validSignature: false,
-        },
-        0
-      );
-    } catch (error) {
-      expect((error as AttestationError).type).to.have.property(
-        "code",
-        AttestationErrorCode.WRONG_NUMBER_OF_AGGREGATION_BITS
-      );
-    }
+
+    await expectRejectedWithLodestarError(
+      validateGossipAttestation(config, chain, db, {attestation, validSignature: false}, 0),
+      AttestationErrorCode.WRONG_NUMBER_OF_AGGREGATION_BITS
+    );
+
     expect(chain.receiveAttestation.called).to.be.false;
     expect(isValidIndexedAttestationStub.calledOnce).to.be.true;
   });
@@ -435,20 +310,11 @@ describe("gossip attestation validation", function () {
     regen.getCheckpointState.resolves(attestationTargetState);
     computeAttestationSubnetStub.returns(0);
     isValidIndexedAttestationStub.returns(true);
-    try {
-      await validateGossipAttestation(
-        config,
-        chain,
-        db,
-        {
-          attestation,
-          validSignature: false,
-        },
-        0
-      );
-    } catch (error) {
-      expect((error as AttestationError).type).to.have.property("code", AttestationErrorCode.BAD_TARGET_EPOCH);
-    }
+
+    await expectRejectedWithLodestarError(
+      validateGossipAttestation(config, chain, db, {attestation, validSignature: false}, 0),
+      AttestationErrorCode.BAD_TARGET_EPOCH
+    );
   });
 
   it("should throw error - target block is not an ancestor of the block named in the LMD vote", async function () {
@@ -498,23 +364,11 @@ describe("gossip attestation validation", function () {
     regen.getCheckpointState.resolves(attestationTargetState);
     computeAttestationSubnetStub.returns(0);
     isValidIndexedAttestationStub.returns(true);
-    try {
-      await validateGossipAttestation(
-        config,
-        chain,
-        db,
-        {
-          attestation,
-          validSignature: false,
-        },
-        0
-      );
-    } catch (error) {
-      expect((error as AttestationError).type).to.have.property(
-        "code",
-        AttestationErrorCode.TARGET_BLOCK_NOT_AN_ANCESTOR_OF_LMD_BLOCK
-      );
-    }
+
+    await expectRejectedWithLodestarError(
+      validateGossipAttestation(config, chain, db, {attestation, validSignature: false}, 0),
+      AttestationErrorCode.TARGET_BLOCK_NOT_AN_ANCESTOR_OF_LMD_BLOCK
+    );
   });
 
   it("should throw error - current finalized_checkpoint not is an ancestor of the block defined by attestation.data.beacon_block_root", async function () {
@@ -539,23 +393,11 @@ describe("gossip attestation validation", function () {
     regen.getCheckpointState.resolves(attestationTargetState);
     computeAttestationSubnetStub.returns(0);
     isValidIndexedAttestationStub.returns(true);
-    try {
-      await validateGossipAttestation(
-        config,
-        chain,
-        db,
-        {
-          attestation,
-          validSignature: false,
-        },
-        0
-      );
-    } catch (error) {
-      expect((error as AttestationError).type).to.have.property(
-        "code",
-        AttestationErrorCode.FINALIZED_CHECKPOINT_NOT_AN_ANCESTOR_OF_ROOT
-      );
-    }
+
+    await expectRejectedWithLodestarError(
+      validateGossipAttestation(config, chain, db, {attestation, validSignature: false}, 0),
+      AttestationErrorCode.FINALIZED_CHECKPOINT_NOT_AN_ANCESTOR_OF_ROOT
+    );
   });
 
   it("should accept", async function () {
@@ -581,16 +423,9 @@ describe("gossip attestation validation", function () {
     forkChoiceStub.hasBlock.returns(true);
     forkChoiceStub.isDescendant.returns(true);
     forkChoiceStub.isDescendantOfFinalized.returns(true);
-    const validationTest = await validateGossipAttestation(
-      config,
-      chain,
-      db,
-      {
-        attestation,
-        validSignature: false,
-      },
-      0
-    );
+
+    const validationTest = await validateGossipAttestation(config, chain, db, {attestation, validSignature: false}, 0);
+
     expect(validationTest).to.not.throw;
     expect(chain.receiveAttestation.called).to.be.false;
     expect(db.seenAttestationCache.addCommitteeAttestation.calledOnce).to.be.true;

@@ -1,4 +1,4 @@
-import {phase0} from "@chainsafe/lodestar-types";
+import {allForks, phase0} from "@chainsafe/lodestar-types";
 import {LodestarError} from "@chainsafe/lodestar-utils";
 
 /**
@@ -6,7 +6,7 @@ import {LodestarError} from "@chainsafe/lodestar-utils";
  * Note: MUST allow missing block for skipped slots.
  */
 export function assertSequentialBlocksInRange(
-  blocks: phase0.SignedBeaconBlock[],
+  blocks: allForks.SignedBeaconBlock[],
   {count, startSlot, step}: phase0.BeaconBlocksByRangeRequest
 ): void {
   // Check below would throw for empty ranges

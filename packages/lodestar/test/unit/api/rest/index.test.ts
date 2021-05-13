@@ -28,10 +28,6 @@ export async function setupRestApiTestServer(): Promise<RestApi> {
       host: "127.0.0.1",
       port: 0,
     },
-    {
-      config,
-      logger: testLogger(),
-      api,
-    }
+    {config, logger: testLogger(), api, metrics: null}
   );
 }

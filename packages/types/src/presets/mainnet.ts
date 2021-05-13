@@ -1,8 +1,4 @@
-/**
- * @module sszTypes/presets/mainnet
- */
 import {params} from "@chainsafe/lodestar-params/mainnet";
+import {createIBeaconSSZTypes} from "../index";
 
-import {createIBeaconSSZTypes, IBeaconSSZTypes} from "../IBeaconSSZTypes";
-
-export const types: IBeaconSSZTypes = createIBeaconSSZTypes(params);
+export const types = createIBeaconSSZTypes(params);

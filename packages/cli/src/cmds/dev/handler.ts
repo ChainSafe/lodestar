@@ -2,6 +2,7 @@ import fs from "fs";
 import {promisify} from "util";
 import rimraf from "rimraf";
 import path from "path";
+import {AbortController} from "abort-controller";
 import {GENESIS_SLOT} from "@chainsafe/lodestar-params";
 import {BeaconNode, BeaconDb, initStateFromAnchorState, createNodeJsLibp2p, nodeUtils} from "@chainsafe/lodestar";
 import {IApiClient, SlashingProtection, Validator} from "@chainsafe/lodestar-validator";
@@ -109,7 +110,11 @@ export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
       controller: new LevelDbController({name: dbPath}, {logger}),
     });
 
-    const validator = new Validator({config, slashingProtection, api, logger, secretKeys});
+    const controller = new AbortController();
+    onGracefulShutdownCbs.push(async () => controller.abort());
+
+    // Initailize genesis once for all validators
+    const validator = await Validator.initializeFromBeaconNode({config, slashingProtection, api, logger, secretKeys});
 
     onGracefulShutdownCbs.push(() => validator.stop());
     await validator.start();

@@ -23,7 +23,7 @@ type BlockProcessorModules = {
   regen: IStateRegenerator;
   emitter: ChainEventEmitter;
   bls: IBlsVerifier;
-  metrics?: IMetrics;
+  metrics: IMetrics | null;
   clock: IBeaconClock;
   checkpointStateCache: CheckpointStateCache;
 };
@@ -46,12 +46,7 @@ export class BlockProcessor {
     this.modules = modules;
     this.jobQueue = new JobQueue(
       {maxLength, signal},
-      modules.metrics && {
-        length: modules.metrics.blockProcessorQueueLength,
-        droppedJobs: modules.metrics.blockProcessorQueueDroppedJobs,
-        jobTime: modules.metrics.blockProcessorQueueJobTime,
-        jobWaitTime: modules.metrics.blockProcessorQueueJobWaitTime,
-      }
+      modules.metrics ? modules.metrics.blockProcessorQueue : undefined
     );
   }
 
@@ -76,8 +71,8 @@ export class BlockProcessor {
  */
 export async function processBlockJob(modules: BlockProcessorModules, job: IBlockJob): Promise<void> {
   try {
-    validateBlock({...modules, job});
-    await processBlock({...modules, job});
+    validateBlock(modules, job);
+    await processBlock(modules, job);
   } catch (e) {
     // above functions only throw BlockError
     modules.emitter.emit(ChainEvent.errorBlock, e);
@@ -123,7 +118,7 @@ export async function processChainSegmentJob(modules: BlockProcessorModules, job
     }
 
     try {
-      validateBlock({...modules, job: {...job, signedBlock: block}});
+      validateBlock(modules, {...job, signedBlock: block});
       // If the block is relevant, add it to the filtered chain segment.
       filteredChainSegment.push(block);
     } catch (e) {
@@ -161,11 +156,5 @@ export async function processChainSegmentJob(modules: BlockProcessorModules, job
     }
   }
 
-  await processChainSegment({
-    ...modules,
-    job: {
-      ...job,
-      signedBlocks: filteredChainSegment,
-    },
-  });
+  await processChainSegment(modules, {...job, signedBlocks: filteredChainSegment});
 }

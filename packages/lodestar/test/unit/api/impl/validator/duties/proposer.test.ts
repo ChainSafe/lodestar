@@ -1,29 +1,38 @@
 import sinon, {SinonStubbedInstance} from "sinon";
-import {expect} from "chai";
-
+import {use, expect} from "chai";
+import chaiAsPromised from "chai-as-promised";
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {createCachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
 
 import {ForkChoice, IBeaconChain} from "../../../../../../src/chain";
 import {LocalClock} from "../../../../../../src/chain/clock";
 import {FAR_FUTURE_EPOCH} from "../../../../../../src/constants";
+import {IEth1ForBlockProduction} from "../../../../../../src/eth1";
 import {IValidatorApi, ValidatorApi} from "../../../../../../src/api/impl/validator";
+import {IApiModules} from "../../../../../../src/api/impl/interface";
 import {generateInitialMaxBalances} from "../../../../../utils/balances";
 import {generateState} from "../../../../../utils/state";
 import {IBeaconSync} from "../../../../../../src/sync";
 import {generateValidators} from "../../../../../utils/validator";
 import {StubbedBeaconDb} from "../../../../../utils/stub";
 import {setupApiImplTestServer, ApiImplTestModules} from "../../index.test";
+import {testLogger} from "../../../../../utils/logger";
+
+use(chaiAsPromised);
 
 describe("get proposers api impl", function () {
+  const logger = testLogger();
+  let eth1Stub: SinonStubbedInstance<IEth1ForBlockProduction>;
+
   let chainStub: SinonStubbedInstance<IBeaconChain>,
     syncStub: SinonStubbedInstance<IBeaconSync>,
     dbStub: StubbedBeaconDb;
 
   let api: IValidatorApi;
   let server: ApiImplTestModules;
+  let modules: IApiModules;
 
-  before(function () {
+  beforeEach(function () {
     server = setupApiImplTestServer();
     chainStub = server.chainStub;
     syncStub = server.syncStub;
@@ -31,33 +40,17 @@ describe("get proposers api impl", function () {
     chainStub.forkChoice = server.sandbox.createStubInstance(ForkChoice);
     chainStub.getCanonicalBlockAtSlot.resolves(config.types.phase0.SignedBeaconBlock.defaultValue());
     dbStub = server.dbStub;
-    // @ts-ignore
-    api = new ValidatorApi({}, {db: dbStub, chain: chainStub, sync: syncStub, config});
-  });
-
-  it("should throw error when node is syncing", async function () {
-    syncStub.isSynced.returns(false);
-    syncStub.getSyncStatus.returns({
-      headSlot: BigInt(1000),
-      syncDistance: BigInt(2000),
-    });
-    try {
-      await api.getProposerDuties(1);
-      expect.fail("Expect error here");
-    } catch (e) {
-      expect((e as Error).message.startsWith("Node is syncing")).to.be.true;
-    }
-  });
-
-  it("should throw error when node is stopped", async function () {
-    syncStub.isSynced.returns(false);
-    syncStub.getSyncStatus.throws("Node is stopped");
-    try {
-      await api.getProposerDuties(1);
-      expect.fail("Expect error here");
-    } catch (e) {
-      expect((e as Error).message.startsWith("Node is stopped")).to.be.true;
-    }
+    modules = {
+      chain: server.chainStub,
+      config,
+      db: server.dbStub,
+      eth1: eth1Stub,
+      logger,
+      network: server.networkStub,
+      sync: syncStub,
+      metrics: null,
+    };
+    api = new ValidatorApi({}, modules);
   });
 
   it("should get proposers", async function () {

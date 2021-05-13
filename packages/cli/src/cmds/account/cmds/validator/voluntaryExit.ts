@@ -102,7 +102,7 @@ BE UNTIL AT LEAST TWO YEARS AFTER THE PHASE 0 MAINNET LAUNCH.
 
     const config = getBeaconConfigFromArgs(args);
 
-    const validatorClient = new Validator({
+    const validatorClient = await Validator.initializeFromBeaconNode({
       slashingProtection: getSlashingProtection(args),
       config,
       api: args.server,

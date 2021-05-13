@@ -129,6 +129,14 @@ export class CachedEpochParticipation implements List<ParticipationFlags> {
   map<T>(fn: (value: ParticipationFlags, index: number) => T): T[] {
     return this.persistent.map((value, index) => fn(toParticipationFlags(value), index));
   }
+
+  forEachStatus(fn: (value: IParticipationStatus, index: number, list: this) => void): void {
+    this.persistent.forEach(fn as (t: IParticipationStatus, i: number) => void);
+  }
+
+  mapStatus<T>(fn: (value: IParticipationStatus, index: number) => T): T[] {
+    return this.persistent.map((value, index) => fn(value, index));
+  }
 }
 
 // eslint-disable-next-line @typescript-eslint/naming-convention

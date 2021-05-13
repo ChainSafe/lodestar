@@ -22,3 +22,11 @@ export function newZeroedBigIntArray(n: number): bigint[] {
   }
   return arr;
 }
+
+export function newFilledArray<T>(n: number, val: T): T[] {
+  const arr = new Array<T>(n);
+  for (let i = 0; i < n; ++i) {
+    arr[i] = val;
+  }
+  return arr;
+}

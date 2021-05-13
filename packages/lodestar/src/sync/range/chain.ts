@@ -1,12 +1,18 @@
 import PeerId from "peer-id";
-import {AbortSignal} from "abort-controller";
-import {Epoch, phase0} from "@chainsafe/lodestar-types";
+import {Epoch, Root, Slot, phase0} from "@chainsafe/lodestar-types";
+import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 import {ErrorAborted, ILogger} from "@chainsafe/lodestar-utils";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {toHexString} from "@chainsafe/ssz";
+import {PeerAction} from "../../network";
 import {ChainSegmentError} from "../../chain/errors";
 import {ItTrigger} from "../../util/itTrigger";
+import {byteArrayEquals} from "../../util/bytes";
+import {PeerMap} from "../../util/peerMap";
 import {wrapError} from "../../util/wrapError";
-import {Batch, BatchOpts, BatchMetadata, BatchStatus} from "./batch";
+import {RangeSyncType} from "../utils";
+import {BATCH_BUFFER_SIZE, EPOCHS_PER_BATCH, BATCH_SLOT_OFFSET} from "../constants";
+import {Batch, BatchError, BatchErrorCode, BatchMetadata, BatchOpts, BatchStatus} from "./batch";
 import {
   validateBatchesStatus,
   getNextBatchToProcess,
@@ -14,121 +20,239 @@ import {
   toBeDownloadedStartEpoch,
   toArr,
   ChainPeersBalancer,
+  computeMostCommonTarget,
 } from "./utils";
 
-export type SyncChainOpts = BatchOpts & {maybeStuckTimeoutMs: number};
+export type SyncChainOpts = BatchOpts;
+
+export type SyncChainModules = {
+  config: IBeaconConfig;
+  logger: ILogger;
+};
+
+export type SyncChainFns = {
+  /**
+   * Must return if ALL blocks are processed successfully
+   * If SOME blocks are processed must throw BlockProcessorError()
+   */
+  processChainSegment: (blocks: phase0.SignedBeaconBlock[]) => Promise<void>;
+  /** Must download blocks, and validate their range */
+  downloadBeaconBlocksByRange: (
+    peer: PeerId,
+    request: phase0.BeaconBlocksByRangeRequest
+  ) => Promise<phase0.SignedBeaconBlock[]>;
+  /** Report peer for negative actions. Decouples from the full network instance */
+  reportPeer: (peer: PeerId, action: PeerAction, actionName: string) => void;
+  /** Hook called when Chain state completes */
+  onEnd: (err?: Error) => void;
+};
 
 /**
- * Should return if ALL blocks are processed successfully
- * If SOME blocks are processed must throw BlockProcessorError()
+ * Sync this up to this target. Uses slot instead of epoch to re-use logic for finalized sync
+ * and head sync. The root is used to uniquely identify this chain on different forks
  */
-export type ProcessChainSegment = (blocks: phase0.SignedBeaconBlock[]) => Promise<void>;
+export type ChainTarget = {
+  slot: Slot;
+  root: Root;
+};
 
-export type DownloadBeaconBlocksByRange = (
-  peer: PeerId,
-  request: phase0.BeaconBlocksByRangeRequest
-) => Promise<phase0.SignedBeaconBlock[]>;
+export class SyncChainStartError extends Error {}
+
+export type SyncChainDebugState = {
+  targetRoot: string | null;
+  targetSlot: number | null;
+  syncType: RangeSyncType;
+  status: SyncChainStatus;
+  startEpoch: number;
+  peers: number;
+  batches: BatchMetadata[];
+};
+
+export enum SyncChainStatus {
+  Stopped = "Stopped",
+  Syncing = "Syncing",
+  Synced = "Synced",
+  Error = "Error",
+}
 
 /**
- * The SyncManager should dynamically inject pools of peers and their targetEpoch through this method.
- * It may inject `null` if the peer pool does not meet some condition like peers < minPeers, which
- * would temporarily pause the sync once all active requests are done.
+ * Dynamic target sync chain. Peers with multiple targets but with the same syncType are added
+ * through the `addPeer()` hook.
+ *
+ * A chain of blocks that need to be downloaded. Peers who claim to contain the target head
+ * root are grouped into the peer pool and queried for batches when downloading the chain.
  */
-export type GetPeersAndTargetEpoch = () => {peers: PeerId[]; targetEpoch: Epoch} | null;
-
-/**
- * Blocks are downloaded in batches from peers. This constant specifies how many epochs worth of
- * blocks per batch are requested _at most_. A batch may request less blocks to account for
- * already requested slots. There is a timeout for each batch request. If this value is too high,
- * we will negatively report peers with poor bandwidth. This can be set arbitrarily high, in which
- * case the responder will fill the response up to the max request size, assuming they have the
- * bandwidth to do so.
- */
-const EPOCHS_PER_BATCH = 2;
-
-/**
- * The maximum number of batches to queue before requesting more.
- */
-const BATCH_BUFFER_SIZE = 5;
-
-/**
- * If no batch is processed during this time, trigger the downloader and processor again
- */
-const MAYBE_STUCK_TIMEOUT = 10 * 1000;
-
 export class SyncChain {
-  /** The start of the chain segment. Any epoch previous to this one has been validated. */
-  startEpoch: Epoch;
-  /** A multi-threaded, non-blocking processor for applying messages to the beacon chain. */
-  private processChainSegment: ProcessChainSegment;
-  private downloadBeaconBlocksByRange: DownloadBeaconBlocksByRange;
-  private getPeersAndTargetEpoch: GetPeersAndTargetEpoch;
-  /** AsyncIterable that guarantees processChainSegment is run only at once at anytime */
-  private batchProcessor = new ItTrigger();
-  private maybeStuckTimeout!: NodeJS.Timeout; // clearTimeout(undefined) is okay
-  /** Sorted map of batches undergoing some kind of processing. */
-  private batches: Map<Epoch, Batch> = new Map<Epoch, Batch>();
+  /** Short string id to identify this SyncChain in logs */
+  readonly logId: string;
+  readonly syncType: RangeSyncType;
+  /** Should sync up until this slot, then stop */
+  target: ChainTarget | null = null;
 
-  private logger: ILogger;
-  private config: IBeaconConfig;
-  private signal: AbortSignal;
-  private opts: SyncChainOpts;
+  /** Number of validated epochs. For the SyncRange to prevent switching chains too fast */
+  validatedEpochs = 0;
+
+  /** The start of the chain segment. Any epoch previous to this one has been validated. */
+  private startEpoch: Epoch;
+  private status = SyncChainStatus.Stopped;
+
+  private readonly processChainSegment: SyncChainFns["processChainSegment"];
+  private readonly downloadBeaconBlocksByRange: SyncChainFns["downloadBeaconBlocksByRange"];
+  private readonly reportPeer: SyncChainFns["reportPeer"];
+  /** AsyncIterable that guarantees processChainSegment is run only at once at anytime */
+  private readonly batchProcessor = new ItTrigger();
+  /** Sorted map of batches undergoing some kind of processing. */
+  private readonly batches = new Map<Epoch, Batch>();
+  private readonly peerset = new PeerMap<ChainTarget>();
+
+  private readonly logger: ILogger;
+  private readonly config: IBeaconConfig;
+  private readonly opts: SyncChainOpts;
 
   constructor(
-    localFinalizedEpoch: Epoch,
-    processChainSegment: ProcessChainSegment,
-    downloadBeaconBlocksByRange: DownloadBeaconBlocksByRange,
-    getPeersAndTargetEpoch: GetPeersAndTargetEpoch,
-    config: IBeaconConfig,
-    logger: ILogger,
-    signal: AbortSignal,
+    startEpoch: Epoch,
+    syncType: RangeSyncType,
+    fns: SyncChainFns,
+    modules: SyncChainModules,
     opts?: SyncChainOpts
   ) {
-    this.startEpoch = localFinalizedEpoch;
-    this.processChainSegment = processChainSegment;
-    this.downloadBeaconBlocksByRange = downloadBeaconBlocksByRange;
-    this.getPeersAndTargetEpoch = getPeersAndTargetEpoch;
-    this.config = config;
-    this.logger = logger;
-    this.signal = signal;
-    this.opts = {
-      epochsPerBatch: opts?.epochsPerBatch ?? EPOCHS_PER_BATCH,
-      maybeStuckTimeoutMs: opts?.maybeStuckTimeoutMs ?? MAYBE_STUCK_TIMEOUT,
-    };
+    this.startEpoch = startEpoch;
+    this.syncType = syncType;
+    this.processChainSegment = fns.processChainSegment;
+    this.downloadBeaconBlocksByRange = fns.downloadBeaconBlocksByRange;
+    this.reportPeer = fns.reportPeer;
+    this.config = modules.config;
+    this.logger = modules.logger;
+    this.opts = {epochsPerBatch: opts?.epochsPerBatch ?? EPOCHS_PER_BATCH};
+    this.logId = `${syncType}`;
 
-    this.signal.addEventListener("abort", () => {
-      clearTimeout(this.maybeStuckTimeout);
-      this.batchProcessor.end(new ErrorAborted("SyncChain"));
-    });
+    // Trigger event on parent class
+    this.sync().then(
+      () => fns.onEnd(),
+      (e) => fns.onEnd(e)
+    );
   }
 
   /**
-   * For debugging and inspect the current status of active batches
+   * Start syncing a new chain or an old one with an existing peer list
+   * In the same call, advance the chain if localFinalizedEpoch >
    */
-  batchesStatus(): BatchMetadata[] {
+  startSyncing(localFinalizedEpoch: Epoch): void {
+    switch (this.status) {
+      case SyncChainStatus.Stopped:
+        break; // Ok, continue
+      case SyncChainStatus.Syncing:
+        return; // Skip, already started
+      case SyncChainStatus.Error:
+      case SyncChainStatus.Synced:
+        throw new SyncChainStartError(`Attempted to start an ended SyncChain ${this.status}`);
+    }
+
+    this.status = SyncChainStatus.Syncing;
+
+    // to avoid dropping local progress, we advance the chain with its batch boundaries.
+    // get the aligned epoch that produces a batch containing the `localFinalizedEpoch`
+    const localFinalizedEpochAligned =
+      this.startEpoch + Math.floor((localFinalizedEpoch - this.startEpoch) / EPOCHS_PER_BATCH) * EPOCHS_PER_BATCH;
+    this.advanceChain(localFinalizedEpochAligned);
+
+    // Potentially download new batches and process pending
+    this.triggerBatchDownloader();
+    this.triggerBatchProcessor();
+  }
+
+  /**
+   * Temporarily stop the chain. Will prevent batches from being processed
+   */
+  stopSyncing(): void {
+    this.status = SyncChainStatus.Stopped;
+  }
+
+  /**
+   * Permanently remove this chain. Throws the main AsyncIterable
+   */
+  remove(): void {
+    this.batchProcessor.end(new ErrorAborted("SyncChain"));
+  }
+
+  /**
+   * Add peer to the chain and request batches if active
+   */
+  addPeer(peer: PeerId, target: ChainTarget): void {
+    this.peerset.set(peer, target);
+    this.computeTarget();
+    this.triggerBatchDownloader();
+  }
+
+  /**
+   * Returns true if the peer existed and has been removed
+   * NOTE: The RangeSync will take care of deleting the SyncChain if peers = 0
+   */
+  removePeer(peerId: PeerId): boolean {
+    const deleted = this.peerset.delete(peerId);
+    this.computeTarget();
+    return deleted;
+  }
+
+  /**
+   * Helper to print internal state for debugging when chain gets stuck
+   */
+  getBatchesState(): BatchMetadata[] {
     return toArr(this.batches).map((batch) => batch.getMetadata());
+  }
+
+  get isSyncing(): boolean {
+    return this.status === SyncChainStatus.Syncing;
+  }
+
+  get isRemovable(): boolean {
+    return this.status === SyncChainStatus.Error || this.status === SyncChainStatus.Synced;
+  }
+
+  get peers(): number {
+    return this.peerset.size;
+  }
+
+  getPeers(): PeerId[] {
+    return this.peerset.keys();
+  }
+
+  /** Full debug state for lodestar API */
+  getDebugState(): SyncChainDebugState {
+    return {
+      targetRoot: this.target && toHexString(this.target.root),
+      targetSlot: this.target && this.target.slot,
+      syncType: this.syncType,
+      status: this.status,
+      startEpoch: this.startEpoch,
+      peers: this.peers,
+      batches: this.getBatchesState(),
+    };
+  }
+
+  private computeTarget(): void {
+    const targets = this.peerset.values();
+    this.target = computeMostCommonTarget(targets);
   }
 
   /**
    * Main Promise that handles the sync process. Will resolve when initial sync completes
    * i.e. when it successfully processes a epoch >= than this chain `targetEpoch`
    */
-  async sync(): Promise<void> {
-    this.triggerBatchDownloader();
-    this.triggerBatchProcessor();
+  private async sync(): Promise<void> {
+    try {
+      // Start processing batches on demand in strict sequence
+      for await (const _ of this.batchProcessor) {
+        if (this.status !== SyncChainStatus.Syncing) {
+          continue;
+        }
 
-    // Start processing batches on demand in strict sequence
-    for await (const _ of this.batchProcessor) {
-      clearTimeout(this.maybeStuckTimeout);
-
-      // Pull the current targetEpoch
-      const {targetEpoch} = this.getPeersAndTargetEpoch() || {};
-      if (targetEpoch !== undefined) {
         // TODO: Consider running this check less often after the sync is well tested
         validateBatchesStatus(toArr(this.batches));
 
         // If startEpoch of the next batch to be processed > targetEpoch -> Done
-        if (toBeProcessedStartEpoch(toArr(this.batches), this.startEpoch, this.opts) >= targetEpoch) {
+        const toBeProcessedEpoch = toBeProcessedStartEpoch(toArr(this.batches), this.startEpoch, this.opts);
+        if (this.target && computeStartSlotAtEpoch(this.config, toBeProcessedEpoch) >= this.target.slot) {
           break;
         }
 
@@ -137,43 +261,61 @@ export class SyncChain {
         if (batch) await this.processBatch(batch);
       }
 
-      this.maybeStuckTimeout = setTimeout(this.syncMaybeStuck, this.opts.maybeStuckTimeoutMs);
-    }
+      this.status = SyncChainStatus.Synced;
+      this.logger.verbose("SyncChain Synced", {id: this.logId});
+    } catch (e) {
+      if (e instanceof ErrorAborted) {
+        return; // Ignore
+      }
 
-    clearTimeout(this.maybeStuckTimeout);
-    this.logger.important("Completed initial sync");
+      this.status = SyncChainStatus.Error;
+      this.logger.verbose("SyncChain Error", {id: this.logId}, e);
+
+      // A batch could not be processed after max retry limit. It's likely that all peers
+      // in this chain are sending invalid batches repeatedly so are either malicious or faulty.
+      // We drop the chain and report all peers.
+      // There are some edge cases with forks that could cause this situation, but it's unlikely.
+      if (e instanceof BatchError && e.type.code === BatchErrorCode.MAX_PROCESSING_ATTEMPTS) {
+        for (const peer of this.peerset.keys()) {
+          this.reportPeer(peer, PeerAction.LowToleranceError, "SyncChainMaxProcessingAttempts");
+        }
+      }
+
+      // TODO: Should peers be reported for MAX_DOWNLOAD_ATTEMPTS?
+
+      throw e;
+    }
   }
 
-  private syncMaybeStuck = (): void => {
-    this.triggerBatchDownloader();
-    this.triggerBatchProcessor();
-    this.logger.verbose(`SyncChain maybe stuck ${this.renderChainState()}`);
-  };
-
   /**
-   * Request to process batches if any
+   * Request to process batches if possible
    */
   private triggerBatchProcessor(): void {
     this.batchProcessor.trigger();
   }
 
   /**
-   * Request to download batches if any
+   * Request to download batches if possible
    * Backlogs requests into a single pending request
    */
   private triggerBatchDownloader(): void {
-    const peerSet = this.getPeersAndTargetEpoch();
-    if (peerSet) this.requestBatches(peerSet.peers, peerSet.targetEpoch);
+    try {
+      this.requestBatches(this.peerset.keys());
+    } catch (e) {
+      // bubble the error up to the main async iterable loop
+      this.batchProcessor.end(e);
+    }
   }
 
   /**
    * Attempts to request the next required batches from the peer pool if the chain is syncing.
    * It will exhaust the peer pool and left over batches until the batch buffer is reached.
-   *
-   * The peers that agree on the same finalized checkpoint and thus available to download
-   * this chain from, as well as the batches we are currently requesting.
    */
-  private requestBatches(peers: PeerId[], targetEpoch: Epoch): void {
+  private requestBatches(peers: PeerId[]): void {
+    if (this.status !== SyncChainStatus.Syncing) {
+      return;
+    }
+
     const peerBalancer = new ChainPeersBalancer(peers, toArr(this.batches));
 
     // Retry download of existing batches
@@ -190,7 +332,7 @@ export class SyncChain {
 
     // find the next pending batch and request it from the peer
     for (const peer of peerBalancer.idlePeers()) {
-      const batch = this.includeNextBatch(targetEpoch);
+      const batch = this.includeNextBatch();
       if (!batch) {
         break;
       }
@@ -199,9 +341,9 @@ export class SyncChain {
   }
 
   /**
-   * Creates the next required batch from the chain. If there are no more batches required, `null` is returned.
+   * Creates the next required batch from the chain. If there are no more batches required, returns `null`.
    */
-  private includeNextBatch(targetEpoch: Epoch): Batch | null {
+  private includeNextBatch(): Batch | null {
     const batches = toArr(this.batches);
 
     // Only request batches up to the buffer size limit
@@ -216,14 +358,19 @@ export class SyncChain {
 
     // This line decides the starting epoch of the next batch. MUST ensure no duplicate batch for the same startEpoch
     const startEpoch = toBeDownloadedStartEpoch(batches, this.startEpoch, this.opts);
+    const toBeDownloadedSlot = computeStartSlotAtEpoch(this.config, startEpoch) + BATCH_SLOT_OFFSET;
 
     // Don't request batches beyond the target head slot
-    if (startEpoch > targetEpoch) {
+    if (this.target && toBeDownloadedSlot > this.target.slot) {
       return null;
     }
 
-    const batch = new Batch(startEpoch, this.config, this.logger, this.opts);
-    if (this.batches.has(startEpoch)) throw Error(`Batch already ${startEpoch} exists`);
+    if (this.batches.has(startEpoch)) {
+      this.logger.error("Attempting to add existing Batch to SyncChain", {id: this.logId, startEpoch});
+      return null;
+    }
+
+    const batch = new Batch(startEpoch, this.config, this.opts);
     this.batches.set(startEpoch, batch);
     return batch;
   }
@@ -232,18 +379,25 @@ export class SyncChain {
    * Requests the batch asigned to the given id from a given peer.
    */
   private async sendBatch(batch: Batch, peer: PeerId): Promise<void> {
-    // Inform the batch about the new request
-    batch.startDownloading(peer);
+    try {
+      batch.startDownloading(peer);
 
-    // wrapError ensures to never call both batch success() and batch error()
-    const res = await wrapError(this.downloadBeaconBlocksByRange(peer, batch.request));
+      // wrapError ensures to never call both batch success() and batch error()
+      const res = await wrapError(this.downloadBeaconBlocksByRange(peer, batch.request));
 
-    if (!res.err) {
-      batch.downloadingSuccess(res.result);
-      this.triggerBatchProcessor();
-    } else {
-      this.logger.verbose("Batch download error", {...batch.getMetadata()}, res.err);
-      batch.downloadingError(res.err); // Throws after MAX_DOWNLOAD_ATTEMPTS
+      if (!res.err) {
+        batch.downloadingSuccess(res.result);
+        this.triggerBatchProcessor();
+      } else {
+        this.logger.verbose("Batch download error", {id: this.logId, ...batch.getMetadata()}, res.err);
+        batch.downloadingError(); // Throws after MAX_DOWNLOAD_ATTEMPTS
+      }
+
+      // Pre-emptively request more blocks from peers whilst we process current blocks
+      this.triggerBatchDownloader();
+    } catch (e) {
+      // bubble the error up to the main async iterable loop
+      this.batchProcessor.end(e);
     }
 
     // Pre-emptively request more blocks from peers whilst we process current blocks
@@ -270,8 +424,8 @@ export class SyncChain {
       // Potentially process next AwaitingProcessing batch
       this.triggerBatchProcessor();
     } else {
-      this.logger.verbose("Batch process error", {...batch.getMetadata()}, res.err);
-      batch.processingError(res.err); // Throws after MAX_BATCH_PROCESSING_ATTEMPTS
+      this.logger.verbose("Batch process error", {id: this.logId, ...batch.getMetadata()}, res.err);
+      batch.processingError(); // Throws after MAX_BATCH_PROCESSING_ATTEMPTS
 
       // At least one block was successfully verified and imported, so we can be sure all
       // previous batches are valid and we only need to download the current failed batch.
@@ -284,7 +438,7 @@ export class SyncChain {
       // Progress will be drop back to `this.startEpoch`
       for (const pendingBatch of this.batches.values()) {
         if (pendingBatch.startEpoch < batch.startEpoch) {
-          this.logger.verbose("Batch validation error", {...pendingBatch.getMetadata()});
+          this.logger.verbose("Batch validation error", {id: this.logId, ...pendingBatch.getMetadata()});
           pendingBatch.validationError(); // Throws after MAX_BATCH_PROCESSING_ATTEMPTS
         }
       }
@@ -306,23 +460,24 @@ export class SyncChain {
     for (const [batchKey, batch] of this.batches.entries()) {
       if (batch.startEpoch < newStartEpoch) {
         this.batches.delete(batchKey);
+        this.validatedEpochs += EPOCHS_PER_BATCH;
+
+        // The last batch attempt is right, all others are wrong. Penalize other peers
+        const attemptOk = batch.validationSuccess();
+        for (const attempt of batch.failedProcessingAttempts) {
+          if (!byteArrayEquals(attempt.hash, attemptOk.hash)) {
+            if (attemptOk.peer.toB58String() === attempt.peer.toB58String()) {
+              // The same peer corrected its previous attempt
+              this.reportPeer(attempt.peer, PeerAction.MidToleranceError, "SyncChainInvalidBatchSelf");
+            } else {
+              // A different peer sent an bad batch
+              this.reportPeer(attempt.peer, PeerAction.LowToleranceError, "SyncChainInvalidBatchOther");
+            }
+          }
+        }
       }
     }
 
     this.startEpoch = newStartEpoch;
-  }
-
-  /**
-   * Helper to print internal state for debugging when chain gets stuck
-   */
-  private renderChainState(): string {
-    const batchesMetadata = toArr(this.batches).map((batch) => batch.getMetadata());
-    return `
-startEpoch: ${this.startEpoch}
-batches: ${this.batches.size}
-\t${"epoch"} \t${"status"}
-\t${"-----"} \t${"------"}
-${batchesMetadata.map(({startEpoch, status}) => `\t${startEpoch} \t${status}`).join("\n")}
-`;
   }
 }

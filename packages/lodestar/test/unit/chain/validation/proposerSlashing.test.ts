@@ -9,9 +9,10 @@ import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {BeaconChain} from "../../../../src/chain";
 import {StubbedBeaconDb, StubbedChain} from "../../../utils/stub";
 import {generateCachedState} from "../../../utils/state";
-import {ProposerSlashingError, ProposerSlashingErrorCode} from "../../../../src/chain/errors/proposerSlashingError";
+import {ProposerSlashingErrorCode} from "../../../../src/chain/errors/proposerSlashingError";
 import {validateGossipProposerSlashing} from "../../../../src/chain/validation/proposerSlashing";
 import {SinonStubFn} from "../../../utils/types";
+import {expectRejectedWithLodestarError} from "../../../utils/errors";
 
 describe("validate proposer slashing", () => {
   const sandbox = sinon.createSandbox();
@@ -23,6 +24,7 @@ describe("validate proposer slashing", () => {
     isValidIncomingProposerSlashingStub = sandbox.stub(validatorStatusUtils, "isValidProposerSlashing");
     chainStub = sandbox.createStubInstance(BeaconChain) as StubbedChain;
     chainStub.forkChoice = sandbox.createStubInstance(ForkChoice);
+    chainStub.bls = {verifySignatureSets: async () => true};
     dbStub = new StubbedBeaconDb(sandbox);
   });
 
@@ -33,14 +35,11 @@ describe("validate proposer slashing", () => {
   it("should return invalid proposer slashing - existing", async () => {
     const slashing = generateEmptyProposerSlashing();
     dbStub.proposerSlashing.has.resolves(true);
-    try {
-      await validateGossipProposerSlashing(config, chainStub, dbStub, slashing);
-    } catch (error) {
-      expect((error as ProposerSlashingError).type).to.have.property(
-        "code",
-        ProposerSlashingErrorCode.SLASHING_ALREADY_EXISTS
-      );
-    }
+
+    await expectRejectedWithLodestarError(
+      validateGossipProposerSlashing(config, chainStub, dbStub, slashing),
+      ProposerSlashingErrorCode.SLASHING_ALREADY_EXISTS
+    );
   });
 
   it("should return invalid proposer slashing - invalid", async () => {
@@ -49,14 +48,11 @@ describe("validate proposer slashing", () => {
     const state = generateCachedState();
     chainStub.getHeadState.returns(state);
     isValidIncomingProposerSlashingStub.returns(false);
-    try {
-      await validateGossipProposerSlashing(config, chainStub, dbStub, slashing);
-    } catch (error) {
-      expect((error as ProposerSlashingError).type).to.have.property(
-        "code",
-        ProposerSlashingErrorCode.INVALID_SLASHING
-      );
-    }
+
+    await expectRejectedWithLodestarError(
+      validateGossipProposerSlashing(config, chainStub, dbStub, slashing),
+      ProposerSlashingErrorCode.INVALID_SLASHING
+    );
   });
 
   it("should return valid proposer slashing", async () => {
