@@ -1,22 +1,37 @@
 import {join} from "path";
 import {expect} from "chai";
-import {config} from "@chainsafe/lodestar-config/minimal";
+import {params} from "@chainsafe/lodestar-params/minimal";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
 import {IProcessSlotsTestCase} from "./type";
 import {SPEC_TEST_LOCATION} from "../../../../utils/specTestCases";
-import {altair as altairTypes} from "@chainsafe/lodestar-types";
-import {altair} from "@chainsafe/lodestar-beacon-state-transition";
+import {altair, allForks} from "@chainsafe/lodestar-beacon-state-transition";
+import {TreeBacked} from "@chainsafe/ssz";
+import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 
-describeDirectorySpecTest<IProcessSlotsTestCase, altairTypes.BeaconState>(
+// eslint-disable-next-line @typescript-eslint/naming-convention
+const config = createIBeaconConfig({...params, ALTAIR_FORK_EPOCH: 0});
+
+describeDirectorySpecTest<IProcessSlotsTestCase, altair.BeaconState>(
   "altair slot sanity minimal",
   join(SPEC_TEST_LOCATION, "/tests/minimal/altair/sanity/slots/pyspec_tests"),
   (testcase) => {
-    const state = testcase.pre;
-    altair.processSlots(config, state, state.slot + Number(testcase.slots));
-    return state;
+    const wrappedState = allForks.createCachedBeaconState<altair.BeaconState>(
+      config,
+      (testcase.pre as TreeBacked<altair.BeaconState>).clone()
+    );
+    altair.processSlots(wrappedState, wrappedState.slot + Number(testcase.slots));
+    return wrappedState;
   },
   {
     inputTypes: {
+      pre: {
+        type: InputType.SSZ_SNAPPY,
+        treeBacked: true,
+      },
+      post: {
+        type: InputType.SSZ_SNAPPY,
+        treeBacked: true,
+      },
       slots: InputType.YAML,
     },
     sszTypes: {

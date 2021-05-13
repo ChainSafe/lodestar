@@ -1,12 +1,11 @@
 import {byteArrayEquals} from "@chainsafe/ssz";
-import {allForks, Gwei, Slot} from "@chainsafe/lodestar-types";
+import {Gwei, Slot} from "@chainsafe/lodestar-types";
 import {assert} from "@chainsafe/lodestar-utils";
 import {
   CachedBeaconState,
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
-  fast,
-  phase0,
+  allForks,
   getEffectiveBalances,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {IBlockSummary, IForkChoice} from "@chainsafe/lodestar-fork-choice";
@@ -28,9 +27,9 @@ export async function processSlotsByCheckpoint(
   preState: CachedBeaconState<allForks.BeaconState>,
   slot: Slot
 ): Promise<CachedBeaconState<allForks.BeaconState>> {
-  const postState = await processSlotsToNearestCheckpoint({emitter, metrics}, preState, slot);
+  let postState = await processSlotsToNearestCheckpoint({emitter, metrics}, preState, slot);
   if (postState.slot < slot) {
-    phase0.fast.processSlots(postState as CachedBeaconState<phase0.BeaconState>, slot, metrics);
+    postState = allForks.processSlots(postState, slot, metrics);
   }
   return postState;
 }
@@ -52,13 +51,13 @@ async function processSlotsToNearestCheckpoint(
   const preSlot = preState.slot;
   const postSlot = slot;
   const preEpoch = computeEpochAtSlot(config, preSlot);
-  const postState = preState.clone();
+  let postState = preState.clone();
   for (
     let nextEpochSlot = computeStartSlotAtEpoch(config, preEpoch + 1);
     nextEpochSlot <= postSlot;
     nextEpochSlot += SLOTS_PER_EPOCH
   ) {
-    phase0.fast.processSlots(postState as CachedBeaconState<phase0.BeaconState>, nextEpochSlot, metrics);
+    postState = allForks.processSlots(postState, nextEpochSlot, metrics);
     emitCheckpointEvent(emitter, postState.clone());
     // this avoids keeping our node busy processing blocks
     await sleep(0);
@@ -77,7 +76,7 @@ export async function runStateTransition(
   const postSlot = job.signedBlock.message.slot;
 
   // if block is trusted don't verify proposer or op signature
-  const postState = fast.fastStateTransition(
+  const postState = allForks.stateTransition(
     preState,
     job.signedBlock,
     {

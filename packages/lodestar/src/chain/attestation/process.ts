@@ -51,7 +51,7 @@ export async function processAttestation({
   // Only verify signature if necessary. Most attestations come from blocks that did full signature verification
   // Otherwise, gossip validation might put it in pool before it validating signature
   if (
-    !phase0.fast.isValidIndexedAttestation(
+    !phase0.isValidIndexedAttestation(
       targetState as CachedBeaconState<allForks.BeaconState>,
       indexedAttestation,
       !job.validSignature

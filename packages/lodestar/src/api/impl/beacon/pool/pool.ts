@@ -1,6 +1,6 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {altair, Epoch, phase0} from "@chainsafe/lodestar-types";
-import {computeEpochAtSlot, fast} from "@chainsafe/lodestar-beacon-state-transition";
+import {computeEpochAtSlot, allForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
 import {IAttestationJob, IBeaconChain} from "../../../../chain";
 import {AttestationError, AttestationErrorCode} from "../../../../chain/errors";
@@ -71,7 +71,7 @@ export class BeaconPoolApi implements IBeaconPoolApi {
           job: attestationJob,
         });
       }
-      const subnet = fast.computeSubnetForAttestation(this.config, attestationTargetState.epochCtx, attestation);
+      const subnet = allForks.computeSubnetForAttestation(this.config, attestationTargetState.epochCtx, attestation);
       await validateGossipAttestation(this.config, this.chain, this.db, attestationJob, subnet);
       await Promise.all([
         this.network.gossip.publishBeaconAttestation(attestation, subnet),
