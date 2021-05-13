@@ -12,9 +12,9 @@ export const getEpochSyncCommittees: ApiController<Query, {stateId: StateId}> = 
   id: "getEpochSyncCommittees",
 
   handler: async function (req) {
-    const committees = await this.api.beacon.state.getEpochSyncCommittees(req.params.stateId, req.query.epoch);
+    const data = await this.api.beacon.state.getEpochSyncCommittees(req.params.stateId, req.query.epoch);
     return {
-      data: committees.map((item) => this.config.types.altair.SyncCommittee.toJson(item, {case: "snake"})),
+      data: this.config.types.altair.SyncCommitteeByValidatorIndices.toJson(data, {case: "snake"}),
     };
   },
 

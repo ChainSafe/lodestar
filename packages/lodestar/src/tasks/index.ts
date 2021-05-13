@@ -113,7 +113,7 @@ export class TasksService {
   };
 
   private onSlot = async (slot: Slot): Promise<void> => {
-    this.db.syncCommitee.prune(slot);
+    this.db.syncCommittee.prune(slot);
     // TODO: Use the head slot
     this.db.syncCommitteeContribution.prune(slot);
   };

@@ -65,7 +65,7 @@ export interface IBeaconDb {
   eth1Data: Eth1DataRepository;
 
   // altair
-  syncCommitee: SyncCommitteeCache;
+  syncCommittee: SyncCommitteeCache;
   syncCommitteeContribution: SyncCommitteeContributionCache;
 
   processBlockOperations(signedBlock: phase0.SignedBeaconBlock): Promise<void>;

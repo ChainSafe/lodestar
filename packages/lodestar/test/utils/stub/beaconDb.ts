@@ -45,7 +45,7 @@ export class StubbedBeaconDb extends BeaconDb {
   eth1Data: SinonStubbedInstance<Eth1DataRepository> & Eth1DataRepository;
 
   seenAttestationCache: SinonStubbedInstance<SeenAttestationCache> & SeenAttestationCache;
-  syncCommitee: SinonStubbedInstance<SyncCommitteeCache> & SyncCommitteeCache;
+  syncCommittee: SinonStubbedInstance<SyncCommitteeCache> & SyncCommitteeCache;
   syncCommitteeContribution: SinonStubbedInstance<SyncCommitteeContributionCache> & SyncCommitteeContributionCache;
 
   processBlockOperations: SinonStubbedInstance<(signedBlock: phase0.SignedBeaconBlock) => Promise<void>> &
@@ -70,7 +70,7 @@ export class StubbedBeaconDb extends BeaconDb {
     this.depositDataRoot = createStubInstance(DepositDataRootRepository);
     this.eth1Data = createStubInstance(Eth1DataRepository);
     this.seenAttestationCache = createStubInstance(SeenAttestationCache);
-    this.syncCommitee = createStubInstance(SyncCommitteeCache);
+    this.syncCommittee = createStubInstance(SyncCommitteeCache);
     this.syncCommitteeContribution = createStubInstance(SyncCommitteeContributionCache);
     this.processBlockOperations = sinon.stub(this, "processBlockOperations") as (
       signedBlock: SignedBeaconBlock

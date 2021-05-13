@@ -16,7 +16,7 @@ import {sleep} from "@chainsafe/lodestar-utils";
 import {waitForEvent} from "../../../utils/events/resolver";
 import {testLogger} from "../../../utils/logger";
 import {getValidPeerId} from "../../../utils/peer";
-import {IAttestationService} from "../../../../src/network/attestationService";
+import {ISubnetsService} from "../../../../src/network/subnetsService";
 
 const logger = testLogger();
 
@@ -60,11 +60,11 @@ describe("network / peers / PeerManager", function () {
     const peerMetadata = new Libp2pPeerMetadataStore(config, libp2p.peerStore.metadataBook);
     const peerRpcScores = new PeerRpcScoreStore(peerMetadata);
     const networkEventBus = new NetworkEventBus();
-    const mockAttService: IAttestationService = {
+    const mockSubnetsService: ISubnetsService = {
       getActiveSubnets: () => [],
-      shouldProcessAttestation: () => true,
+      shouldProcess: () => true,
       // eslint-disable-next-line @typescript-eslint/no-empty-function
-      addBeaconCommitteeSubscriptions: () => {},
+      addCommitteeSubscriptions: () => {},
     };
 
     const peerManager = new PeerManager(
@@ -78,7 +78,8 @@ describe("network / peers / PeerManager", function () {
         peerMetadata,
         peerRpcScores,
         networkEventBus,
-        attService: mockAttService,
+        attnetsService: mockSubnetsService,
+        syncnetsService: mockSubnetsService,
       },
       {targetPeers: 30, maxPeers: 50}
     );

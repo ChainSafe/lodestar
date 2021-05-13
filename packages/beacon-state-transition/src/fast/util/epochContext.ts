@@ -86,6 +86,7 @@ export function createEpochContext(
     nextShuffling,
     currSyncCommitteeIndexes,
     nextSyncCommitteeIndexes,
+    currSyncComitteeValidatorIndexMap: computeSyncComitteeMap(currSyncCommitteeIndexes),
   });
 }
 
@@ -139,6 +140,26 @@ export function computeProposers(
 }
 
 /**
+ * Compute all index in sync committee for all validatorIndexes in `syncCommitteeIndexes`.
+ * Helps reduce work necessary to verify a validatorIndex belongs in a sync committee and which.
+ */
+export function computeSyncComitteeMap(syncCommitteeIndexes: ValidatorIndex[]): SyncComitteeValidatorIndexMap {
+  const map = new Map<ValidatorIndex, number[]>();
+
+  for (let i = 0, len = syncCommitteeIndexes.length; i < len; i++) {
+    const validatorIndex = syncCommitteeIndexes[i];
+    let indexes = map.get(validatorIndex);
+    if (!indexes) {
+      indexes = [];
+      map.set(validatorIndex, indexes);
+    }
+    indexes.push(i);
+  }
+
+  return map;
+}
+
+/**
  * Called to re-use information, such as the shuffling of the next epoch, after transitioning into a
  * new epoch.
  */
@@ -167,6 +188,7 @@ export function rotateEpochs(
     const nextPeriodEpoch = currEpoch + epochCtx.config.params.EPOCHS_PER_SYNC_COMMITTEE_PERIOD;
     epochCtx.currSyncCommitteeIndexes = epochCtx.nextSyncCommitteeIndexes;
     epochCtx.nextSyncCommitteeIndexes = getSyncCommitteeIndices(epochCtx.config, state, nextPeriodEpoch);
+    epochCtx.currSyncComitteeValidatorIndexMap = computeSyncComitteeMap(epochCtx.currSyncCommitteeIndexes);
   }
 
   // If crossing through the altair fork the caches will be empty, fill them up
@@ -174,9 +196,11 @@ export function rotateEpochs(
     const nextPeriodEpoch = currEpoch + epochCtx.config.params.EPOCHS_PER_SYNC_COMMITTEE_PERIOD;
     epochCtx.currSyncCommitteeIndexes = getSyncCommitteeIndices(epochCtx.config, state, currEpoch);
     epochCtx.nextSyncCommitteeIndexes = getSyncCommitteeIndices(epochCtx.config, state, nextPeriodEpoch);
+    epochCtx.currSyncComitteeValidatorIndexMap = computeSyncComitteeMap(epochCtx.currSyncCommitteeIndexes);
   }
 }
 
+type SyncComitteeValidatorIndexMap = Map<ValidatorIndex, number[]>;
 interface IEpochContextData {
   config: IBeaconConfig;
   pubkey2index: PubkeyIndexMap;
@@ -187,6 +211,7 @@ interface IEpochContextData {
   nextShuffling: IEpochShuffling;
   currSyncCommitteeIndexes: ValidatorIndex[];
   nextSyncCommitteeIndexes: ValidatorIndex[];
+  currSyncComitteeValidatorIndexMap: SyncComitteeValidatorIndexMap;
 }
 
 /**
@@ -209,14 +234,20 @@ export class EpochContext {
   currentShuffling: IEpochShuffling;
   nextShuffling: IEpochShuffling;
   /**
-   * Updates every
-   * Memory cost: 1024 Number integers
+   * Update freq: every ~ 27h.
+   * Memory cost: 1024 Number integers.
    */
   currSyncCommitteeIndexes: ValidatorIndex[];
   /**
-   * Memory cost: 1024 Number integers
+   * Update freq: every ~ 27h.
+   * Memory cost: 1024 Number integers.
    */
   nextSyncCommitteeIndexes: ValidatorIndex[];
+  /**
+   * Update freq: every ~ 27h.
+   * Memory cost: Map of Number -> Number with 1024 entries.
+   */
+  currSyncComitteeValidatorIndexMap: SyncComitteeValidatorIndexMap;
   config: IBeaconConfig;
 
   constructor(data: IEpochContextData) {
@@ -229,6 +260,7 @@ export class EpochContext {
     this.nextShuffling = data.nextShuffling;
     this.currSyncCommitteeIndexes = data.currSyncCommitteeIndexes;
     this.nextSyncCommitteeIndexes = data.nextSyncCommitteeIndexes;
+    this.currSyncComitteeValidatorIndexMap = data.currSyncComitteeValidatorIndexMap;
   }
 
   /**

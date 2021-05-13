@@ -1,7 +1,7 @@
 import {
   phase0,
-  allForks,
   altair,
+  allForks,
   BLSPubkey,
   CommitteeIndex,
   Epoch,
@@ -21,7 +21,7 @@ export interface IBeaconStateApi {
     indices?: (BLSPubkey | ValidatorIndex)[]
   ): Promise<phase0.ValidatorBalance[]>;
   getStateCommittees(stateId: StateId, filters?: ICommitteesFilters): Promise<phase0.BeaconCommitteeResponse[]>;
-  getEpochSyncCommittees(stateId: StateId, epoch?: Epoch): Promise<altair.SyncCommittee[]>;
+  getEpochSyncCommittees(stateId: StateId, epoch?: Epoch): Promise<altair.SyncCommitteeByValidatorIndices>;
   getFork(stateId: StateId): Promise<phase0.Fork>;
 }
 

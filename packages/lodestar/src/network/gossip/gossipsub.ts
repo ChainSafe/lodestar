@@ -4,7 +4,7 @@ import {InMessage} from "libp2p-interfaces/src/pubsub";
 import Libp2p from "libp2p";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ATTESTATION_SUBNET_COUNT} from "@chainsafe/lodestar-params";
-import {allForks, phase0} from "@chainsafe/lodestar-types";
+import {allForks, altair, phase0} from "@chainsafe/lodestar-types";
 import {ILogger, toJson} from "@chainsafe/lodestar-utils";
 import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 
@@ -274,6 +274,27 @@ export class Eth2Gossipsub extends Gossipsub {
         fork: this.config.getForkName(attesterSlashing.attestation1.data.slot),
       },
       attesterSlashing
+    );
+  }
+
+  async publishSyncCommitteeSignature(signature: altair.SyncCommitteeSignature, subnet: number): Promise<void> {
+    await this.publishObject(
+      {
+        type: GossipType.sync_committee,
+        fork: this.config.getForkName(signature.slot),
+        subnet,
+      },
+      signature
+    );
+  }
+
+  async publishContributionAndProof(contributionAndProof: altair.SignedContributionAndProof): Promise<void> {
+    await this.publishObject(
+      {
+        type: GossipType.sync_committee_contribution_and_proof,
+        fork: this.config.getForkName(contributionAndProof.message.contribution.slot),
+      },
+      contributionAndProof
     );
   }
 

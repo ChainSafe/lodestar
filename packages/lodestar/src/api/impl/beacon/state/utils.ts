@@ -4,8 +4,10 @@ import {
   FAR_FUTURE_EPOCH,
   CachedBeaconState,
   createCachedBeaconState,
+  computeSyncCommitteePeriod,
+  computeEpochAtSlot,
 } from "@chainsafe/lodestar-beacon-state-transition";
-import {allForks, phase0} from "@chainsafe/lodestar-types";
+import {allForks, altair, phase0} from "@chainsafe/lodestar-types";
 import {phase0 as beaconStateTransitionPhase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {fast} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
@@ -122,34 +124,52 @@ export function toValidatorResponse(
  */
 export function getEpochBeaconCommittees(
   config: IBeaconConfig,
-  chain: IBeaconChain,
   state: allForks.BeaconState | CachedBeaconState<allForks.BeaconState>,
   epoch: Epoch
 ): ValidatorIndex[][][] {
-  let committees: ValidatorIndex[][][] | null = null;
   if ((state as CachedBeaconState<allForks.BeaconState>).epochCtx) {
+    const stateEpoch = computeEpochAtSlot(config, state.slot);
     switch (epoch) {
-      case chain.clock.currentEpoch: {
-        committees = (state as CachedBeaconState<allForks.BeaconState>).currentShuffling.committees;
-        break;
-      }
-      case chain.clock.currentEpoch - 1: {
-        committees = (state as CachedBeaconState<allForks.BeaconState>).previousShuffling.committees;
-        break;
-      }
+      case stateEpoch:
+        return (state as CachedBeaconState<allForks.BeaconState>).currentShuffling.committees;
+      case stateEpoch - 1:
+        return (state as CachedBeaconState<allForks.BeaconState>).previousShuffling.committees;
+      // default: continue to manual computation below
     }
   }
-  if (!committees) {
-    const indicesBounded: [ValidatorIndex, Epoch, Epoch][] = Array.from(readonlyValues(state.validators), (v, i) => [
-      i,
-      v.activationEpoch,
-      v.exitEpoch,
-    ]);
 
-    const shuffling = fast.computeEpochShuffling(config, state, indicesBounded, epoch);
-    committees = shuffling.committees;
+  const indicesBounded: [ValidatorIndex, Epoch, Epoch][] = Array.from(readonlyValues(state.validators), (v, i) => [
+    i,
+    v.activationEpoch,
+    v.exitEpoch,
+  ]);
+  const shuffling = fast.computeEpochShuffling(config, state, indicesBounded, epoch);
+  return shuffling.committees;
+}
+
+/**
+ * Returns committees as an array of validator index
+ */
+export function getSyncCommittees(
+  config: IBeaconConfig,
+  state: allForks.BeaconState | CachedBeaconState<allForks.BeaconState>,
+  epoch: Epoch
+): ValidatorIndex[] {
+  const statePeriod = computeSyncCommitteePeriod(config, computeEpochAtSlot(config, state.slot));
+  const requestPeriod = computeSyncCommitteePeriod(config, epoch);
+
+  if ((state as CachedBeaconState<allForks.BeaconState>).epochCtx) {
+    switch (requestPeriod) {
+      case statePeriod:
+        return (state as CachedBeaconState<altair.BeaconState>).currSyncCommitteeIndexes;
+      case statePeriod + 1:
+        return (state as CachedBeaconState<altair.BeaconState>).nextSyncCommitteeIndexes;
+      default:
+        throw new ApiError(400, "Epoch out of bounds");
+    }
   }
-  return committees;
+
+  throw new ApiError(400, "No CachedBeaconState available");
 }
 
 async function stateByName(
