@@ -5,6 +5,7 @@ import {getPoolVoluntaryExits} from "./getPoolVoluntaryExits";
 import {submitPoolAttestations} from "./submitPoolAttestations";
 import {submitPoolAttesterSlashings} from "./submitPoolAttesterSlashings";
 import {submitPoolProposerSlashings} from "./submitPoolProposerSlashings";
+import {submitPoolSyncCommitteeSignatures} from "./submitPoolSyncCommitteeSignatures";
 import {submitPoolVoluntaryExit} from "./submitPoolVoluntaryExit";
 
 export const beaconPoolRoutes = [
@@ -15,5 +16,6 @@ export const beaconPoolRoutes = [
   submitPoolAttestations,
   submitPoolAttesterSlashings,
   submitPoolProposerSlashings,
+  submitPoolSyncCommitteeSignatures,
   submitPoolVoluntaryExit,
 ];
