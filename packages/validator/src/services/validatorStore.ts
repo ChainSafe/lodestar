@@ -166,8 +166,6 @@ export class ValidatorStore {
     selectionProof: BLSSignature,
     contribution: altair.SyncCommitteeContribution
   ): Promise<altair.SignedContributionAndProof> {
-    this.validateAttestationDuty(duty, aggregate.data);
-
     const contributionAndProof: altair.ContributionAndProof = {
       contribution,
       aggregatorIndex: duty.validatorIndex,
