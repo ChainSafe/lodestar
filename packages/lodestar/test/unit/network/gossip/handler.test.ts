@@ -24,6 +24,7 @@ import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {ISubnetsService} from "../../../../src/network/subnetsService";
 
 describe("gossip handler", function () {
+  const logger = testLogger();
   const attnetsService = {} as ISubnetsService;
   let forkDigestContext: SinonStubbedInstance<ForkDigestContext>;
   let chainStub: SinonStubbedInstance<IBeaconChain>;
@@ -45,7 +46,7 @@ describe("gossip handler", function () {
       config,
       libp2p,
       validatorFns: new Map<string, TopicValidatorFn>(),
-      logger: testLogger(),
+      logger,
       forkDigestContext,
       metrics: null,
     });
@@ -61,7 +62,7 @@ describe("gossip handler", function () {
   });
 
   it("should subscribe/unsubscribe on start/stop", function () {
-    const handler = new GossipHandler(config, chainStub, gossipsub, attnetsService, dbStub, networkStub);
+    const handler = new GossipHandler(config, chainStub, gossipsub, attnetsService, dbStub, logger);
     expect(gossipsub.subscriptions.size).to.equal(0);
     handler.subscribeCoreTopics();
     expect(gossipsub.subscriptions.size).to.equal(5);
@@ -71,7 +72,7 @@ describe("gossip handler", function () {
   });
 
   it("should handle incoming gossip objects", async function () {
-    const handler = new GossipHandler(config, chainStub, gossipsub, attnetsService, dbStub, networkStub);
+    const handler = new GossipHandler(config, chainStub, gossipsub, attnetsService, dbStub, logger);
     handler.subscribeCoreTopics();
     const fork = ForkName.phase0;
     const {
