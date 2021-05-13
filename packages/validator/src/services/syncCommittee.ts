@@ -98,11 +98,9 @@ export class SyncCommitteeService {
     // Produce one attestation data per slot and subcommitteeIndex
     // Spec: the validator should prepare a SyncCommitteeSignature for the previous slot (slot - 1)
     // as soon as they have determined the head block of slot - 1
-    const beaconBlockRoot: Root = await this.apiClient.validator
-      .produceSyncCommitteeData(committeeIndex, slot)
-      .catch((e) => {
-        throw extendError(e, "Error producing SyncCommitteeSignature");
-      });
+    const beaconBlockRoot = await this.apiClient.beacon.blocks.getBlockRoot(slot - 1).catch((e) => {
+      throw extendError(e, "Error producing SyncCommitteeSignature");
+    });
 
     const signatures: altair.SyncCommitteeSignature[] = [];
 

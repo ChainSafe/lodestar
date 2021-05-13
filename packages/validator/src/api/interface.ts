@@ -42,8 +42,8 @@ export interface IApiClient {
       getStateValidators(stateId: StateId, filters?: IValidatorFilters): Promise<phase0.ValidatorResponse[]>;
     };
     blocks: {
+      getBlockRoot(blockId: BlockId): Promise<Root>;
       publishBlock(block: phase0.SignedBeaconBlock): Promise<void>;
-      getBlockHeader(blockId: BlockId): Promise<phase0.SignedBeaconBlockHeader>;
     };
     pool: {
       submitAttestations(attestation: phase0.Attestation[]): Promise<void>;

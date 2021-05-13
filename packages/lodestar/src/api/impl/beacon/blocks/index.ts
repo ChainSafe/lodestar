@@ -9,6 +9,7 @@ import {BlockId, IBeaconBlocksApi} from "./interface";
 import {resolveBlockId, toBeaconHeaderResponse} from "./utils";
 import {IBeaconSync} from "../../../../sync";
 import {INetwork} from "../../../../network/interface";
+import {getBlockType} from "../../../../util/multifork";
 
 export * from "./interface";
 
@@ -105,6 +106,21 @@ export class BeaconBlockApi implements IBeaconBlocksApi {
 
   async getBlock(blockId: BlockId): Promise<allForks.SignedBeaconBlock> {
     return await resolveBlockId(this.chain.forkChoice, this.db, blockId);
+  }
+
+  async getBlockRoot(blockId: BlockId): Promise<Root> {
+    // Fast path: From head state already available in memory get historical blockRoot
+    const slot = parseInt(blockId);
+    if (!Number.isNaN(slot)) {
+      const state = this.chain.getHeadState();
+      if (slot < state.slot && state.slot <= slot + this.config.params.SLOTS_PER_HISTORICAL_ROOT) {
+        return state.blockRoots[slot % this.config.params.SLOTS_PER_HISTORICAL_ROOT];
+      }
+    }
+
+    // Slow path
+    const block = await resolveBlockId(this.chain.forkChoice, this.db, blockId);
+    return getBlockType(this.config, block.message).hashTreeRoot(block.message);
   }
 
   async publishBlock(signedBlock: phase0.SignedBeaconBlock): Promise<void> {
