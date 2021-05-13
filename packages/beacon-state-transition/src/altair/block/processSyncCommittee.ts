@@ -3,12 +3,10 @@ import {altair} from "@chainsafe/lodestar-types";
 import {assert} from "@chainsafe/lodestar-utils";
 
 import {
-  computeEpochAtSlot,
   computeSigningRoot,
   getActiveValidatorIndices,
   getBlockRootAtSlot,
   getCurrentEpoch,
-  getDomain,
   getBeaconProposerIndex,
   increaseBalance,
 } from "../../util";
@@ -29,12 +27,7 @@ export function processSyncCommittee(
   const participantIndices = committeeIndices.filter((index) => !!aggregate.syncCommitteeBits[index]);
   const committeePubkeys = Array.from(state.currentSyncCommittee.pubkeys);
   const participantPubkeys = committeePubkeys.filter((pubkey, index) => !!aggregate.syncCommitteeBits[index]);
-  const domain = getDomain(
-    config,
-    state,
-    config.params.DOMAIN_SYNC_COMMITTEE,
-    computeEpochAtSlot(config, previousSlot)
-  );
+  const domain = state.getDomain(config.params.DOMAIN_SYNC_COMMITTEE, previousSlot);
   const signingRoot = computeSigningRoot(
     config,
     config.types.Root,

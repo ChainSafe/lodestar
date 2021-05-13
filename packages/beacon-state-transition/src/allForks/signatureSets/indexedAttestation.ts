@@ -1,6 +1,12 @@
 import {allForks, phase0} from "@chainsafe/lodestar-types";
 import {readonlyValues} from "@chainsafe/ssz";
-import {computeSigningRoot, getDomain, ISignatureSet, SignatureSetType, verifySignatureSet} from "../../util";
+import {
+  computeSigningRoot,
+  computeStartSlotAtEpoch,
+  ISignatureSet,
+  SignatureSetType,
+  verifySignatureSet,
+} from "../../util";
 import {CachedBeaconState} from "../util";
 
 export function verifyIndexedAttestationSignature(
@@ -17,7 +23,8 @@ export function getIndexedAttestationSignatureSet(
   indices?: number[]
 ): ISignatureSet {
   const {config, epochCtx} = state;
-  const domain = getDomain(config, state, config.params.DOMAIN_BEACON_ATTESTER, indexedAttestation.data.target.epoch);
+  const checkpointSlot = computeStartSlotAtEpoch(config, indexedAttestation.data.target.epoch);
+  const domain = state.getDomain(config.params.DOMAIN_BEACON_ATTESTER, checkpointSlot);
 
   if (!indices) indices = Array.from(readonlyValues(indexedAttestation.attestingIndices));
   return {

@@ -1,12 +1,5 @@
 import {allForks} from "@chainsafe/lodestar-types";
-import {
-  computeEpochAtSlot,
-  computeSigningRoot,
-  getDomain,
-  ISignatureSet,
-  SignatureSetType,
-  verifySignatureSet,
-} from "../../util";
+import {computeEpochAtSlot, computeSigningRoot, ISignatureSet, SignatureSetType, verifySignatureSet} from "../../util";
 import {CachedBeaconState} from "../util";
 
 export function verifyRandaoSignature(
@@ -26,7 +19,7 @@ export function getRandaoRevealSignatureSet(
   const {config, epochCtx} = state;
   // should not get epoch from epochCtx
   const epoch = computeEpochAtSlot(config, block.slot);
-  const domain = getDomain(config, state, config.params.DOMAIN_RANDAO);
+  const domain = state.getDomain(config.params.DOMAIN_RANDAO);
 
   return {
     type: SignatureSetType.single,

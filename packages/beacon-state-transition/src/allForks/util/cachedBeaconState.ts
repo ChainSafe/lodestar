@@ -10,7 +10,7 @@ import {
   readonlyValues,
   TreeBacked,
 } from "@chainsafe/ssz";
-import {allForks, altair, ParticipationFlags} from "@chainsafe/lodestar-types";
+import {allForks, altair, DomainType, ParticipationFlags, phase0} from "@chainsafe/lodestar-types";
 import {ForkName, IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Tree} from "@chainsafe/persistent-merkle-tree";
 import {MutableVector} from "@chainsafe/persistent-ts";
@@ -24,6 +24,7 @@ import {
   fromParticipationFlags,
   IParticipationStatus,
 } from "./cachedEpochParticipation";
+import {computeDomain} from "../../util";
 
 /**
  * `BeaconState` with various caches
@@ -192,6 +193,28 @@ export class BeaconStateContext<T extends allForks.BeaconState> {
     this.balances.persistent.asPersistent();
     this.previousEpochParticipation.persistent.asPersistent();
   }
+
+  /**
+   * Get domain from cache.
+   * domainType should always come from the config.
+   */
+  getDomain(domainType: DomainType, slot: phase0.Slot | null = null): Buffer {
+    const state = this.type.createTreeBacked(this.tree);
+    slot = slot || state.slot;
+    const forkName = this.config.getForkName(slot);
+    let domainByType = domainCache.get(forkName);
+    if (!domainByType) {
+      domainByType = new Map<DomainType, Buffer>();
+      domainCache.set(forkName, domainByType);
+    }
+    let domain = domainByType.get(domainType);
+    if (!domain) {
+      const forkVersion = this.config.getForkVersion(slot);
+      domain = computeDomain(this.config, domainType, forkVersion, state.genesisValidatorsRoot);
+      domainByType.set(domainType, domain);
+    }
+    return domain;
+  }
 }
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
@@ -253,3 +276,6 @@ export const CachedBeaconStateProxyHandler: ProxyHandler<CachedBeaconState<allFo
     return false;
   },
 };
+
+/** Domain cache, share across beacon states */
+const domainCache = new Map<ForkName, Map<DomainType, Buffer>>();

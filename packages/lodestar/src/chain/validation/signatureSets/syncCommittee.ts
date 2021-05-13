@@ -1,9 +1,7 @@
 import {allForks, altair} from "@chainsafe/lodestar-types";
 import {
   CachedBeaconState,
-  computeEpochAtSlot,
   computeSigningRoot,
-  getDomain,
   ISignatureSet,
   SignatureSetType,
 } from "@chainsafe/lodestar-beacon-state-transition";
@@ -13,8 +11,7 @@ export function getSyncCommitteeSignatureSet(
   syncCommittee: altair.SyncCommitteeSignature
 ): ISignatureSet {
   const {config} = state;
-  const msgEpoch = computeEpochAtSlot(config, syncCommittee.slot);
-  const domain = getDomain(config, state, config.params.DOMAIN_SYNC_COMMITTEE, msgEpoch);
+  const domain = state.getDomain(config.params.DOMAIN_SYNC_COMMITTEE, syncCommittee.slot);
 
   return {
     type: SignatureSetType.single,
