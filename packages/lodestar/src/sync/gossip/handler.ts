@@ -116,12 +116,11 @@ export class BeaconGossipHandler {
     subnet: number,
     signature: altair.SyncCommitteeSignature
   ): Promise<void> => {
-    // TODO: Review if we need to check shouldProcessAttestation() like with onAttestation
-    if (this.network.syncnetsService.shouldProcess(subnet, signature.slot)) {
-      // TODO: Do this much better to be able to access this property in the handler
-      const indexInSubCommittee = (signature as SyncCommitteeSignatureIndexed).indexInSubCommittee;
-      this.db.syncCommittee.add(subnet, signature, indexInSubCommittee);
-    }
+    // Note: not calling checking `syncnetsService.shouldProcess()` here since the validators will always aggregate
+
+    // TODO: Do this much better to be able to access this property in the handler
+    const indexInSubCommittee = (signature as SyncCommitteeSignatureIndexed).indexInSubCommittee;
+    this.db.syncCommittee.add(subnet, signature, indexInSubCommittee);
   };
 
   private subscribeAtFork = (fork: ForkName): void => {
