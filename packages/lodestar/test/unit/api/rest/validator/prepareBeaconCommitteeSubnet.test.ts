@@ -1,7 +1,6 @@
 import {expect} from "chai";
 import supertest from "supertest";
-import {urlJoin} from "../utils";
-import {setupRestApiTestServer, VALIDATOR_PREFIX} from "../index.test";
+import {setupRestApiTestServer} from "../index.test";
 import {prepareBeaconCommitteeSubnet} from "../../../../../src/api/rest/validator/prepareBeaconCommitteeSubnet";
 import {SinonStubbedInstance} from "sinon";
 import {RestApi, ValidatorApi} from "../../../../../src/api";
@@ -18,7 +17,7 @@ describe("rest - validator - prepareBeaconCommitteeSubnet", function () {
   it("should succeed", async function () {
     validatorStub.prepareBeaconCommitteeSubnet.resolves();
     await supertest(restApi.server.server)
-      .post(urlJoin(VALIDATOR_PREFIX, prepareBeaconCommitteeSubnet.url))
+      .post(prepareBeaconCommitteeSubnet.url)
       .send([
         {
           // eslint-disable-next-line @typescript-eslint/naming-convention
@@ -48,7 +47,7 @@ describe("rest - validator - prepareBeaconCommitteeSubnet", function () {
 
   it("missing param", async function () {
     await supertest(restApi.server.server)
-      .post(urlJoin(VALIDATOR_PREFIX, prepareBeaconCommitteeSubnet.url))
+      .post(prepareBeaconCommitteeSubnet.url)
       .send([
         {
           slot: 0,

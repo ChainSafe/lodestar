@@ -7,6 +7,7 @@ import {StubbedApi} from "../../../../utils/stub/api";
 import {testLogger} from "../../../../utils/logger";
 import {SinonStubbedInstance} from "sinon";
 import {DebugBeaconApi} from "../../../../../src/api/impl/debug/beacon";
+import {getState} from "../../../../../src/api/rest/debug/getStates";
 import {generateState} from "../../../../utils/state";
 import {ApiResponseBody} from "../utils";
 
@@ -37,7 +38,7 @@ describe("rest - debug - getState", function () {
   it("should get state json successfully", async function () {
     debugBeaconStub.getState.resolves(generateState());
     const response = await supertest(restApi.server.server)
-      .get("/eth/v1/debug/beacon/states/0xSomething")
+      .get(getState.url)
       .expect(200)
       .expect("Content-Type", "application/json; charset=utf-8");
     expect((response.body as ApiResponseBody).data).to.not.be.undefined;
@@ -47,7 +48,7 @@ describe("rest - debug - getState", function () {
     const state = generateState();
     debugBeaconStub.getState.resolves(state);
     const response = await supertest(restApi.server.server)
-      .get("/eth/v1/debug/beacon/states/0xSomething")
+      .get(getState.url)
       .accept("application/octet-stream")
       .expect(200)
       .expect("Content-Type", "application/octet-stream");

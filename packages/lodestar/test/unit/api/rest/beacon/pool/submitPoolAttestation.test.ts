@@ -1,8 +1,7 @@
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {expect} from "chai";
 import supertest from "supertest";
-import {urlJoin} from "../../utils";
-import {BEACON_PREFIX, setupRestApiTestServer} from "../../index.test";
+import {setupRestApiTestServer} from "../../index.test";
 import {generateAttestation} from "../../../../../utils/attestation";
 import {submitPoolAttestations} from "../../../../../../src/api/rest/beacon/pool/submitPoolAttestations";
 import {Attestation} from "@chainsafe/lodestar-types/phase0";
@@ -26,7 +25,7 @@ describe("rest - beacon - submitPoolAttestations", function () {
 
   it("should succeed", async function () {
     await supertest(restApi.server.server)
-      .post(urlJoin(BEACON_PREFIX, submitPoolAttestations.url))
+      .post(submitPoolAttestations.url)
       .send([config.types.phase0.Attestation.toJson(attestation, {case: "snake"}) as Record<string, unknown>])
       .expect(200);
     expect(beaconPoolStub.submitAttestations.calledOnce).to.be.true;
@@ -34,7 +33,7 @@ describe("rest - beacon - submitPoolAttestations", function () {
 
   it("should fail to parse body", async function () {
     await supertest(restApi.server.server)
-      .post(urlJoin(BEACON_PREFIX, submitPoolAttestations.url))
+      .post(submitPoolAttestations.url)
       .send([config.types.phase0.Attestation.toJson(attestation, {case: "camel"}) as Record<string, unknown>])
       .expect(400)
       .expect("Content-Type", "application/json; charset=utf-8");

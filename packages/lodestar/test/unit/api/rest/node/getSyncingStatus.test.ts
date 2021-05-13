@@ -2,8 +2,8 @@ import {expect} from "chai";
 import supertest from "supertest";
 
 import {getSyncingStatus} from "../../../../../src/api/rest/node/getSyncingStatus";
-import {ApiResponseBody, urlJoin} from "../utils";
-import {NODE_PREFIX, setupRestApiTestServer} from "../index.test";
+import {ApiResponseBody} from "../utils";
+import {setupRestApiTestServer} from "../index.test";
 import {StubbedNodeApi} from "../../../../utils/stub/nodeApi";
 
 describe("rest - node - getSyncingStatus", function () {
@@ -16,7 +16,7 @@ describe("rest - node - getSyncingStatus", function () {
       syncDistance: BigInt(2),
     });
     const response = await supertest(restApi.server.server)
-      .get(urlJoin(NODE_PREFIX, getSyncingStatus.url))
+      .get(getSyncingStatus.url)
       .expect(200)
       .expect("Content-Type", "application/json; charset=utf-8");
     expect((response.body as ApiResponseBody).data).to.not.be.undefined;

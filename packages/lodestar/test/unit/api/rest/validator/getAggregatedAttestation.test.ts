@@ -4,8 +4,8 @@ import {expect} from "chai";
 import supertest from "supertest";
 import {getAggregatedAttestation} from "../../../../../src/api/rest/validator/getAggregatedAttestation";
 import {generateEmptyAttestation} from "../../../../utils/attestation";
-import {ApiResponseBody, urlJoin} from "../utils";
-import {setupRestApiTestServer, VALIDATOR_PREFIX} from "../index.test";
+import {ApiResponseBody} from "../utils";
+import {setupRestApiTestServer} from "../index.test";
 import {SinonStubbedInstance} from "sinon";
 import {RestApi, ValidatorApi} from "../../../../../src/api";
 
@@ -22,7 +22,7 @@ describe("rest - validator - getAggregatedAttestation", function () {
     const root = config.types.Root.defaultValue();
     validatorStub.getAggregatedAttestation.resolves(generateEmptyAttestation());
     const response = await supertest(restApi.server.server)
-      .get(urlJoin(VALIDATOR_PREFIX, getAggregatedAttestation.url))
+      .get(getAggregatedAttestation.url)
       .query({
         // eslint-disable-next-line @typescript-eslint/naming-convention
         attestation_data_root: toHexString(root),
@@ -37,7 +37,7 @@ describe("rest - validator - getAggregatedAttestation", function () {
   it("missing param", async function () {
     validatorStub.getAggregatedAttestation.resolves();
     await supertest(restApi.server.server)
-      .get(urlJoin(VALIDATOR_PREFIX, getAggregatedAttestation.url))
+      .get(getAggregatedAttestation.url)
       .query({
         slot: 0,
       })

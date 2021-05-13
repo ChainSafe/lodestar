@@ -3,8 +3,8 @@ import supertest from "supertest";
 import {StateNotFound} from "../../../../../../src/api/impl/errors";
 import {getStateValidators} from "../../../../../../src/api/rest/beacon/state/getStateValidators";
 import {generateValidator} from "../../../../../utils/validator";
-import {ApiResponseBody, urlJoin} from "../../utils";
-import {BEACON_PREFIX, setupRestApiTestServer} from "../../index.test";
+import {ApiResponseBody} from "../../utils";
+import {setupRestApiTestServer} from "../../index.test";
 import {phase0} from "@chainsafe/lodestar-types";
 import {SinonStubbedInstance} from "sinon";
 import {RestApi} from "../../../../../../src/api";
@@ -29,7 +29,7 @@ describe("rest - beacon - getStateValidators", function () {
       },
     ]);
     const response = await supertest(restApi.server.server)
-      .get(urlJoin(BEACON_PREFIX, getStateValidators.url.replace(":stateId", "head")))
+      .get(getStateValidators.url.replace(":stateId", "head"))
       .expect(200)
       .expect("Content-Type", "application/json; charset=utf-8");
     expect((response.body as ApiResponseBody).data).to.not.be.undefined;
@@ -38,9 +38,7 @@ describe("rest - beacon - getStateValidators", function () {
 
   it("should not found state", async function () {
     beaconStateStub.getStateValidators.withArgs("4").throws(new StateNotFound());
-    await supertest(restApi.server.server)
-      .get(urlJoin(BEACON_PREFIX, getStateValidators.url.replace(":stateId", "4")))
-      .expect(404);
+    await supertest(restApi.server.server).get(getStateValidators.url.replace(":stateId", "4")).expect(404);
     expect(beaconStateStub.getStateValidators.calledOnce).to.be.true;
   });
 });

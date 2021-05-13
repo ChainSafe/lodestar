@@ -2,6 +2,7 @@ import EventSource from "eventsource";
 import {URL} from "url";
 import {BeaconEvent, BeaconEventType} from "../../../../../src/api/impl/events";
 import {RestApi} from "../../../../../src/api/rest";
+import {getEventStream} from "../../../../../src/api/rest/events/getEventStream";
 import {generateAttestation} from "../../../../utils/attestation";
 import {expect} from "chai";
 import {AddressInfo} from "net";
@@ -47,7 +48,7 @@ describe("rest - events - getEventStream", function () {
   function getEventStreamUrl(topics: BeaconEventType[], restApi: RestApi): string {
     const addressInfo = restApi.server.server.address() as AddressInfo;
     return new URL(
-      "/eth/v1/events?" + topics.map((t) => "topics=" + t).join("&"),
+      getEventStream.url + "?" + topics.map((t) => "topics=" + t).join("&"),
       "http://" + addressInfo.address + ":" + addressInfo.port
     ).toString();
   }

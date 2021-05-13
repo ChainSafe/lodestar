@@ -5,8 +5,8 @@ import supertest from "supertest";
 import {StateNotFound} from "../../../../../../src/api/impl/errors";
 import {getStateValidator} from "../../../../../../src/api/rest/beacon/state/getStateValidator";
 import {generateValidator} from "../../../../../utils/validator";
-import {ApiResponseBody, urlJoin} from "../../utils";
-import {BEACON_PREFIX, setupRestApiTestServer} from "../../index.test";
+import {ApiResponseBody} from "../../utils";
+import {setupRestApiTestServer} from "../../index.test";
 import {phase0} from "@chainsafe/lodestar-types";
 import {BeaconStateApi} from "../../../../../../src/api/impl/beacon/state";
 import {SinonStubbedInstance} from "sinon";
@@ -30,7 +30,7 @@ describe("rest - beacon - getStateValidator", function () {
       validator: generateValidator(),
     });
     const response = await supertest(restApi.server.server)
-      .get(urlJoin(BEACON_PREFIX, getStateValidator.url.replace(":stateId", "head").replace(":validatorId", pubkey)))
+      .get(getStateValidator.url.replace(":stateId", "head").replace(":validatorId", pubkey))
       .expect(200)
       .expect("Content-Type", "application/json; charset=utf-8");
     expect((response.body as ApiResponseBody).data).to.not.be.undefined;
@@ -46,7 +46,7 @@ describe("rest - beacon - getStateValidator", function () {
       validator: generateValidator(),
     });
     const response = await supertest(restApi.server.server)
-      .get(urlJoin(BEACON_PREFIX, getStateValidator.url.replace(":stateId", "head").replace(":validatorId", "1")))
+      .get(getStateValidator.url.replace(":stateId", "head").replace(":validatorId", "1"))
       .expect(200)
       .expect("Content-Type", "application/json; charset=utf-8");
     expect((response.body as ApiResponseBody).data).to.not.be.undefined;
@@ -57,7 +57,7 @@ describe("rest - beacon - getStateValidator", function () {
   it("should not found state", async function () {
     beaconStateStub.getStateValidator.withArgs("4", 1).throws(new StateNotFound());
     await supertest(restApi.server.server)
-      .get(urlJoin(BEACON_PREFIX, getStateValidator.url.replace(":stateId", "4").replace(":validatorId", "1")))
+      .get(getStateValidator.url.replace(":stateId", "4").replace(":validatorId", "1"))
       .expect(404);
     expect(beaconStateStub.getStateValidator.calledOnce).to.be.true;
   });

@@ -3,6 +3,7 @@ import supertest from "supertest";
 import {ZERO_HASH} from "@chainsafe/lodestar-beacon-state-transition";
 import {SinonStubbedInstance} from "sinon";
 import {DebugBeaconApi} from "../../../../../src/api/impl/debug/beacon";
+import {getDebugChainHeads} from "../../../../../src/api/rest/debug/getDebugChainHeads";
 import {RestApi} from "../../../../../src/api";
 import {setupRestApiTestServer} from "../index.test";
 import {ApiResponseBody} from "../utils";
@@ -19,7 +20,7 @@ describe("rest - debug - getDebugChainHeads", function () {
   it("should succeed", async function () {
     debugBeaconStub.getHeads.resolves([{slot: 100, root: ZERO_HASH}]);
     const response = await supertest(restApi.server.server)
-      .get("/eth/v1/debug/beacon/heads")
+      .get(getDebugChainHeads.url)
       .expect(200)
       .expect("Content-Type", "application/json; charset=utf-8");
     expect((response.body as ApiResponseBody).data).to.not.be.undefined;
