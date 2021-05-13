@@ -28,8 +28,10 @@ async function initAndVerifyWeakSujectivityState(
     stateRoot: string;
     ipfsPath: string;
   },
-  initFunc: (pathOrUrl: string) => Promise<TreeBacked<allForks.BeaconState>>
+  initFunc: (pathOrUrl: string) => Promise<TreeBacked<allForks.BeaconState>>,
+  logger: ILogger
 ): Promise<TreeBacked<allForks.BeaconState>> {
+  logger.info("Fetching weak subjectivity state from IPFS...");
   const state = await initFunc(args.ipfsGatewayUrl + weakSubjectivityState.ipfsPath);
   if (!state) {
     throw new Error("Weak subjectivity state not found for network " + args.network);
@@ -70,11 +72,11 @@ export async function initBeaconState(
     return await initStateFromDb(config, db, logger);
   } else if (args.fetchWeakSubjectivityStateFromIPFS) {
     if (args.network === "mainnet") {
-      return await initAndVerifyWeakSujectivityState(args, mainnetWeakSubjectivityState, initFromFile);
+      return await initAndVerifyWeakSujectivityState(args, mainnetWeakSubjectivityState, initFromFile, logger);
     } else if (args.network === "prater") {
-      return await initAndVerifyWeakSujectivityState(args, praterWeakSubjectivityState, initFromFile);
+      return await initAndVerifyWeakSujectivityState(args, praterWeakSubjectivityState, initFromFile, logger);
     } else if (args.network === "pyrmont") {
-      return await initAndVerifyWeakSujectivityState(args, pyrmontWeakSubjectivityState, initFromFile);
+      return await initAndVerifyWeakSujectivityState(args, pyrmontWeakSubjectivityState, initFromFile, logger);
     } else {
       throw new Error("No matching network with weak subjectivity state.");
     }
