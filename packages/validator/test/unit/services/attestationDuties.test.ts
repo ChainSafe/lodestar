@@ -86,7 +86,7 @@ describe("AttestationDutiesService", function () {
       "Wrong dutiesService.attesters Map"
     );
 
-    expect(dutiesService.getAttestersAtSlot(slot)).to.deep.equal(
+    expect(dutiesService.getDutiesAtSlot(slot)).to.deep.equal(
       [{duty, selectionProof: null}],
       "Wrong getAttestersAtSlot()"
     );

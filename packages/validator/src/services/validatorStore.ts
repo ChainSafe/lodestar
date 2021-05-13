@@ -1,8 +1,8 @@
 import {SecretKey} from "@chainsafe/bls";
 import {computeDomain, computeEpochAtSlot, computeSigningRoot} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {BLSPubkey, BLSSignature, DomainType, Epoch, phase0, Root, Slot} from "@chainsafe/lodestar-types";
-import {Genesis} from "@chainsafe/lodestar-types/phase0";
+import {altair, BLSPubkey, BLSSignature, DomainType, Epoch, phase0, Root, Slot} from "@chainsafe/lodestar-types";
+import {Genesis, ValidatorIndex} from "@chainsafe/lodestar-types/phase0";
 import {List, toHexString} from "@chainsafe/ssz";
 import {ISlashingProtection} from "../slashingProtection";
 import {BLSKeypair, PubkeyHex} from "../types";
@@ -31,6 +31,11 @@ export class ValidatorStore {
     this.validators = mapSecretKeysToValidators(secretKeys);
     this.slashingProtection = slashingProtection;
     this.genesisValidatorsRoot = genesis.genesisValidatorsRoot;
+  }
+
+  /** Return true if there is at least 1 pubkey registered */
+  hasSomeValidators(): boolean {
+    return this.validators.size > 0;
   }
 
   votingPubkeys(): BLSPubkey[] {
@@ -136,6 +141,56 @@ export class ValidatorStore {
     };
   }
 
+  async signSyncCommitteeSignature(
+    pubkey: BLSPubkey,
+    validatorIndex: ValidatorIndex,
+    slot: Slot,
+    beaconBlockRoot: Root
+  ): Promise<altair.SyncCommitteeSignature> {
+    const domain = await this.getDomain(
+      this.config.params.DOMAIN_SYNC_COMMITTEE,
+      computeEpochAtSlot(this.config, slot)
+    );
+    const signingRoot = computeSigningRoot(this.config, this.config.types.Root, beaconBlockRoot, domain);
+
+    return {
+      slot,
+      validatorIndex,
+      beaconBlockRoot,
+      signature: this.getSecretKey(pubkey).sign(signingRoot).toBytes(),
+    };
+  }
+
+  async signContributionAndProof(
+    duty: altair.SyncDuty,
+    selectionProof: BLSSignature,
+    contribution: altair.SyncCommitteeContribution
+  ): Promise<altair.SignedContributionAndProof> {
+    this.validateAttestationDuty(duty, aggregate.data);
+
+    const contributionAndProof: altair.ContributionAndProof = {
+      contribution,
+      aggregatorIndex: duty.validatorIndex,
+      selectionProof,
+    };
+
+    const domain = await this.getDomain(
+      this.config.params.DOMAIN_CONTRIBUTION_AND_PROOF,
+      computeEpochAtSlot(this.config, contribution.slot)
+    );
+    const signingRoot = computeSigningRoot(
+      this.config,
+      this.config.types.altair.ContributionAndProof,
+      contributionAndProof,
+      domain
+    );
+
+    return {
+      message: contributionAndProof,
+      signature: this.getSecretKey(duty.pubkey).sign(signingRoot).toBytes(),
+    };
+  }
+
   async signSelectionProof(pubkey: BLSPubkey, slot: Slot): Promise<BLSSignature> {
     const domain = await this.getDomain(
       this.config.params.DOMAIN_SELECTION_PROOF,
@@ -153,6 +208,7 @@ export class ValidatorStore {
   }
 
   private getSecretKey(pubkey: BLSPubkey): SecretKey {
+    // TODO: Refactor indexing to not have to run toHexString() on the pubkey every time
     const pubkeyHex = toHexString(pubkey);
     const validator = this.validators.get(pubkeyHex);
 

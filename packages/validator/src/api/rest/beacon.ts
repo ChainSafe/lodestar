@@ -2,7 +2,7 @@ import {ForkName, IBeaconConfig} from "@chainsafe/lodestar-config";
 import {allForks, altair, BLSPubkey, phase0, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {ContainerType, Json, toHexString} from "@chainsafe/ssz";
 import {HttpClient, IValidatorFilters} from "../../util";
-import {IApiClient} from "../interface";
+import {BlockId, IApiClient} from "../interface";
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
 export function BeaconApi(config: IBeaconConfig, client: HttpClient): IApiClient["beacon"] {
@@ -32,6 +32,11 @@ export function BeaconApi(config: IBeaconConfig, client: HttpClient): IApiClient
     blocks: {
       async publishBlock(block: allForks.SignedBeaconBlock): Promise<void> {
         await client.post("/eth/v1/beacon/blocks", getSignedBlockType(config, block).toJson(block, {case: "snake"}));
+      },
+
+      async getBlockHeader(blockId: BlockId): Promise<phase0.SignedBeaconBlockHeader> {
+        const res = await client.get<{data: Json}>(`/eth/v1/beacon/headers/${blockId}`);
+        return config.types.phase0.SignedBeaconBlockHeader.fromJson(res.data, {case: "snake"});
       },
     },
 

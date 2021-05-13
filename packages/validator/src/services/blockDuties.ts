@@ -19,10 +19,6 @@ type BlockDutyAtEpoch = {dependentRoot: Root; data: phase0.ProposerDuty[]};
 type NotifyBlockProductionFn = (slot: Slot, proposers: BLSPubkey[]) => void;
 
 export class BlockDutiesService {
-  private readonly config: IBeaconConfig;
-  private readonly logger: ILogger;
-  private readonly apiClient: IApiClient;
-  private readonly validatorStore: ValidatorStore;
   /** Notify the block service if it should produce a block. */
   private readonly notifyBlockProductionFn: NotifyBlockProductionFn;
   /** Maps an epoch to all *local* proposers in this epoch. Notably, this does not contain
@@ -30,11 +26,11 @@ export class BlockDutiesService {
   private readonly proposers = new Map<Epoch, BlockDutyAtEpoch>();
 
   constructor(
-    config: IBeaconConfig,
-    logger: ILogger,
-    apiClient: IApiClient,
-    clock: IClock,
-    validatorStore: ValidatorStore,
+    private readonly config: IBeaconConfig,
+    private readonly logger: ILogger,
+    private readonly apiClient: IApiClient,
+    private readonly clock: IClock,
+    private readonly validatorStore: ValidatorStore,
     notifyBlockProductionFn: NotifyBlockProductionFn
   ) {
     this.config = config;
@@ -141,17 +137,16 @@ export class BlockDutiesService {
   }
 
   private async pollBeaconProposers(epoch: Epoch): Promise<void> {
-    const localPubkeys = this.validatorStore.votingPubkeys();
-
     // Only download duties and push out additional block production events if we have some
     // validators.
-    if (localPubkeys.length > 0) {
+    if (this.validatorStore.hasSomeValidators()) {
       const proposerDuties = await this.apiClient.validator.getProposerDuties(epoch).catch((e) => {
         throw extendError(e, "Error on getProposerDuties");
       });
       const dependentRoot = proposerDuties.dependentRoot;
-      const pubkeysSet = new Set(localPubkeys.map((pk) => toHexString(pk)));
-      const relevantDuties = proposerDuties.data.filter((duty) => pubkeysSet.has(toHexString(duty.pubkey)));
+      const relevantDuties = proposerDuties.data.filter((duty) =>
+        this.validatorStore.hasVotingPubkey(toHexString(duty.pubkey))
+      );
 
       this.logger.debug("Downloaded proposer duties", {
         epoch,

@@ -8,7 +8,7 @@ import {
   generateEmptySignedAggregateAndProof,
 } from "@chainsafe/lodestar/test/utils/attestation";
 import {AttestationService} from "../../../src/services/attestation";
-import {DutyAndProof} from "../../../src/services/attestationDuties";
+import {AttDutyAndProof} from "../../../src/services/attestationDuties";
 import {ValidatorStore} from "../../../src/services/validatorStore";
 import {ApiClientStub} from "../../utils/apiStub";
 import {testLogger} from "../../utils/logger";
@@ -46,7 +46,7 @@ describe("AttestationService", function () {
 
     const attestation = generateEmptyAttestation();
     const aggregate = generateEmptySignedAggregateAndProof();
-    const duties: DutyAndProof[] = [
+    const duties: AttDutyAndProof[] = [
       {
         duty: {
           slot: 0,
@@ -66,7 +66,7 @@ describe("AttestationService", function () {
     apiClient.validator.getAttesterDuties.resolves({dependentRoot: ZERO_HASH, data: []});
 
     // Mock duties service to return some duties directly
-    attestationService["dutiesService"].getAttestersAtSlot = sinon.stub().returns(duties);
+    attestationService["dutiesService"].getDutiesAtSlot = sinon.stub().returns(duties);
 
     // Mock beacon's attestation and aggregates endpoints
 

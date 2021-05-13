@@ -9,6 +9,7 @@ import {
   proposerShufflingDecisionRoot,
   attesterShufflingDecisionRoot,
   computeSubnetForCommitteesAtSlot,
+  computeSyncPeriodAtSlot,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {GENESIS_SLOT, SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
@@ -230,7 +231,8 @@ export class ValidatorApi implements IValidatorApi {
     await this.waitForNextClosestEpoch();
 
     // TODO: Get state at `epoch`
-    const state = await this.chain.getHeadStateAtCurrentEpoch();
+    const state = this.chain.getHeadState();
+    const currentStatePeriod = computeSyncPeriodAtSlot(this.config, state.slot);
     // TODO: ensures `epoch // EPOCHS_PER_SYNC_COMMITTEE_PERIOD <= current_epoch // EPOCHS_PER_SYNC_COMMITTEE_PERIOD + 1`
     // const syncCommittee = getSyncCommittees(this.config, state, epoch);
 

@@ -14,6 +14,7 @@ import {IStoppableEventIterable} from "@chainsafe/lodestar-utils";
 import {IValidatorFilters} from "../util";
 
 export type StateId = "head";
+export type BlockId = "head" | Slot;
 
 export enum BeaconEventType {
   BLOCK = "block",
@@ -42,6 +43,7 @@ export interface IApiClient {
     };
     blocks: {
       publishBlock(block: phase0.SignedBeaconBlock): Promise<void>;
+      getBlockHeader(blockId: BlockId): Promise<phase0.SignedBeaconBlockHeader>;
     };
     pool: {
       submitAttestations(attestation: phase0.Attestation[]): Promise<void>;
