@@ -16,7 +16,11 @@ import {downloadOrLoadFile} from "../../util";
 import {IBeaconArgs} from "./options";
 import {defaultNetwork, IGlobalArgs} from "../../options/globalOptions";
 import {getGenesisFileUrl} from "../../networks";
-import {praterWeakSubjectivityState, mainnetWeakSubjectivityState} from "../weakSubjectivityState";
+import {
+  mainnetWeakSubjectivityState,
+  praterWeakSubjectivityState,
+  pyrmontWeakSubjectivityState,
+} from "../weakSubjectivityState";
 
 async function initAndVerifyWeakSujectivityState(
   args: IBeaconArgs & IGlobalArgs,
@@ -65,10 +69,12 @@ export async function initBeaconState(
   } else if (dbHasSomeState) {
     return await initStateFromDb(config, db, logger);
   } else if (args.fetchWeakSubjectivityStateFromIPFS) {
-    if (args.network === "prater") {
-      return await initAndVerifyWeakSujectivityState(args, praterWeakSubjectivityState, initFromFile);
-    } else if (args.network === "mainnet") {
+    if (args.network === "mainnet") {
       return await initAndVerifyWeakSujectivityState(args, mainnetWeakSubjectivityState, initFromFile);
+    } else if (args.network === "prater") {
+      return await initAndVerifyWeakSujectivityState(args, praterWeakSubjectivityState, initFromFile);
+    } else if (args.network === "pyrmont") {
+      return await initAndVerifyWeakSujectivityState(args, pyrmontWeakSubjectivityState, initFromFile);
     } else {
       throw new Error("No matching network with weak subjectivity state.");
     }
