@@ -1,7 +1,7 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Bucket, IDatabaseController, Repository} from "@chainsafe/lodestar-db";
 import {allForks} from "@chainsafe/lodestar-types";
-import {getBlockTypeFromBlock, getBlockTypeFromBytes} from "./utils/multifork";
+import {getSignedBlockType, getSignedBlockTypeFromBytes} from "../../util/multifork";
 
 /**
  * Blocks by root
@@ -18,14 +18,14 @@ export class BlockRepository extends Repository<Uint8Array, allForks.SignedBeaco
    * Id is hashTreeRoot of unsigned BeaconBlock
    */
   getId(value: allForks.SignedBeaconBlock): Uint8Array {
-    return getBlockTypeFromBlock(this.config, value).fields["message"].hashTreeRoot(value.message);
+    return getSignedBlockType(this.config, value).fields["message"].hashTreeRoot(value.message);
   }
 
   encodeValue(value: allForks.SignedBeaconBlock): Buffer {
-    return getBlockTypeFromBlock(this.config, value).serialize(value) as Buffer;
+    return getSignedBlockType(this.config, value).serialize(value) as Buffer;
   }
 
   decodeValue(data: Buffer): allForks.SignedBeaconBlock {
-    return getBlockTypeFromBytes(this.config, data).deserialize(data);
+    return getSignedBlockTypeFromBytes(this.config, data).deserialize(data);
   }
 }

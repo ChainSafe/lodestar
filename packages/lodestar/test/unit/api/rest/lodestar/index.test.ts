@@ -1,8 +1,7 @@
 import supertest from "supertest";
 
 import {getLatestWeakSubjectivityCheckpointEpoch} from "../../../../../src/api/rest/lodestar";
-import {urlJoin} from "../utils";
-import {LODESTAR_PREFIX, setupRestApiTestServer} from "../index.test";
+import {setupRestApiTestServer} from "../index.test";
 import {RestApi} from "../../../../../src/api";
 import {StubbedLodestarApi} from "../../../../utils/stub/lodestarApi";
 
@@ -17,8 +16,6 @@ describe("rest - lodestar - getLatestWeakSubjectivityCheckpointEpoch", function 
 
   it("success", async function () {
     lodestarApiStub.getLatestWeakSubjectivityCheckpointEpoch.resolves(0);
-    await supertest(restApi.server.server)
-      .get(urlJoin(LODESTAR_PREFIX, getLatestWeakSubjectivityCheckpointEpoch.url))
-      .expect(200);
+    await supertest(restApi.server.server).get(getLatestWeakSubjectivityCheckpointEpoch.url).expect(200);
   });
 });

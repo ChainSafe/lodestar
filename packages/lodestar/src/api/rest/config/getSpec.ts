@@ -2,7 +2,7 @@ import {BeaconParams} from "@chainsafe/lodestar-params";
 import {ApiController} from "../types";
 
 export const getSpec: ApiController = {
-  url: "/spec",
+  url: "/eth/v1/config/spec",
   method: "GET",
   id: "getSpec",
 

@@ -2,8 +2,8 @@ import {expect} from "chai";
 import supertest from "supertest";
 
 import {getPeers} from "../../../../../src/api/rest/node/getPeers";
-import {ApiResponseBody, urlJoin} from "../utils";
-import {NODE_PREFIX, setupRestApiTestServer} from "../index.test";
+import {ApiResponseBody} from "../utils";
+import {setupRestApiTestServer} from "../index.test";
 import {StubbedNodeApi} from "../../../../utils/stub/nodeApi";
 
 describe("rest - node - getPeers", function () {
@@ -21,7 +21,7 @@ describe("rest - node - getPeers", function () {
       },
     ]);
     const response = await supertest(restApi.server.server)
-      .get(urlJoin(NODE_PREFIX, getPeers.url))
+      .get(getPeers.url)
       .query({state: "connected"})
       .expect(200)
       .expect("Content-Type", "application/json; charset=utf-8");

@@ -3,7 +3,7 @@ import {ValidationError} from "../../../impl/errors";
 import {ApiController} from "../../types";
 
 export const publishBlock: ApiController = {
-  url: "/blocks",
+  url: "/eth/v1/beacon/blocks",
   method: "POST",
   id: "publishBlock",
 

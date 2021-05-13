@@ -2,8 +2,8 @@ import {expect} from "chai";
 import supertest from "supertest";
 import {produceAttestationData} from "../../../../../src/api/rest/validator/produceAttestationData";
 import {generateEmptyAttestation} from "../../../../utils/attestation";
-import {ApiResponseBody, urlJoin} from "../utils";
-import {setupRestApiTestServer, VALIDATOR_PREFIX} from "../index.test";
+import {ApiResponseBody} from "../utils";
+import {setupRestApiTestServer} from "../index.test";
 import {SinonStubbedInstance} from "sinon";
 import {RestApi, ValidatorApi} from "../../../../../src/api";
 
@@ -19,7 +19,7 @@ describe("rest - validator - produceAttestationData", function () {
   it("should succeed", async function () {
     validatorStub.produceAttestationData.resolves(generateEmptyAttestation().data);
     const response = await supertest(restApi.server.server)
-      .get(urlJoin(VALIDATOR_PREFIX, produceAttestationData.url))
+      .get(produceAttestationData.url)
       .query({
         // eslint-disable-next-line @typescript-eslint/naming-convention
         committee_index: 1,
@@ -34,7 +34,7 @@ describe("rest - validator - produceAttestationData", function () {
   it("missing param", async function () {
     validatorStub.getAggregatedAttestation.resolves();
     await supertest(restApi.server.server)
-      .get(urlJoin(VALIDATOR_PREFIX, produceAttestationData.url))
+      .get(produceAttestationData.url)
       .query({
         slot: 0,
       })

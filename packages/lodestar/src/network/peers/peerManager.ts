@@ -20,7 +20,7 @@ import {
   IrrelevantPeerError,
 } from "./utils";
 import {prettyPrintPeerId} from "../util";
-import {IAttestationService} from "../attestationService";
+import {ISubnetsService} from "../subnetsService";
 
 /** heartbeat performs regular updates such as updating reputations and performing discovery requests */
 const HEARTBEAT_INTERVAL_MS = 30 * 1000;
@@ -53,7 +53,8 @@ export type PeerManagerModules = {
   logger: ILogger;
   metrics: IMetrics | null;
   reqResp: IReqResp;
-  attService: IAttestationService;
+  attnetsService: ISubnetsService;
+  syncnetsService: ISubnetsService;
   chain: IBeaconChain;
   config: IBeaconConfig;
   peerMetadata: Libp2pPeerMetadataStore;
@@ -74,7 +75,8 @@ export class PeerManager {
   private logger: ILogger;
   private metrics: IMetrics | null;
   private reqResp: IReqResp;
-  private attService: IAttestationService;
+  private attnetsService: ISubnetsService;
+  private syncnetsService: ISubnetsService;
   private chain: IBeaconChain;
   private config: IBeaconConfig;
   private peerMetadata: Libp2pPeerMetadataStore;
@@ -97,7 +99,8 @@ export class PeerManager {
     this.logger = modules.logger;
     this.metrics = modules.metrics;
     this.reqResp = modules.reqResp;
-    this.attService = modules.attService;
+    this.attnetsService = modules.attnetsService;
+    this.syncnetsService = modules.syncnetsService;
     this.chain = modules.chain;
     this.config = modules.config;
     this.peerMetadata = modules.peerMetadata;
@@ -152,7 +155,7 @@ export class PeerManager {
   /**
    * Run after validator subscriptions request.
    */
-  onBeaconCommitteeSubscriptions(): void {
+  onCommitteeSubscriptions(): void {
     // TODO:
     // Only if the slot is more than epoch away, add an event to start looking for peers
 
@@ -307,10 +310,14 @@ export class PeerManager {
       connectedHealthyPeers.map((peer) => ({
         id: peer,
         attnets: this.peerMetadata.metadata.get(peer)?.attnets ?? [],
+        // TODO!! Figure out migration from phase0.metadata to altair.metadata there
+        // syncnets: this.peerMetadata.metadata.get(peer)?.syncnets ?? [],
+        syncnets: [],
         score: this.peerRpcScores.getScore(peer),
       })),
       // Collect subnets which we need peers for in the current slot
-      this.attService.getActiveSubnets(),
+      this.attnetsService.getActiveSubnets(),
+      this.syncnetsService.getActiveSubnets(),
       this.opts
     );
 

@@ -1,14 +1,14 @@
 import {ValidatorIndex} from "@chainsafe/lodestar-types";
 import {ApiController} from "../../types";
 
-export const getAttesterDuties: ApiController<null, {epoch: number}, ValidatorIndex[]> = {
-  url: "/eth/v1/validator/duties/attester/:epoch",
+export const getSyncCommitteeDuties: ApiController<null, {epoch: number}, ValidatorIndex[]> = {
+  url: "/eth/v1/validator/duties/sync/:epoch",
   method: "POST",
-  id: "getAttesterDuties",
+  id: "getSyncCommitteeDuties",
 
   handler: async function (req) {
-    const value = await this.api.validator.getAttesterDuties(req.params.epoch, req.body);
-    return this.config.types.phase0.AttesterDutiesApi.toJson(value, {case: "snake"});
+    const data = await this.api.validator.getSyncCommitteeDuties(req.params.epoch, req.body);
+    return this.config.types.altair.SyncDutiesApi.toJson(data, {case: "snake"});
   },
 
   schema: {

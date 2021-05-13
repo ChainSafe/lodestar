@@ -3,7 +3,7 @@ import {ValidationError} from "../../../impl/errors";
 import {ApiController} from "../../types";
 
 export const submitPoolAttestations: ApiController<null, null, Json[]> = {
-  url: "/pool/attestations",
+  url: "/eth/v1/beacon/pool/attestations",
   method: "POST",
   id: "submitPoolAttestations",
 

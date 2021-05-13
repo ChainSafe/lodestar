@@ -1,8 +1,8 @@
 import {expect} from "chai";
 import supertest from "supertest";
 import {generateState} from "../../../../../utils/state";
-import {ApiResponseBody, urlJoin} from "../../utils";
-import {BEACON_PREFIX, setupRestApiTestServer} from "../../index.test";
+import {ApiResponseBody} from "../../utils";
+import {setupRestApiTestServer} from "../../index.test";
 import {getStateFork} from "../../../../../../src/api/rest/beacon/state/getStateFork";
 import {SinonStubbedInstance} from "sinon";
 import {BeaconStateApi} from "../../../../../../src/api/impl/beacon/state";
@@ -20,7 +20,7 @@ describe("rest - beacon - getStateFork", function () {
   it("should succeed", async function () {
     beaconStateStub.getFork.withArgs("head").resolves(generateState().fork);
     const response = await supertest(restApi.server.server)
-      .get(urlJoin(BEACON_PREFIX, getStateFork.url.replace(":stateId", "head")))
+      .get(getStateFork.url.replace(":stateId", "head"))
       .expect(200)
       .expect("Content-Type", "application/json; charset=utf-8");
     expect((response.body as ApiResponseBody).data).to.not.be.undefined;

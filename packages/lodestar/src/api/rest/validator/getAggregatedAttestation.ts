@@ -9,7 +9,7 @@ type Query = {
 };
 
 export const getAggregatedAttestation: ApiController<Query> = {
-  url: "/aggregate_attestation",
+  url: "/eth/v1/validator/aggregate_attestation",
   method: "GET",
   id: "getAggregatedAttestation",
 

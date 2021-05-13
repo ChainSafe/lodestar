@@ -4,8 +4,7 @@ import {expect} from "chai";
 import supertest from "supertest";
 import {submitPoolAttesterSlashings} from "../../../../../../src/api/rest/beacon/pool/submitPoolAttesterSlashings";
 import {generateEmptyAttesterSlashing} from "../../../../../utils/slashings";
-import {urlJoin} from "../../utils";
-import {BEACON_PREFIX, setupRestApiTestServer} from "../../index.test";
+import {setupRestApiTestServer} from "../../index.test";
 import {RestApi} from "../../../../../../src/api";
 import {SinonStubbedInstance} from "sinon";
 import {BeaconPoolApi} from "../../../../../../src/api/impl/beacon/pool";
@@ -26,7 +25,7 @@ describe("rest - beacon - submitPoolAttesterSlashings", function () {
 
   it("should succeed", async function () {
     await supertest(restApi.server.server)
-      .post(urlJoin(BEACON_PREFIX, submitPoolAttesterSlashings.url))
+      .post(submitPoolAttesterSlashings.url)
       .send(config.types.phase0.AttesterSlashing.toJson(slashing, {case: "snake"}) as Record<string, unknown>)
       .expect(200);
     expect(beaconPoolStub.submitAttesterSlashing.calledOnce).to.be.true;
@@ -34,7 +33,7 @@ describe("rest - beacon - submitPoolAttesterSlashings", function () {
 
   it("should fail to parse body", async function () {
     await supertest(restApi.server.server)
-      .post(urlJoin(BEACON_PREFIX, submitPoolAttesterSlashings.url))
+      .post(submitPoolAttesterSlashings.url)
       .send(config.types.phase0.AttesterSlashing.toJson(slashing, {case: "camel"}) as Record<string, unknown>)
       .expect(400)
       .expect("Content-Type", "application/json; charset=utf-8");

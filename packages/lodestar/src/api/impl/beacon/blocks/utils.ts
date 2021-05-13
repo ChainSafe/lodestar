@@ -1,4 +1,4 @@
-import {phase0} from "@chainsafe/lodestar-types";
+import {phase0, allForks} from "@chainsafe/lodestar-types";
 import {blockToHeader} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
@@ -27,7 +27,7 @@ export async function resolveBlockId(
   forkChoice: IForkChoice,
   db: IBeaconDb,
   blockId: BlockId
-): Promise<phase0.SignedBeaconBlock> {
+): Promise<allForks.SignedBeaconBlock> {
   const block = await resolveBlockIdOrNull(forkChoice, db, blockId);
   if (!block) {
     throw new ApiError(404, `No block found for id '${blockId}'`);
@@ -40,7 +40,7 @@ async function resolveBlockIdOrNull(
   forkChoice: IForkChoice,
   db: IBeaconDb,
   blockId: BlockId
-): Promise<phase0.SignedBeaconBlock | null> {
+): Promise<allForks.SignedBeaconBlock | null> {
   blockId = blockId.toLowerCase();
   if (blockId === "head") {
     const head = forkChoice.getHead();

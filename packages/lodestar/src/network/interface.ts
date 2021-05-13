@@ -10,8 +10,7 @@ import {Eth2Gossipsub} from "./gossip";
 import {MetadataController} from "./metadata";
 import {IPeerRpcScoreStore, IPeerMetadataStore} from "./peers";
 import {IReqResp} from "./reqresp";
-import {phase0} from "@chainsafe/lodestar-types";
-import {IAttestationService} from "./attestationService";
+import {ISubnetsService, CommitteeSubscription} from "./subnetsService";
 
 export type PeerSearchOptions = {
   supportsProtocols?: string[];
@@ -21,7 +20,8 @@ export type PeerSearchOptions = {
 export interface INetwork {
   events: INetworkEventBus;
   reqResp: IReqResp;
-  attService: IAttestationService;
+  attnetsService: ISubnetsService;
+  syncnetsService: ISubnetsService;
   gossip: Eth2Gossipsub;
   metadata: MetadataController;
   peerRpcScores: IPeerRpcScoreStore;
@@ -33,8 +33,10 @@ export interface INetwork {
   getConnectionsByPeer(): Map<string, Connection[]>;
   getConnectedPeers(): PeerId[];
   hasSomeConnectedPeer(): boolean;
-  /** Search peers joining subnets */
-  prepareBeaconCommitteeSubnet(subscriptions: phase0.BeaconCommitteeSubscription[]): void;
+  /** Subscribe, search peers, join long-lived attnets */
+  prepareBeaconCommitteeSubnet(subscriptions: CommitteeSubscription[]): void;
+  /** Subscribe, search peers, join long-lived syncnets */
+  prepareSyncCommitteeSubnets(subscriptions: CommitteeSubscription[]): void;
   reStatusPeers(peers: PeerId[]): void;
   // Service
   start(): Promise<void>;

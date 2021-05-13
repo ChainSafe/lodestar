@@ -2,7 +2,7 @@ import {StateId} from "../../../impl/beacon/state";
 import {ApiController} from "../../types";
 
 export const getStateFork: ApiController<null, {stateId: StateId}> = {
-  url: "/states/:stateId/fork",
+  url: "/eth/v1/beacon/states/:stateId/fork",
   method: "GET",
   id: "getStateFork",
 

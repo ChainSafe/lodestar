@@ -4,7 +4,7 @@ import {ApiController} from "../../types";
 /* eslint-disable @typescript-eslint/naming-convention */
 
 export const getStateFinalityCheckpoints: ApiController<null, {stateId: StateId}> = {
-  url: "/states/:stateId/finality_checkpoints",
+  url: "/eth/v1/beacon/states/:stateId/finality_checkpoints",
   method: "GET",
   id: "getStateFinalityCheckpoints",
 

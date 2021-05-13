@@ -8,7 +8,7 @@ type Query = {
 };
 
 export const produceAttestationData: ApiController<Query> = {
-  url: "/attestation_data",
+  url: "/eth/v1/validator/attestation_data",
   method: "GET",
   id: "produceAttestationData",
 

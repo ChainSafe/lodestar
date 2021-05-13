@@ -3,8 +3,8 @@ import {expect} from "chai";
 import supertest from "supertest";
 import {produceBlock} from "../../../../../src/api/rest/validator/produceBlock";
 import {generateEmptyBlock} from "../../../../utils/block";
-import {ApiResponseBody, urlJoin} from "../utils";
-import {setupRestApiTestServer, VALIDATOR_PREFIX} from "../index.test";
+import {ApiResponseBody} from "../utils";
+import {setupRestApiTestServer} from "../index.test";
 import {SinonStubbedInstance} from "sinon";
 import {RestApi, ValidatorApi} from "../../../../../src/api";
 
@@ -20,7 +20,7 @@ describe("rest - validator - produceBlock", function () {
   it("should succeed", async function () {
     validatorStub.produceBlock.resolves(generateEmptyBlock());
     const response = await supertest(restApi.server.server)
-      .get(urlJoin(VALIDATOR_PREFIX, produceBlock.url.replace(":slot", "5")))
+      .get(produceBlock.url.replace(":slot", "5"))
       .query({
         // eslint-disable-next-line @typescript-eslint/naming-convention
         randao_reveal: toHexString(Buffer.alloc(32, 1)),
@@ -34,14 +34,14 @@ describe("rest - validator - produceBlock", function () {
 
   it("missing randao reveal", async function () {
     await supertest(restApi.server.server)
-      .get(urlJoin(VALIDATOR_PREFIX, produceBlock.url.replace(":slot", "5")))
+      .get(produceBlock.url.replace(":slot", "5"))
       .expect(400)
       .expect("Content-Type", "application/json; charset=utf-8");
   });
 
   it("invalid slot", async function () {
     await supertest(restApi.server.server)
-      .get(urlJoin(VALIDATOR_PREFIX, produceBlock.url.replace(":slot", "0")))
+      .get(produceBlock.url.replace(":slot", "0"))
       .query({
         // eslint-disable-next-line @typescript-eslint/naming-convention
         randao_reveal: toHexString(Buffer.alloc(32, 1)),

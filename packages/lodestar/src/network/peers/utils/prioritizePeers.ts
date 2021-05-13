@@ -1,5 +1,5 @@
 import PeerId from "peer-id";
-import {phase0} from "@chainsafe/lodestar-types";
+import {altair, phase0} from "@chainsafe/lodestar-types";
 import {shuffle} from "../../../util/shuffle";
 import {sortBy} from "../../../util/sortBy";
 import {AttSubnetQuery} from "../discover";
@@ -15,41 +15,44 @@ const MAX_TARGET_SUBNET_PEERS = 6;
  * - Prioritize peers with good score
  */
 export function prioritizePeers(
-  connectedPeers: {id: PeerId; attnets: phase0.AttestationSubnets; score: number}[],
-  activeSubnetIds: number[],
+  connectedPeers: {id: PeerId; attnets: phase0.AttestationSubnets; syncnets: altair.SyncSubnets; score: number}[],
+  activeAttnets: number[],
+  activeSyncnets: number[],
   {targetPeers, maxPeers}: {targetPeers: number; maxPeers: number}
 ): {peersToDisconnect: PeerId[]; peersToConnect: number; discv5Queries: AttSubnetQuery[]} {
   const peersToDisconnect: PeerId[] = [];
   let peersToConnect = 0;
   const discv5Queries: AttSubnetQuery[] = [];
 
-  // Dynamically compute 1 <= TARGET_PEERS_PER_SUBNET <= MAX_TARGET_SUBNET_PEERS
-  const targetPeersPerSubnet = Math.min(
-    MAX_TARGET_SUBNET_PEERS,
-    Math.max(1, Math.floor(maxPeers / activeSubnetIds.length))
-  );
-
   // To filter out peers that are part of 1+ attnets of interest from possible disconnection
   const peerHasDuty = new Map<string, boolean>();
 
-  if (activeSubnetIds.length > 0) {
-    /** Map of peers per subnet, peer may be in multiple arrays */
-    const peersPerSubnet = new Map<number, number>();
+  for (const {subnets, subnetKey} of [
+    {subnets: activeAttnets, subnetKey: "attnets" as const},
+    {subnets: activeSyncnets, subnetKey: "syncnets" as const},
+  ]) {
+    // Dynamically compute 1 <= TARGET_PEERS_PER_SUBNET <= MAX_TARGET_SUBNET_PEERS
+    const targetPeersPerSubnet = Math.min(MAX_TARGET_SUBNET_PEERS, Math.max(1, Math.floor(maxPeers / subnets.length)));
 
-    for (const peer of connectedPeers) {
-      for (const subnetId of activeSubnetIds) {
-        if (peer.attnets[subnetId]) {
-          peerHasDuty.set(peer.id.toB58String(), true);
-          peersPerSubnet.set(subnetId, 1 + (peersPerSubnet.get(subnetId) || 0));
+    if (subnets.length > 0) {
+      /** Map of peers per subnet, peer may be in multiple arrays */
+      const peersPerSubnet = new Map<number, number>();
+
+      for (const peer of connectedPeers) {
+        for (const subnetId of subnets) {
+          if (peer[subnetKey][subnetId]) {
+            peerHasDuty.set(peer.id.toB58String(), true);
+            peersPerSubnet.set(subnetId, 1 + (peersPerSubnet.get(subnetId) || 0));
+          }
         }
       }
-    }
 
-    for (const subnetId of activeSubnetIds) {
-      const peersInSubnet = peersPerSubnet.get(subnetId) ?? 0;
-      if (peersInSubnet < targetPeersPerSubnet) {
-        // We need more peers
-        discv5Queries.push({subnetId, maxPeersToDiscover: targetPeersPerSubnet - peersInSubnet});
+      for (const subnetId of subnets) {
+        const peersInSubnet = peersPerSubnet.get(subnetId) ?? 0;
+        if (peersInSubnet < targetPeersPerSubnet) {
+          // We need more peers
+          discv5Queries.push({subnetId, maxPeersToDiscover: targetPeersPerSubnet - peersInSubnet});
+        }
       }
     }
   }

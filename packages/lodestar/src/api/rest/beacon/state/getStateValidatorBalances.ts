@@ -8,7 +8,7 @@ type ValidatorBalancesQuery = {
 };
 
 export const getStateValidatorsBalances: ApiController<ValidatorBalancesQuery, {stateId: StateId}> = {
-  url: "/states/:stateId/validator_balances",
+  url: "/eth/v1/beacon/states/:stateId/validator_balances",
   method: "GET",
   id: "getStateValidatorBalances",
 

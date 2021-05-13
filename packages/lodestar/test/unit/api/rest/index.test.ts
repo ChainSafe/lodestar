@@ -4,12 +4,6 @@ import {ApiNamespace, RestApi} from "../../../../src/api";
 import {StubbedApi} from "../../../utils/stub/api";
 import {testLogger} from "../../../utils/logger";
 
-export const BEACON_PREFIX = "/eth/v1/beacon";
-export const CONFIG_PREFIX = "/eth/v1/config";
-export const NODE_PREFIX = "/eth/v1/node";
-export const VALIDATOR_PREFIX = "/eth/v1/validator";
-export const LODESTAR_PREFIX = "/eth/v1/lodestar";
-
 export async function setupRestApiTestServer(): Promise<RestApi> {
   const api = new StubbedApi();
   return await RestApi.init(

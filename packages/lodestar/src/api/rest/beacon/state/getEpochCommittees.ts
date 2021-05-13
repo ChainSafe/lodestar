@@ -8,7 +8,7 @@ type Query = {
 };
 
 export const getEpochCommittees: ApiController<Query, {stateId: StateId}> = {
-  url: "/states/:stateId/committees",
+  url: "/eth/v1/beacon/states/:stateId/committees",
   method: "GET",
   id: "getEpochCommittees",
 

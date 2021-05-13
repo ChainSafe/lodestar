@@ -22,9 +22,7 @@ import {createTopicValidatorFnMap, Eth2Gossipsub} from "./gossip";
 import {IReqRespHandler} from "./reqresp/handlers";
 import {INetworkEventBus, NetworkEventBus} from "./events";
 import {AbortSignal} from "abort-controller";
-import {IAttestationService} from "./attestationService";
-import {AttestationService} from "./attestationService";
-import {phase0} from "@chainsafe/lodestar-types";
+import {ISubnetsService, getAttnetsService, getSyncnetsService, CommitteeSubscription} from "./subnetsService";
 
 interface INetworkModules {
   config: IBeaconConfig;
@@ -40,20 +38,23 @@ interface INetworkModules {
 export class Network implements INetwork {
   events: INetworkEventBus;
   reqResp: IReqResp;
-  attService: IAttestationService;
+  attnetsService: ISubnetsService;
+  syncnetsService: ISubnetsService;
   gossip: Eth2Gossipsub;
   metadata: MetadataController;
   peerMetadata: IPeerMetadataStore;
   peerRpcScores: IPeerRpcScoreStore;
 
-  private peerManager: PeerManager;
-  private libp2p: LibP2p;
-  private logger: ILogger;
+  private readonly peerManager: PeerManager;
+  private readonly libp2p: LibP2p;
+  private readonly logger: ILogger;
+  private readonly config: IBeaconConfig;
 
   constructor(opts: INetworkOptions & IReqRespOptions, modules: INetworkModules) {
     const {config, libp2p, logger, metrics, chain, db, reqRespHandler, signal} = modules;
-    this.logger = logger;
     this.libp2p = libp2p;
+    this.logger = logger;
+    this.config = config;
     const networkEventBus = new NetworkEventBus();
     const metadata = new MetadataController({}, {config, chain, logger});
     const peerMetadata = new Libp2pPeerMetadataStore(config, libp2p.peerStore.metadataBook);
@@ -85,12 +86,14 @@ export class Network implements INetwork {
       metrics,
     });
 
-    this.attService = new AttestationService({...modules, gossip: this.gossip, metadata: this.metadata});
+    this.attnetsService = getAttnetsService({...modules, gossip: this.gossip, metadata: this.metadata});
+    this.syncnetsService = getSyncnetsService({...modules, gossip: this.gossip, metadata: this.metadata});
     this.peerManager = new PeerManager(
       {
         libp2p,
         reqResp: this.reqResp,
-        attService: this.attService,
+        attnetsService: this.attnetsService,
+        syncnetsService: this.syncnetsService,
         logger,
         metrics,
         chain,
@@ -152,9 +155,14 @@ export class Network implements INetwork {
   /**
    * Request att subnets up `toSlot`. Network will ensure to mantain some peers for each
    */
-  prepareBeaconCommitteeSubnet(subscriptions: phase0.BeaconCommitteeSubscription[]): void {
-    this.attService.addBeaconCommitteeSubscriptions(subscriptions);
-    this.peerManager.onBeaconCommitteeSubscriptions();
+  prepareBeaconCommitteeSubnet(subscriptions: CommitteeSubscription[]): void {
+    this.attnetsService.addCommitteeSubscriptions(subscriptions);
+    if (subscriptions.length > 0) this.peerManager.onCommitteeSubscriptions();
+  }
+
+  prepareSyncCommitteeSubnets(subscriptions: CommitteeSubscription[]): void {
+    this.syncnetsService.addCommitteeSubscriptions(subscriptions);
+    if (subscriptions.length > 0) this.peerManager.onCommitteeSubscriptions();
   }
 
   /**

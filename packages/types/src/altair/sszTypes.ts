@@ -18,6 +18,8 @@ export type AltairSSZTypes = ReturnType<typeof getAltairTypes>;
 
 // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types,@typescript-eslint/explicit-function-return-type
 export function getAltairTypes(params: IBeaconParams, phase0: Phase0SSZTypes & PrimitiveSSZTypes) {
+  const {ValidatorIndex, CommitteeIndex, Root, Epoch, BLSPubkey, Number64} = phase0;
+
   // So the expandedRoots can be referenced, and break the circular dependency
   const typesRef = new LazyVariable<{
     BeaconBlock: ContainerType<altair.BeaconBlock>;
@@ -91,6 +93,36 @@ export function getAltairTypes(params: IBeaconParams, phase0: Phase0SSZTypes & P
     fields: {
       syncCommitteeBits: new BitVectorType({length: params.SYNC_COMMITTEE_SIZE}),
       syncCommitteeSignature: phase0.BLSSignature,
+    },
+  });
+
+  const SyncCommitteeSubscription = new ContainerType<altair.SyncCommitteeSubscription>({
+    fields: {
+      validatorIndex: ValidatorIndex,
+      syncCommitteeIndices: new ListType({elementType: CommitteeIndex, limit: params.SYNC_COMMITTEE_SIZE}),
+      untilEpoch: Epoch,
+    },
+  });
+
+  const SyncCommitteeByValidatorIndices = new ContainerType<altair.SyncCommitteeByValidatorIndices>({
+    fields: {
+      validators: new ListType({elementType: ValidatorIndex, limit: params.SYNC_COMMITTEE_SIZE}),
+      validatorAggregates: new ListType({elementType: ValidatorIndex, limit: params.SYNC_COMMITTEE_SIZE}),
+    },
+  });
+
+  const SyncDuty = new ContainerType<altair.SyncDuty>({
+    fields: {
+      pubkey: BLSPubkey,
+      validatorIndex: ValidatorIndex,
+      validatorSyncCommitteeIndices: new ListType({elementType: Number64, limit: params.SYNC_COMMITTEE_SIZE}),
+    },
+  });
+
+  const SyncDutiesApi = new ContainerType<altair.SyncDutiesApi>({
+    fields: {
+      data: new ListType({elementType: SyncDuty, limit: params.SYNC_COMMITTEE_SIZE}),
+      dependentRoot: Root,
     },
   });
 
@@ -231,6 +263,10 @@ export function getAltairTypes(params: IBeaconParams, phase0: Phase0SSZTypes & P
     SignedContributionAndProof,
     SyncCommitteeSigningData,
     SyncAggregate,
+    SyncCommitteeSubscription,
+    SyncCommitteeByValidatorIndices,
+    SyncDuty,
+    SyncDutiesApi,
     BeaconBlockBody,
     BeaconBlock,
     SignedBeaconBlock,

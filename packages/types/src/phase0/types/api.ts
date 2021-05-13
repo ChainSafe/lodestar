@@ -61,10 +61,10 @@ export interface ProposerDutiesApi {
 }
 
 export interface BeaconCommitteeSubscription {
-  validatorIndex: number;
+  validatorIndex: ValidatorIndex;
   committeeIndex: number;
   committeesAtSlot: number;
-  slot: number;
+  slot: Slot;
   isAggregator: boolean;
 }
 
