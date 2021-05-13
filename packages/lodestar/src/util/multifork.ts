@@ -1,5 +1,5 @@
 import {ForkName, IBeaconConfig} from "@chainsafe/lodestar-config";
-import {allForks, phase0, Slot} from "@chainsafe/lodestar-types";
+import {allForks, Slot} from "@chainsafe/lodestar-types";
 import {bytesToInt} from "@chainsafe/lodestar-utils";
 import {ContainerType} from "@chainsafe/ssz";
 
@@ -35,8 +35,8 @@ const SLOT_BYTES_POSITION_IN_BLOCK = 100;
  */
 const SLOT_BYTES_POSITION_IN_STATE = 40;
 
-type BlockType = ContainerType<phase0.BeaconBlock>;
-type SignedBlockType = ContainerType<phase0.SignedBeaconBlock>;
+type BlockType = ContainerType<allForks.BeaconBlock>;
+type SignedBlockType = ContainerType<allForks.SignedBeaconBlock>;
 type StateType = ContainerType<allForks.BeaconState>;
 
 // Block

@@ -16,7 +16,7 @@ export function ApiClientOverRest(config: IBeaconConfig, baseUrl: string): IApiC
   });
 
   return {
-    beacon: BeaconApi(config.types, client),
+    beacon: BeaconApi(config, client),
     config: ConfigApi(config.types, client),
     node: NodeApi(config.types, client),
     events: EventsApi(config.types, client),
