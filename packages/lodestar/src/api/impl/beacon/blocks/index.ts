@@ -112,8 +112,14 @@ export class BeaconBlockApi implements IBeaconBlocksApi {
     // Fast path: From head state already available in memory get historical blockRoot
     const slot = parseInt(blockId);
     if (!Number.isNaN(slot)) {
-      const state = this.chain.getHeadState();
-      if (slot < state.slot && state.slot <= slot + this.config.params.SLOTS_PER_HISTORICAL_ROOT) {
+      const head = this.chain.forkChoice.getHead();
+
+      if (slot === head.slot) {
+        return head.blockRoot;
+      }
+
+      if (slot < head.slot && head.slot <= slot + this.config.params.SLOTS_PER_HISTORICAL_ROOT) {
+        const state = this.chain.getHeadState();
         return state.blockRoots[slot % this.config.params.SLOTS_PER_HISTORICAL_ROOT];
       }
     }
