@@ -1,8 +1,6 @@
 import sinon from "sinon";
 import {expect} from "chai";
 
-import {phase0} from "@chainsafe/lodestar-types";
-import {CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import {assembleBody} from "../../../../../src/chain/factory/block/body";
 import {generateCachedState} from "../../../../utils/state";
@@ -33,12 +31,12 @@ describe("blockAssembly - body", function () {
     dbStub.depositDataRoot.getTreeBacked.resolves(config.types.phase0.DepositDataRootList.defaultTreeBacked());
 
     const result = await assembleBody(
-      config,
-      dbStub,
-      eth1,
-      generateCachedState() as CachedBeaconState<phase0.BeaconState>,
+      {config, db: dbStub, eth1},
+      generateCachedState(),
       Buffer.alloc(96, 0),
-      Buffer.alloc(32, 0)
+      Buffer.alloc(32, 0),
+      1,
+      {parentSlot: 0, parentBlockRoot: Buffer.alloc(32, 0)}
     );
     expect(result).to.not.be.null;
     expect(result.randaoReveal.length).to.be.equal(96);
@@ -65,12 +63,12 @@ describe("blockAssembly - body", function () {
     );
 
     const result = await assembleBody(
-      config,
-      dbStub,
-      eth1,
-      generateCachedState() as CachedBeaconState<phase0.BeaconState>,
+      {config, db: dbStub, eth1},
+      generateCachedState(),
       Buffer.alloc(96, 0),
-      Buffer.alloc(32, 0)
+      Buffer.alloc(32, 0),
+      1,
+      {parentSlot: 0, parentBlockRoot: Buffer.alloc(32, 0)}
     );
     expect(result).to.not.be.null;
     expect(result.randaoReveal.length).to.be.equal(96);

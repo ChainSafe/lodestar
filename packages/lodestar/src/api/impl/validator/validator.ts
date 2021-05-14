@@ -12,7 +12,7 @@ import {
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {GENESIS_SLOT, SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
-import {Bytes96, CommitteeIndex, Epoch, Root, phase0, Slot, ValidatorIndex, altair} from "@chainsafe/lodestar-types";
+import {Bytes96, Epoch, Root, phase0, allForks, Slot, ValidatorIndex, altair} from "@chainsafe/lodestar-types";
 import {BeaconState} from "@chainsafe/lodestar-types/lib/allForks";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {readonlyValues} from "@chainsafe/ssz";
@@ -84,7 +84,7 @@ export class ValidatorApi implements IValidatorApi {
     this.logger = modules.logger;
   }
 
-  async produceBlock(slot: Slot, randaoReveal: Bytes96, graffiti = ""): Promise<phase0.BeaconBlock> {
+  async produceBlock(slot: Slot, randaoReveal: Bytes96, graffiti = ""): Promise<allForks.BeaconBlock> {
     this.notWhileSyncing();
 
     await this.waitForSlot(slot); // Must never request for a future slot > currentSlot
@@ -97,7 +97,7 @@ export class ValidatorApi implements IValidatorApi {
     );
   }
 
-  async produceAttestationData(committeeIndex: CommitteeIndex, slot: Slot): Promise<phase0.AttestationData> {
+  async produceAttestationData(committeeIndex: phase0.CommitteeIndex, slot: Slot): Promise<phase0.AttestationData> {
     this.notWhileSyncing();
 
     await this.waitForSlot(slot); // Must never request for a future slot > currentSlot

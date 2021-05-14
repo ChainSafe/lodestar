@@ -7,6 +7,7 @@ import {
   Epoch,
   Root,
   phase0,
+  allForks,
   Slot,
   ValidatorIndex,
   altair,
@@ -19,7 +20,7 @@ export interface IValidatorApi {
   getProposerDuties(epoch: Epoch): Promise<phase0.ProposerDutiesApi>;
   getAttesterDuties(epoch: Epoch, validatorIndices: ValidatorIndex[]): Promise<phase0.AttesterDutiesApi>;
   getSyncCommitteeDuties(epoch: number, validatorIndices: ValidatorIndex[]): Promise<altair.SyncDutiesApi>;
-  produceBlock(slot: Slot, randaoReveal: BLSSignature, graffiti: string): Promise<phase0.BeaconBlock>;
+  produceBlock(slot: Slot, randaoReveal: BLSSignature, graffiti: string): Promise<allForks.BeaconBlock>;
   produceAttestationData(index: CommitteeIndex, slot: Slot): Promise<phase0.AttestationData>;
   produceSyncCommitteeContribution(
     slot: Slot,

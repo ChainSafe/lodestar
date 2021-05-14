@@ -35,12 +35,12 @@ export function stateTransition(
   options?: {verifyStateRoot?: boolean; verifyProposer?: boolean; verifySignatures?: boolean},
   metrics?: IBeaconStateTransitionMetrics | null
 ): CachedBeaconState<allForks.BeaconState> {
-  const {verifyStateRoot = true, verifyProposer = true, verifySignatures = true} = options || {};
+  const {verifyStateRoot = true, verifyProposer = true} = options || {};
   const {config} = state;
 
   const block = signedBlock.message;
   const blockSlot = block.slot;
-  const blockFork = config.getForkName(blockSlot);
+
   let postState = state.clone();
 
   postState.setStateCachesAsTransient();
@@ -57,6 +57,34 @@ export function stateTransition(
   }
 
   // process block
+
+  processBlock(postState, block, options, metrics);
+
+  // verify state root
+  if (verifyStateRoot) {
+    if (!config.types.Root.equals(block.stateRoot, postState.tree.root)) {
+      throw new Error("Invalid state root");
+    }
+  }
+
+  postState.setStateCachesAsPersistent();
+
+  return postState;
+}
+
+/**
+ * Multifork capable processBlock()
+ *
+ * Implementation Note: follows the optimizations in protolambda's eth2fastspec (https://github.com/protolambda/eth2fastspec)
+ */
+export function processBlock(
+  postState: CachedBeaconState<allForks.BeaconState>,
+  block: allForks.BeaconBlock,
+  options?: {verifySignatures?: boolean},
+  metrics?: IBeaconStateTransitionMetrics | null
+): void {
+  const {verifySignatures = true} = options || {};
+  const blockFork = postState.config.getForkName(block.slot);
 
   switch (blockFork) {
     case ForkName.phase0:
@@ -77,17 +105,6 @@ export function stateTransition(
     default:
       throw new Error(`Block processing not implemented for fork ${blockFork}`);
   }
-
-  // verify state root
-  if (verifyStateRoot) {
-    if (!config.types.Root.equals(block.stateRoot, postState.tree.root)) {
-      throw new Error("Invalid state root");
-    }
-  }
-
-  postState.setStateCachesAsPersistent();
-
-  return postState;
 }
 
 /**
