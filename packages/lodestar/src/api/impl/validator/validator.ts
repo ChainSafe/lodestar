@@ -140,7 +140,7 @@ export class ValidatorApi implements IValidatorApi {
     const startSlot = computeStartSlotAtEpoch(this.config, epoch);
     await this.waitForSlot(startSlot); // Must never request for a future slot > currentSlot
 
-    const state = this.chain.getHeadState();
+    const state = await this.chain.getHeadStateAtCurrentEpoch();
     const duties: phase0.ProposerDuty[] = [];
 
     for (let slot = startSlot; slot < startSlot + this.config.params.SLOTS_PER_EPOCH; slot++) {
