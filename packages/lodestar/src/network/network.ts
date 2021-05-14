@@ -5,6 +5,7 @@
 import LibP2p, {Connection} from "libp2p";
 import PeerId from "peer-id";
 import Multiaddr from "multiaddr";
+import {AbortSignal} from "abort-controller";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {IMetrics} from "../metrics";
@@ -21,8 +22,8 @@ import {IBeaconDb} from "../db";
 import {createTopicValidatorFnMap, Eth2Gossipsub} from "./gossip";
 import {IReqRespHandler} from "./reqresp/handlers";
 import {INetworkEventBus, NetworkEventBus} from "./events";
-import {AbortSignal} from "abort-controller";
 import {ISubnetsService, getAttnetsService, getSyncnetsService, CommitteeSubscription} from "./subnetsService";
+import {GossipHandler} from "./gossip/handler";
 
 interface INetworkModules {
   config: IBeaconConfig;
@@ -45,6 +46,7 @@ export class Network implements INetwork {
   peerMetadata: IPeerMetadataStore;
   peerRpcScores: IPeerRpcScoreStore;
 
+  private readonly gossipHandler: GossipHandler;
   private readonly peerManager: PeerManager;
   private readonly libp2p: LibP2p;
   private readonly logger: ILogger;
@@ -104,6 +106,13 @@ export class Network implements INetwork {
       },
       opts
     );
+
+    this.gossipHandler = new GossipHandler(config, chain, this.gossip, this.attnetsService, db, logger);
+  }
+
+  /** Destroy this instance. Can only be called once. */
+  close(): void {
+    this.gossipHandler.close();
   }
 
   async start(): Promise<void> {
@@ -119,6 +128,7 @@ export class Network implements INetwork {
   async stop(): Promise<void> {
     // Must goodbye and disconnect before stopping libp2p
     await this.peerManager.goodbyeAndDisconnectAllPeers();
+    this.gossipHandler.close();
     this.peerManager.stop();
     this.metadata.stop();
     this.gossip.stop();
@@ -170,5 +180,17 @@ export class Network implements INetwork {
    */
   reStatusPeers(peers: PeerId[]): void {
     this.peerManager.reStatusPeers(peers);
+  }
+
+  subscribeGossipCoreTopics(): void {
+    this.gossipHandler.subscribeCoreTopics();
+  }
+
+  unsubscribeGossipCoreTopics(): void {
+    this.gossipHandler.unsubscribeCoreTopics();
+  }
+
+  isSubscribedToGossipCoreTopics(): boolean {
+    return this.gossipHandler.isSubscribedToCoreTopics;
   }
 }

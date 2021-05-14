@@ -7,7 +7,6 @@ import {Slot, phase0} from "@chainsafe/lodestar-types";
 import {toHexString} from "@chainsafe/ssz";
 import {ChainEvent, IBeaconChain} from "../chain";
 import {BlockError, BlockErrorCode} from "../chain/errors";
-import {BeaconGossipHandler} from "./gossip";
 import {RangeSync, RangeSyncStatus, RangeSyncEvent} from "./range/range";
 import {fetchUnknownBlockRoot, getPeerSyncType, PeerSyncType} from "./utils";
 import {MIN_EPOCH_TO_START_GOSSIP} from "./constants";
@@ -22,7 +21,6 @@ export class BeaconSync implements IBeaconSync {
   private readonly opts: ISyncOptions;
 
   private readonly rangeSync: RangeSync;
-  private readonly gossip: BeaconGossipHandler;
 
   // avoid finding same root at the same time
   private readonly processingRoots = new Set<string>();
@@ -45,8 +43,6 @@ export class BeaconSync implements IBeaconSync {
     this.chain = chain;
     this.logger = logger;
     this.rangeSync = new RangeSync(modules);
-    this.gossip =
-      modules.gossipHandler || new BeaconGossipHandler(modules.config, modules.chain, modules.network, modules.db);
     this.slotImportTolerance = modules.config.params.SLOTS_PER_EPOCH;
 
     // Subscribe to RangeSync completing a SyncChain and recompute sync state
@@ -68,8 +64,6 @@ export class BeaconSync implements IBeaconSync {
     this.chain.emitter.off(ChainEvent.errorBlock, this.onUnknownBlockRoot);
     this.chain.emitter.off(ChainEvent.clockEpoch, this.onClockEpoch);
     this.rangeSync.close();
-    this.gossip.stop();
-    this.gossip.close();
   }
 
   getSyncStatus(): phase0.SyncingStatus {
@@ -174,19 +168,19 @@ export class BeaconSync implements IBeaconSync {
     // We have become synced, subscribe to all the gossip core topics
     if (
       state === SyncState.Synced &&
-      !this.gossip.isStarted &&
+      !this.network.isSubscribedToGossipCoreTopics() &&
       this.chain.clock.currentSlot >= MIN_EPOCH_TO_START_GOSSIP
     ) {
-      this.gossip.start();
+      this.network.subscribeGossipCoreTopics();
       this.logger.info("Subscribed gossip core topics");
     }
 
     // If we stopped being synced and falled significantly behind, stop gossip
-    if (state !== SyncState.Synced && this.gossip.isStarted) {
+    if (state !== SyncState.Synced && this.network.isSubscribedToGossipCoreTopics()) {
       const syncDiff = this.chain.clock.currentSlot - this.chain.forkChoice.getHead().slot;
       if (syncDiff > this.slotImportTolerance * 2) {
         this.logger.warn(`Node sync has fallen behind by ${syncDiff} slots`);
-        this.gossip.stop();
+        this.network.unsubscribeGossipCoreTopics();
         this.logger.info("Un-subscribed gossip core topics");
       }
     }

@@ -2,7 +2,7 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Epoch, phase0} from "@chainsafe/lodestar-types";
 import {FAR_FUTURE_EPOCH} from "../../constants";
 import {IForkDigestContext} from "../../util/forkDigestContext";
-import {getCurrentAndNextFork} from "../util";
+import {getCurrentAndNextFork} from "../forks";
 
 export function getENRForkID(
   config: IBeaconConfig,

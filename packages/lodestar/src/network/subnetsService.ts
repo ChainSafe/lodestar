@@ -1,5 +1,5 @@
 import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
-import {IBeaconConfig, ForkName} from "@chainsafe/lodestar-config";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ATTESTATION_SUBNET_COUNT} from "@chainsafe/lodestar-params";
 import {Epoch, phase0, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {ILogger, randBetween} from "@chainsafe/lodestar-utils";
@@ -8,17 +8,13 @@ import {ChainEvent, IBeaconChain} from "../chain";
 import {Eth2Gossipsub, GossipType} from "./gossip";
 import {MetadataController} from "./metadata";
 import {SubnetMap, RequestedSubnet} from "./peers/utils";
-import {getCurrentAndNextFork} from "./util";
+import {getActiveForks, runForkTransitionHooks} from "./forks";
 
 /**
  * The time (in slots) before a last seen validator is considered absent and we unsubscribe from the random
  * gossip topics that we subscribed to due to the validator connection.
  */
 const LAST_SEEN_VALIDATOR_TIMEOUT = 150;
-/**
- * Subscribe topics to the new fork N epochs before the fork. Remove all subscriptions N epochs after the fork
- */
-const FORK_EPOCH_LOOKAHEAD = 2;
 
 /** Generic CommitteeSubscription for both beacon attnets subs and syncnets subs */
 export type CommitteeSubscription = {
@@ -170,31 +166,22 @@ class SubnetsService implements ISubnetsService {
       this.unsubscribeExpiredRandomSubnets(slot);
       this.pruneExpiredKnownValidators(slot);
 
-      // Compute prev and next fork shifted, so next fork is still next at forkEpoch + FORK_EPOCH_LOOKAHEAD
-      const forks = getCurrentAndNextFork(this.config, epoch - FORK_EPOCH_LOOKAHEAD - 1);
-
-      // Only when fork is scheduled
-      if (forks.nextFork) {
-        const prevFork = forks.currentFork.name;
-        const nextFork = forks.nextFork.name;
-        const forkEpoch = forks.nextFork.epoch;
-
-        // ONLY ONCE: Two epoch before the fork, re-subscribe all existing random subscriptions to the new fork
-        if (epoch === forkEpoch - FORK_EPOCH_LOOKAHEAD) {
+      runForkTransitionHooks(this.config, epoch, {
+        beforeForkTransition: (nextFork) => {
           this.logger.info(`Suscribing to random ${this.metadataKey} to next fork`, {nextFork});
+          // ONLY ONCE: Two epoch before the fork, re-subscribe all existing random subscriptions to the new fork
           for (const subnet of this.subscriptionsRandom.getAll()) {
             this.gossip.subscribeTopic({type: this.gossipType, fork: nextFork, subnet});
           }
-        }
-
-        // ONLY ONCE: Two epochs after the fork, un-subscribe all subnets from the old fork
-        if (epoch === forkEpoch + FORK_EPOCH_LOOKAHEAD) {
+        },
+        afterForkTransition: (prevFork) => {
           this.logger.info(`Unsuscribing to random ${this.metadataKey} from prev fork`, {prevFork});
+          // ONLY ONCE: Two epochs after the fork, un-subscribe all subnets from the old fork
           for (let subnet = 0; subnet < ATTESTATION_SUBNET_COUNT; subnet++) {
             this.gossip.unsubscribeTopic({type: this.gossipType, fork: prevFork, subnet});
           }
-        }
-      }
+        },
+      });
     } catch (e) {
       this.logger.error("Error on AttestationService.onEpoch", {epoch}, e);
     }
@@ -305,7 +292,7 @@ class SubnetsService implements ISubnetsService {
 
   /** Tigger a gossip subcription only if not already subscribed */
   private subscribeToSubnets(subnets: number[]): void {
-    const forks = this.getActiveForks();
+    const forks = getActiveForks(this.config, this.chain.clock.currentEpoch);
     for (const subnet of subnets) {
       if (!this.subscriptionsCommittee.has(subnet) && !this.subscriptionsRandom.has(subnet)) {
         for (const fork of forks) {
@@ -317,7 +304,7 @@ class SubnetsService implements ISubnetsService {
 
   /** Trigger a gossip un-subscrition only if no-one is still subscribed */
   private unsubscribeSubnets(subnets: number[], slot: Slot): void {
-    const forks = this.getActiveForks();
+    const forks = getActiveForks(this.config, this.chain.clock.currentEpoch);
     for (const subnet of subnets) {
       if (
         !this.subscriptionsCommittee.isActiveAtSlot(subnet, slot) &&
@@ -328,28 +315,6 @@ class SubnetsService implements ISubnetsService {
         }
       }
     }
-  }
-
-  private getActiveForks(): ForkName[] {
-    const currentEpoch = this.chain.clock.currentEpoch;
-    // Compute prev and next fork shifted, so next fork is still next at forkEpoch + FORK_EPOCH_LOOKAHEAD
-    const forks = getCurrentAndNextFork(this.config, currentEpoch - FORK_EPOCH_LOOKAHEAD - 1);
-
-    // Before fork is scheduled
-    if (!forks.nextFork) {
-      return [forks.currentFork.name];
-    }
-
-    const prevFork = forks.currentFork.name;
-    const nextFork = forks.nextFork.name;
-    const forkEpoch = forks.nextFork.epoch;
-
-    // Way before fork
-    if (currentEpoch < forkEpoch - FORK_EPOCH_LOOKAHEAD) return [prevFork];
-    // Way after fork
-    if (currentEpoch > forkEpoch + FORK_EPOCH_LOOKAHEAD) return [nextFork];
-    // During fork transition
-    return [prevFork, nextFork];
   }
 }
 
