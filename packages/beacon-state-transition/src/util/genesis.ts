@@ -128,7 +128,7 @@ export function applyDeposits(
     }
 
     state.eth1Data.depositCount += 1;
-    processDeposit(config, state as phase0.BeaconState, deposit);
+    processDeposit(config, state, deposit);
   }
 
   // Process activations
@@ -149,7 +149,9 @@ export function applyDeposits(
   }
 
   // Set genesis validators root for domain separation and chain versioning
-  state.genesisValidatorsRoot = config.types.phase0.BeaconState.fields.validators.hashTreeRoot(state.validators);
+  state.genesisValidatorsRoot = config
+    .getTypes(state.slot)
+    .BeaconState.fields.validators.hashTreeRoot(state.validators);
 }
 
 /**
@@ -165,7 +167,6 @@ export function initializeBeaconStateFromEth1(
   eth1Timestamp: Number64,
   deposits: phase0.Deposit[]
 ): TreeBacked<allForks.BeaconState> {
-
   const state = getGenesisBeaconState(
     config,
     config.types.phase0.Eth1Data.defaultValue(),

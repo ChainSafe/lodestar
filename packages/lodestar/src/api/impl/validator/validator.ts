@@ -104,13 +104,7 @@ export class ValidatorApi implements IValidatorApi {
 
     const headRoot = this.chain.forkChoice.getHeadRoot();
     const state = await this.chain.regen.getBlockSlotState(headRoot, slot);
-    return assembleAttestationData(
-      state.config,
-      state as CachedBeaconState<phase0.BeaconState>,
-      headRoot,
-      slot,
-      committeeIndex
-    );
+    return assembleAttestationData(state.config, state, headRoot, slot, committeeIndex);
   }
 
   /**

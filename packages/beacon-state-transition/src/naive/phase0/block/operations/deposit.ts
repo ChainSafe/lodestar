@@ -3,7 +3,7 @@
  */
 
 import bls from "@chainsafe/bls";
-import {phase0} from "@chainsafe/lodestar-types";
+import {allForks, phase0} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {DEPOSIT_CONTRACT_TREE_DEPTH, FAR_FUTURE_EPOCH} from "../../../../constants";
 import {computeDomain, increaseBalance, computeSigningRoot} from "../../../../util";
@@ -12,7 +12,7 @@ import {assert, bigIntMin, verifyMerkleBranch} from "@chainsafe/lodestar-utils";
 /**
  * Process an Eth1 deposit, registering a validator or increasing its balance.
  */
-export function processDeposit(config: IBeaconConfig, state: phase0.BeaconState, deposit: phase0.Deposit): void {
+export function processDeposit(config: IBeaconConfig, state: allForks.BeaconState, deposit: phase0.Deposit): void {
   // Verify the Merkle branch
   assert.true(
     verifyMerkleBranch(

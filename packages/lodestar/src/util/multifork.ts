@@ -37,13 +37,16 @@ const SLOT_BYTES_POSITION_IN_STATE = 40;
 
 export function getSignedBlockTypeFromBytes(
   config: IBeaconConfig,
-  bytes: Buffer
+  bytes: Buffer | Uint8Array
 ): ContainerType<allForks.SignedBeaconBlock> {
   const slot = bytesToInt(bytes.slice(SLOT_BYTES_POSITION_IN_BLOCK, SLOT_BYTES_POSITION_IN_BLOCK + SLOT_BYTE_COUNT));
   return config.getTypes(slot).SignedBeaconBlock;
 }
 
-export function getStateTypeFromBytes(config: IBeaconConfig, bytes: Buffer): ContainerType<allForks.BeaconState> {
+export function getStateTypeFromBytes(
+  config: IBeaconConfig,
+  bytes: Buffer | Uint8Array
+): ContainerType<allForks.BeaconState> {
   const slot = bytesToInt(bytes.slice(SLOT_BYTES_POSITION_IN_STATE, SLOT_BYTES_POSITION_IN_STATE + SLOT_BYTE_COUNT));
   return config.getTypes(slot).BeaconState;
 }
