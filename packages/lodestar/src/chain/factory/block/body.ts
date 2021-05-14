@@ -4,21 +4,19 @@
 
 import {List} from "@chainsafe/ssz";
 import {Bytes96, Bytes32, phase0, allForks, altair, Root, Slot} from "@chainsafe/lodestar-types";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {CachedBeaconState, computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
+import {ForkName, IBeaconConfig} from "@chainsafe/lodestar-config";
+import {CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
 
 import {IBeaconDb} from "../../../db";
 import {IEth1ForBlockProduction} from "../../../eth1";
 
 export async function assembleBody(
-  config: IBeaconConfig,
-  db: IBeaconDb,
-  eth1: IEth1ForBlockProduction,
-  currentState: CachedBeaconState<phase0.BeaconState>,
+  {config, db, eth1}: {config: IBeaconConfig; db: IBeaconDb; eth1: IEth1ForBlockProduction},
+  currentState: CachedBeaconState<allForks.BeaconState>,
   randaoReveal: Bytes96,
   graffiti: Bytes32,
-  slot: Slot,
-  parentBlockRoot: Root
+  blockSlot: Slot,
+  syncAggregateData: {parentSlot: Slot; parentBlockRoot: Root}
 ): Promise<allForks.BeaconBlockBody> {
   const [proposerSlashings, attesterSlashings, attestations, voluntaryExits, {eth1Data, deposits}] = await Promise.all([
     db.proposerSlashing.values({limit: config.params.MAX_PROPOSER_SLASHINGS}),
@@ -30,7 +28,7 @@ export async function assembleBody(
     eth1.getEth1DataAndDeposits(currentState as CachedBeaconState<allForks.BeaconState>),
   ]);
 
-  const blockCommon: phase0.BeaconBlockBody = {
+  const blockBodyPhase0: phase0.BeaconBlockBody = {
     randaoReveal,
     graffiti,
     eth1Data,
@@ -41,14 +39,24 @@ export async function assembleBody(
     voluntaryExits: voluntaryExits as List<phase0.SignedVoluntaryExit>,
   };
 
-  if (computeEpochAtSlot(config, slot) >= config.params.ALTAIR_FORK_EPOCH) {
-    const block: altair.BeaconBlockBody = {
-      ...blockCommon,
-      syncAggregate: db.syncCommitteeContribution.getSyncAggregate(slot, parentBlockRoot),
-    };
-    return block;
-  } else {
-    return blockCommon;
+  const blockFork = config.getForkName(blockSlot);
+  switch (blockFork) {
+    case ForkName.phase0:
+      return blockBodyPhase0;
+
+    case ForkName.altair: {
+      const block: altair.BeaconBlockBody = {
+        ...blockBodyPhase0,
+        syncAggregate: db.syncCommitteeContribution.getSyncAggregate(
+          syncAggregateData.parentSlot,
+          syncAggregateData.parentBlockRoot
+        ),
+      };
+      return block;
+    }
+
+    default:
+      throw new Error(`Block processing not implemented for fork ${blockFork}`);
   }
 }
 

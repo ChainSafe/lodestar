@@ -2,9 +2,9 @@
  * @module chain/blockAssembly
  */
 
-import {CachedBeaconState, phase0} from "@chainsafe/lodestar-beacon-state-transition";
+import {CachedBeaconState, allForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {allForks, Bytes96, Root, Slot} from "@chainsafe/lodestar-types";
+import {Bytes96, Root, Slot} from "@chainsafe/lodestar-types";
 import {ZERO_HASH} from "../../../constants";
 import {IBeaconDb} from "../../../db";
 import {IEth1ForBlockProduction} from "../../../eth1";
@@ -26,27 +26,21 @@ export async function assembleBlock(
   slot: Slot,
   randaoReveal: Bytes96,
   graffiti = ZERO_HASH
-): Promise<phase0.BeaconBlock> {
+): Promise<allForks.BeaconBlock> {
   const head = chain.forkChoice.getHead();
   const state = await chain.regen.getBlockSlotState(head.blockRoot, slot);
 
-  const block: phase0.BeaconBlock = {
+  const block: allForks.BeaconBlock = {
     slot,
     proposerIndex: state.getBeaconProposer(slot),
     parentRoot: head.blockRoot,
     stateRoot: ZERO_HASH,
-    body: await assembleBody(
-      config,
-      db,
-      eth1,
-      state as CachedBeaconState<phase0.BeaconState>,
-      randaoReveal,
-      graffiti,
-      slot,
-      head.blockRoot
-    ),
+    body: await assembleBody({config, db, eth1}, state, randaoReveal, graffiti, slot, {
+      parentSlot: slot - 1,
+      parentBlockRoot: head.blockRoot,
+    }),
   };
-  block.stateRoot = computeNewStateRoot({config, metrics}, state as CachedBeaconState<phase0.BeaconState>, block);
+  block.stateRoot = computeNewStateRoot({config, metrics}, state, block);
 
   return block;
 }
@@ -58,12 +52,12 @@ export async function assembleBlock(
  */
 function computeNewStateRoot(
   {config, metrics}: {config: IBeaconConfig; metrics: IMetrics | null},
-  state: CachedBeaconState<phase0.BeaconState>,
+  state: CachedBeaconState<allForks.BeaconState>,
   block: allForks.BeaconBlock
 ): Root {
   const postState = state.clone();
   // verifySignatures = false since the data to assemble the block is trusted
-  phase0.processBlock(postState, block, false, metrics);
+  allForks.processBlock(postState, block, {verifySignatures: false}, metrics);
 
   return getStateTypeFromState(config, postState).hashTreeRoot(postState);
 }

@@ -1,5 +1,5 @@
 import {ArrayLike, BitList} from "@chainsafe/ssz";
-import {phase0, Epoch, Slot} from "@chainsafe/lodestar-types";
+import {phase0, allForks, Epoch, Slot} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {computeStartSlotAtEpoch, isValidAttestationSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {IDatabaseController, Bucket, Repository} from "@chainsafe/lodestar-db";
@@ -24,7 +24,7 @@ export class AggregateAndProofRepository extends Repository<Uint8Array, phase0.A
     return this.getIdFromAttestation(value.aggregate);
   }
 
-  async getBlockAttestations(state: phase0.BeaconState): Promise<phase0.Attestation[]> {
+  async getBlockAttestations(state: allForks.BeaconState): Promise<phase0.Attestation[]> {
     const stateSlot = state.slot;
     const aggregatesAndProof: phase0.AggregateAndProof[] = await this.values();
     const validAggregatesScored: {aggregate: phase0.Attestation; score: number}[] = [];
