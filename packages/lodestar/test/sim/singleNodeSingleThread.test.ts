@@ -25,7 +25,7 @@ describe("Run single node single thread interop validators (no eth1) until check
     TARGET_AGGREGATORS_PER_COMMITTEE: 4,
   };
 
-  before(async function() {
+  before(async function () {
     await initBLS();
   });
 
@@ -36,13 +36,18 @@ describe("Run single node single thread interop validators (no eth1) until check
     params: Partial<IBeaconParams>;
   }[] = [
     // {validatorClientCount: 1, validatorsPerClient: 32, event: ChainEvent.justified, params: manyValidatorParams},
-    {validatorClientCount: 1, validatorsPerClient: 32, event: ChainEvent.justified, params: {...manyValidatorParams, ALTAIR_FORK_EPOCH: 1}},
     // {validatorClientCount: 8, validatorsPerClient: 8, event: ChainEvent.justified, params: testParams},
     // {validatorClientCount: 8, validatorsPerClient: 8, event: ChainEvent.finalized, params: testParams},
+    {
+      validatorClientCount: 1,
+      validatorsPerClient: 32,
+      event: ChainEvent.justified,
+      params: {...manyValidatorParams, ALTAIR_FORK_EPOCH: 0},
+    },
   ];
 
   for (const testCase of testCases) {
-    it.only(`${testCase.validatorClientCount} vc / ${testCase.validatorsPerClient} validator > until ${testCase.event}`, async function () {
+    it(`${testCase.validatorClientCount} vc / ${testCase.validatorsPerClient} validator > until ${testCase.event}`, async function () {
       // Should reach justification in 3 epochs max, and finalization in 4 epochs max
       const expectedEpochsToFinish = testCase.event === ChainEvent.justified ? 3 : 4;
       // 1 epoch of margin of error
