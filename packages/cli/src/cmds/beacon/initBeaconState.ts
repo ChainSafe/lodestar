@@ -24,20 +24,20 @@ import {
 
 async function initAndVerifyWeakSujectivityState(
   args: IBeaconArgs & IGlobalArgs,
-  weakSubjectivityState: {
+  wsStateData: {
     stateRoot: string;
     ipfsPath: string;
   },
   initFunc: (pathOrUrl: string) => Promise<TreeBacked<allForks.BeaconState>>,
   logger: ILogger
 ): Promise<TreeBacked<allForks.BeaconState>> {
-  logger.info("Fetching weak subjectivity state from IPFS...");
-  const state = await initFunc(args.ipfsGatewayUrl + weakSubjectivityState.ipfsPath);
+  logger.info("Fetching weak subjectivity state from IPFS... at " + wsStateData.ipfsPath);
+  const state = await initFunc(args.ipfsGatewayUrl + wsStateData.ipfsPath);
   if (!state) {
     throw new Error("Weak subjectivity state not found for network " + args.network);
   }
   // verify downloaded state against locally stored state root
-  if (toHexString(state.hashTreeRoot()) !== weakSubjectivityState.stateRoot) {
+  if (toHexString(state.hashTreeRoot()) !== wsStateData.stateRoot) {
     throw new Error("Unable to verify state root downloaded from IPFS");
   }
   return state;
