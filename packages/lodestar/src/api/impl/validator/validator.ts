@@ -140,7 +140,7 @@ export class ValidatorApi implements IValidatorApi {
     const startSlot = computeStartSlotAtEpoch(this.config, epoch);
     await this.waitForSlot(startSlot); // Must never request for a future slot > currentSlot
 
-    const state = await this.chain.getHeadStateAtCurrentEpoch();
+    const state = this.chain.getHeadState();
     const duties: phase0.ProposerDuty[] = [];
 
     for (let slot = startSlot; slot < startSlot + this.config.params.SLOTS_PER_EPOCH; slot++) {
@@ -361,26 +361,21 @@ export class ValidatorApi implements IValidatorApi {
   async prepareSyncCommitteeSubnets(subscriptions: altair.SyncCommitteeSubscription[]): Promise<void> {
     this.notWhileSyncing();
 
-    const state = await this.chain.getHeadStateAtCurrentEpoch();
-
     // TODO: Cache this value
     const SYNC_COMMITTEE_SUBNET_SIZE = Math.floor(this.config.params.SYNC_COMMITTEE_SIZE / SYNC_COMMITTEE_SUBNET_COUNT);
 
     // A `validatorIndex` can be in multiple subnets, so compute the CommitteeSubscription with double for loop
     const subs: CommitteeSubscription[] = [];
     for (const sub of subscriptions) {
-      const committeeIndices = state.currSyncComitteeValidatorIndexMap.get(sub.validatorIndex);
-      if (committeeIndices) {
-        for (const committeeIndex of committeeIndices) {
-          const subnet = Math.floor(committeeIndex / SYNC_COMMITTEE_SUBNET_SIZE);
-          subs.push({
-            validatorIndex: sub.validatorIndex,
-            subnet: subnet,
-            // Subscribe until the end of `untilEpoch`: https://github.com/ethereum/eth2.0-APIs/pull/136#issuecomment-840315097
-            slot: computeStartSlotAtEpoch(this.config, sub.untilEpoch + 1),
-            isAggregator: true,
-          });
-        }
+      for (const committeeIndex of sub.syncCommitteeIndices) {
+        const subnet = Math.floor(committeeIndex / SYNC_COMMITTEE_SUBNET_SIZE);
+        subs.push({
+          validatorIndex: sub.validatorIndex,
+          subnet: subnet,
+          // Subscribe until the end of `untilEpoch`: https://github.com/ethereum/eth2.0-APIs/pull/136#issuecomment-840315097
+          slot: computeStartSlotAtEpoch(this.config, sub.untilEpoch + 1),
+          isAggregator: true,
+        });
       }
     }
 

@@ -175,31 +175,23 @@ export class SyncCommitteeDutiesService {
       count: relevantDuties.length,
     });
 
-    let alreadyWarnedReorg = false;
     for (const duty of relevantDuties) {
       let dutiesByPeriod = this.dutiesByPeriodByIndex.get(duty.validatorIndex);
       if (!dutiesByPeriod) {
         dutiesByPeriod = new Map<Epoch, DutyAtPeriod>();
         this.dutiesByPeriodByIndex.set(duty.validatorIndex, dutiesByPeriod);
       }
+
+      // TODO: Enable dependentRoot functionality
+      // Meanwhile just overwrite them, since the latest duty will be older and less likely to re-org
+      //
       // Only update the duties if either is true:
       //
       // - There were no known duties for this period.
       // - The dependent root has changed, signalling a re-org.
-      const prior = dutiesByPeriod.get(period);
-      const dependentRootChanged = prior && !this.config.types.Root.equals(prior.dependentRoot, dependentRoot);
 
-      if (!prior || dependentRootChanged) {
-        // Using `alreadyWarnedReorg` avoids excessive logs.
-        dutiesByPeriod.set(period, {dependentRoot, duty});
-        if (prior && dependentRootChanged && !alreadyWarnedReorg) {
-          alreadyWarnedReorg = true;
-          this.logger.warn("SyncDuties re-org. This may happen from time to time", {
-            priorDependentRoot: toHexString(prior.dependentRoot),
-            dependentRoot: toHexString(dependentRoot),
-          });
-        }
-      }
+      // Using `alreadyWarnedReorg` avoids excessive logs.
+      dutiesByPeriod.set(period, {dependentRoot, duty});
     }
   }
 

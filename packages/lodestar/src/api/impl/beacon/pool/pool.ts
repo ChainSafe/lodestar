@@ -1,6 +1,6 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {altair, Epoch, phase0} from "@chainsafe/lodestar-types";
-import {computeEpochAtSlot, allForks} from "@chainsafe/lodestar-beacon-state-transition";
+import {allForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
 import {IAttestationJob, IBeaconChain} from "../../../../chain";
 import {AttestationError, AttestationErrorCode} from "../../../../chain/errors";
@@ -106,14 +106,14 @@ export class BeaconPoolApi implements IBeaconPoolApi {
    * https://github.com/ethereum/eth2.0-APIs/pull/135
    */
   async submitSyncCommitteeSignatures(signatures: altair.SyncCommitteeSignature[]): Promise<void> {
-    // Fetch states for all epochs of the `signatures`
-    const epochs = new Set<Epoch>();
+    // Fetch states for all slots of the `signatures`
+    const slots = new Set<Epoch>();
     for (const signature of signatures) {
-      epochs.add(computeEpochAtSlot(this.config, signature.slot));
+      slots.add(signature.slot);
     }
 
-    // TODO: Fetch states at signature epochs
-    const state = await this.chain.getHeadStateAtCurrentEpoch();
+    // TODO: Fetch states at signature slots
+    const state = this.chain.getHeadState();
 
     // TODO: Cache this value
     const SYNC_COMMITTEE_SUBNET_SIZE = Math.floor(this.config.params.SYNC_COMMITTEE_SIZE / SYNC_COMMITTEE_SUBNET_COUNT);
