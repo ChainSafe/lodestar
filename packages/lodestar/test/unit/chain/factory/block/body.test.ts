@@ -38,6 +38,8 @@ describe("blockAssembly - body", function () {
       eth1,
       generateCachedState() as CachedBeaconState<phase0.BeaconState>,
       Buffer.alloc(96, 0),
+      Buffer.alloc(32, 0),
+      0,
       Buffer.alloc(32, 0)
     );
     expect(result).to.not.be.null;
@@ -70,6 +72,8 @@ describe("blockAssembly - body", function () {
       eth1,
       generateCachedState() as CachedBeaconState<phase0.BeaconState>,
       Buffer.alloc(96, 0),
+      Buffer.alloc(32, 0),
+      0,
       Buffer.alloc(32, 0)
     );
     expect(result).to.not.be.null;

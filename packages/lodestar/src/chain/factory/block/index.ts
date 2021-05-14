@@ -4,11 +4,12 @@
 
 import {CachedBeaconState, phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {Bytes96, Root, Slot} from "@chainsafe/lodestar-types";
+import {allForks, Bytes96, Root, Slot} from "@chainsafe/lodestar-types";
 import {ZERO_HASH} from "../../../constants";
 import {IBeaconDb} from "../../../db";
 import {IEth1ForBlockProduction} from "../../../eth1";
 import {IMetrics} from "../../../metrics";
+import {getStateTypeFromState} from "../../../util/multifork";
 import {IBeaconChain} from "../../interface";
 import {assembleBody} from "./body";
 
@@ -34,7 +35,16 @@ export async function assembleBlock(
     proposerIndex: state.getBeaconProposer(slot),
     parentRoot: head.blockRoot,
     stateRoot: ZERO_HASH,
-    body: await assembleBody(config, db, eth1, state as CachedBeaconState<phase0.BeaconState>, randaoReveal, graffiti),
+    body: await assembleBody(
+      config,
+      db,
+      eth1,
+      state as CachedBeaconState<phase0.BeaconState>,
+      randaoReveal,
+      graffiti,
+      slot,
+      head.blockRoot
+    ),
   };
   block.stateRoot = computeNewStateRoot({config, metrics}, state as CachedBeaconState<phase0.BeaconState>, block);
 
@@ -49,11 +59,11 @@ export async function assembleBlock(
 function computeNewStateRoot(
   {config, metrics}: {config: IBeaconConfig; metrics: IMetrics | null},
   state: CachedBeaconState<phase0.BeaconState>,
-  block: phase0.BeaconBlock
+  block: allForks.BeaconBlock
 ): Root {
   const postState = state.clone();
   // verifySignatures = false since the data to assemble the block is trusted
   phase0.processBlock(postState, block, false, metrics);
 
-  return config.types.phase0.BeaconState.hashTreeRoot(postState);
+  return getStateTypeFromState(config, state).hashTreeRoot(state);
 }
