@@ -65,5 +65,5 @@ function computeNewStateRoot(
   // verifySignatures = false since the data to assemble the block is trusted
   phase0.processBlock(postState, block, false, metrics);
 
-  return getStateTypeFromState(config, state).hashTreeRoot(state);
+  return getStateTypeFromState(config, postState).hashTreeRoot(postState);
 }
