@@ -31,13 +31,15 @@ export class IndicesService {
   }
 
   pollValidatorIndices(): Promise<ValidatorIndex[]> {
-    // TODO: ADd comment why
+    // Ensures pollValidatorIndicesInternal() is not called more than once at the same time.
+    // AttestationDutiesService and SyncCommitteeDutiesService will call this function at the same time, so this will
+    // cache the promise and return it to the second caller, preventing calling the API twice for the same data.
     if (this.pollValidatorIndicesPromise) {
       return this.pollValidatorIndicesPromise;
     }
 
     this.pollValidatorIndicesPromise = this.pollValidatorIndicesInternal();
-    // TODO this too
+    // Once the pollValidatorIndicesInternal() resolves or rejects null the cached promise so it can be called again.
     this.pollValidatorIndicesPromise.finally(() => {
       this.pollValidatorIndicesPromise = null;
     });
