@@ -47,9 +47,16 @@ export class SyncCommitteeDutiesService {
     clock.runEveryEpoch(this.runDutiesTasks);
   }
 
-  /** Returns all `ValidatorDuty` for the given `slot` */
+  /**
+   * Returns all `ValidatorDuty` for the given `slot`
+   *
+   * Note: The range of slots a validator has to perform duties is off by one.
+   * The previous slot wording means that if your validator is in a sync committee for a period that runs from slot
+   * 100 to 200,then you would actually produce signatures in slot 99 - 199.
+   * https://github.com/ethereum/eth2.0-specs/pull/2400
+   */
   async getDutiesAtSlot(slot: Slot): Promise<SyncDutyAndProof[]> {
-    const period = computeSyncPeriodAtSlot(this.config, slot);
+    const period = computeSyncPeriodAtSlot(this.config, slot + 1); // See note above for the +1 offset
     const duties: SyncDutyAndProof[] = [];
 
     for (const dutiesByPeriod of this.dutiesByPeriodByIndex.values()) {
