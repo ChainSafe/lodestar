@@ -28,7 +28,7 @@ export function groupAttDutiesByCommitteeIndex(duties: AttDutyAndProof[]): Map<C
     let dutyAndProofArr = dutiesByCommitteeIndex.get(committeeIndex);
     if (!dutyAndProofArr) {
       dutyAndProofArr = [];
-      dutiesByCommitteeIndex.set(committeeIndex, []);
+      dutiesByCommitteeIndex.set(committeeIndex, dutyAndProofArr);
     }
     dutyAndProofArr.push(dutyAndProof);
   }
@@ -51,7 +51,7 @@ export function groupSyncDutiesBySubCommitteeIndex(
       let dutyAndProofArr = dutiesBySubCommitteeIndex.get(subCommitteeIndex);
       if (!dutyAndProofArr) {
         dutyAndProofArr = [];
-        dutiesBySubCommitteeIndex.set(subCommitteeIndex, []);
+        dutiesBySubCommitteeIndex.set(subCommitteeIndex, dutyAndProofArr);
       }
       dutyAndProofArr.push(dutyAndProof);
     }

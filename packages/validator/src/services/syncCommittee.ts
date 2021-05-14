@@ -152,7 +152,7 @@ export class SyncCommitteeService {
     }
 
     this.logger.verbose("Producing SyncCommitteeContribution", logCtx);
-    const aggregate = await this.apiClient.validator
+    const contribution = await this.apiClient.validator
       .produceSyncCommitteeContribution(slot, subcommitteeIndex, beaconBlockRoot)
       .catch((e) => {
         throw extendError(e, "Error producing SyncCommitteeContribution");
@@ -163,9 +163,11 @@ export class SyncCommitteeService {
     for (const {duty, selectionProof} of duties) {
       const logCtxValidator = {...logCtx, validator: prettyBytes(duty.pubkey)};
       try {
-        // Produce signed aggregates only for validators that are subscribed aggregators.
+        // Produce signed contributions only for validators that are subscribed aggregators.
         if (selectionProof !== null) {
-          signedContributions.push(await this.validatorStore.signContributionAndProof(duty, selectionProof, aggregate));
+          signedContributions.push(
+            await this.validatorStore.signContributionAndProof(duty, selectionProof, contribution)
+          );
           this.logger.debug("Signed SyncCommitteeContribution", logCtxValidator);
         }
       } catch (e) {

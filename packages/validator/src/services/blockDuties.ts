@@ -137,32 +137,33 @@ export class BlockDutiesService {
   }
 
   private async pollBeaconProposers(epoch: Epoch): Promise<void> {
-    // Only download duties and push out additional block production events if we have some
-    // validators.
-    if (this.validatorStore.hasSomeValidators()) {
-      const proposerDuties = await this.apiClient.validator.getProposerDuties(epoch).catch((e) => {
-        throw extendError(e, "Error on getProposerDuties");
-      });
-      const dependentRoot = proposerDuties.dependentRoot;
-      const relevantDuties = proposerDuties.data.filter((duty) =>
-        this.validatorStore.hasVotingPubkey(toHexString(duty.pubkey))
-      );
+    // Only download duties and push out additional block production events if we have some validators.
+    if (!this.validatorStore.hasSomeValidators()) {
+      return;
+    }
 
-      this.logger.debug("Downloaded proposer duties", {
-        epoch,
+    const proposerDuties = await this.apiClient.validator.getProposerDuties(epoch).catch((e) => {
+      throw extendError(e, "Error on getProposerDuties");
+    });
+    const dependentRoot = proposerDuties.dependentRoot;
+    const relevantDuties = proposerDuties.data.filter((duty) =>
+      this.validatorStore.hasVotingPubkey(toHexString(duty.pubkey))
+    );
+
+    this.logger.debug("Downloaded proposer duties", {
+      epoch,
+      dependentRoot: toHexString(dependentRoot),
+      count: relevantDuties.length,
+    });
+
+    const prior = this.proposers.get(epoch);
+    this.proposers.set(epoch, {dependentRoot, data: relevantDuties});
+
+    if (prior && !this.config.types.Root.equals(prior.dependentRoot, dependentRoot)) {
+      this.logger.warn("Proposer duties re-org. This may happen from time to time", {
+        priorDependentRoot: toHexString(prior.dependentRoot),
         dependentRoot: toHexString(dependentRoot),
-        count: relevantDuties.length,
       });
-
-      const prior = this.proposers.get(epoch);
-      this.proposers.set(epoch, {dependentRoot, data: relevantDuties});
-
-      if (prior && !this.config.types.Root.equals(prior.dependentRoot, dependentRoot)) {
-        this.logger.warn("Proposer duties re-org. This may happen from time to time", {
-          priorDependentRoot: toHexString(prior.dependentRoot),
-          dependentRoot: toHexString(dependentRoot),
-        });
-      }
     }
   }
 

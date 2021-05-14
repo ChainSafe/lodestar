@@ -26,6 +26,8 @@ describe("BlockDutiesService", function () {
     const secretKeys = Array.from({length: 2}, (_, i) => bls.SecretKey.fromBytes(Buffer.alloc(32, i + 1)));
     pubkeys = secretKeys.map((sk) => sk.toPublicKey().toBytes());
     validatorStore.votingPubkeys.returns(pubkeys);
+    validatorStore.hasVotingPubkey.returns(true);
+    validatorStore.hasSomeValidators.returns(true);
   });
 
   let controller: AbortController; // To stop clock
