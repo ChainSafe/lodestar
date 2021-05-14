@@ -79,10 +79,10 @@ export class AttestationDutiesService {
    *
    * This function will perform (in the following order):
    *
-   * 1. Poll for current-epoch duties and update the local `this.attesters` map.
+   * 1. Poll for current-epoch duties and update the local duties map.
    * 2. As above, but for the next-epoch.
    * 3. Push out any attestation subnet subscriptions to the BN.
-   * 4. Prune old entries from `this.attesters`.
+   * 4. Prune old entries from duties.
    */
   private async pollBeaconAttesters(currentEpoch: Epoch, indexArr: ValidatorIndex[]): Promise<void> {
     const nextEpoch = currentEpoch + 1;
@@ -134,8 +134,9 @@ export class AttestationDutiesService {
     }
   }
 
-  /** For the given `indexArr`, download the duties for the given `epoch` and
-      store them in `this.attesters`. */
+  /**
+   * For the given `indexArr`, download the duties for the given `epoch` and store them in duties.
+   */
   private async pollBeaconAttestersForEpoch(epoch: Epoch, indexArr: ValidatorIndex[]): Promise<void> {
     // Don't fetch duties for epochs before genesis. However, should fetch epoch 0 duties at epoch -1
     if (epoch < 0) {
@@ -199,7 +200,7 @@ export class AttestationDutiesService {
     };
   }
 
-  /** Run once per epoch to prune `this.attesters` map */
+  /** Run once per epoch to prune duties map */
   private pruneOldDuties(currentEpoch: Epoch): void {
     for (const attMap of this.dutiesByEpochByIndex.values()) {
       for (const epoch of attMap.keys()) {
