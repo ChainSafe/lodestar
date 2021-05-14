@@ -8,20 +8,17 @@ import {ValidatorStore} from "./validatorStore";
 type PubkeyHex = string;
 
 export class IndicesService {
-  private readonly logger: ILogger;
-  private readonly apiClient: IApiClient;
-  private readonly validatorStore: ValidatorStore;
   /** Indexed by pubkey in hex 0x prefixed */
   private readonly pubkey2index = new Map<PubkeyHex, ValidatorIndex>();
   private readonly indices = new Set<ValidatorIndex>();
   // Request indices once
   private pollValidatorIndicesPromise: Promise<ValidatorIndex[]> | null = null;
 
-  constructor(logger: ILogger, apiClient: IApiClient, validatorStore: ValidatorStore) {
-    this.logger = logger;
-    this.apiClient = apiClient;
-    this.validatorStore = validatorStore;
-  }
+  constructor(
+    private readonly logger: ILogger,
+    private readonly apiClient: IApiClient,
+    private readonly validatorStore: ValidatorStore
+  ) {}
 
   /** Return all known indices from the validatorStore pubkeys */
   getAllLocalIndices(): ValidatorIndex[] {

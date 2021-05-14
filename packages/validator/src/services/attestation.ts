@@ -24,11 +24,6 @@ export class AttestationService {
     private readonly validatorStore: ValidatorStore,
     indicesService: IndicesService
   ) {
-    this.config = config;
-    this.logger = logger;
-    this.apiClient = apiClient;
-    this.clock = clock;
-    this.validatorStore = validatorStore;
     this.dutiesService = new AttestationDutiesService(config, logger, apiClient, clock, validatorStore, indicesService);
 
     // At most every slot, check existing duties from AttestationDutiesService and run tasks

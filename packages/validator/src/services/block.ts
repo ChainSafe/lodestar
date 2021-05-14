@@ -15,18 +15,13 @@ export class BlockProposingService {
   private readonly dutiesService: BlockDutiesService;
 
   constructor(
-    private readonly config: IBeaconConfig,
+    config: IBeaconConfig,
     private readonly logger: ILogger,
     private readonly apiClient: IApiClient,
-    private readonly clock: IClock,
+    clock: IClock,
     private readonly validatorStore: ValidatorStore,
     private readonly graffiti?: string
   ) {
-    this.config = config;
-    this.logger = logger;
-    this.apiClient = apiClient;
-    this.validatorStore = validatorStore;
-    this.graffiti = graffiti;
     this.dutiesService = new BlockDutiesService(
       config,
       logger,

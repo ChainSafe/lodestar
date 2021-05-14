@@ -13,21 +13,16 @@ import {getAggregationBits, mapSecretKeysToValidators} from "./utils";
  * Service that sets up and handles validator attester duties.
  */
 export class ValidatorStore {
-  private readonly config: IBeaconConfig;
-  private readonly forkService: IForkService;
   private readonly validators: Map<PubkeyHex, BLSKeypair>;
-  private readonly slashingProtection: ISlashingProtection;
   private readonly genesisValidatorsRoot: Root;
 
   constructor(
-    config: IBeaconConfig,
-    forkService: IForkService,
-    slashingProtection: ISlashingProtection,
+    private readonly config: IBeaconConfig,
+    private readonly forkService: IForkService,
+    private readonly slashingProtection: ISlashingProtection,
     secretKeys: SecretKey[],
     genesis: Genesis
   ) {
-    this.config = config;
-    this.forkService = forkService;
     this.validators = mapSecretKeysToValidators(secretKeys);
     this.slashingProtection = slashingProtection;
     this.genesisValidatorsRoot = genesis.genesisValidatorsRoot;

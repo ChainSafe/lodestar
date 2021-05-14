@@ -29,14 +29,10 @@ export class BlockDutiesService {
     private readonly config: IBeaconConfig,
     private readonly logger: ILogger,
     private readonly apiClient: IApiClient,
-    private readonly clock: IClock,
+    clock: IClock,
     private readonly validatorStore: ValidatorStore,
     notifyBlockProductionFn: NotifyBlockProductionFn
   ) {
-    this.config = config;
-    this.logger = logger;
-    this.apiClient = apiClient;
-    this.validatorStore = validatorStore;
     this.notifyBlockProductionFn = notifyBlockProductionFn;
 
     // TODO: Instead of polling every CLOCK_SLOT, poll every CLOCK_EPOCH and track re-org events

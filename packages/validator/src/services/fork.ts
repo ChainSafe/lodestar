@@ -23,9 +23,6 @@ export class ForkService implements IForkService {
   private forkPromisePending = false;
 
   constructor(private readonly provider: IApiClient, private readonly logger: ILogger, clock: IClock) {
-    this.provider = provider;
-    this.logger = logger;
-
     clock.runEveryEpoch(this.updateFork);
   }
 

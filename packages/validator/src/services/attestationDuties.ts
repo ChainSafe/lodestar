@@ -34,11 +34,6 @@ export class AttestationDutiesService {
     private readonly validatorStore: ValidatorStore,
     private readonly indicesService: IndicesService
   ) {
-    this.config = config;
-    this.logger = logger;
-    this.apiClient = apiClient;
-    this.validatorStore = validatorStore;
-
     // Running this task every epoch is safe since a re-org of two epochs is very unlikely
     // TODO: If the re-org event is reliable consider re-running then
     clock.runEveryEpoch(this.runDutiesTasks);

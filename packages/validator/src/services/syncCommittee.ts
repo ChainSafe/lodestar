@@ -24,11 +24,6 @@ export class SyncCommitteeService {
     private readonly validatorStore: ValidatorStore,
     indicesService: IndicesService
   ) {
-    this.config = config;
-    this.logger = logger;
-    this.apiClient = apiClient;
-    this.clock = clock;
-    this.validatorStore = validatorStore;
     this.dutiesService = new SyncCommitteeDutiesService(
       config,
       logger,
