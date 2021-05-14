@@ -1,6 +1,6 @@
-import {ForkName, IBeaconConfig} from "@chainsafe/lodestar-config";
-import {allForks, altair, BLSPubkey, phase0, Root, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
-import {ContainerType, Json, toHexString} from "@chainsafe/ssz";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {allForks, altair, BLSPubkey, phase0, Root, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {Json, toHexString} from "@chainsafe/ssz";
 import {HttpClient, IValidatorFilters} from "../../util";
 import {BlockId, IApiClient} from "../interface";
 
@@ -31,7 +31,10 @@ export function BeaconApi(config: IBeaconConfig, client: HttpClient): IApiClient
 
     blocks: {
       async publishBlock(block: allForks.SignedBeaconBlock): Promise<void> {
-        await client.post("/eth/v1/beacon/blocks", getSignedBlockType(config, block).toJson(block, {case: "snake"}));
+        await client.post(
+          "/eth/v1/beacon/blocks",
+          config.getTypes(block.message.slot).SignedBeaconBlock.toJson(block, {case: "snake"})
+        );
       },
 
       async getBlockRoot(blockId: BlockId): Promise<Root> {
@@ -72,22 +75,5 @@ function formatIndex(validatorId: ValidatorIndex | BLSPubkey): string {
     return validatorId;
   } else {
     return toHexString(validatorId);
-  }
-}
-
-// TODO: Consider de-duplicating this code that also exists in `packages/lodestar/src/util/multifork.ts`
-
-type SignedBlockType = ContainerType<allForks.SignedBeaconBlock>;
-
-function getSignedBlockType(config: IBeaconConfig, block: allForks.SignedBeaconBlock): SignedBlockType {
-  return getSignedBlockTypeFromSlot(config, block.message.slot);
-}
-
-function getSignedBlockTypeFromSlot(config: IBeaconConfig, slot: Slot): SignedBlockType {
-  switch (config.getForkName(slot)) {
-    case ForkName.phase0:
-      return (config.types.phase0.SignedBeaconBlock as unknown) as SignedBlockType;
-    case ForkName.altair:
-      return (config.types.altair.SignedBeaconBlock as unknown) as SignedBlockType;
   }
 }

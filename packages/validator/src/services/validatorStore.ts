@@ -1,7 +1,17 @@
 import {SecretKey} from "@chainsafe/bls";
 import {computeDomain, computeEpochAtSlot, computeSigningRoot} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {altair, BLSPubkey, BLSSignature, DomainType, Epoch, phase0, Root, Slot} from "@chainsafe/lodestar-types";
+import {
+  allForks,
+  altair,
+  BLSPubkey,
+  BLSSignature,
+  DomainType,
+  Epoch,
+  phase0,
+  Root,
+  Slot,
+} from "@chainsafe/lodestar-types";
 import {Genesis, ValidatorIndex} from "@chainsafe/lodestar-types/phase0";
 import {List, toHexString} from "@chainsafe/ssz";
 import {ISlashingProtection} from "../slashingProtection";
@@ -41,7 +51,11 @@ export class ValidatorStore {
     return this.validators.has(pubkeyHex);
   }
 
-  async signBlock(pubkey: BLSPubkey, block: phase0.BeaconBlock, currentSlot: Slot): Promise<phase0.SignedBeaconBlock> {
+  async signBlock(
+    pubkey: BLSPubkey,
+    block: allForks.BeaconBlock,
+    currentSlot: Slot
+  ): Promise<allForks.SignedBeaconBlock> {
     // Make sure the block slot is not higher than the current slot to avoid potential attacks.
     if (block.slot > currentSlot) {
       throw Error(`Not signing block with slot ${block.slot} greater than current slot ${currentSlot}`);
@@ -51,7 +65,8 @@ export class ValidatorStore {
       this.config.params.DOMAIN_BEACON_PROPOSER,
       computeEpochAtSlot(this.config, block.slot)
     );
-    const signingRoot = computeSigningRoot(this.config, this.config.types.phase0.BeaconBlock, block, proposerDomain);
+    const blockType = this.config.getTypes(block.slot).BeaconBlock;
+    const signingRoot = computeSigningRoot(this.config, blockType, block, proposerDomain);
 
     const secretKey = this.getSecretKey(pubkey); // Get before writing to slashingProtection
     await this.slashingProtection.checkAndInsertBlockProposal(pubkey, {slot: block.slot, signingRoot});

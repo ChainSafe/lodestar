@@ -54,7 +54,7 @@ export class StateRegenerator implements IStateRegenerator {
     this.metrics = metrics;
   }
 
-  async getPreState(block: phase0.BeaconBlock): Promise<CachedBeaconState<allForks.BeaconState>> {
+  async getPreState(block: allForks.BeaconBlock): Promise<CachedBeaconState<allForks.BeaconState>> {
     const parentBlock = this.forkChoice.getBlock(block.parentRoot);
     if (!parentBlock) {
       throw new RegenError({

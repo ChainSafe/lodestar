@@ -392,7 +392,9 @@ export class ValidatorApi implements IValidatorApi {
 
       const genesisBlock = await this.chain.getCanonicalBlockAtSlot(GENESIS_SLOT);
       if (genesisBlock) {
-        this.genesisBlockRoot = this.config.types.phase0.SignedBeaconBlock.hashTreeRoot(genesisBlock);
+        this.genesisBlockRoot = this.config
+          .getTypes(genesisBlock.message.slot)
+          .SignedBeaconBlock.hashTreeRoot(genesisBlock);
       }
     }
 

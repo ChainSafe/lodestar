@@ -3,7 +3,7 @@
  */
 
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {phase0} from "@chainsafe/lodestar-types";
+import {allForks, phase0} from "@chainsafe/lodestar-types";
 import {LodestarEventIterator} from "@chainsafe/lodestar-utils";
 import {ChainEvent, IBeaconChain} from "../../../chain";
 import {IApiOptions} from "../../options";
@@ -40,8 +40,8 @@ export class BeaconApi implements IBeaconApi {
     };
   }
 
-  getBlockStream(): LodestarEventIterator<phase0.SignedBeaconBlock> {
-    return new LodestarEventIterator<phase0.SignedBeaconBlock>(({push}) => {
+  getBlockStream(): LodestarEventIterator<allForks.SignedBeaconBlock> {
+    return new LodestarEventIterator<allForks.SignedBeaconBlock>(({push}) => {
       this.chain.emitter.on(ChainEvent.block, push);
       return () => {
         this.chain.emitter.off(ChainEvent.block, push);

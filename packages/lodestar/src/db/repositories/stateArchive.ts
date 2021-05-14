@@ -3,7 +3,7 @@ import {Epoch, Root, Slot, allForks} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {bytesToInt} from "@chainsafe/lodestar-utils";
 import {IDatabaseController, Bucket, Repository} from "@chainsafe/lodestar-db";
-import {getStateTypeFromBytes, getStateTypeFromState} from "../../util/multifork";
+import {getStateTypeFromBytes} from "../../util/multifork";
 import {getRootIndexKey, storeRootIndex} from "./stateArchiveIndex";
 
 /* eslint-disable @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call */
@@ -17,7 +17,7 @@ export class StateArchiveRepository extends Repository<Slot, TreeBacked<allForks
   // Overrides for multi-fork
 
   encodeValue(value: allForks.BeaconState): Buffer {
-    return getStateTypeFromState(this.config, value).serialize(value) as Buffer;
+    return this.config.getTypes(value.slot).BeaconState.serialize(value) as Buffer;
   }
 
   decodeValue(data: Buffer): TreeBacked<allForks.BeaconState> {
