@@ -8,9 +8,9 @@ import {ValidatorStore} from "./validatorStore";
 type PubkeyHex = string;
 
 export class IndicesService {
+  readonly index2pubkey = new Map<ValidatorIndex, PubkeyHex>();
   /** Indexed by pubkey in hex 0x prefixed */
-  private readonly pubkey2index = new Map<PubkeyHex, ValidatorIndex>();
-  private readonly indices = new Set<ValidatorIndex>();
+  readonly pubkey2index = new Map<PubkeyHex, ValidatorIndex>();
   // Request indices once
   private pollValidatorIndicesPromise: Promise<ValidatorIndex[]> | null = null;
 
@@ -22,12 +22,12 @@ export class IndicesService {
 
   /** Return all known indices from the validatorStore pubkeys */
   getAllLocalIndices(): ValidatorIndex[] {
-    return Array.from(this.indices.values());
+    return Array.from(this.index2pubkey.keys());
   }
 
   /** Return true if `index` is active part of this validator client */
   hasValidatorIndex(index: ValidatorIndex): boolean {
-    return this.indices.has(index);
+    return this.index2pubkey.has(index);
   }
 
   pollValidatorIndices(): Promise<ValidatorIndex[]> {
@@ -66,7 +66,7 @@ export class IndicesService {
       if (!this.pubkey2index.has(pubkeyHex)) {
         this.logger.debug("Discovered validator", {pubkey: pubkeyHex, index: validatorState.index});
         this.pubkey2index.set(pubkeyHex, validatorState.index);
-        this.indices.add(validatorState.index);
+        this.index2pubkey.set(validatorState.index, pubkeyHex);
         newIndices.push(validatorState.index);
       }
     }

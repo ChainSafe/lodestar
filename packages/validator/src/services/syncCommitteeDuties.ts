@@ -17,11 +17,19 @@ const ALTAIR_FORK_LOOKAHEAD_EPOCHS = 1;
 /** How many epochs prior from a subscription starting, ask the node to subscribe */
 const SUBSCRIPTIONS_LOOKAHEAD_EPOCHS = 2;
 
+export type SyncDutySubCommittee = {
+  pubkey: altair.SyncDuty["pubkey"];
+  validatorIndex: altair.SyncDuty["validatorIndex"];
+  /** A single index of the validator in the sync committee. */
+  validatorSyncCommitteeIndex: number;
+};
+
 /** Neatly joins SyncDuty with the locally-generated `selectionProof`. */
 export type SyncDutyAndProof = {
-  duty: altair.SyncDuty;
+  duty: SyncDutySubCommittee;
   /** This value is only set to not null if the proof indicates that the validator is an aggregator. */
   selectionProof: BLSSignature | null;
+  subCommitteeIndex: number;
 };
 
 // To assist with readability
@@ -64,8 +72,17 @@ export class SyncCommitteeDutiesService {
       const dutyAtPeriod = dutiesByPeriod.get(period);
       // Validator always has a duty during the entire period
       if (dutyAtPeriod) {
-        // getDutyAndProof() is async beacuse it may have to fetch the fork but should never happen in practice
-        duties.push(...(await this.getDutyAndProof(slot, dutyAtPeriod.duty)));
+        for (const index of dutyAtPeriod.duty.validatorSyncCommitteeIndices) {
+          duties.push(
+            // Compute a different DutyAndProof for each validatorSyncCommitteeIndices. Unwrapping here simplifies downstream code.
+            // getDutyAndProof() is async beacuse it may have to fetch the fork but should never happen in practice
+            await this.getDutyAndProof(slot, {
+              pubkey: dutyAtPeriod.duty.pubkey,
+              validatorIndex: dutyAtPeriod.duty.validatorIndex,
+              validatorSyncCommitteeIndex: index,
+            })
+          );
+        }
       }
     }
 
@@ -202,20 +219,22 @@ export class SyncCommitteeDutiesService {
     }
   }
 
-  private async getDutyAndProof(slot: Slot, duty: altair.SyncDuty): Promise<SyncDutyAndProof[]> {
+  private async getDutyAndProof(slot: Slot, duty: SyncDutySubCommittee): Promise<SyncDutyAndProof> {
     // TODO: Cache this value
     const SYNC_COMMITTEE_SUBNET_SIZE = Math.floor(this.config.params.SYNC_COMMITTEE_SIZE / SYNC_COMMITTEE_SUBNET_COUNT);
-    const selectionProofs = await Promise.all(
-      duty.validatorSyncCommitteeIndices.map((validatorSyncCommitteeIndex) => {
-        const subCommitteeIndex = Math.floor(validatorSyncCommitteeIndex / SYNC_COMMITTEE_SUBNET_SIZE);
-        return this.validatorStore.signSyncCommitteeSelectionProof(duty.pubkey, slot, subCommitteeIndex);
-      }));
-    // const isAggregator = isSyncCommitteeAggregator(this.config, selectionProof);
-    return selectionProofs.map((selectionProof) => ({
+    const subCommitteeIndex = Math.floor(duty.validatorSyncCommitteeIndex / SYNC_COMMITTEE_SUBNET_SIZE);
+    const selectionProof = await this.validatorStore.signSyncCommitteeSelectionProof(
+      // Fast indexing with precomputed pubkeyHex. Fallback to toHexString(duty.pubkey)
+      this.indicesService.index2pubkey.get(duty.validatorIndex) ?? duty.pubkey,
+      slot,
+      subCommitteeIndex
+    );
+    return {
       duty,
       // selectionProof === null is used to check if is aggregator
       selectionProof: isSyncCommitteeAggregator(this.config, selectionProof) ? selectionProof : null,
-    }));
+      subCommitteeIndex,
+    };
   }
 
   /** Run at least once per period to prune duties map */

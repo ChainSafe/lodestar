@@ -157,7 +157,7 @@ export class ValidatorStore {
   }
 
   async signContributionAndProof(
-    duty: altair.SyncDuty,
+    duty: Pick<altair.SyncDuty, "pubkey" | "validatorIndex">,
     selectionProof: BLSSignature,
     contribution: altair.SyncCommitteeContribution
   ): Promise<altair.SignedContributionAndProof> {
@@ -194,7 +194,7 @@ export class ValidatorStore {
   }
 
   async signSyncCommitteeSelectionProof(
-    pubkey: BLSPubkey,
+    pubkey: BLSPubkey | string,
     slot: Slot,
     subCommitteeIndex: number
   ): Promise<BLSSignature> {
@@ -223,9 +223,9 @@ export class ValidatorStore {
     return computeDomain(this.config, domainType, forkVersion, this.genesisValidatorsRoot);
   }
 
-  private getSecretKey(pubkey: BLSPubkey): SecretKey {
+  private getSecretKey(pubkey: BLSPubkey | string): SecretKey {
     // TODO: Refactor indexing to not have to run toHexString() on the pubkey every time
-    const pubkeyHex = toHexString(pubkey);
+    const pubkeyHex = typeof pubkey === "string" ? pubkey : toHexString(pubkey);
     const validator = this.validators.get(pubkeyHex);
 
     if (!validator) {
