@@ -9,6 +9,7 @@ import {testLogger, TestLoggerOpts, LogLevel} from "../utils/logger";
 import {logFiles} from "./params";
 import {simTestInfoTracker} from "../utils/node/simTest";
 import {sleep, TimestampFormatCode} from "@chainsafe/lodestar-utils";
+import {initBLS} from "@chainsafe/lodestar-cli/src/util";
 
 /* eslint-disable no-console, @typescript-eslint/naming-convention */
 
@@ -24,19 +25,24 @@ describe("Run single node single thread interop validators (no eth1) until check
     TARGET_AGGREGATORS_PER_COMMITTEE: 4,
   };
 
+  before(async function() {
+    await initBLS();
+  });
+
   const testCases: {
     validatorClientCount: number;
     validatorsPerClient: number;
     event: ChainEvent.justified | ChainEvent.finalized;
     params: Partial<IBeaconParams>;
   }[] = [
-    {validatorClientCount: 1, validatorsPerClient: 32, event: ChainEvent.justified, params: manyValidatorParams},
-    {validatorClientCount: 8, validatorsPerClient: 8, event: ChainEvent.justified, params: testParams},
-    {validatorClientCount: 8, validatorsPerClient: 8, event: ChainEvent.finalized, params: testParams},
+    // {validatorClientCount: 1, validatorsPerClient: 32, event: ChainEvent.justified, params: manyValidatorParams},
+    {validatorClientCount: 1, validatorsPerClient: 32, event: ChainEvent.justified, params: {...manyValidatorParams, ALTAIR_FORK_EPOCH: 0}},
+    // {validatorClientCount: 8, validatorsPerClient: 8, event: ChainEvent.justified, params: testParams},
+    // {validatorClientCount: 8, validatorsPerClient: 8, event: ChainEvent.finalized, params: testParams},
   ];
 
   for (const testCase of testCases) {
-    it(`${testCase.validatorClientCount} vc / ${testCase.validatorsPerClient} validator > until ${testCase.event}`, async function () {
+    it.only(`${testCase.validatorClientCount} vc / ${testCase.validatorsPerClient} validator > until ${testCase.event}`, async function () {
       // Should reach justification in 3 epochs max, and finalization in 4 epochs max
       const expectedEpochsToFinish = testCase.event === ChainEvent.justified ? 3 : 4;
       // 1 epoch of margin of error

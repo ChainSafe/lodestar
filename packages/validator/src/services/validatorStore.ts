@@ -184,12 +184,35 @@ export class ValidatorStore {
     };
   }
 
-  async signSelectionProof(pubkey: BLSPubkey, slot: Slot): Promise<BLSSignature> {
+  async signAttestationSelectionProof(pubkey: BLSPubkey, slot: Slot): Promise<BLSSignature> {
     const domain = await this.getDomain(
       this.config.params.DOMAIN_SELECTION_PROOF,
       computeEpochAtSlot(this.config, slot)
     );
     const signingRoot = computeSigningRoot(this.config, this.config.types.Slot, slot, domain);
+    return this.getSecretKey(pubkey).sign(signingRoot).toBytes();
+  }
+
+  async signSyncCommitteeSelectionProof(
+    pubkey: BLSPubkey,
+    slot: Slot,
+    subCommitteeIndex: number
+  ): Promise<BLSSignature> {
+    const domain = await this.getDomain(
+      this.config.params.DOMAIN_SYNC_COMMITTEE_SELECTION_PROOF,
+      computeEpochAtSlot(this.config, slot)
+    );
+    const signingData: altair.SyncCommitteeSigningData = {
+      slot,
+      subCommitteeIndex: subCommitteeIndex,
+    };
+
+    const signingRoot = computeSigningRoot(
+      this.config,
+      this.config.types.altair.SyncCommitteeSigningData,
+      signingData,
+      domain
+    );
     return this.getSecretKey(pubkey).sign(signingRoot).toBytes();
   }
 

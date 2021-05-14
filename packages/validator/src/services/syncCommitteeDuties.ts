@@ -8,6 +8,7 @@ import {IApiClient} from "../api";
 import {extendError, isSyncCommitteeAggregator, notAborted} from "../util";
 import {IClock} from "../util/clock";
 import {ValidatorStore} from "./validatorStore";
+import {SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
 
 /** Only retain `HISTORICAL_DUTIES_PERIODS` duties prior to the current periods. */
 const HISTORICAL_DUTIES_PERIODS = 2;
@@ -64,7 +65,7 @@ export class SyncCommitteeDutiesService {
       // Validator always has a duty during the entire period
       if (dutyAtPeriod) {
         // getDutyAndProof() is async beacuse it may have to fetch the fork but should never happen in practice
-        duties.push(await this.getDutyAndProof(slot, dutyAtPeriod.duty));
+        duties.push(...(await this.getDutyAndProof(slot, dutyAtPeriod.duty)));
       }
     }
 
@@ -201,15 +202,20 @@ export class SyncCommitteeDutiesService {
     }
   }
 
-  private async getDutyAndProof(slot: Slot, duty: altair.SyncDuty): Promise<SyncDutyAndProof> {
-    const selectionProof = await this.validatorStore.signSelectionProof(duty.pubkey, slot);
-    const isAggregator = isSyncCommitteeAggregator(this.config, selectionProof);
-
-    return {
+  private async getDutyAndProof(slot: Slot, duty: altair.SyncDuty): Promise<SyncDutyAndProof[]> {
+    // TODO: Cache this value
+    const SYNC_COMMITTEE_SUBNET_SIZE = Math.floor(this.config.params.SYNC_COMMITTEE_SIZE / SYNC_COMMITTEE_SUBNET_COUNT);
+    const selectionProofs = await Promise.all(
+      duty.validatorSyncCommitteeIndices.map((validatorSyncCommitteeIndex) => {
+        const subCommitteeIndex = Math.floor(validatorSyncCommitteeIndex / SYNC_COMMITTEE_SUBNET_SIZE);
+        return this.validatorStore.signSyncCommitteeSelectionProof(duty.pubkey, slot, subCommitteeIndex);
+      }));
+    // const isAggregator = isSyncCommitteeAggregator(this.config, selectionProof);
+    return selectionProofs.map((selectionProof) => ({
       duty,
       // selectionProof === null is used to check if is aggregator
-      selectionProof: isAggregator ? selectionProof : null,
-    };
+      selectionProof: isSyncCommitteeAggregator(this.config, selectionProof) ? selectionProof : null,
+    }));
   }
 
   /** Run at least once per period to prune duties map */

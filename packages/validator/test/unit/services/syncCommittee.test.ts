@@ -37,7 +37,7 @@ describe("SyncCommitteeService", function () {
     validatorStore.votingPubkeys.returns(pubkeys);
     validatorStore.hasVotingPubkey.returns(true);
     validatorStore.hasSomeValidators.returns(true);
-    validatorStore.signSelectionProof.resolves(ZERO_HASH);
+    validatorStore.signAttestationSelectionProof.resolves(ZERO_HASH);
   });
 
   let controller: AbortController; // To stop clock

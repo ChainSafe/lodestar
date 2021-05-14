@@ -165,10 +165,11 @@ export function initializeBeaconStateFromEth1(
   eth1Timestamp: Number64,
   deposits: phase0.Deposit[]
 ): TreeBacked<allForks.BeaconState> {
+
   const state = getGenesisBeaconState(
     config,
     config.types.phase0.Eth1Data.defaultValue(),
-    getTemporaryBlockHeader(config, config.types.phase0.BeaconBlock.defaultValue())
+    getTemporaryBlockHeader(config, config.getTypes(GENESIS_SLOT).BeaconBlock.defaultValue())
   );
 
   applyTimestamp(config, state, eth1Timestamp);
