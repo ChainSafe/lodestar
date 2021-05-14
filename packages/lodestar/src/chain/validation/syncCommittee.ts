@@ -1,6 +1,6 @@
-import {CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
+import {CachedBeaconState, computeSyncPeriodAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
-import {altair, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {altair} from "@chainsafe/lodestar-types";
 import {BeaconState} from "@chainsafe/lodestar-types/lib/allForks";
 import {IBeaconDb} from "../../db";
 import {GossipAction, ISyncCommitteeJob, SyncCommitteeError, SyncCommitteeErrorCode} from "../errors";
@@ -108,7 +108,7 @@ export function validateGossipSyncCommitteeExceptSig(
 
   // [REJECT] The subnet_id is valid for the given validator, i.e. subnet_id in compute_subnets_for_sync_committee(state, sync_committee_signature.validator_index).
   // Note this validation implies the validator is part of the broader current sync committee along with the correct subcommittee.
-  const indexInSubCommittee = getIndexInSubCommittee(headState, subnet, data.validatorIndex);
+  const indexInSubCommittee = getIndexInSubCommittee(headState, subnet, data);
   if (indexInSubCommittee === null) {
     throw new SyncCommitteeError(GossipAction.REJECT, {
       code: SyncCommitteeErrorCode.VALIDATOR_NOT_IN_SYNC_COMMITTEE,
@@ -126,9 +126,20 @@ export function validateGossipSyncCommitteeExceptSig(
 function getIndexInSubCommittee(
   headState: CachedBeaconState<BeaconState>,
   subnet: number,
-  validatorIndex: ValidatorIndex
+  data: Pick<altair.SyncCommitteeSignature, "slot" | "validatorIndex">
 ): IndexInSubCommittee | null {
-  const indexesInCommittee = headState.currSyncComitteeValidatorIndexMap.get(validatorIndex);
+  // Note: The range of slots a validator has to perform duties is off by one.
+  // The previous slot wording means that if your validator is in a sync committee for a period that runs from slot
+  // 100 to 200,then you would actually produce signatures in slot 99 - 199.
+  const statePeriod = computeSyncPeriodAtSlot(headState.config, headState.slot);
+  const dataPeriod = computeSyncPeriodAtSlot(headState.config, data.slot + 1); // See note above for the +1 offset
+
+  const syncComitteeValidatorIndexMap =
+    dataPeriod === statePeriod + 1
+      ? headState.nextSyncComitteeValidatorIndexMap
+      : headState.currSyncComitteeValidatorIndexMap;
+
+  const indexesInCommittee = syncComitteeValidatorIndexMap.get(data.validatorIndex);
   if (indexesInCommittee === undefined) {
     // Not part of the sync committee
     return null;
