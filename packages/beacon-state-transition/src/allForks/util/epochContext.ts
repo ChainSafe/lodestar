@@ -87,6 +87,7 @@ export function createEpochContext(
     currSyncCommitteeIndexes,
     nextSyncCommitteeIndexes,
     currSyncComitteeValidatorIndexMap: computeSyncComitteeMap(currSyncCommitteeIndexes),
+    nextSyncComitteeValidatorIndexMap: computeSyncComitteeMap(nextSyncCommitteeIndexes),
   });
 }
 
@@ -188,7 +189,8 @@ export function rotateEpochs(
     const nextPeriodEpoch = currEpoch + epochCtx.config.params.EPOCHS_PER_SYNC_COMMITTEE_PERIOD;
     epochCtx.currSyncCommitteeIndexes = epochCtx.nextSyncCommitteeIndexes;
     epochCtx.nextSyncCommitteeIndexes = getSyncCommitteeIndices(epochCtx.config, state, nextPeriodEpoch);
-    epochCtx.currSyncComitteeValidatorIndexMap = computeSyncComitteeMap(epochCtx.currSyncCommitteeIndexes);
+    epochCtx.currSyncComitteeValidatorIndexMap = epochCtx.nextSyncComitteeValidatorIndexMap;
+    epochCtx.nextSyncComitteeValidatorIndexMap = computeSyncComitteeMap(epochCtx.nextSyncCommitteeIndexes);
   }
 
   // If crossing through the altair fork the caches will be empty, fill them up
@@ -197,6 +199,7 @@ export function rotateEpochs(
     epochCtx.currSyncCommitteeIndexes = getSyncCommitteeIndices(epochCtx.config, state, currEpoch);
     epochCtx.nextSyncCommitteeIndexes = getSyncCommitteeIndices(epochCtx.config, state, nextPeriodEpoch);
     epochCtx.currSyncComitteeValidatorIndexMap = computeSyncComitteeMap(epochCtx.currSyncCommitteeIndexes);
+    epochCtx.nextSyncComitteeValidatorIndexMap = computeSyncComitteeMap(epochCtx.nextSyncCommitteeIndexes);
   }
 }
 
@@ -212,6 +215,7 @@ interface IEpochContextData {
   currSyncCommitteeIndexes: ValidatorIndex[];
   nextSyncCommitteeIndexes: ValidatorIndex[];
   currSyncComitteeValidatorIndexMap: SyncComitteeValidatorIndexMap;
+  nextSyncComitteeValidatorIndexMap: SyncComitteeValidatorIndexMap;
 }
 
 /**
@@ -238,16 +242,13 @@ export class EpochContext {
    * Memory cost: 1024 Number integers.
    */
   currSyncCommitteeIndexes: ValidatorIndex[];
-  /**
-   * Update freq: every ~ 27h.
-   * Memory cost: 1024 Number integers.
-   */
   nextSyncCommitteeIndexes: ValidatorIndex[];
   /**
    * Update freq: every ~ 27h.
    * Memory cost: Map of Number -> Number with 1024 entries.
    */
   currSyncComitteeValidatorIndexMap: SyncComitteeValidatorIndexMap;
+  nextSyncComitteeValidatorIndexMap: SyncComitteeValidatorIndexMap;
   config: IBeaconConfig;
 
   constructor(data: IEpochContextData) {
@@ -261,6 +262,7 @@ export class EpochContext {
     this.currSyncCommitteeIndexes = data.currSyncCommitteeIndexes;
     this.nextSyncCommitteeIndexes = data.nextSyncCommitteeIndexes;
     this.currSyncComitteeValidatorIndexMap = data.currSyncComitteeValidatorIndexMap;
+    this.nextSyncComitteeValidatorIndexMap = data.nextSyncComitteeValidatorIndexMap;
   }
 
   /**

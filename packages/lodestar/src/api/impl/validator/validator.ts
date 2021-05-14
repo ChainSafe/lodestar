@@ -9,7 +9,6 @@ import {
   proposerShufflingDecisionRoot,
   attesterShufflingDecisionRoot,
   computeSubnetForCommitteesAtSlot,
-  computeSyncPeriodAtSlot,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {GENESIS_SLOT, SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
@@ -35,6 +34,7 @@ import {ApiNamespace, IApiModules} from "../interface";
 import {IValidatorApi} from "./interface";
 import {validateSyncCommitteeGossipContributionAndProof} from "../../../chain/validation/syncCommitteeContributionAndProof";
 import {CommitteeSubscription} from "../../../network/subnetsService";
+import {getSyncComitteeValidatorIndexMap} from "./utils";
 
 /**
  * Validator clock may be advanced from beacon's clock. If the validator requests a resource in a
@@ -230,16 +230,16 @@ export class ValidatorApi implements IValidatorApi {
     // May request for an epoch that's in the future
     await this.waitForNextClosestEpoch();
 
-    // TODO: Get state at `epoch`
+    // Note: does not support requesting past duties
     const state = this.chain.getHeadState();
-    const currentStatePeriod = computeSyncPeriodAtSlot(this.config, state.slot);
-    // TODO: ensures `epoch // EPOCHS_PER_SYNC_COMMITTEE_PERIOD <= current_epoch // EPOCHS_PER_SYNC_COMMITTEE_PERIOD + 1`
-    // const syncCommittee = getSyncCommittees(this.config, state, epoch);
+
+    // Ensures `epoch // EPOCHS_PER_SYNC_COMMITTEE_PERIOD <= current_epoch // EPOCHS_PER_SYNC_COMMITTEE_PERIOD + 1`
+    const syncComitteeValidatorIndexMap = getSyncComitteeValidatorIndexMap(this.config, state, epoch);
 
     const duties: altair.SyncDuty[] = validatorIndices.map((validatorIndex) => ({
       pubkey: state.index2pubkey[validatorIndex].toBytes(),
       validatorIndex,
-      validatorSyncCommitteeIndices: state.currSyncComitteeValidatorIndexMap.get(validatorIndex) ?? [],
+      validatorSyncCommitteeIndices: syncComitteeValidatorIndexMap.get(validatorIndex) ?? [],
     }));
 
     return {
