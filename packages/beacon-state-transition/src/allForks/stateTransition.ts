@@ -165,7 +165,7 @@ function _processSlots(
       impl.processSlots(postState, slot, metrics);
       break;
     }
-    const nextImpl = implementations[currentForkInfo.name];
+    const nextImpl = implementations[nextForkInfo.name];
     if (!nextImpl) {
       throw new Error(`Slot processing not implemented for fork ${nextForkInfo.name}`);
     }
