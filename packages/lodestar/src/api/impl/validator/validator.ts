@@ -34,6 +34,7 @@ import {ApiNamespace, IApiModules} from "../interface";
 import {IValidatorApi} from "./interface";
 import {validateSyncCommitteeGossipContributionAndProof} from "../../../chain/validation/syncCommitteeContributionAndProof";
 import {CommitteeSubscription} from "../../../network/subnetsService";
+import {getSyncComitteeValidatorIndexMap} from "./utils";
 
 /**
  * Validator clock may be advanced from beacon's clock. If the validator requests a resource in a
@@ -229,15 +230,16 @@ export class ValidatorApi implements IValidatorApi {
     // May request for an epoch that's in the future
     await this.waitForNextClosestEpoch();
 
-    // TODO: Get state at `epoch`
-    const state = await this.chain.getHeadStateAtCurrentEpoch();
-    // TODO: ensures `epoch // EPOCHS_PER_SYNC_COMMITTEE_PERIOD <= current_epoch // EPOCHS_PER_SYNC_COMMITTEE_PERIOD + 1`
-    // const syncCommittee = getSyncCommittees(this.config, state, epoch);
+    // Note: does not support requesting past duties
+    const state = this.chain.getHeadState();
+
+    // Ensures `epoch // EPOCHS_PER_SYNC_COMMITTEE_PERIOD <= current_epoch // EPOCHS_PER_SYNC_COMMITTEE_PERIOD + 1`
+    const syncComitteeValidatorIndexMap = getSyncComitteeValidatorIndexMap(this.config, state, epoch);
 
     const duties: altair.SyncDuty[] = validatorIndices.map((validatorIndex) => ({
       pubkey: state.index2pubkey[validatorIndex].toBytes(),
       validatorIndex,
-      validatorSyncCommitteeIndices: state.currSyncComitteeValidatorIndexMap.get(validatorIndex) ?? [],
+      validatorSyncCommitteeIndices: syncComitteeValidatorIndexMap.get(validatorIndex) ?? [],
     }));
 
     return {
@@ -359,26 +361,21 @@ export class ValidatorApi implements IValidatorApi {
   async prepareSyncCommitteeSubnets(subscriptions: altair.SyncCommitteeSubscription[]): Promise<void> {
     this.notWhileSyncing();
 
-    const state = await this.chain.getHeadStateAtCurrentEpoch();
-
     // TODO: Cache this value
     const SYNC_COMMITTEE_SUBNET_SIZE = Math.floor(this.config.params.SYNC_COMMITTEE_SIZE / SYNC_COMMITTEE_SUBNET_COUNT);
 
     // A `validatorIndex` can be in multiple subnets, so compute the CommitteeSubscription with double for loop
     const subs: CommitteeSubscription[] = [];
     for (const sub of subscriptions) {
-      const committeeIndices = state.currSyncComitteeValidatorIndexMap.get(sub.validatorIndex);
-      if (committeeIndices) {
-        for (const committeeIndex of committeeIndices) {
-          const subnet = Math.floor(committeeIndex / SYNC_COMMITTEE_SUBNET_SIZE);
-          subs.push({
-            validatorIndex: sub.validatorIndex,
-            subnet: subnet,
-            // Subscribe until the end of `untilEpoch`: https://github.com/ethereum/eth2.0-APIs/pull/136#issuecomment-840315097
-            slot: computeStartSlotAtEpoch(this.config, sub.untilEpoch + 1),
-            isAggregator: true,
-          });
-        }
+      for (const committeeIndex of sub.syncCommitteeIndices) {
+        const subnet = Math.floor(committeeIndex / SYNC_COMMITTEE_SUBNET_SIZE);
+        subs.push({
+          validatorIndex: sub.validatorIndex,
+          subnet: subnet,
+          // Subscribe until the end of `untilEpoch`: https://github.com/ethereum/eth2.0-APIs/pull/136#issuecomment-840315097
+          slot: computeStartSlotAtEpoch(this.config, sub.untilEpoch + 1),
+          isAggregator: true,
+        });
       }
     }
 

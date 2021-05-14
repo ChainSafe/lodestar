@@ -3,17 +3,20 @@ import {toBufferBE} from "bigint-buffer";
 import {expect} from "chai";
 import sinon from "sinon";
 import bls from "@chainsafe/bls";
-import {config} from "@chainsafe/lodestar-config/mainnet";
-import {phase0} from "@chainsafe/lodestar-types";
+import {createIBeaconConfig} from "@chainsafe/lodestar-config";
+import {config as mainnetConfig} from "@chainsafe/lodestar-config/mainnet";
+import {altair} from "@chainsafe/lodestar-types";
 import {toHexString} from "@chainsafe/ssz";
-import {AttestationDutiesService} from "../../../src/services/attestationDuties";
+import {SyncCommitteeDutiesService} from "../../../src/services/syncCommitteeDuties";
 import {ValidatorStore} from "../../../src/services/validatorStore";
 import {ApiClientStub} from "../../utils/apiStub";
 import {testLogger} from "../../utils/logger";
 import {ClockMock} from "../../utils/clock";
 import {IndicesService} from "../../../src/services/indices";
 
-describe("AttestationDutiesService", function () {
+/* eslint-disable @typescript-eslint/naming-convention */
+
+describe("SyncCommitteeDutiesService", function () {
   const sandbox = sinon.createSandbox();
   const logger = testLogger();
   const ZERO_HASH = Buffer.alloc(32, 0);
@@ -22,6 +25,11 @@ describe("AttestationDutiesService", function () {
   const validatorStore = sinon.createStubInstance(ValidatorStore) as ValidatorStore &
     sinon.SinonStubbedInstance<ValidatorStore>;
   let pubkeys: Uint8Array[]; // Initialize pubkeys in before() so bls is already initialized
+
+  const config = createIBeaconConfig({
+    ...mainnetConfig.params,
+    ALTAIR_FORK_EPOCH: 0, // Activate Altair immediatelly
+  });
 
   // Sample validator
   const defaultValidator = config.types.phase0.ValidatorResponse.defaultValue();
@@ -51,24 +59,20 @@ describe("AttestationDutiesService", function () {
 
     // Reply with some duties
     const slot = 1;
-    const duty: phase0.AttesterDuty = {
-      slot: slot,
-      committeeIndex: 1,
-      committeeLength: 120,
-      committeesAtSlot: 120,
-      validatorCommitteeIndex: 1,
-      validatorIndex: index,
+    const duty: altair.SyncDuty = {
       pubkey: pubkeys[0],
+      validatorIndex: index,
+      validatorSyncCommitteeIndices: [7],
     };
-    apiClient.validator.getAttesterDuties.resolves({dependentRoot: ZERO_HASH, data: [duty]});
+    apiClient.validator.getSyncCommitteeDuties.resolves({dependentRoot: ZERO_HASH, data: [duty]});
 
     // Accept all subscriptions
-    apiClient.validator.prepareBeaconCommitteeSubnet.resolves();
+    apiClient.validator.prepareSyncCommitteeSubnets.resolves();
 
     // Clock will call runAttesterDutiesTasks() immediatelly
     const clock = new ClockMock();
     const indicesService = new IndicesService(logger, apiClient, validatorStore);
-    const dutiesService = new AttestationDutiesService(
+    const dutiesService = new SyncCommitteeDutiesService(
       config,
       logger,
       apiClient,
@@ -87,23 +91,22 @@ describe("AttestationDutiesService", function () {
     );
 
     // Duties for this and next epoch should be persisted
-    expect(Object.fromEntries(dutiesService["dutiesByEpochByIndex"].get(index) || new Map())).to.deep.equal(
+    expect(Object.fromEntries(dutiesService["dutiesByPeriodByIndex"].get(index) || new Map())).to.deep.equal(
       {
-        // Since the ZERO_HASH won't pass the isAggregator test, selectionProof is null
-        0: {dependentRoot: ZERO_HASH, dutyAndProof: {duty, selectionProof: null}},
-        1: {dependentRoot: ZERO_HASH, dutyAndProof: {duty, selectionProof: null}},
+        0: {dependentRoot: ZERO_HASH, duty},
+        1: {dependentRoot: ZERO_HASH, duty},
       },
       "Wrong dutiesService.attesters Map"
     );
 
-    expect(dutiesService.getDutiesAtSlot(slot)).to.deep.equal(
+    expect(await dutiesService.getDutiesAtSlot(slot)).to.deep.equal(
       [{duty, selectionProof: null}],
       "Wrong getAttestersAtSlot()"
     );
 
-    expect(apiClient.validator.prepareBeaconCommitteeSubnet.callCount).to.equal(
+    expect(apiClient.validator.prepareSyncCommitteeSubnets.callCount).to.equal(
       1,
-      "prepareBeaconCommitteeSubnet() must be called once after getting the duties"
+      "prepareSyncCommitteeSubnets() must be called once after getting the duties"
     );
   });
 });

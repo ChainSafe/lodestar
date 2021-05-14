@@ -8,11 +8,13 @@ import {ApiClientOverRest} from "./api/rest";
 import {IValidatorOptions} from "./options";
 import {Clock, IClock} from "./util/clock";
 import {signAndSubmitVoluntaryExit} from "./voluntaryExit";
+import {waitForGenesis} from "./genesis";
 import {ForkService} from "./services/fork";
 import {ValidatorStore} from "./services/validatorStore";
 import {BlockProposingService} from "./services/block";
 import {AttestationService} from "./services/attestation";
-import {waitForGenesis} from "./genesis";
+import {IndicesService} from "./services/indices";
+import {SyncCommitteeService} from "./services/syncCommittee";
 
 // TODO: Extend the timeout, and let it be customizable
 /// The global timeout for HTTP requests to the beacon node.
@@ -44,8 +46,10 @@ export class Validator {
     const clock = new Clock(config, logger, {genesisTime: Number(genesis.genesisTime)});
     const forkService = new ForkService(apiClient, logger, clock);
     const validatorStore = new ValidatorStore(config, forkService, slashingProtection, secretKeys, genesis);
+    const indicesService = new IndicesService(logger, apiClient, validatorStore);
     new BlockProposingService(config, logger, apiClient, clock, validatorStore, graffiti);
-    new AttestationService(config, logger, apiClient, clock, validatorStore);
+    new AttestationService(config, logger, apiClient, clock, validatorStore, indicesService);
+    new SyncCommitteeService(config, logger, apiClient, clock, validatorStore, indicesService);
 
     this.config = config;
     this.logger = logger;
