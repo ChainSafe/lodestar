@@ -12,10 +12,9 @@ export const publishBlock: ApiController = {
   id: "publishBlock",
 
   handler: async function (req) {
-    const type = getSignedBlockType(this.config, req.body as SignedBeaconBlock);
-
     let block: phase0.SignedBeaconBlock;
     try {
+      const type = getSignedBlockType(this.config, req.body as SignedBeaconBlock);
       block = type.fromJson(req.body, {case: "snake"});
     } catch (e) {
       throw new ValidationError(`Failed to deserialize block: ${(e as Error).message}`);
