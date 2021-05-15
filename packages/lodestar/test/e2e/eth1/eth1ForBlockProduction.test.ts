@@ -2,7 +2,6 @@
 import "mocha";
 import {expect} from "chai";
 import {promisify} from "es6-promisify";
-// @ts-ignore
 import leveldown from "leveldown";
 import {AbortController} from "abort-controller";
 import {sleep} from "@chainsafe/lodestar-utils";

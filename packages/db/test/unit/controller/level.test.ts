@@ -1,6 +1,5 @@
 import {expect} from "chai";
 import {WinstonLogger} from "@chainsafe/lodestar-utils";
-// @ts-ignore
 import leveldown from "leveldown";
 import all from "it-all";
 import {LevelDbController} from "../../../src/controller";
