@@ -1,5 +1,7 @@
 import path from "path";
 import bls from "@chainsafe/bls";
+import {EmptyAggregateError} from "@chainsafe/bls/lib/errors";
+import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util/lib";
 
 import {SPEC_TEST_LOCATION} from "../../utils/specTestCases";
@@ -12,28 +14,20 @@ interface IAggregateSigsTestCase {
 }
 
 describeDirectorySpecTest<IAggregateSigsTestCase, string | null>(
-  "BLS - aggregate sigs",
+  "bls/aggregate/small",
   path.join(SPEC_TEST_LOCATION, "tests/general/phase0/bls/aggregate/small"),
   (testCase) => {
     try {
-      const result = bls.aggregateSignatures(
-        testCase.data.input.map((pubKey) => {
-          return Buffer.from(pubKey.replace("0x", ""), "hex");
-        })
-      );
-      return `0x${Buffer.from(result).toString("hex")}`;
+      const signatures = testCase.data.input;
+      const agg = bls.aggregateSignatures(signatures.map(fromHexString));
+      return toHexString(agg);
     } catch (e) {
-      if ((e as Error).message === "signatures is null or undefined or empty array") {
-        return null;
-      }
+      if (e instanceof EmptyAggregateError) return null;
       throw e;
     }
   },
   {
-    inputTypes: {
-      data: InputType.YAML,
-    },
+    inputTypes: {data: InputType.YAML},
     getExpected: (testCase) => testCase.data.output,
-    shouldError: (testCase) => testCase.data.output == null,
   }
 );
