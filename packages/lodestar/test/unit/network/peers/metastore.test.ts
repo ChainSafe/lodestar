@@ -23,6 +23,8 @@ describe("Libp2pPeerMetadataStore", function () {
       getValue: sinon.stub().callsFake(() => {
         return stored;
       }) as SinonStub<[PeerId, string], Buffer>,
+      // TODO: fix upstream type (which also contains @ts-ignore)
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
       set: sinon.stub().callsFake(
         (peerId: PeerId, key: string, value: Buffer): ProtoBook => {

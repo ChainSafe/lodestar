@@ -74,7 +74,7 @@ describe("node api implementation", function () {
     });
 
     it("should get node identity - no enr", async function () {
-      networkStub.getEnr.returns(null!);
+      networkStub.getEnr.returns((null as unknown) as ENR);
       const identity = await api.getNodeIdentity();
       expect(identity.enr).equal("");
     });
