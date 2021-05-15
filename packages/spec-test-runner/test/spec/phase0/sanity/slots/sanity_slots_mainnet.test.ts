@@ -21,6 +21,7 @@ describeDirectorySpecTest<IProcessSlotsTestCase, phase0.BeaconState>(
     return wrappedState;
   },
   {
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
     inputTypes: {
       pre: {
@@ -33,6 +34,7 @@ describeDirectorySpecTest<IProcessSlotsTestCase, phase0.BeaconState>(
       },
       slots: InputType.YAML,
     },
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
     sszTypes: {
       pre: config.types.phase0.BeaconState,
