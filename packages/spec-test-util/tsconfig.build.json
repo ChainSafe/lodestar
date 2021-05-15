@@ -2,6 +2,7 @@
   "extends": "../../tsconfig.build.json",
   "include": ["src"],
   "compilerOptions": {
-    "outDir": "./lib"
+    "outDir": "./lib",
+    "typeRoots": ["../../node_modules/@types", "./node_modules/@types", "./types"]
   }
 }
