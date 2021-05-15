@@ -9,12 +9,11 @@ function isObjectObject(val: unknown): boolean {
   return val != null && typeof val === "object" && Array.isArray(val) === false;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function isPlainObject(o: any): boolean {
+export function isPlainObject(o: unknown): boolean {
   if (isObjectObject(o) === false) return false;
 
   // If has modified constructor
-  const ctor = o.constructor;
+  const ctor = (o as Record<string, unknown>).constructor;
   if (typeof ctor !== "function") return false;
 
   // If has modified prototype

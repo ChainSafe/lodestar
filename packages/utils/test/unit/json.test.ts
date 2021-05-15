@@ -5,8 +5,7 @@ import {LodestarError, toJson, toString, CIRCULAR_REFERENCE_TAG} from "../../src
 
 describe("Json helper", () => {
   const circularReference = {};
-  // @ts-ignore
-  circularReference.myself = circularReference;
+  (circularReference as {myself: unknown}).myself = circularReference;
 
   describe("toJson", () => {
     interface ITestCase {
