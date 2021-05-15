@@ -80,7 +80,7 @@ module.exports = {
         varsIgnorePattern: "^_",
       },
     ],
-    "@typescript-eslint/ban-ts-comment": "warn",
+    "@typescript-eslint/ban-ts-comment": "error",
     "@typescript-eslint/no-use-before-define": "off",
     "@typescript-eslint/semi": "error",
     "@typescript-eslint/type-annotation-spacing": "error",
@@ -90,6 +90,7 @@ module.exports = {
     "@typescript-eslint/no-unsafe-call": "error",
     "@typescript-eslint/no-unsafe-member-access": "error",
     "@typescript-eslint/no-unsafe-return": "error",
+    "@typescript-eslint/no-non-null-assertion": "error",
     "import/no-extraneous-dependencies": [
       "error",
       {
