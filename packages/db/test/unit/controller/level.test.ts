@@ -1,6 +1,5 @@
 import {expect} from "chai";
 import {WinstonLogger} from "@chainsafe/lodestar-utils";
-// @ts-ignore
 import leveldown from "leveldown";
 import all from "it-all";
 import {LevelDbController} from "../../../src/controller";
@@ -16,8 +15,7 @@ describe("LevelDB controller", () => {
   after(async () => {
     await db.stop();
     await new Promise<void>((resolve, reject) => {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-      leveldown.destroy(dbLocation, (err: Error) => {
+      leveldown.destroy(dbLocation, (err) => {
         if (err) reject(err);
         else resolve();
       });

@@ -48,6 +48,7 @@ export class Libp2pPeerMetadataStore implements IPeerMetadataStore {
       set: (peer: PeerId, value: T): void => {
         if (value != null) {
           // TODO: fix upstream type (which also contains @ts-ignore)
+          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
           // @ts-ignore
           this.metabook.set(peer, key, Buffer.from(type.serialize(value)));
         } else {

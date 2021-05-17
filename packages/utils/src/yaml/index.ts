@@ -6,7 +6,6 @@ export function loadYaml(yaml: string): Record<string, unknown> {
   return objectToExpectedCase(load(yaml, {schema}));
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function dumpYaml(yaml: any): string {
+export function dumpYaml(yaml: unknown): string {
   return dump(yaml, {schema});
 }

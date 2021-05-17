@@ -9,7 +9,7 @@ import {ServerOpts} from "../lightclientApiServer";
 import {leveGenesisTime, leveParams} from "../../src/leve";
 import {generateBalances, generateValidators, getInteropSyncCommittee} from "../utils";
 
-/* eslint-disable @typescript-eslint/naming-convention */
+/* eslint-disable @typescript-eslint/naming-convention, no-console */
 
 async function runAltairChainSimulator(): Promise<void> {
   await init("blst-native");

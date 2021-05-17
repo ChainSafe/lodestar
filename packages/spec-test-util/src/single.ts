@@ -3,10 +3,7 @@ import {expect} from "chai";
 import {readdirSync, readFileSync} from "fs";
 import {basename, join, parse} from "path";
 import {Type, CompositeType} from "@chainsafe/ssz";
-// @ts-ignore
 import {uncompress} from "snappyjs";
-declare function uncompress(data: Buffer): Buffer;
-
 import {isDirectory, loadYamlFile} from "./util";
 
 export enum InputType {
@@ -205,7 +202,7 @@ function deserializeInputFile<TestCase, Result>(
       }
     }
     if (sszType) {
-      if ((options.inputTypes![inputName as keyof TestCase]! as ExpandedInputType).treeBacked) {
+      if ((options.inputTypes?.[inputName as keyof TestCase] as ExpandedInputType).treeBacked) {
         // eslint-disable-next-line @typescript-eslint/no-unsafe-call
         return (sszType as CompositeType<any>).createTreeBackedFromBytes(data);
       } else {

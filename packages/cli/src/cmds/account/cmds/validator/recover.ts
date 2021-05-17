@@ -17,6 +17,8 @@ import bls from "@chainsafe/bls";
 import {Keystore} from "@chainsafe/bls-keystore";
 import {getBeaconConfigFromArgs} from "../../../../config";
 
+/* eslint-disable no-console */
+
 export type IValidatorRecoverArgs = Pick<IValidatorCreateArgs, "count" | "depositGwei" | "storeWithdrawalKeystore"> & {
   mnemonicInputPath: string;
   firstIndex: number;

@@ -118,7 +118,7 @@ export class Network implements INetwork {
   async start(): Promise<void> {
     await this.libp2p.start();
     this.reqResp.start();
-    this.metadata.start(this.getEnr()!);
+    this.metadata.start(this.getEnr());
     this.peerManager.start();
     this.gossip.start();
     const multiaddresses = this.libp2p.multiaddrs.map((m) => m.toString()).join(",");

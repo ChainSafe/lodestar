@@ -20,7 +20,7 @@ describe("Process Slots Performance Test", function () {
     }
     logger.profile(`Process ${numSlot} slots ${maxTry} times`);
     const average = duration / maxTry;
-    console.log(`Processing ${numSlot} slots in ${average}ms`);
+    logger.info(`Processing ${numSlot} slots in ${average}ms`);
     expect(average).lt(expectedValue, `process ${numSlot} takes longer than ${expectedValue} ms`);
   }
 

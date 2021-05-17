@@ -5,9 +5,6 @@ export interface INetworkOptions extends PeerManagerOpts {
   localMultiaddrs: string[];
   bootMultiaddrs: string[];
   discv5?: IDiscv5DiscoveryInputOptions;
-  rpcTimeout: number;
-  connectTimeout: number;
-  disconnectTimeout: number;
 }
 
 export const defaultDiscv5Options: IDiscv5DiscoveryInputOptions = {
@@ -24,7 +21,4 @@ export const defaultNetworkOptions: INetworkOptions = {
   localMultiaddrs: ["/ip4/0.0.0.0/tcp/9000"],
   bootMultiaddrs: [],
   discv5: defaultDiscv5Options,
-  rpcTimeout: 5000,
-  connectTimeout: 3000,
-  disconnectTimeout: 3000,
 };

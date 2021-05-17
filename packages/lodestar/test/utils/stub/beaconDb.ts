@@ -53,7 +53,8 @@ export class StubbedBeaconDb extends BeaconDb {
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   constructor(sinon: SinonSandbox, config = minimalConfig) {
-    super({config, controller: null!});
+    // eslint-disable-next-line
+    super({config, controller: {} as any});
     this.badBlock = createStubInstance(BadBlockRepository);
     this.block = createStubInstance(BlockRepository);
     this.pendingBlock = createStubInstance(PendingBlockRepository);

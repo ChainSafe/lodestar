@@ -35,9 +35,11 @@ describeDirectorySpecTest<IForkChoiceTestCase, void>(
         forkchoice.updateTime(Number(step.tick) / SECONDS_PER_SLOT);
       } else if (isAttestation(step)) {
         const attestation = testcase.attestations.get(step.attestation);
-        forkchoice.onAttestation(cachedState.epochCtx.getIndexedAttestation(attestation!));
+        if (!attestation) throw Error(`No attestation ${step.attestation}`);
+        forkchoice.onAttestation(cachedState.epochCtx.getIndexedAttestation(attestation));
       } else if (isBlock(step)) {
-        const signedBlock = testcase.blocks.get(step.block)!;
+        const signedBlock = testcase.blocks.get(step.block);
+        if (!signedBlock) throw Error(`No block ${step.block}`);
         expect(signedBlock).not.to.be.undefined;
         try {
           cachedState = allForks.stateTransition(cachedState, signedBlock, {

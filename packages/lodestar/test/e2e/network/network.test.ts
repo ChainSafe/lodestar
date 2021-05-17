@@ -27,9 +27,6 @@ const opts: INetworkOptions = {
   maxPeers: 1,
   targetPeers: 1,
   bootMultiaddrs: [],
-  rpcTimeout: 5000,
-  connectTimeout: 5000,
-  disconnectTimeout: 5000,
   localMultiaddrs: [],
 };
 

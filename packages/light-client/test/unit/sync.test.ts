@@ -14,7 +14,7 @@ import {ServerOpts} from "../lightclientApiServer";
 import {IClock} from "../../src/utils/clock";
 import {generateBalances, generateValidators, getInteropSyncCommittee} from "../utils";
 
-/* eslint-disable @typescript-eslint/naming-convention */
+/* eslint-disable @typescript-eslint/naming-convention, no-console */
 
 describe("Lightclient flow with LightClientUpdater", () => {
   const config = createIBeaconConfig({

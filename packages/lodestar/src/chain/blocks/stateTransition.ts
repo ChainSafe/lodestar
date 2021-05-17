@@ -1,4 +1,4 @@
-import {byteArrayEquals} from "@chainsafe/ssz";
+import {byteArrayEquals, toHexString} from "@chainsafe/ssz";
 import {Gwei, Slot} from "@chainsafe/lodestar-types";
 import {assert} from "@chainsafe/lodestar-utils";
 import {
@@ -94,7 +94,12 @@ export async function runStateTransition(
   let justifiedBalances: Gwei[] = [];
   if (postState.currentJustifiedCheckpoint.epoch > forkChoice.getJustifiedCheckpoint().epoch) {
     const justifiedState = checkpointStateCache.get(postState.currentJustifiedCheckpoint);
-    justifiedBalances = getEffectiveBalances(justifiedState!);
+    if (!justifiedState) {
+      const epoch = postState.currentJustifiedCheckpoint.epoch;
+      const root = toHexString(postState.currentJustifiedCheckpoint.root);
+      throw Error(`State not available for justified checkpoint ${epoch} ${root}`);
+    }
+    justifiedBalances = getEffectiveBalances(justifiedState);
   }
   forkChoice.onBlock(job.signedBlock.message, postState, justifiedBalances);
 

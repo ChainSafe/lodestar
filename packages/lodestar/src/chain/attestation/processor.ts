@@ -13,7 +13,7 @@ import {ChainEvent, ChainEventEmitter} from "../emitter";
 import {IStateRegenerator} from "../regen";
 
 import {processAttestation} from "./process";
-import {AttestationError, AttestationErrorCode} from "../errors";
+import {AttestationError, AttestationErrorCode, AttestationErrorType} from "../errors";
 
 type AttestationProcessorModules = {
   config: IBeaconConfig;
@@ -67,8 +67,8 @@ export function mapAttestationError(e: Error, job: IAttestationJob): Attestation
       (key) => InvalidAttestationCode[key as keyof typeof InvalidAttestationCode] === attError.code
     );
     const code = AttestationErrorCode[codeName as keyof typeof AttestationErrorCode];
-    // @ts-ignore
-    const lodestarErr = new AttestationError({job, ...attError, code});
+    const errType = {...attError, code} as AttestationErrorType;
+    const lodestarErr = new AttestationError({job, ...errType});
     lodestarErr.stack = e.stack;
     return lodestarErr;
   }
