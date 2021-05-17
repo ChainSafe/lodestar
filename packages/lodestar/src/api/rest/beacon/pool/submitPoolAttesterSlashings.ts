@@ -3,7 +3,7 @@ import {ValidationError} from "../../../impl/errors";
 import {ApiController} from "../../types";
 
 export const submitPoolAttesterSlashings: ApiController = {
-  url: "/pool/attester_slashings",
+  url: "/eth/v1/beacon/pool/attester_slashings",
   method: "POST",
   id: "submitPoolAttesterSlashings",
 

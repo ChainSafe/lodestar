@@ -11,6 +11,7 @@ import {ValidatorStore} from "../../../src/services/validatorStore";
 import {ApiClientStub} from "../../utils/apiStub";
 import {testLogger} from "../../utils/logger";
 import {ClockMock} from "../../utils/clock";
+import {IndicesService} from "../../../src/services/indices";
 
 describe("AttestationDutiesService", function () {
   const sandbox = sinon.createSandbox();
@@ -24,7 +25,8 @@ describe("AttestationDutiesService", function () {
 
   // Sample validator
   const defaultValidator = config.types.phase0.ValidatorResponse.defaultValue();
-  const index = 0;
+  const index = 4;
+  defaultValidator.index = index;
 
   before(() => {
     const secretKeys = [bls.SecretKey.fromBytes(toBufferBE(BigInt(98), 32))];
@@ -65,19 +67,27 @@ describe("AttestationDutiesService", function () {
 
     // Clock will call runAttesterDutiesTasks() immediatelly
     const clock = new ClockMock();
-    const dutiesService = new AttestationDutiesService(config, logger, apiClient, clock, validatorStore);
+    const indicesService = new IndicesService(logger, apiClient, validatorStore);
+    const dutiesService = new AttestationDutiesService(
+      config,
+      logger,
+      apiClient,
+      clock,
+      validatorStore,
+      indicesService
+    );
 
     // Trigger clock onSlot for slot 0
     await clock.tickEpochFns(0, controller.signal);
 
     // Validator index should be persisted
-    expect(Object.fromEntries(dutiesService["indices"])).to.deep.equal(
+    expect(Object.fromEntries(indicesService["pubkey2index"])).to.deep.equal(
       {[toHexString(pubkeys[0])]: index},
       "Wrong dutiesService.indices Map"
     );
 
     // Duties for this and next epoch should be persisted
-    expect(Object.fromEntries(dutiesService["attesters"].get(toHexString(pubkeys[0])) || new Map())).to.deep.equal(
+    expect(Object.fromEntries(dutiesService["dutiesByEpochByIndex"].get(index) || new Map())).to.deep.equal(
       {
         // Since the ZERO_HASH won't pass the isAggregator test, selectionProof is null
         0: {dependentRoot: ZERO_HASH, dutyAndProof: {duty, selectionProof: null}},
@@ -86,7 +96,7 @@ describe("AttestationDutiesService", function () {
       "Wrong dutiesService.attesters Map"
     );
 
-    expect(dutiesService.getAttestersAtSlot(slot)).to.deep.equal(
+    expect(dutiesService.getDutiesAtSlot(slot)).to.deep.equal(
       [{duty, selectionProof: null}],
       "Wrong getAttestersAtSlot()"
     );

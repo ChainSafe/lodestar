@@ -1,16 +1,15 @@
-import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
+import {computeStartSlotAtEpoch, phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {toHexString} from "@chainsafe/ssz";
 import {expect, use} from "chai";
 import chaiAsPromised from "chai-as-promised";
-import sinon, {SinonStubbedInstance} from "sinon";
+import sinon from "sinon";
 import {
   getEpochBeaconCommittees,
   resolveStateId,
   getValidatorStatus,
 } from "../../../../../../src/api/impl/beacon/state/utils";
-import {BeaconChain, IBeaconChain} from "../../../../../../src/chain";
-import {IBeaconClock} from "../../../../../../src/chain/clock/interface";
+import {IBeaconChain} from "../../../../../../src/chain";
 import {generateBlockSummary} from "../../../../../utils/block";
 import {generateCachedState, generateState} from "../../../../../utils/state";
 import {StubbedBeaconDb} from "../../../../../utils/stub";
@@ -222,41 +221,27 @@ describe("beacon state api utils", function () {
   });
 
   describe("getEpochBeaconCommittees", function () {
-    let chainStub: SinonStubbedInstance<IBeaconChain>;
-
-    beforeEach(function () {
-      chainStub = sinon.createStubInstance(BeaconChain);
-    });
-
     it("current epoch with epoch context", function () {
-      chainStub.clock = {
-        currentEpoch: 1,
-      } as IBeaconClock;
       const state = generateCachedState({}, config);
-      const committees = getEpochBeaconCommittees(config, chainStub, state, 1);
+      state.slot = computeStartSlotAtEpoch(config, 1);
+      const committees = getEpochBeaconCommittees(config, state, 1);
       expect(committees).to.be.deep.equal(state.currentShuffling.committees);
     });
 
     it("previous epoch with epoch context", function () {
-      chainStub.clock = {
-        currentEpoch: 2,
-      } as IBeaconClock;
       const state = generateCachedState({}, config);
-      const committees = getEpochBeaconCommittees(config, chainStub, state, 1);
+      state.slot = computeStartSlotAtEpoch(config, 2);
+      const committees = getEpochBeaconCommittees(config, state, 1);
       expect(committees).to.be.deep.equal(state.previousShuffling.committees);
     });
 
     it("old/new epoch with epoch context", function () {
-      chainStub.clock = {
-        currentEpoch: 3,
-      } as IBeaconClock;
       const state = generateCachedState(
-        {
-          validators: generateValidators(24, {activationEpoch: 0, exitEpoch: 10}),
-        },
+        {validators: generateValidators(24, {activationEpoch: 0, exitEpoch: 10})},
         config
       );
-      const committees = getEpochBeaconCommittees(config, chainStub, state, 1);
+      state.slot = computeStartSlotAtEpoch(config, 3);
+      const committees = getEpochBeaconCommittees(config, state, 1);
       expect(committees[0][0][0]).to.not.be.undefined;
     });
   });

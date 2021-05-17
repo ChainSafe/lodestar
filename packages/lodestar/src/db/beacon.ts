@@ -46,7 +46,7 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
   preGenesisStateLastProcessedBlock: PreGenesisStateLastProcessedBlock;
 
   // altair
-  syncCommitee: SyncCommitteeCache;
+  syncCommittee: SyncCommitteeCache;
   syncCommitteeContribution: SyncCommitteeContributionCache;
 
   constructor(opts: IDatabaseApiOptions) {
@@ -69,7 +69,7 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
     this.preGenesisState = new PreGenesisState(this.config, this.db);
     this.preGenesisStateLastProcessedBlock = new PreGenesisStateLastProcessedBlock(this.config, this.db);
     // altair
-    this.syncCommitee = new SyncCommitteeCache(this.config);
+    this.syncCommittee = new SyncCommitteeCache(this.config);
     this.syncCommitteeContribution = new SyncCommitteeContributionCache(this.config);
   }
 

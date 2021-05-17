@@ -1,4 +1,4 @@
-import {CommitteeIndex, phase0, Slot} from "@chainsafe/lodestar-types";
+import {altair, CommitteeIndex, phase0, Slot} from "@chainsafe/lodestar-types";
 
 export interface IAttestationFilters {
   slot: Slot;
@@ -7,11 +7,12 @@ export interface IAttestationFilters {
 
 export interface IBeaconPoolApi {
   getAttestations(filters?: Partial<IAttestationFilters>): Promise<phase0.Attestation[]>;
-  submitAttestations(attestations: phase0.Attestation[]): Promise<void>;
   getAttesterSlashings(): Promise<phase0.AttesterSlashing[]>;
-  submitAttesterSlashing(slashing: phase0.AttesterSlashing): Promise<void>;
   getProposerSlashings(): Promise<phase0.ProposerSlashing[]>;
-  submitProposerSlashing(slashing: phase0.ProposerSlashing): Promise<void>;
   getVoluntaryExits(): Promise<phase0.SignedVoluntaryExit[]>;
+  submitAttestations(attestations: phase0.Attestation[]): Promise<void>;
+  submitAttesterSlashing(slashing: phase0.AttesterSlashing): Promise<void>;
+  submitProposerSlashing(slashing: phase0.ProposerSlashing): Promise<void>;
   submitVoluntaryExit(exit: phase0.SignedVoluntaryExit): Promise<void>;
+  submitSyncCommitteeSignatures(signatures: altair.SyncCommitteeSignature[]): Promise<void>;
 }

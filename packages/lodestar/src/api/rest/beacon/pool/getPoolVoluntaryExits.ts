@@ -1,7 +1,7 @@
 import {ApiController} from "../../types";
 
 export const getPoolVoluntaryExits: ApiController = {
-  url: "/pool/voluntary_exits",
+  url: "/eth/v1/beacon/pool/voluntary_exits",
   method: "GET",
   id: "getPoolVoluntaryExits",
 

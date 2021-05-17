@@ -1,5 +1,5 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {Root, phase0, allForks, BLSPubkey} from "@chainsafe/lodestar-types";
+import {Root, phase0, allForks, BLSPubkey, Epoch, altair} from "@chainsafe/lodestar-types";
 import {List, readonlyValues} from "@chainsafe/ssz";
 import {computeEpochAtSlot, getCurrentEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconChain} from "../../../../chain/interface";
@@ -12,6 +12,7 @@ import {IBeaconStateApi, ICommitteesFilters, IValidatorFilters, StateId} from ".
 import {
   filterStateValidatorsByStatuses,
   getEpochBeaconCommittees,
+  getSyncCommittees,
   getValidatorStatus,
   resolveStateId,
   toValidatorResponse,
@@ -133,9 +134,8 @@ export class BeaconStateApi implements IBeaconStateApi {
   async getStateCommittees(stateId: StateId, filters?: ICommitteesFilters): Promise<phase0.BeaconCommitteeResponse[]> {
     const state = await resolveStateId(this.config, this.chain, this.db, stateId);
 
-    const committes: phase0.ValidatorIndex[][][] = getEpochBeaconCommittees(
+    const committes = getEpochBeaconCommittees(
       this.config,
-      this.chain,
       state,
       filters?.epoch ?? computeEpochAtSlot(this.config, state.slot)
     );
@@ -156,6 +156,28 @@ export class BeaconStateApi implements IBeaconStateApi {
         ];
       });
     });
+  }
+
+  /**
+   * Retrieves the sync committees for the given state.
+   * @param epoch Fetch sync committees for the given epoch. If not present then the sync committees for the epoch of the state will be obtained.
+   */
+  async getEpochSyncCommittees(stateId: StateId, epoch?: Epoch): Promise<altair.SyncCommitteeByValidatorIndices> {
+    // TODO: Should pick a state with the provided epoch too
+    const state = (await resolveStateId(this.config, this.chain, this.db, stateId)) as altair.BeaconState;
+
+    // TODO: If possible compute the syncCommittees in advance of the fork and expose them here.
+    // So the validators can prepare and potentially attest the first block. Not critical tho, it's very unlikely
+    const stateEpoch = computeEpochAtSlot(this.config, state.slot);
+    if (stateEpoch < this.config.params.ALTAIR_FORK_EPOCH) {
+      throw new ApiError(400, "Requested state before ALTAIR_FORK_EPOCH");
+    }
+
+    return {
+      validators: getSyncCommittees(this.config, state, epoch ?? stateEpoch),
+      // TODO: This is not used by the validator and will be deprecated soon
+      validatorAggregates: [],
+    };
   }
 
   async getState(stateId: StateId): Promise<allForks.BeaconState> {

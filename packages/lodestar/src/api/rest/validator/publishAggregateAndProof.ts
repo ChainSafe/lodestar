@@ -2,7 +2,7 @@ import {Json} from "@chainsafe/ssz";
 import {ApiController} from "../types";
 
 export const publishAggregateAndProof: ApiController<null, null, Json[]> = {
-  url: "/aggregate_and_proofs",
+  url: "/eth/v1/validator/aggregate_and_proofs",
   method: "POST",
   id: "publishAggregateAndProofs",
 

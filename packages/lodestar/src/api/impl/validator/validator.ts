@@ -8,14 +8,15 @@ import {
   computeStartSlotAtEpoch,
   proposerShufflingDecisionRoot,
   attesterShufflingDecisionRoot,
+  computeSubnetForCommitteesAtSlot,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {GENESIS_SLOT} from "@chainsafe/lodestar-params";
-import {Bytes96, CommitteeIndex, Epoch, Root, phase0, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {GENESIS_SLOT, SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
+import {Bytes96, Epoch, Root, phase0, allForks, Slot, ValidatorIndex, altair} from "@chainsafe/lodestar-types";
 import {BeaconState} from "@chainsafe/lodestar-types/lib/allForks";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {readonlyValues} from "@chainsafe/ssz";
-import {IAttestationJob, IBeaconChain} from "../../../chain";
+import {IBeaconChain} from "../../../chain";
 import {assembleAttestationData} from "../../../chain/factory/attestation";
 import {assembleBlock} from "../../../chain/factory/block";
 import {assembleAttesterDuty} from "../../../chain/factory/duties";
@@ -31,6 +32,9 @@ import {IApiOptions} from "../../options";
 import {ApiError} from "../errors";
 import {ApiNamespace, IApiModules} from "../interface";
 import {IValidatorApi} from "./interface";
+import {validateSyncCommitteeGossipContributionAndProof} from "../../../chain/validation/syncCommitteeContributionAndProof";
+import {CommitteeSubscription} from "../../../network/subnetsService";
+import {getSyncComitteeValidatorIndexMap} from "./utils";
 
 /**
  * Validator clock may be advanced from beacon's clock. If the validator requests a resource in a
@@ -80,7 +84,7 @@ export class ValidatorApi implements IValidatorApi {
     this.logger = modules.logger;
   }
 
-  async produceBlock(slot: Slot, randaoReveal: Bytes96, graffiti = ""): Promise<phase0.BeaconBlock> {
+  async produceBlock(slot: Slot, randaoReveal: Bytes96, graffiti = ""): Promise<allForks.BeaconBlock> {
     this.notWhileSyncing();
 
     await this.waitForSlot(slot); // Must never request for a future slot > currentSlot
@@ -93,7 +97,7 @@ export class ValidatorApi implements IValidatorApi {
     );
   }
 
-  async produceAttestationData(committeeIndex: CommitteeIndex, slot: Slot): Promise<phase0.AttestationData> {
+  async produceAttestationData(committeeIndex: phase0.CommitteeIndex, slot: Slot): Promise<phase0.AttestationData> {
     this.notWhileSyncing();
 
     await this.waitForSlot(slot); // Must never request for a future slot > currentSlot
@@ -107,6 +111,27 @@ export class ValidatorApi implements IValidatorApi {
       slot,
       committeeIndex
     );
+  }
+
+  /**
+   * GET `/eth/v1/validator/sync_committee_contribution`
+   *
+   * Requests that the beacon node produce a sync committee contribution.
+   *
+   * https://github.com/ethereum/eth2.0-APIs/pull/138
+   *
+   * @param slot The slot for which a sync committee contribution should be created.
+   * @param subcommitteeIndex The subcommittee index for which to produce the contribution.
+   * @param beaconBlockRoot The block root for which to produce the contribution.
+   */
+  async produceSyncCommitteeContribution(
+    slot: Slot,
+    subcommitteeIndex: number,
+    beaconBlockRoot: Root
+  ): Promise<altair.SyncCommitteeContribution> {
+    const contribution = this.db.syncCommittee.getSyncCommitteeContribution(subcommitteeIndex, slot, beaconBlockRoot);
+    if (!contribution) throw new ApiError(500, "No contribution available");
+    return contribution;
   }
 
   async getProposerDuties(epoch: Epoch): Promise<phase0.ProposerDutiesApi> {
@@ -182,6 +207,48 @@ export class ValidatorApi implements IValidatorApi {
     };
   }
 
+  /**
+   * `POST /eth/v1/validator/duties/sync/{epoch}`
+   *
+   * Requests the beacon node to provide a set of sync committee duties for a particular epoch.
+   * - Although pubkey can be inferred from the index we return it to keep this call analogous with the one that
+   *   fetches attester duties.
+   * - `sync_committee_index` is the index of the validator in the sync committee. This can be used to infer the
+   *   subnet to which the contribution should be broadcast. Note, there can be multiple per validator.
+   *
+   * https://github.com/ethereum/eth2.0-APIs/pull/134
+   *
+   * @param validatorIndices an array of the validator indices for which to obtain the duties.
+   */
+  async getSyncCommitteeDuties(epoch: number, validatorIndices: ValidatorIndex[]): Promise<altair.SyncDutiesApi> {
+    this.notWhileSyncing();
+
+    if (validatorIndices.length === 0) {
+      throw new ApiError(400, "No validator to get attester duties");
+    }
+
+    // May request for an epoch that's in the future
+    await this.waitForNextClosestEpoch();
+
+    // Note: does not support requesting past duties
+    const state = this.chain.getHeadState();
+
+    // Ensures `epoch // EPOCHS_PER_SYNC_COMMITTEE_PERIOD <= current_epoch // EPOCHS_PER_SYNC_COMMITTEE_PERIOD + 1`
+    const syncComitteeValidatorIndexMap = getSyncComitteeValidatorIndexMap(this.config, state, epoch);
+
+    const duties: altair.SyncDuty[] = validatorIndices.map((validatorIndex) => ({
+      pubkey: state.index2pubkey[validatorIndex].toBytes(),
+      validatorIndex,
+      validatorSyncCommitteeIndices: syncComitteeValidatorIndexMap.get(validatorIndex) ?? [],
+    }));
+
+    return {
+      data: duties,
+      // TODO: Compute a proper dependentRoot for this syncCommittee shuffling
+      dependentRoot: ZERO_HASH,
+    };
+  }
+
   async getAggregatedAttestation(attestationDataRoot: Root, slot: Slot): Promise<phase0.Attestation> {
     this.notWhileSyncing();
 
@@ -226,27 +293,40 @@ export class ValidatorApi implements IValidatorApi {
 
     await Promise.all(
       signedAggregateAndProofs.map(async (signedAggregateAndProof) => {
-        try {
-          const attestation = signedAggregateAndProof.message.aggregate;
-          const attestationJob = {
-            attestation: attestation,
-            validSignature: false,
-          } as IAttestationJob;
-          await validateGossipAggregateAndProof(
-            this.config,
-            this.chain,
-            this.db,
-            signedAggregateAndProof,
-            attestationJob
-          );
-          await Promise.all([
-            this.db.aggregateAndProof.add(signedAggregateAndProof.message),
-            this.db.seenAttestationCache.addAggregateAndProof(signedAggregateAndProof.message),
-            this.network.gossip.publishBeaconAggregateAndProof(signedAggregateAndProof),
-          ]);
-        } catch (e) {
-          this.logger.warn("Failed to publish aggregate and proof", e);
-        }
+        const attestation = signedAggregateAndProof.message.aggregate;
+        // TODO: Validate in batch
+        await validateGossipAggregateAndProof(this.config, this.chain, this.db, signedAggregateAndProof, {
+          attestation: attestation,
+          validSignature: false,
+        });
+        await Promise.all([
+          this.db.aggregateAndProof.add(signedAggregateAndProof.message),
+          this.db.seenAttestationCache.addAggregateAndProof(signedAggregateAndProof.message),
+          this.network.gossip.publishBeaconAggregateAndProof(signedAggregateAndProof),
+        ]);
+      })
+    );
+  }
+
+  /**
+   * POST `/eth/v1/validator/contribution_and_proofs`
+   *
+   * Publish multiple signed sync committee contribution and proofs
+   *
+   * https://github.com/ethereum/eth2.0-APIs/pull/137
+   */
+  async publishContributionAndProofs(contributionAndProofs: altair.SignedContributionAndProof[]): Promise<void> {
+    this.notWhileSyncing();
+
+    await Promise.all(
+      contributionAndProofs.map(async (contributionAndProof) => {
+        // TODO: Validate in batch
+        await validateSyncCommitteeGossipContributionAndProof(this.config, this.chain, this.db, {
+          contributionAndProof,
+          validSignature: false,
+        });
+        this.db.syncCommitteeContribution.add(contributionAndProof.message);
+        await this.network.gossip.publishContributionAndProof(contributionAndProof);
       })
     );
   }
@@ -254,11 +334,52 @@ export class ValidatorApi implements IValidatorApi {
   async prepareBeaconCommitteeSubnet(subscriptions: phase0.BeaconCommitteeSubscription[]): Promise<void> {
     this.notWhileSyncing();
 
-    this.network.prepareBeaconCommitteeSubnet(subscriptions);
+    this.network.prepareBeaconCommitteeSubnet(
+      subscriptions.map(({validatorIndex, slot, isAggregator, committeesAtSlot, committeeIndex}) => ({
+        validatorIndex: validatorIndex,
+        subnet: computeSubnetForCommitteesAtSlot(this.config, slot, committeesAtSlot, committeeIndex),
+        slot: slot,
+        isAggregator: isAggregator,
+      }))
+    );
 
     // TODO:
     // If the discovery mechanism isn't disabled, attempt to set up a peer discovery for the
     // required subnets.
+  }
+
+  /**
+   * POST `/eth/v1/validator/sync_committee_subscriptions`
+   *
+   * Subscribe to a number of sync committee subnets.
+   * Sync committees are not present in phase0, but are required for Altair networks.
+   * Subscribing to sync committee subnets is an action performed by VC to enable network participation in Altair networks,
+   * and only required if the VC has an active validator in an active sync committee.
+   *
+   * https://github.com/ethereum/eth2.0-APIs/pull/136
+   */
+  async prepareSyncCommitteeSubnets(subscriptions: altair.SyncCommitteeSubscription[]): Promise<void> {
+    this.notWhileSyncing();
+
+    // TODO: Cache this value
+    const SYNC_COMMITTEE_SUBNET_SIZE = Math.floor(this.config.params.SYNC_COMMITTEE_SIZE / SYNC_COMMITTEE_SUBNET_COUNT);
+
+    // A `validatorIndex` can be in multiple subnets, so compute the CommitteeSubscription with double for loop
+    const subs: CommitteeSubscription[] = [];
+    for (const sub of subscriptions) {
+      for (const committeeIndex of sub.syncCommitteeIndices) {
+        const subnet = Math.floor(committeeIndex / SYNC_COMMITTEE_SUBNET_SIZE);
+        subs.push({
+          validatorIndex: sub.validatorIndex,
+          subnet: subnet,
+          // Subscribe until the end of `untilEpoch`: https://github.com/ethereum/eth2.0-APIs/pull/136#issuecomment-840315097
+          slot: computeStartSlotAtEpoch(this.config, sub.untilEpoch + 1),
+          isAggregator: true,
+        });
+      }
+    }
+
+    this.network.prepareSyncCommitteeSubnets(subs);
   }
 
   /** Compute and cache the genesis block root */

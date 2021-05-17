@@ -19,10 +19,6 @@ type BlockDutyAtEpoch = {dependentRoot: Root; data: phase0.ProposerDuty[]};
 type NotifyBlockProductionFn = (slot: Slot, proposers: BLSPubkey[]) => void;
 
 export class BlockDutiesService {
-  private readonly config: IBeaconConfig;
-  private readonly logger: ILogger;
-  private readonly apiClient: IApiClient;
-  private readonly validatorStore: ValidatorStore;
   /** Notify the block service if it should produce a block. */
   private readonly notifyBlockProductionFn: NotifyBlockProductionFn;
   /** Maps an epoch to all *local* proposers in this epoch. Notably, this does not contain
@@ -30,17 +26,13 @@ export class BlockDutiesService {
   private readonly proposers = new Map<Epoch, BlockDutyAtEpoch>();
 
   constructor(
-    config: IBeaconConfig,
-    logger: ILogger,
-    apiClient: IApiClient,
+    private readonly config: IBeaconConfig,
+    private readonly logger: ILogger,
+    private readonly apiClient: IApiClient,
     clock: IClock,
-    validatorStore: ValidatorStore,
+    private readonly validatorStore: ValidatorStore,
     notifyBlockProductionFn: NotifyBlockProductionFn
   ) {
-    this.config = config;
-    this.logger = logger;
-    this.apiClient = apiClient;
-    this.validatorStore = validatorStore;
     this.notifyBlockProductionFn = notifyBlockProductionFn;
 
     // TODO: Instead of polling every CLOCK_SLOT, poll every CLOCK_EPOCH and track re-org events
@@ -141,33 +133,33 @@ export class BlockDutiesService {
   }
 
   private async pollBeaconProposers(epoch: Epoch): Promise<void> {
-    const localPubkeys = this.validatorStore.votingPubkeys();
+    // Only download duties and push out additional block production events if we have some validators.
+    if (!this.validatorStore.hasSomeValidators()) {
+      return;
+    }
 
-    // Only download duties and push out additional block production events if we have some
-    // validators.
-    if (localPubkeys.length > 0) {
-      const proposerDuties = await this.apiClient.validator.getProposerDuties(epoch).catch((e) => {
-        throw extendError(e, "Error on getProposerDuties");
-      });
-      const dependentRoot = proposerDuties.dependentRoot;
-      const pubkeysSet = new Set(localPubkeys.map((pk) => toHexString(pk)));
-      const relevantDuties = proposerDuties.data.filter((duty) => pubkeysSet.has(toHexString(duty.pubkey)));
+    const proposerDuties = await this.apiClient.validator.getProposerDuties(epoch).catch((e) => {
+      throw extendError(e, "Error on getProposerDuties");
+    });
+    const dependentRoot = proposerDuties.dependentRoot;
+    const relevantDuties = proposerDuties.data.filter((duty) =>
+      this.validatorStore.hasVotingPubkey(toHexString(duty.pubkey))
+    );
 
-      this.logger.debug("Downloaded proposer duties", {
-        epoch,
+    this.logger.debug("Downloaded proposer duties", {
+      epoch,
+      dependentRoot: toHexString(dependentRoot),
+      count: relevantDuties.length,
+    });
+
+    const prior = this.proposers.get(epoch);
+    this.proposers.set(epoch, {dependentRoot, data: relevantDuties});
+
+    if (prior && !this.config.types.Root.equals(prior.dependentRoot, dependentRoot)) {
+      this.logger.warn("Proposer duties re-org. This may happen from time to time", {
+        priorDependentRoot: toHexString(prior.dependentRoot),
         dependentRoot: toHexString(dependentRoot),
-        count: relevantDuties.length,
       });
-
-      const prior = this.proposers.get(epoch);
-      this.proposers.set(epoch, {dependentRoot, data: relevantDuties});
-
-      if (prior && !this.config.types.Root.equals(prior.dependentRoot, dependentRoot)) {
-        this.logger.warn("Proposer duties re-org. This may happen from time to time", {
-          priorDependentRoot: toHexString(prior.dependentRoot),
-          dependentRoot: toHexString(dependentRoot),
-        });
-      }
     }
   }
 

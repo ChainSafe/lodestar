@@ -1,4 +1,4 @@
-import {Root, phase0, Slot} from "@chainsafe/lodestar-types";
+import {Root, phase0, allForks, Slot} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
 import {IBeaconChain} from "../../../../chain";
@@ -9,6 +9,7 @@ import {BlockId, IBeaconBlocksApi} from "./interface";
 import {resolveBlockId, toBeaconHeaderResponse} from "./utils";
 import {IBeaconSync} from "../../../../sync";
 import {INetwork} from "../../../../network/interface";
+import {getBlockType} from "../../../../util/multifork";
 
 export * from "./interface";
 
@@ -103,8 +104,29 @@ export class BeaconBlockApi implements IBeaconBlocksApi {
     return toBeaconHeaderResponse(this.config, block, true);
   }
 
-  async getBlock(blockId: BlockId): Promise<phase0.SignedBeaconBlock> {
+  async getBlock(blockId: BlockId): Promise<allForks.SignedBeaconBlock> {
     return await resolveBlockId(this.chain.forkChoice, this.db, blockId);
+  }
+
+  async getBlockRoot(blockId: BlockId): Promise<Root> {
+    // Fast path: From head state already available in memory get historical blockRoot
+    const slot = parseInt(blockId);
+    if (!Number.isNaN(slot)) {
+      const head = this.chain.forkChoice.getHead();
+
+      if (slot === head.slot) {
+        return head.blockRoot;
+      }
+
+      if (slot < head.slot && head.slot <= slot + this.config.params.SLOTS_PER_HISTORICAL_ROOT) {
+        const state = this.chain.getHeadState();
+        return state.blockRoots[slot % this.config.params.SLOTS_PER_HISTORICAL_ROOT];
+      }
+    }
+
+    // Slow path
+    const block = await resolveBlockId(this.chain.forkChoice, this.db, blockId);
+    return getBlockType(this.config, block.message).hashTreeRoot(block.message);
   }
 
   async publishBlock(signedBlock: phase0.SignedBeaconBlock): Promise<void> {

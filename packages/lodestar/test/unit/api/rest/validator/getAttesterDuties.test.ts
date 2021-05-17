@@ -2,8 +2,8 @@ import {config} from "@chainsafe/lodestar-config/minimal";
 import {expect} from "chai";
 import supertest from "supertest";
 import {getAttesterDuties} from "../../../../../src/api/rest/validator/duties/getAttesterDuties";
-import {ApiResponseBody, urlJoin} from "../utils";
-import {setupRestApiTestServer, VALIDATOR_PREFIX} from "../index.test";
+import {ApiResponseBody} from "../utils";
+import {setupRestApiTestServer} from "../index.test";
 import {SinonStubbedInstance} from "sinon";
 import {RestApi, ValidatorApi} from "../../../../../src/api";
 import {ZERO_HASH} from "../../../../../src/constants";
@@ -23,7 +23,7 @@ describe("rest - validator - getAttesterDuties", function () {
       data: [config.types.phase0.AttesterDuty.defaultValue(), config.types.phase0.AttesterDuty.defaultValue()],
     });
     const response = await supertest(restApi.server.server)
-      .post(urlJoin(VALIDATOR_PREFIX, getAttesterDuties.url.replace(":epoch", "0")))
+      .post(getAttesterDuties.url.replace(":epoch", "0"))
       .send(["1", "4"])
       .expect(200)
       .expect("Content-Type", "application/json; charset=utf-8");
@@ -38,7 +38,7 @@ describe("rest - validator - getAttesterDuties", function () {
       data: [config.types.phase0.AttesterDuty.defaultValue(), config.types.phase0.AttesterDuty.defaultValue()],
     });
     await supertest(restApi.server.server)
-      .post(urlJoin(VALIDATOR_PREFIX, getAttesterDuties.url.replace(":epoch", "a")))
+      .post(getAttesterDuties.url.replace(":epoch", "a"))
       .send(["1", "4"])
       .expect(400)
       .expect("Content-Type", "application/json; charset=utf-8");
@@ -50,7 +50,7 @@ describe("rest - validator - getAttesterDuties", function () {
       data: [config.types.phase0.AttesterDuty.defaultValue(), config.types.phase0.AttesterDuty.defaultValue()],
     });
     await supertest(restApi.server.server)
-      .post(urlJoin(VALIDATOR_PREFIX, getAttesterDuties.url.replace(":epoch", "1")))
+      .post(getAttesterDuties.url.replace(":epoch", "1"))
       .send([])
       .expect(400)
       .expect("Content-Type", "application/json; charset=utf-8");
@@ -62,7 +62,7 @@ describe("rest - validator - getAttesterDuties", function () {
       data: [config.types.phase0.AttesterDuty.defaultValue(), config.types.phase0.AttesterDuty.defaultValue()],
     });
     await supertest(restApi.server.server)
-      .post(urlJoin(VALIDATOR_PREFIX, getAttesterDuties.url.replace(":epoch", "1")))
+      .post(getAttesterDuties.url.replace(":epoch", "1"))
       .send([1, "a"])
       .expect(400)
       .expect("Content-Type", "application/json; charset=utf-8");

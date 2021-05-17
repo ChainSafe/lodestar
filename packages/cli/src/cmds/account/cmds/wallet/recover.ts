@@ -5,6 +5,8 @@ import inquirer from "inquirer";
 import {createWalletFromArgsAndMnemonic} from "./utils";
 import {IWalletCreateArgs, walletCreateOptions} from "./create";
 
+/* eslint-disable no-console */
+
 export type IWalletRecoverArgs = IWalletCreateArgs & {
   mnemonicInputPath: string;
 };
@@ -54,7 +56,7 @@ export const recover: ICliCommand<IWalletRecoverArgs, IGlobalArgs, ReturnType> =
 
     const {uuid} = await createWalletFromArgsAndMnemonic(args, mnemonic);
 
-    console.log!(`Your wallet has been successfully recovered.
+    console.log(`Your wallet has been successfully recovered.
 Your wallet's UUID is:
 
 \t${uuid}

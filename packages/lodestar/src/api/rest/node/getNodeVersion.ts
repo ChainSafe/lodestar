@@ -1,7 +1,7 @@
 import {ApiController} from "../types";
 
 export const getNodeVersion: ApiController = {
-  url: "/version",
+  url: "/eth/v1/node/version",
   method: "GET",
   id: "getNodeVersion",
 

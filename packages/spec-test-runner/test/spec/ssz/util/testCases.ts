@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
 import {describeDirectorySpecTest, InputType, safeType} from "@chainsafe/lodestar-spec-test-util";
 import {Bytes32, IBeaconSSZTypes} from "@chainsafe/lodestar-types";
 import {join} from "path";
@@ -7,6 +6,8 @@ import {expect} from "chai";
 import {CompositeType} from "@chainsafe/ssz";
 import {IBaseSSZStaticTestCase} from "../type";
 import {SPEC_TEST_LOCATION} from "../../../utils/specTestCases";
+
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, no-console */
 
 interface IResult {
   root: Bytes32;
@@ -65,8 +66,10 @@ export function testStatic(type: keyof IBeaconSSZTypes["phase0"]): void {
             // debugger;
           }
           const structural = sszType.deserialize(testCase.serialized_raw);
+          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
           // @ts-ignore
           const tree = sszType.createTreeBackedFromBytes(testCase.serialized_raw);
+          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
           // @ts-ignore
           const treeFromStructural = sszType.createTreeBackedFromStruct(structural);
           expect(tree.serialize(), "tree serialization != structural serialization").to.deep.equal(

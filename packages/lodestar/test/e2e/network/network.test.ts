@@ -19,7 +19,7 @@ import {generateState} from "../../utils/state";
 import {StubbedBeaconDb} from "../../utils/stub";
 import {connect, disconnect, onPeerConnect, onPeerDisconnect} from "../../utils/network";
 import {testLogger} from "../../utils/logger";
-import {computeSubnetForCommitteesAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
+import {CommitteeSubscription} from "../../../src/network/subnetsService";
 
 const multiaddr = "/ip4/127.0.0.1/tcp/0";
 
@@ -27,9 +27,6 @@ const opts: INetworkOptions = {
   maxPeers: 1,
   targetPeers: 1,
   bootMultiaddrs: [],
-  rpcTimeout: 5000,
-  connectTimeout: 5000,
-  disconnectTimeout: 5000,
   localMultiaddrs: [],
 };
 
@@ -105,17 +102,14 @@ describe("network", function () {
   });
 
   it("should connect to new peer by subnet", async function () {
-    const subscription: phase0.BeaconCommitteeSubscription = {
+    const subscription: CommitteeSubscription = {
       validatorIndex: 2000,
-      committeeIndex: 10,
-      committeesAtSlot: 20,
+      subnet: 10,
       slot: 2000,
       isAggregator: false,
     };
-    const {slot, committeesAtSlot, committeeIndex} = subscription;
-    const subnetId = computeSubnetForCommitteesAtSlot(config, slot, committeesAtSlot, committeeIndex);
     const {netA, netB} = await mockModules();
-    netB.metadata.attnets[subnetId] = true;
+    netB.metadata.attnets[subscription.subnet] = true;
     const connected = Promise.all([onPeerConnect(netA), onPeerConnect(netB)]);
     const enrB = ENR.createFromPeerId(netB.peerId);
     enrB.set("attnets", Buffer.from(config.types.phase0.AttestationSubnets.serialize(netB.metadata.attnets)));

@@ -1,7 +1,7 @@
 import path from "path";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util/lib";
 import bls from "@chainsafe/bls";
-
+import {fromHexString} from "@chainsafe/ssz";
 import {SPEC_TEST_LOCATION} from "../../utils/specTestCases";
 
 interface IVerifyTestCase {
@@ -16,19 +16,14 @@ interface IVerifyTestCase {
 }
 
 describeDirectorySpecTest<IVerifyTestCase, boolean>(
-  "BLS - verify",
+  "bls/verify/small",
   path.join(SPEC_TEST_LOCATION, "tests/general/phase0/bls/verify/small"),
   (testCase) => {
-    return bls.verify(
-      Buffer.from(testCase.data.input.pubkey.replace("0x", ""), "hex"),
-      Buffer.from(testCase.data.input.message.replace("0x", ""), "hex"),
-      Buffer.from(testCase.data.input.signature.replace("0x", ""), "hex")
-    );
+    const {pubkey, message, signature} = testCase.data.input;
+    return bls.verify(fromHexString(pubkey), fromHexString(message), fromHexString(signature));
   },
   {
-    inputTypes: {
-      data: InputType.YAML,
-    },
+    inputTypes: {data: InputType.YAML},
     getExpected: (testCase) => testCase.data.output,
   }
 );

@@ -16,7 +16,7 @@ export async function validateSyncCommittee(
 ): Promise<void> {
   const metadata = {subnet, slot: syncCommittee.slot};
   try {
-    const syncCommitteeJob: ISyncCommitteeJob = {syncCommittee, validSignature: false};
+    const syncCommitteeJob: ISyncCommitteeJob = {signature: syncCommittee, validSignature: false};
     await validateGossipSyncCommittee(chain, db, syncCommitteeJob, subnet);
     logger.debug("gossip - sync_committee - accept", metadata);
   } catch (e) {

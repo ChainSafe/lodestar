@@ -1,25 +1,41 @@
 import {join} from "path";
 import {expect} from "chai";
 
-import {config} from "@chainsafe/lodestar-config/minimal";
+import {CachedBeaconState, allForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
 import {altair} from "@chainsafe/lodestar-beacon-state-transition";
 import {altair as altairTypes} from "@chainsafe/lodestar-types";
 import {SPEC_TEST_LOCATION} from "../../../../utils/specTestCases";
 import {IAltairStateTestCase} from "../../stateTestCase";
+import {params} from "@chainsafe/lodestar-params/minimal";
+import {TreeBacked} from "@chainsafe/ssz";
+import {createIBeaconConfig} from "@chainsafe/lodestar-config";
+
+// eslint-disable-next-line @typescript-eslint/naming-convention
+const config = createIBeaconConfig({...params, ALTAIR_FORK_EPOCH: 0});
 
 describeDirectorySpecTest<IAltairStateTestCase, altairTypes.BeaconState>(
   "altair epoch justification and finalization minimal",
   join(SPEC_TEST_LOCATION, "tests/minimal/altair/epoch_processing/justification_and_finalization/pyspec_tests"),
   (testcase) => {
-    const state = testcase.pre;
-    altair.processJustificationAndFinalization(config, state);
-    return state;
+    const wrappedState = allForks.createCachedBeaconState<altair.BeaconState>(
+      config,
+      (testcase.pre as TreeBacked<altair.BeaconState>).clone()
+    );
+    const process = allForks.prepareEpochProcessState(wrappedState);
+    altair.processJustificationAndFinalization(wrappedState as CachedBeaconState<allForks.BeaconState>, process);
+    return wrappedState;
   },
   {
     inputTypes: {
-      pre: InputType.SSZ_SNAPPY,
-      post: InputType.SSZ_SNAPPY,
+      pre: {
+        type: InputType.SSZ_SNAPPY,
+        treeBacked: true,
+      },
+      post: {
+        type: InputType.SSZ_SNAPPY,
+        treeBacked: true,
+      },
     },
     sszTypes: {
       pre: config.types.altair.BeaconState,

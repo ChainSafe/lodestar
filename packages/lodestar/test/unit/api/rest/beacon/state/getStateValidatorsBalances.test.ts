@@ -4,8 +4,8 @@ import {expect} from "chai";
 import supertest from "supertest";
 import {StateNotFound} from "../../../../../../src/api/impl/errors";
 import {getStateValidatorsBalances} from "../../../../../../src/api/rest/beacon/state/getStateValidatorBalances";
-import {ApiResponseBody, urlJoin} from "../../utils";
-import {BEACON_PREFIX, setupRestApiTestServer} from "../../index.test";
+import {ApiResponseBody} from "../../utils";
+import {setupRestApiTestServer} from "../../index.test";
 import {SinonStubbedInstance} from "sinon";
 import {RestApi} from "../../../../../../src/api";
 import {BeaconStateApi} from "../../../../../../src/api/impl/beacon/state";
@@ -27,7 +27,7 @@ describe("rest - beacon - getStateValidatorsBalances", function () {
       },
     ]);
     const response = await supertest(restApi.server.server)
-      .get(urlJoin(BEACON_PREFIX, getStateValidatorsBalances.url.replace(":stateId", "head")))
+      .get(getStateValidatorsBalances.url.replace(":stateId", "head"))
       .expect(200)
       .expect("Content-Type", "application/json; charset=utf-8");
     expect((response.body as ApiResponseBody).data).to.not.be.undefined;
@@ -48,7 +48,7 @@ describe("rest - beacon - getStateValidatorsBalances", function () {
       },
     ]);
     const response = await supertest(restApi.server.server)
-      .get(urlJoin(BEACON_PREFIX, getStateValidatorsBalances.url.replace(":stateId", "head")))
+      .get(getStateValidatorsBalances.url.replace(":stateId", "head"))
       .query({
         id: [1, hexPubkey],
       })
@@ -60,9 +60,7 @@ describe("rest - beacon - getStateValidatorsBalances", function () {
 
   it("should not found state", async function () {
     beaconStateStub.getStateValidatorBalances.withArgs("4").throws(new StateNotFound());
-    await supertest(restApi.server.server)
-      .get(urlJoin(BEACON_PREFIX, getStateValidatorsBalances.url.replace(":stateId", "4")))
-      .expect(404);
+    await supertest(restApi.server.server).get(getStateValidatorsBalances.url.replace(":stateId", "4")).expect(404);
     expect(beaconStateStub.getStateValidatorBalances.calledOnce).to.be.true;
   });
 });

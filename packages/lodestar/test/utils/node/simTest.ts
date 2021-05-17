@@ -1,5 +1,5 @@
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
-import {CachedBeaconState, prepareEpochProcessState} from "@chainsafe/lodestar-beacon-state-transition/lib/fast";
+import {CachedBeaconState, prepareEpochProcessState} from "@chainsafe/lodestar-beacon-state-transition/lib/allForks";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBlockSummary} from "@chainsafe/lodestar-fork-choice";
 import {allForks, Epoch, Slot} from "@chainsafe/lodestar-types";

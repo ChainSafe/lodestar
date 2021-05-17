@@ -8,12 +8,10 @@ import {IBeaconSSZTypes} from "@chainsafe/lodestar-types";
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
 export function EventsApi(types: IBeaconSSZTypes, client: HttpClient): IApiClient["events"] {
-  const prefix = "/eth/v1/events";
-
   return {
     getEventStream(topics: BeaconEventType[]): IStoppableEventIterable<BeaconEvent> {
       const query = topics.map((topic) => `topics=${topic}`).join("&");
-      const url = `${urlJoin(client.baseUrl, prefix)}?${query}`;
+      const url = `${urlJoin(client.baseUrl, "/eth/v1/events")}?${query}`;
 
       const eventSource = new EventSource(url);
       return new LodestarEventIterator(({push}) => {

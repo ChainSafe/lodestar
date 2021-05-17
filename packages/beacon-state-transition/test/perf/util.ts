@@ -3,11 +3,10 @@ import {Gwei, phase0} from "@chainsafe/lodestar-types";
 import bls, {CoordType, init, PublicKey} from "@chainsafe/bls";
 import {fromHexString, List, TreeBacked} from "@chainsafe/ssz";
 import {getBeaconProposerIndex} from "../../src/util/proposer";
-import {fast} from "../../src";
-import {computeCommitteeCount, PubkeyIndexMap} from "../../src/fast";
+import {allForks, computeEpochAtSlot} from "../../src";
+import {computeCommitteeCount, PubkeyIndexMap} from "../../src/allForks";
 import {profilerLogger} from "../utils/logger";
 import {interopPubkeysCached} from "../utils/interop";
-import {computeEpochAtSlot} from "../../lib";
 import {PendingAttestation} from "@chainsafe/lodestar-types/phase0";
 import {intDiv} from "@chainsafe/lodestar-utils";
 
@@ -31,7 +30,7 @@ function getPubkeys() {
 
 export function generatePerfTestCachedBeaconState(opts?: {
   goBackOneSlot: boolean;
-}): fast.CachedBeaconState<phase0.BeaconState> {
+}): allForks.CachedBeaconState<phase0.BeaconState> {
   // Generate only some publicKeys
   const {pubkeys, pubkeysMod, pubkeysModObj} = getPubkeys();
   const origState = generatePerformanceState(pubkeys);
@@ -51,7 +50,7 @@ export function generatePerfTestCachedBeaconState(opts?: {
     index2pubkey.push(pubkeyObj);
   }
 
-  const cachedState = fast.createCachedBeaconState(config, origState, {
+  const cachedState = allForks.createCachedBeaconState(config, origState, {
     pubkey2index,
     index2pubkey,
     skipSyncPubkeys: true,
@@ -208,6 +207,7 @@ export async function initBLS(): Promise<void> {
   try {
     await init("blst-native");
   } catch (e) {
+    // eslint-disable-next-line no-console
     console.warn("Performance warning: Using fallback wasm BLS implementation");
     await init("herumi");
   }

@@ -1,7 +1,7 @@
 import {ApiController} from "../types";
 
 export const getSyncingStatus: ApiController = {
-  url: "/syncing",
+  url: "/eth/v1/node/syncing",
   method: "GET",
   id: "getSyncingStatus",
 

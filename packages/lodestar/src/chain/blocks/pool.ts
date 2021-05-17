@@ -107,7 +107,11 @@ export class BlockPool {
     let root = toHexString(blockRoot);
 
     while (this.blocks.has(root)) {
-      root = this.blocks.get(root)!.parentRoot;
+      const block = this.blocks.get(root);
+      if (!block) {
+        throw Error(`Unknown root ${root}`);
+      }
+      root = block.parentRoot;
     }
 
     return fromHexString(root);

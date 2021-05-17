@@ -2,8 +2,8 @@ import {expect} from "chai";
 import supertest from "supertest";
 
 import {getNodeVersion} from "../../../../../src/api/rest/node/getNodeVersion";
-import {ApiResponseBody, urlJoin} from "../utils";
-import {NODE_PREFIX, setupRestApiTestServer} from "../index.test";
+import {ApiResponseBody} from "../utils";
+import {setupRestApiTestServer} from "../index.test";
 import {StubbedNodeApi} from "../../../../utils/stub/nodeApi";
 
 describe("rest - node - getNodeVersion", function () {
@@ -13,7 +13,7 @@ describe("rest - node - getNodeVersion", function () {
 
     nodeStub.getVersion.resolves("test");
     const response = await supertest(restApi.server.server)
-      .get(urlJoin(NODE_PREFIX, getNodeVersion.url))
+      .get(getNodeVersion.url)
       .expect(200)
       .expect("Content-Type", "application/json; charset=utf-8");
     expect((response.body as ApiResponseBody).data).to.not.be.undefined;

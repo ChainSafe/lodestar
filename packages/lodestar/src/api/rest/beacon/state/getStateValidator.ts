@@ -3,7 +3,7 @@ import {StateId} from "../../../impl/beacon/state/interface";
 import {ApiController} from "../../types";
 
 export const getStateValidator: ApiController<null, {stateId: StateId; validatorId: string}> = {
-  url: "/states/:stateId/validators/:validatorId",
+  url: "/eth/v1/beacon/states/:stateId/validators/:validatorId",
   method: "GET",
   id: "getStateValidator",
 

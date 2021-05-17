@@ -1,7 +1,7 @@
 import {ApiController} from "../types";
 
 export const getForkSchedule: ApiController = {
-  url: "/fork_schedule",
+  url: "/eth/v1/config/fork_schedule",
   method: "GET",
   id: "getForkSchedule",
 

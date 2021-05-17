@@ -1,7 +1,17 @@
 /**
  * @module api/rpc
  */
-import {BLSSignature, CommitteeIndex, Epoch, Root, phase0, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {
+  BLSSignature,
+  CommitteeIndex,
+  Epoch,
+  Root,
+  phase0,
+  allForks,
+  Slot,
+  ValidatorIndex,
+  altair,
+} from "@chainsafe/lodestar-types";
 
 /**
  * The API interface defines the calls that can be made from a Validator
@@ -9,14 +19,17 @@ import {BLSSignature, CommitteeIndex, Epoch, Root, phase0, Slot, ValidatorIndex}
 export interface IValidatorApi {
   getProposerDuties(epoch: Epoch): Promise<phase0.ProposerDutiesApi>;
   getAttesterDuties(epoch: Epoch, validatorIndices: ValidatorIndex[]): Promise<phase0.AttesterDutiesApi>;
-  /**
-   * Requests a BeaconNode to produce a valid block,
-   * which can then be signed by a ValidatorClient.
-   * @returns {Promise<BeaconBlock>} A proposed BeaconBlock object
-   */
-  produceBlock(slot: Slot, randaoReveal: BLSSignature, graffiti: string): Promise<phase0.BeaconBlock>;
+  getSyncCommitteeDuties(epoch: number, validatorIndices: ValidatorIndex[]): Promise<altair.SyncDutiesApi>;
+  produceBlock(slot: Slot, randaoReveal: BLSSignature, graffiti: string): Promise<allForks.BeaconBlock>;
   produceAttestationData(index: CommitteeIndex, slot: Slot): Promise<phase0.AttestationData>;
+  produceSyncCommitteeContribution(
+    slot: Slot,
+    subcommitteeIndex: number,
+    beaconBlockRoot: Root
+  ): Promise<altair.SyncCommitteeContribution>;
   getAggregatedAttestation(attestationDataRoot: Root, slot: Slot): Promise<phase0.Attestation>;
   publishAggregateAndProofs(signedAggregateAndProofs: phase0.SignedAggregateAndProof[]): Promise<void>;
+  publishContributionAndProofs(contributionAndProofs: altair.SignedContributionAndProof[]): Promise<void>;
   prepareBeaconCommitteeSubnet(subscriptions: phase0.BeaconCommitteeSubscription[]): Promise<void>;
+  prepareSyncCommitteeSubnets(subscriptions: altair.SyncCommitteeSubscription[]): Promise<void>;
 }

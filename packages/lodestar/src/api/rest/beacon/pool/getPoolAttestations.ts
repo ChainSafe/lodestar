@@ -3,7 +3,7 @@ import {ApiController} from "../../types";
 /* eslint-disable @typescript-eslint/naming-convention */
 
 export const getPoolAttestations: ApiController<{slot: string; committee_index: string}> = {
-  url: "/pool/attestations",
+  url: "/eth/v1/beacon/pool/attestations",
   method: "GET",
   id: "getPoolAttestations",
 

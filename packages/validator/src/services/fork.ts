@@ -16,18 +16,13 @@ export interface IForkService {
  *   the cached value than to stop the validator flow
  */
 export class ForkService implements IForkService {
-  private readonly provider: IApiClient;
-  private readonly logger: ILogger;
   private fork: phase0.Fork | null = null;
   /** Store the promise and return it in getFork() for a potential race condition on start */
   private forkPromise: Promise<phase0.Fork> | null = null;
   /** Prevent calling updateFork() more than once at the same time */
   private forkPromisePending = false;
 
-  constructor(provider: IApiClient, logger: ILogger, clock: IClock) {
-    this.provider = provider;
-    this.logger = logger;
-
+  constructor(private readonly provider: IApiClient, private readonly logger: ILogger, clock: IClock) {
     clock.runEveryEpoch(this.updateFork);
   }
 

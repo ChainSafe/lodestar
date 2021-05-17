@@ -1,5 +1,14 @@
-import {allForks, BLSPubkey, CommitteeIndex, Epoch, Root, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
-import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
+import {
+  phase0,
+  altair,
+  allForks,
+  BLSPubkey,
+  CommitteeIndex,
+  Epoch,
+  Root,
+  Slot,
+  ValidatorIndex,
+} from "@chainsafe/lodestar-types";
 
 export interface IBeaconStateApi {
   getStateRoot(stateId: StateId): Promise<Root>;
@@ -12,6 +21,7 @@ export interface IBeaconStateApi {
     indices?: (BLSPubkey | ValidatorIndex)[]
   ): Promise<phase0.ValidatorBalance[]>;
   getStateCommittees(stateId: StateId, filters?: ICommitteesFilters): Promise<phase0.BeaconCommitteeResponse[]>;
+  getEpochSyncCommittees(stateId: StateId, epoch?: Epoch): Promise<altair.SyncCommitteeByValidatorIndices>;
   getFork(stateId: StateId): Promise<phase0.Fork>;
 }
 

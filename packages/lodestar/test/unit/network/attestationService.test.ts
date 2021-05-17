@@ -1,4 +1,4 @@
-import {allForks, phase0} from "@chainsafe/lodestar-types";
+import {allForks} from "@chainsafe/lodestar-types";
 import {ATTESTATION_SUBNET_COUNT} from "@chainsafe/lodestar-params";
 import {createIBeaconConfig, ForkName} from "@chainsafe/lodestar-config";
 import {params} from "@chainsafe/lodestar-params/minimal";
@@ -15,7 +15,7 @@ import {expect} from "chai";
 import {SinonStubFn} from "../../utils/types";
 import {MetadataController} from "../../../src/network/metadata";
 import {Eth2Gossipsub, GossipType} from "../../../src/network/gossip";
-import {AttestationService} from "../../../src/network/attestationService";
+import {getAttnetsService, CommitteeSubscription} from "../../../src/network/subnetsService";
 import {ChainEvent, IBeaconChain} from "../../../src/chain";
 
 describe("AttestationService", function () {
@@ -25,7 +25,7 @@ describe("AttestationService", function () {
   // eslint-disable-next-line @typescript-eslint/naming-convention
   const config = createIBeaconConfig({...params, ALTAIR_FORK_EPOCH});
 
-  let service: AttestationService;
+  let service: ReturnType<typeof getAttnetsService>;
 
   const sandbox = sinon.createSandbox();
   // let clock: SinonFakeTimers;
@@ -37,10 +37,9 @@ describe("AttestationService", function () {
   let chain: IBeaconChain;
   let state: allForks.BeaconState;
   const logger = testLogger();
-  const subscription: phase0.BeaconCommitteeSubscription = {
+  const subscription: CommitteeSubscription = {
     validatorIndex: 2021,
-    committeeIndex: 2,
-    committeesAtSlot: 10,
+    subnet: 10,
     slot: 100,
     isAggregator: false,
   };
@@ -71,7 +70,7 @@ describe("AttestationService", function () {
     // load getCurrentSlot first, vscode not able to debug without this
     getCurrentSlot(config, Math.floor(Date.now() / 1000));
     metadata = new MetadataController({}, {config, chain, logger});
-    service = new AttestationService({
+    service = getAttnetsService({
       config,
       chain,
       logger,
@@ -94,23 +93,23 @@ describe("AttestationService", function () {
   it.skip("should subscribe to RANDOM_SUBNETS_PER_VALIDATOR per 1 validator", () => {
     randomUtil.withArgs(0, ATTESTATION_SUBNET_COUNT).returns(30);
     randomUtil.withArgs(0, ATTESTATION_SUBNET_COUNT - 1).returns(40);
-    service.addBeaconCommitteeSubscriptions([subscription]);
+    service.addCommitteeSubscriptions([subscription]);
     expect(gossipStub.subscribeTopic.calledOnce).to.be.true;
     expect(metadata.seqNumber).to.be.equal(BigInt(1));
     // subscribe with a different validator
     subscription.validatorIndex = 2022;
-    service.addBeaconCommitteeSubscriptions([subscription]);
+    service.addCommitteeSubscriptions([subscription]);
     expect(gossipStub.subscribeTopic.calledTwice).to.be.true;
     expect(metadata.seqNumber).to.be.equal(BigInt(2));
     // subscribe with same validator
     subscription.validatorIndex = 2021;
-    service.addBeaconCommitteeSubscriptions([subscription]);
+    service.addCommitteeSubscriptions([subscription]);
     expect(gossipStub.subscribeTopic.calledTwice).to.be.true;
     expect(metadata.seqNumber).to.be.equal(BigInt(2));
   });
 
   it("should handle validator expiry", async () => {
-    service.addBeaconCommitteeSubscriptions([subscription]);
+    service.addCommitteeSubscriptions([subscription]);
     expect(metadata.seqNumber).to.be.equal(BigInt(1));
     expect(EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION * SLOTS_PER_EPOCH).to.be.gt(150);
     sandbox.clock.tick(150 * SLOTS_PER_EPOCH * SECONDS_PER_SLOT * 1000);
@@ -120,12 +119,12 @@ describe("AttestationService", function () {
   });
 
   it.skip("should change subnet subscription after 2*EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION", async () => {
-    service.addBeaconCommitteeSubscriptions([subscription]);
+    service.addCommitteeSubscriptions([subscription]);
     expect(gossipStub.subscribeTopic.calledOnce).to.be.true;
     expect(metadata.seqNumber).to.be.equal(BigInt(1));
     for (let numEpoch = 0; numEpoch < 2 * EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION; numEpoch++) {
       // avoid known validator expiry
-      service.addBeaconCommitteeSubscriptions([subscription]);
+      service.addCommitteeSubscriptions([subscription]);
       sandbox.clock.tick(SLOTS_PER_EPOCH * SECONDS_PER_SLOT * 1000);
     }
     // may call 2 times, 1 for committee subnet, 1 for random subnet
@@ -136,11 +135,11 @@ describe("AttestationService", function () {
 
   it("should prepare for a hard fork", async () => {
     const altairEpoch = config.forks.altair.epoch;
-    service.addBeaconCommitteeSubscriptions([subscription]);
+    service.addCommitteeSubscriptions([subscription]);
     // run every epoch (or any num slots < 150)
     while (chain.clock.currentSlot < altairEpoch * SLOTS_PER_EPOCH) {
       // avoid known validator expiry
-      service.addBeaconCommitteeSubscriptions([subscription]);
+      service.addCommitteeSubscriptions([subscription]);
       sandbox.clock.tick(SLOTS_PER_EPOCH * SECONDS_PER_SLOT * 1000);
     }
 
@@ -155,7 +154,7 @@ describe("AttestationService", function () {
     // Advance through the fork transition so it un-subscribes from all phase0 subs
 
     while (chain.clock.currentSlot * SLOTS_PER_EPOCH < altairEpoch + EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION) {
-      service.addBeaconCommitteeSubscriptions([subscription]);
+      service.addCommitteeSubscriptions([subscription]);
       sandbox.clock.tick(SLOTS_PER_EPOCH * SECONDS_PER_SLOT * 1000);
     }
 
@@ -173,8 +172,8 @@ describe("AttestationService", function () {
 
   it.skip("handle committee subnet the same to random subnet", () => {
     randomUtil.withArgs(0, ATTESTATION_SUBNET_COUNT).returns(COMMITTEE_SUBNET_SUBSCRIPTION);
-    const aggregatorSubscription: phase0.BeaconCommitteeSubscription = {...subscription, isAggregator: true};
-    service.addBeaconCommitteeSubscriptions([aggregatorSubscription]);
+    const aggregatorSubscription: CommitteeSubscription = {...subscription, isAggregator: true};
+    service.addCommitteeSubscriptions([aggregatorSubscription]);
     expect(service.getActiveSubnets()).to.be.deep.equal([COMMITTEE_SUBNET_SUBSCRIPTION]);
     // committee subnet is same to random subnet
     expect(gossipStub.subscribeTopic.calledOnce).to.be.true;

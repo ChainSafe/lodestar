@@ -5,7 +5,7 @@ import {IDatabaseController, Repository, IKeyValue, IFilterOptions, Bucket} from
 import {IBlockSummary} from "@chainsafe/lodestar-fork-choice";
 import {Slot, Root, allForks} from "@chainsafe/lodestar-types";
 import {bytesToInt} from "@chainsafe/lodestar-utils";
-import {getBlockTypeFromBlock, getBlockTypeFromBytes} from "./utils/multifork";
+import {getSignedBlockType, getSignedBlockTypeFromBytes} from "../../util/multifork";
 import {getRootIndexKey, getParentRootIndexKey} from "./blockArchiveIndex";
 import {deleteParentRootIndex, deleteRootIndex, storeParentRootIndex, storeRootIndex} from "./blockArchiveIndex";
 
@@ -29,11 +29,11 @@ export class BlockArchiveRepository extends Repository<Slot, allForks.SignedBeac
   // Overrides for multi-fork
 
   encodeValue(value: allForks.SignedBeaconBlock): Buffer {
-    return getBlockTypeFromBlock(this.config, value).serialize(value) as Buffer;
+    return getSignedBlockType(this.config, value).serialize(value) as Buffer;
   }
 
   decodeValue(data: Buffer): allForks.SignedBeaconBlock {
-    return getBlockTypeFromBytes(this.config, data).deserialize(data);
+    return getSignedBlockTypeFromBytes(this.config, data).deserialize(data);
   }
 
   // Handle key as slot
@@ -49,7 +49,7 @@ export class BlockArchiveRepository extends Repository<Slot, allForks.SignedBeac
   // Overrides to index
 
   async put(key: Slot, value: allForks.SignedBeaconBlock): Promise<void> {
-    const blockRoot = getBlockTypeFromBlock(this.config, value).fields["message"].hashTreeRoot(value.message);
+    const blockRoot = getSignedBlockType(this.config, value).fields["message"].hashTreeRoot(value.message);
     const slot = value.message.slot;
     await Promise.all([
       super.put(key, value),
@@ -63,7 +63,7 @@ export class BlockArchiveRepository extends Repository<Slot, allForks.SignedBeac
       super.batchPut(items),
       Array.from(items).map((item) => {
         const slot = item.value.message.slot;
-        const blockRoot = getBlockTypeFromBlock(this.config, item.value).fields["message"].hashTreeRoot(
+        const blockRoot = getSignedBlockType(this.config, item.value).fields["message"].hashTreeRoot(
           item.value.message
         );
         return storeRootIndex(this.db, slot, blockRoot);
@@ -87,7 +87,7 @@ export class BlockArchiveRepository extends Repository<Slot, allForks.SignedBeac
   async remove(value: allForks.SignedBeaconBlock): Promise<void> {
     await Promise.all([
       super.remove(value),
-      deleteRootIndex(this.db, getBlockTypeFromBlock(this.config, value), value),
+      deleteRootIndex(this.db, getSignedBlockType(this.config, value), value),
       deleteParentRootIndex(this.db, value),
     ]);
   }
@@ -95,7 +95,7 @@ export class BlockArchiveRepository extends Repository<Slot, allForks.SignedBeac
   async batchRemove(values: ArrayLike<allForks.SignedBeaconBlock>): Promise<void> {
     await Promise.all([
       super.batchRemove(values),
-      Array.from(values).map((value) => deleteRootIndex(this.db, getBlockTypeFromBlock(this.config, value), value)),
+      Array.from(values).map((value) => deleteRootIndex(this.db, getSignedBlockType(this.config, value), value)),
       Array.from(values).map((value) => deleteParentRootIndex(this.db, value)),
     ]);
   }

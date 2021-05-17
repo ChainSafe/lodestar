@@ -4,7 +4,7 @@ import {ApiController} from "../types";
 /* eslint-disable @typescript-eslint/naming-convention */
 
 export const prepareBeaconCommitteeSubnet: ApiController<null, null, Json[]> = {
-  url: "/beacon_committee_subscriptions",
+  url: "/eth/v1/validator/beacon_committee_subscriptions",
   method: "POST",
   id: "prepareBeaconCommitteeSubnet",
 

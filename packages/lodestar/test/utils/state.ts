@@ -111,9 +111,9 @@ export function generateState(
   // const resultState = state.clone();
 
   for (const key in opts) {
-    // @ts-ignore
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-    resultState[key] = opts[key];
+    const newValue = opts[key as keyof TestBeaconState];
+    // eslint-disable-next-line
+    resultState[key as keyof TreeBacked<allForks.BeaconState>] = (newValue as unknown) as any;
   }
   return resultState;
 }

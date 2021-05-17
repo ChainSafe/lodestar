@@ -1,4 +1,4 @@
-import {isValidVoluntaryExit, fast} from "@chainsafe/lodestar-beacon-state-transition";
+import {isValidVoluntaryExit, allForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {phase0} from "@chainsafe/lodestar-types";
 import {IBeaconChain} from "..";
@@ -29,7 +29,7 @@ export async function validateGossipVoluntaryExit(
     });
   }
 
-  const signatureSet = fast.getVoluntaryExitSignatureSet(state, voluntaryExit);
+  const signatureSet = allForks.getVoluntaryExitSignatureSet(state, voluntaryExit);
   if (!(await chain.bls.verifySignatureSets([signatureSet]))) {
     throw new VoluntaryExitError({
       code: VoluntaryExitErrorCode.INVALID_EXIT,

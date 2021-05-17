@@ -1,7 +1,7 @@
 import {ApiController} from "../types";
 
 export const getDepositContract: ApiController = {
-  url: "/deposit_contract",
+  url: "/eth/v1/config/deposit_contract",
   method: "GET",
   id: "getDepositContract",
 

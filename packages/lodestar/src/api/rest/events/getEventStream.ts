@@ -8,7 +8,7 @@ type Query = {
 };
 
 export const getEventStream: ApiController<Query> = {
-  url: "/",
+  url: "/eth/v1/events",
   method: "GET",
   id: "eventstream",
 

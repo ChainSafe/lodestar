@@ -3,7 +3,6 @@
  */
 
 import {LevelUp} from "levelup";
-//@ts-ignore
 import level from "level";
 import all from "it-all";
 import {ILogger} from "@chainsafe/lodestar-utils";

@@ -12,26 +12,16 @@ import {IClock} from "../util/clock";
  * Service that sets up and handles validator block proposal duties.
  */
 export class BlockProposingService {
-  private readonly config: IBeaconConfig;
-  private readonly logger: ILogger;
-  private readonly apiClient: IApiClient;
-  private readonly validatorStore: ValidatorStore;
   private readonly dutiesService: BlockDutiesService;
-  private readonly graffiti?: string;
 
   constructor(
     config: IBeaconConfig,
-    logger: ILogger,
-    apiClient: IApiClient,
+    private readonly logger: ILogger,
+    private readonly apiClient: IApiClient,
     clock: IClock,
-    validatorStore: ValidatorStore,
-    graffiti?: string
+    private readonly validatorStore: ValidatorStore,
+    private readonly graffiti?: string
   ) {
-    this.config = config;
-    this.logger = logger;
-    this.apiClient = apiClient;
-    this.validatorStore = validatorStore;
-    this.graffiti = graffiti;
     this.dutiesService = new BlockDutiesService(
       config,
       logger,

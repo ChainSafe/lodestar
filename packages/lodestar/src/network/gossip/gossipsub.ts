@@ -4,7 +4,7 @@ import {InMessage} from "libp2p-interfaces/src/pubsub";
 import Libp2p from "libp2p";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ATTESTATION_SUBNET_COUNT} from "@chainsafe/lodestar-params";
-import {allForks, phase0} from "@chainsafe/lodestar-types";
+import {allForks, altair, phase0} from "@chainsafe/lodestar-types";
 import {ILogger, toJson} from "@chainsafe/lodestar-utils";
 import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 
@@ -217,64 +217,44 @@ export class Eth2Gossipsub extends Gossipsub {
   }
 
   async publishBeaconBlock(signedBlock: allForks.SignedBeaconBlock): Promise<void> {
-    await this.publishObject(
-      {
-        type: GossipType.beacon_block,
-        fork: this.config.getForkName(signedBlock.message.slot),
-      },
-      signedBlock
-    );
+    const fork = this.config.getForkName(signedBlock.message.slot);
+
+    await this.publishObject({type: GossipType.beacon_block, fork}, signedBlock);
   }
 
   async publishBeaconAggregateAndProof(aggregateAndProof: phase0.SignedAggregateAndProof): Promise<void> {
-    await this.publishObject(
-      {
-        type: GossipType.beacon_aggregate_and_proof,
-        fork: this.config.getForkName(aggregateAndProof.message.aggregate.data.slot),
-      },
-      aggregateAndProof
-    );
+    const fork = this.config.getForkName(aggregateAndProof.message.aggregate.data.slot);
+    await this.publishObject({type: GossipType.beacon_aggregate_and_proof, fork}, aggregateAndProof);
   }
 
   async publishBeaconAttestation(attestation: phase0.Attestation, subnet: number): Promise<void> {
-    await this.publishObject(
-      {
-        type: GossipType.beacon_attestation,
-        fork: this.config.getForkName(attestation.data.slot),
-        subnet,
-      },
-      attestation
-    );
+    const fork = this.config.getForkName(attestation.data.slot);
+    await this.publishObject({type: GossipType.beacon_attestation, fork, subnet}, attestation);
   }
 
   async publishVoluntaryExit(voluntaryExit: phase0.SignedVoluntaryExit): Promise<void> {
-    await this.publishObject(
-      {
-        type: GossipType.voluntary_exit,
-        fork: this.config.getForkName(computeEpochAtSlot(this.config, voluntaryExit.message.epoch)),
-      },
-      voluntaryExit
-    );
+    const fork = this.config.getForkName(computeEpochAtSlot(this.config, voluntaryExit.message.epoch));
+    await this.publishObject({type: GossipType.voluntary_exit, fork}, voluntaryExit);
   }
 
   async publishProposerSlashing(proposerSlashing: phase0.ProposerSlashing): Promise<void> {
-    await this.publishObject(
-      {
-        type: GossipType.proposer_slashing,
-        fork: this.config.getForkName(proposerSlashing.signedHeader1.message.slot),
-      },
-      proposerSlashing
-    );
+    const fork = this.config.getForkName(proposerSlashing.signedHeader1.message.slot);
+    await this.publishObject({type: GossipType.proposer_slashing, fork}, proposerSlashing);
   }
 
   async publishAttesterSlashing(attesterSlashing: phase0.AttesterSlashing): Promise<void> {
-    await this.publishObject(
-      {
-        type: GossipType.attester_slashing,
-        fork: this.config.getForkName(attesterSlashing.attestation1.data.slot),
-      },
-      attesterSlashing
-    );
+    const fork = this.config.getForkName(attesterSlashing.attestation1.data.slot);
+    await this.publishObject({type: GossipType.attester_slashing, fork}, attesterSlashing);
+  }
+
+  async publishSyncCommitteeSignature(signature: altair.SyncCommitteeSignature, subnet: number): Promise<void> {
+    const fork = this.config.getForkName(signature.slot);
+    await this.publishObject({type: GossipType.sync_committee, fork, subnet}, signature);
+  }
+
+  async publishContributionAndProof(contributionAndProof: altair.SignedContributionAndProof): Promise<void> {
+    const fork = this.config.getForkName(contributionAndProof.message.contribution.slot);
+    await this.publishObject({type: GossipType.sync_committee_contribution_and_proof, fork}, contributionAndProof);
   }
 
   private getGossipTopicString(topic: GossipTopic): string {

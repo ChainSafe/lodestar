@@ -1,7 +1,7 @@
 import {ApiController} from "../../types";
 
 export const getProposerDuties: ApiController<null, {epoch: number}> = {
-  url: "/duties/proposer/:epoch",
+  url: "/eth/v1/validator/duties/proposer/:epoch",
   method: "GET",
   id: "getProposerDuties",
 

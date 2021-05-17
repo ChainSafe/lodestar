@@ -36,7 +36,7 @@ export class MetadataController {
     this._metadata = opts.metadata || this.config.types.altair.Metadata.defaultValue();
   }
 
-  start(enr: ENR): void {
+  start(enr: ENR | undefined): void {
     this.enr = enr;
     if (this.enr) {
       this.enr.set(

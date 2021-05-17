@@ -8,11 +8,12 @@ import {
   generateEmptySignedAggregateAndProof,
 } from "@chainsafe/lodestar/test/utils/attestation";
 import {AttestationService} from "../../../src/services/attestation";
-import {DutyAndProof} from "../../../src/services/attestationDuties";
+import {AttDutyAndProof} from "../../../src/services/attestationDuties";
 import {ValidatorStore} from "../../../src/services/validatorStore";
 import {ApiClientStub} from "../../utils/apiStub";
 import {testLogger} from "../../utils/logger";
 import {ClockMock} from "../../utils/clock";
+import {IndicesService} from "../../../src/services/indices";
 
 describe("AttestationService", function () {
   const sandbox = sinon.createSandbox();
@@ -33,6 +34,8 @@ describe("AttestationService", function () {
     const secretKeys = Array.from({length: 1}, (_, i) => bls.SecretKey.fromBytes(Buffer.alloc(32, i + 1)));
     pubkeys = secretKeys.map((sk) => sk.toPublicKey().toBytes());
     validatorStore.votingPubkeys.returns(pubkeys);
+    validatorStore.hasVotingPubkey.returns(true);
+    validatorStore.hasSomeValidators.returns(true);
     validatorStore.signSelectionProof.resolves(ZERO_HASH);
   });
 
@@ -42,11 +45,12 @@ describe("AttestationService", function () {
 
   it("Should produce, sign, and publish an attestation + aggregate", async () => {
     const clock = new ClockMock();
-    const attestationService = new AttestationService(config, logger, apiClient, clock, validatorStore);
+    const indicesService = new IndicesService(logger, apiClient, validatorStore);
+    const attestationService = new AttestationService(config, logger, apiClient, clock, validatorStore, indicesService);
 
     const attestation = generateEmptyAttestation();
     const aggregate = generateEmptySignedAggregateAndProof();
-    const duties: DutyAndProof[] = [
+    const duties: AttDutyAndProof[] = [
       {
         duty: {
           slot: 0,
@@ -66,7 +70,7 @@ describe("AttestationService", function () {
     apiClient.validator.getAttesterDuties.resolves({dependentRoot: ZERO_HASH, data: []});
 
     // Mock duties service to return some duties directly
-    attestationService["dutiesService"].getAttestersAtSlot = sinon.stub().returns(duties);
+    attestationService["dutiesService"].getDutiesAtSlot = sinon.stub().returns(duties);
 
     // Mock beacon's attestation and aggregates endpoints
 

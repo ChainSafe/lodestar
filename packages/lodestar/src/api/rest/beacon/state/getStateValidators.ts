@@ -8,7 +8,7 @@ type ValidatorsQuery = {
 };
 
 export const getStateValidators: ApiController<ValidatorsQuery, {stateId: StateId}> = {
-  url: "/states/:stateId/validators",
+  url: "/eth/v1/beacon/states/:stateId/validators",
   method: "GET",
   id: "getStateValidators",
 

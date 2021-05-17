@@ -1,7 +1,7 @@
 import {ApiController} from "../../types";
 
 export const getPoolProposerSlashings: ApiController = {
-  url: "/pool/proposer_slashings",
+  url: "/eth/v1/beacon/pool/proposer_slashings",
   method: "GET",
   id: "getPoolProposerSlashings",
 

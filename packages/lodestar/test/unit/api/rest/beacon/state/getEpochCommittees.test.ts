@@ -4,8 +4,8 @@ import {expect} from "chai";
 import supertest from "supertest";
 import {StateNotFound} from "../../../../../../src/api/impl/errors";
 import {getEpochCommittees} from "../../../../../../src/api/rest/beacon/state/getEpochCommittees";
-import {ApiResponseBody, urlJoin} from "../../utils";
-import {BEACON_PREFIX, setupRestApiTestServer} from "../../index.test";
+import {ApiResponseBody} from "../../utils";
+import {setupRestApiTestServer} from "../../index.test";
 import {SinonStubbedInstance} from "sinon";
 import {RestApi} from "../../../../../../src/api";
 import {BeaconStateApi} from "../../../../../../src/api/impl/beacon/state";
@@ -28,7 +28,7 @@ describe("rest - beacon - getEpochCommittees", function () {
       },
     ]);
     const response = await supertest(restApi.server.server)
-      .get(urlJoin(BEACON_PREFIX, getEpochCommittees.url.replace(":stateId", "head")))
+      .get(getEpochCommittees.url.replace(":stateId", "head"))
       .expect(200)
       .expect("Content-Type", "application/json; charset=utf-8");
     expect((response.body as ApiResponseBody).data).to.not.be.undefined;
@@ -44,7 +44,7 @@ describe("rest - beacon - getEpochCommittees", function () {
       },
     ]);
     const response = await supertest(restApi.server.server)
-      .get(urlJoin(BEACON_PREFIX, getEpochCommittees.url.replace(":stateId", "head")))
+      .get(getEpochCommittees.url.replace(":stateId", "head"))
       .query({
         slot: "1",
         epoch: "0",
@@ -58,7 +58,7 @@ describe("rest - beacon - getEpochCommittees", function () {
 
   it("string slot", async function () {
     await supertest(restApi.server.server)
-      .get(urlJoin(BEACON_PREFIX, getEpochCommittees.url.replace(":stateId", "head")))
+      .get(getEpochCommittees.url.replace(":stateId", "head"))
       .query({
         slot: "1a",
         epoch: "0",
@@ -70,7 +70,7 @@ describe("rest - beacon - getEpochCommittees", function () {
 
   it("negative epoch", async function () {
     await supertest(restApi.server.server)
-      .get(urlJoin(BEACON_PREFIX, getEpochCommittees.url.replace(":stateId", "head")))
+      .get(getEpochCommittees.url.replace(":stateId", "head"))
       .query({
         slot: "1",
         epoch: "-2",
@@ -82,9 +82,7 @@ describe("rest - beacon - getEpochCommittees", function () {
 
   it("should not found state", async function () {
     beaconStateStub.getStateCommittees.withArgs("4").throws(new StateNotFound());
-    await supertest(restApi.server.server)
-      .get(urlJoin(BEACON_PREFIX, getEpochCommittees.url.replace(":stateId", "4")))
-      .expect(404);
+    await supertest(restApi.server.server).get(getEpochCommittees.url.replace(":stateId", "4")).expect(404);
     expect(beaconStateStub.getStateCommittees.calledOnce).to.be.true;
   });
 });

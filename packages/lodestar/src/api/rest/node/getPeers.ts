@@ -3,7 +3,7 @@ import {ApiController} from "../types";
 /* eslint-disable @typescript-eslint/naming-convention */
 
 export const getPeers: ApiController<{state: string[] | string; direction: string[] | string}> = {
-  url: "/peers",
+  url: "/eth/v1/node/peers",
   method: "GET",
   id: "getPeers",
 

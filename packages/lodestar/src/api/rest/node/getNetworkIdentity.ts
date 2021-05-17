@@ -3,7 +3,7 @@ import {ApiController} from "../types";
 /* eslint-disable @typescript-eslint/naming-convention */
 
 export const getNetworkIdentity: ApiController = {
-  url: "/identity",
+  url: "/eth/v1/node/identity",
   method: "GET",
   id: "getNetworkIdentity",
 
