@@ -129,7 +129,7 @@ function processSlotsWithTransientCache(
   metrics?: IBeaconStateTransitionMetrics | null
 ): StateAllForks {
   const {config} = postState;
-  if (postState.slot >= slot) {
+  if (postState.slot > slot) {
     throw Error(`Too old slot ${slot}, current=${postState.slot}`);
   }
 
