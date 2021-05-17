@@ -78,6 +78,7 @@ export function getCurrentAndNextFork(
   config: IBeaconConfig,
   epoch: Epoch
 ): {currentFork: IForkInfo; nextFork: IForkInfo | undefined} {
+  if (epoch < 0) epoch = 0;
   // NOTE: forks are sorted by ascending epoch, phase0 first
   const forks = Object.values(config.forks);
   let currentForkIdx = -1;
