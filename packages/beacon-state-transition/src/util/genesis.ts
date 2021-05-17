@@ -46,9 +46,10 @@ export function getGenesisBeaconState(
   const state: allForks.BeaconState = config.getTypes(GENESIS_SLOT).BeaconState.defaultTreeBacked();
   // MISC
   state.slot = GENESIS_SLOT;
+  const version = config.getForkVersion(GENESIS_SLOT);
   state.fork = {
-    previousVersion: config.params.GENESIS_FORK_VERSION,
-    currentVersion: config.params.GENESIS_FORK_VERSION,
+    previousVersion: version,
+    currentVersion: version,
     epoch: computeEpochAtSlot(config, GENESIS_SLOT),
   } as phase0.Fork;
 
