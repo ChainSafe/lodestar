@@ -31,7 +31,7 @@ async function initAndVerifyWeakSujectivityState(
   initFunc: (pathOrUrl: string) => Promise<TreeBacked<allForks.BeaconState>>,
   logger: ILogger
 ): Promise<TreeBacked<allForks.BeaconState>> {
-  logger.info("Fetching weak subjectivity state from IPFS... at " + wsStateData.ipfsPath);
+  logger.info("Fetching weak subjectivity state from IPFS at " + args.ipfsGatewayUrl + wsStateData.ipfsPath);
   const state = await initFunc(args.ipfsGatewayUrl + wsStateData.ipfsPath);
   if (!state) {
     throw new Error("Weak subjectivity state not found for network " + args.network);
