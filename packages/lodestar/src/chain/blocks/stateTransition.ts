@@ -74,10 +74,17 @@ export async function runStateTransition(
   const config = preState.config;
   const {SLOTS_PER_EPOCH} = config.params;
   const postSlot = job.signedBlock.message.slot;
+  const preEpoch = preState.currentShuffling.epoch;
+  const postEpoch = computeEpochAtSlot(config, postSlot);
+  // if there're skipped slots at epoch transition, we want to cache all checkpoint states in the middle
+  const passCheckpoint = preEpoch < postEpoch && postSlot !== computeStartSlotAtEpoch(config, postEpoch);
+  const state = passCheckpoint
+    ? await processSlotsToNearestCheckpoint({emitter, metrics}, preState, postSlot)
+    : preState;
 
   // if block is trusted don't verify proposer or op signature
   const postState = allForks.stateTransition(
-    preState,
+    state,
     job.signedBlock,
     {
       verifyStateRoot: true,
