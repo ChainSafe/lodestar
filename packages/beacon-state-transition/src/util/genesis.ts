@@ -1,10 +1,11 @@
 import {List, TreeBacked} from "@chainsafe/ssz";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {ForkName, IBeaconConfig} from "@chainsafe/lodestar-config";
 import {GENESIS_SLOT} from "@chainsafe/lodestar-params";
-import {allForks, Bytes32, Number64, phase0, Root} from "@chainsafe/lodestar-types";
+import {allForks, altair, Bytes32, Number64, phase0, Root} from "@chainsafe/lodestar-types";
 import {bigIntMin} from "@chainsafe/lodestar-utils";
 
-import {processDeposit} from "../naive/phase0";
+import {processDeposit as phase0ProcessDeposit} from "../naive/phase0";
+import {processDeposit as altairProcessDeposit} from "../naive/altair";
 import {computeEpochAtSlot} from "./epoch";
 import {getActiveValidatorIndices} from "./validator";
 import {getTemporaryBlockHeader} from "./blockRoot";
@@ -129,7 +130,13 @@ export function applyDeposits(
     }
 
     state.eth1Data.depositCount += 1;
-    processDeposit(config, state, deposit);
+
+    const forkName = config.getForkName(GENESIS_SLOT);
+    if (forkName == ForkName.phase0) {
+      phase0ProcessDeposit(config, state, deposit);
+    } else {
+      altairProcessDeposit(config, state as altair.BeaconState, deposit);
+    }
   }
 
   // Process activations
