@@ -17,8 +17,11 @@ describeDirectorySpecTest<IProcessSlotsTestCase, phase0.BeaconState>(
       config,
       testcase.pre as TreeBacked<phase0.BeaconState>
     );
-    phase0.processSlots(wrappedState, wrappedState.slot + Number(testcase.slots));
-    return wrappedState;
+    const postState = allForks.processSlots(
+      wrappedState as allForks.CachedBeaconState<allForks.BeaconState>,
+      wrappedState.slot + Number(testcase.slots)
+    );
+    return postState.type.createTreeBacked(postState.tree) as phase0.BeaconState;
   },
   {
     // @ts-ignore

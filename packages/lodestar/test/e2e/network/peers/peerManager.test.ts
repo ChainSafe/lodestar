@@ -65,6 +65,10 @@ describe("network / peers / PeerManager", function () {
       shouldProcess: () => true,
       // eslint-disable-next-line @typescript-eslint/no-empty-function
       addCommitteeSubscriptions: () => {},
+      // eslint-disable-next-line @typescript-eslint/no-empty-function
+      start: () => {},
+      // eslint-disable-next-line @typescript-eslint/no-empty-function
+      stop: () => {},
     };
 
     const peerManager = new PeerManager(
