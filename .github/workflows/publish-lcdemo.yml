@@ -26,7 +26,7 @@ jobs:
         if: steps.cache-deps.outputs.cache-hit != 'true'
         run: yarn install --frozen-lockfile --ignore-optional
       - name: Build
-        run: node_modules/.bin/lerna run build
+        run: yarn build
         if: steps.cache-deps.outputs.cache-hit == 'true'
       # </common-build>
 
