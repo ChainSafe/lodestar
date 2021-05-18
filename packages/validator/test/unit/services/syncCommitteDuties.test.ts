@@ -42,6 +42,7 @@ describe("SyncCommitteeDutiesService", function () {
     validatorStore.votingPubkeys.returns(pubkeys);
     validatorStore.hasVotingPubkey.returns(true);
     validatorStore.signAttestationSelectionProof.resolves(ZERO_HASH);
+    validatorStore.signSyncCommitteeSelectionProof.resolves(ZERO_HASH);
   });
 
   let controller: AbortController; // To stop clock
@@ -100,7 +101,17 @@ describe("SyncCommitteeDutiesService", function () {
     );
 
     expect(await dutiesService.getDutiesAtSlot(slot)).to.deep.equal(
-      [{duty, selectionProof: null}],
+      [
+        {
+          duty: {
+            pubkey: duty.pubkey,
+            validatorIndex: duty.validatorIndex,
+            validatorSyncCommitteeIndex: duty.validatorSyncCommitteeIndices[0],
+          },
+          selectionProof: null,
+          subCommitteeIndex: 0,
+        },
+      ],
       "Wrong getAttestersAtSlot()"
     );
 
