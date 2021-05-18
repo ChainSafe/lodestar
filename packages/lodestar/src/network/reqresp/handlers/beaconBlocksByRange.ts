@@ -37,10 +37,10 @@ export async function* onBeaconBlocksByRange(
 }
 
 export async function* injectRecentBlocks(
-  archiveStream: AsyncIterable<phase0.SignedBeaconBlock>,
+  archiveStream: AsyncIterable<allForks.SignedBeaconBlock>,
   chain: IBeaconChain,
   request: phase0.BeaconBlocksByRangeRequest
-): AsyncGenerator<phase0.SignedBeaconBlock> {
+): AsyncGenerator<allForks.SignedBeaconBlock> {
   let slot = -1;
   for await (const archiveBlock of archiveStream) {
     yield archiveBlock;

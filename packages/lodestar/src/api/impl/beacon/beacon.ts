@@ -3,7 +3,8 @@
  */
 
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {phase0} from "@chainsafe/lodestar-types";
+import {GENESIS_SLOT} from "@chainsafe/lodestar-params";
+import {allForks, phase0} from "@chainsafe/lodestar-types";
 import {LodestarEventIterator} from "@chainsafe/lodestar-utils";
 import {ChainEvent, IBeaconChain} from "../../../chain";
 import {IApiOptions} from "../../options";
@@ -33,15 +34,16 @@ export class BeaconApi implements IBeaconApi {
   }
 
   async getGenesis(): Promise<phase0.Genesis> {
+    const genesisForkVersion = this.config.getForkVersion(GENESIS_SLOT);
     return {
-      genesisForkVersion: this.config.params.GENESIS_FORK_VERSION,
+      genesisForkVersion,
       genesisTime: BigInt(this.chain.genesisTime),
       genesisValidatorsRoot: this.chain.genesisValidatorsRoot,
     };
   }
 
-  getBlockStream(): LodestarEventIterator<phase0.SignedBeaconBlock> {
-    return new LodestarEventIterator<phase0.SignedBeaconBlock>(({push}) => {
+  getBlockStream(): LodestarEventIterator<allForks.SignedBeaconBlock> {
+    return new LodestarEventIterator<allForks.SignedBeaconBlock>(({push}) => {
       this.chain.emitter.on(ChainEvent.block, push);
       return () => {
         this.chain.emitter.off(ChainEvent.block, push);

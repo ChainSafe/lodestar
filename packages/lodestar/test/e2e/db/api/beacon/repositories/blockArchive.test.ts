@@ -5,7 +5,7 @@ import {generateSignedBlock} from "../../../../../utils/block";
 import {testLogger} from "../../../../../utils/logger";
 import {fromHexString} from "@chainsafe/ssz";
 import {IBlockSummary} from "@chainsafe/lodestar-fork-choice";
-import {phase0} from "@chainsafe/lodestar-types";
+import {allForks, phase0} from "@chainsafe/lodestar-types";
 import {expect} from "chai";
 
 describe("BlockArchiveRepository", function () {
@@ -108,9 +108,9 @@ function notNull<T>(arr: (T | null)[]): T[] {
   return arr as T[];
 }
 
-const toBlockSummary = (signedBlock: phase0.SignedBeaconBlock): IBlockSummary => {
+const toBlockSummary = (signedBlock: allForks.SignedBeaconBlock): IBlockSummary => {
   return {
-    blockRoot: config.types.phase0.BeaconBlock.hashTreeRoot(signedBlock.message),
+    blockRoot: config.getTypes(signedBlock.message.slot).BeaconBlock.hashTreeRoot(signedBlock.message),
     finalizedEpoch: 0,
     justifiedEpoch: 0,
     parentRoot: signedBlock.message.parentRoot as Uint8Array,

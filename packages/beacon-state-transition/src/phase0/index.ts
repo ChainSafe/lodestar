@@ -1,8 +1,6 @@
 // fast
 export * from "./block";
 export * from "./epoch";
-export * from "./slot";
-export * from "./upgrade";
 // naive
 export * as naive from "../naive/phase0";
 

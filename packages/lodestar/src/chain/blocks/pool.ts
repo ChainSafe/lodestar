@@ -1,6 +1,6 @@
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {Root, phase0, Slot} from "@chainsafe/lodestar-types";
+import {Root, Slot, allForks} from "@chainsafe/lodestar-types";
 
 /**
  * The BlockPool is a cache of blocks that are pending processing.
@@ -32,7 +32,7 @@ export class BlockPool {
     this.blocksBySlot = new Map<number, Set<string>>();
   }
 
-  addByParent(signedBlock: phase0.SignedBeaconBlock): void {
+  addByParent(signedBlock: allForks.SignedBeaconBlock): void {
     // put block in two indices:
     // blocks
     const blockKey = this.getBlockKey(signedBlock);
@@ -53,7 +53,7 @@ export class BlockPool {
     blocksWithParent.add(blockKey);
   }
 
-  addBySlot(signedBlock: phase0.SignedBeaconBlock): void {
+  addBySlot(signedBlock: allForks.SignedBeaconBlock): void {
     // put block in two indices:
     // blocks
     const blockKey = this.getBlockKey(signedBlock);
@@ -74,7 +74,7 @@ export class BlockPool {
     blocksAtSlot.add(blockKey);
   }
 
-  remove(signedBlock: phase0.SignedBeaconBlock): void {
+  remove(signedBlock: allForks.SignedBeaconBlock): void {
     // remove block from three indices:
     // blocks
     const blockKey = this.getBlockKey(signedBlock);
@@ -139,16 +139,16 @@ export class BlockPool {
     return Array.from(new Set(blockRoots)).map((root) => fromHexString(root));
   }
 
-  private getParentKey(block: phase0.SignedBeaconBlock): string {
+  private getParentKey(block: allForks.SignedBeaconBlock): string {
     return toHexString(block.message.parentRoot);
   }
 
-  private getSlotKey(block: phase0.SignedBeaconBlock): number {
+  private getSlotKey(block: allForks.SignedBeaconBlock): number {
     return block.message.slot;
   }
 
-  private getBlockKey(block: phase0.SignedBeaconBlock): string {
-    return toHexString(this.config.types.phase0.BeaconBlock.hashTreeRoot(block.message));
+  private getBlockKey(block: allForks.SignedBeaconBlock): string {
+    return toHexString(this.config.getTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message));
   }
 
   private getBlockKeyByRoot(root: Root): string {

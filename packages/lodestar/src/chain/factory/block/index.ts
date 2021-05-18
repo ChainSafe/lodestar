@@ -9,7 +9,6 @@ import {ZERO_HASH} from "../../../constants";
 import {IBeaconDb} from "../../../db";
 import {IEth1ForBlockProduction} from "../../../eth1";
 import {IMetrics} from "../../../metrics";
-import {getStateTypeFromState} from "../../../util/multifork";
 import {IBeaconChain} from "../../interface";
 import {assembleBody} from "./body";
 
@@ -59,5 +58,5 @@ function computeNewStateRoot(
   // verifySignatures = false since the data to assemble the block is trusted
   allForks.processBlock(postState, block, {verifySignatures: false}, metrics);
 
-  return getStateTypeFromState(config, postState).hashTreeRoot(postState);
+  return config.getTypes(state.slot).BeaconState.hashTreeRoot(postState);
 }

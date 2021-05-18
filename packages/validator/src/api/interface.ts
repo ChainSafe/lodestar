@@ -1,14 +1,15 @@
 import {EventEmitter} from "events";
 import StrictEventEmitter from "strict-event-emitter-types";
 import {
+  allForks,
+  phase0,
+  altair,
   Epoch,
   Slot,
   Root,
-  phase0,
   ValidatorIndex,
   BLSSignature,
   CommitteeIndex,
-  altair,
 } from "@chainsafe/lodestar-types";
 import {IStoppableEventIterable} from "@chainsafe/lodestar-utils";
 import {IValidatorFilters} from "../util";
@@ -43,7 +44,7 @@ export interface IApiClient {
     };
     blocks: {
       getBlockRoot(blockId: BlockId): Promise<Root>;
-      publishBlock(block: phase0.SignedBeaconBlock): Promise<void>;
+      publishBlock(block: allForks.SignedBeaconBlock): Promise<void>;
     };
     pool: {
       submitAttestations(attestation: phase0.Attestation[]): Promise<void>;
@@ -70,7 +71,7 @@ export interface IApiClient {
     getProposerDuties(epoch: Epoch): Promise<phase0.ProposerDutiesApi>;
     getAttesterDuties(epoch: Epoch, validatorIndices: ValidatorIndex[]): Promise<phase0.AttesterDutiesApi>;
     getSyncCommitteeDuties(epoch: number, validatorIndices: ValidatorIndex[]): Promise<altair.SyncDutiesApi>;
-    produceBlock(slot: Slot, randaoReveal: BLSSignature, graffiti: string): Promise<phase0.BeaconBlock>;
+    produceBlock(slot: Slot, randaoReveal: BLSSignature, graffiti: string): Promise<allForks.BeaconBlock>;
     produceAttestationData(index: CommitteeIndex, slot: Slot): Promise<phase0.AttestationData>;
     produceSyncCommitteeContribution(
       slot: Slot,

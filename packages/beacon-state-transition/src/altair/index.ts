@@ -1,7 +1,7 @@
 // fast
 export * from "./block";
 export * from "./epoch";
-export * from "./slot";
+export * from "./upgradeState";
 // naive
 export * as naive from "../naive/altair";
 export * from "./state_accessor";

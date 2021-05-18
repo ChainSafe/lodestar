@@ -1,4 +1,4 @@
-import {Root, phase0} from "@chainsafe/lodestar-types";
+import {Root, allForks} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {List, toHexString} from "@chainsafe/ssz";
 import {INetwork} from "../../network";
@@ -8,7 +8,7 @@ export async function fetchUnknownBlockRoot(
   unknownAncestorRoot: Root,
   network: INetwork,
   logger: ILogger
-): Promise<phase0.SignedBeaconBlock> {
+): Promise<allForks.SignedBeaconBlock> {
   const connectedPeers = shuffle(network.getConnectedPeers());
   const parentRootHex = toHexString(unknownAncestorRoot);
 

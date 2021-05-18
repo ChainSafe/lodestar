@@ -10,11 +10,11 @@ import {ApiError, ValidationError} from "../../errors";
 
 export function toBeaconHeaderResponse(
   config: IBeaconConfig,
-  block: phase0.SignedBeaconBlock,
+  block: allForks.SignedBeaconBlock,
   canonical = false
 ): phase0.SignedBeaconHeaderResponse {
   return {
-    root: config.types.phase0.BeaconBlock.hashTreeRoot(block.message),
+    root: config.getTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message),
     canonical,
     header: {
       message: blockToHeader(config, block.message),

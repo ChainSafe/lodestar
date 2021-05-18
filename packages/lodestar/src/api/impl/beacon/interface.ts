@@ -2,7 +2,7 @@
  * @module api/rpc
  */
 
-import {phase0} from "@chainsafe/lodestar-types";
+import {allForks, phase0} from "@chainsafe/lodestar-types";
 import {IStoppableEventIterable} from "@chainsafe/lodestar-utils";
 import {IBeaconBlocksApi} from "./blocks";
 import {IBeaconPoolApi} from "./pool";
@@ -13,5 +13,5 @@ export interface IBeaconApi {
   state: IBeaconStateApi;
   pool: IBeaconPoolApi;
   getGenesis(): Promise<phase0.Genesis>;
-  getBlockStream(): IStoppableEventIterable<phase0.SignedBeaconBlock>;
+  getBlockStream(): IStoppableEventIterable<allForks.SignedBeaconBlock>;
 }

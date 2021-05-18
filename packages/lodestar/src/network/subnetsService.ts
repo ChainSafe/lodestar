@@ -25,6 +25,8 @@ export type CommitteeSubscription = {
 };
 
 export interface ISubnetsService {
+  start(): void;
+  stop(): void;
   addCommitteeSubscriptions(subscriptions: CommitteeSubscription[]): void;
   shouldProcess(subnet: number, slot: phase0.Slot): boolean;
   getActiveSubnets(): number[];

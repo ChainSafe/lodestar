@@ -153,7 +153,7 @@ describe("AttestationService", function () {
 
     // Advance through the fork transition so it un-subscribes from all phase0 subs
 
-    while (chain.clock.currentSlot * SLOTS_PER_EPOCH < altairEpoch + EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION) {
+    while (chain.clock.currentSlot < (altairEpoch + EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION) * SLOTS_PER_EPOCH) {
       service.addCommitteeSubscriptions([subscription]);
       sandbox.clock.tick(SLOTS_PER_EPOCH * SECONDS_PER_SLOT * 1000);
     }

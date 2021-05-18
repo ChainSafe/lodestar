@@ -2,7 +2,7 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBeaconChain, IBlockJob} from "..";
 import {IBeaconDb} from "../../db";
 import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
-import {allForks, phase0} from "@chainsafe/lodestar-beacon-state-transition";
+import {allForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {BlockError, BlockErrorCode} from "../errors";
 
 export async function validateGossipBlock(
@@ -13,7 +13,7 @@ export async function validateGossipBlock(
 ): Promise<void> {
   const block = blockJob.signedBlock;
   const blockSlot = block.message.slot;
-  const blockRoot = config.types.phase0.BeaconBlock.hashTreeRoot(block.message);
+  const blockRoot = config.getTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message);
   const finalizedCheckpoint = chain.getFinalizedCheckpoint();
   const finalizedSlot = computeStartSlotAtEpoch(config, finalizedCheckpoint.epoch);
   // block is too old
@@ -90,7 +90,7 @@ export async function validateGossipBlock(
   }
 }
 
-export function isExpectedProposer(epochCtx: allForks.EpochContext, block: phase0.BeaconBlock): boolean {
+export function isExpectedProposer(epochCtx: allForks.EpochContext, block: allForks.BeaconBlock): boolean {
   const supposedProposerIndex = epochCtx.getBeaconProposer(block.slot);
   return supposedProposerIndex === block.proposerIndex;
 }

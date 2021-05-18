@@ -37,7 +37,7 @@ export function getFlagIndexDeltas(
   for (const index of naive.phase0.getEligibleValidatorIndices(config, (state as unknown) as phase0.BeaconState)) {
     const baseReward = getBaseReward(config, state, index);
     if (unslashedParticipatingIndices.indexOf(index) !== -1) {
-      if (isInInactivityLeak(config, (state as unknown) as phase0.BeaconState)) {
+      if (isInInactivityLeak(config, state)) {
         // This flag reward cancels the inactivity penalty corresponding to the flag index
         rewards[index] += (baseReward * weight) / WEIGHT_DENOMINATOR;
       } else {
@@ -60,7 +60,7 @@ export function getInactivityPenaltyDeltas(config: IBeaconConfig, state: altair.
   const penalties = newZeroedBigIntArray(validatorCount);
   const previousEpoch = getPreviousEpoch(config, state);
 
-  if (isInInactivityLeak(config, (state as unknown) as phase0.BeaconState)) {
+  if (isInInactivityLeak(config, state)) {
     const matchingTargetAttestingIndices = getUnslashedParticipatingIndices(
       config,
       state,

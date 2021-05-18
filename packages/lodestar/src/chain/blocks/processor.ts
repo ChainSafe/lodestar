@@ -2,7 +2,7 @@
 import {AbortSignal} from "abort-controller";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
-import {phase0} from "@chainsafe/lodestar-types";
+import {allForks} from "@chainsafe/lodestar-types";
 
 import {IBlockJob, IChainSegmentJob} from "../interface";
 import {ChainEvent, ChainEventEmitter} from "../emitter";
@@ -83,10 +83,11 @@ export async function processBlockJob(modules: BlockProcessorModules, job: IBloc
  * Similar to processBlockJob but this process a chain segment
  */
 export async function processChainSegmentJob(modules: BlockProcessorModules, job: IChainSegmentJob): Promise<void> {
+  const config = modules.config;
   const blocks = job.signedBlocks;
 
   // Validate and filter out irrelevant blocks
-  const filteredChainSegment: phase0.SignedBeaconBlock[] = [];
+  const filteredChainSegment: allForks.SignedBeaconBlock[] = [];
   for (const [i, block] of blocks.entries()) {
     const child = blocks[i + 1];
     if (child) {
@@ -96,8 +97,8 @@ export async function processChainSegmentJob(modules: BlockProcessorModules, job
       // Without this check it would be possible to have a block verified using the
       // incorrect shuffling. That would be bad, mmkay.
       if (
-        !modules.config.types.Root.equals(
-          modules.config.types.phase0.BeaconBlock.hashTreeRoot(block.message),
+        !config.types.Root.equals(
+          config.getTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message),
           child.message.parentRoot
         )
       ) {
