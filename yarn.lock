@@ -15893,10 +15893,10 @@ typedoc-plugin-internal-external@^2.2.0:
   resolved "https://registry.yarnpkg.com/typedoc-plugin-internal-external/-/typedoc-plugin-internal-external-2.2.0.tgz#af4100f92f40aa08039930c0c750b2f502628e41"
   integrity sha512-xeh+NemurGr23cm1kf6Mec5TB0pCSllm3l3+hJg1ersl00xgC6klVpD1GBKqliGxnLo7blytZrnHsS4w/bzeOA==
 
-typedoc-plugin-markdown@^2.4.0:
-  version "2.4.0"
-  resolved "https://registry.yarnpkg.com/typedoc-plugin-markdown/-/typedoc-plugin-markdown-2.4.0.tgz#276cf4d0e90b7f3c4892f3dec84c700acc7eaf98"
-  integrity sha512-m4eOwxSzeCbGNFzPDadNQcuMbkbc/45fgXsIP/m4K20i/8zVhCBmvoTxmKUqWYVTYc1BTtvQD5hY/qCueHoLFw==
+typedoc-plugin-markdown@^2.4.1:
+  version "2.4.2"
+  resolved "https://registry.yarnpkg.com/typedoc-plugin-markdown/-/typedoc-plugin-markdown-2.4.2.tgz#2d83fe4f279643436ebc44ca2f937855b0fd9f12"
+  integrity sha512-BBH+9/Uq5XbsqfzCDl8Jq4iaLXRMXRuAHZRFarAZX7df8+F3vUjDx/WHWoWqbZ/XUFzduLC2Iuy2qwsJX8SQ7A==
   dependencies:
     fs-extra "^9.0.1"
     handlebars "^4.7.6"
