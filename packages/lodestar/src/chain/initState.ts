@@ -25,7 +25,7 @@ import {CheckpointStateCache, StateContextCache} from "./stateCache";
 export async function persistGenesisResult(
   db: IBeaconDb,
   genesisResult: IGenesisResult,
-  genesisBlock: phase0.SignedBeaconBlock
+  genesisBlock: allForks.SignedBeaconBlock
 ): Promise<void> {
   await Promise.all([
     db.stateArchive.add(genesisResult.state),

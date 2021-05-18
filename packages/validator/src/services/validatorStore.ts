@@ -1,7 +1,22 @@
 import {SecretKey} from "@chainsafe/bls";
-import {computeDomain, computeEpochAtSlot, computeSigningRoot} from "@chainsafe/lodestar-beacon-state-transition";
+import {
+  computeDomain,
+  computeEpochAtSlot,
+  computeSigningRoot,
+  computeStartSlotAtEpoch,
+} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {altair, BLSPubkey, BLSSignature, DomainType, Epoch, phase0, Root, Slot} from "@chainsafe/lodestar-types";
+import {
+  allForks,
+  altair,
+  BLSPubkey,
+  BLSSignature,
+  DomainType,
+  Epoch,
+  phase0,
+  Root,
+  Slot,
+} from "@chainsafe/lodestar-types";
 import {Genesis, ValidatorIndex} from "@chainsafe/lodestar-types/phase0";
 import {List, toHexString} from "@chainsafe/ssz";
 import {ISlashingProtection} from "../slashingProtection";
@@ -41,7 +56,11 @@ export class ValidatorStore {
     return this.validators.has(pubkeyHex);
   }
 
-  async signBlock(pubkey: BLSPubkey, block: phase0.BeaconBlock, currentSlot: Slot): Promise<phase0.SignedBeaconBlock> {
+  async signBlock(
+    pubkey: BLSPubkey,
+    block: allForks.BeaconBlock,
+    currentSlot: Slot
+  ): Promise<allForks.SignedBeaconBlock> {
     // Make sure the block slot is not higher than the current slot to avoid potential attacks.
     if (block.slot > currentSlot) {
       throw Error(`Not signing block with slot ${block.slot} greater than current slot ${currentSlot}`);
@@ -51,7 +70,8 @@ export class ValidatorStore {
       this.config.params.DOMAIN_BEACON_PROPOSER,
       computeEpochAtSlot(this.config, block.slot)
     );
-    const signingRoot = computeSigningRoot(this.config, this.config.types.phase0.BeaconBlock, block, proposerDomain);
+    const blockType = this.config.getTypes(block.slot).BeaconBlock;
+    const signingRoot = computeSigningRoot(this.config, blockType, block, proposerDomain);
 
     const secretKey = this.getSecretKey(pubkey); // Get before writing to slashingProtection
     await this.slashingProtection.checkAndInsertBlockProposal(pubkey, {slot: block.slot, signingRoot});
@@ -157,7 +177,7 @@ export class ValidatorStore {
   }
 
   async signContributionAndProof(
-    duty: altair.SyncDuty,
+    duty: Pick<altair.SyncDuty, "pubkey" | "validatorIndex">,
     selectionProof: BLSSignature,
     contribution: altair.SyncCommitteeContribution
   ): Promise<altair.SignedContributionAndProof> {
@@ -184,7 +204,7 @@ export class ValidatorStore {
     };
   }
 
-  async signSelectionProof(pubkey: BLSPubkey, slot: Slot): Promise<BLSSignature> {
+  async signAttestationSelectionProof(pubkey: BLSPubkey, slot: Slot): Promise<BLSSignature> {
     const domain = await this.getDomain(
       this.config.params.DOMAIN_SELECTION_PROOF,
       computeEpochAtSlot(this.config, slot)
@@ -193,16 +213,37 @@ export class ValidatorStore {
     return this.getSecretKey(pubkey).sign(signingRoot).toBytes();
   }
 
+  async signSyncCommitteeSelectionProof(
+    pubkey: BLSPubkey | string,
+    slot: Slot,
+    subCommitteeIndex: number
+  ): Promise<BLSSignature> {
+    const domain = await this.getDomain(
+      this.config.params.DOMAIN_SYNC_COMMITTEE_SELECTION_PROOF,
+      computeEpochAtSlot(this.config, slot)
+    );
+    const signingData: altair.SyncCommitteeSigningData = {
+      slot,
+      subCommitteeIndex: subCommitteeIndex,
+    };
+
+    const signingRoot = computeSigningRoot(
+      this.config,
+      this.config.types.altair.SyncCommitteeSigningData,
+      signingData,
+      domain
+    );
+    return this.getSecretKey(pubkey).sign(signingRoot).toBytes();
+  }
+
   private async getDomain(domainType: DomainType, epoch: Epoch): Promise<Buffer> {
-    // Get fork from cache or in very rare cases fetch from Beacon node API
-    const fork = await this.forkService.getFork();
-    const forkVersion = epoch < fork.epoch ? fork.previousVersion : fork.currentVersion;
+    const forkVersion = this.config.getForkVersion(computeStartSlotAtEpoch(this.config, epoch));
     return computeDomain(this.config, domainType, forkVersion, this.genesisValidatorsRoot);
   }
 
-  private getSecretKey(pubkey: BLSPubkey): SecretKey {
+  private getSecretKey(pubkey: BLSPubkey | string): SecretKey {
     // TODO: Refactor indexing to not have to run toHexString() on the pubkey every time
-    const pubkeyHex = toHexString(pubkey);
+    const pubkeyHex = typeof pubkey === "string" ? pubkey : toHexString(pubkey);
     const validator = this.validators.get(pubkeyHex);
 
     if (!validator) {

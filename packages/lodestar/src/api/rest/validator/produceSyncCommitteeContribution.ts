@@ -28,7 +28,7 @@ export const produceSyncCommitteeContribution: ApiController<Query> = {
   schema: {
     querystring: {
       type: "object",
-      required: ["committee_index", "slot"],
+      required: ["slot", "subcommittee_index", "beacon_block_root"],
       properties: {
         slot: {
           type: "number",

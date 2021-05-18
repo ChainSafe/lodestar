@@ -45,7 +45,7 @@ export class SyncCommitteeService {
 
     // Fetch info first so a potential delay is absorved by the sleep() below
     const dutiesAtSlot = await this.dutiesService.getDutiesAtSlot(slot);
-    const dutiesBySubcommitteeIndex = groupSyncDutiesBySubCommitteeIndex(this.config, dutiesAtSlot);
+    const dutiesBySubcommitteeIndex = groupSyncDutiesBySubCommitteeIndex(dutiesAtSlot);
     if (dutiesAtSlot.length === 0) {
       return;
     }

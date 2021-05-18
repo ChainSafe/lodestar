@@ -1,4 +1,4 @@
-import {byteArrayEquals} from "@chainsafe/ssz";
+import {byteArrayEquals, toHexString} from "@chainsafe/ssz";
 import {Gwei, Slot} from "@chainsafe/lodestar-types";
 import {assert} from "@chainsafe/lodestar-utils";
 import {
@@ -74,10 +74,17 @@ export async function runStateTransition(
   const config = preState.config;
   const {SLOTS_PER_EPOCH} = config.params;
   const postSlot = job.signedBlock.message.slot;
+  const preEpoch = preState.currentShuffling.epoch;
+  const postEpoch = computeEpochAtSlot(config, postSlot);
+  // if there're skipped slots at epoch transition, we want to cache all checkpoint states in the middle
+  const passCheckpoint = preEpoch < postEpoch && postSlot !== computeStartSlotAtEpoch(config, postEpoch);
+  const state = passCheckpoint
+    ? await processSlotsToNearestCheckpoint({emitter, metrics}, preState, postSlot)
+    : preState;
 
   // if block is trusted don't verify proposer or op signature
   const postState = allForks.stateTransition(
-    preState,
+    state,
     job.signedBlock,
     {
       verifyStateRoot: true,
@@ -94,7 +101,12 @@ export async function runStateTransition(
   let justifiedBalances: Gwei[] = [];
   if (postState.currentJustifiedCheckpoint.epoch > forkChoice.getJustifiedCheckpoint().epoch) {
     const justifiedState = checkpointStateCache.get(postState.currentJustifiedCheckpoint);
-    justifiedBalances = getEffectiveBalances(justifiedState!);
+    if (!justifiedState) {
+      const epoch = postState.currentJustifiedCheckpoint.epoch;
+      const root = toHexString(postState.currentJustifiedCheckpoint.root);
+      throw Error(`State not available for justified checkpoint ${epoch} ${root}`);
+    }
+    justifiedBalances = getEffectiveBalances(justifiedState);
   }
   forkChoice.onBlock(job.signedBlock.message, postState, justifiedBalances);
 
@@ -122,14 +134,16 @@ function emitCheckpointEvent(
   const config = checkpointState.config;
   const slot = checkpointState.slot;
   assert.true(slot % config.params.SLOTS_PER_EPOCH === 0, "Checkpoint state slot must be first in an epoch");
-  const blockHeader = config.types.phase0.BeaconBlockHeader.clone(checkpointState.latestBlockHeader);
+  const blockHeader = config
+    .getTypes(checkpointState.latestBlockHeader.slot)
+    .BeaconBlockHeader.clone(checkpointState.latestBlockHeader);
   if (config.types.Root.equals(blockHeader.stateRoot, ZERO_HASH)) {
     blockHeader.stateRoot = config.getTypes(slot).BeaconState.hashTreeRoot(checkpointState);
   }
   emitter.emit(
     ChainEvent.checkpoint,
     {
-      root: config.types.phase0.BeaconBlockHeader.hashTreeRoot(blockHeader),
+      root: config.getTypes(blockHeader.slot).BeaconBlockHeader.hashTreeRoot(blockHeader),
       epoch: computeEpochAtSlot(config, slot),
     },
     checkpointState

@@ -1,5 +1,5 @@
 import PeerId from "peer-id";
-import {Epoch, Root, Slot, phase0} from "@chainsafe/lodestar-types";
+import {Epoch, Root, Slot, phase0, allForks} from "@chainsafe/lodestar-types";
 import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 import {ErrorAborted, ILogger} from "@chainsafe/lodestar-utils";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
@@ -35,12 +35,12 @@ export type SyncChainFns = {
    * Must return if ALL blocks are processed successfully
    * If SOME blocks are processed must throw BlockProcessorError()
    */
-  processChainSegment: (blocks: phase0.SignedBeaconBlock[]) => Promise<void>;
+  processChainSegment: (blocks: allForks.SignedBeaconBlock[]) => Promise<void>;
   /** Must download blocks, and validate their range */
   downloadBeaconBlocksByRange: (
     peer: PeerId,
     request: phase0.BeaconBlocksByRangeRequest
-  ) => Promise<phase0.SignedBeaconBlock[]>;
+  ) => Promise<allForks.SignedBeaconBlock[]>;
   /** Report peer for negative actions. Decouples from the full network instance */
   reportPeer: (peer: PeerId, action: PeerAction, actionName: string) => void;
   /** Hook called when Chain state completes */

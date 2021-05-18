@@ -7,6 +7,8 @@ import {IProcessSlotsTestCase} from "./type";
 import {SPEC_TEST_LOCATION} from "../../../../../utils/specTestCases";
 import {BeaconState} from "@chainsafe/lodestar-types/phase0";
 
+/* eslint-disable-next-line @typescript-eslint/ban-ts-comment */
+
 describeDirectorySpecTest<IProcessSlotsTestCase, phase0.BeaconState>(
   "slot sanity mainnet",
   join(SPEC_TEST_LOCATION, "/tests/mainnet/phase0/sanity/slots/pyspec_tests"),
@@ -16,10 +18,12 @@ describeDirectorySpecTest<IProcessSlotsTestCase, phase0.BeaconState>(
     return state;
   },
   {
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
     inputTypes: {
       slots: InputType.YAML,
     },
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
     sszTypes: {
       pre: config.types.phase0.BeaconState,

@@ -1,4 +1,7 @@
+import {profilerLogger} from "../../../utils/logger";
+
 describe("array creation", function () {
+  const logger = profilerLogger();
   const testCases: {id: string; fn: (n: number) => void}[] = [
     {
       id: "Array.from(() => 0)",
@@ -36,7 +39,7 @@ describe("array creation", function () {
       }
       const to = process.hrtime.bigint();
       const diffMs = Number(to - from) / 1e6;
-      console.log(`${id}: ${diffMs / opsRun} ms`);
+      logger.info(`${id}: ${diffMs / opsRun} ms`);
     });
   }
 });

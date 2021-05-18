@@ -105,7 +105,7 @@ export function getGossipSSZType<T extends GossipObject>(config: IBeaconConfig, 
     case GossipType.voluntary_exit:
       return (config.types[topic.fork].SignedVoluntaryExit as unknown) as ContainerType<T>;
     case GossipType.sync_committee_contribution_and_proof:
-      return (config.types.altair.SignedAggregateAndProof as unknown) as ContainerType<T>;
+      return (config.types.altair.SignedContributionAndProof as unknown) as ContainerType<T>;
     case GossipType.sync_committee:
       return (config.types.altair.SyncCommitteeSignature as unknown) as ContainerType<T>;
     default:

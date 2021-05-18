@@ -3,6 +3,7 @@
  */
 
 import {phase0} from "@chainsafe/lodestar-types";
+import {toHexString} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBlockSummary, IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {ILogger} from "@chainsafe/lodestar-utils";
@@ -67,7 +68,10 @@ export class ArchiveBlocksTask implements ITask {
     const canonicalBlockEntries = (
       await Promise.all(
         canonicalSummaries.map(async (summary) => {
-          const blockBuffer = (await this.db.block.getBinary(summary.blockRoot))!;
+          const blockBuffer = await this.db.block.getBinary(summary.blockRoot);
+          if (!blockBuffer) {
+            throw Error(`No block found for root ${toHexString(summary.blockRoot)}`);
+          }
           return {
             key: summary.slot,
             value: blockBuffer,

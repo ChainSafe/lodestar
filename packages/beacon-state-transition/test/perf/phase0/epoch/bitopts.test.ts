@@ -1,7 +1,9 @@
 import {FLAG_PREV_SOURCE_ATTESTER, FLAG_UNSLASHED} from "../../../../src/allForks";
+import {profilerLogger} from "../../../utils/logger";
 
 describe("bit opts", function () {
   this.timeout(0);
+  const logger = profilerLogger();
 
   it("Benchmark bitshift", () => {
     const validators = 200_000; // Prater validators
@@ -14,6 +16,6 @@ describe("bit opts", function () {
     }
     const to = process.hrtime.bigint();
     const diffMs = Number(to - from) / 1e6;
-    console.log(`Time spent on OR in getAttestationDeltas: ${diffMs * ((orOptsPerRun * validators) / opsRun)} ms`);
+    logger.info(`Time spent on OR in getAttestationDeltas: ${diffMs * ((orOptsPerRun * validators) / opsRun)} ms`);
   });
 });

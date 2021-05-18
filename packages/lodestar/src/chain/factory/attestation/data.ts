@@ -1,4 +1,4 @@
-import {phase0, CommitteeIndex, Slot, Root} from "@chainsafe/lodestar-types";
+import {phase0, CommitteeIndex, Slot, Root, allForks} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {
   computeStartSlotAtEpoch,
@@ -8,7 +8,7 @@ import {
 
 export function assembleAttestationData(
   config: IBeaconConfig,
-  headState: phase0.BeaconState,
+  headState: allForks.BeaconState,
   headBlockRoot: Uint8Array,
   slot: Slot,
   index: CommitteeIndex

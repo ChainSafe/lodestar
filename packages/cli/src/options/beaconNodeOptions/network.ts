@@ -13,11 +13,12 @@ export interface INetworkArgs {
 
 export function parseArgs(args: INetworkArgs): IBeaconNodeOptions["network"] {
   return {
-    // @ts-ignore
     discv5: {
       enabled: args["network.discv5.enabled"],
       bindAddr: args["network.discv5.bindAddr"],
       bootEnrs: args["network.discv5.bootEnrs"],
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any
+      enr: undefined as any,
     },
     maxPeers: args["network.maxPeers"],
     targetPeers: args["network.targetPeers"],

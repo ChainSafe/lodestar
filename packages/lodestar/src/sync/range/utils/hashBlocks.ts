@@ -1,5 +1,5 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {phase0} from "@chainsafe/lodestar-types";
+import {allForks} from "@chainsafe/lodestar-types";
 import {byteArrayConcat} from "../../../util/bytes";
 
 /**
@@ -7,6 +7,8 @@ import {byteArrayConcat} from "../../../util/bytes";
  * @param blocks
  * @param config
  */
-export function hashBlocks(blocks: phase0.SignedBeaconBlock[], config: IBeaconConfig): Uint8Array {
-  return byteArrayConcat(blocks.map((block) => config.types.phase0.SignedBeaconBlock.hashTreeRoot(block)));
+export function hashBlocks(blocks: allForks.SignedBeaconBlock[], config: IBeaconConfig): Uint8Array {
+  return byteArrayConcat(
+    blocks.map((block) => config.getTypes(block.message.slot).SignedBeaconBlock.hashTreeRoot(block))
+  );
 }

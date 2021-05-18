@@ -2001,10 +2001,10 @@
     ethereum-cryptography "^0.1.3"
     uuid "^3.3.3"
 
-"@chainsafe/bls@6.0.0":
-  version "6.0.0"
-  resolved "https://registry.yarnpkg.com/@chainsafe/bls/-/bls-6.0.0.tgz#f0622b1b1acca63dc079e5d9acc32790381e1ae2"
-  integrity sha512-jySH6rU06NaH+9JwuMmY9LFEgkCBxoDgeqfRaHj1NzzWxlfKXXBP72OpDJolapQLQ774bQLrvUYnr6RDn9Fh4A==
+"@chainsafe/bls@6.0.1":
+  version "6.0.1"
+  resolved "https://registry.yarnpkg.com/@chainsafe/bls/-/bls-6.0.1.tgz#3771182db88e28a6d305c0f4285668d36b5d5da3"
+  integrity sha512-bOyQsjv4H79S7CL4cNX71wY+8lSPcRqou0yNTteMoTCpIOFScFyWqiuUfoBcigHlADbNzoE9SA9pyn02zOSQNw==
   dependencies:
     "@chainsafe/bls-keygen" "^0.3.0"
     bls-eth-wasm "^0.4.4"
@@ -3583,6 +3583,14 @@
   resolved "https://registry.yarnpkg.com/@types/debug/-/debug-4.1.5.tgz#b14efa8852b7768d898906613c23f688713e02cd"
   integrity sha512-Q1y515GcOdTHgagaVFhHnIFQ38ygs/kmxdNpvpou+raI9UO3YZcHDngBSYKQklcKlvA7iuQlmIKbzvmxcOE9CQ==
 
+"@types/encoding-down@*":
+  version "5.0.0"
+  resolved "https://registry.yarnpkg.com/@types/encoding-down/-/encoding-down-5.0.0.tgz#0b5b90b93ac3aa75148f19508044e7bd36463557"
+  integrity sha512-G0MlS/+/U2RIQLcSEhhAcoMrXw3hXUCFSKbhbeEljoKMra2kq+NPX6tfOveSWQLX2hJXBo+YrvKgAGe+tFL1Aw==
+  dependencies:
+    "@types/abstract-leveldown" "*"
+    "@types/level-codec" "*"
+
 "@types/err-code@^2.0.0":
   version "2.0.0"
   resolved "https://registry.yarnpkg.com/@types/err-code/-/err-code-2.0.0.tgz#42550e9e7a487e6c64342799e803f33d4d0f985c"
@@ -3719,6 +3727,28 @@
   resolved "https://registry.yarnpkg.com/@types/keyv/-/keyv-3.1.1.tgz#e45a45324fca9dab716ab1230ee249c9fb52cfa7"
   integrity sha512-MPtoySlAZQ37VoLaPcTHCu1RWJ4llDkULYZIzOYxlhxBqYPB0RsRlmMU0R6tahtFe27mIdkHV+551ZWV4PLmVw==
   dependencies:
+    "@types/node" "*"
+
+"@types/level-codec@*":
+  version "9.0.0"
+  resolved "https://registry.yarnpkg.com/@types/level-codec/-/level-codec-9.0.0.tgz#9f1dc7f9017b6fba094a450602ec0b91cc384059"
+  integrity sha512-SWYkVJylo1dqblkhrr7UtmsQh4wdZA9bV1y3QJSywMPSqGfW0p1w37N1EayZtKbg1dGReIIQEEOtxk4wZvGrWQ==
+
+"@types/level@^6.0.0":
+  version "6.0.0"
+  resolved "https://registry.yarnpkg.com/@types/level/-/level-6.0.0.tgz#0bc0aaf1106598e1774e1dc5b69f0d58885d9d34"
+  integrity sha512-NjaUpukKfCvnV4Wk0jUaodFi2/66HxgpYghc2aV8iP+zk2NMt/9ps1eVlifqOU/+eLzMlDIY69NWkbPaAstukQ==
+  dependencies:
+    "@types/abstract-leveldown" "*"
+    "@types/encoding-down" "*"
+    "@types/levelup" "*"
+
+"@types/leveldown@^4.0.2":
+  version "4.0.2"
+  resolved "https://registry.yarnpkg.com/@types/leveldown/-/leveldown-4.0.2.tgz#edb44a33668ae58656721bb1852345e6a2f2e42a"
+  integrity sha512-VW6QbUnPb5yLbUBcXEh93lFNphyxkBul7Ae41OCgROd76WfLM3qzAbuzErx1LtsTqwcNlbavTr9rWXHCiGVF8A==
+  dependencies:
+    "@types/abstract-leveldown" "*"
     "@types/node" "*"
 
 "@types/levelup@*":
@@ -15863,10 +15893,10 @@ typedoc-plugin-internal-external@^2.2.0:
   resolved "https://registry.yarnpkg.com/typedoc-plugin-internal-external/-/typedoc-plugin-internal-external-2.2.0.tgz#af4100f92f40aa08039930c0c750b2f502628e41"
   integrity sha512-xeh+NemurGr23cm1kf6Mec5TB0pCSllm3l3+hJg1ersl00xgC6klVpD1GBKqliGxnLo7blytZrnHsS4w/bzeOA==
 
-typedoc-plugin-markdown@^2.4.0:
-  version "2.4.0"
-  resolved "https://registry.yarnpkg.com/typedoc-plugin-markdown/-/typedoc-plugin-markdown-2.4.0.tgz#276cf4d0e90b7f3c4892f3dec84c700acc7eaf98"
-  integrity sha512-m4eOwxSzeCbGNFzPDadNQcuMbkbc/45fgXsIP/m4K20i/8zVhCBmvoTxmKUqWYVTYc1BTtvQD5hY/qCueHoLFw==
+typedoc-plugin-markdown@^2.4.1:
+  version "2.4.2"
+  resolved "https://registry.yarnpkg.com/typedoc-plugin-markdown/-/typedoc-plugin-markdown-2.4.2.tgz#2d83fe4f279643436ebc44ca2f937855b0fd9f12"
+  integrity sha512-BBH+9/Uq5XbsqfzCDl8Jq4iaLXRMXRuAHZRFarAZX7df8+F3vUjDx/WHWoWqbZ/XUFzduLC2Iuy2qwsJX8SQ7A==
   dependencies:
     fs-extra "^9.0.1"
     handlebars "^4.7.6"

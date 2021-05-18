@@ -23,6 +23,7 @@ describeDirectorySpecTest<IGenesisValidityTestCase, boolean>(
       is_valid: InputType.YAML,
       genesis: InputType.SSZ_SNAPPY,
     },
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
     sszTypes: {
       genesis: config.types.phase0.BeaconState,

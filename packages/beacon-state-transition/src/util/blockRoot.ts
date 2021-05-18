@@ -2,13 +2,12 @@
  * @module chain/stateTransition/util
  */
 
-import {Epoch, Slot, Root, phase0, altair, allForks} from "@chainsafe/lodestar-types";
+import {Epoch, Slot, Root, phase0, allForks} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {assert} from "@chainsafe/lodestar-utils";
 
 import {ZERO_HASH} from "../constants";
 import {computeStartSlotAtEpoch} from "./epoch";
-import {ContainerType} from "@chainsafe/ssz";
 
 /**
  * Return the block root at a recent [[slot]].
@@ -32,32 +31,27 @@ export function getBlockRoot(config: IBeaconConfig, state: allForks.BeaconState,
 /**
  * Return the block header corresponding to a block with ``state_root`` set to ``ZERO_HASH``.
  */
-export function getTemporaryBlockHeader(
-  config: IBeaconConfig,
-  block: phase0.BeaconBlock | altair.BeaconBlock
-): phase0.BeaconBlockHeader {
+export function getTemporaryBlockHeader(config: IBeaconConfig, block: allForks.BeaconBlock): phase0.BeaconBlockHeader {
   return {
     slot: block.slot,
     proposerIndex: block.proposerIndex,
     parentRoot: block.parentRoot,
     // `state_root` is zeroed and overwritten in the next `process_slot` call
     stateRoot: ZERO_HASH,
-    bodyRoot: (config.getTypes(block.slot).BeaconBlockBody as ContainerType<allForks.BeaconBlockBody>).hashTreeRoot(
-      block.body
-    ),
+    bodyRoot: config.getTypes(block.slot).BeaconBlockBody.hashTreeRoot(block.body),
   };
 }
 
 /**
  * Receives a BeaconBlock, and produces the corresponding BeaconBlockHeader.
  */
-export function blockToHeader(config: IBeaconConfig, block: phase0.BeaconBlock): phase0.BeaconBlockHeader {
+export function blockToHeader(config: IBeaconConfig, block: allForks.BeaconBlock): phase0.BeaconBlockHeader {
   return {
     stateRoot: block.stateRoot,
     proposerIndex: block.proposerIndex,
     slot: block.slot,
     parentRoot: block.parentRoot,
-    bodyRoot: config.types.phase0.BeaconBlockBody.hashTreeRoot(block.body),
+    bodyRoot: config.getTypes(block.slot).BeaconBlockBody.hashTreeRoot(block.body),
   };
 }
 
@@ -66,7 +60,7 @@ export function blockToHeader(config: IBeaconConfig, block: phase0.BeaconBlock):
  */
 export function signedBlockToSignedHeader(
   config: IBeaconConfig,
-  signedBlock: phase0.SignedBeaconBlock
+  signedBlock: allForks.SignedBeaconBlock
 ): phase0.SignedBeaconBlockHeader {
   return {
     message: blockToHeader(config, signedBlock.message),

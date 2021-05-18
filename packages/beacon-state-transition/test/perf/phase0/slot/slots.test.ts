@@ -15,12 +15,12 @@ describe("Process Slots Performance Test", function () {
     for (let i = 0; i < maxTry; i++) {
       state = generatePerfTestCachedBeaconState({goBackOneSlot: true});
       const start = Date.now();
-      phase0.processSlots(state, state.slot + numSlot);
+      allForks.processSlots(state as allForks.CachedBeaconState<allForks.BeaconState>, state.slot + numSlot);
       duration += Date.now() - start;
     }
     logger.profile(`Process ${numSlot} slots ${maxTry} times`);
     const average = duration / maxTry;
-    console.log(`Processing ${numSlot} slots in ${average}ms`);
+    logger.info(`Processing ${numSlot} slots in ${average}ms`);
     expect(average).lt(expectedValue, `process ${numSlot} takes longer than ${expectedValue} ms`);
   }
 

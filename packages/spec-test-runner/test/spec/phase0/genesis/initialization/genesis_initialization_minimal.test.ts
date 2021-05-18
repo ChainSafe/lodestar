@@ -29,19 +29,23 @@ describeDirectorySpecTest<IGenesisInitSpecTest, phase0.BeaconState>(
     }
     return initializeBeaconStateFromEth1(
       config,
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
       config.types.Root.fromJson(testcase.eth1.eth1BlockHash),
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
       Number(testcase.eth1.eth1Timestamp),
       deposits
     ) as phase0.BeaconState;
   },
   {
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
     inputTypes: {
       meta: InputType.YAML,
       eth1: InputType.YAML,
     },
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
     sszTypes: {
       eth1_block_hash: config.types.Root,

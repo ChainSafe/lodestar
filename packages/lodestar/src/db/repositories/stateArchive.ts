@@ -3,21 +3,22 @@ import {Epoch, Root, Slot, allForks} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {bytesToInt} from "@chainsafe/lodestar-utils";
 import {IDatabaseController, Bucket, Repository} from "@chainsafe/lodestar-db";
-import {getStateTypeFromBytes, getStateTypeFromState} from "../../util/multifork";
+import {getStateTypeFromBytes} from "../../util/multifork";
 import {getRootIndexKey, storeRootIndex} from "./stateArchiveIndex";
 
 /* eslint-disable @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call */
 
 export class StateArchiveRepository extends Repository<Slot, TreeBacked<allForks.BeaconState>> {
   constructor(config: IBeaconConfig, db: IDatabaseController<Buffer, Buffer>) {
-    const type = (config.types.phase0.BeaconState as unknown) as ContainerType<TreeBacked<allForks.BeaconState>>; // Pick some type but won't be used
+    // Pick some type but won't be used
+    const type = (config.types.phase0.BeaconState as unknown) as ContainerType<TreeBacked<allForks.BeaconState>>;
     super(config, db, Bucket.allForks_stateArchive, type);
   }
 
   // Overrides for multi-fork
 
   encodeValue(value: allForks.BeaconState): Buffer {
-    return getStateTypeFromState(this.config, value).serialize(value) as Buffer;
+    return this.config.getTypes(value.slot).BeaconState.serialize(value) as Buffer;
   }
 
   decodeValue(data: Buffer): TreeBacked<allForks.BeaconState> {

@@ -1,5 +1,5 @@
 import PeerId from "peer-id";
-import {Epoch, phase0} from "@chainsafe/lodestar-types";
+import {allForks, Epoch, phase0} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {LodestarError} from "@chainsafe/lodestar-utils";
 import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
@@ -43,7 +43,7 @@ export type Attempt = {
 export type BatchState =
   | {status: BatchStatus.AwaitingDownload}
   | {status: BatchStatus.Downloading; peer: PeerId}
-  | {status: BatchStatus.AwaitingProcessing; peer: PeerId; blocks: phase0.SignedBeaconBlock[]}
+  | {status: BatchStatus.AwaitingProcessing; peer: PeerId; blocks: allForks.SignedBeaconBlock[]}
   | {status: BatchStatus.Processing; attempt: Attempt}
   | {status: BatchStatus.AwaitingValidation; attempt: Attempt};
 
@@ -112,7 +112,7 @@ export class Batch {
   /**
    * Downloading -> AwaitingProcessing
    */
-  downloadingSuccess(blocks: phase0.SignedBeaconBlock[]): void {
+  downloadingSuccess(blocks: allForks.SignedBeaconBlock[]): void {
     if (this.state.status !== BatchStatus.Downloading) {
       throw new BatchError(this.wrongStatusErrorType(BatchStatus.Downloading));
     }
@@ -139,7 +139,7 @@ export class Batch {
   /**
    * AwaitingProcessing -> Processing
    */
-  startProcessing(): phase0.SignedBeaconBlock[] {
+  startProcessing(): allForks.SignedBeaconBlock[] {
     if (this.state.status !== BatchStatus.AwaitingProcessing) {
       throw new BatchError(this.wrongStatusErrorType(BatchStatus.AwaitingProcessing));
     }

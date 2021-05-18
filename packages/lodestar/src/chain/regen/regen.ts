@@ -5,6 +5,7 @@ import {
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
 } from "@chainsafe/lodestar-beacon-state-transition";
+import {toHexString} from "@chainsafe/ssz";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {sleep} from "@chainsafe/lodestar-utils";
 
@@ -54,7 +55,7 @@ export class StateRegenerator implements IStateRegenerator {
     this.metrics = metrics;
   }
 
-  async getPreState(block: phase0.BeaconBlock): Promise<CachedBeaconState<allForks.BeaconState>> {
+  async getPreState(block: allForks.BeaconBlock): Promise<CachedBeaconState<allForks.BeaconState>> {
     const parentBlock = this.forkChoice.getBlock(block.parentRoot);
     if (!parentBlock) {
       throw new RegenError({
@@ -179,7 +180,10 @@ export class StateRegenerator implements IStateRegenerator {
     }
 
     for (const b of blocksToReplay.reverse()) {
-      const structBlock = (await this.db.block.get(b.blockRoot))!;
+      const structBlock = await this.db.block.get(b.blockRoot);
+      if (!structBlock) {
+        throw Error(`No block found for ${toHexString(b.blockRoot)}`);
+      }
       const block = this.config.getTypes(b.slot).SignedBeaconBlock.createTreeBackedFromStruct(structBlock);
       if (!block) {
         throw new RegenError({

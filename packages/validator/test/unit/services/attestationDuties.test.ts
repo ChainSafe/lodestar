@@ -33,7 +33,7 @@ describe("AttestationDutiesService", function () {
     pubkeys = secretKeys.map((sk) => sk.toPublicKey().toBytes());
     validatorStore.votingPubkeys.returns(pubkeys);
     validatorStore.hasVotingPubkey.returns(true);
-    validatorStore.signSelectionProof.resolves(ZERO_HASH);
+    validatorStore.signAttestationSelectionProof.resolves(ZERO_HASH);
   });
 
   let controller: AbortController; // To stop clock

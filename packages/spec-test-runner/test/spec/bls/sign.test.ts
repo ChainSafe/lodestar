@@ -1,7 +1,8 @@
 import path from "path";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util/lib";
 import bls from "@chainsafe/bls";
-
+import {ZeroSecretKeyError} from "@chainsafe/bls/lib/errors";
+import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {SPEC_TEST_LOCATION} from "../../utils/specTestCases";
 
 interface ISignMessageTestCase {
@@ -14,21 +15,21 @@ interface ISignMessageTestCase {
   };
 }
 
-describeDirectorySpecTest<ISignMessageTestCase, string>(
-  "BLS - sign",
+describeDirectorySpecTest<ISignMessageTestCase, string | null>(
+  "bls/sign/small",
   path.join(SPEC_TEST_LOCATION, "tests/general/phase0/bls/sign/small"),
   (testCase) => {
-    const signature = bls.sign(
-      Buffer.from(testCase.data.input.privkey.replace("0x", ""), "hex"),
-      Buffer.from(testCase.data.input.message.replace("0x", ""), "hex")
-    );
-    return `0x${Buffer.from(signature).toString("hex")}`;
+    try {
+      const {privkey, message} = testCase.data.input;
+      const signature = bls.sign(fromHexString(privkey), fromHexString(message));
+      return toHexString(signature);
+    } catch (e) {
+      if (e instanceof ZeroSecretKeyError) return null;
+      else throw e;
+    }
   },
   {
-    inputTypes: {
-      data: InputType.YAML,
-    },
+    inputTypes: {data: InputType.YAML},
     getExpected: (testCase) => testCase.data.output,
-    shouldError: (testCase) => testCase.data.output == null,
   }
 );
