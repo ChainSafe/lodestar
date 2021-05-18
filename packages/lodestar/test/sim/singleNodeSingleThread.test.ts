@@ -35,14 +35,41 @@ describe("Run single node single thread interop validators (no eth1) until check
     event: ChainEvent.justified | ChainEvent.finalized;
     params: Partial<IBeaconParams>;
   }[] = [
-    // {validatorClientCount: 1, validatorsPerClient: 32, event: ChainEvent.justified, params: manyValidatorParams},
-    // {validatorClientCount: 8, validatorsPerClient: 8, event: ChainEvent.justified, params: testParams},
-    // {validatorClientCount: 8, validatorsPerClient: 8, event: ChainEvent.finalized, params: testParams},
     {
       validatorClientCount: 1,
       validatorsPerClient: 32,
       event: ChainEvent.justified,
       params: {...manyValidatorParams, ALTAIR_FORK_EPOCH: 0},
+    },
+    {
+      validatorClientCount: 1,
+      validatorsPerClient: 32,
+      event: ChainEvent.justified,
+      params: {...manyValidatorParams, ALTAIR_FORK_EPOCH: 1},
+    },
+    {
+      validatorClientCount: 8,
+      validatorsPerClient: 8,
+      event: ChainEvent.justified,
+      params: {...testParams, ALTAIR_FORK_EPOCH: 0},
+    },
+    {
+      validatorClientCount: 8,
+      validatorsPerClient: 8,
+      event: ChainEvent.justified,
+      params: {...testParams, ALTAIR_FORK_EPOCH: 1},
+    },
+    {
+      validatorClientCount: 8,
+      validatorsPerClient: 8,
+      event: ChainEvent.finalized,
+      params: {...testParams, ALTAIR_FORK_EPOCH: 0},
+    },
+    {
+      validatorClientCount: 8,
+      validatorsPerClient: 8,
+      event: ChainEvent.finalized,
+      params: {...testParams, ALTAIR_FORK_EPOCH: 1},
     },
   ];
 
