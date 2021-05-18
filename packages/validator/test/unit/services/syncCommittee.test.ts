@@ -65,9 +65,10 @@ describe("SyncCommitteeService", function () {
         duty: {
           pubkey: pubkeys[0],
           validatorIndex: 0,
-          validatorSyncCommitteeIndices: [7],
+          validatorSyncCommitteeIndex: 7,
         },
         selectionProof: ZERO_HASH,
+        subCommitteeIndex: 0,
       },
     ];
 
