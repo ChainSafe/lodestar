@@ -11,12 +11,13 @@ import {IParticipationStatus} from "../allForks/util/cachedEpochParticipation";
  */
 export function upgradeState(state: CachedBeaconState<phase0.BeaconState>): CachedBeaconState<altair.BeaconState> {
   const {config} = state;
+  const pendingAttesations = Array.from(state.previousEpochAttestations);
   const postTreeBackedState = upgradeTreeBackedState(
     config,
     config.types.phase0.BeaconState.createTreeBacked(state.tree)
   );
   const postState = createCachedBeaconState(config, postTreeBackedState);
-  translateParticipation(postState, Array.from(state.previousEpochAttestations));
+  translateParticipation(postState, pendingAttesations);
   return postState;
 }
 
@@ -63,8 +64,8 @@ function translateParticipation(
     if (!isMatchingSource) {
       throw new Error(
         "Attestation source does not equal justified checkpoint: " +
-          `source=${config.types.phase0.Checkpoint.toJson(data.source)} ` +
-          `justifiedCheckpoint=${config.types.phase0.Checkpoint.toJson(justifiedCheckpoint)}`
+          `source=${JSON.stringify(config.types.phase0.Checkpoint.toJson(data.source))} ` +
+          `justifiedCheckpoint=${JSON.stringify(config.types.phase0.Checkpoint.toJson(justifiedCheckpoint))}`
       );
     }
     const isMatchingTarget = config.types.Root.equals(data.target.root, getBlockRoot(config, state, data.target.epoch));
