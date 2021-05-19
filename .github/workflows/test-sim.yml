@@ -37,7 +37,16 @@ jobs:
       - name: Simulation multi thread multi node test
         run: yarn test:sim:multiThread
         working-directory: packages/lodestar
-
+        env: {RUN_ONLY_SIM_TEST: phase0}
+      # TODO: enable
+      # - name: Simulation multi thread multi node test altair epoch genesis
+      #   run: yarn test:sim:multiThread
+      #   working-directory: packages/lodestar
+      #   env: {RUN_ONLY_SIM_TEST: altair-genesis}
+      # - name: Simulation multi thread multi node test altair epoch 2
+      #   run: yarn test:sim:multiThread
+      #   working-directory: packages/lodestar
+      #   env: {RUN_ONLY_SIM_TEST: altair-epoch2}
       - name: Upload debug log test files
         if: ${{ always() }}
         uses: actions/upload-artifact@v2
