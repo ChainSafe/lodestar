@@ -15,21 +15,21 @@ import {expect} from "chai";
 import {SinonStubFn} from "../../utils/types";
 import {MetadataController} from "../../../src/network/metadata";
 import {Eth2Gossipsub, GossipType} from "../../../src/network/gossip";
-import {getAttnetsService, CommitteeSubscription} from "../../../src/network/subnetsService";
+import {AttnetsService, CommitteeSubscription} from "../../../src/network/subnets";
 import {ChainEvent, IBeaconChain} from "../../../src/chain";
 
-describe("AttestationService", function () {
+describe("AttnetsService", function () {
   const {SLOTS_PER_EPOCH, SECONDS_PER_SLOT, EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION} = params;
   const COMMITTEE_SUBNET_SUBSCRIPTION = 10;
   const ALTAIR_FORK_EPOCH = 1 * params.EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION;
   // eslint-disable-next-line @typescript-eslint/naming-convention
   const config = createIBeaconConfig({...params, ALTAIR_FORK_EPOCH});
 
-  let service: ReturnType<typeof getAttnetsService>;
+  let service: AttnetsService;
 
   const sandbox = sinon.createSandbox();
   // let clock: SinonFakeTimers;
-  let gossipStub: SinonStubbedInstance<Eth2Gossipsub>;
+  let gossipStub: SinonStubbedInstance<Eth2Gossipsub> & Eth2Gossipsub;
   let computeSubnetUtil: SinonStubFn<typeof stateTransitionUtils["computeSubnetForCommitteesAtSlot"]>;
   let randomUtil: SinonStubFn<typeof mathUtils["randBetween"]>;
   let metadata: MetadataController;
@@ -46,7 +46,7 @@ describe("AttestationService", function () {
 
   beforeEach(function () {
     sandbox.useFakeTimers(Date.now());
-    gossipStub = sandbox.createStubInstance(Eth2Gossipsub);
+    gossipStub = sandbox.createStubInstance(Eth2Gossipsub) as SinonStubbedInstance<Eth2Gossipsub> & Eth2Gossipsub;
     computeSubnetUtil = sandbox.stub(stateTransitionUtils, "computeSubnetForCommitteesAtSlot");
     computeSubnetUtil.returns(COMMITTEE_SUBNET_SUBSCRIPTION);
     randomUtil = sandbox.stub(mathUtils, "randBetween");
@@ -70,13 +70,7 @@ describe("AttestationService", function () {
     // load getCurrentSlot first, vscode not able to debug without this
     getCurrentSlot(config, Math.floor(Date.now() / 1000));
     metadata = new MetadataController({}, {config, chain, logger});
-    service = getAttnetsService({
-      config,
-      chain,
-      logger,
-      gossip: (gossipStub as unknown) as Eth2Gossipsub,
-      metadata,
-    });
+    service = new AttnetsService(config, chain, gossipStub, metadata, logger);
     service.start();
   });
 

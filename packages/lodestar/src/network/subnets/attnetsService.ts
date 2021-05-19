@@ -1,14 +1,15 @@
 import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ATTESTATION_SUBNET_COUNT} from "@chainsafe/lodestar-params";
-import {Epoch, phase0, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {Epoch, Slot} from "@chainsafe/lodestar-types";
 import {ILogger, randBetween} from "@chainsafe/lodestar-utils";
-import {shuffle} from "../util/shuffle";
-import {ChainEvent, IBeaconChain} from "../chain";
-import {Eth2Gossipsub, GossipType} from "./gossip";
-import {MetadataController} from "./metadata";
-import {SubnetMap, RequestedSubnet} from "./peers/utils";
-import {getActiveForks, runForkTransitionHooks} from "./forks";
+import {shuffle} from "../../util/shuffle";
+import {ChainEvent, IBeaconChain} from "../../chain";
+import {Eth2Gossipsub, GossipType} from "../gossip";
+import {MetadataController} from "../metadata";
+import {SubnetMap, RequestedSubnet} from "../peers/utils";
+import {getActiveForks, runForkTransitionHooks} from "../forks";
+import {IAttnetsService, CommitteeSubscription} from "./interface";
 
 /**
  * The time (in slots) before a last seen validator is considered absent and we unsubscribe from the random
@@ -16,48 +17,12 @@ import {getActiveForks, runForkTransitionHooks} from "./forks";
  */
 const LAST_SEEN_VALIDATOR_TIMEOUT = 150;
 
-/** Generic CommitteeSubscription for both beacon attnets subs and syncnets subs */
-export type CommitteeSubscription = {
-  validatorIndex: ValidatorIndex;
-  subnet: number;
-  slot: Slot;
-  isAggregator: boolean;
-};
-
-export interface ISubnetsService {
-  start(): void;
-  stop(): void;
-  addCommitteeSubscriptions(subscriptions: CommitteeSubscription[]): void;
-  shouldProcess(subnet: number, slot: phase0.Slot): boolean;
-  getActiveSubnets(): number[];
-}
-
-export interface IAttestationServiceModules {
-  config: IBeaconConfig;
-  chain: IBeaconChain;
-  logger: ILogger;
-  gossip: Eth2Gossipsub;
-  metadata: MetadataController;
-}
-
-export function getAttnetsService(modules: IAttestationServiceModules): SubnetsService {
-  return new SubnetsService(modules, GossipType.beacon_attestation, "attnets");
-}
-
-export function getSyncnetsService(modules: IAttestationServiceModules): SubnetsService {
-  return new SubnetsService(modules, GossipType.sync_committee, "syncnets");
-}
+const gossipType = GossipType.beacon_attestation;
 
 /**
  * Manage random (long lived) subnets and committee (short lived) subnets.
  */
-class SubnetsService implements ISubnetsService {
-  private readonly config: IBeaconConfig;
-  private readonly chain: IBeaconChain;
-  private readonly gossip: Eth2Gossipsub;
-  private readonly metadata: MetadataController;
-  private readonly logger: ILogger;
-
+export class AttnetsService implements IAttnetsService {
   /** Committee subnets - PeerManager must find peers for those */
   private committeeSubnets = new SubnetMap();
   /**
@@ -77,17 +42,12 @@ class SubnetsService implements ISubnetsService {
   private knownValidators = new Map<number, Slot>();
 
   constructor(
-    modules: IAttestationServiceModules,
-    // Switching state between attSubnets and syncSubnets
-    private readonly gossipType: GossipType.beacon_attestation | GossipType.sync_committee,
-    private readonly metadataKey: keyof Pick<MetadataController, "attnets" | "syncnets">
-  ) {
-    this.config = modules.config;
-    this.chain = modules.chain;
-    this.gossip = modules.gossip;
-    this.metadata = modules.metadata;
-    this.logger = modules.logger;
-  }
+    private readonly config: IBeaconConfig,
+    private readonly chain: IBeaconChain,
+    private readonly gossip: Eth2Gossipsub,
+    private readonly metadata: MetadataController,
+    private readonly logger: ILogger
+  ) {}
 
   start(): void {
     this.chain.emitter.on(ChainEvent.clockSlot, this.onSlot);
@@ -155,7 +115,7 @@ class SubnetsService implements ISubnetsService {
     try {
       this.unsubscribeExpiredCommitteeSubnets(slot);
     } catch (e) {
-      this.logger.error("Error on AttestationService.onSlot", {slot}, e);
+      this.logger.error("Error on AttnetsService.onSlot", {slot}, e);
     }
   };
 
@@ -170,22 +130,22 @@ class SubnetsService implements ISubnetsService {
 
       runForkTransitionHooks(this.config, epoch, {
         beforeForkTransition: (nextFork) => {
-          this.logger.info(`Suscribing to random ${this.metadataKey} to next fork`, {nextFork});
+          this.logger.info("Suscribing to random attnets to next fork", {nextFork});
           // ONLY ONCE: Two epoch before the fork, re-subscribe all existing random subscriptions to the new fork
           for (const subnet of this.subscriptionsRandom.getAll()) {
-            this.gossip.subscribeTopic({type: this.gossipType, fork: nextFork, subnet});
+            this.gossip.subscribeTopic({type: gossipType, fork: nextFork, subnet});
           }
         },
         afterForkTransition: (prevFork) => {
-          this.logger.info(`Unsuscribing to random ${this.metadataKey} from prev fork`, {prevFork});
+          this.logger.info("Unsuscribing to random attnets from prev fork", {prevFork});
           // ONLY ONCE: Two epochs after the fork, un-subscribe all subnets from the old fork
           for (let subnet = 0; subnet < ATTESTATION_SUBNET_COUNT; subnet++) {
-            this.gossip.unsubscribeTopic({type: this.gossipType, fork: prevFork, subnet});
+            this.gossip.unsubscribeTopic({type: gossipType, fork: prevFork, subnet});
           }
         },
       });
     } catch (e) {
-      this.logger.error("Error on AttestationService.onEpoch", {epoch}, e);
+      this.logger.error("Error on AttnetsService.onEpoch", {epoch}, e);
     }
   };
 
@@ -287,8 +247,8 @@ class SubnetsService implements ISubnetsService {
     }
 
     // Only update metadata if necessary, setting `metadata.[key]` triggers a write to disk
-    if (!this.config.types.phase0.AttestationSubnets.equals(subnets, this.metadata[this.metadataKey])) {
-      this.metadata[this.metadataKey] = subnets;
+    if (!this.config.types.phase0.AttestationSubnets.equals(subnets, this.metadata.attnets)) {
+      this.metadata.attnets = subnets;
     }
   }
 
@@ -298,7 +258,7 @@ class SubnetsService implements ISubnetsService {
     for (const subnet of subnets) {
       if (!this.subscriptionsCommittee.has(subnet) && !this.subscriptionsRandom.has(subnet)) {
         for (const fork of forks) {
-          this.gossip.subscribeTopic({type: this.gossipType, fork, subnet});
+          this.gossip.subscribeTopic({type: gossipType, fork, subnet});
         }
       }
     }
@@ -313,7 +273,7 @@ class SubnetsService implements ISubnetsService {
         !this.subscriptionsRandom.isActiveAtSlot(subnet, slot)
       ) {
         for (const fork of forks) {
-          this.gossip.unsubscribeTopic({type: this.gossipType, fork, subnet});
+          this.gossip.unsubscribeTopic({type: gossipType, fork, subnet});
         }
       }
     }

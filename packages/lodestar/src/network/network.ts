@@ -22,7 +22,7 @@ import {IBeaconDb} from "../db";
 import {createTopicValidatorFnMap, Eth2Gossipsub} from "./gossip";
 import {IReqRespHandler} from "./reqresp/handlers";
 import {INetworkEventBus, NetworkEventBus} from "./events";
-import {ISubnetsService, getAttnetsService, getSyncnetsService, CommitteeSubscription} from "./subnetsService";
+import {AttnetsService, SyncnetsService, CommitteeSubscription} from "./subnets";
 import {GossipHandler} from "./gossip/handler";
 
 interface INetworkModules {
@@ -39,8 +39,8 @@ interface INetworkModules {
 export class Network implements INetwork {
   events: INetworkEventBus;
   reqResp: IReqResp;
-  attnetsService: ISubnetsService;
-  syncnetsService: ISubnetsService;
+  attnetsService: AttnetsService;
+  syncnetsService: SyncnetsService;
   gossip: Eth2Gossipsub;
   metadata: MetadataController;
   peerMetadata: IPeerMetadataStore;
@@ -88,8 +88,8 @@ export class Network implements INetwork {
       metrics,
     });
 
-    this.attnetsService = getAttnetsService({...modules, gossip: this.gossip, metadata: this.metadata});
-    this.syncnetsService = getSyncnetsService({...modules, gossip: this.gossip, metadata: this.metadata});
+    this.attnetsService = new AttnetsService(config, chain, this.gossip, metadata, logger);
+    this.syncnetsService = new SyncnetsService(config, chain, this.gossip, metadata, logger);
     this.peerManager = new PeerManager(
       {
         libp2p,

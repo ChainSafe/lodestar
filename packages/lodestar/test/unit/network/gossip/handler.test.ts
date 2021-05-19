@@ -21,11 +21,11 @@ import {createNode} from "../../../utils/network";
 import {ForkDigestContext} from "../../../../src/util/forkDigestContext";
 import {generateBlockSummary} from "../../../utils/block";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
-import {ISubnetsService} from "../../../../src/network/subnetsService";
+import {IAttnetsService} from "../../../../src/network/subnets";
 
 describe("gossip handler", function () {
   const logger = testLogger();
-  const attnetsService = {} as ISubnetsService;
+  const attnetsService = {} as IAttnetsService;
   let forkDigestContext: SinonStubbedInstance<ForkDigestContext>;
   let chainStub: SinonStubbedInstance<IBeaconChain>;
   let networkStub: SinonStubbedInstance<INetwork>;
