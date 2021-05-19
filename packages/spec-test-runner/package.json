@@ -42,7 +42,7 @@
     "@chainsafe/lodestar-types": "^0.21.0",
     "@chainsafe/lodestar-utils": "^0.21.0",
     "@chainsafe/lodestar-validator": "^0.21.0",
-    "@chainsafe/ssz": "^0.8.4",
+    "@chainsafe/ssz": "^0.8.5",
     "@types/yargs": "^13.0.2"
   },
   "keywords": [
