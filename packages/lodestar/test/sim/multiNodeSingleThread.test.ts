@@ -29,11 +29,10 @@ describe("Run multi node single thread interop validators (no eth1) until checkp
   }[] = [
     // Test phase0 to justification
     {nodeCount: 4, validatorsPerNode: 8, event: ChainEvent.justified, altairForkEpoch: Infinity},
-    // TODO: enable
-    // // Test altair only
-    // {nodeCount: 4, validatorsPerNode: 8, event: ChainEvent.justified, altairForkEpoch: 0},
-    // // Test phase -> altair fork transition
-    // {nodeCount: 4, validatorsPerNode: 8, event: ChainEvent.justified, altairForkEpoch: 2},
+    // Test altair only
+    {nodeCount: 4, validatorsPerNode: 8, event: ChainEvent.justified, altairForkEpoch: 0},
+    // Test phase -> altair fork transition
+    {nodeCount: 4, validatorsPerNode: 8, event: ChainEvent.justified, altairForkEpoch: 2},
   ];
 
   let onDoneHandlers: (() => Promise<void>)[] = [];

@@ -27,7 +27,7 @@ export function getAltairTypes(params: IBeaconParams, phase0: Phase0SSZTypes & P
   }>();
 
   const SyncSubnets = new BitVectorType({
-    length: params.EPOCHS_PER_SYNC_COMMITTEE_PERIOD,
+    length: SYNC_COMMITTEE_SUBNET_COUNT,
   });
 
   const Metadata = new ContainerType<altair.Metadata>({

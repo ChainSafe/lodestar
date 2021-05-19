@@ -138,7 +138,8 @@ function processSlotsWithTransientCache(
 
     // Process epoch on the first slot of the next epoch
     if ((postState.slot + 1) % config.params.SLOTS_PER_EPOCH === 0) {
-      const fork = postState.config.getForkName(postState.slot + 1);
+      // At fork boundary we don't want to process "next fork" epoch before upgrading state
+      const fork = postState.config.getForkName(postState.slot);
       const timer = metrics?.stfnEpochTransition.startTimer();
       try {
         processEpochByFork[fork](postState);

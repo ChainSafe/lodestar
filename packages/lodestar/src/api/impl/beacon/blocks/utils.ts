@@ -41,7 +41,7 @@ async function resolveBlockIdOrNull(
   db: IBeaconDb,
   blockId: BlockId
 ): Promise<allForks.SignedBeaconBlock | null> {
-  blockId = blockId.toLowerCase();
+  blockId = String(blockId).toLowerCase();
   if (blockId === "head") {
     const head = forkChoice.getHead();
     return db.block.get(head.blockRoot);
