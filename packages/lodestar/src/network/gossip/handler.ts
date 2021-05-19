@@ -163,38 +163,50 @@ export class GossipHandler {
   };
 
   private registerGossipHandlers(): void {
+    const allForkNames = Object.values(this.config.forks).map((fork) => fork.name);
+    // TODO: Compute all forks after altair including altair
+    const allForksAfterAltair = [ForkName.altair];
+
     const topicHandlers = [
-      {type: GossipType.beacon_block, handler: this.onBlock},
-      {type: GossipType.beacon_aggregate_and_proof, handler: this.onAggregatedAttestation},
-      {type: GossipType.voluntary_exit, handler: this.onVoluntaryExit},
-      {type: GossipType.proposer_slashing, handler: this.onProposerSlashing},
-      {type: GossipType.attester_slashing, handler: this.onAttesterSlashing},
+      {type: GossipType.beacon_block, forks: allForkNames, handler: this.onBlock},
+      {type: GossipType.beacon_aggregate_and_proof, forks: allForkNames, handler: this.onAggregatedAttestation},
+      {type: GossipType.voluntary_exit, forks: allForkNames, handler: this.onVoluntaryExit},
+      {type: GossipType.proposer_slashing, forks: allForkNames, handler: this.onProposerSlashing},
+      {type: GossipType.attester_slashing, forks: allForkNames, handler: this.onAttesterSlashing},
       // Note: Calling .handleTopic() does not subscribe. Safe to do in any fork
-      {type: GossipType.sync_committee_contribution_and_proof, handler: this.onSyncCommitteeContribution},
+      {
+        type: GossipType.sync_committee_contribution_and_proof,
+        forks: allForksAfterAltair,
+        handler: this.onSyncCommitteeContribution,
+      },
     ];
-    const currentEpoch = computeEpochAtSlot(this.config, this.chain.forkChoice.getHead().slot);
-    for (const fork of getActiveForks(this.config, currentEpoch)) {
-      for (const {type, handler} of topicHandlers) {
+
+    for (const {type, forks, handler} of topicHandlers) {
+      for (const fork of forks) {
         const topic = {type, fork} as GossipTopic;
         this.gossip.handleTopic(topic, handler as GossipHandlerFn);
         this.topicHandlers.push({topic, handler: handler as GossipHandlerFn});
       }
+    }
+
+    for (const fork of allForkNames) {
       for (let subnet = 0; subnet < ATTESTATION_SUBNET_COUNT; subnet++) {
         const topic = {type: GossipType.beacon_attestation, fork, subnet};
         const handlerWrapped = (async (attestation: phase0.Attestation): Promise<void> =>
           await this.onAttestation(subnet, attestation)) as GossipHandlerFn;
+        // Note: Calling .handleTopic() does not subscribe. Safe to do in any fork// TODO: Only subscribe after altair
         this.gossip.handleTopic(topic, handlerWrapped);
         this.topicHandlers.push({topic, handler: handlerWrapped});
       }
-      if (fork === ForkName.altair) {
-        // Note: Calling .handleTopic() does not subscribe. Safe to do in any fork// TODO: Only subscribe after altair
-        for (let subnet = 0; subnet < SYNC_COMMITTEE_SUBNET_COUNT; subnet++) {
-          const topic = {type: GossipType.sync_committee, fork, subnet};
-          const handlerWrapped = (async (signature: altair.SyncCommitteeSignature): Promise<void> =>
-            await this.onSyncCommitteeSignature(subnet, signature)) as GossipHandlerFn;
-          this.gossip.handleTopic(topic, handlerWrapped);
-          this.topicHandlers.push({topic, handler: handlerWrapped});
-        }
+    }
+
+    for (const fork of allForksAfterAltair) {
+      for (let subnet = 0; subnet < SYNC_COMMITTEE_SUBNET_COUNT; subnet++) {
+        const topic = {type: GossipType.sync_committee, fork, subnet};
+        const handlerWrapped = (async (signature: altair.SyncCommitteeSignature): Promise<void> =>
+          await this.onSyncCommitteeSignature(subnet, signature)) as GossipHandlerFn;
+        this.gossip.handleTopic(topic, handlerWrapped);
+        this.topicHandlers.push({topic, handler: handlerWrapped});
       }
     }
   }
