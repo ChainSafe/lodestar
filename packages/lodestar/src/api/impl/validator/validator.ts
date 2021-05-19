@@ -33,7 +33,7 @@ import {ApiError} from "../errors";
 import {ApiNamespace, IApiModules} from "../interface";
 import {IValidatorApi} from "./interface";
 import {validateSyncCommitteeGossipContributionAndProof} from "../../../chain/validation/syncCommitteeContributionAndProof";
-import {CommitteeSubscription} from "../../../network/subnetsService";
+import {CommitteeSubscription} from "../../../network/subnets";
 import {getSyncComitteeValidatorIndexMap} from "./utils";
 
 /**

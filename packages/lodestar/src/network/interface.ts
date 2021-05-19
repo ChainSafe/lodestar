@@ -10,7 +10,7 @@ import {Eth2Gossipsub} from "./gossip";
 import {MetadataController} from "./metadata";
 import {IPeerRpcScoreStore, IPeerMetadataStore} from "./peers";
 import {IReqResp} from "./reqresp";
-import {ISubnetsService, CommitteeSubscription} from "./subnetsService";
+import {ISubnetsService, CommitteeSubscription} from "./subnets";
 
 export type PeerSearchOptions = {
   supportsProtocols?: string[];

@@ -9,7 +9,7 @@ import {ChainEvent, IBeaconChain} from "../../chain";
 import {IBeaconDb} from "../../db";
 import {GossipHandlerFn, GossipTopic, GossipType} from ".";
 import {Eth2Gossipsub} from "./gossipsub";
-import {ISubnetsService} from "../subnetsService";
+import {IAttnetsService} from "../subnets";
 
 /**
  * Registers handlers to all possible gossip topics and forks.
@@ -23,7 +23,7 @@ export class GossipHandler {
     private readonly config: IBeaconConfig,
     private readonly chain: IBeaconChain,
     private readonly gossip: Eth2Gossipsub,
-    private readonly attnetsService: ISubnetsService,
+    private readonly attnetsService: IAttnetsService,
     private readonly db: IBeaconDb,
     private readonly logger: ILogger
   ) {

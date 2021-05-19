@@ -16,7 +16,7 @@ import {sleep} from "@chainsafe/lodestar-utils";
 import {waitForEvent} from "../../../utils/events/resolver";
 import {testLogger} from "../../../utils/logger";
 import {getValidPeerId} from "../../../utils/peer";
-import {ISubnetsService} from "../../../../src/network/subnetsService";
+import {IAttnetsService} from "../../../../src/network/subnets";
 
 const logger = testLogger();
 
@@ -60,7 +60,7 @@ describe("network / peers / PeerManager", function () {
     const peerMetadata = new Libp2pPeerMetadataStore(config, libp2p.peerStore.metadataBook);
     const peerRpcScores = new PeerRpcScoreStore(peerMetadata);
     const networkEventBus = new NetworkEventBus();
-    const mockSubnetsService: ISubnetsService = {
+    const mockSubnetsService: IAttnetsService = {
       getActiveSubnets: () => [],
       shouldProcess: () => true,
       // eslint-disable-next-line @typescript-eslint/no-empty-function

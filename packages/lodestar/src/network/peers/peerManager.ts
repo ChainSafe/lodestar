@@ -8,6 +8,8 @@ import {GoodByeReasonCode, GOODBYE_KNOWN_CODES, Libp2pEvent} from "../../constan
 import {IMetrics} from "../../metrics";
 import {NetworkEvent, INetworkEventBus} from "../events";
 import {IReqResp, ReqRespMethod, RequestTypedContainer} from "../reqresp";
+import {prettyPrintPeerId} from "../util";
+import {ISubnetsService} from "../subnets";
 import {Libp2pPeerMetadataStore} from "./metastore";
 import {PeerDiscovery} from "./discover";
 import {IPeerRpcScoreStore, ScoreState} from "./score";
@@ -19,8 +21,6 @@ import {
   prioritizePeers,
   IrrelevantPeerError,
 } from "./utils";
-import {prettyPrintPeerId} from "../util";
-import {ISubnetsService} from "../subnetsService";
 
 /** heartbeat performs regular updates such as updating reputations and performing discovery requests */
 const HEARTBEAT_INTERVAL_MS = 30 * 1000;
