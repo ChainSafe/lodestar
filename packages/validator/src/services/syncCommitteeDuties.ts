@@ -91,7 +91,7 @@ export class SyncCommitteeDutiesService {
 
   private runDutiesTasks = async (currentEpoch: Epoch): Promise<void> => {
     // Before altair fork (+ lookahead) no need to check duties
-    if (currentEpoch < this.config.params.ALTAIR_FORK_EPOCH - ALTAIR_FORK_LOOKAHEAD_EPOCHS || currentEpoch < 0) {
+    if (currentEpoch < this.config.params.ALTAIR_FORK_EPOCH - ALTAIR_FORK_LOOKAHEAD_EPOCHS) {
       return;
     }
 
