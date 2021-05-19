@@ -122,6 +122,7 @@ export class Network implements INetwork {
     this.peerManager.start();
     this.gossip.start();
     this.attnetsService.start();
+    this.syncnetsService.start();
     const multiaddresses = this.libp2p.multiaddrs.map((m) => m.toString()).join(",");
     this.logger.info(`PeerId ${this.libp2p.peerId.toB58String()}, Multiaddrs ${multiaddresses}`);
   }
@@ -135,6 +136,7 @@ export class Network implements INetwork {
     this.gossip.stop();
     this.reqResp.stop();
     this.attnetsService.stop();
+    this.syncnetsService.stop();
     this.gossip.stop();
     await this.libp2p.stop();
   }
