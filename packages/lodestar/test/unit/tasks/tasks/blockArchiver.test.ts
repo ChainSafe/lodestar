@@ -23,21 +23,21 @@ describe("block archiver task", function () {
   });
 
   /**
-   * A - B - D - finalized - E
+   * A(1) - B(2) - D(4) - finalized(5) - E
    *      \
-   *       C
+   *       C(3)
    */
   it("should archive finalized blocks on same chain", async function () {
     const blockBuffer = Buffer.from(config.types.phase0.SignedBeaconBlock.serialize(generateEmptySignedBlock()));
     dbStub.block.getBinary.resolves(blockBuffer);
     const canonicalBlocks = [
-      generateBlockSummary({slot: 5}),
-      generateBlockSummary({slot: 4}),
-      generateBlockSummary({slot: 2}),
-      generateBlockSummary({slot: 1}),
+      generateBlockSummary({slot: 5, blockRoot: Buffer.alloc(32, 5)}),
+      generateBlockSummary({slot: 4, blockRoot: Buffer.alloc(32, 4)}),
+      generateBlockSummary({slot: 2, blockRoot: Buffer.alloc(32, 2)}),
+      generateBlockSummary({slot: 1, blockRoot: Buffer.alloc(32, 1)}),
     ];
     forkChoiceStub.iterateBlockSummaries.returns(canonicalBlocks);
-    forkChoiceStub.iterateNonAncestors.returns([generateBlockSummary({slot: 3})]);
+    forkChoiceStub.iterateNonAncestors.returns([generateBlockSummary({slot: 3, blockRoot: Buffer.alloc(32, 3)})]);
     const archiverTask = new ArchiveBlocksTask(
       config,
       {
@@ -53,7 +53,8 @@ describe("block archiver task", function () {
     await archiverTask.run();
     expect(
       dbStub.blockArchive.batchPutBinary.calledWith(
-        canonicalBlocks.map((summary) => ({
+        // don't want to process the finalized block, keep it in both db and forkchoice until next time
+        canonicalBlocks.slice(1).map((summary) => ({
           key: summary.slot,
           value: blockBuffer,
           summary,
@@ -61,8 +62,9 @@ describe("block archiver task", function () {
       )
     ).to.be.true;
     // delete canonical blocks
-    expect(dbStub.block.batchDelete.calledWith([ZERO_HASH, ZERO_HASH, ZERO_HASH, ZERO_HASH])).to.be.true;
+    expect(dbStub.block.batchDelete.calledWith([Buffer.alloc(32, 4), Buffer.alloc(32, 2), Buffer.alloc(32, 1)])).to.be
+      .true;
     // delete non canonical blocks
-    expect(dbStub.block.batchDelete.calledWith([ZERO_HASH])).to.be.true;
+    expect(dbStub.block.batchDelete.calledWith([Buffer.alloc(32, 3)])).to.be.true;
   });
 });
