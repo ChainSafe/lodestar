@@ -19,20 +19,20 @@ export type Phase0SSZTypes = ReturnType<typeof getPhase0Types>;
 // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types,@typescript-eslint/explicit-function-return-type
 export function getPhase0Types(params: IPhase0Params, primitive: PrimitiveSSZTypes) {
   const {
-    BLSSignature,
-    BLSPubkey,
-    Version,
-    Slot,
-    Uint64,
-    Root,
-    Gwei,
     Boolean,
+    Bytes32,
     Number64,
+    Uint64,
+    Slot,
     Epoch,
-    ForkDigest,
     CommitteeIndex,
     ValidatorIndex,
-    Bytes32,
+    Gwei,
+    Root,
+    Version,
+    ForkDigest,
+    BLSPubkey,
+    BLSSignature,
     Domain,
   } = primitive;
 
