@@ -15,7 +15,7 @@ export interface IReqResp {
   status(peerId: PeerId, request: phase0.Status): Promise<phase0.Status>;
   goodbye(peerId: PeerId, request: phase0.Goodbye): Promise<void>;
   ping(peerId: PeerId): Promise<phase0.Ping>;
-  metadata(peerId: PeerId): Promise<phase0.Metadata>;
+  metadata(peerId: PeerId): Promise<allForks.Metadata>;
   beaconBlocksByRange(
     peerId: PeerId,
     request: phase0.BeaconBlocksByRangeRequest

@@ -94,8 +94,8 @@ export class ReqResp implements IReqResp {
     return await this.sendRequest<phase0.Ping>(peerId, Method.Ping, [Version.V1], this.metadataController.seqNumber);
   }
 
-  async metadata(peerId: PeerId): Promise<phase0.Metadata> {
-    return await this.sendRequest<phase0.Metadata>(peerId, Method.Metadata, [Version.V1], null);
+  async metadata(peerId: PeerId): Promise<allForks.Metadata> {
+    return await this.sendRequest<allForks.Metadata>(peerId, Method.Metadata, [Version.V2, Version.V1], null);
   }
 
   async beaconBlocksByRange(

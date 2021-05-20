@@ -1,6 +1,6 @@
 import LibP2p, {Connection} from "libp2p";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {phase0} from "@chainsafe/lodestar-types";
+import {allForks, altair, phase0} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import PeerId from "peer-id";
 import {IBeaconChain} from "../../chain";
@@ -203,10 +203,13 @@ export class PeerManager {
   /**
    * Handle a METADATA request + response (rpc handler responds with METADATA automatically)
    */
-  private onMetadata(peer: PeerId, metadata: phase0.Metadata): void {
+  private onMetadata(peer: PeerId, metadata: allForks.Metadata): void {
     // Store metadata always in case the peer updates attnets but not the sequence number
     // Trust that the peer always sends the latest metadata (From Lighthouse)
-    this.peerMetadata.metadata.set(peer, metadata);
+    this.peerMetadata.metadata.set(peer, {
+      ...metadata,
+      syncnets: (metadata as Partial<altair.Metadata>).syncnets || [],
+    });
   }
 
   /**
@@ -310,9 +313,7 @@ export class PeerManager {
       connectedHealthyPeers.map((peer) => ({
         id: peer,
         attnets: this.peerMetadata.metadata.get(peer)?.attnets ?? [],
-        // TODO!! Figure out migration from phase0.metadata to altair.metadata there
-        // syncnets: this.peerMetadata.metadata.get(peer)?.syncnets ?? [],
-        syncnets: [],
+        syncnets: this.peerMetadata.metadata.get(peer)?.syncnets ?? [],
         score: this.peerRpcScores.getScore(peer),
       })),
       // Collect subnets which we need peers for in the current slot

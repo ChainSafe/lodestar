@@ -38,6 +38,7 @@ export const protocolsSupported: [Method, Version, Encoding][] = [
   [Method.Goodbye, Version.V1, Encoding.SSZ_SNAPPY],
   [Method.Ping, Version.V1, Encoding.SSZ_SNAPPY],
   [Method.Metadata, Version.V1, Encoding.SSZ_SNAPPY],
+  [Method.Metadata, Version.V2, Encoding.SSZ_SNAPPY],
   [Method.BeaconBlocksByRange, Version.V1, Encoding.SSZ_SNAPPY],
   [Method.BeaconBlocksByRange, Version.V2, Encoding.SSZ_SNAPPY],
   [Method.BeaconBlocksByRoot, Version.V1, Encoding.SSZ_SNAPPY],
@@ -120,8 +121,8 @@ export type RequestBodyByMethod = {
 
 /** Response SSZ type for each method and ForkName */
 // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types, @typescript-eslint/explicit-function-return-type
-export function getResponseSzzTypeByMethod(config: IBeaconConfig, method: Method, forkName: ForkName) {
-  switch (method) {
+export function getResponseSzzTypeByMethod(config: IBeaconConfig, protocol: Protocol, forkName: ForkName) {
+  switch (protocol.method) {
     case Method.Status:
       return config.types.phase0.Status;
     case Method.Goodbye:
@@ -129,15 +130,19 @@ export function getResponseSzzTypeByMethod(config: IBeaconConfig, method: Method
     case Method.Ping:
       return config.types.phase0.Ping;
     case Method.Metadata:
-      return config.types.phase0.Metadata;
+      switch (protocol.version) {
+        case Version.V1:
+          return config.types.phase0.Metadata;
+        case Version.V2:
+          // Metadata type is expanded in altair
+          return config.types.altair.Metadata;
+        default:
+          throw Error(`ReqResp version not supported ${protocol.version}`);
+      }
     case Method.BeaconBlocksByRange:
     case Method.BeaconBlocksByRoot:
-      switch (forkName) {
-        case ForkName.phase0:
-          return config.types.phase0.SignedBeaconBlock;
-        case ForkName.altair:
-          return config.types.altair.SignedBeaconBlock;
-      }
+      // SignedBeaconBlock type is changed in altair
+      return config.types[forkName].SignedBeaconBlock;
   }
 }
 

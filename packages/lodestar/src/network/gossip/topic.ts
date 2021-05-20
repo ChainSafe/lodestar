@@ -93,7 +93,7 @@ export function getGossipTopic(forkDigestContext: IForkDigestContext, topic: str
 export function getGossipSSZType<T extends GossipObject>(config: IBeaconConfig, topic: GossipTopic): ContainerType<T> {
   switch (topic.type) {
     case GossipType.beacon_block:
-      // beacon_block topic is updated in altair to support the updated SignedBeaconBlock type
+      // beacon_block is updated in altair to support the updated SignedBeaconBlock type
       return (config.types[topic.fork].SignedBeaconBlock as unknown) as ContainerType<T>;
     case GossipType.beacon_aggregate_and_proof:
       return (config.types.phase0.SignedAggregateAndProof as unknown) as ContainerType<T>;
