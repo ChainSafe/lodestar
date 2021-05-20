@@ -96,15 +96,15 @@ export function getGossipSSZType<T extends GossipObject>(config: IBeaconConfig, 
       // beacon_block is updated in altair to support the updated SignedBeaconBlock type
       return (config.types[topic.fork].SignedBeaconBlock as unknown) as ContainerType<T>;
     case GossipType.beacon_aggregate_and_proof:
-      return (config.types.phase0.SignedAggregateAndProof as unknown) as ContainerType<T>;
+      return (config.types[topic.fork].SignedAggregateAndProof as unknown) as ContainerType<T>;
     case GossipType.beacon_attestation:
-      return (config.types.phase0.Attestation as unknown) as ContainerType<T>;
+      return (config.types[topic.fork].Attestation as unknown) as ContainerType<T>;
     case GossipType.proposer_slashing:
-      return (config.types.phase0.ProposerSlashing as unknown) as ContainerType<T>;
+      return (config.types[topic.fork].ProposerSlashing as unknown) as ContainerType<T>;
     case GossipType.attester_slashing:
-      return (config.types.phase0.AttesterSlashing as unknown) as ContainerType<T>;
+      return (config.types[topic.fork].AttesterSlashing as unknown) as ContainerType<T>;
     case GossipType.voluntary_exit:
-      return (config.types.phase0.SignedVoluntaryExit as unknown) as ContainerType<T>;
+      return (config.types[topic.fork].SignedVoluntaryExit as unknown) as ContainerType<T>;
     case GossipType.sync_committee_contribution_and_proof:
       return (config.types.altair.SignedContributionAndProof as unknown) as ContainerType<T>;
     case GossipType.sync_committee:
