@@ -20,7 +20,7 @@
     "@chainsafe/lodestar-types": "^0.21.0",
     "@chainsafe/lodestar-utils": "^0.21.0",
     "@chainsafe/persistent-merkle-tree": "^0.3.2",
-    "@chainsafe/ssz": "^0.8.4",
+    "@chainsafe/ssz": "^0.8.5",
     "@types/debounce": "^1.2.0",
     "@typescript-eslint/eslint-plugin": "^2.32.0",
     "@typescript-eslint/parser": "^2.32.0",
