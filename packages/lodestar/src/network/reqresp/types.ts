@@ -129,16 +129,11 @@ export function getResponseSzzTypeByMethod(config: IBeaconConfig, protocol: Prot
       return config.types.phase0.Goodbye;
     case Method.Ping:
       return config.types.phase0.Ping;
-    case Method.Metadata:
-      switch (protocol.version) {
-        case Version.V1:
-          return config.types.phase0.Metadata;
-        case Version.V2:
-          // Metadata type is expanded in altair
-          return config.types.altair.Metadata;
-        default:
-          throw Error(`ReqResp version not supported ${protocol.version}`);
-      }
+    case Method.Metadata: {
+      // V1 -> phase0.Metadata, V2 -> altair.Metadata
+      const fork = protocol.version === Version.V1 ? ForkName.phase0 : ForkName.altair;
+      return config.types[fork].Metadata;
+    }
     case Method.BeaconBlocksByRange:
     case Method.BeaconBlocksByRoot:
       // SignedBeaconBlock type is changed in altair
