@@ -27,17 +27,17 @@ describe("block archiver task", function () {
    *      \
    *       C(3)
    */
-  it("should archive finalized blocks on same chain", async function () {
+  it("should archive finalized blocks", async function () {
     const blockBuffer = Buffer.from(config.types.phase0.SignedBeaconBlock.serialize(generateEmptySignedBlock()));
     dbStub.block.getBinary.resolves(blockBuffer);
-    const canonicalBlocks = [
-      generateBlockSummary({slot: 5, blockRoot: Buffer.alloc(32, 5)}),
-      generateBlockSummary({slot: 4, blockRoot: Buffer.alloc(32, 4)}),
-      generateBlockSummary({slot: 2, blockRoot: Buffer.alloc(32, 2)}),
-      generateBlockSummary({slot: 1, blockRoot: Buffer.alloc(32, 1)}),
-    ];
+    // block i has slot i+1
+    const blocks = Array.from({length: 5}, (_, i) =>
+      generateBlockSummary({slot: i + 1, blockRoot: Buffer.alloc(32, i + 1)})
+    );
+    const canonicalBlocks = [blocks[4], blocks[3], blocks[1], blocks[0]];
+    const nonCanonicalBlocks = [blocks[2]];
     forkChoiceStub.iterateBlockSummaries.returns(canonicalBlocks);
-    forkChoiceStub.iterateNonAncestors.returns([generateBlockSummary({slot: 3, blockRoot: Buffer.alloc(32, 3)})]);
+    forkChoiceStub.iterateNonAncestors.returns(nonCanonicalBlocks);
     const archiverTask = new ArchiveBlocksTask(
       config,
       {
@@ -62,9 +62,9 @@ describe("block archiver task", function () {
       )
     ).to.be.true;
     // delete canonical blocks
-    expect(dbStub.block.batchDelete.calledWith([Buffer.alloc(32, 4), Buffer.alloc(32, 2), Buffer.alloc(32, 1)])).to.be
-      .true;
+    expect(dbStub.block.batchDelete.calledWith([blocks[3], blocks[1], blocks[0]].map((summary) => summary.blockRoot)))
+      .to.be.true;
     // delete non canonical blocks
-    expect(dbStub.block.batchDelete.calledWith([Buffer.alloc(32, 3)])).to.be.true;
+    expect(dbStub.block.batchDelete.calledWith([blocks[2]].map((summary) => summary.blockRoot))).to.be.true;
   });
 });
