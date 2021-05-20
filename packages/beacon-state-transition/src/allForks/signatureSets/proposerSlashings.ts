@@ -17,7 +17,7 @@ export function getProposerSlashingSignatureSets(
     (signedHeader): ISignatureSet => {
       const epoch = computeEpochAtSlot(config, signedHeader.message.slot);
       const domain = getDomain(config, state, config.params.DOMAIN_BEACON_PROPOSER, epoch);
-      const beaconBlockHeaderType = config.getTypes(signedHeader.message.slot).BeaconBlockHeader;
+      const beaconBlockHeaderType = config.types.phase0.BeaconBlockHeader;
 
       return {
         type: SignatureSetType.single,

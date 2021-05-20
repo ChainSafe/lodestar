@@ -84,8 +84,8 @@ export function serializeSyncCommittee(syncCommittee: SyncCommitteeFast): altair
 }
 
 export function isEmptyHeader(config: IBeaconConfig, header: BeaconBlockHeader): boolean {
-  const emptyValue = config.types.altair.BeaconBlockHeader.defaultValue();
-  return config.types.altair.BeaconBlockHeader.equals(emptyValue, header);
+  const emptyValue = config.types.phase0.BeaconBlockHeader.defaultValue();
+  return config.types.phase0.BeaconBlockHeader.equals(emptyValue, header);
 }
 
 export function isEmptySyncCommitte(config: IBeaconConfig, syncCommittee: altair.SyncCommittee): boolean {

@@ -262,7 +262,7 @@ export class ForkChoice implements IForkChoice {
     // Check block is a descendant of the finalized block at the checkpoint finalized slot.
     const blockAncestor = this.getAncestor(block.parentRoot, finalizedSlot);
     const finalizedRoot = this.fcStore.finalizedCheckpoint.root;
-    if (!this.config.types.phase0.Root.equals(blockAncestor, finalizedRoot)) {
+    if (!this.config.types.Root.equals(blockAncestor, finalizedRoot)) {
       throw new ForkChoiceError({
         code: ForkChoiceErrorCode.INVALID_BLOCK,
         err: {
@@ -307,7 +307,7 @@ export class ForkChoice implements IForkChoice {
           state.currentJustifiedCheckpoint
         ) &&
           state.currentJustifiedCheckpoint.epoch > this.fcStore.justifiedCheckpoint.epoch) ||
-        !this.config.types.phase0.Root.equals(
+        !this.config.types.Root.equals(
           this.getAncestor(this.fcStore.justifiedCheckpoint.root, finalizedSlot),
           this.fcStore.finalizedCheckpoint.root
         )
@@ -381,7 +381,7 @@ export class ForkChoice implements IForkChoice {
     // (1) becomes weird once we hit finality and fork choice drops the genesis block. (2) is
     // fine because votes to the genesis block are not useful; all validators implicitly attest
     // to genesis just by being present in the chain.
-    if (this.config.types.phase0.Root.equals(attestation.data.beaconBlockRoot, ZERO_HASH)) {
+    if (this.config.types.Root.equals(attestation.data.beaconBlockRoot, ZERO_HASH)) {
       return;
     }
 
@@ -593,7 +593,7 @@ export class ForkChoice implements IForkChoice {
     // A prior `if` statement protects against a justified_slot that is greater than
     // `state.slot`
     const justifiedAncestor = this.getAncestor(newJustifiedCheckpoint.root, justifiedSlot);
-    if (!this.config.types.phase0.Root.equals(justifiedAncestor, this.fcStore.justifiedCheckpoint.root)) {
+    if (!this.config.types.Root.equals(justifiedAncestor, this.fcStore.justifiedCheckpoint.root)) {
       return false;
     }
 
@@ -712,7 +712,7 @@ export class ForkChoice implements IForkChoice {
         ? indexedAttestation.data.beaconBlockRoot
         : fromHexString(block.targetRoot);
 
-    if (!this.config.types.phase0.Root.equals(expectedTarget, target.root)) {
+    if (!this.config.types.Root.equals(expectedTarget, target.root)) {
       throw new ForkChoiceError({
         code: ForkChoiceErrorCode.INVALID_ATTESTATION,
         err: {

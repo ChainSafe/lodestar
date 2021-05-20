@@ -201,13 +201,13 @@ export function computeAnchorCheckpoint(
     const block = blockTypes.BeaconBlock.defaultValue();
     block.stateRoot = stateTypes.BeaconState.hashTreeRoot(anchorState);
     blockHeader = blockToHeader(config, block);
-    root = stateTypes.BeaconBlockHeader.hashTreeRoot(blockHeader);
+    root = config.types.phase0.BeaconBlockHeader.hashTreeRoot(blockHeader);
   } else {
-    blockHeader = blockTypes.BeaconBlockHeader.clone(anchorState.latestBlockHeader);
+    blockHeader = config.types.phase0.BeaconBlockHeader.clone(anchorState.latestBlockHeader);
     if (config.types.Root.equals(blockHeader.stateRoot, ZERO_HASH)) {
       blockHeader.stateRoot = stateTypes.BeaconState.hashTreeRoot(anchorState);
     }
-    root = stateTypes.BeaconBlockHeader.hashTreeRoot(blockHeader);
+    root = config.types.phase0.BeaconBlockHeader.hashTreeRoot(blockHeader);
   }
 
   return {

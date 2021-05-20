@@ -39,7 +39,7 @@ export function BeaconApi(config: IBeaconConfig, client: HttpClient): IApiClient
 
       async getBlockRoot(blockId: BlockId): Promise<Root> {
         const res = await client.get<{data: {root: Json}}>(`/eth/v1/beacon/blocks/${blockId}/root`);
-        return config.types.phase0.Root.fromJson(res.data.root, {case: "snake"});
+        return config.types.Root.fromJson(res.data.root, {case: "snake"});
       },
     },
 

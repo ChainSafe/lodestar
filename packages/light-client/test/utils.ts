@@ -37,11 +37,11 @@ export function getSyncAggregateSigningRoot(
   syncAttestedBlockHeader: altair.BeaconBlockHeader
 ): Uint8Array {
   const domain = computeDomain(config, config.params.DOMAIN_SYNC_COMMITTEE, forkVersion, genesisValidatorsRoot);
-  return computeSigningRoot(config, config.types.altair.BeaconBlockHeader, syncAttestedBlockHeader, domain);
+  return computeSigningRoot(config, config.types.phase0.BeaconBlockHeader, syncAttestedBlockHeader, domain);
 }
 
 export function defaultBeaconBlockHeader(config: IBeaconConfig, slot: Slot): altair.BeaconBlockHeader {
-  const header = config.types.altair.BeaconBlockHeader.defaultValue();
+  const header = config.types.phase0.BeaconBlockHeader.defaultValue();
   header.slot = slot;
   return header;
 }

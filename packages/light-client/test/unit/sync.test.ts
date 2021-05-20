@@ -115,7 +115,7 @@ describe("Lightclient flow with LightClientUpdater", () => {
     const store: LightClientStoreFast = {
       bestUpdates: new Map<SyncPeriod, altair.LightClientUpdate>(),
       snapshot: {
-        header: config.types.altair.BeaconBlockHeader.defaultValue(),
+        header: config.types.phase0.BeaconBlockHeader.defaultValue(),
         currentSyncCommittee: lightclientServer["getSyncCommittee"](0).syncCommitteeFast,
         nextSyncCommittee: lightclientServer["getSyncCommittee"](1).syncCommitteeFast,
       },
@@ -137,7 +137,7 @@ describe("Lightclient flow with LightClientUpdater", () => {
   it("Simulate a second lightclient syncing over the API from trusted snapshot", async () => {
     const clock = new MockClock(toSlot);
     const snapshot: altair.LightClientSnapshot = {
-      header: config.types.altair.BeaconBlockHeader.defaultValue(),
+      header: config.types.phase0.BeaconBlockHeader.defaultValue(),
       currentSyncCommittee: lightclientServer["getSyncCommittee"](0).syncCommittee,
       nextSyncCommittee: lightclientServer["getSyncCommittee"](1).syncCommittee,
     };
