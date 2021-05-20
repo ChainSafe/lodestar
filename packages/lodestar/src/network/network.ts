@@ -12,7 +12,7 @@ import {IMetrics} from "../metrics";
 import {ReqResp, IReqResp, IReqRespOptions} from "./reqresp";
 import {INetworkOptions} from "./options";
 import {INetwork} from "./interface";
-import {IBeaconChain} from "../chain";
+import {IBeaconChain, IBeaconClock} from "../chain";
 import {MetadataController} from "./metadata";
 import {Discv5Discovery, ENR} from "@chainsafe/discv5";
 import {IPeerMetadataStore, Libp2pPeerMetadataStore} from "./peers/metastore";
@@ -51,12 +51,14 @@ export class Network implements INetwork {
   private readonly libp2p: LibP2p;
   private readonly logger: ILogger;
   private readonly config: IBeaconConfig;
+  private readonly clock: IBeaconClock;
 
   constructor(opts: INetworkOptions & IReqRespOptions, modules: INetworkModules) {
     const {config, libp2p, logger, metrics, chain, db, reqRespHandler, signal} = modules;
     this.libp2p = libp2p;
     this.logger = logger;
     this.config = config;
+    this.clock = chain.clock;
     const networkEventBus = new NetworkEventBus();
     const metadata = new MetadataController({}, {config, chain, logger});
     const peerMetadata = new Libp2pPeerMetadataStore(config, libp2p.peerStore.metadataBook);
@@ -118,7 +120,7 @@ export class Network implements INetwork {
   async start(): Promise<void> {
     await this.libp2p.start();
     this.reqResp.start();
-    this.metadata.start(this.getEnr());
+    this.metadata.start(this.getEnr(), this.config.getForkName(this.clock.currentSlot));
     this.peerManager.start();
     this.gossip.start();
     this.attnetsService.start();

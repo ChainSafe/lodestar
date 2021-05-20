@@ -1,7 +1,7 @@
 import {ENR} from "@chainsafe/discv5";
 import {BitVector, toHexString} from "@chainsafe/ssz";
 import {altair, Epoch, phase0} from "@chainsafe/lodestar-types";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {ForkName, IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {ChainEvent, IBeaconChain} from "../chain";
@@ -38,12 +38,17 @@ export class MetadataController {
     this._metadata = opts.metadata || this.config.types.altair.Metadata.defaultValue();
   }
 
-  start(enr: ENR | undefined): void {
+  start(enr: ENR | undefined, currentFork: ForkName): void {
     this.enr = enr;
     if (this.enr) {
-      this.enr.set("attnets", this.config.types.phase0.AttestationSubnets.serialize(this._metadata.attnets));
-      this.enr.set("syncnets", this.config.types.phase0.AttestationSubnets.serialize(this._metadata.syncnets));
       this.enr.set("eth2", this.config.types.phase0.ENRForkID.serialize(this.getHeadEnrForkId()));
+      this.enr.set("attnets", this.config.types.phase0.AttestationSubnets.serialize(this._metadata.attnets));
+      // TODO: Generalize to all forks
+      if (currentFork === ForkName.altair) {
+        // Only persist syncnets if altair fork is already activated. If currentFork is altair but head is phase0
+        // adding syncnets to the ENR is not a problem, we will just have a useless field for a few hours.
+        this.enr.set("syncnets", this.config.types.phase0.AttestationSubnets.serialize(this._metadata.syncnets));
+      }
     }
     this.chain.emitter.on(ChainEvent.forkVersion, this.handleForkVersion);
   }
