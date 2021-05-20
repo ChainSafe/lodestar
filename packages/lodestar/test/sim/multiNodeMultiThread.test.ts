@@ -41,9 +41,7 @@ describe("Run multi node multi thread interop validators (no eth1) until checkpo
       : RUN_ONLY_SIM_TEST === "altair-epoch2"
       ? [altairEph2Case]
       : // if RUN_ONLY_SIM_TEST is not set or else run all tests
-        // TODO: enable
-        // [phase0Case, altairGenCase, altairEph2Case];
-        [phase0Case];
+        [phase0Case, altairGenCase, altairEph2Case];
 
   for (const testCase of testCases) {
     runMultiNodeMultiThreadTest({
