@@ -12,7 +12,7 @@ import {expect, use} from "chai";
 import chaiAsPromised from "chai-as-promised";
 import Multiaddr from "multiaddr";
 import {MetadataController} from "../../../../../src/network/metadata";
-import {altair, phase0} from "@chainsafe/lodestar-types";
+import {altair} from "@chainsafe/lodestar-types";
 import {NodePeer} from "../../../../../src/api/types";
 import {PeerStatus, PeerDirection} from "../../../../../src/network";
 
