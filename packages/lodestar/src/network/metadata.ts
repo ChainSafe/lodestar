@@ -1,11 +1,13 @@
-import {BitVector, toHexString} from "@chainsafe/ssz";
 import {ENR} from "@chainsafe/discv5";
-import {altair, phase0} from "@chainsafe/lodestar-types";
+import {BitVector, toHexString} from "@chainsafe/ssz";
+import {altair, Epoch, phase0} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {ChainEvent, IBeaconChain} from "../../chain";
 import {ILogger} from "@chainsafe/lodestar-utils";
-import {getENRForkID} from "./utils";
 import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
+import {ChainEvent, IBeaconChain} from "../chain";
+import {FAR_FUTURE_EPOCH} from "../constants";
+import {IForkDigestContext} from "../util/forkDigestContext";
+import {getCurrentAndNextFork} from "./forks";
 
 export interface IMetadataOpts {
   metadata?: altair.Metadata;
@@ -94,4 +96,21 @@ export class MetadataController {
     const headEpoch = computeEpochAtSlot(this.config, this.chain.forkChoice.getHead().slot);
     return getENRForkID(this.config, this.chain.forkDigestContext, headEpoch);
   }
+}
+
+export function getENRForkID(
+  config: IBeaconConfig,
+  forkDigestContext: IForkDigestContext,
+  epoch: Epoch
+): phase0.ENRForkID {
+  const {currentFork, nextFork} = getCurrentAndNextFork(config, epoch);
+
+  return {
+    // Current fork digest
+    forkDigest: forkDigestContext.forkName2ForkDigest(currentFork.name),
+    // next planned fork versin
+    nextForkVersion: nextFork ? nextFork.version : currentFork.version,
+    // next fork epoch
+    nextForkEpoch: nextFork ? nextFork.epoch : FAR_FUTURE_EPOCH,
+  };
 }
