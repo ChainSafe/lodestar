@@ -7,11 +7,11 @@ import {IReqResp, ReqRespMethod} from "../../../../src/network/reqresp";
 import {PeerRpcScoreStore, PeerManager, Libp2pPeerMetadataStore} from "../../../../src/network/peers";
 import {NetworkEvent, NetworkEventBus} from "../../../../src/network";
 import {createMetrics} from "../../../../src/metrics";
-import {createNode, getAttnets} from "../../../utils/network";
+import {createNode, getAttnets, getSyncnets} from "../../../utils/network";
 import {MockBeaconChain} from "../../../utils/mocks/chain/chain";
 import {generateEmptySignedBlock} from "../../../utils/block";
 import {generateState} from "../../../utils/state";
-import {phase0} from "@chainsafe/lodestar-types";
+import {altair, phase0} from "@chainsafe/lodestar-types";
 import {sleep} from "@chainsafe/lodestar-utils";
 import {waitForEvent} from "../../../utils/events/resolver";
 import {testLogger} from "../../../utils/logger";
@@ -161,7 +161,7 @@ describe("network / peers / PeerManager", function () {
 
     // Simulate peer1 returning a PING and STATUS message
     const remoteStatus = chain.getStatus();
-    const remoteMetadata: phase0.Metadata = {seqNumber: BigInt(1), attnets: getAttnets()};
+    const remoteMetadata: altair.Metadata = {seqNumber: BigInt(1), attnets: getAttnets(), syncnets: getSyncnets()};
     reqResp.ping.resolves(remoteMetadata.seqNumber);
     reqResp.status.resolves(remoteStatus);
     reqResp.metadata.resolves(remoteMetadata);
