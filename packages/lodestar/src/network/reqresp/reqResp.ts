@@ -2,7 +2,7 @@
  * @module network
  */
 import {Connection} from "libp2p";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {ForkName, IBeaconConfig} from "@chainsafe/lodestar-config";
 import {allForks, phase0} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {AbortController} from "abort-controller";
@@ -94,8 +94,10 @@ export class ReqResp implements IReqResp {
     return await this.sendRequest<phase0.Ping>(peerId, Method.Ping, [Version.V1], this.metadataController.seqNumber);
   }
 
-  async metadata(peerId: PeerId): Promise<allForks.Metadata> {
-    return await this.sendRequest<allForks.Metadata>(peerId, Method.Metadata, [Version.V2, Version.V1], null);
+  async metadata(peerId: PeerId, fork?: ForkName): Promise<allForks.Metadata> {
+    // Only request V1 if forcing phase0 fork. It's safe to not specify `fork` and let stream negotiation pick the version
+    const versions = fork === ForkName.phase0 ? [Version.V1] : [Version.V2, Version.V1];
+    return await this.sendRequest<allForks.Metadata>(peerId, Method.Metadata, versions, null);
   }
 
   async beaconBlocksByRange(
@@ -186,15 +188,17 @@ export class ReqResp implements IReqResp {
     };
   }
 
-  private async *onRequest(method: Method, requestBody: RequestBody, peerId: PeerId): AsyncIterable<ResponseBody> {
-    const requestTyped = {method, body: requestBody} as RequestTypedContainer;
+  private async *onRequest(protocol: Protocol, requestBody: RequestBody, peerId: PeerId): AsyncIterable<ResponseBody> {
+    const requestTyped = {method: protocol.method, body: requestBody} as RequestTypedContainer;
 
     switch (requestTyped.method) {
       case Method.Ping:
         yield this.metadataController.seqNumber;
         break;
       case Method.Metadata:
-        yield this.metadataController.allPhase0;
+        // V1 -> phase0, V2 -> altair. But the type serialization of phase0.Metadata will just ignore the extra .syncnets property
+        // It's safe to return altair.Metadata here for all versions
+        yield this.metadataController.json;
         break;
       case Method.Goodbye:
         yield BigInt(0);
@@ -213,7 +217,7 @@ export class ReqResp implements IReqResp {
         break;
 
       default:
-        throw Error(`Unsupported method ${method}`);
+        throw Error(`Unsupported method ${protocol.method}`);
     }
 
     // Allow onRequest to return and close the stream

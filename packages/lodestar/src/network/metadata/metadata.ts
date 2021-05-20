@@ -39,11 +39,9 @@ export class MetadataController {
   start(enr: ENR | undefined): void {
     this.enr = enr;
     if (this.enr) {
-      this.enr.set(
-        "attnets",
-        Buffer.from(this.config.types.phase0.AttestationSubnets.serialize(this._metadata.attnets))
-      );
-      this.enr.set("eth2", Buffer.from(this.config.types.phase0.ENRForkID.serialize(this.getHeadEnrForkId())));
+      this.enr.set("attnets", this.config.types.phase0.AttestationSubnets.serialize(this._metadata.attnets));
+      this.enr.set("syncnets", this.config.types.phase0.AttestationSubnets.serialize(this._metadata.syncnets));
+      this.enr.set("eth2", this.config.types.phase0.ENRForkID.serialize(this.getHeadEnrForkId()));
     }
     this.chain.emitter.on(ChainEvent.forkVersion, this.handleForkVersion);
   }
@@ -62,7 +60,7 @@ export class MetadataController {
 
   set syncnets(syncnets: BitVector) {
     if (this.enr) {
-      this.enr.set("syncnets", Buffer.from(this.config.types.altair.SyncSubnets.serialize(syncnets)));
+      this.enr.set("syncnets", this.config.types.altair.SyncSubnets.serialize(syncnets));
     }
     this._metadata.syncnets = syncnets;
   }
@@ -73,20 +71,14 @@ export class MetadataController {
 
   set attnets(attnets: BitVector) {
     if (this.enr) {
-      this.enr.set("attnets", Buffer.from(this.config.types.phase0.AttestationSubnets.serialize(attnets)));
+      this.enr.set("attnets", this.config.types.phase0.AttestationSubnets.serialize(attnets));
     }
     this._metadata.seqNumber++;
     this._metadata.attnets = attnets;
   }
 
-  get allPhase0(): phase0.Metadata {
-    return {
-      attnets: this._metadata.attnets,
-      seqNumber: this._metadata.seqNumber,
-    };
-  }
-
-  get allAltair(): altair.Metadata {
+  /** Consumers that need the phase0.Metadata type can just ignore the .syncnets property */
+  get json(): altair.Metadata {
     return this._metadata;
   }
 
@@ -94,7 +86,7 @@ export class MetadataController {
     const forkDigest = this.chain.getHeadForkDigest();
     this.logger.verbose(`Metadata: received new fork digest ${toHexString(forkDigest)}`);
     if (this.enr) {
-      this.enr.set("eth2", Buffer.from(this.config.types.phase0.ENRForkID.serialize(this.getHeadEnrForkId())));
+      this.enr.set("eth2", this.config.types.phase0.ENRForkID.serialize(this.getHeadEnrForkId()));
     }
   }
 
