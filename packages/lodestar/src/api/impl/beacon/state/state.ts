@@ -31,7 +31,7 @@ export class BeaconStateApi implements IBeaconStateApi {
 
   async getStateRoot(stateId: StateId): Promise<Root> {
     const state = await this.getState(stateId);
-    return this.config.getTypes(state.slot).BeaconState.hashTreeRoot(state);
+    return this.config.getForkTypes(state.slot).BeaconState.hashTreeRoot(state);
   }
 
   async getStateFinalityCheckpoints(stateId: StateId): Promise<phase0.FinalityCheckpoints> {

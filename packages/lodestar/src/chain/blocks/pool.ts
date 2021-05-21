@@ -148,7 +148,7 @@ export class BlockPool {
   }
 
   private getBlockKey(block: allForks.SignedBeaconBlock): string {
-    return toHexString(this.config.getTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message));
+    return toHexString(this.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message));
   }
 
   private getBlockKeyByRoot(root: Root): string {

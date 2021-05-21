@@ -31,6 +31,6 @@ export class PreGenesisState {
   }
 
   private type(): ContainerType<allForks.BeaconState> {
-    return this.config.getTypes(GENESIS_SLOT).BeaconState;
+    return this.config.getForkTypes(GENESIS_SLOT).BeaconState;
   }
 }

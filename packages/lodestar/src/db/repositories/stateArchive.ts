@@ -18,7 +18,7 @@ export class StateArchiveRepository extends Repository<Slot, TreeBacked<allForks
   // Overrides for multi-fork
 
   encodeValue(value: allForks.BeaconState): Buffer {
-    return this.config.getTypes(value.slot).BeaconState.serialize(value) as Buffer;
+    return this.config.getForkTypes(value.slot).BeaconState.serialize(value) as Buffer;
   }
 
   decodeValue(data: Buffer): TreeBacked<allForks.BeaconState> {

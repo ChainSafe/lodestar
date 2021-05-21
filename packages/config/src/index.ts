@@ -35,7 +35,7 @@ export function createIBeaconConfig(params: IBeaconParams): IBeaconConfig {
     getForkVersion(slot: Slot): Version {
       return this.getForkInfo(slot).version;
     },
-    getTypes(slot: Slot): AllForksSSZTypes {
+    getForkTypes(slot: Slot): AllForksSSZTypes {
       return types[this.getForkName(slot)] as AllForksSSZTypes;
     },
   };

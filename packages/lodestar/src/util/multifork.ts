@@ -40,7 +40,7 @@ export function getSignedBlockTypeFromBytes(
   bytes: Buffer | Uint8Array
 ): ContainerType<allForks.SignedBeaconBlock> {
   const slot = bytesToInt(bytes.slice(SLOT_BYTES_POSITION_IN_BLOCK, SLOT_BYTES_POSITION_IN_BLOCK + SLOT_BYTE_COUNT));
-  return config.getTypes(slot).SignedBeaconBlock;
+  return config.getForkTypes(slot).SignedBeaconBlock;
 }
 
 export function getStateTypeFromBytes(
@@ -48,5 +48,5 @@ export function getStateTypeFromBytes(
   bytes: Buffer | Uint8Array
 ): ContainerType<allForks.BeaconState> {
   const slot = bytesToInt(bytes.slice(SLOT_BYTES_POSITION_IN_STATE, SLOT_BYTES_POSITION_IN_STATE + SLOT_BYTE_COUNT));
-  return config.getTypes(slot).BeaconState;
+  return config.getForkTypes(slot).BeaconState;
 }

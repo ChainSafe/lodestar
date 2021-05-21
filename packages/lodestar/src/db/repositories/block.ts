@@ -18,11 +18,11 @@ export class BlockRepository extends Repository<Uint8Array, allForks.SignedBeaco
    * Id is hashTreeRoot of unsigned BeaconBlock
    */
   getId(value: allForks.SignedBeaconBlock): Uint8Array {
-    return this.config.getTypes(value.message.slot).BeaconBlock.hashTreeRoot(value.message);
+    return this.config.getForkTypes(value.message.slot).BeaconBlock.hashTreeRoot(value.message);
   }
 
   encodeValue(value: allForks.SignedBeaconBlock): Buffer {
-    return this.config.getTypes(value.message.slot).SignedBeaconBlock.serialize(value) as Buffer;
+    return this.config.getForkTypes(value.message.slot).SignedBeaconBlock.serialize(value) as Buffer;
   }
 
   decodeValue(data: Buffer): allForks.SignedBeaconBlock {

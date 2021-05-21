@@ -24,5 +24,5 @@ export interface IBeaconConfig {
   /** Get the hard-fork version at a given slot */
   getForkVersion(slot: Slot): Version;
   /** Get SSZ types by hard-fork */
-  getTypes(slot: Slot): AllForksSSZTypes;
+  getForkTypes(slot: Slot): AllForksSSZTypes;
 }

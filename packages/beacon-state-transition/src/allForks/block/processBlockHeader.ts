@@ -23,7 +23,7 @@ export function processBlockHeader(state: CachedBeaconState<allForks.BeaconState
     );
   }
 
-  const types = state.config.getTypes(slot);
+  const types = state.config.getForkTypes(slot);
   // verify that the parent matches
   if (
     !state.config.types.Root.equals(

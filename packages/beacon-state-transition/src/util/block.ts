@@ -10,7 +10,7 @@ export function verifyBlockSignature(
   signedBlock: allForks.SignedBeaconBlock
 ): boolean {
   const domain = getDomain(config, state, config.params.DOMAIN_BEACON_PROPOSER);
-  const blockType = config.getTypes(signedBlock.message.slot).BeaconBlock;
+  const blockType = config.getForkTypes(signedBlock.message.slot).BeaconBlock;
   const signingRoot = computeSigningRoot(config, blockType, signedBlock.message, domain);
   const proposer = state.validators[signedBlock.message.proposerIndex];
   return bls.verify(

@@ -14,7 +14,7 @@ export const publishBlock: ApiController = {
     let block: allForks.SignedBeaconBlock;
     try {
       const slot = (req.body as SignedBeaconBlock).message.slot;
-      block = this.config.getTypes(slot).SignedBeaconBlock.fromJson(req.body, {case: "snake"});
+      block = this.config.getForkTypes(slot).SignedBeaconBlock.fromJson(req.body, {case: "snake"});
     } catch (e) {
       throw new ValidationError(`Failed to deserialize block: ${(e as Error).message}`);
     }

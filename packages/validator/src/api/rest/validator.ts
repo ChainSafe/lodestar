@@ -36,7 +36,7 @@ export function ValidatorApi(config: IBeaconConfig, client: HttpClient): IApiCli
         randao_reveal: toHexString(randaoReveal),
         graffiti,
       });
-      return config.getTypes(slot).BeaconBlock.fromJson(res.data, {case: "snake"});
+      return config.getForkTypes(slot).BeaconBlock.fromJson(res.data, {case: "snake"});
     },
 
     async produceAttestationData(index: CommitteeIndex, slot: Slot): Promise<phase0.AttestationData> {

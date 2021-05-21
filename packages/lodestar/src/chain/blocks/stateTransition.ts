@@ -136,7 +136,7 @@ function emitCheckpointEvent(
   assert.true(slot % config.params.SLOTS_PER_EPOCH === 0, "Checkpoint state slot must be first in an epoch");
   const blockHeader = config.types.phase0.BeaconBlockHeader.clone(checkpointState.latestBlockHeader);
   if (config.types.Root.equals(blockHeader.stateRoot, ZERO_HASH)) {
-    blockHeader.stateRoot = config.getTypes(slot).BeaconState.hashTreeRoot(checkpointState);
+    blockHeader.stateRoot = config.getForkTypes(slot).BeaconState.hashTreeRoot(checkpointState);
   }
   emitter.emit(
     ChainEvent.checkpoint,

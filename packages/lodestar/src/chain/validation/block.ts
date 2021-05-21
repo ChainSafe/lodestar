@@ -13,7 +13,7 @@ export async function validateGossipBlock(
 ): Promise<void> {
   const block = blockJob.signedBlock;
   const blockSlot = block.message.slot;
-  const blockRoot = config.getTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message);
+  const blockRoot = config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message);
   const finalizedCheckpoint = chain.getFinalizedCheckpoint();
   const finalizedSlot = computeStartSlotAtEpoch(config, finalizedCheckpoint.epoch);
   // block is too old

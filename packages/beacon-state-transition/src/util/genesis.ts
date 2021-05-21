@@ -44,7 +44,7 @@ export function getGenesisBeaconState(
   // Seed RANDAO with Eth1 entropy
   const randaoMixes = Array<Bytes32>(config.params.EPOCHS_PER_HISTORICAL_VECTOR).fill(genesisEth1Data.blockHash);
 
-  const state: allForks.BeaconState = config.getTypes(GENESIS_SLOT).BeaconState.defaultTreeBacked();
+  const state: allForks.BeaconState = config.getForkTypes(GENESIS_SLOT).BeaconState.defaultTreeBacked();
   // MISC
   state.slot = GENESIS_SLOT;
   const version = config.getForkVersion(GENESIS_SLOT);
@@ -158,7 +158,7 @@ export function applyDeposits(
 
   // Set genesis validators root for domain separation and chain versioning
   state.genesisValidatorsRoot = config
-    .getTypes(state.slot)
+    .getForkTypes(state.slot)
     .BeaconState.fields.validators.hashTreeRoot(state.validators);
 }
 
@@ -178,7 +178,7 @@ export function initializeBeaconStateFromEth1(
   const state = getGenesisBeaconState(
     config,
     config.types.phase0.Eth1Data.defaultValue(),
-    getTemporaryBlockHeader(config, config.getTypes(GENESIS_SLOT).BeaconBlock.defaultValue())
+    getTemporaryBlockHeader(config, config.getForkTypes(GENESIS_SLOT).BeaconBlock.defaultValue())
   );
 
   applyTimestamp(config, state, eth1Timestamp);

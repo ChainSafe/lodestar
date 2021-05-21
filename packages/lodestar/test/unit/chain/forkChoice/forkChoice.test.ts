@@ -64,7 +64,7 @@ describe("LodestarForkChoice", function () {
       targetBlock.message.parentRoot = finalizedRoot;
       //
       const targetState = runStateTransition(anchorState, targetBlock);
-      targetBlock.message.stateRoot = config.getTypes(targetState.slot).BeaconState.hashTreeRoot(targetState);
+      targetBlock.message.stateRoot = config.getForkTypes(targetState.slot).BeaconState.hashTreeRoot(targetState);
       const {block: orphanedBlock, state: orphanedState} = makeChild({block: targetBlock, state: targetState}, 36);
       const {block: parentBlock, state: parentState} = makeChild({block: targetBlock, state: targetState}, 37);
       const {block: childBlock, state: childState} = makeChild({block: parentBlock, state: parentState}, 38);
@@ -111,7 +111,7 @@ describe("LodestarForkChoice", function () {
       const block08 = generateSignedBlock({message: {slot: 8}});
       block08.message.parentRoot = finalizedRoot;
       const state08 = runStateTransition(anchorState, block08);
-      block08.message.stateRoot = config.getTypes(state08.slot).BeaconState.hashTreeRoot(state08);
+      block08.message.stateRoot = config.getForkTypes(state08.slot).BeaconState.hashTreeRoot(state08);
 
       const {block: block12, state: state12} = makeChild({block: block08, state: state08}, 12);
       const {block: block16, state: state16} = makeChild({block: block12, state: state12}, 16);
@@ -177,7 +177,7 @@ describe("LodestarForkChoice", function () {
       const targetBlock = generateSignedBlock({message: {slot: 32}});
       targetBlock.message.parentRoot = finalizedRoot;
       const targetState = runStateTransition(anchorState, targetBlock);
-      targetBlock.message.stateRoot = config.getTypes(targetState.slot).BeaconState.hashTreeRoot(targetState);
+      targetBlock.message.stateRoot = config.getForkTypes(targetState.slot).BeaconState.hashTreeRoot(targetState);
       const {block: orphanedBlock, state: orphanedState} = makeChild({block: targetBlock, state: targetState}, 33);
       const {block: parentBlock, state: parentState} = makeChild({block: targetBlock, state: targetState}, 34);
       const {block: childBlock, state: childState} = makeChild({block: parentBlock, state: parentState}, 35);

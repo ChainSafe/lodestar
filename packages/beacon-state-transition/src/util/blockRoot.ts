@@ -38,7 +38,7 @@ export function getTemporaryBlockHeader(config: IBeaconConfig, block: allForks.B
     parentRoot: block.parentRoot,
     // `state_root` is zeroed and overwritten in the next `process_slot` call
     stateRoot: ZERO_HASH,
-    bodyRoot: config.getTypes(block.slot).BeaconBlockBody.hashTreeRoot(block.body),
+    bodyRoot: config.getForkTypes(block.slot).BeaconBlockBody.hashTreeRoot(block.body),
   };
 }
 
@@ -51,7 +51,7 @@ export function blockToHeader(config: IBeaconConfig, block: allForks.BeaconBlock
     proposerIndex: block.proposerIndex,
     slot: block.slot,
     parentRoot: block.parentRoot,
-    bodyRoot: config.getTypes(block.slot).BeaconBlockBody.hashTreeRoot(block.body),
+    bodyRoot: config.getForkTypes(block.slot).BeaconBlockBody.hashTreeRoot(block.body),
   };
 }
 

@@ -80,7 +80,7 @@ export class BeaconBlockApi implements IBeaconBlocksApi {
         return [];
       }
       const canonicalRoot = this.config
-        .getTypes(canonicalBlock.message.slot)
+        .getForkTypes(canonicalBlock.message.slot)
         .BeaconBlock.hashTreeRoot(canonicalBlock.message);
       result.push(toBeaconHeaderResponse(this.config, canonicalBlock, true));
 
@@ -127,7 +127,7 @@ export class BeaconBlockApi implements IBeaconBlocksApi {
 
     // Slow path
     const block = await resolveBlockId(this.chain.forkChoice, this.db, blockId);
-    return this.config.getTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message);
+    return this.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message);
   }
 
   async publishBlock(signedBlock: allForks.SignedBeaconBlock): Promise<void> {

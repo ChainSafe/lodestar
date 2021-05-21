@@ -70,7 +70,7 @@ export class ValidatorStore {
       this.config.params.DOMAIN_BEACON_PROPOSER,
       computeEpochAtSlot(this.config, block.slot)
     );
-    const blockType = this.config.getTypes(block.slot).BeaconBlock;
+    const blockType = this.config.getForkTypes(block.slot).BeaconBlock;
     const signingRoot = computeSigningRoot(this.config, blockType, block, proposerDomain);
 
     const secretKey = this.getSecretKey(pubkey); // Get before writing to slashingProtection

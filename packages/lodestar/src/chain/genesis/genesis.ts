@@ -72,7 +72,7 @@ export class GenesisBuilder implements IGenesisBuilder {
       this.state = getGenesisBeaconState(
         config,
         config.types.phase0.Eth1Data.defaultValue(),
-        getTemporaryBlockHeader(config, config.getTypes(GENESIS_SLOT).BeaconBlock.defaultValue())
+        getTemporaryBlockHeader(config, config.getForkTypes(GENESIS_SLOT).BeaconBlock.defaultValue())
       );
       this.depositTree = config.types.phase0.DepositDataRootList.defaultTreeBacked();
       this.fromBlock = this.eth1Provider.deployBlock;

@@ -184,7 +184,7 @@ export class StateRegenerator implements IStateRegenerator {
       if (!structBlock) {
         throw Error(`No block found for ${toHexString(b.blockRoot)}`);
       }
-      const block = this.config.getTypes(b.slot).SignedBeaconBlock.createTreeBackedFromStruct(structBlock);
+      const block = this.config.getForkTypes(b.slot).SignedBeaconBlock.createTreeBackedFromStruct(structBlock);
       if (!block) {
         throw new RegenError({
           code: RegenErrorCode.BLOCK_NOT_IN_DB,

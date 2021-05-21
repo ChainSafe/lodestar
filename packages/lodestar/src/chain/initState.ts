@@ -56,7 +56,7 @@ export function createGenesisBlock(
   config: IBeaconConfig,
   genesisState: allForks.BeaconState
 ): allForks.SignedBeaconBlock {
-  const types = config.getTypes(GENESIS_SLOT);
+  const types = config.getForkTypes(GENESIS_SLOT);
   const genesisBlock = types.SignedBeaconBlock.defaultValue();
   const stateRoot = types.BeaconState.hashTreeRoot(genesisState);
   genesisBlock.message.stateRoot = stateRoot;
@@ -93,7 +93,7 @@ export async function initStateFromEth1(
   try {
     const genesisResult = await builder.waitForGenesis();
     const genesisBlock = createGenesisBlock(config, genesisResult.state);
-    const types = config.getTypes(GENESIS_SLOT);
+    const types = config.getForkTypes(GENESIS_SLOT);
     const stateRoot = types.BeaconState.hashTreeRoot(genesisResult.state);
     const blockRoot = types.BeaconBlock.hashTreeRoot(genesisBlock.message);
 
@@ -137,7 +137,7 @@ export async function initStateFromDb(
   logger.info("Initializing beacon state from db", {
     slot: state.slot,
     epoch: computeEpochAtSlot(config, state.slot),
-    stateRoot: toHexString(config.getTypes(state.slot).BeaconState.hashTreeRoot(state)),
+    stateRoot: toHexString(config.getForkTypes(state.slot).BeaconState.hashTreeRoot(state)),
   });
 
   return state as TreeBacked<allForks.BeaconState>;
@@ -155,7 +155,7 @@ export async function initStateFromAnchorState(
   logger.info("Initializing beacon state", {
     slot: anchorState.slot,
     epoch: computeEpochAtSlot(config, anchorState.slot),
-    stateRoot: toHexString(config.getTypes(anchorState.slot).BeaconState.hashTreeRoot(anchorState)),
+    stateRoot: toHexString(config.getForkTypes(anchorState.slot).BeaconState.hashTreeRoot(anchorState)),
   });
 
   await persistAnchorState(config, db, anchorState);
@@ -195,8 +195,8 @@ export function computeAnchorCheckpoint(
 ): {checkpoint: phase0.Checkpoint; blockHeader: phase0.BeaconBlockHeader} {
   let blockHeader;
   let root;
-  const blockTypes = config.getTypes(anchorState.latestBlockHeader.slot);
-  const stateTypes = config.getTypes(anchorState.slot);
+  const blockTypes = config.getForkTypes(anchorState.latestBlockHeader.slot);
+  const stateTypes = config.getForkTypes(anchorState.slot);
   if (anchorState.latestBlockHeader.slot === GENESIS_SLOT) {
     const block = blockTypes.BeaconBlock.defaultValue();
     block.stateRoot = stateTypes.BeaconState.hashTreeRoot(anchorState);

@@ -7,7 +7,7 @@ import {ZERO_HASH} from "../../constants";
  */
 export function processSlot(state: CachedBeaconState<allForks.BeaconState>): void {
   const {config} = state;
-  const types = config.getTypes(state.slot);
+  const types = config.getForkTypes(state.slot);
 
   // Cache state root
   const previousStateRoot = types.BeaconState.hashTreeRoot(state);

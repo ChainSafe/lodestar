@@ -330,7 +330,7 @@ export class ForkChoice implements IForkChoice {
     }
 
     const targetSlot = computeStartSlotAtEpoch(this.config, computeEpochAtSlot(this.config, block.slot));
-    const blockRoot = this.config.getTypes(block.slot).BeaconBlock.hashTreeRoot(block);
+    const blockRoot = this.config.getForkTypes(block.slot).BeaconBlock.hashTreeRoot(block);
     const targetRoot =
       block.slot === targetSlot
         ? blockRoot
