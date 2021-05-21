@@ -93,6 +93,7 @@ export function getGossipTopic(forkDigestContext: IForkDigestContext, topic: str
 export function getGossipSSZType<T extends GossipObject>(config: IBeaconConfig, topic: GossipTopic): ContainerType<T> {
   switch (topic.type) {
     case GossipType.beacon_block:
+      // beacon_block is updated in altair to support the updated SignedBeaconBlock type
       return (config.types[topic.fork].SignedBeaconBlock as unknown) as ContainerType<T>;
     case GossipType.beacon_aggregate_and_proof:
       return (config.types[topic.fork].SignedAggregateAndProof as unknown) as ContainerType<T>;
@@ -109,7 +110,7 @@ export function getGossipSSZType<T extends GossipObject>(config: IBeaconConfig, 
     case GossipType.sync_committee:
       return (config.types.altair.SyncCommitteeSignature as unknown) as ContainerType<T>;
     default:
-      throw new Error("Cannot get ssz gossip type");
+      throw new Error(`No ssz gossip type for ${(topic as GossipTopic).type}`);
   }
 }
 

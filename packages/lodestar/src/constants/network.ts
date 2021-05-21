@@ -8,11 +8,6 @@
 // Gossip constants
 
 /**
- * Rationale: https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/p2p-interface.md#why-are-there-attestation_subnet_count-attestation-subnets
- */
-export const ATTESTATION_SUBNET_COUNT = 64;
-
-/**
  * The maximum number of slots during which an attestation can be propagated.
  */
 export const ATTESTATION_PROPAGATION_SLOT_RANGE = 23;

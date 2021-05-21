@@ -1,11 +1,13 @@
-import {BitVector, toHexString} from "@chainsafe/ssz";
 import {ENR} from "@chainsafe/discv5";
-import {altair, phase0} from "@chainsafe/lodestar-types";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {ChainEvent, IBeaconChain} from "../../chain";
+import {BitVector, toHexString} from "@chainsafe/ssz";
+import {altair, Epoch, phase0} from "@chainsafe/lodestar-types";
+import {ForkName, IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils";
-import {getENRForkID} from "./utils";
 import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
+import {ChainEvent, IBeaconChain} from "../chain";
+import {FAR_FUTURE_EPOCH} from "../constants";
+import {IForkDigestContext} from "../util/forkDigestContext";
+import {getCurrentAndNextFork} from "./forks";
 
 export interface IMetadataOpts {
   metadata?: altair.Metadata;
@@ -36,14 +38,17 @@ export class MetadataController {
     this._metadata = opts.metadata || this.config.types.altair.Metadata.defaultValue();
   }
 
-  start(enr: ENR | undefined): void {
+  start(enr: ENR | undefined, currentFork: ForkName): void {
     this.enr = enr;
     if (this.enr) {
-      this.enr.set(
-        "attnets",
-        Buffer.from(this.config.types.phase0.AttestationSubnets.serialize(this._metadata.attnets))
-      );
-      this.enr.set("eth2", Buffer.from(this.config.types.phase0.ENRForkID.serialize(this.getHeadEnrForkId())));
+      this.enr.set("eth2", this.config.types.phase0.ENRForkID.serialize(this.getHeadEnrForkId()));
+      this.enr.set("attnets", this.config.types.phase0.AttestationSubnets.serialize(this._metadata.attnets));
+      // TODO: Generalize to all forks
+      if (currentFork === ForkName.altair) {
+        // Only persist syncnets if altair fork is already activated. If currentFork is altair but head is phase0
+        // adding syncnets to the ENR is not a problem, we will just have a useless field for a few hours.
+        this.enr.set("syncnets", this.config.types.phase0.AttestationSubnets.serialize(this._metadata.syncnets));
+      }
     }
     this.chain.emitter.on(ChainEvent.forkVersion, this.handleForkVersion);
   }
@@ -62,7 +67,7 @@ export class MetadataController {
 
   set syncnets(syncnets: BitVector) {
     if (this.enr) {
-      this.enr.set("syncnets", Buffer.from(this.config.types.altair.SyncSubnets.serialize(syncnets)));
+      this.enr.set("syncnets", this.config.types.altair.SyncSubnets.serialize(syncnets));
     }
     this._metadata.syncnets = syncnets;
   }
@@ -73,20 +78,14 @@ export class MetadataController {
 
   set attnets(attnets: BitVector) {
     if (this.enr) {
-      this.enr.set("attnets", Buffer.from(this.config.types.phase0.AttestationSubnets.serialize(attnets)));
+      this.enr.set("attnets", this.config.types.phase0.AttestationSubnets.serialize(attnets));
     }
     this._metadata.seqNumber++;
     this._metadata.attnets = attnets;
   }
 
-  get allPhase0(): phase0.Metadata {
-    return {
-      attnets: this._metadata.attnets,
-      seqNumber: this._metadata.seqNumber,
-    };
-  }
-
-  get allAltair(): altair.Metadata {
+  /** Consumers that need the phase0.Metadata type can just ignore the .syncnets property */
+  get json(): altair.Metadata {
     return this._metadata;
   }
 
@@ -94,7 +93,7 @@ export class MetadataController {
     const forkDigest = this.chain.getHeadForkDigest();
     this.logger.verbose(`Metadata: received new fork digest ${toHexString(forkDigest)}`);
     if (this.enr) {
-      this.enr.set("eth2", Buffer.from(this.config.types.phase0.ENRForkID.serialize(this.getHeadEnrForkId())));
+      this.enr.set("eth2", this.config.types.phase0.ENRForkID.serialize(this.getHeadEnrForkId()));
     }
   }
 
@@ -102,4 +101,21 @@ export class MetadataController {
     const headEpoch = computeEpochAtSlot(this.config, this.chain.forkChoice.getHead().slot);
     return getENRForkID(this.config, this.chain.forkDigestContext, headEpoch);
   }
+}
+
+export function getENRForkID(
+  config: IBeaconConfig,
+  forkDigestContext: IForkDigestContext,
+  epoch: Epoch
+): phase0.ENRForkID {
+  const {currentFork, nextFork} = getCurrentAndNextFork(config, epoch);
+
+  return {
+    // Current fork digest
+    forkDigest: forkDigestContext.forkName2ForkDigest(currentFork.name),
+    // next planned fork versin
+    nextForkVersion: nextFork ? nextFork.version : currentFork.version,
+    // next fork epoch
+    nextForkEpoch: nextFork ? nextFork.epoch : FAR_FUTURE_EPOCH,
+  };
 }

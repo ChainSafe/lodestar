@@ -38,6 +38,7 @@ export const protocolsSupported: [Method, Version, Encoding][] = [
   [Method.Goodbye, Version.V1, Encoding.SSZ_SNAPPY],
   [Method.Ping, Version.V1, Encoding.SSZ_SNAPPY],
   [Method.Metadata, Version.V1, Encoding.SSZ_SNAPPY],
+  [Method.Metadata, Version.V2, Encoding.SSZ_SNAPPY],
   [Method.BeaconBlocksByRange, Version.V1, Encoding.SSZ_SNAPPY],
   [Method.BeaconBlocksByRange, Version.V2, Encoding.SSZ_SNAPPY],
   [Method.BeaconBlocksByRoot, Version.V1, Encoding.SSZ_SNAPPY],
@@ -120,24 +121,23 @@ export type RequestBodyByMethod = {
 
 /** Response SSZ type for each method and ForkName */
 // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types, @typescript-eslint/explicit-function-return-type
-export function getResponseSzzTypeByMethod(config: IBeaconConfig, method: Method, forkName: ForkName) {
-  switch (method) {
+export function getResponseSzzTypeByMethod(config: IBeaconConfig, protocol: Protocol, forkName: ForkName) {
+  switch (protocol.method) {
     case Method.Status:
       return config.types.phase0.Status;
     case Method.Goodbye:
       return config.types.phase0.Goodbye;
     case Method.Ping:
       return config.types.phase0.Ping;
-    case Method.Metadata:
-      return config.types.phase0.Metadata;
+    case Method.Metadata: {
+      // V1 -> phase0.Metadata, V2 -> altair.Metadata
+      const fork = protocol.version === Version.V1 ? ForkName.phase0 : ForkName.altair;
+      return config.types[fork].Metadata;
+    }
     case Method.BeaconBlocksByRange:
     case Method.BeaconBlocksByRoot:
-      switch (forkName) {
-        case ForkName.phase0:
-          return config.types.phase0.SignedBeaconBlock;
-        case ForkName.altair:
-          return config.types.altair.SignedBeaconBlock;
-      }
+      // SignedBeaconBlock type is changed in altair
+      return config.types[forkName].SignedBeaconBlock;
   }
 }
 

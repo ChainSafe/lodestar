@@ -5,7 +5,7 @@ import {AbortController} from "abort-controller";
 import PeerId from "peer-id";
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {sleep as _sleep} from "@chainsafe/lodestar-utils";
-import {phase0} from "@chainsafe/lodestar-types";
+import {altair, phase0} from "@chainsafe/lodestar-types";
 import {createPeerId, IReqRespOptions, Network, prettyPrintPeerId} from "../../../src/network";
 import {INetworkOptions} from "../../../src/network/options";
 import {Method, Encoding} from "../../../src/network/reqresp/types";
@@ -21,6 +21,7 @@ import {generateEmptySignedBlock} from "../../utils/block";
 import {expectRejectedWithLodestarError} from "../../utils/errors";
 import {connect, onPeerConnect} from "../../utils/network";
 import {StubbedBeaconDb} from "../../utils/stub";
+import {ForkName} from "@chainsafe/lodestar-config";
 
 chai.use(chaiAsPromised);
 
@@ -105,16 +106,29 @@ describe("network / ReqResp", function () {
     expect(pong.toString()).to.deep.equal(expectedPong.toString(), "Wrong response body");
   });
 
-  it("should send/receive a metadata message", async function () {
+  it("should send/receive a metadata message - phase0", async function () {
     const [netA, netB] = await createAndConnectPeers();
 
-    const metadataBody = {
+    const metadata: phase0.Metadata = {
       seqNumber: netB.metadata.seqNumber,
       attnets: netB.metadata.attnets,
     };
 
-    const metadata = await netA.reqResp.metadata(netB.peerId);
-    expect(metadata).to.deep.equal(metadataBody, "Wrong response body");
+    const receivedMetadata = await netA.reqResp.metadata(netB.peerId, ForkName.phase0);
+    expect(receivedMetadata).to.deep.equal(metadata, "Wrong response body");
+  });
+
+  it("should send/receive a metadata message - altair", async function () {
+    const [netA, netB] = await createAndConnectPeers();
+
+    const metadata: altair.Metadata = {
+      seqNumber: netB.metadata.seqNumber,
+      attnets: netB.metadata.attnets,
+      syncnets: netB.metadata.syncnets,
+    };
+
+    const receivedMetadata = await netA.reqResp.metadata(netB.peerId);
+    expect(receivedMetadata).to.deep.equal(metadata, "Wrong response body");
   });
 
   it("should send/receive a status message", async function () {
