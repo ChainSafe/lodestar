@@ -40,7 +40,9 @@ export class ArchiveBlocksTask implements ITask {
   async run(): Promise<void> {
     // Use fork choice to determine the blocks to archive and delete
     const allCanonicalSummaries = this.forkChoice.iterateBlockSummaries(this.finalized.root);
-    let i = 0;
+    // 1st block in iterateBlockSummaries() is the finalized block itself, to keep db in synchronized with forkchoice
+    // we don't want to process it until the next finalized checkpoint
+    let i = 1;
     // this number of blocks per chunk is tested in e2e test blockArchive.test.ts
     const BATCH_SIZE = 1000;
     // process in chunks to avoid OOM
