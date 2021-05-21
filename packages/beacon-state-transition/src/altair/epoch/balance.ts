@@ -86,16 +86,14 @@ export function getInactivityPenaltyDeltas(
   const rewards = newZeroedBigIntArray(validatorCount);
   const penalties = newZeroedBigIntArray(validatorCount);
 
-  if (isInInactivityLeak(config, (state as unknown) as phase0.BeaconState)) {
-    for (let i = 0; i < process.statuses.length; i++) {
-      const status = process.statuses[i];
-      if (hasMarkers(status.flags, FLAG_ELIGIBLE_ATTESTER)) {
-        if (!hasMarkers(status.flags, FLAG_PREV_TARGET_ATTESTER_OR_UNSLASHED)) {
-          const penaltyNumerator = process.validators[i].effectiveBalance * BigInt(state.inactivityScores[i]);
-          const penaltyDenominator =
-            config.params.INACTIVITY_SCORE_BIAS * config.params.INACTIVITY_PENALTY_QUOTIENT_ALTAIR;
-          penalties[i] += penaltyNumerator / penaltyDenominator;
-        }
+  for (let i = 0; i < process.statuses.length; i++) {
+    const status = process.statuses[i];
+    if (hasMarkers(status.flags, FLAG_ELIGIBLE_ATTESTER)) {
+      if (!hasMarkers(status.flags, FLAG_PREV_TARGET_ATTESTER_OR_UNSLASHED)) {
+        const penaltyNumerator = process.validators[i].effectiveBalance * BigInt(state.inactivityScores[i]);
+        const penaltyDenominator =
+          config.params.INACTIVITY_SCORE_BIAS * config.params.INACTIVITY_PENALTY_QUOTIENT_ALTAIR;
+        penalties[i] += penaltyNumerator / penaltyDenominator;
       }
     }
   }

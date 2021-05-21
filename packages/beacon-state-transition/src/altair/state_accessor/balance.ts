@@ -57,21 +57,18 @@ export function getInactivityPenaltyDeltas(config: IBeaconConfig, state: altair.
   const penalties = newZeroedBigIntArray(validatorCount);
   const previousEpoch = getPreviousEpoch(config, state);
 
-  if (isInInactivityLeak(config, state)) {
-    const matchingTargetAttestingIndices = getUnslashedParticipatingIndices(
-      config,
-      state,
-      TIMELY_TARGET_FLAG_INDEX,
-      previousEpoch
-    );
-    // eslint-disable-next-line import/namespace
-    for (const index of naive.phase0.getEligibleValidatorIndices(config, (state as unknown) as phase0.BeaconState)) {
-      if (matchingTargetAttestingIndices.indexOf(index) === -1) {
-        const penaltyNumerator = state.validators[index].effectiveBalance * BigInt(state.inactivityScores[index]);
-        const penaltyDenominator =
-          config.params.INACTIVITY_SCORE_BIAS * config.params.INACTIVITY_PENALTY_QUOTIENT_ALTAIR;
-        penalties[index] += penaltyNumerator / penaltyDenominator;
-      }
+  const matchingTargetAttestingIndices = getUnslashedParticipatingIndices(
+    config,
+    state,
+    TIMELY_TARGET_FLAG_INDEX,
+    previousEpoch
+  );
+  // eslint-disable-next-line import/namespace
+  for (const index of naive.phase0.getEligibleValidatorIndices(config, (state as unknown) as phase0.BeaconState)) {
+    if (matchingTargetAttestingIndices.indexOf(index) === -1) {
+      const penaltyNumerator = state.validators[index].effectiveBalance * BigInt(state.inactivityScores[index]);
+      const penaltyDenominator = config.params.INACTIVITY_SCORE_BIAS * config.params.INACTIVITY_PENALTY_QUOTIENT_ALTAIR;
+      penalties[index] += penaltyNumerator / penaltyDenominator;
     }
   }
   return [rewards, penalties];
