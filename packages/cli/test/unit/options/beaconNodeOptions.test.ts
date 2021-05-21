@@ -13,6 +13,8 @@ describe("options / beaconNodeOptions", () => {
       "api.rest.host": "127.0.0.1",
       "api.rest.port": 7654,
 
+      "chain.useSingleThreadVerifier": true,
+
       "eth1.enabled": true,
       "eth1.providerUrl": "http://my.node:8545",
       "eth1.depositContractDeployBlock": 1625314,
@@ -46,6 +48,9 @@ describe("options / beaconNodeOptions", () => {
           host: "127.0.0.1",
           port: 7654,
         },
+      },
+      chain: {
+        useSingleThreadVerifier: true,
       },
       eth1: {
         enabled: true,
