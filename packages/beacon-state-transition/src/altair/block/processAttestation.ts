@@ -12,6 +12,7 @@ import {
   WEIGHT_DENOMINATOR,
 } from "../constants";
 import {getBaseReward} from "../state_accessor";
+import {intSqrt} from "@chainsafe/lodestar-utils";
 
 export function processAttestation(
   state: CachedBeaconState<altair.BeaconState>,
@@ -59,29 +60,13 @@ export function processAttestation(
     );
   }
 
-  let epochParticipation, justifiedCheckpoint;
+  let epochParticipation;
   if (data.target.epoch === epochCtx.currentShuffling.epoch) {
     epochParticipation = state.currentEpochParticipation;
-    justifiedCheckpoint = state.currentJustifiedCheckpoint;
   } else {
     epochParticipation = state.previousEpochParticipation;
-    justifiedCheckpoint = state.previousJustifiedCheckpoint;
   }
 
-  // The source and target votes are part of the FFG vote, the head vote is part of the fork choice vote
-  // Both are tracked to properly incentivise validators
-  //
-  // The source vote always matches the justified checkpoint (else its invalid)
-  // The target vote should match the most recent checkpoint (eg: the first root of the epoch)
-  // The head vote should match the root at the attestation slot (eg: the root at data.slot)
-  const isMatchingSource = config.types.phase0.Checkpoint.equals(data.source, justifiedCheckpoint);
-  if (!isMatchingSource) {
-    throw new Error(
-      "Attestation source does not equal justified checkpoint: " +
-        `source=${JSON.stringify(config.types.phase0.Checkpoint.toJson(data.source))} ` +
-        `justifiedCheckpoint=${JSON.stringify(config.types.phase0.Checkpoint.toJson(justifiedCheckpoint))}`
-    );
-  }
   // this check is done last because its the most expensive (if signature verification is toggled on)
   if (
     !isValidIndexedAttestation(
@@ -92,10 +77,11 @@ export function processAttestation(
   ) {
     throw new Error("Attestation is not valid");
   }
-  const isMatchingTarget = config.types.Root.equals(data.target.root, getBlockRoot(config, state, data.target.epoch));
-  // a timely head is only be set if the target is _also_ matching
-  const isMatchingHead =
-    isMatchingTarget && config.types.Root.equals(data.beaconBlockRoot, getBlockRootAtSlot(config, state, data.slot));
+  const {timelySource, timelyTarget, timelyHead} = getAttestationParticipationStatus(
+    state,
+    data,
+    state.slot - data.slot
+  );
 
   // Retrieve the validator indices from the attestation participation bitfield
   const attestingIndices = epochCtx.getAttestingIndices(data, attestation.aggregationBits);
@@ -106,20 +92,55 @@ export function processAttestation(
   for (const index of attestingIndices) {
     const status = epochParticipation.getStatus(index) as IParticipationStatus;
     const newStatus = {
-      timelyHead: status.timelyHead || isMatchingHead,
-      timelySource: true,
-      timelyTarget: status.timelyTarget || isMatchingTarget,
+      timelySource: status.timelySource || timelySource,
+      timelyTarget: status.timelyTarget || timelyTarget,
+      timelyHead: status.timelyHead || timelyHead,
     };
     epochParticipation.setStatus(index, newStatus);
     // add proposer rewards for source/target/head that updated the state
     proposerRewardNumerator +=
       getBaseReward(config, state, index) *
-      (BigInt(!status.timelySource) * TIMELY_SOURCE_WEIGHT +
-        BigInt(!status.timelyTarget && isMatchingTarget) * TIMELY_TARGET_WEIGHT +
-        BigInt(!status.timelyHead && isMatchingHead) * TIMELY_HEAD_WEIGHT);
+      (BigInt(!status.timelySource && timelySource) * TIMELY_SOURCE_WEIGHT +
+        BigInt(!status.timelyTarget && timelyTarget) * TIMELY_TARGET_WEIGHT +
+        BigInt(!status.timelyHead && timelyHead) * TIMELY_HEAD_WEIGHT);
   }
 
   const proposerRewardDenominator = ((WEIGHT_DENOMINATOR - PROPOSER_WEIGHT) * WEIGHT_DENOMINATOR) / PROPOSER_WEIGHT;
   const proposerReward = proposerRewardNumerator / proposerRewardDenominator;
   increaseBalance(state, epochCtx.getBeaconProposer(state.slot), proposerReward);
+}
+
+/**
+ * https://github.com/ethereum/eth2.0-specs/blob/v1.1.0-alpha.4/specs/altair/beacon-chain.md#get_attestation_participation_flag_indices
+ */
+export function getAttestationParticipationStatus(
+  state: CachedBeaconState<altair.BeaconState>,
+  data: phase0.AttestationData,
+  inclusionDelay: number
+): IParticipationStatus {
+  const {config, epochCtx} = state;
+  const {SLOTS_PER_EPOCH, MIN_ATTESTATION_INCLUSION_DELAY} = config.params;
+  let justifiedCheckpoint;
+  if (data.target.epoch === epochCtx.currentShuffling.epoch) {
+    justifiedCheckpoint = state.currentJustifiedCheckpoint;
+  } else {
+    justifiedCheckpoint = state.previousJustifiedCheckpoint;
+  }
+  const isMatchingSource = config.types.phase0.Checkpoint.equals(data.source, justifiedCheckpoint);
+  if (!isMatchingSource) {
+    throw new Error(
+      "Attestation source does not equal justified checkpoint: " +
+        `source=${JSON.stringify(config.types.phase0.Checkpoint.toJson(data.source))} ` +
+        `justifiedCheckpoint=${JSON.stringify(config.types.phase0.Checkpoint.toJson(justifiedCheckpoint))}`
+    );
+  }
+  const isMatchingTarget = config.types.Root.equals(data.target.root, getBlockRoot(config, state, data.target.epoch));
+  // a timely head is only be set if the target is _also_ matching
+  const isMatchingHead =
+    isMatchingTarget && config.types.Root.equals(data.beaconBlockRoot, getBlockRootAtSlot(config, state, data.slot));
+  return {
+    timelySource: isMatchingSource && inclusionDelay <= intSqrt(SLOTS_PER_EPOCH),
+    timelyTarget: isMatchingTarget && inclusionDelay <= SLOTS_PER_EPOCH,
+    timelyHead: isMatchingHead && inclusionDelay === MIN_ATTESTATION_INCLUSION_DELAY,
+  };
 }
