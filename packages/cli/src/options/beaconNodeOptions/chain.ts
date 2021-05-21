@@ -15,7 +15,7 @@ export const options: ICliCommandOptions<IChainArgs> = {
   "chain.useSingleThreadVerifier": {
     hidden: true,
     type: "boolean",
-    description: "Disable spawining worker threads for BLS verification, use single thread implementation.",
+    description: "Disable spawning worker threads for BLS verification, use single thread implementation.",
     defaultDescription: String(defaultOptions.chain.useSingleThreadVerifier),
     group: "chain",
   },
