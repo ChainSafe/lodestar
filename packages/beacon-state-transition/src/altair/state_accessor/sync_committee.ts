@@ -49,16 +49,8 @@ export function getSyncCommittee(
 ): altair.SyncCommittee {
   const indices = getSyncCommitteeIndices(config, state, epoch);
   const pubkeys = indices.map((index) => state.validators[index].pubkey);
-  const aggregates = [];
-  for (let i = 0; i < pubkeys.length; i += config.params.SYNC_PUBKEYS_PER_AGGREGATE) {
-    aggregates.push(
-      aggregatePublicKeys(
-        pubkeys.slice(i, i + config.params.SYNC_PUBKEYS_PER_AGGREGATE).map((pubkey) => pubkey.valueOf() as Uint8Array)
-      )
-    );
-  }
   return {
     pubkeys,
-    pubkeyAggregates: aggregates,
+    aggregatePubkey: aggregatePublicKeys(pubkeys.map((pubkey) => pubkey.valueOf() as Uint8Array)),
   };
 }

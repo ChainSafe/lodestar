@@ -56,10 +56,7 @@ export function getAltairTypes(params: IBeaconParams, primitive: PrimitiveSSZTyp
   const SyncCommittee = new ContainerType<altair.SyncCommittee>({
     fields: {
       pubkeys: new VectorType({elementType: BLSPubkey, length: params.SYNC_COMMITTEE_SIZE}),
-      pubkeyAggregates: new VectorType({
-        elementType: BLSPubkey,
-        length: Math.floor(params.SYNC_COMMITTEE_SIZE / params.SYNC_PUBKEYS_PER_AGGREGATE),
-      }),
+      aggregatePubkey: BLSPubkey,
     },
   });
 
