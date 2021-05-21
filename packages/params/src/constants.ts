@@ -4,8 +4,10 @@ export const FAR_FUTURE_EPOCH = Infinity;
 export const BASE_REWARDS_PER_EPOCH = 4;
 export const DEPOSIT_CONTRACT_TREE_DEPTH = 2 ** 5; // 32
 export const JUSTIFICATION_BITS_LENGTH = 4;
-export const ATTESTATION_SUBNET_COUNT = 64;
 export const MAX_REQUEST_BLOCKS = 2 ** 10; // 1024
+
+/** Rationale: https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/p2p-interface.md#why-are-there-attestation_subnet_count-attestation-subnets */
+export const ATTESTATION_SUBNET_COUNT = 64;
 
 // Altair - TODO: Make sure it's not included in the spec
 export const SYNC_COMMITTEE_SUBNET_COUNT = 8;

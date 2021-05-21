@@ -46,7 +46,11 @@ export async function persistAnchorState(
 ): Promise<void> {
   if (anchorState.slot === GENESIS_SLOT) {
     const genesisBlock = createGenesisBlock(config, anchorState);
-    await Promise.all([db.blockArchive.add(genesisBlock), db.stateArchive.add(anchorState)]);
+    await Promise.all([
+      db.blockArchive.add(genesisBlock),
+      db.block.add(genesisBlock),
+      db.stateArchive.add(anchorState),
+    ]);
   } else {
     await db.stateArchive.add(anchorState);
   }

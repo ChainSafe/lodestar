@@ -12,7 +12,7 @@ import {expect, use} from "chai";
 import chaiAsPromised from "chai-as-promised";
 import Multiaddr from "multiaddr";
 import {MetadataController} from "../../../../../src/network/metadata";
-import {phase0} from "@chainsafe/lodestar-types";
+import {altair} from "@chainsafe/lodestar-types";
 import {NodePeer} from "../../../../../src/api/types";
 import {PeerStatus, PeerDirection} from "../../../../../src/network";
 
@@ -56,9 +56,10 @@ describe("node api implementation", function () {
       enr.setLocationMultiaddr(new Multiaddr("/ip4/127.0.0.1/tcp/36001"));
       networkStub.getEnr.returns(enr);
       networkStub.metadata = {
-        get allPhase0(): phase0.Metadata {
+        get json(): altair.Metadata {
           return {
             attnets: [true],
+            syncnets: [],
             seqNumber: BigInt(1),
           };
         },

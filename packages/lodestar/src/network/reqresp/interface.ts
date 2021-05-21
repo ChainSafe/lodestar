@@ -1,6 +1,6 @@
 import LibP2p from "libp2p";
 import PeerId from "peer-id";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {ForkName, IBeaconConfig} from "@chainsafe/lodestar-config";
 import {allForks, phase0} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {IForkDigestContext} from "../../util/forkDigestContext";
@@ -15,7 +15,7 @@ export interface IReqResp {
   status(peerId: PeerId, request: phase0.Status): Promise<phase0.Status>;
   goodbye(peerId: PeerId, request: phase0.Goodbye): Promise<void>;
   ping(peerId: PeerId): Promise<phase0.Ping>;
-  metadata(peerId: PeerId): Promise<phase0.Metadata>;
+  metadata(peerId: PeerId, fork?: ForkName): Promise<allForks.Metadata>;
   beaconBlocksByRange(
     peerId: PeerId,
     request: phase0.BeaconBlocksByRangeRequest

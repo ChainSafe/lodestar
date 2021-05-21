@@ -1,4 +1,4 @@
-import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition/src/util/epoch";
+import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 import {ForkName, IBeaconConfig} from "@chainsafe/lodestar-config";
 import {SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
 import {Epoch} from "@chainsafe/lodestar-types";

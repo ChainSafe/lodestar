@@ -1,17 +1,16 @@
-/* eslint-disable @typescript-eslint/naming-convention */
 import MetadataBook from "libp2p/src/peer-store/metadata-book";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import PeerId from "peer-id";
-import {phase0} from "@chainsafe/lodestar-types";
-import {BasicType, ContainerType} from "@chainsafe/ssz";
+import {altair} from "@chainsafe/lodestar-types";
 import {ReqRespEncoding} from "../reqresp";
+import {Type} from "@chainsafe/ssz";
 
 /**
  * Get/set data about peers.
  */
 export interface IPeerMetadataStore {
   encoding: PeerStoreBucket<ReqRespEncoding>;
-  metadata: PeerStoreBucket<phase0.Metadata>;
+  metadata: PeerStoreBucket<altair.Metadata>;
   rpcScore: PeerStoreBucket<number>;
   rpcScoreLastUpdate: PeerStoreBucket<number>;
 }
@@ -21,13 +20,18 @@ export type PeerStoreBucket<T> = {
   get: (peer: PeerId) => T | undefined;
 };
 
+type BucketSerdes<T> = {
+  serialize: (value: T) => Uint8Array;
+  deserialize: (data: Uint8Array) => T;
+};
+
 /**
  * Wrapper around Libp2p.peerstore.metabook
  * that uses ssz serialization to store data
  */
 export class Libp2pPeerMetadataStore implements IPeerMetadataStore {
   encoding: PeerStoreBucket<ReqRespEncoding>;
-  metadata: PeerStoreBucket<phase0.Metadata>;
+  metadata: PeerStoreBucket<altair.Metadata>;
   rpcScore: PeerStoreBucket<number>;
   rpcScoreLastUpdate: PeerStoreBucket<number>;
 
@@ -37,13 +41,23 @@ export class Libp2pPeerMetadataStore implements IPeerMetadataStore {
   constructor(config: IBeaconConfig, metabook: MetadataBook) {
     this.config = config;
     this.metabook = metabook;
-    this.encoding = this.typedStore("encoding", new StringType()) as PeerStoreBucket<ReqRespEncoding>;
-    this.metadata = this.typedStore("metadata", this.config.types.phase0.Metadata);
-    this.rpcScore = this.typedStore("score", this.config.types.Number64);
-    this.rpcScoreLastUpdate = this.typedStore("score-last-update", this.config.types.Number64);
+
+    const number64Serdes = typeToSerdes(this.config.types.Number64);
+    const metadataV2Serdes = typeToSerdes(this.config.types.altair.Metadata);
+    const stringSerdes: BucketSerdes<ReqRespEncoding> = {
+      serialize: (v) => Buffer.from(v, "utf8"),
+      deserialize: (b) => Buffer.from(b).toString("utf8") as ReqRespEncoding,
+    };
+
+    this.encoding = this.typedStore("encoding", stringSerdes);
+    // Discard existing `metadata` stored values. Store both phase0 and altair Metadata objects as altair
+    // Serializing altair.Metadata instead of phase0.Metadata has a cost of just `SYNC_COMMITTEE_SUBNET_COUNT // 8` bytes
+    this.metadata = this.typedStore("metadata-altair", metadataV2Serdes);
+    this.rpcScore = this.typedStore("score", number64Serdes);
+    this.rpcScoreLastUpdate = this.typedStore("score-last-update", number64Serdes);
   }
 
-  private typedStore<T>(key: string, type: BasicType<T> | ContainerType<T>): PeerStoreBucket<T> {
+  private typedStore<T>(key: string, type: BucketSerdes<T>): PeerStoreBucket<T> {
     return {
       set: (peer: PeerId, value: T): void => {
         if (value != null) {
@@ -63,40 +77,9 @@ export class Libp2pPeerMetadataStore implements IPeerMetadataStore {
   }
 }
 
-/**
- * Dedicated string type only used here, so not worth to keep it in `lodestar-types`
- */
-class StringType<T extends string = string> extends BasicType<T> {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  struct_getSerializedLength(data?: string): number {
-    throw new Error("unsupported ssz operation");
-  }
-
-  struct_convertToJson(value: T): string {
-    return value;
-  }
-
-  struct_convertFromJson(data: string): T {
-    return data as T;
-  }
-
-  struct_assertValidValue(data: unknown): data is T {
-    throw new Error("unsupported ssz operation");
-  }
-
-  serialize(value: T): Uint8Array {
-    return Buffer.from(value);
-  }
-
-  struct_serializeToBytes(): number {
-    throw new Error("unsupported ssz type for serialization");
-  }
-
-  struct_deserializeFromBytes(data: Uint8Array): T {
-    return (Buffer.from(data).toString() as unknown) as T;
-  }
-
-  struct_defaultValue(): T {
-    return "something" as T;
-  }
+function typeToSerdes<T>(type: Type<T>): BucketSerdes<T> {
+  return {
+    serialize: (v) => type.serialize(v),
+    deserialize: (b) => type.deserialize(b),
+  };
 }

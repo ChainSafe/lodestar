@@ -57,7 +57,7 @@ export function responseDecode(
       }
 
       const forkName = await readForkName(forkDigestContext, bufferedSource, contextBytesType);
-      const type = getResponseSzzTypeByMethod(config, protocol.method, forkName);
+      const type = getResponseSzzTypeByMethod(config, protocol, forkName);
 
       yield await readEncodedPayload(bufferedSource, protocol.encoding, type, {deserializeToTree});
     }

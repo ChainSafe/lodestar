@@ -281,7 +281,7 @@ describe("network / reqresp / encoders / response - Success and error cases", ()
           const responses = await responseDecodePromise;
           const typeArr = responses.map((body) => {
             const forkName = getForkNameFromResponseBody(config, protocol, body);
-            return getResponseSzzTypeByMethod(config, method, forkName);
+            return getResponseSzzTypeByMethod(config, protocol, forkName);
           });
           expectIsEqualSszTypeArr(typeArr, responses, onlySuccessChunks(responseChunks), "Response chunks");
         } else {
