@@ -12,7 +12,7 @@ jobs:
       - uses: actions/checkout@v2
       - uses: actions/setup-node@v2-beta
         with:
-          node-version: "12.14.1"
+          node-version: "14.16.0"
       - name: Restore dependencies
         uses: actions/cache@master
         id: cache-deps
@@ -20,7 +20,7 @@ jobs:
           path: |
             node_modules
             packages/*/node_modules
-          key: ${{ runner.os }}-${{ hashFiles('**/yarn.lock') }}-ignore-optional
+          key: ${{ runner.os }}-${{ hashFiles('**/yarn.lock') }}-ignore-optional-14.16.0
       - name: Install & build
         if: steps.cache-deps.outputs.cache-hit != 'true'
         run: yarn install --frozen-lockfile --ignore-optional

@@ -11,7 +11,7 @@ jobs:
       - uses: actions/checkout@v2
       - uses: actions/setup-node@v2-beta
         with:
-          node-version: "12.14.1"
+          node-version: "14.16.0"
       # As of October 2020, runner has +8GB of free space w/out this script (takes 1m30s to run)
       # - run: ./scripts/free-disk-space.sh
       - name: Restore dependencies
@@ -21,7 +21,7 @@ jobs:
           path: |
             node_modules
             packages/*/node_modules
-          key: ${{ runner.os }}-${{ hashFiles('**/yarn.lock') }}
+          key: ${{ runner.os }}-${{ hashFiles('**/yarn.lock') }}-14.16.0
       - name: Install & build
         if: steps.cache-deps.outputs.cache-hit != 'true'
         run: yarn install --frozen-lockfile
