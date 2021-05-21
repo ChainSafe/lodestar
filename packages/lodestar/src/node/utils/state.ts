@@ -26,7 +26,7 @@ export async function initDevState(
 
 export function storeSSZState(config: IBeaconConfig, state: TreeBacked<allForks.BeaconState>, path: string): void {
   mkdirSync(dirname(path), {recursive: true});
-  writeFileSync(path, config.getTypes(state.slot).BeaconState.serialize(state));
+  writeFileSync(path, config.getForkTypes(state.slot).BeaconState.serialize(state));
 }
 
 async function storeDeposits(config: IBeaconConfig, db: IBeaconDb, deposits: phase0.Deposit[]): Promise<void> {

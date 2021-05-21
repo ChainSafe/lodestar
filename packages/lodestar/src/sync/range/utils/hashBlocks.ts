@@ -9,6 +9,6 @@ import {byteArrayConcat} from "../../../util/bytes";
  */
 export function hashBlocks(blocks: allForks.SignedBeaconBlock[], config: IBeaconConfig): Uint8Array {
   return byteArrayConcat(
-    blocks.map((block) => config.getTypes(block.message.slot).SignedBeaconBlock.hashTreeRoot(block))
+    blocks.map((block) => config.getForkTypes(block.message.slot).SignedBeaconBlock.hashTreeRoot(block))
   );
 }

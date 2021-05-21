@@ -11,7 +11,9 @@ export function validateBlock(
   job: IBlockJob
 ): void {
   try {
-    const blockHash = config.getTypes(job.signedBlock.message.slot).BeaconBlock.hashTreeRoot(job.signedBlock.message);
+    const blockHash = config
+      .getForkTypes(job.signedBlock.message.slot)
+      .BeaconBlock.hashTreeRoot(job.signedBlock.message);
     const blockSlot = job.signedBlock.message.slot;
     if (blockSlot === 0) {
       throw new BlockError({

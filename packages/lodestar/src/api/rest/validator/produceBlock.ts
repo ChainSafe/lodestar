@@ -20,7 +20,7 @@ const handler: ApiController<Query, Params>["handler"] = async function (req) {
   );
   return {
     version: this.config.getForkName(block.slot),
-    data: this.config.getTypes(block.slot).BeaconBlock.toJson(block, {case: "snake"}),
+    data: this.config.getForkTypes(block.slot).BeaconBlock.toJson(block, {case: "snake"}),
   };
 };
 

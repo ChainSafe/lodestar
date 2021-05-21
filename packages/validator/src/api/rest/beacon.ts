@@ -33,13 +33,13 @@ export function BeaconApi(config: IBeaconConfig, client: HttpClient): IApiClient
       async publishBlock(block: allForks.SignedBeaconBlock): Promise<void> {
         await client.post(
           "/eth/v1/beacon/blocks",
-          config.getTypes(block.message.slot).SignedBeaconBlock.toJson(block, {case: "snake"})
+          config.getForkTypes(block.message.slot).SignedBeaconBlock.toJson(block, {case: "snake"})
         );
       },
 
       async getBlockRoot(blockId: BlockId): Promise<Root> {
         const res = await client.get<{data: {root: Json}}>(`/eth/v1/beacon/blocks/${blockId}/root`);
-        return config.types.phase0.Root.fromJson(res.data.root, {case: "snake"});
+        return config.types.Root.fromJson(res.data.root, {case: "snake"});
       },
     },
 

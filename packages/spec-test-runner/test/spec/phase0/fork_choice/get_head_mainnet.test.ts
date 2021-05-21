@@ -26,7 +26,7 @@ describeDirectorySpecTest<IForkChoiceTestCase, void>(
     const emitter = new ChainEventEmitter();
     const {steps, anchorState} = testcase;
     const currentSlot = anchorState.slot;
-    const tbState = config.getTypes(currentSlot).BeaconState.createTreeBackedFromStruct(anchorState);
+    const tbState = config.getForkTypes(currentSlot).BeaconState.createTreeBackedFromStruct(anchorState);
     let cachedState = createCachedBeaconState(config, tbState);
     const forkchoice = new LodestarForkChoice({config, emitter, currentSlot, state: cachedState});
     const {SECONDS_PER_SLOT} = cachedState.config.params;

@@ -21,7 +21,7 @@ export function getSyncCommitteeContributionSignatureSet(
   return {
     type: SignatureSetType.aggregate,
     pubkeys: getContributionPubkeys(state, contribution),
-    signingRoot: computeSigningRoot(config, config.types.phase0.Root, contribution.beaconBlockRoot, domain),
+    signingRoot: computeSigningRoot(config, config.types.Root, contribution.beaconBlockRoot, domain),
     signature: contribution.signature.valueOf() as Uint8Array,
   };
 }

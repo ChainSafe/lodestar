@@ -29,7 +29,7 @@ export class BlockArchiveRepository extends Repository<Slot, allForks.SignedBeac
   // Overrides for multi-fork
 
   encodeValue(value: allForks.SignedBeaconBlock): Buffer {
-    return this.config.getTypes(value.message.slot).SignedBeaconBlock.serialize(value) as Buffer;
+    return this.config.getForkTypes(value.message.slot).SignedBeaconBlock.serialize(value) as Buffer;
   }
 
   decodeValue(data: Buffer): allForks.SignedBeaconBlock {
@@ -49,7 +49,7 @@ export class BlockArchiveRepository extends Repository<Slot, allForks.SignedBeac
   // Overrides to index
 
   async put(key: Slot, value: allForks.SignedBeaconBlock): Promise<void> {
-    const blockRoot = this.config.getTypes(value.message.slot).BeaconBlock.hashTreeRoot(value.message);
+    const blockRoot = this.config.getForkTypes(value.message.slot).BeaconBlock.hashTreeRoot(value.message);
     const slot = value.message.slot;
     await Promise.all([
       super.put(key, value),
@@ -63,7 +63,7 @@ export class BlockArchiveRepository extends Repository<Slot, allForks.SignedBeac
       super.batchPut(items),
       Array.from(items).map((item) => {
         const slot = item.value.message.slot;
-        const blockRoot = this.config.getTypes(slot).BeaconBlock.hashTreeRoot(item.value.message);
+        const blockRoot = this.config.getForkTypes(slot).BeaconBlock.hashTreeRoot(item.value.message);
         return storeRootIndex(this.db, slot, blockRoot);
       }),
       Array.from(items).map((item) => {
@@ -85,7 +85,7 @@ export class BlockArchiveRepository extends Repository<Slot, allForks.SignedBeac
   async remove(value: allForks.SignedBeaconBlock): Promise<void> {
     await Promise.all([
       super.remove(value),
-      deleteRootIndex(this.db, this.config.getTypes(value.message.slot).SignedBeaconBlock, value),
+      deleteRootIndex(this.db, this.config.getForkTypes(value.message.slot).SignedBeaconBlock, value),
       deleteParentRootIndex(this.db, value),
     ]);
   }
@@ -94,7 +94,7 @@ export class BlockArchiveRepository extends Repository<Slot, allForks.SignedBeac
     await Promise.all([
       super.batchRemove(values),
       Array.from(values).map((value) =>
-        deleteRootIndex(this.db, this.config.getTypes(value.message.slot).SignedBeaconBlock, value)
+        deleteRootIndex(this.db, this.config.getForkTypes(value.message.slot).SignedBeaconBlock, value)
       ),
       Array.from(values).map((value) => deleteParentRootIndex(this.db, value)),
     ]);

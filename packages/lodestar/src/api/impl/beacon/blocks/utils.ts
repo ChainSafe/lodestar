@@ -14,7 +14,7 @@ export function toBeaconHeaderResponse(
   canonical = false
 ): phase0.SignedBeaconHeaderResponse {
   return {
-    root: config.getTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message),
+    root: config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message),
     canonical,
     header: {
       message: blockToHeader(config, block.message),

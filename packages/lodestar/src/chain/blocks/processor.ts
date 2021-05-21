@@ -98,7 +98,7 @@ export async function processChainSegmentJob(modules: BlockProcessorModules, job
       // incorrect shuffling. That would be bad, mmkay.
       if (
         !config.types.Root.equals(
-          config.getTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message),
+          config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message),
           child.message.parentRoot
         )
       ) {

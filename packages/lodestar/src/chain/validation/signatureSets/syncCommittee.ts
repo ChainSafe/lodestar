@@ -19,7 +19,7 @@ export function getSyncCommitteeSignatureSet(
   return {
     type: SignatureSetType.single,
     pubkey: state.epochCtx.index2pubkey[syncCommittee.validatorIndex],
-    signingRoot: computeSigningRoot(config, config.types.phase0.Root, syncCommittee.beaconBlockRoot, domain),
+    signingRoot: computeSigningRoot(config, config.types.Root, syncCommittee.beaconBlockRoot, domain),
     signature: syncCommittee.signature.valueOf() as Uint8Array,
   };
 }

@@ -52,6 +52,6 @@ describe("rest - debug - getState", function () {
       .accept("application/octet-stream")
       .expect(200)
       .expect("Content-Type", "application/octet-stream");
-    expect(response.body).to.be.deep.equal(config.getTypes(state.slot).BeaconState.serialize(state));
+    expect(response.body).to.be.deep.equal(config.getForkTypes(state.slot).BeaconState.serialize(state));
   });
 });

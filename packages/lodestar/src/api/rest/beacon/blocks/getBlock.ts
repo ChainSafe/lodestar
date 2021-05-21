@@ -5,7 +5,7 @@ const handler: ApiController<null, {blockId: string}>["handler"] = async functio
   const block = await this.api.beacon.blocks.getBlock(req.params.blockId);
   return {
     version: this.config.getForkName(block.message.slot),
-    data: this.config.getTypes(block.message.slot).SignedBeaconBlock.toJson(block, {case: "snake"}),
+    data: this.config.getForkTypes(block.message.slot).SignedBeaconBlock.toJson(block, {case: "snake"}),
   };
 };
 

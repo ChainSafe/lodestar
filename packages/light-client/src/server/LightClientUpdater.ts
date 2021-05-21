@@ -71,7 +71,7 @@ export class LightClientUpdater {
       nextSyncCommitteeBranch: this.config.types.altair.LightClientUpdate.getPropertyType(
         "nextSyncCommitteeBranch"
       ).defaultValue() as LightClientUpdate["nextSyncCommitteeBranch"],
-      finalityHeader: this.config.types.altair.BeaconBlockHeader.defaultValue(),
+      finalityHeader: this.config.types.phase0.BeaconBlockHeader.defaultValue(),
       finalityBranch: this.config.types.altair.LightClientUpdate.getPropertyType(
         "finalityBranch"
       ).defaultValue() as LightClientUpdate["finalityBranch"],

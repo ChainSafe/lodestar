@@ -63,7 +63,7 @@ export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
       db,
       logger,
       config
-        .getTypes(GENESIS_SLOT)
+        .getForkTypes(GENESIS_SLOT)
         .BeaconState.createTreeBackedFromBytes(
           await fs.promises.readFile(path.join(args.rootDir, args.genesisStateFile))
         )

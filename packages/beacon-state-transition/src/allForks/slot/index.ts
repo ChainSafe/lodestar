@@ -7,18 +7,18 @@ import {ZERO_HASH} from "../../constants";
  */
 export function processSlot(state: CachedBeaconState<allForks.BeaconState>): void {
   const {config} = state;
-  const types = config.getTypes(state.slot);
+  const types = config.getForkTypes(state.slot);
 
   // Cache state root
   const previousStateRoot = types.BeaconState.hashTreeRoot(state);
   state.stateRoots[state.slot % config.params.SLOTS_PER_HISTORICAL_ROOT] = previousStateRoot;
 
   // Cache latest block header state root
-  if (types.Root.equals(state.latestBlockHeader.stateRoot, ZERO_HASH)) {
+  if (config.types.Root.equals(state.latestBlockHeader.stateRoot, ZERO_HASH)) {
     state.latestBlockHeader.stateRoot = previousStateRoot;
   }
 
   // Cache block root
-  const previousBlockRoot = types.BeaconBlockHeader.hashTreeRoot(state.latestBlockHeader);
+  const previousBlockRoot = config.types.phase0.BeaconBlockHeader.hashTreeRoot(state.latestBlockHeader);
   state.blockRoots[state.slot % config.params.SLOTS_PER_HISTORICAL_ROOT] = previousBlockRoot;
 }

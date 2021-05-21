@@ -23,19 +23,17 @@ export {AllForksSSZTypes} from "./allForks";
  * Most types are namespaced by hardfork: `phase0`, `altair`, `phase1`
  */
 export type IBeaconSSZTypes = PrimitiveSSZTypes & {
-  phase0: PrimitiveSSZTypes & Phase0SSZTypes;
-  altair: PrimitiveSSZTypes &
-    Omit<Phase0SSZTypes, "BeaconBlockBody" | "BeaconBlock" | "SignedBeaconBlock" | "BeaconState" | "Metadata"> &
-    AltairSSZTypes;
+  phase0: Phase0SSZTypes;
+  altair: AltairSSZTypes;
 };
 
 export function createIBeaconSSZTypes(params: IBeaconParams): IBeaconSSZTypes {
   const primitive = getPrimitiveTypes();
   const phase0 = getPhase0Types(params, primitive);
-  const altair = getAltairTypes(params, {...primitive, ...phase0});
+  const altair = getAltairTypes(params, primitive, phase0);
   return {
     ...primitive,
-    phase0: {...primitive, ...phase0},
-    altair: {...primitive, ...phase0, ...altair},
+    phase0,
+    altair,
   };
 }

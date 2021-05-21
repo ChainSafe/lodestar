@@ -23,7 +23,7 @@ export function getProposerSignatureSet(
     pubkey: epochCtx.index2pubkey[signedBlock.message.proposerIndex],
     signingRoot: computeSigningRoot(
       config,
-      config.getTypes(signedBlock.message.slot).BeaconBlock,
+      config.getForkTypes(signedBlock.message.slot).BeaconBlock,
       signedBlock.message,
       domain
     ),

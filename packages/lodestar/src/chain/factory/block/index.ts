@@ -58,5 +58,5 @@ function computeNewStateRoot(
   // verifySignatures = false since the data to assemble the block is trusted
   allForks.processBlock(postState, block, {verifySignatures: false}, metrics);
 
-  return config.getTypes(state.slot).BeaconState.hashTreeRoot(postState);
+  return config.getForkTypes(state.slot).BeaconState.hashTreeRoot(postState);
 }

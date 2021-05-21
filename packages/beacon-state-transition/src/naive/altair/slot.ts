@@ -28,6 +28,6 @@ function processSlot(config: IBeaconConfig, state: altair.BeaconState): void {
   }
 
   // Cache block root
-  const previousBlockRoot = config.types.altair.BeaconBlockHeader.hashTreeRoot(state.latestBlockHeader);
+  const previousBlockRoot = config.types.phase0.BeaconBlockHeader.hashTreeRoot(state.latestBlockHeader);
   state.blockRoots[state.slot % config.params.SLOTS_PER_HISTORICAL_ROOT] = previousBlockRoot;
 }

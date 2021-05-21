@@ -110,7 +110,7 @@ function notNull<T>(arr: (T | null)[]): T[] {
 
 const toBlockSummary = (signedBlock: allForks.SignedBeaconBlock): IBlockSummary => {
   return {
-    blockRoot: config.getTypes(signedBlock.message.slot).BeaconBlock.hashTreeRoot(signedBlock.message),
+    blockRoot: config.getForkTypes(signedBlock.message.slot).BeaconBlock.hashTreeRoot(signedBlock.message),
     finalizedEpoch: 0,
     justifiedEpoch: 0,
     parentRoot: signedBlock.message.parentRoot as Uint8Array,
