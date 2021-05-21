@@ -12,6 +12,17 @@ export type BeaconState = phase0.BeaconState | altair.BeaconState;
 export type Metadata = phase0.Metadata | altair.Metadata;
 
 /**
+ * Types known to change between forks
+ */
+export type AllForksTypes = {
+  BeaconBlockBody: BeaconBlockBody;
+  BeaconBlock: BeaconBlock;
+  SignedBeaconBlock: SignedBeaconBlock;
+  BeaconState: BeaconState;
+  Metadata: Metadata;
+};
+
+/**
  * SSZ Types known to change between forks
  */
 export type AllForksSSZTypes = {
