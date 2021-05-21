@@ -2,7 +2,7 @@ import {altair} from "@chainsafe/lodestar-types";
 import {GENESIS_EPOCH} from "../../constants";
 import {getCurrentEpoch} from "../../util";
 import {CachedBeaconState, IEpochProcess} from "../../allForks/util";
-import {getFlagIndicesAndWeights} from "../misc";
+import {PARTICIPATION_FLAG_WEIGHTS} from "../misc";
 import {getFlagIndexDeltas, getInactivityPenaltyDeltas} from "./balance";
 
 export function processRewardsAndPenalties(state: CachedBeaconState<altair.BeaconState>, process: IEpochProcess): void {
@@ -12,9 +12,10 @@ export function processRewardsAndPenalties(state: CachedBeaconState<altair.Beaco
     return;
   }
 
-  const flagDeltas = getFlagIndicesAndWeights().map(([flag, numerator]) =>
-    getFlagIndexDeltas(state, process, flag, numerator)
+  const flagDeltas = Array.from({length: PARTICIPATION_FLAG_WEIGHTS.length}, (_, flag) =>
+    getFlagIndexDeltas(state, process, flag)
   );
+
   const inactivityPenaltyDeltas = getInactivityPenaltyDeltas(state, process);
   flagDeltas.push(inactivityPenaltyDeltas);
 

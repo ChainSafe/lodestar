@@ -4,8 +4,8 @@ import {bigIntSqrt} from "@chainsafe/lodestar-utils";
 import {getUnslashedParticipatingIndices} from "./index";
 import {getPreviousEpoch} from "../../util/epoch";
 import {getTotalBalance, getTotalActiveBalance} from "../../util/balance";
-import {TIMELY_TARGET_FLAG_INDEX, WEIGHT_DENOMINATOR} from "../constants";
-import {getFlagIndicesAndWeights} from "../misc";
+import {TIMELY_HEAD_FLAG_INDEX, TIMELY_TARGET_FLAG_INDEX, WEIGHT_DENOMINATOR} from "../constants";
+import {PARTICIPATION_FLAG_WEIGHTS} from "../misc";
 import * as phase0 from "../../phase0";
 import * as naive from "../../naive";
 import {newZeroedBigIntArray} from "../../util/array";
@@ -17,8 +17,7 @@ import {isInInactivityLeak} from "../../util";
 export function getFlagIndexDeltas(
   config: IBeaconConfig,
   state: altair.BeaconState,
-  flagIndex: number,
-  weight: bigint
+  flagIndex: number
 ): [Gwei[], Gwei[]] {
   const validatorCount = state.validators.length;
   const rewards = newZeroedBigIntArray(validatorCount);
@@ -30,6 +29,7 @@ export function getFlagIndexDeltas(
     flagIndex,
     getPreviousEpoch(config, state)
   );
+  const weight = PARTICIPATION_FLAG_WEIGHTS[flagIndex];
   const increment = config.params.EFFECTIVE_BALANCE_INCREMENT;
   const unslashedParticipatingIncrements = getTotalBalance(config, state, unslashedParticipatingIndices) / increment;
   const activeIncrements = getTotalActiveBalance(config, state) / increment;
@@ -37,14 +37,11 @@ export function getFlagIndexDeltas(
   for (const index of naive.phase0.getEligibleValidatorIndices(config, (state as unknown) as phase0.BeaconState)) {
     const baseReward = getBaseReward(config, state, index);
     if (unslashedParticipatingIndices.indexOf(index) !== -1) {
-      if (isInInactivityLeak(config, state)) {
-        // This flag reward cancels the inactivity penalty corresponding to the flag index
-        rewards[index] += (baseReward * weight) / WEIGHT_DENOMINATOR;
-      } else {
+      if (!isInInactivityLeak(config, state)) {
         const rewardNumerator = baseReward * weight * unslashedParticipatingIncrements;
         rewards[index] += rewardNumerator / (activeIncrements * WEIGHT_DENOMINATOR);
       }
-    } else {
+    } else if (flagIndex != TIMELY_HEAD_FLAG_INDEX) {
       penalties[index] += (baseReward * weight) / WEIGHT_DENOMINATOR;
     }
   }
@@ -69,10 +66,6 @@ export function getInactivityPenaltyDeltas(config: IBeaconConfig, state: altair.
     );
     // eslint-disable-next-line import/namespace
     for (const index of naive.phase0.getEligibleValidatorIndices(config, (state as unknown) as phase0.BeaconState)) {
-      for (const [_, weight] of getFlagIndicesAndWeights()) {
-        // This inactivity penalty cancels the flag reward rcorresponding to the flag index
-        penalties[index] += (getBaseReward(config, state, index) * weight) / WEIGHT_DENOMINATOR;
-      }
       if (matchingTargetAttestingIndices.indexOf(index) === -1) {
         const penaltyNumerator = state.validators[index].effectiveBalance * BigInt(state.inactivityScores[index]);
         const penaltyDenominator =

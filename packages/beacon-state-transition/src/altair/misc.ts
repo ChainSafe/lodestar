@@ -1,20 +1,7 @@
 import {ParticipationFlags} from "@chainsafe/lodestar-types";
-import {
-  TIMELY_HEAD_FLAG_INDEX,
-  TIMELY_HEAD_WEIGHT,
-  TIMELY_SOURCE_FLAG_INDEX,
-  TIMELY_SOURCE_WEIGHT,
-  TIMELY_TARGET_FLAG_INDEX,
-  TIMELY_TARGET_WEIGHT,
-} from "./constants";
+import {TIMELY_HEAD_WEIGHT, TIMELY_SOURCE_WEIGHT, TIMELY_TARGET_WEIGHT} from "./constants";
 
-export function getFlagIndicesAndWeights(): [number, bigint][] {
-  return [
-    [TIMELY_HEAD_FLAG_INDEX, TIMELY_HEAD_WEIGHT],
-    [TIMELY_SOURCE_FLAG_INDEX, TIMELY_SOURCE_WEIGHT],
-    [TIMELY_TARGET_FLAG_INDEX, TIMELY_TARGET_WEIGHT],
-  ];
-}
+export const PARTICIPATION_FLAG_WEIGHTS = [TIMELY_SOURCE_WEIGHT, TIMELY_TARGET_WEIGHT, TIMELY_HEAD_WEIGHT];
 export function addFlag(flags: ParticipationFlags, flagIndex: number): ParticipationFlags {
   const flag = 2 ** flagIndex;
   return flags | flag;

@@ -1,6 +1,6 @@
 import {altair, Gwei, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {bigIntSqrt} from "@chainsafe/lodestar-utils";
-import {getFlagIndicesAndWeights} from "../misc";
+import {PARTICIPATION_FLAG_WEIGHTS} from "../misc";
 import * as phase0 from "../../phase0";
 import {
   CachedBeaconState,
@@ -26,15 +26,14 @@ import {
 export function getFlagIndexDeltas(
   state: CachedBeaconState<altair.BeaconState>,
   process: IEpochProcess,
-  flagIndex: number,
-  weight: bigint
+  flagIndex: number
 ): [Gwei[], Gwei[]] {
   const {config} = state;
   const validatorCount = state.validators.length;
   const rewards = newZeroedBigIntArray(validatorCount);
   const penalties = newZeroedBigIntArray(validatorCount);
 
-  const increment = config.params.EFFECTIVE_BALANCE_INCREMENT;
+  const {EFFECTIVE_BALANCE_INCREMENT} = config.params;
 
   let flag;
   let stakeSummaryKey: keyof IEpochStakeSummary;
@@ -52,8 +51,10 @@ export function getFlagIndexDeltas(
     throw new Error(`Unable to process flagIndex: ${flagIndex}`);
   }
 
-  const unslashedParticipatingIncrements = process.prevEpochUnslashedStake[stakeSummaryKey] / increment;
-  const activeIncrements = process.totalActiveStake / increment;
+  const weight = PARTICIPATION_FLAG_WEIGHTS[flagIndex];
+  const unslashedParticipatingIncrements =
+    process.prevEpochUnslashedStake[stakeSummaryKey] / EFFECTIVE_BALANCE_INCREMENT;
+  const activeIncrements = process.totalActiveStake / EFFECTIVE_BALANCE_INCREMENT;
 
   for (let i = 0; i < process.statuses.length; i++) {
     const status = process.statuses[i];
@@ -62,14 +63,11 @@ export function getFlagIndexDeltas(
     }
     const baseReward = getBaseReward(state, process, i);
     if (hasMarkers(status.flags, flag)) {
-      if (isInInactivityLeak(config, (state as unknown) as phase0.BeaconState)) {
-        // This flag reward cancels the inactivity penalty corresponding to the flag index
-        rewards[i] += (baseReward * weight) / WEIGHT_DENOMINATOR;
-      } else {
+      if (!isInInactivityLeak(config, (state as unknown) as phase0.BeaconState)) {
         const rewardNumerator = baseReward * weight * unslashedParticipatingIncrements;
         rewards[i] += rewardNumerator / (activeIncrements * WEIGHT_DENOMINATOR);
       }
-    } else {
+    } else if (flagIndex !== TIMELY_HEAD_FLAG_INDEX) {
       penalties[i] += (baseReward * weight) / WEIGHT_DENOMINATOR;
     }
   }
@@ -92,10 +90,6 @@ export function getInactivityPenaltyDeltas(
     for (let i = 0; i < process.statuses.length; i++) {
       const status = process.statuses[i];
       if (hasMarkers(status.flags, FLAG_ELIGIBLE_ATTESTER)) {
-        for (const [_, weight] of getFlagIndicesAndWeights()) {
-          // This inactivity penalty cancels the flag reward rcorresponding to the flag index
-          penalties[i] += (getBaseReward(state, process, i) * weight) / WEIGHT_DENOMINATOR;
-        }
         if (!hasMarkers(status.flags, FLAG_PREV_TARGET_ATTESTER_OR_UNSLASHED)) {
           const penaltyNumerator = process.validators[i].effectiveBalance * BigInt(state.inactivityScores[i]);
           const penaltyDenominator =
