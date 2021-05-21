@@ -16,7 +16,9 @@ export interface IBeaconConfig {
   params: IBeaconParams;
   types: IBeaconSSZTypes;
 
+  /** Forks in order order of occurence, `phase0` first */
   forks: {[K in ForkName]: IForkInfo};
+  /** Get the hard-fork info for the active fork at `slot` */
   getForkInfo(slot: Slot): IForkInfo;
 
   /** Get the hard-fork name at a given slot */
