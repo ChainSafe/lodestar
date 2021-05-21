@@ -13,7 +13,7 @@ import {
   getSeed,
   isAggregatorFromCommitteeLength,
 } from "../../util";
-import {getSyncCommitteeIndices} from "../../altair/state_accessor/sync_committee";
+import {getNextSyncCommitteeIndices} from "../../altair/state_accessor/sync_committee";
 import {computeEpochShuffling, IEpochShuffling} from "./epochShuffling";
 import {MutableVector} from "@chainsafe/persistent-ts";
 import {CachedValidatorList} from "./cachedValidatorList";
@@ -72,9 +72,8 @@ export function createEpochContext(
 
   // Only after altair, compute the indices of the current sync committee
   const onAltairFork = currentEpoch >= config.params.ALTAIR_FORK_EPOCH;
-  const nextPeriodEpoch = currentEpoch + config.params.EPOCHS_PER_SYNC_COMMITTEE_PERIOD;
-  const currSyncCommitteeIndexes = onAltairFork ? getSyncCommitteeIndices(config, state, currentEpoch) : [];
-  const nextSyncCommitteeIndexes = onAltairFork ? getSyncCommitteeIndices(config, state, nextPeriodEpoch) : [];
+  const currSyncCommitteeIndexes = onAltairFork ? getNextSyncCommitteeIndices(config, state) : [];
+  const nextSyncCommitteeIndexes = onAltairFork ? getNextSyncCommitteeIndices(config, state) : [];
 
   return new EpochContext({
     config,
@@ -186,18 +185,16 @@ export function rotateEpochs(
     currEpoch % epochCtx.config.params.EPOCHS_PER_SYNC_COMMITTEE_PERIOD === 0 &&
     currEpoch > epochCtx.config.params.ALTAIR_FORK_EPOCH
   ) {
-    const nextPeriodEpoch = currEpoch + epochCtx.config.params.EPOCHS_PER_SYNC_COMMITTEE_PERIOD;
     epochCtx.currSyncCommitteeIndexes = epochCtx.nextSyncCommitteeIndexes;
-    epochCtx.nextSyncCommitteeIndexes = getSyncCommitteeIndices(epochCtx.config, state, nextPeriodEpoch);
+    epochCtx.nextSyncCommitteeIndexes = getNextSyncCommitteeIndices(epochCtx.config, state);
     epochCtx.currSyncComitteeValidatorIndexMap = epochCtx.nextSyncComitteeValidatorIndexMap;
     epochCtx.nextSyncComitteeValidatorIndexMap = computeSyncComitteeMap(epochCtx.nextSyncCommitteeIndexes);
   }
 
   // If crossing through the altair fork the caches will be empty, fill them up
   if (currEpoch === epochCtx.config.params.ALTAIR_FORK_EPOCH) {
-    const nextPeriodEpoch = currEpoch + epochCtx.config.params.EPOCHS_PER_SYNC_COMMITTEE_PERIOD;
-    epochCtx.currSyncCommitteeIndexes = getSyncCommitteeIndices(epochCtx.config, state, currEpoch);
-    epochCtx.nextSyncCommitteeIndexes = getSyncCommitteeIndices(epochCtx.config, state, nextPeriodEpoch);
+    epochCtx.currSyncCommitteeIndexes = getNextSyncCommitteeIndices(epochCtx.config, state);
+    epochCtx.nextSyncCommitteeIndexes = getNextSyncCommitteeIndices(epochCtx.config, state);
     epochCtx.currSyncComitteeValidatorIndexMap = computeSyncComitteeMap(epochCtx.currSyncCommitteeIndexes);
     epochCtx.nextSyncComitteeValidatorIndexMap = computeSyncComitteeMap(epochCtx.nextSyncCommitteeIndexes);
   }

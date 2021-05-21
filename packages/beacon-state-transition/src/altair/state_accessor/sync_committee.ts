@@ -1,10 +1,10 @@
 import {aggregatePublicKeys} from "@chainsafe/bls";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {Epoch, altair, ValidatorIndex, allForks} from "@chainsafe/lodestar-types";
+import {altair, ValidatorIndex, allForks} from "@chainsafe/lodestar-types";
 import {intDiv, intToBytes} from "@chainsafe/lodestar-utils";
 import {hash} from "@chainsafe/ssz";
 
-import {computeShuffledIndex, getActiveValidatorIndices, getSeed} from "../../util";
+import {computeEpochAtSlot, computeShuffledIndex, getActiveValidatorIndices, getSeed} from "../../util";
 
 const MAX_RANDOM_BYTE = BigInt(2 ** 8 - 1);
 
@@ -14,18 +14,12 @@ const MAX_RANDOM_BYTE = BigInt(2 ** 8 - 1);
  *  Note: This function should only be called at sync committee period boundaries, as
     ``get_sync_committee_indices`` is not stable within a given period.
  */
-export function getSyncCommitteeIndices(
-  config: IBeaconConfig,
-  state: allForks.BeaconState,
-  epoch: Epoch
-): ValidatorIndex[] {
-  const baseEpoch =
-    (Math.max(intDiv(epoch, config.params.EPOCHS_PER_SYNC_COMMITTEE_PERIOD), 1) - 1) *
-    config.params.EPOCHS_PER_SYNC_COMMITTEE_PERIOD;
+export function getNextSyncCommitteeIndices(config: IBeaconConfig, state: allForks.BeaconState): ValidatorIndex[] {
+  const epoch = computeEpochAtSlot(config, state.slot) + 1;
 
-  const activeValidatorIndices = getActiveValidatorIndices(state, baseEpoch);
+  const activeValidatorIndices = getActiveValidatorIndices(state, epoch);
   const activeValidatorCount = activeValidatorIndices.length;
-  const seed = getSeed(config, state, baseEpoch, config.params.DOMAIN_SYNC_COMMITTEE);
+  const seed = getSeed(config, state, epoch, config.params.DOMAIN_SYNC_COMMITTEE);
   let i = 0;
   const syncCommitteeIndices = [];
   while (syncCommitteeIndices.length < config.params.SYNC_COMMITTEE_SIZE) {
@@ -44,12 +38,8 @@ export function getSyncCommitteeIndices(
 /**
  * Return the sync committee for a given state and epoch.
  */
-export function getSyncCommittee(
-  config: IBeaconConfig,
-  state: allForks.BeaconState,
-  epoch: Epoch
-): altair.SyncCommittee {
-  const indices = getSyncCommitteeIndices(config, state, epoch);
+export function getNextSyncCommittee(config: IBeaconConfig, state: allForks.BeaconState): altair.SyncCommittee {
+  const indices = getNextSyncCommitteeIndices(config, state);
   const pubkeys = indices.map((index) => state.validators[index].pubkey);
   return {
     pubkeys,

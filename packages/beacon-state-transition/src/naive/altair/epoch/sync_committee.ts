@@ -1,6 +1,6 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {altair} from "@chainsafe/lodestar-types";
-import {getSyncCommittee} from "../../../altair/state_accessor";
+import {getNextSyncCommittee} from "../../../altair/state_accessor";
 import {getCurrentEpoch} from "../../../util";
 
 /**
@@ -10,10 +10,6 @@ export function processSyncCommitteeUpdates(config: IBeaconConfig, state: altair
   const nextEpoch = getCurrentEpoch(config, state) + 1;
   if (nextEpoch % config.params.EPOCHS_PER_SYNC_COMMITTEE_PERIOD === 0) {
     state.currentSyncCommittee = state.nextSyncCommittee;
-    state.nextSyncCommittee = getSyncCommittee(
-      config,
-      state,
-      nextEpoch + config.params.EPOCHS_PER_SYNC_COMMITTEE_PERIOD
-    );
+    state.nextSyncCommittee = getNextSyncCommittee(config, state);
   }
 }
