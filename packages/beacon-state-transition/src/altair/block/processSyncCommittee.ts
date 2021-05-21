@@ -14,7 +14,6 @@ import {
 } from "../../util";
 import * as phase0 from "../../phase0";
 import * as naive from "../../naive";
-import {getSyncCommitteeIndices} from "../state_accessor";
 import {CachedBeaconState} from "../../allForks/util";
 
 export function processSyncCommittee(
@@ -25,7 +24,7 @@ export function processSyncCommittee(
   const {config} = state;
   const previousSlot = Math.max(state.slot, 1) - 1;
   const currentEpoch = getCurrentEpoch(config, state);
-  const committeeIndices = getSyncCommitteeIndices(config, state, currentEpoch);
+  const committeeIndices = state.currSyncCommitteeIndexes;
   const participantIndices = committeeIndices.filter((index) => !!aggregate.syncCommitteeBits[index]);
   const committeePubkeys = Array.from(state.currentSyncCommittee.pubkeys);
   const participantPubkeys = committeePubkeys.filter((pubkey, index) => !!aggregate.syncCommitteeBits[index]);

@@ -238,13 +238,13 @@ export class EpochContext {
   currentShuffling: IEpochShuffling;
   nextShuffling: IEpochShuffling;
   /**
-   * Update freq: every ~ 27h.
+   * Update freq: every ~ 54h.
    * Memory cost: 1024 Number integers.
    */
   currSyncCommitteeIndexes: ValidatorIndex[];
   nextSyncCommitteeIndexes: ValidatorIndex[];
   /**
-   * Update freq: every ~ 27h.
+   * Update freq: every ~ 54h.
    * Memory cost: Map of Number -> Number with 1024 entries.
    */
   currSyncComitteeValidatorIndexMap: SyncComitteeValidatorIndexMap;
