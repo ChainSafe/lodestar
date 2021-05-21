@@ -10,10 +10,9 @@ export type BeaconBlock = phase0.BeaconBlock | altair.BeaconBlock;
 export type SignedBeaconBlock = phase0.SignedBeaconBlock | altair.SignedBeaconBlock;
 export type BeaconState = phase0.BeaconState | altair.BeaconState;
 
-// The difference between AllSSZTypes and AllForksSSZTypes:
-// AllSSZTypes["BeaconState"] = ContainerType<phase0.BeaconState & altair.BeaconState & phase1.BeaconState>
-// AllForksSSZTypes["BeaconState"] = ContainerType<phase0.BeaconState | altair.BeaconState | phase1.BeaconState>
-
+/**
+ * SSZ Types known to change between forks
+ */
 export type AllForksSSZTypes = {
   BeaconBlockBody: ContainerType<BeaconBlockBody>;
   BeaconBlock: ContainerType<BeaconBlock>;
