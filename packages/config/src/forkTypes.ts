@@ -13,12 +13,14 @@ export function getForkTypesRecord(types: IBeaconSSZTypes): {[K in ForkName]: Al
       BeaconBlock: types.phase0.BeaconBlock,
       SignedBeaconBlock: types.phase0.SignedBeaconBlock,
       BeaconState: types.phase0.BeaconState as AllForksSSZTypes["BeaconState"],
+      Metadata: types.phase0.Metadata,
     },
     altair: {
       BeaconBlockBody: types.altair.BeaconBlockBody as AllForksSSZTypes["BeaconBlockBody"],
       BeaconBlock: types.altair.BeaconBlock as AllForksSSZTypes["BeaconBlock"],
       SignedBeaconBlock: types.altair.SignedBeaconBlock as AllForksSSZTypes["SignedBeaconBlock"],
       BeaconState: types.altair.BeaconState as AllForksSSZTypes["BeaconState"],
+      Metadata: types.altair.Metadata as AllForksSSZTypes["Metadata"],
     },
   };
 }
