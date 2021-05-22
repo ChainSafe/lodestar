@@ -30,12 +30,11 @@ export async function createNode(
 // Helpers to manipulate network's libp2p instance for testing only
 
 export async function connect(network: Network, peer: PeerId, multiaddr: Multiaddr[]): Promise<void> {
-  network["libp2p"].peerStore.addressBook.add(peer, multiaddr);
-  await network["libp2p"].dial(peer);
+  await network.connectToPeer(peer, multiaddr);
 }
 
 export async function disconnect(network: Network, peer: PeerId): Promise<void> {
-  await network["libp2p"].hangUp(peer);
+  await network.disconnectPeer(peer);
 }
 
 export function onPeerConnect(network: Network): Promise<void> {
