@@ -10,6 +10,7 @@ interface IBeaconExtraArgs {
   weakSubjectivityStateFile?: string;
   logLevel?: LogLevel;
   logLevelFile?: LogLevel;
+  logFormatGenesisTime?: number;
 }
 
 export const beaconExtraOptions: ICliCommandOptions<IBeaconExtraArgs> = {
@@ -40,6 +41,12 @@ export const beaconExtraOptions: ICliCommandOptions<IBeaconExtraArgs> = {
     description: "Logging verbosity level for file transport",
     defaultDescription: defaultLogLevel,
     type: "string",
+  },
+
+  logFormatGenesisTime: {
+    hidden: true,
+    description: "Use EpochSlot TimestampFormat for the logger",
+    type: "number",
   },
 };
 

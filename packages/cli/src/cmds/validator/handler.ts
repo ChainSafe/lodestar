@@ -24,7 +24,7 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
   const beaconPaths = getBeaconPaths(args);
   const config = getBeaconConfigFromArgs(args);
 
-  const logger = getCliLogger(args, beaconPaths);
+  const logger = getCliLogger(args, beaconPaths, config);
 
   const validatorDirManager = new ValidatorDirManager(accountPaths);
   const secretKeys = await validatorDirManager.decryptAllValidators({force: args.force});
