@@ -47,6 +47,10 @@ export interface INetwork {
   // Service
   start(): Promise<void>;
   stop(): Promise<void>;
+
+  // Debug
+  connectToPeer(peer: PeerId, multiaddr: Multiaddr[]): Promise<void>;
+  disconnectPeer(peer: PeerId): Promise<void>;
 }
 
 export type PeerDirection = Connection["stat"]["direction"];
