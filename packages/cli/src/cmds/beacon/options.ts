@@ -1,15 +1,13 @@
 import {Options} from "yargs";
-import {defaultLogLevel, LogLevel, LogLevels} from "@chainsafe/lodestar-utils";
+import {defaultLogLevel, LogLevels} from "@chainsafe/lodestar-utils";
 import {beaconNodeOptions, paramsOptions, IBeaconNodeArgs, IENRArgs, enrOptions} from "../../options";
 import {defaultBeaconPaths, IBeaconPaths} from "./paths";
-import {ICliCommandOptions} from "../../util";
+import {ICliCommandOptions, ILogArgs} from "../../util";
 
 interface IBeaconExtraArgs {
   forceGenesis?: boolean;
   genesisStateFile?: string;
   weakSubjectivityStateFile?: string;
-  logLevel?: LogLevel;
-  logLevelFile?: LogLevel;
 }
 
 export const beaconExtraOptions: ICliCommandOptions<IBeaconExtraArgs> = {
@@ -27,7 +25,9 @@ export const beaconExtraOptions: ICliCommandOptions<IBeaconExtraArgs> = {
     description: "Path or URL to download a weak subjectivity state file in ssz-encoded format",
     type: "string",
   },
+};
 
+export const logOptions: ICliCommandOptions<ILogArgs> = {
   logLevel: {
     choices: LogLevels,
     description: "Logging verbosity level",
@@ -39,6 +39,18 @@ export const beaconExtraOptions: ICliCommandOptions<IBeaconExtraArgs> = {
     choices: LogLevels,
     description: "Logging verbosity level for file transport",
     defaultDescription: defaultLogLevel,
+    type: "string",
+  },
+
+  logFormatGenesisTime: {
+    hidden: true,
+    description: "Logger format - Use EpochSlot TimestampFormat",
+    type: "number",
+  },
+
+  logFormatId: {
+    hidden: true,
+    description: "Logger format - Prefix module field with a string ID",
     type: "string",
   },
 };
@@ -91,11 +103,12 @@ export const beaconPathsOptions: ICliCommandOptions<IBeaconPaths> = {
   },
 };
 
-export type IBeaconArgs = IBeaconNodeArgs & IBeaconPaths & IENRArgs & IBeaconExtraArgs;
+export type IBeaconArgs = IBeaconExtraArgs & ILogArgs & IBeaconPaths & IBeaconNodeArgs & IENRArgs;
 
 export const beaconOptions: {[k: string]: Options} = {
-  ...beaconPathsOptions,
   ...beaconExtraOptions,
+  ...logOptions,
+  ...beaconPathsOptions,
   ...beaconNodeOptions,
   ...paramsOptions,
   ...enrOptions,

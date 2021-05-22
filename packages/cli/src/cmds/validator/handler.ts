@@ -26,7 +26,7 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
   const beaconPaths = getBeaconPaths(args);
   const config = getBeaconConfigFromArgs(args);
 
-  const logger = getCliLogger(args, beaconPaths);
+  const logger = getCliLogger(args, beaconPaths, config);
 
   const secretKeys = await getSecretKeys(args);
   if (secretKeys.length === 0) throw new YargsError("No validator keystores found");

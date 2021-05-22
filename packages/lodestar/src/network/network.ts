@@ -199,4 +199,15 @@ export class Network implements INetwork {
   isSubscribedToGossipCoreTopics(): boolean {
     return this.gossipHandler.isSubscribedToCoreTopics;
   }
+
+  // Debug
+
+  async connectToPeer(peer: PeerId, multiaddr: Multiaddr[]): Promise<void> {
+    this.libp2p.peerStore.addressBook.add(peer, multiaddr);
+    await this.libp2p.dial(peer);
+  }
+
+  async disconnectPeer(peer: PeerId): Promise<void> {
+    await this.libp2p.hangUp(peer);
+  }
 }
