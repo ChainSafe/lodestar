@@ -1,32 +1,23 @@
-import {IApiOptions} from "../options";
-import {IApi, IApiModules} from "./interface";
-import {IBeaconApi, BeaconApi} from "./beacon";
-import {INodeApi, NodeApi} from "./node";
-import {IValidatorApi, ValidatorApi} from "./validator";
-import {EventsApi, IEventsApi} from "./events";
-import {DebugApi, IDebugApi} from "./debug";
-import {ConfigApi, IConfigApi} from "./config";
-import {LightclientApi, ILightclientApi} from "./lightclient";
-import {LodestarApi, ILodestarApi} from "./lodestar";
+import {Api} from "@chainsafe/lodestar-api";
+import {ApiModules} from "./types";
+import {getBeaconApi} from "./beacon";
+import {getConfigApi} from "./config";
+import {getDebugApi} from "./debug";
+import {getEventsApi} from "./events";
+import {getLightclientApi} from "./lightclient";
+import {getLodestarApi} from "./lodestar";
+import {getNodeApi} from "./node";
+import {getValidatorApi} from "./validator";
 
-export class Api implements IApi {
-  beacon: IBeaconApi;
-  node: INodeApi;
-  validator: IValidatorApi;
-  events: IEventsApi;
-  debug: IDebugApi;
-  config: IConfigApi;
-  lightclient: ILightclientApi;
-  lodestar: ILodestarApi;
-
-  constructor(opts: Partial<IApiOptions>, modules: IApiModules) {
-    this.beacon = new BeaconApi(opts, modules);
-    this.node = new NodeApi(opts, modules);
-    this.validator = new ValidatorApi(opts, modules);
-    this.events = new EventsApi(opts, modules);
-    this.debug = new DebugApi(opts, modules);
-    this.config = new ConfigApi(opts, modules);
-    this.lightclient = new LightclientApi(opts, modules);
-    this.lodestar = new LodestarApi(modules);
-  }
+export function getApi(modules: ApiModules): Api {
+  return {
+    beacon: getBeaconApi(modules),
+    config: getConfigApi(modules),
+    debug: getDebugApi(modules),
+    events: getEventsApi(modules),
+    lightclient: getLightclientApi(modules),
+    lodestar: getLodestarApi(modules),
+    node: getNodeApi(modules),
+    validator: getValidatorApi(modules),
+  };
 }

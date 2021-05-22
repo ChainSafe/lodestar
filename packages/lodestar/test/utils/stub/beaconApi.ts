@@ -1,7 +1,6 @@
 import {IBeaconApi} from "../../../src/api/impl/beacon";
 import Sinon, {SinonSandbox, SinonStubbedInstance} from "sinon";
 import {BeaconBlockApi, IBeaconBlocksApi} from "../../../src/api/impl/beacon/blocks";
-import {ApiNamespace} from "../../../src/api";
 import {BeaconPoolApi, IBeaconPoolApi} from "../../../src/api/impl/beacon/pool";
 import {IBeaconStateApi} from "../../../src/api/impl/beacon/state/interface";
 import {BeaconStateApi} from "../../../src/api/impl/beacon/state/state";
@@ -12,7 +11,6 @@ export class StubbedBeaconApi implements SinonStubbedInstance<IBeaconApi> {
   pool: SinonStubbedInstance<IBeaconPoolApi>;
   getBlockStream: Sinon.SinonStubbedMember<IBeaconApi["getBlockStream"]>;
   getGenesis: Sinon.SinonStubbedMember<IBeaconApi["getGenesis"]>;
-  namespace: ApiNamespace.BEACON = ApiNamespace.BEACON;
 
   constructor(sandbox: SinonSandbox = Sinon) {
     this.state = sandbox.createStubInstance(BeaconStateApi);

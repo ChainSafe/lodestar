@@ -1,10 +1,7 @@
 import Sinon, {SinonSandbox, SinonStubbedInstance} from "sinon";
-import {ApiNamespace} from "../../../src/api";
 import {INodeApi} from "../../../src/api/impl/node";
 
 export class StubbedNodeApi implements SinonStubbedInstance<INodeApi> {
-  namespace: ApiNamespace.NODE = ApiNamespace.NODE;
-
   getNodeIdentity: Sinon.SinonStubbedMember<INodeApi["getNodeIdentity"]>;
   getNodeStatus: Sinon.SinonStubbedMember<INodeApi["getNodeStatus"]>;
   getPeer: Sinon.SinonStubbedMember<INodeApi["getPeer"]>;

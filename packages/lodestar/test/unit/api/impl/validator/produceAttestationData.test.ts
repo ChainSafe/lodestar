@@ -2,7 +2,7 @@ import {config} from "@chainsafe/lodestar-config/minimal";
 import {IBlockSummary} from "@chainsafe/lodestar-fork-choice";
 import sinon, {SinonStubbedInstance} from "sinon";
 import {IBeaconSync, SyncState} from "../../../../../src/sync/interface";
-import {IApiModules} from "../../../../../src/api/impl/interface";
+import {ApiModules} from "../../../../../src/api/impl/types";
 import {ValidatorApi} from "../../../../../src/api/impl/validator/validator";
 import {IEth1ForBlockProduction} from "../../../../../src/eth1";
 import {LocalClock} from "../../../../../src/chain/clock";
@@ -17,7 +17,7 @@ describe("api - validator - produceAttestationData", function () {
   const logger = testLogger();
   let eth1Stub: SinonStubbedInstance<IEth1ForBlockProduction>;
   let syncStub: SinonStubbedInstance<IBeaconSync>;
-  let modules: IApiModules;
+  let modules: ApiModules;
   let server: ApiImplTestModules;
 
   beforeEach(function () {

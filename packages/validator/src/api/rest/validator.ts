@@ -9,15 +9,13 @@ import {IApiClient} from "../interface";
 export function ValidatorApi(config: IBeaconConfig, client: HttpClient): IApiClient["validator"] {
   return {
     async getProposerDuties(epoch: Epoch): Promise<phase0.ProposerDutiesApi> {
-      const res = await client.get<{data: Json[]; dependentRoot: string}>(
-        `/eth/v1/validator/duties/proposer/${epoch.toString()}`
-      );
+      const res = await client.get<{data: Json[]; dependentRoot: string}>(`/eth/v1/validator/duties/proposer/${epoch}`);
       return config.types.phase0.ProposerDutiesApi.fromJson(res, {case: "snake"});
     },
 
     async getAttesterDuties(epoch: Epoch, indices: ValidatorIndex[]): Promise<phase0.AttesterDutiesApi> {
       const res = await client.post<string[], {data: Json[]; dependentRoot: string}>(
-        `/eth/v1/validator/duties/attester/${epoch.toString()}`,
+        `/eth/v1/validator/duties/attester/${epoch}`,
         indices.map((index) => config.types.ValidatorIndex.toJson(index) as string)
       );
       return config.types.phase0.AttesterDutiesApi.fromJson(res, {case: "snake"});
@@ -25,7 +23,7 @@ export function ValidatorApi(config: IBeaconConfig, client: HttpClient): IApiCli
 
     async getSyncCommitteeDuties(epoch: number, indices: ValidatorIndex[]): Promise<altair.SyncDutiesApi> {
       const res = await client.post<string[], {data: Json[]; dependentRoot: string}>(
-        `/eth/v1/validator/duties/sync/${epoch.toString()}`,
+        `/eth/v1/validator/duties/sync/${epoch}`,
         indices.map((index) => config.types.ValidatorIndex.toJson(index) as string)
       );
       return config.types.altair.SyncDutiesApi.fromJson(res, {case: "snake"});

@@ -52,7 +52,7 @@
     "ethereum",
     "eth2",
     "beacon",
-    "light-client",
+    "api",
     "blockchain"
   ]
 }

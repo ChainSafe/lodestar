@@ -9,7 +9,7 @@ import {LocalClock} from "../../../../../../src/chain/clock";
 import {FAR_FUTURE_EPOCH} from "../../../../../../src/constants";
 import {IEth1ForBlockProduction} from "../../../../../../src/eth1";
 import {IValidatorApi, ValidatorApi} from "../../../../../../src/api/impl/validator";
-import {IApiModules} from "../../../../../../src/api/impl/interface";
+import {ApiModules} from "../../../../../../src/api/impl/types";
 import {generateInitialMaxBalances} from "../../../../../utils/balances";
 import {generateState} from "../../../../../utils/state";
 import {IBeaconSync} from "../../../../../../src/sync";
@@ -30,7 +30,7 @@ describe("get proposers api impl", function () {
 
   let api: IValidatorApi;
   let server: ApiImplTestModules;
-  let modules: IApiModules;
+  let modules: ApiModules;
 
   beforeEach(function () {
     server = setupApiImplTestServer();

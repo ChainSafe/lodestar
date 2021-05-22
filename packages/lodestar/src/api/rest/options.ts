@@ -1,8 +1,8 @@
-import {ApiNamespace} from "../impl";
+import {Api} from "@chainsafe/lodestar-api";
 
 export interface IRestApiOptions {
   enabled: boolean;
-  api: ApiNamespace[];
+  api: (keyof Api)[];
   host: string;
   cors: string;
   port: number;
@@ -10,8 +10,8 @@ export interface IRestApiOptions {
 
 export const defaultApiRestOptions: IRestApiOptions = {
   enabled: false,
-  // ApiNamespace.DEBUG is not turned on by default
-  api: [ApiNamespace.BEACON, ApiNamespace.CONFIG, ApiNamespace.NODE, ApiNamespace.VALIDATOR, ApiNamespace.EVENTS],
+  // ApiNamespace "debug" is not turned on by default
+  api: ["beacon", "config", "events", "node", "validator"],
   host: "127.0.0.1",
   port: 9596,
   cors: "*",
