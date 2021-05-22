@@ -11,7 +11,6 @@ export type IValidatorCliArgs = IAccountValidatorArgs &
     force: boolean;
     graffiti: string;
     logFile: IBeaconPaths["logFile"];
-    interopIndexes?: string;
   };
 
 export const validatorOptions: ICliCommandOptions<IValidatorCliArgs> = {
