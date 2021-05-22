@@ -40,7 +40,7 @@ export async function beaconHandler(args: IBeaconArgs & IGlobalArgs): Promise<vo
   const options = beaconNodeOptions.getWithDefaults();
 
   const abortController = new AbortController();
-  const logger = getCliLogger(args, beaconPaths);
+  const logger = getCliLogger(args, beaconPaths, config);
 
   onGracefulShutdown(async () => {
     abortController.abort();
