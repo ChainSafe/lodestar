@@ -9,6 +9,7 @@ export type IValidatorCliArgs = IAccountValidatorArgs & {
   server: string;
   force: boolean;
   graffiti: string;
+  interopIndexes?: string;
   logFile: string;
   logLevel: LogLevel;
   logLevelFile: LogLevel;
@@ -40,6 +41,12 @@ export const validatorOptions: ICliCommandOptions<IValidatorCliArgs> = {
   graffiti: {
     description: "Specify your custom graffiti to be included in blocks (plain UTF8 text, 32 characters max)",
     // Don't use a default here since it should be computed only if necessary by getDefaultGraffiti()
+    type: "string",
+  },
+
+  interopIndexes: {
+    hidden: true,
+    description: "Range (inclusive) of interop key indexes to validate with: 0..16",
     type: "string",
   },
 };

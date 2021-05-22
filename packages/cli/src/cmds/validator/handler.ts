@@ -1,10 +1,12 @@
 import {AbortController} from "abort-controller";
+import {SecretKey} from "@chainsafe/bls";
+import {interopSecretKey} from "@chainsafe/lodestar-beacon-state-transition";
 import {ApiClientOverRest} from "@chainsafe/lodestar-validator";
 import {Validator, SlashingProtection} from "@chainsafe/lodestar-validator";
 import {LevelDbController} from "@chainsafe/lodestar-db";
 import {getBeaconConfigFromArgs} from "../../config";
 import {IGlobalArgs} from "../../options";
-import {YargsError, getDefaultGraffiti, initBLS, mkdir, getCliLogger} from "../../util";
+import {YargsError, getDefaultGraffiti, initBLS, mkdir, getCliLogger, parseRange} from "../../util";
 import {ValidatorDirManager} from "../../validatorDir";
 import {getAccountPaths} from "../account/paths";
 import {getValidatorPaths} from "./paths";
@@ -19,16 +21,14 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
   await initBLS();
 
   const graffiti = args.graffiti || getDefaultGraffiti();
-  const accountPaths = getAccountPaths(args);
+
   const validatorPaths = getValidatorPaths(args);
   const beaconPaths = getBeaconPaths(args);
   const config = getBeaconConfigFromArgs(args);
 
   const logger = getCliLogger(args, beaconPaths);
 
-  const validatorDirManager = new ValidatorDirManager(accountPaths);
-  const secretKeys = await validatorDirManager.decryptAllValidators({force: args.force});
-
+  const secretKeys = await getSecretKeys(args);
   if (secretKeys.length === 0) throw new YargsError("No validator keystores found");
   logger.info(`Decrypted ${secretKeys.length} validator keystores`);
 
@@ -56,4 +56,15 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
 
   onGracefulShutdownCbs.push(async () => await validator.stop());
   await validator.start();
+}
+
+async function getSecretKeys(args: IValidatorCliArgs & IGlobalArgs): Promise<SecretKey[]> {
+  if (args.interopIndexes) {
+    const indexes = parseRange(args.interopIndexes);
+    return indexes.map((index) => interopSecretKey(index));
+  } else {
+    const accountPaths = getAccountPaths(args);
+    const validatorDirManager = new ValidatorDirManager(accountPaths);
+    return await validatorDirManager.decryptAllValidators({force: args.force});
+  }
 }
