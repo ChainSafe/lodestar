@@ -148,15 +148,17 @@ describe("winston logger", () => {
   });
 });
 
-/** Wait for file to exist and return its contents */
+/** Wait for file to exist have some content, then return its contents */
 async function readFileWhenExists(filepath: string): Promise<string> {
   for (let i = 0; i < 200; i++) {
-    await new Promise((r) => setTimeout(r, 10));
     try {
-      return fs.readFileSync(filepath, "utf8").trim();
+      const data = fs.readFileSync(filepath, "utf8").trim();
+      // Winston will first create the file then write to it
+      if (data) return data;
     } catch (e) {
       if ((e as IoError).code !== "ENOENT") throw e;
     }
+    await new Promise((r) => setTimeout(r, 10));
   }
   throw Error("Timeout");
 }
