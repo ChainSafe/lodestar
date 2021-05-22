@@ -21,7 +21,7 @@ export function parseBeaconNodeArgs(args: IBeaconNodeArgs): RecursivePartial<IBe
   // Remove undefined values to allow deepmerge to inject default values downstream
   return removeUndefinedRecursive({
     api: api.parseArgs(args),
-    chain: {},
+    chain: chain.parseArgs(args),
     // db: {},
     eth1: eth1.parseArgs(args),
     logger: logger.parseArgs(args),
