@@ -14,11 +14,8 @@ import {
 } from "@chainsafe/lodestar-beacon-state-transition/lib/altair/epoch/balance";
 import {
   TIMELY_HEAD_FLAG_INDEX,
-  TIMELY_HEAD_WEIGHT,
   TIMELY_SOURCE_FLAG_INDEX,
-  TIMELY_SOURCE_WEIGHT,
   TIMELY_TARGET_FLAG_INDEX,
-  TIMELY_TARGET_WEIGHT,
 } from "@chainsafe/lodestar-beacon-state-transition/lib/altair/constants";
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
@@ -54,9 +51,9 @@ describeDirectorySpecTest<RewardTestCase, Output>(
     );
     const process = allForks.prepareEpochProcessState(wrappedState);
     return {
-      head_deltas: getFlagIndexDeltas(wrappedState, process, TIMELY_HEAD_FLAG_INDEX, TIMELY_HEAD_WEIGHT),
-      source_deltas: getFlagIndexDeltas(wrappedState, process, TIMELY_SOURCE_FLAG_INDEX, TIMELY_SOURCE_WEIGHT),
-      target_deltas: getFlagIndexDeltas(wrappedState, process, TIMELY_TARGET_FLAG_INDEX, TIMELY_TARGET_WEIGHT),
+      head_deltas: getFlagIndexDeltas(wrappedState, process, TIMELY_HEAD_FLAG_INDEX),
+      source_deltas: getFlagIndexDeltas(wrappedState, process, TIMELY_SOURCE_FLAG_INDEX),
+      target_deltas: getFlagIndexDeltas(wrappedState, process, TIMELY_TARGET_FLAG_INDEX),
       inactivity_penalty_deltas: getInactivityPenaltyDeltas(wrappedState, process),
     };
   },
