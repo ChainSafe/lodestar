@@ -27,7 +27,7 @@ export function processSyncCommittee(
   const committeeIndices = [];
   for (const committeePubkey of state.currentSyncCommittee.pubkeys) {
     for (const [index, pubkey] of allPubkeys.entries()) {
-      if (config.types.phase0.BLSPubkey.equals(pubkey, committeePubkey)) {
+      if (config.types.BLSPubkey.equals(pubkey, committeePubkey)) {
         committeeIndices.push(index);
       }
     }

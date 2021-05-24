@@ -4,7 +4,6 @@ import {MutableVector, PersistentVector, TransientVector} from "@chainsafe/persi
 import {Tree} from "@chainsafe/persistent-merkle-tree";
 import {unsafeUint8ArrayToTree} from "./unsafeUint8ArrayToTree";
 import {TIMELY_HEAD_FLAG_INDEX, TIMELY_SOURCE_FLAG_INDEX, TIMELY_TARGET_FLAG_INDEX} from "../../altair/constants";
-import {hasFlag} from "../../altair/misc";
 
 export interface IParticipationStatus {
   timelyHead: boolean;
