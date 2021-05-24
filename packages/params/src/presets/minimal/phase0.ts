@@ -1,9 +1,9 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 // Minimal preset
 
-export const phase0Json = {
-  CONFIG_NAME: "minimal",
+import {IPhase0Preset} from "../../preset";
 
+export const phase0: IPhase0Preset = {
   // Misc
   // ---------------------------------------------------------------
 
@@ -13,16 +13,20 @@ export const phase0Json = {
   TARGET_COMMITTEE_SIZE: 4,
   // 2**11 (= 2,048)
   MAX_VALIDATORS_PER_COMMITTEE: 2048,
+  /*
   // 2**2 (= 4)
   MIN_PER_EPOCH_CHURN_LIMIT: 4,
   // 2**16 (= 65,536)
   CHURN_LIMIT_QUOTIENT: 65536,
+  */
   // [customized] Faster, but unsecure.
   SHUFFLE_ROUND_COUNT: 10,
+  /*
   // [customized]
   MIN_GENESIS_ACTIVE_VALIDATOR_COUNT: 64,
   // Jan 3, 2020
   MIN_GENESIS_TIME: 1578009600,
+  */
   // 4
   HYSTERESIS_QUOTIENT: 4,
   // 1 (minus 0.25)
@@ -35,6 +39,7 @@ export const phase0Json = {
   // 2**1 (= 1)
   SAFE_SLOTS_TO_UPDATE_JUSTIFIED: 2,
 
+  /*
   // Validator
   // ---------------------------------------------------------------
   // [customized] process deposits more quickly, but insecure
@@ -55,18 +60,20 @@ export const phase0Json = {
   DEPOSIT_NETWORK_ID: 5,
   // **TBD**
   DEPOSIT_CONTRACT_ADDRESS: "0x1234567890123456789012345678901234567890",
+  */
 
   // Gwei values
   // ---------------------------------------------------------------
   // 2**0 * 10**9 (= 1,000,000,000) Gwei
-  MIN_DEPOSIT_AMOUNT: 1000000000,
+  MIN_DEPOSIT_AMOUNT: BigInt(1000000000),
   // 2**5 * 10**9 (= 32,000,000,000) Gwei
-  MAX_EFFECTIVE_BALANCE: 32000000000,
+  MAX_EFFECTIVE_BALANCE: BigInt(32000000000),
   // 2**4 * 10**9 (= 16,000,000,000) Gwei
-  EJECTION_BALANCE: 16000000000,
+  EJECTION_BALANCE: BigInt(16000000000),
   // 2**0 * 10**9 (= 1,000,000,000) Gwei
-  EFFECTIVE_BALANCE_INCREMENT: 1000000000,
+  EFFECTIVE_BALANCE_INCREMENT: BigInt(1000000000),
 
+  /*
   // Initial values
   // ---------------------------------------------------------------
   // Highest byte set to 0x01 to avoid collisions with mainnet versioning
@@ -79,6 +86,7 @@ export const phase0Json = {
   GENESIS_DELAY: 300,
   // [customized] Faster for testing purposes
   SECONDS_PER_SLOT: 6,
+  */
   // 2**0 (= 1) slots 6 seconds
   MIN_ATTESTATION_INCLUSION_DELAY: 1,
   // [customized] fast epochs
@@ -91,10 +99,12 @@ export const phase0Json = {
   EPOCHS_PER_ETH1_VOTING_PERIOD: 4,
   // [customized] smaller state
   SLOTS_PER_HISTORICAL_ROOT: 64,
+  /*
   // 2**8 (= 256) epochs
   MIN_VALIDATOR_WITHDRAWABILITY_DELAY: 256,
   // [customized] higher frequency of committee turnover and faster time to acceptable voluntary exit
   SHARD_COMMITTEE_PERIOD: 64,
+  */
   // 2**2 (= 4) epochs
   MIN_EPOCHS_TO_INACTIVITY_PENALTY: 4,
 
@@ -118,7 +128,7 @@ export const phase0Json = {
   // 2**3 (= 8)
   PROPOSER_REWARD_QUOTIENT: 8,
   // [customized] 2**25 (= 33,554,432)
-  INACTIVITY_PENALTY_QUOTIENT: 33554432,
+  INACTIVITY_PENALTY_QUOTIENT: BigInt(33554432),
   // [customized] 2**6 (= 64)
   MIN_SLASHING_PENALTY_QUOTIENT: 64,
   // [customized] 2 (lower safety margin than Phase 0 genesis but different than mainnet config for testing)
@@ -136,14 +146,4 @@ export const phase0Json = {
   MAX_DEPOSITS: 16,
   // 2**4 (= 16)
   MAX_VOLUNTARY_EXITS: 16,
-
-  // Signature domains
-  // ---------------------------------------------------------------
-  DOMAIN_BEACON_PROPOSER: "0x00000000",
-  DOMAIN_BEACON_ATTESTER: "0x01000000",
-  DOMAIN_RANDAO: "0x02000000",
-  DOMAIN_DEPOSIT: "0x03000000",
-  DOMAIN_VOLUNTARY_EXIT: "0x04000000",
-  DOMAIN_SELECTION_PROOF: "0x05000000",
-  DOMAIN_AGGREGATE_AND_PROOF: "0x06000000",
 };

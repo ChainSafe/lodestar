@@ -1,6 +1,6 @@
 import {expect} from "chai";
 import axios from "axios";
-import {createIBeaconParams, loadConfigYaml} from "../../src/utils";
+import {createIBeaconPreset, loadConfigYaml} from "../../src/utils";
 import * as mainnet from "../../src/presets/mainnet";
 import * as minimal from "../../src/presets/minimal";
 
@@ -11,7 +11,7 @@ async function downloadRemoteConfig(preset: "mainnet" | "minimal", commit: strin
   const altairUrl = `https://raw.githubusercontent.com/ethereum/eth2.0-specs/${commit}/configs/${preset}/altair.yaml`;
   const phase0Res = await axios({url: phase0Url, timeout: 30 * 1000});
   const altairRes = await axios({url: altairUrl, timeout: 30 * 1000});
-  return createIBeaconParams({
+  return createIBeaconPreset({
     ...loadConfigYaml(phase0Res.data),
     ...loadConfigYaml(altairRes.data),
   });
@@ -26,22 +26,22 @@ describe("Ensure config is synced", function () {
   const blacklist: string[] = [];
 
   it("mainnet", async function () {
-    const remoteParams = await downloadRemoteConfig("mainnet", mainnet.commit);
-    const localParams = {...mainnet.params};
+    const remotePreset = await downloadRemoteConfig("mainnet", mainnet.commit);
+    const localPreset = {...mainnet.params};
     for (const param of blacklist) {
-      delete remoteParams[param];
-      delete (localParams as Record<string, unknown>)[param];
+      delete remotePreset[param];
+      delete (localPreset as Record<string, unknown>)[param];
     }
-    expect(localParams).to.deep.equal(remoteParams);
+    expect(localPreset).to.deep.equal(remotePreset);
   });
 
   it("minimal", async function () {
-    const remoteParams = await downloadRemoteConfig("minimal", minimal.commit);
-    const localParams = {...minimal.params};
+    const remotePreset = await downloadRemoteConfig("minimal", minimal.commit);
+    const localPreset = {...minimal.params};
     for (const param of blacklist) {
-      delete remoteParams[param];
-      delete (localParams as Record<string, unknown>)[param];
+      delete remotePreset[param];
+      delete (localPreset as Record<string, unknown>)[param];
     }
-    expect(localParams).to.deep.equal(remoteParams);
+    expect(localPreset).to.deep.equal(remotePreset);
   });
 });
