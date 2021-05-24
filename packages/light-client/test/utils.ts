@@ -1,4 +1,4 @@
-import {PublicKey, SecretKey, Signature} from "@chainsafe/bls";
+import {aggregatePublicKeys, PublicKey, SecretKey, Signature} from "@chainsafe/bls";
 import {computeDomain, computeSigningRoot, interopSecretKey} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig, createIBeaconConfig} from "@chainsafe/lodestar-config";
 import {params as minimalParams} from "@chainsafe/lodestar-params/minimal";
@@ -15,7 +15,6 @@ export function createExtraMinimalConfig(): IBeaconConfig {
   return createIBeaconConfig({
     ...minimalParams,
     SYNC_COMMITTEE_SIZE: 4,
-    SYNC_PUBKEYS_PER_AGGREGATE: 2,
     EPOCHS_PER_SYNC_COMMITTEE_PERIOD: 4, // Must be higher than 3 to allow finalized updates
     SLOTS_PER_EPOCH: 4,
   });
@@ -62,17 +61,16 @@ export function getInteropSyncCommittee(config: IBeaconConfig, period: SyncPerio
   }
   const pks = sks.map((sk) => sk.toPublicKey());
   const pubkeys = pks.map((pk) => pk.toBytes());
-  const pubkeyAggregatesLen = Math.floor(config.params.SYNC_COMMITTEE_SIZE / config.params.SYNC_PUBKEYS_PER_AGGREGATE);
   return {
     sks,
     pks,
     syncCommittee: {
       pubkeys,
-      pubkeyAggregates: pubkeys.slice(0, pubkeyAggregatesLen),
+      aggregatePubkey: aggregatePublicKeys(pubkeys),
     },
     syncCommitteeFast: {
       pubkeys: pks,
-      pubkeyAggregates: pks.slice(0, pubkeyAggregatesLen),
+      aggregatePubkey: PublicKey.fromBytes(aggregatePublicKeys(pubkeys)),
     },
   };
 }

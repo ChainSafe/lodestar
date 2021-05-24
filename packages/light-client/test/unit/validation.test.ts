@@ -1,4 +1,4 @@
-import {SecretKey} from "@chainsafe/bls";
+import {aggregatePublicKeys, PublicKey, SecretKey} from "@chainsafe/bls";
 import {altair} from "@chainsafe/lodestar-types";
 import {FINALIZED_ROOT_INDEX, NEXT_SYNC_COMMITTEE_INDEX} from "@chainsafe/lodestar-params";
 import {validateLightClientUpdate} from "../../src/client/validation";
@@ -31,12 +31,9 @@ describe("validateLightClientUpdate", () => {
     const pubkeys = pks.map((pk) => pk.toBytes());
 
     // Create a sync committee with the keys that will sign the `syncAggregate`
-    const pubkeyAggregatesCount = Math.floor(
-      config.params.SYNC_COMMITTEE_SIZE / config.params.SYNC_PUBKEYS_PER_AGGREGATE
-    );
     const nextSyncCommittee: altair.SyncCommittee = {
       pubkeys,
-      pubkeyAggregates: pubkeys.slice(0, pubkeyAggregatesCount),
+      aggregatePubkey: aggregatePublicKeys(pubkeys),
     };
 
     // finalizedCheckpointState must have `nextSyncCommittee`
@@ -79,10 +76,13 @@ describe("validateLightClientUpdate", () => {
 
     snapshot = {
       header: defaultBeaconBlockHeader(config, snapshotHeaderSlot),
-      currentSyncCommittee: {pubkeys: [], pubkeyAggregates: []},
+      currentSyncCommittee: {
+        pubkeys: pks,
+        aggregatePubkey: PublicKey.fromBytes(aggregatePublicKeys(pubkeys)),
+      },
       nextSyncCommittee: {
         pubkeys: pks,
-        pubkeyAggregates: pks.slice(0, pubkeyAggregatesCount),
+        aggregatePubkey: PublicKey.fromBytes(aggregatePublicKeys(pubkeys)),
       },
     };
   });
