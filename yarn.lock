@@ -2067,10 +2067,10 @@
     fast-crc32c "^1.0.1"
     snappy "6.3.4"
 
-"@chainsafe/ssz@^0.8.5":
-  version "0.8.5"
-  resolved "https://registry.yarnpkg.com/@chainsafe/ssz/-/ssz-0.8.5.tgz#9040369fc24788e352d319fa0b9533dc1403c11d"
-  integrity sha512-Zmn9fDnhkg8ZM9muusn4SdS25S3xca0jnaYR2SeQ4AS+XFbwHlsSLVahK+lbnyT0HYOc1vLLYkufYwdd7TzclQ==
+"@chainsafe/ssz@^0.8.6":
+  version "0.8.6"
+  resolved "https://registry.yarnpkg.com/@chainsafe/ssz/-/ssz-0.8.6.tgz#bad15a401a210a8d978ac2c1b24b9d04c3e5b916"
+  integrity sha512-dooiXIgFg07uPkzRx/+Mpe2j7uPuD7Sx7VJ2tW+2Q1yxL/YXlSOeccwEeHiTAvlPP6E5bPmfYkWGtSS7lEckGQ==
   dependencies:
     "@chainsafe/as-sha256" "^0.2.2"
     "@chainsafe/persistent-merkle-tree" "^0.3.2"
