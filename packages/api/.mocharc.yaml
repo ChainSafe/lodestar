@@ -1,4 +1,4 @@
 colors: true
 require: ts-node/register
-timeout: 5000
+timeout: 2000
 exit: true

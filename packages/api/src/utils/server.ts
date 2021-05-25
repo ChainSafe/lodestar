@@ -79,6 +79,8 @@ export function getGenericServer<
         const data = (await api[routeKey](...args)) as Resolves<Api[keyof Api]>;
         if (returnType) {
           return returnType.toJson(data, jsonOpts);
+        } else {
+          return {};
         }
       },
     };
