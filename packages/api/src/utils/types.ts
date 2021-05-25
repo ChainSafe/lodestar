@@ -37,6 +37,15 @@ export const jsonOpts = {case: "snake" as const};
 /** All JSON inside the JS code must be camel case */
 export const codeCase = "camel" as const;
 
+export type RouteGroupDefinition<
+  Api extends Record<string, RouteGeneric>,
+  ReqTypes extends {[K in keyof Api]: ReqGeneric}
+> = {
+  routesData: RoutesData<Api>;
+  getReqSerdes: (config: IBeaconConfig) => RouteReqSerdes<Api, ReqTypes>;
+  getReturnTypes: (config: IBeaconConfig) => ReturnTypes<Api>;
+};
+
 /* eslint-disable @typescript-eslint/naming-convention */
 
 export type RouteDef = {

@@ -1,5 +1,5 @@
 import {routes} from "@chainsafe/lodestar-api";
-import {getGenericServer, jsonOpts} from "@chainsafe/lodestar-api/lib/utils";
+import {getGenericServer} from "@chainsafe/lodestar-api/lib/utils";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ApiController, ApiControllerGeneric, HttpHeader, MimeTypes} from "../types";
 
@@ -11,18 +11,18 @@ export function getRoutes(
   const returnTypes = routes.debug.getReturnTypes(config);
 
   const getStateHandler: ApiController<null, {stateId: string}>["handler"] = async function (req, resp) {
-    const args = reqsSerdes.getState.parseReq(req);
-    const resData = await this.api.debug.beacon.getState(...args);
+    const args = reqsSerdes.getStateV2.parseReq(req);
+    const resData = await api.getStateV2(...args);
 
-    const type = this.config.getForkTypes(resData.slot).BeaconState;
+    const type = config.getForkTypes(resData.data.slot).BeaconState;
     if (req.headers[HttpHeader.ACCEPT] === MimeTypes.SSZ) {
       return resp
         .status(200)
         .header(HttpHeader.CONTENT_TYPE, MimeTypes.SSZ)
-        .send(type.serialize(resData) as Buffer);
+        .send(type.serialize(resData.data) as Buffer);
     } else {
       // Send 200 JSON
-      return type.toJson(resData, jsonOpts);
+      return returnTypes.getStateV2.toJson(resData);
     }
   };
 

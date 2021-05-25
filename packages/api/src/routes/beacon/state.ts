@@ -1,4 +1,4 @@
-import {ContainerType, List} from "@chainsafe/ssz";
+import {ContainerType} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {phase0, CommitteeIndex, Slot, ValidatorIndex, Epoch, Root, Gwei} from "@chainsafe/lodestar-types";
 import {mapValues} from "@chainsafe/lodestar-utils";
@@ -52,7 +52,7 @@ export interface ValidatorBalance {
 export interface EpochCommitteeResponse {
   index: CommitteeIndex;
   slot: Slot;
-  validators: List<ValidatorIndex>;
+  validators: ValidatorIndex[];
 }
 
 export interface EpochSyncCommitteeResponse {

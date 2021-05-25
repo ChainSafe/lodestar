@@ -1,9 +1,11 @@
 import fastify, {ServerOptions} from "fastify";
 import {fetch} from "cross-fetch";
 import querystring from "querystring";
+import Sinon from "sinon";
+import {mapValues} from "@chainsafe/lodestar-utils";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {
   getGenericServer,
-  getFastifySchema,
   RouteGeneric,
   ReqGeneric,
   RoutesData,
@@ -11,17 +13,17 @@ import {
   ReturnTypes,
   FetchFn,
   FetchOpts,
+  Resolves,
+  RouteGroupDefinition,
+  getGenericClient,
 } from "../../src/utils";
+
+type IgnoreVoid<T> = T extends void ? undefined : T;
 
 export function getTestServer<
   Api extends Record<string, RouteGeneric>,
   ReqTypes extends {[K in keyof Api]: ReqGeneric}
->(
-  routesData: RoutesData<Api>,
-  reqSerdes: RouteReqSerdes<Api, ReqTypes>,
-  returnTypes: ReturnTypes<Api>,
-  api: Api
-): {baseUrl: string} {
+>(routesGroupDef: RouteGroupDefinition<Api, ReqTypes>, config: IBeaconConfig, api: Api): {baseUrl: string} {
   const port = 10101;
   const baseUrl = `http://127.0.0.1:${port}`;
 
@@ -36,19 +38,11 @@ export function getTestServer<
     done();
   });
 
-  const sampleServer = getGenericServer<Api, ReqTypes>(routesData, reqSerdes, returnTypes, api);
+  const genericServer = getGenericServer<Api, ReqTypes>(routesGroupDef, config, api);
 
-  // Register all route
-  for (const [key, routeData] of Object.entries(routesData)) {
-    const routeId = key as keyof Api;
-    const schema = reqSerdes[routeId].schema;
-
-    server.route({
-      url: routeData.url,
-      method: routeData.method,
-      handler: async (req) => (await sampleServer[routeId](req)) || {},
-      schema: schema && getFastifySchema(schema),
-    });
+  // Register all routes
+  for (const serverRoute of Object.values(genericServer)) {
+    server.route(serverRoute);
   }
 
   before("start server", async () => {

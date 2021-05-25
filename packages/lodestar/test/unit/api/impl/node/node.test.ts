@@ -1,8 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-return */
 import {Connection} from "libp2p";
-import {INodeApi} from "../../../../../src/api/impl/node";
-import {NodeApi} from "../../../../../src/api/impl/node/node";
+import {getNodeApi} from "../../../../../src/api/impl/node";
 import sinon, {SinonStubbedInstance} from "sinon";
 import {createPeerId, INetwork, Network} from "../../../../../src/network";
 import {BeaconSync, IBeaconSync} from "../../../../../src/sync";
@@ -13,8 +12,8 @@ import chaiAsPromised from "chai-as-promised";
 import Multiaddr from "multiaddr";
 import {MetadataController} from "../../../../../src/network/metadata";
 import {altair} from "@chainsafe/lodestar-types";
-import {NodePeer} from "../../../../../src/api/types";
 import {PeerStatus, PeerDirection} from "../../../../../src/network";
+import {routes} from "@chainsafe/lodestar-api";
 
 use(chaiAsPromised);
 
@@ -25,7 +24,7 @@ interface IPeerSummary {
   hasP2pAddress: boolean;
 }
 
-const toPeerSummary = (peer: NodePeer): IPeerSummary => {
+const toPeerSummary = (peer: routes.node.NodePeer): IPeerSummary => {
   return {
     direction: peer.direction,
     state: peer.state,
@@ -35,7 +34,7 @@ const toPeerSummary = (peer: NodePeer): IPeerSummary => {
 };
 
 describe("node api implementation", function () {
-  let api: INodeApi;
+  let api: ReturnType<typeof getNodeApi>;
   let networkStub: SinonStubbedInstance<INetwork>;
   let syncStub: SinonStubbedInstance<IBeaconSync>;
   let peerId: PeerId;
@@ -43,13 +42,13 @@ describe("node api implementation", function () {
   beforeEach(async function () {
     networkStub = sinon.createStubInstance(Network);
     syncStub = sinon.createStubInstance(BeaconSync);
-    api = new NodeApi({}, {network: networkStub, sync: syncStub});
+    api = getNodeApi({network: networkStub, sync: syncStub});
     peerId = await PeerId.create({keyType: "secp256k1"});
     sinon.stub(networkStub, "peerId").get(() => peerId);
     sinon.stub(networkStub, "localMultiaddrs").get(() => [new Multiaddr("/ip4/127.0.0.1/tcp/36000")]);
   });
 
-  describe("getNodeIdentity", function () {
+  describe("getNetworkIdentity", function () {
     it("should get node identity", async function () {
       const keypair = createKeypairFromPeerId(peerId);
       const enr = ENR.createV4(keypair.publicKey);
@@ -64,7 +63,7 @@ describe("node api implementation", function () {
           };
         },
       } as MetadataController;
-      const identity = await api.getNodeIdentity();
+      const {data: identity} = await api.getNetworkIdentity();
       expect(identity.peerId.startsWith("16")).to.be.true;
       expect(identity.enr.startsWith("enr:-")).to.be.true;
       expect(identity.discoveryAddresses.length).to.equal(1);
@@ -76,22 +75,8 @@ describe("node api implementation", function () {
 
     it("should get node identity - no enr", async function () {
       networkStub.getEnr.returns((null as unknown) as ENR);
-      const identity = await api.getNodeIdentity();
+      const {data: identity} = await api.getNetworkIdentity();
       expect(identity.enr).equal("");
-    });
-  });
-
-  describe("getNodeStatus", function () {
-    it("syncing", async function () {
-      syncStub.isSynced.returns(false);
-      const status = await api.getNodeStatus();
-      expect(status).to.equal("syncing");
-    });
-
-    it("ready", async function () {
-      syncStub.isSynced.resolves(true);
-      const status = await api.getNodeStatus();
-      expect(status).to.equal("ready");
     });
   });
 
@@ -110,7 +95,7 @@ describe("node api implementation", function () {
       ]);
       networkStub.getConnectionsByPeer.returns(connectionsByPeer);
 
-      const peers = await api.getPeers();
+      const {data: peers} = await api.getPeers();
       expect(peers.length).to.equal(2);
       expect(peers.map(toPeerSummary)).to.be.deep.equal([
         {direction: "outbound", state: "connected", hasP2pAddress: true, hasPeerId: true},
@@ -125,7 +110,7 @@ describe("node api implementation", function () {
       ]);
       networkStub.getConnectionsByPeer.returns(connectionsByPeer);
 
-      const peers = await api.getPeers();
+      const {data: peers} = await api.getPeers();
       // expect(peers[0].enr).not.empty;
       expect(peers.map(toPeerSummary)).to.be.deep.equal([
         {direction: "outbound", state: "disconnected", hasPeerId: true, hasP2pAddress: true},
@@ -144,7 +129,7 @@ describe("node api implementation", function () {
       ]);
       networkStub.getConnectionsByPeer.returns(connectionsByPeer);
 
-      const peer = await api.getPeer(peer1.toB58String());
+      const {data: peer} = await api.getPeer(peer1.toB58String());
       if (!peer) throw Error("getPeer returned no peer");
       expect(peer.peerId).to.equal(peer1.toB58String());
       expect(peer.lastSeenP2pAddress).not.empty;
@@ -167,7 +152,7 @@ describe("node api implementation", function () {
         headSlot: BigInt(2),
         syncDistance: BigInt(1),
       });
-      const syncStatus = await api.getSyncingStatus();
+      const {data: syncStatus} = await api.getSyncingStatus();
       expect(syncStatus.headSlot.toString()).to.equal("2");
       expect(syncStatus.syncDistance.toString()).to.equal("1");
     });
@@ -175,8 +160,8 @@ describe("node api implementation", function () {
 
   describe("getVersion", function () {
     it("success", async function () {
-      const version = await api.getVersion();
-      expect(version.startsWith("Lodestar")).to.be.true;
+      const {data} = await api.getNodeVersion();
+      expect(data.version.startsWith("Lodestar")).to.be.true;
     });
   });
 });

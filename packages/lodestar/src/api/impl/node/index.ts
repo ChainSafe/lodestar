@@ -70,7 +70,7 @@ export function getNodeApi({network, sync}: Pick<ApiModules, "network" | "sync">
     },
 
     async getSyncingStatus() {
-      return sync.getSyncStatus();
+      return {data: sync.getSyncStatus()};
     },
 
     async getHealth() {

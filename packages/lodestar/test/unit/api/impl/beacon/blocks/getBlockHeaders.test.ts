@@ -10,9 +10,11 @@ import {
 import deepmerge from "deepmerge";
 import {expect} from "chai";
 import {setupApiImplTestServer, ApiImplTestModules} from "../../index.test";
+import {toHexString} from "@chainsafe/ssz";
 
 describe("api - beacon - getBlockHeaders", function () {
   let server: ApiImplTestModules;
+  const parentRoot = toHexString(Buffer.alloc(32, 1));
 
   beforeEach(function () {
     server = setupApiImplTestServer();
@@ -79,7 +81,7 @@ describe("api - beacon - getBlockHeaders", function () {
       .returns(generateBlockSummary({blockRoot: config.types.phase0.BeaconBlock.hashTreeRoot(cannonical.message)}));
     server.dbStub.block.get.onFirstCall().resolves(generateSignedBlock({message: {slot: 1}}));
     server.dbStub.block.get.onSecondCall().resolves(generateSignedBlock({message: {slot: 2}}));
-    const blockHeaders = await server.blockApi.getBlockHeaders({parentRoot: Buffer.alloc(32, 1)});
+    const blockHeaders = await server.blockApi.getBlockHeaders({parentRoot});
     expect(blockHeaders.length).to.equal(3);
     expect(blockHeaders.filter((b) => b.canonical).length).to.equal(2);
   });
@@ -89,14 +91,14 @@ describe("api - beacon - getBlockHeaders", function () {
     server.forkChoiceStub.getBlockSummariesByParentRoot.returns([generateBlockSummary({slot: 1})]);
     server.forkChoiceStub.getCanonicalBlockSummaryAtSlot.withArgs(1).returns(generateBlockSummary());
     server.dbStub.block.get.resolves(generateSignedBlock({message: {slot: 1}}));
-    const blockHeaders = await server.blockApi.getBlockHeaders({parentRoot: Buffer.alloc(32, 1)});
+    const blockHeaders = await server.blockApi.getBlockHeaders({parentRoot});
     expect(blockHeaders.length).to.equal(1);
   });
 
   it("parent root - no non finalized blocks", async function () {
     server.dbStub.blockArchive.getByParentRoot.resolves(generateEmptySignedBlock());
     server.forkChoiceStub.getBlockSummariesByParentRoot.returns([]);
-    const blockHeaders = await server.blockApi.getBlockHeaders({parentRoot: Buffer.alloc(32, 1)});
+    const blockHeaders = await server.blockApi.getBlockHeaders({parentRoot});
     expect(blockHeaders.length).to.equal(1);
   });
 

@@ -3,15 +3,15 @@ import {mapValues} from "@chainsafe/lodestar-utils";
 import {
   ReqGeneric,
   RouteGeneric,
-  RoutesData,
   ReturnTypes,
   TypeJson,
   Resolves,
   jsonOpts,
-  RouteReqSerdes,
   RouteDef,
+  RouteGroupDefinition,
 } from "./types";
 import {getFastifySchema} from "./schema";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -57,23 +57,25 @@ export function getGenericServer<
   Api extends Record<string, RouteGeneric>,
   ReqTypes extends {[K in keyof Api]: ReqGeneric}
 >(
-  routesData: RoutesData<Api>,
-  reqsSerdes: RouteReqSerdes<Api, ReqTypes>,
-  returnTypes: ReturnTypes<Api>,
+  {routesData, getReqSerdes, getReturnTypes}: RouteGroupDefinition<Api, ReqTypes>,
+  config: IBeaconConfig,
   api: Api
 ): {[K in keyof Api]: GenericServerRoute} {
+  const reqSerdes = getReqSerdes(config);
+  const returnTypes = getReturnTypes(config);
+
   return mapValues(routesData, (routeDef, routeKey) => {
-    const reqSerdes = reqsSerdes[routeKey];
+    const routeSerdes = reqSerdes[routeKey];
     const returnType = returnTypes[routeKey as keyof ReturnTypes<Api>] as TypeJson<any> | null;
 
     return {
       url: routeDef.url,
       method: routeDef.method,
       id: routeKey as string,
-      schema: reqSerdes.schema && getFastifySchema(reqSerdes.schema),
+      schema: routeSerdes.schema && getFastifySchema(routeSerdes.schema),
 
       handler: async function handler(req: ReqGeneric): Promise<Json | void> {
-        const args: any[] = reqSerdes.parseReq(req as ReqTypes[keyof Api]);
+        const args: any[] = routeSerdes.parseReq(req as ReqTypes[keyof Api]);
         const data = (await api[routeKey](...args)) as Resolves<Api[keyof Api]>;
         if (returnType) {
           return returnType.toJson(data, jsonOpts);

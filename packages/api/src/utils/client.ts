@@ -1,8 +1,8 @@
 import {Json} from "@chainsafe/ssz";
 import {mapValues} from "@chainsafe/lodestar-utils";
-import {compileRouteUrlFormater} from "./urlFormat";
-import {RouteDef, ReqGeneric, RouteGeneric, RoutesData, ReturnTypes, TypeJson, RouteReqSerdes, jsonOpts} from "./types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {compileRouteUrlFormater} from "./urlFormat";
+import {RouteDef, ReqGeneric, RouteGeneric, ReturnTypes, TypeJson, jsonOpts, RouteGroupDefinition} from "./types";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -52,15 +52,7 @@ export function getGenericClient<
   Api extends Record<string, RouteGeneric>,
   ReqTypes extends {[K in keyof Api]: ReqGeneric}
 >(
-  {
-    routesData,
-    getReqSerdes,
-    getReturnTypes,
-  }: {
-    routesData: RoutesData<Api>;
-    getReqSerdes: (config: IBeaconConfig) => RouteReqSerdes<Api, ReqTypes>;
-    getReturnTypes: (config: IBeaconConfig) => ReturnTypes<Api>;
-  },
+  {routesData, getReqSerdes, getReturnTypes}: RouteGroupDefinition<Api, ReqTypes>,
   config: IBeaconConfig,
   fetchFn: FetchFn
 ): Api {
