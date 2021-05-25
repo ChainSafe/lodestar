@@ -193,8 +193,9 @@ export function rotateEpochs(
 
   // If crossing through the altair fork the caches will be empty, fill them up
   if (currEpoch === epochCtx.config.params.ALTAIR_FORK_EPOCH) {
-    epochCtx.currSyncCommitteeIndexes = getNextSyncCommitteeIndices(epochCtx.config, state);
-    epochCtx.nextSyncCommitteeIndexes = getNextSyncCommitteeIndices(epochCtx.config, state);
+    const firstCommitteeIndices = getNextSyncCommitteeIndices(epochCtx.config, state);
+    epochCtx.currSyncCommitteeIndexes = [...firstCommitteeIndices];
+    epochCtx.nextSyncCommitteeIndexes = [...firstCommitteeIndices];
     epochCtx.currSyncComitteeValidatorIndexMap = computeSyncComitteeMap(epochCtx.currSyncCommitteeIndexes);
     epochCtx.nextSyncComitteeValidatorIndexMap = computeSyncComitteeMap(epochCtx.nextSyncCommitteeIndexes);
   }

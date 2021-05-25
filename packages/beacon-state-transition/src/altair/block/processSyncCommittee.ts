@@ -40,7 +40,7 @@ export function processSyncCommittee(
     getBlockRootAtSlot(config, state, previousSlot),
     domain
   );
-  // different from the spec but not sure how to get through signature verification for default/empty SyncAggregate
+  // different from the spec but not sure how to get through signature verification for default/empty SyncAggregate in the spec test
   if (verifySignatures && participantIndices.length > 0) {
     assert.true(
       verifyAggregate(
