@@ -1,7 +1,6 @@
 import mitt from "mitt";
 import {altair, Root, Slot, SyncPeriod} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {LIGHT_CLIENT_UPDATE_TIMEOUT} from "@chainsafe/lodestar-params";
 import {computeSyncPeriodAtSlot, ZERO_HASH} from "@chainsafe/lodestar-beacon-state-transition";
 import {TreeOffsetProof} from "@chainsafe/persistent-merkle-tree";
 import {toHexString} from "@chainsafe/ssz";
@@ -136,11 +135,14 @@ export class Lightclient {
       this.store.bestUpdates.set(syncPeriod, update);
     }
 
+    const {SLOTS_PER_EPOCH, EPOCHS_PER_SYNC_COMMITTEE_PERIOD} = this.config.params;
+    const updateTimeout = SLOTS_PER_EPOCH * EPOCHS_PER_SYNC_COMMITTEE_PERIOD;
+
     // Apply update if (1) 2/3 quorum is reached and (2) we have a finality proof.
     // Note that (2) means that the current light client design needs finality.
     // It may be changed to re-organizable light client design. See the on-going issue eth2.0-specs#2182.
     if (
-      sumBits(update.syncCommitteeBits) * 3 > update.syncCommitteeBits.length * 2 &&
+      sumBits(update.syncCommitteeBits) * 3 >= update.syncCommitteeBits.length * 2 &&
       !isEmptyHeader(this.config, update.finalityHeader)
     ) {
       this.applyLightClientUpdate(update);
@@ -148,7 +150,7 @@ export class Lightclient {
     }
 
     // Forced best update when the update timeout has elapsed
-    else if (this.clock.currentSlot > this.store.snapshot.header.slot + LIGHT_CLIENT_UPDATE_TIMEOUT) {
+    else if (this.clock.currentSlot > this.store.snapshot.header.slot + updateTimeout) {
       const prevSyncPeriod = computeSyncPeriodAtSlot(this.config, this.store.snapshot.header.slot);
       const bestUpdate = this.store.bestUpdates.get(prevSyncPeriod);
       if (bestUpdate) {

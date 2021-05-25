@@ -13,8 +13,6 @@ export const ATTESTATION_SUBNET_COUNT = 64;
 export const SYNC_COMMITTEE_SUBNET_COUNT = 4;
 
 export const MIN_SYNC_COMMITTEE_PARTICIPANTS = 1;
-//~27 hours
-export const LIGHT_CLIENT_UPDATE_TIMEOUT = 2 ** 13;
 
 // Lightclient pre-computed
 /**
