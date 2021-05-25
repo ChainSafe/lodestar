@@ -1,36 +1,41 @@
-import {Api} from "@chainsafe/lodestar-api";
 import {ReqGeneric} from "@chainsafe/lodestar-api/lib/utils";
-import {IncomingMessage, Server, ServerResponse} from "http";
 import {
-  DefaultBody,
-  DefaultHeaders,
-  DefaultParams,
-  DefaultQuery,
-  HTTPMethod,
-  RequestHandler,
-  RouteShorthandOptions,
+  ContextConfigDefault,
+  FastifySchema,
+  HTTPMethods,
+  RawReplyDefaultExpression,
+  RawRequestDefaultExpression,
+  RawServerDefault,
+  RouteHandlerMethod,
 } from "fastify";
 
+/* eslint-disable @typescript-eslint/naming-convention */
+
 // eslint-disable-next-line @typescript-eslint/naming-convention
-export type ApiController<
-  Query = DefaultQuery,
-  Params = DefaultParams,
-  Body = DefaultBody,
-  Headers = DefaultHeaders
-> = {
+export type ApiController<Req extends ReqGeneric = ReqGeneric> = {
   url: string;
-  method: HTTPMethod;
-  handler: RequestHandler<IncomingMessage, ServerResponse, Query, Params, Headers, Body>;
-  schema?: RouteShorthandOptions<Server, IncomingMessage, ServerResponse, Query, Params, Headers, Body>["schema"];
+  method: HTTPMethods;
+  handler: FastifyHandler<Req>;
+  schema?: FastifySchema;
   /** OperationId as defined in https://github.com/ethereum/eth2.0-APIs/blob/18cb6ff152b33a5f34c377f00611821942955c82/apis/beacon/blocks/attestations.yaml#L2 */
   id: string;
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type ApiControllerGeneric = ApiController<any, any, any, any>;
+type FastifyHandler<Req extends ReqGeneric> = RouteHandlerMethod<
+  RawServerDefault,
+  RawRequestDefaultExpression<RawServerDefault>,
+  RawReplyDefaultExpression<RawServerDefault>,
+  {
+    Body: Req["body"];
+    Querystring: Req["query"];
+    Params: Req["params"];
+  },
+  ContextConfigDefault
+>;
 
 export type ApiControllers<Api extends Record<string, unknown>, ReqTypes extends {[K in keyof Api]: ReqGeneric}> = {
-  [K in keyof Api]: ApiController<ReqTypes[K]["query"], ReqTypes[K]["params"], ReqTypes[K]["body"]>;
+  // TODO: Use ReqTypes declarations
+  [K in keyof Api]: ApiController<ReqTypes[K]>;
 };
 
 export enum HttpHeader {
@@ -45,15 +50,3 @@ export enum MimeTypes {
 export type RouteConfig = {
   operationId: ApiController["id"];
 };
-
-export type ApiNamespace = keyof Api;
-export const apiNamespaces: ApiNamespace[] = [
-  "beacon",
-  "validator",
-  "node",
-  "events",
-  "debug",
-  "config",
-  "lightclient",
-  "lodestar",
-];

@@ -3,7 +3,7 @@ import {IBeaconParams, BeaconParams} from "@chainsafe/lodestar-params";
 import {Bytes32, Number64, phase0} from "@chainsafe/lodestar-types";
 import {mapValues} from "@chainsafe/lodestar-utils";
 import {ContainerType} from "@chainsafe/ssz";
-import {ArrayOf, ContainerData, reqEmpty, ReturnTypes, RouteReqSerdes, RoutesData} from "../utils";
+import {ArrayOf, ContainerData, ReqEmpty, reqEmpty, ReturnTypes, RouteReqSerdes, RoutesData} from "../utils";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
@@ -46,7 +46,7 @@ export const routesData: RoutesData<Api> = {
   getSpec: {url: "/eth/v1/config/spec", method: "GET"},
 };
 
-export type ReqTypes = {[K in keyof Api]: Record<string, never>};
+export type ReqTypes = {[K in keyof Api]: ReqEmpty};
 
 export function getReqSerdes(): RouteReqSerdes<Api, ReqTypes> {
   return mapValues(routesData, () => reqEmpty);

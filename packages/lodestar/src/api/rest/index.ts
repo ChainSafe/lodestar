@@ -1,7 +1,5 @@
-import fastify, {FastifyError, FastifyInstance, ServerOptions} from "fastify";
+import fastify, {FastifyError, FastifyInstance} from "fastify";
 import fastifyCors from "fastify-cors";
-import {FastifySSEPlugin} from "fastify-sse-v2";
-import {IncomingMessage, Server, ServerResponse} from "http";
 import querystring from "querystring";
 import {Api} from "@chainsafe/lodestar-api";
 import {ErrorAborted, ILogger} from "@chainsafe/lodestar-utils";
@@ -34,10 +32,8 @@ export class RestApi {
     const server = fastify({
       logger: false,
       ajv: {customOptions: {coerceTypes: "array"}},
-      querystringParser: querystring.parse as ServerOptions["querystringParser"],
+      querystringParser: querystring.parse,
     });
-
-    server.register(FastifySSEPlugin);
 
     // Instantiate and register the routes with matching namespace in `opts.api`
     registerRoutes(server, modules.config, modules.api, opts.api);
@@ -45,30 +41,28 @@ export class RestApi {
     // To parse our ApiError -> statusCode
     server.setErrorHandler((err, req, res) => {
       if ((err as FastifyError).validation) {
-        res.status(400).send((err as FastifyError).validation);
+        void res.status(400).send((err as FastifyError).validation);
       } else {
         // Convert our custom ApiError into status code
         const statusCode = err instanceof ApiError ? err.statusCode : 500;
-        res.status(statusCode).send(err);
+        void res.status(statusCode).send(err);
       }
     });
 
     if (opts.cors) {
-      server.register(fastifyCors as fastify.Plugin<Server, IncomingMessage, ServerResponse, Record<string, unknown>>, {
-        origin: opts.cors,
-      });
+      void server.register(fastifyCors, {origin: opts.cors});
     }
 
     // Log all incoming request to debug (before parsing). TODO: Should we hook latter in the lifecycle? https://www.fastify.io/docs/latest/Lifecycle/
     server.addHook("onRequest", (req) => {
-      const url = req.req.url ? req.req.url.split("?")[0] : "-";
-      this.logger.debug(`Req ${req.id} ${req.ip} ${req.req.method}:${url}`);
+      const url = req.raw.url ? req.raw.url.split("?")[0] : "-";
+      this.logger.debug(`Req ${req.id} ${req.ip} ${req.raw.method}:${url}`);
     });
 
     // Log after response
     server.addHook("onResponse", async (req, res) => {
       const config = res.context.config as RouteConfig;
-      this.logger.debug(`Res ${req.id} ${config} - ${res.res.statusCode}`);
+      this.logger.debug(`Res ${req.id} ${config} - ${res.raw.statusCode}`);
 
       if (modules.metrics) {
         modules.metrics?.apiRestResponseTime.observe({operationId: config.operationId}, res.getResponseTime() / 1000);

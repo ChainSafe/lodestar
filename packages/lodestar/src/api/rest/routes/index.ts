@@ -1,7 +1,7 @@
 import {Api} from "@chainsafe/lodestar-api/lib/interface";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {FastifyInstance} from "fastify";
-import {ApiControllerGeneric, ApiNamespace, RouteConfig} from "../types";
+import {ApiController, RouteConfig} from "../types";
 import * as beacon from "./beacon";
 import * as configApi from "./config";
 import * as debug from "./debug";
@@ -15,12 +15,14 @@ export function registerRoutes(
   fastify: FastifyInstance,
   config: IBeaconConfig,
   api: Api,
-  enabledNamespaces: ApiNamespace[]
+  enabledNamespaces: (keyof Api)[]
 ): void {
   const routesByNamespace: {
     // Enforces that we are declaring routes for every routeId in `Api`
     [K in keyof Api]: {
-      [K2 in keyof Api[K]]: ApiControllerGeneric;
+      // The ReqTypes are enforced in each getRoutes return type
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      [K2 in keyof Api[K]]: ApiController<any>;
     };
   } = {
     // Initializes route types and their definitions
@@ -29,7 +31,7 @@ export function registerRoutes(
     debug: debug.getRoutes(config, api.debug),
     events: events.getRoutes(config, api.events),
     lightclient: lightclient.getRoutes(config, api.lightclient),
-    lodestar: lodestar.getRoutes(api.lodestar),
+    lodestar: lodestar.getRoutes(config, api.lodestar),
     node: node.getRoutes(config, api.node),
     validator: validator.getRoutes(config, api.validator),
   };

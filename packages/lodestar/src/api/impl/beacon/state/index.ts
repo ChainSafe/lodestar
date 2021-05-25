@@ -1,7 +1,7 @@
 import {routes} from "@chainsafe/lodestar-api";
 import {Api as IBeaconStateApi} from "@chainsafe/lodestar-api/lib/routes/beacon/state";
-import {phase0, allForks, altair} from "@chainsafe/lodestar-types";
-import {List, readonlyValues} from "@chainsafe/ssz";
+import {allForks, altair} from "@chainsafe/lodestar-types";
+import {readonlyValues} from "@chainsafe/ssz";
 import {computeEpochAtSlot, getCurrentEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 import {ApiError} from "../../errors";
 import {ApiModules} from "../../types";
@@ -148,7 +148,7 @@ export function getBeaconStateApi({chain, config, db}: Pick<ApiModules, "chain" 
             {
               index: committeeIndex,
               slot,
-              validators: committee as List<phase0.ValidatorIndex>,
+              validators: committee,
             },
           ];
         });

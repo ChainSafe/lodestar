@@ -1,6 +1,6 @@
 import {Epoch} from "@chainsafe/lodestar-types";
 import {mapValues} from "@chainsafe/lodestar-utils";
-import {jsonType, reqEmpty, ReturnTypes, RouteReqSerdes, RoutesData, sameType} from "../utils";
+import {jsonType, ReqEmpty, reqEmpty, ReturnTypes, RouteReqSerdes, RoutesData, sameType} from "../utils";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
@@ -33,7 +33,7 @@ export const routesData: RoutesData<Api> = {
   getSyncChainsDebugState: {url: "/eth/v1/lodestar/sync-chains-debug-state", method: "GET"},
 };
 
-export type ReqTypes = {[K in keyof Api]: Record<string, never>};
+export type ReqTypes = {[K in keyof Api]: ReqEmpty};
 
 export function getReqSerdes(): RouteReqSerdes<Api, ReqTypes> {
   return mapValues(routesData, () => reqEmpty);

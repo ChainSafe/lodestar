@@ -18,17 +18,21 @@ export function getRoutes(
         const controller = new AbortController();
 
         try {
-          res.header("Content-Type", "text/event-stream");
-          res.header("Cache-Control", "no-cache,no-transform");
-          res.header("Connection", "keep-alive");
-          // It was reported that chrome and firefox do not play well with compressed event-streams https://github.com/lolo32/fastify-sse/issues/2
-          res.header("x-no-compression", 1);
+          await res.headers({
+            "Content-Type": "text/event-stream",
+            "Cache-Control": "no-cache,no-transform",
+            // prettier-ignore
+            // eslint-disable-next-line
+            "Connection": "keep-alive",
+            // It was reported that chrome and firefox do not play well with compressed event-streams https://github.com/lolo32/fastify-sse/issues/2
+            "x-no-compression": 1,
+          });
 
           await new Promise<void>((resolve, reject) => {
             api.eventstream(req.query.topics, controller.signal, (event) => {
               try {
                 const data = eventSerdes.toJson(event);
-                res.res.write(`event: ${event.type}\ndata: ${JSON.stringify(data)}\n\n`);
+                res.raw.write(`event: ${event.type}\ndata: ${JSON.stringify(data)}\n\n`);
               } catch (e) {
                 reject(e);
               }

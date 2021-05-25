@@ -44,10 +44,10 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 // - need to convert BigInt, 0x01 to bytes, etc.
 // ?? - Define a return SSZ type for the routes that need it?
 
-export type GenericServerRoute = {
+export type GenericServerRoute<Req extends ReqGeneric = ReqGeneric> = {
   url: RouteDef["url"];
   method: RouteDef["method"];
-  handler: (req: ReqGeneric) => Promise<Json | void>;
+  handler: (req: Req) => Promise<Json | void>;
   schema?: Record<string, any>;
   /** OperationId as defined in https://github.com/ethereum/eth2.0-APIs/blob/18cb6ff152b33a5f34c377f00611821942955c82/apis/beacon/blocks/attestations.yaml#L2 */
   id: string;
@@ -60,7 +60,7 @@ export function getGenericServer<
   {routesData, getReqSerdes, getReturnTypes}: RouteGroupDefinition<Api, ReqTypes>,
   config: IBeaconConfig,
   api: Api
-): {[K in keyof Api]: GenericServerRoute} {
+): {[K in keyof Api]: GenericServerRoute<ReqTypes[K]>} {
   const reqSerdes = getReqSerdes(config);
   const returnTypes = getReturnTypes(config);
 

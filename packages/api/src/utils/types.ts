@@ -61,6 +61,8 @@ export type ReqGeneric = {
   body?: any;
 };
 
+export type ReqEmpty = ReqGeneric;
+
 export type RouteGeneric = (...args: any) => Promise<any>;
 
 type ThenArg<T> = T extends PromiseLike<infer U> ? U : T;
@@ -119,7 +121,7 @@ export type GetRouteReqSerdes<
 //
 
 /** Shortcut for routes that have no params, query nor body */
-export const reqEmpty: ReqDef<() => void, Record<string, never>> = {
+export const reqEmpty: ReqDef<() => void, ReqEmpty> = {
   writeReq: () => ({}),
   parseReq: () => [] as [],
 };

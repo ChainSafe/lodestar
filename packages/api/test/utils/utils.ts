@@ -1,24 +1,8 @@
-import fastify, {ServerOptions} from "fastify";
+import fastify from "fastify";
 import {fetch} from "cross-fetch";
 import querystring from "querystring";
-import Sinon from "sinon";
-import {mapValues} from "@chainsafe/lodestar-utils";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {
-  getGenericServer,
-  RouteGeneric,
-  ReqGeneric,
-  RoutesData,
-  RouteReqSerdes,
-  ReturnTypes,
-  FetchFn,
-  FetchOpts,
-  Resolves,
-  RouteGroupDefinition,
-  getGenericClient,
-} from "../../src/utils";
-
-type IgnoreVoid<T> = T extends void ? undefined : T;
+import {getGenericServer, RouteGeneric, ReqGeneric, FetchFn, FetchOpts, RouteGroupDefinition} from "../../src/utils";
 
 export function getTestServer<
   Api extends Record<string, RouteGeneric>,
@@ -29,7 +13,7 @@ export function getTestServer<
 
   const server = fastify({
     ajv: {customOptions: {coerceTypes: "array"}},
-    querystringParser: querystring.parse as ServerOptions["querystringParser"],
+    querystringParser: querystring.parse,
   });
 
   server.addHook("onError", (request, reply, error, done) => {
