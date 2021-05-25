@@ -22,7 +22,7 @@ export function getLightclientApi({
   return {
     // Proofs API
 
-    async createStateProof(stateId, paths) {
+    async getStateProof(stateId, paths) {
       const state = await resolveStateId(config, chain, db, stateId);
       const stateTreeBacked = config.types.altair.BeaconState.createTreeBackedFromStruct(state as altair.BeaconState);
       return {data: stateTreeBacked.createProof(paths)};

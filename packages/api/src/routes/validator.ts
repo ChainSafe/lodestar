@@ -205,11 +205,11 @@ export const routesData: RoutesData<Api> = {
 };
 
 export type ReqTypes = {
-  [K in keyof ReturnType<typeof getReqSerdes>]: ReturnType<ReturnType<typeof getReqSerdes>[K]["writeReq"]>;
+  [K in keyof ReturnType<typeof getReqSerializers>]: ReturnType<ReturnType<typeof getReqSerializers>[K]["writeReq"]>;
 };
 
 // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types, @typescript-eslint/explicit-function-return-type
-export function getReqSerdes(config: IBeaconConfig) {
+export function getReqSerializers(config: IBeaconConfig) {
   const t = mapValues(routesData, () => (arg: unknown) => arg) as RouteReqTypeGenerator<Api>;
 
   const BeaconCommitteeSubscription = new ContainerType<BeaconCommitteeSubscription>({

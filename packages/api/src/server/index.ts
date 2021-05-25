@@ -1,7 +1,9 @@
-import {Api} from "@chainsafe/lodestar-api/lib/interface";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
+// eslint-disable-next-line import/no-extraneous-dependencies
 import {FastifyInstance} from "fastify";
-import {ApiController, RouteConfig} from "../types";
+import {Api} from "../interface";
+import {ServerRoute} from "./utils";
+
 import * as beacon from "./beacon";
 import * as configApi from "./config";
 import * as debug from "./debug";
@@ -10,6 +12,10 @@ import * as lightclient from "./lightclient";
 import * as lodestar from "./lodestar";
 import * as node from "./node";
 import * as validator from "./validator";
+
+export type RouteConfig = {
+  operationId: ServerRoute["id"];
+};
 
 export function registerRoutes(
   fastify: FastifyInstance,
@@ -22,7 +28,7 @@ export function registerRoutes(
     [K in keyof Api]: {
       // The ReqTypes are enforced in each getRoutes return type
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      [K2 in keyof Api[K]]: ApiController<any>;
+      [K2 in keyof Api[K]]: ServerRoute<any>;
     };
   } = {
     // Initializes route types and their definitions

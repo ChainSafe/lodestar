@@ -2,7 +2,9 @@ import Sinon from "sinon";
 import {expect} from "chai";
 import {mapValues} from "@chainsafe/lodestar-utils";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {RouteGeneric, ReqGeneric, Resolves, RouteGroupDefinition, getGenericClient} from "../../src/utils";
+import {RouteGeneric, ReqGeneric, Resolves} from "../../src/utils";
+import {FetchFn} from "../../src/client/utils";
+import {ServerRoutes} from "../../src/server/utils";
 import {getFetchFn, getTestServer} from "./utils";
 
 type IgnoreVoid<T> = T extends void ? undefined : T;
@@ -19,24 +21,36 @@ export function runGenericServerTest<
   ReqTypes extends {[K in keyof Api]: ReqGeneric}
 >(
   config: IBeaconConfig,
-  routesGroupDef: RouteGroupDefinition<Api, ReqTypes>,
+  getClient: (config: IBeaconConfig, fetchFn: FetchFn) => Api,
+  getRoutes: (config: IBeaconConfig, api: Api) => ServerRoutes<Api, ReqTypes>,
   testCases: GenericServerTestCases<Api>
 ): void {
-  const mockApi = mapValues(routesGroupDef.routesData, () => Sinon.stub()) as Sinon.SinonStubbedInstance<Api> & Api;
-  const {baseUrl} = getTestServer<Api, ReqTypes>(routesGroupDef, config, mockApi);
+  const mockApi = mapValues(testCases, () => Sinon.stub()) as Sinon.SinonStubbedInstance<Api> & Api;
+  const {baseUrl, server} = getTestServer();
+
   const fetchFn = getFetchFn(baseUrl);
-  const client = getGenericClient<Api, ReqTypes>(routesGroupDef, config, fetchFn);
+  const client = getClient(config, fetchFn);
+
+  const routes = getRoutes(config, mockApi);
+  for (const key of Object.keys(testCases)) {
+    const routeId = key as keyof typeof routes;
+    const route = routes[routeId];
+    server.route({
+      url: route.url,
+      method: route.method,
+      handler: route.handler,
+      schema: route.schema,
+    });
+
+    // Register mock data for all routes
+    mockApi[routeId].resolves(testCases[routeId].res as any);
+  }
 
   for (const key of Object.keys(testCases)) {
     const routeId = key as keyof Api;
     const testCase = testCases[routeId];
 
     it(routeId as string, async () => {
-      mockApi[routeId].reset();
-
-      // Register mock data
-      mockApi[routeId].resolves(testCase.res as any);
-
       // Do the call
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const res = await (client[routeId] as RouteGeneric)(...(testCase.args as any[]));

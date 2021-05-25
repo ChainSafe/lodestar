@@ -37,19 +37,19 @@ export const routesData: RoutesData<Api> = {
   ...state.routesData,
 };
 
+export type ReqTypes = {
+  [K in keyof ReturnType<typeof getReqSerializers>]: ReturnType<ReturnType<typeof getReqSerializers>[K]["writeReq"]>;
+};
+
 // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types, @typescript-eslint/explicit-function-return-type
-export function getReqSerdes(config: IBeaconConfig) {
+export function getReqSerializers(config: IBeaconConfig) {
   return {
     getGenesis: reqEmpty,
-    ...block.getReqSerdes(config),
-    ...pool.getReqSerdes(config),
-    ...state.getReqSerdes(),
+    ...block.getReqSerializers(config),
+    ...pool.getReqSerializers(config),
+    ...state.getReqSerializers(),
   };
 }
-
-export type ReqTypes = {
-  [K in keyof ReturnType<typeof getReqSerdes>]: ReturnType<ReturnType<typeof getReqSerdes>[K]["writeReq"]>;
-};
 
 export function getReturnTypes(config: IBeaconConfig): ReturnTypes<Api> {
   return {

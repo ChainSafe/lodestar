@@ -35,7 +35,7 @@ export const routesData: RoutesData<Api> = {
 
 export type ReqTypes = {[K in keyof Api]: ReqEmpty};
 
-export function getReqSerdes(): RouteReqSerdes<Api, ReqTypes> {
+export function getReqSerializers(): RouteReqSerdes<Api, ReqTypes> {
   return mapValues(routesData, () => reqEmpty);
 }
 

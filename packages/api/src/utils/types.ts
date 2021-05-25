@@ -42,7 +42,7 @@ export type RouteGroupDefinition<
   ReqTypes extends {[K in keyof Api]: ReqGeneric}
 > = {
   routesData: RoutesData<Api>;
-  getReqSerdes: (config: IBeaconConfig) => RouteReqSerdes<Api, ReqTypes>;
+  getReqSerializers: (config: IBeaconConfig) => RouteReqSerdes<Api, ReqTypes>;
   getReturnTypes: (config: IBeaconConfig) => ReturnTypes<Api>;
 };
 
@@ -63,7 +63,7 @@ export type ReqGeneric = {
 
 export type ReqEmpty = ReqGeneric;
 
-export type RouteGeneric = (...args: any) => Promise<any>;
+export type RouteGeneric = (...args: any) => PromiseLike<any> | any;
 
 type ThenArg<T> = T extends PromiseLike<infer U> ? U : T;
 export type Resolves<T extends (...args: any) => any> = ThenArg<ReturnType<T>>;
@@ -77,7 +77,7 @@ export type TypeJson<T> = {
 // REQ
 //
 
-export type ReqDef<Fn extends (...args: any) => any, ReqType extends ReqGeneric> = {
+export type ReqSerializer<Fn extends (...args: any) => any, ReqType extends ReqGeneric> = {
   writeReq: (...args: Parameters<Fn>) => ReqType;
   parseReq: (arg: ReqType) => Parameters<Fn>;
   schema?: SchemaDefinition<ReqType>;
@@ -87,11 +87,11 @@ export type RouteReqSerdes<
   Api extends Record<string, RouteGeneric>,
   ReqTypes extends {[K in keyof Api]: ReqGeneric}
 > = {
-  [K in keyof Api]: ReqDef<Api[K], ReqTypes[K]>;
+  [K in keyof Api]: ReqSerializer<Api[K], ReqTypes[K]>;
 };
 
 /** Curried definition to infer only one of the two generic types */
-export type ReqGenArg<Fn extends (...args: any) => any, ReqType extends ReqGeneric> = ReqDef<Fn, ReqType>;
+export type ReqGenArg<Fn extends (...args: any) => any, ReqType extends ReqGeneric> = ReqSerializer<Fn, ReqType>;
 
 export type RouteReqTypeGenerator<Api extends Record<string, RouteGeneric>> = {
   [K in keyof Api]: <ReqType extends ReqGeneric>(arg: ReqGenArg<Api[K], ReqType>) => ReqGenArg<Api[K], ReqType>;
@@ -121,7 +121,7 @@ export type GetRouteReqSerdes<
 //
 
 /** Shortcut for routes that have no params, query nor body */
-export const reqEmpty: ReqDef<() => void, ReqEmpty> = {
+export const reqEmpty: ReqSerializer<() => void, ReqEmpty> = {
   writeReq: () => ({}),
   parseReq: () => [] as [],
 };

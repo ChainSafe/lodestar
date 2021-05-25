@@ -1,5 +1,6 @@
 import {ReqGeneric} from "./types";
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type JsonSchema = Record<string, any>;
 type JsonSchemaObj = {
   type: "object";
@@ -26,6 +27,7 @@ export enum Schema {
   StringArray,
   Object,
   ObjectArray,
+  AnyArray,
 }
 
 function getJsonSchemaItem(schema: Schema): JsonSchema {
@@ -33,31 +35,25 @@ function getJsonSchemaItem(schema: Schema): JsonSchema {
     case Schema.Uint:
     case Schema.UintRequired:
       return {type: "number", minimum: 0};
+
     case Schema.UintArray:
-      return {
-        type: "array",
-        items: {type: "number", minimum: 0},
-      };
+      return {type: "array", items: {type: "number", minimum: 0}};
 
     case Schema.String:
     case Schema.StringRequired:
       return {type: "string"};
+
     case Schema.StringArray:
-      return {
-        type: "array",
-        items: {type: "string"},
-      };
+      return {type: "array", items: {type: "string"}};
 
     case Schema.Object:
-      return {
-        type: "object",
-      };
+      return {type: "object"};
 
     case Schema.ObjectArray:
-      return {
-        type: "array",
-        items: {type: "object"},
-      };
+      return {type: "array", items: {type: "object"}};
+
+    case Schema.AnyArray:
+      return {type: "array"};
   }
 }
 

@@ -1,10 +1,12 @@
 import {config} from "@chainsafe/lodestar-config/minimal";
-import {routes} from "../../src";
+import {Api, ReqTypes, NodePeer} from "../../src/routes/node";
+import {getClient} from "../../src/client/node";
+import {getRoutes} from "../../src/server/node";
 import {runGenericServerTest} from "../utils/genericServerTest";
 
 describe("node", () => {
   const peerIdStr = "peerId";
-  const nodePeer: routes.node.NodePeer = {
+  const nodePeer: NodePeer = {
     peerId: peerIdStr,
     enr: "enr",
     lastSeenP2pAddress: "lastSeenP2pAddress",
@@ -12,7 +14,7 @@ describe("node", () => {
     direction: "inbound",
   };
 
-  runGenericServerTest<routes.node.Api, routes.node.ReqTypes>(config, routes.node, {
+  runGenericServerTest<Api, ReqTypes>(config, getClient, getRoutes, {
     getNetworkIdentity: {
       args: [],
       res: {

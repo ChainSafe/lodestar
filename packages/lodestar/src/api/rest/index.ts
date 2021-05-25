@@ -2,11 +2,11 @@ import fastify, {FastifyError, FastifyInstance} from "fastify";
 import fastifyCors from "fastify-cors";
 import querystring from "querystring";
 import {Api} from "@chainsafe/lodestar-api";
+import {registerRoutes} from "@chainsafe/lodestar-api/server";
 import {ErrorAborted, ILogger} from "@chainsafe/lodestar-utils";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IMetrics} from "../../metrics";
 import {defaultApiRestOptions, IRestApiOptions} from "./options";
-import {registerRoutes} from "./routes";
 import {RouteConfig} from "./types";
 import {ApiError} from "../impl/errors";
 

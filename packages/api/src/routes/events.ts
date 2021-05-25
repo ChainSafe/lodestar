@@ -1,4 +1,3 @@
-import EventSource from "eventsource";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Epoch, Number64, phase0, Slot, Root} from "@chainsafe/lodestar-types";
 import {ContainerType, Json, Type} from "@chainsafe/ssz";
@@ -133,37 +132,3 @@ export function getEventSerdes(config: IBeaconConfig) {
     },
   };
 }
-
-export function getClient(config: IBeaconConfig, baseUrl: string): Api {
-  const eventSerdes = getEventSerdes(config);
-
-  return {
-    eventstream: (topics, signal, onEvent) => {
-      const query = topics.map((topic) => `topics=${topic}`).join("&");
-      // TODO: Use a proper URL formatter
-      const url = baseUrl + `${baseUrl}${routesData.eventstream.url}?${query}`;
-      const eventSource = new EventSource(url);
-
-      for (const topic of topics) {
-        eventSource.addEventListener(topic, ((event: MessageEvent) => {
-          const message = eventSerdes.fromJson(topic, JSON.parse(event.data));
-          onEvent({type: topic, message} as BeaconEvent);
-        }) as EventListener);
-      }
-
-      signal.addEventListener("abort", () => eventSource.close(), {once: true});
-    },
-  };
-}
-
-// topics: Array<'head' | 'block' | 'attestation' | 'voluntary_exit' | 'finalized_checkpoint' | 'chain_reorg'>,
-
-// method: 'GET',
-// path: `/eth/v1/events`,
-// query: {
-//     'topics': topics,
-// },
-// errors: {
-//     400: `The topics supplied could not be parsed`,
-//     500: `Beacon node internal error.`,
-// },

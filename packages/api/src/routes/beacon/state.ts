@@ -147,13 +147,13 @@ export const routesData: RoutesData<Api> = {
 };
 
 // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types, @typescript-eslint/explicit-function-return-type
-export function getReqSerdes() {
+export function getReqSerializers() {
   const t = mapValues(routesData, () => (arg: unknown) => arg) as RouteReqTypeGenerator<Api>;
 
-  const stateIdOnlyReq = t.getStateRoot<{params: {blockId: string}}>({
-    writeReq: (blockId) => ({params: {blockId}}),
-    parseReq: ({params}) => [params.blockId],
-    schema: {params: {blockId: Schema.StringRequired}},
+  const stateIdOnlyReq = t.getStateRoot<{params: {stateId: string}}>({
+    writeReq: (stateId) => ({params: {stateId}}),
+    parseReq: ({params}) => [params.stateId],
+    schema: {params: {stateId: Schema.StringRequired}},
   });
 
   return {
@@ -173,7 +173,7 @@ export function getReqSerdes() {
       params: {stateId: StateId};
       query: {epoch?: number};
     }>({
-      writeReq: (stateId, filters) => ({params: {stateId}, query: filters || {}}),
+      writeReq: (stateId, epoch) => ({params: {stateId}, query: {epoch}}),
       parseReq: ({params, query}) => [params.stateId, query.epoch],
       schema: {
         params: {stateId: Schema.StringRequired},
@@ -203,7 +203,7 @@ export function getReqSerdes() {
       parseReq: ({params, query}) => [params.stateId, query],
       schema: {
         params: {stateId: Schema.StringRequired},
-        query: {indices: Schema.StringArray, statuses: Schema.StringArray},
+        query: {indices: Schema.UintArray, statuses: Schema.StringArray},
       },
     }),
 
@@ -215,14 +215,14 @@ export function getReqSerdes() {
       parseReq: ({params, query}) => [params.stateId, query.indices],
       schema: {
         params: {stateId: Schema.StringRequired},
-        query: {indices: Schema.StringArray},
+        query: {indices: Schema.UintArray},
       },
     }),
   };
 }
 
 export type ReqTypes = {
-  [K in keyof ReturnType<typeof getReqSerdes>]: ReturnType<ReturnType<typeof getReqSerdes>[K]["writeReq"]>;
+  [K in keyof ReturnType<typeof getReqSerializers>]: ReturnType<ReturnType<typeof getReqSerializers>[K]["writeReq"]>;
 };
 
 export function getReturnTypes(config: IBeaconConfig): ReturnTypes<Api> {

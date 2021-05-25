@@ -2,7 +2,7 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBeaconParams, BeaconParams} from "@chainsafe/lodestar-params";
 import {Bytes32, Number64, phase0} from "@chainsafe/lodestar-types";
 import {mapValues} from "@chainsafe/lodestar-utils";
-import {ContainerType} from "@chainsafe/ssz";
+import {ByteVectorType, ContainerType} from "@chainsafe/ssz";
 import {ArrayOf, ContainerData, ReqEmpty, reqEmpty, ReturnTypes, RouteReqSerdes, RoutesData} from "../utils";
 
 /* eslint-disable @typescript-eslint/naming-convention */
@@ -48,7 +48,7 @@ export const routesData: RoutesData<Api> = {
 
 export type ReqTypes = {[K in keyof Api]: ReqEmpty};
 
-export function getReqSerdes(): RouteReqSerdes<Api, ReqTypes> {
+export function getReqSerializers(): RouteReqSerdes<Api, ReqTypes> {
   return mapValues(routesData, () => reqEmpty);
 }
 
@@ -56,7 +56,7 @@ export function getReturnTypes(config: IBeaconConfig): ReturnTypes<Api> {
   const DepositContract = new ContainerType<DepositContract>({
     fields: {
       chainId: config.types.Number64,
-      address: config.types.Bytes32, // The byte count doesn't matter
+      address: new ByteVectorType({length: 20}), // The byte count doesn't matter
     },
   });
 

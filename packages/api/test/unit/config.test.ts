@@ -1,10 +1,12 @@
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {BeaconParams} from "@chainsafe/lodestar-params";
-import {routes} from "../../src";
+import {Api, ReqTypes} from "../../src/routes/config";
+import {getClient} from "../../src/client/config";
+import {getRoutes} from "../../src/server/config";
 import {runGenericServerTest} from "../utils/genericServerTest";
 
 describe("config", () => {
-  runGenericServerTest<routes.config.Api, routes.config.ReqTypes>(config, routes.config, {
+  runGenericServerTest<Api, ReqTypes>(config, getClient, getRoutes, {
     getDepositContract: {
       args: [],
       res: {

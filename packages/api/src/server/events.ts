@@ -1,17 +1,14 @@
 import {AbortController} from "abort-controller";
-import {routes} from "@chainsafe/lodestar-api";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {ApiControllers} from "../types";
+import {ServerRoutes} from "./utils";
+import {Api, ReqTypes, routesData, getEventSerdes} from "../routes/events";
 
-export function getRoutes(
-  config: IBeaconConfig,
-  api: routes.events.Api
-): ApiControllers<routes.events.Api, routes.events.ReqTypes> {
-  const eventSerdes = routes.events.getEventSerdes(config);
+export function getRoutes(config: IBeaconConfig, api: Api): ServerRoutes<Api, ReqTypes> {
+  const eventSerdes = getEventSerdes(config);
 
   return {
     eventstream: {
-      ...routes.events.routesData.eventstream,
+      ...routesData.eventstream,
       id: "eventstream",
 
       handler: async (req, res) => {

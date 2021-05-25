@@ -1,18 +1,20 @@
 import {ForkName} from "@chainsafe/lodestar-config";
 import {config} from "@chainsafe/lodestar-config/minimal";
-import {routes} from "../../src";
+import {Api, ReqTypes} from "../../src/routes/validator";
+import {getClient} from "../../src/client/validator";
+import {getRoutes} from "../../src/server/validator";
 import {runGenericServerTest} from "../utils/genericServerTest";
 
 const ZERO_HASH = Buffer.alloc(32, 0);
 
 describe("validator", () => {
-  runGenericServerTest<routes.validator.Api, routes.validator.ReqTypes>(config, routes.validator, {
+  runGenericServerTest<Api, ReqTypes>(config, getClient, getRoutes, {
     getAttesterDuties: {
       args: [1000, [1, 2, 3]],
       res: {
         data: [
           {
-            pubkey: Buffer.alloc(96, 1),
+            pubkey: Buffer.alloc(48, 1),
             validatorIndex: 2,
             committeeIndex: 3,
             committeeLength: 4,

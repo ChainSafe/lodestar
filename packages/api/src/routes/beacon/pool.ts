@@ -108,7 +108,7 @@ export const routesData: RoutesData<Api> = {
 };
 
 // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types, @typescript-eslint/explicit-function-return-type
-export function getReqSerdes(config: IBeaconConfig) {
+export function getReqSerializers(config: IBeaconConfig) {
   const t = mapValues(routesData, () => (arg: unknown) => arg) as RouteReqTypeGenerator<Api>;
 
   return {
@@ -117,6 +117,7 @@ export function getReqSerdes(config: IBeaconConfig) {
     }>({
       writeReq: (filters) => ({query: {slot: filters?.slot, committee_index: filters?.committeeIndex}}),
       parseReq: ({query}) => [{slot: query.slot, committeeIndex: query.committee_index}],
+      schema: {query: {slot: Schema.Uint, committee_index: Schema.Uint}},
     }),
     getPoolAttesterSlashings: t.getPoolAttesterSlashings({writeReq: () => ({}), parseReq: () => []}),
     getPoolProposerSlashings: t.getPoolProposerSlashings({writeReq: () => ({}), parseReq: () => []}),
@@ -134,7 +135,7 @@ export function getReqSerdes(config: IBeaconConfig) {
 }
 
 export type ReqTypes = {
-  [K in keyof ReturnType<typeof getReqSerdes>]: ReturnType<ReturnType<typeof getReqSerdes>[K]["writeReq"]>;
+  [K in keyof ReturnType<typeof getReqSerializers>]: ReturnType<ReturnType<typeof getReqSerializers>[K]["writeReq"]>;
 };
 
 export function getReturnTypes(config: IBeaconConfig): ReturnTypes<Api> {

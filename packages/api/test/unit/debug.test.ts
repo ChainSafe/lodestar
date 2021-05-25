@@ -1,12 +1,14 @@
 import {ForkName} from "@chainsafe/lodestar-config";
 import {config} from "@chainsafe/lodestar-config/minimal";
-import {routes} from "../../src";
+import {Api, ReqTypes} from "../../src/routes/debug";
+import {getClient} from "../../src/client/debug";
+import {getRoutes} from "../../src/server/debug";
 import {runGenericServerTest} from "../utils/genericServerTest";
 
 const root = Buffer.alloc(32, 1);
 
 describe("debug", () => {
-  runGenericServerTest<routes.debug.Api, routes.debug.ReqTypes>(config, routes.debug, {
+  runGenericServerTest<Api, ReqTypes>(config, getClient, getRoutes, {
     getHeads: {
       args: [],
       res: {data: [{slot: 1, root}]},

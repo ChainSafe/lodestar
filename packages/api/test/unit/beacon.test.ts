@@ -1,27 +1,29 @@
 import {ForkName} from "@chainsafe/lodestar-config";
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {toHexString} from "@chainsafe/ssz";
-import {routes} from "../../src";
+import {Api, ReqTypes, BlockHeaderResponse, ValidatorResponse} from "../../src/routes/beacon";
+import {getClient} from "../../src/client/beacon";
+import {getRoutes} from "../../src/server/beacon";
 import {runGenericServerTest} from "../utils/genericServerTest";
 
 describe("beacon", () => {
   const root = Buffer.alloc(32, 1);
   const balance = BigInt(32e9);
 
-  const blockHeaderResponse: routes.beacon.BlockHeaderResponse = {
+  const blockHeaderResponse: BlockHeaderResponse = {
     root,
     canonical: true,
     header: config.types.phase0.SignedBeaconBlockHeader.defaultValue(),
   };
 
-  const validatorResponse: routes.beacon.ValidatorResponse = {
+  const validatorResponse: ValidatorResponse = {
     index: 1,
     balance,
     status: "active_ongoing",
     validator: config.types.phase0.Validator.defaultValue(),
   };
 
-  runGenericServerTest<routes.beacon.Api, routes.beacon.ReqTypes>(config, routes.beacon, {
+  runGenericServerTest<Api, ReqTypes>(config, getClient, getRoutes, {
     // block
 
     getBlock: {
@@ -117,7 +119,7 @@ describe("beacon", () => {
       res: {data: [validatorResponse]},
     },
     getStateValidator: {
-      args: ["head", 1300],
+      args: ["head", toHexString(Buffer.alloc(48, 1))],
       res: {data: validatorResponse},
     },
     getStateValidatorBalances: {
@@ -125,11 +127,11 @@ describe("beacon", () => {
       res: {data: [{index: 1300, balance}]},
     },
     getEpochCommittees: {
-      args: ["head"],
+      args: ["head", {index: 1, slot: 2, epoch: 3}],
       res: {data: [{index: 1, slot: 2, validators: [1300]}]},
     },
     getEpochSyncCommittees: {
-      args: ["head"],
+      args: ["head", 1],
       res: {data: {validators: [1300], validatorAggregates: [1300]}},
     },
 

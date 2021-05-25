@@ -1,15 +1,17 @@
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {ProofType} from "@chainsafe/persistent-merkle-tree";
-import {routes} from "../../src";
+import {Api, ReqTypes} from "../../src/routes/lightclient";
+import {getClient} from "../../src/client/lightclient";
+import {getRoutes} from "../../src/server/lightclient";
 import {runGenericServerTest} from "../utils/genericServerTest";
 
-const root = Buffer.alloc(32, 1);
+const root = Uint8Array.from(Buffer.alloc(32, 1));
 
 describe("lightclient", () => {
   const lightClientUpdate = config.types.altair.LightClientUpdate.defaultValue();
 
-  runGenericServerTest<routes.lightclient.Api, routes.lightclient.ReqTypes>(config, routes.lightclient, {
-    createStateProof: {
+  runGenericServerTest<Api, ReqTypes>(config, getClient, getRoutes, {
+    getStateProof: {
       args: [
         "head",
         [
@@ -20,7 +22,7 @@ describe("lightclient", () => {
       res: {
         data: {
           type: ProofType.treeOffset,
-          offsets: [1, 2, 3, 4],
+          offsets: [1, 2, 3],
           leaves: [root, root, root, root],
         },
       },

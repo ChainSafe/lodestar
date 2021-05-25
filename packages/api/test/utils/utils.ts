@@ -1,13 +1,9 @@
-import fastify from "fastify";
+import fastify, {FastifyInstance} from "fastify";
 import {fetch} from "cross-fetch";
 import querystring from "querystring";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {getGenericServer, RouteGeneric, ReqGeneric, FetchFn, FetchOpts, RouteGroupDefinition} from "../../src/utils";
+import {FetchFn, FetchOpts} from "../../src/client/utils";
 
-export function getTestServer<
-  Api extends Record<string, RouteGeneric>,
-  ReqTypes extends {[K in keyof Api]: ReqGeneric}
->(routesGroupDef: RouteGroupDefinition<Api, ReqTypes>, config: IBeaconConfig, api: Api): {baseUrl: string} {
+export function getTestServer(): {baseUrl: string; server: FastifyInstance} {
   const port = 10101;
   const baseUrl = `http://127.0.0.1:${port}`;
 
@@ -22,13 +18,6 @@ export function getTestServer<
     done();
   });
 
-  const genericServer = getGenericServer<Api, ReqTypes>(routesGroupDef, config, api);
-
-  // Register all routes
-  for (const serverRoute of Object.values(genericServer)) {
-    server.route(serverRoute);
-  }
-
   before("start server", async () => {
     await new Promise((resolve, reject) => {
       server.listen(port, function (err, address) {
@@ -42,16 +31,31 @@ export function getTestServer<
     await server.close();
   });
 
-  return {baseUrl};
+  return {baseUrl, server};
 }
 
 export function getFetchFn(baseUrl: string): FetchFn {
-  return async function <T>(opts: FetchOpts): Promise<T> {
-    const url = baseUrl + (opts.query ? opts.url + "?" + querystring.encode(opts.query as any) : opts.url);
-    const bodyArgs = opts.body ? {headers: {"Content-Type": "application/json"}, body: JSON.stringify(opts.body)} : {};
+  return {
+    async json<T>(opts: FetchOpts): Promise<T> {
+      const url = baseUrl + (opts.query ? opts.url + "?" + querystring.encode(opts.query as any) : opts.url);
+      const bodyArgs = opts.body
+        ? {headers: {"Content-Type": "application/json"}, body: JSON.stringify(opts.body)}
+        : {};
 
-    const res = await fetch(url, {method: opts.method, ...bodyArgs});
-    if (!res.ok) throw Error(res.statusText);
-    return (await res.json()) as T;
+      const res = await fetch(url, {method: opts.method, ...bodyArgs});
+      if (!res.ok) throw Error(res.statusText);
+      return (await res.json()) as T;
+    },
+
+    async arrayBuffer(opts: FetchOpts): Promise<ArrayBuffer> {
+      const url = baseUrl + (opts.query ? opts.url + "?" + querystring.encode(opts.query as any) : opts.url);
+      const bodyArgs = opts.body
+        ? {headers: {"Content-Type": "application/json"}, body: JSON.stringify(opts.body)}
+        : {};
+
+      const res = await fetch(url, {method: opts.method, ...bodyArgs});
+      if (!res.ok) throw Error(res.statusText);
+      return await res.arrayBuffer();
+    },
   };
 }
