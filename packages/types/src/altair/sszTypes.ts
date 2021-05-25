@@ -94,7 +94,7 @@ export function getAltairTypes(params: IBeaconParams, primitive: PrimitiveSSZTyp
     },
   });
 
-  const SyncCommitteeSigningData = new ContainerType<altair.SyncCommitteeSigningData>({
+  const SyncAggregatorSelectionData = new ContainerType<altair.SyncAggregatorSelectionData>({
     fields: {
       slot: Slot,
       subCommitteeIndex: SubCommitteeIndex,
@@ -273,7 +273,7 @@ export function getAltairTypes(params: IBeaconParams, primitive: PrimitiveSSZTyp
     SyncCommitteeContribution,
     ContributionAndProof,
     SignedContributionAndProof,
-    SyncCommitteeSigningData,
+    SyncAggregatorSelectionData,
     SyncAggregate,
     SyncCommitteeSubscription,
     SyncCommitteeByValidatorIndices,

@@ -222,14 +222,14 @@ export class ValidatorStore {
       this.config.params.DOMAIN_SYNC_COMMITTEE_SELECTION_PROOF,
       computeEpochAtSlot(this.config, slot)
     );
-    const signingData: altair.SyncCommitteeSigningData = {
+    const signingData: altair.SyncAggregatorSelectionData = {
       slot,
       subCommitteeIndex: subCommitteeIndex,
     };
 
     const signingRoot = computeSigningRoot(
       this.config,
-      this.config.types.altair.SyncCommitteeSigningData,
+      this.config.types.altair.SyncAggregatorSelectionData,
       signingData,
       domain
     );

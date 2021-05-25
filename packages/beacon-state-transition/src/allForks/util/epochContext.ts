@@ -142,6 +142,7 @@ export function computeProposers(
 /**
  * Compute all index in sync committee for all validatorIndexes in `syncCommitteeIndexes`.
  * Helps reduce work necessary to verify a validatorIndex belongs in a sync committee and which.
+ * This is similar to compute_subnets_for_sync_committee in https://github.com/ethereum/eth2.0-specs/blob/v1.1.0-alpha.5/specs/altair/validator.md
  */
 export function computeSyncComitteeMap(syncCommitteeIndexes: ValidatorIndex[]): SyncComitteeValidatorIndexMap {
   const map = new Map<ValidatorIndex, number[]>();
@@ -153,7 +154,9 @@ export function computeSyncComitteeMap(syncCommitteeIndexes: ValidatorIndex[]): 
       indexes = [];
       map.set(validatorIndex, indexes);
     }
-    indexes.push(i);
+    if (!indexes.includes(i)) {
+      indexes.push(i);
+    }
   }
 
   return map;

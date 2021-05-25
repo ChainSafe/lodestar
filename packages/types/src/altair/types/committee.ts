@@ -33,7 +33,7 @@ export interface SignedContributionAndProof {
   signature: phase0.BLSSignature;
 }
 
-export interface SyncCommitteeSigningData {
+export interface SyncAggregatorSelectionData {
   slot: phase0.Slot;
   subCommitteeIndex: phase0.SubCommitteeIndex;
 }
