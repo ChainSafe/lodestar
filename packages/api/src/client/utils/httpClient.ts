@@ -97,7 +97,8 @@ export class HttpClient implements IHttpClient {
 }
 
 function isAbortedError(e: Error): boolean {
-  return false;
+  // TODO: IMPLEMENT
+  return e instanceof ErrorAborted;
 }
 
 function getErrorMessage(errBody: string): string {

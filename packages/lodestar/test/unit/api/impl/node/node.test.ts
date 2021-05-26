@@ -148,13 +148,12 @@ describe("node api implementation", function () {
 
   describe("getSyncStatus", function () {
     it("success", async function () {
-      syncStub.getSyncStatus.resolves({
-        headSlot: BigInt(2),
-        syncDistance: BigInt(1),
+      syncStub.getSyncStatus.returns({
+        headSlot: 2,
+        syncDistance: 1,
       });
       const {data: syncStatus} = await api.getSyncingStatus();
-      expect(syncStatus.headSlot.toString()).to.equal("2");
-      expect(syncStatus.syncDistance.toString()).to.equal("1");
+      expect(syncStatus).to.deep.equal({headSlot: 2, syncDistance: 1});
     });
   });
 

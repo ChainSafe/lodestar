@@ -136,9 +136,9 @@ export const reqOnlyBody = <T>(
   schema: {body: bodySchema},
 });
 
-/** SSZ factory helper + typed */
-export function ArrayOf<T>(elementType: Type<T>): ListType<T[]> {
-  return new ListType({elementType, limit: 1});
+/** SSZ factory helper + typed. limit = 1e6 as a big enough random number */
+export function ArrayOf<T>(elementType: Type<T>, limit = 1e6): ListType<T[]> {
+  return new ListType({elementType, limit});
 }
 
 /**

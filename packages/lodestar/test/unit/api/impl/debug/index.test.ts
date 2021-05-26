@@ -39,13 +39,13 @@ describe("api - debug - beacon", function () {
 
   it("getHeads - should return head", async function () {
     forkchoiceStub.getHeads.returns([generateBlockSummary({slot: 1000})]);
-    const heads = await debugApi.getHeads();
+    const {data: heads} = await debugApi.getHeads();
     expect(heads).to.be.deep.equal([{slot: 1000, root: ZERO_HASH}]);
   });
 
   it("getState - should return state", async function () {
     resolveStateIdStub.resolves(generateState());
-    const state = await debugApi.getState("something");
+    const {data: state} = await debugApi.getState("something");
     expect(state).to.not.be.null;
   });
 });

@@ -39,7 +39,7 @@ describe("beacon api impl - states", function () {
     it("no filters", async function () {
       resolveStateIdStub.resolves(state);
       getEpochBeaconCommitteesStub.returns([[[1, 4, 5]], [[2, 3, 6]]]);
-      const committees = await api.getEpochCommittees("blem");
+      const {data: committees} = await api.getEpochCommittees("blem");
       expect(committees).to.have.length(2);
     });
     it("slot and committee filter", async function () {
@@ -51,11 +51,11 @@ describe("beacon api impl - states", function () {
           [8, 9, 10],
         ],
       ]);
-      const committees = await api.getEpochCommittees("blem", {slot: 1, index: 1});
-      expect(committees.data).to.have.length(1);
-      expect(committees.data[0].index).to.be.equal(1);
-      expect(committees.data[0].slot).to.be.equal(1);
-      expect(committees.data[0].validators).to.be.deep.equal([8, 9, 10]);
+      const {data: committees} = await api.getEpochCommittees("blem", {slot: 1, index: 1});
+      expect(committees).to.have.length(1);
+      expect(committees[0].index).to.be.equal(1);
+      expect(committees[0].slot).to.be.equal(1);
+      expect(committees[0].validators).to.be.deep.equal([8, 9, 10]);
     });
   });
 });

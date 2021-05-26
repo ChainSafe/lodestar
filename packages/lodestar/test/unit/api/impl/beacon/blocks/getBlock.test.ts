@@ -29,7 +29,7 @@ describe("api - beacon - getBlock", function () {
 
   it("success for non finalized block", async function () {
     resolveBlockIdStub.withArgs(sinon.match.any, sinon.match.any, "head").resolves(generateEmptySignedBlock());
-    const result = await server.blockApi.getBlock("head");
+    const {data: result} = await server.blockApi.getBlock("head");
     expect(result).to.not.be.null;
     expect(() => config.types.phase0.SignedBeaconBlock.assertValidValue(result)).to.not.throw();
   });

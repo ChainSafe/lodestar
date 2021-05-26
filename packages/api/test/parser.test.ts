@@ -1,7 +1,9 @@
 import {compileRouteUrlFormater} from "../src/utils/urlFormat";
 
+/* eslint-disable no-console */
+
 describe("route parse", () => {
-  it("/eth/v1/validator/:name/attester/:epoch", () => {
+  it.skip("Benchmark compileRouteUrlFormater", () => {
     const path = "/eth/v1/validator/:name/attester/:epoch";
     const args = {epoch: 5, name: "HEAD"};
 
@@ -23,7 +25,7 @@ describe("route parse", () => {
 
     console.time("execute-template");
     for (let i = 0; i < 1e6; i++) {
-      const a = `/eth/v1/validator/${args.name}/attester/${args.epoch}`;
+      `/eth/v1/validator/${args.name}/attester/${args.epoch}`;
     }
     console.timeEnd("execute-template");
   });

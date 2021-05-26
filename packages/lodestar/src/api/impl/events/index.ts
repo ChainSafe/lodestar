@@ -79,9 +79,11 @@ export function getEventsApi({chain, config}: Pick<ApiModules, "chain" | "config
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const handler = (...args: any[]): void => {
           // TODO: What happens if this handler throws? Does it break the other chain.emitter listeners?
-          const data = eventDataTransformer(...args);
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any
-          onEvent({type: topic, message: data as any});
+          const messages = eventDataTransformer(...args);
+          for (const message of messages) {
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any
+            onEvent({type: topic, message: message as any});
+          }
         };
 
         chain.emitter.on(chainEvent, handler);

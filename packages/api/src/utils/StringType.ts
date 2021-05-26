@@ -1,5 +1,7 @@
 import {BasicType} from "@chainsafe/ssz";
 
+/* eslint-disable @typescript-eslint/naming-convention */
+
 export class StringType<T extends string = string> extends BasicType<T> {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   struct_getSerializedLength(data?: string): number {
