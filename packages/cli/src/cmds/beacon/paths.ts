@@ -37,7 +37,7 @@ export function getBeaconPaths(
   const peerStoreDir = args.peerStoreDir || path.join(beaconDir, "peerstore");
   const configFile = args.configFile || path.join(beaconDir, "beacon.config.json");
   const peerIdFile = args.peerIdFile || path.join(beaconDir, "peer-id.json");
-  const enrFile = args.enrFile || path.join(beaconDir, "enr");
+  const enrFile = args.enrFile || path.join(beaconDir, "enr.yml");
   const logFile = args.logFile;
 
   return {
