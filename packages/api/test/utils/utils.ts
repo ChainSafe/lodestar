@@ -46,7 +46,7 @@ export function getMockApi<Api extends Record<string, any>>(
 
 export function getFetchFn(baseUrl: string): FetchFn {
   async function getRes(opts: FetchOpts): Promise<Response> {
-    const url = urlJoin(baseUrl, opts.url) + (opts.query ? "?" + qs.stringify(opts.query as any) : "");
+    const url = urlJoin(baseUrl, opts.url) + (opts.query ? "?" + stringifyQuery(opts.query) : "");
     const bodyArgs = opts.body ? {headers: {"Content-Type": "application/json"}, body: JSON.stringify(opts.body)} : {};
 
     const res = await fetch(url, {method: opts.method, ...bodyArgs});
@@ -70,6 +70,14 @@ export function getFetchFn(baseUrl: string): FetchFn {
       return await res.arrayBuffer();
     },
   };
+}
+
+/**
+ * Eth2.0 API requires the query with format:
+ * - arrayFormat: repeat `topic=topic1&topic=topic2`
+ */
+export function stringifyQuery(query: unknown): string {
+  return qs.stringify(query, {arrayFormat: "repeat"});
 }
 
 export function urlJoin(...args: string[]): string {
