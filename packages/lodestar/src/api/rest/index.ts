@@ -71,7 +71,8 @@ export class RestApi {
     }
 
     // Log all incoming request to debug (before parsing). TODO: Should we hook latter in the lifecycle? https://www.fastify.io/docs/latest/Lifecycle/
-    server.addHook("onRequest", (req) => {
+    // Note: Must be an async method so fastify can continue the release lifecycle. Otherwise we must call done() or the request stalls
+    server.addHook("onRequest", async (req) => {
       this.activeRequests.add(req.raw);
       const url = req.raw.url ? req.raw.url.split("?")[0] : "-";
       this.logger.debug(`Req ${req.id} ${req.ip} ${req.raw.method}:${url}`);
@@ -88,7 +89,7 @@ export class RestApi {
       }
     });
 
-    server.addHook("onError", (req, res, err) => {
+    server.addHook("onError", async (req, res, err) => {
       this.activeRequests.delete(req.raw);
       // Don't log ErrorAborted errors, they happen on node shutdown and are not usefull
       if (err instanceof ErrorAborted) return;
