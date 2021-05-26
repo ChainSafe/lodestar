@@ -1,6 +1,7 @@
 import fastify, {FastifyError, FastifyInstance} from "fastify";
 import fastifyCors from "fastify-cors";
 import querystring from "querystring";
+import {IncomingMessage} from "http";
 import {Api} from "@chainsafe/lodestar-api";
 import {registerRoutes, RouteConfig} from "@chainsafe/lodestar-api/server";
 import {ErrorAborted, ILogger} from "@chainsafe/lodestar-utils";
@@ -39,6 +40,7 @@ export class RestApi {
   private readonly opts: RestApiOptions;
   private readonly server: FastifyInstance;
   private readonly logger: ILogger;
+  private readonly activeRequests = new Set<IncomingMessage>();
 
   constructor(optsArg: Partial<RestApiOptions>, modules: IRestApiModules) {
     // Apply opts defaults
@@ -70,12 +72,14 @@ export class RestApi {
 
     // Log all incoming request to debug (before parsing). TODO: Should we hook latter in the lifecycle? https://www.fastify.io/docs/latest/Lifecycle/
     server.addHook("onRequest", (req) => {
+      this.activeRequests.add(req.raw);
       const url = req.raw.url ? req.raw.url.split("?")[0] : "-";
       this.logger.debug(`Req ${req.id} ${req.ip} ${req.raw.method}:${url}`);
     });
 
     // Log after response
     server.addHook("onResponse", async (req, res) => {
+      this.activeRequests.delete(req.raw);
       const config = res.context.config as RouteConfig;
       this.logger.debug(`Res ${req.id} ${config} - ${res.raw.statusCode}`);
 
@@ -85,6 +89,7 @@ export class RestApi {
     });
 
     server.addHook("onError", (req, res, err) => {
+      this.activeRequests.delete(req.raw);
       // Don't log ErrorAborted errors, they happen on node shutdown and are not usefull
       if (err instanceof ErrorAborted) return;
 
@@ -114,9 +119,17 @@ export class RestApi {
   }
 
   /**
-   * Close the server instance.
+   * Close the server instance and terminate all existing connections.
    */
   async close(): Promise<void> {
+    // In NodeJS land calling close() only causes new connections to be rejected.
+    // Existing connections can prevent .close() from resolving for potentially forever.
+    // In Lodestar case when the BeaconNode wants to close we will just abruptly terminate
+    // all existing connections for a fast shutdown.
+    // Inspired by https://github.com/gajus/http-terminator/
+    for (const req of this.activeRequests) {
+      req.destroy(Error("Closing"));
+    }
     await this.server.close();
   }
 }
