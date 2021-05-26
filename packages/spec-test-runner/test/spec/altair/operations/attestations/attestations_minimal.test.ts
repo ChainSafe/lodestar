@@ -6,24 +6,21 @@ import {params} from "@chainsafe/lodestar-params/minimal";
 import {allForks, altair, CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
 import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
-import {IProcessSyncCommitteeTestCase} from "./type";
+import {IProcessAttestationTestCase} from "./type";
 import {SPEC_TEST_LOCATION} from "../../../../utils/specTestCases";
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
 const config = createIBeaconConfig({...params, ALTAIR_FORK_EPOCH: 0});
 
-describeDirectorySpecTest<IProcessSyncCommitteeTestCase, altair.BeaconState>(
-  "process sync committee minimal",
-  join(SPEC_TEST_LOCATION, "/tests/minimal/altair/operations/sync_committee/pyspec_tests"),
+describeDirectorySpecTest<IProcessAttestationTestCase, altair.BeaconState>(
+  "process attestation minimal",
+  join(SPEC_TEST_LOCATION, "/tests/minimal/altair/operations/attestation/pyspec_tests"),
   (testcase) => {
     const wrappedState = allForks.createCachedBeaconState<altair.BeaconState>(
       config,
       testcase.pre as TreeBacked<altair.BeaconState>
     ) as CachedBeaconState<altair.BeaconState>;
-    altair.processSyncCommittee(
-      wrappedState,
-      config.types.altair.SyncAggregate.createTreeBackedFromStruct(testcase["sync_aggregate"])
-    );
+    altair.processAttestation(wrappedState, testcase.attestation);
     return wrappedState;
   },
   {
@@ -36,18 +33,12 @@ describeDirectorySpecTest<IProcessSyncCommitteeTestCase, altair.BeaconState>(
         type: InputType.SSZ_SNAPPY,
         treeBacked: true,
       },
-      // TODO: not able to deserialzie from binary
-      // sync_aggregate: {
-      //   type: InputType.SSZ_SNAPPY,
-      //   treeBacked: true,
-      // },
       meta: InputType.YAML,
     },
     sszTypes: {
       pre: config.types.altair.BeaconState,
       post: config.types.altair.BeaconState,
-      // eslint-disable-next-line @typescript-eslint/naming-convention
-      sync_aggregate: config.types.altair.SyncAggregate,
+      attestation: config.types.phase0.Attestation,
     },
 
     timeout: 100000000,

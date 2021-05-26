@@ -2,28 +2,25 @@ import {join} from "path";
 import {expect} from "chai";
 
 import {TreeBacked} from "@chainsafe/ssz";
+import {allForks, altair} from "@chainsafe/lodestar-beacon-state-transition";
 import {params} from "@chainsafe/lodestar-params/minimal";
-import {allForks, altair, CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
 import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
-import {IProcessSyncCommitteeTestCase} from "./type";
+import {IProcessProposerSlashingTestCase} from "./type";
 import {SPEC_TEST_LOCATION} from "../../../../utils/specTestCases";
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
 const config = createIBeaconConfig({...params, ALTAIR_FORK_EPOCH: 0});
 
-describeDirectorySpecTest<IProcessSyncCommitteeTestCase, altair.BeaconState>(
-  "process sync committee minimal",
-  join(SPEC_TEST_LOCATION, "/tests/minimal/altair/operations/sync_committee/pyspec_tests"),
+describeDirectorySpecTest<IProcessProposerSlashingTestCase, altair.BeaconState>(
+  "process proposer slashing minimal",
+  join(SPEC_TEST_LOCATION, "/tests/minimal/altair/operations/proposer_slashing/pyspec_tests"),
   (testcase) => {
     const wrappedState = allForks.createCachedBeaconState<altair.BeaconState>(
       config,
       testcase.pre as TreeBacked<altair.BeaconState>
-    ) as CachedBeaconState<altair.BeaconState>;
-    altair.processSyncCommittee(
-      wrappedState,
-      config.types.altair.SyncAggregate.createTreeBackedFromStruct(testcase["sync_aggregate"])
     );
+    altair.processProposerSlashing(wrappedState, testcase.proposer_slashing);
     return wrappedState;
   },
   {
@@ -36,20 +33,13 @@ describeDirectorySpecTest<IProcessSyncCommitteeTestCase, altair.BeaconState>(
         type: InputType.SSZ_SNAPPY,
         treeBacked: true,
       },
-      // TODO: not able to deserialzie from binary
-      // sync_aggregate: {
-      //   type: InputType.SSZ_SNAPPY,
-      //   treeBacked: true,
-      // },
-      meta: InputType.YAML,
     },
     sszTypes: {
       pre: config.types.altair.BeaconState,
       post: config.types.altair.BeaconState,
       // eslint-disable-next-line @typescript-eslint/naming-convention
-      sync_aggregate: config.types.altair.SyncAggregate,
+      proposer_slashing: config.types.phase0.ProposerSlashing,
     },
-
     timeout: 100000000,
     shouldError: (testCase) => !testCase.post,
     getExpected: (testCase) => testCase.post,
