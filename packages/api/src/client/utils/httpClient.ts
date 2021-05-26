@@ -1,8 +1,19 @@
 import {fetch} from "cross-fetch";
 import qs from "qs";
 import {AbortSignal, AbortController} from "abort-controller";
-import {ErrorAborted} from "@chainsafe/lodestar-utils";
+import {ErrorAborted, TimeoutError} from "@chainsafe/lodestar-utils";
 import {ReqGeneric, RouteDef} from "../../utils";
+
+export class HttpError extends Error {
+  status: number;
+  url: string;
+
+  constructor(message: string, status: number, url: string) {
+    super(message);
+    this.status = status;
+    this.url = url;
+  }
+}
 
 export type FetchOpts = {
   url: RouteDef["url"];
@@ -58,7 +69,7 @@ export class HttpClient implements IHttpClient {
     // Attach global signal to this request's controller
     const signalGlobal = this.getAbortSignal && this.getAbortSignal();
     if (signalGlobal) {
-      signalGlobal.addEventListener("abort", controller.abort);
+      signalGlobal.addEventListener("abort", () => controller.abort());
     }
 
     try {
@@ -71,7 +82,7 @@ export class HttpClient implements IHttpClient {
 
       if (!res.ok) {
         const errBody = await res.text();
-        throw Error(`${res.statusText}: ${getErrorMessage(errBody)}`);
+        throw new HttpError(`${res.statusText}: ${getErrorMessage(errBody)}`, res.status, url);
       }
 
       return await getBody(res);
@@ -79,9 +90,9 @@ export class HttpClient implements IHttpClient {
       // TODO: Parse error, rename abort timeout error
       if (isAbortedError(e)) {
         if (signalGlobal?.aborted) {
-          throw new ErrorAborted("Validator REST client");
+          throw new ErrorAborted("REST client");
         } else if (controller.signal.aborted) {
-          throw Error("Timeout");
+          throw new TimeoutError("request");
         } else {
           throw Error("Unknown aborted error");
         }
@@ -97,8 +108,7 @@ export class HttpClient implements IHttpClient {
 }
 
 function isAbortedError(e: Error): boolean {
-  // TODO: IMPLEMENT
-  return e instanceof ErrorAborted;
+  return e.name === "AbortError" || e.message === "The user aborted a request";
 }
 
 function getErrorMessage(errBody: string): string {
