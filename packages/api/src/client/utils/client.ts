@@ -52,8 +52,8 @@ export function toUint(val: string | number): number {
 export type FetchOpts = {
   url: RouteDef["url"];
   method: RouteDef["method"];
-  query: ReqGeneric["query"];
-  body: ReqGeneric["body"];
+  query?: ReqGeneric["query"];
+  body?: ReqGeneric["body"];
 };
 export type FetchFn = {
   json: <T>(opts: FetchOpts) => Promise<T>;

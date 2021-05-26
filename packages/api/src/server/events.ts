@@ -39,9 +39,9 @@ export function getRoutes(config: IBeaconConfig, api: Api): ServerRoutes<Api, Re
             // In that case the BeaconNode class will call server.close() and end this connection.
 
             // The client may disconnect and we need to clean the subscriptions.
-            req.req.once("close", () => resolve());
-            req.req.once("end", () => resolve());
-            req.req.once("error", (err) => reject(err));
+            req.raw.once("close", () => resolve());
+            req.raw.once("end", () => resolve());
+            req.raw.once("error", (err) => reject(err));
           });
         } finally {
           controller.abort();

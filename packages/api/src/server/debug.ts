@@ -19,11 +19,12 @@ export function getRoutes(config: IBeaconConfig, api: Api): ServerRoutes<Api, Re
     getHeads: serverRoutes.getHeads,
     getState: {
       ...serverRoutes.getState,
-      handler: async (req, res) => {
+      handler: async (req) => {
         const data = await api.getState(...reqSerializers.getState.parseReq(req));
         const type = config.getForkTypes(data.data.slot).BeaconState;
         if (req.headers["accept"] === mimeTypeSSZ) {
-          return res.status(200).header("Content-Type", mimeTypeSSZ).send(type.serialize(data.data));
+          // Fastify 3.x.x will automatically add header `Content-Type: application/octet-stream` if Buffer
+          return Buffer.from(type.serialize(data.data));
         } else {
           return returnTypes.getState.toJson(data, jsonOpts);
         }
@@ -31,11 +32,12 @@ export function getRoutes(config: IBeaconConfig, api: Api): ServerRoutes<Api, Re
     },
     getStateV2: {
       ...serverRoutes.getStateV2,
-      handler: async (req, res) => {
+      handler: async (req) => {
         const data = await api.getStateV2(...reqSerializers.getStateV2.parseReq(req));
         const type = config.getForkTypes(data.data.slot).BeaconState;
         if (req.headers["accept"] === mimeTypeSSZ) {
-          return res.status(200).header("Content-Type", mimeTypeSSZ).send(type.serialize(data.data));
+          // Fastify 3.x.x will automatically add header `Content-Type: application/octet-stream` if Buffer
+          return Buffer.from(type.serialize(data.data));
         } else {
           return returnTypes.getStateV2.toJson(data, jsonOpts);
         }

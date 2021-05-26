@@ -1,11 +1,10 @@
-import Sinon from "sinon";
 import {expect} from "chai";
-import {mapValues} from "@chainsafe/lodestar-utils";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {RouteGeneric, ReqGeneric, Resolves} from "../../src/utils";
 import {FetchFn} from "../../src/client/utils";
 import {ServerRoutes} from "../../src/server/utils";
-import {getFetchFn, getTestServer} from "./utils";
+import {getFetchFn, getMockApi, getTestServer} from "./utils";
+import {registerRoutesSubApi} from "../../src/server";
 
 type IgnoreVoid<T> = T extends void ? undefined : T;
 
@@ -25,32 +24,23 @@ export function runGenericServerTest<
   getRoutes: (config: IBeaconConfig, api: Api) => ServerRoutes<Api, ReqTypes>,
   testCases: GenericServerTestCases<Api>
 ): void {
-  const mockApi = mapValues(testCases, () => Sinon.stub()) as Sinon.SinonStubbedInstance<Api> & Api;
+  const mockApi = getMockApi<Api>(testCases);
   const {baseUrl, server} = getTestServer();
 
   const fetchFn = getFetchFn(baseUrl);
   const client = getClient(config, fetchFn);
 
   const routes = getRoutes(config, mockApi);
-  for (const key of Object.keys(testCases)) {
-    const routeId = key as keyof typeof routes;
-    const route = routes[routeId];
-    server.route({
-      url: route.url,
-      method: route.method,
-      handler: route.handler,
-      schema: route.schema,
-    });
-
-    // Register mock data for all routes
-    mockApi[routeId].resolves(testCases[routeId].res as any);
-  }
+  registerRoutesSubApi(server, routes);
 
   for (const key of Object.keys(testCases)) {
     const routeId = key as keyof Api;
     const testCase = testCases[routeId];
 
     it(routeId as string, async () => {
+      // Register mock data for this route
+      mockApi[routeId].resolves(testCases[routeId].res as any);
+
       // Do the call
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const res = await (client[routeId] as RouteGeneric)(...(testCase.args as any[]));

@@ -2,9 +2,11 @@ import fastify, {FastifyInstance} from "fastify";
 import {fetch} from "cross-fetch";
 import querystring from "querystring";
 import {FetchFn, FetchOpts} from "../../src/client/utils";
+import {mapValues} from "@chainsafe/lodestar-utils";
+import Sinon from "sinon";
 
 export function getTestServer(): {baseUrl: string; server: FastifyInstance} {
-  const port = 10101;
+  const port = Math.floor(Math.random() * (65535 - 49152)) + 49152;
   const baseUrl = `http://127.0.0.1:${port}`;
 
   const server = fastify({
@@ -32,6 +34,13 @@ export function getTestServer(): {baseUrl: string; server: FastifyInstance} {
   });
 
   return {baseUrl, server};
+}
+
+/** Type helper to get a Sinon mock object type with Api */
+export function getMockApi<Api extends Record<string, any>>(
+  routeKeys: Record<string, any>
+): Sinon.SinonStubbedInstance<Api> & Api {
+  return mapValues(routeKeys, () => Sinon.stub()) as Sinon.SinonStubbedInstance<Api> & Api;
 }
 
 export function getFetchFn(baseUrl: string): FetchFn {

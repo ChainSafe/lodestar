@@ -16,11 +16,11 @@ export function getRoutes(config: IBeaconConfig, api: Api): ServerRoutes<Api, Re
 
     getStateProof: {
       ...serverRoutes.getStateProof,
-      handler: async (req, res) => {
+      handler: async (req) => {
         const args = reqSerializers.getStateProof.parseReq(req);
         const {data: proof} = await api.getStateProof(...args);
-        const serialized = serializeProof(proof);
-        return res.status(200).header("Content-Type", "application/octet-stream").send(Buffer.from(serialized));
+        // Fastify 3.x.x will automatically add header `Content-Type: application/octet-stream` if Buffer
+        return Buffer.from(serializeProof(proof));
       },
     },
   };

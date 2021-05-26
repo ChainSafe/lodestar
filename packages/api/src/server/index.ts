@@ -18,7 +18,7 @@ export type RouteConfig = {
 };
 
 export function registerRoutes(
-  fastify: FastifyInstance,
+  server: FastifyInstance,
   config: IBeaconConfig,
   api: Api,
   enabledNamespaces: (keyof Api)[]
@@ -48,14 +48,22 @@ export function registerRoutes(
       throw Error(`Unknown api namespace ${namespace}`);
     }
 
-    for (const route of Object.values(routes)) {
-      fastify.route({
-        url: route.url,
-        method: route.method,
-        handler: route.handler,
-        schema: route.schema,
-        config: {operationId: route.id} as RouteConfig,
-      });
-    }
+    registerRoutesSubApi(server, routes);
+  }
+}
+
+export function registerRoutesSubApi(
+  fastify: FastifyInstance,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  routes: Record<string, ServerRoute<any>>
+): void {
+  for (const route of Object.values(routes)) {
+    fastify.route({
+      url: route.url,
+      method: route.method,
+      handler: route.handler,
+      schema: route.schema,
+      config: {operationId: route.id} as RouteConfig,
+    });
   }
 }
