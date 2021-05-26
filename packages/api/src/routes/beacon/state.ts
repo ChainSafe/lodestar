@@ -203,7 +203,7 @@ export function getReqSerializers() {
       parseReq: ({params, query}) => [params.stateId, query],
       schema: {
         params: {stateId: Schema.StringRequired},
-        query: {indices: Schema.UintArray, statuses: Schema.StringArray},
+        query: {indices: Schema.UintOrStringArray, statuses: Schema.StringArray},
       },
     }),
 
@@ -215,7 +215,7 @@ export function getReqSerializers() {
       parseReq: ({params, query}) => [params.stateId, query.indices],
       schema: {
         params: {stateId: Schema.StringRequired},
-        query: {indices: Schema.UintArray},
+        query: {indices: Schema.UintOrStringArray},
       },
     }),
   };

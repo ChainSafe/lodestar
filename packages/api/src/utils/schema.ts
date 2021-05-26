@@ -26,6 +26,7 @@ export enum Schema {
   StringRequired,
   StringArray,
   UintOrStringRequired,
+  UintOrStringArray,
   Object,
   ObjectArray,
   AnyArray,
@@ -48,7 +49,9 @@ function getJsonSchemaItem(schema: Schema): JsonSchema {
       return {type: "array", items: {type: "string"}};
 
     case Schema.UintOrStringRequired:
-      return {type: ["integer", "string"]};
+      return {type: ["string", "integer"]};
+    case Schema.UintOrStringArray:
+      return {type: "array", items: {type: ["string", "integer"]}};
 
     case Schema.Object:
       return {type: "object"};

@@ -9,6 +9,7 @@ import {runGenericServerTest} from "../utils/genericServerTest";
 describe("beacon", () => {
   const root = Buffer.alloc(32, 1);
   const balance = BigInt(32e9);
+  const pubkeyHex = toHexString(Buffer.alloc(48, 1));
 
   const blockHeaderResponse: BlockHeaderResponse = {
     root,
@@ -115,15 +116,15 @@ describe("beacon", () => {
       },
     },
     getStateValidators: {
-      args: ["head", {indices: [1300], statuses: ["active_ongoing"]}],
+      args: ["head", {indices: [pubkeyHex, "1300"], statuses: ["active_ongoing"]}],
       res: {data: [validatorResponse]},
     },
     getStateValidator: {
-      args: ["head", toHexString(Buffer.alloc(48, 1))],
+      args: ["head", pubkeyHex],
       res: {data: validatorResponse},
     },
     getStateValidatorBalances: {
-      args: ["head", [1300]],
+      args: ["head", ["1300"]],
       res: {data: [{index: 1300, balance}]},
     },
     getEpochCommittees: {
