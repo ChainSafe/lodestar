@@ -16,7 +16,8 @@ export function getRoutes(config: IBeaconConfig, api: Api): ServerRoutes<Api, Re
   );
 
   return {
-    getHeads: serverRoutes.getHeads,
+    ...serverRoutes,
+
     getState: {
       ...serverRoutes.getState,
       handler: async (req) => {

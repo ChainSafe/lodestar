@@ -25,6 +25,14 @@ describe("debug", () => {
       args: ["head"],
       res: {data: config.types.altair.BeaconState.defaultValue(), version: ForkName.altair},
     },
+    connectToPeer: {
+      args: ["peerId", ["multiaddr1", "multiaddr2"]],
+      res: undefined,
+    },
+    disconnectPeer: {
+      args: ["peerId"],
+      res: undefined,
+    },
   });
 
   // Get state by SSZ

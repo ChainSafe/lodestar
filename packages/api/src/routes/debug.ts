@@ -45,12 +45,26 @@ export type Api = {
    * Can be one of: "head" (canonical head in node's view), "genesis", "finalized", "justified", \<slot\>, \<hex encoded stateRoot with 0x prefix\>.
    */
   getStateV2(stateId: StateId): Promise<{data: allForks.BeaconState; version: ForkName}>;
+
+  /**
+   * NOT IN SPEC
+   * Connect to a peer at the given multiaddr array
+   */
+  connectToPeer(peerIdStr: string, multiaddr: string[]): Promise<void>;
+
+  /**
+   * NOT IN SPEC
+   * Disconnect from a peer
+   */
+  disconnectPeer(peerIdStr: string): Promise<void>;
 };
 
 export const routesData: RoutesData<Api> = {
   getHeads: {url: "/eth/v1/debug/beacon/heads", method: "GET"},
   getState: {url: "/eth/v1/debug/beacon/states/:stateId", method: "GET"},
   getStateV2: {url: "/eth/v2/debug/beacon/states/:stateId", method: "GET"},
+  connectToPeer: {url: "/eth/v1/debug/connect/:peerId", method: "POST"},
+  disconnectPeer: {url: "/eth/v1/debug/disconnect/:peerId", method: "POST"},
 };
 
 export type ReqTypes = {
@@ -71,6 +85,17 @@ export function getReqSerializers() {
     getHeads: reqEmpty,
     getState: getState,
     getStateV2: getState,
+
+    connectToPeer: t.connectToPeer<{params: {peerId: string}; body: string[]}>({
+      writeReq: (peerId, multiaddr) => ({params: {peerId}, body: multiaddr}),
+      parseReq: ({params, body}) => [params.peerId, body],
+      schema: {params: {peerId: Schema.StringRequired}, body: Schema.StringArray},
+    }),
+    disconnectPeer: t.disconnectPeer<{params: {peerId: string}}>({
+      writeReq: (peerId) => ({params: {peerId}}),
+      parseReq: ({params}) => [params.peerId],
+      schema: {params: {peerId: Schema.StringRequired}},
+    }),
   };
 }
 
