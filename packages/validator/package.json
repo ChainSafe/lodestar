@@ -56,7 +56,7 @@
     "axios": "^0.21.1",
     "axios-mock-adapter": "^1.17.0",
     "bigint-buffer": "^1.1.5",
-    "eventsource": "^1.0.7",
+    "eventsource": "^1.1.0",
     "strict-event-emitter-types": "^2.0.0"
   },
   "devDependencies": {

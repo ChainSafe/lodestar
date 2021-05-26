@@ -3,6 +3,7 @@ import {ChainEvent, IChainEvents} from "../../../chain";
 import {routes} from "@chainsafe/lodestar-api";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 import {ZERO_HASH} from "../../../constants";
+import {ApiError} from "../errors";
 
 /**
  * Mapping of internal `ChainEvents` to API spec events
@@ -71,11 +72,13 @@ export function getEventsApi({chain, config}: Pick<ApiModules, "chain" | "config
       for (const topic of topics) {
         const eventDataTransformer = eventDataTransformers[topic];
         const chainEvent = chainEventMap[topic];
-        if (!eventDataTransformer) throw Error(`Unknown topic ${topic}`);
-        if (!chainEvent) throw Error(`Unknown topic ${topic}`);
+        if (!eventDataTransformer || !chainEvent) {
+          throw new ApiError(400, `Unknown topic ${topic}`);
+        }
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const handler = (...args: any[]): void => {
+          // TODO: What happens if this handler throws? Does it break the other chain.emitter listeners?
           const data = eventDataTransformer(...args);
           // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any
           onEvent({type: topic, message: data as any});

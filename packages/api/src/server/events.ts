@@ -8,28 +8,25 @@ export function getRoutes(config: IBeaconConfig, api: Api): ServerRoutes<Api, Re
 
   return {
     eventstream: {
-      ...routesData.eventstream,
+      url: routesData.eventstream.url,
+      method: routesData.eventstream.method,
       id: "eventstream",
 
       handler: async (req, res) => {
         const controller = new AbortController();
 
         try {
-          await res.headers({
-            "Content-Type": "text/event-stream",
-            "Cache-Control": "no-cache,no-transform",
-            // prettier-ignore
-            // eslint-disable-next-line
-            "Connection": "keep-alive",
-            // It was reported that chrome and firefox do not play well with compressed event-streams https://github.com/lolo32/fastify-sse/issues/2
-            "x-no-compression": 1,
-          });
+          res.raw.setHeader("Content-Type", "text/event-stream");
+          res.raw.setHeader("Cache-Control", "no-cache,no-transform");
+          res.raw.setHeader("Connection", "keep-alive");
+          // It was reported that chrome and firefox do not play well with compressed event-streams https://github.com/lolo32/fastify-sse/issues/2
+          res.raw.setHeader("x-no-compression", 1);
 
           await new Promise<void>((resolve, reject) => {
             api.eventstream(req.query.topics, controller.signal, (event) => {
               try {
                 const data = eventSerdes.toJson(event);
-                res.raw.write(`event: ${event.type}\ndata: ${JSON.stringify(data)}\n\n`);
+                res.raw.write(serializeSSEEvent({event: event.type, data}));
               } catch (e) {
                 reject(e);
               }
@@ -43,6 +40,8 @@ export function getRoutes(config: IBeaconConfig, api: Api): ServerRoutes<Api, Re
             req.raw.once("end", () => resolve());
             req.raw.once("error", (err) => reject(err));
           });
+
+          // api.eventstream will never stop, so no need to ever call `res.raw.end();`
         } finally {
           controller.abort();
         }
@@ -59,4 +58,8 @@ export function getRoutes(config: IBeaconConfig, api: Api): ServerRoutes<Api, Re
       },
     },
   };
+}
+
+export function serializeSSEEvent(chunk: {event: string; data: unknown}): string {
+  return [`event: ${chunk.event}`, `data: ${JSON.stringify(chunk.data)}`, "\n"].join("\n");
 }
