@@ -81,11 +81,11 @@ export class RestApi {
     // Log after response
     server.addHook("onResponse", async (req, res) => {
       this.activeRequests.delete(req.raw);
-      const config = res.context.config as RouteConfig;
-      this.logger.debug(`Res ${req.id} ${config} - ${res.raw.statusCode}`);
+      const {operationId} = res.context.config as RouteConfig;
+      this.logger.debug(`Res ${req.id} ${operationId} - ${res.raw.statusCode}`);
 
       if (modules.metrics) {
-        modules.metrics?.apiRestResponseTime.observe({operationId: config.operationId}, res.getResponseTime() / 1000);
+        modules.metrics?.apiRestResponseTime.observe({operationId}, res.getResponseTime() / 1000);
       }
     });
 
@@ -94,8 +94,8 @@ export class RestApi {
       // Don't log ErrorAborted errors, they happen on node shutdown and are not usefull
       if (err instanceof ErrorAborted) return;
 
-      const config = res.context.config as RouteConfig;
-      this.logger.error(`Req ${req.id} ${config} error`, {}, err);
+      const {operationId} = res.context.config as RouteConfig;
+      this.logger.error(`Req ${req.id} ${operationId} error`, {}, err);
     });
 
     this.opts = opts;
