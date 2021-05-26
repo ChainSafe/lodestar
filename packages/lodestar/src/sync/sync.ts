@@ -197,7 +197,8 @@ export class BeaconSync implements IBeaconSync {
   private onUnknownBlockRoot = async (err: BlockError): Promise<void> => {
     if (err.type.code !== BlockErrorCode.PARENT_UNKNOWN) return;
 
-    const blockRoot = this.config.types.phase0.BeaconBlock.hashTreeRoot(err.job.signedBlock.message);
+    const block = err.job.signedBlock.message;
+    const blockRoot = this.config.getForkTypes(block.slot).BeaconBlock.hashTreeRoot(block);
     const parentRoot = this.chain.pendingBlocks.getMissingAncestor(blockRoot);
     const parentRootHex = toHexString(parentRoot);
 

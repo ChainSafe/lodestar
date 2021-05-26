@@ -4,7 +4,7 @@ import sinon, {SinonStub, SinonStubbedInstance} from "sinon";
 import {ReqRespEncoding} from "../../../../src/network/reqresp";
 import {expect} from "chai";
 import PeerId from "peer-id";
-import {phase0} from "@chainsafe/lodestar-types";
+import {altair, phase0} from "@chainsafe/lodestar-types";
 import MetadataBook from "libp2p/src/peer-store/metadata-book";
 import ProtoBook from "libp2p/src/peer-store/proto-book";
 
@@ -47,9 +47,11 @@ describe("Libp2pPeerMetadataStore", function () {
 
   it("can store and retrieve metadata", function () {
     const store = new Libp2pPeerMetadataStore(config, metabookStub);
-    const value: phase0.Metadata = {
+    const value: altair.Metadata = {
       attnets: Array.from({length: 64}, () => true),
       seqNumber: BigInt(20),
+      // This will serialize fine, to 0x00
+      syncnets: [],
     };
     store.metadata.set(peerId, value);
     const result = store.metadata.get(peerId);

@@ -9,7 +9,6 @@ import {BlockId, IBeaconBlocksApi} from "./interface";
 import {resolveBlockId, toBeaconHeaderResponse} from "./utils";
 import {IBeaconSync} from "../../../../sync";
 import {INetwork} from "../../../../network/interface";
-import {getBlockType} from "../../../../util/multifork";
 
 export * from "./interface";
 
@@ -80,7 +79,9 @@ export class BeaconBlockApi implements IBeaconBlocksApi {
       if (!canonicalBlock) {
         return [];
       }
-      const canonicalRoot = this.config.types.phase0.BeaconBlock.hashTreeRoot(canonicalBlock.message);
+      const canonicalRoot = this.config
+        .getForkTypes(canonicalBlock.message.slot)
+        .BeaconBlock.hashTreeRoot(canonicalBlock.message);
       result.push(toBeaconHeaderResponse(this.config, canonicalBlock, true));
 
       // fork blocks
@@ -126,10 +127,10 @@ export class BeaconBlockApi implements IBeaconBlocksApi {
 
     // Slow path
     const block = await resolveBlockId(this.chain.forkChoice, this.db, blockId);
-    return getBlockType(this.config, block.message).hashTreeRoot(block.message);
+    return this.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message);
   }
 
-  async publishBlock(signedBlock: phase0.SignedBeaconBlock): Promise<void> {
+  async publishBlock(signedBlock: allForks.SignedBeaconBlock): Promise<void> {
     await Promise.all([this.chain.receiveBlock(signedBlock), this.network.gossip.publishBeaconBlock(signedBlock)]);
   }
 }

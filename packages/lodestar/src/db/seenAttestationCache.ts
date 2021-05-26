@@ -96,8 +96,6 @@ export class SeenAttestationCache {
    * We're only interested in the AttestationData + aggregationBits inside AggregateAndProof.
    */
   private aggregateAndProofKey(value: phase0.AggregateAndProof): string {
-    return toHexString(
-      this.config.getTypes(value.aggregate.data.slot).AttestationData.hashTreeRoot(value.aggregate.data)
-    );
+    return toHexString(this.config.types.phase0.AttestationData.hashTreeRoot(value.aggregate.data));
   }
 }

@@ -53,7 +53,7 @@ describe("validateLightClientUpdate", () => {
     const syncAttestedState = config.types.altair.BeaconState.defaultTreeBacked();
     syncAttestedState.finalizedCheckpoint = {
       epoch: 0,
-      root: config.types.altair.BeaconBlockHeader.hashTreeRoot(header),
+      root: config.types.phase0.BeaconBlockHeader.hashTreeRoot(header),
     };
     // Prove it
     const finalityBranch = syncAttestedState.tree.getSingleProof(BigInt(FINALIZED_ROOT_INDEX));

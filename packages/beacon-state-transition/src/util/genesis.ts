@@ -1,10 +1,11 @@
 import {List, TreeBacked} from "@chainsafe/ssz";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {ForkName, IBeaconConfig} from "@chainsafe/lodestar-config";
 import {GENESIS_SLOT} from "@chainsafe/lodestar-params";
-import {allForks, Bytes32, Number64, phase0, Root} from "@chainsafe/lodestar-types";
+import {allForks, altair, Bytes32, Number64, phase0, Root} from "@chainsafe/lodestar-types";
 import {bigIntMin} from "@chainsafe/lodestar-utils";
 
-import {processDeposit} from "../naive/phase0";
+import {processDeposit as phase0ProcessDeposit} from "../naive/phase0";
+import {processDeposit as altairProcessDeposit} from "../naive/altair";
 import {computeEpochAtSlot} from "./epoch";
 import {getActiveValidatorIndices} from "./validator";
 import {getTemporaryBlockHeader} from "./blockRoot";
@@ -43,12 +44,13 @@ export function getGenesisBeaconState(
   // Seed RANDAO with Eth1 entropy
   const randaoMixes = Array<Bytes32>(config.params.EPOCHS_PER_HISTORICAL_VECTOR).fill(genesisEth1Data.blockHash);
 
-  const state: allForks.BeaconState = config.getTypes(GENESIS_SLOT).BeaconState.defaultTreeBacked();
+  const state: allForks.BeaconState = config.getForkTypes(GENESIS_SLOT).BeaconState.defaultTreeBacked();
   // MISC
   state.slot = GENESIS_SLOT;
+  const version = config.getForkVersion(GENESIS_SLOT);
   state.fork = {
-    previousVersion: config.params.GENESIS_FORK_VERSION,
-    currentVersion: config.params.GENESIS_FORK_VERSION,
+    previousVersion: version,
+    currentVersion: version,
     epoch: computeEpochAtSlot(config, GENESIS_SLOT),
   } as phase0.Fork;
 
@@ -128,7 +130,13 @@ export function applyDeposits(
     }
 
     state.eth1Data.depositCount += 1;
-    processDeposit(config, state as phase0.BeaconState, deposit);
+
+    const forkName = config.getForkName(GENESIS_SLOT);
+    if (forkName == ForkName.phase0) {
+      phase0ProcessDeposit(config, state, deposit);
+    } else {
+      altairProcessDeposit(config, state as altair.BeaconState, deposit);
+    }
   }
 
   // Process activations
@@ -149,7 +157,9 @@ export function applyDeposits(
   }
 
   // Set genesis validators root for domain separation and chain versioning
-  state.genesisValidatorsRoot = config.types.phase0.BeaconState.fields.validators.hashTreeRoot(state.validators);
+  state.genesisValidatorsRoot = config
+    .getForkTypes(state.slot)
+    .BeaconState.fields.validators.hashTreeRoot(state.validators);
 }
 
 /**
@@ -168,7 +178,7 @@ export function initializeBeaconStateFromEth1(
   const state = getGenesisBeaconState(
     config,
     config.types.phase0.Eth1Data.defaultValue(),
-    getTemporaryBlockHeader(config, config.types.phase0.BeaconBlock.defaultValue())
+    getTemporaryBlockHeader(config, config.getForkTypes(GENESIS_SLOT).BeaconBlock.defaultValue())
   );
 
   applyTimestamp(config, state, eth1Timestamp);

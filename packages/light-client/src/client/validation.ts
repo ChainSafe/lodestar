@@ -51,7 +51,7 @@ export function validateLightClientUpdate(
     // Where `hashTreeRoot(state) == update.finalityHeader.stateRoot`
     if (
       !isValidMerkleBranch(
-        config.types.altair.BeaconBlockHeader.hashTreeRoot(update.header),
+        config.types.phase0.BeaconBlockHeader.hashTreeRoot(update.header),
         Array.from(update.finalityBranch).map((i) => i.valueOf() as Uint8Array),
         FINALIZED_ROOT_INDEX_FLOORLOG2,
         FINALIZED_ROOT_INDEX % 2 ** FINALIZED_ROOT_INDEX_FLOORLOG2,
@@ -115,7 +115,7 @@ export function validateLightClientUpdate(
   // Ref: https://github.com/ethereum/eth2.0-specs/blob/dev/specs/altair/beacon-chain.md#sync-committee-processing
   const participantPubkeys = getParticipantPubkeys(syncCommittee.pubkeys, update.syncCommitteeBits);
   const domain = computeDomain(config, config.params.DOMAIN_SYNC_COMMITTEE, update.forkVersion, genesisValidatorsRoot);
-  const signingRoot = computeSigningRoot(config, config.types.altair.BeaconBlockHeader, signedHeader, domain);
+  const signingRoot = computeSigningRoot(config, config.types.phase0.BeaconBlockHeader, signedHeader, domain);
   if (!isValidBlsAggregate(participantPubkeys, signingRoot, update.syncCommitteeSignature.valueOf() as Uint8Array)) {
     throw Error("Invalid aggregate signature");
   }

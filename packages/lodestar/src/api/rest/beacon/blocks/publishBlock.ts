@@ -1,6 +1,5 @@
-import {phase0} from "@chainsafe/lodestar-types";
+import {allForks} from "@chainsafe/lodestar-types";
 import {SignedBeaconBlock} from "@chainsafe/lodestar-types/lib/allForks";
-import {getSignedBlockType} from "../../../../util/multifork";
 import {ValidationError} from "../../../impl/errors";
 import {ApiController} from "../../types";
 
@@ -12,10 +11,10 @@ export const publishBlock: ApiController = {
   id: "publishBlock",
 
   handler: async function (req) {
-    let block: phase0.SignedBeaconBlock;
+    let block: allForks.SignedBeaconBlock;
     try {
-      const type = getSignedBlockType(this.config, req.body as SignedBeaconBlock);
-      block = type.fromJson(req.body, {case: "snake"});
+      const slot = (req.body as SignedBeaconBlock).message.slot;
+      block = this.config.getForkTypes(slot).SignedBeaconBlock.fromJson(req.body, {case: "snake"});
     } catch (e) {
       throw new ValidationError(`Failed to deserialize block: ${(e as Error).message}`);
     }

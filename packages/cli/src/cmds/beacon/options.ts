@@ -1,13 +1,13 @@
 import {Options} from "yargs";
+import {defaultLogLevel, LogLevels} from "@chainsafe/lodestar-utils";
 import {beaconNodeOptions, paramsOptions, IBeaconNodeArgs, IENRArgs, enrOptions} from "../../options";
 import {defaultBeaconPaths, IBeaconPaths} from "./paths";
-import {ICliCommandOptions} from "../../util";
+import {ICliCommandOptions, ILogArgs} from "../../util";
 
 interface IBeaconExtraArgs {
   forceGenesis?: boolean;
   genesisStateFile?: string;
   weakSubjectivityStateFile?: string;
-  weakSubjectivityServer: string;
   fetchChainSafeWeakSubjecitivtyState: boolean;
   weakSubjectivityCheckpoint?: string;
 }
@@ -37,7 +37,35 @@ export const beaconExtraOptions: ICliCommandOptions<IBeaconExtraArgs> = {
   weakSubjectivityCheckpoint: {
     description: "Tell the beacon node to fetch a weak subjectivity state at the specified checkpoint.  The string arg must be in the form <blockRoot>:<epoch>.  For example, 0x1234:100 would ask for the weak subjectivity state at checkpoint of epoch 100 with block root 0x1234.",
     type: "string",
-  }
+  },
+};
+
+export const logOptions: ICliCommandOptions<ILogArgs> = {
+  logLevel: {
+    choices: LogLevels,
+    description: "Logging verbosity level",
+    defaultDescription: defaultLogLevel,
+    type: "string",
+  },
+
+  logLevelFile: {
+    choices: LogLevels,
+    description: "Logging verbosity level for file transport",
+    defaultDescription: defaultLogLevel,
+    type: "string",
+  },
+
+  logFormatGenesisTime: {
+    hidden: true,
+    description: "Logger format - Use EpochSlot TimestampFormat",
+    type: "number",
+  },
+
+  logFormatId: {
+    hidden: true,
+    description: "Logger format - Prefix module field with a string ID",
+    type: "string",
+  },
 };
 
 export const beaconPathsOptions: ICliCommandOptions<IBeaconPaths> = {
@@ -88,11 +116,12 @@ export const beaconPathsOptions: ICliCommandOptions<IBeaconPaths> = {
   },
 };
 
-export type IBeaconArgs = IBeaconNodeArgs & IBeaconPaths & IENRArgs & IBeaconExtraArgs;
+export type IBeaconArgs = IBeaconExtraArgs & ILogArgs & IBeaconPaths & IBeaconNodeArgs & IENRArgs;
 
 export const beaconOptions: {[k: string]: Options} = {
-  ...beaconPathsOptions,
   ...beaconExtraOptions,
+  ...logOptions,
+  ...beaconPathsOptions,
   ...beaconNodeOptions,
   ...paramsOptions,
   ...enrOptions,

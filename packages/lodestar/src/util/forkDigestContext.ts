@@ -43,7 +43,7 @@ export class ForkDigestContext implements IForkDigestContext {
   }
 }
 
-function toHexStringNoPrefix(hex: string | ByteVector): string {
+export function toHexStringNoPrefix(hex: string | ByteVector): string {
   return strip0xPrefix(typeof hex === "string" ? hex : toHexString(hex));
 }
 

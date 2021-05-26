@@ -1,9 +1,9 @@
 import {expect} from "chai";
 import {config} from "@chainsafe/lodestar-config/minimal";
-import {getENRForkID} from "../../../../src/network/metadata/utils";
-import {ForkDigestContext} from "../../../../src/util/forkDigestContext";
+import {getENRForkID} from "../../../src/network/metadata";
+import {ForkDigestContext} from "../../../src/util/forkDigestContext";
 
-describe("network / metadata / utils / getENRForkID", function () {
+describe("network / metadata / getENRForkID", function () {
   it("should get enr fork id if not found next fork", () => {
     const genesisValidatorsRoot = config.types.Root.defaultValue();
     const forkDigestContext = new ForkDigestContext(config, genesisValidatorsRoot);

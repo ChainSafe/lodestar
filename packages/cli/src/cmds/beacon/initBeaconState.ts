@@ -12,6 +12,7 @@ import {
   initStateFromDb,
   initStateFromEth1,
 } from "@chainsafe/lodestar";
+import {getStateTypeFromBytes} from "@chainsafe/lodestar/lib/util/multifork";
 import {downloadOrLoadFile} from "../../util";
 import {IBeaconArgs} from "./options";
 import {defaultNetwork, IGlobalArgs} from "../../options/globalOptions";
@@ -66,7 +67,8 @@ export async function initBeaconState(
   signal: AbortSignal
 ): Promise<TreeBacked<allForks.BeaconState>> {
   async function initFromFile(pathOrUrl: string): Promise<TreeBacked<allForks.BeaconState>> {
-    const anchorState = config.types.phase0.BeaconState.createTreeBackedFromBytes(await downloadOrLoadFile(pathOrUrl));
+    const stateBytes = await downloadOrLoadFile(pathOrUrl);
+    const anchorState = getStateTypeFromBytes(config, stateBytes).createTreeBackedFromBytes(stateBytes);
     return await initStateFromAnchorState(config, db, logger, anchorState as TreeBacked<allForks.BeaconState>);
   }
 

@@ -1,6 +1,5 @@
 import {ContainerType} from "@chainsafe/ssz";
 
-import {PrimitiveSSZTypes} from "../primitive";
 import * as phase0 from "../phase0";
 import * as altair from "../altair";
 
@@ -10,21 +9,26 @@ export type BeaconBlockBody = phase0.BeaconBlockBody | altair.BeaconBlockBody;
 export type BeaconBlock = phase0.BeaconBlock | altair.BeaconBlock;
 export type SignedBeaconBlock = phase0.SignedBeaconBlock | altair.SignedBeaconBlock;
 export type BeaconState = phase0.BeaconState | altair.BeaconState;
+export type Metadata = phase0.Metadata | altair.Metadata;
 
-// The difference between AllSSZTypes and AllForksSSZTypes:
-// AllSSZTypes["BeaconState"] = ContainerType<phase0.BeaconState & altair.BeaconState & phase1.BeaconState>
-// AllForksSSZTypes["BeaconState"] = ContainerType<phase0.BeaconState | altair.BeaconState | phase1.BeaconState>
+/**
+ * Types known to change between forks
+ */
+export type AllForksTypes = {
+  BeaconBlockBody: BeaconBlockBody;
+  BeaconBlock: BeaconBlock;
+  SignedBeaconBlock: SignedBeaconBlock;
+  BeaconState: BeaconState;
+  Metadata: Metadata;
+};
 
-type AllSSZTypes =
-  | (PrimitiveSSZTypes & phase0.Phase0SSZTypes)
-  | (PrimitiveSSZTypes & phase0.Phase0SSZTypes & altair.AltairSSZTypes);
-
-export type AllForksSSZTypes = Omit<
-  AllSSZTypes,
-  "BeaconBlockBody" | "BeaconBlock" | "SignedBeaconBlock" | "BeaconState"
-> & {
+/**
+ * SSZ Types known to change between forks
+ */
+export type AllForksSSZTypes = {
   BeaconBlockBody: ContainerType<BeaconBlockBody>;
   BeaconBlock: ContainerType<BeaconBlock>;
   SignedBeaconBlock: ContainerType<SignedBeaconBlock>;
   BeaconState: ContainerType<BeaconState>;
+  Metadata: ContainerType<Metadata>;
 };

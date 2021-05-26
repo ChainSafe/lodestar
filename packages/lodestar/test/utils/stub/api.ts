@@ -28,7 +28,8 @@ export class StubbedApi implements SinonStubbedInstance<IApi> {
     this.validator = sandbox.createStubInstance(ValidatorApi);
     this.events = sandbox.createStubInstance(EventsApi);
     const debugBeacon = sandbox.createStubInstance(DebugBeaconApi);
-    this.debug = {beacon: debugBeacon} as SinonStubbedInstance<DebugApi>;
+    this.debug = sandbox.createStubInstance(DebugApi);
+    this.debug.beacon = debugBeacon;
     this.config = new StubbedConfigApi(sandbox);
     this.lightclient = sandbox.createStubInstance(LightclientApi);
     this.lodestar = sandbox.createStubInstance(LodestarApi);

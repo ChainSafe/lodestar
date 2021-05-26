@@ -20,7 +20,7 @@ export async function validateBeaconBlock(
       validProposerSignature: false,
     });
     logger.debug("gossip - Block - accept", {
-      root: toHexString(config.types.phase0.BeaconBlock.hashTreeRoot(signedBlock.message)),
+      root: toHexString(config.getForkTypes(signedBlock.message.slot).BeaconBlock.hashTreeRoot(signedBlock.message)),
       slot: signedBlock.message.slot,
     });
   } catch (e) {

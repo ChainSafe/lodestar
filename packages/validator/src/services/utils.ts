@@ -1,6 +1,4 @@
 import {SecretKey} from "@chainsafe/bls";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
 import {CommitteeIndex, SubCommitteeIndex} from "@chainsafe/lodestar-types";
 import {toHexString} from "@chainsafe/ssz";
 import {PubkeyHex, BLSKeypair} from "../types";
@@ -37,24 +35,18 @@ export function groupAttDutiesByCommitteeIndex(duties: AttDutyAndProof[]): Map<C
 }
 
 export function groupSyncDutiesBySubCommitteeIndex(
-  config: IBeaconConfig,
   duties: SyncDutyAndProof[]
 ): Map<SubCommitteeIndex, SyncDutyAndProof[]> {
   const dutiesBySubCommitteeIndex = new Map<SubCommitteeIndex, SyncDutyAndProof[]>();
 
-  // TODO: Cache this value
-  const SYNC_COMMITTEE_SUBNET_SIZE = Math.floor(config.params.SYNC_COMMITTEE_SIZE / SYNC_COMMITTEE_SUBNET_COUNT);
-
   for (const dutyAndProof of duties) {
-    for (const committeeIndex of dutyAndProof.duty.validatorSyncCommitteeIndices) {
-      const subCommitteeIndex = Math.floor(committeeIndex / SYNC_COMMITTEE_SUBNET_SIZE);
-      let dutyAndProofArr = dutiesBySubCommitteeIndex.get(subCommitteeIndex);
-      if (!dutyAndProofArr) {
-        dutyAndProofArr = [];
-        dutiesBySubCommitteeIndex.set(subCommitteeIndex, dutyAndProofArr);
-      }
-      dutyAndProofArr.push(dutyAndProof);
+    const subCommitteeIndex = dutyAndProof.subCommitteeIndex;
+    let dutyAndProofArr = dutiesBySubCommitteeIndex.get(subCommitteeIndex);
+    if (!dutyAndProofArr) {
+      dutyAndProofArr = [];
+      dutiesBySubCommitteeIndex.set(subCommitteeIndex, dutyAndProofArr);
     }
+    dutyAndProofArr.push(dutyAndProof);
   }
 
   return dutiesBySubCommitteeIndex;

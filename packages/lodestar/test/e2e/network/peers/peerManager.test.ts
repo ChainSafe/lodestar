@@ -7,16 +7,16 @@ import {IReqResp, ReqRespMethod} from "../../../../src/network/reqresp";
 import {PeerRpcScoreStore, PeerManager, Libp2pPeerMetadataStore} from "../../../../src/network/peers";
 import {NetworkEvent, NetworkEventBus} from "../../../../src/network";
 import {createMetrics} from "../../../../src/metrics";
-import {createNode, getAttnets} from "../../../utils/network";
+import {createNode, getAttnets, getSyncnets} from "../../../utils/network";
 import {MockBeaconChain} from "../../../utils/mocks/chain/chain";
 import {generateEmptySignedBlock} from "../../../utils/block";
 import {generateState} from "../../../utils/state";
-import {phase0} from "@chainsafe/lodestar-types";
+import {altair, phase0} from "@chainsafe/lodestar-types";
 import {sleep} from "@chainsafe/lodestar-utils";
 import {waitForEvent} from "../../../utils/events/resolver";
 import {testLogger} from "../../../utils/logger";
 import {getValidPeerId} from "../../../utils/peer";
-import {ISubnetsService} from "../../../../src/network/subnetsService";
+import {IAttnetsService} from "../../../../src/network/subnets";
 
 const logger = testLogger();
 
@@ -60,11 +60,15 @@ describe("network / peers / PeerManager", function () {
     const peerMetadata = new Libp2pPeerMetadataStore(config, libp2p.peerStore.metadataBook);
     const peerRpcScores = new PeerRpcScoreStore(peerMetadata);
     const networkEventBus = new NetworkEventBus();
-    const mockSubnetsService: ISubnetsService = {
+    const mockSubnetsService: IAttnetsService = {
       getActiveSubnets: () => [],
       shouldProcess: () => true,
       // eslint-disable-next-line @typescript-eslint/no-empty-function
       addCommitteeSubscriptions: () => {},
+      // eslint-disable-next-line @typescript-eslint/no-empty-function
+      start: () => {},
+      // eslint-disable-next-line @typescript-eslint/no-empty-function
+      stop: () => {},
     };
 
     const peerManager = new PeerManager(
@@ -157,7 +161,7 @@ describe("network / peers / PeerManager", function () {
 
     // Simulate peer1 returning a PING and STATUS message
     const remoteStatus = chain.getStatus();
-    const remoteMetadata: phase0.Metadata = {seqNumber: BigInt(1), attnets: getAttnets()};
+    const remoteMetadata: altair.Metadata = {seqNumber: BigInt(1), attnets: getAttnets(), syncnets: getSyncnets()};
     reqResp.ping.resolves(remoteMetadata.seqNumber);
     reqResp.status.resolves(remoteStatus);
     reqResp.metadata.resolves(remoteMetadata);

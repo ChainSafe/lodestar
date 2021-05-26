@@ -10,11 +10,11 @@ import {ApiError, ValidationError} from "../../errors";
 
 export function toBeaconHeaderResponse(
   config: IBeaconConfig,
-  block: phase0.SignedBeaconBlock,
+  block: allForks.SignedBeaconBlock,
   canonical = false
 ): phase0.SignedBeaconHeaderResponse {
   return {
-    root: config.types.phase0.BeaconBlock.hashTreeRoot(block.message),
+    root: config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message),
     canonical,
     header: {
       message: blockToHeader(config, block.message),
@@ -41,7 +41,7 @@ async function resolveBlockIdOrNull(
   db: IBeaconDb,
   blockId: BlockId
 ): Promise<allForks.SignedBeaconBlock | null> {
-  blockId = blockId.toLowerCase();
+  blockId = String(blockId).toLowerCase();
   if (blockId === "head") {
     const head = forkChoice.getHead();
     return db.block.get(head.blockRoot);

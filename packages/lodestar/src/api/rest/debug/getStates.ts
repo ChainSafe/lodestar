@@ -1,4 +1,3 @@
-import {getStateTypeFromState} from "../../../util/multifork";
 import {ApiController, HttpHeader} from "../types";
 
 const SSZ_MIME_TYPE = "application/octet-stream";
@@ -6,7 +5,7 @@ const SSZ_MIME_TYPE = "application/octet-stream";
 // V2 handler is backwards compatible so re-use it for both versions
 const handler: ApiController<null, {stateId: string}>["handler"] = async function (req, resp) {
   const state = await this.api.debug.beacon.getState(req.params.stateId);
-  const type = getStateTypeFromState(this.config, state);
+  const type = this.config.getForkTypes(state.slot).BeaconState;
   if (req.headers[HttpHeader.ACCEPT] === SSZ_MIME_TYPE) {
     const stateSsz = type.serialize(state);
     return resp.status(200).header(HttpHeader.CONTENT_TYPE, SSZ_MIME_TYPE).send(Buffer.from(stateSsz));

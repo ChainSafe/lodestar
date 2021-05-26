@@ -41,7 +41,7 @@ export function getDomain(
   domainType: DomainType,
   messageEpoch: Epoch | null = null
 ): Buffer {
-  const epoch = messageEpoch || getCurrentEpoch(config, state);
+  const epoch = messageEpoch ?? getCurrentEpoch(config, state);
   const forkVersion = getForkVersion(state.fork, epoch);
   return computeDomain(config, domainType, forkVersion, state.genesisValidatorsRoot);
 }

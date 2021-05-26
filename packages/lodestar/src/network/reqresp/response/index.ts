@@ -7,7 +7,7 @@ import {Context, ILogger, TimeoutError, withTimeout} from "@chainsafe/lodestar-u
 import {IForkDigestContext} from "../../../util/forkDigestContext";
 import {REQUEST_TIMEOUT, RespStatus} from "../../../constants";
 import {getAgentVersionFromPeerStore, prettyPrintPeerId} from "../../util";
-import {Method, Protocol, RequestBody, ResponseBody} from "../types";
+import {Protocol, RequestBody, ResponseBody} from "../types";
 import {onChunk} from "../utils";
 import {Libp2pStream} from "../interface";
 import {requestDecode} from "../encoders/requestDecode";
@@ -17,7 +17,7 @@ import {ResponseError} from "./errors";
 export {ResponseError};
 
 export type PerformRequestHandler = (
-  method: Method,
+  protocol: Protocol,
   requestBody: RequestBody,
   peerId: PeerId
 ) => AsyncIterable<ResponseBody>;
@@ -73,7 +73,7 @@ export async function handleRequest(
         logger.debug("Resp received request", {...logCtx, requestBody} as Context);
 
         yield* pipe(
-          performRequestHandler(protocol.method, requestBody, peerId),
+          performRequestHandler(protocol, requestBody, peerId),
           // NOTE: Do not log the resp chunk contents, logs get extremely cluttered
           onChunk(() => logger.debug("Resp sending chunk", logCtx)),
           responseEncodeSuccess(config, forkDigestContext, protocol)

@@ -37,15 +37,11 @@ jobs:
     needs: tag
     if: needs.tag.outputs.tag != ''
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
-
-      - name: Setup Nodejs
-        uses: actions/setup-node@v1
+      # <common-build> - Uses YAML anchors in the future
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v2-beta
         with:
-          node-version: "12.x"
-          registry-url: "https://registry.npmjs.org"
-
+          node-version: "14.16.0"
       - name: Restore dependencies
         uses: actions/cache@master
         id: cache-deps
@@ -53,15 +49,14 @@ jobs:
           path: |
             node_modules
             packages/*/node_modules
-          key: ${{ runner.os }}-${{ hashFiles('**/yarn.lock') }}-ignore-optional
-
+          key: ${{ runner.os }}-${{ hashFiles('**/yarn.lock') }}-ignore-optional-14.16.0
       - name: Install & build
         if: steps.cache-deps.outputs.cache-hit != 'true'
         run: yarn install --frozen-lockfile --ignore-optional
-
       - name: Build
+        run: yarn build
         if: steps.cache-deps.outputs.cache-hit == 'true'
-        run: yarn run build
+      # </common-build>
 
       - name: Generate changelog
         id: changelog

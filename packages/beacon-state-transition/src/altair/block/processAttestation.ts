@@ -78,8 +78,8 @@ export function processAttestation(
   if (!isMatchingSource) {
     throw new Error(
       "Attestation source does not equal justified checkpoint: " +
-        `source=${config.types.phase0.Checkpoint.toJson(data.source)} ` +
-        `justifiedCheckpoint=${config.types.phase0.Checkpoint.toJson(justifiedCheckpoint)}`
+        `source=${JSON.stringify(config.types.phase0.Checkpoint.toJson(data.source))} ` +
+        `justifiedCheckpoint=${JSON.stringify(config.types.phase0.Checkpoint.toJson(justifiedCheckpoint))}`
     );
   }
   // this check is done last because its the most expensive (if signature verification is toggled on)

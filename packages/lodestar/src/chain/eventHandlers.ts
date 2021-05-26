@@ -212,7 +212,7 @@ export async function onBlock(
   postState: CachedBeaconState<allForks.BeaconState>,
   job: IBlockJob
 ): Promise<void> {
-  const blockRoot = this.config.getTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message);
+  const blockRoot = this.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message);
   this.logger.verbose("Block processed", {
     slot: block.message.slot,
     root: toHexString(blockRoot),
@@ -306,7 +306,7 @@ export async function onErrorBlock(this: BeaconChain, err: BlockError): Promise<
 
   this.logger.error("Block error", {slot: err.job.signedBlock.message.slot}, err);
   const blockRoot = this.config
-    .getTypes(err.job.signedBlock.message.slot)
+    .getForkTypes(err.job.signedBlock.message.slot)
     .BeaconBlock.hashTreeRoot(err.job.signedBlock.message);
 
   switch (err.type.code) {

@@ -17,11 +17,12 @@ export function getProposerSlashingSignatureSets(
     (signedHeader): ISignatureSet => {
       const epoch = computeEpochAtSlot(config, signedHeader.message.slot);
       const domain = getDomain(config, state, config.params.DOMAIN_BEACON_PROPOSER, epoch);
+      const beaconBlockHeaderType = config.types.phase0.BeaconBlockHeader;
 
       return {
         type: SignatureSetType.single,
         pubkey,
-        signingRoot: computeSigningRoot(config, config.types.phase0.BeaconBlockHeader, signedHeader.message, domain),
+        signingRoot: computeSigningRoot(config, beaconBlockHeaderType, signedHeader.message, domain),
         signature: signedHeader.signature.valueOf() as Uint8Array,
       };
     }

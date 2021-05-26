@@ -18,14 +18,14 @@ import {GossipHandler} from "../../../../src/network/gossip/handler";
 import {StubbedBeaconDb} from "../../../utils/stub";
 import {testLogger} from "../../../utils/logger";
 import {createNode} from "../../../utils/network";
-import {ForkDigestContext} from "../../../../src/util/forkDigestContext";
+import {ForkDigestContext, toHexStringNoPrefix} from "../../../../src/util/forkDigestContext";
 import {generateBlockSummary} from "../../../utils/block";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
-import {ISubnetsService} from "../../../../src/network/subnetsService";
+import {IAttnetsService} from "../../../../src/network/subnets";
 
 describe("gossip handler", function () {
   const logger = testLogger();
-  const attnetsService = {} as ISubnetsService;
+  const attnetsService = {} as IAttnetsService;
   let forkDigestContext: SinonStubbedInstance<ForkDigestContext>;
   let chainStub: SinonStubbedInstance<IBeaconChain>;
   let networkStub: SinonStubbedInstance<INetwork>;
@@ -53,8 +53,16 @@ describe("gossip handler", function () {
     networkStub.gossip = gossipsub;
     gossipsub.start();
     dbStub = new StubbedBeaconDb(sinon);
-    forkDigestContext.forkName2ForkDigest.returns(Buffer.alloc(4, 1));
-    forkDigestContext.forkDigest2ForkName.returns(ForkName.phase0);
+    const phase0ForkDigestBuf = Buffer.alloc(4, 1);
+    const altairForkDigestBuf = Buffer.alloc(4, 2);
+    const phase0ForkDigestHex = toHexStringNoPrefix(Buffer.alloc(4, 1));
+    const altairForkDigestHex = toHexStringNoPrefix(Buffer.alloc(4, 2));
+    forkDigestContext.forkName2ForkDigest.withArgs(ForkName.phase0).returns(phase0ForkDigestBuf);
+    forkDigestContext.forkName2ForkDigest.withArgs(ForkName.altair).returns(altairForkDigestBuf);
+    forkDigestContext.forkDigest2ForkName.withArgs(phase0ForkDigestHex).returns(ForkName.phase0);
+    forkDigestContext.forkDigest2ForkName.withArgs(phase0ForkDigestBuf).returns(ForkName.phase0);
+    forkDigestContext.forkDigest2ForkName.withArgs(altairForkDigestHex).returns(ForkName.altair);
+    forkDigestContext.forkDigest2ForkName.withArgs(altairForkDigestBuf).returns(ForkName.altair);
   });
 
   afterEach(() => {

@@ -23,9 +23,14 @@ export function processBlockHeader(state: CachedBeaconState<allForks.BeaconState
     );
   }
 
-  const types = state.config.getTypes(slot);
+  const types = state.config.getForkTypes(slot);
   // verify that the parent matches
-  if (!types.Root.equals(block.parentRoot, types.BeaconBlockHeader.hashTreeRoot(state.latestBlockHeader))) {
+  if (
+    !state.config.types.Root.equals(
+      block.parentRoot,
+      state.config.types.phase0.BeaconBlockHeader.hashTreeRoot(state.latestBlockHeader)
+    )
+  ) {
     throw new Error("Block parent root does not match state latest block");
   }
   // cache current block as the new latest block

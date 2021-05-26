@@ -49,7 +49,7 @@ export class Clock implements IClock {
   /** Miliseconds from now to a specific slot fraction */
   msToSlotFraction(slot: Slot, fraction: number): number {
     const timeAt = this.genesisTime + this.config.params.SECONDS_PER_SLOT * (slot + fraction);
-    return timeAt - Date.now();
+    return timeAt * 1000 - Date.now();
   }
 
   /**

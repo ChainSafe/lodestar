@@ -33,7 +33,7 @@ import {ApiError} from "../errors";
 import {ApiNamespace, IApiModules} from "../interface";
 import {IValidatorApi} from "./interface";
 import {validateSyncCommitteeGossipContributionAndProof} from "../../../chain/validation/syncCommitteeContributionAndProof";
-import {CommitteeSubscription} from "../../../network/subnetsService";
+import {CommitteeSubscription} from "../../../network/subnets";
 import {getSyncComitteeValidatorIndexMap} from "./utils";
 
 /**
@@ -104,13 +104,7 @@ export class ValidatorApi implements IValidatorApi {
 
     const headRoot = this.chain.forkChoice.getHeadRoot();
     const state = await this.chain.regen.getBlockSlotState(headRoot, slot);
-    return assembleAttestationData(
-      state.config,
-      state as CachedBeaconState<phase0.BeaconState>,
-      headRoot,
-      slot,
-      committeeIndex
-    );
+    return assembleAttestationData(state.config, state, headRoot, slot, committeeIndex);
   }
 
   /**
@@ -392,7 +386,9 @@ export class ValidatorApi implements IValidatorApi {
 
       const genesisBlock = await this.chain.getCanonicalBlockAtSlot(GENESIS_SLOT);
       if (genesisBlock) {
-        this.genesisBlockRoot = this.config.types.phase0.SignedBeaconBlock.hashTreeRoot(genesisBlock);
+        this.genesisBlockRoot = this.config
+          .getForkTypes(genesisBlock.message.slot)
+          .SignedBeaconBlock.hashTreeRoot(genesisBlock);
       }
     }
 

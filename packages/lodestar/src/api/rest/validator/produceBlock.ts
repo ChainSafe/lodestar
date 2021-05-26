@@ -1,5 +1,4 @@
 import {fromHex} from "@chainsafe/lodestar-utils";
-import {getBlockType} from "../../../util/multifork";
 import {ApiController} from "../types";
 
 /* eslint-disable @typescript-eslint/naming-convention */
@@ -19,10 +18,9 @@ const handler: ApiController<Query, Params>["handler"] = async function (req) {
     fromHex(req.query.randao_reveal),
     req.query.grafitti
   );
-  const type = getBlockType(this.config, block);
   return {
     version: this.config.getForkName(block.slot),
-    data: type.toJson(block, {case: "snake"}),
+    data: this.config.getForkTypes(block.slot).BeaconBlock.toJson(block, {case: "snake"}),
   };
 };
 

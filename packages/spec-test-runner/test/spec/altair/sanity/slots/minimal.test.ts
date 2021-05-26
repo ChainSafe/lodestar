@@ -19,8 +19,11 @@ describeDirectorySpecTest<IProcessSlotsTestCase, altair.BeaconState>(
       config,
       (testcase.pre as TreeBacked<altair.BeaconState>).clone()
     );
-    altair.processSlots(wrappedState, wrappedState.slot + Number(testcase.slots));
-    return wrappedState;
+    const postState = allForks.processSlots(
+      wrappedState as allForks.CachedBeaconState<allForks.BeaconState>,
+      wrappedState.slot + Number(testcase.slots)
+    );
+    return postState.type.createTreeBacked(postState.tree) as altair.BeaconState;
   },
   {
     inputTypes: {

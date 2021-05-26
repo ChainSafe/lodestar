@@ -8,10 +8,10 @@
     "packages/*"
   ],
   "scripts": {
-    "postinstall": "yarn clean && lerna run build",
+    "postinstall": "yarn build",
     "clean": "rm -rf ./packages/*/lib ./packages/*/*.tsbuildinfo",
-    "build": "lerna run build",
-    "build:docs": "yarn clean && lerna run build && lerna run build:typedocs && lerna run build:refdocs && ./scripts/prepare-docs.sh",
+    "build": "yarn clean && lerna run build",
+    "build:docs": "lerna run build:typedocs && lerna run build:refdocs && ./scripts/prepare-docs.sh",
     "build:lib:watch": "lerna run build:lib:watch --parallel",
     "build:types:watch": "lerna run build:types:watch --parallel",
     "build:watch": "run-p build:lib:watch build:types:watch",
@@ -67,7 +67,7 @@
     "typedoc": "^0.19.2",
     "typedoc-plugin-external-module-name": "^4.0.3",
     "typedoc-plugin-internal-external": "^2.2.0",
-    "typedoc-plugin-markdown": "^2.4.0",
+    "typedoc-plugin-markdown": "^2.4.1",
     "typescript": "^4.2.0",
     "webpack": "^5.36.2"
   },

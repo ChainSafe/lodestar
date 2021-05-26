@@ -4,11 +4,12 @@ import {EpochSlotOpts} from "./interface";
  * Formats time as: `EPOCH/SLOT_INDEX SECONDS.MILISECONDS
  */
 export function formatEpochSlotTime(opts: EpochSlotOpts, now = Date.now()): string {
-  const secSinceGenesis = now / 1000 - opts.genesisTime;
-  const slot = Math.floor(secSinceGenesis / opts.secondsPerSlot);
-  const epoch = Math.floor(slot / opts.slotsPerEpoch);
-  const slotIndex = slot % opts.slotsPerEpoch;
-  const slotSec = secSinceGenesis % opts.secondsPerSlot;
-
+  const nowSec = now / 1000;
+  const secSinceGenesis = nowSec - opts.genesisTime;
+  const epoch = Math.floor(secSinceGenesis / (opts.slotsPerEpoch * opts.secondsPerSlot));
+  const epochStartSec = opts.genesisTime + epoch * opts.slotsPerEpoch * opts.secondsPerSlot;
+  const secSinceStartEpoch = nowSec - epochStartSec;
+  const slotIndex = Math.floor(secSinceStartEpoch / opts.secondsPerSlot);
+  const slotSec = secSinceStartEpoch % opts.secondsPerSlot;
   return `Eph ${epoch}/${slotIndex} ${slotSec.toFixed(3)}`;
 }

@@ -9,24 +9,36 @@ import {BeaconNode} from "../../src/node";
 import {ChainEvent} from "../../src/chain";
 import {testLogger, LogLevel, TestLoggerOpts} from "../utils/logger";
 import {connect} from "../utils/network";
-import {logFiles} from "./params";
+import {logFilesDir} from "./params";
 import {simTestInfoTracker} from "../utils/node/simTest";
 import {ILogger, sleep, TimestampFormatCode} from "@chainsafe/lodestar-utils";
 
 /* eslint-disable no-console, @typescript-eslint/naming-convention */
 
 describe("Run multi node single thread interop validators (no eth1) until checkpoint", function () {
-  const checkpointEvent = ChainEvent.justified;
-  const validatorsPerNode = 8;
-  const beaconParams: Pick<IBeaconParams, "SECONDS_PER_SLOT" | "SLOTS_PER_EPOCH"> = {
+  const testParams: Pick<IBeaconParams, "SECONDS_PER_SLOT" | "SLOTS_PER_EPOCH"> = {
     SECONDS_PER_SLOT: 3,
     SLOTS_PER_EPOCH: 8,
   };
 
+  const testCases: {
+    nodeCount: number;
+    validatorsPerNode: number;
+    event: ChainEvent.justified | ChainEvent.finalized;
+    altairForkEpoch: number;
+  }[] = [
+    // Test phase0 to justification
+    {nodeCount: 4, validatorsPerNode: 8, event: ChainEvent.justified, altairForkEpoch: Infinity},
+    // Test altair only
+    {nodeCount: 4, validatorsPerNode: 8, event: ChainEvent.justified, altairForkEpoch: 0},
+    // Test phase -> altair fork transition
+    {nodeCount: 4, validatorsPerNode: 8, event: ChainEvent.justified, altairForkEpoch: 2},
+  ];
+
   let onDoneHandlers: (() => Promise<void>)[] = [];
 
-  for (const nodeCount of [4]) {
-    it(`${nodeCount} nodes / ${validatorsPerNode} vc / 1 validator > until ${checkpointEvent}`, async function () {
+  for (const {nodeCount, validatorsPerNode, event, altairForkEpoch} of testCases) {
+    it(`singleThread ${nodeCount} nodes / ${validatorsPerNode} vc / 1 validator > until ${event}, altairForkEpoch ${altairForkEpoch}`, async function () {
       this.timeout("10 min");
 
       const nodes: BeaconNode[] = [];
@@ -34,23 +46,23 @@ describe("Run multi node single thread interop validators (no eth1) until checkp
       const loggers: ILogger[] = [];
       // delay a bit so regular sync sees it's up to date and sync is completed from the beginning
       const genesisSlotsDelay = 3;
-      const genesisTime = Math.floor(Date.now() / 1000) + genesisSlotsDelay * beaconParams.SECONDS_PER_SLOT;
+      const genesisTime = Math.floor(Date.now() / 1000) + genesisSlotsDelay * testParams.SECONDS_PER_SLOT;
 
       for (let i = 0; i < nodeCount; i++) {
         const testLoggerOpts: TestLoggerOpts = {
           logLevel: LogLevel.info,
-          logFile: logFiles.multinodeSinglethread,
+          logFile: `${logFilesDir}/singlethread_multinode_altair-${altairForkEpoch}.log`,
           timestampFormat: {
             format: TimestampFormatCode.EpochSlot,
             genesisTime,
-            slotsPerEpoch: beaconParams.SLOTS_PER_EPOCH,
-            secondsPerSlot: beaconParams.SECONDS_PER_SLOT,
+            slotsPerEpoch: testParams.SLOTS_PER_EPOCH,
+            secondsPerSlot: testParams.SECONDS_PER_SLOT,
           },
         };
         const logger = testLogger(`Node ${i}`, testLoggerOpts);
 
         const node = await getDevBeaconNode({
-          params: beaconParams,
+          params: {...testParams, ALTAIR_FORK_EPOCH: altairForkEpoch},
           validatorCount: nodeCount * validatorsPerNode,
           genesisTime,
           logger,
@@ -75,7 +87,7 @@ describe("Run multi node single thread interop validators (no eth1) until checkp
         await Promise.all(validators.map((validator) => validator.stop()));
         console.log("--- Stopped all validators ---");
         // wait for 1 slot
-        await sleep(1 * beaconParams.SECONDS_PER_SLOT * 1000);
+        await sleep(1 * testParams.SECONDS_PER_SLOT * 1000);
 
         stopInfoTracker();
         await Promise.all(nodes.map((node) => node.close()));
@@ -97,9 +109,7 @@ describe("Run multi node single thread interop validators (no eth1) until checkp
       await Promise.all(validators.map((validator) => validator.start()));
 
       // Wait for justified checkpoint on all nodes
-      await Promise.all(
-        nodes.map((node) => waitForEvent<phase0.Checkpoint>(node.chain.emitter, checkpointEvent, 240000))
-      );
+      await Promise.all(nodes.map((node) => waitForEvent<phase0.Checkpoint>(node.chain.emitter, event, 240000)));
       console.log("--- All nodes reached justified checkpoint ---");
     });
   }

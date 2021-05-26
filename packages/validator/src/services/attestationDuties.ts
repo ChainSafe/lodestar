@@ -190,7 +190,7 @@ export class AttestationDutiesService {
   }
 
   private async getDutyAndProof(duty: phase0.AttesterDuty): Promise<AttDutyAndProof> {
-    const selectionProof = await this.validatorStore.signSelectionProof(duty.pubkey, duty.slot);
+    const selectionProof = await this.validatorStore.signAttestationSelectionProof(duty.pubkey, duty.slot);
     const isAggregator = isAttestationAggregator(this.config, duty, selectionProof);
 
     return {

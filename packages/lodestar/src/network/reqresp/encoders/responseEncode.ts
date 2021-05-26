@@ -40,7 +40,7 @@ export function responseEncodeSuccess(
       yield* writeContextBytes(forkDigestContext, contextBytesType, forkName);
 
       // <encoding-dependent-header> | <encoded-payload>
-      const type = getResponseSzzTypeByMethod(config, protocol.method, forkName);
+      const type = getResponseSzzTypeByMethod(config, protocol, forkName);
       yield* writeEncodedPayload(chunk, protocol.encoding, type);
     }
   };

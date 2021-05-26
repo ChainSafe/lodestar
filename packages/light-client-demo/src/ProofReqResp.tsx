@@ -2,7 +2,7 @@ import React, {useState} from "react";
 import {Lightclient} from "@chainsafe/lodestar-light-client/lib/client";
 import {TreeOffsetProof} from "@chainsafe/persistent-merkle-tree";
 import {altair} from "@chainsafe/lodestar-types";
-import {toHexString} from "@chainsafe/ssz";
+import {CompositeType, toHexString, TreeBacked} from "@chainsafe/ssz";
 import {ReqStatus} from "./types";
 import {ErrorView} from "./components/ErrorView";
 
@@ -16,7 +16,7 @@ type Path = (string | number)[];
 type StateRender = {key: string; value: string}[];
 type Json = Record<string | number, string | number>;
 
-function renderState(paths: Path[], state: altair.BeaconState | null): StateRender {
+function renderState(paths: Path[], state: TreeBacked<altair.BeaconState> | null): StateRender {
   if (!state) return [];
   return paths.map((path) => ({
     key: path.join("."),
@@ -24,15 +24,17 @@ function renderState(paths: Path[], state: altair.BeaconState | null): StateRend
   }));
 }
 
-function getStateData(state: altair.BeaconState, path: Path): string {
-  let value = (state as unknown) as Json;
+function getStateData(state: TreeBacked<altair.BeaconState>, path: Path): string {
+  let value = state as object;
+  let type = state.type as CompositeType<object>;
   for (const indexer of path) {
-    value = (value[indexer].valueOf() as unknown) as Json;
+    type = type.getPropertyType(indexer) as CompositeType<object>;
+    value = (value as Record<string, unknown>)[String(indexer)] as object;
   }
-  if (typeof value === "function" || typeof value === "object" || typeof value === "symbol") {
+  try {
+    return JSON.stringify(type.toJson(value.valueOf()), null, 2);
+  } catch (e) {
     return "-";
-  } else {
-    return String(value);
   }
 }
 

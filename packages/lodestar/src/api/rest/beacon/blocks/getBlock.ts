@@ -1,13 +1,11 @@
 import {ApiController} from "../../types";
-import {getSignedBlockType} from "../../../../util/multifork";
 
 // V2 handler is backwards compatible so re-use it for both versions
 const handler: ApiController<null, {blockId: string}>["handler"] = async function (req) {
   const block = await this.api.beacon.blocks.getBlock(req.params.blockId);
-  const type = getSignedBlockType(this.config, block);
   return {
     version: this.config.getForkName(block.message.slot),
-    data: type.toJson(block, {case: "snake"}),
+    data: this.config.getForkTypes(block.message.slot).SignedBeaconBlock.toJson(block, {case: "snake"}),
   };
 };
 

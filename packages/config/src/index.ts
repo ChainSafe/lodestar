@@ -1,24 +1,27 @@
 import {GENESIS_EPOCH, IBeaconParams} from "@chainsafe/lodestar-params";
 import {createIBeaconSSZTypes, Slot, AllForksSSZTypes, Version} from "@chainsafe/lodestar-types";
 import {IBeaconConfig, ForkName} from "./interface";
+import {getForkTypesRecord} from "./forkTypes";
 
 export * from "./interface";
 
 export function createIBeaconConfig(params: IBeaconParams): IBeaconConfig {
   const types = createIBeaconSSZTypes(params);
+  const forkTypes = getForkTypesRecord(types);
 
   const phase0 = {name: ForkName.phase0, epoch: GENESIS_EPOCH, version: params.GENESIS_FORK_VERSION};
   const altair = {name: ForkName.altair, epoch: params.ALTAIR_FORK_EPOCH, version: params.ALTAIR_FORK_VERSION};
+
+  /** Forks in order order of occurence, `phase0` first */
+  // Note: Downstream code relies on proper ordering.
+  const forks = {phase0, altair};
   // Prevents allocating an array on every getForkInfo() call
-  const forksDescendingEpochOrder = [altair, phase0];
+  const forksDescendingEpochOrder = Object.values(forks).reverse();
 
   return {
     params,
     types,
-
-    /** Forks in order order of occurence, `phase0` first */
-    // Note: Downstream code relies on proper ordering.
-    forks: {phase0, altair},
+    forks,
 
     // Fork convenience methods
     getForkInfo(slot: Slot) {
@@ -35,8 +38,8 @@ export function createIBeaconConfig(params: IBeaconParams): IBeaconConfig {
     getForkVersion(slot: Slot): Version {
       return this.getForkInfo(slot).version;
     },
-    getTypes(slot: Slot): AllForksSSZTypes {
-      return types[this.getForkName(slot)] as AllForksSSZTypes;
+    getForkTypes(slot: Slot): AllForksSSZTypes {
+      return forkTypes[this.getForkName(slot)] as AllForksSSZTypes;
     },
   };
 }

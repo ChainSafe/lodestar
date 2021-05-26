@@ -2,7 +2,7 @@
  * @module db/api/beacon
  */
 
-import {phase0} from "@chainsafe/lodestar-types";
+import {allForks} from "@chainsafe/lodestar-types";
 import {DatabaseService, IDatabaseApiOptions} from "@chainsafe/lodestar-db";
 import {IBeaconDb} from "./interface";
 import {
@@ -76,7 +76,7 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
   /**
    * Remove stored operations based on a newly processed block
    */
-  async processBlockOperations(signedBlock: phase0.SignedBeaconBlock): Promise<void> {
+  async processBlockOperations(signedBlock: allForks.SignedBeaconBlock): Promise<void> {
     await Promise.all([
       this.voluntaryExit.batchRemove(signedBlock.message.body.voluntaryExits),
       this.depositEvent.deleteOld(signedBlock.message.body.eth1Data.depositCount),

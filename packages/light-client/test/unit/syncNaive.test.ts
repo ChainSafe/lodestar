@@ -49,7 +49,7 @@ describe("Lightclient flow", () => {
 
     const finalizedState = config.types.altair.BeaconState.defaultValue();
     finalizedState.nextSyncCommittee = getSyncCommittee(0).syncCommittee;
-    const finalizedBlockHeader = config.types.altair.BeaconBlockHeader.defaultValue();
+    const finalizedBlockHeader = config.types.phase0.BeaconBlockHeader.defaultValue();
     finalizedBlockHeader.slot = finalizedBlockSlot;
     finalizedBlockHeader.stateRoot = config.types.altair.BeaconState.hashTreeRoot(finalizedState);
 
@@ -57,16 +57,16 @@ describe("Lightclient flow", () => {
     const syncAttestedState = config.types.altair.BeaconState.defaultValue();
     syncAttestedState.finalizedCheckpoint = {
       epoch: 0, // Checkpoint { epoch, blockRoot }
-      root: config.types.altair.BeaconBlockHeader.hashTreeRoot(finalizedBlockHeader),
+      root: config.types.phase0.BeaconBlockHeader.hashTreeRoot(finalizedBlockHeader),
     };
-    const syncAttestedBlockHeader = config.types.altair.BeaconBlockHeader.defaultValue();
+    const syncAttestedBlockHeader = config.types.phase0.BeaconBlockHeader.defaultValue();
     syncAttestedBlockHeader.slot = headerBlockSlot;
     syncAttestedBlockHeader.stateRoot = config.types.altair.BeaconState.hashTreeRoot(syncAttestedState);
 
     // Create a state with the block blockWithSyncAggregate
     const stateWithSyncAggregate = config.types.altair.BeaconState.defaultValue();
     stateWithSyncAggregate.slot = 1;
-    stateWithSyncAggregate.blockRoots[0] = config.types.altair.BeaconBlockHeader.hashTreeRoot(syncAttestedBlockHeader);
+    stateWithSyncAggregate.blockRoots[0] = config.types.phase0.BeaconBlockHeader.hashTreeRoot(syncAttestedBlockHeader);
 
     // Create a signature from current committee to "attest" syncAttestedBlockHeader
     const forkVersion = stateWithSyncAggregate.fork.currentVersion;
@@ -97,7 +97,7 @@ describe("Lightclient flow", () => {
     const store: LightClientStoreFast = {
       bestUpdates: new Map<SyncPeriod, altair.LightClientUpdate>(),
       snapshot: {
-        header: config.types.altair.BeaconBlockHeader.defaultValue(),
+        header: config.types.phase0.BeaconBlockHeader.defaultValue(),
         currentSyncCommittee: getSyncCommittee(0).syncCommitteeFast,
         nextSyncCommittee: getSyncCommittee(0).syncCommitteeFast,
       },
@@ -119,7 +119,7 @@ class MockBeaconChainLc implements IBeaconChainLc {
   constructor(config: IBeaconConfig, blockHeaders: altair.BeaconBlockHeader[], states: altair.BeaconState[]) {
     this.config = config;
     for (const blockHeader of blockHeaders)
-      this.blockHeaders.set(toHexString(config.types.altair.BeaconBlockHeader.hashTreeRoot(blockHeader)), blockHeader);
+      this.blockHeaders.set(toHexString(config.types.phase0.BeaconBlockHeader.hashTreeRoot(blockHeader)), blockHeader);
     for (const state of states)
       this.states.set(toHexString(config.types.altair.BeaconState.hashTreeRoot(state)), state);
   }
