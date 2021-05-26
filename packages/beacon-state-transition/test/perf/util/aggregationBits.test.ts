@@ -23,7 +23,7 @@ describe("aggregationBits", function () {
     id: "zipIndexesInBitList",
     maxPerOp: 0.0378,
     n: 81920,
-    fn: () => zipIndexesInBitList(config, indexes, bitlistTree),
+    fn: () => zipIndexesInBitList(config, indexes, bitlistTree, config.types.phase0.CommitteeBits),
   });
 
   function benchmark({id, maxPerOp, n, fn}: {id: string; maxPerOp: number; n: number; fn: () => void}): void {

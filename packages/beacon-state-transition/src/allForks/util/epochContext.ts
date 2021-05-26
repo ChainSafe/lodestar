@@ -1,8 +1,18 @@
 import {ByteVector, hash, toHexString, BitList, List, readonlyValues} from "@chainsafe/ssz";
 import bls, {CoordType, PublicKey} from "@chainsafe/bls";
-import {BLSSignature, CommitteeIndex, Epoch, Slot, ValidatorIndex, phase0, allForks} from "@chainsafe/lodestar-types";
+import {
+  BLSSignature,
+  CommitteeIndex,
+  Epoch,
+  Slot,
+  ValidatorIndex,
+  phase0,
+  allForks,
+  altair,
+  Gwei,
+} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {intToBytes} from "@chainsafe/lodestar-utils";
+import {bigIntSqrt, intToBytes} from "@chainsafe/lodestar-utils";
 
 import {GENESIS_EPOCH} from "../../constants";
 import {
@@ -11,12 +21,14 @@ import {
   computeStartSlotAtEpoch,
   getAttestingIndicesFromCommittee,
   getSeed,
+  getTotalActiveBalance,
   isAggregatorFromCommitteeLength,
 } from "../../util";
 import {getNextSyncCommitteeIndices} from "../../altair/state_accessor/sync_committee";
 import {computeEpochShuffling, IEpochShuffling} from "./epochShuffling";
 import {MutableVector} from "@chainsafe/persistent-ts";
 import {CachedValidatorList} from "./cachedValidatorList";
+import {PROPOSER_WEIGHT, SYNC_REWARD_WEIGHT, WEIGHT_DENOMINATOR} from "../../altair/constants";
 
 export type EpochContextOpts = {
   pubkey2index?: PubkeyIndexMap;
@@ -72,8 +84,17 @@ export function createEpochContext(
 
   // Only after altair, compute the indices of the current sync committee
   const onAltairFork = currentEpoch >= config.params.ALTAIR_FORK_EPOCH;
-  const currSyncCommitteeIndexes = onAltairFork ? getNextSyncCommitteeIndices(config, state) : [];
-  const nextSyncCommitteeIndexes = onAltairFork ? getNextSyncCommitteeIndices(config, state) : [];
+  const currSyncCommitteeIndexes = onAltairFork
+    ? computeSyncCommitteeIndices(pubkey2index, state as altair.BeaconState, false)
+    : [];
+  const nextSyncCommitteeIndexes = onAltairFork
+    ? computeSyncCommitteeIndices(pubkey2index, state as altair.BeaconState, true)
+    : [];
+
+  const syncParticipantReward = onAltairFork ? computeSyncParticipantReward(config, state) : BigInt(0);
+  const syncProposerReward = onAltairFork
+    ? (syncParticipantReward * PROPOSER_WEIGHT) / (WEIGHT_DENOMINATOR - PROPOSER_WEIGHT)
+    : BigInt(0);
 
   return new EpochContext({
     config,
@@ -87,6 +108,8 @@ export function createEpochContext(
     nextSyncCommitteeIndexes,
     currSyncComitteeValidatorIndexMap: computeSyncComitteeMap(currSyncCommitteeIndexes),
     nextSyncComitteeValidatorIndexMap: computeSyncComitteeMap(nextSyncCommitteeIndexes),
+    syncParticipantReward,
+    syncProposerReward,
   });
 }
 
@@ -163,6 +186,40 @@ export function computeSyncComitteeMap(syncCommitteeIndexes: ValidatorIndex[]): 
 }
 
 /**
+ * Extract validator indices from current and next sync committee
+ */
+export function computeSyncCommitteeIndices(
+  pubkey2index: PubkeyIndexMap,
+  state: altair.BeaconState,
+  isNext: boolean
+): phase0.ValidatorIndex[] {
+  const syncCommittee = isNext ? state.nextSyncCommittee : state.currentSyncCommittee;
+  const result: phase0.ValidatorIndex[] = [];
+  for (const pubkey of syncCommittee.pubkeys) {
+    const validatorIndex = pubkey2index.get(pubkey);
+    if (validatorIndex === undefined) {
+      throw new Error("Invalid pubkey in sync committee: " + toHexString(pubkey));
+    }
+    result.push(validatorIndex);
+  }
+  return result;
+}
+
+/**
+ * Same logic in https://github.com/ethereum/eth2.0-specs/blob/v1.1.0-alpha.5/specs/altair/beacon-chain.md#sync-committee-processing
+ */
+export function computeSyncParticipantReward(config: IBeaconConfig, state: allForks.BeaconState): Gwei {
+  const {EFFECTIVE_BALANCE_INCREMENT, BASE_REWARD_FACTOR, SLOTS_PER_EPOCH, SYNC_COMMITTEE_SIZE} = config.params;
+  const totalActiveBalance = getTotalActiveBalance(config, state);
+  const totalActiveIncrements = totalActiveBalance / EFFECTIVE_BALANCE_INCREMENT;
+  const baseRewardPerIncrement =
+    (EFFECTIVE_BALANCE_INCREMENT * BigInt(BASE_REWARD_FACTOR)) / bigIntSqrt(totalActiveBalance);
+  const totalBaseRewards = baseRewardPerIncrement * totalActiveIncrements;
+  const maxParticipantRewards = (totalBaseRewards * SYNC_REWARD_WEIGHT) / WEIGHT_DENOMINATOR / BigInt(SLOTS_PER_EPOCH);
+  return maxParticipantRewards / BigInt(SYNC_COMMITTEE_SIZE);
+}
+
+/**
  * Called to re-use information, such as the shuffling of the next epoch, after transitioning into a
  * new epoch.
  */
@@ -202,6 +259,12 @@ export function rotateEpochs(
     epochCtx.currSyncComitteeValidatorIndexMap = computeSyncComitteeMap(epochCtx.currSyncCommitteeIndexes);
     epochCtx.nextSyncComitteeValidatorIndexMap = computeSyncComitteeMap(epochCtx.nextSyncCommitteeIndexes);
   }
+
+  if (currEpoch >= epochCtx.config.params.ALTAIR_FORK_EPOCH) {
+    epochCtx.syncParticipantReward = computeSyncParticipantReward(epochCtx.config, state);
+    epochCtx.syncProposerReward =
+      (epochCtx.syncParticipantReward * PROPOSER_WEIGHT) / (WEIGHT_DENOMINATOR - PROPOSER_WEIGHT);
+  }
 }
 
 type SyncComitteeValidatorIndexMap = Map<ValidatorIndex, number[]>;
@@ -217,6 +280,8 @@ interface IEpochContextData {
   nextSyncCommitteeIndexes: ValidatorIndex[];
   currSyncComitteeValidatorIndexMap: SyncComitteeValidatorIndexMap;
   nextSyncComitteeValidatorIndexMap: SyncComitteeValidatorIndexMap;
+  syncParticipantReward: Gwei;
+  syncProposerReward: Gwei;
 }
 
 /**
@@ -250,6 +315,8 @@ export class EpochContext {
    */
   currSyncComitteeValidatorIndexMap: SyncComitteeValidatorIndexMap;
   nextSyncComitteeValidatorIndexMap: SyncComitteeValidatorIndexMap;
+  syncParticipantReward: phase0.Gwei;
+  syncProposerReward: phase0.Gwei;
   config: IBeaconConfig;
 
   constructor(data: IEpochContextData) {
@@ -264,6 +331,8 @@ export class EpochContext {
     this.nextSyncCommitteeIndexes = data.nextSyncCommitteeIndexes;
     this.currSyncComitteeValidatorIndexMap = data.currSyncComitteeValidatorIndexMap;
     this.nextSyncComitteeValidatorIndexMap = data.nextSyncComitteeValidatorIndexMap;
+    this.syncParticipantReward = data.syncParticipantReward;
+    this.syncProposerReward = data.syncProposerReward;
   }
 
   /**

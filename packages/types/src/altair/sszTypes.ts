@@ -101,9 +101,13 @@ export function getAltairTypes(params: IBeaconParams, primitive: PrimitiveSSZTyp
     },
   });
 
+  const SyncCommitteeBits = new BitVectorType({
+    length: params.SYNC_COMMITTEE_SIZE,
+  });
+
   const SyncAggregate = new ContainerType<altair.SyncAggregate>({
     fields: {
-      syncCommitteeBits: new BitVectorType({length: params.SYNC_COMMITTEE_SIZE}),
+      syncCommitteeBits: SyncCommitteeBits,
       syncCommitteeSignature: BLSSignature,
     },
   });
@@ -274,6 +278,7 @@ export function getAltairTypes(params: IBeaconParams, primitive: PrimitiveSSZTyp
     ContributionAndProof,
     SignedContributionAndProof,
     SyncAggregatorSelectionData,
+    SyncCommitteeBits,
     SyncAggregate,
     SyncCommitteeSubscription,
     SyncCommitteeByValidatorIndices,
