@@ -4,7 +4,7 @@ import {getDevBeaconNode} from "../utils/node/beacon";
 import {waitForEvent} from "../utils/events/resolver";
 import {getAndInitDevValidators} from "../utils/node/validator";
 import {ChainEvent} from "../../src/chain";
-import {IRestApiOptions} from "../../src/api/rest/options";
+import {RestApiOptions} from "../../src/api/rest";
 import {testLogger, TestLoggerOpts, LogLevel} from "../utils/logger";
 import {logFilesDir} from "./params";
 import {simTestInfoTracker} from "../utils/node/simTest";
@@ -78,7 +78,7 @@ describe("Run single node single thread interop validators (no eth1) until check
 
       const bn = await getDevBeaconNode({
         params: {...testParams, ALTAIR_FORK_EPOCH: altairForkEpoch},
-        options: {api: {rest: {enabled: true} as IRestApiOptions}, sync: {isSingleNode: true}},
+        options: {api: {rest: {enabled: true} as RestApiOptions}, sync: {isSingleNode: true}},
         validatorCount: validatorClientCount * validatorsPerClient,
         logger: loggerNodeA,
         genesisTime,

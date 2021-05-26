@@ -6,6 +6,7 @@ import sinon from "sinon";
 import {SinonStubbedInstance} from "sinon";
 import * as stateApiUtils from "../../../../../src/api/impl/beacon/state/utils";
 import {getDebugApi} from "../../../../../src/api/impl/debug";
+import {INetwork, Network} from "../../../../../src/network";
 import {IBeaconChain, LodestarForkChoice} from "../../../../../src/chain";
 import {generateBlockSummary} from "../../../../utils/block";
 import {StubbedBeaconDb} from "../../../../utils/stub";
@@ -18,6 +19,7 @@ describe("api - debug - beacon", function () {
   let chainStub: SinonStubbedInstance<IBeaconChain>;
   let forkchoiceStub: SinonStubbedInstance<IForkChoice>;
   let dbStub: StubbedBeaconDb;
+  let networkStub: SinonStubbedInstance<INetwork>;
   let resolveStateIdStub: SinonStubFn<typeof stateApiUtils["resolveStateId"]>;
 
   beforeEach(function () {
@@ -27,7 +29,8 @@ describe("api - debug - beacon", function () {
     forkchoiceStub = sinon.createStubInstance(LodestarForkChoice);
     chainStub.forkChoice = forkchoiceStub;
     dbStub = new StubbedBeaconDb(sinon);
-    debugApi = getDebugApi({chain: chainStub, db: dbStub, config});
+    networkStub = sinon.createStubInstance(Network);
+    debugApi = getDebugApi({chain: chainStub, db: dbStub, config, network: networkStub});
   });
 
   afterEach(function () {

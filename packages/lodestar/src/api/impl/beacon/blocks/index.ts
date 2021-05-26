@@ -104,7 +104,7 @@ export function getBeaconBlockApi({
 
     async getBlockRoot(blockId) {
       // Fast path: From head state already available in memory get historical blockRoot
-      const slot = parseInt(blockId);
+      const slot = typeof blockId === "string" ? parseInt(blockId) : blockId;
       if (!Number.isNaN(slot)) {
         const head = chain.forkChoice.getHead();
 

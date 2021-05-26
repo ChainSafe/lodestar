@@ -2,7 +2,7 @@ import {BLSPubkey, Slot} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ILogger, prettyBytes} from "@chainsafe/lodestar-utils";
 import {toHexString} from "@chainsafe/ssz";
-import {IApiClient} from "../api";
+import {Api} from "@chainsafe/lodestar-api";
 import {extendError, notAborted} from "../util";
 import {ValidatorStore} from "./validatorStore";
 import {BlockDutiesService, GENESIS_SLOT} from "./blockDuties";
@@ -17,7 +17,7 @@ export class BlockProposingService {
   constructor(
     config: IBeaconConfig,
     private readonly logger: ILogger,
-    private readonly apiClient: IApiClient,
+    private readonly api: Api,
     clock: IClock,
     private readonly validatorStore: ValidatorStore,
     private readonly graffiti?: string
@@ -25,7 +25,7 @@ export class BlockProposingService {
     this.dutiesService = new BlockDutiesService(
       config,
       logger,
-      apiClient,
+      api,
       clock,
       validatorStore,
       this.notifyBlockProductionFn
@@ -62,13 +62,13 @@ export class BlockProposingService {
       const graffiti = this.graffiti || "";
 
       this.logger.debug("Producing block", logCtx);
-      const block = await this.apiClient.validator.produceBlock(slot, randaoReveal, graffiti).catch((e) => {
+      const block = await this.api.validator.produceBlock(slot, randaoReveal, graffiti).catch((e) => {
         throw extendError(e, "Failed to produce block");
       });
       this.logger.debug("Produced block", logCtx);
 
-      const signedBlock = await this.validatorStore.signBlock(pubkey, block, slot);
-      await this.apiClient.beacon.blocks.publishBlock(signedBlock).catch((e) => {
+      const signedBlock = await this.validatorStore.signBlock(pubkey, block.data, slot);
+      await this.api.beacon.publishBlock(signedBlock).catch((e) => {
         throw extendError(e, "Failed to publish block");
       });
       this.logger.info("Published block", {...logCtx, graffiti});

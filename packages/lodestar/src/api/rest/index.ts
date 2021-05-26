@@ -2,13 +2,28 @@ import fastify, {FastifyError, FastifyInstance} from "fastify";
 import fastifyCors from "fastify-cors";
 import querystring from "querystring";
 import {Api} from "@chainsafe/lodestar-api";
-import {registerRoutes} from "@chainsafe/lodestar-api/server";
+import {registerRoutes, RouteConfig} from "@chainsafe/lodestar-api/server";
 import {ErrorAborted, ILogger} from "@chainsafe/lodestar-utils";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IMetrics} from "../../metrics";
-import {defaultApiRestOptions, IRestApiOptions} from "./options";
-import {RouteConfig} from "./types";
 import {ApiError} from "../impl/errors";
+
+export type RestApiOptions = {
+  enabled: boolean;
+  api: (keyof Api)[];
+  host: string;
+  cors: string;
+  port: number;
+};
+
+export const restApiOptionsDefault: RestApiOptions = {
+  enabled: false,
+  // ApiNamespace "debug" is not turned on by default
+  api: ["beacon", "config", "events", "node", "validator"],
+  host: "127.0.0.1",
+  port: 9596,
+  cors: "*",
+};
 
 export interface IRestApiModules {
   config: IBeaconConfig;
@@ -21,13 +36,13 @@ export interface IRestApiModules {
  * REST API powered by `fastify` server.
  */
 export class RestApi {
-  private readonly opts: IRestApiOptions;
+  private readonly opts: RestApiOptions;
   private readonly server: FastifyInstance;
   private readonly logger: ILogger;
 
-  constructor(optsArg: Partial<IRestApiOptions>, modules: IRestApiModules) {
+  constructor(optsArg: Partial<RestApiOptions>, modules: IRestApiModules) {
     // Apply opts defaults
-    const opts = {...defaultApiRestOptions, ...optsArg};
+    const opts = {...restApiOptionsDefault, ...optsArg};
 
     const server = fastify({
       logger: false,

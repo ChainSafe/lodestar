@@ -1,5 +1,6 @@
 import {Json} from "@chainsafe/ssz";
 import {mapValues} from "@chainsafe/lodestar-utils";
+import {FetchOpts, IHttpClient} from "./httpClient";
 import {compileRouteUrlFormater} from "../../utils/urlFormat";
 import {
   RouteDef,
@@ -49,17 +50,6 @@ export function toUint(val: string | number): number {
   else return parseInt(val, 10);
 }
 
-export type FetchOpts = {
-  url: RouteDef["url"];
-  method: RouteDef["method"];
-  query?: ReqGeneric["query"];
-  body?: ReqGeneric["body"];
-};
-export type FetchFn = {
-  json: <T>(opts: FetchOpts) => Promise<T>;
-  arrayBuffer: (opts: FetchOpts) => Promise<ArrayBuffer>;
-};
-
 /**
  * Format FetchFn opts from Fn arguments given a route definition and request serializer.
  * For routes that return only JSOn use @see getGenericJsonClient
@@ -96,14 +86,14 @@ export function getFetchOptsSerializers<
 /**
  * Get a generic JSON client from route definition, request serializer and return types
  */
-export function getGenericJsonClient<
+export function generateGenericJsonClient<
   Api extends Record<string, RouteGeneric>,
   ReqTypes extends {[K in keyof Api]: ReqGeneric}
 >(
   routesData: RoutesData<Api>,
   reqSerializers: RouteReqSerdes<Api, ReqTypes>,
   returnTypes: ReturnTypes<Api>,
-  fetchFn: FetchFn
+  fetchFn: IHttpClient
 ): Api {
   return mapValues(routesData, (routeDef, routeKey) => {
     const fetchOptsSerializer = getFetchOptsSerializer(routeDef, reqSerializers[routeKey]);

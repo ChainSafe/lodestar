@@ -10,7 +10,7 @@ import {
 import {AttestationService} from "../../../src/services/attestation";
 import {AttDutyAndProof} from "../../../src/services/attestationDuties";
 import {ValidatorStore} from "../../../src/services/validatorStore";
-import {ApiClientStub} from "../../utils/apiStub";
+import {getApiClientStub} from "../../utils/apiStub";
 import {testLogger} from "../../utils/logger";
 import {ClockMock} from "../../utils/clock";
 import {IndicesService} from "../../../src/services/indices";
@@ -20,7 +20,7 @@ describe("AttestationService", function () {
   const logger = testLogger();
   const ZERO_HASH = Buffer.alloc(32, 0);
 
-  const apiClient = ApiClientStub(sandbox);
+  const api = getApiClientStub(sandbox);
   const validatorStore = sinon.createStubInstance(ValidatorStore) as ValidatorStore &
     sinon.SinonStubbedInstance<ValidatorStore>;
   let pubkeys: Uint8Array[]; // Initialize pubkeys in before() so bls is already initialized
@@ -45,8 +45,8 @@ describe("AttestationService", function () {
 
   it("Should produce, sign, and publish an attestation + aggregate", async () => {
     const clock = new ClockMock();
-    const indicesService = new IndicesService(logger, apiClient, validatorStore);
-    const attestationService = new AttestationService(config, logger, apiClient, clock, validatorStore, indicesService);
+    const indicesService = new IndicesService(logger, api, validatorStore);
+    const attestationService = new AttestationService(config, logger, api, clock, validatorStore, indicesService);
 
     const attestation = generateEmptyAttestation();
     const aggregate = generateEmptySignedAggregateAndProof();
@@ -66,18 +66,18 @@ describe("AttestationService", function () {
     ];
 
     // Return empty replies to duties service
-    apiClient.beacon.state.getStateValidators.resolves([]);
-    apiClient.validator.getAttesterDuties.resolves({dependentRoot: ZERO_HASH, data: []});
+    api.beacon.getStateValidators.resolves({data: []});
+    api.validator.getAttesterDuties.resolves({dependentRoot: ZERO_HASH, data: []});
 
     // Mock duties service to return some duties directly
     attestationService["dutiesService"].getDutiesAtSlot = sinon.stub().returns(duties);
 
     // Mock beacon's attestation and aggregates endpoints
 
-    apiClient.validator.produceAttestationData.resolves(attestation.data);
-    apiClient.validator.getAggregatedAttestation.resolves(attestation);
-    apiClient.beacon.pool.submitAttestations.resolves();
-    apiClient.validator.publishAggregateAndProofs.resolves();
+    api.validator.produceAttestationData.resolves({data: attestation.data});
+    api.validator.getAggregatedAttestation.resolves({data: attestation});
+    api.beacon.submitPoolAttestations.resolves();
+    api.validator.publishAggregateAndProofs.resolves();
 
     // Mock signing service
     validatorStore.signAttestation.resolves(attestation);
@@ -87,18 +87,18 @@ describe("AttestationService", function () {
     await clock.tickSlotFns(0, controller.signal);
 
     // Must submit the attestation received through produceAttestationData()
-    expect(apiClient.beacon.pool.submitAttestations.callCount).to.equal(1, "submitAttestations() must be called once");
-    expect(apiClient.beacon.pool.submitAttestations.getCall(0).args).to.deep.equal(
+    expect(api.beacon.submitPoolAttestations.callCount).to.equal(1, "submitAttestations() must be called once");
+    expect(api.beacon.submitPoolAttestations.getCall(0).args).to.deep.equal(
       [[attestation]], // 1 arg, = attestation[]
       "wrong submitAttestations() args"
     );
 
     // Must submit the aggregate received through getAggregatedAttestation() then createAndSignAggregateAndProof()
-    expect(apiClient.validator.publishAggregateAndProofs.callCount).to.equal(
+    expect(api.validator.publishAggregateAndProofs.callCount).to.equal(
       1,
       "publishAggregateAndProofs() must be called once"
     );
-    expect(apiClient.validator.publishAggregateAndProofs.getCall(0).args).to.deep.equal(
+    expect(api.validator.publishAggregateAndProofs.getCall(0).args).to.deep.equal(
       [[aggregate]], // 1 arg, = aggregate[]
       "wrong publishAggregateAndProofs() args"
     );

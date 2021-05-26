@@ -3,7 +3,7 @@ import {IBlockSummary} from "@chainsafe/lodestar-fork-choice";
 import sinon, {SinonStubbedInstance} from "sinon";
 import {IBeaconSync, SyncState} from "../../../../../src/sync/interface";
 import {ApiModules} from "../../../../../src/api/impl/types";
-import {ValidatorApi} from "../../../../../src/api/impl/validator/validator";
+import {getValidatorApi} from "../../../../../src/api/impl/validator";
 import {IEth1ForBlockProduction} from "../../../../../src/eth1";
 import {LocalClock} from "../../../../../src/chain/clock";
 import {testLogger} from "../../../../utils/logger";
@@ -44,7 +44,7 @@ describe("api - validator - produceAttestationData", function () {
     server.forkChoiceStub.getHead.returns({slot: headSlot} as IBlockSummary);
 
     // Should not allow any call to validator API
-    const api = new ValidatorApi({}, modules);
+    const api = getValidatorApi(modules);
     await expect(api.produceAttestationData(0, 0)).to.be.rejectedWith("Node is syncing");
   });
 
@@ -54,7 +54,7 @@ describe("api - validator - produceAttestationData", function () {
     sinon.replaceGetter(syncStub, "state", () => SyncState.Stalled);
 
     // Should not allow any call to validator API
-    const api = new ValidatorApi({}, modules);
+    const api = getValidatorApi(modules);
     await expect(api.produceAttestationData(0, 0)).to.be.rejectedWith("Node is waiting for peers");
   });
 });

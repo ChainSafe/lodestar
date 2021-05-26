@@ -16,7 +16,7 @@ import {
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
-export type BlockId = string | "head" | "genesis" | "finalized";
+export type BlockId = "head" | "genesis" | "finalized" | string | number;
 
 export type BlockHeaderResponse = {
   root: Root;
@@ -107,7 +107,7 @@ export const routesData: RoutesData<Api> = {
 export function getReqSerializers(config: IBeaconConfig) {
   const t = mapValues(routesData, () => (arg: unknown) => arg) as RouteReqTypeGenerator<Api>;
 
-  const blockIdOnlyReq = t.getBlock<{params: {blockId: string}}>({
+  const blockIdOnlyReq = t.getBlock<{params: {blockId: string | number}}>({
     writeReq: (blockId) => ({params: {blockId}}),
     parseReq: ({params}) => [params.blockId],
     schema: {params: {blockId: Schema.StringRequired}},

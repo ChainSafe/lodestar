@@ -45,6 +45,7 @@
   ],
   "dependencies": {
     "@chainsafe/bls": "6.0.1",
+    "@chainsafe/lodestar-api": "^0.22.0",
     "@chainsafe/lodestar-beacon-state-transition": "^0.22.0",
     "@chainsafe/lodestar-config": "^0.22.0",
     "@chainsafe/lodestar-db": "^0.22.0",
@@ -53,15 +54,10 @@
     "@chainsafe/lodestar-utils": "^0.22.0",
     "@chainsafe/ssz": "^0.8.6",
     "abort-controller": "^3.0.0",
-    "axios": "^0.21.1",
-    "axios-mock-adapter": "^1.17.0",
-    "bigint-buffer": "^1.1.5",
-    "eventsource": "^1.1.0",
-    "strict-event-emitter-types": "^2.0.0"
+    "bigint-buffer": "^1.1.5"
   },
   "devDependencies": {
     "@chainsafe/slashing-protection-interchange-tests": "^4.0.0",
-    "@types/eventsource": "^1.1.5",
     "bigint-buffer": "^1.1.5"
   }
 }

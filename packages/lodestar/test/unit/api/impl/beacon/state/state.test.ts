@@ -52,10 +52,10 @@ describe("beacon api impl - states", function () {
         ],
       ]);
       const committees = await api.getEpochCommittees("blem", {slot: 1, index: 1});
-      expect(committees).to.have.length(1);
-      expect(committees[0].index).to.be.equal(1);
-      expect(committees[0].slot).to.be.equal(1);
-      expect(committees[0].validators).to.be.deep.equal([8, 9, 10]);
+      expect(committees.data).to.have.length(1);
+      expect(committees.data[0].index).to.be.equal(1);
+      expect(committees.data[0].slot).to.be.equal(1);
+      expect(committees.data[0].validators).to.be.deep.equal([8, 9, 10]);
     });
   });
 });

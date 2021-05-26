@@ -7,7 +7,7 @@ import {
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {phase0} from "@chainsafe/lodestar-types";
-import {IApiClient} from "./api";
+import {Api} from "@chainsafe/lodestar-api";
 
 /**
  * Perform a voluntary exit for the given validator by its key.
@@ -16,25 +16,24 @@ export async function signAndSubmitVoluntaryExit(
   publicKey: string,
   exitEpoch: number,
   secretKey: SecretKey,
-  apiClient: IApiClient,
+  api: Api,
   config: IBeaconConfig
 ): Promise<void> {
-  const [stateValidator] = await apiClient.beacon.state.getStateValidators("head", {
-    indices: [config.types.BLSPubkey.fromJson(publicKey)],
-  });
+  const stateValidatorRes = await api.beacon.getStateValidators("head", {indices: [publicKey]});
+  const stateValidator = stateValidatorRes.data[0];
 
   if (!stateValidator) {
     throw new Error("Validator not found in beacon chain.");
   }
 
-  const fork = await apiClient.beacon.state.getFork("head");
+  const {data: fork} = await api.beacon.getStateFork("head");
   if (!fork) {
     throw new Error("VoluntaryExit: Fork not found");
   }
 
-  const genesis = await apiClient.beacon.getGenesis();
-  const genesisValidatorsRoot = genesis.genesisValidatorsRoot;
-  const currentSlot = getCurrentSlot(config, Number(genesis.genesisTime));
+  const genesisRes = await api.beacon.getGenesis();
+  const {genesisValidatorsRoot, genesisTime} = genesisRes.data;
+  const currentSlot = getCurrentSlot(config, Number(genesisTime));
   const currentEpoch = computeEpochAtSlot(config, currentSlot);
 
   const voluntaryExit = {
@@ -50,5 +49,5 @@ export async function signAndSubmitVoluntaryExit(
     signature: secretKey.sign(signingRoot).toBytes(),
   };
 
-  await apiClient.beacon.pool.submitVoluntaryExit(signedVoluntaryExit);
+  await api.beacon.submitPoolVoluntaryExit(signedVoluntaryExit);
 }

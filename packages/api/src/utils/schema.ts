@@ -25,6 +25,7 @@ export enum Schema {
   String,
   StringRequired,
   StringArray,
+  UintOrStringRequired,
   Object,
   ObjectArray,
   AnyArray,
@@ -34,10 +35,10 @@ function getJsonSchemaItem(schema: Schema): JsonSchema {
   switch (schema) {
     case Schema.Uint:
     case Schema.UintRequired:
-      return {type: "number", minimum: 0};
+      return {type: "integer", minimum: 0};
 
     case Schema.UintArray:
-      return {type: "array", items: {type: "number", minimum: 0}};
+      return {type: "array", items: {type: "integer", minimum: 0}};
 
     case Schema.String:
     case Schema.StringRequired:
@@ -45,6 +46,9 @@ function getJsonSchemaItem(schema: Schema): JsonSchema {
 
     case Schema.StringArray:
       return {type: "array", items: {type: "string"}};
+
+    case Schema.UintOrStringRequired:
+      return {type: ["integer", "string"]};
 
     case Schema.Object:
       return {type: "object"};
@@ -61,6 +65,7 @@ function isRequired(schema: Schema): boolean {
   switch (schema) {
     case Schema.UintRequired:
     case Schema.StringRequired:
+    case Schema.UintOrStringRequired:
       return true;
 
     default:

@@ -1,12 +1,9 @@
 import tmp from "tmp";
 import {LevelDbController} from "@chainsafe/lodestar-db";
-import {ILogger, LogLevel} from "@chainsafe/lodestar-utils";
 import {interopSecretKey} from "@chainsafe/lodestar-beacon-state-transition";
-import {IApiClient, SlashingProtection, Validator} from "@chainsafe/lodestar-validator";
-import {Eth1ForBlockProductionDisabled} from "../../../src/eth1";
+import {SlashingProtection, Validator} from "@chainsafe/lodestar-validator";
 import {BeaconNode} from "../../../src/node";
 import {testLogger, TestLoggerOpts} from "../logger";
-import {Api} from "../../../src/api/impl";
 
 export async function getAndInitDevValidators({
   node,
@@ -33,7 +30,7 @@ export async function getAndInitDevValidators({
     vcs.push(
       Validator.initializeFromBeaconNode({
         config: node.config,
-        api: useRestApi ? getNodeApiUrl(node) : getApiInstance(node, logger),
+        api: useRestApi ? getNodeApiUrl(node) : node.api,
         slashingProtection: new SlashingProtection({
           config: node.config,
           controller: new LevelDbController({name: tmpDir.name}, {logger}),
@@ -51,16 +48,4 @@ function getNodeApiUrl(node: BeaconNode): string {
   const host = node.opts.api.rest.host || "127.0.0.1";
   const port = node.opts.api.rest.port || 9596;
   return `http://${host}:${port}`;
-}
-
-function getApiInstance(node: BeaconNode, parentLogger: ILogger): IApiClient {
-  return new Api(
-    {},
-    {
-      ...node,
-      logger: parentLogger.child({module: "api", level: LogLevel.warn}),
-      eth1: new Eth1ForBlockProductionDisabled(),
-    }
-    // TODO: Review why this casting is necessary
-  ) as IApiClient;
 }

@@ -1,9 +1,9 @@
 import {expect} from "chai";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {RouteGeneric, ReqGeneric, Resolves} from "../../src/utils";
-import {FetchFn} from "../../src/client/utils";
+import {HttpClient, IHttpClient} from "../../src/client/utils";
 import {ServerRoutes} from "../../src/server/utils";
-import {getFetchFn, getMockApi, getTestServer} from "./utils";
+import {getMockApi, getTestServer} from "./utils";
 import {registerRoutesSubApi} from "../../src/server";
 
 type IgnoreVoid<T> = T extends void ? undefined : T;
@@ -20,15 +20,15 @@ export function runGenericServerTest<
   ReqTypes extends {[K in keyof Api]: ReqGeneric}
 >(
   config: IBeaconConfig,
-  getClient: (config: IBeaconConfig, fetchFn: FetchFn) => Api,
+  getClient: (config: IBeaconConfig, https: IHttpClient) => Api,
   getRoutes: (config: IBeaconConfig, api: Api) => ServerRoutes<Api, ReqTypes>,
   testCases: GenericServerTestCases<Api>
 ): void {
   const mockApi = getMockApi<Api>(testCases);
   const {baseUrl, server} = getTestServer();
 
-  const fetchFn = getFetchFn(baseUrl);
-  const client = getClient(config, fetchFn);
+  const httpClient = new HttpClient({baseUrl});
+  const client = getClient(config, httpClient);
 
   const routes = getRoutes(config, mockApi);
   registerRoutesSubApi(server, routes);

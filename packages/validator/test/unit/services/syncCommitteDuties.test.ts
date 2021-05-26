@@ -5,11 +5,11 @@ import sinon from "sinon";
 import bls from "@chainsafe/bls";
 import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 import {config as mainnetConfig} from "@chainsafe/lodestar-config/mainnet";
-import {altair} from "@chainsafe/lodestar-types";
 import {toHexString} from "@chainsafe/ssz";
+import {routes} from "@chainsafe/lodestar-api";
 import {SyncCommitteeDutiesService} from "../../../src/services/syncCommitteeDuties";
 import {ValidatorStore} from "../../../src/services/validatorStore";
-import {ApiClientStub} from "../../utils/apiStub";
+import {getApiClientStub} from "../../utils/apiStub";
 import {testLogger} from "../../utils/logger";
 import {ClockMock} from "../../utils/clock";
 import {IndicesService} from "../../../src/services/indices";
@@ -21,7 +21,7 @@ describe("SyncCommitteeDutiesService", function () {
   const logger = testLogger();
   const ZERO_HASH = Buffer.alloc(32, 0);
 
-  const apiClient = ApiClientStub(sandbox);
+  const api = getApiClientStub(sandbox);
   const validatorStore = sinon.createStubInstance(ValidatorStore) as ValidatorStore &
     sinon.SinonStubbedInstance<ValidatorStore>;
   let pubkeys: Uint8Array[]; // Initialize pubkeys in before() so bls is already initialized
@@ -31,10 +31,14 @@ describe("SyncCommitteeDutiesService", function () {
     ALTAIR_FORK_EPOCH: 0, // Activate Altair immediatelly
   });
 
-  // Sample validator
-  const defaultValidator = config.types.phase0.ValidatorResponse.defaultValue();
   const index = 4;
-  defaultValidator.index = index;
+  // Sample validator
+  const defaultValidator: routes.beacon.ValidatorResponse = {
+    index,
+    balance: BigInt(32e9),
+    status: "active",
+    validator: config.types.phase0.Validator.defaultValue(),
+  };
 
   before(() => {
     const secretKeys = [bls.SecretKey.fromBytes(toBufferBE(BigInt(98), 32))];
@@ -56,31 +60,24 @@ describe("SyncCommitteeDutiesService", function () {
       index,
       validator: {...defaultValidator.validator, pubkey: pubkeys[0]},
     };
-    apiClient.beacon.state.getStateValidators.resolves([validatorResponse]);
+    api.beacon.getStateValidators.resolves({data: [validatorResponse]});
 
     // Reply with some duties
     const slot = 1;
-    const duty: altair.SyncDuty = {
+    const duty: routes.validator.SyncDuty = {
       pubkey: pubkeys[0],
       validatorIndex: index,
       validatorSyncCommitteeIndices: [7],
     };
-    apiClient.validator.getSyncCommitteeDuties.resolves({dependentRoot: ZERO_HASH, data: [duty]});
+    api.validator.getSyncCommitteeDuties.resolves({dependentRoot: ZERO_HASH, data: [duty]});
 
     // Accept all subscriptions
-    apiClient.validator.prepareSyncCommitteeSubnets.resolves();
+    api.validator.prepareSyncCommitteeSubnets.resolves();
 
     // Clock will call runAttesterDutiesTasks() immediatelly
     const clock = new ClockMock();
-    const indicesService = new IndicesService(logger, apiClient, validatorStore);
-    const dutiesService = new SyncCommitteeDutiesService(
-      config,
-      logger,
-      apiClient,
-      clock,
-      validatorStore,
-      indicesService
-    );
+    const indicesService = new IndicesService(logger, api, validatorStore);
+    const dutiesService = new SyncCommitteeDutiesService(config, logger, api, clock, validatorStore, indicesService);
 
     // Trigger clock onSlot for slot 0
     await clock.tickEpochFns(0, controller.signal);
@@ -115,7 +112,7 @@ describe("SyncCommitteeDutiesService", function () {
       "Wrong getAttestersAtSlot()"
     );
 
-    expect(apiClient.validator.prepareSyncCommitteeSubnets.callCount).to.equal(
+    expect(api.validator.prepareSyncCommitteeSubnets.callCount).to.equal(
       1,
       "prepareSyncCommitteeSubnets() must be called once after getting the duties"
     );

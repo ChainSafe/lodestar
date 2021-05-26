@@ -8,7 +8,7 @@ import {ForkChoice, IBeaconChain} from "../../../../../../src/chain";
 import {LocalClock} from "../../../../../../src/chain/clock";
 import {FAR_FUTURE_EPOCH} from "../../../../../../src/constants";
 import {IEth1ForBlockProduction} from "../../../../../../src/eth1";
-import {IValidatorApi, ValidatorApi} from "../../../../../../src/api/impl/validator";
+import {getValidatorApi} from "../../../../../../src/api/impl/validator";
 import {ApiModules} from "../../../../../../src/api/impl/types";
 import {generateInitialMaxBalances} from "../../../../../utils/balances";
 import {generateState} from "../../../../../utils/state";
@@ -28,7 +28,7 @@ describe("get proposers api impl", function () {
     syncStub: SinonStubbedInstance<IBeaconSync>,
     dbStub: StubbedBeaconDb;
 
-  let api: IValidatorApi;
+  let api: ReturnType<typeof getValidatorApi>;
   let server: ApiImplTestModules;
   let modules: ApiModules;
 
@@ -50,7 +50,7 @@ describe("get proposers api impl", function () {
       sync: syncStub,
       metrics: null,
     };
-    api = new ValidatorApi({}, modules);
+    api = getValidatorApi(modules);
   });
 
   it("should get proposers", async function () {

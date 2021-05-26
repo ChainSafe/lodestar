@@ -1,9 +1,9 @@
-import {defaultApiRestOptions, IRestApiOptions} from "./rest/options";
+import {restApiOptionsDefault, RestApiOptions} from "./rest";
 
 export interface IApiOptions {
-  rest: IRestApiOptions;
+  rest: RestApiOptions;
 }
 
 export const defaultApiOptions: IApiOptions = {
-  rest: defaultApiRestOptions,
+  rest: restApiOptionsDefault,
 };
