@@ -17,30 +17,36 @@ import {IBeaconArgs} from "./options";
 import {defaultNetwork, IGlobalArgs} from "../../options/globalOptions";
 import {getGenesisFileUrl} from "../../networks";
 import {
-  mainnetWeakSubjectivityState,
-  praterWeakSubjectivityState,
-  pyrmontWeakSubjectivityState,
+  mainnetWeakSubjectivityServer,
+  praterWeakSubjectivityServer,
+  pyrmontWeakSubjectivityServer,
 } from "../weakSubjectivityState";
+import got from "got";
+
+type WSResponse = {
+  ws_state: allForks.BeaconState;
+}
 
 async function initAndVerifyWeakSujectivityState(
+  config: IBeaconConfig,
+  db: IBeaconDb,
   args: IBeaconArgs & IGlobalArgs,
-  wsStateData: {
-    stateRoot: string;
-    ipfsPath: string;
-  },
-  initFunc: (pathOrUrl: string) => Promise<TreeBacked<allForks.BeaconState>>,
+  server: string,
   logger: ILogger
 ): Promise<TreeBacked<allForks.BeaconState>> {
-  logger.info("Fetching weak subjectivity state from IPFS at " + args.ipfsGatewayUrl + wsStateData.ipfsPath);
-  const state = await initFunc(args.ipfsGatewayUrl + wsStateData.ipfsPath);
-  if (!state) {
-    throw new Error("Weak subjectivity state not found for network " + args.network);
-  }
-  // verify downloaded state against locally stored state root
-  if (toHexString(state.hashTreeRoot()) !== wsStateData.stateRoot) {
-    throw new Error("Unable to verify state root downloaded from IPFS");
-  }
-  return state;
+  logger.info("Fetching weak subjectivity state from ChainSafe at " + server);
+  const wsStateData = await got(server, {searchParams: {checkpoint: args.weakSubjectivityCheckpoint}});
+  console.log("wsStateData: ", wsStateData);
+  // @ts-ignore
+  const state = wsStateData.ws_state;
+  // if (!wsStateData.ws_state) {
+  //   throw new Error("Weak subjectivity state not found for network " + args.network);
+  // }
+  // // verify downloaded state against locally stored state root
+  // if (toHexString(state.hashTreeRoot()) !== wsStateData.stateRoot) {
+  //   throw new Error("Unable to verify state root downloaded from ChainSafe");
+  // }
+  return await initStateFromAnchorState(config, db, logger, state as TreeBacked<allForks.BeaconState>);
 }
 
 /**
@@ -70,13 +76,13 @@ export async function initBeaconState(
     return await initFromFile(args.weakSubjectivityStateFile);
   } else if (dbHasSomeState) {
     return await initStateFromDb(config, db, logger);
-  } else if (args.fetchWeakSubjectivityStateFromIPFS) {
+  } else if (args.fetchChainSafeWeakSubjecitivtyState) {
     if (args.network === "mainnet") {
-      return await initAndVerifyWeakSujectivityState(args, mainnetWeakSubjectivityState, initFromFile, logger);
+      return await initAndVerifyWeakSujectivityState(config, db, args, mainnetWeakSubjectivityServer, logger);
     } else if (args.network === "prater") {
-      return await initAndVerifyWeakSujectivityState(args, praterWeakSubjectivityState, initFromFile, logger);
+      return await initAndVerifyWeakSujectivityState(config, db, args, praterWeakSubjectivityServer, logger);
     } else if (args.network === "pyrmont") {
-      return await initAndVerifyWeakSujectivityState(args, pyrmontWeakSubjectivityState, initFromFile, logger);
+      return await initAndVerifyWeakSujectivityState(config, db, args, pyrmontWeakSubjectivityServer, logger);
     } else {
       throw new Error("No matching network with weak subjectivity state.");
     }
