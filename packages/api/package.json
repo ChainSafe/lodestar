@@ -47,10 +47,12 @@
     "abort-controller": "^3.0.0",
     "cross-fetch": "^3.1.4",
     "eventsource": "^1.1.0",
-    "mitt": "^2.1.0"
+    "mitt": "^2.1.0",
+    "qs": "^6.10.1"
   },
   "devDependencies": {
     "@types/eventsource": "^1.1.5",
+    "@types/qs": "^6.9.6",
     "fastify": "3.15.1",
     "openapi-typescript-codegen": "^0.9.3"
   },

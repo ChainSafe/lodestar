@@ -1,6 +1,6 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Api} from "../interface";
-import {FetchFn} from "../utils";
+import {FetchFn} from "./utils";
 
 import * as beacon from "./beacon";
 import * as configApi from "./config";

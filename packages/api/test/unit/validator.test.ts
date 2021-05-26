@@ -70,4 +70,24 @@ describe("validator", () => {
       res: undefined,
     },
   });
+
+  // TODO: Extra tests to implement maybe
+
+  // getAttesterDuties
+  // - throw validation error on invalid epoch "a"
+  // - throw validation error on no validator indices
+  // - throw validation error on invalid validator index "a"
+
+  // getProposerDuties
+  // - throw validation error on invalid epoch "a"
+
+  // prepareBeaconCommitteeSubnet
+  // - throw validation error on missing param
+
+  // produceAttestationData
+  // - throw validation error on missing param
+
+  // produceBlock
+  // - throw validation error on missing randao reveal
+  // - throw validation error on invalid slot
 });

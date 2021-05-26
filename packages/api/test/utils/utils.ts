@@ -1,6 +1,7 @@
 import fastify, {FastifyInstance} from "fastify";
 import {fetch} from "cross-fetch";
 import querystring from "querystring";
+import qs from "qs";
 import {FetchFn, FetchOpts} from "../../src/client/utils";
 import {mapValues} from "@chainsafe/lodestar-utils";
 import Sinon from "sinon";
@@ -44,27 +45,39 @@ export function getMockApi<Api extends Record<string, any>>(
 }
 
 export function getFetchFn(baseUrl: string): FetchFn {
+  async function getRes(opts: FetchOpts): Promise<Response> {
+    const url = urlJoin(baseUrl, opts.url) + (opts.query ? "?" + qs.stringify(opts.query as any) : "");
+    const bodyArgs = opts.body ? {headers: {"Content-Type": "application/json"}, body: JSON.stringify(opts.body)} : {};
+
+    const res = await fetch(url, {method: opts.method, ...bodyArgs});
+
+    if (!res.ok) {
+      const errBody = await res.text();
+      throw Error(`${res.statusText}: ${errBody}`);
+    }
+
+    return res;
+  }
+
   return {
     async json<T>(opts: FetchOpts): Promise<T> {
-      const url = baseUrl + (opts.query ? opts.url + "?" + querystring.encode(opts.query as any) : opts.url);
-      const bodyArgs = opts.body
-        ? {headers: {"Content-Type": "application/json"}, body: JSON.stringify(opts.body)}
-        : {};
-
-      const res = await fetch(url, {method: opts.method, ...bodyArgs});
-      if (!res.ok) throw Error(res.statusText);
+      const res = await getRes(opts);
       return (await res.json()) as T;
     },
 
     async arrayBuffer(opts: FetchOpts): Promise<ArrayBuffer> {
-      const url = baseUrl + (opts.query ? opts.url + "?" + querystring.encode(opts.query as any) : opts.url);
-      const bodyArgs = opts.body
-        ? {headers: {"Content-Type": "application/json"}, body: JSON.stringify(opts.body)}
-        : {};
-
-      const res = await fetch(url, {method: opts.method, ...bodyArgs});
-      if (!res.ok) throw Error(res.statusText);
+      const res = await getRes(opts);
       return await res.arrayBuffer();
     },
   };
+}
+
+export function urlJoin(...args: string[]): string {
+  return (
+    args
+      .join("/")
+      .replace(/([^:]\/)\/+/g, "$1")
+      // Remove duplicate slashes in the front
+      .replace(/^(\/)+/, "/")
+  );
 }

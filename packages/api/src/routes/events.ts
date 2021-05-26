@@ -72,6 +72,9 @@ export type ReqTypes = {
   };
 };
 
+// It doesn't make sense to define a getReqSerializers() here given the exotic argument of eventstream()
+// The request is very simple: (topics) => {query: {topics}}, and the test will ensure compatibility server - client
+
 export function getTypeByEvent(config: IBeaconConfig): {[K in EventType]: Type<EventData[K]>} {
   return {
     [EventType.head]: new ContainerType<EventData[EventType.head]>({
