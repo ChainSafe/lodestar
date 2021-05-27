@@ -32,7 +32,6 @@ import {BlsVerifier, IBlsVerifier} from "./bls";
 import {ForkDigestContext, IForkDigestContext} from "../util/forkDigestContext";
 
 export interface IBeaconChainModules {
-  opts: IChainOptions;
   config: IBeaconConfig;
   db: IBeaconDb;
   logger: ILogger;
@@ -69,7 +68,7 @@ export class BeaconChain implements IBeaconChain {
   protected internalEmitter = new ChainEventEmitter();
   private abortController = new AbortController();
 
-  constructor({opts, config, db, logger, metrics, anchorState}: IBeaconChainModules) {
+  constructor(opts: IChainOptions, {config, db, logger, metrics, anchorState}: IBeaconChainModules) {
     this.opts = opts;
     this.config = config;
     this.db = db;
@@ -82,7 +81,7 @@ export class BeaconChain implements IBeaconChain {
 
     const signal = this.abortController.signal;
     const emitter = this.internalEmitter; // All internal compoments emit to the internal emitter first
-    const bls = new BlsVerifier({logger, metrics, signal: this.abortController.signal});
+    const bls = new BlsVerifier({logger, metrics, signal: this.abortController.signal}, opts);
 
     const clock = new LocalClock({config, emitter, genesisTime: this.genesisTime, signal});
     const stateCache = new StateContextCache();

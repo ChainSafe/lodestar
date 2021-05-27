@@ -29,12 +29,25 @@ export type EpochContextOpts = {
   skipSyncPubkeys?: boolean;
 };
 
-export class PubkeyIndexMap extends Map<ByteVector, ValidatorIndex> {
-  get(key: ByteVector): ValidatorIndex | undefined {
-    return super.get((toHexString(key) as unknown) as ByteVector);
+type PubkeyHex = string;
+
+function toHexStringMaybe(hex: ByteVector | string): string {
+  return typeof hex === "string" ? hex : toHexString(hex);
+}
+
+export class PubkeyIndexMap {
+  private readonly map = new Map<PubkeyHex, ValidatorIndex>();
+
+  get size(): number {
+    return this.map.size;
   }
-  set(key: ByteVector, value: ValidatorIndex): this {
-    return super.set((toHexString(key) as unknown) as ByteVector, value);
+
+  get(key: ByteVector | PubkeyHex): ValidatorIndex | undefined {
+    return this.map.get(toHexStringMaybe(key));
+  }
+
+  set(key: ByteVector | PubkeyHex, value: ValidatorIndex): void {
+    this.map.set(toHexStringMaybe(key), value);
   }
 }
 

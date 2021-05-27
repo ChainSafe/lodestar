@@ -4,11 +4,11 @@ import {expect} from "chai";
 import sinon from "sinon";
 import bls from "@chainsafe/bls";
 import {config} from "@chainsafe/lodestar-config/mainnet";
-import {phase0} from "@chainsafe/lodestar-types";
 import {toHexString} from "@chainsafe/ssz";
+import {routes} from "@chainsafe/lodestar-api";
 import {AttestationDutiesService} from "../../../src/services/attestationDuties";
 import {ValidatorStore} from "../../../src/services/validatorStore";
-import {ApiClientStub} from "../../utils/apiStub";
+import {getApiClientStub} from "../../utils/apiStub";
 import {testLogger} from "../../utils/logger";
 import {ClockMock} from "../../utils/clock";
 import {IndicesService} from "../../../src/services/indices";
@@ -18,15 +18,20 @@ describe("AttestationDutiesService", function () {
   const logger = testLogger();
   const ZERO_HASH = Buffer.alloc(32, 0);
 
-  const apiClient = ApiClientStub(sandbox);
+  const api = getApiClientStub(sandbox);
   const validatorStore = sinon.createStubInstance(ValidatorStore) as ValidatorStore &
     sinon.SinonStubbedInstance<ValidatorStore>;
   let pubkeys: Uint8Array[]; // Initialize pubkeys in before() so bls is already initialized
 
   // Sample validator
-  const defaultValidator = config.types.phase0.ValidatorResponse.defaultValue();
   const index = 4;
-  defaultValidator.index = index;
+  // Sample validator
+  const defaultValidator: routes.beacon.ValidatorResponse = {
+    index,
+    balance: BigInt(32e9),
+    status: "active",
+    validator: config.types.phase0.Validator.defaultValue(),
+  };
 
   before(() => {
     const secretKeys = [bls.SecretKey.fromBytes(toBufferBE(BigInt(98), 32))];
@@ -47,11 +52,11 @@ describe("AttestationDutiesService", function () {
       index,
       validator: {...defaultValidator.validator, pubkey: pubkeys[0]},
     };
-    apiClient.beacon.state.getStateValidators.resolves([validatorResponse]);
+    api.beacon.getStateValidators.resolves({data: [validatorResponse]});
 
     // Reply with some duties
     const slot = 1;
-    const duty: phase0.AttesterDuty = {
+    const duty: routes.validator.AttesterDuty = {
       slot: slot,
       committeeIndex: 1,
       committeeLength: 120,
@@ -60,22 +65,15 @@ describe("AttestationDutiesService", function () {
       validatorIndex: index,
       pubkey: pubkeys[0],
     };
-    apiClient.validator.getAttesterDuties.resolves({dependentRoot: ZERO_HASH, data: [duty]});
+    api.validator.getAttesterDuties.resolves({dependentRoot: ZERO_HASH, data: [duty]});
 
     // Accept all subscriptions
-    apiClient.validator.prepareBeaconCommitteeSubnet.resolves();
+    api.validator.prepareBeaconCommitteeSubnet.resolves();
 
     // Clock will call runAttesterDutiesTasks() immediatelly
     const clock = new ClockMock();
-    const indicesService = new IndicesService(logger, apiClient, validatorStore);
-    const dutiesService = new AttestationDutiesService(
-      config,
-      logger,
-      apiClient,
-      clock,
-      validatorStore,
-      indicesService
-    );
+    const indicesService = new IndicesService(logger, api, validatorStore);
+    const dutiesService = new AttestationDutiesService(config, logger, api, clock, validatorStore, indicesService);
 
     // Trigger clock onSlot for slot 0
     await clock.tickEpochFns(0, controller.signal);
@@ -101,7 +99,7 @@ describe("AttestationDutiesService", function () {
       "Wrong getAttestersAtSlot()"
     );
 
-    expect(apiClient.validator.prepareBeaconCommitteeSubnet.callCount).to.equal(
+    expect(api.validator.prepareBeaconCommitteeSubnet.callCount).to.equal(
       1,
       "prepareBeaconCommitteeSubnet() must be called once after getting the duties"
     );

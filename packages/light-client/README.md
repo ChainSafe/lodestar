@@ -1,4 +1,4 @@
-# Lodestar
+# Lodestar Light-client
 
 [![](https://img.shields.io/travis/com/ChainSafe/lodestar/master.svg?label=master&logo=travis "Master Branch (Travis)")](https://travis-ci.com/ChainSafe/lodestar)
 [![Discord](https://img.shields.io/discord/593655374469660673.svg?label=Discord&logo=discord)](https://discord.gg/aMxzVcr)
@@ -29,4 +29,4 @@ Read our [contributors document](/CONTRIBUTING.md), [submit an issue](https://gi
 
 ## License
 
-LGPL-3.0 [ChainSafe Systems](https://chainsafe.io)
+Apache-2.0 [ChainSafe Systems](https://chainsafe.io)

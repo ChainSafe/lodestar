@@ -1,6 +1,5 @@
 import sinon from "sinon";
 import * as blockUtils from "../../../../../../src/api/impl/beacon/blocks/utils";
-import {config} from "@chainsafe/lodestar-config/minimal";
 import {expect, use} from "chai";
 import chaiAsPromised from "chai-as-promised";
 import {generateEmptySignedBlock} from "../../../../../utils/block";
@@ -31,6 +30,5 @@ describe("api - beacon - getBlockHeader", function () {
     resolveBlockIdStub.withArgs(sinon.match.any, sinon.match.any, "head").resolves(generateEmptySignedBlock());
     const result = await server.blockApi.getBlockHeader("head");
     expect(result).to.not.be.null;
-    expect(() => config.types.phase0.SignedBeaconHeaderResponse.assertValidValue(result)).to.not.throw();
   });
 });

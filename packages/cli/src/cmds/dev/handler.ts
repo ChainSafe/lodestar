@@ -5,7 +5,7 @@ import path from "path";
 import {AbortController} from "abort-controller";
 import {GENESIS_SLOT} from "@chainsafe/lodestar-params";
 import {BeaconNode, BeaconDb, initStateFromAnchorState, createNodeJsLibp2p, nodeUtils} from "@chainsafe/lodestar";
-import {IApiClient, SlashingProtection, Validator} from "@chainsafe/lodestar-validator";
+import {SlashingProtection, Validator} from "@chainsafe/lodestar-validator";
 import {LevelDbController} from "@chainsafe/lodestar-db";
 import {onGracefulShutdown} from "../../util/process";
 import {createEnr, createPeerId} from "../../config";
@@ -104,7 +104,7 @@ export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
     const dbPath = path.join(validatorsDbDir, "validators");
     fs.mkdirSync(dbPath, {recursive: true});
 
-    const api = args.server === "memory" ? (node.api as IApiClient) : args.server;
+    const api = args.server === "memory" ? node.api : args.server;
     const slashingProtection = new SlashingProtection({
       config: config,
       controller: new LevelDbController({name: dbPath}, {logger}),

@@ -3,7 +3,7 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {BLSPubkey, Epoch, phase0, Root, Slot, ssz} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {toHexString} from "@chainsafe/ssz";
-import {IApiClient} from "../api";
+import {Api, routes} from "@chainsafe/lodestar-api";
 import {extendError, notAborted} from "../util";
 import {IClock} from "../util/clock";
 import {differenceHex} from "../util/difference";
@@ -15,7 +15,7 @@ const HISTORICAL_DUTIES_EPOCHS = 2;
 const GENESIS_EPOCH = 0;
 export const GENESIS_SLOT = 0;
 
-type BlockDutyAtEpoch = {dependentRoot: Root; data: phase0.ProposerDuty[]};
+type BlockDutyAtEpoch = {dependentRoot: Root; data: routes.validator.ProposerDuty[]};
 type NotifyBlockProductionFn = (slot: Slot, proposers: BLSPubkey[]) => void;
 
 export class BlockDutiesService {
@@ -28,7 +28,7 @@ export class BlockDutiesService {
   constructor(
     private readonly config: IBeaconConfig,
     private readonly logger: ILogger,
-    private readonly apiClient: IApiClient,
+    private readonly api: Api,
     clock: IClock,
     private readonly validatorStore: ValidatorStore,
     notifyBlockProductionFn: NotifyBlockProductionFn
@@ -138,7 +138,7 @@ export class BlockDutiesService {
       return;
     }
 
-    const proposerDuties = await this.apiClient.validator.getProposerDuties(epoch).catch((e) => {
+    const proposerDuties = await this.api.validator.getProposerDuties(epoch).catch((e) => {
       throw extendError(e, "Error on getProposerDuties");
     });
     const dependentRoot = proposerDuties.dependentRoot;

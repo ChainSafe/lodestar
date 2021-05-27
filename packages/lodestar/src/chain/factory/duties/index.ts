@@ -1,14 +1,19 @@
+import {routes} from "@chainsafe/lodestar-api";
 import {readonlyValues} from "@chainsafe/ssz";
 import {allForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
+<<<<<<< HEAD
 import {BLSPubkey, Epoch, ValidatorIndex, phase0, ssz} from "@chainsafe/lodestar-types";
+=======
+import {BLSPubkey, Epoch, ValidatorIndex} from "@chainsafe/lodestar-types";
+>>>>>>> master
 
 export function assembleAttesterDuty(
   config: IBeaconConfig,
   validator: {pubkey: BLSPubkey; index: ValidatorIndex},
   epochCtx: allForks.EpochContext,
   epoch: Epoch
-): phase0.AttesterDuty | null {
+): routes.validator.AttesterDuty | null {
   const committeeAssignment = epochCtx.getCommitteeAssignment(epoch, validator.index);
   if (committeeAssignment) {
     let validatorCommitteeIndex = -1;

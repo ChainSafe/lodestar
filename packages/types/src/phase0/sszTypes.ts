@@ -19,9 +19,7 @@ import {
 } from "@chainsafe/lodestar-params";
 import {BitListType, BitVectorType, ContainerType, List, ListType, RootType, Vector, VectorType} from "@chainsafe/ssz";
 import {ssz as primitiveSsz} from "../primitive";
-import {StringType} from "../utils/StringType";
 import {LazyVariable} from "../utils/lazyVar";
-import {ValidatorStatus} from "./types";
 import * as phase0 from "./types";
 
 const {
@@ -172,13 +170,6 @@ export const HistoricalBatch = new ContainerType<phase0.HistoricalBatch>({
   fields: {
     blockRoots: HistoricalBlockRoots,
     stateRoots: HistoricalStateRoots,
-  },
-});
-
-export const SlotRoot = new ContainerType<phase0.SlotRoot>({
-  fields: {
-    slot: Slot,
-    root: Root,
   },
 });
 
@@ -420,94 +411,6 @@ export const BeaconBlocksByRootRequest = new ListType({elementType: Root, limit:
 // Api types
 // =========
 
-export const AttesterDuty = new ContainerType<phase0.AttesterDuty>({
-  fields: {
-    pubkey: BLSPubkey,
-    validatorIndex: ValidatorIndex,
-    committeeIndex: CommitteeIndex,
-    committeeLength: Number64,
-    committeesAtSlot: Number64,
-    validatorCommitteeIndex: Number64,
-    slot: Slot,
-  },
-});
-
-export const AttesterDutiesApi = new ContainerType<phase0.AttesterDutiesApi>({
-  fields: {
-    data: new ListType({elementType: AttesterDuty, limit: VALIDATOR_REGISTRY_LIMIT}),
-    dependentRoot: Root,
-  },
-});
-
-export const BeaconCommitteeResponse = new ContainerType<phase0.BeaconCommitteeResponse>({
-  fields: {
-    index: CommitteeIndex,
-    slot: Slot,
-    validators: CommitteeIndices,
-  },
-});
-
-export const BeaconCommitteeSubscription = new ContainerType<phase0.BeaconCommitteeSubscription>({
-  fields: {
-    validatorIndex: ValidatorIndex,
-    committeeIndex: CommitteeIndex,
-    committeesAtSlot: Slot,
-    slot: Slot,
-    isAggregator: Boolean,
-  },
-});
-
-export const BlockEventPayload = new ContainerType<phase0.BlockEventPayload>({
-  fields: {
-    slot: Slot,
-    block: Root,
-  },
-});
-
-export const ChainHead = new ContainerType<phase0.ChainHead>({
-  fields: {
-    slot: Slot,
-    block: Root,
-    state: Root,
-    epochTransition: Boolean,
-  },
-});
-
-export const ChainReorg = new ContainerType<phase0.ChainReorg>({
-  fields: {
-    slot: Slot,
-    depth: Number64,
-    oldHeadBlock: Root,
-    newHeadBlock: Root,
-    oldHeadState: Root,
-    newHeadState: Root,
-    epoch: Epoch,
-  },
-});
-
-export const Contract = new ContainerType<phase0.Contract>({
-  fields: {
-    chainId: Number64,
-    address: Bytes32,
-  },
-});
-
-export const FinalityCheckpoints = new ContainerType<phase0.FinalityCheckpoints>({
-  fields: {
-    previousJustified: Checkpoint,
-    currentJustified: Checkpoint,
-    finalized: Checkpoint,
-  },
-});
-
-export const FinalizedCheckpoint = new ContainerType<phase0.FinalizedCheckpoint>({
-  fields: {
-    block: Root,
-    state: Root,
-    epoch: Epoch,
-  },
-});
-
 export const Genesis = new ContainerType<phase0.Genesis>({
   fields: {
     genesisValidatorsRoot: Root,
@@ -516,60 +419,6 @@ export const Genesis = new ContainerType<phase0.Genesis>({
   },
 });
 
-export const ProposerDuty = new ContainerType<phase0.ProposerDuty>({
-  fields: {
-    slot: Slot,
-    validatorIndex: ValidatorIndex,
-    pubkey: BLSPubkey,
-  },
-});
-
-export const ProposerDutiesApi = new ContainerType<phase0.ProposerDutiesApi>({
-  fields: {
-    data: new ListType({elementType: ProposerDuty, limit: VALIDATOR_REGISTRY_LIMIT}),
-    dependentRoot: Root,
-  },
-});
-
-export const SignedBeaconHeaderResponse = new ContainerType<phase0.SignedBeaconHeaderResponse>({
-  fields: {
-    root: Root,
-    canonical: Boolean,
-    header: SignedBeaconBlockHeader,
-  },
-});
-
-export const SubscribeToCommitteeSubnetPayload = new ContainerType<phase0.SubscribeToCommitteeSubnetPayload>({
-  fields: {
-    slot: Slot,
-    slotSignature: BLSSignature,
-    attestationCommitteeIndex: CommitteeIndex,
-    aggregatorPubkey: BLSPubkey,
-  },
-});
-
-export const SyncingStatus = new ContainerType<phase0.SyncingStatus>({
-  fields: {
-    headSlot: Uint64,
-    syncDistance: Uint64,
-  },
-});
-
-export const ValidatorBalance = new ContainerType<phase0.ValidatorBalance>({
-  fields: {
-    index: ValidatorIndex,
-    balance: Gwei,
-  },
-});
-
-export const ValidatorResponse = new ContainerType<phase0.ValidatorResponse>({
-  fields: {
-    index: ValidatorIndex,
-    balance: Gwei,
-    status: new StringType<ValidatorStatus>(),
-    validator: Validator,
-  },
-});
 
 // Non-speced types
 // ================
@@ -600,3 +449,4 @@ export const SlashingProtectionAttestationLowerBound = new ContainerType<
 
 // MUST set typesRef here, otherwise expandedType() calls will throw
 typesRef.set({BeaconBlock, BeaconState});
+

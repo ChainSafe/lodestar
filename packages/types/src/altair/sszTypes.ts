@@ -113,36 +113,6 @@ export const SyncAggregate = new ContainerType<altair.SyncAggregate>({
   },
 });
 
-export const SyncCommitteeSubscription = new ContainerType<altair.SyncCommitteeSubscription>({
-  fields: {
-    validatorIndex: ValidatorIndex,
-    syncCommitteeIndices: new ListType({elementType: CommitteeIndex, limit: SYNC_COMMITTEE_SIZE}),
-    untilEpoch: Epoch,
-  },
-});
-
-export const SyncCommitteeByValidatorIndices = new ContainerType<altair.SyncCommitteeByValidatorIndices>({
-  fields: {
-    validators: new ListType({elementType: ValidatorIndex, limit: SYNC_COMMITTEE_SIZE}),
-    validatorAggregates: new ListType({elementType: ValidatorIndex, limit: SYNC_COMMITTEE_SIZE}),
-  },
-});
-
-export const SyncDuty = new ContainerType<altair.SyncDuty>({
-  fields: {
-    pubkey: BLSPubkey,
-    validatorIndex: ValidatorIndex,
-    validatorSyncCommitteeIndices: new ListType({elementType: Number64, limit: SYNC_COMMITTEE_SIZE}),
-  },
-});
-
-export const SyncDutiesApi = new ContainerType<altair.SyncDutiesApi>({
-  fields: {
-    data: new ListType({elementType: SyncDuty, limit: SYNC_COMMITTEE_SIZE}),
-    dependentRoot: Root,
-  },
-});
-
 // Re-declare with the new expanded type
 export const HistoricalBlockRoots = new VectorType<Vector<altair.Root>>({
   elementType: new RootType({expandedType: () => typesRef.get().BeaconBlock}),
@@ -270,3 +240,4 @@ export const LightClientStore = new ContainerType<altair.LightClientStore>({
 
 // MUST set typesRef here, otherwise expandedType() calls will throw
 typesRef.set({BeaconBlock, BeaconState});
+

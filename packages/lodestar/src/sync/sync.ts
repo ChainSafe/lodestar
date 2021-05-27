@@ -1,5 +1,5 @@
 import PeerId from "peer-id";
-import {IBeaconSync, ISyncModules} from "./interface";
+import {IBeaconSync, ISyncModules, SyncingStatus} from "./interface";
 import {INetwork, NetworkEvent} from "../network";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
@@ -67,7 +67,7 @@ export class BeaconSync implements IBeaconSync {
     this.rangeSync.close();
   }
 
-  getSyncStatus(): phase0.SyncingStatus {
+  getSyncStatus(): SyncingStatus {
     const currentSlot = this.chain.clock.currentSlot;
     const headSlot = this.chain.forkChoice.getHead().slot;
     switch (this.state) {
@@ -75,13 +75,13 @@ export class BeaconSync implements IBeaconSync {
       case SyncState.SyncingHead:
       case SyncState.Stalled:
         return {
-          headSlot: BigInt(headSlot),
-          syncDistance: BigInt(currentSlot - headSlot),
+          headSlot: headSlot,
+          syncDistance: currentSlot - headSlot,
         };
       case SyncState.Synced:
         return {
-          headSlot: BigInt(headSlot),
-          syncDistance: BigInt(0),
+          headSlot: headSlot,
+          syncDistance: 0,
         };
       default:
         throw new Error("Node is stopped, cannot get sync status");

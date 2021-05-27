@@ -1,15 +1,23 @@
 import {bls, PublicKey} from "@chainsafe/bls";
 import {ISignatureSet, SignatureSetType} from "@chainsafe/lodestar-beacon-state-transition";
+import {IBlsVerifierImpl} from "./interface";
 import {BlsMultiThreadWorkerPool, BlsMultiThreadWorkerPoolModules} from "./multithread";
+import {BlsSingleThreadVerifier} from "./singleThread";
+
+export type BlsVerifierOpts = {
+  useSingleThreadVerifier?: boolean;
+};
 
 export interface IBlsVerifier {
   verifySignatureSets(signatureSets: ISignatureSet[]): Promise<boolean>;
 }
 
 export class BlsVerifier implements IBlsVerifier {
-  private readonly pool: BlsMultiThreadWorkerPool;
-  constructor(modules: BlsMultiThreadWorkerPoolModules) {
-    this.pool = new BlsMultiThreadWorkerPool(bls.implementation, modules);
+  private readonly pool: IBlsVerifierImpl;
+  constructor(modules: BlsMultiThreadWorkerPoolModules, opts: BlsVerifierOpts) {
+    this.pool = opts.useSingleThreadVerifier
+      ? new BlsSingleThreadVerifier()
+      : new BlsMultiThreadWorkerPool(bls.implementation, modules);
   }
 
   /**

@@ -7,7 +7,11 @@ import {getBeaconPaths} from "../../../src/cmds/beacon/paths";
 import {depositContractDeployBlock} from "../../../src/networks/pyrmont";
 import {testFilesDir} from "../../utils";
 import {getLodestarCliTestRunner} from "../commandRunner";
-import {ApiNamespace} from "@chainsafe/lodestar/lib/api";
+
+enum ApiNamespace {
+  DEBUG = "debug",
+  LODESTAR = "lodestar",
+}
 
 describe("cmds / init", function () {
   const lodestar = getLodestarCliTestRunner();

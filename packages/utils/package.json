@@ -36,12 +36,11 @@
   },
   "types": "lib/index.d.ts",
   "dependencies": {
-    "@chainsafe/ssz": "^0.8.5",
+    "@chainsafe/ssz": "^0.8.6",
     "abort-controller": "^3.0.0",
     "any-signal": "2.1.1",
     "bigint-buffer": "^1.1.5",
     "chalk": "^2.4.2",
-    "event-iterator": "^2.0.0",
     "js-yaml": "^3.13.1",
     "winston": "^3.3.3",
     "winston-transport": "^4.3.0"

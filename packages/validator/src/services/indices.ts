@@ -1,7 +1,7 @@
 import {ValidatorIndex} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {toHexString} from "@chainsafe/ssz";
-import {IApiClient} from "../api";
+import {Api} from "@chainsafe/lodestar-api";
 import {ValidatorStore} from "./validatorStore";
 
 // To assist with readability
@@ -16,7 +16,7 @@ export class IndicesService {
 
   constructor(
     private readonly logger: ILogger,
-    private readonly apiClient: IApiClient,
+    private readonly api: Api,
     private readonly validatorStore: ValidatorStore
   ) {}
 
@@ -58,10 +58,11 @@ export class IndicesService {
     }
 
     // Query the remote BN to resolve a pubkey to a validator index.
-    const validatorsState = await this.apiClient.beacon.state.getStateValidators("head", {indices: pubkeysToPoll});
+    const pubkeysHex = pubkeysToPoll.map((pubkey) => toHexString(pubkey));
+    const validatorsState = await this.api.beacon.getStateValidators("head", {indices: pubkeysHex});
 
     const newIndices = [];
-    for (const validatorState of validatorsState) {
+    for (const validatorState of validatorsState.data) {
       const pubkeyHex = toHexString(validatorState.validator.pubkey);
       if (!this.pubkey2index.has(pubkeyHex)) {
         this.logger.debug("Discovered validator", {pubkey: pubkeyHex, index: validatorState.index});
