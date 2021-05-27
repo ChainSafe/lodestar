@@ -127,8 +127,7 @@ export class BeaconNode {
       initBeaconMetrics(metrics, anchorState);
     }
 
-    const chain = new BeaconChain({
-      opts: opts.chain,
+    const chain = new BeaconChain(opts.chain, {
       config,
       db,
       logger: logger.child(opts.logger.chain),

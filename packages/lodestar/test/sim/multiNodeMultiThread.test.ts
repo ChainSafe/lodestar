@@ -87,6 +87,8 @@ function runMultiNodeMultiThreadTest({nodeCount, validatorsPerNode, event, altai
       const options: NodeWorkerOptions = {
         params: {...testParams, ALTAIR_FORK_EPOCH: altairForkEpoch},
         options: {
+          // Don't spawn workers from worker threads
+          chain: {useSingleThreadVerifier: true},
           network: {
             discv5: {bindAddr: `/ip4/127.0.0.1/udp/${p2pPort}`},
             localMultiaddrs: [`/ip4/127.0.0.1/tcp/${p2pPort}`],
