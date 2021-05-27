@@ -7,7 +7,7 @@ import PeerId, {createFromPrivKey} from "peer-id";
 import {ENR, createKeypairFromPeerId} from "@chainsafe/discv5";
 import {IBeaconParams} from "@chainsafe/lodestar-params";
 import {params as minimalParams} from "@chainsafe/lodestar-params/minimal";
-import {RecursivePartial, sleep} from "@chainsafe/lodestar-utils";
+import {RecursivePartial} from "@chainsafe/lodestar-utils";
 import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 import {getClient, Api, routes} from "@chainsafe/lodestar-api";
 import {ChainEvent} from "../../src/chain";
@@ -116,7 +116,6 @@ describe("Run multi node multi thread interop validators (no eth1) until checkpo
       for (let i = 0; i < nodeCount; i++) {
         const p2pPort = getP2pPort(i);
         const peerId = await getPeerId(i);
-        console.log(i, peerId.toB58String());
         const keypair = createKeypairFromPeerId(peerId);
         const enr = ENR.createV4(keypair.publicKey);
         enr.ip = "127.0.0.1";
@@ -127,8 +126,6 @@ describe("Run multi node multi thread interop validators (no eth1) until checkpo
 
         clients[i] = getClient(config, {baseUrl: getNodeApi(i)});
       }
-
-      console.log(enrs);
 
       for (let i = 0; i < nodeCount; i++) {
         const rootDirNode = path.join(tmpDir.name, `node-${i}`);
@@ -228,22 +225,21 @@ describe("Run multi node multi thread interop validators (no eth1) until checkpo
       }
 
       // On error and success kill all processes
+      process.on("SIGINT", () => {
+        const procs = processByNodes.map((p) => [p.node, p.vali]).flat();
+        for (const proc of procs) proc.kill("SIGKILL");
+        console.log("On parent SIGINT: Killed all child processes");
+      });
       afterEachCallbacks.push(async () => {
         try {
           const procs = processByNodes.map((p) => [p.node, p.vali]).flat();
-          // Some margin before stopping everything
-          await sleep(1000);
-          // First SIGINT, give 5 sec to gracefully shutdown
-          for (const proc of procs) proc.kill("SIGINT");
-          await sleep(5000);
-          // Then KILL all processes
           for (const proc of procs) proc.kill("SIGKILL");
-          // Some safety marging to ensure everything is cleaned
-          await sleep(1000);
+          console.log("afterEach(): Killed all child processes");
         } catch (e) {
-          console.log("Error terminating processes", e);
+          console.error("Error terminating processes", e);
         }
       });
+      console.log("Registered afterEachCallbacks");
 
       // Wait for all nodes to start
       for (let i = 0; i < nodeCount; i++) {
