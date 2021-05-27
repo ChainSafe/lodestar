@@ -1,8 +1,8 @@
 import {fetch} from "cross-fetch";
-import qs from "qs";
 import {AbortSignal, AbortController} from "abort-controller";
 import {ErrorAborted, TimeoutError} from "@chainsafe/lodestar-utils";
 import {ReqGeneric, RouteDef} from "../../utils";
+import {stringifyQuery, urlJoin} from "./format";
 
 export class HttpError extends Error {
   status: number;
@@ -121,25 +121,4 @@ function getErrorMessage(errBody: string): string {
   } catch (e) {
     return errBody;
   }
-}
-
-/**
- * Eth2.0 API requires the query with format:
- * - arrayFormat: repeat `topic=topic1&topic=topic2`
- */
-export function stringifyQuery(query: unknown): string {
-  return qs.stringify(query, {arrayFormat: "repeat"});
-}
-
-/**
- * TODO: Optimize, two regex is a bit wasteful
- */
-export function urlJoin(...args: string[]): string {
-  return (
-    args
-      .join("/")
-      .replace(/([^:]\/)\/+/g, "$1")
-      // Remove duplicate slashes in the front
-      .replace(/^(\/)+/, "/")
-  );
 }
