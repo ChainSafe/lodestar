@@ -1,10 +1,5 @@
 import {SecretKey} from "@chainsafe/bls";
-import {
-  computeDomain,
-  computeEpochAtSlot,
-  computeSigningRoot,
-  computeStartSlotAtEpoch,
-} from "@chainsafe/lodestar-beacon-state-transition";
+import {computeDomain, computeEpochAtSlot, computeSigningRoot} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {
   allForks,
@@ -238,7 +233,11 @@ export class ValidatorStore {
   }
 
   private async getDomain(domainType: DomainType, epoch: Epoch): Promise<Buffer> {
-    const forkVersion = this.config.getForkVersion(computeStartSlotAtEpoch(this.config, epoch));
+    const fork = await this.forkService.getFork();
+    // TODO: Abstract this logic into the config but use the fork object provided by the beacon node
+    // The fork object MUST be fetched from the beacon node. If the validator client is run in a different
+    // fork than the node all signatures from the validator will be rejected as invalid.
+    const forkVersion = epoch < fork.epoch ? fork.previousVersion : fork.currentVersion;
     return computeDomain(this.config, domainType, forkVersion, this.genesisValidatorsRoot);
   }
 
