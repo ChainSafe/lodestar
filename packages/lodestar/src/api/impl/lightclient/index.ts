@@ -1,12 +1,8 @@
 import {altair, SyncPeriod} from "@chainsafe/lodestar-types";
-import {Path} from "@chainsafe/ssz";
-import {ApiNamespace, IApiModules} from "../interface";
-import {IApiOptions} from "../../options";
-import {Proof} from "@chainsafe/persistent-merkle-tree";
+import {ApiModules} from "../types";
 import {resolveStateId} from "../beacon/state/utils";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {IBeaconChain} from "../../../chain";
-import {IBeaconDb} from "../../../db";
+import {routes} from "@chainsafe/lodestar-api";
+import {ApiError} from "../errors";
 
 // TODO: Import from lightclient/server package
 interface ILightClientUpdater {
@@ -15,48 +11,39 @@ interface ILightClientUpdater {
   getLatestUpdateNonFinalized(): Promise<altair.LightClientUpdate | null>;
 }
 
-export interface ILightclientApi {
-  getBestUpdates(from: SyncPeriod, to: SyncPeriod): Promise<altair.LightClientUpdate[]>;
-  getLatestUpdateFinalized(): Promise<altair.LightClientUpdate | null>;
-  getLatestUpdateNonFinalized(): Promise<altair.LightClientUpdate | null>;
-  createStateProof(stateId: string, paths: Path[]): Promise<Proof>;
-}
+export function getLightclientApi({
+  chain,
+  config,
+  db,
+}: Pick<ApiModules, "chain" | "config" | "db">): routes.lightclient.Api {
+  // TODO:
+  const lightClientUpdater = {} as ILightClientUpdater;
 
-export class LightclientApi implements ILightclientApi {
-  namespace = ApiNamespace.LIGHTCLIENT;
+  return {
+    // Proofs API
 
-  private readonly config: IBeaconConfig;
-  private readonly db: IBeaconDb;
-  private readonly chain: IBeaconChain;
-  private readonly lightClientUpdater!: ILightClientUpdater;
+    async getStateProof(stateId, paths) {
+      const state = await resolveStateId(config, chain, db, stateId);
+      const stateTreeBacked = config.types.altair.BeaconState.createTreeBackedFromStruct(state as altair.BeaconState);
+      return {data: stateTreeBacked.createProof(paths)};
+    },
 
-  constructor(opts: Partial<IApiOptions>, modules: Pick<IApiModules, "config" | "db" | "chain">) {
-    this.config = modules.config;
-    this.db = modules.db;
-    this.chain = modules.chain;
-  }
+    // Sync API
 
-  // Sync API
+    async getBestUpdates(from, to) {
+      return {data: await lightClientUpdater.getBestUpdates(from, to)};
+    },
 
-  async getBestUpdates(from: SyncPeriod, to: SyncPeriod): Promise<altair.LightClientUpdate[]> {
-    return this.lightClientUpdater.getBestUpdates(from, to);
-  }
+    async getLatestUpdateFinalized() {
+      const update = await lightClientUpdater.getLatestUpdateFinalized();
+      if (!update) throw new ApiError(404, "No update available");
+      return {data: update};
+    },
 
-  async getLatestUpdateFinalized(): Promise<altair.LightClientUpdate | null> {
-    return this.lightClientUpdater.getLatestUpdateFinalized();
-  }
-
-  async getLatestUpdateNonFinalized(): Promise<altair.LightClientUpdate | null> {
-    return this.lightClientUpdater.getLatestUpdateNonFinalized();
-  }
-
-  // Proofs API
-
-  async createStateProof(stateId: string, paths: Path[]): Promise<Proof> {
-    const state = await resolveStateId(this.config, this.chain, this.db, stateId);
-    const stateTreeBacked = this.config.types.altair.BeaconState.createTreeBackedFromStruct(
-      state as altair.BeaconState
-    );
-    return stateTreeBacked.createProof(paths);
-  }
+    async getLatestUpdateNonFinalized() {
+      const update = await lightClientUpdater.getLatestUpdateNonFinalized();
+      if (!update) throw new ApiError(404, "No update available");
+      return {data: update};
+    },
+  };
 }

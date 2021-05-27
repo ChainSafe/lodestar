@@ -2,7 +2,7 @@
   "name": "@chainsafe/lodestar-light-client",
   "private": true,
   "description": "A Typescript implementation of the eth2 light client",
-  "license": "LGPL-3.0",
+  "license": "Apache-2.0",
   "author": "ChainSafe Systems",
   "homepage": "https://github.com/ChainSafe/lodestar#readme",
   "repository": {
@@ -12,7 +12,7 @@
   "bugs": {
     "url": "https://github.com/ChainSafe/lodestar/issues"
   },
-  "version": "0.21.0",
+  "version": "0.22.0",
   "main": "lib/index.js",
   "files": [
     "lib/**/*.d.ts",
@@ -37,13 +37,14 @@
   },
   "dependencies": {
     "@chainsafe/bls": "6.0.1",
-    "@chainsafe/lodestar-beacon-state-transition": "^0.21.0",
-    "@chainsafe/lodestar-config": "^0.21.0",
-    "@chainsafe/lodestar-params": "^0.21.0",
-    "@chainsafe/lodestar-types": "^0.21.0",
-    "@chainsafe/lodestar-utils": "^0.21.0",
+    "@chainsafe/lodestar-api": "^0.22.0",
+    "@chainsafe/lodestar-beacon-state-transition": "^0.22.0",
+    "@chainsafe/lodestar-config": "^0.22.0",
+    "@chainsafe/lodestar-params": "^0.22.0",
+    "@chainsafe/lodestar-types": "^0.22.0",
+    "@chainsafe/lodestar-utils": "^0.22.0",
     "@chainsafe/persistent-merkle-tree": "^0.3.2",
-    "@chainsafe/ssz": "^0.8.5",
+    "@chainsafe/ssz": "^0.8.6",
     "abort-controller": "^3.0.0",
     "cross-fetch": "^3.1.4",
     "mitt": "^2.1.0"

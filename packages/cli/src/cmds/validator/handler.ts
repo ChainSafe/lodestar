@@ -1,7 +1,7 @@
 import {AbortController} from "abort-controller";
 import {SecretKey} from "@chainsafe/bls";
 import {interopSecretKey} from "@chainsafe/lodestar-beacon-state-transition";
-import {ApiClientOverRest} from "@chainsafe/lodestar-validator";
+import {getClient} from "@chainsafe/lodestar-api";
 import {Validator, SlashingProtection} from "@chainsafe/lodestar-validator";
 import {LevelDbController} from "@chainsafe/lodestar-db";
 import {getBeaconConfigFromArgs} from "../../config";
@@ -44,7 +44,7 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
   const controller = new AbortController();
   onGracefulShutdownCbs.push(async () => controller.abort());
 
-  const api = ApiClientOverRest(config, args.server);
+  const api = getClient(config, {baseUrl: args.server});
   const slashingProtection = new SlashingProtection({
     config: config,
     controller: new LevelDbController({name: dbPath}, {logger}),

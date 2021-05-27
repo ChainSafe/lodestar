@@ -1,12 +1,13 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
-import {phase0, BLSSignature} from "@chainsafe/lodestar-types";
+import {BLSSignature} from "@chainsafe/lodestar-types";
 import {bytesToBigInt, intDiv} from "@chainsafe/lodestar-utils";
+import {routes} from "@chainsafe/lodestar-api";
 import {hash} from "@chainsafe/ssz";
 
 export function isAttestationAggregator(
   config: IBeaconConfig,
-  duty: Pick<phase0.AttesterDuty, "committeeLength">,
+  duty: Pick<routes.validator.AttesterDuty, "committeeLength">,
   slotSignature: BLSSignature
 ): boolean {
   const modulo = Math.max(1, intDiv(duty.committeeLength, config.params.TARGET_AGGREGATORS_PER_COMMITTEE));
