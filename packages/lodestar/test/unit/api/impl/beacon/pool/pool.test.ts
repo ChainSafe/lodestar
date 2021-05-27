@@ -60,8 +60,8 @@ describe("beacon pool api impl", function () {
   describe("getPoolAttestations", function () {
     it("no filters", async function () {
       dbStub.attestation.values.resolves([generateAttestation(), generateAttestation()]);
-      const attestations = await poolApi.getPoolAttestations();
-      expect(attestations.data.length).to.be.equal(2);
+      const {data: attestations} = await poolApi.getPoolAttestations();
+      expect(attestations.length).to.be.equal(2);
     });
 
     it("with filters", async function () {
@@ -70,8 +70,8 @@ describe("beacon pool api impl", function () {
         generateAttestation({data: generateAttestationData(0, 1, 1, 0)}),
         generateAttestation({data: generateAttestationData(0, 1, 3, 2)}),
       ]);
-      const attestations = await poolApi.getPoolAttestations({slot: 1, committeeIndex: 0});
-      expect(attestations.data.length).to.be.equal(1);
+      const {data: attestations} = await poolApi.getPoolAttestations({slot: 1, committeeIndex: 0});
+      expect(attestations.length).to.be.equal(1);
     });
   });
 

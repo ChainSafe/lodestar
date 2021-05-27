@@ -51,8 +51,8 @@ describe("beacon api impl - state - validators", function () {
     it("indices filter", async function () {
       resolveStateIdStub.resolves(generateState({validators: generateValidators(10)}));
       const api = getBeaconStateApi({config, db: dbStub, chain: chainStub});
-      const validators = await api.getStateValidators("someState", {indices: [0, 1, 123]});
-      expect(validators.data.length).to.equal(2);
+      const {data: validators} = await api.getStateValidators("someState", {indices: [0, 1, 123]});
+      expect(validators.length).to.equal(2);
     });
 
     it("status filter", async function () {
@@ -72,10 +72,10 @@ describe("beacon api impl - state - validators", function () {
         } as CachedBeaconState<allForks.BeaconState>);
       }
       const api = getBeaconStateApi({config, db: dbStub, chain: chainStub});
-      const validators = await api.getStateValidators("someState", {
+      const {data: validators} = await api.getStateValidators("someState", {
         statuses: ["pending_initialized"],
       });
-      expect(validators.data.length).to.equal(9);
+      expect(validators.length).to.equal(9);
     });
 
     it("statuses and indices filters", async function () {
@@ -91,18 +91,18 @@ describe("beacon api impl - state - validators", function () {
         } as CachedBeaconState<allForks.BeaconState>);
       }
       const api = getBeaconStateApi({config, db: dbStub, chain: chainStub});
-      const stateValidators = await api.getStateValidators("someState", {
+      const {data: stateValidators} = await api.getStateValidators("someState", {
         indices: [0, 1, 2, 123],
         statuses: ["pending_initialized"],
       });
-      expect(stateValidators.data.length).to.equal(3);
+      expect(stateValidators.length).to.equal(3);
     });
 
     it("success", async function () {
       resolveStateIdStub.resolves(generateState({validators: generateValidators(10)}));
       const api = getBeaconStateApi({config, db: dbStub, chain: chainStub});
-      const validators = await api.getStateValidators("someState");
-      expect(validators.data.length).to.equal(10);
+      const {data: validators} = await api.getStateValidators("someState");
+      expect(validators.length).to.equal(10);
     });
   });
 
@@ -154,10 +154,10 @@ describe("beacon api impl - state - validators", function () {
         pubkey2index: (pubkey2IndexStub as unknown) as allForks.PubkeyIndexMap,
       } as CachedBeaconState<allForks.BeaconState>);
       const api = getBeaconStateApi({config, db: dbStub, chain: chainStub});
-      const balances = await api.getStateValidatorBalances("somestate", [1, 24, validatorId1, validatorId2]);
-      expect(balances.data.length).to.equal(2);
-      expect(balances.data[0].index).to.equal(1);
-      expect(balances.data[1].index).to.equal(3);
+      const {data: balances} = await api.getStateValidatorBalances("somestate", [1, 24, validatorId1, validatorId2]);
+      expect(balances.length).to.equal(2);
+      expect(balances[0].index).to.equal(1);
+      expect(balances[1].index).to.equal(3);
     });
 
     it("no filters", async function () {
@@ -168,10 +168,10 @@ describe("beacon api impl - state - validators", function () {
         })
       );
       const api = getBeaconStateApi({config, db: dbStub, chain: chainStub});
-      const balances = await api.getStateValidatorBalances("somestate");
-      expect(balances.data.length).to.equal(10);
-      expect(balances.data[0].index).to.equal(0);
-      expect(balances.data[0].balance.toString()).to.equal("10");
+      const {data: balances} = await api.getStateValidatorBalances("somestate");
+      expect(balances.length).to.equal(10);
+      expect(balances[0].index).to.equal(0);
+      expect(balances[0].balance.toString()).to.equal("10");
     });
   });
 });

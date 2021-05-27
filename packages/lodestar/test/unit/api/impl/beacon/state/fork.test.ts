@@ -30,7 +30,7 @@ describe("beacon api impl - state - get fork", function () {
 
   it("should get fork by state id", async function () {
     resolveStateIdStub.resolves(generateCachedState());
-    const fork = await api.getStateFork("something");
+    const {data: fork} = await api.getStateFork("something");
     expect(fork).to.not.be.null;
   });
 });

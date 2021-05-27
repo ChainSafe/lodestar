@@ -27,11 +27,11 @@ describe("beacon api implementation", function () {
       /** eslint-disable @typescript-eslint/no-unsafe-member-access */
       (server.chainStub as any).genesisTime = 0;
       (server.chainStub as any).genesisValidatorsRoot = Buffer.alloc(32);
-      const genesis = await api.getGenesis();
-      if (!genesis.data) throw Error("Genesis is nullish");
-      expect(genesis.data.genesisForkVersion).to.not.be.undefined;
-      expect(genesis.data.genesisTime).to.not.be.undefined;
-      expect(genesis.data.genesisValidatorsRoot).to.not.be.undefined;
+      const {data: genesis} = await api.getGenesis();
+      if (!genesis) throw Error("Genesis is nullish");
+      expect(genesis.genesisForkVersion).to.not.be.undefined;
+      expect(genesis.genesisTime).to.not.be.undefined;
+      expect(genesis.genesisValidatorsRoot).to.not.be.undefined;
     });
   });
 });

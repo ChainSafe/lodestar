@@ -87,7 +87,6 @@ export class HttpClient implements IHttpClient {
 
       return await getBody(res);
     } catch (e) {
-      // TODO: Parse error, rename abort timeout error
       if (isAbortedError(e)) {
         if (signalGlobal?.aborted) {
           throw new ErrorAborted("REST client");

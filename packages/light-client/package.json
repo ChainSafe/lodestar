@@ -2,7 +2,7 @@
   "name": "@chainsafe/lodestar-light-client",
   "private": true,
   "description": "A Typescript implementation of the eth2 light client",
-  "license": "LGPL-3.0",
+  "license": "Apache-2.0",
   "author": "ChainSafe Systems",
   "homepage": "https://github.com/ChainSafe/lodestar#readme",
   "repository": {
@@ -53,7 +53,7 @@
     "ethereum",
     "eth2",
     "beacon",
-    "api",
+    "light-client",
     "blockchain"
   ]
 }
