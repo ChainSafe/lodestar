@@ -14,7 +14,7 @@ import {
   TypeJson,
 } from "../../utils";
 
-/* eslint-disable @typescript-eslint/naming-convention */
+// See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
 export type BlockId = "head" | "genesis" | "finalized" | string | number;
 
@@ -103,6 +103,7 @@ export const routesData: RoutesData<Api> = {
   publishBlock: {url: "/eth/v1/beacon/blocks", method: "POST"},
 };
 
+/* eslint-disable @typescript-eslint/naming-convention */
 // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types, @typescript-eslint/explicit-function-return-type
 export function getReqSerializers(config: IBeaconConfig) {
   const t = mapValues(routesData, () => (arg: unknown) => arg) as RouteReqTypeGenerator<Api>;

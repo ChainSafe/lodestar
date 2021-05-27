@@ -48,11 +48,11 @@ export function registerRoutes(
       throw Error(`Unknown api namespace ${namespace}`);
     }
 
-    registerRoutesSubApi(server, routes);
+    registerRoutesGroup(server, routes);
   }
 }
 
-export function registerRoutesSubApi(
+export function registerRoutesGroup(
   fastify: FastifyInstance,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   routes: Record<string, ServerRoute<any>>

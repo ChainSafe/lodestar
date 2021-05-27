@@ -25,32 +25,32 @@ import {
   reqOnlyBody,
 } from "../utils";
 
-/* eslint-disable @typescript-eslint/naming-convention */
+// See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
-export interface BeaconCommitteeSubscription {
+export type BeaconCommitteeSubscription = {
   validatorIndex: ValidatorIndex;
   committeeIndex: number;
   committeesAtSlot: number;
   slot: Slot;
   isAggregator: boolean;
-}
+};
 
 /**
  * From https://github.com/ethereum/eth2.0-APIs/pull/136
  */
-export interface SyncCommitteeSubscription {
+export type SyncCommitteeSubscription = {
   validatorIndex: ValidatorIndex;
   syncCommitteeIndices: number[];
   untilEpoch: Epoch;
-}
+};
 
-export interface ProposerDuty {
+export type ProposerDuty = {
   slot: Slot;
   validatorIndex: ValidatorIndex;
   pubkey: BLSPubkey;
-}
+};
 
-export interface AttesterDuty {
+export type AttesterDuty = {
   // The validator's public key, uniquely identifying them
   pubkey: BLSPubkey;
   // Index of validator in validator registry
@@ -64,18 +64,18 @@ export interface AttesterDuty {
   validatorCommitteeIndex: Number64;
   // The slot at which the validator must attest.
   slot: Slot;
-}
+};
 
 /**
  * From https://github.com/ethereum/eth2.0-APIs/pull/134
  */
-export interface SyncDuty {
+export type SyncDuty = {
   pubkey: BLSPubkey;
   /** Index of validator in validator registry. */
   validatorIndex: ValidatorIndex;
   /** The indices of the validator in the sync committee. */
   validatorSyncCommitteeIndices: number[];
-}
+};
 
 export type Api = {
   /**
@@ -208,6 +208,7 @@ export type ReqTypes = {
   [K in keyof ReturnType<typeof getReqSerializers>]: ReturnType<ReturnType<typeof getReqSerializers>[K]["writeReq"]>;
 };
 
+/* eslint-disable @typescript-eslint/naming-convention */
 // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types, @typescript-eslint/explicit-function-return-type
 export function getReqSerializers(config: IBeaconConfig) {
   const t = mapValues(routesData, () => (arg: unknown) => arg) as RouteReqTypeGenerator<Api>;

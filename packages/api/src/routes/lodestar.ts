@@ -2,7 +2,7 @@ import {Epoch} from "@chainsafe/lodestar-types";
 import {mapValues} from "@chainsafe/lodestar-utils";
 import {jsonType, ReqEmpty, reqEmpty, ReturnTypes, RouteReqSerdes, RoutesData, sameType} from "../utils";
 
-/* eslint-disable @typescript-eslint/naming-convention */
+// See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
 export type SyncChainDebugState = {
   targetRoot: string | null;

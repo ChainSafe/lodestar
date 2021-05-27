@@ -3,12 +3,12 @@ import {mapValues} from "@chainsafe/lodestar-utils";
 import {phase0, altair, CommitteeIndex, Slot} from "@chainsafe/lodestar-types";
 import {RoutesData, ReturnTypes, ArrayOf, ContainerData, RouteReqTypeGenerator, Schema, reqOnlyBody} from "../../utils";
 
-/* eslint-disable @typescript-eslint/naming-convention */
+// See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
-export interface AttestationFilters {
+export type AttestationFilters = {
   slot: Slot;
   committeeIndex: CommitteeIndex;
-}
+};
 
 export type Api = {
   /**
@@ -107,6 +107,7 @@ export const routesData: RoutesData<Api> = {
   submitPoolSyncCommitteeSignatures: {url: "/eth/v1/beacon/pool/sync_committees", method: "POST"},
 };
 
+/* eslint-disable @typescript-eslint/naming-convention */
 // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types, @typescript-eslint/explicit-function-return-type
 export function getReqSerializers(config: IBeaconConfig) {
   const t = mapValues(routesData, () => (arg: unknown) => arg) as RouteReqTypeGenerator<Api>;

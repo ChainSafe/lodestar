@@ -6,7 +6,7 @@ import {getClient} from "../../src/client/debug";
 import {getRoutes} from "../../src/server/debug";
 import {runGenericServerTest} from "../utils/genericServerTest";
 import {getMockApi, getTestServer} from "../utils/utils";
-import {registerRoutesSubApi} from "../../src/server";
+import {registerRoutesGroup} from "../../src/server";
 import {expect} from "chai";
 
 const root = Buffer.alloc(32, 1);
@@ -41,7 +41,7 @@ describe("debug", () => {
     const {baseUrl, server} = getTestServer();
     const mockApi = getMockApi<Api>(routesData);
     const routes = getRoutes(config, mockApi);
-    registerRoutesSubApi(server, routes);
+    registerRoutesGroup(server, routes);
 
     it("getState", async () => {
       const state = config.types.phase0.BeaconState.defaultValue();

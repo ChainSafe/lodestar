@@ -1,7 +1,7 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Path} from "@chainsafe/ssz";
 import {Proof} from "@chainsafe/persistent-merkle-tree";
-import {altair, Bytes32, Number64, SyncPeriod} from "@chainsafe/lodestar-types";
+import {altair, SyncPeriod} from "@chainsafe/lodestar-types";
 import {mapValues} from "@chainsafe/lodestar-utils";
 import {
   ArrayOf,
@@ -14,12 +14,7 @@ import {
   ContainerData,
 } from "../utils";
 
-/* eslint-disable @typescript-eslint/naming-convention */
-
-export interface DepositContract {
-  chainId: Number64;
-  address: Bytes32;
-}
+// See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
 export type Api = {
   /** TODO: description */

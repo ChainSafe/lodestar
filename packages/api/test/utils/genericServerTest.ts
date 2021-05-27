@@ -4,7 +4,7 @@ import {RouteGeneric, ReqGeneric, Resolves} from "../../src/utils";
 import {HttpClient, IHttpClient} from "../../src/client/utils";
 import {ServerRoutes} from "../../src/server/utils";
 import {getMockApi, getTestServer} from "./utils";
-import {registerRoutesSubApi} from "../../src/server";
+import {registerRoutesGroup} from "../../src/server";
 
 type IgnoreVoid<T> = T extends void ? undefined : T;
 
@@ -31,7 +31,7 @@ export function runGenericServerTest<
   const client = getClient(config, httpClient);
 
   const routes = getRoutes(config, mockApi);
-  registerRoutesSubApi(server, routes);
+  registerRoutesGroup(server, routes);
 
   for (const key of Object.keys(testCases)) {
     const routeId = key as keyof Api;

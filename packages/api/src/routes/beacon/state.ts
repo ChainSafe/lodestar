@@ -4,7 +4,7 @@ import {phase0, CommitteeIndex, Slot, ValidatorIndex, Epoch, Root, Gwei} from "@
 import {mapValues} from "@chainsafe/lodestar-utils";
 import {RoutesData, ReturnTypes, ArrayOf, ContainerData, RouteReqTypeGenerator, Schema, StringType} from "../../utils";
 
-/* eslint-disable @typescript-eslint/naming-convention */
+// See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
 export type StateId = string | "head" | "genesis" | "finalized" | "justified";
 export type ValidatorId = string | number;
@@ -31,37 +31,37 @@ export type CommitteesFilters = {
   slot?: Slot;
 };
 
-export interface FinalityCheckpoints {
+export type FinalityCheckpoints = {
   previousJustified: phase0.Checkpoint;
   currentJustified: phase0.Checkpoint;
   finalized: phase0.Checkpoint;
-}
+};
 
-export interface ValidatorResponse {
+export type ValidatorResponse = {
   index: ValidatorIndex;
   balance: Gwei;
   status: ValidatorStatus;
   validator: phase0.Validator;
-}
+};
 
-export interface ValidatorBalance {
+export type ValidatorBalance = {
   index: ValidatorIndex;
   balance: Gwei;
-}
+};
 
-export interface EpochCommitteeResponse {
+export type EpochCommitteeResponse = {
   index: CommitteeIndex;
   slot: Slot;
   validators: ValidatorIndex[];
-}
+};
 
-export interface EpochSyncCommitteeResponse {
+export type EpochSyncCommitteeResponse = {
   /** all of the validator indices in the current sync committee */
   validators: ValidatorIndex[];
   // TODO: This property will likely be deprecated
   /** Subcommittee slices of the current sync committee */
   validatorAggregates: ValidatorIndex[];
-}
+};
 
 export type Api = {
   /**
@@ -225,6 +225,7 @@ export type ReqTypes = {
   [K in keyof ReturnType<typeof getReqSerializers>]: ReturnType<ReturnType<typeof getReqSerializers>[K]["writeReq"]>;
 };
 
+/* eslint-disable @typescript-eslint/naming-convention */
 export function getReturnTypes(config: IBeaconConfig): ReturnTypes<Api> {
   const FinalityCheckpoints = new ContainerType<FinalityCheckpoints>({
     fields: {

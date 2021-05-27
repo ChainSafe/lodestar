@@ -5,12 +5,12 @@ import {mapValues} from "@chainsafe/lodestar-utils";
 import {ByteVectorType, ContainerType} from "@chainsafe/ssz";
 import {ArrayOf, ContainerData, ReqEmpty, reqEmpty, ReturnTypes, RouteReqSerdes, RoutesData} from "../utils";
 
-/* eslint-disable @typescript-eslint/naming-convention */
+// See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
-export interface DepositContract {
+export type DepositContract = {
   chainId: Number64;
   address: Bytes32;
-}
+};
 
 export type Api = {
   /**
@@ -52,11 +52,12 @@ export function getReqSerializers(): RouteReqSerdes<Api, ReqTypes> {
   return mapValues(routesData, () => reqEmpty);
 }
 
+/* eslint-disable @typescript-eslint/naming-convention */
 export function getReturnTypes(config: IBeaconConfig): ReturnTypes<Api> {
   const DepositContract = new ContainerType<DepositContract>({
     fields: {
       chainId: config.types.Number64,
-      address: new ByteVectorType({length: 20}), // The byte count doesn't matter
+      address: new ByteVectorType({length: 20}),
     },
   });
 

@@ -1,5 +1,9 @@
 import {ReqGeneric} from "./types";
 
+// Reasoning: Allows to declare JSON schemas for server routes in a succinct typesafe way.
+// The enums exposed here are very feature incomplete but cover the minimum necessary for
+// the existing routes. Since the arguments for Eth2.0 server routes are very simple it suffice.
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type JsonSchema = Record<string, any>;
 type JsonSchemaObj = {
@@ -32,6 +36,9 @@ export enum Schema {
   AnyArray,
 }
 
+/**
+ * Return JSON schema from a Schema enum. Useful to declare schemas in a succinct format
+ */
 function getJsonSchemaItem(schema: Schema): JsonSchema {
   switch (schema) {
     case Schema.Uint:

@@ -15,7 +15,7 @@ import {
   reqEmpty,
 } from "../utils";
 
-/* eslint-disable @typescript-eslint/naming-convention */
+// See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
 type SlotRoot = {slot: Slot; root: Root};
 
@@ -99,6 +99,7 @@ export function getReqSerializers() {
   };
 }
 
+/* eslint-disable @typescript-eslint/naming-convention */
 export function getReturnTypes(config: IBeaconConfig): ReturnTypes<Api> {
   const SlotRoot = new ContainerType<SlotRoot>({
     fields: {

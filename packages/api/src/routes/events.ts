@@ -3,6 +3,8 @@ import {Epoch, Number64, phase0, Slot, Root} from "@chainsafe/lodestar-types";
 import {ContainerType, Json, Type} from "@chainsafe/ssz";
 import {jsonOpts, RouteDef, TypeJson} from "../utils";
 
+// See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
+
 export enum EventType {
   /**
    * The node has finished processing, resulting in a new head. previous_duty_dependent_root is

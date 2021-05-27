@@ -7,6 +7,7 @@ export function getRoutes(config: IBeaconConfig, api: Api): ServerRoutes<Api, Re
   const eventSerdes = getEventSerdes(config);
 
   return {
+    // Non-JSON route. Server Sent Events (SSE)
     eventstream: {
       url: routesData.eventstream.url,
       method: routesData.eventstream.method,
@@ -47,7 +48,7 @@ export function getRoutes(config: IBeaconConfig, api: Api): ServerRoutes<Api, Re
         }
       },
 
-      // TODO: Bundle this in lodestar-api?
+      // TODO: Bundle this in /routes/events?
       schema: {
         querystring: {
           type: "object",

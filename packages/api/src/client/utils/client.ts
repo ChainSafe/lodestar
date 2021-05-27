@@ -14,41 +14,9 @@ import {
   RoutesData,
 } from "../../utils/types";
 
+// See /packages/api/src/routes/index.ts for reasoning
+
 /* eslint-disable @typescript-eslint/no-explicit-any */
-
-// Reasoning of the API definitions
-
-// api args => req params
-// --- wire
-// req params => api args
-// --- exec api
-// api return => res body
-// --- wire
-// res body => api return
-
-// Server has to know:
-// - req params => api args
-// - api return => res body
-
-// Client has to know:
-// - api args => req params
-// - res body => api return
-
-// Extra things to consider
-// - The debug state route returns a bytes stream
-// - The events routes return Server Events not a JSON HTTP response
-// - There are v1 and v2 routes that should be merge in one handler
-
-// For a returned JSON value, we don't really need the SSZ type
-// - need to convert camelCase to snake_case when sending
-// - need to convert from snake_case to camelCase when receiving
-// - need to convert BigInt, 0x01 to bytes, etc.
-// ?? - Define a return SSZ type for the routes that need it?
-
-export function toUint(val: string | number): number {
-  if (typeof val === "number") return val;
-  else return parseInt(val, 10);
-}
 
 /**
  * Format FetchFn opts from Fn arguments given a route definition and request serializer.
@@ -84,7 +52,7 @@ export function getFetchOptsSerializers<
 }
 
 /**
- * Get a generic JSON client from route definition, request serializer and return types
+ * Get a generic JSON client from route definition, request serializer and return types.
  */
 export function generateGenericJsonClient<
   Api extends Record<string, RouteGeneric>,

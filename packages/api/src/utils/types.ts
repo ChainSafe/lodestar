@@ -3,34 +3,9 @@ import {ForkName, IBeaconConfig} from "@chainsafe/lodestar-config";
 import {objectToExpectedCase} from "@chainsafe/lodestar-utils";
 import {Schema, SchemaDefinition} from "./schema";
 
-// Reasoning of the API definitions
+// See /packages/api/src/routes/index.ts for reasoning
 
-// api args => req params
-// --- wire
-// req params => api args
-// --- exec api
-// api return => res body
-// --- wire
-// res body => api return
-
-// Server has to know:
-// - req params => api args
-// - api return => res body
-
-// Client has to know:
-// - api args => req params
-// - res body => api return
-
-// Extra things to consider
-// - The debug state route returns a bytes stream
-// - The events routes return Server Events not a JSON HTTP response
-// - There are v1 and v2 routes that should be merge in one handler
-
-// For a returned JSON value, we don't really need the SSZ type
-// - need to convert camelCase to snake_case when sending
-// - need to convert from snake_case to camelCase when receiving
-// - need to convert BigInt, 0x01 to bytes, etc.
-// ?? - Define a return SSZ type for the routes that need it?
+/* eslint-disable @typescript-eslint/naming-convention, @typescript-eslint/no-explicit-any */
 
 /** All JSON must be sent in snake case */
 export const jsonOpts = {case: "snake" as const};
@@ -46,14 +21,10 @@ export type RouteGroupDefinition<
   getReturnTypes: (config: IBeaconConfig) => ReturnTypes<Api>;
 };
 
-/* eslint-disable @typescript-eslint/naming-convention */
-
 export type RouteDef = {
   url: string;
   method: "GET" | "POST";
 };
-
-/* eslint-disable @typescript-eslint/no-explicit-any */
 
 export type ReqGeneric = {
   params?: Record<string, string | number>;

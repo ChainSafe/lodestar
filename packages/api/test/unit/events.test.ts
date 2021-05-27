@@ -5,7 +5,7 @@ import {Api, routesData, EventType, BeaconEvent} from "../../src/routes/events";
 import {getClient} from "../../src/client/events";
 import {getRoutes} from "../../src/server/events";
 import {getMockApi, getTestServer} from "../utils/utils";
-import {registerRoutesSubApi} from "../../src/server";
+import {registerRoutesGroup} from "../../src/server";
 import {expect} from "chai";
 
 const root = Buffer.alloc(32, 1);
@@ -14,7 +14,7 @@ describe("events", () => {
   const {baseUrl, server} = getTestServer();
   const mockApi = getMockApi<Api>(routesData);
   const routes = getRoutes(config, mockApi);
-  registerRoutesSubApi(server, routes);
+  registerRoutesGroup(server, routes);
 
   let controller: AbortController;
   beforeEach(() => (controller = new AbortController()));

@@ -14,7 +14,7 @@ import {
   StringType,
 } from "../utils";
 
-/* eslint-disable @typescript-eslint/naming-convention */
+// See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
 export type NetworkIdentity = {
   /** Cryptographic hash of a peer’s public key. [Read more](https://docs.libp2p.io/concepts/peer-id/) */
@@ -147,6 +147,7 @@ export function getReqSerializers() {
   };
 }
 
+/* eslint-disable @typescript-eslint/naming-convention */
 export function getReturnTypes(config: IBeaconConfig): ReturnTypes<Api> {
   const stringType = new StringType();
   const NetworkIdentity = new ContainerType<NetworkIdentity>({

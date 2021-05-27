@@ -18,6 +18,7 @@ export function getRoutes(config: IBeaconConfig, api: Api): ServerRoutes<Api, Re
   return {
     ...serverRoutes,
 
+    // Non-JSON routes. Return JSON or binary depending on "accept" header
     getState: {
       ...serverRoutes.getState,
       handler: async (req) => {
