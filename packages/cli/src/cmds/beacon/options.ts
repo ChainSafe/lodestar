@@ -29,13 +29,15 @@ export const beaconExtraOptions: ICliCommandOptions<IBeaconExtraArgs> = {
   },
 
   fetchChainSafeWeakSubjecitivtyState: {
-    description: "Tell the beacon node to fetch the latest weak subjectivity state for the given network from the ChainSafe weak subjectivity state server.",
+    description:
+      "Tell the beacon node to fetch the latest weak subjectivity state for the given network from the ChainSafe weak subjectivity state server.",
     type: "boolean",
     default: false,
   },
 
   weakSubjectivityCheckpoint: {
-    description: "Tell the beacon node to fetch a weak subjectivity state at the specified checkpoint.  The string arg must be in the form <blockRoot>:<epoch>.  For example, 0x1234:100 would ask for the weak subjectivity state at checkpoint of epoch 100 with block root 0x1234.",
+    description:
+      "Tell the beacon node to fetch a weak subjectivity state at the specified checkpoint.  The string arg must be in the form <blockRoot>:<epoch>.  For example, 0x1234:100 would ask for the weak subjectivity state at checkpoint of epoch 100 with block root 0x1234.",
     type: "string",
   },
 };

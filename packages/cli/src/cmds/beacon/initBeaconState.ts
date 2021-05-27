@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/naming-convention */
+
 import {AbortSignal} from "abort-controller";
 
 import {toHexString, TreeBacked} from "@chainsafe/ssz";
@@ -25,8 +27,13 @@ import {
 import got from "got";
 
 type WSResponse = {
-  ws_state: allForks.BeaconState;
-}
+  current_epoch: number;
+  ws_checkpoint: string;
+  ws_period: number;
+  is_safe: boolean;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ws_state: any;
+};
 
 async function initAndVerifyWeakSujectivityState(
   config: IBeaconConfig,
@@ -36,18 +43,20 @@ async function initAndVerifyWeakSujectivityState(
   logger: ILogger
 ): Promise<TreeBacked<allForks.BeaconState>> {
   logger.info("Fetching weak subjectivity state from ChainSafe at " + server);
-  const wsStateData = await got(server, {searchParams: {checkpoint: args.weakSubjectivityCheckpoint}});
-  console.log("wsStateData: ", wsStateData);
-  // @ts-ignore
-  const state = wsStateData.ws_state;
-  // if (!wsStateData.ws_state) {
-  //   throw new Error("Weak subjectivity state not found for network " + args.network);
-  // }
-  // // verify downloaded state against locally stored state root
-  // if (toHexString(state.hashTreeRoot()) !== wsStateData.stateRoot) {
-  //   throw new Error("Unable to verify state root downloaded from ChainSafe");
-  // }
-  return await initStateFromAnchorState(config, db, logger, state as TreeBacked<allForks.BeaconState>);
+  const response = await got(server, {searchParams: {checkpoint: args.weakSubjectivityCheckpoint}});
+  const responseBody = JSON.parse(response.body) as WSResponse;
+  const data = responseBody.ws_state.data;
+  const wsStateData = config.getForkTypes(data.slot).BeaconState.fromJson(data, {case: "snake"});
+  const state = config.getForkTypes(data.slot).BeaconState.createTreeBacked(data);
+  if (!state) {
+    throw new Error("Weak subjectivity state not found for network " + args.network);
+  }
+  const stateRoot = responseBody.ws_checkpoint.split(":")[0];
+  // verify downloaded state against locally stored state root
+  if (toHexString(config.getForkTypes(data.slot).BeaconState.hashTreeRoot(wsStateData)) !== stateRoot) {
+    throw new Error("Unable to verify state root downloaded from ChainSafe");
+  }
+  return await initStateFromAnchorState(config, db, logger, state);
 }
 
 /**
