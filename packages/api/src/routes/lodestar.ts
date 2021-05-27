@@ -1,6 +1,6 @@
 import {Epoch} from "@chainsafe/lodestar-types";
 import {mapValues} from "@chainsafe/lodestar-utils";
-import {jsonType, ReqEmpty, reqEmpty, ReturnTypes, RouteReqSerdes, RoutesData, sameType} from "../utils";
+import {jsonType, ReqEmpty, reqEmpty, ReturnTypes, ReqSerializers, RoutesData, sameType} from "../utils";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
@@ -35,7 +35,7 @@ export const routesData: RoutesData<Api> = {
 
 export type ReqTypes = {[K in keyof Api]: ReqEmpty};
 
-export function getReqSerializers(): RouteReqSerdes<Api, ReqTypes> {
+export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
   return mapValues(routesData, () => reqEmpty);
 }
 

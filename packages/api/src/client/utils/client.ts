@@ -10,7 +10,7 @@ import {
   TypeJson,
   jsonOpts,
   ReqSerializer,
-  RouteReqSerdes,
+  ReqSerializers,
   RoutesData,
 } from "../../utils/types";
 
@@ -47,7 +47,7 @@ export function getFetchOptsSerializer<Fn extends (...args: any) => any, ReqType
 export function getFetchOptsSerializers<
   Api extends Record<string, RouteGeneric>,
   ReqTypes extends {[K in keyof Api]: ReqGeneric}
->(routesData: RoutesData<Api>, reqSerializers: RouteReqSerdes<Api, ReqTypes>) {
+>(routesData: RoutesData<Api>, reqSerializers: ReqSerializers<Api, ReqTypes>) {
   return mapValues(routesData, (routeDef, routeKey) => getFetchOptsSerializer(routeDef, reqSerializers[routeKey]));
 }
 
@@ -59,7 +59,7 @@ export function generateGenericJsonClient<
   ReqTypes extends {[K in keyof Api]: ReqGeneric}
 >(
   routesData: RoutesData<Api>,
-  reqSerializers: RouteReqSerdes<Api, ReqTypes>,
+  reqSerializers: ReqSerializers<Api, ReqTypes>,
   returnTypes: ReturnTypes<Api>,
   fetchFn: IHttpClient
 ): Api {

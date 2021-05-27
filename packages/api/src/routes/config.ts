@@ -3,7 +3,7 @@ import {IBeaconParams, BeaconParams} from "@chainsafe/lodestar-params";
 import {Bytes32, Number64, phase0} from "@chainsafe/lodestar-types";
 import {mapValues} from "@chainsafe/lodestar-utils";
 import {ByteVectorType, ContainerType} from "@chainsafe/ssz";
-import {ArrayOf, ContainerData, ReqEmpty, reqEmpty, ReturnTypes, RouteReqSerdes, RoutesData} from "../utils";
+import {ArrayOf, ContainerData, ReqEmpty, reqEmpty, ReturnTypes, ReqSerializers, RoutesData} from "../utils";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
@@ -48,7 +48,7 @@ export const routesData: RoutesData<Api> = {
 
 export type ReqTypes = {[K in keyof Api]: ReqEmpty};
 
-export function getReqSerializers(): RouteReqSerdes<Api, ReqTypes> {
+export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
   return mapValues(routesData, () => reqEmpty);
 }
 

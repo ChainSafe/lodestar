@@ -1,8 +1,16 @@
 import {ContainerType} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {phase0, CommitteeIndex, Slot, ValidatorIndex, Epoch, Root, Gwei} from "@chainsafe/lodestar-types";
-import {mapValues} from "@chainsafe/lodestar-utils";
-import {RoutesData, ReturnTypes, ArrayOf, ContainerData, RouteReqTypeGenerator, Schema, StringType} from "../../utils";
+import {
+  RoutesData,
+  ReturnTypes,
+  ArrayOf,
+  ContainerData,
+  Schema,
+  StringType,
+  ReqSerializers,
+  ReqSerializer,
+} from "../../utils";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
@@ -146,84 +154,76 @@ export const routesData: RoutesData<Api> = {
   getStateValidatorBalances: {url: "/eth/v1/beacon/states/:stateId/validators", method: "GET"},
 };
 
-// eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types, @typescript-eslint/explicit-function-return-type
-export function getReqSerializers() {
-  const t = mapValues(routesData, () => (arg: unknown) => arg) as RouteReqTypeGenerator<Api>;
+type StateIdOnlyReq = {params: {stateId: string}};
 
-  const stateIdOnlyReq = t.getStateRoot<{params: {stateId: string}}>({
+export type ReqTypes = {
+  getEpochCommittees: {params: {stateId: StateId}; query: {slot?: number; epoch?: number; index?: number}};
+  getEpochSyncCommittees: {params: {stateId: StateId}; query: {epoch?: number}};
+  getStateFinalityCheckpoints: StateIdOnlyReq;
+  getStateFork: StateIdOnlyReq;
+  getStateRoot: StateIdOnlyReq;
+  getStateValidator: {params: {stateId: StateId; validatorId: ValidatorId}};
+  getStateValidators: {params: {stateId: StateId}; query: {indices?: ValidatorId[]; statuses?: ValidatorStatus[]}};
+  getStateValidatorBalances: {params: {stateId: StateId}; query: {indices?: ValidatorId[]}};
+};
+
+export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
+  const stateIdOnlyReq: ReqSerializer<Api["getStateFork"], StateIdOnlyReq> = {
     writeReq: (stateId) => ({params: {stateId}}),
     parseReq: ({params}) => [params.stateId],
     schema: {params: {stateId: Schema.StringRequired}},
-  });
+  };
 
   return {
-    getEpochCommittees: t.getEpochCommittees<{
-      params: {stateId: StateId};
-      query: {slot?: number; epoch?: number; index?: number};
-    }>({
+    getEpochCommittees: {
       writeReq: (stateId, filters) => ({params: {stateId}, query: filters || {}}),
       parseReq: ({params, query}) => [params.stateId, query],
       schema: {
         params: {stateId: Schema.StringRequired},
         query: {slot: Schema.Uint, epoch: Schema.Uint, index: Schema.Uint},
       },
-    }),
+    },
 
-    getEpochSyncCommittees: t.getEpochSyncCommittees<{
-      params: {stateId: StateId};
-      query: {epoch?: number};
-    }>({
+    getEpochSyncCommittees: {
       writeReq: (stateId, epoch) => ({params: {stateId}, query: {epoch}}),
       parseReq: ({params, query}) => [params.stateId, query.epoch],
       schema: {
         params: {stateId: Schema.StringRequired},
         query: {epoch: Schema.Uint},
       },
-    }),
+    },
 
     getStateFinalityCheckpoints: stateIdOnlyReq,
     getStateFork: stateIdOnlyReq,
     getStateRoot: stateIdOnlyReq,
 
-    getStateValidator: t.getStateValidator<{
-      params: {stateId: StateId; validatorId: ValidatorId};
-    }>({
+    getStateValidator: {
       writeReq: (stateId, validatorId) => ({params: {stateId, validatorId}}),
       parseReq: ({params}) => [params.stateId, params.validatorId],
       schema: {
         params: {stateId: Schema.StringRequired, validatorId: Schema.StringRequired},
       },
-    }),
+    },
 
-    getStateValidators: t.getStateValidators<{
-      params: {stateId: StateId};
-      query: {indices?: ValidatorId[]; statuses?: ValidatorStatus[]};
-    }>({
+    getStateValidators: {
       writeReq: (stateId, filters) => ({params: {stateId}, query: filters || {}}),
       parseReq: ({params, query}) => [params.stateId, query],
       schema: {
         params: {stateId: Schema.StringRequired},
         query: {indices: Schema.UintOrStringArray, statuses: Schema.StringArray},
       },
-    }),
+    },
 
-    getStateValidatorBalances: t.getStateValidatorBalances<{
-      params: {stateId: StateId};
-      query: {indices?: ValidatorId[]};
-    }>({
+    getStateValidatorBalances: {
       writeReq: (stateId, indices) => ({params: {stateId}, query: {indices}}),
       parseReq: ({params, query}) => [params.stateId, query.indices],
       schema: {
         params: {stateId: Schema.StringRequired},
         query: {indices: Schema.UintOrStringArray},
       },
-    }),
+    },
   };
 }
-
-export type ReqTypes = {
-  [K in keyof ReturnType<typeof getReqSerializers>]: ReturnType<ReturnType<typeof getReqSerializers>[K]["writeReq"]>;
-};
 
 /* eslint-disable @typescript-eslint/naming-convention */
 export function getReturnTypes(config: IBeaconConfig): ReturnTypes<Api> {

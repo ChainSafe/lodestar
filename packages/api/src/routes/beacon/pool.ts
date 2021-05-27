@@ -1,7 +1,17 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {mapValues} from "@chainsafe/lodestar-utils";
 import {phase0, altair, CommitteeIndex, Slot} from "@chainsafe/lodestar-types";
-import {RoutesData, ReturnTypes, ArrayOf, ContainerData, RouteReqTypeGenerator, Schema, reqOnlyBody} from "../../utils";
+import {Json} from "@chainsafe/ssz";
+import {
+  RoutesData,
+  ReturnTypes,
+  ArrayOf,
+  ContainerData,
+  Schema,
+  reqOnlyBody,
+  ReqSerializers,
+  reqEmpty,
+  ReqEmpty,
+} from "../../utils";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
@@ -108,22 +118,28 @@ export const routesData: RoutesData<Api> = {
 };
 
 /* eslint-disable @typescript-eslint/naming-convention */
-// eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types, @typescript-eslint/explicit-function-return-type
-export function getReqSerializers(config: IBeaconConfig) {
-  const t = mapValues(routesData, () => (arg: unknown) => arg) as RouteReqTypeGenerator<Api>;
+export type ReqTypes = {
+  getPoolAttestations: {query: {slot?: number; committee_index?: number}};
+  getPoolAttesterSlashings: ReqEmpty;
+  getPoolProposerSlashings: ReqEmpty;
+  getPoolVoluntaryExits: ReqEmpty;
+  submitPoolAttestations: {body: Json};
+  submitPoolAttesterSlashing: {body: Json};
+  submitPoolProposerSlashing: {body: Json};
+  submitPoolVoluntaryExit: {body: Json};
+  submitPoolSyncCommitteeSignatures: {body: Json};
+};
 
+export function getReqSerializers(config: IBeaconConfig): ReqSerializers<Api, ReqTypes> {
   return {
-    getPoolAttestations: t.getPoolAttestations<{
-      query: {slot?: number; committee_index?: number};
-    }>({
+    getPoolAttestations: {
       writeReq: (filters) => ({query: {slot: filters?.slot, committee_index: filters?.committeeIndex}}),
       parseReq: ({query}) => [{slot: query.slot, committeeIndex: query.committee_index}],
       schema: {query: {slot: Schema.Uint, committee_index: Schema.Uint}},
-    }),
-    getPoolAttesterSlashings: t.getPoolAttesterSlashings({writeReq: () => ({}), parseReq: () => []}),
-    getPoolProposerSlashings: t.getPoolProposerSlashings({writeReq: () => ({}), parseReq: () => []}),
-    getPoolVoluntaryExits: t.getPoolVoluntaryExits({writeReq: () => ({}), parseReq: () => []}),
-
+    },
+    getPoolAttesterSlashings: reqEmpty,
+    getPoolProposerSlashings: reqEmpty,
+    getPoolVoluntaryExits: reqEmpty,
     submitPoolAttestations: reqOnlyBody(ArrayOf(config.types.phase0.Attestation), Schema.ObjectArray),
     submitPoolAttesterSlashing: reqOnlyBody(config.types.phase0.AttesterSlashing, Schema.Object),
     submitPoolProposerSlashing: reqOnlyBody(config.types.phase0.ProposerSlashing, Schema.Object),
@@ -134,10 +150,6 @@ export function getReqSerializers(config: IBeaconConfig) {
     ),
   };
 }
-
-export type ReqTypes = {
-  [K in keyof ReturnType<typeof getReqSerializers>]: ReturnType<ReturnType<typeof getReqSerializers>[K]["writeReq"]>;
-};
 
 export function getReturnTypes(config: IBeaconConfig): ReturnTypes<Api> {
   return {

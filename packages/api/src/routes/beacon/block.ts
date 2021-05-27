@@ -1,5 +1,4 @@
-import {ContainerType} from "@chainsafe/ssz";
-import {mapValues} from "@chainsafe/lodestar-utils";
+import {ContainerType, Json} from "@chainsafe/ssz";
 import {ForkName, IBeaconConfig} from "@chainsafe/lodestar-config";
 import {phase0, allForks, Slot, Root} from "@chainsafe/lodestar-types";
 import {
@@ -7,11 +6,12 @@ import {
   ReturnTypes,
   ArrayOf,
   ContainerData,
-  RouteReqTypeGenerator,
   Schema,
   WithVersion,
   reqOnlyBody,
   TypeJson,
+  ReqSerializers,
+  ReqSerializer,
 } from "../../utils";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
@@ -103,16 +103,25 @@ export const routesData: RoutesData<Api> = {
   publishBlock: {url: "/eth/v1/beacon/blocks", method: "POST"},
 };
 
-/* eslint-disable @typescript-eslint/naming-convention */
-// eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types, @typescript-eslint/explicit-function-return-type
-export function getReqSerializers(config: IBeaconConfig) {
-  const t = mapValues(routesData, () => (arg: unknown) => arg) as RouteReqTypeGenerator<Api>;
+type BlockIdOnlyReq = {params: {blockId: string | number}};
 
-  const blockIdOnlyReq = t.getBlock<{params: {blockId: string | number}}>({
+/* eslint-disable @typescript-eslint/naming-convention */
+export type ReqTypes = {
+  getBlock: BlockIdOnlyReq;
+  getBlockV2: BlockIdOnlyReq;
+  getBlockAttestations: BlockIdOnlyReq;
+  getBlockHeader: BlockIdOnlyReq;
+  getBlockHeaders: {query: {slot?: number; parent_root?: string}};
+  getBlockRoot: BlockIdOnlyReq;
+  publishBlock: {body: Json};
+};
+
+export function getReqSerializers(config: IBeaconConfig): ReqSerializers<Api, ReqTypes> {
+  const blockIdOnlyReq: ReqSerializer<Api["getBlock"], BlockIdOnlyReq> = {
     writeReq: (blockId) => ({params: {blockId}}),
     parseReq: ({params}) => [params.blockId],
     schema: {params: {blockId: Schema.StringRequired}},
-  });
+  };
 
   // Compute block type from JSON payload. See https://github.com/ethereum/eth2.0-APIs/pull/142
   const getSignedBeaconBlockType = (data: allForks.SignedBeaconBlock): ContainerType<allForks.SignedBeaconBlock> =>
@@ -128,19 +137,15 @@ export function getReqSerializers(config: IBeaconConfig) {
     getBlockV2: blockIdOnlyReq,
     getBlockAttestations: blockIdOnlyReq,
     getBlockHeader: blockIdOnlyReq,
-    getBlockHeaders: t.getBlockHeaders<{query: {slot?: number; parent_root?: string}}>({
+    getBlockHeaders: {
       writeReq: (filters) => ({query: {slot: filters?.slot, parent_root: filters?.parentRoot}}),
       parseReq: ({query}) => [{slot: query?.slot, parentRoot: query?.parent_root}],
       schema: {query: {slot: Schema.Uint, parent_root: Schema.String}},
-    }),
+    },
     getBlockRoot: blockIdOnlyReq,
     publishBlock: reqOnlyBody(AllForksSignedBeaconBlock, Schema.Object),
   };
 }
-
-export type ReqTypes = {
-  [K in keyof ReturnType<typeof getReqSerializers>]: ReturnType<ReturnType<typeof getReqSerializers>[K]["writeReq"]>;
-};
 
 export function getReturnTypes(config: IBeaconConfig): ReturnTypes<Api> {
   const BeaconHeaderResType = new ContainerType<BlockHeaderResponse>({

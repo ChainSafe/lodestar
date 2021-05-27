@@ -1,6 +1,5 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {allForks, Slot} from "@chainsafe/lodestar-types";
-import {mapValues} from "@chainsafe/lodestar-utils";
 import {ContainerType} from "@chainsafe/ssz";
 import {
   ArrayOf,
@@ -8,10 +7,11 @@ import {
   reqEmpty,
   jsonType,
   ReturnTypes,
-  RouteReqTypeGenerator,
   RoutesData,
   Schema,
   StringType,
+  ReqSerializers,
+  ReqEmpty,
 } from "../utils";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
@@ -119,26 +119,29 @@ export const routesData: RoutesData<Api> = {
 };
 
 export type ReqTypes = {
-  [K in keyof ReturnType<typeof getReqSerializers>]: ReturnType<ReturnType<typeof getReqSerializers>[K]["writeReq"]>;
+  getNetworkIdentity: ReqEmpty;
+  getPeers: {query: {state?: PeerState[]; direction?: PeerDirection[]}};
+  getPeer: {params: {peerId: string}};
+  getPeerCount: ReqEmpty;
+  getNodeVersion: ReqEmpty;
+  getSyncingStatus: ReqEmpty;
+  getHealth: ReqEmpty;
 };
 
-// eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types, @typescript-eslint/explicit-function-return-type
-export function getReqSerializers() {
-  const t = mapValues(routesData, () => (arg: unknown) => arg) as RouteReqTypeGenerator<Api>;
-
+export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
   return {
     getNetworkIdentity: reqEmpty,
 
-    getPeers: t.getPeers<{query: {state?: PeerState[]; direction?: PeerDirection[]}}>({
+    getPeers: {
       writeReq: (filters) => ({query: filters || {}}),
       parseReq: ({query}) => [query],
       schema: {query: {state: Schema.StringArray, direction: Schema.StringArray}},
-    }),
-    getPeer: t.getPeer<{params: {peerId: string}}>({
+    },
+    getPeer: {
       writeReq: (peerId) => ({params: {peerId}}),
       parseReq: ({params}) => [params.peerId],
       schema: {params: {peerId: Schema.StringRequired}},
-    }),
+    },
 
     getPeerCount: reqEmpty,
     getNodeVersion: reqEmpty,

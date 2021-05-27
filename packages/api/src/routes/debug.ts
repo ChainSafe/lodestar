@@ -1,18 +1,19 @@
 import {ForkName, IBeaconConfig} from "@chainsafe/lodestar-config";
 import {allForks, Slot, Root} from "@chainsafe/lodestar-types";
-import {mapValues} from "@chainsafe/lodestar-utils";
 import {ContainerType} from "@chainsafe/ssz";
 import {StateId} from "./beacon/state";
 import {
   ArrayOf,
   ContainerData,
   ReturnTypes,
-  RouteReqTypeGenerator,
   RoutesData,
   Schema,
   WithVersion,
   TypeJson,
   reqEmpty,
+  ReqSerializers,
+  ReqEmpty,
+  ReqSerializer,
 } from "../utils";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
@@ -68,34 +69,34 @@ export const routesData: RoutesData<Api> = {
 };
 
 export type ReqTypes = {
-  [K in keyof ReturnType<typeof getReqSerializers>]: ReturnType<ReturnType<typeof getReqSerializers>[K]["writeReq"]>;
+  getHeads: ReqEmpty;
+  getState: {params: {stateId: string}};
+  getStateV2: {params: {stateId: string}};
+  connectToPeer: {params: {peerId: string}; body: string[]};
+  disconnectPeer: {params: {peerId: string}};
 };
 
-// eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types, @typescript-eslint/explicit-function-return-type
-export function getReqSerializers() {
-  const t = mapValues(routesData, () => (arg: unknown) => arg) as RouteReqTypeGenerator<Api>;
-
-  const getState = t.getState<{params: {stateId: string}}>({
+export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
+  const getState: ReqSerializer<Api["getState"], ReqTypes["getState"]> = {
     writeReq: (stateId) => ({params: {stateId}}),
     parseReq: ({params}) => [params.stateId],
     schema: {params: {stateId: Schema.StringRequired}},
-  });
+  };
 
   return {
     getHeads: reqEmpty,
     getState: getState,
     getStateV2: getState,
-
-    connectToPeer: t.connectToPeer<{params: {peerId: string}; body: string[]}>({
+    connectToPeer: {
       writeReq: (peerId, multiaddr) => ({params: {peerId}, body: multiaddr}),
       parseReq: ({params, body}) => [params.peerId, body],
       schema: {params: {peerId: Schema.StringRequired}, body: Schema.StringArray},
-    }),
-    disconnectPeer: t.disconnectPeer<{params: {peerId: string}}>({
+    },
+    disconnectPeer: {
       writeReq: (peerId) => ({params: {peerId}}),
       parseReq: ({params}) => [params.peerId],
       schema: {params: {peerId: Schema.StringRequired}},
-    }),
+    },
   };
 }
 

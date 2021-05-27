@@ -1,6 +1,5 @@
-import {ContainerType, fromHexString, toHexString, Type} from "@chainsafe/ssz";
+import {ContainerType, fromHexString, Json, toHexString, Type} from "@chainsafe/ssz";
 import {ForkName, IBeaconConfig} from "@chainsafe/lodestar-config";
-import {mapValues} from "@chainsafe/lodestar-utils";
 import {
   allForks,
   altair,
@@ -19,10 +18,10 @@ import {
   ReturnTypes,
   ArrayOf,
   ContainerData,
-  RouteReqTypeGenerator,
   Schema,
   WithVersion,
   reqOnlyBody,
+  ReqSerializers,
 } from "../utils";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
@@ -204,15 +203,22 @@ export const routesData: RoutesData<Api> = {
   prepareSyncCommitteeSubnets: {url: "/eth/v1/validator/sync_committee_subscriptions", method: "POST"},
 };
 
+/* eslint-disable @typescript-eslint/naming-convention */
 export type ReqTypes = {
-  [K in keyof ReturnType<typeof getReqSerializers>]: ReturnType<ReturnType<typeof getReqSerializers>[K]["writeReq"]>;
+  getAttesterDuties: {params: {epoch: Epoch}; body: ValidatorIndex[]};
+  getProposerDuties: {params: {epoch: Epoch}};
+  getSyncCommitteeDuties: {params: {epoch: Epoch}; body: ValidatorIndex[]};
+  produceBlock: {params: {slot: number}; query: {randao_reveal: string; grafitti: string}};
+  produceAttestationData: {query: {slot: number; committee_index: number}};
+  produceSyncCommitteeContribution: {query: {slot: number; subcommittee_index: number; beacon_block_root: string}};
+  getAggregatedAttestation: {query: {attestation_data_root: string; slot: number}};
+  publishAggregateAndProofs: {body: Json};
+  publishContributionAndProofs: {body: Json};
+  prepareBeaconCommitteeSubnet: {body: Json};
+  prepareSyncCommitteeSubnets: {body: Json};
 };
 
-/* eslint-disable @typescript-eslint/naming-convention */
-// eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types, @typescript-eslint/explicit-function-return-type
-export function getReqSerializers(config: IBeaconConfig) {
-  const t = mapValues(routesData, () => (arg: unknown) => arg) as RouteReqTypeGenerator<Api>;
-
+export function getReqSerializers(config: IBeaconConfig): ReqSerializers<Api, ReqTypes> {
   const BeaconCommitteeSubscription = new ContainerType<BeaconCommitteeSubscription>({
     fields: {
       validatorIndex: config.types.ValidatorIndex,
@@ -232,44 +238,33 @@ export function getReqSerializers(config: IBeaconConfig) {
   });
 
   return {
-    getAttesterDuties: t.getAttesterDuties<{
-      params: {epoch: Epoch};
-      body: ValidatorIndex[];
-    }>({
+    getAttesterDuties: {
       writeReq: (epoch, validatorIndexes) => ({params: {epoch}, body: validatorIndexes}),
       parseReq: ({params, body}) => [params.epoch, body],
       schema: {
         params: {epoch: Schema.UintRequired},
         body: Schema.UintArray,
       },
-    }),
+    },
 
-    getProposerDuties: t.getProposerDuties<{
-      params: {epoch: Epoch};
-    }>({
+    getProposerDuties: {
       writeReq: (epoch) => ({params: {epoch}}),
       parseReq: ({params}) => [params.epoch],
       schema: {
         params: {epoch: Schema.UintRequired},
       },
-    }),
+    },
 
-    getSyncCommitteeDuties: t.getSyncCommitteeDuties<{
-      params: {epoch: Epoch};
-      body: ValidatorIndex[];
-    }>({
+    getSyncCommitteeDuties: {
       writeReq: (epoch, validatorIndexes) => ({params: {epoch}, body: validatorIndexes}),
       parseReq: ({params, body}) => [params.epoch, body],
       schema: {
         params: {epoch: Schema.UintRequired},
         body: Schema.UintArray,
       },
-    }),
+    },
 
-    produceBlock: t.produceBlock<{
-      params: {slot: number};
-      query: {randao_reveal: string; grafitti: string};
-    }>({
+    produceBlock: {
       writeReq: (slot, randaoReveal, grafitti) => ({
         params: {slot},
         query: {randao_reveal: toHexString(randaoReveal), grafitti},
@@ -279,21 +274,17 @@ export function getReqSerializers(config: IBeaconConfig) {
         params: {slot: Schema.UintRequired},
         query: {randao_reveal: Schema.StringRequired, grafitti: Schema.String},
       },
-    }),
+    },
 
-    produceAttestationData: t.produceAttestationData<{
-      query: {slot: number; committee_index: number};
-    }>({
+    produceAttestationData: {
       writeReq: (index, slot) => ({query: {slot, committee_index: index}}),
       parseReq: ({query}) => [query.committee_index, query.slot],
       schema: {
         query: {slot: Schema.UintRequired, committee_index: Schema.UintRequired},
       },
-    }),
+    },
 
-    produceSyncCommitteeContribution: t.produceSyncCommitteeContribution<{
-      query: {slot: number; subcommittee_index: number; beacon_block_root: string};
-    }>({
+    produceSyncCommitteeContribution: {
       writeReq: (slot, index, root) => ({
         query: {slot, subcommittee_index: index, beacon_block_root: toHexString(root)},
       }),
@@ -305,17 +296,15 @@ export function getReqSerializers(config: IBeaconConfig) {
           beacon_block_root: Schema.StringRequired,
         },
       },
-    }),
+    },
 
-    getAggregatedAttestation: t.getAggregatedAttestation<{
-      query: {attestation_data_root: string; slot: number};
-    }>({
+    getAggregatedAttestation: {
       writeReq: (root, slot) => ({query: {attestation_data_root: toHexString(root), slot}}),
       parseReq: ({query}) => [fromHexString(query.attestation_data_root), query.slot],
       schema: {
         query: {attestation_data_root: Schema.StringRequired, slot: Schema.UintRequired},
       },
-    }),
+    },
 
     publishAggregateAndProofs: reqOnlyBody(ArrayOf(config.types.phase0.SignedAggregateAndProof), Schema.ObjectArray),
     publishContributionAndProofs: reqOnlyBody(

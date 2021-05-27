@@ -17,7 +17,7 @@ export type RouteGroupDefinition<
   ReqTypes extends {[K in keyof Api]: ReqGeneric}
 > = {
   routesData: RoutesData<Api>;
-  getReqSerializers: (config: IBeaconConfig) => RouteReqSerdes<Api, ReqTypes>;
+  getReqSerializers: (config: IBeaconConfig) => ReqSerializers<Api, ReqTypes>;
   getReturnTypes: (config: IBeaconConfig) => ReturnTypes<Api>;
 };
 
@@ -54,7 +54,7 @@ export type ReqSerializer<Fn extends (...args: any) => any, ReqType extends ReqG
   schema?: SchemaDefinition<ReqType>;
 };
 
-export type RouteReqSerdes<
+export type ReqSerializers<
   Api extends Record<string, RouteGeneric>,
   ReqTypes extends {[K in keyof Api]: ReqGeneric}
 > = {
@@ -63,10 +63,6 @@ export type RouteReqSerdes<
 
 /** Curried definition to infer only one of the two generic types */
 export type ReqGenArg<Fn extends (...args: any) => any, ReqType extends ReqGeneric> = ReqSerializer<Fn, ReqType>;
-
-export type RouteReqTypeGenerator<Api extends Record<string, RouteGeneric>> = {
-  [K in keyof Api]: <ReqType extends ReqGeneric>(arg: ReqGenArg<Api[K], ReqType>) => ReqGenArg<Api[K], ReqType>;
-};
 
 //
 // RETURN
@@ -81,11 +77,6 @@ export type ReturnTypes<Api extends Record<string, RouteGeneric>> = {
 };
 
 export type RoutesData<Api extends Record<string, RouteGeneric>> = {[K in keyof Api]: RouteDef};
-
-export type GetRouteReqSerdes<
-  Api extends Record<string, RouteGeneric>,
-  ReqTypes extends {[K in keyof Api]: ReqGeneric}
-> = (config: IBeaconConfig) => RouteReqSerdes<Api, ReqTypes>;
 
 //
 // Helpers
