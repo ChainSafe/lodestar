@@ -61,8 +61,8 @@ export class QueuedStateRegenerator implements IStateRegenerator {
       });
     }
 
-    const parentEpoch = computeEpochAtSlot(this.config, parentBlock.slot);
-    const blockEpoch = computeEpochAtSlot(this.config, block.slot);
+    const parentEpoch = computeEpochAtSlot(parentBlock.slot);
+    const blockEpoch = computeEpochAtSlot(block.slot);
 
     // Check the checkpoint cache (if the pre-state is a checkpoint state)
     if (parentEpoch < blockEpoch) {

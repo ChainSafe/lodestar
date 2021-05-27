@@ -1,3 +1,8 @@
+import {
+  EPOCHS_PER_SYNC_COMMITTEE_PERIOD,
+  SYNC_COMMITTEE_SIZE,
+  SYNC_COMMITTEE_SUBNET_COUNT,
+} from "@chainsafe/lodestar-params";
 import {computeSyncPeriodAtEpoch, computeSyncPeriodAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {altair, BLSSignature, Epoch, Root, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
@@ -8,7 +13,6 @@ import {IApiClient} from "../api";
 import {extendError, isSyncCommitteeAggregator, notAborted} from "../util";
 import {IClock} from "../util/clock";
 import {ValidatorStore} from "./validatorStore";
-import {SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
 
 /** Only retain `HISTORICAL_DUTIES_PERIODS` duties prior to the current periods. */
 const HISTORICAL_DUTIES_PERIODS = 2;
@@ -65,7 +69,7 @@ export class SyncCommitteeDutiesService {
    * https://github.com/ethereum/eth2.0-specs/pull/2400
    */
   async getDutiesAtSlot(slot: Slot): Promise<SyncDutyAndProof[]> {
-    const period = computeSyncPeriodAtSlot(this.config, slot + 1); // See note above for the +1 offset
+    const period = computeSyncPeriodAtSlot(slot + 1); // See note above for the +1 offset
     const duties: SyncDutyAndProof[] = [];
 
     for (const dutiesByPeriod of this.dutiesByPeriodByIndex.values()) {
@@ -91,7 +95,7 @@ export class SyncCommitteeDutiesService {
 
   private runDutiesTasks = async (currentEpoch: Epoch): Promise<void> => {
     // Before altair fork (+ lookahead) no need to check duties
-    if (currentEpoch < this.config.params.ALTAIR_FORK_EPOCH - ALTAIR_FORK_LOOKAHEAD_EPOCHS) {
+    if (currentEpoch < this.config.ALTAIR_FORK_EPOCH - ALTAIR_FORK_LOOKAHEAD_EPOCHS) {
       return;
     }
 
@@ -130,7 +134,7 @@ export class SyncCommitteeDutiesService {
       return;
     }
 
-    const nextPeriodEpoch = currentEpoch + this.config.params.EPOCHS_PER_SYNC_COMMITTEE_PERIOD;
+    const nextPeriodEpoch = currentEpoch + EPOCHS_PER_SYNC_COMMITTEE_PERIOD;
     for (const epoch of [currentEpoch, nextPeriodEpoch]) {
       // Download the duties and update the duties for the current and next period.
       await this.pollSyncCommitteesForEpoch(epoch, indexArr).catch((e) => {
@@ -138,7 +142,7 @@ export class SyncCommitteeDutiesService {
       });
     }
 
-    const currentPeriod = computeSyncPeriodAtEpoch(this.config, currentEpoch);
+    const currentPeriod = computeSyncPeriodAtEpoch(currentEpoch);
     const syncCommitteeSubscriptions: altair.SyncCommitteeSubscription[] = [];
 
     // For this and the next period, produce any beacon committee subscriptions.
@@ -152,8 +156,8 @@ export class SyncCommitteeDutiesService {
         const dutyAtEpoch = dutiesByPeriod.get(period);
         if (dutyAtEpoch) {
           if (indexSet.has(validatorIndex)) {
-            const fromEpoch = period * this.config.params.EPOCHS_PER_SYNC_COMMITTEE_PERIOD;
-            const untilEpoch = (period + 1) * this.config.params.EPOCHS_PER_SYNC_COMMITTEE_PERIOD;
+            const fromEpoch = period * EPOCHS_PER_SYNC_COMMITTEE_PERIOD;
+            const untilEpoch = (period + 1) * EPOCHS_PER_SYNC_COMMITTEE_PERIOD;
             // Don't subscribe too early to save node's resources
             if (currentEpoch >= fromEpoch - SUBSCRIPTIONS_LOOKAHEAD_EPOCHS) {
               syncCommitteeSubscriptions.push({
@@ -191,7 +195,7 @@ export class SyncCommitteeDutiesService {
     });
     const dependentRoot = syncDuties.dependentRoot;
     const relevantDuties = syncDuties.data.filter((duty) => this.indicesService.hasValidatorIndex(duty.validatorIndex));
-    const period = computeSyncPeriodAtEpoch(this.config, epoch);
+    const period = computeSyncPeriodAtEpoch(epoch);
 
     this.logger.debug("Downloaded SyncDuties", {
       epoch,
@@ -221,7 +225,7 @@ export class SyncCommitteeDutiesService {
 
   private async getDutyAndProof(slot: Slot, duty: SyncDutySubCommittee): Promise<SyncDutyAndProof> {
     // TODO: Cache this value
-    const SYNC_COMMITTEE_SUBNET_SIZE = Math.floor(this.config.params.SYNC_COMMITTEE_SIZE / SYNC_COMMITTEE_SUBNET_COUNT);
+    const SYNC_COMMITTEE_SUBNET_SIZE = Math.floor(SYNC_COMMITTEE_SIZE / SYNC_COMMITTEE_SUBNET_COUNT);
     const subCommitteeIndex = Math.floor(duty.validatorSyncCommitteeIndex / SYNC_COMMITTEE_SUBNET_SIZE);
     const selectionProof = await this.validatorStore.signSyncCommitteeSelectionProof(
       // Fast indexing with precomputed pubkeyHex. Fallback to toHexString(duty.pubkey)
@@ -239,7 +243,7 @@ export class SyncCommitteeDutiesService {
 
   /** Run at least once per period to prune duties map */
   private pruneOldDuties(currentEpoch: Epoch): void {
-    const currentPeriod = computeSyncPeriodAtEpoch(this.config, currentEpoch);
+    const currentPeriod = computeSyncPeriodAtEpoch(currentEpoch);
     for (const attMap of this.dutiesByPeriodByIndex.values()) {
       for (const period of attMap.keys()) {
         if (period + HISTORICAL_DUTIES_PERIODS < currentPeriod) {

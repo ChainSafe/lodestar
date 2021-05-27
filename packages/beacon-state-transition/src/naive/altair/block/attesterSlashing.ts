@@ -18,7 +18,7 @@ export function processAttesterSlashing(
   verifySignatures = true
 ): void {
   // Check that the attestations are conflicting
-  assert.true(isValidAttesterSlashing(config, state, attesterSlashing, verifySignatures), "Invalid attester slashing");
+  assert.true(isValidAttesterSlashing(state, attesterSlashing, verifySignatures), "Invalid attester slashing");
 
   const attestation1 = attesterSlashing.attestation1;
   const attestation2 = attesterSlashing.attestation2;
@@ -28,7 +28,7 @@ export function processAttesterSlashing(
   const intersectionIndices = attestingIndices1.filter((i) => attestingIndices2.indexOf(i) !== -1);
   const sortedIndices = intersectionIndices.sort((index1: ValidatorIndex, index2: ValidatorIndex) => index1 - index2);
 
-  const currentEpoch = getCurrentEpoch(config, state);
+  const currentEpoch = getCurrentEpoch(state);
   for (const index of sortedIndices) {
     if (isSlashableValidator(state.validators[index], currentEpoch)) {
       slashValidator(config, state, index);

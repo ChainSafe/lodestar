@@ -57,7 +57,7 @@ export function processLightClientUpdate(
 ): void {
   validateLightClientUpdate(config, store.snapshot, update, genesisValidatorsRoot);
 
-  const syncPeriod = computeSyncPeriodAtSlot(config, update.header.slot);
+  const syncPeriod = computeSyncPeriodAtSlot(update.header.slot);
   const prevBestUpdate = store.bestUpdates.get(syncPeriod);
   if (!prevBestUpdate || isBetterUpdate(prevBestUpdate, update)) {
     store.bestUpdates.set(syncPeriod, update);
@@ -76,7 +76,7 @@ export function processLightClientUpdate(
 
   // Forced best update when the update timeout has elapsed
   else if (currentSlot > store.snapshot.header.slot + LIGHT_CLIENT_UPDATE_TIMEOUT) {
-    const prevSyncPeriod = computeSyncPeriodAtSlot(config, store.snapshot.header.slot);
+    const prevSyncPeriod = computeSyncPeriodAtSlot(store.snapshot.header.slot);
     const bestUpdate = store.bestUpdates.get(prevSyncPeriod);
     if (bestUpdate) {
       applyLightClientUpdate(config, store.snapshot, bestUpdate);
@@ -93,8 +93,8 @@ export function applyLightClientUpdate(
   snapshot: LightClientSnapshotFast,
   update: altair.LightClientUpdate
 ): void {
-  const snapshotPeriod = computeSyncPeriodAtSlot(config, snapshot.header.slot);
-  const updatePeriod = computeSyncPeriodAtSlot(config, update.header.slot);
+  const snapshotPeriod = computeSyncPeriodAtSlot(snapshot.header.slot);
+  const updatePeriod = computeSyncPeriodAtSlot(update.header.slot);
   if (updatePeriod < snapshotPeriod) {
     throw Error("Cannot rollback sync period");
   }

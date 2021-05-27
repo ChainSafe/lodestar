@@ -1,4 +1,11 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {
+  EPOCHS_PER_SLASHINGS_VECTOR,
+  MIN_SLASHING_PENALTY_QUOTIENT_ALTAIR,
+  PROPOSER_WEIGHT,
+  WEIGHT_DENOMINATOR,
+  WHISTLEBLOWER_REWARD_QUOTIENT,
+} from "@chainsafe/lodestar-params";
 import {altair, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {
   getCurrentEpoch,
@@ -7,7 +14,6 @@ import {
   getBeaconProposerIndex,
   increaseBalance,
 } from "../../util";
-import {PROPOSER_WEIGHT, WEIGHT_DENOMINATOR} from "../constants";
 
 /**
  * Slash the validator with index ``slashed_index``.
@@ -22,28 +28,28 @@ export function slashValidator(
   slashedIndex: ValidatorIndex,
   whistleblowerIndex: ValidatorIndex | null = null
 ): void {
-  const currentEpoch = getCurrentEpoch(config, state);
+  const currentEpoch = getCurrentEpoch(state);
 
   initiateValidatorExit(config, state, slashedIndex);
   state.validators[slashedIndex].slashed = true;
   state.validators[slashedIndex].withdrawableEpoch = Math.max(
     state.validators[slashedIndex].withdrawableEpoch,
-    currentEpoch + config.params.EPOCHS_PER_SLASHINGS_VECTOR
+    currentEpoch + EPOCHS_PER_SLASHINGS_VECTOR
   );
 
   const slashedBalance = state.validators[slashedIndex].effectiveBalance;
-  state.slashings[currentEpoch % config.params.EPOCHS_PER_SLASHINGS_VECTOR] += slashedBalance;
+  state.slashings[currentEpoch % EPOCHS_PER_SLASHINGS_VECTOR] += slashedBalance;
   decreaseBalance(
     state,
     slashedIndex,
-    state.validators[slashedIndex].effectiveBalance / BigInt(config.params.MIN_SLASHING_PENALTY_QUOTIENT_ALTAIR)
+    state.validators[slashedIndex].effectiveBalance / MIN_SLASHING_PENALTY_QUOTIENT_ALTAIR
   );
 
-  const proposerIndex = getBeaconProposerIndex(config, state);
+  const proposerIndex = getBeaconProposerIndex(state);
   if (whistleblowerIndex === undefined || whistleblowerIndex === null) {
     whistleblowerIndex = proposerIndex;
   }
-  const whistleblowingReward = slashedBalance / BigInt(config.params.WHISTLEBLOWER_REWARD_QUOTIENT);
+  const whistleblowingReward = slashedBalance / WHISTLEBLOWER_REWARD_QUOTIENT;
   const proposerReward = (whistleblowingReward * PROPOSER_WEIGHT) / WEIGHT_DENOMINATOR;
   increaseBalance(state, proposerIndex, proposerReward);
   increaseBalance(state, whistleblowerIndex, whistleblowingReward - proposerReward);

@@ -1,4 +1,5 @@
-import {ForkName, IBeaconConfig, IForkInfo} from "@chainsafe/lodestar-config";
+import {ForkName} from "@chainsafe/lodestar-params";
+import {IBeaconConfig, IForkInfo} from "@chainsafe/lodestar-config";
 import {Epoch} from "@chainsafe/lodestar-types";
 
 /**

@@ -122,17 +122,17 @@ export const phase0: IPhase0Preset = {
   // Reward and penalty quotients
   // ---------------------------------------------------------------
   // 2**6 (= 64)
-  BASE_REWARD_FACTOR: 64,
+  BASE_REWARD_FACTOR: BigInt(64),
   // 2**9 (= 512)
-  WHISTLEBLOWER_REWARD_QUOTIENT: 512,
+  WHISTLEBLOWER_REWARD_QUOTIENT: BigInt(512),
   // 2**3 (= 8)
-  PROPOSER_REWARD_QUOTIENT: 8,
+  PROPOSER_REWARD_QUOTIENT: BigInt(8),
   // [customized] 2**25 (= 33,554,432)
   INACTIVITY_PENALTY_QUOTIENT: BigInt(33554432),
   // [customized] 2**6 (= 64)
-  MIN_SLASHING_PENALTY_QUOTIENT: 64,
+  MIN_SLASHING_PENALTY_QUOTIENT: BigInt(64),
   // [customized] 2 (lower safety margin than Phase 0 genesis but different than mainnet config for testing)
-  PROPORTIONAL_SLASHING_MULTIPLIER: 2,
+  PROPORTIONAL_SLASHING_MULTIPLIER: BigInt(2),
 
   // Max operations per block
   // ---------------------------------------------------------------

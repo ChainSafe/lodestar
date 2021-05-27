@@ -1,6 +1,6 @@
 import {isValidAttesterSlashing, allForks} from "@chainsafe/lodestar-beacon-state-transition/";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {phase0, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {phase0, ssz, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {IBeaconChain} from "..";
 import {AttesterSlashingError, AttesterSlashingErrorCode} from "../errors/attesterSlashingError";
 import {IBeaconDb} from "../../db";
@@ -15,7 +15,7 @@ export async function validateGossipAttesterSlashing(
   const attesterSlashedIndices = arrayIntersection<ValidatorIndex>(
     attesterSlashing.attestation1.attestingIndices.valueOf() as ValidatorIndex[],
     attesterSlashing.attestation2.attestingIndices.valueOf() as ValidatorIndex[],
-    sszEqualPredicate(config.types.ValidatorIndex)
+    sszEqualPredicate(ssz.ValidatorIndex)
   );
 
   if (await db.attesterSlashing.hasAll(attesterSlashedIndices)) {
@@ -27,7 +27,7 @@ export async function validateGossipAttesterSlashing(
   const state = chain.getHeadState();
 
   // verifySignature = false, verified in batch below
-  if (!isValidAttesterSlashing(config, state, attesterSlashing, false)) {
+  if (!isValidAttesterSlashing(state, attesterSlashing, false)) {
     throw new AttesterSlashingError({
       code: AttesterSlashingErrorCode.INVALID_SLASHING,
     });

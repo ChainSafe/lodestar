@@ -12,4 +12,4 @@ export * from "./epoch";
 // allForks.processDeposit(...)
 //
 // const x: allForks.BeaconState;
-export * from "@chainsafe/lodestar-types/lib/allForks";
+export * from "@chainsafe/lodestar-types/lib/allForks/types";

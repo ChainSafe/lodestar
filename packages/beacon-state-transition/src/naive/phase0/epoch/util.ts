@@ -2,8 +2,7 @@
  * @module chain/stateTransition/epoch/util
  */
 
-import {Epoch, Gwei, phase0, ValidatorIndex} from "@chainsafe/lodestar-types";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {Epoch, Gwei, phase0, ssz, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {assert} from "@chainsafe/lodestar-utils";
 
 import {
@@ -21,14 +20,10 @@ import {
  * The goal of this function is to get all attestations that have a correct Casper FFG source. Hence,
  * it can safely just return all the PendingAttestations for the desired epoch (current or previous).
  */
-export function getMatchingSourceAttestations(
-  config: IBeaconConfig,
-  state: phase0.BeaconState,
-  epoch: Epoch
-): phase0.PendingAttestation[] {
-  const currentEpoch = getCurrentEpoch(config, state);
+export function getMatchingSourceAttestations(state: phase0.BeaconState, epoch: Epoch): phase0.PendingAttestation[] {
+  const currentEpoch = getCurrentEpoch(state);
   assert.true(
-    epoch === currentEpoch || epoch === getPreviousEpoch(config, state),
+    epoch === currentEpoch || epoch === getPreviousEpoch(state),
     `Too old epoch ${epoch}, current=${currentEpoch}`
   );
   return Array.from(epoch === currentEpoch ? state.currentEpochAttestations : state.previousEpochAttestations);
@@ -38,28 +33,18 @@ export function getMatchingSourceAttestations(
  * Returns the subset of PendingAttestations that have the correct Casper FFG target (ie. the
  * checkpoint that is part of the current chain).
  */
-export function getMatchingTargetAttestations(
-  config: IBeaconConfig,
-  state: phase0.BeaconState,
-  epoch: Epoch
-): phase0.PendingAttestation[] {
-  const blockRoot = getBlockRoot(config, state, epoch);
-  return getMatchingSourceAttestations(config, state, epoch).filter((a) =>
-    config.types.Root.equals(a.data.target.root, blockRoot)
-  );
+export function getMatchingTargetAttestations(state: phase0.BeaconState, epoch: Epoch): phase0.PendingAttestation[] {
+  const blockRoot = getBlockRoot(state, epoch);
+  return getMatchingSourceAttestations(state, epoch).filter((a) => ssz.Root.equals(a.data.target.root, blockRoot));
 }
 
 /**
  * Returns the subset of PendingAttestations that have the correct head (ie. they voted for a head
  * that ended up being the head of the chain).
  */
-export function getMatchingHeadAttestations(
-  config: IBeaconConfig,
-  state: phase0.BeaconState,
-  epoch: Epoch
-): phase0.PendingAttestation[] {
-  return getMatchingTargetAttestations(config, state, epoch).filter((a) =>
-    config.types.Root.equals(a.data.beaconBlockRoot, getBlockRootAtSlot(config, state, a.data.slot))
+export function getMatchingHeadAttestations(state: phase0.BeaconState, epoch: Epoch): phase0.PendingAttestation[] {
+  return getMatchingTargetAttestations(state, epoch).filter((a) =>
+    ssz.Root.equals(a.data.beaconBlockRoot, getBlockRootAtSlot(state, a.data.slot))
   );
 }
 
@@ -71,14 +56,13 @@ export function getMatchingHeadAttestations(
  * do not get counted.
  */
 export function getUnslashedAttestingIndices(
-  config: IBeaconConfig,
   state: phase0.BeaconState,
   attestations: phase0.PendingAttestation[]
 ): ValidatorIndex[] {
   const output: Set<ValidatorIndex> = new Set();
 
   for (const a of attestations) {
-    for (const index of getAttestingIndices(config, state, a.data, a.aggregationBits)) {
+    for (const index of getAttestingIndices(state, a.data, a.aggregationBits)) {
       output.add(index);
     }
   }
@@ -92,10 +76,6 @@ export function getUnslashedAttestingIndices(
  * Return the combined effective balance of the set of unslashed validators participating in `attestations`.
  * Note: `getTotalBalance` returns `EFFECTIVE_BALANCE_INCREMENT` Gwei minimum to avoid divisions by zero.
  */
-export function getAttestingBalance(
-  config: IBeaconConfig,
-  state: phase0.BeaconState,
-  attestations: phase0.PendingAttestation[]
-): Gwei {
-  return getTotalBalance(config, state, getUnslashedAttestingIndices(config, state, attestations));
+export function getAttestingBalance(state: phase0.BeaconState, attestations: phase0.PendingAttestation[]): Gwei {
+  return getTotalBalance(state, getUnslashedAttestingIndices(state, attestations));
 }

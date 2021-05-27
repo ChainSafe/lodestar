@@ -1,6 +1,6 @@
 import {allForks, altair, Epoch, phase0} from "@chainsafe/lodestar-types";
-import {ATTESTATION_SUBNET_COUNT, SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
-import {IBeaconConfig, ForkName} from "@chainsafe/lodestar-config";
+import {ATTESTATION_SUBNET_COUNT, ForkName, SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {SyncCommitteeSignatureIndexed} from "../../chain/validation/syncCommittee";
@@ -50,7 +50,7 @@ export class GossipHandler {
       this.logger.info("Subscribed gossip core topics");
     }
 
-    const currentEpoch = computeEpochAtSlot(this.config, this.chain.forkChoice.getHead().slot);
+    const currentEpoch = computeEpochAtSlot(this.chain.forkChoice.getHead().slot);
     for (const fork of getActiveForks(this.config, currentEpoch)) {
       this.subscribeCoreTopicsAtFork(fork);
     }

@@ -1,5 +1,6 @@
 import {AbortController, AbortSignal} from "abort-controller";
 import {SecretKey} from "@chainsafe/bls";
+import {ssz} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Genesis} from "@chainsafe/lodestar-types/phase0";
 import {fromHex, ILogger} from "@chainsafe/lodestar-utils";
@@ -92,7 +93,7 @@ export class Validator {
    */
   async voluntaryExit(publicKey: string, exitEpoch: number): Promise<void> {
     const secretKey = this.secretKeys.find((sk) =>
-      this.config.types.BLSPubkey.equals(sk.toPublicKey().toBytes(), fromHex(publicKey))
+      ssz.BLSPubkey.equals(sk.toPublicKey().toBytes(), fromHex(publicKey))
     );
     if (!secretKey) throw new Error(`No matching secret key found for public key ${publicKey}`);
 

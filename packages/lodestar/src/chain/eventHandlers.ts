@@ -1,6 +1,6 @@
 import {AbortSignal} from "abort-controller";
 import {readonlyValues, toHexString} from "@chainsafe/ssz";
-import {allForks, phase0, Slot, Version} from "@chainsafe/lodestar-types";
+import {allForks, phase0, Slot, ssz, Version} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {IBlockSummary} from "@chainsafe/lodestar-fork-choice";
 import {CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
@@ -132,7 +132,7 @@ export function onClockEpoch(): void {
 }
 
 export function onForkVersion(this: BeaconChain, version: Version): void {
-  this.logger.verbose("New fork version", this.config.types.Version.toJson(version));
+  this.logger.verbose("New fork version", ssz.Version.toJson(version));
 }
 
 export function onCheckpoint(
@@ -140,7 +140,7 @@ export function onCheckpoint(
   cp: phase0.Checkpoint,
   state: CachedBeaconState<allForks.BeaconState>
 ): void {
-  this.logger.verbose("Checkpoint processed", this.config.types.phase0.Checkpoint.toJson(cp));
+  this.logger.verbose("Checkpoint processed", ssz.phase0.Checkpoint.toJson(cp));
   this.checkpointStateCache.add(cp, state);
 
   this.metrics?.currentValidators.set({status: "active"}, state.currentShuffling.activeIndices.length);
@@ -167,22 +167,22 @@ export function onJustified(
   cp: phase0.Checkpoint,
   state: CachedBeaconState<allForks.BeaconState>
 ): void {
-  this.logger.verbose("Checkpoint justified", this.config.types.phase0.Checkpoint.toJson(cp));
+  this.logger.verbose("Checkpoint justified", ssz.phase0.Checkpoint.toJson(cp));
   this.metrics?.previousJustifiedEpoch.set(state.previousJustifiedCheckpoint.epoch);
   this.metrics?.currentJustifiedEpoch.set(cp.epoch);
 }
 
 export function onFinalized(this: BeaconChain, cp: phase0.Checkpoint): void {
-  this.logger.verbose("Checkpoint finalized", this.config.types.phase0.Checkpoint.toJson(cp));
+  this.logger.verbose("Checkpoint finalized", ssz.phase0.Checkpoint.toJson(cp));
   this.metrics?.finalizedEpoch.set(cp.epoch);
 }
 
 export function onForkChoiceJustified(this: BeaconChain, cp: phase0.Checkpoint): void {
-  this.logger.verbose("Fork choice justified", this.config.types.phase0.Checkpoint.toJson(cp));
+  this.logger.verbose("Fork choice justified", ssz.phase0.Checkpoint.toJson(cp));
 }
 
 export function onForkChoiceFinalized(this: BeaconChain, cp: phase0.Checkpoint): void {
-  this.logger.verbose("Fork choice finalized", this.config.types.phase0.Checkpoint.toJson(cp));
+  this.logger.verbose("Fork choice finalized", ssz.phase0.Checkpoint.toJson(cp));
 }
 
 export function onForkChoiceHead(this: BeaconChain, head: IBlockSummary): void {
@@ -202,7 +202,7 @@ export function onAttestation(this: BeaconChain, attestation: phase0.Attestation
     slot: attestation.data.slot,
     index: attestation.data.index,
     targetRoot: toHexString(attestation.data.target.root),
-    aggregationBits: this.config.types.phase0.CommitteeBits.toJson(attestation.aggregationBits),
+    aggregationBits: ssz.phase0.CommitteeBits.toJson(attestation.aggregationBits),
   });
 }
 
@@ -270,7 +270,7 @@ export async function onErrorAttestation(this: BeaconChain, err: AttestationErro
   }
 
   this.logger.debug("Attestation error", {}, err);
-  const attestationRoot = this.config.types.phase0.Attestation.hashTreeRoot(err.job.attestation);
+  const attestationRoot = ssz.phase0.Attestation.hashTreeRoot(err.job.attestation);
 
   switch (err.type.code) {
     case AttestationErrorCode.FUTURE_SLOT:

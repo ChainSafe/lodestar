@@ -4,7 +4,7 @@
 
 import {Interface} from "@ethersproject/abi";
 import {fromHexString} from "@chainsafe/ssz";
-import {phase0} from "@chainsafe/lodestar-types";
+import {phase0, ssz} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
 const depositEventFragment =
@@ -29,11 +29,11 @@ export function parseDepositLog(
   if (!values) throw Error(`DepositEvent at ${log.blockNumber} has no values`);
   return {
     blockNumber: log.blockNumber,
-    index: config.types.Number64.deserialize(fromHexString(values.index)),
+    index: ssz.Number64.deserialize(fromHexString(values.index)),
     depositData: {
       pubkey: fromHexString(values.pubkey),
       withdrawalCredentials: fromHexString(values.withdrawal_credentials),
-      amount: config.types.Gwei.deserialize(fromHexString(values.amount)),
+      amount: ssz.Gwei.deserialize(fromHexString(values.amount)),
       signature: fromHexString(values.signature),
     },
   };

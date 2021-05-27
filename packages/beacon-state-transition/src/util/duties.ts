@@ -2,7 +2,7 @@
  * @module chain/stateTransition/util
  */
 
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {allForks, altair, Epoch, phase0, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {assert} from "@chainsafe/lodestar-utils";
 import {List, readonlyValues} from "@chainsafe/ssz";
@@ -20,19 +20,18 @@ import {computeSyncCommitteePeriod} from "./syncCommittee";
  * Return null if no assignment..
  */
 export function getCommitteeAssignment(
-  config: IBeaconConfig,
   state: allForks.BeaconState,
   epoch: Epoch,
   validatorIndex: ValidatorIndex
 ): phase0.CommitteeAssignment | null {
-  const next2Epoch = getCurrentEpoch(config, state) + 2;
+  const next2Epoch = getCurrentEpoch(state) + 2;
   assert.lte(epoch, next2Epoch, "Cannot get committee assignment for epoch more than two ahead");
 
-  const epochStartSlot = computeStartSlotAtEpoch(config, epoch);
-  for (let slot = epochStartSlot; slot < epochStartSlot + config.params.SLOTS_PER_EPOCH; slot++) {
-    const committeeCount = getCommitteeCountAtSlot(config, state, slot);
+  const epochStartSlot = computeStartSlotAtEpoch(epoch);
+  for (let slot = epochStartSlot; slot < epochStartSlot + SLOTS_PER_EPOCH; slot++) {
+    const committeeCount = getCommitteeCountAtSlot(state, slot);
     for (let i = 0; i < committeeCount; i++) {
-      const committee = getBeaconCommittee(config, state, slot, i);
+      const committee = getBeaconCommittee(state, slot, i);
       if (committee.includes(validatorIndex)) {
         return {
           validators: committee as List<number>,
@@ -49,17 +48,12 @@ export function getCommitteeAssignment(
 /**
  * Checks if a validator is supposed to propose a block
  */
-export function isProposerAtSlot(
-  config: IBeaconConfig,
-  state: allForks.BeaconState,
-  slot: Slot,
-  validatorIndex: ValidatorIndex
-): boolean {
+export function isProposerAtSlot(state: allForks.BeaconState, slot: Slot, validatorIndex: ValidatorIndex): boolean {
   state = {...state, slot};
-  const currentEpoch = getCurrentEpoch(config, state);
-  assert.equal(computeEpochAtSlot(config, slot), currentEpoch, "Must request for current epoch");
+  const currentEpoch = getCurrentEpoch(state);
+  assert.equal(computeEpochAtSlot(slot), currentEpoch, "Must request for current epoch");
 
-  return getBeaconProposerIndex(config, state) === validatorIndex;
+  return getBeaconProposerIndex(state) === validatorIndex;
 }
 
 /**
@@ -67,14 +61,13 @@ export function isProposerAtSlot(
  * @returns
  */
 export function isAssignedToSyncCommittee(
-  config: IBeaconConfig,
   state: altair.BeaconState,
   epoch: Epoch,
   validatorIndex: ValidatorIndex
 ): boolean {
-  const syncCommitteePeriod = computeSyncCommitteePeriod(config, epoch);
-  const currentEpoch = computeEpochAtSlot(config, state.slot);
-  const currentSyncCommitteePeriod = computeSyncCommitteePeriod(config, currentEpoch);
+  const syncCommitteePeriod = computeSyncCommitteePeriod(epoch);
+  const currentEpoch = computeEpochAtSlot(state.slot);
+  const currentSyncCommitteePeriod = computeSyncCommitteePeriod(currentEpoch);
   const nextSyncCommitteePeriod = currentSyncCommitteePeriod + 1;
   const expectedPeriods = [currentSyncCommitteePeriod, nextSyncCommitteePeriod];
   assert.true(

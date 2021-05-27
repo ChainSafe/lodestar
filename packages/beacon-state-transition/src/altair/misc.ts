@@ -1,4 +1,3 @@
-import {ParticipationFlags} from "@chainsafe/lodestar-types";
 import {
   TIMELY_HEAD_FLAG_INDEX,
   TIMELY_HEAD_WEIGHT,
@@ -6,7 +5,8 @@ import {
   TIMELY_SOURCE_WEIGHT,
   TIMELY_TARGET_FLAG_INDEX,
   TIMELY_TARGET_WEIGHT,
-} from "./constants";
+} from "@chainsafe/lodestar-params";
+import {ParticipationFlags} from "@chainsafe/lodestar-types";
 
 export function getFlagIndicesAndWeights(): [number, bigint][] {
   return [

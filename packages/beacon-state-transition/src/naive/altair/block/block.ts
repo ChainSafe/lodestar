@@ -8,6 +8,13 @@ import {processAttesterSlashing} from "./attesterSlashing";
 import {processProposerSlashing} from "./proposerSlashing";
 import {processAttestation} from "./attestation";
 import {processDeposit} from "./deposit";
+import {
+  MAX_ATTESTATIONS,
+  MAX_ATTESTER_SLASHINGS,
+  MAX_DEPOSITS,
+  MAX_PROPOSER_SLASHINGS,
+  MAX_VOLUNTARY_EXITS,
+} from "@chainsafe/lodestar-params";
 
 export function processBlock(
   config: IBeaconConfig,
@@ -16,8 +23,8 @@ export function processBlock(
   verifySignatures = true
 ): void {
   phase0.processBlockHeader(config, state, block);
-  phase0.processRandao(config, state, block.body);
-  phase0.processEth1Data(config, state, block.body);
+  phase0.processRandao(state, block.body);
+  phase0.processEth1Data(state, block.body);
   processOperations(config, state, block.body, verifySignatures);
   processSyncCommittee(config, state, block.body.syncAggregate, verifySignatures);
 }
@@ -37,7 +44,7 @@ export function processOperations(
 ): void {
   // Verify that outstanding deposits are processed up to the maximum number of deposits
   assert.true(
-    body.deposits.length === Math.min(config.params.MAX_DEPOSITS, state.eth1Data.depositCount - state.eth1DepositIndex),
+    body.deposits.length === Math.min(MAX_DEPOSITS, state.eth1Data.depositCount - state.eth1DepositIndex),
     "Outstanding deposits are not processed"
   );
 
@@ -56,31 +63,31 @@ export function processOperations(
   }[] = [
     {
       operations: body.proposerSlashings,
-      maxOperations: config.params.MAX_PROPOSER_SLASHINGS,
+      maxOperations: MAX_PROPOSER_SLASHINGS,
       func: processProposerSlashing,
       verifySignatures,
     },
     {
       operations: body.attesterSlashings,
-      maxOperations: config.params.MAX_ATTESTER_SLASHINGS,
+      maxOperations: MAX_ATTESTER_SLASHINGS,
       func: processAttesterSlashing,
       verifySignatures,
     },
     {
       operations: body.attestations,
-      maxOperations: config.params.MAX_ATTESTATIONS,
+      maxOperations: MAX_ATTESTATIONS,
       func: processAttestation,
       verifySignatures,
     },
     {
       operations: body.deposits,
-      maxOperations: config.params.MAX_DEPOSITS,
+      maxOperations: MAX_DEPOSITS,
       func: processDeposit,
       verifySignatures,
     },
     {
       operations: body.voluntaryExits,
-      maxOperations: config.params.MAX_VOLUNTARY_EXITS,
+      maxOperations: MAX_VOLUNTARY_EXITS,
       func: phase0.processVoluntaryExit,
       verifySignatures,
     },

@@ -5,22 +5,17 @@
 import xor from "buffer-xor";
 import {hash} from "@chainsafe/ssz";
 import bls from "@chainsafe/bls";
-import {phase0} from "@chainsafe/lodestar-types";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {phase0, ssz} from "@chainsafe/lodestar-types";
 import {assert} from "@chainsafe/lodestar-utils";
 
 import {getBeaconProposerIndex, getCurrentEpoch, getDomain, getRandaoMix, computeSigningRoot} from "../../../util";
+import {DOMAIN_RANDAO, EPOCHS_PER_HISTORICAL_VECTOR} from "@chainsafe/lodestar-params";
 
-export function processRandao(
-  config: IBeaconConfig,
-  state: phase0.BeaconState,
-  body: phase0.BeaconBlockBody,
-  verifySignature = true
-): void {
-  const currentEpoch = getCurrentEpoch(config, state);
-  const proposer = state.validators[getBeaconProposerIndex(config, state)];
-  const domain = getDomain(config, state, config.params.DOMAIN_RANDAO);
-  const signingRoot = computeSigningRoot(config, config.types.Epoch, currentEpoch, domain);
+export function processRandao(state: phase0.BeaconState, body: phase0.BeaconBlockBody, verifySignature = true): void {
+  const currentEpoch = getCurrentEpoch(state);
+  const proposer = state.validators[getBeaconProposerIndex(state)];
+  const domain = getDomain(state, DOMAIN_RANDAO);
+  const signingRoot = computeSigningRoot(ssz.Epoch, currentEpoch, domain);
   // Verify RANDAO reveal
   assert.true(
     !verifySignature ||
@@ -28,8 +23,8 @@ export function processRandao(
     "Invalid RANDAO reveal"
   );
   // Mix it in
-  state.randaoMixes[currentEpoch % config.params.EPOCHS_PER_HISTORICAL_VECTOR] = xor(
-    Buffer.from(getRandaoMix(config, state, currentEpoch) as Uint8Array),
+  state.randaoMixes[currentEpoch % EPOCHS_PER_HISTORICAL_VECTOR] = xor(
+    Buffer.from(getRandaoMix(state, currentEpoch) as Uint8Array),
     Buffer.from(hash(body.randaoReveal.valueOf() as Uint8Array))
   );
 }

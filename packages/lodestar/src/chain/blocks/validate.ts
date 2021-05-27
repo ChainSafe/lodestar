@@ -31,7 +31,7 @@ export function validateBlock(
     }
 
     const finalizedCheckpoint = forkChoice.getFinalizedCheckpoint();
-    const finalizedSlot = computeStartSlotAtEpoch(config, finalizedCheckpoint.epoch);
+    const finalizedSlot = computeStartSlotAtEpoch(finalizedCheckpoint.epoch);
     if (blockSlot <= finalizedSlot) {
       throw new BlockError({
         code: BlockErrorCode.WOULD_REVERT_FINALIZED_SLOT,

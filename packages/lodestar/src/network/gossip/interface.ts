@@ -2,10 +2,11 @@
  * @module network/gossip
  */
 
+import {ForkName} from "@chainsafe/lodestar-params";
 import {allForks, altair, phase0} from "@chainsafe/lodestar-types";
 import StrictEventEmitter from "strict-event-emitter-types";
 import {EventEmitter} from "events";
-import {IBeaconConfig, ForkName} from "@chainsafe/lodestar-config";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import LibP2p from "libp2p";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {InMessage} from "libp2p-interfaces/src/pubsub";

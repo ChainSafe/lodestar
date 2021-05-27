@@ -1,5 +1,5 @@
 import {ArrayLike, BitList} from "@chainsafe/ssz";
-import {phase0, allForks, Epoch, Slot} from "@chainsafe/lodestar-types";
+import {phase0, allForks, Epoch, Slot, ssz} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {computeStartSlotAtEpoch, isValidAttestationSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {IDatabaseController, Bucket, Repository} from "@chainsafe/lodestar-db";
@@ -14,7 +14,7 @@ import {IDatabaseController, Bucket, Repository} from "@chainsafe/lodestar-db";
  */
 export class AggregateAndProofRepository extends Repository<Uint8Array, phase0.AggregateAndProof> {
   constructor(config: IBeaconConfig, db: IDatabaseController<Buffer, Buffer>) {
-    super(config, db, Bucket.phase0_aggregateAndProof, config.types.phase0.AggregateAndProof);
+    super(config, db, Bucket.phase0_aggregateAndProof, ssz.phase0.AggregateAndProof);
   }
 
   /**
@@ -32,7 +32,7 @@ export class AggregateAndProofRepository extends Repository<Uint8Array, phase0.A
     for (const aggregateAndProof of aggregatesAndProof) {
       // Attestation should be unique because we store by its id
       const aggregate = aggregateAndProof.aggregate;
-      if (isValidAttestationSlot(this.config, aggregate.data.slot, state.slot)) {
+      if (isValidAttestationSlot(aggregate.data.slot, state.slot)) {
         validAggregatesScored.push({aggregate, score: computeAttestationValueScore(aggregate, stateSlot)});
       }
     }
@@ -51,14 +51,14 @@ export class AggregateAndProofRepository extends Repository<Uint8Array, phase0.A
   }
 
   async pruneFinalized(finalizedEpoch: Epoch): Promise<void> {
-    const finalizedEpochStartSlot = computeStartSlotAtEpoch(this.config, finalizedEpoch);
+    const finalizedEpochStartSlot = computeStartSlotAtEpoch(finalizedEpoch);
     const entries = await this.entries();
     const idsToDelete = entries.filter((e) => e.value.aggregate.data.slot < finalizedEpochStartSlot).map((e) => e.key);
     await this.batchDelete(idsToDelete);
   }
 
   private getIdFromAttestation(attestation: phase0.Attestation): Uint8Array {
-    return this.config.types.phase0.Attestation.hashTreeRoot(attestation);
+    return ssz.phase0.Attestation.hashTreeRoot(attestation);
   }
 }
 

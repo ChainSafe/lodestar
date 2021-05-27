@@ -1,5 +1,6 @@
+import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {byteArrayEquals, toHexString} from "@chainsafe/ssz";
-import {Gwei, Slot} from "@chainsafe/lodestar-types";
+import {Gwei, Slot, ssz} from "@chainsafe/lodestar-types";
 import {assert} from "@chainsafe/lodestar-utils";
 import {
   CachedBeaconState,
@@ -46,14 +47,12 @@ async function processSlotsToNearestCheckpoint(
   preState: CachedBeaconState<allForks.BeaconState>,
   slot: Slot
 ): Promise<CachedBeaconState<allForks.BeaconState>> {
-  const config = preState.config;
-  const {SLOTS_PER_EPOCH} = config.params;
   const preSlot = preState.slot;
   const postSlot = slot;
-  const preEpoch = computeEpochAtSlot(config, preSlot);
+  const preEpoch = computeEpochAtSlot(preSlot);
   let postState = preState.clone();
   for (
-    let nextEpochSlot = computeStartSlotAtEpoch(config, preEpoch + 1);
+    let nextEpochSlot = computeStartSlotAtEpoch(preEpoch + 1);
     nextEpochSlot <= postSlot;
     nextEpochSlot += SLOTS_PER_EPOCH
   ) {
@@ -71,13 +70,11 @@ export async function runStateTransition(
   preState: CachedBeaconState<allForks.BeaconState>,
   job: IBlockJob
 ): Promise<CachedBeaconState<allForks.BeaconState>> {
-  const config = preState.config;
-  const {SLOTS_PER_EPOCH} = config.params;
   const postSlot = job.signedBlock.message.slot;
   const preEpoch = preState.currentShuffling.epoch;
-  const postEpoch = computeEpochAtSlot(config, postSlot);
+  const postEpoch = computeEpochAtSlot(postSlot);
   // if there're skipped slots at epoch transition, we want to cache all checkpoint states in the middle
-  const passCheckpoint = preEpoch < postEpoch && postSlot !== computeStartSlotAtEpoch(config, postEpoch);
+  const passCheckpoint = preEpoch < postEpoch && postSlot !== computeStartSlotAtEpoch(postEpoch);
   const state = passCheckpoint
     ? await processSlotsToNearestCheckpoint({emitter, metrics}, preState, postSlot)
     : preState;
@@ -133,16 +130,16 @@ function emitCheckpointEvent(
 ): void {
   const config = checkpointState.config;
   const slot = checkpointState.slot;
-  assert.true(slot % config.params.SLOTS_PER_EPOCH === 0, "Checkpoint state slot must be first in an epoch");
-  const blockHeader = config.types.phase0.BeaconBlockHeader.clone(checkpointState.latestBlockHeader);
-  if (config.types.Root.equals(blockHeader.stateRoot, ZERO_HASH)) {
+  assert.true(slot % SLOTS_PER_EPOCH === 0, "Checkpoint state slot must be first in an epoch");
+  const blockHeader = ssz.phase0.BeaconBlockHeader.clone(checkpointState.latestBlockHeader);
+  if (ssz.Root.equals(blockHeader.stateRoot, ZERO_HASH)) {
     blockHeader.stateRoot = config.getForkTypes(slot).BeaconState.hashTreeRoot(checkpointState);
   }
   emitter.emit(
     ChainEvent.checkpoint,
     {
-      root: config.types.phase0.BeaconBlockHeader.hashTreeRoot(blockHeader),
-      epoch: computeEpochAtSlot(config, slot),
+      root: ssz.phase0.BeaconBlockHeader.hashTreeRoot(blockHeader),
+      epoch: computeEpochAtSlot(slot),
     },
     checkpointState
   );

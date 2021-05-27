@@ -57,7 +57,7 @@ export class StatesArchiver {
    */
   async maybeArchiveState(finalized: phase0.Checkpoint): Promise<void> {
     const lastStoredSlot = await this.db.stateArchive.lastKey();
-    const lastStoredEpoch = computeEpochAtSlot(this.config, lastStoredSlot || 0);
+    const lastStoredEpoch = computeEpochAtSlot(lastStoredSlot || 0);
 
     if (finalized.epoch - lastStoredEpoch > PERSIST_TEMP_STATE_EVERY_EPOCHS) {
       await this.archiveState(finalized);

@@ -20,7 +20,7 @@ export async function validateGossipProposerSlashing(
   const state = chain.getHeadState();
 
   // verifySignature = false, verified in batch below
-  if (!isValidProposerSlashing(config, state, proposerSlashing, false)) {
+  if (!isValidProposerSlashing(state, proposerSlashing, false)) {
     throw new ProposerSlashingError({
       code: ProposerSlashingErrorCode.INVALID_SLASHING,
     });

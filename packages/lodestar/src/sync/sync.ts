@@ -2,6 +2,7 @@ import PeerId from "peer-id";
 import {IBeaconSync, ISyncModules} from "./interface";
 import {INetwork, NetworkEvent} from "../network";
 import {ILogger} from "@chainsafe/lodestar-utils";
+import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Slot, phase0} from "@chainsafe/lodestar-types";
 import {toHexString} from "@chainsafe/ssz";
@@ -43,7 +44,7 @@ export class BeaconSync implements IBeaconSync {
     this.chain = chain;
     this.logger = logger;
     this.rangeSync = new RangeSync(modules);
-    this.slotImportTolerance = modules.config.params.SLOTS_PER_EPOCH;
+    this.slotImportTolerance = SLOTS_PER_EPOCH;
 
     // Subscribe to RangeSync completing a SyncChain and recompute sync state
     this.rangeSync.on(RangeSyncEvent.completedChain, this.updateSyncState);

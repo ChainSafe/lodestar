@@ -1,4 +1,4 @@
-import {allForks, altair, phase0} from "@chainsafe/lodestar-types";
+import {allForks, altair, phase0, ssz} from "@chainsafe/lodestar-types";
 import {isSlashableValidator} from "../../util";
 import {CachedBeaconState} from "../../allForks/util";
 import {getProposerSlashingSignatureSets} from "../../allForks/signatureSets";
@@ -10,8 +10,8 @@ export function processProposerSlashing(
   proposerSlashing: phase0.ProposerSlashing,
   verifySignatures = true
 ): void {
-  const {config, epochCtx} = state;
-  const {BeaconBlockHeader} = config.types.phase0;
+  const {epochCtx} = state;
+  const {BeaconBlockHeader} = ssz.phase0;
   const header1 = proposerSlashing.signedHeader1.message;
   const header2 = proposerSlashing.signedHeader2.message;
 

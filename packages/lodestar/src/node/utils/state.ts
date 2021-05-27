@@ -1,5 +1,5 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {allForks, phase0} from "@chainsafe/lodestar-types";
+import {allForks, phase0, ssz} from "@chainsafe/lodestar-types";
 import {interopDeposits} from "./interop/deposits";
 import {getInteropState} from "./interop/state";
 import {mkdirSync, writeFileSync} from "fs";
@@ -13,7 +13,7 @@ export async function initDevState(
   validatorCount: number,
   genesisTime?: number
 ): Promise<TreeBacked<allForks.BeaconState>> {
-  const deposits = interopDeposits(config, config.types.phase0.DepositDataRootList.defaultTreeBacked(), validatorCount);
+  const deposits = interopDeposits(config, ssz.phase0.DepositDataRootList.defaultTreeBacked(), validatorCount);
   await storeDeposits(config, db, deposits);
   const state = getInteropState(
     config,
@@ -37,7 +37,7 @@ async function storeDeposits(config: IBeaconConfig, db: IBeaconDb, deposits: pha
         index: i,
         depositData: deposits[i].data,
       }),
-      db.depositDataRoot.put(i, config.types.phase0.DepositData.hashTreeRoot(deposits[i].data)),
+      db.depositDataRoot.put(i, ssz.phase0.DepositData.hashTreeRoot(deposits[i].data)),
     ]);
   }
 }

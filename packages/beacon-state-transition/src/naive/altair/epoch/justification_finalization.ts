@@ -1,16 +1,14 @@
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {GENESIS_EPOCH, TIMELY_TARGET_FLAG_INDEX} from "@chainsafe/lodestar-params";
 import {altair} from "@chainsafe/lodestar-types";
-import {GENESIS_EPOCH} from "../../../constants";
 import {getBlockRoot, getCurrentEpoch, getPreviousEpoch, getTotalActiveBalance, getTotalBalance} from "../../../util";
-import {TIMELY_TARGET_FLAG_INDEX} from "../../../altair/constants";
 import {getUnslashedParticipatingIndices} from "../../../altair/state_accessor";
 
-export function processJustificationAndFinalization(config: IBeaconConfig, state: altair.BeaconState): void {
-  const currentEpoch = getCurrentEpoch(config, state);
+export function processJustificationAndFinalization(state: altair.BeaconState): void {
+  const currentEpoch = getCurrentEpoch(state);
   if (currentEpoch <= GENESIS_EPOCH + 1) {
     return;
   }
-  const previousEpoch = getPreviousEpoch(config, state);
+  const previousEpoch = getPreviousEpoch(state);
   const bits = state.justificationBits;
   const oldPreviousJustifiedCheckpoint = state.previousJustifiedCheckpoint;
   const oldCurrentJustifiedCheckpoint = state.currentJustifiedCheckpoint;
@@ -24,30 +22,24 @@ export function processJustificationAndFinalization(config: IBeaconConfig, state
   bits[0] = false;
 
   const matchingPreviousTargetIndices = getUnslashedParticipatingIndices(
-    config,
     state,
     TIMELY_TARGET_FLAG_INDEX,
     previousEpoch
   );
-  const totalActiveBalance = getTotalActiveBalance(config, state);
-  if (getTotalBalance(config, state, matchingPreviousTargetIndices) * BigInt(3) >= totalActiveBalance * BigInt(2)) {
+  const totalActiveBalance = getTotalActiveBalance(state);
+  if (getTotalBalance(state, matchingPreviousTargetIndices) * BigInt(3) >= totalActiveBalance * BigInt(2)) {
     state.currentJustifiedCheckpoint = {
       epoch: previousEpoch,
-      root: getBlockRoot(config, state, previousEpoch),
+      root: getBlockRoot(state, previousEpoch),
     };
     bits[1] = true;
   }
 
-  const matchingCurrentTargetIndices = getUnslashedParticipatingIndices(
-    config,
-    state,
-    TIMELY_TARGET_FLAG_INDEX,
-    currentEpoch
-  );
-  if (getTotalBalance(config, state, matchingCurrentTargetIndices) * BigInt(3) >= totalActiveBalance * BigInt(2)) {
+  const matchingCurrentTargetIndices = getUnslashedParticipatingIndices(state, TIMELY_TARGET_FLAG_INDEX, currentEpoch);
+  if (getTotalBalance(state, matchingCurrentTargetIndices) * BigInt(3) >= totalActiveBalance * BigInt(2)) {
     state.currentJustifiedCheckpoint = {
       epoch: currentEpoch,
-      root: getBlockRoot(config, state, currentEpoch),
+      root: getBlockRoot(state, currentEpoch),
     };
     bits[0] = true;
   }

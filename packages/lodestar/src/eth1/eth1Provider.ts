@@ -19,7 +19,7 @@ export class Eth1Provider extends Eth1JsonRpcClient implements IEth1Provider {
   constructor(config: IBeaconConfig, opts: IEth1Options) {
     super(opts);
     this.deployBlock = opts.depositContractDeployBlock;
-    this.address = toHexString(config.params.DEPOSIT_CONTRACT_ADDRESS);
+    this.address = toHexString(config.DEPOSIT_CONTRACT_ADDRESS);
     this.config = config;
   }
 

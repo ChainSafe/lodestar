@@ -33,12 +33,12 @@ export const TIMELY_HEAD_FLAG_INDEX = 2;
 
 // Incentivization weights
 
-export const TIMELY_SOURCE_WEIGHT = 12;
-export const TIMELY_TARGET_WEIGHT = 24;
-export const TIMELY_HEAD_WEIGHT = 12;
-export const SYNC_REWARD_WEIGHT = 8;
-export const PROPOSER_WEIGHT = 8;
-export const WEIGHT_DENOMINATOR = 64;
+export const TIMELY_SOURCE_WEIGHT = BigInt(12);
+export const TIMELY_TARGET_WEIGHT = BigInt(24);
+export const TIMELY_HEAD_WEIGHT = BigInt(12);
+export const SYNC_REWARD_WEIGHT = BigInt(8);
+export const PROPOSER_WEIGHT = BigInt(8);
+export const WEIGHT_DENOMINATOR = BigInt(64);
 
 // altair misc
 

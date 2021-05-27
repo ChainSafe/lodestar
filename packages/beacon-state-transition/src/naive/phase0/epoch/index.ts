@@ -26,28 +26,28 @@ export * from "./participation_records";
 
 export function processEpoch(config: IBeaconConfig, state: phase0.BeaconState): phase0.BeaconState {
   // Justification
-  processJustificationAndFinalization(config, state);
+  processJustificationAndFinalization(state);
 
   // Rewards and penalties
-  processRewardsAndPenalties(config, state);
+  processRewardsAndPenalties(state);
 
   // Validator Registry
   processRegistryUpdates(config, state);
 
   // Slashings
-  processSlashings(config, state);
+  processSlashings(state);
 
-  processEth1DataReset(config, state);
+  processEth1DataReset(state);
 
-  processEffectiveBalanceUpdates(config, state);
+  processEffectiveBalanceUpdates(state);
 
-  processSlashingsReset(config, state);
+  processSlashingsReset(state);
 
-  processRandaoMixesReset(config, state);
+  processRandaoMixesReset(state);
 
-  processHistoricalRootsUpdate(config, state);
+  processHistoricalRootsUpdate(state);
 
-  processParticipationRecordUpdates(config, state);
+  processParticipationRecordUpdates(state);
 
   return state;
 }

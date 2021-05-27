@@ -1,16 +1,18 @@
-import {allForks, altair, phase0} from "@chainsafe/lodestar-types";
+import {allForks, altair, phase0, ssz} from "@chainsafe/lodestar-types";
+import {
+  MIN_ATTESTATION_INCLUSION_DELAY,
+  PROPOSER_WEIGHT,
+  SLOTS_PER_EPOCH,
+  TIMELY_HEAD_WEIGHT,
+  TIMELY_SOURCE_WEIGHT,
+  TIMELY_TARGET_WEIGHT,
+  WEIGHT_DENOMINATOR,
+} from "@chainsafe/lodestar-params";
 
 import {computeEpochAtSlot, getBlockRoot, getBlockRootAtSlot, increaseBalance} from "../../util";
 import {CachedBeaconState} from "../../allForks/util";
 import {isValidIndexedAttestation} from "../../allForks/block";
 import {IParticipationStatus} from "../../allForks/util/cachedEpochParticipation";
-import {
-  PROPOSER_WEIGHT,
-  TIMELY_HEAD_WEIGHT,
-  TIMELY_SOURCE_WEIGHT,
-  TIMELY_TARGET_WEIGHT,
-  WEIGHT_DENOMINATOR,
-} from "../constants";
 import {getBaseReward} from "../state_accessor";
 
 export function processAttestation(
@@ -18,8 +20,7 @@ export function processAttestation(
   attestation: phase0.Attestation,
   verifySignature = true
 ): void {
-  const {config, epochCtx} = state;
-  const {MIN_ATTESTATION_INCLUSION_DELAY, SLOTS_PER_EPOCH} = config.params;
+  const {epochCtx} = state;
   const slot = state.slot;
   const data = attestation.data;
   const committeeCount = epochCtx.getCommitteeCountAtSlot(data.slot);
@@ -37,7 +38,7 @@ export function processAttestation(
         `targetEpoch=${data.target.epoch} currentEpoch=${epochCtx.currentShuffling.epoch}`
     );
   }
-  const computedEpoch = computeEpochAtSlot(config, data.slot);
+  const computedEpoch = computeEpochAtSlot(data.slot);
   if (!(data.target.epoch === computedEpoch)) {
     throw new Error(
       "Attestation target epoch does not match epoch computed from slot: " +
@@ -74,12 +75,12 @@ export function processAttestation(
   // The source vote always matches the justified checkpoint (else its invalid)
   // The target vote should match the most recent checkpoint (eg: the first root of the epoch)
   // The head vote should match the root at the attestation slot (eg: the root at data.slot)
-  const isMatchingSource = config.types.phase0.Checkpoint.equals(data.source, justifiedCheckpoint);
+  const isMatchingSource = ssz.phase0.Checkpoint.equals(data.source, justifiedCheckpoint);
   if (!isMatchingSource) {
     throw new Error(
       "Attestation source does not equal justified checkpoint: " +
-        `source=${JSON.stringify(config.types.phase0.Checkpoint.toJson(data.source))} ` +
-        `justifiedCheckpoint=${JSON.stringify(config.types.phase0.Checkpoint.toJson(justifiedCheckpoint))}`
+        `source=${JSON.stringify(ssz.phase0.Checkpoint.toJson(data.source))} ` +
+        `justifiedCheckpoint=${JSON.stringify(ssz.phase0.Checkpoint.toJson(justifiedCheckpoint))}`
     );
   }
   // this check is done last because its the most expensive (if signature verification is toggled on)
@@ -92,10 +93,10 @@ export function processAttestation(
   ) {
     throw new Error("Attestation is not valid");
   }
-  const isMatchingTarget = config.types.Root.equals(data.target.root, getBlockRoot(config, state, data.target.epoch));
+  const isMatchingTarget = ssz.Root.equals(data.target.root, getBlockRoot(state, data.target.epoch));
   // a timely head is only be set if the target is _also_ matching
   const isMatchingHead =
-    isMatchingTarget && config.types.Root.equals(data.beaconBlockRoot, getBlockRootAtSlot(config, state, data.slot));
+    isMatchingTarget && ssz.Root.equals(data.beaconBlockRoot, getBlockRootAtSlot(state, data.slot));
 
   // Retrieve the validator indices from the attestation participation bitfield
   const attestingIndices = epochCtx.getAttestingIndices(data, attestation.aggregationBits);
@@ -113,7 +114,7 @@ export function processAttestation(
     epochParticipation.setStatus(index, newStatus);
     // add proposer rewards for source/target/head that updated the state
     proposerRewardNumerator +=
-      getBaseReward(config, state, index) *
+      getBaseReward(state, index) *
       (BigInt(!status.timelySource) * TIMELY_SOURCE_WEIGHT +
         BigInt(!status.timelyTarget && isMatchingTarget) * TIMELY_TARGET_WEIGHT +
         BigInt(!status.timelyHead && isMatchingHead) * TIMELY_HEAD_WEIGHT);

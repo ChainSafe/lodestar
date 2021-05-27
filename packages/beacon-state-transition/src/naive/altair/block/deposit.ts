@@ -1,10 +1,16 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {phase0, altair} from "@chainsafe/lodestar-types";
-import {DEPOSIT_CONTRACT_TREE_DEPTH} from "@chainsafe/lodestar-params";
+import {phase0, altair, ssz} from "@chainsafe/lodestar-types";
+import {
+  DEPOSIT_CONTRACT_TREE_DEPTH,
+  DOMAIN_DEPOSIT,
+  EFFECTIVE_BALANCE_INCREMENT,
+  FAR_FUTURE_EPOCH,
+  MAX_EFFECTIVE_BALANCE,
+} from "@chainsafe/lodestar-params";
 import {assert, verifyMerkleBranch, bigIntMin} from "@chainsafe/lodestar-utils";
 import {computeSigningRoot, computeDomain, increaseBalance} from "../../../util";
 import bls from "@chainsafe/bls";
-import {FAR_FUTURE_EPOCH} from "../../../constants";
+import {ZERO_HASH} from "../../../constants";
 
 /**
  * Process an Eth1 deposit, registering a validator or increasing its balance.
@@ -13,7 +19,7 @@ export function processDeposit(config: IBeaconConfig, state: altair.BeaconState,
   // Verify the Merkle branch
   assert.true(
     verifyMerkleBranch(
-      config.types.phase0.DepositData.hashTreeRoot(deposit.data),
+      ssz.phase0.DepositData.hashTreeRoot(deposit.data),
       Array.from(deposit.proof).map((p) => p.valueOf() as Uint8Array),
       DEPOSIT_CONTRACT_TREE_DEPTH + 1,
       state.eth1DepositIndex,
@@ -27,10 +33,10 @@ export function processDeposit(config: IBeaconConfig, state: altair.BeaconState,
 
   const pubkey = deposit.data.pubkey;
   const amount = deposit.data.amount;
-  const validatorIndex = Array.from(state.validators).findIndex((v) => config.types.BLSPubkey.equals(v.pubkey, pubkey));
+  const validatorIndex = Array.from(state.validators).findIndex((v) => ssz.BLSPubkey.equals(v.pubkey, pubkey));
   if (validatorIndex === -1) {
-    const domain = computeDomain(config, config.params.DOMAIN_DEPOSIT);
-    const signingRoot = computeSigningRoot(config, config.types.phase0.DepositMessage, deposit.data, domain);
+    const domain = computeDomain(DOMAIN_DEPOSIT, config.GENESIS_FORK_VERSION, ZERO_HASH);
+    const signingRoot = computeSigningRoot(ssz.phase0.DepositMessage, deposit.data, domain);
     // Verify the deposit signature (proof of possession)
     // Note: The deposit contract does not check signatures.
     // Note: Deposits are valid across forks, thus the deposit domain is retrieved directly from `computeDomain`.
@@ -46,10 +52,7 @@ export function processDeposit(config: IBeaconConfig, state: altair.BeaconState,
       exitEpoch: FAR_FUTURE_EPOCH,
       withdrawableEpoch: FAR_FUTURE_EPOCH,
       slashed: false,
-      effectiveBalance: bigIntMin(
-        amount - (amount % config.params.EFFECTIVE_BALANCE_INCREMENT),
-        config.params.MAX_EFFECTIVE_BALANCE
-      ),
+      effectiveBalance: bigIntMin(amount - (amount % EFFECTIVE_BALANCE_INCREMENT), MAX_EFFECTIVE_BALANCE),
     };
     state.validators.push(validator);
     state.balances.push(amount);

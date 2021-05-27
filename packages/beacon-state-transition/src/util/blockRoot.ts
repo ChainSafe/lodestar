@@ -8,25 +8,26 @@ import {assert} from "@chainsafe/lodestar-utils";
 
 import {ZERO_HASH} from "../constants";
 import {computeStartSlotAtEpoch} from "./epoch";
+import {SLOTS_PER_HISTORICAL_ROOT} from "@chainsafe/lodestar-params";
 
 /**
  * Return the block root at a recent [[slot]].
  */
-export function getBlockRootAtSlot(config: IBeaconConfig, state: allForks.BeaconState, slot: Slot): Root {
+export function getBlockRootAtSlot(state: allForks.BeaconState, slot: Slot): Root {
   assert.lt(slot, state.slot, "Cannot get block root for slot in the future");
   assert.lte(
     state.slot,
-    slot + config.params.SLOTS_PER_HISTORICAL_ROOT,
-    `Cannot get block root from slot more than ${config.params.SLOTS_PER_HISTORICAL_ROOT} in the past`
+    slot + SLOTS_PER_HISTORICAL_ROOT,
+    `Cannot get block root from slot more than ${SLOTS_PER_HISTORICAL_ROOT} in the past`
   );
-  return state.blockRoots[slot % config.params.SLOTS_PER_HISTORICAL_ROOT];
+  return state.blockRoots[slot % SLOTS_PER_HISTORICAL_ROOT];
 }
 
 /**
  * Return the block root at the start of a recent [[epoch]].
  */
-export function getBlockRoot(config: IBeaconConfig, state: allForks.BeaconState, epoch: Epoch): Root {
-  return getBlockRootAtSlot(config, state, computeStartSlotAtEpoch(config, epoch));
+export function getBlockRoot(state: allForks.BeaconState, epoch: Epoch): Root {
+  return getBlockRootAtSlot(state, computeStartSlotAtEpoch(epoch));
 }
 /**
  * Return the block header corresponding to a block with ``state_root`` set to ``ZERO_HASH``.

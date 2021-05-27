@@ -11,7 +11,7 @@ import {
   TreeBacked,
 } from "@chainsafe/ssz";
 import {allForks, altair, ParticipationFlags} from "@chainsafe/lodestar-types";
-import {ForkName, IBeaconConfig} from "@chainsafe/lodestar-config";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Tree} from "@chainsafe/persistent-merkle-tree";
 import {MutableVector} from "@chainsafe/persistent-ts";
 import {createValidatorFlat} from "./flat";
@@ -24,6 +24,7 @@ import {
   fromParticipationFlags,
   IParticipationStatus,
 } from "./cachedEpochParticipation";
+import {ForkName} from "@chainsafe/lodestar-params";
 
 /**
  * `BeaconState` with various caches

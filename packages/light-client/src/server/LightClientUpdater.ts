@@ -1,4 +1,4 @@
-import {altair} from "@chainsafe/lodestar-types";
+import {altair, Epoch, phase0, Slot, ssz} from "@chainsafe/lodestar-types";
 import {ByteVector, toHexString, TreeBacked} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {
@@ -8,7 +8,6 @@ import {
   getForkVersion,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {FINALIZED_ROOT_INDEX, NEXT_SYNC_COMMITTEE_INDEX} from "@chainsafe/lodestar-params";
-import {Checkpoint, Epoch, LightClientUpdate, Slot} from "@chainsafe/lodestar-types/lib/altair";
 import {isZeroHash, sumBits, toBlockHeader} from "../utils/utils";
 
 type CommitteePeriod = number;
@@ -16,12 +15,12 @@ type DbRepo<K, T> = {put(key: K, data: T): void; get(key: K): T | null};
 type DbItem<T> = {put(data: T): void; get(): T | null};
 
 export type SyncAttestedData = Pick<
-  LightClientUpdate,
+  altair.LightClientUpdate,
   "finalityBranch" | "header" | "nextSyncCommittee" | "nextSyncCommitteeBranch"
 > & {finalizedCheckpoint: altair.Checkpoint};
 
 export type FinalizedCheckpointData = Pick<
-  LightClientUpdate,
+  altair.LightClientUpdate,
   "header" | "nextSyncCommittee" | "nextSyncCommitteeBranch"
 >;
 
@@ -42,9 +41,9 @@ export type LightClientUpdaterDb = {
    *
    * Must persist the best update for each committee period between the longest possible weak subjectivity epoch and now.
    */
-  bestUpdatePerCommitteePeriod: DbRepo<CommitteePeriod, LightClientUpdate>;
-  latestFinalizedUpdate: DbItem<LightClientUpdate>;
-  latestNonFinalizedUpdate: DbItem<LightClientUpdate>;
+  bestUpdatePerCommitteePeriod: DbRepo<CommitteePeriod, altair.LightClientUpdate>;
+  latestFinalizedUpdate: DbItem<altair.LightClientUpdate>;
+  latestNonFinalizedUpdate: DbItem<altair.LightClientUpdate>;
 };
 
 /**
@@ -60,29 +59,29 @@ const PREV_DATA_MAX_SIZE = 64;
 export class LightClientUpdater {
   private readonly prevHeadData = new Map<string, SyncAttestedData>();
   private readonly zero: Pick<
-    LightClientUpdate,
+    altair.LightClientUpdate,
     "nextSyncCommittee" | "nextSyncCommitteeBranch" | "finalityBranch" | "finalityHeader"
   >;
 
   constructor(private readonly config: IBeaconConfig, private readonly db: LightClientUpdaterDb) {
     // Cache the zero default values to not compute them every time
     this.zero = {
-      nextSyncCommittee: this.config.types.altair.SyncCommittee.defaultValue(),
-      nextSyncCommitteeBranch: this.config.types.altair.LightClientUpdate.getPropertyType(
+      nextSyncCommittee: ssz.altair.SyncCommittee.defaultValue(),
+      nextSyncCommitteeBranch: ssz.altair.LightClientUpdate.getPropertyType(
         "nextSyncCommitteeBranch"
-      ).defaultValue() as LightClientUpdate["nextSyncCommitteeBranch"],
-      finalityHeader: this.config.types.phase0.BeaconBlockHeader.defaultValue(),
-      finalityBranch: this.config.types.altair.LightClientUpdate.getPropertyType(
+      ).defaultValue() as altair.LightClientUpdate["nextSyncCommitteeBranch"],
+      finalityHeader: ssz.phase0.BeaconBlockHeader.defaultValue(),
+      finalityBranch: ssz.altair.LightClientUpdate.getPropertyType(
         "finalityBranch"
-      ).defaultValue() as LightClientUpdate["finalityBranch"],
+      ).defaultValue() as altair.LightClientUpdate["finalityBranch"],
     };
   }
 
   /**
    * To be called in API route GET /eth/v1/lightclient/best_update/:periods
    */
-  async getBestUpdates(periods: CommitteePeriod[]): Promise<LightClientUpdate[]> {
-    const updates: LightClientUpdate[] = [];
+  async getBestUpdates(periods: CommitteePeriod[]): Promise<altair.LightClientUpdate[]> {
+    const updates: altair.LightClientUpdate[] = [];
     for (const period of periods) {
       const update = this.db.bestUpdatePerCommitteePeriod.get(period);
       if (update) updates.push(update);
@@ -93,14 +92,14 @@ export class LightClientUpdater {
   /**
    * To be called in API route GET /eth/v1/lightclient/latest_update_finalized/
    */
-  async getLatestUpdateFinalized(): Promise<LightClientUpdate | null> {
+  async getLatestUpdateFinalized(): Promise<altair.LightClientUpdate | null> {
     return this.db.latestFinalizedUpdate.get();
   }
 
   /**
    * To be called in API route GET /eth/v1/lightclient/latest_update_nonfinalized/
    */
-  async getLatestUpdateNonFinalized(): Promise<LightClientUpdate | null> {
+  async getLatestUpdateNonFinalized(): Promise<altair.LightClientUpdate | null> {
     return this.db.latestNonFinalizedUpdate.get();
   }
 
@@ -116,7 +115,7 @@ export class LightClientUpdater {
   onHead(block: altair.BeaconBlock, postState: TreeBacked<altair.BeaconState>): void {
     // Store a proof expected to be attested by the sync committee in a future block
     // Prove that the `finalizedCheckpointRoot` belongs in that block
-    this.prevHeadData.set(toHexString(this.config.types.altair.BeaconBlock.hashTreeRoot(block)), {
+    this.prevHeadData.set(toHexString(ssz.altair.BeaconBlock.hashTreeRoot(block)), {
       finalizedCheckpoint: postState.finalizedCheckpoint,
       finalityBranch: postState.tree.getSingleProof(BigInt(FINALIZED_ROOT_INDEX)),
       header: toBlockHeader(this.config, block),
@@ -126,12 +125,12 @@ export class LightClientUpdater {
     });
 
     // Store syncAggregate associated to the attested blockRoot
-    const syncAttestedBlockRoot = getBlockRootAtSlot(this.config, postState, postState.slot - 1);
+    const syncAttestedBlockRoot = getBlockRootAtSlot(postState, postState.slot - 1);
     const signatureData: CommitteeSignatureData = {
       // Track the signature slot since that's what decides the committeePeriod
       slot: block.slot,
       // Get the ForkVersion used in the syncAggregate, as verified in the state transition fn
-      forkVersion: getForkVersion(postState.fork, computeEpochAtSlot(this.config, block.slot)),
+      forkVersion: getForkVersion(postState.fork, computeEpochAtSlot(block.slot)),
       syncAggregate: block.body.syncAggregate,
     };
 
@@ -163,7 +162,11 @@ export class LightClientUpdater {
    *
    * NOTE: Must be called also on start with the current finalized checkpoint (may be genesis)
    */
-  onFinalized(checkpoint: Checkpoint, block: altair.BeaconBlock, postState: TreeBacked<altair.BeaconState>): void {
+  onFinalized(
+    checkpoint: phase0.Checkpoint,
+    block: altair.BeaconBlock,
+    postState: TreeBacked<altair.BeaconState>
+  ): void {
     // Pre-compute the nextSyncCommitteeBranch for this checkpoint, it will never change
     this.db.lightclientFinalizedCheckpoint.put(checkpoint.epoch, {
       header: toBlockHeader(this.config, block),
@@ -198,13 +201,13 @@ export class LightClientUpdater {
     // Note, that the `syncAttestedData.header` period is > finalizedData & < signaturePeriod.
     // Otherwise a different committee will be the signer of a previous update and the lightclient
     // won't be able to validate it because it hasn't switched to the next syncCommittee yet
-    const committeePeriod = computeSyncPeriodAtSlot(this.config, finalizedData.header.slot);
-    const signaturePeriod = computeSyncPeriodAtSlot(this.config, signatureData.slot);
+    const committeePeriod = computeSyncPeriodAtSlot(finalizedData.header.slot);
+    const signaturePeriod = computeSyncPeriodAtSlot(signatureData.slot);
     if (committeePeriod !== signaturePeriod) {
       return null;
     }
 
-    const newUpdate: LightClientUpdate = {
+    const newUpdate: altair.LightClientUpdate = {
       header: finalizedData.header,
       nextSyncCommittee: finalizedData.nextSyncCommittee,
       nextSyncCommitteeBranch: finalizedData.nextSyncCommitteeBranch,
@@ -236,13 +239,13 @@ export class LightClientUpdater {
     signatureData: CommitteeSignatureData,
     committeePeriodWithFinalized: CommitteePeriod | null
   ): void {
-    const committeePeriod = computeSyncPeriodAtSlot(this.config, syncAttestedData.header.slot);
-    const signaturePeriod = computeSyncPeriodAtSlot(this.config, signatureData.slot);
+    const committeePeriod = computeSyncPeriodAtSlot(syncAttestedData.header.slot);
+    const signaturePeriod = computeSyncPeriodAtSlot(signatureData.slot);
     if (committeePeriod !== signaturePeriod) {
       return;
     }
 
-    const newUpdate: LightClientUpdate = {
+    const newUpdate: altair.LightClientUpdate = {
       header: syncAttestedData.header,
       nextSyncCommittee: syncAttestedData.nextSyncCommittee,
       nextSyncCommitteeBranch: syncAttestedData.nextSyncCommitteeBranch,
@@ -273,7 +276,7 @@ export class LightClientUpdater {
 /**
  * Returns the update with more bits. On ties, newUpdate is the better
  */
-function isBetterUpdate(prevUpdate: LightClientUpdate, newUpdate: LightClientUpdate): boolean {
+function isBetterUpdate(prevUpdate: altair.LightClientUpdate, newUpdate: altair.LightClientUpdate): boolean {
   const prevIsFinalized = isFinalizedUpdate(prevUpdate);
   const newIsFinalized = isFinalizedUpdate(newUpdate);
 
@@ -285,18 +288,24 @@ function isBetterUpdate(prevUpdate: LightClientUpdate, newUpdate: LightClientUpd
   return sumBits(newUpdate.syncCommitteeBits) >= sumBits(prevUpdate.syncCommitteeBits);
 }
 
-function isLatestBestFinalizedUpdate(prevUpdate: LightClientUpdate, newUpdate: LightClientUpdate): boolean {
+function isLatestBestFinalizedUpdate(
+  prevUpdate: altair.LightClientUpdate,
+  newUpdate: altair.LightClientUpdate
+): boolean {
   if (newUpdate.finalityHeader.slot > prevUpdate.finalityHeader.slot) return true;
   if (newUpdate.finalityHeader.slot < prevUpdate.finalityHeader.slot) return false;
   return sumBits(newUpdate.syncCommitteeBits) >= sumBits(prevUpdate.syncCommitteeBits);
 }
 
-function isLatestBestNonFinalizedUpdate(prevUpdate: LightClientUpdate, newUpdate: LightClientUpdate): boolean {
+function isLatestBestNonFinalizedUpdate(
+  prevUpdate: altair.LightClientUpdate,
+  newUpdate: altair.LightClientUpdate
+): boolean {
   if (newUpdate.header.slot > prevUpdate.header.slot) return true;
   if (newUpdate.header.slot < prevUpdate.header.slot) return false;
   return sumBits(newUpdate.syncCommitteeBits) >= sumBits(prevUpdate.syncCommitteeBits);
 }
 
-function isFinalizedUpdate(update: LightClientUpdate): boolean {
+function isFinalizedUpdate(update: altair.LightClientUpdate): boolean {
   return !isZeroHash(update.finalityHeader.stateRoot);
 }

@@ -1,4 +1,5 @@
-import {ForkName, IBeaconConfig} from "@chainsafe/lodestar-config";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {ForkName} from "@chainsafe/lodestar-params";
 import {Slot} from "@chainsafe/lodestar-types";
 
 /**

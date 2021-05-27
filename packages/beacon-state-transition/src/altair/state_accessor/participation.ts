@@ -1,4 +1,3 @@
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {altair, Epoch, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {getCurrentEpoch, getPreviousEpoch} from "../../util";
 import {assert} from "@chainsafe/lodestar-utils";
@@ -9,13 +8,12 @@ import {hasFlag} from "../misc";
  *     Return the active and unslashed validator indices for the given epoch and flag index.
  */
 export function getUnslashedParticipatingIndices(
-  config: IBeaconConfig,
   state: altair.BeaconState,
   flagIndex: number,
   epoch: Epoch
 ): ValidatorIndex[] {
-  const currentEpoch = getCurrentEpoch(config, state);
-  const previousEpoch = getPreviousEpoch(config, state);
+  const currentEpoch = getCurrentEpoch(state);
+  const previousEpoch = getPreviousEpoch(state);
   assert.gte(epoch, previousEpoch);
   assert.lte(epoch, currentEpoch);
   const epochParticipation =

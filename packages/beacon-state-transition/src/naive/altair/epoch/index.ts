@@ -18,7 +18,7 @@ export function processEpoch(
   state: altair.BeaconState & phase0Types.BeaconState
 ): altair.BeaconState {
   // Justification
-  processJustificationAndFinalization(config, state);
+  processJustificationAndFinalization(state);
 
   processInactivityUpdates(config, state);
 
@@ -29,21 +29,21 @@ export function processEpoch(
   phase0.processRegistryUpdates(config, state);
 
   // Slashings
-  processSlashings(config, state);
+  processSlashings(state);
 
-  phase0.processEth1DataReset(config, state);
+  phase0.processEth1DataReset(state);
 
-  phase0.processEffectiveBalanceUpdates(config, state);
+  phase0.processEffectiveBalanceUpdates(state);
 
-  phase0.processSlashingsReset(config, state);
+  phase0.processSlashingsReset(state);
 
-  phase0.processRandaoMixesReset(config, state);
+  phase0.processRandaoMixesReset(state);
 
-  phase0.processHistoricalRootsUpdate(config, state);
+  phase0.processHistoricalRootsUpdate(state);
 
-  processParticipationFlagUpdates(config, state);
+  processParticipationFlagUpdates(state);
 
-  processSyncCommitteeUpdates(config, state);
+  processSyncCommitteeUpdates(state);
 
   return state;
 }

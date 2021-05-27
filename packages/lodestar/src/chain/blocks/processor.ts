@@ -2,7 +2,7 @@
 import {AbortSignal} from "abort-controller";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
-import {allForks} from "@chainsafe/lodestar-types";
+import {allForks, ssz} from "@chainsafe/lodestar-types";
 
 import {IBlockJob, IChainSegmentJob} from "../interface";
 import {ChainEvent, ChainEventEmitter} from "../emitter";
@@ -97,7 +97,7 @@ export async function processChainSegmentJob(modules: BlockProcessorModules, job
       // Without this check it would be possible to have a block verified using the
       // incorrect shuffling. That would be bad, mmkay.
       if (
-        !config.types.Root.equals(
+        !ssz.Root.equals(
           config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message),
           child.message.parentRoot
         )

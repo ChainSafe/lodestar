@@ -1,7 +1,7 @@
 import {readonlyValues} from "@chainsafe/ssz";
 import {allForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {BLSPubkey, Epoch, ValidatorIndex, phase0} from "@chainsafe/lodestar-types";
+import {BLSPubkey, Epoch, ValidatorIndex, phase0, ssz} from "@chainsafe/lodestar-types";
 
 export function assembleAttesterDuty(
   config: IBeaconConfig,
@@ -14,7 +14,7 @@ export function assembleAttesterDuty(
     let validatorCommitteeIndex = -1;
     let index = 0;
     for (const i of readonlyValues(committeeAssignment.validators)) {
-      if (config.types.ValidatorIndex.equals(i, validator.index)) {
+      if (ssz.ValidatorIndex.equals(i, validator.index)) {
         validatorCommitteeIndex = index;
         break;
       }

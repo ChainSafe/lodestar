@@ -3,8 +3,11 @@
  */
 
 import {Gwei, ValidatorIndex, phase0} from "@chainsafe/lodestar-types";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {BASE_REWARDS_PER_EPOCH} from "../../../../constants";
+import {
+  BASE_REWARDS_PER_EPOCH,
+  EFFECTIVE_BALANCE_INCREMENT,
+  INACTIVITY_PENALTY_QUOTIENT,
+} from "@chainsafe/lodestar-params";
 
 import {
   getAttestingIndices,
@@ -30,8 +33,8 @@ import {getBaseReward, getProposerReward} from "./util";
  * Both active validators and slashed-but-not-yet-withdrawn validators are eligible to receive
  * penalties. This is done to prevent self-slashing from being a way to escape inactivity leaks.
  */
-export function getEligibleValidatorIndices(config: IBeaconConfig, state: phase0.BeaconState): ValidatorIndex[] {
-  const previousEpoch = getPreviousEpoch(config, state);
+export function getEligibleValidatorIndices(state: phase0.BeaconState): ValidatorIndex[] {
+  const previousEpoch = getPreviousEpoch(state);
   return Array.from(state.validators).reduce((indices: ValidatorIndex[], v, index) => {
     if (isActiveValidator(v, previousEpoch) || (v.slashed && previousEpoch + 1 < v.withdrawableEpoch)) {
       indices.push(index);
@@ -44,29 +47,28 @@ export function getEligibleValidatorIndices(config: IBeaconConfig, state: phase0
  * Helper with shared logic for use by get source, target, and head deltas functions
  */
 export function getAttestationComponentDeltas(
-  config: IBeaconConfig,
   state: phase0.BeaconState,
   attestations: phase0.PendingAttestation[]
 ): [bigint[], bigint[]] {
-  const unslashedAttestingIndices = getUnslashedAttestingIndices(config, state, attestations);
-  const attestingBalance = getTotalBalance(config, state, unslashedAttestingIndices);
+  const unslashedAttestingIndices = getUnslashedAttestingIndices(state, attestations);
+  const attestingBalance = getTotalBalance(state, unslashedAttestingIndices);
   const validatorCount = state.validators.length;
   const rewards = newZeroedBigIntArray(validatorCount);
   const penalties = newZeroedBigIntArray(validatorCount);
-  const totalBalance = getTotalActiveBalance(config, state);
+  const totalBalance = getTotalActiveBalance(state);
 
-  for (const index of getEligibleValidatorIndices(config, state)) {
+  for (const index of getEligibleValidatorIndices(state)) {
     if (unslashedAttestingIndices.includes(index)) {
-      const increment = BigInt(config.params.EFFECTIVE_BALANCE_INCREMENT);
-      if (isInInactivityLeak(config, state)) {
+      const increment = BigInt(EFFECTIVE_BALANCE_INCREMENT);
+      if (isInInactivityLeak(state)) {
         // optimal participation receives full base reward compensation here.
-        rewards[index] += getBaseReward(config, state, index);
+        rewards[index] += getBaseReward(state, index);
       } else {
-        const rewardNumerator = BigInt(getBaseReward(config, state, index) * (attestingBalance / increment));
+        const rewardNumerator = BigInt(getBaseReward(state, index) * (attestingBalance / increment));
         rewards[index] += BigInt(rewardNumerator / (totalBalance / increment));
       }
     } else {
-      penalties[index] += getBaseReward(config, state, index);
+      penalties[index] += getBaseReward(state, index);
     }
   }
 
@@ -76,46 +78,46 @@ export function getAttestationComponentDeltas(
 /**
  * Return attester micro-rewards/penalties for source-vote for each validator.
  */
-export function getSourceDeltas(config: IBeaconConfig, state: phase0.BeaconState): [bigint[], bigint[]] {
-  const previousEpoch = getPreviousEpoch(config, state);
-  const matchingSourceAttestations = getMatchingSourceAttestations(config, state, previousEpoch);
-  return getAttestationComponentDeltas(config, state, matchingSourceAttestations);
+export function getSourceDeltas(state: phase0.BeaconState): [bigint[], bigint[]] {
+  const previousEpoch = getPreviousEpoch(state);
+  const matchingSourceAttestations = getMatchingSourceAttestations(state, previousEpoch);
+  return getAttestationComponentDeltas(state, matchingSourceAttestations);
 }
 
 /**
  * Return attester micro-rewards/penalties for target-vote for each validator.
  */
-export function getTargetDeltas(config: IBeaconConfig, state: phase0.BeaconState): [bigint[], bigint[]] {
-  const previousEpoch = getPreviousEpoch(config, state);
-  const matchingTargetAttestations = getMatchingTargetAttestations(config, state, previousEpoch);
-  return getAttestationComponentDeltas(config, state, matchingTargetAttestations);
+export function getTargetDeltas(state: phase0.BeaconState): [bigint[], bigint[]] {
+  const previousEpoch = getPreviousEpoch(state);
+  const matchingTargetAttestations = getMatchingTargetAttestations(state, previousEpoch);
+  return getAttestationComponentDeltas(state, matchingTargetAttestations);
 }
 
 /**
  * Return attester micro-rewards/penalties for head-vote for each validator.
  */
-export function getHeadDeltas(config: IBeaconConfig, state: phase0.BeaconState): [bigint[], bigint[]] {
-  const previousEpoch = getPreviousEpoch(config, state);
-  const matchingHeadAttestations = getMatchingHeadAttestations(config, state, previousEpoch);
-  return getAttestationComponentDeltas(config, state, matchingHeadAttestations);
+export function getHeadDeltas(state: phase0.BeaconState): [bigint[], bigint[]] {
+  const previousEpoch = getPreviousEpoch(state);
+  const matchingHeadAttestations = getMatchingHeadAttestations(state, previousEpoch);
+  return getAttestationComponentDeltas(state, matchingHeadAttestations);
 }
 
 /**
  * Return proposer and inclusion delay micro-rewards/penalties for each validator.
  */
-export function getInclusionDelayDeltas(config: IBeaconConfig, state: phase0.BeaconState): bigint[] {
-  const previousEpoch = getPreviousEpoch(config, state);
+export function getInclusionDelayDeltas(state: phase0.BeaconState): bigint[] {
+  const previousEpoch = getPreviousEpoch(state);
   const rewards = newZeroedBigIntArray(state.validators.length);
-  const matchingSourceAttestations = getMatchingSourceAttestations(config, state, previousEpoch);
+  const matchingSourceAttestations = getMatchingSourceAttestations(state, previousEpoch);
 
-  for (const index of getUnslashedAttestingIndices(config, state, matchingSourceAttestations)) {
+  for (const index of getUnslashedAttestingIndices(state, matchingSourceAttestations)) {
     const earliestAttestation = matchingSourceAttestations
-      .filter((a) => getAttestingIndices(config, state, a.data, a.aggregationBits).includes(index))
+      .filter((a) => getAttestingIndices(state, a.data, a.aggregationBits).includes(index))
       .reduce((a1, a2) => (a2.inclusionDelay < a1.inclusionDelay ? a2 : a1));
 
-    const baseReward = getBaseReward(config, state, index);
-    rewards[earliestAttestation.proposerIndex] += getProposerReward(config, state, index);
-    const maxAttesterReward = BigInt(baseReward - getProposerReward(config, state, index));
+    const baseReward = getBaseReward(state, index);
+    rewards[earliestAttestation.proposerIndex] += getProposerReward(state, index);
+    const maxAttesterReward = BigInt(baseReward - getProposerReward(state, index));
     rewards[index] += BigInt(maxAttesterReward / BigInt(earliestAttestation.inclusionDelay));
   }
 
@@ -126,19 +128,18 @@ export function getInclusionDelayDeltas(config: IBeaconConfig, state: phase0.Bea
 /**
  * Return inactivity reward/penalty deltas for each validator.
  */
-export function getInactivityPenaltyDeltas(config: IBeaconConfig, state: phase0.BeaconState): bigint[] {
+export function getInactivityPenaltyDeltas(state: phase0.BeaconState): bigint[] {
   const penalties = newZeroedBigIntArray(state.validators.length);
-  const previousEpoch = getPreviousEpoch(config, state);
-  const matchingTargetAttestations = getMatchingTargetAttestations(config, state, previousEpoch);
-  if (isInInactivityLeak(config, state)) {
-    const matchingTargetAttestingIndices = getUnslashedAttestingIndices(config, state, matchingTargetAttestations);
-    for (const index of getEligibleValidatorIndices(config, state)) {
-      const baseReward = getBaseReward(config, state, index);
-      penalties[index] += BigInt(BASE_REWARDS_PER_EPOCH) * baseReward - getProposerReward(config, state, index);
+  const previousEpoch = getPreviousEpoch(state);
+  const matchingTargetAttestations = getMatchingTargetAttestations(state, previousEpoch);
+  if (isInInactivityLeak(state)) {
+    const matchingTargetAttestingIndices = getUnslashedAttestingIndices(state, matchingTargetAttestations);
+    for (const index of getEligibleValidatorIndices(state)) {
+      const baseReward = getBaseReward(state, index);
+      penalties[index] += BigInt(BASE_REWARDS_PER_EPOCH) * baseReward - getProposerReward(state, index);
       if (!matchingTargetAttestingIndices.includes(index)) {
         penalties[index] +=
-          (state.validators[index].effectiveBalance * BigInt(getFinalityDelay(config, state))) /
-          config.params.INACTIVITY_PENALTY_QUOTIENT;
+          (state.validators[index].effectiveBalance * BigInt(getFinalityDelay(state))) / INACTIVITY_PENALTY_QUOTIENT;
       }
     }
   }
@@ -149,12 +150,12 @@ export function getInactivityPenaltyDeltas(config: IBeaconConfig, state: phase0.
 /**
  * Return attestation reward/penalty deltas for each validator.
  */
-export function getAttestationDeltas(config: IBeaconConfig, state: phase0.BeaconState): [Gwei[], Gwei[]] {
-  const [sourceRewards, sourcePenalties] = getSourceDeltas(config, state);
-  const [targetRewards, targetPenalties] = getTargetDeltas(config, state);
-  const [headRewards, headPenalties] = getHeadDeltas(config, state);
-  const inclusionDelayRewards = getInclusionDelayDeltas(config, state);
-  const inactivityPenalties = getInactivityPenaltyDeltas(config, state);
+export function getAttestationDeltas(state: phase0.BeaconState): [Gwei[], Gwei[]] {
+  const [sourceRewards, sourcePenalties] = getSourceDeltas(state);
+  const [targetRewards, targetPenalties] = getTargetDeltas(state);
+  const [headRewards, headPenalties] = getHeadDeltas(state);
+  const inclusionDelayRewards = getInclusionDelayDeltas(state);
+  const inactivityPenalties = getInactivityPenaltyDeltas(state);
   const rewards = [sourceRewards, targetRewards, headRewards, inclusionDelayRewards].reduce(
     (previousValue, currentValue) => {
       for (const index of previousValue.keys()) previousValue[index] += currentValue[index];

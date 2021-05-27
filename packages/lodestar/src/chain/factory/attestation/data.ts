@@ -13,14 +13,14 @@ export function assembleAttestationData(
   slot: Slot,
   index: CommitteeIndex
 ): phase0.AttestationData {
-  const currentEpoch = getCurrentEpoch(config, headState);
-  const epochStartSlot = computeStartSlotAtEpoch(config, currentEpoch);
+  const currentEpoch = getCurrentEpoch(headState);
+  const epochStartSlot = computeStartSlotAtEpoch(currentEpoch);
 
   let epochBoundaryBlockRoot: Root;
   if (epochStartSlot === headState.slot) {
     epochBoundaryBlockRoot = headBlockRoot;
   } else {
-    epochBoundaryBlockRoot = getBlockRootAtSlot(config, headState, epochStartSlot);
+    epochBoundaryBlockRoot = getBlockRootAtSlot(headState, epochStartSlot);
   }
 
   if (!epochBoundaryBlockRoot) {

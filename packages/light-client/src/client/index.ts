@@ -1,5 +1,5 @@
 import mitt from "mitt";
-import {altair, Root, Slot, SyncPeriod} from "@chainsafe/lodestar-types";
+import {altair, Root, Slot, ssz, SyncPeriod} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {LIGHT_CLIENT_UPDATE_TIMEOUT} from "@chainsafe/lodestar-params";
 import {computeSyncPeriodAtSlot, ZERO_HASH} from "@chainsafe/lodestar-beacon-state-transition";
@@ -42,7 +42,7 @@ export class Lightclient {
     this.clock = clock;
     this.genesisValidatorsRoot = genesisValidatorsRoot;
     this.beaconApiUrl = beaconApiUrl;
-    this.apiClient = LightclientApiClient(beaconApiUrl, config.types);
+    this.apiClient = LightclientApiClient(beaconApiUrl);
     this.clock.runEverySlot(this.syncToLatest);
   }
 
@@ -50,14 +50,14 @@ export class Lightclient {
     modules: LightclientModules,
     trustedRoot: {stateRoot: Root; slot: Slot}
   ): Promise<Lightclient> {
-    const {config, beaconApiUrl} = modules;
+    const {beaconApiUrl} = modules;
     const {slot, stateRoot} = trustedRoot;
-    const apiClient = LightclientApiClient(beaconApiUrl, config.types);
+    const apiClient = LightclientApiClient(beaconApiUrl);
 
-    const paths = getSyncCommitteesProofPaths(config);
+    const paths = getSyncCommitteesProofPaths();
     const proof = await apiClient.getStateProof(toHexString(stateRoot), paths);
 
-    const state = config.types.altair.BeaconState.createTreeBackedFromProof(stateRoot as Uint8Array, proof);
+    const state = ssz.altair.BeaconState.createTreeBackedFromProof(stateRoot as Uint8Array, proof);
     const store: LightClientStoreFast = {
       bestUpdates: new Map<SyncPeriod, altair.LightClientUpdate>(),
       snapshot: {
@@ -95,8 +95,8 @@ export class Lightclient {
 
   async sync(): Promise<void> {
     const currentSlot = this.clock.currentSlot;
-    const lastPeriod = computeSyncPeriodAtSlot(this.config, this.store.snapshot.header.slot);
-    const currentPeriod = computeSyncPeriodAtSlot(this.config, currentSlot);
+    const lastPeriod = computeSyncPeriodAtSlot(this.store.snapshot.header.slot);
+    const currentPeriod = computeSyncPeriodAtSlot(currentSlot);
     const periodRanges = chunkifyInclusiveRange(lastPeriod, currentPeriod, maxPeriodPerRequest);
     for (const [fromPeriod, toPeriod] of periodRanges) {
       const updates = await this.apiClient.getBestUpdates(fromPeriod, toPeriod);
@@ -130,7 +130,7 @@ export class Lightclient {
   private processLightClientUpdate(update: altair.LightClientUpdate): void {
     validateLightClientUpdate(this.config, this.store.snapshot, update, this.genesisValidatorsRoot);
 
-    const syncPeriod = computeSyncPeriodAtSlot(this.config, update.header.slot);
+    const syncPeriod = computeSyncPeriodAtSlot(update.header.slot);
     const prevBestUpdate = this.store.bestUpdates.get(syncPeriod);
     if (!prevBestUpdate || isBetterUpdate(prevBestUpdate, update)) {
       this.store.bestUpdates.set(syncPeriod, update);
@@ -149,7 +149,7 @@ export class Lightclient {
 
     // Forced best update when the update timeout has elapsed
     else if (this.clock.currentSlot > this.store.snapshot.header.slot + LIGHT_CLIENT_UPDATE_TIMEOUT) {
-      const prevSyncPeriod = computeSyncPeriodAtSlot(this.config, this.store.snapshot.header.slot);
+      const prevSyncPeriod = computeSyncPeriodAtSlot(this.store.snapshot.header.slot);
       const bestUpdate = this.store.bestUpdates.get(prevSyncPeriod);
       if (bestUpdate) {
         this.applyLightClientUpdate(bestUpdate);
@@ -159,8 +159,8 @@ export class Lightclient {
   }
 
   private applyLightClientUpdate(update: altair.LightClientUpdate): void {
-    const snapshotPeriod = computeSyncPeriodAtSlot(this.config, this.store.snapshot.header.slot);
-    const updatePeriod = computeSyncPeriodAtSlot(this.config, update.header.slot);
+    const snapshotPeriod = computeSyncPeriodAtSlot(this.store.snapshot.header.slot);
+    const updatePeriod = computeSyncPeriodAtSlot(update.header.slot);
     if (updatePeriod < snapshotPeriod) {
       throw Error("Cannot rollback sync period");
     }

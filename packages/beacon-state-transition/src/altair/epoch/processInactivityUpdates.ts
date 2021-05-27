@@ -10,7 +10,7 @@ import {isInInactivityLeak} from "../../util";
 
 export function processInactivityUpdates(state: CachedBeaconState<altair.BeaconState>, process: IEpochProcess): void {
   const {config} = state;
-  const inActivityLeak = isInInactivityLeak(config, (state as unknown) as phase0.BeaconState);
+  const inActivityLeak = isInInactivityLeak((state as unknown) as phase0.BeaconState);
   for (let i = 0; i < process.statuses.length; i++) {
     const status = process.statuses[i];
     if (hasMarkers(status.flags, FLAG_ELIGIBLE_ATTESTER)) {
@@ -19,7 +19,7 @@ export function processInactivityUpdates(state: CachedBeaconState<altair.BeaconS
           state.inactivityScores[i] -= 1;
         }
       } else if (inActivityLeak) {
-        state.inactivityScores[i] += Number(config.params.INACTIVITY_SCORE_BIAS);
+        state.inactivityScores[i] += Number(config.INACTIVITY_SCORE_BIAS);
       }
     }
   }

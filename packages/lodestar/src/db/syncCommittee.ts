@@ -1,5 +1,5 @@
 import bls, {PointFormat, Signature} from "@chainsafe/bls";
-import {SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
+import {SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
 import {newFilledArray} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {altair, phase0, Slot} from "@chainsafe/lodestar-types";
@@ -157,7 +157,7 @@ function signatureToAggregate(
   signature: altair.SyncCommitteeSignature,
   indexInSubCommittee: number
 ): ContributionFast {
-  const indexesPerSubnet = Math.floor(config.params.SYNC_COMMITTEE_SIZE / SYNC_COMMITTEE_SUBNET_COUNT);
+  const indexesPerSubnet = Math.floor(SYNC_COMMITTEE_SIZE / SYNC_COMMITTEE_SUBNET_COUNT);
   const aggregationBits = newFilledArray(indexesPerSubnet, false);
   aggregationBits[indexInSubCommittee] = true;
 

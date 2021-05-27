@@ -2,7 +2,8 @@
  * @module network
  */
 import {Connection} from "libp2p";
-import {ForkName, IBeaconConfig} from "@chainsafe/lodestar-config";
+import {ForkName} from "@chainsafe/lodestar-params";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {allForks, phase0} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {AbortController} from "abort-controller";

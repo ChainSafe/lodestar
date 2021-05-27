@@ -14,6 +14,6 @@ export function processProposerSlashing(
   proposerSlashing: phase0.ProposerSlashing,
   verifySignatures = true
 ): void {
-  assert.true(isValidProposerSlashing(config, state, proposerSlashing, verifySignatures), "Invalid proposer slashing");
+  assert.true(isValidProposerSlashing(state, proposerSlashing, verifySignatures), "Invalid proposer slashing");
   slashValidator(config, state, proposerSlashing.signedHeader1.message.proposerIndex);
 }

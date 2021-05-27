@@ -2,30 +2,31 @@
  * @module chain/stateTransition/epoch
  */
 
-import {altair, phase0} from "@chainsafe/lodestar-types";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {altair} from "@chainsafe/lodestar-types";
 import {decreaseBalance, getCurrentEpoch, getTotalActiveBalance} from "../../../util";
 import {bigIntMin, intDiv} from "@chainsafe/lodestar-utils";
+import {
+  EFFECTIVE_BALANCE_INCREMENT,
+  EPOCHS_PER_SLASHINGS_VECTOR,
+  PROPORTIONAL_SLASHING_MULTIPLIER_ALTAIR,
+} from "@chainsafe/lodestar-params";
 
 /**
  * Process the slashings.
  *
  * Note that this function mutates ``state``.
  */
-export function processSlashings(config: IBeaconConfig, state: altair.BeaconState): void {
-  const currentEpoch = getCurrentEpoch(config, state);
-  const totalBalance = getTotalActiveBalance(config, state);
+export function processSlashings(state: altair.BeaconState): void {
+  const currentEpoch = getCurrentEpoch(state);
+  const totalBalance = getTotalActiveBalance(state);
   const totalSlashings = Array.from(state.slashings).reduce((a, b) => a + b, BigInt(0));
-  const proportionalSlashingMultiplier = BigInt(config.params.PROPORTIONAL_SLASHING_MULTIPLIER_ALTAIR);
+  const proportionalSlashingMultiplier = BigInt(PROPORTIONAL_SLASHING_MULTIPLIER_ALTAIR);
   const adjustedTotalSlashingBalance = bigIntMin(totalSlashings * proportionalSlashingMultiplier, totalBalance);
-  const increment = BigInt(config.params.EFFECTIVE_BALANCE_INCREMENT);
+  const increment = BigInt(EFFECTIVE_BALANCE_INCREMENT);
 
   let index = 0;
   for (const validator of state.validators) {
-    if (
-      validator.slashed &&
-      currentEpoch + intDiv(config.params.EPOCHS_PER_SLASHINGS_VECTOR, 2) === validator.withdrawableEpoch
-    ) {
+    if (validator.slashed && currentEpoch + intDiv(EPOCHS_PER_SLASHINGS_VECTOR, 2) === validator.withdrawableEpoch) {
       const penaltyNumerator = (validator.effectiveBalance / increment) * adjustedTotalSlashingBalance;
       const penalty = (penaltyNumerator / totalBalance) * increment;
       decreaseBalance(state, index, penalty);
@@ -34,9 +35,9 @@ export function processSlashings(config: IBeaconConfig, state: altair.BeaconStat
   }
 }
 
-export function processSlashingsReset(config: IBeaconConfig, state: phase0.BeaconState): void {
-  const currentEpoch = getCurrentEpoch(config, state);
+export function processSlashingsReset(state: altair.BeaconState): void {
+  const currentEpoch = getCurrentEpoch(state);
   const nextEpoch = currentEpoch + 1;
   // Reset slashings
-  state.slashings[nextEpoch % config.params.EPOCHS_PER_SLASHINGS_VECTOR] = BigInt(0);
+  state.slashings[nextEpoch % EPOCHS_PER_SLASHINGS_VECTOR] = BigInt(0);
 }

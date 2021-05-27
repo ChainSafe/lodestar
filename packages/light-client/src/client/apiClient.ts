@@ -1,12 +1,12 @@
 import {fetch} from "cross-fetch";
 import {Json} from "@chainsafe/ssz";
 import {deserializeProof, TreeOffsetProof} from "@chainsafe/persistent-merkle-tree";
-import {altair, SyncPeriod, IBeaconSSZTypes} from "@chainsafe/lodestar-types";
+import {altair, SyncPeriod, ssz} from "@chainsafe/lodestar-types";
 
 export type Paths = (string | number)[][];
 
 // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types, @typescript-eslint/explicit-function-return-type, @typescript-eslint/naming-convention
-export function LightclientApiClient(beaconApiUrl: string, types: IBeaconSSZTypes) {
+export function LightclientApiClient(beaconApiUrl: string) {
   const prefix = "/eth/v1/lightclient";
 
   async function get<T>(url: string): Promise<T> {
@@ -31,7 +31,7 @@ export function LightclientApiClient(beaconApiUrl: string, types: IBeaconSSZType
      */
     async getBestUpdates(from: SyncPeriod, to: SyncPeriod): Promise<altair.LightClientUpdate[]> {
       const res = await get<{data: Json[]}>(`/best_updates/${from}..${to}`);
-      return res.data.map((item) => types.altair.LightClientUpdate.fromJson(item, {case: "snake"}));
+      return res.data.map((item) => ssz.altair.LightClientUpdate.fromJson(item, {case: "snake"}));
     },
 
     /**
@@ -39,7 +39,7 @@ export function LightclientApiClient(beaconApiUrl: string, types: IBeaconSSZType
      */
     async getLatestUpdateFinalized(): Promise<altair.LightClientUpdate | null> {
       const res = await get<{data: Json}>("/latest_update_finalized/");
-      return types.altair.LightClientUpdate.fromJson(res.data, {case: "snake"});
+      return ssz.altair.LightClientUpdate.fromJson(res.data, {case: "snake"});
     },
 
     /**
@@ -47,7 +47,7 @@ export function LightclientApiClient(beaconApiUrl: string, types: IBeaconSSZType
      */
     async getLatestUpdateNonFinalized(): Promise<altair.LightClientUpdate | null> {
       const res = await get<{data: Json}>("/latest_update_finalized/");
-      return types.altair.LightClientUpdate.fromJson(res.data, {case: "snake"});
+      return ssz.altair.LightClientUpdate.fromJson(res.data, {case: "snake"});
     },
 
     /**

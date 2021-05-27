@@ -3,6 +3,7 @@
  */
 
 import {ContainerType, toHexString} from "@chainsafe/ssz";
+import {ssz} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IForkDigestContext} from "../../util/forkDigestContext";
 import {
@@ -94,21 +95,21 @@ export function getGossipSSZType<T extends GossipObject>(config: IBeaconConfig, 
   switch (topic.type) {
     case GossipType.beacon_block:
       // beacon_block is updated in altair to support the updated SignedBeaconBlock type
-      return (config.types[topic.fork].SignedBeaconBlock as unknown) as ContainerType<T>;
+      return (ssz[topic.fork].SignedBeaconBlock as unknown) as ContainerType<T>;
     case GossipType.beacon_aggregate_and_proof:
-      return (config.types.phase0.SignedAggregateAndProof as unknown) as ContainerType<T>;
+      return (ssz.phase0.SignedAggregateAndProof as unknown) as ContainerType<T>;
     case GossipType.beacon_attestation:
-      return (config.types.phase0.Attestation as unknown) as ContainerType<T>;
+      return (ssz.phase0.Attestation as unknown) as ContainerType<T>;
     case GossipType.proposer_slashing:
-      return (config.types.phase0.ProposerSlashing as unknown) as ContainerType<T>;
+      return (ssz.phase0.ProposerSlashing as unknown) as ContainerType<T>;
     case GossipType.attester_slashing:
-      return (config.types.phase0.AttesterSlashing as unknown) as ContainerType<T>;
+      return (ssz.phase0.AttesterSlashing as unknown) as ContainerType<T>;
     case GossipType.voluntary_exit:
-      return (config.types.phase0.SignedVoluntaryExit as unknown) as ContainerType<T>;
+      return (ssz.phase0.SignedVoluntaryExit as unknown) as ContainerType<T>;
     case GossipType.sync_committee_contribution_and_proof:
-      return (config.types.altair.SignedContributionAndProof as unknown) as ContainerType<T>;
+      return (ssz.altair.SignedContributionAndProof as unknown) as ContainerType<T>;
     case GossipType.sync_committee:
-      return (config.types.altair.SyncCommitteeSignature as unknown) as ContainerType<T>;
+      return (ssz.altair.SyncCommitteeSignature as unknown) as ContainerType<T>;
     default:
       throw new Error(`No ssz gossip type for ${(topic as GossipTopic).type}`);
   }

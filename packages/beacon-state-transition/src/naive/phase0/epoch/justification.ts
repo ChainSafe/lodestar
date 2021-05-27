@@ -2,20 +2,19 @@
  * @module chain/stateTransition/epoch
  */
 
+import {GENESIS_EPOCH} from "@chainsafe/lodestar-params";
 import {phase0} from "@chainsafe/lodestar-types";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
-import {GENESIS_EPOCH} from "../../../constants";
 import {getBlockRoot, getCurrentEpoch, getPreviousEpoch, getTotalActiveBalance} from "../../../util";
 
 import {getAttestingBalance, getMatchingTargetAttestations} from "./util";
 
-export function processJustificationAndFinalization(config: IBeaconConfig, state: phase0.BeaconState): void {
-  const currentEpoch = getCurrentEpoch(config, state);
+export function processJustificationAndFinalization(state: phase0.BeaconState): void {
+  const currentEpoch = getCurrentEpoch(state);
   if (currentEpoch <= GENESIS_EPOCH + 1) {
     return;
   }
-  const previousEpoch = getPreviousEpoch(config, state);
+  const previousEpoch = getPreviousEpoch(state);
   const oldPreviousJustifiedCheckpoint = state.previousJustifiedCheckpoint;
   const oldCurrentJustifiedCheckpoint = state.currentJustifiedCheckpoint;
   const bits = state.justificationBits;
@@ -27,31 +26,29 @@ export function processJustificationAndFinalization(config: IBeaconConfig, state
     bits[i] = bits[i - 1];
   }
   bits[0] = false;
-  const totalActiveBalance = getTotalActiveBalance(config, state);
+  const totalActiveBalance = getTotalActiveBalance(state);
 
   // If the previous epoch gets justified, fill the second last bit
   const previousEpochMatchingTargetBalance = getAttestingBalance(
-    config,
     state,
-    getMatchingTargetAttestations(config, state, previousEpoch)
+    getMatchingTargetAttestations(state, previousEpoch)
   );
   if (previousEpochMatchingTargetBalance * BigInt(3) >= totalActiveBalance * BigInt(2)) {
     state.currentJustifiedCheckpoint = {
       epoch: previousEpoch,
-      root: getBlockRoot(config, state, previousEpoch),
+      root: getBlockRoot(state, previousEpoch),
     };
     bits[1] = true;
   }
   // If the current epoch gets justified, fill the last bit
   const currentEpochMatchingTargetBalance = getAttestingBalance(
-    config,
     state,
-    getMatchingTargetAttestations(config, state, currentEpoch)
+    getMatchingTargetAttestations(state, currentEpoch)
   );
   if (currentEpochMatchingTargetBalance * BigInt(3) >= totalActiveBalance * BigInt(2)) {
     state.currentJustifiedCheckpoint = {
       epoch: currentEpoch,
-      root: getBlockRoot(config, state, currentEpoch),
+      root: getBlockRoot(state, currentEpoch),
     };
     bits[0] = true;
   }

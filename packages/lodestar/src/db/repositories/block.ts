@@ -1,6 +1,6 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Bucket, IDatabaseController, Repository} from "@chainsafe/lodestar-db";
-import {allForks} from "@chainsafe/lodestar-types";
+import {allForks, ssz} from "@chainsafe/lodestar-types";
 import {getSignedBlockTypeFromBytes} from "../../util/multifork";
 
 /**
@@ -10,7 +10,7 @@ import {getSignedBlockTypeFromBytes} from "../../util/multifork";
  */
 export class BlockRepository extends Repository<Uint8Array, allForks.SignedBeaconBlock> {
   constructor(config: IBeaconConfig, db: IDatabaseController<Buffer, Buffer>) {
-    const type = config.types.phase0.SignedBeaconBlock; // Pick some type but won't be used
+    const type = ssz.phase0.SignedBeaconBlock; // Pick some type but won't be used
     super(config, db, Bucket.allForks_block, type);
   }
 

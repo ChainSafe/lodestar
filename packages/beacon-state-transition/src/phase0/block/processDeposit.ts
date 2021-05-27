@@ -1,18 +1,24 @@
 import bls, {CoordType} from "@chainsafe/bls";
-import {phase0} from "@chainsafe/lodestar-types";
+import {phase0, ssz} from "@chainsafe/lodestar-types";
 import {verifyMerkleBranch, bigIntMin} from "@chainsafe/lodestar-utils";
+import {
+  DEPOSIT_CONTRACT_TREE_DEPTH,
+  DOMAIN_DEPOSIT,
+  EFFECTIVE_BALANCE_INCREMENT,
+  FAR_FUTURE_EPOCH,
+  MAX_EFFECTIVE_BALANCE,
+} from "@chainsafe/lodestar-params";
 
-import {DEPOSIT_CONTRACT_TREE_DEPTH, FAR_FUTURE_EPOCH} from "../../constants";
+import {ZERO_HASH} from "../../constants";
 import {computeDomain, computeSigningRoot, increaseBalance} from "../../util";
 import {CachedBeaconState} from "../../allForks/util";
 
 export function processDeposit(state: CachedBeaconState<phase0.BeaconState>, deposit: phase0.Deposit): void {
   const {config, validators, epochCtx} = state;
-  const {EFFECTIVE_BALANCE_INCREMENT, MAX_EFFECTIVE_BALANCE} = config.params;
   // verify the merkle branch
   if (
     !verifyMerkleBranch(
-      config.types.phase0.DepositData.hashTreeRoot(deposit.data),
+      ssz.phase0.DepositData.hashTreeRoot(deposit.data),
       Array.from(deposit.proof).map((p) => p.valueOf() as Uint8Array),
       DEPOSIT_CONTRACT_TREE_DEPTH + 1,
       state.eth1DepositIndex,
@@ -36,8 +42,8 @@ export function processDeposit(state: CachedBeaconState<phase0.BeaconState>, dep
       amount: deposit.data.amount,
     };
     // fork-agnostic domain since deposits are valid across forks
-    const domain = computeDomain(config, config.params.DOMAIN_DEPOSIT);
-    const signingRoot = computeSigningRoot(config, config.types.phase0.DepositMessage, depositMessage, domain);
+    const domain = computeDomain(DOMAIN_DEPOSIT, config.GENESIS_FORK_VERSION, ZERO_HASH);
+    const signingRoot = computeSigningRoot(ssz.phase0.DepositMessage, depositMessage, domain);
     try {
       // Pubkeys must be checked for group + inf. This must be done only once when the validator deposit is processed
       const publicKey = bls.PublicKey.fromBytes(pubkey, CoordType.affine, true);

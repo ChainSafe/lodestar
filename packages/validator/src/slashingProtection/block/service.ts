@@ -1,5 +1,4 @@
 import {BLSPubkey, phase0} from "@chainsafe/lodestar-types";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {isEqualNonZeroRoot} from "../utils";
 import {InvalidBlockError, InvalidBlockErrorCode} from "./errors";
 import {BlockBySlotRepository} from "./blockBySlotRepository";
@@ -10,11 +9,9 @@ enum SafeStatus {
 }
 
 export class SlashingProtectionBlockService {
-  private config: IBeaconConfig;
   private blockBySlot: BlockBySlotRepository;
 
-  constructor(config: IBeaconConfig, blockBySlot: BlockBySlotRepository) {
-    this.config = config;
+  constructor(blockBySlot: BlockBySlotRepository) {
     this.blockBySlot = blockBySlot;
   }
 
@@ -40,7 +37,7 @@ export class SlashingProtectionBlockService {
     const sameSlotBlock = await this.blockBySlot.get(pubkey, block.slot);
     if (sameSlotBlock && block.slot === sameSlotBlock.slot) {
       // Interchange format allows for blocks without signing_root, then assume root is equal
-      if (isEqualNonZeroRoot(this.config, sameSlotBlock.signingRoot, block.signingRoot)) {
+      if (isEqualNonZeroRoot(sameSlotBlock.signingRoot, block.signingRoot)) {
         return SafeStatus.SAME_DATA;
       } else {
         throw new InvalidBlockError({

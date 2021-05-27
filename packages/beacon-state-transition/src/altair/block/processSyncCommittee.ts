@@ -1,6 +1,7 @@
 import {verifyAggregate} from "@chainsafe/bls";
-import {altair} from "@chainsafe/lodestar-types";
+import {altair, ssz, phase0} from "@chainsafe/lodestar-types";
 import {assert} from "@chainsafe/lodestar-utils";
+import {DOMAIN_SYNC_COMMITTEE, PROPOSER_REWARD_QUOTIENT, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 
 import {
   computeEpochAtSlot,
@@ -12,7 +13,6 @@ import {
   getBeaconProposerIndex,
   increaseBalance,
 } from "../../util";
-import * as phase0 from "../../phase0";
 import * as naive from "../../naive";
 import {getSyncCommitteeIndices} from "../state_accessor";
 import {CachedBeaconState} from "../../allForks/util";
@@ -22,25 +22,14 @@ export function processSyncCommittee(
   aggregate: altair.SyncAggregate,
   verifySignatures = true
 ): void {
-  const {config} = state;
   const previousSlot = Math.max(state.slot, 1) - 1;
-  const currentEpoch = getCurrentEpoch(config, state);
-  const committeeIndices = getSyncCommitteeIndices(config, state, currentEpoch);
+  const currentEpoch = getCurrentEpoch(state);
+  const committeeIndices = getSyncCommitteeIndices(state, currentEpoch);
   const participantIndices = committeeIndices.filter((index) => !!aggregate.syncCommitteeBits[index]);
   const committeePubkeys = Array.from(state.currentSyncCommittee.pubkeys);
   const participantPubkeys = committeePubkeys.filter((pubkey, index) => !!aggregate.syncCommitteeBits[index]);
-  const domain = getDomain(
-    config,
-    state,
-    config.params.DOMAIN_SYNC_COMMITTEE,
-    computeEpochAtSlot(config, previousSlot)
-  );
-  const signingRoot = computeSigningRoot(
-    config,
-    config.types.Root,
-    getBlockRootAtSlot(config, state, previousSlot),
-    domain
-  );
+  const domain = getDomain(state, DOMAIN_SYNC_COMMITTEE, computeEpochAtSlot(previousSlot));
+  const signingRoot = computeSigningRoot(ssz.Root, getBlockRootAtSlot(state, previousSlot), domain);
   if (verifySignatures) {
     assert.true(
       verifyAggregate(
@@ -56,15 +45,10 @@ export function processSyncCommittee(
   const activeValidatorCount = BigInt(getActiveValidatorIndices(state, currentEpoch).length);
   for (const participantIndex of participantIndices) {
     // eslint-disable-next-line import/namespace
-    const baseReward = naive.phase0.getBaseReward(config, (state as unknown) as phase0.BeaconState, participantIndex);
-    const reward =
-      (baseReward * activeValidatorCount) / BigInt(committeeIndices.length) / BigInt(config.params.SLOTS_PER_EPOCH);
+    const baseReward = naive.phase0.getBaseReward((state as unknown) as phase0.BeaconState, participantIndex);
+    const reward = (baseReward * activeValidatorCount) / BigInt(committeeIndices.length) / BigInt(SLOTS_PER_EPOCH);
     increaseBalance(state, participantIndex, reward);
     participantRewards += reward;
   }
-  increaseBalance(
-    state,
-    getBeaconProposerIndex(config, state),
-    participantRewards / BigInt(config.params.PROPOSER_REWARD_QUOTIENT)
-  );
+  increaseBalance(state, getBeaconProposerIndex(state), participantRewards / PROPOSER_REWARD_QUOTIENT);
 }

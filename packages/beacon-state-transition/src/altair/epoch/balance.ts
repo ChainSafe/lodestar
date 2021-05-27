@@ -1,7 +1,15 @@
-import {altair, Gwei, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {altair, Gwei, phase0, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {bigIntSqrt} from "@chainsafe/lodestar-utils";
 import {getFlagIndicesAndWeights} from "../misc";
-import * as phase0 from "../../phase0";
+import {
+  BASE_REWARD_FACTOR,
+  EFFECTIVE_BALANCE_INCREMENT,
+  INACTIVITY_PENALTY_QUOTIENT_ALTAIR,
+  TIMELY_HEAD_FLAG_INDEX,
+  TIMELY_SOURCE_FLAG_INDEX,
+  TIMELY_TARGET_FLAG_INDEX,
+  WEIGHT_DENOMINATOR,
+} from "@chainsafe/lodestar-params";
 import {
   CachedBeaconState,
   FLAG_ELIGIBLE_ATTESTER,
@@ -13,12 +21,6 @@ import {
   IEpochStakeSummary,
 } from "../../allForks/util";
 import {isInInactivityLeak, newZeroedBigIntArray} from "../../util";
-import {
-  TIMELY_HEAD_FLAG_INDEX,
-  TIMELY_SOURCE_FLAG_INDEX,
-  TIMELY_TARGET_FLAG_INDEX,
-  WEIGHT_DENOMINATOR,
-} from "../constants";
 
 /**
  * Return the deltas for a given flag index by scanning through the participation flags.
@@ -29,12 +31,11 @@ export function getFlagIndexDeltas(
   flagIndex: number,
   weight: bigint
 ): [Gwei[], Gwei[]] {
-  const {config} = state;
   const validatorCount = state.validators.length;
   const rewards = newZeroedBigIntArray(validatorCount);
   const penalties = newZeroedBigIntArray(validatorCount);
 
-  const increment = config.params.EFFECTIVE_BALANCE_INCREMENT;
+  const increment = EFFECTIVE_BALANCE_INCREMENT;
 
   let flag;
   let stakeSummaryKey: keyof IEpochStakeSummary;
@@ -62,7 +63,7 @@ export function getFlagIndexDeltas(
     }
     const baseReward = getBaseReward(state, process, i);
     if (hasMarkers(status.flags, flag)) {
-      if (isInInactivityLeak(config, (state as unknown) as phase0.BeaconState)) {
+      if (isInInactivityLeak((state as unknown) as phase0.BeaconState)) {
         // This flag reward cancels the inactivity penalty corresponding to the flag index
         rewards[i] += (baseReward * weight) / WEIGHT_DENOMINATOR;
       } else {
@@ -88,7 +89,8 @@ export function getInactivityPenaltyDeltas(
   const rewards = newZeroedBigIntArray(validatorCount);
   const penalties = newZeroedBigIntArray(validatorCount);
 
-  if (isInInactivityLeak(config, (state as unknown) as phase0.BeaconState)) {
+  if (isInInactivityLeak((state as unknown) as phase0.BeaconState)) {
+    const inactivityScoreBias = BigInt(config.INACTIVITY_SCORE_BIAS);
     for (let i = 0; i < process.statuses.length; i++) {
       const status = process.statuses[i];
       if (hasMarkers(status.flags, FLAG_ELIGIBLE_ATTESTER)) {
@@ -98,8 +100,7 @@ export function getInactivityPenaltyDeltas(
         }
         if (!hasMarkers(status.flags, FLAG_PREV_TARGET_ATTESTER_OR_UNSLASHED)) {
           const penaltyNumerator = process.validators[i].effectiveBalance * BigInt(state.inactivityScores[i]);
-          const penaltyDenominator =
-            config.params.INACTIVITY_SCORE_BIAS * config.params.INACTIVITY_PENALTY_QUOTIENT_ALTAIR;
+          const penaltyDenominator = inactivityScoreBias * INACTIVITY_PENALTY_QUOTIENT_ALTAIR;
           penalties[i] += penaltyNumerator / penaltyDenominator;
         }
       }
@@ -112,18 +113,13 @@ export function getBaseRewardPerIncrement(
   state: CachedBeaconState<altair.BeaconState>,
   process: IEpochProcess
 ): bigint {
-  const {config} = state;
-  return (
-    (config.params.EFFECTIVE_BALANCE_INCREMENT * BigInt(config.params.BASE_REWARD_FACTOR)) /
-    bigIntSqrt(process.totalActiveStake)
-  );
+  return (EFFECTIVE_BALANCE_INCREMENT * BASE_REWARD_FACTOR) / bigIntSqrt(process.totalActiveStake);
 }
 export function getBaseReward(
   state: CachedBeaconState<altair.BeaconState>,
   process: IEpochProcess,
   index: ValidatorIndex
 ): bigint {
-  const {config} = state;
-  const increments = state.validators[index].effectiveBalance / config.params.EFFECTIVE_BALANCE_INCREMENT;
+  const increments = state.validators[index].effectiveBalance / EFFECTIVE_BALANCE_INCREMENT;
   return increments * getBaseRewardPerIncrement(state, process);
 }

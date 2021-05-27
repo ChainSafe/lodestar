@@ -2,11 +2,19 @@
  * @module chain/stateTransition/util
  */
 
-import {ValidatorIndex, phase0, allForks} from "@chainsafe/lodestar-types";
+import {ValidatorIndex, phase0, allForks, ssz} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import bls from "@chainsafe/bls";
+import {
+  DOMAIN_BEACON_PROPOSER,
+  DOMAIN_VOLUNTARY_EXIT,
+  EPOCHS_PER_SLASHINGS_VECTOR,
+  FAR_FUTURE_EPOCH,
+  MIN_SLASHING_PENALTY_QUOTIENT,
+  PROPOSER_REWARD_QUOTIENT,
+  WHISTLEBLOWER_REWARD_QUOTIENT,
+} from "@chainsafe/lodestar-params";
 
-import {FAR_FUTURE_EPOCH} from "../constants";
 import {computeActivationExitEpoch, getCurrentEpoch, computeEpochAtSlot} from "./epoch";
 import {getValidatorChurnLimit, isSlashableValidator, isActiveValidator} from "./validator";
 import {decreaseBalance, increaseBalance} from "./balance";
@@ -28,7 +36,7 @@ export function initiateValidatorExit(config: IBeaconConfig, state: allForks.Bea
   }
 
   // Compute exit queue epoch
-  let exitQueueEpoch = computeActivationExitEpoch(config, getCurrentEpoch(config, state));
+  let exitQueueEpoch = computeActivationExitEpoch(getCurrentEpoch(state));
   for (const v of state.validators) {
     if (v.exitEpoch !== FAR_FUTURE_EPOCH) {
       exitQueueEpoch = Math.max(v.exitEpoch, exitQueueEpoch);
@@ -44,7 +52,7 @@ export function initiateValidatorExit(config: IBeaconConfig, state: allForks.Bea
   state.validators[index] = {
     ...validator,
     exitEpoch: exitQueueEpoch,
-    withdrawableEpoch: exitQueueEpoch + config.params.MIN_VALIDATOR_WITHDRAWABILITY_DELAY,
+    withdrawableEpoch: exitQueueEpoch + config.MIN_VALIDATOR_WITHDRAWABILITY_DELAY,
   };
 }
 
@@ -59,35 +67,34 @@ export function slashValidator(
   slashedIndex: ValidatorIndex,
   whistleblowerIndex: ValidatorIndex | null = null
 ): void {
-  const currentEpoch = getCurrentEpoch(config, state);
+  const currentEpoch = getCurrentEpoch(state);
 
   initiateValidatorExit(config, state, slashedIndex);
   state.validators[slashedIndex].slashed = true;
   state.validators[slashedIndex].withdrawableEpoch = Math.max(
     state.validators[slashedIndex].withdrawableEpoch,
-    currentEpoch + config.params.EPOCHS_PER_SLASHINGS_VECTOR
+    currentEpoch + EPOCHS_PER_SLASHINGS_VECTOR
   );
 
   const slashedBalance = state.validators[slashedIndex].effectiveBalance;
-  state.slashings[currentEpoch % config.params.EPOCHS_PER_SLASHINGS_VECTOR] += slashedBalance;
+  state.slashings[currentEpoch % EPOCHS_PER_SLASHINGS_VECTOR] += slashedBalance;
   decreaseBalance(
     state,
     slashedIndex,
-    state.validators[slashedIndex].effectiveBalance / BigInt(config.params.MIN_SLASHING_PENALTY_QUOTIENT)
+    state.validators[slashedIndex].effectiveBalance / BigInt(MIN_SLASHING_PENALTY_QUOTIENT)
   );
 
-  const proposerIndex = getBeaconProposerIndex(config, state);
+  const proposerIndex = getBeaconProposerIndex(state);
   if (whistleblowerIndex === undefined || whistleblowerIndex === null) {
     whistleblowerIndex = proposerIndex;
   }
-  const whistleblowingReward = slashedBalance / BigInt(config.params.WHISTLEBLOWER_REWARD_QUOTIENT);
-  const proposerReward = whistleblowingReward / BigInt(config.params.PROPOSER_REWARD_QUOTIENT);
+  const whistleblowingReward = slashedBalance / BigInt(WHISTLEBLOWER_REWARD_QUOTIENT);
+  const proposerReward = whistleblowingReward / BigInt(PROPOSER_REWARD_QUOTIENT);
   increaseBalance(state, proposerIndex, proposerReward);
   increaseBalance(state, whistleblowerIndex, whistleblowingReward - proposerReward);
 }
 
 export function isValidAttesterSlashing(
-  config: IBeaconConfig,
   state: allForks.BeaconState,
   attesterSlashing: phase0.AttesterSlashing,
   verifySignatures = true
@@ -95,14 +102,13 @@ export function isValidAttesterSlashing(
   const attestation1 = attesterSlashing.attestation1;
   const attestation2 = attesterSlashing.attestation2;
   return (
-    isSlashableAttestationData(config, attestation1.data, attestation2.data) &&
-    isValidIndexedAttestation(config, state, attestation1, verifySignatures) &&
-    isValidIndexedAttestation(config, state, attestation2, verifySignatures)
+    isSlashableAttestationData(attestation1.data, attestation2.data) &&
+    isValidIndexedAttestation(state, attestation1, verifySignatures) &&
+    isValidIndexedAttestation(state, attestation2, verifySignatures)
   );
 }
 
 export function isValidProposerSlashing(
-  config: IBeaconConfig,
   state: allForks.BeaconState,
   proposerSlashing: phase0.ProposerSlashing,
   verifySignatures = true
@@ -118,30 +124,20 @@ export function isValidProposerSlashing(
     return false;
   }
   // Verify the headers are different
-  if (config.types.phase0.BeaconBlockHeader.equals(header1, header2)) {
+  if (ssz.phase0.BeaconBlockHeader.equals(header1, header2)) {
     return false;
   }
   const proposer = state.validators[header1.proposerIndex];
   // Check proposer is slashable
-  if (!isSlashableValidator(proposer, getCurrentEpoch(config, state))) {
+  if (!isSlashableValidator(proposer, getCurrentEpoch(state))) {
     return false;
   }
   // Verify signatures
   if (!verifySignatures) {
     return true;
   }
-  const domain = getDomain(
-    config,
-    state,
-    config.params.DOMAIN_BEACON_PROPOSER,
-    computeEpochAtSlot(config, header1.slot)
-  );
-  const signingRoot = computeSigningRoot(
-    config,
-    config.types.phase0.BeaconBlockHeader,
-    proposerSlashing.signedHeader1.message,
-    domain
-  );
+  const domain = getDomain(state, DOMAIN_BEACON_PROPOSER, computeEpochAtSlot(header1.slot));
+  const signingRoot = computeSigningRoot(ssz.phase0.BeaconBlockHeader, proposerSlashing.signedHeader1.message, domain);
   const proposalData1Verified = bls.verify(
     proposer.pubkey.valueOf() as Uint8Array,
     signingRoot,
@@ -150,15 +146,9 @@ export function isValidProposerSlashing(
   if (!proposalData1Verified) {
     return false;
   }
-  const domain2 = getDomain(
-    config,
-    state,
-    config.params.DOMAIN_BEACON_PROPOSER,
-    computeEpochAtSlot(config, header2.slot)
-  );
+  const domain2 = getDomain(state, DOMAIN_BEACON_PROPOSER, computeEpochAtSlot(header2.slot));
   const signingRoot2 = computeSigningRoot(
-    config,
-    config.types.phase0.BeaconBlockHeader,
+    ssz.phase0.BeaconBlockHeader,
     proposerSlashing.signedHeader2.message,
     domain2
   );
@@ -177,9 +167,9 @@ export function isValidVoluntaryExit(
   verifySignature = true
 ): boolean {
   const validator = state.validators[signedExit.message.validatorIndex];
-  const currentEpoch = getCurrentEpoch(config, state);
-  const domain = getDomain(config, state, config.params.DOMAIN_VOLUNTARY_EXIT, signedExit.message.epoch);
-  const signingRoot = computeSigningRoot(config, config.types.phase0.VoluntaryExit, signedExit.message, domain);
+  const currentEpoch = getCurrentEpoch(state);
+  const domain = getDomain(state, DOMAIN_VOLUNTARY_EXIT, signedExit.message.epoch);
+  const signingRoot = computeSigningRoot(ssz.phase0.VoluntaryExit, signedExit.message, domain);
   // Verify the validator is active
   return (
     isActiveValidator(validator, currentEpoch) &&
@@ -188,7 +178,7 @@ export function isValidVoluntaryExit(
     // Exits must specify an epoch when they become valid; they are not valid before then
     currentEpoch >= signedExit.message.epoch &&
     // Verify the validator has been active long enough
-    currentEpoch >= validator.activationEpoch + config.params.SHARD_COMMITTEE_PERIOD &&
+    currentEpoch >= validator.activationEpoch + config.SHARD_COMMITTEE_PERIOD &&
     // Verify signature
     (!verifySignature ||
       bls.verify(validator.pubkey.valueOf() as Uint8Array, signingRoot, signedExit.signature.valueOf() as Uint8Array))

@@ -1,10 +1,10 @@
 import {phase0} from "@chainsafe/lodestar-types";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {getRandaoMix, getCurrentEpoch} from "../../../util";
+import {EPOCHS_PER_HISTORICAL_VECTOR} from "@chainsafe/lodestar-params";
 
-export function processRandaoMixesReset(config: IBeaconConfig, state: phase0.BeaconState): void {
-  const currentEpoch = getCurrentEpoch(config, state);
+export function processRandaoMixesReset(state: phase0.BeaconState): void {
+  const currentEpoch = getCurrentEpoch(state);
   const nextEpoch = currentEpoch + 1;
   // Set randao mix
-  state.randaoMixes[nextEpoch % config.params.EPOCHS_PER_HISTORICAL_VECTOR] = getRandaoMix(config, state, currentEpoch);
+  state.randaoMixes[nextEpoch % EPOCHS_PER_HISTORICAL_VECTOR] = getRandaoMix(state, currentEpoch);
 }

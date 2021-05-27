@@ -25,10 +25,10 @@ export function processBlock(
   processBlockHeader(config, state, block);
 
   // RANDAO
-  processRandao(config, state, block.body, verifySignatures);
+  processRandao(state, block.body, verifySignatures);
 
   // Eth1 Data
-  processEth1Data(config, state, block.body);
+  processEth1Data(state, block.body);
 
   // Operations
   processOperations(config, state, block.body, verifySignatures);

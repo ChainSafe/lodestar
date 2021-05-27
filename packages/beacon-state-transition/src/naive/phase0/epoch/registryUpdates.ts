@@ -14,19 +14,20 @@ import {
   isEligibleForActivationQueue,
   isEligibleForActivation,
 } from "../../../util";
+import {EJECTION_BALANCE} from "@chainsafe/lodestar-params";
 
 /**
  * Processes (i) the validator activation queue, and (ii) the rule that validators with <=
  * `EJECTION_BALANCE` ETH get ejected.
  */
 export function processRegistryUpdates(config: IBeaconConfig, state: phase0.BeaconState): phase0.BeaconState {
-  const currentEpoch = getCurrentEpoch(config, state);
+  const currentEpoch = getCurrentEpoch(state);
   // Process activation eligibility and ejections
-  const ejectionBalance = config.params.EJECTION_BALANCE;
+  const ejectionBalance = EJECTION_BALANCE;
   const validatorsLength = state.validators.length;
   for (let index = 0; index < validatorsLength; index++) {
     const validator = state.validators[index];
-    if (isEligibleForActivationQueue(config, validator)) {
+    if (isEligibleForActivationQueue(validator)) {
       validator.activationEligibilityEpoch = currentEpoch + 1;
     }
     if (isActiveValidator(validator, currentEpoch) && validator.effectiveBalance <= ejectionBalance) {
@@ -37,7 +38,7 @@ export function processRegistryUpdates(config: IBeaconConfig, state: phase0.Beac
   // Queue validators eligible for activation and not yet dequeued for activation
   const activationQueue = Array.from(state.validators)
     .filter(
-      (validator) => isEligibleForActivation(config, state, validator)
+      (validator) => isEligibleForActivation(state, validator)
       // Order by the sequence of activation_eligibility_epoch setting and then index
     )
     .map((val: phase0.Validator, index: number) => {
@@ -47,7 +48,7 @@ export function processRegistryUpdates(config: IBeaconConfig, state: phase0.Beac
     .map((obj) => obj.val);
   // Dequeued validators for activation up to churn limit
   for (const validator of activationQueue.slice(0, getValidatorChurnLimit(config, state))) {
-    validator.activationEpoch = computeActivationExitEpoch(config, currentEpoch);
+    validator.activationEpoch = computeActivationExitEpoch(currentEpoch);
   }
   return state;
 }
