@@ -1,33 +1,33 @@
 import {join} from "path";
 import {expect} from "chai";
-import {params} from "@chainsafe/lodestar-params/minimal";
-import {allForks} from "@chainsafe/lodestar-beacon-state-transition";
-import {altair as altairTypes} from "@chainsafe/lodestar-types";
-import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
-import {IBeaconConfig, createIBeaconConfig} from "@chainsafe/lodestar-config";
-import {IBlockSanityTestCase} from "./types";
-import {SPEC_TEST_LOCATION} from "../../../../utils/specTestCases";
 import {TreeBacked} from "@chainsafe/ssz";
+import {CachedBeaconState, allForks, altair} from "@chainsafe/lodestar-beacon-state-transition";
+import {params} from "@chainsafe/lodestar-params/minimal";
+import {createIBeaconConfig, IBeaconConfig} from "@chainsafe/lodestar-config";
+import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
+import {IFinalityTestCase} from "./type";
+import {SPEC_TEST_LOCATION} from "../../../utils/specTestCases";
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
 const config = createIBeaconConfig({...params, ALTAIR_FORK_EPOCH: 0});
 
-describeDirectorySpecTest<IBlockSanityTestCase, allForks.BeaconState>(
-  "altair block sanity minimal",
-  join(SPEC_TEST_LOCATION, "/tests/minimal/altair/sanity/blocks/pyspec_tests"),
+describeDirectorySpecTest<IFinalityTestCase, allForks.BeaconState>(
+  "finality altair minimal",
+  join(SPEC_TEST_LOCATION, "/tests/minimal/altair/finality/finality/pyspec_tests"),
   (testcase) => {
-    let wrappedState = allForks.createCachedBeaconState<allForks.BeaconState>(
+    let wrappedState = allForks.createCachedBeaconState<altair.BeaconState>(
       config,
-      testcase.pre as TreeBacked<allForks.BeaconState>
-    );
+      testcase.pre as TreeBacked<altair.BeaconState>
+    ) as CachedBeaconState<allForks.BeaconState>;
     const verify = !!testcase.meta && !!testcase.meta.blsSetting && testcase.meta.blsSetting === BigInt(1);
     for (let i = 0; i < Number(testcase.meta.blocksCount); i++) {
-      const signedBlock = testcase[`blocks_${i}`] as altairTypes.SignedBeaconBlock;
+      const signedBlock = testcase[`blocks_${i}`] as altair.SignedBeaconBlock;
+
       wrappedState = allForks.stateTransition(
         wrappedState,
         config.types.altair.SignedBeaconBlock.createTreeBackedFromStruct(signedBlock),
         {
-          verifyStateRoot: verify,
+          verifyStateRoot: false,
           verifyProposer: verify,
           verifySignatures: verify,
         }
@@ -50,7 +50,7 @@ describeDirectorySpecTest<IBlockSanityTestCase, allForks.BeaconState>(
     sszTypes: {
       pre: config.types.altair.BeaconState,
       post: config.types.altair.BeaconState,
-      ...generateBlocksSZZTypeMapping(99, config),
+      ...generateBlocksSZZTypeMapping(200, config),
     },
     shouldError: (testCase) => {
       return !testCase.post;

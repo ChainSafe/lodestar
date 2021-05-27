@@ -196,11 +196,10 @@ export function computeSyncCommitteeIndices(
   const syncCommittee = isNext ? state.nextSyncCommittee : state.currentSyncCommittee;
   const result: phase0.ValidatorIndex[] = [];
   for (const pubkey of syncCommittee.pubkeys) {
-    const validatorIndex = pubkey2index.get(pubkey);
-    if (validatorIndex === undefined) {
-      throw new Error("Invalid pubkey in sync committee: " + toHexString(pubkey));
+    const validatorIndex = pubkey2index.get(pubkey.valueOf() as Uint8Array);
+    if (validatorIndex !== undefined) {
+      result.push(validatorIndex);
     }
-    result.push(validatorIndex);
   }
   return result;
 }
