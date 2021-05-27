@@ -1,4 +1,4 @@
-import {ByteVector, hash, toHexString, BitList, List, readonlyValues} from "@chainsafe/ssz";
+import {ByteVector, hash, toHexString, BitList, List, isTreeBacked, TreeBacked} from "@chainsafe/ssz";
 import bls, {CoordType, PublicKey} from "@chainsafe/bls";
 import {
   BLSSignature,
@@ -19,10 +19,10 @@ import {
   computeEpochAtSlot,
   computeProposerIndex,
   computeStartSlotAtEpoch,
-  getAttestingIndicesFromCommittee,
   getSeed,
   getTotalActiveBalance,
   isAggregatorFromCommitteeLength,
+  zipIndexesInBitList,
 } from "../../util";
 import {getNextSyncCommitteeIndices} from "../../altair/state_accessor/sync_committee";
 import {computeEpochShuffling, IEpochShuffling} from "./epochShuffling";
@@ -373,16 +373,15 @@ export class EpochContext {
    * Return the indexed attestation corresponding to ``attestation``.
    */
   getIndexedAttestation(attestation: phase0.Attestation): phase0.IndexedAttestation {
-    const data = attestation.data;
-    const bits = Array.from(readonlyValues(attestation.aggregationBits));
-    const committee = this.getBeaconCommittee(data.slot, data.index);
-    // No need for a Set, the indices in the committee are already unique.
-    const attestingIndices: ValidatorIndex[] = [];
-    for (const [i, index] of committee.entries()) {
-      if (bits[i]) {
-        attestingIndices.push(index);
-      }
-    }
+    const {aggregationBits, data} = attestation;
+    const committeeIndices = this.getBeaconCommittee(data.slot, data.index);
+    const attestingIndices = isTreeBacked(attestation)
+      ? zipIndexesInBitList(
+          committeeIndices,
+          (attestation.aggregationBits as unknown) as TreeBacked<BitList>,
+          this.config.types.phase0.CommitteeBits
+        )
+      : committeeIndices.filter((_, index) => !!aggregationBits[index]);
     // sort in-place
     attestingIndices.sort((a, b) => a - b);
     return {
@@ -393,8 +392,15 @@ export class EpochContext {
   }
 
   getAttestingIndices(data: phase0.AttestationData, bits: BitList): ValidatorIndex[] {
-    const committee = this.getBeaconCommittee(data.slot, data.index);
-    return getAttestingIndicesFromCommittee(committee, Array.from(readonlyValues(bits)) as List<boolean>);
+    const committeeIndices = this.getBeaconCommittee(data.slot, data.index);
+    const validatorIndices = isTreeBacked(bits)
+      ? zipIndexesInBitList(
+          committeeIndices,
+          (bits as unknown) as TreeBacked<BitList>,
+          this.config.types.phase0.CommitteeBits
+        )
+      : committeeIndices.filter((_, index) => !!bits[index]);
+    return validatorIndices;
   }
 
   /**

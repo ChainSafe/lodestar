@@ -11,7 +11,7 @@ import {
   zipIndexesInBitList,
 } from "../../util";
 import {CachedBeaconState} from "../../allForks/util";
-import {BitList, TreeBacked} from "@chainsafe/ssz";
+import {BitList, isTreeBacked, TreeBacked} from "@chainsafe/ssz";
 
 export function processSyncCommittee(
   state: CachedBeaconState<altair.BeaconState>,
@@ -22,11 +22,14 @@ export function processSyncCommittee(
   const {syncParticipantReward, syncProposerReward} = epochCtx;
   const previousSlot = Math.max(state.slot, 1) - 1;
   const committeeIndices = state.currSyncCommitteeIndexes;
-  const participantIndices = zipIndexesInBitList(
-    committeeIndices,
-    aggregate.syncCommitteeBits as TreeBacked<BitList>,
-    config.types.altair.SyncCommitteeBits
-  );
+  // the only time aggregate is not a TreeBacked is when producing a new block
+  const participantIndices = isTreeBacked(aggregate)
+    ? zipIndexesInBitList(
+        committeeIndices,
+        aggregate.syncCommitteeBits as TreeBacked<BitList>,
+        config.types.altair.SyncCommitteeBits
+      )
+    : committeeIndices.filter((index) => !!aggregate.syncCommitteeBits[index]);
   const participantPubkeys = participantIndices.map((validatorIndex) => state.validators[validatorIndex].pubkey);
   const domain = getDomain(
     config,
