@@ -7,7 +7,7 @@ import PeerId, {createFromPrivKey} from "peer-id";
 import {ENR, createKeypairFromPeerId} from "@chainsafe/discv5";
 import {IBeaconParams} from "@chainsafe/lodestar-params";
 import {params as minimalParams} from "@chainsafe/lodestar-params/minimal";
-import {RecursivePartial} from "@chainsafe/lodestar-utils";
+import {RecursivePartial, TimeoutError, withTimeout} from "@chainsafe/lodestar-utils";
 import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 import {getClient, Api, routes} from "@chainsafe/lodestar-api";
 import {ChainEvent} from "../../src/chain";
@@ -241,31 +241,48 @@ describe("Run multi node multi thread interop validators (no eth1) until checkpo
       });
       console.log("Registered afterEachCallbacks");
 
-      // Wait for all nodes to start
-      for (let i = 0; i < nodeCount; i++) {
-        await retry(
-          async () => {
-            const res = await clients[i].node.getNetworkIdentity();
-            console.log(`Node ${i} is online`, res.data.peerId);
-          },
-          {retries: 10, waitBetweenRetriesMs: 1000}
-        );
+      const controller = new AbortController();
+      afterEachCallbacks.push(() => controller.abort());
+
+      /** Run `fn()` ensuring it resolves before genesis */
+      async function runBeforeGenesis(action: string, fn: () => Promise<void>): Promise<void> {
+        await withTimeout(fn, genesisTime * 1000 - Date.now(), controller.signal).catch((e: Error) => {
+          if (e instanceof TimeoutError) {
+            throw Error(`Not able to ${action} before genesis`);
+          } else {
+            throw e;
+          }
+        });
       }
 
-      // Connect all nodes with others
-      for (let i = 0; i < nodeCount; i++) {
-        for (let j = 0; j < nodeCount; j++) {
-          if (i === j) continue;
-
+      // Wait for all nodes to start
+      await runBeforeGenesis("start nodes network", async () => {
+        for (let i = 0; i < nodeCount; i++) {
           await retry(
             async () => {
-              await clients[i].debug.connectToPeer(peerIds[j].toB58String(), [getP2pAddr(j)]);
-              console.log(`Successfully connected nodes ${i} -> ${j}`);
+              const res = await clients[i].node.getNetworkIdentity();
+              console.log(`Node ${i} is online`, res.data.peerId);
             },
-            {retries: 5, waitBetweenRetriesMs: 2000}
+            {retries: 10, waitBetweenRetriesMs: 1000}
           );
         }
-      }
+      });
+
+      // Connect all nodes with others
+      await runBeforeGenesis("connect all nodes", async () => {
+        for (let i = 0; i < nodeCount; i++) {
+          for (let j = 0; j < nodeCount; j++) {
+            if (i === j) continue;
+            await retry(
+              async () => {
+                await clients[i].debug.connectToPeer(peerIds[j].toB58String(), [getP2pAddr(j)]);
+                console.log(`Successfully connected nodes ${i} -> ${j}`);
+              },
+              {retries: 5, waitBetweenRetriesMs: 2000}
+            );
+          }
+        }
+      });
 
       // TODO:
       // - Connect all nodes with others
@@ -276,9 +293,6 @@ describe("Run multi node multi thread interop validators (no eth1) until checkpo
       // - Listen for process failures, and reject the test
       // - Wait for the checkpoint event subscribing to the events API
       // - If neither condition is reached, the mocha timeout will fail the test
-
-      const controller = new AbortController();
-      afterEachCallbacks.push(() => controller.abort());
 
       await Promise.all(
         processByNodes.map((processByNode, i) => {
