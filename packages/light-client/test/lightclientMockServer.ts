@@ -1,4 +1,4 @@
-import fastify from "fastify";
+import {FastifyInstance} from "fastify";
 import {computeEpochAtSlot, computeSyncPeriodAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {toHexString, TreeBacked} from "@chainsafe/ssz";
@@ -16,7 +16,7 @@ enum ApiStatus {
   started = "started",
   stopped = "stopped",
 }
-type ApiState = {status: ApiStatus.started; server: fastify.FastifyInstance} | {status: ApiStatus.stopped};
+type ApiState = {status: ApiStatus.started; server: FastifyInstance} | {status: ApiStatus.stopped};
 
 export class LightclientMockServer {
   private readonly lightClientUpdater: LightClientUpdater;

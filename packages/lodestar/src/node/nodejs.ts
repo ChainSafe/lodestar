@@ -9,13 +9,14 @@ import {TreeBacked} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {allForks} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
+import {Api} from "@chainsafe/lodestar-api";
 
 import {IBeaconDb} from "../db";
 import {INetwork, Network, ReqRespHandler} from "../network";
 import {BeaconSync, IBeaconSync} from "../sync";
 import {BeaconChain, IBeaconChain, initBeaconMetrics} from "../chain";
 import {createMetrics, IMetrics, HttpMetricsServer} from "../metrics";
-import {Api, IApi, RestApi} from "../api";
+import {getApi, RestApi} from "../api";
 import {TasksService} from "../tasks";
 import {IBeaconNodeOptions} from "./options";
 import {Eth1ForBlockProduction, Eth1ForBlockProductionDisabled, Eth1Provider} from "../eth1";
@@ -30,7 +31,7 @@ export interface IBeaconNodeModules {
   metrics: IMetrics | null;
   network: INetwork;
   chain: IBeaconChain;
-  api: IApi;
+  api: Api;
   sync: IBeaconSync;
   chores: TasksService;
   metricsServer?: HttpMetricsServer;
@@ -65,7 +66,7 @@ export class BeaconNode {
   metricsServer?: HttpMetricsServer;
   network: INetwork;
   chain: IBeaconChain;
-  api: IApi;
+  api: Api;
   restApi?: RestApi;
   sync: IBeaconSync;
   chores: TasksService;
@@ -162,7 +163,7 @@ export class BeaconNode {
       logger: logger.child(opts.logger.chores),
     });
 
-    const api = new Api(opts.api, {
+    const api = getApi({
       config,
       logger: logger.child(opts.logger.api),
       db,
@@ -189,12 +190,15 @@ export class BeaconNode {
       await metricsServer.start();
     }
 
-    const restApi = await RestApi.init(opts.api.rest, {
+    const restApi = new RestApi(opts.api.rest, {
       config,
       logger: logger.child(opts.logger.api),
       api,
       metrics,
     });
+    if (opts.api.rest.enabled) {
+      await restApi.listen();
+    }
 
     await network.start();
     chores.start();

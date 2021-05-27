@@ -1,6 +1,6 @@
 import {Epoch, phase0} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
-import {IApiClient} from "../api";
+import {Api} from "@chainsafe/lodestar-api";
 import {notAborted} from "../util";
 import {IClock} from "../util/clock";
 
@@ -22,7 +22,7 @@ export class ForkService implements IForkService {
   /** Prevent calling updateFork() more than once at the same time */
   private forkPromisePending = false;
 
-  constructor(private readonly provider: IApiClient, private readonly logger: ILogger, clock: IClock) {
+  constructor(private readonly api: Api, private readonly logger: ILogger, clock: IClock) {
     clock.runEveryEpoch(this.updateFork);
   }
 
@@ -45,7 +45,7 @@ export class ForkService implements IForkService {
 
     try {
       this.forkPromisePending = true;
-      this.forkPromise = this.provider.beacon.state.getFork("head");
+      this.forkPromise = this.api.beacon.getStateFork("head").then((res) => res.data);
       this.fork = await this.forkPromise;
     } catch (e) {
       if (notAborted(e)) this.logger.error("Error updating fork", {}, e as Error);

@@ -55,4 +55,3 @@ export interface INetwork {
 
 export type PeerDirection = Connection["stat"]["direction"];
 export type PeerStatus = Connection["stat"]["status"];
-export type PeerState = "disconnected" | "connecting" | "connected" | "disconnecting";

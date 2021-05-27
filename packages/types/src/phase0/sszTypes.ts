@@ -7,9 +7,7 @@ import {
 } from "@chainsafe/lodestar-params";
 import {BitListType, BitVectorType, ContainerType, List, ListType, RootType, Vector, VectorType} from "@chainsafe/ssz";
 import {PrimitiveSSZTypes} from "../primitive";
-import {StringType} from "../utils/StringType";
 import {LazyVariable} from "../utils/lazyVar";
-import {ValidatorStatus} from "./types";
 import * as phase0 from "./types";
 
 // Interface is defined in the return of getPhase0Types(), to de-duplicate info
@@ -166,13 +164,6 @@ export function getPhase0Types(params: IPhase0Params, primitive: PrimitiveSSZTyp
     fields: {
       blockRoots: HistoricalBlockRoots,
       stateRoots: HistoricalStateRoots,
-    },
-  });
-
-  const SlotRoot = new ContainerType<phase0.SlotRoot>({
-    fields: {
-      slot: Slot,
-      root: Root,
     },
   });
 
@@ -414,154 +405,11 @@ export function getPhase0Types(params: IPhase0Params, primitive: PrimitiveSSZTyp
   // Api types
   // =========
 
-  const AttesterDuty = new ContainerType<phase0.AttesterDuty>({
-    fields: {
-      pubkey: BLSPubkey,
-      validatorIndex: ValidatorIndex,
-      committeeIndex: CommitteeIndex,
-      committeeLength: Number64,
-      committeesAtSlot: Number64,
-      validatorCommitteeIndex: Number64,
-      slot: Slot,
-    },
-  });
-
-  const AttesterDutiesApi = new ContainerType<phase0.AttesterDutiesApi>({
-    fields: {
-      data: new ListType({elementType: AttesterDuty, limit: params.VALIDATOR_REGISTRY_LIMIT}),
-      dependentRoot: Root,
-    },
-  });
-
-  const BeaconCommitteeResponse = new ContainerType<phase0.BeaconCommitteeResponse>({
-    fields: {
-      index: CommitteeIndex,
-      slot: Slot,
-      validators: CommitteeIndices,
-    },
-  });
-
-  const BeaconCommitteeSubscription = new ContainerType<phase0.BeaconCommitteeSubscription>({
-    fields: {
-      validatorIndex: ValidatorIndex,
-      committeeIndex: CommitteeIndex,
-      committeesAtSlot: Slot,
-      slot: Slot,
-      isAggregator: Boolean,
-    },
-  });
-
-  const BlockEventPayload = new ContainerType<phase0.BlockEventPayload>({
-    fields: {
-      slot: Slot,
-      block: Root,
-    },
-  });
-
-  const ChainHead = new ContainerType<phase0.ChainHead>({
-    fields: {
-      slot: Slot,
-      block: Root,
-      state: Root,
-      epochTransition: Boolean,
-    },
-  });
-
-  const ChainReorg = new ContainerType<phase0.ChainReorg>({
-    fields: {
-      slot: Slot,
-      depth: Number64,
-      oldHeadBlock: Root,
-      newHeadBlock: Root,
-      oldHeadState: Root,
-      newHeadState: Root,
-      epoch: Epoch,
-    },
-  });
-
-  const Contract = new ContainerType<phase0.Contract>({
-    fields: {
-      chainId: Number64,
-      address: Bytes32,
-    },
-  });
-
-  const FinalityCheckpoints = new ContainerType<phase0.FinalityCheckpoints>({
-    fields: {
-      previousJustified: Checkpoint,
-      currentJustified: Checkpoint,
-      finalized: Checkpoint,
-    },
-  });
-
-  const FinalizedCheckpoint = new ContainerType<phase0.FinalizedCheckpoint>({
-    fields: {
-      block: Root,
-      state: Root,
-      epoch: Epoch,
-    },
-  });
-
   const Genesis = new ContainerType<phase0.Genesis>({
     fields: {
       genesisValidatorsRoot: Root,
       genesisTime: Uint64,
       genesisForkVersion: Version,
-    },
-  });
-
-  const ProposerDuty = new ContainerType<phase0.ProposerDuty>({
-    fields: {
-      slot: Slot,
-      validatorIndex: ValidatorIndex,
-      pubkey: BLSPubkey,
-    },
-  });
-
-  const ProposerDutiesApi = new ContainerType<phase0.ProposerDutiesApi>({
-    fields: {
-      data: new ListType({elementType: ProposerDuty, limit: params.VALIDATOR_REGISTRY_LIMIT}),
-      dependentRoot: Root,
-    },
-  });
-
-  const SignedBeaconHeaderResponse = new ContainerType<phase0.SignedBeaconHeaderResponse>({
-    fields: {
-      root: Root,
-      canonical: Boolean,
-      header: SignedBeaconBlockHeader,
-    },
-  });
-
-  const SubscribeToCommitteeSubnetPayload = new ContainerType<phase0.SubscribeToCommitteeSubnetPayload>({
-    fields: {
-      slot: Slot,
-      slotSignature: BLSSignature,
-      attestationCommitteeIndex: CommitteeIndex,
-      aggregatorPubkey: BLSPubkey,
-    },
-  });
-
-  const SyncingStatus = new ContainerType<phase0.SyncingStatus>({
-    fields: {
-      headSlot: Uint64,
-      syncDistance: Uint64,
-    },
-  });
-
-  const ValidatorBalance = new ContainerType<phase0.ValidatorBalance>({
-    fields: {
-      index: ValidatorIndex,
-      balance: Gwei,
-    },
-  });
-
-  const ValidatorResponse = new ContainerType<phase0.ValidatorResponse>({
-    fields: {
-      index: ValidatorIndex,
-      balance: Gwei,
-      status: new StringType<ValidatorStatus>(),
-      validator: Validator,
     },
   });
 
@@ -599,7 +447,6 @@ export function getPhase0Types(params: IPhase0Params, primitive: PrimitiveSSZTyp
     ForkData,
     ENRForkID,
     Checkpoint,
-    SlotRoot,
     Validator,
     AttestationData,
     CommitteeIndices,
@@ -638,7 +485,6 @@ export function getPhase0Types(params: IPhase0Params, primitive: PrimitiveSSZTyp
     SignedAggregateAndProof,
     CommitteeAssignment,
     // Validator slashing protection
-
     // wire
     Status,
     Goodbye,
@@ -647,24 +493,7 @@ export function getPhase0Types(params: IPhase0Params, primitive: PrimitiveSSZTyp
     BeaconBlocksByRangeRequest,
     BeaconBlocksByRootRequest,
     // api
-    SignedBeaconHeaderResponse,
-    SubscribeToCommitteeSubnetPayload,
-    SyncingStatus,
-    AttesterDuty,
-    ProposerDuty,
-    AttesterDutiesApi,
-    ProposerDutiesApi,
-    BeaconCommitteeSubscription,
     Genesis,
-    ChainHead,
-    BlockEventPayload,
-    FinalizedCheckpoint,
-    ChainReorg,
-    ValidatorBalance,
-    ValidatorResponse,
-    FinalityCheckpoints,
-    BeaconCommitteeResponse,
-    Contract,
     // Non-speced types
     SlashingProtectionBlock,
     SlashingProtectionAttestation,

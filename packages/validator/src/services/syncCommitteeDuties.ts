@@ -1,10 +1,10 @@
 import {computeSyncPeriodAtEpoch, computeSyncPeriodAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {altair, BLSSignature, Epoch, Root, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {BLSSignature, Epoch, Root, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {toHexString} from "@chainsafe/ssz";
+import {Api, routes} from "@chainsafe/lodestar-api";
 import {IndicesService} from "./indices";
-import {IApiClient} from "../api";
 import {extendError, isSyncCommitteeAggregator, notAborted} from "../util";
 import {IClock} from "../util/clock";
 import {ValidatorStore} from "./validatorStore";
@@ -18,8 +18,8 @@ const ALTAIR_FORK_LOOKAHEAD_EPOCHS = 1;
 const SUBSCRIPTIONS_LOOKAHEAD_EPOCHS = 2;
 
 export type SyncDutySubCommittee = {
-  pubkey: altair.SyncDuty["pubkey"];
-  validatorIndex: altair.SyncDuty["validatorIndex"];
+  pubkey: routes.validator.SyncDuty["pubkey"];
+  validatorIndex: routes.validator.SyncDuty["validatorIndex"];
   /** A single index of the validator in the sync committee. */
   validatorSyncCommitteeIndex: number;
 };
@@ -33,7 +33,7 @@ export type SyncDutyAndProof = {
 };
 
 // To assist with readability
-type DutyAtPeriod = {dependentRoot: Root; duty: altair.SyncDuty};
+type DutyAtPeriod = {dependentRoot: Root; duty: routes.validator.SyncDuty};
 
 /**
  * Validators are part of a static long (~27h) sync committee, and part of static subnets.
@@ -46,7 +46,7 @@ export class SyncCommitteeDutiesService {
   constructor(
     private readonly config: IBeaconConfig,
     private readonly logger: ILogger,
-    private readonly apiClient: IApiClient,
+    private readonly api: Api,
     clock: IClock,
     private readonly validatorStore: ValidatorStore,
     private readonly indicesService: IndicesService
@@ -139,7 +139,7 @@ export class SyncCommitteeDutiesService {
     }
 
     const currentPeriod = computeSyncPeriodAtEpoch(this.config, currentEpoch);
-    const syncCommitteeSubscriptions: altair.SyncCommitteeSubscription[] = [];
+    const syncCommitteeSubscriptions: routes.validator.SyncCommitteeSubscription[] = [];
 
     // For this and the next period, produce any beacon committee subscriptions.
     //
@@ -171,7 +171,7 @@ export class SyncCommitteeDutiesService {
     // If there are any subscriptions, push them out to the beacon node.
     if (syncCommitteeSubscriptions.length > 0) {
       // TODO: Should log or throw?
-      await this.apiClient.validator.prepareSyncCommitteeSubnets(syncCommitteeSubscriptions).catch((e) => {
+      await this.api.validator.prepareSyncCommitteeSubnets(syncCommitteeSubscriptions).catch((e) => {
         throw extendError(e, "Failed to subscribe to sync committee subnets");
       });
     }
@@ -186,7 +186,7 @@ export class SyncCommitteeDutiesService {
       return;
     }
 
-    const syncDuties = await this.apiClient.validator.getSyncCommitteeDuties(epoch, indexArr).catch((e) => {
+    const syncDuties = await this.api.validator.getSyncCommitteeDuties(epoch, indexArr).catch((e) => {
       throw extendError(e, "Failed to obtain SyncDuties");
     });
     const dependentRoot = syncDuties.dependentRoot;

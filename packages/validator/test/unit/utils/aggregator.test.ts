@@ -1,7 +1,7 @@
 import {expect} from "chai";
-import {phase0} from "@chainsafe/lodestar-types";
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import {fromHexString} from "@chainsafe/ssz";
+import {routes} from "@chainsafe/lodestar-api";
 import {isAttestationAggregator, isSyncCommitteeAggregator} from "../../../src/util/aggregator";
 import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 import {SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
@@ -9,7 +9,7 @@ import {SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
 /* eslint-disable @typescript-eslint/naming-convention */
 
 describe("isAttestationAggregator", function () {
-  const duty: phase0.AttesterDuty = {
+  const duty: routes.validator.AttesterDuty = {
     slot: 1,
     committeeIndex: 2,
     committeeLength: 130,

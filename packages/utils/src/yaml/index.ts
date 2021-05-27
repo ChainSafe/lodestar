@@ -3,7 +3,7 @@ import {schema} from "./schema";
 import {objectToExpectedCase} from "../objects";
 
 export function loadYaml(yaml: string): Record<string, unknown> {
-  return objectToExpectedCase(load(yaml, {schema}));
+  return objectToExpectedCase<Record<string, unknown>>(load(yaml, {schema}));
 }
 
 export function dumpYaml(yaml: unknown): string {
