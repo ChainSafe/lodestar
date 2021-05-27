@@ -56,20 +56,26 @@ describe("events", () => {
       },
     };
 
+    const topicsToRequest = [EventType.head, EventType.chainReorg];
     const eventsToSend: BeaconEvent[] = [eventHead1, eventHead2, eventChainReorg];
     const eventsReceived: BeaconEvent[] = [];
 
-    await new Promise<void>((resolve) => {
+    await new Promise<void>((resolve, reject) => {
       mockApi.eventstream.callsFake(async (topics, signal, onEvent) => {
-        for (const event of eventsToSend) {
-          onEvent(event);
-          await sleep(5);
+        try {
+          expect(topics).to.deep.equal(topicsToRequest, "Wrong received topics");
+          for (const event of eventsToSend) {
+            onEvent(event);
+            await sleep(5);
+          }
+        } catch (e) {
+          reject(e);
         }
       });
 
       // Capture them on the client
       const client = getClient(config, baseUrl);
-      client.eventstream([EventType.head, EventType.chainReorg], controller.signal, (event) => {
+      client.eventstream(topicsToRequest, controller.signal, (event) => {
         eventsReceived.push(event);
         if (eventsReceived.length >= eventsToSend.length) resolve();
       });
