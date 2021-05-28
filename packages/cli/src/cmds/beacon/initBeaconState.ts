@@ -46,15 +46,18 @@ async function initAndVerifyWeakSujectivityState(
   const response = await got(server, {searchParams: {checkpoint: args.weakSubjectivityCheckpoint}});
   const responseBody = JSON.parse(response.body) as WSResponse;
   const data = responseBody.ws_state.data;
-  const wsStateData = config.getForkTypes(data.slot).BeaconState.fromJson(data, {case: "snake"});
-  const state = config.getForkTypes(data.slot).BeaconState.createTreeBacked(data);
+  const state = config.getForkTypes(data.slot).BeaconState.createTreeBackedFromJson(data, {case: "snake"});
   if (!state) {
     throw new Error("Weak subjectivity state not found for network " + args.network);
   }
-  const stateRoot = responseBody.ws_checkpoint.split(":")[0];
+  const checkpoint = args.weakSubjectivityCheckpoint || responseBody.ws_checkpoint;
+  const expectedRoot = checkpoint.split(":")[0];
+  const actualRoot = toHexString(state.finalizedCheckpoint.root);
   // verify downloaded state against locally stored state root
-  if (toHexString(config.getForkTypes(data.slot).BeaconState.hashTreeRoot(wsStateData)) !== stateRoot) {
-    throw new Error("Unable to verify state root downloaded from ChainSafe");
+  if (actualRoot !== expectedRoot) {
+    throw new Error(
+      `Fetched state root does not match computed state root.  Expected: ${expectedRoot}, Actual: ${actualRoot}`
+    );
   }
   return await initStateFromAnchorState(config, db, logger, state);
 }
