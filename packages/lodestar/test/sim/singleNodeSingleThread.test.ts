@@ -34,14 +34,13 @@ describe("Run single node single thread interop validators (no eth1) until check
   }[] = [
     // phase0 fork only
     {validatorClientCount: 1, validatorsPerClient: 32, event: ChainEvent.justified, altairForkEpoch: Infinity},
-    {validatorClientCount: 8, validatorsPerClient: 8, event: ChainEvent.justified, altairForkEpoch: Infinity},
-    {validatorClientCount: 8, validatorsPerClient: 8, event: ChainEvent.finalized, altairForkEpoch: Infinity},
+    {validatorClientCount: 1, validatorsPerClient: 32, event: ChainEvent.finalized, altairForkEpoch: Infinity},
     // altair fork only
-    {validatorClientCount: 8, validatorsPerClient: 8, event: ChainEvent.finalized, altairForkEpoch: 0},
+    {validatorClientCount: 1, validatorsPerClient: 32, event: ChainEvent.finalized, altairForkEpoch: 0},
     // altair fork at epoch 1
-    {validatorClientCount: 8, validatorsPerClient: 8, event: ChainEvent.finalized, altairForkEpoch: 1},
+    {validatorClientCount: 1, validatorsPerClient: 32, event: ChainEvent.finalized, altairForkEpoch: 1},
     // altair fork at epoch 2
-    {validatorClientCount: 8, validatorsPerClient: 8, event: ChainEvent.finalized, altairForkEpoch: 2},
+    {validatorClientCount: 1, validatorsPerClient: 32, event: ChainEvent.finalized, altairForkEpoch: 2},
   ];
 
   for (const {validatorClientCount, validatorsPerClient, event, altairForkEpoch} of testCases) {
