@@ -56,7 +56,7 @@ async function initAndVerifyWeakSujectivityState(
   // verify downloaded state against locally stored state root
   if (actualRoot !== expectedRoot) {
     throw new Error(
-      `Fetched state root does not match computed state root.  Expected: ${expectedRoot}, Actual: ${actualRoot}`
+      `Fetched weak subjectivity checkpoint root does not match computed weak subjectivity checkpoint root.  Expected: ${expectedRoot}, Actual: ${actualRoot}`
     );
   }
   return await initStateFromAnchorState(config, db, logger, state);
