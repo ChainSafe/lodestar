@@ -236,6 +236,11 @@ export class ValidatorStore {
   }
 
   private async getDomain(domainType: DomainType, epoch: Epoch): Promise<Buffer> {
+    // We don't fetch the Fork from the beacon node dynamically.
+    // The Fork object should not change during the runtime of the validator. When a new planned fork happens
+    // node operators would have to update the validator client software at least once.
+    // If we wanted to have long-term independent validator client we can review this approach.
+    // On start-up the validator client fetches the full config from the beacon node and ensures they match.
     const forkVersion = this.config.getForkVersion(computeStartSlotAtEpoch(this.config, epoch));
     return computeDomain(this.config, domainType, forkVersion, this.genesisValidatorsRoot);
   }
