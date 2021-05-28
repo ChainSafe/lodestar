@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import {join} from "path";
-import {expect} from "chai";
 import {params} from "@chainsafe/lodestar-params/minimal";
 import {IBeaconConfig, createIBeaconConfig} from "@chainsafe/lodestar-config";
 import {altair, Uint64, Root} from "@chainsafe/lodestar-types";
@@ -8,6 +7,7 @@ import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-tes
 import {initializeBeaconStateFromEth1} from "@chainsafe/lodestar-beacon-state-transition";
 
 import {SPEC_TEST_LOCATION} from "../../../../utils/specTestCases";
+import {expectEqualBeaconState} from "../../util";
 
 interface IGenesisInitSpecTest {
   [k: string]: altair.Deposit | unknown | null | undefined;
@@ -55,12 +55,11 @@ describeDirectorySpecTest<IGenesisInitSpecTest, altair.BeaconState>(
       state: config.types.altair.BeaconState,
       ...generateDepositSSZTypeMapping(192, config),
     },
-    timeout: 60000,
+    timeout: 10000,
     getExpected: (testCase) => testCase.state,
     expectFunc: (testCase, expected, actual) => {
-      expect(config.types.altair.BeaconState.equals(actual, expected)).to.be.true;
+      expectEqualBeaconState(config, expected, actual);
     },
-    // shouldSkip: (_, __, index) => index !== 0,
   }
 );
 

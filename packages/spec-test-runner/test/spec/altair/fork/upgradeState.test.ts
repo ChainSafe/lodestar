@@ -1,5 +1,4 @@
 import {join} from "path";
-import {expect} from "chai";
 
 import {TreeBacked} from "@chainsafe/ssz";
 import {config} from "@chainsafe/lodestar-config/minimal";
@@ -8,6 +7,7 @@ import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-tes
 import {IUpgradeStateCase} from "./type";
 import {upgradeState} from "@chainsafe/lodestar-beacon-state-transition/lib/altair";
 import {SPEC_TEST_LOCATION} from "../../../utils/specTestCases";
+import {expectEqualBeaconState} from "../util";
 
 describeDirectorySpecTest<IUpgradeStateCase, altair.BeaconState>(
   "upgrade state to altair",
@@ -36,11 +36,11 @@ describeDirectorySpecTest<IUpgradeStateCase, altair.BeaconState>(
       post: config.types.altair.BeaconState,
     },
 
-    timeout: 100000000,
+    timeout: 10000,
     shouldError: (testCase) => !testCase.post,
     getExpected: (testCase) => testCase.post,
     expectFunc: (testCase, expected, actual) => {
-      expect(config.types.altair.BeaconState.equals(actual, expected)).to.be.true;
+      expectEqualBeaconState(config, expected, actual);
     },
   }
 );

@@ -1,5 +1,4 @@
 import {join} from "path";
-import {expect} from "chai";
 import {params} from "@chainsafe/lodestar-params/minimal";
 import {allForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {altair as altairTypes} from "@chainsafe/lodestar-types";
@@ -8,6 +7,7 @@ import {IBeaconConfig, createIBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBlockSanityTestCase} from "./types";
 import {SPEC_TEST_LOCATION} from "../../../../utils/specTestCases";
 import {TreeBacked} from "@chainsafe/ssz";
+import {expectEqualBeaconState} from "../../util";
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
 const config = createIBeaconConfig({...params, ALTAIR_FORK_EPOCH: 0});
@@ -55,10 +55,10 @@ describeDirectorySpecTest<IBlockSanityTestCase, allForks.BeaconState>(
     shouldError: (testCase) => {
       return !testCase.post;
     },
-    timeout: 10000000,
+    timeout: 10000,
     getExpected: (testCase) => testCase.post,
     expectFunc: (testCase, expected, actual) => {
-      expect(config.types.altair.BeaconState.equals(actual, expected)).to.be.true;
+      expectEqualBeaconState(config, expected, actual);
     },
   }
 );

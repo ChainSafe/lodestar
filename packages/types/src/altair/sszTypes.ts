@@ -1,7 +1,6 @@
 import {
   IBeaconParams,
   JUSTIFICATION_BITS_LENGTH,
-  MAX_VALID_LIGHT_CLIENT_UPDATES,
   FINALIZED_ROOT_INDEX_FLOORLOG2,
   NEXT_SYNC_COMMITTEE_INDEX_FLOORLOG2,
   SYNC_COMMITTEE_SUBNET_COUNT,
@@ -263,7 +262,10 @@ export function getAltairTypes(params: IBeaconParams, primitive: PrimitiveSSZTyp
   const LightClientStore = new ContainerType<altair.LightClientStore>({
     fields: {
       snapshot: LightClientSnapshot,
-      validUpdates: new ListType({elementType: LightClientUpdate, limit: MAX_VALID_LIGHT_CLIENT_UPDATES}),
+      validUpdates: new ListType({
+        elementType: LightClientUpdate,
+        limit: params.EPOCHS_PER_SYNC_COMMITTEE_PERIOD * params.SLOTS_PER_EPOCH,
+      }),
     },
   });
 

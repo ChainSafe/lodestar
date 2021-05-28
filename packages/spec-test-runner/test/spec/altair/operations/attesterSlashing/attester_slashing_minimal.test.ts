@@ -1,5 +1,4 @@
 import {join} from "path";
-import {expect} from "chai";
 
 import {TreeBacked} from "@chainsafe/ssz";
 import {params} from "@chainsafe/lodestar-params/minimal";
@@ -8,6 +7,7 @@ import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
 import {IProcessAttesterSlashingTestCase} from "./type";
 import {SPEC_TEST_LOCATION} from "../../../../utils/specTestCases";
+import {expectEqualBeaconState} from "../../util";
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
 const config = createIBeaconConfig({...params, ALTAIR_FORK_EPOCH: 0});
@@ -42,11 +42,11 @@ describeDirectorySpecTest<IProcessAttesterSlashingTestCase, altair.BeaconState>(
       // eslint-disable-next-line @typescript-eslint/naming-convention
       attester_slashing: config.types.phase0.AttesterSlashing,
     },
-    timeout: 100000000,
+    timeout: 10000,
     shouldError: (testCase) => !testCase.post,
     getExpected: (testCase) => testCase.post,
     expectFunc: (testCase, expected, actual) => {
-      expect(config.types.altair.BeaconState.equals(actual, expected)).to.be.true;
+      expectEqualBeaconState(config, expected, actual);
     },
   }
 );

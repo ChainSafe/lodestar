@@ -49,7 +49,7 @@ describeDirectorySpecTest<IForkChoiceTestCase, void>(
     const stateCache = new Map<string, CachedBeaconState<allForks.BeaconState>>();
     cacheState(wrappedState, stateCache);
     const {SECONDS_PER_SLOT} = wrappedState.config.params;
-    for (const step of steps) {
+    for (const [i, step] of steps.entries()) {
       if (isTick(step)) {
         forkchoice.updateTime(Number(step.tick) / SECONDS_PER_SLOT);
       } else if (isAttestation(step)) {
@@ -59,7 +59,6 @@ describeDirectorySpecTest<IForkChoiceTestCase, void>(
       } else if (isBlock(step)) {
         const signedBlock = testcase.blocks.get(step.block);
         if (!signedBlock) throw Error(`No block ${step.block}`);
-        expect(signedBlock).not.to.be.undefined;
         const preState = stateCache.get(toHexString(signedBlock.message.parentRoot));
         if (!preState)
           throw new Error("not found parent state for parent root" + toHexString(signedBlock.message.parentRoot));
@@ -74,16 +73,29 @@ describeDirectorySpecTest<IForkChoiceTestCase, void>(
           bestJustifiedCheckpoint,
         } = step.checks;
         const head = forkchoice.getHead();
-        expect(head.slot).to.be.equal(Number(expectedHead.slot));
-        expect(toHexString(head.blockRoot)).to.be.equal(expectedHead.root);
+        expect(head.slot).to.be.equal(Number(expectedHead.slot), `Invalid head slot at step ${i}`);
+        expect(toHexString(head.blockRoot)).to.be.equal(expectedHead.root, `Invalid head root at step ${i}`);
         // time in spec mapped to Slot in our forkchoice implementation
-        if (expectedTime) expect(forkchoice.getTime() * SECONDS_PER_SLOT).to.be.equal(Number(expectedTime));
+        if (expectedTime)
+          expect(forkchoice.getTime() * SECONDS_PER_SLOT).to.be.equal(
+            Number(expectedTime),
+            `Invalid forkchoice time at step ${i}`
+          );
         if (justifiedCheckpointRoot)
-          expect(toHexString(forkchoice.getJustifiedCheckpoint().root)).to.be.equal(justifiedCheckpointRoot);
+          expect(toHexString(forkchoice.getJustifiedCheckpoint().root)).to.be.equal(
+            justifiedCheckpointRoot,
+            `Invalid justified checkpoint time at step ${i}`
+          );
         if (finalizedCheckpointRoot)
-          expect(toHexString(forkchoice.getFinalizedCheckpoint().root)).to.be.equal(finalizedCheckpointRoot);
+          expect(toHexString(forkchoice.getFinalizedCheckpoint().root)).to.be.equal(
+            finalizedCheckpointRoot,
+            `Invalid finalized checkpoint time at step ${i}`
+          );
         if (bestJustifiedCheckpoint)
-          expect(toHexString(forkchoice.getBestJustifiedCheckpoint().root)).to.be.equal(bestJustifiedCheckpoint);
+          expect(toHexString(forkchoice.getBestJustifiedCheckpoint().root)).to.be.equal(
+            bestJustifiedCheckpoint,
+            `Invalid best justified checkpoint time at step ${i}`
+          );
       }
     }
   },
@@ -121,7 +133,7 @@ describeDirectorySpecTest<IForkChoiceTestCase, void>(
         attestations,
       };
     },
-    timeout: 10000000,
+    timeout: 10000,
     // TODO: fix this
     shouldSkip: (testCase, name) => name === "filtered_block_tree",
     // eslint-disable-next-line @typescript-eslint/no-empty-function

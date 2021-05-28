@@ -3,10 +3,10 @@ import {allForks, altair, CachedBeaconState} from "@chainsafe/lodestar-beacon-st
 import {params} from "@chainsafe/lodestar-params/minimal";
 import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
-import {expect} from "chai";
 import {join} from "path";
 import {SPEC_TEST_LOCATION} from "../../../../utils/specTestCases";
 import {IProcessDepositTestCase} from "./type";
+import {expectEqualBeaconState} from "../../util";
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
 const config = createIBeaconConfig({...params, ALTAIR_FORK_EPOCH: 0});
@@ -38,11 +38,11 @@ describeDirectorySpecTest<IProcessDepositTestCase, altair.BeaconState>(
       post: config.types.altair.BeaconState,
       deposit: config.types.phase0.Deposit,
     },
-    timeout: 100000000,
+    timeout: 10000,
     shouldError: (testCase) => !testCase.post,
     getExpected: (testCase) => testCase.post,
     expectFunc: (testCase, expected, actual) => {
-      expect(config.types.altair.BeaconState.equals(actual, expected)).to.be.true;
+      expectEqualBeaconState(config, expected, actual);
     },
   }
 );

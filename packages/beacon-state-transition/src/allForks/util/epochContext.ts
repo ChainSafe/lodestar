@@ -375,13 +375,21 @@ export class EpochContext {
   getIndexedAttestation(attestation: phase0.Attestation): phase0.IndexedAttestation {
     const {aggregationBits, data} = attestation;
     const committeeIndices = this.getBeaconCommittee(data.slot, data.index);
-    const attestingIndices = isTreeBacked(attestation)
-      ? zipIndexesInBitList(
-          committeeIndices,
-          (attestation.aggregationBits as unknown) as TreeBacked<BitList>,
-          this.config.types.phase0.CommitteeBits
-        )
-      : committeeIndices.filter((_, index) => !!aggregationBits[index]);
+    let attestingIndices: phase0.ValidatorIndex[];
+    if (isTreeBacked(attestation)) {
+      attestingIndices = zipIndexesInBitList(
+        committeeIndices,
+        (attestation.aggregationBits as unknown) as TreeBacked<BitList>,
+        this.config.types.phase0.CommitteeBits
+      );
+    } else {
+      attestingIndices = [];
+      for (const [i, index] of committeeIndices.entries()) {
+        if (aggregationBits[i]) {
+          attestingIndices.push(index);
+        }
+      }
+    }
     // sort in-place
     attestingIndices.sort((a, b) => a - b);
     return {
