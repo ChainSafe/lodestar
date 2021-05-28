@@ -9,6 +9,7 @@ export interface ITransitionTestCase extends IBaseSpecTest {
     forkEpoch: phase0.Epoch;
     forkBlock: Uint64;
     blocksCount: Uint64;
+    blsSetting?: BigInt;
   };
   pre: phase0.BeaconState;
   post: altair.BeaconState;
