@@ -6,6 +6,7 @@ import {expect} from "chai";
 import {CompositeType} from "@chainsafe/ssz";
 import {IBaseSSZStaticTestCase} from "../type";
 import {SPEC_TEST_LOCATION} from "../../../utils/specTestCases";
+import {ForkName} from "@chainsafe/lodestar-config";
 
 /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, no-console */
 
@@ -14,8 +15,18 @@ interface IResult {
   serialized: Uint8Array;
 }
 
-export function testStatic(type: keyof IBeaconSSZTypes["phase0"]): void {
+export function testStaticPhase0(type: keyof IBeaconSSZTypes["phase0"]): void {
   const sszType = safeType(config.types.phase0[type]) as CompositeType<any>;
+  testStatic(type, sszType, ForkName.phase0);
+}
+
+export function testStaticAltair(type: keyof IBeaconSSZTypes["altair"]): void {
+  const sszType = safeType(config.types.altair[type]) as CompositeType<any>;
+  console.log("@@@@ found sszType", sszType);
+  testStatic(type, sszType, ForkName.altair);
+}
+
+function testStatic(type: string, sszType: CompositeType<any>, preset: ForkName): void {
   for (const caseName of [
     "ssz_lengthy",
     "ssz_max",
@@ -27,8 +38,9 @@ export function testStatic(type: keyof IBeaconSSZTypes["phase0"]): void {
   ]) {
     describeDirectorySpecTest<IBaseSSZStaticTestCase<any>, IResult>(
       `SSZ - ${type} ${caseName} minimal`,
-      join(SPEC_TEST_LOCATION, `tests/minimal/phase0/ssz_static/${type}/${caseName}`),
+      join(SPEC_TEST_LOCATION, `tests/minimal/${preset}/ssz_static/${type}/${caseName}`),
       (testcase) => {
+        console.log("@@@", `tests/minimal/${preset}/ssz_static/${type}/${caseName}`);
         //debugger;
         const serialized = sszType.serialize(testcase.serialized);
         const root = sszType.hashTreeRoot(testcase.serialized);
