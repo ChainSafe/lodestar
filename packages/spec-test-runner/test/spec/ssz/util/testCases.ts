@@ -22,7 +22,6 @@ export function testStaticPhase0(type: keyof IBeaconSSZTypes["phase0"]): void {
 
 export function testStaticAltair(type: keyof IBeaconSSZTypes["altair"]): void {
   const sszType = safeType(config.types.altair[type]) as CompositeType<any>;
-  console.log("@@@@ found sszType", sszType);
   testStatic(type, sszType, ForkName.altair);
 }
 
@@ -40,7 +39,6 @@ function testStatic(type: string, sszType: CompositeType<any>, preset: ForkName)
       `SSZ - ${type} ${caseName} minimal`,
       join(SPEC_TEST_LOCATION, `tests/minimal/${preset}/ssz_static/${type}/${caseName}`),
       (testcase) => {
-        console.log("@@@", `tests/minimal/${preset}/ssz_static/${type}/${caseName}`);
         //debugger;
         const serialized = sszType.serialize(testcase.serialized);
         const root = sszType.hashTreeRoot(testcase.serialized);
