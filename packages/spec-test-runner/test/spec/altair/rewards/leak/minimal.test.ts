@@ -17,6 +17,7 @@ import {
   TIMELY_SOURCE_FLAG_INDEX,
   TIMELY_TARGET_FLAG_INDEX,
 } from "@chainsafe/lodestar-beacon-state-transition/lib/altair/constants";
+import {IBaseSpecTest} from "../../../type";
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
 const config = createIBeaconConfig({...params, ALTAIR_FORK_EPOCH: 0});
@@ -26,13 +27,13 @@ const Deltas = new VectorType<bigint[]>({
   length: 2,
 });
 
-type RewardTestCase = {
+interface RewardTestCase extends IBaseSpecTest {
   pre: altair.BeaconState;
   head_deltas: bigint[][];
   source_deltas: bigint[][];
   target_deltas: bigint[][];
   inactivity_penalty_deltas: bigint[][];
-};
+}
 
 type Output = {
   head_deltas: bigint[][];

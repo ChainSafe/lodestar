@@ -1,6 +1,7 @@
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import {phase0, Gwei} from "@chainsafe/lodestar-types";
 import {ContainerType, ListType} from "@chainsafe/ssz";
+import {IBaseSpecTest} from "../../type";
 
 export interface IDeltas {
   rewards: Gwei[];
@@ -40,7 +41,7 @@ export const AttestationDeltasType = new ContainerType({
   },
 });
 
-export interface IRewardsTestCase {
+export interface IRewardsTestCase extends IBaseSpecTest {
   [k: string]: IDeltas | unknown | null | undefined;
   pre: phase0.BeaconState;
 }

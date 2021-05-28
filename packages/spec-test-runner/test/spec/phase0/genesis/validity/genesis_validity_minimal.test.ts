@@ -6,8 +6,9 @@ import {params} from "@chainsafe/lodestar-params/minimal";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
 import {altair, isValidGenesisState} from "@chainsafe/lodestar-beacon-state-transition";
 import {SPEC_TEST_LOCATION} from "../../../../utils/specTestCases";
+import {IBaseSpecTest} from "../../../type";
 
-interface IGenesisValidityTestCase {
+interface IGenesisValidityTestCase extends IBaseSpecTest {
   is_valid: boolean;
   genesis: altair.BeaconState;
 }
