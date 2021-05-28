@@ -13,6 +13,7 @@ import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {allForks, ForkDigest, Number64, Root, Slot} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {TreeBacked} from "@chainsafe/ssz";
+import {LightClientUpdater} from "@chainsafe/lodestar-light-client/lib/server/LightClientUpdater";
 import {AbortController} from "abort-controller";
 import {GENESIS_EPOCH, ZERO_HASH} from "../constants";
 import {IBeaconDb} from "../db";
@@ -53,6 +54,7 @@ export class BeaconChain implements IBeaconChain {
   pendingAttestations: AttestationPool;
   pendingBlocks: BlockPool;
   forkDigestContext: IForkDigestContext;
+  lightclientUpdater: LightClientUpdater;
 
   protected attestationProcessor: AttestationProcessor;
   protected blockProcessor: BlockProcessor;
@@ -119,6 +121,8 @@ export class BeaconChain implements IBeaconChain {
     this.bls = bls;
     this.checkpointStateCache = checkpointStateCache;
     this.stateCache = stateCache;
+
+    this.lightclientUpdater = new LightClientUpdater(config, db);
 
     handleChainEvents.bind(this)(this.abortController.signal);
   }
