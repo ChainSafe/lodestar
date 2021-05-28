@@ -1,5 +1,4 @@
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {BitList, TreeBacked} from "@chainsafe/ssz";
+import {BitList, BitListType, BitVectorType, TreeBacked} from "@chainsafe/ssz";
 
 const BITS_PER_BYTE = 8;
 /** Globally cache this information. @see getUint8ByteToBitBooleanArray */
@@ -40,8 +39,12 @@ function computeUint8ByteToBitBooleanArray(byte: number): boolean[] {
  * This function uses a precomputed array of booleans `Uint8 -> boolean[]` @see uint8ByteToBitBooleanArrays.
  * This approach is x15 times faster.
  */
-export function zipIndexesInBitList(config: IBeaconConfig, indexes: number[], bitlist: TreeBacked<BitList>): number[] {
-  const attBytes = bitlistToUint8Array(config, bitlist as TreeBacked<BitList>);
+export function zipIndexesInBitList(
+  indexes: number[],
+  bitlist: TreeBacked<BitList>,
+  sszType: BitVectorType | BitListType
+): number[] {
+  const attBytes = bitlistToUint8Array(bitlist as TreeBacked<BitList>, sszType);
 
   const indexesSelected: number[] = [];
 
@@ -64,8 +67,10 @@ export function zipIndexesInBitList(config: IBeaconConfig, indexes: number[], bi
  * Efficiently extract the Uint8Array inside a `TreeBacked<BitList>` structure.
  * @see zipIndexesInBitList for reasoning and advantatges.
  */
-export function bitlistToUint8Array(config: IBeaconConfig, aggregationBits: TreeBacked<BitList>): Uint8Array {
-  const sszType = config.types.phase0.CommitteeBits;
+export function bitlistToUint8Array(
+  aggregationBits: TreeBacked<BitList>,
+  sszType: BitVectorType | BitListType
+): Uint8Array {
   const tree = aggregationBits.tree;
   const chunkCount = sszType.tree_getChunkCount(tree);
   const chunkDepth = sszType.getChunkDepth();

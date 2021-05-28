@@ -3,8 +3,9 @@ import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-tes
 import bls, {CoordType} from "@chainsafe/bls";
 import {fromHexString} from "@chainsafe/ssz";
 import {SPEC_TEST_LOCATION} from "../../utils/specTestCases";
+import {IBaseSpecTest} from "../type";
 
-interface IAggregateSigsVerifyTestCase {
+interface IAggregateSigsVerifyTestCase extends IBaseSpecTest {
   data: {
     input: {
       pubkeys: string[];

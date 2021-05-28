@@ -1,7 +1,6 @@
 import {
   IBeaconParams,
   JUSTIFICATION_BITS_LENGTH,
-  MAX_VALID_LIGHT_CLIENT_UPDATES,
   FINALIZED_ROOT_INDEX_FLOORLOG2,
   NEXT_SYNC_COMMITTEE_INDEX_FLOORLOG2,
   SYNC_COMMITTEE_SUBNET_COUNT,
@@ -23,8 +22,6 @@ export function getAltairTypes(params: IBeaconParams, primitive: PrimitiveSSZTyp
     Number64,
     Uint64,
     Slot,
-    Epoch,
-    CommitteeIndex,
     SubCommitteeIndex,
     ValidatorIndex,
     Gwei,
@@ -56,10 +53,7 @@ export function getAltairTypes(params: IBeaconParams, primitive: PrimitiveSSZTyp
   const SyncCommittee = new ContainerType<altair.SyncCommittee>({
     fields: {
       pubkeys: new VectorType({elementType: BLSPubkey, length: params.SYNC_COMMITTEE_SIZE}),
-      pubkeyAggregates: new VectorType({
-        elementType: BLSPubkey,
-        length: Math.floor(params.SYNC_COMMITTEE_SIZE / params.SYNC_PUBKEYS_PER_AGGREGATE),
-      }),
+      aggregatePubkey: BLSPubkey,
     },
   });
 
@@ -97,47 +91,21 @@ export function getAltairTypes(params: IBeaconParams, primitive: PrimitiveSSZTyp
     },
   });
 
-  const SyncCommitteeSigningData = new ContainerType<altair.SyncCommitteeSigningData>({
+  const SyncAggregatorSelectionData = new ContainerType<altair.SyncAggregatorSelectionData>({
     fields: {
       slot: Slot,
       subCommitteeIndex: SubCommitteeIndex,
     },
   });
 
+  const SyncCommitteeBits = new BitVectorType({
+    length: params.SYNC_COMMITTEE_SIZE,
+  });
+
   const SyncAggregate = new ContainerType<altair.SyncAggregate>({
     fields: {
-      syncCommitteeBits: new BitVectorType({length: params.SYNC_COMMITTEE_SIZE}),
+      syncCommitteeBits: SyncCommitteeBits,
       syncCommitteeSignature: BLSSignature,
-    },
-  });
-
-  const SyncCommitteeSubscription = new ContainerType<altair.SyncCommitteeSubscription>({
-    fields: {
-      validatorIndex: ValidatorIndex,
-      syncCommitteeIndices: new ListType({elementType: CommitteeIndex, limit: params.SYNC_COMMITTEE_SIZE}),
-      untilEpoch: Epoch,
-    },
-  });
-
-  const SyncCommitteeByValidatorIndices = new ContainerType<altair.SyncCommitteeByValidatorIndices>({
-    fields: {
-      validators: new ListType({elementType: ValidatorIndex, limit: params.SYNC_COMMITTEE_SIZE}),
-      validatorAggregates: new ListType({elementType: ValidatorIndex, limit: params.SYNC_COMMITTEE_SIZE}),
-    },
-  });
-
-  const SyncDuty = new ContainerType<altair.SyncDuty>({
-    fields: {
-      pubkey: BLSPubkey,
-      validatorIndex: ValidatorIndex,
-      validatorSyncCommitteeIndices: new ListType({elementType: Number64, limit: params.SYNC_COMMITTEE_SIZE}),
-    },
-  });
-
-  const SyncDutiesApi = new ContainerType<altair.SyncDutiesApi>({
-    fields: {
-      data: new ListType({elementType: SyncDuty, limit: params.SYNC_COMMITTEE_SIZE}),
-      dependentRoot: Root,
     },
   });
 
@@ -262,7 +230,10 @@ export function getAltairTypes(params: IBeaconParams, primitive: PrimitiveSSZTyp
   const LightClientStore = new ContainerType<altair.LightClientStore>({
     fields: {
       snapshot: LightClientSnapshot,
-      validUpdates: new ListType({elementType: LightClientUpdate, limit: MAX_VALID_LIGHT_CLIENT_UPDATES}),
+      validUpdates: new ListType({
+        elementType: LightClientUpdate,
+        limit: params.EPOCHS_PER_SYNC_COMMITTEE_PERIOD * params.SLOTS_PER_EPOCH,
+      }),
     },
   });
 
@@ -276,12 +247,9 @@ export function getAltairTypes(params: IBeaconParams, primitive: PrimitiveSSZTyp
     SyncCommitteeContribution,
     ContributionAndProof,
     SignedContributionAndProof,
-    SyncCommitteeSigningData,
+    SyncAggregatorSelectionData,
+    SyncCommitteeBits,
     SyncAggregate,
-    SyncCommitteeSubscription,
-    SyncCommitteeByValidatorIndices,
-    SyncDuty,
-    SyncDutiesApi,
     BeaconBlockBody,
     BeaconBlock,
     SignedBeaconBlock,

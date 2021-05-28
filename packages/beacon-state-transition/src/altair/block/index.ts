@@ -17,6 +17,7 @@ export {
   processDeposit,
   processProposerSlashing,
   processVoluntaryExit,
+  processSyncCommittee,
 };
 
 export function processBlock(

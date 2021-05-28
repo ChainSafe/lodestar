@@ -2,8 +2,8 @@ import {config} from "@chainsafe/lodestar-config/minimal";
 import {IBlockSummary} from "@chainsafe/lodestar-fork-choice";
 import sinon, {SinonStubbedInstance} from "sinon";
 import {IBeaconSync, SyncState} from "../../../../../src/sync/interface";
-import {IApiModules} from "../../../../../src/api/impl/interface";
-import {ValidatorApi} from "../../../../../src/api/impl/validator/validator";
+import {ApiModules} from "../../../../../src/api/impl/types";
+import {getValidatorApi} from "../../../../../src/api/impl/validator";
 import {IEth1ForBlockProduction} from "../../../../../src/eth1";
 import {LocalClock} from "../../../../../src/chain/clock";
 import {testLogger} from "../../../../utils/logger";
@@ -17,7 +17,7 @@ describe("api - validator - produceAttestationData", function () {
   const logger = testLogger();
   let eth1Stub: SinonStubbedInstance<IEth1ForBlockProduction>;
   let syncStub: SinonStubbedInstance<IBeaconSync>;
-  let modules: IApiModules;
+  let modules: ApiModules;
   let server: ApiImplTestModules;
 
   beforeEach(function () {
@@ -44,7 +44,7 @@ describe("api - validator - produceAttestationData", function () {
     server.forkChoiceStub.getHead.returns({slot: headSlot} as IBlockSummary);
 
     // Should not allow any call to validator API
-    const api = new ValidatorApi({}, modules);
+    const api = getValidatorApi(modules);
     await expect(api.produceAttestationData(0, 0)).to.be.rejectedWith("Node is syncing");
   });
 
@@ -54,7 +54,7 @@ describe("api - validator - produceAttestationData", function () {
     sinon.replaceGetter(syncStub, "state", () => SyncState.Stalled);
 
     // Should not allow any call to validator API
-    const api = new ValidatorApi({}, modules);
+    const api = getValidatorApi(modules);
     await expect(api.produceAttestationData(0, 0)).to.be.rejectedWith("Node is waiting for peers");
   });
 });

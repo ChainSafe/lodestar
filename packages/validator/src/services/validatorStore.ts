@@ -19,9 +19,9 @@ import {
 } from "@chainsafe/lodestar-types";
 import {Genesis, ValidatorIndex} from "@chainsafe/lodestar-types/phase0";
 import {List, toHexString} from "@chainsafe/ssz";
+import {routes} from "@chainsafe/lodestar-api";
 import {ISlashingProtection} from "../slashingProtection";
 import {BLSKeypair, PubkeyHex} from "../types";
-import {IForkService} from "./fork";
 import {getAggregationBits, mapSecretKeysToValidators} from "./utils";
 
 /**
@@ -33,7 +33,6 @@ export class ValidatorStore {
 
   constructor(
     private readonly config: IBeaconConfig,
-    private readonly forkService: IForkService,
     private readonly slashingProtection: ISlashingProtection,
     secretKeys: SecretKey[],
     genesis: Genesis
@@ -91,7 +90,7 @@ export class ValidatorStore {
   }
 
   async signAttestation(
-    duty: phase0.AttesterDuty,
+    duty: routes.validator.AttesterDuty,
     attestationData: phase0.AttestationData,
     currentEpoch: Epoch
   ): Promise<phase0.Attestation> {
@@ -127,7 +126,7 @@ export class ValidatorStore {
   }
 
   async signAggregateAndProof(
-    duty: phase0.AttesterDuty,
+    duty: routes.validator.AttesterDuty,
     selectionProof: BLSSignature,
     aggregate: phase0.Attestation
   ): Promise<phase0.SignedAggregateAndProof> {
@@ -177,7 +176,7 @@ export class ValidatorStore {
   }
 
   async signContributionAndProof(
-    duty: Pick<altair.SyncDuty, "pubkey" | "validatorIndex">,
+    duty: Pick<routes.validator.SyncDuty, "pubkey" | "validatorIndex">,
     selectionProof: BLSSignature,
     contribution: altair.SyncCommitteeContribution
   ): Promise<altair.SignedContributionAndProof> {
@@ -222,14 +221,14 @@ export class ValidatorStore {
       this.config.params.DOMAIN_SYNC_COMMITTEE_SELECTION_PROOF,
       computeEpochAtSlot(this.config, slot)
     );
-    const signingData: altair.SyncCommitteeSigningData = {
+    const signingData: altair.SyncAggregatorSelectionData = {
       slot,
       subCommitteeIndex: subCommitteeIndex,
     };
 
     const signingRoot = computeSigningRoot(
       this.config,
-      this.config.types.altair.SyncCommitteeSigningData,
+      this.config.types.altair.SyncAggregatorSelectionData,
       signingData,
       domain
     );
@@ -237,6 +236,11 @@ export class ValidatorStore {
   }
 
   private async getDomain(domainType: DomainType, epoch: Epoch): Promise<Buffer> {
+    // We don't fetch the Fork from the beacon node dynamically.
+    // The Fork object should not change during the runtime of the validator. When a new planned fork happens
+    // node operators would have to update the validator client software at least once.
+    // If we wanted to have long-term independent validator client we can review this approach.
+    // On start-up the validator client fetches the full config from the beacon node and ensures they match.
     const forkVersion = this.config.getForkVersion(computeStartSlotAtEpoch(this.config, epoch));
     return computeDomain(this.config, domainType, forkVersion, this.genesisValidatorsRoot);
   }
@@ -254,7 +258,7 @@ export class ValidatorStore {
   }
 
   /** Prevent signing bad data sent by the Beacon node */
-  private validateAttestationDuty(duty: phase0.AttesterDuty, data: phase0.AttestationData): void {
+  private validateAttestationDuty(duty: routes.validator.AttesterDuty, data: phase0.AttestationData): void {
     if (duty.slot !== data.slot) {
       throw Error(`Inconsistent duties during signing: duty.slot ${duty.slot} != att.slot ${data.slot}`);
     }

@@ -1,6 +1,7 @@
 import {ILogger} from "@chainsafe/lodestar-utils";
-import {Slot, phase0} from "@chainsafe/lodestar-types";
+import {Slot} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {routes} from "@chainsafe/lodestar-api";
 import {INetwork} from "../network";
 import {IBeaconChain} from "../chain";
 import {IMetrics} from "../metrics";
@@ -8,10 +9,12 @@ import {IBeaconDb} from "../db";
 import {SyncChainDebugState} from "./range/chain";
 export {SyncChainDebugState};
 
+export type SyncingStatus = routes.node.SyncingStatus;
+
 export interface IBeaconSync {
   state: SyncState;
   close(): void;
-  getSyncStatus(): phase0.SyncingStatus;
+  getSyncStatus(): SyncingStatus;
   isSynced(): boolean;
   isSyncing(): boolean;
   getSyncChainsDebugState(): SyncChainDebugState[];

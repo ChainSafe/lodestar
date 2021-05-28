@@ -24,7 +24,7 @@ describe("aggregationBits", function () {
   for (const {name, data} of testCases) {
     it(name, () => {
       const tree = config.types.phase0.CommitteeBits.createTreeBackedFromStruct(data as List<boolean>);
-      const aggregationBytes = bitlistToUint8Array(config, tree);
+      const aggregationBytes = bitlistToUint8Array(tree, config.types.phase0.CommitteeBits);
       const aggregationBits: boolean[] = [];
       for (let i = 0; i < tree.length; i++) {
         aggregationBits.push(getAggregationBit(aggregationBytes, i));

@@ -1,0 +1,64 @@
+{
+  "name": "@chainsafe/lodestar-api",
+  "private": true,
+  "description": "A Typescript implementation of the eth2 light client",
+  "license": "Apache-2.0",
+  "author": "ChainSafe Systems",
+  "homepage": "https://github.com/ChainSafe/lodestar#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com:ChainSafe/lodestar.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ChainSafe/lodestar/issues"
+  },
+  "version": "0.22.0",
+  "main": "lib/index.js",
+  "files": [
+    "lib/**/*.d.ts",
+    "lib/**/*.js",
+    "lib/**/*.js.map"
+  ],
+  "scripts": {
+    "clean": "rm -rf lib && rm -f *.tsbuildinfo",
+    "build": "concurrently \"yarn build:lib\" \"yarn build:types\"",
+    "build:typedocs": "typedoc --exclude src/index.ts --out typedocs src",
+    "build:lib": "babel src -x .ts -d lib --source-maps",
+    "build:release": "yarn clean && yarn run build && yarn run build:typedocs",
+    "build:types": "tsc -p tsconfig.build.json",
+    "check-types": "tsc",
+    "coverage": "codecov -F lodestar-api",
+    "lint": "eslint --color --ext .ts src/ test/",
+    "lint:fix": "yarn run lint --fix",
+    "pretest": "yarn run check-types",
+    "test": "yarn test:unit && yarn test:e2e",
+    "test:unit": "nyc --cache-dir .nyc_output/.cache -e .ts mocha 'test/unit/**/*.test.ts'"
+  },
+  "dependencies": {
+    "@chainsafe/lodestar-config": "^0.22.0",
+    "@chainsafe/lodestar-params": "^0.22.0",
+    "@chainsafe/lodestar-types": "^0.22.0",
+    "@chainsafe/lodestar-utils": "^0.22.0",
+    "@chainsafe/persistent-merkle-tree": "^0.3.2",
+    "@chainsafe/ssz": "^0.8.6",
+    "abort-controller": "^3.0.0",
+    "cross-fetch": "^3.1.4",
+    "eventsource": "^1.1.0",
+    "qs": "^6.10.1"
+  },
+  "devDependencies": {
+    "@types/eventsource": "^1.1.5",
+    "@types/qs": "^6.9.6",
+    "fastify": "3.15.1"
+  },
+  "peerDependencies": {
+    "fastify": "3.15.1"
+  },
+  "keywords": [
+    "ethereum",
+    "eth2",
+    "beacon",
+    "api",
+    "blockchain"
+  ]
+}

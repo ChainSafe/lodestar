@@ -9,9 +9,10 @@ import {AbortSignal} from "abort-controller";
 import {Implementation, PointFormat, PublicKey} from "@chainsafe/bls";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {QueueError, QueueErrorCode} from "../../../util/queue";
+import {IMetrics} from "../../../metrics";
+import {IBlsVerifierImpl} from "../interface";
 import {BlsWorkReq, WorkerData, WorkResult, WorkResultCode} from "./types";
 import {chunkifyMaximizeChunkSize, getDefaultPoolSize} from "./utils";
-import {IMetrics} from "../../../metrics";
 
 export type BlsMultiThreadWorkerPoolModules = {
   logger: ILogger;
@@ -67,7 +68,7 @@ type WorkerDescriptor = {
  *   communiction has very high latency, of around ~5 ms. So package multiple small signature
  *   sets into packages of work and send at once to a worker to distribute the latency cost
  */
-export class BlsMultiThreadWorkerPool {
+export class BlsMultiThreadWorkerPool implements IBlsVerifierImpl {
   private readonly logger: ILogger;
   private readonly metrics: IMetrics | null;
   private readonly signal: AbortSignal;

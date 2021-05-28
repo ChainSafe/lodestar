@@ -47,16 +47,16 @@ export function mapValues<T extends {[K: string]: any}, R>(
   return output;
 }
 
-export function objectToExpectedCase(
-  obj: Record<string, unknown>,
+export function objectToExpectedCase<T extends Record<string, unknown> | Record<string, unknown>[]>(
+  obj: T,
   expectedCase: "snake" | "camel" = "camel"
-): Record<string, unknown> {
+): T {
   if (Array.isArray(obj)) {
     const newArr: unknown[] = [];
     for (let i = 0; i < obj.length; i++) {
       newArr[i] = objectToExpectedCase(obj[i], expectedCase);
     }
-    return (newArr as unknown) as Record<string, unknown>;
+    return (newArr as unknown) as T;
   }
 
   if (Object(obj) === obj) {
@@ -67,9 +67,12 @@ export function objectToExpectedCase(
         throw new Error(`object already has a ${newName} property`);
       }
 
-      newObj[newName] = objectToExpectedCase(obj[name] as Record<string, unknown>, expectedCase);
+      newObj[newName] = objectToExpectedCase(
+        (obj as Record<string, unknown>)[name] as Record<string, unknown>,
+        expectedCase
+      );
     }
-    return newObj;
+    return newObj as T;
   }
 
   return obj;

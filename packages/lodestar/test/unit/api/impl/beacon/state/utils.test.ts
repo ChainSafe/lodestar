@@ -131,7 +131,7 @@ describe("beacon state api utils", function () {
       } as phase0.Validator;
       const currentEpoch = 0;
       const status = getValidatorStatus(validator, currentEpoch);
-      expect(status).to.be.equal(phase0.ValidatorStatus.PENDING_INITIALIZED);
+      expect(status).to.be.equal("pending_initialized");
     });
     it("should return PENDING_QUEUED", function () {
       const validator = {
@@ -140,7 +140,7 @@ describe("beacon state api utils", function () {
       } as phase0.Validator;
       const currentEpoch = 0;
       const status = getValidatorStatus(validator, currentEpoch);
-      expect(status).to.be.equal(phase0.ValidatorStatus.PENDING_QUEUED);
+      expect(status).to.be.equal("pending_queued");
     });
     it("should return ACTIVE_ONGOING", function () {
       const validator = {
@@ -149,7 +149,7 @@ describe("beacon state api utils", function () {
       } as phase0.Validator;
       const currentEpoch = 1;
       const status = getValidatorStatus(validator, currentEpoch);
-      expect(status).to.be.equal(phase0.ValidatorStatus.ACTIVE_ONGOING);
+      expect(status).to.be.equal("active_ongoing");
     });
     it("should return ACTIVE_SLASHED", function () {
       const validator = {
@@ -159,7 +159,7 @@ describe("beacon state api utils", function () {
       } as phase0.Validator;
       const currentEpoch = 1;
       const status = getValidatorStatus(validator, currentEpoch);
-      expect(status).to.be.equal(phase0.ValidatorStatus.ACTIVE_SLASHED);
+      expect(status).to.be.equal("active_slashed");
     });
     it("should return ACTIVE_EXITING", function () {
       const validator = {
@@ -169,7 +169,7 @@ describe("beacon state api utils", function () {
       } as phase0.Validator;
       const currentEpoch = 1;
       const status = getValidatorStatus(validator, currentEpoch);
-      expect(status).to.be.equal(phase0.ValidatorStatus.ACTIVE_EXITING);
+      expect(status).to.be.equal("active_exiting");
     });
     it("should return EXITED_SLASHED", function () {
       const validator = {
@@ -179,7 +179,7 @@ describe("beacon state api utils", function () {
       } as phase0.Validator;
       const currentEpoch = 2;
       const status = getValidatorStatus(validator, currentEpoch);
-      expect(status).to.be.equal(phase0.ValidatorStatus.EXITED_SLASHED);
+      expect(status).to.be.equal("exited_slashed");
     });
     it("should return EXITED_UNSLASHED", function () {
       const validator = {
@@ -189,7 +189,7 @@ describe("beacon state api utils", function () {
       } as phase0.Validator;
       const currentEpoch = 2;
       const status = getValidatorStatus(validator, currentEpoch);
-      expect(status).to.be.equal(phase0.ValidatorStatus.EXITED_UNSLASHED);
+      expect(status).to.be.equal("exited_unslashed");
     });
     it("should return WITHDRAWAL_POSSIBLE", function () {
       const validator = {
@@ -198,7 +198,7 @@ describe("beacon state api utils", function () {
       } as phase0.Validator;
       const currentEpoch = 1;
       const status = getValidatorStatus(validator, currentEpoch);
-      expect(status).to.be.equal(phase0.ValidatorStatus.WITHDRAWAL_POSSIBLE);
+      expect(status).to.be.equal("withdrawal_possible");
     });
     it("should return WITHDRAWAL_DONE", function () {
       const validator = {
@@ -207,7 +207,7 @@ describe("beacon state api utils", function () {
       } as phase0.Validator;
       const currentEpoch = 1;
       const status = getValidatorStatus(validator, currentEpoch);
-      expect(status).to.be.equal(phase0.ValidatorStatus.WITHDRAWAL_DONE);
+      expect(status).to.be.equal("withdrawal_done");
     });
     it("should error", function () {
       const validator = {} as phase0.Validator;
