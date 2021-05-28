@@ -50,15 +50,15 @@ export class Lightclient {
     modules: LightclientModules,
     trustedRoot: {stateRoot: Root; slot: Slot}
   ): Promise<Lightclient> {
-    const {beaconApiUrl} = modules;
+    const {beaconApiUrl, config} = modules;
     const {slot, stateRoot} = trustedRoot;
     // TODO: Consider initializing only the lightclient namespace
     const api = getClient(config, {baseUrl: beaconApiUrl});
 
-    const paths = getSyncCommitteesProofPaths(config);
+    const paths = getSyncCommitteesProofPaths();
     const proof = await api.lightclient.getStateProof(toHexString(stateRoot), paths);
 
-    const state = config.types.altair.BeaconState.createTreeBackedFromProof(stateRoot as Uint8Array, proof.data);
+    const state = ssz.altair.BeaconState.createTreeBackedFromProof(stateRoot as Uint8Array, proof.data);
     const store: LightClientStoreFast = {
       bestUpdates: new Map<SyncPeriod, altair.LightClientUpdate>(),
       snapshot: {

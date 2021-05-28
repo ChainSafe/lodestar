@@ -142,7 +142,7 @@ export class SyncCommitteeDutiesService {
       });
     }
 
-    const currentPeriod = computeSyncPeriodAtEpoch(this.config, currentEpoch);
+    const currentPeriod = computeSyncPeriodAtEpoch(currentEpoch);
     const syncCommitteeSubscriptions: routes.validator.SyncCommitteeSubscription[] = [];
 
     // For this and the next period, produce any beacon committee subscriptions.

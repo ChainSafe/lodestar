@@ -2,11 +2,7 @@ import {routes} from "@chainsafe/lodestar-api";
 import {readonlyValues} from "@chainsafe/ssz";
 import {allForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-<<<<<<< HEAD
-import {BLSPubkey, Epoch, ValidatorIndex, phase0, ssz} from "@chainsafe/lodestar-types";
-=======
-import {BLSPubkey, Epoch, ValidatorIndex} from "@chainsafe/lodestar-types";
->>>>>>> master
+import {BLSPubkey, Epoch, ValidatorIndex, ssz} from "@chainsafe/lodestar-types";
 
 export function assembleAttesterDuty(
   config: IBeaconConfig,

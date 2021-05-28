@@ -5,7 +5,7 @@ import {
   TARGET_AGGREGATORS_PER_COMMITTEE,
   TARGET_AGGREGATORS_PER_SYNC_SUBCOMMITTEE,
 } from "@chainsafe/lodestar-params";
-import {phase0, BLSSignature} from "@chainsafe/lodestar-types";
+import {BLSSignature} from "@chainsafe/lodestar-types";
 import {bytesToBigInt, intDiv} from "@chainsafe/lodestar-utils";
 import {routes} from "@chainsafe/lodestar-api";
 import {hash} from "@chainsafe/ssz";

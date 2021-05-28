@@ -12,8 +12,8 @@ export function getSyncComitteeValidatorIndexMap(
   state: allForks.BeaconState | CachedBeaconState<allForks.BeaconState>,
   requestedEpoch: Epoch
 ): Map<ValidatorIndex, number[]> {
-  const statePeriod = computeSyncCommitteePeriod(config, computeEpochAtSlot(config, state.slot));
-  const requestPeriod = computeSyncCommitteePeriod(config, requestedEpoch);
+  const statePeriod = computeSyncCommitteePeriod(computeEpochAtSlot(state.slot));
+  const requestPeriod = computeSyncCommitteePeriod(requestedEpoch);
 
   if ((state as CachedBeaconState<allForks.BeaconState>).epochCtx) {
     switch (requestPeriod) {

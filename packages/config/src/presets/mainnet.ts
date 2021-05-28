@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import {fromHexString} from "@chainsafe/ssz";
 import {PresetName} from "@chainsafe/lodestar-params";
-import {IChainConfig} from "../interface";
+import {IChainConfig} from "../chainConfig";
 
 export const config: IChainConfig = {
   PRESET_BASE: PresetName.mainnet,

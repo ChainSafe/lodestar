@@ -5,6 +5,7 @@ import {getBeaconConfigFromArgs} from "../../../../config";
 import {ICliCommand, YargsError, readPassphraseFile, add0xPrefix, initBLS, ICliCommandOptions} from "../../../../util";
 import {IAccountValidatorArgs} from "./options";
 import {IGlobalArgs} from "../../../../options";
+import {MAX_EFFECTIVE_BALANCE} from "@chainsafe/lodestar-params";
 
 export interface IValidatorCreateArgs {
   name: string;
@@ -78,7 +79,7 @@ and pre-computed deposit RPL data",
 
     const {name, passphraseFile, storeWithdrawalKeystore, count} = args;
     const accountPaths = getAccountPaths(args);
-    const maxEffectiveBalance = config.params.MAX_EFFECTIVE_BALANCE;
+    const maxEffectiveBalance = MAX_EFFECTIVE_BALANCE;
     const depositGwei = BigInt(args.depositGwei || 0) || maxEffectiveBalance;
 
     if (depositGwei > maxEffectiveBalance)

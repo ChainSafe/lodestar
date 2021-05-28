@@ -1,5 +1,4 @@
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {allForks, Slot} from "@chainsafe/lodestar-types";
+import {allForks, Slot, ssz} from "@chainsafe/lodestar-types";
 import {ContainerType} from "@chainsafe/ssz";
 import {
   ArrayOf,
@@ -151,7 +150,7 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
 }
 
 /* eslint-disable @typescript-eslint/naming-convention */
-export function getReturnTypes(config: IBeaconConfig): ReturnTypes<Api> {
+export function getReturnTypes(): ReturnTypes<Api> {
   const stringType = new StringType();
   const NetworkIdentity = new ContainerType<NetworkIdentity>({
     fields: {
@@ -159,7 +158,7 @@ export function getReturnTypes(config: IBeaconConfig): ReturnTypes<Api> {
       enr: stringType,
       p2pAddresses: ArrayOf(stringType),
       discoveryAddresses: ArrayOf(stringType),
-      metadata: config.types.altair.Metadata,
+      metadata: ssz.altair.Metadata,
     },
   });
 

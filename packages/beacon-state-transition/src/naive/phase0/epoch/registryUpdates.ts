@@ -14,7 +14,6 @@ import {
   isEligibleForActivationQueue,
   isEligibleForActivation,
 } from "../../../util";
-import {EJECTION_BALANCE} from "@chainsafe/lodestar-params";
 
 /**
  * Processes (i) the validator activation queue, and (ii) the rule that validators with <=
@@ -23,7 +22,7 @@ import {EJECTION_BALANCE} from "@chainsafe/lodestar-params";
 export function processRegistryUpdates(config: IBeaconConfig, state: phase0.BeaconState): phase0.BeaconState {
   const currentEpoch = getCurrentEpoch(state);
   // Process activation eligibility and ejections
-  const ejectionBalance = EJECTION_BALANCE;
+  const ejectionBalance = config.EJECTION_BALANCE;
   const validatorsLength = state.validators.length;
   for (let index = 0; index < validatorsLength; index++) {
     const validator = state.validators[index];

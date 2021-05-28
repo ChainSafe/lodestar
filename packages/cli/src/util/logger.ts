@@ -1,4 +1,5 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {
   ILogger,
   LogLevel,
@@ -34,8 +35,8 @@ export function getCliLogger(args: ILogArgs, paths: {logFile?: string}, config: 
       ? {
           format: TimestampFormatCode.EpochSlot,
           genesisTime: args.logFormatGenesisTime,
-          secondsPerSlot: config.params.SECONDS_PER_SLOT,
-          slotsPerEpoch: config.params.SLOTS_PER_EPOCH,
+          secondsPerSlot: config.SECONDS_PER_SLOT,
+          slotsPerEpoch: SLOTS_PER_EPOCH,
         }
       : {
           format: TimestampFormatCode.DateRegular,

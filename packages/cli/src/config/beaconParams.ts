@@ -1,7 +1,10 @@
-import {createIBeaconConfig, IBeaconConfig} from "@chainsafe/lodestar-config";
-import {createIBeaconParams, BeaconParams, IBeaconParams} from "@chainsafe/lodestar-params";
-import {params as mainnetParams} from "@chainsafe/lodestar-params/mainnet";
-import {params as minimalParams} from "@chainsafe/lodestar-params/minimal";
+import {
+  ChainConfig,
+  createIBeaconConfig,
+  createIChainConfig,
+  IBeaconConfig,
+  IChainConfig,
+} from "@chainsafe/lodestar-config";
 import {writeFile, readFileIfExists} from "../util";
 import {getNetworkBeaconParams, NetworkName} from "../networks";
 import {getGlobalPaths, IGlobalPaths} from "../paths/global";
@@ -33,7 +36,7 @@ export function getBeaconConfigFromArgs(args: IBeaconParamsCliArgs): IBeaconConf
  * Convenience method to parse yargs CLI args and call getBeaconParams
  * @see getBeaconParams
  */
-export function getBeaconParamsFromArgs(args: IBeaconParamsCliArgs): IBeaconParams {
+export function getBeaconParamsFromArgs(args: IBeaconParamsCliArgs): IChainConfig {
   return getBeaconParams({
     preset: args.preset,
     network: args.network,
@@ -57,8 +60,7 @@ export function getBeaconConfig(args: IBeaconParamsArgs): IBeaconConfig {
  * - existing params file
  * - CLI flags
  */
-export function getBeaconParams({preset, network, paramsFile, additionalParamsCli}: IBeaconParamsArgs): IBeaconParams {
-  const presetBeaconParams = getPresetBeaconParams(preset);
+export function getBeaconParams({network, paramsFile, additionalParamsCli}: IBeaconParamsArgs): IChainConfig {
   const additionalParams = mergeBeaconParams(
     // Default network params
     network ? getNetworkBeaconParams(network) : {},
@@ -67,22 +69,11 @@ export function getBeaconParams({preset, network, paramsFile, additionalParamsCl
     // Params from CLI flags
     additionalParamsCli || {}
   );
-  return {...presetBeaconParams, ...createIBeaconParams(additionalParams)};
+  return createIChainConfig(additionalParams);
 }
 
-function getPresetBeaconParams(preset: string): IBeaconParams {
-  switch (preset) {
-    case "mainnet":
-      return mainnetParams;
-    case "minimal":
-      return minimalParams;
-    default:
-      throw Error(`Unsupported spec: ${preset}`);
-  }
-}
-
-export function writeBeaconParams(filepath: string, params: IBeaconParams): void {
-  writeFile(filepath, BeaconParams.toJson(params));
+export function writeBeaconParams(filepath: string, params: IChainConfig): void {
+  writeFile(filepath, ChainConfig.toJson(params));
 }
 
 function readBeaconParamsIfExists(filepath: string): IBeaconParamsUnparsed {

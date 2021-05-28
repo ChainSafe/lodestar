@@ -6,17 +6,7 @@ export interface IPhase0Preset {
   TARGET_COMMITTEE_SIZE: number;
   MAX_VALIDATORS_PER_COMMITTEE: number;
 
-  /*
-  MIN_PER_EPOCH_CHURN_LIMIT: number;
-  CHURN_LIMIT_QUOTIENT: number;
-  */
-
   SHUFFLE_ROUND_COUNT: number;
-
-  /*
-  MIN_GENESIS_ACTIVE_VALIDATOR_COUNT: number;
-  MIN_GENESIS_TIME: number;
-  */
 
   HYSTERESIS_QUOTIENT: number;
   HYSTERESIS_DOWNWARD_MULTIPLIER: number;
@@ -25,47 +15,18 @@ export interface IPhase0Preset {
   // Fork choice
   SAFE_SLOTS_TO_UPDATE_JUSTIFIED: number;
 
-  /*
-  // Validator
-  ETH1_FOLLOW_DISTANCE: number;
-  TARGET_AGGREGATORS_PER_COMMITTEE: number;
-  RANDOM_SUBNETS_PER_VALIDATOR: number;
-  EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION: number;
-  SECONDS_PER_ETH1_BLOCK: number;
-
-  // Deposit contract
-  DEPOSIT_CHAIN_ID: number;
-  DEPOSIT_NETWORK_ID: number;
-  DEPOSIT_CONTRACT_ADDRESS: Buffer;
-  */
-
   // Gwei Values
   MIN_DEPOSIT_AMOUNT: bigint;
   MAX_EFFECTIVE_BALANCE: bigint;
-  EJECTION_BALANCE: bigint;
   EFFECTIVE_BALANCE_INCREMENT: bigint;
 
-  /*
-  // Initial values
-  GENESIS_FORK_VERSION: Buffer;
-  BLS_WITHDRAWAL_PREFIX: Buffer;
-  */
-
   // Time parameters
-  /*
-  GENESIS_DELAY: number;
-  SECONDS_PER_SLOT: number;
-  */
   MIN_ATTESTATION_INCLUSION_DELAY: number;
   SLOTS_PER_EPOCH: number;
   MIN_SEED_LOOKAHEAD: number;
   MAX_SEED_LOOKAHEAD: number;
   EPOCHS_PER_ETH1_VOTING_PERIOD: number;
   SLOTS_PER_HISTORICAL_ROOT: number;
-  /*
-  MIN_VALIDATOR_WITHDRAWABILITY_DELAY: number;
-  SHARD_COMMITTEE_PERIOD: number;
-  */
   MIN_EPOCHS_TO_INACTIVITY_PENALTY: number;
 
   // State vector lengths

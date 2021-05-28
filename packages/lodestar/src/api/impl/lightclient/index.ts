@@ -1,4 +1,4 @@
-import {altair, SyncPeriod} from "@chainsafe/lodestar-types";
+import {altair, ssz, SyncPeriod} from "@chainsafe/lodestar-types";
 import {ApiModules} from "../types";
 import {resolveStateId} from "../beacon/state/utils";
 import {routes} from "@chainsafe/lodestar-api";
@@ -24,7 +24,7 @@ export function getLightclientApi({
 
     async getStateProof(stateId, paths) {
       const state = await resolveStateId(config, chain, db, stateId);
-      const stateTreeBacked = config.types.altair.BeaconState.createTreeBackedFromStruct(state as altair.BeaconState);
+      const stateTreeBacked = ssz.altair.BeaconState.createTreeBackedFromStruct(state as altair.BeaconState);
       return {data: stateTreeBacked.createProof(paths)};
     },
 

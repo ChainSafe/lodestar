@@ -1,4 +1,5 @@
 import {routes} from "@chainsafe/lodestar-api";
+import * as params from "@chainsafe/lodestar-params";
 import {ApiModules} from "../types";
 
 export function getConfigApi({config}: Pick<ApiModules, "config">): routes.config.Api {
@@ -11,14 +12,19 @@ export function getConfigApi({config}: Pick<ApiModules, "config">): routes.confi
     async getDepositContract() {
       return {
         data: {
-          chainId: config.params.DEPOSIT_CHAIN_ID,
-          address: config.params.DEPOSIT_CONTRACT_ADDRESS,
+          chainId: config.DEPOSIT_CHAIN_ID,
+          address: config.DEPOSIT_CONTRACT_ADDRESS,
         },
       };
     },
 
     async getSpec() {
-      return {data: config.params};
+      return {
+        data: {
+          ...params,
+          ...config,
+        },
+      };
     },
   };
 }

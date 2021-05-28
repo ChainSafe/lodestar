@@ -2,7 +2,6 @@ import {Epoch, ValidatorIndex, Gwei, phase0, allForks} from "@chainsafe/lodestar
 import {intDiv} from "@chainsafe/lodestar-utils";
 import {
   EFFECTIVE_BALANCE_INCREMENT,
-  EJECTION_BALANCE,
   EPOCHS_PER_SLASHINGS_VECTOR,
   FAR_FUTURE_EPOCH,
   ForkName,
@@ -127,7 +126,7 @@ export function prepareEpochProcessState<T extends allForks.BeaconState>(state: 
       out.indicesToMaybeActivate.push(i);
     }
 
-    if (status.active && v.exitEpoch === FAR_FUTURE_EPOCH && v.effectiveBalance <= EJECTION_BALANCE) {
+    if (status.active && v.exitEpoch === FAR_FUTURE_EPOCH && v.effectiveBalance <= config.EJECTION_BALANCE) {
       out.indicesToEject.push(i);
     }
 

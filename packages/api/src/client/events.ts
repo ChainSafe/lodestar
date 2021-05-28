@@ -6,8 +6,8 @@ import {Api, BeaconEvent, routesData, getEventSerdes} from "../routes/events";
 /**
  * REST HTTP client for events routes
  */
-export function getClient(config: IBeaconConfig, baseUrl: string): Api {
-  const eventSerdes = getEventSerdes(config);
+export function getClient(_config: IBeaconConfig, baseUrl: string): Api {
+  const eventSerdes = getEventSerdes();
 
   return {
     eventstream: async (topics, signal, onEvent) => {

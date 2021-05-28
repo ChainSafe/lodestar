@@ -54,7 +54,7 @@ export class Validator {
       typeof opts.api === "string"
         ? getClient(config, {
             baseUrl: opts.api,
-            timeoutMs: config.params.SECONDS_PER_SLOT * 1000,
+            timeoutMs: config.SECONDS_PER_SLOT * 1000,
             getAbortSignal: this.getAbortSignal,
           })
         : opts.api;

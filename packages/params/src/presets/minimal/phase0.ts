@@ -6,27 +6,14 @@ import {IPhase0Preset} from "../../preset";
 export const phase0: IPhase0Preset = {
   // Misc
   // ---------------------------------------------------------------
-
   // [customized] Just 4 committees for slot for testing purposes
   MAX_COMMITTEES_PER_SLOT: 4,
   // [customized] unsecure, but fast
   TARGET_COMMITTEE_SIZE: 4,
   // 2**11 (= 2,048)
   MAX_VALIDATORS_PER_COMMITTEE: 2048,
-  /*
-  // 2**2 (= 4)
-  MIN_PER_EPOCH_CHURN_LIMIT: 4,
-  // 2**16 (= 65,536)
-  CHURN_LIMIT_QUOTIENT: 65536,
-  */
   // [customized] Faster, but unsecure.
   SHUFFLE_ROUND_COUNT: 10,
-  /*
-  // [customized]
-  MIN_GENESIS_ACTIVE_VALIDATOR_COUNT: 64,
-  // Jan 3, 2020
-  MIN_GENESIS_TIME: 1578009600,
-  */
   // 4
   HYSTERESIS_QUOTIENT: 4,
   // 1 (minus 0.25)
@@ -39,54 +26,17 @@ export const phase0: IPhase0Preset = {
   // 2**1 (= 1)
   SAFE_SLOTS_TO_UPDATE_JUSTIFIED: 2,
 
-  /*
-  // Validator
-  // ---------------------------------------------------------------
-  // [customized] process deposits more quickly, but insecure
-  ETH1_FOLLOW_DISTANCE: 16,
-  // 2**4 (= 16)
-  TARGET_AGGREGATORS_PER_COMMITTEE: 16,
-  // 2**0 (= 1)
-  RANDOM_SUBNETS_PER_VALIDATOR: 1,
-  // 2**8 (= 256)
-  EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION: 256,
-  // 14 (estimate from Eth1 mainnet)
-  SECONDS_PER_ETH1_BLOCK: 14,
-
-  // Deposit contract
-  // ---------------------------------------------------------------
-  // Ethereum Goerli testnet
-  DEPOSIT_CHAIN_ID: 5,
-  DEPOSIT_NETWORK_ID: 5,
-  // **TBD**
-  DEPOSIT_CONTRACT_ADDRESS: "0x1234567890123456789012345678901234567890",
-  */
-
   // Gwei values
   // ---------------------------------------------------------------
   // 2**0 * 10**9 (= 1,000,000,000) Gwei
   MIN_DEPOSIT_AMOUNT: BigInt(1000000000),
   // 2**5 * 10**9 (= 32,000,000,000) Gwei
   MAX_EFFECTIVE_BALANCE: BigInt(32000000000),
-  // 2**4 * 10**9 (= 16,000,000,000) Gwei
-  EJECTION_BALANCE: BigInt(16000000000),
   // 2**0 * 10**9 (= 1,000,000,000) Gwei
   EFFECTIVE_BALANCE_INCREMENT: BigInt(1000000000),
 
-  /*
-  // Initial values
-  // ---------------------------------------------------------------
-  // Highest byte set to 0x01 to avoid collisions with mainnet versioning
-  GENESIS_FORK_VERSION: "0x00000001",
-  BLS_WITHDRAWAL_PREFIX: "0x00",
-
   // Time parameters
   // ---------------------------------------------------------------
-  // [customized] Faster to spin up testnets, but does not give validator reasonable warning time for genesis
-  GENESIS_DELAY: 300,
-  // [customized] Faster for testing purposes
-  SECONDS_PER_SLOT: 6,
-  */
   // 2**0 (= 1) slots 6 seconds
   MIN_ATTESTATION_INCLUSION_DELAY: 1,
   // [customized] fast epochs
