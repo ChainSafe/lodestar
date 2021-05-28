@@ -326,13 +326,14 @@ describe("Run multi node multi process interop validators (no eth1) until checkp
             }
 
             // Wait for finalized checkpoint on all nodes
-            clients[i].events.eventstream([routes.events.EventType.finalizedCheckpoint], controller.signal, (event) => {
-              if (event.type === routes.events.EventType.finalizedCheckpoint) {
-                console.log(`BeaconNode #${i} justifiedCheckpoint`, {
-                  epoch: event.message.epoch,
-                  root: event.message.block,
-                });
-                resolve();
+            clients[i].events.eventstream([routes.events.EventType.head], controller.signal, (event) => {
+              if (event.type === routes.events.EventType.head) {
+                if (event.message.slot > config.params.SLOTS_PER_EPOCH * 3) {
+                  console.log(`TEMP: BeaconNode #${i} got to epoch 3`, {
+                    root: event.message.block,
+                  });
+                  resolve();
+                }
               }
             });
           });
