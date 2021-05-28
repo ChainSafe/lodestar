@@ -28,12 +28,12 @@ jobs:
         if: steps.cache-deps.outputs.cache-hit == 'true'
       # </common-build>
 
-      - name: Simulation single process single node test
-        run: yarn test:sim:singleProcess
-        working-directory: packages/lodestar
-      - name: Simulation single process multi node test
-        run: yarn test:sim:singleProcessMultiNode
-        working-directory: packages/lodestar
+      # - name: Simulation single process single node test
+      #   run: yarn test:sim:singleProcess
+      #   working-directory: packages/lodestar
+      # - name: Simulation single process multi node test
+      #   run: yarn test:sim:singleProcessMultiNode
+      #   working-directory: packages/lodestar
       - name: Simulation multi process multi node test phase0
         run: yarn test:sim:multiProcess
         working-directory: packages/lodestar
