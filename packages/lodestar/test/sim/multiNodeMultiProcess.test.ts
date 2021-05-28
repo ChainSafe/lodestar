@@ -149,6 +149,9 @@ describe("Run multi node multi process interop validators (no eth1) until checkp
               api: ["beacon", "config", "events", "node", "validator", "debug"],
             },
           },
+          chain: {
+            runChainStatusNotifier: true,
+          },
           eth1: {enabled: false},
           metrics: {enabled: false},
           network: {
