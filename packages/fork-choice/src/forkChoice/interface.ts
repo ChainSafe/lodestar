@@ -88,6 +88,7 @@ export interface IForkChoice {
    */
   getBlock(blockRoot: phase0.Root): IBlockSummary | null;
   getFinalizedBlock(): IBlockSummary;
+  getJustifiedBlock(): IBlockSummary;
   /**
    * Return `true` if `block_root` is equal to the finalized root, or a known descendant of it.
    */
