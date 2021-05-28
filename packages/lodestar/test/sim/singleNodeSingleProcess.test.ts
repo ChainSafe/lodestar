@@ -13,7 +13,7 @@ import {initBLS} from "@chainsafe/lodestar-cli/src/util";
 
 /* eslint-disable no-console, @typescript-eslint/naming-convention */
 
-describe("Run single node single thread interop validators (no eth1) until checkpoint", function () {
+describe("Run single node single process interop validators (no eth1) until checkpoint", function () {
   const testParams: Pick<IBeaconParams, "SECONDS_PER_SLOT" | "SLOTS_PER_EPOCH" | "TARGET_AGGREGATORS_PER_COMMITTEE"> = {
     SECONDS_PER_SLOT: 2,
     SLOTS_PER_EPOCH: 8,

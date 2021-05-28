@@ -4,6 +4,7 @@ import fs from "fs";
 import tmp from "tmp";
 import child_process from "child_process";
 import PeerId, {createFromPrivKey} from "peer-id";
+import {AbortController} from "abort-controller";
 import {ENR, createKeypairFromPeerId} from "@chainsafe/discv5";
 import {IBeaconParams} from "@chainsafe/lodestar-params";
 import {params as minimalParams} from "@chainsafe/lodestar-params/minimal";
@@ -11,11 +12,13 @@ import {RecursivePartial, TimeoutError, withTimeout} from "@chainsafe/lodestar-u
 import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 import {getClient, Api, routes} from "@chainsafe/lodestar-api";
 import {ChainEvent} from "../../src/chain";
-import {logFilesDir} from "./params";
 import {IBeaconNodeOptions} from "../../src";
 import {retry} from "../../src/util/retry";
 import {getInteropState, storeSSZState} from "../../src/node/utils/state";
-import {AbortController} from "abort-controller";
+import {logFilesDir} from "./params";
+
+// TODO: Add simTestInfoTracker() to node 0.
+//       Probably that would have to be bundled in the packages/cli or packages/lodestar
 
 /* eslint-disable no-console, @typescript-eslint/naming-convention */
 
