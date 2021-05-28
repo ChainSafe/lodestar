@@ -142,8 +142,8 @@ describe("Run multi node multi thread interop validators (no eth1) until checkpo
             rest: {
               enabled: true,
               port: apiPort,
-              // For validator ------------------- | + To connect to peers and get the node's ENR
-              api: ["beacon", "validator", "events", "debug", "node"],
+              // Default namespaces -------------------------------- | + To connect to peers
+              api: ["beacon", "config", "events", "node", "validator", "debug"],
             },
           },
           eth1: {enabled: false},
