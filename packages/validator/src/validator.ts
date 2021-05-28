@@ -13,6 +13,7 @@ import {AttestationService} from "./services/attestation";
 import {IndicesService} from "./services/indices";
 import {SyncCommitteeService} from "./services/syncCommittee";
 import {ISlashingProtection} from "./slashingProtection";
+import {assertEqualParams} from "./util/params";
 
 export type ValidatorOptions = {
   slashingProtection: ISlashingProtection;
@@ -77,8 +78,14 @@ export class Validator {
       typeof opts.api === "string"
         ? getClient(opts.config, {baseUrl: opts.api, timeoutMs: 12000, getAbortSignal: () => signal})
         : opts.api;
+
     const genesis = await waitForGenesis(api, opts.logger, signal);
     opts.logger.info("Genesis available");
+
+    const {data: nodeParams} = await api.config.getSpec();
+    assertEqualParams(opts.config.params, nodeParams);
+    opts.logger.info("Verified node and validator have same config");
+
     return new Validator(opts, genesis);
   }
 
