@@ -270,8 +270,8 @@ describe("Run multi node multi process interop validators (no eth1) until checkp
               console.log(`Node ${i} is online`, res.data.peerId);
             },
             {
-              retries: 10,
-              waitBetweenRetriesMs: 1000,
+              retries: 15,
+              waitBetweenRetriesMs: 2000,
               onError: (e, k) => console.error(`Node ${i} not available yet, try ${k}`, e.message),
             }
           );
@@ -339,6 +339,8 @@ describe("Run multi node multi process interop validators (no eth1) until checkp
           });
         })
       );
+
+      console.log("\n\n### Test completed\n\n");
     });
   }
 });
