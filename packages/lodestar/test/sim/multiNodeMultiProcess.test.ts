@@ -266,7 +266,11 @@ describe("Run multi node multi process interop validators (no eth1) until checkp
               const res = await clients[i].node.getNetworkIdentity();
               console.log(`Node ${i} is online`, res.data.peerId);
             },
-            {retries: 10, waitBetweenRetriesMs: 1000}
+            {
+              retries: 10,
+              waitBetweenRetriesMs: 1000,
+              onError: (e, k) => console.error(`Node ${i} not available yet, try ${k}`, e.message),
+            }
           );
         }
       });
@@ -285,7 +289,7 @@ describe("Run multi node multi process interop validators (no eth1) until checkp
                 retries: 5,
                 waitBetweenRetriesMs: 2000,
                 // Connecting to nodes should work the first time. Log otherwise why it fails
-                onError: (e, k) => console.error(`Error connectToPeer node ${i} -> ${j} try ${k}`, e),
+                onError: (e, k) => console.error(`Error connectToPeer node ${i} -> ${j}, try ${k}`, e),
               }
             );
           }
