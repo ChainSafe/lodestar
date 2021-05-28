@@ -12,6 +12,10 @@ export interface IRetryOptions {
    */
   shouldRetry?: (lastError: Error) => boolean;
   /**
+   * Callback on each error
+   */
+  onError?: (error: Error, attempt: number) => unknown;
+  /**
    * wait between retries N miliseconds
    */
   waitBetweenRetriesMs?: number;
@@ -33,6 +37,7 @@ export async function retry<A>(fn: (attempt: number) => A | Promise<A>, opts?: I
       return await fn(i);
     } catch (e) {
       lastError = e as Error;
+      if (opts?.onError) opts?.onError(e, i);
       if (shouldRetry && !shouldRetry(lastError)) {
         break;
       }

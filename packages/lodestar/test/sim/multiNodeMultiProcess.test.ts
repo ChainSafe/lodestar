@@ -281,7 +281,12 @@ describe("Run multi node multi process interop validators (no eth1) until checkp
                 await clients[i].debug.connectToPeer(peerIds[j].toB58String(), [getP2pAddr(j)]);
                 console.log(`Successfully connected nodes ${i} -> ${j}`);
               },
-              {retries: 5, waitBetweenRetriesMs: 2000}
+              {
+                retries: 5,
+                waitBetweenRetriesMs: 2000,
+                // Connecting to nodes should work the first time. Log otherwise why it fails
+                onError: (e, k) => console.error(`Error connectToPeer node ${i} -> ${j} try ${k}`, e),
+              }
             );
           }
         }
