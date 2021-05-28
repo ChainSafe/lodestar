@@ -22,7 +22,7 @@ import {AbortController} from "abort-controller";
 const lodestarBinPath = path.join(__dirname, "../../../cli/bin/lodestar");
 const nodeJsBinPath = process.execPath;
 
-describe("Run multi node multi thread interop validators (no eth1) until checkpoint", function () {
+describe("Run multi node multi process interop validators (no eth1) until checkpoint", function () {
   // Test phase0 to justification
   const phase0Case = {altairForkEpoch: 1e10}; // Practically Infinity
   // Test altair only
@@ -55,7 +55,7 @@ describe("Run multi node multi thread interop validators (no eth1) until checkpo
     const event = ChainEvent.justified;
     const altairForkEpoch = testCase.altairForkEpoch;
 
-    it(`multiThread ${nodeCount} nodes / ${validatorsPerNode} vc / 1 validator > until ${event}, altairForkEpoch ${altairForkEpoch}`, async function () {
+    it(`multiProcess ${nodeCount} nodes / ${validatorsPerNode} vc / 1 validator > until ${event}, altairForkEpoch ${altairForkEpoch}`, async function () {
       this.timeout("10 min");
 
       console.log(
@@ -78,7 +78,7 @@ describe("Run multi node multi thread interop validators (no eth1) until checkpo
 
       // CLI options
       const tmpDir = tmp.dirSync({unsafeCleanup: true});
-      const logFile = `${logFilesDir}/multithread_multinode_altair-${altairForkEpoch}.log`;
+      const logFile = `${logFilesDir}/multiprocess_multinode_altair-${altairForkEpoch}.log`;
       const logLevelFile = "debug";
       const genesisStateFilePath = path.join(tmpDir.name, "genesis_state.ssz");
       const paramsFilePath = path.join(tmpDir.name, "config.yaml");
