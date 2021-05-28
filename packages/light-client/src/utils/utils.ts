@@ -72,14 +72,14 @@ function serializePubkeys(pubkeys: PublicKey[]): altair.LightClientUpdate["nextS
 export function deserializeSyncCommittee(syncCommittee: altair.SyncCommittee): SyncCommitteeFast {
   return {
     pubkeys: deserializePubkeys(syncCommittee.pubkeys),
-    pubkeyAggregates: deserializePubkeys(syncCommittee.pubkeyAggregates),
+    aggregatePubkey: PublicKey.fromBytes(syncCommittee.aggregatePubkey.valueOf() as Uint8Array),
   };
 }
 
 export function serializeSyncCommittee(syncCommittee: SyncCommitteeFast): altair.SyncCommittee {
   return {
     pubkeys: serializePubkeys(syncCommittee.pubkeys),
-    pubkeyAggregates: serializePubkeys(syncCommittee.pubkeyAggregates),
+    aggregatePubkey: syncCommittee.aggregatePubkey.toBytes(),
   };
 }
 

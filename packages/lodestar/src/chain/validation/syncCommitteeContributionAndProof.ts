@@ -12,7 +12,7 @@ import {
 } from "./signatureSets";
 
 /**
- * Spec v1.1.0-alpha.3
+ * Spec v1.1.0-alpha.5
  */
 export async function validateSyncCommitteeGossipContributionAndProof(
   config: IBeaconConfig,

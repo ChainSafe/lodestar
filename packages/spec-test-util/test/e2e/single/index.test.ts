@@ -17,6 +17,9 @@ export interface ISimpleStruct {
 export interface ISimpleCase extends Iterable<string> {
   input: ISimpleStruct;
   output: number;
+  meta?: {
+    blsSetting?: BigInt;
+  };
 }
 
 const inputSchema = new ContainerType({

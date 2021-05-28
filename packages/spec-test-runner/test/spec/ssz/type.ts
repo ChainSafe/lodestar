@@ -1,4 +1,6 @@
-export interface IBaseSSZStaticTestCase<T> {
+import {IBaseSpecTest} from "../type";
+
+export interface IBaseSSZStaticTestCase<T> extends IBaseSpecTest {
   roots: {
     root: string;
   };

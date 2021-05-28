@@ -9,21 +9,12 @@ export const MAX_REQUEST_BLOCKS = 2 ** 10; // 1024
 /** Rationale: https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/p2p-interface.md#why-are-there-attestation_subnet_count-attestation-subnets */
 export const ATTESTATION_SUBNET_COUNT = 64;
 
-// Altair - TODO: Make sure it's not included in the spec
-export const SYNC_COMMITTEE_SUBNET_COUNT = 8;
+// https://github.com/ethereum/eth2.0-specs/blob/v1.1.0-alpha.5/specs/altair/validator.md
+export const SYNC_COMMITTEE_SUBNET_COUNT = 4;
 
 export const MIN_SYNC_COMMITTEE_PARTICIPANTS = 1;
-//~27 hours
-export const LIGHT_CLIENT_UPDATE_TIMEOUT = 2 ** 13;
 
 // Lightclient pre-computed
-/**
- * ```ts
- * BigInt(2 ** 64) - BigInt(1);
- * ```
- * But approximated to `Number.MAX_SAFE_INTEGER`
- */
-export const MAX_VALID_LIGHT_CLIENT_UPDATES = Number.MAX_SAFE_INTEGER;
 /**
  * ```ts
  * config.types.altair.BeaconState.getPathGindex(["finalizedCheckpoint", "root"])

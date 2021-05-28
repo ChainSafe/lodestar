@@ -1,22 +1,34 @@
-import {ByteVector, hash, toHexString, BitList, List, readonlyValues} from "@chainsafe/ssz";
+import {ByteVector, hash, toHexString, BitList, List, isTreeBacked, TreeBacked} from "@chainsafe/ssz";
 import bls, {CoordType, PublicKey} from "@chainsafe/bls";
-import {BLSSignature, CommitteeIndex, Epoch, Slot, ValidatorIndex, phase0, allForks} from "@chainsafe/lodestar-types";
+import {
+  BLSSignature,
+  CommitteeIndex,
+  Epoch,
+  Slot,
+  ValidatorIndex,
+  phase0,
+  allForks,
+  altair,
+  Gwei,
+} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {intToBytes} from "@chainsafe/lodestar-utils";
+import {bigIntSqrt, intToBytes} from "@chainsafe/lodestar-utils";
 
 import {GENESIS_EPOCH} from "../../constants";
 import {
   computeEpochAtSlot,
   computeProposerIndex,
   computeStartSlotAtEpoch,
-  getAttestingIndicesFromCommittee,
   getSeed,
+  getTotalActiveBalance,
   isAggregatorFromCommitteeLength,
+  zipIndexesInBitList,
 } from "../../util";
-import {getSyncCommitteeIndices} from "../../altair/state_accessor/sync_committee";
+import {getNextSyncCommitteeIndices} from "../../altair/state_accessor/sync_committee";
 import {computeEpochShuffling, IEpochShuffling} from "./epochShuffling";
 import {MutableVector} from "@chainsafe/persistent-ts";
 import {CachedValidatorList} from "./cachedValidatorList";
+import {PROPOSER_WEIGHT, SYNC_REWARD_WEIGHT, WEIGHT_DENOMINATOR} from "../../altair/constants";
 
 export type EpochContextOpts = {
   pubkey2index?: PubkeyIndexMap;
@@ -85,9 +97,17 @@ export function createEpochContext(
 
   // Only after altair, compute the indices of the current sync committee
   const onAltairFork = currentEpoch >= config.params.ALTAIR_FORK_EPOCH;
-  const nextPeriodEpoch = currentEpoch + config.params.EPOCHS_PER_SYNC_COMMITTEE_PERIOD;
-  const currSyncCommitteeIndexes = onAltairFork ? getSyncCommitteeIndices(config, state, currentEpoch) : [];
-  const nextSyncCommitteeIndexes = onAltairFork ? getSyncCommitteeIndices(config, state, nextPeriodEpoch) : [];
+  const currSyncCommitteeIndexes = onAltairFork
+    ? computeSyncCommitteeIndices(pubkey2index, state as altair.BeaconState, false)
+    : [];
+  const nextSyncCommitteeIndexes = onAltairFork
+    ? computeSyncCommitteeIndices(pubkey2index, state as altair.BeaconState, true)
+    : [];
+
+  const syncParticipantReward = onAltairFork ? computeSyncParticipantReward(config, state) : BigInt(0);
+  const syncProposerReward = onAltairFork
+    ? (syncParticipantReward * PROPOSER_WEIGHT) / (WEIGHT_DENOMINATOR - PROPOSER_WEIGHT)
+    : BigInt(0);
 
   return new EpochContext({
     config,
@@ -101,6 +121,8 @@ export function createEpochContext(
     nextSyncCommitteeIndexes,
     currSyncComitteeValidatorIndexMap: computeSyncComitteeMap(currSyncCommitteeIndexes),
     nextSyncComitteeValidatorIndexMap: computeSyncComitteeMap(nextSyncCommitteeIndexes),
+    syncParticipantReward,
+    syncProposerReward,
   });
 }
 
@@ -156,6 +178,7 @@ export function computeProposers(
 /**
  * Compute all index in sync committee for all validatorIndexes in `syncCommitteeIndexes`.
  * Helps reduce work necessary to verify a validatorIndex belongs in a sync committee and which.
+ * This is similar to compute_subnets_for_sync_committee in https://github.com/ethereum/eth2.0-specs/blob/v1.1.0-alpha.5/specs/altair/validator.md
  */
 export function computeSyncComitteeMap(syncCommitteeIndexes: ValidatorIndex[]): SyncComitteeValidatorIndexMap {
   const map = new Map<ValidatorIndex, number[]>();
@@ -167,10 +190,45 @@ export function computeSyncComitteeMap(syncCommitteeIndexes: ValidatorIndex[]): 
       indexes = [];
       map.set(validatorIndex, indexes);
     }
-    indexes.push(i);
+    if (!indexes.includes(i)) {
+      indexes.push(i);
+    }
   }
 
   return map;
+}
+
+/**
+ * Extract validator indices from current and next sync committee
+ */
+export function computeSyncCommitteeIndices(
+  pubkey2index: PubkeyIndexMap,
+  state: altair.BeaconState,
+  isNext: boolean
+): phase0.ValidatorIndex[] {
+  const syncCommittee = isNext ? state.nextSyncCommittee : state.currentSyncCommittee;
+  const result: phase0.ValidatorIndex[] = [];
+  for (const pubkey of syncCommittee.pubkeys) {
+    const validatorIndex = pubkey2index.get(pubkey.valueOf() as Uint8Array);
+    if (validatorIndex !== undefined) {
+      result.push(validatorIndex);
+    }
+  }
+  return result;
+}
+
+/**
+ * Same logic in https://github.com/ethereum/eth2.0-specs/blob/v1.1.0-alpha.5/specs/altair/beacon-chain.md#sync-committee-processing
+ */
+export function computeSyncParticipantReward(config: IBeaconConfig, state: allForks.BeaconState): Gwei {
+  const {EFFECTIVE_BALANCE_INCREMENT, BASE_REWARD_FACTOR, SLOTS_PER_EPOCH, SYNC_COMMITTEE_SIZE} = config.params;
+  const totalActiveBalance = getTotalActiveBalance(config, state);
+  const totalActiveIncrements = totalActiveBalance / EFFECTIVE_BALANCE_INCREMENT;
+  const baseRewardPerIncrement =
+    (EFFECTIVE_BALANCE_INCREMENT * BigInt(BASE_REWARD_FACTOR)) / bigIntSqrt(totalActiveBalance);
+  const totalBaseRewards = baseRewardPerIncrement * totalActiveIncrements;
+  const maxParticipantRewards = (totalBaseRewards * SYNC_REWARD_WEIGHT) / WEIGHT_DENOMINATOR / BigInt(SLOTS_PER_EPOCH);
+  return maxParticipantRewards / BigInt(SYNC_COMMITTEE_SIZE);
 }
 
 /**
@@ -199,20 +257,25 @@ export function rotateEpochs(
     currEpoch % epochCtx.config.params.EPOCHS_PER_SYNC_COMMITTEE_PERIOD === 0 &&
     currEpoch > epochCtx.config.params.ALTAIR_FORK_EPOCH
   ) {
-    const nextPeriodEpoch = currEpoch + epochCtx.config.params.EPOCHS_PER_SYNC_COMMITTEE_PERIOD;
     epochCtx.currSyncCommitteeIndexes = epochCtx.nextSyncCommitteeIndexes;
-    epochCtx.nextSyncCommitteeIndexes = getSyncCommitteeIndices(epochCtx.config, state, nextPeriodEpoch);
+    epochCtx.nextSyncCommitteeIndexes = getNextSyncCommitteeIndices(epochCtx.config, state);
     epochCtx.currSyncComitteeValidatorIndexMap = epochCtx.nextSyncComitteeValidatorIndexMap;
     epochCtx.nextSyncComitteeValidatorIndexMap = computeSyncComitteeMap(epochCtx.nextSyncCommitteeIndexes);
   }
 
   // If crossing through the altair fork the caches will be empty, fill them up
   if (currEpoch === epochCtx.config.params.ALTAIR_FORK_EPOCH) {
-    const nextPeriodEpoch = currEpoch + epochCtx.config.params.EPOCHS_PER_SYNC_COMMITTEE_PERIOD;
-    epochCtx.currSyncCommitteeIndexes = getSyncCommitteeIndices(epochCtx.config, state, currEpoch);
-    epochCtx.nextSyncCommitteeIndexes = getSyncCommitteeIndices(epochCtx.config, state, nextPeriodEpoch);
+    const firstCommitteeIndices = getNextSyncCommitteeIndices(epochCtx.config, state);
+    epochCtx.currSyncCommitteeIndexes = [...firstCommitteeIndices];
+    epochCtx.nextSyncCommitteeIndexes = [...firstCommitteeIndices];
     epochCtx.currSyncComitteeValidatorIndexMap = computeSyncComitteeMap(epochCtx.currSyncCommitteeIndexes);
     epochCtx.nextSyncComitteeValidatorIndexMap = computeSyncComitteeMap(epochCtx.nextSyncCommitteeIndexes);
+  }
+
+  if (currEpoch >= epochCtx.config.params.ALTAIR_FORK_EPOCH) {
+    epochCtx.syncParticipantReward = computeSyncParticipantReward(epochCtx.config, state);
+    epochCtx.syncProposerReward =
+      (epochCtx.syncParticipantReward * PROPOSER_WEIGHT) / (WEIGHT_DENOMINATOR - PROPOSER_WEIGHT);
   }
 }
 
@@ -229,6 +292,8 @@ interface IEpochContextData {
   nextSyncCommitteeIndexes: ValidatorIndex[];
   currSyncComitteeValidatorIndexMap: SyncComitteeValidatorIndexMap;
   nextSyncComitteeValidatorIndexMap: SyncComitteeValidatorIndexMap;
+  syncParticipantReward: Gwei;
+  syncProposerReward: Gwei;
 }
 
 /**
@@ -251,17 +316,19 @@ export class EpochContext {
   currentShuffling: IEpochShuffling;
   nextShuffling: IEpochShuffling;
   /**
-   * Update freq: every ~ 27h.
+   * Update freq: every ~ 54h.
    * Memory cost: 1024 Number integers.
    */
   currSyncCommitteeIndexes: ValidatorIndex[];
   nextSyncCommitteeIndexes: ValidatorIndex[];
   /**
-   * Update freq: every ~ 27h.
+   * Update freq: every ~ 54h.
    * Memory cost: Map of Number -> Number with 1024 entries.
    */
   currSyncComitteeValidatorIndexMap: SyncComitteeValidatorIndexMap;
   nextSyncComitteeValidatorIndexMap: SyncComitteeValidatorIndexMap;
+  syncParticipantReward: phase0.Gwei;
+  syncProposerReward: phase0.Gwei;
   config: IBeaconConfig;
 
   constructor(data: IEpochContextData) {
@@ -276,6 +343,8 @@ export class EpochContext {
     this.nextSyncCommitteeIndexes = data.nextSyncCommitteeIndexes;
     this.currSyncComitteeValidatorIndexMap = data.currSyncComitteeValidatorIndexMap;
     this.nextSyncComitteeValidatorIndexMap = data.nextSyncComitteeValidatorIndexMap;
+    this.syncParticipantReward = data.syncParticipantReward;
+    this.syncProposerReward = data.syncProposerReward;
   }
 
   /**
@@ -317,14 +386,21 @@ export class EpochContext {
    * Return the indexed attestation corresponding to ``attestation``.
    */
   getIndexedAttestation(attestation: phase0.Attestation): phase0.IndexedAttestation {
-    const data = attestation.data;
-    const bits = Array.from(readonlyValues(attestation.aggregationBits));
-    const committee = this.getBeaconCommittee(data.slot, data.index);
-    // No need for a Set, the indices in the committee are already unique.
-    const attestingIndices: ValidatorIndex[] = [];
-    for (const [i, index] of committee.entries()) {
-      if (bits[i]) {
-        attestingIndices.push(index);
+    const {aggregationBits, data} = attestation;
+    const committeeIndices = this.getBeaconCommittee(data.slot, data.index);
+    let attestingIndices: phase0.ValidatorIndex[];
+    if (isTreeBacked(attestation)) {
+      attestingIndices = zipIndexesInBitList(
+        committeeIndices,
+        (attestation.aggregationBits as unknown) as TreeBacked<BitList>,
+        this.config.types.phase0.CommitteeBits
+      );
+    } else {
+      attestingIndices = [];
+      for (const [i, index] of committeeIndices.entries()) {
+        if (aggregationBits[i]) {
+          attestingIndices.push(index);
+        }
       }
     }
     // sort in-place
@@ -337,8 +413,15 @@ export class EpochContext {
   }
 
   getAttestingIndices(data: phase0.AttestationData, bits: BitList): ValidatorIndex[] {
-    const committee = this.getBeaconCommittee(data.slot, data.index);
-    return getAttestingIndicesFromCommittee(committee, Array.from(readonlyValues(bits)) as List<boolean>);
+    const committeeIndices = this.getBeaconCommittee(data.slot, data.index);
+    const validatorIndices = isTreeBacked(bits)
+      ? zipIndexesInBitList(
+          committeeIndices,
+          (bits as unknown) as TreeBacked<BitList>,
+          this.config.types.phase0.CommitteeBits
+        )
+      : committeeIndices.filter((_, index) => !!bits[index]);
+    return validatorIndices;
   }
 
   /**

@@ -1,4 +1,5 @@
 import {allForks} from "@chainsafe/lodestar-types";
+import {toHexString} from "@chainsafe/ssz";
 import {CachedBeaconState} from "../util";
 
 export function processBlockHeader(state: CachedBeaconState<allForks.BeaconState>, block: allForks.BeaconBlock): void {
@@ -31,7 +32,9 @@ export function processBlockHeader(state: CachedBeaconState<allForks.BeaconState
       state.config.types.phase0.BeaconBlockHeader.hashTreeRoot(state.latestBlockHeader)
     )
   ) {
-    throw new Error("Block parent root does not match state latest block");
+    throw new Error(
+      `Block parent root ${toHexString(block.parentRoot)} does not match state latest block, block slot=${slot}`
+    );
   }
   // cache current block as the new latest block
   state.latestBlockHeader = {

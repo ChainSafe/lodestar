@@ -12,14 +12,17 @@ export function processInactivityUpdates(config: IBeaconConfig, state: altair.Be
     TIMELY_TARGET_FLAG_INDEX,
     getPreviousEpoch(config, state)
   );
+  const {INACTIVITY_SCORE_BIAS, INACTIVITY_SCORE_RECOVERY_RATE} = config.params;
   const inActivityLeak = isInInactivityLeak(config, (state as unknown) as phase0.BeaconState);
   for (const index of getEligibleValidatorIndices(config, (state as unknown) as phase0.BeaconState)) {
     if (unslashedParticipatingIndices.includes(index)) {
-      if (state.inactivityScores[index] > 0) {
-        state.inactivityScores[index] -= 1;
-      }
-    } else if (inActivityLeak) {
-      state.inactivityScores[index] += Number(config.params.INACTIVITY_SCORE_BIAS);
+      state.inactivityScores[index] -= Math.min(1, state.inactivityScores[index]);
+    } else {
+      state.inactivityScores[index] += Number(INACTIVITY_SCORE_BIAS);
+    }
+
+    if (!inActivityLeak) {
+      state.inactivityScores[index] -= Math.min(Number(INACTIVITY_SCORE_RECOVERY_RATE), state.inactivityScores[index]);
     }
   }
 }

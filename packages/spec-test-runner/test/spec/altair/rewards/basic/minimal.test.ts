@@ -14,12 +14,10 @@ import {
 } from "@chainsafe/lodestar-beacon-state-transition/lib/altair/epoch/balance";
 import {
   TIMELY_HEAD_FLAG_INDEX,
-  TIMELY_HEAD_WEIGHT,
   TIMELY_SOURCE_FLAG_INDEX,
-  TIMELY_SOURCE_WEIGHT,
   TIMELY_TARGET_FLAG_INDEX,
-  TIMELY_TARGET_WEIGHT,
 } from "@chainsafe/lodestar-beacon-state-transition/lib/altair/constants";
+import {IBaseSpecTest} from "../../../type";
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
 const config = createIBeaconConfig({...params, ALTAIR_FORK_EPOCH: 0});
@@ -29,13 +27,13 @@ const Deltas = new VectorType<bigint[]>({
   length: 2,
 });
 
-type RewardTestCase = {
+interface RewardTestCase extends IBaseSpecTest {
   pre: altair.BeaconState;
   head_deltas: bigint[][];
   source_deltas: bigint[][];
   target_deltas: bigint[][];
   inactivity_penalty_deltas: bigint[][];
-};
+}
 
 type Output = {
   head_deltas: bigint[][];
@@ -54,9 +52,9 @@ describeDirectorySpecTest<RewardTestCase, Output>(
     );
     const process = allForks.prepareEpochProcessState(wrappedState);
     return {
-      head_deltas: getFlagIndexDeltas(wrappedState, process, TIMELY_HEAD_FLAG_INDEX, TIMELY_HEAD_WEIGHT),
-      source_deltas: getFlagIndexDeltas(wrappedState, process, TIMELY_SOURCE_FLAG_INDEX, TIMELY_SOURCE_WEIGHT),
-      target_deltas: getFlagIndexDeltas(wrappedState, process, TIMELY_TARGET_FLAG_INDEX, TIMELY_TARGET_WEIGHT),
+      head_deltas: getFlagIndexDeltas(wrappedState, process, TIMELY_HEAD_FLAG_INDEX),
+      source_deltas: getFlagIndexDeltas(wrappedState, process, TIMELY_SOURCE_FLAG_INDEX),
+      target_deltas: getFlagIndexDeltas(wrappedState, process, TIMELY_TARGET_FLAG_INDEX),
       inactivity_penalty_deltas: getInactivityPenaltyDeltas(wrappedState, process),
     };
   },
