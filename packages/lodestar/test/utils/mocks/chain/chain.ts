@@ -189,6 +189,7 @@ function mockForkChoice(config: IBeaconConfig): IForkChoice {
     hasBlock: () => true,
     getBlock: () => blockSummary,
     getFinalizedBlock: () => blockSummary,
+    getJustifiedBlock: () => blockSummary,
     isDescendantOfFinalized: () => true,
     isDescendant: () => true,
     prune: () => [blockSummary],
