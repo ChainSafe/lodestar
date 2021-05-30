@@ -18,8 +18,15 @@ import {
   ProposerSlashingRepository,
   StateArchiveRepository,
   VoluntaryExitRepository,
+  BestUpdatePerCommitteePeriod,
+  LightclientFinalizedCheckpoint,
 } from "./repositories";
-import {PreGenesisState, PreGenesisStateLastProcessedBlock} from "./single";
+import {
+  PreGenesisState,
+  PreGenesisStateLastProcessedBlock,
+  LatestFinalizedUpdate,
+  LatestNonFinalizedUpdate,
+} from "./single";
 import {SeenAttestationCache} from "./seenAttestationCache";
 import {PendingBlockRepository} from "./repositories/pendingBlock";
 import {SyncCommitteeCache} from "./syncCommittee";
@@ -48,6 +55,10 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
   // altair
   syncCommittee: SyncCommitteeCache;
   syncCommitteeContribution: SyncCommitteeContributionCache;
+  bestUpdatePerCommitteePeriod: BestUpdatePerCommitteePeriod;
+  latestFinalizedUpdate: LatestFinalizedUpdate;
+  latestNonFinalizedUpdate: LatestNonFinalizedUpdate;
+  lightclientFinalizedCheckpoint: LightclientFinalizedCheckpoint;
 
   constructor(opts: IDatabaseApiOptions) {
     super(opts);
@@ -71,6 +82,10 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
     // altair
     this.syncCommittee = new SyncCommitteeCache(this.config);
     this.syncCommitteeContribution = new SyncCommitteeContributionCache(this.config);
+    this.bestUpdatePerCommitteePeriod = new BestUpdatePerCommitteePeriod(this.config, this.db);
+    this.latestFinalizedUpdate = new LatestFinalizedUpdate(this.config, this.db);
+    this.latestNonFinalizedUpdate = new LatestNonFinalizedUpdate(this.config, this.db);
+    this.lightclientFinalizedCheckpoint = new LightclientFinalizedCheckpoint(this.config, this.db);
   }
 
   /**

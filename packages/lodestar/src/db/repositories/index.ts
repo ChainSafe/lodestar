@@ -13,3 +13,6 @@ export * from "./pendingBlock";
 
 export * from "./depositDataRoot";
 export * from "./eth1Data";
+
+export * from "./bestUpdatePerCommitteePeriod";
+export * from "./lightclientFinalizedCheckpoint";

@@ -122,7 +122,7 @@ export class BeaconChain implements IBeaconChain {
     this.checkpointStateCache = checkpointStateCache;
     this.stateCache = stateCache;
 
-    this.lightclientUpdater = new LightClientUpdater(config, db);
+    this.lightclientUpdater = new LightClientUpdater(config, this.db);
 
     handleChainEvents.bind(this)(this.abortController.signal);
   }

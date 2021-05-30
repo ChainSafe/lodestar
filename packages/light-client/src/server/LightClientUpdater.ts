@@ -11,8 +11,8 @@ import {FINALIZED_ROOT_INDEX, NEXT_SYNC_COMMITTEE_INDEX} from "@chainsafe/lodest
 import {Checkpoint, Epoch, LightClientUpdate, Slot, SyncPeriod} from "@chainsafe/lodestar-types/lib/altair";
 import {isZeroHash, sumBits, toBlockHeader} from "../utils/utils";
 
-type DbRepo<K, T> = {put(key: K, data: T): void; get(key: K): T | null};
-type DbItem<T> = {put(data: T): void; get(): T | null};
+type DbRepo<K, T> = {put(key: K, data: T): Promise<void>; get(key: K): Promise<T | null>};
+type DbItem<T> = {put(data: T): Promise<void>; get(): Promise<T | null>};
 
 export type SyncAttestedData = Pick<
   LightClientUpdate,
@@ -89,7 +89,7 @@ export class LightClientUpdater implements ILightClientUpdater {
   async getBestUpdates(periods: SyncPeriod[]): Promise<LightClientUpdate[]> {
     const updates: LightClientUpdate[] = [];
     for (const period of periods) {
-      const update = this.db.bestUpdatePerCommitteePeriod.get(period);
+      const update = await this.db.bestUpdatePerCommitteePeriod.get(period);
       if (update) updates.push(update);
     }
     return updates;
@@ -118,7 +118,7 @@ export class LightClientUpdater implements ILightClientUpdater {
    * - Consider persisting the best of the best per comittee period in another db repo
    * - Consider storing two best sync aggregates: the one with most bits and the one with most full aggregate sigs
    */
-  onHead(block: altair.BeaconBlock, postState: TreeBacked<altair.BeaconState>): void {
+  async onHead(block: altair.BeaconBlock, postState: TreeBacked<altair.BeaconState>): Promise<void> {
     // Store a proof expected to be attested by the sync committee in a future block
     // Prove that the `finalizedCheckpointRoot` belongs in that block
     this.prevHeadData.set(toHexString(this.config.types.altair.BeaconBlock.hashTreeRoot(block)), {
@@ -147,9 +147,9 @@ export class LightClientUpdater implements ILightClientUpdater {
     }
 
     // Store the best finalized update per period
-    const committeePeriodWithFinalized = this.persistBestFinalizedUpdate(syncAttestedData, signatureData);
+    const committeePeriodWithFinalized = await this.persistBestFinalizedUpdate(syncAttestedData, signatureData);
     // Then, store the best non finalized update per period
-    this.persistBestNonFinalizedUpdate(syncAttestedData, signatureData, committeePeriodWithFinalized);
+    await this.persistBestNonFinalizedUpdate(syncAttestedData, signatureData, committeePeriodWithFinalized);
 
     // Prune old prevHeadData
     if (this.prevHeadData.size > PREV_DATA_MAX_SIZE) {
@@ -168,9 +168,13 @@ export class LightClientUpdater implements ILightClientUpdater {
    *
    * NOTE: Must be called also on start with the current finalized checkpoint (may be genesis)
    */
-  onFinalized(checkpoint: Checkpoint, block: altair.BeaconBlock, postState: TreeBacked<altair.BeaconState>): void {
+  async onFinalized(
+    checkpoint: Checkpoint,
+    block: altair.BeaconBlock,
+    postState: TreeBacked<altair.BeaconState>
+  ): Promise<void> {
     // Pre-compute the nextSyncCommitteeBranch for this checkpoint, it will never change
-    this.db.lightclientFinalizedCheckpoint.put(checkpoint.epoch, {
+    await this.db.lightclientFinalizedCheckpoint.put(checkpoint.epoch, {
       header: toBlockHeader(this.config, block),
       nextSyncCommittee: postState.nextSyncCommittee,
       // Prove that the `nextSyncCommittee` is included in a finalized state "attested" by the current sync committee
@@ -184,13 +188,13 @@ export class LightClientUpdater implements ILightClientUpdater {
   /**
    * Store the best syncAggregate per finalizedEpoch
    */
-  private persistBestFinalizedUpdate(
+  private async persistBestFinalizedUpdate(
     syncAttestedData: SyncAttestedData,
     signatureData: CommitteeSignatureData
-  ): SyncPeriod | null {
+  ): Promise<SyncPeriod | null> {
     // Retrieve finality branch for attested finalized checkpoint
     const finalizedEpoch = syncAttestedData.finalizedCheckpoint.epoch;
-    const finalizedData = this.db.lightclientFinalizedCheckpoint.get(finalizedEpoch);
+    const finalizedData = await this.db.lightclientFinalizedCheckpoint.get(finalizedEpoch);
 
     // If there's no finalized data available for this epoch, we can't create an update
     // TODO: Review if we can recover this data from the previous best update maybe, then prune
@@ -220,14 +224,14 @@ export class LightClientUpdater implements ILightClientUpdater {
       forkVersion: signatureData.forkVersion,
     };
 
-    const prevBestUpdate = this.db.bestUpdatePerCommitteePeriod.get(committeePeriod);
+    const prevBestUpdate = await this.db.bestUpdatePerCommitteePeriod.get(committeePeriod);
     if (!prevBestUpdate || isBetterUpdate(prevBestUpdate, newUpdate)) {
-      this.db.bestUpdatePerCommitteePeriod.put(committeePeriod, newUpdate);
+      await this.db.bestUpdatePerCommitteePeriod.put(committeePeriod, newUpdate);
     }
 
-    const prevLatestUpdate = this.db.latestFinalizedUpdate.get();
+    const prevLatestUpdate = await this.db.latestFinalizedUpdate.get();
     if (!prevLatestUpdate || isLatestBestFinalizedUpdate(prevLatestUpdate, newUpdate)) {
-      this.db.latestFinalizedUpdate.put(newUpdate);
+      await this.db.latestFinalizedUpdate.put(newUpdate);
     }
 
     return committeePeriod;
@@ -236,11 +240,11 @@ export class LightClientUpdater implements ILightClientUpdater {
   /**
    * Store the best syncAggregate per committeePeriod in case finality is not reached
    */
-  private persistBestNonFinalizedUpdate(
+  private async persistBestNonFinalizedUpdate(
     syncAttestedData: SyncAttestedData,
     signatureData: CommitteeSignatureData,
     committeePeriodWithFinalized: SyncPeriod | null
-  ): void {
+  ): Promise<void> {
     const committeePeriod = computeSyncPeriodAtSlot(this.config, syncAttestedData.header.slot);
     const signaturePeriod = computeSyncPeriodAtSlot(this.config, signatureData.slot);
     if (committeePeriod !== signaturePeriod) {
@@ -260,17 +264,17 @@ export class LightClientUpdater implements ILightClientUpdater {
 
     // Optimization: If there's already a finalized update for this committee period, no need to create a non-finalized update
     if (committeePeriodWithFinalized !== committeePeriod) {
-      const prevBestUpdate = this.db.bestUpdatePerCommitteePeriod.get(committeePeriod);
+      const prevBestUpdate = await this.db.bestUpdatePerCommitteePeriod.get(committeePeriod);
       if (!prevBestUpdate || isBetterUpdate(prevBestUpdate, newUpdate)) {
-        this.db.bestUpdatePerCommitteePeriod.put(committeePeriod, newUpdate);
+        await this.db.bestUpdatePerCommitteePeriod.put(committeePeriod, newUpdate);
       }
     }
 
     // Store the latest update here overall. Not checking it's the best
-    const prevLatestUpdate = this.db.latestNonFinalizedUpdate.get();
+    const prevLatestUpdate = await this.db.latestNonFinalizedUpdate.get();
     if (!prevLatestUpdate || isLatestBestNonFinalizedUpdate(prevLatestUpdate, newUpdate)) {
       // TODO: Don't store nextCommittee, that can be fetched through getBestUpdates()
-      this.db.latestNonFinalizedUpdate.put(newUpdate);
+      await this.db.latestNonFinalizedUpdate.put(newUpdate);
     }
   }
 }

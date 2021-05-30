@@ -185,7 +185,7 @@ export async function onFinalized(this: BeaconChain, cp: phase0.Checkpoint): Pro
         throw Error(`No block found for checkpoint ${cp.epoch} : ${toHexString(cp.root)}`);
       }
 
-      this.lightclientUpdater.onFinalized(
+      await this.lightclientUpdater.onFinalized(
         cp,
         block.message as altair.BeaconBlock,
         state as TreeBacked<altair.BeaconState>
@@ -283,7 +283,14 @@ export async function onBlock(
 
   // Only after altair
   if (computeEpochAtSlot(this.config, block.message.slot) >= this.config.params.ALTAIR_FORK_EPOCH) {
-    this.lightclientUpdater.onHead(block.message as altair.BeaconBlock, postState as TreeBacked<altair.BeaconState>);
+    try {
+      await this.lightclientUpdater.onHead(
+        block.message as altair.BeaconBlock,
+        postState as TreeBacked<altair.BeaconState>
+      );
+    } catch (e) {
+      this.logger.error("Error lightclientUpdater.onHead", {slot: block.message.slot}, e);
+    }
   }
 }
 
