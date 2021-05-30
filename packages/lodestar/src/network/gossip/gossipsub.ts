@@ -11,7 +11,7 @@ import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {IMetrics} from "../../metrics";
 import {GossipHandlerFn, GossipObject, GossipTopic, GossipType, IGossipMessage, TopicValidatorFnMap} from "./interface";
 import {msgIdToString, getMsgId, messageIsValid} from "./utils";
-import {getGossipSSZSerializer, getGossipTopic, getGossipTopicString} from "./topic";
+import {getGossipSSZSerializer, parseGossipTopic, stringifyGossipTopic} from "./topic";
 import {encodeMessageData} from "./encoding";
 import {DEFAULT_ENCODING} from "./constants";
 import {GossipValidationError} from "./errors";
@@ -258,13 +258,13 @@ export class Eth2Gossipsub extends Gossipsub {
   }
 
   private getGossipTopicString(topic: GossipTopic): string {
-    return getGossipTopicString(this.forkDigestContext, topic);
+    return stringifyGossipTopic(this.forkDigestContext, topic);
   }
 
   private getGossipTopic(topicString: string): GossipTopic {
     let topic = this.gossipTopics.get(topicString);
     if (topic == null) {
-      topic = getGossipTopic(this.forkDigestContext, topicString);
+      topic = parseGossipTopic(this.forkDigestContext, topicString);
       this.gossipTopics.set(topicString, topic);
     }
     return topic;
