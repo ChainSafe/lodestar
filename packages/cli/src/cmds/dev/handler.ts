@@ -56,7 +56,7 @@ export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
   let anchorState;
   if (args.genesisValidators) {
     anchorState = await nodeUtils.initDevState(config, db, args.genesisValidators);
-    nodeUtils.storeSSZState(config, anchorState, path.join(args.rootDir, "dev", "genesis.ssz"));
+    nodeUtils.storeSSZState(config, anchorState, path.join(beaconPaths.rootDir, "dev", "genesis.ssz"));
   } else if (args.genesisStateFile) {
     anchorState = await initStateFromAnchorState(
       config,
@@ -65,7 +65,7 @@ export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
       config
         .getForkTypes(GENESIS_SLOT)
         .BeaconState.createTreeBackedFromBytes(
-          await fs.promises.readFile(path.join(args.rootDir, args.genesisStateFile))
+          await fs.promises.readFile(path.join(beaconPaths.rootDir, args.genesisStateFile))
         )
     );
   } else {
