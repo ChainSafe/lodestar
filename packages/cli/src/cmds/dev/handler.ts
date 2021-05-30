@@ -46,9 +46,16 @@ export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
   beaconNodeOptions.set({db: {name: beaconPaths.dbDir}});
   const options = beaconNodeOptions.getWithDefaults();
 
+  // Genesis params
+  const validatorCount = args.genesisValidators || 8;
+  const genesisTime = args.genesisTime || Math.floor(Date.now() / 1000) + 5;
+  // Set logger format to Eph with provided genesisTime
+  if (args.logFormatGenesisTime === undefined) args.logFormatGenesisTime = genesisTime;
+
   // BeaconNode setup
   const libp2p = await createNodeJsLibp2p(peerId, options.network);
   const logger = getCliLogger(args, beaconPaths, config);
+  logger.info("Lodestar dev", {network: args.network, preset: args.preset});
 
   const db = new BeaconDb({config, controller: new LevelDbController(options.db, {logger})});
   await db.start();
@@ -60,8 +67,6 @@ export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
       .BeaconState.createTreeBackedFromBytes(await fs.promises.readFile(args.genesisStateFile));
     anchorState = await initStateFromAnchorState(config, db, logger, state);
   } else {
-    const validatorCount = args.genesisValidators || 8;
-    const genesisTime = args.genesisTime;
     anchorState = await nodeUtils.initDevState(config, db, validatorCount, genesisTime);
   }
 
