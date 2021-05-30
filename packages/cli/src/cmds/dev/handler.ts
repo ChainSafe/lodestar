@@ -116,7 +116,13 @@ export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
     onGracefulShutdownCbs.push(async () => controller.abort());
 
     // Initailize genesis once for all validators
-    const validator = await Validator.initializeFromBeaconNode({config, slashingProtection, api, logger, secretKeys});
+    const validator = await Validator.initializeFromBeaconNode({
+      config,
+      slashingProtection,
+      api,
+      logger: logger.child({module: "vali"}),
+      secretKeys,
+    });
 
     onGracefulShutdownCbs.push(() => validator.stop());
     await validator.start();
