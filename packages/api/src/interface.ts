@@ -17,3 +17,17 @@ export type Api = {
   node: NodeApi;
   validator: ValidatorApi;
 };
+
+// Declare namespaces for CLI options
+export type ApiNamespace = keyof Api;
+const allNamespacesObj: {[K in keyof Api]: true} = {
+  beacon: true,
+  config: true,
+  debug: true,
+  events: true,
+  lightclient: true,
+  lodestar: true,
+  node: true,
+  validator: true,
+};
+export const allNamespaces = Object.keys(allNamespacesObj) as ApiNamespace[];
