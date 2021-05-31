@@ -1,8 +1,7 @@
-// TODO put the real server name/IP once we have it
-export const mainnetWeakSubjectivityServer = "http://localhost:8081";
-
-// TODO put the real server name/IP once we have it
-export const praterWeakSubjectivityServer = "http://localhost:8081";
-
-// TODO put the real server name/IP once we have it
-export const pyrmontWeakSubjectivityServer = "http://localhost:8081";
+// TODO put the real server names/IPs once we have them
+export enum WeakSubjectivityServers {
+  mainnet = "http://localhost:8081",
+  prater = "http://localhost:8081",
+  pyrmont = "http://localhost:8081",
+  dev = "http://localhost:8081",
+}

@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/naming-convention */
 
 import {AbortSignal} from "abort-controller";
-
+import got from "got";
 import {TreeBacked} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {fromHex, ILogger} from "@chainsafe/lodestar-utils";
@@ -16,16 +16,12 @@ import {
   initStateFromEth1,
 } from "@chainsafe/lodestar";
 import {getStateTypeFromBytes} from "@chainsafe/lodestar/lib/util/multifork";
+import {Checkpoint} from "@chainsafe/lodestar-types/phase0";
 import {downloadOrLoadFile} from "../../util";
 import {IBeaconArgs} from "./options";
 import {defaultNetwork, IGlobalArgs} from "../../options/globalOptions";
 import {getGenesisFileUrl} from "../../networks";
-import {
-  mainnetWeakSubjectivityServer,
-  praterWeakSubjectivityServer,
-  pyrmontWeakSubjectivityServer,
-} from "../weakSubjectivityState";
-import got from "got";
+import {WeakSubjectivityServers} from "../weakSubjectivityState";
 
 type WSResponse = {
   current_epoch: number;
@@ -36,13 +32,17 @@ type WSResponse = {
   ws_state: any;
 };
 
-async function initAndVerifyWeakSujectivityState(
+type WeakSubjectivityData = {
+  state: TreeBacked<allForks.BeaconState>;
+  checkpoint: Checkpoint;
+};
+
+async function getWeakSubjectivityData(
   config: IBeaconConfig,
-  db: IBeaconDb,
   args: IBeaconArgs & IGlobalArgs,
   server: string,
   logger: ILogger
-): Promise<TreeBacked<allForks.BeaconState>> {
+): Promise<WeakSubjectivityData> {
   logger.info("Fetching weak subjectivity state from ChainSafe at " + server);
   const response = await got(server, {searchParams: {checkpoint: args.weakSubjectivityCheckpoint}});
   const responseBody = JSON.parse(response.body) as WSResponse;
@@ -55,7 +55,15 @@ async function initAndVerifyWeakSujectivityState(
   const checkpointRoot = checkpointData[0];
   const checkpointEpoch = checkpointData[1];
   const checkpoint = {root: fromHex(checkpointRoot), epoch: parseInt(checkpointEpoch)};
+  return {state, checkpoint};
+}
 
+async function initAndVerifyWeakSujectivityState(
+  config: IBeaconConfig,
+  db: IBeaconDb,
+  {state, checkpoint}: WeakSubjectivityData,
+  logger: ILogger
+): Promise<TreeBacked<allForks.BeaconState>> {
   // TODO: backfill blocks before calling isWithinWeakSubjectivityPeriod to get an accurate state.latestBlockHeader.stateRoot?  (it is always 0x0000...00 by default with fetched ws state)
 
   if (!isWithinWeakSubjectivityPeriod(config, state.genesisTime, state, checkpoint)) {
@@ -93,15 +101,8 @@ export async function initBeaconState(
   } else if (dbHasSomeState) {
     return await initStateFromDb(config, db, logger);
   } else if (args.fetchChainSafeWeakSubjecitivtyState) {
-    if (args.network === "mainnet") {
-      return await initAndVerifyWeakSujectivityState(config, db, args, mainnetWeakSubjectivityServer, logger);
-    } else if (args.network === "prater") {
-      return await initAndVerifyWeakSujectivityState(config, db, args, praterWeakSubjectivityServer, logger);
-    } else if (args.network === "pyrmont") {
-      return await initAndVerifyWeakSujectivityState(config, db, args, pyrmontWeakSubjectivityServer, logger);
-    } else {
-      throw new Error("No matching network with weak subjectivity state.");
-    }
+    const wsData = await getWeakSubjectivityData(config, args, WeakSubjectivityServers[args.network], logger);
+    return initAndVerifyWeakSujectivityState(config, db, wsData, logger);
   } else {
     const genesisStateFile = args.genesisStateFile || getGenesisFileUrl(args.network || defaultNetwork);
     if (genesisStateFile && !args.forceGenesis) {
