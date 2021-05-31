@@ -21,6 +21,7 @@ import {SyncState} from "../../../sync";
 import {toGraffitiBuffer} from "../../../util/graffiti";
 import {ApiError} from "../errors";
 import {validateSyncCommitteeGossipContributionAndProof} from "../../../chain/validation/syncCommitteeContributionAndProof";
+import {SyncContributionError, SyncContributionErrorCode} from "../../../db/syncCommitteeContribution";
 import {CommitteeSubscription} from "../../../network/subnets";
 import {getSyncComitteeValidatorIndexMap} from "./utils";
 import {ApiModules} from "../types";
@@ -397,6 +398,11 @@ export function getValidatorApi({
             db.syncCommitteeContribution.add(contributionAndProof.message);
             await network.gossip.publishContributionAndProof(contributionAndProof);
           } catch (e) {
+            if (e instanceof SyncContributionError && e.type.code === SyncContributionErrorCode.ALREADY_KNOWN) {
+              logger.debug("Ignoring known contributionAndProof");
+              return; // Ok to submit the same aggregate twice
+            }
+
             errors.push(e);
             logger.error(
               `Error on publishContributionAndProofs [${i}]`,
