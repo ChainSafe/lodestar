@@ -2,10 +2,11 @@
 
 import {AbortSignal} from "abort-controller";
 
-import {toHexString, TreeBacked} from "@chainsafe/ssz";
+import {TreeBacked} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {ILogger} from "@chainsafe/lodestar-utils";
+import {fromHex, ILogger} from "@chainsafe/lodestar-utils";
 import {allForks} from "@chainsafe/lodestar-types";
+import {isWithinWeakSubjectivityPeriod} from "@chainsafe/lodestar-beacon-state-transition/lib/allForks/util/weakSubjectivity";
 import {
   IBeaconDb,
   Eth1Provider,
@@ -50,14 +51,15 @@ async function initAndVerifyWeakSujectivityState(
   if (!state) {
     throw new Error("Weak subjectivity state not found for network " + args.network);
   }
-  const checkpoint = args.weakSubjectivityCheckpoint || responseBody.ws_checkpoint;
-  const expectedRoot = checkpoint.split(":")[0];
-  const actualRoot = toHexString(state.finalizedCheckpoint.root);
-  // verify downloaded state against locally stored state root
-  if (actualRoot !== expectedRoot) {
-    throw new Error(
-      `Fetched weak subjectivity checkpoint root does not match computed weak subjectivity checkpoint root.  Expected: ${expectedRoot}, Actual: ${actualRoot}`
-    );
+  const checkpointData = (args.weakSubjectivityCheckpoint || responseBody.ws_checkpoint).split(":");
+  const checkpointRoot = checkpointData[0];
+  const checkpointEpoch = checkpointData[1];
+  const checkpoint = {root: fromHex(checkpointRoot), epoch: parseInt(checkpointEpoch)};
+
+  // TODO: backfill blocks before calling isWithinWeakSubjectivityPeriod to get an accurate latestBlockHeader.stateRoot?  (it is always 0x0000...00 by default with fetched ws state)
+
+  if (!isWithinWeakSubjectivityPeriod(config, state.genesisTime, state, checkpoint)) {
+    throw new Error("Fetched weak subjectivity checkpoint not within weak subjectivity period.");
   }
   return await initStateFromAnchorState(config, db, logger, state);
 }
