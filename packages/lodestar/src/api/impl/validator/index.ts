@@ -331,21 +331,41 @@ export function getValidatorApi({
     async publishAggregateAndProofs(signedAggregateAndProofs) {
       notWhileSyncing();
 
+      const errors: Error[] = [];
+
       await Promise.all(
-        signedAggregateAndProofs.map(async (signedAggregateAndProof) => {
-          const attestation = signedAggregateAndProof.message.aggregate;
-          // TODO: Validate in batch
-          await validateGossipAggregateAndProof(config, chain, db, signedAggregateAndProof, {
-            attestation: attestation,
-            validSignature: false,
-          });
-          await Promise.all([
-            db.aggregateAndProof.add(signedAggregateAndProof.message),
-            db.seenAttestationCache.addAggregateAndProof(signedAggregateAndProof.message),
-            network.gossip.publishBeaconAggregateAndProof(signedAggregateAndProof),
-          ]);
+        signedAggregateAndProofs.map(async (signedAggregateAndProof, i) => {
+          try {
+            const attestation = signedAggregateAndProof.message.aggregate;
+            // TODO: Validate in batch
+            await validateGossipAggregateAndProof(config, chain, db, signedAggregateAndProof, {
+              attestation: attestation,
+              validSignature: false,
+            });
+            await Promise.all([
+              db.aggregateAndProof.add(signedAggregateAndProof.message),
+              db.seenAttestationCache.addAggregateAndProof(signedAggregateAndProof.message),
+              network.gossip.publishBeaconAggregateAndProof(signedAggregateAndProof),
+            ]);
+          } catch (e) {
+            errors.push(e);
+            logger.error(
+              `Error on publishAggregateAndProofs [${i}]`,
+              {
+                slot: signedAggregateAndProof.message.aggregate.data.slot,
+                index: signedAggregateAndProof.message.aggregate.data.index,
+              },
+              e
+            );
+          }
         })
       );
+
+      if (errors.length > 1) {
+        throw Error("Multiple errors on publishAggregateAndProofs\n" + errors.map((e) => e.message).join("\n"));
+      } else if (errors.length === 1) {
+        throw errors[0];
+      }
     },
 
     /**
@@ -358,17 +378,37 @@ export function getValidatorApi({
     async publishContributionAndProofs(contributionAndProofs) {
       notWhileSyncing();
 
+      const errors: Error[] = [];
+
       await Promise.all(
-        contributionAndProofs.map(async (contributionAndProof) => {
-          // TODO: Validate in batch
-          await validateSyncCommitteeGossipContributionAndProof(config, chain, db, {
-            contributionAndProof,
-            validSignature: false,
-          });
-          db.syncCommitteeContribution.add(contributionAndProof.message);
-          await network.gossip.publishContributionAndProof(contributionAndProof);
+        contributionAndProofs.map(async (contributionAndProof, i) => {
+          try {
+            // TODO: Validate in batch
+            await validateSyncCommitteeGossipContributionAndProof(config, chain, db, {
+              contributionAndProof,
+              validSignature: false,
+            });
+            db.syncCommitteeContribution.add(contributionAndProof.message);
+            await network.gossip.publishContributionAndProof(contributionAndProof);
+          } catch (e) {
+            errors.push(e);
+            logger.error(
+              `Error on publishContributionAndProofs [${i}]`,
+              {
+                slot: contributionAndProof.message.contribution.slot,
+                subCommitteeIndex: contributionAndProof.message.contribution.subCommitteeIndex,
+              },
+              e
+            );
+          }
         })
       );
+
+      if (errors.length > 1) {
+        throw Error("Multiple errors on publishContributionAndProofs\n" + errors.map((e) => e.message).join("\n"));
+      } else if (errors.length === 1) {
+        throw errors[0];
+      }
     },
 
     async prepareBeaconCommitteeSubnet(subscriptions) {
