@@ -2,6 +2,7 @@ import {Root, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {LodestarError} from "@chainsafe/lodestar-utils";
 
 import {IBlockJob, IChainSegmentJob} from "../interface";
+import {GossipAction} from "./gossipValidation";
 
 export enum BlockErrorCode {
   /**
@@ -114,6 +115,14 @@ export class BlockError extends LodestarError<BlockErrorType> {
   constructor({job, ...type}: BlockErrorType & BlockJobObject) {
     super(type);
     this.job = job;
+  }
+}
+
+export class BlockGossipError extends BlockError {
+  action: GossipAction;
+  constructor(action: GossipAction, jobAndType: BlockErrorType & BlockJobObject) {
+    super(jobAndType);
+    this.action = action;
   }
 }
 

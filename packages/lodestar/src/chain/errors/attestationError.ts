@@ -1,7 +1,7 @@
 import {CommitteeIndex, Epoch, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {LodestarError} from "@chainsafe/lodestar-utils";
-
 import {IAttestationJob} from "../interface";
+import {GossipAction} from "./gossipValidation";
 
 export enum AttestationErrorCode {
   /**
@@ -176,5 +176,13 @@ export class AttestationError extends LodestarError<AttestationErrorType> {
   constructor({job, ...type}: AttestationErrorType & IJobObject) {
     super(type);
     this.job = job;
+  }
+}
+
+export class AttestationGossipError extends AttestationError {
+  action: GossipAction;
+  constructor(action: GossipAction, jobAndType: AttestationErrorType & IJobObject) {
+    super(jobAndType);
+    this.action = action;
   }
 }

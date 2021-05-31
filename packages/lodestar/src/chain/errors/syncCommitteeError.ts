@@ -1,5 +1,5 @@
 import {altair, phase0, Slot} from "@chainsafe/lodestar-types";
-import {GossipAction, GossipValidationError} from "./gossipValidation";
+import {GossipValidationError} from "./gossipValidation";
 
 export enum SyncCommitteeErrorCode {
   NOT_CURRENT_SLOT = "SYNC_COMMITTEE_ERROR_NOT_CURRENT_SLOT",
@@ -31,11 +31,4 @@ export interface IContributionAndProofJob {
   validSignature: boolean;
 }
 
-export class SyncCommitteeError extends GossipValidationError<SyncCommitteeErrorType> {
-  action: GossipAction;
-
-  constructor(action: GossipAction, type: SyncCommitteeErrorType) {
-    super(action, type);
-    this.action = action;
-  }
-}
+export class SyncCommitteeError extends GossipValidationError<SyncCommitteeErrorType> {}

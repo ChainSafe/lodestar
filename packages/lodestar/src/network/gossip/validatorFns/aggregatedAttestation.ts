@@ -2,7 +2,7 @@ import {ERR_TOPIC_VALIDATOR_IGNORE, ERR_TOPIC_VALIDATOR_REJECT} from "libp2p-gos
 import {phase0} from "@chainsafe/lodestar-types";
 import {Json} from "@chainsafe/ssz";
 import {validateGossipAggregateAndProof} from "../../../chain/validation";
-import {AttestationError, AttestationErrorCode} from "../../../chain/errors";
+import {AttestationGossipError, AttestationErrorCode, GossipAction} from "../../../chain/errors";
 import {IObjectValidatorModules, GossipTopic} from "../interface";
 import {GossipValidationError} from "../errors";
 
@@ -20,30 +20,25 @@ export async function validateAggregatedAttestation(
     });
     logger.debug("gossip - AggregateAndProof - accept");
   } catch (e) {
-    if (!(e instanceof AttestationError)) {
-      logger.error("Gossip aggregate and proof validation threw a non-AttestationError", e);
+    if (!(e instanceof AttestationGossipError)) {
+      logger.error("gossip - AggregateAndProof - non-AttestationError", e);
       throw new GossipValidationError(ERR_TOPIC_VALIDATOR_IGNORE);
     }
 
-    switch (e.type.code) {
-      case AttestationErrorCode.WRONG_NUMBER_OF_AGGREGATION_BITS:
-      case AttestationErrorCode.KNOWN_BAD_BLOCK:
-      case AttestationErrorCode.AGGREGATOR_NOT_IN_COMMITTEE:
-      case AttestationErrorCode.INVALID_SIGNATURE:
-      case AttestationErrorCode.INVALID_AGGREGATOR:
-      case AttestationErrorCode.INVALID_INDEXED_ATTESTATION:
-        logger.debug("gossip - AggregateAndProof - reject", e.type);
-        throw new GossipValidationError(ERR_TOPIC_VALIDATOR_REJECT);
+    if (
+      e.type.code === AttestationErrorCode.UNKNOWN_BEACON_BLOCK_ROOT ||
+      e.type.code === AttestationErrorCode.MISSING_ATTESTATION_TARGET_STATE
+    ) {
+      // attestation might be valid after we receive block
+      chain.receiveAttestation(attestation);
+    }
 
-      case AttestationErrorCode.FUTURE_SLOT: // IGNORE
-        chain.receiveAttestation(attestation);
-      /** eslit-disable-next-line no-fallthrough */
-      case AttestationErrorCode.PAST_SLOT:
-      case AttestationErrorCode.AGGREGATE_ALREADY_KNOWN:
-      case AttestationErrorCode.MISSING_ATTESTATION_TARGET_STATE:
-      default:
-        logger.debug("gossip - AggregateAndProof - ignore", e.type as Json);
-        throw new GossipValidationError(ERR_TOPIC_VALIDATOR_IGNORE);
+    if (e.action === GossipAction.REJECT) {
+      logger.debug("gossip - AggregateAndProof - reject", e.type as Json);
+      throw new GossipValidationError(ERR_TOPIC_VALIDATOR_REJECT);
+    } else {
+      logger.debug("gossip - AggregateAndProof - ignore", e.type as Json);
+      throw new GossipValidationError(ERR_TOPIC_VALIDATOR_IGNORE);
     }
   } finally {
     db.seenAttestationCache.addAggregateAndProof(signedAggregateAndProof.message);

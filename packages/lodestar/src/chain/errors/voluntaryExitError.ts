@@ -1,4 +1,4 @@
-import {LodestarError} from "@chainsafe/lodestar-utils";
+import {GossipValidationError} from "./gossipValidation";
 
 export enum VoluntaryExitErrorCode {
   EXIT_ALREADY_EXISTS = "VOLUNTARY_EXIT_ERROR_EXIT_ALREADY_EXISTS",
@@ -8,8 +8,4 @@ export type VoluntaryExitErrorType =
   | {code: VoluntaryExitErrorCode.EXIT_ALREADY_EXISTS}
   | {code: VoluntaryExitErrorCode.INVALID_EXIT};
 
-export class VoluntaryExitError extends LodestarError<VoluntaryExitErrorType> {
-  constructor(type: VoluntaryExitErrorType) {
-    super(type);
-  }
-}
+export class VoluntaryExitError extends GossipValidationError<VoluntaryExitErrorType> {}
