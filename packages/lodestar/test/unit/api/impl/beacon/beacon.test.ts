@@ -5,8 +5,10 @@ import {StubbedBeaconDb} from "../../../../utils/stub";
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {expect} from "chai";
 import {setupApiImplTestServer, ApiImplTestModules} from "../index.test";
+import {testLogger} from "../../../../utils/logger";
 
 describe("beacon api implementation", function () {
+  const logger = testLogger();
   let dbStub: StubbedBeaconDb;
   let server: ApiImplTestModules;
 
@@ -21,6 +23,7 @@ describe("beacon api implementation", function () {
         config,
         chain: server.chainStub,
         db: dbStub,
+        logger,
         network: server.networkStub,
       });
 
