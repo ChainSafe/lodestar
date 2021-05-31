@@ -9,23 +9,8 @@ export function serializeInterchange(
   interchangeLodestar: IInterchangeLodestar,
   {format, version}: InterchangeFormatVersion
 ): Interchange {
-  // version < v5.0.0
-  if (format) {
-    switch (format) {
-      case "complete":
-        switch (version) {
-          case "4":
-            return serializeInterchangeCompleteV4(config, interchangeLodestar);
-
-          default:
-            throw new InterchangeError({code: InterchangeErrorErrorCode.UNSUPPORTED_VERSION, version});
-        }
-
-      default:
-        throw new InterchangeError({code: InterchangeErrorErrorCode.UNSUPPORTED_FORMAT, format});
-    }
-    // version >= v5.0.0
-  } else {
+  // version >= v5.0.0
+  if (!format) {
     switch (version) {
       case "5":
         return serializeInterchangeV5(config, interchangeLodestar);
@@ -33,5 +18,20 @@ export function serializeInterchange(
       default:
         throw new InterchangeError({code: InterchangeErrorErrorCode.UNSUPPORTED_VERSION, version});
     }
+  }
+
+  // version < v5.0.0
+  switch (format) {
+    case "complete":
+      switch (version) {
+        case "4":
+          return serializeInterchangeCompleteV4(config, interchangeLodestar);
+
+        default:
+          throw new InterchangeError({code: InterchangeErrorErrorCode.UNSUPPORTED_VERSION, version});
+      }
+
+    default:
+      throw new InterchangeError({code: InterchangeErrorErrorCode.UNSUPPORTED_FORMAT, format});
   }
 }

@@ -1,2 +1,2 @@
 coverage/**
-test/e2e/slashing-protection-interchange-tests/spi-tests/
+test/slashing-protection-interchange-spec-tests

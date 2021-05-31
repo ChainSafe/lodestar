@@ -5,9 +5,9 @@ import {SPEC_TEST_LOCATION, SPEC_TEST_VERSION, SPEC_TEST_REPO_URL} from "./utils
 
 downloadTests(
   {
-    specTestsRepoUrl: SPEC_TEST_REPO_URL,
     specVersion: SPEC_TEST_VERSION,
     outputDir: SPEC_TEST_LOCATION,
+    specTestsRepoUrl: SPEC_TEST_REPO_URL,
   },
   console.log
 ).catch((e) => {
