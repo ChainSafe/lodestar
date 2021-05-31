@@ -8,7 +8,7 @@ import {IForkDigestContext, toHexStringNoPrefix} from "../../util/forkDigestCont
 import {DEFAULT_ENCODING} from "./constants";
 import {GossipEncoding, GossipDeserializer, GossipObject, GossipSerializer, GossipType, GossipTopic} from "./interface";
 
-const topicPrefix = "/eth2";
+const gossipTopicRegex = new RegExp("^/eth2/(\\w+)/(\\w+)/(\\w+)");
 
 /**
  * Stringify a GossipTopic into a spec-ed formated topic string
@@ -17,7 +17,26 @@ export function stringifyGossipTopic(forkDigestContext: IForkDigestContext, topi
   const forkDigest = forkDigestContext.forkName2ForkDigest(topic.fork);
   const forkDigestHexNoPrefix = toHexStringNoPrefix(forkDigest);
   const topicType = stringifyGossipTopicType(topic);
-  return [topicPrefix, forkDigestHexNoPrefix, topicType, topic.encoding ?? DEFAULT_ENCODING].join("/");
+  const encoding = topic.encoding ?? DEFAULT_ENCODING;
+  return `/eth2/${forkDigestHexNoPrefix}/${topicType}/${encoding}`;
+}
+
+/**
+ * Stringify a GossipTopic into a spec-ed formated partial topic string
+ */
+function stringifyGossipTopicType(topic: GossipTopic): string {
+  switch (topic.type) {
+    case GossipType.beacon_block:
+    case GossipType.beacon_aggregate_and_proof:
+    case GossipType.voluntary_exit:
+    case GossipType.proposer_slashing:
+    case GossipType.attester_slashing:
+    case GossipType.sync_committee_contribution_and_proof:
+      return topic.type;
+    case GossipType.beacon_attestation:
+    case GossipType.sync_committee:
+      return `${topic.type}_${topic.subnet}`;
+  }
 }
 
 /**
@@ -29,12 +48,12 @@ export function stringifyGossipTopic(forkDigestContext: IForkDigestContext, topi
  */
 export function parseGossipTopic(forkDigestContext: IForkDigestContext, topicStr: string): GossipTopic {
   try {
-    if (!topicStr.startsWith(topicPrefix)) {
-      throw Error(`Must be prefixed with ${topicPrefix}`);
+    const matches = topicStr.match(gossipTopicRegex);
+    if (matches === null) {
+      throw Error(`Must match regex ${gossipTopicRegex}`);
     }
 
-    const topicStrNoPrefix = topicStr.slice(topicPrefix.length + 1); // +1 for the second '/' in '/eth2/...'
-    const [forkDigestHexNoPrefix, gossipTypeStr, encodingStr] = topicStrNoPrefix.split("/");
+    const [, forkDigestHexNoPrefix, gossipTypeStr, encodingStr] = matches;
 
     const fork = forkDigestContext.forkDigest2ForkName(forkDigestHexNoPrefix);
     const encoding = parseEncodingStr(encodingStr);
@@ -63,24 +82,6 @@ export function parseGossipTopic(forkDigestContext: IForkDigestContext, topicStr
   } catch (e) {
     (e as Error).message = `Invalid gossip topic ${topicStr}: ${(e as Error).message}`;
     throw e;
-  }
-}
-
-/**
- * Stringify a GossipTopic into a spec-ed formated partial topic string
- */
-function stringifyGossipTopicType(topic: GossipTopic): string {
-  switch (topic.type) {
-    case GossipType.beacon_block:
-    case GossipType.beacon_aggregate_and_proof:
-    case GossipType.voluntary_exit:
-    case GossipType.proposer_slashing:
-    case GossipType.attester_slashing:
-    case GossipType.sync_committee_contribution_and_proof:
-      return topic.type;
-    case GossipType.beacon_attestation:
-    case GossipType.sync_committee:
-      return `${topic.type}_${topic.subnet}`;
   }
 }
 
