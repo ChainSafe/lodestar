@@ -8,6 +8,7 @@ import {ErrorAborted, ILogger} from "@chainsafe/lodestar-utils";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IMetrics} from "../../metrics";
 import {ApiError} from "../impl/errors";
+export {allNamespaces} from "@chainsafe/lodestar-api";
 
 export type RestApiOptions = {
   enabled: boolean;
