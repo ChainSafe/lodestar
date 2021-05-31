@@ -15,6 +15,7 @@ export type IForkDigestContext = {
  */
 export class ForkDigestContext implements IForkDigestContext {
   private forkDigestByForkName = new Map<ForkName, ForkDigest>();
+  /** Map of ForkDigest in hex format without prefix: `0011aabb` */
   private forkNameByForkDigest = new Map<ForkDigestHex, ForkName>();
 
   constructor(config: IBeaconConfig, genesisValidatorsRoot: Root) {

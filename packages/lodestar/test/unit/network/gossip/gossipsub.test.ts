@@ -8,7 +8,7 @@ import {ForkName} from "@chainsafe/lodestar-config";
 
 import {
   Eth2Gossipsub,
-  getGossipTopicString,
+  stringifyGossipTopic,
   GossipType,
   TopicValidatorFn,
   GossipValidationError,
@@ -38,7 +38,7 @@ describe("gossipsub", function () {
     forkDigestContext.forkDigest2ForkName.returns(ForkName.phase0);
 
     const signedBlock = generateEmptySignedBlock();
-    topicString = getGossipTopicString(forkDigestContext, {type: GossipType.beacon_block, fork: ForkName.phase0});
+    topicString = stringifyGossipTopic(forkDigestContext, {type: GossipType.beacon_block, fork: ForkName.phase0});
     message = {
       data: encodeMessageData(GossipEncoding.ssz_snappy, config.types.phase0.SignedBeaconBlock.serialize(signedBlock)),
       receivedFrom: "0",
