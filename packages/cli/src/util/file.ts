@@ -44,7 +44,7 @@ export function parse<T = Json>(contents: string, fileFormat: FileFormat): T {
     case FileFormat.yml:
       return load(contents, {schema: yamlSchema}) as T;
     default:
-      throw new Error("Invalid filetype");
+      return (contents as unknown) as T;
   }
 }
 
@@ -62,7 +62,7 @@ export function stringify<T = Json>(obj: T, fileFormat: FileFormat): string {
       contents = dump(obj, {schema: yamlSchema});
       break;
     default:
-      throw new Error("Invalid filetype");
+      contents = (obj as unknown) as string;
   }
   return contents;
 }
