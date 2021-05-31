@@ -57,7 +57,6 @@
     "bigint-buffer": "^1.1.5"
   },
   "devDependencies": {
-    "@chainsafe/slashing-protection-interchange-tests": "^4.0.0",
     "bigint-buffer": "^1.1.5"
   }
 }
