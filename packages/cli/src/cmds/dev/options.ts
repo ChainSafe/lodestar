@@ -6,6 +6,7 @@ import {globalOptions, beaconNodeOptions} from "../../options";
 interface IDevOwnArgs {
   genesisValidators?: number;
   startValidators?: string;
+  genesisTime?: number;
   reset?: boolean;
   server: string;
 }
@@ -22,6 +23,12 @@ const devOwnOptions: ICliCommandOptions<IDevOwnArgs> = {
     description: "Start interop validators in given range",
     default: "0:8",
     type: "string",
+    group: "dev",
+  },
+
+  genesisTime: {
+    description: "genesis_time to initialize interop genesis state",
+    type: "number",
     group: "dev",
   },
 
