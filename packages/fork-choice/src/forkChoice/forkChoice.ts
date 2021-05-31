@@ -463,6 +463,17 @@ export class ForkChoice implements IForkChoice {
     return toBlockSummary(block);
   }
 
+  getJustifiedBlock(): IBlockSummary {
+    const block = this.getBlock(this.fcStore.justifiedCheckpoint.root);
+    if (!block) {
+      throw new ForkChoiceError({
+        code: ForkChoiceErrorCode.MISSING_PROTO_ARRAY_BLOCK,
+        root: this.fcStore.justifiedCheckpoint.root.valueOf() as Uint8Array,
+      });
+    }
+    return block;
+  }
+
   getFinalizedBlock(): IBlockSummary {
     const block = this.getBlock(this.fcStore.finalizedCheckpoint.root);
     if (!block) {

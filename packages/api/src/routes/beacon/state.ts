@@ -150,8 +150,8 @@ export const routesData: RoutesData<Api> = {
   getStateFork: {url: "/eth/v1/beacon/states/:stateId/fork", method: "GET"},
   getStateRoot: {url: "/eth/v1/beacon/states/:stateId/root", method: "GET"},
   getStateValidator: {url: "/eth/v1/beacon/states/:stateId/validators/:validatorId", method: "GET"},
-  getStateValidators: {url: "/eth/v1/beacon/states/:stateId/validator_balances", method: "GET"},
-  getStateValidatorBalances: {url: "/eth/v1/beacon/states/:stateId/validators", method: "GET"},
+  getStateValidators: {url: "/eth/v1/beacon/states/:stateId/validators", method: "GET"},
+  getStateValidatorBalances: {url: "/eth/v1/beacon/states/:stateId/validator_balances", method: "GET"},
 };
 
 type StateIdOnlyReq = {params: {stateId: string}};

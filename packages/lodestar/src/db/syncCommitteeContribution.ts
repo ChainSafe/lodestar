@@ -128,7 +128,12 @@ function aggregateContributionInto(
 
   for (const [index, participated] of Array.from(readonlyValues(contribution.aggregationBits)).entries()) {
     if (participated) {
-      aggregate.syncCommitteeBits[indexOffset + index] = true;
+      const syncCommitteeIndex = indexOffset + index;
+      if (aggregate.syncCommitteeBits[syncCommitteeIndex] === true) {
+        throw Error(`Already aggregated SyncCommitteeContribution - syncCommitteeIndex=${syncCommitteeIndex}`);
+      }
+
+      aggregate.syncCommitteeBits[syncCommitteeIndex] = true;
     }
   }
 
