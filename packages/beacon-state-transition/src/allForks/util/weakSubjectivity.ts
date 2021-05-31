@@ -10,8 +10,12 @@ import {
   getTotalActiveBalance,
   computeEpochAtSlot,
   getCurrentSlot,
+  getValidatorChurnLimit,
 } from "../..";
 import {getWeakSubjectivityCheckpointEpoch} from "../../util/weakSubjectivity";
+
+const ETH_TO_GWEI = BigInt(10 ** 9);
+const SAFETY_DECAY = BigInt(10);
 
 /**
  * Returns the epoch of the latest weak subjectivity checkpoint for the given
@@ -34,31 +38,27 @@ export function getLatestWeakSubjectivityCheckpointEpoch(
     A detailed calculation can be found at:
     https://github.com/runtimeverification/beacon-chain-verification/blob/master/weak-subjectivity/weak-subjectivity-analysis.pdf
  */
-export function computeWeakSubjectivityPeriod(
-  config: IBeaconConfig,
-  state: allForks.BeaconState,
-  safetyDecay = 0.1
-): Uint64 {
-  let wsPeriod = BigInt(config.params.MIN_VALIDATOR_WITHDRAWABILITY_DELAY);
+export function computeWeakSubjectivityPeriod(config: IBeaconConfig, state: allForks.BeaconState): Uint64 {
+  let wsPeriod = config.params.MIN_VALIDATOR_WITHDRAWABILITY_DELAY;
   const N = getActiveValidatorIndices(state, getCurrentEpoch(config, state)).length;
-  const t = getTotalActiveBalance(config, state); // N // ETH_TO_GWEI
-  const T = config.params.MAX_EFFECTIVE_BALANCE; // ETH_TO_GWEI
-  // const delta = getValidatorChurnLimit(config, state);
-  // const Delta = config.params.MAX_DEPOSITS * config.params.SLOTS_PER_EPOCH;
-  // const D = config.params.SAFETY_DECAY
-  const D = safetyDecay;
+  const t = Math.floor(Number(getTotalActiveBalance(config, state)) / N / Number(ETH_TO_GWEI));
+  const T = Math.floor(Number(config.params.MAX_EFFECTIVE_BALANCE) / Number(ETH_TO_GWEI));
+  const delta = getValidatorChurnLimit(config, state);
+  // eslint-disable-next-line @typescript-eslint/naming-convention
+  const Delta = config.params.MAX_DEPOSITS * config.params.SLOTS_PER_EPOCH;
+  const D = Number(SAFETY_DECAY);
 
-  if (T * BigInt(200 + 3 * D) < t * BigInt(200 + 12 * D)) {
-    const epochsForValidatorSetChurn = BigInt(N) * (t * BigInt(200 + 12 * D) - T * BigInt(200 + 3 * D)); // (600 * delta * (2 * t + T))
-    const epochsForBalanceTopUps = BigInt(
-      N * (200 + 3 * D) // (600 * Delta)
+  if (T * (200 + 3 * D) < t * (200 + 12 * D)) {
+    const epochsForValidatorSetChurn = Math.floor(
+      (N * (t * (200 + 12 * D) - T * (200 + 3 * D))) / (600 * delta * (2 * t + T))
     );
+    const epochsForBalanceTopUps = Math.floor((N * (200 + 3 * D)) / (600 * Delta));
     wsPeriod +=
-      epochsForValidatorSetChurn > epochsForBalanceTopUps ? epochsForValidatorSetChurn : epochsForBalanceTopUps; // max(epochsForValidatorSetChurn, epochsForBalanceTopUps)
+      epochsForValidatorSetChurn > epochsForBalanceTopUps ? epochsForValidatorSetChurn : epochsForBalanceTopUps;
   } else {
-    wsPeriod += BigInt(3 * N * D) * t; // (200 * Delta * (T - t))
+    wsPeriod += Math.floor((3 * N * D * t) / (200 * Delta * (T - t)));
   }
-  return wsPeriod;
+  return BigInt(wsPeriod);
 }
 
 export function isWithinWeakSubjectivityPeriod(
