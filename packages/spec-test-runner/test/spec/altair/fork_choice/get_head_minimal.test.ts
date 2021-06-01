@@ -134,8 +134,6 @@ describeDirectorySpecTest<IForkChoiceTestCase, void>(
       };
     },
     timeout: 10000,
-    // TODO: fix this
-    shouldSkip: (testCase, name) => name === "filtered_block_tree",
     // eslint-disable-next-line @typescript-eslint/no-empty-function
     expectFunc: () => {},
   }
