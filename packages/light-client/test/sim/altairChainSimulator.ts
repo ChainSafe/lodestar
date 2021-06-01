@@ -45,11 +45,8 @@ async function runAltairChainSimulator(): Promise<void> {
   });
 
   const logger = new WinstonLogger();
-  const lightclientServer = new LightclientMockServer(config, logger, genesisValidatorsRoot, {
-    block: genesisBlock,
-    state: genesisState,
-    checkpoint: genesisCheckpoint,
-  });
+  const lightclientServer = new LightclientMockServer(config, logger, genesisValidatorsRoot);
+  await lightclientServer.initialize({block: genesisBlock, state: genesisState, checkpoint: genesisCheckpoint});
 
   // Start API server
   await lightclientServer.startApiServer(serverOpts);
@@ -57,7 +54,7 @@ async function runAltairChainSimulator(): Promise<void> {
   // Compute all periods until currentSlot
   console.log("Syncing to latest slot...");
   for (let slot = 1; slot <= getCurrentSlot(config, leveGenesisTime); slot++) {
-    lightclientServer.createNewBlock(slot);
+    await lightclientServer.createNewBlock(slot);
   }
   console.log("Synced to latest slot");
 
@@ -72,7 +69,7 @@ async function runAltairChainSimulator(): Promise<void> {
 
     const slot = getCurrentSlot(config, leveGenesisTime);
     console.log("Slot", slot);
-    lightclientServer.createNewBlock(slot);
+    await lightclientServer.createNewBlock(slot);
   }
 }
 

@@ -28,7 +28,7 @@ export class LightclientMockServer {
   private readonly stateCache = new Map<string, TreeBacked<altair.BeaconState>>();
   private finalizedCheckpoint: altair.Checkpoint | null = null;
   private prevBlock: altair.BeaconBlock | null = null;
-  private prevState: TreeBacked<altair.BeaconState>;
+  private prevState: TreeBacked<altair.BeaconState> | null = null;
 
   // API state
   private apiState: ApiState = {status: ApiStatus.stopped};
@@ -36,21 +36,22 @@ export class LightclientMockServer {
   constructor(
     private readonly config: IBeaconConfig,
     private readonly logger: ILogger,
-    private readonly genesisValidatorsRoot: Root,
-    readonly initialFinalizedCheckpoint: {
-      checkpoint: Checkpoint;
-      block: altair.BeaconBlock;
-      state: TreeBacked<altair.BeaconState>;
-    }
+    private readonly genesisValidatorsRoot: Root
   ) {
     const db = getLightClientUpdaterDb();
     this.lightClientUpdater = new LightClientUpdater(config, db);
     this.stateRegen = new MockStateRegen(this.stateCache);
+  }
 
+  async initialize(initialFinalizedCheckpoint: {
+    checkpoint: Checkpoint;
+    block: altair.BeaconBlock;
+    state: TreeBacked<altair.BeaconState>;
+  }): Promise<void> {
     const {checkpoint, block, state} = initialFinalizedCheckpoint;
-    this.lightClientUpdater.onFinalized(checkpoint, block, state);
+    void this.lightClientUpdater.onFinalized(checkpoint, block, state);
     this.stateCache.set(toHexString(state.hashTreeRoot()), state);
-    this.prevState = config.types.altair.BeaconState.createTreeBackedFromStruct(state);
+    this.prevState = this.config.types.altair.BeaconState.createTreeBackedFromStruct(state);
   }
 
   async startApiServer(opts: ServerOpts): Promise<void> {
@@ -73,10 +74,10 @@ export class LightclientMockServer {
     await this.apiState.server.close();
   }
 
-  createNewBlock(slot: Slot): void {
+  async createNewBlock(slot: Slot): Promise<void> {
     // Create a block and postState
     const block = this.config.types.altair.BeaconBlock.defaultValue();
-    const state = this.prevState.clone();
+    const state = this.prevState?.clone() || this.config.types.altair.BeaconState.defaultTreeBacked();
     block.slot = slot;
     state.slot = slot;
 
@@ -133,7 +134,7 @@ export class LightclientMockServer {
         };
 
         // Feed new finalized block and state to the LightClientUpdater
-        this.lightClientUpdater.onFinalized(
+        await this.lightClientUpdater.onFinalized(
           this.finalizedCheckpoint,
           finalizedData.block,
           this.config.types.altair.BeaconState.createTreeBackedFromStruct(finalizedData.state)
@@ -160,7 +161,7 @@ export class LightclientMockServer {
     }
 
     // Feed new block and state to the LightClientUpdater
-    this.lightClientUpdater.onHead(block, this.config.types.altair.BeaconState.createTreeBackedFromStruct(state));
+    await this.lightClientUpdater.onHead(block, this.config.types.altair.BeaconState.createTreeBackedFromStruct(state));
   }
 
   private getSyncCommittee(period: SyncPeriod): SyncCommitteeKeys {
@@ -193,20 +194,28 @@ function getLightClientUpdaterDb(): LightClientUpdaterDb {
   let latestNonFinalizedUpdate: altair.LightClientUpdate | null = null;
   return {
     lightclientFinalizedCheckpoint: {
-      put: (key, data) => lightclientFinalizedCheckpoint.set(key, data),
-      get: (key) => lightclientFinalizedCheckpoint.get(key) ?? null,
+      get: async (key) => lightclientFinalizedCheckpoint.get(key) ?? null,
+      put: async (key, data) => {
+        lightclientFinalizedCheckpoint.set(key, data);
+      },
     },
     bestUpdatePerCommitteePeriod: {
-      put: (key, data) => bestUpdatePerCommitteePeriod.set(key, data),
-      get: (key) => bestUpdatePerCommitteePeriod.get(key) ?? null,
+      get: async (key) => bestUpdatePerCommitteePeriod.get(key) ?? null,
+      put: async (key, data) => {
+        bestUpdatePerCommitteePeriod.set(key, data);
+      },
     },
     latestFinalizedUpdate: {
-      put: (data) => (latestFinalizedUpdate = data),
-      get: () => latestFinalizedUpdate,
+      get: async () => latestFinalizedUpdate,
+      put: async (data) => {
+        latestFinalizedUpdate = data;
+      },
     },
     latestNonFinalizedUpdate: {
-      put: (data) => (latestNonFinalizedUpdate = data),
-      get: () => latestNonFinalizedUpdate,
+      get: async () => latestNonFinalizedUpdate,
+      put: async (data) => {
+        latestNonFinalizedUpdate = data;
+      },
     },
   };
 }

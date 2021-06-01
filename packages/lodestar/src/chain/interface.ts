@@ -2,6 +2,7 @@ import {allForks, Number64, Root, Slot} from "@chainsafe/lodestar-types";
 import {ForkName} from "@chainsafe/lodestar-config";
 import {phase0, CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
+import {LightClientUpdater} from "@chainsafe/lodestar-light-client/lib/server/LightClientUpdater";
 
 import {IBeaconClock} from "./clock/interface";
 import {ChainEventEmitter} from "./emitter";
@@ -66,6 +67,7 @@ export interface IBeaconChain {
   pendingBlocks: BlockPool;
   pendingAttestations: AttestationPool;
   forkDigestContext: IForkDigestContext;
+  lightclientUpdater: LightClientUpdater;
 
   /** Stop beacon chain processing */
   close(): void;
