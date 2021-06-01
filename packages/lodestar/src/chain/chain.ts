@@ -261,7 +261,11 @@ export class BeaconChain implements IBeaconChain {
     const head = this.forkChoice.getHead();
     const finalizedCheckpoint = this.forkChoice.getFinalizedCheckpoint();
     return {
-      forkDigest: this.forkDigestContext.forkName2ForkDigest(this.config.getForkName(head.slot)),
+      // fork_digest: The node's ForkDigest (compute_fork_digest(current_fork_version, genesis_validators_root)) where
+      // - current_fork_version is the fork version at the node's current epoch defined by the wall-clock time (not necessarily the epoch to which the node is sync)
+      // - genesis_validators_root is the static Root found in state.genesis_validators_root
+      forkDigest: this.forkDigestContext.forkName2ForkDigest(this.config.getForkName(this.clock.currentSlot)),
+      // finalized_root: state.finalized_checkpoint.root for the state corresponding to the head block (Note this defaults to Root(b'\x00' * 32) for the genesis finalized checkpoint).
       finalizedRoot: finalizedCheckpoint.epoch === GENESIS_EPOCH ? ZERO_HASH : finalizedCheckpoint.root,
       finalizedEpoch: finalizedCheckpoint.epoch,
       headRoot: head.blockRoot,
