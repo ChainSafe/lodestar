@@ -1,5 +1,5 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {allForks, Epoch, Uint64} from "@chainsafe/lodestar-types";
+import {allForks, Epoch, Root, Uint64} from "@chainsafe/lodestar-types";
 import {Checkpoint} from "@chainsafe/lodestar-types/phase0";
 import {assert} from "@chainsafe/lodestar-utils";
 import {toHexString} from "@chainsafe/ssz";
@@ -11,6 +11,7 @@ import {
   computeEpochAtSlot,
   getCurrentSlot,
   getValidatorChurnLimit,
+  ZERO_HASH,
 } from "../..";
 import {getWeakSubjectivityCheckpointEpoch} from "../../util/weakSubjectivity";
 
@@ -61,14 +62,27 @@ export function computeWeakSubjectivityPeriod(config: IBeaconConfig, state: allF
   return BigInt(wsPeriod);
 }
 
+function getLatestBlockRoot(config: IBeaconConfig, state: allForks.BeaconState): Root {
+  const header = state.latestBlockHeader;
+  if (config.types.Root.equals(header.stateRoot, ZERO_HASH)) {
+    header.stateRoot = config.getForkTypes(state.slot).BeaconState.hashTreeRoot(state);
+  }
+  return config.types.phase0.BeaconBlockHeader.hashTreeRoot(header);
+}
+
 export function isWithinWeakSubjectivityPeriod(
   config: IBeaconConfig,
   genesisTime: number,
   wsState: allForks.BeaconState,
   wsCheckpoint: Checkpoint
 ): boolean {
-  // Clients may choose to validate the input state against the input Weak Subjectivity Checkpoint
-  assert.equal(toHexString(wsState.latestBlockHeader.stateRoot), toHexString(wsCheckpoint.root));
+  const blockRoot = getLatestBlockRoot(config, wsState);
+
+  if (!config.types.Root.equals(blockRoot, wsCheckpoint.root)) {
+    throw new Error(
+      `Roots do not match.  expected=${toHexString(wsCheckpoint.root)}, actual=${toHexString(blockRoot)}`
+    );
+  }
   assert.equal(computeEpochAtSlot(config, wsState.slot), wsCheckpoint.epoch);
 
   const wsPeriod = computeWeakSubjectivityPeriod(config, wsState);
