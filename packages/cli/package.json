@@ -62,7 +62,7 @@
     "@chainsafe/lodestar-types": "^0.22.0",
     "@chainsafe/lodestar-utils": "^0.22.0",
     "@chainsafe/lodestar-validator": "^0.22.0",
-    "@chainsafe/ssz": "^0.8.6",
+    "@chainsafe/ssz": "^0.8.7",
     "@types/lockfile": "^1.0.1",
     "abort-controller": "^3.0.0",
     "bip39": "^3.0.2",
