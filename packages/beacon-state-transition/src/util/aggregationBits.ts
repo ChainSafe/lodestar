@@ -54,8 +54,9 @@ export function zipIndexesInBitList(
     const booleansInByte = getUint8ByteToBitBooleanArray(attBytes[iByte]);
     // For each bit in the byte check participation and add to indexesSelected array
     for (let iBit = 0; iBit < BITS_PER_BYTE; iBit++) {
-      if (booleansInByte[iBit]) {
-        indexesSelected.push(indexes[iByte * BITS_PER_BYTE + iBit]);
+      const participantIndex = indexes[iByte * BITS_PER_BYTE + iBit];
+      if (booleansInByte[iBit] && participantIndex !== undefined) {
+        indexesSelected.push(participantIndex);
       }
     }
   }
@@ -79,5 +80,6 @@ export function bitlistToUint8Array(
   for (const node of nodeIterator) {
     chunks.push(node.root);
   }
-  return Buffer.concat(chunks);
+  // the last chunk has 32 bytes but we don't use all of them
+  return Buffer.concat(chunks).subarray(0, Math.ceil(aggregationBits.length / BITS_PER_BYTE));
 }
