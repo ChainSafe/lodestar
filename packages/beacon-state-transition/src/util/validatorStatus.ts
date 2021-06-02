@@ -130,17 +130,14 @@ export function isValidProposerSlashing(
   if (!verifySignatures) {
     return true;
   }
-  const domain = getDomain(
-    config,
-    state,
-    config.params.DOMAIN_BEACON_PROPOSER,
-    computeEpochAtSlot(config, header1.slot)
-  );
+
+  const epochSig1 = computeEpochAtSlot(config, header1.slot);
+  const domain1 = getDomain(config, state, config.params.DOMAIN_BEACON_PROPOSER, epochSig1);
   const signingRoot = computeSigningRoot(
     config,
     config.types.phase0.BeaconBlockHeader,
     proposerSlashing.signedHeader1.message,
-    domain
+    domain1
   );
   const proposalData1Verified = bls.verify(
     proposer.pubkey.valueOf() as Uint8Array,
@@ -150,12 +147,9 @@ export function isValidProposerSlashing(
   if (!proposalData1Verified) {
     return false;
   }
-  const domain2 = getDomain(
-    config,
-    state,
-    config.params.DOMAIN_BEACON_PROPOSER,
-    computeEpochAtSlot(config, header2.slot)
-  );
+
+  const epochSig2 = computeEpochAtSlot(config, header2.slot);
+  const domain2 = getDomain(config, state, config.params.DOMAIN_BEACON_PROPOSER, epochSig2);
   const signingRoot2 = computeSigningRoot(
     config,
     config.types.phase0.BeaconBlockHeader,

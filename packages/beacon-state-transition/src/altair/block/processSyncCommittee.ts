@@ -31,12 +31,8 @@ export function processSyncCommittee(
       )
     : committeeIndices.filter((index) => !!aggregate.syncCommitteeBits[index]);
   const participantPubkeys = participantIndices.map((validatorIndex) => state.validators[validatorIndex].pubkey);
-  const domain = getDomain(
-    config,
-    state,
-    config.params.DOMAIN_SYNC_COMMITTEE,
-    computeEpochAtSlot(config, previousSlot)
-  );
+  const epochSig = computeEpochAtSlot(config, previousSlot);
+  const domain = getDomain(config, state, config.params.DOMAIN_SYNC_COMMITTEE, epochSig);
   const signingRoot = computeSigningRoot(
     config,
     config.types.Root,
