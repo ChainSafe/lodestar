@@ -3,7 +3,7 @@ import sinon from "sinon";
 
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {generateEmptyAttesterSlashing} from "@chainsafe/lodestar-beacon-state-transition/test/utils/slashings";
-import * as validatorStatusUtils from "@chainsafe/lodestar-beacon-state-transition/lib/util/validatorStatus";
+import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
 
 import {BeaconChain} from "../../../../src/chain";
@@ -17,11 +17,11 @@ import {expectRejectedWithLodestarError} from "../../../utils/errors";
 describe("GossipMessageValidator", () => {
   const sandbox = sinon.createSandbox();
   let dbStub: StubbedBeaconDb,
-    isValidIncomingAttesterSlashingStub: SinonStubFn<typeof validatorStatusUtils["isValidAttesterSlashing"]>,
+    assertValidAttesterSlashing: SinonStubFn<typeof phase0["assertValidAttesterSlashing"]>,
     chainStub: StubbedChain;
 
   beforeEach(() => {
-    isValidIncomingAttesterSlashingStub = sandbox.stub(validatorStatusUtils, "isValidAttesterSlashing");
+    assertValidAttesterSlashing = sandbox.stub(phase0, "assertValidAttesterSlashing");
     chainStub = sandbox.createStubInstance(BeaconChain) as StubbedChain;
     chainStub.forkChoice = sandbox.createStubInstance(ForkChoice);
     chainStub.bls = {verifySignatureSets: async () => true};
@@ -48,7 +48,7 @@ describe("GossipMessageValidator", () => {
       dbStub.attesterSlashing.hasAll.resolves(false);
       const state = generateCachedState();
       chainStub.getHeadState.returns(state);
-      isValidIncomingAttesterSlashingStub.returns(false);
+      assertValidAttesterSlashing.throws(Error("Invalid"));
 
       await expectRejectedWithLodestarError(
         validateGossipAttesterSlashing(config, chainStub, dbStub, slashing),
@@ -61,7 +61,7 @@ describe("GossipMessageValidator", () => {
       dbStub.attesterSlashing.hasAll.resolves(false);
       const state = generateCachedState();
       chainStub.getHeadState.returns(state);
-      isValidIncomingAttesterSlashingStub.returns(true);
+      assertValidAttesterSlashing.returns();
       const validationTest = await validateGossipAttesterSlashing(config, chainStub, dbStub, slashing);
       expect(validationTest).to.not.throw;
     });

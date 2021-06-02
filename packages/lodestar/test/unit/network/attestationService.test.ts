@@ -3,7 +3,6 @@ import {ATTESTATION_SUBNET_COUNT} from "@chainsafe/lodestar-params";
 import {createIBeaconConfig, ForkName} from "@chainsafe/lodestar-config";
 import {params} from "@chainsafe/lodestar-params/minimal";
 import {getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
-import * as stateTransitionUtils from "@chainsafe/lodestar-beacon-state-transition/lib/util/attestation";
 import * as mathUtils from "@chainsafe/lodestar-utils/lib/math";
 import * as shuffleUtils from "../../../src/util/shuffle";
 import sinon, {SinonStubbedInstance} from "sinon";
@@ -30,7 +29,6 @@ describe("AttnetsService", function () {
   const sandbox = sinon.createSandbox();
   // let clock: SinonFakeTimers;
   let gossipStub: SinonStubbedInstance<Eth2Gossipsub> & Eth2Gossipsub;
-  let computeSubnetUtil: SinonStubFn<typeof stateTransitionUtils["computeSubnetForCommitteesAtSlot"]>;
   let randomUtil: SinonStubFn<typeof mathUtils["randBetween"]>;
   let metadata: MetadataController;
 
@@ -47,8 +45,6 @@ describe("AttnetsService", function () {
   beforeEach(function () {
     sandbox.useFakeTimers(Date.now());
     gossipStub = sandbox.createStubInstance(Eth2Gossipsub) as SinonStubbedInstance<Eth2Gossipsub> & Eth2Gossipsub;
-    computeSubnetUtil = sandbox.stub(stateTransitionUtils, "computeSubnetForCommitteesAtSlot");
-    computeSubnetUtil.returns(COMMITTEE_SUBNET_SUBSCRIPTION);
     randomUtil = sandbox.stub(mathUtils, "randBetween");
     randomUtil
       .withArgs(EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION, 2 * EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION)

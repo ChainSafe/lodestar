@@ -2,8 +2,7 @@ import {expect} from "chai";
 import sinon, {SinonStubbedInstance} from "sinon";
 
 import {config} from "@chainsafe/lodestar-config/minimal";
-import {createCachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
-import * as validatorStatusUtils from "@chainsafe/lodestar-beacon-state-transition/lib/util/validatorStatus";
+import {phase0, createCachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
 import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
 
 import {BeaconChain} from "../../../../src/chain";
@@ -21,12 +20,12 @@ import {expectRejectedWithLodestarError} from "../../../utils/errors";
 describe("validate voluntary exit", () => {
   const sandbox = sinon.createSandbox();
   let dbStub: StubbedBeaconDb,
-    isValidIncomingVoluntaryExitStub: SinonStubFn<typeof validatorStatusUtils["isValidVoluntaryExit"]>,
+    assertValidVoluntaryExit: SinonStubFn<typeof phase0["assertValidVoluntaryExit"]>,
     chainStub: StubbedChain,
     regenStub: SinonStubbedInstance<StateRegenerator>;
 
   beforeEach(() => {
-    isValidIncomingVoluntaryExitStub = sandbox.stub(validatorStatusUtils, "isValidVoluntaryExit");
+    assertValidVoluntaryExit = sandbox.stub(phase0, "assertValidVoluntaryExit");
     chainStub = sandbox.createStubInstance(BeaconChain) as StubbedChain;
     chainStub.forkChoice = sandbox.createStubInstance(ForkChoice);
     chainStub.bls = {verifySignatureSets: async () => true};
@@ -75,7 +74,7 @@ describe("validate voluntary exit", () => {
       config
     );
     regenStub.getCheckpointState.resolves(createCachedBeaconState(config, state));
-    isValidIncomingVoluntaryExitStub.returns(false);
+    assertValidVoluntaryExit.throws(Error("invalid"));
 
     await expectRejectedWithLodestarError(
       validateGossipVoluntaryExit(config, chainStub, dbStub, voluntaryExit),
@@ -98,7 +97,7 @@ describe("validate voluntary exit", () => {
       config
     );
     regenStub.getCheckpointState.resolves(createCachedBeaconState(config, state));
-    isValidIncomingVoluntaryExitStub.returns(true);
+    assertValidVoluntaryExit.returns();
     const validationTest = await validateGossipVoluntaryExit(config, chainStub, dbStub, voluntaryExit);
     expect(validationTest).to.not.throw;
   });
