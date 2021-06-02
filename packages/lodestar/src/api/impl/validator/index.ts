@@ -5,7 +5,6 @@ import {
   computeStartSlotAtEpoch,
   proposerShufflingDecisionRoot,
   attesterShufflingDecisionRoot,
-  computeSubnetForCommitteesAtSlot,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {GENESIS_SLOT, SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
 import {Root, Slot} from "@chainsafe/lodestar-types";
@@ -23,7 +22,7 @@ import {ApiError} from "../errors";
 import {validateSyncCommitteeGossipContributionAndProof} from "../../../chain/validation/syncCommitteeContributionAndProof";
 import {SyncContributionError, SyncContributionErrorCode} from "../../../db/syncCommitteeContribution";
 import {CommitteeSubscription} from "../../../network/subnets";
-import {getSyncComitteeValidatorIndexMap} from "./utils";
+import {computeSubnetForCommitteesAtSlot, getSyncComitteeValidatorIndexMap} from "./utils";
 import {ApiModules} from "../types";
 
 /**

@@ -3,10 +3,10 @@ import {CachedBeaconState} from "../../allForks/util";
 import {processBlockHeader, processEth1Data, processRandao} from "../../allForks/block";
 import {processOperations} from "./processOperations";
 import {processAttestation} from "./processAttestation";
-import {processAttesterSlashing} from "./processAttesterSlashing";
 import {processDeposit} from "./processDeposit";
-import {processProposerSlashing} from "./processProposerSlashing";
-import {processVoluntaryExit} from "./processVoluntaryExit";
+import {processAttesterSlashing, assertValidAttesterSlashing} from "./processAttesterSlashing";
+import {processProposerSlashing, assertValidProposerSlashing} from "./processProposerSlashing";
+import {processVoluntaryExit, assertValidVoluntaryExit} from "./processVoluntaryExit";
 
 // Extra utils used by other modules
 export {isValidIndexedAttestation} from "../../allForks/block";
@@ -14,10 +14,14 @@ export {isValidIndexedAttestation} from "../../allForks/block";
 export {
   processOperations,
   processAttestation,
-  processAttesterSlashing,
   processDeposit,
+  processAttesterSlashing,
   processProposerSlashing,
   processVoluntaryExit,
+  // For Lodestar gossip validation
+  assertValidAttesterSlashing,
+  assertValidProposerSlashing,
+  assertValidVoluntaryExit,
 };
 
 export function processBlock(
