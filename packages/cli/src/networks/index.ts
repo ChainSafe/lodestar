@@ -84,7 +84,6 @@ export async function fetchBootnodes(network: NetworkName): Promise<string[]> {
 
   const enrs: string[] = [];
   for (const line of bootnodesFile.trim().split(/\r?\n/)) {
-    console.log(line)
     // File may contain a row with '### Ethereum Node Records'
     // File may be YAML, with `- enr:-KG4QOWkRj`
     if (line.includes("enr:")) enrs.push("enr:" + line.split("enr:")[1]);
