@@ -23,7 +23,7 @@ import {
   computeMostCommonTarget,
 } from "./utils";
 
-export type SyncChainOpts = BatchOpts;
+export type SyncChainOpts = Partial<BatchOpts>;
 
 export type SyncChainModules = {
   config: IBeaconConfig;
@@ -107,7 +107,7 @@ export class SyncChain {
 
   private readonly logger: ILogger;
   private readonly config: IBeaconConfig;
-  private readonly opts: SyncChainOpts;
+  private readonly opts: BatchOpts;
 
   constructor(
     startEpoch: Epoch,
