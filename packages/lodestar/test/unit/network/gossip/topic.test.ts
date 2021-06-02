@@ -1,6 +1,7 @@
 import {expect} from "chai";
 import {config} from "@chainsafe/lodestar-config/mainnet";
-import {ForkName} from "@chainsafe/lodestar-config";
+import {ForkName} from "@chainsafe/lodestar-params";
+import {ssz} from "@chainsafe/lodestar-types";
 import {
   parseGossipTopic,
   stringifyGossipTopic,
@@ -11,7 +12,7 @@ import {
 import {ForkDigestContext} from "../../../../src/util/forkDigestContext";
 
 describe("GossipTopic", function () {
-  const genesisValidatorsRoot = config.types.Root.defaultValue();
+  const genesisValidatorsRoot = ssz.Root.defaultValue();
   const forkDigestContext = new ForkDigestContext(config, genesisValidatorsRoot);
   const encoding = GossipEncoding.ssz_snappy;
 

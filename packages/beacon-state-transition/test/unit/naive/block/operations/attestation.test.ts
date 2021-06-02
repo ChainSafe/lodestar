@@ -1,5 +1,6 @@
 import {expect} from "chai";
 import sinon from "sinon";
+import {MIN_ATTESTATION_INCLUSION_DELAY, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import {ZERO_HASH} from "../../../../../src/constants";
 import * as utils from "../../../../../src/util";
@@ -31,7 +32,7 @@ describe("process block - attestation", function () {
   });
 
   it("fail to process attestation - exceeds inclusion delay", function () {
-    const state = generateState({slot: config.params.MIN_ATTESTATION_INCLUSION_DELAY + 1});
+    const state = generateState({slot: MIN_ATTESTATION_INCLUSION_DELAY + 1});
     const attestation = generateEmptyAttestation();
     expect(() => phase0.processAttestation(config, state, attestation)).to.throw;
   });
@@ -50,7 +51,7 @@ describe("process block - attestation", function () {
 
   it.skip("should process attestation - currentEpoch === data.targetEpoch", function () {
     const state = generateState({
-      slot: config.params.MIN_ATTESTATION_INCLUSION_DELAY + 1,
+      slot: MIN_ATTESTATION_INCLUSION_DELAY + 1,
       currentJustifiedCheckpoint: {epoch: 1, root: ZERO_HASH},
     });
     currentEpochStub.returns(1);
@@ -58,7 +59,7 @@ describe("process block - attestation", function () {
     validateIndexedAttestationStub.returns(true);
     getBeaconProposerIndexStub.returns(2);
     const attestation = generateEmptyAttestation();
-    attestation.data.slot = config.params.SLOTS_PER_EPOCH + 1;
+    attestation.data.slot = SLOTS_PER_EPOCH + 1;
     attestation.data.target.epoch = 1;
     attestation.data.source.epoch = 1;
     attestation.data.source.root = state.currentJustifiedCheckpoint.root;
@@ -70,7 +71,7 @@ describe("process block - attestation", function () {
 
   it.skip("should process attestation - previousEpoch === data.targetEpoch", function () {
     const state = generateState({
-      slot: config.params.MIN_ATTESTATION_INCLUSION_DELAY + 1,
+      slot: MIN_ATTESTATION_INCLUSION_DELAY + 1,
       currentJustifiedCheckpoint: {epoch: 1, root: ZERO_HASH},
     });
     currentEpochStub.returns(1);

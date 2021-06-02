@@ -1,9 +1,8 @@
 import {expect} from "chai";
 import sinon from "sinon";
 
-import {config} from "@chainsafe/lodestar-config/mainnet";
+import {GENESIS_EPOCH} from "@chainsafe/lodestar-params";
 import * as utils from "../../../../../src/util";
-import {GENESIS_EPOCH} from "../../../../../src/constants";
 import {processRewardsAndPenalties} from "../../../../../src/naive/phase0/epoch/balanceUpdates";
 import * as attestationDeltas from "../../../../../src/naive/phase0/epoch/balanceUpdates/attestation";
 import {generateValidator} from "../../../../utils/validator";
@@ -32,7 +31,7 @@ describe("process epoch - balance updates", function () {
     const state = generateState();
     getCurrentEpochStub.returns(GENESIS_EPOCH);
 
-    processRewardsAndPenalties(config, state);
+    processRewardsAndPenalties(state);
     expect(getAttestationDeltasStub.called).to.be.false;
   });
 
@@ -44,7 +43,7 @@ describe("process epoch - balance updates", function () {
     getCurrentEpochStub.returns(10);
     getAttestationDeltasStub.returns([[reward], [penalty]]);
 
-    processRewardsAndPenalties(config, state);
+    processRewardsAndPenalties(state);
     expect(increaseBalanceStub.calledOnceWith(state, 0, reward + reward));
     expect(decreaseBalanceStub.calledOnceWith(state, 0, penalty + penalty));
   });

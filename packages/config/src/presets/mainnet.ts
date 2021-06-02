@@ -2,8 +2,9 @@
 import {fromHexString} from "@chainsafe/ssz";
 import {PresetName} from "@chainsafe/lodestar-params";
 import {IChainConfig} from "../chainConfig";
+import {createIBeaconConfig} from "../index";
 
-export const config: IChainConfig = {
+export const chainConfig: IChainConfig = {
   PRESET_BASE: PresetName.mainnet,
   // Genesis
   // ---------------------------------------------------------------
@@ -68,3 +69,5 @@ export const config: IChainConfig = {
   DEPOSIT_NETWORK_ID: 1,
   DEPOSIT_CONTRACT_ADDRESS: fromHexString("0x00000000219ab540356cBB839Cbe05303d7705Fa"),
 };
+
+export const config = createIBeaconConfig(chainConfig);

@@ -12,6 +12,7 @@ import {BlsVerifier} from "../../../../src/chain/bls";
 import {RegenError, RegenErrorCode, StateRegenerator} from "../../../../src/chain/regen";
 import {getNewBlockJob} from "../../../utils/block";
 import {createStubInstance} from "../../../utils/types";
+import {ssz} from "@chainsafe/lodestar-types";
 
 describe("processBlock", function () {
   const emitter = new ChainEventEmitter();
@@ -33,7 +34,7 @@ describe("processBlock", function () {
   });
 
   it("should throw on unknown parent", async function () {
-    const signedBlock = config.types.phase0.SignedBeaconBlock.defaultValue();
+    const signedBlock = ssz.phase0.SignedBeaconBlock.defaultValue();
     signedBlock.message.slot = 1;
     const job = getNewBlockJob(signedBlock);
     forkChoice.hasBlock.returns(false);
@@ -46,7 +47,7 @@ describe("processBlock", function () {
   });
 
   it("should throw on missing prestate", async function () {
-    const signedBlock = config.types.phase0.SignedBeaconBlock.defaultValue();
+    const signedBlock = ssz.phase0.SignedBeaconBlock.defaultValue();
     signedBlock.message.slot = 1;
     const job = getNewBlockJob(signedBlock);
     forkChoice.hasBlock.returns(true);

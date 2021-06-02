@@ -179,7 +179,7 @@ describe("gossip attestation validation", function () {
     );
 
     expect(chain.receiveAttestation.called).to.be.false;
-    expect(computeAttestationSubnetStub.calledOnceWith(config, attestationTargetState, attestation)).to.be.true;
+    expect(computeAttestationSubnetStub.calledOnceWith(attestationTargetState, attestation)).to.be.true;
   });
 
   it("should throw error - invalid indexed attestation", async function () {

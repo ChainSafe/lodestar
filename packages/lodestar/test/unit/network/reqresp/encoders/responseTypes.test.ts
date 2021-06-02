@@ -2,7 +2,7 @@ import chai from "chai";
 import chaiAsPromised from "chai-as-promised";
 import pipe from "it-pipe";
 import all from "it-all";
-import {ForkName} from "@chainsafe/lodestar-config";
+import {ForkName} from "@chainsafe/lodestar-params";
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {
   Method,

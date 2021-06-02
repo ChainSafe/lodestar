@@ -2,8 +2,8 @@ import {expect} from "chai";
 import sinon from "sinon";
 
 import {List} from "@chainsafe/ssz";
+import {FAR_FUTURE_EPOCH, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {phase0} from "@chainsafe/lodestar-types";
-import {config} from "@chainsafe/lodestar-config/mainnet";
 import {
   getAttestingBalance,
   getMatchingHeadAttestations,
@@ -12,7 +12,6 @@ import {
   getUnslashedAttestingIndices,
 } from "../../../../src/naive/phase0/epoch/util";
 import * as utils from "../../../../src/util";
-import {FAR_FUTURE_EPOCH} from "../../../../src/constants";
 import {generateEmptyAttestation} from "../../../utils/attestation";
 import {generateValidator} from "../../../utils/validator";
 import {generateState} from "../../../utils/state";
@@ -43,7 +42,7 @@ describe("process epoch - crosslinks", function () {
     const validatorIndices = [1, 2];
     getActiveValidatorIndicesStub.returns(validatorIndices);
 
-    utils.getTotalActiveBalance(config, generateState());
+    utils.getTotalActiveBalance(generateState());
   });
 
   it("should get matching source attestation - for current epoch", function () {
@@ -55,11 +54,11 @@ describe("process epoch - crosslinks", function () {
       },
     ];
     const state = generateState({
-      slot: config.params.SLOTS_PER_EPOCH,
+      slot: SLOTS_PER_EPOCH,
       currentEpochAttestations: pendingAttestations as List<phase0.PendingAttestation>,
     });
 
-    const result = getMatchingSourceAttestations(config, state, 1);
+    const result = getMatchingSourceAttestations(state, 1);
     expect(result).to.be.deep.equal(pendingAttestations);
   });
 
@@ -79,12 +78,12 @@ describe("process epoch - crosslinks", function () {
       },
     ];
     const state = generateState({
-      slot: config.params.SLOTS_PER_EPOCH,
+      slot: SLOTS_PER_EPOCH,
       currentEpochAttestations: currentPendingAttestations as List<phase0.PendingAttestation>,
       previousEpochAttestations: previousPendingAttestations as List<phase0.PendingAttestation>,
     });
 
-    const result = getMatchingSourceAttestations(config, state, 0);
+    const result = getMatchingSourceAttestations(state, 0);
     expect(result).to.be.deep.equal(previousPendingAttestations);
   });
 
@@ -104,12 +103,12 @@ describe("process epoch - crosslinks", function () {
     ];
     currentPendingAttestations[0].data.target.root = blockRoot;
     const state = generateState({
-      slot: config.params.SLOTS_PER_EPOCH,
+      slot: SLOTS_PER_EPOCH,
       currentEpochAttestations: currentPendingAttestations as List<phase0.PendingAttestation>,
     });
     getBlockRootStub.returns(blockRoot);
 
-    const result = getMatchingTargetAttestations(config, state, 1);
+    const result = getMatchingTargetAttestations(state, 1);
     expect(getBlockRootStub.calledOnce).to.be.true;
     expect(result).to.be.deep.equal([currentPendingAttestations[0]]);
   });
@@ -130,14 +129,14 @@ describe("process epoch - crosslinks", function () {
     ];
     currentPendingAttestations[0].data.beaconBlockRoot = blockRoot;
     const state = generateState({
-      slot: config.params.SLOTS_PER_EPOCH,
+      slot: SLOTS_PER_EPOCH,
       currentEpochAttestations: currentPendingAttestations as List<phase0.PendingAttestation>,
     });
     getBlockRootAtSlotStub.returns(blockRoot);
     getBlockRootStub.returns(Buffer.alloc(32));
 
-    const result = getMatchingHeadAttestations(config, state, 1);
-    expect(getBlockRootAtSlotStub.withArgs(config, sinon.match.any, 1).calledTwice).to.be.true;
+    const result = getMatchingHeadAttestations(state, 1);
+    expect(getBlockRootAtSlotStub.withArgs(sinon.match.any, 1).calledTwice).to.be.true;
     expect(result).to.be.deep.equal([currentPendingAttestations[0]]);
   });
 
@@ -159,7 +158,7 @@ describe("process epoch - crosslinks", function () {
     const validator2 = generateValidator({activation: 0, exit: FAR_FUTURE_EPOCH, slashed: false});
     const state = generateState({validators: [validator1, validator2] as List<phase0.Validator>});
 
-    const result = getUnslashedAttestingIndices(config, state, pendingAttestations);
+    const result = getUnslashedAttestingIndices(state, pendingAttestations);
     expect(result).to.be.deep.equal([1]);
     expect(getAttestingIndicesStub.calledTwice).to.be.true;
   });
@@ -183,8 +182,8 @@ describe("process epoch - crosslinks", function () {
     const state = generateState({validators: [validator1, validator2] as List<phase0.Validator>});
     getTotalBalanceStub.returns(BigInt(1));
 
-    const result = getAttestingBalance(config, state, pendingAttestations);
+    const result = getAttestingBalance(state, pendingAttestations);
     expect(result.toString()).to.be.deep.equal(BigInt(1).toString());
-    expect(getTotalBalanceStub.withArgs(sinon.match.any, sinon.match.any, [1]).calledOnce).to.be.true;
+    expect(getTotalBalanceStub.withArgs(sinon.match.any, [1]).calledOnce).to.be.true;
   });
 });

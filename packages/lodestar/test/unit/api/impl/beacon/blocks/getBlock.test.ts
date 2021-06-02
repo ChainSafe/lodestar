@@ -1,6 +1,6 @@
 import sinon from "sinon";
 import * as blockUtils from "../../../../../../src/api/impl/beacon/blocks/utils";
-import {config} from "@chainsafe/lodestar-config/minimal";
+import {ssz} from "@chainsafe/lodestar-types";
 import {expect, use} from "chai";
 import chaiAsPromised from "chai-as-promised";
 import {generateEmptySignedBlock} from "../../../../../utils/block";
@@ -31,6 +31,6 @@ describe("api - beacon - getBlock", function () {
     resolveBlockIdStub.withArgs(sinon.match.any, sinon.match.any, "head").resolves(generateEmptySignedBlock());
     const {data: result} = await server.blockApi.getBlock("head");
     expect(result).to.not.be.null;
-    expect(() => config.types.phase0.SignedBeaconBlock.assertValidValue(result)).to.not.throw();
+    expect(() => ssz.phase0.SignedBeaconBlock.assertValidValue(result)).to.not.throw();
   });
 });

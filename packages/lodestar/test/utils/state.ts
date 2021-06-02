@@ -1,9 +1,16 @@
-import {minimalConfig} from "@chainsafe/lodestar-config/minimal";
+import {config as minimalConfig} from "@chainsafe/lodestar-config/minimal";
 import {CachedBeaconState, createCachedBeaconState, phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {List, TreeBacked} from "@chainsafe/ssz";
-import {allForks, altair, Gwei, Root} from "@chainsafe/lodestar-types";
+import {allForks, altair, Gwei, Root, ssz} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {FAR_FUTURE_EPOCH} from "@chainsafe/lodestar-params";
+import {
+  EPOCHS_PER_HISTORICAL_VECTOR,
+  EPOCHS_PER_SLASHINGS_VECTOR,
+  FAR_FUTURE_EPOCH,
+  MAX_EFFECTIVE_BALANCE,
+  SLOTS_PER_HISTORICAL_ROOT,
+  SYNC_COMMITTEE_SIZE,
+} from "@chainsafe/lodestar-params";
 
 import {GENESIS_EPOCH, GENESIS_SLOT, ZERO_HASH} from "../../src/constants";
 import {generateEmptyBlock} from "./block";
@@ -36,7 +43,7 @@ export function generateState(
 ): TreeBacked<allForks.BeaconState> {
   const validatorOpts = {
     activationEpoch: 0,
-    effectiveBalance: config.params.MAX_EFFECTIVE_BALANCE,
+    effectiveBalance: MAX_EFFECTIVE_BALANCE,
     withdrawableEpoch: FAR_FUTURE_EPOCH,
     exitEpoch: FAR_FUTURE_EPOCH,
   };
@@ -60,8 +67,8 @@ export function generateState(
     genesisValidatorsRoot: ZERO_HASH,
     slot: GENESIS_SLOT,
     fork: {
-      previousVersion: config.params.GENESIS_FORK_VERSION,
-      currentVersion: config.params.GENESIS_FORK_VERSION,
+      previousVersion: config.GENESIS_FORK_VERSION,
+      currentVersion: config.GENESIS_FORK_VERSION,
       epoch: GENESIS_EPOCH,
     },
     latestBlockHeader: {
@@ -69,10 +76,10 @@ export function generateState(
       proposerIndex: 0,
       parentRoot: Buffer.alloc(32),
       stateRoot: Buffer.alloc(32),
-      bodyRoot: config.types.phase0.BeaconBlockBody.hashTreeRoot(generateEmptyBlock().body),
+      bodyRoot: ssz.phase0.BeaconBlockBody.hashTreeRoot(generateEmptyBlock().body),
     },
-    blockRoots: Array.from({length: config.params.SLOTS_PER_HISTORICAL_ROOT}, () => ZERO_HASH),
-    stateRoots: Array.from({length: config.params.SLOTS_PER_HISTORICAL_ROOT}, () => ZERO_HASH),
+    blockRoots: Array.from({length: SLOTS_PER_HISTORICAL_ROOT}, () => ZERO_HASH),
+    stateRoots: Array.from({length: SLOTS_PER_HISTORICAL_ROOT}, () => ZERO_HASH),
     historicalRoots: ([] as Root[]) as List<Root>,
     eth1Data: {
       depositRoot: Buffer.alloc(32),
@@ -82,9 +89,9 @@ export function generateState(
     eth1DataVotes: ([] as phase0.Eth1Data[]) as List<phase0.Eth1Data>,
     eth1DepositIndex: 0,
     validators: validators as List<phase0.Validator>,
-    balances: Array.from({length: 4}, () => config.params.MAX_EFFECTIVE_BALANCE) as List<Gwei>,
-    randaoMixes: Array.from({length: config.params.EPOCHS_PER_HISTORICAL_VECTOR}, () => ZERO_HASH),
-    slashings: Array.from({length: config.params.EPOCHS_PER_SLASHINGS_VECTOR}, () => BigInt(0)),
+    balances: Array.from({length: 4}, () => MAX_EFFECTIVE_BALANCE) as List<Gwei>,
+    randaoMixes: Array.from({length: EPOCHS_PER_HISTORICAL_VECTOR}, () => ZERO_HASH),
+    slashings: Array.from({length: EPOCHS_PER_SLASHINGS_VECTOR}, () => BigInt(0)),
     previousEpochAttestations: ([] as phase0.PendingAttestation[]) as List<phase0.PendingAttestation>,
     currentEpochAttestations: ([] as phase0.PendingAttestation[]) as List<phase0.PendingAttestation>,
     justificationBits: Array.from({length: 4}, () => false),
@@ -103,34 +110,26 @@ export function generateState(
   };
   if (isAltair) {
     const defaultAltairState: altair.BeaconState = {
-      ...config.types.altair.BeaconState.struct_defaultValue(),
+      ...ssz.altair.BeaconState.struct_defaultValue(),
       ...defaultState,
       currentSyncCommittee: {
-        pubkeys: Array.from(
-          {length: config.params.SYNC_COMMITTEE_SIZE},
-          (_, i) => validators[i % validators.length].pubkey
-        ),
-        aggregatePubkey: config.types.BLSPubkey.defaultValue(),
+        pubkeys: Array.from({length: SYNC_COMMITTEE_SIZE}, (_, i) => validators[i % validators.length].pubkey),
+        aggregatePubkey: ssz.BLSPubkey.defaultValue(),
       },
       nextSyncCommittee: {
-        pubkeys: Array.from(
-          {length: config.params.SYNC_COMMITTEE_SIZE},
-          (_, i) => validators[i % validators.length].pubkey
-        ),
-        aggregatePubkey: config.types.BLSPubkey.defaultValue(),
+        pubkeys: Array.from({length: SYNC_COMMITTEE_SIZE}, (_, i) => validators[i % validators.length].pubkey),
+        aggregatePubkey: ssz.BLSPubkey.defaultValue(),
       },
     };
 
     const state =
       altairStates.get(config) ??
-      (config.types.altair.BeaconState.createTreeBackedFromStruct(defaultAltairState) as TreeBacked<
-        altair.BeaconState
-      >);
+      (ssz.altair.BeaconState.createTreeBackedFromStruct(defaultAltairState) as TreeBacked<altair.BeaconState>);
     altairStates.set(config, state);
   } else {
     const state =
       phase0States.get(config) ??
-      (config.types.phase0.BeaconState.createTreeBackedFromStruct(defaultState) as TreeBacked<allForks.BeaconState>);
+      (ssz.phase0.BeaconState.createTreeBackedFromStruct(defaultState) as TreeBacked<allForks.BeaconState>);
     phase0States.set(config, state);
   }
   const resultState = (isAltair ? altairStates.get(config)?.clone() : phase0States.get(config)?.clone()) as TreeBacked<

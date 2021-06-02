@@ -12,7 +12,7 @@ import {ValidatorStore} from "../../../src/services/validatorStore";
 import {getApiClientStub} from "../../utils/apiStub";
 import {testLogger} from "../../utils/logger";
 import {ClockMock} from "../../utils/clock";
-import {ForkName} from "@chainsafe/lodestar-config";
+import {ForkName} from "@chainsafe/lodestar-params";
 
 type ProposerDutiesRes = {dependentRoot: Root; data: routes.validator.ProposerDuty[]};
 

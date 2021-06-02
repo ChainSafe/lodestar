@@ -20,15 +20,15 @@ describe("config api implementation", function () {
   describe("getDepositContract", function () {
     it("should get the deposit contract from config", async function () {
       const {data: depositContract} = await api.getDepositContract();
-      expect(depositContract.address).to.equal(config.params.DEPOSIT_CONTRACT_ADDRESS);
-      expect(depositContract.chainId).to.equal(config.params.DEPOSIT_CHAIN_ID);
+      expect(depositContract.address).to.equal(config.DEPOSIT_CONTRACT_ADDRESS);
+      expect(depositContract.chainId).to.equal(config.DEPOSIT_CHAIN_ID);
     });
   });
 
   describe("getSpec", function () {
     it("should get the spec", async function () {
       const {data: spec} = await api.getSpec();
-      expect(spec).to.equal(config.params);
+      expect(spec).to.equal(config);
     });
   });
 });

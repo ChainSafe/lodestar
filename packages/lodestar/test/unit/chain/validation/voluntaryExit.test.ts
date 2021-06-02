@@ -17,6 +17,7 @@ import {validateGossipVoluntaryExit} from "../../../../src/chain/validation/volu
 import {VoluntaryExitErrorCode} from "../../../../src/chain/errors/voluntaryExitError";
 import {SinonStubFn} from "../../../utils/types";
 import {expectRejectedWithLodestarError} from "../../../utils/errors";
+import {MAX_EFFECTIVE_BALANCE} from "@chainsafe/lodestar-params";
 
 describe("validate voluntary exit", () => {
   const sandbox = sinon.createSandbox();
@@ -43,10 +44,10 @@ describe("validate voluntary exit", () => {
     dbStub.voluntaryExit.has.resolves(true);
     const state = generateState(
       {
-        genesisTime: Math.floor(Date.now() / 1000) - config.params.SECONDS_PER_SLOT,
-        validators: generateValidators(config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT, {
+        genesisTime: Math.floor(Date.now() / 1000) - config.SECONDS_PER_SLOT,
+        validators: generateValidators(config.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT, {
           activationEpoch: 0,
-          effectiveBalance: config.params.MAX_EFFECTIVE_BALANCE,
+          effectiveBalance: MAX_EFFECTIVE_BALANCE,
         }),
         balances: generateInitialMaxBalances(config),
       },
@@ -65,10 +66,10 @@ describe("validate voluntary exit", () => {
     dbStub.voluntaryExit.has.resolves(false);
     const state = generateState(
       {
-        genesisTime: Math.floor(Date.now() / 1000) - config.params.SECONDS_PER_SLOT,
-        validators: generateValidators(config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT, {
+        genesisTime: Math.floor(Date.now() / 1000) - config.SECONDS_PER_SLOT,
+        validators: generateValidators(config.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT, {
           activationEpoch: 0,
-          effectiveBalance: config.params.MAX_EFFECTIVE_BALANCE,
+          effectiveBalance: MAX_EFFECTIVE_BALANCE,
         }),
         balances: generateInitialMaxBalances(config),
       },
@@ -88,10 +89,10 @@ describe("validate voluntary exit", () => {
     dbStub.voluntaryExit.has.resolves(false);
     const state = generateState(
       {
-        genesisTime: Math.floor(Date.now() / 1000) - config.params.SECONDS_PER_SLOT,
-        validators: generateValidators(config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT, {
+        genesisTime: Math.floor(Date.now() / 1000) - config.SECONDS_PER_SLOT,
+        validators: generateValidators(config.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT, {
           activationEpoch: 0,
-          effectiveBalance: config.params.MAX_EFFECTIVE_BALANCE,
+          effectiveBalance: MAX_EFFECTIVE_BALANCE,
         }),
         balances: generateInitialMaxBalances(config),
       },

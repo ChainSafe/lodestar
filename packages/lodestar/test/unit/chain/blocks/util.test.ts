@@ -5,12 +5,7 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {expect} from "chai";
 
 describe("chain / blocks / util / groupBlocksByEpoch", function () {
-  const SLOTS_PER_EPOCH = 4;
-  const fastConfig: IBeaconConfig = {
-    ...config,
-    // eslint-disable-next-line @typescript-eslint/naming-convention
-    params: {...config.params, SLOTS_PER_EPOCH},
-  };
+  const fastConfig: IBeaconConfig = config;
 
   const testCases: {id: string; blocksSlot: number[]; blocksByEpochSlot: number[][]}[] = [
     {

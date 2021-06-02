@@ -1,22 +1,22 @@
-import {mainnetConfig} from "@chainsafe/lodestar-config/mainnet";
-import {minimalConfig} from "@chainsafe/lodestar-config/minimal";
+import {chainConfig as mainnetConfig} from "@chainsafe/lodestar-config/mainnet";
+import {chainConfig as minimalConfig} from "@chainsafe/lodestar-config/minimal";
 import {expect} from "chai";
 import {assertEqualParams, NotEqualParamsError} from "../../../src/util/params";
 
 describe("utils / params / assertEqualParams", () => {
   it("mainnet == mainnet", () => {
-    assertEqualParams(mainnetConfig.params, mainnetConfig.params);
+    assertEqualParams(mainnetConfig, mainnetConfig);
   });
 
   it("minimal == minimal", () => {
-    assertEqualParams(minimalConfig.params, minimalConfig.params);
+    assertEqualParams(minimalConfig, minimalConfig);
   });
 
   it("mainnet != minimal", () => {
-    expect(() => assertEqualParams(mainnetConfig.params, minimalConfig.params)).to.throw(NotEqualParamsError);
+    expect(() => assertEqualParams(mainnetConfig, minimalConfig)).to.throw(NotEqualParamsError);
   });
 
   it("minimal != mainnet", () => {
-    expect(() => assertEqualParams(minimalConfig.params, mainnetConfig.params)).to.throw(NotEqualParamsError);
+    expect(() => assertEqualParams(minimalConfig, mainnetConfig)).to.throw(NotEqualParamsError);
   });
 });

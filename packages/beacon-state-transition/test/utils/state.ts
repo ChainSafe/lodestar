@@ -1,8 +1,15 @@
 import {List, Vector} from "@chainsafe/ssz";
-import {phase0} from "@chainsafe/lodestar-types";
+import {
+  EPOCHS_PER_HISTORICAL_VECTOR,
+  EPOCHS_PER_SLASHINGS_VECTOR,
+  GENESIS_EPOCH,
+  GENESIS_SLOT,
+  SLOTS_PER_HISTORICAL_ROOT,
+} from "@chainsafe/lodestar-params";
+import {phase0, ssz} from "@chainsafe/lodestar-types";
 import {config} from "@chainsafe/lodestar-config/mainnet";
 
-import {GENESIS_EPOCH, GENESIS_SLOT, ZERO_HASH} from "../../src/constants";
+import {ZERO_HASH} from "../../src/constants";
 import {newZeroedBigIntArray} from "../../src/util";
 
 import {generateEmptyBlock} from "./block";
@@ -24,8 +31,8 @@ export function generateState(opts?: TestBeaconState): phase0.BeaconState {
     genesisValidatorsRoot: ZERO_HASH,
     slot: GENESIS_SLOT,
     fork: {
-      previousVersion: config.params.GENESIS_FORK_VERSION,
-      currentVersion: config.params.GENESIS_FORK_VERSION,
+      previousVersion: config.GENESIS_FORK_VERSION,
+      currentVersion: config.GENESIS_FORK_VERSION,
       epoch: GENESIS_EPOCH,
     },
     latestBlockHeader: {
@@ -33,10 +40,10 @@ export function generateState(opts?: TestBeaconState): phase0.BeaconState {
       proposerIndex: 0,
       parentRoot: Buffer.alloc(32),
       stateRoot: Buffer.alloc(32),
-      bodyRoot: config.types.phase0.BeaconBlockBody.hashTreeRoot(generateEmptyBlock().body),
+      bodyRoot: ssz.phase0.BeaconBlockBody.hashTreeRoot(generateEmptyBlock().body),
     },
-    blockRoots: Array.from({length: config.params.SLOTS_PER_HISTORICAL_ROOT}, () => ZERO_HASH),
-    stateRoots: Array.from({length: config.params.SLOTS_PER_HISTORICAL_ROOT}, () => ZERO_HASH),
+    blockRoots: Array.from({length: SLOTS_PER_HISTORICAL_ROOT}, () => ZERO_HASH),
+    stateRoots: Array.from({length: SLOTS_PER_HISTORICAL_ROOT}, () => ZERO_HASH),
     historicalRoots: ([] as Vector<number>[]) as List<Vector<number>>,
     eth1Data: {
       depositRoot: Buffer.alloc(32),
@@ -47,8 +54,8 @@ export function generateState(opts?: TestBeaconState): phase0.BeaconState {
     eth1DepositIndex: 0,
     validators: ([] as phase0.Validator[]) as List<phase0.Validator>,
     balances: ([] as bigint[]) as List<bigint>,
-    randaoMixes: Array.from({length: config.params.EPOCHS_PER_HISTORICAL_VECTOR}, () => ZERO_HASH),
-    slashings: newZeroedBigIntArray(config.params.EPOCHS_PER_SLASHINGS_VECTOR),
+    randaoMixes: Array.from({length: EPOCHS_PER_HISTORICAL_VECTOR}, () => ZERO_HASH),
+    slashings: newZeroedBigIntArray(EPOCHS_PER_SLASHINGS_VECTOR),
     previousEpochAttestations: ([] as phase0.PendingAttestation[]) as List<phase0.PendingAttestation>,
     currentEpochAttestations: ([] as phase0.PendingAttestation[]) as List<phase0.PendingAttestation>,
     justificationBits: [false, false, false, false],

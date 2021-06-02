@@ -1,4 +1,5 @@
-import {config} from "@chainsafe/lodestar-config/minimal";
+import {MAX_VALIDATORS_PER_COMMITTEE} from "@chainsafe/lodestar-params";
+import {ssz} from "@chainsafe/lodestar-types";
 import {List} from "@chainsafe/ssz";
 import {expect} from "chai";
 import {getUint8ByteToBitBooleanArray, bitlistToUint8Array} from "../../../src";
@@ -15,9 +16,9 @@ describe("aggregationBits", function () {
       numBytes: 2,
     },
     {
-      name: "" + config.params.MAX_VALIDATORS_PER_COMMITTEE + " bits all true",
-      data: Array.from({length: config.params.MAX_VALIDATORS_PER_COMMITTEE}, () => true),
-      numBytes: Math.ceil(config.params.MAX_VALIDATORS_PER_COMMITTEE / 8),
+      name: "" + MAX_VALIDATORS_PER_COMMITTEE + " bits all true",
+      data: Array.from({length: MAX_VALIDATORS_PER_COMMITTEE}, () => true),
+      numBytes: Math.ceil(MAX_VALIDATORS_PER_COMMITTEE / 8),
     },
   ];
 
@@ -28,8 +29,8 @@ describe("aggregationBits", function () {
 
   for (const {name, data, numBytes} of testCases) {
     it(name, () => {
-      const tree = config.types.phase0.CommitteeBits.createTreeBackedFromStruct(data as List<boolean>);
-      const aggregationBytes = bitlistToUint8Array(tree, config.types.phase0.CommitteeBits);
+      const tree = ssz.phase0.CommitteeBits.createTreeBackedFromStruct(data as List<boolean>);
+      const aggregationBytes = bitlistToUint8Array(tree, ssz.phase0.CommitteeBits);
       expect(aggregationBytes.length).to.be.equal(numBytes, "number of bytes is incorrect");
       const aggregationBits: boolean[] = [];
       for (let i = 0; i < tree.length; i++) {
@@ -42,7 +43,7 @@ describe("aggregationBits", function () {
   it("getUint8ByteToBitBooleanArray - all values in 8 bytes", () => {
     for (let i = 0; i <= 0xff; i++) {
       const boolArr = getUint8ByteToBitBooleanArray(i);
-      const tree = config.types.phase0.CommitteeBits.createTreeBackedFromStruct(boolArr as List<boolean>);
+      const tree = ssz.phase0.CommitteeBits.createTreeBackedFromStruct(boolArr as List<boolean>);
       const bytes = tree.serialize();
       expect(bytes[0]).to.equal(i, `Wrong serialization of ${i}: ${JSON.stringify(boolArr)}`);
     }

@@ -1,16 +1,16 @@
 import sinon from "sinon";
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import {List} from "@chainsafe/ssz";
-import {phase0} from "@chainsafe/lodestar-types";
-import {BeaconState} from "@chainsafe/lodestar-types/lib/allForks";
+import {allForks, phase0} from "@chainsafe/lodestar-types";
 import {getLatestWeakSubjectivityCheckpointEpoch} from "../../../../src/util/weakSubjectivity";
 import {generateState} from "../../../utils/state";
 import {generateValidator} from "../../../utils/validator";
 import {expect} from "chai";
+import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 
 describe("getLatestWeakSubjectivityCheckpointEpoch", () => {
   const sandbox = sinon.createSandbox();
-  let state: BeaconState;
+  let state: allForks.BeaconState;
 
   beforeEach(() => {
     state = generateState();
@@ -32,7 +32,7 @@ describe("getLatestWeakSubjectivityCheckpointEpoch", () => {
   for (const testValue of testValues) {
     it(`should have ${testValue.expectedMod} mod for slot ${testValue.slot} and activeValidatorCount of ${testValue.activeValidatorCount}`, () => {
       state.slot = testValue.slot;
-      state.finalizedCheckpoint.epoch = state.slot / config.params.SLOTS_PER_EPOCH;
+      state.finalizedCheckpoint.epoch = state.slot / SLOTS_PER_EPOCH;
       state.validators = Array.from({length: testValue.activeValidatorCount}, () =>
         generateValidator({activation: 0, exit: Infinity})
       ) as List<phase0.Validator>;

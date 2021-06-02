@@ -1,6 +1,6 @@
+import {ssz} from "@chainsafe/lodestar-types";
 import {config} from "@chainsafe/lodestar-config/minimal";
-import {BeaconParams} from "@chainsafe/lodestar-params";
-import {Api, ReqTypes} from "../../src/routes/config";
+import {Api, ReqTypes, Spec} from "../../src/routes/config";
 import {getClient} from "../../src/client/config";
 import {getRoutes} from "../../src/server/config";
 import {runGenericServerTest} from "../utils/genericServerTest";
@@ -18,11 +18,11 @@ describe("config", () => {
     },
     getForkSchedule: {
       args: [],
-      res: {data: [config.types.phase0.Fork.defaultValue()]},
+      res: {data: [ssz.phase0.Fork.defaultValue()]},
     },
     getSpec: {
       args: [],
-      res: {data: BeaconParams.defaultValue()},
+      res: {data: Spec.defaultValue()},
     },
   });
 });

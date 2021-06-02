@@ -1,7 +1,7 @@
 import {expect} from "chai";
 import sinon from "sinon";
+import {FAR_FUTURE_EPOCH, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {config} from "@chainsafe/lodestar-config/mainnet";
-import {FAR_FUTURE_EPOCH} from "../../../../../src/constants";
 import * as utils from "../../../../../src/util";
 import * as validatorUtils from "../../../../../src/util/validator";
 import {processVoluntaryExit} from "../../../../../src/naive/phase0/block/operations";
@@ -55,7 +55,7 @@ describe("process block - voluntary exits", function () {
   it("should fail - not valid", function () {
     const state = generateState({slot: 0});
     const exit = generateEmptySignedVoluntaryExit();
-    exit.message.epoch = config.params.SLOTS_PER_EPOCH * 2;
+    exit.message.epoch = SLOTS_PER_EPOCH * 2;
     state.validators.push(generateValidator({activation: 0, exit: FAR_FUTURE_EPOCH}));
     isActiveValidatorStub.returns(true);
     try {
@@ -67,7 +67,7 @@ describe("process block - voluntary exits", function () {
   });
 
   it("should fail - validator not enough active", function () {
-    const state = generateState({slot: config.params.SLOTS_PER_EPOCH * 2});
+    const state = generateState({slot: SLOTS_PER_EPOCH * 2});
     const exit = generateEmptySignedVoluntaryExit();
     exit.message.epoch = 0;
     state.validators.push(generateValidator({activation: 0, exit: FAR_FUTURE_EPOCH}));
@@ -81,7 +81,7 @@ describe("process block - voluntary exits", function () {
   });
 
   it("should fail - invalid signature", function () {
-    const state = generateState({slot: (config.params.SHARD_COMMITTEE_PERIOD + 1) * config.params.SLOTS_PER_EPOCH});
+    const state = generateState({slot: (config.SHARD_COMMITTEE_PERIOD + 1) * SLOTS_PER_EPOCH});
     const exit = generateEmptySignedVoluntaryExit();
     exit.message.epoch = 0;
     state.validators.push(generateValidator({activation: 0, exit: FAR_FUTURE_EPOCH}));
@@ -96,7 +96,7 @@ describe("process block - voluntary exits", function () {
 
   it.skip("should process exit", function () {
     const validator = generateValidator({activation: 1, exit: FAR_FUTURE_EPOCH});
-    const state = generateState({slot: (config.params.SHARD_COMMITTEE_PERIOD + 1) * config.params.SLOTS_PER_EPOCH});
+    const state = generateState({slot: (config.SHARD_COMMITTEE_PERIOD + 1) * SLOTS_PER_EPOCH});
     const exit = generateEmptySignedVoluntaryExit();
     exit.message.epoch = 0;
     state.validators.push(validator);

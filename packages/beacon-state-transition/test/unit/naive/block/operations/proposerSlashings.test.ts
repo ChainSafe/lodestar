@@ -1,5 +1,6 @@
 import {expect} from "chai";
 import sinon from "sinon";
+import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import {processProposerSlashing} from "../../../../../src/naive/phase0/block/operations";
 import * as utils from "../../../../../src/util";
@@ -30,7 +31,7 @@ describe("process block - proposer slashings", function () {
     const state = generateState({validators: generateValidators(0)});
     const proposerSlashing = generateEmptyProposerSlashing();
     proposerSlashing.signedHeader1.message.slot = 1;
-    proposerSlashing.signedHeader2.message.slot = config.params.SLOTS_PER_EPOCH + 1;
+    proposerSlashing.signedHeader2.message.slot = SLOTS_PER_EPOCH + 1;
     try {
       processProposerSlashing(config, state, proposerSlashing);
       expect.fail();

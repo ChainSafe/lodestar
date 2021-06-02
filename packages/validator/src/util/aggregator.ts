@@ -19,7 +19,7 @@ export function isAttestationAggregator(
   return bytesToBigInt(hash(slotSignature.valueOf() as Uint8Array).slice(0, 8)) % BigInt(modulo) === BigInt(0);
 }
 
-export function isSyncCommitteeAggregator(config: IBeaconConfig, selectionProof: BLSSignature): boolean {
+export function isSyncCommitteeAggregator(selectionProof: BLSSignature): boolean {
   const modulo = Math.max(
     1,
     intDiv(intDiv(SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_SUBNET_COUNT), TARGET_AGGREGATORS_PER_SYNC_SUBCOMMITTEE)

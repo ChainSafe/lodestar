@@ -1,7 +1,7 @@
 import {expect} from "chai";
 import sinon from "sinon";
 
-import {config} from "@chainsafe/lodestar-config/mainnet";
+import {BASE_REWARD_FACTOR} from "@chainsafe/lodestar-params";
 import * as utils from "../../../../../src/util";
 import {generateState} from "../../../../utils/state";
 import {generateValidators} from "../../../../utils/validator";
@@ -28,11 +28,9 @@ describe.skip("process epoch - balance updates", function () {
     state.validators = generateValidators(10);
     for (let index = 0; index < state.validators.length; index++) {
       state.validators[index].effectiveBalance = BigInt(index);
-      const result = getBaseReward(config, state, index);
+      const result = getBaseReward(state, index);
       const actual =
-        (BigInt(index) * BigInt(config.params.BASE_REWARD_FACTOR)) /
-        bigIntSqrt(BigInt(100)) /
-        BigInt(BASE_REWARDS_PER_EPOCH);
+        (BigInt(index) * BigInt(BASE_REWARD_FACTOR)) / bigIntSqrt(BigInt(100)) / BigInt(BASE_REWARDS_PER_EPOCH);
       expect(result === actual).to.be.true;
     }
   });

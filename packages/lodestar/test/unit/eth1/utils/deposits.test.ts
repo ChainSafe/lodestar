@@ -1,7 +1,8 @@
 import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
-import {Root, phase0} from "@chainsafe/lodestar-types";
+import {Root, phase0, ssz} from "@chainsafe/lodestar-types";
 import {List, TreeBacked} from "@chainsafe/ssz";
+import {MAX_DEPOSITS} from "@chainsafe/lodestar-params";
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import {verifyMerkleBranch} from "@chainsafe/lodestar-utils";
 import {filterBy} from "../../../utils/db";
@@ -29,7 +30,6 @@ describe("eth1 / util / deposits", function () {
       error?: unknown;
     }
 
-    const {MAX_DEPOSITS} = config.params;
     const testCases: ITestCase[] = [
       {
         id: "Return first deposit",
@@ -108,7 +108,7 @@ describe("eth1 / util / deposits", function () {
   describe("getDepositsWithProofs", () => {
     it("return empty array if no pending deposits", function () {
       const initialValues = [Buffer.alloc(32)] as List<Root>;
-      const depositRootTree = config.types.phase0.DepositDataRootList.createTreeBackedFromStruct(initialValues);
+      const depositRootTree = ssz.phase0.DepositDataRootList.createTreeBackedFromStruct(initialValues);
       const depositCount = 0;
       const eth1Data = generateEth1Data(depositCount, depositRootTree);
 
@@ -126,9 +126,9 @@ describe("eth1 / util / deposits", function () {
         })
       );
 
-      const depositRootTree = config.types.phase0.DepositDataRootList.defaultTreeBacked();
+      const depositRootTree = ssz.phase0.DepositDataRootList.defaultTreeBacked();
       for (const depositEvent of depositEvents) {
-        depositRootTree.push(config.types.phase0.DepositData.hashTreeRoot(depositEvent.depositData));
+        depositRootTree.push(ssz.phase0.DepositData.hashTreeRoot(depositEvent.depositData));
       }
       const depositCount = depositEvents.length;
       const eth1Data = generateEth1Data(depositCount, depositRootTree);
@@ -142,7 +142,7 @@ describe("eth1 / util / deposits", function () {
       for (const [index, deposit] of deposits.entries()) {
         expect(
           verifyMerkleBranch(
-            config.types.phase0.DepositData.hashTreeRoot(deposit.data),
+            ssz.phase0.DepositData.hashTreeRoot(deposit.data),
             Array.from(deposit.proof).map((p) => p.valueOf() as Uint8Array),
             33,
             index,

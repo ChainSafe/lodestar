@@ -1,4 +1,5 @@
 import {config} from "@chainsafe/lodestar-config/mainnet";
+import {ssz} from "@chainsafe/lodestar-types";
 import {fromHexString, List, TreeBacked} from "@chainsafe/ssz";
 import {expect} from "chai";
 import {phase0, CachedBeaconState, createCachedBeaconState} from "../../../src";
@@ -29,7 +30,7 @@ describe("CachedBeaconState", function () {
       });
     }
     const defaultState = generateState({validators: validators as List<phase0.Validator>});
-    state = config.types.phase0.BeaconState.createTreeBackedFromStruct(defaultState);
+    state = ssz.phase0.BeaconState.createTreeBackedFromStruct(defaultState);
   });
 
   beforeEach(() => {

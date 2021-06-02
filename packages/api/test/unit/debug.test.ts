@@ -1,4 +1,5 @@
-import {ForkName} from "@chainsafe/lodestar-config";
+import {ForkName} from "@chainsafe/lodestar-params";
+import {ssz} from "@chainsafe/lodestar-types";
 import {fetch} from "cross-fetch";
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {Api, ReqTypes, routesData} from "../../src/routes/debug";
@@ -19,11 +20,11 @@ describe("debug", () => {
     },
     getState: {
       args: ["head"],
-      res: {data: config.types.phase0.BeaconState.defaultValue()},
+      res: {data: ssz.phase0.BeaconState.defaultValue()},
     },
     getStateV2: {
       args: ["head"],
-      res: {data: config.types.altair.BeaconState.defaultValue(), version: ForkName.altair},
+      res: {data: ssz.altair.BeaconState.defaultValue(), version: ForkName.altair},
     },
     connectToPeer: {
       args: ["peerId", ["multiaddr1", "multiaddr2"]],
@@ -44,7 +45,7 @@ describe("debug", () => {
     registerRoutesGroup(server, routes);
 
     it("getState", async () => {
-      const state = config.types.phase0.BeaconState.defaultValue();
+      const state = ssz.phase0.BeaconState.defaultValue();
       mockApi.getState.resolves({data: state});
 
       const url = baseUrl + routesData.getState.url;
@@ -57,9 +58,9 @@ describe("debug", () => {
 
       expect(res.headers.get("Content-Type")).to.equal("application/octet-stream", "Wrong Content-Type header value");
 
-      const stateRes = config.types.phase0.BeaconState.deserialize(new Uint8Array(arrayBuffer));
-      expect(config.types.phase0.BeaconState.toJson(state)).to.deep.equal(
-        config.types.phase0.BeaconState.toJson(stateRes),
+      const stateRes = ssz.phase0.BeaconState.deserialize(new Uint8Array(arrayBuffer));
+      expect(ssz.phase0.BeaconState.toJson(state)).to.deep.equal(
+        ssz.phase0.BeaconState.toJson(stateRes),
         "returned state value is not equal"
       );
     });

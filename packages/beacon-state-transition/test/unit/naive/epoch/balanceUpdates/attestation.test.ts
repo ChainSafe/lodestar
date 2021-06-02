@@ -1,7 +1,6 @@
 import {expect} from "chai";
 import sinon from "sinon";
 
-import {config} from "@chainsafe/lodestar-config/mainnet";
 import * as utilsEpoch from "../../../../../src/naive/phase0/epoch/util";
 import * as utils from "../../../../../src/util";
 import * as baseReward from "../../../../../src/naive/phase0/epoch/balanceUpdates/util";
@@ -64,7 +63,7 @@ describe.skip("process epoch - balance updates", function () {
     getBaseRewardStub.returns(BigInt(10));
     getAttestingIndicesStub.returns([0, 1]);
 
-    const result = getAttestationDeltas(config, state);
+    const result = getAttestationDeltas(state);
     const rewards = result[0];
     for (const value of rewards) {
       expect(value > BigInt(0)).to.be.true;
@@ -92,7 +91,7 @@ describe.skip("process epoch - balance updates", function () {
     getBaseRewardStub.returns(BigInt(2));
     getAttestingIndicesStub.returns([2, 3]);
 
-    const result = getAttestationDeltas(config, state);
+    const result = getAttestationDeltas(state);
     const penalties = result[1];
     for (const value of penalties) {
       expect(value > BigInt(0)).to.be.true;

@@ -1,5 +1,5 @@
 import {IBlockSummary} from "@chainsafe/lodestar-fork-choice";
-import {config} from "@chainsafe/lodestar-config/minimal";
+import {ssz} from "@chainsafe/lodestar-types";
 import {
   generateBlockSummary,
   generateEmptyBlock,
@@ -28,7 +28,7 @@ describe("api - beacon - getBlockHeaders", function () {
       generateEmptyBlockSummary(),
       //canonical block summary
       deepmerge<IBlockSummary>(generateEmptyBlockSummary(), {
-        blockRoot: config.types.phase0.BeaconBlock.hashTreeRoot(generateEmptyBlock()),
+        blockRoot: ssz.phase0.BeaconBlock.hashTreeRoot(generateEmptyBlock()),
       }),
     ]);
     server.dbStub.block.get.resolves(deepmerge(generateEmptySignedBlock(), {message: {slot: 3}}));
@@ -75,7 +75,7 @@ describe("api - beacon - getBlockHeaders", function () {
     server.forkChoiceStub.getCanonicalBlockSummaryAtSlot.withArgs(1).returns(generateBlockSummary());
     server.forkChoiceStub.getCanonicalBlockSummaryAtSlot
       .withArgs(2)
-      .returns(generateBlockSummary({blockRoot: config.types.phase0.BeaconBlock.hashTreeRoot(cannonical.message)}));
+      .returns(generateBlockSummary({blockRoot: ssz.phase0.BeaconBlock.hashTreeRoot(cannonical.message)}));
     server.dbStub.block.get.onFirstCall().resolves(generateSignedBlock({message: {slot: 1}}));
     server.dbStub.block.get.onSecondCall().resolves(generateSignedBlock({message: {slot: 2}}));
     const {data: blockHeaders} = await server.blockApi.getBlockHeaders({parentRoot});
@@ -109,7 +109,7 @@ describe("api - beacon - getBlockHeaders", function () {
     server.forkChoiceStub.getCanonicalBlockSummaryAtSlot.withArgs(1).returns(generateBlockSummary());
     server.forkChoiceStub.getCanonicalBlockSummaryAtSlot
       .withArgs(2)
-      .returns(generateBlockSummary({blockRoot: config.types.phase0.BeaconBlock.hashTreeRoot(cannonical.message)}));
+      .returns(generateBlockSummary({blockRoot: ssz.phase0.BeaconBlock.hashTreeRoot(cannonical.message)}));
     server.dbStub.block.get.onFirstCall().resolves(generateSignedBlock({message: {slot: 1}}));
     server.dbStub.block.get.onSecondCall().resolves(generateSignedBlock({message: {slot: 2}}));
     const {data: blockHeaders} = await server.blockApi.getBlockHeaders({

@@ -1,9 +1,16 @@
+/* eslint-disable @typescript-eslint/naming-convention */
 import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
 import {SecretKey, PublicKey} from "@chainsafe/bls";
+import {DOMAIN_DEPOSIT} from "@chainsafe/lodestar-params";
 import {config} from "@chainsafe/lodestar-config/minimal";
-import {computeDomain, computeSigningRoot, interopSecretKey} from "@chainsafe/lodestar-beacon-state-transition";
-import {ValidatorIndex, phase0} from "@chainsafe/lodestar-types";
+import {
+  computeDomain,
+  computeSigningRoot,
+  interopSecretKey,
+  ZERO_HASH,
+} from "@chainsafe/lodestar-beacon-state-transition";
+import {ValidatorIndex, phase0, ssz} from "@chainsafe/lodestar-types";
 import {ErrorAborted} from "@chainsafe/lodestar-utils";
 import {toHexString} from "@chainsafe/ssz";
 import {AbortController} from "abort-controller";
@@ -15,13 +22,9 @@ chai.use(chaiAsPromised);
 
 describe("genesis builder", function () {
   const logger = testLogger();
-  const schlesiConfig = Object.assign({}, {params: config.params}, config);
-  schlesiConfig.params = Object.assign({}, config.params, {
-    // eslint-disable-next-line @typescript-eslint/naming-convention
+  const schlesiConfig = Object.assign({}, config, {
     MIN_GENESIS_TIME: 1587755000,
-    // eslint-disable-next-line @typescript-eslint/naming-convention
     MIN_GENESIS_ACTIVE_VALIDATOR_COUNT: 4,
-    // eslint-disable-next-line @typescript-eslint/naming-convention
     MIN_GENESIS_DELAY: 3600,
   });
 
@@ -32,7 +35,7 @@ describe("genesis builder", function () {
     const events: phase0.DepositEvent[] = [];
     const blocks: phase0.Eth1Block[] = [];
 
-    for (let i = 0; i < schlesiConfig.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT; i++) {
+    for (let i = 0; i < schlesiConfig.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT; i++) {
       const secretKey = interopSecretKey(i);
       const publicKey = secretKey.toPublicKey();
       const event: phase0.DepositEvent = {
@@ -45,7 +48,7 @@ describe("genesis builder", function () {
       blocks.push({
         blockNumber: i,
         blockHash: Buffer.alloc(32, 0),
-        timestamp: schlesiConfig.params.MIN_GENESIS_TIME + i,
+        timestamp: schlesiConfig.MIN_GENESIS_TIME + i,
       });
     }
 
@@ -77,9 +80,9 @@ describe("genesis builder", function () {
 
     const {state} = await genesisBuilder.waitForGenesis();
 
-    expect(state.validators.length).to.be.equal(schlesiConfig.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT);
+    expect(state.validators.length).to.be.equal(schlesiConfig.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT);
     expect(toHexString(state.eth1Data.blockHash)).to.be.equal(
-      toHexString(blocks[schlesiConfig.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT - 1].blockHash)
+      toHexString(blocks[schlesiConfig.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT - 1].blockHash)
     );
   });
 
@@ -115,13 +118,13 @@ describe("genesis builder", function () {
 });
 
 function generateDeposit(index: ValidatorIndex, secretKey: SecretKey, publicKey: PublicKey): phase0.DepositData {
-  const domain = computeDomain(config, config.params.DOMAIN_DEPOSIT);
+  const domain = computeDomain(DOMAIN_DEPOSIT, config.GENESIS_FORK_VERSION, ZERO_HASH);
   const depositMessage = {
     pubkey: publicKey.toBytes(),
     withdrawalCredentials: Buffer.alloc(32, index),
     amount: BigInt(32) * BigInt("1000000000000000000"),
   };
-  const signingRoot = computeSigningRoot(config, config.types.phase0.DepositMessage, depositMessage, domain);
+  const signingRoot = computeSigningRoot(ssz.phase0.DepositMessage, depositMessage, domain);
   const signature = secretKey.sign(signingRoot);
   return {...depositMessage, signature: signature.toBytes()};
 }

@@ -46,9 +46,8 @@ describe("process block - attester slashings", function () {
       expect.fail();
     } catch (e) {
       expect(validateIndexedAttestationStub.callCount).equals(1);
-      expect(
-        validateIndexedAttestationStub.getCall(0).calledWithExactly(config, state, attesterSlashing.attestation1, true)
-      ).to.be.true;
+      expect(validateIndexedAttestationStub.getCall(0).calledWithExactly(state, attesterSlashing.attestation1, true)).to
+        .be.true;
     }
   });
 
@@ -56,8 +55,8 @@ describe("process block - attester slashings", function () {
     attesterSlashing.attestation1.data.source.epoch = 2;
     attesterSlashing.attestation2.data.source.epoch = 3;
     isSlashableAttestationStub.returns(true);
-    validateIndexedAttestationStub.withArgs(config, state, attesterSlashing.attestation1).returns(true);
-    validateIndexedAttestationStub.withArgs(config, state, attesterSlashing.attestation2).returns(false);
+    validateIndexedAttestationStub.withArgs(state, attesterSlashing.attestation1).returns(true);
+    validateIndexedAttestationStub.withArgs(state, attesterSlashing.attestation2).returns(false);
     try {
       phase0.processAttesterSlashing(config, state, attesterSlashing);
       expect.fail();

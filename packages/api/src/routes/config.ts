@@ -14,6 +14,14 @@ export type DepositContract = {
 
 export type ISpec = IBeaconPreset & IChainConfig;
 
+// eslint-disable-next-line @typescript-eslint/naming-convention
+export const Spec = new ContainerType<ISpec>({
+  fields: {
+    ...BeaconPreset.fields,
+    ...ChainConfig.fields,
+  },
+});
+
 export type Api = {
   /**
    * Get deposit contract address.
@@ -60,14 +68,6 @@ export function getReturnTypes(): ReturnTypes<Api> {
     fields: {
       chainId: ssz.Number64,
       address: new ByteVectorType({length: 20}),
-    },
-  });
-
-  // eslint-disable-next-line @typescript-eslint/naming-convention
-  const Spec = new ContainerType<ISpec>({
-    fields: {
-      ...BeaconPreset.fields,
-      ...ChainConfig.fields,
     },
   });
 

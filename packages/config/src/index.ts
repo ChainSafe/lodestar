@@ -9,9 +9,9 @@ export * from "./forkConfig";
  */
 export type IBeaconConfig = IChainConfig & IForkConfig;
 
-export function createIBeaconConfig(config: IChainConfig): IBeaconConfig {
+export function createIBeaconConfig(chainConfig: IChainConfig): IBeaconConfig {
   return {
-    ...config,
-    ...createIForkConfig(config),
+    ...chainConfig,
+    ...createIForkConfig(chainConfig),
   };
 }

@@ -2,7 +2,7 @@ import {expect} from "chai";
 import sinon from "sinon";
 
 import {config} from "@chainsafe/lodestar-config/mainnet";
-import {GENESIS_SLOT} from "../../../../src/constants";
+import {GENESIS_SLOT, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {processEpoch} from "../../../../src/naive/phase0/epoch";
 import * as justificationUtils from "../../../../src/naive/phase0/epoch/justification";
 import * as balanceUpdateUtils from "../../../../src/naive/phase0/epoch/balanceUpdates";
@@ -49,7 +49,7 @@ describe("process epoch - crosslinks", function () {
   });
 
   it("should process epoch", function () {
-    processEpoch(config, generateState({slot: config.params.SLOTS_PER_EPOCH - 1}));
+    processEpoch(config, generateState({slot: SLOTS_PER_EPOCH - 1}));
     expect(processJustificationAndFinalizationStub.calledOnce).to.be.true;
     expect(processRewardsAndPenaltiesStub.calledOnce).to.be.true;
     expect(processRegistryUpdatesStub.calledOnce).to.be.true;

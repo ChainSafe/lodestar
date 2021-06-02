@@ -3,7 +3,6 @@ import {TreeBacked} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {computeEpochAtSlot, getBlockRootAtSlot, getForkVersion} from "@chainsafe/lodestar-beacon-state-transition";
 import {FINALIZED_ROOT_INDEX, NEXT_SYNC_COMMITTEE_INDEX} from "@chainsafe/lodestar-params";
-import {LightClientUpdate} from "@chainsafe/lodestar-types/lib/altair";
 
 export interface IBeaconChainLc {
   getBlockHeaderByRoot(blockRoot: Root): Promise<altair.BeaconBlockHeader>;
@@ -18,7 +17,7 @@ export async function prepareUpdateNaive(
   config: IBeaconConfig,
   chain: IBeaconChainLc,
   blockWithSyncAggregate: altair.BeaconBlock
-): Promise<LightClientUpdate> {
+): Promise<altair.LightClientUpdate> {
   // update.syncCommitteeSignature signs over the block at the previous slot of the state it is included
   // ```py
   // previous_slot = max(state.slot, Slot(1)) - Slot(1)
@@ -84,11 +83,11 @@ export async function prepareUpdateNaive(
 
   // Get the finality block root that sync committees have signed in blockA
   const syncAttestedSlot = stateWithSyncAggregate.slot - 1;
-  const syncAttestedBlockRoot = getBlockRootAtSlot(config, stateWithSyncAggregate, syncAttestedSlot);
+  const syncAttestedBlockRoot = getBlockRootAtSlot(stateWithSyncAggregate, syncAttestedSlot);
   const syncAttestedBlockHeader = await chain.getBlockHeaderByRoot(syncAttestedBlockRoot);
 
   // Get the ForkVersion used in the syncAggregate, as verified in the state transition fn
-  const syncAttestedEpoch = computeEpochAtSlot(config, syncAttestedSlot);
+  const syncAttestedEpoch = computeEpochAtSlot(syncAttestedSlot);
   const syncAttestedForkVersion = getForkVersion(stateWithSyncAggregate.fork, syncAttestedEpoch);
 
   // Get the finalized state defined in the block "attested" by the current sync committee

@@ -236,7 +236,7 @@ export class SyncCommitteeDutiesService {
     return {
       duty,
       // selectionProof === null is used to check if is aggregator
-      selectionProof: isSyncCommitteeAggregator(this.config, selectionProof) ? selectionProof : null,
+      selectionProof: isSyncCommitteeAggregator(selectionProof) ? selectionProof : null,
       subCommitteeIndex,
     };
   }

@@ -2,13 +2,14 @@ import {FastifyInstance} from "fastify";
 import {computeEpochAtSlot, computeSyncPeriodAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {toHexString, TreeBacked} from "@chainsafe/ssz";
-import {altair, Epoch, Root, Slot, SyncPeriod} from "@chainsafe/lodestar-types";
+import {altair, Epoch, Root, Slot, ssz, SyncPeriod} from "@chainsafe/lodestar-types";
 import {FinalizedCheckpointData, LightClientUpdater, LightClientUpdaterDb} from "../src/server/LightClientUpdater";
 import {toBlockHeader} from "../src/utils/utils";
 import {getInteropSyncCommittee, getSyncAggregateSigningRoot, signAndAggregate, SyncCommitteeKeys} from "./utils";
 import {startLightclientApiServer, IStateRegen, ServerOpts} from "./lightclientApiServer";
 import {Checkpoint} from "@chainsafe/lodestar-types/phase0";
 import {ILogger} from "@chainsafe/lodestar-utils";
+import {SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} from "@chainsafe/lodestar-params";
 
 const MAX_STATE_HISTORIC_EPOCHS = 100;
 
@@ -51,7 +52,7 @@ export class LightclientMockServer {
     const {checkpoint, block, state} = initialFinalizedCheckpoint;
     void this.lightClientUpdater.onFinalized(checkpoint, block, state);
     this.stateCache.set(toHexString(state.hashTreeRoot()), state);
-    this.prevState = this.config.types.altair.BeaconState.createTreeBackedFromStruct(state);
+    this.prevState = ssz.altair.BeaconState.createTreeBackedFromStruct(state);
   }
 
   async startApiServer(opts: ServerOpts): Promise<void> {
@@ -76,13 +77,13 @@ export class LightclientMockServer {
 
   async createNewBlock(slot: Slot): Promise<void> {
     // Create a block and postState
-    const block = this.config.types.altair.BeaconBlock.defaultValue();
-    const state = this.prevState?.clone() || this.config.types.altair.BeaconState.defaultTreeBacked();
+    const block = ssz.altair.BeaconBlock.defaultValue();
+    const state = this.prevState?.clone() || ssz.altair.BeaconState.defaultTreeBacked();
     block.slot = slot;
     state.slot = slot;
 
     // Set committeeKeys to static set
-    const currentSyncPeriod = computeSyncPeriodAtSlot(this.config, slot);
+    const currentSyncPeriod = computeSyncPeriodAtSlot(slot);
     state.currentSyncCommittee = this.getSyncCommittee(currentSyncPeriod).syncCommittee;
     state.nextSyncCommittee = this.getSyncCommittee(currentSyncPeriod + 1).syncCommittee;
 
@@ -92,7 +93,7 @@ export class LightclientMockServer {
     }
 
     // Increase balances, simulate rewards
-    if (slot % this.config.params.SLOTS_PER_EPOCH === 0) {
+    if (slot % SLOTS_PER_EPOCH === 0) {
       for (let i = 0, len = state.balances.length; i < len; i++) {
         state.balances[i] = state.balances[i] + BigInt(Math.round(11430 * (1 + Math.random())));
       }
@@ -101,8 +102,8 @@ export class LightclientMockServer {
     // Add sync aggregate signing over last block
     if (this.prevBlock) {
       const attestedBlock = toBlockHeader(this.config, this.prevBlock);
-      const attestedBlockRoot = this.config.types.altair.BeaconBlock.hashTreeRoot(this.prevBlock);
-      state.blockRoots[(slot - 1) % this.config.params.SLOTS_PER_HISTORICAL_ROOT] = attestedBlockRoot;
+      const attestedBlockRoot = ssz.altair.BeaconBlock.hashTreeRoot(this.prevBlock);
+      state.blockRoots[(slot - 1) % SLOTS_PER_HISTORICAL_ROOT] = attestedBlockRoot;
       const forkVersion = state.fork.currentVersion;
       const signingRoot = getSyncAggregateSigningRoot(
         this.config,
@@ -113,15 +114,15 @@ export class LightclientMockServer {
       block.body.syncAggregate = signAndAggregate(signingRoot, this.getSyncCommittee(currentSyncPeriod).sks);
     }
 
-    block.stateRoot = this.config.types.altair.BeaconState.hashTreeRoot(state);
+    block.stateRoot = ssz.altair.BeaconState.hashTreeRoot(state);
 
     // Store new prevBlock and prevState
     this.prevBlock = block;
     this.prevState = state;
 
     // Simulate finalizing a state
-    if (slot % this.config.params.SLOTS_PER_EPOCH === 0) {
-      const epoch = computeEpochAtSlot(this.config, slot);
+    if (slot % SLOTS_PER_EPOCH === 0) {
+      const epoch = computeEpochAtSlot(slot);
       this.checkpoints.set(epoch, {block, state});
       this.stateCache.set(toHexString(state.hashTreeRoot()), state);
 
@@ -130,14 +131,14 @@ export class LightclientMockServer {
       if (finalizedData) {
         this.finalizedCheckpoint = {
           epoch: finalizedEpoch,
-          root: this.config.types.altair.BeaconBlock.hashTreeRoot(finalizedData.block),
+          root: ssz.altair.BeaconBlock.hashTreeRoot(finalizedData.block),
         };
 
         // Feed new finalized block and state to the LightClientUpdater
         await this.lightClientUpdater.onFinalized(
           this.finalizedCheckpoint,
           finalizedData.block,
-          this.config.types.altair.BeaconState.createTreeBackedFromStruct(finalizedData.state)
+          ssz.altair.BeaconState.createTreeBackedFromStruct(finalizedData.state)
         );
       }
 
@@ -151,17 +152,14 @@ export class LightclientMockServer {
 
       // Prune old states
       for (const [key, oldState] of this.stateCache.entries()) {
-        if (
-          oldState.slot !== 0 &&
-          computeEpochAtSlot(this.config, oldState.slot) < finalizedEpoch - MAX_STATE_HISTORIC_EPOCHS
-        ) {
+        if (oldState.slot !== 0 && computeEpochAtSlot(oldState.slot) < finalizedEpoch - MAX_STATE_HISTORIC_EPOCHS) {
           this.stateCache.delete(key);
         }
       }
     }
 
     // Feed new block and state to the LightClientUpdater
-    await this.lightClientUpdater.onHead(block, this.config.types.altair.BeaconState.createTreeBackedFromStruct(state));
+    await this.lightClientUpdater.onHead(block, ssz.altair.BeaconState.createTreeBackedFromStruct(state));
   }
 
   private getSyncCommittee(period: SyncPeriod): SyncCommitteeKeys {

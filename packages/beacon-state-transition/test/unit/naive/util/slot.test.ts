@@ -1,6 +1,5 @@
 import {assert} from "chai";
 
-import {config} from "@chainsafe/lodestar-config/mainnet";
 import {computeSlotsSinceEpochStart} from "../../../../src/util";
 import {Slot} from "@chainsafe/lodestar-types";
 
@@ -14,7 +13,7 @@ describe("computeSlotsSinceEpochStart", () => {
 
   for (const pair of pairs) {
     it(`Slot ${pair.test} is ${pair.expected} from current Epoch start`, () => {
-      const result: Slot = computeSlotsSinceEpochStart(config, pair.test);
+      const result: Slot = computeSlotsSinceEpochStart(pair.test);
       assert.equal(result, pair.expected);
     });
   }
@@ -22,7 +21,7 @@ describe("computeSlotsSinceEpochStart", () => {
   it("should compute slot correctly since a specified epoch", () => {
     const epoch = 1;
     const slot = 70;
-    const result = computeSlotsSinceEpochStart(config, slot, epoch);
+    const result = computeSlotsSinceEpochStart(slot, epoch);
     // 70 - NUM_SLOT_PER_EPOCH
     assert.equal(result, 38);
   });

@@ -1,10 +1,9 @@
 import {expect} from "chai";
 import {SecretKey} from "@chainsafe/bls";
-import {createIBeaconConfig} from "@chainsafe/lodestar-config";
-import {params as minimalParams} from "@chainsafe/lodestar-params/minimal";
+import {config} from "@chainsafe/lodestar-config/minimal";
 import {toHexString} from "@chainsafe/ssz";
 import {WinstonLogger} from "@chainsafe/lodestar-utils";
-import {altair, Root, Slot, SyncPeriod} from "@chainsafe/lodestar-types";
+import {altair, Root, Slot, ssz, SyncPeriod} from "@chainsafe/lodestar-types";
 import {computeSyncPeriodAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {LightclientMockServer} from "../lightclientMockServer";
 import {processLightClientUpdate} from "../../src/client/update";
@@ -17,13 +16,6 @@ import {generateBalances, generateValidators, getInteropSyncCommittee} from "../
 /* eslint-disable @typescript-eslint/naming-convention, no-console */
 
 describe("Lightclient flow with LightClientUpdater", () => {
-  const config = createIBeaconConfig({
-    ...minimalParams,
-    SYNC_COMMITTEE_SIZE: 4,
-    EPOCHS_PER_SYNC_COMMITTEE_PERIOD: 4, // Must be higher than 3 to allow finalized updates
-    SLOTS_PER_EPOCH: 4,
-  });
-
   let lightclientServer: LightclientMockServer;
   let genesisStateRoot: Root;
   let genesisValidatorsRoot: Root;
@@ -34,7 +26,7 @@ describe("Lightclient flow with LightClientUpdater", () => {
   const validatorCount = 4;
 
   // Compute all periods until toSlot
-  const lastPeriod = computeSyncPeriodAtSlot(config, toSlot);
+  const lastPeriod = computeSyncPeriodAtSlot(toSlot);
   const periods = Array.from({length: lastPeriod + 1}, (_, i) => i);
 
   const serverOpts: ServerOpts = {port: 31000, host: "0.0.0.0"};
@@ -57,17 +49,17 @@ describe("Lightclient flow with LightClientUpdater", () => {
 
   it("Run LightclientMockServer for a few periods", async () => {
     // Create genesis state and block
-    const genesisState = config.types.altair.BeaconState.defaultTreeBacked();
-    const genesisBlock = config.types.altair.BeaconBlock.defaultValue();
+    const genesisState = ssz.altair.BeaconState.defaultTreeBacked();
+    const genesisBlock = ssz.altair.BeaconBlock.defaultValue();
     genesisState.validators = generateValidators(validatorCount);
     genesisState.balances = generateBalances(validatorCount);
     genesisState.currentSyncCommittee = getInteropSyncCommittee(config, 0).syncCommittee;
     genesisState.nextSyncCommittee = getInteropSyncCommittee(config, 1).syncCommittee;
-    genesisValidatorsRoot = config.types.altair.BeaconState.fields["validators"].hashTreeRoot(genesisState.validators);
-    genesisStateRoot = config.types.altair.BeaconState.hashTreeRoot(genesisState);
+    genesisValidatorsRoot = ssz.altair.BeaconState.fields["validators"].hashTreeRoot(genesisState.validators);
+    genesisStateRoot = ssz.altair.BeaconState.hashTreeRoot(genesisState);
     genesisBlock.stateRoot = genesisStateRoot;
     const genesisCheckpoint: altair.Checkpoint = {
-      root: config.types.altair.BeaconBlock.hashTreeRoot(genesisBlock),
+      root: ssz.altair.BeaconBlock.hashTreeRoot(genesisBlock),
       epoch: 0,
     };
 
@@ -111,7 +103,7 @@ describe("Lightclient flow with LightClientUpdater", () => {
     const store: LightClientStoreFast = {
       bestUpdates: new Map<SyncPeriod, altair.LightClientUpdate>(),
       snapshot: {
-        header: config.types.phase0.BeaconBlockHeader.defaultValue(),
+        header: ssz.phase0.BeaconBlockHeader.defaultValue(),
         currentSyncCommittee: lightclientServer["getSyncCommittee"](0).syncCommitteeFast,
         nextSyncCommittee: lightclientServer["getSyncCommittee"](1).syncCommitteeFast,
       },
@@ -133,7 +125,7 @@ describe("Lightclient flow with LightClientUpdater", () => {
   it("Simulate a second lightclient syncing over the API from trusted snapshot", async () => {
     const clock = new MockClock(toSlot);
     const snapshot: altair.LightClientSnapshot = {
-      header: config.types.phase0.BeaconBlockHeader.defaultValue(),
+      header: ssz.phase0.BeaconBlockHeader.defaultValue(),
       currentSyncCommittee: lightclientServer["getSyncCommittee"](0).syncCommittee,
       nextSyncCommittee: lightclientServer["getSyncCommittee"](1).syncCommittee,
     };

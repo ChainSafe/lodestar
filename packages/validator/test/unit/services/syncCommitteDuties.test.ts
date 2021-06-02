@@ -13,6 +13,7 @@ import {getApiClientStub} from "../../utils/apiStub";
 import {testLogger} from "../../utils/logger";
 import {ClockMock} from "../../utils/clock";
 import {IndicesService} from "../../../src/services/indices";
+import {ssz} from "@chainsafe/lodestar-types";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
@@ -27,7 +28,7 @@ describe("SyncCommitteeDutiesService", function () {
   let pubkeys: Uint8Array[]; // Initialize pubkeys in before() so bls is already initialized
 
   const config = createIBeaconConfig({
-    ...mainnetConfig.params,
+    ...mainnetConfig,
     ALTAIR_FORK_EPOCH: 0, // Activate Altair immediatelly
   });
 
@@ -37,7 +38,7 @@ describe("SyncCommitteeDutiesService", function () {
     index,
     balance: BigInt(32e9),
     status: "active",
-    validator: config.types.phase0.Validator.defaultValue(),
+    validator: ssz.phase0.Validator.defaultValue(),
   };
 
   before(() => {

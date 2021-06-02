@@ -1,6 +1,6 @@
 import {assert} from "chai";
 
-import {config} from "@chainsafe/lodestar-config/mainnet";
+import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {Epoch, Slot} from "@chainsafe/lodestar-types";
 import {randBetween} from "../../../utils/misc";
 import {isSlashableAttestationData} from "../../../../src/util";
@@ -12,7 +12,7 @@ describe("isSlashableAttestationData", () => {
     const epoch2: Epoch = epoch1 + 1;
     const a1 = generateAttestationData(epoch1, epoch2);
     const a2 = generateAttestationData(epoch1 - 1, epoch2);
-    assert.isTrue(isSlashableAttestationData(config, a1, a2));
+    assert.isTrue(isSlashableAttestationData(a1, a2));
   });
 
   it("Attestation data with disjoint source/target epochs should return false", () => {
@@ -22,7 +22,7 @@ describe("isSlashableAttestationData", () => {
     const epoch4 = epoch3 + 1;
     const a1 = generateAttestationData(epoch1, epoch2);
     const a2 = generateAttestationData(epoch3, epoch4);
-    assert.isFalse(isSlashableAttestationData(config, a1, a2));
+    assert.isFalse(isSlashableAttestationData(a1, a2));
   });
 
   it("Should return false if the second attestation does not have a greater source epoch", () => {
@@ -36,12 +36,12 @@ describe("isSlashableAttestationData", () => {
     const a1 = generateAttestationData(sourceEpoch1, targetEpoch1);
     let a2 = generateAttestationData(sourceEpoch2, targetEpoch2);
 
-    assert.isFalse(isSlashableAttestationData(config, a1, a2));
+    assert.isFalse(isSlashableAttestationData(a1, a2));
 
     // Second attestation has a smaller source epoch.
     sourceEpoch2 = sourceEpoch1 - 1;
     a2 = generateAttestationData(sourceEpoch2, targetEpoch2);
-    assert.isFalse(isSlashableAttestationData(config, a1, a2));
+    assert.isFalse(isSlashableAttestationData(a1, a2));
   });
 
   it("Should return false if the second attestation does not have a smaller target epoch", () => {
@@ -52,20 +52,20 @@ describe("isSlashableAttestationData", () => {
     const targetEpoch: Epoch = randBetween(2, 1000);
 
     // Last slot in the epoch.
-    let targetSlot1: Slot = targetEpoch * config.params.SLOTS_PER_EPOCH - 1;
+    let targetSlot1: Slot = targetEpoch * SLOTS_PER_EPOCH - 1;
     // First slot in the epoch
-    let targetSlot2: Slot = (targetEpoch - 1) * config.params.SLOTS_PER_EPOCH;
+    let targetSlot2: Slot = (targetEpoch - 1) * SLOTS_PER_EPOCH;
 
     let a1 = generateAttestationData(targetSlot1, sourceEpoch1);
     let a2 = generateAttestationData(targetSlot2, sourceEpoch2);
 
-    assert.isFalse(isSlashableAttestationData(config, a1, a2));
+    assert.isFalse(isSlashableAttestationData(a1, a2));
 
     // Second attestation has a greater target epoch.
-    targetSlot1 = targetEpoch * config.params.SLOTS_PER_EPOCH;
-    targetSlot2 = (targetEpoch + 1) * config.params.SLOTS_PER_EPOCH;
+    targetSlot1 = targetEpoch * SLOTS_PER_EPOCH;
+    targetSlot2 = (targetEpoch + 1) * SLOTS_PER_EPOCH;
     a1 = generateAttestationData(targetSlot1, sourceEpoch1);
     a2 = generateAttestationData(targetSlot2, sourceEpoch2);
-    assert.isFalse(isSlashableAttestationData(config, a1, a2));
+    assert.isFalse(isSlashableAttestationData(a1, a2));
   });
 });

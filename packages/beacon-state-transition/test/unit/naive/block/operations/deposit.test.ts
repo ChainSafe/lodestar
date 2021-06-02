@@ -10,6 +10,7 @@ import {generateDeposit} from "../../../../utils/deposit";
 import {generateValidator} from "../../../../utils/validator";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {phase0} from "@chainsafe/lodestar-types";
+import {MAX_EFFECTIVE_BALANCE} from "@chainsafe/lodestar-params";
 
 describe("process block - deposits", function () {
   const sandbox = sinon.createSandbox();
@@ -86,7 +87,7 @@ describe("process block - deposits", function () {
     const state = generateState({eth1DepositIndex: 3});
     verifyMerkleBranchStub.returns(true);
     const deposit = generateDeposit();
-    deposit.data.amount = config.params.MAX_EFFECTIVE_BALANCE;
+    deposit.data.amount = MAX_EFFECTIVE_BALANCE;
     blsStub.returns(true);
 
     processDeposit(config, state, deposit);

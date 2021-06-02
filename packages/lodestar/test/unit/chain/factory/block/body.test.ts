@@ -1,6 +1,13 @@
 import sinon from "sinon";
 import {expect} from "chai";
 
+import {ssz} from "@chainsafe/lodestar-types";
+import {
+  MAX_ATTESTATIONS,
+  MAX_ATTESTER_SLASHINGS,
+  MAX_PROPOSER_SLASHINGS,
+  MAX_VOLUNTARY_EXITS,
+} from "@chainsafe/lodestar-params";
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import {assembleBody} from "../../../../../src/chain/factory/block/body";
 import {generateCachedState} from "../../../../utils/state";
@@ -28,7 +35,7 @@ describe("blockAssembly - body", function () {
     dbStub.attesterSlashing.values.resolves([generateEmptyAttesterSlashing()]);
     dbStub.aggregateAndProof.getBlockAttestations.resolves([generateEmptyAttestation()]);
     dbStub.voluntaryExit.values.resolves([generateEmptySignedVoluntaryExit()]);
-    dbStub.depositDataRoot.getTreeBacked.resolves(config.types.phase0.DepositDataRootList.defaultTreeBacked());
+    dbStub.depositDataRoot.getTreeBacked.resolves(ssz.phase0.DepositDataRootList.defaultTreeBacked());
 
     const result = await assembleBody(
       {config, db: dbStub, eth1},
@@ -50,17 +57,15 @@ describe("blockAssembly - body", function () {
   it("should generate block body with max respective field lengths", async function () {
     const {dbStub, eth1} = getStubs();
     dbStub.proposerSlashing.values.resolves(
-      Array.from({length: config.params.MAX_PROPOSER_SLASHINGS}, generateEmptyProposerSlashing)
+      Array.from({length: MAX_PROPOSER_SLASHINGS}, generateEmptyProposerSlashing)
     );
     dbStub.attesterSlashing.values.resolves(
-      Array.from({length: config.params.MAX_ATTESTER_SLASHINGS}, generateEmptyAttesterSlashing)
+      Array.from({length: MAX_ATTESTER_SLASHINGS}, generateEmptyAttesterSlashing)
     );
     dbStub.aggregateAndProof.getBlockAttestations.resolves(
-      Array.from({length: config.params.MAX_ATTESTATIONS}, generateEmptyAttestation)
+      Array.from({length: MAX_ATTESTATIONS}, generateEmptyAttestation)
     );
-    dbStub.voluntaryExit.values.resolves(
-      Array.from({length: config.params.MAX_VOLUNTARY_EXITS}, generateEmptySignedVoluntaryExit)
-    );
+    dbStub.voluntaryExit.values.resolves(Array.from({length: MAX_VOLUNTARY_EXITS}, generateEmptySignedVoluntaryExit));
 
     const result = await assembleBody(
       {config, db: dbStub, eth1},
@@ -72,10 +77,10 @@ describe("blockAssembly - body", function () {
     );
     expect(result).to.not.be.null;
     expect(result.randaoReveal.length).to.be.equal(96);
-    expect(result.attestations.length).to.be.equal(config.params.MAX_ATTESTATIONS);
-    expect(result.attesterSlashings.length).to.be.equal(config.params.MAX_ATTESTER_SLASHINGS);
-    expect(result.voluntaryExits.length).to.be.equal(config.params.MAX_VOLUNTARY_EXITS);
-    expect(result.proposerSlashings.length).to.be.equal(config.params.MAX_PROPOSER_SLASHINGS);
+    expect(result.attestations.length).to.be.equal(MAX_ATTESTATIONS);
+    expect(result.attesterSlashings.length).to.be.equal(MAX_ATTESTER_SLASHINGS);
+    expect(result.voluntaryExits.length).to.be.equal(MAX_VOLUNTARY_EXITS);
+    expect(result.proposerSlashings.length).to.be.equal(MAX_PROPOSER_SLASHINGS);
     expect(result.deposits.length).to.be.equal(1);
   });
 });

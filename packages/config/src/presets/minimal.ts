@@ -2,8 +2,9 @@
 import {fromHexString} from "@chainsafe/ssz";
 import {PresetName} from "@chainsafe/lodestar-params";
 import {IChainConfig} from "../chainConfig";
+import {createIBeaconConfig} from "../index";
 
-export const config: IChainConfig = {
+export const chainConfig: IChainConfig = {
   // Extends the minimal preset
   PRESET_BASE: PresetName.minimal,
 
@@ -70,3 +71,5 @@ export const config: IChainConfig = {
   // Configured on a per testnet basis
   DEPOSIT_CONTRACT_ADDRESS: fromHexString("0x1234567890123456789012345678901234567890"),
 };
+
+export const config = createIBeaconConfig(chainConfig);

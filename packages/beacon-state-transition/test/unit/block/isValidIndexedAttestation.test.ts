@@ -1,7 +1,7 @@
 import {List, TreeBacked} from "@chainsafe/ssz";
 import {config} from "@chainsafe/lodestar-config/mainnet";
-import {FAR_FUTURE_EPOCH} from "@chainsafe/lodestar-params";
-import {allForks} from "@chainsafe/lodestar-types";
+import {FAR_FUTURE_EPOCH, MAX_EFFECTIVE_BALANCE} from "@chainsafe/lodestar-params";
+import {allForks, ssz} from "@chainsafe/lodestar-types";
 import {generateAttestationData} from "../../utils/attestation";
 import {expect} from "chai";
 import {EMPTY_SIGNATURE} from "../../../src";
@@ -10,10 +10,10 @@ import {generateState} from "../../utils/state";
 import {generateValidators} from "../../utils/validator";
 
 describe("validate indexed attestation", () => {
-  const treeState = config.types.phase0.BeaconState.createTreeBackedFromStruct(
+  const treeState = ssz.phase0.BeaconState.createTreeBackedFromStruct(
     generateState({
       validators: generateValidators(100, {
-        balance: config.params.MAX_EFFECTIVE_BALANCE,
+        balance: MAX_EFFECTIVE_BALANCE,
         activation: 0,
         withdrawableEpoch: FAR_FUTURE_EPOCH,
         exit: FAR_FUTURE_EPOCH,

@@ -1,7 +1,14 @@
 import {expect} from "chai";
 import sinon from "sinon";
 import {List} from "@chainsafe/ssz";
-import {phase0} from "@chainsafe/lodestar-types";
+import {
+  MAX_ATTESTATIONS,
+  MAX_ATTESTER_SLASHINGS,
+  MAX_DEPOSITS,
+  MAX_PROPOSER_SLASHINGS,
+  MAX_VOLUNTARY_EXITS,
+} from "@chainsafe/lodestar-params";
+import {phase0, ssz} from "@chainsafe/lodestar-types";
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import * as processProposerSlashing from "../../../../../src/naive/phase0/block/operations/proposerSlashing";
 import * as processAttesterSlashing from "../../../../../src/naive/phase0/block/operations/attesterSlashing";
@@ -60,8 +67,8 @@ describe("process block - process operations", function () {
   });
 
   it("should fail to process operations - proposerSlashings length  exceed maxProposerSlashings ", function () {
-    body.proposerSlashings = Array.from({length: config.params.MAX_PROPOSER_SLASHINGS + 1}, () =>
-      config.types.phase0.ProposerSlashing.defaultValue()
+    body.proposerSlashings = Array.from({length: MAX_PROPOSER_SLASHINGS + 1}, () =>
+      ssz.phase0.ProposerSlashing.defaultValue()
     ) as List<phase0.ProposerSlashing>;
     try {
       processOperations(config, state, body);
@@ -71,8 +78,8 @@ describe("process block - process operations", function () {
 
   it("should fail to process operations - attesterSlashings length  exceed maxAttesterSlashings", function () {
     processProposerSlashingStub.returns();
-    body.attesterSlashings = Array.from({length: config.params.MAX_ATTESTER_SLASHINGS + 1}, () =>
-      config.types.phase0.AttesterSlashing.defaultValue()
+    body.attesterSlashings = Array.from({length: MAX_ATTESTER_SLASHINGS + 1}, () =>
+      ssz.phase0.AttesterSlashing.defaultValue()
     ) as List<phase0.AttesterSlashing>;
     body.proposerSlashings.push(generateEmptyProposerSlashing());
     try {
@@ -86,9 +93,9 @@ describe("process block - process operations", function () {
   it("should fail to process operations - attestation length  exceed maxAttestation", function () {
     processProposerSlashingStub.returns();
     processAttesterSlashingStub.returns();
-    body.attestations = Array.from({length: config.params.MAX_ATTESTATIONS + 1}, () =>
-      config.types.phase0.Attestation.defaultValue()
-    ) as List<phase0.Attestation>;
+    body.attestations = Array.from({length: MAX_ATTESTATIONS + 1}, () => ssz.phase0.Attestation.defaultValue()) as List<
+      phase0.Attestation
+    >;
     body.proposerSlashings.push(generateEmptyProposerSlashing());
     body.attesterSlashings.push(generateEmptyAttesterSlashing());
 
@@ -102,9 +109,9 @@ describe("process block - process operations", function () {
   });
 
   it("should fail to process operations - deposit length  exceed maxDeposit", function () {
-    body.deposits = Array.from({length: config.params.MAX_DEPOSITS + 1}, () =>
-      config.types.phase0.Deposit.defaultValue()
-    ) as List<phase0.Deposit>;
+    body.deposits = Array.from({length: MAX_DEPOSITS + 1}, () => ssz.phase0.Deposit.defaultValue()) as List<
+      phase0.Deposit
+    >;
 
     try {
       processOperations(config, state, body);
@@ -117,8 +124,8 @@ describe("process block - process operations", function () {
     processAttesterSlashingStub.returns();
     processAttestationStub.returns();
     processDepositStub.returns();
-    body.voluntaryExits = Array.from({length: config.params.MAX_VOLUNTARY_EXITS + 1}, () =>
-      config.types.phase0.SignedVoluntaryExit.defaultValue()
+    body.voluntaryExits = Array.from({length: MAX_VOLUNTARY_EXITS + 1}, () =>
+      ssz.phase0.SignedVoluntaryExit.defaultValue()
     ) as List<phase0.SignedVoluntaryExit>;
     body.proposerSlashings.push(generateEmptyProposerSlashing());
     body.attesterSlashings.push(generateEmptyAttesterSlashing());

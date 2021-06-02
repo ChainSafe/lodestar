@@ -25,12 +25,12 @@ describe("Sync Committee Signature validation", function () {
 
   before(async function () {
     await initBLS();
-    altairForkEpochBk = config.params.ALTAIR_FORK_EPOCH;
-    config.params.ALTAIR_FORK_EPOCH = altairForkEpoch;
+    altairForkEpochBk = config.ALTAIR_FORK_EPOCH;
+    config.ALTAIR_FORK_EPOCH = altairForkEpoch;
   });
 
   after(function () {
-    config.params.ALTAIR_FORK_EPOCH = altairForkEpochBk;
+    config.ALTAIR_FORK_EPOCH = altairForkEpochBk;
   });
 
   beforeEach(function () {

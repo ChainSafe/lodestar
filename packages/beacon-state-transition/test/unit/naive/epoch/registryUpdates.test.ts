@@ -2,6 +2,7 @@ import sinon from "sinon";
 import {expect} from "chai";
 
 import {List} from "@chainsafe/ssz";
+import {MAX_EFFECTIVE_BALANCE} from "@chainsafe/lodestar-params";
 import {phase0} from "@chainsafe/lodestar-types";
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import * as utils from "../../../../src/util";
@@ -32,7 +33,7 @@ describe.skip("process epoch - slashings", function () {
   it("should make required registry updates", function () {
     getCurrentEpochStub.returns(1);
     const validatorEligble = generateValidator();
-    validatorEligble.effectiveBalance = BigInt(config.params.MAX_EFFECTIVE_BALANCE);
+    validatorEligble.effectiveBalance = BigInt(MAX_EFFECTIVE_BALANCE);
 
     const validatorToExit = generateValidator({activation: 1});
     validatorToExit.effectiveBalance = BigInt(1);

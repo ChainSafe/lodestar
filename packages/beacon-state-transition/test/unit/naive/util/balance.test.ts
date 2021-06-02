@@ -1,8 +1,8 @@
 import {assert} from "chai";
 
 import {List} from "@chainsafe/ssz";
+import {EFFECTIVE_BALANCE_INCREMENT} from "@chainsafe/lodestar-params";
 import {phase0, Gwei, ValidatorIndex} from "@chainsafe/lodestar-types";
-import {config} from "@chainsafe/lodestar-config/minimal";
 
 import {increaseBalance, decreaseBalance, getTotalBalance} from "../../../../src/util";
 
@@ -20,7 +20,7 @@ describe("getTotalBalance", () => {
     const state: phase0.BeaconState = generateState({validators: validators});
     const validatorIndices: ValidatorIndex[] = Array.from({length: num}, (_, i) => i);
 
-    const result = getTotalBalance(config, state, validatorIndices);
+    const result = getTotalBalance(state, validatorIndices);
     const expected = BigInt(num) * validatorBalance;
     assert(result === expected, `Expected: ${expected} :: Result: ${result}`);
   });
@@ -32,8 +32,8 @@ describe("getTotalBalance", () => {
     const state: phase0.BeaconState = generateState({validators: validators, balances});
     const validatorIndices: ValidatorIndex[] = Array.from({length: num}, (_, i) => i);
 
-    const result = getTotalBalance(config, state, validatorIndices);
-    const expected = config.params.EFFECTIVE_BALANCE_INCREMENT;
+    const result = getTotalBalance(state, validatorIndices);
+    const expected = EFFECTIVE_BALANCE_INCREMENT;
     assert(result === expected, `Expected: ${expected} :: Result: ${result}`);
   });
 });

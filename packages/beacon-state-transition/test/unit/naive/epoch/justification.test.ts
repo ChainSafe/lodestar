@@ -1,7 +1,6 @@
 import sinon from "sinon";
 import {expect} from "chai";
 
-import {config} from "@chainsafe/lodestar-config/mainnet";
 import * as utils1 from "../../../../src/util";
 import * as utils2 from "../../../../src/naive/phase0/epoch/util";
 import {generateState} from "../../../utils/state";
@@ -40,34 +39,34 @@ describe.skip("process epoch - justification and finalization", function () {
     state.justificationBits = Array.from({length: 64}, () => false);
 
     getCurrentEpochStub.returns(1);
-    processJustificationAndFinalization(config, state);
-    expect(getCurrentEpochStub.calledOnceWith(config, state)).to.be.true;
+    processJustificationAndFinalization(state);
+    expect(getCurrentEpochStub.calledOnceWith(state)).to.be.true;
 
     // hit 1st if condition of finalization
     state.previousJustifiedCheckpoint.epoch = previousJustifiedEpoch = 0;
     getBlockRootStub.returns(Buffer.alloc(32));
     getCurrentEpochStub.returns(3);
     getPreviousEpochStub.returns(1);
-    processJustificationAndFinalization(config, state);
+    processJustificationAndFinalization(state);
     expect(state.finalizedCheckpoint.epoch).to.be.equal(previousJustifiedEpoch);
 
     // hit 2nd if condition of finalization
     getCurrentEpochStub.returns(2);
     state.previousJustifiedCheckpoint.epoch = previousJustifiedEpoch = 0;
-    processJustificationAndFinalization(config, state);
+    processJustificationAndFinalization(state);
     expect(state.finalizedCheckpoint.epoch).to.be.equal(previousJustifiedEpoch);
 
     // hit 3rd if condition of finalization
     state.currentJustifiedCheckpoint.epoch = currentJustifiedEpoch = 0;
     getCurrentEpochStub.returns(2);
-    processJustificationAndFinalization(config, state);
+    processJustificationAndFinalization(state);
     expect(state.finalizedCheckpoint.epoch).to.be.equal(currentJustifiedEpoch);
 
     // hit 4th if condition of finalization
     getCurrentEpochStub.returns(2);
     state.previousJustifiedCheckpoint.epoch = 1;
     state.currentJustifiedCheckpoint.epoch = currentJustifiedEpoch = 1;
-    processJustificationAndFinalization(config, state);
+    processJustificationAndFinalization(state);
     expect(state.finalizedCheckpoint.epoch).to.be.equal(currentJustifiedEpoch);
 
     expect(getPreviousEpochStub.callCount).to.be.equal(4);

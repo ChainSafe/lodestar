@@ -8,6 +8,7 @@ import {generateState} from "../../../utils/state";
 import {generateEmptyBlock} from "../../../utils/block";
 import {generateValidator} from "../../../utils/validator";
 import {SinonStubFn} from "../../../utils/types";
+import {ssz} from "@chainsafe/lodestar-types";
 import {BeaconBlock, BeaconState} from "@chainsafe/lodestar-types/phase0";
 
 /* eslint-disable no-empty */
@@ -49,7 +50,7 @@ describe("process block - block header", function () {
   it("fail to process header - proposerSlashed", function () {
     state.validators.push(generateValidator({activation: 0, exit: 10, slashed: true}));
     block.slot = 5;
-    block.parentRoot = config.types.phase0.BeaconBlockHeader.hashTreeRoot(state.latestBlockHeader);
+    block.parentRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(state.latestBlockHeader);
     try {
       processBlockHeader(config, state, block);
       expect.fail();
@@ -59,7 +60,7 @@ describe("process block - block header", function () {
   it.skip("should process block", function () {
     state.validators.push(generateValidator({activation: 0, exit: 10}));
     block.slot = 5;
-    block.parentRoot = config.types.phase0.BeaconBlockHeader.hashTreeRoot(state.latestBlockHeader);
+    block.parentRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(state.latestBlockHeader);
     getBeaconProposeIndexStub.returns(0);
 
     processBlockHeader(config, state, block);

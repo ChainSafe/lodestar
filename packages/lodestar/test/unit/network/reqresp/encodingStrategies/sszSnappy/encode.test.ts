@@ -1,6 +1,6 @@
 import all from "it-all";
 import pipe from "it-pipe";
-import {config} from "@chainsafe/lodestar-config/minimal";
+import {ssz} from "@chainsafe/lodestar-types";
 import {LodestarError} from "@chainsafe/lodestar-utils";
 import {RequestOrResponseBody, RequestOrResponseType} from "../../../../../../src/network/reqresp/types";
 import {
@@ -33,7 +33,7 @@ describe("network / reqresp / sszSnappy / encode", () => {
     }[] = [
       {
         id: "Bad body",
-        type: config.types.phase0.Status,
+        type: ssz.phase0.Status,
         body: BigInt(1),
         error: new SszSnappyError({
           code: SszSnappyErrorCode.SERIALIZE_ERROR,
