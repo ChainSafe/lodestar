@@ -6,7 +6,6 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
 import {ZERO_HASH} from "../constants";
 
-import {getCurrentEpoch} from "./epoch";
 import {computeForkDataRoot} from "./fork";
 
 /**
@@ -39,9 +38,8 @@ export function getDomain(
   config: IBeaconConfig,
   state: allForks.BeaconState,
   domainType: DomainType,
-  messageEpoch: Epoch | null = null
+  messageEpoch: Epoch
 ): Buffer {
-  const epoch = messageEpoch ?? getCurrentEpoch(config, state);
-  const forkVersion = getForkVersion(state.fork, epoch);
+  const forkVersion = getForkVersion(state.fork, messageEpoch);
   return computeDomain(config, domainType, forkVersion, state.genesisValidatorsRoot);
 }

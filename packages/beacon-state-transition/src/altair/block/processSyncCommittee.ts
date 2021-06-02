@@ -19,7 +19,6 @@ export function processSyncCommittee(
   verifySignatures = true
 ): void {
   const {syncParticipantReward, syncProposerReward} = state.epochCtx;
-  // the only time aggregate is not a TreeBacked is when producing a new block
   const participantIndices = getParticipantIndices(state, syncAggregate);
 
   // different from the spec but not sure how to get through signature verification for default/empty SyncAggregate in the spec test
@@ -49,7 +48,6 @@ export function getSyncCommitteeSignatureSet(
   const previousSlot = Math.max(state.slot, 1) - 1;
   const rootSigned = getBlockRootAtSlot(config, state, previousSlot);
 
-  // the only time aggregate is not a TreeBacked is when producing a new block
   if (!participantIndices) {
     participantIndices = getParticipantIndices(state, syncAggregate);
   }
@@ -77,6 +75,7 @@ function getParticipantIndices(
 ): number[] {
   const committeeIndices = state.currSyncCommitteeIndexes;
 
+  // the only time aggregate is not a TreeBacked is when producing a new block
   return isTreeBacked(syncAggregate)
     ? zipIndexesInBitList(
         committeeIndices,

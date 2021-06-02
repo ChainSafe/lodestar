@@ -17,10 +17,10 @@ export function processRandao(
   body: phase0.BeaconBlockBody,
   verifySignature = true
 ): void {
-  const currentEpoch = getCurrentEpoch(config, state);
+  const stateEpoch = getCurrentEpoch(config, state);
   const proposer = state.validators[getBeaconProposerIndex(config, state)];
-  const domain = getDomain(config, state, config.params.DOMAIN_RANDAO);
-  const signingRoot = computeSigningRoot(config, config.types.Epoch, currentEpoch, domain);
+  const domain = getDomain(config, state, config.params.DOMAIN_RANDAO, stateEpoch);
+  const signingRoot = computeSigningRoot(config, config.types.Epoch, stateEpoch, domain);
   // Verify RANDAO reveal
   assert.true(
     !verifySignature ||
@@ -28,8 +28,8 @@ export function processRandao(
     "Invalid RANDAO reveal"
   );
   // Mix it in
-  state.randaoMixes[currentEpoch % config.params.EPOCHS_PER_HISTORICAL_VECTOR] = xor(
-    Buffer.from(getRandaoMix(config, state, currentEpoch) as Uint8Array),
+  state.randaoMixes[stateEpoch % config.params.EPOCHS_PER_HISTORICAL_VECTOR] = xor(
+    Buffer.from(getRandaoMix(config, state, stateEpoch) as Uint8Array),
     Buffer.from(hash(body.randaoReveal.valueOf() as Uint8Array))
   );
 }

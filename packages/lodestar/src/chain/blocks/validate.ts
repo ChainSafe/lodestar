@@ -6,10 +6,13 @@ import {IBlockJob} from "../interface";
 import {IBeaconClock} from "../clock";
 import {BlockError, BlockErrorCode} from "../errors";
 
-export function validateBlock(
-  {config, forkChoice, clock}: {config: IBeaconConfig; forkChoice: IForkChoice; clock: IBeaconClock},
-  job: IBlockJob
-): void {
+export type BlockValidateModules = {
+  config: IBeaconConfig;
+  forkChoice: IForkChoice;
+  clock: IBeaconClock;
+};
+
+export function validateBlock({config, forkChoice, clock}: BlockValidateModules, job: IBlockJob): void {
   try {
     const blockHash = config
       .getForkTypes(job.signedBlock.message.slot)

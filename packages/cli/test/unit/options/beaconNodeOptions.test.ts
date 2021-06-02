@@ -14,6 +14,7 @@ describe("options / beaconNodeOptions", () => {
       "api.rest.port": 7654,
 
       "chain.useSingleThreadVerifier": true,
+      "chain.disableBlsBatchVerify": true,
 
       "eth1.enabled": true,
       "eth1.providerUrl": "http://my.node:8545",
@@ -37,6 +38,7 @@ describe("options / beaconNodeOptions", () => {
       "network.localMultiaddrs": [],
 
       "sync.isSingleNode": true,
+      "sync.disableProcessAsChainSegment": true,
     } as IBeaconNodeArgs;
 
     const expectedOptions: RecursivePartial<IBeaconNodeOptions> = {
@@ -51,6 +53,7 @@ describe("options / beaconNodeOptions", () => {
       },
       chain: {
         useSingleThreadVerifier: true,
+        disableBlsBatchVerify: true,
       },
       eth1: {
         enabled: true,
@@ -82,6 +85,7 @@ describe("options / beaconNodeOptions", () => {
       },
       sync: {
         isSingleNode: true,
+        disableProcessAsChainSegment: true,
       },
     };
 

@@ -113,6 +113,7 @@ export class BeaconChain implements IBeaconChain {
       emitter,
       checkpointStateCache,
       signal,
+      opts,
     });
 
     this.forkChoice = forkChoice;
@@ -233,6 +234,19 @@ export class BeaconChain implements IBeaconChain {
         validProposerSignature: trusted,
       })
       .catch(() => /* unreachable */ ({}));
+  }
+
+  async processBlock(
+    signedBlock: allForks.SignedBeaconBlock,
+    {prefinalized, trusted = false}: {prefinalized: boolean; trusted: boolean}
+  ): Promise<void> {
+    return await this.blockProcessor.processBlockJob({
+      signedBlock,
+      reprocess: false,
+      prefinalized,
+      validSignatures: trusted,
+      validProposerSignature: trusted,
+    });
   }
 
   async processChainSegment(
