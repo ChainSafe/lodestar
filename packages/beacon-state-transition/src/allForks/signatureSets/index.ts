@@ -44,7 +44,7 @@ export function getAllBlockSignatureSetsExceptProposer(
   ];
 
   // Only after altair fork, validate tSyncCommitteeSignature
-  if (computeEpochAtSlot(state.config, signedBlock.message.slot) > state.config.params.ALTAIR_FORK_EPOCH) {
+  if (computeEpochAtSlot(state.config, signedBlock.message.slot) >= state.config.params.ALTAIR_FORK_EPOCH) {
     const syncCommitteeSignatureSet = getSyncCommitteeSignatureSet(
       state as CachedBeaconState<altair.BeaconState>,
       (signedBlock as altair.SignedBeaconBlock).message.body.syncAggregate
