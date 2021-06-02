@@ -1,24 +1,17 @@
-import {altair, ssz, SyncPeriod} from "@chainsafe/lodestar-types";
+import {altair, ssz} from "@chainsafe/lodestar-types";
 import {ApiModules} from "../types";
 import {resolveStateId} from "../beacon/state/utils";
 import {routes} from "@chainsafe/lodestar-api";
 import {ApiError} from "../errors";
+import {linspace} from "../../../util/numpy";
 
 // TODO: Import from lightclient/server package
-interface ILightClientUpdater {
-  getBestUpdates(from: SyncPeriod, to: SyncPeriod): Promise<altair.LightClientUpdate[]>;
-  getLatestUpdateFinalized(): Promise<altair.LightClientUpdate | null>;
-  getLatestUpdateNonFinalized(): Promise<altair.LightClientUpdate | null>;
-}
 
 export function getLightclientApi({
   chain,
   config,
   db,
 }: Pick<ApiModules, "chain" | "config" | "db">): routes.lightclient.Api {
-  // TODO:
-  const lightClientUpdater = {} as ILightClientUpdater;
-
   return {
     // Proofs API
 
@@ -31,17 +24,18 @@ export function getLightclientApi({
     // Sync API
 
     async getBestUpdates(from, to) {
-      return {data: await lightClientUpdater.getBestUpdates(from, to)};
+      const periods = linspace(from, to);
+      return {data: await chain.lightclientUpdater.getBestUpdates(periods)};
     },
 
     async getLatestUpdateFinalized() {
-      const update = await lightClientUpdater.getLatestUpdateFinalized();
+      const update = await chain.lightclientUpdater.getLatestUpdateFinalized();
       if (!update) throw new ApiError(404, "No update available");
       return {data: update};
     },
 
     async getLatestUpdateNonFinalized() {
-      const update = await lightClientUpdater.getLatestUpdateNonFinalized();
+      const update = await chain.lightclientUpdater.getLatestUpdateNonFinalized();
       if (!update) throw new ApiError(404, "No update available");
       return {data: update};
     },
