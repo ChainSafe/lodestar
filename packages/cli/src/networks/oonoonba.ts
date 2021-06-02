@@ -30,9 +30,9 @@ export const beaconParams: IBeaconParamsUnparsed = {
   MAX_EFFECTIVE_BALANCE: 32000000000,
   EJECTION_BALANCE: 16000000000,
   EFFECTIVE_BALANCE_INCREMENT: 1000000000,
-  GENESIS_FORK_VERSION: "0x00004151",
+  GENESIS_FORK_VERSION: "0x00004811",
   BLS_WITHDRAWAL_PREFIX: "0x00",
-  GENESIS_DELAY: 1020129,
+  GENESIS_DELAY: 1100642,
   SECONDS_PER_SLOT: 12,
   MIN_ATTESTATION_INCLUSION_DELAY: 1,
   SLOTS_PER_EPOCH: 32,
@@ -78,20 +78,20 @@ export const beaconParams: IBeaconParamsUnparsed = {
   DOMAIN_SYNC_COMMITTEE: "0x07000000",
   DOMAIN_SYNC_COMMITTEE_SELECTION_PROOF: "0x08000000",
   DOMAIN_CONTRIBUTION_AND_PROOF: "0x09000000",
-  ALTAIR_FORK_VERSION: "0x01004151",
+  ALTAIR_FORK_VERSION: "0x01004811",
   ALTAIR_FORK_EPOCH: 10,
   TARGET_AGGREGATORS_PER_SYNC_SUBCOMMITTEE: 4,
 };
 
 export const depositContractDeployBlock = 4823811;
 export const genesisFileUrl =
-  "https://raw.githubusercontent.com/ajsutton/eth2-networks/4a58c1852e3add6551b5cae3f260087efd6078e4/teku/coorparoo/genesis.ssz";
+  "https://raw.githubusercontent.com/eth2-clients/eth2-networks/master/teku/oonoonba/genesis.ssz";
 export const bootnodesFileUrl =
-  "https://raw.githubusercontent.com/ajsutton/eth2-networks/4a58c1852e3add6551b5cae3f260087efd6078e4/teku/coorparoo/boot_enr.yaml";
+  "https://raw.githubusercontent.com/eth2-clients/eth2-networks/master/teku/oonoonba/boot_enr.yaml";
 
 export const bootEnrs = [
-  // /ip4/18.216.199.235/tcp/9000/p2p/16Uiu2HAm9e3CaYN8XxvjFEyHFd1aiE3FUTfMpL6Z2vMfnBQieXVs
-  "enr:-KG4QGtLfpaTMJKBD8_VTE0ZBf24KoVrnT-Toc5K6IuQwUm2WQShEmmjEwZc1B3J3muXaDoIYt3Qty9xEFCdvKeOq1sDhGV0aDKQFmWbwwAAQVH__________4JpZIJ2NIJpcIQS2MfriXNlY3AyNTZrMaEC0y6UqTmdr_Jw_4L_bi1Tlp9i-WT5T8MKHs0r77RUonqDdGNwgiMog3VkcIIjKA",
-  // /ip4/18.222.144.13/tcp/9000/p2p/16Uiu2HAmAt2JM9UjsFMUHkqmN51dE7bHTsmoqbTKcM6QeJceuVm
-  "enr:-KG4QOWkRj93eXbzMLc6Jvps6lXzlIq6CFmYQJV93QtkglAUf6C2myzSU8Zzay1iYxvQp0w3FD5XLQnitMtIIEwhJwgDhGV0aDKQFmWbwwAAQVH__________4JpZIJ2NIJpcIQS3pANiXNlY3AyNTZrMaEC5Z9hdyMHa64JhYZFVf40uI9BnzKWd2Y_NNG9sUcs0gWDdGNwgiMog3VkcIIjKA",
+  // /ip4/18.216.199.235/tcp/9000/p2p/16Uiu2HAm5nt57D6THGW2tRTLjCjAizk83DuLNMv6NTabdzEAGj7C
+  "enr:-KG4QLXhcaTSEqPF-g5T_t-7NJJ6DQTHy8yCV-vvjJHU7jwOUpGMdIcvlKB4roS9qG1mi-P38Pvq1GkHYblRpOvfi6UDhGV0aDKQk_tI4gEASBEKAAAAAAAAAIJpZIJ2NIJpcIQS2MfriXNlY3AyNTZrMaECmgO9ATicNnBAl0Z1wKtbfvVlxv70aiJ7Obx_bFyhGpeDdGNwgiMog3VkcIIjKA",
+  // /ip4/18.222.144.13/tcp/9000/p2p/16Uiu2HAmVVTsqNyKU9kuf71ZCRq3zFkFUpDaukdRaiGwSDGLq5MF
+  "enr:-KG4QKHoILkdRrVT253n_S_cWB9K27hKGfQBUjT7Vw_dpTj2Y7BtIcEshnlj4fERg9IDer8CzwLjpCM809ZJ0Qym7dMDhGV0aDKQk_tI4gEASBEKAAAAAAAAAIJpZIJ2NIJpcIQS3pANiXNlY3AyNTZrMaED-iX-fx0c0RglNfwWG7N-K3oI-3JXM2O0Nyd67D5U1raDdGNwgiMog3VkcIIjKA",
 ];
