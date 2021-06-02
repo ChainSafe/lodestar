@@ -1,4 +1,3 @@
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {unshuffleList} from "../../../src";
 import {BenchmarkRunner} from "../runner";
 
@@ -10,7 +9,6 @@ import {BenchmarkRunner} from "../runner";
 // eslint-disable-next-line @typescript-eslint/no-floating-promises
 (async function () {
   // eslint-disable-next-line @typescript-eslint/naming-convention
-  const config = {params: {SHUFFLE_ROUND_COUNT: 90}} as IBeaconConfig;
   const seed = new Uint8Array([42, 32]);
 
   const runner = new BenchmarkRunner("shuffle list", {
@@ -29,7 +27,7 @@ import {BenchmarkRunner} from "../runner";
         return input;
       },
       run: (input) => {
-        unshuffleList(config, input, seed);
+        unshuffleList(input, seed);
       },
     });
   }

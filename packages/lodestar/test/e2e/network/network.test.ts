@@ -5,7 +5,7 @@ import {AbortController} from "abort-controller";
 import PeerId from "peer-id";
 import {Discv5Discovery, ENR} from "@chainsafe/discv5";
 import {config} from "@chainsafe/lodestar-config/minimal";
-import {phase0} from "@chainsafe/lodestar-types";
+import {phase0, ssz} from "@chainsafe/lodestar-types";
 import {sleep} from "@chainsafe/lodestar-utils";
 
 import {Network, NetworkEvent, ReqRespHandler, ReqRespMethod} from "../../../src/network";
@@ -49,7 +49,7 @@ describe("network", function () {
     const state = generateState({
       finalizedCheckpoint: {
         epoch: 0,
-        root: config.types.phase0.BeaconBlock.hashTreeRoot(block.message),
+        root: ssz.phase0.BeaconBlock.hashTreeRoot(block.message),
       },
     });
 
@@ -112,7 +112,7 @@ describe("network", function () {
     netB.metadata.attnets[subscription.subnet] = true;
     const connected = Promise.all([onPeerConnect(netA), onPeerConnect(netB)]);
     const enrB = ENR.createFromPeerId(netB.peerId);
-    enrB.set("attnets", Buffer.from(config.types.phase0.AttestationSubnets.serialize(netB.metadata.attnets)));
+    enrB.set("attnets", Buffer.from(ssz.phase0.AttestationSubnets.serialize(netB.metadata.attnets)));
     enrB.setLocationMultiaddr((netB["libp2p"]._discovery.get("discv5") as Discv5Discovery).discv5.bindAddress);
     enrB.setLocationMultiaddr(netB["libp2p"].multiaddrs[0]);
 

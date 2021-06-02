@@ -1,10 +1,9 @@
-import {IBeaconParams} from "@chainsafe/lodestar-params";
+import {IChainConfig} from "@chainsafe/lodestar-config";
 import {getDevBeaconNode} from "../../utils/node/beacon";
 import {waitForEvent} from "../../utils/events/resolver";
-import {phase0} from "@chainsafe/lodestar-types";
+import {phase0, ssz} from "@chainsafe/lodestar-types";
 import assert from "assert";
 import {getAndInitDevValidators} from "../../utils/node/validator";
-import {config} from "@chainsafe/lodestar-config/minimal";
 import {ChainEvent} from "../../../src/chain";
 import {Network} from "../../../src/network";
 import {connect} from "../../utils/network";
@@ -12,11 +11,9 @@ import {testLogger, LogLevel, TestLoggerOpts} from "../../utils/logger";
 
 describe("sync", function () {
   const validatorCount = 8;
-  const beaconParams: Partial<IBeaconParams> = {
+  const beaconParams: Partial<IChainConfig> = {
     // eslint-disable-next-line @typescript-eslint/naming-convention
     SECONDS_PER_SLOT: 2,
-    // eslint-disable-next-line @typescript-eslint/naming-convention
-    SLOTS_PER_EPOCH: 8,
   };
 
   it("should sync from other BN", async function () {
@@ -61,7 +58,7 @@ describe("sync", function () {
     const head = await bn.chain.getHeadBlock();
     if (!head) throw Error("First beacon node has no head block");
     const waitForSynced = waitForEvent<phase0.SignedBeaconBlock>(bn2.chain.emitter, ChainEvent.block, 100000, (block) =>
-      config.types.phase0.SignedBeaconBlock.equals(block, head)
+      ssz.phase0.SignedBeaconBlock.equals(block, head)
     );
 
     await connect(bn2.network as Network, bn.network.peerId, bn.network.localMultiaddrs);

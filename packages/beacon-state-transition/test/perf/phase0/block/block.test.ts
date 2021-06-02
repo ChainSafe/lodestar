@@ -1,4 +1,4 @@
-import {config} from "@chainsafe/lodestar-config/mainnet";
+import {MAX_VOLUNTARY_EXITS} from "@chainsafe/lodestar-params";
 import {List} from "@chainsafe/ssz";
 import {expect} from "chai";
 import {generatePerformanceBlock, generatePerfTestCachedBeaconState, initBLS} from "../../util";
@@ -31,7 +31,7 @@ describe("Process Blocks Performance Test", function () {
     const signedBlock: phase0.SignedBeaconBlock = generatePerformanceBlock();
     const exitEpoch = state.epochCtx.currentShuffling.epoch;
     const voluntaryExits: phase0.SignedVoluntaryExit[] = [];
-    const numValidatorExits = config.params.MAX_VOLUNTARY_EXITS;
+    const numValidatorExits = MAX_VOLUNTARY_EXITS;
     for (let i = 0; i < numValidatorExits; i++) {
       voluntaryExits.push({
         message: {epoch: exitEpoch, validatorIndex: 40000 + i},

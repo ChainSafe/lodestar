@@ -1,7 +1,6 @@
 import path from "path";
 import os from "os";
 import {Worker} from "worker_threads";
-import {IBeaconParams} from "@chainsafe/lodestar-params";
 import {phase0} from "@chainsafe/lodestar-types";
 import {toHexString} from "@chainsafe/ssz";
 import {waitForEvent} from "../utils/events/resolver";
@@ -9,6 +8,7 @@ import {ChainEvent} from "../../src/chain";
 import {createPeerId} from "../../src/network";
 import {logFilesDir} from "./params";
 import {NodeWorkerOptions} from "./threaded/types";
+import {IChainConfig} from "@chainsafe/lodestar-config";
 
 /* eslint-disable no-console, @typescript-eslint/naming-convention */
 
@@ -19,9 +19,8 @@ type TestArgs = {
   altairForkEpoch: number;
 };
 
-const testParams: Pick<IBeaconParams, "SECONDS_PER_SLOT" | "SLOTS_PER_EPOCH"> = {
+const testParams: Pick<IChainConfig, "SECONDS_PER_SLOT"> = {
   SECONDS_PER_SLOT: 2,
-  SLOTS_PER_EPOCH: 8,
 };
 
 describe("Run multi node multi thread interop validators (no eth1) until checkpoint", function () {

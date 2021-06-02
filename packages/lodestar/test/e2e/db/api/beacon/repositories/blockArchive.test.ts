@@ -5,7 +5,7 @@ import {generateSignedBlock} from "../../../../../utils/block";
 import {testLogger} from "../../../../../utils/logger";
 import {fromHexString} from "@chainsafe/ssz";
 import {IBlockSummary} from "@chainsafe/lodestar-fork-choice";
-import {allForks, phase0} from "@chainsafe/lodestar-types";
+import {allForks, phase0, ssz} from "@chainsafe/lodestar-types";
 import {expect} from "chai";
 
 describe("BlockArchiveRepository", function () {
@@ -58,7 +58,7 @@ describe("BlockArchiveRepository", function () {
     await db.blockArchive.batchPutBinary([
       {
         key: signedBlock2.message.slot,
-        value: config.types.phase0.SignedBeaconBlock.serialize(signedBlock2) as Buffer,
+        value: ssz.phase0.SignedBeaconBlock.serialize(signedBlock2) as Buffer,
         summary: toBlockSummary(signedBlock2),
       },
     ]);
@@ -70,7 +70,7 @@ describe("BlockArchiveRepository", function () {
 
     // make sure they are the same except for slot
     savedBlock2.message.slot = sampleBlock.message.slot;
-    expect(config.types.phase0.SignedBeaconBlock.equals(savedBlock1, savedBlock2)).to.be.true;
+    expect(ssz.phase0.SignedBeaconBlock.equals(savedBlock1, savedBlock2)).to.be.true;
   });
 
   it("batchPutBinary should be faster than batchPut", async () => {

@@ -1,11 +1,11 @@
-import {IBeaconParams} from "@chainsafe/lodestar-params";
+import {IChainConfig} from "@chainsafe/lodestar-config";
 import {RecursivePartial} from "@chainsafe/lodestar-utils";
 import {ChainEvent} from "../../../src/chain";
 import {IBeaconNodeOptions} from "../../../src/node/options";
 import {Json} from "@chainsafe/ssz";
 
 export type NodeWorkerOptions = {
-  params: Pick<IBeaconParams, "SECONDS_PER_SLOT" | "SLOTS_PER_EPOCH" | "ALTAIR_FORK_EPOCH">;
+  params: Pick<IChainConfig, "SECONDS_PER_SLOT" | "ALTAIR_FORK_EPOCH">;
   options: RecursivePartial<IBeaconNodeOptions>;
   validatorCount: number;
   genesisTime: number;
