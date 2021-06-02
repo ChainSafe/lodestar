@@ -113,6 +113,7 @@ export class BeaconChain implements IBeaconChain {
       emitter,
       checkpointStateCache,
       signal,
+      opts,
     });
 
     this.forkChoice = forkChoice;
