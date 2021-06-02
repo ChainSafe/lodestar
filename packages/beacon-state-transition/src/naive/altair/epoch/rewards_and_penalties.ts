@@ -1,9 +1,8 @@
-import {GENESIS_EPOCH} from "@chainsafe/lodestar-params";
+import {GENESIS_EPOCH, PARTICIPATION_FLAG_WEIGHTS} from "@chainsafe/lodestar-params";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {altair} from "@chainsafe/lodestar-types";
 import {getCurrentEpoch} from "../../../util";
 import {decreaseBalance, increaseBalance} from "../../../util/balance";
-import {getFlagIndicesAndWeights} from "../../../altair/misc";
 import {getFlagIndexDeltas, getInactivityPenaltyDeltas} from "../../../altair/state_accessor";
 
 export function processRewardsAndPenalties(config: IBeaconConfig, state: altair.BeaconState): void {
@@ -11,7 +10,9 @@ export function processRewardsAndPenalties(config: IBeaconConfig, state: altair.
     return;
   }
 
-  const flagDeltas = getFlagIndicesAndWeights().map(([flag, numerator]) => getFlagIndexDeltas(state, flag, numerator));
+  const flagDeltas = Array.from({length: PARTICIPATION_FLAG_WEIGHTS.length}, (_, flag) =>
+    getFlagIndexDeltas(config, state, flag)
+  );
   const inactivityPenaltyDeltas = getInactivityPenaltyDeltas(config, state);
   flagDeltas.push(inactivityPenaltyDeltas);
   for (const [rewards, penalties] of flagDeltas) {

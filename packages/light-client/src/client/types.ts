@@ -16,5 +16,5 @@ export type LightClientSnapshotFast = {
 
 export type SyncCommitteeFast = {
   pubkeys: PublicKey[];
-  pubkeyAggregates: PublicKey[];
+  aggregatePubkey: PublicKey;
 };

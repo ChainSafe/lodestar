@@ -12,7 +12,7 @@ export type SyncCommitteeSignatureIndexed = altair.SyncCommitteeSignature & {ind
 type IndexInSubCommittee = number;
 
 /**
- * Spec v1.1.0-alpha.3
+ * Spec v1.1.0-alpha.5
  */
 export async function validateGossipSyncCommittee(
   chain: IBeaconChain,

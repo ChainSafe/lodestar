@@ -1,5 +1,5 @@
 import {Path} from "@chainsafe/ssz";
-import {SYNC_COMMITTEE_SIZE, SYNC_PUBKEYS_PER_AGGREGATE} from "@chainsafe/lodestar-params";
+import {SYNC_COMMITTEE_SIZE} from "@chainsafe/lodestar-params";
 
 export function getSyncCommitteesProofPaths(): Path[] {
   const paths: Path[] = [];
@@ -10,11 +10,9 @@ export function getSyncCommitteesProofPaths(): Path[] {
     paths.push(["nextSyncCommittee", "pubkeys", i, 0]);
     paths.push(["nextSyncCommittee", "pubkeys", i, 32]);
   }
-  for (let i = 0; i < Math.floor(SYNC_COMMITTEE_SIZE / SYNC_PUBKEYS_PER_AGGREGATE); i++) {
-    paths.push(["currentSyncCommittee", "pubkeyAggregates", i, 0]);
-    paths.push(["currentSyncCommittee", "pubkeyAggregates", i, 32]);
-    paths.push(["nextSyncCommittee", "pubkeyAggregates", i, 0]);
-    paths.push(["nextSyncCommittee", "pubkeyAggregates", i, 32]);
-  }
+  paths.push(["currentSyncCommittee", "aggregatePubkey", 0]);
+  paths.push(["currentSyncCommittee", "aggregatePubkey", 32]);
+  paths.push(["nextSyncCommittee", "aggregatePubkey", 0]);
+  paths.push(["nextSyncCommittee", "aggregatePubkey", 32]);
   return paths;
 }

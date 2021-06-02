@@ -19,12 +19,14 @@ import {readonlyValues} from "@chainsafe/ssz";
 import {assembleAttestationData} from "../../../chain/factory/attestation";
 import {assembleBlock} from "../../../chain/factory/block";
 import {assembleAttesterDuty} from "../../../chain/factory/duties";
+import {AttestationError, AttestationErrorCode} from "../../../chain/errors";
 import {validateGossipAggregateAndProof} from "../../../chain/validation";
 import {ZERO_HASH} from "../../../constants";
 import {SyncState} from "../../../sync";
 import {toGraffitiBuffer} from "../../../util/graffiti";
 import {ApiError} from "../errors";
 import {validateSyncCommitteeGossipContributionAndProof} from "../../../chain/validation/syncCommitteeContributionAndProof";
+import {SyncContributionError, SyncContributionErrorCode} from "../../../db/syncCommitteeContribution";
 import {CommitteeSubscription} from "../../../network/subnets";
 import {getSyncComitteeValidatorIndexMap} from "./utils";
 import {ApiModules} from "../types";
@@ -336,21 +338,46 @@ export function getValidatorApi({
     async publishAggregateAndProofs(signedAggregateAndProofs) {
       notWhileSyncing();
 
+      const errors: Error[] = [];
+
       await Promise.all(
-        signedAggregateAndProofs.map(async (signedAggregateAndProof) => {
-          const attestation = signedAggregateAndProof.message.aggregate;
-          // TODO: Validate in batch
-          await validateGossipAggregateAndProof(config, chain, db, signedAggregateAndProof, {
-            attestation: attestation,
-            validSignature: false,
-          });
-          await Promise.all([
-            db.aggregateAndProof.add(signedAggregateAndProof.message),
-            db.seenAttestationCache.addAggregateAndProof(signedAggregateAndProof.message),
-            network.gossip.publishBeaconAggregateAndProof(signedAggregateAndProof),
-          ]);
+        signedAggregateAndProofs.map(async (signedAggregateAndProof, i) => {
+          try {
+            const attestation = signedAggregateAndProof.message.aggregate;
+            // TODO: Validate in batch
+            await validateGossipAggregateAndProof(config, chain, db, signedAggregateAndProof, {
+              attestation: attestation,
+              validSignature: false,
+            });
+            await Promise.all([
+              db.aggregateAndProof.add(signedAggregateAndProof.message),
+              db.seenAttestationCache.addAggregateAndProof(signedAggregateAndProof.message),
+              network.gossip.publishBeaconAggregateAndProof(signedAggregateAndProof),
+            ]);
+          } catch (e) {
+            if (e instanceof AttestationError && e.type.code === AttestationErrorCode.AGGREGATE_ALREADY_KNOWN) {
+              logger.debug("Ignoring known signedAggregateAndProof");
+              return; // Ok to submit the same aggregate twice
+            }
+
+            errors.push(e);
+            logger.error(
+              `Error on publishAggregateAndProofs [${i}]`,
+              {
+                slot: signedAggregateAndProof.message.aggregate.data.slot,
+                index: signedAggregateAndProof.message.aggregate.data.index,
+              },
+              e
+            );
+          }
         })
       );
+
+      if (errors.length > 1) {
+        throw Error("Multiple errors on publishAggregateAndProofs\n" + errors.map((e) => e.message).join("\n"));
+      } else if (errors.length === 1) {
+        throw errors[0];
+      }
     },
 
     /**
@@ -363,17 +390,42 @@ export function getValidatorApi({
     async publishContributionAndProofs(contributionAndProofs) {
       notWhileSyncing();
 
+      const errors: Error[] = [];
+
       await Promise.all(
-        contributionAndProofs.map(async (contributionAndProof) => {
-          // TODO: Validate in batch
-          await validateSyncCommitteeGossipContributionAndProof(config, chain, db, {
-            contributionAndProof,
-            validSignature: false,
-          });
-          db.syncCommitteeContribution.add(contributionAndProof.message);
-          await network.gossip.publishContributionAndProof(contributionAndProof);
+        contributionAndProofs.map(async (contributionAndProof, i) => {
+          try {
+            // TODO: Validate in batch
+            await validateSyncCommitteeGossipContributionAndProof(config, chain, db, {
+              contributionAndProof,
+              validSignature: false,
+            });
+            db.syncCommitteeContribution.add(contributionAndProof.message);
+            await network.gossip.publishContributionAndProof(contributionAndProof);
+          } catch (e) {
+            if (e instanceof SyncContributionError && e.type.code === SyncContributionErrorCode.ALREADY_KNOWN) {
+              logger.debug("Ignoring known contributionAndProof");
+              return; // Ok to submit the same aggregate twice
+            }
+
+            errors.push(e);
+            logger.error(
+              `Error on publishContributionAndProofs [${i}]`,
+              {
+                slot: contributionAndProof.message.contribution.slot,
+                subCommitteeIndex: contributionAndProof.message.contribution.subCommitteeIndex,
+              },
+              e
+            );
+          }
         })
       );
+
+      if (errors.length > 1) {
+        throw Error("Multiple errors on publishContributionAndProofs\n" + errors.map((e) => e.message).join("\n"));
+      } else if (errors.length === 1) {
+        throw errors[0];
+      }
     },
 
     async prepareBeaconCommitteeSubnet(subscriptions) {

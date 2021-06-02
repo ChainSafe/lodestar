@@ -38,7 +38,7 @@ export const ChainConfig = new ContainerType<IChainConfig>({
     ETH1_FOLLOW_DISTANCE: ssz.Number64,
 
     // Validator cycle
-    INACTIVITY_SCORE_BIAS: ssz.Number64,
+    INACTIVITY_SCORE_BIAS: ssz.Uint64,
     INACTIVITY_SCORE_RECOVERY_RATE: ssz.Number64,
     EJECTION_BALANCE: ssz.Number64,
     MIN_PER_EPOCH_CHURN_LIMIT: ssz.Number64,

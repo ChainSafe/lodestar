@@ -4,6 +4,7 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {phase0, altair, Slot, ssz} from "@chainsafe/lodestar-types";
 import {newFilledArray} from "@chainsafe/lodestar-beacon-state-transition";
 import {readonlyValues, toHexString} from "@chainsafe/ssz";
+import {LodestarError} from "@chainsafe/lodestar-utils";
 
 /**
  * SyncCommittee aggregates are only useful for the next block they have signed.
@@ -115,6 +116,18 @@ export class SyncCommitteeContributionCache {
   }
 }
 
+export enum SyncContributionErrorCode {
+  ALREADY_KNOWN = "SYNC_COMMITTEE_CONTRIBUTION_ERROR_ALREADY_KNOWN",
+}
+
+type SyncContributionErrorType = {
+  code: SyncContributionErrorCode.ALREADY_KNOWN;
+  syncCommitteeIndex: number;
+  slot: Slot;
+};
+
+export class SyncContributionError extends LodestarError<SyncContributionErrorType> {}
+
 /**
  * Aggregate a new contribution into `aggregate` mutating it
  */
@@ -128,7 +141,16 @@ function aggregateContributionInto(
 
   for (const [index, participated] of Array.from(readonlyValues(contribution.aggregationBits)).entries()) {
     if (participated) {
-      aggregate.syncCommitteeBits[indexOffset + index] = true;
+      const syncCommitteeIndex = indexOffset + index;
+      if (aggregate.syncCommitteeBits[syncCommitteeIndex] === true) {
+        throw new SyncContributionError({
+          code: SyncContributionErrorCode.ALREADY_KNOWN,
+          syncCommitteeIndex,
+          slot: contribution.slot,
+        });
+      }
+
+      aggregate.syncCommitteeBits[syncCommitteeIndex] = true;
     }
   }
 

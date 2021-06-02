@@ -1,10 +1,11 @@
 import {altair, ParticipationFlags, phase0, ssz, Uint8} from "@chainsafe/lodestar-types";
 import {CachedBeaconState, createCachedBeaconState} from "../allForks/util";
-import {getBlockRoot, getBlockRootAtSlot, getCurrentEpoch, newZeroedArray} from "../util";
+import {getCurrentEpoch, newZeroedArray} from "../util";
 import {List, TreeBacked} from "@chainsafe/ssz";
-import {getSyncCommittee} from "./state_accessor";
+import {getNextSyncCommittee} from "./state_accessor";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IParticipationStatus} from "../allForks/util/cachedEpochParticipation";
+import {getAttestationParticipationStatus} from "./block/processAttestation";
 
 /**
  * Upgrade a state from phase0 to altair.
@@ -33,7 +34,7 @@ function upgradeTreeBackedState(
   postState.previousEpochParticipation = newZeroedArray(validatorCount) as List<ParticipationFlags>;
   postState.currentEpochParticipation = newZeroedArray(validatorCount) as List<ParticipationFlags>;
   postState.inactivityScores = newZeroedArray(validatorCount) as List<Uint8>;
-  const syncCommittee = getSyncCommittee(state, epoch);
+  const syncCommittee = getNextSyncCommittee(state);
   postState.currentSyncCommittee = syncCommittee;
   postState.nextSyncCommittee = syncCommittee;
   return postState;
@@ -47,33 +48,21 @@ function translateParticipation(
   pendingAttesations: phase0.PendingAttestation[]
 ): void {
   const epochParticipation = state.previousEpochParticipation;
-  const currentEpoch = state.currentShuffling.epoch;
   for (const attestation of pendingAttesations) {
     const data = attestation.data;
-    let justifiedCheckpoint;
-    if (data.target.epoch === currentEpoch) {
-      justifiedCheckpoint = state.currentJustifiedCheckpoint;
-    } else {
-      justifiedCheckpoint = state.previousJustifiedCheckpoint;
-    }
-    const isMatchingSource = ssz.phase0.Checkpoint.equals(data.source, justifiedCheckpoint);
-    if (!isMatchingSource) {
-      throw new Error(
-        "Attestation source does not equal justified checkpoint: " +
-          `source=${JSON.stringify(ssz.phase0.Checkpoint.toJson(data.source))} ` +
-          `justifiedCheckpoint=${JSON.stringify(ssz.phase0.Checkpoint.toJson(justifiedCheckpoint))}`
-      );
-    }
-    const isMatchingTarget = ssz.Root.equals(data.target.root, getBlockRoot(state, data.target.epoch));
-    const isMatchingHead =
-      isMatchingTarget && ssz.Root.equals(data.beaconBlockRoot, getBlockRootAtSlot(state, data.slot));
+    const {timelySource, timelyTarget, timelyHead} = getAttestationParticipationStatus(
+      state,
+      data,
+      attestation.inclusionDelay
+    );
+
     const attestingIndices = state.getAttestingIndices(data, attestation.aggregationBits);
     for (const index of attestingIndices) {
       const status = epochParticipation.getStatus(index) as IParticipationStatus;
       const newStatus = {
-        timelyHead: status.timelyHead || isMatchingHead,
-        timelySource: true,
-        timelyTarget: status.timelyTarget || isMatchingTarget,
+        timelySource: status.timelySource || timelySource,
+        timelyTarget: status.timelyTarget || timelyTarget,
+        timelyHead: status.timelyHead || timelyHead,
       };
       epochParticipation.setStatus(index, newStatus);
     }

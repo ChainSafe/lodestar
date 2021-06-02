@@ -33,7 +33,6 @@ import {List, toHexString} from "@chainsafe/ssz";
 import {routes} from "@chainsafe/lodestar-api";
 import {ISlashingProtection} from "../slashingProtection";
 import {BLSKeypair, PubkeyHex} from "../types";
-import {IForkService} from "./fork";
 import {getAggregationBits, mapSecretKeysToValidators} from "./utils";
 
 /**
@@ -45,7 +44,6 @@ export class ValidatorStore {
 
   constructor(
     private readonly config: IBeaconConfig,
-    private readonly forkService: IForkService,
     private readonly slashingProtection: ISlashingProtection,
     secretKeys: SecretKey[],
     genesis: Genesis
@@ -201,16 +199,21 @@ export class ValidatorStore {
     subCommitteeIndex: number
   ): Promise<BLSSignature> {
     const domain = await this.getDomain(DOMAIN_SYNC_COMMITTEE_SELECTION_PROOF, computeEpochAtSlot(slot));
-    const signingData: altair.SyncCommitteeSigningData = {
+    const signingData: altair.SyncAggregatorSelectionData = {
       slot,
       subCommitteeIndex: subCommitteeIndex,
     };
 
-    const signingRoot = computeSigningRoot(ssz.altair.SyncCommitteeSigningData, signingData, domain);
+    const signingRoot = computeSigningRoot(ssz.altair.SyncAggregatorSelectionData, signingData, domain);
     return this.getSecretKey(pubkey).sign(signingRoot).toBytes();
   }
 
   private async getDomain(domainType: DomainType, epoch: Epoch): Promise<Buffer> {
+    // We don't fetch the Fork from the beacon node dynamically.
+    // The Fork object should not change during the runtime of the validator. When a new planned fork happens
+    // node operators would have to update the validator client software at least once.
+    // If we wanted to have long-term independent validator client we can review this approach.
+    // On start-up the validator client fetches the full config from the beacon node and ensures they match.
     const forkVersion = this.config.getForkVersion(computeStartSlotAtEpoch(epoch));
     return computeDomain(domainType, forkVersion, this.genesisValidatorsRoot);
   }

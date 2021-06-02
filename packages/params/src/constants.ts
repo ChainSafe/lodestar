@@ -62,17 +62,8 @@ export const MAX_REQUEST_BLOCKS = 2 ** 10; // 1024
 //
 
 export const MIN_SYNC_COMMITTEE_PARTICIPANTS = 1;
-//~27 hours
-export const LIGHT_CLIENT_UPDATE_TIMEOUT = 2 ** 13;
 
 // Lightclient pre-computed
-/**
- * ```ts
- * BigInt(2 ** 64) - BigInt(1);
- * ```
- * But approximated to `Number.MAX_SAFE_INTEGER`
- */
-export const MAX_VALID_LIGHT_CLIENT_UPDATES = Number.MAX_SAFE_INTEGER;
 /**
  * ```ts
  * config.types.altair.BeaconState.getPathGindex(["finalizedCheckpoint", "root"])

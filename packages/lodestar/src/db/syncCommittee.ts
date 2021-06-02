@@ -140,6 +140,12 @@ function aggregateSignatureInto(
   signature: altair.SyncCommitteeSignature,
   indexInSubCommittee: number
 ): void {
+  if (contribution.aggregationBits[indexInSubCommittee] === true) {
+    throw Error(
+      `Already aggregated SyncCommitteeSignature - subCommitteeIndex=${contribution.subCommitteeIndex} indexInSubCommittee=${indexInSubCommittee}`
+    );
+  }
+
   contribution.aggregationBits[indexInSubCommittee] = true;
 
   contribution.signature = Signature.aggregate([

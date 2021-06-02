@@ -204,12 +204,12 @@ export function prepareEpochProcessState<T extends allForks.BeaconState>(state: 
     const effectiveBalance = out.validators[i].effectiveBalance;
     if (hasMarkers(status.flags, FLAG_PREV_SOURCE_ATTESTER | FLAG_UNSLASHED)) {
       prevSourceUnslStake += effectiveBalance;
-      if (hasMarkers(status.flags, FLAG_PREV_TARGET_ATTESTER)) {
-        prevTargetUnslStake += effectiveBalance;
-        if (hasMarkers(status.flags, FLAG_PREV_HEAD_ATTESTER)) {
-          prevHeadUnslStake += effectiveBalance;
-        }
-      }
+    }
+    if (hasMarkers(status.flags, FLAG_PREV_TARGET_ATTESTER | FLAG_UNSLASHED)) {
+      prevTargetUnslStake += effectiveBalance;
+    }
+    if (hasMarkers(status.flags, FLAG_PREV_HEAD_ATTESTER | FLAG_UNSLASHED)) {
+      prevHeadUnslStake += effectiveBalance;
     }
     if (hasMarkers(status.flags, FLAG_CURR_TARGET_ATTESTER | FLAG_UNSLASHED)) {
       currTargetUnslStake += effectiveBalance;

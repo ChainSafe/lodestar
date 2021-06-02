@@ -178,9 +178,9 @@ async function stateByName(
     case "genesis":
       return await db.stateArchive.get(GENESIS_SLOT);
     case "finalized":
-      return stateCache.get(forkChoice.getFinalizedCheckpoint().root) ?? null;
+      return stateCache.get(forkChoice.getFinalizedBlock().stateRoot) ?? null;
     case "justified":
-      return stateCache.get(forkChoice.getJustifiedCheckpoint().root) ?? null;
+      return stateCache.get(forkChoice.getJustifiedBlock().stateRoot) ?? null;
     default:
       throw new Error("not a named state id");
   }

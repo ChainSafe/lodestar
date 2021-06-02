@@ -13,7 +13,6 @@ export const leveParams: IBeaconParams = {
 
   // Extra minimal settings
   SYNC_COMMITTEE_SIZE: 4,
-  SYNC_PUBKEYS_PER_AGGREGATE: 2,
   // Must be higher than 3 to allow finalized updates
   EPOCHS_PER_SYNC_COMMITTEE_PERIOD: 4,
   SLOTS_PER_EPOCH: 8,

@@ -3,8 +3,9 @@ import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-tes
 import bls from "@chainsafe/bls";
 import {fromHexString} from "@chainsafe/ssz";
 import {SPEC_TEST_LOCATION} from "../../utils/specTestCases";
+import {IBaseSpecTest} from "../type";
 
-interface IVerifyTestCase {
+interface IVerifyTestCase extends IBaseSpecTest {
   data: {
     input: {
       pubkey: string;

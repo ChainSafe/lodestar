@@ -13,7 +13,7 @@ interface IUser {
   name: string;
 }
 
-describe("httpClient test", () => {
+describe("httpClient json client", () => {
   const afterEachCallbacks: (() => Promise<any> | any)[] = [];
   afterEach(async () => {
     while (afterEachCallbacks.length > 0) {

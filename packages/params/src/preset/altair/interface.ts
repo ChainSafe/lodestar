@@ -2,7 +2,6 @@
 
 export interface IAltairPreset {
   SYNC_COMMITTEE_SIZE: number;
-  SYNC_PUBKEYS_PER_AGGREGATE: number;
   /*
   INACTIVITY_SCORE_BIAS: bigint;
   */

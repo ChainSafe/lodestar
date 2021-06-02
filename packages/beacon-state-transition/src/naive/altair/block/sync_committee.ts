@@ -15,7 +15,6 @@ import {
   increaseBalance,
 } from "../../../util";
 import * as phase0 from "../../phase0";
-import {getSyncCommitteeIndices} from "../../../altair/state_accessor";
 
 export function processSyncCommittee(
   config: IBeaconConfig,
@@ -25,7 +24,15 @@ export function processSyncCommittee(
 ): void {
   const previousSlot = Math.max(state.slot, 1) - 1;
   const currentEpoch = getCurrentEpoch(state);
-  const committeeIndices = getSyncCommitteeIndices(state, currentEpoch);
+  const allPubkeys = Array.from(state.validators).map((validator) => validator.pubkey);
+  const committeeIndices = [];
+  for (const committeePubkey of state.currentSyncCommittee.pubkeys) {
+    for (const [index, pubkey] of allPubkeys.entries()) {
+      if (ssz.BLSPubkey.equals(pubkey, committeePubkey)) {
+        committeeIndices.push(index);
+      }
+    }
+  }
   const participantIndices = committeeIndices.filter((index) => !!aggregate.syncCommitteeBits[index]);
   const committeePubkeys = Array.from(state.currentSyncCommittee.pubkeys);
   const participantPubkeys = committeePubkeys.filter((pubkey, index) => !!aggregate.syncCommitteeBits[index]);

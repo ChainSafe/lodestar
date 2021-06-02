@@ -2,93 +2,102 @@
  * @module network/gossip
  */
 
-import {ContainerType, toHexString} from "@chainsafe/ssz";
+import {ContainerType} from "@chainsafe/ssz";
 import {ssz} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {IForkDigestContext} from "../../util/forkDigestContext";
-import {
-  GossipEncoding,
-  GossipDeserializer,
-  GossipObject,
-  GossipSerializer,
-  GossipType,
-  GossipTopic,
-  GossipTopicMap,
-} from "./interface";
+import {IForkDigestContext, toHexStringNoPrefix} from "../../util/forkDigestContext";
 import {DEFAULT_ENCODING} from "./constants";
+import {GossipEncoding, GossipDeserializer, GossipObject, GossipSerializer, GossipType, GossipTopic} from "./interface";
+
+const gossipTopicRegex = new RegExp("^/eth2/(\\w+)/(\\w+)/(\\w+)");
 
 /**
- * Create a gossip topic string
+ * Stringify a GossipTopic into a spec-ed formated topic string
  */
-export function getGossipTopicString(forkDigestContext: IForkDigestContext, topic: GossipTopic): string {
+export function stringifyGossipTopic(forkDigestContext: IForkDigestContext, topic: GossipTopic): string {
   const forkDigest = forkDigestContext.forkName2ForkDigest(topic.fork);
-  const forkDigestHex = toHexString(forkDigest).toLowerCase().substring(2);
-  let topicType: string = topic.type;
-  if (topic.type === GossipType.beacon_attestation) {
-    topicType += "_" + topic.subnet;
-  }
-  if (topic.type === GossipType.sync_committee) {
-    topicType += "_" + topic.subnet;
-  }
-  return `/eth2/${forkDigestHex}/${topicType}/${topic.encoding ?? DEFAULT_ENCODING}`;
-}
-
-// eslint-disable-next-line @typescript-eslint/naming-convention
-export const GossipTopicRegExp = new RegExp("^(/eth2/)([a-f0-9]{8})/(\\w+)/(\\w+)");
-
-// eslint-disable-next-line @typescript-eslint/naming-convention
-export const AttestationSubnetRegExp = new RegExp("^/eth2/[a-f0-9]{8}/beacon_attestation_([0-9]+)/\\w+$");
-
-export function isAttestationSubnetTopic(topic: string): boolean {
-  return AttestationSubnetRegExp.test(topic);
-}
-
-export function getSubnetFromAttestationSubnetTopic(topic: string): number {
-  const groups = topic.match(AttestationSubnetRegExp);
-  const subnetStr = groups && groups[1];
-  if (!subnetStr) throw Error(`Bad attestation topic format: ${topic}`);
-  return Number(subnetStr);
+  const forkDigestHexNoPrefix = toHexStringNoPrefix(forkDigest);
+  const topicType = stringifyGossipTopicType(topic);
+  const encoding = topic.encoding ?? DEFAULT_ENCODING;
+  return `/eth2/${forkDigestHexNoPrefix}/${topicType}/${encoding}`;
 }
 
 /**
- * Create a `GossipTopic` from a gossip topic string
+ * Stringify a GossipTopic into a spec-ed formated partial topic string
  */
-export function getGossipTopic(forkDigestContext: IForkDigestContext, topic: string): GossipTopic {
-  const groups = topic.match(GossipTopicRegExp);
-  if (!groups) {
-    throw Error(`Bad gossip topic string: ${topic}`);
+function stringifyGossipTopicType(topic: GossipTopic): string {
+  switch (topic.type) {
+    case GossipType.beacon_block:
+    case GossipType.beacon_aggregate_and_proof:
+    case GossipType.voluntary_exit:
+    case GossipType.proposer_slashing:
+    case GossipType.attester_slashing:
+    case GossipType.sync_committee_contribution_and_proof:
+      return topic.type;
+    case GossipType.beacon_attestation:
+    case GossipType.sync_committee:
+      return `${topic.type}_${topic.subnet}`;
   }
+}
 
-  const forkDigestHex = groups[2] as string | undefined;
-  const type = groups[3] as GossipType | undefined;
-  const encoding = groups[4] as GossipEncoding | undefined;
-  if (!forkDigestHex || !type || !encoding) {
-    throw Error(`Bad gossip topic string: ${topic}`);
-  }
+/**
+ * Parse a `GossipTopic` object from its stringified form.
+ * A gossip topic has the format
+ * ```ts
+ * /eth2/$FORK_DIGEST/$GOSSIP_TYPE/$ENCODING
+ * ```
+ */
+export function parseGossipTopic(forkDigestContext: IForkDigestContext, topicStr: string): GossipTopic {
+  try {
+    const matches = topicStr.match(gossipTopicRegex);
+    if (matches === null) {
+      throw Error(`Must match regex ${gossipTopicRegex}`);
+    }
 
-  const fork = forkDigestContext.forkDigest2ForkName(forkDigestHex);
+    const [, forkDigestHexNoPrefix, gossipTypeStr, encodingStr] = matches;
 
-  if (GossipEncoding[encoding] == null) {
-    throw new Error(`Bad gossip topic encoding: ${encoding}`);
-  }
+    const fork = forkDigestContext.forkDigest2ForkName(forkDigestHexNoPrefix);
+    const encoding = parseEncodingStr(encodingStr);
 
-  if (isAttestationSubnetTopic(topic)) {
-    const subnet = getSubnetFromAttestationSubnetTopic(topic);
-    return {
-      type: GossipType.beacon_attestation,
-      fork,
-      encoding,
-      subnet,
-    };
+    // Inline-d the parseGossipTopicType() function since spreading the resulting object x4 the time to parse a topicStr
+    switch (gossipTypeStr) {
+      case GossipType.beacon_block:
+      case GossipType.beacon_aggregate_and_proof:
+      case GossipType.voluntary_exit:
+      case GossipType.proposer_slashing:
+      case GossipType.attester_slashing:
+      case GossipType.sync_committee_contribution_and_proof:
+        return {type: gossipTypeStr, fork, encoding};
+    }
+
+    for (const gossipType of [GossipType.beacon_attestation as const, GossipType.sync_committee as const]) {
+      if (gossipTypeStr.startsWith(gossipType)) {
+        const subnetStr = gossipTypeStr.slice(gossipType.length + 1); // +1 for '_' concatenating the topic name and the subnet
+        const subnet = parseInt(subnetStr, 10);
+        if (Number.isNaN(subnet)) throw Error(`Subnet ${subnetStr} is not a number`);
+        return {type: gossipType, subnet, fork, encoding};
+      }
+    }
+
+    throw Error(`Unknown gossip type ${gossipTypeStr}`);
+  } catch (e) {
+    (e as Error).message = `Invalid gossip topic ${topicStr}: ${(e as Error).message}`;
+    throw e;
   }
-  if (GossipType[type] == null) {
-    throw new Error(`Bad gossip topic type: ${type}`);
+}
+
+/**
+ * Validate that a `encodingStr` is a known `GossipEncoding`
+ */
+function parseEncodingStr(encodingStr: string): GossipEncoding {
+  switch (encodingStr) {
+    case GossipEncoding.ssz:
+    case GossipEncoding.ssz_snappy:
+      return encodingStr;
+
+    default:
+      throw Error(`Unknown encoding ${encodingStr}`);
   }
-  return {
-    type,
-    fork,
-    encoding,
-  } as GossipTopicMap[GossipType.beacon_block];
 }
 
 export function getGossipSSZType<T extends GossipObject>(config: IBeaconConfig, topic: GossipTopic): ContainerType<T> {

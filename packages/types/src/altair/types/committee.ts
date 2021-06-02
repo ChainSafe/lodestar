@@ -4,7 +4,7 @@ import * as phase0 from "../../phase0/types";
 
 export interface SyncCommittee {
   pubkeys: Vector<phase0.BLSPubkey>;
-  pubkeyAggregates: Vector<phase0.BLSPubkey>;
+  aggregatePubkey: phase0.BLSPubkey;
 }
 
 export interface SyncCommitteeSignature {
@@ -33,7 +33,7 @@ export interface SignedContributionAndProof {
   signature: phase0.BLSSignature;
 }
 
-export interface SyncCommitteeSigningData {
+export interface SyncAggregatorSelectionData {
   slot: phase0.Slot;
   subCommitteeIndex: phase0.SubCommitteeIndex;
 }

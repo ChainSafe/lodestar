@@ -11,17 +11,48 @@ export type TestToDownload = "general" | "mainnet" | "minimal";
 export const defaultTestsToDownload: TestToDownload[] = ["general", "mainnet", "minimal"];
 export const defaultSpecTestsRepoUrl = "https://github.com/ethereum/eth2.0-spec-tests";
 
+// eslint-disable-next-line @typescript-eslint/no-empty-function
+const logEmpty = (): void => {};
+
 export interface IDownloadTestsOptions {
-  specTestsRepoUrl?: string;
   specVersion: string;
   outputDir: string;
+  specTestsRepoUrl?: string;
   testsToDownload?: TestToDownload[];
 }
 
+export interface IDownloadGenericTestsOptions<TestNames extends string> {
+  specVersion: string;
+  outputDir: string;
+  specTestsRepoUrl: string;
+  testsToDownload: TestNames[];
+}
+
+/**
+ * Download spec tests
+ */
 export async function downloadTests(
-  {specVersion, specTestsRepoUrl, outputDir, testsToDownload = defaultTestsToDownload}: IDownloadTestsOptions,
-  // eslint-disable-next-line @typescript-eslint/no-empty-function
-  log: (msg: string) => void = () => {}
+  {specVersion, specTestsRepoUrl, outputDir, testsToDownload}: IDownloadTestsOptions,
+  log: (msg: string) => void = logEmpty
+): Promise<void> {
+  await downloadGenericSpecTests(
+    {
+      specVersion,
+      outputDir,
+      specTestsRepoUrl: specTestsRepoUrl ?? defaultSpecTestsRepoUrl,
+      testsToDownload: testsToDownload ?? defaultTestsToDownload,
+    },
+    log
+  );
+}
+
+/**
+ * Generic Github release downloader.
+ * Used by spec tests and SlashingProtectionInterchangeTest
+ */
+export async function downloadGenericSpecTests<TestNames extends string>(
+  {specVersion, specTestsRepoUrl, outputDir, testsToDownload}: IDownloadGenericTestsOptions<TestNames>,
+  log: (msg: string) => void = logEmpty
 ): Promise<void> {
   log(`outputDir = ${outputDir}`);
 

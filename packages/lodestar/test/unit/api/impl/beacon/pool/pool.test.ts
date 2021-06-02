@@ -21,8 +21,10 @@ import {Eth2Gossipsub} from "../../../../../../src/network/gossip";
 import {generateEmptySignedBlockHeader} from "../../../../../utils/block";
 import {setupApiImplTestServer} from "../../index.test";
 import {SinonStubFn} from "../../../../../utils/types";
+import {testLogger} from "../../../../../utils/logger";
 
 describe("beacon pool api impl", function () {
+  const logger = testLogger();
   let poolApi: ReturnType<typeof getBeaconPoolApi>;
   let dbStub: StubbedBeaconDb;
   let chainStub: SinonStubbedInstance<IBeaconChain>;
@@ -45,6 +47,7 @@ describe("beacon pool api impl", function () {
     poolApi = getBeaconPoolApi({
       config,
       db: server.dbStub,
+      logger,
       network: networkStub,
       chain: chainStub,
     });

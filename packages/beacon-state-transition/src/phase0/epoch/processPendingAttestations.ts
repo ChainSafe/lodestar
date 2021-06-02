@@ -28,7 +28,11 @@ export function statusProcessEpoch<T extends allForks.BeaconState>(
     const attVotedTargetRoot = rootType.equals(attTarget.root, actualTargetBlockRoot);
     const attVotedHeadRoot = rootType.equals(attBeaconBlockRoot, getBlockRootAtSlot(state, attSlot));
     const committee = epochCtx.getBeaconCommittee(attSlot, committeeIndex);
-    const participants = zipIndexesInBitList(committee, aggregationBits as TreeBacked<BitList>);
+    const participants = zipIndexesInBitList(
+      committee,
+      aggregationBits as TreeBacked<BitList>,
+      ssz.phase0.CommitteeBits
+    );
 
     if (epoch === prevEpoch) {
       for (const p of participants) {

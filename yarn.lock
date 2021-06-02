@@ -2057,11 +2057,6 @@
   resolved "https://registry.yarnpkg.com/@chainsafe/persistent-ts/-/persistent-ts-0.19.0.tgz#9cc7e93f91329e0c9a8a035ec99880b77d503abf"
   integrity sha512-A3q/o9aMoMkfX11JzEMfjO3+Ms0F+gVDBsNpM90i2HWvIYQYRnbzGe5UUPMleRj3LQkAjFjipQ7L27fdDUf+rw==
 
-"@chainsafe/slashing-protection-interchange-tests@^4.0.0":
-  version "4.0.0"
-  resolved "https://registry.yarnpkg.com/@chainsafe/slashing-protection-interchange-tests/-/slashing-protection-interchange-tests-4.0.0.tgz#431837fb113447223bb6fc73954a39d15d58314f"
-  integrity sha512-H9sc2PFzsK0YRtjwtaZeJ1k8zIhhvPRZYksbzEuLKBss2iIYsCpNKzvHdbjb6uG/S3LBihpuBc53oJ2az82KSQ==
-
 "@chainsafe/snappy-stream@5.0.0":
   version "5.0.0"
   resolved "https://registry.yarnpkg.com/@chainsafe/snappy-stream/-/snappy-stream-5.0.0.tgz#87dfb8dd6e5a20c7e982700974fd59941f5a96c4"

@@ -14,6 +14,7 @@ import {CachedBeaconState} from "../../allForks/util";
 import {isValidIndexedAttestation} from "../../allForks/block";
 import {IParticipationStatus} from "../../allForks/util/cachedEpochParticipation";
 import {getBaseReward} from "../state_accessor";
+import {intSqrt} from "@chainsafe/lodestar-utils";
 
 export function processAttestation(
   state: CachedBeaconState<altair.BeaconState>,
@@ -60,15 +61,71 @@ export function processAttestation(
     );
   }
 
-  let epochParticipation, justifiedCheckpoint;
+  let epochParticipation;
   if (data.target.epoch === epochCtx.currentShuffling.epoch) {
     epochParticipation = state.currentEpochParticipation;
-    justifiedCheckpoint = state.currentJustifiedCheckpoint;
   } else {
     epochParticipation = state.previousEpochParticipation;
-    justifiedCheckpoint = state.previousJustifiedCheckpoint;
   }
 
+  // this check is done last because its the most expensive (if signature verification is toggled on)
+  if (
+    !isValidIndexedAttestation(
+      state as CachedBeaconState<allForks.BeaconState>,
+      epochCtx.getIndexedAttestation(attestation),
+      verifySignature
+    )
+  ) {
+    throw new Error("Attestation is not valid");
+  }
+  const {timelySource, timelyTarget, timelyHead} = getAttestationParticipationStatus(
+    state,
+    data,
+    state.slot - data.slot
+  );
+
+  // Retrieve the validator indices from the attestation participation bitfield
+  const attestingIndices = epochCtx.getAttestingIndices(data, attestation.aggregationBits);
+
+  // For each participant, update their participation
+  // In epoch processing, this participation info is used to calculate balance updates
+  let proposerRewardNumerator = BigInt(0);
+  for (const index of attestingIndices) {
+    const status = epochParticipation.getStatus(index) as IParticipationStatus;
+    const newStatus = {
+      timelySource: status.timelySource || timelySource,
+      timelyTarget: status.timelyTarget || timelyTarget,
+      timelyHead: status.timelyHead || timelyHead,
+    };
+    epochParticipation.setStatus(index, newStatus);
+    // add proposer rewards for source/target/head that updated the state
+    proposerRewardNumerator +=
+      getBaseReward(state, index) *
+      (BigInt(!status.timelySource && timelySource) * TIMELY_SOURCE_WEIGHT +
+        BigInt(!status.timelyTarget && timelyTarget) * TIMELY_TARGET_WEIGHT +
+        BigInt(!status.timelyHead && timelyHead) * TIMELY_HEAD_WEIGHT);
+  }
+
+  const proposerRewardDenominator = ((WEIGHT_DENOMINATOR - PROPOSER_WEIGHT) * WEIGHT_DENOMINATOR) / PROPOSER_WEIGHT;
+  const proposerReward = proposerRewardNumerator / proposerRewardDenominator;
+  increaseBalance(state, epochCtx.getBeaconProposer(state.slot), proposerReward);
+}
+
+/**
+ * https://github.com/ethereum/eth2.0-specs/blob/v1.1.0-alpha.4/specs/altair/beacon-chain.md#get_attestation_participation_flag_indices
+ */
+export function getAttestationParticipationStatus(
+  state: CachedBeaconState<altair.BeaconState>,
+  data: phase0.AttestationData,
+  inclusionDelay: number
+): IParticipationStatus {
+  const {epochCtx} = state;
+  let justifiedCheckpoint;
+  if (data.target.epoch === epochCtx.currentShuffling.epoch) {
+    justifiedCheckpoint = state.currentJustifiedCheckpoint;
+  } else {
+    justifiedCheckpoint = state.previousJustifiedCheckpoint;
+  }
   // The source and target votes are part of the FFG vote, the head vote is part of the fork choice vote
   // Both are tracked to properly incentivise validators
   //
@@ -83,44 +140,13 @@ export function processAttestation(
         `justifiedCheckpoint=${JSON.stringify(ssz.phase0.Checkpoint.toJson(justifiedCheckpoint))}`
     );
   }
-  // this check is done last because its the most expensive (if signature verification is toggled on)
-  if (
-    !isValidIndexedAttestation(
-      state as CachedBeaconState<allForks.BeaconState>,
-      epochCtx.getIndexedAttestation(attestation),
-      verifySignature
-    )
-  ) {
-    throw new Error("Attestation is not valid");
-  }
   const isMatchingTarget = ssz.Root.equals(data.target.root, getBlockRoot(state, data.target.epoch));
   // a timely head is only be set if the target is _also_ matching
   const isMatchingHead =
     isMatchingTarget && ssz.Root.equals(data.beaconBlockRoot, getBlockRootAtSlot(state, data.slot));
-
-  // Retrieve the validator indices from the attestation participation bitfield
-  const attestingIndices = epochCtx.getAttestingIndices(data, attestation.aggregationBits);
-
-  // For each participant, update their participation
-  // In epoch processing, this participation info is used to calculate balance updates
-  let proposerRewardNumerator = BigInt(0);
-  for (const index of attestingIndices) {
-    const status = epochParticipation.getStatus(index) as IParticipationStatus;
-    const newStatus = {
-      timelyHead: status.timelyHead || isMatchingHead,
-      timelySource: true,
-      timelyTarget: status.timelyTarget || isMatchingTarget,
-    };
-    epochParticipation.setStatus(index, newStatus);
-    // add proposer rewards for source/target/head that updated the state
-    proposerRewardNumerator +=
-      getBaseReward(state, index) *
-      (BigInt(!status.timelySource) * TIMELY_SOURCE_WEIGHT +
-        BigInt(!status.timelyTarget && isMatchingTarget) * TIMELY_TARGET_WEIGHT +
-        BigInt(!status.timelyHead && isMatchingHead) * TIMELY_HEAD_WEIGHT);
-  }
-
-  const proposerRewardDenominator = ((WEIGHT_DENOMINATOR - PROPOSER_WEIGHT) * WEIGHT_DENOMINATOR) / PROPOSER_WEIGHT;
-  const proposerReward = proposerRewardNumerator / proposerRewardDenominator;
-  increaseBalance(state, epochCtx.getBeaconProposer(state.slot), proposerReward);
+  return {
+    timelySource: isMatchingSource && inclusionDelay <= intSqrt(SLOTS_PER_EPOCH),
+    timelyTarget: isMatchingTarget && inclusionDelay <= SLOTS_PER_EPOCH,
+    timelyHead: isMatchingHead && inclusionDelay === MIN_ATTESTATION_INCLUSION_DELAY,
+  };
 }

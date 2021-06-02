@@ -46,30 +46,28 @@ export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
   beaconNodeOptions.set({db: {name: beaconPaths.dbDir}});
   const options = beaconNodeOptions.getWithDefaults();
 
+  // Genesis params
+  const validatorCount = args.genesisValidators || 8;
+  const genesisTime = args.genesisTime || Math.floor(Date.now() / 1000) + 5;
+  // Set logger format to Eph with provided genesisTime
+  if (args.logFormatGenesisTime === undefined) args.logFormatGenesisTime = genesisTime;
+
   // BeaconNode setup
   const libp2p = await createNodeJsLibp2p(peerId, options.network);
   const logger = getCliLogger(args, beaconPaths, config);
+  logger.info("Lodestar dev", {network: args.network, preset: args.preset});
 
   const db = new BeaconDb({config, controller: new LevelDbController(options.db, {logger})});
   await db.start();
 
   let anchorState;
-  if (args.genesisValidators) {
-    anchorState = await nodeUtils.initDevState(config, db, args.genesisValidators);
-    nodeUtils.storeSSZState(config, anchorState, path.join(args.rootDir, "dev", "genesis.ssz"));
-  } else if (args.genesisStateFile) {
-    anchorState = await initStateFromAnchorState(
-      config,
-      db,
-      logger,
-      config
-        .getForkTypes(GENESIS_SLOT)
-        .BeaconState.createTreeBackedFromBytes(
-          await fs.promises.readFile(path.join(args.rootDir, args.genesisStateFile))
-        )
-    );
+  if (args.genesisStateFile) {
+    const state = config
+      .getForkTypes(GENESIS_SLOT)
+      .BeaconState.createTreeBackedFromBytes(await fs.promises.readFile(args.genesisStateFile));
+    anchorState = await initStateFromAnchorState(config, db, logger, state);
   } else {
-    throw new Error("Unable to start node: no available genesis state");
+    anchorState = await nodeUtils.initDevState(config, db, validatorCount, genesisTime);
   }
 
   const validators: Validator[] = [];
@@ -97,6 +95,15 @@ export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
   if (args.startValidators) {
     const secretKeys: SecretKey[] = [];
     const [fromIndex, toIndex] = args.startValidators.split(":").map((s) => parseInt(s));
+
+    if (fromIndex > toIndex) {
+      throw Error(`Invalid startValidators arg - fromIndex > toIndex: ${args.startValidators}`);
+    }
+
+    if (toIndex >= anchorState.validators.length) {
+      throw Error("Invalid startValidators arg - toIndex > state.validators.length");
+    }
+
     for (let i = fromIndex; i < toIndex; i++) {
       secretKeys.push(interopSecretKey(i));
     }
@@ -114,7 +121,13 @@ export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
     onGracefulShutdownCbs.push(async () => controller.abort());
 
     // Initailize genesis once for all validators
-    const validator = await Validator.initializeFromBeaconNode({config, slashingProtection, api, logger, secretKeys});
+    const validator = await Validator.initializeFromBeaconNode({
+      config,
+      slashingProtection,
+      api,
+      logger: logger.child({module: "vali"}),
+      secretKeys,
+    });
 
     onGracefulShutdownCbs.push(() => validator.stop());
     await validator.start();

@@ -1,7 +1,7 @@
 import EventSource from "eventsource";
-import qs from "qs";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Api, BeaconEvent, routesData, getEventSerdes} from "../routes/events";
+import {stringifyQuery} from "./utils/format";
 
 /**
  * REST HTTP client for events routes
@@ -11,7 +11,7 @@ export function getClient(_config: IBeaconConfig, baseUrl: string): Api {
 
   return {
     eventstream: async (topics, signal, onEvent) => {
-      const query = qs.stringify({topics});
+      const query = stringifyQuery({topics});
       // TODO: Use a proper URL formatter
       const url = `${baseUrl}${routesData.eventstream.url}?${query}`;
       const eventSource = new EventSource(url);

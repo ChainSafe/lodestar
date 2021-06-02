@@ -3,7 +3,7 @@ import {ATTESTATION_SUBNET_COUNT, ForkName} from "@chainsafe/lodestar-params";
 import {mapValues} from "@chainsafe/lodestar-utils";
 import {IMetrics} from "../../metrics";
 import {JobQueue, JobQueueOpts, QueueType} from "../../util/queue";
-import {getGossipTopicString} from "./topic";
+import {stringifyGossipTopic} from "./topic";
 import {DEFAULT_ENCODING} from "./constants";
 import {validatorFns} from "./validatorFns";
 import {parseGossipMsg} from "./message";
@@ -112,7 +112,7 @@ export function createValidatorFnsByTopic(
 
   for (const type of staticGossipTypes) {
     const topic = {type, fork, encoding: DEFAULT_ENCODING} as GossipTopic;
-    const topicString = getGossipTopicString(modules.chain.forkDigestContext, topic);
+    const topicString = stringifyGossipTopic(modules.chain.forkDigestContext, topic);
     validatorFnsByTopic.set(topicString, validatorFnsByType[type]);
   }
 
@@ -124,7 +124,7 @@ export function createValidatorFnsByTopic(
       encoding: DEFAULT_ENCODING,
       subnet,
     } as GossipTopic;
-    const topicString = getGossipTopicString(modules.chain.forkDigestContext, topic);
+    const topicString = stringifyGossipTopic(modules.chain.forkDigestContext, topic);
     const topicValidatorFn = validatorFnsByType[GossipType.beacon_attestation];
     validatorFnsByTopic.set(topicString, topicValidatorFn);
   }

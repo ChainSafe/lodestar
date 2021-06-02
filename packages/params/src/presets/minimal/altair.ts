@@ -4,7 +4,6 @@ import {IAltairPreset} from "../../preset";
 
 export const altair: IAltairPreset = {
   SYNC_COMMITTEE_SIZE: 32,
-  SYNC_PUBKEYS_PER_AGGREGATE: 16,
   /*
   INACTIVITY_SCORE_BIAS: 4,
   */

@@ -14,9 +14,10 @@ import {ApiModules} from "../../types";
 export function getBeaconPoolApi({
   chain,
   config,
+  logger,
   network,
   db,
-}: Pick<ApiModules, "chain" | "config" | "network" | "db">): IBeaconPoolApi {
+}: Pick<ApiModules, "chain" | "config" | "logger" | "network" | "db">): IBeaconPoolApi {
   return {
     async getPoolAttestations(filters) {
       const attestations = (await db.attestation.values()).filter((attestation) => {
@@ -45,27 +46,42 @@ export function getBeaconPoolApi({
     },
 
     async submitPoolAttestations(attestations) {
-      for (const attestation of attestations) {
-        const attestationJob = {
-          attestation,
-          validSignature: false,
-        } as IAttestationJob;
-        let attestationTargetState;
-        try {
-          attestationTargetState = await chain.regen.getCheckpointState(attestation.data.target);
-        } catch (e) {
-          throw new AttestationError({
-            code: AttestationErrorCode.MISSING_ATTESTATION_TARGET_STATE,
-            error: e as Error,
-            job: attestationJob,
-          });
-        }
-        const subnet = allForks.computeSubnetForAttestation(attestationTargetState.epochCtx, attestation);
-        await validateGossipAttestation(config, chain, db, attestationJob, subnet);
-        await Promise.all([
-          network.gossip.publishBeaconAttestation(attestation, subnet),
-          db.attestation.add(attestation),
-        ]);
+      const errors: Error[] = [];
+
+      await Promise.all(
+        attestations.map(async (attestation, i) => {
+          try {
+            const attestationJob = {attestation, validSignature: false} as IAttestationJob;
+
+            const attestationTargetState = await chain.regen.getCheckpointState(attestation.data.target).catch((e) => {
+              throw new AttestationError({
+                code: AttestationErrorCode.MISSING_ATTESTATION_TARGET_STATE,
+                error: e as Error,
+                job: attestationJob,
+              });
+            });
+
+            const subnet = allForks.computeSubnetForAttestation(attestationTargetState.epochCtx, attestation);
+            await validateGossipAttestation(config, chain, db, attestationJob, subnet);
+            await Promise.all([
+              network.gossip.publishBeaconAttestation(attestation, subnet),
+              db.attestation.add(attestation),
+            ]);
+          } catch (e) {
+            errors.push(e);
+            logger.error(
+              `Error on submitPoolAttestations [${i}]`,
+              {slot: attestation.data.slot, index: attestation.data.index},
+              e
+            );
+          }
+        })
+      );
+
+      if (errors.length > 1) {
+        throw Error("Multiple errors on submitPoolAttestations\n" + errors.map((e) => e.message).join("\n"));
+      } else if (errors.length === 1) {
+        throw errors[0];
       }
     },
 
@@ -107,28 +123,45 @@ export function getBeaconPoolApi({
       // TODO: Cache this value
       const SYNC_COMMITTEE_SUBNET_SIZE = Math.floor(SYNC_COMMITTEE_SIZE / SYNC_COMMITTEE_SUBNET_COUNT);
 
+      const errors: Error[] = [];
+
       await Promise.all(
-        signatures.map(async (signature) => {
-          const indexesInCommittee = state.currSyncComitteeValidatorIndexMap.get(signature.validatorIndex);
-          if (indexesInCommittee === undefined || indexesInCommittee.length === 0) {
-            return; // Not a sync committee member
+        signatures.map(async (signature, i) => {
+          try {
+            const indexesInCommittee = state.currSyncComitteeValidatorIndexMap.get(signature.validatorIndex);
+            if (indexesInCommittee === undefined || indexesInCommittee.length === 0) {
+              return; // Not a sync committee member
+            }
+
+            // Verify signature only, all other data is very likely to be correct, since the `signature` object is created by this node.
+            // Worst case if `signature` is not valid, gossip peers will drop it and slightly downscore us.
+            await validateSyncCommitteeSigOnly(chain, state, signature);
+
+            await Promise.all(
+              indexesInCommittee.map(async (indexInCommittee) => {
+                // Sync committee subnet members are just sequential in the order they appear in SyncCommitteeIndexes array
+                const subnet = Math.floor(indexInCommittee / SYNC_COMMITTEE_SUBNET_SIZE);
+                const indexInSubCommittee = indexInCommittee % SYNC_COMMITTEE_SUBNET_SIZE;
+                db.syncCommittee.add(subnet, signature, indexInSubCommittee);
+                await network.gossip.publishSyncCommitteeSignature(signature, subnet);
+              })
+            );
+          } catch (e) {
+            errors.push(e);
+            logger.error(
+              `Error on submitPoolSyncCommitteeSignatures [${i}]`,
+              {slot: signature.slot, validatorIndex: signature.validatorIndex},
+              e
+            );
           }
-
-          // Verify signature only, all other data is very likely to be correct, since the `signature` object is created by this node.
-          // Worst case if `signature` is not valid, gossip peers will drop it and slightly downscore us.
-          await validateSyncCommitteeSigOnly(chain, state, signature);
-
-          await Promise.all(
-            indexesInCommittee.map(async (indexInCommittee) => {
-              // Sync committee subnet members are just sequential in the order they appear in SyncCommitteeIndexes array
-              const subnet = Math.floor(indexInCommittee / SYNC_COMMITTEE_SUBNET_SIZE);
-              const indexInSubCommittee = indexInCommittee % SYNC_COMMITTEE_SUBNET_SIZE;
-              db.syncCommittee.add(subnet, signature, indexInSubCommittee);
-              await network.gossip.publishSyncCommitteeSignature(signature, subnet);
-            })
-          );
         })
       );
+
+      if (errors.length > 1) {
+        throw Error("Multiple errors on publishAggregateAndProofs\n" + errors.map((e) => e.message).join("\n"));
+      } else if (errors.length === 1) {
+        throw errors[0];
+      }
     },
   };
 }

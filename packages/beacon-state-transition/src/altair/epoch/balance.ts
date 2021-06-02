@@ -1,10 +1,10 @@
 import {altair, Gwei, phase0, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {bigIntSqrt} from "@chainsafe/lodestar-utils";
-import {getFlagIndicesAndWeights} from "../misc";
 import {
   BASE_REWARD_FACTOR,
   EFFECTIVE_BALANCE_INCREMENT,
   INACTIVITY_PENALTY_QUOTIENT_ALTAIR,
+  PARTICIPATION_FLAG_WEIGHTS,
   TIMELY_HEAD_FLAG_INDEX,
   TIMELY_SOURCE_FLAG_INDEX,
   TIMELY_TARGET_FLAG_INDEX,
@@ -28,14 +28,11 @@ import {isInInactivityLeak, newZeroedBigIntArray} from "../../util";
 export function getFlagIndexDeltas(
   state: CachedBeaconState<altair.BeaconState>,
   process: IEpochProcess,
-  flagIndex: number,
-  weight: bigint
+  flagIndex: number
 ): [Gwei[], Gwei[]] {
   const validatorCount = state.validators.length;
   const rewards = newZeroedBigIntArray(validatorCount);
   const penalties = newZeroedBigIntArray(validatorCount);
-
-  const increment = EFFECTIVE_BALANCE_INCREMENT;
 
   let flag;
   let stakeSummaryKey: keyof IEpochStakeSummary;
@@ -53,8 +50,10 @@ export function getFlagIndexDeltas(
     throw new Error(`Unable to process flagIndex: ${flagIndex}`);
   }
 
-  const unslashedParticipatingIncrements = process.prevEpochUnslashedStake[stakeSummaryKey] / increment;
-  const activeIncrements = process.totalActiveStake / increment;
+  const weight = PARTICIPATION_FLAG_WEIGHTS[flagIndex];
+  const unslashedParticipatingIncrements =
+    process.prevEpochUnslashedStake[stakeSummaryKey] / EFFECTIVE_BALANCE_INCREMENT;
+  const activeIncrements = process.totalActiveStake / EFFECTIVE_BALANCE_INCREMENT;
 
   for (let i = 0; i < process.statuses.length; i++) {
     const status = process.statuses[i];
@@ -63,14 +62,11 @@ export function getFlagIndexDeltas(
     }
     const baseReward = getBaseReward(state, process, i);
     if (hasMarkers(status.flags, flag)) {
-      if (isInInactivityLeak((state as unknown) as phase0.BeaconState)) {
-        // This flag reward cancels the inactivity penalty corresponding to the flag index
-        rewards[i] += (baseReward * weight) / WEIGHT_DENOMINATOR;
-      } else {
+      if (!isInInactivityLeak((state as unknown) as phase0.BeaconState)) {
         const rewardNumerator = baseReward * weight * unslashedParticipatingIncrements;
         rewards[i] += rewardNumerator / (activeIncrements * WEIGHT_DENOMINATOR);
       }
-    } else {
+    } else if (flagIndex !== TIMELY_HEAD_FLAG_INDEX) {
       penalties[i] += (baseReward * weight) / WEIGHT_DENOMINATOR;
     }
   }
@@ -89,20 +85,13 @@ export function getInactivityPenaltyDeltas(
   const rewards = newZeroedBigIntArray(validatorCount);
   const penalties = newZeroedBigIntArray(validatorCount);
 
-  if (isInInactivityLeak((state as unknown) as phase0.BeaconState)) {
-    const inactivityScoreBias = BigInt(config.INACTIVITY_SCORE_BIAS);
-    for (let i = 0; i < process.statuses.length; i++) {
-      const status = process.statuses[i];
-      if (hasMarkers(status.flags, FLAG_ELIGIBLE_ATTESTER)) {
-        for (const [_, weight] of getFlagIndicesAndWeights()) {
-          // This inactivity penalty cancels the flag reward rcorresponding to the flag index
-          penalties[i] += (getBaseReward(state, process, i) * weight) / WEIGHT_DENOMINATOR;
-        }
-        if (!hasMarkers(status.flags, FLAG_PREV_TARGET_ATTESTER_OR_UNSLASHED)) {
-          const penaltyNumerator = process.validators[i].effectiveBalance * BigInt(state.inactivityScores[i]);
-          const penaltyDenominator = inactivityScoreBias * INACTIVITY_PENALTY_QUOTIENT_ALTAIR;
-          penalties[i] += penaltyNumerator / penaltyDenominator;
-        }
+  for (let i = 0; i < process.statuses.length; i++) {
+    const status = process.statuses[i];
+    if (hasMarkers(status.flags, FLAG_ELIGIBLE_ATTESTER)) {
+      if (!hasMarkers(status.flags, FLAG_PREV_TARGET_ATTESTER_OR_UNSLASHED)) {
+        const penaltyNumerator = process.validators[i].effectiveBalance * BigInt(state.inactivityScores[i]);
+        const penaltyDenominator = config.INACTIVITY_SCORE_BIAS * INACTIVITY_PENALTY_QUOTIENT_ALTAIR;
+        penalties[i] += penaltyNumerator / penaltyDenominator;
       }
     }
   }

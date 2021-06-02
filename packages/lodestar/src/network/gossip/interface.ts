@@ -41,17 +41,21 @@ export interface IGossipTopic {
   encoding?: GossipEncoding;
 }
 
-export type GossipTopicMap = {
-  [GossipType.beacon_block]: IGossipTopic & {type: GossipType.beacon_block};
-  [GossipType.beacon_aggregate_and_proof]: IGossipTopic & {type: GossipType.beacon_aggregate_and_proof};
-  [GossipType.beacon_attestation]: IGossipTopic & {type: GossipType.beacon_attestation; subnet: number};
-  [GossipType.voluntary_exit]: IGossipTopic & {type: GossipType.voluntary_exit};
-  [GossipType.proposer_slashing]: IGossipTopic & {type: GossipType.proposer_slashing};
-  [GossipType.attester_slashing]: IGossipTopic & {type: GossipType.attester_slashing};
-  [GossipType.sync_committee_contribution_and_proof]: IGossipTopic & {
+export type GossipTopicTypeMap = {
+  [GossipType.beacon_block]: {type: GossipType.beacon_block};
+  [GossipType.beacon_aggregate_and_proof]: {type: GossipType.beacon_aggregate_and_proof};
+  [GossipType.beacon_attestation]: {type: GossipType.beacon_attestation; subnet: number};
+  [GossipType.voluntary_exit]: {type: GossipType.voluntary_exit};
+  [GossipType.proposer_slashing]: {type: GossipType.proposer_slashing};
+  [GossipType.attester_slashing]: {type: GossipType.attester_slashing};
+  [GossipType.sync_committee_contribution_and_proof]: {
     type: GossipType.sync_committee_contribution_and_proof;
   };
-  [GossipType.sync_committee]: IGossipTopic & {type: GossipType.sync_committee; subnet: number};
+  [GossipType.sync_committee]: {type: GossipType.sync_committee; subnet: number};
+};
+
+export type GossipTopicMap = {
+  [K in keyof GossipTopicTypeMap]: GossipTopicTypeMap[K] & IGossipTopic;
 };
 
 /**

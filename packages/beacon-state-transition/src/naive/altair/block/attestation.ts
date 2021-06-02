@@ -4,6 +4,7 @@
 
 import {
   MIN_ATTESTATION_INCLUSION_DELAY,
+  PARTICIPATION_FLAG_WEIGHTS,
   PROPOSER_WEIGHT,
   SLOTS_PER_EPOCH,
   TIMELY_HEAD_FLAG_INDEX,
@@ -14,7 +15,7 @@ import {
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {altair, phase0, ParticipationFlags, ssz} from "@chainsafe/lodestar-types";
 import {assert, intSqrt} from "@chainsafe/lodestar-utils";
-import {addFlag, getFlagIndicesAndWeights, hasFlag} from "../../../altair/misc";
+import {addFlag, hasFlag} from "../../../altair/misc";
 import {
   getCurrentEpoch,
   getPreviousEpoch,
@@ -86,7 +87,7 @@ export function processAttestation(
 
   let proposerRewardNumerator = BigInt(0);
   for (const index of getAttestingIndices(state, data, attestation.aggregationBits)) {
-    for (const [flag, weight] of getFlagIndicesAndWeights()) {
+    for (const [flag, weight] of PARTICIPATION_FLAG_WEIGHTS.entries()) {
       if (participationFlagIndices.indexOf(flag) !== -1 && !hasFlag(epochParticipation[index], flag)) {
         epochParticipation[index] = addFlag(epochParticipation[index], flag);
         proposerRewardNumerator += getBaseReward(state, index) * weight;

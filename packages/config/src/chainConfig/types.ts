@@ -31,7 +31,7 @@ export interface IChainConfig {
   ETH1_FOLLOW_DISTANCE: number;
 
   // Validator cycle
-  INACTIVITY_SCORE_BIAS: number;
+  INACTIVITY_SCORE_BIAS: bigint;
   INACTIVITY_SCORE_RECOVERY_RATE: number;
   EJECTION_BALANCE: number;
   MIN_PER_EPOCH_CHURN_LIMIT: number;

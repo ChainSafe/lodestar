@@ -5,8 +5,9 @@ import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util/lib";
 
 import {SPEC_TEST_LOCATION} from "../../utils/specTestCases";
+import {IBaseSpecTest} from "../type";
 
-interface IAggregateSigsTestCase {
+interface IAggregateSigsTestCase extends IBaseSpecTest {
   data: {
     input: string[];
     output: string;

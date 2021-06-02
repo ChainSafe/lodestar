@@ -12,7 +12,7 @@ import {generateSignedContributionAndProof} from "../../../utils/contributionAnd
 import {validateSyncCommitteeGossipContributionAndProof} from "../../../../src/chain/validation/syncCommitteeContributionAndProof";
 import * as syncCommitteeUtils from "@chainsafe/lodestar-beacon-state-transition/lib/util/syncCommittee";
 import {SinonStubFn} from "../../../utils/types";
-import {generateCachedState} from "../../../utils/state";
+import {generateCachedStateWithPubkeys} from "../../../utils/state";
 import {phase0} from "@chainsafe/lodestar-types";
 
 // https://github.com/ethereum/eth2.0-specs/blob/v1.1.0-alpha.3/specs/altair/p2p-interface.md
@@ -104,7 +104,7 @@ describe("Sync Committee Contribution And Proof validation", function () {
   it("should throw error - there is same contribution with same aggregator and index and slot", async function () {
     const signedContributionAndProof = generateSignedContributionAndProof({contribution: {slot: 2}});
     forkChoiceStub.hasBlock.returns(true);
-    const headState = generateCachedState({slot: 32 * (altairForkEpoch + 1)}, config, true);
+    const headState = await generateCachedStateWithPubkeys({slot: 32 * (altairForkEpoch + 1)}, config, true);
     chain.getHeadState.returns(headState);
     db.syncCommitteeContribution.has.returns(true);
     await expectRejectedWithLodestarError(
@@ -120,7 +120,7 @@ describe("Sync Committee Contribution And Proof validation", function () {
     const signedContributionAndProof = generateSignedContributionAndProof({contribution: {slot: 2}});
     forkChoiceStub.hasBlock.returns(true);
     db.syncCommitteeContribution.has.returns(false);
-    const headState = generateCachedState({slot: 32 * (altairForkEpoch + 1)}, config, true);
+    const headState = await generateCachedStateWithPubkeys({slot: 32 * (altairForkEpoch + 1)}, config, true);
     chain.getHeadState.returns(headState);
     isSyncCommitteeAggregatorStub.returns(false);
     await expectRejectedWithLodestarError(
@@ -141,7 +141,7 @@ describe("Sync Committee Contribution And Proof validation", function () {
     forkChoiceStub.hasBlock.returns(true);
     db.syncCommitteeContribution.has.returns(false);
     isSyncCommitteeAggregatorStub.returns(true);
-    const headState = generateCachedState({slot: 32 * (altairForkEpoch + 1)}, config, true);
+    const headState = await generateCachedStateWithPubkeys({slot: 32 * (altairForkEpoch + 1)}, config, true);
     chain.getHeadState.returns(headState);
     await expectRejectedWithLodestarError(
       validateSyncCommitteeGossipContributionAndProof(config, chain, db, {
@@ -157,7 +157,7 @@ describe("Sync Committee Contribution And Proof validation", function () {
     forkChoiceStub.hasBlock.returns(true);
     db.syncCommitteeContribution.has.returns(false);
     isSyncCommitteeAggregatorStub.returns(true);
-    const headState = generateCachedState({slot: 32 * (altairForkEpoch + 1)}, config, true);
+    const headState = await generateCachedStateWithPubkeys({slot: 32 * (altairForkEpoch + 1)}, config, true);
     chain.getHeadState.returns(headState);
     chain.bls = {verifySignatureSets: async () => false};
     await expectRejectedWithLodestarError(

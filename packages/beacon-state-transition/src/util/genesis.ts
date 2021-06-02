@@ -15,6 +15,7 @@ import {processDeposit as altairProcessDeposit} from "../naive/altair";
 import {computeEpochAtSlot} from "./epoch";
 import {getActiveValidatorIndices} from "./validator";
 import {getTemporaryBlockHeader} from "./blockRoot";
+import {getNextSyncCommittee} from "../altair/state_accessor";
 
 // TODO: Refactor to work with non-phase0 genesis state
 
@@ -54,8 +55,15 @@ export function getGenesisBeaconState(
   // MISC
   state.slot = GENESIS_SLOT;
   const version = config.getForkVersion(GENESIS_SLOT);
+  const forkName = config.getForkName(GENESIS_SLOT);
+  const allForkNames = Object.keys(config.forks) as ForkName[];
+  const forkIndex = allForkNames.findIndex((item) => item === forkName);
+  const previousForkIndex = Math.max(0, forkIndex - 1);
+  const previousForkName = allForkNames[previousForkIndex];
+  const previousFork = config.forks[previousForkName];
+  // the altair genesis spec test requires previous version to be phase0 although ALTAIR_FORK_EPOCH=0
   state.fork = {
-    previousVersion: version,
+    previousVersion: previousFork.version,
     currentVersion: version,
     epoch: computeEpochAtSlot(GENESIS_SLOT),
   } as phase0.Fork;
@@ -68,7 +76,6 @@ export function getGenesisBeaconState(
   // Ethereum 1.0 chain data
   state.eth1Data = genesisEth1Data;
   state.randaoMixes = randaoMixes;
-
   return state as TreeBacked<allForks.BeaconState>;
 }
 
@@ -189,5 +196,13 @@ export function initializeBeaconStateFromEth1(
   // Process deposits
   applyDeposits(config, state, deposits);
 
-  return state;
+  if (config.getForkName(GENESIS_SLOT) === ForkName.altair) {
+    const syncCommittees = getNextSyncCommittee(state);
+    const altairState = state as TreeBacked<altair.BeaconState>;
+    altairState.currentSyncCommittee = syncCommittees;
+    altairState.nextSyncCommittee = syncCommittees;
+    return altairState as TreeBacked<allForks.BeaconState>;
+  } else {
+    return state;
+  }
 }

@@ -37,30 +37,30 @@ describe("beacon state api utils", function () {
     });
 
     it("resolve finalized state id - success", async function () {
-      const getFinalizedCheckpoint = sinon.stub().returns({root: Buffer.alloc(32, 1), epoch: 1});
+      const getFinalizedBlock = sinon.stub().returns(generateBlockSummary());
       const get = sinon.stub().returns(generateCachedState());
       const chainStub = ({
-        forkChoice: {getFinalizedCheckpoint},
+        forkChoice: {getFinalizedBlock},
         stateCache: {get},
       } as unknown) as IBeaconChain;
 
       const state = await resolveStateId(config, chainStub, dbStub, "finalized");
       expect(state).to.not.be.null;
-      expect(getFinalizedCheckpoint.calledOnce).to.be.true;
+      expect(getFinalizedBlock.calledOnce).to.be.true;
       expect(get.calledOnce).to.be.true;
     });
 
     it("resolve justified state id - success", async function () {
-      const getJustifiedCheckpoint = sinon.stub().returns({root: Buffer.alloc(32, 1), epoch: 1});
+      const getJustifiedBlock = sinon.stub().returns(generateBlockSummary());
       const get = sinon.stub().returns(generateCachedState());
       const chainStub = ({
-        forkChoice: {getJustifiedCheckpoint},
+        forkChoice: {getJustifiedBlock},
         stateCache: {get},
       } as unknown) as IBeaconChain;
 
       const state = await resolveStateId(config, chainStub, dbStub, "justified");
       expect(state).to.not.be.null;
-      expect(getJustifiedCheckpoint.calledOnce).to.be.true;
+      expect(getJustifiedBlock.calledOnce).to.be.true;
       expect(get.calledOnce).to.be.true;
     });
 

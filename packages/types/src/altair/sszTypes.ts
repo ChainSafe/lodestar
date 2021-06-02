@@ -1,11 +1,9 @@
 import {
   JUSTIFICATION_BITS_LENGTH,
-  MAX_VALID_LIGHT_CLIENT_UPDATES,
   FINALIZED_ROOT_INDEX_FLOORLOG2,
   NEXT_SYNC_COMMITTEE_INDEX_FLOORLOG2,
   SYNC_COMMITTEE_SUBNET_COUNT,
   SYNC_COMMITTEE_SIZE,
-  SYNC_PUBKEYS_PER_AGGREGATE,
   SLOTS_PER_HISTORICAL_ROOT,
   HISTORICAL_ROOTS_LIMIT,
   EPOCHS_PER_ETH1_VOTING_PERIOD,
@@ -13,6 +11,7 @@ import {
   VALIDATOR_REGISTRY_LIMIT,
   EPOCHS_PER_HISTORICAL_VECTOR,
   EPOCHS_PER_SLASHINGS_VECTOR,
+  EPOCHS_PER_SYNC_COMMITTEE_PERIOD,
 } from "@chainsafe/lodestar-params";
 import {BitVectorType, ContainerType, VectorType, ListType, RootType, BitListType, Vector} from "@chainsafe/ssz";
 import {ssz as phase0Ssz} from "../phase0";
@@ -25,8 +24,6 @@ const {
   Number64,
   Uint64,
   Slot,
-  Epoch,
-  CommitteeIndex,
   SubCommitteeIndex,
   ValidatorIndex,
   Gwei,
@@ -58,10 +55,7 @@ export const Metadata = new ContainerType<altair.Metadata>({
 export const SyncCommittee = new ContainerType<altair.SyncCommittee>({
   fields: {
     pubkeys: new VectorType({elementType: BLSPubkey, length: SYNC_COMMITTEE_SIZE}),
-    pubkeyAggregates: new VectorType({
-      elementType: BLSPubkey,
-      length: Math.floor(SYNC_COMMITTEE_SIZE / SYNC_PUBKEYS_PER_AGGREGATE),
-    }),
+    aggregatePubkey: BLSPubkey,
   },
 });
 
@@ -99,16 +93,20 @@ export const SignedContributionAndProof = new ContainerType<altair.SignedContrib
   },
 });
 
-export const SyncCommitteeSigningData = new ContainerType<altair.SyncCommitteeSigningData>({
+export const SyncAggregatorSelectionData = new ContainerType<altair.SyncAggregatorSelectionData>({
   fields: {
     slot: Slot,
     subCommitteeIndex: SubCommitteeIndex,
   },
 });
 
+export const SyncCommitteeBits = new BitVectorType({
+  length: SYNC_COMMITTEE_SIZE,
+});
+
 export const SyncAggregate = new ContainerType<altair.SyncAggregate>({
   fields: {
-    syncCommitteeBits: new BitVectorType({length: SYNC_COMMITTEE_SIZE}),
+    syncCommitteeBits: SyncCommitteeBits,
     syncCommitteeSignature: BLSSignature,
   },
 });
@@ -234,10 +232,12 @@ export const LightClientUpdate = new ContainerType<altair.LightClientUpdate>({
 export const LightClientStore = new ContainerType<altair.LightClientStore>({
   fields: {
     snapshot: LightClientSnapshot,
-    validUpdates: new ListType({elementType: LightClientUpdate, limit: MAX_VALID_LIGHT_CLIENT_UPDATES}),
+    validUpdates: new ListType({
+      elementType: LightClientUpdate,
+      limit: EPOCHS_PER_SYNC_COMMITTEE_PERIOD * SLOTS_PER_EPOCH,
+    }),
   },
 });
 
 // MUST set typesRef here, otherwise expandedType() calls will throw
 typesRef.set({BeaconBlock, BeaconState});
-
