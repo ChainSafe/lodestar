@@ -1,3 +1,4 @@
+import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import React, {useState, useEffect} from "react";
 import {config, genesisTime} from "./config";
 
@@ -10,7 +11,7 @@ export function TimeMonitor(): JSX.Element {
     return () => clearInterval(interval);
   }, [setCounter]);
 
-  const {SLOTS_PER_EPOCH, SECONDS_PER_SLOT, EPOCHS_PER_SYNC_COMMITTEE_PERIOD} = config.params;
+  const {SECONDS_PER_SLOT} = config;
   const secondsPerEpoch = SECONDS_PER_SLOT * SLOTS_PER_EPOCH;
   const secondsPerPeriod = secondsPerEpoch * EPOCHS_PER_SYNC_COMMITTEE_PERIOD;
 
@@ -30,14 +31,14 @@ export function TimeMonitor(): JSX.Element {
       </p>
 
       <p>
-        Slot {slotInEpoch} / {config.params.SLOTS_PER_EPOCH} in epoch
+        Slot {slotInEpoch} / {SLOTS_PER_EPOCH} in epoch
       </p>
       <div className="progressbar">
         <div style={{width: 100 * slotRatio + "%"}}></div>
       </div>
 
       <p>
-        Epoch {epochInPeriod} / {config.params.EPOCHS_PER_SYNC_COMMITTEE_PERIOD} in period
+        Epoch {epochInPeriod} / {EPOCHS_PER_SYNC_COMMITTEE_PERIOD} in period
       </p>
       <div className="progressbar">
         <div style={{width: 100 * epochRatio + "%"}}></div>
