@@ -3,16 +3,7 @@
  */
 
 import {hash, readonlyValues} from "@chainsafe/ssz";
-import {
-  BLSSignature,
-  CommitteeIndex,
-  Epoch,
-  Slot,
-  Uint64,
-  phase0,
-  ValidatorIndex,
-  allForks,
-} from "@chainsafe/lodestar-types";
+import {BLSSignature, CommitteeIndex, Epoch, Slot, phase0, ValidatorIndex, allForks} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {getCurrentEpoch} from "./epoch";
 import {intDiv, bytesToInt} from "@chainsafe/lodestar-utils";
