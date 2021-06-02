@@ -12,18 +12,27 @@ import {allForks, ISignatureSet, CachedBeaconState} from "@chainsafe/lodestar-be
 import {CheckpointStateCache} from "../stateCache";
 import {IMetrics} from "../../metrics";
 
-type BlockProcessorModules = {
-  config: IBeaconConfig;
-  forkChoice: IForkChoice;
-  regen: IStateRegenerator;
-  emitter: ChainEventEmitter;
-  checkpointStateCache: CheckpointStateCache;
+export type BlockProcessOpts = {
+  /**
+   * Do not use BLS batch verify to validate all block signatures at once.
+   * Will double processing times. Use only for debugging purposes.
+   */
+  disableBlsBatchVerify?: boolean;
+};
+
+export type BlockProcessModules = {
   bls: IBlsVerifier;
+  checkpointStateCache: CheckpointStateCache;
+  config: IBeaconConfig;
+  emitter: ChainEventEmitter;
+  forkChoice: IForkChoice;
   metrics: IMetrics | null;
+  regen: IStateRegenerator;
+  opts?: BlockProcessOpts;
 };
 
 export async function processBlock(
-  {forkChoice, regen, emitter, checkpointStateCache, bls, metrics}: BlockProcessorModules,
+  {forkChoice, regen, emitter, checkpointStateCache, bls, metrics, opts}: BlockProcessModules,
   job: IBlockJob
 ): Promise<void> {
   if (!forkChoice.hasBlock(job.signedBlock.message.parentRoot)) {
@@ -37,7 +46,7 @@ export async function processBlock(
   try {
     const preState = await regen.getPreState(job.signedBlock.message);
 
-    if (!job.validSignatures) {
+    if (!job.validSignatures && !opts?.disableBlsBatchVerify) {
       const signatureSets = job.validProposerSignature
         ? allForks.getAllBlockSignatureSetsExceptProposer(
             preState as CachedBeaconState<allForks.BeaconState>,
@@ -78,7 +87,7 @@ export async function processBlock(
 }
 
 export async function processChainSegment(
-  {config, forkChoice, regen, emitter, checkpointStateCache, bls, metrics}: BlockProcessorModules,
+  {config, forkChoice, regen, emitter, checkpointStateCache, bls, metrics, opts}: BlockProcessModules,
   job: IChainSegmentJob
 ): Promise<void> {
   let importedBlocks = 0;
@@ -113,7 +122,7 @@ export async function processChainSegment(
       let preState = await regen.getPreState(firstBlock.message);
 
       // Verify the signature of the blocks, returning early if the signature is invalid.
-      if (!job.validSignatures) {
+      if (!job.validSignatures && !opts?.disableBlsBatchVerify) {
         const signatureSets: ISignatureSet[] = [];
         for (const block of blocksInEpoch) {
           signatureSets.push(
