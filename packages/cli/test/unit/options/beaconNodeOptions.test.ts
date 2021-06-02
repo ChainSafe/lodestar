@@ -37,6 +37,7 @@ describe("options / beaconNodeOptions", () => {
       "network.localMultiaddrs": [],
 
       "sync.isSingleNode": true,
+      "sync.disableProcessAsChainSegment": true,
     } as IBeaconNodeArgs;
 
     const expectedOptions: RecursivePartial<IBeaconNodeOptions> = {
@@ -82,6 +83,7 @@ describe("options / beaconNodeOptions", () => {
       },
       sync: {
         isSingleNode: true,
+        disableProcessAsChainSegment: true,
       },
     };
 

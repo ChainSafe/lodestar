@@ -235,6 +235,19 @@ export class BeaconChain implements IBeaconChain {
       .catch(() => /* unreachable */ ({}));
   }
 
+  async processBlock(
+    signedBlock: allForks.SignedBeaconBlock,
+    {prefinalized, trusted = false}: {prefinalized: boolean; trusted: boolean}
+  ): Promise<void> {
+    return await this.blockProcessor.processBlockJob({
+      signedBlock,
+      reprocess: false,
+      prefinalized,
+      validSignatures: trusted,
+      validProposerSignature: trusted,
+    });
+  }
+
   async processChainSegment(
     signedBlocks: allForks.SignedBeaconBlock[],
     {prefinalized, trusted = false}: {prefinalized: boolean; trusted: boolean}

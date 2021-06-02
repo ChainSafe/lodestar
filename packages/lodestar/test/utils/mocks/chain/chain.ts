@@ -150,6 +150,10 @@ export class MockBeaconChain implements IBeaconChain {
     return;
   }
 
+  async processBlock(): Promise<void> {
+    return;
+  }
+
   async processChainSegment(): Promise<void> {
     return;
   }
