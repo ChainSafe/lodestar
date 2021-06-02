@@ -106,6 +106,7 @@ export async function runStateTransition(
       const root = toHexString(postState.currentJustifiedCheckpoint.root);
       throw Error(`State not available for justified checkpoint ${epoch} ${root}`);
     }
+    // TODO - PERFORMANCE WARNING - NAIVE CODE
     justifiedBalances = getEffectiveBalances(justifiedState);
   }
   forkChoice.onBlock(job.signedBlock.message, postState, justifiedBalances);

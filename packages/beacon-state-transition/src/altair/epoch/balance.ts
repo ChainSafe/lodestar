@@ -110,6 +110,7 @@ export function getBaseRewardPerIncrement(
     bigIntSqrt(process.totalActiveStake)
   );
 }
+
 export function getBaseReward(
   state: CachedBeaconState<altair.BeaconState>,
   process: IEpochProcess,

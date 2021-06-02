@@ -4,10 +4,10 @@ import {List} from "@chainsafe/ssz";
 import {phase0, Gwei, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {config} from "@chainsafe/lodestar-config/minimal";
 
-import {increaseBalance, decreaseBalance, getTotalBalance} from "../../../../src/util";
+import {increaseBalance, decreaseBalance, getTotalBalance} from "../../../src/util";
 
-import {generateValidators} from "../../../utils/validator";
-import {generateState} from "../../../utils/state";
+import {generateValidators} from "../../utils/validator";
+import {generateState} from "../../utils/state";
 
 describe("getTotalBalance", () => {
   it("should return correct balances", () => {

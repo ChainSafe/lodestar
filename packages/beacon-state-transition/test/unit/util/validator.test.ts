@@ -3,11 +3,11 @@ import {assert, expect} from "chai";
 import {List} from "@chainsafe/ssz";
 import {phase0} from "@chainsafe/lodestar-types";
 
-import {getActiveValidatorIndices, isActiveValidator, isSlashableValidator} from "../../../../src/util";
+import {getActiveValidatorIndices, isActiveValidator, isSlashableValidator} from "../../../src/util";
 
-import {randBetween} from "../../../utils/misc";
-import {generateValidator} from "../../../utils/validator";
-import {generateState} from "../../../utils/state";
+import {randBetween} from "../../utils/misc";
+import {generateValidator} from "../../utils/validator";
+import {generateState} from "../../utils/state";
 
 describe("getActiveValidatorIndices", () => {
   it("empty list of validators should return no indices (empty list)", () => {

@@ -1,6 +1,6 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {expect} from "chai";
-import {unshuffleList} from "../../../../src";
+import {unshuffleList} from "../../../src";
 
 describe("util / shuffle", () => {
   const testCases: {

@@ -1,13 +1,11 @@
 import {assert} from "chai";
 
+import {toBigIntLE} from "bigint-buffer";
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import {phase0} from "@chainsafe/lodestar-types";
-import {GENESIS_SLOT} from "../../../../src/constants";
-import {getBlockRoot, getDomain} from "../../../../src/util";
-
-import {toBigIntLE} from "bigint-buffer";
-
-import {generateState} from "../../../utils/state";
+import {GENESIS_SLOT} from "../../../src/constants";
+import {getBlockRoot, getDomain} from "../../../src/util";
+import {generateState} from "../../utils/state";
 
 describe("getDomain", () => {
   const testValues = [

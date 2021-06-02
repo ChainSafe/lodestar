@@ -1,10 +1,10 @@
 import {assert} from "chai";
 
 import {config} from "@chainsafe/lodestar-config/mainnet";
-import {GENESIS_EPOCH, GENESIS_SLOT} from "../../../../src/constants";
-import {getRandaoMix} from "../../../../src/util";
+import {GENESIS_EPOCH, GENESIS_SLOT} from "../../../src/constants";
+import {getRandaoMix} from "../../../src/util";
 
-import {generateState} from "../../../utils/state";
+import {generateState} from "../../utils/state";
 
 describe("getRandaoMix", () => {
   it("should return first randao mix for GENESIS_EPOCH", () => {

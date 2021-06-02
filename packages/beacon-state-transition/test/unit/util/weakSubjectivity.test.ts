@@ -3,9 +3,9 @@ import {config} from "@chainsafe/lodestar-config/mainnet";
 import {List} from "@chainsafe/ssz";
 import {phase0} from "@chainsafe/lodestar-types";
 import {BeaconState} from "@chainsafe/lodestar-types/lib/allForks";
-import {getLatestWeakSubjectivityCheckpointEpoch} from "../../../../src/util/weakSubjectivity";
-import {generateState} from "../../../utils/state";
-import {generateValidator} from "../../../utils/validator";
+import {getLatestWeakSubjectivityCheckpointEpoch} from "../../../src/util/weakSubjectivity";
+import {generateState} from "../../utils/state";
+import {generateValidator} from "../../utils/validator";
 import {expect} from "chai";
 
 describe("getLatestWeakSubjectivityCheckpointEpoch", () => {

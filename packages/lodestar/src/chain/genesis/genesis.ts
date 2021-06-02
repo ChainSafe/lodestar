@@ -15,6 +15,8 @@ import {
   applyEth1BlockHash,
   isValidGenesisState,
   isValidGenesisValidators,
+  CachedBeaconState,
+  createCachedBeaconState,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {IEth1StreamParams, IEth1Provider, getDepositsAndBlockStreamForGenesis, getDepositsStream} from "../../eth1";
@@ -38,7 +40,7 @@ export interface IGenesisBuilderKwargs {
 
 export class GenesisBuilder implements IGenesisBuilder {
   // Expose state to persist on error
-  state: TreeBacked<allForks.BeaconState>;
+  state: CachedBeaconState<allForks.BeaconState>;
   depositTree: TreeBacked<List<Root>>;
   /** Is null if no block has been processed yet */
   lastProcessedBlockNumber: number | null = null;
@@ -65,7 +67,7 @@ export class GenesisBuilder implements IGenesisBuilder {
 
     if (pendingStatus) {
       this.logger.info("Restoring pending genesis state", {block: pendingStatus.lastProcessedBlockNumber});
-      this.state = pendingStatus.state;
+      this.state = createCachedBeaconState(config, pendingStatus.state);
       this.depositTree = pendingStatus.depositTree;
       this.fromBlock = Math.max(pendingStatus.lastProcessedBlockNumber + 1, this.eth1Provider.deployBlock);
     } else {

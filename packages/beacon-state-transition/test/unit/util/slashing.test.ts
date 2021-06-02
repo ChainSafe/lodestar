@@ -2,9 +2,9 @@ import {assert} from "chai";
 
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import {Epoch, Slot} from "@chainsafe/lodestar-types";
-import {randBetween} from "../../../utils/misc";
-import {isSlashableAttestationData} from "../../../../src/util";
-import {generateAttestationData} from "../../../utils/attestation";
+import {isSlashableAttestationData} from "../../../src/util";
+import {randBetween} from "../../utils/misc";
+import {generateAttestationData} from "../../utils/attestation";
 
 describe("isSlashableAttestationData", () => {
   it("Attestation data with the same target epoch should return true", () => {
