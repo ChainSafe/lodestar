@@ -24,7 +24,7 @@ import {
   isAggregatorFromCommitteeLength,
   zipIndexesInBitList,
 } from "../../util";
-import {getNextSyncCommitteeIndices} from "../../altair/state_accessor/sync_committee";
+import {getNextSyncCommitteeIndices} from "../../altair/epoch/sync_committee";
 import {computeEpochShuffling, IEpochShuffling} from "./epochShuffling";
 import {MutableVector} from "@chainsafe/persistent-ts";
 import {CachedValidatorList} from "./cachedValidatorList";

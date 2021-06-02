@@ -9,6 +9,8 @@ import {computeEpochAtSlot, computeShuffledIndex, getActiveValidatorIndices, get
 const MAX_RANDOM_BYTE = BigInt(2 ** 8 - 1);
 
 /**
+ * TODO: NAIVE
+ * 
  * Return the sync committee indices for a given state and epoch.
  * Aligns `epoch` to `baseEpoch` so the result is the same with any `epoch` within a sync period.
  *  Note: This function should only be called at sync committee period boundaries, as
@@ -36,6 +38,8 @@ export function getNextSyncCommitteeIndices(config: IBeaconConfig, state: allFor
 }
 
 /**
+ * TODO: NAIVE
+ *
  * Return the sync committee for a given state and epoch.
  */
 export function getNextSyncCommittee(config: IBeaconConfig, state: allForks.BeaconState): altair.SyncCommittee {
