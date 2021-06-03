@@ -200,19 +200,24 @@ export function prepareEpochProcessState<T extends allForks.BeaconState>(state: 
 
   let currTargetUnslStake = BigInt(0);
 
+  const FLAG_PREV_SOURCE_ATTESTER_UNSLASHED = FLAG_PREV_SOURCE_ATTESTER | FLAG_UNSLASHED;
+  const FLAG_PREV_TARGET_ATTESTER_UNSLASHED = FLAG_PREV_TARGET_ATTESTER | FLAG_UNSLASHED;
+  const FLAG_PREV_HEAD_ATTESTER_UNSLASHED = FLAG_PREV_HEAD_ATTESTER | FLAG_UNSLASHED;
+  const FLAG_CURR_TARGET_UNSLASHED = FLAG_CURR_TARGET_ATTESTER | FLAG_UNSLASHED;
+
   for (let i = 0; i < out.statuses.length; i++) {
     const status = out.statuses[i];
     const effectiveBalance = out.validators[i].effectiveBalance;
-    if (hasMarkers(status.flags, FLAG_PREV_SOURCE_ATTESTER | FLAG_UNSLASHED)) {
+    if (hasMarkers(status.flags, FLAG_PREV_SOURCE_ATTESTER_UNSLASHED)) {
       prevSourceUnslStake += effectiveBalance;
     }
-    if (hasMarkers(status.flags, FLAG_PREV_TARGET_ATTESTER | FLAG_UNSLASHED)) {
+    if (hasMarkers(status.flags, FLAG_PREV_TARGET_ATTESTER_UNSLASHED)) {
       prevTargetUnslStake += effectiveBalance;
     }
-    if (hasMarkers(status.flags, FLAG_PREV_HEAD_ATTESTER | FLAG_UNSLASHED)) {
+    if (hasMarkers(status.flags, FLAG_PREV_HEAD_ATTESTER_UNSLASHED)) {
       prevHeadUnslStake += effectiveBalance;
     }
-    if (hasMarkers(status.flags, FLAG_CURR_TARGET_ATTESTER | FLAG_UNSLASHED)) {
+    if (hasMarkers(status.flags, FLAG_CURR_TARGET_UNSLASHED)) {
       currTargetUnslStake += effectiveBalance;
     }
   }

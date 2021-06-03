@@ -31,8 +31,7 @@
     "test": "yarn test:unit",
     "test:e2e": "yarn run download-test-cases && mocha 'test/e2e/**/*.test.ts'",
     "download-test-cases": "node -r ts-node/register test/e2e/slashing-protection-interchange-tests/downloadTests.ts",
-    "coverage": "codecov -F lodestar-validator",
-    "benchmark": "ts-node test/benchmarks"
+    "coverage": "codecov -F lodestar-validator"
   },
   "repository": {
     "type": "git",
