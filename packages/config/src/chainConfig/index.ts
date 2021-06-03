@@ -16,7 +16,7 @@ export function createIChainConfig(input: Partial<IChainConfig>): IChainConfig {
     // Set the config first with default preset values
     ...defaultChainConfig,
     // Override with input
-    input,
+    ...input,
   };
 
   // Assert that the preset matches the active preset
