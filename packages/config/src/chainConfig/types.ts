@@ -1,6 +1,9 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import {PresetName} from "@chainsafe/lodestar-params";
 
+/**
+ * Run-time chain configuration
+ */
 export interface IChainConfig {
   PRESET_BASE: PresetName;
 

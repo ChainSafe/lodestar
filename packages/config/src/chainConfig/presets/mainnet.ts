@@ -1,8 +1,7 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import {fromHexString} from "@chainsafe/ssz";
 import {PresetName} from "@chainsafe/lodestar-params";
-import {IChainConfig} from "../chainConfig";
-import {createIBeaconConfig} from "../index";
+import {IChainConfig} from "../types";
 
 export const chainConfig: IChainConfig = {
   PRESET_BASE: PresetName.mainnet,
@@ -69,5 +68,3 @@ export const chainConfig: IChainConfig = {
   DEPOSIT_NETWORK_ID: 1,
   DEPOSIT_CONTRACT_ADDRESS: fromHexString("0x00000000219ab540356cBB839Cbe05303d7705Fa"),
 };
-
-export const config = createIBeaconConfig(chainConfig);

@@ -8,6 +8,9 @@ export interface IForkInfo {
   version: Version;
 }
 
+/**
+ * Fork schedule and helper methods
+ */
 export interface IForkConfig {
   /** Forks in order order of occurence, `phase0` first */
   forks: {[K in ForkName]: IForkInfo};

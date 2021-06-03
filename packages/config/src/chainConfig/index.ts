@@ -2,24 +2,22 @@ import {Json} from "@chainsafe/ssz";
 import {ACTIVE_PRESET} from "@chainsafe/lodestar-params";
 import {IChainConfig} from "./types";
 import {ChainConfig} from "./sszTypes";
+import {defaultChainConfig} from "./default";
 
 export * from "./types";
 export * from "./sszTypes";
+export * from "./default";
 
-export function createIChainConfig(input?: Record<string, unknown>): IChainConfig {
-  input = input ?? {};
-  // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-var-requires, @typescript-eslint/no-unsafe-member-access
-  const presetConfig = require(`../presets/${ACTIVE_PRESET}`).config as IChainConfig;
-
-  // Set the config first with preset values
-  const config = {...presetConfig};
-
-  // Override the config with input values, if they exist
-  for (const [fieldName, fieldType] of Object.entries(ChainConfig.fields)) {
-    if (input[fieldName] != null) {
-      (config as Record<string, unknown>)[fieldName] = fieldType.fromJson(input[fieldName] as Json);
-    }
-  }
+/**
+ * Create an `IChainConfig`, filling in missing values with defaults
+ */
+export function createIChainConfig(input: Partial<IChainConfig>): IChainConfig {
+  const config = {
+    // Set the config first with default preset values
+    ...defaultChainConfig,
+    // Override with input
+    input,
+  };
 
   // Assert that the preset matches the active preset
   if (config.PRESET_BASE !== ACTIVE_PRESET) {
@@ -27,5 +25,22 @@ export function createIChainConfig(input?: Record<string, unknown>): IChainConfi
       `Can only create a config for the active preset: ACTIVE_PRESET=${ACTIVE_PRESET} PRESET_BASE=${config.PRESET_BASE}`
     );
   }
+  return config;
+}
+
+export function parsePartialIChainConfigJson(input?: Record<string, unknown>): Partial<IChainConfig> {
+  if (!input) {
+    return {};
+  }
+
+  const config = {};
+
+  // Parse config input values, if they exist
+  for (const [fieldName, fieldType] of Object.entries(ChainConfig.fields)) {
+    if (input[fieldName] != null) {
+      (config as Record<string, unknown>)[fieldName] = fieldType.fromJson(input[fieldName] as Json);
+    }
+  }
+
   return config;
 }

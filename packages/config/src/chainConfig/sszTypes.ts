@@ -48,5 +48,5 @@ export const ChainConfig = new ContainerType<IChainConfig>({
     DEPOSIT_CHAIN_ID: ssz.Number64,
     DEPOSIT_NETWORK_ID: ssz.Number64,
     DEPOSIT_CONTRACT_ADDRESS: ByteVector20,
-  }
+  },
 });
