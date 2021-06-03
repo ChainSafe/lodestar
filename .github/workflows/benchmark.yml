@@ -1,0 +1,42 @@
+name: Benchmark
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - name: Bootstrap
+        run: yarn
+      # Run benchmark with custom tooling and stores the output to a file
+      - name: Run performance tests
+        run: yarn benchmark
+        env:
+          BENCHMARK_OUTPUT_PATH: benchmark-output.txt
+      # Download previous benchmark result from cache (if exists)
+      - name: Download previous benchmark data
+        uses: actions/cache@v1
+        with:
+          path: ./cache
+          key: ${{ runner.os }}-benchmark
+      # Run `github-action-benchmark` action
+      - name: Store benchmark result
+        uses: rhysd/github-action-benchmark@v1
+        with:
+          # What benchmark tool the output.txt came from
+          tool: "benchmarkjs"
+          # Where the output from the benchmark tool is stored
+          output-file-path: benchmark-output.txt
+          # Where the previous data file is stored
+          external-data-json-path: ./cache/benchmark-data.json
+          # Workflow will fail when an alert happens
+          fail-on-alert: true
+          # GitHub API token to make a commit comment
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          # Enable alert commit comment
+          comment-on-alert: true
+      # Upload the updated cache file for the next job by actions/cache
