@@ -1,24 +1,21 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import {join} from "path";
 
-import {createIBeaconConfig} from "@chainsafe/lodestar-config";
+import {config} from "@chainsafe/lodestar-config/default";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
-import {altair, isValidGenesisState} from "@chainsafe/lodestar-beacon-state-transition";
+import {phase0, isValidGenesisState} from "@chainsafe/lodestar-beacon-state-transition";
 import {SPEC_TEST_LOCATION} from "../../../../utils/specTestCases";
 import {IBaseSpecTest} from "../../../type";
 import {ssz} from "@chainsafe/lodestar-types";
 
 interface IGenesisValidityTestCase extends IBaseSpecTest {
   is_valid: boolean;
-  genesis: altair.BeaconState;
+  genesis: phase0.BeaconState;
 }
-
-// eslint-disable-next-line @typescript-eslint/naming-convention
-const config = createIBeaconConfig({ALTAIR_FORK_EPOCH: 0});
 
 describeDirectorySpecTest<IGenesisValidityTestCase, boolean>(
   "genesis validity",
-  join(SPEC_TEST_LOCATION, "tests/minimal/altair/genesis/validity/pyspec_tests"),
+  join(SPEC_TEST_LOCATION, "tests/minimal/phase0/genesis/validity/pyspec_tests"),
   (testcase) => {
     return isValidGenesisState(config, testcase.genesis);
   },
@@ -30,7 +27,7 @@ describeDirectorySpecTest<IGenesisValidityTestCase, boolean>(
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
     sszTypes: {
-      genesis: ssz.altair.BeaconState,
+      genesis: ssz.phase0.BeaconState,
     },
     getExpected: (testCase) => testCase.is_valid,
   }
