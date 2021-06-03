@@ -67,7 +67,7 @@ class BenchmarkGroupRunner {
 }
 
 async function doRun<T1, T2 = T1, R = void>(
-  {before, beforeEach, run, check, id, ...opts}: RunOpts<T1, T2, R>,
+  {before, beforeEach, run, check, ...opts}: RunOpts<T1, T2, R>,
   extraOpts: BenchmarkOpts
 ): Promise<{averageNs: number; runsDone: number}> {
   const runs = opts.runs || extraOpts.runs || 512;
@@ -78,7 +78,7 @@ async function doRun<T1, T2 = T1, R = void>(
 
   const inputAll = before ? await before() : undefined;
 
-  let start = Date.now();
+  const start = Date.now();
   let i = 0;
   while ((i++ < runs || Date.now() - start < minMs) && Date.now() - start < maxMs) {
     const input = beforeEach ? await beforeEach(inputAll, i) : ((inputAll as unknown) as T2);
@@ -123,7 +123,7 @@ function formatResultRow({id, averageNs, runsDone, factor}: BenchmarkResult): st
   // Scalar multiplication G1 (255-bit, constant-time)                              7219.330 ops/s       138517 ns/op
   // Scalar multiplication G2 (255-bit, constant-time)                              3133.117 ops/s       319171 ns/op
 
-  let row = [
+  const row = [
     factor === undefined ? "" : `x${factor.toFixed(2)}`.padStart(6),
     `${opsPerSec.toPrecision(precision).padStart(13)} ops/s`,
     `${averageNs.toPrecision(precision).padStart(13)} ns/op`,
