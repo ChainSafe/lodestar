@@ -7,7 +7,7 @@ import {createIForkConfig, IForkConfig} from "./forkConfig";
 export type IBeaconConfig = IChainConfig & IForkConfig;
 
 /**
- * Create an `IBeaconConfig`, filling in missing values with defaults
+ * Create an `IBeaconConfig`, filling in missing values with preset defaults
  */
 export function createIBeaconConfig(chainConfig: Partial<IChainConfig>): IBeaconConfig {
   const fullChainConfig = createIChainConfig(chainConfig);

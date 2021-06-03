@@ -9,7 +9,7 @@ export * from "./sszTypes";
 export * from "./default";
 
 /**
- * Create an `IChainConfig`, filling in missing values with defaults
+ * Create an `IChainConfig`, filling in missing values with preset defaults
  */
 export function createIChainConfig(input: Partial<IChainConfig>): IChainConfig {
   const config = {
