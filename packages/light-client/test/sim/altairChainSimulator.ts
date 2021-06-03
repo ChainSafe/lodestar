@@ -26,8 +26,8 @@ async function runAltairChainSimulator(): Promise<void> {
   const genesisBlock = ssz.altair.BeaconBlock.defaultValue();
   genesisState.validators = generateValidators(validatorCount);
   genesisState.balances = generateBalances(validatorCount);
-  genesisState.currentSyncCommittee = getInteropSyncCommittee(config, 0).syncCommittee;
-  genesisState.nextSyncCommittee = getInteropSyncCommittee(config, 1).syncCommittee;
+  genesisState.currentSyncCommittee = getInteropSyncCommittee(0).syncCommittee;
+  genesisState.nextSyncCommittee = getInteropSyncCommittee(1).syncCommittee;
   const genesisValidatorsRoot = ssz.altair.BeaconState.fields["validators"].hashTreeRoot(genesisState.validators);
   const genesisStateRoot = ssz.altair.BeaconState.hashTreeRoot(genesisState);
   genesisBlock.stateRoot = genesisStateRoot;

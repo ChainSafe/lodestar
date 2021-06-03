@@ -1,6 +1,5 @@
 import {altair, Root} from "@chainsafe/lodestar-types";
 import {TreeBacked} from "@chainsafe/ssz";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {computeEpochAtSlot, getBlockRootAtSlot, getForkVersion} from "@chainsafe/lodestar-beacon-state-transition";
 import {FINALIZED_ROOT_INDEX, NEXT_SYNC_COMMITTEE_INDEX} from "@chainsafe/lodestar-params";
 
@@ -14,7 +13,6 @@ export interface IBeaconChainLc {
  * Spec v1.0.1
  */
 export async function prepareUpdateNaive(
-  config: IBeaconConfig,
   chain: IBeaconChainLc,
   blockWithSyncAggregate: altair.BeaconBlock
 ): Promise<altair.LightClientUpdate> {

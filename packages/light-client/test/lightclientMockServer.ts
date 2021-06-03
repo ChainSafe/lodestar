@@ -5,7 +5,7 @@ import {toHexString, TreeBacked} from "@chainsafe/ssz";
 import {altair, Epoch, Root, Slot, ssz, SyncPeriod} from "@chainsafe/lodestar-types";
 import {FinalizedCheckpointData, LightClientUpdater, LightClientUpdaterDb} from "../src/server/LightClientUpdater";
 import {toBlockHeader} from "../src/utils/utils";
-import {getInteropSyncCommittee, getSyncAggregateSigningRoot, signAndAggregate, SyncCommitteeKeys} from "./utils";
+import {getInteropSyncCommittee, getSyncAggregateSigningRoot, SyncCommitteeKeys} from "./utils";
 import {startLightclientApiServer, IStateRegen, ServerOpts} from "./lightclientApiServer";
 import {Checkpoint} from "@chainsafe/lodestar-types/phase0";
 import {ILogger} from "@chainsafe/lodestar-utils";
@@ -40,7 +40,7 @@ export class LightclientMockServer {
     private readonly genesisValidatorsRoot: Root
   ) {
     const db = getLightClientUpdaterDb();
-    this.lightClientUpdater = new LightClientUpdater(config, db);
+    this.lightClientUpdater = new LightClientUpdater(db);
     this.stateRegen = new MockStateRegen(this.stateCache);
   }
 
@@ -101,17 +101,12 @@ export class LightclientMockServer {
 
     // Add sync aggregate signing over last block
     if (this.prevBlock) {
-      const attestedBlock = toBlockHeader(this.config, this.prevBlock);
+      const attestedBlock = toBlockHeader(this.prevBlock);
       const attestedBlockRoot = ssz.altair.BeaconBlock.hashTreeRoot(this.prevBlock);
       state.blockRoots[(slot - 1) % SLOTS_PER_HISTORICAL_ROOT] = attestedBlockRoot;
       const forkVersion = state.fork.currentVersion;
-      const signingRoot = getSyncAggregateSigningRoot(
-        this.config,
-        this.genesisValidatorsRoot,
-        forkVersion,
-        attestedBlock
-      );
-      block.body.syncAggregate = signAndAggregate(signingRoot, this.getSyncCommittee(currentSyncPeriod).sks);
+      const signingRoot = getSyncAggregateSigningRoot(this.genesisValidatorsRoot, forkVersion, attestedBlock);
+      block.body.syncAggregate = this.getSyncCommittee(currentSyncPeriod).signAndAggregate(signingRoot);
     }
 
     block.stateRoot = ssz.altair.BeaconState.hashTreeRoot(state);
@@ -165,7 +160,7 @@ export class LightclientMockServer {
   private getSyncCommittee(period: SyncPeriod): SyncCommitteeKeys {
     let syncCommitteeKeys = this.syncCommitteesKeys.get(period);
     if (!syncCommitteeKeys) {
-      syncCommitteeKeys = getInteropSyncCommittee(this.config, period);
+      syncCommitteeKeys = getInteropSyncCommittee(period);
       this.syncCommitteesKeys.set(period, syncCommitteeKeys);
     }
     return syncCommitteeKeys;

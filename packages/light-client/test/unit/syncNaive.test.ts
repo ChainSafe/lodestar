@@ -1,25 +1,16 @@
 import {expect} from "chai";
 import {SecretKey} from "@chainsafe/bls";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {altair, Root, ssz, SyncPeriod} from "@chainsafe/lodestar-types";
 import {toHexString, TreeBacked} from "@chainsafe/ssz";
 import {processLightClientUpdate} from "../../src/client/update";
 import {prepareUpdateNaive, IBeaconChainLc} from "../prepareUpdateNaive";
-import {
-  createExtraMinimalConfig,
-  getInteropSyncCommittee,
-  getSyncAggregateSigningRoot,
-  signAndAggregate,
-  SyncCommitteeKeys,
-} from "../utils";
+import {getInteropSyncCommittee, getSyncAggregateSigningRoot, SyncCommitteeKeys} from "../utils";
 import {LightClientStoreFast} from "../../src/client/types";
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
 describe("Lightclient flow", () => {
-  const config = createExtraMinimalConfig();
-
   before("BLS sanity check", () => {
     const sk = SecretKey.fromBytes(Buffer.alloc(32, 1));
     expect(sk.toPublicKey().toHex()).to.equal(
@@ -37,7 +28,7 @@ describe("Lightclient flow", () => {
   function getSyncCommittee(period: SyncPeriod): SyncCommitteeKeys {
     let syncCommitteeKeys = syncCommitteesKeys.get(period);
     if (!syncCommitteeKeys) {
-      syncCommitteeKeys = getInteropSyncCommittee(config, period);
+      syncCommitteeKeys = getInteropSyncCommittee(period);
       syncCommitteesKeys.set(period, syncCommitteeKeys);
     }
     return syncCommitteeKeys;
@@ -71,14 +62,13 @@ describe("Lightclient flow", () => {
 
     // Create a signature from current committee to "attest" syncAttestedBlockHeader
     const forkVersion = stateWithSyncAggregate.fork.currentVersion;
-    const signingRoot = getSyncAggregateSigningRoot(config, genValiRoot, forkVersion, syncAttestedBlockHeader);
+    const signingRoot = getSyncAggregateSigningRoot(genValiRoot, forkVersion, syncAttestedBlockHeader);
     const blockWithSyncAggregate = ssz.altair.BeaconBlock.defaultValue();
-    blockWithSyncAggregate.body.syncAggregate = signAndAggregate(signingRoot, getSyncCommittee(0).sks);
+    blockWithSyncAggregate.body.syncAggregate = getSyncCommittee(0).signAndAggregate(signingRoot);
     blockWithSyncAggregate.stateRoot = ssz.altair.BeaconState.hashTreeRoot(stateWithSyncAggregate);
 
     // Simulate BeaconChain module with a memory map of blocks and states
     const chainMock = new MockBeaconChainLc(
-      config,
       [finalizedBlockHeader, syncAttestedBlockHeader],
       [finalizedState, syncAttestedState, stateWithSyncAggregate]
     );
@@ -89,7 +79,7 @@ describe("Lightclient flow", () => {
   it("Prepare altair update", async () => {
     if (!updateData) throw Error("Prev test failed");
 
-    update = await prepareUpdateNaive(config, updateData.chain, updateData.blockWithSyncAggregate);
+    update = await prepareUpdateNaive(updateData.chain, updateData.blockWithSyncAggregate);
   });
 
   it("Process altair update", () => {
@@ -104,7 +94,7 @@ describe("Lightclient flow", () => {
       },
     };
 
-    processLightClientUpdate(config, store, update, currentSlot, genValiRoot);
+    processLightClientUpdate(store, update, currentSlot, genValiRoot);
   });
 });
 
@@ -113,12 +103,10 @@ describe("Lightclient flow", () => {
  * Throws for any unknown root
  */
 class MockBeaconChainLc implements IBeaconChainLc {
-  private readonly config: IBeaconConfig;
   private readonly blockHeaders = new Map<string, altair.BeaconBlockHeader>();
   private readonly states = new Map<string, altair.BeaconState>();
 
-  constructor(config: IBeaconConfig, blockHeaders: altair.BeaconBlockHeader[], states: altair.BeaconState[]) {
-    this.config = config;
+  constructor(blockHeaders: altair.BeaconBlockHeader[], states: altair.BeaconState[]) {
     for (const blockHeader of blockHeaders)
       this.blockHeaders.set(toHexString(ssz.phase0.BeaconBlockHeader.hashTreeRoot(blockHeader)), blockHeader);
     for (const state of states) this.states.set(toHexString(ssz.altair.BeaconState.hashTreeRoot(state)), state);

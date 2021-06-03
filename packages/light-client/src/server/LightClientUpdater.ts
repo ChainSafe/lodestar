@@ -1,6 +1,5 @@
 import {altair, Epoch, phase0, Slot, ssz} from "@chainsafe/lodestar-types";
 import {ByteVector, toHexString, TreeBacked} from "@chainsafe/ssz";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {
   computeEpochAtSlot,
   computeSyncPeriodAtSlot,
@@ -68,7 +67,7 @@ export class LightClientUpdater implements ILightClientUpdater {
     "nextSyncCommittee" | "nextSyncCommitteeBranch" | "finalityBranch" | "finalityHeader"
   >;
 
-  constructor(private readonly config: IBeaconConfig, private readonly db: LightClientUpdaterDb) {
+  constructor(private readonly db: LightClientUpdaterDb) {
     // Cache the zero default values to not compute them every time
     this.zero = {
       nextSyncCommittee: ssz.altair.SyncCommittee.defaultValue(),
@@ -123,7 +122,7 @@ export class LightClientUpdater implements ILightClientUpdater {
     this.prevHeadData.set(toHexString(ssz.altair.BeaconBlock.hashTreeRoot(block)), {
       finalizedCheckpoint: postState.finalizedCheckpoint,
       finalityBranch: postState.tree.getSingleProof(BigInt(FINALIZED_ROOT_INDEX)),
-      header: toBlockHeader(this.config, block),
+      header: toBlockHeader(block),
       nextSyncCommittee: postState.nextSyncCommittee,
       // Prove that the `nextSyncCommittee` is included in a finalized state "attested" by the current sync committee
       nextSyncCommitteeBranch: postState.tree.getSingleProof(BigInt(NEXT_SYNC_COMMITTEE_INDEX)),
@@ -174,7 +173,7 @@ export class LightClientUpdater implements ILightClientUpdater {
   ): Promise<void> {
     // Pre-compute the nextSyncCommitteeBranch for this checkpoint, it will never change
     await this.db.lightclientFinalizedCheckpoint.put(checkpoint.epoch, {
-      header: toBlockHeader(this.config, block),
+      header: toBlockHeader(block),
       nextSyncCommittee: postState.nextSyncCommittee,
       // Prove that the `nextSyncCommittee` is included in a finalized state "attested" by the current sync committee
       nextSyncCommitteeBranch: postState.tree.getSingleProof(BigInt(NEXT_SYNC_COMMITTEE_INDEX)),

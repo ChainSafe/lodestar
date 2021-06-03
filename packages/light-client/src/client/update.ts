@@ -1,5 +1,4 @@
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {altair, Slot} from "@chainsafe/lodestar-types";
 import {computeSyncPeriodAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {validateLightClientUpdate} from "./validation";
@@ -49,13 +48,12 @@ import {LightClientSnapshotFast, LightClientStoreFast} from "./types";
  * Spec v1.0.1
  */
 export function processLightClientUpdate(
-  config: IBeaconConfig,
   store: LightClientStoreFast,
   update: altair.LightClientUpdate,
   currentSlot: Slot,
   genesisValidatorsRoot: altair.Root
 ): void {
-  validateLightClientUpdate(config, store.snapshot, update, genesisValidatorsRoot);
+  validateLightClientUpdate(store.snapshot, update, genesisValidatorsRoot);
 
   const syncPeriod = computeSyncPeriodAtSlot(update.header.slot);
   const prevBestUpdate = store.bestUpdates.get(syncPeriod);
@@ -70,9 +68,9 @@ export function processLightClientUpdate(
   // It may be changed to re-organizable light client design. See the on-going issue eth2.0-specs#2182.
   if (
     sumBits(update.syncCommitteeBits) * 3 >= update.syncCommitteeBits.length * 2 &&
-    !isEmptyHeader(config, update.finalityHeader)
+    !isEmptyHeader(update.finalityHeader)
   ) {
-    applyLightClientUpdate(config, store.snapshot, update);
+    applyLightClientUpdate(store.snapshot, update);
     store.bestUpdates.delete(syncPeriod);
   }
 
@@ -81,7 +79,7 @@ export function processLightClientUpdate(
     const prevSyncPeriod = computeSyncPeriodAtSlot(store.snapshot.header.slot);
     const bestUpdate = store.bestUpdates.get(prevSyncPeriod);
     if (bestUpdate) {
-      applyLightClientUpdate(config, store.snapshot, bestUpdate);
+      applyLightClientUpdate(store.snapshot, bestUpdate);
       store.bestUpdates.delete(prevSyncPeriod);
     }
   }
@@ -90,11 +88,7 @@ export function processLightClientUpdate(
 /**
  * Spec v1.0.1
  */
-export function applyLightClientUpdate(
-  config: IBeaconConfig,
-  snapshot: LightClientSnapshotFast,
-  update: altair.LightClientUpdate
-): void {
+export function applyLightClientUpdate(snapshot: LightClientSnapshotFast, update: altair.LightClientUpdate): void {
   const snapshotPeriod = computeSyncPeriodAtSlot(snapshot.header.slot);
   const updatePeriod = computeSyncPeriodAtSlot(update.header.slot);
   if (updatePeriod < snapshotPeriod) {

@@ -1,20 +1,11 @@
-import {aggregatePublicKeys, PublicKey, SecretKey, Signature} from "@chainsafe/bls";
+import {PointFormat, PublicKey, SecretKey, Signature} from "@chainsafe/bls";
 import {computeDomain, computeSigningRoot, interopSecretKey} from "@chainsafe/lodestar-beacon-state-transition";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {config} from "@chainsafe/lodestar-config/default";
 import {DOMAIN_SYNC_COMMITTEE, SYNC_COMMITTEE_SIZE} from "@chainsafe/lodestar-params";
 import {altair, Bytes4, Gwei, Root, Slot, ssz, SyncPeriod} from "@chainsafe/lodestar-types";
 import {fromHexString, List} from "@chainsafe/ssz";
 import {SyncCommitteeFast} from "../src/client/types";
 
 /* eslint-disable @typescript-eslint/naming-convention */
-
-/**
- * Create extra minimal sync committee config to make tests faster
- */
-export function createExtraMinimalConfig(): IBeaconConfig {
-  return config;
-}
 
 export function signAndAggregate(message: Uint8Array, sks: SecretKey[]): altair.SyncAggregate {
   const sigs = sks.map((sk) => sk.sign(message));
@@ -26,7 +17,6 @@ export function signAndAggregate(message: Uint8Array, sks: SecretKey[]): altair.
 }
 
 export function getSyncAggregateSigningRoot(
-  config: IBeaconConfig,
   genesisValidatorsRoot: Root,
   forkVersion: Bytes4,
   syncAttestedBlockHeader: altair.BeaconBlockHeader
@@ -35,38 +25,52 @@ export function getSyncAggregateSigningRoot(
   return computeSigningRoot(ssz.phase0.BeaconBlockHeader, syncAttestedBlockHeader, domain);
 }
 
-export function defaultBeaconBlockHeader(config: IBeaconConfig, slot: Slot): altair.BeaconBlockHeader {
+export function defaultBeaconBlockHeader(slot: Slot): altair.BeaconBlockHeader {
   const header = ssz.phase0.BeaconBlockHeader.defaultValue();
   header.slot = slot;
   return header;
 }
 
 export type SyncCommitteeKeys = {
-  sks: SecretKey[];
   pks: PublicKey[];
   syncCommittee: altair.SyncCommittee;
   syncCommitteeFast: SyncCommitteeFast;
+  signAndAggregate: (message: Uint8Array) => altair.SyncAggregate;
 };
 
-export function getInteropSyncCommittee(config: IBeaconConfig, period: SyncPeriod): SyncCommitteeKeys {
-  const fromIndex = period * SYNC_COMMITTEE_SIZE;
-  const toIndex = (period + 1) * SYNC_COMMITTEE_SIZE;
-  const sks: SecretKey[] = [];
-  for (let i = fromIndex; i < toIndex; i++) {
-    sks.push(interopSecretKey(i));
+/**
+ * To make the test fast each sync committee has a single key repeated `SYNC_COMMITTEE_SIZE` times
+ */
+export function getInteropSyncCommittee(period: SyncPeriod): SyncCommitteeKeys {
+  const sk = interopSecretKey(period);
+  const pk = sk.toPublicKey();
+  const pks = Array.from({length: SYNC_COMMITTEE_SIZE}, () => pk);
+
+  const pkBytes = pk.toBytes(PointFormat.compressed);
+  const pksBytes = Array.from({length: SYNC_COMMITTEE_SIZE}, () => pkBytes);
+
+  const aggPk = PublicKey.aggregate(pks);
+
+  function signAndAggregate(message: Uint8Array): altair.SyncAggregate {
+    const sig = sk.sign(message);
+    const sigs = Array.from({length: SYNC_COMMITTEE_SIZE}, () => sig);
+    const aggSig = Signature.aggregate(sigs).toBytes();
+    return {
+      syncCommitteeBits: Array.from({length: SYNC_COMMITTEE_SIZE}, () => true),
+      syncCommitteeSignature: aggSig,
+    };
   }
-  const pks = sks.map((sk) => sk.toPublicKey());
-  const pubkeys = pks.map((pk) => pk.toBytes());
+
   return {
-    sks,
     pks,
+    signAndAggregate,
     syncCommittee: {
-      pubkeys,
-      aggregatePubkey: aggregatePublicKeys(pubkeys),
+      pubkeys: pksBytes,
+      aggregatePubkey: aggPk.toBytes(PointFormat.compressed),
     },
     syncCommitteeFast: {
       pubkeys: pks,
-      aggregatePubkey: PublicKey.fromBytes(aggregatePublicKeys(pubkeys)),
+      aggregatePubkey: aggPk,
     },
   };
 }

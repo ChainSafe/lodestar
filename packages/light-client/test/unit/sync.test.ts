@@ -53,8 +53,8 @@ describe("Lightclient flow with LightClientUpdater", () => {
     const genesisBlock = ssz.altair.BeaconBlock.defaultValue();
     genesisState.validators = generateValidators(validatorCount);
     genesisState.balances = generateBalances(validatorCount);
-    genesisState.currentSyncCommittee = getInteropSyncCommittee(config, 0).syncCommittee;
-    genesisState.nextSyncCommittee = getInteropSyncCommittee(config, 1).syncCommittee;
+    genesisState.currentSyncCommittee = getInteropSyncCommittee(0).syncCommittee;
+    genesisState.nextSyncCommittee = getInteropSyncCommittee(1).syncCommittee;
     genesisValidatorsRoot = ssz.altair.BeaconState.fields["validators"].hashTreeRoot(genesisState.validators);
     genesisStateRoot = ssz.altair.BeaconState.hashTreeRoot(genesisState);
     genesisBlock.stateRoot = genesisStateRoot;
@@ -112,7 +112,7 @@ describe("Lightclient flow with LightClientUpdater", () => {
     const bestUpdates = await lightclientServer["lightClientUpdater"].getBestUpdates(periods);
     for (const [i, update] of bestUpdates.entries()) {
       try {
-        processLightClientUpdate(config, store, update, toSlot, genesisValidatorsRoot);
+        processLightClientUpdate(store, update, toSlot, genesisValidatorsRoot);
       } catch (e) {
         (e as Error).message = `Error processing update ${i}: ${(e as Error).message}`;
         throw e;

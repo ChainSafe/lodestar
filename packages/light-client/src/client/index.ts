@@ -131,7 +131,7 @@ export class Lightclient {
   };
 
   private processLightClientUpdate(update: altair.LightClientUpdate): void {
-    validateLightClientUpdate(this.config, this.store.snapshot, update, this.genesisValidatorsRoot);
+    validateLightClientUpdate(this.store.snapshot, update, this.genesisValidatorsRoot);
 
     const syncPeriod = computeSyncPeriodAtSlot(update.header.slot);
     const prevBestUpdate = this.store.bestUpdates.get(syncPeriod);
@@ -146,7 +146,7 @@ export class Lightclient {
     // It may be changed to re-organizable light client design. See the on-going issue eth2.0-specs#2182.
     if (
       sumBits(update.syncCommitteeBits) * 3 >= update.syncCommitteeBits.length * 2 &&
-      !isEmptyHeader(this.config, update.finalityHeader)
+      !isEmptyHeader(update.finalityHeader)
     ) {
       this.applyLightClientUpdate(update);
       this.store.bestUpdates.delete(syncPeriod);

@@ -1,4 +1,3 @@
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {altair, ssz} from "@chainsafe/lodestar-types";
 import {isValidMerkleBranch} from "../utils/verifyMerkleBranch";
 import {computeDomain, computeSyncPeriodAtSlot, computeSigningRoot} from "@chainsafe/lodestar-beacon-state-transition";
@@ -18,7 +17,6 @@ import {LightClientSnapshotFast} from "./types";
  * Spec v1.0.1
  */
 export function validateLightClientUpdate(
-  config: IBeaconConfig,
   snapshot: LightClientSnapshotFast,
   update: altair.LightClientUpdate,
   genesisValidatorsRoot: altair.Root
@@ -39,7 +37,7 @@ export function validateLightClientUpdate(
   }
 
   // Verify update header root is the finalized root of the finality header, if specified
-  const finalityHeaderSpecified = !isEmptyHeader(config, update.finalityHeader);
+  const finalityHeaderSpecified = !isEmptyHeader(update.finalityHeader);
   const signedHeader = finalityHeaderSpecified ? update.finalityHeader : update.header;
   if (finalityHeaderSpecified) {
     // Proof that the state referenced in `update.finalityHeader.stateRoot` includes
@@ -78,7 +76,7 @@ export function validateLightClientUpdate(
   // I believe the nextSyncCommitteeBranch should be check always not only when updatePeriodIncremented
   // An update may not increase the period but still be stored in validUpdates and be used latter
 
-  if (!isEmptySyncCommitte(config, update.nextSyncCommittee)) {
+  if (!isEmptySyncCommitte(update.nextSyncCommittee)) {
     // Proof that the state referenced in `update.header.stateRoot` includes
     // state = {
     //   nextSyncCommittee: update.nextSyncCommittee

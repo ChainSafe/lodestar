@@ -9,15 +9,9 @@ import {
 } from "@chainsafe/lodestar-params";
 import {validateLightClientUpdate} from "../../src/client/validation";
 import {LightClientSnapshotFast} from "../../src/client/types";
-import {
-  createExtraMinimalConfig,
-  defaultBeaconBlockHeader,
-  getSyncAggregateSigningRoot,
-  signAndAggregate,
-} from "../utils";
+import {defaultBeaconBlockHeader, getSyncAggregateSigningRoot, signAndAggregate} from "../utils";
 
 describe("validateLightClientUpdate", () => {
-  const config = createExtraMinimalConfig();
   const genValiRoot = Buffer.alloc(32, 9);
 
   let update: altair.LightClientUpdate;
@@ -47,7 +41,7 @@ describe("validateLightClientUpdate", () => {
     const nextSyncCommitteeBranch = finalizedCheckpointState.tree.getSingleProof(BigInt(NEXT_SYNC_COMMITTEE_INDEX));
 
     // update.header must have stateRoot to finalizedCheckpointState
-    const header = defaultBeaconBlockHeader(config, updateHeaderSlot);
+    const header = defaultBeaconBlockHeader(updateHeaderSlot);
     header.stateRoot = ssz.altair.BeaconState.hashTreeRoot(finalizedCheckpointState);
 
     // syncAttestedState must have `header` as finalizedCheckpoint
@@ -60,11 +54,11 @@ describe("validateLightClientUpdate", () => {
     const finalityBranch = syncAttestedState.tree.getSingleProof(BigInt(FINALIZED_ROOT_INDEX));
 
     // finalityHeader must have stateRoot to syncAttestedState
-    const syncAttestedBlockHeader = defaultBeaconBlockHeader(config, attestedHeaderSlot);
+    const syncAttestedBlockHeader = defaultBeaconBlockHeader(attestedHeaderSlot);
     syncAttestedBlockHeader.stateRoot = ssz.altair.BeaconState.hashTreeRoot(syncAttestedState);
 
     const forkVersion = ssz.Bytes4.defaultValue();
-    const signingRoot = getSyncAggregateSigningRoot(config, genValiRoot, forkVersion, syncAttestedBlockHeader);
+    const signingRoot = getSyncAggregateSigningRoot(genValiRoot, forkVersion, syncAttestedBlockHeader);
     const syncAggregate = signAndAggregate(signingRoot, sks);
 
     update = {
@@ -79,7 +73,7 @@ describe("validateLightClientUpdate", () => {
     };
 
     snapshot = {
-      header: defaultBeaconBlockHeader(config, snapshotHeaderSlot),
+      header: defaultBeaconBlockHeader(snapshotHeaderSlot),
       currentSyncCommittee: {
         pubkeys: pks,
         aggregatePubkey: PublicKey.fromBytes(aggregatePublicKeys(pubkeys)),
@@ -92,6 +86,6 @@ describe("validateLightClientUpdate", () => {
   });
 
   it("Validate valid update", () => {
-    validateLightClientUpdate(config, snapshot, update, genValiRoot);
+    validateLightClientUpdate(snapshot, update, genValiRoot);
   });
 });
