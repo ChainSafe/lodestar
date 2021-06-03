@@ -119,7 +119,8 @@ export async function processChainSegment(
     }
 
     try {
-      let preState = await regen.getPreState(firstBlock.message);
+      // It's important to process up to block slot to get through signature verification at fork transition
+      let preState = await regen.getBlockSlotState(firstBlock.message.parentRoot, firstBlock.message.slot);
 
       // Verify the signature of the blocks, returning early if the signature is invalid.
       if (!job.validSignatures && !opts?.disableBlsBatchVerify) {
