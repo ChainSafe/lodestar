@@ -119,10 +119,20 @@ export async function processChainSegment(
     }
 
     try {
-      // It's important to process up to block slot to get through signature verification at fork transition
-      let preState = await regen.getBlockSlotState(firstBlock.message.parentRoot, firstBlock.message.slot);
-
-      // Verify the signature of the blocks, returning early if the signature is invalid.
+      let preState = await regen.getPreState(firstBlock.message);
+      for (const block of blocksInEpoch) {
+        preState = await runStateTransition({emitter, forkChoice, metrics}, checkpointStateCache, preState, {
+          reprocess: job.reprocess,
+          prefinalized: job.prefinalized,
+          signedBlock: block,
+          validProposerSignature: true,
+          validSignatures: true,
+        });
+        importedBlocks++;
+        // this avoids keeping our node busy processing blocks
+        await sleep(0);
+      }
+      // Verify the signature afterall bc all SyncCommittee signed roots are only known at this point
       if (!job.validSignatures && !opts?.disableBlsBatchVerify) {
         const signatureSets: ISignatureSet[] = [];
         for (const block of blocksInEpoch) {
@@ -140,19 +150,6 @@ export async function processChainSegment(
             importedBlocks,
           });
         }
-      }
-
-      for (const block of blocksInEpoch) {
-        preState = await runStateTransition({emitter, forkChoice, metrics}, checkpointStateCache, preState, {
-          reprocess: job.reprocess,
-          prefinalized: job.prefinalized,
-          signedBlock: block,
-          validProposerSignature: true,
-          validSignatures: true,
-        });
-        importedBlocks++;
-        // this avoids keeping our node busy processing blocks
-        await sleep(0);
       }
     } catch (e) {
       if (e instanceof RegenError) {

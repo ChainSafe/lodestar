@@ -20,10 +20,14 @@ describeDirectorySpecTest<IProcessSyncCommitteeTestCase, altair.BeaconState>(
       config,
       testcase.pre as TreeBacked<altair.BeaconState>
     ) as CachedBeaconState<altair.BeaconState>;
-    altair.processSyncCommittee(
-      wrappedState,
-      config.types.altair.SyncAggregate.createTreeBackedFromStruct(testcase["sync_aggregate"])
-    );
+
+    const block = config.types.altair.BeaconBlock.defaultValue();
+
+    // processSyncCommittee() needs the full block to get the slot
+    block.slot = wrappedState.slot;
+    block.body.syncAggregate = config.types.altair.SyncAggregate.createTreeBackedFromStruct(testcase["sync_aggregate"]);
+
+    altair.processSyncCommittee(wrappedState, block);
     return wrappedState;
   },
   {

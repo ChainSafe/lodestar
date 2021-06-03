@@ -15,15 +15,16 @@ import {BitList, isTreeBacked, TreeBacked} from "@chainsafe/ssz";
 
 export function processSyncCommittee(
   state: CachedBeaconState<altair.BeaconState>,
-  syncAggregate: altair.SyncAggregate,
+  block: altair.BeaconBlock,
   verifySignatures = true
 ): void {
   const {syncParticipantReward, syncProposerReward} = state.epochCtx;
-  const participantIndices = getParticipantIndices(state, syncAggregate);
+  const participantIndices = getParticipantIndices(state, block.body.syncAggregate);
 
   // different from the spec but not sure how to get through signature verification for default/empty SyncAggregate in the spec test
   if (verifySignatures) {
-    const signatureSet = getSyncCommitteeSignatureSet(state, syncAggregate, participantIndices);
+    // This is to conform to the spec - we want the signature to be verified
+    const signatureSet = getSyncCommitteeSignatureSet(state, block, participantIndices);
     // When there's no participation we consider the signature valid and just ignore i
     if (signatureSet !== null && !verifySignatureSet(signatureSet)) {
       throw Error("Sync committee signature invalid");
@@ -39,13 +40,13 @@ export function processSyncCommittee(
 
 export function getSyncCommitteeSignatureSet(
   state: CachedBeaconState<altair.BeaconState>,
-  syncAggregate: altair.SyncAggregate,
+  block: altair.BeaconBlock,
   /** Optional parameter to prevent computing it twice */
   participantIndices?: number[]
 ): ISignatureSet | null {
   const {config, epochCtx} = state;
-
-  const previousSlot = Math.max(state.slot, 1) - 1;
+  const {syncAggregate} = block.body;
+  const previousSlot = Math.max(block.slot, 1) - 1;
   const rootSigned = getBlockRootAtSlot(config, state, previousSlot);
 
   if (!participantIndices) {
