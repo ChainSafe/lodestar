@@ -3,6 +3,7 @@ import {generateSignedBlock} from "../../../utils/block";
 import {groupBlocksByEpoch} from "../../../../src/chain/blocks/util";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {expect} from "chai";
+import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 
 describe("chain / blocks / util / groupBlocksByEpoch", function () {
   const fastConfig: IBeaconConfig = config;
@@ -10,20 +11,20 @@ describe("chain / blocks / util / groupBlocksByEpoch", function () {
   const testCases: {id: string; blocksSlot: number[]; blocksByEpochSlot: number[][]}[] = [
     {
       id: "Regular segment with all slots",
-      blocksSlot: [0, 1, 2, 3, 4, 5, 6, 7],
+      blocksSlot: Array.from({length: SLOTS_PER_EPOCH * 2}, (_, i) => i),
       blocksByEpochSlot: [
-        [0, 1, 2, 3],
-        [4, 5, 6, 7],
+        Array.from({length: SLOTS_PER_EPOCH}, (_, i) => i),
+        Array.from({length: SLOTS_PER_EPOCH}, (_, i) => i + SLOTS_PER_EPOCH),
       ],
     },
     {
       id: "Regular segment with skipped slots",
-      blocksSlot: [1, 2, 3, 4, 7, 8, 9, 10, 12, 14, 15],
+      blocksSlot: Array.from({length: SLOTS_PER_EPOCH * 2}, (_, i) => i).filter((i) => ![5, 6, 11, 13, 19].includes(i)),
       blocksByEpochSlot: [
-        [1, 2, 3],
-        [4, 7],
-        [8, 9, 10],
-        [12, 14, 15],
+        Array.from({length: SLOTS_PER_EPOCH}, (_, i) => i).filter((i) => ![5, 6, 11, 13, 19].includes(i)),
+        Array.from({length: SLOTS_PER_EPOCH}, (_, i) => i + SLOTS_PER_EPOCH).filter(
+          (i) => ![5, 6, 11, 13, 19].includes(i)
+        ),
       ],
     },
     {

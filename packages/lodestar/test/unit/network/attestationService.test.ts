@@ -129,7 +129,6 @@ describe("AttnetsService", function () {
 
   it("should prepare for a hard fork", async () => {
     const altairEpoch = config.forks.altair.epoch;
-    console.log(altairEpoch)
     service.addCommitteeSubscriptions([subscription]);
     // run every epoch (or any num slots < 150)
     while (chain.clock.currentSlot < altairEpoch * SLOTS_PER_EPOCH) {

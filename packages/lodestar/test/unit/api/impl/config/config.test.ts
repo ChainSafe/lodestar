@@ -1,4 +1,5 @@
-import {config} from "@chainsafe/lodestar-config/default";
+import * as params from "@chainsafe/lodestar-params/lib/activePreset";
+import {chainConfig, config} from "@chainsafe/lodestar-config/default";
 import {expect} from "chai";
 import {getConfigApi} from "../../../../../src/api/impl/config";
 
@@ -28,7 +29,9 @@ describe("config api implementation", function () {
   describe("getSpec", function () {
     it("should get the spec", async function () {
       const {data: spec} = await api.getSpec();
-      expect(spec).to.equal(config);
+      const expected: Record<string, unknown> = {...params, ...chainConfig};
+      delete expected.ACTIVE_PRESET;
+      expect(spec).to.deep.equal(expected);
     });
   });
 });
