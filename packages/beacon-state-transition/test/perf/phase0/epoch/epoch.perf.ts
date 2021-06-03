@@ -60,8 +60,6 @@ export const runEpochTransitionStepTests = async (): Promise<void> => {
   for (const {name, testFunc} of testCases) {
     await runner.run({
       id: name,
-      // before: async () => {
-      // },
       beforeEach: () => {
         state = originalState.clone();
       },

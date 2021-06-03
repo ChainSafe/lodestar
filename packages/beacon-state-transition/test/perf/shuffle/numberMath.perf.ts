@@ -1,4 +1,4 @@
-import {BenchmarkRunner} from "../runner";
+import {BenchmarkRunner} from "@chainsafe/lodestar-utils";
 
 // eslint-disable-next-line @typescript-eslint/no-floating-promises
 (async function () {
