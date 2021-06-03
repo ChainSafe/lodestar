@@ -90,7 +90,7 @@ export class MockBeaconChain implements IBeaconChain {
       metrics: null,
     });
     this.forkDigestContext = new ForkDigestContext(this.config, this.genesisValidatorsRoot);
-    this.lightclientUpdater = new LightClientUpdater(config, db);
+    this.lightclientUpdater = new LightClientUpdater(db);
   }
 
   async getHeadBlock(): Promise<null> {
