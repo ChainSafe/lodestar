@@ -55,16 +55,3 @@ export function blockToHeader(config: IBeaconConfig, block: allForks.BeaconBlock
     bodyRoot: config.getForkTypes(block.slot).BeaconBlockBody.hashTreeRoot(block.body),
   };
 }
-
-/**
- * Receives a SignedBeaconBlock, and produces the corresponding SignedBeaconBlockHeader.
- */
-export function signedBlockToSignedHeader(
-  config: IBeaconConfig,
-  signedBlock: allForks.SignedBeaconBlock
-): phase0.SignedBeaconBlockHeader {
-  return {
-    message: blockToHeader(config, signedBlock.message),
-    signature: signedBlock.signature,
-  };
-}

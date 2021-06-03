@@ -2,10 +2,10 @@ import {altair, ParticipationFlags, phase0, ssz, Uint8} from "@chainsafe/lodesta
 import {CachedBeaconState, createCachedBeaconState} from "../allForks/util";
 import {getCurrentEpoch, newZeroedArray} from "../util";
 import {List, TreeBacked} from "@chainsafe/ssz";
-import {getNextSyncCommittee} from "./state_accessor";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IParticipationStatus} from "../allForks/util/cachedEpochParticipation";
 import {getAttestationParticipationStatus} from "./block/processAttestation";
+import {getNextSyncCommittee} from "./epoch/sync_committee";
 
 /**
  * Upgrade a state from phase0 to altair.

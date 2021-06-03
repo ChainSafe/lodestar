@@ -3,7 +3,6 @@
  */
 import {Epoch, Version, Root, DomainType, allForks} from "@chainsafe/lodestar-types";
 
-import {getCurrentEpoch} from "./epoch";
 import {computeForkDataRoot} from "./fork";
 
 /**
@@ -24,12 +23,7 @@ export function getForkVersion(fork: allForks.BeaconState["fork"], epoch: Epoch)
 /**
  * Return the signature domain (fork version concatenated with domain type) of a message.
  */
-export function getDomain(
-  state: allForks.BeaconState,
-  domainType: DomainType,
-  messageEpoch: Epoch | null = null
-): Buffer {
-  const epoch = messageEpoch ?? getCurrentEpoch(state);
-  const forkVersion = getForkVersion(state.fork, epoch);
+export function getDomain(state: allForks.BeaconState, domainType: DomainType, messageEpoch: Epoch): Buffer {
+  const forkVersion = getForkVersion(state.fork, messageEpoch);
   return computeDomain(domainType, forkVersion, state.genesisValidatorsRoot);
 }

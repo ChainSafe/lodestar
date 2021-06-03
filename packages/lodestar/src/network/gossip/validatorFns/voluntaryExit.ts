@@ -1,4 +1,5 @@
 import {ERR_TOPIC_VALIDATOR_IGNORE, ERR_TOPIC_VALIDATOR_REJECT} from "libp2p-gossipsub/src/constants";
+import {Json} from "@chainsafe/ssz";
 import {phase0} from "@chainsafe/lodestar-types";
 import {validateGossipVoluntaryExit} from "../../../chain/validation";
 import {VoluntaryExitError, VoluntaryExitErrorCode} from "../../../chain/errors";
@@ -20,11 +21,11 @@ export async function validateVoluntaryExit(
     }
 
     switch (e.type.code) {
-      case VoluntaryExitErrorCode.INVALID_EXIT:
-        logger.debug("gossip - VoluntaryExit - reject", e.type);
+      case VoluntaryExitErrorCode.INVALID:
+        logger.debug("gossip - VoluntaryExit - reject", (e.type as unknown) as Json);
         throw new GossipValidationError(ERR_TOPIC_VALIDATOR_REJECT);
 
-      case VoluntaryExitErrorCode.EXIT_ALREADY_EXISTS:
+      case VoluntaryExitErrorCode.ALREADY_EXISTS:
       default:
         logger.debug("gossip - VoluntaryExit - ignore", e.type);
         throw new GossipValidationError(ERR_TOPIC_VALIDATOR_IGNORE);

@@ -5,7 +5,6 @@ import {
   computeStartSlotAtEpoch,
   proposerShufflingDecisionRoot,
   attesterShufflingDecisionRoot,
-  computeSubnetForCommitteesAtSlot,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {
   GENESIS_SLOT,
@@ -28,7 +27,7 @@ import {ApiError} from "../errors";
 import {validateSyncCommitteeGossipContributionAndProof} from "../../../chain/validation/syncCommitteeContributionAndProof";
 import {SyncContributionError, SyncContributionErrorCode} from "../../../db/syncCommitteeContribution";
 import {CommitteeSubscription} from "../../../network/subnets";
-import {getSyncComitteeValidatorIndexMap} from "./utils";
+import {computeSubnetForCommitteesAtSlot, getSyncComitteeValidatorIndexMap} from "./utils";
 import {ApiModules} from "../types";
 
 /**
@@ -279,7 +278,7 @@ export function getValidatorApi({
       const state = chain.getHeadState();
 
       // Ensures `epoch // EPOCHS_PER_SYNC_COMMITTEE_PERIOD <= current_epoch // EPOCHS_PER_SYNC_COMMITTEE_PERIOD + 1`
-      const syncComitteeValidatorIndexMap = getSyncComitteeValidatorIndexMap(config, state, epoch);
+      const syncComitteeValidatorIndexMap = getSyncComitteeValidatorIndexMap(state, epoch);
 
       const duties: routes.validator.SyncDuty[] = validatorIndices.map((validatorIndex) => ({
         pubkey: state.index2pubkey[validatorIndex].toBytes(),

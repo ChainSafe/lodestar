@@ -3,19 +3,13 @@
  */
 
 import bls from "@chainsafe/bls";
-import {
-  ATTESTATION_SUBNET_COUNT,
-  DOMAIN_BEACON_ATTESTER,
-  MIN_ATTESTATION_INCLUSION_DELAY,
-  SLOTS_PER_EPOCH,
-} from "@chainsafe/lodestar-params";
-import {phase0, Slot, ValidatorIndex, CommitteeIndex, allForks, ssz} from "@chainsafe/lodestar-types";
+import {DOMAIN_BEACON_ATTESTER, MIN_ATTESTATION_INCLUSION_DELAY, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
+import {phase0, Slot, ValidatorIndex, allForks, ssz} from "@chainsafe/lodestar-types";
 import {isSorted} from "@chainsafe/lodestar-utils";
 import {BitList, List} from "@chainsafe/ssz";
-import {getBeaconCommittee, getCommitteeCountAtSlot} from "./committee";
+import {getBeaconCommittee} from "./committee";
 import {getDomain} from "./domain";
 import {computeSigningRoot} from "./signingRoot";
-import {computeSlotsSinceEpochStart} from "./slot";
 
 /**
  * Check if [[data1]] and [[data2]] are slashable according to Casper FFG rules.
@@ -103,41 +97,4 @@ export function isValidAttestationSlot(attestationSlot: Slot, currentSlot: Slot)
   return (
     attestationSlot + MIN_ATTESTATION_INCLUSION_DELAY <= currentSlot && currentSlot <= attestationSlot + SLOTS_PER_EPOCH
   );
-}
-
-export function isUnaggregatedAttestation(attestation: phase0.Attestation): boolean {
-  const aggregationBits = attestation.aggregationBits;
-  let count = 0;
-  for (let i = 0; i < aggregationBits.length; i++) {
-    if (aggregationBits[i]) {
-      count++;
-    }
-  }
-  return count === 1;
-}
-
-/**
- * Compute the correct subnet for an attestation for Phase 0.
- */
-export function computeSubnetForAttestation(state: allForks.BeaconState, attestation: phase0.Attestation): number {
-  const {slot, index} = attestation.data;
-  return computeSubnetForSlot(state, slot, index);
-}
-
-/**
- * Compute the correct subnet for a slot/committee index for Phase 0.
- */
-export function computeSubnetForSlot(state: allForks.BeaconState, slot: number, committeeIndex: number): number {
-  const committeesAtSlot = getCommitteeCountAtSlot(state, slot);
-  return computeSubnetForCommitteesAtSlot(slot, committeesAtSlot, committeeIndex);
-}
-
-export function computeSubnetForCommitteesAtSlot(
-  slot: Slot,
-  committeesAtSlot: number,
-  committeeIndex: CommitteeIndex
-): number {
-  const slotsSinceEpochStart = computeSlotsSinceEpochStart(slot);
-  const committeesSinceEpochStart = committeesAtSlot * slotsSinceEpochStart;
-  return (committeesSinceEpochStart + committeeIndex) % ATTESTATION_SUBNET_COUNT;
 }

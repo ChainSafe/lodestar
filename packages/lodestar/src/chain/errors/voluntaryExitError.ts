@@ -1,12 +1,12 @@
 import {LodestarError} from "@chainsafe/lodestar-utils";
 
 export enum VoluntaryExitErrorCode {
-  EXIT_ALREADY_EXISTS = "VOLUNTARY_EXIT_ERROR_EXIT_ALREADY_EXISTS",
-  INVALID_EXIT = "VOLUNTARY_EXIT_ERROR_INVALID_EXIT",
+  ALREADY_EXISTS = "VOLUNTARY_EXIT_ERROR_ALREADY_EXISTS",
+  INVALID = "VOLUNTARY_EXIT_ERROR_INVALID",
 }
 export type VoluntaryExitErrorType =
-  | {code: VoluntaryExitErrorCode.EXIT_ALREADY_EXISTS}
-  | {code: VoluntaryExitErrorCode.INVALID_EXIT};
+  | {code: VoluntaryExitErrorCode.ALREADY_EXISTS}
+  | {code: VoluntaryExitErrorCode.INVALID; error: Error};
 
 export class VoluntaryExitError extends LodestarError<VoluntaryExitErrorType> {
   constructor(type: VoluntaryExitErrorType) {

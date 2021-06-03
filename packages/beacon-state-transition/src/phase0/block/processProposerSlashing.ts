@@ -10,6 +10,16 @@ export function processProposerSlashing(
   proposerSlashing: phase0.ProposerSlashing,
   verifySignatures = true
 ): void {
+  assertValidProposerSlashing(state as CachedBeaconState<allForks.BeaconState>, proposerSlashing, verifySignatures);
+
+  slashValidator(state, proposerSlashing.signedHeader1.message.proposerIndex);
+}
+
+export function assertValidProposerSlashing(
+  state: CachedBeaconState<allForks.BeaconState>,
+  proposerSlashing: phase0.ProposerSlashing,
+  verifySignatures = true
+): void {
   const {epochCtx} = state;
   const {BeaconBlockHeader} = ssz.phase0;
   const header1 = proposerSlashing.signedHeader1.message;
@@ -47,6 +57,4 @@ export function processProposerSlashing(
       }
     }
   }
-
-  slashValidator(state, header1.proposerIndex);
 }

@@ -18,7 +18,9 @@ import {
   SLOTS_PER_HISTORICAL_ROOT,
 } from "@chainsafe/lodestar-params";
 
-let archivedState: TreeBacked<phase0.BeaconState> | null = null;
+let tbState: TreeBacked<phase0.BeaconState> | null = null;
+let cachedState23637: allForks.CachedBeaconState<phase0.BeaconState> | null = null;
+let cachedState23638: allForks.CachedBeaconState<phase0.BeaconState> | null = null;
 let signedBlock: TreeBacked<phase0.SignedBeaconBlock> | null = null;
 const logger = profilerLogger();
 
@@ -41,12 +43,6 @@ export function generatePerfTestCachedBeaconState(opts?: {
 }): allForks.CachedBeaconState<phase0.BeaconState> {
   // Generate only some publicKeys
   const {pubkeys, pubkeysMod, pubkeysModObj} = getPubkeys();
-  const origState = generatePerformanceState(pubkeys);
-
-  if (opts?.goBackOneSlot) {
-    // go back 1 slot to process epoch
-    origState.slot -= 1;
-  }
 
   // Manually sync pubkeys to prevent doing BLS opts 110_000 times
   const pubkey2index = new PubkeyIndexMap();
@@ -58,19 +54,33 @@ export function generatePerfTestCachedBeaconState(opts?: {
     index2pubkey.push(pubkeyObj);
   }
 
-  const cachedState = allForks.createCachedBeaconState(config, origState, {
-    pubkey2index,
-    index2pubkey,
-    skipSyncPubkeys: true,
-  });
-  return cachedState;
+  const origState = generatePerformanceState(pubkeys);
+  if (!cachedState23637) {
+    const state = origState.clone();
+    state.slot -= 1;
+    cachedState23637 = allForks.createCachedBeaconState(config, state, {
+      pubkey2index,
+      index2pubkey,
+      skipSyncPubkeys: true,
+    });
+  }
+  if (!cachedState23638) {
+    cachedState23638 = allForks.processSlots(
+      cachedState23637 as allForks.CachedBeaconState<allForks.BeaconState>,
+      cachedState23637.slot + 1
+    ) as allForks.CachedBeaconState<phase0.BeaconState>;
+    cachedState23638.slot += 1;
+  }
+  const resultingState = opts && opts.goBackOneSlot ? cachedState23637 : cachedState23638;
+
+  return resultingState.clone();
 }
 
 /**
  * This is generated from Medalla state 756416
  */
 export function generatePerformanceState(pubkeysArg?: Uint8Array[]): TreeBacked<phase0.BeaconState> {
-  if (!archivedState) {
+  if (!tbState) {
     const pubkeys = pubkeysArg || getPubkeys().pubkeys;
 
     const state = ssz.phase0.BeaconState.defaultValue();
@@ -176,15 +186,15 @@ export function generatePerformanceState(pubkeysArg?: Uint8Array[]): TreeBacked<
       };
     }) as List<PendingAttestation>;
     // no justificationBits
-    archivedState = ssz.phase0.BeaconState.createTreeBackedFromStruct(state);
-    logger.info("Loaded state", {
-      slot: archivedState.slot,
-      numValidators: archivedState.validators.length,
+    tbState = ssz.phase0.BeaconState.createTreeBackedFromStruct(state);
+    logger.verbose("Loaded state", {
+      slot: tbState.slot,
+      numValidators: tbState.validators.length,
     });
     // cache roots
-    archivedState.hashTreeRoot();
+    tbState.hashTreeRoot();
   }
-  return archivedState.clone();
+  return tbState.clone();
 }
 
 /**
@@ -205,7 +215,7 @@ export function generatePerformanceBlock(): TreeBacked<phase0.SignedBeaconBlock>
     );
     // eth1Data, graffiti, attestations
     signedBlock = ssz.phase0.SignedBeaconBlock.createTreeBackedFromStruct(block);
-    logger.info("Loaded block", {slot: signedBlock.message.slot});
+    logger.verbose("Loaded block", {slot: signedBlock.message.slot});
   }
   return signedBlock.clone();
 }

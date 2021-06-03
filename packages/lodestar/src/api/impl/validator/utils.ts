@@ -1,14 +1,14 @@
 import {
   CachedBeaconState,
   computeEpochAtSlot,
+  computeSlotsSinceEpochStart,
   computeSyncCommitteePeriod,
 } from "@chainsafe/lodestar-beacon-state-transition";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {allForks, altair, Epoch, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {ATTESTATION_SUBNET_COUNT} from "@chainsafe/lodestar-params";
+import {allForks, altair, CommitteeIndex, Epoch, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {ApiError} from "../errors";
 
 export function getSyncComitteeValidatorIndexMap(
-  config: IBeaconConfig,
   state: allForks.BeaconState | CachedBeaconState<allForks.BeaconState>,
   requestedEpoch: Epoch
 ): Map<ValidatorIndex, number[]> {
@@ -27,4 +27,14 @@ export function getSyncComitteeValidatorIndexMap(
   }
 
   throw new ApiError(400, "No CachedBeaconState available");
+}
+
+export function computeSubnetForCommitteesAtSlot(
+  slot: Slot,
+  committeesAtSlot: number,
+  committeeIndex: CommitteeIndex
+): number {
+  const slotsSinceEpochStart = computeSlotsSinceEpochStart(slot);
+  const committeesSinceEpochStart = committeesAtSlot * slotsSinceEpochStart;
+  return (committeesSinceEpochStart + committeeIndex) % ATTESTATION_SUBNET_COUNT;
 }

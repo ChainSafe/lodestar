@@ -14,8 +14,8 @@ export function getContributionAndProofSignatureSet(
   signedContributionAndProof: altair.SignedContributionAndProof
 ): ISignatureSet {
   const {epochCtx} = state;
-  const msgEpoch = computeEpochAtSlot(signedContributionAndProof.message.contribution.slot);
-  const domain = getDomain(state, DOMAIN_CONTRIBUTION_AND_PROOF, msgEpoch);
+  const epochSig = computeEpochAtSlot(signedContributionAndProof.message.contribution.slot);
+  const domain = getDomain(state, DOMAIN_CONTRIBUTION_AND_PROOF, epochSig);
   const signingData = signedContributionAndProof.message;
   return {
     type: SignatureSetType.single,

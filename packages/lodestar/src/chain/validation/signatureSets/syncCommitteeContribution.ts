@@ -15,8 +15,8 @@ export function getSyncCommitteeContributionSignatureSet(
   state: CachedBeaconState<altair.BeaconState>,
   contribution: altair.SyncCommitteeContribution
 ): ISignatureSet {
-  const currentEpoch = computeEpochAtSlot(contribution.slot);
-  const domain = getDomain(state, DOMAIN_SYNC_COMMITTEE, currentEpoch);
+  const epochSig = computeEpochAtSlot(contribution.slot);
+  const domain = getDomain(state, DOMAIN_SYNC_COMMITTEE, epochSig);
   return {
     type: SignatureSetType.aggregate,
     pubkeys: getContributionPubkeys(state, contribution),

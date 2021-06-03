@@ -13,8 +13,8 @@ export function getSyncCommitteeSignatureSet(
   state: CachedBeaconState<allForks.BeaconState>,
   syncCommittee: altair.SyncCommitteeSignature
 ): ISignatureSet {
-  const msgEpoch = computeEpochAtSlot(syncCommittee.slot);
-  const domain = getDomain(state, DOMAIN_SYNC_COMMITTEE, msgEpoch);
+  const epochSig = computeEpochAtSlot(syncCommittee.slot);
+  const domain = getDomain(state, DOMAIN_SYNC_COMMITTEE, epochSig);
 
   return {
     type: SignatureSetType.single,

@@ -1,5 +1,13 @@
-import {allForks, altair, phase0, ssz} from "@chainsafe/lodestar-types";
+import {allForks, altair, Gwei, phase0, ssz, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {bigIntSqrt, intSqrt} from "@chainsafe/lodestar-utils";
+
+import {computeEpochAtSlot, getBlockRoot, getBlockRootAtSlot, getTotalActiveBalance, increaseBalance} from "../../util";
+import {CachedBeaconState} from "../../allForks/util";
+import {isValidIndexedAttestation} from "../../allForks/block";
+import {IParticipationStatus} from "../../allForks/util/cachedEpochParticipation";
 import {
+  BASE_REWARD_FACTOR,
+  EFFECTIVE_BALANCE_INCREMENT,
   MIN_ATTESTATION_INCLUSION_DELAY,
   PROPOSER_WEIGHT,
   SLOTS_PER_EPOCH,
@@ -8,13 +16,6 @@ import {
   TIMELY_TARGET_WEIGHT,
   WEIGHT_DENOMINATOR,
 } from "@chainsafe/lodestar-params";
-
-import {computeEpochAtSlot, getBlockRoot, getBlockRootAtSlot, increaseBalance} from "../../util";
-import {CachedBeaconState} from "../../allForks/util";
-import {isValidIndexedAttestation} from "../../allForks/block";
-import {IParticipationStatus} from "../../allForks/util/cachedEpochParticipation";
-import {getBaseReward} from "../state_accessor";
-import {intSqrt} from "@chainsafe/lodestar-utils";
 
 export function processAttestation(
   state: CachedBeaconState<altair.BeaconState>,
@@ -149,4 +150,19 @@ export function getAttestationParticipationStatus(
     timelyTarget: isMatchingTarget && inclusionDelay <= SLOTS_PER_EPOCH,
     timelyHead: isMatchingHead && inclusionDelay === MIN_ATTESTATION_INCLUSION_DELAY,
   };
+}
+
+/**
+ * TODO: NAIVE - EXTREMELY SLOW
+ */
+export function getBaseReward(state: CachedBeaconState<altair.BeaconState>, index: ValidatorIndex): Gwei {
+  const increments = state.validators[index].effectiveBalance / EFFECTIVE_BALANCE_INCREMENT;
+  return increments * getBaseRewardPerIncrement(state);
+}
+
+/**
+ * TODO: NAIVE - EXTREMELY SLOW
+ */
+export function getBaseRewardPerIncrement(state: CachedBeaconState<altair.BeaconState>): bigint {
+  return (EFFECTIVE_BALANCE_INCREMENT * BASE_REWARD_FACTOR) / bigIntSqrt(getTotalActiveBalance(state));
 }

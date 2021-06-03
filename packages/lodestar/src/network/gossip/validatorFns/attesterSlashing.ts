@@ -1,4 +1,5 @@
 import {ERR_TOPIC_VALIDATOR_IGNORE, ERR_TOPIC_VALIDATOR_REJECT} from "libp2p-gossipsub/src/constants";
+import {Json} from "@chainsafe/ssz";
 import {phase0} from "@chainsafe/lodestar-types";
 import {validateGossipAttesterSlashing} from "../../../chain/validation";
 import {AttesterSlashingError, AttesterSlashingErrorCode} from "../../../chain/errors";
@@ -20,11 +21,11 @@ export async function validateAttesterSlashing(
     }
 
     switch (e.type.code) {
-      case AttesterSlashingErrorCode.INVALID_SLASHING:
-        logger.debug("gossip - AttesterSlashing - reject", e.type);
+      case AttesterSlashingErrorCode.INVALID:
+        logger.debug("gossip - AttesterSlashing - reject", (e.type as unknown) as Json);
         throw new GossipValidationError(ERR_TOPIC_VALIDATOR_REJECT);
 
-      case AttesterSlashingErrorCode.SLASHING_ALREADY_EXISTS:
+      case AttesterSlashingErrorCode.ALREADY_EXISTS:
       default:
         logger.debug("gossip - AttesterSlashing - ignore", e.type);
         throw new GossipValidationError(ERR_TOPIC_VALIDATOR_IGNORE);

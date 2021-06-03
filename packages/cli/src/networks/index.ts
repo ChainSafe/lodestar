@@ -5,10 +5,10 @@ import {IBeaconParamsUnparsed} from "../config/types";
 import * as mainnet from "./mainnet";
 import * as pyrmont from "./pyrmont";
 import * as prater from "./prater";
-import * as coorparoo from "./coorparoo";
+import * as oonoonba from "./oonoonba";
 
-export type NetworkName = "mainnet" | "pyrmont" | "prater" | "dev" | "coorparoo";
-export const networkNames: NetworkName[] = ["mainnet", "pyrmont", "prater", "coorparoo"];
+export type NetworkName = "mainnet" | "pyrmont" | "prater" | "dev" | "oonoonba";
+export const networkNames: NetworkName[] = ["mainnet", "pyrmont", "prater", "oonoonba"];
 
 function getNetworkData(
   network: NetworkName
@@ -26,8 +26,8 @@ function getNetworkData(
       return pyrmont;
     case "prater":
       return prater;
-    case "coorparoo":
-      return coorparoo;
+    case "oonoonba":
+      return oonoonba;
     default:
       throw Error(`Network not supported: ${network}`);
   }

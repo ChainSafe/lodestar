@@ -104,6 +104,7 @@ export function getBaseRewardPerIncrement(
 ): bigint {
   return (EFFECTIVE_BALANCE_INCREMENT * BASE_REWARD_FACTOR) / bigIntSqrt(process.totalActiveStake);
 }
+
 export function getBaseReward(
   state: CachedBeaconState<altair.BeaconState>,
   process: IEpochProcess,

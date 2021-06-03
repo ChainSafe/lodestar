@@ -16,8 +16,8 @@ export function getProposerSlashingSignatureSets(
 
   return [proposerSlashing.signedHeader1, proposerSlashing.signedHeader2].map(
     (signedHeader): ISignatureSet => {
-      const epoch = computeEpochAtSlot(signedHeader.message.slot);
-      const domain = getDomain(state, DOMAIN_BEACON_PROPOSER, epoch);
+      const epochSig = computeEpochAtSlot(signedHeader.message.slot);
+      const domain = getDomain(state, DOMAIN_BEACON_PROPOSER, epochSig);
       const beaconBlockHeaderType = ssz.phase0.BeaconBlockHeader;
 
       return {

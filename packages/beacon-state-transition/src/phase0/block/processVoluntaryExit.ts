@@ -10,6 +10,16 @@ export function processVoluntaryExit(
   signedVoluntaryExit: phase0.SignedVoluntaryExit,
   verifySignature = true
 ): void {
+  assertValidVoluntaryExit(state as CachedBeaconState<allForks.BeaconState>, signedVoluntaryExit, verifySignature);
+
+  initiateValidatorExit(state as CachedBeaconState<allForks.BeaconState>, signedVoluntaryExit.message.validatorIndex);
+}
+
+export function assertValidVoluntaryExit(
+  state: CachedBeaconState<allForks.BeaconState>,
+  signedVoluntaryExit: phase0.SignedVoluntaryExit,
+  verifySignature = true
+): void {
   const {config, epochCtx} = state;
   const voluntaryExit = signedVoluntaryExit.message;
   const validator = state.validators[voluntaryExit.validatorIndex];
@@ -39,7 +49,4 @@ export function processVoluntaryExit(
       throw new Error("VoluntaryExit has an invalid signature");
     }
   }
-
-  // initiate exit
-  initiateValidatorExit(state as CachedBeaconState<allForks.BeaconState>, voluntaryExit.validatorIndex);
 }

@@ -3,29 +3,12 @@
  */
 
 import {hash, readonlyValues} from "@chainsafe/ssz";
-import {
-  BLSSignature,
-  CommitteeIndex,
-  Epoch,
-  Slot,
-  Uint64,
-  phase0,
-  ValidatorIndex,
-  allForks,
-} from "@chainsafe/lodestar-types";
+import {BLSSignature, CommitteeIndex, Epoch, Slot, phase0, ValidatorIndex, allForks} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {getCurrentEpoch} from "./epoch";
 import {intDiv, bytesToInt} from "@chainsafe/lodestar-utils";
 import {getBeaconCommittee} from "./committee";
-import {EFFECTIVE_BALANCE_INCREMENT, TARGET_COMMITTEE_SIZE} from "@chainsafe/lodestar-params";
-
-export function computeCompactValidator(validator: phase0.Validator, index: ValidatorIndex): Uint64 {
-  // `index` (top 6 bytes) + `slashed` (16th bit) + `compact_balance` (bottom 15 bits)
-  const compactBalance = validator.effectiveBalance / EFFECTIVE_BALANCE_INCREMENT;
-  const compactValidator =
-    (BigInt(index) << BigInt(16)) + (BigInt(validator.slashed ? 1 : 0) << BigInt(15)) + compactBalance;
-  return compactValidator;
-}
+import {TARGET_COMMITTEE_SIZE} from "@chainsafe/lodestar-params";
 
 /**
  * Check if [[validator]] is active

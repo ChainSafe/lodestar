@@ -15,8 +15,8 @@ export function getSyncCommitteeSelectionProofSignatureSet(
 ): ISignatureSet {
   const {epochCtx} = state;
   const slot = contributionAndProof.contribution.slot;
-  const epoch = computeEpochAtSlot(slot);
-  const domain = getDomain(state, DOMAIN_SYNC_COMMITTEE_SELECTION_PROOF, epoch);
+  const epochSig = computeEpochAtSlot(slot);
+  const domain = getDomain(state, DOMAIN_SYNC_COMMITTEE_SELECTION_PROOF, epochSig);
   const signingData: altair.SyncAggregatorSelectionData = {
     slot,
     subCommitteeIndex: contributionAndProof.contribution.subCommitteeIndex,

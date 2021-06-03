@@ -27,7 +27,7 @@ export function getRandaoRevealSignatureSet(
   const {epochCtx} = state;
   // should not get epoch from epochCtx
   const epoch = computeEpochAtSlot(block.slot);
-  const domain = getDomain(state, DOMAIN_RANDAO);
+  const domain = getDomain(state, DOMAIN_RANDAO, epoch);
 
   return {
     type: SignatureSetType.single,

@@ -43,7 +43,7 @@ export class BeaconSync implements IBeaconSync {
     this.network = network;
     this.chain = chain;
     this.logger = logger;
-    this.rangeSync = new RangeSync(modules);
+    this.rangeSync = new RangeSync(modules, this.opts);
     this.slotImportTolerance = SLOTS_PER_EPOCH;
 
     // Subscribe to RangeSync completing a SyncChain and recompute sync state
