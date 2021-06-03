@@ -6,7 +6,7 @@ export enum VoluntaryExitErrorCode {
 }
 export type VoluntaryExitErrorType =
   | {code: VoluntaryExitErrorCode.EXIT_ALREADY_EXISTS}
-  | {code: VoluntaryExitErrorCode.INVALID_EXIT};
+  | {code: VoluntaryExitErrorCode.INVALID_EXIT; error: Error};
 
 export class VoluntaryExitError extends LodestarError<VoluntaryExitErrorType> {
   constructor(type: VoluntaryExitErrorType) {

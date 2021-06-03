@@ -27,6 +27,7 @@ export async function validateGossipVoluntaryExit(
   } catch (e) {
     throw new VoluntaryExitError({
       code: VoluntaryExitErrorCode.INVALID_EXIT,
+      error: e as Error,
     });
   }
 
@@ -34,6 +35,7 @@ export async function validateGossipVoluntaryExit(
   if (!(await chain.bls.verifySignatureSets([signatureSet]))) {
     throw new VoluntaryExitError({
       code: VoluntaryExitErrorCode.INVALID_EXIT,
+      error: Error("Invalid signature"),
     });
   }
 }
