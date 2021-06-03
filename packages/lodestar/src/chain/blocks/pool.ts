@@ -1,6 +1,7 @@
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Root, Slot, allForks} from "@chainsafe/lodestar-types";
+import {ILogger} from "@chainsafe/lodestar-utils";
 
 /**
  * The BlockPool is a cache of blocks that are pending processing.
@@ -10,27 +11,20 @@ import {Root, Slot, allForks} from "@chainsafe/lodestar-types";
  * - blocks with future slots
  */
 export class BlockPool {
-  private readonly config: IBeaconConfig;
   /**
    * Block metadata indexed by block root
    */
-  private blocks: Map<string, {parentRoot: string; slot: Slot}>;
+  private blocks = new Map<string, {parentRoot: string; slot: Slot}>();
   /**
    * Blocks indexed by parentRoot, then blockRoot
    */
-  private blocksByParent: Map<string, Set<string>>;
+  private blocksByParent = new Map<string, Set<string>>();
   /**
    * Blocks indexed by slot, then blockRoot
    */
-  private blocksBySlot: Map<Slot, Set<string>>;
+  private blocksBySlot = new Map<number, Set<string>>();
 
-  constructor({config}: {config: IBeaconConfig}) {
-    this.config = config;
-
-    this.blocks = new Map<string, {parentRoot: string; slot: Slot}>();
-    this.blocksByParent = new Map<string, Set<string>>();
-    this.blocksBySlot = new Map<number, Set<string>>();
-  }
+  constructor(private readonly config: IBeaconConfig, private readonly logger: ILogger) {}
 
   addByParent(signedBlock: allForks.SignedBeaconBlock): void {
     // put block in two indices:
@@ -51,6 +45,8 @@ export class BlockPool {
     }
 
     blocksWithParent.add(blockKey);
+
+    this.logger.debug("Add block to pool", {blockKey});
   }
 
   addBySlot(signedBlock: allForks.SignedBeaconBlock): void {
@@ -72,6 +68,8 @@ export class BlockPool {
     }
 
     blocksAtSlot.add(blockKey);
+
+    this.logger.debug("Add block to pool", {blockKey});
   }
 
   remove(signedBlock: allForks.SignedBeaconBlock): void {

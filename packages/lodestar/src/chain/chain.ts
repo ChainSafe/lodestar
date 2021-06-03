@@ -101,7 +101,7 @@ export class BeaconChain implements IBeaconChain {
       signal,
     });
     this.pendingAttestations = new AttestationPool({config});
-    this.pendingBlocks = new BlockPool({config});
+    this.pendingBlocks = new BlockPool(config, logger);
     this.attestationProcessor = new AttestationProcessor({config, forkChoice, emitter, clock, regen});
     this.blockProcessor = new BlockProcessor({
       config,
