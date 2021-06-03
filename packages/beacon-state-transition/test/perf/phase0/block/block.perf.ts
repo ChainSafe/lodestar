@@ -15,7 +15,7 @@ import {generatePerformanceBlock, generatePerfTestCachedBeaconState, initBLS} fr
 export const runBlockTransitionTests = async (): Promise<void> => {
   const runner = new BenchmarkRunner("Process block", {
     maxMs: 5 * 60 * 1000,
-    runs: 100,
+    runs: 50,
   });
   await initBLS();
   const originalState = generatePerfTestCachedBeaconState() as allForks.CachedBeaconState<allForks.BeaconState>;
