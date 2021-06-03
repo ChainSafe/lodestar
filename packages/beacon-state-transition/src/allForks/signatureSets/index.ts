@@ -1,5 +1,5 @@
-import {allForks} from "@chainsafe/lodestar-types";
-import {ISignatureSet} from "../../util";
+import {allForks, altair} from "@chainsafe/lodestar-types";
+import {computeEpochAtSlot, ISignatureSet} from "../../util";
 import {CachedBeaconState} from "../util";
 import {getProposerSlashingsSignatureSets} from "./proposerSlashings";
 import {getAttesterSlashingsSignatureSets} from "./attesterSlashings";
@@ -7,6 +7,7 @@ import {getAttestationsSignatureSets} from "./indexedAttestation";
 import {getProposerSignatureSet} from "./proposer";
 import {getRandaoRevealSignatureSet} from "./randao";
 import {getVoluntaryExitsSignatureSets} from "./voluntaryExits";
+import {getSyncCommitteeSignatureSet} from "../../altair/block/processSyncCommittee";
 
 export * from "./attesterSlashings";
 export * from "./indexedAttestation";
@@ -34,11 +35,25 @@ export function getAllBlockSignatureSetsExceptProposer(
   state: CachedBeaconState<allForks.BeaconState>,
   signedBlock: allForks.SignedBeaconBlock
 ): ISignatureSet[] {
-  return [
+  const signatureSets = [
     getRandaoRevealSignatureSet(state, signedBlock.message),
     ...getProposerSlashingsSignatureSets(state, signedBlock),
     ...getAttesterSlashingsSignatureSets(state, signedBlock),
     ...getAttestationsSignatureSets(state, signedBlock),
     ...getVoluntaryExitsSignatureSets(state, signedBlock),
   ];
+
+  // Only after altair fork, validate tSyncCommitteeSignature
+  if (computeEpochAtSlot(state.config, signedBlock.message.slot) >= state.config.params.ALTAIR_FORK_EPOCH) {
+    const syncCommitteeSignatureSet = getSyncCommitteeSignatureSet(
+      state as CachedBeaconState<altair.BeaconState>,
+      (signedBlock as altair.SignedBeaconBlock).message.body.syncAggregate
+    );
+    // There may be no participants in this syncCommitteeSignature, so it must not be validated
+    if (syncCommitteeSignatureSet) {
+      signatureSets.push(syncCommitteeSignatureSet);
+    }
+  }
+
+  return signatureSets;
 }
