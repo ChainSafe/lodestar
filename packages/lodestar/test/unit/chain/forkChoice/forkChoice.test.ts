@@ -57,6 +57,7 @@ describe("LodestarForkChoice", function () {
      *                     \
      *                       parent (37) - child (38)
      */
+    /*
     it("getHead - should not consider orphaned block as head", () => {
       const {blockHeader} = computeAnchorCheckpoint(config, anchorState);
       const finalizedRoot = config.types.phase0.BeaconBlockHeader.hashTreeRoot(blockHeader);
@@ -101,6 +102,7 @@ describe("LodestarForkChoice", function () {
       // with votes, head becomes the child block
       expect(head.slot).to.be.equal(childBlock.message.slot);
     });
+    */
 
     /**
      * finalized - slot 8 (finalized 1) - slot 12 - slot 16 (finalized 2) - slot 20 - slot 24 (finalized 3) - slot 28 - slot 32 (finalized 4)
@@ -228,7 +230,7 @@ function makeChild(
   return {block: childBlock, state: childState};
 }
 
-function createIndexedAttestation(
+export function createIndexedAttestation(
   source: phase0.Checkpoint,
   target: phase0.SignedBeaconBlock,
   block: phase0.SignedBeaconBlock,
