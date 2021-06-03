@@ -2,8 +2,7 @@
 import {join} from "path";
 import {expect} from "chai";
 import {config} from "@chainsafe/lodestar-config/minimal";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {phase0, Uint64, Root} from "@chainsafe/lodestar-types";
+import {phase0, Uint64, Root, ssz} from "@chainsafe/lodestar-types";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
 import {initializeBeaconStateFromEth1} from "@chainsafe/lodestar-beacon-state-transition";
 
@@ -31,7 +30,7 @@ describeDirectorySpecTest<IGenesisInitSpecTest, phase0.BeaconState>(
       config,
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
-      config.types.Root.fromJson(testcase.eth1.eth1BlockHash),
+      ssz.Root.fromJson(testcase.eth1.eth1BlockHash),
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
       Number(testcase.eth1.eth1Timestamp),
@@ -48,26 +47,23 @@ describeDirectorySpecTest<IGenesisInitSpecTest, phase0.BeaconState>(
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
     sszTypes: {
-      eth1_block_hash: config.types.Root,
-      state: config.types.phase0.BeaconState,
-      ...generateDepositSSZTypeMapping(192, config),
+      eth1_block_hash: ssz.Root,
+      state: ssz.phase0.BeaconState,
+      ...generateDepositSSZTypeMapping(192),
     },
     timeout: 60000,
     getExpected: (testCase) => testCase.state,
     expectFunc: (testCase, expected, actual) => {
-      expect(config.types.phase0.BeaconState.equals(actual, expected)).to.be.true;
+      expect(ssz.phase0.BeaconState.equals(actual, expected)).to.be.true;
     },
     //shouldSkip: (_, __, index) => index !== 0,
   }
 );
 
-function generateDepositSSZTypeMapping(
-  n: number,
-  config: IBeaconConfig
-): Record<string, typeof config.types.phase0.Deposit> {
-  const depositMappings: Record<string, typeof config.types.phase0.Deposit> = {};
+function generateDepositSSZTypeMapping(n: number): Record<string, typeof ssz.phase0.Deposit> {
+  const depositMappings: Record<string, typeof ssz.phase0.Deposit> = {};
   for (let i = 0; i < n; i++) {
-    depositMappings[`deposits_${i}`] = config.types.phase0.Deposit;
+    depositMappings[`deposits_${i}`] = ssz.phase0.Deposit;
   }
   return depositMappings;
 }

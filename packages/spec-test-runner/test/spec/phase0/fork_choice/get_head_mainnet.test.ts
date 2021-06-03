@@ -18,6 +18,7 @@ import {LodestarForkChoice} from "@chainsafe/lodestar/lib/chain/forkChoice/forkC
 import {SPEC_TEST_LOCATION} from "../../../utils/specTestCases";
 import {ChainEventEmitter} from "@chainsafe/lodestar/lib/chain/emitter";
 import {toHexString} from "@chainsafe/ssz";
+import {ssz} from "@chainsafe/lodestar-types";
 
 describeDirectorySpecTest<IForkChoiceTestCase, void>(
   "forkchoice get_head",
@@ -29,7 +30,7 @@ describeDirectorySpecTest<IForkChoiceTestCase, void>(
     const tbState = config.getForkTypes(currentSlot).BeaconState.createTreeBackedFromStruct(anchorState);
     let cachedState = createCachedBeaconState(config, tbState);
     const forkchoice = new LodestarForkChoice({config, emitter, currentSlot, state: cachedState});
-    const {SECONDS_PER_SLOT} = cachedState.config.params;
+    const {SECONDS_PER_SLOT} = cachedState.config;
     for (const step of steps) {
       if (isTick(step)) {
         forkchoice.updateTime(Number(step.tick) / SECONDS_PER_SLOT);
@@ -80,10 +81,10 @@ describeDirectorySpecTest<IForkChoiceTestCase, void>(
       steps: InputType.YAML,
     },
     sszTypes: {
-      [ANCHOR_STATE_FILE_NAME]: config.types.phase0.BeaconState,
-      [ANCHOR_BLOCK_FILE_NAME]: config.types.phase0.BeaconBlock,
-      [BLOCK_FILE_NAME]: config.types.phase0.SignedBeaconBlock,
-      [ATTESTATION_FILE_NAME]: config.types.phase0.Attestation,
+      [ANCHOR_STATE_FILE_NAME]: ssz.phase0.BeaconState,
+      [ANCHOR_BLOCK_FILE_NAME]: ssz.phase0.BeaconBlock,
+      [BLOCK_FILE_NAME]: ssz.phase0.SignedBeaconBlock,
+      [ATTESTATION_FILE_NAME]: ssz.phase0.Attestation,
     },
     mapToTestCase: (t: Record<string, any>) => {
       // t has input file name as key

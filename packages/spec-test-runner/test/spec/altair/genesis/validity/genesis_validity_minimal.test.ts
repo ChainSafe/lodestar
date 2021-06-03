@@ -3,7 +3,7 @@ import {join} from "path";
 
 import {params} from "@chainsafe/lodestar-params/minimal";
 import {createIBeaconConfig} from "@chainsafe/lodestar-config";
-import {altair} from "@chainsafe/lodestar-types";
+import {altair, ssz} from "@chainsafe/lodestar-types";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
 import {isValidGenesisState} from "@chainsafe/lodestar-beacon-state-transition";
 import {SPEC_TEST_LOCATION} from "../../../../utils/specTestCases";
@@ -32,7 +32,7 @@ describeDirectorySpecTest<IGenesisValidityTestCase, boolean>(
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
     sszTypes: {
-      genesis: config.types.altair.BeaconState,
+      genesis: ssz.altair.BeaconState,
     },
     getExpected: (testCase) => testCase.is_valid,
     expectFunc: (testCase, expected, actual) => {

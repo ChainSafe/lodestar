@@ -7,6 +7,7 @@ import {allForks, phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
 import {IProcessVoluntaryExitTestCase} from "./type";
 import {SPEC_TEST_LOCATION} from "../../../../utils/specTestCases";
+import {ssz} from "@chainsafe/lodestar-types";
 
 describeDirectorySpecTest<IProcessVoluntaryExitTestCase, phase0.BeaconState>(
   "process voluntary exit mainnet",
@@ -31,16 +32,16 @@ describeDirectorySpecTest<IProcessVoluntaryExitTestCase, phase0.BeaconState>(
       },
     },
     sszTypes: {
-      pre: config.types.phase0.BeaconState,
-      post: config.types.phase0.BeaconState,
+      pre: ssz.phase0.BeaconState,
+      post: ssz.phase0.BeaconState,
       // eslint-disable-next-line @typescript-eslint/naming-convention
-      voluntary_exit: config.types.phase0.SignedVoluntaryExit,
+      voluntary_exit: ssz.phase0.SignedVoluntaryExit,
     },
     timeout: 100000000,
     shouldError: (testCase) => !testCase.post,
     getExpected: (testCase) => testCase.post,
     expectFunc: (testCase, expected, actual) => {
-      expect(config.types.phase0.BeaconState.equals(actual, expected)).to.be.true;
+      expect(ssz.phase0.BeaconState.equals(actual, expected)).to.be.true;
     },
   }
 );

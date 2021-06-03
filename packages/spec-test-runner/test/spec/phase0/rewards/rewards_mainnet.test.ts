@@ -6,6 +6,7 @@ import {join} from "path";
 import {SPEC_TEST_LOCATION} from "../../../utils/specTestCases";
 import {generateSZZTypeMapping, IDeltas, DeltasType, IRewardsTestCase} from "./types";
 import {expect} from "chai";
+import {ssz} from "@chainsafe/lodestar-types";
 
 for (const testSuite of ["basic", "leak", "random"]) {
   describeDirectorySpecTest<IRewardsTestCase, IDeltas>(
@@ -36,7 +37,7 @@ for (const testSuite of ["basic", "leak", "random"]) {
         meta: InputType.YAML,
       },
       sszTypes: {
-        pre: config.types.phase0.BeaconState,
+        pre: ssz.phase0.BeaconState,
         ...generateSZZTypeMapping(),
       },
       timeout: 100000000,

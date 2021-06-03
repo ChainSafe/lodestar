@@ -7,6 +7,7 @@ import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-tes
 import {altair, isValidGenesisState} from "@chainsafe/lodestar-beacon-state-transition";
 import {SPEC_TEST_LOCATION} from "../../../../utils/specTestCases";
 import {IBaseSpecTest} from "../../../type";
+import {ssz} from "@chainsafe/lodestar-types";
 
 interface IGenesisValidityTestCase extends IBaseSpecTest {
   is_valid: boolean;
@@ -30,7 +31,7 @@ describeDirectorySpecTest<IGenesisValidityTestCase, boolean>(
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
     sszTypes: {
-      genesis: config.types.altair.BeaconState,
+      genesis: ssz.altair.BeaconState,
     },
     getExpected: (testCase) => testCase.is_valid,
   }

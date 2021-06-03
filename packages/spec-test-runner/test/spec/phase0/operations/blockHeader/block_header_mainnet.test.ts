@@ -7,6 +7,7 @@ import {CachedBeaconState, allForks, phase0} from "@chainsafe/lodestar-beacon-st
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
 import {IProcessBlockHeader} from "./type";
 import {SPEC_TEST_LOCATION} from "../../../../utils/specTestCases";
+import {ssz} from "@chainsafe/lodestar-types";
 
 describeDirectorySpecTest<IProcessBlockHeader, phase0.BeaconState>(
   "process block header mainnet",
@@ -31,15 +32,15 @@ describeDirectorySpecTest<IProcessBlockHeader, phase0.BeaconState>(
       },
     },
     sszTypes: {
-      pre: config.types.phase0.BeaconState,
-      post: config.types.phase0.BeaconState,
-      block: config.types.phase0.BeaconBlock,
+      pre: ssz.phase0.BeaconState,
+      post: ssz.phase0.BeaconState,
+      block: ssz.phase0.BeaconBlock,
     },
     timeout: 100000000,
     shouldError: (testCase) => !testCase.post,
     getExpected: (testCase) => testCase.post,
     expectFunc: (testCase, expected, actual) => {
-      expect(config.types.phase0.BeaconState.equals(actual, expected)).to.be.true;
+      expect(ssz.phase0.BeaconState.equals(actual, expected)).to.be.true;
     },
   }
 );

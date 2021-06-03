@@ -8,6 +8,7 @@ import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-tes
 import {IProcessSlotsTestCase} from "./type";
 import {SPEC_TEST_LOCATION} from "../../../../utils/specTestCases";
 import {BeaconState} from "@chainsafe/lodestar-types/phase0";
+import {ssz} from "@chainsafe/lodestar-types";
 
 describeDirectorySpecTest<IProcessSlotsTestCase, phase0.BeaconState>(
   "slot sanity mainnet",
@@ -40,8 +41,8 @@ describeDirectorySpecTest<IProcessSlotsTestCase, phase0.BeaconState>(
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
     sszTypes: {
-      pre: config.types.phase0.BeaconState,
-      post: config.types.phase0.BeaconState,
+      pre: ssz.phase0.BeaconState,
+      post: ssz.phase0.BeaconState,
     },
     shouldError: (testCase) => {
       return !testCase.post;
@@ -49,7 +50,7 @@ describeDirectorySpecTest<IProcessSlotsTestCase, phase0.BeaconState>(
     timeout: 10000000,
     getExpected: (testCase) => testCase.post as BeaconState,
     expectFunc: (testCase, expected, actual) => {
-      expect(config.types.phase0.BeaconState.equals(actual, expected)).to.be.true;
+      expect(ssz.phase0.BeaconState.equals(actual, expected)).to.be.true;
     },
   }
 );

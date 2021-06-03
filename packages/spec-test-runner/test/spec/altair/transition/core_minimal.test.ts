@@ -1,7 +1,7 @@
 import {join} from "path";
 import {params} from "@chainsafe/lodestar-params/minimal";
 import {allForks} from "@chainsafe/lodestar-beacon-state-transition";
-import {altair, phase0} from "@chainsafe/lodestar-types";
+import {altair, phase0, ssz} from "@chainsafe/lodestar-types";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
 import {IBeaconConfig, createIBeaconConfig} from "@chainsafe/lodestar-config";
 import {ITransitionTestCase} from "./types";
@@ -29,10 +29,10 @@ describeDirectorySpecTest<ITransitionTestCase, allForks.BeaconState>(
       let tbSignedBlock: allForks.SignedBeaconBlock;
       if (i <= forkBlock) {
         const signedBlock = testcase[`blocks_${i}`] as phase0.SignedBeaconBlock;
-        tbSignedBlock = testConfig.types.phase0.SignedBeaconBlock.createTreeBackedFromStruct(signedBlock);
+        tbSignedBlock = ssz.phase0.SignedBeaconBlock.createTreeBackedFromStruct(signedBlock);
       } else {
         const signedBlock = testcase[`blocks_${i}`] as altair.SignedBeaconBlock;
-        tbSignedBlock = testConfig.types.altair.SignedBeaconBlock.createTreeBackedFromStruct(signedBlock);
+        tbSignedBlock = ssz.altair.SignedBeaconBlock.createTreeBackedFromStruct(signedBlock);
       }
       wrappedState = allForks.stateTransition(wrappedState, tbSignedBlock, {
         verifyStateRoot: true,
@@ -56,8 +56,8 @@ describeDirectorySpecTest<ITransitionTestCase, allForks.BeaconState>(
     },
     getSszTypes: (meta: ITransitionTestCase["meta"]) => {
       return {
-        pre: config.types.phase0.BeaconState,
-        post: config.types.altair.BeaconState,
+        pre: ssz.phase0.BeaconState,
+        post: ssz.altair.BeaconState,
         ...generateBlocksSZZTypeMapping(config, meta),
       };
     },
@@ -78,18 +78,14 @@ describeDirectorySpecTest<ITransitionTestCase, allForks.BeaconState>(
 function generateBlocksSZZTypeMapping(
   config: IBeaconConfig,
   meta: ITransitionTestCase["meta"]
-): Record<string, typeof config.types.phase0.SignedBeaconBlock | typeof config.types.altair.SignedBeaconBlock> {
+): Record<string, typeof ssz.phase0.SignedBeaconBlock | typeof ssz.altair.SignedBeaconBlock> {
   if (!meta) {
     throw new Error("No meta data found");
   }
-  const blocksMapping: Record<
-    string,
-    typeof config.types.phase0.SignedBeaconBlock | typeof config.types.altair.SignedBeaconBlock
-  > = {};
+  const blocksMapping: Record<string, typeof ssz.phase0.SignedBeaconBlock | typeof ssz.altair.SignedBeaconBlock> = {};
   // The fork_block is the index in the test data of the last block of the initial fork.
   for (let i = 0; i < meta.blocksCount; i++) {
-    blocksMapping[`blocks_${i}`] =
-      i <= meta.forkBlock ? config.types.phase0.SignedBeaconBlock : config.types.altair.SignedBeaconBlock;
+    blocksMapping[`blocks_${i}`] = i <= meta.forkBlock ? ssz.phase0.SignedBeaconBlock : ssz.altair.SignedBeaconBlock;
   }
   return blocksMapping;
 }

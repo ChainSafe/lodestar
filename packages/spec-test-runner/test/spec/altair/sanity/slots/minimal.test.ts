@@ -7,6 +7,7 @@ import {altair, allForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {TreeBacked} from "@chainsafe/ssz";
 import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 import {expectEqualBeaconState} from "../../util";
+import {ssz} from "@chainsafe/lodestar-types";
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
 const config = createIBeaconConfig({...params, ALTAIR_FORK_EPOCH: 0});
@@ -38,8 +39,8 @@ describeDirectorySpecTest<IProcessSlotsTestCase, altair.BeaconState>(
       slots: InputType.YAML,
     },
     sszTypes: {
-      pre: config.types.altair.BeaconState,
-      post: config.types.altair.BeaconState,
+      pre: ssz.altair.BeaconState,
+      post: ssz.altair.BeaconState,
     },
     shouldError: (testCase) => {
       return !testCase.post;

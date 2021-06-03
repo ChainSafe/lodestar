@@ -1,12 +1,11 @@
 import {describeDirectorySpecTest, InputType, safeType} from "@chainsafe/lodestar-spec-test-util";
-import {Bytes32, IBeaconSSZTypes} from "@chainsafe/lodestar-types";
+import {Bytes32, ssz} from "@chainsafe/lodestar-types";
 import {join} from "path";
-import {config} from "@chainsafe/lodestar-config/minimal";
 import {expect} from "chai";
 import {CompositeType} from "@chainsafe/ssz";
 import {IBaseSSZStaticTestCase} from "../type";
 import {SPEC_TEST_LOCATION} from "../../../utils/specTestCases";
-import {ForkName} from "@chainsafe/lodestar-config";
+import {ForkName} from "@chainsafe/lodestar-params";
 
 /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, no-console */
 
@@ -15,13 +14,13 @@ interface IResult {
   serialized: Uint8Array;
 }
 
-export function testStaticPhase0(type: keyof IBeaconSSZTypes["phase0"]): void {
-  const sszType = safeType(config.types.phase0[type]) as CompositeType<any>;
+export function testStaticPhase0(type: keyof typeof ssz["phase0"]): void {
+  const sszType = safeType(ssz.phase0[type]) as CompositeType<any>;
   testStatic(type, sszType, ForkName.phase0);
 }
 
-export function testStaticAltair(type: keyof IBeaconSSZTypes["altair"]): void {
-  const sszType = safeType(config.types.altair[type]) as CompositeType<any>;
+export function testStaticAltair(type: keyof typeof ssz["altair"]): void {
+  const sszType = safeType(ssz.altair[type]) as CompositeType<any>;
   testStatic(type, sszType, ForkName.altair);
 }
 

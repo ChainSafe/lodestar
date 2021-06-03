@@ -1,9 +1,9 @@
 import {join} from "path";
 import {params} from "@chainsafe/lodestar-params/minimal";
 import {allForks} from "@chainsafe/lodestar-beacon-state-transition";
-import {altair as altairTypes} from "@chainsafe/lodestar-types";
+import {altair as altairTypes, ssz} from "@chainsafe/lodestar-types";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
-import {IBeaconConfig, createIBeaconConfig} from "@chainsafe/lodestar-config";
+import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBlockSanityTestCase} from "./types";
 import {SPEC_TEST_LOCATION} from "../../../../utils/specTestCases";
 import {TreeBacked} from "@chainsafe/ssz";
@@ -25,7 +25,7 @@ describeDirectorySpecTest<IBlockSanityTestCase, allForks.BeaconState>(
       const signedBlock = testcase[`blocks_${i}`] as altairTypes.SignedBeaconBlock;
       wrappedState = allForks.stateTransition(
         wrappedState,
-        config.types.altair.SignedBeaconBlock.createTreeBackedFromStruct(signedBlock),
+        ssz.altair.SignedBeaconBlock.createTreeBackedFromStruct(signedBlock),
         {
           verifyStateRoot: verify,
           verifyProposer: verify,
@@ -48,9 +48,9 @@ describeDirectorySpecTest<IBlockSanityTestCase, allForks.BeaconState>(
       meta: InputType.YAML,
     },
     sszTypes: {
-      pre: config.types.altair.BeaconState,
-      post: config.types.altair.BeaconState,
-      ...generateBlocksSZZTypeMapping(99, config),
+      pre: ssz.altair.BeaconState,
+      post: ssz.altair.BeaconState,
+      ...generateBlocksSZZTypeMapping(99),
     },
     shouldError: (testCase) => {
       return !testCase.post;
@@ -63,13 +63,10 @@ describeDirectorySpecTest<IBlockSanityTestCase, allForks.BeaconState>(
   }
 );
 
-function generateBlocksSZZTypeMapping(
-  n: number,
-  config: IBeaconConfig
-): Record<string, typeof config.types.altair.SignedBeaconBlock> {
-  const blocksMapping: Record<string, typeof config.types.altair.SignedBeaconBlock> = {};
+function generateBlocksSZZTypeMapping(n: number): Record<string, typeof ssz.altair.SignedBeaconBlock> {
+  const blocksMapping: Record<string, typeof ssz.altair.SignedBeaconBlock> = {};
   for (let i = 0; i < n; i++) {
-    blocksMapping[`blocks_${i}`] = config.types.altair.SignedBeaconBlock;
+    blocksMapping[`blocks_${i}`] = ssz.altair.SignedBeaconBlock;
   }
   return blocksMapping;
 }

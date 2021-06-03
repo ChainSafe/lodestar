@@ -12,18 +12,15 @@ import {
   getFlagIndexDeltas,
   getInactivityPenaltyDeltas,
 } from "@chainsafe/lodestar-beacon-state-transition/lib/altair/epoch/balance";
-import {
-  TIMELY_HEAD_FLAG_INDEX,
-  TIMELY_SOURCE_FLAG_INDEX,
-  TIMELY_TARGET_FLAG_INDEX,
-} from "@chainsafe/lodestar-beacon-state-transition/lib/altair/constants";
+import {TIMELY_HEAD_FLAG_INDEX, TIMELY_SOURCE_FLAG_INDEX, TIMELY_TARGET_FLAG_INDEX} from "@chainsafe/lodestar-params";
 import {IBaseSpecTest} from "../../../type";
+import {ssz} from "@chainsafe/lodestar-types";
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
 const config = createIBeaconConfig({...params, ALTAIR_FORK_EPOCH: 0});
 
 const Deltas = new VectorType<bigint[]>({
-  elementType: config.types.altair.BeaconState.fields.balances,
+  elementType: ssz.altair.BeaconState.fields.balances,
   length: 2,
 });
 
@@ -67,7 +64,7 @@ describeDirectorySpecTest<RewardTestCase, Output>(
       },
     },
     sszTypes: {
-      pre: config.types.altair.BeaconState,
+      pre: ssz.altair.BeaconState,
       head_deltas: Deltas,
       source_deltas: Deltas,
       target_deltas: Deltas,

@@ -8,6 +8,7 @@ import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-tes
 import {IProcessAttestationTestCase} from "./type";
 import {SPEC_TEST_LOCATION} from "../../../../utils/specTestCases";
 import {expectEqualBeaconState} from "../../util";
+import {ssz} from "@chainsafe/lodestar-types";
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
 const config = createIBeaconConfig({...params, ALTAIR_FORK_EPOCH: 0});
@@ -36,9 +37,9 @@ describeDirectorySpecTest<IProcessAttestationTestCase, altair.BeaconState>(
       meta: InputType.YAML,
     },
     sszTypes: {
-      pre: config.types.altair.BeaconState,
-      post: config.types.altair.BeaconState,
-      attestation: config.types.phase0.Attestation,
+      pre: ssz.altair.BeaconState,
+      post: ssz.altair.BeaconState,
+      attestation: ssz.phase0.Attestation,
     },
 
     timeout: 10000,

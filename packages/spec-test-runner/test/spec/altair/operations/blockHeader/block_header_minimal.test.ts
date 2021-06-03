@@ -8,6 +8,7 @@ import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-tes
 import {IProcessBlockHeader} from "./type";
 import {SPEC_TEST_LOCATION} from "../../../../utils/specTestCases";
 import {expectEqualBeaconState} from "../../util";
+import {ssz} from "@chainsafe/lodestar-types";
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
 const config = createIBeaconConfig({...params, ALTAIR_FORK_EPOCH: 0});
@@ -35,9 +36,9 @@ describeDirectorySpecTest<IProcessBlockHeader, altair.BeaconState>(
       },
     },
     sszTypes: {
-      pre: config.types.altair.BeaconState,
-      post: config.types.altair.BeaconState,
-      block: config.types.altair.BeaconBlock,
+      pre: ssz.altair.BeaconState,
+      post: ssz.altair.BeaconState,
+      block: ssz.altair.BeaconBlock,
     },
     timeout: 10000,
     shouldError: (testCase) => !testCase.post,
