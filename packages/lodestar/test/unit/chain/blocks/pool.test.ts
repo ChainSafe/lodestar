@@ -1,4 +1,4 @@
-import {config} from "@chainsafe/lodestar-config/minimal";
+import {config} from "@chainsafe/lodestar-config/default";
 import {ssz} from "@chainsafe/lodestar-types";
 import {expect} from "chai";
 import {BlockPool} from "../../../../src/chain/blocks";

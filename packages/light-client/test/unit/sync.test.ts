@@ -1,6 +1,6 @@
 import {expect} from "chai";
 import {SecretKey} from "@chainsafe/bls";
-import {config} from "@chainsafe/lodestar-config/minimal";
+import {config} from "@chainsafe/lodestar-config/default";
 import {toHexString} from "@chainsafe/ssz";
 import {WinstonLogger} from "@chainsafe/lodestar-utils";
 import {altair, Root, Slot, ssz, SyncPeriod} from "@chainsafe/lodestar-types";

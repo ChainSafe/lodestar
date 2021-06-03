@@ -4,6 +4,7 @@ import {
   createIChainConfig,
   IBeaconConfig,
   IChainConfig,
+  parsePartialIChainConfigJson,
 } from "@chainsafe/lodestar-config";
 import {writeFile, readFileIfExists} from "../util";
 import {getNetworkBeaconParams, NetworkName} from "../networks";
@@ -69,7 +70,7 @@ export function getBeaconParams({network, paramsFile, additionalParamsCli}: IBea
     // Params from CLI flags
     additionalParamsCli || {}
   );
-  return createIChainConfig(additionalParams);
+  return createIChainConfig(parsePartialIChainConfigJson(additionalParams));
 }
 
 export function writeBeaconParams(filepath: string, params: IChainConfig): void {

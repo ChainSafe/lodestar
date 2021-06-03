@@ -1,6 +1,6 @@
 import {AbortController} from "abort-controller";
 import {sleep} from "@chainsafe/lodestar-utils";
-import {config} from "@chainsafe/lodestar-config/minimal";
+import {config} from "@chainsafe/lodestar-config/default";
 import {Api, routesData, EventType, BeaconEvent} from "../../src/routes/events";
 import {getClient} from "../../src/client/events";
 import {getRoutes} from "../../src/server/events";

@@ -2,7 +2,7 @@ import {expect} from "chai";
 import {MAX_EFFECTIVE_BALANCE} from "@chainsafe/lodestar-params";
 import {phase0, ssz} from "@chainsafe/lodestar-types";
 import {CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
-import {config} from "@chainsafe/lodestar-config/minimal";
+import {config} from "@chainsafe/lodestar-config/default";
 import {assembleAttestationData} from "../../../../../src/chain/factory/attestation/data";
 import {generateState} from "../../../../utils/state";
 import {generateEmptyBlock} from "../../../../utils/block";

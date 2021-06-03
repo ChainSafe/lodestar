@@ -1,5 +1,5 @@
 import {IChainConfig} from "@chainsafe/lodestar-config";
-import {config} from "@chainsafe/lodestar-config/minimal";
+import {config} from "@chainsafe/lodestar-config/default";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 

@@ -5,7 +5,7 @@ import {rewiremock} from "../../../rewiremock";
 import {List} from "@chainsafe/ssz";
 import bls from "@chainsafe/bls";
 import {bigIntToBytes} from "@chainsafe/lodestar-utils";
-import {config} from "@chainsafe/lodestar-config/minimal";
+import {config} from "@chainsafe/lodestar-config/default";
 import * as validatorUtils from "@chainsafe/lodestar-beacon-state-transition/lib/util/validator";
 import {getCurrentSlot, ISignatureSet} from "@chainsafe/lodestar-beacon-state-transition";
 import * as indexedAttUtils from "@chainsafe/lodestar-beacon-state-transition/lib/allForks/block/isValidIndexedAttestation";

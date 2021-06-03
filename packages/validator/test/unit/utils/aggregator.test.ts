@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import {config} from "@chainsafe/lodestar-config/mainnet";
+import {config} from "@chainsafe/lodestar-config/default";
 import {fromHexString} from "@chainsafe/ssz";
 import {routes} from "@chainsafe/lodestar-api";
 import {isAttestationAggregator, isSyncCommitteeAggregator} from "../../../src/util/aggregator";

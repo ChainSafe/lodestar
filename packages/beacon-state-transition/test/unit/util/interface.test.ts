@@ -1,4 +1,4 @@
-import {config} from "@chainsafe/lodestar-config/mainnet";
+import {config} from "@chainsafe/lodestar-config/default";
 import {ssz} from "@chainsafe/lodestar-types";
 import {fromHexString, List, TreeBacked} from "@chainsafe/ssz";
 import {expect} from "chai";

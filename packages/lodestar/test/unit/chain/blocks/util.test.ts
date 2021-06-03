@@ -1,4 +1,4 @@
-import {config} from "@chainsafe/lodestar-config/minimal";
+import {config} from "@chainsafe/lodestar-config/default";
 import {generateSignedBlock} from "../../../utils/block";
 import {groupBlocksByEpoch} from "../../../../src/chain/blocks/util";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";

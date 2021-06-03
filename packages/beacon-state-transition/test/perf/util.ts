@@ -1,4 +1,4 @@
-import {config} from "@chainsafe/lodestar-config/mainnet";
+import {config} from "@chainsafe/lodestar-config/default";
 import {Gwei, phase0, ssz} from "@chainsafe/lodestar-types";
 import bls, {CoordType, init, PublicKey} from "@chainsafe/bls";
 import {fromHexString, List, TreeBacked} from "@chainsafe/ssz";

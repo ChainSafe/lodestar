@@ -3,7 +3,7 @@ import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
 import {AbortController} from "abort-controller";
 import PeerId from "peer-id";
-import {config} from "@chainsafe/lodestar-config/minimal";
+import {config} from "@chainsafe/lodestar-config/default";
 import {sleep as _sleep} from "@chainsafe/lodestar-utils";
 import {altair, phase0, ssz} from "@chainsafe/lodestar-types";
 import {createPeerId, IReqRespOptions, Network, prettyPrintPeerId} from "../../../src/network";

@@ -3,7 +3,7 @@ import chaiAsPromised from "chai-as-promised";
 import {Root, phase0, ssz} from "@chainsafe/lodestar-types";
 import {List, TreeBacked} from "@chainsafe/ssz";
 import {MAX_DEPOSITS} from "@chainsafe/lodestar-params";
-import {config} from "@chainsafe/lodestar-config/mainnet";
+import {config} from "@chainsafe/lodestar-config/default";
 import {verifyMerkleBranch} from "@chainsafe/lodestar-utils";
 import {filterBy} from "../../../utils/db";
 import {getTreeAtIndex} from "../../../../src/util/tree";

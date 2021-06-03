@@ -1,7 +1,7 @@
 import {aggregatePublicKeys, PublicKey, SecretKey, Signature} from "@chainsafe/bls";
 import {computeDomain, computeSigningRoot, interopSecretKey} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {config} from "@chainsafe/lodestar-config/minimal";
+import {config} from "@chainsafe/lodestar-config/default";
 import {DOMAIN_SYNC_COMMITTEE, SYNC_COMMITTEE_SIZE} from "@chainsafe/lodestar-params";
 import {altair, Bytes4, Gwei, Root, Slot, ssz, SyncPeriod} from "@chainsafe/lodestar-types";
 import {fromHexString, List} from "@chainsafe/ssz";

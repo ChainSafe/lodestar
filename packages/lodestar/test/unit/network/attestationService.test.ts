@@ -6,7 +6,7 @@ import {
   SLOTS_PER_EPOCH,
 } from "@chainsafe/lodestar-params";
 import {createIBeaconConfig} from "@chainsafe/lodestar-config";
-import {chainConfig} from "@chainsafe/lodestar-config/minimal";
+import {chainConfig} from "@chainsafe/lodestar-config/default";
 import {getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import * as mathUtils from "@chainsafe/lodestar-utils/lib/math";
 import * as shuffleUtils from "../../../src/util/shuffle";

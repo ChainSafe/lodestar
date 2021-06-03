@@ -3,7 +3,7 @@ import chaiAsPromised from "chai-as-promised";
 import pipe from "it-pipe";
 import all from "it-all";
 import {ForkName, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
-import {chainConfig} from "@chainsafe/lodestar-config/minimal";
+import {chainConfig} from "@chainsafe/lodestar-config/default";
 import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 import {LodestarError} from "@chainsafe/lodestar-utils";
 import {Method, Version, Encoding, Protocol, ResponseBody} from "../../../../../src/network/reqresp/types";

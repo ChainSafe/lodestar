@@ -1,4 +1,4 @@
-import {config} from "@chainsafe/lodestar-config/minimal";
+import {config} from "@chainsafe/lodestar-config/default";
 import {BitList} from "@chainsafe/ssz";
 import {expect} from "chai";
 import {SeenAttestationCache} from "../../../src/db/seenAttestationCache";

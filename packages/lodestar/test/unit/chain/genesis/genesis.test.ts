@@ -3,7 +3,7 @@ import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
 import {SecretKey, PublicKey} from "@chainsafe/bls";
 import {DOMAIN_DEPOSIT} from "@chainsafe/lodestar-params";
-import {config} from "@chainsafe/lodestar-config/minimal";
+import {config} from "@chainsafe/lodestar-config/default";
 import {
   computeDomain,
   computeSigningRoot,

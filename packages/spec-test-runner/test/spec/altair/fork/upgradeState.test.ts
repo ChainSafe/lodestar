@@ -1,7 +1,7 @@
 import {join} from "path";
 
 import {TreeBacked} from "@chainsafe/ssz";
-import {config} from "@chainsafe/lodestar-config/minimal";
+import {config} from "@chainsafe/lodestar-config/default";
 import {allForks, altair, phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
 import {IUpgradeStateCase} from "./type";

@@ -1,4 +1,4 @@
-import {config} from "@chainsafe/lodestar-config/minimal";
+import {config} from "@chainsafe/lodestar-config/default";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {Epoch, phase0, Slot} from "@chainsafe/lodestar-types";
 import {linspace} from "../../../../src/util/numpy";

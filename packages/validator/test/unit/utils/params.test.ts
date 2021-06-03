@@ -1,5 +1,5 @@
-import {chainConfig as mainnetConfig} from "@chainsafe/lodestar-config/mainnet";
-import {chainConfig as minimalConfig} from "@chainsafe/lodestar-config/minimal";
+import {chainConfig as mainnetConfig} from "@chainsafe/lodestar-config/default";
+import {chainConfig as minimalConfig} from "@chainsafe/lodestar-config/default";
 import {expect} from "chai";
 import {assertEqualParams, NotEqualParamsError} from "../../../src/util/params";
 

@@ -1,5 +1,5 @@
 import {BeaconDb} from "../../../../../../src/db";
-import {config} from "@chainsafe/lodestar-config/mainnet";
+import {config} from "@chainsafe/lodestar-config/default";
 import {LevelDbController} from "@chainsafe/lodestar-db";
 import {generateSignedBlock} from "../../../../../utils/block";
 import {testLogger} from "../../../../../utils/logger";

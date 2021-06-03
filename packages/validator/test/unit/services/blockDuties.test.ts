@@ -2,7 +2,7 @@ import {AbortController} from "abort-controller";
 import {expect} from "chai";
 import sinon from "sinon";
 import bls from "@chainsafe/bls";
-import {config} from "@chainsafe/lodestar-config/mainnet";
+import {config} from "@chainsafe/lodestar-config/default";
 import {Root} from "@chainsafe/lodestar-types";
 import {routes} from "@chainsafe/lodestar-api";
 import {BlockDutiesService} from "../../../src/services/blockDuties";

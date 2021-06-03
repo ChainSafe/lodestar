@@ -1,6 +1,6 @@
 import {phase0} from "@chainsafe/lodestar-types";
 import {createIBeaconConfig, IBeaconConfig} from "@chainsafe/lodestar-config";
-import {chainConfig} from "@chainsafe/lodestar-config/mainnet";
+import {chainConfig} from "@chainsafe/lodestar-config/default";
 import {goerliRpcUrl} from "../testParams";
 import {fromHexString} from "@chainsafe/ssz";
 

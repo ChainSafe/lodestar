@@ -1,4 +1,4 @@
-import {config} from "@chainsafe/lodestar-config/minimal";
+import {config} from "@chainsafe/lodestar-config/default";
 import {altair, ssz} from "@chainsafe/lodestar-types";
 import {expect} from "chai";
 import {SyncCommitteeContributionCache} from "../../../src/db/syncCommitteeContribution";

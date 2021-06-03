@@ -1,7 +1,7 @@
 import {ForkName} from "@chainsafe/lodestar-params";
 import {ssz} from "@chainsafe/lodestar-types";
 import {fetch} from "cross-fetch";
-import {config} from "@chainsafe/lodestar-config/minimal";
+import {config} from "@chainsafe/lodestar-config/default";
 import {Api, ReqTypes, routesData} from "../../src/routes/debug";
 import {getClient} from "../../src/client/debug";
 import {getRoutes} from "../../src/server/debug";

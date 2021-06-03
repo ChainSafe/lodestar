@@ -1,4 +1,4 @@
-import {config} from "@chainsafe/lodestar-config/minimal";
+import {config} from "@chainsafe/lodestar-config/default";
 import {SinonSandbox, SinonStubbedInstance} from "sinon";
 import sinon from "sinon";
 import {getBeaconBlockApi} from "../../../../src/api/impl/beacon/blocks";

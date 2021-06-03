@@ -1,7 +1,7 @@
 import crypto from "crypto";
 import bls, {init} from "@chainsafe/bls";
 import {BitList, List, TreeBacked} from "@chainsafe/ssz";
-import {config} from "@chainsafe/lodestar-config/mainnet";
+import {config} from "@chainsafe/lodestar-config/default";
 import {ValidatorIndex, BLSSignature, ssz} from "@chainsafe/lodestar-types";
 import {ZERO_HASH} from "../../../src/constants";
 import {generateState} from "../../utils/state";

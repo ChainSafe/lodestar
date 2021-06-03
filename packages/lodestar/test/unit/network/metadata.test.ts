@@ -1,6 +1,6 @@
 import {expect} from "chai";
 import {ssz} from "@chainsafe/lodestar-types";
-import {config} from "@chainsafe/lodestar-config/minimal";
+import {config} from "@chainsafe/lodestar-config/default";
 import {getENRForkID} from "../../../src/network/metadata";
 import {ForkDigestContext} from "../../../src/util/forkDigestContext";
 

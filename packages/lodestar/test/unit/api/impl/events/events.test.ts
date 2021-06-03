@@ -2,7 +2,7 @@ import {AbortController} from "abort-controller";
 import {expect} from "chai";
 import sinon, {SinonStubbedInstance} from "sinon";
 import {routes} from "@chainsafe/lodestar-api";
-import {config} from "@chainsafe/lodestar-config/minimal";
+import {config} from "@chainsafe/lodestar-config/default";
 import {BeaconChain, ChainEvent, ChainEventEmitter, IBeaconChain} from "../../../../../src/chain";
 import {getEventsApi} from "../../../../../src/api/impl/events";
 import {generateBlockSummary, generateEmptySignedBlock, generateSignedBlock} from "../../../../utils/block";

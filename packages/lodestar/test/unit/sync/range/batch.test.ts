@@ -1,7 +1,7 @@
 import {expect} from "chai";
 import PeerId from "peer-id";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
-import {config} from "@chainsafe/lodestar-config/minimal";
+import {config} from "@chainsafe/lodestar-config/default";
 import {generateEmptySignedBlock} from "../../../utils/block";
 import {expectThrowsLodestarError} from "../../../utils/errors";
 import {Batch, BatchOpts, BatchStatus, BatchErrorCode, BatchError} from "../../../../src/sync/range/batch";

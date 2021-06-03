@@ -1,5 +1,5 @@
 import {ssz} from "@chainsafe/lodestar-types";
-import {config} from "@chainsafe/lodestar-config/minimal";
+import {config} from "@chainsafe/lodestar-config/default";
 import {ProofType} from "@chainsafe/persistent-merkle-tree";
 import {Api, ReqTypes} from "../../src/routes/lightclient";
 import {getClient} from "../../src/client/lightclient";

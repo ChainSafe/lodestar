@@ -1,5 +1,5 @@
 import sinon from "sinon";
-import {config} from "@chainsafe/lodestar-config/mainnet";
+import {config} from "@chainsafe/lodestar-config/default";
 import {List} from "@chainsafe/ssz";
 import {allForks, phase0} from "@chainsafe/lodestar-types";
 import {getLatestWeakSubjectivityCheckpointEpoch} from "../../../src/util/weakSubjectivity";

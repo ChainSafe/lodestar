@@ -1,5 +1,5 @@
 import {getBeaconStateApi} from "../../../../../../src/api/impl/beacon/state";
-import {config} from "@chainsafe/lodestar-config/minimal";
+import {config} from "@chainsafe/lodestar-config/default";
 import sinon, {SinonStubbedMember} from "sinon";
 import * as stateApiUtils from "../../../../../../src/api/impl/beacon/state/utils";
 import {generateCachedState} from "../../../../../utils/state";

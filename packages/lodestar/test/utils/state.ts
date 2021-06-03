@@ -1,4 +1,4 @@
-import {config as minimalConfig} from "@chainsafe/lodestar-config/minimal";
+import {config as minimalConfig} from "@chainsafe/lodestar-config/default";
 import {CachedBeaconState, createCachedBeaconState, phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {List, TreeBacked} from "@chainsafe/ssz";
 import {allForks, altair, Gwei, Root, ssz} from "@chainsafe/lodestar-types";

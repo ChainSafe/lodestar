@@ -1,6 +1,6 @@
 import {ForkName} from "@chainsafe/lodestar-params";
 import {ssz} from "@chainsafe/lodestar-types";
-import {config} from "@chainsafe/lodestar-config/minimal";
+import {config} from "@chainsafe/lodestar-config/default";
 import {Api, ReqTypes} from "../../src/routes/validator";
 import {getClient} from "../../src/client/validator";
 import {getRoutes} from "../../src/server/validator";

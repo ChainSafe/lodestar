@@ -1,7 +1,7 @@
 import deepmerge from "deepmerge";
 import tmp from "tmp";
 import {createEnr} from "@chainsafe/lodestar-cli/src/config";
-import {config as minimalConfig} from "@chainsafe/lodestar-config/minimal";
+import {config as minimalConfig} from "@chainsafe/lodestar-config/default";
 import {createIBeaconConfig, IChainConfig} from "@chainsafe/lodestar-config";
 import {ILogger, RecursivePartial} from "@chainsafe/lodestar-utils";
 import {LevelDbController} from "@chainsafe/lodestar-db";

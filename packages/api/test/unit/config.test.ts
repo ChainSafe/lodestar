@@ -1,5 +1,5 @@
 import {ssz} from "@chainsafe/lodestar-types";
-import {config} from "@chainsafe/lodestar-config/minimal";
+import {config} from "@chainsafe/lodestar-config/default";
 import {Api, ReqTypes, Spec} from "../../src/routes/config";
 import {getClient} from "../../src/client/config";
 import {getRoutes} from "../../src/server/config";
