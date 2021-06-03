@@ -166,6 +166,8 @@ export function applyDeposits(
       validator.activationEligibilityEpoch = computeEpochAtSlot(config, GENESIS_SLOT);
       validator.activationEpoch = computeEpochAtSlot(config, GENESIS_SLOT);
     }
+    // If state is a CachedBeaconState<> validator has to be re-assigned manually
+    state.validators[index] = validator;
   }
 
   // Set genesis validators root for domain separation and chain versioning
