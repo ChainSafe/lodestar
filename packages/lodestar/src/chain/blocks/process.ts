@@ -46,6 +46,10 @@ export async function processBlock(
   try {
     const preState = await regen.getPreState(job.signedBlock.message);
 
+    await runStateTransition({emitter, forkChoice, metrics}, checkpointStateCache, preState, job);
+
+    // Verify signatures after running state transition, so all SyncCommittee signed roots are known at this point.
+    // We must ensure block.slot <= state.slot before running getAllBlockSignatureSets().
     if (!job.validSignatures && !opts?.disableBlsBatchVerify) {
       const signatureSets = job.validProposerSignature
         ? allForks.getAllBlockSignatureSetsExceptProposer(
@@ -64,8 +68,6 @@ export async function processBlock(
       job.validProposerSignature = true;
       job.validSignatures = true;
     }
-
-    await runStateTransition({emitter, forkChoice, metrics}, checkpointStateCache, preState, job);
   } catch (e) {
     if (e instanceof RegenError) {
       throw new BlockError({
@@ -132,7 +134,9 @@ export async function processChainSegment(
         // this avoids keeping our node busy processing blocks
         await sleep(0);
       }
-      // Verify the signature afterall bc all SyncCommittee signed roots are only known at this point
+
+      // Verify signatures after running state transition, so all SyncCommittee signed roots are known at this point.
+      // We must ensure block.slot <= state.slot before running getAllBlockSignatureSets().
       if (!job.validSignatures && !opts?.disableBlsBatchVerify) {
         const signatureSets: ISignatureSet[] = [];
         for (const block of blocksInEpoch) {
