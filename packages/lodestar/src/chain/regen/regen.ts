@@ -16,7 +16,7 @@ import {processSlotsByCheckpoint, runStateTransition} from "../blocks/stateTrans
 import {IStateRegenerator} from "./interface";
 import {RegenError, RegenErrorCode} from "./errors";
 import {IMetrics} from "../../metrics";
-import { SLOTS_PER_EPOCH } from "@chainsafe/lodestar-params";
+import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 
 /**
  * Regenerates states that have already been processed by the fork choice

@@ -419,7 +419,6 @@ export const Genesis = new ContainerType<phase0.Genesis>({
   },
 });
 
-
 // Non-speced types
 // ================
 
@@ -449,4 +448,3 @@ export const SlashingProtectionAttestationLowerBound = new ContainerType<
 
 // MUST set typesRef here, otherwise expandedType() calls will throw
 typesRef.set({BeaconBlock, BeaconState});
-

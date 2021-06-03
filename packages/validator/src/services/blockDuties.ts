@@ -1,6 +1,6 @@
 import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {BLSPubkey, Epoch, phase0, Root, Slot, ssz} from "@chainsafe/lodestar-types";
+import {BLSPubkey, Epoch, Root, Slot, ssz} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {toHexString} from "@chainsafe/ssz";
 import {Api, routes} from "@chainsafe/lodestar-api";
