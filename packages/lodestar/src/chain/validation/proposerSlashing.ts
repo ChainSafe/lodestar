@@ -12,7 +12,7 @@ export async function validateGossipProposerSlashing(
 ): Promise<void> {
   if (await db.proposerSlashing.has(proposerSlashing.signedHeader1.message.proposerIndex)) {
     throw new ProposerSlashingError({
-      code: ProposerSlashingErrorCode.SLASHING_ALREADY_EXISTS,
+      code: ProposerSlashingErrorCode.ALREADY_EXISTS,
     });
   }
 
@@ -23,14 +23,16 @@ export async function validateGossipProposerSlashing(
     phase0.assertValidProposerSlashing(state, proposerSlashing, false);
   } catch (e) {
     throw new ProposerSlashingError({
-      code: ProposerSlashingErrorCode.INVALID_SLASHING,
+      code: ProposerSlashingErrorCode.INVALID,
+      error: e as Error,
     });
   }
 
   const signatureSets = allForks.getProposerSlashingSignatureSets(state, proposerSlashing);
   if (!(await chain.bls.verifySignatureSets(signatureSets))) {
     throw new ProposerSlashingError({
-      code: ProposerSlashingErrorCode.INVALID_SLASHING,
+      code: ProposerSlashingErrorCode.INVALID,
+      error: Error("Invalid signature"),
     });
   }
 }

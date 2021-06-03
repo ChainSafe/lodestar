@@ -92,7 +92,7 @@ describe("validate voluntary exit", () => {
 
     await expectRejectedWithLodestarError(
       validateGossipVoluntaryExit(config, chainStub, dbStub, signedVoluntaryExitInvalidSig),
-      VoluntaryExitErrorCode.EXIT_ALREADY_EXISTS
+      VoluntaryExitErrorCode.ALREADY_EXISTS
     );
   });
 
@@ -108,7 +108,7 @@ describe("validate voluntary exit", () => {
 
     await expectRejectedWithLodestarError(
       validateGossipVoluntaryExit(config, chainStub, dbStub, signedVoluntaryExitInvalid),
-      VoluntaryExitErrorCode.INVALID_EXIT
+      VoluntaryExitErrorCode.INVALID
     );
   });
 

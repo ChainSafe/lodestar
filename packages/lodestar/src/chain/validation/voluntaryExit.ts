@@ -12,7 +12,7 @@ export async function validateGossipVoluntaryExit(
 ): Promise<void> {
   if (await db.voluntaryExit.has(voluntaryExit.message.validatorIndex)) {
     throw new VoluntaryExitError({
-      code: VoluntaryExitErrorCode.EXIT_ALREADY_EXISTS,
+      code: VoluntaryExitErrorCode.ALREADY_EXISTS,
     });
   }
 
@@ -26,7 +26,7 @@ export async function validateGossipVoluntaryExit(
     phase0.assertValidVoluntaryExit(state, voluntaryExit, false);
   } catch (e) {
     throw new VoluntaryExitError({
-      code: VoluntaryExitErrorCode.INVALID_EXIT,
+      code: VoluntaryExitErrorCode.INVALID,
       error: e as Error,
     });
   }
@@ -34,7 +34,7 @@ export async function validateGossipVoluntaryExit(
   const signatureSet = allForks.getVoluntaryExitSignatureSet(state, voluntaryExit);
   if (!(await chain.bls.verifySignatureSets([signatureSet]))) {
     throw new VoluntaryExitError({
-      code: VoluntaryExitErrorCode.INVALID_EXIT,
+      code: VoluntaryExitErrorCode.INVALID,
       error: Error("Invalid signature"),
     });
   }

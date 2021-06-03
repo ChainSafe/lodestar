@@ -4,7 +4,6 @@ import {expect} from "chai";
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import {assembleBody} from "../../../../../src/chain/factory/block/body";
 import {generateCachedState} from "../../../../utils/state";
-import {generateEmptyAttesterSlashing, generateEmptyProposerSlashing} from "../../../../utils/slashings";
 import {generateEmptyAttestation} from "../../../../utils/attestation";
 import {generateEmptySignedVoluntaryExit} from "../../../../utils/voluntaryExits";
 import {generateDeposit} from "../../../../utils/deposit";
@@ -24,8 +23,8 @@ describe("blockAssembly - body", function () {
 
   it("should generate block body", async function () {
     const {dbStub, eth1} = getStubs();
-    dbStub.proposerSlashing.values.resolves([generateEmptyProposerSlashing()]);
-    dbStub.attesterSlashing.values.resolves([generateEmptyAttesterSlashing()]);
+    dbStub.proposerSlashing.values.resolves([config.types.phase0.ProposerSlashing.defaultValue()]);
+    dbStub.attesterSlashing.values.resolves([config.types.phase0.AttesterSlashing.defaultValue()]);
     dbStub.aggregateAndProof.getBlockAttestations.resolves([generateEmptyAttestation()]);
     dbStub.voluntaryExit.values.resolves([generateEmptySignedVoluntaryExit()]);
     dbStub.depositDataRoot.getTreeBacked.resolves(config.types.phase0.DepositDataRootList.defaultTreeBacked());
@@ -50,10 +49,14 @@ describe("blockAssembly - body", function () {
   it("should generate block body with max respective field lengths", async function () {
     const {dbStub, eth1} = getStubs();
     dbStub.proposerSlashing.values.resolves(
-      Array.from({length: config.params.MAX_PROPOSER_SLASHINGS}, generateEmptyProposerSlashing)
+      Array.from({length: config.params.MAX_PROPOSER_SLASHINGS}, () =>
+        config.types.phase0.ProposerSlashing.defaultValue()
+      )
     );
     dbStub.attesterSlashing.values.resolves(
-      Array.from({length: config.params.MAX_ATTESTER_SLASHINGS}, generateEmptyAttesterSlashing)
+      Array.from({length: config.params.MAX_ATTESTER_SLASHINGS}, () =>
+        config.types.phase0.AttesterSlashing.defaultValue()
+      )
     );
     dbStub.aggregateAndProof.getBlockAttestations.resolves(
       Array.from({length: config.params.MAX_ATTESTATIONS}, generateEmptyAttestation)

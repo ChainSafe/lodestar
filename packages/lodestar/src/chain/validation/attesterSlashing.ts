@@ -20,7 +20,7 @@ export async function validateGossipAttesterSlashing(
 
   if (await db.attesterSlashing.hasAll(attesterSlashedIndices)) {
     throw new AttesterSlashingError({
-      code: AttesterSlashingErrorCode.SLASHING_ALREADY_EXISTS,
+      code: AttesterSlashingErrorCode.ALREADY_EXISTS,
     });
   }
 
@@ -31,14 +31,16 @@ export async function validateGossipAttesterSlashing(
     phase0.assertValidAttesterSlashing(state, attesterSlashing, false);
   } catch (e) {
     throw new AttesterSlashingError({
-      code: AttesterSlashingErrorCode.INVALID_SLASHING,
+      code: AttesterSlashingErrorCode.INVALID,
+      error: e as Error,
     });
   }
 
   const signatureSets = allForks.getAttesterSlashingSignatureSets(state, attesterSlashing);
   if (!(await chain.bls.verifySignatureSets(signatureSets))) {
     throw new AttesterSlashingError({
-      code: AttesterSlashingErrorCode.INVALID_SLASHING,
+      code: AttesterSlashingErrorCode.INVALID,
+      error: Error("Invalid signature"),
     });
   }
 }
