@@ -10,15 +10,7 @@ const BigInt64 = new BigIntUintType({byteLength: 8});
 export const AltairPreset = new ContainerType<IAltairPreset>({
   fields: {
     SYNC_COMMITTEE_SIZE: Number64,
-    SYNC_PUBKEYS_PER_AGGREGATE: Number64,
-    /*
-    INACTIVITY_SCORE_BIAS: BigInt64,
-    */
     EPOCHS_PER_SYNC_COMMITTEE_PERIOD: Number64,
-    /*
-    ALTAIR_FORK_VERSION: ByteVector4,
-    ALTAIR_FORK_EPOCH: Number64,
-    */
     INACTIVITY_PENALTY_QUOTIENT_ALTAIR: BigInt64,
     MIN_SLASHING_PENALTY_QUOTIENT_ALTAIR: BigInt64,
     PROPORTIONAL_SLASHING_MULTIPLIER_ALTAIR: BigInt64,
