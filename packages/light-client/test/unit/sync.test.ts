@@ -22,7 +22,7 @@ describe("Lightclient flow with LightClientUpdater", () => {
 
   // Create blocks and state
   const fromSlot = 1;
-  const toSlot = 50;
+  const toSlot = 100;
   const validatorCount = 4;
 
   // Compute all periods until toSlot
@@ -88,9 +88,9 @@ describe("Lightclient flow with LightClientUpdater", () => {
       latestFinalizedUpdate: latestFinalizedUpdate?.header.slot,
       latestNonFinalizedUpdate: latestNonFinalizedUpdate?.header.slot,
     }).to.deep.equal({
-      bestUpdates: [4, 20, 36, 49],
-      latestFinalizedUpdate: 36,
-      latestNonFinalizedUpdate: 49,
+      bestUpdates: [40, 80],
+      latestFinalizedUpdate: 80,
+      latestNonFinalizedUpdate: 99,
     });
 
     // Start API server
@@ -119,7 +119,7 @@ describe("Lightclient flow with LightClientUpdater", () => {
       }
     }
 
-    expect(store.snapshot.header.slot).to.equal(36, "Wrong store.snapshot.header.slot after applying updates");
+    expect(store.snapshot.header.slot).to.equal(80, "Wrong store.snapshot.header.slot after applying updates");
   });
 
   it("Simulate a second lightclient syncing over the API from trusted snapshot", async () => {
@@ -136,7 +136,7 @@ describe("Lightclient flow with LightClientUpdater", () => {
 
     await lightclient.sync();
 
-    expect(lightclient.getHeader().slot).to.equal(36, "Wrong store.snapshot.header.slot after applying updates");
+    expect(lightclient.getHeader().slot).to.equal(80, "Wrong store.snapshot.header.slot after applying updates");
   });
 
   it("Simulate a second lightclient syncing over the API from trusted stateRoot", async () => {
@@ -148,7 +148,7 @@ describe("Lightclient flow with LightClientUpdater", () => {
 
     await lightclient.sync();
 
-    expect(lightclient.getHeader().slot).to.equal(36, "Wrong store.snapshot.header.slot after applying updates");
+    expect(lightclient.getHeader().slot).to.equal(80, "Wrong store.snapshot.header.slot after applying updates");
   });
 });
 
