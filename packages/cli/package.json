@@ -34,8 +34,7 @@
     "test:unit": "nyc --cache-dir .nyc_output/.cache -e .ts mocha 'test/unit/**/*.test.ts'",
     "test:e2e": "mocha --timeout 30000 'test/e2e/**/*.test.ts'",
     "test": "yarn test:unit && yarn test:e2e",
-    "coverage": "codecov -F lodestar",
-    "benchmark": "ts-node test/benchmarks"
+    "coverage": "codecov -F lodestar"
   },
   "repository": {
     "type": "git",

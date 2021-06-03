@@ -32,7 +32,9 @@
     "lint:fix": "yarn run lint --fix",
     "prepublishOnly": "yarn build",
     "test:unit": "mocha 'test/unit/**/*.test.ts'",
-    "test:perf": "mocha 'test/perf/**/*.test.ts'"
+    "test:perf": "mocha 'test/perf/**/*.test.ts'",
+    "benchmark": "node --max_old_space_size=8192 -r ts-node/register test/perf/benchmark.ts",
+    "dev": "ts-node test/perf/phase0/epoch/processRewardsAndPenalties.perf.ts"
   },
   "types": "lib/index.d.ts",
   "dependencies": {

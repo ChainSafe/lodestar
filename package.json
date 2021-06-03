@@ -24,6 +24,7 @@
     "test:spec-min": "lerna run test:spec-min --no-bail",
     "test:spec-fast": "lerna run test:spec-fast --no-bail",
     "test:spec-main": "lerna run test:spec-main --no-bail",
+    "benchmark": "lerna run benchmark",
     "cli": "node --trace-deprecation --max-old-space-size=8192 ./packages/cli/bin/lodestar",
     "publish": "lerna publish from-package --yes --no-verify-access",
     "release": "lerna version --no-push --sign-git-commit",
