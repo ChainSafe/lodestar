@@ -1,5 +1,4 @@
 import {join} from "path";
-import {params} from "@chainsafe/lodestar-params/minimal";
 import {allForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {altair as altairTypes, ssz} from "@chainsafe/lodestar-types";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
@@ -10,7 +9,7 @@ import {TreeBacked} from "@chainsafe/ssz";
 import {expectEqualBeaconState} from "../../util";
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
-const config = createIBeaconConfig({...params, ALTAIR_FORK_EPOCH: 0});
+const config = createIBeaconConfig({ALTAIR_FORK_EPOCH: 0});
 
 describeDirectorySpecTest<IBlockSanityTestCase, allForks.BeaconState>(
   "altair block sanity minimal",

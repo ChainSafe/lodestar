@@ -5,7 +5,6 @@ import {expect} from "chai";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
 import {altair, allForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {SPEC_TEST_LOCATION} from "../../../../utils/specTestCases";
-import {params} from "@chainsafe/lodestar-params/minimal";
 import {TreeBacked, VectorType} from "@chainsafe/ssz";
 import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 import {
@@ -17,7 +16,7 @@ import {IBaseSpecTest} from "../../../type";
 import {ssz} from "@chainsafe/lodestar-types";
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
-const config = createIBeaconConfig({...params, ALTAIR_FORK_EPOCH: 0});
+const config = createIBeaconConfig({ALTAIR_FORK_EPOCH: 0});
 
 const Deltas = new VectorType<bigint[]>({
   elementType: ssz.altair.BeaconState.fields.balances,

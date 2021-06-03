@@ -1,5 +1,4 @@
 import {join} from "path";
-import {params} from "@chainsafe/lodestar-params/minimal";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
 import {IProcessSlotsTestCase} from "./type";
 import {SPEC_TEST_LOCATION} from "../../../../utils/specTestCases";
@@ -10,7 +9,7 @@ import {expectEqualBeaconState} from "../../util";
 import {ssz} from "@chainsafe/lodestar-types";
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
-const config = createIBeaconConfig({...params, ALTAIR_FORK_EPOCH: 0});
+const config = createIBeaconConfig({ALTAIR_FORK_EPOCH: 0});
 
 describeDirectorySpecTest<IProcessSlotsTestCase, altair.BeaconState>(
   "altair slot sanity minimal",

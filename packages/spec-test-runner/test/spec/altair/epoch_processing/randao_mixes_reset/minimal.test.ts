@@ -6,12 +6,11 @@ import {altair, CachedBeaconState, allForks} from "@chainsafe/lodestar-beacon-st
 import {altair as altairTypes, ssz} from "@chainsafe/lodestar-types";
 import {SPEC_TEST_LOCATION} from "../../../../utils/specTestCases";
 import {IAltairStateTestCase} from "../../stateTestCase";
-import {params} from "@chainsafe/lodestar-params/minimal";
 import {TreeBacked} from "@chainsafe/ssz";
 import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
-const config = createIBeaconConfig({...params, ALTAIR_FORK_EPOCH: 0});
+const config = createIBeaconConfig({ALTAIR_FORK_EPOCH: 0});
 
 describeDirectorySpecTest<IAltairStateTestCase, altairTypes.BeaconState>(
   "altair epoch randao mixes reset minimal",

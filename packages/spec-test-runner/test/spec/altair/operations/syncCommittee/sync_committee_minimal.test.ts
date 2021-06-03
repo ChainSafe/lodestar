@@ -1,7 +1,6 @@
 import {join} from "path";
 
 import {TreeBacked} from "@chainsafe/ssz";
-import {params} from "@chainsafe/lodestar-params/minimal";
 import {allForks, altair, CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
 import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
@@ -11,7 +10,7 @@ import {expectEqualBeaconState} from "../../util";
 import {ssz} from "@chainsafe/lodestar-types";
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
-const config = createIBeaconConfig({...params, ALTAIR_FORK_EPOCH: 0});
+const config = createIBeaconConfig({ALTAIR_FORK_EPOCH: 0});
 
 describeDirectorySpecTest<IProcessSyncCommitteeTestCase, altair.BeaconState>(
   "process sync committee minimal",

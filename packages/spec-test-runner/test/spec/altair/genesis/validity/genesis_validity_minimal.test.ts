@@ -1,7 +1,6 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import {join} from "path";
 
-import {params} from "@chainsafe/lodestar-params/minimal";
 import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 import {altair, ssz} from "@chainsafe/lodestar-types";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
@@ -16,7 +15,7 @@ interface IGenesisValidityTestCase extends IBaseSpecTest {
 }
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
-const config = createIBeaconConfig({...params, ALTAIR_FORK_EPOCH: 0});
+const config = createIBeaconConfig({ALTAIR_FORK_EPOCH: 0});
 
 describeDirectorySpecTest<IGenesisValidityTestCase, boolean>(
   "genesis validity",

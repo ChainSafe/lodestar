@@ -1,6 +1,5 @@
 import {join} from "path";
 import {expect} from "chai";
-import {params} from "@chainsafe/lodestar-params/minimal";
 import {
   createCachedBeaconState,
   phase0,
@@ -35,7 +34,7 @@ import {ssz} from "@chainsafe/lodestar-types";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
-const config = createIBeaconConfig({...params, ALTAIR_FORK_EPOCH: 0});
+const config = createIBeaconConfig({ALTAIR_FORK_EPOCH: 0});
 
 describeDirectorySpecTest<IForkChoiceTestCase, void>(
   "forkchoice get_head",
