@@ -4,12 +4,13 @@ import {GENESIS_SLOT} from "@chainsafe/lodestar-params";
 import {allForks, altair, Bytes32, Number64, phase0, Root} from "@chainsafe/lodestar-types";
 import {bigIntMin} from "@chainsafe/lodestar-utils";
 
-import {processDeposit as phase0ProcessDeposit} from "../naive/phase0";
-import {processDeposit as altairProcessDeposit} from "../naive/altair";
+import {processDeposit as processDepositPhase0} from "../phase0";
+import {processDeposit as processDepositAltair} from "../altair";
 import {computeEpochAtSlot} from "./epoch";
 import {getActiveValidatorIndices} from "./validator";
 import {getTemporaryBlockHeader} from "./blockRoot";
-import {getNextSyncCommittee} from "../altair/state_accessor";
+import {getNextSyncCommittee} from "../altair/epoch/sync_committee";
+import {CachedBeaconState, createCachedBeaconState} from "../allForks";
 
 // TODO: Refactor to work with non-phase0 genesis state
 
@@ -41,11 +42,11 @@ export function getGenesisBeaconState(
   config: IBeaconConfig,
   genesisEth1Data: phase0.Eth1Data,
   latestBlockHeader: phase0.BeaconBlockHeader
-): TreeBacked<allForks.BeaconState> {
+): CachedBeaconState<allForks.BeaconState> {
   // Seed RANDAO with Eth1 entropy
   const randaoMixes = Array<Bytes32>(config.params.EPOCHS_PER_HISTORICAL_VECTOR).fill(genesisEth1Data.blockHash);
 
-  const state: allForks.BeaconState = config.getForkTypes(GENESIS_SLOT).BeaconState.defaultTreeBacked();
+  const state = config.getForkTypes(GENESIS_SLOT).BeaconState.defaultTreeBacked();
   // MISC
   state.slot = GENESIS_SLOT;
   const version = config.getForkVersion(GENESIS_SLOT);
@@ -70,7 +71,8 @@ export function getGenesisBeaconState(
   // Ethereum 1.0 chain data
   state.eth1Data = genesisEth1Data;
   state.randaoMixes = randaoMixes;
-  return state as TreeBacked<allForks.BeaconState>;
+
+  return createCachedBeaconState(config, state);
 }
 
 /**
@@ -109,7 +111,7 @@ export function applyTimestamp(
  */
 export function applyDeposits(
   config: IBeaconConfig,
-  state: allForks.BeaconState,
+  state: CachedBeaconState<allForks.BeaconState>,
   newDeposits: phase0.Deposit[],
   fullDepositDataRootList?: TreeBacked<List<Root>>
 ): void {
@@ -139,10 +141,13 @@ export function applyDeposits(
     state.eth1Data.depositCount += 1;
 
     const forkName = config.getForkName(GENESIS_SLOT);
-    if (forkName == ForkName.phase0) {
-      phase0ProcessDeposit(config, state, deposit);
-    } else {
-      altairProcessDeposit(config, state as altair.BeaconState, deposit);
+    switch (forkName) {
+      case ForkName.phase0:
+        processDepositPhase0(state as CachedBeaconState<phase0.BeaconState>, deposit);
+        break;
+      case ForkName.altair:
+        processDepositAltair(state as CachedBeaconState<altair.BeaconState>, deposit);
+        break;
     }
   }
 
@@ -161,6 +166,8 @@ export function applyDeposits(
       validator.activationEligibilityEpoch = computeEpochAtSlot(config, GENESIS_SLOT);
       validator.activationEpoch = computeEpochAtSlot(config, GENESIS_SLOT);
     }
+    // If state is a CachedBeaconState<> validator has to be re-assigned manually
+    state.validators[index] = validator;
   }
 
   // Set genesis validators root for domain separation and chain versioning

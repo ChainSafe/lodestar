@@ -1,6 +1,6 @@
 import {altair} from "@chainsafe/lodestar-types";
-import {getNextSyncCommittee} from "../state_accessor";
 import {CachedBeaconState, IEpochProcess} from "../../allForks/util";
+import {getNextSyncCommittee} from "./sync_committee";
 
 export function processSyncCommitteeUpdates(
   state: CachedBeaconState<altair.BeaconState>,

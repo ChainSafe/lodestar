@@ -1,9 +1,7 @@
-import {expect} from "chai";
 import sinon from "sinon";
 
 import {config} from "@chainsafe/lodestar-config/minimal";
-import {generateEmptyProposerSlashing} from "@chainsafe/lodestar-beacon-state-transition/test/utils/slashings";
-import * as validatorStatusUtils from "@chainsafe/lodestar-beacon-state-transition/lib/util/validatorStatus";
+import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
 
 import {BeaconChain} from "../../../../src/chain";
@@ -11,57 +9,63 @@ import {StubbedBeaconDb, StubbedChain} from "../../../utils/stub";
 import {generateCachedState} from "../../../utils/state";
 import {ProposerSlashingErrorCode} from "../../../../src/chain/errors/proposerSlashingError";
 import {validateGossipProposerSlashing} from "../../../../src/chain/validation/proposerSlashing";
-import {SinonStubFn} from "../../../utils/types";
 import {expectRejectedWithLodestarError} from "../../../utils/errors";
 
 describe("validate proposer slashing", () => {
   const sandbox = sinon.createSandbox();
-  let dbStub: StubbedBeaconDb,
-    isValidIncomingProposerSlashingStub: SinonStubFn<typeof validatorStatusUtils["isValidProposerSlashing"]>,
-    chainStub: StubbedChain;
+  let dbStub: StubbedBeaconDb, chainStub: StubbedChain;
 
-  beforeEach(() => {
-    isValidIncomingProposerSlashingStub = sandbox.stub(validatorStatusUtils, "isValidProposerSlashing");
+  before(() => {
     chainStub = sandbox.createStubInstance(BeaconChain) as StubbedChain;
     chainStub.forkChoice = sandbox.createStubInstance(ForkChoice);
     chainStub.bls = {verifySignatureSets: async () => true};
     dbStub = new StubbedBeaconDb(sandbox);
+
+    const state = generateCachedState();
+    chainStub.getHeadState.returns(state);
   });
 
   afterEach(() => {
+    dbStub.proposerSlashing.has.resolves(false);
+  });
+
+  after(() => {
     sandbox.restore();
   });
 
   it("should return invalid proposer slashing - existing", async () => {
-    const slashing = generateEmptyProposerSlashing();
+    const proposerSlashing = config.types.phase0.ProposerSlashing.defaultValue();
     dbStub.proposerSlashing.has.resolves(true);
 
     await expectRejectedWithLodestarError(
-      validateGossipProposerSlashing(config, chainStub, dbStub, slashing),
-      ProposerSlashingErrorCode.SLASHING_ALREADY_EXISTS
+      validateGossipProposerSlashing(config, chainStub, dbStub, proposerSlashing),
+      ProposerSlashingErrorCode.ALREADY_EXISTS
     );
   });
 
   it("should return invalid proposer slashing - invalid", async () => {
-    const slashing = generateEmptyProposerSlashing();
-    dbStub.proposerSlashing.has.resolves(false);
-    const state = generateCachedState();
-    chainStub.getHeadState.returns(state);
-    isValidIncomingProposerSlashingStub.returns(false);
+    const proposerSlashing = config.types.phase0.ProposerSlashing.defaultValue();
+    // Make it invalid
+    proposerSlashing.signedHeader1.message.slot = 1;
+    proposerSlashing.signedHeader2.message.slot = 0;
 
     await expectRejectedWithLodestarError(
-      validateGossipProposerSlashing(config, chainStub, dbStub, slashing),
-      ProposerSlashingErrorCode.INVALID_SLASHING
+      validateGossipProposerSlashing(config, chainStub, dbStub, proposerSlashing),
+      ProposerSlashingErrorCode.INVALID
     );
   });
 
   it("should return valid proposer slashing", async () => {
-    const slashing = generateEmptyProposerSlashing();
-    dbStub.proposerSlashing.has.resolves(false);
-    const state = generateCachedState();
-    chainStub.getHeadState.returns(state);
-    isValidIncomingProposerSlashingStub.returns(true);
-    const validationTest = await validateGossipProposerSlashing(config, chainStub, dbStub, slashing);
-    expect(validationTest).to.not.throw;
+    const signedHeader1 = config.types.phase0.SignedBeaconBlockHeader.defaultValue();
+    const signedHeader2 = config.types.phase0.SignedBeaconBlockHeader.defaultValue();
+    // Make it different, so slashable
+    signedHeader2.message.stateRoot = Buffer.alloc(32, 1);
+
+    const proposerSlashing: phase0.ProposerSlashing = {
+      signedHeader1: signedHeader1,
+      signedHeader2: signedHeader2,
+    };
+
+    await validateGossipProposerSlashing(config, chainStub, dbStub, proposerSlashing);
   });
 });

@@ -1,8 +1,5 @@
-// fast
 export * from "./block";
 export * from "./epoch";
-// naive
-export * as naive from "../naive/phase0";
 
 // re-export phase0 lodestar types for ergonomic usage downstream
 // eg:

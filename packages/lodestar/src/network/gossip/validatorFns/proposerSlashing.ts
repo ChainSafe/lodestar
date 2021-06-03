@@ -1,4 +1,5 @@
 import {ERR_TOPIC_VALIDATOR_IGNORE, ERR_TOPIC_VALIDATOR_REJECT} from "libp2p-gossipsub/src/constants";
+import {Json} from "@chainsafe/ssz";
 import {phase0} from "@chainsafe/lodestar-types";
 import {validateGossipProposerSlashing} from "../../../chain/validation";
 import {ProposerSlashingError, ProposerSlashingErrorCode} from "../../../chain/errors";
@@ -20,11 +21,11 @@ export async function validateProposerSlashing(
     }
 
     switch (e.type.code) {
-      case ProposerSlashingErrorCode.INVALID_SLASHING:
-        logger.debug("gossip - ProposerSlashing - reject", e.type);
+      case ProposerSlashingErrorCode.INVALID:
+        logger.debug("gossip - ProposerSlashing - reject", (e.type as unknown) as Json);
         throw new GossipValidationError(ERR_TOPIC_VALIDATOR_REJECT);
 
-      case ProposerSlashingErrorCode.SLASHING_ALREADY_EXISTS:
+      case ProposerSlashingErrorCode.ALREADY_EXISTS:
       default:
         logger.debug("gossip - ProposerSlashing - ignore", e.type);
         throw new GossipValidationError(ERR_TOPIC_VALIDATOR_IGNORE);

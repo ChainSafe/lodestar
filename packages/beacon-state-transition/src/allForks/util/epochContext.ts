@@ -24,7 +24,7 @@ import {
   isAggregatorFromCommitteeLength,
   zipIndexesInBitList,
 } from "../../util";
-import {getNextSyncCommitteeIndices} from "../../altair/state_accessor/sync_committee";
+import {getNextSyncCommitteeIndices} from "../../altair/epoch/sync_committee";
 import {computeEpochShuffling, IEpochShuffling} from "./epochShuffling";
 import {MutableVector} from "@chainsafe/persistent-ts";
 import {CachedValidatorList} from "./cachedValidatorList";
@@ -93,7 +93,9 @@ export function createEpochContext(
     previousShuffling = computeEpochShuffling(config, state, indicesBounded, previousEpoch);
   }
   const nextShuffling = computeEpochShuffling(config, state, indicesBounded, nextEpoch);
-  const proposers = computeProposers(config, state, currentShuffling);
+
+  // Allow to create CachedBeaconState for empty states
+  const proposers = state.validators.length > 0 ? computeProposers(config, state, currentShuffling) : [];
 
   // Only after altair, compute the indices of the current sync committee
   const onAltairFork = currentEpoch >= config.params.ALTAIR_FORK_EPOCH;

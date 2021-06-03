@@ -4,14 +4,12 @@
 
 import bls from "@chainsafe/bls";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {ATTESTATION_SUBNET_COUNT} from "@chainsafe/lodestar-params";
-import {phase0, Slot, ValidatorIndex, CommitteeIndex, allForks} from "@chainsafe/lodestar-types";
+import {phase0, Slot, ValidatorIndex, allForks} from "@chainsafe/lodestar-types";
 import {isSorted} from "@chainsafe/lodestar-utils";
 import {BitList, List} from "@chainsafe/ssz";
-import {getBeaconCommittee, getCommitteeCountAtSlot} from "./committee";
+import {getBeaconCommittee} from "./committee";
 import {getDomain} from "./domain";
 import {computeSigningRoot} from "./signingRoot";
-import {computeSlotsSinceEpochStart} from "./slot";
 
 /**
  * Check if [[data1]] and [[data2]] are slashable according to Casper FFG rules.
@@ -107,51 +105,4 @@ export function isValidAttestationSlot(config: IBeaconConfig, attestationSlot: S
     attestationSlot + config.params.MIN_ATTESTATION_INCLUSION_DELAY <= currentSlot &&
     currentSlot <= attestationSlot + config.params.SLOTS_PER_EPOCH
   );
-}
-
-export function isUnaggregatedAttestation(attestation: phase0.Attestation): boolean {
-  const aggregationBits = attestation.aggregationBits;
-  let count = 0;
-  for (let i = 0; i < aggregationBits.length; i++) {
-    if (aggregationBits[i]) {
-      count++;
-    }
-  }
-  return count === 1;
-}
-
-/**
- * Compute the correct subnet for an attestation for Phase 0.
- */
-export function computeSubnetForAttestation(
-  config: IBeaconConfig,
-  state: allForks.BeaconState,
-  attestation: phase0.Attestation
-): number {
-  const {slot, index} = attestation.data;
-  return computeSubnetForSlot(config, state, slot, index);
-}
-
-/**
- * Compute the correct subnet for a slot/committee index for Phase 0.
- */
-export function computeSubnetForSlot(
-  config: IBeaconConfig,
-  state: allForks.BeaconState,
-  slot: number,
-  committeeIndex: number
-): number {
-  const committeesAtSlot = getCommitteeCountAtSlot(config, state, slot);
-  return computeSubnetForCommitteesAtSlot(config, slot, committeesAtSlot, committeeIndex);
-}
-
-export function computeSubnetForCommitteesAtSlot(
-  config: IBeaconConfig,
-  slot: Slot,
-  committeesAtSlot: number,
-  committeeIndex: CommitteeIndex
-): number {
-  const slotsSinceEpochStart = computeSlotsSinceEpochStart(config, slot);
-  const committeesSinceEpochStart = committeesAtSlot * slotsSinceEpochStart;
-  return (committeesSinceEpochStart + committeeIndex) % ATTESTATION_SUBNET_COUNT;
 }
