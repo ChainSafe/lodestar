@@ -212,12 +212,16 @@ async function stateBySlot(
 ): Promise<allForks.BeaconState | null> {
   const blockSummary = forkChoice.getCanonicalBlockSummaryAtSlot(slot);
   if (blockSummary) {
-    const state = stateCache.get(blockSummary.stateRoot) ?? null;
-    if (state) return state;
+    const state = stateCache.get(blockSummary.stateRoot);
+    if (state) {
+      return state;
+    }
   }
+
   if (opts?.regenFinalizedState) {
     return await getFinalizedState(config, db, forkChoice, slot);
   }
+
   return await db.stateArchive.get(slot);
 }
 
