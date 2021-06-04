@@ -11,7 +11,7 @@
   "bugs": {
     "url": "https://github.com/ChainSafe/lodestar/issues"
   },
-  "version": "0.22.0",
+  "version": "0.23.0",
   "main": "lib/index.js",
   "bin": {
     "lodestar": "./bin/lodestar"
@@ -23,7 +23,6 @@
   ],
   "scripts": {
     "clean": "rm -rf lib && rm -f *.tsbuildinfo",
-    "benchmark": "ts-node test/benchmarks",
     "build": "concurrently \"yarn build:lib\" \"yarn build:types\"",
     "build:typedocs": "typedoc --exclude src/index.ts --out typedocs src",
     "build:lib": "babel src -x .ts -d lib --source-maps",
@@ -47,18 +46,19 @@
   "dependencies": {
     "@chainsafe/bls": "6.0.1",
     "@chainsafe/discv5": "^0.5.1",
-    "@chainsafe/lodestar-api": "^0.22.0",
-    "@chainsafe/lodestar-beacon-state-transition": "^0.22.0",
-    "@chainsafe/lodestar-config": "^0.22.0",
-    "@chainsafe/lodestar-db": "^0.22.0",
-    "@chainsafe/lodestar-fork-choice": "^0.22.0",
-    "@chainsafe/lodestar-params": "^0.22.0",
-    "@chainsafe/lodestar-types": "^0.22.0",
-    "@chainsafe/lodestar-utils": "^0.22.0",
-    "@chainsafe/lodestar-validator": "^0.22.0",
+    "@chainsafe/lodestar-api": "^0.23.0",
+    "@chainsafe/lodestar-beacon-state-transition": "^0.23.0",
+    "@chainsafe/lodestar-config": "^0.23.0",
+    "@chainsafe/lodestar-db": "^0.23.0",
+    "@chainsafe/lodestar-fork-choice": "^0.23.0",
+    "@chainsafe/lodestar-light-client": "^0.23.0",
+    "@chainsafe/lodestar-params": "^0.23.0",
+    "@chainsafe/lodestar-types": "^0.23.0",
+    "@chainsafe/lodestar-utils": "^0.23.0",
+    "@chainsafe/lodestar-validator": "^0.23.0",
     "@chainsafe/persistent-merkle-tree": "^0.3.2",
     "@chainsafe/snappy-stream": "5.0.0",
-    "@chainsafe/ssz": "^0.8.6",
+    "@chainsafe/ssz": "^0.8.7",
     "@ethersproject/abi": "^5.0.0",
     "@types/datastore-level": "^1.1.1",
     "abort-controller": "^3.0.0",

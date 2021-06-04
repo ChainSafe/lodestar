@@ -6,59 +6,41 @@ import {IBlockJob} from "../interface";
 import {IBeaconClock} from "../clock";
 import {BlockError, BlockErrorCode} from "../errors";
 
-export function validateBlock(
-  {config, forkChoice, clock}: {config: IBeaconConfig; forkChoice: IForkChoice; clock: IBeaconClock},
-  job: IBlockJob
-): void {
+export type BlockValidateModules = {
+  config: IBeaconConfig;
+  forkChoice: IForkChoice;
+  clock: IBeaconClock;
+};
+
+export function validateBlock({config, forkChoice, clock}: BlockValidateModules, job: IBlockJob): void {
+  const block = job.signedBlock;
+
   try {
-    const blockHash = config
-      .getForkTypes(job.signedBlock.message.slot)
-      .BeaconBlock.hashTreeRoot(job.signedBlock.message);
-    const blockSlot = job.signedBlock.message.slot;
+    const blockHash = config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message);
+    const blockSlot = block.message.slot;
     if (blockSlot === 0) {
-      throw new BlockError({
-        code: BlockErrorCode.GENESIS_BLOCK,
-        job,
-      });
+      throw new BlockError(block, {code: BlockErrorCode.GENESIS_BLOCK});
     }
 
     if (!job.reprocess && forkChoice.hasBlock(blockHash)) {
-      throw new BlockError({
-        code: BlockErrorCode.BLOCK_IS_ALREADY_KNOWN,
-        root: blockHash,
-        job,
-      });
+      throw new BlockError(block, {code: BlockErrorCode.BLOCK_IS_ALREADY_KNOWN, root: blockHash});
     }
 
     const finalizedCheckpoint = forkChoice.getFinalizedCheckpoint();
     const finalizedSlot = computeStartSlotAtEpoch(config, finalizedCheckpoint.epoch);
     if (blockSlot <= finalizedSlot) {
-      throw new BlockError({
-        code: BlockErrorCode.WOULD_REVERT_FINALIZED_SLOT,
-        blockSlot,
-        finalizedSlot,
-        job,
-      });
+      throw new BlockError(block, {code: BlockErrorCode.WOULD_REVERT_FINALIZED_SLOT, blockSlot, finalizedSlot});
     }
 
     const currentSlot = clock.currentSlot;
     if (blockSlot > currentSlot) {
-      throw new BlockError({
-        code: BlockErrorCode.FUTURE_SLOT,
-        blockSlot,
-        currentSlot,
-        job,
-      });
+      throw new BlockError(block, {code: BlockErrorCode.FUTURE_SLOT, blockSlot, currentSlot});
     }
   } catch (e) {
     if (e instanceof BlockError) {
       throw e;
     }
 
-    throw new BlockError({
-      code: BlockErrorCode.BEACON_CHAIN_ERROR,
-      error: e as Error,
-      job,
-    });
+    throw new BlockError(block, {code: BlockErrorCode.BEACON_CHAIN_ERROR, error: e as Error});
   }
 }

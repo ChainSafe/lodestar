@@ -7,6 +7,7 @@ import {IBeaconConfig, ForkName} from "@chainsafe/lodestar-config";
 import {CachedBeaconState, createCachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
 import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
+import {LightClientUpdater} from "@chainsafe/lodestar-light-client/lib/server/LightClientUpdater";
 
 import {ChainEventEmitter, IBeaconChain} from "../../../../src/chain";
 import {IBeaconClock} from "../../../../src/chain/clock/interface";
@@ -20,6 +21,7 @@ import {AttestationPool} from "../../../../src/chain/attestation";
 import {BlsVerifier, IBlsVerifier} from "../../../../src/chain/bls";
 import {ForkDigestContext, IForkDigestContext} from "../../../../src/util/forkDigestContext";
 import {generateEmptyBlockSummary} from "../../block";
+import {testLogger} from "../../logger";
 
 /* eslint-disable @typescript-eslint/no-empty-function */
 
@@ -46,12 +48,14 @@ export class MockBeaconChain implements IBeaconChain {
   pendingBlocks: BlockPool;
   pendingAttestations: AttestationPool;
   forkDigestContext: IForkDigestContext;
+  lightclientUpdater: LightClientUpdater;
 
   private state: TreeBacked<allForks.BeaconState>;
   private config: IBeaconConfig;
   private abortController: AbortController;
 
   constructor({genesisTime, chainId, networkId, state, config}: IMockChainParams) {
+    const logger = testLogger();
     this.genesisTime = genesisTime ?? state.genesisTime;
     this.genesisValidatorsRoot = state.genesisValidatorsRoot;
     this.bls = sinon.createStubInstance(BlsVerifier);
@@ -70,22 +74,22 @@ export class MockBeaconChain implements IBeaconChain {
     this.forkChoice = mockForkChoice(config);
     this.stateCache = new StateContextCache();
     this.checkpointStateCache = new CheckpointStateCache(this.config);
-    this.pendingBlocks = new BlockPool({
-      config: this.config,
-    });
+    this.pendingBlocks = new BlockPool(config, logger);
     this.pendingAttestations = new AttestationPool({
       config: this.config,
     });
+    const db = new StubbedBeaconDb(sinon);
     this.regen = new StateRegenerator({
       config: this.config,
       emitter: this.emitter,
       forkChoice: this.forkChoice,
       stateCache: this.stateCache,
       checkpointStateCache: this.checkpointStateCache,
-      db: new StubbedBeaconDb(sinon),
+      db,
       metrics: null,
     });
     this.forkDigestContext = new ForkDigestContext(this.config, this.genesisValidatorsRoot);
+    this.lightclientUpdater = new LightClientUpdater(config, db);
   }
 
   async getHeadBlock(): Promise<null> {
@@ -143,6 +147,10 @@ export class MockBeaconChain implements IBeaconChain {
   }
 
   async receiveBlock(): Promise<void> {
+    return;
+  }
+
+  async processBlock(): Promise<void> {
     return;
   }
 

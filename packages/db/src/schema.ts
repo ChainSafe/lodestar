@@ -48,6 +48,14 @@ export enum Bucket {
   allForks_pendingBlock = 25, // Root -> SignedBeaconBlock
 
   index_stateArchiveRootIndex = 26, // State Root -> slot
+
+  // Lightclient server
+  altair_bestUpdatePerCommitteePeriod = 30, // SyncPeriod -> LightClientUpdate
+  // TODO: Review if it's really necessary to persist these two
+  altair_latestFinalizedUpdate = 31, // Single: LightClientUpdate
+  altair_latestNonFinalizedUpdate = 32, // Single: LightClientUpdate
+  // TODO: Review if it's really necessary
+  altair_lightclientFinalizedCheckpoint = 33, // Epoch -> FinalizedCheckpointData
 }
 
 export enum Key {

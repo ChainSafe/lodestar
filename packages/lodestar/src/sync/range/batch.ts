@@ -8,7 +8,6 @@ import {hashBlocks} from "./utils";
 
 export type BatchOpts = {
   epochsPerBatch: Epoch;
-  logAfterAttempts?: number;
 };
 
 /**

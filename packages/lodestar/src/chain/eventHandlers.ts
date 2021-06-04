@@ -1,9 +1,9 @@
 import {AbortSignal} from "abort-controller";
-import {readonlyValues, toHexString} from "@chainsafe/ssz";
-import {allForks, phase0, Slot, Version} from "@chainsafe/lodestar-types";
+import {readonlyValues, toHexString, TreeBacked} from "@chainsafe/ssz";
+import {allForks, altair, phase0, Root, Slot, Version} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {IBlockSummary} from "@chainsafe/lodestar-fork-choice";
-import {CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
+import {CachedBeaconState, computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 
 import {AttestationError, AttestationErrorCode, BlockError, BlockErrorCode} from "./errors";
 import {IBlockJob} from "./interface";
@@ -172,9 +172,28 @@ export function onJustified(
   this.metrics?.currentJustifiedEpoch.set(cp.epoch);
 }
 
-export function onFinalized(this: BeaconChain, cp: phase0.Checkpoint): void {
+export async function onFinalized(this: BeaconChain, cp: phase0.Checkpoint): Promise<void> {
   this.logger.verbose("Checkpoint finalized", this.config.types.phase0.Checkpoint.toJson(cp));
   this.metrics?.finalizedEpoch.set(cp.epoch);
+
+  // Only after altair
+  if (cp.epoch >= this.config.params.ALTAIR_FORK_EPOCH) {
+    try {
+      const state = await this.regen.getCheckpointState(cp);
+      const block = await this.getCanonicalBlockAtSlot(state.slot);
+      if (!block) {
+        throw Error(`No block found for checkpoint ${cp.epoch} : ${toHexString(cp.root)}`);
+      }
+
+      await this.lightclientUpdater.onFinalized(
+        cp,
+        block.message as altair.BeaconBlock,
+        state as TreeBacked<altair.BeaconState>
+      );
+    } catch (e) {
+      this.logger.error("Error lightclientUpdater.onFinalized", {epoch: cp.epoch}, e);
+    }
+  }
 }
 
 export function onForkChoiceJustified(this: BeaconChain, cp: phase0.Checkpoint): void {
@@ -261,6 +280,18 @@ export async function onBlock(
       })
     );
   }
+
+  // Only after altair
+  if (computeEpochAtSlot(this.config, block.message.slot) >= this.config.params.ALTAIR_FORK_EPOCH) {
+    try {
+      await this.lightclientUpdater.onHead(
+        block.message as altair.BeaconBlock,
+        postState as TreeBacked<altair.BeaconState>
+      );
+    } catch (e) {
+      this.logger.error("Error lightclientUpdater.onHead", {slot: block.message.slot}, e);
+    }
+  }
 }
 
 export async function onErrorAttestation(this: BeaconChain, err: AttestationError): Promise<void> {
@@ -304,30 +335,21 @@ export async function onErrorBlock(this: BeaconChain, err: BlockError): Promise<
     return;
   }
 
-  this.logger.error("Block error", {slot: err.job.signedBlock.message.slot}, err);
-  const blockRoot = this.config
-    .getForkTypes(err.job.signedBlock.message.slot)
-    .BeaconBlock.hashTreeRoot(err.job.signedBlock.message);
+  this.logger.error("Block error", {slot: err.signedBlock.message.slot}, err);
+  const getBlockRoot = (): Root =>
+    this.config.getForkTypes(err.signedBlock.message.slot).BeaconBlock.hashTreeRoot(err.signedBlock.message);
 
   switch (err.type.code) {
     case BlockErrorCode.FUTURE_SLOT:
-      this.logger.debug("Add block to pool", {
-        reason: err.type.code,
-        blockRoot: toHexString(blockRoot),
-      });
-      this.pendingBlocks.addBySlot(err.job.signedBlock);
-      await this.db.pendingBlock.add(err.job.signedBlock);
+      this.pendingBlocks.addBySlot(err.signedBlock);
+      await this.db.pendingBlock.add(err.signedBlock);
       break;
 
     case BlockErrorCode.PARENT_UNKNOWN:
-      this.logger.debug("Add block to pool", {
-        reason: err.type.code,
-        blockRoot: toHexString(blockRoot),
-      });
       // add to pendingBlocks first which is not await
       // this is to process a block range
-      this.pendingBlocks.addByParent(err.job.signedBlock);
-      await this.db.pendingBlock.add(err.job.signedBlock);
+      this.pendingBlocks.addByParent(err.signedBlock);
+      await this.db.pendingBlock.add(err.signedBlock);
       break;
 
     case BlockErrorCode.INCORRECT_PROPOSER:
@@ -335,9 +357,11 @@ export async function onErrorBlock(this: BeaconChain, err: BlockError): Promise<
     case BlockErrorCode.STATE_ROOT_MISMATCH:
     case BlockErrorCode.PER_BLOCK_PROCESSING_ERROR:
     case BlockErrorCode.BLOCK_IS_NOT_LATER_THAN_PARENT:
-    case BlockErrorCode.UNKNOWN_PROPOSER:
-      await this.db.badBlock.put(blockRoot);
+    case BlockErrorCode.UNKNOWN_PROPOSER: {
+      const blockRoot = getBlockRoot();
+      await this.db.badBlock.put(blockRoot as Uint8Array);
       this.logger.warn("Found bad block", {blockRoot: toHexString(blockRoot)}, err);
       break;
+    }
   }
 }

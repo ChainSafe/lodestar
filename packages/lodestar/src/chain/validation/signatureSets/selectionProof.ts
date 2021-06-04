@@ -16,8 +16,8 @@ export function getSelectionProofSignatureSet(
   aggregator: PublicKey,
   aggregateAndProof: phase0.SignedAggregateAndProof
 ): ISignatureSet {
-  const epoch = computeEpochAtSlot(config, slot);
-  const selectionProofDomain = getDomain(config, state, config.params.DOMAIN_SELECTION_PROOF, epoch);
+  const epochSig = computeEpochAtSlot(config, slot);
+  const selectionProofDomain = getDomain(config, state, config.params.DOMAIN_SELECTION_PROOF, epochSig);
 
   return {
     type: SignatureSetType.single,

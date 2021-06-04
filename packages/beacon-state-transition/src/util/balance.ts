@@ -35,6 +35,7 @@ export function getTotalActiveBalance(config: IBeaconConfig, state: allForks.Bea
  * Increase the balance for a validator with the given ``index`` by ``delta``.
  */
 export function increaseBalance(state: allForks.BeaconState, index: ValidatorIndex, delta: Gwei): void {
+  // TODO: Inline this
   state.balances[index] = state.balances[index] + delta;
 }
 

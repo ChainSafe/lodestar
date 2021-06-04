@@ -1,6 +1,6 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {BenchmarkRunner} from "@chainsafe/lodestar-utils";
 import {unshuffleList} from "../../../src";
-import {BenchmarkRunner} from "../runner";
 
 //          Lightouse  Lodestar
 // 512      254.04 us  1.6034 ms (x6)

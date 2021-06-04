@@ -20,6 +20,7 @@ import {
 import {IEpochStakeSummary} from "./epochStakeSummary";
 import {CachedBeaconState} from "./cachedBeaconState";
 import {statusProcessEpoch} from "../../phase0/epoch/processPendingAttestations";
+import {computeBaseRewardPerIncrement} from "../../altair/misc";
 
 /**
  * The AttesterStatus (and FlatValidator under status.validator) objects and
@@ -30,6 +31,8 @@ export interface IEpochProcess {
   prevEpoch: Epoch;
   currentEpoch: Epoch;
   totalActiveStake: Gwei;
+  /** For altair */
+  baseRewardPerIncrement: Gwei;
   prevEpochUnslashedStake: IEpochStakeSummary;
   currEpochUnslashedTargetStake: Gwei;
   indicesToSlash: ValidatorIndex[];
@@ -53,6 +56,7 @@ export function createIEpochProcess(): IEpochProcess {
     prevEpoch: 0,
     currentEpoch: 0,
     totalActiveStake: BigInt(0),
+    baseRewardPerIncrement: BigInt(0),
     prevEpochUnslashedStake: {
       sourceStake: BigInt(0),
       targetStake: BigInt(0),
@@ -139,6 +143,9 @@ export function prepareEpochProcessState<T extends allForks.BeaconState>(state: 
     out.totalActiveStake = EFFECTIVE_BALANCE_INCREMENT;
   }
 
+  // SPEC: function getBaseRewardPerIncrement()
+  out.baseRewardPerIncrement = computeBaseRewardPerIncrement(config, out.totalActiveStake);
+
   // order by sequence of activationEligibilityEpoch setting and then index
   out.indicesToMaybeActivate.sort(
     (a, b) => out.validators[a].activationEligibilityEpoch - out.validators[b].activationEligibilityEpoch || a - b
@@ -200,19 +207,24 @@ export function prepareEpochProcessState<T extends allForks.BeaconState>(state: 
 
   let currTargetUnslStake = BigInt(0);
 
+  const FLAG_PREV_SOURCE_ATTESTER_UNSLASHED = FLAG_PREV_SOURCE_ATTESTER | FLAG_UNSLASHED;
+  const FLAG_PREV_TARGET_ATTESTER_UNSLASHED = FLAG_PREV_TARGET_ATTESTER | FLAG_UNSLASHED;
+  const FLAG_PREV_HEAD_ATTESTER_UNSLASHED = FLAG_PREV_HEAD_ATTESTER | FLAG_UNSLASHED;
+  const FLAG_CURR_TARGET_UNSLASHED = FLAG_CURR_TARGET_ATTESTER | FLAG_UNSLASHED;
+
   for (let i = 0; i < out.statuses.length; i++) {
     const status = out.statuses[i];
     const effectiveBalance = out.validators[i].effectiveBalance;
-    if (hasMarkers(status.flags, FLAG_PREV_SOURCE_ATTESTER | FLAG_UNSLASHED)) {
+    if (hasMarkers(status.flags, FLAG_PREV_SOURCE_ATTESTER_UNSLASHED)) {
       prevSourceUnslStake += effectiveBalance;
     }
-    if (hasMarkers(status.flags, FLAG_PREV_TARGET_ATTESTER | FLAG_UNSLASHED)) {
+    if (hasMarkers(status.flags, FLAG_PREV_TARGET_ATTESTER_UNSLASHED)) {
       prevTargetUnslStake += effectiveBalance;
     }
-    if (hasMarkers(status.flags, FLAG_PREV_HEAD_ATTESTER | FLAG_UNSLASHED)) {
+    if (hasMarkers(status.flags, FLAG_PREV_HEAD_ATTESTER_UNSLASHED)) {
       prevHeadUnslStake += effectiveBalance;
     }
-    if (hasMarkers(status.flags, FLAG_CURR_TARGET_ATTESTER | FLAG_UNSLASHED)) {
+    if (hasMarkers(status.flags, FLAG_CURR_TARGET_UNSLASHED)) {
       currTargetUnslStake += effectiveBalance;
     }
   }

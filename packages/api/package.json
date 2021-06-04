@@ -1,6 +1,5 @@
 {
   "name": "@chainsafe/lodestar-api",
-  "private": true,
   "description": "A Typescript implementation of the eth2 light client",
   "license": "Apache-2.0",
   "author": "ChainSafe Systems",
@@ -12,7 +11,7 @@
   "bugs": {
     "url": "https://github.com/ChainSafe/lodestar/issues"
   },
-  "version": "0.22.0",
+  "version": "0.23.0",
   "main": "lib/index.js",
   "files": [
     "lib/**/*.d.ts",
@@ -35,12 +34,12 @@
     "test:unit": "nyc --cache-dir .nyc_output/.cache -e .ts mocha 'test/unit/**/*.test.ts'"
   },
   "dependencies": {
-    "@chainsafe/lodestar-config": "^0.22.0",
-    "@chainsafe/lodestar-params": "^0.22.0",
-    "@chainsafe/lodestar-types": "^0.22.0",
-    "@chainsafe/lodestar-utils": "^0.22.0",
+    "@chainsafe/lodestar-config": "^0.23.0",
+    "@chainsafe/lodestar-params": "^0.23.0",
+    "@chainsafe/lodestar-types": "^0.23.0",
+    "@chainsafe/lodestar-utils": "^0.23.0",
     "@chainsafe/persistent-merkle-tree": "^0.3.2",
-    "@chainsafe/ssz": "^0.8.6",
+    "@chainsafe/ssz": "^0.8.7",
     "abort-controller": "^3.0.0",
     "cross-fetch": "^3.1.4",
     "eventsource": "^1.1.0",

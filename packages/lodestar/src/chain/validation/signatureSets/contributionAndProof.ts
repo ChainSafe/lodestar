@@ -13,8 +13,8 @@ export function getContributionAndProofSignatureSet(
   signedContributionAndProof: altair.SignedContributionAndProof
 ): ISignatureSet {
   const {config, epochCtx} = state;
-  const msgEpoch = computeEpochAtSlot(config, signedContributionAndProof.message.contribution.slot);
-  const domain = getDomain(config, state, config.params.DOMAIN_CONTRIBUTION_AND_PROOF, msgEpoch);
+  const epochSig = computeEpochAtSlot(config, signedContributionAndProof.message.contribution.slot);
+  const domain = getDomain(config, state, config.params.DOMAIN_CONTRIBUTION_AND_PROOF, epochSig);
   const signingData = signedContributionAndProof.message;
   return {
     type: SignatureSetType.single,

@@ -2,6 +2,7 @@ import {allForks, Number64, Root, Slot} from "@chainsafe/lodestar-types";
 import {ForkName} from "@chainsafe/lodestar-config";
 import {phase0, CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
+import {LightClientUpdater} from "@chainsafe/lodestar-light-client/lib/server/LightClientUpdater";
 
 import {IBeaconClock} from "./clock/interface";
 import {ChainEventEmitter} from "./emitter";
@@ -12,7 +13,7 @@ import {StateContextCache, CheckpointStateCache} from "./stateCache";
 import {IBlsVerifier} from "./bls";
 import {IForkDigestContext} from "../util/forkDigestContext";
 
-interface IProcessBlock {
+export interface IProcessBlock {
   /**
    * Metadata: lets a block thats already been processed to be processed again.
    * After processing, the block will not be stored in the database
@@ -66,6 +67,7 @@ export interface IBeaconChain {
   pendingBlocks: BlockPool;
   pendingAttestations: AttestationPool;
   forkDigestContext: IForkDigestContext;
+  lightclientUpdater: LightClientUpdater;
 
   /** Stop beacon chain processing */
   close(): void;
@@ -91,6 +93,11 @@ export interface IBeaconChain {
   receiveAttestation(attestation: phase0.Attestation): void;
   /** Pre-process and run the per slot state transition function */
   receiveBlock(signedBlock: allForks.SignedBeaconBlock, trusted?: boolean): void;
+  /** Process a block until complete */
+  processBlock(
+    signedBlock: allForks.SignedBeaconBlock,
+    flags: {prefinalized: boolean; trusted: boolean}
+  ): Promise<void>;
   /** Process a chain of blocks until complete */
   processChainSegment(
     signedBlocks: allForks.SignedBeaconBlock[],

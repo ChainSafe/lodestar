@@ -86,6 +86,10 @@ jobs:
           release_name: Release ${{ needs.tag.outputs.tag }}
           prerelease: false # Note: if prerelease, will be hidden from view in the main page
 
+      # From https://github.com/lerna/lerna/issues/2404
+      - run: echo //registry.npmjs.org/:_authToken=${NPM_TOKEN} > .npmrc
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
       - name: Publish to npm registry
         run: yarn run publish
         env:

@@ -78,14 +78,11 @@ describe("Lightclient flow with LightClientUpdater", () => {
     });
 
     const logger = new WinstonLogger();
-    lightclientServer = new LightclientMockServer(config, logger, genesisValidatorsRoot, {
-      block: genesisBlock,
-      state: genesisState,
-      checkpoint: genesisCheckpoint,
-    });
+    lightclientServer = new LightclientMockServer(config, logger, genesisValidatorsRoot);
+    await lightclientServer.initialize({block: genesisBlock, state: genesisState, checkpoint: genesisCheckpoint});
 
     for (let slot = fromSlot; slot <= toSlot; slot++) {
-      lightclientServer.createNewBlock(slot);
+      await lightclientServer.createNewBlock(slot);
     }
 
     // Check the current state of updates

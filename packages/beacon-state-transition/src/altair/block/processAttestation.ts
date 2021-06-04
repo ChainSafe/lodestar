@@ -1,6 +1,7 @@
-import {allForks, altair, phase0} from "@chainsafe/lodestar-types";
+import {allForks, altair, Gwei, phase0, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {bigIntSqrt, intSqrt} from "@chainsafe/lodestar-utils";
 
-import {computeEpochAtSlot, getBlockRoot, getBlockRootAtSlot, increaseBalance} from "../../util";
+import {computeEpochAtSlot, getBlockRoot, getBlockRootAtSlot, getTotalActiveBalance, increaseBalance} from "../../util";
 import {CachedBeaconState} from "../../allForks/util";
 import {isValidIndexedAttestation} from "../../allForks/block";
 import {IParticipationStatus} from "../../allForks/util/cachedEpochParticipation";
@@ -11,8 +12,8 @@ import {
   TIMELY_TARGET_WEIGHT,
   WEIGHT_DENOMINATOR,
 } from "../constants";
-import {getBaseReward} from "../state_accessor";
-import {intSqrt} from "@chainsafe/lodestar-utils";
+
+const PROPOSER_REWARD_DOMINATOR = ((WEIGHT_DENOMINATOR - PROPOSER_WEIGHT) * WEIGHT_DENOMINATOR) / PROPOSER_WEIGHT;
 
 export function processAttestation(
   state: CachedBeaconState<altair.BeaconState>,
@@ -88,7 +89,7 @@ export function processAttestation(
 
   // For each participant, update their participation
   // In epoch processing, this participation info is used to calculate balance updates
-  let proposerRewardNumerator = BigInt(0);
+  let totalBalancesWithWeight = BigInt(0);
   for (const index of attestingIndices) {
     const status = epochParticipation.getStatus(index) as IParticipationStatus;
     const newStatus = {
@@ -97,16 +98,23 @@ export function processAttestation(
       timelyHead: status.timelyHead || timelyHead,
     };
     epochParticipation.setStatus(index, newStatus);
-    // add proposer rewards for source/target/head that updated the state
-    proposerRewardNumerator +=
-      getBaseReward(config, state, index) *
-      (BigInt(!status.timelySource && timelySource) * TIMELY_SOURCE_WEIGHT +
-        BigInt(!status.timelyTarget && timelyTarget) * TIMELY_TARGET_WEIGHT +
-        BigInt(!status.timelyHead && timelyHead) * TIMELY_HEAD_WEIGHT);
+    /**
+     * Spec:
+     * baseReward = state.validators[index].effectiveBalance / EFFECTIVE_BALANCE_INCREMENT * baseRewardPerIncrement;
+     * proposerRewardNumerator += baseReward * totalWeight
+     */
+    const totalWeight =
+      BigInt(!status.timelySource && timelySource) * TIMELY_SOURCE_WEIGHT +
+      BigInt(!status.timelyTarget && timelyTarget) * TIMELY_TARGET_WEIGHT +
+      BigInt(!status.timelyHead && timelyHead) * TIMELY_HEAD_WEIGHT;
+    if (totalWeight > 0) {
+      totalBalancesWithWeight += state.validators[index].effectiveBalance * totalWeight;
+    }
   }
 
-  const proposerRewardDenominator = ((WEIGHT_DENOMINATOR - PROPOSER_WEIGHT) * WEIGHT_DENOMINATOR) / PROPOSER_WEIGHT;
-  const proposerReward = proposerRewardNumerator / proposerRewardDenominator;
+  const totalIncrements = totalBalancesWithWeight / config.params.EFFECTIVE_BALANCE_INCREMENT;
+  const proposerRewardNumerator = totalIncrements * state.baseRewardPerIncrement;
+  const proposerReward = proposerRewardNumerator / PROPOSER_REWARD_DOMINATOR;
   increaseBalance(state, epochCtx.getBeaconProposer(state.slot), proposerReward);
 }
 
@@ -143,4 +151,22 @@ export function getAttestationParticipationStatus(
     timelyTarget: isMatchingTarget && inclusionDelay <= SLOTS_PER_EPOCH,
     timelyHead: isMatchingHead && inclusionDelay === MIN_ATTESTATION_INCLUSION_DELAY,
   };
+}
+
+/**
+ * TODO: NAIVE - EXTREMELY SLOW
+ */
+export function getBaseReward(state: CachedBeaconState<altair.BeaconState>, index: ValidatorIndex): Gwei {
+  const increments = state.validators[index].effectiveBalance / state.config.params.EFFECTIVE_BALANCE_INCREMENT;
+  return increments * getBaseRewardPerIncrement(state);
+}
+
+/**
+ * TODO: NAIVE - EXTREMELY SLOW
+ */
+export function getBaseRewardPerIncrement(state: CachedBeaconState<altair.BeaconState>): bigint {
+  return (
+    (state.config.params.EFFECTIVE_BALANCE_INCREMENT * BigInt(state.config.params.BASE_REWARD_FACTOR)) /
+    bigIntSqrt(getTotalActiveBalance(state.config, state))
+  );
 }

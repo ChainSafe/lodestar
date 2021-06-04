@@ -13,8 +13,8 @@ export function getSyncCommitteeSignatureSet(
   syncCommittee: altair.SyncCommitteeSignature
 ): ISignatureSet {
   const {config} = state;
-  const msgEpoch = computeEpochAtSlot(config, syncCommittee.slot);
-  const domain = getDomain(config, state, config.params.DOMAIN_SYNC_COMMITTEE, msgEpoch);
+  const epochSig = computeEpochAtSlot(config, syncCommittee.slot);
+  const domain = getDomain(config, state, config.params.DOMAIN_SYNC_COMMITTEE, epochSig);
 
   return {
     type: SignatureSetType.single,

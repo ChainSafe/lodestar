@@ -5,9 +5,10 @@ import {IBeaconParamsUnparsed} from "../config/types";
 import * as mainnet from "./mainnet";
 import * as pyrmont from "./pyrmont";
 import * as prater from "./prater";
+import * as oonoonba from "./oonoonba";
 
-export type NetworkName = "mainnet" | "pyrmont" | "prater" | "dev";
-export const networkNames: NetworkName[] = ["mainnet", "pyrmont", "prater"];
+export type NetworkName = "mainnet" | "pyrmont" | "prater" | "dev" | "oonoonba";
+export const networkNames: NetworkName[] = ["mainnet", "pyrmont", "prater", "oonoonba"];
 
 function getNetworkData(
   network: NetworkName
@@ -25,6 +26,8 @@ function getNetworkData(
       return pyrmont;
     case "prater":
       return prater;
+    case "oonoonba":
+      return oonoonba;
     default:
       throw Error(`Network not supported: ${network}`);
   }
@@ -78,11 +81,12 @@ export function getGenesisFileUrl(network: NetworkName): string | null {
 export async function fetchBootnodes(network: NetworkName): Promise<string[]> {
   const bootnodesFileUrl = getNetworkData(network).bootnodesFileUrl;
   const bootnodesFile = await got.get(bootnodesFileUrl).text();
-  return (
-    bootnodesFile
-      .trim()
-      .split(/\r?\n/)
-      // File may contain a row with '### Ethereum Node Records'
-      .filter((enr) => enr.trim() && enr.startsWith("enr:"))
-  );
+
+  const enrs: string[] = [];
+  for (const line of bootnodesFile.trim().split(/\r?\n/)) {
+    // File may contain a row with '### Ethereum Node Records'
+    // File may be YAML, with `- enr:-KG4QOWkRj`
+    if (line.includes("enr:")) enrs.push("enr:" + line.split("enr:")[1]);
+  }
+  return enrs;
 }

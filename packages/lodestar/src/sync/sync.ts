@@ -42,7 +42,7 @@ export class BeaconSync implements IBeaconSync {
     this.network = network;
     this.chain = chain;
     this.logger = logger;
-    this.rangeSync = new RangeSync(modules);
+    this.rangeSync = new RangeSync(modules, this.opts);
     this.slotImportTolerance = modules.config.params.SLOTS_PER_EPOCH;
 
     // Subscribe to RangeSync completing a SyncChain and recompute sync state
@@ -197,7 +197,7 @@ export class BeaconSync implements IBeaconSync {
   private onUnknownBlockRoot = async (err: BlockError): Promise<void> => {
     if (err.type.code !== BlockErrorCode.PARENT_UNKNOWN) return;
 
-    const block = err.job.signedBlock.message;
+    const block = err.signedBlock.message;
     const blockRoot = this.config.getForkTypes(block.slot).BeaconBlock.hashTreeRoot(block);
     const parentRoot = this.chain.pendingBlocks.getMissingAncestor(blockRoot);
     const parentRootHex = toHexString(parentRoot);
