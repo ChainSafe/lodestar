@@ -38,7 +38,7 @@ export type RpcResponseStatusError = Exclude<RespStatus, RespStatus.SUCCESS>;
 /** The maximum allowed size of uncompressed gossip messages. */
 export const GOSSIP_MAX_SIZE = 2 ** 20;
 
-export function getMaxEpochForBlockRequests(config: IBeaconConfig): number {
+export function getMinEpochForBlockRequests(config: IBeaconConfig): number {
   return config.params.MIN_VALIDATOR_WITHDRAWABILITY_DELAY + intDiv(config.params.CHURN_LIMIT_QUOTIENT, 2);
 }
 

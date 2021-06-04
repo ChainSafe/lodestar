@@ -7,7 +7,7 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {GENESIS_EPOCH} from "@chainsafe/lodestar-params";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {IBeaconClock} from "../../chain";
-import {getMaxEpochForBlockRequests} from "../../constants";
+import {getMinEpochForBlockRequests} from "../../constants";
 import {IBeaconDb} from "../../db";
 import {ITask} from "../interface";
 export interface IPruneBlockArchiveModules {
@@ -32,7 +32,7 @@ export class PruneBlockArchiveTask implements ITask {
     this.db = modules.db;
     this.logger = modules.logger;
     this.clock = modules.clock;
-    this.maxEpochForBlockRequests = getMaxEpochForBlockRequests(this.config);
+    this.maxEpochForBlockRequests = getMinEpochForBlockRequests(this.config);
   }
 
   /**
