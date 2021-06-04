@@ -16,7 +16,7 @@ jobs:
       - name: Run performance tests
         run: yarn benchmark
         env:
-          BENCHMARK_OUTPUT_PATH: benchmark-output.txt
+          BENCHMARK_OUTPUT_PATH: /benchmark-output.txt
       # Download previous benchmark result from cache (if exists)
       - name: Download previous benchmark data
         uses: actions/cache@v1
@@ -30,7 +30,7 @@ jobs:
           # What benchmark tool the output.txt came from
           tool: "benchmarkjs"
           # Where the output from the benchmark tool is stored
-          output-file-path: benchmark-output.txt
+          output-file-path: /benchmark-output.txt
           # Where the previous data file is stored
           external-data-json-path: ./cache/benchmark-data.json
           # Workflow will fail when an alert happens
