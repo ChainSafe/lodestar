@@ -13,6 +13,8 @@ import {
   WEIGHT_DENOMINATOR,
 } from "../constants";
 
+const PROPOSER_REWARD_DOMINATOR = ((WEIGHT_DENOMINATOR - PROPOSER_WEIGHT) * WEIGHT_DENOMINATOR) / PROPOSER_WEIGHT;
+
 export function processAttestation(
   state: CachedBeaconState<altair.BeaconState>,
   attestation: phase0.Attestation,
@@ -87,7 +89,7 @@ export function processAttestation(
 
   // For each participant, update their participation
   // In epoch processing, this participation info is used to calculate balance updates
-  let proposerRewardNumerator = BigInt(0);
+  let totalBalancesWithWeight = BigInt(0);
   for (const index of attestingIndices) {
     const status = epochParticipation.getStatus(index) as IParticipationStatus;
     const newStatus = {
@@ -96,16 +98,23 @@ export function processAttestation(
       timelyHead: status.timelyHead || timelyHead,
     };
     epochParticipation.setStatus(index, newStatus);
-    // add proposer rewards for source/target/head that updated the state
-    proposerRewardNumerator +=
-      getBaseReward(state, index) *
-      (BigInt(!status.timelySource && timelySource) * TIMELY_SOURCE_WEIGHT +
-        BigInt(!status.timelyTarget && timelyTarget) * TIMELY_TARGET_WEIGHT +
-        BigInt(!status.timelyHead && timelyHead) * TIMELY_HEAD_WEIGHT);
+    /**
+     * Spec:
+     * baseReward = state.validators[index].effectiveBalance / EFFECTIVE_BALANCE_INCREMENT * baseRewardPerIncrement;
+     * proposerRewardNumerator += baseReward * totalWeight
+     */
+    const totalWeight =
+      BigInt(!status.timelySource && timelySource) * TIMELY_SOURCE_WEIGHT +
+      BigInt(!status.timelyTarget && timelyTarget) * TIMELY_TARGET_WEIGHT +
+      BigInt(!status.timelyHead && timelyHead) * TIMELY_HEAD_WEIGHT;
+    if (totalWeight > 0) {
+      totalBalancesWithWeight += state.validators[index].effectiveBalance * totalWeight;
+    }
   }
 
-  const proposerRewardDenominator = ((WEIGHT_DENOMINATOR - PROPOSER_WEIGHT) * WEIGHT_DENOMINATOR) / PROPOSER_WEIGHT;
-  const proposerReward = proposerRewardNumerator / proposerRewardDenominator;
+  const totalIncrements = totalBalancesWithWeight / config.params.EFFECTIVE_BALANCE_INCREMENT;
+  const proposerRewardNumerator = totalIncrements * state.baseRewardPerIncrement;
+  const proposerReward = proposerRewardNumerator / PROPOSER_REWARD_DOMINATOR;
   increaseBalance(state, epochCtx.getBeaconProposer(state.slot), proposerReward);
 }
 
