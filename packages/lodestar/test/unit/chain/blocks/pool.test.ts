@@ -1,12 +1,14 @@
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {expect} from "chai";
 import {BlockPool} from "../../../../src/chain/blocks";
+import {testLogger} from "../../../utils/logger";
 
 describe("BlockPool", function () {
+  const logger = testLogger();
   let pool: BlockPool;
 
   beforeEach(() => {
-    pool = new BlockPool({config});
+    pool = new BlockPool(config, logger);
   });
 
   it("should get missing ancestor", () => {
