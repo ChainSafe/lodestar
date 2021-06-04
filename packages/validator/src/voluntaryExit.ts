@@ -1,4 +1,5 @@
 import {SecretKey} from "@chainsafe/bls";
+import {DOMAIN_VOLUNTARY_EXIT} from "@chainsafe/lodestar-params";
 import {
   computeDomain,
   computeEpochAtSlot,
@@ -6,7 +7,7 @@ import {
   getCurrentSlot,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {phase0} from "@chainsafe/lodestar-types";
+import {phase0, ssz} from "@chainsafe/lodestar-types";
 import {Api} from "@chainsafe/lodestar-api";
 
 /**
@@ -34,15 +35,15 @@ export async function signAndSubmitVoluntaryExit(
   const genesisRes = await api.beacon.getGenesis();
   const {genesisValidatorsRoot, genesisTime} = genesisRes.data;
   const currentSlot = getCurrentSlot(config, Number(genesisTime));
-  const currentEpoch = computeEpochAtSlot(config, currentSlot);
+  const currentEpoch = computeEpochAtSlot(currentSlot);
 
   const voluntaryExit = {
     epoch: exitEpoch || currentEpoch,
     validatorIndex: stateValidator.index,
   };
 
-  const domain = computeDomain(config, config.params.DOMAIN_VOLUNTARY_EXIT, fork.currentVersion, genesisValidatorsRoot);
-  const signingRoot = computeSigningRoot(config, config.types.phase0.VoluntaryExit, voluntaryExit, domain);
+  const domain = computeDomain(DOMAIN_VOLUNTARY_EXIT, fork.currentVersion, genesisValidatorsRoot);
+  const signingRoot = computeSigningRoot(ssz.phase0.VoluntaryExit, voluntaryExit, domain);
 
   const signedVoluntaryExit: phase0.SignedVoluntaryExit = {
     message: voluntaryExit,

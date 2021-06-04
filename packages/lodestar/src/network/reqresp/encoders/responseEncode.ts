@@ -1,4 +1,5 @@
-import {ForkName, IBeaconConfig} from "@chainsafe/lodestar-config";
+import {ForkName} from "@chainsafe/lodestar-params";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {RespStatus, RpcResponseStatusError} from "../../../constants";
 import {IForkDigestContext} from "../../../util/forkDigestContext";
 import {writeEncodedPayload} from "../encodingStrategies";

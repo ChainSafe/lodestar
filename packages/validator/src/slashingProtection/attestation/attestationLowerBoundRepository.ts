@@ -1,4 +1,4 @@
-import {BLSPubkey, phase0} from "@chainsafe/lodestar-types";
+import {BLSPubkey, phase0, ssz} from "@chainsafe/lodestar-types";
 import {Bucket, encodeKey, IDatabaseApiOptions} from "@chainsafe/lodestar-db";
 import {Type} from "@chainsafe/ssz";
 import {LodestarValidatorDatabaseController} from "../../types";
@@ -14,7 +14,7 @@ export class AttestationLowerBoundRepository {
 
   constructor(opts: IDatabaseApiOptions) {
     this.db = opts.controller;
-    this.type = opts.config.types.phase0.SlashingProtectionAttestationLowerBound;
+    this.type = ssz.phase0.SlashingProtectionAttestationLowerBound;
   }
 
   async get(pubkey: BLSPubkey): Promise<phase0.SlashingProtectionAttestationLowerBound | null> {

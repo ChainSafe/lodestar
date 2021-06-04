@@ -1,5 +1,6 @@
 import {AbortController, AbortSignal} from "abort-controller";
 import {SecretKey} from "@chainsafe/bls";
+import {ssz} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Genesis} from "@chainsafe/lodestar-types/phase0";
 import {fromHex, ILogger} from "@chainsafe/lodestar-utils";
@@ -53,7 +54,7 @@ export class Validator {
       typeof opts.api === "string"
         ? getClient(config, {
             baseUrl: opts.api,
-            timeoutMs: config.params.SECONDS_PER_SLOT * 1000,
+            timeoutMs: config.SECONDS_PER_SLOT * 1000,
             getAbortSignal: this.getAbortSignal,
           })
         : opts.api;
@@ -83,7 +84,7 @@ export class Validator {
     opts.logger.info("Genesis available");
 
     const {data: nodeParams} = await api.config.getSpec();
-    assertEqualParams(opts.config.params, nodeParams);
+    assertEqualParams(opts.config, nodeParams);
     opts.logger.info("Verified node and validator have same config");
 
     return new Validator(opts, genesis);
@@ -114,7 +115,7 @@ export class Validator {
    */
   async voluntaryExit(publicKey: string, exitEpoch: number): Promise<void> {
     const secretKey = this.secretKeys.find((sk) =>
-      this.config.types.BLSPubkey.equals(sk.toPublicKey().toBytes(), fromHex(publicKey))
+      ssz.BLSPubkey.equals(sk.toPublicKey().toBytes(), fromHex(publicKey))
     );
     if (!secretKey) throw new Error(`No matching secret key found for public key ${publicKey}`);
 

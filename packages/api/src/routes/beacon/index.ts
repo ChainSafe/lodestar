@@ -1,5 +1,5 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {phase0} from "@chainsafe/lodestar-types";
+import {phase0, ssz} from "@chainsafe/lodestar-types";
 import {RoutesData, ReturnTypes, reqEmpty, ContainerData} from "../../utils";
 import * as block from "./block";
 import * as pool from "./pool";
@@ -48,16 +48,16 @@ export function getReqSerializers(config: IBeaconConfig) {
   return {
     getGenesis: reqEmpty,
     ...block.getReqSerializers(config),
-    ...pool.getReqSerializers(config),
+    ...pool.getReqSerializers(),
     ...state.getReqSerializers(),
   };
 }
 
-export function getReturnTypes(config: IBeaconConfig): ReturnTypes<Api> {
+export function getReturnTypes(): ReturnTypes<Api> {
   return {
-    getGenesis: ContainerData(config.types.phase0.Genesis),
-    ...block.getReturnTypes(config),
-    ...pool.getReturnTypes(config),
-    ...state.getReturnTypes(config),
+    getGenesis: ContainerData(ssz.phase0.Genesis),
+    ...block.getReturnTypes(),
+    ...pool.getReturnTypes(),
+    ...state.getReturnTypes(),
   };
 }

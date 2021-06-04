@@ -1,5 +1,6 @@
+import {MAX_DEPOSITS} from "@chainsafe/lodestar-params";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {Root, phase0, allForks} from "@chainsafe/lodestar-types";
+import {Root, phase0, allForks, ssz} from "@chainsafe/lodestar-types";
 import {TreeBacked, List, toHexString} from "@chainsafe/ssz";
 import {IFilterOptions} from "@chainsafe/lodestar-db";
 import {getTreeAtIndex} from "../../util/tree";
@@ -20,7 +21,7 @@ export async function getDeposits<T>(
 
   // Spec v0.12.2
   // assert len(body.deposits) == min(MAX_DEPOSITS, state.eth1_data.deposit_count - state.eth1_deposit_index)
-  const depositsLen = Math.min(config.params.MAX_DEPOSITS, depositCount - depositIndex);
+  const depositsLen = Math.min(MAX_DEPOSITS, depositCount - depositIndex);
 
   const indexRange = {gte: depositIndex, lt: depositIndex + depositsLen};
   const deposits = await depositsGetter(indexRange, eth1Data);
@@ -42,7 +43,7 @@ export function getDepositsWithProofs(
 
   const depositRoot = treeAtDepositCount.hashTreeRoot();
 
-  if (!config.types.Root.equals(depositRoot, eth1Data.depositRoot)) {
+  if (!ssz.Root.equals(depositRoot, eth1Data.depositRoot)) {
     throw new ErrorWrongDepositRoot(toHexString(depositRoot), toHexString(eth1Data.depositRoot));
   }
 

@@ -1,7 +1,7 @@
 import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
-import {ForkName, IBeaconConfig} from "@chainsafe/lodestar-config";
-import {SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
-import {Epoch} from "@chainsafe/lodestar-types";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {ForkName, SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
+import {Epoch, ssz} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {ChainEvent, IBeaconChain} from "../../chain";
 import {getActiveForks, runForkTransitionHooks} from "../forks";
@@ -73,7 +73,7 @@ export class SyncnetsService implements ISubnetsService {
    */
   private onEpoch = (epoch: Epoch): void => {
     try {
-      const slot = computeStartSlotAtEpoch(this.config, epoch);
+      const slot = computeStartSlotAtEpoch(epoch);
       // Unsubscribe to a committee subnet from subscriptionsCommittee.
       this.unsubscribeSubnets(this.subscriptionsCommittee.getExpired(slot));
 
@@ -103,13 +103,13 @@ export class SyncnetsService implements ISubnetsService {
 
   /** Update ENR */
   private updateMetadata(): void {
-    const subnets = this.config.types.altair.SyncSubnets.defaultValue();
+    const subnets = ssz.altair.SyncSubnets.defaultValue();
     for (const subnet of this.subscriptionsCommittee.getAll()) {
       subnets[subnet] = true;
     }
 
     // Only update metadata if necessary, setting `metadata.[key]` triggers a write to disk
-    if (!this.config.types.altair.SyncSubnets.equals(subnets, this.metadata.syncnets)) {
+    if (!ssz.altair.SyncSubnets.equals(subnets, this.metadata.syncnets)) {
       this.metadata.syncnets = subnets;
     }
   }

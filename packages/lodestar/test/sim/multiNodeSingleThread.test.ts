@@ -1,4 +1,4 @@
-import {IBeaconParams} from "@chainsafe/lodestar-params";
+import {IChainConfig} from "@chainsafe/lodestar-config";
 import {Network} from "../../src/network";
 import {getDevBeaconNode} from "../utils/node/beacon";
 import {waitForEvent} from "../utils/events/resolver";
@@ -12,13 +12,13 @@ import {connect} from "../utils/network";
 import {logFilesDir} from "./params";
 import {simTestInfoTracker} from "../utils/node/simTest";
 import {ILogger, sleep, TimestampFormatCode} from "@chainsafe/lodestar-utils";
+import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 
 /* eslint-disable no-console, @typescript-eslint/naming-convention */
 
 describe("Run multi node single thread interop validators (no eth1) until checkpoint", function () {
-  const testParams: Pick<IBeaconParams, "SECONDS_PER_SLOT" | "SLOTS_PER_EPOCH"> = {
+  const testParams: Pick<IChainConfig, "SECONDS_PER_SLOT"> = {
     SECONDS_PER_SLOT: 3,
-    SLOTS_PER_EPOCH: 8,
   };
 
   const testCases: {
@@ -55,7 +55,7 @@ describe("Run multi node single thread interop validators (no eth1) until checkp
           timestampFormat: {
             format: TimestampFormatCode.EpochSlot,
             genesisTime,
-            slotsPerEpoch: testParams.SLOTS_PER_EPOCH,
+            slotsPerEpoch: SLOTS_PER_EPOCH,
             secondsPerSlot: testParams.SECONDS_PER_SLOT,
           },
         };

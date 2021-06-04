@@ -4,7 +4,7 @@ import {ServerRoutes} from "./utils";
 import {Api, ReqTypes, routesData, getEventSerdes} from "../routes/events";
 
 export function getRoutes(config: IBeaconConfig, api: Api): ServerRoutes<Api, ReqTypes> {
-  const eventSerdes = getEventSerdes(config);
+  const eventSerdes = getEventSerdes();
 
   return {
     // Non-JSON route. Server Sent Events (SSE)

@@ -1,4 +1,3 @@
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {expect} from "chai";
 import {unshuffleList} from "../../../src";
 
@@ -21,13 +20,11 @@ describe("util / shuffle", () => {
     },
   ];
 
-  // eslint-disable-next-line @typescript-eslint/naming-convention
-  const config = {params: {SHUFFLE_ROUND_COUNT: 90}} as IBeaconConfig;
   const seed = new Uint8Array([42, 32]);
 
   for (const {id, input, res} of testCases) {
     it(id, () => {
-      unshuffleList(config, input, seed);
+      unshuffleList(input, seed);
       expect(input).to.deep.equal(res);
     });
   }

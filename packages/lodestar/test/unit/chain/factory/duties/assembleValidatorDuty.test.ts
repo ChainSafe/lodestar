@@ -1,4 +1,4 @@
-import {config} from "@chainsafe/lodestar-config/mainnet";
+import {config} from "@chainsafe/lodestar-config/default";
 import {List} from "@chainsafe/ssz";
 import {expect} from "chai";
 import sinon from "sinon";

@@ -1,6 +1,6 @@
 import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {BLSSignature, Epoch, Root, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {BLSSignature, Epoch, Root, Slot, ssz, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {Api, routes} from "@chainsafe/lodestar-api";
 import {toHexString} from "@chainsafe/ssz";
@@ -41,7 +41,7 @@ export class AttestationDutiesService {
 
   /** Returns all `ValidatorDuty` for the given `slot` */
   getDutiesAtSlot(slot: Slot): AttDutyAndProof[] {
-    const epoch = computeEpochAtSlot(this.config, slot);
+    const epoch = computeEpochAtSlot(slot);
     const duties: AttDutyAndProof[] = [];
 
     for (const dutiesByEpoch of this.dutiesByEpochByIndex.values()) {
@@ -171,7 +171,7 @@ export class AttestationDutiesService {
       // - There were no known duties for this epoch.
       // - The dependent root has changed, signalling a re-org.
       const prior = dutiesByEpoch.get(epoch);
-      const dependentRootChanged = prior && !this.config.types.Root.equals(prior.dependentRoot, dependentRoot);
+      const dependentRootChanged = prior && !ssz.Root.equals(prior.dependentRoot, dependentRoot);
 
       if (!prior || dependentRootChanged) {
         const dutyAndProof = await this.getDutyAndProof(duty);

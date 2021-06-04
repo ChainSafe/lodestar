@@ -1,4 +1,4 @@
-import {allForks, phase0, Root, Slot} from "@chainsafe/lodestar-types";
+import {allForks, phase0, Root, Slot, ssz} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {
   CachedBeaconState,
@@ -16,6 +16,7 @@ import {processSlotsByCheckpoint, runStateTransition} from "../blocks/stateTrans
 import {IStateRegenerator} from "./interface";
 import {RegenError, RegenErrorCode} from "./errors";
 import {IMetrics} from "../../metrics";
+import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 
 /**
  * Regenerates states that have already been processed by the fork choice
@@ -64,8 +65,8 @@ export class StateRegenerator implements IStateRegenerator {
       });
     }
 
-    const parentEpoch = computeEpochAtSlot(this.config, parentBlock.slot);
-    const blockEpoch = computeEpochAtSlot(this.config, block.slot);
+    const parentEpoch = computeEpochAtSlot(parentBlock.slot);
+    const blockEpoch = computeEpochAtSlot(block.slot);
 
     // This may save us at least one epoch transition.
     // If the requested state crosses an epoch boundary
@@ -81,7 +82,7 @@ export class StateRegenerator implements IStateRegenerator {
   }
 
   async getCheckpointState(cp: phase0.Checkpoint): Promise<CachedBeaconState<allForks.BeaconState>> {
-    const checkpointStartSlot = computeStartSlotAtEpoch(this.config, cp.epoch);
+    const checkpointStartSlot = computeStartSlotAtEpoch(cp.epoch);
     return await this.getBlockSlotState(cp.root, checkpointStartSlot);
   }
 
@@ -104,7 +105,7 @@ export class StateRegenerator implements IStateRegenerator {
 
     const latestCheckpointStateCtx = this.checkpointStateCache.getLatest({
       root: blockRoot,
-      epoch: computeEpochAtSlot(this.config, slot),
+      epoch: computeEpochAtSlot(slot),
     });
 
     // If a checkpoint state exists with the given checkpoint root, it either is in requested epoch
@@ -134,7 +135,7 @@ export class StateRegenerator implements IStateRegenerator {
     // Otherwise we have to use the fork choice to traverse backwards, block by block,
     // searching the state caches
     // then replay blocks forward to the desired stateRoot
-    const rootType = this.config.types.Root;
+    const rootType = ssz.Root;
     const block = this.forkChoice
       .forwardIterateBlockSummaries()
       .find((summary) => rootType.equals(summary.stateRoot, stateRoot));
@@ -157,7 +158,7 @@ export class StateRegenerator implements IStateRegenerator {
       }
       state = this.checkpointStateCache.getLatest({
         root: b.blockRoot,
-        epoch: computeEpochAtSlot(this.config, blocksToReplay[blocksToReplay.length - 1].slot - 1),
+        epoch: computeEpochAtSlot(blocksToReplay[blocksToReplay.length - 1].slot - 1),
       });
       if (state) {
         break;
@@ -172,7 +173,7 @@ export class StateRegenerator implements IStateRegenerator {
     }
 
     const MAX_EPOCH_TO_PROCESS = 5;
-    if (blocksToReplay.length > MAX_EPOCH_TO_PROCESS * this.config.params.SLOTS_PER_EPOCH) {
+    if (blocksToReplay.length > MAX_EPOCH_TO_PROCESS * SLOTS_PER_EPOCH) {
       throw new RegenError({
         code: RegenErrorCode.TOO_MANY_BLOCK_PROCESSED,
         stateRoot,

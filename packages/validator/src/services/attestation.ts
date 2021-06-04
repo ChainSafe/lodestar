@@ -1,6 +1,6 @@
 import {AbortSignal} from "abort-controller";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {phase0, Slot, CommitteeIndex} from "@chainsafe/lodestar-types";
+import {phase0, Slot, CommitteeIndex, ssz} from "@chainsafe/lodestar-types";
 import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {ILogger, prettyBytes, sleep} from "@chainsafe/lodestar-utils";
 import {Api} from "@chainsafe/lodestar-api";
@@ -90,7 +90,7 @@ export class AttestationService {
     });
     const attestation = attestationRes.data;
 
-    const currentEpoch = computeEpochAtSlot(this.config, slot);
+    const currentEpoch = computeEpochAtSlot(slot);
     const signedAttestations: phase0.Attestation[] = [];
 
     for (const {duty} of duties) {
@@ -138,7 +138,7 @@ export class AttestationService {
 
     this.logger.verbose("Aggregating attestations", logCtx);
     const aggregate = await this.api.validator
-      .getAggregatedAttestation(this.config.types.phase0.AttestationData.hashTreeRoot(attestation), attestation.slot)
+      .getAggregatedAttestation(ssz.phase0.AttestationData.hashTreeRoot(attestation), attestation.slot)
       .catch((e) => {
         throw extendError(e, "Error producing aggregateAndProofs");
       });

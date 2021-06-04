@@ -2,7 +2,7 @@
  * simple lru cache of slot + committee index + aggregation bits hashes
  *
  */
-import {phase0} from "@chainsafe/lodestar-types";
+import {phase0, ssz} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {readonlyValues, toHexString} from "@chainsafe/ssz";
 import {assert} from "@chainsafe/lodestar-utils";
@@ -96,6 +96,6 @@ export class SeenAttestationCache {
    * We're only interested in the AttestationData + aggregationBits inside AggregateAndProof.
    */
   private aggregateAndProofKey(value: phase0.AggregateAndProof): string {
-    return toHexString(this.config.types.phase0.AttestationData.hashTreeRoot(value.aggregate.data));
+    return toHexString(ssz.phase0.AttestationData.hashTreeRoot(value.aggregate.data));
   }
 }

@@ -1,8 +1,7 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import {join} from "path";
-import {params} from "@chainsafe/lodestar-params/minimal";
-import {IBeaconConfig, createIBeaconConfig} from "@chainsafe/lodestar-config";
-import {altair, Uint64, Root} from "@chainsafe/lodestar-types";
+import {createIBeaconConfig} from "@chainsafe/lodestar-config";
+import {altair, Uint64, Root, ssz} from "@chainsafe/lodestar-types";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
 import {initializeBeaconStateFromEth1} from "@chainsafe/lodestar-beacon-state-transition";
 
@@ -20,7 +19,7 @@ interface IGenesisInitSpecTest {
 }
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
-const config = createIBeaconConfig({...params, ALTAIR_FORK_EPOCH: 0});
+const config = createIBeaconConfig({ALTAIR_FORK_EPOCH: 0});
 
 describeDirectorySpecTest<IGenesisInitSpecTest, altair.BeaconState>(
   "genesis initialization",
@@ -34,7 +33,7 @@ describeDirectorySpecTest<IGenesisInitSpecTest, altair.BeaconState>(
       config,
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
-      config.types.Root.fromJson(testcase.eth1.eth1BlockHash),
+      ssz.Root.fromJson(testcase.eth1.eth1BlockHash),
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
       Number(testcase.eth1.eth1Timestamp),
@@ -51,9 +50,9 @@ describeDirectorySpecTest<IGenesisInitSpecTest, altair.BeaconState>(
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
     sszTypes: {
-      eth1_block_hash: config.types.Root,
-      state: config.types.altair.BeaconState,
-      ...generateDepositSSZTypeMapping(192, config),
+      eth1_block_hash: ssz.Root,
+      state: ssz.altair.BeaconState,
+      ...generateDepositSSZTypeMapping(192),
     },
     timeout: 10000,
     getExpected: (testCase) => testCase.state,
@@ -63,13 +62,10 @@ describeDirectorySpecTest<IGenesisInitSpecTest, altair.BeaconState>(
   }
 );
 
-function generateDepositSSZTypeMapping(
-  n: number,
-  config: IBeaconConfig
-): Record<string, typeof config.types.phase0.Deposit> {
-  const depositMappings: Record<string, typeof config.types.phase0.Deposit> = {};
+function generateDepositSSZTypeMapping(n: number): Record<string, typeof ssz.phase0.Deposit> {
+  const depositMappings: Record<string, typeof ssz.phase0.Deposit> = {};
   for (let i = 0; i < n; i++) {
-    depositMappings[`deposits_${i}`] = config.types.phase0.Deposit;
+    depositMappings[`deposits_${i}`] = ssz.phase0.Deposit;
   }
   return depositMappings;
 }

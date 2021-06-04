@@ -1,5 +1,6 @@
+import {DEPOSIT_CONTRACT_TREE_DEPTH} from "@chainsafe/lodestar-params";
 import {phase0} from "@chainsafe/lodestar-types";
-import {DEPOSIT_CONTRACT_TREE_DEPTH, EMPTY_SIGNATURE} from "../../src/constants";
+import {EMPTY_SIGNATURE} from "../../src/constants";
 
 /**
  * Generates a fake attestation data for test purposes.

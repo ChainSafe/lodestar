@@ -1,7 +1,8 @@
 import sinon, {SinonStubbedInstance} from "sinon";
 import {expect} from "chai";
 
-import {config} from "@chainsafe/lodestar-config/minimal";
+import {ssz} from "@chainsafe/lodestar-types";
+import {config} from "@chainsafe/lodestar-config/default";
 import * as processBlock from "@chainsafe/lodestar-beacon-state-transition/lib/allForks/stateTransition";
 import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
 
@@ -48,7 +49,7 @@ describe("block assembly", function () {
     const state = generateCachedState({slot: 1});
     sinon.stub(state.epochCtx, "getBeaconProposer").returns(2);
     regenStub.getBlockSlotState.resolves(state);
-    beaconDB.depositDataRoot.getTreeBacked.resolves(config.types.phase0.DepositDataRootList.defaultTreeBacked());
+    beaconDB.depositDataRoot.getTreeBacked.resolves(ssz.phase0.DepositDataRootList.defaultTreeBacked());
     assembleBodyStub.resolves(generateEmptyBlock().body);
 
     const eth1 = sandbox.createStubInstance(Eth1ForBlockProduction);

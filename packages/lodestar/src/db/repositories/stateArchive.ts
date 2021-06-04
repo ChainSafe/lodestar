@@ -1,5 +1,5 @@
 import {ContainerType, TreeBacked} from "@chainsafe/ssz";
-import {Epoch, Root, Slot, allForks} from "@chainsafe/lodestar-types";
+import {Epoch, Root, Slot, allForks, ssz} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {bytesToInt} from "@chainsafe/lodestar-utils";
 import {IDatabaseController, Bucket, Repository} from "@chainsafe/lodestar-db";
@@ -11,7 +11,7 @@ import {getRootIndexKey, storeRootIndex} from "./stateArchiveIndex";
 export class StateArchiveRepository extends Repository<Slot, TreeBacked<allForks.BeaconState>> {
   constructor(config: IBeaconConfig, db: IDatabaseController<Buffer, Buffer>) {
     // Pick some type but won't be used
-    const type = (config.types.phase0.BeaconState as unknown) as ContainerType<TreeBacked<allForks.BeaconState>>;
+    const type = (ssz.phase0.BeaconState as unknown) as ContainerType<TreeBacked<allForks.BeaconState>>;
     super(config, db, Bucket.allForks_stateArchive, type);
   }
 

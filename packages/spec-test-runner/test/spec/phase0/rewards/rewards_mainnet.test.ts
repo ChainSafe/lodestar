@@ -1,11 +1,12 @@
 import {TreeBacked} from "@chainsafe/ssz";
 import {allForks, phase0} from "@chainsafe/lodestar-beacon-state-transition";
-import {config} from "@chainsafe/lodestar-config/mainnet";
+import {config} from "@chainsafe/lodestar-config/default";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
 import {join} from "path";
 import {SPEC_TEST_LOCATION} from "../../../utils/specTestCases";
 import {generateSZZTypeMapping, IDeltas, DeltasType, IRewardsTestCase} from "./types";
 import {expect} from "chai";
+import {ssz} from "@chainsafe/lodestar-types";
 
 for (const testSuite of ["basic", "leak", "random"]) {
   describeDirectorySpecTest<IRewardsTestCase, IDeltas>(
@@ -36,7 +37,7 @@ for (const testSuite of ["basic", "leak", "random"]) {
         meta: InputType.YAML,
       },
       sszTypes: {
-        pre: config.types.phase0.BeaconState,
+        pre: ssz.phase0.BeaconState,
         ...generateSZZTypeMapping(),
       },
       timeout: 100000000,

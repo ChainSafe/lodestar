@@ -1,7 +1,7 @@
 import sinon, {SinonStubbedInstance} from "sinon";
 import {use, expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
-import {config} from "@chainsafe/lodestar-config/minimal";
+import {config} from "@chainsafe/lodestar-config/default";
 import {createCachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
 
 import {ForkChoice, IBeaconChain} from "../../../../../../src/chain";
@@ -17,6 +17,8 @@ import {generateValidators} from "../../../../../utils/validator";
 import {StubbedBeaconDb} from "../../../../../utils/stub";
 import {setupApiImplTestServer, ApiImplTestModules} from "../../index.test";
 import {testLogger} from "../../../../../utils/logger";
+import {ssz} from "@chainsafe/lodestar-types";
+import {MAX_EFFECTIVE_BALANCE, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 
 use(chaiAsPromised);
 
@@ -38,7 +40,7 @@ describe("get proposers api impl", function () {
     syncStub = server.syncStub;
     chainStub.clock = server.sandbox.createStubInstance(LocalClock);
     chainStub.forkChoice = server.sandbox.createStubInstance(ForkChoice);
-    chainStub.getCanonicalBlockAtSlot.resolves(config.types.phase0.SignedBeaconBlock.defaultValue());
+    chainStub.getCanonicalBlockAtSlot.resolves(ssz.phase0.SignedBeaconBlock.defaultValue());
     dbStub = server.dbStub;
     modules = {
       chain: server.chainStub,
@@ -62,7 +64,7 @@ describe("get proposers api impl", function () {
       {
         slot: 0,
         validators: generateValidators(25, {
-          effectiveBalance: config.params.MAX_EFFECTIVE_BALANCE,
+          effectiveBalance: MAX_EFFECTIVE_BALANCE,
           activationEpoch: 0,
           exitEpoch: FAR_FUTURE_EPOCH,
         }),
@@ -74,6 +76,6 @@ describe("get proposers api impl", function () {
     chainStub.getHeadStateAtCurrentEpoch.resolves(cachedState);
     sinon.stub(cachedState.epochCtx, "getBeaconProposer").returns(1);
     const {data: result} = await api.getProposerDuties(0);
-    expect(result.length).to.be.equal(config.params.SLOTS_PER_EPOCH);
+    expect(result.length).to.be.equal(SLOTS_PER_EPOCH);
   });
 });

@@ -44,7 +44,7 @@ export function getBeaconStateApi({chain, config, db}: Pick<ApiModules, "chain" 
 
     async getStateValidators(stateId, filters) {
       const state = await resolveStateId(config, chain, db, stateId);
-      const currentEpoch = getCurrentEpoch(config, state);
+      const currentEpoch = getCurrentEpoch(state);
 
       const validators: routes.beacon.ValidatorResponse[] = [];
       if (filters?.indices) {
@@ -92,7 +92,7 @@ export function getBeaconStateApi({chain, config, db}: Pick<ApiModules, "chain" 
           validatorIndex,
           state.validators[validatorIndex],
           state.balances[validatorIndex],
-          getCurrentEpoch(config, state)
+          getCurrentEpoch(state)
         ),
       };
     },
@@ -131,11 +131,7 @@ export function getBeaconStateApi({chain, config, db}: Pick<ApiModules, "chain" 
     async getEpochCommittees(stateId, filters) {
       const state = await resolveStateId(config, chain, db, stateId);
 
-      const committes = getEpochBeaconCommittees(
-        config,
-        state,
-        filters?.epoch ?? computeEpochAtSlot(config, state.slot)
-      );
+      const committes = getEpochBeaconCommittees(config, state, filters?.epoch ?? computeEpochAtSlot(state.slot));
       const committesFlat = committes.flatMap((slotCommittees, committeeIndex) => {
         if (filters?.index && filters.index !== committeeIndex) {
           return [];
@@ -167,8 +163,8 @@ export function getBeaconStateApi({chain, config, db}: Pick<ApiModules, "chain" 
 
       // TODO: If possible compute the syncCommittees in advance of the fork and expose them here.
       // So the validators can prepare and potentially attest the first block. Not critical tho, it's very unlikely
-      const stateEpoch = computeEpochAtSlot(config, state.slot);
-      if (stateEpoch < config.params.ALTAIR_FORK_EPOCH) {
+      const stateEpoch = computeEpochAtSlot(state.slot);
+      if (stateEpoch < config.ALTAIR_FORK_EPOCH) {
         throw new ApiError(400, "Requested state before ALTAIR_FORK_EPOCH");
       }
 

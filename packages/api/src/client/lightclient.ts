@@ -6,9 +6,9 @@ import {Api, ReqTypes, routesData, getReqSerializers, getReturnTypes} from "../r
 /**
  * REST HTTP client for lightclient routes
  */
-export function getClient(config: IBeaconConfig, httpClient: IHttpClient): Api {
+export function getClient(_config: IBeaconConfig, httpClient: IHttpClient): Api {
   const reqSerializers = getReqSerializers();
-  const returnTypes = getReturnTypes(config);
+  const returnTypes = getReturnTypes();
 
   // Some routes return JSON, use a client auto-generator
   const client = generateGenericJsonClient<Api, ReqTypes>(routesData, reqSerializers, returnTypes, httpClient);

@@ -30,7 +30,7 @@ export function SyncStatus({client}: {client: Lightclient}): JSX.Element {
 
   // Sync every epoch
   useEffect(() => {
-    const interval = setInterval(sync, config.params.SECONDS_PER_SLOT * 1000);
+    const interval = setInterval(sync, config.SECONDS_PER_SLOT * 1000);
     return () => clearInterval(interval);
   });
 

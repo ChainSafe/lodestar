@@ -1,5 +1,5 @@
-import {ForkName, IBeaconConfig} from "@chainsafe/lodestar-config";
-import {allForks, Slot, Root} from "@chainsafe/lodestar-types";
+import {ForkName} from "@chainsafe/lodestar-params";
+import {allForks, Slot, Root, ssz} from "@chainsafe/lodestar-types";
 import {ContainerType} from "@chainsafe/ssz";
 import {StateId} from "./beacon/state";
 import {
@@ -101,17 +101,17 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
 }
 
 /* eslint-disable @typescript-eslint/naming-convention */
-export function getReturnTypes(config: IBeaconConfig): ReturnTypes<Api> {
+export function getReturnTypes(): ReturnTypes<Api> {
   const SlotRoot = new ContainerType<SlotRoot>({
     fields: {
-      slot: config.types.Slot,
-      root: config.types.Root,
+      slot: ssz.Slot,
+      root: ssz.Root,
     },
   });
 
   return {
     getHeads: ContainerData(ArrayOf(SlotRoot)),
-    getState: ContainerData(config.types.phase0.BeaconState),
-    getStateV2: WithVersion((fork) => config.types[fork].BeaconState as TypeJson<allForks.BeaconState>),
+    getState: ContainerData(ssz.phase0.BeaconState),
+    getStateV2: WithVersion((fork: ForkName) => ssz[fork].BeaconState as TypeJson<allForks.BeaconState>),
   };
 }

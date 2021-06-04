@@ -1,5 +1,6 @@
 import {computeStartSlotAtEpoch, phase0} from "@chainsafe/lodestar-beacon-state-transition";
-import {config} from "@chainsafe/lodestar-config/minimal";
+import {config} from "@chainsafe/lodestar-config/default";
+import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {toHexString} from "@chainsafe/ssz";
 import {expect, use} from "chai";
 import chaiAsPromised from "chai-as-promised";
@@ -90,9 +91,9 @@ describe("beacon state api utils", function () {
     });
 
     it("resolve state on unarchived finalized slot", async function () {
-      const nearestArchiveSlot = PERSIST_STATE_EVERY_EPOCHS * config.params.SLOTS_PER_EPOCH;
+      const nearestArchiveSlot = PERSIST_STATE_EVERY_EPOCHS * SLOTS_PER_EPOCH;
       const finalizedEpoch = 1028;
-      const requestedSlot = 1026 * config.params.SLOTS_PER_EPOCH;
+      const requestedSlot = 1026 * SLOTS_PER_EPOCH;
 
       const getFinalizedCheckpoint = sinon.stub().returns({root: Buffer.alloc(32, 1), epoch: finalizedEpoch});
       const getCanonicalBlockSummaryAtSlot = sinon
@@ -223,14 +224,14 @@ describe("beacon state api utils", function () {
   describe("getEpochBeaconCommittees", function () {
     it("current epoch with epoch context", function () {
       const state = generateCachedState({}, config);
-      state.slot = computeStartSlotAtEpoch(config, 1);
+      state.slot = computeStartSlotAtEpoch(1);
       const committees = getEpochBeaconCommittees(config, state, 1);
       expect(committees).to.be.deep.equal(state.currentShuffling.committees);
     });
 
     it("previous epoch with epoch context", function () {
       const state = generateCachedState({}, config);
-      state.slot = computeStartSlotAtEpoch(config, 2);
+      state.slot = computeStartSlotAtEpoch(2);
       const committees = getEpochBeaconCommittees(config, state, 1);
       expect(committees).to.be.deep.equal(state.previousShuffling.committees);
     });
@@ -240,7 +241,7 @@ describe("beacon state api utils", function () {
         {validators: generateValidators(24, {activationEpoch: 0, exitEpoch: 10})},
         config
       );
-      state.slot = computeStartSlotAtEpoch(config, 3);
+      state.slot = computeStartSlotAtEpoch(3);
       const committees = getEpochBeaconCommittees(config, state, 1);
       expect(committees[0][0][0]).to.not.be.undefined;
     });

@@ -1,14 +1,13 @@
 import {altair} from "@chainsafe/lodestar-types";
-import {GENESIS_EPOCH} from "../../constants";
 import {getCurrentEpoch} from "../../util";
 import {CachedBeaconState, IEpochProcess} from "../../allForks/util";
-import {PARTICIPATION_FLAG_WEIGHTS} from "../misc";
 import {getFlagIndexDeltas, getInactivityPenaltyDeltas} from "./balance";
+import {GENESIS_EPOCH, PARTICIPATION_FLAG_WEIGHTS} from "@chainsafe/lodestar-params";
 
 export function processRewardsAndPenalties(state: CachedBeaconState<altair.BeaconState>, process: IEpochProcess): void {
-  const {balances, config} = state;
+  const {balances} = state;
 
-  if (getCurrentEpoch(config, state) == GENESIS_EPOCH) {
+  if (getCurrentEpoch(state) == GENESIS_EPOCH) {
     return;
   }
 

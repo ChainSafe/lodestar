@@ -1,10 +1,10 @@
 import {expect} from "chai";
-import {config} from "@chainsafe/lodestar-config/minimal";
 
 import {StateContextCache} from "../../../../src/chain/stateCache";
 import {generateCachedState} from "../../../utils/state";
 import {ZERO_HASH} from "../../../../src/constants";
 import {ByteVector} from "@chainsafe/ssz";
+import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 
 describe("StateContextCache", function () {
   let cache: StateContextCache;
@@ -17,7 +17,7 @@ describe("StateContextCache", function () {
     key1 = state1.hashTreeRoot();
     state1.epochCtx.currentShuffling = {epoch: 0, activeIndices: [], shuffling: [], committees: []};
     cache.add(state1);
-    const state2 = generateCachedState({slot: 1 * config.params.SLOTS_PER_EPOCH});
+    const state2 = generateCachedState({slot: 1 * SLOTS_PER_EPOCH});
     key2 = state2.hashTreeRoot();
     state2.epochCtx.currentShuffling = {epoch: 1, activeIndices: [], shuffling: [], committees: []};
     cache.add(state2);
@@ -25,7 +25,7 @@ describe("StateContextCache", function () {
 
   it("should prune", function () {
     expect(cache.size).to.be.equal(2, "Size must be same as initial 2");
-    const state3 = generateCachedState({slot: 2 * config.params.SLOTS_PER_EPOCH});
+    const state3 = generateCachedState({slot: 2 * SLOTS_PER_EPOCH});
     state3.epochCtx.currentShuffling = {epoch: 2, activeIndices: [], shuffling: [], committees: []};
 
     cache.add(state3);

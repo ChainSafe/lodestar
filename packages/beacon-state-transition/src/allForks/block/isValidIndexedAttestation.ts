@@ -1,4 +1,5 @@
 import {readonlyValues} from "@chainsafe/ssz";
+import {MAX_VALIDATORS_PER_COMMITTEE} from "@chainsafe/lodestar-params";
 import {allForks, phase0} from "@chainsafe/lodestar-types";
 import {CachedBeaconState} from "../util";
 import {verifyIndexedAttestationSignature} from "../signatureSets";
@@ -11,8 +12,6 @@ export function isValidIndexedAttestation(
   indexedAttestation: phase0.IndexedAttestation,
   verifySignature = true
 ): boolean {
-  const {config} = state;
-  const {MAX_VALIDATORS_PER_COMMITTEE} = config.params;
   const indices = Array.from(readonlyValues(indexedAttestation.attestingIndices));
 
   // verify max number of indices

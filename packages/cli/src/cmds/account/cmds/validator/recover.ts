@@ -16,6 +16,7 @@ import {mapValues, values} from "lodash";
 import bls from "@chainsafe/bls";
 import {Keystore} from "@chainsafe/bls-keystore";
 import {getBeaconConfigFromArgs} from "../../../../config";
+import {MAX_EFFECTIVE_BALANCE} from "@chainsafe/lodestar-params";
 
 /* eslint-disable no-console */
 
@@ -63,7 +64,7 @@ export const recover: ICliCommand<IValidatorRecoverArgs, IGlobalArgs, ReturnType
     const config = getBeaconConfigFromArgs(args);
 
     const {mnemonicInputPath, count, storeWithdrawalKeystore, firstIndex} = args;
-    const maxEffectiveBalance = config.params.MAX_EFFECTIVE_BALANCE;
+    const maxEffectiveBalance = MAX_EFFECTIVE_BALANCE;
     const depositGwei = BigInt(args.depositGwei || 0) || maxEffectiveBalance;
     let mnemonic;
 

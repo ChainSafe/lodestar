@@ -3,7 +3,7 @@
 import {parentPort, workerData} from "worker_threads";
 
 import {init} from "@chainsafe/bls";
-import {phase0} from "@chainsafe/lodestar-types";
+import {phase0, ssz} from "@chainsafe/lodestar-types";
 
 import {getDevBeaconNode} from "../../utils/node/beacon";
 import {getAndInitDevValidators} from "../../utils/node/validator";
@@ -16,6 +16,7 @@ import {sleep, TimestampFormatCode, withTimeout} from "@chainsafe/lodestar-utils
 import {fromHexString} from "@chainsafe/ssz";
 import {createFromPrivKey} from "peer-id";
 import {simTestInfoTracker} from "../../utils/node/simTest";
+import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 
 /* eslint-disable no-console */
 
@@ -40,7 +41,7 @@ async function runWorker(): Promise<void> {
     timestampFormat: {
       format: TimestampFormatCode.EpochSlot,
       genesisTime: options.genesisTime,
-      slotsPerEpoch: options.params.SLOTS_PER_EPOCH,
+      slotsPerEpoch: SLOTS_PER_EPOCH,
       secondsPerSlot: options.params.SECONDS_PER_SLOT,
     },
   };
@@ -85,7 +86,7 @@ async function runWorker(): Promise<void> {
     await node.close();
     parent.postMessage({
       event: checkpointEvent,
-      checkpoint: node.config.types.phase0.Checkpoint.toJson(checkpoint as phase0.Checkpoint),
+      checkpoint: ssz.phase0.Checkpoint.toJson(checkpoint as phase0.Checkpoint),
     } as Message);
   });
 

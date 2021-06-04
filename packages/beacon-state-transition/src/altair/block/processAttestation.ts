@@ -1,4 +1,4 @@
-import {allForks, altair, Gwei, phase0, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {allForks, altair, Gwei, phase0, ssz, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {bigIntSqrt, intSqrt} from "@chainsafe/lodestar-utils";
 
 import {computeEpochAtSlot, getBlockRoot, getBlockRootAtSlot, getTotalActiveBalance, increaseBalance} from "../../util";
@@ -6,12 +6,16 @@ import {CachedBeaconState} from "../../allForks/util";
 import {isValidIndexedAttestation} from "../../allForks/block";
 import {IParticipationStatus} from "../../allForks/util/cachedEpochParticipation";
 import {
+  BASE_REWARD_FACTOR,
+  EFFECTIVE_BALANCE_INCREMENT,
+  MIN_ATTESTATION_INCLUSION_DELAY,
   PROPOSER_WEIGHT,
+  SLOTS_PER_EPOCH,
   TIMELY_HEAD_WEIGHT,
   TIMELY_SOURCE_WEIGHT,
   TIMELY_TARGET_WEIGHT,
   WEIGHT_DENOMINATOR,
-} from "../constants";
+} from "@chainsafe/lodestar-params";
 
 const PROPOSER_REWARD_DOMINATOR = ((WEIGHT_DENOMINATOR - PROPOSER_WEIGHT) * WEIGHT_DENOMINATOR) / PROPOSER_WEIGHT;
 
@@ -20,8 +24,7 @@ export function processAttestation(
   attestation: phase0.Attestation,
   verifySignature = true
 ): void {
-  const {config, epochCtx} = state;
-  const {MIN_ATTESTATION_INCLUSION_DELAY, SLOTS_PER_EPOCH} = config.params;
+  const {epochCtx} = state;
   const slot = state.slot;
   const data = attestation.data;
   const committeeCount = epochCtx.getCommitteeCountAtSlot(data.slot);
@@ -39,7 +42,7 @@ export function processAttestation(
         `targetEpoch=${data.target.epoch} currentEpoch=${epochCtx.currentShuffling.epoch}`
     );
   }
-  const computedEpoch = computeEpochAtSlot(config, data.slot);
+  const computedEpoch = computeEpochAtSlot(data.slot);
   if (!(data.target.epoch === computedEpoch)) {
     throw new Error(
       "Attestation target epoch does not match epoch computed from slot: " +
@@ -112,7 +115,7 @@ export function processAttestation(
     }
   }
 
-  const totalIncrements = totalBalancesWithWeight / config.params.EFFECTIVE_BALANCE_INCREMENT;
+  const totalIncrements = totalBalancesWithWeight / EFFECTIVE_BALANCE_INCREMENT;
   const proposerRewardNumerator = totalIncrements * state.baseRewardPerIncrement;
   const proposerReward = proposerRewardNumerator / PROPOSER_REWARD_DOMINATOR;
   increaseBalance(state, epochCtx.getBeaconProposer(state.slot), proposerReward);
@@ -126,26 +129,31 @@ export function getAttestationParticipationStatus(
   data: phase0.AttestationData,
   inclusionDelay: number
 ): IParticipationStatus {
-  const {config, epochCtx} = state;
-  const {SLOTS_PER_EPOCH, MIN_ATTESTATION_INCLUSION_DELAY} = config.params;
+  const {epochCtx} = state;
   let justifiedCheckpoint;
   if (data.target.epoch === epochCtx.currentShuffling.epoch) {
     justifiedCheckpoint = state.currentJustifiedCheckpoint;
   } else {
     justifiedCheckpoint = state.previousJustifiedCheckpoint;
   }
-  const isMatchingSource = config.types.phase0.Checkpoint.equals(data.source, justifiedCheckpoint);
+  // The source and target votes are part of the FFG vote, the head vote is part of the fork choice vote
+  // Both are tracked to properly incentivise validators
+  //
+  // The source vote always matches the justified checkpoint (else its invalid)
+  // The target vote should match the most recent checkpoint (eg: the first root of the epoch)
+  // The head vote should match the root at the attestation slot (eg: the root at data.slot)
+  const isMatchingSource = ssz.phase0.Checkpoint.equals(data.source, justifiedCheckpoint);
   if (!isMatchingSource) {
     throw new Error(
       "Attestation source does not equal justified checkpoint: " +
-        `source=${JSON.stringify(config.types.phase0.Checkpoint.toJson(data.source))} ` +
-        `justifiedCheckpoint=${JSON.stringify(config.types.phase0.Checkpoint.toJson(justifiedCheckpoint))}`
+        `source=${JSON.stringify(ssz.phase0.Checkpoint.toJson(data.source))} ` +
+        `justifiedCheckpoint=${JSON.stringify(ssz.phase0.Checkpoint.toJson(justifiedCheckpoint))}`
     );
   }
-  const isMatchingTarget = config.types.Root.equals(data.target.root, getBlockRoot(config, state, data.target.epoch));
+  const isMatchingTarget = ssz.Root.equals(data.target.root, getBlockRoot(state, data.target.epoch));
   // a timely head is only be set if the target is _also_ matching
   const isMatchingHead =
-    isMatchingTarget && config.types.Root.equals(data.beaconBlockRoot, getBlockRootAtSlot(config, state, data.slot));
+    isMatchingTarget && ssz.Root.equals(data.beaconBlockRoot, getBlockRootAtSlot(state, data.slot));
   return {
     timelySource: isMatchingSource && inclusionDelay <= intSqrt(SLOTS_PER_EPOCH),
     timelyTarget: isMatchingTarget && inclusionDelay <= SLOTS_PER_EPOCH,
@@ -157,7 +165,7 @@ export function getAttestationParticipationStatus(
  * TODO: NAIVE - EXTREMELY SLOW
  */
 export function getBaseReward(state: CachedBeaconState<altair.BeaconState>, index: ValidatorIndex): Gwei {
-  const increments = state.validators[index].effectiveBalance / state.config.params.EFFECTIVE_BALANCE_INCREMENT;
+  const increments = state.validators[index].effectiveBalance / EFFECTIVE_BALANCE_INCREMENT;
   return increments * getBaseRewardPerIncrement(state);
 }
 
@@ -165,8 +173,5 @@ export function getBaseReward(state: CachedBeaconState<altair.BeaconState>, inde
  * TODO: NAIVE - EXTREMELY SLOW
  */
 export function getBaseRewardPerIncrement(state: CachedBeaconState<altair.BeaconState>): bigint {
-  return (
-    (state.config.params.EFFECTIVE_BALANCE_INCREMENT * BigInt(state.config.params.BASE_REWARD_FACTOR)) /
-    bigIntSqrt(getTotalActiveBalance(state.config, state))
-  );
+  return (EFFECTIVE_BALANCE_INCREMENT * BASE_REWARD_FACTOR) / bigIntSqrt(getTotalActiveBalance(state));
 }

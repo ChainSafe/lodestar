@@ -1,5 +1,4 @@
-import {altair} from "@chainsafe/lodestar-types";
-import {config} from "./config";
+import {altair, ssz} from "@chainsafe/lodestar-types";
 
 /* eslint-disable no-console */
 
@@ -10,7 +9,7 @@ export function readSnapshot(): altair.LightClientSnapshot | null {
     const str = localStorage.getItem(key);
     if (!str) return null;
     const json = JSON.parse(str);
-    return config.types.altair.LightClientSnapshot.fromJson(json);
+    return ssz.altair.LightClientSnapshot.fromJson(json);
   } catch (e) {
     console.error("Error deserializing snapshot", e);
     return null;
@@ -18,6 +17,6 @@ export function readSnapshot(): altair.LightClientSnapshot | null {
 }
 
 export function writeSnapshot(snapshot: altair.LightClientSnapshot): void {
-  const json = config.types.altair.LightClientSnapshot.toJson(snapshot);
+  const json = ssz.altair.LightClientSnapshot.toJson(snapshot);
   localStorage.setItem(key, JSON.stringify(json, null, 2));
 }

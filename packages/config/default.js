@@ -1,2 +1,2 @@
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-module.exports = require("./lib/presets/minimal");
+module.exports = require("./lib/default");

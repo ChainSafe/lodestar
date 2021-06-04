@@ -1,5 +1,4 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {IInterchangeLodestar} from "../types";
 import {fromOptionalHexString, numToString, toOptionalHexString} from "../../utils";
@@ -83,10 +82,10 @@ export interface IInterchangeCompleteV4 {
   }[];
 }
 
-export function serializeInterchangeCompleteV4(
-  config: IBeaconConfig,
-  {data, genesisValidatorsRoot}: IInterchangeLodestar
-): IInterchangeCompleteV4 {
+export function serializeInterchangeCompleteV4({
+  data,
+  genesisValidatorsRoot,
+}: IInterchangeLodestar): IInterchangeCompleteV4 {
   return {
     metadata: {
       interchange_format: "complete",
@@ -97,33 +96,30 @@ export function serializeInterchangeCompleteV4(
       pubkey: toHexString(validator.pubkey),
       signed_blocks: validator.signedBlocks.map((block) => ({
         slot: numToString(block.slot),
-        signing_root: toOptionalHexString(config, block.signingRoot),
+        signing_root: toOptionalHexString(block.signingRoot),
       })),
       signed_attestations: validator.signedAttestations.map((att) => ({
         source_epoch: numToString(att.sourceEpoch),
         target_epoch: numToString(att.targetEpoch),
-        signing_root: toOptionalHexString(config, att.signingRoot),
+        signing_root: toOptionalHexString(att.signingRoot),
       })),
     })),
   };
 }
 
-export function parseInterchangeCompleteV4(
-  config: IBeaconConfig,
-  interchange: IInterchangeCompleteV4
-): IInterchangeLodestar {
+export function parseInterchangeCompleteV4(interchange: IInterchangeCompleteV4): IInterchangeLodestar {
   return {
     genesisValidatorsRoot: fromHexString(interchange.metadata.genesis_validators_root),
     data: interchange.data.map((validator) => ({
       pubkey: fromHexString(validator.pubkey),
       signedBlocks: validator.signed_blocks.map((block) => ({
         slot: parseInt(block.slot, 10),
-        signingRoot: fromOptionalHexString(config, block.signing_root),
+        signingRoot: fromOptionalHexString(block.signing_root),
       })),
       signedAttestations: validator.signed_attestations.map((att) => ({
         sourceEpoch: parseInt(att.source_epoch, 10),
         targetEpoch: parseInt(att.target_epoch, 10),
-        signingRoot: fromOptionalHexString(config, att.signing_root),
+        signingRoot: fromOptionalHexString(att.signing_root),
       })),
     })),
   };

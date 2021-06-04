@@ -115,7 +115,7 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
       case RangeSyncType.Finalized: {
         startEpoch = localStatus.finalizedEpoch;
         target = {
-          slot: computeStartSlotAtEpoch(this.config, peerStatus.finalizedEpoch),
+          slot: computeStartSlotAtEpoch(peerStatus.finalizedEpoch),
           root: peerStatus.finalizedRoot,
         };
         break;
@@ -124,7 +124,7 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
       case RangeSyncType.Head: {
         // The new peer has the same finalized (earlier filters should prevent a peer with an
         // earlier finalized chain from reaching here).
-        startEpoch = Math.min(computeEpochAtSlot(this.config, localStatus.headSlot), peerStatus.finalizedEpoch);
+        startEpoch = Math.min(computeEpochAtSlot(localStatus.headSlot), peerStatus.finalizedEpoch);
         target = {
           slot: peerStatus.headSlot,
           root: peerStatus.headRoot,
@@ -234,7 +234,7 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
   }
 
   private update(localFinalizedEpoch: Epoch): void {
-    const localFinalizedSlot = computeStartSlotAtEpoch(this.config, localFinalizedEpoch);
+    const localFinalizedSlot = computeStartSlotAtEpoch(localFinalizedEpoch);
 
     // Remove chains that are out-dated, peer-empty, completed or failed
     for (const [id, syncChain] of this.chains.entries()) {

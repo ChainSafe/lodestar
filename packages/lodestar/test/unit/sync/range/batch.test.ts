@@ -1,6 +1,7 @@
 import {expect} from "chai";
 import PeerId from "peer-id";
-import {config} from "@chainsafe/lodestar-config/minimal";
+import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
+import {config} from "@chainsafe/lodestar-config/default";
 import {generateEmptySignedBlock} from "../../../utils/block";
 import {expectThrowsLodestarError} from "../../../utils/errors";
 import {Batch, BatchOpts, BatchStatus, BatchErrorCode, BatchError} from "../../../../src/sync/range/batch";
@@ -17,7 +18,7 @@ describe("sync / range / batch", () => {
     const batch = new Batch(startEpoch, config, opts);
     expect(batch.request).to.deep.equal({
       startSlot: 1,
-      count: config.params.SLOTS_PER_EPOCH * opts.epochsPerBatch,
+      count: SLOTS_PER_EPOCH * opts.epochsPerBatch,
       step: 1,
     });
   });

@@ -1,5 +1,5 @@
 import {ContainerType, fromHexString, Json, toHexString, Type} from "@chainsafe/ssz";
-import {ForkName, IBeaconConfig} from "@chainsafe/lodestar-config";
+import {ForkName} from "@chainsafe/lodestar-params";
 import {
   allForks,
   altair,
@@ -11,6 +11,7 @@ import {
   phase0,
   Root,
   Slot,
+  ssz,
   ValidatorIndex,
 } from "@chainsafe/lodestar-types";
 import {
@@ -218,22 +219,22 @@ export type ReqTypes = {
   prepareSyncCommitteeSubnets: {body: Json};
 };
 
-export function getReqSerializers(config: IBeaconConfig): ReqSerializers<Api, ReqTypes> {
+export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
   const BeaconCommitteeSubscription = new ContainerType<BeaconCommitteeSubscription>({
     fields: {
-      validatorIndex: config.types.ValidatorIndex,
-      committeeIndex: config.types.CommitteeIndex,
-      committeesAtSlot: config.types.Slot,
-      slot: config.types.Slot,
-      isAggregator: config.types.Boolean,
+      validatorIndex: ssz.ValidatorIndex,
+      committeeIndex: ssz.CommitteeIndex,
+      committeesAtSlot: ssz.Slot,
+      slot: ssz.Slot,
+      isAggregator: ssz.Boolean,
     },
   });
 
   const SyncCommitteeSubscription = new ContainerType<SyncCommitteeSubscription>({
     fields: {
-      validatorIndex: config.types.ValidatorIndex,
-      syncCommitteeIndices: ArrayOf(config.types.CommitteeIndex),
-      untilEpoch: config.types.Epoch,
+      validatorIndex: ssz.ValidatorIndex,
+      syncCommitteeIndices: ArrayOf(ssz.CommitteeIndex),
+      untilEpoch: ssz.Epoch,
     },
   });
 
@@ -306,45 +307,42 @@ export function getReqSerializers(config: IBeaconConfig): ReqSerializers<Api, Re
       },
     },
 
-    publishAggregateAndProofs: reqOnlyBody(ArrayOf(config.types.phase0.SignedAggregateAndProof), Schema.ObjectArray),
-    publishContributionAndProofs: reqOnlyBody(
-      ArrayOf(config.types.altair.SignedContributionAndProof),
-      Schema.ObjectArray
-    ),
+    publishAggregateAndProofs: reqOnlyBody(ArrayOf(ssz.phase0.SignedAggregateAndProof), Schema.ObjectArray),
+    publishContributionAndProofs: reqOnlyBody(ArrayOf(ssz.altair.SignedContributionAndProof), Schema.ObjectArray),
     prepareBeaconCommitteeSubnet: reqOnlyBody(ArrayOf(BeaconCommitteeSubscription), Schema.ObjectArray),
     prepareSyncCommitteeSubnets: reqOnlyBody(ArrayOf(SyncCommitteeSubscription), Schema.ObjectArray),
   };
 }
 
-export function getReturnTypes(config: IBeaconConfig): ReturnTypes<Api> {
+export function getReturnTypes(): ReturnTypes<Api> {
   const WithDependentRoot = <T>(dataType: Type<T>): ContainerType<{data: T; dependentRoot: Root}> =>
-    new ContainerType({fields: {data: dataType, dependentRoot: config.types.Root}});
+    new ContainerType({fields: {data: dataType, dependentRoot: ssz.Root}});
 
   const AttesterDuty = new ContainerType<AttesterDuty>({
     fields: {
-      pubkey: config.types.BLSPubkey,
-      validatorIndex: config.types.ValidatorIndex,
-      committeeIndex: config.types.CommitteeIndex,
-      committeeLength: config.types.Number64,
-      committeesAtSlot: config.types.Number64,
-      validatorCommitteeIndex: config.types.Number64,
-      slot: config.types.Slot,
+      pubkey: ssz.BLSPubkey,
+      validatorIndex: ssz.ValidatorIndex,
+      committeeIndex: ssz.CommitteeIndex,
+      committeeLength: ssz.Number64,
+      committeesAtSlot: ssz.Number64,
+      validatorCommitteeIndex: ssz.Number64,
+      slot: ssz.Slot,
     },
   });
 
   const ProposerDuty = new ContainerType<ProposerDuty>({
     fields: {
-      slot: config.types.Slot,
-      validatorIndex: config.types.ValidatorIndex,
-      pubkey: config.types.BLSPubkey,
+      slot: ssz.Slot,
+      validatorIndex: ssz.ValidatorIndex,
+      pubkey: ssz.BLSPubkey,
     },
   });
 
   const SyncDuty = new ContainerType<SyncDuty>({
     fields: {
-      pubkey: config.types.BLSPubkey,
-      validatorIndex: config.types.ValidatorIndex,
-      validatorSyncCommitteeIndices: ArrayOf(config.types.Number64),
+      pubkey: ssz.BLSPubkey,
+      validatorIndex: ssz.ValidatorIndex,
+      validatorSyncCommitteeIndices: ArrayOf(ssz.Number64),
     },
   });
 
@@ -352,9 +350,9 @@ export function getReturnTypes(config: IBeaconConfig): ReturnTypes<Api> {
     getAttesterDuties: WithDependentRoot(ArrayOf(AttesterDuty)),
     getProposerDuties: WithDependentRoot(ArrayOf(ProposerDuty)),
     getSyncCommitteeDuties: WithDependentRoot(ArrayOf(SyncDuty)),
-    produceBlock: WithVersion((fork) => config.types[fork].BeaconBlock),
-    produceAttestationData: ContainerData(config.types.phase0.AttestationData),
-    produceSyncCommitteeContribution: ContainerData(config.types.altair.SyncCommitteeContribution),
-    getAggregatedAttestation: ContainerData(config.types.phase0.Attestation),
+    produceBlock: WithVersion((fork: ForkName) => ssz[fork].BeaconBlock),
+    produceAttestationData: ContainerData(ssz.phase0.AttestationData),
+    produceSyncCommitteeContribution: ContainerData(ssz.altair.SyncCommitteeContribution),
+    getAggregatedAttestation: ContainerData(ssz.phase0.Attestation),
   };
 }

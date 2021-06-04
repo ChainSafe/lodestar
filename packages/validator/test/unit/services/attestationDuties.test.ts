@@ -3,7 +3,7 @@ import {toBufferBE} from "bigint-buffer";
 import {expect} from "chai";
 import sinon from "sinon";
 import bls from "@chainsafe/bls";
-import {config} from "@chainsafe/lodestar-config/mainnet";
+import {config} from "@chainsafe/lodestar-config/default";
 import {toHexString} from "@chainsafe/ssz";
 import {routes} from "@chainsafe/lodestar-api";
 import {AttestationDutiesService} from "../../../src/services/attestationDuties";
@@ -12,6 +12,7 @@ import {getApiClientStub} from "../../utils/apiStub";
 import {testLogger} from "../../utils/logger";
 import {ClockMock} from "../../utils/clock";
 import {IndicesService} from "../../../src/services/indices";
+import {ssz} from "@chainsafe/lodestar-types";
 
 describe("AttestationDutiesService", function () {
   const sandbox = sinon.createSandbox();
@@ -30,7 +31,7 @@ describe("AttestationDutiesService", function () {
     index,
     balance: BigInt(32e9),
     status: "active",
-    validator: config.types.phase0.Validator.defaultValue(),
+    validator: ssz.phase0.Validator.defaultValue(),
   };
 
   before(() => {

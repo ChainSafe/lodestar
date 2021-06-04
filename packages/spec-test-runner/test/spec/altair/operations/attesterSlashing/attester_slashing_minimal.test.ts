@@ -1,16 +1,16 @@
 import {join} from "path";
 
 import {TreeBacked} from "@chainsafe/ssz";
-import {params} from "@chainsafe/lodestar-params/minimal";
 import {allForks, altair} from "@chainsafe/lodestar-beacon-state-transition";
 import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
 import {IProcessAttesterSlashingTestCase} from "./type";
 import {SPEC_TEST_LOCATION} from "../../../../utils/specTestCases";
 import {expectEqualBeaconState} from "../../util";
+import {ssz} from "@chainsafe/lodestar-types";
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
-const config = createIBeaconConfig({...params, ALTAIR_FORK_EPOCH: 0});
+const config = createIBeaconConfig({ALTAIR_FORK_EPOCH: 0});
 
 describeDirectorySpecTest<IProcessAttesterSlashingTestCase, altair.BeaconState>(
   "process attester slashing minimal",
@@ -37,10 +37,10 @@ describeDirectorySpecTest<IProcessAttesterSlashingTestCase, altair.BeaconState>(
       meta: InputType.YAML,
     },
     sszTypes: {
-      pre: config.types.altair.BeaconState,
-      post: config.types.altair.BeaconState,
+      pre: ssz.altair.BeaconState,
+      post: ssz.altair.BeaconState,
       // eslint-disable-next-line @typescript-eslint/naming-convention
-      attester_slashing: config.types.phase0.AttesterSlashing,
+      attester_slashing: ssz.phase0.AttesterSlashing,
     },
     timeout: 10000,
     shouldError: (testCase) => !testCase.post,

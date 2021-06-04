@@ -1,5 +1,7 @@
 import {routes} from "@chainsafe/lodestar-api";
 import {Api as IBeaconBlocksApi} from "@chainsafe/lodestar-api/lib/routes/beacon/block";
+import {SLOTS_PER_HISTORICAL_ROOT} from "@chainsafe/lodestar-params";
+import {ssz} from "@chainsafe/lodestar-types";
 import {fromHexString} from "@chainsafe/ssz";
 import {ApiModules} from "../../types";
 import {resolveBlockId, toBeaconHeaderResponse} from "./utils";
@@ -27,11 +29,7 @@ export function getBeaconBlockApi({
               const cannonical = chain.forkChoice.getCanonicalBlockSummaryAtSlot(block.message.slot);
               if (cannonical) {
                 result.push(
-                  toBeaconHeaderResponse(
-                    config,
-                    block,
-                    config.types.Root.equals(cannonical.blockRoot, summary.blockRoot)
-                  )
+                  toBeaconHeaderResponse(config, block, ssz.Root.equals(cannonical.blockRoot, summary.blockRoot))
                 );
               }
             }
@@ -70,7 +68,7 @@ export function getBeaconBlockApi({
         // fork blocks
         await Promise.all(
           chain.forkChoice.getBlockSummariesAtSlot(filters.slot).map(async (summary) => {
-            if (!config.types.Root.equals(summary.blockRoot, canonicalRoot)) {
+            if (!ssz.Root.equals(summary.blockRoot, canonicalRoot)) {
               const block = await db.block.get(summary.blockRoot);
               if (block) {
                 result.push(toBeaconHeaderResponse(config, block));
@@ -112,9 +110,9 @@ export function getBeaconBlockApi({
           return {data: head.blockRoot};
         }
 
-        if (slot < head.slot && head.slot <= slot + config.params.SLOTS_PER_HISTORICAL_ROOT) {
+        if (slot < head.slot && head.slot <= slot + SLOTS_PER_HISTORICAL_ROOT) {
           const state = chain.getHeadState();
-          return {data: state.blockRoots[slot % config.params.SLOTS_PER_HISTORICAL_ROOT]};
+          return {data: state.blockRoots[slot % SLOTS_PER_HISTORICAL_ROOT]};
         }
       }
 

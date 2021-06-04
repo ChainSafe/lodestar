@@ -2,7 +2,7 @@ import {Connection} from "libp2p";
 import {EventEmitter} from "events";
 import sinon from "sinon";
 import {expect} from "chai";
-import {config} from "@chainsafe/lodestar-config/mainnet";
+import {config} from "@chainsafe/lodestar-config/default";
 import {IReqResp, ReqRespMethod} from "../../../../src/network/reqresp";
 import {PeerRpcScoreStore, PeerManager, Libp2pPeerMetadataStore} from "../../../../src/network/peers";
 import {NetworkEvent, NetworkEventBus} from "../../../../src/network";
@@ -11,7 +11,7 @@ import {createNode, getAttnets, getSyncnets} from "../../../utils/network";
 import {MockBeaconChain} from "../../../utils/mocks/chain/chain";
 import {generateEmptySignedBlock} from "../../../utils/block";
 import {generateState} from "../../../utils/state";
-import {altair, phase0} from "@chainsafe/lodestar-types";
+import {altair, phase0, ssz} from "@chainsafe/lodestar-types";
 import {sleep} from "@chainsafe/lodestar-utils";
 import {waitForEvent} from "../../../utils/events/resolver";
 import {testLogger} from "../../../utils/logger";
@@ -39,7 +39,7 @@ describe("network / peers / PeerManager", function () {
     const state = generateState({
       finalizedCheckpoint: {
         epoch: 0,
-        root: config.types.phase0.BeaconBlock.hashTreeRoot(block.message),
+        root: ssz.phase0.BeaconBlock.hashTreeRoot(block.message),
       },
     });
     const chain = new MockBeaconChain({

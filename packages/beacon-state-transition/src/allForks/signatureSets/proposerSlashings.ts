@@ -1,5 +1,6 @@
+import {DOMAIN_BEACON_PROPOSER} from "@chainsafe/lodestar-params";
 import {readonlyValues} from "@chainsafe/ssz";
-import {allForks, phase0} from "@chainsafe/lodestar-types";
+import {allForks, phase0, ssz} from "@chainsafe/lodestar-types";
 import {computeEpochAtSlot, computeSigningRoot, getDomain, ISignatureSet, SignatureSetType} from "../../util";
 import {CachedBeaconState} from "../util";
 
@@ -10,19 +11,19 @@ export function getProposerSlashingSignatureSets(
   state: CachedBeaconState<allForks.BeaconState>,
   proposerSlashing: phase0.ProposerSlashing
 ): ISignatureSet[] {
-  const {config, epochCtx} = state;
+  const {epochCtx} = state;
   const pubkey = epochCtx.index2pubkey[proposerSlashing.signedHeader1.message.proposerIndex];
 
   return [proposerSlashing.signedHeader1, proposerSlashing.signedHeader2].map(
     (signedHeader): ISignatureSet => {
-      const epochSig = computeEpochAtSlot(config, signedHeader.message.slot);
-      const domain = getDomain(config, state, config.params.DOMAIN_BEACON_PROPOSER, epochSig);
-      const beaconBlockHeaderType = config.types.phase0.BeaconBlockHeader;
+      const epochSig = computeEpochAtSlot(signedHeader.message.slot);
+      const domain = getDomain(state, DOMAIN_BEACON_PROPOSER, epochSig);
+      const beaconBlockHeaderType = ssz.phase0.BeaconBlockHeader;
 
       return {
         type: SignatureSetType.single,
         pubkey,
-        signingRoot: computeSigningRoot(config, beaconBlockHeaderType, signedHeader.message, domain),
+        signingRoot: computeSigningRoot(beaconBlockHeaderType, signedHeader.message, domain),
         signature: signedHeader.signature.valueOf() as Uint8Array,
       };
     }

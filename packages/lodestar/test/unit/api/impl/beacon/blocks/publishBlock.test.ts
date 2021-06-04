@@ -5,7 +5,7 @@ import {getBeaconBlockApi} from "../../../../../../src/api/impl/beacon/blocks";
 import {BeaconChain} from "../../../../../../src/chain";
 import {Eth2Gossipsub} from "../../../../../../src/network/gossip";
 import {generateEmptySignedBlock} from "../../../../../utils/block";
-import {SignedBeaconBlock} from "@chainsafe/lodestar-types/lib/allForks";
+import {allForks} from "@chainsafe/lodestar-types";
 import {BeaconSync} from "../../../../../../src/sync";
 import {setupApiImplTestServer, ApiImplTestModules} from "../../index.test";
 
@@ -13,7 +13,7 @@ use(chaiAsPromised);
 
 describe("api - beacon - publishBlock", function () {
   let gossipStub: SinonStubbedInstance<Eth2Gossipsub>;
-  let block: SignedBeaconBlock;
+  let block: allForks.SignedBeaconBlock;
   let chainStub: SinonStubbedInstance<BeaconChain>;
   let syncStub: SinonStubbedInstance<BeaconSync>;
   let server: ApiImplTestModules;

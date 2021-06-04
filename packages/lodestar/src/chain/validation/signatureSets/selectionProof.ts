@@ -1,5 +1,6 @@
+import {DOMAIN_SELECTION_PROOF} from "@chainsafe/lodestar-params";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {allForks, phase0, Slot} from "@chainsafe/lodestar-types";
+import {allForks, phase0, Slot, ssz} from "@chainsafe/lodestar-types";
 import {PublicKey} from "@chainsafe/bls";
 import {
   computeEpochAtSlot,
@@ -16,13 +17,13 @@ export function getSelectionProofSignatureSet(
   aggregator: PublicKey,
   aggregateAndProof: phase0.SignedAggregateAndProof
 ): ISignatureSet {
-  const epochSig = computeEpochAtSlot(config, slot);
-  const selectionProofDomain = getDomain(config, state, config.params.DOMAIN_SELECTION_PROOF, epochSig);
+  const epochSig = computeEpochAtSlot(slot);
+  const selectionProofDomain = getDomain(state, DOMAIN_SELECTION_PROOF, epochSig);
 
   return {
     type: SignatureSetType.single,
     pubkey: aggregator,
-    signingRoot: computeSigningRoot(config, config.types.Slot, slot, selectionProofDomain),
+    signingRoot: computeSigningRoot(ssz.Slot, slot, selectionProofDomain),
     signature: aggregateAndProof.message.selectionProof.valueOf() as Uint8Array,
   };
 }

@@ -1,4 +1,4 @@
-import {phase0, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {phase0, ssz, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IDatabaseController, Bucket, Repository} from "@chainsafe/lodestar-db";
 
@@ -10,7 +10,7 @@ import {IDatabaseController, Bucket, Repository} from "@chainsafe/lodestar-db";
  */
 export class AttesterSlashingRepository extends Repository<Uint8Array, phase0.AttesterSlashing> {
   constructor(config: IBeaconConfig, db: IDatabaseController<Buffer, Buffer>) {
-    super(config, db, Bucket.phase0_attesterSlashing, config.types.phase0.AttesterSlashing);
+    super(config, db, Bucket.phase0_attesterSlashing, ssz.phase0.AttesterSlashing);
   }
 
   async hasAll(attesterIndices: ValidatorIndex[] = []): Promise<boolean> {

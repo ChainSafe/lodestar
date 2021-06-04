@@ -1,15 +1,15 @@
 import {TreeBacked} from "@chainsafe/ssz";
 import {allForks, altair, CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
-import {params} from "@chainsafe/lodestar-params/minimal";
 import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
 import {join} from "path";
 import {SPEC_TEST_LOCATION} from "../../../../utils/specTestCases";
 import {IProcessDepositTestCase} from "./type";
 import {expectEqualBeaconState} from "../../util";
+import {ssz} from "@chainsafe/lodestar-types";
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
-const config = createIBeaconConfig({...params, ALTAIR_FORK_EPOCH: 0});
+const config = createIBeaconConfig({ALTAIR_FORK_EPOCH: 0});
 
 describeDirectorySpecTest<IProcessDepositTestCase, altair.BeaconState>(
   "process deposit minimal",
@@ -34,9 +34,9 @@ describeDirectorySpecTest<IProcessDepositTestCase, altair.BeaconState>(
       },
     },
     sszTypes: {
-      pre: config.types.altair.BeaconState,
-      post: config.types.altair.BeaconState,
-      deposit: config.types.phase0.Deposit,
+      pre: ssz.altair.BeaconState,
+      post: ssz.altair.BeaconState,
+      deposit: ssz.phase0.Deposit,
     },
     timeout: 10000,
     shouldError: (testCase) => !testCase.post,

@@ -1,13 +1,14 @@
 import {join} from "path";
 
 import {TreeBacked} from "@chainsafe/ssz";
-import {config} from "@chainsafe/lodestar-config/minimal";
+import {config} from "@chainsafe/lodestar-config/default";
 import {allForks, altair, phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
 import {IUpgradeStateCase} from "./type";
 import {upgradeState} from "@chainsafe/lodestar-beacon-state-transition/lib/altair";
 import {SPEC_TEST_LOCATION} from "../../../utils/specTestCases";
 import {expectEqualBeaconState} from "../util";
+import {ssz} from "@chainsafe/lodestar-types";
 
 describeDirectorySpecTest<IUpgradeStateCase, altair.BeaconState>(
   "upgrade state to altair",
@@ -32,8 +33,8 @@ describeDirectorySpecTest<IUpgradeStateCase, altair.BeaconState>(
       meta: InputType.YAML,
     },
     sszTypes: {
-      pre: config.types.phase0.BeaconState,
-      post: config.types.altair.BeaconState,
+      pre: ssz.phase0.BeaconState,
+      post: ssz.altair.BeaconState,
     },
 
     timeout: 10000,

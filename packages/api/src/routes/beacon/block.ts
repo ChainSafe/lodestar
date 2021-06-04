@@ -1,6 +1,7 @@
 import {ContainerType, Json} from "@chainsafe/ssz";
-import {ForkName, IBeaconConfig} from "@chainsafe/lodestar-config";
-import {phase0, allForks, Slot, Root} from "@chainsafe/lodestar-types";
+import {ForkName} from "@chainsafe/lodestar-params";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {phase0, allForks, Slot, Root, ssz} from "@chainsafe/lodestar-types";
 import {
   RoutesData,
   ReturnTypes,
@@ -147,21 +148,21 @@ export function getReqSerializers(config: IBeaconConfig): ReqSerializers<Api, Re
   };
 }
 
-export function getReturnTypes(config: IBeaconConfig): ReturnTypes<Api> {
+export function getReturnTypes(): ReturnTypes<Api> {
   const BeaconHeaderResType = new ContainerType<BlockHeaderResponse>({
     fields: {
-      root: config.types.Root,
-      canonical: config.types.Boolean,
-      header: config.types.phase0.SignedBeaconBlockHeader,
+      root: ssz.Root,
+      canonical: ssz.Boolean,
+      header: ssz.phase0.SignedBeaconBlockHeader,
     },
   });
 
   return {
-    getBlock: ContainerData(config.types.phase0.SignedBeaconBlock),
-    getBlockV2: WithVersion((fork) => config.types[fork].SignedBeaconBlock),
-    getBlockAttestations: ContainerData(ArrayOf(config.types.phase0.Attestation)),
+    getBlock: ContainerData(ssz.phase0.SignedBeaconBlock),
+    getBlockV2: WithVersion((fork: ForkName) => ssz[fork].SignedBeaconBlock),
+    getBlockAttestations: ContainerData(ArrayOf(ssz.phase0.Attestation)),
     getBlockHeader: ContainerData(BeaconHeaderResType),
     getBlockHeaders: ContainerData(ArrayOf(BeaconHeaderResType)),
-    getBlockRoot: ContainerData(config.types.Root),
+    getBlockRoot: ContainerData(ssz.Root),
   };
 }

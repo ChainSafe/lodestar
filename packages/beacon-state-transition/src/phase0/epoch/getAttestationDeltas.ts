@@ -3,6 +3,13 @@ import {bigIntSqrt, bigIntMax} from "@chainsafe/lodestar-utils";
 import {BASE_REWARDS_PER_EPOCH as BASE_REWARDS_PER_EPOCH_CONST} from "../../constants";
 import {newZeroedArray} from "../../util";
 import {IEpochProcess, hasMarkers, CachedBeaconState} from "../../allForks/util";
+import {
+  BASE_REWARD_FACTOR,
+  EFFECTIVE_BALANCE_INCREMENT,
+  INACTIVITY_PENALTY_QUOTIENT,
+  MIN_EPOCHS_TO_INACTIVITY_PENALTY,
+  PROPOSER_REWARD_QUOTIENT,
+} from "@chainsafe/lodestar-params";
 
 /**
  * Redefine constants in attesterStatus to improve performance
@@ -24,12 +31,11 @@ export function getAttestationDeltas(
   state: CachedBeaconState<phase0.BeaconState>,
   process: IEpochProcess
 ): [number[], number[]] {
-  const params = state.config.params;
   const validatorCount = process.statuses.length;
   const rewards = newZeroedArray(validatorCount);
   const penalties = newZeroedArray(validatorCount);
 
-  const increment = params.EFFECTIVE_BALANCE_INCREMENT;
+  const increment = EFFECTIVE_BALANCE_INCREMENT;
   let totalBalance = bigIntMax(process.totalActiveStake, increment);
 
   // increment is factored out from balance totals to avoid overflow
@@ -43,16 +49,14 @@ export function getAttestationDeltas(
 
   totalBalance = totalBalance / increment;
 
-  const BASE_REWARD_FACTOR = BigInt(params.BASE_REWARD_FACTOR);
   const BASE_REWARDS_PER_EPOCH = BigInt(BASE_REWARDS_PER_EPOCH_CONST);
-  const MIN_EPOCHS_TO_INACTIVITY_PENALTY = params.MIN_EPOCHS_TO_INACTIVITY_PENALTY;
-  const INACTIVITY_PENALTY_QUOTIENT = params.INACTIVITY_PENALTY_QUOTIENT;
+  const proposerRewardQuotient = Number(PROPOSER_REWARD_QUOTIENT);
   const isInInactivityLeak = finalityDelay > MIN_EPOCHS_TO_INACTIVITY_PENALTY;
 
   for (const [i, status] of process.statuses.entries()) {
     const effBalance = process.validators[i].effectiveBalance;
     const baseReward = Number((effBalance * BASE_REWARD_FACTOR) / balanceSqRoot / BASE_REWARDS_PER_EPOCH);
-    const proposerReward = Math.floor(baseReward / params.PROPOSER_REWARD_QUOTIENT);
+    const proposerReward = Math.floor(baseReward / proposerRewardQuotient);
 
     // inclusion speed bonus
     if (hasMarkers(status.flags, FLAG_PREV_SOURCE_ATTESTER_OR_UNSLASHED)) {

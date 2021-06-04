@@ -1,3 +1,4 @@
+import {ssz} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IDatabaseController, Bucket, Repository} from "@chainsafe/lodestar-db";
 
@@ -6,7 +7,7 @@ import {IDatabaseController, Bucket, Repository} from "@chainsafe/lodestar-db";
  */
 export class BadBlockRepository extends Repository<Uint8Array, boolean> {
   constructor(config: IBeaconConfig, db: IDatabaseController<Buffer, Buffer>) {
-    super(config, db, Bucket.index_invalidBlock, config.types.Boolean);
+    super(config, db, Bucket.index_invalidBlock, ssz.Boolean);
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars

@@ -1,4 +1,6 @@
-import {altair} from "@chainsafe/lodestar-types";
+import {altair, ssz} from "@chainsafe/lodestar-types";
+import {DOMAIN_SYNC_COMMITTEE} from "@chainsafe/lodestar-params";
+
 import {
   computeEpochAtSlot,
   computeSigningRoot,
@@ -44,7 +46,7 @@ export function getSyncCommitteeSignatureSet(
   /** Optional parameter to prevent computing it twice */
   participantIndices?: number[]
 ): ISignatureSet | null {
-  const {config, epochCtx} = state;
+  const {epochCtx} = state;
   const {syncAggregate} = block.body;
 
   // The spec uses the state to get the previous slot
@@ -59,7 +61,7 @@ export function getSyncCommitteeSignatureSet(
   // which in the spec forces state.slot to equal block.slot.
   const previousSlot = Math.max(block.slot, 1) - 1;
 
-  const rootSigned = getBlockRootAtSlot(config, state, previousSlot);
+  const rootSigned = getBlockRootAtSlot(state, previousSlot);
 
   if (!participantIndices) {
     participantIndices = getParticipantIndices(state, syncAggregate);
@@ -70,13 +72,13 @@ export function getSyncCommitteeSignatureSet(
     return null;
   }
 
-  const epochSig = computeEpochAtSlot(config, previousSlot);
-  const domain = getDomain(config, state, config.params.DOMAIN_SYNC_COMMITTEE, epochSig);
+  const epochSig = computeEpochAtSlot(previousSlot);
+  const domain = getDomain(state, DOMAIN_SYNC_COMMITTEE, epochSig);
 
   return {
     type: SignatureSetType.aggregate,
     pubkeys: participantIndices.map((i) => epochCtx.index2pubkey[i]),
-    signingRoot: computeSigningRoot(config, config.types.Root, rootSigned, domain),
+    signingRoot: computeSigningRoot(ssz.Root, rootSigned, domain),
     signature: syncAggregate.syncCommitteeSignature.valueOf() as Uint8Array,
   };
 }
@@ -93,7 +95,7 @@ function getParticipantIndices(
     ? zipIndexesInBitList(
         committeeIndices,
         syncAggregate.syncCommitteeBits as TreeBacked<BitList>,
-        state.config.types.altair.SyncCommitteeBits
+        ssz.altair.SyncCommitteeBits
       )
     : committeeIndices.filter((index) => !!syncAggregate.syncCommitteeBits[index]);
 }

@@ -1,4 +1,5 @@
-import {config} from "@chainsafe/lodestar-config/minimal";
+import {ssz} from "@chainsafe/lodestar-types";
+import {config} from "@chainsafe/lodestar-config/default";
 import {ProofType} from "@chainsafe/persistent-merkle-tree";
 import {Api, ReqTypes} from "../../src/routes/lightclient";
 import {getClient} from "../../src/client/lightclient";
@@ -8,7 +9,7 @@ import {runGenericServerTest} from "../utils/genericServerTest";
 const root = Uint8Array.from(Buffer.alloc(32, 1));
 
 describe("lightclient", () => {
-  const lightClientUpdate = config.types.altair.LightClientUpdate.defaultValue();
+  const lightClientUpdate = ssz.altair.LightClientUpdate.defaultValue();
 
   runGenericServerTest<Api, ReqTypes>(config, getClient, getRoutes, {
     getStateProof: {

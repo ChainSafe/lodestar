@@ -1,7 +1,7 @@
 import React, {useState} from "react";
 import {Lightclient} from "@chainsafe/lodestar-light-client/lib/client";
 import {TreeOffsetProof} from "@chainsafe/persistent-merkle-tree";
-import {altair} from "@chainsafe/lodestar-types";
+import {altair, ssz} from "@chainsafe/lodestar-types";
 import {CompositeType, toHexString, TreeBacked} from "@chainsafe/ssz";
 import {ReqStatus} from "./types";
 import {ErrorView} from "./components/ErrorView";
@@ -59,7 +59,7 @@ export function ProofReqResp({client}: {client: Lightclient}): JSX.Element {
       if (proof.leaves.length <= 0) {
         throw Error("Empty proof");
       }
-      const state = client.config.types.altair.BeaconState.createTreeBackedFromProofUnsafe(proof);
+      const state = ssz.altair.BeaconState.createTreeBackedFromProofUnsafe(proof);
       const stateStr = renderState(pathsQueried, state ?? null);
       setReqStatusProof({result: {proof, stateStr}});
     } catch (e) {

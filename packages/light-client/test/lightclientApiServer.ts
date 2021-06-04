@@ -7,7 +7,7 @@ import querystring from "querystring";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {LightClientUpdater} from "../src/server/LightClientUpdater";
 import {TreeBacked} from "@chainsafe/ssz";
-import {altair} from "@chainsafe/lodestar-types";
+import {altair, ssz} from "@chainsafe/lodestar-types";
 
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 
@@ -46,12 +46,12 @@ export async function startLightclientApiServer(opts: ServerOpts, modules: Serve
 }
 
 function getLightclientServerApi(modules: ServerModules): Api["lightclient"] {
-  const {config, lightClientUpdater, stateRegen} = modules;
+  const {lightClientUpdater, stateRegen} = modules;
 
   return {
     async getStateProof(stateId, paths) {
       const state = await stateRegen.getStateByRoot(stateId);
-      const tree = config.types.altair.BeaconState.createTreeBackedFromStruct(state);
+      const tree = ssz.altair.BeaconState.createTreeBackedFromStruct(state);
       return {data: tree.createProof(paths)};
     },
 

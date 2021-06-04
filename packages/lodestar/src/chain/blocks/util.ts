@@ -16,7 +16,7 @@ export function groupBlocksByEpoch(
   const blocksByEpoch = new Map<Epoch, allForks.SignedBeaconBlock[]>();
 
   for (const block of blocks) {
-    const epoch = computeEpochAtSlot(config, block.message.slot);
+    const epoch = computeEpochAtSlot(block.message.slot);
     let blocksInEpoch = blocksByEpoch.get(epoch);
     if (!blocksInEpoch) blocksInEpoch = [];
     blocksInEpoch.push(block);

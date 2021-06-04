@@ -38,9 +38,8 @@ export class SlashingProtection extends DatabaseService implements ISlashingProt
     const distanceStoreRepository = new DistanceStoreRepository(opts);
     const minMaxSurround = new MinMaxSurround(distanceStoreRepository);
 
-    this.blockService = new SlashingProtectionBlockService(opts.config, blockBySlotRepository);
+    this.blockService = new SlashingProtectionBlockService(blockBySlotRepository);
     this.attestationService = new SlashingProtectionAttestationService(
-      opts.config,
       attestationByTargetRepository,
       attestationLowerBoundRepository,
       minMaxSurround
@@ -56,7 +55,7 @@ export class SlashingProtection extends DatabaseService implements ISlashingProt
   }
 
   async importInterchange(interchange: Interchange, genesisValidatorsRoot: Root): Promise<void> {
-    const {data} = parseInterchange(this.config, interchange, genesisValidatorsRoot);
+    const {data} = parseInterchange(interchange, genesisValidatorsRoot);
     for (const validator of data) {
       await this.blockService.importBlocks(validator.pubkey, validator.signedBlocks);
       await this.attestationService.importAttestations(validator.pubkey, validator.signedAttestations);
@@ -76,7 +75,7 @@ export class SlashingProtection extends DatabaseService implements ISlashingProt
         signedAttestations: await this.attestationService.exportAttestations(pubkey),
       });
     }
-    return serializeInterchange(this.config, {data: validatorData, genesisValidatorsRoot}, formatVersion);
+    return serializeInterchange({data: validatorData, genesisValidatorsRoot}, formatVersion);
   }
 
   async listPubkeys(): Promise<BLSPubkey[]> {

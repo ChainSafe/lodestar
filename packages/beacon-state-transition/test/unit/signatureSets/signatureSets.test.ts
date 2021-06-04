@@ -1,13 +1,14 @@
 import crypto from "crypto";
 import bls, {init} from "@chainsafe/bls";
 import {BitList, List, TreeBacked} from "@chainsafe/ssz";
-import {config} from "@chainsafe/lodestar-config/mainnet";
-import {ValidatorIndex, BLSSignature} from "@chainsafe/lodestar-types";
-import {ZERO_HASH, FAR_FUTURE_EPOCH} from "../../../src/constants";
+import {config} from "@chainsafe/lodestar-config/default";
+import {ValidatorIndex, BLSSignature, ssz} from "@chainsafe/lodestar-types";
+import {ZERO_HASH} from "../../../src/constants";
 import {generateState} from "../../utils/state";
 import {generateValidators} from "../../utils/validator";
 import {expect} from "chai";
 import {phase0, createCachedBeaconState, allForks} from "../../../src";
+import {FAR_FUTURE_EPOCH, MAX_EFFECTIVE_BALANCE} from "@chainsafe/lodestar-params";
 
 describe("signatureSets", () => {
   before("Init BLS", async () => {
@@ -59,7 +60,7 @@ describe("signatureSets", () => {
 
     // Generate active validators
     const validators = generateValidators(32, {
-      balance: config.params.MAX_EFFECTIVE_BALANCE,
+      balance: MAX_EFFECTIVE_BALANCE,
       activation: 0,
       exit: FAR_FUTURE_EPOCH,
     });
@@ -69,9 +70,7 @@ describe("signatureSets", () => {
 
     const state = createCachedBeaconState(
       config,
-      config.types.phase0.BeaconState.createTreeBackedFromStruct(generateState({validators})) as TreeBacked<
-        allForks.BeaconState
-      >
+      ssz.phase0.BeaconState.createTreeBackedFromStruct(generateState({validators})) as TreeBacked<allForks.BeaconState>
     );
 
     const signatureSets = allForks.getAllBlockSignatureSets(state, signedBlock);

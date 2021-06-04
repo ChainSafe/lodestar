@@ -1,6 +1,6 @@
 import {BitVector, List} from "@chainsafe/ssz";
 import {Number64, ParticipationFlags} from "../../primitive/types";
-import * as phase0 from "../../phase0";
+import * as phase0 from "../../phase0/types";
 import {SyncCommittee} from "./committee";
 
 export interface SyncAggregate {

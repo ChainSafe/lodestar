@@ -1,11 +1,11 @@
-import {altair, SyncPeriod} from "@chainsafe/lodestar-types";
+import {altair, ssz, SyncPeriod} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {bytesToInt} from "@chainsafe/lodestar-utils";
 import {IDatabaseController, Bucket, Repository} from "@chainsafe/lodestar-db";
 
 export class BestUpdatePerCommitteePeriod extends Repository<SyncPeriod, altair.LightClientUpdate> {
   constructor(config: IBeaconConfig, db: IDatabaseController<Buffer, Buffer>) {
-    const type = config.types.altair.LightClientUpdate;
+    const type = ssz.altair.LightClientUpdate;
     super(config, db, Bucket.altair_bestUpdatePerCommitteePeriod, type);
   }
 

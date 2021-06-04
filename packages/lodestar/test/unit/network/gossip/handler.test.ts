@@ -1,7 +1,8 @@
 import sinon, {SinonStubbedInstance} from "sinon";
 import {expect} from "chai";
-import {config} from "@chainsafe/lodestar-config/mainnet";
-import {ForkName} from "@chainsafe/lodestar-config";
+import {config} from "@chainsafe/lodestar-config/default";
+import {ForkName} from "@chainsafe/lodestar-params";
+import {ssz} from "@chainsafe/lodestar-types";
 
 import {BeaconChain, ChainEventEmitter, IBeaconChain} from "../../../../src/chain";
 import {INetwork, Network} from "../../../../src/network";
@@ -89,7 +90,7 @@ describe("gossip handler", function () {
       SignedVoluntaryExit,
       ProposerSlashing,
       AttesterSlashing,
-    } = config.types.phase0;
+    } = ssz.phase0;
 
     await gossipsub._processRpcMessage({
       data: encodeMessageData(GossipEncoding.ssz_snappy, SignedBeaconBlock.serialize(SignedBeaconBlock.defaultValue())),

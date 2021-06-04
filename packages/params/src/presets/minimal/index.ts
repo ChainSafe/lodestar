@@ -1,12 +1,11 @@
-import {createIBeaconParams} from "../../utils";
-import {IBeaconParams} from "../../interface";
+import {IBeaconPreset} from "../../preset";
 
-import {phase0Json} from "./phase0";
-import {altairJson} from "./altair";
+import {phase0} from "./phase0";
+import {altair} from "./altair";
 
-export const commit = "v1.1.0-alpha.5";
+export const commit = "v1.1.0-alpha.6";
 
-export const params = createIBeaconParams({
-  ...phase0Json,
-  ...altairJson,
-}) as IBeaconParams;
+export const preset: IBeaconPreset = {
+  ...phase0,
+  ...altair,
+};

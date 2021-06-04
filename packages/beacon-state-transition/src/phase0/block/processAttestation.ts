@@ -1,16 +1,16 @@
-import {allForks, phase0} from "@chainsafe/lodestar-types";
+import {allForks, phase0, ssz} from "@chainsafe/lodestar-types";
 
 import {computeEpochAtSlot} from "../../util";
 import {CachedBeaconState} from "../../allForks/util";
 import {isValidIndexedAttestation} from "../../allForks/block";
+import {MIN_ATTESTATION_INCLUSION_DELAY, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 
 export function processAttestation(
   state: CachedBeaconState<phase0.BeaconState>,
   attestation: phase0.Attestation,
   verifySignature = true
 ): void {
-  const {config, epochCtx} = state;
-  const {MIN_ATTESTATION_INCLUSION_DELAY, SLOTS_PER_EPOCH} = config.params;
+  const {epochCtx} = state;
   const slot = state.slot;
   const data = attestation.data;
   const committeeCount = epochCtx.getCommitteeCountAtSlot(data.slot);
@@ -28,7 +28,7 @@ export function processAttestation(
         `targetEpoch=${data.target.epoch} currentEpoch=${epochCtx.currentShuffling.epoch}`
     );
   }
-  const computedEpoch = computeEpochAtSlot(config, data.slot);
+  const computedEpoch = computeEpochAtSlot(data.slot);
   if (!(data.target.epoch === computedEpoch)) {
     throw new Error(
       "Attestation target epoch does not match epoch computed from slot: " +
@@ -50,7 +50,7 @@ export function processAttestation(
     );
   }
 
-  const pendingAttestation = state.config.types.phase0.PendingAttestation.createTreeBackedFromStruct({
+  const pendingAttestation = ssz.phase0.PendingAttestation.createTreeBackedFromStruct({
     data: data,
     aggregationBits: attestation.aggregationBits,
     inclusionDelay: slot - data.slot,
@@ -58,20 +58,20 @@ export function processAttestation(
   });
 
   if (data.target.epoch === epochCtx.currentShuffling.epoch) {
-    if (!config.types.phase0.Checkpoint.equals(data.source, state.currentJustifiedCheckpoint)) {
+    if (!ssz.phase0.Checkpoint.equals(data.source, state.currentJustifiedCheckpoint)) {
       throw new Error(
         "Attestation source does not equal current justified checkpoint: " +
-          `source=${config.types.phase0.Checkpoint.toJson(data.source)} ` +
-          `currentJustifiedCheckpoint=${config.types.phase0.Checkpoint.toJson(state.currentJustifiedCheckpoint)}`
+          `source=${ssz.phase0.Checkpoint.toJson(data.source)} ` +
+          `currentJustifiedCheckpoint=${ssz.phase0.Checkpoint.toJson(state.currentJustifiedCheckpoint)}`
       );
     }
     state.currentEpochAttestations.push(pendingAttestation);
   } else {
-    if (!config.types.phase0.Checkpoint.equals(data.source, state.previousJustifiedCheckpoint)) {
+    if (!ssz.phase0.Checkpoint.equals(data.source, state.previousJustifiedCheckpoint)) {
       throw new Error(
         "Attestation source does not equal previous justified checkpoint: " +
-          `source=${config.types.phase0.Checkpoint.toJson(data.source)} ` +
-          `previousJustifiedCheckpoint=${config.types.phase0.Checkpoint.toJson(state.previousJustifiedCheckpoint)}`
+          `source=${ssz.phase0.Checkpoint.toJson(data.source)} ` +
+          `previousJustifiedCheckpoint=${ssz.phase0.Checkpoint.toJson(state.previousJustifiedCheckpoint)}`
       );
     }
     state.previousEpochAttestations.push(pendingAttestation);

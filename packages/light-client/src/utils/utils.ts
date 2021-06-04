@@ -1,6 +1,5 @@
 import {PublicKey} from "@chainsafe/bls";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {altair, Root} from "@chainsafe/lodestar-types";
+import {altair, Root, ssz} from "@chainsafe/lodestar-types";
 import {BeaconBlockHeader} from "@chainsafe/lodestar-types/phase0";
 import {ArrayLike, BitVector} from "@chainsafe/ssz";
 import {SyncCommitteeFast} from "../client/types";
@@ -51,13 +50,13 @@ export function getParticipantPubkeys<T>(pubkeys: ArrayLike<T>, bits: BitVector)
   return participantPubkeys;
 }
 
-export function toBlockHeader(config: IBeaconConfig, block: altair.BeaconBlock): BeaconBlockHeader {
+export function toBlockHeader(block: altair.BeaconBlock): BeaconBlockHeader {
   return {
     slot: block.slot,
     proposerIndex: block.proposerIndex,
     parentRoot: block.parentRoot,
     stateRoot: block.stateRoot,
-    bodyRoot: config.types.altair.BeaconBlockBody.hashTreeRoot(block.body),
+    bodyRoot: ssz.altair.BeaconBlockBody.hashTreeRoot(block.body),
   };
 }
 
@@ -83,12 +82,12 @@ export function serializeSyncCommittee(syncCommittee: SyncCommitteeFast): altair
   };
 }
 
-export function isEmptyHeader(config: IBeaconConfig, header: BeaconBlockHeader): boolean {
-  const emptyValue = config.types.phase0.BeaconBlockHeader.defaultValue();
-  return config.types.phase0.BeaconBlockHeader.equals(emptyValue, header);
+export function isEmptyHeader(header: BeaconBlockHeader): boolean {
+  const emptyValue = ssz.phase0.BeaconBlockHeader.defaultValue();
+  return ssz.phase0.BeaconBlockHeader.equals(emptyValue, header);
 }
 
-export function isEmptySyncCommitte(config: IBeaconConfig, syncCommittee: altair.SyncCommittee): boolean {
-  const emptyValue = config.types.altair.SyncCommittee.defaultValue();
-  return config.types.altair.SyncCommittee.equals(emptyValue, syncCommittee);
+export function isEmptySyncCommitte(syncCommittee: altair.SyncCommittee): boolean {
+  const emptyValue = ssz.altair.SyncCommittee.defaultValue();
+  return ssz.altair.SyncCommittee.equals(emptyValue, syncCommittee);
 }

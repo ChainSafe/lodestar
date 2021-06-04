@@ -1,5 +1,5 @@
 import {Bucket, encodeKey, IDatabaseApiOptions} from "@chainsafe/lodestar-db";
-import {BLSPubkey, Epoch} from "@chainsafe/lodestar-types";
+import {BLSPubkey, Epoch, ssz} from "@chainsafe/lodestar-types";
 import {intToBytes} from "@chainsafe/lodestar-utils";
 import {Type} from "@chainsafe/ssz";
 import {LodestarValidatorDatabaseController} from "../../types";
@@ -25,7 +25,7 @@ class SpanDistanceRepository {
 
   constructor(opts: IDatabaseApiOptions, bucket: Bucket) {
     this.db = opts.controller;
-    this.type = opts.config.types.Epoch;
+    this.type = ssz.Epoch;
     this.bucket = bucket;
   }
 

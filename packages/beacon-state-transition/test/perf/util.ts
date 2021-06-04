@@ -1,5 +1,5 @@
-import {config} from "@chainsafe/lodestar-config/mainnet";
-import {Gwei, phase0} from "@chainsafe/lodestar-types";
+import {config} from "@chainsafe/lodestar-config/default";
+import {Gwei, phase0, ssz} from "@chainsafe/lodestar-types";
 import bls, {CoordType, init, PublicKey} from "@chainsafe/bls";
 import {fromHexString, List, TreeBacked} from "@chainsafe/ssz";
 import {getBeaconProposerIndex} from "../../src/util/proposer";
@@ -9,6 +9,14 @@ import {profilerLogger} from "../utils/logger";
 import {interopPubkeysCached} from "../utils/interop";
 import {PendingAttestation} from "@chainsafe/lodestar-types/phase0";
 import {intDiv} from "@chainsafe/lodestar-utils";
+import {
+  EPOCHS_PER_ETH1_VOTING_PERIOD,
+  EPOCHS_PER_HISTORICAL_VECTOR,
+  MAX_ATTESTATIONS,
+  MAX_VALIDATORS_PER_COMMITTEE,
+  SLOTS_PER_EPOCH,
+  SLOTS_PER_HISTORICAL_ROOT,
+} from "@chainsafe/lodestar-params";
 
 let tbState: TreeBacked<phase0.BeaconState> | null = null;
 let cachedState23637: allForks.CachedBeaconState<phase0.BeaconState> | null = null;
@@ -72,11 +80,10 @@ export function generatePerfTestCachedBeaconState(opts?: {
  * This is generated from Medalla state 756416
  */
 export function generatePerformanceState(pubkeysArg?: Uint8Array[]): TreeBacked<phase0.BeaconState> {
-  const {SLOTS_PER_EPOCH, MAX_ATTESTATIONS, MAX_VALIDATORS_PER_COMMITTEE, SLOTS_PER_HISTORICAL_ROOT} = config.params;
   if (!tbState) {
     const pubkeys = pubkeysArg || getPubkeys().pubkeys;
 
-    const state = config.types.phase0.BeaconState.defaultValue();
+    const state = ssz.phase0.BeaconState.defaultValue();
     state.genesisTime = 1596546008;
     state.genesisValidatorsRoot = fromHexString("0x04700007fabc8282644aed6d1c7c9e21d38a03a0c4ba193f3afe428824b3a673");
     state.slot = 756416;
@@ -102,7 +109,7 @@ export function generatePerformanceState(pubkeysArg?: Uint8Array[]): TreeBacked<
     };
     state.eth1DataVotes = (Array.from(
       // minus one so that inserting 1 from block works
-      {length: config.params.EPOCHS_PER_ETH1_VOTING_PERIOD * SLOTS_PER_EPOCH - 1},
+      {length: EPOCHS_PER_ETH1_VOTING_PERIOD * SLOTS_PER_EPOCH - 1},
       (_, i) => {
         return {
           depositCount: i,
@@ -123,9 +130,9 @@ export function generatePerformanceState(pubkeysArg?: Uint8Array[]): TreeBacked<
       withdrawableEpoch: Infinity,
     })) as List<phase0.Validator>;
     state.balances = Array.from({length: pubkeys.length}, () => BigInt(31217089836)) as List<Gwei>;
-    state.randaoMixes = Array.from({length: config.params.EPOCHS_PER_HISTORICAL_VECTOR}, (_, i) => Buffer.alloc(32, i));
+    state.randaoMixes = Array.from({length: EPOCHS_PER_HISTORICAL_VECTOR}, (_, i) => Buffer.alloc(32, i));
     // no slashings
-    const currentEpoch = computeEpochAtSlot(config, state.slot - 1);
+    const currentEpoch = computeEpochAtSlot(state.slot - 1);
     const previousEpoch = currentEpoch - 1;
     state.previousJustifiedCheckpoint = {
       epoch: currentEpoch - 2,
@@ -142,7 +149,7 @@ export function generatePerformanceState(pubkeysArg?: Uint8Array[]): TreeBacked<
     // previous epoch attestations
     const numPrevAttestations = SLOTS_PER_EPOCH * MAX_ATTESTATIONS;
     const activeValidatorCount = pubkeys.length;
-    const committeesPerSlot = computeCommitteeCount(config, activeValidatorCount);
+    const committeesPerSlot = computeCommitteeCount(activeValidatorCount);
     state.previousEpochAttestations = Array.from({length: numPrevAttestations}, (_, i) => {
       const slotInEpoch = intDiv(i, MAX_ATTESTATIONS);
       return {
@@ -179,7 +186,7 @@ export function generatePerformanceState(pubkeysArg?: Uint8Array[]): TreeBacked<
       };
     }) as List<PendingAttestation>;
     // no justificationBits
-    tbState = config.types.phase0.BeaconState.createTreeBackedFromStruct(state);
+    tbState = ssz.phase0.BeaconState.createTreeBackedFromStruct(state);
     logger.verbose("Loaded state", {
       slot: tbState.slot,
       numValidators: tbState.validators.length,
@@ -195,19 +202,19 @@ export function generatePerformanceState(pubkeysArg?: Uint8Array[]): TreeBacked<
  */
 export function generatePerformanceBlock(): TreeBacked<phase0.SignedBeaconBlock> {
   if (!signedBlock) {
-    const block = config.types.phase0.SignedBeaconBlock.defaultValue();
+    const block = ssz.phase0.SignedBeaconBlock.defaultValue();
     const parentState = generatePerformanceState();
     const newState = parentState.clone();
     newState.slot++;
     block.message.slot = newState.slot;
-    block.message.proposerIndex = getBeaconProposerIndex(config, newState);
-    block.message.parentRoot = config.types.phase0.BeaconBlockHeader.hashTreeRoot(parentState.latestBlockHeader);
+    block.message.proposerIndex = getBeaconProposerIndex(newState);
+    block.message.parentRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(parentState.latestBlockHeader);
     block.message.stateRoot = fromHexString("0x6c86ca3c4c6688cf189421b8a68bf2dbc91521609965e6f4e207d44347061fee");
     block.message.body.randaoReveal = fromHexString(
       "0x8a5d2673c48f22f6ed19462efec35645db490df29eed2f56321dbe4a89b2463b0c902095a7ab74a2dc5b7f67edb1a19507ea3d4361d5af9cb0a524945c91638dfd6568841486813a2c45142659d6d9403f5081febb123a7931edbc248b9d0025"
     );
     // eth1Data, graffiti, attestations
-    signedBlock = config.types.phase0.SignedBeaconBlock.createTreeBackedFromStruct(block);
+    signedBlock = ssz.phase0.SignedBeaconBlock.createTreeBackedFromStruct(block);
     logger.verbose("Loaded block", {slot: signedBlock.message.slot});
   }
   return signedBlock.clone();

@@ -1,4 +1,4 @@
-import {config} from "@chainsafe/lodestar-config/mainnet";
+import {MAX_VOLUNTARY_EXITS} from "@chainsafe/lodestar-params";
 import {phase0} from "@chainsafe/lodestar-types";
 import {BenchmarkRunner} from "@chainsafe/lodestar-utils";
 import {List} from "@chainsafe/ssz";
@@ -22,7 +22,7 @@ export const runBlockTransitionTests = async (): Promise<void> => {
   const signedBlock = generatePerformanceBlock();
   const validatorExitsBlock = signedBlock.clone();
   const voluntaryExits: phase0.SignedVoluntaryExit[] = [];
-  const numValidatorExits = config.params.MAX_VOLUNTARY_EXITS;
+  const numValidatorExits = MAX_VOLUNTARY_EXITS;
   const exitEpoch = originalState.epochCtx.currentShuffling.epoch;
   for (let i = 0; i < numValidatorExits; i++) {
     voluntaryExits.push({

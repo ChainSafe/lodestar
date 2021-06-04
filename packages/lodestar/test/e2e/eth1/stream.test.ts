@@ -16,7 +16,7 @@ describe("Eth1 streams", function () {
 
   const maxBlocksPerPoll = 1000;
   const depositsToFetch = 1000;
-  const eth1Params = {...config.params, maxBlocksPerPoll};
+  const eth1Params = {...config, maxBlocksPerPoll};
 
   it(`Should fetch ${depositsToFetch} deposits with getDepositsStream`, async function () {
     const controller = new AbortController();

@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
 import {AbortSignal} from "abort-controller";
-import {allForks} from "@chainsafe/lodestar-types";
+import {allForks, ssz} from "@chainsafe/lodestar-types";
 
 import {IBlockJob, IChainSegmentJob} from "../interface";
 import {ChainEvent} from "../emitter";
@@ -81,7 +81,7 @@ export async function processChainSegmentJob(modules: BlockProcessorModules, job
       // Without this check it would be possible to have a block verified using the
       // incorrect shuffling. That would be bad, mmkay.
       if (
-        !config.types.Root.equals(
+        !ssz.Root.equals(
           config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message),
           child.message.parentRoot
         )

@@ -1,3 +1,4 @@
+import {GENESIS_EPOCH} from "@chainsafe/lodestar-params";
 import {altair, phase0} from "@chainsafe/lodestar-types";
 import {
   CachedBeaconState,
@@ -6,7 +7,6 @@ import {
   hasMarkers,
   IEpochProcess,
 } from "../../allForks/util";
-import {GENESIS_EPOCH} from "../../constants";
 import {isInInactivityLeak} from "../../util";
 
 export function processInactivityUpdates(state: CachedBeaconState<altair.BeaconState>, process: IEpochProcess): void {
@@ -14,8 +14,8 @@ export function processInactivityUpdates(state: CachedBeaconState<altair.BeaconS
     return;
   }
   const {config} = state;
-  const {INACTIVITY_SCORE_BIAS, INACTIVITY_SCORE_RECOVERY_RATE} = config.params;
-  const inActivityLeak = isInInactivityLeak(config, (state as unknown) as phase0.BeaconState);
+  const {INACTIVITY_SCORE_BIAS, INACTIVITY_SCORE_RECOVERY_RATE} = config;
+  const inActivityLeak = isInInactivityLeak((state as unknown) as phase0.BeaconState);
   for (let i = 0; i < process.statuses.length; i++) {
     const status = process.statuses[i];
     if (hasMarkers(status.flags, FLAG_ELIGIBLE_ATTESTER)) {

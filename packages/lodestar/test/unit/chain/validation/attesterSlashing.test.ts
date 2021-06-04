@@ -1,8 +1,9 @@
 import sinon from "sinon";
 
-import {config} from "@chainsafe/lodestar-config/minimal";
+import {config} from "@chainsafe/lodestar-config/default";
 import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
+import {ssz} from "@chainsafe/lodestar-types";
 
 import {BeaconChain} from "../../../../src/chain";
 import {StubbedBeaconDb, StubbedChain} from "../../../utils/stub";
@@ -37,7 +38,7 @@ describe("GossipMessageValidator", () => {
 
   describe("validate attester slashing", () => {
     it("should return invalid attester slashing - already exisits", async () => {
-      const attesterSlashing = config.types.phase0.AttesterSlashing.defaultValue();
+      const attesterSlashing = ssz.phase0.AttesterSlashing.defaultValue();
       dbStub.attesterSlashing.hasAll.resolves(true);
 
       await expectRejectedWithLodestarError(
@@ -47,7 +48,7 @@ describe("GossipMessageValidator", () => {
     });
 
     it("should return invalid attester slashing - invalid", async () => {
-      const attesterSlashing = config.types.phase0.AttesterSlashing.defaultValue();
+      const attesterSlashing = ssz.phase0.AttesterSlashing.defaultValue();
 
       await expectRejectedWithLodestarError(
         validateGossipAttesterSlashing(config, chainStub, dbStub, attesterSlashing),
@@ -56,7 +57,7 @@ describe("GossipMessageValidator", () => {
     });
 
     it("should return valid attester slashing", async () => {
-      const attestationData = config.types.phase0.AttestationData.defaultValue();
+      const attestationData = ssz.phase0.AttestationData.defaultValue();
       const attesterSlashing: phase0.AttesterSlashing = {
         attestation1: {
           data: attestationData,

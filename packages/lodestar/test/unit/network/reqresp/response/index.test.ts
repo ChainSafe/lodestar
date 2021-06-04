@@ -1,7 +1,7 @@
 import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
 import {AbortController} from "abort-controller";
-import {config} from "@chainsafe/lodestar-config/minimal";
+import {config} from "@chainsafe/lodestar-config/default";
 import {LodestarError} from "@chainsafe/lodestar-utils";
 import {RespStatus} from "../../../../../src/constants";
 import {Method, Encoding, Version} from "../../../../../src/network/reqresp/types";

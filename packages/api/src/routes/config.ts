@@ -1,6 +1,6 @@
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {IBeaconParams, BeaconParams} from "@chainsafe/lodestar-params";
-import {Bytes32, Number64, phase0} from "@chainsafe/lodestar-types";
+import {IBeaconPreset, BeaconPreset} from "@chainsafe/lodestar-params";
+import {IChainConfig, ChainConfig} from "@chainsafe/lodestar-config";
+import {Bytes32, Number64, phase0, ssz} from "@chainsafe/lodestar-types";
 import {mapValues} from "@chainsafe/lodestar-utils";
 import {ByteVectorType, ContainerType} from "@chainsafe/ssz";
 import {ArrayOf, ContainerData, ReqEmpty, reqEmpty, ReturnTypes, ReqSerializers, RoutesData} from "../utils";
@@ -11,6 +11,16 @@ export type DepositContract = {
   chainId: Number64;
   address: Bytes32;
 };
+
+export type ISpec = IBeaconPreset & IChainConfig;
+
+// eslint-disable-next-line @typescript-eslint/naming-convention
+export const Spec = new ContainerType<ISpec>({
+  fields: {
+    ...BeaconPreset.fields,
+    ...ChainConfig.fields,
+  },
+});
 
 export type Api = {
   /**
@@ -34,7 +44,7 @@ export type Api = {
    * - any value starting with 0x in the spec is returned as a hex string
    * - numeric values are returned as a quoted integer
    */
-  getSpec(): Promise<{data: IBeaconParams}>;
+  getSpec(): Promise<{data: ISpec}>;
 };
 
 /**
@@ -53,17 +63,17 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
 }
 
 /* eslint-disable @typescript-eslint/naming-convention */
-export function getReturnTypes(config: IBeaconConfig): ReturnTypes<Api> {
+export function getReturnTypes(): ReturnTypes<Api> {
   const DepositContract = new ContainerType<DepositContract>({
     fields: {
-      chainId: config.types.Number64,
+      chainId: ssz.Number64,
       address: new ByteVectorType({length: 20}),
     },
   });
 
   return {
     getDepositContract: ContainerData(DepositContract),
-    getForkSchedule: ContainerData(ArrayOf(config.types.phase0.Fork)),
-    getSpec: ContainerData(BeaconParams),
+    getForkSchedule: ContainerData(ArrayOf(ssz.phase0.Fork)),
+    getSpec: ContainerData(Spec),
   };
 }

@@ -1,6 +1,6 @@
 import {BitList, Vector} from "@chainsafe/ssz";
 
-import * as phase0 from "../../phase0";
+import * as phase0 from "../../phase0/types";
 
 export interface SyncCommittee {
   pubkeys: Vector<phase0.BLSPubkey>;

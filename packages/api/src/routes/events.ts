@@ -1,5 +1,4 @@
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {Epoch, Number64, phase0, Slot, Root} from "@chainsafe/lodestar-types";
+import {Epoch, Number64, phase0, Slot, Root, ssz} from "@chainsafe/lodestar-types";
 import {ContainerType, Json, Type} from "@chainsafe/ssz";
 import {jsonOpts, RouteDef, TypeJson} from "../utils";
 
@@ -77,54 +76,54 @@ export type ReqTypes = {
 // It doesn't make sense to define a getReqSerializers() here given the exotic argument of eventstream()
 // The request is very simple: (topics) => {query: {topics}}, and the test will ensure compatibility server - client
 
-export function getTypeByEvent(config: IBeaconConfig): {[K in EventType]: Type<EventData[K]>} {
+export function getTypeByEvent(): {[K in EventType]: Type<EventData[K]>} {
   return {
     [EventType.head]: new ContainerType<EventData[EventType.head]>({
       fields: {
-        slot: config.types.Slot,
-        block: config.types.Root,
-        state: config.types.Root,
-        epochTransition: config.types.Boolean,
-        previousDutyDependentRoot: config.types.Root,
-        currentDutyDependentRoot: config.types.Root,
+        slot: ssz.Slot,
+        block: ssz.Root,
+        state: ssz.Root,
+        epochTransition: ssz.Boolean,
+        previousDutyDependentRoot: ssz.Root,
+        currentDutyDependentRoot: ssz.Root,
       },
     }),
 
     [EventType.block]: new ContainerType<EventData[EventType.block]>({
       fields: {
-        slot: config.types.Slot,
-        block: config.types.Root,
+        slot: ssz.Slot,
+        block: ssz.Root,
       },
     }),
 
-    [EventType.attestation]: config.types.phase0.Attestation,
-    [EventType.voluntaryExit]: config.types.phase0.SignedVoluntaryExit,
+    [EventType.attestation]: ssz.phase0.Attestation,
+    [EventType.voluntaryExit]: ssz.phase0.SignedVoluntaryExit,
 
     [EventType.finalizedCheckpoint]: new ContainerType<EventData[EventType.finalizedCheckpoint]>({
       fields: {
-        block: config.types.Root,
-        state: config.types.Root,
-        epoch: config.types.Epoch,
+        block: ssz.Root,
+        state: ssz.Root,
+        epoch: ssz.Epoch,
       },
     }),
 
     [EventType.chainReorg]: new ContainerType<EventData[EventType.chainReorg]>({
       fields: {
-        slot: config.types.Slot,
-        depth: config.types.Number64,
-        oldHeadBlock: config.types.Root,
-        newHeadBlock: config.types.Root,
-        oldHeadState: config.types.Root,
-        newHeadState: config.types.Root,
-        epoch: config.types.Epoch,
+        slot: ssz.Slot,
+        depth: ssz.Number64,
+        oldHeadBlock: ssz.Root,
+        newHeadBlock: ssz.Root,
+        oldHeadState: ssz.Root,
+        newHeadState: ssz.Root,
+        epoch: ssz.Epoch,
       },
     }),
   };
 }
 
 // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types, @typescript-eslint/explicit-function-return-type
-export function getEventSerdes(config: IBeaconConfig) {
-  const typeByEvent = getTypeByEvent(config);
+export function getEventSerdes() {
+  const typeByEvent = getTypeByEvent();
 
   return {
     toJson: (event: BeaconEvent): Json => {

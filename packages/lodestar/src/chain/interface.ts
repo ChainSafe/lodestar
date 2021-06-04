@@ -1,6 +1,6 @@
-import {allForks, Number64, Root, Slot} from "@chainsafe/lodestar-types";
-import {ForkName} from "@chainsafe/lodestar-config";
-import {phase0, CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
+import {ForkName} from "@chainsafe/lodestar-params";
+import {allForks, Number64, Root, phase0, Slot} from "@chainsafe/lodestar-types";
+import {CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {LightClientUpdater} from "@chainsafe/lodestar-light-client/lib/server/LightClientUpdater";
 

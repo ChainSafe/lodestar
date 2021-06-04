@@ -1,9 +1,9 @@
 import {Path} from "@chainsafe/ssz";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {SYNC_COMMITTEE_SIZE} from "@chainsafe/lodestar-params";
 
-export function getSyncCommitteesProofPaths(config: IBeaconConfig): Path[] {
+export function getSyncCommitteesProofPaths(): Path[] {
   const paths: Path[] = [];
-  for (let i = 0; i < config.params.SYNC_COMMITTEE_SIZE; i++) {
+  for (let i = 0; i < SYNC_COMMITTEE_SIZE; i++) {
     // hacky, but fetch both the first and second half of the pubkeys
     paths.push(["currentSyncCommittee", "pubkeys", i, 0]);
     paths.push(["currentSyncCommittee", "pubkeys", i, 32]);

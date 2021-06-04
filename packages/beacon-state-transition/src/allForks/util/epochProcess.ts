@@ -1,9 +1,14 @@
-import {ForkName} from "@chainsafe/lodestar-config";
 import {Epoch, ValidatorIndex, Gwei, phase0, allForks} from "@chainsafe/lodestar-types";
 import {intDiv} from "@chainsafe/lodestar-utils";
+import {
+  EFFECTIVE_BALANCE_INCREMENT,
+  EPOCHS_PER_SLASHINGS_VECTOR,
+  FAR_FUTURE_EPOCH,
+  ForkName,
+  MAX_EFFECTIVE_BALANCE,
+} from "@chainsafe/lodestar-params";
 
 import {computeActivationExitEpoch, getChurnLimit, isActiveValidator} from "../../util";
-import {FAR_FUTURE_EPOCH} from "../../constants";
 import {
   IAttesterStatus,
   createIAttesterStatus,
@@ -80,19 +85,13 @@ export function prepareEpochProcessState<T extends allForks.BeaconState>(state: 
 
   const {config, epochCtx, validators} = state;
   const forkName = config.getForkName(state.slot);
-  const {
-    EPOCHS_PER_SLASHINGS_VECTOR,
-    MAX_EFFECTIVE_BALANCE,
-    EFFECTIVE_BALANCE_INCREMENT,
-    EJECTION_BALANCE,
-  } = config.params;
   const currentEpoch = epochCtx.currentShuffling.epoch;
   const prevEpoch = epochCtx.previousShuffling.epoch;
   out.currentEpoch = currentEpoch;
   out.prevEpoch = prevEpoch;
 
   const slashingsEpoch = currentEpoch + intDiv(EPOCHS_PER_SLASHINGS_VECTOR, 2);
-  let exitQueueEnd = computeActivationExitEpoch(config, currentEpoch);
+  let exitQueueEnd = computeActivationExitEpoch(currentEpoch);
   let exitQueueEndChurn = 0;
 
   let activeCount = 0;
@@ -131,7 +130,7 @@ export function prepareEpochProcessState<T extends allForks.BeaconState>(state: 
       out.indicesToMaybeActivate.push(i);
     }
 
-    if (status.active && v.exitEpoch === FAR_FUTURE_EPOCH && v.effectiveBalance <= EJECTION_BALANCE) {
+    if (status.active && v.exitEpoch === FAR_FUTURE_EPOCH && v.effectiveBalance <= config.EJECTION_BALANCE) {
       out.indicesToEject.push(i);
     }
 
@@ -144,7 +143,7 @@ export function prepareEpochProcessState<T extends allForks.BeaconState>(state: 
   }
 
   // SPEC: function getBaseRewardPerIncrement()
-  out.baseRewardPerIncrement = computeBaseRewardPerIncrement(config, out.totalActiveStake);
+  out.baseRewardPerIncrement = computeBaseRewardPerIncrement(out.totalActiveStake);
 
   // order by sequence of activationEligibilityEpoch setting and then index
   out.indicesToMaybeActivate.sort(
@@ -231,7 +230,7 @@ export function prepareEpochProcessState<T extends allForks.BeaconState>(state: 
   // As per spec of `get_total_balance`:
   // EFFECTIVE_BALANCE_INCREMENT Gwei minimum to avoid divisions by zero.
   // Math safe up to ~10B ETH, afterwhich this overflows uint64.
-  const increment = config.params.EFFECTIVE_BALANCE_INCREMENT;
+  const increment = EFFECTIVE_BALANCE_INCREMENT;
   if (prevSourceUnslStake < increment) prevSourceUnslStake = increment;
   if (prevTargetUnslStake < increment) prevTargetUnslStake = increment;
   if (prevHeadUnslStake < increment) prevHeadUnslStake = increment;

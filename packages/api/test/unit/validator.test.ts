@@ -1,5 +1,6 @@
-import {ForkName} from "@chainsafe/lodestar-config";
-import {config} from "@chainsafe/lodestar-config/minimal";
+import {ForkName} from "@chainsafe/lodestar-params";
+import {ssz} from "@chainsafe/lodestar-types";
+import {config} from "@chainsafe/lodestar-config/default";
 import {Api, ReqTypes} from "../../src/routes/validator";
 import {getClient} from "../../src/client/validator";
 import {getRoutes} from "../../src/server/validator";
@@ -39,26 +40,26 @@ describe("validator", () => {
     },
     produceBlock: {
       args: [32000, Buffer.alloc(96, 1), "graffiti"],
-      res: {data: config.types.phase0.BeaconBlock.defaultValue(), version: ForkName.phase0},
+      res: {data: ssz.phase0.BeaconBlock.defaultValue(), version: ForkName.phase0},
     },
     produceAttestationData: {
       args: [2, 32000],
-      res: {data: config.types.phase0.AttestationData.defaultValue()},
+      res: {data: ssz.phase0.AttestationData.defaultValue()},
     },
     produceSyncCommitteeContribution: {
       args: [32000, 2, ZERO_HASH],
-      res: {data: config.types.altair.SyncCommitteeContribution.defaultValue()},
+      res: {data: ssz.altair.SyncCommitteeContribution.defaultValue()},
     },
     getAggregatedAttestation: {
       args: [ZERO_HASH, 32000],
-      res: {data: config.types.phase0.Attestation.defaultValue()},
+      res: {data: ssz.phase0.Attestation.defaultValue()},
     },
     publishAggregateAndProofs: {
-      args: [[config.types.phase0.SignedAggregateAndProof.defaultValue()]],
+      args: [[ssz.phase0.SignedAggregateAndProof.defaultValue()]],
       res: undefined,
     },
     publishContributionAndProofs: {
-      args: [[config.types.altair.SignedContributionAndProof.defaultValue()]],
+      args: [[ssz.altair.SignedContributionAndProof.defaultValue()]],
       res: undefined,
     },
     prepareBeaconCommitteeSubnet: {

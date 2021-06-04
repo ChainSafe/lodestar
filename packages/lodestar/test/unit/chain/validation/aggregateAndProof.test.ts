@@ -5,7 +5,7 @@ import {rewiremock} from "../../../rewiremock";
 import {List} from "@chainsafe/ssz";
 import bls from "@chainsafe/bls";
 import {bigIntToBytes} from "@chainsafe/lodestar-utils";
-import {config} from "@chainsafe/lodestar-config/minimal";
+import {config} from "@chainsafe/lodestar-config/default";
 import * as validatorUtils from "@chainsafe/lodestar-beacon-state-transition/lib/util/validator";
 import {getCurrentSlot, ISignatureSet} from "@chainsafe/lodestar-beacon-state-transition";
 import * as indexedAttUtils from "@chainsafe/lodestar-beacon-state-transition/lib/allForks/block/isValidIndexedAttestation";
@@ -79,14 +79,14 @@ describe("gossip aggregate and proof test", function () {
   it("should throw error - invalid slot (too old)", async function () {
     //move genesis time in past so current slot is high
     chain.getGenesisTime.returns(
-      Math.floor(Date.now() / 1000) - (ATTESTATION_PROPAGATION_SLOT_RANGE + 1) * config.params.SECONDS_PER_SLOT
+      Math.floor(Date.now() / 1000) - (ATTESTATION_PROPAGATION_SLOT_RANGE + 1) * config.SECONDS_PER_SLOT
     );
     sinon
       .stub(chain.clock, "currentSlot")
       .get(() =>
         getCurrentSlot(
           config,
-          Math.floor(Date.now() / 1000) - (ATTESTATION_PROPAGATION_SLOT_RANGE + 1) * config.params.SECONDS_PER_SLOT
+          Math.floor(Date.now() / 1000) - (ATTESTATION_PROPAGATION_SLOT_RANGE + 1) * config.SECONDS_PER_SLOT
         )
       );
     const item = generateSignedAggregateAndProof({
@@ -265,7 +265,7 @@ describe("gossip aggregate and proof test", function () {
       AttestationErrorCode.INVALID_AGGREGATOR
     );
 
-    expect(isAggregatorStub.withArgs(config, 1, item.message.selectionProof).calledOnce).to.be.true;
+    expect(isAggregatorStub.withArgs(1, item.message.selectionProof).calledOnce).to.be.true;
   });
 
   it("should throw error - invalid selection proof signature", async function () {

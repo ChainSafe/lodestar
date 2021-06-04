@@ -2,7 +2,7 @@
 import {getBeaconApi} from "../../../../../src/api/impl/beacon";
 import sinon from "sinon";
 import {StubbedBeaconDb} from "../../../../utils/stub";
-import {config} from "@chainsafe/lodestar-config/minimal";
+import {config} from "@chainsafe/lodestar-config/default";
 import {expect} from "chai";
 import {setupApiImplTestServer, ApiImplTestModules} from "../index.test";
 import {testLogger} from "../../../../utils/logger";

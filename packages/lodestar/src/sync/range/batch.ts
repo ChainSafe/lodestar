@@ -1,5 +1,6 @@
 import PeerId from "peer-id";
 import {allForks, Epoch, phase0} from "@chainsafe/lodestar-types";
+import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {LodestarError} from "@chainsafe/lodestar-utils";
 import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
@@ -74,8 +75,8 @@ export class Batch {
   private readonly config: IBeaconConfig;
 
   constructor(startEpoch: Epoch, config: IBeaconConfig, opts: BatchOpts) {
-    const startSlot = computeStartSlotAtEpoch(config, startEpoch) + BATCH_SLOT_OFFSET;
-    const endSlot = startSlot + opts.epochsPerBatch * config.params.SLOTS_PER_EPOCH;
+    const startSlot = computeStartSlotAtEpoch(startEpoch) + BATCH_SLOT_OFFSET;
+    const endSlot = startSlot + opts.epochsPerBatch * SLOTS_PER_EPOCH;
 
     this.config = config;
     this.startEpoch = startEpoch;

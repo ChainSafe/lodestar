@@ -17,6 +17,7 @@
     "@chainsafe/bls": "6.0.1",
     "@chainsafe/lodestar-config": "^0.23.0",
     "@chainsafe/lodestar-light-client": "^0.23.0",
+    "@chainsafe/lodestar-params": "^0.23.0",
     "@chainsafe/lodestar-types": "^0.23.0",
     "@chainsafe/lodestar-utils": "^0.23.0",
     "@chainsafe/persistent-merkle-tree": "^0.3.2",

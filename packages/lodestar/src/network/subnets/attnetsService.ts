@@ -1,7 +1,12 @@
 import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {ATTESTATION_SUBNET_COUNT} from "@chainsafe/lodestar-params";
-import {Epoch, Slot} from "@chainsafe/lodestar-types";
+import {
+  ATTESTATION_SUBNET_COUNT,
+  EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION,
+  RANDOM_SUBNETS_PER_VALIDATOR,
+  SLOTS_PER_EPOCH,
+} from "@chainsafe/lodestar-params";
+import {Epoch, Slot, ssz} from "@chainsafe/lodestar-types";
 import {ILogger, randBetween} from "@chainsafe/lodestar-utils";
 import {shuffle} from "../../util/shuffle";
 import {ChainEvent, IBeaconChain} from "../../chain";
@@ -124,7 +129,7 @@ export class AttnetsService implements IAttnetsService {
    */
   private onEpoch = (epoch: Epoch): void => {
     try {
-      const slot = computeStartSlotAtEpoch(this.config, epoch);
+      const slot = computeStartSlotAtEpoch(epoch);
       this.unsubscribeExpiredRandomSubnets(slot);
       this.pruneExpiredKnownValidators(slot);
 
@@ -199,7 +204,7 @@ export class AttnetsService implements IAttnetsService {
     const slot = this.chain.clock.currentSlot;
     // By limiting to ATTESTATION_SUBNET_COUNT, if target is still over subnetDiff equals 0
     const targetRandomSubnetCount = Math.min(
-      this.knownValidators.size * this.config.params.RANDOM_SUBNETS_PER_VALIDATOR,
+      this.knownValidators.size * RANDOM_SUBNETS_PER_VALIDATOR,
       ATTESTATION_SUBNET_COUNT
     );
     const subnetDiff = targetRandomSubnetCount - this.subscriptionsRandom.size;
@@ -217,7 +222,7 @@ export class AttnetsService implements IAttnetsService {
       // Register these new subnets until some future slot
       for (const subnet of subnetsToConnect) {
         // the heartbeat will help connect to respective peers
-        this.subscriptionsRandom.request({subnet, toSlot: randomSubscriptionSlotLen(this.config) + slot});
+        this.subscriptionsRandom.request({subnet, toSlot: randomSubscriptionSlotLen() + slot});
       }
     }
 
@@ -241,13 +246,13 @@ export class AttnetsService implements IAttnetsService {
 
   /** Update ENR */
   private updateMetadata(): void {
-    const subnets = this.config.types.phase0.AttestationSubnets.defaultValue();
+    const subnets = ssz.phase0.AttestationSubnets.defaultValue();
     for (const subnet of this.subscriptionsRandom.getAll()) {
       subnets[subnet] = true;
     }
 
     // Only update metadata if necessary, setting `metadata.[key]` triggers a write to disk
-    if (!this.config.types.phase0.AttestationSubnets.equals(subnets, this.metadata.attnets)) {
+    if (!ssz.phase0.AttestationSubnets.equals(subnets, this.metadata.attnets)) {
       this.metadata.attnets = subnets;
     }
   }
@@ -280,8 +285,7 @@ export class AttnetsService implements IAttnetsService {
   }
 }
 
-function randomSubscriptionSlotLen(config: IBeaconConfig): Slot {
-  const {EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION, SLOTS_PER_EPOCH} = config.params;
+function randomSubscriptionSlotLen(): Slot {
   return (
     randBetween(EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION, 2 * EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION) * SLOTS_PER_EPOCH
   );
