@@ -64,8 +64,6 @@ async function initAndVerifyWeakSujectivityState(
   {state, checkpoint}: WeakSubjectivityData,
   logger: ILogger
 ): Promise<TreeBacked<allForks.BeaconState>> {
-  // TODO: backfill blocks before calling isWithinWeakSubjectivityPeriod to get an accurate state.latestBlockHeader.stateRoot?  (it is always 0x0000...00 by default with fetched ws state)
-
   if (!isWithinWeakSubjectivityPeriod(config, state.genesisTime, state, checkpoint)) {
     throw new Error("Fetched weak subjectivity checkpoint not within weak subjectivity period.");
   }

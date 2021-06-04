@@ -77,7 +77,6 @@ export function isWithinWeakSubjectivityPeriod(
   wsCheckpoint: Checkpoint
 ): boolean {
   const blockRoot = getLatestBlockRoot(config, wsState);
-
   if (!config.types.Root.equals(blockRoot, wsCheckpoint.root)) {
     throw new Error(
       `Roots do not match.  expected=${toHexString(wsCheckpoint.root)}, actual=${toHexString(blockRoot)}`
