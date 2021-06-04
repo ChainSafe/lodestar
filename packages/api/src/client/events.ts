@@ -1,11 +1,12 @@
 import EventSource from "eventsource";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Api, BeaconEvent, routesData, getEventSerdes} from "../routes/events";
 import {stringifyQuery} from "./utils/format";
 
 /**
  * REST HTTP client for events routes
  */
-export function getClient(baseUrl: string): Api {
+export function getClient(_config: IBeaconConfig, baseUrl: string): Api {
   const eventSerdes = getEventSerdes();
 
   return {

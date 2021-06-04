@@ -74,7 +74,7 @@ describe("events", () => {
       });
 
       // Capture them on the client
-      const client = getClient(baseUrl);
+      const client = getClient(config, baseUrl);
       client.eventstream(topicsToRequest, controller.signal, (event) => {
         eventsReceived.push(event);
         if (eventsReceived.length >= eventsToSend.length) resolve();

@@ -19,12 +19,12 @@ export function getClient(config: IBeaconConfig, opts: HttpClientOptions, httpCl
 
   return {
     beacon: beacon.getClient(config, httpClient),
-    config: configApi.getClient(httpClient),
-    debug: debug.getClient(httpClient),
-    events: events.getClient(httpClient.baseUrl),
-    lightclient: lightclient.getClient(httpClient),
-    lodestar: lodestar.getClient(httpClient),
-    node: node.getClient(httpClient),
-    validator: validator.getClient(httpClient),
+    config: configApi.getClient(config, httpClient),
+    debug: debug.getClient(config, httpClient),
+    events: events.getClient(config, httpClient.baseUrl),
+    lightclient: lightclient.getClient(config, httpClient),
+    lodestar: lodestar.getClient(config, httpClient),
+    node: node.getClient(config, httpClient),
+    validator: validator.getClient(config, httpClient),
   };
 }
