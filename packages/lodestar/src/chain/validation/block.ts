@@ -18,38 +18,25 @@ export async function validateGossipBlock(
   const finalizedSlot = computeStartSlotAtEpoch(finalizedCheckpoint.epoch);
   // block is too old
   if (blockSlot <= finalizedSlot) {
-    throw new BlockError({
-      code: BlockErrorCode.WOULD_REVERT_FINALIZED_SLOT,
-      blockSlot,
-      finalizedSlot,
-      job: blockJob,
-    });
+    throw new BlockError(block, {code: BlockErrorCode.WOULD_REVERT_FINALIZED_SLOT, blockSlot, finalizedSlot});
   }
 
   const currentSlotWithGossipDisparity = chain.clock.currentSlotWithGossipDisparity;
   if (currentSlotWithGossipDisparity < blockSlot) {
-    throw new BlockError({
+    throw new BlockError(block, {
       code: BlockErrorCode.FUTURE_SLOT,
       currentSlot: currentSlotWithGossipDisparity,
       blockSlot,
-      job: blockJob,
     });
   }
 
   if (await db.badBlock.has(blockRoot)) {
-    throw new BlockError({
-      code: BlockErrorCode.KNOWN_BAD_BLOCK,
-      job: blockJob,
-    });
+    throw new BlockError(block, {code: BlockErrorCode.KNOWN_BAD_BLOCK});
   }
 
   const existingBlock = await db.block.get(blockRoot);
   if (existingBlock?.message.proposerIndex === block.message.proposerIndex) {
-    throw new BlockError({
-      code: BlockErrorCode.REPEAT_PROPOSAL,
-      proposer: block.message.proposerIndex,
-      job: blockJob,
-    });
+    throw new BlockError(block, {code: BlockErrorCode.REPEAT_PROPOSAL, proposer: block.message.proposerIndex});
   }
 
   let blockState;
@@ -57,35 +44,26 @@ export async function validateGossipBlock(
     // getBlockSlotState also checks for whether the current finalized checkpoint is an ancestor of the block.  as a result, we throw an IGNORE (whereas the spec says we should REJECT for this scenario).  this is something we should change this in the future to make the code airtight to the spec.
     blockState = await chain.regen.getBlockSlotState(block.message.parentRoot, block.message.slot);
   } catch (e) {
-    throw new BlockError({
+    throw new BlockError(block, {
       code: BlockErrorCode.PARENT_UNKNOWN,
       parentRoot: block.message.parentRoot.valueOf() as Uint8Array,
-      job: blockJob,
     });
   }
 
   const signatureSet = allForks.getProposerSignatureSet(blockState, block);
   if (!(await chain.bls.verifySignatureSets([signatureSet]))) {
-    throw new BlockError({
-      code: BlockErrorCode.PROPOSAL_SIGNATURE_INVALID,
-      job: blockJob,
-    });
+    throw new BlockError(block, {code: BlockErrorCode.PROPOSAL_SIGNATURE_INVALID});
   }
 
   try {
     const validProposer = isExpectedProposer(blockState.epochCtx, block.message);
     if (!validProposer) {
-      throw new BlockError({
-        code: BlockErrorCode.INCORRECT_PROPOSER,
-        blockProposer: block.message.proposerIndex,
-        job: blockJob,
-      });
+      throw Error("INCORRECT_PROPOSER");
     }
   } catch (error) {
-    throw new BlockError({
+    throw new BlockError(block, {
       code: BlockErrorCode.INCORRECT_PROPOSER,
       blockProposer: block.message.proposerIndex,
-      job: blockJob,
     });
   }
 }

@@ -13,7 +13,7 @@ import {StateContextCache, CheckpointStateCache} from "./stateCache";
 import {IBlsVerifier} from "./bls";
 import {IForkDigestContext} from "../util/forkDigestContext";
 
-interface IProcessBlock {
+export interface IProcessBlock {
   /**
    * Metadata: lets a block thats already been processed to be processed again.
    * After processing, the block will not be stored in the database

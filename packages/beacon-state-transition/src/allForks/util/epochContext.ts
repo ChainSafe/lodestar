@@ -40,6 +40,7 @@ import {getNextSyncCommitteeIndices} from "../../altair/epoch/sync_committee";
 import {computeEpochShuffling, IEpochShuffling} from "./epochShuffling";
 import {MutableVector} from "@chainsafe/persistent-ts";
 import {CachedValidatorList} from "./cachedValidatorList";
+import {computeBaseRewardPerIncrement} from "../../altair/misc";
 
 export type EpochContextOpts = {
   pubkey2index?: PubkeyIndexMap;
@@ -117,10 +118,13 @@ export function createEpochContext(
     ? computeSyncCommitteeIndices(pubkey2index, state as altair.BeaconState, true)
     : [];
 
-  const syncParticipantReward = onAltairFork ? computeSyncParticipantReward(config, state) : BigInt(0);
+  const totalActiveBalance = getTotalActiveBalance(state);
+  const syncParticipantReward = onAltairFork ? computeSyncParticipantReward(config, totalActiveBalance) : BigInt(0);
   const syncProposerReward = onAltairFork
     ? (syncParticipantReward * PROPOSER_WEIGHT) / (WEIGHT_DENOMINATOR - PROPOSER_WEIGHT)
     : BigInt(0);
+
+  const baseRewardPerIncrement = onAltairFork ? computeBaseRewardPerIncrement(totalActiveBalance) : BigInt(0);
 
   return new EpochContext({
     config,
@@ -136,6 +140,7 @@ export function createEpochContext(
     nextSyncComitteeValidatorIndexMap: computeSyncComitteeMap(nextSyncCommitteeIndexes),
     syncParticipantReward,
     syncProposerReward,
+    baseRewardPerIncrement,
   });
 }
 
@@ -224,8 +229,7 @@ export function computeSyncCommitteeIndices(
 /**
  * Same logic in https://github.com/ethereum/eth2.0-specs/blob/v1.1.0-alpha.5/specs/altair/beacon-chain.md#sync-committee-processing
  */
-export function computeSyncParticipantReward(config: IBeaconConfig, state: allForks.BeaconState): Gwei {
-  const totalActiveBalance = getTotalActiveBalance(state);
+export function computeSyncParticipantReward(config: IBeaconConfig, totalActiveBalance: Gwei): Gwei {
   const totalActiveIncrements = totalActiveBalance / EFFECTIVE_BALANCE_INCREMENT;
   const baseRewardPerIncrement =
     (EFFECTIVE_BALANCE_INCREMENT * BigInt(BASE_REWARD_FACTOR)) / bigIntSqrt(totalActiveBalance);
@@ -273,9 +277,12 @@ export function rotateEpochs(
   }
 
   if (currEpoch >= epochCtx.config.ALTAIR_FORK_EPOCH) {
-    epochCtx.syncParticipantReward = computeSyncParticipantReward(epochCtx.config, state);
+    const totalActiveBalance = getTotalActiveBalance(state);
+    epochCtx.syncParticipantReward = computeSyncParticipantReward(epochCtx.config, totalActiveBalance);
     epochCtx.syncProposerReward =
       (epochCtx.syncParticipantReward * PROPOSER_WEIGHT) / (WEIGHT_DENOMINATOR - PROPOSER_WEIGHT);
+
+    epochCtx.baseRewardPerIncrement = computeBaseRewardPerIncrement(totalActiveBalance);
   }
 }
 
@@ -294,6 +301,7 @@ interface IEpochContextData {
   nextSyncComitteeValidatorIndexMap: SyncComitteeValidatorIndexMap;
   syncParticipantReward: Gwei;
   syncProposerReward: Gwei;
+  baseRewardPerIncrement: Gwei;
 }
 
 /**
@@ -330,6 +338,11 @@ export class EpochContext {
   syncParticipantReward: phase0.Gwei;
   syncProposerReward: phase0.Gwei;
   config: IBeaconConfig;
+  /**
+   * Update freq: once per epoch after `process_effective_balance_updates()`
+   * Memory cost: 1 bigint
+   */
+  baseRewardPerIncrement: Gwei;
 
   constructor(data: IEpochContextData) {
     this.config = data.config;
@@ -345,6 +358,7 @@ export class EpochContext {
     this.nextSyncComitteeValidatorIndexMap = data.nextSyncComitteeValidatorIndexMap;
     this.syncParticipantReward = data.syncParticipantReward;
     this.syncProposerReward = data.syncProposerReward;
+    this.baseRewardPerIncrement = data.baseRewardPerIncrement;
   }
 
   /**

@@ -57,8 +57,7 @@ describe("LodestarForkChoice", function () {
      *                     \
      *                       parent (37) - child (38)
      */
-    /*
-    it("getHead - should not consider orphaned block as head", () => {
+    it.skip("getHead - should not consider orphaned block as head", () => {
       const {blockHeader} = computeAnchorCheckpoint(config, anchorState);
       const finalizedRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(blockHeader);
       const targetBlock = generateSignedBlock({message: {slot: 32}});
@@ -102,7 +101,6 @@ describe("LodestarForkChoice", function () {
       // with votes, head becomes the child block
       expect(head.slot).to.be.equal(childBlock.message.slot);
     });
-    */
 
     /**
      * finalized - slot 8 (finalized 1) - slot 12 - slot 16 (finalized 2) - slot 20 - slot 24 (finalized 3) - slot 28 - slot 32 (finalized 4)

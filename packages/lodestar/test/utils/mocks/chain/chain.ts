@@ -22,6 +22,7 @@ import {BlsVerifier, IBlsVerifier} from "../../../../src/chain/bls";
 import {ForkDigestContext, IForkDigestContext} from "../../../../src/util/forkDigestContext";
 import {generateEmptyBlockSummary} from "../../block";
 import {ForkName} from "@chainsafe/lodestar-params";
+import {testLogger} from "../../logger";
 
 /* eslint-disable @typescript-eslint/no-empty-function */
 
@@ -55,6 +56,7 @@ export class MockBeaconChain implements IBeaconChain {
   private abortController: AbortController;
 
   constructor({genesisTime, chainId, networkId, state, config}: IMockChainParams) {
+    const logger = testLogger();
     this.genesisTime = genesisTime ?? state.genesisTime;
     this.genesisValidatorsRoot = state.genesisValidatorsRoot;
     this.bls = sinon.createStubInstance(BlsVerifier);
@@ -73,9 +75,7 @@ export class MockBeaconChain implements IBeaconChain {
     this.forkChoice = mockForkChoice();
     this.stateCache = new StateContextCache();
     this.checkpointStateCache = new CheckpointStateCache(this.config);
-    this.pendingBlocks = new BlockPool({
-      config: this.config,
-    });
+    this.pendingBlocks = new BlockPool(config, logger);
     this.pendingAttestations = new AttestationPool({
       config: this.config,
     });

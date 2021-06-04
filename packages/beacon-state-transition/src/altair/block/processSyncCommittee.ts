@@ -48,7 +48,19 @@ export function getSyncCommitteeSignatureSet(
 ): ISignatureSet | null {
   const {epochCtx} = state;
   const {syncAggregate} = block.body;
+
+  // The spec uses the state to get the previous slot
+  // ```python
+  // previous_slot = max(state.slot, Slot(1)) - Slot(1)
+  // ```
+  // However we need to run the function getSyncCommitteeSignatureSet() for all the blocks in a epoch
+  // with the same state when verifying blocks in batch on RangeSync. Therefore we use the block.slot.
+  //
+  // This function expects that block.slot <= state.slot, otherwise we can't get the root sign by the sync committee.
+  // process_sync_committee() is run at the end of process_block(). process_block() is run after process_slots()
+  // which in the spec forces state.slot to equal block.slot.
   const previousSlot = Math.max(block.slot, 1) - 1;
+
   const rootSigned = getBlockRootAtSlot(state, previousSlot);
 
   if (!participantIndices) {

@@ -1,7 +1,5 @@
 import {altair, Gwei, phase0, ValidatorIndex} from "@chainsafe/lodestar-types";
-import {bigIntSqrt} from "@chainsafe/lodestar-utils";
 import {
-  BASE_REWARD_FACTOR,
   EFFECTIVE_BALANCE_INCREMENT,
   INACTIVITY_PENALTY_QUOTIENT_ALTAIR,
   PARTICIPATION_FLAG_WEIGHTS,
@@ -98,18 +96,11 @@ export function getInactivityPenaltyDeltas(
   return [rewards, penalties];
 }
 
-export function getBaseRewardPerIncrement(
-  state: CachedBeaconState<altair.BeaconState>,
-  process: IEpochProcess
-): bigint {
-  return (EFFECTIVE_BALANCE_INCREMENT * BASE_REWARD_FACTOR) / bigIntSqrt(process.totalActiveStake);
-}
-
 export function getBaseReward(
   state: CachedBeaconState<altair.BeaconState>,
   process: IEpochProcess,
   index: ValidatorIndex
 ): bigint {
   const increments = state.validators[index].effectiveBalance / EFFECTIVE_BALANCE_INCREMENT;
-  return increments * getBaseRewardPerIncrement(state, process);
+  return increments * process.baseRewardPerIncrement;
 }
