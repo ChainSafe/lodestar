@@ -1,9 +1,10 @@
-import {IEpochProcess} from "./allForks";
+import {IAttesterStatus} from "./allForks";
+import {Epoch} from "./phase0";
 
 export interface IBeaconStateTransitionMetrics {
   stfnEpochTransition: IHistogram;
   stfnProcessBlock: IHistogram;
-  registerParticipation: (process: IEpochProcess) => void;
+  registerValidatorStatuses: (currentEpoch: Epoch, statuses: IAttesterStatus[]) => void;
 }
 
 interface IHistogram {

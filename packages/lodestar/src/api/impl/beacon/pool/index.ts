@@ -10,14 +10,16 @@ import {validateGossipProposerSlashing} from "../../../../chain/validation/propo
 import {validateGossipVoluntaryExit} from "../../../../chain/validation/voluntaryExit";
 import {validateSyncCommitteeSigOnly} from "../../../../chain/validation/syncCommittee";
 import {ApiModules} from "../../types";
+import {OpSource} from "../../../../metrics/validatorMonitor";
 
 export function getBeaconPoolApi({
   chain,
   config,
   logger,
+  metrics,
   network,
   db,
-}: Pick<ApiModules, "chain" | "config" | "logger" | "network" | "db">): IBeaconPoolApi {
+}: Pick<ApiModules, "chain" | "config" | "logger" | "metrics" | "network" | "db">): IBeaconPoolApi {
   return {
     async getPoolAttestations(filters) {
       const attestations = (await db.attestation.values()).filter((attestation) => {
@@ -46,6 +48,7 @@ export function getBeaconPoolApi({
     },
 
     async submitPoolAttestations(attestations) {
+      const seenTimestamp = Date.now();
       const errors: Error[] = [];
 
       await Promise.all(
@@ -62,7 +65,10 @@ export function getBeaconPoolApi({
             });
 
             const subnet = allForks.computeSubnetForAttestation(attestationTargetState.epochCtx, attestation);
-            await validateGossipAttestation(config, chain, db, attestationJob, subnet);
+            const indexedAtt = await validateGossipAttestation(config, chain, db, attestationJob, subnet);
+
+            metrics?.registerUnaggregatedAttestation(OpSource.api, seenTimestamp, indexedAtt);
+
             await Promise.all([
               network.gossip.publishBeaconAttestation(attestation, subnet),
               db.attestation.add(attestation),

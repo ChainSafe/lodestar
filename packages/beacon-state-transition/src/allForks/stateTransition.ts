@@ -141,7 +141,7 @@ function processSlotsWithTransientCache(
       const timer = metrics?.stfnEpochTransition.startTimer();
       try {
         const process = processEpochByFork[fork](postState);
-        metrics?.registerParticipation(process);
+        metrics?.registerValidatorStatuses(process.currentEpoch, process.statuses);
 
         postState.slot++;
         rotateEpochs(postState.epochCtx, postState, postState.validators);

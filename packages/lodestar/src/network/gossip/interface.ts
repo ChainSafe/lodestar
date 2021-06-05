@@ -13,6 +13,7 @@ import {InMessage} from "libp2p-interfaces/src/pubsub";
 import {IBeaconChain} from "../../chain";
 import {NetworkEvent} from "../events";
 import {IBeaconDb} from "../../db";
+import {IMetrics} from "../../metrics";
 
 export enum GossipType {
   // phase0
@@ -128,9 +129,10 @@ export type GossipDeserializer = (buf: Uint8Array) => GossipObject;
 
 export interface IObjectValidatorModules {
   chain: IBeaconChain;
-  db: IBeaconDb;
   config: IBeaconConfig;
+  db: IBeaconDb;
   logger: ILogger;
+  metrics: IMetrics | null;
 }
 
 /**

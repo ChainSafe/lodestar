@@ -243,10 +243,12 @@ export async function onBlock(
   }
 
   if (!job.prefinalized) {
+    const attestations = Array.from(readonlyValues(block.message.body.attestations));
+
     // Only process attestations in response to an non-prefinalized block
     await Promise.all([
       // process the attestations in the block
-      ...Array.from(readonlyValues(block.message.body.attestations), (attestation) => {
+      ...attestations.map((attestation) => {
         return this.attestationProcessor.processAttestationJob({
           attestation,
           // attestation signatures from blocks have already been verified
@@ -259,6 +261,11 @@ export async function onBlock(
         return this.attestationProcessor.processAttestationJob(job);
       }),
     ]);
+
+    // Register attestations in metrics
+    for (const attestation of attestations) {
+      this.metrics?.registerAttestationInBlock(attestation, block);
+    }
   }
   // if reprocess job, don't have to reprocess block operations or pending blocks
   if (!job.reprocess) {

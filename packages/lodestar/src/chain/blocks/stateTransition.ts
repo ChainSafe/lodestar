@@ -90,7 +90,6 @@ export async function runStateTransition(
     },
     metrics
   );
-  chain.valiMonitor()asdasda
 
   const oldHead = forkChoice.getHead();
 

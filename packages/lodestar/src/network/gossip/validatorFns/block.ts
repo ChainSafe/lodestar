@@ -5,12 +5,15 @@ import {validateGossipBlock} from "../../../chain/validation";
 import {BlockError, BlockErrorCode} from "../../../chain/errors";
 import {IObjectValidatorModules, GossipTopic} from "../interface";
 import {GossipValidationError} from "../errors";
+import {OpSource} from "../../../metrics/validatorMonitor";
 
 export async function validateBeaconBlock(
-  {chain, db, config, logger}: IObjectValidatorModules,
+  {chain, db, config, logger, metrics}: IObjectValidatorModules,
   _topic: GossipTopic,
   signedBlock: allForks.SignedBeaconBlock
 ): Promise<void> {
+  const seenTimestamp = Date.now();
+
   try {
     await validateGossipBlock(config, chain, db, {
       signedBlock,
@@ -23,6 +26,8 @@ export async function validateBeaconBlock(
       root: toHexString(config.getForkTypes(signedBlock.message.slot).BeaconBlock.hashTreeRoot(signedBlock.message)),
       slot: signedBlock.message.slot,
     });
+
+    metrics?.registerBeaconBlock(OpSource.api, seenTimestamp, signedBlock.message);
   } catch (e) {
     if (!(e instanceof BlockError)) {
       logger.error("Gossip block validation threw a non-BlockError", e);

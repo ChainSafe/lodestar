@@ -212,7 +212,7 @@ export function createLodestarMetrics(
     // Validator monitoring
 
     validatorMonitor: {
-      validatorMonitorValidatorsTotal: register.gauge({
+      validatorsTotal: register.gauge({
         name: "validator_monitor_validators_total",
         help: "Count of validators that are specifically monitored by this beacon node",
         labelNames: ["index"],
@@ -305,11 +305,6 @@ export function createLodestarMetrics(
 
       // Validator Monitor Metrics (real-time)
 
-      validatorsTotal: register.gauge<"index" | "src">({
-        name: "validator_monitor_validators_total",
-        help: "Count of validators that are specifically monitored by this beacon node",
-        labelNames: ["index", "src"],
-      }),
       unaggregatedAttestationTotal: register.gauge<"index" | "src">({
         name: "validator_monitor_unaggregated_attestation_total",
         help: "Number of unaggregated attestations seen",
