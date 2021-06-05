@@ -211,13 +211,17 @@ async function stateBySlot(
 ): Promise<allForks.BeaconState | null> {
   const blockSummary = forkChoice.getCanonicalBlockSummaryAtSlot(slot);
   if (blockSummary) {
-    return stateCache.get(blockSummary.stateRoot) ?? null;
-  } else {
-    if (opts?.regenFinalizedState) {
-      return await getFinalizedState(config, db, forkChoice, slot);
+    const state = stateCache.get(blockSummary.stateRoot);
+    if (state) {
+      return state;
     }
-    return await db.stateArchive.get(slot);
   }
+
+  if (opts?.regenFinalizedState) {
+    return await getFinalizedState(config, db, forkChoice, slot);
+  }
+
+  return await db.stateArchive.get(slot);
 }
 
 export function filterStateValidatorsByStatuses(
