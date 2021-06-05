@@ -5,7 +5,7 @@ import * as phase0 from "../phase0";
 import * as altair from "../altair";
 import {IBeaconStateTransitionMetrics} from "../metrics";
 import {verifyProposerSignature} from "./signatureSets";
-import {CachedBeaconState, rotateEpochs} from "./util";
+import {CachedBeaconState, IEpochProcess, rotateEpochs} from "./util";
 import {processSlot} from "./slot";
 import {computeEpochAtSlot} from "../util";
 
@@ -13,7 +13,7 @@ type StateAllForks = CachedBeaconState<allForks.BeaconState>;
 type StatePhase0 = CachedBeaconState<phase0Types.BeaconState>;
 
 type ProcessBlockFn = (state: StateAllForks, block: allForks.BeaconBlock, verifySignatures: boolean) => void;
-type ProcessEpochFn = (state: StateAllForks) => CachedBeaconState<allForks.BeaconState>;
+type ProcessEpochFn = (state: StateAllForks) => IEpochProcess;
 
 const processBlockByFork: Record<ForkName, ProcessBlockFn> = {
   [ForkName.phase0]: phase0.processBlock as ProcessBlockFn,
@@ -48,7 +48,7 @@ export function stateTransition(
 
   // Process slots (including those with no blocks) since block.
   // Includes state upgrades
-  const res = processSlotsWithTransientCache(postState, blockSlot, metrics);
+  postState = processSlotsWithTransientCache(postState, blockSlot, metrics);
 
   // Verify proposer signature only
   if (verifyProposer) {
