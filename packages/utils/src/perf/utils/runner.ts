@@ -39,8 +39,10 @@ export class BenchmarkRunner {
   done(): void {
     const filepath = process.env.BENCHMARK_OUTPUT_PATH;
     if (filepath) {
-      const absoluteFilePath = path.resolve(filepath);
-      console.log("About to write to", absoluteFilePath);
+      // path.resolve(filePath) resolves to something like
+      // /home/runner/work/lodestar/lodestar/packages/beacon-state-transition/benchmark-output.txt
+      const absoluteFilePath = path.resolve("..", "..", filepath);
+      console.log("About to write to lodestar home dir", absoluteFilePath);
       fs.writeFileSync(absoluteFilePath, formatAsBenchmarkJs(this.results));
       if (fs.existsSync(absoluteFilePath)) {
         console.log("Write to", absoluteFilePath, "successfully");
