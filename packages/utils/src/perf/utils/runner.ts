@@ -1,4 +1,5 @@
 import fs from "fs";
+import path from "path";
 
 /* eslint-disable no-console */
 
@@ -38,7 +39,7 @@ export class BenchmarkRunner {
   done(): void {
     const filepath = process.env.BENCHMARK_OUTPUT_PATH;
     if (filepath) {
-      fs.writeFileSync(filepath, formatAsBenchmarkJs(this.results));
+      fs.writeFileSync(path.resolve(filepath), formatAsBenchmarkJs(this.results));
     }
   }
 }
