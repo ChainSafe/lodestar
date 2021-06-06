@@ -4,8 +4,6 @@ on:
   push:
     branches:
       - master
-      # `benchmark` branch allows testing without polluting master
-      - benchmark
 
 jobs:
   run:
