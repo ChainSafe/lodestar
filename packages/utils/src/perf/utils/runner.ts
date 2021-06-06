@@ -1,4 +1,5 @@
 import fs from "fs";
+import path from "path";
 
 /* eslint-disable no-console */
 
@@ -38,7 +39,10 @@ export class BenchmarkRunner {
   done(): void {
     const filepath = process.env.BENCHMARK_OUTPUT_PATH;
     if (filepath) {
-      fs.writeFileSync(filepath, formatAsBenchmarkJs(this.results));
+      // path.resolve(filePath) resolves to something like
+      // /home/runner/work/lodestar/lodestar/packages/beacon-state-transition/benchmark-output.txt
+      const absoluteFilePath = path.resolve("..", "..", filepath);
+      fs.appendFileSync(absoluteFilePath, formatAsBenchmarkJs(this.results));
     }
   }
 }
