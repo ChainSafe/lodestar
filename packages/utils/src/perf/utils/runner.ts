@@ -39,7 +39,12 @@ export class BenchmarkRunner {
   done(): void {
     const filepath = process.env.BENCHMARK_OUTPUT_PATH;
     if (filepath) {
-      fs.writeFileSync(path.resolve(filepath), formatAsBenchmarkJs(this.results));
+      const absoluteFilePath = path.resolve(filepath);
+      console.log("About to write to", absoluteFilePath);
+      fs.writeFileSync(absoluteFilePath, formatAsBenchmarkJs(this.results));
+      if (fs.existsSync(absoluteFilePath)) {
+        console.log("Write to", absoluteFilePath, "successfully");
+      }
     }
   }
 }
