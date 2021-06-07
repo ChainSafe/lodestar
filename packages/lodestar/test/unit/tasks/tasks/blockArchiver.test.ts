@@ -1,7 +1,7 @@
 import {expect} from "chai";
 import sinon, {SinonStubbedInstance} from "sinon";
 
-import {config} from "@chainsafe/lodestar-config/mainnet";
+import {config} from "@chainsafe/lodestar-config/default";
 import {ZERO_HASH} from "@chainsafe/lodestar-beacon-state-transition";
 
 import {ForkChoice} from "../../../../src/chain";
@@ -9,6 +9,7 @@ import {ArchiveBlocksTask} from "../../../../src/tasks/tasks/archiveBlocks";
 import {generateBlockSummary, generateEmptySignedBlock} from "../../../utils/block";
 import {StubbedBeaconDb} from "../../../utils/stub";
 import {testLogger} from "../../../utils/logger";
+import {ssz} from "@chainsafe/lodestar-types";
 
 describe("block archiver task", function () {
   const sandbox = sinon.createSandbox();
@@ -28,7 +29,7 @@ describe("block archiver task", function () {
    *       C(3)
    */
   it("should archive finalized blocks", async function () {
-    const blockBuffer = Buffer.from(config.types.phase0.SignedBeaconBlock.serialize(generateEmptySignedBlock()));
+    const blockBuffer = Buffer.from(ssz.phase0.SignedBeaconBlock.serialize(generateEmptySignedBlock()));
     dbStub.block.getBinary.resolves(blockBuffer);
     // block i has slot i+1
     const blocks = Array.from({length: 5}, (_, i) =>

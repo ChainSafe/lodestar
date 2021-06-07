@@ -32,7 +32,7 @@ export class SyncCommitteeService {
 
   private runSyncCommitteeTasks = async (slot: Slot, signal: AbortSignal): Promise<void> => {
     // Before altair fork no need to check duties
-    if (computeEpochAtSlot(this.config, slot) < this.config.params.ALTAIR_FORK_EPOCH) {
+    if (computeEpochAtSlot(slot) < this.config.ALTAIR_FORK_EPOCH) {
       return;
     }
 

@@ -1,13 +1,13 @@
-import {BeaconParams, IBeaconParams} from "@chainsafe/lodestar-params";
+import {ChainConfig, IChainConfig} from "@chainsafe/lodestar-config";
 
 export class NotEqualParamsError extends Error {}
 
 /**
  * Assert that two IBeaconParams are identical. Throws error otherwise
  */
-export function assertEqualParams(currentParams: IBeaconParams, expectedParams: IBeaconParams): void {
-  const params1Json = BeaconParams.toJson(currentParams) as Record<string, unknown>;
-  const params2Json = BeaconParams.toJson(expectedParams) as Record<string, unknown>;
+export function assertEqualParams(currentParams: IChainConfig, expectedParams: IChainConfig): void {
+  const params1Json = ChainConfig.toJson(currentParams) as Record<string, unknown>;
+  const params2Json = ChainConfig.toJson(expectedParams) as Record<string, unknown>;
   const keys = new Set([...Object.keys(params1Json), ...Object.keys(params2Json)]);
 
   const errors: string[] = [];

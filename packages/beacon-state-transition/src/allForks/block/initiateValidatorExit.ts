@@ -1,6 +1,6 @@
+import {FAR_FUTURE_EPOCH} from "@chainsafe/lodestar-params";
 import {allForks, ValidatorIndex} from "@chainsafe/lodestar-types";
 
-import {FAR_FUTURE_EPOCH} from "../../constants";
 import {computeActivationExitEpoch, getChurnLimit} from "../../util";
 import {CachedBeaconState} from "../util";
 
@@ -19,7 +19,7 @@ export function initiateValidatorExit(state: CachedBeaconState<allForks.BeaconSt
   // compute exit queue epoch
   const validatorExitEpochs = validators.map((v) => v.exitEpoch);
   const exitEpochs = validatorExitEpochs.filter((exitEpoch) => exitEpoch !== FAR_FUTURE_EPOCH);
-  exitEpochs.push(computeActivationExitEpoch(config, currentEpoch));
+  exitEpochs.push(computeActivationExitEpoch(currentEpoch));
   let exitQueueEpoch = Math.max(...exitEpochs);
   const exitQueueChurn = validatorExitEpochs.filter((exitEpoch) => exitEpoch === exitQueueEpoch).length;
   if (exitQueueChurn >= getChurnLimit(config, epochCtx.currentShuffling.activeIndices.length)) {
@@ -29,6 +29,6 @@ export function initiateValidatorExit(state: CachedBeaconState<allForks.BeaconSt
   // set validator exit epoch and withdrawable epoch
   validators.update(index, {
     exitEpoch: exitQueueEpoch,
-    withdrawableEpoch: exitQueueEpoch + config.params.MIN_VALIDATOR_WITHDRAWABILITY_DELAY,
+    withdrawableEpoch: exitQueueEpoch + config.MIN_VALIDATOR_WITHDRAWABILITY_DELAY,
   });
 }

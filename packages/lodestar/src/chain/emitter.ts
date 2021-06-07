@@ -1,9 +1,9 @@
 import {EventEmitter} from "events";
 import StrictEventEmitter from "strict-event-emitter-types";
 
+import {ForkName} from "@chainsafe/lodestar-params";
 import {phase0, Epoch, Slot, Version, allForks} from "@chainsafe/lodestar-types";
 import {IBlockSummary} from "@chainsafe/lodestar-fork-choice";
-import {ForkName} from "@chainsafe/lodestar-config";
 import {IBlockJob} from "./interface";
 import {AttestationError, BlockError} from "./errors";
 import {CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";

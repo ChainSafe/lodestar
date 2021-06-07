@@ -1,4 +1,10 @@
 import {allForks, phase0, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {
+  EPOCHS_PER_SLASHINGS_VECTOR,
+  MIN_SLASHING_PENALTY_QUOTIENT,
+  PROPOSER_REWARD_QUOTIENT,
+  WHISTLEBLOWER_REWARD_QUOTIENT,
+} from "@chainsafe/lodestar-params";
 
 import {decreaseBalance, increaseBalance} from "../../util";
 import {CachedBeaconState} from "../../allForks/util";
@@ -9,13 +15,7 @@ export function slashValidator(
   slashedIndex: ValidatorIndex,
   whistleblowerIndex?: ValidatorIndex
 ): void {
-  const {config, validators, epochCtx} = state;
-  const {
-    EPOCHS_PER_SLASHINGS_VECTOR,
-    MIN_SLASHING_PENALTY_QUOTIENT,
-    WHISTLEBLOWER_REWARD_QUOTIENT,
-    PROPOSER_REWARD_QUOTIENT,
-  } = config.params;
+  const {validators, epochCtx} = state;
   const epoch = epochCtx.currentShuffling.epoch;
   initiateValidatorExit(state as CachedBeaconState<allForks.BeaconState>, slashedIndex);
   const validator = validators[slashedIndex];

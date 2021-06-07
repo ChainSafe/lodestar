@@ -41,7 +41,7 @@ export function assertValidAttesterSlashing(
   const attestation1 = attesterSlashing.attestation1;
   const attestation2 = attesterSlashing.attestation2;
 
-  if (!isSlashableAttestationData(state.config, attestation1.data, attestation2.data)) {
+  if (!isSlashableAttestationData(attestation1.data, attestation2.data)) {
     throw new Error("AttesterSlashing is not slashable");
   }
   if (!isValidIndexedAttestation(state, attestation1, verifySignatures)) {

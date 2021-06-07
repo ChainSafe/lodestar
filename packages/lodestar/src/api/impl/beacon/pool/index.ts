@@ -1,7 +1,7 @@
 import {Api as IBeaconPoolApi} from "@chainsafe/lodestar-api/lib/routes/beacon/pool";
 import {Epoch} from "@chainsafe/lodestar-types";
 import {allForks} from "@chainsafe/lodestar-beacon-state-transition";
-import {SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
+import {SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
 import {IAttestationJob} from "../../../../chain";
 import {AttestationError, AttestationErrorCode} from "../../../../chain/errors";
 import {validateGossipAttestation} from "../../../../chain/validation";
@@ -61,7 +61,7 @@ export function getBeaconPoolApi({
               });
             });
 
-            const subnet = allForks.computeSubnetForAttestation(config, attestationTargetState.epochCtx, attestation);
+            const subnet = allForks.computeSubnetForAttestation(attestationTargetState.epochCtx, attestation);
             await validateGossipAttestation(config, chain, db, attestationJob, subnet);
             await Promise.all([
               network.gossip.publishBeaconAttestation(attestation, subnet),
@@ -121,7 +121,7 @@ export function getBeaconPoolApi({
       const state = chain.getHeadState();
 
       // TODO: Cache this value
-      const SYNC_COMMITTEE_SUBNET_SIZE = Math.floor(config.params.SYNC_COMMITTEE_SIZE / SYNC_COMMITTEE_SUBNET_COUNT);
+      const SYNC_COMMITTEE_SUBNET_SIZE = Math.floor(SYNC_COMMITTEE_SIZE / SYNC_COMMITTEE_SUBNET_COUNT);
 
       const errors: Error[] = [];
 

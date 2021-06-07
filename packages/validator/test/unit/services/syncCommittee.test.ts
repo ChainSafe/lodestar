@@ -3,7 +3,7 @@ import {expect} from "chai";
 import sinon from "sinon";
 import bls from "@chainsafe/bls";
 import {createIBeaconConfig} from "@chainsafe/lodestar-config";
-import {config as mainnetConfig} from "@chainsafe/lodestar-config/mainnet";
+import {config as mainnetConfig} from "@chainsafe/lodestar-config/default";
 import {SyncCommitteeService} from "../../../src/services/syncCommittee";
 import {SyncDutyAndProof} from "../../../src/services/syncCommitteeDuties";
 import {ValidatorStore} from "../../../src/services/validatorStore";
@@ -11,6 +11,7 @@ import {getApiClientStub} from "../../utils/apiStub";
 import {testLogger} from "../../utils/logger";
 import {ClockMock} from "../../utils/clock";
 import {IndicesService} from "../../../src/services/indices";
+import {ssz} from "@chainsafe/lodestar-types";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
@@ -25,9 +26,8 @@ describe("SyncCommitteeService", function () {
   let pubkeys: Uint8Array[]; // Initialize pubkeys in before() so bls is already initialized
 
   const config = createIBeaconConfig({
-    ...mainnetConfig.params,
+    ...mainnetConfig,
     SECONDS_PER_SLOT: 1 / 1000, // Make slot time super short: 1 ms
-    SLOTS_PER_EPOCH: 3,
     ALTAIR_FORK_EPOCH: 0, // Activate Altair immediatelly
   });
 
@@ -50,9 +50,9 @@ describe("SyncCommitteeService", function () {
     const syncCommitteeService = new SyncCommitteeService(config, logger, api, clock, validatorStore, indicesService);
 
     const beaconBlockRoot = Buffer.alloc(32, 0x4d);
-    const syncCommitteeSignature = config.types.altair.SyncCommitteeSignature.defaultValue();
-    const contribution = config.types.altair.SyncCommitteeContribution.defaultValue();
-    const contributionAndProof = config.types.altair.SignedContributionAndProof.defaultValue();
+    const syncCommitteeSignature = ssz.altair.SyncCommitteeSignature.defaultValue();
+    const contribution = ssz.altair.SyncCommitteeContribution.defaultValue();
+    const contributionAndProof = ssz.altair.SignedContributionAndProof.defaultValue();
     const duties: SyncDutyAndProof[] = [
       {
         duty: {

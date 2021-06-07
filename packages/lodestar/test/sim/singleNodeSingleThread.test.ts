@@ -1,4 +1,4 @@
-import {IBeaconParams} from "@chainsafe/lodestar-params";
+import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {phase0} from "@chainsafe/lodestar-types";
 import {getDevBeaconNode} from "../utils/node/beacon";
 import {waitForEvent} from "../utils/events/resolver";
@@ -10,16 +10,13 @@ import {logFilesDir} from "./params";
 import {simTestInfoTracker} from "../utils/node/simTest";
 import {sleep, TimestampFormatCode} from "@chainsafe/lodestar-utils";
 import {initBLS} from "@chainsafe/lodestar-cli/src/util";
+import {IChainConfig} from "@chainsafe/lodestar-config";
 
 /* eslint-disable no-console, @typescript-eslint/naming-convention */
 
 describe("Run single node single thread interop validators (no eth1) until checkpoint", function () {
-  const testParams: Pick<IBeaconParams, "SECONDS_PER_SLOT" | "SLOTS_PER_EPOCH" | "TARGET_AGGREGATORS_PER_COMMITTEE"> = {
+  const testParams: Pick<IChainConfig, "SECONDS_PER_SLOT"> = {
     SECONDS_PER_SLOT: 2,
-    SLOTS_PER_EPOCH: 8,
-    // Reduce from 16 of minimal but ensure there's almost always an aggregator per committee
-    // otherwise block producers won't be able to include attestations
-    TARGET_AGGREGATORS_PER_COMMITTEE: 4,
   };
 
   before(async function () {
@@ -55,7 +52,7 @@ describe("Run single node single thread interop validators (no eth1) until check
       const genesisSlotsDelay = 3;
 
       const timeout =
-        ((epochsOfMargin + expectedEpochsToFinish) * testParams.SLOTS_PER_EPOCH + genesisSlotsDelay) *
+        ((epochsOfMargin + expectedEpochsToFinish) * SLOTS_PER_EPOCH + genesisSlotsDelay) *
         testParams.SECONDS_PER_SLOT *
         1000;
 
@@ -69,7 +66,7 @@ describe("Run single node single thread interop validators (no eth1) until check
         timestampFormat: {
           format: TimestampFormatCode.EpochSlot,
           genesisTime,
-          slotsPerEpoch: testParams.SLOTS_PER_EPOCH,
+          slotsPerEpoch: SLOTS_PER_EPOCH,
           secondsPerSlot: testParams.SECONDS_PER_SLOT,
         },
       };
@@ -108,7 +105,7 @@ describe("Run single node single thread interop validators (no eth1) until check
         await Promise.all(validators.map((v) => v.stop()));
 
         // wait for 1 slot
-        await sleep(1 * bn.config.params.SECONDS_PER_SLOT * 1000);
+        await sleep(1 * bn.config.SECONDS_PER_SLOT * 1000);
         stopInfoTracker();
         await bn.close();
         console.log("\n\nDone\n\n");

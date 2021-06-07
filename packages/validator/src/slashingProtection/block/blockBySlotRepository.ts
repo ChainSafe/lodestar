@@ -1,4 +1,4 @@
-import {BLSPubkey, phase0, Slot} from "@chainsafe/lodestar-types";
+import {BLSPubkey, phase0, Slot, ssz} from "@chainsafe/lodestar-types";
 import {intToBytes, bytesToInt} from "@chainsafe/lodestar-utils";
 import {Bucket, DB_PREFIX_LENGTH, encodeKey, IDatabaseApiOptions, uintLen} from "@chainsafe/lodestar-db";
 import {Type} from "@chainsafe/ssz";
@@ -17,7 +17,7 @@ export class BlockBySlotRepository {
 
   constructor(opts: IDatabaseApiOptions) {
     this.db = opts.controller;
-    this.type = opts.config.types.phase0.SlashingProtectionBlock;
+    this.type = ssz.phase0.SlashingProtectionBlock;
   }
 
   async getAll(pubkey: BLSPubkey, limit?: number): Promise<phase0.SlashingProtectionBlock[]> {

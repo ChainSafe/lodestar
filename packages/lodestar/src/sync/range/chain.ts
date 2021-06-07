@@ -252,7 +252,7 @@ export class SyncChain {
 
         // If startEpoch of the next batch to be processed > targetEpoch -> Done
         const toBeProcessedEpoch = toBeProcessedStartEpoch(toArr(this.batches), this.startEpoch, this.opts);
-        if (this.target && computeStartSlotAtEpoch(this.config, toBeProcessedEpoch) >= this.target.slot) {
+        if (this.target && computeStartSlotAtEpoch(toBeProcessedEpoch) >= this.target.slot) {
           break;
         }
 
@@ -358,7 +358,7 @@ export class SyncChain {
 
     // This line decides the starting epoch of the next batch. MUST ensure no duplicate batch for the same startEpoch
     const startEpoch = toBeDownloadedStartEpoch(batches, this.startEpoch, this.opts);
-    const toBeDownloadedSlot = computeStartSlotAtEpoch(this.config, startEpoch) + BATCH_SLOT_OFFSET;
+    const toBeDownloadedSlot = computeStartSlotAtEpoch(startEpoch) + BATCH_SLOT_OFFSET;
 
     // Don't request batches beyond the target head slot
     if (this.target && toBeDownloadedSlot > this.target.slot) {

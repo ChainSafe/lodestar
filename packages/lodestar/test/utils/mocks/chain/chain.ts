@@ -2,8 +2,8 @@ import {AbortController} from "abort-controller";
 import sinon from "sinon";
 
 import {TreeBacked} from "@chainsafe/ssz";
-import {allForks, ForkDigest, Number64, Root, Slot, Uint16, Uint64} from "@chainsafe/lodestar-types";
-import {IBeaconConfig, ForkName} from "@chainsafe/lodestar-config";
+import {allForks, ForkDigest, Number64, Root, Slot, ssz, Uint16, Uint64} from "@chainsafe/lodestar-types";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {CachedBeaconState, createCachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
 import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
@@ -21,6 +21,7 @@ import {AttestationPool} from "../../../../src/chain/attestation";
 import {BlsVerifier, IBlsVerifier} from "../../../../src/chain/bls";
 import {ForkDigestContext, IForkDigestContext} from "../../../../src/util/forkDigestContext";
 import {generateEmptyBlockSummary} from "../../block";
+import {ForkName} from "@chainsafe/lodestar-params";
 import {testLogger} from "../../logger";
 
 /* eslint-disable @typescript-eslint/no-empty-function */
@@ -71,7 +72,7 @@ export class MockBeaconChain implements IBeaconChain {
       emitter: this.emitter,
       signal: this.abortController.signal,
     });
-    this.forkChoice = mockForkChoice(config);
+    this.forkChoice = mockForkChoice();
     this.stateCache = new StateContextCache();
     this.checkpointStateCache = new CheckpointStateCache(this.config);
     this.pendingBlocks = new BlockPool(config, logger);
@@ -89,7 +90,7 @@ export class MockBeaconChain implements IBeaconChain {
       metrics: null,
     });
     this.forkDigestContext = new ForkDigestContext(this.config, this.genesisValidatorsRoot);
-    this.lightclientUpdater = new LightClientUpdater(config, db);
+    this.lightclientUpdater = new LightClientUpdater(db);
   }
 
   async getHeadBlock(): Promise<null> {
@@ -126,10 +127,10 @@ export class MockBeaconChain implements IBeaconChain {
   }
 
   getHeadForkDigest(): ForkDigest {
-    return this.config.types.ForkDigest.defaultValue();
+    return ssz.ForkDigest.defaultValue();
   }
   getClockForkDigest(): ForkDigest {
-    return this.config.types.ForkDigest.defaultValue();
+    return ssz.ForkDigest.defaultValue();
   }
   getHeadForkName(): ForkName {
     return ForkName.phase0;
@@ -177,10 +178,10 @@ export class MockBeaconChain implements IBeaconChain {
   }
 }
 
-function mockForkChoice(config: IBeaconConfig): IForkChoice {
-  const root = config.types.Root.defaultValue() as Uint8Array;
+function mockForkChoice(): IForkChoice {
+  const root = ssz.Root.defaultValue() as Uint8Array;
   const blockSummary = generateEmptyBlockSummary();
-  const checkpoint = config.types.phase0.Checkpoint.defaultValue();
+  const checkpoint = ssz.phase0.Checkpoint.defaultValue();
 
   return {
     getAncestor: () => root,

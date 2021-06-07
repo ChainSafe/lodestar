@@ -1,15 +1,16 @@
 import sinon, {SinonStubbedInstance} from "sinon";
 
-import {config} from "@chainsafe/lodestar-config/minimal";
+import {config} from "@chainsafe/lodestar-config/default";
 import {
   phase0,
   createCachedBeaconState,
   CachedBeaconState,
+  computeEpochAtSlot,
   computeDomain,
   computeSigningRoot,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
-import {allForks} from "@chainsafe/lodestar-types";
+import {allForks, ssz} from "@chainsafe/lodestar-types";
 
 import {BeaconChain} from "../../../../src/chain";
 import {StateRegenerator} from "../../../../src/chain/regen";
@@ -18,9 +19,8 @@ import {generateState} from "../../../utils/state";
 import {validateGossipVoluntaryExit} from "../../../../src/chain/validation/voluntaryExit";
 import {VoluntaryExitErrorCode} from "../../../../src/chain/errors/voluntaryExitError";
 import {expectRejectedWithLodestarError} from "../../../utils/errors";
-import {FAR_FUTURE_EPOCH} from "../../../../src/constants";
+import {DOMAIN_VOLUNTARY_EXIT, FAR_FUTURE_EPOCH, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {PointFormat, SecretKey} from "@chainsafe/bls";
-import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition/src/util/epoch";
 
 describe("validate voluntary exit", () => {
   const sandbox = sinon.createSandbox();
@@ -33,10 +33,10 @@ describe("validate voluntary exit", () => {
   before(() => {
     const sk = SecretKey.fromKeygen();
 
-    const stateEmpty = config.types.phase0.BeaconState.defaultTreeBacked();
+    const stateEmpty = ssz.phase0.BeaconState.defaultTreeBacked();
 
     // Validator has to be active for long enough
-    stateEmpty.slot = config.params.SHARD_COMMITTEE_PERIOD * config.params.SLOTS_PER_EPOCH;
+    stateEmpty.slot = config.SHARD_COMMITTEE_PERIOD * SLOTS_PER_EPOCH;
 
     // Add a validator that's active since genesis and ready to exit
     stateEmpty.validators[0] = {
@@ -55,12 +55,11 @@ describe("validate voluntary exit", () => {
       validatorIndex: 0,
     };
     const domain = computeDomain(
-      config,
-      config.params.DOMAIN_VOLUNTARY_EXIT,
+      DOMAIN_VOLUNTARY_EXIT,
       stateEmpty.fork.currentVersion,
       stateEmpty.genesisValidatorsRoot
     );
-    const signingRoot = computeSigningRoot(config, config.types.phase0.VoluntaryExit, voluntaryExit, domain);
+    const signingRoot = computeSigningRoot(ssz.phase0.VoluntaryExit, voluntaryExit, domain);
     signedVoluntaryExit = {message: voluntaryExit, signature: sk.sign(signingRoot).toBytes()};
 
     state = createCachedBeaconState(config, generateState(stateEmpty, config));
@@ -100,7 +99,7 @@ describe("validate voluntary exit", () => {
     const signedVoluntaryExitInvalid: phase0.SignedVoluntaryExit = {
       message: {
         // Force an invalid epoch
-        epoch: computeEpochAtSlot(config, state.slot) + 1,
+        epoch: computeEpochAtSlot(state.slot) + 1,
         validatorIndex: 0,
       },
       signature: Buffer.alloc(96, 1),

@@ -1,5 +1,6 @@
 import {ContainerType, IJsonOptions, Json, ListType, Type} from "@chainsafe/ssz";
-import {ForkName, IBeaconConfig} from "@chainsafe/lodestar-config";
+import {ForkName} from "@chainsafe/lodestar-params";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {objectToExpectedCase} from "@chainsafe/lodestar-utils";
 import {Schema, SchemaDefinition} from "./schema";
 

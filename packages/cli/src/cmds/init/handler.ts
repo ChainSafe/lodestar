@@ -90,7 +90,7 @@ export async function persistOptionsAndConfig(
   }
 
   if (!fs.existsSync(beaconPaths.paramsFile)) {
-    writeBeaconParams(beaconPaths.paramsFile, beaconConfig.params);
+    writeBeaconParams(beaconPaths.paramsFile, beaconConfig);
   }
 
   // initialize beacon configuration file, if it doesn't exist

@@ -2,15 +2,15 @@ import {join} from "path";
 
 import {TreeBacked} from "@chainsafe/ssz";
 import {allForks, altair} from "@chainsafe/lodestar-beacon-state-transition";
-import {params} from "@chainsafe/lodestar-params/minimal";
 import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
 import {IProcessProposerSlashingTestCase} from "./type";
 import {SPEC_TEST_LOCATION} from "../../../../utils/specTestCases";
 import {expectEqualBeaconState} from "../../util";
+import {ssz} from "@chainsafe/lodestar-types";
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
-const config = createIBeaconConfig({...params, ALTAIR_FORK_EPOCH: 0});
+const config = createIBeaconConfig({ALTAIR_FORK_EPOCH: 0});
 
 describeDirectorySpecTest<IProcessProposerSlashingTestCase, altair.BeaconState>(
   "process proposer slashing minimal",
@@ -35,10 +35,10 @@ describeDirectorySpecTest<IProcessProposerSlashingTestCase, altair.BeaconState>(
       },
     },
     sszTypes: {
-      pre: config.types.altair.BeaconState,
-      post: config.types.altair.BeaconState,
+      pre: ssz.altair.BeaconState,
+      post: ssz.altair.BeaconState,
       // eslint-disable-next-line @typescript-eslint/naming-convention
-      proposer_slashing: config.types.phase0.ProposerSlashing,
+      proposer_slashing: ssz.phase0.ProposerSlashing,
     },
     timeout: 10000,
     shouldError: (testCase) => !testCase.post,

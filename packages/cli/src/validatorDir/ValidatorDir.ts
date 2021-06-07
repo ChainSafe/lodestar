@@ -3,7 +3,6 @@ import path from "path";
 import bls, {SecretKey} from "@chainsafe/bls";
 import {Keystore} from "@chainsafe/bls-keystore";
 import {phase0} from "@chainsafe/lodestar-types";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {YargsError, readValidatorPassphrase} from "../util";
 import {decodeEth1TxData} from "../depositContract/depositData";
 import {add0xPrefix} from "../util/format";
@@ -146,7 +145,7 @@ export class ValidatorDir {
    * Attempts to read files in `this.dir` and return an `Eth1DepositData` that can be used for
    * submitting an Eth1 deposit.
    */
-  eth1DepositData(config: IBeaconConfig): IEth1DepositData {
+  eth1DepositData(): IEth1DepositData {
     const depositDataPath = path.join(this.dir, ETH1_DEPOSIT_DATA_FILE);
     const depositAmountPath = path.join(this.dir, ETH1_DEPOSIT_AMOUNT_FILE);
     const depositDataRlp = fs.readFileSync(depositDataPath, "utf8");
@@ -154,7 +153,7 @@ export class ValidatorDir {
 
     // This acts as a sanity check to ensure that the amount from `ETH1_DEPOSIT_AMOUNT_FILE`
     // matches the value that `ETH1_DEPOSIT_DATA_FILE` was created with.
-    const {depositData, root} = decodeEth1TxData(depositDataRlp, depositAmount, config);
+    const {depositData, root} = decodeEth1TxData(depositDataRlp, depositAmount);
 
     return {rlp: depositDataRlp, depositData, root};
   }

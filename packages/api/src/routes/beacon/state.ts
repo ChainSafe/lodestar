@@ -1,6 +1,5 @@
 import {ContainerType} from "@chainsafe/ssz";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {phase0, CommitteeIndex, Slot, ValidatorIndex, Epoch, Root, Gwei} from "@chainsafe/lodestar-types";
+import {phase0, CommitteeIndex, Slot, ValidatorIndex, Epoch, Root, Gwei, ssz} from "@chainsafe/lodestar-types";
 import {
   RoutesData,
   ReturnTypes,
@@ -226,49 +225,49 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
 }
 
 /* eslint-disable @typescript-eslint/naming-convention */
-export function getReturnTypes(config: IBeaconConfig): ReturnTypes<Api> {
+export function getReturnTypes(): ReturnTypes<Api> {
   const FinalityCheckpoints = new ContainerType<FinalityCheckpoints>({
     fields: {
-      previousJustified: config.types.phase0.Checkpoint,
-      currentJustified: config.types.phase0.Checkpoint,
-      finalized: config.types.phase0.Checkpoint,
+      previousJustified: ssz.phase0.Checkpoint,
+      currentJustified: ssz.phase0.Checkpoint,
+      finalized: ssz.phase0.Checkpoint,
     },
   });
 
   const ValidatorResponse = new ContainerType<ValidatorResponse>({
     fields: {
-      index: config.types.ValidatorIndex,
-      balance: config.types.Gwei,
+      index: ssz.ValidatorIndex,
+      balance: ssz.Gwei,
       status: new StringType<ValidatorStatus>(),
-      validator: config.types.phase0.Validator,
+      validator: ssz.phase0.Validator,
     },
   });
 
   const ValidatorBalance = new ContainerType<ValidatorBalance>({
     fields: {
-      index: config.types.ValidatorIndex,
-      balance: config.types.Gwei,
+      index: ssz.ValidatorIndex,
+      balance: ssz.Gwei,
     },
   });
 
   const EpochCommitteeResponse = new ContainerType<EpochCommitteeResponse>({
     fields: {
-      index: config.types.CommitteeIndex,
-      slot: config.types.Slot,
-      validators: config.types.phase0.CommitteeIndices,
+      index: ssz.CommitteeIndex,
+      slot: ssz.Slot,
+      validators: ssz.phase0.CommitteeIndices,
     },
   });
 
   const EpochSyncCommitteesResponse = new ContainerType<EpochSyncCommitteeResponse>({
     fields: {
-      validators: ArrayOf(config.types.ValidatorIndex),
-      validatorAggregates: ArrayOf(config.types.ValidatorIndex),
+      validators: ArrayOf(ssz.ValidatorIndex),
+      validatorAggregates: ArrayOf(ssz.ValidatorIndex),
     },
   });
 
   return {
-    getStateRoot: ContainerData(config.types.Root),
-    getStateFork: ContainerData(config.types.phase0.Fork),
+    getStateRoot: ContainerData(ssz.Root),
+    getStateFork: ContainerData(ssz.phase0.Fork),
     getStateFinalityCheckpoints: ContainerData(FinalityCheckpoints),
     getStateValidators: ContainerData(ArrayOf(ValidatorResponse)),
     getStateValidator: ContainerData(ValidatorResponse),

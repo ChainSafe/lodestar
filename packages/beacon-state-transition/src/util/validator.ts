@@ -8,6 +8,7 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {getCurrentEpoch} from "./epoch";
 import {intDiv, bytesToInt} from "@chainsafe/lodestar-utils";
 import {getBeaconCommittee} from "./committee";
+import {TARGET_COMMITTEE_SIZE} from "@chainsafe/lodestar-params";
 
 /**
  * Check if [[validator]] is active
@@ -39,35 +40,27 @@ export function getActiveValidatorIndices(state: allForks.BeaconState, epoch: Ep
 }
 
 export function getChurnLimit(config: IBeaconConfig, activeValidatorCount: number): number {
-  return Math.max(
-    config.params.MIN_PER_EPOCH_CHURN_LIMIT,
-    intDiv(activeValidatorCount, config.params.CHURN_LIMIT_QUOTIENT)
-  );
+  return Math.max(config.MIN_PER_EPOCH_CHURN_LIMIT, intDiv(activeValidatorCount, config.CHURN_LIMIT_QUOTIENT));
 }
 
 /**
  * Return the validator churn limit for the current epoch.
  */
 export function getValidatorChurnLimit(config: IBeaconConfig, state: allForks.BeaconState): number {
-  return getChurnLimit(config, getActiveValidatorIndices(state, getCurrentEpoch(config, state)).length);
+  return getChurnLimit(config, getActiveValidatorIndices(state, getCurrentEpoch(state)).length);
 }
 
 export function isAggregator(
-  config: IBeaconConfig,
   state: allForks.BeaconState,
   slot: Slot,
   index: CommitteeIndex,
   slotSignature: BLSSignature
 ): boolean {
-  const committee = getBeaconCommittee(config, state, slot, index);
-  return isAggregatorFromCommitteeLength(config, committee.length, slotSignature);
+  const committee = getBeaconCommittee(state, slot, index);
+  return isAggregatorFromCommitteeLength(committee.length, slotSignature);
 }
 
-export function isAggregatorFromCommitteeLength(
-  config: IBeaconConfig,
-  committeeLength: number,
-  slotSignature: BLSSignature
-): boolean {
-  const modulo = Math.max(1, intDiv(committeeLength, config.params.TARGET_COMMITTEE_SIZE));
+export function isAggregatorFromCommitteeLength(committeeLength: number, slotSignature: BLSSignature): boolean {
+  const modulo = Math.max(1, intDiv(committeeLength, TARGET_COMMITTEE_SIZE));
   return bytesToInt(hash(slotSignature.valueOf() as Uint8Array).slice(0, 8)) % modulo === 0;
 }

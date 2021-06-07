@@ -1,5 +1,6 @@
-import {ForkName} from "@chainsafe/lodestar-config";
-import {config} from "@chainsafe/lodestar-config/minimal";
+import {ForkName} from "@chainsafe/lodestar-params";
+import {ssz} from "@chainsafe/lodestar-types";
+import {config} from "@chainsafe/lodestar-config/default";
 import {toHexString} from "@chainsafe/ssz";
 import {Api, ReqTypes, BlockHeaderResponse, ValidatorResponse} from "../../src/routes/beacon";
 import {getClient} from "../../src/client/beacon";
@@ -14,14 +15,14 @@ describe("beacon", () => {
   const blockHeaderResponse: BlockHeaderResponse = {
     root,
     canonical: true,
-    header: config.types.phase0.SignedBeaconBlockHeader.defaultValue(),
+    header: ssz.phase0.SignedBeaconBlockHeader.defaultValue(),
   };
 
   const validatorResponse: ValidatorResponse = {
     index: 1,
     balance,
     status: "active_ongoing",
-    validator: config.types.phase0.Validator.defaultValue(),
+    validator: ssz.phase0.Validator.defaultValue(),
   };
 
   runGenericServerTest<Api, ReqTypes>(config, getClient, getRoutes, {
@@ -29,15 +30,15 @@ describe("beacon", () => {
 
     getBlock: {
       args: ["head"],
-      res: {data: config.types.phase0.SignedBeaconBlock.defaultValue()},
+      res: {data: ssz.phase0.SignedBeaconBlock.defaultValue()},
     },
     getBlockV2: {
       args: ["head"],
-      res: {data: config.types.altair.SignedBeaconBlock.defaultValue(), version: ForkName.altair},
+      res: {data: ssz.altair.SignedBeaconBlock.defaultValue(), version: ForkName.altair},
     },
     getBlockAttestations: {
       args: ["head"],
-      res: {data: [config.types.phase0.Attestation.defaultValue()]},
+      res: {data: [ssz.phase0.Attestation.defaultValue()]},
     },
     getBlockHeader: {
       args: ["head"],
@@ -52,7 +53,7 @@ describe("beacon", () => {
       res: {data: root},
     },
     publishBlock: {
-      args: [config.types.phase0.SignedBeaconBlock.defaultValue()],
+      args: [ssz.phase0.SignedBeaconBlock.defaultValue()],
       res: undefined,
     },
 
@@ -60,38 +61,38 @@ describe("beacon", () => {
 
     getPoolAttestations: {
       args: [{slot: 1, committeeIndex: 2}],
-      res: {data: [config.types.phase0.Attestation.defaultValue()]},
+      res: {data: [ssz.phase0.Attestation.defaultValue()]},
     },
     getPoolAttesterSlashings: {
       args: [],
-      res: {data: [config.types.phase0.AttesterSlashing.defaultValue()]},
+      res: {data: [ssz.phase0.AttesterSlashing.defaultValue()]},
     },
     getPoolProposerSlashings: {
       args: [],
-      res: {data: [config.types.phase0.ProposerSlashing.defaultValue()]},
+      res: {data: [ssz.phase0.ProposerSlashing.defaultValue()]},
     },
     getPoolVoluntaryExits: {
       args: [],
-      res: {data: [config.types.phase0.SignedVoluntaryExit.defaultValue()]},
+      res: {data: [ssz.phase0.SignedVoluntaryExit.defaultValue()]},
     },
     submitPoolAttestations: {
-      args: [[config.types.phase0.Attestation.defaultValue()]],
+      args: [[ssz.phase0.Attestation.defaultValue()]],
       res: undefined,
     },
     submitPoolAttesterSlashing: {
-      args: [config.types.phase0.AttesterSlashing.defaultValue()],
+      args: [ssz.phase0.AttesterSlashing.defaultValue()],
       res: undefined,
     },
     submitPoolProposerSlashing: {
-      args: [config.types.phase0.ProposerSlashing.defaultValue()],
+      args: [ssz.phase0.ProposerSlashing.defaultValue()],
       res: undefined,
     },
     submitPoolVoluntaryExit: {
-      args: [config.types.phase0.SignedVoluntaryExit.defaultValue()],
+      args: [ssz.phase0.SignedVoluntaryExit.defaultValue()],
       res: undefined,
     },
     submitPoolSyncCommitteeSignatures: {
-      args: [[config.types.altair.SyncCommitteeSignature.defaultValue()]],
+      args: [[ssz.altair.SyncCommitteeSignature.defaultValue()]],
       res: undefined,
     },
 
@@ -103,15 +104,15 @@ describe("beacon", () => {
     },
     getStateFork: {
       args: ["head"],
-      res: {data: config.types.phase0.Fork.defaultValue()},
+      res: {data: ssz.phase0.Fork.defaultValue()},
     },
     getStateFinalityCheckpoints: {
       args: ["head"],
       res: {
         data: {
-          previousJustified: config.types.phase0.Checkpoint.defaultValue(),
-          currentJustified: config.types.phase0.Checkpoint.defaultValue(),
-          finalized: config.types.phase0.Checkpoint.defaultValue(),
+          previousJustified: ssz.phase0.Checkpoint.defaultValue(),
+          currentJustified: ssz.phase0.Checkpoint.defaultValue(),
+          finalized: ssz.phase0.Checkpoint.defaultValue(),
         },
       },
     },
@@ -140,7 +141,7 @@ describe("beacon", () => {
 
     getGenesis: {
       args: [],
-      res: {data: config.types.phase0.Genesis.defaultValue()},
+      res: {data: ssz.phase0.Genesis.defaultValue()},
     },
   });
 

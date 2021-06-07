@@ -112,7 +112,7 @@ export async function validateAggregateAttestation(
     });
   }
 
-  if (!isAggregatorFromCommitteeLength(config, committee.length, aggregateAndProof.message.selectionProof)) {
+  if (!isAggregatorFromCommitteeLength(committee.length, aggregateAndProof.message.selectionProof)) {
     throw new AttestationError({
       code: AttestationErrorCode.INVALID_AGGREGATOR,
       job: attestationJob,
@@ -120,7 +120,7 @@ export async function validateAggregateAttestation(
   }
 
   const slot = attestation.data.slot;
-  const epoch = computeEpochAtSlot(config, slot);
+  const epoch = computeEpochAtSlot(slot);
   const indexedAttestation = attestationTargetState.getIndexedAttestation(attestation);
   const aggregator = attestationTargetState.index2pubkey[aggregateAndProof.message.aggregatorIndex];
 

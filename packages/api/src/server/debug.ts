@@ -7,7 +7,7 @@ const mimeTypeSSZ = "application/octet-stream";
 
 export function getRoutes(config: IBeaconConfig, api: Api): ServerRoutes<Api, ReqTypes> {
   const reqSerializers = getReqSerializers();
-  const returnTypes = getReturnTypes(config);
+  const returnTypes = getReturnTypes();
 
   const serverRoutes = getGenericJsonServer<Api, ReqTypes>(
     {routesData, getReturnTypes, getReqSerializers},

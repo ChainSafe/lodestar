@@ -14,17 +14,17 @@ Parameters for configuring an Eth2 network
 
 ```typescript
 // mainnet and minimal presets are available under non-default exports
-import {params as mainnetParams} from "@chainsafe/lodestar-params/mainnet";
-import {params as minimalParams} from "@chainsafe/lodestar-params/mainnet";
+import {params as mainnetPreset} from "@chainsafe/lodestar-params/mainnet";
+import {params as minimalPreset} from "@chainsafe/lodestar-params/mainnet";
 
-mainnetParams.SHARD_COUNT;
+mainnetPreset.SHARD_COUNT;
 
-// custom params should follow the IBeaconParams interface
+// custom params should follow the IBeaconPreset interface
 
-import {IBeaconParams} from "@chainsafe/lodestar-params";
+import {IBeaconPreset} from "@chainsafe/lodestar-params";
 
-const testnetParams: IBeaconParams = {
-  ...mainnetParams,
+const testnetPreset: IBeaconPreset = {
+  ...mainnetPreset,
   SHARD_COUNT: 4,
 };
 ```

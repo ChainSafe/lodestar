@@ -2,7 +2,7 @@ import {AbortController} from "abort-controller";
 import {expect} from "chai";
 import sinon from "sinon";
 import bls from "@chainsafe/bls";
-import {config as mainnetConfig} from "@chainsafe/lodestar-config/mainnet";
+import {config as mainnetConfig} from "@chainsafe/lodestar-config/default";
 import {
   generateEmptyAttestation,
   generateEmptySignedAggregateAndProof,
@@ -14,6 +14,7 @@ import {getApiClientStub} from "../../utils/apiStub";
 import {testLogger} from "../../utils/logger";
 import {ClockMock} from "../../utils/clock";
 import {IndicesService} from "../../../src/services/indices";
+import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 
 describe("AttestationService", function () {
   const sandbox = sinon.createSandbox();
@@ -26,9 +27,11 @@ describe("AttestationService", function () {
   let pubkeys: Uint8Array[]; // Initialize pubkeys in before() so bls is already initialized
 
   // Clone before mutating
-  const config: typeof mainnetConfig = {...mainnetConfig, params: {...mainnetConfig.params}};
-  config.params.SECONDS_PER_SLOT = 1 / 1000; // Make slot time super short: 1 ms
-  config.params.SLOTS_PER_EPOCH = 3;
+  const config: typeof mainnetConfig = createIBeaconConfig({
+    ...mainnetConfig,
+    // eslint-disable-next-line @typescript-eslint/naming-convention
+    SECONDS_PER_SLOT: 1 / 1000, // Make slot time super short: 1 ms
+  });
 
   before(() => {
     const secretKeys = Array.from({length: 1}, (_, i) => bls.SecretKey.fromBytes(Buffer.alloc(32, i + 1)));

@@ -1,4 +1,4 @@
-import {phase0, CommitteeIndex, Epoch, Slot, Root} from "@chainsafe/lodestar-types";
+import {phase0, CommitteeIndex, Epoch, Slot, Root, ssz} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 import {IDatabaseController, Bucket, Repository} from "@chainsafe/lodestar-db";
@@ -17,11 +17,11 @@ export class AttestationRepository extends Repository<Uint8Array, phase0.Attesta
   private dataRootIndex = new Map<Slot, Map<string, string[]>>();
 
   constructor(config: IBeaconConfig, db: IDatabaseController<Buffer, Buffer>) {
-    super(config, db, Bucket.phase0_attestation, config.types.phase0.Attestation);
+    super(config, db, Bucket.phase0_attestation, ssz.phase0.Attestation);
   }
 
   async put(key: Uint8Array, value: phase0.Attestation): Promise<void> {
-    const attestationDataRoot = this.config.types.phase0.AttestationData.hashTreeRoot(value.data);
+    const attestationDataRoot = ssz.phase0.AttestationData.hashTreeRoot(value.data);
     const slot = value.data.slot;
     const dataRootHex = toHexString(attestationDataRoot);
     const rootHex = toHexString(key);
@@ -44,7 +44,7 @@ export class AttestationRepository extends Repository<Uint8Array, phase0.Attesta
     return attestations.filter((attestation) => {
       return (
         attestation.data.index === committeeIndex &&
-        computeEpochAtSlot(this.config, attestation.data.slot) === epoch &&
+        computeEpochAtSlot(attestation.data.slot) === epoch &&
         // filter out aggregated attestations
         Array.from(attestation.aggregationBits).filter((bit) => !!bit).length === 1
       );
@@ -66,7 +66,7 @@ export class AttestationRepository extends Repository<Uint8Array, phase0.Attesta
   }
 
   async pruneFinalized(finalizedEpoch: Epoch): Promise<void> {
-    const finalizedEpochStartSlot = computeStartSlotAtEpoch(this.config, finalizedEpoch);
+    const finalizedEpochStartSlot = computeStartSlotAtEpoch(finalizedEpoch);
     const entries = await this.entries();
     const idsToDelete = entries.filter((e) => e.value.data.slot < finalizedEpochStartSlot).map((e) => e.key);
     await this.batchDelete(idsToDelete);

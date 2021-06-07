@@ -101,7 +101,7 @@ export async function runNodeNotifier({
 }
 
 function timeToNextHalfSlot(config: IBeaconConfig, chain: IBeaconChain): number {
-  const msPerSlot = config.params.SECONDS_PER_SLOT * 1000;
+  const msPerSlot = config.SECONDS_PER_SLOT * 1000;
   const msFromGenesis = Date.now() - chain.getGenesisTime() * 1000;
   const msToNextSlot = msPerSlot - (msFromGenesis % msPerSlot);
   return msToNextSlot > msPerSlot / 2 ? msToNextSlot - msPerSlot / 2 : msToNextSlot + msPerSlot / 2;

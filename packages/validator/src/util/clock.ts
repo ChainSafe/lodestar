@@ -1,5 +1,6 @@
 import {AbortSignal} from "abort-controller";
 import {ErrorAborted, ILogger, sleep} from "@chainsafe/lodestar-utils";
+import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Epoch, Slot} from "@chainsafe/lodestar-types";
 import {computeEpochAtSlot, getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
@@ -48,7 +49,7 @@ export class Clock implements IClock {
 
   /** Miliseconds from now to a specific slot fraction */
   msToSlotFraction(slot: Slot, fraction: number): number {
-    const timeAt = this.genesisTime + this.config.params.SECONDS_PER_SLOT * (slot + fraction);
+    const timeAt = this.genesisTime + this.config.SECONDS_PER_SLOT * (slot + fraction);
     return timeAt * 1000 - Date.now();
   }
 
@@ -63,7 +64,7 @@ export class Clock implements IClock {
       // Run immediatelly first
       const slot = getCurrentSlot(this.config, this.genesisTime);
 
-      const slotOrEpoch = timeItem === TimeItem.Slot ? slot : computeEpochAtSlot(this.config, slot);
+      const slotOrEpoch = timeItem === TimeItem.Slot ? slot : computeEpochAtSlot(slot);
       await fn(slotOrEpoch, signal);
 
       try {
@@ -78,13 +79,13 @@ export class Clock implements IClock {
   }
 
   private timeUntilNext(timeItem: TimeItem): number {
-    const miliSecondsPerSlot = this.config.params.SECONDS_PER_SLOT * 1000;
+    const miliSecondsPerSlot = this.config.SECONDS_PER_SLOT * 1000;
     const msFromGenesis = Date.now() - this.genesisTime * 1000;
 
     if (timeItem === TimeItem.Slot) {
       return miliSecondsPerSlot - Math.abs(msFromGenesis % miliSecondsPerSlot);
     } else {
-      const miliSecondsPerEpoch = this.config.params.SLOTS_PER_EPOCH * miliSecondsPerSlot;
+      const miliSecondsPerEpoch = SLOTS_PER_EPOCH * miliSecondsPerSlot;
       return miliSecondsPerEpoch - Math.abs(msFromGenesis % miliSecondsPerEpoch);
     }
   }

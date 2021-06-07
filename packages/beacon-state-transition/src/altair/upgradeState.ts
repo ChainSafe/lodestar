@@ -1,4 +1,4 @@
-import {altair, ParticipationFlags, phase0, Uint8} from "@chainsafe/lodestar-types";
+import {altair, ParticipationFlags, phase0, ssz, Uint8} from "@chainsafe/lodestar-types";
 import {CachedBeaconState, createCachedBeaconState} from "../allForks/util";
 import {getCurrentEpoch, newZeroedArray} from "../util";
 import {List, TreeBacked} from "@chainsafe/ssz";
@@ -13,10 +13,7 @@ import {getNextSyncCommittee} from "./epoch/sync_committee";
 export function upgradeState(state: CachedBeaconState<phase0.BeaconState>): CachedBeaconState<altair.BeaconState> {
   const {config} = state;
   const pendingAttesations = Array.from(state.previousEpochAttestations);
-  const postTreeBackedState = upgradeTreeBackedState(
-    config,
-    config.types.phase0.BeaconState.createTreeBacked(state.tree)
-  );
+  const postTreeBackedState = upgradeTreeBackedState(config, ssz.phase0.BeaconState.createTreeBacked(state.tree));
   const postState = createCachedBeaconState(config, postTreeBackedState);
   translateParticipation(postState, pendingAttesations);
   return postState;
@@ -27,17 +24,17 @@ function upgradeTreeBackedState(
   state: TreeBacked<phase0.BeaconState>
 ): TreeBacked<altair.BeaconState> {
   const validatorCount = state.validators.length;
-  const epoch = getCurrentEpoch(config, state);
-  const postState = config.types.altair.BeaconState.createTreeBacked(state.tree);
+  const epoch = getCurrentEpoch(state);
+  const postState = ssz.altair.BeaconState.createTreeBacked(state.tree);
   postState.fork = {
     previousVersion: state.fork.currentVersion,
-    currentVersion: config.params.ALTAIR_FORK_VERSION,
+    currentVersion: config.ALTAIR_FORK_VERSION,
     epoch,
   };
   postState.previousEpochParticipation = newZeroedArray(validatorCount) as List<ParticipationFlags>;
   postState.currentEpochParticipation = newZeroedArray(validatorCount) as List<ParticipationFlags>;
   postState.inactivityScores = newZeroedArray(validatorCount) as List<Uint8>;
-  const syncCommittee = getNextSyncCommittee(config, state);
+  const syncCommittee = getNextSyncCommittee(state);
   postState.currentSyncCommittee = syncCommittee;
   postState.nextSyncCommittee = syncCommittee;
   return postState;

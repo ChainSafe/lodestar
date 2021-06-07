@@ -1,13 +1,14 @@
 import {expect} from "chai";
 import sinon, {SinonStubbedInstance} from "sinon";
 
-import {config} from "@chainsafe/lodestar-config/minimal";
+import {config} from "@chainsafe/lodestar-config/default";
 import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
 
 import {validateBlock} from "../../../../src/chain/blocks/validate";
 import {LocalClock} from "../../../../src/chain/clock";
 import {BlockError, BlockErrorCode} from "../../../../src/chain/errors";
 import {getNewBlockJob} from "../../../utils/block";
+import {ssz} from "@chainsafe/lodestar-types";
 
 describe("validateBlock", function () {
   let forkChoice: SinonStubbedInstance<ForkChoice>;
@@ -23,7 +24,7 @@ describe("validateBlock", function () {
   });
 
   it("should throw on genesis block", function () {
-    const signedBlock = config.types.phase0.SignedBeaconBlock.defaultValue();
+    const signedBlock = ssz.phase0.SignedBeaconBlock.defaultValue();
     const job = getNewBlockJob(signedBlock);
     try {
       validateBlock({config, forkChoice, clock}, job);
@@ -34,7 +35,7 @@ describe("validateBlock", function () {
   });
 
   it("should throw on already known block", function () {
-    const signedBlock = config.types.phase0.SignedBeaconBlock.defaultValue();
+    const signedBlock = ssz.phase0.SignedBeaconBlock.defaultValue();
     signedBlock.message.slot = 1;
     const job = getNewBlockJob(signedBlock);
     forkChoice.hasBlock.returns(true);
@@ -47,7 +48,7 @@ describe("validateBlock", function () {
   });
 
   it("should throw on already known block", function () {
-    const signedBlock = config.types.phase0.SignedBeaconBlock.defaultValue();
+    const signedBlock = ssz.phase0.SignedBeaconBlock.defaultValue();
     signedBlock.message.slot = 1;
     const job = getNewBlockJob(signedBlock);
     forkChoice.hasBlock.returns(false);
@@ -61,7 +62,7 @@ describe("validateBlock", function () {
   });
 
   it("should throw on future slot", function () {
-    const signedBlock = config.types.phase0.SignedBeaconBlock.defaultValue();
+    const signedBlock = ssz.phase0.SignedBeaconBlock.defaultValue();
     signedBlock.message.slot = 1;
     const job = getNewBlockJob(signedBlock);
     forkChoice.hasBlock.returns(false);

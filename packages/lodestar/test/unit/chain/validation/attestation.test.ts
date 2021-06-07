@@ -3,7 +3,7 @@ import {BeaconChain, ChainEventEmitter, ForkChoiceStore, IBeaconChain} from "../
 import {StubbedBeaconDb} from "../../../utils/stub";
 import {expect} from "chai";
 
-import {config} from "@chainsafe/lodestar-config/minimal";
+import {config} from "@chainsafe/lodestar-config/default";
 import {phase0, getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import * as attestationUtils from "@chainsafe/lodestar-beacon-state-transition/lib/allForks/util/attestation";
 import * as blockUtils from "@chainsafe/lodestar-beacon-state-transition/lib/allForks/block/isValidIndexedAttestation";
@@ -179,7 +179,7 @@ describe("gossip attestation validation", function () {
     );
 
     expect(chain.receiveAttestation.called).to.be.false;
-    expect(computeAttestationSubnetStub.calledOnceWith(config, attestationTargetState, attestation)).to.be.true;
+    expect(computeAttestationSubnetStub.calledOnceWith(attestationTargetState, attestation)).to.be.true;
   });
 
   it("should throw error - invalid indexed attestation", async function () {

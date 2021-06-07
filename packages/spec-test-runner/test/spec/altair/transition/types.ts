@@ -1,4 +1,4 @@
-import {ForkName} from "@chainsafe/lodestar-config";
+import {ForkName} from "@chainsafe/lodestar-params";
 import {altair, phase0, Uint64} from "@chainsafe/lodestar-types";
 import {IBaseSpecTest} from "../../type";
 

@@ -1,5 +1,5 @@
+import {FAR_FUTURE_EPOCH} from "@chainsafe/lodestar-params";
 import {allForks, phase0} from "@chainsafe/lodestar-types";
-import {FAR_FUTURE_EPOCH} from "../../constants";
 import {isActiveValidator} from "../../util";
 import {CachedBeaconState} from "../../allForks/util";
 import {initiateValidatorExit} from "../../allForks/block";
@@ -39,7 +39,7 @@ export function assertValidVoluntaryExit(
     );
   }
   // verify the validator had been active long enough
-  if (!(currentEpoch >= validator.activationEpoch + config.params.SHARD_COMMITTEE_PERIOD)) {
+  if (!(currentEpoch >= validator.activationEpoch + config.SHARD_COMMITTEE_PERIOD)) {
     throw new Error("VoluntaryExit validator has not been active for long enough");
   }
 

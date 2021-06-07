@@ -19,7 +19,7 @@ import {
   PendingBlockRepository,
 } from "../../../src/db/repositories";
 import {SeenAttestationCache} from "../../../src/db/seenAttestationCache";
-import {minimalConfig} from "@chainsafe/lodestar-config/minimal";
+import {config as minimalConfig} from "@chainsafe/lodestar-config/default";
 import {SignedBeaconBlock} from "@chainsafe/lodestar-types/phase0";
 import {createStubInstance} from "../types";
 import {SyncCommitteeCache} from "../../../src/db/syncCommittee";

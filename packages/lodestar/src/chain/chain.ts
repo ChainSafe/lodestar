@@ -2,15 +2,15 @@
  * @module chain
  */
 
+import {ForkName} from "@chainsafe/lodestar-params";
 import {
   CachedBeaconState,
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
 } from "@chainsafe/lodestar-beacon-state-transition";
-import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
-import {IBeaconConfig, ForkName} from "@chainsafe/lodestar-config";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
-import {allForks, ForkDigest, Number64, Root, Slot} from "@chainsafe/lodestar-types";
+import {allForks, ForkDigest, Number64, Root, phase0, Slot} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {TreeBacked} from "@chainsafe/ssz";
 import {LightClientUpdater} from "@chainsafe/lodestar-light-client/lib/server/LightClientUpdater";
@@ -123,7 +123,7 @@ export class BeaconChain implements IBeaconChain {
     this.checkpointStateCache = checkpointStateCache;
     this.stateCache = stateCache;
 
-    this.lightclientUpdater = new LightClientUpdater(config, this.db);
+    this.lightclientUpdater = new LightClientUpdater(this.db);
 
     handleChainEvents.bind(this)(this.abortController.signal);
   }
@@ -151,7 +151,7 @@ export class BeaconChain implements IBeaconChain {
   }
 
   async getHeadStateAtCurrentEpoch(): Promise<CachedBeaconState<allForks.BeaconState>> {
-    const currentEpochStartSlot = computeStartSlotAtEpoch(this.config, this.clock.currentEpoch);
+    const currentEpochStartSlot = computeStartSlotAtEpoch(this.clock.currentEpoch);
     const head = this.forkChoice.getHead();
     const bestSlot = currentEpochStartSlot > head.slot ? currentEpochStartSlot : head.slot;
     return await this.regen.getBlockSlotState(head.blockRoot, bestSlot);
@@ -172,7 +172,7 @@ export class BeaconChain implements IBeaconChain {
 
   async getCanonicalBlockAtSlot(slot: Slot): Promise<allForks.SignedBeaconBlock | null> {
     const finalizedCheckpoint = this.forkChoice.getFinalizedCheckpoint();
-    if (finalizedCheckpoint.epoch > computeEpochAtSlot(this.config, slot)) {
+    if (finalizedCheckpoint.epoch > computeEpochAtSlot(slot)) {
       return this.db.blockArchive.get(slot);
     }
     const summary = this.forkChoice.getCanonicalBlockSummaryAtSlot(slot);

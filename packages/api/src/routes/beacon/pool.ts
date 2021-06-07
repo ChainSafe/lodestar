@@ -1,5 +1,4 @@
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {phase0, altair, CommitteeIndex, Slot} from "@chainsafe/lodestar-types";
+import {phase0, altair, CommitteeIndex, Slot, ssz} from "@chainsafe/lodestar-types";
 import {Json} from "@chainsafe/ssz";
 import {
   RoutesData,
@@ -130,7 +129,7 @@ export type ReqTypes = {
   submitPoolSyncCommitteeSignatures: {body: Json};
 };
 
-export function getReqSerializers(config: IBeaconConfig): ReqSerializers<Api, ReqTypes> {
+export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
   return {
     getPoolAttestations: {
       writeReq: (filters) => ({query: {slot: filters?.slot, committee_index: filters?.committeeIndex}}),
@@ -140,22 +139,19 @@ export function getReqSerializers(config: IBeaconConfig): ReqSerializers<Api, Re
     getPoolAttesterSlashings: reqEmpty,
     getPoolProposerSlashings: reqEmpty,
     getPoolVoluntaryExits: reqEmpty,
-    submitPoolAttestations: reqOnlyBody(ArrayOf(config.types.phase0.Attestation), Schema.ObjectArray),
-    submitPoolAttesterSlashing: reqOnlyBody(config.types.phase0.AttesterSlashing, Schema.Object),
-    submitPoolProposerSlashing: reqOnlyBody(config.types.phase0.ProposerSlashing, Schema.Object),
-    submitPoolVoluntaryExit: reqOnlyBody(config.types.phase0.SignedVoluntaryExit, Schema.Object),
-    submitPoolSyncCommitteeSignatures: reqOnlyBody(
-      ArrayOf(config.types.altair.SyncCommitteeSignature),
-      Schema.ObjectArray
-    ),
+    submitPoolAttestations: reqOnlyBody(ArrayOf(ssz.phase0.Attestation), Schema.ObjectArray),
+    submitPoolAttesterSlashing: reqOnlyBody(ssz.phase0.AttesterSlashing, Schema.Object),
+    submitPoolProposerSlashing: reqOnlyBody(ssz.phase0.ProposerSlashing, Schema.Object),
+    submitPoolVoluntaryExit: reqOnlyBody(ssz.phase0.SignedVoluntaryExit, Schema.Object),
+    submitPoolSyncCommitteeSignatures: reqOnlyBody(ArrayOf(ssz.altair.SyncCommitteeSignature), Schema.ObjectArray),
   };
 }
 
-export function getReturnTypes(config: IBeaconConfig): ReturnTypes<Api> {
+export function getReturnTypes(): ReturnTypes<Api> {
   return {
-    getPoolAttestations: ContainerData(ArrayOf(config.types.phase0.Attestation)),
-    getPoolAttesterSlashings: ContainerData(ArrayOf(config.types.phase0.AttesterSlashing)),
-    getPoolProposerSlashings: ContainerData(ArrayOf(config.types.phase0.ProposerSlashing)),
-    getPoolVoluntaryExits: ContainerData(ArrayOf(config.types.phase0.SignedVoluntaryExit)),
+    getPoolAttestations: ContainerData(ArrayOf(ssz.phase0.Attestation)),
+    getPoolAttesterSlashings: ContainerData(ArrayOf(ssz.phase0.AttesterSlashing)),
+    getPoolProposerSlashings: ContainerData(ArrayOf(ssz.phase0.ProposerSlashing)),
+    getPoolVoluntaryExits: ContainerData(ArrayOf(ssz.phase0.SignedVoluntaryExit)),
   };
 }

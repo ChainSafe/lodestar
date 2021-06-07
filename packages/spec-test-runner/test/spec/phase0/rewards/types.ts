@@ -1,5 +1,5 @@
-import {config} from "@chainsafe/lodestar-config/mainnet";
-import {phase0, Gwei} from "@chainsafe/lodestar-types";
+import {VALIDATOR_REGISTRY_LIMIT} from "@chainsafe/lodestar-params";
+import {phase0, Gwei, ssz} from "@chainsafe/lodestar-types";
 import {ContainerType, ListType} from "@chainsafe/ssz";
 import {IBaseSpecTest} from "../../type";
 
@@ -20,12 +20,12 @@ export interface IAttestationDeltas {
 export const DeltasType = new ContainerType({
   fields: {
     rewards: new ListType({
-      elementType: config.types.Gwei,
-      limit: config.params.VALIDATOR_REGISTRY_LIMIT,
+      elementType: ssz.Gwei,
+      limit: VALIDATOR_REGISTRY_LIMIT,
     }),
     penalties: new ListType({
-      elementType: config.types.Gwei,
-      limit: config.params.VALIDATOR_REGISTRY_LIMIT,
+      elementType: ssz.Gwei,
+      limit: VALIDATOR_REGISTRY_LIMIT,
     }),
   },
 });

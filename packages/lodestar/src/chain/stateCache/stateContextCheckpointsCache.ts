@@ -1,5 +1,5 @@
 import {toHexString, fromHexString} from "@chainsafe/ssz";
-import {phase0, Epoch, allForks} from "@chainsafe/lodestar-types";
+import {phase0, Epoch, allForks, ssz} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
 
@@ -22,12 +22,12 @@ export class CheckpointStateCache {
   }
 
   get(cp: phase0.Checkpoint): CachedBeaconState<allForks.BeaconState> | null {
-    const item = this.cache.get(toHexString(this.config.types.phase0.Checkpoint.hashTreeRoot(cp)));
+    const item = this.cache.get(toHexString(ssz.phase0.Checkpoint.hashTreeRoot(cp)));
     return item ? item.clone() : null;
   }
 
   add(cp: phase0.Checkpoint, item: CachedBeaconState<allForks.BeaconState>): void {
-    const key = toHexString(this.config.types.phase0.Checkpoint.hashTreeRoot(cp));
+    const key = toHexString(ssz.phase0.Checkpoint.hashTreeRoot(cp));
     if (this.cache.has(key)) {
       return;
     }
@@ -79,7 +79,7 @@ export class CheckpointStateCache {
   }
 
   delete(cp: phase0.Checkpoint): void {
-    const key = toHexString(this.config.types.phase0.Checkpoint.hashTreeRoot(cp));
+    const key = toHexString(ssz.phase0.Checkpoint.hashTreeRoot(cp));
     this.cache.delete(key);
     const epochKey = toHexString(cp.root);
     const value = this.epochIndex.get(cp.epoch);
@@ -93,9 +93,7 @@ export class CheckpointStateCache {
 
   deleteAllEpochItems(epoch: Epoch): void {
     for (const hexRoot of this.epochIndex.get(epoch) || []) {
-      this.cache.delete(
-        toHexString(this.config.types.phase0.Checkpoint.hashTreeRoot({root: fromHexString(hexRoot), epoch}))
-      );
+      this.cache.delete(toHexString(ssz.phase0.Checkpoint.hashTreeRoot({root: fromHexString(hexRoot), epoch})));
     }
     this.epochIndex.delete(epoch);
   }

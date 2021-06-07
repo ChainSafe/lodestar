@@ -1,8 +1,7 @@
 import {routes} from "@chainsafe/lodestar-api";
+import {FAR_FUTURE_EPOCH, GENESIS_SLOT, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 // this will need async once we wan't to resolve archive slot
 import {
-  GENESIS_SLOT,
-  FAR_FUTURE_EPOCH,
   CachedBeaconState,
   createCachedBeaconState,
   computeSyncCommitteePeriod,
@@ -123,7 +122,7 @@ export function getEpochBeaconCommittees(
   epoch: Epoch
 ): ValidatorIndex[][][] {
   if ((state as CachedBeaconState<allForks.BeaconState>).epochCtx) {
-    const stateEpoch = computeEpochAtSlot(config, state.slot);
+    const stateEpoch = computeEpochAtSlot(state.slot);
     switch (epoch) {
       case stateEpoch:
         return (state as CachedBeaconState<allForks.BeaconState>).currentShuffling.committees;
@@ -138,7 +137,7 @@ export function getEpochBeaconCommittees(
     v.activationEpoch,
     v.exitEpoch,
   ]);
-  const shuffling = allForks.computeEpochShuffling(config, state, indicesBounded, epoch);
+  const shuffling = allForks.computeEpochShuffling(state, indicesBounded, epoch);
   return shuffling.committees;
 }
 
@@ -150,8 +149,8 @@ export function getSyncCommittees(
   state: allForks.BeaconState | CachedBeaconState<allForks.BeaconState>,
   epoch: Epoch
 ): ValidatorIndex[] {
-  const statePeriod = computeSyncCommitteePeriod(config, computeEpochAtSlot(config, state.slot));
-  const requestPeriod = computeSyncCommitteePeriod(config, epoch);
+  const statePeriod = computeSyncCommitteePeriod(computeEpochAtSlot(state.slot));
+  const requestPeriod = computeSyncCommitteePeriod(epoch);
 
   if ((state as CachedBeaconState<allForks.BeaconState>).epochCtx) {
     switch (requestPeriod) {
@@ -212,13 +211,17 @@ async function stateBySlot(
 ): Promise<allForks.BeaconState | null> {
   const blockSummary = forkChoice.getCanonicalBlockSummaryAtSlot(slot);
   if (blockSummary) {
-    return stateCache.get(blockSummary.stateRoot) ?? null;
-  } else {
-    if (opts?.regenFinalizedState) {
-      return await getFinalizedState(config, db, forkChoice, slot);
+    const state = stateCache.get(blockSummary.stateRoot);
+    if (state) {
+      return state;
     }
-    return await db.stateArchive.get(slot);
   }
+
+  if (opts?.regenFinalizedState) {
+    return await getFinalizedState(config, db, forkChoice, slot);
+  }
+
+  return await db.stateArchive.get(slot);
 }
 
 export function filterStateValidatorsByStatuses(
@@ -258,7 +261,7 @@ async function getFinalizedState(
   forkChoice: IForkChoice,
   slot: Slot
 ): Promise<CachedBeaconState<allForks.BeaconState>> {
-  assert.lte(slot, forkChoice.getFinalizedCheckpoint().epoch * config.params.SLOTS_PER_EPOCH);
+  assert.lte(slot, forkChoice.getFinalizedCheckpoint().epoch * SLOTS_PER_EPOCH);
   let state = await getNearestArchivedState(config, db, slot);
 
   // process blocks up to the requested slot

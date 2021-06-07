@@ -1,10 +1,10 @@
 import {Libp2pPeerMetadataStore} from "../../../../src/network/peers/metastore";
-import {config} from "@chainsafe/lodestar-config/minimal";
+import {config} from "@chainsafe/lodestar-config/default";
 import sinon, {SinonStub, SinonStubbedInstance} from "sinon";
 import {ReqRespEncoding} from "../../../../src/network/reqresp";
 import {expect} from "chai";
 import PeerId from "peer-id";
-import {altair, phase0} from "@chainsafe/lodestar-types";
+import {altair, phase0, ssz} from "@chainsafe/lodestar-types";
 import MetadataBook from "libp2p/src/peer-store/metadata-book";
 import ProtoBook from "libp2p/src/peer-store/proto-book";
 
@@ -56,7 +56,7 @@ describe("Libp2pPeerMetadataStore", function () {
     store.metadata.set(peerId, value);
     const result = store.metadata.get(peerId);
 
-    expect(config.types.phase0.Metadata.equals(result as phase0.Metadata, value)).to.be.true;
+    expect(ssz.phase0.Metadata.equals(result as phase0.Metadata, value)).to.be.true;
   });
 
   it("can store and retrieve score", function () {
@@ -65,6 +65,6 @@ describe("Libp2pPeerMetadataStore", function () {
     store.rpcScore.set(peerId, value);
     const result = store.rpcScore.get(peerId);
 
-    expect(config.types.Number64.equals(result as number, value)).to.be.true;
+    expect(ssz.Number64.equals(result as number, value)).to.be.true;
   });
 });

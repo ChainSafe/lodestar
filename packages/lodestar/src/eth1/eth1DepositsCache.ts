@@ -1,4 +1,4 @@
-import {phase0} from "@chainsafe/lodestar-types";
+import {phase0, ssz} from "@chainsafe/lodestar-types";
 import {IFilterOptions} from "@chainsafe/lodestar-db";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBeaconDb} from "../db";
@@ -48,7 +48,7 @@ export class Eth1DepositsCache {
 
     const depositRoots = depositEvents.map((depositEvent) => ({
       index: depositEvent.index,
-      root: this.config.types.phase0.DepositData.hashTreeRoot(depositEvent.depositData),
+      root: ssz.phase0.DepositData.hashTreeRoot(depositEvent.depositData),
     }));
 
     // Store events after verifying that data is consecutive

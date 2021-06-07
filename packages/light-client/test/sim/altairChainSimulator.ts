@@ -2,7 +2,7 @@ import {init} from "@chainsafe/bls";
 import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 import {toHexString} from "@chainsafe/ssz";
 import {WinstonLogger} from "@chainsafe/lodestar-utils";
-import {altair} from "@chainsafe/lodestar-types";
+import {altair, ssz} from "@chainsafe/lodestar-types";
 import {getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {LightclientMockServer} from "../lightclientMockServer";
 import {ServerOpts} from "../lightclientApiServer";
@@ -22,19 +22,17 @@ async function runAltairChainSimulator(): Promise<void> {
   const serverOpts: ServerOpts = {port: 31000, host: "0.0.0.0"};
 
   // Create genesis state and block
-  const genesisState = config.types.altair.BeaconState.defaultTreeBacked();
-  const genesisBlock = config.types.altair.BeaconBlock.defaultValue();
+  const genesisState = ssz.altair.BeaconState.defaultTreeBacked();
+  const genesisBlock = ssz.altair.BeaconBlock.defaultValue();
   genesisState.validators = generateValidators(validatorCount);
   genesisState.balances = generateBalances(validatorCount);
-  genesisState.currentSyncCommittee = getInteropSyncCommittee(config, 0).syncCommittee;
-  genesisState.nextSyncCommittee = getInteropSyncCommittee(config, 1).syncCommittee;
-  const genesisValidatorsRoot = config.types.altair.BeaconState.fields["validators"].hashTreeRoot(
-    genesisState.validators
-  );
-  const genesisStateRoot = config.types.altair.BeaconState.hashTreeRoot(genesisState);
+  genesisState.currentSyncCommittee = getInteropSyncCommittee(0).syncCommittee;
+  genesisState.nextSyncCommittee = getInteropSyncCommittee(1).syncCommittee;
+  const genesisValidatorsRoot = ssz.altair.BeaconState.fields["validators"].hashTreeRoot(genesisState.validators);
+  const genesisStateRoot = ssz.altair.BeaconState.hashTreeRoot(genesisState);
   genesisBlock.stateRoot = genesisStateRoot;
   const genesisCheckpoint: altair.Checkpoint = {
-    root: config.types.altair.BeaconBlock.hashTreeRoot(genesisBlock),
+    root: ssz.altair.BeaconBlock.hashTreeRoot(genesisBlock),
     epoch: 0,
   };
 
@@ -62,7 +60,7 @@ async function runAltairChainSimulator(): Promise<void> {
   // eslint-disable-next-line no-constant-condition
   while (true) {
     // Sleep until next slot
-    const msPerSlot = config.params.SECONDS_PER_SLOT * 1000;
+    const msPerSlot = config.SECONDS_PER_SLOT * 1000;
     const diffInMiliSeconds = Date.now() - leveGenesisTime * 1000;
     const msToNextSlot = msPerSlot - (diffInMiliSeconds % msPerSlot);
     await new Promise((r) => setTimeout(r, msToNextSlot));

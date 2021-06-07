@@ -1,7 +1,6 @@
 import {CachedBeaconState, computeSyncPeriodAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
-import {SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
-import {altair} from "@chainsafe/lodestar-types";
-import {BeaconState} from "@chainsafe/lodestar-types/lib/allForks";
+import {SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
+import {allForks, altair} from "@chainsafe/lodestar-types";
 import {IBeaconDb} from "../../db";
 import {GossipAction, ISyncCommitteeJob, SyncCommitteeError, SyncCommitteeErrorCode} from "../errors";
 import {IBeaconChain} from "../interface";
@@ -61,7 +60,7 @@ export async function validateGossipSyncCommittee(
  */
 export async function validateSyncCommitteeSigOnly(
   chain: IBeaconChain,
-  headState: CachedBeaconState<BeaconState>,
+  headState: CachedBeaconState<allForks.BeaconState>,
   syncCommittee: altair.SyncCommitteeSignature
 ): Promise<void> {
   const signatureSet = getSyncCommitteeSignatureSet(headState, syncCommittee);
@@ -77,7 +76,7 @@ export async function validateSyncCommitteeSigOnly(
  */
 export function validateGossipSyncCommitteeExceptSig(
   chain: IBeaconChain,
-  headState: CachedBeaconState<BeaconState>,
+  headState: CachedBeaconState<allForks.BeaconState>,
   subnet: number,
   data: Pick<altair.SyncCommitteeSignature, "slot" | "beaconBlockRoot" | "validatorIndex">
 ): IndexInSubCommittee {
@@ -124,15 +123,15 @@ export function validateGossipSyncCommitteeExceptSig(
  * Returns `null` if not part of the sync committee or not part of the given `subnet`
  */
 function getIndexInSubCommittee(
-  headState: CachedBeaconState<BeaconState>,
+  headState: CachedBeaconState<allForks.BeaconState>,
   subnet: number,
   data: Pick<altair.SyncCommitteeSignature, "slot" | "validatorIndex">
 ): IndexInSubCommittee | null {
   // Note: The range of slots a validator has to perform duties is off by one.
   // The previous slot wording means that if your validator is in a sync committee for a period that runs from slot
   // 100 to 200,then you would actually produce signatures in slot 99 - 199.
-  const statePeriod = computeSyncPeriodAtSlot(headState.config, headState.slot);
-  const dataPeriod = computeSyncPeriodAtSlot(headState.config, data.slot + 1); // See note above for the +1 offset
+  const statePeriod = computeSyncPeriodAtSlot(headState.slot);
+  const dataPeriod = computeSyncPeriodAtSlot(data.slot + 1); // See note above for the +1 offset
 
   const syncComitteeValidatorIndexMap =
     dataPeriod === statePeriod + 1
@@ -146,9 +145,7 @@ function getIndexInSubCommittee(
   }
 
   // TODO: Cache this value
-  const SYNC_COMMITTEE_SUBNET_SIZE = Math.floor(
-    headState.config.params.SYNC_COMMITTEE_SIZE / SYNC_COMMITTEE_SUBNET_COUNT
-  );
+  const SYNC_COMMITTEE_SUBNET_SIZE = Math.floor(SYNC_COMMITTEE_SIZE / SYNC_COMMITTEE_SUBNET_COUNT);
 
   for (const indexInCommittee of indexesInCommittee) {
     if (Math.floor(indexInCommittee / SYNC_COMMITTEE_SUBNET_SIZE) === subnet) {

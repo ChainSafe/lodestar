@@ -1,6 +1,6 @@
 import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {BLSPubkey, Epoch, Root, Slot} from "@chainsafe/lodestar-types";
+import {BLSPubkey, Epoch, Root, Slot, ssz} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {toHexString} from "@chainsafe/ssz";
 import {Api, routes} from "@chainsafe/lodestar-api";
@@ -48,7 +48,7 @@ export class BlockDutiesService {
    * likely the result of heavy forking (lol) or inconsistent beacon node connections.
    */
   getblockProposersAtSlot(slot: Slot): BLSPubkey[] {
-    const epoch = computeEpochAtSlot(this.config, slot);
+    const epoch = computeEpochAtSlot(slot);
     const publicKeys = new Map<string, BLSPubkey>(); // pseudo-HashSet of Buffers
 
     const dutyAtEpoch = this.proposers.get(epoch);
@@ -75,7 +75,7 @@ export class BlockDutiesService {
         if (notAborted(e)) this.logger.error("Error on pollBeaconProposers", {}, e);
       });
 
-      this.pruneOldDuties(computeEpochAtSlot(this.config, slot));
+      this.pruneOldDuties(computeEpochAtSlot(slot));
     }
   };
 
@@ -112,7 +112,7 @@ export class BlockDutiesService {
     }
 
     // Poll proposers again for the same slot
-    await this.pollBeaconProposers(computeEpochAtSlot(this.config, currentSlot));
+    await this.pollBeaconProposers(computeEpochAtSlot(currentSlot));
 
     // Compute the block proposers for this slot again, now that we've received an update from the BN.
     //
@@ -155,7 +155,7 @@ export class BlockDutiesService {
     const prior = this.proposers.get(epoch);
     this.proposers.set(epoch, {dependentRoot, data: relevantDuties});
 
-    if (prior && !this.config.types.Root.equals(prior.dependentRoot, dependentRoot)) {
+    if (prior && !ssz.Root.equals(prior.dependentRoot, dependentRoot)) {
       this.logger.warn("Proposer duties re-org. This may happen from time to time", {
         priorDependentRoot: toHexString(prior.dependentRoot),
         dependentRoot: toHexString(dependentRoot),

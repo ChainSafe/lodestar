@@ -1,8 +1,9 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {IBeaconDb} from "../../db";
-import {IAttestationJob, IBeaconChain} from "..";
+import {ssz} from "@chainsafe/lodestar-types";
 import {CachedBeaconState, computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {allForks, phase0} from "@chainsafe/lodestar-beacon-state-transition";
+import {IBeaconDb} from "../../db";
+import {IAttestationJob, IBeaconChain} from "..";
 import {AttestationError, AttestationErrorCode} from "../errors";
 import {ATTESTATION_PROPAGATION_SLOT_RANGE} from "../../constants";
 
@@ -53,7 +54,7 @@ export async function validateGossipAttestation(
   if (db.seenAttestationCache.hasCommitteeAttestation(attestation)) {
     throw new AttestationError({
       code: AttestationErrorCode.ATTESTATION_ALREADY_KNOWN,
-      root: config.types.phase0.Attestation.hashTreeRoot(attestation),
+      root: ssz.phase0.Attestation.hashTreeRoot(attestation),
       job: attestationJob,
     });
   }
@@ -84,7 +85,7 @@ export async function validateGossipAttestation(
     });
   }
 
-  const expectedSubnet = allForks.computeSubnetForAttestation(config, attestationTargetState, attestation);
+  const expectedSubnet = allForks.computeSubnetForAttestation(attestationTargetState, attestation);
   if (subnet !== expectedSubnet) {
     throw new AttestationError({
       code: AttestationErrorCode.INVALID_SUBNET_ID,
@@ -115,7 +116,7 @@ export async function validateGossipAttestation(
     });
   }
 
-  if (!config.types.Epoch.equals(attestation.data.target.epoch, computeEpochAtSlot(config, attestationSlot))) {
+  if (!ssz.Epoch.equals(attestation.data.target.epoch, computeEpochAtSlot(attestationSlot))) {
     throw new AttestationError({
       code: AttestationErrorCode.BAD_TARGET_EPOCH,
       job: attestationJob,

@@ -3,8 +3,9 @@ import sinon, {SinonStubbedInstance} from "sinon";
 import Libp2p from "libp2p";
 import {InMessage} from "libp2p-interfaces/src/pubsub";
 import {ERR_TOPIC_VALIDATOR_REJECT} from "libp2p-gossipsub/src/constants";
-import {config} from "@chainsafe/lodestar-config/minimal";
-import {ForkName} from "@chainsafe/lodestar-config";
+import {config} from "@chainsafe/lodestar-config/default";
+import {ForkName} from "@chainsafe/lodestar-params";
+import {ssz} from "@chainsafe/lodestar-types";
 
 import {
   Eth2Gossipsub,
@@ -40,7 +41,7 @@ describe("gossipsub", function () {
     const signedBlock = generateEmptySignedBlock();
     topicString = stringifyGossipTopic(forkDigestContext, {type: GossipType.beacon_block, fork: ForkName.phase0});
     message = {
-      data: encodeMessageData(GossipEncoding.ssz_snappy, config.types.phase0.SignedBeaconBlock.serialize(signedBlock)),
+      data: encodeMessageData(GossipEncoding.ssz_snappy, ssz.phase0.SignedBeaconBlock.serialize(signedBlock)),
       receivedFrom: "0",
       topicIDs: [topicString],
     };

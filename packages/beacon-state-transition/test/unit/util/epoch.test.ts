@@ -1,8 +1,7 @@
 import {assert} from "chai";
 
-import {config} from "@chainsafe/lodestar-config/mainnet";
+import {GENESIS_SLOT, MAX_SEED_LOOKAHEAD} from "@chainsafe/lodestar-params";
 import {phase0, Epoch, Slot} from "@chainsafe/lodestar-types";
-import {GENESIS_SLOT} from "../../../src/constants";
 import {
   computeStartSlotAtEpoch,
   getPreviousEpoch,
@@ -25,7 +24,7 @@ describe("computeEpochAtSlot", () => {
   ];
   for (const pair of pairs) {
     it(`Slot ${pair.test} should map to epoch ${pair.expected}`, () => {
-      const result: Epoch = computeEpochAtSlot(config, pair.test);
+      const result: Epoch = computeEpochAtSlot(pair.test);
       assert.equal(result, pair.expected);
     });
   }
@@ -44,7 +43,7 @@ describe("computeStartSlotAtEpoch", () => {
   ];
   for (const pair of pairs) {
     it(`Epoch ${pair.test} should map to slot ${pair.expected}`, () => {
-      const result: Slot = computeStartSlotAtEpoch(config, pair.test);
+      const result: Slot = computeStartSlotAtEpoch(pair.test);
       assert.equal(result, pair.expected);
     });
   }
@@ -56,14 +55,14 @@ describe("getPreviousEpoch", () => {
     {slot: 256, expectedEpoch: 7},
     {
       slot: GENESIS_SLOT,
-      expectedEpoch: computeEpochAtSlot(config, GENESIS_SLOT),
+      expectedEpoch: computeEpochAtSlot(GENESIS_SLOT),
     },
   ];
 
   for (const testValue of testValues) {
     it("epoch should return previous epoch", () => {
       const state: phase0.BeaconState = generateState({slot: testValue.slot});
-      const result = getPreviousEpoch(config, state);
+      const result = getPreviousEpoch(state);
       assert.equal(result, testValue.expectedEpoch);
     });
   }
@@ -72,7 +71,7 @@ describe("getPreviousEpoch", () => {
 describe("computeActivationExitEpoch", () => {
   it("epoch is always equal to the epoch after the exit delay", () => {
     for (let e: Epoch = 0; e < 1000; e++) {
-      assert.equal(computeActivationExitEpoch(config, e), e + 1 + config.params.MAX_SEED_LOOKAHEAD);
+      assert.equal(computeActivationExitEpoch(e), e + 1 + MAX_SEED_LOOKAHEAD);
     }
   });
 });

@@ -1,9 +1,8 @@
 import deepmerge from "deepmerge";
 import tmp from "tmp";
 import {createEnr} from "@chainsafe/lodestar-cli/src/config";
-import {params as minimalParams} from "@chainsafe/lodestar-params/minimal";
-import {createIBeaconConfig} from "@chainsafe/lodestar-config";
-import {IBeaconParams} from "@chainsafe/lodestar-params";
+import {config as minimalConfig} from "@chainsafe/lodestar-config/default";
+import {createIBeaconConfig, IChainConfig} from "@chainsafe/lodestar-config";
 import {ILogger, RecursivePartial} from "@chainsafe/lodestar-utils";
 import {LevelDbController} from "@chainsafe/lodestar-db";
 import {BeaconNode} from "../../../src/node";
@@ -26,7 +25,7 @@ export async function getDevBeaconNode({
   peerId,
   peerStoreDir,
 }: {
-  params: Partial<IBeaconParams>;
+  params: Partial<IChainConfig>;
   options?: RecursivePartial<IBeaconNodeOptions>;
   validatorCount?: number;
   genesisTime?: number;
@@ -36,7 +35,7 @@ export async function getDevBeaconNode({
 }): Promise<BeaconNode> {
   if (!peerId) peerId = await createPeerId();
   const tmpDir = tmp.dirSync({unsafeCleanup: true});
-  const config = createIBeaconConfig({...minimalParams, ...params});
+  const config = createIBeaconConfig({...minimalConfig, ...params});
   logger = logger ?? testLogger();
 
   const db = new BeaconDb({config, controller: new LevelDbController({name: tmpDir.name}, {logger})});

@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import {config} from "@chainsafe/lodestar-config/minimal";
+import {config} from "@chainsafe/lodestar-config/default";
 import {Epoch} from "@chainsafe/lodestar-types";
 import {getValidPeerId} from "../../../../utils/peer";
 import {Batch, BatchOpts, BatchStatus} from "../../../../../src/sync/range/batch";

@@ -1,5 +1,5 @@
 import {List, readonlyValues, TreeBacked, Vector} from "@chainsafe/ssz";
-import {Root} from "@chainsafe/lodestar-types";
+import {Root, ssz} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {bytesToInt} from "@chainsafe/lodestar-utils";
 import {IDatabaseController, Bucket, Repository, IKeyValue} from "@chainsafe/lodestar-db";
@@ -8,7 +8,7 @@ export class DepositDataRootRepository extends Repository<number, Root> {
   private depositRootTree?: TreeBacked<List<Root>>;
 
   constructor(config: IBeaconConfig, db: IDatabaseController<Buffer, Buffer>) {
-    super(config, db, Bucket.index_depositDataRoot, config.types.Root);
+    super(config, db, Bucket.index_depositDataRoot, ssz.Root);
   }
 
   decodeKey(data: Buffer): number {
@@ -65,7 +65,7 @@ export class DepositDataRootRepository extends Repository<number, Root> {
   async getDepositRootTree(): Promise<TreeBacked<List<Root>>> {
     if (!this.depositRootTree) {
       const values = (await this.values()) as List<Vector<number>>;
-      this.depositRootTree = this.config.types.phase0.DepositDataRootList.createTreeBackedFromStruct(values);
+      this.depositRootTree = ssz.phase0.DepositDataRootList.createTreeBackedFromStruct(values);
     }
     return this.depositRootTree;
   }

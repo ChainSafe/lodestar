@@ -10,11 +10,23 @@ import {
   allForks,
   altair,
   Gwei,
+  ssz,
 } from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {
+  BASE_REWARD_FACTOR,
+  DOMAIN_BEACON_PROPOSER,
+  EFFECTIVE_BALANCE_INCREMENT,
+  EPOCHS_PER_SYNC_COMMITTEE_PERIOD,
+  GENESIS_EPOCH,
+  PROPOSER_WEIGHT,
+  SLOTS_PER_EPOCH,
+  SYNC_COMMITTEE_SIZE,
+  SYNC_REWARD_WEIGHT,
+  WEIGHT_DENOMINATOR,
+} from "@chainsafe/lodestar-params";
 import {bigIntSqrt, intToBytes} from "@chainsafe/lodestar-utils";
 
-import {GENESIS_EPOCH} from "../../constants";
 import {
   computeEpochAtSlot,
   computeProposerIndex,
@@ -28,7 +40,6 @@ import {getNextSyncCommitteeIndices} from "../../altair/epoch/sync_committee";
 import {computeEpochShuffling, IEpochShuffling} from "./epochShuffling";
 import {MutableVector} from "@chainsafe/persistent-ts";
 import {CachedValidatorList} from "./cachedValidatorList";
-import {PROPOSER_WEIGHT, SYNC_REWARD_WEIGHT, WEIGHT_DENOMINATOR} from "../../altair/constants";
 import {computeBaseRewardPerIncrement} from "../../altair/misc";
 
 export type EpochContextOpts = {
@@ -75,7 +86,7 @@ export function createEpochContext(
     syncPubkeys(state, pubkey2index, index2pubkey);
   }
 
-  const currentEpoch = computeEpochAtSlot(config, state.slot);
+  const currentEpoch = computeEpochAtSlot(state.slot);
   const previousEpoch = currentEpoch === GENESIS_EPOCH ? GENESIS_EPOCH : currentEpoch - 1;
   const nextEpoch = currentEpoch + 1;
 
@@ -85,21 +96,21 @@ export function createEpochContext(
     v.exitEpoch,
   ]);
 
-  const currentShuffling = computeEpochShuffling(config, state, indicesBounded, currentEpoch);
+  const currentShuffling = computeEpochShuffling(state, indicesBounded, currentEpoch);
   let previousShuffling;
   if (previousEpoch === currentEpoch) {
     // in case of genesis
     previousShuffling = currentShuffling;
   } else {
-    previousShuffling = computeEpochShuffling(config, state, indicesBounded, previousEpoch);
+    previousShuffling = computeEpochShuffling(state, indicesBounded, previousEpoch);
   }
-  const nextShuffling = computeEpochShuffling(config, state, indicesBounded, nextEpoch);
+  const nextShuffling = computeEpochShuffling(state, indicesBounded, nextEpoch);
 
   // Allow to create CachedBeaconState for empty states
-  const proposers = state.validators.length > 0 ? computeProposers(config, state, currentShuffling) : [];
+  const proposers = state.validators.length > 0 ? computeProposers(state, currentShuffling) : [];
 
   // Only after altair, compute the indices of the current sync committee
-  const onAltairFork = currentEpoch >= config.params.ALTAIR_FORK_EPOCH;
+  const onAltairFork = currentEpoch >= config.ALTAIR_FORK_EPOCH;
   const currSyncCommitteeIndexes = onAltairFork
     ? computeSyncCommitteeIndices(pubkey2index, state as altair.BeaconState, false)
     : [];
@@ -107,13 +118,13 @@ export function createEpochContext(
     ? computeSyncCommitteeIndices(pubkey2index, state as altair.BeaconState, true)
     : [];
 
-  const totalActiveBalance = getTotalActiveBalance(config, state);
+  const totalActiveBalance = getTotalActiveBalance(state);
   const syncParticipantReward = onAltairFork ? computeSyncParticipantReward(config, totalActiveBalance) : BigInt(0);
   const syncProposerReward = onAltairFork
     ? (syncParticipantReward * PROPOSER_WEIGHT) / (WEIGHT_DENOMINATOR - PROPOSER_WEIGHT)
     : BigInt(0);
 
-  const baseRewardPerIncrement = onAltairFork ? computeBaseRewardPerIncrement(config, totalActiveBalance) : BigInt(0);
+  const baseRewardPerIncrement = onAltairFork ? computeBaseRewardPerIncrement(totalActiveBalance) : BigInt(0);
 
   return new EpochContext({
     config,
@@ -161,22 +172,13 @@ export function syncPubkeys(
 /**
  * Compute proposer indices for an epoch
  */
-export function computeProposers(
-  config: IBeaconConfig,
-  state: allForks.BeaconState,
-  shuffling: IEpochShuffling
-): number[] {
-  const epochSeed = getSeed(config, state, shuffling.epoch, config.params.DOMAIN_BEACON_PROPOSER);
-  const startSlot = computeStartSlotAtEpoch(config, shuffling.epoch);
+export function computeProposers(state: allForks.BeaconState, shuffling: IEpochShuffling): number[] {
+  const epochSeed = getSeed(state, shuffling.epoch, DOMAIN_BEACON_PROPOSER);
+  const startSlot = computeStartSlotAtEpoch(shuffling.epoch);
   const proposers = [];
-  for (let slot = startSlot; slot < startSlot + config.params.SLOTS_PER_EPOCH; slot++) {
+  for (let slot = startSlot; slot < startSlot + SLOTS_PER_EPOCH; slot++) {
     proposers.push(
-      computeProposerIndex(
-        config,
-        state,
-        shuffling.activeIndices,
-        hash(Buffer.concat([epochSeed, intToBytes(slot, 8)]))
-      )
+      computeProposerIndex(state, shuffling.activeIndices, hash(Buffer.concat([epochSeed, intToBytes(slot, 8)])))
     );
   }
   return proposers;
@@ -228,7 +230,6 @@ export function computeSyncCommitteeIndices(
  * Same logic in https://github.com/ethereum/eth2.0-specs/blob/v1.1.0-alpha.5/specs/altair/beacon-chain.md#sync-committee-processing
  */
 export function computeSyncParticipantReward(config: IBeaconConfig, totalActiveBalance: Gwei): Gwei {
-  const {EFFECTIVE_BALANCE_INCREMENT, BASE_REWARD_FACTOR, SLOTS_PER_EPOCH, SYNC_COMMITTEE_SIZE} = config.params;
   const totalActiveIncrements = totalActiveBalance / EFFECTIVE_BALANCE_INCREMENT;
   const baseRewardPerIncrement =
     (EFFECTIVE_BALANCE_INCREMENT * BigInt(BASE_REWARD_FACTOR)) / bigIntSqrt(totalActiveBalance);
@@ -255,36 +256,33 @@ export function rotateEpochs(
     v.activationEpoch,
     v.exitEpoch,
   ]);
-  epochCtx.nextShuffling = computeEpochShuffling(epochCtx.config, state, indicesBounded, nextEpoch);
-  epochCtx.proposers = computeProposers(epochCtx.config, state, epochCtx.currentShuffling);
+  epochCtx.nextShuffling = computeEpochShuffling(state, indicesBounded, nextEpoch);
+  epochCtx.proposers = computeProposers(state, epochCtx.currentShuffling);
 
   // State slot has already been += 1
-  if (
-    currEpoch % epochCtx.config.params.EPOCHS_PER_SYNC_COMMITTEE_PERIOD === 0 &&
-    currEpoch > epochCtx.config.params.ALTAIR_FORK_EPOCH
-  ) {
+  if (currEpoch % EPOCHS_PER_SYNC_COMMITTEE_PERIOD === 0 && currEpoch > epochCtx.config.ALTAIR_FORK_EPOCH) {
     epochCtx.currSyncCommitteeIndexes = epochCtx.nextSyncCommitteeIndexes;
-    epochCtx.nextSyncCommitteeIndexes = getNextSyncCommitteeIndices(epochCtx.config, state);
+    epochCtx.nextSyncCommitteeIndexes = getNextSyncCommitteeIndices(state);
     epochCtx.currSyncComitteeValidatorIndexMap = epochCtx.nextSyncComitteeValidatorIndexMap;
     epochCtx.nextSyncComitteeValidatorIndexMap = computeSyncComitteeMap(epochCtx.nextSyncCommitteeIndexes);
   }
 
   // If crossing through the altair fork the caches will be empty, fill them up
-  if (currEpoch === epochCtx.config.params.ALTAIR_FORK_EPOCH) {
-    const firstCommitteeIndices = getNextSyncCommitteeIndices(epochCtx.config, state);
+  if (currEpoch === epochCtx.config.ALTAIR_FORK_EPOCH) {
+    const firstCommitteeIndices = getNextSyncCommitteeIndices(state);
     epochCtx.currSyncCommitteeIndexes = [...firstCommitteeIndices];
     epochCtx.nextSyncCommitteeIndexes = [...firstCommitteeIndices];
     epochCtx.currSyncComitteeValidatorIndexMap = computeSyncComitteeMap(epochCtx.currSyncCommitteeIndexes);
     epochCtx.nextSyncComitteeValidatorIndexMap = computeSyncComitteeMap(epochCtx.nextSyncCommitteeIndexes);
   }
 
-  if (currEpoch >= epochCtx.config.params.ALTAIR_FORK_EPOCH) {
-    const totalActiveBalance = getTotalActiveBalance(epochCtx.config, state);
+  if (currEpoch >= epochCtx.config.ALTAIR_FORK_EPOCH) {
+    const totalActiveBalance = getTotalActiveBalance(state);
     epochCtx.syncParticipantReward = computeSyncParticipantReward(epochCtx.config, totalActiveBalance);
     epochCtx.syncProposerReward =
       (epochCtx.syncParticipantReward * PROPOSER_WEIGHT) / (WEIGHT_DENOMINATOR - PROPOSER_WEIGHT);
 
-    epochCtx.baseRewardPerIncrement = computeBaseRewardPerIncrement(epochCtx.config, totalActiveBalance);
+    epochCtx.baseRewardPerIncrement = computeBaseRewardPerIncrement(totalActiveBalance);
   }
 }
 
@@ -389,13 +387,13 @@ export class EpochContext {
   }
 
   getBeaconProposer(slot: Slot): ValidatorIndex {
-    const epoch = computeEpochAtSlot(this.config, slot);
+    const epoch = computeEpochAtSlot(slot);
     if (epoch !== this.currentShuffling.epoch) {
       throw new Error(
         `Requesting beacon proposer for different epoch current shuffling: ${epoch} != ${this.currentShuffling.epoch}`
       );
     }
-    return this.proposers[slot % this.config.params.SLOTS_PER_EPOCH];
+    return this.proposers[slot % SLOTS_PER_EPOCH];
   }
 
   /**
@@ -409,7 +407,7 @@ export class EpochContext {
       attestingIndices = zipIndexesInBitList(
         committeeIndices,
         (attestation.aggregationBits as unknown) as TreeBacked<BitList>,
-        this.config.types.phase0.CommitteeBits
+        ssz.phase0.CommitteeBits
       );
     } else {
       attestingIndices = [];
@@ -431,11 +429,7 @@ export class EpochContext {
   getAttestingIndices(data: phase0.AttestationData, bits: BitList): ValidatorIndex[] {
     const committeeIndices = this.getBeaconCommittee(data.slot, data.index);
     const validatorIndices = isTreeBacked(bits)
-      ? zipIndexesInBitList(
-          committeeIndices,
-          (bits as unknown) as TreeBacked<BitList>,
-          this.config.types.phase0.CommitteeBits
-        )
+      ? zipIndexesInBitList(committeeIndices, (bits as unknown) as TreeBacked<BitList>, ssz.phase0.CommitteeBits)
       : committeeIndices.filter((_, index) => !!bits[index]);
     return validatorIndices;
   }
@@ -455,8 +449,8 @@ export class EpochContext {
       );
     }
 
-    const epochStartSlot = computeStartSlotAtEpoch(this.config, epoch);
-    for (let slot = epochStartSlot; slot < epochStartSlot + this.config.params.SLOTS_PER_EPOCH; slot++) {
+    const epochStartSlot = computeStartSlotAtEpoch(epoch);
+    for (let slot = epochStartSlot; slot < epochStartSlot + SLOTS_PER_EPOCH; slot++) {
       const committeeCount = this.getCommitteeCountAtSlot(slot);
       for (let i = 0; i < committeeCount; i++) {
         const committee = this.getBeaconCommittee(slot, i);
@@ -475,7 +469,7 @@ export class EpochContext {
 
   isAggregator(slot: Slot, index: CommitteeIndex, slotSignature: BLSSignature): boolean {
     const committee = this.getBeaconCommittee(slot, index);
-    return isAggregatorFromCommitteeLength(this.config, committee.length, slotSignature);
+    return isAggregatorFromCommitteeLength(committee.length, slotSignature);
   }
 
   addPubkey(index: ValidatorIndex, pubkey: Uint8Array): void {
@@ -484,8 +478,8 @@ export class EpochContext {
   }
 
   private _getSlotCommittees(slot: Slot): ValidatorIndex[][] {
-    const epoch = computeEpochAtSlot(this.config, slot);
-    const epochSlot = slot % this.config.params.SLOTS_PER_EPOCH;
+    const epoch = computeEpochAtSlot(slot);
+    const epochSlot = slot % SLOTS_PER_EPOCH;
     if (epoch === this.previousShuffling.epoch) {
       return this.previousShuffling.committees[epochSlot];
     } else if (epoch === this.currentShuffling.epoch) {

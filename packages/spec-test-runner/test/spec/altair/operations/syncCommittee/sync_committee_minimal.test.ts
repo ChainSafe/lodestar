@@ -1,16 +1,16 @@
 import {join} from "path";
 
 import {TreeBacked} from "@chainsafe/ssz";
-import {params} from "@chainsafe/lodestar-params/minimal";
 import {allForks, altair, CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
 import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
 import {IProcessSyncCommitteeTestCase} from "./type";
 import {SPEC_TEST_LOCATION} from "../../../../utils/specTestCases";
 import {expectEqualBeaconState} from "../../util";
+import {ssz} from "@chainsafe/lodestar-types";
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
-const config = createIBeaconConfig({...params, ALTAIR_FORK_EPOCH: 0});
+const config = createIBeaconConfig({ALTAIR_FORK_EPOCH: 0});
 
 describeDirectorySpecTest<IProcessSyncCommitteeTestCase, altair.BeaconState>(
   "process sync committee minimal",
@@ -21,11 +21,11 @@ describeDirectorySpecTest<IProcessSyncCommitteeTestCase, altair.BeaconState>(
       testcase.pre as TreeBacked<altair.BeaconState>
     ) as CachedBeaconState<altair.BeaconState>;
 
-    const block = config.types.altair.BeaconBlock.defaultValue();
+    const block = ssz.altair.BeaconBlock.defaultValue();
 
     // processSyncCommittee() needs the full block to get the slot
     block.slot = wrappedState.slot;
-    block.body.syncAggregate = config.types.altair.SyncAggregate.createTreeBackedFromStruct(testcase["sync_aggregate"]);
+    block.body.syncAggregate = ssz.altair.SyncAggregate.createTreeBackedFromStruct(testcase["sync_aggregate"]);
 
     altair.processSyncCommittee(wrappedState, block);
     return wrappedState;
@@ -48,10 +48,10 @@ describeDirectorySpecTest<IProcessSyncCommitteeTestCase, altair.BeaconState>(
       meta: InputType.YAML,
     },
     sszTypes: {
-      pre: config.types.altair.BeaconState,
-      post: config.types.altair.BeaconState,
+      pre: ssz.altair.BeaconState,
+      post: ssz.altair.BeaconState,
       // eslint-disable-next-line @typescript-eslint/naming-convention
-      sync_aggregate: config.types.altair.SyncAggregate,
+      sync_aggregate: ssz.altair.SyncAggregate,
     },
 
     timeout: 10000,

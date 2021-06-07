@@ -1,6 +1,11 @@
 import {Epoch, ValidatorIndex, allForks} from "@chainsafe/lodestar-types";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {intDiv} from "@chainsafe/lodestar-utils";
+import {
+  DOMAIN_BEACON_ATTESTER,
+  MAX_COMMITTEES_PER_SLOT,
+  SLOTS_PER_EPOCH,
+  TARGET_COMMITTEE_SIZE,
+} from "@chainsafe/lodestar-params";
 
 import {getSeed, unshuffleList} from "../../util";
 
@@ -39,11 +44,11 @@ export interface IEpochShuffling {
   committees: ValidatorIndex[][][];
 }
 
-export function computeCommitteeCount(config: IBeaconConfig, activeValidatorCount: number): number {
-  const validatorsPerSlot = intDiv(activeValidatorCount, config.params.SLOTS_PER_EPOCH);
-  let committeesPerSlot = intDiv(validatorsPerSlot, config.params.TARGET_COMMITTEE_SIZE);
-  if (config.params.MAX_COMMITTEES_PER_SLOT < committeesPerSlot) {
-    committeesPerSlot = config.params.MAX_COMMITTEES_PER_SLOT;
+export function computeCommitteeCount(activeValidatorCount: number): number {
+  const validatorsPerSlot = intDiv(activeValidatorCount, SLOTS_PER_EPOCH);
+  let committeesPerSlot = intDiv(validatorsPerSlot, TARGET_COMMITTEE_SIZE);
+  if (MAX_COMMITTEES_PER_SLOT < committeesPerSlot) {
+    committeesPerSlot = MAX_COMMITTEES_PER_SLOT;
   }
   if (committeesPerSlot === 0) {
     committeesPerSlot = 1;
@@ -52,12 +57,11 @@ export function computeCommitteeCount(config: IBeaconConfig, activeValidatorCoun
 }
 
 export function computeEpochShuffling(
-  config: IBeaconConfig,
   state: allForks.BeaconState,
   indicesBounded: [ValidatorIndex, Epoch, Epoch][],
   epoch: Epoch
 ): IEpochShuffling {
-  const seed = getSeed(config, state, epoch, config.params.DOMAIN_BEACON_ATTESTER);
+  const seed = getSeed(state, epoch, DOMAIN_BEACON_ATTESTER);
 
   const activeIndices: ValidatorIndex[] = [];
   for (const [index, activationEpoch, exitEpoch] of indicesBounded) {
@@ -68,12 +72,12 @@ export function computeEpochShuffling(
 
   // copy
   const shuffling = activeIndices.slice();
-  unshuffleList(config, shuffling, seed);
+  unshuffleList(shuffling, seed);
 
   const activeValidatorCount = activeIndices.length;
-  const committeesPerSlot = computeCommitteeCount(config, activeValidatorCount);
+  const committeesPerSlot = computeCommitteeCount(activeValidatorCount);
 
-  const committeeCount = committeesPerSlot * config.params.SLOTS_PER_EPOCH;
+  const committeeCount = committeesPerSlot * SLOTS_PER_EPOCH;
 
   const sliceCommittee = (slot: number, committeeIndex: number): ValidatorIndex[] => {
     const index = slot * committeesPerSlot + committeeIndex;
@@ -85,7 +89,7 @@ export function computeEpochShuffling(
     return shuffling.slice(startOffset, endOffset);
   };
 
-  const committees = Array.from({length: config.params.SLOTS_PER_EPOCH}, (_, slot) => {
+  const committees = Array.from({length: SLOTS_PER_EPOCH}, (_, slot) => {
     return Array.from({length: committeesPerSlot}, (_, committeeIndex) => {
       return sliceCommittee(slot, committeeIndex);
     });

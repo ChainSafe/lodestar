@@ -1,5 +1,5 @@
 import {BitVector} from "@chainsafe/ssz";
-import {AttestationSubnets} from "../../phase0/types/misc";
+import {AttestationSubnets} from "../../phase0/types";
 import {Uint64} from "../../primitive/types";
 
 export type SyncSubnets = BitVector;

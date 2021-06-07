@@ -1,5 +1,5 @@
 import {bls, init} from "@chainsafe/bls";
-import {config} from "@chainsafe/lodestar-config/minimal";
+import {config} from "@chainsafe/lodestar-config/default";
 import {altair} from "@chainsafe/lodestar-types";
 import {toHexString} from "@chainsafe/ssz";
 import {expect} from "chai";

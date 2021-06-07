@@ -1,6 +1,5 @@
 import {join} from "path";
 import {expect} from "chai";
-import {params} from "@chainsafe/lodestar-params/minimal";
 import {
   createCachedBeaconState,
   phase0,
@@ -31,9 +30,11 @@ import {toHexString} from "@chainsafe/ssz";
 import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 import {CheckpointStateCache} from "@chainsafe/lodestar/lib/chain/stateCache/stateContextCheckpointsCache";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
+import {ssz} from "@chainsafe/lodestar-types";
+import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
-const config = createIBeaconConfig({...params, ALTAIR_FORK_EPOCH: 0});
+const config = createIBeaconConfig({ALTAIR_FORK_EPOCH: 0});
 
 describeDirectorySpecTest<IForkChoiceTestCase, void>(
   "forkchoice get_head",
@@ -48,7 +49,7 @@ describeDirectorySpecTest<IForkChoiceTestCase, void>(
     const checkpointStateCache = new CheckpointStateCache(config);
     const stateCache = new Map<string, CachedBeaconState<allForks.BeaconState>>();
     cacheState(wrappedState, stateCache);
-    const {SECONDS_PER_SLOT} = wrappedState.config.params;
+    const {SECONDS_PER_SLOT} = wrappedState.config;
     for (const [i, step] of steps.entries()) {
       if (isTick(step)) {
         forkchoice.updateTime(Number(step.tick) / SECONDS_PER_SLOT);
@@ -105,10 +106,10 @@ describeDirectorySpecTest<IForkChoiceTestCase, void>(
       steps: InputType.YAML,
     },
     sszTypes: {
-      [ANCHOR_STATE_FILE_NAME]: config.types.altair.BeaconState,
-      [ANCHOR_BLOCK_FILE_NAME]: config.types.altair.BeaconBlock,
-      [BLOCK_FILE_NAME]: config.types.altair.SignedBeaconBlock,
-      [ATTESTATION_FILE_NAME]: config.types.phase0.Attestation,
+      [ANCHOR_STATE_FILE_NAME]: ssz.altair.BeaconState,
+      [ANCHOR_BLOCK_FILE_NAME]: ssz.altair.BeaconBlock,
+      [BLOCK_FILE_NAME]: ssz.altair.SignedBeaconBlock,
+      [ATTESTATION_FILE_NAME]: ssz.phase0.Attestation,
     },
     mapToTestCase: (t: Record<string, any>) => {
       // t has input file name as key
@@ -145,14 +146,12 @@ function runStateTranstion(
   forkchoice: IForkChoice,
   checkpointCache: CheckpointStateCache
 ): CachedBeaconState<allForks.BeaconState> {
-  const config = preState.config;
-  const {SLOTS_PER_EPOCH} = config.params;
   const preSlot = preState.slot;
   const postSlot = signedBlock.message.slot - 1;
-  let preEpoch = computeEpochAtSlot(config, preSlot);
+  let preEpoch = computeEpochAtSlot(preSlot);
   let postState = preState.clone();
   for (
-    let nextEpochSlot = computeStartSlotAtEpoch(config, preEpoch + 1);
+    let nextEpochSlot = computeStartSlotAtEpoch(preEpoch + 1);
     nextEpochSlot <= postSlot;
     nextEpochSlot += SLOTS_PER_EPOCH
   ) {
@@ -190,16 +189,16 @@ function cacheCheckpointState(
 ): void {
   const config = checkpointState.config;
   const slot = checkpointState.slot;
-  if (slot % config.params.SLOTS_PER_EPOCH !== 0) {
+  if (slot % SLOTS_PER_EPOCH !== 0) {
     throw new Error(`Invalid checkpoint state slot ${checkpointState.slot}`);
   }
-  const blockHeader = config.types.phase0.BeaconBlockHeader.clone(checkpointState.latestBlockHeader);
-  if (config.types.Root.equals(blockHeader.stateRoot, ZERO_HASH)) {
+  const blockHeader = ssz.phase0.BeaconBlockHeader.clone(checkpointState.latestBlockHeader);
+  if (ssz.Root.equals(blockHeader.stateRoot, ZERO_HASH)) {
     blockHeader.stateRoot = config.getForkTypes(slot).BeaconState.hashTreeRoot(checkpointState);
   }
   const cp: phase0.Checkpoint = {
-    root: config.types.phase0.BeaconBlockHeader.hashTreeRoot(blockHeader),
-    epoch: computeEpochAtSlot(config, slot),
+    root: ssz.phase0.BeaconBlockHeader.hashTreeRoot(blockHeader),
+    epoch: computeEpochAtSlot(slot),
   };
   checkpointCache.add(cp, checkpointState);
 }
@@ -208,10 +207,10 @@ function cacheState(
   wrappedState: CachedBeaconState<allForks.BeaconState>,
   stateCache: Map<string, CachedBeaconState<allForks.BeaconState>>
 ): void {
-  const blockHeader = config.types.phase0.BeaconBlockHeader.clone(wrappedState.latestBlockHeader);
-  if (config.types.Root.equals(blockHeader.stateRoot, ZERO_HASH)) {
+  const blockHeader = ssz.phase0.BeaconBlockHeader.clone(wrappedState.latestBlockHeader);
+  if (ssz.Root.equals(blockHeader.stateRoot, ZERO_HASH)) {
     blockHeader.stateRoot = wrappedState.hashTreeRoot();
   }
-  const blockRoot = config.types.phase0.BeaconBlockHeader.hashTreeRoot(blockHeader);
+  const blockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(blockHeader);
   stateCache.set(toHexString(blockRoot), wrappedState);
 }

@@ -1,4 +1,4 @@
-import {allForks, Epoch, phase0} from "@chainsafe/lodestar-types";
+import {allForks, Epoch, phase0, ssz} from "@chainsafe/lodestar-types";
 import {BitList, List, readonlyValues, TreeBacked} from "@chainsafe/ssz";
 import {CachedBeaconState, IAttesterStatus} from "../../allForks/util";
 import {computeStartSlotAtEpoch, getBlockRootAtSlot, zipIndexesInBitList} from "../../util";
@@ -12,10 +12,10 @@ export function statusProcessEpoch<T extends allForks.BeaconState>(
   targetFlag: number,
   headFlag: number
 ): void {
-  const {config, epochCtx} = state;
-  const rootType = config.types.Root;
+  const {epochCtx} = state;
+  const rootType = ssz.Root;
   const prevEpoch = epochCtx.previousShuffling.epoch;
-  const actualTargetBlockRoot = getBlockRootAtSlot(config, state, computeStartSlotAtEpoch(config, epoch));
+  const actualTargetBlockRoot = getBlockRootAtSlot(state, computeStartSlotAtEpoch(epoch));
   for (const att of readonlyValues(attestations)) {
     const aggregationBits = att.aggregationBits;
     const attData = att.data;
@@ -26,12 +26,12 @@ export function statusProcessEpoch<T extends allForks.BeaconState>(
     const attBeaconBlockRoot = attData.beaconBlockRoot;
     const attTarget = attData.target;
     const attVotedTargetRoot = rootType.equals(attTarget.root, actualTargetBlockRoot);
-    const attVotedHeadRoot = rootType.equals(attBeaconBlockRoot, getBlockRootAtSlot(config, state, attSlot));
+    const attVotedHeadRoot = rootType.equals(attBeaconBlockRoot, getBlockRootAtSlot(state, attSlot));
     const committee = epochCtx.getBeaconCommittee(attSlot, committeeIndex);
     const participants = zipIndexesInBitList(
       committee,
       aggregationBits as TreeBacked<BitList>,
-      config.types.phase0.CommitteeBits
+      ssz.phase0.CommitteeBits
     );
 
     if (epoch === prevEpoch) {

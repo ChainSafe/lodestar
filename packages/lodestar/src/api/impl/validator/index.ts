@@ -6,9 +6,14 @@ import {
   proposerShufflingDecisionRoot,
   attesterShufflingDecisionRoot,
 } from "@chainsafe/lodestar-beacon-state-transition";
-import {GENESIS_SLOT, SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
-import {Root, Slot} from "@chainsafe/lodestar-types";
-import {BeaconState} from "@chainsafe/lodestar-types/lib/allForks";
+import {
+  GENESIS_SLOT,
+  SLOTS_PER_EPOCH,
+  SLOTS_PER_HISTORICAL_ROOT,
+  SYNC_COMMITTEE_SIZE,
+  SYNC_COMMITTEE_SUBNET_COUNT,
+} from "@chainsafe/lodestar-params";
+import {allForks, Root, Slot} from "@chainsafe/lodestar-types";
 import {readonlyValues} from "@chainsafe/ssz";
 import {assembleAttestationData} from "../../../chain/factory/attestation";
 import {assembleBlock} from "../../../chain/factory/block";
@@ -57,10 +62,10 @@ export function getValidatorApi({
   let genesisBlockRoot: Root | null = null;
 
   /** Compute and cache the genesis block root */
-  async function getGenesisBlockRoot(state: CachedBeaconState<BeaconState>): Promise<Root> {
+  async function getGenesisBlockRoot(state: CachedBeaconState<allForks.BeaconState>): Promise<Root> {
     if (!genesisBlockRoot) {
       // Close to genesis the genesis block may not be available in the DB
-      if (state.slot < config.params.SLOTS_PER_HISTORICAL_ROOT) {
+      if (state.slot < SLOTS_PER_HISTORICAL_ROOT) {
         genesisBlockRoot = state.blockRoots[0];
       }
 
@@ -80,7 +85,7 @@ export function getValidatorApi({
    * Prevents the validator from getting errors from the API if the clock is a bit advanced
    */
   async function waitForSlot(slot: Slot): Promise<void> {
-    const slotStartSec = chain.genesisTime + slot * config.params.SECONDS_PER_SLOT;
+    const slotStartSec = chain.genesisTime + slot * config.SECONDS_PER_SLOT;
     const msToSlot = slotStartSec * 1000 - Date.now();
     if (msToSlot > 0 && msToSlot < MAX_API_CLOCK_DISPARITY_MS) {
       await chain.clock.waitForSlot(slot);
@@ -93,11 +98,11 @@ export function getValidatorApi({
    */
   async function waitForNextClosestEpoch(): Promise<void> {
     const nextEpoch = chain.clock.currentEpoch + 1;
-    const secPerEpoch = config.params.SLOTS_PER_EPOCH * config.params.SECONDS_PER_SLOT;
+    const secPerEpoch = SLOTS_PER_EPOCH * config.SECONDS_PER_SLOT;
     const nextEpochStartSec = chain.genesisTime + nextEpoch * secPerEpoch;
     const msToNextEpoch = nextEpochStartSec * 1000 - Date.now();
     if (msToNextEpoch > 0 && msToNextEpoch < MAX_API_CLOCK_DISPARITY_MS) {
-      await chain.clock.waitForSlot(computeStartSlotAtEpoch(config, nextEpoch));
+      await chain.clock.waitForSlot(computeStartSlotAtEpoch(nextEpoch));
     }
   }
 
@@ -106,7 +111,7 @@ export function getValidatorApi({
    */
   function notWhileSyncing(): void {
     // Consider node synced before or close to genesis
-    if (chain.clock.currentSlot < config.params.SLOTS_PER_EPOCH) {
+    if (chain.clock.currentSlot < SLOTS_PER_EPOCH) {
       return;
     }
 
@@ -116,7 +121,7 @@ export function getValidatorApi({
       case SyncState.SyncingHead: {
         const currentSlot = chain.clock.currentSlot;
         const headSlot = chain.forkChoice.getHead().slot;
-        if (currentSlot - headSlot > SYNC_TOLERANCE_EPOCHS * config.params.SLOTS_PER_EPOCH) {
+        if (currentSlot - headSlot > SYNC_TOLERANCE_EPOCHS * SLOTS_PER_EPOCH) {
           throw new ApiError(503, `Node is syncing, headSlot ${headSlot} currentSlot ${currentSlot}`);
         } else {
           return;
@@ -177,13 +182,13 @@ export function getValidatorApi({
     async getProposerDuties(epoch) {
       notWhileSyncing();
 
-      const startSlot = computeStartSlotAtEpoch(config, epoch);
+      const startSlot = computeStartSlotAtEpoch(epoch);
       await waitForSlot(startSlot); // Must never request for a future slot > currentSlot
 
       const state = await chain.getHeadStateAtCurrentEpoch();
       const duties: routes.validator.ProposerDuty[] = [];
 
-      for (let slot = startSlot; slot < startSlot + config.params.SLOTS_PER_EPOCH; slot++) {
+      for (let slot = startSlot; slot < startSlot + SLOTS_PER_EPOCH; slot++) {
         // getBeaconProposer ensures the requested epoch is correct
         const blockProposerIndex = state.getBeaconProposer(slot);
         duties.push({slot, validatorIndex: blockProposerIndex, pubkey: state.validators[blockProposerIndex].pubkey});
@@ -191,7 +196,7 @@ export function getValidatorApi({
 
       // Returns `null` on the one-off scenario where the genesis block decides its own shuffling.
       // It should be set to the latest block applied to `self` or the genesis block root.
-      const dependentRoot = proposerShufflingDecisionRoot(config, state) || (await getGenesisBlockRoot(state));
+      const dependentRoot = proposerShufflingDecisionRoot(state) || (await getGenesisBlockRoot(state));
 
       return {
         data: duties,
@@ -238,7 +243,7 @@ export function getValidatorApi({
         if (duty) duties.push(duty);
       }
 
-      const dependentRoot = attesterShufflingDecisionRoot(config, state, epoch) || (await getGenesisBlockRoot(state));
+      const dependentRoot = attesterShufflingDecisionRoot(state, epoch) || (await getGenesisBlockRoot(state));
 
       return {
         data: duties,
@@ -273,7 +278,7 @@ export function getValidatorApi({
       const state = chain.getHeadState();
 
       // Ensures `epoch // EPOCHS_PER_SYNC_COMMITTEE_PERIOD <= current_epoch // EPOCHS_PER_SYNC_COMMITTEE_PERIOD + 1`
-      const syncComitteeValidatorIndexMap = getSyncComitteeValidatorIndexMap(config, state, epoch);
+      const syncComitteeValidatorIndexMap = getSyncComitteeValidatorIndexMap(state, epoch);
 
       const duties: routes.validator.SyncDuty[] = validatorIndices.map((validatorIndex) => ({
         pubkey: state.index2pubkey[validatorIndex].toBytes(),
@@ -428,7 +433,7 @@ export function getValidatorApi({
       network.prepareBeaconCommitteeSubnet(
         subscriptions.map(({validatorIndex, slot, isAggregator, committeesAtSlot, committeeIndex}) => ({
           validatorIndex: validatorIndex,
-          subnet: computeSubnetForCommitteesAtSlot(config, slot, committeesAtSlot, committeeIndex),
+          subnet: computeSubnetForCommitteesAtSlot(slot, committeesAtSlot, committeeIndex),
           slot: slot,
           isAggregator: isAggregator,
         }))
@@ -453,7 +458,7 @@ export function getValidatorApi({
       notWhileSyncing();
 
       // TODO: Cache this value
-      const SYNC_COMMITTEE_SUBNET_SIZE = Math.floor(config.params.SYNC_COMMITTEE_SIZE / SYNC_COMMITTEE_SUBNET_COUNT);
+      const SYNC_COMMITTEE_SUBNET_SIZE = Math.floor(SYNC_COMMITTEE_SIZE / SYNC_COMMITTEE_SUBNET_COUNT);
 
       // A `validatorIndex` can be in multiple subnets, so compute the CommitteeSubscription with double for loop
       const subs: CommitteeSubscription[] = [];
@@ -464,7 +469,7 @@ export function getValidatorApi({
             validatorIndex: sub.validatorIndex,
             subnet: subnet,
             // Subscribe until the end of `untilEpoch`: https://github.com/ethereum/eth2.0-APIs/pull/136#issuecomment-840315097
-            slot: computeStartSlotAtEpoch(config, sub.untilEpoch + 1),
+            slot: computeStartSlotAtEpoch(sub.untilEpoch + 1),
             isAggregator: true,
           });
         }

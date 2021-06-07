@@ -1,4 +1,5 @@
-import {allForks} from "@chainsafe/lodestar-types";
+import {allForks, ssz} from "@chainsafe/lodestar-types";
+import {SLOTS_PER_HISTORICAL_ROOT} from "@chainsafe/lodestar-params";
 import {CachedBeaconState} from "../util";
 import {ZERO_HASH} from "../../constants";
 
@@ -11,14 +12,14 @@ export function processSlot(state: CachedBeaconState<allForks.BeaconState>): voi
 
   // Cache state root
   const previousStateRoot = types.BeaconState.hashTreeRoot(state);
-  state.stateRoots[state.slot % config.params.SLOTS_PER_HISTORICAL_ROOT] = previousStateRoot;
+  state.stateRoots[state.slot % SLOTS_PER_HISTORICAL_ROOT] = previousStateRoot;
 
   // Cache latest block header state root
-  if (config.types.Root.equals(state.latestBlockHeader.stateRoot, ZERO_HASH)) {
+  if (ssz.Root.equals(state.latestBlockHeader.stateRoot, ZERO_HASH)) {
     state.latestBlockHeader.stateRoot = previousStateRoot;
   }
 
   // Cache block root
-  const previousBlockRoot = config.types.phase0.BeaconBlockHeader.hashTreeRoot(state.latestBlockHeader);
-  state.blockRoots[state.slot % config.params.SLOTS_PER_HISTORICAL_ROOT] = previousBlockRoot;
+  const previousBlockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(state.latestBlockHeader);
+  state.blockRoots[state.slot % SLOTS_PER_HISTORICAL_ROOT] = previousBlockRoot;
 }

@@ -1,7 +1,7 @@
 import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
 import pipe from "it-pipe";
-import {config} from "@chainsafe/lodestar-config/minimal";
+import {config} from "@chainsafe/lodestar-config/default";
 import {phase0} from "@chainsafe/lodestar-types";
 import {Method, Encoding, getRequestSzzTypeByMethod, RequestBody} from "../../../../../src/network/reqresp/types";
 import {requestEncode} from "../../../../../src/network/reqresp/encoders/requestEncode";

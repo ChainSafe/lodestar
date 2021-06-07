@@ -7,6 +7,7 @@ import {processAttesterSlashing} from "./processAttesterSlashing";
 import {processAttestation} from "./processAttestation";
 import {processDeposit} from "./processDeposit";
 import {processVoluntaryExit} from "./processVoluntaryExit";
+import {MAX_DEPOSITS} from "@chainsafe/lodestar-params";
 
 type Operation =
   | phase0.ProposerSlashing
@@ -22,7 +23,7 @@ export function processOperations(
   verifySignatures = true
 ): void {
   // verify that outstanding deposits are processed up to the maximum number of deposits
-  const maxDeposits = Math.min(state.config.params.MAX_DEPOSITS, state.eth1Data.depositCount - state.eth1DepositIndex);
+  const maxDeposits = Math.min(MAX_DEPOSITS, state.eth1Data.depositCount - state.eth1DepositIndex);
   if (body.deposits.length !== maxDeposits) {
     throw new Error(
       "Block contains incorrect number of deposits: " + `depositCount=${body.deposits.length} expected=${maxDeposits}`

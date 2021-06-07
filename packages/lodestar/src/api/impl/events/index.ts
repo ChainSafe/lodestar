@@ -29,7 +29,7 @@ export function getEventsApi({chain, config}: Pick<ApiModules, "chain" | "config
     [routes.events.EventType.head]: (head) => [
       {
         block: head.blockRoot,
-        epochTransition: computeStartSlotAtEpoch(config, computeEpochAtSlot(config, head.slot)) === head.slot,
+        epochTransition: computeStartSlotAtEpoch(computeEpochAtSlot(head.slot)) === head.slot,
         slot: head.slot,
         state: head.stateRoot,
         // Todo implement
@@ -55,7 +55,7 @@ export function getEventsApi({chain, config}: Pick<ApiModules, "chain" | "config
     [routes.events.EventType.chainReorg]: (oldHead, newHead, depth) => [
       {
         depth,
-        epoch: computeEpochAtSlot(config, newHead.slot),
+        epoch: computeEpochAtSlot(newHead.slot),
         slot: newHead.slot,
         newHeadBlock: newHead.blockRoot,
         oldHeadBlock: oldHead.blockRoot,

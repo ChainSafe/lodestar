@@ -12,7 +12,7 @@ export function getLatestWeakSubjectivityCheckpointEpoch(
   state: allForks.BeaconState,
   safetyDecay = 0.1
 ): Epoch {
-  const valCount = getActiveValidatorIndices(state, getCurrentEpoch(config, state)).length;
+  const valCount = getActiveValidatorIndices(state, getCurrentEpoch(state)).length;
   return getWeakSubjectivityCheckpointEpoch(config, state.finalizedCheckpoint.epoch, valCount, safetyDecay);
 }
 
@@ -22,12 +22,12 @@ export function getWeakSubjectivityCheckpointEpoch(
   activeValidatorCount: number,
   safetyDecay = 0.1
 ): Epoch {
-  let weakSubjectivityMod = config.params.MIN_VALIDATOR_WITHDRAWABILITY_DELAY;
-  if (activeValidatorCount >= config.params.MIN_PER_EPOCH_CHURN_LIMIT * config.params.CHURN_LIMIT_QUOTIENT) {
-    weakSubjectivityMod += 256 * Math.floor((safetyDecay * config.params.CHURN_LIMIT_QUOTIENT) / 2 / 256);
+  let weakSubjectivityMod = config.MIN_VALIDATOR_WITHDRAWABILITY_DELAY;
+  if (activeValidatorCount >= config.MIN_PER_EPOCH_CHURN_LIMIT * config.CHURN_LIMIT_QUOTIENT) {
+    weakSubjectivityMod += 256 * Math.floor((safetyDecay * config.CHURN_LIMIT_QUOTIENT) / 2 / 256);
   } else {
     weakSubjectivityMod +=
-      256 * Math.floor((safetyDecay * activeValidatorCount) / (2 * config.params.MIN_PER_EPOCH_CHURN_LIMIT) / 256);
+      256 * Math.floor((safetyDecay * activeValidatorCount) / (2 * config.MIN_PER_EPOCH_CHURN_LIMIT) / 256);
   }
   return finalizedEpoch - (finalizedEpoch % weakSubjectivityMod);
 }

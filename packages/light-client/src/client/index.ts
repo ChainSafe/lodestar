@@ -1,6 +1,7 @@
 import mitt from "mitt";
+import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {getClient, Api} from "@chainsafe/lodestar-api";
-import {altair, Root, Slot, SyncPeriod} from "@chainsafe/lodestar-types";
+import {altair, Root, Slot, ssz, SyncPeriod} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {computeSyncPeriodAtSlot, ZERO_HASH} from "@chainsafe/lodestar-beacon-state-transition";
 import {TreeOffsetProof} from "@chainsafe/persistent-merkle-tree";
@@ -49,15 +50,15 @@ export class Lightclient {
     modules: LightclientModules,
     trustedRoot: {stateRoot: Root; slot: Slot}
   ): Promise<Lightclient> {
-    const {config, beaconApiUrl} = modules;
+    const {beaconApiUrl, config} = modules;
     const {slot, stateRoot} = trustedRoot;
     // TODO: Consider initializing only the lightclient namespace
     const api = getClient(config, {baseUrl: beaconApiUrl});
 
-    const paths = getSyncCommitteesProofPaths(config);
+    const paths = getSyncCommitteesProofPaths();
     const proof = await api.lightclient.getStateProof(toHexString(stateRoot), paths);
 
-    const state = config.types.altair.BeaconState.createTreeBackedFromProof(stateRoot as Uint8Array, proof.data);
+    const state = ssz.altair.BeaconState.createTreeBackedFromProof(stateRoot as Uint8Array, proof.data);
     const store: LightClientStoreFast = {
       bestUpdates: new Map<SyncPeriod, altair.LightClientUpdate>(),
       snapshot: {
@@ -95,8 +96,8 @@ export class Lightclient {
 
   async sync(): Promise<void> {
     const currentSlot = this.clock.currentSlot;
-    const lastPeriod = computeSyncPeriodAtSlot(this.config, this.store.snapshot.header.slot);
-    const currentPeriod = computeSyncPeriodAtSlot(this.config, currentSlot);
+    const lastPeriod = computeSyncPeriodAtSlot(this.store.snapshot.header.slot);
+    const currentPeriod = computeSyncPeriodAtSlot(currentSlot);
     const periodRanges = chunkifyInclusiveRange(lastPeriod, currentPeriod, maxPeriodPerRequest);
     for (const [fromPeriod, toPeriod] of periodRanges) {
       const {data: updates} = await this.api.lightclient.getBestUpdates(fromPeriod, toPeriod);
@@ -130,15 +131,14 @@ export class Lightclient {
   };
 
   private processLightClientUpdate(update: altair.LightClientUpdate): void {
-    validateLightClientUpdate(this.config, this.store.snapshot, update, this.genesisValidatorsRoot);
+    validateLightClientUpdate(this.store.snapshot, update, this.genesisValidatorsRoot);
 
-    const syncPeriod = computeSyncPeriodAtSlot(this.config, update.header.slot);
+    const syncPeriod = computeSyncPeriodAtSlot(update.header.slot);
     const prevBestUpdate = this.store.bestUpdates.get(syncPeriod);
     if (!prevBestUpdate || isBetterUpdate(prevBestUpdate, update)) {
       this.store.bestUpdates.set(syncPeriod, update);
     }
 
-    const {SLOTS_PER_EPOCH, EPOCHS_PER_SYNC_COMMITTEE_PERIOD} = this.config.params;
     const updateTimeout = SLOTS_PER_EPOCH * EPOCHS_PER_SYNC_COMMITTEE_PERIOD;
 
     // Apply update if (1) 2/3 quorum is reached and (2) we have a finality proof.
@@ -146,7 +146,7 @@ export class Lightclient {
     // It may be changed to re-organizable light client design. See the on-going issue eth2.0-specs#2182.
     if (
       sumBits(update.syncCommitteeBits) * 3 >= update.syncCommitteeBits.length * 2 &&
-      !isEmptyHeader(this.config, update.finalityHeader)
+      !isEmptyHeader(update.finalityHeader)
     ) {
       this.applyLightClientUpdate(update);
       this.store.bestUpdates.delete(syncPeriod);
@@ -154,7 +154,7 @@ export class Lightclient {
 
     // Forced best update when the update timeout has elapsed
     else if (this.clock.currentSlot > this.store.snapshot.header.slot + updateTimeout) {
-      const prevSyncPeriod = computeSyncPeriodAtSlot(this.config, this.store.snapshot.header.slot);
+      const prevSyncPeriod = computeSyncPeriodAtSlot(this.store.snapshot.header.slot);
       const bestUpdate = this.store.bestUpdates.get(prevSyncPeriod);
       if (bestUpdate) {
         this.applyLightClientUpdate(bestUpdate);
@@ -164,8 +164,8 @@ export class Lightclient {
   }
 
   private applyLightClientUpdate(update: altair.LightClientUpdate): void {
-    const snapshotPeriod = computeSyncPeriodAtSlot(this.config, this.store.snapshot.header.slot);
-    const updatePeriod = computeSyncPeriodAtSlot(this.config, update.header.slot);
+    const snapshotPeriod = computeSyncPeriodAtSlot(this.store.snapshot.header.slot);
+    const updatePeriod = computeSyncPeriodAtSlot(update.header.slot);
     if (updatePeriod < snapshotPeriod) {
       throw Error("Cannot rollback sync period");
     }

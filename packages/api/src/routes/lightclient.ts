@@ -1,7 +1,6 @@
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Path} from "@chainsafe/ssz";
 import {Proof} from "@chainsafe/persistent-merkle-tree";
-import {altair, SyncPeriod} from "@chainsafe/lodestar-types";
+import {altair, ssz, SyncPeriod} from "@chainsafe/lodestar-types";
 import {
   ArrayOf,
   reqEmpty,
@@ -63,12 +62,12 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
   };
 }
 
-export function getReturnTypes(config: IBeaconConfig): ReturnTypes<Api> {
+export function getReturnTypes(): ReturnTypes<Api> {
   return {
     // Just sent the proof JSON as-is
     getStateProof: sameType(),
-    getBestUpdates: ContainerData(ArrayOf(config.types.altair.LightClientUpdate)),
-    getLatestUpdateFinalized: ContainerData(config.types.altair.LightClientUpdate),
-    getLatestUpdateNonFinalized: ContainerData(config.types.altair.LightClientUpdate),
+    getBestUpdates: ContainerData(ArrayOf(ssz.altair.LightClientUpdate)),
+    getLatestUpdateFinalized: ContainerData(ssz.altair.LightClientUpdate),
+    getLatestUpdateNonFinalized: ContainerData(ssz.altair.LightClientUpdate),
   };
 }

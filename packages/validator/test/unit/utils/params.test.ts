@@ -1,22 +1,15 @@
-import {mainnetConfig} from "@chainsafe/lodestar-config/mainnet";
-import {minimalConfig} from "@chainsafe/lodestar-config/minimal";
+import {createIChainConfig} from "@chainsafe/lodestar-config";
+import {chainConfig} from "@chainsafe/lodestar-config/default";
 import {expect} from "chai";
 import {assertEqualParams, NotEqualParamsError} from "../../../src/util/params";
 
 describe("utils / params / assertEqualParams", () => {
-  it("mainnet == mainnet", () => {
-    assertEqualParams(mainnetConfig.params, mainnetConfig.params);
+  it("default == default", () => {
+    assertEqualParams(chainConfig, chainConfig);
   });
-
-  it("minimal == minimal", () => {
-    assertEqualParams(minimalConfig.params, minimalConfig.params);
-  });
-
-  it("mainnet != minimal", () => {
-    expect(() => assertEqualParams(mainnetConfig.params, minimalConfig.params)).to.throw(NotEqualParamsError);
-  });
-
-  it("minimal != mainnet", () => {
-    expect(() => assertEqualParams(minimalConfig.params, mainnetConfig.params)).to.throw(NotEqualParamsError);
+  it("default != other", () => {
+    // eslint-disable-next-line @typescript-eslint/naming-convention
+    const otherConfig = createIChainConfig({...chainConfig, ALTAIR_FORK_EPOCH: 0});
+    expect(() => assertEqualParams(chainConfig, otherConfig)).to.throw(NotEqualParamsError);
   });
 });

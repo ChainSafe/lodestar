@@ -1,16 +1,16 @@
 import {join} from "path";
 
 import {TreeBacked} from "@chainsafe/ssz";
-import {params} from "@chainsafe/lodestar-params/minimal";
 import {CachedBeaconState, allForks, altair} from "@chainsafe/lodestar-beacon-state-transition";
 import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
 import {IProcessBlockHeader} from "./type";
 import {SPEC_TEST_LOCATION} from "../../../../utils/specTestCases";
 import {expectEqualBeaconState} from "../../util";
+import {ssz} from "@chainsafe/lodestar-types";
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
-const config = createIBeaconConfig({...params, ALTAIR_FORK_EPOCH: 0});
+const config = createIBeaconConfig({ALTAIR_FORK_EPOCH: 0});
 
 describeDirectorySpecTest<IProcessBlockHeader, altair.BeaconState>(
   "process block header minimal",
@@ -35,9 +35,9 @@ describeDirectorySpecTest<IProcessBlockHeader, altair.BeaconState>(
       },
     },
     sszTypes: {
-      pre: config.types.altair.BeaconState,
-      post: config.types.altair.BeaconState,
-      block: config.types.altair.BeaconBlock,
+      pre: ssz.altair.BeaconState,
+      post: ssz.altair.BeaconState,
+      block: ssz.altair.BeaconBlock,
     },
     timeout: 10000,
     shouldError: (testCase) => !testCase.post,

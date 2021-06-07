@@ -1,4 +1,5 @@
-import {config} from "@chainsafe/lodestar-config/minimal";
+import {ssz} from "@chainsafe/lodestar-types";
+import {config} from "@chainsafe/lodestar-config/default";
 import {Api, ReqTypes, NodePeer} from "../../src/routes/node";
 import {getClient} from "../../src/client/node";
 import {getRoutes} from "../../src/server/node";
@@ -23,7 +24,7 @@ describe("node", () => {
           enr: "enr",
           p2pAddresses: ["p2pAddresses"],
           discoveryAddresses: ["discoveryAddresses"],
-          metadata: config.types.altair.Metadata.defaultValue(),
+          metadata: ssz.altair.Metadata.defaultValue(),
         },
       },
     },

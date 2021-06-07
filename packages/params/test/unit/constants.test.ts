@@ -1,12 +1,12 @@
 import * as constants from "../../src/constants";
-import {config} from "@chainsafe/lodestar-config/mainnet";
+import {ssz} from "@chainsafe/lodestar-types";
 import {expect} from "chai";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
 describe("Lightclient pre-computed constants", () => {
-  const FINALIZED_ROOT_INDEX = Number(config.types.altair.BeaconState.getPathGindex(["finalizedCheckpoint", "root"]));
-  const NEXT_SYNC_COMMITTEE_INDEX = Number(config.types.altair.BeaconState.getPathGindex(["nextSyncCommittee"]));
+  const FINALIZED_ROOT_INDEX = Number(ssz.altair.BeaconState.getPathGindex(["finalizedCheckpoint", "root"]));
+  const NEXT_SYNC_COMMITTEE_INDEX = Number(ssz.altair.BeaconState.getPathGindex(["nextSyncCommittee"]));
   const FINALIZED_ROOT_INDEX_FLOORLOG2 = floorlog2(FINALIZED_ROOT_INDEX);
   const NEXT_SYNC_COMMITTEE_INDEX_FLOORLOG2 = floorlog2(NEXT_SYNC_COMMITTEE_INDEX);
 
@@ -19,7 +19,7 @@ describe("Lightclient pre-computed constants", () => {
 
   for (const [key, expectedValue] of Object.entries(correctConstants)) {
     it(key, () => {
-      expect((constants as Record<string, number>)[key]).to.equal(expectedValue);
+      expect(((constants as unknown) as Record<string, number>)[key]).to.equal(expectedValue);
     });
   }
 });

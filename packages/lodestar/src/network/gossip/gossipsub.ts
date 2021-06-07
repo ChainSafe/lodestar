@@ -233,7 +233,7 @@ export class Eth2Gossipsub extends Gossipsub {
   }
 
   async publishVoluntaryExit(voluntaryExit: phase0.SignedVoluntaryExit): Promise<void> {
-    const fork = this.config.getForkName(computeEpochAtSlot(this.config, voluntaryExit.message.epoch));
+    const fork = this.config.getForkName(computeEpochAtSlot(voluntaryExit.message.epoch));
     await this.publishObject({type: GossipType.voluntary_exit, fork}, voluntaryExit);
   }
 

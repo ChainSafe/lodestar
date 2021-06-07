@@ -1,7 +1,13 @@
 import {hash, TreeBacked, List} from "@chainsafe/ssz";
-import {phase0, Root} from "@chainsafe/lodestar-types";
+import {phase0, Root, ssz} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {computeDomain, computeSigningRoot, interopSecretKeys} from "@chainsafe/lodestar-beacon-state-transition";
+import {
+  computeDomain,
+  computeSigningRoot,
+  interopSecretKeys,
+  ZERO_HASH,
+} from "@chainsafe/lodestar-beacon-state-transition";
+import {BLS_WITHDRAWAL_PREFIX, DOMAIN_DEPOSIT, MAX_EFFECTIVE_BALANCE} from "@chainsafe/lodestar-params";
 
 /**
  * Compute and return deposit data from other validators.
@@ -17,15 +23,15 @@ export function interopDeposits(
     // create DepositData
     const data: phase0.DepositData = {
       pubkey,
-      withdrawalCredentials: Buffer.concat([config.params.BLS_WITHDRAWAL_PREFIX, hash(pubkey).slice(1)]),
-      amount: config.params.MAX_EFFECTIVE_BALANCE,
+      withdrawalCredentials: Buffer.concat([BLS_WITHDRAWAL_PREFIX, hash(pubkey).slice(1)]),
+      amount: MAX_EFFECTIVE_BALANCE,
       signature: Buffer.alloc(0),
     };
-    const domain = computeDomain(config, config.params.DOMAIN_DEPOSIT);
-    const signingRoot = computeSigningRoot(config, config.types.phase0.DepositMessage, data, domain);
+    const domain = computeDomain(DOMAIN_DEPOSIT, config.GENESIS_FORK_VERSION, ZERO_HASH);
+    const signingRoot = computeSigningRoot(ssz.phase0.DepositMessage, data, domain);
     data.signature = secretKey.sign(signingRoot).toBytes();
     // Add to merkle tree
-    depositDataRootList.push(config.types.phase0.DepositData.hashTreeRoot(data));
+    depositDataRootList.push(ssz.phase0.DepositData.hashTreeRoot(data));
     return {
       proof: tree.getSingleProof(depositDataRootList.type.getPropertyGindex(i)),
       data,

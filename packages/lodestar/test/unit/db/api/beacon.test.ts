@@ -1,7 +1,7 @@
 import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
 import sinon from "sinon";
-import {config} from "@chainsafe/lodestar-config/mainnet";
+import {config} from "@chainsafe/lodestar-config/default";
 import {LevelDbController} from "@chainsafe/lodestar-db";
 import {BeaconDb} from "../../../../src/db";
 import {generateEmptySignedBlock} from "../../../utils/block";

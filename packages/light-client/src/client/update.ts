@@ -1,4 +1,4 @@
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {altair, Slot} from "@chainsafe/lodestar-types";
 import {computeSyncPeriodAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {validateLightClientUpdate} from "./validation";
@@ -48,21 +48,19 @@ import {LightClientSnapshotFast, LightClientStoreFast} from "./types";
  * Spec v1.0.1
  */
 export function processLightClientUpdate(
-  config: IBeaconConfig,
   store: LightClientStoreFast,
   update: altair.LightClientUpdate,
   currentSlot: Slot,
   genesisValidatorsRoot: altair.Root
 ): void {
-  validateLightClientUpdate(config, store.snapshot, update, genesisValidatorsRoot);
+  validateLightClientUpdate(store.snapshot, update, genesisValidatorsRoot);
 
-  const syncPeriod = computeSyncPeriodAtSlot(config, update.header.slot);
+  const syncPeriod = computeSyncPeriodAtSlot(update.header.slot);
   const prevBestUpdate = store.bestUpdates.get(syncPeriod);
   if (!prevBestUpdate || isBetterUpdate(prevBestUpdate, update)) {
     store.bestUpdates.set(syncPeriod, update);
   }
 
-  const {SLOTS_PER_EPOCH, EPOCHS_PER_SYNC_COMMITTEE_PERIOD} = config.params;
   const updateTimeout = SLOTS_PER_EPOCH * EPOCHS_PER_SYNC_COMMITTEE_PERIOD;
 
   // Apply update if (1) 2/3 quorum is reached and (2) we have a finality proof.
@@ -70,18 +68,18 @@ export function processLightClientUpdate(
   // It may be changed to re-organizable light client design. See the on-going issue eth2.0-specs#2182.
   if (
     sumBits(update.syncCommitteeBits) * 3 >= update.syncCommitteeBits.length * 2 &&
-    !isEmptyHeader(config, update.finalityHeader)
+    !isEmptyHeader(update.finalityHeader)
   ) {
-    applyLightClientUpdate(config, store.snapshot, update);
+    applyLightClientUpdate(store.snapshot, update);
     store.bestUpdates.delete(syncPeriod);
   }
 
   // Forced best update when the update timeout has elapsed
   else if (currentSlot > store.snapshot.header.slot + updateTimeout) {
-    const prevSyncPeriod = computeSyncPeriodAtSlot(config, store.snapshot.header.slot);
+    const prevSyncPeriod = computeSyncPeriodAtSlot(store.snapshot.header.slot);
     const bestUpdate = store.bestUpdates.get(prevSyncPeriod);
     if (bestUpdate) {
-      applyLightClientUpdate(config, store.snapshot, bestUpdate);
+      applyLightClientUpdate(store.snapshot, bestUpdate);
       store.bestUpdates.delete(prevSyncPeriod);
     }
   }
@@ -90,13 +88,9 @@ export function processLightClientUpdate(
 /**
  * Spec v1.0.1
  */
-export function applyLightClientUpdate(
-  config: IBeaconConfig,
-  snapshot: LightClientSnapshotFast,
-  update: altair.LightClientUpdate
-): void {
-  const snapshotPeriod = computeSyncPeriodAtSlot(config, snapshot.header.slot);
-  const updatePeriod = computeSyncPeriodAtSlot(config, update.header.slot);
+export function applyLightClientUpdate(snapshot: LightClientSnapshotFast, update: altair.LightClientUpdate): void {
+  const snapshotPeriod = computeSyncPeriodAtSlot(snapshot.header.slot);
+  const updatePeriod = computeSyncPeriodAtSlot(update.header.slot);
   if (updatePeriod < snapshotPeriod) {
     throw Error("Cannot rollback sync period");
   }

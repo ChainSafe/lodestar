@@ -1,5 +1,6 @@
 import LibP2p from "libp2p";
 import PeerId from "peer-id";
+import {ssz} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {Discv5, Discv5Discovery} from "@chainsafe/discv5";
@@ -107,7 +108,7 @@ export class PeerDiscovery {
 
       try {
         const attnets = enr.get("attnets");
-        if (attnets && this.config.types.phase0.AttestationSubnets.deserialize(attnets)[subnet]) {
+        if (attnets && ssz.phase0.AttestationSubnets.deserialize(attnets)[subnet]) {
           // async because peerId runs some crypto lib
           const peerId = await enr.peerId();
 

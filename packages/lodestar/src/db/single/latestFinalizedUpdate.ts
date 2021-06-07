@@ -1,6 +1,6 @@
 import {Type} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {altair} from "@chainsafe/lodestar-types";
+import {altair, ssz} from "@chainsafe/lodestar-types";
 import {IDatabaseController, Bucket} from "@chainsafe/lodestar-db";
 
 export class LatestFinalizedUpdate {
@@ -11,7 +11,7 @@ export class LatestFinalizedUpdate {
 
   constructor(config: IBeaconConfig, db: IDatabaseController<Buffer, Buffer>) {
     this.db = db;
-    this.type = config.types.altair.LightClientUpdate;
+    this.type = ssz.altair.LightClientUpdate;
   }
 
   async put(value: altair.LightClientUpdate): Promise<void> {
