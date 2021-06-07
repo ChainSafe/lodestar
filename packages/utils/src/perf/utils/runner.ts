@@ -144,9 +144,11 @@ function formatResultRow({id, averageNs, runsDone, factor}: BenchmarkResult): st
  * ```
  */
 function formatAsBenchmarkJs(results: BenchmarkResult[]): string {
-  return results
-    .map(({id, averageNs, runsDone}) => `${id} x ${1e9 / averageNs} ops/sec ±0.00% (${runsDone} runs sampled)`)
-    .join("\n");
+  return (
+    results
+      .map(({id, averageNs, runsDone}) => `${id} x ${1e9 / averageNs} ops/sec ±0.00% (${runsDone} runs sampled)`)
+      .join("\n") + "\n"
+  );
 }
 
 export function formatTitle(title: string): string {
