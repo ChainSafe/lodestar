@@ -1,7 +1,8 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {MAX_DEPOSITS, MAX_EFFECTIVE_BALANCE, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {allForks, Epoch, Root, Uint64} from "@chainsafe/lodestar-types";
+import {ssz} from "@chainsafe/lodestar-types";
 import {Checkpoint} from "@chainsafe/lodestar-types/phase0";
-import {assert} from "@chainsafe/lodestar-utils";
 import {toHexString} from "@chainsafe/ssz";
 import {CachedBeaconState} from ".";
 import {
@@ -40,13 +41,13 @@ export function getLatestWeakSubjectivityCheckpointEpoch(
     https://github.com/runtimeverification/beacon-chain-verification/blob/master/weak-subjectivity/weak-subjectivity-analysis.pdf
  */
 export function computeWeakSubjectivityPeriod(config: IBeaconConfig, state: allForks.BeaconState): Uint64 {
-  let wsPeriod = config.params.MIN_VALIDATOR_WITHDRAWABILITY_DELAY;
-  const N = getActiveValidatorIndices(state, getCurrentEpoch(config, state)).length;
-  const t = Math.floor(Number(getTotalActiveBalance(config, state)) / N / Number(ETH_TO_GWEI));
-  const T = Math.floor(Number(config.params.MAX_EFFECTIVE_BALANCE) / Number(ETH_TO_GWEI));
+  let wsPeriod = config.MIN_VALIDATOR_WITHDRAWABILITY_DELAY;
+  const N = getActiveValidatorIndices(state, getCurrentEpoch(state)).length;
+  const t = Math.floor(Number(getTotalActiveBalance(state)) / N / Number(ETH_TO_GWEI));
+  const T = Math.floor(Number(MAX_EFFECTIVE_BALANCE) / Number(ETH_TO_GWEI));
   const delta = getValidatorChurnLimit(config, state);
   // eslint-disable-next-line @typescript-eslint/naming-convention
-  const Delta = config.params.MAX_DEPOSITS * config.params.SLOTS_PER_EPOCH;
+  const Delta = MAX_DEPOSITS * SLOTS_PER_EPOCH;
   const D = Number(SAFETY_DECAY);
 
   if (T * (200 + 3 * D) < t * (200 + 12 * D)) {
@@ -63,11 +64,11 @@ export function computeWeakSubjectivityPeriod(config: IBeaconConfig, state: allF
 }
 
 function getLatestBlockRoot(config: IBeaconConfig, state: allForks.BeaconState): Root {
-  const header = config.types.phase0.BeaconBlockHeader.clone(state.latestBlockHeader);
-  if (config.types.Root.equals(header.stateRoot, ZERO_HASH)) {
+  const header = ssz.phase0.BeaconBlockHeader.clone(state.latestBlockHeader);
+  if (ssz.Root.equals(header.stateRoot, ZERO_HASH)) {
     header.stateRoot = config.getForkTypes(state.slot).BeaconState.hashTreeRoot(state);
   }
-  return config.types.phase0.BeaconBlockHeader.hashTreeRoot(header);
+  return ssz.phase0.BeaconBlockHeader.hashTreeRoot(header);
 }
 
 export function isWithinWeakSubjectivityPeriod(
@@ -77,15 +78,18 @@ export function isWithinWeakSubjectivityPeriod(
   wsCheckpoint: Checkpoint
 ): boolean {
   const blockRoot = getLatestBlockRoot(config, wsState);
-  if (!config.types.Root.equals(blockRoot, wsCheckpoint.root)) {
+  if (!ssz.Root.equals(blockRoot, wsCheckpoint.root)) {
     throw new Error(
       `Roots do not match.  expected=${toHexString(wsCheckpoint.root)}, actual=${toHexString(blockRoot)}`
     );
   }
-  assert.equal(computeEpochAtSlot(config, wsState.slot), wsCheckpoint.epoch);
+
+  const wsStateEpoch = computeEpochAtSlot(wsState.slot);
+  if (!ssz.Epoch.equals(wsStateEpoch, wsCheckpoint.epoch)) {
+    throw new Error(`Epochs do not match.  expected=${wsCheckpoint.epoch}, actual=${wsStateEpoch}`);
+  }
 
   const wsPeriod = computeWeakSubjectivityPeriod(config, wsState);
-  const wsStateEpoch = computeEpochAtSlot(config, wsState.slot);
-  const currentEpoch = computeEpochAtSlot(config, getCurrentSlot(config, genesisTime));
+  const currentEpoch = computeEpochAtSlot(getCurrentSlot(config, genesisTime));
   return currentEpoch <= BigInt(wsStateEpoch) + wsPeriod;
 }

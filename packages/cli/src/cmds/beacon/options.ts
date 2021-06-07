@@ -10,6 +10,7 @@ interface IBeaconExtraArgs {
   weakSubjectivityStateFile?: string;
   fetchChainSafeWeakSubjecitivtyState: boolean;
   weakSubjectivityCheckpoint?: string;
+  weakSubjecivityServerUrl?: string;
 }
 
 export const beaconExtraOptions: ICliCommandOptions<IBeaconExtraArgs> = {
@@ -37,7 +38,13 @@ export const beaconExtraOptions: ICliCommandOptions<IBeaconExtraArgs> = {
 
   weakSubjectivityCheckpoint: {
     description:
-      "Tell the beacon node to fetch a weak subjectivity state at the specified checkpoint.  The string arg must be in the form <blockRoot>:<epoch>.  For example, 0x1234:100 would ask for the weak subjectivity state at checkpoint of epoch 100 with block root 0x1234.",
+      "Tell the beacon node to fetch a weak subjectivity state at the specified checkpoint. The string arg must be in the form <blockRoot>:<epoch>. For example, 0x1234:100 would ask for the weak subjectivity state at checkpoint of epoch 100 with block root 0x1234.",
+    type: "string",
+  },
+
+  weakSubjecivityServerUrl: {
+    description:
+      "Pass in a custom server from which to fetch weak subjectivity states (if you don't want to use the built-in Lodestar servers).",
     type: "string",
   },
 };
