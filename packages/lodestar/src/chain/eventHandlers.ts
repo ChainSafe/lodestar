@@ -246,7 +246,7 @@ export async function onBlock(
     const attestations = Array.from(readonlyValues(block.message.body.attestations));
 
     // Only process attestations in response to an non-prefinalized block
-    await Promise.all([
+    const indexedAttestations = await Promise.all([
       // process the attestations in the block
       ...attestations.map((attestation) => {
         return this.attestationProcessor.processAttestationJob({
@@ -262,11 +262,16 @@ export async function onBlock(
       }),
     ]);
 
-    // Register attestations in metrics
-    for (const attestation of attestations) {
-      this.metrics?.registerAttestationInBlock(attestation, block);
+    if (this.metrics) {
+      // Register attestations in metrics
+      for (const attestation of indexedAttestations) {
+        if (attestation) {
+          this.metrics.registerAttestationInBlock(attestation, block.message);
+        }
+      }
     }
   }
+
   // if reprocess job, don't have to reprocess block operations or pending blocks
   if (!job.reprocess) {
     await this.db.processBlockOperations(block);
