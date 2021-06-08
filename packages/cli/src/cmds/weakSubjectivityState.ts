@@ -1,59 +1,33 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/naming-convention */
-
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {allForks} from "@chainsafe/lodestar-types";
-import {Checkpoint} from "@chainsafe/lodestar-types/phase0";
-import {ILogger, fromHex} from "@chainsafe/lodestar-utils";
+import {ILogger} from "@chainsafe/lodestar-utils";
 import {TreeBacked} from "@chainsafe/ssz";
-import got from "got";
+import {getStateTypeFromBytes} from "@chainsafe/lodestar/lib/util/multifork";
 import {IGlobalArgs} from "../options";
 import {IBeaconArgs} from "./beacon/options";
+import got from "got";
 
-// TODO put the real server names/IPs once we have them
+// TODO this is a local infura account.  switch with a ChainSafe account when available
 export enum WeakSubjectivityServers {
-  mainnet = "http://localhost:8081",
-  prater = "http://localhost:8081",
-  pyrmont = "http://localhost:8081",
-  dev = "http://localhost:8081",
-  oonoonba = "http://localhost:8081",
+  mainnet = "https://1sla4tyOFn0bB1ohyCKaH2sLmHu:b8cdb9d881039fd04fe982a5ec57b0b8@eth2-beacon-mainnet.infura.io/eth/v1/debug/beacon/states",
+  prater = "https://1sla4tyOFn0bB1ohyCKaH2sLmHu:b8cdb9d881039fd04fe982a5ec57b0b8@eth2-beacon-prater.infura.io/eth/v1/debug/beacon/states",
+  pyrmont = "https://1sla4tyOFn0bB1ohyCKaH2sLmHu:b8cdb9d881039fd04fe982a5ec57b0b8@eth2-beacon-pyrmont.infura.io/eth/v1/debug/beacon/states",
 }
 
-export type WeakSubjectivityData = {
-  state: TreeBacked<allForks.BeaconState>;
-  checkpoint: Checkpoint;
-};
-
-type WSResponse = {
-  current_epoch: number;
-  ws_checkpoint: string;
-  ws_period: number;
-  is_safe: boolean;
-  ws_state: {
-    data: {
-      slot: number;
-    };
-  };
-};
-
-export async function getWeakSubjectivityData(
+export async function getWeakSubjectivityState(
   config: IBeaconConfig,
   args: IBeaconArgs & IGlobalArgs,
+  stateId = "finalized",
   server: string,
   logger: ILogger
-): Promise<WeakSubjectivityData> {
-  logger.info("Fetching weak subjectivity state from ChainSafe at " + server);
-  const response = await got(server, {searchParams: {checkpoint: args.weakSubjectivityCheckpoint}});
-  const responseBody = JSON.parse(response.body) as WSResponse;
-  if (!responseBody.ws_state) {
-    throw new Error("Unexpected data from weak subjectivity server.  Missing ws_state.");
-  }
-  const data = responseBody.ws_state.data;
-  const state = config.getForkTypes(data.slot).BeaconState.createTreeBackedFromJson(data, {case: "snake"});
+): Promise<TreeBacked<allForks.BeaconState>> {
+  logger.info("Fetching weak subjectivity state from ChainSafe at " + server + "/" + stateId);
+  // eslint-disable-next-line @typescript-eslint/naming-convention
+  const response = await got(server + "/" + stateId, {headers: {Accept: "application/octet-stream"}});
+  const stateBytes = response.rawBody;
+  const state = getStateTypeFromBytes(config, stateBytes).createTreeBackedFromBytes(stateBytes);
   if (!state) {
     throw new Error("Weak subjectivity state not found for network " + args.network);
   }
-  const [checkpointRoot, checkpointEpoch] = (args.weakSubjectivityCheckpoint || responseBody.ws_checkpoint).split(":");
-  console.log("checkpoint data: ", checkpointRoot, checkpointEpoch);
-  const checkpoint = {root: fromHex(checkpointRoot), epoch: parseInt(checkpointEpoch)};
-  return {state, checkpoint};
+  return state;
 }
