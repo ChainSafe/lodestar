@@ -94,7 +94,7 @@ jobs:
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
       - name: Publish to npm registry
-        run: yarn run publish
+        run: yarn run publish:release
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
