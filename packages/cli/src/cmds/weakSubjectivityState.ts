@@ -7,7 +7,7 @@ import {IGlobalArgs} from "../options";
 import {IBeaconArgs} from "./beacon/options";
 import got from "got";
 
-// TODO this is a local infura account.  switch with a ChainSafe account when available
+// TODO these URLs are from a local infura account.  switch with a ChainSafe account when available
 export enum WeakSubjectivityServers {
   mainnet = "https://1sla4tyOFn0bB1ohyCKaH2sLmHu:b8cdb9d881039fd04fe982a5ec57b0b8@eth2-beacon-mainnet.infura.io/eth/v1/debug/beacon/states",
   prater = "https://1sla4tyOFn0bB1ohyCKaH2sLmHu:b8cdb9d881039fd04fe982a5ec57b0b8@eth2-beacon-prater.infura.io/eth/v1/debug/beacon/states",
