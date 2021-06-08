@@ -338,7 +338,7 @@ export function getValidatorApi({
     async publishAggregateAndProofs(signedAggregateAndProofs) {
       notWhileSyncing();
 
-      const seenTimestamp = Date.now();
+      const seenTimestampSec = Date.now() / 1000;
       const errors: Error[] = [];
 
       await Promise.all(
@@ -351,7 +351,7 @@ export function getValidatorApi({
               validSignature: false,
             });
 
-            metrics?.registerAggregatedAttestation(OpSource.api, seenTimestamp, signedAggregateAndProof, indexedAtt);
+            metrics?.registerAggregatedAttestation(OpSource.api, seenTimestampSec, signedAggregateAndProof, indexedAtt);
 
             await Promise.all([
               db.aggregateAndProof.add(signedAggregateAndProof.message),

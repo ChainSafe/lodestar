@@ -6,21 +6,6 @@ import {allForks, Epoch, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {IndexedAttestation, SignedAggregateAndProof} from "@chainsafe/lodestar-types/phase0";
 import {ILodestarMetrics} from "./metrics/lodestar";
 
-export interface IValidatorMonitor {
-  registerLocalValidator(index: number): void;
-  registerValidatorStatuses(currentEpoch: Epoch, statuses: IAttesterStatus[]): void;
-  registerBeaconBlock(src: OpSource, seenTimestamp: number, block: allForks.BeaconBlock): void;
-  registerUnaggregatedAttestation(src: OpSource, seenTimestamp: number, indexedAttestation: IndexedAttestation): void;
-  registerAggregatedAttestation(
-    src: OpSource,
-    seenTimestamp: number,
-    signedAggregateAndProof: SignedAggregateAndProof,
-    indexedAttestation: IndexedAttestation
-  ): void;
-  registerAttestationInBlock(indexedAttestation: IndexedAttestation, block: allForks.BeaconBlock): void;
-  scrapeMetrics(slotClock: Slot): void;
-}
-
 /** The validator monitor collects per-epoch data about each monitored validator.
  * Historical data will be kept around for `HISTORIC_EPOCHS` before it is pruned.
  */
@@ -30,6 +15,25 @@ type Seconds = number;
 export enum OpSource {
   api = "api",
   gossip = "gossip",
+}
+
+export interface IValidatorMonitor {
+  registerLocalValidator(index: number): void;
+  registerValidatorStatuses(currentEpoch: Epoch, statuses: IAttesterStatus[]): void;
+  registerBeaconBlock(src: OpSource, seenTimestampSec: Seconds, block: allForks.BeaconBlock): void;
+  registerUnaggregatedAttestation(
+    src: OpSource,
+    seenTimestampSec: Seconds,
+    indexedAttestation: IndexedAttestation
+  ): void;
+  registerAggregatedAttestation(
+    src: OpSource,
+    seenTimestampSec: Seconds,
+    signedAggregateAndProof: SignedAggregateAndProof,
+    indexedAttestation: IndexedAttestation
+  ): void;
+  registerAttestationInBlock(indexedAttestation: IndexedAttestation, block: allForks.BeaconBlock): void;
+  scrapeMetrics(slotClock: Slot): void;
 }
 
 /** Information required to reward some validator during the current and previous epoch. */
@@ -206,51 +210,51 @@ export function createValidatorMonitor(
       }
     },
 
-    registerBeaconBlock(src, seenTimestamp, block) {
+    registerBeaconBlock(src, seenTimestampSec, block) {
       const index = block.proposerIndex;
       const validator = validators.get(index);
       if (validator) {
         // Returns the delay between the start of `block.slot` and `seenTimestamp`.
-        const delay = seenTimestamp - (genesisTime + block.slot * config.SECONDS_PER_SLOT);
+        const delaySec = seenTimestampSec - (genesisTime + block.slot * config.SECONDS_PER_SLOT);
         metrics.validatorMonitor.beaconBlockTotal.inc({src, index});
-        metrics.validatorMonitor.beaconBlockDelaySeconds.observe({src, index}, delay);
+        metrics.validatorMonitor.beaconBlockDelaySeconds.observe({src, index}, delaySec);
       }
     },
 
-    registerUnaggregatedAttestation(src, seenTimestamp, indexedAttestation) {
+    registerUnaggregatedAttestation(src, seenTimestampSec, indexedAttestation) {
       const data = indexedAttestation.data;
       const epoch = computeEpochAtSlot(data.slot);
       // Returns the duration between when the attestation `data` could be produced (1/3rd through the slot) and `seenTimestamp`.
-      const delay = seenTimestamp - (genesisTime + (data.slot + 1 / 3) * config.SECONDS_PER_SLOT);
+      const delaySec = seenTimestampSec - (genesisTime + (data.slot + 1 / 3) * config.SECONDS_PER_SLOT);
 
       for (const index of indexedAttestation.attestingIndices) {
         const validator = validators.get(index);
         if (validator) {
           metrics.validatorMonitor.unaggregatedAttestationTotal.inc({src, index});
-          metrics.validatorMonitor.unaggregatedAttestationDelaySeconds.observe({src, index}, delay);
+          metrics.validatorMonitor.unaggregatedAttestationDelaySeconds.observe({src, index}, delaySec);
           withEpochSummary(validator, epoch, (summary) => {
             summary.attestations += 1;
-            summary.attestationMinDelay = Math.min(delay, summary.attestationMinDelay ?? Infinity);
+            summary.attestationMinDelay = Math.min(delaySec, summary.attestationMinDelay ?? Infinity);
           });
         }
       }
     },
 
-    registerAggregatedAttestation(src, seenTimestamp, signedAggregateAndProof, indexedAttestation) {
+    registerAggregatedAttestation(src, seenTimestampSec, signedAggregateAndProof, indexedAttestation) {
       const data = indexedAttestation.data;
       const epoch = computeEpochAtSlot(data.slot);
       // Returns the duration between when a `AggregateAndproof` with `data` could be produced (2/3rd through the slot) and `seenTimestamp`.
-      const delay = seenTimestamp - (genesisTime + (data.slot + 2 / 3) * config.SECONDS_PER_SLOT);
+      const delaySec = seenTimestampSec - (genesisTime + (data.slot + 2 / 3) * config.SECONDS_PER_SLOT);
 
       const aggregatorIndex = signedAggregateAndProof.message.aggregatorIndex;
       const validtorAggregator = validators.get(aggregatorIndex);
       if (validtorAggregator) {
         const index = aggregatorIndex;
         metrics.validatorMonitor.aggregatedAttestationTotal.inc({src, index});
-        metrics.validatorMonitor.aggregatedAttestationDelaySeconds.observe({src, index}, delay);
+        metrics.validatorMonitor.aggregatedAttestationDelaySeconds.observe({src, index}, delaySec);
         withEpochSummary(validtorAggregator, epoch, (summary) => {
           summary.aggregates += 1;
-          summary.aggregateMinDelay = Math.min(delay, summary.aggregateMinDelay ?? Infinity);
+          summary.aggregateMinDelay = Math.min(delaySec, summary.aggregateMinDelay ?? Infinity);
         });
       }
 
@@ -258,7 +262,7 @@ export function createValidatorMonitor(
         const validator = validators.get(index);
         if (validator) {
           metrics.validatorMonitor.attestationInAggregateTotal.inc({src, index});
-          metrics.validatorMonitor.attestationInAggregateDelaySeconds.observe({src, index}, delay);
+          metrics.validatorMonitor.attestationInAggregateDelaySeconds.observe({src, index}, delaySec);
           withEpochSummary(validator, epoch, (summary) => {
             summary.attestationAggregateIncusions += 1;
           });

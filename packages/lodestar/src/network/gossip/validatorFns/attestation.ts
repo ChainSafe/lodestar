@@ -13,7 +13,7 @@ export async function validateCommitteeAttestation(
   topic: GossipTopicMap[GossipType.beacon_attestation],
   attestation: phase0.Attestation
 ): Promise<void> {
-  const seenTimestamp = Date.now();
+  const seenTimestampSec = Date.now() / 1000;
   const subnet = topic.subnet;
 
   try {
@@ -25,7 +25,7 @@ export async function validateCommitteeAttestation(
     const indexedAtt = await validateGossipAttestation(config, chain, db, attestationJob, subnet);
     logger.debug("gossip - Attestation - accept", {subnet});
 
-    metrics?.registerUnaggregatedAttestation(OpSource.gossip, seenTimestamp, indexedAtt);
+    metrics?.registerUnaggregatedAttestation(OpSource.gossip, seenTimestampSec, indexedAtt);
   } catch (e) {
     if (!(e instanceof AttestationError)) {
       logger.error("Gossip attestation validation threw a non-AttestationError", e);

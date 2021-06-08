@@ -124,11 +124,11 @@ export function getBeaconBlockApi({
     },
 
     async publishBlock(signedBlock) {
-      const seenTimestamp = Date.now();
+      const seenTimestampSec = Date.now() / 1000;
 
       // TODO: Validate block
 
-      metrics?.registerBeaconBlock(OpSource.api, seenTimestamp, signedBlock.message);
+      metrics?.registerBeaconBlock(OpSource.api, seenTimestampSec, signedBlock.message);
 
       await Promise.all([chain.receiveBlock(signedBlock), network.gossip.publishBeaconBlock(signedBlock)]);
     },

@@ -12,7 +12,7 @@ export async function validateBeaconBlock(
   _topic: GossipTopic,
   signedBlock: allForks.SignedBeaconBlock
 ): Promise<void> {
-  const seenTimestamp = Date.now();
+  const seenTimestampSec = Date.now() / 1000;
 
   try {
     await validateGossipBlock(config, chain, db, {
@@ -27,7 +27,7 @@ export async function validateBeaconBlock(
       slot: signedBlock.message.slot,
     });
 
-    metrics?.registerBeaconBlock(OpSource.api, seenTimestamp, signedBlock.message);
+    metrics?.registerBeaconBlock(OpSource.api, seenTimestampSec, signedBlock.message);
   } catch (e) {
     if (!(e instanceof BlockError)) {
       logger.error("Gossip block validation threw a non-BlockError", e);

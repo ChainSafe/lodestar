@@ -48,7 +48,7 @@ export function getBeaconPoolApi({
     },
 
     async submitPoolAttestations(attestations) {
-      const seenTimestamp = Date.now();
+      const seenTimestampSec = Date.now() / 1000;
       const errors: Error[] = [];
 
       await Promise.all(
@@ -67,7 +67,7 @@ export function getBeaconPoolApi({
             const subnet = allForks.computeSubnetForAttestation(attestationTargetState.epochCtx, attestation);
             const indexedAtt = await validateGossipAttestation(config, chain, db, attestationJob, subnet);
 
-            metrics?.registerUnaggregatedAttestation(OpSource.api, seenTimestamp, indexedAtt);
+            metrics?.registerUnaggregatedAttestation(OpSource.api, seenTimestampSec, indexedAtt);
 
             await Promise.all([
               network.gossip.publishBeaconAttestation(attestation, subnet),

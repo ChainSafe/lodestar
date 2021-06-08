@@ -12,7 +12,7 @@ export async function validateAggregatedAttestation(
   _topic: GossipTopic,
   signedAggregateAndProof: phase0.SignedAggregateAndProof
 ): Promise<void> {
-  const seenTimestamp = Date.now();
+  const seenTimestampSec = Date.now() / 1000;
   const attestation = signedAggregateAndProof.message.aggregate;
 
   try {
@@ -22,7 +22,7 @@ export async function validateAggregatedAttestation(
     });
     logger.debug("gossip - AggregateAndProof - accept");
 
-    metrics?.registerAggregatedAttestation(OpSource.gossip, seenTimestamp, signedAggregateAndProof, indexedAtt);
+    metrics?.registerAggregatedAttestation(OpSource.gossip, seenTimestampSec, signedAggregateAndProof, indexedAtt);
   } catch (e) {
     if (!(e instanceof AttestationError)) {
       logger.error("Gossip aggregate and proof validation threw a non-AttestationError", e);
