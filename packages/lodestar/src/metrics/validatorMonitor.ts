@@ -1,5 +1,5 @@
 import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
-import {IAttesterStatus} from "@chainsafe/lodestar-beacon-state-transition/lib/allForks";
+import {parseAttesterFlags, IAttesterStatus} from "@chainsafe/lodestar-beacon-state-transition/lib/allForks";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {MIN_ATTESTATION_INCLUSION_DELAY, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {allForks, Epoch, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
@@ -36,8 +36,6 @@ export enum OpSource {
 type ValidatorStatus = {
   /** True if the validator has been slashed, ever. */
   isSlashed: boolean;
-  /** True if the validator can withdraw in the current epoch. */
-  isWithdrawableInCurrentEpoch: boolean;
   /** True if the validator was active in the state's _current_ epoch. */
   isActiveInCurrentEpoch: boolean;
   /** True if the validator was active in the state's _previous_ epoch. */
@@ -45,25 +43,46 @@ type ValidatorStatus = {
   /** The validator's effective balance in the _current_ epoch. */
   currentEpochEffectiveBalance: number;
 
-  /** True if the validator had an attestation included in the _current_ epoch. */
-  isCurrentEpochAttester: boolean;
-  /** True if the validator's beacon block root attestation for the first slot of the _current_
-  /** epoch matches the block root known to the state. */
-  isCurrentEpochTargetAttester: boolean;
   /** True if the validator had an attestation included in the _previous_ epoch. */
-  isPreviousEpochAttester: boolean;
+  isPrevSourceAttester: boolean;
   /** True if the validator's beacon block root attestation for the first slot of the _previous_
-  /** epoch matches the block root known to the state. */
-  isPreviousEpochTargetAttester: boolean;
+      epoch matches the block root known to the state. */
+  isPrevTargetAttester: boolean;
   /** True if the validator's beacon block root attestation in the _previous_ epoch at the
-  /** attestation's slot (`attestation_data.slot`) matches the block root known to the state. */
-  isPreviousEpochHeadAttester: boolean;
+      attestation's slot (`attestation_data.slot`) matches the block root known to the state. */
+  isPrevHeadAttester: boolean;
+
+  /** True if the validator had an attestation included in the _current_ epoch. */
+  isCurrSourceAttester: boolean;
+  /** True if the validator's beacon block root attestation for the first slot of the _current_
+      epoch matches the block root known to the state. */
+  isCurrTargetAttester: boolean;
+  /** True if the validator's beacon block root attestation in the _current_ epoch at the
+      attestation's slot (`attestation_data.slot`) matches the block root known to the state. */
+  isCurrHeadAttester: boolean;
 
   /** The distance between the attestation slot and the slot that attestation was included in a block. */
   inclusionDistance: number;
 };
 
-function statusToSummary(status: IAttesterStatus): ValidatorStatus {}
+function statusToSummary(status: IAttesterStatus): ValidatorStatus {
+  const flags = parseAttesterFlags(status.flags);
+  return {
+    isSlashed: flags.unslashed,
+    isActiveInCurrentEpoch: status.active,
+    isActiveInPreviousEpoch: status.active,
+    // TODO: Implement
+    currentEpochEffectiveBalance: 0,
+
+    isPrevSourceAttester: flags.prevSourceAttester,
+    isPrevTargetAttester: flags.prevTargetAttester,
+    isPrevHeadAttester: flags.prevHeadAttester,
+    isCurrSourceAttester: flags.currSourceAttester,
+    isCurrTargetAttester: flags.currTargetAttester,
+    isCurrHeadAttester: flags.currHeadAttester,
+    inclusionDistance: status.inclusionDelay,
+  };
+}
 
 /** Contains data pertaining to one validator for one epoch. */
 type EpochSummary = {
@@ -166,17 +185,17 @@ export function createValidatorMonitor(
 
         const summary = statusToSummary(status);
 
-        if (summary.isPreviousEpochAttester) {
+        if (summary.isPrevSourceAttester) {
           metrics.validatorMonitor.prevEpochOnChainAttesterHit.inc({index});
         } else {
           metrics.validatorMonitor.prevEpochOnChainAttesterMiss.inc({index});
         }
-        if (summary.isPreviousEpochHeadAttester) {
+        if (summary.isPrevHeadAttester) {
           metrics.validatorMonitor.prevEpochOnChainHeadAttesterHit.inc({index});
         } else {
           metrics.validatorMonitor.prevEpochOnChainHeadAttesterMiss.inc({index});
         }
-        if (summary.isPreviousEpochTargetAttester) {
+        if (summary.isPrevTargetAttester) {
           metrics.validatorMonitor.prevEpochOnChainTargetAttesterHit.inc({index});
         } else {
           metrics.validatorMonitor.prevEpochOnChainTargetAttesterMiss.inc({index});
