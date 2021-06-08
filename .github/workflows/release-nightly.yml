@@ -1,5 +1,10 @@
 name: Release nightly
 
+# only one per github sha can be run
+concurrency: 
+  group: ${{ github.sha }}
+  cancel-in-progress: true
+
 on:
   push:
     branches:
