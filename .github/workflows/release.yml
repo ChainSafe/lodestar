@@ -1,5 +1,8 @@
 name: Release
 
+# only one can tun at a time
+concurrency: cd-release
+
 on:
   push:
     branches:
