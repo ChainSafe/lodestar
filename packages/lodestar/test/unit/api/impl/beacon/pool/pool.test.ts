@@ -50,6 +50,7 @@ describe("beacon pool api impl", function () {
       logger,
       network: networkStub,
       chain: chainStub,
+      metrics: null,
     });
     validateGossipAttesterSlashing = sinon.stub(attesterSlashingValidation, "validateGossipAttesterSlashing");
     validateGossipProposerSlashing = sinon.stub(proposerSlashingValidation, "validateGossipProposerSlashing");
