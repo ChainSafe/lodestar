@@ -12,9 +12,10 @@ jobs:
     steps:
       # <common-build> - Uses YAML anchors in the future
       - uses: actions/checkout@v2
-      - uses: actions/setup-node@v2-beta
+      - uses: actions/setup-node@v2
         with:
           node-version: "14.16.0"
+          registry-url: 'https://registry.npmjs.org'
       - name: Restore dependencies
         uses: actions/cache@master
         id: cache-deps
@@ -30,11 +31,6 @@ jobs:
         run: yarn build
         if: steps.cache-deps.outputs.cache-hit == 'true'
       # </common-build>
-
-      # From https://github.com/lerna/lerna/issues/2404
-      - run: echo //registry.npmjs.org/:_authToken=${NPM_TOKEN} > .npmrc
-        env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
       - name: Publish to npm registry
         run: yarn run publish-nightly
         env:
