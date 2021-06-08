@@ -27,7 +27,7 @@
     "benchmark": "lerna run benchmark",
     "cli": "node --trace-deprecation --max-old-space-size=8192 ./packages/cli/bin/lodestar",
     "publish": "lerna publish from-package --yes --no-verify-access",
-    "publish-nightly": "yarn run publish --canary minor --dist-tag next",
+    "publish-nightly": "yarn run publish --canary --dist-tag next",
     "release": "lerna version --no-push --sign-git-commit",
     "postrelease": "git tag -d $(git describe --abbrev=0)"
   },
