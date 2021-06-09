@@ -1,6 +1,6 @@
 import {MAX_VALIDATORS_PER_COMMITTEE} from "@chainsafe/lodestar-params";
 import {ssz} from "@chainsafe/lodestar-types";
-import {BenchmarkRunner} from "@chainsafe/lodestar-utils";
+import {BenchmarkRunner} from "@chainsafe/lodestar-utils/test_utils/benchmark";
 import {List, readonlyValues} from "@chainsafe/ssz";
 import {zipIndexesInBitList} from "../../../src";
 

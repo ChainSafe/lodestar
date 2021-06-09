@@ -1,5 +1,5 @@
 import {generatePerfTestCachedBeaconState, initBLS} from "../../util";
-import {BenchmarkRunner} from "@chainsafe/lodestar-utils";
+import {BenchmarkRunner} from "@chainsafe/lodestar-utils/test_utils/benchmark";
 import {allForks} from "../../../../src";
 
 const testCases = [

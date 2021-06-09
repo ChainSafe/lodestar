@@ -1,4 +1,4 @@
-import {BenchmarkRunner} from "@chainsafe/lodestar-utils";
+import {BenchmarkRunner} from "@chainsafe/lodestar-utils/test_utils/benchmark";
 import {allForks, phase0} from "../../../../src";
 import {generatePerfTestCachedBeaconState, initBLS} from "../../util";
 

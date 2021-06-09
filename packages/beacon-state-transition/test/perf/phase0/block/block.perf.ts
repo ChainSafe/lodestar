@@ -1,6 +1,6 @@
 import {MAX_VOLUNTARY_EXITS} from "@chainsafe/lodestar-params";
 import {phase0} from "@chainsafe/lodestar-types";
-import {BenchmarkRunner} from "@chainsafe/lodestar-utils";
+import {BenchmarkRunner} from "@chainsafe/lodestar-utils/test_utils/benchmark";
 import {List} from "@chainsafe/ssz";
 import {allForks} from "../../../../src";
 import {generatePerformanceBlock, generatePerfTestCachedBeaconState, initBLS} from "../../util";
