@@ -16,7 +16,7 @@ import {
 } from "../..";
 import {getWeakSubjectivityCheckpointEpoch} from "../../util/weakSubjectivity";
 
-const ETH_TO_GWEI = BigInt(10 ** 9);
+export const ETH_TO_GWEI = BigInt(10 ** 9);
 const SAFETY_DECAY = BigInt(10);
 
 /**
