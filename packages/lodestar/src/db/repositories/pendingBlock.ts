@@ -26,6 +26,6 @@ export class PendingBlockRepository extends Repository<Uint8Array, allForks.Sign
   }
 
   decodeValue(data: Buffer): allForks.SignedBeaconBlock {
-    return getSignedBlockTypeFromBytes(this.config, data).deserialize(data);
+    return getSignedBlockTypeFromBytes(this.config, data).createTreeBackedFromBytes(data);
   }
 }
