@@ -5,7 +5,7 @@ import {getLocalVersion} from "./version";
 
 // This file is created in the build step and is distributed through NPM
 // MUST be in sync with packages/cli/scripts/getGitData.js, and package.json .files
-const DOCKER_LODESTAR_GIT_DATA_FILEPATH = path.join(__dirname, "../../.git-data.json");
+const LOCAL_GIT_DATA_FILEPATH = path.join(__dirname, "../../.git-data.json");
 
 /* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
 type GitData = {
@@ -66,8 +66,10 @@ function getGitData(): Partial<GitData> {
 
 function getPersistedGitData(): Partial<GitData> {
   try {
+    const gitDataFilepath = process?.env?.DOCKER_LODESTAR_GIT_DATA_FILEPATH || LOCAL_GIT_DATA_FILEPATH;
+
     // eslint-disable-next-line
-    const gitData = JSON.parse(fs.readFileSync(DOCKER_LODESTAR_GIT_DATA_FILEPATH, "utf8"));
+    const gitData = JSON.parse(fs.readFileSync(gitDataFilepath, "utf8"));
     const {version: semver, branch, commit} = gitData;
     return {semver, branch, commit, version: `${semver} ${branch} ${commit.slice(0, 8)}`};
   } catch (e) {
