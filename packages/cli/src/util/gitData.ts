@@ -1,6 +1,11 @@
 import fs from "fs";
+import path from "path";
 import {execSync} from "child_process";
 import {getLocalVersion} from "./version";
+
+// This file is created in the build step and is distributed through NPM
+// MUST be in sync with packages/cli/scripts/getGitData.js, and package.json .files
+const DOCKER_LODESTAR_GIT_DATA_FILEPATH = path.join(__dirname, "../../.git-data.json");
 
 /* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
 type GitData = {
@@ -27,17 +32,12 @@ type GitData = {
  */
 export function readLodestarGitData(): GitData {
   try {
-    const gitDataFilepath = process?.env?.DOCKER_LODESTAR_GIT_DATA_FILEPATH;
-    if (gitDataFilepath) {
-      // Lazy load fs module only if necessary
-      // eslint-disable-next-line
-      const gitData = JSON.parse(fs.readFileSync(gitDataFilepath, "utf8"));
-      const {version: semver, branch, commit} = gitData;
-      return {semver, branch, commit, version: `${semver} ${branch} ${commit.slice(0, 8)}`};
-    }
-
     const semver = getLocalVersion() ?? undefined;
-    const gitData = getGitData();
+    const currentGitData = getGitData();
+    const persistedGitData = getPersistedGitData();
+    // If the CLI is run from source, prioritze current git data over .git-data.json file, which might be stale
+    const gitData = {...persistedGitData, ...currentGitData};
+
     return {
       semver: semver || "-",
       branch: gitData?.branch || "-",
@@ -59,6 +59,17 @@ function getGitData(): Partial<GitData> {
     const branch = shell("git rev-parse --abbrev-ref HEAD");
     const commit = shell("git rev-parse --verify HEAD");
     return {branch, commit};
+  } catch (e) {
+    return {};
+  }
+}
+
+function getPersistedGitData(): Partial<GitData> {
+  try {
+    // eslint-disable-next-line
+    const gitData = JSON.parse(fs.readFileSync(DOCKER_LODESTAR_GIT_DATA_FILEPATH, "utf8"));
+    const {version: semver, branch, commit} = gitData;
+    return {semver, branch, commit, version: `${semver} ${branch} ${commit.slice(0, 8)}`};
   } catch (e) {
     return {};
   }
