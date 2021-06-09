@@ -13,7 +13,9 @@
   "files": [
     "lib/**/*.js",
     "lib/**/*.js.map",
-    "lib/**/*.d.ts"
+    "lib/**/*.d.ts",
+    "./*.d.ts",
+    "./*.js"
   ],
   "bin": {
     "eth2-spec-test-download": "lib/downloadTestsCli.js"
