@@ -262,7 +262,11 @@ export function rotateEpochs(
   // State slot has already been += 1
   if (currEpoch % EPOCHS_PER_SYNC_COMMITTEE_PERIOD === 0 && currEpoch > epochCtx.config.ALTAIR_FORK_EPOCH) {
     epochCtx.currSyncCommitteeIndexes = epochCtx.nextSyncCommitteeIndexes;
-    epochCtx.nextSyncCommitteeIndexes = getNextSyncCommitteeIndices(state);
+    epochCtx.nextSyncCommitteeIndexes = computeSyncCommitteeIndices(
+      epochCtx.pubkey2index,
+      state as altair.BeaconState,
+      true
+    );
     epochCtx.currSyncComitteeValidatorIndexMap = epochCtx.nextSyncComitteeValidatorIndexMap;
     epochCtx.nextSyncComitteeValidatorIndexMap = computeSyncComitteeMap(epochCtx.nextSyncCommitteeIndexes);
   }
