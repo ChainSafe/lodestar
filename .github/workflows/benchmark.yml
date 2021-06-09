@@ -1,5 +1,9 @@
 name: Benchmark
 
+# only one can tun at a time.
+# Actions access a common cache entry and may corrupt it.
+concurrency: cd-benchmark
+
 on:
   push:
     branches:
