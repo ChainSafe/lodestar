@@ -9,6 +9,8 @@ export enum RequestErrorCode {
   INVALID_REQUEST = "REQUEST_ERROR_INVALID_REQUEST",
   /** `<response_chunk>` had `<result>` === SERVER_ERROR */
   SERVER_ERROR = "REQUEST_ERROR_SERVER_ERROR",
+  /** `<response_chunk>` had `<result>` === RESOURCE_UNAVAILABLE */
+  RESOURCE_UNAVAILABLE = "RESOURCE_UNAVAILABLE_ERROR",
   /** `<response_chunk>` had a `<result>` not known in the current spec */
   UNKNOWN_ERROR_STATUS = "REQUEST_ERROR_UNKNOWN_ERROR_STATUS",
   /** Could not open a stream with peer before DIAL_TIMEOUT */
@@ -32,6 +34,7 @@ export enum RequestErrorCode {
 type RequestErrorType =
   | {code: RequestErrorCode.INVALID_REQUEST; errorMessage: string}
   | {code: RequestErrorCode.SERVER_ERROR; errorMessage: string}
+  | {code: RequestErrorCode.RESOURCE_UNAVAILABLE; errorMessage: string}
   | {code: RequestErrorCode.UNKNOWN_ERROR_STATUS; status: RpcResponseStatusError; errorMessage: string}
   | {code: RequestErrorCode.DIAL_TIMEOUT}
   | {code: RequestErrorCode.DIAL_ERROR; error: Error}
@@ -75,6 +78,8 @@ export function responseStatusErrorToRequestError(e: ResponseError): RequestErro
       return {code: RequestErrorCode.INVALID_REQUEST, errorMessage};
     case RespStatus.SERVER_ERROR:
       return {code: RequestErrorCode.SERVER_ERROR, errorMessage};
+    case RespStatus.RESOURCE_UNAVAILABLE:
+      return {code: RequestErrorCode.RESOURCE_UNAVAILABLE, errorMessage};
     default:
       return {code: RequestErrorCode.UNKNOWN_ERROR_STATUS, errorMessage, status};
   }
@@ -87,6 +92,7 @@ function renderErrorMessage(type: RequestErrorType): string | undefined {
   switch (type.code) {
     case RequestErrorCode.INVALID_REQUEST:
     case RequestErrorCode.SERVER_ERROR:
+    case RequestErrorCode.RESOURCE_UNAVAILABLE:
     case RequestErrorCode.UNKNOWN_ERROR_STATUS:
       return `${type.code}: ${type.errorMessage}`;
     default:
