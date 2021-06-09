@@ -14,8 +14,19 @@ export type BenchmarkResult = {
   averageNs: number;
   runsDone: number;
   runsNs: bigint[];
+  totalMs: number;
   factor?: number;
 };
+
+type PromiseOptional<T> = T | Promise<T>;
+
+type RunOpts<T1, T2 = T1, R = void> = {
+  before?: () => PromiseOptional<T1>;
+  beforeEach?: (arg: T1 | undefined, i: number) => PromiseOptional<T2>;
+  run: (input: T2) => PromiseOptional<R>;
+  check?: (result: R) => boolean;
+  id: string;
+} & BenchmarkOpts;
 
 export class BenchmarkRunner {
   results: BenchmarkResult[] = [];
@@ -86,42 +97,41 @@ async function doRun<T1, T2 = T1, R = void>(
 
   const inputAll = before ? await before() : undefined;
 
-  const start = Date.now();
+  const startRunMs = Date.now();
   let i = 0;
-  while ((i++ < runs || Date.now() - start < minMs) && Date.now() - start < maxMs) {
+  // eslint-disable-next-line no-constant-condition
+  while (true) {
+    const ellapsedMs = Date.now() - startRunMs;
+    // Exceeds time limit, stop
+    if (ellapsedMs > maxMs) break;
+    // Exceeds target runs + min time
+    if (i++ > runs && ellapsedMs > minMs) break;
+
     const input = beforeEach ? await beforeEach(inputAll, i) : ((inputAll as unknown) as T2);
 
-    const start = process.hrtime.bigint();
-    const result = run(input);
-    const end = process.hrtime.bigint();
+    const startNs = process.hrtime.bigint();
+    const result = await run(input);
+    const endNs = process.hrtime.bigint();
+
+    console.log(opts.id, i, new Date(), process.memoryUsage());
 
     if (check && check(result)) throw Error("Result fails check test");
 
-    runsNs.push(end - start);
+    runsNs.push(endNs - startNs);
   }
 
   const average = averageBigint(runsNs);
   const averageNs = Number(average);
 
-  return {id: opts.id, averageNs, runsDone: i - 1, runsNs};
+  return {id: opts.id, averageNs, runsDone: i - 1, runsNs, totalMs: Date.now() - startRunMs};
 }
-
-type PromiseOptional<T> = T | Promise<T>;
-
-type RunOpts<T1, T2 = T1, R = void> = {
-  before?: () => PromiseOptional<T1>;
-  beforeEach?: (arg: T1 | undefined, i: number) => PromiseOptional<T2>;
-  run: (input: T2) => R;
-  check?: (result: R) => boolean;
-  id: string;
-} & BenchmarkOpts;
 
 function averageBigint(arr: bigint[]): bigint {
   const total = arr.reduce((total, value) => total + value);
   return total / BigInt(arr.length);
 }
 
-function formatResultRow({id, averageNs, runsDone, factor}: BenchmarkResult): string {
+function formatResultRow({id, averageNs, runsDone, factor, totalMs}: BenchmarkResult): string {
   const precision = 7;
   const idLen = 64;
 
@@ -137,6 +147,7 @@ function formatResultRow({id, averageNs, runsDone, factor}: BenchmarkResult): st
     `${opsPerSec.toPrecision(precision).padStart(13)} ops/s`,
     `${averageTime.toPrecision(precision).padStart(13)} ${timeUnit}/op`,
     `${String(runsDone).padStart(6)} runs`,
+    `${(totalMs / 1000).toPrecision(4).padStart(8)} s`,
   ].join(" ");
 
   return id.slice(0, idLen).padEnd(idLen) + " " + row;

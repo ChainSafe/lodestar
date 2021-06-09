@@ -6,7 +6,7 @@ export async function runEpochTransitionStepTests(): Promise<void> {
   const runner = new BenchmarkRunner("Epoch transition steps", {
     maxMs: 10 * 60 * 1000,
     minMs: 15 * 1000,
-    runs: 512,
+    runs: 64,
   });
 
   await initBLS();

@@ -19,7 +19,7 @@ export async function runEpochTransitionTests(): Promise<void> {
   const runner = new BenchmarkRunner("Epoch transitions", {
     maxMs: 5 * 60 * 1000,
     minMs: 15 * 1000,
-    runs: 512,
+    runs: 64,
   });
 
   await initBLS();
