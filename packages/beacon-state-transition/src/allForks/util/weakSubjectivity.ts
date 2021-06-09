@@ -1,6 +1,6 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {MAX_DEPOSITS, MAX_EFFECTIVE_BALANCE, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
-import {allForks, Epoch, Root, Uint64} from "@chainsafe/lodestar-types";
+import {allForks, Epoch, Root} from "@chainsafe/lodestar-types";
 import {ssz} from "@chainsafe/lodestar-types";
 import {Checkpoint} from "@chainsafe/lodestar-types/phase0";
 import {toHexString} from "@chainsafe/ssz";
@@ -40,7 +40,7 @@ export function getLatestWeakSubjectivityCheckpointEpoch(
     A detailed calculation can be found at:
     https://github.com/runtimeverification/beacon-chain-verification/blob/master/weak-subjectivity/weak-subjectivity-analysis.pdf
  */
-export function computeWeakSubjectivityPeriod(config: IBeaconConfig, state: allForks.BeaconState): Uint64 {
+export function computeWeakSubjectivityPeriod(config: IBeaconConfig, state: allForks.BeaconState): number {
   let wsPeriod = config.MIN_VALIDATOR_WITHDRAWABILITY_DELAY;
   const N = getActiveValidatorIndices(state, getCurrentEpoch(state)).length;
   const t = Math.floor(Number(getTotalActiveBalance(state)) / N / Number(ETH_TO_GWEI));
@@ -60,7 +60,7 @@ export function computeWeakSubjectivityPeriod(config: IBeaconConfig, state: allF
   } else {
     wsPeriod += Math.floor((3 * N * D * t) / (200 * Delta * (T - t)));
   }
-  return BigInt(wsPeriod);
+  return wsPeriod;
 }
 
 function getLatestBlockRoot(config: IBeaconConfig, state: allForks.BeaconState): Root {
@@ -91,5 +91,5 @@ export function isWithinWeakSubjectivityPeriod(
   }
   const wsPeriod = computeWeakSubjectivityPeriod(config, wsState);
   const currentEpoch = computeEpochAtSlot(getCurrentSlot(config, genesisTime));
-  return currentEpoch <= BigInt(wsStateEpoch) + wsPeriod;
+  return currentEpoch <= wsStateEpoch + wsPeriod;
 }
