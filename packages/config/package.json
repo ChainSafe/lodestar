@@ -14,8 +14,8 @@
     "lib/**/*.js",
     "lib/**/*.js.map",
     "lib/**/*.d.ts",
-    "mainnet.*",
-    "minimal.*"
+    "./*.d.ts",
+    "./*.js"
   ],
   "scripts": {
     "clean": "rm -rf lib && rm -f *.tsbuildinfo",
