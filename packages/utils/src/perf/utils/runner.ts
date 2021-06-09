@@ -127,10 +127,11 @@ function formatResultRow({id, averageNs, runsDone, factor}: BenchmarkResult): st
   // Scalar multiplication G1 (255-bit, constant-time)                              7219.330 ops/s       138517 ns/op
   // Scalar multiplication G2 (255-bit, constant-time)                              3133.117 ops/s       319171 ns/op
 
+  const [averageTime, timeUnit] = prettyTime(averageNs);
   const row = [
     factor === undefined ? "" : `x${factor.toFixed(2)}`.padStart(6),
     `${opsPerSec.toPrecision(precision).padStart(13)} ops/s`,
-    `${averageNs.toPrecision(precision).padStart(13)} ns/op`,
+    `${averageTime.toPrecision(precision).padStart(13)} ${timeUnit}/op`,
     `${String(runsDone).padStart(6)} runs`,
   ].join(" ");
 
@@ -155,4 +156,11 @@ export function formatTitle(title: string): string {
   return `
 ${title}
 ${"=".repeat(64)}`;
+}
+
+function prettyTime(nanoSec: number): [number, string] {
+  if (nanoSec > 1e9) return [nanoSec / 1e9, " s"];
+  if (nanoSec > 1e6) return [nanoSec / 1e6, "ms"];
+  if (nanoSec > 1e3) return [nanoSec / 1e3, "us"];
+  return [nanoSec, "ns"];
 }
