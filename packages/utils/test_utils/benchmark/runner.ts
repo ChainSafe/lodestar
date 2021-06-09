@@ -36,10 +36,8 @@ export class BenchmarkRunner {
   done(): void {
     const filepath = process.env.BENCHMARK_OUTPUT_PATH;
     if (filepath) {
-      // path.resolve(filePath) resolves to something like
-      // /home/runner/work/lodestar/lodestar/packages/beacon-state-transition/benchmark-output.txt
-      const absoluteFilePath = path.resolve("..", "..", filepath);
-      fs.appendFileSync(absoluteFilePath, formatAsBenchmarkJs(this.results));
+      fs.mkdirSync(path.dirname(filepath), {recursive: true});
+      fs.appendFileSync(filepath, formatAsBenchmarkJs(this.results));
     }
   }
 
@@ -51,6 +49,7 @@ export class BenchmarkRunner {
     if (process.env.BENCHMARK_RESULTS_DIR) {
       const filename = `${this.title.replace(/\s/g, "-")}_${result.id}.csv`;
       const filepath = path.join(process.env.BENCHMARK_RESULTS_DIR, filename);
+      fs.mkdirSync(path.dirname(filepath), {recursive: true});
       fs.writeFileSync(filepath, result.runsNs.join("\n"));
     }
 
