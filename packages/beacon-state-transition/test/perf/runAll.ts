@@ -4,11 +4,17 @@ import {runGetAttestationDeltaTest} from "./phase0/epoch/getAttestationDeltas.pe
 import {runEpochTransitionTests} from "./phase0/slot/slots.perf";
 import {runAggregationBitsTest} from "./util/aggregationBits.perf";
 
-// eslint-disable-next-line @typescript-eslint/no-floating-promises
-(async function () {
+async function runAll(): Promise<void> {
   await runBlockTransitionTests();
   await runEpochTransitionStepTests();
   await runGetAttestationDeltaTest();
   await runEpochTransitionTests();
   await runAggregationBitsTest();
-})();
+}
+
+// Must catch an exit 1 or the script will succeed
+runAll().catch((e) => {
+  // eslint-disable-next-line no-console
+  console.error(e);
+  process.exit(1);
+});
