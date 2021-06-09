@@ -27,6 +27,7 @@ import {ApiError} from "../errors";
 import {validateSyncCommitteeGossipContributionAndProof} from "../../../chain/validation/syncCommitteeContributionAndProof";
 import {SyncContributionError, SyncContributionErrorCode} from "../../../db/syncCommitteeContribution";
 import {CommitteeSubscription} from "../../../network/subnets";
+import {OpSource} from "../../../metrics/validatorMonitor";
 import {computeSubnetForCommitteesAtSlot, getSyncComitteeValidatorIndexMap} from "./utils";
 import {ApiModules} from "../types";
 
@@ -337,6 +338,7 @@ export function getValidatorApi({
     async publishAggregateAndProofs(signedAggregateAndProofs) {
       notWhileSyncing();
 
+      const seenTimestampSec = Date.now() / 1000;
       const errors: Error[] = [];
 
       await Promise.all(
@@ -344,10 +346,13 @@ export function getValidatorApi({
           try {
             const attestation = signedAggregateAndProof.message.aggregate;
             // TODO: Validate in batch
-            await validateGossipAggregateAndProof(config, chain, db, signedAggregateAndProof, {
+            const indexedAtt = await validateGossipAggregateAndProof(config, chain, db, signedAggregateAndProof, {
               attestation: attestation,
               validSignature: false,
             });
+
+            metrics?.registerAggregatedAttestation(OpSource.api, seenTimestampSec, signedAggregateAndProof, indexedAtt);
+
             await Promise.all([
               db.aggregateAndProof.add(signedAggregateAndProof.message),
               db.seenAttestationCache.addAggregateAndProof(signedAggregateAndProof.message),
@@ -442,6 +447,12 @@ export function getValidatorApi({
       // TODO:
       // If the discovery mechanism isn't disabled, attempt to set up a peer discovery for the
       // required subnets.
+
+      if (metrics) {
+        for (const subscription of subscriptions) {
+          metrics.registerLocalValidator(subscription.validatorIndex);
+        }
+      }
     },
 
     /**

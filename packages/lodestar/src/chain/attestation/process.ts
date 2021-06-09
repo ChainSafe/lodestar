@@ -22,7 +22,7 @@ export async function processAttestation({
   forkChoice: IForkChoice;
   regen: IStateRegenerator;
   job: IAttestationJob;
-}): Promise<void> {
+}): Promise<phase0.IndexedAttestation> {
   const {attestation} = job;
   const target = attestation.data.target;
 
@@ -36,7 +36,7 @@ export async function processAttestation({
     });
   }
 
-  let indexedAttestation;
+  let indexedAttestation: phase0.IndexedAttestation;
   try {
     indexedAttestation = targetState.epochCtx.getIndexedAttestation(attestation);
   } catch (e) {
@@ -65,4 +65,6 @@ export async function processAttestation({
 
   forkChoice.onAttestation(indexedAttestation);
   emitter.emit(ChainEvent.attestation, attestation);
+
+  return indexedAttestation;
 }

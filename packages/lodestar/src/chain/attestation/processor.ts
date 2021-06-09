@@ -1,4 +1,5 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {phase0} from "@chainsafe/lodestar-types";
 import {
   IForkChoice,
   ForkChoiceError,
@@ -30,8 +31,8 @@ export class AttestationProcessor {
     this.modules = modules;
   }
 
-  async processAttestationJob(job: IAttestationJob): Promise<void> {
-    await processAttestationJob(this.modules, job);
+  async processAttestationJob(job: IAttestationJob): Promise<phase0.IndexedAttestation | null> {
+    return await processAttestationJob(this.modules, job);
   }
 }
 
@@ -45,13 +46,17 @@ export class AttestationProcessor {
  *
  * All other effects are provided by downstream event handlers
  */
-export async function processAttestationJob(modules: AttestationProcessorModules, job: IAttestationJob): Promise<void> {
+export async function processAttestationJob(
+  modules: AttestationProcessorModules,
+  job: IAttestationJob
+): Promise<phase0.IndexedAttestation | null> {
   try {
     // validate attestation in the forkchoice
-    await processAttestation({...modules, job});
+    return await processAttestation({...modules, job});
   } catch (e) {
     // above functions ForkChoice attestation error, we have to map it to AttestationError
     modules.emitter.emit(ChainEvent.errorAttestation, mapAttestationError(e, job) || e);
+    return null;
   }
 }
 

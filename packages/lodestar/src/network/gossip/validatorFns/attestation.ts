@@ -6,12 +6,14 @@ import {validateGossipAttestation} from "../../../chain/validation";
 import {AttestationError, AttestationErrorCode} from "../../../chain/errors";
 import {IObjectValidatorModules, GossipTopicMap, GossipType} from "../interface";
 import {GossipValidationError} from "../errors";
+import {OpSource} from "../../../metrics/validatorMonitor";
 
 export async function validateCommitteeAttestation(
-  {chain, db, config, logger}: IObjectValidatorModules,
+  {chain, db, config, logger, metrics}: IObjectValidatorModules,
   topic: GossipTopicMap[GossipType.beacon_attestation],
   attestation: phase0.Attestation
 ): Promise<void> {
+  const seenTimestampSec = Date.now() / 1000;
   const subnet = topic.subnet;
 
   try {
@@ -20,8 +22,10 @@ export async function validateCommitteeAttestation(
       validSignature: false,
     };
 
-    await validateGossipAttestation(config, chain, db, attestationJob, subnet);
+    const indexedAtt = await validateGossipAttestation(config, chain, db, attestationJob, subnet);
     logger.debug("gossip - Attestation - accept", {subnet});
+
+    metrics?.registerUnaggregatedAttestation(OpSource.gossip, seenTimestampSec, indexedAtt);
   } catch (e) {
     if (!(e instanceof AttestationError)) {
       logger.error("Gossip attestation validation threw a non-AttestationError", e);

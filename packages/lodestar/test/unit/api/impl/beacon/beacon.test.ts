@@ -25,6 +25,7 @@ describe("beacon api implementation", function () {
         db: dbStub,
         logger,
         network: server.networkStub,
+        metrics: null,
       });
 
       /** eslint-disable @typescript-eslint/no-unsafe-member-access */

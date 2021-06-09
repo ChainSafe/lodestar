@@ -20,7 +20,7 @@ export async function validateGossipAggregateAndProof(
   db: IBeaconDb,
   signedAggregateAndProof: phase0.SignedAggregateAndProof,
   attestationJob: IAttestationJob
-): Promise<void> {
+): Promise<phase0.IndexedAttestation> {
   const aggregateAndProof = signedAggregateAndProof.message;
   const aggregate = aggregateAndProof.aggregate;
 
@@ -68,7 +68,7 @@ export async function validateGossipAggregateAndProof(
     });
   }
 
-  await validateAggregateAttestation(config, chain, signedAggregateAndProof, attestationJob);
+  return await validateAggregateAttestation(config, chain, signedAggregateAndProof, attestationJob);
 }
 
 export function hasAttestationParticipants(attestation: phase0.Attestation): boolean {
@@ -80,7 +80,7 @@ export async function validateAggregateAttestation(
   chain: IBeaconChain,
   aggregateAndProof: phase0.SignedAggregateAndProof,
   attestationJob: IAttestationJob
-): Promise<void> {
+): Promise<phase0.IndexedAttestation> {
   const attestation = aggregateAndProof.message.aggregate;
 
   let attestationTargetState: CachedBeaconState<allForks.BeaconState>;
@@ -146,4 +146,6 @@ export async function validateAggregateAttestation(
       job: attestationJob,
     });
   }
+
+  return indexedAttestation;
 }

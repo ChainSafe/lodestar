@@ -13,7 +13,7 @@ export async function validateGossipAttestation(
   db: IBeaconDb,
   attestationJob: IAttestationJob,
   subnet: number
-): Promise<void> {
+): Promise<phase0.IndexedAttestation> {
   const attestation = attestationJob.attestation;
   const numBits = getAttestationAttesterCount(attestation);
   if (numBits !== 1) {
@@ -160,6 +160,8 @@ export async function validateGossipAttestation(
     });
   }
   db.seenAttestationCache.addCommitteeAttestation(attestation);
+
+  return indexedAttestation;
 }
 
 export async function isAttestingToInValidBlock(db: IBeaconDb, attestation: phase0.Attestation): Promise<boolean> {
