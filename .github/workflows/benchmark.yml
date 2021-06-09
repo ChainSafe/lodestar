@@ -21,6 +21,14 @@ jobs:
         run: yarn benchmark
         env:
           BENCHMARK_OUTPUT_PATH: benchmark-output.txt
+          BENCHMARK_RESULTS_DIR: /benchmark-results
+      # Upload full results
+      - name: Upload full benchmark results
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v2
+        with:
+          name: benchmark-results
+          path: /benchmark-results
       # Download previous benchmark result from cache (if exists)
       - name: Download previous benchmark data
         uses: actions/cache@v1
