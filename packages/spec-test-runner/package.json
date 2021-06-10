@@ -28,7 +28,7 @@
     "test:bls": "mocha 'test/spec/bls/**/*.test.ts'",
     "test:spec": "yarn test:ssz && yarn test:bls && yarn test:spec-phase0 && yarn test:spec-altair",
     "test:spec-altair-minimal": "LODESTAR_PRESET=minimal mocha 'test/spec/altair/**/*minimal.test.ts'",
-    "test:spec-altair-mainnet": "exit",
+    "test:spec-altair-mainnet": "mocha 'test/spec/altair/**/*mainnet.test.ts'",
     "test:spec-phase0-minimal": "LODESTAR_PRESET=minimal mocha 'test/spec/phase0/**/*minimal.test.ts'",
     "test:spec-phase0-mainnet": "mocha 'test/spec/phase0/**/*mainnet.test.ts'",
     "test:spec-altair": "yarn test:spec-altair-minimal && yarn test:spec-altair-mainnet",
