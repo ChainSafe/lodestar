@@ -43,7 +43,10 @@ jobs:
 
       - name: Get version
         id: version
-        run: echo "::set-output name=version::$(node -p "require('./package.json').version")"
+        run: |
+          VERSION=$(node -p "require('./packages/lodestar/package.json').version")
+          echo VERSION $VERSION
+          echo "::set-output name=version::$VERSION"
     outputs:
       version: ${{ steps.version.outputs.version }}
 
