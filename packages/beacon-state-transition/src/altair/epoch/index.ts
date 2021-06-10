@@ -17,11 +17,13 @@ import {processSyncCommitteeUpdates} from "./processSyncCommitteeUpdates";
 
 export {
   processJustificationAndFinalization,
+  processInactivityUpdates,
   processRewardsAndPenalties,
   processRegistryUpdates,
   processSlashings,
   processSyncCommitteeUpdates,
   processEffectiveBalanceUpdates,
+  processParticipationFlagUpdates,
 };
 
 export function processEpoch(state: CachedBeaconState<altair.BeaconState>): IEpochProcess {
