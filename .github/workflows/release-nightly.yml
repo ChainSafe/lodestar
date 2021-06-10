@@ -41,11 +41,11 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      - name: Get latest tag
-        uses: actions-ecosystem/action-get-latest-tag@v1
-        with:
-          with_initial_version: false
-        id: tag
+      - name: Get version
+        id: version
+        run: echo "::set-output name=version::$(node -p "require('./package.json').version")"
+    outputs:
+      version: ${{ steps.version.outputs.version }}
 
   docker:
     name: Publish to Docker Hub
@@ -58,6 +58,7 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-      # TODO: Prevent Docker Hub tagging this image as "latest", tag as "next" instead
-      - run: docker build --tag chainsafe/lodestar:${{ needs.publish.outputs.tag }} .
-      - run: docker push chainsafe/lodestar:${{ needs.publish.outputs.tag }}
+      - run: docker build --tag chainsafe/lodestar:next .
+      - run: docker tag chainsafe/lodestar:next chainsafe/lodestar:${{ needs.publish.outputs.version }}
+        # Push all tags - TODO: Prevent Docker Hub tagging this image as "latest"
+      - run: docker push chainsafe/lodestar
