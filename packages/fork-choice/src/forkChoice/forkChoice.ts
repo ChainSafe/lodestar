@@ -166,7 +166,7 @@ export class ForkChoice implements IForkChoice {
 
   getHead(): IBlockSummary {
     // balances is not changed but votes are changed
-    let timer, blockSummary;
+    let timer;
     try {
       if (!this.synced) {
         timer = this.metrics?.forkChoiceFindHead.startTimer();
@@ -199,11 +199,10 @@ export class ForkChoice implements IForkChoice {
         });
       }
 
-      blockSummary = toBlockSummary(headNode);
+      return toBlockSummary(headNode);
     } finally {
       if (timer) timer();
     }
-    return blockSummary;
   }
 
   getHeads(): IBlockSummary[] {
