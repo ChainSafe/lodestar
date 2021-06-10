@@ -8,11 +8,11 @@ import {CachedBeaconState} from ".";
 import {
   getActiveValidatorIndices,
   getCurrentEpoch,
-  getTotalActiveBalance,
   computeEpochAtSlot,
   getCurrentSlot,
-  getValidatorChurnLimit,
   ZERO_HASH,
+  getTotalBalance,
+  getChurnLimit,
 } from "../..";
 import {getWeakSubjectivityCheckpointEpoch} from "../../util/weakSubjectivity";
 
@@ -42,10 +42,14 @@ export function getLatestWeakSubjectivityCheckpointEpoch(
  */
 export function computeWeakSubjectivityPeriod(config: IBeaconConfig, state: allForks.BeaconState): number {
   let wsPeriod = config.MIN_VALIDATOR_WITHDRAWABILITY_DELAY;
-  const N = getActiveValidatorIndices(state, getCurrentEpoch(state)).length;
-  const t = Math.floor(Number(getTotalActiveBalance(state)) / N / Number(ETH_TO_GWEI));
-  const T = Math.floor(Number(MAX_EFFECTIVE_BALANCE) / Number(ETH_TO_GWEI));
-  const delta = getValidatorChurnLimit(config, state);
+  const ethToGwei = Number(ETH_TO_GWEI);
+  const currentEpoch = getCurrentEpoch(state);
+  const indices = getActiveValidatorIndices(state, currentEpoch);
+  const N = indices.length;
+  const totalBalance = getTotalBalance(state, indices);
+  const t = Math.floor(Number(totalBalance) / N / ethToGwei);
+  const T = Math.floor(Number(MAX_EFFECTIVE_BALANCE) / ethToGwei);
+  const delta = getChurnLimit(config, N);
   // eslint-disable-next-line @typescript-eslint/naming-convention
   const Delta = MAX_DEPOSITS * SLOTS_PER_EPOCH;
   const D = Number(SAFETY_DECAY);

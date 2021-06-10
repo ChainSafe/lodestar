@@ -22,6 +22,8 @@ describe("weak subjectivity tests", () => {
       sandbox.restore();
     });
 
+    const validatorPool = Array.from({length: 262144}, () => generateValidator({activation: 0, exit: Infinity}));
+
     const testValues = [
       {activeValidatorCount: 8192, slot: 8192, expectedMod: 256},
       {activeValidatorCount: 16384, slot: 16384, expectedMod: 256},
@@ -35,9 +37,7 @@ describe("weak subjectivity tests", () => {
       it(`should have ${testValue.expectedMod} mod for slot ${testValue.slot} and activeValidatorCount of ${testValue.activeValidatorCount}`, () => {
         state.slot = testValue.slot;
         state.finalizedCheckpoint.epoch = state.slot / SLOTS_PER_EPOCH;
-        state.validators = Array.from({length: testValue.activeValidatorCount}, () =>
-          generateValidator({activation: 0, exit: Infinity})
-        ) as List<phase0.Validator>;
+        state.validators = validatorPool.slice(0, testValue.activeValidatorCount) as List<phase0.Validator>;
         const wsCheckpointEpoch = getLatestWeakSubjectivityCheckpointEpoch(config, state);
         expect(wsCheckpointEpoch).to.be.equal(
           state.finalizedCheckpoint.epoch - (state.finalizedCheckpoint.epoch % testValue.expectedMod)
@@ -47,30 +47,35 @@ describe("weak subjectivity tests", () => {
   });
 
   describe("computeWeakSubjectivityPeriod", function () {
-    const testValues = [
-      {avgValBalance: BigInt(28), valCount: 32768, wsPeriod: 504},
-      {avgValBalance: BigInt(28), valCount: 65536, wsPeriod: 752},
-      {avgValBalance: BigInt(28), valCount: 131072, wsPeriod: 1248},
-      {avgValBalance: BigInt(28), valCount: 262144, wsPeriod: 2241},
-      {avgValBalance: BigInt(28), valCount: 524288, wsPeriod: 2241},
-      {avgValBalance: BigInt(28), valCount: 1048576, wsPeriod: 2241},
-      {avgValBalance: BigInt(32), valCount: 32768, wsPeriod: 665},
-      {avgValBalance: BigInt(32), valCount: 65536, wsPeriod: 1075},
-      {avgValBalance: BigInt(32), valCount: 131072, wsPeriod: 1894},
-      {avgValBalance: BigInt(32), valCount: 262144, wsPeriod: 3532},
-      {avgValBalance: BigInt(32), valCount: 524288, wsPeriod: 3532},
-      {avgValBalance: BigInt(32), valCount: 1048576, wsPeriod: 3532},
-    ];
-
     const state = generateState();
-    const validatorPool = Array.from({length: 1048576}, () => generateValidator({activation: 0, exit: Infinity}));
+
+    const balance28 = BigInt(28) * ETH_TO_GWEI;
+    const validatorPool28 = Array.from({length: 1048576}, () =>
+      generateValidator({activation: 0, exit: Infinity, balance: balance28})
+    );
+    const balance32 = BigInt(32) * ETH_TO_GWEI;
+    const validatorPool32 = Array.from({length: 1048576}, () =>
+      generateValidator({activation: 0, exit: Infinity, balance: balance32})
+    );
+
+    const testValues = [
+      {avgValBalance: balance28, valCount: 32768, wsPeriod: 504, validatorPool: validatorPool28.slice(0, 32768)},
+      {avgValBalance: balance28, valCount: 65536, wsPeriod: 752, validatorPool: validatorPool28.slice(0, 65536)},
+      {avgValBalance: balance28, valCount: 131072, wsPeriod: 1248, validatorPool: validatorPool28.slice(0, 131072)},
+      {avgValBalance: balance28, valCount: 262144, wsPeriod: 2241, validatorPool: validatorPool28.slice(0, 262144)},
+      {avgValBalance: balance28, valCount: 524288, wsPeriod: 2241, validatorPool: validatorPool28.slice(0, 524288)},
+      {avgValBalance: balance28, valCount: 1048576, wsPeriod: 2241, validatorPool: validatorPool28.slice(0, 1048576)},
+      {avgValBalance: balance32, valCount: 32768, wsPeriod: 665, validatorPool: validatorPool32.slice(0, 32768)},
+      {avgValBalance: balance32, valCount: 65536, wsPeriod: 1075, validatorPool: validatorPool32.slice(0, 65536)},
+      {avgValBalance: balance32, valCount: 131072, wsPeriod: 1894, validatorPool: validatorPool32.slice(0, 131072)},
+      {avgValBalance: balance32, valCount: 262144, wsPeriod: 3532, validatorPool: validatorPool32.slice(0, 262144)},
+      {avgValBalance: balance32, valCount: 524288, wsPeriod: 3532, validatorPool: validatorPool32.slice(0, 524288)},
+      {avgValBalance: balance32, valCount: 1048576, wsPeriod: 3532, validatorPool: validatorPool32.slice(0, 1048576)},
+    ];
 
     for (const testValue of testValues) {
       it(`should have wsPeriod ${testValue.wsPeriod} with avgValBalance: ${testValue.avgValBalance} and valCount: ${testValue.valCount}`, () => {
-        state.validators = validatorPool.slice(0, testValue.valCount).map((v) => v) as List<phase0.Validator>;
-        for (const v in state.validators) {
-          state.validators[v].effectiveBalance = testValue.avgValBalance * ETH_TO_GWEI;
-        }
+        state.validators = testValue.validatorPool as List<phase0.Validator>;
         const wsPeriod = computeWeakSubjectivityPeriod(config, state);
         expect(wsPeriod).to.equal(testValue.wsPeriod);
       });
