@@ -36,7 +36,7 @@ export async function runBlockTransitionTests(): Promise<void> {
 
   const testCases = [
     {signedBlock, name: "Process regular block"},
-    {signedBlock: validatorExitsBlock, name: `Process blocks with ${numValidatorExits} validator exits`},
+    {signedBlock: validatorExitsBlock, name: `Process block with ${numValidatorExits} validator exits`},
   ];
 
   for (const {name, signedBlock} of testCases) {

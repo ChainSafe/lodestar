@@ -2,11 +2,8 @@ import {generatePerfTestCachedBeaconState, initBLS} from "../../util";
 import {BenchmarkRunner} from "@chainsafe/lodestar-utils/test_utils/benchmark";
 import {allForks} from "../../../../src";
 
-const testCases = [
-  {numSlot: 32, name: "process 1 empty epoch"},
-  {numSlot: 64, name: "process double empty epochs"},
-  {numSlot: 128, name: "process 4 empty epochs"},
-];
+// Testing going through 1,2,4 epoch transitions has the same proportional result
+const testCases = [{numSlot: 32, name: "process 1 empty epoch"}];
 
 // As of Jun 01 2021
 // Epoch transitions
