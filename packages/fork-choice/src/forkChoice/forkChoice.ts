@@ -202,9 +202,8 @@ export class ForkChoice implements IForkChoice {
       const blockSummary = toBlockSummary(headNode);
       if (timer) timer();
       return blockSummary;
-    } catch (e) {
+    } finally {
       if (timer) timer();
-      throw e;
     }
   }
 
