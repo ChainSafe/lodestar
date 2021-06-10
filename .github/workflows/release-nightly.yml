@@ -58,7 +58,7 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-      - run: docker build --tag chainsafe/lodestar:next .
+      - run: docker build --tag chainsafe/lodestar:next --build-arg VERSION=${{ needs.publish.outputs.version }} .
       - run: docker tag chainsafe/lodestar:next chainsafe/lodestar:${{ needs.publish.outputs.version }}
         # Push all tags
       - run: docker push chainsafe/lodestar
