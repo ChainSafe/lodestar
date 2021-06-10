@@ -5,6 +5,7 @@ import {generatePerfTestCachedBeaconState, initBLS} from "../../util";
 export const runGetAttestationDeltaTest = async (): Promise<void> => {
   const runner = new BenchmarkRunner("getAttestationDeltas", {
     maxMs: 5 * 60 * 1000,
+    minMs: 15 * 1000,
     runs: 25,
   });
   await initBLS();

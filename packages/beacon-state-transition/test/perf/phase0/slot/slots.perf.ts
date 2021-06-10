@@ -21,6 +21,7 @@ let state: allForks.CachedBeaconState<phase0.BeaconState>;
 export const runEpochTransitionTests = async (): Promise<void> => {
   const runner = new BenchmarkRunner("Epoch transitions", {
     maxMs: 5 * 60 * 1000,
+    minMs: 15 * 1000,
     runs: 5,
   });
   for (const {name, numSlot} of testCases) {
