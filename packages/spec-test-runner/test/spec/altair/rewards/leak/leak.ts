@@ -19,29 +19,10 @@ import {
 } from "@chainsafe/lodestar-params";
 import {IBaseSpecTest} from "../../../type";
 import {ssz} from "@chainsafe/lodestar-types";
+import {Deltas, Output, RewardTestCase} from "../type";
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
 const config = createIBeaconConfig({ALTAIR_FORK_EPOCH: 0});
-
-const Deltas = new VectorType<bigint[]>({
-  elementType: ssz.altair.BeaconState.fields.balances,
-  length: 2,
-});
-
-interface RewardTestCase extends IBaseSpecTest {
-  pre: altair.BeaconState;
-  head_deltas: bigint[][];
-  source_deltas: bigint[][];
-  target_deltas: bigint[][];
-  inactivity_penalty_deltas: bigint[][];
-}
-
-type Output = {
-  head_deltas: bigint[][];
-  source_deltas: bigint[][];
-  target_deltas: bigint[][];
-  inactivity_penalty_deltas: bigint[][];
-};
 
 export function runLeak(presetName: PresetName): void {
   describeDirectorySpecTest<RewardTestCase, Output>(
