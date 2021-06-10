@@ -113,8 +113,6 @@ async function doRun<T1, T2 = T1, R = void>(
     const result = await run(input);
     const endNs = process.hrtime.bigint();
 
-    console.log(opts.id, i, new Date(), process.memoryUsage());
-
     if (check && check(result)) throw Error("Result fails check test");
 
     runsNs.push(endNs - startNs);

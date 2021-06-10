@@ -31,19 +31,8 @@ export async function runEpochTransitionTests(): Promise<void> {
       beforeEach: () => originalState.clone(),
       run: (state) => {
         allForks.processSlots(state as allForks.CachedBeaconState<allForks.BeaconState>, state.slot + numSlot);
-        if (global.gc) {
-          // eslint-disable-next-line no-console
-          console.log("Triggering GC...");
-          global.gc();
-        }
       },
     });
-
-    if (global.gc) {
-      // eslint-disable-next-line no-console
-      console.log("Triggering GC...");
-      global.gc();
-    }
   }
 
   runner.done();

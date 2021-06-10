@@ -46,12 +46,6 @@ export async function runEpochTransitionStepTests(): Promise<void> {
 
   // Non-action perf
 
-  if (global.gc) {
-    // eslint-disable-next-line no-console
-    console.log("Triggering GC...");
-    global.gc();
-  }
-
   await runner.run({
     id: "prepareEpochProcessState",
     run: () => {
