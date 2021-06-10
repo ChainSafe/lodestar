@@ -5,7 +5,7 @@ import {expect} from "chai";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
 import {altair, allForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {SPEC_TEST_LOCATION} from "../../../../utils/specTestCases";
-import {TreeBacked, VectorType} from "@chainsafe/ssz";
+import {TreeBacked} from "@chainsafe/ssz";
 import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 import {
   getFlagIndexDeltas,
@@ -17,7 +17,6 @@ import {
   TIMELY_SOURCE_FLAG_INDEX,
   TIMELY_TARGET_FLAG_INDEX,
 } from "@chainsafe/lodestar-params";
-import {IBaseSpecTest} from "../../../type";
 import {ssz} from "@chainsafe/lodestar-types";
 import {Deltas, Output, RewardTestCase} from "../type";
 

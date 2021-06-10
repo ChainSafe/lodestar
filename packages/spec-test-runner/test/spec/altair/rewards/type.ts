@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/naming-convention */
 import {altair, ssz} from "@chainsafe/lodestar-types";
 import {VectorType} from "@chainsafe/ssz";
 import {IBaseSpecTest} from "../../type";

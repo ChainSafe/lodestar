@@ -23,11 +23,11 @@ export function runSyncCommittee(presetName: PresetName): void {
         testcase.pre as TreeBacked<altair.BeaconState>
       ) as CachedBeaconState<altair.BeaconState>;
 
-      const block = ssz.altair.BeaconBlock.defaultValue();
+      const block = ssz.altair.BeaconBlock.defaultTreeBacked();
 
       // processSyncCommittee() needs the full block to get the slot
       block.slot = wrappedState.slot;
-      block.body.syncAggregate = ssz.altair.SyncAggregate.createTreeBackedFromStruct(testcase["sync_aggregate"]);
+      block.body.syncAggregate = testcase["sync_aggregate"];
 
       altair.processSyncCommittee(wrappedState, block);
       return wrappedState;
@@ -42,11 +42,11 @@ export function runSyncCommittee(presetName: PresetName): void {
           type: InputType.SSZ_SNAPPY,
           treeBacked: true,
         },
-        // TODO: not able to deserialzie from binary
-        // sync_aggregate: {
-        //   type: InputType.SSZ_SNAPPY,
-        //   treeBacked: true,
-        // },
+        // eslint-disable-next-line @typescript-eslint/naming-convention
+        sync_aggregate: {
+          type: InputType.SSZ_SNAPPY,
+          treeBacked: true,
+        },
         meta: InputType.YAML,
       },
       sszTypes: {
