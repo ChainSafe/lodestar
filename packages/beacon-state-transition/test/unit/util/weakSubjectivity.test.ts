@@ -8,7 +8,6 @@ import {generateValidator} from "../../utils/validator";
 import {expect} from "chai";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {computeWeakSubjectivityPeriod, ETH_TO_GWEI} from "../../../src/allForks/util/weakSubjectivity";
-import {BeaconState} from "@chainsafe/lodestar-types/lib/allForks/types";
 
 describe("weak subjectivity tests", () => {
   describe("getLatestWeakSubjectivityCheckpointEpoch", () => {
@@ -47,7 +46,7 @@ describe("weak subjectivity tests", () => {
     }
   });
 
-  describe("computeWeakSubjectivityPeriod", () => {
+  describe("computeWeakSubjectivityPeriod", function () {
     const testValues = [
       {avgValBalance: BigInt(28), valCount: 32768, wsPeriod: 504},
       {avgValBalance: BigInt(28), valCount: 65536, wsPeriod: 752},
@@ -63,17 +62,15 @@ describe("weak subjectivity tests", () => {
       {avgValBalance: BigInt(32), valCount: 1048576, wsPeriod: 3532},
     ];
 
+    const state = generateState();
+    const validatorPool = Array.from({length: 1048576}, () => generateValidator({activation: 0, exit: Infinity}));
+
     for (const testValue of testValues) {
-      let state: BeaconState;
-
-      before(() => {
-        state = generateState();
-      });
-
       it(`should have wsPeriod ${testValue.wsPeriod} with avgValBalance: ${testValue.avgValBalance} and valCount: ${testValue.valCount}`, () => {
-        state.validators = Array.from({length: testValue.valCount}, () =>
-          generateValidator({activation: 0, exit: Infinity, balance: testValue.avgValBalance * ETH_TO_GWEI})
-        ) as List<phase0.Validator>;
+        state.validators = validatorPool.slice(0, testValue.valCount).map((v) => v) as List<phase0.Validator>;
+        for (const v in state.validators) {
+          state.validators[v].effectiveBalance = testValue.avgValBalance * ETH_TO_GWEI;
+        }
         const wsPeriod = computeWeakSubjectivityPeriod(config, state);
         expect(wsPeriod).to.equal(testValue.wsPeriod);
       });
