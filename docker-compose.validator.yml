@@ -1,8 +1,7 @@
 version: "3.4"
 services:
   validator:
-    build: .
-    image: lodestar
+    image: chainsafe/lodestar@next
     restart: always
     volumes:
       - validator:/data

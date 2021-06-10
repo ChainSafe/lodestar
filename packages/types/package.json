@@ -11,12 +11,14 @@
   "bugs": {
     "url": "https://github.com/ChainSafe/lodestar/issues"
   },
-  "version": "0.24.0",
+  "version": "0.24.2",
   "main": "lib/index.js",
   "files": [
     "lib/**/*.d.ts",
     "lib/**/*.js",
-    "lib/**/*.js.map"
+    "lib/**/*.js.map",
+    "*.d.ts",
+    "*.js"
   ],
   "scripts": {
     "clean": "rm -rf lib && rm -f *.tsbuildinfo",
@@ -35,7 +37,7 @@
   },
   "types": "lib/index.d.ts",
   "dependencies": {
-    "@chainsafe/lodestar-params": "^0.24.0",
+    "@chainsafe/lodestar-params": "^0.24.2",
     "@chainsafe/ssz": "^0.8.7"
   },
   "keywords": [

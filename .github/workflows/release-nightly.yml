@@ -1,7 +1,7 @@
 name: Release nightly
 
 # only one per github sha can be run
-concurrency: 
+concurrency:
   group: ${{ github.sha }}
   cancel-in-progress: true
 
@@ -20,7 +20,7 @@ jobs:
       - uses: actions/setup-node@v2
         with:
           node-version: "14.16.0"
-          registry-url: 'https://registry.npmjs.org'
+          registry-url: "https://registry.npmjs.org"
       - name: Restore dependencies
         uses: actions/cache@master
         id: cache-deps
@@ -40,3 +40,28 @@ jobs:
         run: yarn run publish:nightly
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Get version
+        id: version
+        run: |
+          VERSION=$(node -p "require('./packages/lodestar/package.json').version")
+          echo VERSION $VERSION
+          echo "::set-output name=version::$VERSION"
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+
+  docker:
+    name: Publish to Docker Hub
+    runs-on: ubuntu-latest
+    needs: publish
+    steps:
+      - uses: actions/checkout@v2
+      - name: Login to Docker Hub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - run: docker build --tag chainsafe/lodestar:next --build-arg VERSION=${{ needs.publish.outputs.version }} .
+      - run: docker tag chainsafe/lodestar:next chainsafe/lodestar:${{ needs.publish.outputs.version }}
+        # Push all tags
+      - run: docker push chainsafe/lodestar
