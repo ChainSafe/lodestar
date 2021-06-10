@@ -16,33 +16,6 @@ export interface IInvalidTestcase {
   serialized: Uint8Array;
 }
 
-export function parseValue(value: unknown): unknown {
-  if (typeof value === "boolean") {
-    return value;
-  } else if (typeof value === "string") {
-    if (value.startsWith("0x")) {
-      return fromHexString(value);
-    } else {
-      return BigInt(value);
-    }
-  } else if (typeof value === "bigint") {
-    return BigInt(value);
-  } else if (typeof value === "number") {
-    return BigInt(value);
-  } else if (typeof value === "object") {
-    if (Array.isArray(value)) {
-      return value.map(parseValue);
-    } else {
-      const obj: Record<string, unknown> = {};
-      Object.keys(value as Record<string, unknown>).forEach((fieldName) => {
-        obj[fieldName] = parseValue((value as Record<string, unknown>)[fieldName]);
-      });
-      return obj;
-    }
-  }
-  throw new Error("Can't parse value " + value);
-}
-
 export function parseValidTestcase<T>(path: string, type: Type<T>): IValidTestcase<T> {
   // The root is stored in meta.yml as:
   //   root: 0xDEADBEEF
