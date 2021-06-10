@@ -29,7 +29,7 @@ export enum Bucket {
   phase0_preGenesisState = 30, // Single = phase0.BeaconState
   phase0_preGenesisStateLastProcessedBlock = 31, // Single = Uint8
   // op pool
-  phase0_attestation = 10, // Root -> Attestation
+  // phase0_attestation = 10, // DEPRECATED on v0.25.0
   phase0_aggregateAndProof = 11, // Root -> AggregateAndProof
   phase0_depositData = 12, // [DEPRECATED] index -> DepositData
   phase0_exit = 13, // ValidatorIndex -> VoluntaryExit

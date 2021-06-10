@@ -6,7 +6,6 @@ import {allForks} from "@chainsafe/lodestar-types";
 
 import {
   AggregateAndProofRepository,
-  AttestationRepository,
   AttesterSlashingRepository,
   BadBlockRepository,
   BlockArchiveRepository,
@@ -27,6 +26,7 @@ import {
   LatestNonFinalizedUpdate,
 } from "./single";
 import {SeenAttestationCache} from "./seenAttestationCache";
+import {AttestationPool} from "./attestationPool";
 import {PendingBlockRepository} from "./repositories/pendingBlock";
 import {SyncCommitteeCache} from "./syncCommittee";
 import {SyncCommitteeContributionCache} from "./syncCommitteeContribution";
@@ -46,8 +46,9 @@ export interface IBeaconDb {
   // pending block
   pendingBlock: PendingBlockRepository;
 
-  // cache for attestations that have already been seen via gossip or other sources
+  // cache for partially aggregated attestations - also does caching for gossip validation
   seenAttestationCache: SeenAttestationCache;
+  attestationPool: AttestationPool;
 
   // finalized blocks
   blockArchive: BlockArchiveRepository;
@@ -56,7 +57,6 @@ export interface IBeaconDb {
   stateArchive: StateArchiveRepository;
 
   // op pool
-  attestation: AttestationRepository;
   aggregateAndProof: AggregateAndProofRepository;
   voluntaryExit: VoluntaryExitRepository;
   proposerSlashing: ProposerSlashingRepository;

@@ -22,15 +22,12 @@ export function getBeaconPoolApi({
 }: Pick<ApiModules, "chain" | "config" | "logger" | "metrics" | "network" | "db">): IBeaconPoolApi {
   return {
     async getPoolAttestations(filters) {
-      const attestations = (await db.attestation.values()).filter((attestation) => {
-        if (filters?.slot && filters?.slot !== attestation.data.slot) {
-          return false;
-        }
-        if (filters?.committeeIndex && filters?.committeeIndex !== attestation.data.index) {
-          return false;
-        }
-        return true;
-      });
+      // Already filtered by slot
+      let attestations = db.attestationPool.getAll(filters?.slot);
+
+      if (filters?.committeeIndex !== undefined) {
+        attestations = attestations.filter((attestation) => filters.committeeIndex === attestation.data.index);
+      }
 
       return {data: attestations};
     },
@@ -71,7 +68,7 @@ export function getBeaconPoolApi({
 
             await Promise.all([
               network.gossip.publishBeaconAttestation(attestation, subnet),
-              db.attestation.add(attestation),
+              db.attestationPool.add(attestation),
             ]);
           } catch (e) {
             errors.push(e);

@@ -7,7 +7,6 @@ import {DatabaseService, IDatabaseApiOptions} from "@chainsafe/lodestar-db";
 import {IBeaconDb} from "./interface";
 import {
   AggregateAndProofRepository,
-  AttestationRepository,
   AttesterSlashingRepository,
   BadBlockRepository,
   BlockArchiveRepository,
@@ -29,6 +28,7 @@ import {
 } from "./single";
 import {SeenAttestationCache} from "./seenAttestationCache";
 import {PendingBlockRepository} from "./repositories/pendingBlock";
+import {AttestationPool} from "./attestationPool";
 import {SyncCommitteeCache} from "./syncCommittee";
 import {SyncCommitteeContributionCache} from "./syncCommitteeContribution";
 
@@ -37,10 +37,10 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
   block: BlockRepository;
   pendingBlock: PendingBlockRepository;
   seenAttestationCache: SeenAttestationCache;
+  attestationPool: AttestationPool;
   blockArchive: BlockArchiveRepository;
   stateArchive: StateArchiveRepository;
 
-  attestation: AttestationRepository;
   aggregateAndProof: AggregateAndProofRepository;
   voluntaryExit: VoluntaryExitRepository;
   proposerSlashing: ProposerSlashingRepository;
@@ -67,9 +67,9 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
     this.block = new BlockRepository(this.config, this.db);
     this.pendingBlock = new PendingBlockRepository(this.config, this.db);
     this.seenAttestationCache = new SeenAttestationCache(this.config, 2048);
+    this.attestationPool = new AttestationPool();
     this.blockArchive = new BlockArchiveRepository(this.config, this.db);
     this.stateArchive = new StateArchiveRepository(this.config, this.db);
-    this.attestation = new AttestationRepository(this.config, this.db);
     this.aggregateAndProof = new AggregateAndProofRepository(this.config, this.db);
     this.voluntaryExit = new VoluntaryExitRepository(this.config, this.db);
     this.proposerSlashing = new ProposerSlashingRepository(this.config, this.db);
