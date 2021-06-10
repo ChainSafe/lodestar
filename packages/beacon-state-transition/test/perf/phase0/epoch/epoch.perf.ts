@@ -65,6 +65,12 @@ export async function runEpochTransitionStepTests(): Promise<void> {
       beforeEach: () => originalState.clone(),
       run: (state) => testFunc(state, process),
     });
+
+    if (global.gc) {
+      // eslint-disable-next-line no-console
+      console.log("Triggering GC...");
+      global.gc();
+    }
   }
   runner.done();
 }

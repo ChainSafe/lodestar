@@ -20,5 +20,11 @@ export async function runGetAttestationDeltaTest(): Promise<void> {
     },
   });
 
+  if (global.gc) {
+    // eslint-disable-next-line no-console
+    console.log("Triggering GC...");
+    global.gc();
+  }
+
   runner.done();
 }
