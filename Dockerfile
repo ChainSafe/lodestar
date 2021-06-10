@@ -9,7 +9,8 @@ RUN npm install @chainsafe/lodestar-cli@$VERSION
 FROM node:14-alpine
 WORKDIR /usr/app
 COPY --from=build /usr/app .
+
 # Sanity check
 RUN /usr/app/node_modules/.bin/lodestar --help
 
-ENTRYPOINT ["node", "--max-old-space-size=8192", "/usr/app/lodestar"]
+ENTRYPOINT ["node", "--max-old-space-size=8192", "/usr/app/node_modules/.bin/lodestar"]
