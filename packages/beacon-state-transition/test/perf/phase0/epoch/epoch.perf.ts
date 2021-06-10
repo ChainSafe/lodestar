@@ -10,7 +10,47 @@ export async function runEpochTransitionStepTests(): Promise<void> {
   });
 
   await initBLS();
+
   const originalState = generatePerfTestCachedBeaconState({goBackOneSlot: true});
+  const process = allForks.prepareEpochProcessState(originalState);
+
+  await runner.run({
+    id: "processJustificationAndFinalization",
+    beforeEach: () => originalState.clone() as allForks.CachedBeaconState<allForks.BeaconState>,
+    run: (state) => phase0.processJustificationAndFinalization(state, process),
+  });
+
+  await runner.run({
+    id: "processRewardsAndPenalties",
+    beforeEach: () => originalState.clone(),
+    run: (state) => phase0.processRewardsAndPenalties(state, process),
+  });
+
+  await runner.run({
+    id: "processRegistryUpdates",
+    beforeEach: () => originalState.clone() as allForks.CachedBeaconState<allForks.BeaconState>,
+    run: (state) => phase0.processRegistryUpdates(state, process),
+  });
+
+  await runner.run({
+    id: "processSlashings",
+    beforeEach: () => originalState.clone(),
+    run: (state) => phase0.processSlashings(state, process),
+  });
+
+  await runner.run({
+    id: "processFinalUpdates",
+    beforeEach: () => originalState.clone(),
+    run: (state) => phase0.processFinalUpdates(state, process),
+  });
+
+  // Non-action perf
+
+  if (global.gc) {
+    // eslint-disable-next-line no-console
+    console.log("Triggering GC...");
+    global.gc();
+  }
 
   await runner.run({
     id: "prepareEpochProcessState",
@@ -19,58 +59,5 @@ export async function runEpochTransitionStepTests(): Promise<void> {
     },
   });
 
-  const process = allForks.prepareEpochProcessState(originalState);
-
-  const testCases = [
-    {
-      testFunc: phase0.processJustificationAndFinalization as (
-        state: allForks.CachedBeaconState<phase0.BeaconState>,
-        process: allForks.IEpochProcess
-      ) => void,
-      name: "processJustificationAndFinalization",
-    },
-    {
-      testFunc: phase0.processRewardsAndPenalties as (
-        state: allForks.CachedBeaconState<phase0.BeaconState>,
-        process: allForks.IEpochProcess
-      ) => void,
-      name: "processRewardsAndPenalties",
-    },
-    {
-      testFunc: phase0.processRegistryUpdates as (
-        state: allForks.CachedBeaconState<phase0.BeaconState>,
-        process: allForks.IEpochProcess
-      ) => void,
-      name: "processRegistryUpdates",
-    },
-    {
-      testFunc: phase0.processSlashings as (
-        state: allForks.CachedBeaconState<phase0.BeaconState>,
-        process: allForks.IEpochProcess
-      ) => void,
-      name: "processSlashings",
-    },
-    {
-      testFunc: phase0.processFinalUpdates as (
-        state: allForks.CachedBeaconState<phase0.BeaconState>,
-        process: allForks.IEpochProcess
-      ) => void,
-      name: "processFinalUpdates",
-    },
-  ];
-
-  for (const {name, testFunc} of testCases) {
-    await runner.run({
-      id: name,
-      beforeEach: () => originalState.clone(),
-      run: (state) => testFunc(state, process),
-    });
-
-    if (global.gc) {
-      // eslint-disable-next-line no-console
-      console.log("Triggering GC...");
-      global.gc();
-    }
-  }
   runner.done();
 }
