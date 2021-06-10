@@ -5,7 +5,6 @@ import {LevelDbController} from "@chainsafe/lodestar-db";
 import {BeaconDb} from "../../../src/db";
 import {
   AggregateAndProofRepository,
-  AttestationRepository,
   AttesterSlashingRepository,
   BadBlockRepository,
   BlockArchiveRepository,
@@ -34,7 +33,6 @@ export class StubbedBeaconDb extends BeaconDb {
   blockArchive: SinonStubbedInstance<BlockArchiveRepository> & BlockArchiveRepository;
   stateArchive: SinonStubbedInstance<StateArchiveRepository> & StateArchiveRepository;
 
-  attestation: SinonStubbedInstance<AttestationRepository> & AttestationRepository;
   aggregateAndProof: SinonStubbedInstance<AggregateAndProofRepository> & AggregateAndProofRepository;
   voluntaryExit: SinonStubbedInstance<VoluntaryExitRepository> & VoluntaryExitRepository;
   proposerSlashing: SinonStubbedInstance<ProposerSlashingRepository> & ProposerSlashingRepository;
@@ -61,7 +59,6 @@ export class StubbedBeaconDb extends BeaconDb {
     this.blockArchive = createStubInstance(BlockArchiveRepository);
     this.stateArchive = createStubInstance(StateArchiveRepository);
 
-    this.attestation = createStubInstance(AttestationRepository);
     this.aggregateAndProof = createStubInstance(AggregateAndProofRepository);
     this.voluntaryExit = createStubInstance(VoluntaryExitRepository);
     this.proposerSlashing = createStubInstance(ProposerSlashingRepository);
