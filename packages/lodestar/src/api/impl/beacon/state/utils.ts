@@ -260,7 +260,7 @@ async function getFinalizedState(
   db: IBeaconDb,
   forkChoice: IForkChoice,
   slot: Slot
-): Promise<CachedBeaconState<allForks.BeaconState>> {
+): Promise<allForks.BeaconState> {
   assert.lte(slot, forkChoice.getFinalizedCheckpoint().epoch * SLOTS_PER_EPOCH);
   let state = await getNearestArchivedState(config, db, slot);
 
@@ -278,7 +278,7 @@ async function getFinalizedState(
   if (state.slot < slot) {
     state = allForks.processSlots(state, slot);
   }
-  return state;
+  return config.getForkTypes(slot).BeaconState.tree_convertToStruct(state.tree);
 }
 
 export function getStateValidatorIndex(
