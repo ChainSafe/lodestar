@@ -15,6 +15,7 @@ import {generatePerformanceBlock, generatePerfTestCachedBeaconState, initBLS} fr
 export const runBlockTransitionTests = async (): Promise<void> => {
   const runner = new BenchmarkRunner("Process block", {
     maxMs: 5 * 60 * 1000,
+    minMs: 15 * 1000,
     runs: 50,
   });
   await initBLS();
