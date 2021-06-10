@@ -1,6 +1,6 @@
 import {AbortSignal} from "abort-controller";
 import {readonlyValues, toHexString, TreeBacked} from "@chainsafe/ssz";
-import {allForks, altair, phase0, Root, Slot, ssz, Version} from "@chainsafe/lodestar-types";
+import {allForks, altair, phase0, Slot, ssz, Version} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {IBlockSummary} from "@chainsafe/lodestar-fork-choice";
 import {CachedBeaconState, computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
