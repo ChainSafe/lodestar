@@ -8,7 +8,6 @@ import {
   AggregateAndProofRepository,
   AttestationRepository,
   AttesterSlashingRepository,
-  BadBlockRepository,
   BlockArchiveRepository,
   BlockRepository,
   DepositEventRepository,
@@ -37,9 +36,6 @@ import {SyncCommitteeContributionCache} from "./syncCommitteeContribution";
  * but instead expose relevent beacon chain objects
  */
 export interface IBeaconDb {
-  // bad blocks
-  badBlock: BadBlockRepository;
-
   // unfinalized blocks
   block: BlockRepository;
 

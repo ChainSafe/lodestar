@@ -17,7 +17,7 @@ export enum Bucket {
   index_blockArchiveParentRootIndex = 3, // parent Root -> Slot
   index_blockArchiveRootIndex = 4, // Root -> Slot
   // known bad block
-  index_invalidBlock = 5, // Root -> boolean
+  // index_invalidBlock = 5, // DEPRECATED on v0.25.0
   // finalized chain
   index_mainChain = 6, // Slot -> Root<BeaconBlock>
   // justified, finalized state and block hashes

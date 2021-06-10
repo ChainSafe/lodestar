@@ -1,4 +1,3 @@
-export * from "./badBlock";
 export * from "./block";
 export * from "./blockArchive";
 export * from "./stateArchive";

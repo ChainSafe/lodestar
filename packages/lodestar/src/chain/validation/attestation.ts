@@ -23,12 +23,7 @@ export async function validateGossipAttestation(
       job: attestationJob,
     });
   }
-  if (await isAttestingToInValidBlock(db, attestation)) {
-    throw new AttestationError({
-      code: AttestationErrorCode.KNOWN_BAD_BLOCK,
-      job: attestationJob,
-    });
-  }
+
   const latestPermissibleSlot = chain.clock.currentSlot;
   const earliestPermissibleSlot = chain.clock.currentSlot - ATTESTATION_PROPAGATION_SLOT_RANGE;
   const attestationSlot = attestation.data.slot;
@@ -59,12 +54,8 @@ export async function validateGossipAttestation(
     });
   }
 
-  if (await db.badBlock.has(attestation.data.beaconBlockRoot.valueOf() as Uint8Array)) {
-    throw new AttestationError({
-      code: AttestationErrorCode.KNOWN_BAD_BLOCK,
-      job: attestationJob,
-    });
-  }
+  // No need to check if `attestation.data.beaconBlockRoot` is a badBlock
+  // If it is, the ForkChoice won't know about it so the `chain.forkChoice.hasBlock` is sufficient
 
   if (!chain.forkChoice.hasBlock(attestation.data.beaconBlockRoot)) {
     throw new AttestationError({
@@ -162,12 +153,6 @@ export async function validateGossipAttestation(
   db.seenAttestationCache.addCommitteeAttestation(attestation);
 
   return indexedAttestation;
-}
-
-export async function isAttestingToInValidBlock(db: IBeaconDb, attestation: phase0.Attestation): Promise<boolean> {
-  const blockRoot = attestation.data.beaconBlockRoot.valueOf() as Uint8Array;
-  // TODO: check if source and target blocks are not in bad block repository
-  return await db.badBlock.has(blockRoot);
 }
 
 export function getAttestationAttesterCount(attestation: phase0.Attestation): number {

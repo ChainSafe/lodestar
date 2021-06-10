@@ -9,7 +9,6 @@ import {
   computeEpochAtSlot,
   isAggregatorFromCommitteeLength,
 } from "@chainsafe/lodestar-beacon-state-transition";
-import {isAttestingToInValidBlock} from "./attestation";
 import {getSelectionProofSignatureSet, getAggregateAndProofSignatureSet} from "./signatureSets";
 import {AttestationError, AttestationErrorCode} from "../errors";
 import {ATTESTATION_PROPAGATION_SLOT_RANGE} from "../../constants";
@@ -57,13 +56,6 @@ export async function validateGossipAggregateAndProof(
     // missing attestation participants
     throw new AttestationError({
       code: AttestationErrorCode.WRONG_NUMBER_OF_AGGREGATION_BITS,
-      job: attestationJob,
-    });
-  }
-
-  if (await isAttestingToInValidBlock(db, aggregate)) {
-    throw new AttestationError({
-      code: AttestationErrorCode.KNOWN_BAD_BLOCK,
       job: attestationJob,
     });
   }

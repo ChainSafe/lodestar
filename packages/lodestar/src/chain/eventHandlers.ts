@@ -348,32 +348,16 @@ export async function onErrorBlock(this: BeaconChain, err: BlockError): Promise<
   }
 
   this.logger.error("Block error", {slot: err.signedBlock.message.slot}, err);
-  const getBlockRoot = (): Root =>
-    this.config.getForkTypes(err.signedBlock.message.slot).BeaconBlock.hashTreeRoot(err.signedBlock.message);
 
-  switch (err.type.code) {
-    case BlockErrorCode.FUTURE_SLOT:
-      this.pendingBlocks.addBySlot(err.signedBlock);
-      await this.db.pendingBlock.add(err.signedBlock);
-      break;
+  if (err.type.code === BlockErrorCode.FUTURE_SLOT) {
+    this.pendingBlocks.addBySlot(err.signedBlock);
+    await this.db.pendingBlock.add(err.signedBlock);
+  }
 
-    case BlockErrorCode.PARENT_UNKNOWN:
-      // add to pendingBlocks first which is not await
-      // this is to process a block range
-      this.pendingBlocks.addByParent(err.signedBlock);
-      await this.db.pendingBlock.add(err.signedBlock);
-      break;
-
-    case BlockErrorCode.INCORRECT_PROPOSER:
-    case BlockErrorCode.REPEAT_PROPOSAL:
-    case BlockErrorCode.STATE_ROOT_MISMATCH:
-    case BlockErrorCode.PER_BLOCK_PROCESSING_ERROR:
-    case BlockErrorCode.BLOCK_IS_NOT_LATER_THAN_PARENT:
-    case BlockErrorCode.UNKNOWN_PROPOSER: {
-      const blockRoot = getBlockRoot();
-      await this.db.badBlock.put(blockRoot as Uint8Array);
-      this.logger.warn("Found bad block", {blockRoot: toHexString(blockRoot)}, err);
-      break;
-    }
+  // add to pendingBlocks first which is not await
+  // this is to process a block range
+  else if (err.type.code === BlockErrorCode.PARENT_UNKNOWN) {
+    this.pendingBlocks.addByParent(err.signedBlock);
+    await this.db.pendingBlock.add(err.signedBlock);
   }
 }
