@@ -1,6 +1,6 @@
 import {join} from "path";
 import {readFileSync, readdirSync} from "fs";
-import {fromHexString} from "@chainsafe/ssz";
+import {fromHexString, Json, Type} from "@chainsafe/ssz";
 import {uncompress} from "snappyjs";
 import {loadYamlFile} from "./util";
 
@@ -43,7 +43,7 @@ export function parseValue(value: unknown): unknown {
   throw new Error("Can't parse value " + value);
 }
 
-export function parseValidTestcase<T>(path: string): IValidTestcase<T> {
+export function parseValidTestcase<T>(path: string, type: Type<T>): IValidTestcase<T> {
   // The root is stored in meta.yml as:
   //   root: 0xDEADBEEF
   const meta = loadYamlFile(join(path, "meta.yaml"));
@@ -53,7 +53,7 @@ export function parseValidTestcase<T>(path: string): IValidTestcase<T> {
   const serialized = uncompress<Uint8Array>(readFileSync(join(path, "serialized.ssz_snappy")));
 
   // The value is stored in value.yml
-  const value = parseValue(loadYamlFile(join(path, "value.yaml"))) as T;
+  const value = type.fromJson(loadYamlFile(join(path, "value.yaml")) as Json) as T;
 
   return {
     path,
@@ -73,15 +73,18 @@ export function parseInvalidTestcase(path: string): IInvalidTestcase {
   };
 }
 
-export function getValidTestcases<T>(path: string, prefix: string): IValidTestcase<T>[] {
+export function getValidTestcases<T>(path: string, prefix: string, type: Type<T>): IValidTestcase<T>[] {
   const subdirs = readdirSync(path);
   return subdirs
     .filter((dir) => dir.includes(prefix))
     .map((d) => join(path, d))
-    .map(parseValidTestcase) as IValidTestcase<T>[];
+    .map((p) => parseValidTestcase(p, type)) as IValidTestcase<T>[];
 }
 
 export function getInvalidTestcases(path: string, prefix: string): IInvalidTestcase[] {
   const subdirs = readdirSync(path);
-  return subdirs.filter((dir) => dir.includes(prefix)).map(parseInvalidTestcase);
+  return subdirs
+    .filter((dir) => dir.includes(prefix))
+    .map((d) => join(path, d))
+    .map(parseInvalidTestcase);
 }

@@ -1,6 +1,6 @@
 import {expect} from "chai";
 import {SPEC_TEST_LOCATION} from "../../../utils/specTestCases";
-import {getValidTestcases} from "@chainsafe/lodestar-spec-test-util/lib/sszGeneric";
+import {getInvalidTestcases, getValidTestcases} from "@chainsafe/lodestar-spec-test-util/lib/sszGeneric";
 import {join} from "path";
 import {
   BigIntUintType,
@@ -8,7 +8,7 @@ import {
   BitVectorType,
   booleanType,
   CompositeValue,
-  ContainerType,
+  // ContainerType,
   isCompositeType,
   Type,
   VectorType,
@@ -106,7 +106,7 @@ const basicVectorTypes = (boolTypes2 as IGenericSSZType<any>[])
           elementType: t.type,
           length,
         }),
-        prefix: `vec_${t.prefix}_${length}`,
+        prefix: `vec_${t.prefix}_${length}_`,
         path: basicVectorPath,
       };
     });
@@ -120,7 +120,7 @@ const bitlistTypes = lengths.map((length) => {
     type: new BitListType({
       limit: length,
     }),
-    prefix: `bitlist_${length}`,
+    prefix: `bitlist_${length}_`,
     path: bitlistPath,
   };
 });
@@ -132,28 +132,34 @@ const bitvectorTypes = lengths.map((length) => {
     type: new BitVectorType({
       length,
     }),
-    prefix: `bitvec_${length}`,
+    prefix: `bitvec_${length}_`,
     path: bitvectorPath,
   };
 });
 
 // containers
-const containerPath = join(rootGenericSszPath, "containers");
+// const containerPath = join(rootGenericSszPath, "containers");
 const containerTypes: IGenericSSZType<any>[] = [];
 
 const types: IGenericSSZType<any>[] = (boolTypes as IGenericSSZType<any>[]).concat(
   uintTypes,
   basicVectorTypes,
-  bitlistTypes,
   bitvectorTypes,
+  bitlistTypes,
   containerTypes
 );
 
 for (const type of types) {
-  describe(`ssz generic - ${type.prefix}`, () => {
-    // valid testcases
-    for (const testcase of getValidTestcases(join(type.path, "valid"), type.prefix)) {
+  // valid testcases
+  describe(`ssz generic - valid - ${type.prefix}`, () => {
+    for (const testcase of getValidTestcases(join(type.path, "valid"), type.prefix, type.type)) {
       it(`${testcase.path.split("/").pop()}`, () => {
+        // test struct round trip serialization/deserialization
+        expect(
+          type.type.deserialize(type.type.serialize(testcase.value)),
+          "Invalid struct round-trip serialization/deserialization"
+        ).to.deep.equal(testcase.value);
+
         // test struct serialization
         expect(type.type.serialize(testcase.value), "Invalid struct serialization").to.deep.equal(testcase.serialized);
 
@@ -165,6 +171,7 @@ for (const type of types) {
         // test struct merkleization
         expect(type.type.hashTreeRoot(testcase.value), "Invalid struct merkleization").to.deep.equal(testcase.root);
 
+        // If the type is composite, test tree-backed ops
         if (isCompositeType(type.type)) {
           const structValue = testcase.value as CompositeValue;
           const treebackedValue = type.type.createTreeBackedFromStruct(structValue);
@@ -179,17 +186,29 @@ for (const type of types) {
           ).to.deep.equal(structValue);
 
           // test tree-backed serialization
-          expect(treebackedValue.serialize(), "Invalid tree-backed serialization").to.deep.equal(testcase.root);
+          expect(treebackedValue.serialize(), "Invalid tree-backed serialization").to.deep.equal(testcase.serialized);
 
           // test deserialization to tree-backed
           expect(
-            type.type.createTreeBackedFromBytes(testcase.serialized).equals(treebackedValue),
+            type.type.tree_convertToStruct(type.type.tree_deserialize(testcase.serialized)),
             "Invalid deserialization to tree-backed"
-          ).to.be.true;
+          ).to.deep.equal(structValue);
 
           // test tree-backed merkleization
           expect(treebackedValue.hashTreeRoot(), "Invalid tree-backed merkleization").to.deep.equal(testcase.root);
         }
+      });
+    }
+  });
+
+  // invalid testcases
+  describe(`ssz generic - invalid - ${type.prefix}`, () => {
+    for (const testcase of getInvalidTestcases(join(type.path, "invalid"), type.prefix)) {
+      it(`${testcase.path.split("/").pop()}`, () => {
+        // test struct round trip serialization/deserialization
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+        expect(() => type.type.deserialize(testcase.serialized), "Invalid data should error during deserialization").to
+          .throw;
       });
     }
   });
