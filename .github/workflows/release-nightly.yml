@@ -60,5 +60,5 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       - run: docker build --tag chainsafe/lodestar:next .
       - run: docker tag chainsafe/lodestar:next chainsafe/lodestar:${{ needs.publish.outputs.version }}
-        # Push all tags - TODO: Prevent Docker Hub tagging this image as "latest"
+        # Push all tags
       - run: docker push chainsafe/lodestar
