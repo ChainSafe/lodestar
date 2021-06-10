@@ -22,9 +22,10 @@
   "scripts": {
     "check-types": "tsc --noEmit",
     "download-test-cases": "node -r ts-node/register test/downloadTests.ts",
+    "test:ssz-generic": "mocha 'test/spec/ssz/generic/index.test.ts'",
     "test:ssz-minimal": "LODESTAR_PRESET=minimal mocha 'test/spec/ssz/**/*minimal.test.ts'",
     "test:ssz-mainnet": "exit",
-    "test:ssz": "yarn test:ssz-minimal && yarn test:ssz-mainnet",
+    "test:ssz": "yarn test:ssz-generic && yarn test:ssz-minimal && yarn test:ssz-mainnet",
     "test:bls": "mocha 'test/spec/bls/**/*.test.ts'",
     "test:spec": "yarn test:ssz && yarn test:bls && yarn test:spec-phase0 && yarn test:spec-altair",
     "test:spec-altair-minimal": "LODESTAR_PRESET=minimal mocha 'test/spec/altair/**/*minimal.test.ts'",
