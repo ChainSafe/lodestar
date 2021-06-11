@@ -1,5 +1,4 @@
 import {routes} from "@chainsafe/lodestar-api";
-import bls, {Signature} from "@chainsafe/bls";
 import {
   CachedBeaconState,
   computeStartSlotAtEpoch,
@@ -14,7 +13,6 @@ import {
   SYNC_COMMITTEE_SUBNET_COUNT,
 } from "@chainsafe/lodestar-params";
 import {allForks, Root, Slot} from "@chainsafe/lodestar-types";
-import {readonlyValues} from "@chainsafe/ssz";
 import {assembleAttestationData} from "../../../chain/factory/attestation";
 import {assembleBlock} from "../../../chain/factory/block";
 import {assembleAttesterDuty} from "../../../chain/factory/duties";
@@ -299,39 +297,8 @@ export function getValidatorApi({
 
       await waitForSlot(slot); // Must never request for a future slot > currentSlot
 
-      const attestations = await db.attestation.getAttestationsByDataRoot(slot, attestationDataRoot);
-
-      if (attestations.length === 0) {
-        throw Error("No matching attestations found for attestationData");
-      }
-
-      // first iterate through collected committee attestations
-      // expanding each signature and building an aggregated bitlist
-      const signatures: Signature[] = [];
-      const aggregationBits = attestations[0].aggregationBits;
-      for (const attestation of attestations) {
-        try {
-          const signature = bls.Signature.fromBytes(attestation.signature.valueOf() as Uint8Array);
-          signatures.push(signature);
-          let index = 0;
-          for (const bit of readonlyValues(attestation.aggregationBits)) {
-            if (bit) {
-              aggregationBits[index] = true;
-            }
-            index++;
-          }
-        } catch (e) {
-          logger.verbose("Invalid attestation signature", e);
-        }
-      }
-
-      // then create/return the aggregate signature
       return {
-        data: {
-          data: attestations[0].data,
-          signature: bls.Signature.aggregate(signatures).toBytes(),
-          aggregationBits,
-        },
+        data: db.attestationPool.getAggregate(slot, attestationDataRoot),
       };
     },
 

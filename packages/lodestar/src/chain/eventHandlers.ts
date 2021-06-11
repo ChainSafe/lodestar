@@ -95,6 +95,8 @@ export async function onClockSlot(this: BeaconChain, slot: Slot): Promise<void> 
   this.forkChoice.updateTime(slot);
   this.metrics?.clockSlot.set(slot);
 
+  this.db.attestationPool.prune(slot);
+
   await Promise.all(
     // Attestations can only affect the fork choice of subsequent slots.
     // Process the attestations in `slot - 1`, rather than `slot`
@@ -336,8 +338,9 @@ export async function onErrorAttestation(this: BeaconChain, err: AttestationErro
       this.pendingAttestations.putByBlock(err.type.beaconBlockRoot, err.job);
       break;
 
-    default:
-      await this.db.attestation.remove(err.job.attestation);
+    // TODO: Why is necessary to remove the attestation from the DB on error?
+    // default:
+    //   await this.db.attestation.remove(err.job.attestation);
   }
 }
 

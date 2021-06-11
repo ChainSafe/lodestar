@@ -85,15 +85,15 @@ export class SyncCommitteeContributionCache {
    */
   getSyncAggregate(slot: phase0.Slot, prevBlockRoot: phase0.Root): altair.SyncAggregate {
     const aggregate = this.aggregateByRootBySlot.get(slot)?.get(toHexString(prevBlockRoot));
-    if (aggregate) {
-      return {
-        syncCommitteeBits: aggregate.syncCommitteeBits,
-        syncCommitteeSignature: aggregate.syncCommitteeSignature.toBytes(PointFormat.compressed),
-      };
-    } else {
+    if (!aggregate) {
       // TODO: Add metric for missing SyncAggregate
       return ssz.altair.SyncAggregate.defaultValue();
     }
+
+    return {
+      syncCommitteeBits: aggregate.syncCommitteeBits,
+      syncCommitteeSignature: aggregate.syncCommitteeSignature.toBytes(PointFormat.compressed),
+    };
   }
 
   /**
