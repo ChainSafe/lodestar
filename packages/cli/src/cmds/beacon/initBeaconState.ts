@@ -17,7 +17,7 @@ import {downloadOrLoadFile} from "../../util";
 import {IBeaconArgs} from "./options";
 import {defaultNetwork, IGlobalArgs} from "../../options/globalOptions";
 import {getGenesisFileUrl} from "../../networks";
-import {WeakSubjectivityServers, getWeakSubjectivityState} from "../weakSubjectivityState";
+import {weakSubjectivityServers, getWeakSubjectivityState, WeakSubjectivityServer} from "../weakSubjectivityState";
 import {Checkpoint} from "@chainsafe/lodestar-types/phase0";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 
@@ -28,10 +28,14 @@ async function initAndVerifyWeakSujectivityState(
   logger: ILogger,
   wsCheckpoint?: Checkpoint
 ): Promise<TreeBacked<allForks.BeaconState>> {
-  if (!isWithinWeakSubjectivityPeriod(config, wsState.genesisTime, wsState, wsCheckpoint)) {
-    throw new Error("Fetched weak subjectivity checkpoint not within weak subjectivity period.");
+  try {
+    if (!isWithinWeakSubjectivityPeriod(config, wsState.genesisTime, wsState, wsCheckpoint)) {
+      throw new Error("Fetched weak subjectivity checkpoint not within weak subjectivity period.");
+    }
+    return await initStateFromAnchorState(config, db, logger, wsState);
+  } catch (error) {
+    throw new Error(error);
   }
-  return await initStateFromAnchorState(config, db, logger, wsState);
 }
 
 /**
@@ -62,7 +66,14 @@ export async function initBeaconState(
     return await initFromFile(args.weakSubjectivityStateFile);
   } else if (dbHasSomeState) {
     return await initStateFromDb(config, db, logger);
-  } else if (args.fetchChainSafeWeakSubjecitivtyState && args.network !== "dev" && args.network !== "oonoonba") {
+  } else if (args.fetchChainSafeWeakSubjecitivtyState) {
+    if (!(args.weakSubjectivityServerUrl || Object.keys(weakSubjectivityServers).includes(args.network))) {
+      throw new Error(
+        `Missing weak subjectivity server URL.  Use either a custom URL via --weakSubjectivityServerUrl or use one of these options for --network: ${Object.keys(
+          weakSubjectivityServers
+        ).toString()}`
+      );
+    }
     let checkpoint;
     let stateId = "finalized";
     if (args.weakSubjectivityCheckpoint) {
@@ -75,7 +86,7 @@ export async function initBeaconState(
       config,
       args,
       stateId,
-      args.weakSubjecivityServerUrl || WeakSubjectivityServers[args.network],
+      args.weakSubjectivityServerUrl || weakSubjectivityServers[args.network as WeakSubjectivityServer],
       logger
     );
     return initAndVerifyWeakSujectivityState(config, db, state, logger, checkpoint);

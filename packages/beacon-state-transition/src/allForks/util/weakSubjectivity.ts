@@ -67,7 +67,7 @@ export function computeWeakSubjectivityPeriod(config: IBeaconConfig, state: allF
   return wsPeriod;
 }
 
-function getLatestBlockRoot(config: IBeaconConfig, state: allForks.BeaconState): Root {
+export function getLatestBlockRoot(config: IBeaconConfig, state: allForks.BeaconState): Root {
   const header = ssz.phase0.BeaconBlockHeader.clone(state.latestBlockHeader);
   if (ssz.Root.equals(header.stateRoot, ZERO_HASH)) {
     header.stateRoot = config.getForkTypes(state.slot).BeaconState.hashTreeRoot(state);

@@ -10,7 +10,7 @@ interface IBeaconExtraArgs {
   weakSubjectivityStateFile?: string;
   fetchChainSafeWeakSubjecitivtyState: boolean;
   weakSubjectivityCheckpoint?: string;
-  weakSubjecivityServerUrl?: string;
+  weakSubjectivityServerUrl?: string;
 }
 
 export const beaconExtraOptions: ICliCommandOptions<IBeaconExtraArgs> = {
@@ -42,7 +42,7 @@ export const beaconExtraOptions: ICliCommandOptions<IBeaconExtraArgs> = {
     type: "string",
   },
 
-  weakSubjecivityServerUrl: {
+  weakSubjectivityServerUrl: {
     description:
       "Pass in a custom server from which to fetch weak subjectivity states (if you don't want to use the built-in Lodestar servers).",
     type: "string",
