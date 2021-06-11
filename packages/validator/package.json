@@ -52,7 +52,7 @@
     "@chainsafe/lodestar-params": "^0.23.0",
     "@chainsafe/lodestar-types": "^0.23.0",
     "@chainsafe/lodestar-utils": "^0.23.0",
-    "@chainsafe/ssz": "^0.8.8",
+    "@chainsafe/ssz": "^0.8.7",
     "abort-controller": "^3.0.0",
     "bigint-buffer": "^1.1.5"
   },
