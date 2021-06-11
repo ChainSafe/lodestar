@@ -73,7 +73,7 @@ export const SyncCommitteeContribution = new ContainerType<altair.SyncCommitteeC
     slot: Slot,
     beaconBlockRoot: Root,
     subCommitteeIndex: SubCommitteeIndex,
-    aggregationBits: new BitListType({limit: SYNC_COMMITTEE_SIZE / SYNC_COMMITTEE_SUBNET_COUNT}),
+    aggregationBits: new BitVectorType({length: SYNC_COMMITTEE_SIZE / SYNC_COMMITTEE_SUBNET_COUNT}),
     signature: BLSSignature,
   },
 });
