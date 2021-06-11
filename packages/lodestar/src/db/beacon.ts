@@ -9,7 +9,6 @@ import {
   AggregateAndProofRepository,
   AttestationRepository,
   AttesterSlashingRepository,
-  BadBlockRepository,
   BlockArchiveRepository,
   BlockRepository,
   DepositEventRepository,
@@ -33,7 +32,6 @@ import {SyncCommitteeCache} from "./syncCommittee";
 import {SyncCommitteeContributionCache} from "./syncCommitteeContribution";
 
 export class BeaconDb extends DatabaseService implements IBeaconDb {
-  badBlock: BadBlockRepository;
   block: BlockRepository;
   pendingBlock: PendingBlockRepository;
   seenAttestationCache: SeenAttestationCache;
@@ -63,7 +61,6 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
   constructor(opts: IDatabaseApiOptions) {
     super(opts);
     // Warning: If code is ever run in the constructor, must change this stub to not extend 'packages/lodestar/test/utils/stub/beaconDb.ts' -
-    this.badBlock = new BadBlockRepository(this.config, this.db);
     this.block = new BlockRepository(this.config, this.db);
     this.pendingBlock = new PendingBlockRepository(this.config, this.db);
     this.seenAttestationCache = new SeenAttestationCache(this.config, 2048);

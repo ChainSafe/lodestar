@@ -49,26 +49,6 @@ describe("gossip block validation", function () {
     expect(chainStub.getGenesisTime.notCalled).to.be.true;
   });
 
-  it("should throw error - bad block", async function () {
-    sinon.stub(chainStub.clock, "currentSlotWithGossipDisparity").get(() => 1);
-    const signedBlock = generateSignedBlock({message: {slot: 1}});
-    const job = getNewBlockJob(signedBlock);
-    chainStub.getFinalizedCheckpoint.returns({
-      epoch: 0,
-      root: Buffer.alloc(32),
-    });
-    dbStub.badBlock.has.resolves(true);
-
-    await expectRejectedWithLodestarError(
-      validateGossipBlock(config, chainStub, dbStub, job),
-      BlockErrorCode.KNOWN_BAD_BLOCK
-    );
-
-    expect(chainStub.getFinalizedCheckpoint.calledOnce).to.be.true;
-    expect(dbStub.badBlock.has.withArgs(sinon.match.defined).calledOnce).to.be.true;
-    expect(chainStub.getCanonicalBlockAtSlot.notCalled).to.be.true;
-  });
-
   it("should throw error - already proposed", async function () {
     sinon.stub(chainStub.clock, "currentSlotWithGossipDisparity").get(() => 1);
     const signedBlock = generateSignedBlock({message: {slot: 1}});
@@ -77,7 +57,6 @@ describe("gossip block validation", function () {
       epoch: 0,
       root: Buffer.alloc(32),
     });
-    dbStub.badBlock.has.resolves(false);
     dbStub.block.get.resolves(generateSignedBlock({message: {proposerIndex: signedBlock.message.proposerIndex}}));
 
     await expectRejectedWithLodestarError(
@@ -86,7 +65,6 @@ describe("gossip block validation", function () {
     );
 
     expect(chainStub.getFinalizedCheckpoint.calledOnce).to.be.true;
-    expect(dbStub.badBlock.has.withArgs(sinon.match.defined).calledOnce).to.be.true;
     expect(regenStub.getBlockSlotState.notCalled).to.be.true;
   });
 
@@ -98,8 +76,6 @@ describe("gossip block validation", function () {
       epoch: 0,
       root: Buffer.alloc(32),
     });
-    dbStub.badBlock.has.resolves(false);
-    dbStub.block.get.resolves(null);
     regenStub.getBlockSlotState.throws();
 
     await expectRejectedWithLodestarError(
@@ -108,7 +84,6 @@ describe("gossip block validation", function () {
     );
 
     expect(chainStub.getFinalizedCheckpoint.calledOnce).to.be.true;
-    expect(dbStub.badBlock.has.withArgs(sinon.match.defined).calledOnce).to.be.true;
     expect(regenStub.getBlockSlotState.calledOnce).to.be.true;
   });
 
@@ -120,8 +95,6 @@ describe("gossip block validation", function () {
       epoch: 0,
       root: Buffer.alloc(32),
     });
-    dbStub.badBlock.has.resolves(false);
-    dbStub.block.get.resolves(null);
     regenStub.getBlockSlotState.resolves(generateCachedState());
     verifySignatureStub.resolves(false);
 
@@ -131,7 +104,6 @@ describe("gossip block validation", function () {
     );
 
     expect(chainStub.getFinalizedCheckpoint.calledOnce).to.be.true;
-    expect(dbStub.badBlock.has.withArgs(sinon.match.defined).calledOnce).to.be.true;
     expect(regenStub.getBlockSlotState.calledOnce).to.be.true;
     expect(chainStub.receiveBlock.calledOnce).to.be.false;
     expect(verifySignatureStub.calledOnce).to.be.true;
@@ -145,8 +117,6 @@ describe("gossip block validation", function () {
       epoch: 0,
       root: Buffer.alloc(32),
     });
-    dbStub.badBlock.has.resolves(false);
-    dbStub.block.get.resolves(null);
     const state = generateCachedState();
     sinon.stub(state.epochCtx, "getBeaconProposer").returns(signedBlock.message.proposerIndex + 1);
     regenStub.getBlockSlotState.resolves(state);
@@ -158,7 +128,6 @@ describe("gossip block validation", function () {
     );
 
     expect(chainStub.getFinalizedCheckpoint.calledOnce).to.be.true;
-    expect(dbStub.badBlock.has.withArgs(sinon.match.defined).calledOnce).to.be.true;
     expect(regenStub.getBlockSlotState.calledOnce).to.be.true;
     expect(chainStub.receiveBlock.calledOnce).to.be.false;
     expect(verifySignatureStub.calledOnce).to.be.true;
@@ -177,7 +146,6 @@ describe("gossip block validation", function () {
       epoch: 0,
       root: Buffer.alloc(32),
     });
-    dbStub.badBlock.has.resolves(false);
     chainStub.getCanonicalBlockAtSlot.resolves(null);
     forkChoiceStub.isDescendantOfFinalized.returns(true);
     const state = generateCachedState();
@@ -188,7 +156,6 @@ describe("gossip block validation", function () {
     const validationTest = await validateGossipBlock(config, chainStub, dbStub, job);
     expect(validationTest).to.not.throw;
     expect(chainStub.getFinalizedCheckpoint.calledOnce).to.be.true;
-    expect(dbStub.badBlock.has.withArgs(sinon.match.defined).calledOnce).to.be.true;
     expect(regenStub.getBlockSlotState.calledOnce).to.be.true;
     expect(verifySignatureStub.calledOnce).to.be.true;
     expect(

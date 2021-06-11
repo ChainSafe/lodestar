@@ -7,7 +7,6 @@ import {
   AggregateAndProofRepository,
   AttestationRepository,
   AttesterSlashingRepository,
-  BadBlockRepository,
   BlockArchiveRepository,
   BlockRepository,
   DepositEventRepository,
@@ -28,7 +27,6 @@ import {SyncCommitteeContributionCache} from "../../../src/db/syncCommitteeContr
 export class StubbedBeaconDb extends BeaconDb {
   db!: SinonStubbedInstance<LevelDbController>;
 
-  badBlock: SinonStubbedInstance<BadBlockRepository> & BadBlockRepository;
   block: SinonStubbedInstance<BlockRepository> & BlockRepository;
   pendingBlock: SinonStubbedInstance<PendingBlockRepository> & PendingBlockRepository;
   blockArchive: SinonStubbedInstance<BlockArchiveRepository> & BlockArchiveRepository;
@@ -55,7 +53,6 @@ export class StubbedBeaconDb extends BeaconDb {
   constructor(sinon: SinonSandbox, config = minimalConfig) {
     // eslint-disable-next-line
     super({config, controller: {} as any});
-    this.badBlock = createStubInstance(BadBlockRepository);
     this.block = createStubInstance(BlockRepository);
     this.pendingBlock = createStubInstance(PendingBlockRepository);
     this.blockArchive = createStubInstance(BlockArchiveRepository);
