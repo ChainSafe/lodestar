@@ -23,6 +23,7 @@ import {SignedBeaconBlock} from "@chainsafe/lodestar-types/phase0";
 import {createStubInstance} from "../types";
 import {SyncCommitteeCache} from "../../../src/db/syncCommittee";
 import {SyncCommitteeContributionCache} from "../../../src/db/syncCommitteeContribution";
+import {AttestationPool} from "../../../src/db/attestationPool";
 
 export class StubbedBeaconDb extends BeaconDb {
   db!: SinonStubbedInstance<LevelDbController>;
@@ -33,6 +34,7 @@ export class StubbedBeaconDb extends BeaconDb {
   blockArchive: SinonStubbedInstance<BlockArchiveRepository> & BlockArchiveRepository;
   stateArchive: SinonStubbedInstance<StateArchiveRepository> & StateArchiveRepository;
 
+  attestationPool: SinonStubbedInstance<AttestationPool> & AttestationPool;
   aggregateAndProof: SinonStubbedInstance<AggregateAndProofRepository> & AggregateAndProofRepository;
   voluntaryExit: SinonStubbedInstance<VoluntaryExitRepository> & VoluntaryExitRepository;
   proposerSlashing: SinonStubbedInstance<ProposerSlashingRepository> & ProposerSlashingRepository;
@@ -59,6 +61,7 @@ export class StubbedBeaconDb extends BeaconDb {
     this.blockArchive = createStubInstance(BlockArchiveRepository);
     this.stateArchive = createStubInstance(StateArchiveRepository);
 
+    this.attestationPool = createStubInstance(AttestationPool);
     this.aggregateAndProof = createStubInstance(AggregateAndProofRepository);
     this.voluntaryExit = createStubInstance(VoluntaryExitRepository);
     this.proposerSlashing = createStubInstance(ProposerSlashingRepository);
