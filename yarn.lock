@@ -1197,10 +1197,10 @@
     buffer-from "^1.1.1"
     snappy "^6.3.5"
 
-"@chainsafe/ssz@^0.8.7":
-  version "0.8.7"
-  resolved "https://registry.yarnpkg.com/@chainsafe/ssz/-/ssz-0.8.7.tgz#cc484b90375ae9f14017b2dda2abe23d74c14595"
-  integrity sha512-OY3I+oUmUxEC0q5wpgsK0z97eqgEYTNjTJCWPfWzNF1n0xT3hBO8U37+ZgN+wH7Y0ETfIYDT22KgB0OmfXqemA==
+"@chainsafe/ssz@^0.8.8":
+  version "0.8.8"
+  resolved "https://registry.yarnpkg.com/@chainsafe/ssz/-/ssz-0.8.8.tgz#dfe2036dfd97b0f6546fd043408f40c9b9f96c73"
+  integrity sha512-sqnbglIjhCH/0RvGPW6im454dxMLbTai3a12I5jSrTCD1gyxiXy+Kzl/OqQ7BbK+SW+Q7jiHeonRXnz+t3tMdw==
   dependencies:
     "@chainsafe/as-sha256" "^0.2.2"
     "@chainsafe/persistent-merkle-tree" "^0.3.2"
