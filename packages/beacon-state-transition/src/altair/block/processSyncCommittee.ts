@@ -4,13 +4,13 @@ import {DOMAIN_SYNC_COMMITTEE} from "@chainsafe/lodestar-params";
 import {
   computeEpochAtSlot,
   computeSigningRoot,
-  extractParticipantIndices,
   getBlockRootAtSlot,
   getDomain,
   increaseBalance,
   ISignatureSet,
   SignatureSetType,
   verifySignatureSet,
+  zipIndexesSyncCommitteeBits,
 } from "../../util";
 import {CachedBeaconState} from "../../allForks/util";
 
@@ -88,5 +88,5 @@ function getParticipantIndices(
   syncAggregate: altair.SyncAggregate
 ): number[] {
   const committeeIndices = state.currSyncCommitteeIndexes;
-  return extractParticipantIndices(committeeIndices, syncAggregate);
+  return zipIndexesSyncCommitteeBits(committeeIndices, syncAggregate.syncCommitteeBits);
 }
