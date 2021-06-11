@@ -43,9 +43,8 @@ export function runSSZStaticSpecTest(preset: PresetName): void {
     "SyncAggregatorSelectionData",
     "SyncCommittee",
     "SyncCommitteeContribution",
-    "SyncCommitteeSignature"
+    "SyncCommitteeSignature",
   ]) {
     testStaticAltair({fork: ForkName.altair, type: typeName as keyof typeof ssz["altair"]}, preset);
   }
 }
-

@@ -49,7 +49,7 @@ function testStatic(type: string, sszType: CompositeType<any>, forkName: ForkNam
       : ["ssz_lengthy", "ssz_max", "ssz_one", "ssz_nil", "ssz_random", "ssz_random_chaos", "ssz_zero"];
   for (const caseName of caseNames) {
     describeDirectorySpecTest<IBaseSSZStaticTestCase<any>, IResult>(
-      `SSZ - ${type} ${caseName} ${preset}`,
+      `SSZ ${forkName} - ${type} ${caseName} ${preset}`,
       join(SPEC_TEST_LOCATION, `tests/${preset}/${forkName}/ssz_static/${type}/${caseName}`),
       (testcase) => {
         //debugger;
