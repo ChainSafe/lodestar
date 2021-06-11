@@ -1,6 +1,17 @@
+/* eslint-disable @typescript-eslint/naming-convention */
 import {SPEC_TEST_LOCATION} from "../../../utils/specTestCases";
 import {join} from "path";
-import {BigIntUintType, BitListType, BitVectorType, booleanType, Type, VectorType} from "@chainsafe/ssz";
+import {
+  BigIntUintType,
+  BitListType,
+  BitVectorType,
+  booleanType,
+  // byteType,
+  ContainerType,
+  ListType,
+  Type,
+  VectorType,
+} from "@chainsafe/ssz";
 
 const rootGenericSszPath = join(SPEC_TEST_LOCATION, "tests", "general", "phase0", "ssz_generic");
 
@@ -126,8 +137,99 @@ const bitvectorTypes = lengths.map((length) => {
 });
 
 // containers
-// const containerPath = join(rootGenericSszPath, "containers");
-const containerTypes: IGenericSSZType<any>[] = [];
+const containerPath = join(rootGenericSszPath, "containers");
+
+const FixedTestStruct = new ContainerType({
+  fields: {
+    a: new BigIntUintType({byteLength: 1}),
+    b: new BigIntUintType({byteLength: 8}),
+    c: new BigIntUintType({byteLength: 4}),
+  },
+});
+const VarTestStruct = new ContainerType({
+  fields: {
+    a: new BigIntUintType({byteLength: 2}),
+    b: new ListType({
+      elementType: new BigIntUintType({byteLength: 2}),
+      limit: 1024,
+    }),
+    c: new BigIntUintType({byteLength: 1}),
+  },
+});
+
+const containerTypes: IGenericSSZType<any>[] = [
+  {
+    type: new ContainerType({
+      fields: {
+        a: new BigIntUintType({byteLength: 1}),
+      },
+    }),
+    prefix: "SingleFieldTestStruct",
+    path: containerPath,
+  },
+  {
+    type: new ContainerType({
+      fields: {
+        a: new BigIntUintType({byteLength: 2}),
+        b: new BigIntUintType({byteLength: 2}),
+      },
+    }),
+    prefix: "SmallTestStruct",
+    path: containerPath,
+  },
+  {
+    type: FixedTestStruct,
+    prefix: "FixedTestStruct",
+    path: containerPath,
+  },
+  {
+    type: VarTestStruct,
+    prefix: "VarTestStruct",
+    path: containerPath,
+  },
+  /* TODO implement ByteList
+  {
+    type: new ContainerType({
+      fields: {
+        a: new BigIntUintType({byteLength: 2}),
+        b: new ListType({
+          elementType: new BigIntUintType({byteLength: 2}),
+          limit: 128,
+        }),
+        c: new BigIntUintType({byteLength: 1}),
+        d: new ListType({
+          elementType: byteType,
+          limit: 256,
+        }),
+        e: VarTestStruct,
+        f: new VectorType({
+          elementType: FixedTestStruct,
+          length: 4,
+        }),
+        g: new VectorType({
+          elementType: VarTestStruct,
+          length: 2,
+        }),
+      },
+    }),
+    prefix: "ComplexTestStruct",
+    path: containerPath,
+  },
+  */
+  {
+    type: new ContainerType({
+      fields: {
+        a: new BitListType({limit: 5}),
+        b: new BitVectorType({length: 2}),
+        c: new BitVectorType({length: 1}),
+        d: new BitListType({limit: 6}),
+        e: new BitVectorType({length: 8}),
+      },
+    }),
+    prefix: "BitsStruct",
+    path: containerPath,
+  },
+];
 
 export const types: IGenericSSZType<any>[] = (boolTypes as IGenericSSZType<any>[]).concat(
   uintTypes,
