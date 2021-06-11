@@ -108,8 +108,9 @@ jobs:
           delete_orphan_tag: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   docker:
-    name: Build docker image
+    name: Publish to Docker Hub
     runs-on: ubuntu-latest
     needs: tag
     if: needs.tag.outputs.tag != ''
@@ -120,5 +121,7 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-      - run: docker build --tag chainsafe/lodestar:${{ needs.tag.outputs.tag }} .
-      - run: docker push chainsafe/lodestar:${{ needs.tag.outputs.tag }}
+      - run: docker build --tag chainsafe/lodestar:latest --build-arg VERSION=${{ needs.tag.outputs.tag }} .
+      - run: docker tag chainsafe/lodestar:latest chainsafe/lodestar:${{ needs.tag.outputs.tag }}
+        # Push all tags
+      - run: docker push chainsafe/lodestar

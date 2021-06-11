@@ -11,12 +11,14 @@
   "bugs": {
     "url": "https://github.com/ChainSafe/lodestar/issues"
   },
-  "version": "0.23.0",
+  "version": "0.24.2",
   "main": "lib/index.js",
   "files": [
     "lib/**/*.d.ts",
     "lib/**/*.js",
-    "lib/**/*.js.map"
+    "lib/**/*.js.map",
+    "*.d.ts",
+    "*.js"
   ],
   "scripts": {
     "clean": "rm -rf lib && rm -f *.tsbuildinfo",
@@ -36,11 +38,11 @@
     "test:unit": "mocha --colors -r ts-node/register 'test/unit/**/*.test.ts'"
   },
   "dependencies": {
-    "@chainsafe/lodestar-beacon-state-transition": "^0.23.0",
-    "@chainsafe/lodestar-config": "^0.23.0",
-    "@chainsafe/lodestar-params": "^0.23.0",
-    "@chainsafe/lodestar-types": "^0.23.0",
-    "@chainsafe/lodestar-utils": "^0.23.0",
+    "@chainsafe/lodestar-beacon-state-transition": "^0.24.2",
+    "@chainsafe/lodestar-config": "^0.24.2",
+    "@chainsafe/lodestar-params": "^0.24.2",
+    "@chainsafe/lodestar-types": "^0.24.2",
+    "@chainsafe/lodestar-utils": "^0.24.2",
     "@chainsafe/ssz": "^0.8.7"
   },
   "keywords": [

@@ -84,7 +84,7 @@ export class Network implements INetwork {
     this.gossip = new Eth2Gossipsub({
       config,
       libp2p,
-      validatorFns: createTopicValidatorFnMap({config, chain, db, logger}, metrics, signal),
+      validatorFns: createTopicValidatorFnMap({config, chain, db, logger, metrics}, metrics, signal),
       logger,
       forkDigestContext: chain.forkDigestContext,
       metrics,

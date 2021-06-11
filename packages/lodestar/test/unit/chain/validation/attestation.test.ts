@@ -42,7 +42,6 @@ describe("gossip attestation validation", function () {
     regen = chain.regen = sinon.createStubInstance(StateRegenerator);
     chain.bls = {verifySignatureSets: async () => true};
     db = new StubbedBeaconDb(sinon, config);
-    db.badBlock.has.resolves(false);
     computeAttestationSubnetStub = sinon.stub(attestationUtils, "computeSubnetForAttestation");
     isValidIndexedAttestationStub = sinon.stub(blockUtils, "isValidIndexedAttestation");
     forkChoiceStub = sinon.createStubInstance(ForkChoice);
@@ -75,18 +74,6 @@ describe("gossip attestation validation", function () {
       validateGossipAttestation(config, chain, db, {attestation, validSignature: false}, 0),
       AttestationErrorCode.NOT_EXACTLY_ONE_AGGREGATION_BIT_SET
     );
-  });
-
-  it("should throw error - attestation block is invalid", async function () {
-    const attestation = generateAttestation({aggregationBits: [true] as BitList});
-    db.badBlock.has.resolves(true);
-
-    await expectRejectedWithLodestarError(
-      validateGossipAttestation(config, chain, db, {attestation, validSignature: false}, 0),
-      AttestationErrorCode.KNOWN_BAD_BLOCK
-    );
-
-    expect(db.badBlock.has.calledOnceWith(attestation.data.beaconBlockRoot.valueOf() as Uint8Array)).to.be.true;
   });
 
   it("should throw error - old attestation", async function () {

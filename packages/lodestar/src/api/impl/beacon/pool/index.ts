@@ -10,25 +10,24 @@ import {validateGossipProposerSlashing} from "../../../../chain/validation/propo
 import {validateGossipVoluntaryExit} from "../../../../chain/validation/voluntaryExit";
 import {validateSyncCommitteeSigOnly} from "../../../../chain/validation/syncCommittee";
 import {ApiModules} from "../../types";
+import {OpSource} from "../../../../metrics/validatorMonitor";
 
 export function getBeaconPoolApi({
   chain,
   config,
   logger,
+  metrics,
   network,
   db,
-}: Pick<ApiModules, "chain" | "config" | "logger" | "network" | "db">): IBeaconPoolApi {
+}: Pick<ApiModules, "chain" | "config" | "logger" | "metrics" | "network" | "db">): IBeaconPoolApi {
   return {
     async getPoolAttestations(filters) {
-      const attestations = (await db.attestation.values()).filter((attestation) => {
-        if (filters?.slot && filters?.slot !== attestation.data.slot) {
-          return false;
-        }
-        if (filters?.committeeIndex && filters?.committeeIndex !== attestation.data.index) {
-          return false;
-        }
-        return true;
-      });
+      // Already filtered by slot
+      let attestations = db.attestationPool.getAll(filters?.slot);
+
+      if (filters?.committeeIndex !== undefined) {
+        attestations = attestations.filter((attestation) => filters.committeeIndex === attestation.data.index);
+      }
 
       return {data: attestations};
     },
@@ -46,6 +45,7 @@ export function getBeaconPoolApi({
     },
 
     async submitPoolAttestations(attestations) {
+      const seenTimestampSec = Date.now() / 1000;
       const errors: Error[] = [];
 
       await Promise.all(
@@ -62,10 +62,13 @@ export function getBeaconPoolApi({
             });
 
             const subnet = allForks.computeSubnetForAttestation(attestationTargetState.epochCtx, attestation);
-            await validateGossipAttestation(config, chain, db, attestationJob, subnet);
+            const indexedAtt = await validateGossipAttestation(config, chain, db, attestationJob, subnet);
+
+            metrics?.registerUnaggregatedAttestation(OpSource.api, seenTimestampSec, indexedAtt);
+
             await Promise.all([
               network.gossip.publishBeaconAttestation(attestation, subnet),
-              db.attestation.add(attestation),
+              db.attestationPool.add(attestation),
             ]);
           } catch (e) {
             errors.push(e);

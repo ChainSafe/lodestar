@@ -48,3 +48,6 @@ packages/lodestar/.tmpdb/
 
 # docker-compose .env file
 .env
+
+# Git artifacts
+packages/cli/.git-data.json

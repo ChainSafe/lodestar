@@ -31,6 +31,7 @@ export function setupApiImplTestServer(): ApiImplTestModules {
     config,
     db: dbStub,
     network: networkStub,
+    metrics: null,
   });
   chainStub.forkChoice = forkChoiceStub;
   return {

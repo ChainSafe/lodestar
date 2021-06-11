@@ -3,15 +3,17 @@ import {Api as IBeaconBlocksApi} from "@chainsafe/lodestar-api/lib/routes/beacon
 import {SLOTS_PER_HISTORICAL_ROOT} from "@chainsafe/lodestar-params";
 import {ssz} from "@chainsafe/lodestar-types";
 import {fromHexString} from "@chainsafe/ssz";
+import {OpSource} from "../../../../metrics/validatorMonitor";
 import {ApiModules} from "../../types";
 import {resolveBlockId, toBeaconHeaderResponse} from "./utils";
 
 export function getBeaconBlockApi({
   chain,
   config,
+  metrics,
   network,
   db,
-}: Pick<ApiModules, "chain" | "config" | "network" | "db">): IBeaconBlocksApi {
+}: Pick<ApiModules, "chain" | "config" | "metrics" | "network" | "db">): IBeaconBlocksApi {
   return {
     async getBlockHeaders(filters) {
       const result: routes.beacon.BlockHeaderResponse[] = [];
@@ -122,6 +124,12 @@ export function getBeaconBlockApi({
     },
 
     async publishBlock(signedBlock) {
+      const seenTimestampSec = Date.now() / 1000;
+
+      // TODO: Validate block
+
+      metrics?.registerBeaconBlock(OpSource.api, seenTimestampSec, signedBlock.message);
+
       await Promise.all([chain.receiveBlock(signedBlock), network.gossip.publishBeaconBlock(signedBlock)]);
     },
   };

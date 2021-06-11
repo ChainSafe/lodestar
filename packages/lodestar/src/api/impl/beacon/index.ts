@@ -6,7 +6,7 @@ import {getBeaconPoolApi} from "./pool";
 import {getBeaconStateApi} from "./state";
 
 export function getBeaconApi(
-  modules: Pick<ApiModules, "chain" | "config" | "logger" | "network" | "db">
+  modules: Pick<ApiModules, "chain" | "config" | "logger" | "metrics" | "network" | "db">
 ): routes.beacon.Api {
   const block = getBeaconBlockApi(modules);
   const pool = getBeaconPoolApi(modules);

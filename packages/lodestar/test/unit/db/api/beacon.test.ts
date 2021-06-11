@@ -12,7 +12,6 @@ import {
   DepositEventRepository,
   ProposerSlashingRepository,
   VoluntaryExitRepository,
-  AttestationRepository,
   AggregateAndProofRepository,
   StateArchiveRepository,
 } from "../../../../src/db/repositories";
@@ -34,7 +33,6 @@ describe("beacon db - post block processing", function () {
     dbStub.voluntaryExit = createStubInstance(VoluntaryExitRepository);
     dbStub.proposerSlashing = createStubInstance(ProposerSlashingRepository);
     dbStub.attesterSlashing = createStubInstance(AttesterSlashingRepository);
-    dbStub.attestation = createStubInstance(AttestationRepository);
     dbStub.aggregateAndProof = createStubInstance(AggregateAndProofRepository);
     dbStub.stateArchive = createStubInstance(StateArchiveRepository);
 

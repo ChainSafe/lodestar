@@ -11,12 +11,14 @@
   "bugs": {
     "url": "https://github.com/ChainSafe/lodestar/issues"
   },
-  "version": "0.23.0",
+  "version": "0.24.2",
   "main": "lib/index.js",
   "files": [
     "lib/**/*.d.ts",
     "lib/**/*.js",
-    "lib/**/*.js.map"
+    "lib/**/*.js.map",
+    "*.d.ts",
+    "*.js"
   ],
   "scripts": {
     "clean": "rm -rf lib && rm -f *.tsbuildinfo",
@@ -33,16 +35,16 @@
     "prepublishOnly": "yarn build",
     "test:unit": "mocha 'test/unit/**/*.test.ts'",
     "test:perf": "mocha 'test/perf/**/*.test.ts'",
-    "benchmark": "node -r ts-node/register --max-old-space-size=4096 test/perf/benchmark.ts",
+    "benchmark": "node -r ts-node/register --max-old-space-size=4096 test/perf/runAll.ts",
     "dev": "ts-node test/perf/phase0/epoch/processRewardsAndPenalties.perf.ts"
   },
   "types": "lib/index.d.ts",
   "dependencies": {
     "@chainsafe/bls": "6.0.1",
-    "@chainsafe/lodestar-config": "^0.23.0",
-    "@chainsafe/lodestar-params": "^0.23.0",
-    "@chainsafe/lodestar-types": "^0.23.0",
-    "@chainsafe/lodestar-utils": "^0.23.0",
+    "@chainsafe/lodestar-config": "^0.24.2",
+    "@chainsafe/lodestar-params": "^0.24.2",
+    "@chainsafe/lodestar-types": "^0.24.2",
+    "@chainsafe/lodestar-utils": "^0.24.2",
     "@chainsafe/persistent-merkle-tree": "^0.3.2",
     "@chainsafe/persistent-ts": "^0.19.0",
     "@chainsafe/ssz": "^0.8.7",

@@ -17,7 +17,7 @@ export enum Bucket {
   index_blockArchiveParentRootIndex = 3, // parent Root -> Slot
   index_blockArchiveRootIndex = 4, // Root -> Slot
   // known bad block
-  index_invalidBlock = 5, // Root -> boolean
+  // index_invalidBlock = 5, // DEPRECATED on v0.25.0
   // finalized chain
   index_mainChain = 6, // Slot -> Root<BeaconBlock>
   // justified, finalized state and block hashes
@@ -29,7 +29,7 @@ export enum Bucket {
   phase0_preGenesisState = 30, // Single = phase0.BeaconState
   phase0_preGenesisStateLastProcessedBlock = 31, // Single = Uint8
   // op pool
-  phase0_attestation = 10, // Root -> Attestation
+  // phase0_attestation = 10, // DEPRECATED on v0.25.0
   phase0_aggregateAndProof = 11, // Root -> AggregateAndProof
   phase0_depositData = 12, // [DEPRECATED] index -> DepositData
   phase0_exit = 13, // ValidatorIndex -> VoluntaryExit

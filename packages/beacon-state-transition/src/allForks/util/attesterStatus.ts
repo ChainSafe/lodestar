@@ -36,3 +36,27 @@ export function createIAttesterStatus(): IAttesterStatus {
 export function hasMarkers(flags: number, markers: number): boolean {
   return (flags & markers) === markers;
 }
+
+export type AttesterFlags = {
+  prevSourceAttester: boolean;
+  prevTargetAttester: boolean;
+  prevHeadAttester: boolean;
+  currSourceAttester: boolean;
+  currTargetAttester: boolean;
+  currHeadAttester: boolean;
+  unslashed: boolean;
+  eligibleAttester: boolean;
+};
+
+export function parseAttesterFlags(flags: number): AttesterFlags {
+  return {
+    prevSourceAttester: hasMarkers(flags, FLAG_PREV_SOURCE_ATTESTER),
+    prevTargetAttester: hasMarkers(flags, FLAG_PREV_TARGET_ATTESTER),
+    prevHeadAttester: hasMarkers(flags, FLAG_PREV_HEAD_ATTESTER),
+    currSourceAttester: hasMarkers(flags, FLAG_CURR_SOURCE_ATTESTER),
+    currTargetAttester: hasMarkers(flags, FLAG_CURR_TARGET_ATTESTER),
+    currHeadAttester: hasMarkers(flags, FLAG_CURR_HEAD_ATTESTER),
+    unslashed: hasMarkers(flags, FLAG_UNSLASHED),
+    eligibleAttester: hasMarkers(flags, FLAG_ELIGIBLE_ATTESTER),
+  };
+}

@@ -50,6 +50,7 @@ describe("beacon pool api impl", function () {
       logger,
       network: networkStub,
       chain: chainStub,
+      metrics: null,
     });
     validateGossipAttesterSlashing = sinon.stub(attesterSlashingValidation, "validateGossipAttesterSlashing");
     validateGossipProposerSlashing = sinon.stub(proposerSlashingValidation, "validateGossipProposerSlashing");
@@ -62,13 +63,13 @@ describe("beacon pool api impl", function () {
 
   describe("getPoolAttestations", function () {
     it("no filters", async function () {
-      dbStub.attestation.values.resolves([generateAttestation(), generateAttestation()]);
+      dbStub.attestationPool.getAll.returns([generateAttestation(), generateAttestation()]);
       const {data: attestations} = await poolApi.getPoolAttestations();
       expect(attestations.length).to.be.equal(2);
     });
 
     it("with filters", async function () {
-      dbStub.attestation.values.resolves([
+      dbStub.attestationPool.getAll.returns([
         generateAttestation({data: generateAttestationData(0, 1, 0, 1)}),
         generateAttestation({data: generateAttestationData(0, 1, 1, 0)}),
         generateAttestation({data: generateAttestationData(0, 1, 3, 2)}),

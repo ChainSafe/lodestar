@@ -9,7 +9,6 @@ import {
   computeEpochAtSlot,
   isAggregatorFromCommitteeLength,
 } from "@chainsafe/lodestar-beacon-state-transition";
-import {isAttestingToInValidBlock} from "./attestation";
 import {getSelectionProofSignatureSet, getAggregateAndProofSignatureSet} from "./signatureSets";
 import {AttestationError, AttestationErrorCode} from "../errors";
 import {ATTESTATION_PROPAGATION_SLOT_RANGE} from "../../constants";
@@ -20,7 +19,7 @@ export async function validateGossipAggregateAndProof(
   db: IBeaconDb,
   signedAggregateAndProof: phase0.SignedAggregateAndProof,
   attestationJob: IAttestationJob
-): Promise<void> {
+): Promise<phase0.IndexedAttestation> {
   const aggregateAndProof = signedAggregateAndProof.message;
   const aggregate = aggregateAndProof.aggregate;
 
@@ -61,14 +60,7 @@ export async function validateGossipAggregateAndProof(
     });
   }
 
-  if (await isAttestingToInValidBlock(db, aggregate)) {
-    throw new AttestationError({
-      code: AttestationErrorCode.KNOWN_BAD_BLOCK,
-      job: attestationJob,
-    });
-  }
-
-  await validateAggregateAttestation(config, chain, signedAggregateAndProof, attestationJob);
+  return await validateAggregateAttestation(config, chain, signedAggregateAndProof, attestationJob);
 }
 
 export function hasAttestationParticipants(attestation: phase0.Attestation): boolean {
@@ -80,7 +72,7 @@ export async function validateAggregateAttestation(
   chain: IBeaconChain,
   aggregateAndProof: phase0.SignedAggregateAndProof,
   attestationJob: IAttestationJob
-): Promise<void> {
+): Promise<phase0.IndexedAttestation> {
   const attestation = aggregateAndProof.message.aggregate;
 
   let attestationTargetState: CachedBeaconState<allForks.BeaconState>;
@@ -146,4 +138,6 @@ export async function validateAggregateAttestation(
       job: attestationJob,
     });
   }
+
+  return indexedAttestation;
 }

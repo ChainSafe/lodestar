@@ -65,7 +65,6 @@ describe("gossip aggregate and proof test", function () {
     sinon.stub(chain.clock, "currentSlot").get(() => 0);
     regen = chain.regen = sinon.createStubInstance(StateRegenerator);
     chain.bls = {verifySignatureSets: async () => true};
-    db.badBlock.has.resolves(false);
     db.seenAttestationCache.hasAggregateAndProof.returns(false);
     isAggregatorStub = sinon.stub(validatorUtils, "isAggregatorFromCommitteeLength");
     isValidIndexedAttestationStub = sinon.stub(indexedAttUtils, "isValidIndexedAttestation");
@@ -167,29 +166,6 @@ describe("gossip aggregate and proof test", function () {
       } as IAttestationJob),
       AttestationErrorCode.WRONG_NUMBER_OF_AGGREGATION_BITS
     );
-  });
-
-  it("should throw error - attesting to invalid block", async function () {
-    const item = generateSignedAggregateAndProof({
-      aggregate: {
-        aggregationBits: Array.from([true]) as List<boolean>,
-        data: {
-          slot: 0,
-        },
-      },
-    });
-    db.badBlock.has.resolves(true);
-
-    await expectRejectedWithLodestarError(
-      validateGossipAggregateAndProof(config, chain, db, item, {
-        attestation: item.message.aggregate,
-        validSignature: false,
-      } as IAttestationJob),
-      AttestationErrorCode.KNOWN_BAD_BLOCK
-    );
-
-    expect(db.badBlock.has.withArgs(item.message.aggregate.data.beaconBlockRoot.valueOf() as Uint8Array).calledOnce).to
-      .be.true;
   });
 
   it("should throw error - missing attestation prestate", async function () {

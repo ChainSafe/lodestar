@@ -5,9 +5,7 @@ import {LevelDbController} from "@chainsafe/lodestar-db";
 import {BeaconDb} from "../../../src/db";
 import {
   AggregateAndProofRepository,
-  AttestationRepository,
   AttesterSlashingRepository,
-  BadBlockRepository,
   BlockArchiveRepository,
   BlockRepository,
   DepositEventRepository,
@@ -24,17 +22,17 @@ import {SignedBeaconBlock} from "@chainsafe/lodestar-types/phase0";
 import {createStubInstance} from "../types";
 import {SyncCommitteeCache} from "../../../src/db/syncCommittee";
 import {SyncCommitteeContributionCache} from "../../../src/db/syncCommitteeContribution";
+import {AttestationPool} from "../../../src/db/attestationPool";
 
 export class StubbedBeaconDb extends BeaconDb {
   db!: SinonStubbedInstance<LevelDbController>;
 
-  badBlock: SinonStubbedInstance<BadBlockRepository> & BadBlockRepository;
   block: SinonStubbedInstance<BlockRepository> & BlockRepository;
   pendingBlock: SinonStubbedInstance<PendingBlockRepository> & PendingBlockRepository;
   blockArchive: SinonStubbedInstance<BlockArchiveRepository> & BlockArchiveRepository;
   stateArchive: SinonStubbedInstance<StateArchiveRepository> & StateArchiveRepository;
 
-  attestation: SinonStubbedInstance<AttestationRepository> & AttestationRepository;
+  attestationPool: SinonStubbedInstance<AttestationPool> & AttestationPool;
   aggregateAndProof: SinonStubbedInstance<AggregateAndProofRepository> & AggregateAndProofRepository;
   voluntaryExit: SinonStubbedInstance<VoluntaryExitRepository> & VoluntaryExitRepository;
   proposerSlashing: SinonStubbedInstance<ProposerSlashingRepository> & ProposerSlashingRepository;
@@ -55,13 +53,12 @@ export class StubbedBeaconDb extends BeaconDb {
   constructor(sinon: SinonSandbox, config = minimalConfig) {
     // eslint-disable-next-line
     super({config, controller: {} as any});
-    this.badBlock = createStubInstance(BadBlockRepository);
     this.block = createStubInstance(BlockRepository);
     this.pendingBlock = createStubInstance(PendingBlockRepository);
     this.blockArchive = createStubInstance(BlockArchiveRepository);
     this.stateArchive = createStubInstance(StateArchiveRepository);
 
-    this.attestation = createStubInstance(AttestationRepository);
+    this.attestationPool = createStubInstance(AttestationPool);
     this.aggregateAndProof = createStubInstance(AggregateAndProofRepository);
     this.voluntaryExit = createStubInstance(VoluntaryExitRepository);
     this.proposerSlashing = createStubInstance(ProposerSlashingRepository);

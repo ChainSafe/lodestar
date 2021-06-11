@@ -1,6 +1,6 @@
 import {AbortSignal} from "abort-controller";
 import {readonlyValues, toHexString, TreeBacked} from "@chainsafe/ssz";
-import {allForks, altair, phase0, Root, Slot, ssz, Version} from "@chainsafe/lodestar-types";
+import {allForks, altair, phase0, Slot, ssz, Version} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {IBlockSummary} from "@chainsafe/lodestar-fork-choice";
 import {CachedBeaconState, computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
@@ -94,6 +94,8 @@ export async function onClockSlot(this: BeaconChain, slot: Slot): Promise<void> 
   this.logger.verbose("Clock slot", {slot});
   this.forkChoice.updateTime(slot);
   this.metrics?.clockSlot.set(slot);
+
+  this.db.attestationPool.prune(slot);
 
   await Promise.all(
     // Attestations can only affect the fork choice of subsequent slots.
@@ -243,10 +245,12 @@ export async function onBlock(
   }
 
   if (!job.prefinalized) {
+    const attestations = Array.from(readonlyValues(block.message.body.attestations));
+
     // Only process attestations in response to an non-prefinalized block
-    await Promise.all([
+    const indexedAttestations = await Promise.all([
       // process the attestations in the block
-      ...Array.from(readonlyValues(block.message.body.attestations), (attestation) => {
+      ...attestations.map((attestation) => {
         return this.attestationProcessor.processAttestationJob({
           attestation,
           // attestation signatures from blocks have already been verified
@@ -259,7 +263,17 @@ export async function onBlock(
         return this.attestationProcessor.processAttestationJob(job);
       }),
     ]);
+
+    if (this.metrics) {
+      // Register attestations in metrics
+      for (const attestation of indexedAttestations) {
+        if (attestation) {
+          this.metrics.registerAttestationInBlock(attestation, block.message);
+        }
+      }
+    }
   }
+
   // if reprocess job, don't have to reprocess block operations or pending blocks
   if (!job.reprocess) {
     await this.db.processBlockOperations(block);
@@ -324,8 +338,9 @@ export async function onErrorAttestation(this: BeaconChain, err: AttestationErro
       this.pendingAttestations.putByBlock(err.type.beaconBlockRoot, err.job);
       break;
 
-    default:
-      await this.db.attestation.remove(err.job.attestation);
+    // TODO: Why is necessary to remove the attestation from the DB on error?
+    // default:
+    //   await this.db.attestation.remove(err.job.attestation);
   }
 }
 
@@ -336,32 +351,16 @@ export async function onErrorBlock(this: BeaconChain, err: BlockError): Promise<
   }
 
   this.logger.error("Block error", {slot: err.signedBlock.message.slot}, err);
-  const getBlockRoot = (): Root =>
-    this.config.getForkTypes(err.signedBlock.message.slot).BeaconBlock.hashTreeRoot(err.signedBlock.message);
 
-  switch (err.type.code) {
-    case BlockErrorCode.FUTURE_SLOT:
-      this.pendingBlocks.addBySlot(err.signedBlock);
-      await this.db.pendingBlock.add(err.signedBlock);
-      break;
+  if (err.type.code === BlockErrorCode.FUTURE_SLOT) {
+    this.pendingBlocks.addBySlot(err.signedBlock);
+    await this.db.pendingBlock.add(err.signedBlock);
+  }
 
-    case BlockErrorCode.PARENT_UNKNOWN:
-      // add to pendingBlocks first which is not await
-      // this is to process a block range
-      this.pendingBlocks.addByParent(err.signedBlock);
-      await this.db.pendingBlock.add(err.signedBlock);
-      break;
-
-    case BlockErrorCode.INCORRECT_PROPOSER:
-    case BlockErrorCode.REPEAT_PROPOSAL:
-    case BlockErrorCode.STATE_ROOT_MISMATCH:
-    case BlockErrorCode.PER_BLOCK_PROCESSING_ERROR:
-    case BlockErrorCode.BLOCK_IS_NOT_LATER_THAN_PARENT:
-    case BlockErrorCode.UNKNOWN_PROPOSER: {
-      const blockRoot = getBlockRoot();
-      await this.db.badBlock.put(blockRoot as Uint8Array);
-      this.logger.warn("Found bad block", {blockRoot: toHexString(blockRoot)}, err);
-      break;
-    }
+  // add to pendingBlocks first which is not await
+  // this is to process a block range
+  else if (err.type.code === BlockErrorCode.PARENT_UNKNOWN) {
+    this.pendingBlocks.addByParent(err.signedBlock);
+    await this.db.pendingBlock.add(err.signedBlock);
   }
 }

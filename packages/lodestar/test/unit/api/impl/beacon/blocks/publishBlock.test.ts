@@ -37,6 +37,7 @@ describe("api - beacon - publishBlock", function () {
       config: server.config,
       db: server.dbStub,
       network: server.networkStub,
+      metrics: null,
     });
 
     syncStub.isSynced.returns(true);
