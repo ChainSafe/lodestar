@@ -1,7 +1,7 @@
 import {allForks, Epoch, phase0, ssz} from "@chainsafe/lodestar-types";
-import {BitList, List, readonlyValues, TreeBacked} from "@chainsafe/ssz";
+import {List, readonlyValues} from "@chainsafe/ssz";
 import {CachedBeaconState, IAttesterStatus} from "../../allForks/util";
-import {computeStartSlotAtEpoch, getBlockRootAtSlot, zipIndexesInBitList} from "../../util";
+import {computeStartSlotAtEpoch, getBlockRootAtSlot, zipIndexesCommitteeBits} from "../../util";
 
 export function statusProcessEpoch<T extends allForks.BeaconState>(
   state: CachedBeaconState<T>,
@@ -28,11 +28,7 @@ export function statusProcessEpoch<T extends allForks.BeaconState>(
     const attVotedTargetRoot = rootType.equals(attTarget.root, actualTargetBlockRoot);
     const attVotedHeadRoot = rootType.equals(attBeaconBlockRoot, getBlockRootAtSlot(state, attSlot));
     const committee = epochCtx.getBeaconCommittee(attSlot, committeeIndex);
-    const participants = zipIndexesInBitList(
-      committee,
-      aggregationBits as TreeBacked<BitList>,
-      ssz.phase0.CommitteeBits
-    );
+    const participants = zipIndexesCommitteeBits(committee, aggregationBits);
 
     if (epoch === prevEpoch) {
       for (const p of participants) {

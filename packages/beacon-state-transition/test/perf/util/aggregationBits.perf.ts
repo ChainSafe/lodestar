@@ -2,7 +2,7 @@ import {MAX_VALIDATORS_PER_COMMITTEE} from "@chainsafe/lodestar-params";
 import {ssz} from "@chainsafe/lodestar-types";
 import {BenchmarkRunner} from "@chainsafe/lodestar-utils/test_utils/benchmark";
 import {List, readonlyValues} from "@chainsafe/ssz";
-import {zipIndexesInBitList} from "../../../src";
+import {zipIndexesCommitteeBits} from "../../../src";
 
 export async function runAggregationBitsTest(): Promise<void> {
   const runner = new BenchmarkRunner("aggregationBits", {
@@ -25,7 +25,7 @@ export async function runAggregationBitsTest(): Promise<void> {
   await runner.run({
     id: "zipIndexesInBitList",
     run: () => {
-      zipIndexesInBitList(indexes, bitlistTree, ssz.phase0.CommitteeBits);
+      zipIndexesCommitteeBits(indexes, bitlistTree);
     },
   });
 

@@ -1,8 +1,8 @@
-import {MAX_VALIDATORS_PER_COMMITTEE} from "@chainsafe/lodestar-params";
+import {MAX_VALIDATORS_PER_COMMITTEE, SYNC_COMMITTEE_SIZE} from "@chainsafe/lodestar-params";
 import {ssz} from "@chainsafe/lodestar-types";
 import {List} from "@chainsafe/ssz";
 import {expect} from "chai";
-import {getUint8ByteToBitBooleanArray, bitlistToUint8Array} from "../../../src";
+import {getUint8ByteToBitBooleanArray, bitsToUint8Array, zipIndexesSyncCommitteeBits} from "../../../src";
 
 const BITS_PER_BYTE = 8;
 
@@ -30,7 +30,7 @@ describe("aggregationBits", function () {
   for (const {name, data, numBytes} of testCases) {
     it(name, () => {
       const tree = ssz.phase0.CommitteeBits.createTreeBackedFromStruct(data as List<boolean>);
-      const aggregationBytes = bitlistToUint8Array(tree, ssz.phase0.CommitteeBits);
+      const aggregationBytes = bitsToUint8Array(tree, ssz.phase0.CommitteeBits);
       expect(aggregationBytes.length).to.be.equal(numBytes, "number of bytes is incorrect");
       const aggregationBits: boolean[] = [];
       for (let i = 0; i < tree.length; i++) {
@@ -47,6 +47,32 @@ describe("aggregationBits", function () {
       const bytes = tree.serialize();
       expect(bytes[0]).to.equal(i, `Wrong serialization of ${i}: ${JSON.stringify(boolArr)}`);
     }
+  });
+});
+
+describe("zipIndexesSyncCommitteeBits", function () {
+  const committeeIndices = Array.from({length: SYNC_COMMITTEE_SIZE}, (_, i) => i * 2);
+  // 3 first bits are true
+  const syncCommitteeBits = Array.from({length: SYNC_COMMITTEE_SIZE}, (_, i) => {
+    return i < 3 ? true : false;
+  });
+
+  it("should extract from TreeBacked SyncAggregate", function () {
+    const syncAggregate = ssz.altair.SyncAggregate.defaultTreeBacked();
+    syncAggregate.syncCommitteeBits = syncCommitteeBits;
+    expect(zipIndexesSyncCommitteeBits(committeeIndices, syncAggregate.syncCommitteeBits)).to.be.deep.equal(
+      [0, 2, 4],
+      "Incorrect participant indices from TreeBacked SyncAggregate"
+    );
+  });
+
+  it("should extract from struct SyncAggregate", function () {
+    const syncAggregate = ssz.altair.SyncAggregate.defaultValue();
+    syncAggregate.syncCommitteeBits = syncCommitteeBits;
+    expect(zipIndexesSyncCommitteeBits(committeeIndices, syncAggregate.syncCommitteeBits)).to.be.deep.equal(
+      [0, 2, 4],
+      "Incorrect participant indices from TreeBacked SyncAggregate"
+    );
   });
 });
 
