@@ -20,6 +20,8 @@ describe("getLatestWeakSubjectivityCheckpointEpoch", () => {
     sandbox.restore();
   });
 
+  const validatorPool = Array.from({length: 262144}, () => generateValidator({activation: 0, exit: Infinity}));
+
   const testValues = [
     {activeValidatorCount: 8192, slot: 8192, expectedMod: 256},
     {activeValidatorCount: 16384, slot: 16384, expectedMod: 256},
@@ -33,9 +35,7 @@ describe("getLatestWeakSubjectivityCheckpointEpoch", () => {
     it(`should have ${testValue.expectedMod} mod for slot ${testValue.slot} and activeValidatorCount of ${testValue.activeValidatorCount}`, () => {
       state.slot = testValue.slot;
       state.finalizedCheckpoint.epoch = state.slot / SLOTS_PER_EPOCH;
-      state.validators = Array.from({length: testValue.activeValidatorCount}, () =>
-        generateValidator({activation: 0, exit: Infinity})
-      ) as List<phase0.Validator>;
+      state.validators = validatorPool.slice(0, testValue.activeValidatorCount) as List<phase0.Validator>;
       const wsCheckpointEpoch = getLatestWeakSubjectivityCheckpointEpoch(config, state);
       expect(wsCheckpointEpoch).to.be.equal(
         state.finalizedCheckpoint.epoch - (state.finalizedCheckpoint.epoch % testValue.expectedMod)
