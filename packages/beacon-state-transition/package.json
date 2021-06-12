@@ -47,7 +47,7 @@
     "@chainsafe/lodestar-utils": "^0.24.2",
     "@chainsafe/persistent-merkle-tree": "^0.3.2",
     "@chainsafe/persistent-ts": "^0.19.0",
-    "@chainsafe/ssz": "^0.8.7",
+    "@chainsafe/ssz": "^0.8.9",
     "bigint-buffer": "^1.1.5",
     "buffer-xor": "^2.0.2"
   },
