@@ -1,12 +1,27 @@
 import {allForks, phase0, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {ForkName} from "@chainsafe/lodestar-params";
 
 import {isSlashableValidator, isSlashableAttestationData} from "../../util";
 import {CachedBeaconState} from "../../allForks/util";
 import {isValidIndexedAttestation} from "../../allForks/block";
-import {slashValidator} from "./slashValidator";
+import {slashValidatorAllForks} from "../../allForks/block/slashValidator";
 
 export function processAttesterSlashing(
   state: CachedBeaconState<phase0.BeaconState>,
+  attesterSlashing: phase0.AttesterSlashing,
+  verifySignatures = true
+): void {
+  processAttesterSlashingAllForks(
+    ForkName.phase0,
+    state as CachedBeaconState<allForks.BeaconState>,
+    attesterSlashing,
+    verifySignatures
+  );
+}
+
+export function processAttesterSlashingAllForks(
+  fork: ForkName,
+  state: CachedBeaconState<allForks.BeaconState>,
   attesterSlashing: phase0.AttesterSlashing,
   verifySignatures = true
 ): void {
@@ -24,7 +39,7 @@ export function processAttesterSlashing(
   const validators = state.validators;
   for (const index of indices.sort((a, b) => a - b)) {
     if (isSlashableValidator(validators[index], state.epochCtx.currentShuffling.epoch)) {
-      slashValidator(state, index);
+      slashValidatorAllForks(fork, state, index);
       slashedAny = true;
     }
   }

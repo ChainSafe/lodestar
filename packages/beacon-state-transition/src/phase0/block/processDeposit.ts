@@ -1,11 +1,12 @@
 import bls, {CoordType} from "@chainsafe/bls";
-import {phase0, ssz} from "@chainsafe/lodestar-types";
+import {allForks, altair, phase0, ssz} from "@chainsafe/lodestar-types";
 import {verifyMerkleBranch, bigIntMin} from "@chainsafe/lodestar-utils";
 import {
   DEPOSIT_CONTRACT_TREE_DEPTH,
   DOMAIN_DEPOSIT,
   EFFECTIVE_BALANCE_INCREMENT,
   FAR_FUTURE_EPOCH,
+  ForkName,
   MAX_EFFECTIVE_BALANCE,
 } from "@chainsafe/lodestar-params";
 
@@ -14,6 +15,14 @@ import {computeDomain, computeSigningRoot, increaseBalance} from "../../util";
 import {CachedBeaconState} from "../../allForks/util";
 
 export function processDeposit(state: CachedBeaconState<phase0.BeaconState>, deposit: phase0.Deposit): void {
+  processDepositAllForks(ForkName.phase0, state as CachedBeaconState<allForks.BeaconState>, deposit);
+}
+
+export function processDepositAllForks(
+  fork: ForkName,
+  state: CachedBeaconState<allForks.BeaconState>,
+  deposit: phase0.Deposit
+): void {
   const {config, validators, epochCtx} = state;
   // verify the merkle branch
   if (
@@ -71,6 +80,10 @@ export function processDeposit(state: CachedBeaconState<phase0.BeaconState>, dep
     // add participation caches
     state.previousEpochParticipation.pushStatus({timelyHead: false, timelySource: false, timelyTarget: false});
     state.currentEpochParticipation.pushStatus({timelyHead: false, timelySource: false, timelyTarget: false});
+
+    if (fork === ForkName.altair) {
+      (state as CachedBeaconState<altair.BeaconState>).inactivityScores.push(0);
+    }
 
     // now that there is a new validator, update the epoch context with the new pubkey
     epochCtx.addPubkey(validators.length - 1, pubkey);

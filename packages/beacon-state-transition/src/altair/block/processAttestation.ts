@@ -1,7 +1,7 @@
 import {allForks, altair, Gwei, phase0, ssz, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {bigIntSqrt, intSqrt} from "@chainsafe/lodestar-utils";
 
-import {computeEpochAtSlot, getBlockRoot, getBlockRootAtSlot, getTotalActiveBalance, increaseBalance} from "../../util";
+import {getBlockRoot, getBlockRootAtSlot, getTotalActiveBalance, increaseBalance} from "../../util";
 import {CachedBeaconState} from "../../allForks/util";
 import {isValidIndexedAttestation} from "../../allForks/block";
 import {IParticipationStatus} from "../../allForks/util/cachedEpochParticipation";
@@ -16,6 +16,7 @@ import {
   TIMELY_TARGET_WEIGHT,
   WEIGHT_DENOMINATOR,
 } from "@chainsafe/lodestar-params";
+import {validateAttestation} from "../../phase0/block/processAttestation";
 
 const PROPOSER_REWARD_DOMINATOR = ((WEIGHT_DENOMINATOR - PROPOSER_WEIGHT) * WEIGHT_DENOMINATOR) / PROPOSER_WEIGHT;
 
@@ -25,44 +26,9 @@ export function processAttestation(
   verifySignature = true
 ): void {
   const {epochCtx} = state;
-  const slot = state.slot;
   const data = attestation.data;
-  const committeeCount = epochCtx.getCommitteeCountAtSlot(data.slot);
-  if (!(data.index < committeeCount)) {
-    throw new Error(
-      "Attestation committee index not within current committee count: " +
-        `committeeIndex=${data.index} committeeCount=${committeeCount}`
-    );
-  }
-  if (
-    !(data.target.epoch === epochCtx.previousShuffling.epoch || data.target.epoch === epochCtx.currentShuffling.epoch)
-  ) {
-    throw new Error(
-      "Attestation target epoch not in previous or current epoch: " +
-        `targetEpoch=${data.target.epoch} currentEpoch=${epochCtx.currentShuffling.epoch}`
-    );
-  }
-  const computedEpoch = computeEpochAtSlot(data.slot);
-  if (!(data.target.epoch === computedEpoch)) {
-    throw new Error(
-      "Attestation target epoch does not match epoch computed from slot: " +
-        `targetEpoch=${data.target.epoch} computedEpoch=${computedEpoch}`
-    );
-  }
-  if (!(data.slot + MIN_ATTESTATION_INCLUSION_DELAY <= slot && slot <= data.slot + SLOTS_PER_EPOCH)) {
-    throw new Error(
-      "Attestation slot not within inclusion window: " +
-        `slot=${data.slot} window=${data.slot + MIN_ATTESTATION_INCLUSION_DELAY}..${data.slot + SLOTS_PER_EPOCH}`
-    );
-  }
 
-  const committee = epochCtx.getBeaconCommittee(data.slot, data.index);
-  if (attestation.aggregationBits.length !== committee.length) {
-    throw new Error(
-      "Attestation aggregation bits length does not match committee length: " +
-        `aggregationBitsLength=${attestation.aggregationBits.length} committeeLength=${committee.length}`
-    );
-  }
+  validateAttestation(state as CachedBeaconState<allForks.BeaconState>, attestation);
 
   let epochParticipation;
   if (data.target.epoch === epochCtx.currentShuffling.epoch) {

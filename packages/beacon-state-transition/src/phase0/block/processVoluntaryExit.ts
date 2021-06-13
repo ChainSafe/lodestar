@@ -11,7 +11,6 @@ export function processVoluntaryExit(
   verifySignature = true
 ): void {
   assertValidVoluntaryExit(state as CachedBeaconState<allForks.BeaconState>, signedVoluntaryExit, verifySignature);
-
   initiateValidatorExit(state as CachedBeaconState<allForks.BeaconState>, signedVoluntaryExit.message.validatorIndex);
 }
 

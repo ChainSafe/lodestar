@@ -2,17 +2,32 @@ import {allForks, phase0, ssz} from "@chainsafe/lodestar-types";
 import {isSlashableValidator} from "../../util";
 import {CachedBeaconState} from "../../allForks/util";
 import {getProposerSlashingSignatureSets} from "../../allForks/signatureSets";
-import {slashValidator} from "./slashValidator";
+import {slashValidatorAllForks} from "../../allForks/block/slashValidator";
 import {verifySignatureSet} from "../../util/signatureSets";
+import {ForkName} from "@chainsafe/lodestar-params";
 
 export function processProposerSlashing(
   state: CachedBeaconState<phase0.BeaconState>,
   proposerSlashing: phase0.ProposerSlashing,
   verifySignatures = true
 ): void {
+  processProposerSlashingAllForks(
+    ForkName.phase0,
+    state as CachedBeaconState<allForks.BeaconState>,
+    proposerSlashing,
+    verifySignatures
+  );
+}
+
+export function processProposerSlashingAllForks(
+  fork: ForkName,
+  state: CachedBeaconState<allForks.BeaconState>,
+  proposerSlashing: phase0.ProposerSlashing,
+  verifySignatures = true
+): void {
   assertValidProposerSlashing(state as CachedBeaconState<allForks.BeaconState>, proposerSlashing, verifySignatures);
 
-  slashValidator(state, proposerSlashing.signedHeader1.message.proposerIndex);
+  slashValidatorAllForks(fork, state, proposerSlashing.signedHeader1.message.proposerIndex);
 }
 
 export function assertValidProposerSlashing(
