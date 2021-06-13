@@ -1,9 +1,10 @@
+import {init} from "@chainsafe/bls";
 import {MAX_VOLUNTARY_EXITS} from "@chainsafe/lodestar-params";
 import {phase0} from "@chainsafe/lodestar-types";
 import {BenchmarkRunner} from "@chainsafe/lodestar-utils/test_utils/benchmark";
 import {List} from "@chainsafe/ssz";
 import {allForks} from "../../../../src";
-import {generatePerformanceBlock, generatePerfTestCachedBeaconState, initBLS} from "../../util";
+import {generatePerformanceBlock, generatePerfTestCachedBeaconState} from "../../util";
 
 // As of Jun 01 2021
 // Process block
@@ -18,7 +19,7 @@ export async function runBlockTransitionTests(): Promise<void> {
     minMs: 15 * 1000,
     runs: 64,
   });
-  await initBLS();
+  await init("blst-native");
 
   const originalState = generatePerfTestCachedBeaconState() as allForks.CachedBeaconState<allForks.BeaconState>;
   const signedBlock = generatePerformanceBlock();
