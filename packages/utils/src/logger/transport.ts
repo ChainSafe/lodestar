@@ -1,4 +1,5 @@
 import {transports} from "winston";
+import DailyRotateFile from "winston-daily-rotate-file";
 import {LogLevel} from "./interface";
 import TransportStream from "winston-transport";
 
@@ -10,7 +11,7 @@ export enum TransportType {
 
 export type TransportOpts =
   | {type: TransportType.console; level?: LogLevel}
-  | {type: TransportType.file; level?: LogLevel; filename: string}
+  | {type: TransportType.file; level?: LogLevel; filename: string; rotate?: boolean}
   | {type: TransportType.stream; level?: LogLevel; stream: NodeJS.WritableStream};
 
 export function fromTransportOpts(transportOpts: TransportOpts): TransportStream {
@@ -23,11 +24,20 @@ export function fromTransportOpts(transportOpts: TransportOpts): TransportStream
       });
 
     case TransportType.file:
-      return new transports.File({
-        level: transportOpts.level,
-        filename: transportOpts.filename,
-        handleExceptions: true,
-      });
+      return transportOpts.rotate
+        ? new DailyRotateFile({
+            level: transportOpts.level,
+            //insert the date pattern in filename before the file extension.
+            filename: transportOpts.filename.replace(/\.(?=[^.]*$)|$/, "-%DATE%$&"),
+            datePattern: "YYYY-MM-DD",
+            handleExceptions: true,
+            maxFiles: 5,
+          })
+        : new transports.File({
+            level: transportOpts.level,
+            filename: transportOpts.filename,
+            handleExceptions: true,
+          });
 
     case TransportType.stream:
       return new transports.Stream({

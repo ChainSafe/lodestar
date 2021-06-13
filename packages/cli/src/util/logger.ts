@@ -15,6 +15,7 @@ export interface ILogArgs {
   logLevelFile?: LogLevel;
   logFormatGenesisTime?: number;
   logFormatId?: string;
+  logRotate?: boolean;
 }
 
 export function errorLogger(): ILogger {
@@ -27,7 +28,12 @@ export function errorLogger(): ILogger {
 export function getCliLogger(args: ILogArgs, paths: {logFile?: string}, config: IBeaconConfig): ILogger {
   const transports: TransportOpts[] = [{type: TransportType.console}];
   if (paths.logFile) {
-    transports.push({type: TransportType.file, filename: paths.logFile, level: args.logLevelFile});
+    transports.push({
+      type: TransportType.file,
+      filename: paths.logFile,
+      level: args.logLevelFile,
+      rotate: args.logRotate,
+    });
   }
 
   const timestampFormat: TimestampFormat =
