@@ -28,14 +28,10 @@ async function initAndVerifyWeakSujectivityState(
   logger: ILogger,
   wsCheckpoint?: Checkpoint
 ): Promise<TreeBacked<allForks.BeaconState>> {
-  try {
-    if (!isWithinWeakSubjectivityPeriod(config, wsState.genesisTime, wsState, wsCheckpoint)) {
-      throw new Error("Fetched weak subjectivity checkpoint not within weak subjectivity period.");
-    }
-    return await initStateFromAnchorState(config, db, logger, wsState);
-  } catch (error) {
-    throw new Error(error);
+  if (!isWithinWeakSubjectivityPeriod(config, wsState.genesisTime, wsState, wsCheckpoint)) {
+    throw new Error("Fetched weak subjectivity checkpoint not within weak subjectivity period.");
   }
+  return await initStateFromAnchorState(config, db, logger, wsState);
 }
 
 /**
