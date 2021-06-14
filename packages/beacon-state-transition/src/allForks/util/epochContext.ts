@@ -8,7 +8,6 @@ import {
   ValidatorIndex,
   phase0,
   allForks,
-  altair,
   Gwei,
 } from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
@@ -16,7 +15,6 @@ import {
   BASE_REWARD_FACTOR,
   DOMAIN_BEACON_PROPOSER,
   EFFECTIVE_BALANCE_INCREMENT,
-  EPOCHS_PER_SYNC_COMMITTEE_PERIOD,
   GENESIS_EPOCH,
   PROPOSER_WEIGHT,
   SLOTS_PER_EPOCH,
@@ -35,7 +33,6 @@ import {
   isAggregatorFromCommitteeLength,
   zipIndexesCommitteeBits,
 } from "../../util";
-import {getNextSyncCommitteeIndices} from "../../altair/epoch/sync_committee";
 import {computeEpochShuffling, IEpochShuffling} from "./epochShuffling";
 import {MutableVector} from "@chainsafe/persistent-ts";
 import {CachedValidatorList} from "./cachedValidatorList";
@@ -110,12 +107,6 @@ export function createEpochContext(
 
   // Only after altair, compute the indices of the current sync committee
   const onAltairFork = currentEpoch >= config.ALTAIR_FORK_EPOCH;
-  const currSyncCommitteeIndexes = onAltairFork
-    ? computeSyncCommitteeIndices(pubkey2index, state as altair.BeaconState, false)
-    : [];
-  const nextSyncCommitteeIndexes = onAltairFork
-    ? computeSyncCommitteeIndices(pubkey2index, state as altair.BeaconState, true)
-    : [];
 
   const totalActiveBalance = getTotalActiveBalance(state);
   const syncParticipantReward = onAltairFork ? computeSyncParticipantReward(config, totalActiveBalance) : BigInt(0);
@@ -133,10 +124,6 @@ export function createEpochContext(
     previousShuffling,
     currentShuffling,
     nextShuffling,
-    currSyncCommitteeIndexes,
-    nextSyncCommitteeIndexes,
-    currSyncComitteeValidatorIndexMap: computeSyncComitteeMap(currSyncCommitteeIndexes),
-    nextSyncComitteeValidatorIndexMap: computeSyncComitteeMap(nextSyncCommitteeIndexes),
     syncParticipantReward,
     syncProposerReward,
     baseRewardPerIncrement,
@@ -184,48 +171,6 @@ export function computeProposers(state: allForks.BeaconState, shuffling: IEpochS
 }
 
 /**
- * Compute all index in sync committee for all validatorIndexes in `syncCommitteeIndexes`.
- * Helps reduce work necessary to verify a validatorIndex belongs in a sync committee and which.
- * This is similar to compute_subnets_for_sync_committee in https://github.com/ethereum/eth2.0-specs/blob/v1.1.0-alpha.5/specs/altair/validator.md
- */
-export function computeSyncComitteeMap(syncCommitteeIndexes: ValidatorIndex[]): SyncComitteeValidatorIndexMap {
-  const map = new Map<ValidatorIndex, number[]>();
-
-  for (let i = 0, len = syncCommitteeIndexes.length; i < len; i++) {
-    const validatorIndex = syncCommitteeIndexes[i];
-    let indexes = map.get(validatorIndex);
-    if (!indexes) {
-      indexes = [];
-      map.set(validatorIndex, indexes);
-    }
-    if (!indexes.includes(i)) {
-      indexes.push(i);
-    }
-  }
-
-  return map;
-}
-
-/**
- * Extract validator indices from current and next sync committee
- */
-export function computeSyncCommitteeIndices(
-  pubkey2index: PubkeyIndexMap,
-  state: altair.BeaconState,
-  isNext: boolean
-): phase0.ValidatorIndex[] {
-  const syncCommittee = isNext ? state.nextSyncCommittee : state.currentSyncCommittee;
-  const result: phase0.ValidatorIndex[] = [];
-  for (const pubkey of syncCommittee.pubkeys) {
-    const validatorIndex = pubkey2index.get(pubkey.valueOf() as Uint8Array);
-    if (validatorIndex !== undefined) {
-      result.push(validatorIndex);
-    }
-  }
-  return result;
-}
-
-/**
  * Same logic in https://github.com/ethereum/eth2.0-specs/blob/v1.1.0-alpha.5/specs/altair/beacon-chain.md#sync-committee-processing
  */
 export function computeSyncParticipantReward(config: IBeaconConfig, totalActiveBalance: Gwei): Gwei {
@@ -258,27 +203,6 @@ export function rotateEpochs(
   epochCtx.nextShuffling = computeEpochShuffling(state, indicesBounded, nextEpoch);
   epochCtx.proposers = computeProposers(state, epochCtx.currentShuffling);
 
-  // State slot has already been += 1
-  if (currEpoch % EPOCHS_PER_SYNC_COMMITTEE_PERIOD === 0 && currEpoch > epochCtx.config.ALTAIR_FORK_EPOCH) {
-    epochCtx.currSyncCommitteeIndexes = epochCtx.nextSyncCommitteeIndexes;
-    epochCtx.nextSyncCommitteeIndexes = computeSyncCommitteeIndices(
-      epochCtx.pubkey2index,
-      state as altair.BeaconState,
-      true
-    );
-    epochCtx.currSyncComitteeValidatorIndexMap = epochCtx.nextSyncComitteeValidatorIndexMap;
-    epochCtx.nextSyncComitteeValidatorIndexMap = computeSyncComitteeMap(epochCtx.nextSyncCommitteeIndexes);
-  }
-
-  // If crossing through the altair fork the caches will be empty, fill them up
-  if (currEpoch === epochCtx.config.ALTAIR_FORK_EPOCH) {
-    const firstCommitteeIndices = getNextSyncCommitteeIndices(state);
-    epochCtx.currSyncCommitteeIndexes = [...firstCommitteeIndices];
-    epochCtx.nextSyncCommitteeIndexes = [...firstCommitteeIndices];
-    epochCtx.currSyncComitteeValidatorIndexMap = computeSyncComitteeMap(epochCtx.currSyncCommitteeIndexes);
-    epochCtx.nextSyncComitteeValidatorIndexMap = computeSyncComitteeMap(epochCtx.nextSyncCommitteeIndexes);
-  }
-
   if (currEpoch >= epochCtx.config.ALTAIR_FORK_EPOCH) {
     const totalActiveBalance = getTotalActiveBalance(state);
     epochCtx.syncParticipantReward = computeSyncParticipantReward(epochCtx.config, totalActiveBalance);
@@ -289,7 +213,6 @@ export function rotateEpochs(
   }
 }
 
-type SyncComitteeValidatorIndexMap = Map<ValidatorIndex, number[]>;
 interface IEpochContextData {
   config: IBeaconConfig;
   pubkey2index: PubkeyIndexMap;
@@ -298,10 +221,6 @@ interface IEpochContextData {
   previousShuffling: IEpochShuffling;
   currentShuffling: IEpochShuffling;
   nextShuffling: IEpochShuffling;
-  currSyncCommitteeIndexes: ValidatorIndex[];
-  nextSyncCommitteeIndexes: ValidatorIndex[];
-  currSyncComitteeValidatorIndexMap: SyncComitteeValidatorIndexMap;
-  nextSyncComitteeValidatorIndexMap: SyncComitteeValidatorIndexMap;
   syncParticipantReward: Gwei;
   syncProposerReward: Gwei;
   baseRewardPerIncrement: Gwei;
@@ -326,18 +245,6 @@ export class EpochContext {
   previousShuffling: IEpochShuffling;
   currentShuffling: IEpochShuffling;
   nextShuffling: IEpochShuffling;
-  /**
-   * Update freq: every ~ 54h.
-   * Memory cost: 1024 Number integers.
-   */
-  currSyncCommitteeIndexes: ValidatorIndex[];
-  nextSyncCommitteeIndexes: ValidatorIndex[];
-  /**
-   * Update freq: every ~ 54h.
-   * Memory cost: Map of Number -> Number with 1024 entries.
-   */
-  currSyncComitteeValidatorIndexMap: SyncComitteeValidatorIndexMap;
-  nextSyncComitteeValidatorIndexMap: SyncComitteeValidatorIndexMap;
   syncParticipantReward: phase0.Gwei;
   syncProposerReward: phase0.Gwei;
   config: IBeaconConfig;
@@ -355,10 +262,6 @@ export class EpochContext {
     this.previousShuffling = data.previousShuffling;
     this.currentShuffling = data.currentShuffling;
     this.nextShuffling = data.nextShuffling;
-    this.currSyncCommitteeIndexes = data.currSyncCommitteeIndexes;
-    this.nextSyncCommitteeIndexes = data.nextSyncCommitteeIndexes;
-    this.currSyncComitteeValidatorIndexMap = data.currSyncComitteeValidatorIndexMap;
-    this.nextSyncComitteeValidatorIndexMap = data.nextSyncComitteeValidatorIndexMap;
     this.syncParticipantReward = data.syncParticipantReward;
     this.syncProposerReward = data.syncProposerReward;
     this.baseRewardPerIncrement = data.baseRewardPerIncrement;

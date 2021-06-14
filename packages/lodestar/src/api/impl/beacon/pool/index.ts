@@ -131,7 +131,7 @@ export function getBeaconPoolApi({
       await Promise.all(
         signatures.map(async (signature, i) => {
           try {
-            const indexesInCommittee = state.currSyncComitteeValidatorIndexMap.get(signature.validatorIndex);
+            const indexesInCommittee = state.currentSyncCommittee?.validatorIndexMap.get(signature.validatorIndex);
             if (indexesInCommittee === undefined || indexesInCommittee.length === 0) {
               return; // Not a sync committee member
             }
