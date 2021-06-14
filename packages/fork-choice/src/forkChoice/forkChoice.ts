@@ -76,6 +76,11 @@ export class ForkChoice implements IForkChoice {
   synced: boolean;
 
   /**
+   * Cached head
+   */
+  head: IBlockSummary;
+
+  /**
    * Instantiates a Fork Choice from some existing components
    *
    * This is useful if the existing components have been loaded from disk after a process restart.
@@ -101,6 +106,7 @@ export class ForkChoice implements IForkChoice {
     this.bestJustifiedBalances = justifiedBalances;
     this.queuedAttestations = queuedAttestations;
     this.synced = false;
+    this.head = this.updateHead();
   }
 
   /**
@@ -156,6 +162,10 @@ export class ForkChoice implements IForkChoice {
   }
 
   getHead(): IBlockSummary {
+    return this.head;
+  }
+
+  updateHead(): IBlockSummary {
     // balances is not changed but votes are changed
     if (!this.synced) {
       const deltas = computeDeltas(this.protoArray.indices, this.votes, this.justifiedBalances, this.justifiedBalances);
@@ -181,7 +191,7 @@ export class ForkChoice implements IForkChoice {
         root: fromHexString(headRoot),
       });
     }
-    return toBlockSummary(headNode);
+    return (this.head = toBlockSummary(headNode));
   }
 
   getHeads(): IBlockSummary[] {
@@ -538,14 +548,7 @@ export class ForkChoice implements IForkChoice {
   }
 
   private updateJustified(justifiedCheckpoint: phase0.Checkpoint, justifiedBalances: Gwei[]): void {
-    const oldBalances = this.justifiedBalances;
-    const newBalances = justifiedBalances;
-
-    const deltas = computeDeltas(this.protoArray.indices, this.votes, oldBalances, newBalances);
-
-    this.protoArray.applyScoreChanges(deltas, justifiedCheckpoint.epoch, this.fcStore.finalizedCheckpoint.epoch);
-
-    this.justifiedBalances = newBalances;
+    this.justifiedBalances = justifiedBalances;
     this.fcStore.justifiedCheckpoint = justifiedCheckpoint;
   }
 
