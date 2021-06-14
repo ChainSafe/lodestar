@@ -32,10 +32,10 @@ export function getLatestWeakSubjectivityCheckpointEpoch(
 }
 
 /**
-  Returns the weak subjectivity period for the current ``state``. 
+  Returns the weak subjectivity period for the current `state`. 
     This computation takes into account the effect of:
-      - validator set churn (bounded by ``get_validator_churn_limit()`` per epoch), and 
-      - validator balance top-ups (bounded by ``MAX_DEPOSITS * SLOTS_PER_EPOCH`` per epoch).
+      - validator set churn (bounded by `get_validator_churn_limit()` per epoch), and 
+      - validator balance top-ups (bounded by `MAX_DEPOSITS * SLOTS_PER_EPOCH` per epoch).
     A detailed calculation can be found at:
     https://github.com/runtimeverification/beacon-chain-verification/blob/master/weak-subjectivity/weak-subjectivity-analysis.pdf
  */
