@@ -9,7 +9,7 @@ import {expect} from "chai";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {computeWeakSubjectivityPeriod, ETH_TO_GWEI} from "../../../src/allForks/util/weakSubjectivity";
 
-describe.only("weak subjectivity tests", () => {
+describe("weak subjectivity tests", () => {
   describe("getLatestWeakSubjectivityCheckpointEpoch", () => {
     const sandbox = sinon.createSandbox();
     let state: allForks.BeaconState;
