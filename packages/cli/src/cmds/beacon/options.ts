@@ -8,9 +8,9 @@ interface IBeaconExtraArgs {
   forceGenesis?: boolean;
   genesisStateFile?: string;
   weakSubjectivityStateFile?: string;
-  fetchChainSafeWeakSubjecitivtyState: boolean;
   weakSubjectivityCheckpoint?: string;
   weakSubjectivityServerUrl?: string;
+  weakSubjectivitySyncLatest?: string;
 }
 
 export const beaconExtraOptions: ICliCommandOptions<IBeaconExtraArgs> = {
@@ -29,9 +29,9 @@ export const beaconExtraOptions: ICliCommandOptions<IBeaconExtraArgs> = {
     type: "string",
   },
 
-  fetchChainSafeWeakSubjecitivtyState: {
+  weakSubjectivitySyncLatest: {
     description:
-      "Tell the beacon node to fetch the latest weak subjectivity state for the given network from the ChainSafe weak subjectivity state server.",
+      "Enable fetching of a weak subjectivity state via --weakSubjectivityServerUrl.  If an argument is provided to --weakSubjectivityCheckpoint, fetch the state at that checkpoint.  Else, fetch the latest finalized state.",
     type: "boolean",
     default: false,
   },

@@ -25,14 +25,20 @@ import {Checkpoint} from "@chainsafe/lodestar-types/phase0";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {computeEpochAtSlot} from "../../../../beacon-state-transition/lib";
 
+function getCheckpointFromArg(checkpointStr: string): Checkpoint {
+  const wsCheckpointData = checkpointStr.split(":");
+  return {root: fromHex(wsCheckpointData[0]), epoch: parseInt(wsCheckpointData[1])};
+}
+
 async function initAndVerifyWeakSujectivityState(
   config: IBeaconConfig,
   db: IBeaconDb,
+  store: TreeBacked<allForks.BeaconState> | null,
   wsState: TreeBacked<allForks.BeaconState>,
   logger: ILogger,
   wsCheckpoint: Checkpoint
 ): Promise<TreeBacked<allForks.BeaconState>> {
-  if (!isWithinWeakSubjectivityPeriod(config, wsState.genesisTime, wsState, wsCheckpoint)) {
+  if (!isWithinWeakSubjectivityPeriod(config, store, wsState, wsCheckpoint)) {
     throw new Error("Fetched weak subjectivity checkpoint not within weak subjectivity period.");
   }
   return await initStateFromAnchorState(config, db, logger, wsState);
@@ -63,10 +69,15 @@ export async function initBeaconState(
   const dbHasSomeState = (await db.stateArchive.lastKey()) != null;
 
   if (args.weakSubjectivityStateFile) {
+    if (args.weakSubjectivityCheckpoint) {
+      const stateBytes = await downloadOrLoadFile(args.weakSubjectivityStateFile);
+      const anchorState = getStateTypeFromBytes(config, stateBytes).createTreeBackedFromBytes(stateBytes);
+      const checkpoint = getCheckpointFromArg(args.weakSubjectivityCheckpoint);
+      const store = dbHasSomeState ? await db.stateArchive.lastValue() : null;
+      return initAndVerifyWeakSujectivityState(config, db, store, anchorState, logger, checkpoint);
+    }
     return await initFromFile(args.weakSubjectivityStateFile);
-  } else if (dbHasSomeState) {
-    return await initStateFromDb(config, db, logger);
-  } else if (args.fetchChainSafeWeakSubjecitivtyState) {
+  } else if (args.weakSubjectivitySyncLatest || args.weakSubjectivityCheckpoint) {
     if (!(args.weakSubjectivityServerUrl || Object.keys(weakSubjectivityServers).includes(args.network))) {
       throw new Error(
         `Missing weak subjectivity server URL.  Use either a custom URL via --weakSubjectivityServerUrl or use one of these options for --network: ${Object.keys(
@@ -77,25 +88,31 @@ export async function initBeaconState(
     let checkpoint: Checkpoint | undefined;
     let stateId = "finalized";
     if (args.weakSubjectivityCheckpoint) {
-      const wsCheckpointData = args.weakSubjectivityCheckpoint.split(":");
-      checkpoint = {root: fromHex(wsCheckpointData[0]), epoch: parseInt(wsCheckpointData[1])};
+      checkpoint = getCheckpointFromArg(args.weakSubjectivityCheckpoint);
       stateId = args.weakSubjectivityCheckpoint && (checkpoint.epoch * SLOTS_PER_EPOCH).toString();
     }
 
-    const state = await getWeakSubjectivityState(
+    const wsState = await getWeakSubjectivityState(
       config,
       args,
       stateId,
       args.weakSubjectivityServerUrl || weakSubjectivityServers[args.network as WeakSubjectivityServer],
       logger
     );
+    const store = dbHasSomeState ? await db.stateArchive.lastValue() : null;
     return initAndVerifyWeakSujectivityState(
       config,
       db,
-      state,
+      store,
+      wsState,
       logger,
-      checkpoint || {epoch: computeEpochAtSlot(state.latestBlockHeader.slot), root: getLatestBlockRoot(config, state)}
+      checkpoint || {
+        epoch: computeEpochAtSlot(wsState.latestBlockHeader.slot),
+        root: getLatestBlockRoot(config, wsState),
+      }
     );
+  } else if (dbHasSomeState) {
+    return await initStateFromDb(config, db, logger);
   } else {
     const genesisStateFile = args.genesisStateFile || getGenesisFileUrl(args.network || defaultNetwork);
     if (genesisStateFile && !args.forceGenesis) {

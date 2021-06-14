@@ -3,13 +3,12 @@ import {MAX_DEPOSITS, MAX_EFFECTIVE_BALANCE, SLOTS_PER_EPOCH} from "@chainsafe/l
 import {allForks, Epoch, Root} from "@chainsafe/lodestar-types";
 import {ssz} from "@chainsafe/lodestar-types";
 import {Checkpoint} from "@chainsafe/lodestar-types/phase0";
-import {toHexString} from "@chainsafe/ssz";
+import {toHexString, TreeBacked} from "@chainsafe/ssz";
 import {CachedBeaconState} from ".";
 import {
   getActiveValidatorIndices,
   getCurrentEpoch,
   computeEpochAtSlot,
-  getCurrentSlot,
   ZERO_HASH,
   getTotalBalance,
   getChurnLimit,
@@ -77,7 +76,7 @@ export function getLatestBlockRoot(config: IBeaconConfig, state: allForks.Beacon
 
 export function isWithinWeakSubjectivityPeriod(
   config: IBeaconConfig,
-  genesisTime: number,
+  store: TreeBacked<allForks.BeaconState> | null,
   wsState: allForks.BeaconState,
   wsCheckpoint: Checkpoint
 ): boolean {
@@ -92,6 +91,6 @@ export function isWithinWeakSubjectivityPeriod(
     throw new Error(`Epochs do not match.  expected=${wsCheckpoint.epoch}, actual=${wsStateEpoch}`);
   }
   const wsPeriod = computeWeakSubjectivityPeriod(config, wsState);
-  const currentEpoch = computeEpochAtSlot(getCurrentSlot(config, genesisTime));
+  const currentEpoch = computeEpochAtSlot(store ? store.slot : wsState.slot);
   return currentEpoch <= wsStateEpoch + wsPeriod;
 }
