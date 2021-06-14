@@ -79,19 +79,17 @@ export function isWithinWeakSubjectivityPeriod(
   config: IBeaconConfig,
   genesisTime: number,
   wsState: allForks.BeaconState,
-  wsCheckpoint?: Checkpoint
+  wsCheckpoint: Checkpoint
 ): boolean {
   const wsStateEpoch = computeEpochAtSlot(wsState.slot);
   const blockRoot = getLatestBlockRoot(config, wsState);
-  if (wsCheckpoint) {
-    if (!ssz.Root.equals(blockRoot, wsCheckpoint.root)) {
-      throw new Error(
-        `Roots do not match.  expected=${toHexString(wsCheckpoint.root)}, actual=${toHexString(blockRoot)}`
-      );
-    }
-    if (!ssz.Epoch.equals(wsStateEpoch, wsCheckpoint.epoch)) {
-      throw new Error(`Epochs do not match.  expected=${wsCheckpoint.epoch}, actual=${wsStateEpoch}`);
-    }
+  if (!ssz.Root.equals(blockRoot, wsCheckpoint.root)) {
+    throw new Error(
+      `Roots do not match.  expected=${toHexString(wsCheckpoint.root)}, actual=${toHexString(blockRoot)}`
+    );
+  }
+  if (!ssz.Epoch.equals(wsStateEpoch, wsCheckpoint.epoch)) {
+    throw new Error(`Epochs do not match.  expected=${wsCheckpoint.epoch}, actual=${wsStateEpoch}`);
   }
   const wsPeriod = computeWeakSubjectivityPeriod(config, wsState);
   const currentEpoch = computeEpochAtSlot(getCurrentSlot(config, genesisTime));

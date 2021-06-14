@@ -3,7 +3,10 @@ import {TreeBacked} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {fromHex, ILogger} from "@chainsafe/lodestar-utils";
 import {allForks} from "@chainsafe/lodestar-types";
-import {isWithinWeakSubjectivityPeriod} from "@chainsafe/lodestar-beacon-state-transition/lib/allForks/util/weakSubjectivity";
+import {
+  getLatestBlockRoot,
+  isWithinWeakSubjectivityPeriod,
+} from "@chainsafe/lodestar-beacon-state-transition/lib/allForks/util/weakSubjectivity";
 import {
   IBeaconDb,
   Eth1Provider,
@@ -20,13 +23,14 @@ import {getGenesisFileUrl} from "../../networks";
 import {weakSubjectivityServers, getWeakSubjectivityState, WeakSubjectivityServer} from "../weakSubjectivityState";
 import {Checkpoint} from "@chainsafe/lodestar-types/phase0";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
+import {computeEpochAtSlot} from "../../../../beacon-state-transition/lib";
 
 async function initAndVerifyWeakSujectivityState(
   config: IBeaconConfig,
   db: IBeaconDb,
   wsState: TreeBacked<allForks.BeaconState>,
   logger: ILogger,
-  wsCheckpoint?: Checkpoint
+  wsCheckpoint: Checkpoint
 ): Promise<TreeBacked<allForks.BeaconState>> {
   if (!isWithinWeakSubjectivityPeriod(config, wsState.genesisTime, wsState, wsCheckpoint)) {
     throw new Error("Fetched weak subjectivity checkpoint not within weak subjectivity period.");
@@ -70,7 +74,7 @@ export async function initBeaconState(
         ).toString()}`
       );
     }
-    let checkpoint;
+    let checkpoint: Checkpoint | undefined;
     let stateId = "finalized";
     if (args.weakSubjectivityCheckpoint) {
       const wsCheckpointData = args.weakSubjectivityCheckpoint.split(":");
@@ -85,7 +89,13 @@ export async function initBeaconState(
       args.weakSubjectivityServerUrl || weakSubjectivityServers[args.network as WeakSubjectivityServer],
       logger
     );
-    return initAndVerifyWeakSujectivityState(config, db, state, logger, checkpoint);
+    return initAndVerifyWeakSujectivityState(
+      config,
+      db,
+      state,
+      logger,
+      checkpoint || {epoch: computeEpochAtSlot(state.latestBlockHeader.slot), root: getLatestBlockRoot(config, state)}
+    );
   } else {
     const genesisStateFile = args.genesisStateFile || getGenesisFileUrl(args.network || defaultNetwork);
     if (genesisStateFile && !args.forceGenesis) {
