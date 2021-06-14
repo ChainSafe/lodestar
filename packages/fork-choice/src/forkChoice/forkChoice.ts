@@ -548,6 +548,7 @@ export class ForkChoice implements IForkChoice {
   }
 
   private updateJustified(justifiedCheckpoint: phase0.Checkpoint, justifiedBalances: Gwei[]): void {
+    this.synced = false;
     this.justifiedBalances = justifiedBalances;
     this.fcStore.justifiedCheckpoint = justifiedCheckpoint;
   }
