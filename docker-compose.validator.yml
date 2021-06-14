@@ -10,7 +10,7 @@ services:
       - ./keystores:/keystores
       - ./secrets:/secrets
     env_file: .env
-    command: validator --rootDir /data --keystoresDir /keystores --secretsDir /secrets --server http://beacon_node:9596 --logFile /logs/validator.log --logLevelFile debug --logRotate
+    command: validator --rootDir /data --keystoresDir /keystores --secretsDir /secrets --server http://beacon_node:9596 --logFile /logs/validator.log --logLevelFile debug --logRotate --logMaxFiles 5
 
 volumes:
   validator:
