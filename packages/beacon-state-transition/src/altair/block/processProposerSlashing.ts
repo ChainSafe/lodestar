@@ -1,7 +1,7 @@
 import {allForks, altair, phase0} from "@chainsafe/lodestar-types";
-import {CachedBeaconState} from "../../allForks/util";
-import {processProposerSlashingAllForks} from "../../phase0/block/processProposerSlashing";
 import {ForkName} from "@chainsafe/lodestar-params";
+import {CachedBeaconState} from "../../allForks/util";
+import {processProposerSlashing as processProposerSlashingAllForks} from "../../allForks/block";
 
 export function processProposerSlashing(
   state: CachedBeaconState<altair.BeaconState>,
