@@ -30,9 +30,8 @@ export async function validateGossipBlock(
     });
   }
 
-  if (await db.badBlock.has(blockRoot)) {
-    throw new BlockError(block, {code: BlockErrorCode.KNOWN_BAD_BLOCK});
-  }
+  // No need to check for badBlock
+  // Gossip de-duplicates messages so we shouldn't be able to receive a bad block twice
 
   const existingBlock = await db.block.get(blockRoot);
   if (existingBlock?.message.proposerIndex === block.message.proposerIndex) {

@@ -24,6 +24,7 @@ export interface IForkChoice {
    */
   getHeadRoot(): Uint8Array;
   getHead(): IBlockSummary;
+  updateHead(): IBlockSummary;
   /**
    * Retrieves all possible chain heads (leaves of fork choice tree).
    */

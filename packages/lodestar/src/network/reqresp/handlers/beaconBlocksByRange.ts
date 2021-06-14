@@ -19,6 +19,7 @@ export async function* onBeaconBlocksByRange(
   if (requestBody.count < 1) {
     throw new ResponseError(RespStatus.INVALID_REQUEST, "count < 1");
   }
+  // TODO: validate against MIN_EPOCHS_FOR_BLOCK_REQUESTS
   if (requestBody.startSlot < GENESIS_SLOT) {
     throw new ResponseError(RespStatus.INVALID_REQUEST, "startSlot < genesis");
   }
@@ -40,8 +41,10 @@ export async function* injectRecentBlocks(
   chain: IBeaconChain,
   request: phase0.BeaconBlocksByRangeRequest
 ): AsyncGenerator<allForks.SignedBeaconBlock> {
+  let totalBlock = 0;
   let slot = -1;
   for await (const archiveBlock of archiveStream) {
+    totalBlock++;
     yield archiveBlock;
     slot = archiveBlock.message.slot;
   }
@@ -56,7 +59,11 @@ export async function* injectRecentBlocks(
   const blocks = (await chain.getUnfinalizedBlocksAtSlots(slots)) || [];
   for (const block of blocks) {
     if (block) {
+      totalBlock++;
       yield block;
     }
+  }
+  if (totalBlock === 0) {
+    throw new ResponseError(RespStatus.RESOURCE_UNAVAILABLE, "No block found");
   }
 }

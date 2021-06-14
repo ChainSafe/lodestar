@@ -1,6 +1,6 @@
 import {config} from "@chainsafe/lodestar-config/default";
 import {Gwei, phase0, ssz} from "@chainsafe/lodestar-types";
-import bls, {CoordType, init, PublicKey} from "@chainsafe/bls";
+import bls, {CoordType, PublicKey} from "@chainsafe/bls";
 import {fromHexString, List, TreeBacked} from "@chainsafe/ssz";
 import {getBeaconProposerIndex} from "../../src/util/proposer";
 import {allForks, computeEpochAtSlot} from "../../src";
@@ -218,14 +218,4 @@ export function generatePerformanceBlock(): TreeBacked<phase0.SignedBeaconBlock>
     logger.verbose("Loaded block", {slot: signedBlock.message.slot});
   }
   return signedBlock.clone();
-}
-
-export async function initBLS(): Promise<void> {
-  try {
-    await init("blst-native");
-  } catch (e) {
-    // eslint-disable-next-line no-console
-    console.warn("Performance warning: Using fallback wasm BLS implementation");
-    await init("herumi");
-  }
 }

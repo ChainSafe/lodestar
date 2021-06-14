@@ -1,4 +1,4 @@
-import {BenchmarkRunner} from "@chainsafe/lodestar-utils";
+import {BenchmarkRunner} from "@chainsafe/lodestar-utils/test_utils/benchmark";
 import {unshuffleList} from "../../../src";
 
 //          Lightouse  Lodestar

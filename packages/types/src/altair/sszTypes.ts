@@ -13,7 +13,7 @@ import {
   EPOCHS_PER_SLASHINGS_VECTOR,
   EPOCHS_PER_SYNC_COMMITTEE_PERIOD,
 } from "@chainsafe/lodestar-params";
-import {BitVectorType, ContainerType, VectorType, ListType, RootType, BitListType, Vector} from "@chainsafe/ssz";
+import {BitVectorType, ContainerType, VectorType, ListType, RootType, Vector} from "@chainsafe/ssz";
 import {ssz as phase0Ssz} from "../phase0";
 import {ssz as primitiveSsz} from "../primitive";
 import {LazyVariable} from "../utils/lazyVar";
@@ -73,7 +73,7 @@ export const SyncCommitteeContribution = new ContainerType<altair.SyncCommitteeC
     slot: Slot,
     beaconBlockRoot: Root,
     subCommitteeIndex: SubCommitteeIndex,
-    aggregationBits: new BitListType({limit: SYNC_COMMITTEE_SIZE / SYNC_COMMITTEE_SUBNET_COUNT}),
+    aggregationBits: new BitVectorType({length: SYNC_COMMITTEE_SIZE / SYNC_COMMITTEE_SUBNET_COUNT}),
     signature: BLSSignature,
   },
 });

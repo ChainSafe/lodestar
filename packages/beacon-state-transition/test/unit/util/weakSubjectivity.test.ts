@@ -9,7 +9,7 @@ import {expect} from "chai";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {computeWeakSubjectivityPeriod, ETH_TO_GWEI} from "../../../src/allForks/util/weakSubjectivity";
 
-describe("weak subjectivity tests", () => {
+describe.only("weak subjectivity tests", () => {
   describe("getLatestWeakSubjectivityCheckpointEpoch", () => {
     const sandbox = sinon.createSandbox();
     let state: allForks.BeaconState;
@@ -31,13 +31,13 @@ describe("weak subjectivity tests", () => {
       {activeValidatorCount: 262144, slot: 262144, expectedMod: 3328},
     ];
 
+    const validatorPool = Array.from({length: 262144}, () => generateValidator({activation: 0, exit: Infinity}));
+
     for (const testValue of testValues) {
       it(`should have ${testValue.expectedMod} mod for slot ${testValue.slot} and activeValidatorCount of ${testValue.activeValidatorCount}`, () => {
         state.slot = testValue.slot;
         state.finalizedCheckpoint.epoch = state.slot / SLOTS_PER_EPOCH;
-        state.validators = Array.from({length: testValue.activeValidatorCount}, () =>
-          generateValidator({activation: 0, exit: Infinity})
-        ) as List<phase0.Validator>;
+        state.validators = validatorPool.slice(0, testValue.activeValidatorCount) as List<phase0.Validator>;
         const wsCheckpointEpoch = getLatestWeakSubjectivityCheckpointEpoch(config, state);
         expect(wsCheckpointEpoch).to.be.equal(
           state.finalizedCheckpoint.epoch - (state.finalizedCheckpoint.epoch % testValue.expectedMod)

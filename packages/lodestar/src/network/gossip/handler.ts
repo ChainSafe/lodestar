@@ -119,7 +119,7 @@ export class GossipHandler {
   private onAttestation = async (subnet: number, attestation: phase0.Attestation): Promise<void> => {
     // TODO: Review if it's really necessary to check shouldProcessAttestation()
     if (this.attnetsService.shouldProcess(subnet, attestation.data.slot)) {
-      await this.db.attestation.add(attestation);
+      this.db.attestationPool.add(attestation);
     }
   };
 

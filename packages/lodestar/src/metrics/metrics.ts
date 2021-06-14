@@ -1,6 +1,8 @@
 /**
  * @module metrics
  */
+import {getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {allForks} from "@chainsafe/lodestar-types";
 import {collectDefaultMetrics, Registry} from "prom-client";
 import gcStats from "prometheus-gc-stats";
@@ -8,13 +10,26 @@ import {createBeaconMetrics, IBeaconMetrics} from "./metrics/beacon";
 import {createLodestarMetrics, ILodestarMetrics} from "./metrics/lodestar";
 import {IMetricsOptions} from "./options";
 import {RegistryMetricCreator} from "./utils/registryMetricCreator";
+import {createValidatorMonitor, IValidatorMonitor} from "./validatorMonitor";
 
-export type IMetrics = IBeaconMetrics & ILodestarMetrics & {register: Registry};
+export type IMetrics = IBeaconMetrics & ILodestarMetrics & IValidatorMonitor & {register: Registry};
 
-export function createMetrics(opts?: IMetricsOptions, anchorState?: allForks.BeaconState): IMetrics {
+export function createMetrics(
+  opts: IMetricsOptions,
+  config: IBeaconConfig,
+  anchorState: allForks.BeaconState
+): IMetrics {
   const register = new RegistryMetricCreator();
   const beacon = createBeaconMetrics(register);
-  const lodestar = createLodestarMetrics(register, opts?.metadata, anchorState);
+  const lodestar = createLodestarMetrics(register, opts.metadata, anchorState);
+
+  const genesisTime = anchorState.genesisTime;
+  const validatorMonitor = createValidatorMonitor(lodestar, config, genesisTime);
+  // Register a single collect() function to run all validatorMonitor metrics
+  lodestar.validatorMonitor.validatorsTotal.addCollect(() => {
+    const clockSlot = getCurrentSlot(config, genesisTime);
+    validatorMonitor.scrapeMetrics(clockSlot);
+  });
 
   collectDefaultMetrics({
     register,
@@ -28,5 +43,5 @@ export function createMetrics(opts?: IMetricsOptions, anchorState?: allForks.Bea
   // - nodejs_gc_reclaimed_bytes_total: The number of bytes GC has freed
   gcStats(register)();
 
-  return {...beacon, ...lodestar, register};
+  return {...beacon, ...lodestar, ...validatorMonitor, register};
 }

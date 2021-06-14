@@ -10,10 +10,9 @@ import {
   ISignatureSet,
   SignatureSetType,
   verifySignatureSet,
-  zipIndexesInBitList,
+  zipIndexesSyncCommitteeBits,
 } from "../../util";
 import {CachedBeaconState} from "../../allForks/util";
-import {BitList, isTreeBacked, TreeBacked} from "@chainsafe/ssz";
 
 export function processSyncCommittee(
   state: CachedBeaconState<altair.BeaconState>,
@@ -89,13 +88,5 @@ function getParticipantIndices(
   syncAggregate: altair.SyncAggregate
 ): number[] {
   const committeeIndices = state.currSyncCommitteeIndexes;
-
-  // the only time aggregate is not a TreeBacked is when producing a new block
-  return isTreeBacked(syncAggregate)
-    ? zipIndexesInBitList(
-        committeeIndices,
-        syncAggregate.syncCommitteeBits as TreeBacked<BitList>,
-        ssz.altair.SyncCommitteeBits
-      )
-    : committeeIndices.filter((index) => !!syncAggregate.syncCommitteeBits[index]);
+  return zipIndexesSyncCommitteeBits(committeeIndices, syncAggregate.syncCommitteeBits);
 }

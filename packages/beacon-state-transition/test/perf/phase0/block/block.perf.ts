@@ -1,9 +1,10 @@
+import {init} from "@chainsafe/bls";
 import {MAX_VOLUNTARY_EXITS} from "@chainsafe/lodestar-params";
 import {phase0} from "@chainsafe/lodestar-types";
-import {BenchmarkRunner} from "@chainsafe/lodestar-utils";
+import {BenchmarkRunner} from "@chainsafe/lodestar-utils/test_utils/benchmark";
 import {List} from "@chainsafe/ssz";
 import {allForks} from "../../../../src";
-import {generatePerformanceBlock, generatePerfTestCachedBeaconState, initBLS} from "../../util";
+import {generatePerformanceBlock, generatePerfTestCachedBeaconState} from "../../util";
 
 // As of Jun 01 2021
 // Process block
@@ -12,12 +13,14 @@ import {generatePerformanceBlock, generatePerfTestCachedBeaconState, initBLS} fr
 // Process regular block                                                  212.0753 ops/s       4715307 ns/op    100 runs
 // Process blocks with [object Object] validator exits                    1.960872 ops/s   5.099772e+8 ns/op    100 runs
 
-export const runBlockTransitionTests = async (): Promise<void> => {
+export async function runBlockTransitionTests(): Promise<void> {
   const runner = new BenchmarkRunner("Process block", {
-    maxMs: 5 * 60 * 1000,
-    runs: 50,
+    maxMs: 60 * 1000,
+    minMs: 15 * 1000,
+    runs: 64,
   });
-  await initBLS();
+  await init("blst-native");
+
   const originalState = generatePerfTestCachedBeaconState() as allForks.CachedBeaconState<allForks.BeaconState>;
   const signedBlock = generatePerformanceBlock();
   const validatorExitsBlock = signedBlock.clone();
@@ -34,17 +37,14 @@ export const runBlockTransitionTests = async (): Promise<void> => {
 
   const testCases = [
     {signedBlock, name: "Process regular block"},
-    {signedBlock: validatorExitsBlock, name: `Process blocks with ${numValidatorExits} validator exits`},
+    {signedBlock: validatorExitsBlock, name: `Process block with ${numValidatorExits} validator exits`},
   ];
 
-  let state: allForks.CachedBeaconState<allForks.BeaconState>;
   for (const {name, signedBlock} of testCases) {
     await runner.run({
       id: name,
-      beforeEach: () => {
-        state = originalState.clone();
-      },
-      run: () => {
+      beforeEach: () => originalState.clone(),
+      run: (state) => {
         allForks.stateTransition(state, signedBlock, {
           verifyProposer: false,
           verifySignatures: false,
@@ -53,5 +53,6 @@ export const runBlockTransitionTests = async (): Promise<void> => {
       },
     });
   }
+
   runner.done();
-};
+}

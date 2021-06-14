@@ -25,6 +25,18 @@ export async function assembleBody(
   blockSlot: Slot,
   syncAggregateData: {parentSlot: Slot; parentBlockRoot: Root}
 ): Promise<allForks.BeaconBlockBody> {
+  // TODO:
+  // Iterate through the naive aggregation pool and ensure all the attestations from there
+  // are included in the operation pool.
+  // for (const attestation of db.attestationPool.getAll()) {
+  //   try {
+  //     opPool.insertAttestation(attestation);
+  //   } catch (e) {
+  //     // Don't stop block production if there's an error, just create a log.
+  //     logger.error("Attestation did not transfer to op pool", {}, e);
+  //   }
+  // }
+
   const [proposerSlashings, attesterSlashings, attestations, voluntaryExits, {eth1Data, deposits}] = await Promise.all([
     db.proposerSlashing.values({limit: MAX_PROPOSER_SLASHINGS}),
     db.attesterSlashing.values({limit: MAX_ATTESTER_SLASHINGS}),

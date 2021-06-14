@@ -102,15 +102,15 @@ export class SyncCommitteeCache {
     prevBlockRoot: phase0.Root
   ): altair.SyncCommitteeContribution | null {
     const contribution = this.contributionsByRootBySubnetBySlot.get(slot)?.get(subnet)?.get(toHexString(prevBlockRoot));
-    if (contribution) {
-      return {
-        ...contribution,
-        aggregationBits: contribution.aggregationBits as BitList,
-        signature: contribution.signature.toBytes(PointFormat.compressed),
-      };
-    } else {
+    if (!contribution) {
       return null;
     }
+
+    return {
+      ...contribution,
+      aggregationBits: contribution.aggregationBits as BitList,
+      signature: contribution.signature.toBytes(PointFormat.compressed),
+    };
   }
 
   /**

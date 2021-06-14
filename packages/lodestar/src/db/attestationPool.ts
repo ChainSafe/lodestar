@@ -1,0 +1,230 @@
+import {phase0, Slot, ssz} from "@chainsafe/lodestar-types";
+import bls, {PointFormat, Signature} from "@chainsafe/bls";
+import {BitList, readonlyValues, toHexString} from "@chainsafe/ssz";
+import {LodestarError} from "@chainsafe/lodestar-utils";
+
+export enum AttestationPoolErrorCode {
+  /** The given `attestation.data.slot` was too low to be stored. No changes were made. */
+  SLOT_TOO_LOW = "ATTESTATION_POOL_ERROR_SLOT_TOO_LOW",
+  /** Reached max number of unique `AttestationData` per slot. This is a DoS protection function. */
+  REACHED_MAX_PER_SLOT = "ATTESTATION_POOL_ERROR_REACHED_MAX_PER_SLOT",
+  /** A validator signature for the given `attestation.data` was already known. No changes were made. */
+  ALREADY_KNOWN = "ATTESTATION_CACHE_ERROR_ALREADY_KNOWN",
+}
+
+export type AttestationPoolErrorType =
+  | {code: AttestationPoolErrorCode.SLOT_TOO_LOW; slot: Slot; lowestPermissibleSlot: Slot}
+  | {code: AttestationPoolErrorCode.REACHED_MAX_PER_SLOT}
+  | {code: AttestationPoolErrorCode.ALREADY_KNOWN; index: number; slot: Slot};
+
+export class AttestationPoolError extends LodestarError<AttestationPoolErrorType> {}
+
+/**
+ * The number of slots that will be stored in the pool.
+ *
+ * For example, if `SLOTS_RETAINED == 3` and the pool is pruned at slot `6`, then all attestations
+ * at slots less than `4` will be dropped and any future attestation with a slot less than `4`
+ * will be refused.
+ */
+const SLOTS_RETAINED = 3;
+
+/**
+ * The maximum number of distinct `AttestationData` that will be stored in each slot.
+ *
+ * This is a DoS protection measure.
+ */
+const MAX_ATTESTATIONS_PER_SLOT = 16_384;
+
+type AggregateFast = {
+  data: phase0.Attestation["data"];
+  aggregationBits: boolean[];
+  signature: Signature;
+};
+
+/** Hex string of DataRoot `TODO` */
+type DataRootHex = string;
+
+/**
+ * A pool of `Attestation` that is specially designed to store "unaggregated" attestations from
+ * the native aggregation scheme.
+ *
+ * **The `NaiveAggregationPool` does not do any signature or attestation verification. It assumes
+ * that all `Attestation` objects provided are valid.**
+ *
+ * ## Details
+ *
+ * The pool sorts the `Attestation` by `attestation.data.slot`, then by `attestation.data`.
+ *
+ * As each unaggregated attestation is added it is aggregated with any existing `attestation` with
+ * the same `AttestationData`. Considering that the pool only accepts attestations with a single
+ * signature, there should only ever be a single aggregated `Attestation` for any given
+ * `AttestationData`.
+ *
+ * The pool has a capacity for `SLOTS_RETAINED` slots, when a new `attestation.data.slot` is
+ * provided, the oldest slot is dropped and replaced with the new slot. The pool can also be
+ * pruned by supplying a `current_slot`; all existing attestations with a slot lower than
+ * `current_slot - SLOTS_RETAINED` will be removed and any future attestation with a slot lower
+ * than that will also be refused. Pruning is done automatically based upon the attestations it
+ * receives and it can be triggered manually.
+ */
+export class AttestationPool {
+  private readonly aggregateByRootBySlot = new Map<phase0.Slot, Map<DataRootHex, AggregateFast>>();
+  private lowestPermissibleSlot = 0;
+
+  // TODO: Add metrics for total num of attestations in the pool
+
+  /**
+   * Accepts an `VerifiedUnaggregatedAttestation` and attempts to apply it to the "naive
+   * aggregation pool".
+   *
+   * The naive aggregation pool is used by local validators to produce
+   * `SignedAggregateAndProof`.
+   *
+   * If the attestation is too old (low slot) to be included in the pool it is simply dropped
+   * and no error is returned.
+   *
+   * Expects the attestation to be fully validated:
+   * - Valid signature
+   * - Consistent bitlength
+   * - Valid committeeIndex
+   * - Valid data
+   */
+  add(attestation: phase0.Attestation): void {
+    const slot = attestation.data.slot;
+    const lowestPermissibleSlot = this.lowestPermissibleSlot;
+
+    // Reject any attestations that are too old.
+    if (slot < lowestPermissibleSlot) {
+      throw new AttestationPoolError({code: AttestationPoolErrorCode.SLOT_TOO_LOW, slot, lowestPermissibleSlot});
+    }
+
+    const dataRoot = ssz.phase0.AttestationData.hashTreeRoot(attestation.data);
+    const dataRootHex = toHexString(dataRoot);
+
+    // Pre-aggregate the contribution with existing items
+    let aggregateByRoot = this.aggregateByRootBySlot.get(slot);
+    if (!aggregateByRoot) {
+      aggregateByRoot = new Map<DataRootHex, AggregateFast>();
+      this.aggregateByRootBySlot.set(slot, aggregateByRoot);
+    } else {
+      if (aggregateByRoot.size >= MAX_ATTESTATIONS_PER_SLOT) {
+        throw new AttestationPoolError({code: AttestationPoolErrorCode.REACHED_MAX_PER_SLOT});
+      }
+    }
+
+    const aggregate = aggregateByRoot.get(dataRootHex);
+    if (aggregate) {
+      // Aggregate mutating
+      aggregateAttestationInto(aggregate, attestation);
+    } else {
+      // Create new aggregate
+      aggregateByRoot.set(dataRootHex, attestationToAggregate(attestation));
+    }
+  }
+
+  /**
+   * For validator API to get an aggregate
+   */
+  getAggregate(slot: phase0.Slot, dataRoot: phase0.Root): phase0.Attestation {
+    const dataRootHex = toHexString(dataRoot);
+    const aggregate = this.aggregateByRootBySlot.get(slot)?.get(dataRootHex);
+    if (!aggregate) {
+      // TODO: Add metric for missing aggregates
+      throw Error(`No attestation for slot=${slot} dataRoot=${dataRootHex}`);
+    }
+
+    return fastToAttestation(aggregate);
+  }
+
+  /**
+   * Removes any attestations with a slot lower than `current_slot` and bars any future
+   * attestations with a slot lower than `current_slot - SLOTS_RETAINED`.
+   */
+  prune(currentSlot: Slot): void {
+    const lowestPermissibleSlot = Math.max(currentSlot - SLOTS_RETAINED, 0);
+
+    // No need to prune if the lowest permissible slot has not changed and the queue length is less than the maximum
+    if (this.lowestPermissibleSlot == lowestPermissibleSlot && this.aggregateByRootBySlot.size <= SLOTS_RETAINED) {
+      return;
+    }
+
+    this.lowestPermissibleSlot = lowestPermissibleSlot;
+
+    // Remove the oldest slots to keep a max of `SLOTS_RETAINED` slots
+    const slots = Array.from(this.aggregateByRootBySlot.keys());
+    const slotsToDelete = slots.sort().reverse().slice(SLOTS_RETAINED);
+    for (const slot of slotsToDelete) {
+      this.aggregateByRootBySlot.delete(slot);
+    }
+  }
+
+  /**
+   * Get all attestations optionally filtered by `attestation.data.slot`
+   * @param bySlot slot to filter, `bySlot === attestation.data.slot`
+   */
+  getAll(bySlot?: Slot): phase0.Attestation[] {
+    const attestations: phase0.Attestation[] = [];
+
+    const aggregateByRoots =
+      bySlot === undefined ? Array.from(this.aggregateByRootBySlot.values()) : [this.aggregateByRootBySlot.get(bySlot)];
+
+    for (const aggregateByRoot of aggregateByRoots) {
+      if (aggregateByRoot) {
+        for (const aggFast of aggregateByRoot.values()) {
+          attestations.push(fastToAttestation(aggFast));
+        }
+      }
+    }
+
+    return attestations;
+  }
+}
+
+// - Retrieve agg attestations by slot and data root
+// - Insert attestations coming from gossip and API
+
+/**
+ * Aggregate a new contribution into `aggregate` mutating it
+ */
+function aggregateAttestationInto(aggregate: AggregateFast, attestation: phase0.Attestation): void {
+  for (const [index, participated] of Array.from(readonlyValues(attestation.aggregationBits)).entries()) {
+    if (participated) {
+      if (aggregate.aggregationBits[index] === true) {
+        throw new AttestationPoolError({
+          code: AttestationPoolErrorCode.ALREADY_KNOWN,
+          index,
+          slot: attestation.data.slot,
+        });
+      }
+
+      aggregate.aggregationBits[index] = true;
+    }
+  }
+
+  aggregate.signature = Signature.aggregate([
+    aggregate.signature,
+    bls.Signature.fromBytes(attestation.signature.valueOf() as Uint8Array),
+  ]);
+}
+
+/**
+ * Format `contribution` into an efficient `aggregate` to add more contributions in with aggregateContributionInto()
+ */
+function attestationToAggregate(attestation: phase0.Attestation): AggregateFast {
+  return {
+    data: attestation.data,
+    aggregationBits: Array.from(readonlyValues(attestation.aggregationBits)),
+    signature: bls.Signature.fromBytes(attestation.signature.valueOf() as Uint8Array),
+  };
+}
+
+/**
+ * Unwrap AggregateFast to phase0.Attestation
+ */
+function fastToAttestation(aggFast: AggregateFast): phase0.Attestation {
+  return {
+    data: aggFast.data,
+    aggregationBits: aggFast.aggregationBits as BitList,
+    signature: aggFast.signature.toBytes(PointFormat.compressed),
+  };
+}

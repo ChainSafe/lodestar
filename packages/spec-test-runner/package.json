@@ -12,7 +12,7 @@
   "bugs": {
     "url": "https://github.com/ChainSafe/lodestar/issues"
   },
-  "version": "0.23.0",
+  "version": "0.24.2",
   "main": "lib/index.js",
   "files": [
     "lib/**/*.d.ts",
@@ -22,13 +22,14 @@
   "scripts": {
     "check-types": "tsc --noEmit",
     "download-test-cases": "node -r ts-node/register test/downloadTests.ts",
+    "test:ssz-generic": "mocha 'test/spec/ssz/generic/index.test.ts'",
     "test:ssz-minimal": "LODESTAR_PRESET=minimal mocha 'test/spec/ssz/**/*minimal.test.ts'",
-    "test:ssz-mainnet": "exit",
-    "test:ssz": "yarn test:ssz-minimal && yarn test:ssz-mainnet",
+    "test:ssz-mainnet": "mocha 'test/spec/ssz/**/*mainnet.test.ts'",
+    "test:ssz": "yarn test:ssz-generic && yarn test:ssz-minimal && yarn test:ssz-mainnet",
     "test:bls": "mocha 'test/spec/bls/**/*.test.ts'",
     "test:spec": "yarn test:ssz && yarn test:bls && yarn test:spec-phase0 && yarn test:spec-altair",
     "test:spec-altair-minimal": "LODESTAR_PRESET=minimal mocha 'test/spec/altair/**/*minimal.test.ts'",
-    "test:spec-altair-mainnet": "exit",
+    "test:spec-altair-mainnet": "mocha 'test/spec/altair/**/*mainnet.test.ts'",
     "test:spec-phase0-minimal": "LODESTAR_PRESET=minimal mocha 'test/spec/phase0/**/*minimal.test.ts'",
     "test:spec-phase0-mainnet": "mocha 'test/spec/phase0/**/*mainnet.test.ts'",
     "test:spec-altair": "yarn test:spec-altair-minimal && yarn test:spec-altair-mainnet",
@@ -39,15 +40,15 @@
   "dependencies": {
     "@chainsafe/bit-utils": "0.1.6",
     "@chainsafe/bls": "6.0.1",
-    "@chainsafe/lodestar": "^0.23.0",
-    "@chainsafe/lodestar-beacon-state-transition": "^0.23.0",
-    "@chainsafe/lodestar-config": "^0.23.0",
-    "@chainsafe/lodestar-params": "^0.23.0",
-    "@chainsafe/lodestar-spec-test-util": "^0.23.0",
-    "@chainsafe/lodestar-types": "^0.23.0",
-    "@chainsafe/lodestar-utils": "^0.23.0",
-    "@chainsafe/lodestar-validator": "^0.23.0",
-    "@chainsafe/ssz": "^0.8.7",
+    "@chainsafe/lodestar": "^0.24.2",
+    "@chainsafe/lodestar-beacon-state-transition": "^0.24.2",
+    "@chainsafe/lodestar-config": "^0.24.2",
+    "@chainsafe/lodestar-params": "^0.24.2",
+    "@chainsafe/lodestar-spec-test-util": "^0.24.2",
+    "@chainsafe/lodestar-types": "^0.24.2",
+    "@chainsafe/lodestar-utils": "^0.24.2",
+    "@chainsafe/lodestar-validator": "^0.24.2",
+    "@chainsafe/ssz": "^0.8.9",
     "@types/yargs": "^13.0.2"
   },
   "keywords": [

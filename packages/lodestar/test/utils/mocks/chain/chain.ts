@@ -187,6 +187,7 @@ function mockForkChoice(): IForkChoice {
     getAncestor: () => root,
     getHeadRoot: () => root,
     getHead: () => blockSummary,
+    updateHead: () => blockSummary,
     getHeads: () => [blockSummary],
     getFinalizedCheckpoint: () => checkpoint,
     getJustifiedCheckpoint: () => checkpoint,
