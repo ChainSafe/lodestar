@@ -32,7 +32,6 @@ import {IForkChoice, ILatestMessage, IQueuedAttestation} from "./interface";
  * This class MUST be used with the following considerations:
  *
  * - Time is not updated automatically, updateTime MUST be called every slot
- * - Justified balances are not updated automatically, updateBalances MUST be called when Store justifiedCheckpoint is updated
  */
 export class ForkChoice implements IForkChoice {
   config: IBeaconConfig;
@@ -148,7 +147,23 @@ export class ForkChoice implements IForkChoice {
   }
 
   /**
+   * Get the cached head root
+   */
+  getHeadRoot(): Uint8Array {
+    const head = this.getHead();
+    return head.blockRoot;
+  }
+
+  /**
+   * Get the cached head
+   */
+  getHead(): IBlockSummary {
+    return this.head;
+  }
+
+  /**
    * Run the fork choice rule to determine the head.
+   * Update the head cache.
    *
    * ## Specification
    *
@@ -156,15 +171,6 @@ export class ForkChoice implements IForkChoice {
    *
    * https://github.com/ethereum/eth2.0-specs/blob/v0.12.2/specs/phase0/fork-choice.md#get_head
    */
-  getHeadRoot(): Uint8Array {
-    const head = this.getHead();
-    return head.blockRoot;
-  }
-
-  getHead(): IBlockSummary {
-    return this.head;
-  }
-
   updateHead(): IBlockSummary {
     // balances is not changed but votes are changed
     if (!this.synced) {
