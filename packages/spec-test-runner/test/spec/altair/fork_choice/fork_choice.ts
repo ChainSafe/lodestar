@@ -74,7 +74,7 @@ export function runForkChoiceGetHead(presetName: PresetName): void {
             finalizedCheckpointRoot,
             bestJustifiedCheckpoint,
           } = step.checks;
-          const head = forkchoice.getHead();
+          const head = forkchoice.updateHead();
           expect(head.slot).to.be.equal(Number(expectedHead.slot), `Invalid head slot at step ${i}`);
           expect(toHexString(head.blockRoot)).to.be.equal(expectedHead.root, `Invalid head root at step ${i}`);
           // time in spec mapped to Slot in our forkchoice implementation

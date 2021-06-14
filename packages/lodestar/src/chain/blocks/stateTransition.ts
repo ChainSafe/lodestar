@@ -107,6 +107,7 @@ export async function runStateTransition(
     justifiedBalances = getEffectiveBalances(justifiedState);
   }
   forkChoice.onBlock(job.signedBlock.message, postState, justifiedBalances);
+  forkChoice.updateHead();
 
   if (!job.reprocess) {
     if (postSlot % SLOTS_PER_EPOCH === 0) {
