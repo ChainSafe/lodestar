@@ -28,7 +28,7 @@ export async function validateGossipAttesterSlashing(
 
   try {
     // verifySignature = false, verified in batch below
-    phase0.assertValidAttesterSlashing(state, attesterSlashing, false);
+    allForks.assertValidAttesterSlashing(state, attesterSlashing, false);
   } catch (e) {
     throw new AttesterSlashingError({
       code: AttesterSlashingErrorCode.INVALID,
