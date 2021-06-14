@@ -53,6 +53,11 @@ export const logOptions: ICliCommandOptions<ILogArgs> = {
     description: "Logger format - Prefix module field with a string ID",
     type: "string",
   },
+
+  logRotate: {
+    description: "Daily rotate log file to keep last 5 (including current)",
+    type: "boolean",
+  },
 };
 
 export const beaconPathsOptions: ICliCommandOptions<IBeaconPaths> = {
