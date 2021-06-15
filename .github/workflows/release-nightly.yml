@@ -9,7 +9,6 @@ on:
   push:
     branches:
       - master
-      - nightly-release
 
 jobs:
   publish:
