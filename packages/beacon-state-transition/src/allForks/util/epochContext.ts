@@ -439,19 +439,16 @@ export class EpochContext {
 
     const epochStartSlot = computeStartSlotAtEpoch(epoch);
     for (let slot = epochStartSlot; slot < epochStartSlot + SLOTS_PER_EPOCH; slot++) {
-      const committeeCount = this.getCommitteeCountAtSlot(slot);
-      for (let i = 0; i < committeeCount; i++) {
-        const committee = this.getBeaconCommittee(slot, i);
-        if (committee.includes(validatorIndex)) {
-          return {
-            validators: committee as List<number>,
-            committeeIndex: i,
-            slot,
-          };
-        }
-      }
+      const slotCommittee = this._getSlotCommittees(slot);
+      const committeeIndex = slotCommittee.findIndex((v) => v.includes(validatorIndex));
+      const committee = slotCommittee[committeeIndex];
+      if (!committee) continue;
+      return {
+        validators: committee as List<number>,
+        committeeIndex,
+        slot,
+      };
     }
-
     return null;
   }
 
