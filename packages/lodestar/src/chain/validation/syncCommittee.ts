@@ -135,8 +135,8 @@ function getIndexInSubCommittee(
 
   const syncComitteeValidatorIndexMap =
     dataPeriod === statePeriod + 1
-      ? headState.nextSyncCommittee?.validatorIndexMap
-      : headState.currentSyncCommittee?.validatorIndexMap;
+      ? headState.nextSyncCommittee.validatorIndexMap
+      : headState.currentSyncCommittee.validatorIndexMap;
 
   const indexesInCommittee = syncComitteeValidatorIndexMap?.get(data.validatorIndex);
   if (indexesInCommittee === undefined) {

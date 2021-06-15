@@ -25,7 +25,12 @@ import {
   IParticipationStatus,
 } from "./cachedEpochParticipation";
 import {ForkName} from "@chainsafe/lodestar-params";
-import {convertToIndexedSyncCommittee, createIndexedSyncCommittee, IndexedSyncCommittee} from "./indexedSyncCommittee";
+import {
+  convertToIndexedSyncCommittee,
+  createIndexedSyncCommittee,
+  emptyIndexedSyncCommittee,
+  IndexedSyncCommittee,
+} from "./indexedSyncCommittee";
 import {getNextSyncCommittee} from "../../altair/epoch/sync_committee";
 import {ssz} from "@chainsafe/lodestar-types";
 
@@ -60,16 +65,17 @@ export function createCachedBeaconState<T extends allForks.BeaconState>(
   const cachedBalances = MutableVector.from(readonlyValues(state.balances));
   let cachedPreviousParticipation, cachedCurrentParticipation;
   const forkName = config.getForkName(state.slot);
-  const isOnPhase0 = forkName === ForkName.phase0;
-  let currIndexedSyncCommittee: IndexedSyncCommittee | undefined;
-  let nextIndexedSyncCommittee: IndexedSyncCommittee | undefined;
+  let currIndexedSyncCommittee: IndexedSyncCommittee;
+  let nextIndexedSyncCommittee: IndexedSyncCommittee;
   const epochCtx = createEpochContext(config, state, cachedValidators, opts);
-  if (isOnPhase0) {
+  if (forkName === ForkName.phase0) {
     const emptyParticipationStatus = {
       timelyHead: false,
       timelySource: false,
       timelyTarget: false,
     };
+    currIndexedSyncCommittee = emptyIndexedSyncCommittee;
+    nextIndexedSyncCommittee = emptyIndexedSyncCommittee;
     cachedPreviousParticipation = MutableVector.from(
       Array.from({length: cachedValidators.length}, () => emptyParticipationStatus)
     );
@@ -119,8 +125,8 @@ export class BeaconStateContext<T extends allForks.BeaconState> {
   previousEpochParticipation: CachedEpochParticipation & List<ParticipationFlags>;
   currentEpochParticipation: CachedEpochParticipation & List<ParticipationFlags>;
   // phase0 has no sync committee
-  currentSyncCommittee: IndexedSyncCommittee | undefined;
-  nextSyncCommittee: IndexedSyncCommittee | undefined;
+  currentSyncCommittee: IndexedSyncCommittee;
+  nextSyncCommittee: IndexedSyncCommittee;
 
   constructor(
     type: ContainerType<T>,
@@ -129,8 +135,8 @@ export class BeaconStateContext<T extends allForks.BeaconState> {
     balanceCache: MutableVector<T["balances"][number]>,
     previousEpochParticipationCache: MutableVector<IParticipationStatus>,
     currentEpochParticipationCache: MutableVector<IParticipationStatus>,
-    currentSyncCommittee: IndexedSyncCommittee | undefined,
-    nextSyncCommittee: IndexedSyncCommittee | undefined,
+    currentSyncCommittee: IndexedSyncCommittee,
+    nextSyncCommittee: IndexedSyncCommittee,
     epochCtx: EpochContext
   ) {
     this.config = epochCtx.config;

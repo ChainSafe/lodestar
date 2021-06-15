@@ -1,4 +1,4 @@
-import {altair, phase0} from "@chainsafe/lodestar-types";
+import {altair, phase0, ssz} from "@chainsafe/lodestar-types";
 import {TreeBacked, Vector} from "@chainsafe/ssz";
 import {PubkeyIndexMap} from "./epochContext";
 
@@ -41,6 +41,12 @@ export class IndexedSyncCommittee implements altair.SyncCommittee {
     return new IndexedSyncCommittee(this.treeBacked.clone(), this.validatorIndices, this.validatorIndexMap);
   }
 }
+
+export const emptyIndexedSyncCommittee = new IndexedSyncCommittee(
+  ssz.altair.SyncCommittee.defaultTreeBacked(),
+  [],
+  new Map()
+);
 
 export function createIndexedSyncCommittee(
   pubkey2index: PubkeyIndexMap,
