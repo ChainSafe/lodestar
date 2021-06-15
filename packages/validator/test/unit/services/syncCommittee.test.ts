@@ -5,7 +5,7 @@ import bls from "@chainsafe/bls";
 import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 import {config as mainnetConfig} from "@chainsafe/lodestar-config/default";
 import {SyncCommitteeService} from "../../../src/services/syncCommittee";
-import {SyncDutyAndProof} from "../../../src/services/syncCommitteeDuties";
+import {SyncDutyAndProofs} from "../../../src/services/syncCommitteeDuties";
 import {ValidatorStore} from "../../../src/services/validatorStore";
 import {getApiClientStub} from "../../utils/apiStub";
 import {testLogger} from "../../utils/logger";
@@ -53,15 +53,14 @@ describe("SyncCommitteeService", function () {
     const syncCommitteeSignature = ssz.altair.SyncCommitteeSignature.defaultValue();
     const contribution = ssz.altair.SyncCommitteeContribution.defaultValue();
     const contributionAndProof = ssz.altair.SignedContributionAndProof.defaultValue();
-    const duties: SyncDutyAndProof[] = [
+    const duties: SyncDutyAndProofs[] = [
       {
         duty: {
           pubkey: pubkeys[0],
           validatorIndex: 0,
-          validatorSyncCommitteeIndex: 7,
+          validatorSyncCommitteeIndices: [7],
         },
-        selectionProof: ZERO_HASH,
-        subCommitteeIndex: 0,
+        selectionProofs: [{selectionProof: ZERO_HASH, subCommitteeIndex: 0}],
       },
     ];
 

@@ -21,19 +21,16 @@ const ALTAIR_FORK_LOOKAHEAD_EPOCHS = 1;
 /** How many epochs prior from a subscription starting, ask the node to subscribe */
 const SUBSCRIPTIONS_LOOKAHEAD_EPOCHS = 2;
 
-export type SyncDutySubCommittee = {
-  pubkey: routes.validator.SyncDuty["pubkey"];
-  validatorIndex: routes.validator.SyncDuty["validatorIndex"];
-  /** A single index of the validator in the sync committee. */
-  validatorSyncCommitteeIndex: number;
-};
-
-/** Neatly joins SyncDuty with the locally-generated `selectionProof`. */
-export type SyncDutyAndProof = {
-  duty: SyncDutySubCommittee;
+export type SyncSelectionProof = {
   /** This value is only set to not null if the proof indicates that the validator is an aggregator. */
   selectionProof: BLSSignature | null;
   subCommitteeIndex: number;
+};
+
+/** Neatly joins SyncDuty with the locally-generated `selectionProof`. */
+export type SyncDutyAndProofs = {
+  duty: routes.validator.SyncDuty;
+  selectionProofs: SyncSelectionProof[];
 };
 
 // To assist with readability
@@ -68,25 +65,18 @@ export class SyncCommitteeDutiesService {
    * 100 to 200,then you would actually produce signatures in slot 99 - 199.
    * https://github.com/ethereum/eth2.0-specs/pull/2400
    */
-  async getDutiesAtSlot(slot: Slot): Promise<SyncDutyAndProof[]> {
+  async getDutiesAtSlot(slot: Slot): Promise<SyncDutyAndProofs[]> {
     const period = computeSyncPeriodAtSlot(slot + 1); // See note above for the +1 offset
-    const duties: SyncDutyAndProof[] = [];
+    const duties: SyncDutyAndProofs[] = [];
 
     const dutiesByIndex = this.dutiesByIndexByPeriod.get(period);
     if (dutiesByIndex) {
       for (const dutyAtPeriod of dutiesByIndex.values()) {
         // Validator always has a duty during the entire period
-        for (const index of dutyAtPeriod.duty.validatorSyncCommitteeIndices) {
-          duties.push(
-            // Compute a different DutyAndProof for each validatorSyncCommitteeIndices. Unwrapping here simplifies downstream code.
-            // getDutyAndProof() is async beacuse it may have to fetch the fork but should never happen in practice
-            await this.getDutyAndProof(slot, {
-              pubkey: dutyAtPeriod.duty.pubkey,
-              validatorIndex: dutyAtPeriod.duty.validatorIndex,
-              validatorSyncCommitteeIndex: index,
-            })
-          );
-        }
+        duties.push({
+          duty: dutyAtPeriod.duty,
+          selectionProofs: await this.getSelectionProofs(slot, dutyAtPeriod.duty),
+        });
       }
     }
 
@@ -225,22 +215,23 @@ export class SyncCommitteeDutiesService {
     this.logger.debug("Downloaded SyncDuties", {epoch, dependentRoot: toHexString(dependentRoot), count});
   }
 
-  private async getDutyAndProof(slot: Slot, duty: SyncDutySubCommittee): Promise<SyncDutyAndProof> {
+  private async getSelectionProofs(slot: Slot, duty: routes.validator.SyncDuty): Promise<SyncSelectionProof[]> {
     // TODO: Cache this value
     const SYNC_COMMITTEE_SUBNET_SIZE = Math.floor(SYNC_COMMITTEE_SIZE / SYNC_COMMITTEE_SUBNET_COUNT);
-    const subCommitteeIndex = Math.floor(duty.validatorSyncCommitteeIndex / SYNC_COMMITTEE_SUBNET_SIZE);
-    const selectionProof = await this.validatorStore.signSyncCommitteeSelectionProof(
-      // Fast indexing with precomputed pubkeyHex. Fallback to toHexString(duty.pubkey)
-      this.indicesService.index2pubkey.get(duty.validatorIndex) ?? duty.pubkey,
-      slot,
-      subCommitteeIndex
-    );
-    return {
-      duty,
-      // selectionProof === null is used to check if is aggregator
-      selectionProof: isSyncCommitteeAggregator(selectionProof) ? selectionProof : null,
-      subCommitteeIndex,
-    };
+    // Fast indexing with precomputed pubkeyHex. Fallback to toHexString(duty.pubkey)
+    const pubkey = this.indicesService.index2pubkey.get(duty.validatorIndex) ?? duty.pubkey;
+
+    const dutiesAndProofs: SyncSelectionProof[] = [];
+    for (const index of duty.validatorSyncCommitteeIndices) {
+      const subCommitteeIndex = Math.floor(index / SYNC_COMMITTEE_SUBNET_SIZE);
+      const selectionProof = await this.validatorStore.signSyncCommitteeSelectionProof(pubkey, slot, subCommitteeIndex);
+      dutiesAndProofs.push({
+        // selectionProof === null is used to check if is aggregator
+        selectionProof: isSyncCommitteeAggregator(selectionProof) ? selectionProof : null,
+        subCommitteeIndex,
+      });
+    }
+    return dutiesAndProofs;
   }
 
   /** Run at least once per period to prune duties map */

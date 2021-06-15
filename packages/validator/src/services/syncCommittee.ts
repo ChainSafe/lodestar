@@ -5,8 +5,8 @@ import {ILogger, prettyBytes, sleep} from "@chainsafe/lodestar-utils";
 import {Api} from "@chainsafe/lodestar-api";
 import {extendError, notAborted, IClock} from "../util";
 import {ValidatorStore} from "./validatorStore";
-import {SyncCommitteeDutiesService, SyncDutyAndProof} from "./syncCommitteeDuties";
-import {groupSyncDutiesBySubCommitteeIndex} from "./utils";
+import {SyncCommitteeDutiesService, SyncDutyAndProofs} from "./syncCommitteeDuties";
+import {groupSyncDutiesBySubCommitteeIndex, SubCommitteeDuty} from "./utils";
 import {IndicesService} from "./indices";
 import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 
@@ -38,7 +38,6 @@ export class SyncCommitteeService {
 
     // Fetch info first so a potential delay is absorved by the sleep() below
     const dutiesAtSlot = await this.dutiesService.getDutiesAtSlot(slot);
-    const dutiesBySubcommitteeIndex = groupSyncDutiesBySubCommitteeIndex(dutiesAtSlot);
     if (dutiesAtSlot.length === 0) {
       return;
     }
@@ -56,6 +55,7 @@ export class SyncCommitteeService {
 
     // await for all so if the Beacon node is overloaded it auto-throttles
     // TODO: This approach is convervative to reduce the node's load, review
+    const dutiesBySubcommitteeIndex = groupSyncDutiesBySubCommitteeIndex(dutiesAtSlot);
     await Promise.all(
       Array.from(dutiesBySubcommitteeIndex.entries()).map(async ([subcommitteeIndex, duties]) => {
         if (duties.length === 0) return;
@@ -78,7 +78,7 @@ export class SyncCommitteeService {
    * Only one `SyncCommittee` is downloaded from the BN. It is then signed by each
    * validator and the list of individually-signed `SyncCommittee` objects is returned to the BN.
    */
-  private async produceAndPublishSyncCommittees(slot: Slot, duties: SyncDutyAndProof[]): Promise<Root> {
+  private async produceAndPublishSyncCommittees(slot: Slot, duties: SyncDutyAndProofs[]): Promise<Root> {
     const logCtx = {slot};
 
     // /eth/v1/beacon/blocks/:blockId/root -> at slot -1
@@ -131,7 +131,7 @@ export class SyncCommitteeService {
     slot: Slot,
     subcommitteeIndex: CommitteeIndex,
     beaconBlockRoot: Root,
-    duties: SyncDutyAndProof[]
+    duties: SubCommitteeDuty[]
   ): Promise<void> {
     const logCtx = {slot, index: subcommitteeIndex};
 
