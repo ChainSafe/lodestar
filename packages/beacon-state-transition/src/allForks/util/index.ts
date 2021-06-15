@@ -7,3 +7,4 @@ export * from "./epochStakeSummary";
 export * from "./flat";
 export * from "./cachedValidatorList";
 export * from "./cachedBeaconState";
+export * from "./indexedSyncCommittee";

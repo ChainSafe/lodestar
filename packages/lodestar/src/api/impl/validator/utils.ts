@@ -18,9 +18,9 @@ export function getSyncComitteeValidatorIndexMap(
   if ((state as CachedBeaconState<allForks.BeaconState>).epochCtx) {
     switch (requestPeriod) {
       case statePeriod:
-        return (state as CachedBeaconState<altair.BeaconState>).currSyncComitteeValidatorIndexMap;
+        return (state as CachedBeaconState<altair.BeaconState>).currentSyncCommittee.validatorIndexMap;
       case statePeriod + 1:
-        return (state as CachedBeaconState<altair.BeaconState>).nextSyncComitteeValidatorIndexMap;
+        return (state as CachedBeaconState<altair.BeaconState>).nextSyncCommittee.validatorIndexMap;
       default:
         throw new ApiError(400, "Epoch out of bounds");
     }

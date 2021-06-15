@@ -56,12 +56,6 @@ export function generateState(
         });
       })
     : generateValidators(4, validatorOpts);
-  // const validators = generateValidators(4, {
-  //   activationEpoch: 0,
-  //   effectiveBalance: config.params.MAX_EFFECTIVE_BALANCE,
-  //   withdrawableEpoch: FAR_FUTURE_EPOCH,
-  //   exitEpoch: FAR_FUTURE_EPOCH,
-  // }) as phase0.Validator[];
   const defaultState: phase0.BeaconState = {
     genesisTime: Math.floor(Date.now() / 1000),
     genesisValidatorsRoot: ZERO_HASH,

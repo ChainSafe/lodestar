@@ -87,6 +87,6 @@ function getParticipantIndices(
   state: CachedBeaconState<altair.BeaconState>,
   syncAggregate: altair.SyncAggregate
 ): number[] {
-  const committeeIndices = state.currSyncCommitteeIndexes;
+  const committeeIndices = state.currentSyncCommittee.validatorIndices;
   return zipIndexesSyncCommitteeBits(committeeIndices, syncAggregate.syncCommitteeBits);
 }
