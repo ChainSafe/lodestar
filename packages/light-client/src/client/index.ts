@@ -7,7 +7,7 @@ import {computeSyncPeriodAtSlot, ZERO_HASH} from "@chainsafe/lodestar-beacon-sta
 import {TreeOffsetProof} from "@chainsafe/persistent-merkle-tree";
 import {Path, toHexString} from "@chainsafe/ssz";
 import {BeaconBlockHeader} from "@chainsafe/lodestar-types/phase0";
-import {IClock} from "../utils/clock";
+import {Clock, IClock} from "../utils/clock";
 import {deserializeSyncCommittee, isEmptyHeader, serializeSyncCommittee, sumBits} from "../utils/utils";
 import {LightClientStoreFast} from "./types";
 import {chunkifyInclusiveRange} from "../utils/chunkify";
@@ -17,6 +17,8 @@ import {validateLightClientUpdate} from "./validation";
 import {isBetterUpdate} from "./update";
 // Re-export event types
 export {LightclientEvent} from "./events";
+
+type Optional<T, K extends keyof T> = Partial<T> & Omit<T, K>;
 
 export type LightclientModules = {
   config: IBeaconConfig;
@@ -47,7 +49,7 @@ export class Lightclient {
   }
 
   static async initializeFromTrustedStateRoot(
-    modules: LightclientModules,
+    modules: Optional<LightclientModules, "clock" | "genesisValidatorsRoot">,
     trustedRoot: {stateRoot: Root; slot: Slot}
   ): Promise<Lightclient> {
     const {beaconApiUrl, config} = modules;
@@ -56,6 +58,14 @@ export class Lightclient {
     const api = getClient(config, {baseUrl: beaconApiUrl});
 
     const paths = getSyncCommitteesProofPaths();
+    // if the clock or genesisValidatorsRoot isn't supplied
+    // then add the required fields to the requested proof paths
+    if (!modules.clock) {
+      paths.push(["genesisTime"]);
+    }
+    if (!modules.genesisValidatorsRoot) {
+      paths.push(["genesisValidatorsRoot"]);
+    }
     const proof = await api.lightclient.getStateProof(toHexString(stateRoot), paths);
 
     const state = ssz.altair.BeaconState.createTreeBackedFromProof(stateRoot as Uint8Array, proof.data);
@@ -67,7 +77,17 @@ export class Lightclient {
         nextSyncCommittee: deserializeSyncCommittee(state.nextSyncCommittee),
       },
     };
-    return new Lightclient(modules, store);
+    const newModules = {...modules} as LightclientModules;
+    // if the clock or genesisValidatorsRoot isn't supplied
+    // then set them in the new modules object
+    if (!modules.clock) {
+      newModules.clock = new Clock(config, state.genesisTime);
+    }
+    if (!modules.genesisValidatorsRoot) {
+      newModules.genesisValidatorsRoot = state.genesisValidatorsRoot.valueOf() as Root;
+    }
+
+    return new Lightclient(newModules, store);
   }
 
   static initializeFromTrustedSnapshot(modules: LightclientModules, snapshot: altair.LightClientSnapshot): Lightclient {
