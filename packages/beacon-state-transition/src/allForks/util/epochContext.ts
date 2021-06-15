@@ -442,12 +442,13 @@ export class EpochContext {
       const slotCommittee = this._getSlotCommittees(slot);
       const committeeIndex = slotCommittee.findIndex((v) => v.includes(validatorIndex));
       const committee = slotCommittee[committeeIndex];
-      if (!committee) continue;
-      return {
-        validators: committee as List<number>,
-        committeeIndex,
-        slot,
-      };
+      if (committee) {
+        return {
+          validators: committee as List<number>,
+          committeeIndex,
+          slot,
+        };
+      }
     }
     return null;
   }
