@@ -44,7 +44,7 @@ jobs:
         # --preid next: Tag version with `next` instead of `alpha`
         run: |
           node_modules/.bin/lerna publish --yes --no-verify-access \
-          --canary --preid next --dist-tag next --no-git-reset \
+          --canary --dist-tag next --no-git-reset \
           --preid next.$(git rev-parse --short=7 HEAD)
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
