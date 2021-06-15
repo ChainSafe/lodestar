@@ -27,6 +27,7 @@ import {
 import {ForkName} from "@chainsafe/lodestar-params";
 import {convertToIndexedSyncCommittee, createIndexedSyncCommittee, IndexedSyncCommittee} from "./indexedSyncCommittee";
 import {getNextSyncCommittee} from "../../altair/epoch/sync_committee";
+import {ssz} from "@chainsafe/lodestar-types";
 
 /**
  * `BeaconState` with various caches
@@ -117,6 +118,7 @@ export class BeaconStateContext<T extends allForks.BeaconState> {
   balances: CachedBalanceList & T["balances"];
   previousEpochParticipation: CachedEpochParticipation & List<ParticipationFlags>;
   currentEpochParticipation: CachedEpochParticipation & List<ParticipationFlags>;
+  // phase0 has no sync committee
   currentSyncCommittee: IndexedSyncCommittee | undefined;
   nextSyncCommittee: IndexedSyncCommittee | undefined;
 
@@ -180,6 +182,7 @@ export class BeaconStateContext<T extends allForks.BeaconState> {
         this.balances.persistent.clone(),
         this.previousEpochParticipation.persistent.clone(),
         this.currentEpochParticipation.persistent.clone(),
+        // states in the same sync period has same sync committee
         this.currentSyncCommittee,
         this.nextSyncCommittee,
         this.epochCtx.copy()
@@ -192,7 +195,7 @@ export class BeaconStateContext<T extends allForks.BeaconState> {
     const state = (this.type.createTreeBacked(this.tree) as unknown) as TreeBacked<altair.BeaconState>;
     this.currentSyncCommittee = this.nextSyncCommittee;
     state.currentSyncCommittee = state.nextSyncCommittee;
-    const nextSyncCommittee = getNextSyncCommittee(state);
+    const nextSyncCommittee = ssz.altair.SyncCommittee.createTreeBackedFromStruct(getNextSyncCommittee(state));
     this.nextSyncCommittee = convertToIndexedSyncCommittee(nextSyncCommittee, this.epochCtx.pubkey2index);
     state.nextSyncCommittee = nextSyncCommittee;
   }
@@ -262,20 +265,37 @@ export const CachedBeaconStateProxyHandler: ProxyHandler<CachedBeaconState<allFo
     } else if (key === "currentEpochParticipation") {
       throw new Error("Cannot set currentEpochParticipation");
     } else if (target.type.fields[key]) {
-      if (key === "currentSyncCommittee") {
-        const {pubkey2index} = target.epochCtx;
-        target.currentSyncCommittee = convertToIndexedSyncCommittee(value as altair.SyncCommittee, pubkey2index);
-      } else if (key === "nextSyncCommittee") {
-        const {pubkey2index} = target.epochCtx;
-        target.nextSyncCommittee = convertToIndexedSyncCommittee(value as altair.SyncCommittee, pubkey2index);
-      }
       const propType = target.type.fields[key];
       if (!isCompositeType(propType)) {
         return target.type.tree_setProperty(target.tree, key, value);
       } else {
         if (isTreeBacked(value)) {
+          if (key === "currentSyncCommittee") {
+            const {pubkey2index} = target.epochCtx;
+            target.currentSyncCommittee = convertToIndexedSyncCommittee(
+              (value as unknown) as TreeBacked<altair.SyncCommittee>,
+              pubkey2index
+            );
+          } else if (key === "nextSyncCommittee") {
+            const {pubkey2index} = target.epochCtx;
+            target.nextSyncCommittee = convertToIndexedSyncCommittee(
+              (value as unknown) as TreeBacked<altair.SyncCommittee>,
+              pubkey2index
+            );
+          }
           return target.type.tree_setProperty(target.tree, key, value.tree);
         } else {
+          if (key === "currentSyncCommittee") {
+            const {pubkey2index} = target.epochCtx;
+            const treeBackedValue = ssz.altair.SyncCommittee.createTreeBackedFromStruct(value as altair.SyncCommittee);
+            target.currentSyncCommittee = convertToIndexedSyncCommittee(treeBackedValue, pubkey2index);
+            return target.type.tree_setProperty(target.tree, key, treeBackedValue.tree);
+          } else if (key === "nextSyncCommittee") {
+            const {pubkey2index} = target.epochCtx;
+            const treeBackedValue = ssz.altair.SyncCommittee.createTreeBackedFromStruct(value as altair.SyncCommittee);
+            target.nextSyncCommittee = convertToIndexedSyncCommittee(treeBackedValue, pubkey2index);
+            return target.type.tree_setProperty(target.tree, key, treeBackedValue.tree);
+          }
           return target.type.tree_setProperty(
             target.tree,
             key,

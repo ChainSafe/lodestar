@@ -25,11 +25,11 @@ export function runFork(presetName: PresetName): void {
       // this test has a random slot so createCachedBeaconState is not able to create indexed sync committee
       const tbAltairState = altairState.type.createTreeBacked(altairState.tree);
       altairState.currentSyncCommittee = convertToIndexedSyncCommittee(
-        tbAltairState.currentSyncCommittee,
+        tbAltairState.currentSyncCommittee as TreeBacked<altair.SyncCommittee>,
         altairState.pubkey2index
       );
       altairState.nextSyncCommittee = convertToIndexedSyncCommittee(
-        tbAltairState.nextSyncCommittee,
+        tbAltairState.nextSyncCommittee as TreeBacked<altair.SyncCommittee>,
         altairState.pubkey2index
       );
       return altairState;

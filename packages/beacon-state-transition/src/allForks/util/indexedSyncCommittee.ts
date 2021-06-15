@@ -1,13 +1,14 @@
 import {altair, phase0} from "@chainsafe/lodestar-types";
-import {Vector} from "@chainsafe/ssz";
+import {TreeBacked, Vector} from "@chainsafe/ssz";
 import {PubkeyIndexMap} from "./epochContext";
 
 type SyncComitteeValidatorIndexMap = Map<phase0.ValidatorIndex, number[]>;
+
 /**
- * Same to altair.SyncCommittee with additional indexed properties.
+ * A sync committee with additional index data.
  */
-// eslint-disable-next-line @typescript-eslint/naming-convention
-export interface IndexedSyncCommittee extends altair.SyncCommittee {
+export class IndexedSyncCommittee implements altair.SyncCommittee {
+  treeBacked: TreeBacked<altair.SyncCommittee>;
   pubkeys: Vector<phase0.BLSPubkey>;
   aggregatePubkey: phase0.BLSPubkey;
   /**
@@ -20,29 +21,43 @@ export interface IndexedSyncCommittee extends altair.SyncCommittee {
    * Memory cost: Map of Number -> Number with 1024 entries.
    */
   validatorIndexMap: SyncComitteeValidatorIndexMap;
+
+  constructor(
+    treeBacked: TreeBacked<altair.SyncCommittee>,
+    validatorIndices: phase0.ValidatorIndex[],
+    validatorIndexMap: SyncComitteeValidatorIndexMap
+  ) {
+    this.treeBacked = treeBacked;
+    this.pubkeys = treeBacked.pubkeys;
+    this.aggregatePubkey = treeBacked.aggregatePubkey;
+    this.validatorIndices = validatorIndices;
+    this.validatorIndexMap = validatorIndexMap;
+  }
+
+  /**
+   * clone() shares the same index data.
+   */
+  clone(): IndexedSyncCommittee {
+    return new IndexedSyncCommittee(this.treeBacked.clone(), this.validatorIndices, this.validatorIndexMap);
+  }
 }
 
 export function createIndexedSyncCommittee(
   pubkey2index: PubkeyIndexMap,
-  state: altair.BeaconState,
+  state: TreeBacked<altair.BeaconState>,
   isNext: boolean
 ): IndexedSyncCommittee {
   const syncCommittee = isNext ? state.nextSyncCommittee : state.currentSyncCommittee;
-  return convertToIndexedSyncCommittee(syncCommittee, pubkey2index);
+  return convertToIndexedSyncCommittee(syncCommittee as TreeBacked<altair.SyncCommittee>, pubkey2index);
 }
 
 export function convertToIndexedSyncCommittee(
-  syncCommittee: altair.SyncCommittee,
+  syncCommittee: TreeBacked<altair.SyncCommittee>,
   pubkey2index: PubkeyIndexMap
 ): IndexedSyncCommittee {
   const validatorIndices = computeSyncCommitteeIndices(syncCommittee, pubkey2index);
   const validatorIndexMap = computeSyncComitteeMap(validatorIndices);
-  return {
-    pubkeys: syncCommittee.pubkeys,
-    aggregatePubkey: syncCommittee.aggregatePubkey,
-    validatorIndices,
-    validatorIndexMap,
-  };
+  return new IndexedSyncCommittee(syncCommittee, validatorIndices, validatorIndexMap);
 }
 
 /**
