@@ -16,6 +16,7 @@ export interface ILogArgs {
   logFormatGenesisTime?: number;
   logFormatId?: string;
   logRotate?: boolean;
+  logMaxFiles?: number;
 }
 
 export function errorLogger(): ILogger {
@@ -33,6 +34,7 @@ export function getCliLogger(args: ILogArgs, paths: {logFile?: string}, config: 
       filename: paths.logFile,
       level: args.logLevelFile,
       rotate: args.logRotate,
+      maxfiles: args.logMaxFiles,
     });
   }
 
