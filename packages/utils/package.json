@@ -11,7 +11,7 @@
   "bugs": {
     "url": "https://github.com/ChainSafe/lodestar/issues"
   },
-  "version": "0.24.2",
+  "version": "0.24.3",
   "main": "lib/index.js",
   "files": [
     "lib/**/*.d.ts",
@@ -44,8 +44,8 @@
     "chalk": "^2.4.2",
     "js-yaml": "^3.13.1",
     "winston": "^3.3.3",
-    "winston-transport": "^4.3.0",
-    "winston-daily-rotate-file": "^4.5.5"
+    "winston-daily-rotate-file": "^4.5.5",
+    "winston-transport": "^4.3.0"
   },
   "devDependencies": {
     "@types/js-yaml": "^3.12.1",
