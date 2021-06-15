@@ -11,7 +11,7 @@ export enum TransportType {
 
 export type TransportOpts =
   | {type: TransportType.console; level?: LogLevel}
-  | {type: TransportType.file; level?: LogLevel; filename: string; rotate?: boolean}
+  | {type: TransportType.file; level?: LogLevel; filename: string; rotate?: boolean; maxfiles?: number}
   | {type: TransportType.stream; level?: LogLevel; stream: NodeJS.WritableStream};
 
 export function fromTransportOpts(transportOpts: TransportOpts): TransportStream {
@@ -31,7 +31,7 @@ export function fromTransportOpts(transportOpts: TransportOpts): TransportStream
             filename: transportOpts.filename.replace(/\.(?=[^.]*$)|$/, "-%DATE%$&"),
             datePattern: "YYYY-MM-DD",
             handleExceptions: true,
-            maxFiles: 5,
+            maxFiles: transportOpts.maxfiles,
           })
         : new transports.File({
             level: transportOpts.level,
