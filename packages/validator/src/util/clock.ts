@@ -34,7 +34,7 @@ export class Clock implements IClock {
   start(signal: AbortSignal): void {
     for (const {timeItem, fn} of this.fns) {
       this.runAtMostEvery(timeItem, signal, fn).catch((e) => {
-        this.logger.error("", {}, e);
+        this.logger.error("runAtMostEvery", {}, e);
       });
     }
   }
@@ -63,9 +63,10 @@ export class Clock implements IClock {
     while (!signal.aborted) {
       // Run immediatelly first
       const slot = getCurrentSlot(this.config, this.genesisTime);
-
       const slotOrEpoch = timeItem === TimeItem.Slot ? slot : computeEpochAtSlot(slot);
-      await fn(slotOrEpoch, signal);
+
+      // Must catch fn() to ensure `sleep()` is awaited both for resolve and reject
+      await fn(slotOrEpoch, signal).catch((e) => this.logger.error("Error on runEvery fn", {}, e));
 
       try {
         await sleep(this.timeUntilNext(timeItem), signal);
