@@ -42,10 +42,11 @@ jobs:
         # --canary: Format version with commit (1.1.0-alpha.0+81e3b443)
         # --dist-tag next: Make this nightly version installable with `@next`
         # --preid next: Tag version with `next` instead of `alpha`
+        # NOTE: Using --preid next.$(git rev-parse --short=7 HEAD) results in `0.24.3-next.3ddb91d.0+3ddb91d`
         run: |
           node_modules/.bin/lerna publish --yes --no-verify-access \
           --canary --dist-tag next --no-git-reset \
-          --preid next.$(git rev-parse --short=7 HEAD)
+          --preid next
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
