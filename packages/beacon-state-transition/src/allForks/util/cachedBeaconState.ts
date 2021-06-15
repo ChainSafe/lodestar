@@ -277,29 +277,25 @@ export const CachedBeaconStateProxyHandler: ProxyHandler<CachedBeaconState<allFo
       } else {
         if (isTreeBacked(value)) {
           if (key === "currentSyncCommittee") {
-            const {pubkey2index} = target.epochCtx;
             target.currentSyncCommittee = convertToIndexedSyncCommittee(
               (value as unknown) as TreeBacked<altair.SyncCommittee>,
-              pubkey2index
+              target.epochCtx.pubkey2index
             );
           } else if (key === "nextSyncCommittee") {
-            const {pubkey2index} = target.epochCtx;
             target.nextSyncCommittee = convertToIndexedSyncCommittee(
               (value as unknown) as TreeBacked<altair.SyncCommittee>,
-              pubkey2index
+              target.epochCtx.pubkey2index
             );
           }
           return target.type.tree_setProperty(target.tree, key, value.tree);
         } else {
           if (key === "currentSyncCommittee") {
-            const {pubkey2index} = target.epochCtx;
             const treeBackedValue = ssz.altair.SyncCommittee.createTreeBackedFromStruct(value as altair.SyncCommittee);
-            target.currentSyncCommittee = convertToIndexedSyncCommittee(treeBackedValue, pubkey2index);
+            target.currentSyncCommittee = convertToIndexedSyncCommittee(treeBackedValue, target.epochCtx.pubkey2index);
             return target.type.tree_setProperty(target.tree, key, treeBackedValue.tree);
           } else if (key === "nextSyncCommittee") {
-            const {pubkey2index} = target.epochCtx;
             const treeBackedValue = ssz.altair.SyncCommittee.createTreeBackedFromStruct(value as altair.SyncCommittee);
-            target.nextSyncCommittee = convertToIndexedSyncCommittee(treeBackedValue, pubkey2index);
+            target.nextSyncCommittee = convertToIndexedSyncCommittee(treeBackedValue, target.epochCtx.pubkey2index);
             return target.type.tree_setProperty(target.tree, key, treeBackedValue.tree);
           }
           return target.type.tree_setProperty(
