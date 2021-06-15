@@ -38,13 +38,14 @@ jobs:
         if: steps.cache-deps.outputs.cache-hit == 'true'
       # </common-build>
       - name: Publish to npm registry
+        # from-package: Base the latest nightly ref count from NPM registry
         # --no-git-reset: Do not delete code version artifcats so the next step can pick the version
         # --canary: Format version with commit (1.1.0-alpha.0+81e3b443)
         # --dist-tag next: Make this nightly version installable with `@next`
         # --preid next: Tag version with `next` instead of `alpha`
         # NOTE: Using --preid next.$(git rev-parse --short=7 HEAD) results in `0.24.3-next.3ddb91d.0+3ddb91d`
         run: |
-          node_modules/.bin/lerna publish --yes --no-verify-access \
+          node_modules/.bin/lerna publish from-package --yes --no-verify-access \
           --canary --dist-tag next --no-git-reset \
           --preid next
         env:
