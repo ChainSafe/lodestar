@@ -1,7 +1,7 @@
 version: "3.4"
 services:
   beacon_node:
-    image: chainsafe/lodestar@next
+    image: chainsafe/lodestar:next
     restart: always
     volumes:
       - beacon_node:/data

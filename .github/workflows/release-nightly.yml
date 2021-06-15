@@ -8,7 +8,7 @@ concurrency:
 on:
   push:
     branches:
-      - "master"
+      - master
 
 jobs:
   publish:
@@ -17,6 +17,8 @@ jobs:
     steps:
       # <common-build> - Uses YAML anchors in the future
       - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v2
         with:
           node-version: "14.16.0"
@@ -37,7 +39,17 @@ jobs:
         if: steps.cache-deps.outputs.cache-hit == 'true'
       # </common-build>
       - name: Publish to npm registry
-        run: yarn run publish:nightly
+        # from-package: Base the latest nightly ref count from NPM registry
+        # --no-git-reset: Do not delete code version artifacts so the next step can pick the version
+        # --canary: Format version with commit (1.1.0-alpha.0+81e3b443)
+        # --dist-tag next: Make this nightly version installable with `@next`
+        # --preid dev: Tag version with `dev` instead of `alpha`
+        # --force-publish: lerna doesn't want to publish anything otherwise - "lerna success No changed packages to publish"
+        # NOTE: Using --preid dev.$(git rev-parse --short=7 HEAD) results in `0.24.3-dev.3ddb91d.0+3ddb91d`
+        run: |
+          node_modules/.bin/lerna publish --yes --no-verify-access \
+          --canary --dist-tag next --no-git-reset --force-publish \
+          --preid dev
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
@@ -62,6 +74,4 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       - run: docker build --tag chainsafe/lodestar:next --build-arg VERSION=${{ needs.publish.outputs.version }} .
-      - run: docker tag chainsafe/lodestar:next chainsafe/lodestar:${{ needs.publish.outputs.version }}
-        # Push all tags
-      - run: docker push chainsafe/lodestar
+      - run: docker push chainsafe/lodestar:next
