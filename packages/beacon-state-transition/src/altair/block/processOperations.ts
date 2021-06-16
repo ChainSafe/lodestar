@@ -8,6 +8,7 @@ import {processAttestation} from "./processAttestation";
 import {processDeposit} from "./processDeposit";
 import {processVoluntaryExit} from "./processVoluntaryExit";
 import {MAX_DEPOSITS} from "@chainsafe/lodestar-params";
+import {BlockProcess} from "../../util/blockProcess";
 
 type Operation =
   | phase0.ProposerSlashing
@@ -15,11 +16,17 @@ type Operation =
   | phase0.Attestation
   | phase0.Deposit
   | phase0.VoluntaryExit;
-type OperationFunction = (state: CachedBeaconState<altair.BeaconState>, op: Operation, verify: boolean) => void;
+type OperationFunction = (
+  state: CachedBeaconState<altair.BeaconState>,
+  op: Operation,
+  blockProcess: BlockProcess,
+  verify: boolean
+) => void;
 
 export function processOperations(
   state: CachedBeaconState<altair.BeaconState>,
   body: altair.BeaconBlockBody,
+  blockProcess: BlockProcess = {validatorExitCache: {}},
   verifySignatures = true
 ): void {
   // verify that outstanding deposits are processed up to the maximum number of deposits
@@ -38,7 +45,7 @@ export function processOperations(
     [body.voluntaryExits, processVoluntaryExit],
   ] as [List<Operation>, OperationFunction][]) {
     for (const op of readonlyValues(operations)) {
-      processOp(state, op, verifySignatures);
+      processOp(state, op, blockProcess, verifySignatures);
     }
   }
 }

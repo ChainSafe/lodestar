@@ -4,14 +4,20 @@ import {isActiveValidator} from "../../util";
 import {CachedBeaconState} from "../../allForks/util";
 import {initiateValidatorExit} from "../../allForks/block";
 import {verifyVoluntaryExitSignature} from "../../allForks/signatureSets";
+import {BlockProcess} from "../../util/blockProcess";
 
 export function processVoluntaryExit(
   state: CachedBeaconState<allForks.BeaconState>,
   signedVoluntaryExit: phase0.SignedVoluntaryExit,
+  blockProcess: BlockProcess,
   verifySignature = true
 ): void {
   assertValidVoluntaryExit(state as CachedBeaconState<allForks.BeaconState>, signedVoluntaryExit, verifySignature);
-  initiateValidatorExit(state as CachedBeaconState<allForks.BeaconState>, signedVoluntaryExit.message.validatorIndex);
+  initiateValidatorExit(
+    state as CachedBeaconState<allForks.BeaconState>,
+    signedVoluntaryExit.message.validatorIndex,
+    blockProcess
+  );
 }
 
 export function assertValidVoluntaryExit(

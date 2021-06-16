@@ -17,12 +17,15 @@ import {
   WEIGHT_DENOMINATOR,
 } from "@chainsafe/lodestar-params";
 import {validateAttestation} from "../../phase0/block/processAttestation";
+import {BlockProcess} from "../../util/blockProcess";
 
 const PROPOSER_REWARD_DOMINATOR = ((WEIGHT_DENOMINATOR - PROPOSER_WEIGHT) * WEIGHT_DENOMINATOR) / PROPOSER_WEIGHT;
 
 export function processAttestation(
   state: CachedBeaconState<altair.BeaconState>,
   attestation: phase0.Attestation,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  blockProcess: BlockProcess = {validatorExitCache: {}},
   verifySignature = true
 ): void {
   const {epochCtx} = state;

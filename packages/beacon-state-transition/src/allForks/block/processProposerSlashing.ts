@@ -5,16 +5,18 @@ import {CachedBeaconState} from "../../allForks/util";
 import {getProposerSlashingSignatureSets} from "../../allForks/signatureSets";
 import {slashValidatorAllForks} from "../../allForks/block/slashValidator";
 import {verifySignatureSet} from "../../util/signatureSets";
+import {BlockProcess} from "../../util/blockProcess";
 
 export function processProposerSlashing(
   fork: ForkName,
   state: CachedBeaconState<allForks.BeaconState>,
   proposerSlashing: phase0.ProposerSlashing,
+  blockProcess: BlockProcess,
   verifySignatures = true
 ): void {
   assertValidProposerSlashing(state as CachedBeaconState<allForks.BeaconState>, proposerSlashing, verifySignatures);
 
-  slashValidatorAllForks(fork, state, proposerSlashing.signedHeader1.message.proposerIndex);
+  slashValidatorAllForks(fork, state, proposerSlashing.signedHeader1.message.proposerIndex, blockProcess);
 }
 
 export function assertValidProposerSlashing(
