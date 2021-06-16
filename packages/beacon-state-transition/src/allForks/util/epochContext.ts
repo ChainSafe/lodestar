@@ -325,6 +325,10 @@ export class EpochContext {
     return validatorIndices;
   }
 
+  getCommitteeAssignments(epoch: Epoch, validatorIndices: ValidatorIndex[]): (phase0.CommitteeAssignment | null)[] {
+    return validatorIndices.map((index) => this.getCommitteeAssignment(epoch, index));
+  }
+
   /**
    * Return the committee assignment in the ``epoch`` for ``validator_index``.
    * ``assignment`` returned is a tuple of the following form:

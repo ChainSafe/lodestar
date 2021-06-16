@@ -15,7 +15,7 @@ import {
 import {allForks, Root, Slot} from "@chainsafe/lodestar-types";
 import {assembleAttestationData} from "../../../chain/factory/attestation";
 import {assembleBlock} from "../../../chain/factory/block";
-import {assembleAttesterDuty} from "../../../chain/factory/duties";
+import {assembleAttesterDuties} from "../../../chain/factory/duties";
 import {AttestationError, AttestationErrorCode} from "../../../chain/errors";
 import {validateGossipAggregateAndProof} from "../../../chain/validation";
 import {ZERO_HASH} from "../../../constants";
@@ -227,20 +227,17 @@ export function getValidatorApi({
       // the first `MAXIMUM_GOSSIP_CLOCK_DISPARITY` duration of the epoch `tolerantCurrentEpoch`
       // will equal `currentEpoch + 1`
 
-      const duties: routes.validator.AttesterDuty[] = [];
-      for (const validatorIndex of validatorIndices) {
-        const validator = state.validators[validatorIndex];
-        if (!validator) {
-          throw new ApiError(400, `Validator index ${validatorIndex} not in state`);
-        }
-        const duty = assembleAttesterDuty(
-          config,
-          {pubkey: validator.pubkey, index: validatorIndex},
-          state.epochCtx,
-          epoch
-        );
-        if (duty) duties.push(duty);
-      }
+      const duties = assembleAttesterDuties(
+        state.validators.map((validator, k) => {
+          const index = validatorIndices[k];
+          if (!validator) {
+            throw new ApiError(400, `Validator index ${index} not in state`);
+          }
+          return {pubkey: validator.pubkey, index};
+        }),
+        state.epochCtx,
+        epoch
+      );
 
       const dependentRoot = attesterShufflingDecisionRoot(state, epoch) || (await getGenesisBlockRoot(state));
 
