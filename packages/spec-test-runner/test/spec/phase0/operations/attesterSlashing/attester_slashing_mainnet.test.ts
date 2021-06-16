@@ -18,7 +18,7 @@ describeDirectorySpecTest<IProcessAttesterSlashingTestCase, phase0.BeaconState>(
       testcase.pre as TreeBacked<phase0.BeaconState>
     );
     const verify = !!testcase.meta && !!testcase.meta.blsSetting && testcase.meta.blsSetting === BigInt(1);
-    phase0.processAttesterSlashing(wrappedState, testcase.attester_slashing, verify);
+    phase0.processAttesterSlashing(wrappedState, testcase.attester_slashing, undefined, verify);
     return wrappedState;
   },
   {
