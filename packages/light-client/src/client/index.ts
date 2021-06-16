@@ -77,17 +77,17 @@ export class Lightclient {
         nextSyncCommittee: deserializeSyncCommittee(state.nextSyncCommittee),
       },
     };
-    const newModules = {...modules} as LightclientModules;
-    // if the clock or genesisValidatorsRoot isn't supplied
-    // then set them in the new modules object
-    if (!modules.clock) {
-      newModules.clock = new Clock(config, state.genesisTime);
-    }
-    if (!modules.genesisValidatorsRoot) {
-      newModules.genesisValidatorsRoot = state.genesisValidatorsRoot.valueOf() as Root;
-    }
 
-    return new Lightclient(newModules, store);
+    return new Lightclient(
+      {
+        ...modules,
+        // if the clock or genesisValidatorsRoot isn't supplied
+        // then set them in the new modules object
+        clock: modules.clock || new Clock(config, state.genesisTime),
+        genesisValidatorsRoot: modules.genesisValidatorsRoot || (state.genesisValidatorsRoot.valueOf() as Root),
+      },
+      store
+    );
   }
 
   static initializeFromTrustedSnapshot(modules: LightclientModules, snapshot: altair.LightClientSnapshot): Lightclient {
