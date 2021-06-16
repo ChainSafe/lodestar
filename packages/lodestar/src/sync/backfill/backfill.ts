@@ -3,7 +3,7 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {GENESIS_EPOCH} from "@chainsafe/lodestar-params";
 import {phase0, Root, Slot} from "@chainsafe/lodestar-types";
 import {SignedBeaconBlock} from "@chainsafe/lodestar-types/lib/allForks";
-import {ErrorAborted, ILogger} from "@chainsafe/lodestar-utils";
+import {ErrorAborted, ILogger, LodestarError} from "@chainsafe/lodestar-utils";
 import {List} from "@chainsafe/ssz";
 import PeerId from "peer-id";
 import {ItTrigger} from "../../../lib/util/itTrigger";
@@ -13,6 +13,7 @@ import {IBeaconDb} from "../../db";
 import {INetwork, NetworkEvent} from "../../network";
 import {PeerMap} from "../../util/peerMap";
 import {ChainTarget, SyncChainFns} from "../range/chain";
+import {BackfillSyncError, BackfillSyncErrorCode} from "./errors";
 import {getRandomPeer} from "./util";
 import {verifyBlocks} from "./verify";
 
@@ -50,6 +51,9 @@ export class BackfillSync {
   private readonly config: IBeaconConfig;
   private readonly logger: ILogger;
   private opts: BackfillSyncOpts;
+  //last fetched slot
+  private lastFetchedSlot: Slot | null = null;
+  //last trusted block
   private anchorBlock: SignedBeaconBlock | null = null;
   private processor: ItTrigger = new ItTrigger();
   private peers: PeerMap<phase0.Status> = new PeerMap();
@@ -93,8 +97,8 @@ export class BackfillSync {
 
         if (this.anchorBlock) {
           try {
-            const fromSlot = Math.max(this.anchorBlock.message.slot - this.opts.batchSize, oldestSlotRequired);
-            const toSlot = this.anchorBlock.message.slot;
+            const toSlot = this.lastFetchedSlot ?? this.anchorBlock.message.slot;
+            const fromSlot = Math.max(toSlot - this.opts.batchSize, oldestSlotRequired);
             if (fromSlot >= toSlot) {
               this.logger.info("Backfill sync completed");
               break;
@@ -139,15 +143,21 @@ export class BackfillSync {
     try {
       const blocks = await this.network.reqResp.beaconBlocksByRoot(peer, [root] as List<Root>);
       if (blocks.length === 0) {
-        throw new Error("Peer missing block");
+        throw new BackfillSyncError({code: BackfillSyncErrorCode.MISSING_BLOCKS, peerId: peer});
       }
       const block = blocks[0] as SignedBeaconBlock;
-      verifyBlockSignature(this.config, this.chain.getHeadState(), block);
+      try {
+        verifyBlockSignature(this.config, this.chain.getHeadState(), block);
+      } catch (e) {
+        throw new BackfillSyncError({code: BackfillSyncErrorCode.INVALID_SIGNATURE});
+      }
+
       await this.db.blockArchive.put(block.message.slot, block);
       this.anchorBlock = block;
       this.processor.trigger();
     } catch (e) {
       this.peers.delete(peer);
+      setTimeout(this.processor.trigger, 2000);
       throw e;
     }
   }
@@ -161,7 +171,11 @@ export class BackfillSync {
       this.anchorBlock = blocks[blocks.length - 1];
       this.processor.trigger();
     } catch (e) {
+      if ((e as BackfillSyncError).type.code === BackfillSyncErrorCode.NOT_ANCHORED) {
+        this.lastFetchedSlot = this.anchorBlock?.message.slot ?? null;
+      }
       this.peers.delete(peer);
+      setTimeout(this.processor.trigger, 2000);
       throw e;
     }
   }
