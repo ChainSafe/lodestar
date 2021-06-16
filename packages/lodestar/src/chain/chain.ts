@@ -70,7 +70,6 @@ export class BeaconChain implements IBeaconChain {
   private abortController = new AbortController();
 
   constructor({opts, config, db, logger, metrics, anchorState}: IBeaconChainModules) {
-    config.getForkTypes(0)
     this.opts = opts;
     this.config = config;
     this.db = db;

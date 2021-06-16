@@ -1,24 +1,33 @@
-import {verifyBlockSignature} from "@chainsafe/lodestar-beacon-state-transition";
+import {allForks, CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {BeaconState, SignedBeaconBlock} from "@chainsafe/lodestar-types/lib/allForks";
+import {SignedBeaconBlock} from "@chainsafe/lodestar-types/lib/allForks";
+import {Root} from "../../../../types/lib";
+import {IBlsVerifier} from "../../chain/bls";
 
-export function verifyBlocks(config: IBeaconConfig, state: BeaconState, blocks: SignedBeaconBlock[]): void {
+export async function verifyBlocks(
+  config: IBeaconConfig,
+  bls: IBlsVerifier,
+  state: CachedBeaconState<allForks.BeaconState>,
+  blocks: SignedBeaconBlock[],
+  anchorRoot: Root
+): Promise<void> {
   if (blocks.length === 0) {
     return;
   }
-  let lastBlock: SignedBeaconBlock | undefined;
-  for (const block of blocks) {
+  const nextRoot: Root = anchorRoot;
+  const signatures: ReturnType<typeof allForks["getProposerSignatureSet"]>[] = [];
+  for (const block of blocks.reverse()) {
     if (
-      lastBlock &&
       !config.types.Root.equals(
-        config.getForkTypes(lastBlock.message.slot).BeaconBlock.hashTreeRoot(lastBlock.message),
-        block.message.parentRoot
+        config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message),
+        nextRoot
       )
     ) {
       throw new Error("BackfillSync - Non linear blocks");
     }
-    if (!verifyBlockSignature(config, state, block)) {
-      throw new Error("BackfillSync - Invalid proposer signature");
-    }
+    signatures.push(allForks.getProposerSignatureSet(state, block));
+  }
+  if (!(await bls.verifySignatureSets(signatures))) {
+    throw new Error("BackfillSync - Proposer signature invalid");
   }
 }

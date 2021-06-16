@@ -1,30 +1,20 @@
-import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
-import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition/src/util/epoch";
+import {computeStartSlotAtEpoch, verifyBlockSignature} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {GENESIS_EPOCH} from "@chainsafe/lodestar-params";
-import {Epoch, phase0} from "@chainsafe/lodestar-types";
-import {ILogger} from "@chainsafe/lodestar-utils";
-import {EventEmitter} from "events";
+import {phase0, Root, Slot} from "@chainsafe/lodestar-types";
+import {SignedBeaconBlock} from "@chainsafe/lodestar-types/lib/allForks";
+import {ErrorAborted, ILogger} from "@chainsafe/lodestar-utils";
+import {List} from "@chainsafe/ssz";
 import PeerId from "peer-id";
-import StrictEventEmitter from "strict-event-emitter-types";
+import {ItTrigger} from "../../../lib/util/itTrigger";
 import {IBeaconChain} from "../../chain";
 import {getMinEpochForBlockRequests} from "../../constants";
 import {IBeaconDb} from "../../db";
 import {INetwork, NetworkEvent} from "../../network";
-import {BatchOpts} from "../range/batch";
-import {ChainTarget, SyncChain, SyncChainFns} from "../range/chain";
-import {RangeSyncType} from "../utils";
+import {PeerMap} from "../../util/peerMap";
+import {ChainTarget, SyncChainFns} from "../range/chain";
+import {getRandomPeer} from "./util";
 import {verifyBlocks} from "./verify";
-
-export enum BackfillSyncEvent {
-  completedChain = "BackfillSync-completedChain",
-}
-
-type BackfillSyncEvents = {
-  [BackfillSyncEvent.completedChain]: () => void;
-};
-
-type BackfillSyncEmitter = StrictEventEmitter<EventEmitter, BackfillSyncEvents>;
 
 export enum BackfillSyncStatus {
   /** Required history blocks are syncing */
@@ -49,141 +39,130 @@ export type RangeSyncModules = {
   logger: ILogger;
 };
 
-export type BackfillSyncOpts = BatchOpts;
+export type BackfillSyncOpts = {
+  batchSize: number;
+};
 
-export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}) {
+export class BackfillSync {
   private readonly chain: IBeaconChain;
   private readonly network: INetwork;
   private readonly db: IBeaconDb;
   private readonly config: IBeaconConfig;
   private readonly logger: ILogger;
-  private opts?: BackfillSyncOpts;
-
-  private syncChain?: SyncChain;
+  private opts: BackfillSyncOpts;
+  private anchorBlock: SignedBeaconBlock | null = null;
+  private processor: ItTrigger = new ItTrigger();
+  private peers: PeerMap<phase0.Status> = new PeerMap();
 
   constructor(modules: RangeSyncModules, opts?: BackfillSyncOpts) {
-    super();
     this.chain = modules.chain;
     this.network = modules.network;
     this.db = modules.db;
     this.config = modules.config;
     this.logger = modules.logger;
-    this.opts = opts;
-    void this.update();
+    this.opts = opts ?? {batchSize: 32};
     this.network.events.addListener(NetworkEvent.peerConnected, this.addPeer);
     this.network.events.addListener(NetworkEvent.peerDisconnected, this.removePeer);
+    void this.init();
   }
 
-  /** Throw / return all AsyncGenerators inside every SyncChain instance */
+  /** Throw / return all AsyncGenerators */
   close(): void {
     this.network.events.removeListener(NetworkEvent.peerConnected, this.addPeer);
     this.network.events.removeListener(NetworkEvent.peerDisconnected, this.removePeer);
-    this.syncChain?.remove();
+    this.processor.end(new ErrorAborted("BackfillSync"));
   }
 
-  state(): BackfillSyncState {
-    if (this.syncChain?.isSyncing && this.syncChain?.target) {
-      return {status: BackfillSyncStatus.Syncing, target: this.syncChain.target};
-    }
-    return {status: BackfillSyncStatus.Idle};
+  async init(): Promise<void> {
+    const anchorState = this.chain.getHeadState();
+    const parentBlockRoot: Root = anchorState.latestBlockHeader.parentRoot;
+    this.anchorBlock = await this.db.blockArchive.getByRoot(parentBlockRoot);
+    void this.sync();
   }
 
-  private async update(): Promise<void> {
-    const oldestStoredBlock = await this.db.blockArchive.firstValue();
-    if (!oldestStoredBlock) {
-      //no blocks in db, somethings wrong
-      return;
-    }
-    const oldestStoredBlockSlot = oldestStoredBlock.message.slot;
-    const oldestRequiredEpoch = Math.max(
-      GENESIS_EPOCH,
-      this.chain.clock.currentEpoch - getMinEpochForBlockRequests(this.config)
-    );
-    const oldestSlotRequired = computeStartSlotAtEpoch(this.config, oldestRequiredEpoch);
-    if (oldestSlotRequired >= oldestStoredBlockSlot) {
-      this.close();
-    } else {
-      this.syncChain?.startSyncing(oldestRequiredEpoch);
+  async sync(): Promise<void> {
+    try {
+      for await (const _ of this.processor) {
+        if (this.peers.size === 0) continue;
+
+        const oldestRequiredEpoch = Math.max(
+          GENESIS_EPOCH,
+          this.chain.clock.currentEpoch - getMinEpochForBlockRequests(this.config)
+        );
+        const oldestSlotRequired = computeStartSlotAtEpoch(this.config, oldestRequiredEpoch);
+
+        if (this.anchorBlock) {
+          try {
+            const fromSlot = Math.max(this.anchorBlock.message.slot - this.opts.batchSize, oldestSlotRequired);
+            const toSlot = this.anchorBlock.message.slot;
+            if (fromSlot >= toSlot) {
+              this.logger.info("Backfill sync completed");
+              break;
+            }
+            await this.syncRange(fromSlot, toSlot, this.anchorBlock.message.parentRoot);
+          } catch (e) {
+            this.logger.debug("Error while backfiling by range", e);
+          }
+        } else {
+          try {
+            await this.syncBlock(this.chain.getHeadState().latestBlockHeader.parentRoot);
+          } catch (e) {
+            this.logger.debug("Error while backfilling anchor block", e);
+          }
+        }
+      }
+    } catch (e) {
+      if (e instanceof ErrorAborted) {
+        return; // Ignore
+      }
+      this.logger.error("BackfillSync Error", e);
     }
   }
 
   private async addPeer(peerId: PeerId, peerStatus: phase0.Status): Promise<void> {
-    //Could be caveat if you start from genesis, than stop and continue from WS state
-    // Currently we are relying on block archive prune to delete old blocks after which this is going to work
-    const oldestStoredBlock = await this.db.blockArchive.firstValue();
-    if (!oldestStoredBlock) {
-      //no blocks in db, somethings wrong
-      return;
+    const requiredSlot = this.anchorBlock?.message.slot ?? this.chain.getHeadState().slot;
+    if (peerStatus.headSlot >= requiredSlot) {
+      this.peers.set(peerId, peerStatus);
+      this.processor.trigger();
     }
-    const oldestStoredBlockSlot = oldestStoredBlock.message.slot;
-    const oldestRequiredEpoch = Math.max(
-      GENESIS_EPOCH,
-      this.chain.clock.currentEpoch - getMinEpochForBlockRequests(this.config)
-    );
-    const oldestSlotRequired = computeStartSlotAtEpoch(this.config, oldestRequiredEpoch);
-    if (oldestSlotRequired >= oldestStoredBlockSlot) {
-      return;
-    }
-    if (peerStatus.headSlot > oldestSlotRequired) {
-      this.addPeerOrCreateChain(
-        computeEpochAtSlot(this.config, oldestSlotRequired),
-        {
-          slot: oldestStoredBlockSlot,
-          root: this.config.getForkTypes(oldestStoredBlockSlot).BeaconBlock.hashTreeRoot(oldestStoredBlock.message),
-        },
-        peerId
-      );
-    }
-  }
-
-  private addPeerOrCreateChain(startEpoch: Epoch, target: ChainTarget, peer: PeerId): void {
-    if (!this.syncChain) {
-      this.syncChain = new SyncChain(
-        startEpoch,
-        RangeSyncType.Finalized,
-        {
-          downloadBeaconBlocksByRange: this.downloadBeaconBlocksByRange,
-          reportPeer: this.reportPeer,
-          onEnd: this.onSyncChainEnd,
-          processChainSegment: this.processChainSegment,
-        },
-        {config: this.config, logger: this.logger},
-        this.opts
-      );
-      this.logger.verbose("New syncChain", {syncType: "backfill sync"});
-    }
-    this.syncChain.addPeer(peer, target);
   }
 
   /**
    * Remove this peer from all sync chains
    */
   private removePeer(peerId: PeerId): void {
-    this.syncChain?.removePeer(peerId);
+    this.peers.delete(peerId);
   }
 
-  /** Convenience method for `SyncChain` */
-  private processChainSegment: SyncChainFns["processChainSegment"] = async (blocks) => {
-    const state = await this.chain.getHeadStateAtCurrentEpoch();
-    verifyBlocks(this.config, state, blocks);
-    await this.db.blockArchive.batchPut(blocks.map((b) => ({key: b.message.slot, value: b})));
-  };
-
-  /** Convenience method for `SyncChain` */
-  private downloadBeaconBlocksByRange: SyncChainFns["downloadBeaconBlocksByRange"] = async (peerId, request) => {
-    return await this.network.reqResp.beaconBlocksByRange(peerId, request);
-  };
-
-  /** Convenience method for `SyncChain` */
-  private reportPeer: SyncChainFns["reportPeer"] = (peer, action, actionName) => {
-    this.network.peerRpcScores.applyAction(peer, action, actionName);
-  };
-
-  /** Convenience method for `SyncChain` */
-  private onSyncChainEnd: SyncChainFns["onEnd"] = (e) => {
-    if (!e) {
-      void this.update();
-      this.emit(BackfillSyncEvent.completedChain);
+  private async syncBlock(root: Root): Promise<void> {
+    const peer = getRandomPeer(this.peers.keys());
+    try {
+      const blocks = await this.network.reqResp.beaconBlocksByRoot(peer, [root] as List<Root>);
+      if (blocks.length === 0) {
+        throw new Error("Peer missing block");
+      }
+      const block = blocks[0] as SignedBeaconBlock;
+      verifyBlockSignature(this.config, this.chain.getHeadState(), block);
+      await this.db.blockArchive.put(block.message.slot, block);
+      this.anchorBlock = block;
+      this.processor.trigger();
+    } catch (e) {
+      this.peers.delete(peer);
+      throw e;
     }
-  };
+  }
+
+  private async syncRange(from: Slot, to: Slot, anchorRoot: Root): Promise<void> {
+    const peer = getRandomPeer(this.peers.keys());
+    try {
+      const blocks = await this.network.reqResp.beaconBlocksByRange(peer, {startSlot: from, count: to - from, step: 1});
+      await verifyBlocks(this.config, this.chain.bls, this.chain.getHeadState(), blocks, anchorRoot);
+      await this.db.blockArchive.batchAdd(blocks);
+      this.anchorBlock = blocks[blocks.length - 1];
+      this.processor.trigger();
+    } catch (e) {
+      this.peers.delete(peer);
+      throw e;
+    }
+  }
 }
