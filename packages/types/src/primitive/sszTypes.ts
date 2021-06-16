@@ -1,4 +1,12 @@
-import {byteType, booleanType, ByteVectorType, BigIntUintType, number32Type, NumberUintType} from "@chainsafe/ssz";
+import {
+  byteType,
+  booleanType,
+  ByteVectorType,
+  BigIntUintType,
+  number32Type,
+  NumberUintType,
+  RootType,
+} from "@chainsafe/ssz";
 
 export const Boolean = booleanType;
 export const Bytes4 = new ByteVectorType({length: 4});
@@ -21,7 +29,11 @@ export const CommitteeIndex = Number64;
 export const SubCommitteeIndex = Number64;
 export const ValidatorIndex = Number64;
 export const Gwei = Uint64;
-export const Root = Bytes32;
+export const Root = new RootType({
+  expandedType: () => {
+    throw new Error("Generic Root type has no expanded type");
+  },
+});
 export const Version = Bytes4;
 export const DomainType = Bytes4;
 export const ForkDigest = Bytes4;
