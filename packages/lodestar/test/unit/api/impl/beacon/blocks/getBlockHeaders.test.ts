@@ -1,4 +1,3 @@
-import {IBlockSummary} from "@chainsafe/lodestar-fork-choice";
 import {ssz} from "@chainsafe/lodestar-types";
 import {
   generateBlockSummary,
