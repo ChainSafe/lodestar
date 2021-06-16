@@ -7,7 +7,7 @@ import {processAttesterSlashing as processAttesterSlashingAllForks} from "../../
 export function processAttesterSlashing(
   state: CachedBeaconState<phase0.BeaconState>,
   attesterSlashing: phase0.AttesterSlashing,
-  verifySignatures = true
+  verifySignatures = true,
 ): void {
   processAttesterSlashingAllForks(
     ForkName.phase0,

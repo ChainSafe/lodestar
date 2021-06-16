@@ -8,6 +8,7 @@ import {processAttestation} from "./processAttestation";
 import {processDeposit} from "./processDeposit";
 import {processVoluntaryExit} from "./processVoluntaryExit";
 import {MAX_DEPOSITS} from "@chainsafe/lodestar-params";
+import {ValidatorExitProcess} from "../../allForks/block/initiateValidatorExit";
 
 type Operation =
   | phase0.ProposerSlashing
@@ -15,7 +16,12 @@ type Operation =
   | phase0.Attestation
   | phase0.Deposit
   | phase0.VoluntaryExit;
-type OperationFunction = (state: CachedBeaconState<altair.BeaconState>, op: Operation, verify: boolean) => void;
+type OperationFunction = (
+  state: CachedBeaconState<altair.BeaconState>,
+  op: Operation,
+  verify: boolean,
+  process: ValidatorExitProcess
+) => void;
 
 export function processOperations(
   state: CachedBeaconState<altair.BeaconState>,
@@ -30,6 +36,9 @@ export function processOperations(
     );
   }
 
+  // cache some internal data of validator exit process after the 1st exit
+  const validatorExitProcess = {} as ValidatorExitProcess;
+
   for (const [operations, processOp] of [
     [body.proposerSlashings, processProposerSlashing],
     [body.attesterSlashings, processAttesterSlashing],
@@ -38,7 +47,7 @@ export function processOperations(
     [body.voluntaryExits, processVoluntaryExit],
   ] as [List<Operation>, OperationFunction][]) {
     for (const op of readonlyValues(operations)) {
-      processOp(state, op, verifySignatures);
+      processOp(state, op, verifySignatures, validatorExitProcess);
     }
   }
 }

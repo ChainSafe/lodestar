@@ -6,7 +6,7 @@ import {processAttesterSlashing as processAttesterSlashingAllForks} from "../../
 export function processAttesterSlashing(
   state: CachedBeaconState<altair.BeaconState>,
   attesterSlashing: phase0.AttesterSlashing,
-  verifySignatures = true
+  verifySignatures = true,
 ): void {
   processAttesterSlashingAllForks(
     ForkName.altair,

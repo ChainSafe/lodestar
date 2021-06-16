@@ -6,7 +6,7 @@ import {processProposerSlashing as processProposerSlashingAllForks} from "../../
 export function processProposerSlashing(
   state: CachedBeaconState<phase0.BeaconState>,
   proposerSlashing: phase0.ProposerSlashing,
-  verifySignatures = true
+  verifySignatures = true,
 ): void {
   processProposerSlashingAllForks(
     ForkName.phase0,

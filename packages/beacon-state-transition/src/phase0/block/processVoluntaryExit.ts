@@ -5,7 +5,7 @@ import {processVoluntaryExit as processVoluntaryExitAllForks} from "../../allFor
 export function processVoluntaryExit(
   state: CachedBeaconState<phase0.BeaconState>,
   signedVoluntaryExit: phase0.SignedVoluntaryExit,
-  verifySignature = true
+  verifySignature = true,
 ): void {
   processVoluntaryExitAllForks(state as CachedBeaconState<allForks.BeaconState>, signedVoluntaryExit, verifySignature);
 }
