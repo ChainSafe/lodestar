@@ -30,7 +30,7 @@ function getCheckpointFromArg(checkpointStr: string): Checkpoint {
   return {root: fromHex(wsCheckpointData[0]), epoch: parseInt(wsCheckpointData[1])};
 }
 
-async function initAndVerifyWeakSujectivityState(
+async function initAndVerifyWeakSubjectivityState(
   config: IBeaconConfig,
   db: IBeaconDb,
   store: TreeBacked<allForks.BeaconState> | null,
@@ -74,7 +74,7 @@ export async function initBeaconState(
       const anchorState = getStateTypeFromBytes(config, stateBytes).createTreeBackedFromBytes(stateBytes);
       const checkpoint = getCheckpointFromArg(args.weakSubjectivityCheckpoint);
       const store = dbHasSomeState ? await db.stateArchive.lastValue() : null;
-      return initAndVerifyWeakSujectivityState(config, db, store, anchorState, logger, checkpoint);
+      return initAndVerifyWeakSubjectivityState(config, db, store, anchorState, logger, checkpoint);
     }
     return await initFromFile(args.weakSubjectivityStateFile);
   } else if (args.weakSubjectivitySyncLatest || args.weakSubjectivityCheckpoint) {
@@ -100,7 +100,7 @@ export async function initBeaconState(
       logger
     );
     const store = dbHasSomeState ? await db.stateArchive.lastValue() : null;
-    return initAndVerifyWeakSujectivityState(
+    return initAndVerifyWeakSubjectivityState(
       config,
       db,
       store,
