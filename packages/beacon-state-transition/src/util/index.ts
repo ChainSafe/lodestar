@@ -23,3 +23,4 @@ export * from "./slot";
 export * from "./validator";
 export * from "./syncCommittee";
 export * from "./finality";
+export * from "./blockProcess";

@@ -8,7 +8,7 @@ import {processAttesterSlashing} from "./processAttesterSlashing";
 import {processAttestation} from "./processAttestation";
 import {processDeposit} from "./processDeposit";
 import {processVoluntaryExit} from "./processVoluntaryExit";
-import {ValidatorExitProcess} from "../../allForks/block/initiateValidatorExit";
+import {BlockProcess} from "../../util/blockProcess";
 
 type Operation =
   | phase0.ProposerSlashing
@@ -19,13 +19,14 @@ type Operation =
 type OperationFunction = (
   state: CachedBeaconState<phase0.BeaconState>,
   op: Operation,
-  verify: boolean,
-  process: ValidatorExitProcess
+  process: BlockProcess,
+  verify: boolean
 ) => void;
 
 export function processOperations(
   state: CachedBeaconState<phase0.BeaconState>,
   body: phase0.BeaconBlockBody,
+  blockProcess: BlockProcess,
   verifySignatures = true
 ): void {
   // verify that outstanding deposits are processed up to the maximum number of deposits
@@ -36,9 +37,6 @@ export function processOperations(
     );
   }
 
-  // cache some internal data of validator exit process after the 1st exit
-  const validatorExitProcess = {} as ValidatorExitProcess;
-
   for (const [operations, processOp] of [
     [body.proposerSlashings, processProposerSlashing],
     [body.attesterSlashings, processAttesterSlashing],
@@ -47,7 +45,7 @@ export function processOperations(
     [body.voluntaryExits, processVoluntaryExit],
   ] as [List<Operation>, OperationFunction][]) {
     for (const op of readonlyValues(operations)) {
-      processOp(state, op, verifySignatures, validatorExitProcess);
+      processOp(state, op, blockProcess, verifySignatures);
     }
   }
 }

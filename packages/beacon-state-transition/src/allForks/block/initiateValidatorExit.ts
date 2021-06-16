@@ -2,14 +2,8 @@ import {FAR_FUTURE_EPOCH} from "@chainsafe/lodestar-params";
 import {allForks, ValidatorIndex} from "@chainsafe/lodestar-types";
 
 import {computeActivationExitEpoch, getChurnLimit} from "../../util";
+import {BlockProcess} from "../../util/blockProcess";
 import {CachedBeaconState} from "../util";
-
-// eslint-disable-next-line @typescript-eslint/naming-convention
-export interface ValidatorExitProcess {
-  exitQueueEpoch: number | undefined;
-  exitQueueChurn: number | undefined;
-  churnLimit: number | undefined;
-}
 
 /**
  * Initiate the exit of the validator with index ``index``.
@@ -17,16 +11,17 @@ export interface ValidatorExitProcess {
 export function initiateValidatorExit(
   state: CachedBeaconState<allForks.BeaconState>,
   index: ValidatorIndex,
-  process: ValidatorExitProcess
+  blockProcess: BlockProcess
 ): void {
   const {config, validators, epochCtx} = state;
   // return if validator already initiated exit
   if (validators[index].exitEpoch !== FAR_FUTURE_EPOCH) {
     return;
   }
+  const {validatorExitCache: cache} = blockProcess;
 
   // the 1st time we process validator exit in this block
-  if (process.exitQueueEpoch === undefined) {
+  if (cache.exitQueueEpoch === undefined) {
     const currentEpoch = epochCtx.currentShuffling.epoch;
     // compute exit queue epoch
     const validatorArr = validators.persistent.toArray();
@@ -53,25 +48,25 @@ export function initiateValidatorExit(
       exitQueueChurn = 1;
     }
 
-    process.exitQueueEpoch = exitQueueEpoch;
-    process.exitQueueChurn = exitQueueChurn;
-    process.churnLimit = churnLimit;
+    cache.exitQueueEpoch = exitQueueEpoch;
+    cache.exitQueueChurn = exitQueueChurn;
+    cache.churnLimit = churnLimit;
   } else {
-    let {exitQueueChurn} = process;
-    if (exitQueueChurn === undefined || process.churnLimit === undefined) {
+    let {exitQueueChurn} = cache;
+    if (exitQueueChurn === undefined || cache.churnLimit === undefined) {
       throw new Error("Invalid ValidatorExitProcess");
     }
     exitQueueChurn++;
-    if (exitQueueChurn >= process.churnLimit) {
+    if (exitQueueChurn >= cache.churnLimit) {
       // 1st validator with this exitQueueEpoch
-      process.exitQueueEpoch += 1;
+      cache.exitQueueEpoch += 1;
       exitQueueChurn = 0;
     }
-    process.exitQueueChurn = exitQueueChurn;
+    cache.exitQueueChurn = exitQueueChurn;
   }
 
   // set validator exit epoch and withdrawable epoch
-  const {exitQueueEpoch} = process;
+  const {exitQueueEpoch} = cache;
   validators.update(index, {
     exitEpoch: exitQueueEpoch,
     withdrawableEpoch: exitQueueEpoch + config.MIN_VALIDATOR_WITHDRAWABILITY_DELAY,
