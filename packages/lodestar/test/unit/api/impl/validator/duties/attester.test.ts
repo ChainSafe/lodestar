@@ -66,18 +66,23 @@ describe("getCommitteeAssignments vs assembleAttesterDuties performance test", f
 
   after(() => {
     console.log("number of runs: ", numRuns);
+    console.log("assembleAttesterDuty batch performance avg: ", totalPerfAAD / numRuns);
     console.log("getCommitteeAssignments performance avg: ", totalPerfGCA / numRuns);
-    console.log("assembleAttesterDuties performance avg: ", totalPerfAAD / numRuns);
   });
 
   for (let i = 0; i < numRuns; i++) {
     it("performance comparison", async () => {
       const state = await chainStub.getHeadStateAtCurrentEpoch();
-      const vData = state.validators.map((v, i) => ({pubkey: v.pubkey, index: indices[i]}));
 
       // the new way of getting attester duties
       let start = Date.now();
-      const newDuties = state.epochCtx.getCommitteeAssignments(0, vData);
+      const newDuties = state.epochCtx.getCommitteeAssignments(
+        0,
+        state.validators.map((validator, k) => {
+          const index = indices[k];
+          return {pubkey: validator.pubkey, index};
+        })
+      );
       totalPerfGCA += Date.now() - start;
 
       // the old way of getting the attester duties
