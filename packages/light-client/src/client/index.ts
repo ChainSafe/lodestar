@@ -1,12 +1,12 @@
 import mitt from "mitt";
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {getClient, Api} from "@chainsafe/lodestar-api";
-import {altair, Root, Slot, ssz, SyncPeriod} from "@chainsafe/lodestar-types";
+import {altair, Root, ssz, SyncPeriod} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {computeSyncPeriodAtSlot, ZERO_HASH} from "@chainsafe/lodestar-beacon-state-transition";
+import {computeSyncPeriodAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {TreeOffsetProof} from "@chainsafe/persistent-merkle-tree";
 import {Path, toHexString} from "@chainsafe/ssz";
-import {BeaconBlockHeader} from "@chainsafe/lodestar-types/phase0";
+import {BeaconBlockHeader, Checkpoint} from "@chainsafe/lodestar-types/phase0";
 import {Clock, IClock} from "../utils/clock";
 import {deserializeSyncCommittee, isEmptyHeader, serializeSyncCommittee, sumBits} from "../utils/utils";
 import {LightClientStoreFast} from "./types";
@@ -17,8 +17,6 @@ import {validateLightClientUpdate} from "./validation";
 import {isBetterUpdate} from "./update";
 // Re-export event types
 export {LightclientEvent} from "./events";
-
-type Optional<T, K extends keyof T> = Partial<T> & Omit<T, K>;
 
 export type LightclientModules = {
   config: IBeaconConfig;
@@ -48,31 +46,36 @@ export class Lightclient {
     this.clock.runEverySlot(this.syncToLatest);
   }
 
-  static async initializeFromTrustedStateRoot(
-    modules: Optional<LightclientModules, "clock" | "genesisValidatorsRoot">,
-    trustedRoot: {stateRoot: Root; slot: Slot}
+  static async initializeFromCheckpoint(
+    config: IBeaconConfig,
+    beaconApiUrl: string,
+    checkpoint: Checkpoint
   ): Promise<Lightclient> {
-    const {beaconApiUrl, config} = modules;
-    const {slot, stateRoot} = trustedRoot;
-    // TODO: Consider initializing only the lightclient namespace
     const api = getClient(config, {baseUrl: beaconApiUrl});
 
+    // fetch block header matching checkpoint root
+    const headerResp = await api.beacon.getBlockHeader(toHexString(checkpoint.root));
+
+    // verify the response matches the requested root
+    if (
+      !ssz.Root.equals(checkpoint.root, headerResp.data.root) ||
+      !ssz.Root.equals(checkpoint.root, ssz.phase0.BeaconBlockHeader.hashTreeRoot(headerResp.data.header.message))
+    ) {
+      throw new Error("Retrieved header does not match trusted checkpoint");
+    }
+    const header = headerResp.data.header.message;
+    const stateRoot = header.stateRoot;
+
+    // fetch a proof of the sync committees and genesis info
     const paths = getSyncCommitteesProofPaths();
-    // if the clock or genesisValidatorsRoot isn't supplied
-    // then add the required fields to the requested proof paths
-    if (!modules.clock) {
-      paths.push(["genesisTime"]);
-    }
-    if (!modules.genesisValidatorsRoot) {
-      paths.push(["genesisValidatorsRoot"]);
-    }
+    paths.push(["genesisTime"], ["genesisValidatorsRoot"]);
     const proof = await api.lightclient.getStateProof(toHexString(stateRoot), paths);
 
     const state = ssz.altair.BeaconState.createTreeBackedFromProof(stateRoot as Uint8Array, proof.data);
     const store: LightClientStoreFast = {
       bestUpdates: new Map<SyncPeriod, altair.LightClientUpdate>(),
       snapshot: {
-        header: {slot, proposerIndex: 0, parentRoot: ZERO_HASH, stateRoot, bodyRoot: ZERO_HASH},
+        header,
         currentSyncCommittee: deserializeSyncCommittee(state.currentSyncCommittee),
         nextSyncCommittee: deserializeSyncCommittee(state.nextSyncCommittee),
       },
@@ -80,11 +83,10 @@ export class Lightclient {
 
     return new Lightclient(
       {
-        ...modules,
-        // if the clock or genesisValidatorsRoot isn't supplied
-        // then set them in the new modules object
-        clock: modules.clock || new Clock(config, state.genesisTime),
-        genesisValidatorsRoot: modules.genesisValidatorsRoot || (state.genesisValidatorsRoot.valueOf() as Root),
+        config,
+        beaconApiUrl,
+        clock: new Clock(config, state.genesisTime),
+        genesisValidatorsRoot: state.genesisValidatorsRoot.valueOf() as Root,
       },
       store
     );
