@@ -12,7 +12,6 @@ import {
   Eth1Provider,
   IBeaconNodeOptions,
   initStateFromAnchorState,
-  initStateFromDb,
   initStateFromEth1,
 } from "@chainsafe/lodestar";
 import {getStateTypeFromBytes} from "@chainsafe/lodestar/lib/util/multifork";
@@ -25,17 +24,29 @@ import {Checkpoint} from "@chainsafe/lodestar-types/phase0";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {computeEpochAtSlot} from "../../../../beacon-state-transition/lib";
 
+const checkpointRegex = new RegExp("^(?:0x)?([0-9a-f]{64}):([0-9]+)$");
+
 function getCheckpointFromArg(checkpointStr: string): Checkpoint {
-  const wsCheckpointData = checkpointStr.split(":");
-  return {root: fromHex(wsCheckpointData[0]), epoch: parseInt(wsCheckpointData[1])};
+  const match = checkpointRegex.exec(checkpointStr.toLowerCase());
+  if (!match) {
+    throw new Error(`Could not parse checkpoint string: ${checkpointStr}`);
+  }
+  return {root: fromHex(match[1]), epoch: parseInt(match[2])};
+}
+
+function getCheckpointFromState(config: IBeaconConfig, state: allForks.BeaconState): Checkpoint {
+  return {
+    epoch: computeEpochAtSlot(state.latestBlockHeader.slot),
+    root: getLatestBlockRoot(config, state),
+  };
 }
 
 async function initAndVerifyWeakSubjectivityState(
   config: IBeaconConfig,
   db: IBeaconDb,
-  store: TreeBacked<allForks.BeaconState> | null,
-  wsState: TreeBacked<allForks.BeaconState>,
   logger: ILogger,
+  store: TreeBacked<allForks.BeaconState>,
+  wsState: TreeBacked<allForks.BeaconState>,
   wsCheckpoint: Checkpoint
 ): Promise<TreeBacked<allForks.BeaconState>> {
   if (!isWithinWeakSubjectivityPeriod(config, store, wsState, wsCheckpoint)) {
@@ -60,24 +71,25 @@ export async function initBeaconState(
   logger: ILogger,
   signal: AbortSignal
 ): Promise<TreeBacked<allForks.BeaconState>> {
-  async function initFromFile(pathOrUrl: string): Promise<TreeBacked<allForks.BeaconState>> {
-    const stateBytes = await downloadOrLoadFile(pathOrUrl);
-    const anchorState = getStateTypeFromBytes(config, stateBytes).createTreeBackedFromBytes(stateBytes);
-    return await initStateFromAnchorState(config, db, logger, anchorState as TreeBacked<allForks.BeaconState>);
-  }
-
-  const dbHasSomeState = (await db.stateArchive.lastKey()) != null;
+  // fetch the latest state stored in the db
+  // this will be used in all cases, if it exists, either used during verification of a weak subjectivity state, or used directly as the anchor state
+  const lastDbState = await db.stateArchive.lastValue();
 
   if (args.weakSubjectivityStateFile) {
-    if (args.weakSubjectivityCheckpoint) {
-      const stateBytes = await downloadOrLoadFile(args.weakSubjectivityStateFile);
-      const anchorState = getStateTypeFromBytes(config, stateBytes).createTreeBackedFromBytes(stateBytes);
-      const checkpoint = getCheckpointFromArg(args.weakSubjectivityCheckpoint);
-      const store = dbHasSomeState ? await db.stateArchive.lastValue() : null;
-      return initAndVerifyWeakSubjectivityState(config, db, store, anchorState, logger, checkpoint);
-    }
-    return await initFromFile(args.weakSubjectivityStateFile);
-  } else if (args.weakSubjectivitySyncLatest || args.weakSubjectivityCheckpoint) {
+    // weak subjectivity sync from a provided state file:
+    // if a weak subjectivity checkpoint has been provided, it is used for additional verification
+    // otherwise, the state itself is used for verification (not bad, because the trusted state has been explicitly provided)
+    const stateBytes = await downloadOrLoadFile(args.weakSubjectivityStateFile);
+    const wsState = getStateTypeFromBytes(config, stateBytes).createTreeBackedFromBytes(stateBytes);
+    const store = lastDbState ?? wsState;
+    const checkpoint = args.weakSubjectivityCheckpoint
+      ? getCheckpointFromArg(args.weakSubjectivityCheckpoint)
+      : getCheckpointFromState(config, wsState);
+    return initAndVerifyWeakSubjectivityState(config, db, logger, store, wsState, checkpoint);
+  } else if (args.weakSubjectivitySyncLatest) {
+    // weak subjectivity sync from a state that needs to be fetched:
+    // if a weak subjectivity checkpoint has been provided, it is used to inform which state to download and used for additional verification
+    // otherwise, the 'finalized' state is downloaded and the state itself is used for verification (all trust delegated to the remote beacon node)
     if (!(args.weakSubjectivityServerUrl || Object.keys(weakSubjectivityServers).includes(args.network))) {
       throw new Error(
         `Missing weak subjectivity server URL.  Use either a custom URL via --weakSubjectivityServerUrl or use one of these options for --network: ${Object.keys(
@@ -85,13 +97,13 @@ export async function initBeaconState(
         ).toString()}`
       );
     }
-    let checkpoint: Checkpoint | undefined;
+
     let stateId = "finalized";
+    let checkpoint: Checkpoint | undefined;
     if (args.weakSubjectivityCheckpoint) {
       checkpoint = getCheckpointFromArg(args.weakSubjectivityCheckpoint);
-      stateId = args.weakSubjectivityCheckpoint && (checkpoint.epoch * SLOTS_PER_EPOCH).toString();
+      stateId = (checkpoint.epoch * SLOTS_PER_EPOCH).toString();
     }
-
     const wsState = await getWeakSubjectivityState(
       config,
       args,
@@ -99,24 +111,24 @@ export async function initBeaconState(
       args.weakSubjectivityServerUrl || weakSubjectivityServers[args.network as WeakSubjectivityServer],
       logger
     );
-    const store = dbHasSomeState ? await db.stateArchive.lastValue() : null;
+    const store = lastDbState ?? wsState;
     return initAndVerifyWeakSubjectivityState(
       config,
       db,
+      logger,
       store,
       wsState,
-      logger,
-      checkpoint || {
-        epoch: computeEpochAtSlot(wsState.latestBlockHeader.slot),
-        root: getLatestBlockRoot(config, wsState),
-      }
+      checkpoint || getCheckpointFromState(config, wsState)
     );
-  } else if (dbHasSomeState) {
-    return await initStateFromDb(config, db, logger);
+  } else if (lastDbState) {
+    // start the chain from the latest stored state in the db
+    return await initStateFromAnchorState(config, db, logger, lastDbState);
   } else {
     const genesisStateFile = args.genesisStateFile || getGenesisFileUrl(args.network || defaultNetwork);
     if (genesisStateFile && !args.forceGenesis) {
-      return await initFromFile(genesisStateFile);
+      const stateBytes = await downloadOrLoadFile(genesisStateFile);
+      const anchorState = getStateTypeFromBytes(config, stateBytes).createTreeBackedFromBytes(stateBytes);
+      return await initStateFromAnchorState(config, db, logger, anchorState);
     } else {
       return await initStateFromEth1(config, db, logger, new Eth1Provider(config, options.eth1), signal);
     }
