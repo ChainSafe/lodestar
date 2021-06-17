@@ -37,7 +37,7 @@
   "types": "lib/index.d.ts",
   "dependencies": {
     "@chainsafe/lodestar-params": "^0.24.3",
-    "@chainsafe/ssz": "^0.8.9"
+    "@chainsafe/ssz": "^0.8.10"
   },
   "keywords": [
     "ethereum",

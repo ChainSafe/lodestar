@@ -1,4 +1,3 @@
-import {IBlockSummary} from "@chainsafe/lodestar-fork-choice";
 import {ssz} from "@chainsafe/lodestar-types";
 import {
   generateBlockSummary,
@@ -27,9 +26,10 @@ describe("api - beacon - getBlockHeaders", function () {
     server.forkChoiceStub.getBlockSummariesAtSlot.withArgs(1).returns([
       generateEmptyBlockSummary(),
       //canonical block summary
-      deepmerge<IBlockSummary>(generateEmptyBlockSummary(), {
+      {
+        ...generateEmptyBlockSummary(),
         blockRoot: ssz.phase0.BeaconBlock.hashTreeRoot(generateEmptyBlock()),
-      }),
+      },
     ]);
     server.dbStub.block.get.resolves(deepmerge(generateEmptySignedBlock(), {message: {slot: 3}}));
     server.dbStub.blockArchive.get.resolves(null);
