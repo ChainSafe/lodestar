@@ -2,8 +2,10 @@ import {routes} from "@chainsafe/lodestar-api";
 import {allForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {BLSPubkey, Epoch, ssz, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {readonlyValues} from "@chainsafe/ssz";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
 export function assembleAttesterDuty(
+  config: IBeaconConfig,
   validator: {pubkey: BLSPubkey; index: ValidatorIndex},
   epochCtx: allForks.EpochContext,
   epoch: Epoch

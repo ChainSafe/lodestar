@@ -90,7 +90,7 @@ describe("getCommitteeAssignments vs assembleAttesterDuties performance test", f
       start = Date.now();
       for (const validatorIndex of indices) {
         const validator = state.validators[validatorIndex];
-        const duty = assembleAttesterDuty({pubkey: validator.pubkey, index: validatorIndex}, state.epochCtx, 0);
+        const duty = assembleAttesterDuty(config, {pubkey: validator.pubkey, index: validatorIndex}, state.epochCtx, 0);
         if (duty) oldDuties.push(duty);
       }
       totalPerfAAD += Date.now() - start;

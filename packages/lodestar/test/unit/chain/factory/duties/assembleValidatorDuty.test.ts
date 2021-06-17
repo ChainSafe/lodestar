@@ -1,3 +1,4 @@
+import {config} from "@chainsafe/lodestar-config/default";
 import {List} from "@chainsafe/ssz";
 import {expect} from "chai";
 import sinon from "sinon";
@@ -21,7 +22,7 @@ describe("assemble validator duty", function () {
       validators: [1, validatorIndex, 5] as List<number>,
     });
     state.epochCtx.getCommitteeCountAtSlot = () => 3;
-    const result = assembleAttesterDuty({pubkey: publicKey, index: validatorIndex}, state.epochCtx, 2);
+    const result = assembleAttesterDuty(config, {pubkey: publicKey, index: validatorIndex}, state.epochCtx, 2);
     if (result === null) throw Error("Result is null");
     expect(result.pubkey).to.be.equal(publicKey);
     expect(result.slot).to.be.equal(1);
@@ -39,7 +40,7 @@ describe("assemble validator duty", function () {
       validators: [1, validatorIndex, 5] as List<number>,
     });
     state.epochCtx.getCommitteeCountAtSlot = () => 3;
-    const result = assembleAttesterDuty({pubkey: publicKey, index: validatorIndex}, state.epochCtx, 3);
+    const result = assembleAttesterDuty(config, {pubkey: publicKey, index: validatorIndex}, state.epochCtx, 3);
     if (result === null) throw Error("Result is null");
     expect(result.pubkey).to.be.equal(publicKey);
     expect(result.slot).to.be.equal(1);
@@ -52,7 +53,7 @@ describe("assemble validator duty", function () {
     const validatorIndex = 2;
     const state = generateCachedState();
     state.epochCtx.getCommitteeAssignment = () => null;
-    const result = assembleAttesterDuty({pubkey: publicKey, index: validatorIndex}, state.epochCtx, 3);
+    const result = assembleAttesterDuty(config, {pubkey: publicKey, index: validatorIndex}, state.epochCtx, 3);
     expect(result).to.be.null;
   });
 });
