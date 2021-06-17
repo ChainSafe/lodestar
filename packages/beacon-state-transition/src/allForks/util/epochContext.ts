@@ -1,3 +1,4 @@
+import {routes} from "@chainsafe/lodestar-api";
 import {ByteVector, hash, toHexString, BitList, List} from "@chainsafe/ssz";
 import bls, {CoordType, PublicKey} from "@chainsafe/bls";
 import {
@@ -9,6 +10,7 @@ import {
   phase0,
   allForks,
   Gwei,
+  BLSPubkey,
 } from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {
@@ -323,6 +325,36 @@ export class EpochContext {
     const committeeIndices = this.getBeaconCommittee(data.slot, data.index);
     const validatorIndices = zipIndexesCommitteeBits(committeeIndices, bits);
     return validatorIndices;
+  }
+
+  getCommitteeAssignments(
+    epoch: Epoch,
+    validatorData: {pubkey: BLSPubkey; index: ValidatorIndex}[]
+  ): routes.validator.AttesterDuty[] {
+    if (epoch > this.currentShuffling.epoch + 1) {
+      throw Error(
+        `Requesting committee assignment for more than 1 epoch ahead: ${epoch} > ${this.currentShuffling.epoch} + 1`
+      );
+    }
+    const epochStartSlot = computeStartSlotAtEpoch(epoch);
+    const validators = [];
+    for (let slot = epochStartSlot; slot < epochStartSlot + SLOTS_PER_EPOCH; slot++) {
+      const slotCommittees = this._getSlotCommittees(slot);
+      for (let committeeIdx = 0; committeeIdx < slotCommittees.length; committeeIdx++) {
+        for (let idx = 0; idx < slotCommittees[committeeIdx].length; idx++) {
+          validators.push({
+            pubkey: validatorData[idx].pubkey,
+            validatorIndex: slotCommittees[committeeIdx][idx],
+            committeeLength: slotCommittees[committeeIdx].length,
+            committeesAtSlot: slotCommittees.length,
+            validatorCommitteeIndex: idx,
+            committeeIndex: committeeIdx,
+            slot,
+          });
+        }
+      }
+    }
+    return validators;
   }
 
   /**

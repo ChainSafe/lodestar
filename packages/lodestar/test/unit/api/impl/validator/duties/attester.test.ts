@@ -5,34 +5,29 @@ import {createCachedBeaconState} from "@chainsafe/lodestar-beacon-state-transiti
 import {ForkChoice, IBeaconChain} from "../../../../../../src/chain";
 import {LocalClock} from "../../../../../../src/chain/clock";
 import {FAR_FUTURE_EPOCH} from "../../../../../../src/constants";
-import {IEth1ForBlockProduction} from "../../../../../../src/eth1";
-import {getValidatorApi} from "../../../../../../src/api/impl/validator";
-import {ApiModules} from "../../../../../../src/api/impl/types";
 import {generateInitialMaxBalances} from "../../../../../utils/balances";
 import {generateState} from "../../../../../utils/state";
 import {IBeaconSync} from "../../../../../../src/sync";
 import {generateValidators} from "../../../../../utils/validator";
 import {StubbedBeaconDb} from "../../../../../utils/stub";
 import {setupApiImplTestServer, ApiImplTestModules} from "../../index.test";
-import {testLogger} from "../../../../../utils/logger";
 import {ssz} from "@chainsafe/lodestar-types";
 import {MAX_EFFECTIVE_BALANCE} from "@chainsafe/lodestar-params";
+import {assembleAttesterDuty} from "../../../../../../src/chain/factory/duties";
+import {expect} from "chai";
 
-describe("get attesters api impl", function () {
+describe("getCommitteeAssignments vs assembleAttesterDuties performance test", function () {
   this.timeout(0);
-  const logger = testLogger();
-  let eth1Stub: SinonStubbedInstance<IEth1ForBlockProduction>;
 
   let chainStub: SinonStubbedInstance<IBeaconChain>,
     syncStub: SinonStubbedInstance<IBeaconSync>,
     dbStub: StubbedBeaconDb;
 
-  let api: ReturnType<typeof getValidatorApi>;
   let server: ApiImplTestModules;
-  let modules: ApiModules;
 
   let indices: number[];
-  let totalPerf = 0;
+  let totalPerfGCA = 0,
+    totalPerfAAD = 0;
   const numRuns = 50;
 
   before(function () {
@@ -43,17 +38,6 @@ describe("get attesters api impl", function () {
     chainStub.forkChoice = server.sandbox.createStubInstance(ForkChoice);
     chainStub.getCanonicalBlockAtSlot.resolves(ssz.phase0.SignedBeaconBlock.defaultValue());
     dbStub = server.dbStub;
-    modules = {
-      chain: server.chainStub,
-      config,
-      db: server.dbStub,
-      eth1: eth1Stub,
-      logger,
-      network: server.networkStub,
-      sync: syncStub,
-      metrics: null,
-    };
-    api = getValidatorApi(modules);
 
     const numValidators = 20000;
 
@@ -82,15 +66,34 @@ describe("get attesters api impl", function () {
 
   after(() => {
     console.log("number of runs: ", numRuns);
-    console.log("performance avg: ", totalPerf / numRuns);
+    console.log("getCommitteeAssignments performance avg: ", totalPerfGCA / numRuns);
+    console.log("assembleAttesterDuties performance avg: ", totalPerfAAD / numRuns);
   });
 
   for (let i = 0; i < numRuns; i++) {
-    it("getAttesterDuties perf test", async () => {
-      const start = Date.now();
-      await api.getAttesterDuties(0, indices);
-      const perf = Date.now() - start;
-      totalPerf += perf;
+    it("performance comparison", async () => {
+      const state = await chainStub.getHeadStateAtCurrentEpoch();
+      const vData = state.validators.map((v, i) => ({pubkey: v.pubkey, index: indices[i]}));
+
+      // the new way of getting attester duties
+      let start = Date.now();
+      const newDuties = state.epochCtx.getCommitteeAssignments(0, vData);
+      totalPerfGCA += Date.now() - start;
+
+      // the old way of getting the attester duties
+      const oldDuties = [];
+      start = Date.now();
+      for (const validatorIndex of indices) {
+        const validator = state.validators[validatorIndex];
+        const duty = assembleAttesterDuty({pubkey: validator.pubkey, index: validatorIndex}, state.epochCtx, 0);
+        if (duty) oldDuties.push(duty);
+      }
+      totalPerfAAD += Date.now() - start;
+
+      // verify that both the old and new ways get the same data
+      newDuties.sort((x, y) => x.validatorIndex - y.validatorIndex);
+      oldDuties.sort((x, y) => x.validatorIndex - y.validatorIndex);
+      expect(newDuties).to.deep.equal(oldDuties);
     });
   }
 });
