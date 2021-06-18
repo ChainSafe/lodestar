@@ -1,7 +1,8 @@
 export interface IForkChoiceMetrics {
-  forkChoiceFindHead: IHistogram;
+  forkChoiceFindHead: IHistogram<"syncStatus" | "resStatus">;
 }
 
-interface IHistogram {
-  startTimer(): () => void;
+type Labels<T extends string> = Partial<Record<T, string | number>>;
+interface IHistogram<T extends string> {
+  startTimer(arg?: Labels<T>): (arg?: Labels<T>) => void;
 }

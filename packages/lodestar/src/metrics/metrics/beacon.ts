@@ -121,9 +121,10 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
       help: "number of aggregators for which we have seen an attestation, not necessarily included on chain.",
     }),
 
-    forkChoiceFindHead: register.histogram({
+    forkChoiceFindHead: register.histogram<"syncStatus" | "resStatus">({
       name: "beacon_fork_choice_find_head_seconds",
       help: "Time taken to find head in seconds",
+      labelNames: ["syncStatus", "resStatus"],
       buckets: [0.1, 1, 10],
     }),
   };

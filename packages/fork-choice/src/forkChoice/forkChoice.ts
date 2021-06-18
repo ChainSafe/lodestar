@@ -182,10 +182,10 @@ export class ForkChoice implements IForkChoice {
    */
   updateHead(): IBlockSummary {
     // balances is not changed but votes are changed
-    let timer;
+    const timer = this.metrics?.forkChoiceFindHead.startTimer({syncStatus: this.synced ? "synced" : "unsynced"});
+    const mLabels = {resStatus: "error"};
     try {
       if (!this.synced) {
-        timer = this.metrics?.forkChoiceFindHead.startTimer();
         const deltas = computeDeltas(
           this.protoArray.indices,
           this.votes,
@@ -214,10 +214,17 @@ export class ForkChoice implements IForkChoice {
           root: fromHexString(headRoot),
         });
       }
+      const blockSummary = toBlockSummary(headNode);
 
-      return (this.head = toBlockSummary(headNode));
+      const isSameHead =
+        blockSummary && this.head && toHexString(blockSummary.blockRoot) == toHexString(this.head.blockRoot);
+      const isSameChain =
+        isSameHead || (this.head && blockSummary && this.isDescendant(this.head.blockRoot, blockSummary.blockRoot));
+      Object.assign(mLabels, {resStatus: isSameHead ? "samehead" : isSameChain ? "newhead" : "newfork"});
+
+      return (this.head = blockSummary);
     } finally {
-      if (timer) timer();
+      if (timer) timer(mLabels);
     }
   }
 
