@@ -18,6 +18,7 @@ import {expect} from "chai";
 import {AttesterDuty} from "../../../../../../../api/src/routes/validator";
 
 describe("getCommitteeAssignments vs assembleAttesterDuties performance test", function () {
+  this.timeout(0);
   let chainStub: SinonStubbedInstance<IBeaconChain>,
     syncStub: SinonStubbedInstance<IBeaconSync>,
     dbStub: StubbedBeaconDb;
