@@ -1,5 +1,6 @@
 import {ErrorAborted, TimeoutError} from "@chainsafe/lodestar-utils";
-import {AbortController} from "abort-controller";
+// eslint-disable-next-line import/no-named-as-default
+import AbortController from "abort-controller";
 import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
 import fastify, {RouteOptions} from "fastify";

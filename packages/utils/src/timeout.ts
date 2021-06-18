@@ -1,4 +1,5 @@
-import {AbortSignal, AbortController} from "abort-controller";
+// eslint-disable-next-line import/no-named-as-default
+import AbortController, {AbortSignal} from "abort-controller";
 import {anySignal} from "any-signal";
 import {TimeoutError} from "./errors";
 import {sleep} from "./sleep";

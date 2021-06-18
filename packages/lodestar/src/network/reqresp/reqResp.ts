@@ -6,7 +6,8 @@ import {ForkName} from "@chainsafe/lodestar-params";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {allForks, phase0} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
-import {AbortController} from "abort-controller";
+// eslint-disable-next-line import/no-named-as-default
+import AbortController from "abort-controller";
 import LibP2p from "libp2p";
 import PeerId from "peer-id";
 import {timeoutOptions} from "../../constants";

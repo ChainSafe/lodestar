@@ -1,6 +1,7 @@
 import sinon from "sinon";
 import {expect} from "chai";
-import {AbortController} from "abort-controller";
+// eslint-disable-next-line import/no-named-as-default
+import AbortController from "abort-controller";
 
 import PeerId from "peer-id";
 import {Discv5Discovery, ENR} from "@chainsafe/discv5";

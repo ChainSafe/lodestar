@@ -1,4 +1,5 @@
-import {AbortController, AbortSignal} from "abort-controller";
+// eslint-disable-next-line import/no-named-as-default
+import AbortController, {AbortSignal} from "abort-controller";
 import {SecretKey} from "@chainsafe/bls";
 import {ssz} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";

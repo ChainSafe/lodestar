@@ -1,5 +1,6 @@
 import {sleep} from "@chainsafe/lodestar-utils";
-import {AbortController} from "abort-controller";
+// eslint-disable-next-line import/no-named-as-default
+import AbortController from "abort-controller";
 import {expect} from "chai";
 
 import {JobQueue, QueueError, QueueErrorCode, QueueType} from "../../../src/util/queue";

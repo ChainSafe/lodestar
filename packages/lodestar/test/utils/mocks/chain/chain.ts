@@ -1,4 +1,5 @@
-import {AbortController} from "abort-controller";
+// eslint-disable-next-line import/no-named-as-default
+import AbortController from "abort-controller";
 import sinon from "sinon";
 
 import {TreeBacked} from "@chainsafe/ssz";

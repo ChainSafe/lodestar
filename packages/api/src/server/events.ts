@@ -1,4 +1,5 @@
-import {AbortController} from "abort-controller";
+// eslint-disable-next-line import/no-named-as-default
+import AbortController from "abort-controller";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ServerRoutes} from "./utils";
 import {Api, ReqTypes, routesData, getEventSerdes} from "../routes/events";

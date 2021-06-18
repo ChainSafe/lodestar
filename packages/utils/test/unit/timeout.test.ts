@@ -1,6 +1,7 @@
 import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
-import {AbortController} from "abort-controller";
+// eslint-disable-next-line import/no-named-as-default
+import AbortController from "abort-controller";
 import {withTimeout} from "../../src/timeout";
 import {ErrorAborted, TimeoutError} from "../../src/errors";
 

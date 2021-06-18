@@ -1,6 +1,7 @@
 import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
-import {AbortController} from "abort-controller";
+// eslint-disable-next-line import/no-named-as-default
+import AbortController from "abort-controller";
 import {config} from "@chainsafe/lodestar-config/default";
 import {LodestarError} from "@chainsafe/lodestar-utils";
 import {RespStatus} from "../../../../../src/constants";

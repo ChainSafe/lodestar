@@ -13,7 +13,8 @@ import {
 import {ValidatorIndex, phase0, ssz} from "@chainsafe/lodestar-types";
 import {ErrorAborted} from "@chainsafe/lodestar-utils";
 import {toHexString} from "@chainsafe/ssz";
-import {AbortController} from "abort-controller";
+// eslint-disable-next-line import/no-named-as-default
+import AbortController from "abort-controller";
 import {IEth1Provider} from "../../../../src/eth1";
 import {GenesisBuilder} from "../../../../src/chain/genesis/genesis";
 import {testLogger} from "../../../utils/logger";

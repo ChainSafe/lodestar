@@ -1,4 +1,5 @@
-import {AbortController} from "abort-controller";
+// eslint-disable-next-line import/no-named-as-default
+import AbortController from "abort-controller";
 import pipe from "it-pipe";
 import {timeoutOptions} from "../../../constants";
 import {abortableSource} from "../../../util/abortableSource";

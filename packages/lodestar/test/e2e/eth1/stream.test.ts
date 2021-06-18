@@ -1,6 +1,7 @@
 import "mocha";
 import {expect} from "chai";
-import {AbortController} from "abort-controller";
+// eslint-disable-next-line import/no-named-as-default
+import AbortController from "abort-controller";
 import {getTestnetConfig, testnet} from "../../utils/testnet";
 import {getDepositsStream, getDepositsAndBlockStreamForGenesis, Eth1Provider} from "../../../src/eth1";
 

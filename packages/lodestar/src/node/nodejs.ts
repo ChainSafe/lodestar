@@ -2,7 +2,8 @@
  * @module node
  */
 
-import {AbortController} from "abort-controller";
+// eslint-disable-next-line import/no-named-as-default
+import AbortController from "abort-controller";
 import LibP2p from "libp2p";
 
 import {TreeBacked} from "@chainsafe/ssz";
