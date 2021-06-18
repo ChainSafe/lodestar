@@ -47,7 +47,7 @@
   ],
   "dependencies": {
     "@chainsafe/lodestar-utils": "^0.24.3",
-    "@chainsafe/ssz": "^0.8.10",
+    "@chainsafe/ssz": "^0.8.11",
     "axios": "^0.21.0",
     "chai": "^4.2.0",
     "mocha": "^8.1.1",
