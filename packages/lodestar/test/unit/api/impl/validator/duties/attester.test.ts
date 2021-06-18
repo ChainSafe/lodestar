@@ -15,10 +15,9 @@ import {ssz} from "@chainsafe/lodestar-types";
 import {MAX_EFFECTIVE_BALANCE} from "@chainsafe/lodestar-params";
 import {assembleAttesterDuty} from "../../../../../../src/chain/factory/duties";
 import {expect} from "chai";
+import {AttesterDuty} from "../../../../../../../api/src/routes/validator";
 
 describe("getCommitteeAssignments vs assembleAttesterDuties performance test", function () {
-  this.timeout(0);
-
   let chainStub: SinonStubbedInstance<IBeaconChain>,
     syncStub: SinonStubbedInstance<IBeaconSync>,
     dbStub: StubbedBeaconDb;
@@ -28,7 +27,7 @@ describe("getCommitteeAssignments vs assembleAttesterDuties performance test", f
   let indices: number[];
   let totalPerfGCA = 0,
     totalPerfAAD = 0;
-  const numRuns = 50;
+  const numRuns = 1;
 
   before(function () {
     server = setupApiImplTestServer();
@@ -86,7 +85,7 @@ describe("getCommitteeAssignments vs assembleAttesterDuties performance test", f
       totalPerfGCA += Date.now() - start;
 
       // the old way of getting the attester duties
-      const oldDuties = [];
+      const oldDuties: AttesterDuty[] = [];
       start = Date.now();
       for (const validatorIndex of indices) {
         const validator = state.validators[validatorIndex];

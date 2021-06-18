@@ -340,15 +340,15 @@ export class EpochContext {
     const validators = [];
     for (let slot = epochStartSlot; slot < epochStartSlot + SLOTS_PER_EPOCH; slot++) {
       const slotCommittees = this._getSlotCommittees(slot);
-      for (let committeeIdx = 0; committeeIdx < slotCommittees.length; committeeIdx++) {
-        for (let idx = 0; idx < slotCommittees[committeeIdx].length; idx++) {
+      for (let i = 0; i < slotCommittees.length; i++) {
+        for (let j = 0; j < slotCommittees[i].length; j++) {
           validators.push({
-            pubkey: validatorData[idx].pubkey,
-            validatorIndex: slotCommittees[committeeIdx][idx],
-            committeeLength: slotCommittees[committeeIdx].length,
+            pubkey: validatorData[slotCommittees[i][j]].pubkey,
+            validatorIndex: validatorData[slotCommittees[i][j]].index,
+            committeeLength: slotCommittees[i].length,
             committeesAtSlot: slotCommittees.length,
-            validatorCommitteeIndex: idx,
-            committeeIndex: committeeIdx,
+            validatorCommitteeIndex: j,
+            committeeIndex: i,
             slot,
           });
         }
