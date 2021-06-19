@@ -13,7 +13,6 @@ import {
   getTotalBalance,
   getChurnLimit,
 } from "../..";
-import {getWeakSubjectivityCheckpointEpoch} from "../../util/weakSubjectivity";
 
 export const ETH_TO_GWEI = BigInt(10 ** 9);
 const SAFETY_DECAY = BigInt(10);
@@ -24,11 +23,9 @@ const SAFETY_DECAY = BigInt(10);
  */
 export function getLatestWeakSubjectivityCheckpointEpoch(
   config: IBeaconConfig,
-  state: CachedBeaconState<allForks.BeaconState>,
-  safetyDecay = 0.1
+  state: CachedBeaconState<allForks.BeaconState>
 ): Epoch {
-  const valCount = state.epochCtx.currentShuffling.activeIndices.length;
-  return getWeakSubjectivityCheckpointEpoch(config, state.finalizedCheckpoint.epoch, valCount, safetyDecay);
+  return state.epochCtx.currentShuffling.epoch - computeWeakSubjectivityPeriod(config, state);
 }
 
 /**
@@ -40,19 +37,30 @@ export function getLatestWeakSubjectivityCheckpointEpoch(
     https://github.com/runtimeverification/beacon-chain-verification/blob/master/weak-subjectivity/weak-subjectivity-analysis.pdf
  */
 export function computeWeakSubjectivityPeriod(config: IBeaconConfig, state: allForks.BeaconState): number {
-  let wsPeriod = config.MIN_VALIDATOR_WITHDRAWABILITY_DELAY;
-  const ethToGwei = Number(ETH_TO_GWEI);
-  const currentEpoch = getCurrentEpoch(state);
-  const indices = getActiveValidatorIndices(state, currentEpoch);
-  const N = indices.length;
-  const totalBalance = getTotalBalance(state, indices);
-  const t = Math.floor(Number(totalBalance) / N / ethToGwei);
-  const T = Math.floor(Number(MAX_EFFECTIVE_BALANCE) / ethToGwei);
-  const delta = getChurnLimit(config, N);
+  const indices = getActiveValidatorIndices(state, getCurrentEpoch(state));
+  return computeWeakSubjectivityPeriodFromConstituents(
+    indices.length,
+    getTotalBalance(state, indices),
+    getChurnLimit(config, indices.length),
+    config.MIN_VALIDATOR_WITHDRAWABILITY_DELAY
+  );
+}
+
+export function computeWeakSubjectivityPeriodFromConstituents(
+  activeValidatorCount: number,
+  totalBalance: bigint,
+  churnLimit: number,
+  minWithdrawabilityDelay: number
+): number {
+  const N = activeValidatorCount;
+  const t = Number(totalBalance / BigInt(N) / ETH_TO_GWEI);
+  const T = Number(MAX_EFFECTIVE_BALANCE / ETH_TO_GWEI);
+  const delta = churnLimit;
   // eslint-disable-next-line @typescript-eslint/naming-convention
   const Delta = MAX_DEPOSITS * SLOTS_PER_EPOCH;
   const D = Number(SAFETY_DECAY);
 
+  let wsPeriod = minWithdrawabilityDelay;
   if (T * (200 + 3 * D) < t * (200 + 12 * D)) {
     const epochsForValidatorSetChurn = Math.floor(
       (N * (t * (200 + 12 * D) - T * (200 + 3 * D))) / (600 * delta * (2 * t + T))
@@ -91,6 +99,6 @@ export function isWithinWeakSubjectivityPeriod(
     throw new Error(`Epochs do not match.  expected=${wsCheckpoint.epoch}, actual=${wsStateEpoch}`);
   }
   const wsPeriod = computeWeakSubjectivityPeriod(config, wsState);
-  const currentEpoch = computeEpochAtSlot(store.slot);
+  const currentEpoch = getCurrentEpoch(store);
   return currentEpoch <= wsStateEpoch + wsPeriod;
 }
