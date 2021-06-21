@@ -18,8 +18,7 @@ import {getStateTypeFromBytes} from "@chainsafe/lodestar/lib/util/multifork";
 import {downloadOrLoadFile} from "../../util";
 import {IBeaconArgs} from "./options";
 import {defaultNetwork, IGlobalArgs} from "../../options/globalOptions";
-import {getGenesisFileUrl} from "../../networks";
-import {weakSubjectivityServers, getWeakSubjectivityState, WeakSubjectivityServer} from "../weakSubjectivityState";
+import {fetchWeakSubjectivityState, getGenesisFileUrl, getInfuraBeaconUrl, infuraNetworks} from "../../networks";
 import {Checkpoint} from "@chainsafe/lodestar-types/phase0";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {computeEpochAtSlot} from "../../../../beacon-state-transition/lib";
@@ -91,11 +90,10 @@ export async function initBeaconState(
     // weak subjectivity sync from a state that needs to be fetched:
     // if a weak subjectivity checkpoint has been provided, it is used to inform which state to download and used for additional verification
     // otherwise, the 'finalized' state is downloaded and the state itself is used for verification (all trust delegated to the remote beacon node)
-    if (!(args.weakSubjectivityServerUrl || Object.keys(weakSubjectivityServers).includes(args.network))) {
+    const remoteBeaconUrl = args.weakSubjectivityServerUrl || getInfuraBeaconUrl(args.network);
+    if (!remoteBeaconUrl) {
       throw new Error(
-        `Missing weak subjectivity server URL.  Use either a custom URL via --weakSubjectivityServerUrl or use one of these options for --network: ${Object.keys(
-          weakSubjectivityServers
-        ).toString()}`
+        `Missing weak subjectivity server URL.  Use either a custom URL via --weakSubjectivityServerUrl or use one of these options for --network: ${infuraNetworks.toString()}`
       );
     }
 
@@ -105,13 +103,10 @@ export async function initBeaconState(
       checkpoint = getCheckpointFromArg(args.weakSubjectivityCheckpoint);
       stateId = (checkpoint.epoch * SLOTS_PER_EPOCH).toString();
     }
-    const wsState = await getWeakSubjectivityState(
-      config,
-      args,
-      stateId,
-      args.weakSubjectivityServerUrl || weakSubjectivityServers[args.network as WeakSubjectivityServer],
-      logger
-    );
+    const url = `${remoteBeaconUrl}/eth/v1/debug/beacon/states/${stateId}`;
+
+    logger.info("Fetching weak subjectivity state from " + url);
+    const wsState = await fetchWeakSubjectivityState(config, url);
     const store = lastDbState ?? wsState;
     return initAndVerifyWeakSubjectivityState(
       config,
