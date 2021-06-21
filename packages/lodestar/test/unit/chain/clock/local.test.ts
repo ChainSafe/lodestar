@@ -57,4 +57,41 @@ describe("LocalClock", function () {
       expect(clock.currentSlotWithGossipDisparity).to.be.equal(clock.currentSlot);
     });
   });
+
+  describe("isCurrentSlotGivenGossipDisparity", () => {
+    it("should return true for current slot", () => {
+      const currentSlot = clock.currentSlot;
+      expect(
+        clock.isCurrentSlotGivenGossipDisparity(currentSlot),
+        "isCurrentSlotGivenGossipDisparity is not correct for current slot"
+      ).to.be.true;
+    });
+
+    it("should accept next slot if it's too close to next slot", () => {
+      const nextSlot = clock.currentSlot + 1;
+      expect(
+        clock.isCurrentSlotGivenGossipDisparity(nextSlot),
+        "current slot could NOT be next slot if it's far away from next slot"
+      ).to.be.false;
+      sandbox.clock.tick(config.SECONDS_PER_SLOT * 1000 - (MAXIMUM_GOSSIP_CLOCK_DISPARITY - 50));
+      expect(
+        clock.isCurrentSlotGivenGossipDisparity(nextSlot),
+        "current slot could be next slot if it's too close to next slot"
+      ).to.be.true;
+    });
+
+    it("should accept previous slot if it's just passed current slot", () => {
+      const previousSlot = clock.currentSlot - 1;
+      sandbox.clock.tick(MAXIMUM_GOSSIP_CLOCK_DISPARITY - 50);
+      expect(
+        clock.isCurrentSlotGivenGossipDisparity(previousSlot),
+        "current slot could be previous slot if it's just passed to a slot"
+      ).to.be.true;
+      sandbox.clock.tick(100);
+      expect(
+        clock.isCurrentSlotGivenGossipDisparity(previousSlot),
+        "current slot could NOT be previous slot if it's far away from previous slot"
+      ).to.be.false;
+    });
+  });
 });

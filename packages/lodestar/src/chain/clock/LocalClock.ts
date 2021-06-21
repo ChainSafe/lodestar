@@ -63,6 +63,27 @@ export class LocalClock implements IBeaconClock {
     return computeEpochAtSlot(this.currentSlot);
   }
 
+  /**
+   * Check if a slot is current slot given MAXIMUM_GOSSIP_CLOCK_DISPARITY.
+   */
+  isCurrentSlotGivenGossipDisparity(slot: Slot): boolean {
+    const currentSlot = this.currentSlot;
+    if (currentSlot === slot) {
+      return true;
+    }
+    const nextSlotTime = computeTimeAtSlot(this.config, currentSlot + 1, this.genesisTime) * 1000;
+    // we're too close to next slot, accept next slot
+    if (nextSlotTime - Date.now() < MAXIMUM_GOSSIP_CLOCK_DISPARITY) {
+      return slot === currentSlot + 1;
+    }
+    const currentSlotTime = computeTimeAtSlot(this.config, currentSlot, this.genesisTime) * 1000;
+    // we've just passed the current slot, accept previous slot
+    if (Date.now() - currentSlotTime < MAXIMUM_GOSSIP_CLOCK_DISPARITY) {
+      return slot === currentSlot - 1;
+    }
+    return false;
+  }
+
   async waitForSlot(slot: Slot): Promise<void> {
     if (this.signal.aborted) {
       throw new ErrorAborted();

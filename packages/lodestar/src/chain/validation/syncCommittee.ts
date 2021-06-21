@@ -80,20 +80,22 @@ export function validateGossipSyncCommitteeExceptSig(
   subnet: number,
   data: Pick<altair.SyncCommitteeMessage, "slot" | "beaconBlockRoot" | "validatorIndex">
 ): IndexInSubCommittee {
+  const {slot, beaconBlockRoot, validatorIndex} = data;
   // [IGNORE] The signature's slot is for the current slot, i.e. sync_committee_signature.slot == current_slot.
-  if (chain.clock.currentSlot !== data.slot) {
+  // (with a MAXIMUM_GOSSIP_CLOCK_DISPARITY allowance)
+  if (!chain.clock.isCurrentSlotGivenGossipDisparity(slot)) {
     throw new SyncCommitteeError(GossipAction.IGNORE, {
       code: SyncCommitteeErrorCode.NOT_CURRENT_SLOT,
       currentSlot: chain.clock.currentSlot,
-      slot: data.slot,
+      slot,
     });
   }
 
   // [IGNORE] The block being signed over (sync_committee_signature.beacon_block_root) has been seen (via both gossip and non-gossip sources).
-  if (!chain.forkChoice.hasBlock(data.beaconBlockRoot)) {
+  if (!chain.forkChoice.hasBlock(beaconBlockRoot)) {
     throw new SyncCommitteeError(GossipAction.IGNORE, {
       code: SyncCommitteeErrorCode.UNKNOWN_BEACON_BLOCK_ROOT,
-      beaconBlockRoot: data.beaconBlockRoot as Uint8Array,
+      beaconBlockRoot: beaconBlockRoot as Uint8Array,
     });
   }
 
@@ -111,7 +113,7 @@ export function validateGossipSyncCommitteeExceptSig(
   if (indexInSubCommittee === null) {
     throw new SyncCommitteeError(GossipAction.REJECT, {
       code: SyncCommitteeErrorCode.VALIDATOR_NOT_IN_SYNC_COMMITTEE,
-      validatorIndex: data.validatorIndex,
+      validatorIndex,
     });
   }
 
