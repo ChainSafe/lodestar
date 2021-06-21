@@ -8,7 +8,7 @@ import {processAttesterSlashing} from "./processAttesterSlashing";
 import {processDeposit} from "./processDeposit";
 import {processProposerSlashing} from "./processProposerSlashing";
 import {processVoluntaryExit} from "./processVoluntaryExit";
-import {processSyncCommittee} from "./processSyncCommittee";
+import {processSyncAggregate} from "./processSyncCommittee";
 
 export {
   processOperations,
@@ -17,7 +17,7 @@ export {
   processDeposit,
   processProposerSlashing,
   processVoluntaryExit,
-  processSyncCommittee,
+  processSyncAggregate,
 };
 
 export function processBlock(
@@ -30,5 +30,5 @@ export function processBlock(
   processRandao(state as CachedBeaconState<allForks.BeaconState>, block, verifySignatures);
   processEth1Data(state as CachedBeaconState<allForks.BeaconState>, block.body);
   processOperations(state, block.body, blockProcess, verifySignatures);
-  processSyncCommittee(state, block, verifySignatures);
+  processSyncAggregate(state, block, verifySignatures);
 }

@@ -16,7 +16,7 @@ import {
 } from "../../util";
 import {CachedBeaconState} from "../../allForks/util";
 
-export function processSyncCommittee(
+export function processSyncAggregate(
   state: CachedBeaconState<altair.BeaconState>,
   block: altair.BeaconBlock,
   verifySignatures = true
