@@ -72,7 +72,7 @@ export type GossipTypeMap = {
   [GossipType.proposer_slashing]: phase0.ProposerSlashing;
   [GossipType.attester_slashing]: phase0.AttesterSlashing;
   [GossipType.sync_committee_contribution_and_proof]: altair.SignedContributionAndProof;
-  [GossipType.sync_committee]: altair.SyncCommitteeSignature;
+  [GossipType.sync_committee]: altair.SyncCommitteeMessage;
 };
 
 export type GossipFnByType = {
@@ -85,7 +85,7 @@ export type GossipFnByType = {
   [GossipType.sync_committee_contribution_and_proof]: (
     signedContributionAndProof: altair.SignedContributionAndProof
   ) => Promise<void> | void;
-  [GossipType.sync_committee]: (syncCommittee: altair.SyncCommitteeSignature) => Promise<void> | void;
+  [GossipType.sync_committee]: (syncCommittee: altair.SyncCommitteeMessage) => Promise<void> | void;
 };
 
 export type GossipFn = GossipFnByType[keyof GossipFnByType];
@@ -119,7 +119,7 @@ export type GossipObject =
   | phase0.ProposerSlashing
   | phase0.AttesterSlashing
   | altair.SignedContributionAndProof
-  | altair.SyncCommitteeSignature;
+  | altair.SyncCommitteeMessage;
 
 export type GossipHandlerFn = (gossipObject: GossipObject) => Promise<void> | void;
 

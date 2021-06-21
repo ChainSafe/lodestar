@@ -98,7 +98,7 @@ export type Api = {
   /**
    * TODO: Add description
    */
-  submitPoolSyncCommitteeSignatures(signatures: altair.SyncCommitteeSignature[]): Promise<void>;
+  submitPoolSyncCommitteeSignatures(signatures: altair.SyncCommitteeMessage[]): Promise<void>;
 };
 
 /**
@@ -143,7 +143,7 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
     submitPoolAttesterSlashing: reqOnlyBody(ssz.phase0.AttesterSlashing, Schema.Object),
     submitPoolProposerSlashing: reqOnlyBody(ssz.phase0.ProposerSlashing, Schema.Object),
     submitPoolVoluntaryExit: reqOnlyBody(ssz.phase0.SignedVoluntaryExit, Schema.Object),
-    submitPoolSyncCommitteeSignatures: reqOnlyBody(ArrayOf(ssz.altair.SyncCommitteeSignature), Schema.ObjectArray),
+    submitPoolSyncCommitteeSignatures: reqOnlyBody(ArrayOf(ssz.altair.SyncCommitteeMessage), Schema.ObjectArray),
   };
 }
 

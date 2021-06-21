@@ -118,7 +118,7 @@ export function getGossipSSZType<T extends GossipObject>(config: IBeaconConfig, 
     case GossipType.sync_committee_contribution_and_proof:
       return (ssz.altair.SignedContributionAndProof as unknown) as ContainerType<T>;
     case GossipType.sync_committee:
-      return (ssz.altair.SyncCommitteeSignature as unknown) as ContainerType<T>;
+      return (ssz.altair.SyncCommitteeMessage as unknown) as ContainerType<T>;
     default:
       throw new Error(`No ssz gossip type for ${(topic as GossipTopic).type}`);
   }

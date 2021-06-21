@@ -7,7 +7,7 @@ import {IBeaconChain} from "../interface";
 import {getSyncCommitteeSignatureSet} from "./signatureSets";
 
 /** TODO: Do this much better to be able to access this property in the handler */
-export type SyncCommitteeSignatureIndexed = altair.SyncCommitteeSignature & {indexInSubCommittee: number};
+export type SyncCommitteeSignatureIndexed = altair.SyncCommitteeMessage & {indexInSubCommittee: number};
 
 type IndexInSubCommittee = number;
 
@@ -61,7 +61,7 @@ export async function validateGossipSyncCommittee(
 export async function validateSyncCommitteeSigOnly(
   chain: IBeaconChain,
   headState: CachedBeaconState<allForks.BeaconState>,
-  syncCommittee: altair.SyncCommitteeSignature
+  syncCommittee: altair.SyncCommitteeMessage
 ): Promise<void> {
   const signatureSet = getSyncCommitteeSignatureSet(headState, syncCommittee);
   if (!(await chain.bls.verifySignatureSets([signatureSet]))) {
@@ -78,7 +78,7 @@ export function validateGossipSyncCommitteeExceptSig(
   chain: IBeaconChain,
   headState: CachedBeaconState<allForks.BeaconState>,
   subnet: number,
-  data: Pick<altair.SyncCommitteeSignature, "slot" | "beaconBlockRoot" | "validatorIndex">
+  data: Pick<altair.SyncCommitteeMessage, "slot" | "beaconBlockRoot" | "validatorIndex">
 ): IndexInSubCommittee {
   // [IGNORE] The signature's slot is for the current slot, i.e. sync_committee_signature.slot == current_slot.
   if (chain.clock.currentSlot !== data.slot) {
@@ -125,7 +125,7 @@ export function validateGossipSyncCommitteeExceptSig(
 function getIndexInSubCommittee(
   headState: CachedBeaconState<allForks.BeaconState>,
   subnet: number,
-  data: Pick<altair.SyncCommitteeSignature, "slot" | "validatorIndex">
+  data: Pick<altair.SyncCommitteeMessage, "slot" | "validatorIndex">
 ): IndexInSubCommittee | null {
   // Note: The range of slots a validator has to perform duties is off by one.
   // The previous slot wording means that if your validator is in a sync committee for a period that runs from slot
