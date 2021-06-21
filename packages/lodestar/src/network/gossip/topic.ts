@@ -4,6 +4,7 @@
 
 import {ContainerType} from "@chainsafe/ssz";
 import {ssz} from "@chainsafe/lodestar-types";
+import {ForkName} from "@chainsafe/lodestar-params";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IForkDigestContext, toHexStringNoPrefix} from "../../util/forkDigestContext";
 import {DEFAULT_ENCODING} from "./constants";
@@ -38,6 +39,22 @@ function stringifyGossipTopicType(topic: GossipTopic): string {
     case GossipType.sync_committee:
       return `${topic.type}_${topic.subnet}`;
   }
+}
+
+/**
+ * Parse a gossip string to a fork.
+ * A gossip topic has the format
+ * ```ts
+ * /eth2/$FORK_DIGEST/$GOSSIP_TYPE/$ENCODING
+ * ```
+ */
+export function getForkFromGossipTopic(forkDigestContext: IForkDigestContext, topicStr: string): ForkName {
+  const matches = topicStr.match(gossipTopicRegex);
+  if (matches === null) {
+    throw Error(`Must match regex ${gossipTopicRegex}`);
+  }
+
+  return forkDigestContext.forkDigest2ForkName(matches[1]);
 }
 
 /**

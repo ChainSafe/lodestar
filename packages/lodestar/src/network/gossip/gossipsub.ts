@@ -107,7 +107,7 @@ export class Eth2Gossipsub extends Gossipsub {
    * @override Use eth2 msg id and cache results to the msg
    */
   getMsgId(msg: IGossipMessage): Uint8Array {
-    return getMsgId(msg);
+    return getMsgId(msg, this.forkDigestContext);
   }
 
   /**
