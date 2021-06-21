@@ -1,6 +1,7 @@
 import {SinonStubbedInstance} from "sinon";
 import {config} from "@chainsafe/lodestar-config/default";
 import {createCachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
+import {BenchmarkRunner} from "@chainsafe/lodestar-utils/test_utils/benchmark";
 
 import {ForkChoice, IBeaconChain} from "../../../../../../src/chain";
 import {LocalClock} from "../../../../../../src/chain/clock";
@@ -26,8 +27,6 @@ describe("getCommitteeAssignments vs assembleAttesterDuties performance test", f
   let server: ApiImplTestModules;
 
   let indices: number[];
-  let totalPerfGCA = 0,
-    totalPerfAAD = 0;
   const numRuns = 1;
 
   before(function () {
@@ -64,41 +63,78 @@ describe("getCommitteeAssignments vs assembleAttesterDuties performance test", f
     indices = Array.from({length: numValidators}, (_, i) => i);
   });
 
-  after(() => {
-    console.log("number of runs: ", numRuns);
-    console.log("assembleAttesterDuty batch performance avg: ", totalPerfAAD / numRuns);
-    console.log("getCommitteeAssignments performance avg: ", totalPerfGCA / numRuns);
-  });
-
-  for (let i = 0; i < numRuns; i++) {
-    it("performance comparison", async () => {
-      const state = await chainStub.getHeadStateAtCurrentEpoch();
-
-      // the new way of getting attester duties
-      let start = Date.now();
-      const newDuties = state.epochCtx.getCommitteeAssignments(
-        0,
-        state.validators.map((validator, k) => {
-          const index = indices[k];
-          return {pubkey: validator.pubkey, index};
-        })
-      );
-      totalPerfGCA += Date.now() - start;
-
-      // the old way of getting the attester duties
-      const oldDuties: AttesterDuty[] = [];
-      start = Date.now();
-      for (const validatorIndex of indices) {
-        const validator = state.validators[validatorIndex];
-        const duty = assembleAttesterDuty(config, {pubkey: validator.pubkey, index: validatorIndex}, state.epochCtx, 0);
-        if (duty) oldDuties.push(duty);
-      }
-      totalPerfAAD += Date.now() - start;
-
-      // verify that both the old and new ways get the same data
-      newDuties.sort((x, y) => x.validatorIndex - y.validatorIndex);
-      oldDuties.sort((x, y) => x.validatorIndex - y.validatorIndex);
-      expect(newDuties).to.deep.equal(oldDuties);
+  it("performance comparison", async () => {
+    const runner = new BenchmarkRunner("get attester duties", {
+      maxMs: 10 * 1000,
+      // minMs: 15 * 1000,
+      runs: numRuns,
     });
-  }
+
+    const state = await chainStub.getHeadStateAtCurrentEpoch();
+
+    // the new way of getting attester duties
+    let newDuties: AttesterDuty[] = [];
+    await runner.run({
+      id: "new way: getCommitteeAssignments",
+      beforeEach: () => {
+        newDuties = [];
+      },
+      run: () => {
+        newDuties = state.epochCtx.getCommitteeAssignments(
+          0,
+          state.validators.map((validator, k) => {
+            const index = indices[k];
+            return {pubkey: validator.pubkey, index};
+          })
+        );
+      },
+    });
+
+    await runner.run({
+      id: "new way (plus index2pubkey): getCommitteeAssignments",
+      beforeEach: () => {
+        newDuties = [];
+      },
+      run: () => {
+        newDuties = state.epochCtx.getCommitteeAssignments(
+          0,
+          indices.map((index) => {
+            const pubkey = state.index2pubkey[index];
+            if (!pubkey) {
+              throw new Error(`Validator pubkey at validator index ${index} not found in state.`);
+            }
+            return {pubkey: pubkey.toBytes(), index};
+          })
+        );
+      },
+    });
+
+    // the old way of getting the attester duties
+    let oldDuties: AttesterDuty[] = [];
+    await runner.run({
+      id: "old way: assembleAttesterDuty batch",
+      beforeEach: () => {
+        oldDuties = [];
+      },
+      run: () => {
+        for (const validatorIndex of indices) {
+          const validator = state.validators[validatorIndex];
+          const duty = assembleAttesterDuty(
+            config,
+            {pubkey: validator.pubkey, index: validatorIndex},
+            state.epochCtx,
+            0
+          );
+          if (duty) oldDuties.push(duty);
+        }
+      },
+    });
+
+    runner.done();
+
+    // verify that both the old and new ways get the same data
+    newDuties.sort((x, y) => x.validatorIndex - y.validatorIndex);
+    oldDuties.sort((x, y) => x.validatorIndex - y.validatorIndex);
+    expect(newDuties).to.deep.equal(oldDuties);
+  });
 });
