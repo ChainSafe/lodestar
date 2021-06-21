@@ -342,9 +342,10 @@ export class EpochContext {
       const slotCommittees = this._getSlotCommittees(slot);
       for (let i = 0; i < slotCommittees.length; i++) {
         for (let j = 0; j < slotCommittees[i].length; j++) {
+          console.log("slotCommittees[i][j]: ", slotCommittees[i][j]);
           validators.push({
             pubkey: validatorData[slotCommittees[i][j]].pubkey,
-            validatorIndex: validatorData[slotCommittees[i][j]].index,
+            validatorIndex: slotCommittees[i][j],
             committeeLength: slotCommittees[i].length,
             committeesAtSlot: slotCommittees.length,
             validatorCommitteeIndex: j,
