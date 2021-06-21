@@ -59,9 +59,10 @@ async function initAndVerifyWeakSubjectivityState(
  * Initialize a beacon state, picking the strategy based on the `IBeaconArgs`
  *
  * State is initialized in one of three ways:
- * 1. restore from a file (possibly downloaded via URL)
+ * 1. restore from weak subjectivity state (possibly downloaded from a remote beacon node)
  * 2. restore from db
- * 3. create from eth1
+ * 3. restore from genesis state (possibly downloaded via URL)
+ * 4. create genesis state from eth1
  */
 export async function initBeaconState(
   options: IBeaconNodeOptions,
