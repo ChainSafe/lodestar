@@ -2,7 +2,12 @@ import {MAX_VALIDATORS_PER_COMMITTEE, SYNC_COMMITTEE_SIZE} from "@chainsafe/lode
 import {ssz} from "@chainsafe/lodestar-types";
 import {List} from "@chainsafe/ssz";
 import {expect} from "chai";
-import {getUint8ByteToBitBooleanArray, bitsToUint8Array, zipIndexesSyncCommitteeBits} from "../../../src";
+import {
+  getUint8ByteToBitBooleanArray,
+  bitsToUint8Array,
+  zipIndexesSyncCommitteeBits,
+  zipAllIndexesSyncCommitteeBits,
+} from "../../../src";
 
 const BITS_PER_BYTE = 8;
 
@@ -50,12 +55,19 @@ describe("aggregationBits", function () {
   });
 });
 
-describe("zipIndexesSyncCommitteeBits", function () {
+describe("zipIndexesSyncCommitteeBits and zipAllIndexesSyncCommitteeBits", function () {
   const committeeIndices = Array.from({length: SYNC_COMMITTEE_SIZE}, (_, i) => i * 2);
+  const pivot = 3;
   // 3 first bits are true
   const syncCommitteeBits = Array.from({length: SYNC_COMMITTEE_SIZE}, (_, i) => {
-    return i < 3 ? true : false;
+    return i < pivot ? true : false;
   });
+
+  // remaining bits are false
+  const expectedUnparticipantIndices: number[] = [];
+  for (let i = pivot; i < SYNC_COMMITTEE_SIZE; i++) {
+    expectedUnparticipantIndices.push(committeeIndices[i]);
+  }
 
   it("should extract from TreeBacked SyncAggregate", function () {
     const syncAggregate = ssz.altair.SyncAggregate.defaultTreeBacked();
@@ -64,6 +76,18 @@ describe("zipIndexesSyncCommitteeBits", function () {
       [0, 2, 4],
       "Incorrect participant indices from TreeBacked SyncAggregate"
     );
+    const [participantIndices, unparticipantIndices] = zipAllIndexesSyncCommitteeBits(
+      committeeIndices,
+      syncAggregate.syncCommitteeBits
+    );
+    expect(participantIndices).to.be.deep.equal(
+      [0, 2, 4],
+      "Incorrect participant indices from TreeBacked SyncAggregate"
+    );
+    expect(unparticipantIndices).to.be.deep.equal(
+      expectedUnparticipantIndices,
+      "Incorrect unparticipant indices from TreeBacked SyncAggregate"
+    );
   });
 
   it("should extract from struct SyncAggregate", function () {
@@ -71,7 +95,16 @@ describe("zipIndexesSyncCommitteeBits", function () {
     syncAggregate.syncCommitteeBits = syncCommitteeBits;
     expect(zipIndexesSyncCommitteeBits(committeeIndices, syncAggregate.syncCommitteeBits)).to.be.deep.equal(
       [0, 2, 4],
-      "Incorrect participant indices from TreeBacked SyncAggregate"
+      "Incorrect participant indices from struct SyncAggregate"
+    );
+    const [participantIndices, unparticipantIndices] = zipAllIndexesSyncCommitteeBits(
+      committeeIndices,
+      syncAggregate.syncCommitteeBits
+    );
+    expect(participantIndices).to.be.deep.equal([0, 2, 4], "Incorrect participant indices from struct SyncAggregate");
+    expect(unparticipantIndices).to.be.deep.equal(
+      expectedUnparticipantIndices,
+      "Incorrect unparticipant indices from struct SyncAggregate"
     );
   });
 });
