@@ -12,12 +12,12 @@ export class IndexedSyncCommittee implements altair.SyncCommittee {
   pubkeys: Vector<phase0.BLSPubkey>;
   aggregatePubkey: phase0.BLSPubkey;
   /**
-   * Update freq: every ~ 54h.
+   * Update freq: every ~ 27h.
    * Memory cost: 1024 Number integers.
    */
   validatorIndices: phase0.ValidatorIndex[];
   /**
-   * Update freq: every ~ 54h.
+   * Update freq: every ~ 27h.
    * Memory cost: Map of Number -> Number with 1024 entries.
    */
   validatorIndexMap: SyncComitteeValidatorIndexMap;

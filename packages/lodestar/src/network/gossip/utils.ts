@@ -3,9 +3,12 @@
  */
 
 import {InMessage} from "libp2p-interfaces/src/pubsub";
+import {ForkName} from "@chainsafe/lodestar-params";
 import {IGossipMessage} from "./interface";
-import {computeMsgId} from "./encoding";
+import {computeMsgIdAltair, computeMsgIdPhase0} from "./encoding";
 import {GOSSIP_MAX_SIZE} from "../../constants";
+import {IForkDigestContext} from "../../util/forkDigestContext";
+import {getForkFromGossipTopic} from "./topic";
 
 /**
  * Basic sanity check on gossip message
@@ -18,9 +21,12 @@ export function msgIdToString(msgId: Uint8Array): string {
   return Buffer.from(msgId).toString("base64");
 }
 
-export function getMsgId(msg: IGossipMessage): Uint8Array {
+export function getMsgId(msg: IGossipMessage, forkDigestContext: IForkDigestContext): Uint8Array {
+  const topic = msg.topicIDs[0];
+  const fork = getForkFromGossipTopic(forkDigestContext, topic);
   if (!msg.msgId) {
-    const {msgId, uncompressed} = computeMsgId(msg.topicIDs[0], msg.data);
+    const {msgId, uncompressed} =
+      fork === ForkName.phase0 ? computeMsgIdPhase0(topic, msg.data) : computeMsgIdAltair(topic, msg.data);
     msg.msgId = msgId;
     msg.uncompressed = uncompressed;
   }

@@ -7,20 +7,22 @@ import {
   getBlockRootAtSlot,
   getDomain,
   increaseBalance,
+  decreaseBalance,
   ISignatureSet,
   SignatureSetType,
   verifySignatureSet,
+  zipAllIndexesSyncCommitteeBits,
   zipIndexesSyncCommitteeBits,
 } from "../../util";
 import {CachedBeaconState} from "../../allForks/util";
 
-export function processSyncCommittee(
+export function processSyncAggregate(
   state: CachedBeaconState<altair.BeaconState>,
   block: altair.BeaconBlock,
   verifySignatures = true
 ): void {
   const {syncParticipantReward, syncProposerReward} = state.epochCtx;
-  const participantIndices = getParticipantIndices(state, block.body.syncAggregate);
+  const [participantIndices, unparticipantIndices] = getParticipantInfo(state, block.body.syncAggregate);
 
   // different from the spec but not sure how to get through signature verification for default/empty SyncAggregate in the spec test
   if (verifySignatures) {
@@ -37,6 +39,9 @@ export function processSyncCommittee(
     increaseBalance(state, participantIndex, syncParticipantReward);
   }
   increaseBalance(state, proposerIndex, syncProposerReward * BigInt(participantIndices.length));
+  for (const unparticipantIndex of unparticipantIndices) {
+    decreaseBalance(state, unparticipantIndex, syncParticipantReward);
+  }
 }
 
 export function getSyncCommitteeSignatureSet(
@@ -82,11 +87,20 @@ export function getSyncCommitteeSignatureSet(
   };
 }
 
-/** Common logic for processSyncCommittee() and getSyncCommitteeSignatureSet() */
+/** Get participant indices for a sync committee. */
 function getParticipantIndices(
   state: CachedBeaconState<altair.BeaconState>,
   syncAggregate: altair.SyncAggregate
 ): number[] {
   const committeeIndices = state.currentSyncCommittee.validatorIndices;
   return zipIndexesSyncCommitteeBits(committeeIndices, syncAggregate.syncCommitteeBits);
+}
+
+/** Return [0] as participant indices and [1] as unparticipant indices for a sync committee. */
+function getParticipantInfo(
+  state: CachedBeaconState<altair.BeaconState>,
+  syncAggregate: altair.SyncAggregate
+): [number[], number[]] {
+  const committeeIndices = state.currentSyncCommittee.validatorIndices;
+  return zipAllIndexesSyncCommitteeBits(committeeIndices, syncAggregate.syncCommitteeBits);
 }
