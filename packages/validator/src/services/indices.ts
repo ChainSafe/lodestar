@@ -58,9 +58,21 @@ export class IndicesService {
     }
 
     // Query the remote BN to resolve a pubkey to a validator index.
-    const pubkeysHex = pubkeysToPoll.map((pubkey) => toHexString(pubkey));
-    const validatorsState = await this.api.beacon.getStateValidators("head", {indices: pubkeysHex});
+    // support up to 1000 pubkeys per poll
+    const pubkeysHex = pubkeysToPoll.map((pubkey) => toHexString(pubkey)).slice(0, MAX_PUBKEYS_PER_POLL);
+    const batches = pubkeysToBatches(pubkeysHex);
 
+    const newIndicesArr = await Promise.all(
+      batches.map(async (batch) => {
+        const validatorIndicesArr = await Promise.all(batch.map(this.getIndicesPerHttpRequest));
+        return validatorIndicesArr.flat();
+      })
+    );
+    return newIndicesArr.flat();
+  }
+
+  private getIndicesPerHttpRequest = async (pubkeysHex: string[]): Promise<ValidatorIndex[]> => {
+    const validatorsState = await this.api.beacon.getStateValidators("head", {indices: pubkeysHex});
     const newIndices = [];
     for (const validatorState of validatorsState.data) {
       const pubkeyHex = toHexString(validatorState.validator.pubkey);
@@ -71,7 +83,42 @@ export class IndicesService {
         newIndices.push(validatorState.index);
       }
     }
-
     return newIndices;
+  };
+}
+
+type Batch = string[][];
+const PUBKEYS_PER_REQUEST = 40;
+const REQUESTS_PER_BATCH = 5;
+const MAX_PUBKEYS_PER_POLL = 5 * PUBKEYS_PER_REQUEST * REQUESTS_PER_BATCH;
+
+/**
+ * Divide pubkeys into batches, each batch contains at most 5 http requests,
+ * each request can work on at most 40 pubkeys.
+ * @param pubkeysHex
+ */
+export function pubkeysToBatches(
+  pubkeysHex: string[],
+  maxPubkeysPerRequest: number = PUBKEYS_PER_REQUEST,
+  maxRequesPerBatch: number = REQUESTS_PER_BATCH
+): Batch[] {
+  if (!pubkeysHex || pubkeysHex.length === 0) {
+    return [[[]]];
   }
+  const batches: Batch[] = [];
+
+  const pubkeysPerBatch = maxPubkeysPerRequest * maxRequesPerBatch;
+  let batch: Batch = [];
+  let pubkeysPerRequest: string[];
+  for (let i = 0; i < pubkeysHex.length; i += maxPubkeysPerRequest) {
+    if (i % pubkeysPerBatch === 0) {
+      batch = [];
+      batches.push(batch);
+    }
+    if (i % maxPubkeysPerRequest === 0) {
+      pubkeysPerRequest = pubkeysHex.slice(i, Math.min(i + maxPubkeysPerRequest, pubkeysHex.length));
+      batch.push(pubkeysPerRequest);
+    }
+  }
+  return batches;
 }
