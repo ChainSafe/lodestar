@@ -11,7 +11,7 @@
   "bugs": {
     "url": "https://github.com/ChainSafe/lodestar/issues"
   },
-  "version": "0.24.2",
+  "version": "0.24.3",
   "main": "lib/index.js",
   "files": [
     "lib/**/*.d.ts",
@@ -32,21 +32,20 @@
     "check-types": "tsc",
     "lint": "eslint --color --ext .ts src/ test/",
     "lint:fix": "yarn run lint --fix",
-    "prepublishOnly": "yarn build",
     "pretest": "yarn run check-types",
     "test:unit": "mocha 'test/**/*.test.ts'"
   },
   "types": "lib/index.d.ts",
   "dependencies": {
-    "@chainsafe/ssz": "^0.8.9",
-    "abort-controller": "^3.0.0",
+    "@chainsafe/ssz": "^0.8.11",
+    "@chainsafe/abort-controller": "^3.0.1",
     "any-signal": "2.1.1",
     "bigint-buffer": "^1.1.5",
     "chalk": "^2.4.2",
     "js-yaml": "^3.13.1",
     "winston": "^3.3.3",
-    "winston-transport": "^4.3.0",
-    "winston-daily-rotate-file": "^4.5.5"
+    "winston-daily-rotate-file": "^4.5.5",
+    "winston-transport": "^4.3.0"
   },
   "devDependencies": {
     "@types/js-yaml": "^3.12.1",

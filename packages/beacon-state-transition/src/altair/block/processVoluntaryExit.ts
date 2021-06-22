@@ -1,14 +1,18 @@
 import {allForks, altair, phase0} from "@chainsafe/lodestar-types";
-import {CachedBeaconState} from "../../allForks/util";
-import {initiateValidatorExit} from "../../allForks/block";
-import {assertValidVoluntaryExit} from "../../phase0/block/processVoluntaryExit";
+import {CachedBeaconState} from "../../allForks";
+import {processVoluntaryExit as processVoluntaryExitAllForks} from "../../allForks/block";
+import {BlockProcess} from "../../util/blockProcess";
 
 export function processVoluntaryExit(
   state: CachedBeaconState<altair.BeaconState>,
   signedVoluntaryExit: phase0.SignedVoluntaryExit,
+  blockProcess: BlockProcess = {validatorExitCache: {}},
   verifySignature = true
 ): void {
-  assertValidVoluntaryExit(state as CachedBeaconState<allForks.BeaconState>, signedVoluntaryExit, verifySignature);
-
-  initiateValidatorExit(state as CachedBeaconState<allForks.BeaconState>, signedVoluntaryExit.message.validatorIndex);
+  processVoluntaryExitAllForks(
+    state as CachedBeaconState<allForks.BeaconState>,
+    signedVoluntaryExit,
+    blockProcess,
+    verifySignature
+  );
 }

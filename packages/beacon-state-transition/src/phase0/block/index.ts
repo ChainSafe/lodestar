@@ -4,9 +4,9 @@ import {processBlockHeader, processEth1Data, processRandao} from "../../allForks
 import {processOperations} from "./processOperations";
 import {processAttestation} from "./processAttestation";
 import {processDeposit} from "./processDeposit";
-import {processAttesterSlashing, assertValidAttesterSlashing} from "./processAttesterSlashing";
-import {processProposerSlashing, assertValidProposerSlashing} from "./processProposerSlashing";
-import {processVoluntaryExit, assertValidVoluntaryExit} from "./processVoluntaryExit";
+import {processAttesterSlashing} from "./processAttesterSlashing";
+import {processProposerSlashing} from "./processProposerSlashing";
+import {processVoluntaryExit} from "./processVoluntaryExit";
 
 // Extra utils used by other modules
 export {isValidIndexedAttestation} from "../../allForks/block";
@@ -18,10 +18,6 @@ export {
   processAttesterSlashing,
   processProposerSlashing,
   processVoluntaryExit,
-  // For Lodestar gossip validation
-  assertValidAttesterSlashing,
-  assertValidProposerSlashing,
-  assertValidVoluntaryExit,
 };
 
 export function processBlock(
@@ -29,8 +25,9 @@ export function processBlock(
   block: phase0.BeaconBlock,
   verifySignatures = true
 ): void {
+  const blockProcess = {validatorExitCache: {}};
   processBlockHeader(state as CachedBeaconState<allForks.BeaconState>, block);
   processRandao(state as CachedBeaconState<allForks.BeaconState>, block, verifySignatures);
   processEth1Data(state as CachedBeaconState<allForks.BeaconState>, block.body);
-  processOperations(state, block.body, verifySignatures);
+  processOperations(state, block.body, blockProcess, verifySignatures);
 }

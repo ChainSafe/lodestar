@@ -1,4 +1,4 @@
-import {AbortController} from "abort-controller";
+import {AbortController} from "@chainsafe/abort-controller";
 import {toBufferBE} from "bigint-buffer";
 import {expect} from "chai";
 import sinon from "sinon";
@@ -90,26 +90,22 @@ describe("SyncCommitteeDutiesService", function () {
     );
 
     // Duties for this and next epoch should be persisted
-    expect(Object.fromEntries(dutiesService["dutiesByPeriodByIndex"].get(index) || new Map())).to.deep.equal(
+    const dutiesByIndexByPeriodObj = Object.fromEntries(
+      Array.from(dutiesService["dutiesByIndexByPeriod"].entries()).map(([period, dutiesByIndex]) => [
+        period,
+        Object.fromEntries(dutiesByIndex),
+      ])
+    );
+    expect(dutiesByIndexByPeriodObj).to.deep.equal(
       {
-        0: {dependentRoot: ZERO_HASH, duty},
-        1: {dependentRoot: ZERO_HASH, duty},
+        0: {[index]: {dependentRoot: ZERO_HASH, duty}},
+        1: {[index]: {dependentRoot: ZERO_HASH, duty}},
       },
-      "Wrong dutiesService.attesters Map"
+      "Wrong dutiesService.dutiesByIndexByPeriod Map"
     );
 
     expect(await dutiesService.getDutiesAtSlot(slot)).to.deep.equal(
-      [
-        {
-          duty: {
-            pubkey: duty.pubkey,
-            validatorIndex: duty.validatorIndex,
-            validatorSyncCommitteeIndex: duty.validatorSyncCommitteeIndices[0],
-          },
-          selectionProof: null,
-          subCommitteeIndex: 0,
-        },
-      ],
+      [{duty, selectionProofs: [{selectionProof: null, subCommitteeIndex: 0}]}],
       "Wrong getAttestersAtSlot()"
     );
 

@@ -1,14 +1,20 @@
 import {allForks, altair, phase0} from "@chainsafe/lodestar-types";
+import {ForkName} from "@chainsafe/lodestar-params";
 import {CachedBeaconState} from "../../allForks/util";
-import {slashValidator} from "./slashValidator";
-import {assertValidProposerSlashing} from "../../phase0/block/processProposerSlashing";
+import {processProposerSlashing as processProposerSlashingAllForks} from "../../allForks/block";
+import {BlockProcess} from "../../util/blockProcess";
 
 export function processProposerSlashing(
   state: CachedBeaconState<altair.BeaconState>,
   proposerSlashing: phase0.ProposerSlashing,
+  blockProcess: BlockProcess = {validatorExitCache: {}},
   verifySignatures = true
 ): void {
-  assertValidProposerSlashing(state as CachedBeaconState<allForks.BeaconState>, proposerSlashing, verifySignatures);
-
-  slashValidator(state, proposerSlashing.signedHeader1.message.proposerIndex);
+  processProposerSlashingAllForks(
+    ForkName.altair,
+    state as CachedBeaconState<allForks.BeaconState>,
+    proposerSlashing,
+    blockProcess,
+    verifySignatures
+  );
 }

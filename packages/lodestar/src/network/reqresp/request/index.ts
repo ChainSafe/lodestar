@@ -1,5 +1,5 @@
 import {Connection} from "libp2p";
-import {AbortSignal} from "abort-controller";
+import {AbortSignal} from "@chainsafe/abort-controller";
 import pipe from "it-pipe";
 import PeerId from "peer-id";
 import {Libp2p} from "libp2p/src/connection-manager";

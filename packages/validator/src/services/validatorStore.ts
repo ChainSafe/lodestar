@@ -155,7 +155,7 @@ export class ValidatorStore {
     validatorIndex: ValidatorIndex,
     slot: Slot,
     beaconBlockRoot: Root
-  ): Promise<altair.SyncCommitteeSignature> {
+  ): Promise<altair.SyncCommitteeMessage> {
     const domain = await this.getDomain(DOMAIN_SYNC_COMMITTEE, computeEpochAtSlot(slot));
     const signingRoot = computeSigningRoot(ssz.Root, beaconBlockRoot, domain);
 

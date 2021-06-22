@@ -16,6 +16,10 @@ export interface IBeaconClock {
   readonly currentSlotWithGossipDisparity: Slot;
   readonly currentEpoch: Epoch;
   /**
+   * Check if a slot is current slot given MAXIMUM_GOSSIP_CLOCK_DISPARITY.
+   */
+  isCurrentSlotGivenGossipDisparity(slot: Slot): boolean;
+  /**
    * Returns a promise that waits until at least `slot` is reached
    * Resolves when the current slot >= `slot`
    * Rejects if the clock is aborted

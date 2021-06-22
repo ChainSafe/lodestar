@@ -11,7 +11,7 @@
   "bugs": {
     "url": "https://github.com/ChainSafe/lodestar/issues"
   },
-  "version": "0.24.2",
+  "version": "0.24.3",
   "main": "lib/index.js",
   "files": [
     "lib/**/*.d.ts",
@@ -38,12 +38,12 @@
     "test:unit": "mocha --colors -r ts-node/register 'test/unit/**/*.test.ts'"
   },
   "dependencies": {
-    "@chainsafe/lodestar-beacon-state-transition": "^0.24.2",
-    "@chainsafe/lodestar-config": "^0.24.2",
-    "@chainsafe/lodestar-params": "^0.24.2",
-    "@chainsafe/lodestar-types": "^0.24.2",
-    "@chainsafe/lodestar-utils": "^0.24.2",
-    "@chainsafe/ssz": "^0.8.9"
+    "@chainsafe/lodestar-beacon-state-transition": "^0.24.3",
+    "@chainsafe/lodestar-config": "^0.24.3",
+    "@chainsafe/lodestar-params": "^0.24.3",
+    "@chainsafe/lodestar-types": "^0.24.3",
+    "@chainsafe/lodestar-utils": "^0.24.3",
+    "@chainsafe/ssz": "^0.8.11"
   },
   "keywords": [
     "ethereum",

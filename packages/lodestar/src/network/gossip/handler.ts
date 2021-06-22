@@ -123,10 +123,7 @@ export class GossipHandler {
     }
   };
 
-  private onSyncCommitteeSignature = async (
-    subnet: number,
-    signature: altair.SyncCommitteeSignature
-  ): Promise<void> => {
+  private onSyncCommitteeSignature = async (subnet: number, signature: altair.SyncCommitteeMessage): Promise<void> => {
     // Note: not calling checking `syncnetsService.shouldProcess()` here since the validators will always aggregate
 
     // TODO: Do this much better to be able to access this property in the handler
@@ -203,7 +200,7 @@ export class GossipHandler {
     for (const fork of allForksAfterAltair) {
       for (let subnet = 0; subnet < SYNC_COMMITTEE_SUBNET_COUNT; subnet++) {
         const topic = {type: GossipType.sync_committee, fork, subnet};
-        const handlerWrapped = (async (signature: altair.SyncCommitteeSignature): Promise<void> =>
+        const handlerWrapped = (async (signature: altair.SyncCommitteeMessage): Promise<void> =>
           await this.onSyncCommitteeSignature(subnet, signature)) as GossipHandlerFn;
         this.gossip.handleTopic(topic, handlerWrapped);
         this.topicHandlers.push({topic, handler: handlerWrapped});

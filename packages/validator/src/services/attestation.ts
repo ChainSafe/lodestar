@@ -1,4 +1,4 @@
-import {AbortSignal} from "abort-controller";
+import {AbortSignal} from "@chainsafe/abort-controller";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {phase0, Slot, CommitteeIndex, ssz} from "@chainsafe/lodestar-types";
 import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";

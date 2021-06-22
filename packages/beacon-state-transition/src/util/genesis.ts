@@ -10,13 +10,11 @@ import {
 import {allForks, altair, Bytes32, Number64, phase0, Root, ssz} from "@chainsafe/lodestar-types";
 import {bigIntMin} from "@chainsafe/lodestar-utils";
 
-import {processDeposit as processDepositPhase0} from "../phase0";
-import {processDeposit as processDepositAltair} from "../altair";
 import {computeEpochAtSlot} from "./epoch";
 import {getActiveValidatorIndices} from "./validator";
 import {getTemporaryBlockHeader} from "./blockRoot";
 import {getNextSyncCommittee} from "../altair/epoch/sync_committee";
-import {CachedBeaconState, createCachedBeaconState} from "../allForks";
+import {CachedBeaconState, createCachedBeaconState, processDeposit} from "../allForks";
 
 // TODO: Refactor to work with non-phase0 genesis state
 
@@ -146,14 +144,7 @@ export function applyDeposits(
     state.eth1Data.depositCount += 1;
 
     const forkName = config.getForkName(GENESIS_SLOT);
-    switch (forkName) {
-      case ForkName.phase0:
-        processDepositPhase0(state as CachedBeaconState<phase0.BeaconState>, deposit);
-        break;
-      case ForkName.altair:
-        processDepositAltair(state as CachedBeaconState<altair.BeaconState>, deposit);
-        break;
-    }
+    processDeposit(forkName, state, deposit);
   }
 
   // Process activations

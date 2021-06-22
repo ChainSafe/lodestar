@@ -5,7 +5,7 @@ import {
 } from "@chainsafe/lodestar-params";
 import {computeSyncPeriodAtEpoch, computeSyncPeriodAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {BLSSignature, Epoch, Root, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {BLSSignature, Epoch, Root, Slot, SyncPeriod, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {toHexString} from "@chainsafe/ssz";
 import {Api, routes} from "@chainsafe/lodestar-api";
@@ -21,19 +21,16 @@ const ALTAIR_FORK_LOOKAHEAD_EPOCHS = 1;
 /** How many epochs prior from a subscription starting, ask the node to subscribe */
 const SUBSCRIPTIONS_LOOKAHEAD_EPOCHS = 2;
 
-export type SyncDutySubCommittee = {
-  pubkey: routes.validator.SyncDuty["pubkey"];
-  validatorIndex: routes.validator.SyncDuty["validatorIndex"];
-  /** A single index of the validator in the sync committee. */
-  validatorSyncCommitteeIndex: number;
-};
-
-/** Neatly joins SyncDuty with the locally-generated `selectionProof`. */
-export type SyncDutyAndProof = {
-  duty: SyncDutySubCommittee;
+export type SyncSelectionProof = {
   /** This value is only set to not null if the proof indicates that the validator is an aggregator. */
   selectionProof: BLSSignature | null;
   subCommitteeIndex: number;
+};
+
+/** Neatly joins SyncDuty with the locally-generated `selectionProof`. */
+export type SyncDutyAndProofs = {
+  duty: routes.validator.SyncDuty;
+  selectionProofs: SyncSelectionProof[];
 };
 
 // To assist with readability
@@ -45,7 +42,7 @@ type DutyAtPeriod = {dependentRoot: Root; duty: routes.validator.SyncDuty};
  */
 export class SyncCommitteeDutiesService {
   /** Maps a validator public key to their duties for each slot */
-  private readonly dutiesByPeriodByIndex = new Map<ValidatorIndex, Map<Slot, DutyAtPeriod>>();
+  private readonly dutiesByIndexByPeriod = new Map<SyncPeriod, Map<ValidatorIndex, DutyAtPeriod>>();
 
   constructor(
     private readonly config: IBeaconConfig,
@@ -68,25 +65,18 @@ export class SyncCommitteeDutiesService {
    * 100 to 200,then you would actually produce signatures in slot 99 - 199.
    * https://github.com/ethereum/eth2.0-specs/pull/2400
    */
-  async getDutiesAtSlot(slot: Slot): Promise<SyncDutyAndProof[]> {
+  async getDutiesAtSlot(slot: Slot): Promise<SyncDutyAndProofs[]> {
     const period = computeSyncPeriodAtSlot(slot + 1); // See note above for the +1 offset
-    const duties: SyncDutyAndProof[] = [];
+    const duties: SyncDutyAndProofs[] = [];
 
-    for (const dutiesByPeriod of this.dutiesByPeriodByIndex.values()) {
-      const dutyAtPeriod = dutiesByPeriod.get(period);
-      // Validator always has a duty during the entire period
-      if (dutyAtPeriod) {
-        for (const index of dutyAtPeriod.duty.validatorSyncCommitteeIndices) {
-          duties.push(
-            // Compute a different DutyAndProof for each validatorSyncCommitteeIndices. Unwrapping here simplifies downstream code.
-            // getDutyAndProof() is async beacuse it may have to fetch the fork but should never happen in practice
-            await this.getDutyAndProof(slot, {
-              pubkey: dutyAtPeriod.duty.pubkey,
-              validatorIndex: dutyAtPeriod.duty.validatorIndex,
-              validatorSyncCommitteeIndex: index,
-            })
-          );
-        }
+    const dutiesByIndex = this.dutiesByIndexByPeriod.get(period);
+    if (dutiesByIndex) {
+      for (const dutyAtPeriod of dutiesByIndex.values()) {
+        // Validator always has a duty during the entire period
+        duties.push({
+          duty: dutyAtPeriod.duty,
+          selectionProofs: await this.getSelectionProofs(slot, dutyAtPeriod.duty),
+        });
       }
     }
 
@@ -152,9 +142,9 @@ export class SyncCommitteeDutiesService {
     // if the BN goes offline or we swap to a different one.
     const indexSet = new Set(indexArr);
     for (const period of [currentPeriod, currentPeriod + 1]) {
-      for (const [validatorIndex, dutiesByPeriod] of this.dutiesByPeriodByIndex.entries()) {
-        const dutyAtEpoch = dutiesByPeriod.get(period);
-        if (dutyAtEpoch) {
+      const dutiesByIndex = this.dutiesByIndexByPeriod.get(period);
+      if (dutiesByIndex) {
+        for (const [validatorIndex, dutyAtEpoch] of dutiesByIndex.entries()) {
           if (indexSet.has(validatorIndex)) {
             const fromEpoch = period * EPOCHS_PER_SYNC_COMMITTEE_PERIOD;
             const untilEpoch = (period + 1) * EPOCHS_PER_SYNC_COMMITTEE_PERIOD;
@@ -194,20 +184,20 @@ export class SyncCommitteeDutiesService {
       throw extendError(e, "Failed to obtain SyncDuties");
     });
     const dependentRoot = syncDuties.dependentRoot;
-    const relevantDuties = syncDuties.data.filter((duty) => this.indicesService.hasValidatorIndex(duty.validatorIndex));
     const period = computeSyncPeriodAtEpoch(epoch);
 
-    this.logger.debug("Downloaded SyncDuties", {
-      epoch,
-      dependentRoot: toHexString(dependentRoot),
-      count: relevantDuties.length,
-    });
+    let count = 0;
 
-    for (const duty of relevantDuties) {
-      let dutiesByPeriod = this.dutiesByPeriodByIndex.get(duty.validatorIndex);
-      if (!dutiesByPeriod) {
-        dutiesByPeriod = new Map<Epoch, DutyAtPeriod>();
-        this.dutiesByPeriodByIndex.set(duty.validatorIndex, dutiesByPeriod);
+    for (const duty of syncDuties.data) {
+      if (!this.indicesService.hasValidatorIndex(duty.validatorIndex)) {
+        continue;
+      }
+      count++;
+
+      let dutiesByIndex = this.dutiesByIndexByPeriod.get(period);
+      if (!dutiesByIndex) {
+        dutiesByIndex = new Map<ValidatorIndex, DutyAtPeriod>();
+        this.dutiesByIndexByPeriod.set(period, dutiesByIndex);
       }
 
       // TODO: Enable dependentRoot functionality
@@ -219,36 +209,37 @@ export class SyncCommitteeDutiesService {
       // - The dependent root has changed, signalling a re-org.
 
       // Using `alreadyWarnedReorg` avoids excessive logs.
-      dutiesByPeriod.set(period, {dependentRoot, duty});
+      dutiesByIndex.set(duty.validatorIndex, {dependentRoot, duty});
     }
+
+    this.logger.debug("Downloaded SyncDuties", {epoch, dependentRoot: toHexString(dependentRoot), count});
   }
 
-  private async getDutyAndProof(slot: Slot, duty: SyncDutySubCommittee): Promise<SyncDutyAndProof> {
+  private async getSelectionProofs(slot: Slot, duty: routes.validator.SyncDuty): Promise<SyncSelectionProof[]> {
     // TODO: Cache this value
     const SYNC_COMMITTEE_SUBNET_SIZE = Math.floor(SYNC_COMMITTEE_SIZE / SYNC_COMMITTEE_SUBNET_COUNT);
-    const subCommitteeIndex = Math.floor(duty.validatorSyncCommitteeIndex / SYNC_COMMITTEE_SUBNET_SIZE);
-    const selectionProof = await this.validatorStore.signSyncCommitteeSelectionProof(
-      // Fast indexing with precomputed pubkeyHex. Fallback to toHexString(duty.pubkey)
-      this.indicesService.index2pubkey.get(duty.validatorIndex) ?? duty.pubkey,
-      slot,
-      subCommitteeIndex
-    );
-    return {
-      duty,
-      // selectionProof === null is used to check if is aggregator
-      selectionProof: isSyncCommitteeAggregator(selectionProof) ? selectionProof : null,
-      subCommitteeIndex,
-    };
+    // Fast indexing with precomputed pubkeyHex. Fallback to toHexString(duty.pubkey)
+    const pubkey = this.indicesService.index2pubkey.get(duty.validatorIndex) ?? duty.pubkey;
+
+    const dutiesAndProofs: SyncSelectionProof[] = [];
+    for (const index of duty.validatorSyncCommitteeIndices) {
+      const subCommitteeIndex = Math.floor(index / SYNC_COMMITTEE_SUBNET_SIZE);
+      const selectionProof = await this.validatorStore.signSyncCommitteeSelectionProof(pubkey, slot, subCommitteeIndex);
+      dutiesAndProofs.push({
+        // selectionProof === null is used to check if is aggregator
+        selectionProof: isSyncCommitteeAggregator(selectionProof) ? selectionProof : null,
+        subCommitteeIndex,
+      });
+    }
+    return dutiesAndProofs;
   }
 
   /** Run at least once per period to prune duties map */
   private pruneOldDuties(currentEpoch: Epoch): void {
     const currentPeriod = computeSyncPeriodAtEpoch(currentEpoch);
-    for (const attMap of this.dutiesByPeriodByIndex.values()) {
-      for (const period of attMap.keys()) {
-        if (period + HISTORICAL_DUTIES_PERIODS < currentPeriod) {
-          attMap.delete(period);
-        }
+    for (const period of this.dutiesByIndexByPeriod.keys()) {
+      if (period + HISTORICAL_DUTIES_PERIODS < currentPeriod) {
+        this.dutiesByIndexByPeriod.delete(period);
       }
     }
   }

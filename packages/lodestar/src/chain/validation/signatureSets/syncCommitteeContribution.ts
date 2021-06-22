@@ -43,7 +43,7 @@ function getContributionPubkeys(
   for (const [i, bit] of aggBits.entries()) {
     if (bit) {
       const indexInCommittee = startIndex + i;
-      const validatorIndex = state.currSyncCommitteeIndexes[indexInCommittee];
+      const validatorIndex = state.currentSyncCommittee.validatorIndices[indexInCommittee];
       const pubkey = state.index2pubkey[validatorIndex];
       pubkeys.push(pubkey);
     }

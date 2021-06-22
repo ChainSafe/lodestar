@@ -7,7 +7,7 @@ export interface SyncCommittee {
   aggregatePubkey: phase0.BLSPubkey;
 }
 
-export interface SyncCommitteeSignature {
+export interface SyncCommitteeMessage {
   slot: phase0.Slot;
   beaconBlockRoot: phase0.Root;
   validatorIndex: phase0.ValidatorIndex;

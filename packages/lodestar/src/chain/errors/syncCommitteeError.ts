@@ -22,7 +22,7 @@ export type SyncCommitteeErrorType =
   | {code: SyncCommitteeErrorCode.AGGREGATOR_PUBKEY_UNKNOWN; aggregatorIndex: phase0.ValidatorIndex};
 
 export interface ISyncCommitteeJob {
-  signature: altair.SyncCommitteeSignature;
+  signature: altair.SyncCommitteeMessage;
   validSignature: boolean;
 }
 

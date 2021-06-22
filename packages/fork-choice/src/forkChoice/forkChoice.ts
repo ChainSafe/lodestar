@@ -15,6 +15,7 @@ import {ForkChoiceError, ForkChoiceErrorCode, InvalidBlockCode, InvalidAttestati
 import {IForkChoiceStore} from "./store";
 import {IBlockSummary, toBlockSummary} from "./blockSummary";
 import {IForkChoice, ILatestMessage, IQueuedAttestation} from "./interface";
+import {IForkChoiceMetrics} from "../metrics";
 
 /**
  * Provides an implementation of "Ethereum 2.0 Phase 0 -- Beacon Chain Fork Choice":
@@ -80,6 +81,11 @@ export class ForkChoice implements IForkChoice {
   head: IBlockSummary;
 
   /**
+   * Fork choice metrics.
+   */
+  private readonly metrics: IForkChoiceMetrics | null | undefined;
+
+  /**
    * Instantiates a Fork Choice from some existing components
    *
    * This is useful if the existing components have been loaded from disk after a process restart.
@@ -90,12 +96,14 @@ export class ForkChoice implements IForkChoice {
     protoArray,
     queuedAttestations,
     justifiedBalances,
+    metrics,
   }: {
     config: IBeaconConfig;
     fcStore: IForkChoiceStore;
     protoArray: ProtoArray;
     queuedAttestations: Set<IQueuedAttestation>;
     justifiedBalances: Gwei[];
+    metrics?: IForkChoiceMetrics | null;
   }) {
     this.config = config;
     this.fcStore = fcStore;
@@ -105,6 +113,7 @@ export class ForkChoice implements IForkChoice {
     this.bestJustifiedBalances = justifiedBalances;
     this.queuedAttestations = queuedAttestations;
     this.synced = false;
+    this.metrics = metrics;
     this.head = this.updateHead();
   }
 
@@ -173,31 +182,43 @@ export class ForkChoice implements IForkChoice {
    */
   updateHead(): IBlockSummary {
     // balances is not changed but votes are changed
-    if (!this.synced) {
-      const deltas = computeDeltas(this.protoArray.indices, this.votes, this.justifiedBalances, this.justifiedBalances);
-      this.protoArray.applyScoreChanges(
-        deltas,
-        this.fcStore.justifiedCheckpoint.epoch,
-        this.fcStore.finalizedCheckpoint.epoch
-      );
-      this.synced = true;
+    let timer;
+    try {
+      if (!this.synced) {
+        timer = this.metrics?.forkChoiceFindHead.startTimer();
+        const deltas = computeDeltas(
+          this.protoArray.indices,
+          this.votes,
+          this.justifiedBalances,
+          this.justifiedBalances
+        );
+        this.protoArray.applyScoreChanges(
+          deltas,
+          this.fcStore.justifiedCheckpoint.epoch,
+          this.fcStore.finalizedCheckpoint.epoch
+        );
+        this.synced = true;
+      }
+      const headRoot = this.protoArray.findHead(toHexString(this.fcStore.justifiedCheckpoint.root));
+      const headIndex = this.protoArray.indices.get(headRoot);
+      if (headIndex === undefined) {
+        throw new ForkChoiceError({
+          code: ForkChoiceErrorCode.MISSING_PROTO_ARRAY_BLOCK,
+          root: fromHexString(headRoot),
+        });
+      }
+      const headNode = this.protoArray.nodes[headIndex];
+      if (headNode === undefined) {
+        throw new ForkChoiceError({
+          code: ForkChoiceErrorCode.MISSING_PROTO_ARRAY_BLOCK,
+          root: fromHexString(headRoot),
+        });
+      }
+
+      return (this.head = toBlockSummary(headNode));
+    } finally {
+      if (timer) timer();
     }
-    const headRoot = this.protoArray.findHead(toHexString(this.fcStore.justifiedCheckpoint.root));
-    const headIndex = this.protoArray.indices.get(headRoot);
-    if (headIndex === undefined) {
-      throw new ForkChoiceError({
-        code: ForkChoiceErrorCode.MISSING_PROTO_ARRAY_BLOCK,
-        root: fromHexString(headRoot),
-      });
-    }
-    const headNode = this.protoArray.nodes[headIndex];
-    if (headNode === undefined) {
-      throw new ForkChoiceError({
-        code: ForkChoiceErrorCode.MISSING_PROTO_ARRAY_BLOCK,
-        root: fromHexString(headRoot),
-      });
-    }
-    return (this.head = toBlockSummary(headNode));
   }
 
   getHeads(): IBlockSummary[] {

@@ -14,7 +14,7 @@ import {allForks, ForkDigest, Number64, Root, phase0, Slot} from "@chainsafe/lod
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {TreeBacked} from "@chainsafe/ssz";
 import {LightClientUpdater} from "@chainsafe/lodestar-light-client/lib/server/LightClientUpdater";
-import {AbortController} from "abort-controller";
+import {AbortController} from "@chainsafe/abort-controller";
 import {GENESIS_EPOCH, ZERO_HASH} from "../constants";
 import {IBeaconDb} from "../db";
 import {CheckpointStateCache, StateContextCache} from "./stateCache";
@@ -89,7 +89,13 @@ export class BeaconChain implements IBeaconChain {
     const stateCache = new StateContextCache();
     const checkpointStateCache = new CheckpointStateCache(config);
     const cachedState = restoreStateCaches(config, stateCache, checkpointStateCache, anchorState);
-    const forkChoice = new LodestarForkChoice({config, emitter, currentSlot: clock.currentSlot, state: cachedState});
+    const forkChoice = new LodestarForkChoice({
+      config,
+      emitter,
+      currentSlot: clock.currentSlot,
+      state: cachedState,
+      metrics,
+    });
     const regen = new QueuedStateRegenerator({
       config,
       emitter,

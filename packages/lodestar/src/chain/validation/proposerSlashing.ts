@@ -20,7 +20,7 @@ export async function validateGossipProposerSlashing(
 
   try {
     // verifySignature = false, verified in batch below
-    phase0.assertValidProposerSlashing(state, proposerSlashing, false);
+    allForks.assertValidProposerSlashing(state, proposerSlashing, false);
   } catch (e) {
     throw new ProposerSlashingError({
       code: ProposerSlashingErrorCode.INVALID,

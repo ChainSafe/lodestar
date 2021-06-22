@@ -107,7 +107,7 @@ export class Eth2Gossipsub extends Gossipsub {
    * @override Use eth2 msg id and cache results to the msg
    */
   getMsgId(msg: IGossipMessage): Uint8Array {
-    return getMsgId(msg);
+    return getMsgId(msg, this.forkDigestContext);
   }
 
   /**
@@ -247,7 +247,7 @@ export class Eth2Gossipsub extends Gossipsub {
     await this.publishObject({type: GossipType.attester_slashing, fork}, attesterSlashing);
   }
 
-  async publishSyncCommitteeSignature(signature: altair.SyncCommitteeSignature, subnet: number): Promise<void> {
+  async publishSyncCommitteeSignature(signature: altair.SyncCommitteeMessage, subnet: number): Promise<void> {
     const fork = this.config.getForkName(signature.slot);
     await this.publishObject({type: GossipType.sync_committee, fork, subnet}, signature);
   }

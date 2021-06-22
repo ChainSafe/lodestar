@@ -10,6 +10,7 @@ import {SPEC_TEST_LOCATION} from "../../../utils/specTestCases";
 import {expectEqualBeaconState} from "../util";
 import {ssz} from "@chainsafe/lodestar-types";
 import {PresetName} from "@chainsafe/lodestar-params";
+import {convertToIndexedSyncCommittee} from "@chainsafe/lodestar-beacon-state-transition/lib/allForks/util/indexedSyncCommittee";
 
 export function runFork(presetName: PresetName): void {
   describeDirectorySpecTest<IUpgradeStateCase, altair.BeaconState>(
@@ -20,7 +21,18 @@ export function runFork(presetName: PresetName): void {
         config,
         testcase.pre as TreeBacked<phase0.BeaconState>
       );
-      return upgradeState(phase0State);
+      const altairState = upgradeState(phase0State);
+      // this test has a random slot so createCachedBeaconState is not able to create indexed sync committee
+      const tbAltairState = altairState.type.createTreeBacked(altairState.tree);
+      altairState.currentSyncCommittee = convertToIndexedSyncCommittee(
+        tbAltairState.currentSyncCommittee as TreeBacked<altair.SyncCommittee>,
+        altairState.pubkey2index
+      );
+      altairState.nextSyncCommittee = convertToIndexedSyncCommittee(
+        tbAltairState.nextSyncCommittee as TreeBacked<altair.SyncCommittee>,
+        altairState.pubkey2index
+      );
+      return altairState;
     },
     {
       inputTypes: {

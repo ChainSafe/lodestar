@@ -1,4 +1,4 @@
-import {AbortController} from "abort-controller";
+import {AbortController} from "@chainsafe/abort-controller";
 import pipe from "it-pipe";
 import {timeoutOptions} from "../../../constants";
 import {abortableSource} from "../../../util/abortableSource";

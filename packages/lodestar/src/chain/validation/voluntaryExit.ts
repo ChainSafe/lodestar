@@ -23,7 +23,7 @@ export async function validateGossipVoluntaryExit(
 
   try {
     // verifySignature = false, verified in batch below
-    phase0.assertValidVoluntaryExit(state, voluntaryExit, false);
+    allForks.assertValidVoluntaryExit(state, voluntaryExit, false);
   } catch (e) {
     throw new VoluntaryExitError({
       code: VoluntaryExitErrorCode.INVALID,
