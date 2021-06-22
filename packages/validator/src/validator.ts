@@ -1,4 +1,4 @@
-import {AbortController, AbortSignal} from "abort-controller";
+import {AbortController, AbortSignal} from "@chainsafe/abort-controller";
 import {SecretKey} from "@chainsafe/bls";
 import {ssz} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";

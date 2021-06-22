@@ -1,4 +1,4 @@
-import {AbortSignal} from "abort-controller";
+import {AbortSignal} from "@chainsafe/abort-controller";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Slot, CommitteeIndex, altair, Root} from "@chainsafe/lodestar-types";
 import {ILogger, prettyBytes, sleep} from "@chainsafe/lodestar-utils";
@@ -46,8 +46,8 @@ export class SyncCommitteeService {
       // Lighthouse recommends to always wait to 1/3 of the slot, even if the block comes early
       await sleep(this.clock.msToSlotFraction(slot, 1 / 3), signal);
 
-      // Step 1. Download, sign and publish an `SyncCommitteeSignature` for each validator.
-      //         Differs from AttestationService, `SyncCommitteeSignature` are equal for all
+      // Step 1. Download, sign and publish an `SyncCommitteeMessage` for each validator.
+      //         Differs from AttestationService, `SyncCommitteeMessage` are equal for all
       const beaconBlockRoot = await this.produceAndPublishSyncCommittees(slot, dutiesAtSlot);
 
       // Step 2. If an attestation was produced, make an aggregate.
@@ -88,14 +88,14 @@ export class SyncCommitteeService {
     // /eth/v1/beacon/blocks/:blockId/root -> at slot -1
 
     // Produce one attestation data per slot and subcommitteeIndex
-    // Spec: the validator should prepare a SyncCommitteeSignature for the previous slot (slot - 1)
+    // Spec: the validator should prepare a SyncCommitteeMessage for the previous slot (slot - 1)
     // as soon as they have determined the head block of slot - 1
     const beaconBlockRoot = await this.api.beacon.getBlockRoot(slot).catch((e) => {
-      throw extendError(e, "Error producing SyncCommitteeSignature");
+      throw extendError(e, "Error producing SyncCommitteeMessage");
     });
 
     const blockRoot = beaconBlockRoot.data;
-    const signatures: altair.SyncCommitteeSignature[] = [];
+    const signatures: altair.SyncCommitteeMessage[] = [];
 
     for (const {duty} of duties) {
       const logCtxValidator = {...logCtx, validator: prettyBytes(duty.pubkey)};
@@ -103,18 +103,18 @@ export class SyncCommitteeService {
         signatures.push(
           await this.validatorStore.signSyncCommitteeSignature(duty.pubkey, duty.validatorIndex, slot, blockRoot)
         );
-        this.logger.debug("Signed SyncCommitteeSignature", logCtxValidator);
+        this.logger.debug("Signed SyncCommitteeMessage", logCtxValidator);
       } catch (e) {
-        if (notAborted(e)) this.logger.error("Error signing SyncCommitteeSignature", logCtxValidator, e);
+        if (notAborted(e)) this.logger.error("Error signing SyncCommitteeMessage", logCtxValidator, e);
       }
     }
 
     if (signatures.length > 0) {
       try {
         await this.api.beacon.submitPoolSyncCommitteeSignatures(signatures);
-        this.logger.info("Published SyncCommitteeSignature", {...logCtx, count: signatures.length});
+        this.logger.info("Published SyncCommitteeMessage", {...logCtx, count: signatures.length});
       } catch (e) {
-        if (notAborted(e)) this.logger.error("Error publishing SyncCommitteeSignature", logCtx, e);
+        if (notAborted(e)) this.logger.error("Error publishing SyncCommitteeMessage", logCtx, e);
       }
     }
 

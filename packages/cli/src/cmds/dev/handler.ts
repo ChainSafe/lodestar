@@ -2,7 +2,7 @@ import fs from "fs";
 import {promisify} from "util";
 import rimraf from "rimraf";
 import path from "path";
-import {AbortController} from "abort-controller";
+import {AbortController} from "@chainsafe/abort-controller";
 import {GENESIS_SLOT} from "@chainsafe/lodestar-params";
 import {BeaconNode, BeaconDb, initStateFromAnchorState, createNodeJsLibp2p, nodeUtils} from "@chainsafe/lodestar";
 import {SlashingProtection, Validator} from "@chainsafe/lodestar-validator";

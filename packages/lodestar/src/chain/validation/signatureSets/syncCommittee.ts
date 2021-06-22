@@ -11,7 +11,7 @@ import {
 
 export function getSyncCommitteeSignatureSet(
   state: CachedBeaconState<allForks.BeaconState>,
-  syncCommittee: altair.SyncCommitteeSignature
+  syncCommittee: altair.SyncCommitteeMessage
 ): ISignatureSet {
   const epochSig = computeEpochAtSlot(syncCommittee.slot);
   const domain = getDomain(state, DOMAIN_SYNC_COMMITTEE, epochSig);

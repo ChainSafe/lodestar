@@ -8,6 +8,7 @@ import {
   GossipType,
   GossipEncoding,
   GossipTopicMap,
+  getForkFromGossipTopic,
 } from "../../../../src/network/gossip";
 import {ForkDigestContext} from "../../../../src/util/forkDigestContext";
 
@@ -29,9 +30,9 @@ describe("GossipTopic", function () {
     [GossipType.proposer_slashing]: [{type: GossipType.proposer_slashing, fork: ForkName.phase0, encoding}],
     [GossipType.attester_slashing]: [{type: GossipType.attester_slashing, fork: ForkName.phase0, encoding}],
     [GossipType.sync_committee_contribution_and_proof]: [
-      {type: GossipType.sync_committee_contribution_and_proof, fork: ForkName.phase0, encoding},
+      {type: GossipType.sync_committee_contribution_and_proof, fork: ForkName.altair, encoding},
     ],
-    [GossipType.sync_committee]: [{type: GossipType.sync_committee, fork: ForkName.phase0, subnet: 5, encoding}],
+    [GossipType.sync_committee]: [{type: GossipType.sync_committee, fork: ForkName.altair, subnet: 5, encoding}],
   };
 
   for (const topics of Object.values(testCases)) {
@@ -42,6 +43,7 @@ describe("GossipTopic", function () {
         const topicString = stringifyGossipTopic(forkDigestContext, topic);
         const outputTopic = parseGossipTopic(forkDigestContext, topicString);
         expect(outputTopic).to.deep.equal(topic);
+        expect(getForkFromGossipTopic(forkDigestContext, topicString)).to.be.equal(topic.fork, "Incorrect fork");
       });
     }
   }

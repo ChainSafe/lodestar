@@ -16,7 +16,7 @@ export function runSyncCommittee(presetName: PresetName): void {
 
   describeDirectorySpecTest<IProcessSyncCommitteeTestCase, altair.BeaconState>(
     `process sync committee ${presetName}`,
-    join(SPEC_TEST_LOCATION, `/tests/${presetName}/altair/operations/sync_committee/pyspec_tests`),
+    join(SPEC_TEST_LOCATION, `/tests/${presetName}/altair/operations/sync_aggregate/pyspec_tests`),
     (testcase) => {
       const wrappedState = allForks.createCachedBeaconState<altair.BeaconState>(
         config,
@@ -25,11 +25,11 @@ export function runSyncCommittee(presetName: PresetName): void {
 
       const block = ssz.altair.BeaconBlock.defaultTreeBacked();
 
-      // processSyncCommittee() needs the full block to get the slot
+      // processSyncAggregate() needs the full block to get the slot
       block.slot = wrappedState.slot;
       block.body.syncAggregate = testcase["sync_aggregate"];
 
-      altair.processSyncCommittee(wrappedState, block);
+      altair.processSyncAggregate(wrappedState, block);
       return wrappedState;
     },
     {

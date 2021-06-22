@@ -1,6 +1,6 @@
 import sinon from "sinon";
 import {expect} from "chai";
-import {AbortController} from "abort-controller";
+import {AbortController} from "@chainsafe/abort-controller";
 
 import PeerId from "peer-id";
 import {Discv5Discovery, ENR} from "@chainsafe/discv5";

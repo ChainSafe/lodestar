@@ -1,6 +1,6 @@
 import {fromHexString} from "@chainsafe/ssz";
 import {phase0} from "@chainsafe/lodestar-types";
-import {AbortSignal} from "abort-controller";
+import {AbortSignal} from "@chainsafe/abort-controller";
 import {chunkifyInclusiveRange} from "../util/chunkify";
 import {linspace} from "../util/numpy";
 import {retry} from "../util/retry";

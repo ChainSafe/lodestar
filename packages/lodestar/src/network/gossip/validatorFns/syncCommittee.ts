@@ -12,7 +12,7 @@ import {GossipTopicMap, IObjectValidatorModules} from "../interface";
 export async function validateSyncCommittee(
   {chain, db, logger}: IObjectValidatorModules,
   {subnet}: GossipTopicMap[GossipType.sync_committee],
-  syncCommittee: altair.SyncCommitteeSignature
+  syncCommittee: altair.SyncCommitteeMessage
 ): Promise<void> {
   const metadata = {subnet, slot: syncCommittee.slot};
   try {

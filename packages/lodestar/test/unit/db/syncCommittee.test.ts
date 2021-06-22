@@ -14,7 +14,7 @@ describe("SyncCommitteeCache", function () {
   const indexInSubCommittee = 3;
   const beaconBlockRoot = Buffer.alloc(32, 1);
   const slot = 10;
-  let syncCommittee: altair.SyncCommitteeSignature;
+  let syncCommittee: altair.SyncCommitteeMessage;
 
   before("Init BLS", async () => {
     await init("blst-native");

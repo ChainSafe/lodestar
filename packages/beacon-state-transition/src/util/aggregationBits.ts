@@ -33,37 +33,50 @@ function computeUint8ByteToBitBooleanArray(byte: number): boolean[] {
 
 /** zipIndexes for CommitteeBits. @see zipIndexes */
 export function zipIndexesCommitteeBits(indexes: number[], bits: TreeBacked<BitVector> | BitVector): number[] {
-  return zipIndexes(indexes, bits, ssz.phase0.CommitteeBits);
+  return zipIndexes(indexes, bits, ssz.phase0.CommitteeBits)[0];
 }
+
 /** zipIndexes for SyncCommitteeBits. @see zipIndexes */
 export function zipIndexesSyncCommitteeBits(indexes: number[], bits: TreeBacked<BitVector> | BitVector): number[] {
+  return zipIndexes(indexes, bits, ssz.altair.SyncCommitteeBits)[0];
+}
+
+/** Similar to zipIndexesSyncCommitteeBits but we extract both participant and unparticipant indices*/
+export function zipAllIndexesSyncCommitteeBits(
+  indexes: number[],
+  bits: TreeBacked<BitVector> | BitVector
+): [number[], number[]] {
   return zipIndexes(indexes, bits, ssz.altair.SyncCommitteeBits);
 }
 
 /**
  * Performant indexing of a BitList, both as struct or TreeBacked
+ * Return [0] as participant indices and [1] as unparticipant indices
  * @see zipIndexesInBitListTreeBacked
  */
 export function zipIndexes<BitArr extends BitList | BitVector>(
   indexes: number[],
   bitlist: TreeBacked<BitArr> | BitArr,
   sszType: Type<BitArr>
-): number[] {
+): [number[], number[]] {
   if (isTreeBacked<BitArr>(bitlist)) {
     return zipIndexesTreeBacked(indexes, bitlist, sszType);
   } else {
     const attestingIndices = [];
+    const unattestingIndices = [];
     for (let i = 0, len = indexes.length; i < len; i++) {
       if (bitlist[i]) {
         attestingIndices.push(indexes[i]);
+      } else {
+        unattestingIndices.push(indexes[i]);
       }
     }
-    return attestingIndices;
+    return [attestingIndices, unattestingIndices];
   }
 }
 
 /**
- * Returns a new `indexes` array with only the indexes that participated in `bitlist`.
+ * Returns [0] as indices that participated in `bitlist` and [1] as indices that did not participated in `bitlist`.
  * Participation of `indexes[i]` means that the bit at position `i` in `bitlist` is true.
  *
  * Previously we computed this information with `readonlyValues(TreeBacked<BitList>)`.
@@ -75,30 +88,30 @@ export function zipIndexesTreeBacked<BitArr extends BitList | BitVector>(
   indexes: number[],
   bits: TreeBacked<BitArr>,
   sszType: Type<BitArr>
-): number[] {
+): [number[], number[]] {
   const bytes = bitsToUint8Array(bits, sszType);
 
-  const indexesSelected: number[] = [];
+  const participantIndices: number[] = [];
+  const unparticipantIndices: number[] = [];
 
   // Iterate over each byte of bits
   for (let iByte = 0, byteLen = bytes.length; iByte < byteLen; iByte++) {
-    // If it's exactly zero, there won't be any indexes, continue early
-    if (bytes[iByte] === 0) {
-      continue;
-    }
-
     // Get the precomputed boolean array for this byte
     const booleansInByte = getUint8ByteToBitBooleanArray(bytes[iByte]);
     // For each bit in the byte check participation and add to indexesSelected array
     for (let iBit = 0; iBit < BITS_PER_BYTE; iBit++) {
-      const participantIndex = indexes[iByte * BITS_PER_BYTE + iBit];
-      if (booleansInByte[iBit] && participantIndex !== undefined) {
-        indexesSelected.push(participantIndex);
+      const committeeIndex = indexes[iByte * BITS_PER_BYTE + iBit];
+      if (committeeIndex !== undefined) {
+        if (booleansInByte[iBit]) {
+          participantIndices.push(committeeIndex);
+        } else {
+          unparticipantIndices.push(committeeIndex);
+        }
       }
     }
   }
 
-  return indexesSelected;
+  return [participantIndices, unparticipantIndices];
 }
 
 /**
