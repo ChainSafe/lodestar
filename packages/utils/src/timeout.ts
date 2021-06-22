@@ -1,4 +1,4 @@
-import {AbortSignal, AbortController} from "abort-controller";
+import {AbortSignal, AbortController} from "@chainsafe/abort-controller";
 import {anySignal} from "any-signal";
 import {TimeoutError} from "./errors";
 import {sleep} from "./sleep";

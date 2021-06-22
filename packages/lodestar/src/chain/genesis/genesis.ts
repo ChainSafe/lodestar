@@ -6,7 +6,7 @@ import {TreeBacked, List} from "@chainsafe/ssz";
 import {GENESIS_SLOT} from "@chainsafe/lodestar-params";
 import {Root, phase0, allForks, ssz} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {AbortSignal} from "abort-controller";
+import {AbortSignal} from "@chainsafe/abort-controller";
 import {
   getTemporaryBlockHeader,
   getGenesisBeaconState,

@@ -1,6 +1,6 @@
 import PeerId from "peer-id";
 import pipe from "it-pipe";
-import {AbortSignal} from "abort-controller";
+import {AbortSignal} from "@chainsafe/abort-controller";
 import {Libp2p} from "libp2p/src/connection-manager";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Context, ILogger, TimeoutError, withTimeout} from "@chainsafe/lodestar-utils";

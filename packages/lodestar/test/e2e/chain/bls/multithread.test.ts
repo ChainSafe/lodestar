@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import {AbortController} from "abort-controller";
+import {AbortController} from "@chainsafe/abort-controller";
 import {bls, init, PublicKey} from "@chainsafe/bls";
 import {BlsMultiThreadWorkerPool} from "../../../../src/chain/bls/multithread";
 import {testLogger} from "../../../utils/logger";

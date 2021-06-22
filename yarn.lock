@@ -1084,6 +1084,13 @@
     lodash "^4.17.13"
     to-fast-properties "^2.0.0"
 
+"@chainsafe/abort-controller@^3.0.1":
+  version "3.0.1"
+  resolved "https://registry.yarnpkg.com/@chainsafe/abort-controller/-/abort-controller-3.0.1.tgz#9f99ff6c641fa08e76ca346ecea54496ccb0662e"
+  integrity sha512-oyq0qgFJDIIgLpyPwTv4j/sHX/MITatFzY3/b42VSldyZfnUC1lYBx5RwFvzBv1Sq4APOj2VCZO23pDRwy5kew==
+  dependencies:
+    event-target-shim "^5.0.0"
+
 "@chainsafe/as-sha256@^0.2.2":
   version "0.2.2"
   resolved "https://registry.yarnpkg.com/@chainsafe/as-sha256/-/as-sha256-0.2.2.tgz#f76fae7034c463295bdfb722caf2d93c6fb70d8f"
