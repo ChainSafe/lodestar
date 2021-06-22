@@ -82,8 +82,11 @@ describe("getCommitteeAssignments vs assembleAttesterDuties performance test", f
       run: () => {
         newDuties = state.epochCtx.getCommitteeAssignments(
           0,
-          state.validators.map((validator, k) => {
-            const index = indices[k];
+          indices.map((index) => {
+            const validator = state.validators.get(index);
+            if (!validator) {
+              throw new Error(`Validator at index ${index} not in state`);
+            }
             return {pubkey: validator.pubkey, index};
           })
         );
