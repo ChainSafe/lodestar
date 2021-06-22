@@ -182,10 +182,13 @@ export class ForkChoice implements IForkChoice {
    */
   updateHead(): IBlockSummary {
     // balances is not changed but votes are changed
-    const timer = this.metrics?.forkChoiceFindHead.startTimer({syncStatus: this.synced ? "synced" : "unsynced"});
-    const mLabels = {resStatus: "error"};
+
+    let timer, prevHead, newHead;
+    this.metrics?.forkChoiceHeadRequests.inc();
+
     try {
       if (!this.synced) {
+        timer = this.metrics?.forkChoiceFindHead.startTimer();
         const deltas = computeDeltas(
           this.protoArray.indices,
           this.votes,
@@ -214,17 +217,21 @@ export class ForkChoice implements IForkChoice {
           root: fromHexString(headRoot),
         });
       }
-      const blockSummary = toBlockSummary(headNode);
-
-      const isSameHead =
-        blockSummary && this.head && toHexString(blockSummary.blockRoot) == toHexString(this.head.blockRoot);
-      const isSameChain =
-        isSameHead || (this.head && blockSummary && this.isDescendant(this.head.blockRoot, blockSummary.blockRoot));
-      Object.assign(mLabels, {resStatus: isSameHead ? "samehead" : isSameChain ? "newhead" : "newfork"});
-
-      return (this.head = blockSummary);
+      prevHead = this.head;
+      return (this.head = newHead = toBlockSummary(headNode));
     } finally {
-      if (timer) timer(mLabels);
+      if (timer) timer();
+      if (newHead && this.metrics) {
+        //if there is no prevHead, then isSameHead is false and isSameChain is true
+        const isSameHead = prevHead && toHexString(newHead.blockRoot) == toHexString(prevHead.blockRoot);
+        const isSameChain = !prevHead || isSameHead || this.isDescendant(prevHead.blockRoot, newHead.blockRoot);
+
+        if (isSameChain && !isSameHead) this.metrics.forkChoiceNewHeads.inc();
+        if (!isSameChain) this.metrics.forkChoiceNewChains.inc();
+      }
+      if (!newHead) {
+        this.metrics?.forkChoiceErrors.inc();
+      }
     }
   }
 

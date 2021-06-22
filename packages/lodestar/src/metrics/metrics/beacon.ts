@@ -121,11 +121,26 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
       help: "number of aggregators for which we have seen an attestation, not necessarily included on chain.",
     }),
 
-    forkChoiceFindHead: register.histogram<"syncStatus" | "resStatus">({
+    forkChoiceFindHead: register.histogram({
       name: "beacon_fork_choice_find_head_seconds",
       help: "Time taken to find head in seconds",
-      labelNames: ["syncStatus", "resStatus"],
       buckets: [0.1, 1, 10],
+    }),
+    forkChoiceHeadRequests: register.gauge({
+      name: "beacon_fork_choice_requests_total",
+      help: "Count of occasions where fork choice has tried to find a head",
+    }),
+    forkChoiceErrors: register.gauge({
+      name: "beacon_fork_choice_errors_total",
+      help: "Count of occasions where fork choice has returned an error when trying to find a head",
+    }),
+    forkChoiceNewHeads: register.gauge({
+      name: "beacon_fork_choice_changed_head_total",
+      help: "Count of occasions fork choice has found a new head",
+    }),
+    forkChoiceNewChains: register.gauge({
+      name: "beacon_fork_choice_reorg_total",
+      help: "Count of occasions fork choice has switched to a different chain",
     }),
   };
 }
