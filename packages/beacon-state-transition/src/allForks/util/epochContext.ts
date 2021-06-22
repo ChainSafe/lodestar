@@ -342,15 +342,18 @@ export class EpochContext {
       const slotCommittees = this._getSlotCommittees(slot);
       for (let i = 0; i < slotCommittees.length; i++) {
         for (let j = 0; j < slotCommittees[i].length; j++) {
-          validators.push({
-            pubkey: validatorData[slotCommittees[i][j]].pubkey,
-            validatorIndex: slotCommittees[i][j],
-            committeeLength: slotCommittees[i].length,
-            committeesAtSlot: slotCommittees.length,
-            validatorCommitteeIndex: j,
-            committeeIndex: i,
-            slot,
-          });
+          const validator = validatorData.find((v) => v.index === slotCommittees[i][j]);
+          if (validator) {
+            validators.push({
+              pubkey: validator.pubkey,
+              validatorIndex: validator.index,
+              committeeLength: slotCommittees[i].length,
+              committeesAtSlot: slotCommittees.length,
+              validatorCommitteeIndex: j,
+              committeeIndex: i,
+              slot,
+            });
+          }
         }
       }
     }

@@ -229,11 +229,11 @@ export function getValidatorApi({
       const duties = state.epochCtx.getCommitteeAssignments(
         epoch,
         validatorIndices.map((index) => {
-          const validator = state.validators.get(index);
-          if (!validator) {
-            throw new ApiError(400, `Validator at index ${index} not in state`);
+          const pubkey = state.index2pubkey[index];
+          if (!pubkey) {
+            throw new ApiError(400, `Validator pubkey at index ${index} not in state`);
           }
-          return {pubkey: validator.pubkey, index};
+          return {pubkey: pubkey.toBytes(), index};
         })
       );
 
