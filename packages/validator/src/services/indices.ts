@@ -68,7 +68,9 @@ export class IndicesService {
         return validatorIndicesArr.flat();
       })
     );
-    return newIndicesArr.flat();
+    const newIndices = newIndicesArr.flat();
+    this.logger.info("Discovered new validators", {count: newIndices.length});
+    return newIndices;
   }
 
   private getIndicesPerHttpRequest = async (pubkeysHex: string[]): Promise<ValidatorIndex[]> => {
