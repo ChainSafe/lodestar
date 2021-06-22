@@ -76,14 +76,11 @@ describe("getCommitteeAssignments vs assembleAttesterDuties performance test", f
     let newDuties: AttesterDuty[] = [];
     await runner.run({
       id: "new way: getCommitteeAssignments",
-      beforeEach: () => {
-        newDuties = [];
-      },
       run: () => {
         newDuties = state.epochCtx.getCommitteeAssignments(
           0,
           indices.map((index) => {
-            const validator = state.validators.get(index);
+            const validator = state.validators[index];
             if (!validator) {
               throw new Error(`Validator at index ${index} not in state`);
             }
@@ -95,9 +92,6 @@ describe("getCommitteeAssignments vs assembleAttesterDuties performance test", f
 
     await runner.run({
       id: "new way (plus index2pubkey): getCommitteeAssignments",
-      beforeEach: () => {
-        newDuties = [];
-      },
       run: () => {
         newDuties = state.epochCtx.getCommitteeAssignments(
           0,
