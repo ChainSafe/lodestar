@@ -1,4 +1,4 @@
-import {AbortSignal} from "abort-controller";
+import {AbortSignal} from "@chainsafe/abort-controller";
 import {Slot} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";

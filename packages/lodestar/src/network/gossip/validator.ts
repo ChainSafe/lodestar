@@ -1,4 +1,4 @@
-import {AbortSignal} from "abort-controller";
+import {AbortSignal} from "@chainsafe/abort-controller";
 import {ATTESTATION_SUBNET_COUNT, ForkName} from "@chainsafe/lodestar-params";
 import {mapValues} from "@chainsafe/lodestar-utils";
 import {IMetrics} from "../../metrics";

@@ -1,4 +1,4 @@
-import {AbortSignal} from "abort-controller";
+import {AbortSignal} from "@chainsafe/abort-controller";
 import {ErrorAborted, ILogger, sleep} from "@chainsafe/lodestar-utils";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";

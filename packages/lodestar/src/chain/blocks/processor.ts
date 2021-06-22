@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
-import {AbortSignal} from "abort-controller";
+import {AbortSignal} from "@chainsafe/abort-controller";
 import {allForks, ssz} from "@chainsafe/lodestar-types";
 
 import {IBlockJob, IChainSegmentJob} from "../interface";

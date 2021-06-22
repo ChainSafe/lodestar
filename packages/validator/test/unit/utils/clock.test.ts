@@ -1,6 +1,6 @@
 import sinon from "sinon";
 import {expect} from "chai";
-import {AbortController} from "abort-controller";
+import {AbortController} from "@chainsafe/abort-controller";
 import {config} from "@chainsafe/lodestar-config/default";
 import {Clock} from "../../../src/util/clock";
 import {testLogger} from "../../utils/logger";
