@@ -280,18 +280,17 @@ export function getValidatorApi({
       // Ensures `epoch // EPOCHS_PER_SYNC_COMMITTEE_PERIOD <= current_epoch // EPOCHS_PER_SYNC_COMMITTEE_PERIOD + 1`
       const syncComitteeValidatorIndexMap = getSyncComitteeValidatorIndexMap(state, epoch);
 
-      const duties: routes.validator.SyncDuty[] = validatorIndices
-        .map((validatorIndex) => {
-          const validatorSyncCommitteeIndices = syncComitteeValidatorIndexMap.get(validatorIndex);
-          return validatorSyncCommitteeIndices
-            ? {
-                pubkey: state.validators[validatorIndex].pubkey,
-                validatorIndex,
-                validatorSyncCommitteeIndices,
-              }
-            : null;
-        })
-        .filter(notNullish);
+      const duties: routes.validator.SyncDuty[] = [];
+      for (const validatorIndex of validatorIndices) {
+        const validatorSyncCommitteeIndices = syncComitteeValidatorIndexMap.get(validatorIndex);
+        if (validatorSyncCommitteeIndices) {
+          duties.push({
+            pubkey: state.validators[validatorIndex].pubkey,
+            validatorIndex,
+            validatorSyncCommitteeIndices,
+          });
+        }
+      }
 
       return {
         data: duties,
