@@ -1,9 +1,9 @@
 export interface IForkChoiceMetrics {
   forkChoiceFindHead: IHistogram;
-  forkChoiceHeadRequests: IGauge;
+  forkChoiceRequests: IGauge;
   forkChoiceErrors: IGauge;
-  forkChoiceNewHeads: IGauge;
-  forkChoiceNewChains: IGauge;
+  forkChoiceChangedHead: IGauge;
+  forkChoiceReorg: IGauge;
 }
 
 interface IHistogram {

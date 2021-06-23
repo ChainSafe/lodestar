@@ -183,8 +183,8 @@ export class ForkChoice implements IForkChoice {
   updateHead(): IBlockSummary {
     // balances is not changed but votes are changed
 
-    let timer, prevHead, newHead;
-    this.metrics?.forkChoiceHeadRequests.inc();
+    let timer;
+    this.metrics?.forkChoiceRequests.inc();
 
     try {
       if (!this.synced) {
@@ -217,21 +217,12 @@ export class ForkChoice implements IForkChoice {
           root: fromHexString(headRoot),
         });
       }
-      prevHead = this.head;
-      return (this.head = newHead = toBlockSummary(headNode));
+      return (this.head = toBlockSummary(headNode));
+    } catch (e) {
+      this.metrics?.forkChoiceErrors.inc();
+      throw e;
     } finally {
       if (timer) timer();
-      if (newHead && this.metrics) {
-        //if there is no prevHead, then isSameHead is false and isSameChain is true
-        const isSameHead = prevHead && toHexString(newHead.blockRoot) == toHexString(prevHead.blockRoot);
-        const isSameChain = !prevHead || isSameHead || this.isDescendant(prevHead.blockRoot, newHead.blockRoot);
-
-        if (isSameChain && !isSameHead) this.metrics.forkChoiceNewHeads.inc();
-        if (!isSameChain) this.metrics.forkChoiceNewChains.inc();
-      }
-      if (!newHead) {
-        this.metrics?.forkChoiceErrors.inc();
-      }
     }
   }
 
