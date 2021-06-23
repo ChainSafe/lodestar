@@ -28,7 +28,6 @@ import {CommitteeSubscription} from "../../../network/subnets";
 import {OpSource} from "../../../metrics/validatorMonitor";
 import {computeSubnetForCommitteesAtSlot, getSyncComitteeValidatorIndexMap} from "./utils";
 import {ApiModules} from "../types";
-import {notNullish} from "../../../../../utils/lib";
 
 /**
  * Validator clock may be advanced from beacon's clock. If the validator requests a resource in a
