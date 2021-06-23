@@ -1,11 +1,11 @@
 import {phase0, ssz} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {bytesToInt} from "@chainsafe/lodestar-utils";
-import {IDatabaseController, Bucket, Repository} from "@chainsafe/lodestar-db";
+import {IDatabaseController, Bucket, Repository, IDbMetrics} from "@chainsafe/lodestar-db";
 
 export class Eth1DataRepository extends Repository<number, phase0.Eth1DataOrdered> {
-  constructor(config: IBeaconConfig, db: IDatabaseController<Buffer, Buffer>) {
-    super(config, db, Bucket.phase0_eth1Data, ssz.phase0.Eth1DataOrdered);
+  constructor(config: IBeaconConfig, db: IDatabaseController<Buffer, Buffer>, metrics?: IDbMetrics) {
+    super(config, db, Bucket.phase0_eth1Data, ssz.phase0.Eth1DataOrdered, metrics);
   }
 
   decodeKey(data: Buffer): number {

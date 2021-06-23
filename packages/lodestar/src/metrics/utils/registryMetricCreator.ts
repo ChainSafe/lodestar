@@ -1,4 +1,4 @@
-import {Gauge, GaugeConfiguration, Registry, HistogramConfiguration} from "prom-client";
+import {Gauge, GaugeConfiguration, Registry, HistogramConfiguration, CounterConfiguration} from "prom-client";
 import {GaugeExtra} from "./gauge";
 import {HistogramExtra} from "./histogram";
 

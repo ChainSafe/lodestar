@@ -13,6 +13,7 @@ import {initBLS, onGracefulShutdown, getCliLogger} from "../../util";
 import {readLodestarGitData} from "../../util/gitData";
 import {FileENR, overwriteEnrWithCliArgs, readPeerId} from "../../config";
 import {initBeaconState} from "./initBeaconState";
+import {createDbMetrics} from "@chainsafe/lodestar/lib/metrics";
 
 /**
  * Run a beacon node
@@ -48,9 +49,11 @@ export async function beaconHandler(args: IBeaconArgs & IGlobalArgs): Promise<vo
 
   logger.info("Lodestar", {version: lodestarGitData.version, network: args.network});
 
+  const dbMetrics = createDbMetrics();
   const db = new BeaconDb({
     config,
     controller: new LevelDbController(options.db, {logger: logger.child(options.logger.db)}),
+    metrics: dbMetrics.metrics,
   });
 
   await db.start();
@@ -65,6 +68,7 @@ export async function beaconHandler(args: IBeaconArgs & IGlobalArgs): Promise<vo
       logger,
       libp2p: await createNodeJsLibp2p(peerId, options.network, {peerStoreDir: beaconPaths.peerStoreDir}),
       anchorState,
+      metricRegistries: [dbMetrics.registry],
     });
 
     abortController.signal.addEventListener("abort", () => node.close(), {once: true});

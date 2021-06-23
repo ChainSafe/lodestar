@@ -1,12 +1,12 @@
 import {ssz, SyncPeriod} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {bytesToInt} from "@chainsafe/lodestar-utils";
-import {IDatabaseController, Bucket, Repository} from "@chainsafe/lodestar-db";
+import {IDatabaseController, Bucket, Repository, IDbMetrics} from "@chainsafe/lodestar-db";
 import {FinalizedCheckpointData} from "@chainsafe/lodestar-light-client/lib/server/LightClientUpdater";
 import {ContainerType} from "@chainsafe/ssz";
 
 export class LightclientFinalizedCheckpoint extends Repository<SyncPeriod, FinalizedCheckpointData> {
-  constructor(config: IBeaconConfig, db: IDatabaseController<Buffer, Buffer>) {
+  constructor(config: IBeaconConfig, db: IDatabaseController<Buffer, Buffer>, metrics?: IDbMetrics) {
     // Pick<LightClientUpdate, "header" | "nextSyncCommittee" | "nextSyncCommitteeBranch">
     const type = new ContainerType<FinalizedCheckpointData>({
       fields: {
@@ -15,7 +15,7 @@ export class LightclientFinalizedCheckpoint extends Repository<SyncPeriod, Final
         nextSyncCommitteeBranch: ssz.altair.LightClientUpdate.getPropertyType("nextSyncCommitteeBranch"),
       },
     });
-    super(config, db, Bucket.altair_lightclientFinalizedCheckpoint, type);
+    super(config, db, Bucket.altair_lightclientFinalizedCheckpoint, type, metrics);
   }
 
   // Handle key as SyncPeriod
