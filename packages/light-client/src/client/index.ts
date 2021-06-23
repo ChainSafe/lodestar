@@ -66,9 +66,15 @@ export class Lightclient {
     const header = headerResp.data.header.message;
     const stateRoot = header.stateRoot;
 
-    // fetch a proof of the sync committees and genesis info
-    const paths = getSyncCommitteesProofPaths();
-    paths.push(["genesisTime"], ["genesisValidatorsRoot"]);
+    // fetch a proof with everything needed to bootstrap the client
+    const paths = [
+      // initial sync committee list
+      ...getSyncCommitteesProofPaths(),
+      // required to initialize a slot clock
+      ["genesisTime"],
+      // required to verify signatures
+      ["genesisValidatorsRoot"],
+    ];
     const proof = await api.lightclient.getStateProof(toHexString(stateRoot), paths);
 
     const state = ssz.altair.BeaconState.createTreeBackedFromProof(stateRoot as Uint8Array, proof.data);
