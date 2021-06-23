@@ -28,6 +28,7 @@ import {CommitteeSubscription} from "../../../network/subnets";
 import {OpSource} from "../../../metrics/validatorMonitor";
 import {computeSubnetForCommitteesAtSlot, getSyncComitteeValidatorIndexMap} from "./utils";
 import {ApiModules} from "../types";
+import {notNullish} from "../../../../../utils/lib";
 
 /**
  * Validator clock may be advanced from beacon's clock. If the validator requests a resource in a
@@ -279,11 +280,18 @@ export function getValidatorApi({
       // Ensures `epoch // EPOCHS_PER_SYNC_COMMITTEE_PERIOD <= current_epoch // EPOCHS_PER_SYNC_COMMITTEE_PERIOD + 1`
       const syncComitteeValidatorIndexMap = getSyncComitteeValidatorIndexMap(state, epoch);
 
-      const duties: routes.validator.SyncDuty[] = validatorIndices.map((validatorIndex) => ({
-        pubkey: state.index2pubkey[validatorIndex].toBytes(),
-        validatorIndex,
-        validatorSyncCommitteeIndices: syncComitteeValidatorIndexMap.get(validatorIndex) ?? [],
-      }));
+      const duties: routes.validator.SyncDuty[] = validatorIndices
+        .map((validatorIndex) => {
+          const validatorSyncCommitteeIndices = syncComitteeValidatorIndexMap.get(validatorIndex);
+          return validatorSyncCommitteeIndices
+            ? {
+                pubkey: state.validators[validatorIndex].pubkey,
+                validatorIndex,
+                validatorSyncCommitteeIndices,
+              }
+            : null;
+        })
+        .filter(notNullish);
 
       return {
         data: duties,
