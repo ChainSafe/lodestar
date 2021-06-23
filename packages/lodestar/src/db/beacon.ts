@@ -3,7 +3,7 @@
  */
 
 import {allForks} from "@chainsafe/lodestar-types";
-import {DatabaseService, IDatabaseApiOptions} from "@chainsafe/lodestar-db";
+import {DatabaseService, IDatabaseApiOptions, IDbMetrics} from "@chainsafe/lodestar-db";
 import {IBeaconDb} from "./interface";
 import {
   AggregateAndProofRepository,
@@ -32,6 +32,8 @@ import {SyncCommitteeCache} from "./syncCommittee";
 import {SyncCommitteeContributionCache} from "./syncCommitteeContribution";
 
 export class BeaconDb extends DatabaseService implements IBeaconDb {
+  metrics?: IDbMetrics;
+
   block: BlockRepository;
   pendingBlock: PendingBlockRepository;
   seenAttestationCache: SeenAttestationCache;
@@ -60,29 +62,30 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
 
   constructor(opts: IDatabaseApiOptions) {
     super(opts);
+    this.metrics = opts.metrics;
     // Warning: If code is ever run in the constructor, must change this stub to not extend 'packages/lodestar/test/utils/stub/beaconDb.ts' -
-    this.block = new BlockRepository(this.config, this.db);
-    this.pendingBlock = new PendingBlockRepository(this.config, this.db);
+    this.block = new BlockRepository(this.config, this.db, this.metrics);
+    this.pendingBlock = new PendingBlockRepository(this.config, this.db, this.metrics);
     this.seenAttestationCache = new SeenAttestationCache(this.config, 2048);
     this.attestationPool = new AttestationPool();
-    this.blockArchive = new BlockArchiveRepository(this.config, this.db);
-    this.stateArchive = new StateArchiveRepository(this.config, this.db);
-    this.aggregateAndProof = new AggregateAndProofRepository(this.config, this.db);
-    this.voluntaryExit = new VoluntaryExitRepository(this.config, this.db);
-    this.proposerSlashing = new ProposerSlashingRepository(this.config, this.db);
-    this.attesterSlashing = new AttesterSlashingRepository(this.config, this.db);
-    this.depositEvent = new DepositEventRepository(this.config, this.db);
-    this.depositDataRoot = new DepositDataRootRepository(this.config, this.db);
-    this.eth1Data = new Eth1DataRepository(this.config, this.db);
-    this.preGenesisState = new PreGenesisState(this.config, this.db);
-    this.preGenesisStateLastProcessedBlock = new PreGenesisStateLastProcessedBlock(this.config, this.db);
+    this.blockArchive = new BlockArchiveRepository(this.config, this.db, this.metrics);
+    this.stateArchive = new StateArchiveRepository(this.config, this.db, this.metrics);
+    this.aggregateAndProof = new AggregateAndProofRepository(this.config, this.db, this.metrics);
+    this.voluntaryExit = new VoluntaryExitRepository(this.config, this.db, this.metrics);
+    this.proposerSlashing = new ProposerSlashingRepository(this.config, this.db, this.metrics);
+    this.attesterSlashing = new AttesterSlashingRepository(this.config, this.db, this.metrics);
+    this.depositEvent = new DepositEventRepository(this.config, this.db, this.metrics);
+    this.depositDataRoot = new DepositDataRootRepository(this.config, this.db, this.metrics);
+    this.eth1Data = new Eth1DataRepository(this.config, this.db, this.metrics);
+    this.preGenesisState = new PreGenesisState(this.config, this.db, this.metrics);
+    this.preGenesisStateLastProcessedBlock = new PreGenesisStateLastProcessedBlock(this.config, this.db, this.metrics);
     // altair
     this.syncCommittee = new SyncCommitteeCache(this.config);
     this.syncCommitteeContribution = new SyncCommitteeContributionCache(this.config);
-    this.bestUpdatePerCommitteePeriod = new BestUpdatePerCommitteePeriod(this.config, this.db);
-    this.latestFinalizedUpdate = new LatestFinalizedUpdate(this.config, this.db);
-    this.latestNonFinalizedUpdate = new LatestNonFinalizedUpdate(this.config, this.db);
-    this.lightclientFinalizedCheckpoint = new LightclientFinalizedCheckpoint(this.config, this.db);
+    this.bestUpdatePerCommitteePeriod = new BestUpdatePerCommitteePeriod(this.config, this.db, this.metrics);
+    this.latestFinalizedUpdate = new LatestFinalizedUpdate(this.config, this.db, this.metrics);
+    this.latestNonFinalizedUpdate = new LatestNonFinalizedUpdate(this.config, this.db, this.metrics);
+    this.lightclientFinalizedCheckpoint = new LightclientFinalizedCheckpoint(this.config, this.db, this.metrics);
   }
 
   /**
