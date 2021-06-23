@@ -1,5 +1,9 @@
 import got from "got";
+import {TreeBacked} from "@chainsafe/ssz";
+import {allForks} from "@chainsafe/lodestar-types";
 import {IBeaconNodeOptions} from "@chainsafe/lodestar";
+import {getStateTypeFromBytes} from "@chainsafe/lodestar/lib/util/multifork";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {RecursivePartial} from "@chainsafe/lodestar-utils";
 import {IBeaconParamsUnparsed} from "../config/types";
 import * as mainnet from "./mainnet";
@@ -9,6 +13,8 @@ import * as oonoonba from "./oonoonba";
 
 export type NetworkName = "mainnet" | "pyrmont" | "prater" | "dev" | "oonoonba";
 export const networkNames: NetworkName[] = ["mainnet", "pyrmont", "prater", "oonoonba"];
+/** Networks that infura supports */
+export const infuraNetworks: NetworkName[] = ["mainnet", "pyrmont", "prater"];
 
 function getNetworkData(
   network: NetworkName
@@ -89,4 +95,30 @@ export async function fetchBootnodes(network: NetworkName): Promise<string[]> {
     if (line.includes("enr:")) enrs.push("enr:" + line.split("enr:")[1]);
   }
   return enrs;
+}
+
+// TODO these URLs are from a local infura account.  switch with a ChainSafe account when available
+const INFURA_CREDENTIALS = "1sla4tyOFn0bB1ohyCKaH2sLmHu:b8cdb9d881039fd04fe982a5ec57b0b8";
+
+export function getInfuraBeaconUrl(network: NetworkName): string | undefined {
+  if (infuraNetworks.includes(network)) {
+    return `https://${INFURA_CREDENTIALS}@eth2-beacon-${network}.infura.io`;
+  }
+  return undefined;
+}
+
+/**
+ * Fetch weak subjectivity state from a remote beacon node
+ */
+export async function fetchWeakSubjectivityState(
+  config: IBeaconConfig,
+  url: string
+): Promise<TreeBacked<allForks.BeaconState>> {
+  try {
+    const response = await got(url, {headers: {accept: "application/octet-stream"}});
+    const stateBytes = response.rawBody;
+    return getStateTypeFromBytes(config, stateBytes).createTreeBackedFromBytes(stateBytes);
+  } catch (e) {
+    throw new Error("Unable to fetch weak subjectivity state: " + (e as Error).message);
+  }
 }
