@@ -1,7 +1,6 @@
 import {allForks} from "@chainsafe/lodestar-types";
 import {RegistryMetricCreator} from "../utils/registryMetricCreator";
 import {IMetricsOptions} from "../options";
-import {Counter} from "prom-client";
 
 export type ILodestarMetrics = ReturnType<typeof createLodestarMetrics>;
 
