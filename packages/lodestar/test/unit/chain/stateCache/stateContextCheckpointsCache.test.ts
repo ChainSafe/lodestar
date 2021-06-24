@@ -5,16 +5,13 @@ import {generateCachedState} from "../../../utils/state";
 import {CheckpointStateCache} from "../../../../src/chain/stateCache";
 
 describe("CheckpointStateCache perf tests", function () {
-  this.timeout(0);
-
   it("should run test", async () => {
     const checkpointStateCache = new CheckpointStateCache(config);
     const state = generateCachedState();
     const checkpoint = ssz.phase0.Checkpoint.defaultValue();
     const runner = new BenchmarkRunner("CheckpointStateCache perf test", {
-      maxMs: 999999 * 1000,
-      minMs: 0,
-      runs: 64,
+      minMs: 1000,
+      runs: 1024,
     });
 
     await runner.run({
