@@ -21,10 +21,6 @@ export class CheckpointStateCache {
     this.config = config;
   }
 
-  checkpointToKey(cp: phase0.Checkpoint): string {
-    return `${toHexString(cp.root)}:${cp.epoch}`;
-  }
-
   get(cp: phase0.Checkpoint): CachedBeaconState<allForks.BeaconState> | null {
     const item = this.cache.get(this.checkpointToKey(cp));
     return item ? item.clone() : null;
@@ -105,5 +101,9 @@ export class CheckpointStateCache {
   clear(): void {
     this.cache.clear();
     this.epochIndex.clear();
+  }
+
+  private checkpointToKey(cp: phase0.Checkpoint): string {
+    return `${toHexString(cp.root)}:${cp.epoch}`;
   }
 }
