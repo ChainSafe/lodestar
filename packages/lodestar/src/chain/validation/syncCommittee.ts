@@ -7,7 +7,7 @@ import {IBeaconChain} from "../interface";
 import {getSyncCommitteeSignatureSet} from "./signatureSets";
 
 /** TODO: Do this much better to be able to access this property in the handler */
-export type SyncCommitteeSignatureIndexed = altair.SyncCommitteeSignature & {indexInSubCommittee: number};
+export type SyncCommitteeSignatureIndexed = altair.SyncCommitteeMessage & {indexInSubCommittee: number};
 
 type IndexInSubCommittee = number;
 
@@ -61,7 +61,7 @@ export async function validateGossipSyncCommittee(
 export async function validateSyncCommitteeSigOnly(
   chain: IBeaconChain,
   headState: CachedBeaconState<allForks.BeaconState>,
-  syncCommittee: altair.SyncCommitteeSignature
+  syncCommittee: altair.SyncCommitteeMessage
 ): Promise<void> {
   const signatureSet = getSyncCommitteeSignatureSet(headState, syncCommittee);
   if (!(await chain.bls.verifySignatureSets([signatureSet]))) {
@@ -78,22 +78,24 @@ export function validateGossipSyncCommitteeExceptSig(
   chain: IBeaconChain,
   headState: CachedBeaconState<allForks.BeaconState>,
   subnet: number,
-  data: Pick<altair.SyncCommitteeSignature, "slot" | "beaconBlockRoot" | "validatorIndex">
+  data: Pick<altair.SyncCommitteeMessage, "slot" | "beaconBlockRoot" | "validatorIndex">
 ): IndexInSubCommittee {
+  const {slot, beaconBlockRoot, validatorIndex} = data;
   // [IGNORE] The signature's slot is for the current slot, i.e. sync_committee_signature.slot == current_slot.
-  if (chain.clock.currentSlot !== data.slot) {
+  // (with a MAXIMUM_GOSSIP_CLOCK_DISPARITY allowance)
+  if (!chain.clock.isCurrentSlotGivenGossipDisparity(slot)) {
     throw new SyncCommitteeError(GossipAction.IGNORE, {
       code: SyncCommitteeErrorCode.NOT_CURRENT_SLOT,
       currentSlot: chain.clock.currentSlot,
-      slot: data.slot,
+      slot,
     });
   }
 
   // [IGNORE] The block being signed over (sync_committee_signature.beacon_block_root) has been seen (via both gossip and non-gossip sources).
-  if (!chain.forkChoice.hasBlock(data.beaconBlockRoot)) {
+  if (!chain.forkChoice.hasBlock(beaconBlockRoot)) {
     throw new SyncCommitteeError(GossipAction.IGNORE, {
       code: SyncCommitteeErrorCode.UNKNOWN_BEACON_BLOCK_ROOT,
-      beaconBlockRoot: data.beaconBlockRoot as Uint8Array,
+      beaconBlockRoot: beaconBlockRoot as Uint8Array,
     });
   }
 
@@ -111,7 +113,7 @@ export function validateGossipSyncCommitteeExceptSig(
   if (indexInSubCommittee === null) {
     throw new SyncCommitteeError(GossipAction.REJECT, {
       code: SyncCommitteeErrorCode.VALIDATOR_NOT_IN_SYNC_COMMITTEE,
-      validatorIndex: data.validatorIndex,
+      validatorIndex,
     });
   }
 
@@ -125,7 +127,7 @@ export function validateGossipSyncCommitteeExceptSig(
 function getIndexInSubCommittee(
   headState: CachedBeaconState<allForks.BeaconState>,
   subnet: number,
-  data: Pick<altair.SyncCommitteeSignature, "slot" | "validatorIndex">
+  data: Pick<altair.SyncCommitteeMessage, "slot" | "validatorIndex">
 ): IndexInSubCommittee | null {
   // Note: The range of slots a validator has to perform duties is off by one.
   // The previous slot wording means that if your validator is in a sync committee for a period that runs from slot

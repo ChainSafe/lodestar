@@ -1,5 +1,5 @@
 import {sleep} from "@chainsafe/lodestar-utils";
-import {AbortController} from "abort-controller";
+import {AbortController} from "@chainsafe/abort-controller";
 import {expect} from "chai";
 
 import {JobQueue, QueueError, QueueErrorCode, QueueType} from "../../../src/util/queue";

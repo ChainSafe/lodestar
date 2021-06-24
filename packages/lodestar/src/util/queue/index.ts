@@ -1,4 +1,4 @@
-import {AbortSignal} from "abort-controller";
+import {AbortSignal} from "@chainsafe/abort-controller";
 import {sleep} from "@chainsafe/lodestar-utils";
 import {QueueError, QueueErrorCode} from "./errors";
 import {IGauge, IHistogram} from "../../metrics";

@@ -1,4 +1,4 @@
-import {AbortController} from "abort-controller";
+import {AbortController} from "@chainsafe/abort-controller";
 import all from "it-all";
 import pipe from "it-pipe";
 import {LodestarError, sleep as _sleep} from "@chainsafe/lodestar-utils";

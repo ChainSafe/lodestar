@@ -19,6 +19,7 @@ describe("Sync Committee Signature validation", function () {
   const sandbox = sinon.createSandbox();
   let chain: SinonStubbedInstance<IBeaconChain>;
   let forkChoiceStub: SinonStubbedInstance<IForkChoice>;
+  let clockStub: SinonStubbedInstance<LocalClock>;
   // let computeSubnetsForSyncCommitteeStub: SinonStubFn<typeof syncCommitteeUtils["computeSubnetsForSyncCommittee"]>;
   let db: StubbedBeaconDb;
   let altairForkEpochBk: phase0.Epoch;
@@ -42,8 +43,9 @@ describe("Sync Committee Signature validation", function () {
   beforeEach(function () {
     chain = sandbox.createStubInstance(BeaconChain);
     chain.getGenesisTime.returns(Math.floor(Date.now() / 1000));
-    chain.clock = sandbox.createStubInstance(LocalClock);
-    sandbox.stub(chain.clock, "currentSlot").get(() => currentSlot);
+    clockStub = sandbox.createStubInstance(LocalClock);
+    chain.clock = clockStub;
+    clockStub.isCurrentSlotGivenGossipDisparity.returns(true);
     forkChoiceStub = sandbox.createStubInstance(ForkChoice);
     chain.forkChoice = forkChoiceStub;
     db = new StubbedBeaconDb(sandbox, config);
@@ -55,15 +57,10 @@ describe("Sync Committee Signature validation", function () {
   });
 
   it("should throw error - the signature's slot is in the past", async function () {
-    const syncCommittee = generateSyncCommitteeSignature({slot: 1});
-    await expectRejectedWithLodestarError(
-      validateGossipSyncCommittee(chain, db, {signature: syncCommittee, validSignature: false}, 0),
-      SyncCommitteeErrorCode.NOT_CURRENT_SLOT
-    );
-  });
+    clockStub.isCurrentSlotGivenGossipDisparity.returns(false);
+    sandbox.stub(clockStub, "currentSlot").get(() => 100);
 
-  it("should throw error - the signature's slot is in the future", async function () {
-    const syncCommittee = generateSyncCommitteeSignature({slot: 3});
+    const syncCommittee = generateSyncCommitteeSignature({slot: 1});
     await expectRejectedWithLodestarError(
       validateGossipSyncCommittee(chain, db, {signature: syncCommittee, validSignature: false}, 0),
       SyncCommitteeErrorCode.NOT_CURRENT_SLOT

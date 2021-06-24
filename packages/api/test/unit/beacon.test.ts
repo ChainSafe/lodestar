@@ -92,7 +92,7 @@ describe("beacon", () => {
       res: undefined,
     },
     submitPoolSyncCommitteeSignatures: {
-      args: [[ssz.altair.SyncCommitteeSignature.defaultValue()]],
+      args: [[ssz.altair.SyncCommitteeMessage.defaultValue()]],
       res: undefined,
     },
 

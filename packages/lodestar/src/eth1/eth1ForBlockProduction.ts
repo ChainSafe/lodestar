@@ -2,7 +2,7 @@ import {phase0} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {CachedBeaconState, allForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {ILogger, sleep} from "@chainsafe/lodestar-utils";
-import {AbortSignal} from "abort-controller";
+import {AbortSignal} from "@chainsafe/abort-controller";
 import {IBeaconDb} from "../db";
 import {Eth1DepositsCache} from "./eth1DepositsCache";
 import {Eth1DataCache} from "./eth1DataCache";

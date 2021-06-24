@@ -59,7 +59,7 @@ export const SyncCommittee = new ContainerType<altair.SyncCommittee>({
   },
 });
 
-export const SyncCommitteeSignature = new ContainerType<altair.SyncCommitteeSignature>({
+export const SyncCommitteeMessage = new ContainerType<altair.SyncCommitteeMessage>({
   fields: {
     slot: Slot,
     beaconBlockRoot: Root,

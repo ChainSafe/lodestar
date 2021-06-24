@@ -1,4 +1,4 @@
-import {AbortController} from "abort-controller";
+import {AbortController} from "@chainsafe/abort-controller";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ServerRoutes} from "./utils";
 import {Api, ReqTypes, routesData, getEventSerdes} from "../routes/events";
