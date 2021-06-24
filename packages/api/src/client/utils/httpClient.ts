@@ -1,5 +1,5 @@
 import {fetch} from "cross-fetch";
-import {AbortSignal, AbortController} from "abort-controller";
+import {AbortSignal, AbortController} from "@chainsafe/abort-controller";
 import {ErrorAborted, TimeoutError} from "@chainsafe/lodestar-utils";
 import {ReqGeneric, RouteDef} from "../../utils";
 import {stringifyQuery, urlJoin} from "./format";

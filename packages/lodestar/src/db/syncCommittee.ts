@@ -21,8 +21,8 @@ type ValidataorSubnetKey = string;
 type BlockRootHex = string;
 
 /**
- * Preaggregate SyncCommitteeSignature into SyncCommitteeContribution
- * and cache seen SyncCommitteeSignature by slot + validator index.
+ * Preaggregate SyncCommitteeMessage into SyncCommitteeContribution
+ * and cache seen SyncCommitteeMessage by slot + validator index.
  * This stays in-memory and should be pruned per slot.
  */
 export class SyncCommitteeCache {
@@ -37,14 +37,14 @@ export class SyncCommitteeCache {
 
   /**
    * Each array item is respective to a subCommitteeIndex.
-   * A seen SyncCommitteeSignature is decided by slot + validator index.
+   * A seen SyncCommitteeMessage is decided by slot + validator index.
    */
   private readonly seenCacheBySlot = new Map<phase0.Slot, Set<ValidataorSubnetKey>>();
 
   constructor(private readonly config: IBeaconConfig) {}
 
   /** Register item as seen in the cache */
-  seen(subnet: phase0.SubCommitteeIndex, syncCommitteeSignature: altair.SyncCommitteeSignature): void {
+  seen(subnet: phase0.SubCommitteeIndex, syncCommitteeSignature: altair.SyncCommitteeMessage): void {
     const {slot} = syncCommitteeSignature;
     let seenCache = this.seenCacheBySlot.get(slot);
     if (!seenCache) {
@@ -55,7 +55,7 @@ export class SyncCommitteeCache {
   }
 
   // TODO: indexInSubCommittee: number should be indicesInSyncCommittee
-  add(subnet: phase0.SubCommitteeIndex, signature: altair.SyncCommitteeSignature, indexInSubCommittee: number): void {
+  add(subnet: phase0.SubCommitteeIndex, signature: altair.SyncCommitteeMessage, indexInSubCommittee: number): void {
     const {slot, beaconBlockRoot} = signature;
     const rootHex = toHexString(beaconBlockRoot);
 
@@ -89,7 +89,7 @@ export class SyncCommitteeCache {
   /**
    * based on slot + validator index
    */
-  has(subnet: phase0.SubCommitteeIndex, syncCommittee: altair.SyncCommitteeSignature): boolean {
+  has(subnet: phase0.SubCommitteeIndex, syncCommittee: altair.SyncCommitteeMessage): boolean {
     return this.seenCacheBySlot.get(syncCommittee.slot)?.has(seenCacheKey(subnet, syncCommittee)) === true;
   }
 
@@ -137,12 +137,12 @@ export class SyncCommitteeCache {
  */
 function aggregateSignatureInto(
   contribution: ContributionFast,
-  signature: altair.SyncCommitteeSignature,
+  signature: altair.SyncCommitteeMessage,
   indexInSubCommittee: number
 ): void {
   if (contribution.aggregationBits[indexInSubCommittee] === true) {
     throw Error(
-      `Already aggregated SyncCommitteeSignature - subCommitteeIndex=${contribution.subCommitteeIndex} indexInSubCommittee=${indexInSubCommittee}`
+      `Already aggregated SyncCommitteeMessage - subCommitteeIndex=${contribution.subCommitteeIndex} indexInSubCommittee=${indexInSubCommittee}`
     );
   }
 
@@ -160,7 +160,7 @@ function aggregateSignatureInto(
 function signatureToAggregate(
   config: IBeaconConfig,
   subnet: number,
-  signature: altair.SyncCommitteeSignature,
+  signature: altair.SyncCommitteeMessage,
   indexInSubCommittee: number
 ): ContributionFast {
   const indexesPerSubnet = Math.floor(SYNC_COMMITTEE_SIZE / SYNC_COMMITTEE_SUBNET_COUNT);
@@ -176,6 +176,6 @@ function signatureToAggregate(
   };
 }
 
-function seenCacheKey(subnet: number, syncCommittee: altair.SyncCommitteeSignature): ValidataorSubnetKey {
+function seenCacheKey(subnet: number, syncCommittee: altair.SyncCommitteeMessage): ValidataorSubnetKey {
   return `${subnet}-${syncCommittee.validatorIndex}`;
 }

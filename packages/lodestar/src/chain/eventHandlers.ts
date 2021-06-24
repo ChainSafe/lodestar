@@ -1,4 +1,4 @@
-import {AbortSignal} from "abort-controller";
+import {AbortSignal} from "@chainsafe/abort-controller";
 import {readonlyValues, toHexString, TreeBacked} from "@chainsafe/ssz";
 import {allForks, altair, phase0, Slot, ssz, Version} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";

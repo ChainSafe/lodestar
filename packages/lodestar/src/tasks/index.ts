@@ -3,7 +3,7 @@
  */
 
 import {phase0, Slot} from "@chainsafe/lodestar-types";
-import {AbortSignal} from "abort-controller";
+import {AbortSignal} from "@chainsafe/abort-controller";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils";
 

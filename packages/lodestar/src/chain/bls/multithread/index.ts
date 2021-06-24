@@ -5,7 +5,7 @@ import {spawn, Worker} from "threads";
 // @ts-ignore
 // eslint-disable-next-line
 self = undefined;
-import {AbortSignal} from "abort-controller";
+import {AbortSignal} from "@chainsafe/abort-controller";
 import {Implementation, PointFormat, PublicKey} from "@chainsafe/bls";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {QueueError, QueueErrorCode} from "../../../util/queue";

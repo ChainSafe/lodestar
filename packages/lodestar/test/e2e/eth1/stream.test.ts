@@ -1,6 +1,6 @@
 import "mocha";
 import {expect} from "chai";
-import {AbortController} from "abort-controller";
+import {AbortController} from "@chainsafe/abort-controller";
 import {getTestnetConfig, testnet} from "../../utils/testnet";
 import {getDepositsStream, getDepositsAndBlockStreamForGenesis, Eth1Provider} from "../../../src/eth1";
 

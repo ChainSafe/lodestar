@@ -21,6 +21,7 @@ describe("Sync Committee Contribution And Proof validation", function () {
   const sandbox = sinon.createSandbox();
   let chain: SinonStubbedInstance<IBeaconChain>;
   let forkChoiceStub: SinonStubbedInstance<IForkChoice>;
+  let clockStub: SinonStubbedInstance<LocalClock>;
   let db: StubbedBeaconDb;
   let isSyncCommitteeAggregatorStub: SinonStubFn<typeof syncCommitteeUtils["isSyncCommitteeAggregator"]>;
 
@@ -36,8 +37,9 @@ describe("Sync Committee Contribution And Proof validation", function () {
   beforeEach(function () {
     chain = sandbox.createStubInstance(BeaconChain);
     chain.getGenesisTime.returns(Math.floor(Date.now() / 1000));
-    chain.clock = sandbox.createStubInstance(LocalClock);
-    sandbox.stub(chain.clock, "currentSlot").get(() => currentSlot);
+    clockStub = sandbox.createStubInstance(LocalClock);
+    chain.clock = clockStub;
+    clockStub.isCurrentSlotGivenGossipDisparity.returns(true);
     forkChoiceStub = sandbox.createStubInstance(ForkChoice);
     chain.forkChoice = forkChoiceStub;
     db = new StubbedBeaconDb(sandbox, config);
@@ -48,19 +50,11 @@ describe("Sync Committee Contribution And Proof validation", function () {
     sandbox.restore();
   });
 
-  it("should throw error - the signature's slot is in the past", async function () {
-    const signedContributionAndProof = generateSignedContributionAndProof({contribution: {slot: 1}});
-    await expectRejectedWithLodestarError(
-      validateSyncCommitteeGossipContributionAndProof(config, chain, db, {
-        contributionAndProof: signedContributionAndProof,
-        validSignature: false,
-      }),
-      SyncCommitteeErrorCode.NOT_CURRENT_SLOT
-    );
-  });
+  it("should throw error - the signature's slot is not the current", async function () {
+    clockStub.isCurrentSlotGivenGossipDisparity.returns(false);
+    sandbox.stub(clockStub, "currentSlot").get(() => 100);
 
-  it("should throw error - the signature's slot is in the future", async function () {
-    const signedContributionAndProof = generateSignedContributionAndProof({contribution: {slot: 3}});
+    const signedContributionAndProof = generateSignedContributionAndProof({contribution: {slot: 1}});
     await expectRejectedWithLodestarError(
       validateSyncCommitteeGossipContributionAndProof(config, chain, db, {
         contributionAndProof: signedContributionAndProof,
@@ -101,7 +95,6 @@ describe("Sync Committee Contribution And Proof validation", function () {
   it("should throw error - there is same contribution with same aggregator and index and slot", async function () {
     const signedContributionAndProof = generateSignedContributionAndProof({contribution: {slot: currentSlot}});
     forkChoiceStub.hasBlock.returns(true);
-    console.log("@@@ config.ALTAIR_FORK_EPOCH", config.ALTAIR_FORK_EPOCH);
     const headState = await generateCachedStateWithPubkeys({slot: currentSlot}, config, true);
     chain.getHeadState.returns(headState);
     db.syncCommitteeContribution.has.returns(true);

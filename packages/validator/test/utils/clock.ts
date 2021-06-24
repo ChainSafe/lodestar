@@ -1,4 +1,4 @@
-import {AbortSignal} from "abort-controller";
+import {AbortSignal} from "@chainsafe/abort-controller";
 import {Epoch, Slot} from "@chainsafe/lodestar-types";
 import {IClock} from "../../src/util";
 
