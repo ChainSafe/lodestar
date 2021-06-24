@@ -12,7 +12,7 @@ import {IBeaconSync} from "../../../../../../src/sync";
 import {generateValidators} from "../../../../../utils/validator";
 import {StubbedBeaconDb} from "../../../../../utils/stub";
 import {setupApiImplTestServer, ApiImplTestModules} from "../../index.test";
-import {ssz} from "@chainsafe/lodestar-types";
+import {BLSPubkey, ssz} from "@chainsafe/lodestar-types";
 import {MAX_EFFECTIVE_BALANCE} from "@chainsafe/lodestar-params";
 import {assembleAttesterDuty} from "../../../../../../src/chain/factory/duties";
 import {expect} from "chai";
@@ -38,7 +38,8 @@ describe("getCommitteeAssignments vs assembleAttesterDuties performance test", f
     chainStub.getCanonicalBlockAtSlot.resolves(ssz.phase0.SignedBeaconBlock.defaultValue());
     dbStub = server.dbStub;
 
-    const numValidators = 20000;
+    const numValidators = 200000;
+    const numAttachedValidators = 200;
 
     const validators = generateValidators(numValidators, {
       effectiveBalance: MAX_EFFECTIVE_BALANCE,
@@ -60,7 +61,7 @@ describe("getCommitteeAssignments vs assembleAttesterDuties performance test", f
     const cachedState = createCachedBeaconState(config, state);
     chainStub.getHeadStateAtCurrentEpoch.resolves(cachedState);
 
-    indices = Array.from({length: numValidators}, (_, i) => i);
+    indices = Array.from({length: numAttachedValidators}, (_, i) => i * 5);
   });
 
   it("performance comparison", async () => {
@@ -77,32 +78,31 @@ describe("getCommitteeAssignments vs assembleAttesterDuties performance test", f
     await runner.run({
       id: "new way: getCommitteeAssignments",
       run: () => {
-        newDuties = state.epochCtx.getCommitteeAssignments(
-          0,
-          indices.map((index) => {
-            const validator = state.validators[index];
-            if (!validator) {
-              throw new Error(`Validator at index ${index} not in state`);
-            }
-            return {pubkey: validator.pubkey, index};
-          })
-        );
+        const validators = state.validators.persistent;
+        const validatorData: BLSPubkey[] = [];
+        indices.forEach((index) => {
+          const validator = validators.get(index);
+          if (!validator) {
+            throw new Error(`Validator at index ${index} not in state`);
+          }
+          validatorData[index] = validator.pubkey;
+        });
+        newDuties = state.epochCtx.getCommitteeAssignments(0, validatorData);
       },
     });
 
     await runner.run({
       id: "new way (plus index2pubkey): getCommitteeAssignments",
       run: () => {
-        newDuties = state.epochCtx.getCommitteeAssignments(
-          0,
-          indices.map((index) => {
-            const pubkey = state.index2pubkey[index];
-            if (!pubkey) {
-              throw new Error(`Validator pubkey at validator index ${index} not found in state.`);
-            }
-            return {pubkey: pubkey.toBytes(), index};
-          })
-        );
+        const validatorData: BLSPubkey[] = [];
+        indices.forEach((index) => {
+          const pubkey = state.index2pubkey[index];
+          if (!pubkey) {
+            throw new Error(`Validator pubkey at validator index ${index} not found in state.`);
+          }
+          validatorData[index] = pubkey.toBytes();
+        });
+        newDuties = state.epochCtx.getCommitteeAssignments(0, validatorData);
       },
     });
 
