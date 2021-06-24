@@ -3,20 +3,19 @@ import {config} from "@chainsafe/lodestar-config/default";
 import {createCachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
 import {BenchmarkRunner} from "@chainsafe/lodestar-utils/test_utils/benchmark";
 
-import {ForkChoice, IBeaconChain} from "../../../../../../src/chain";
-import {LocalClock} from "../../../../../../src/chain/clock";
-import {FAR_FUTURE_EPOCH} from "../../../../../../src/constants";
-import {generateInitialMaxBalances} from "../../../../../utils/balances";
-import {generateState} from "../../../../../utils/state";
-import {IBeaconSync} from "../../../../../../src/sync";
-import {generateValidators} from "../../../../../utils/validator";
-import {StubbedBeaconDb} from "../../../../../utils/stub";
-import {setupApiImplTestServer, ApiImplTestModules} from "../../index.test";
+import {ForkChoice, IBeaconChain} from "../../../../../src/chain";
+import {LocalClock} from "../../../../../src/chain/clock";
+import {generateInitialMaxBalances} from "../../../../utils/balances";
+import {generateState} from "../../../../utils/state";
+import {IBeaconSync} from "../../../../../src/sync";
+import {generateValidators} from "../../../../utils/validator";
+import {StubbedBeaconDb} from "../../../../utils/stub";
+import {setupApiImplTestServer, ApiImplTestModules} from "../../../../unit/api/impl/index.test";
 import {BLSPubkey, ssz} from "@chainsafe/lodestar-types";
-import {MAX_EFFECTIVE_BALANCE} from "@chainsafe/lodestar-params";
-import {assembleAttesterDuty} from "../../../../../../src/chain/factory/duties";
+import {MAX_EFFECTIVE_BALANCE, FAR_FUTURE_EPOCH} from "@chainsafe/lodestar-params";
+import {AttesterDuty} from "@chainsafe/lodestar-api/lib/routes/validator";
+import {assembleAttesterDuty} from "../../../../../src/chain/factory/duties";
 import {expect} from "chai";
-import {AttesterDuty} from "../../../../../../../api/src/routes/validator";
 
 describe("getCommitteeAssignments vs assembleAttesterDuties performance test", function () {
   this.timeout(0);
