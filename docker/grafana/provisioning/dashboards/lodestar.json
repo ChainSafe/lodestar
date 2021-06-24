@@ -4156,6 +4156,10 @@
     {
       "collapsed": true,
       "datasource": null,
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -4213,7 +4217,8 @@
                     "value": 80
                   }
                 ]
-              }
+              },
+              "unit": "s"
             },
             "overrides": []
           },
@@ -4221,7 +4226,7 @@
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 2
+            "y": 33
           },
           "id": 130,
           "options": {
@@ -4243,7 +4248,7 @@
               "refId": "A"
             }
           ],
-          "title": "find head avg time(seconds)",
+          "title": "find head avg time (seconds)",
           "type": "timeseries"
         },
         {
@@ -4317,7 +4322,7 @@
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 2
+            "y": 33
           },
           "id": 138,
           "options": {
@@ -4408,7 +4413,7 @@
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 10
+            "y": 41
           },
           "id": 132,
           "options": {
@@ -4430,7 +4435,7 @@
               "refId": "A"
             }
           ],
-          "title": "find head utilization/slot",
+          "title": "find head / slot",
           "type": "timeseries"
         },
         {
@@ -4438,7 +4443,35 @@
           "fieldConfig": {
             "defaults": {
               "color": {
-                "mode": "thresholds"
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 0,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "auto",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
               },
               "mappings": [],
               "thresholds": {
@@ -4450,7 +4483,7 @@
                   },
                   {
                     "color": "red",
-                    "value": 1
+                    "value": 80
                   }
                 ]
               }
@@ -4459,25 +4492,20 @@
           },
           "gridPos": {
             "h": 8,
-            "w": 3,
+            "w": 12,
             "x": 12,
-            "y": 10
+            "y": 41
           },
           "id": 140,
           "options": {
-            "colorMode": "value",
-            "graphMode": "area",
-            "justifyMode": "auto",
-            "orientation": "auto",
-            "reduceOptions": {
-              "calcs": [
-                "lastNotNull"
-              ],
-              "fields": "",
-              "values": false
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom"
             },
-            "text": {},
-            "textMode": "auto"
+            "tooltip": {
+              "mode": "single"
+            }
           },
           "pluginVersion": "8.0.0",
           "targets": [
@@ -4490,7 +4518,85 @@
             }
           ],
           "title": "Fork Choice Errors",
-          "type": "stat"
+          "type": "timeseries"
+        },
+        {
+          "datasource": null,
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 0,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "auto",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  }
+                ]
+              },
+              "unit": "percentunit"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 49
+          },
+          "id": 146,
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "hidden",
+              "placement": "bottom"
+            },
+            "tooltip": {
+              "mode": "single"
+            }
+          },
+          "targets": [
+            {
+              "exemplar": true,
+              "expr": "rate(beacon_fork_choice_find_head_seconds_sum[$__rate_interval])",
+              "interval": "",
+              "legendFormat": "process  time",
+              "refId": "A"
+            }
+          ],
+          "title": "find head utilization rate",
+          "type": "timeseries"
         },
         {
           "datasource": null,
@@ -4520,8 +4626,8 @@
           "gridPos": {
             "h": 8,
             "w": 3,
-            "x": 15,
-            "y": 10
+            "x": 12,
+            "y": 49
           },
           "id": 144,
           "options": {
