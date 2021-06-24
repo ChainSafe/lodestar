@@ -41,10 +41,10 @@ describe("pubkeysToBatches", function () {
     },
   ];
   const maxPubkeysPerRequest = 2;
-  const maxRequesPerBatch = 3;
+  const maxRequestsPerBatch = 3;
   for (const {pubkeys, expected} of testCases) {
     it(`should work with ${pubkeys.length} pubkeys`, () => {
-      expect(pubkeysToBatches(pubkeys, maxPubkeysPerRequest, maxRequesPerBatch)).to.be.deep.equals(expected);
+      expect(pubkeysToBatches(pubkeys, maxPubkeysPerRequest, maxRequestsPerBatch)).to.be.deep.equals(expected);
     });
   }
 });

@@ -90,7 +90,7 @@ export class IndicesService {
 }
 
 type Batch = string[][];
-const PUBKEYS_PER_REQUEST = 40;
+const PUBKEYS_PER_REQUEST = 10;
 const REQUESTS_PER_BATCH = 5;
 const MAX_PUBKEYS_PER_POLL = 5 * PUBKEYS_PER_REQUEST * REQUESTS_PER_BATCH;
 
