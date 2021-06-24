@@ -8,31 +8,26 @@ import {Eth1ForBlockProduction} from "../../../../../src/eth1";
 import {IBeaconSync, SyncState} from "../../../../../src/sync";
 import {generateBlockSummary, generateEmptyBlock, generateEmptySignedBlock} from "../../../../utils/block";
 import {testLogger} from "../../../../utils/logger";
-import {ApiImplTestModules, setupApiImplTestServer} from "../index.test";
+import {setupApiImplTestServer} from "../../../../unit/api/impl/index.test";
 import {StateRegenerator} from "../../../../../src/chain/regen";
 import {generateCachedState} from "../../../../utils/state";
 import {generateEmptyAttestation} from "../../../../utils/attestation";
-import {allForks, ssz} from "../../../../../../types/lib";
-import {CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
-import {SinonStubFn} from "../../../../utils/types";
+import {ssz} from "../../../../../../types/lib";
 import * as blockBodyAssembly from "../../../../../src/chain/factory/block/body";
 
 describe("produceBlock benchmark", () => {
+  const sandbox = sinon.createSandbox();
   const logger = testLogger();
-  let eth1Stub: SinonStubbedInstance<Eth1ForBlockProduction>;
+  const currentSlot = 1;
+
   let syncStub: SinonStubbedInstance<IBeaconSync>;
   let modules: ApiModules;
-  let server: ApiImplTestModules;
-  const sandbox = sinon.createSandbox();
-  let state: CachedBeaconState<allForks.BeaconState>;
-  const currentSlot = 1;
-  let assembleBodyStub: SinonStubFn<typeof blockBodyAssembly["assembleBody"]>;
 
   before(() => {
-    assembleBodyStub = sandbox.stub(blockBodyAssembly, "assembleBody");
-    eth1Stub = sinon.createStubInstance(Eth1ForBlockProduction);
-    server = setupApiImplTestServer();
-    state = generateCachedState({slot: currentSlot});
+    const assembleBodyStub = sandbox.stub(blockBodyAssembly, "assembleBody");
+    const eth1Stub = sinon.createStubInstance(Eth1ForBlockProduction);
+    const server = setupApiImplTestServer();
+    const state = generateCachedState({slot: currentSlot});
     const summary = generateBlockSummary({
       slot: currentSlot,
       blockRoot: ssz.phase0.BeaconBlockHeader.hashTreeRoot(state.latestBlockHeader),
