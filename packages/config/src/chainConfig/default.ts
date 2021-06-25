@@ -1,5 +1,18 @@
-import {ACTIVE_PRESET} from "@chainsafe/lodestar-params";
+import {ACTIVE_PRESET, PresetName} from "@chainsafe/lodestar-params";
 import {IChainConfig} from "./types";
+import {chainConfig as mainnet} from "./presets/mainnet";
+import {chainConfig as minimal} from "./presets/minimal";
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-var-requires, @typescript-eslint/no-unsafe-member-access
-export const defaultChainConfig = require(`./presets/${ACTIVE_PRESET}`).chainConfig as IChainConfig;
+let defaultChainConfig: IChainConfig;
+
+switch (ACTIVE_PRESET) {
+  case PresetName.minimal:
+    defaultChainConfig = minimal;
+    break;
+  case PresetName.mainnet:
+  default:
+    defaultChainConfig = mainnet;
+    break;
+}
+
+export {defaultChainConfig};
