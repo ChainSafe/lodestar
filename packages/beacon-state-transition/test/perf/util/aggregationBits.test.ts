@@ -16,13 +16,13 @@ describe("aggregationBits", () => {
   const indexes = Array.from({length: len}, () => 165432);
   const bitlistTree = ssz.phase0.CommitteeBits.createTreeBackedFromStruct(aggregationBits as List<boolean>);
 
-  const idPrefix = `aggregationBits - ${len} els - `;
+  const idPrefix = `aggregationBits - ${len} els`;
 
-  itBench(`${idPrefix} readonlyValues`, () => {
+  itBench(`${idPrefix} - readonlyValues`, () => {
     Array.from(readonlyValues(bitlistTree));
   });
 
-  itBench(`${idPrefix} zipIndexesInBitList`, () => {
+  itBench(`${idPrefix} - zipIndexesInBitList`, () => {
     zipIndexesCommitteeBits(indexes, bitlistTree);
   });
 });

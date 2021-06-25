@@ -13,34 +13,34 @@ describe("Epoch transition steps", () => {
   const process = allForks.prepareEpochProcessState(originalState);
 
   const valCount = originalState.validators.length;
-  const idPrefix = `epoch - ${valCount} vs - `;
+  const idPrefix = `epoch - ${valCount} vs`;
 
   itBench({
-    id: `${idPrefix} processJustificationAndFinalization`,
+    id: `${idPrefix} - processJustificationAndFinalization`,
     beforeEach: () => originalState.clone() as allForks.CachedBeaconState<allForks.BeaconState>,
     fn: (state) => phase0.processJustificationAndFinalization(state, process),
   });
 
   itBench({
-    id: `${idPrefix} processRewardsAndPenalties`,
+    id: `${idPrefix} - processRewardsAndPenalties`,
     beforeEach: () => originalState.clone(),
     fn: (state) => phase0.processRewardsAndPenalties(state, process),
   });
 
   itBench({
-    id: `${idPrefix} processRegistryUpdates`,
+    id: `${idPrefix} - processRegistryUpdates`,
     beforeEach: () => originalState.clone() as allForks.CachedBeaconState<allForks.BeaconState>,
     fn: (state) => phase0.processRegistryUpdates(state, process),
   });
 
   itBench({
-    id: `${idPrefix} processSlashings`,
+    id: `${idPrefix} - processSlashings`,
     beforeEach: () => originalState.clone(),
     fn: (state) => phase0.processSlashings(state, process),
   });
 
   itBench({
-    id: `${idPrefix} processFinalUpdates`,
+    id: `${idPrefix} - processFinalUpdates`,
     beforeEach: () => originalState.clone(),
     fn: (state) => phase0.processFinalUpdates(state, process),
   });
@@ -48,7 +48,7 @@ describe("Epoch transition steps", () => {
   // Non-action perf
 
   itBench({
-    id: `${idPrefix} prepareEpochProcessState`,
+    id: `${idPrefix} - prepareEpochProcessState`,
     fn: () => {
       allForks.prepareEpochProcessState(originalState);
     },
