@@ -39,8 +39,8 @@ export abstract class Repository<I extends Id, T> {
     this.db = db;
     this.bucket = bucket;
     this.type = type;
-    this.dbReadsMetrics = metrics?.dbReads.labels({bucket: getBucketNameByValue(bucket) ?? ""});
-    this.dbWriteMetrics = metrics?.dbWrites.labels({bucket: getBucketNameByValue(bucket) ?? ""});
+    this.dbReadsMetrics = metrics?.dbReads.labels({bucket: getBucketNameByValue(bucket)});
+    this.dbWriteMetrics = metrics?.dbWrites.labels({bucket: getBucketNameByValue(bucket)});
   }
 
   encodeValue(value: T): Buffer {
@@ -88,8 +88,7 @@ export abstract class Repository<I extends Id, T> {
   }
 
   async delete(id: I): Promise<void> {
-    // do we wanna intorduce db deletes or treat delete as write?
-    // this.dbWriteMetrics?.inc();
+    this.dbWriteMetrics?.inc();
     await this.db.delete(this.encodeKey(id));
   }
 
@@ -107,7 +106,7 @@ export abstract class Repository<I extends Id, T> {
   }
 
   async batchPut(items: ArrayLike<IKeyValue<I, T>>): Promise<void> {
-    this.dbWriteMetrics?.inc(items.length);
+    this.dbWriteMetrics?.inc();
     await this.db.batchPut(
       Array.from({length: items.length}, (_, i) => ({
         key: this.encodeKey(items[i].key),
@@ -118,7 +117,7 @@ export abstract class Repository<I extends Id, T> {
 
   // Similar to batchPut but we support value as Buffer
   async batchPutBinary(items: ArrayLike<IKeyValue<I, Buffer>>): Promise<void> {
-    this.dbWriteMetrics?.inc(items.length);
+    this.dbWriteMetrics?.inc();
     await this.db.batchPut(
       Array.from({length: items.length}, (_, i) => ({
         key: this.encodeKey(items[i].key),
@@ -128,6 +127,7 @@ export abstract class Repository<I extends Id, T> {
   }
 
   async batchDelete(ids: ArrayLike<I>): Promise<void> {
+    this.dbWriteMetrics?.inc();
     await this.db.batchDelete(Array.from({length: ids.length}, (_, i) => this.encodeKey(ids[i])));
   }
 

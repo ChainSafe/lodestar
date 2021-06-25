@@ -1,6 +1,6 @@
 import {Bucket} from ".";
 
-export function getBucketNameByValue<T extends Bucket>(enumValue: T): keyof typeof Bucket | null {
+export function getBucketNameByValue<T extends Bucket>(enumValue: T): keyof typeof Bucket {
   const keys = Object.keys(Bucket).filter((x) => {
     if (isNaN(parseInt(x))) {
       return Bucket[x as keyof typeof Bucket] == enumValue;
@@ -8,5 +8,8 @@ export function getBucketNameByValue<T extends Bucket>(enumValue: T): keyof type
       return false;
     }
   }) as (keyof typeof Bucket)[];
-  return keys.length > 0 ? keys[0] : null;
+  if (keys.length > 0) {
+    return keys[0];
+  }
+  throw new Error("Missing bucket for value " + enumValue);
 }

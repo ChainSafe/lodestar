@@ -58,7 +58,7 @@ export function createDbMetrics(): {metrics: IDbMetrics; registry: Registry} {
     dbWrites: new Counter<DbMetricLabels>({
       name: "lodestar_db_writes",
       labelNames: ["bucket"],
-      help: "Number of db reads, contains bucket label.",
+      help: "Number of db writes and deletes, contains bucket label.",
     }),
   };
   const registry = new Registry();

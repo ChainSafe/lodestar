@@ -49,11 +49,16 @@ export async function beaconHandler(args: IBeaconArgs & IGlobalArgs): Promise<vo
 
   logger.info("Lodestar", {version: lodestarGitData.version, network: args.network});
 
-  const dbMetrics = createDbMetrics();
+  let dbMetrics: null | ReturnType<typeof createDbMetrics> = null;
+  const metricRegistries = [];
+  if (options.metrics.enabled) {
+    dbMetrics = createDbMetrics();
+    metricRegistries.push(dbMetrics.registry);
+  }
   const db = new BeaconDb({
     config,
     controller: new LevelDbController(options.db, {logger: logger.child(options.logger.db)}),
-    metrics: dbMetrics.metrics,
+    metrics: dbMetrics?.metrics,
   });
 
   await db.start();
@@ -68,7 +73,7 @@ export async function beaconHandler(args: IBeaconArgs & IGlobalArgs): Promise<vo
       logger,
       libp2p: await createNodeJsLibp2p(peerId, options.network, {peerStoreDir: beaconPaths.peerStoreDir}),
       anchorState,
-      metricRegistries: [dbMetrics.registry],
+      metricRegistries,
     });
 
     abortController.signal.addEventListener("abort", () => node.close(), {once: true});
