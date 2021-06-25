@@ -40,7 +40,7 @@
     "@babel/preset-env": "^7.12.7",
     "@babel/preset-typescript": "^7.12.7",
     "@babel/register": "^7.12.1",
-    "@dapplion/benchmark": "^0.1.2",
+    "@dapplion/benchmark": "^0.1.4",
     "@types/chai": "4.2.0",
     "@types/chai-as-promised": "^7.1.2",
     "@types/mocha": "^8.0.3",
