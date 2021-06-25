@@ -40,7 +40,7 @@ jobs:
       # </common-build>
 
       - name: Run benchmarks
-        run: yarn benchmark --s3
+        run: yarn benchmark -- --s3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # S3 credentials
