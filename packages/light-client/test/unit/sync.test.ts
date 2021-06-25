@@ -1,7 +1,7 @@
-/* TODO re-enable this test when the mock server is updated OR test against a full backend in another package
 import {expect} from "chai";
 import {SecretKey} from "@chainsafe/bls";
-import {config} from "@chainsafe/lodestar-config/default";
+import {chainConfig} from "@chainsafe/lodestar-config/default";
+import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 import {toHexString} from "@chainsafe/ssz";
 import {WinstonLogger} from "@chainsafe/lodestar-utils";
 import {altair, Root, Slot, ssz, SyncPeriod} from "@chainsafe/lodestar-types";
@@ -13,21 +13,30 @@ import {Lightclient} from "../../src/client";
 import {ServerOpts} from "../lightclientApiServer";
 import {IClock} from "../../src/utils/clock";
 import {generateBalances, generateValidators, getInteropSyncCommittee} from "../utils";
-*/
 
 /* eslint-disable @typescript-eslint/naming-convention, no-console */
-
-/*
 
 describe("Lightclient flow with LightClientUpdater", () => {
   let lightclientServer: LightclientMockServer;
   let genesisStateRoot: Root;
   let genesisValidatorsRoot: Root;
+  let genesisCheckpoint: altair.Checkpoint;
 
   // Create blocks and state
   const fromSlot = 1;
   const toSlot = 100;
   const validatorCount = 4;
+
+  // Ensure it's running minimal, or the asserted epochs will be wrong
+  if (chainConfig.PRESET_BASE !== "minimal") {
+    throw Error("Must run test with 'LODESTAR_PRESET=minimal'");
+  }
+  // Custom config to activate altair on genesis
+  const customConfig: typeof chainConfig = {
+    ...chainConfig,
+    ALTAIR_FORK_EPOCH: 0,
+  };
+  const config = createIBeaconConfig(customConfig);
 
   // Compute all periods until toSlot
   const lastPeriod = computeSyncPeriodAtSlot(toSlot);
@@ -52,17 +61,22 @@ describe("Lightclient flow with LightClientUpdater", () => {
   });
 
   it("Run LightclientMockServer for a few periods", async () => {
+    // Choose genesisTime so that the toSlot is the current after initialization
+    const genesisTime = Math.floor(Date.now() / 1000) - toSlot * config.SECONDS_PER_SLOT;
+
     // Create genesis state and block
     const genesisState = ssz.altair.BeaconState.defaultTreeBacked();
     const genesisBlock = ssz.altair.BeaconBlock.defaultValue();
     genesisState.validators = generateValidators(validatorCount);
+    genesisValidatorsRoot = ssz.altair.BeaconState.fields["validators"].hashTreeRoot(genesisState.validators);
+    genesisState.genesisValidatorsRoot = genesisValidatorsRoot;
+    genesisState.genesisTime = genesisTime;
     genesisState.balances = generateBalances(validatorCount);
     genesisState.currentSyncCommittee = getInteropSyncCommittee(0).syncCommittee;
     genesisState.nextSyncCommittee = getInteropSyncCommittee(1).syncCommittee;
-    genesisValidatorsRoot = ssz.altair.BeaconState.fields["validators"].hashTreeRoot(genesisState.validators);
     genesisStateRoot = ssz.altair.BeaconState.hashTreeRoot(genesisState);
     genesisBlock.stateRoot = genesisStateRoot;
-    const genesisCheckpoint: altair.Checkpoint = {
+    genesisCheckpoint = {
       root: ssz.altair.BeaconBlock.hashTreeRoot(genesisBlock),
       epoch: 0,
     };
@@ -143,19 +157,14 @@ describe("Lightclient flow with LightClientUpdater", () => {
     expect(lightclient.getHeader().slot).to.equal(80, "Wrong store.snapshot.header.slot after applying updates");
   });
 
-  it("Simulate a second lightclient syncing over the API from trusted stateRoot", async () => {
-    const clock = new MockClock(toSlot);
-    const lightclient = await Lightclient.initializeFromTrustedStateRoot(
-      {config, clock, genesisValidatorsRoot, beaconApiUrl},
-      {stateRoot: genesisStateRoot, slot: 0}
-    );
+  it("Simulate a second lightclient syncing over the API from a checkpoint", async () => {
+    const lightclient = await Lightclient.initializeFromCheckpoint(config, beaconApiUrl, genesisCheckpoint);
 
     await lightclient.sync();
 
     expect(lightclient.getHeader().slot).to.equal(80, "Wrong store.snapshot.header.slot after applying updates");
   });
 });
-
 
 class MockClock implements IClock {
   constructor(readonly currentSlot: Slot) {}
@@ -166,5 +175,3 @@ class MockClock implements IClock {
     //
   }
 }
-
-*/

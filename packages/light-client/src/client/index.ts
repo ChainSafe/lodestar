@@ -58,11 +58,15 @@ export class Lightclient {
 
     // verify the response matches the requested root
     if (
-      !ssz.Root.equals(checkpoint.root, headerResp.data.root) ||
-      !ssz.Root.equals(checkpoint.root, ssz.phase0.BeaconBlockHeader.hashTreeRoot(headerResp.data.header.message))
+      !ssz.Root.equals(headerResp.data.root, ssz.phase0.BeaconBlockHeader.hashTreeRoot(headerResp.data.header.message))
     ) {
+      throw new Error("Invalid header response, data.root != data.header");
+    }
+
+    if (!ssz.Root.equals(checkpoint.root, headerResp.data.root)) {
       throw new Error("Retrieved header does not match trusted checkpoint");
     }
+
     const header = headerResp.data.header.message;
     const stateRoot = header.stateRoot;
 
