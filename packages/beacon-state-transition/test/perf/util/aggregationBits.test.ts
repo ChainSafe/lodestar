@@ -11,15 +11,18 @@ describe("aggregationBits", () => {
     runs: 1024,
   });
 
-  const aggregationBits = Array.from({length: MAX_VALIDATORS_PER_COMMITTEE}, () => true);
-  const indexes = Array.from({length: MAX_VALIDATORS_PER_COMMITTEE}, () => 165432);
+  const len = MAX_VALIDATORS_PER_COMMITTEE;
+  const aggregationBits = Array.from({length: len}, () => true);
+  const indexes = Array.from({length: len}, () => 165432);
   const bitlistTree = ssz.phase0.CommitteeBits.createTreeBackedFromStruct(aggregationBits as List<boolean>);
 
-  itBench("aggregationBits - readonlyValues", () => {
+  const idPrefix = `aggregationBits - ${len} els - `;
+
+  itBench(`${idPrefix} readonlyValues`, () => {
     Array.from(readonlyValues(bitlistTree));
   });
 
-  itBench("aggregationBits - zipIndexesInBitList", () => {
+  itBench(`${idPrefix} zipIndexesInBitList`, () => {
     zipIndexesCommitteeBits(indexes, bitlistTree);
   });
 });

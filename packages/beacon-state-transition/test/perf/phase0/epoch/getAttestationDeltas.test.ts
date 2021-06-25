@@ -12,7 +12,9 @@ describe("getAttestationDeltas", () => {
   const state = generatePerfTestCachedBeaconState({goBackOneSlot: true});
   const epochProcess = allForks.prepareEpochProcessState(state);
 
-  itBench("getAttestationDeltas", () => {
+  const valCount = state.validators.length;
+
+  itBench(`getAttestationDeltas - ${valCount} vs`, () => {
     phase0.getAttestationDeltas(state, epochProcess);
   });
 });

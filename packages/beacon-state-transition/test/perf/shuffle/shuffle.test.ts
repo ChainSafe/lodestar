@@ -28,7 +28,7 @@ describe("shuffle list", () => {
       input[i] = i;
     }
 
-    itBench(`shuffle list - list size ${listSize}`, () => {
+    itBench(`shuffle list - ${listSize} els`, () => {
       unshuffleList(input, seed);
     });
   }

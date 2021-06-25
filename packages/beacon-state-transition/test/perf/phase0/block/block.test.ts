@@ -35,10 +35,13 @@ describe("Process block", () => {
     return signedBlock;
   });
 
+  const validatorCount = originalState.validators.length;
+  const idPrefix = `Process block - ${validatorCount} vs - `;
+
   const testCases = [
-    {signedBlock: regularBlock, id: "Process block with 0 validator exit"},
-    {signedBlock: oneValidatorExitBlock, id: "Process block with 1 validator exit"},
-    {signedBlock: maxValidatorExitBlock, id: `Process block with ${MAX_VOLUNTARY_EXITS} validator exits`},
+    {signedBlock: regularBlock, id: `${idPrefix} with 0 validator exit`},
+    {signedBlock: oneValidatorExitBlock, id: `${idPrefix} with 1 validator exit`},
+    {signedBlock: maxValidatorExitBlock, id: `${idPrefix} with ${MAX_VOLUNTARY_EXITS} validator exits`},
   ];
 
   for (const {id, signedBlock} of testCases) {

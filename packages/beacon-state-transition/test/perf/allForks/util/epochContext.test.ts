@@ -4,7 +4,7 @@ import {BeaconState, Epoch} from "../../../../phase0";
 import {CachedBeaconState, createCachedBeaconState} from "../../../../src/allForks";
 import {generatePerformanceState} from "../../util";
 
-describe("getCommitteeAssignment perf test group", function () {
+describe.skip("getCommitteeAssignment perf test group", function () {
   setBenchOpts({
     maxMs: 60 * 1000,
     minMs: 1 * 1000,
@@ -13,7 +13,9 @@ describe("getCommitteeAssignment perf test group", function () {
 
   let epoch: Epoch, state, cstate: CachedBeaconState<BeaconState>;
 
-  before(() => {
+  before(function () {
+    this.timeout(60 * 1000);
+
     epoch = 23638;
     state = generatePerformanceState();
     cstate = createCachedBeaconState(config, state);
