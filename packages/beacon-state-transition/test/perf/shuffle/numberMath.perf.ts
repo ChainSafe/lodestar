@@ -1,10 +1,10 @@
-import {BenchmarkRunner} from "@chainsafe/lodestar-utils/test_utils/benchmark";
+import {itBench, setBenchOpts} from "@dapplion/benchmark";
 
-// eslint-disable-next-line @typescript-eslint/no-floating-promises
-(async function () {
-  const runner = new BenchmarkRunner("shuffle number math ops", {
-    runs: 512,
+describe.skip("shuffle number math ops", () => {
+  setBenchOpts({
     maxMs: 10 * 1000,
+    minMs: 1 * 1000,
+    runs: 1024,
   });
 
   const forRuns = 100e5;
@@ -18,101 +18,71 @@ import {BenchmarkRunner} from "@chainsafe/lodestar-utils/test_utils/benchmark";
     inputUint32Array[i] = i;
   }
 
-  await runner.run({
-    id: "if(i == 1)",
-    run: () => {
-      for (let i = 0; i < forRuns; i++) {
-        if (i === 1) {
-          //
-        }
+  itBench("if(i == 1)", () => {
+    for (let i = 0; i < forRuns; i++) {
+      if (i === 1) {
+        //
       }
-    },
+    }
   });
 
-  await runner.run({
-    id: "if(i)",
-    run: () => {
-      for (let i = 0; i < forRuns; i++) {
-        if (i) {
-          //
-        }
+  itBench("if(i)", () => {
+    for (let i = 0; i < forRuns; i++) {
+      if (i) {
+        //
       }
-    },
+    }
   });
 
-  await runner.run({
-    id: "i == j",
-    run: () => {
-      for (let i = 0; i < forRuns; i++) {
-        i == j;
-      }
-    },
+  itBench("i == j", () => {
+    for (let i = 0; i < forRuns; i++) {
+      i == j;
+    }
   });
 
-  await runner.run({
-    id: "i === j",
-    run: () => {
-      for (let i = 0; i < forRuns; i++) {
-        i === j;
-      }
-    },
+  itBench("i === j", () => {
+    for (let i = 0; i < forRuns; i++) {
+      i === j;
+    }
   });
 
-  await runner.run({
-    id: "bit opts",
-    run: () => {
-      for (let i = 0; i < forRuns; i++) {
-        (j & 0x7) == 0x7;
-      }
-    },
+  itBench("bit opts", () => {
+    for (let i = 0; i < forRuns; i++) {
+      (j & 0x7) == 0x7;
+    }
   });
 
-  await runner.run({
-    id: "modulo",
-    run: () => {
-      for (let i = 0; i < forRuns; i++) {
-        j % 8 == 0;
-      }
-    },
+  itBench("modulo", () => {
+    for (let i = 0; i < forRuns; i++) {
+      j % 8 == 0;
+    }
   });
 
-  await runner.run({
-    id: ">> 3",
-    run: () => {
-      for (let i = 0; i < forRuns; i++) {
-        j >> 3;
-      }
-    },
+  itBench(">> 3", () => {
+    for (let i = 0; i < forRuns; i++) {
+      j >> 3;
+    }
   });
 
-  await runner.run({
-    id: "/ 8",
-    run: () => {
-      for (let i = 0; i < forRuns; i++) {
-        j / 8;
-      }
-    },
+  itBench("/ 8", () => {
+    for (let i = 0; i < forRuns; i++) {
+      j / 8;
+    }
   });
 
-  await runner.run({
-    id: "swap item in array",
-    run: () => {
-      for (let i = 0; i < forRuns; i++) {
-        const tmp = input[forRuns - i];
-        input[forRuns - i] = input[i];
-        input[i] = tmp;
-      }
-    },
+  itBench("swap item in array", () => {
+    for (let i = 0; i < forRuns; i++) {
+      const tmp = input[forRuns - i];
+      input[forRuns - i] = input[i];
+      input[i] = tmp;
+    }
   });
 
-  await runner.run({
-    id: "swap item in Uint32Array",
-    run: () => {
-      for (let i = 0; i < forRuns; i++) {
-        const tmp = inputUint32Array[forRuns - i];
-        inputUint32Array[forRuns - i] = inputUint32Array[i];
-        inputUint32Array[i] = tmp;
-      }
-    },
+  itBench("swap item in Uint32Array", () => {
+    for (let i = 0; i < forRuns; i++) {
+      const tmp = inputUint32Array[forRuns - i];
+      inputUint32Array[forRuns - i] = inputUint32Array[i];
+      inputUint32Array[i] = tmp;
+    }
   });
-})();
+});

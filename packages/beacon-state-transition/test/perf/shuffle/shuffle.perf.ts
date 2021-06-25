@@ -1,4 +1,4 @@
-import {BenchmarkRunner} from "@chainsafe/lodestar-utils/test_utils/benchmark";
+import {itBench, setBenchOpts} from "@dapplion/benchmark";
 import {unshuffleList} from "../../../src";
 
 //          Lightouse  Lodestar
@@ -6,29 +6,30 @@ import {unshuffleList} from "../../../src";
 // 16384    6.2046 ms  18.272 ms (x3)
 // 4000000  1.5617 s   4.9690 s  (x3)
 
-// eslint-disable-next-line @typescript-eslint/no-floating-promises
-(async function () {
+describe("shuffle list", () => {
+  setBenchOpts({
+    maxMs: 30 * 1000,
+    minMs: 10 * 1000,
+    runs: 512,
+  });
+
   // eslint-disable-next-line @typescript-eslint/naming-convention
   const seed = new Uint8Array([42, 32]);
 
-  const runner = new BenchmarkRunner("shuffle list", {
-    runs: 512,
-    maxMs: 30 * 1000,
-  });
+  for (const listSize of [
+    512,
+    16384,
+    250000,
+    // Don't run 4_000_000 since it's very slow and not testnet has gotten there yet
+    // 4e6,
+  ]) {
+    const input: number[] = [];
+    for (let i = 0; i < listSize; i++) {
+      input[i] = i;
+    }
 
-  for (const listSize of [512, 16384, 4000000]) {
-    await runner.run({
-      id: `list size ${listSize}`,
-      before: () => {
-        const input: number[] = [];
-        for (let i = 0; i < listSize; i++) {
-          input[i] = i;
-        }
-        return input;
-      },
-      run: (input) => {
-        unshuffleList(input, seed);
-      },
+    itBench(`shuffle list - list size ${listSize}`, () => {
+      unshuffleList(input, seed);
     });
   }
-})();
+});

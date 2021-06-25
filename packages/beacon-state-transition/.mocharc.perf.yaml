@@ -1,0 +1,7 @@
+extends: .mocharc.yaml
+require:
+  - ts-node/register
+  - ../utils/test_utils/benchmark/mochaPlugin.ts
+file: ./test/setup.ts
+reporter: ../utils/test_utils/benchmark/reporter.ts
+lazyLoadFiles: true

@@ -2,54 +2,52 @@ name: Benchmark
 
 # only one can tun at a time.
 # Actions access a common cache entry and may corrupt it.
-concurrency: cd-benchmark
+concurrency: cd-benchmark-${{ github.ref }}
 
 on:
   push:
     branches:
       - master
-      - benchmark
+      - benchmark # For debugging
+  pull_request:
+    branches:
+      - master
 
 jobs:
   run:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v1
-      - name: Bootstrap
-        run: yarn
-      # Run benchmark with custom tooling and stores the output to a file
-      - name: Run performance tests
-        run: yarn benchmark
+      # <common-build> - Uses YAML anchors in the future
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v2-beta
+        with:
+          node-version: "14.16.0"
+      - name: Restore dependencies
+        uses: actions/cache@master
+        id: cache-deps
+        with:
+          path: |
+            node_modules
+            packages/*/node_modules
+          key: ${{ runner.os }}-${{ hashFiles('**/yarn.lock') }}-ignore-optional-14.16.0
+      - name: Install & build
+        if: steps.cache-deps.outputs.cache-hit != 'true'
+        run: yarn install --frozen-lockfile --ignore-optional
+      - name: Build
+        run: yarn build
+        if: steps.cache-deps.outputs.cache-hit == 'true'
+      # </common-build>
+
+      - name: Run benchmarks
+        run: yarn benchmark --s3
         env:
-          BENCHMARK_OUTPUT_PATH: ./benchmark-results/benchmark-output.txt
-          BENCHMARK_RESULTS_DIR: ./benchmark-results
-      # Upload full results
-      - name: Upload full benchmark results
-        if: ${{ always() }}
-        uses: actions/upload-artifact@v2
-        with:
-          name: benchmark-results
-          path: ./benchmark-results
-      # Download previous benchmark result from cache (if exists)
-      - name: Download previous benchmark data
-        uses: actions/cache@v1
-        with:
-          path: ./cache
-          key: ${{ runner.os }}-benchmark
-      # Run `github-action-benchmark` action
-      - name: Store benchmark result
-        uses: rhysd/github-action-benchmark@v1
-        with:
-          # What benchmark tool the output.txt came from
-          tool: "benchmarkjs"
-          # Where the output from the benchmark tool is stored
-          output-file-path: ./benchmark-results/benchmark-output.txt
-          # Where the previous data file is stored
-          external-data-json-path: ./cache/benchmark-data.json
-          # Workflow will fail when an alert happens
-          fail-on-alert: true
-          # GitHub API token to make a commit comment
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          # Enable alert commit comment
-          comment-on-alert: true
-      # Upload the updated cache file for the next job by actions/cache
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # S3 credentials
+          S3_ACCESS_KEY: ${{ secrets.S3_BENCH_LODESTAR_ACCESS_KEY }}
+          S3_SECRET_KEY: ${{ secrets.S3_BENCH_LODESTAR_SECRET_KEY }}
+          S3_REGION: ${{ secrets.S3_BENCH_LODESTAR_REGION }}
+          S3_BUCKET: ${{ secrets.S3_BENCH_LODESTAR_BUCKET }}
+          S3_ENDPOINT: ${{ secrets.S3_BENCH_LODESTAR_ENDPOINT }}
+          # Key prefix to separate benchmark data from multiple repositories
+          S3_KEY_PREFIX: ${{ github.repository }}/${{ runner.os }}
