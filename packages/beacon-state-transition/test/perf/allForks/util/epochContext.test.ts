@@ -1,13 +1,16 @@
+import {itBench, setBenchOpts} from "@dapplion/benchmark";
 import {config} from "@chainsafe/lodestar-config/default";
 import {BeaconState, Epoch} from "../../../../phase0";
 import {CachedBeaconState, createCachedBeaconState} from "../../../../src/allForks";
 import {generatePerformanceState} from "../../util";
 
 describe("getCommitteeAssignment perf test group", function () {
-  this.timeout(0);
+  setBenchOpts({
+    maxMs: 60 * 1000,
+    minMs: 1 * 1000,
+    runs: 1024,
+  });
 
-  const numRuns = 1000;
-  let perfCumulative = 0;
   let epoch: Epoch, state, cstate: CachedBeaconState<BeaconState>;
 
   before(() => {
@@ -16,17 +19,7 @@ describe("getCommitteeAssignment perf test group", function () {
     cstate = createCachedBeaconState(config, state);
   });
 
-  after(() => {
-    console.log("avg perf: ", perfCumulative / numRuns);
+  itBench("getCommitteeAssignment", () => {
+    cstate.getCommitteeAssignment(epoch, 0);
   });
-
-  for (let i = 0; i < numRuns; i++) {
-    it("getCommitteeAssignment indivdual test", () => {
-      const start = Date.now();
-      cstate.getCommitteeAssignment(epoch, 0);
-      const perf = Date.now() - start;
-      console.log("perf: ", Date.now() - start);
-      perfCumulative += perf;
-    });
-  }
 });
