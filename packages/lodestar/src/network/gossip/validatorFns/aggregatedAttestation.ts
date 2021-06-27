@@ -40,7 +40,7 @@ export async function validateAggregatedAttestation(
         throw new GossipValidationError(ERR_TOPIC_VALIDATOR_REJECT);
 
       case AttestationErrorCode.FUTURE_SLOT: // IGNORE
-        chain.receiveAttestation(attestation);
+        chain.pendingAttestationBySlot(attestation);
       /** eslit-disable-next-line no-fallthrough */
       case AttestationErrorCode.PAST_SLOT:
       case AttestationErrorCode.AGGREGATE_ALREADY_KNOWN:

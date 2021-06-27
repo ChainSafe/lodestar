@@ -47,7 +47,7 @@ export async function validateCommitteeAttestation(
       case AttestationErrorCode.UNKNOWN_BEACON_BLOCK_ROOT:
       case AttestationErrorCode.MISSING_ATTESTATION_TARGET_STATE: // IGNORE
         // attestation might be valid after we receive block
-        chain.receiveAttestation(attestation);
+        chain.pendingAttestationByBlock(attestation, attestation.data.target.root);
       /** eslit-disable-next-line no-fallthrough */
       case AttestationErrorCode.PAST_SLOT:
       case AttestationErrorCode.FUTURE_SLOT:

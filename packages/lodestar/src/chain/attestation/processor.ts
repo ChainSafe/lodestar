@@ -13,19 +13,22 @@ import {IBeaconClock} from "../clock";
 import {ChainEvent, ChainEventEmitter} from "../emitter";
 import {IStateRegenerator} from "../regen";
 
-import {processAttestation} from "./process";
+import {processAttestation, verifyAttestationSignatures} from "./process";
 import {AttestationError, AttestationErrorCode, AttestationErrorType} from "../errors";
+import {IBlsVerifier} from "../bls";
 
 type AttestationProcessorModules = {
   config: IBeaconConfig;
   emitter: ChainEventEmitter;
   forkChoice: IForkChoice;
   clock: IBeaconClock;
+  bls: IBlsVerifier;
   regen: IStateRegenerator;
 };
 
 export class AttestationProcessor {
   private modules: AttestationProcessorModules;
+  private pendingAttestationJobs: IAttestationJob[] = [];
 
   constructor(modules: AttestationProcessorModules) {
     this.modules = modules;
@@ -34,6 +37,47 @@ export class AttestationProcessor {
   async processAttestationJob(job: IAttestationJob): Promise<phase0.IndexedAttestation | null> {
     return await processAttestationJob(this.modules, job);
   }
+
+  /**
+   * Same to processAttestationJob but we process jobs in batch.
+   */
+  processAttestationJobInBatch(job: IAttestationJob): void {
+    if (job.validSignature) {
+      void processAttestationJob(this.modules, job);
+    } else {
+      this.pendingAttestationJobs.push(job);
+      const toProcessAttestations = needProcessPendingAttestations(this.pendingAttestationJobs);
+      if (toProcessAttestations) {
+        void processAttestationJobsInBatch(this.modules, toProcessAttestations);
+      }
+    }
+  }
+}
+
+/**
+ * Check if it's enough 128 jobs to process.
+ * Return jobs to process or undefined.
+ */
+export function needProcessPendingAttestations(
+  pendingAttestationJobs: IAttestationJob[],
+  itemsPerBatch = 128
+): IAttestationJob[] | null {
+  if (pendingAttestationJobs.length >= itemsPerBatch) {
+    return pendingAttestationJobs.splice(0, itemsPerBatch);
+  } else {
+    return null;
+  }
+}
+
+/**
+ * Verify signatures in batch then process each job separately.
+ */
+export async function processAttestationJobsInBatch(
+  modules: AttestationProcessorModules,
+  jobs: IAttestationJob[]
+): Promise<void> {
+  const verifiedJobs = await verifyAttestationSignatures({...modules, jobs});
+  await Promise.all(verifiedJobs.map((job) => processAttestationJob(modules, job)));
 }
 
 /**
@@ -76,6 +120,8 @@ export function mapAttestationError(e: Error, job: IAttestationJob): Attestation
     const lodestarErr = new AttestationError({job, ...errType});
     lodestarErr.stack = e.stack;
     return lodestarErr;
+  } else if (e instanceof AttestationError) {
+    return e;
   }
   return null;
 }

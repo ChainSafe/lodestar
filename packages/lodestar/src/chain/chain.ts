@@ -108,7 +108,7 @@ export class BeaconChain implements IBeaconChain {
     });
     this.pendingAttestations = new AttestationPool({config});
     this.pendingBlocks = new BlockPool(config, logger);
-    this.attestationProcessor = new AttestationProcessor({config, forkChoice, emitter, clock, regen});
+    this.attestationProcessor = new AttestationProcessor({config, forkChoice, emitter, clock, regen, bls});
     this.blockProcessor = new BlockProcessor({
       config,
       forkChoice,
@@ -222,6 +222,14 @@ export class BeaconChain implements IBeaconChain {
 
   getFinalizedCheckpoint(): phase0.Checkpoint {
     return this.forkChoice.getFinalizedCheckpoint();
+  }
+
+  pendingAttestationByBlock(attestation: phase0.Attestation, blockRoot: Root): void {
+    this.pendingAttestations.putByBlock(blockRoot, {attestation, validSignature: false});
+  }
+
+  pendingAttestationBySlot(attestation: phase0.Attestation): void {
+    this.pendingAttestations.putBySlot(attestation.data.slot, {attestation, validSignature: false});
   }
 
   receiveAttestation(attestation: phase0.Attestation): void {

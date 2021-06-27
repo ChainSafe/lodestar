@@ -97,14 +97,12 @@ export async function onClockSlot(this: BeaconChain, slot: Slot): Promise<void> 
 
   this.db.attestationPool.prune(slot);
 
-  await Promise.all(
-    // Attestations can only affect the fork choice of subsequent slots.
-    // Process the attestations in `slot - 1`, rather than `slot`
-    this.pendingAttestations.getBySlot(slot - 1).map((job) => {
-      this.pendingAttestations.remove(job);
-      return this.attestationProcessor.processAttestationJob(job);
-    })
-  );
+  // Attestations can only affect the fork choice of subsequent slots.
+  // Process the attestations in `slot - 1`, rather than `slot`
+  for (const job of this.pendingAttestations.getBySlot(slot - 1)) {
+    this.pendingAttestations.remove(job);
+    this.attestationProcessor.processAttestationJobInBatch(job);
+  }
 
   await Promise.all(
     this.pendingBlocks.getBySlot(slot).map(async (root) => {
@@ -248,22 +246,16 @@ export async function onBlock(
     const attestations = Array.from(readonlyValues(block.message.body.attestations));
 
     // Only process attestations in response to an non-prefinalized block
-    const indexedAttestations = await Promise.all([
+    const indexedAttestations = await Promise.all(
       // process the attestations in the block
-      ...attestations.map((attestation) => {
+      attestations.map((attestation) => {
         return this.attestationProcessor.processAttestationJob({
           attestation,
           // attestation signatures from blocks have already been verified
           validSignature: true,
         });
-      }),
-      // process pending attestations which needed the block
-      ...this.pendingAttestations.getByBlock(blockRoot).map((job) => {
-        this.pendingAttestations.remove(job);
-        return this.attestationProcessor.processAttestationJob(job);
-      }),
-    ]);
-
+      })
+    );
     if (this.metrics) {
       // Register attestations in metrics
       for (const attestation of indexedAttestations) {
@@ -271,6 +263,10 @@ export async function onBlock(
           this.metrics.registerAttestationInBlock(attestation, block.message);
         }
       }
+    }
+    for (const job of this.pendingAttestations.getByBlock(blockRoot)) {
+      this.pendingAttestations.remove(job);
+      this.attestationProcessor.processAttestationJobInBatch(job);
     }
   }
 

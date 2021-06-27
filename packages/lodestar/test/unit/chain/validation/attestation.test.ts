@@ -115,7 +115,6 @@ describe("gossip attestation validation", function () {
       AttestationErrorCode.ATTESTATION_ALREADY_KNOWN
     );
 
-    expect(chain.receiveAttestation.called).to.be.false;
     expect(db.seenAttestationCache.hasCommitteeAttestation.calledOnceWith(attestation)).to.be.true;
   });
 
@@ -165,7 +164,6 @@ describe("gossip attestation validation", function () {
       AttestationErrorCode.INVALID_SUBNET_ID
     );
 
-    expect(chain.receiveAttestation.called).to.be.false;
     expect(computeAttestationSubnetStub.calledOnceWith(attestationTargetState, attestation)).to.be.true;
   });
 
@@ -186,7 +184,6 @@ describe("gossip attestation validation", function () {
       AttestationErrorCode.INVALID_INDEXED_ATTESTATION
     );
 
-    expect(chain.receiveAttestation.called).to.be.false;
     expect(isValidIndexedAttestationStub.calledOnce).to.be.true;
   });
 
@@ -213,7 +210,6 @@ describe("gossip attestation validation", function () {
       AttestationErrorCode.COMMITTEE_INDEX_OUT_OF_RANGE
     );
 
-    expect(chain.receiveAttestation.called).to.be.false;
     expect(isValidIndexedAttestationStub.calledOnce).to.be.true;
   });
 
@@ -246,7 +242,6 @@ describe("gossip attestation validation", function () {
       AttestationErrorCode.COMMITTEE_INDEX_OUT_OF_RANGE
     );
 
-    expect(chain.receiveAttestation.called).to.be.false;
     expect(isValidIndexedAttestationStub.calledOnce).to.be.true;
   });
 
@@ -273,7 +268,6 @@ describe("gossip attestation validation", function () {
       AttestationErrorCode.WRONG_NUMBER_OF_AGGREGATION_BITS
     );
 
-    expect(chain.receiveAttestation.called).to.be.false;
     expect(isValidIndexedAttestationStub.calledOnce).to.be.true;
   });
 
@@ -414,7 +408,6 @@ describe("gossip attestation validation", function () {
     const validationTest = await validateGossipAttestation(config, chain, db, {attestation, validSignature: false}, 0);
 
     expect(validationTest).to.not.throw;
-    expect(chain.receiveAttestation.called).to.be.false;
     expect(db.seenAttestationCache.addCommitteeAttestation.calledOnce).to.be.true;
   });
 });

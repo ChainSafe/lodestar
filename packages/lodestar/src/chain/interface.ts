@@ -43,6 +43,7 @@ export interface IBlockJob extends IProcessBlock {
 
 export interface IAttestationJob {
   attestation: phase0.Attestation;
+  indexedAttestation?: phase0.IndexedAttestation;
   /**
    * `true` if the signature has already been verified
    */
@@ -89,6 +90,10 @@ export interface IBeaconChain {
   getUnfinalizedBlocksAtSlots(slots: Slot[]): Promise<allForks.SignedBeaconBlock[]>;
   getFinalizedCheckpoint(): phase0.Checkpoint;
 
+  /** Put to AttestationPool to reprocess after we see a blockRoot */
+  pendingAttestationByBlock(attestation: phase0.Attestation, blockRoot: Root): void;
+  /** Put to AttestationPool to reprocess after we reach attestation slot */
+  pendingAttestationBySlot(attestation: phase0.Attestation): void;
   /** Add attestation to the fork-choice rule */
   receiveAttestation(attestation: phase0.Attestation): void;
   /** Pre-process and run the per slot state transition function */
