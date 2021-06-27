@@ -5,8 +5,8 @@ import {
   TARGET_AGGREGATORS_PER_SYNC_SUBCOMMITTEE,
 } from "@chainsafe/lodestar-params";
 import {BLSSignature, phase0} from "@chainsafe/lodestar-types";
-import {bytesToInt, intDiv} from "@chainsafe/lodestar-utils";
-import {hash} from "@chainsafe/ssz";
+import {intDiv} from "@chainsafe/lodestar-utils";
+import {isSelectionProofValid} from "./validator";
 
 /**
  * TODO
@@ -23,5 +23,5 @@ export function isSyncCommitteeAggregator(selectionProof: BLSSignature): boolean
     1,
     intDiv(intDiv(SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_SUBNET_COUNT), TARGET_AGGREGATORS_PER_SYNC_SUBCOMMITTEE)
   );
-  return bytesToInt(hash(selectionProof.valueOf() as Uint8Array).slice(0, 8)) % modulo === 0;
+  return isSelectionProofValid(selectionProof, modulo);
 }

@@ -6,9 +6,11 @@ import {hash, readonlyValues} from "@chainsafe/ssz";
 import {BLSSignature, CommitteeIndex, Epoch, Slot, phase0, ValidatorIndex, allForks} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {getCurrentEpoch} from "./epoch";
-import {intDiv, bytesToInt} from "@chainsafe/lodestar-utils";
+import {intDiv, bytesToBigInt} from "@chainsafe/lodestar-utils";
 import {getBeaconCommittee} from "./committee";
-import {TARGET_COMMITTEE_SIZE} from "@chainsafe/lodestar-params";
+import {TARGET_AGGREGATORS_PER_COMMITTEE} from "@chainsafe/lodestar-params";
+
+const ZERO_BIGINT = BigInt(0);
 
 /**
  * Check if [[validator]] is active
@@ -61,6 +63,15 @@ export function isAggregator(
 }
 
 export function isAggregatorFromCommitteeLength(committeeLength: number, slotSignature: BLSSignature): boolean {
-  const modulo = Math.max(1, intDiv(committeeLength, TARGET_COMMITTEE_SIZE));
-  return bytesToInt(hash(slotSignature.valueOf() as Uint8Array).slice(0, 8)) % modulo === 0;
+  const modulo = Math.max(1, intDiv(committeeLength, TARGET_AGGREGATORS_PER_COMMITTEE));
+  return isSelectionProofValid(slotSignature, modulo);
+}
+
+/**
+ * Note: **must** use bytesToBigInt() otherwise a JS number is not able to represent the latest digits of
+ * the remainder, resulting in `14333559117764833000` for example, where the last three digits are always zero.
+ * Using bytesToInt() may cause isSelectionProofValid() to always return false.
+ */
+export function isSelectionProofValid(sig: BLSSignature, modulo: number): boolean {
+  return bytesToBigInt(hash(sig.valueOf() as Uint8Array).slice(0, 8)) % BigInt(modulo) === ZERO_BIGINT;
 }
