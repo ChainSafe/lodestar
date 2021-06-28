@@ -3,6 +3,13 @@ import {ILogger} from "@chainsafe/lodestar-utils";
 import {toHexString} from "@chainsafe/ssz";
 import {Api} from "@chainsafe/lodestar-api";
 import {ValidatorStore} from "./validatorStore";
+import {batchItems} from "../util/batch";
+
+/**
+ * URLs have a limitation on size, adding an unbounded num of pubkeys will break the request.
+ * For reasoning on the specific number see: https://github.com/ChainSafe/lodestar/pull/2730#issuecomment-866749083
+ */
+const PUBKEYS_PER_REQUEST = 10;
 
 // To assist with readability
 type PubkeyHex = string;
@@ -59,20 +66,19 @@ export class IndicesService {
 
     // Query the remote BN to resolve a pubkey to a validator index.
     // support up to 1000 pubkeys per poll
-    const pubkeysHex = pubkeysToPoll.map((pubkey) => toHexString(pubkey)).slice(0, MAX_PUBKEYS_PER_POLL);
-    const batches = pubkeysToBatches(pubkeysHex);
+    const pubkeysHex = pubkeysToPoll.map((pubkey) => toHexString(pubkey));
+    const pubkeysHexBatches = batchItems(pubkeysHex, {batchSize: PUBKEYS_PER_REQUEST});
 
-    const newIndicesArr = [];
-    for (const batch of batches) {
-      const validatorIndicesArr = await Promise.all(batch.map(this.getIndicesPerHttpRequest));
-      newIndicesArr.push(...validatorIndicesArr.flat());
+    const newIndices: number[] = [];
+    for (const pubkeysHexBatch of pubkeysHexBatches) {
+      const validatorIndicesArr = await this.fetchValidatorIndices(pubkeysHexBatch);
+      newIndices.push(...validatorIndicesArr);
     }
-    const newIndices = newIndicesArr.flat();
     this.logger.info("Discovered new validators", {count: newIndices.length});
     return newIndices;
   }
 
-  private getIndicesPerHttpRequest = async (pubkeysHex: string[]): Promise<ValidatorIndex[]> => {
+  private async fetchValidatorIndices(pubkeysHex: string[]): Promise<ValidatorIndex[]> {
     const validatorsState = await this.api.beacon.getStateValidators("head", {indices: pubkeysHex});
     const newIndices = [];
     for (const validatorState of validatorsState.data) {
@@ -85,41 +91,5 @@ export class IndicesService {
       }
     }
     return newIndices;
-  };
-}
-
-type Batch = string[][];
-const PUBKEYS_PER_REQUEST = 10;
-const REQUESTS_PER_BATCH = 5;
-const MAX_PUBKEYS_PER_POLL = 5 * PUBKEYS_PER_REQUEST * REQUESTS_PER_BATCH;
-
-/**
- * Divide pubkeys into batches, each batch contains at most 5 http requests,
- * each request can work on at most 40 pubkeys.
- * @param pubkeysHex
- */
-export function pubkeysToBatches(
-  pubkeysHex: string[],
-  maxPubkeysPerRequest: number = PUBKEYS_PER_REQUEST,
-  maxRequesPerBatch: number = REQUESTS_PER_BATCH
-): Batch[] {
-  if (!pubkeysHex || pubkeysHex.length === 0) {
-    return [[[]]];
   }
-  const batches: Batch[] = [];
-
-  const pubkeysPerBatch = maxPubkeysPerRequest * maxRequesPerBatch;
-  let batch: Batch = [];
-  let pubkeysPerRequest: string[];
-  for (let i = 0; i < pubkeysHex.length; i += maxPubkeysPerRequest) {
-    if (i % pubkeysPerBatch === 0) {
-      batch = [];
-      batches.push(batch);
-    }
-    if (i % maxPubkeysPerRequest === 0) {
-      pubkeysPerRequest = pubkeysHex.slice(i, Math.min(i + maxPubkeysPerRequest, pubkeysHex.length));
-      batch.push(pubkeysPerRequest);
-    }
-  }
-  return batches;
 }
