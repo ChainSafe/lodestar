@@ -231,7 +231,7 @@ export function getValidatorApi({
       for (const index of validatorIndices) {
         const validator = validators.get(index);
         if (!validator) {
-          throw new ApiError(400, `Validator pubkey at index ${index} not in state`);
+          throw new ApiError(400, `Validator index ${index} not in state`);
         }
         validatorData.set(index, validator.pubkey);
       }
