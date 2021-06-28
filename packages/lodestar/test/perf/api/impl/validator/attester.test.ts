@@ -9,9 +9,6 @@ import {generateValidators} from "../../../../utils/validator";
 import {setupApiImplTestServer} from "../../../../unit/api/impl/index.test";
 import {BLSPubkey, ssz} from "@chainsafe/lodestar-types";
 import {MAX_EFFECTIVE_BALANCE, FAR_FUTURE_EPOCH} from "@chainsafe/lodestar-params";
-import {AttesterDuty} from "@chainsafe/lodestar-api/lib/routes/validator";
-import {assembleAttesterDuty} from "../../../../../src/chain/factory/duties";
-import {expect} from "chai";
 import {itBench, setBenchOpts} from "@dapplion/benchmark";
 
 describe("getCommitteeAssignments vs assembleAttesterDuties performance test", async () => {
@@ -55,18 +52,17 @@ describe("getCommitteeAssignments vs assembleAttesterDuties performance test", a
   });
 
   // the new way of getting attester duties
-  let newDuties: AttesterDuty[] = [];
   itBench("getCommitteeAssignments", () => {
     const validators = state.validators.persistent;
     const validatorData: Map<number, BLSPubkey> = new Map<number, BLSPubkey>();
-    indices.forEach((index) => {
+    for (const index of indices) {
       const validator = validators.get(index);
       if (!validator) {
-        throw new Error(`Validator at index ${index} not in state`);
+        throw new Error(`Validator pubkey at index ${index} not in state`);
       }
       validatorData.set(index, validator.pubkey);
-    });
-    newDuties = state.epochCtx.getCommitteeAssignments(0, validatorData);
+    }
+    state.epochCtx.getCommitteeAssignments(0, validatorData);
   });
 
   itBench("getCommitteeAssignments - index2pubkey - more data", () => {
@@ -78,22 +74,6 @@ describe("getCommitteeAssignments vs assembleAttesterDuties performance test", a
       }
       validatorData.set(index, pubkey.toBytes());
     });
-    newDuties = state.epochCtx.getCommitteeAssignments(0, validatorData);
+    state.epochCtx.getCommitteeAssignments(0, validatorData);
   });
-
-  // the old way of getting the attester duties
-  let oldDuties: AttesterDuty[] = [];
-  itBench("assembleAttesterDuty", () => {
-    oldDuties = [];
-    for (const validatorIndex of indices) {
-      const validator = state.validators[validatorIndex];
-      const duty = assembleAttesterDuty(config, {pubkey: validator.pubkey, index: validatorIndex}, state.epochCtx, 0);
-      if (duty) oldDuties.push(duty);
-    }
-  });
-
-  // verify that both the old and new ways get the same data
-  newDuties.sort((x, y) => x.validatorIndex - y.validatorIndex);
-  oldDuties.sort((x, y) => x.validatorIndex - y.validatorIndex);
-  expect(newDuties).to.deep.equal(oldDuties);
 });
