@@ -1,11 +1,25 @@
 import {expect} from "chai";
 import {fromHexString} from "@chainsafe/ssz";
+import {
+  SYNC_COMMITTEE_SIZE,
+  SYNC_COMMITTEE_SUBNET_COUNT,
+  TARGET_AGGREGATORS_PER_SYNC_SUBCOMMITTEE,
+  TARGET_AGGREGATORS_PER_COMMITTEE,
+} from "@chainsafe/lodestar-params";
 import {isAggregatorFromCommitteeLength, isSyncCommitteeAggregator} from "../../../src/util/aggregator";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
 describe("isAttestationAggregator", function () {
   const committeeLength = 130;
+
+  before("Ensure constants don't change", () => {
+    expect({
+      TARGET_AGGREGATORS_PER_COMMITTEE,
+    }).to.deep.equal({
+      TARGET_AGGREGATORS_PER_COMMITTEE: 16,
+    });
+  });
 
   it("should be false", function () {
     const result = isAggregatorFromCommitteeLength(
@@ -28,6 +42,18 @@ describe("isAttestationAggregator", function () {
 });
 
 describe("isSyncCommitteeAggregator", function () {
+  before("Ensure constants don't change", () => {
+    expect({
+      SYNC_COMMITTEE_SIZE,
+      SYNC_COMMITTEE_SUBNET_COUNT,
+      TARGET_AGGREGATORS_PER_SYNC_SUBCOMMITTEE,
+    }).to.deep.equal({
+      SYNC_COMMITTEE_SIZE: 512,
+      SYNC_COMMITTEE_SUBNET_COUNT: 4,
+      TARGET_AGGREGATORS_PER_SYNC_SUBCOMMITTEE: 4,
+    });
+  });
+
   it("should be false", function () {
     const result = isSyncCommitteeAggregator(
       fromHexString(
@@ -36,11 +62,12 @@ describe("isSyncCommitteeAggregator", function () {
     );
     expect(result).to.be.equal(false);
   });
-  // TODO the constant needs to be regenerated
-  it.skip("should be true", function () {
+
+  // NOTE: Invalid sig, bruteforced last characters to get a true result
+  it("should be true", function () {
     const result = isSyncCommitteeAggregator(
       fromHexString(
-        "0xa8f8bb92931234ca6d8a34530526bcd6a4cfa3bf33bd0470200dc8fa3ebdc3ba24bc8c6e994d58a0f884eb24336d746c01a29693ed0354c0862c2d5de5859e3f58747045182844d267ba232058f7df1867a406f63a1eb8afec0cf3f00a115125"
+        "0xa8f8bb92931234ca6d8a34530526bcd6a4cfa3bf33bd0470200dc8fa3ebdc3ba24bc8c6e994d58a0f884eb24336d746c01a29693ed0354c0862c2d5de5859e3f58747045182844d267ba232058f7df1867a406f63a1eb8afec0cf3f00a115142"
       )
     );
     expect(result).to.be.equal(true);
