@@ -19,7 +19,7 @@ import {uniqueVectorArr} from "../slashingProtection/utils";
 
 export {InvalidAttestationError, InvalidAttestationErrorCode} from "./attestation";
 export {InvalidBlockError, InvalidBlockErrorCode} from "./block";
-export {InterchangeError, InterchangeErrorErrorCode} from "./interchange";
+export {InterchangeError, InterchangeErrorErrorCode, Interchange, InterchangeFormat} from "./interchange";
 export {ISlashingProtection, InterchangeFormatVersion};
 
 /**
