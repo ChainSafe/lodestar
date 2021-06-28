@@ -3,6 +3,13 @@ import {ILogger} from "@chainsafe/lodestar-utils";
 import {toHexString} from "@chainsafe/ssz";
 import {Api} from "@chainsafe/lodestar-api";
 import {ValidatorStore} from "./validatorStore";
+import {batchItems} from "../util/batch";
+
+/**
+ * URLs have a limitation on size, adding an unbounded num of pubkeys will break the request.
+ * For reasoning on the specific number see: https://github.com/ChainSafe/lodestar/pull/2730#issuecomment-866749083
+ */
+const PUBKEYS_PER_REQUEST = 10;
 
 // To assist with readability
 type PubkeyHex = string;
@@ -58,9 +65,21 @@ export class IndicesService {
     }
 
     // Query the remote BN to resolve a pubkey to a validator index.
+    // support up to 1000 pubkeys per poll
     const pubkeysHex = pubkeysToPoll.map((pubkey) => toHexString(pubkey));
-    const validatorsState = await this.api.beacon.getStateValidators("head", {indices: pubkeysHex});
+    const pubkeysHexBatches = batchItems(pubkeysHex, {batchSize: PUBKEYS_PER_REQUEST});
 
+    const newIndices: number[] = [];
+    for (const pubkeysHexBatch of pubkeysHexBatches) {
+      const validatorIndicesArr = await this.fetchValidatorIndices(pubkeysHexBatch);
+      newIndices.push(...validatorIndicesArr);
+    }
+    this.logger.info("Discovered new validators", {count: newIndices.length});
+    return newIndices;
+  }
+
+  private async fetchValidatorIndices(pubkeysHex: string[]): Promise<ValidatorIndex[]> {
+    const validatorsState = await this.api.beacon.getStateValidators("head", {indices: pubkeysHex});
     const newIndices = [];
     for (const validatorState of validatorsState.data) {
       const pubkeyHex = toHexString(validatorState.validator.pubkey);
@@ -71,7 +90,6 @@ export class IndicesService {
         newIndices.push(validatorState.index);
       }
     }
-
     return newIndices;
   }
 }

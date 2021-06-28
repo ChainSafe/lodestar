@@ -8,7 +8,6 @@ export * from "./array";
 export * from "./attestation";
 export * from "./balance";
 export * from "./blockRoot";
-export * from "./committee";
 export * from "./domain";
 export * from "./epoch";
 export * from "./fork";

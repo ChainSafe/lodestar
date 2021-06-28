@@ -5,7 +5,6 @@
 import {readonlyValues} from "@chainsafe/ssz";
 import {Epoch, phase0, ValidatorIndex, allForks} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {getCurrentEpoch} from "./epoch";
 import {intDiv} from "@chainsafe/lodestar-utils";
 
 /**
@@ -39,11 +38,4 @@ export function getActiveValidatorIndices(state: allForks.BeaconState, epoch: Ep
 
 export function getChurnLimit(config: IBeaconConfig, activeValidatorCount: number): number {
   return Math.max(config.MIN_PER_EPOCH_CHURN_LIMIT, intDiv(activeValidatorCount, config.CHURN_LIMIT_QUOTIENT));
-}
-
-/**
- * Return the validator churn limit for the current epoch.
- */
-export function getValidatorChurnLimit(config: IBeaconConfig, state: allForks.BeaconState): number {
-  return getChurnLimit(config, getActiveValidatorIndices(state, getCurrentEpoch(state)).length);
 }
