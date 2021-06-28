@@ -32,10 +32,10 @@ export async function verifyAttestationSignatures({
         try {
           job.indexedAttestation = targetState.getIndexedAttestation(attestation);
         } catch (e) {
-          emitErrorAttestation(emitter, job, AttestationErrorCode.NO_COMMITTEE_FOR_SLOT_AND_INDEX);
+          emitErrorAttestation(emitter, job, AttestationErrorCode.NO_COMMITTEE_FOR_SLOT_AND_INDEX, e);
         }
       } catch (e) {
-        emitErrorAttestation(emitter, job, AttestationErrorCode.UNKNOWN_TARGET_ROOT);
+        emitErrorAttestation(emitter, job, AttestationErrorCode.MISSING_ATTESTATION_TARGET_STATE, e);
       }
       return job.indexedAttestation && targetState
         ? allForks.getIndexedAttestationSignatureSet(targetState, job.indexedAttestation)
@@ -62,7 +62,12 @@ export async function verifyAttestationSignatures({
   return validJobs.map((job) => ({...job, ...{validSignature: true}}));
 }
 
-function emitErrorAttestation(emitter: ChainEventEmitter, job: IAttestationJob, code: AttestationErrorCode): void {
+function emitErrorAttestation(
+  emitter: ChainEventEmitter,
+  job: IAttestationJob,
+  code: AttestationErrorCode,
+  error?: Error
+): void {
   const data = job.attestation.data;
   switch (code) {
     case AttestationErrorCode.NO_COMMITTEE_FOR_SLOT_AND_INDEX:
@@ -76,15 +81,17 @@ function emitErrorAttestation(emitter: ChainEventEmitter, job: IAttestationJob, 
         })
       );
       break;
-    case AttestationErrorCode.UNKNOWN_TARGET_ROOT:
-      emitter.emit(
-        ChainEvent.errorAttestation,
-        new AttestationError({
-          code: AttestationErrorCode.UNKNOWN_TARGET_ROOT,
-          root: job.attestation.data.target.root as Uint8Array,
-          job,
-        })
-      );
+    case AttestationErrorCode.MISSING_ATTESTATION_TARGET_STATE:
+      if (error) {
+        emitter.emit(
+          ChainEvent.errorAttestation,
+          new AttestationError({
+            code: AttestationErrorCode.MISSING_ATTESTATION_TARGET_STATE,
+            error,
+            job,
+          })
+        );
+      }
       break;
     case AttestationErrorCode.INVALID_SIGNATURE:
       emitter.emit(
@@ -125,8 +132,8 @@ export async function processAttestation({
     targetState = await regen.getCheckpointState(target);
   } catch (e) {
     throw new AttestationError({
-      code: AttestationErrorCode.UNKNOWN_TARGET_ROOT,
-      root: target.root as Uint8Array,
+      code: AttestationErrorCode.MISSING_ATTESTATION_TARGET_STATE,
+      error: e as Error,
       job,
     });
   }

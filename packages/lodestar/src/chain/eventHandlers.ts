@@ -315,15 +315,22 @@ export async function onErrorAttestation(this: BeaconChain, err: AttestationErro
 
   switch (err.type.code) {
     case AttestationErrorCode.FUTURE_SLOT:
-      this.logger.debug("Add attestation to pool", {
+      this.logger.debug("Future slot, add attestation to pool", {
         reason: err.type.code,
         attestationRoot: toHexString(attestationRoot),
       });
       this.pendingAttestations.putBySlot(err.type.attestationSlot, err.job);
       break;
 
+    case AttestationErrorCode.MISSING_ATTESTATION_TARGET_STATE:
+      this.logger.debug("missing target state, add attestation to pool", {
+        reason: err.type.code,
+        attestationRoot: toHexString(attestationRoot),
+      });
+      this.pendingAttestations.putByBlock(err.job.attestation.data.target.root, err.job);
+      break;
     case AttestationErrorCode.UNKNOWN_TARGET_ROOT:
-      this.logger.debug("Add attestation to pool", {
+      this.logger.debug("unknown target root, add attestation to pool", {
         reason: err.type.code,
         attestationRoot: toHexString(attestationRoot),
       });

@@ -5,10 +5,6 @@ import {IAttestationJob} from "../interface";
 
 export enum AttestationErrorCode {
   /**
-   * The target state cannot be fetched
-   */
-  TARGET_STATE_MISSING = "ATTESTATION_ERROR_TARGET_STATE_MISSING",
-  /**
    * The attestation is from a slot that is later than the current slot (with respect to the gossip clock disparity).
    */
   FUTURE_SLOT = "ATTESTATION_ERROR_FUTURE_SLOT",
@@ -134,7 +130,6 @@ export enum AttestationErrorCode {
 }
 
 export type AttestationErrorType =
-  | {code: AttestationErrorCode.TARGET_STATE_MISSING}
   | {code: AttestationErrorCode.FUTURE_SLOT; attestationSlot: Slot; latestPermissibleSlot: Slot}
   | {code: AttestationErrorCode.PAST_SLOT; attestationSlot: Slot; earliestPermissibleSlot: Slot}
   | {code: AttestationErrorCode.EMPTY_AGGREGATION_BITFIELD}

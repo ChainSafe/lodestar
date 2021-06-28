@@ -69,7 +69,7 @@ describe("verifyAttestationSignatures", function () {
     expect(emitSpy.args[0][0]).to.be.equal(ChainEvent.errorAttestation, "incorrect emit event");
     const attestationError = emitSpy.args[0][1] as AttestationError;
     expect(attestationError.job).to.be.deep.equal(jobs[1]);
-    expect(attestationError.type.code).to.be.equal(AttestationErrorCode.UNKNOWN_TARGET_ROOT);
+    expect(attestationError.type.code).to.be.equal(AttestationErrorCode.MISSING_ATTESTATION_TARGET_STATE);
     expect(validJobs.length).to.be.equal(1, "should return 1 valid jobs");
     expect(validJobs[0]).to.be.deep.equal({attestation: attestations[0], indexedAttestation, validSignature: true});
   });
@@ -149,7 +149,7 @@ describe("processAttestation", function () {
       });
       expect.fail("attestation should throw");
     } catch (e) {
-      expect((e as AttestationError).type.code).to.equal(AttestationErrorCode.UNKNOWN_TARGET_ROOT);
+      expect((e as AttestationError).type.code).to.equal(AttestationErrorCode.MISSING_ATTESTATION_TARGET_STATE);
     }
   });
 
