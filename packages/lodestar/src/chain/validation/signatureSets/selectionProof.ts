@@ -1,5 +1,4 @@
 import {DOMAIN_SELECTION_PROOF} from "@chainsafe/lodestar-params";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {allForks, phase0, Slot, ssz} from "@chainsafe/lodestar-types";
 import {PublicKey} from "@chainsafe/bls";
 import {
@@ -11,7 +10,6 @@ import {
 } from "@chainsafe/lodestar-beacon-state-transition";
 
 export function getSelectionProofSignatureSet(
-  config: IBeaconConfig,
   state: allForks.BeaconState,
   slot: Slot,
   aggregator: PublicKey,

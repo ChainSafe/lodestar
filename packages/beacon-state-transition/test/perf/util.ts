@@ -1,9 +1,10 @@
 import {config} from "@chainsafe/lodestar-config/default";
-import {Gwei, phase0, ssz, ValidatorIndex} from "@chainsafe/lodestar-types";
-import bls, {CoordType, PublicKey} from "@chainsafe/bls";
+import {Gwei, phase0, ssz, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
+import bls, {CoordType, PublicKey, SecretKey} from "@chainsafe/bls";
 import {fromHexString, List, TreeBacked, hash} from "@chainsafe/ssz";
 import {
   allForks,
+  interopSecretKey,
   computeEpochAtSlot,
   computeProposerIndex,
   getActiveValidatorIndices,
@@ -35,14 +36,33 @@ const logger = profilerLogger();
  * Number of validators in prater is 210000 as of May 2021
  */
 const numValidators = 250000;
-const numKeyPairs = 100;
+const keypairsMod = 100;
 
-// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-function getPubkeys() {
-  const pubkeysMod = interopPubkeysCached(numKeyPairs);
+/** Cache interop secret keys */
+const secretKeyByModIndex = new Map<number, SecretKey>();
+
+// eslint-disable-next-line @typescript-eslint/explicit-function-return-type, @typescript-eslint/explicit-module-boundary-types
+export function getPubkeys(vc = numValidators) {
+  const pubkeysMod = interopPubkeysCached(keypairsMod);
   const pubkeysModObj = pubkeysMod.map((pk) => bls.PublicKey.fromBytes(pk, CoordType.jacobian));
-  const pubkeys = Array.from({length: numValidators}, (_, i) => pubkeysMod[i % numKeyPairs]);
+  const pubkeys = Array.from({length: vc}, (_, i) => pubkeysMod[i % keypairsMod]);
   return {pubkeysMod, pubkeysModObj, pubkeys};
+}
+
+/** Get secret key of a validatorIndex, if the pubkeys are generated with `getPubkeys()` */
+export function getSecretKeyFromIndex(validatorIndex: number): SecretKey {
+  return interopSecretKey(validatorIndex % keypairsMod);
+}
+
+/** Get secret key of a validatorIndex, if the pubkeys are generated with `getPubkeys()` */
+export function getSecretKeyFromIndexCached(validatorIndex: number): SecretKey {
+  const keyIndex = validatorIndex % keypairsMod;
+  let sk = secretKeyByModIndex.get(keyIndex);
+  if (!sk) {
+    sk = interopSecretKey(keyIndex);
+    secretKeyByModIndex.set(keyIndex, sk);
+  }
+  return sk;
 }
 
 export function generatePerfTestCachedBeaconState(opts?: {
@@ -55,8 +75,8 @@ export function generatePerfTestCachedBeaconState(opts?: {
   const pubkey2index = new PubkeyIndexMap();
   const index2pubkey = [] as PublicKey[];
   for (let i = 0; i < numValidators; i++) {
-    const pubkey = pubkeysMod[i % numKeyPairs];
-    const pubkeyObj = pubkeysModObj[i % numKeyPairs];
+    const pubkey = pubkeysMod[i % keypairsMod];
+    const pubkeyObj = pubkeysModObj[i % keypairsMod];
     pubkey2index.set(pubkey, i);
     index2pubkey.push(pubkeyObj);
   }
@@ -236,4 +256,54 @@ function getBeaconProposerIndex(state: allForks.BeaconState): ValidatorIndex {
   const seed = hash(Buffer.concat([getSeed(state, currentEpoch, DOMAIN_BEACON_PROPOSER), intToBytes(state.slot, 8)]));
   const indices = getActiveValidatorIndices(state, currentEpoch);
   return computeProposerIndex(state, indices, seed);
+}
+
+export function generateTestCachedBeaconStateOnlyValidators({
+  vc,
+  slot,
+}: {
+  vc: number;
+  slot: Slot;
+}): allForks.CachedBeaconState<allForks.BeaconState> {
+  // Generate only some publicKeys
+  const {pubkeys, pubkeysMod, pubkeysModObj} = getPubkeys(vc);
+
+  // Manually sync pubkeys to prevent doing BLS opts 110_000 times
+  const pubkey2index = new PubkeyIndexMap();
+  const index2pubkey = [] as PublicKey[];
+  for (let i = 0; i < vc; i++) {
+    const pubkey = pubkeysMod[i % keypairsMod];
+    const pubkeyObj = pubkeysModObj[i % keypairsMod];
+    pubkey2index.set(pubkey, i);
+    index2pubkey.push(pubkeyObj);
+  }
+
+  const state = ssz.phase0.BeaconState.defaultTreeBacked();
+  state.slot = slot;
+
+  const activeValidator = ssz.phase0.Validator.createTreeBackedFromStruct({
+    pubkey: Buffer.alloc(48, 0),
+    withdrawalCredentials: Buffer.alloc(32, 0),
+    effectiveBalance: BigInt(31000000000),
+    slashed: false,
+    activationEligibilityEpoch: 0,
+    activationEpoch: 0,
+    exitEpoch: Infinity,
+    withdrawableEpoch: Infinity,
+  });
+
+  for (let i = 0; i < vc; i++) {
+    const validator = activeValidator.clone();
+    validator.pubkey = pubkeys[i];
+    state.validators[i] = validator;
+  }
+
+  state.balances = Array.from({length: pubkeys.length}, () => BigInt(31217089836)) as List<Gwei>;
+  state.randaoMixes = Array.from({length: EPOCHS_PER_HISTORICAL_VECTOR}, (_, i) => Buffer.alloc(32, i));
+
+  return allForks.createCachedBeaconState(config, state as TreeBacked<allForks.BeaconState>, {
+    pubkey2index,
+    index2pubkey,
+    skipSyncPubkeys: true,
+  });
 }

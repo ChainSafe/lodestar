@@ -8,18 +8,14 @@ import {GossipValidationError} from "../errors";
 import {OpSource} from "../../../metrics/validatorMonitor";
 
 export async function validateAggregatedAttestation(
-  {chain, db, config, logger, metrics}: IObjectValidatorModules,
+  {chain, logger, metrics}: IObjectValidatorModules,
   _topic: GossipTopic,
   signedAggregateAndProof: phase0.SignedAggregateAndProof
 ): Promise<void> {
   const seenTimestampSec = Date.now() / 1000;
-  const attestation = signedAggregateAndProof.message.aggregate;
 
   try {
-    const indexedAtt = await validateGossipAggregateAndProof(config, chain, db, signedAggregateAndProof, {
-      attestation: attestation,
-      validSignature: false,
-    });
+    const indexedAtt = await validateGossipAggregateAndProof(chain, signedAggregateAndProof);
     logger.debug("gossip - AggregateAndProof - accept");
 
     metrics?.registerAggregatedAttestation(OpSource.gossip, seenTimestampSec, signedAggregateAndProof, indexedAtt);
@@ -28,6 +24,17 @@ export async function validateAggregatedAttestation(
       logger.error("Gossip aggregate and proof validation threw a non-AttestationError", e);
       throw new GossipValidationError(ERR_TOPIC_VALIDATOR_IGNORE);
     }
+
+    // TODO: Add DoS resistant pending attestation pool
+    // switch (e.type.code) {
+    //   case AttestationErrorCode.FUTURE_SLOT:
+    //     chain.pendingAttestations.putBySlot(e.type.attestationSlot, attestation);
+    //     break;
+    //   case AttestationErrorCode.UNKNOWN_TARGET_ROOT:
+    //   case AttestationErrorCode.UNKNOWN_BEACON_BLOCK_ROOT:
+    //     chain.pendingAttestations.putByBlock(e.type.root, attestation);
+    //     break;
+    // }
 
     switch (e.type.code) {
       case AttestationErrorCode.WRONG_NUMBER_OF_AGGREGATION_BITS:
@@ -40,16 +47,12 @@ export async function validateAggregatedAttestation(
         throw new GossipValidationError(ERR_TOPIC_VALIDATOR_REJECT);
 
       case AttestationErrorCode.FUTURE_SLOT: // IGNORE
-        chain.receiveAttestation(attestation);
-      /** eslit-disable-next-line no-fallthrough */
       case AttestationErrorCode.PAST_SLOT:
-      case AttestationErrorCode.AGGREGATE_ALREADY_KNOWN:
+      case AttestationErrorCode.AGGREGATOR_ALREADY_KNOWN:
       case AttestationErrorCode.MISSING_ATTESTATION_TARGET_STATE:
       default:
         logger.debug("gossip - AggregateAndProof - ignore", e.type as Json);
         throw new GossipValidationError(ERR_TOPIC_VALIDATOR_IGNORE);
     }
-  } finally {
-    db.seenAttestationCache.addAggregateAndProof(signedAggregateAndProof.message);
   }
 }

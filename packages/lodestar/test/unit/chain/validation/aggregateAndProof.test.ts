@@ -1,363 +1,158 @@
-import sinon, {SinonStubbedInstance} from "sinon";
-import {expect} from "chai";
-import {rewiremock} from "../../../rewiremock";
-
-import {List} from "@chainsafe/ssz";
-import bls from "@chainsafe/bls";
-import {bigIntToBytes} from "@chainsafe/lodestar-utils";
-import {config} from "@chainsafe/lodestar-config/default";
-import * as aggregatorUtils from "@chainsafe/lodestar-beacon-state-transition/lib/util/aggregator";
-import {getCurrentSlot, ISignatureSet} from "@chainsafe/lodestar-beacon-state-transition";
-import * as indexedAttUtils from "@chainsafe/lodestar-beacon-state-transition/lib/allForks/block/isValidIndexedAttestation";
-import * as indexedAttSigSet from "@chainsafe/lodestar-beacon-state-transition/lib/allForks/signatureSets/indexedAttestation";
-
-import {BeaconChain, IAttestationJob, IBeaconChain} from "../../../../src/chain";
-import {LocalClock} from "../../../../src/chain/clock";
-import {IStateRegenerator, StateRegenerator} from "../../../../src/chain/regen";
-import {validateGossipAggregateAndProof} from "../../../../src/chain/validation";
-import {ATTESTATION_PROPAGATION_SLOT_RANGE, MAXIMUM_GOSSIP_CLOCK_DISPARITY} from "../../../../src/constants";
-import {generateSignedAggregateAndProof} from "../../../utils/aggregateAndProof";
-import {generateCachedState} from "../../../utils/state";
-import {StubbedBeaconDb} from "../../../utils/stub";
+import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
+import {phase0} from "@chainsafe/lodestar-types";
+import {IBeaconChain} from "../../../../src/chain";
 import {AttestationErrorCode} from "../../../../src/chain/errors";
+import {validateGossipAggregateAndProof} from "../../../../src/chain/validation";
 import {expectRejectedWithLodestarError} from "../../../utils/errors";
-import {SinonStubFn} from "../../../utils/types";
+import {generateTestCachedBeaconStateOnlyValidators} from "@chainsafe/lodestar-beacon-state-transition/test/perf/util";
+import {memoOnce} from "../../../utils/cache";
+import {
+  getAggregateAndProofValidData,
+  AggregateAndProofValidDataOpts,
+} from "../../../utils/validationData/aggregateAndProof";
 
-describe("gossip aggregate and proof test", function () {
-  let chain: SinonStubbedInstance<IBeaconChain>;
-  let regen: SinonStubbedInstance<IStateRegenerator>;
-  let db: StubbedBeaconDb;
-  let isAggregatorStub: SinonStubFn<typeof aggregatorUtils["isAggregatorFromCommitteeLength"]>;
-  let isValidIndexedAttestationStub: SinonStubFn<typeof indexedAttUtils["isValidIndexedAttestation"]>;
-  // This util it not relevant for testing since only the result of verifySignatureSets() matters
-  const getIndexedAttestationSignatureSet: typeof indexedAttSigSet["getIndexedAttestationSignatureSet"] = () =>
-    ({} as ISignatureSet);
+describe("chain / validation / aggregateAndProof", () => {
+  const vc = 64;
+  const stateSlot = 100;
+
+  const UNKNOWN_ROOT = Buffer.alloc(32, 1);
+  const KNOWN_TARGET_ROOT = Buffer.alloc(32, 0xd0);
+  const KNOWN_BEACON_BLOCK_ROOT = Buffer.alloc(32, 0xd1);
+
+  const getState = memoOnce(() => generateTestCachedBeaconStateOnlyValidators({vc, slot: stateSlot}));
 
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  async function mockValidateGossipAggregateAndProof({
-    isAggregatorFromCommitteeLength,
-    isValidIndexedAttestation,
-  }: {
-    isAggregatorFromCommitteeLength: typeof aggregatorUtils.isAggregatorFromCommitteeLength;
-    isValidIndexedAttestation: typeof indexedAttUtils.isValidIndexedAttestation;
-  }) {
-    return await rewiremock.around(
-      () => import("../../../../src/chain/validation"),
-      (mock) => {
-        mock(() => import("@chainsafe/lodestar-beacon-state-transition/lib/util/aggregator"))
-          .with({isAggregatorFromCommitteeLength})
-          .toBeUsed();
-        mock(() => import("@chainsafe/lodestar-beacon-state-transition/lib/allForks/block/isValidIndexedAttestation"))
-          .with({isValidIndexedAttestation})
-          .toBeUsed();
-        mock(() => import("@chainsafe/lodestar-beacon-state-transition/lib/allForks/signatureSets/indexedAttestation"))
-          .with({getIndexedAttestationSignatureSet})
-          .toBeUsed();
-      }
-    );
+  function getValidData(opts?: Partial<AggregateAndProofValidDataOpts>) {
+    return getAggregateAndProofValidData({
+      currentSlot: stateSlot,
+      attSlot: opts?.currentSlot ?? stateSlot,
+      attIndex: 1,
+      bitIndex: 1,
+      targetRoot: KNOWN_TARGET_ROOT,
+      beaconBlockRoot: KNOWN_BEACON_BLOCK_ROOT,
+      state: getState(),
+      ...opts,
+    });
   }
 
-  beforeEach(function () {
-    chain = sinon.createStubInstance(BeaconChain);
-    db = new StubbedBeaconDb(sinon);
-    chain.getGenesisTime.returns(Math.floor(Date.now() / 1000));
-    chain.clock = sinon.createStubInstance(LocalClock);
-    sinon.stub(chain.clock, "currentSlot").get(() => 0);
-    regen = chain.regen = sinon.createStubInstance(StateRegenerator);
-    chain.bls = {verifySignatureSets: async () => true};
-    db.seenAttestationCache.hasAggregateAndProof.returns(false);
-    isAggregatorStub = sinon.stub(aggregatorUtils, "isAggregatorFromCommitteeLength");
-    isValidIndexedAttestationStub = sinon.stub(indexedAttUtils, "isValidIndexedAttestation");
+  it("Valid", async () => {
+    const {chain, signedAggregateAndProof} = getValidData({});
+
+    await validateGossipAggregateAndProof(chain, signedAggregateAndProof);
   });
 
-  afterEach(function () {
-    isAggregatorStub.restore();
-    isValidIndexedAttestationStub.restore();
+  it("BAD_TARGET_EPOCH", async () => {
+    const {chain, signedAggregateAndProof} = getValidData({});
+
+    // Change target epoch to it doesn't match data.slot
+    signedAggregateAndProof.message.aggregate.data.target.epoch += 1;
+
+    await expectError(chain, signedAggregateAndProof, AttestationErrorCode.BAD_TARGET_EPOCH);
   });
 
-  it("should throw error - invalid slot (too old)", async function () {
-    //move genesis time in past so current slot is high
-    chain.getGenesisTime.returns(
-      Math.floor(Date.now() / 1000) - (ATTESTATION_PROPAGATION_SLOT_RANGE + 1) * config.SECONDS_PER_SLOT
-    );
-    sinon
-      .stub(chain.clock, "currentSlot")
-      .get(() =>
-        getCurrentSlot(
-          config,
-          Math.floor(Date.now() / 1000) - (ATTESTATION_PROPAGATION_SLOT_RANGE + 1) * config.SECONDS_PER_SLOT
-        )
-      );
-    const item = generateSignedAggregateAndProof({
-      aggregate: {
-        data: {
-          slot: 0,
-        },
-      },
-    });
+  it("PAST_SLOT", async () => {
+    // Set attestation at a very old slot
+    const {chain, signedAggregateAndProof} = getValidData({attSlot: stateSlot - SLOTS_PER_EPOCH - 3});
 
-    await expectRejectedWithLodestarError(
-      validateGossipAggregateAndProof(config, chain, db, item, {
-        attestation: item.message.aggregate,
-        validSignature: false,
-      } as IAttestationJob),
-      AttestationErrorCode.PAST_SLOT
-    );
+    await expectError(chain, signedAggregateAndProof, AttestationErrorCode.PAST_SLOT);
   });
 
-  it("should throw error - invalid slot (too eager)", async function () {
-    // move genesis time so slot 0 has not yet come
-    chain.getGenesisTime.returns(Math.floor(Date.now() / 1000) + MAXIMUM_GOSSIP_CLOCK_DISPARITY + 1);
-    sinon
-      .stub(chain.clock, "currentSlot")
-      .get(() => getCurrentSlot(config, Math.floor(Date.now() / 1000) + MAXIMUM_GOSSIP_CLOCK_DISPARITY + 1));
-    const item = generateSignedAggregateAndProof({
-      aggregate: {
-        data: {
-          slot: 0,
-        },
-      },
-    });
+  it("FUTURE_SLOT", async () => {
+    // Set attestation to a future slot
+    const {chain, signedAggregateAndProof} = getValidData({attSlot: stateSlot + 2});
 
-    await expectRejectedWithLodestarError(
-      validateGossipAggregateAndProof(config, chain, db, item, {
-        attestation: item.message.aggregate,
-        validSignature: false,
-      } as IAttestationJob),
-      AttestationErrorCode.FUTURE_SLOT
-    );
+    await expectError(chain, signedAggregateAndProof, AttestationErrorCode.FUTURE_SLOT);
   });
 
-  it("should throw error - already seen", async function () {
-    const item = generateSignedAggregateAndProof({
-      aggregate: {
-        data: {
-          slot: 0,
-        },
-      },
-    });
-    db.seenAttestationCache.hasAggregateAndProof.returns(true);
-
-    await expectRejectedWithLodestarError(
-      validateGossipAggregateAndProof(config, chain, db, item, {
-        attestation: item.message.aggregate,
-        validSignature: false,
-      } as IAttestationJob),
-      AttestationErrorCode.AGGREGATE_ALREADY_KNOWN
+  it("AGGREGATOR_ALREADY_KNOWN", async () => {
+    const {chain, signedAggregateAndProof} = getValidData();
+    // Register attester as already seen
+    chain.seenAggregators.add(
+      signedAggregateAndProof.message.aggregate.data.target.epoch,
+      signedAggregateAndProof.message.aggregatorIndex
     );
 
-    expect(db.seenAttestationCache.hasAggregateAndProof.withArgs(item.message).calledOnce).to.be.true;
+    await expectError(chain, signedAggregateAndProof, AttestationErrorCode.AGGREGATOR_ALREADY_KNOWN);
   });
 
-  it("should throw error - no attestation participants", async function () {
-    const item = generateSignedAggregateAndProof({
-      aggregate: {
-        aggregationBits: Array.from([false]) as List<boolean>,
-        data: {
-          slot: 0,
-        },
-      },
-    });
+  it("UNKNOWN_BEACON_BLOCK_ROOT", async () => {
+    const {chain, signedAggregateAndProof} = getValidData();
+    // Set beaconBlockRoot to a root not known by the fork choice
+    signedAggregateAndProof.message.aggregate.data.beaconBlockRoot = UNKNOWN_ROOT;
 
-    await expectRejectedWithLodestarError(
-      validateGossipAggregateAndProof(config, chain, db, item, {
-        attestation: item.message.aggregate,
-        validSignature: false,
-      } as IAttestationJob),
-      AttestationErrorCode.WRONG_NUMBER_OF_AGGREGATION_BITS
-    );
+    await expectError(chain, signedAggregateAndProof, AttestationErrorCode.UNKNOWN_BEACON_BLOCK_ROOT);
   });
 
-  it("should throw error - missing attestation prestate", async function () {
-    const item = generateSignedAggregateAndProof({
-      aggregate: {
-        aggregationBits: Array.from([true]) as List<boolean>,
-        data: {
-          slot: 0,
-        },
-      },
-    });
-    regen.getCheckpointState.throws();
+  it("INVALID_TARGET_ROOT", async () => {
+    const {chain, signedAggregateAndProof} = getValidData();
+    // Set target.root to an unknown root
+    signedAggregateAndProof.message.aggregate.data.target.root = UNKNOWN_ROOT;
 
-    await expectRejectedWithLodestarError(
-      validateGossipAggregateAndProof(config, chain, db, item, {
-        attestation: item.message.aggregate,
-        validSignature: false,
-      } as IAttestationJob),
-      AttestationErrorCode.MISSING_ATTESTATION_TARGET_STATE
-    );
-
-    expect(regen.getCheckpointState.withArgs(item.message.aggregate.data.target).calledOnce).to.be.true;
+    await expectError(chain, signedAggregateAndProof, AttestationErrorCode.INVALID_TARGET_ROOT);
   });
 
-  it("should throw error - aggregator not in committee", async function () {
-    const item = generateSignedAggregateAndProof({
-      aggregate: {
-        aggregationBits: Array.from([true]) as List<boolean>,
-        data: {
-          slot: 0,
-        },
-      },
-    });
-    const state = generateCachedState();
-    sinon.stub(state.epochCtx, "getBeaconCommittee").returns([]);
-    regen.getCheckpointState.resolves(state);
+  it("EMPTY_AGGREGATION_BITFIELD", async () => {
+    const {chain, signedAggregateAndProof} = getValidData();
+    // Unset all aggregationBits
+    const {aggregationBits} = signedAggregateAndProof.message.aggregate;
+    for (let i = 0, len = aggregationBits.length; i < len; i++) {
+      aggregationBits[i] = false;
+    }
 
-    await expectRejectedWithLodestarError(
-      validateGossipAggregateAndProof(config, chain, db, item, {
-        attestation: item.message.aggregate,
-        validSignature: false,
-      } as IAttestationJob),
-      AttestationErrorCode.AGGREGATOR_NOT_IN_COMMITTEE
-    );
-
-    expect(
-      (state.getBeaconCommittee as SinonStubFn<typeof state["getBeaconCommittee"]>).withArgs(
-        item.message.aggregate.data.slot,
-        item.message.aggregate.data.index
-      ).calledOnce
-    ).to.be.true;
+    await expectError(chain, signedAggregateAndProof, AttestationErrorCode.EMPTY_AGGREGATION_BITFIELD);
   });
 
-  it("should throw error - not aggregator", async function () {
-    const item = generateSignedAggregateAndProof({
-      aggregate: {
-        aggregationBits: Array.from([true]) as List<boolean>,
-        data: {
-          slot: 0,
-        },
-      },
-    });
-    const state = generateCachedState();
-    sinon.stub(state.epochCtx, "getBeaconCommittee").returns([item.message.aggregatorIndex]);
-    regen.getCheckpointState.resolves(state);
-    isAggregatorStub.returns(false);
+  // TODO: Need to manipulate state quite a bit to force modulo > 1. When the state has a low validator count
+  // all validators are aggregators.
+  it.skip("INVALID_AGGREGATOR", async () => {
+    const {chain, signedAggregateAndProof} = getValidData();
 
-    await expectRejectedWithLodestarError(
-      validateGossipAggregateAndProof(config, chain, db, item, {
-        attestation: item.message.aggregate,
-        validSignature: false,
-      } as IAttestationJob),
-      AttestationErrorCode.INVALID_AGGREGATOR
-    );
-
-    expect(isAggregatorStub.withArgs(1, item.message.selectionProof).calledOnce).to.be.true;
+    await expectError(chain, signedAggregateAndProof, AttestationErrorCode.INVALID_AGGREGATOR);
   });
 
-  it("should throw error - invalid selection proof signature", async function () {
-    const {validateGossipAggregateAndProof} = await mockValidateGossipAggregateAndProof({
-      isAggregatorFromCommitteeLength: sinon.stub().returns(true),
-      isValidIndexedAttestation: sinon.stub().returns(true),
-    });
-    chain.bls.verifySignatureSets = async () => false;
+  it("AGGREGATOR_NOT_IN_COMMITTEE", async () => {
+    const attIndex = 1;
+    const {chain, signedAggregateAndProof} = getValidData({attIndex});
+    // Change the attestation index so the aggregator is not longer in the valid committee
+    signedAggregateAndProof.message.aggregate.data.index = attIndex - 1;
 
-    const item = generateSignedAggregateAndProof({
-      aggregate: {
-        aggregationBits: Array.from([true]) as List<boolean>,
-        data: {
-          slot: 0,
-        },
-      },
-    });
-    const state = generateCachedState();
-    const privateKey = bls.SecretKey.fromBytes(bigIntToBytes(BigInt(1), 32));
-    state.index2pubkey[item.message.aggregatorIndex] = privateKey.toPublicKey();
-    sinon.stub(state.epochCtx, "getBeaconCommittee").returns([item.message.aggregatorIndex]);
-    regen.getCheckpointState.resolves(state);
-
-    await expectRejectedWithLodestarError(
-      validateGossipAggregateAndProof(config, chain, db, item, {
-        attestation: item.message.aggregate,
-        validSignature: false,
-      } as IAttestationJob),
-      AttestationErrorCode.INVALID_SIGNATURE
-    );
+    await expectError(chain, signedAggregateAndProof, AttestationErrorCode.AGGREGATOR_NOT_IN_COMMITTEE);
   });
 
-  it("should throw error - invalid signature", async function () {
-    const {validateGossipAggregateAndProof} = await mockValidateGossipAggregateAndProof({
-      isAggregatorFromCommitteeLength: sinon.stub().returns(true),
-      isValidIndexedAttestation: sinon.stub().returns(true),
-    });
-    chain.bls.verifySignatureSets = async () => false;
+  it("INVALID_SIGNATURE - selection proof sig", async () => {
+    const bitIndex = 1;
+    const {chain, signedAggregateAndProof} = getValidData({bitIndex});
+    // Swap the selectionProof signature with the overall sig of the object
+    signedAggregateAndProof.message.selectionProof = signedAggregateAndProof.signature;
 
-    const item = generateSignedAggregateAndProof({
-      aggregate: {
-        aggregationBits: Array.from([true]) as List<boolean>,
-        data: {
-          slot: 0,
-        },
-      },
-    });
-    const state = generateCachedState();
-    const privateKey = bls.SecretKey.fromBytes(bigIntToBytes(BigInt(1), 32));
-    state.index2pubkey[item.message.aggregatorIndex] = privateKey.toPublicKey();
-    sinon.stub(state.epochCtx, "getBeaconCommittee").returns([item.message.aggregatorIndex]);
-    regen.getCheckpointState.resolves(state);
-
-    await expectRejectedWithLodestarError(
-      validateGossipAggregateAndProof(config, chain, db, item, {
-        attestation: item.message.aggregate,
-        validSignature: false,
-      } as IAttestationJob),
-      AttestationErrorCode.INVALID_SIGNATURE
-    );
+    await expectError(chain, signedAggregateAndProof, AttestationErrorCode.INVALID_SIGNATURE);
   });
 
-  it("should throw error - invalid indexed attestation", async function () {
-    const {validateGossipAggregateAndProof} = await mockValidateGossipAggregateAndProof({
-      isAggregatorFromCommitteeLength: sinon.stub().returns(true),
-      isValidIndexedAttestation: sinon.stub().returns(false),
-    });
-    chain.bls.verifySignatureSets = async () => true;
+  it("INVALID_SIGNATURE - aggregate sig", async () => {
+    const bitIndex = 1;
+    const {chain, signedAggregateAndProof} = getValidData({bitIndex});
+    // Swap the selectionProof signature with the overall sig of the object
+    signedAggregateAndProof.signature = signedAggregateAndProof.message.selectionProof;
 
-    const item = generateSignedAggregateAndProof({
-      aggregate: {
-        aggregationBits: Array.from([true]) as List<boolean>,
-        data: {
-          slot: 0,
-        },
-      },
-    });
-    const state = generateCachedState();
-    const privateKey = bls.SecretKey.fromBytes(bigIntToBytes(BigInt(1), 32));
-    state.index2pubkey[item.message.aggregatorIndex] = privateKey.toPublicKey();
-    sinon.stub(state.epochCtx, "getBeaconCommittee").returns([item.message.aggregatorIndex]);
-    regen.getCheckpointState.resolves(state);
-
-    await expectRejectedWithLodestarError(
-      validateGossipAggregateAndProof(config, chain, db, item, {
-        attestation: item.message.aggregate,
-        validSignature: false,
-      } as IAttestationJob),
-      AttestationErrorCode.INVALID_INDEXED_ATTESTATION
-    );
+    await expectError(chain, signedAggregateAndProof, AttestationErrorCode.INVALID_SIGNATURE);
   });
 
-  it("should accept", async function () {
-    const {validateGossipAggregateAndProof} = await mockValidateGossipAggregateAndProof({
-      isAggregatorFromCommitteeLength: sinon.stub().returns(true),
-      isValidIndexedAttestation: sinon.stub().returns(true),
-    });
-    chain.bls.verifySignatureSets = async () => true;
+  it("INVALID_SIGNATURE - attestation sig", async () => {
+    const bitIndex = 1;
+    const {chain, signedAggregateAndProof} = getValidData({bitIndex});
+    // Change the bit index so the signature is validated against a different pubkey
+    signedAggregateAndProof.message.aggregate.aggregationBits[bitIndex] = false;
+    signedAggregateAndProof.message.aggregate.aggregationBits[bitIndex + 1] = true;
 
-    const item = generateSignedAggregateAndProof({
-      aggregate: {
-        aggregationBits: Array.from([true]) as List<boolean>,
-        data: {
-          slot: 0,
-        },
-      },
-    });
-    const state = generateCachedState();
-    const privateKey = bls.SecretKey.fromKeygen();
-    state.index2pubkey[item.message.aggregatorIndex] = privateKey.toPublicKey();
-    sinon.stub(state.epochCtx, "getBeaconCommittee").returns([item.message.aggregatorIndex]);
-    regen.getCheckpointState.resolves(state);
-
-    await validateGossipAggregateAndProof(config, chain, db, item, {
-      attestation: item.message.aggregate,
-      validSignature: false,
-    } as IAttestationJob);
+    await expectError(chain, signedAggregateAndProof, AttestationErrorCode.INVALID_SIGNATURE);
   });
+
+  /** Alias to reduce code duplication */
+  async function expectError(
+    chain: IBeaconChain,
+    signedAggregateAndProof: phase0.SignedAggregateAndProof,
+    errorCode: AttestationErrorCode
+  ): Promise<void> {
+    await expectRejectedWithLodestarError(validateGossipAggregateAndProof(chain, signedAggregateAndProof), errorCode);
+  }
 });

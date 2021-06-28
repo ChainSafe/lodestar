@@ -19,7 +19,6 @@ import {GENESIS_EPOCH, ZERO_HASH} from "../constants";
 import {IBeaconDb} from "../db";
 import {CheckpointStateCache, StateContextCache} from "./stateCache";
 import {IMetrics} from "../metrics";
-import {AttestationPool, AttestationProcessor} from "./attestation";
 import {BlockPool, BlockProcessor} from "./blocks";
 import {IBeaconClock, LocalClock} from "./clock";
 import {ChainEventEmitter} from "./emitter";
@@ -30,7 +29,9 @@ import {IStateRegenerator, QueuedStateRegenerator} from "./regen";
 import {LodestarForkChoice} from "./forkChoice";
 import {restoreStateCaches} from "./initState";
 import {IBlsVerifier, BlsSingleThreadVerifier, BlsMultiThreadWorkerPool} from "./bls";
+import {SeenAttesters, SeenAggregators} from "./seenCache";
 import {ForkDigestContext, IForkDigestContext} from "../util/forkDigestContext";
+import {AttestationPool} from "./opsPool/attestationPool";
 
 export interface IBeaconChainModules {
   config: IBeaconConfig;
@@ -51,12 +52,16 @@ export class BeaconChain implements IBeaconChain {
   stateCache: StateContextCache;
   checkpointStateCache: CheckpointStateCache;
   regen: IStateRegenerator;
-  pendingAttestations: AttestationPool;
   pendingBlocks: BlockPool;
   forkDigestContext: IForkDigestContext;
   lightclientUpdater: LightClientUpdater;
 
-  protected attestationProcessor: AttestationProcessor;
+  // Ops pool
+  readonly attestationPool = new AttestationPool();
+
+  readonly seenAttesters = new SeenAttesters();
+  readonly seenAggregators = new SeenAggregators();
+
   protected blockProcessor: BlockProcessor;
   protected readonly config: IBeaconConfig;
   protected readonly db: IBeaconDb;
@@ -108,9 +113,7 @@ export class BeaconChain implements IBeaconChain {
       metrics,
       signal,
     });
-    this.pendingAttestations = new AttestationPool({config});
     this.pendingBlocks = new BlockPool(config, logger);
-    this.attestationProcessor = new AttestationProcessor({config, forkChoice, emitter, clock, regen});
     this.blockProcessor = new BlockProcessor({
       config,
       forkChoice,
@@ -224,12 +227,6 @@ export class BeaconChain implements IBeaconChain {
 
   getFinalizedCheckpoint(): phase0.Checkpoint {
     return this.forkChoice.getFinalizedCheckpoint();
-  }
-
-  receiveAttestation(attestation: phase0.Attestation): void {
-    this.attestationProcessor
-      .processAttestationJob({attestation, validSignature: false})
-      .catch(() => /* unreachable */ ({}));
   }
 
   receiveBlock(signedBlock: allForks.SignedBeaconBlock, trusted = false): void {

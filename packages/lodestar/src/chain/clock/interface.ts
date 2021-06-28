@@ -15,6 +15,8 @@ export interface IBeaconClock {
    */
   readonly currentSlotWithGossipDisparity: Slot;
   readonly currentEpoch: Epoch;
+  /** Returns the slot if the internal clock were advanced by `toleranceSec`. */
+  slotWithTolerance(toleranceSec: number): Slot;
   /**
    * Check if a slot is current slot given MAXIMUM_GOSSIP_CLOCK_DISPARITY.
    */

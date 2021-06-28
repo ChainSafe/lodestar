@@ -17,12 +17,13 @@ import {LocalClock} from "../../../../src/chain/clock";
 import {IStateRegenerator, StateRegenerator} from "../../../../src/chain/regen";
 import {StubbedBeaconDb} from "../../stub";
 import {BlockPool} from "../../../../src/chain/blocks";
-import {AttestationPool} from "../../../../src/chain/attestation";
 import {IBlsVerifier, BlsSingleThreadVerifier} from "../../../../src/chain/bls";
 import {ForkDigestContext, IForkDigestContext} from "../../../../src/util/forkDigestContext";
 import {generateEmptyBlockSummary} from "../../block";
 import {ForkName} from "@chainsafe/lodestar-params";
 import {testLogger} from "../../logger";
+import {AttestationPool} from "../../../../src/chain/opsPool/attestationPool";
+import {SeenAggregators, SeenAttesters} from "../../../../src/chain/seenCache";
 
 /* eslint-disable @typescript-eslint/no-empty-function */
 
@@ -47,9 +48,14 @@ export class MockBeaconChain implements IBeaconChain {
   regen: IStateRegenerator;
   emitter: ChainEventEmitter;
   pendingBlocks: BlockPool;
-  pendingAttestations: AttestationPool;
   forkDigestContext: IForkDigestContext;
   lightclientUpdater: LightClientUpdater;
+
+  // Ops pool
+  readonly attestationPool = new AttestationPool();
+
+  readonly seenAttesters = new SeenAttesters();
+  readonly seenAggregators = new SeenAggregators();
 
   private state: TreeBacked<allForks.BeaconState>;
   private config: IBeaconConfig;
@@ -76,9 +82,6 @@ export class MockBeaconChain implements IBeaconChain {
     this.stateCache = new StateContextCache();
     this.checkpointStateCache = new CheckpointStateCache(this.config);
     this.pendingBlocks = new BlockPool(config, logger);
-    this.pendingAttestations = new AttestationPool({
-      config: this.config,
-    });
     const db = new StubbedBeaconDb(sinon);
     this.regen = new StateRegenerator({
       config: this.config,
@@ -141,10 +144,6 @@ export class MockBeaconChain implements IBeaconChain {
 
   getGenesisTime(): Number64 {
     return Math.floor(Date.now() / 1000);
-  }
-
-  async receiveAttestation(): Promise<void> {
-    return;
   }
 
   async receiveBlock(): Promise<void> {

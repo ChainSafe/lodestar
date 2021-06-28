@@ -9,6 +9,10 @@ import {ChainEvent, ChainEventEmitter} from "../emitter";
 import {IBeaconClock} from "./interface";
 import {MAXIMUM_GOSSIP_CLOCK_DISPARITY} from "../../constants";
 
+// let latest_permissible_slot = chain
+// .slot_clock
+// .now_with_future_tolerance(MAXIMUM_GOSSIP_CLOCK_DISPARITY)
+
 /**
  * A local clock, the clock time is assumed to be trusted
  */
@@ -61,6 +65,11 @@ export class LocalClock implements IBeaconClock {
 
   get currentEpoch(): Epoch {
     return computeEpochAtSlot(this.currentSlot);
+  }
+
+  /** Returns the slot if the internal clock were advanced by `toleranceSec`. */
+  slotWithTolerance(toleranceSec: number): Slot {
+    return getCurrentSlot(this.config, this.genesisTime + toleranceSec);
   }
 
   /**
