@@ -163,7 +163,7 @@ export function isCommitteeIndexWithinRange(
   epochCtx: allForks.EpochContext,
   attestationData: phase0.AttestationData
 ): boolean {
-  return attestationData.index < epochCtx.getCommitteeCountPerSlot(attestationData.slot);
+  return attestationData.index < epochCtx.getCommitteeCountPerSlot(computeEpochAtSlot(attestationData.slot));
 }
 
 export function doAggregationBitsMatchCommitteeSize(
