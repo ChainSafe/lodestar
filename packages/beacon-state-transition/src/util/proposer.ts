@@ -5,21 +5,9 @@
 import {hash} from "@chainsafe/ssz";
 import {allForks, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {assert, intToBytes, intDiv} from "@chainsafe/lodestar-utils";
-import {DOMAIN_BEACON_PROPOSER, MAX_EFFECTIVE_BALANCE} from "@chainsafe/lodestar-params";
+import {MAX_EFFECTIVE_BALANCE} from "@chainsafe/lodestar-params";
 
-import {getCurrentEpoch} from "./epoch";
-import {getSeed, computeShuffledIndex} from "./seed";
-import {getActiveValidatorIndices} from "./validator";
-
-/**
- * Return the beacon proposer index at ``state.slot``.
- */
-export function getBeaconProposerIndex(state: allForks.BeaconState): ValidatorIndex {
-  const currentEpoch = getCurrentEpoch(state);
-  const seed = hash(Buffer.concat([getSeed(state, currentEpoch, DOMAIN_BEACON_PROPOSER), intToBytes(state.slot, 8)]));
-  const indices = getActiveValidatorIndices(state, currentEpoch);
-  return computeProposerIndex(state, indices, seed);
-}
+import {computeShuffledIndex} from "./seed";
 
 /**
  * Return from ``indices`` a random index sampled by effective balance.
