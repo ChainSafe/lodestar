@@ -95,7 +95,7 @@ export interface IBeaconChain {
   /** Put to AttestationPool to reprocess after we reach attestation slot */
   pendingAttestationBySlot(attestation: phase0.Attestation): void;
   /** Add attestation to the fork-choice rule */
-  receiveAttestation(attestation: phase0.Attestation): void;
+  receiveAttestation(job: IAttestationJob): void;
   /** Pre-process and run the per slot state transition function */
   receiveBlock(signedBlock: allForks.SignedBeaconBlock, trusted?: boolean): void;
   /** Process a block until complete */

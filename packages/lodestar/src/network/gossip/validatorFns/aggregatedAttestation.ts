@@ -21,6 +21,7 @@ export async function validateAggregatedAttestation(
       validSignature: false,
     });
     logger.debug("gossip - AggregateAndProof - accept");
+    chain.receiveAttestation({attestation, indexedAttestation: indexedAtt, validSignature: true});
 
     metrics?.registerAggregatedAttestation(OpSource.gossip, seenTimestampSec, signedAggregateAndProof, indexedAtt);
   } catch (e) {

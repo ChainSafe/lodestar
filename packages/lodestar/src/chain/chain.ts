@@ -31,6 +31,7 @@ import {LodestarForkChoice} from "./forkChoice";
 import {restoreStateCaches} from "./initState";
 import {BlsVerifier, IBlsVerifier} from "./bls";
 import {ForkDigestContext, IForkDigestContext} from "../util/forkDigestContext";
+import {IAttestationJob} from "../../src/chain";
 
 export interface IBeaconChainModules {
   config: IBeaconConfig;
@@ -232,10 +233,8 @@ export class BeaconChain implements IBeaconChain {
     this.pendingAttestations.putBySlot(attestation.data.slot, {attestation, validSignature: false});
   }
 
-  receiveAttestation(attestation: phase0.Attestation): void {
-    this.attestationProcessor
-      .processAttestationJob({attestation, validSignature: false})
-      .catch(() => /* unreachable */ ({}));
+  receiveAttestation(job: IAttestationJob): void {
+    this.attestationProcessor.processAttestationJob(job).catch(() => /* unreachable */ ({}));
   }
 
   receiveBlock(signedBlock: allForks.SignedBeaconBlock, trusted = false): void {

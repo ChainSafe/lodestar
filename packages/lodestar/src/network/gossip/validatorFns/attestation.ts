@@ -24,6 +24,7 @@ export async function validateCommitteeAttestation(
 
     const indexedAtt = await validateGossipAttestation(config, chain, db, attestationJob, subnet);
     logger.debug("gossip - Attestation - accept", {subnet});
+    chain.receiveAttestation({attestation, indexedAttestation: indexedAtt, validSignature: true});
 
     metrics?.registerUnaggregatedAttestation(OpSource.gossip, seenTimestampSec, indexedAtt);
   } catch (e) {

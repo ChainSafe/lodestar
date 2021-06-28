@@ -26,6 +26,11 @@ type AttestationProcessorModules = {
   regen: IStateRegenerator;
 };
 
+/** In terms of batch signature verification, we can make this the same to MAX_ATTESTATION
+ *  but we also don't want attestations to be delayed a lot.
+ **/
+const ITEMS_PER_BATCH = 10;
+
 export class AttestationProcessor {
   private modules: AttestationProcessorModules;
   private pendingAttestationJobs: IAttestationJob[] = [];
@@ -55,12 +60,12 @@ export class AttestationProcessor {
 }
 
 /**
- * Check if it's enough 128 jobs to process.
+ * Check if it's enough ITEMS_PER_BATCH jobs to process.
  * Return jobs to process or undefined.
  */
 export function needProcessPendingAttestations(
   pendingAttestationJobs: IAttestationJob[],
-  itemsPerBatch = 128
+  itemsPerBatch = ITEMS_PER_BATCH
 ): IAttestationJob[] | null {
   if (pendingAttestationJobs.length >= itemsPerBatch) {
     return pendingAttestationJobs.splice(0, itemsPerBatch);
