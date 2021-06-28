@@ -22,7 +22,7 @@ import {defaultNetwork, IGlobalArgs} from "../../options/globalOptions";
 import {fetchWeakSubjectivityState, getGenesisFileUrl, getInfuraBeaconUrl, infuraNetworks} from "../../networks";
 import {Checkpoint} from "@chainsafe/lodestar-types/phase0";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
-import {computeEpochAtSlot} from "../../../../beacon-state-transition/lib";
+import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 
 const checkpointRegex = new RegExp("^(?:0x)?([0-9a-f]{64}):([0-9]+)$");
 
