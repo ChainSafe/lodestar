@@ -50,10 +50,11 @@ export async function beaconHandler(args: IBeaconArgs & IGlobalArgs): Promise<vo
   logger.info("Lodestar", {version: lodestarGitData.version, network: args.network});
 
   let dbMetrics: null | ReturnType<typeof createDbMetrics> = null;
-  const metricRegistries = [];
+  // additional metrics registries
+  const metricsRegistries = [];
   if (options.metrics.enabled) {
     dbMetrics = createDbMetrics();
-    metricRegistries.push(dbMetrics.registry);
+    metricsRegistries.push(dbMetrics.registry);
   }
   const db = new BeaconDb({
     config,
@@ -73,7 +74,7 @@ export async function beaconHandler(args: IBeaconArgs & IGlobalArgs): Promise<vo
       logger,
       libp2p: await createNodeJsLibp2p(peerId, options.network, {peerStoreDir: beaconPaths.peerStoreDir}),
       anchorState,
-      metricRegistries,
+      metricsRegistries,
     });
 
     abortController.signal.addEventListener("abort", () => node.close(), {once: true});

@@ -47,7 +47,7 @@ export interface IBeaconNodeInitModules {
   logger: ILogger;
   libp2p: LibP2p;
   anchorState: TreeBacked<allForks.BeaconState>;
-  metricRegistries?: Registry[];
+  metricsRegistries?: Registry[];
 }
 
 export enum BeaconNodeStatus {
@@ -117,7 +117,7 @@ export class BeaconNode {
     logger,
     libp2p,
     anchorState,
-    metricRegistries = [],
+    metricsRegistries = [],
   }: IBeaconNodeInitModules): Promise<T> {
     const controller = new AbortController();
     const signal = controller.signal;
@@ -125,7 +125,7 @@ export class BeaconNode {
     // start db if not already started
     await db.start();
 
-    const metrics = opts.metrics.enabled ? createMetrics(opts.metrics, config, anchorState, metricRegistries) : null;
+    const metrics = opts.metrics.enabled ? createMetrics(opts.metrics, config, anchorState, metricsRegistries) : null;
     if (metrics) {
       initBeaconMetrics(metrics, anchorState);
     }
