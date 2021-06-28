@@ -33,9 +33,7 @@
     "lint": "eslint --color --ext .ts src/ test/",
     "lint:fix": "yarn run lint --fix",
     "test:unit": "mocha 'test/unit/**/*.test.ts'",
-    "test:perf": "mocha 'test/perf/**/*.test.ts'",
-    "benchmark": "node -r ts-node/register --max-old-space-size=4096 test/perf/runAll.ts",
-    "dev": "ts-node test/perf/phase0/epoch/processRewardsAndPenalties.perf.ts"
+    "benchmark": "node --max-old-space-size=4096 -r ts-node/register ../../node_modules/.bin/benchmark 'test/perf/**/*.test.ts'"
   },
   "types": "lib/index.d.ts",
   "dependencies": {

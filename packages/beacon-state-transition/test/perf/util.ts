@@ -219,3 +219,13 @@ export function generatePerformanceBlock(): TreeBacked<phase0.SignedBeaconBlock>
   }
   return signedBlock.clone();
 }
+
+export function runOnce<T>(fn: () => T): () => T {
+  let value: T | null = null;
+  return function () {
+    if (value === null) {
+      value = fn();
+    }
+    return value;
+  };
+}
