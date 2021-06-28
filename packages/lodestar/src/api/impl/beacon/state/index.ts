@@ -131,7 +131,7 @@ export function getBeaconStateApi({chain, config, db}: Pick<ApiModules, "chain" 
     async getEpochCommittees(stateId, filters) {
       const state = await resolveStateId(config, chain, db, stateId);
 
-      const committes = getEpochBeaconCommittees(config, state, filters?.epoch ?? computeEpochAtSlot(state.slot));
+      const committes = getEpochBeaconCommittees(state, filters?.epoch ?? computeEpochAtSlot(state.slot));
       const committesFlat = committes.flatMap((slotCommittees, committeeIndex) => {
         if (filters?.index && filters.index !== committeeIndex) {
           return [];
@@ -170,7 +170,7 @@ export function getBeaconStateApi({chain, config, db}: Pick<ApiModules, "chain" 
 
       return {
         data: {
-          validators: getSyncCommittees(config, state, epoch ?? stateEpoch),
+          validators: getSyncCommittees(state, epoch ?? stateEpoch),
           // TODO: This is not used by the validator and will be deprecated soon
           validatorAggregates: [],
         },
