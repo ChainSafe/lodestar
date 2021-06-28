@@ -6,13 +6,15 @@ import {spawn, Worker} from "threads";
 // eslint-disable-next-line
 self = undefined;
 import {AbortSignal} from "@chainsafe/abort-controller";
-import {Implementation, PointFormat, PublicKey} from "@chainsafe/bls";
+import {bls, Implementation, PointFormat} from "@chainsafe/bls";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {QueueError, QueueErrorCode} from "../../../util/queue";
 import {IMetrics} from "../../../metrics";
-import {IBlsVerifierImpl} from "../interface";
+import {IBlsVerifier} from "../interface";
 import {BlsWorkReq, WorkerData, WorkResult, WorkResultCode} from "./types";
 import {chunkifyMaximizeChunkSize, getDefaultPoolSize} from "./utils";
+import {ISignatureSet} from "@chainsafe/lodestar-beacon-state-transition/src";
+import {getAggregatedPubkey} from "../utils";
 
 export type BlsMultiThreadWorkerPoolModules = {
   logger: ILogger;
@@ -68,7 +70,7 @@ type WorkerDescriptor = {
  *   communiction has very high latency, of around ~5 ms. So package multiple small signature
  *   sets into packages of work and send at once to a worker to distribute the latency cost
  */
-export class BlsMultiThreadWorkerPool implements IBlsVerifierImpl {
+export class BlsMultiThreadWorkerPool implements IBlsVerifier {
   private readonly logger: ILogger;
   private readonly metrics: IMetrics | null;
   private readonly signal: AbortSignal;
@@ -77,11 +79,14 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifierImpl {
   private readonly jobs: JobQueueItem[] = [];
   private readonly workers: WorkerDescriptor[];
 
-  constructor(implementation: Implementation, modules: BlsMultiThreadWorkerPoolModules) {
+  constructor(modules: BlsMultiThreadWorkerPoolModules) {
     const {logger, metrics, signal} = modules;
     this.logger = logger;
     this.metrics = metrics;
     this.signal = signal;
+
+    // TODO: Allow to customize implementation
+    const implementation = bls.implementation;
 
     // Use compressed for herumi for now.
     // THe worker is not able to deserialize from uncompressed
@@ -97,17 +102,14 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifierImpl {
     }
   }
 
-  async verifySignatureSets(
-    sets: {publicKey: PublicKey; message: Uint8Array; signature: Uint8Array}[],
-    validateSignature: boolean
-  ): Promise<boolean> {
+  async verifySignatureSets(sets: ISignatureSet[], validateSignature = true): Promise<boolean> {
     const results = await Promise.all(
       chunkifyMaximizeChunkSize(sets, MAX_SIGNATURE_SETS_PER_JOB).map((setsWorker) =>
         this.queueBlsWork({
           validateSignature,
           sets: setsWorker.map((s) => ({
-            publicKey: s.publicKey.toBytes(this.format),
-            message: s.message,
+            publicKey: getAggregatedPubkey(s).toBytes(this.format),
+            message: s.signingRoot.valueOf() as Uint8Array,
             signature: s.signature,
           })),
         })

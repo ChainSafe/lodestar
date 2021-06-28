@@ -225,14 +225,14 @@ describe("beacon state api utils", function () {
     it("current epoch with epoch context", function () {
       const state = generateCachedState({}, config);
       state.slot = computeStartSlotAtEpoch(1);
-      const committees = getEpochBeaconCommittees(config, state, 1);
+      const committees = getEpochBeaconCommittees(state, 1);
       expect(committees).to.be.deep.equal(state.currentShuffling.committees);
     });
 
     it("previous epoch with epoch context", function () {
       const state = generateCachedState({}, config);
       state.slot = computeStartSlotAtEpoch(2);
-      const committees = getEpochBeaconCommittees(config, state, 1);
+      const committees = getEpochBeaconCommittees(state, 1);
       expect(committees).to.be.deep.equal(state.previousShuffling.committees);
     });
 
@@ -242,7 +242,7 @@ describe("beacon state api utils", function () {
         config
       );
       state.slot = computeStartSlotAtEpoch(3);
-      const committees = getEpochBeaconCommittees(config, state, 1);
+      const committees = getEpochBeaconCommittees(state, 1);
       expect(committees[0][0][0]).to.not.be.undefined;
     });
   });

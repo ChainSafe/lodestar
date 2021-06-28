@@ -5,9 +5,10 @@ import {ILogger} from "@chainsafe/lodestar-utils";
 import fastifyCors from "fastify-cors";
 import querystring from "querystring";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {LightClientUpdater} from "../src/server/LightClientUpdater";
 import {TreeBacked} from "@chainsafe/ssz";
 import {altair, ssz} from "@chainsafe/lodestar-types";
+import {blockToHeader} from "@chainsafe/lodestar-beacon-state-transition";
+import {LightClientUpdater} from "../src/server/LightClientUpdater";
 
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 
@@ -15,6 +16,10 @@ const maxPeriodsPerRequest = 128;
 
 export type IStateRegen = {
   getStateByRoot(stateRoot: string): Promise<TreeBacked<altair.BeaconState>>;
+};
+
+export type IBlockCache = {
+  getBlockByRoot(blockRoot: string): Promise<altair.BeaconBlock>;
 };
 
 export type ServerOpts = {
@@ -27,6 +32,7 @@ export type ServerModules = {
   lightClientUpdater: LightClientUpdater;
   logger: ILogger;
   stateRegen: IStateRegen;
+  blockCache: IBlockCache;
 };
 
 export async function startLightclientApiServer(opts: ServerOpts, modules: ServerModules): Promise<FastifyInstance> {
@@ -37,7 +43,13 @@ export async function startLightclientApiServer(opts: ServerOpts, modules: Serve
   });
 
   const lightclientApi = getLightclientServerApi(modules);
-  registerRoutes(server, modules.config, {lightclient: lightclientApi} as Api, ["lightclient"]);
+  const beaconApi = getBeaconServerApi(modules);
+  const api = {
+    lightclient: lightclientApi,
+    beacon: beaconApi,
+  } as Api;
+
+  registerRoutes(server, modules.config, api, ["lightclient", "beacon"]);
 
   void server.register(fastifyCors, {origin: "*"});
 
@@ -75,6 +87,28 @@ function getLightclientServerApi(modules: ServerModules): Api["lightclient"] {
       return {data};
     },
   };
+}
+
+function getBeaconServerApi(modules: ServerModules): Api["beacon"] {
+  const {config, blockCache} = modules;
+  const api = {
+    async getBlockHeader(blockId: string) {
+      const block = await blockCache.getBlockByRoot(blockId);
+
+      return {
+        data: {
+          root: config.getForkTypes(block.slot).BeaconBlock.hashTreeRoot(block),
+          canonical: true,
+          header: {
+            message: blockToHeader(modules.config, block),
+            signature: Buffer.alloc(96, 0),
+          },
+        },
+      };
+    },
+  } as Partial<Api["beacon"]>;
+
+  return api as Api["beacon"];
 }
 
 function linspace(from: number, to: number): number[] {

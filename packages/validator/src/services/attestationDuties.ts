@@ -1,11 +1,11 @@
-import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
+import {computeEpochAtSlot, isAggregatorFromCommitteeLength} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {BLSSignature, Epoch, Root, Slot, ssz, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {Api, routes} from "@chainsafe/lodestar-api";
 import {toHexString} from "@chainsafe/ssz";
 import {IndicesService} from "./indices";
-import {extendError, isAttestationAggregator, notAborted} from "../util";
+import {extendError, notAborted} from "../util";
 import {IClock} from "../util/clock";
 import {ValidatorStore} from "./validatorStore";
 
@@ -191,7 +191,7 @@ export class AttestationDutiesService {
 
   private async getDutyAndProof(duty: routes.validator.AttesterDuty): Promise<AttDutyAndProof> {
     const selectionProof = await this.validatorStore.signAttestationSelectionProof(duty.pubkey, duty.slot);
-    const isAggregator = isAttestationAggregator(this.config, duty, selectionProof);
+    const isAggregator = isAggregatorFromCommitteeLength(duty.committeeLength, selectionProof);
 
     return {
       duty,

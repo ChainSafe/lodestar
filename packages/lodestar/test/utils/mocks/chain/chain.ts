@@ -18,7 +18,7 @@ import {IStateRegenerator, StateRegenerator} from "../../../../src/chain/regen";
 import {StubbedBeaconDb} from "../../stub";
 import {BlockPool} from "../../../../src/chain/blocks";
 import {AttestationPool} from "../../../../src/chain/attestation";
-import {BlsVerifier, IBlsVerifier} from "../../../../src/chain/bls";
+import {IBlsVerifier, BlsSingleThreadVerifier} from "../../../../src/chain/bls";
 import {ForkDigestContext, IForkDigestContext} from "../../../../src/util/forkDigestContext";
 import {generateEmptyBlockSummary} from "../../block";
 import {ForkName} from "@chainsafe/lodestar-params";
@@ -59,7 +59,7 @@ export class MockBeaconChain implements IBeaconChain {
     const logger = testLogger();
     this.genesisTime = genesisTime ?? state.genesisTime;
     this.genesisValidatorsRoot = state.genesisValidatorsRoot;
-    this.bls = sinon.createStubInstance(BlsVerifier);
+    this.bls = sinon.createStubInstance(BlsSingleThreadVerifier);
     this.chainId = chainId || 0;
     this.networkId = networkId || BigInt(0);
     this.state = state;

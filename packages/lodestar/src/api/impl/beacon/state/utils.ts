@@ -4,7 +4,7 @@ import {FAR_FUTURE_EPOCH, GENESIS_SLOT, SLOTS_PER_EPOCH} from "@chainsafe/lodest
 import {
   CachedBeaconState,
   createCachedBeaconState,
-  computeSyncCommitteePeriod,
+  computeSyncPeriodAtEpoch,
   computeEpochAtSlot,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {altair, phase0} from "@chainsafe/lodestar-types";
@@ -117,7 +117,6 @@ export function toValidatorResponse(
  * Returns committees mapped by index -> slot -> validator index
  */
 export function getEpochBeaconCommittees(
-  config: IBeaconConfig,
   state: allForks.BeaconState | CachedBeaconState<allForks.BeaconState>,
   epoch: Epoch
 ): ValidatorIndex[][][] {
@@ -145,12 +144,11 @@ export function getEpochBeaconCommittees(
  * Returns committees as an array of validator index
  */
 export function getSyncCommittees(
-  config: IBeaconConfig,
   state: allForks.BeaconState | CachedBeaconState<allForks.BeaconState>,
   epoch: Epoch
 ): ValidatorIndex[] {
-  const statePeriod = computeSyncCommitteePeriod(computeEpochAtSlot(state.slot));
-  const requestPeriod = computeSyncCommitteePeriod(epoch);
+  const statePeriod = computeSyncPeriodAtEpoch(computeEpochAtSlot(state.slot));
+  const requestPeriod = computeSyncPeriodAtEpoch(epoch);
 
   if ((state as CachedBeaconState<allForks.BeaconState>).epochCtx) {
     switch (requestPeriod) {

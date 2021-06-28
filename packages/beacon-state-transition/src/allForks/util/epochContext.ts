@@ -24,7 +24,7 @@ import {
   SYNC_REWARD_WEIGHT,
   WEIGHT_DENOMINATOR,
 } from "@chainsafe/lodestar-params";
-import {bigIntSqrt, intToBytes} from "@chainsafe/lodestar-utils";
+import {bigIntSqrt, intToBytes, LodestarError} from "@chainsafe/lodestar-utils";
 
 import {
   computeEpochAtSlot,
@@ -283,15 +283,19 @@ export class EpochContext {
    * Return the beacon committee at slot for index.
    */
   getBeaconCommittee(slot: Slot, index: CommitteeIndex): ValidatorIndex[] {
-    const slotCommittees = this._getSlotCommittees(slot);
+    const slotCommittees = this.getShufflingAtSlot(slot).committees[slot % SLOTS_PER_EPOCH];
     if (index >= slotCommittees.length) {
-      throw new Error(`Requesting beacon committee index ${index} over slot committees len ${slotCommittees.length}`);
+      throw new EpochContextError({
+        code: EpochContextErrorCode.COMMITTEE_INDEX_OUT_OF_RANGE,
+        index,
+        maxIndex: slotCommittees.length,
+      });
     }
     return slotCommittees[index];
   }
 
-  getCommitteeCountAtSlot(slot: Slot): number {
-    return this._getSlotCommittees(slot).length;
+  getCommitteeCountPerSlot(epoch: Epoch): number {
+    return this.getShufflingAtEpoch(epoch).committeesPerSlot;
   }
 
   getBeaconProposer(slot: Slot): ValidatorIndex {
@@ -338,8 +342,9 @@ export class EpochContext {
     }
     const epochStartSlot = computeStartSlotAtEpoch(epoch);
     const validators = [];
+    const epochCommittees = this.getShufflingAtEpoch(epoch).committees;
     for (let slot = epochStartSlot; slot < epochStartSlot + SLOTS_PER_EPOCH; slot++) {
-      const slotCommittees = this._getSlotCommittees(slot);
+      const slotCommittees = epochCommittees[slot % SLOTS_PER_EPOCH];
       for (let i = 0; i < slotCommittees.length; i++) {
         for (let j = 0; j < slotCommittees[i].length; j++) {
           const validatorIndex = slotCommittees[i][j];
@@ -377,16 +382,17 @@ export class EpochContext {
     }
 
     const epochStartSlot = computeStartSlotAtEpoch(epoch);
+    const committeeCountPerSlot = this.getCommitteeCountPerSlot(epoch);
     for (let slot = epochStartSlot; slot < epochStartSlot + SLOTS_PER_EPOCH; slot++) {
-      const slotCommittee = this._getSlotCommittees(slot);
-      const committeeIndex = slotCommittee.findIndex((v) => v.includes(validatorIndex));
-      const committee = slotCommittee[committeeIndex];
-      if (committee) {
-        return {
-          validators: committee as List<number>,
-          committeeIndex,
-          slot,
-        };
+      for (let i = 0; i < committeeCountPerSlot; i++) {
+        const committee = this.getBeaconCommittee(slot, i);
+        if (committee.includes(validatorIndex)) {
+          return {
+            validators: committee as List<number>,
+            committeeIndex: i,
+            slot,
+          };
+        }
       }
     }
     return null;
@@ -402,17 +408,32 @@ export class EpochContext {
     this.index2pubkey[index] = bls.PublicKey.fromBytes(pubkey, CoordType.jacobian); // Optimize for aggregation
   }
 
-  private _getSlotCommittees(slot: Slot): ValidatorIndex[][] {
+  getShufflingAtSlot(slot: Slot): IEpochShuffling {
     const epoch = computeEpochAtSlot(slot);
-    const epochSlot = slot % SLOTS_PER_EPOCH;
+    return this.getShufflingAtEpoch(epoch);
+  }
+
+  getShufflingAtEpoch(epoch: Epoch): IEpochShuffling {
     if (epoch === this.previousShuffling.epoch) {
-      return this.previousShuffling.committees[epochSlot];
+      return this.previousShuffling;
     } else if (epoch === this.currentShuffling.epoch) {
-      return this.currentShuffling.committees[epochSlot];
+      return this.currentShuffling;
     } else if (epoch === this.nextShuffling.epoch) {
-      return this.nextShuffling.committees[epochSlot];
+      return this.nextShuffling;
     } else {
       throw new Error(`Requesting slot committee out of range epoch: ${epoch} current: ${this.currentShuffling.epoch}`);
     }
   }
 }
+
+export enum EpochContextErrorCode {
+  COMMITTEE_INDEX_OUT_OF_RANGE = "EPOCH_CONTEXT_ERROR_COMMITTEE_INDEX_OUT_OF_RANGE",
+}
+
+type EpochContextErrorType = {
+  code: EpochContextErrorCode.COMMITTEE_INDEX_OUT_OF_RANGE;
+  index: number;
+  maxIndex: number;
+};
+
+export class EpochContextError extends LodestarError<EpochContextErrorType> {}

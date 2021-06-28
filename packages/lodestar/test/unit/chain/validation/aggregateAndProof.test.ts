@@ -6,7 +6,7 @@ import {List} from "@chainsafe/ssz";
 import bls from "@chainsafe/bls";
 import {bigIntToBytes} from "@chainsafe/lodestar-utils";
 import {config} from "@chainsafe/lodestar-config/default";
-import * as validatorUtils from "@chainsafe/lodestar-beacon-state-transition/lib/util/validator";
+import * as aggregatorUtils from "@chainsafe/lodestar-beacon-state-transition/lib/util/aggregator";
 import {getCurrentSlot, ISignatureSet} from "@chainsafe/lodestar-beacon-state-transition";
 import * as indexedAttUtils from "@chainsafe/lodestar-beacon-state-transition/lib/allForks/block/isValidIndexedAttestation";
 import * as indexedAttSigSet from "@chainsafe/lodestar-beacon-state-transition/lib/allForks/signatureSets/indexedAttestation";
@@ -27,7 +27,7 @@ describe("gossip aggregate and proof test", function () {
   let chain: SinonStubbedInstance<IBeaconChain>;
   let regen: SinonStubbedInstance<IStateRegenerator>;
   let db: StubbedBeaconDb;
-  let isAggregatorStub: SinonStubFn<typeof validatorUtils["isAggregatorFromCommitteeLength"]>;
+  let isAggregatorStub: SinonStubFn<typeof aggregatorUtils["isAggregatorFromCommitteeLength"]>;
   let isValidIndexedAttestationStub: SinonStubFn<typeof indexedAttUtils["isValidIndexedAttestation"]>;
   // This util it not relevant for testing since only the result of verifySignatureSets() matters
   const getIndexedAttestationSignatureSet: typeof indexedAttSigSet["getIndexedAttestationSignatureSet"] = () =>
@@ -38,13 +38,13 @@ describe("gossip aggregate and proof test", function () {
     isAggregatorFromCommitteeLength,
     isValidIndexedAttestation,
   }: {
-    isAggregatorFromCommitteeLength: typeof validatorUtils.isAggregatorFromCommitteeLength;
+    isAggregatorFromCommitteeLength: typeof aggregatorUtils.isAggregatorFromCommitteeLength;
     isValidIndexedAttestation: typeof indexedAttUtils.isValidIndexedAttestation;
   }) {
     return await rewiremock.around(
       () => import("../../../../src/chain/validation"),
       (mock) => {
-        mock(() => import("@chainsafe/lodestar-beacon-state-transition/lib/util/validator"))
+        mock(() => import("@chainsafe/lodestar-beacon-state-transition/lib/util/aggregator"))
           .with({isAggregatorFromCommitteeLength})
           .toBeUsed();
         mock(() => import("@chainsafe/lodestar-beacon-state-transition/lib/allForks/block/isValidIndexedAttestation"))
@@ -66,7 +66,7 @@ describe("gossip aggregate and proof test", function () {
     regen = chain.regen = sinon.createStubInstance(StateRegenerator);
     chain.bls = {verifySignatureSets: async () => true};
     db.seenAttestationCache.hasAggregateAndProof.returns(false);
-    isAggregatorStub = sinon.stub(validatorUtils, "isAggregatorFromCommitteeLength");
+    isAggregatorStub = sinon.stub(aggregatorUtils, "isAggregatorFromCommitteeLength");
     isValidIndexedAttestationStub = sinon.stub(indexedAttUtils, "isValidIndexedAttestation");
   });
 

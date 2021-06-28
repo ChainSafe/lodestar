@@ -8,7 +8,7 @@ import {ChainEventEmitter} from "../../../../src/chain";
 import {BlockError, BlockErrorCode} from "../../../../src/chain/errors";
 import {CheckpointStateCache} from "../../../../src/chain/stateCache";
 import {processBlock} from "../../../../src/chain/blocks/process";
-import {BlsVerifier} from "../../../../src/chain/bls";
+import {BlsSingleThreadVerifier} from "../../../../src/chain/bls";
 import {RegenError, RegenErrorCode, StateRegenerator} from "../../../../src/chain/regen";
 import {getNewBlockJob} from "../../../utils/block";
 import {createStubInstance} from "../../../utils/types";
@@ -20,13 +20,13 @@ describe("processBlock", function () {
   let forkChoice: SinonStubbedInstance<ForkChoice>;
   let checkpointStateCache: SinonStubbedInstance<CheckpointStateCache> & CheckpointStateCache;
   let regen: SinonStubbedInstance<StateRegenerator>;
-  let bls: SinonStubbedInstance<BlsVerifier>;
+  let bls: SinonStubbedInstance<BlsSingleThreadVerifier>;
 
   beforeEach(function () {
     forkChoice = sinon.createStubInstance(ForkChoice);
     checkpointStateCache = createStubInstance(CheckpointStateCache);
     regen = sinon.createStubInstance(StateRegenerator);
-    bls = sinon.createStubInstance(BlsVerifier);
+    bls = sinon.createStubInstance(BlsSingleThreadVerifier);
   });
 
   afterEach(function () {

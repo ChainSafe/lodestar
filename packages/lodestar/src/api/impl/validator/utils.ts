@@ -2,7 +2,7 @@ import {
   CachedBeaconState,
   computeEpochAtSlot,
   computeSlotsSinceEpochStart,
-  computeSyncCommitteePeriod,
+  computeSyncPeriodAtEpoch,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {ATTESTATION_SUBNET_COUNT} from "@chainsafe/lodestar-params";
 import {allForks, altair, CommitteeIndex, Epoch, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
@@ -12,8 +12,8 @@ export function getSyncComitteeValidatorIndexMap(
   state: allForks.BeaconState | CachedBeaconState<allForks.BeaconState>,
   requestedEpoch: Epoch
 ): Map<ValidatorIndex, number[]> {
-  const statePeriod = computeSyncCommitteePeriod(computeEpochAtSlot(state.slot));
-  const requestPeriod = computeSyncCommitteePeriod(requestedEpoch);
+  const statePeriod = computeSyncPeriodAtEpoch(computeEpochAtSlot(state.slot));
+  const requestPeriod = computeSyncPeriodAtEpoch(requestedEpoch);
 
   if ((state as CachedBeaconState<allForks.BeaconState>).epochCtx) {
     switch (requestPeriod) {

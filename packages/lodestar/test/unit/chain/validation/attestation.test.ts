@@ -262,6 +262,7 @@ describe("gossip attestation validation", function () {
       committees: [[[]]],
       activeIndices: [],
       shuffling: [],
+      committeesPerSlot: 1,
     };
     attestationTargetState.epochCtx.getIndexedAttestation = () => toIndexedAttestation(attestation);
     regen.getCheckpointState.resolves(attestationTargetState);
@@ -346,6 +347,7 @@ describe("gossip attestation validation", function () {
       epoch: 0,
       committees: [[[1]]],
       shuffling: [],
+      committeesPerSlot: 1,
     } as allForks.IEpochShuffling;
     attestationTargetState.epochCtx.getIndexedAttestation = () => toIndexedAttestation(attestation);
     regen.getCheckpointState.resolves(attestationTargetState);
@@ -375,6 +377,7 @@ describe("gossip attestation validation", function () {
       epoch: 0,
       committees: [[[1]]],
       shuffling: [],
+      committeesPerSlot: 1,
     } as allForks.IEpochShuffling;
     attestationTargetState.epochCtx.getIndexedAttestation = () => toIndexedAttestation(attestation);
     regen.getCheckpointState.resolves(attestationTargetState);
@@ -397,6 +400,7 @@ describe("gossip attestation validation", function () {
       epoch: 0,
       committees: [[[1]]],
       shuffling: [],
+      committeesPerSlot: 1,
     } as allForks.IEpochShuffling;
     attestationTargetState.epochCtx.getIndexedAttestation = () => toIndexedAttestation(attestation);
     regen.getCheckpointState.resolves(attestationTargetState);
