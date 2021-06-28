@@ -334,7 +334,7 @@ export class EpochContext {
   /**
    * @param validatorData pubkeys indexed by validator index
    */
-  getCommitteeAssignments(epoch: Epoch, validatorData: BLSPubkey[]): routes.validator.AttesterDuty[] {
+  getCommitteeAssignments(epoch: Epoch, validatorData: Map<number, BLSPubkey>): routes.validator.AttesterDuty[] {
     if (epoch > this.currentShuffling.epoch + 1) {
       throw Error(
         `Requesting committee assignment for more than 1 epoch ahead: ${epoch} > ${this.currentShuffling.epoch} + 1`
@@ -348,7 +348,7 @@ export class EpochContext {
       for (let i = 0; i < slotCommittees.length; i++) {
         for (let j = 0; j < slotCommittees[i].length; j++) {
           const validatorIndex = slotCommittees[i][j];
-          const pubkey = validatorData[validatorIndex];
+          const pubkey = validatorData.get(validatorIndex);
           if (pubkey) {
             validators.push({
               pubkey,

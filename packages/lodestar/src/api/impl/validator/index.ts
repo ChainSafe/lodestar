@@ -227,13 +227,13 @@ export function getValidatorApi({
       // will equal `currentEpoch + 1`
 
       const validators = state.validators.persistent;
-      const validatorData: BLSPubkey[] = [];
+      const validatorData: Map<number, BLSPubkey> = new Map<number, BLSPubkey>();
       for (const index of validatorIndices) {
         const validator = validators.get(index);
         if (!validator) {
           throw new ApiError(400, `Validator pubkey at index ${index} not in state`);
         }
-        validatorData[index] = validator.pubkey;
+        validatorData.set(index, validator.pubkey);
       }
       const duties = state.epochCtx.getCommitteeAssignments(epoch, validatorData);
 
