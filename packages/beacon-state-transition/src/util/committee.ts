@@ -35,7 +35,7 @@ export function computeCommittee(
  * Return the number of committees at [[epoch]].
  * Return the number of committees at [[slot]].
  */
-export function getCommitteeCountAtSlot(state: allForks.BeaconState, slot: Slot): number {
+export function getCommitteeCountPerSlot(state: allForks.BeaconState, slot: Slot): number {
   const epoch = computeEpochAtSlot(slot);
   const activeValidatorIndices = getActiveValidatorIndices(state, epoch);
   return Math.max(
@@ -52,7 +52,7 @@ export function getCommitteeCountAtSlot(state: allForks.BeaconState, slot: Slot)
  */
 export function getBeaconCommittee(state: allForks.BeaconState, slot: Slot, index: CommitteeIndex): ValidatorIndex[] {
   const epoch = computeEpochAtSlot(slot);
-  const committeesPerSlot = getCommitteeCountAtSlot(state, slot);
+  const committeesPerSlot = getCommitteeCountPerSlot(state, slot);
   return computeCommittee(
     getActiveValidatorIndices(state, epoch),
     getSeed(state, epoch, DOMAIN_BEACON_ATTESTER),

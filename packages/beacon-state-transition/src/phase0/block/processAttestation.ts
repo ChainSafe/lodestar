@@ -65,7 +65,7 @@ export function validateAttestation(
   const slot = state.slot;
   const data = attestation.data;
   const computedEpoch = computeEpochAtSlot(data.slot);
-  const committeeCount = epochCtx.getCommitteeCountAtSlot(data.slot);
+  const committeeCount = epochCtx.getCommitteeCountPerSlot(data.slot);
   if (!(data.index < committeeCount)) {
     throw new Error(
       "Attestation committee index not within current committee count: " +

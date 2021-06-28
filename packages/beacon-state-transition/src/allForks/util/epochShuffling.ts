@@ -42,18 +42,17 @@ export interface IEpochShuffling {
    * some shards may not have a committee this epoch
    */
   committees: ValidatorIndex[][][];
+
+  /**
+   * Committees per slot, for fast attestation verification
+   */
+  committeesPerSlot: number;
 }
 
 export function computeCommitteeCount(activeValidatorCount: number): number {
   const validatorsPerSlot = intDiv(activeValidatorCount, SLOTS_PER_EPOCH);
-  let committeesPerSlot = intDiv(validatorsPerSlot, TARGET_COMMITTEE_SIZE);
-  if (MAX_COMMITTEES_PER_SLOT < committeesPerSlot) {
-    committeesPerSlot = MAX_COMMITTEES_PER_SLOT;
-  }
-  if (committeesPerSlot === 0) {
-    committeesPerSlot = 1;
-  }
-  return committeesPerSlot;
+  const committeesPerSlot = intDiv(validatorsPerSlot, TARGET_COMMITTEE_SIZE);
+  return Math.max(1, Math.min(MAX_COMMITTEES_PER_SLOT, committeesPerSlot));
 }
 
 export function computeEpochShuffling(
@@ -100,5 +99,6 @@ export function computeEpochShuffling(
     activeIndices,
     shuffling,
     committees,
+    committeesPerSlot,
   };
 }
