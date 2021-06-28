@@ -1,7 +1,7 @@
 /* eslint-disable max-len */
 import {fromHexString, readonlyValues, toHexString} from "@chainsafe/ssz";
 import {SAFE_SLOTS_TO_UPDATE_JUSTIFIED, SLOTS_PER_HISTORICAL_ROOT} from "@chainsafe/lodestar-params";
-import {Slot, ValidatorIndex, Gwei, phase0, allForks, ssz} from "@chainsafe/lodestar-types";
+import {Slot, ValidatorIndex, Gwei, phase0, allForks, ssz, BlockRootHex, Epoch} from "@chainsafe/lodestar-types";
 import {
   computeSlotsSinceEpochStart,
   computeStartSlotAtEpoch,
@@ -418,18 +418,19 @@ export class ForkChoice implements IForkChoice {
     // (1) becomes weird once we hit finality and fork choice drops the genesis block. (2) is
     // fine because votes to the genesis block are not useful; all validators implicitly attest
     // to genesis just by being present in the chain.
-    if (ssz.Root.equals(attestation.data.beaconBlockRoot, ZERO_HASH)) {
+    const attestationData = attestation.data;
+    const {slot, beaconBlockRoot} = attestationData;
+    const blockRootHex = toHexString(beaconBlockRoot);
+    const epoch = attestationData.target.epoch;
+    if (ssz.Root.equals(beaconBlockRoot, ZERO_HASH)) {
       return;
     }
 
     this.validateOnAttestation(attestation);
 
-    if (attestation.data.slot < this.fcStore.currentSlot) {
+    if (slot < this.fcStore.currentSlot) {
       for (const validatorIndex of readonlyValues(attestation.attestingIndices)) {
-        this.addLatestMessage(validatorIndex, {
-          root: attestation.data.beaconBlockRoot,
-          epoch: attestation.data.target.epoch,
-        });
+        this.addLatestMessage(validatorIndex, epoch, blockRootHex);
       }
     } else {
       // The spec declares:
@@ -439,10 +440,10 @@ export class ForkChoice implements IForkChoice {
       // Delay consideration in the fork choice until their slot is in the past.
       // ```
       this.queuedAttestations.add({
-        slot: attestation.data.slot,
+        slot: slot,
         attestingIndices: Array.from(readonlyValues(attestation.attestingIndices)),
-        blockRoot: attestation.data.beaconBlockRoot.valueOf() as Uint8Array,
-        targetEpoch: attestation.data.target.epoch,
+        blockRoot: beaconBlockRoot.valueOf() as Uint8Array,
+        targetEpoch: epoch,
       });
     }
   }
@@ -779,19 +780,18 @@ export class ForkChoice implements IForkChoice {
   /**
    * Add a validator's latest message to the tracked votes
    */
-  private addLatestMessage(validatorIndex: ValidatorIndex, message: ILatestMessage): void {
+  private addLatestMessage(validatorIndex: ValidatorIndex, nextEpoch: Epoch, nextRoot: BlockRootHex): void {
     this.synced = false;
-    const nextRoot = toHexString(message.root);
     const vote = this.votes[validatorIndex];
     if (!vote) {
       this.votes[validatorIndex] = {
         currentRoot: HEX_ZERO_HASH,
         nextRoot,
-        nextEpoch: message.epoch,
+        nextEpoch,
       };
-    } else if (message.epoch > vote.nextEpoch) {
+    } else if (nextEpoch > vote.nextEpoch) {
       vote.nextRoot = nextRoot;
-      vote.nextEpoch = message.epoch;
+      vote.nextEpoch = nextEpoch;
     }
     // else its an old vote, don't count it
   }
@@ -805,11 +805,10 @@ export class ForkChoice implements IForkChoice {
     for (const attestation of this.queuedAttestations.values()) {
       if (attestation.slot <= currentSlot) {
         this.queuedAttestations.delete(attestation);
+        const {blockRoot, targetEpoch} = attestation;
+        const blockRootHex = toHexString(blockRoot);
         for (const validatorIndex of attestation.attestingIndices) {
-          this.addLatestMessage(validatorIndex, {
-            root: attestation.blockRoot,
-            epoch: attestation.targetEpoch,
-          });
+          this.addLatestMessage(validatorIndex, targetEpoch, blockRootHex);
         }
       }
     }
