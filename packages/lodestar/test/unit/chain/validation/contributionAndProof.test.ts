@@ -10,7 +10,7 @@ import {expectRejectedWithLodestarError} from "../../../utils/errors";
 import {StubbedBeaconDb} from "../../../utils/stub";
 import {generateSignedContributionAndProof} from "../../../utils/contributionAndProof";
 import {validateSyncCommitteeGossipContributionAndProof} from "../../../../src/chain/validation/syncCommitteeContributionAndProof";
-import * as syncCommitteeUtils from "@chainsafe/lodestar-beacon-state-transition/lib/util/syncCommittee";
+import * as syncCommitteeUtils from "@chainsafe/lodestar-beacon-state-transition/lib/util/aggregator";
 import {SinonStubFn} from "../../../utils/types";
 import {generateCachedStateWithPubkeys} from "../../../utils/state";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
