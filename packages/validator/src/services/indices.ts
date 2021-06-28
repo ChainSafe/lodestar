@@ -62,12 +62,11 @@ export class IndicesService {
     const pubkeysHex = pubkeysToPoll.map((pubkey) => toHexString(pubkey)).slice(0, MAX_PUBKEYS_PER_POLL);
     const batches = pubkeysToBatches(pubkeysHex);
 
-    const newIndicesArr = await Promise.all(
-      batches.map(async (batch) => {
-        const validatorIndicesArr = await Promise.all(batch.map(this.getIndicesPerHttpRequest));
-        return validatorIndicesArr.flat();
-      })
-    );
+    const newIndicesArr = [];
+    for (const batch of batches) {
+      const validatorIndicesArr = await Promise.all(batch.map(this.getIndicesPerHttpRequest));
+      newIndicesArr.push(...validatorIndicesArr.flat());
+    }
     const newIndices = newIndicesArr.flat();
     this.logger.info("Discovered new validators", {count: newIndices.length});
     return newIndices;
