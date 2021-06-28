@@ -50,6 +50,7 @@ export function decreaseBalance(state: allForks.BeaconState, index: ValidatorInd
 }
 
 /**
+ * TODO - PERFORMANCE WARNING - NAIVE CODE
  * This method is used to get justified balances from a justified state.
  */
 export function getEffectiveBalances(justifiedState: CachedBeaconState<allForks.BeaconState>): Gwei[] {

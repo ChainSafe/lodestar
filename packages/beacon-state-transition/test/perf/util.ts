@@ -1,15 +1,22 @@
 import {config} from "@chainsafe/lodestar-config/default";
-import {Gwei, phase0, ssz} from "@chainsafe/lodestar-types";
+import {Gwei, phase0, ssz, ValidatorIndex} from "@chainsafe/lodestar-types";
 import bls, {CoordType, PublicKey} from "@chainsafe/bls";
-import {fromHexString, List, TreeBacked} from "@chainsafe/ssz";
-import {getBeaconProposerIndex} from "../../src/util/proposer";
-import {allForks, computeEpochAtSlot} from "../../src";
+import {fromHexString, List, TreeBacked, hash} from "@chainsafe/ssz";
+import {
+  allForks,
+  computeEpochAtSlot,
+  computeProposerIndex,
+  getActiveValidatorIndices,
+  getCurrentEpoch,
+  getSeed,
+} from "../../src";
 import {computeCommitteeCount, PubkeyIndexMap} from "../../src/allForks";
 import {profilerLogger} from "../utils/logger";
 import {interopPubkeysCached} from "../utils/interop";
 import {PendingAttestation} from "@chainsafe/lodestar-types/phase0";
-import {intDiv} from "@chainsafe/lodestar-utils";
+import {intDiv, intToBytes} from "@chainsafe/lodestar-utils";
 import {
+  DOMAIN_BEACON_PROPOSER,
   EPOCHS_PER_ETH1_VOTING_PERIOD,
   EPOCHS_PER_HISTORICAL_VECTOR,
   MAX_ATTESTATIONS,
@@ -220,12 +227,13 @@ export function generatePerformanceBlock(): TreeBacked<phase0.SignedBeaconBlock>
   return signedBlock.clone();
 }
 
-export function runOnce<T>(fn: () => T): () => T {
-  let value: T | null = null;
-  return function () {
-    if (value === null) {
-      value = fn();
-    }
-    return value;
-  };
+/**
+ * TODO - PERFORMANCE WARNING - NAIVE CODE
+ * Return the beacon proposer index at ``state.slot``.
+ */
+function getBeaconProposerIndex(state: allForks.BeaconState): ValidatorIndex {
+  const currentEpoch = getCurrentEpoch(state);
+  const seed = hash(Buffer.concat([getSeed(state, currentEpoch, DOMAIN_BEACON_PROPOSER), intToBytes(state.slot, 8)]));
+  const indices = getActiveValidatorIndices(state, currentEpoch);
+  return computeProposerIndex(state, indices, seed);
 }
