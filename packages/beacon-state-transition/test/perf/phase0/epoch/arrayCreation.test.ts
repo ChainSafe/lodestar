@@ -1,6 +1,6 @@
 import {profilerLogger} from "../../../utils/logger";
 
-describe("array creation", function () {
+describe.skip("array creation", function () {
   const logger = profilerLogger();
   const testCases: {id: string; fn: (n: number) => void}[] = [
     {

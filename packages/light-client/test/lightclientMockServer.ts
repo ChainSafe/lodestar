@@ -2,12 +2,11 @@ import {FastifyInstance} from "fastify";
 import {computeEpochAtSlot, computeSyncPeriodAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {toHexString, TreeBacked} from "@chainsafe/ssz";
-import {altair, Epoch, Root, Slot, ssz, SyncPeriod} from "@chainsafe/lodestar-types";
+import {altair, phase0, Epoch, Root, Slot, ssz, SyncPeriod} from "@chainsafe/lodestar-types";
 import {FinalizedCheckpointData, LightClientUpdater, LightClientUpdaterDb} from "../src/server/LightClientUpdater";
 import {toBlockHeader} from "../src/utils/utils";
 import {getInteropSyncCommittee, getSyncAggregateSigningRoot, SyncCommitteeKeys} from "./utils";
-import {startLightclientApiServer, IStateRegen, ServerOpts} from "./lightclientApiServer";
-import {Checkpoint} from "@chainsafe/lodestar-types/phase0";
+import {startLightclientApiServer, IStateRegen, IBlockCache, ServerOpts} from "./lightclientApiServer";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} from "@chainsafe/lodestar-params";
 
@@ -21,12 +20,12 @@ type ApiState = {status: ApiStatus.started; server: FastifyInstance} | {status: 
 
 export class LightclientMockServer {
   private readonly lightClientUpdater: LightClientUpdater;
-  private readonly stateRegen: MockStateRegen;
+  private readonly stateRegen = new MockStateRegen();
+  private readonly blockCache = new MockBlockCache();
 
   // Mock chain state
   private readonly syncCommitteesKeys = new Map<SyncPeriod, SyncCommitteeKeys>();
   private readonly checkpoints = new Map<Epoch, {block: altair.BeaconBlock; state: altair.BeaconState}>();
-  private readonly stateCache = new Map<string, TreeBacked<altair.BeaconState>>();
   private finalizedCheckpoint: altair.Checkpoint | null = null;
   private prevBlock: altair.BeaconBlock | null = null;
   private prevState: TreeBacked<altair.BeaconState> | null = null;
@@ -41,17 +40,17 @@ export class LightclientMockServer {
   ) {
     const db = getLightClientUpdaterDb();
     this.lightClientUpdater = new LightClientUpdater(db);
-    this.stateRegen = new MockStateRegen(this.stateCache);
   }
 
   async initialize(initialFinalizedCheckpoint: {
-    checkpoint: Checkpoint;
+    checkpoint: phase0.Checkpoint;
     block: altair.BeaconBlock;
     state: TreeBacked<altair.BeaconState>;
   }): Promise<void> {
     const {checkpoint, block, state} = initialFinalizedCheckpoint;
     void this.lightClientUpdater.onFinalized(checkpoint, block, state);
-    this.stateCache.set(toHexString(state.hashTreeRoot()), state);
+    this.stateRegen.add(state);
+    this.blockCache.add(block);
     this.prevState = ssz.altair.BeaconState.createTreeBackedFromStruct(state);
   }
 
@@ -64,6 +63,7 @@ export class LightclientMockServer {
       lightClientUpdater: this.lightClientUpdater,
       logger: this.logger,
       stateRegen: this.stateRegen,
+      blockCache: this.blockCache,
     });
     this.apiState = {status: ApiStatus.started, server};
   }
@@ -104,7 +104,7 @@ export class LightclientMockServer {
       const attestedBlock = toBlockHeader(this.prevBlock);
       const attestedBlockRoot = ssz.altair.BeaconBlock.hashTreeRoot(this.prevBlock);
       state.blockRoots[(slot - 1) % SLOTS_PER_HISTORICAL_ROOT] = attestedBlockRoot;
-      const forkVersion = state.fork.currentVersion;
+      const forkVersion = state.fork.currentVersion.valueOf() as Uint8Array;
       const signingRoot = getSyncAggregateSigningRoot(this.genesisValidatorsRoot, forkVersion, attestedBlock);
       block.body.syncAggregate = this.getSyncCommittee(currentSyncPeriod).signAndAggregate(signingRoot);
     }
@@ -119,7 +119,8 @@ export class LightclientMockServer {
     if (slot % SLOTS_PER_EPOCH === 0) {
       const epoch = computeEpochAtSlot(slot);
       this.checkpoints.set(epoch, {block, state});
-      this.stateCache.set(toHexString(state.hashTreeRoot()), state);
+      this.stateRegen.add(state);
+      this.blockCache.add(block);
 
       const finalizedEpoch = epoch - 2; // Simulate perfect network conditions
       const finalizedData = this.checkpoints.get(finalizedEpoch);
@@ -146,11 +147,7 @@ export class LightclientMockServer {
       }
 
       // Prune old states
-      for (const [key, oldState] of this.stateCache.entries()) {
-        if (oldState.slot !== 0 && computeEpochAtSlot(oldState.slot) < finalizedEpoch - MAX_STATE_HISTORIC_EPOCHS) {
-          this.stateCache.delete(key);
-        }
-      }
+      this.stateRegen.prune(finalizedEpoch);
     }
 
     // Feed new block and state to the LightClientUpdater
@@ -171,12 +168,39 @@ export class LightclientMockServer {
  * Mock state regen that only checks an in-memory cache
  */
 class MockStateRegen implements IStateRegen {
-  constructor(private readonly stateCache: Map<string, TreeBacked<altair.BeaconState>>) {}
+  readonly stateCache = new Map<string, TreeBacked<altair.BeaconState>>();
 
   async getStateByRoot(stateRoot: string): Promise<TreeBacked<altair.BeaconState>> {
     const state = this.stateCache.get(stateRoot);
     if (!state) throw Error(`State not available ${stateRoot}`);
     return state;
+  }
+
+  add(state: TreeBacked<altair.BeaconState>): void {
+    this.stateCache.set(toHexString(state.hashTreeRoot()), state);
+  }
+
+  prune(finalizedEpoch: Epoch): void {
+    for (const [key, oldState] of this.stateCache.entries()) {
+      if (oldState.slot !== 0 && computeEpochAtSlot(oldState.slot) < finalizedEpoch - MAX_STATE_HISTORIC_EPOCHS) {
+        this.stateCache.delete(key);
+      }
+    }
+  }
+}
+
+class MockBlockCache implements IBlockCache {
+  readonly blockCache = new Map<string, altair.BeaconBlock>();
+
+  async getBlockByRoot(blockRoot: string): Promise<altair.BeaconBlock> {
+    const block = this.blockCache.get(blockRoot);
+    if (!block) throw Error(`Block not available ${blockRoot}`);
+    return block;
+  }
+
+  add(block: altair.BeaconBlock): void {
+    const root = ssz.altair.BeaconBlock.hashTreeRoot(block);
+    this.blockCache.set(toHexString(root), block);
   }
 }
 

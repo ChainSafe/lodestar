@@ -126,5 +126,21 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
       help: "Time taken to find head in seconds",
       buckets: [0.1, 1, 10],
     }),
+    forkChoiceRequests: register.gauge({
+      name: "beacon_fork_choice_requests_total",
+      help: "Count of occasions where fork choice has tried to find a head",
+    }),
+    forkChoiceErrors: register.gauge({
+      name: "beacon_fork_choice_errors_total",
+      help: "Count of occasions where fork choice has returned an error when trying to find a head",
+    }),
+    forkChoiceChangedHead: register.gauge({
+      name: "beacon_fork_choice_changed_head_total",
+      help: "Count of occasions fork choice has found a new head",
+    }),
+    forkChoiceReorg: register.gauge({
+      name: "beacon_fork_choice_reorg_total",
+      help: "Count of occasions fork choice has switched to a different chain",
+    }),
   };
 }

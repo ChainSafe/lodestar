@@ -1,5 +1,7 @@
 colors: true
-require: ts-node/register
+require:
+  - ts-node/register
+  - ./test/mocha-hooks.ts
 file: ./test/setup.ts
 timeout: 5000
 exit: true

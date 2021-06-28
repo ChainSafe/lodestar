@@ -21,7 +21,7 @@ describe("assemble validator duty", function () {
       slot: 1,
       validators: [1, validatorIndex, 5] as List<number>,
     });
-    state.epochCtx.getCommitteeCountAtSlot = () => 3;
+    state.epochCtx.getCommitteeCountPerSlot = () => 3;
     const result = assembleAttesterDuty(config, {pubkey: publicKey, index: validatorIndex}, state.epochCtx, 2);
     if (result === null) throw Error("Result is null");
     expect(result.pubkey).to.be.equal(publicKey);
@@ -39,7 +39,7 @@ describe("assemble validator duty", function () {
       slot: 1,
       validators: [1, validatorIndex, 5] as List<number>,
     });
-    state.epochCtx.getCommitteeCountAtSlot = () => 3;
+    state.epochCtx.getCommitteeCountPerSlot = () => 3;
     const result = assembleAttesterDuty(config, {pubkey: publicKey, index: validatorIndex}, state.epochCtx, 3);
     if (result === null) throw Error("Result is null");
     expect(result.pubkey).to.be.equal(publicKey);

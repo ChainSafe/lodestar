@@ -1,8 +1,8 @@
 import {AbortSignal} from "@chainsafe/abort-controller";
 import {ErrorAborted, ILogger, sleep} from "@chainsafe/lodestar-utils";
-import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
+import {GENESIS_SLOT, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {Epoch, Slot} from "@chainsafe/lodestar-types";
+import {Epoch, Number64, Slot} from "@chainsafe/lodestar-types";
 import {computeEpochAtSlot, getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
 
 type RunEveryFn = (slot: Slot, signal: AbortSignal) => Promise<void>;
@@ -60,16 +60,19 @@ export class Clock implements IClock {
    * on an overloaded/latent system rather than overload it even more.
    */
   private async runAtMostEvery(timeItem: TimeItem, signal: AbortSignal, fn: RunEveryFn): Promise<void> {
+    // Run immediatelly first
+    let slot = getCurrentSlot(this.config, this.genesisTime);
+    let slotOrEpoch = timeItem === TimeItem.Slot ? slot : computeEpochAtSlot(slot);
     while (!signal.aborted) {
-      // Run immediatelly first
-      const slot = getCurrentSlot(this.config, this.genesisTime);
-      const slotOrEpoch = timeItem === TimeItem.Slot ? slot : computeEpochAtSlot(slot);
-
       // Must catch fn() to ensure `sleep()` is awaited both for resolve and reject
       await fn(slotOrEpoch, signal).catch((e) => this.logger.error("Error on runEvery fn", {}, e));
 
       try {
         await sleep(this.timeUntilNext(timeItem), signal);
+        // calling getCurrentSlot here may not be correct when we're close to the next slot
+        // it's safe to call getCurrentSlotAround after we sleep
+        slot = getCurrentSlotAround(this.config, this.genesisTime);
+        slotOrEpoch = timeItem === TimeItem.Slot ? slot : computeEpochAtSlot(slot);
       } catch (e) {
         if (e instanceof ErrorAborted) {
           return;
@@ -84,12 +87,29 @@ export class Clock implements IClock {
     const msFromGenesis = Date.now() - this.genesisTime * 1000;
 
     if (timeItem === TimeItem.Slot) {
-      return miliSecondsPerSlot - Math.abs(msFromGenesis % miliSecondsPerSlot);
+      if (msFromGenesis >= 0) {
+        return miliSecondsPerSlot - (msFromGenesis % miliSecondsPerSlot);
+      } else {
+        return Math.abs(msFromGenesis % miliSecondsPerSlot);
+      }
     } else {
       const miliSecondsPerEpoch = SLOTS_PER_EPOCH * miliSecondsPerSlot;
-      return miliSecondsPerEpoch - Math.abs(msFromGenesis % miliSecondsPerEpoch);
+      if (msFromGenesis >= 0) {
+        return miliSecondsPerEpoch - (msFromGenesis % miliSecondsPerEpoch);
+      } else {
+        return Math.abs(msFromGenesis % miliSecondsPerEpoch);
+      }
     }
   }
+}
+
+/**
+ * Same to the spec but we use Math.round instead of Math.floor.
+ */
+export function getCurrentSlotAround(config: IBeaconConfig, genesisTime: Number64): Slot {
+  const diffInSeconds = Date.now() / 1000 - genesisTime;
+  const slotsSinceGenesis = Math.round(diffInSeconds / config.SECONDS_PER_SLOT);
+  return GENESIS_SLOT + slotsSinceGenesis;
 }
 
 // function useEventStream() {

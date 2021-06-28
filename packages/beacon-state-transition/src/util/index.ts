@@ -3,6 +3,7 @@
  */
 
 export * from "./aggregationBits";
+export * from "./aggregator";
 export * from "./array";
 export * from "./attestation";
 export * from "./balance";
@@ -21,6 +22,5 @@ export * from "./signatureSets";
 export * from "./signingRoot";
 export * from "./slot";
 export * from "./validator";
-export * from "./syncCommittee";
 export * from "./finality";
 export * from "./blockProcess";

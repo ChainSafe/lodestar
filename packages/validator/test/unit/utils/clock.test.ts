@@ -2,9 +2,10 @@ import sinon from "sinon";
 import {expect} from "chai";
 import {AbortController} from "@chainsafe/abort-controller";
 import {config} from "@chainsafe/lodestar-config/default";
-import {Clock} from "../../../src/util/clock";
+import {Clock, getCurrentSlotAround} from "../../../src/util/clock";
 import {testLogger} from "../../utils/logger";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
+import {IBeaconConfig} from "../../../../config/lib";
 
 describe("util / Clock", function () {
   const logger = testLogger();
@@ -79,5 +80,23 @@ describe("util / Clock", function () {
     await fakeClock.tickAsync(SLOTS_PER_EPOCH * config.SECONDS_PER_SLOT * 1000);
     expect(onEpoch.callCount).to.equal(2, "runEverySlot(cb) must be called again after an epoch");
     expect(onEpoch.getCall(1).args[0]).to.equal(1, "Wrong arg on runEverySlot(cb) call 1");
+  });
+
+  describe("getCurrentSlot", function () {
+    // eslint-disable-next-line @typescript-eslint/naming-convention
+    const testConfig = {SECONDS_PER_SLOT: 12} as IBeaconConfig;
+    const genesisTime = Math.floor(new Date("2021-01-01").getTime() / 1000);
+    const testCase: {name: string; delta: number}[] = [
+      {name: "should return next slot after 11.5s", delta: 11.5},
+      {name: "should return next slot after 12s", delta: 12},
+      {name: "should return next slot after 12.5s", delta: 12.5},
+    ];
+    for (const {name, delta} of testCase) {
+      it(name, async function () {
+        const currentSlot = getCurrentSlotAround(testConfig, genesisTime);
+        fakeClock.tick(delta * 1000);
+        expect(getCurrentSlotAround(testConfig, genesisTime)).to.be.equal(currentSlot + 1, name);
+      });
+    }
   });
 });
