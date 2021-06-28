@@ -17,14 +17,6 @@ describe("StateContextCache", function () {
     committeesPerSlot: 1,
   };
 
-  const shuffling: allForks.IEpochShuffling = {
-    epoch: 0,
-    activeIndices: [],
-    shuffling: [],
-    committees: [],
-    committeesPerSlot: 1,
-  };
-
   beforeEach(function () {
     // max 2 items
     cache = new StateContextCache(2);
