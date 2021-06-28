@@ -1,9 +1,11 @@
-import {IDatabaseController} from "./controller";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {IDatabaseController} from "./controller";
+import {IDbMetrics} from "./metrics";
 
 export interface IDatabaseApiOptions {
   config: IBeaconConfig;
   controller: IDatabaseController<Buffer, Buffer>;
+  metrics?: IDbMetrics;
 }
 
 export abstract class DatabaseService {

@@ -1,6 +1,6 @@
 import {phase0, ssz, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {IDatabaseController, Bucket, Repository} from "@chainsafe/lodestar-db";
+import {IDatabaseController, Bucket, Repository, IDbMetrics} from "@chainsafe/lodestar-db";
 
 /**
  * AttesterSlashing indexed by root
@@ -9,8 +9,8 @@ import {IDatabaseController, Bucket, Repository} from "@chainsafe/lodestar-db";
  * Removed when included on chain or old
  */
 export class AttesterSlashingRepository extends Repository<Uint8Array, phase0.AttesterSlashing> {
-  constructor(config: IBeaconConfig, db: IDatabaseController<Buffer, Buffer>) {
-    super(config, db, Bucket.phase0_attesterSlashing, ssz.phase0.AttesterSlashing);
+  constructor(config: IBeaconConfig, db: IDatabaseController<Buffer, Buffer>, metrics?: IDbMetrics) {
+    super(config, db, Bucket.phase0_attesterSlashing, ssz.phase0.AttesterSlashing, metrics);
   }
 
   async hasAll(attesterIndices: ValidatorIndex[] = []): Promise<boolean> {

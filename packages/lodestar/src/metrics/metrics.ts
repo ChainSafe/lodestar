@@ -4,8 +4,9 @@
 import {getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {allForks} from "@chainsafe/lodestar-types";
-import {collectDefaultMetrics, Registry} from "prom-client";
+import {collectDefaultMetrics, Counter, Registry} from "prom-client";
 import gcStats from "prometheus-gc-stats";
+import {DbMetricLabels, IDbMetrics} from "../../../db/lib";
 import {createBeaconMetrics, IBeaconMetrics} from "./metrics/beacon";
 import {createLodestarMetrics, ILodestarMetrics} from "./metrics/lodestar";
 import {IMetricsOptions} from "./options";
@@ -17,7 +18,8 @@ export type IMetrics = IBeaconMetrics & ILodestarMetrics & IValidatorMonitor & {
 export function createMetrics(
   opts: IMetricsOptions,
   config: IBeaconConfig,
-  anchorState: allForks.BeaconState
+  anchorState: allForks.BeaconState,
+  registries: Registry[] = []
 ): IMetrics {
   const register = new RegistryMetricCreator();
   const beacon = createBeaconMetrics(register);
@@ -43,5 +45,24 @@ export function createMetrics(
   // - nodejs_gc_reclaimed_bytes_total: The number of bytes GC has freed
   gcStats(register)();
 
-  return {...beacon, ...lodestar, ...validatorMonitor, register};
+  return {...beacon, ...lodestar, ...validatorMonitor, register: Registry.merge([register, ...registries])};
+}
+
+export function createDbMetrics(): {metrics: IDbMetrics; registry: Registry} {
+  const metrics = {
+    dbReads: new Counter<DbMetricLabels>({
+      name: "lodestar_db_reads",
+      labelNames: ["bucket"],
+      help: "Number of db reads, contains bucket label.",
+    }),
+    dbWrites: new Counter<DbMetricLabels>({
+      name: "lodestar_db_writes",
+      labelNames: ["bucket"],
+      help: "Number of db writes and deletes, contains bucket label.",
+    }),
+  };
+  const registry = new Registry();
+  registry.registerMetric(metrics.dbReads);
+  registry.registerMetric(metrics.dbWrites);
+  return {metrics, registry};
 }

@@ -21,6 +21,7 @@ import {TasksService} from "../tasks";
 import {IBeaconNodeOptions} from "./options";
 import {Eth1ForBlockProduction, Eth1ForBlockProductionDisabled, Eth1Provider} from "../eth1";
 import {runNodeNotifier} from "./notifier";
+import {Registry} from "prom-client";
 
 export * from "./options";
 
@@ -46,6 +47,7 @@ export interface IBeaconNodeInitModules {
   logger: ILogger;
   libp2p: LibP2p;
   anchorState: TreeBacked<allForks.BeaconState>;
+  metricsRegistries?: Registry[];
 }
 
 export enum BeaconNodeStatus {
@@ -115,6 +117,7 @@ export class BeaconNode {
     logger,
     libp2p,
     anchorState,
+    metricsRegistries = [],
   }: IBeaconNodeInitModules): Promise<T> {
     const controller = new AbortController();
     const signal = controller.signal;
@@ -122,7 +125,7 @@ export class BeaconNode {
     // start db if not already started
     await db.start();
 
-    const metrics = opts.metrics.enabled ? createMetrics(opts.metrics, config, anchorState) : null;
+    const metrics = opts.metrics.enabled ? createMetrics(opts.metrics, config, anchorState, metricsRegistries) : null;
     if (metrics) {
       initBeaconMetrics(metrics, anchorState);
     }

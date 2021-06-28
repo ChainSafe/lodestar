@@ -2,26 +2,30 @@ import {TreeBacked, ContainerType} from "@chainsafe/ssz";
 import {GENESIS_SLOT} from "@chainsafe/lodestar-params";
 import {allForks} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {IDatabaseController, Bucket} from "@chainsafe/lodestar-db";
+import {IDatabaseController, Bucket, IDbMetrics} from "@chainsafe/lodestar-db";
 
 export class PreGenesisState {
   private readonly config: IBeaconConfig;
   private readonly bucket: Bucket;
   private readonly db: IDatabaseController<Buffer, Buffer>;
   private readonly key: Buffer;
+  private readonly metrics?: IDbMetrics;
 
-  constructor(config: IBeaconConfig, db: IDatabaseController<Buffer, Buffer>) {
+  constructor(config: IBeaconConfig, db: IDatabaseController<Buffer, Buffer>, metrics?: IDbMetrics) {
     this.config = config;
     this.db = db;
-    this.bucket = Bucket.phase0_preGenesisState as Bucket;
+    this.bucket = Bucket.phase0_preGenesisState;
     this.key = Buffer.from(new Uint8Array([this.bucket]));
+    this.metrics = metrics;
   }
 
   async put(value: TreeBacked<allForks.BeaconState>): Promise<void> {
+    this.metrics?.dbWrites.labels({bucket: "phase0_preGenesisState"}).inc();
     await this.db.put(this.key, this.type().serialize(value) as Buffer);
   }
 
   async get(): Promise<TreeBacked<allForks.BeaconState> | null> {
+    this.metrics?.dbReads.labels({bucket: "phase0_preGenesisState"}).inc();
     const value = await this.db.get(this.key);
     return value ? this.type().createTreeBackedFromBytes(value) : null;
   }

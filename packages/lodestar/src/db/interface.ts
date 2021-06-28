@@ -29,6 +29,7 @@ import {AttestationPool} from "./attestationPool";
 import {PendingBlockRepository} from "./repositories/pendingBlock";
 import {SyncCommitteeCache} from "./syncCommittee";
 import {SyncCommitteeContributionCache} from "./syncCommitteeContribution";
+import {IDbMetrics} from "../../../db/lib";
 
 /**
  * The DB service manages the data layer of the beacon chain
@@ -36,6 +37,8 @@ import {SyncCommitteeContributionCache} from "./syncCommitteeContribution";
  * but instead expose relevent beacon chain objects
  */
 export interface IBeaconDb {
+  metrics?: IDbMetrics;
+
   // unfinalized blocks
   block: BlockRepository;
 
