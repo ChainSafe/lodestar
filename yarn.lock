@@ -1383,10 +1383,10 @@
     enabled "2.0.x"
     kuler "^2.0.0"
 
-"@dapplion/benchmark@^0.1.4":
-  version "0.1.4"
-  resolved "https://registry.yarnpkg.com/@dapplion/benchmark/-/benchmark-0.1.4.tgz#4142abf30d3077e13e982b29aaa044b0f398bb3d"
-  integrity sha512-yu500pX/99InW0B5u3Ik9xhuo8Hl9mCMCC3EyLhld+KnyTln/PHBzMioUcoxDkqqG6UxJegP44so3dZOyx2Ocg==
+"@dapplion/benchmark@^0.1.5":
+  version "0.1.5"
+  resolved "https://registry.yarnpkg.com/@dapplion/benchmark/-/benchmark-0.1.5.tgz#43b268dd4a41adb6e35ee5b71a0697bc6a43078f"
+  integrity sha512-6+SBe8Jee/THTCMTr/cvgB0fS3u5n2lDRfcDUMtHl/LZYVE61BASk2D7vRmMVL8LOax9tLk3OcWtCo5Q9aNbTQ==
   dependencies:
     "@actions/cache" "^1.0.7"
     "@actions/github" "^5.0.0"
