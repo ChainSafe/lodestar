@@ -14,43 +14,44 @@ import {assembleAttesterDuty} from "../../../../../src/chain/factory/duties";
 import {expect} from "chai";
 import {itBench, setBenchOpts} from "@dapplion/benchmark";
 
-const server = setupApiImplTestServer();
-const chainStub = server.chainStub;
-const syncStub = server.syncStub;
-chainStub.clock = server.sandbox.createStubInstance(LocalClock);
-chainStub.forkChoice = server.sandbox.createStubInstance(ForkChoice);
-chainStub.getCanonicalBlockAtSlot.resolves(ssz.phase0.SignedBeaconBlock.defaultValue());
-const dbStub = server.dbStub;
-
-const numValidators = 200000;
-const numAttachedValidators = 200;
-
-const validators = generateValidators(numValidators, {
-  effectiveBalance: MAX_EFFECTIVE_BALANCE,
-  activationEpoch: 0,
-  exitEpoch: FAR_FUTURE_EPOCH,
-});
-syncStub.isSynced.returns(true);
-server.sandbox.stub(chainStub.clock, "currentEpoch").get(() => 0);
-server.sandbox.stub(chainStub.clock, "currentSlot").get(() => 0);
-dbStub.block.get.resolves({message: {stateRoot: Buffer.alloc(32)}} as any);
-const _state = generateState(
-  {
-    slot: 0,
-    validators,
-    balances: generateInitialMaxBalances(config, numValidators),
-  },
-  config
-);
-const state = createCachedBeaconState(config, _state);
-chainStub.getHeadStateAtCurrentEpoch.resolves(state);
-
-const indices = Array.from({length: numAttachedValidators}, (_, i) => i * 5);
-
 describe("getCommitteeAssignments vs assembleAttesterDuties performance test", async () => {
+  const server = setupApiImplTestServer();
+  const chainStub = server.chainStub;
+  const syncStub = server.syncStub;
+  chainStub.clock = server.sandbox.createStubInstance(LocalClock);
+  chainStub.forkChoice = server.sandbox.createStubInstance(ForkChoice);
+  chainStub.getCanonicalBlockAtSlot.resolves(ssz.phase0.SignedBeaconBlock.defaultValue());
+  const dbStub = server.dbStub;
+
+  const numValidators = 200000;
+  const numAttachedValidators = 200;
+
+  const validators = generateValidators(numValidators, {
+    effectiveBalance: MAX_EFFECTIVE_BALANCE,
+    activationEpoch: 0,
+    exitEpoch: FAR_FUTURE_EPOCH,
+  });
+  syncStub.isSynced.returns(true);
+  server.sandbox.stub(chainStub.clock, "currentEpoch").get(() => 0);
+  server.sandbox.stub(chainStub.clock, "currentSlot").get(() => 0);
+  dbStub.block.get.resolves({message: {stateRoot: Buffer.alloc(32)}} as any);
+  const _state = generateState(
+    {
+      slot: 0,
+      validators,
+      balances: generateInitialMaxBalances(config, numValidators),
+    },
+    config
+  );
+  const state = createCachedBeaconState(config, _state);
+  chainStub.getHeadStateAtCurrentEpoch.resolves(state);
+
+  const indices = Array.from({length: numAttachedValidators}, (_, i) => i * 5);
+
   setBenchOpts({
     maxMs: 10 * 1000,
-    runs: 10,
+    minMs: 2 * 1000,
+    runs: 1024,
   });
 
   // the new way of getting attester duties
@@ -68,7 +69,7 @@ describe("getCommitteeAssignments vs assembleAttesterDuties performance test", a
     newDuties = state.epochCtx.getCommitteeAssignments(0, validatorData);
   });
 
-  itBench("new way (plus index2pubkey): getCommitteeAssignments", () => {
+  itBench("getCommitteeAssignments - index2pubkey - more data", () => {
     const validatorData: BLSPubkey[] = [];
     indices.forEach((index) => {
       const pubkey = state.index2pubkey[index];
@@ -82,7 +83,7 @@ describe("getCommitteeAssignments vs assembleAttesterDuties performance test", a
 
   // the old way of getting the attester duties
   let oldDuties: AttesterDuty[] = [];
-  itBench("old way: assembleAttesterDuty batch", () => {
+  itBench("assembleAttesterDuty", () => {
     oldDuties = [];
     for (const validatorIndex of indices) {
       const validator = state.validators[validatorIndex];

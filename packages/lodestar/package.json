@@ -36,6 +36,7 @@
     "pretest": "yarn run check-types",
     "test": "yarn test:unit && yarn test:e2e",
     "test:unit": "LODESTAR_PRESET=minimal nyc --cache-dir .nyc_output/.cache -e .ts mocha 'test/unit/**/*.test.ts'",
+    "test:perf": "LODESTAR_PRESET=minimal nyc --cache-dir .nyc_output/.cache -e .ts mocha 'test/perf/**/*.test.ts'",
     "test:e2e": "LODESTAR_PRESET=minimal mocha 'test/e2e/**/*.test.ts'",
     "test:sim": "LODESTAR_PRESET=minimal mocha 'test/sim/**/*.test.ts'",
     "test:sim:singleThread": "LODESTAR_PRESET=minimal mocha 'test/sim/singleNodeSingleThread.test.ts'",
