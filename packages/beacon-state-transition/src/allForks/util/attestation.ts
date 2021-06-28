@@ -1,6 +1,6 @@
-import {ATTESTATION_SUBNET_COUNT} from "@chainsafe/lodestar-params";
+import {ATTESTATION_SUBNET_COUNT, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {phase0} from "@chainsafe/lodestar-types";
-import {computeSlotsSinceEpochStart} from "../../util";
+import {computeEpochAtSlot} from "../../util";
 import {EpochContext} from "./epochContext";
 
 /**
@@ -15,8 +15,8 @@ export function computeSubnetForAttestation(epochCtx: EpochContext, attestation:
  * Compute the correct subnet for a slot/committee index
  */
 export function computeSubnetForSlot(epochCtx: EpochContext, slot: number, committeeIndex: number): number {
-  const slotsSinceEpochStart = computeSlotsSinceEpochStart(slot);
-  const committeeCount = epochCtx.getCommitteeCountAtSlot(slot);
-  const committeesSinceEpochStart = committeeCount * slotsSinceEpochStart;
+  const slotsSinceEpochStart = slot % SLOTS_PER_EPOCH;
+  const committeesPerSlot = epochCtx.getCommitteeCountPerSlot(computeEpochAtSlot(slot));
+  const committeesSinceEpochStart = committeesPerSlot * slotsSinceEpochStart;
   return (committeesSinceEpochStart + committeeIndex) % ATTESTATION_SUBNET_COUNT;
 }

@@ -1,6 +1,6 @@
 import {routes} from "@chainsafe/lodestar-api";
 import {readonlyValues} from "@chainsafe/ssz";
-import {allForks} from "@chainsafe/lodestar-beacon-state-transition";
+import {allForks, computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {BLSPubkey, Epoch, ValidatorIndex, ssz} from "@chainsafe/lodestar-types";
 
@@ -25,7 +25,7 @@ export function assembleAttesterDuty(
       pubkey: validator.pubkey,
       validatorIndex: validator.index,
       committeeLength: committeeAssignment.validators.length,
-      committeesAtSlot: epochCtx.getCommitteeCountAtSlot(committeeAssignment.slot),
+      committeesAtSlot: epochCtx.getCommitteeCountPerSlot(computeEpochAtSlot(committeeAssignment.slot)),
       validatorCommitteeIndex,
       committeeIndex: committeeAssignment.committeeIndex,
       slot: committeeAssignment.slot,
