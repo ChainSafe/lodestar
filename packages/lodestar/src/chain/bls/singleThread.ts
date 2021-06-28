@@ -1,12 +1,17 @@
-import {PublicKey} from "@chainsafe/bls";
-import {IBlsVerifierImpl} from "./interface";
+import {ISignatureSet} from "@chainsafe/lodestar-beacon-state-transition/src";
+import {IBlsVerifier} from "./interface";
 import {verifySignatureSetsMaybeBatch} from "./maybeBatch";
+import {getAggregatedPubkey} from "./utils";
 
-export class BlsSingleThreadVerifier implements IBlsVerifierImpl {
-  async verifySignatureSets(
-    sets: {publicKey: PublicKey; message: Uint8Array; signature: Uint8Array}[],
-    validateSignature: boolean
-  ): Promise<boolean> {
-    return verifySignatureSetsMaybeBatch(sets, validateSignature);
+export class BlsSingleThreadVerifier implements IBlsVerifier {
+  async verifySignatureSets(sets: ISignatureSet[], validateSignature = true): Promise<boolean> {
+    return verifySignatureSetsMaybeBatch(
+      sets.map((set) => ({
+        publicKey: getAggregatedPubkey(set),
+        message: set.signingRoot.valueOf() as Uint8Array,
+        signature: set.signature,
+      })),
+      validateSignature
+    );
   }
 }
