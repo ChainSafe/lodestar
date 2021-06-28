@@ -29,7 +29,7 @@ import {IChainOptions} from "./options";
 import {IStateRegenerator, QueuedStateRegenerator} from "./regen";
 import {LodestarForkChoice} from "./forkChoice";
 import {restoreStateCaches} from "./initState";
-import {BlsVerifier, IBlsVerifier} from "./bls";
+import {IBlsVerifier, BlsSingleThreadVerifier, BlsMultiThreadWorkerPool} from "./bls";
 import {ForkDigestContext, IForkDigestContext} from "../util/forkDigestContext";
 
 export interface IBeaconChainModules {
@@ -83,7 +83,9 @@ export class BeaconChain implements IBeaconChain {
 
     const signal = this.abortController.signal;
     const emitter = this.internalEmitter; // All internal compoments emit to the internal emitter first
-    const bls = new BlsVerifier({logger, metrics, signal: this.abortController.signal}, opts);
+    const bls = opts.useSingleThreadVerifier
+      ? new BlsSingleThreadVerifier()
+      : new BlsMultiThreadWorkerPool({logger, metrics, signal: this.abortController.signal});
 
     const clock = new LocalClock({config, emitter, genesisTime: this.genesisTime, signal});
     const stateCache = new StateContextCache();
