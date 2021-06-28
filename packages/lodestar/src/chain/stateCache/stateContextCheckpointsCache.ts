@@ -1,4 +1,4 @@
-import {toHexString, fromHexString} from "@chainsafe/ssz";
+import {toHexString} from "@chainsafe/ssz";
 import {phase0, Epoch, allForks} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
@@ -22,12 +22,12 @@ export class CheckpointStateCache {
   }
 
   get(cp: phase0.Checkpoint): CachedBeaconState<allForks.BeaconState> | null {
-    const item = this.cache.get(this.checkpointToKey(cp));
+    const item = this.cache.get(toCheckpointKey(cp));
     return item ? item.clone() : null;
   }
 
   add(cp: phase0.Checkpoint, item: CachedBeaconState<allForks.BeaconState>): void {
-    const key = this.checkpointToKey(cp);
+    const key = toCheckpointKey(cp);
     if (this.cache.has(key)) {
       return;
     }
@@ -79,8 +79,7 @@ export class CheckpointStateCache {
   }
 
   delete(cp: phase0.Checkpoint): void {
-    const key = this.checkpointToKey(cp);
-    this.cache.delete(key);
+    this.cache.delete(toCheckpointKey(cp));
     const epochKey = toHexString(cp.root);
     const value = this.epochIndex.get(cp.epoch);
     if (value) {
@@ -93,7 +92,7 @@ export class CheckpointStateCache {
 
   deleteAllEpochItems(epoch: Epoch): void {
     for (const hexRoot of this.epochIndex.get(epoch) || []) {
-      this.cache.delete(this.checkpointToKey({root: fromHexString(hexRoot), epoch}));
+      this.cache.delete(toCheckpointHexKey({root: hexRoot, epoch}));
     }
     this.epochIndex.delete(epoch);
   }
@@ -102,8 +101,12 @@ export class CheckpointStateCache {
     this.cache.clear();
     this.epochIndex.clear();
   }
+}
 
-  private checkpointToKey(cp: phase0.Checkpoint): string {
-    return `${toHexString(cp.root)}:${cp.epoch}`;
-  }
+function toCheckpointKey(cp: phase0.Checkpoint): string {
+  return `${toHexString(cp.root)}:${cp.epoch}`;
+}
+
+function toCheckpointHexKey(cp: {root: string; epoch: Epoch}): string {
+  return `${cp.root}:${cp.epoch}`;
 }
