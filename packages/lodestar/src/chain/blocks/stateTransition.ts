@@ -115,7 +115,7 @@ export async function runStateTransition(
     }
 
     emitBlockEvent(emitter, job, postState);
-    emitForkChoiceHeadEvents(emitter, forkChoice, forkChoice.getHead(), oldHead);
+    emitForkChoiceHeadEvents(emitter, forkChoice, forkChoice.getHead(), oldHead, metrics);
   }
 
   return postState;
@@ -151,7 +151,8 @@ function emitForkChoiceHeadEvents(
   emitter: ChainEventEmitter,
   forkChoice: IForkChoice,
   head: IBlockSummary,
-  oldHead: IBlockSummary
+  oldHead: IBlockSummary,
+  metrics: IMetrics | null
 ): void {
   const headRoot = head.blockRoot;
   const oldHeadRoot = oldHead.blockRoot;
@@ -164,8 +165,10 @@ function emitForkChoiceHeadEvents(
       const firstAncestor = headHistory.find((summary) => oldHeadHistory.includes(summary));
       const distance = oldHead.slot - (firstAncestor?.slot ?? oldHead.slot);
       emitter.emit(ChainEvent.forkChoiceReorg, head, oldHead, distance);
+      metrics?.forkChoiceReorg.inc();
     }
     emitter.emit(ChainEvent.forkChoiceHead, head);
+    metrics?.forkChoiceChangedHead.inc();
   }
 }
 
