@@ -142,5 +142,30 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
       name: "beacon_fork_choice_reorg_total",
       help: "Count of occasions fork choice has switched to a different chain",
     }),
+
+    reqRespOutgoingRequests: register.gauge<"method">({
+      name: "beacon_reqresp_outgoing_requests_total",
+      labelNames: ["method"],
+      help: "Counts total requests done per method",
+    }),
+    reqRespOutgoingErrors: register.gauge<"method">({
+      name: "beacon_reqresp_outgoing_requests_error_total",
+      labelNames: ["method"],
+      help: "Counts total failed requests done per method",
+    }),
+    reqRespIncomingRequests: register.gauge<"method">({
+      name: "beacon_reqresp_incoming_requests_total",
+      labelNames: ["method"],
+      help: "Counts total responses handled per method",
+    }),
+    reqRespIncomingErrors: register.gauge<"method">({
+      name: "beacon_reqresp_incoming_requests_error_total",
+      help: "Counts total failed responses handled per method",
+      labelNames: ["method"],
+    }),
+    reqRespDialErrors: register.gauge({
+      name: "beacon_reqresp_dial_errors_total",
+      help: "Count total dial errors",
+    }),
   };
 }

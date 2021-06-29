@@ -20,6 +20,8 @@ import {assertSequentialBlocksInRange, formatProtocolId} from "./utils";
 import {MetadataController} from "../metadata";
 import {INetworkEventBus, NetworkEvent} from "../events";
 import {IReqRespHandler} from "./handlers";
+import {IMetrics} from "../../metrics";
+import {RequestError, RequestErrorCode} from "./request";
 import {
   Method,
   Version,
@@ -52,6 +54,7 @@ export class ReqResp implements IReqResp {
   private options?: IReqRespOptions;
   private reqCount = 0;
   private respCount = 0;
+  private metrics: IMetrics | null;
 
   constructor(modules: IReqRespModules, options?: IReqRespOptions) {
     this.config = modules.config;
@@ -64,6 +67,7 @@ export class ReqResp implements IReqResp {
     this.peerRpcScores = modules.peerRpcScores;
     this.networkEventBus = modules.networkEventBus;
     this.options = options;
+    this.metrics = modules.metrics;
   }
 
   start(): void {
@@ -138,6 +142,8 @@ export class ReqResp implements IReqResp {
     maxResponses = 1
   ): Promise<T> {
     try {
+      this.metrics?.reqRespOutgoingRequests.inc({method});
+
       const encoding = this.peerMetadata.encoding.get(peerId) ?? Encoding.SSZ_SNAPPY;
       const result = await sendRequest<T>(
         {config: this.config, logger: this.logger, libp2p: this.libp2p, forkDigestContext: this.forkDigestContext},
@@ -154,7 +160,12 @@ export class ReqResp implements IReqResp {
 
       return result;
     } catch (e) {
+      this.metrics?.reqRespOutgoingErrors.inc({method});
+
       const peerAction = onOutgoingReqRespError(e as Error, method);
+      if (e instanceof RequestError && (e.type.code === RequestErrorCode.DIAL_ERROR || e.type.code === RequestErrorCode.DIAL_TIMEOUT)) {
+          this.metrics?.reqRespDialErrors.inc();
+        }
       if (peerAction !== null) this.peerRpcScores.applyAction(peerId, peerAction);
 
       throw e;
@@ -172,6 +183,8 @@ export class ReqResp implements IReqResp {
       }
 
       try {
+        this.metrics?.reqRespIncomingRequests.inc({method});
+
         await handleRequest(
           {config: this.config, logger: this.logger, libp2p: this.libp2p, forkDigestContext: this.forkDigestContext},
           this.onRequest.bind(this),
@@ -183,6 +196,8 @@ export class ReqResp implements IReqResp {
         );
         // TODO: Do success peer scoring here
       } catch {
+        this.metrics?.reqRespIncomingErrors.inc({method});
+
         // TODO: Do error peer scoring here
         // Must not throw since this is an event handler
       }
