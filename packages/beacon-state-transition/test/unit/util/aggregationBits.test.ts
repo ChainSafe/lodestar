@@ -7,6 +7,8 @@ import {
   bitsToUint8Array,
   zipIndexesSyncCommitteeBits,
   zipAllIndexesSyncCommitteeBits,
+  getSingleBitIndex,
+  AggregationBitsErrorCode,
 } from "../../../src";
 
 const BITS_PER_BYTE = 8;
@@ -107,6 +109,52 @@ describe("zipIndexesSyncCommitteeBits and zipAllIndexesSyncCommitteeBits", funct
       "Incorrect unparticipant indices from struct SyncAggregate"
     );
   });
+});
+
+describe("getSingleBitIndex", () => {
+  const len = MAX_VALIDATORS_PER_COMMITTEE;
+
+  const testCases: {id: string; bitList: boolean[]; res: number | Error | string}[] = [
+    {id: "bit 0 true", bitList: [true, false, false, false, false, false, false, false, false, false], res: 0},
+    {id: "bit 4 true", bitList: [false, false, false, false, true, false, false, false, false, false], res: 4},
+    {id: "bit 9 true", bitList: [false, false, false, false, false, false, false, false, false, true], res: 9},
+    {
+      id: "2 bits true",
+      bitList: [true, false, false, false, true, false, false, false, false, false],
+      res: AggregationBitsErrorCode.NOT_EXACTLY_ONE_BIT_SET,
+    },
+    {
+      id: `${len} all true`,
+      bitList: Array.from({length: len}, () => true),
+      res: AggregationBitsErrorCode.NOT_EXACTLY_ONE_BIT_SET,
+    },
+    {
+      id: `${len} all false`,
+      bitList: Array.from({length: len}, () => false),
+      res: AggregationBitsErrorCode.NOT_EXACTLY_ONE_BIT_SET,
+    },
+  ];
+
+  for (const {id, res, bitList} of testCases) {
+    const struct = bitList as List<boolean>;
+    const treeBacked = ssz.phase0.CommitteeBits.createTreeBackedFromStruct(struct);
+
+    it(`${id} - struct`, () => {
+      if (typeof res === "number") {
+        expect(getSingleBitIndex(struct)).to.equal(res);
+      } else {
+        expect(() => getSingleBitIndex(struct)).to.throw(res as Error);
+      }
+    });
+
+    it(`${id} - treeBacked`, () => {
+      if (typeof res === "number") {
+        expect(getSingleBitIndex(treeBacked)).to.equal(res);
+      } else {
+        expect(() => getSingleBitIndex(treeBacked)).to.throw(res as Error);
+      }
+    });
+  }
 });
 
 /**
