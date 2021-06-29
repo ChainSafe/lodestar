@@ -111,9 +111,9 @@ async function processBlocksInEpoch(
         reprocess: job.reprocess,
         prefinalized: job.prefinalized,
         signedBlock: block,
-        // if opts?.disableBlsBatchVerify == false, assume validSignatures == true for runStateTransition
-        validProposerSignature: !opts?.disableBlsBatchVerify || job.validProposerSignature,
-        validSignatures: !opts?.disableBlsBatchVerify || job.validSignatures,
+        // validate signatures in batch below
+        validProposerSignature: true,
+        validSignatures: true,
       });
 
       // Callback to count processed blocks in processChainSegment
