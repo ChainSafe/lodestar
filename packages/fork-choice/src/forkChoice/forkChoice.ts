@@ -1,7 +1,7 @@
 /* eslint-disable max-len */
 import {fromHexString, readonlyValues, toHexString} from "@chainsafe/ssz";
 import {SAFE_SLOTS_TO_UPDATE_JUSTIFIED, SLOTS_PER_HISTORICAL_ROOT} from "@chainsafe/lodestar-params";
-import {Slot, ValidatorIndex, Gwei, phase0, allForks, ssz} from "@chainsafe/lodestar-types";
+import {Slot, ValidatorIndex, Gwei, phase0, allForks, ssz, BlockRootHex, Epoch} from "@chainsafe/lodestar-types";
 import {
   computeSlotsSinceEpochStart,
   computeStartSlotAtEpoch,
@@ -128,7 +128,8 @@ export class ForkChoice implements IForkChoice {
    * https://github.com/ethereum/eth2.0-specs/blob/v0.12.1/specs/phase0/fork-choice.md#get_ancestor
    */
   getAncestor(blockRoot: phase0.Root, ancestorSlot: Slot): Uint8Array {
-    const block = this.protoArray.getBlock(toHexString(blockRoot));
+    const blockRootHex = toHexString(blockRoot);
+    const block = this.protoArray.getBlock(blockRootHex);
     if (!block) {
       throw new ForkChoiceError({
         code: ForkChoiceErrorCode.MISSING_PROTO_ARRAY_BLOCK,
@@ -139,7 +140,7 @@ export class ForkChoice implements IForkChoice {
     if (block.slot > ancestorSlot) {
       // Search for a slot that is lte the target slot.
       // We check for lower slots to account for skip slots.
-      for (const node of this.protoArray.iterateNodes(toHexString(blockRoot))) {
+      for (const node of this.protoArray.iterateNodes(blockRootHex)) {
         if (node.slot <= ancestorSlot) {
           return fromHexString(node.blockRoot);
         }
@@ -262,13 +263,15 @@ export class ForkChoice implements IForkChoice {
    * This ensures that the forkchoice is never out of sync.
    */
   onBlock(block: allForks.BeaconBlock, state: allForks.BeaconState, justifiedBalances?: Gwei[]): void {
+    const {parentRoot, slot} = block;
+    const parentRootHex = toHexString(parentRoot);
     // Parent block must be known
-    if (!this.protoArray.hasBlock(toHexString(block.parentRoot))) {
+    if (!this.protoArray.hasBlock(parentRootHex)) {
       throw new ForkChoiceError({
         code: ForkChoiceErrorCode.INVALID_BLOCK,
         err: {
           code: InvalidBlockCode.UNKNOWN_PARENT,
-          root: block.parentRoot.valueOf() as Uint8Array,
+          root: parentRoot.valueOf() as Uint8Array,
         },
       });
     }
@@ -277,13 +280,13 @@ export class ForkChoice implements IForkChoice {
     // the are in the past.
     //
     // Note: presently, we do not delay consideration. We just drop the block.
-    if (block.slot > this.fcStore.currentSlot) {
+    if (slot > this.fcStore.currentSlot) {
       throw new ForkChoiceError({
         code: ForkChoiceErrorCode.INVALID_BLOCK,
         err: {
           code: InvalidBlockCode.FUTURE_SLOT,
           currentSlot: this.fcStore.currentSlot,
-          blockSlot: block.slot,
+          blockSlot: slot,
         },
       });
     }
@@ -291,19 +294,19 @@ export class ForkChoice implements IForkChoice {
     // Check that block is later than the finalized epoch slot (optimization to reduce calls to
     // get_ancestor).
     const finalizedSlot = computeStartSlotAtEpoch(this.fcStore.finalizedCheckpoint.epoch);
-    if (block.slot <= finalizedSlot) {
+    if (slot <= finalizedSlot) {
       throw new ForkChoiceError({
         code: ForkChoiceErrorCode.INVALID_BLOCK,
         err: {
           code: InvalidBlockCode.FINALIZED_SLOT,
           finalizedSlot,
-          blockSlot: block.slot,
+          blockSlot: slot,
         },
       });
     }
 
     // Check block is a descendant of the finalized block at the checkpoint finalized slot.
-    const blockAncestor = this.getAncestor(block.parentRoot, finalizedSlot);
+    const blockAncestor = this.getAncestor(parentRoot, finalizedSlot);
     const finalizedRoot = this.fcStore.finalizedCheckpoint.root;
     if (!ssz.Root.equals(blockAncestor, finalizedRoot)) {
       throw new ForkChoiceError({
@@ -317,19 +320,20 @@ export class ForkChoice implements IForkChoice {
     }
 
     let shouldUpdateJustified = false;
-
+    const {currentJustifiedCheckpoint, finalizedCheckpoint} = state;
+    const stateJustifiedEpoch = currentJustifiedCheckpoint.epoch;
     // Update justified checkpoint.
-    if (state.currentJustifiedCheckpoint.epoch > this.fcStore.justifiedCheckpoint.epoch) {
+    if (stateJustifiedEpoch > this.fcStore.justifiedCheckpoint.epoch) {
       if (!justifiedBalances) {
         throw new ForkChoiceError({
           code: ForkChoiceErrorCode.UNABLE_TO_SET_JUSTIFIED_CHECKPOINT,
           error: new Error("No validator balances supplied"),
         });
       }
-      if (state.currentJustifiedCheckpoint.epoch > this.fcStore.bestJustifiedCheckpoint.epoch) {
+      if (stateJustifiedEpoch > this.fcStore.bestJustifiedCheckpoint.epoch) {
         // `valueOf` coerses the checkpoint, which may be tree-backed, into a javascript object
         // See https://github.com/ChainSafe/lodestar/issues/2258
-        this.updateBestJustified(state.currentJustifiedCheckpoint.valueOf() as phase0.Checkpoint, justifiedBalances);
+        this.updateBestJustified(currentJustifiedCheckpoint.valueOf() as phase0.Checkpoint, justifiedBalances);
       }
       if (this.shouldUpdateJustifiedCheckpoint(state)) {
         // wait to update until after finalized checkpoint is set
@@ -338,15 +342,14 @@ export class ForkChoice implements IForkChoice {
     }
 
     // Update finalized checkpoint.
-    if (state.finalizedCheckpoint.epoch > this.fcStore.finalizedCheckpoint.epoch) {
+    if (finalizedCheckpoint.epoch > this.fcStore.finalizedCheckpoint.epoch) {
       // `valueOf` coerses the checkpoint, which may be tree-backed, into a javascript object
       // See https://github.com/ChainSafe/lodestar/issues/2258
-      this.fcStore.finalizedCheckpoint = state.finalizedCheckpoint.valueOf() as phase0.Checkpoint;
-      const finalizedSlot = computeStartSlotAtEpoch(this.fcStore.finalizedCheckpoint.epoch);
+      this.fcStore.finalizedCheckpoint = finalizedCheckpoint.valueOf() as phase0.Checkpoint;
 
       if (
-        (!ssz.phase0.Checkpoint.equals(this.fcStore.justifiedCheckpoint, state.currentJustifiedCheckpoint) &&
-          state.currentJustifiedCheckpoint.epoch > this.fcStore.justifiedCheckpoint.epoch) ||
+        (!ssz.phase0.Checkpoint.equals(this.fcStore.justifiedCheckpoint, currentJustifiedCheckpoint) &&
+          stateJustifiedEpoch > this.fcStore.justifiedCheckpoint.epoch) ||
         !ssz.Root.equals(
           this.getAncestor(this.fcStore.justifiedCheckpoint.root, finalizedSlot),
           this.fcStore.finalizedCheckpoint.root
@@ -366,23 +369,23 @@ export class ForkChoice implements IForkChoice {
       }
       // `valueOf` coerses the checkpoint, which may be tree-backed, into a javascript object
       // See https://github.com/ChainSafe/lodestar/issues/2258
-      this.updateJustified(state.currentJustifiedCheckpoint.valueOf() as phase0.Checkpoint, justifiedBalances);
+      this.updateJustified(currentJustifiedCheckpoint.valueOf() as phase0.Checkpoint, justifiedBalances);
     }
 
-    const targetSlot = computeStartSlotAtEpoch(computeEpochAtSlot(block.slot));
-    const blockRoot = this.config.getForkTypes(block.slot).BeaconBlock.hashTreeRoot(block);
-    const targetRoot = block.slot === targetSlot ? blockRoot : state.blockRoots[targetSlot % SLOTS_PER_HISTORICAL_ROOT];
+    const targetSlot = computeStartSlotAtEpoch(computeEpochAtSlot(slot));
+    const blockRoot = this.config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block);
+    const targetRoot = slot === targetSlot ? blockRoot : state.blockRoots[targetSlot % SLOTS_PER_HISTORICAL_ROOT];
 
     // This does not apply a vote to the block, it just makes fork choice aware of the block so
     // it can still be identified as the head even if it doesn't have any votes.
     this.protoArray.onBlock({
-      slot: block.slot,
+      slot: slot,
       blockRoot: toHexString(blockRoot),
-      parentRoot: toHexString(block.parentRoot),
+      parentRoot: parentRootHex,
       targetRoot: toHexString(targetRoot),
       stateRoot: toHexString(block.stateRoot),
-      justifiedEpoch: state.currentJustifiedCheckpoint.epoch,
-      finalizedEpoch: state.finalizedCheckpoint.epoch,
+      justifiedEpoch: stateJustifiedEpoch,
+      finalizedEpoch: finalizedCheckpoint.epoch,
     });
   }
 
@@ -418,18 +421,19 @@ export class ForkChoice implements IForkChoice {
     // (1) becomes weird once we hit finality and fork choice drops the genesis block. (2) is
     // fine because votes to the genesis block are not useful; all validators implicitly attest
     // to genesis just by being present in the chain.
-    if (ssz.Root.equals(attestation.data.beaconBlockRoot, ZERO_HASH)) {
+    const attestationData = attestation.data;
+    const {slot, beaconBlockRoot} = attestationData;
+    const blockRootHex = toHexString(beaconBlockRoot);
+    const epoch = attestationData.target.epoch;
+    if (ssz.Root.equals(beaconBlockRoot, ZERO_HASH)) {
       return;
     }
 
     this.validateOnAttestation(attestation);
 
-    if (attestation.data.slot < this.fcStore.currentSlot) {
+    if (slot < this.fcStore.currentSlot) {
       for (const validatorIndex of readonlyValues(attestation.attestingIndices)) {
-        this.addLatestMessage(validatorIndex, {
-          root: attestation.data.beaconBlockRoot,
-          epoch: attestation.data.target.epoch,
-        });
+        this.addLatestMessage(validatorIndex, epoch, blockRootHex);
       }
     } else {
       // The spec declares:
@@ -439,10 +443,10 @@ export class ForkChoice implements IForkChoice {
       // Delay consideration in the fork choice until their slot is in the past.
       // ```
       this.queuedAttestations.add({
-        slot: attestation.data.slot,
+        slot: slot,
         attestingIndices: Array.from(readonlyValues(attestation.attestingIndices)),
-        blockRoot: attestation.data.beaconBlockRoot.valueOf() as Uint8Array,
-        targetEpoch: attestation.data.target.epoch,
+        blockRoot: beaconBlockRoot.valueOf() as Uint8Array,
+        targetEpoch: epoch,
       });
     }
   }
@@ -601,7 +605,8 @@ export class ForkChoice implements IForkChoice {
    * https://github.com/ethereum/eth2.0-specs/blob/v0.12.1/specs/phase0/fork-choice.md#should_update_justified_checkpoint
    */
   private shouldUpdateJustifiedCheckpoint(state: allForks.BeaconState): boolean {
-    const newJustifiedCheckpoint = state.currentJustifiedCheckpoint;
+    const {slot, currentJustifiedCheckpoint} = state;
+    const newJustifiedCheckpoint = currentJustifiedCheckpoint;
 
     if (computeSlotsSinceEpochStart(this.fcStore.currentSlot) < SAFE_SLOTS_TO_UPDATE_JUSTIFIED) {
       return true;
@@ -610,16 +615,16 @@ export class ForkChoice implements IForkChoice {
     const justifiedSlot = computeStartSlotAtEpoch(this.fcStore.justifiedCheckpoint.epoch);
 
     // This sanity check is not in the spec, but the invariant is implied
-    if (justifiedSlot >= state.slot) {
+    if (justifiedSlot >= slot) {
       throw new ForkChoiceError({
         code: ForkChoiceErrorCode.ATTEMPT_TO_REVERT_JUSTIFICATION,
         store: justifiedSlot,
-        state: state.slot,
+        state: slot,
       });
     }
 
     // at regular sync time we don't want to wait for clock time next epoch to update bestJustifiedCheckpoint
-    if (computeEpochAtSlot(state.slot) < computeEpochAtSlot(this.fcStore.currentSlot)) {
+    if (computeEpochAtSlot(slot) < computeEpochAtSlot(this.fcStore.currentSlot)) {
       return true;
     }
 
@@ -664,46 +669,50 @@ export class ForkChoice implements IForkChoice {
     }
 
     const epochNow = computeEpochAtSlot(this.fcStore.currentSlot);
-    const target = indexedAttestation.data.target;
+    const attestationData = indexedAttestation.data;
+    const {target, slot, beaconBlockRoot} = attestationData;
+    const beaconBlockRootHex = toHexString(beaconBlockRoot);
+    const {epoch: targetEpoch, root: targetRoot} = target;
+    const targetRootHex = toHexString(targetRoot);
 
     // Attestation must be from the current of previous epoch.
-    if (target.epoch > epochNow) {
+    if (targetEpoch > epochNow) {
       throw new ForkChoiceError({
         code: ForkChoiceErrorCode.INVALID_ATTESTATION,
         err: {
           code: InvalidAttestationCode.FUTURE_EPOCH,
-          attestationEpoch: target.epoch,
+          attestationEpoch: targetEpoch,
           currentEpoch: epochNow,
         },
       });
-    } else if (target.epoch + 1 < epochNow) {
+    } else if (targetEpoch + 1 < epochNow) {
       throw new ForkChoiceError({
         code: ForkChoiceErrorCode.INVALID_ATTESTATION,
         err: {
           code: InvalidAttestationCode.PAST_EPOCH,
-          attestationEpoch: target.epoch,
+          attestationEpoch: targetEpoch,
           currentEpoch: epochNow,
         },
       });
     }
 
-    if (target.epoch !== computeEpochAtSlot(indexedAttestation.data.slot)) {
+    if (targetEpoch !== computeEpochAtSlot(slot)) {
       throw new ForkChoiceError({
         code: ForkChoiceErrorCode.INVALID_ATTESTATION,
         err: {
           code: InvalidAttestationCode.BAD_TARGET_EPOCH,
-          target: target.epoch,
-          slot: indexedAttestation.data.slot,
+          target: targetEpoch,
+          slot,
         },
       });
     }
 
-    if (this.fcStore.currentSlot < indexedAttestation.data.slot + 1) {
+    if (this.fcStore.currentSlot < slot + 1) {
       throw new ForkChoiceError({
         code: ForkChoiceErrorCode.INVALID_ATTESTATION,
         err: {
           code: InvalidAttestationCode.FUTURE_SLOT,
-          attestationSlot: indexedAttestation.data.slot,
+          attestationSlot: slot,
           latestPermissibleSlot: this.fcStore.currentSlot - 1,
         },
       });
@@ -713,12 +722,12 @@ export class ForkChoice implements IForkChoice {
     //
     // We do not delay the block for later processing to reduce complexity and DoS attack
     // surface.
-    if (!this.protoArray.hasBlock(toHexString(target.root))) {
+    if (!this.protoArray.hasBlock(targetRootHex)) {
       throw new ForkChoiceError({
         code: ForkChoiceErrorCode.INVALID_ATTESTATION,
         err: {
           code: InvalidAttestationCode.UNKNOWN_TARGET_ROOT,
-          root: target.root.valueOf() as Uint8Array,
+          root: targetRoot.valueOf() as Uint8Array,
         },
       });
     }
@@ -731,13 +740,13 @@ export class ForkChoice implements IForkChoice {
     //
     // Attestations must be for a known block. If the block is unknown, we simply drop the
     // attestation and do not delay consideration for later.
-    const block = this.protoArray.getBlock(toHexString(indexedAttestation.data.beaconBlockRoot));
+    const block = this.protoArray.getBlock(beaconBlockRootHex);
     if (!block) {
       throw new ForkChoiceError({
         code: ForkChoiceErrorCode.INVALID_ATTESTATION,
         err: {
           code: InvalidAttestationCode.UNKNOWN_HEAD_BLOCK,
-          beaconBlockRoot: indexedAttestation.data.beaconBlockRoot.valueOf() as Uint8Array,
+          beaconBlockRoot: beaconBlockRoot.valueOf() as Uint8Array,
         },
       });
     }
@@ -746,31 +755,28 @@ export class ForkChoice implements IForkChoice {
     // then all slots between the block and attestation must be skipped. Therefore if the block
     // is from a prior epoch to the attestation, then the target root must be equal to the root
     // of the block that is being attested to.
-    const expectedTarget =
-      target.epoch > computeEpochAtSlot(block.slot)
-        ? indexedAttestation.data.beaconBlockRoot
-        : fromHexString(block.targetRoot);
+    const expectedTargetHex = target.epoch > computeEpochAtSlot(block.slot) ? beaconBlockRootHex : block.targetRoot;
 
-    if (!ssz.Root.equals(expectedTarget, target.root)) {
+    if (expectedTargetHex !== targetRootHex) {
       throw new ForkChoiceError({
         code: ForkChoiceErrorCode.INVALID_ATTESTATION,
         err: {
           code: InvalidAttestationCode.INVALID_TARGET,
-          attestation: target.root.valueOf() as Uint8Array,
-          local: expectedTarget.valueOf() as Uint8Array,
+          attestation: targetRoot.valueOf() as Uint8Array,
+          local: fromHexString(expectedTargetHex),
         },
       });
     }
 
     // Attestations must not be for blocks in the future. If this is the case, the attestation
     // should not be considered.
-    if (block.slot > indexedAttestation.data.slot) {
+    if (block.slot > slot) {
       throw new ForkChoiceError({
         code: ForkChoiceErrorCode.INVALID_ATTESTATION,
         err: {
           code: InvalidAttestationCode.ATTESTS_TO_FUTURE_BLOCK,
           block: block.slot,
-          attestation: indexedAttestation.data.slot,
+          attestation: slot,
         },
       });
     }
@@ -779,19 +785,18 @@ export class ForkChoice implements IForkChoice {
   /**
    * Add a validator's latest message to the tracked votes
    */
-  private addLatestMessage(validatorIndex: ValidatorIndex, message: ILatestMessage): void {
+  private addLatestMessage(validatorIndex: ValidatorIndex, nextEpoch: Epoch, nextRoot: BlockRootHex): void {
     this.synced = false;
-    const nextRoot = toHexString(message.root);
     const vote = this.votes[validatorIndex];
     if (!vote) {
       this.votes[validatorIndex] = {
         currentRoot: HEX_ZERO_HASH,
         nextRoot,
-        nextEpoch: message.epoch,
+        nextEpoch,
       };
-    } else if (message.epoch > vote.nextEpoch) {
+    } else if (nextEpoch > vote.nextEpoch) {
       vote.nextRoot = nextRoot;
-      vote.nextEpoch = message.epoch;
+      vote.nextEpoch = nextEpoch;
     }
     // else its an old vote, don't count it
   }
@@ -805,11 +810,10 @@ export class ForkChoice implements IForkChoice {
     for (const attestation of this.queuedAttestations.values()) {
       if (attestation.slot <= currentSlot) {
         this.queuedAttestations.delete(attestation);
+        const {blockRoot, targetEpoch} = attestation;
+        const blockRootHex = toHexString(blockRoot);
         for (const validatorIndex of attestation.attestingIndices) {
-          this.addLatestMessage(validatorIndex, {
-            root: attestation.blockRoot,
-            epoch: attestation.targetEpoch,
-          });
+          this.addLatestMessage(validatorIndex, targetEpoch, blockRootHex);
         }
       }
     }
