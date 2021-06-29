@@ -321,15 +321,16 @@ export class ForkChoice implements IForkChoice {
 
     let shouldUpdateJustified = false;
     const {currentJustifiedCheckpoint, finalizedCheckpoint} = state;
+    const stateJustifiedEpoch = currentJustifiedCheckpoint.epoch;
     // Update justified checkpoint.
-    if (currentJustifiedCheckpoint.epoch > this.fcStore.justifiedCheckpoint.epoch) {
+    if (stateJustifiedEpoch > this.fcStore.justifiedCheckpoint.epoch) {
       if (!justifiedBalances) {
         throw new ForkChoiceError({
           code: ForkChoiceErrorCode.UNABLE_TO_SET_JUSTIFIED_CHECKPOINT,
           error: new Error("No validator balances supplied"),
         });
       }
-      if (currentJustifiedCheckpoint.epoch > this.fcStore.bestJustifiedCheckpoint.epoch) {
+      if (stateJustifiedEpoch > this.fcStore.bestJustifiedCheckpoint.epoch) {
         // `valueOf` coerses the checkpoint, which may be tree-backed, into a javascript object
         // See https://github.com/ChainSafe/lodestar/issues/2258
         this.updateBestJustified(currentJustifiedCheckpoint.valueOf() as phase0.Checkpoint, justifiedBalances);
@@ -348,7 +349,7 @@ export class ForkChoice implements IForkChoice {
 
       if (
         (!ssz.phase0.Checkpoint.equals(this.fcStore.justifiedCheckpoint, currentJustifiedCheckpoint) &&
-          currentJustifiedCheckpoint.epoch > this.fcStore.justifiedCheckpoint.epoch) ||
+          stateJustifiedEpoch > this.fcStore.justifiedCheckpoint.epoch) ||
         !ssz.Root.equals(
           this.getAncestor(this.fcStore.justifiedCheckpoint.root, finalizedSlot),
           this.fcStore.finalizedCheckpoint.root
@@ -383,7 +384,7 @@ export class ForkChoice implements IForkChoice {
       parentRoot: parentRootHex,
       targetRoot: toHexString(targetRoot),
       stateRoot: toHexString(block.stateRoot),
-      justifiedEpoch: currentJustifiedCheckpoint.epoch,
+      justifiedEpoch: stateJustifiedEpoch,
       finalizedEpoch: finalizedCheckpoint.epoch,
     });
   }
@@ -670,7 +671,9 @@ export class ForkChoice implements IForkChoice {
     const epochNow = computeEpochAtSlot(this.fcStore.currentSlot);
     const attestationData = indexedAttestation.data;
     const {target, slot, beaconBlockRoot} = attestationData;
+    const beaconBlockRootHex = toHexString(beaconBlockRoot);
     const {epoch: targetEpoch, root: targetRoot} = target;
+    const targetRootHex = toHexString(targetRoot);
 
     // Attestation must be from the current of previous epoch.
     if (targetEpoch > epochNow) {
@@ -719,7 +722,7 @@ export class ForkChoice implements IForkChoice {
     //
     // We do not delay the block for later processing to reduce complexity and DoS attack
     // surface.
-    if (!this.protoArray.hasBlock(toHexString(targetRoot))) {
+    if (!this.protoArray.hasBlock(targetRootHex)) {
       throw new ForkChoiceError({
         code: ForkChoiceErrorCode.INVALID_ATTESTATION,
         err: {
@@ -737,7 +740,7 @@ export class ForkChoice implements IForkChoice {
     //
     // Attestations must be for a known block. If the block is unknown, we simply drop the
     // attestation and do not delay consideration for later.
-    const block = this.protoArray.getBlock(toHexString(beaconBlockRoot));
+    const block = this.protoArray.getBlock(beaconBlockRootHex);
     if (!block) {
       throw new ForkChoiceError({
         code: ForkChoiceErrorCode.INVALID_ATTESTATION,
@@ -752,16 +755,15 @@ export class ForkChoice implements IForkChoice {
     // then all slots between the block and attestation must be skipped. Therefore if the block
     // is from a prior epoch to the attestation, then the target root must be equal to the root
     // of the block that is being attested to.
-    const expectedTarget =
-      target.epoch > computeEpochAtSlot(block.slot) ? beaconBlockRoot : fromHexString(block.targetRoot);
+    const expectedTargetHex = target.epoch > computeEpochAtSlot(block.slot) ? beaconBlockRootHex : block.targetRoot;
 
-    if (!ssz.Root.equals(expectedTarget, targetRoot)) {
+    if (expectedTargetHex !== targetRootHex) {
       throw new ForkChoiceError({
         code: ForkChoiceErrorCode.INVALID_ATTESTATION,
         err: {
           code: InvalidAttestationCode.INVALID_TARGET,
           attestation: targetRoot.valueOf() as Uint8Array,
-          local: expectedTarget.valueOf() as Uint8Array,
+          local: fromHexString(expectedTargetHex),
         },
       });
     }
