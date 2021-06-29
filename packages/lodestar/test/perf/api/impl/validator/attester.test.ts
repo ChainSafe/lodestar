@@ -64,16 +64,4 @@ describe("getCommitteeAssignments vs assembleAttesterDuties performance test", a
     }
     state.epochCtx.getCommitteeAssignments(0, validatorData);
   });
-
-  itBench("getCommitteeAssignments - index2pubkey - more data", () => {
-    const validatorData: Map<number, BLSPubkey> = new Map<number, BLSPubkey>();
-    indices.forEach((index) => {
-      const pubkey = state.index2pubkey[index];
-      if (!pubkey) {
-        throw new Error(`Validator pubkey at validator index ${index} not found in state.`);
-      }
-      validatorData.set(index, pubkey.toBytes());
-    });
-    state.epochCtx.getCommitteeAssignments(0, validatorData);
-  });
 });
