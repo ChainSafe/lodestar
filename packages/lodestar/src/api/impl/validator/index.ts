@@ -230,9 +230,9 @@ export function getValidatorApi({
       const duties = state.epochCtx.getCommitteeAssignments(epoch, new Set(validatorIndices));
       const data: routes.validator.AttesterDuty[] = [];
       for (const duty of duties) {
-        const pubkey = validators.get(duty.validatorIndex)?.pubkey;
-        if (!pubkey) throw new ApiError(400, `Validator pubkey ${pubkey} not in duties`);
-        data.push({...duty, pubkey});
+        const validator = validators.get(duty.validatorIndex);
+        if (!validator) throw new ApiError(400, `Validator index ${duty.validatorIndex} not in state`);
+        data.push({...duty, pubkey: validator.pubkey});
       }
 
       const dependentRoot = attesterShufflingDecisionRoot(state, epoch) || (await getGenesisBlockRoot(state));
