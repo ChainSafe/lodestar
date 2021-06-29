@@ -344,9 +344,6 @@ export class EpochContext {
     return validatorIndices;
   }
 
-  /**
-   * @param validatorData pubkeys indexed by validator index
-   */
   getCommitteeAssignments(epoch: Epoch, requestedValidatorIndices: Set<number>): AttesterDuty[] {
     if (epoch > this.currentShuffling.epoch + 1) {
       throw Error(
