@@ -12,7 +12,7 @@ import {
   SYNC_COMMITTEE_SIZE,
   SYNC_COMMITTEE_SUBNET_COUNT,
 } from "@chainsafe/lodestar-params";
-import {allForks, BLSPubkey, Root, Slot} from "@chainsafe/lodestar-types";
+import {allForks, Root, Slot} from "@chainsafe/lodestar-types";
 import {assembleAttestationData} from "../../../chain/factory/attestation";
 import {assembleBlock} from "../../../chain/factory/block";
 import {AttestationError, AttestationErrorCode} from "../../../chain/errors";
@@ -227,20 +227,18 @@ export function getValidatorApi({
       // will equal `currentEpoch + 1`
 
       const validators = state.validators.persistent;
-      const validatorData: Map<number, BLSPubkey> = new Map<number, BLSPubkey>();
-      for (const index of validatorIndices) {
-        const validator = validators.get(index);
-        if (!validator) {
-          throw new ApiError(400, `Validator index ${index} not in state`);
-        }
-        validatorData.set(index, validator.pubkey);
+      const duties = state.epochCtx.getCommitteeAssignments(epoch, new Set(validatorIndices));
+      const data: routes.validator.AttesterDuty[] = [];
+      for (const duty of duties) {
+        const pubkey = validators.get(duty.validatorIndex)?.pubkey;
+        if (!pubkey) throw new ApiError(400, `Validator pubkey ${pubkey} not in duties`);
+        data.push({...duty, pubkey});
       }
-      const duties = state.epochCtx.getCommitteeAssignments(epoch, validatorData);
 
       const dependentRoot = attesterShufflingDecisionRoot(state, epoch) || (await getGenesisBlockRoot(state));
 
       return {
-        data: duties,
+        data,
         dependentRoot,
       };
     },

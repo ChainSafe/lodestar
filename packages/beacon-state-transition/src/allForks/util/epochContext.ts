@@ -9,7 +9,6 @@ import {
   phase0,
   allForks,
   Gwei,
-  BLSPubkey,
   Number64,
 } from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
@@ -41,8 +40,6 @@ import {CachedValidatorList} from "./cachedValidatorList";
 import {computeBaseRewardPerIncrement} from "../../altair/misc";
 
 export type AttesterDuty = {
-  // The validator's public key, uniquely identifying them
-  pubkey: BLSPubkey;
   // Index of validator in validator registry
   validatorIndex: ValidatorIndex;
   committeeIndex: CommitteeIndex;
@@ -350,7 +347,7 @@ export class EpochContext {
   /**
    * @param validatorData pubkeys indexed by validator index
    */
-  getCommitteeAssignments(epoch: Epoch, validatorData: Map<number, BLSPubkey>): AttesterDuty[] {
+  getCommitteeAssignments(epoch: Epoch, requestedValidatorIndices: Set<number>): AttesterDuty[] {
     if (epoch > this.currentShuffling.epoch + 1) {
       throw Error(
         `Requesting committee assignment for more than 1 epoch ahead: ${epoch} > ${this.currentShuffling.epoch} + 1`
@@ -364,10 +361,8 @@ export class EpochContext {
       for (let i = 0; i < slotCommittees.length; i++) {
         for (let j = 0; j < slotCommittees[i].length; j++) {
           const validatorIndex = slotCommittees[i][j];
-          const pubkey = validatorData.get(validatorIndex);
-          if (pubkey) {
+          if (requestedValidatorIndices.has(validatorIndex)) {
             validators.push({
-              pubkey,
               validatorIndex,
               committeeLength: slotCommittees[i].length,
               committeesAtSlot: slotCommittees.length,

@@ -7,7 +7,7 @@ import {generateInitialMaxBalances} from "../../../../utils/balances";
 import {generateState} from "../../../../utils/state";
 import {generateValidators} from "../../../../utils/validator";
 import {setupApiImplTestServer} from "../../../../unit/api/impl/index.test";
-import {BLSPubkey, ssz} from "@chainsafe/lodestar-types";
+import {ssz} from "@chainsafe/lodestar-types";
 import {MAX_EFFECTIVE_BALANCE, FAR_FUTURE_EPOCH} from "@chainsafe/lodestar-params";
 import {itBench, setBenchOpts} from "@dapplion/benchmark";
 import {BeaconState} from "../../../../../../beacon-state-transition/src/allForks";
@@ -63,15 +63,13 @@ describe("getCommitteeAssignments performance test", () => {
     id: "getCommitteeAssignments",
     fn: () => {
       const persistentValidators = state.validators.persistent;
-      const validatorData: Map<number, BLSPubkey> = new Map<number, BLSPubkey>();
-      for (const index of indices) {
-        const validator = persistentValidators.get(index);
-        if (!validator) {
-          throw new Error(`Validator pubkey at index ${index} not in state`);
-        }
-        validatorData.set(index, validator.pubkey);
+      const duties = state.epochCtx.getCommitteeAssignments(0, new Set(indices));
+      const data = [];
+      for (const duty of duties) {
+        const pubkey = persistentValidators.get(duty.validatorIndex)?.pubkey;
+        if (!pubkey) throw new Error(`Validator pubkey ${pubkey} not in duties`);
+        data.push({...duty, pubkey});
       }
-      state.epochCtx.getCommitteeAssignments(0, validatorData);
     },
   });
 });
