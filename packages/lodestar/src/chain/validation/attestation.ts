@@ -44,11 +44,6 @@ export async function validateGossipAttestation(
     });
   }
 
-  // Ensure attestation is within the last ATTESTATION_PROPAGATION_SLOT_RANGE slots (within a MAXIMUM_GOSSIP_CLOCK_DISPARITY allowance).
-  //
-  // TODO (LH): Do not queue future attestations for later processing. Investigate why LH doesn't do it
-  // TODO: use MAXIMUM_GOSSIP_CLOCK_DISPARITY to compute the clock.currentSlot
-
   // [IGNORE] attestation.data.slot is within the last ATTESTATION_PROPAGATION_SLOT_RANGE slots (within a MAXIMUM_GOSSIP_CLOCK_DISPARITY allowance)
   //  -- i.e. attestation.data.slot + ATTESTATION_PROPAGATION_SLOT_RANGE >= current_slot >= attestation.data.slot
   // (a client MAY queue future attestations for processing at the appropriate slot).
@@ -160,11 +155,9 @@ export async function validateGossipAttestation(
  * to the current slot of the `chain`.
  *
  * Accounts for `MAXIMUM_GOSSIP_CLOCK_DISPARITY`.
+ * Note: We do not queue future attestations for later processing
  */
 export function verifyPropagationSlotRange(chain: IBeaconChain, attestationSlot: Slot): void {
-  // TODO (LH): Do not queue future attestations for later processing. Investigate why LH doesn't do it
-  // TODO: use MAXIMUM_GOSSIP_CLOCK_DISPARITY to compute the clock.currentSlot
-
   // slot with future tolerance of MAXIMUM_GOSSIP_CLOCK_DISPARITY_SEC
   const latestPermissibleSlot = chain.clock.slotWithTolerance(MAXIMUM_GOSSIP_CLOCK_DISPARITY_SEC);
   const earliestPermissibleSlot = Math.max(

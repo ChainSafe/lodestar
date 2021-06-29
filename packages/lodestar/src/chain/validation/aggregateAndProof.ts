@@ -18,20 +18,10 @@ export async function validateGossipAggregateAndProof(
 ): Promise<phase0.IndexedAttestation> {
   // Do checks in this order:
   // - do early checks (w/o indexed attestation)
-  //   - Check the attestation's epoch matches its target
-  //   - Ensure attestation is within the last ATTESTATION_PROPAGATION_SLOT_RANGE slots (within a MAXIMUM_GOSSIP_CLOCK_DISPARITY allowance).
-  //   - Ensure the valid aggregated attestation has not already been seen locally.
-  //   - Ensure there has been no other observed aggregate for the given `aggregator_index`.
-  //   - Ensure the block being voted for (attestation.data.beacon_block_root) passes validation.
-  //   - Ensure that the attestation has participants.
   // - > obtain indexed attestation and committes per slot
   // - do middle checks w/ indexed attestation
-  //   - Is aggregator
-  //   - Ensure the aggregator is a member of the committee for which it is aggregating.
   // - > verify signature
   // - do late checks w/ a valid signature
-  //   - Observe the valid attestation so we do not re-process it.
-  //   - Observe the aggregator so we don't process another aggregate from them.
 
   const aggregateAndProof = signedAggregateAndProof.message;
   const aggregate = aggregateAndProof.aggregate;
@@ -112,6 +102,9 @@ export async function validateGossipAggregateAndProof(
     throw new AttestationError({code: AttestationErrorCode.INVALID_SIGNATURE});
   }
 
+  // It's important to double check that the attestation still hasn't been observed, since
+  // there can be a race-condition if we receive two attestations at the same time and
+  // process them in different threads.
   if (chain.seenAggregators.isKnown(targetEpoch, aggregatorIndex)) {
     throw new AttestationError({code: AttestationErrorCode.AGGREGATOR_ALREADY_KNOWN, targetEpoch, aggregatorIndex});
   }
