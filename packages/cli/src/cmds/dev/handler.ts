@@ -67,7 +67,12 @@ export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
       .BeaconState.createTreeBackedFromBytes(await fs.promises.readFile(args.genesisStateFile));
     anchorState = await initStateFromAnchorState(config, db, logger, state);
   } else {
-    anchorState = await nodeUtils.initDevState(config, db, validatorCount, genesisTime);
+    anchorState = await initStateFromAnchorState(
+      config,
+      db,
+      logger,
+      await nodeUtils.initDevState(config, db, validatorCount, genesisTime)
+    );
   }
 
   const validators: Validator[] = [];
