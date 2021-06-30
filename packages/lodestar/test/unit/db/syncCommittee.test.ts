@@ -1,4 +1,4 @@
-import {bls, init} from "@chainsafe/bls";
+import {bls} from "@chainsafe/bls";
 import {config} from "@chainsafe/lodestar-config/default";
 import {altair} from "@chainsafe/lodestar-types";
 import {toHexString} from "@chainsafe/ssz";
@@ -17,7 +17,6 @@ describe("SyncCommitteeCache", function () {
   let syncCommittee: altair.SyncCommitteeMessage;
 
   before("Init BLS", async () => {
-    await init("blst-native");
     const sk = bls.SecretKey.fromBytes(Buffer.alloc(32, 1));
     syncCommittee = generateSyncCommitteeSignature({
       slot,

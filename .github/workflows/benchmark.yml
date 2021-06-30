@@ -16,6 +16,8 @@ on:
 jobs:
   run:
     runs-on: ubuntu-latest
+    # Don't run on forks. Forks don't have access to the S3 credentials and the workflow will fail
+    if: github.event.pull_request.head.repo.full_name == github.repository
 
     steps:
       # <common-build> - Uses YAML anchors in the future
