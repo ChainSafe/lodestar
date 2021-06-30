@@ -5,7 +5,7 @@ import {
   computeSyncPeriodAtEpoch,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {ATTESTATION_SUBNET_COUNT} from "@chainsafe/lodestar-params";
-import {allForks, altair, CommitteeIndex, Epoch, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {allForks, altair, BLSPubkey, CommitteeIndex, Epoch, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {ApiError} from "../errors";
 
 export function getSyncComitteeValidatorIndexMap(
@@ -37,4 +37,31 @@ export function computeSubnetForCommitteesAtSlot(
   const slotsSinceEpochStart = computeSlotsSinceEpochStart(slot);
   const committeesSinceEpochStart = committeesAtSlot * slotsSinceEpochStart;
   return (committeesSinceEpochStart + committeeIndex) % ATTESTATION_SUBNET_COUNT;
+}
+
+/**
+ * Precompute all pubkeys for given `validatorIndices`. Ensures that all `validatorIndices` are known
+ * before doing other expensive logic.
+ *
+ * Note: Using a MutableVector is the fastest way of getting compressed pubkeys.
+ *       See benchmark -> packages/lodestar/test/perf/api/impl/validator/attester.test.ts
+ */
+export function getPubkeysForIndices(
+  state: CachedBeaconState<allForks.BeaconState>,
+  validatorIndices: ValidatorIndex[]
+): (validatorIndex: ValidatorIndex) => BLSPubkey {
+  const validators = state.validators.persistent;
+  const pubkeyMap = new Map(
+    validatorIndices.map((validatorIndex) => {
+      const validator = validators.get(validatorIndex);
+      if (!validator) throw new ApiError(400, `Validator index ${validatorIndex} not in state`);
+      return [validatorIndex, validator.pubkey];
+    })
+  );
+
+  return function getPubkey(validatorIndex: ValidatorIndex) {
+    const pubkey = pubkeyMap.get(validatorIndex);
+    if (!pubkey) throw Error(`Unknown validatorIndex ${validatorIndex}`);
+    return pubkey;
+  };
 }

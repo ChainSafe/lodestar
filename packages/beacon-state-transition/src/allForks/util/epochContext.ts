@@ -344,34 +344,29 @@ export class EpochContext {
     return validatorIndices;
   }
 
-  getCommitteeAssignments(epoch: Epoch, requestedValidatorIndices: Set<number>): AttesterDuty[] {
-    if (epoch > this.currentShuffling.epoch + 1) {
-      throw Error(
-        `Requesting committee assignment for more than 1 epoch ahead: ${epoch} > ${this.currentShuffling.epoch} + 1`
-      );
-    }
-    const epochStartSlot = computeStartSlotAtEpoch(epoch);
-    const validators = [];
+  getCommitteeAssignments(epoch: Epoch, requestedValidatorIndices: ValidatorIndex[]): AttesterDuty[] {
+    const requestedValidatorIndicesSet = new Set(requestedValidatorIndices);
+    const duties = [];
     const epochCommittees = this.getShufflingAtEpoch(epoch).committees;
-    for (let slot = epochStartSlot; slot < epochStartSlot + SLOTS_PER_EPOCH; slot++) {
-      const slotCommittees = epochCommittees[slot % SLOTS_PER_EPOCH];
-      for (let i = 0; i < slotCommittees.length; i++) {
-        for (let j = 0; j < slotCommittees[i].length; j++) {
+    for (let epochSlot = 0; epochSlot < SLOTS_PER_EPOCH; epochSlot++) {
+      const slotCommittees = epochCommittees[epochSlot];
+      for (let i = 0, committeesAtSlot = slotCommittees.length; i < committeesAtSlot; i++) {
+        for (let j = 0, committeeLength = slotCommittees[i].length; j < committeeLength; j++) {
           const validatorIndex = slotCommittees[i][j];
-          if (requestedValidatorIndices.has(validatorIndex)) {
-            validators.push({
+          if (requestedValidatorIndicesSet.has(validatorIndex)) {
+            duties.push({
               validatorIndex,
-              committeeLength: slotCommittees[i].length,
-              committeesAtSlot: slotCommittees.length,
+              committeeLength,
+              committeesAtSlot,
               validatorCommitteeIndex: j,
               committeeIndex: i,
-              slot,
+              slot: epoch * SLOTS_PER_EPOCH + epochSlot,
             });
           }
         }
       }
     }
-    return validators;
+    return duties;
   }
 
   /**

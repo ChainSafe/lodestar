@@ -11,23 +11,21 @@ describe("CheckpointStateCache perf tests", function () {
   let checkpoint: Checkpoint;
   let checkpointStateCache: CheckpointStateCache;
 
-  itBench({
-    id: "CheckpointStateCache - add get delete",
-    beforeEach: () => {
-      setBenchOpts({
-        maxMs: 60 * 1000,
-        minMs: 1 * 1000,
-        runs: 1024,
-      });
+  setBenchOpts({
+    maxMs: 60 * 1000,
+    minMs: 1 * 1000,
+    runs: 1024,
+  });
 
-      checkpointStateCache = new CheckpointStateCache(config);
-      state = generateCachedState();
-      checkpoint = ssz.phase0.Checkpoint.defaultValue();
-    },
-    fn: () => {
-      checkpointStateCache.add(checkpoint, state);
-      checkpointStateCache.get(checkpoint);
-      checkpointStateCache.delete(checkpoint);
-    },
+  before(() => {
+    checkpointStateCache = new CheckpointStateCache(config);
+    state = generateCachedState();
+    checkpoint = ssz.phase0.Checkpoint.defaultValue();
+  });
+
+  itBench("CheckpointStateCache - add get delete", () => {
+    checkpointStateCache.add(checkpoint, state);
+    checkpointStateCache.get(checkpoint);
+    checkpointStateCache.delete(checkpoint);
   });
 });
