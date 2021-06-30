@@ -1,5 +1,6 @@
+import {Epoch} from "@chainsafe/lodestar-types";
 import {itBench, setBenchOpts} from "@dapplion/benchmark";
-import {allForks} from "../../../../src";
+import {allForks, computeEpochAtSlot} from "../../../../src";
 import {generatePerfTestCachedBeaconState, numValidators} from "../../util";
 
 // Current implementation scales very well with number of requested validators
@@ -10,9 +11,12 @@ import {generatePerfTestCachedBeaconState, numValidators} from "../../util";
 // ✓ getCommitteeAssignments - req 1000 vs - 200000 vc                   124.7096 ops/s    8.018632 ms/op        -       1024 runs   8.25 s
 describe("epochCtx.getCommitteeAssignments", () => {
   let state: allForks.CachedBeaconState<allForks.BeaconState>;
+  let epoch: Epoch;
+
   before(function () {
     this.timeout(60 * 1000);
     state = generatePerfTestCachedBeaconState() as allForks.CachedBeaconState<allForks.BeaconState>;
+    epoch = computeEpochAtSlot(state.slot);
 
     // Sanity check to ensure numValidators doesn't go stale
     if (state.validators.length !== numValidators) throw Error("constant numValidators is wrong");
@@ -35,7 +39,7 @@ describe("epochCtx.getCommitteeAssignments", () => {
     const indices = Array.from({length: reqCount}, (_, i) => i * indexMult);
 
     itBench(`getCommitteeAssignments - req ${reqCount} vs - ${validatorCount} vc`, () => {
-      state.epochCtx.getCommitteeAssignments(0, indices);
+      state.epochCtx.getCommitteeAssignments(epoch, indices);
     });
   }
 });
