@@ -33,8 +33,7 @@
     "lint:fix": "yarn run lint --fix",
     "pretest": "yarn run check-types",
     "test": "yarn test:unit && yarn test:e2e",
-    "test:unit": "LODESTAR_PRESET=minimal nyc --cache-dir .nyc_output/.cache -e .ts mocha 'test/unit/**/*.test.ts'",
-    "test:e2e": "mocha 'test/e2e/**/*.test.ts'"
+    "test:unit": "LODESTAR_PRESET=minimal nyc --cache-dir .nyc_output/.cache -e .ts mocha 'test/unit/**/*.test.ts'"
   },
   "dependencies": {
     "@chainsafe/abort-controller": "^3.0.1",

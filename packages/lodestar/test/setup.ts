@@ -6,6 +6,7 @@ if (process.env.LODESTAR_PRESET === undefined) {
 }
 
 // blst-native initialization is syncronous
+// Initialize bls here instead of in before() so it's available inside describe() blocks
 init("blst-native").catch((e) => {
   // eslint-disable-next-line no-console
   console.error(e);

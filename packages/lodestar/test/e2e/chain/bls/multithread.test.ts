@@ -1,6 +1,6 @@
 import {expect} from "chai";
 import {AbortController} from "@chainsafe/abort-controller";
-import {bls, init} from "@chainsafe/bls";
+import {bls} from "@chainsafe/bls";
 import {ISignatureSet, SignatureSetType} from "@chainsafe/lodestar-beacon-state-transition";
 import {BlsMultiThreadWorkerPool} from "../../../../src/chain/bls/multithread";
 import {testLogger} from "../../../utils/logger";
@@ -8,10 +8,6 @@ import {testLogger} from "../../../utils/logger";
 describe("chain / bls / multithread queue", function () {
   this.timeout(30 * 1000);
   const logger = testLogger();
-
-  before("Init BLS", async () => {
-    await init("blst-native");
-  });
 
   let controller: AbortController;
   beforeEach(() => (controller = new AbortController()));
