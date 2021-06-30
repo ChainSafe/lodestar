@@ -40,9 +40,7 @@
     "test:sim": "LODESTAR_PRESET=minimal mocha 'test/sim/**/*.test.ts'",
     "test:sim:singleThread": "LODESTAR_PRESET=minimal mocha 'test/sim/singleNodeSingleThread.test.ts'",
     "test:sim:singleThreadMultiNode": "LODESTAR_PRESET=minimal mocha 'test/sim/multiNodeSingleThread.test.ts'",
-    "test:sim:multiThread": "LODESTAR_PRESET=minimal mocha 'test/sim/multiNodeMultiThread.test.ts'",
-    "benchmark": "node -r ts-node/register ../../node_modules/.bin/benchmark 'test/perf/**/*.test.ts'",
-    "benchmark:local": "node -r ts-node/register ../../node_modules/.bin/benchmark 'test/perf/**/*.test.ts' --local"
+    "test:sim:multiThread": "LODESTAR_PRESET=minimal mocha 'test/sim/multiNodeMultiThread.test.ts'"
   },
   "dependencies": {
     "@chainsafe/abort-controller": "^3.0.1",
@@ -105,7 +103,6 @@
     "@types/supertest": "^2.0.8",
     "@types/tmp": "^0.2.0",
     "@types/varint": "^5.0.0",
-    "benchmark": "^2.1.4",
     "eventsource": "^1.1.0",
     "rewiremock": "^3.14.3",
     "rimraf": "^3.0.2",
