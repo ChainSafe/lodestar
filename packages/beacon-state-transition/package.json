@@ -32,8 +32,7 @@
     "check-types": "tsc",
     "lint": "eslint --color --ext .ts src/ test/",
     "lint:fix": "yarn run lint --fix",
-    "test:unit": "mocha 'test/unit/**/*.test.ts'",
-    "benchmark": "node --max-old-space-size=4096 -r ts-node/register ../../node_modules/.bin/benchmark 'test/perf/**/*.test.ts'"
+    "test:unit": "mocha 'test/unit/**/*.test.ts'"
   },
   "types": "lib/index.d.ts",
   "dependencies": {
