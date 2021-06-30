@@ -1,5 +1,5 @@
 import crypto from "crypto";
-import bls, {init} from "@chainsafe/bls";
+import bls from "@chainsafe/bls";
 import {BitList, List, TreeBacked} from "@chainsafe/ssz";
 import {config} from "@chainsafe/lodestar-config/default";
 import {ValidatorIndex, BLSSignature, ssz} from "@chainsafe/lodestar-types";
@@ -11,10 +11,6 @@ import {phase0, createCachedBeaconState, allForks} from "../../../src";
 import {FAR_FUTURE_EPOCH, MAX_EFFECTIVE_BALANCE} from "@chainsafe/lodestar-params";
 
 describe("signatureSets", () => {
-  before("Init BLS", async () => {
-    await init("blst-native");
-  });
-
   it("should aggregate all signatures from a block", () => {
     const EMPTY_SIGNATURE = Buffer.alloc(96);
 
