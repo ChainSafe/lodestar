@@ -10,9 +10,10 @@ import * as mainnet from "./mainnet";
 import * as pyrmont from "./pyrmont";
 import * as prater from "./prater";
 import * as oonoonba from "./oonoonba";
+import * as yeerongpilly from "./yeerongpilly";
 
-export type NetworkName = "mainnet" | "pyrmont" | "prater" | "dev" | "oonoonba";
-export const networkNames: NetworkName[] = ["mainnet", "pyrmont", "prater", "oonoonba"];
+export type NetworkName = "mainnet" | "pyrmont" | "prater" | "dev" | "oonoonba" | "yeerongpilly";
+export const networkNames: NetworkName[] = ["mainnet", "pyrmont", "prater", "oonoonba", "yeerongpilly"];
 /** Networks that infura supports */
 export const infuraNetworks: NetworkName[] = ["mainnet", "pyrmont", "prater"];
 
@@ -34,6 +35,8 @@ function getNetworkData(
       return prater;
     case "oonoonba":
       return oonoonba;
+    case "yeerongpilly":
+      return yeerongpilly;
     default:
       throw Error(`Network not supported: ${network}`);
   }
