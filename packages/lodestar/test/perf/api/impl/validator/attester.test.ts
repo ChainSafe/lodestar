@@ -14,12 +14,18 @@ import {BeaconState} from "../../../../../../beacon-state-transition/src/allFork
 // ✓ getPubkeys - index2pubkey - req 1 vs - 200000 vc                    836120.4 ops/s    1.196000 us/op        -    1224786 runs   2.07 s
 // ✓ getPubkeys - index2pubkey - req 100 vs - 200000 vc                  10347.15 ops/s    96.64500 us/op        -      20602 runs   2.00 s
 // ✓ getPubkeys - index2pubkey - req 1000 vs - 200000 vc                 1248.985 ops/s    800.6500 us/op        -       2518 runs   2.02 s
-// ✓ getPubkeys - validators arr - req 1 vs - 200000 vc                   1109878 ops/s    901.0000 ns/op        -    1714328 runs   2.09 s
-// ✓ getPubkeys - validators arr - req 100 vs - 200000 vc                19937.00 ops/s    50.15800 us/op        -      39548 runs   2.00 s
-// ✓ getPubkeys - validators arr - req 1000 vs - 200000 vc               2475.542 ops/s    403.9520 us/op        -       4947 runs   2.00 s
+// ✓ getPubkeys - validatorsArr - req 1 vs - 200000 vc                   1109878 ops/s    901.0000 ns/op        -    1714328 runs   2.09 s
+// ✓ getPubkeys - validatorsArr - req 100 vs - 200000 vc                19937.00 ops/s    50.15800 us/op        -      39548 runs   2.00 s
+// ✓ getPubkeys - validatorsArr - req 1000 vs - 200000 vc               2475.542 ops/s    403.9520 us/op        -       4947 runs   2.00 s
 // ✓ getPubkeys - persistent - req 1 vs - 200000 vc                       1579779 ops/s    633.0000 ns/op        -    2278954 runs   2.11 s
 // ✓ getPubkeys - persistent - req 100 vs - 200000 vc                    395100.8 ops/s    2.531000 us/op        -     714562 runs   2.05 s
 // ✓ getPubkeys - persistent - req 1000 vs - 200000 vc                   56593.10 ops/s    17.67000 us/op        -     111477 runs   2.00 s
+
+enum Impl {
+  index2pubkey,
+  validatorsArr,
+  persistent,
+}
 
 describe("api / impl / validator", () => {
   let state: CachedBeaconState<BeaconState>;
@@ -69,7 +75,7 @@ describe("api / impl / validator", () => {
 
   if (impls.includes(Impl.validatorsArr)) {
     for (const reqCount of reqCounts) {
-      itBench(`getPubkeys - validators arr - req ${reqCount} vs - ${validatorCount} vc`, () => {
+      itBench(`getPubkeys - validatorsArr - req ${reqCount} vs - ${validatorCount} vc`, () => {
         for (let i = 0; i < reqCount; i++) {
           const validator = state.validators[i];
           validator.pubkey;
@@ -91,9 +97,3 @@ describe("api / impl / validator", () => {
     }
   }
 });
-
-enum Impl {
-  index2pubkey,
-  validatorsArr,
-  persistent,
-}
