@@ -34,8 +34,8 @@ const logger = profilerLogger();
 /**
  * Number of validators in prater is 210000 as of May 2021
  */
-const numValidators = 250000;
-const numKeyPairs = 100;
+export const numValidators = 250000;
+export const numKeyPairs = 100;
 
 // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 function getPubkeys() {
