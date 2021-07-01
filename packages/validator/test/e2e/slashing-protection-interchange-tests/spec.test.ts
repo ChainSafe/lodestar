@@ -41,7 +41,15 @@ describe("slashing-protection-interchange-tests", () => {
 
           const genesisValidatorsRoot = fromHexString(testCase.genesis_validators_root);
           if (step.should_succeed) {
-            await slashingProtection.importInterchange(step.interchange, genesisValidatorsRoot);
+            if (step.contains_slashable_data) {
+              await expect(
+                slashingProtection.importInterchange(step.interchange, genesisValidatorsRoot)
+              ).to.be.rejectedWith(InterchangeError);
+            } else {
+              await expect(
+                slashingProtection.importInterchange(step.interchange, genesisValidatorsRoot)
+              ).to.not.be.rejectedWith(InterchangeError);
+            }
           } else {
             await expect(
               slashingProtection.importInterchange(step.interchange, genesisValidatorsRoot)
@@ -53,41 +61,43 @@ describe("slashing-protection-interchange-tests", () => {
           await controller.stop();
         });
 
-        // Add blocks
-        for (const [i, blockRaw] of step.blocks.entries()) {
-          it(`Add block ${i}`, async () => {
-            const pubkey = fromHexString(blockRaw.pubkey);
-            const block: phase0.SlashingProtectionBlock = {
-              slot: parseInt(blockRaw.slot),
-              signingRoot: blockRaw.signing_root ? fromHexString(blockRaw.signing_root) : ZERO_HASH,
-            };
-            if (blockRaw.should_succeed) {
-              await slashingProtection.checkAndInsertBlockProposal(pubkey, block);
-            } else {
-              await expect(slashingProtection.checkAndInsertBlockProposal(pubkey, block)).to.be.rejectedWith(
-                InvalidBlockError
-              );
-            }
-          });
-        }
+        if (!step.contains_slashable_data) {
+          // Add blocks
+          for (const [i, blockRaw] of step.blocks.entries()) {
+            it(`Add block ${i}`, async () => {
+              const pubkey = fromHexString(blockRaw.pubkey);
+              const block: phase0.SlashingProtectionBlock = {
+                slot: parseInt(blockRaw.slot),
+                signingRoot: blockRaw.signing_root ? fromHexString(blockRaw.signing_root) : ZERO_HASH,
+              };
+              if (blockRaw.should_succeed) {
+                await slashingProtection.checkAndInsertBlockProposal(pubkey, block);
+              } else {
+                await expect(slashingProtection.checkAndInsertBlockProposal(pubkey, block)).to.be.rejectedWith(
+                  InvalidBlockError
+                );
+              }
+            });
+          }
 
-        // Add attestations
-        for (const [i, attestationRaw] of step.attestations.entries()) {
-          it(`Add attestation ${i}`, async () => {
-            const pubkey = fromHexString(attestationRaw.pubkey);
-            const attestation: phase0.SlashingProtectionAttestation = {
-              sourceEpoch: parseInt(attestationRaw.source_epoch),
-              targetEpoch: parseInt(attestationRaw.target_epoch),
-              signingRoot: attestationRaw.signing_root ? fromHexString(attestationRaw.signing_root) : ZERO_HASH,
-            };
-            if (attestationRaw.should_succeed) {
-              await slashingProtection.checkAndInsertAttestation(pubkey, attestation);
-            } else {
-              await expect(slashingProtection.checkAndInsertAttestation(pubkey, attestation)).to.be.rejectedWith(
-                InvalidAttestationError
-              );
-            }
-          });
+          // Add attestations
+          for (const [i, attestationRaw] of step.attestations.entries()) {
+            it(`Add attestation ${i}`, async () => {
+              const pubkey = fromHexString(attestationRaw.pubkey);
+              const attestation: phase0.SlashingProtectionAttestation = {
+                sourceEpoch: parseInt(attestationRaw.source_epoch),
+                targetEpoch: parseInt(attestationRaw.target_epoch),
+                signingRoot: attestationRaw.signing_root ? fromHexString(attestationRaw.signing_root) : ZERO_HASH,
+              };
+              if (attestationRaw.should_succeed) {
+                await slashingProtection.checkAndInsertAttestation(pubkey, attestation);
+              } else {
+                await expect(slashingProtection.checkAndInsertAttestation(pubkey, attestation)).to.be.rejectedWith(
+                  InvalidAttestationError
+                );
+              }
+            });
+          }
         }
       }
     });
