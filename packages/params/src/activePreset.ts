@@ -78,7 +78,7 @@ export function setActivePreset(presetName: PresetName): void {
   ACTIVE_PRESET = parsePresetName(presetName);
   const preset = presets[ACTIVE_PRESET];
 
-  // Unfortunately, there is way to dynamically update all of these variables
+  // Unfortunately, there is no way to dynamically update all of these variables
   // so they must be updated individually and explicitly
   MAX_COMMITTEES_PER_SLOT = preset.MAX_COMMITTEES_PER_SLOT;
   TARGET_COMMITTEE_SIZE = preset.TARGET_COMMITTEE_SIZE;
