@@ -25,9 +25,7 @@ import {
   LatestFinalizedUpdate,
   LatestNonFinalizedUpdate,
 } from "./single";
-import {SeenAttestationCache} from "./seenAttestationCache";
 import {PendingBlockRepository} from "./repositories/pendingBlock";
-import {AttestationPool} from "./attestationPool";
 import {SyncCommitteeCache} from "./syncCommittee";
 import {SyncCommitteeContributionCache} from "./syncCommitteeContribution";
 
@@ -36,8 +34,6 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
 
   block: BlockRepository;
   pendingBlock: PendingBlockRepository;
-  seenAttestationCache: SeenAttestationCache;
-  attestationPool: AttestationPool;
   blockArchive: BlockArchiveRepository;
   stateArchive: StateArchiveRepository;
 
@@ -66,8 +62,6 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
     // Warning: If code is ever run in the constructor, must change this stub to not extend 'packages/lodestar/test/utils/stub/beaconDb.ts' -
     this.block = new BlockRepository(this.config, this.db, this.metrics);
     this.pendingBlock = new PendingBlockRepository(this.config, this.db, this.metrics);
-    this.seenAttestationCache = new SeenAttestationCache(this.config, 2048);
-    this.attestationPool = new AttestationPool();
     this.blockArchive = new BlockArchiveRepository(this.config, this.db, this.metrics);
     this.stateArchive = new StateArchiveRepository(this.config, this.db, this.metrics);
     this.aggregateAndProof = new AggregateAndProofRepository(this.config, this.db, this.metrics);

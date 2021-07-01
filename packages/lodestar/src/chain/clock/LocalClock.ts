@@ -63,6 +63,11 @@ export class LocalClock implements IBeaconClock {
     return computeEpochAtSlot(this.currentSlot);
   }
 
+  /** Returns the slot if the internal clock were advanced by `toleranceSec`. */
+  slotWithTolerance(toleranceSec: number): Slot {
+    return getCurrentSlot(this.config, this.genesisTime + toleranceSec);
+  }
+
   /**
    * Check if a slot is current slot given MAXIMUM_GOSSIP_CLOCK_DISPARITY.
    */

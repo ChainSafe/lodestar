@@ -306,7 +306,7 @@ export function getValidatorApi({
       await waitForSlot(slot); // Must never request for a future slot > currentSlot
 
       return {
-        data: db.attestationPool.getAggregate(slot, attestationDataRoot),
+        data: chain.attestationPool.getAggregate(slot, attestationDataRoot),
       };
     },
 
@@ -319,22 +319,17 @@ export function getValidatorApi({
       await Promise.all(
         signedAggregateAndProofs.map(async (signedAggregateAndProof, i) => {
           try {
-            const attestation = signedAggregateAndProof.message.aggregate;
             // TODO: Validate in batch
-            const indexedAtt = await validateGossipAggregateAndProof(config, chain, db, signedAggregateAndProof, {
-              attestation: attestation,
-              validSignature: false,
-            });
+            const indexedAtt = await validateGossipAggregateAndProof(chain, signedAggregateAndProof);
 
             metrics?.registerAggregatedAttestation(OpSource.api, seenTimestampSec, signedAggregateAndProof, indexedAtt);
 
             await Promise.all([
               db.aggregateAndProof.add(signedAggregateAndProof.message),
-              db.seenAttestationCache.addAggregateAndProof(signedAggregateAndProof.message),
               network.gossip.publishBeaconAggregateAndProof(signedAggregateAndProof),
             ]);
           } catch (e) {
-            if (e instanceof AttestationError && e.type.code === AttestationErrorCode.AGGREGATE_ALREADY_KNOWN) {
+            if (e instanceof AttestationError && e.type.code === AttestationErrorCode.AGGREGATOR_ALREADY_KNOWN) {
               logger.debug("Ignoring known signedAggregateAndProof");
               return; // Ok to submit the same aggregate twice
             }
