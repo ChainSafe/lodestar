@@ -26,7 +26,6 @@ const b: BeaconState = {
 #### Using the ssz types
 
 ```typescript
-// mainnet and minimal types pre-generated under non-default export
 import {ssz} from "@chainsafe/lodestar-types";
 
 ssz.phase0.BeaconState.defaultValue();
