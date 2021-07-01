@@ -36,13 +36,18 @@ export class ArchiveBlocksTask implements ITask {
 
   /**
    * Only archive blocks on the same chain to the finalized checkpoint.
+   * Each run should move all finalized blocks to blockArhive db to make it consistent
+   * to stateArchive, so that the node always work well when we restart.
+   * Note that the finalized block still stay in forkchoice to check finalize checkpoint of next onBlock calls,
+   * the next run should not reprocess finalzied block of this run.
    */
   async run(): Promise<void> {
     // Use fork choice to determine the blocks to archive and delete
     const allCanonicalSummaries = this.forkChoice.iterateBlockSummaries(this.finalized.root);
-    // 1st block in iterateBlockSummaries() is the finalized block itself, to keep db in synchronized with forkchoice
-    // we don't want to process it until the next finalized checkpoint
-    let i = 1;
+    // 1st block in iterateBlockSummaries() is the finalized block itself
+    // we move it to blockArchive but forkchoice still have it to check next onBlock calls
+    // the next iterateBlockSummaries call does not return this block
+    let i = 0;
     // this number of blocks per chunk is tested in e2e test blockArchive.test.ts
     const BATCH_SIZE = 1000;
     // process in chunks to avoid OOM
@@ -72,7 +77,7 @@ export class ArchiveBlocksTask implements ITask {
         canonicalSummaries.map(async (summary) => {
           const blockBuffer = await this.db.block.getBinary(summary.blockRoot);
           if (!blockBuffer) {
-            throw Error(`No block found for root ${toHexString(summary.blockRoot)}`);
+            throw Error(`No block found for slot ${summary.slot} root ${toHexString(summary.blockRoot)}`);
           }
           return {
             key: summary.slot,
@@ -92,6 +97,11 @@ export class ArchiveBlocksTask implements ITask {
   private async deleteNonCanonicalBlocks(): Promise<void> {
     // loop through forkchoice single time
     const nonCanonicalSummaries = this.forkChoice.iterateNonAncestors(this.finalized.root);
-    await this.db.block.batchDelete(nonCanonicalSummaries.map((summary) => summary.blockRoot));
+    if (nonCanonicalSummaries && nonCanonicalSummaries.length > 0) {
+      await this.db.block.batchDelete(nonCanonicalSummaries.map((summary) => summary.blockRoot));
+      this.logger.verbose("deleteNonCanonicalBlocks", {
+        slots: nonCanonicalSummaries.map((summary) => summary.slot).join(","),
+      });
+    }
   }
 }

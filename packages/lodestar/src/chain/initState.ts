@@ -156,7 +156,7 @@ export async function initStateFromAnchorState(
   logger: ILogger,
   anchorState: TreeBacked<allForks.BeaconState>
 ): Promise<TreeBacked<allForks.BeaconState>> {
-  logger.info("Initializing beacon state", {
+  logger.info("Initializing beacon state from anchor state", {
     slot: anchorState.slot,
     epoch: computeEpochAtSlot(anchorState.slot),
     stateRoot: toHexString(config.getForkTypes(anchorState.slot).BeaconState.hashTreeRoot(anchorState)),
