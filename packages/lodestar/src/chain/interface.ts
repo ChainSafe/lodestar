@@ -12,6 +12,7 @@ import {AttestationPool} from "./attestation";
 import {StateContextCache, CheckpointStateCache} from "./stateCache";
 import {IBlsVerifier} from "./bls";
 import {IForkDigestContext} from "../util/forkDigestContext";
+import {LightClientIniter} from "./lightClient";
 
 export interface IProcessBlock {
   /**
@@ -68,6 +69,7 @@ export interface IBeaconChain {
   pendingAttestations: AttestationPool;
   forkDigestContext: IForkDigestContext;
   lightclientUpdater: LightClientUpdater;
+  lightClientIniter: LightClientIniter;
 
   /** Stop beacon chain processing */
   close(): void;

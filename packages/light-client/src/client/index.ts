@@ -12,7 +12,6 @@ import {deserializeSyncCommittee, isEmptyHeader, serializeSyncCommittee, sumBits
 import {LightClientStoreFast} from "./types";
 import {chunkifyInclusiveRange} from "../utils/chunkify";
 import {LightclientEmitter, LightclientEvent} from "./events";
-import {getSyncCommitteesProofPaths} from "../utils/proof";
 import {validateLightClientUpdate} from "./validation";
 import {isBetterUpdate} from "./update";
 // Re-export event types
@@ -70,16 +69,7 @@ export class Lightclient {
     const header = headerResp.data.header.message;
     const stateRoot = header.stateRoot;
 
-    // fetch a proof with everything needed to bootstrap the client
-    const paths = [
-      // initial sync committee list
-      ...getSyncCommitteesProofPaths(),
-      // required to initialize a slot clock
-      ["genesisTime"],
-      // required to verify signatures
-      ["genesisValidatorsRoot"],
-    ];
-    const proof = await api.lightclient.getStateProof(toHexString(stateRoot), paths);
+    const proof = await api.lightclient.getInitProof(toHexString(stateRoot));
 
     const state = ssz.altair.BeaconState.createTreeBackedFromProof(stateRoot as Uint8Array, proof.data);
     const store: LightClientStoreFast = {

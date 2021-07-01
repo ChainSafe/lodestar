@@ -31,6 +31,7 @@ import {LodestarForkChoice} from "./forkChoice";
 import {restoreStateCaches} from "./initState";
 import {IBlsVerifier, BlsSingleThreadVerifier, BlsMultiThreadWorkerPool} from "./bls";
 import {ForkDigestContext, IForkDigestContext} from "../util/forkDigestContext";
+import {LightClientIniter} from "./lightClient";
 
 export interface IBeaconChainModules {
   config: IBeaconConfig;
@@ -55,6 +56,7 @@ export class BeaconChain implements IBeaconChain {
   pendingBlocks: BlockPool;
   forkDigestContext: IForkDigestContext;
   lightclientUpdater: LightClientUpdater;
+  lightClientIniter: LightClientIniter;
 
   protected attestationProcessor: AttestationProcessor;
   protected blockProcessor: BlockProcessor;
@@ -132,6 +134,7 @@ export class BeaconChain implements IBeaconChain {
     this.stateCache = stateCache;
 
     this.lightclientUpdater = new LightClientUpdater(this.db);
+    this.lightClientIniter = new LightClientIniter({config: this.config, forkChoice, db: this.db, stateCache});
 
     handleChainEvents.bind(this)(this.abortController.signal);
   }

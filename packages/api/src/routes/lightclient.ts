@@ -24,6 +24,11 @@ export type Api = {
   getLatestUpdateFinalized(): Promise<{data: altair.LightClientUpdate}>;
   /** TODO: description */
   getLatestUpdateNonFinalized(): Promise<{data: altair.LightClientUpdate}>;
+  /**
+   * Fetch a proof needed for light client initialization
+   * @param stateId a state root or _epoch_
+   */
+  getInitProof(stateId: string): Promise<{data: Proof}>;
 };
 
 /**
@@ -34,6 +39,7 @@ export const routesData: RoutesData<Api> = {
   getBestUpdates: {url: "/eth/v1/lightclient/best_updates/", method: "GET"},
   getLatestUpdateFinalized: {url: "/eth/v1/lightclient/latest_update_finalized/", method: "GET"},
   getLatestUpdateNonFinalized: {url: "/eth/v1/lightclient/latest_update_nonfinalized/", method: "GET"},
+  getInitProof: {url: "/eth/v1/lightclient/init_proof/:stateId", method: "GET"},
 };
 
 export type ReqTypes = {
@@ -41,6 +47,7 @@ export type ReqTypes = {
   getBestUpdates: {query: {from: number; to: number}};
   getLatestUpdateFinalized: ReqEmpty;
   getLatestUpdateNonFinalized: ReqEmpty;
+  getInitProof: {params: {stateId: string}};
 };
 
 export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
@@ -59,6 +66,12 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
 
     getLatestUpdateFinalized: reqEmpty,
     getLatestUpdateNonFinalized: reqEmpty,
+
+    getInitProof: {
+      writeReq: (stateId) => ({params: {stateId}}),
+      parseReq: ({params}) => [params.stateId],
+      schema: {params: {stateId: Schema.StringRequired}},
+    },
   };
 }
 
@@ -69,5 +82,7 @@ export function getReturnTypes(): ReturnTypes<Api> {
     getBestUpdates: ContainerData(ArrayOf(ssz.altair.LightClientUpdate)),
     getLatestUpdateFinalized: ContainerData(ssz.altair.LightClientUpdate),
     getLatestUpdateNonFinalized: ContainerData(ssz.altair.LightClientUpdate),
+    // Just sent the proof JSON as-is
+    getInitProof: sameType(),
   };
 }

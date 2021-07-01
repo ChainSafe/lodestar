@@ -195,6 +195,11 @@ export async function onFinalized(this: BeaconChain, cp: phase0.Checkpoint): Pro
     } catch (e) {
       this.logger.error("Error lightclientUpdater.onFinalized", {epoch: cp.epoch}, e);
     }
+    try {
+      await this.lightClientIniter.onFinalized(cp);
+    } catch (e) {
+      this.logger.error("Error LightClientIniter.onFinalized", {epoch: cp.epoch}, e);
+    }
   }
 }
 

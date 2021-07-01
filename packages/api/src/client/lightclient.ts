@@ -23,5 +23,10 @@ export function getClient(_config: IBeaconConfig, httpClient: IHttpClient): Api 
       const proof = deserializeProof(new Uint8Array(buffer));
       return {data: proof};
     },
+    async getInitProof(stateId) {
+      const buffer = await httpClient.arrayBuffer(fetchOptsSerializers.getInitProof(stateId));
+      const proof = deserializeProof(new Uint8Array(buffer));
+      return {data: proof};
+    },
   };
 }

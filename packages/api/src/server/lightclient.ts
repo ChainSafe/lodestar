@@ -24,5 +24,15 @@ export function getRoutes(config: IBeaconConfig, api: Api): ServerRoutes<Api, Re
         return Buffer.from(serializeProof(proof));
       },
     },
+    // Non-JSON route. Return binary
+    getInitProof: {
+      ...serverRoutes.getInitProof,
+      handler: async (req) => {
+        const args = reqSerializers.getInitProof.parseReq(req);
+        const {data: proof} = await api.getInitProof(...args);
+        // Fastify 3.x.x will automatically add header `Content-Type: application/octet-stream` if Buffer
+        return Buffer.from(serializeProof(proof));
+      },
+    },
   };
 }

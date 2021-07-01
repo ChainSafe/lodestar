@@ -17,6 +17,8 @@ import {
   VoluntaryExitRepository,
   BestUpdatePerCommitteePeriod,
   LightclientFinalizedCheckpoint,
+  LightClientInitProofRepository,
+  LightClientInitProofStateRootRepository,
 } from "./repositories";
 import {
   PreGenesisState,
@@ -77,6 +79,8 @@ export interface IBeaconDb {
   latestFinalizedUpdate: LatestFinalizedUpdate;
   latestNonFinalizedUpdate: LatestNonFinalizedUpdate;
   lightclientFinalizedCheckpoint: LightclientFinalizedCheckpoint;
+  lightClientInitProof: LightClientInitProofRepository;
+  lightClientInitProofStateRoot: LightClientInitProofStateRootRepository;
 
   processBlockOperations(signedBlock: allForks.SignedBeaconBlock): Promise<void>;
 
