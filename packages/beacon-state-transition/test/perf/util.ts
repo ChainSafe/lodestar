@@ -35,8 +35,8 @@ const logger = profilerLogger();
 /**
  * Number of validators in prater is 210000 as of May 2021
  */
-const numValidators = 250000;
-const keypairsMod = 100;
+export const numValidators = 250000;
+export const keypairsMod = 100;
 
 /** Cache interop secret keys */
 const secretKeyByModIndex = new Map<number, SecretKey>();
