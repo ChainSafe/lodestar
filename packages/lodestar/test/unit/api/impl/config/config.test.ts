@@ -31,6 +31,7 @@ describe("config api implementation", function () {
       const {data: spec} = await api.getSpec();
       const expected: Record<string, unknown> = {...params, ...chainConfig};
       delete expected.ACTIVE_PRESET;
+      delete expected.setActivePreset;
       expect(spec).to.deep.equal(expected);
     });
   });
