@@ -4,7 +4,6 @@ import {
   CachedBeaconState,
   computeEpochAtSlot,
   computeSigningRoot,
-  getDomain,
   ISignatureSet,
   SignatureSetType,
 } from "@chainsafe/lodestar-beacon-state-transition";
@@ -15,7 +14,7 @@ export function getContributionAndProofSignatureSet(
 ): ISignatureSet {
   const {epochCtx} = state;
   const epochSig = computeEpochAtSlot(signedContributionAndProof.message.contribution.slot);
-  const domain = getDomain(state, DOMAIN_CONTRIBUTION_AND_PROOF, epochSig);
+  const domain = state.config.getDomain(DOMAIN_CONTRIBUTION_AND_PROOF, epochSig);
   const signingData = signedContributionAndProof.message;
   return {
     type: SignatureSetType.single,

@@ -1,4 +1,4 @@
-import {computeEpochAtSlot, computeSigningRoot, getDomain} from "@chainsafe/lodestar-beacon-state-transition";
+import {computeEpochAtSlot, computeSigningRoot} from "@chainsafe/lodestar-beacon-state-transition";
 import {DOMAIN_AGGREGATE_AND_PROOF, DOMAIN_SELECTION_PROOF} from "@chainsafe/lodestar-params";
 import {phase0, ssz} from "@chainsafe/lodestar-types";
 import {IBeaconChain} from "../../../src/chain";
@@ -30,7 +30,7 @@ export function getAggregateAndProofValidData(
   (chain as {seenAggregators: IBeaconChain["seenAggregators"]}).seenAggregators = new SeenAggregators();
 
   const aggregatorIndex = validatorIndex;
-  const proofDomain = getDomain(state, DOMAIN_SELECTION_PROOF, computeEpochAtSlot(attSlot));
+  const proofDomain = state.config.getDomain(DOMAIN_SELECTION_PROOF, computeEpochAtSlot(attSlot));
   const proofSigningRoot = computeSigningRoot(ssz.Slot, attSlot, proofDomain);
 
   const aggregateAndProof: phase0.AggregateAndProof = {
@@ -39,7 +39,7 @@ export function getAggregateAndProofValidData(
     selectionProof: signCached(sk, proofSigningRoot),
   };
 
-  const aggDomain = getDomain(state, DOMAIN_AGGREGATE_AND_PROOF, computeEpochAtSlot(attSlot));
+  const aggDomain = state.config.getDomain(DOMAIN_AGGREGATE_AND_PROOF, computeEpochAtSlot(attSlot));
   const aggSigningRoot = computeSigningRoot(ssz.phase0.AggregateAndProof, aggregateAndProof, aggDomain);
 
   const signedAggregateAndProof: phase0.SignedAggregateAndProof = {

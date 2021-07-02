@@ -6,7 +6,6 @@ import {
   CachedBeaconState,
   computeEpochAtSlot,
   computeSigningRoot,
-  getDomain,
   ISignatureSet,
   SignatureSetType,
 } from "@chainsafe/lodestar-beacon-state-transition";
@@ -16,7 +15,7 @@ export function getSyncCommitteeContributionSignatureSet(
   contribution: altair.SyncCommitteeContribution
 ): ISignatureSet {
   const epochSig = computeEpochAtSlot(contribution.slot);
-  const domain = getDomain(state, DOMAIN_SYNC_COMMITTEE, epochSig);
+  const domain = state.config.getDomain(DOMAIN_SYNC_COMMITTEE, epochSig);
   return {
     type: SignatureSetType.aggregate,
     pubkeys: getContributionPubkeys(state, contribution),

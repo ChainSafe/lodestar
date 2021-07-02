@@ -3,7 +3,6 @@ import {
   CachedBeaconState,
   computeEpochAtSlot,
   computeSigningRoot,
-  getDomain,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {IBlockSummary, IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {DOMAIN_BEACON_ATTESTER} from "@chainsafe/lodestar-params";
@@ -84,7 +83,7 @@ export function getAttestationValidData(
     },
   };
 
-  const domain = getDomain(state, DOMAIN_BEACON_ATTESTER, attestationData.target.epoch);
+  const domain = state.config.getDomain(DOMAIN_BEACON_ATTESTER, attestationData.target.epoch);
   const signingRoot = computeSigningRoot(ssz.phase0.AttestationData, attestationData, domain);
   const sk = getSecretKeyFromIndexCached(validatorIndex);
 

@@ -1,7 +1,7 @@
 import {DOMAIN_BEACON_ATTESTER} from "@chainsafe/lodestar-params";
 import {allForks, phase0, ssz} from "@chainsafe/lodestar-types";
 import {readonlyValues} from "@chainsafe/ssz";
-import {computeSigningRoot, getDomain, ISignatureSet, SignatureSetType, verifySignatureSet} from "../../util";
+import {computeSigningRoot, ISignatureSet, SignatureSetType, verifySignatureSet} from "../../util";
 import {CachedBeaconState} from "../util";
 
 export function verifyIndexedAttestationSignature(
@@ -18,7 +18,7 @@ export function getIndexedAttestationSignatureSet(
   indices?: number[]
 ): ISignatureSet {
   const {epochCtx} = state;
-  const domain = getDomain(state, DOMAIN_BEACON_ATTESTER, indexedAttestation.data.target.epoch);
+  const domain = state.config.getDomain(DOMAIN_BEACON_ATTESTER, indexedAttestation.data.target.epoch);
 
   if (!indices) indices = Array.from(readonlyValues(indexedAttestation.attestingIndices));
   return {

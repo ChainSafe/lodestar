@@ -1,7 +1,7 @@
 import {DOMAIN_VOLUNTARY_EXIT} from "@chainsafe/lodestar-params";
 import {readonlyValues} from "@chainsafe/ssz";
 import {allForks, phase0, ssz} from "@chainsafe/lodestar-types";
-import {computeSigningRoot, getDomain, ISignatureSet, SignatureSetType, verifySignatureSet} from "../../util";
+import {computeSigningRoot, ISignatureSet, SignatureSetType, verifySignatureSet} from "../../util";
 import {CachedBeaconState} from "../util";
 
 export function verifyVoluntaryExitSignature(
@@ -19,7 +19,7 @@ export function getVoluntaryExitSignatureSet(
   signedVoluntaryExit: phase0.SignedVoluntaryExit
 ): ISignatureSet {
   const {epochCtx} = state;
-  const domain = getDomain(state, DOMAIN_VOLUNTARY_EXIT, signedVoluntaryExit.message.epoch);
+  const domain = state.config.getDomain(DOMAIN_VOLUNTARY_EXIT, signedVoluntaryExit.message.epoch);
 
   return {
     type: SignatureSetType.single,

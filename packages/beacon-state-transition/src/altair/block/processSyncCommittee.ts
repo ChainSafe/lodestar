@@ -5,7 +5,6 @@ import {
   computeEpochAtSlot,
   computeSigningRoot,
   getBlockRootAtSlot,
-  getDomain,
   increaseBalance,
   decreaseBalance,
   ISignatureSet,
@@ -77,7 +76,7 @@ export function getSyncCommitteeSignatureSet(
   }
 
   const epochSig = computeEpochAtSlot(previousSlot);
-  const domain = getDomain(state, DOMAIN_SYNC_COMMITTEE, epochSig);
+  const domain = state.config.getDomain(DOMAIN_SYNC_COMMITTEE, epochSig);
 
   return {
     type: SignatureSetType.aggregate,
