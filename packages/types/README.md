@@ -30,7 +30,6 @@ import {ssz} from "@chainsafe/lodestar-types";
 
 ssz.phase0.BeaconState.defaultValue();
 ssz.altair.BeaconState.defaultValue();
-ssz.allForks.BeaconState.defaultValue();
 ...
 
 ```
