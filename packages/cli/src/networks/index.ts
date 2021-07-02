@@ -61,12 +61,10 @@ export function getNetworkBeaconNodeOptions(network: NetworkName): RecursivePart
   const {depositContractDeployBlock, bootEnrs, beaconParams} = getNetworkData(network);
   const networkId = parseInt((beaconParams.DEPOSIT_NETWORK_ID || 1) as string, 10);
   return {
-    api: {rest: {enabled: true}},
     eth1: {
       providerUrl: getEth1ProviderUrl(networkId),
       depositContractDeployBlock,
     },
-    metrics: {enabled: true},
     network: {
       discv5: {
         enabled: true,
