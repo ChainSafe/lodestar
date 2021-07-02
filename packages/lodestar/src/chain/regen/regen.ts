@@ -1,5 +1,5 @@
 import {allForks, phase0, Root, Slot, ssz} from "@chainsafe/lodestar-types";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {
   CachedBeaconState,
   computeEpochAtSlot,
@@ -22,7 +22,7 @@ import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
  * Regenerates states that have already been processed by the fork choice
  */
 export class StateRegenerator implements IStateRegenerator {
-  private config: IBeaconConfig;
+  private config: IChainForkConfig;
   private emitter: ChainEventEmitter;
   private forkChoice: IForkChoice;
   private stateCache: StateContextCache;
@@ -39,7 +39,7 @@ export class StateRegenerator implements IStateRegenerator {
     db,
     metrics,
   }: {
-    config: IBeaconConfig;
+    config: IChainForkConfig;
     emitter: ChainEventEmitter;
     forkChoice: IForkChoice;
     stateCache: StateContextCache;

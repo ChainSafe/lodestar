@@ -1,6 +1,6 @@
 import {toHexString} from "@chainsafe/ssz";
 import {phase0} from "@chainsafe/lodestar-types";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {AbortSignal} from "@chainsafe/abort-controller";
 import {isValidAddress} from "../util/address";
 import {retry} from "../util/retry";
@@ -14,9 +14,9 @@ import {depositEventTopics, parseDepositLog} from "./utils/depositContract";
 export class Eth1Provider extends Eth1JsonRpcClient implements IEth1Provider {
   deployBlock: number;
   private address: string;
-  private config: IBeaconConfig;
+  private config: IChainForkConfig;
 
-  constructor(config: IBeaconConfig, opts: IEth1Options) {
+  constructor(config: IChainForkConfig, opts: IEth1Options) {
     super(opts);
     this.deployBlock = opts.depositContractDeployBlock;
     this.address = toHexString(config.DEPOSIT_CONTRACT_ADDRESS);
@@ -44,7 +44,7 @@ export class Eth1Provider extends Eth1JsonRpcClient implements IEth1Provider {
       }
     );
 
-    return logsRawArr.flat(1).map((log) => parseDepositLog(this.config, log));
+    return logsRawArr.flat(1).map((log) => parseDepositLog(log));
   }
 
   async validateContract(signal?: AbortSignal): Promise<void> {

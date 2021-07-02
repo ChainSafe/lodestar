@@ -1,7 +1,7 @@
 import PeerId from "peer-id";
 import {allForks, Epoch, phase0} from "@chainsafe/lodestar-types";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {LodestarError} from "@chainsafe/lodestar-utils";
 import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 import {BATCH_SLOT_OFFSET, MAX_BATCH_DOWNLOAD_ATTEMPTS, MAX_BATCH_PROCESSING_ATTEMPTS} from "../constants";
@@ -72,9 +72,9 @@ export class Batch {
   readonly failedProcessingAttempts: Attempt[] = [];
   /** The number of download retries this batch has undergone due to a failed request. */
   private readonly failedDownloadAttempts: PeerId[] = [];
-  private readonly config: IBeaconConfig;
+  private readonly config: IChainForkConfig;
 
-  constructor(startEpoch: Epoch, config: IBeaconConfig, opts: BatchOpts) {
+  constructor(startEpoch: Epoch, config: IChainForkConfig, opts: BatchOpts) {
     const startSlot = computeStartSlotAtEpoch(startEpoch) + BATCH_SLOT_OFFSET;
     const endSlot = startSlot + opts.epochsPerBatch * SLOTS_PER_EPOCH;
 

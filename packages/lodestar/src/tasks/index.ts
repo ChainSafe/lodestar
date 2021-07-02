@@ -77,7 +77,6 @@ export class TasksService {
   private processFinalizedCheckpoint = async (finalized: phase0.Checkpoint): Promise<void> => {
     try {
       await new ArchiveBlocksTask(
-        this.config,
         {db: this.db, forkChoice: this.chain.forkChoice, logger: this.logger},
         finalized
       ).run();

@@ -1,5 +1,5 @@
 import {AbortSignal} from "@chainsafe/abort-controller";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {Slot, CommitteeIndex, altair, Root} from "@chainsafe/lodestar-types";
 import {ILogger, prettyBytes, sleep} from "@chainsafe/lodestar-utils";
 import {Api} from "@chainsafe/lodestar-api";
@@ -17,7 +17,7 @@ export class SyncCommitteeService {
   private readonly dutiesService: SyncCommitteeDutiesService;
 
   constructor(
-    private readonly config: IBeaconConfig,
+    private readonly config: IChainForkConfig,
     private readonly logger: ILogger,
     private readonly api: Api,
     private readonly clock: IClock,

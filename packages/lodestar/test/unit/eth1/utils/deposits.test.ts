@@ -3,7 +3,6 @@ import chaiAsPromised from "chai-as-promised";
 import {Root, phase0, ssz} from "@chainsafe/lodestar-types";
 import {List, TreeBacked} from "@chainsafe/ssz";
 import {MAX_DEPOSITS} from "@chainsafe/lodestar-params";
-import {config} from "@chainsafe/lodestar-config/default";
 import {verifyMerkleBranch} from "@chainsafe/lodestar-utils";
 import {filterBy} from "../../../utils/db";
 import {getTreeAtIndex} from "../../../../src/util/tree";
@@ -91,7 +90,7 @@ describe("eth1 / util / deposits", function () {
         const depositsGetter: DepositGetter<phase0.DepositEvent> = async (indexRange) =>
           filterBy(deposits, indexRange, (deposit) => deposit.index);
 
-        const resultPromise = getDeposits(config, state, eth1Data, depositsGetter);
+        const resultPromise = getDeposits(state, eth1Data, depositsGetter);
 
         if (expectedReturnedIndexes) {
           const result = await resultPromise;
@@ -112,7 +111,7 @@ describe("eth1 / util / deposits", function () {
       const depositCount = 0;
       const eth1Data = generateEth1Data(depositCount, depositRootTree);
 
-      const deposits = getDepositsWithProofs(config, [], depositRootTree, eth1Data);
+      const deposits = getDepositsWithProofs([], depositRootTree, eth1Data);
       expect(deposits).to.be.deep.equal([]);
     });
 
@@ -133,7 +132,7 @@ describe("eth1 / util / deposits", function () {
       const depositCount = depositEvents.length;
       const eth1Data = generateEth1Data(depositCount, depositRootTree);
 
-      const deposits = getDepositsWithProofs(config, depositEvents, depositRootTree, eth1Data);
+      const deposits = getDepositsWithProofs(depositEvents, depositRootTree, eth1Data);
 
       // Should not return all deposits
       expect(deposits.length).to.be.equal(2);

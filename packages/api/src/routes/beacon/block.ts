@@ -1,6 +1,6 @@
 import {ContainerType, Json} from "@chainsafe/ssz";
 import {ForkName} from "@chainsafe/lodestar-params";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {phase0, allForks, Slot, Root, ssz} from "@chainsafe/lodestar-types";
 import {
   RoutesData,
@@ -117,7 +117,7 @@ export type ReqTypes = {
   publishBlock: {body: Json};
 };
 
-export function getReqSerializers(config: IBeaconConfig): ReqSerializers<Api, ReqTypes> {
+export function getReqSerializers(config: IChainForkConfig): ReqSerializers<Api, ReqTypes> {
   const blockIdOnlyReq: ReqSerializer<Api["getBlock"], BlockIdOnlyReq> = {
     writeReq: (blockId) => ({params: {blockId}}),
     parseReq: ({params}) => [params.blockId],

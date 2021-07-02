@@ -3,7 +3,7 @@ import {toBufferBE} from "bigint-buffer";
 import {expect} from "chai";
 import sinon from "sinon";
 import bls from "@chainsafe/bls";
-import {createIBeaconConfig} from "@chainsafe/lodestar-config";
+import {createIChainForkConfig} from "@chainsafe/lodestar-config";
 import {config as mainnetConfig} from "@chainsafe/lodestar-config/default";
 import {toHexString} from "@chainsafe/ssz";
 import {routes} from "@chainsafe/lodestar-api";
@@ -27,7 +27,7 @@ describe("SyncCommitteeDutiesService", function () {
     sinon.SinonStubbedInstance<ValidatorStore>;
   let pubkeys: Uint8Array[]; // Initialize pubkeys in before() so bls is already initialized
 
-  const config = createIBeaconConfig({
+  const config = createIChainForkConfig({
     ...mainnetConfig,
     ALTAIR_FORK_EPOCH: 0, // Activate Altair immediatelly
   });

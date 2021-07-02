@@ -14,6 +14,7 @@ import {readLodestarGitData} from "../../util/gitData";
 import {FileENR, overwriteEnrWithCliArgs, readPeerId} from "../../config";
 import {initBeaconState} from "./initBeaconState";
 import {createDbMetrics} from "@chainsafe/lodestar/lib/metrics";
+import {createIBeaconConfig} from "../../../../config/lib";
 
 /**
  * Run a beacon node
@@ -67,9 +68,10 @@ export async function beaconHandler(args: IBeaconArgs & IGlobalArgs): Promise<vo
   // BeaconNode setup
   try {
     const anchorState = await initBeaconState(options, args, config, db, logger, abortController.signal);
+    const beaconConfig = createIBeaconConfig(config, anchorState.genesisValidatorsRoot);
     const node = await BeaconNode.init({
       opts: options,
-      config,
+      config: beaconConfig,
       db,
       logger,
       libp2p: await createNodeJsLibp2p(peerId, options.network, {peerStoreDir: beaconPaths.peerStoreDir}),

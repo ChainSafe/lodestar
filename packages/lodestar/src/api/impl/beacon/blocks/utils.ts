@@ -1,7 +1,7 @@
 import {allForks} from "@chainsafe/lodestar-types";
 import {routes} from "@chainsafe/lodestar-api";
 import {blockToHeader} from "@chainsafe/lodestar-beacon-state-transition";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {IBeaconDb} from "../../../../db";
 import {GENESIS_SLOT} from "../../../../constants";
@@ -9,7 +9,7 @@ import {fromHexString} from "@chainsafe/ssz";
 import {ApiError, ValidationError} from "../../errors";
 
 export function toBeaconHeaderResponse(
-  config: IBeaconConfig,
+  config: IChainForkConfig,
   block: allForks.SignedBeaconBlock,
   canonical = false
 ): routes.beacon.BlockHeaderResponse {

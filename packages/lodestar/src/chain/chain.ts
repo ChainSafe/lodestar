@@ -94,7 +94,7 @@ export class BeaconChain implements IBeaconChain {
 
     const clock = new LocalClock({config, emitter, genesisTime: this.genesisTime, signal});
     const stateCache = new StateContextCache();
-    const checkpointStateCache = new CheckpointStateCache(config);
+    const checkpointStateCache = new CheckpointStateCache();
     const cachedState = restoreStateCaches(config, stateCache, checkpointStateCache, anchorState);
     const forkChoice = new LodestarForkChoice({
       config,

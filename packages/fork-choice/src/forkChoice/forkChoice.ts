@@ -8,7 +8,7 @@ import {
   computeEpochAtSlot,
   ZERO_HASH,
 } from "@chainsafe/lodestar-beacon-state-transition";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {IChainForkConfig} from "@chainsafe/lodestar-config";
 
 import {computeDeltas, HEX_ZERO_HASH, IVoteTracker, ProtoArray} from "../protoArray";
 import {ForkChoiceError, ForkChoiceErrorCode, InvalidBlockCode, InvalidAttestationCode} from "./errors";
@@ -35,7 +35,7 @@ import {IForkChoiceMetrics} from "../metrics";
  * - Time is not updated automatically, updateTime MUST be called every slot
  */
 export class ForkChoice implements IForkChoice {
-  config: IBeaconConfig;
+  config: IChainForkConfig;
   /**
    * Storage for `ForkChoice`, modelled off the spec `Store` object.
    */
@@ -98,7 +98,7 @@ export class ForkChoice implements IForkChoice {
     justifiedBalances,
     metrics,
   }: {
-    config: IBeaconConfig;
+    config: IChainForkConfig;
     fcStore: IForkChoiceStore;
     protoArray: ProtoArray;
     queuedAttestations: Set<IQueuedAttestation>;

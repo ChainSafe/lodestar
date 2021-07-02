@@ -3,15 +3,14 @@ import {GossipValidationError} from "./errors";
 import {decodeMessageData} from "./encoding";
 import {getGossipSSZDeserializer} from "./topic";
 import {IGossipMessage, GossipTypeMap, GossipTopicMap, GossipType, GossipTopic, GossipEncoding} from "./interface";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
 /**
  * Mutates the `IGossipMessage` `message` so `parseGossipMsg()` can use it
  */
-export function prepareGossipMsg(message: IGossipMessage, gossipTopic: GossipTopic, config: IBeaconConfig): void {
+export function prepareGossipMsg(message: IGossipMessage, gossipTopic: GossipTopic): void {
   // get GossipTopic and GossipObject, set on IGossipMessage
   const messageData = decodeMessageData(gossipTopic.encoding as GossipEncoding, message.data);
-  const gossipObject = getGossipSSZDeserializer(config, gossipTopic)(messageData);
+  const gossipObject = getGossipSSZDeserializer(gossipTopic)(messageData);
   // Lodestar ObjectValidatorFns rely on these properties being set
   message.gossipObject = gossipObject;
   message.gossipTopic = gossipTopic;

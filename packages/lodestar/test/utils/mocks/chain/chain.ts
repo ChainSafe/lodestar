@@ -3,7 +3,7 @@ import sinon from "sinon";
 
 import {TreeBacked} from "@chainsafe/ssz";
 import {allForks, ForkDigest, Number64, Root, Slot, ssz, Uint16, Uint64} from "@chainsafe/lodestar-types";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {CachedBeaconState, createCachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
 import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
@@ -32,7 +32,7 @@ export interface IMockChainParams {
   chainId: Uint16;
   networkId: Uint64;
   state: TreeBacked<allForks.BeaconState>;
-  config: IBeaconConfig;
+  config: IChainForkConfig;
 }
 
 export class MockBeaconChain implements IBeaconChain {
@@ -58,7 +58,7 @@ export class MockBeaconChain implements IBeaconChain {
   readonly seenAggregators = new SeenAggregators();
 
   private state: TreeBacked<allForks.BeaconState>;
-  private config: IBeaconConfig;
+  private config: IChainForkConfig;
   private abortController: AbortController;
 
   constructor({genesisTime, chainId, networkId, state, config}: IMockChainParams) {
@@ -80,7 +80,7 @@ export class MockBeaconChain implements IBeaconChain {
     });
     this.forkChoice = mockForkChoice();
     this.stateCache = new StateContextCache();
-    this.checkpointStateCache = new CheckpointStateCache(this.config);
+    this.checkpointStateCache = new CheckpointStateCache();
     this.pendingBlocks = new BlockPool(config, logger);
     const db = new StubbedBeaconDb(sinon);
     this.regen = new StateRegenerator({

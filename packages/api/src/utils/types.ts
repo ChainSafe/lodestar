@@ -1,6 +1,6 @@
 import {ContainerType, IJsonOptions, Json, ListType, Type} from "@chainsafe/ssz";
 import {ForkName} from "@chainsafe/lodestar-params";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {objectToExpectedCase} from "@chainsafe/lodestar-utils";
 import {Schema, SchemaDefinition} from "./schema";
 
@@ -18,8 +18,8 @@ export type RouteGroupDefinition<
   ReqTypes extends {[K in keyof Api]: ReqGeneric}
 > = {
   routesData: RoutesData<Api>;
-  getReqSerializers: (config: IBeaconConfig) => ReqSerializers<Api, ReqTypes>;
-  getReturnTypes: (config: IBeaconConfig) => ReturnTypes<Api>;
+  getReqSerializers: (config: IChainForkConfig) => ReqSerializers<Api, ReqTypes>;
+  getReturnTypes: (config: IChainForkConfig) => ReturnTypes<Api>;
 };
 
 export type RouteDef = {

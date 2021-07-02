@@ -1,6 +1,5 @@
 import sinon from "sinon";
 
-import {config} from "@chainsafe/lodestar-config/default";
 import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {ssz} from "@chainsafe/lodestar-types";
@@ -39,7 +38,7 @@ describe("validate proposer slashing", () => {
     dbStub.proposerSlashing.has.resolves(true);
 
     await expectRejectedWithLodestarError(
-      validateGossipProposerSlashing(config, chainStub, dbStub, proposerSlashing),
+      validateGossipProposerSlashing(chainStub, dbStub, proposerSlashing),
       ProposerSlashingErrorCode.ALREADY_EXISTS
     );
   });
@@ -51,7 +50,7 @@ describe("validate proposer slashing", () => {
     proposerSlashing.signedHeader2.message.slot = 0;
 
     await expectRejectedWithLodestarError(
-      validateGossipProposerSlashing(config, chainStub, dbStub, proposerSlashing),
+      validateGossipProposerSlashing(chainStub, dbStub, proposerSlashing),
       ProposerSlashingErrorCode.INVALID
     );
   });
@@ -67,6 +66,6 @@ describe("validate proposer slashing", () => {
       signedHeader2: signedHeader2,
     };
 
-    await validateGossipProposerSlashing(config, chainStub, dbStub, proposerSlashing);
+    await validateGossipProposerSlashing(chainStub, dbStub, proposerSlashing);
   });
 });

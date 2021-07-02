@@ -27,7 +27,7 @@ import {LodestarForkChoice} from "@chainsafe/lodestar/lib/chain/forkChoice/forkC
 import {SPEC_TEST_LOCATION} from "../../../utils/specTestCases";
 import {ChainEventEmitter} from "@chainsafe/lodestar/lib/chain/emitter";
 import {toHexString} from "@chainsafe/ssz";
-import {createIBeaconConfig} from "@chainsafe/lodestar-config";
+import {createIChainForkConfig} from "@chainsafe/lodestar-config";
 import {CheckpointStateCache} from "@chainsafe/lodestar/lib/chain/stateCache/stateContextCheckpointsCache";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {ssz} from "@chainsafe/lodestar-types";
@@ -35,7 +35,7 @@ import {PresetName, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 
 export function runForkChoiceGetHead(presetName: PresetName): void {
   // eslint-disable-next-line @typescript-eslint/naming-convention
-  const config = createIBeaconConfig({ALTAIR_FORK_EPOCH: 0});
+  const config = createIChainForkConfig({ALTAIR_FORK_EPOCH: 0});
 
   describeDirectorySpecTest<IForkChoiceTestCase, void>(
     `forkchoice get_head ${presetName}`,
@@ -47,7 +47,7 @@ export function runForkChoiceGetHead(presetName: PresetName): void {
       const tbState = config.getForkTypes(currentSlot).BeaconState.createTreeBackedFromStruct(anchorState);
       let wrappedState = createCachedBeaconState(config, tbState);
       const forkchoice = new LodestarForkChoice({config, emitter, currentSlot, state: wrappedState});
-      const checkpointStateCache = new CheckpointStateCache(config);
+      const checkpointStateCache = new CheckpointStateCache();
       const stateCache = new Map<string, CachedBeaconState<allForks.BeaconState>>();
       cacheState(wrappedState, stateCache);
       const {SECONDS_PER_SLOT} = wrappedState.config;

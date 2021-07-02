@@ -7,12 +7,12 @@ import {IObjectValidatorModules, GossipTopic} from "../interface";
 import {GossipValidationError} from "../errors";
 
 export async function validateProposerSlashing(
-  {chain, db, config, logger}: IObjectValidatorModules,
+  {chain, db, logger}: IObjectValidatorModules,
   _topic: GossipTopic,
   proposerSlashing: phase0.ProposerSlashing
 ): Promise<void> {
   try {
-    await validateGossipProposerSlashing(config, chain, db, proposerSlashing);
+    await validateGossipProposerSlashing(chain, db, proposerSlashing);
     logger.debug("gossip - ProposerSlashing - accept");
   } catch (e) {
     if (!(e instanceof ProposerSlashingError)) {

@@ -5,7 +5,7 @@
 import {TreeBacked, List} from "@chainsafe/ssz";
 import {GENESIS_SLOT} from "@chainsafe/lodestar-params";
 import {Root, phase0, allForks, ssz} from "@chainsafe/lodestar-types";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {IBeaconConfig, IChainForkConfig} from "@chainsafe/lodestar-config";
 import {AbortSignal} from "@chainsafe/abort-controller";
 import {
   getTemporaryBlockHeader,
@@ -23,7 +23,7 @@ import {IEth1StreamParams, IEth1Provider, getDepositsAndBlockStreamForGenesis, g
 import {IGenesisBuilder, IGenesisResult} from "./interface";
 
 export interface IGenesisBuilderKwargs {
-  config: IBeaconConfig;
+  config: IChainForkConfig;
   eth1Provider: IEth1Provider;
   logger: ILogger;
 
@@ -56,7 +56,10 @@ export class GenesisBuilder implements IGenesisBuilder {
   private lastLog = 0;
 
   constructor({config, eth1Provider, logger, signal, pendingStatus, maxBlocksPerPoll}: IGenesisBuilderKwargs) {
-    this.config = config;
+    // at genesis builder, there is no genesis validator so we don't have a real IBeaconConfig
+    // but we need IBeaconConfig to temporarily create CachedBeaconState, the cast here is safe since we don't use any getDomain here
+    // the use of state as CachedBeaconState is just for convenient, IGenesisResult returns TreeBacked anyway
+    this.config = config as IBeaconConfig;
     this.eth1Provider = eth1Provider;
     this.logger = logger;
     this.signal = signal;
@@ -67,14 +70,14 @@ export class GenesisBuilder implements IGenesisBuilder {
 
     if (pendingStatus) {
       this.logger.info("Restoring pending genesis state", {block: pendingStatus.lastProcessedBlockNumber});
-      this.state = createCachedBeaconState(config, pendingStatus.state);
+      this.state = createCachedBeaconState(this.config, pendingStatus.state);
       this.depositTree = pendingStatus.depositTree;
       this.fromBlock = Math.max(pendingStatus.lastProcessedBlockNumber + 1, this.eth1Provider.deployBlock);
     } else {
       this.state = getGenesisBeaconState(
-        config,
+        this.config,
         ssz.phase0.Eth1Data.defaultValue(),
-        getTemporaryBlockHeader(config, config.getForkTypes(GENESIS_SLOT).BeaconBlock.defaultValue())
+        getTemporaryBlockHeader(this.config, config.getForkTypes(GENESIS_SLOT).BeaconBlock.defaultValue())
       );
       this.depositTree = ssz.phase0.DepositDataRootList.defaultTreeBacked();
       this.fromBlock = this.eth1Provider.deployBlock;

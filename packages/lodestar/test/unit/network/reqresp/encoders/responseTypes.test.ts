@@ -55,11 +55,11 @@ describe("network / reqresp / encoders / responseTypes", () => {
             const returnedResponses = await pipe(
               arrToSource(responseChunks),
               responseEncodeSuccess(config, forkDigestContext, protocol),
-              responseDecode(config, forkDigestContext, protocol),
+              responseDecode(forkDigestContext, protocol),
               all
             );
 
-            const type = getResponseSzzTypeByMethod(config, protocol, forkName);
+            const type = getResponseSzzTypeByMethod(protocol, forkName);
             if (!type) throw Error("no type");
 
             expectIsEqualSszTypeArr(type, returnedResponses, responseChunks, "Response chunks");

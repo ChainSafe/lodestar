@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {RouteGeneric, ReqGeneric, Resolves} from "../../src/utils";
 import {HttpClient, IHttpClient} from "../../src/client/utils";
 import {ServerRoutes} from "../../src/server/utils";
@@ -19,9 +19,9 @@ export function runGenericServerTest<
   Api extends Record<string, RouteGeneric>,
   ReqTypes extends {[K in keyof Api]: ReqGeneric}
 >(
-  config: IBeaconConfig,
-  getClient: (config: IBeaconConfig, https: IHttpClient) => Api,
-  getRoutes: (config: IBeaconConfig, api: Api) => ServerRoutes<Api, ReqTypes>,
+  config: IChainForkConfig,
+  getClient: (config: IChainForkConfig, https: IHttpClient) => Api,
+  getRoutes: (config: IChainForkConfig, api: Api) => ServerRoutes<Api, ReqTypes>,
   testCases: GenericServerTestCases<Api>
 ): void {
   const mockApi = getMockApi<Api>(testCases);

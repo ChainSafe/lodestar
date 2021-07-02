@@ -5,7 +5,7 @@ import {
   ForkName,
   SLOTS_PER_EPOCH,
 } from "@chainsafe/lodestar-params";
-import {createIBeaconConfig} from "@chainsafe/lodestar-config";
+import {createIChainForkConfig} from "@chainsafe/lodestar-config";
 import {getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import * as mathUtils from "@chainsafe/lodestar-utils/lib/math";
 import * as shuffleUtils from "../../../src/util/shuffle";
@@ -25,7 +25,7 @@ describe("AttnetsService", function () {
   const COMMITTEE_SUBNET_SUBSCRIPTION = 10;
   const ALTAIR_FORK_EPOCH = 1 * EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION;
   // eslint-disable-next-line @typescript-eslint/naming-convention
-  const config = createIBeaconConfig({ALTAIR_FORK_EPOCH});
+  const config = createIChainForkConfig({ALTAIR_FORK_EPOCH});
   const {SECONDS_PER_SLOT} = config;
 
   let service: AttnetsService;

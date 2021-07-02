@@ -1,6 +1,6 @@
 import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {parseAttesterFlags, IAttesterStatus} from "@chainsafe/lodestar-beacon-state-transition/lib/allForks";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {MIN_ATTESTATION_INCLUSION_DELAY, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {allForks, Epoch, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {IndexedAttestation, SignedAggregateAndProof} from "@chainsafe/lodestar-types/phase0";
@@ -153,7 +153,7 @@ type MonitoredValidator = {
 
 export function createValidatorMonitor(
   metrics: ILodestarMetrics,
-  config: IBeaconConfig,
+  config: IChainForkConfig,
   genesisTime: number
 ): IValidatorMonitor {
   /** The validators that require additional monitoring. */

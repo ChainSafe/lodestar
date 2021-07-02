@@ -2,7 +2,7 @@ import deepmerge from "deepmerge";
 import tmp from "tmp";
 import {createEnr} from "@chainsafe/lodestar-cli/src/config";
 import {config as minimalConfig} from "@chainsafe/lodestar-config/default";
-import {createIBeaconConfig, IChainConfig} from "@chainsafe/lodestar-config";
+import {createIBeaconConfig, createIChainForkConfig, IChainConfig} from "@chainsafe/lodestar-config";
 import {ILogger, RecursivePartial} from "@chainsafe/lodestar-utils";
 import {LevelDbController} from "@chainsafe/lodestar-db";
 import {BeaconNode} from "../../../src/node";
@@ -35,7 +35,7 @@ export async function getDevBeaconNode({
 }): Promise<BeaconNode> {
   if (!peerId) peerId = await createPeerId();
   const tmpDir = tmp.dirSync({unsafeCleanup: true});
-  const config = createIBeaconConfig({...minimalConfig, ...params});
+  const config = createIChainForkConfig({...minimalConfig, ...params});
   logger = logger ?? testLogger();
 
   const db = new BeaconDb({config, controller: new LevelDbController({name: tmpDir.name}, {logger})});
@@ -71,9 +71,10 @@ export async function getDevBeaconNode({
   );
 
   const anchorState = await initDevState(config, db, validatorCount, genesisTime);
+  const beaconConfig = createIBeaconConfig(config, anchorState.genesisValidatorsRoot);
   return await BeaconNode.init({
     opts: options as IBeaconNodeOptions,
-    config,
+    config: beaconConfig,
     db,
     logger,
     libp2p,

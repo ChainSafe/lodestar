@@ -22,6 +22,7 @@ import {expectRejectedWithLodestarError} from "../../utils/errors";
 import {connect, onPeerConnect} from "../../utils/network";
 import {StubbedBeaconDb} from "../../utils/stub";
 import {ForkName} from "@chainsafe/lodestar-params";
+import {createIBeaconConfig} from "../../../../config/lib";
 
 chai.use(chaiAsPromised);
 
@@ -38,7 +39,8 @@ describe("network / ReqResp", function () {
     localMultiaddrs: [],
   };
   const state = generateState();
-  const chain = new MockBeaconChain({genesisTime: 0, chainId: 0, networkId: BigInt(0), state, config});
+  const beaconConfig = createIBeaconConfig(config, state.genesisValidatorsRoot);
+  const chain = new MockBeaconChain({genesisTime: 0, chainId: 0, networkId: BigInt(0), state, config: beaconConfig});
   const db = new StubbedBeaconDb(sinon);
 
   const afterEachCallbacks: (() => Promise<void> | void)[] = [];
@@ -75,7 +77,7 @@ describe("network / ReqResp", function () {
       ...reqRespHandlerPartial,
     };
     const opts = {...networkOptsDefault, ...reqRespOpts};
-    const modules = {config, db, chain, reqRespHandler, signal: controller.signal, metrics: null};
+    const modules = {config: beaconConfig, db, chain, reqRespHandler, signal: controller.signal, metrics: null};
     const netA = new Network(opts, {...modules, libp2p: libp2pA, logger: testLogger("A")});
     const netB = new Network(opts, {...modules, libp2p: libp2pB, logger: testLogger("B")});
     await Promise.all([netA.start(), netB.start()]);

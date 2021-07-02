@@ -1,6 +1,6 @@
 import {ArrayLike, BitList} from "@chainsafe/ssz";
 import {phase0, allForks, Epoch, Slot, ssz} from "@chainsafe/lodestar-types";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {computeStartSlotAtEpoch, isValidAttestationSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {IDatabaseController, Bucket, Repository, IDbMetrics} from "@chainsafe/lodestar-db";
 
@@ -13,7 +13,7 @@ import {IDatabaseController, Bucket, Repository, IDbMetrics} from "@chainsafe/lo
  * Removed when included on chain or old
  */
 export class AggregateAndProofRepository extends Repository<Uint8Array, phase0.AggregateAndProof> {
-  constructor(config: IBeaconConfig, db: IDatabaseController<Buffer, Buffer>, metrics?: IDbMetrics) {
+  constructor(config: IChainForkConfig, db: IDatabaseController<Buffer, Buffer>, metrics?: IDbMetrics) {
     super(config, db, Bucket.phase0_aggregateAndProof, ssz.phase0.AggregateAndProof, metrics);
   }
 

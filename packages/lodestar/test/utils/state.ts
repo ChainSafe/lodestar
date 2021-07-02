@@ -2,7 +2,7 @@ import {config as minimalConfig} from "@chainsafe/lodestar-config/default";
 import {CachedBeaconState, createCachedBeaconState, phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {List, TreeBacked} from "@chainsafe/ssz";
 import {allForks, altair, Gwei, Root, ssz} from "@chainsafe/lodestar-types";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {
   EPOCHS_PER_HISTORICAL_VECTOR,
   EPOCHS_PER_SLASHINGS_VECTOR,
@@ -23,8 +23,8 @@ import {initBLS} from "@chainsafe/lodestar-cli/src/util";
  */
 type TestBeaconState = Partial<allForks.BeaconState>;
 
-const phase0States = new Map<IBeaconConfig, TreeBacked<allForks.BeaconState>>();
-const altairStates = new Map<IBeaconConfig, TreeBacked<altair.BeaconState>>();
+const phase0States = new Map<IChainForkConfig, TreeBacked<allForks.BeaconState>>();
+const altairStates = new Map<IChainForkConfig, TreeBacked<altair.BeaconState>>();
 
 /**
  * Generate beaconState, by default it will generate a mostly empty state with "just enough" to be valid-ish
@@ -146,7 +146,8 @@ export function generateCachedState(
   config = minimalConfig,
   isAltair = false
 ): CachedBeaconState<allForks.BeaconState> {
-  return createCachedBeaconState(config, generateState(opts, config, isAltair));
+  const state = generateState(opts, config, isAltair);
+  return createCachedBeaconState(config, state);
 }
 
 /**
@@ -159,5 +160,6 @@ export async function generateCachedStateWithPubkeys(
 ): Promise<CachedBeaconState<allForks.BeaconState>> {
   // somehow this is called in the test but BLS isn't init
   await initBLS();
-  return createCachedBeaconState(config, generateState(opts, config, isAltair, true));
+  const state = generateState(opts, config, isAltair, true);
+  return createCachedBeaconState(config, state);
 }

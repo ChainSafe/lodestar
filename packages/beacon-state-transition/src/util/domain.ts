@@ -5,6 +5,7 @@ import {Epoch, Version, Root, DomainType, allForks} from "@chainsafe/lodestar-ty
 
 import {computeForkDataRoot} from "./fork";
 
+// TODO: remove?
 /**
  * Return the domain for the [[domainType]] and [[forkVersion]].
  */
@@ -20,6 +21,7 @@ export function getForkVersion(fork: allForks.BeaconState["fork"], epoch: Epoch)
   return epoch < fork.epoch ? fork.previousVersion : fork.currentVersion;
 }
 
+// TODO: remove?
 /**
  * Return the signature domain (fork version concatenated with domain type) of a message.
  */

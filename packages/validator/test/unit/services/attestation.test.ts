@@ -14,7 +14,7 @@ import {getApiClientStub} from "../../utils/apiStub";
 import {testLogger} from "../../utils/logger";
 import {ClockMock} from "../../utils/clock";
 import {IndicesService} from "../../../src/services/indices";
-import {createIBeaconConfig} from "@chainsafe/lodestar-config";
+import {createIChainForkConfig} from "@chainsafe/lodestar-config";
 
 describe("AttestationService", function () {
   const sandbox = sinon.createSandbox();
@@ -27,7 +27,7 @@ describe("AttestationService", function () {
   let pubkeys: Uint8Array[]; // Initialize pubkeys in before() so bls is already initialized
 
   // Clone before mutating
-  const config: typeof mainnetConfig = createIBeaconConfig({
+  const config: typeof mainnetConfig = createIChainForkConfig({
     ...mainnetConfig,
     // eslint-disable-next-line @typescript-eslint/naming-convention
     SECONDS_PER_SLOT: 1 / 1000, // Make slot time super short: 1 ms

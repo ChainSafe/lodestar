@@ -1,5 +1,4 @@
 import {Libp2pPeerMetadataStore} from "../../../../src/network/peers/metastore";
-import {config} from "@chainsafe/lodestar-config/default";
 import sinon, {SinonStub, SinonStubbedInstance} from "sinon";
 import {ReqRespEncoding} from "../../../../src/network/reqresp";
 import {expect} from "chai";
@@ -37,7 +36,7 @@ describe("Libp2pPeerMetadataStore", function () {
   });
 
   it("can store and retrieve encoding", function () {
-    const store = new Libp2pPeerMetadataStore(config, metabookStub);
+    const store = new Libp2pPeerMetadataStore(metabookStub);
     const value = ReqRespEncoding.SSZ_SNAPPY;
     store.encoding.set(peerId, value);
     const result = store.encoding.get(peerId);
@@ -46,7 +45,7 @@ describe("Libp2pPeerMetadataStore", function () {
   });
 
   it("can store and retrieve metadata", function () {
-    const store = new Libp2pPeerMetadataStore(config, metabookStub);
+    const store = new Libp2pPeerMetadataStore(metabookStub);
     const value: altair.Metadata = {
       attnets: Array.from({length: 64}, () => true),
       seqNumber: BigInt(20),
@@ -60,7 +59,7 @@ describe("Libp2pPeerMetadataStore", function () {
   });
 
   it("can store and retrieve score", function () {
-    const store = new Libp2pPeerMetadataStore(config, metabookStub);
+    const store = new Libp2pPeerMetadataStore(metabookStub);
     const value = 80;
     store.rpcScore.set(peerId, value);
     const result = store.rpcScore.get(peerId);

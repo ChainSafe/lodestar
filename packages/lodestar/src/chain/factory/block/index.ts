@@ -3,7 +3,7 @@
  */
 
 import {CachedBeaconState, allForks} from "@chainsafe/lodestar-beacon-state-transition";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {Bytes96, Root, Slot} from "@chainsafe/lodestar-types";
 import {ZERO_HASH} from "../../../constants";
 import {IBeaconDb} from "../../../db";
@@ -13,7 +13,7 @@ import {IBeaconChain} from "../../interface";
 import {assembleBody} from "./body";
 
 type AssembleBlockModules = {
-  config: IBeaconConfig;
+  config: IChainForkConfig;
   chain: IBeaconChain;
   db: IBeaconDb;
   eth1: IEth1ForBlockProduction;
@@ -50,7 +50,7 @@ export async function assembleBlock(
  * epoch transition which happen at slot % 32 === 0)
  */
 function computeNewStateRoot(
-  {config, metrics}: {config: IBeaconConfig; metrics: IMetrics | null},
+  {config, metrics}: {config: IChainForkConfig; metrics: IMetrics | null},
   state: CachedBeaconState<allForks.BeaconState>,
   block: allForks.BeaconBlock
 ): Root {

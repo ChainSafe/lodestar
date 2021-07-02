@@ -1,5 +1,5 @@
 import {BLSPubkey, Slot} from "@chainsafe/lodestar-types";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {ILogger, prettyBytes} from "@chainsafe/lodestar-utils";
 import {toHexString} from "@chainsafe/ssz";
 import {Api} from "@chainsafe/lodestar-api";
@@ -15,7 +15,7 @@ export class BlockProposingService {
   private readonly dutiesService: BlockDutiesService;
 
   constructor(
-    config: IBeaconConfig,
+    config: IChainForkConfig,
     private readonly logger: ILogger,
     private readonly api: Api,
     clock: IClock,

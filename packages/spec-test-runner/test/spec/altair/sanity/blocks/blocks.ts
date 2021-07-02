@@ -2,7 +2,7 @@ import {join} from "path";
 import {allForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {altair as altairTypes, ssz} from "@chainsafe/lodestar-types";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
-import {createIBeaconConfig} from "@chainsafe/lodestar-config";
+import {createIChainForkConfig} from "@chainsafe/lodestar-config";
 import {IBlockSanityTestCase} from "./types";
 import {SPEC_TEST_LOCATION} from "../../../../utils/specTestCases";
 import {TreeBacked} from "@chainsafe/ssz";
@@ -11,7 +11,7 @@ import {PresetName} from "@chainsafe/lodestar-params";
 
 export function runBlocks(presetName: PresetName): void {
   // eslint-disable-next-line @typescript-eslint/naming-convention
-  const config = createIBeaconConfig({ALTAIR_FORK_EPOCH: 0});
+  const config = createIChainForkConfig({ALTAIR_FORK_EPOCH: 0});
 
   describeDirectorySpecTest<IBlockSanityTestCase, allForks.BeaconState>(
     `altair block sanity ${presetName}`,
@@ -59,7 +59,7 @@ export function runBlocks(presetName: PresetName): void {
       timeout: 10000,
       getExpected: (testCase) => testCase.post,
       expectFunc: (testCase, expected, actual) => {
-        expectEqualBeaconState(config, expected, actual);
+        expectEqualBeaconState(expected, actual);
       },
     }
   );

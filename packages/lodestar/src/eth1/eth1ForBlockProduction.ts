@@ -1,5 +1,5 @@
 import {phase0} from "@chainsafe/lodestar-types";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {CachedBeaconState, allForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {ILogger, sleep} from "@chainsafe/lodestar-utils";
 import {AbortSignal} from "@chainsafe/abort-controller";
@@ -16,7 +16,7 @@ import {IEth1Options} from "./options";
  * Upon instantiation, starts fetcheing deposits and blocks at regular intervals
  */
 export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
-  private config: IBeaconConfig;
+  private config: IChainForkConfig;
   private logger: ILogger;
   private signal: AbortSignal;
 
@@ -38,7 +38,7 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
     opts,
     signal,
   }: {
-    config: IBeaconConfig;
+    config: IChainForkConfig;
     db: IBeaconDb;
     eth1Provider: IEth1Provider;
     logger: ILogger;
@@ -87,7 +87,7 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
       state,
       this.eth1DataCache.get.bind(this.eth1DataCache)
     );
-    return pickEth1Vote(this.config, state, eth1VotesToConsider);
+    return pickEth1Vote(state, eth1VotesToConsider);
   }
 
   /**
@@ -100,7 +100,7 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
   ): Promise<phase0.Deposit[]> {
     // Eth1 data may change due to the vote included in this block
     const newEth1Data = allForks.getNewEth1Data(state, eth1DataVote) || state.eth1Data;
-    return await getDeposits(this.config, state, newEth1Data, this.depositsCache.get.bind(this.depositsCache));
+    return await getDeposits(state, newEth1Data, this.depositsCache.get.bind(this.depositsCache));
   }
 
   /**

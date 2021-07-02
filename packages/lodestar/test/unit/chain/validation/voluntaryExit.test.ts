@@ -21,6 +21,7 @@ import {VoluntaryExitErrorCode} from "../../../../src/chain/errors/voluntaryExit
 import {expectRejectedWithLodestarError} from "../../../utils/errors";
 import {DOMAIN_VOLUNTARY_EXIT, FAR_FUTURE_EPOCH, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {PointFormat, SecretKey} from "@chainsafe/bls";
+import {createIBeaconConfig} from "../../../../../config/lib";
 
 describe("validate voluntary exit", () => {
   const sandbox = sinon.createSandbox();
@@ -61,8 +62,9 @@ describe("validate voluntary exit", () => {
     );
     const signingRoot = computeSigningRoot(ssz.phase0.VoluntaryExit, voluntaryExit, domain);
     signedVoluntaryExit = {message: voluntaryExit, signature: sk.sign(signingRoot).toBytes()};
+    const _state = generateState(stateEmpty, config);
 
-    state = createCachedBeaconState(config, generateState(stateEmpty, config));
+    state = createCachedBeaconState(createIBeaconConfig(config, _state.genesisValidatorsRoot), _state);
   });
 
   beforeEach(() => {
@@ -90,7 +92,7 @@ describe("validate voluntary exit", () => {
     dbStub.voluntaryExit.has.resolves(true);
 
     await expectRejectedWithLodestarError(
-      validateGossipVoluntaryExit(config, chainStub, dbStub, signedVoluntaryExitInvalidSig),
+      validateGossipVoluntaryExit(chainStub, dbStub, signedVoluntaryExitInvalidSig),
       VoluntaryExitErrorCode.ALREADY_EXISTS
     );
   });
@@ -106,12 +108,12 @@ describe("validate voluntary exit", () => {
     };
 
     await expectRejectedWithLodestarError(
-      validateGossipVoluntaryExit(config, chainStub, dbStub, signedVoluntaryExitInvalid),
+      validateGossipVoluntaryExit(chainStub, dbStub, signedVoluntaryExitInvalid),
       VoluntaryExitErrorCode.INVALID
     );
   });
 
   it("should return valid Voluntary Exit", async () => {
-    await validateGossipVoluntaryExit(config, chainStub, dbStub, signedVoluntaryExit);
+    await validateGossipVoluntaryExit(chainStub, dbStub, signedVoluntaryExit);
   });
 });

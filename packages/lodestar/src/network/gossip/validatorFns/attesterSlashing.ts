@@ -7,12 +7,12 @@ import {IObjectValidatorModules, GossipTopic} from "../interface";
 import {GossipValidationError} from "../errors";
 
 export async function validateAttesterSlashing(
-  {chain, db, config, logger}: IObjectValidatorModules,
+  {chain, db, logger}: IObjectValidatorModules,
   _topic: GossipTopic,
   attesterSlashing: phase0.AttesterSlashing
 ): Promise<void> {
   try {
-    await validateGossipAttesterSlashing(config, chain, db, attesterSlashing);
+    await validateGossipAttesterSlashing(chain, db, attesterSlashing);
     logger.debug("gossip - AttesterSlashing - accept");
   } catch (e) {
     if (!(e instanceof AttesterSlashingError)) {

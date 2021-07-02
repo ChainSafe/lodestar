@@ -6,7 +6,7 @@ import {ForkChoice, BeaconChain} from "../../../../src/chain";
 import {Network} from "../../../../src/network";
 import {BeaconSync} from "../../../../src/sync";
 import {StubbedBeaconDb} from "../../../utils/stub";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {IChainForkConfig} from "@chainsafe/lodestar-config";
 
 export type ApiImplTestModules = {
   sandbox: SinonSandbox;
@@ -16,7 +16,7 @@ export type ApiImplTestModules = {
   dbStub: StubbedBeaconDb;
   networkStub: SinonStubbedInstance<Network>;
   blockApi: ReturnType<typeof getBeaconBlockApi>;
-  config: IBeaconConfig;
+  config: IChainForkConfig;
 };
 
 export function setupApiImplTestServer(): ApiImplTestModules {
