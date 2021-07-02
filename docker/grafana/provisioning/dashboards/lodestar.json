@@ -6168,7 +6168,7 @@
                 "spanNulls": false,
                 "stacking": {
                   "group": "A",
-                  "mode": "none"
+                  "mode": "normal"
                 },
                 "thresholdsStyle": {
                   "mode": "off"
@@ -6218,7 +6218,7 @@
               "refId": "A"
             }
           ],
-          "title": "Outgoing requests rate",
+          "title": "Outgoing requests rate (stacked)",
           "type": "timeseries"
         },
         {
@@ -6250,7 +6250,7 @@
                 "spanNulls": false,
                 "stacking": {
                   "group": "A",
-                  "mode": "none"
+                  "mode": "normal"
                 },
                 "thresholdsStyle": {
                   "mode": "off"
@@ -6299,7 +6299,7 @@
               "refId": "A"
             }
           ],
-          "title": "Incoming requests rate",
+          "title": "Incoming requests rate (stacked)",
           "type": "timeseries"
         },
         {
@@ -6351,7 +6351,7 @@
                   }
                 ]
               },
-              "unit": "none"
+              "unit": "percentunit"
             },
             "overrides": []
           },
@@ -6375,7 +6375,7 @@
           "targets": [
             {
               "exemplar": true,
-              "expr": "rate(beacon_reqresp_outgoing_requests_error_total[$__rate_interval])",
+              "expr": "delta(beacon_reqresp_outgoing_requests_error_total[$__rate_interval])/(delta(beacon_reqresp_outgoing_requests_total[$__rate_interval]) > 0)",
               "interval": "",
               "legendFormat": "{{method}}",
               "refId": "A"
@@ -6432,7 +6432,8 @@
                     "value": 80
                   }
                 ]
-              }
+              },
+              "unit": "percentunit"
             },
             "overrides": []
           },
@@ -6456,7 +6457,7 @@
           "targets": [
             {
               "exemplar": true,
-              "expr": "rate(beacon_reqresp_incoming_requests_error_total[$__rate_interval])",
+              "expr": "delta(beacon_reqresp_incoming_requests_error_total[$__rate_interval])/(delta(beacon_reqresp_incoming_requests_total[$__rate_interval])>0)",
               "interval": "",
               "legendFormat": "{{method}}",
               "refId": "A"
