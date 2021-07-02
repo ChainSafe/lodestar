@@ -3,7 +3,6 @@ import {phase0, Slot, ssz} from "@chainsafe/lodestar-types";
 import {PublicKey} from "@chainsafe/bls";
 import {
   allForks,
-  computeEpochAtSlot,
   computeSigningRoot,
   ISignatureSet,
   SignatureSetType,
@@ -15,8 +14,7 @@ export function getSelectionProofSignatureSet(
   aggregator: PublicKey,
   aggregateAndProof: phase0.SignedAggregateAndProof
 ): ISignatureSet {
-  const epochSig = computeEpochAtSlot(slot);
-  const selectionProofDomain = state.config.getDomain(DOMAIN_SELECTION_PROOF, epochSig);
+  const selectionProofDomain = state.config.getDomain(DOMAIN_SELECTION_PROOF, slot);
 
   return {
     type: SignatureSetType.single,

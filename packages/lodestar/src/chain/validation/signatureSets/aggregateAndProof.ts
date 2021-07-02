@@ -5,6 +5,7 @@ import {PublicKey} from "@chainsafe/bls";
 import {
   allForks,
   computeSigningRoot,
+  computeStartSlotAtEpoch,
   ISignatureSet,
   SignatureSetType,
 } from "@chainsafe/lodestar-beacon-state-transition";
@@ -15,7 +16,8 @@ export function getAggregateAndProofSignatureSet(
   aggregator: PublicKey,
   aggregateAndProof: phase0.SignedAggregateAndProof
 ): ISignatureSet {
-  const aggregatorDomain = state.config.getDomain(DOMAIN_AGGREGATE_AND_PROOF, epoch);
+  const slot = computeStartSlotAtEpoch(epoch);
+  const aggregatorDomain = state.config.getDomain(DOMAIN_AGGREGATE_AND_PROOF, slot);
   const signingRoot = computeSigningRoot(ssz.phase0.AggregateAndProof, aggregateAndProof.message, aggregatorDomain);
 
   return {

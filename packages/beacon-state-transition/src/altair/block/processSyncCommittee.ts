@@ -2,7 +2,6 @@ import {altair, ssz} from "@chainsafe/lodestar-types";
 import {DOMAIN_SYNC_COMMITTEE} from "@chainsafe/lodestar-params";
 
 import {
-  computeEpochAtSlot,
   computeSigningRoot,
   getBlockRootAtSlot,
   increaseBalance,
@@ -75,8 +74,7 @@ export function getSyncCommitteeSignatureSet(
     return null;
   }
 
-  const epochSig = computeEpochAtSlot(previousSlot);
-  const domain = state.config.getDomain(DOMAIN_SYNC_COMMITTEE, epochSig);
+  const domain = state.config.getDomain(DOMAIN_SYNC_COMMITTEE, previousSlot);
 
   return {
     type: SignatureSetType.aggregate,

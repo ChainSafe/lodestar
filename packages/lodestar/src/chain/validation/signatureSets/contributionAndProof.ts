@@ -2,7 +2,6 @@ import {DOMAIN_CONTRIBUTION_AND_PROOF} from "@chainsafe/lodestar-params";
 import {allForks, altair, ssz} from "@chainsafe/lodestar-types";
 import {
   CachedBeaconState,
-  computeEpochAtSlot,
   computeSigningRoot,
   ISignatureSet,
   SignatureSetType,
@@ -13,8 +12,10 @@ export function getContributionAndProofSignatureSet(
   signedContributionAndProof: altair.SignedContributionAndProof
 ): ISignatureSet {
   const {epochCtx} = state;
-  const epochSig = computeEpochAtSlot(signedContributionAndProof.message.contribution.slot);
-  const domain = state.config.getDomain(DOMAIN_CONTRIBUTION_AND_PROOF, epochSig);
+  const domain = state.config.getDomain(
+    DOMAIN_CONTRIBUTION_AND_PROOF,
+    signedContributionAndProof.message.contribution.slot
+  );
   const signingData = signedContributionAndProof.message;
   return {
     type: SignatureSetType.single,

@@ -4,7 +4,6 @@ import {DOMAIN_SYNC_COMMITTEE, SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_SUBNET_COUNT}
 import {readonlyValues} from "@chainsafe/ssz";
 import {
   CachedBeaconState,
-  computeEpochAtSlot,
   computeSigningRoot,
   ISignatureSet,
   SignatureSetType,
@@ -14,8 +13,7 @@ export function getSyncCommitteeContributionSignatureSet(
   state: CachedBeaconState<altair.BeaconState>,
   contribution: altair.SyncCommitteeContribution
 ): ISignatureSet {
-  const epochSig = computeEpochAtSlot(contribution.slot);
-  const domain = state.config.getDomain(DOMAIN_SYNC_COMMITTEE, epochSig);
+  const domain = state.config.getDomain(DOMAIN_SYNC_COMMITTEE, contribution.slot);
   return {
     type: SignatureSetType.aggregate,
     pubkeys: getContributionPubkeys(state, contribution),
