@@ -9,6 +9,7 @@ import {IPeerMetadataStore, IPeerRpcScoreStore} from "../peers";
 import {MetadataController} from "../metadata";
 import {INetworkEventBus} from "../events";
 import {IReqRespHandler} from "./handlers";
+import {IMetrics} from "../../metrics";
 
 export interface IReqResp {
   start(): void;
@@ -34,6 +35,7 @@ export interface IReqRespModules {
   peerMetadata: IPeerMetadataStore;
   peerRpcScores: IPeerRpcScoreStore;
   networkEventBus: INetworkEventBus;
+  metrics: IMetrics | null;
 }
 
 export type Libp2pConnection = {
