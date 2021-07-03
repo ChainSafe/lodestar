@@ -90,7 +90,7 @@ describe("validate voluntary exit", () => {
     dbStub.voluntaryExit.has.resolves(true);
 
     await expectRejectedWithLodestarError(
-      validateGossipVoluntaryExit(config, chainStub, dbStub, signedVoluntaryExitInvalidSig),
+      validateGossipVoluntaryExit(chainStub, dbStub, signedVoluntaryExitInvalidSig),
       VoluntaryExitErrorCode.ALREADY_EXISTS
     );
   });
@@ -106,12 +106,12 @@ describe("validate voluntary exit", () => {
     };
 
     await expectRejectedWithLodestarError(
-      validateGossipVoluntaryExit(config, chainStub, dbStub, signedVoluntaryExitInvalid),
+      validateGossipVoluntaryExit(chainStub, dbStub, signedVoluntaryExitInvalid),
       VoluntaryExitErrorCode.INVALID
     );
   });
 
   it("should return valid Voluntary Exit", async () => {
-    await validateGossipVoluntaryExit(config, chainStub, dbStub, signedVoluntaryExit);
+    await validateGossipVoluntaryExit(chainStub, dbStub, signedVoluntaryExit);
   });
 });

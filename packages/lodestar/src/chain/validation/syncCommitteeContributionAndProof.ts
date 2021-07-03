@@ -1,8 +1,7 @@
 import {CachedBeaconState, isSyncCommitteeAggregator} from "@chainsafe/lodestar-beacon-state-transition";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {altair} from "@chainsafe/lodestar-types";
 import {IBeaconDb} from "../../db";
-import {GossipAction, IContributionAndProofJob, SyncCommitteeError, SyncCommitteeErrorCode} from "../errors";
+import {GossipAction, SyncCommitteeError, SyncCommitteeErrorCode} from "../errors";
 import {IBeaconChain} from "../interface";
 import {validateGossipSyncCommitteeExceptSig} from "./syncCommittee";
 import {
@@ -15,12 +14,10 @@ import {
  * Spec v1.1.0-alpha.5
  */
 export async function validateSyncCommitteeGossipContributionAndProof(
-  config: IBeaconConfig,
   chain: IBeaconChain,
   db: IBeaconDb,
-  job: IContributionAndProofJob
+  signedContributionAndProof: altair.SignedContributionAndProof
 ): Promise<void> {
-  const signedContributionAndProof = job.contributionAndProof;
   const contributionAndProof = signedContributionAndProof.message;
   const contribution = contributionAndProof.contribution;
   const subCommitteeIndex = contribution.subCommitteeIndex;

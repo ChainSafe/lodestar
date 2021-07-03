@@ -1,5 +1,5 @@
 import {CommitteeIndex, Epoch, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
-import {LodestarError} from "@chainsafe/lodestar-utils";
+import {GossipActionError} from "./gossipValidation";
 
 export enum AttestationErrorCode {
   /**
@@ -164,4 +164,4 @@ export type AttestationErrorType =
   | {code: AttestationErrorCode.INVALID_AGGREGATOR}
   | {code: AttestationErrorCode.INVALID_INDEXED_ATTESTATION};
 
-export class AttestationError extends LodestarError<AttestationErrorType> {}
+export class AttestationError extends GossipActionError<AttestationErrorType> {}

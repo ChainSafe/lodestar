@@ -80,6 +80,22 @@ export function createLodestarMetrics(
       labelNames: ["subnet"],
     }),
 
+    gossipValidationAccept: register.gauge<"topic">({
+      name: "lodestar_gossip_validation_accept",
+      help: "Count of total gossip validation accept",
+      labelNames: ["topic"],
+    }),
+    gossipValidationIgnore: register.gauge<"topic">({
+      name: "lodestar_gossip_validation_accept",
+      help: "Count of total gossip validation ignore",
+      labelNames: ["topic"],
+    }),
+    gossipValidationReject: register.gauge<"topic">({
+      name: "lodestar_gossip_validation_accept",
+      help: "Count of total gossip validation reject",
+      labelNames: ["topic"],
+    }),
+
     gossipValidationQueueLength: register.gauge<"topic">({
       name: "lodestar_gossip_validation_queue_length",
       help: "Count of total gossip validation queue length",

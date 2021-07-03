@@ -15,7 +15,13 @@ import {
   TopicValidatorFnMap,
   GossipTopicMap,
   GossipTypeMap,
+  GossipTopicTypeMap,
 } from "./interface";
+import {ERR_TOPIC_VALIDATOR_IGNORE, ERR_TOPIC_VALIDATOR_REJECT} from "libp2p-gossipsub/src/constants";
+import {GossipValidationError} from "./errors";
+import {GossipActionError, GossipAction} from "../../chain/errors";
+import {Json, toHexString} from "@chainsafe/ssz";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
 // Numbers from https://github.com/sigp/lighthouse/blob/b34a79dc0b02e04441ba01fd0f304d1e203d877d/beacon_node/network/src/beacon_processor/mod.rs#L69
 const gossipQueueOpts: {[K in GossipType]: Pick<JobQueueOpts, "maxLength" | "type" | "maxConcurrency">} = {
@@ -63,6 +69,7 @@ export function wrapWithQueue<K extends GossipType>(
   metrics: IMetrics | null,
   type: GossipType
 ): TopicValidatorFn {
+  const {logger, config} = modules;
   const jobQueue = new JobQueue(
     queueOpts,
     metrics
@@ -76,7 +83,32 @@ export function wrapWithQueue<K extends GossipType>(
   );
   return async function (_topicStr, gossipMsg) {
     const {gossipTopic, gossipObject} = parseGossipMsg<K>(gossipMsg);
-    await jobQueue.push(async () => await validatorFn(modules, gossipTopic, gossipObject));
+    await jobQueue.push(async () => {
+      try {
+        await validatorFn(modules, gossipTopic, gossipObject);
+
+        const metadata = getGossipObjectAcceptMetadataObj[type](config, gossipObject as any, gossipTopic as any);
+        logger.debug(`gossip - ${type} - accept`, metadata);
+        metrics?.gossipValidationAccept.inc({topic: type}, 1);
+      } catch (e) {
+        if (!(e instanceof GossipActionError)) {
+          logger.error(`Gossip validation ${type} threw a non-GossipValidationError`, {}, e);
+          throw new GossipValidationError(ERR_TOPIC_VALIDATOR_IGNORE);
+        }
+
+        switch (e.action) {
+          case GossipAction.IGNORE:
+            logger.debug(`gossip - ${type} - ignore`, e.type as Json);
+            metrics?.gossipValidationIgnore.inc({topic: type}, 1);
+            throw new GossipValidationError(ERR_TOPIC_VALIDATOR_IGNORE);
+
+          case GossipAction.REJECT:
+            logger.debug(`gossip - ${type} - reject`, e.type as Json);
+            metrics?.gossipValidationReject.inc({topic: type}, 1);
+            throw new GossipValidationError(ERR_TOPIC_VALIDATOR_REJECT);
+        }
+      }
+    });
   };
 }
 
@@ -131,3 +163,48 @@ export function createValidatorFnsByTopic(
 
   return validatorFnsByTopic;
 }
+
+/**
+ * Return succint but meaningful data about accepted gossip objects
+ */
+const getGossipObjectAcceptMetadataObj: {
+  [K in GossipType]: (config: IBeaconConfig, object: GossipTypeMap[K], topic: GossipTopicTypeMap[K]) => Json;
+} = {
+  [GossipType.beacon_block]: (config, signedBlock) => ({
+    slot: signedBlock.message.slot,
+    root: toHexString(config.getForkTypes(signedBlock.message.slot).BeaconBlock.hashTreeRoot(signedBlock.message)),
+  }),
+  [GossipType.beacon_aggregate_and_proof]: (config, aggregateAndProof) => {
+    const {data} = aggregateAndProof.message.aggregate;
+    return {
+      slot: data.slot,
+      index: data.index,
+    };
+  },
+  [GossipType.beacon_attestation]: (config, attestation, topic) => ({
+    slot: attestation.data.slot,
+    subnet: topic.subnet,
+    index: attestation.data.index,
+  }),
+  [GossipType.voluntary_exit]: (config, voluntaryExit) => ({
+    validatorIndex: voluntaryExit.message.validatorIndex,
+  }),
+  [GossipType.proposer_slashing]: (config, proposerSlashing) => ({
+    proposerIndex: proposerSlashing.signedHeader1.message.proposerIndex,
+  }),
+  [GossipType.attester_slashing]: (config, attesterSlashing) => ({
+    slot1: attesterSlashing.attestation1.data.slot,
+    slot2: attesterSlashing.attestation2.data.slot,
+  }),
+  [GossipType.sync_committee_contribution_and_proof]: (config, contributionAndProof) => {
+    const {contribution} = contributionAndProof.message;
+    return {
+      slot: contribution.slot,
+      index: contribution.subCommitteeIndex,
+    };
+  },
+  [GossipType.sync_committee]: (config, syncCommitteeSignature, topic) => ({
+    slot: syncCommitteeSignature.slot,
+    subnet: topic.subnet,
+  }),
+};

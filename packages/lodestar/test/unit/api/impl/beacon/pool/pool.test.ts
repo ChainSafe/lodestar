@@ -1,4 +1,3 @@
-import {config} from "@chainsafe/lodestar-config/default";
 import {expect} from "chai";
 import sinon from "sinon";
 import {getBeaconPoolApi} from "../../../../../../src/api/impl/beacon/pool";
@@ -51,7 +50,6 @@ describe("beacon pool api impl", function () {
     networkStub = server.networkStub;
     networkStub.gossip = (gossipStub as unknown) as Eth2Gossipsub;
     poolApi = getBeaconPoolApi({
-      config,
       db: server.dbStub,
       logger,
       network: networkStub,

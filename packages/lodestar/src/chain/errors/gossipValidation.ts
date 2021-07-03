@@ -5,7 +5,7 @@ export enum GossipAction {
   REJECT = "REJECT",
 }
 
-export class GossipValidationError<T extends {code: string}> extends LodestarError<T> {
+export class GossipActionError<T extends {code: string}> extends LodestarError<T> {
   action: GossipAction;
 
   constructor(action: GossipAction, type: T) {
