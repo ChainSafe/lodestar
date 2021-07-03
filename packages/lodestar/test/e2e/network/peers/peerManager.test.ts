@@ -58,15 +58,15 @@ describe("network / peers / PeerManager", function () {
     const peerMetadata = new Libp2pPeerMetadataStore(config, libp2p.peerStore.metadataBook);
     const peerRpcScores = new PeerRpcScoreStore(peerMetadata);
     const networkEventBus = new NetworkEventBus();
+    /* eslint-disable @typescript-eslint/no-empty-function */
     const mockSubnetsService: IAttnetsService = {
       getActiveSubnets: () => [],
       shouldProcess: () => true,
-      // eslint-disable-next-line @typescript-eslint/no-empty-function
       addCommitteeSubscriptions: () => {},
-      // eslint-disable-next-line @typescript-eslint/no-empty-function
       start: () => {},
-      // eslint-disable-next-line @typescript-eslint/no-empty-function
       stop: () => {},
+      subscribeSubnetsToNextFork: () => {},
+      unsubscribeSubnetsFromPrevFork: () => {},
     };
 
     const peerManager = new PeerManager(

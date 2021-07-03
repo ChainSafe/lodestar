@@ -6,9 +6,6 @@ import {GossipAction, SyncCommitteeError, SyncCommitteeErrorCode} from "../error
 import {IBeaconChain} from "../interface";
 import {getSyncCommitteeSignatureSet} from "./signatureSets";
 
-/** TODO: Do this much better to be able to access this property in the handler */
-export type SyncCommitteeSignatureIndexed = altair.SyncCommitteeMessage & {indexInSubCommittee: number};
-
 type IndexInSubCommittee = number;
 
 /**
@@ -19,12 +16,9 @@ export async function validateGossipSyncCommittee(
   db: IBeaconDb,
   syncCommittee: altair.SyncCommitteeMessage,
   subnet: number
-): Promise<void> {
+): Promise<{indexInSubCommittee: IndexInSubCommittee}> {
   const headState = chain.getHeadState();
   const indexInSubCommittee = validateGossipSyncCommitteeExceptSig(chain, headState, subnet, syncCommittee);
-
-  // TODO: Do this much better to be able to access this property in the handler
-  (syncCommittee as SyncCommitteeSignatureIndexed).indexInSubCommittee = indexInSubCommittee;
 
   // [IGNORE] The signature's slot is for the current slot, i.e. sync_committee_signature.slot == current_slot.
   // > Checked in validateGossipSyncCommitteeExceptSig()
@@ -49,6 +43,8 @@ export async function validateGossipSyncCommittee(
 
   // Register this valid item as seen
   db.syncCommittee.seen(subnet, syncCommittee);
+
+  return {indexInSubCommittee};
 }
 
 /**

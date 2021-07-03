@@ -4,7 +4,7 @@ import {IObjectValidatorModules, GossipTopic} from "../interface";
 import {OpSource} from "../../../metrics/validatorMonitor";
 
 export async function validateAggregatedAttestation(
-  {chain, metrics}: IObjectValidatorModules,
+  {chain, db, metrics, logger}: IObjectValidatorModules,
   _topic: GossipTopic,
   signedAggregateAndProof: phase0.SignedAggregateAndProof
 ): Promise<void> {
@@ -24,4 +24,10 @@ export async function validateAggregatedAttestation(
   //     chain.pendingAttestations.putByBlock(e.type.root, attestation);
   //     break;
   // }
+
+  // Handler
+
+  db.aggregateAndProof.add(signedAggregateAndProof.message).catch((e) => {
+    logger.error("Error adding aggregateAndProof to pool", {}, e);
+  });
 }

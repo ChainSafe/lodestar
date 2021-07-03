@@ -14,7 +14,7 @@ import {Epoch} from "@chainsafe/lodestar-types";
  * 0        fork-2      fork      fork+2       oo
  * ```
  */
-const FORK_EPOCH_LOOKAHEAD = 2;
+export const FORK_EPOCH_LOOKAHEAD = 2;
 
 /**
  * Return the list of `ForkName`s meant to be active at `epoch`
@@ -38,38 +38,6 @@ export function getActiveForks(config: IBeaconConfig, epoch: Epoch): ForkName[] 
   if (epoch > forkEpoch + FORK_EPOCH_LOOKAHEAD) return [nextFork];
   // During fork transition
   return [prevFork, nextFork];
-}
-
-/**
- * Helper to run hooks at the start and end of the fork transition, with `FORK_EPOCH_LOOKAHEAD`
- */
-export function runForkTransitionHooks(
-  config: IBeaconConfig,
-  epoch: Epoch,
-  hooks: {
-    /** ONLY ONCE: Two epoch before the fork run this function */
-    beforeForkTransition(nextFork: ForkName): void;
-    /** ONLY ONCE: Two epochs after the fork run this function */
-    afterForkTransition(prevFork: ForkName): void;
-  }
-): void {
-  // Compute prev and next fork shifted, so next fork is still next at forkEpoch + FORK_EPOCH_LOOKAHEAD
-  const forks = getCurrentAndNextFork(config, epoch - FORK_EPOCH_LOOKAHEAD - 1);
-
-  // Only when fork is scheduled
-  if (forks.nextFork) {
-    const prevFork = forks.currentFork.name;
-    const nextFork = forks.nextFork.name;
-    const forkEpoch = forks.nextFork.epoch;
-
-    if (epoch === forkEpoch - FORK_EPOCH_LOOKAHEAD) {
-      hooks.beforeForkTransition(nextFork);
-    }
-
-    if (epoch === forkEpoch + FORK_EPOCH_LOOKAHEAD) {
-      hooks.afterForkTransition(prevFork);
-    }
-  }
 }
 
 /**

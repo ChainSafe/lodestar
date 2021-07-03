@@ -5,7 +5,7 @@ import {IObjectValidatorModules, GossipTopic} from "../interface";
 import {OpSource} from "../../../metrics/validatorMonitor";
 
 export async function validateBeaconBlock(
-  {chain, db, config, metrics}: IObjectValidatorModules,
+  {chain, db, config, metrics, logger}: IObjectValidatorModules,
   _topic: GossipTopic,
   signedBlock: allForks.SignedBeaconBlock
 ): Promise<void> {
@@ -21,6 +21,14 @@ export async function validateBeaconBlock(
     });
 
     metrics?.registerBeaconBlock(OpSource.api, seenTimestampSec, signedBlock.message);
+
+    // Handler
+
+    try {
+      chain.receiveBlock(signedBlock);
+    } catch (e) {
+      logger.error("Error receiving block", {}, e);
+    }
   } catch (e) {
     if (
       e instanceof BlockError &&

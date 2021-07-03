@@ -2,36 +2,38 @@ import sinon, {SinonStubbedInstance} from "sinon";
 import {expect} from "chai";
 import {config} from "@chainsafe/lodestar-config/default";
 import {ForkName} from "@chainsafe/lodestar-params";
-import {ssz} from "@chainsafe/lodestar-types";
+import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
+import {AbortController} from "@chainsafe/abort-controller";
 
 import {BeaconChain, ChainEventEmitter, IBeaconChain} from "../../../../src/chain";
-import {INetwork, Network} from "../../../../src/network";
-import {
-  Eth2Gossipsub,
-  stringifyGossipTopic,
-  GossipEncoding,
-  GossipType,
-  encodeMessageData,
-  TopicValidatorFn,
-} from "../../../../src/network/gossip";
-import {GossipHandler} from "../../../../src/network/gossip/handler";
+import {INetwork, Network, ReqRespHandler} from "../../../../src/network";
+import {Eth2Gossipsub, TopicValidatorFn} from "../../../../src/network/gossip";
 
 import {StubbedBeaconDb} from "../../../utils/stub";
 import {testLogger} from "../../../utils/logger";
 import {createNode} from "../../../utils/network";
 import {ForkDigestContext, toHexStringNoPrefix} from "../../../../src/util/forkDigestContext";
 import {generateBlockSummary} from "../../../utils/block";
-import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
-import {IAttnetsService} from "../../../../src/network/subnets";
+import {INetworkOptions} from "../../../../src/network/options";
 
 describe("gossip handler", function () {
   const logger = testLogger();
-  const attnetsService = {} as IAttnetsService;
   let forkDigestContext: SinonStubbedInstance<ForkDigestContext>;
   let chainStub: SinonStubbedInstance<IBeaconChain>;
-  let networkStub: SinonStubbedInstance<INetwork>;
+  let network: INetwork;
   let gossipsub: Eth2Gossipsub;
   let dbStub: StubbedBeaconDb;
+
+  const opts: INetworkOptions = {
+    maxPeers: 1,
+    targetPeers: 1,
+    bootMultiaddrs: [],
+    localMultiaddrs: [],
+  };
+
+  let controller: AbortController;
+  beforeEach(() => (controller = new AbortController()));
+  afterEach(() => controller.abort());
 
   beforeEach(async function () {
     forkDigestContext = sinon.createStubInstance(ForkDigestContext);
@@ -40,7 +42,6 @@ describe("gossip handler", function () {
     chainStub.getHeadForkName.returns(ForkName.phase0);
     chainStub.forkDigestContext = forkDigestContext;
     chainStub.forkChoice = {getHead: () => generateBlockSummary()} as IForkChoice;
-    networkStub = sinon.createStubInstance(Network);
     const multiaddr = "/ip4/127.0.0.1/tcp/0";
     const libp2p = await createNode(multiaddr);
     gossipsub = new Eth2Gossipsub({
@@ -51,9 +52,20 @@ describe("gossip handler", function () {
       forkDigestContext,
       metrics: null,
     });
-    networkStub.gossip = gossipsub;
     gossipsub.start();
     dbStub = new StubbedBeaconDb(sinon);
+
+    network = new Network(opts, {
+      config,
+      libp2p,
+      logger,
+      metrics: null,
+      chain: chainStub,
+      db: dbStub,
+      reqRespHandler: sinon.createStubInstance(ReqRespHandler),
+      signal: controller.signal,
+    });
+
     const phase0ForkDigestBuf = Buffer.alloc(4, 1);
     const altairForkDigestBuf = Buffer.alloc(4, 2);
     const phase0ForkDigestHex = toHexStringNoPrefix(Buffer.alloc(4, 1));
@@ -71,69 +83,13 @@ describe("gossip handler", function () {
   });
 
   it("should subscribe/unsubscribe on start/stop", function () {
-    const handler = new GossipHandler(config, chainStub, gossipsub, attnetsService, dbStub, logger);
     expect(gossipsub.subscriptions.size).to.equal(0);
-    handler.subscribeCoreTopics();
+    network.subscribeGossipCoreTopics();
     expect(gossipsub.subscriptions.size).to.equal(5);
-    handler.unsubscribeCoreTopics();
+    network.unsubscribeGossipCoreTopics();
     expect(gossipsub.subscriptions.size).to.equal(0);
-    handler.close();
+    network.close();
   });
 
-  it("should handle incoming gossip objects", async function () {
-    const handler = new GossipHandler(config, chainStub, gossipsub, attnetsService, dbStub, logger);
-    handler.subscribeCoreTopics();
-    const fork = ForkName.phase0;
-    const {
-      SignedBeaconBlock,
-      SignedAggregateAndProof,
-      SignedVoluntaryExit,
-      ProposerSlashing,
-      AttesterSlashing,
-    } = ssz.phase0;
-
-    await gossipsub._processRpcMessage({
-      data: encodeMessageData(GossipEncoding.ssz_snappy, SignedBeaconBlock.serialize(SignedBeaconBlock.defaultValue())),
-      receivedFrom: "foo",
-      topicIDs: [stringifyGossipTopic(forkDigestContext, {type: GossipType.beacon_block, fork})],
-    });
-    expect(chainStub.receiveBlock.calledOnce).to.be.true;
-
-    await gossipsub._processRpcMessage({
-      data: encodeMessageData(
-        GossipEncoding.ssz_snappy,
-        SignedAggregateAndProof.serialize(SignedAggregateAndProof.defaultValue())
-      ),
-      receivedFrom: "foo",
-      topicIDs: [stringifyGossipTopic(forkDigestContext, {type: GossipType.beacon_aggregate_and_proof, fork})],
-    });
-    expect(dbStub.aggregateAndProof.add.calledOnce).to.be.true;
-
-    await gossipsub._processRpcMessage({
-      data: encodeMessageData(
-        GossipEncoding.ssz_snappy,
-        SignedVoluntaryExit.serialize(SignedVoluntaryExit.defaultValue())
-      ),
-      receivedFrom: "foo",
-      topicIDs: [stringifyGossipTopic(forkDigestContext, {type: GossipType.voluntary_exit, fork})],
-    });
-    expect(dbStub.voluntaryExit.add.calledOnce).to.be.true;
-
-    await gossipsub._processRpcMessage({
-      data: encodeMessageData(GossipEncoding.ssz_snappy, ProposerSlashing.serialize(ProposerSlashing.defaultValue())),
-      receivedFrom: "foo",
-      topicIDs: [stringifyGossipTopic(forkDigestContext, {type: GossipType.proposer_slashing, fork})],
-    });
-    expect(dbStub.proposerSlashing.add.calledOnce).to.be.true;
-
-    await gossipsub._processRpcMessage({
-      data: encodeMessageData(GossipEncoding.ssz_snappy, AttesterSlashing.serialize(AttesterSlashing.defaultValue())),
-      receivedFrom: "foo",
-      topicIDs: [stringifyGossipTopic(forkDigestContext, {type: GossipType.attester_slashing, fork})],
-    });
-    expect(dbStub.attesterSlashing.add.calledOnce).to.be.true;
-
-    handler.unsubscribeCoreTopics();
-    handler.close();
-  });
+  // TODO: Test sending and receiving various gossip objects
 });

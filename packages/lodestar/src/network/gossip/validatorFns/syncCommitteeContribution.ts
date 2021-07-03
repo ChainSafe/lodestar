@@ -6,9 +6,17 @@ import {GossipTopic, IObjectValidatorModules} from "../interface";
  * Validate messages from `sync_committee_contribution_and_proof`
  */
 export async function validateSyncCommitteeContribution(
-  {chain, db}: IObjectValidatorModules,
+  {chain, db, logger}: IObjectValidatorModules,
   _topic: GossipTopic,
   contributionAndProof: altair.SignedContributionAndProof
 ): Promise<void> {
   await validateSyncCommitteeGossipContributionAndProof(chain, db, contributionAndProof);
+
+  // Handler
+
+  try {
+    db.syncCommitteeContribution.add(contributionAndProof.message);
+  } catch (e) {
+    logger.error("Error adding to contributionAndProof pool", {}, e);
+  }
 }

@@ -8,22 +8,25 @@ import Multiaddr from "multiaddr";
 import {AbortSignal} from "@chainsafe/abort-controller";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils";
+import {ForkName} from "@chainsafe/lodestar-params";
+import {Discv5Discovery, ENR} from "@chainsafe/discv5";
+import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
+import {Epoch} from "@chainsafe/lodestar-types";
 import {IMetrics} from "../metrics";
 import {ReqResp, IReqResp, IReqRespOptions} from "./reqresp";
 import {INetworkOptions} from "./options";
 import {INetwork} from "./interface";
-import {IBeaconChain, IBeaconClock} from "../chain";
+import {ChainEvent, IBeaconChain, IBeaconClock} from "../chain";
 import {MetadataController} from "./metadata";
-import {Discv5Discovery, ENR} from "@chainsafe/discv5";
+import {getActiveForks, getCurrentAndNextFork, FORK_EPOCH_LOOKAHEAD} from "./forks";
 import {IPeerMetadataStore, Libp2pPeerMetadataStore} from "./peers/metastore";
 import {PeerManager} from "./peers/peerManager";
 import {IPeerRpcScoreStore, PeerRpcScoreStore} from "./peers";
 import {IBeaconDb} from "../db";
-import {createTopicValidatorFnMap, Eth2Gossipsub} from "./gossip";
+import {createTopicValidatorFnMap, Eth2Gossipsub, GossipType} from "./gossip";
 import {IReqRespHandler} from "./reqresp/handlers";
 import {INetworkEventBus, NetworkEventBus} from "./events";
 import {AttnetsService, SyncnetsService, CommitteeSubscription} from "./subnets";
-import {GossipHandler} from "./gossip/handler";
 
 interface INetworkModules {
   config: IBeaconConfig;
@@ -46,12 +49,14 @@ export class Network implements INetwork {
   peerMetadata: IPeerMetadataStore;
   peerRpcScores: IPeerRpcScoreStore;
 
-  private readonly gossipHandler: GossipHandler;
   private readonly peerManager: PeerManager;
   private readonly libp2p: LibP2p;
   private readonly logger: ILogger;
   private readonly config: IBeaconConfig;
   private readonly clock: IBeaconClock;
+  private readonly chain: IBeaconChain;
+
+  private subscribedForks = new Set<ForkName>();
 
   constructor(opts: INetworkOptions & IReqRespOptions, modules: INetworkModules) {
     const {config, libp2p, logger, metrics, chain, db, reqRespHandler, signal} = modules;
@@ -59,6 +64,7 @@ export class Network implements INetwork {
     this.logger = logger;
     this.config = config;
     this.clock = chain.clock;
+    this.chain = chain;
     const networkEventBus = new NetworkEventBus();
     const metadata = new MetadataController({}, {config, chain, logger});
     const peerMetadata = new Libp2pPeerMetadataStore(config, libp2p.peerStore.metadataBook);
@@ -85,6 +91,9 @@ export class Network implements INetwork {
     this.gossip = new Eth2Gossipsub({
       config,
       libp2p,
+      // Note: We use the validator functions as handlers. No handler will be registered to gossipsub.
+      // libp2p-js layer will emit the message to an EventEmitter that won't be listened by anyone.
+      // TODO: Force to ensure there's a validatorFunction attached to every received topic.
       validatorFns: createTopicValidatorFnMap({config, chain, db, logger, metrics}, metrics, signal),
       logger,
       forkDigestContext: chain.forkDigestContext,
@@ -93,6 +102,7 @@ export class Network implements INetwork {
 
     this.attnetsService = new AttnetsService(config, chain, this.gossip, metadata, logger);
     this.syncnetsService = new SyncnetsService(config, chain, this.gossip, metadata, logger);
+
     this.peerManager = new PeerManager(
       {
         libp2p,
@@ -110,12 +120,13 @@ export class Network implements INetwork {
       opts
     );
 
-    this.gossipHandler = new GossipHandler(config, chain, this.gossip, this.attnetsService, db, logger);
+    this.chain.emitter.on(ChainEvent.clockEpoch, this.onEpoch);
+    modules.signal.addEventListener("abort", () => this.close(), {once: true});
   }
 
   /** Destroy this instance. Can only be called once. */
   close(): void {
-    this.gossipHandler.close();
+    this.chain.emitter.off(ChainEvent.clockEpoch, this.onEpoch);
   }
 
   async start(): Promise<void> {
@@ -133,7 +144,6 @@ export class Network implements INetwork {
   async stop(): Promise<void> {
     // Must goodbye and disconnect before stopping libp2p
     await this.peerManager.goodbyeAndDisconnectAllPeers();
-    this.gossipHandler.close();
     this.peerManager.stop();
     this.metadata.stop();
     this.gossip.stop();
@@ -189,16 +199,31 @@ export class Network implements INetwork {
     this.peerManager.reStatusPeers(peers);
   }
 
+  /**
+   * Subscribe to all gossip events. Safe to call multiple times
+   */
   subscribeGossipCoreTopics(): void {
-    this.gossipHandler.subscribeCoreTopics();
+    if (!this.isSubscribedToGossipCoreTopics()) {
+      this.logger.info("Subscribed gossip core topics");
+    }
+
+    const currentEpoch = computeEpochAtSlot(this.chain.forkChoice.getHead().slot);
+    for (const fork of getActiveForks(this.config, currentEpoch)) {
+      this.subscribeCoreTopicsAtFork(fork);
+    }
   }
 
+  /**
+   * Unsubscribe from all gossip events. Safe to call multiple times
+   */
   unsubscribeGossipCoreTopics(): void {
-    this.gossipHandler.unsubscribeCoreTopics();
+    for (const fork of this.subscribedForks.values()) {
+      this.unsubscribeCoreTopicsAtFork(fork);
+    }
   }
 
   isSubscribedToGossipCoreTopics(): boolean {
-    return this.gossipHandler.isSubscribedToCoreTopics;
+    return this.subscribedForks.size > 0;
   }
 
   // Debug
@@ -211,4 +236,68 @@ export class Network implements INetwork {
   async disconnectPeer(peer: PeerId): Promise<void> {
     await this.libp2p.hangUp(peer);
   }
+
+  /**
+   * Handle subscriptions through fork transitions, @see FORK_EPOCH_LOOKAHEAD
+   */
+  private onEpoch = (epoch: Epoch): void => {
+    try {
+      // Compute prev and next fork shifted, so next fork is still next at forkEpoch + FORK_EPOCH_LOOKAHEAD
+      const forks = getCurrentAndNextFork(this.config, epoch - FORK_EPOCH_LOOKAHEAD - 1);
+
+      // Only when a new fork is scheduled
+      if (forks.nextFork) {
+        const prevFork = forks.currentFork.name;
+        const nextFork = forks.nextFork.name;
+        const forkEpoch = forks.nextFork.epoch;
+
+        // Before fork transition
+        if (epoch === forkEpoch - FORK_EPOCH_LOOKAHEAD) {
+          this.logger.info("Suscribing gossip topics to next fork", {nextFork});
+          // Don't subscribe to new fork if the node is not subscribed to any topic
+          if (this.isSubscribedToGossipCoreTopics()) this.subscribeCoreTopicsAtFork(nextFork);
+          this.attnetsService.subscribeSubnetsToNextFork(nextFork);
+          this.syncnetsService.subscribeSubnetsToNextFork(nextFork);
+        }
+
+        // After fork transition
+        if (epoch === forkEpoch + FORK_EPOCH_LOOKAHEAD) {
+          this.logger.info("Unsuscribing gossip topics from prev fork", {prevFork});
+          this.unsubscribeCoreTopicsAtFork(prevFork);
+          this.attnetsService.unsubscribeSubnetsFromPrevFork(prevFork);
+          this.syncnetsService.unsubscribeSubnetsFromPrevFork(prevFork);
+        }
+      }
+    } catch (e) {
+      this.logger.error("Error on BeaconGossipHandler.onEpoch", {epoch}, e);
+    }
+  };
+
+  private subscribeCoreTopicsAtFork = (fork: ForkName): void => {
+    if (this.subscribedForks.has(fork)) return;
+    this.subscribedForks.add(fork);
+
+    this.gossip.subscribeTopic({type: GossipType.beacon_block, fork});
+    this.gossip.subscribeTopic({type: GossipType.beacon_aggregate_and_proof, fork});
+    this.gossip.subscribeTopic({type: GossipType.voluntary_exit, fork});
+    this.gossip.subscribeTopic({type: GossipType.proposer_slashing, fork});
+    this.gossip.subscribeTopic({type: GossipType.attester_slashing, fork});
+    if (fork === ForkName.altair) {
+      this.gossip.subscribeTopic({type: GossipType.sync_committee_contribution_and_proof, fork});
+    }
+  };
+
+  private unsubscribeCoreTopicsAtFork = (fork: ForkName): void => {
+    if (!this.subscribedForks.has(fork)) return;
+    this.subscribedForks.delete(fork);
+
+    this.gossip.unsubscribeTopic({type: GossipType.beacon_block, fork});
+    this.gossip.unsubscribeTopic({type: GossipType.beacon_aggregate_and_proof, fork});
+    this.gossip.unsubscribeTopic({type: GossipType.voluntary_exit, fork});
+    this.gossip.unsubscribeTopic({type: GossipType.proposer_slashing, fork});
+    this.gossip.unsubscribeTopic({type: GossipType.attester_slashing, fork});
+    if (fork === ForkName.altair) {
+      this.gossip.unsubscribeTopic({type: GossipType.sync_committee_contribution_and_proof, fork});
+    }
+  };
 }
