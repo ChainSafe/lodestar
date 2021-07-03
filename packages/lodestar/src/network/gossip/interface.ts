@@ -12,8 +12,6 @@ import {ILogger} from "@chainsafe/lodestar-utils";
 import {InMessage} from "libp2p-interfaces/src/pubsub";
 import {IBeaconChain} from "../../chain";
 import {NetworkEvent} from "../events";
-import {IBeaconDb} from "../../db";
-import {IMetrics} from "../../metrics";
 
 export enum GossipType {
   // phase0
@@ -29,7 +27,6 @@ export enum GossipType {
 }
 
 export enum GossipEncoding {
-  ssz = "ssz",
   ssz_snappy = "ssz_snappy",
 }
 
@@ -91,7 +88,7 @@ export type GossipFnByType = {
 export type GossipFn = GossipFnByType[keyof GossipFnByType];
 
 export interface IGossipEvents {
-  [topic: string]: GossipFn;
+  [topicStr: string]: GossipFn;
   [NetworkEvent.gossipHeartbeat]: () => void;
   [NetworkEvent.gossipStart]: () => void;
   [NetworkEvent.gossipStop]: () => void;
@@ -111,62 +108,21 @@ export interface IGossipModules {
  * https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/p2p-interface.md#global-topics
  */
 
-export type GossipObject =
-  | allForks.SignedBeaconBlock
-  | phase0.SignedAggregateAndProof
-  | phase0.Attestation
-  | phase0.SignedVoluntaryExit
-  | phase0.ProposerSlashing
-  | phase0.AttesterSlashing
-  | altair.SignedContributionAndProof
-  | altair.SyncCommitteeMessage;
-
-export type GossipHandlerFn = (gossipObject: GossipObject) => Promise<void> | void;
-
-export type GossipSerializer = (obj: GossipObject) => Uint8Array;
-
-export type GossipDeserializer = (buf: Uint8Array) => GossipObject;
-
-export interface IObjectValidatorModules {
-  chain: IBeaconChain;
-  config: IBeaconConfig;
-  db: IBeaconDb;
-  logger: ILogger;
-  metrics: IMetrics | null;
-}
-
 /**
  * Top-level type for gossip validation functions
  *
  * js-libp2p-gossipsub expects validation functions that look like this
  */
-export type TopicValidatorFn = (topic: string, message: InMessage) => Promise<void>;
+export type TopicValidatorFn = (topicStr: string, message: InMessage) => Promise<void>;
 
 /**
  * Map of TopicValidatorFn by topic string. What js-libp2p-gossipsub requires
  */
-export type TopicValidatorFnMap = Map<string, TopicValidatorFn>;
+export type ValidatorFnsByTopic = Map<string, TopicValidatorFn>;
+
+export type ValidatorFnsByType = {[K in GossipType]: TopicValidatorFn};
 
 /**
- * Overridden `InMessage`
- *
- * Possibly includes cached msgId, uncompressed message data, deserialized data
+ * Cache to prevent re-computing GossipTopic from topicStr
  */
-export interface IGossipMessage extends InMessage {
-  /**
-   * Cached message id
-   */
-  msgId?: Uint8Array;
-  /**
-   * Cached uncompressed data
-   */
-  uncompressed?: Uint8Array;
-  /**
-   * deserialized data
-   */
-  gossipObject?: GossipObject;
-  /**
-   * gossip topic
-   */
-  gossipTopic?: GossipTopic;
-}
+export type TopicsByTopicStrMap = Map<string, Required<GossipTopic>>;

@@ -23,7 +23,8 @@ import {IPeerMetadataStore, Libp2pPeerMetadataStore} from "./peers/metastore";
 import {PeerManager} from "./peers/peerManager";
 import {IPeerRpcScoreStore, PeerRpcScoreStore} from "./peers";
 import {IBeaconDb} from "../db";
-import {createTopicValidatorFnMap, Eth2Gossipsub, GossipType} from "./gossip";
+import {Eth2Gossipsub, GossipType} from "./gossip";
+import {GossipValidatorFns} from "./gossip/validation/validatorFns";
 import {IReqRespHandler} from "./reqresp/handlers";
 import {INetworkEventBus, NetworkEventBus} from "./events";
 import {AttnetsService, SyncnetsService, CommitteeSubscription} from "./subnets";
@@ -35,7 +36,8 @@ interface INetworkModules {
   metrics: IMetrics | null;
   chain: IBeaconChain;
   db: IBeaconDb;
-  reqRespHandler: IReqRespHandler;
+  reqRespHandlers: IReqRespHandler;
+  gossipHandlers: GossipValidatorFns;
   signal: AbortSignal;
 }
 
@@ -59,7 +61,7 @@ export class Network implements INetwork {
   private subscribedForks = new Set<ForkName>();
 
   constructor(opts: INetworkOptions & IReqRespOptions, modules: INetworkModules) {
-    const {config, libp2p, logger, metrics, chain, db, reqRespHandler, signal} = modules;
+    const {config, libp2p, logger, metrics, chain, reqRespHandlers, gossipHandlers, signal} = modules;
     this.libp2p = libp2p;
     this.logger = logger;
     this.config = config;
@@ -78,7 +80,7 @@ export class Network implements INetwork {
         config,
         libp2p,
         forkDigestContext: chain.forkDigestContext,
-        reqRespHandler,
+        reqRespHandlers,
         peerMetadata,
         metadata,
         peerRpcScores,
@@ -88,16 +90,15 @@ export class Network implements INetwork {
       },
       opts
     );
+
     this.gossip = new Eth2Gossipsub({
       config,
       libp2p,
-      // Note: We use the validator functions as handlers. No handler will be registered to gossipsub.
-      // libp2p-js layer will emit the message to an EventEmitter that won't be listened by anyone.
-      // TODO: Force to ensure there's a validatorFunction attached to every received topic.
-      validatorFns: createTopicValidatorFnMap({config, chain, db, logger, metrics}, metrics, signal),
       logger,
-      forkDigestContext: chain.forkDigestContext,
       metrics,
+      signal,
+      gossipHandlers,
+      forkDigestContext: chain.forkDigestContext,
     });
 
     this.attnetsService = new AttnetsService(config, chain, this.gossip, metadata, logger);

@@ -8,7 +8,7 @@ import {config} from "@chainsafe/lodestar-config/default";
 import {phase0, ssz} from "@chainsafe/lodestar-types";
 import {sleep} from "@chainsafe/lodestar-utils";
 
-import {Network, NetworkEvent, ReqRespHandler, ReqRespMethod} from "../../../src/network";
+import {Network, NetworkEvent, ReqRespMethod, getReqRespHandlers} from "../../../src/network";
 import {INetworkOptions} from "../../../src/network/options";
 import {GoodByeReasonCode} from "../../../src/constants";
 
@@ -20,6 +20,7 @@ import {StubbedBeaconDb} from "../../utils/stub";
 import {connect, disconnect, onPeerConnect, onPeerDisconnect} from "../../utils/network";
 import {testLogger} from "../../utils/logger";
 import {CommitteeSubscription} from "../../../src/network/subnets";
+import {GossipValidatorFns} from "../../../src/network/gossip/validation/validatorFns";
 
 const multiaddr = "/ip4/127.0.0.1/tcp/0";
 
@@ -55,13 +56,14 @@ describe("network", function () {
 
     const chain = new MockBeaconChain({genesisTime: 0, chainId: 0, networkId: BigInt(0), state, config});
     const db = new StubbedBeaconDb(sinon, config);
-    const reqRespHandler = new ReqRespHandler({db, chain});
+    const reqRespHandlers = getReqRespHandlers({db, chain});
+    const gossipHandlers = {} as GossipValidatorFns;
 
     const [libp2pA, libp2pB] = await Promise.all([createNode(multiaddr), createNode(multiaddr)]);
     const loggerA = testLogger("A");
     const loggerB = testLogger("B");
 
-    const modules = {config, chain, db, reqRespHandler, signal: controller.signal, metrics: null};
+    const modules = {config, chain, db, reqRespHandlers, gossipHandlers, signal: controller.signal, metrics: null};
     const netA = new Network(opts, {...modules, libp2p: libp2pA, logger: loggerA});
     const netB = new Network(opts, {...modules, libp2p: libp2pB, logger: loggerB});
 
@@ -174,5 +176,16 @@ describe("network", function () {
     const [goodbye, peer] = onGoodbyeNetB.getCall(0).args;
     expect(peer.toB58String()).to.equal(netA.peerId.toB58String(), "netA must be the goodbye requester");
     expect(goodbye).to.equal(BigInt(GoodByeReasonCode.CLIENT_SHUTDOWN), "goodbye reason must be CLIENT_SHUTDOWN");
+  });
+
+  it("Should subscribe to gossip core topics on demand", async () => {
+    const {netA} = await mockModules();
+
+    expect(netA.gossip.subscriptions.size).to.equal(0);
+    netA.subscribeGossipCoreTopics();
+    expect(netA.gossip.subscriptions.size).to.equal(5);
+    netA.unsubscribeGossipCoreTopics();
+    expect(netA.gossip.subscriptions.size).to.equal(0);
+    netA.close();
   });
 });

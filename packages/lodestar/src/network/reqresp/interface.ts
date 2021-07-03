@@ -31,7 +31,7 @@ export interface IReqRespModules {
   logger: ILogger;
   forkDigestContext: IForkDigestContext;
   metadata: MetadataController;
-  reqRespHandler: IReqRespHandler;
+  reqRespHandlers: IReqRespHandler;
   peerMetadata: IPeerMetadataStore;
   peerRpcScores: IPeerRpcScoreStore;
   networkEventBus: INetworkEventBus;

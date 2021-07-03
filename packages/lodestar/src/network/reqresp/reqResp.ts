@@ -45,7 +45,7 @@ export class ReqResp implements IReqResp {
   private libp2p: LibP2p;
   private logger: ILogger;
   private forkDigestContext: IForkDigestContext;
-  private reqRespHandler: IReqRespHandler;
+  private reqRespHandlers: IReqRespHandler;
   private metadataController: MetadataController;
   private peerMetadata: IPeerMetadataStore;
   private peerRpcScores: IPeerRpcScoreStore;
@@ -61,7 +61,7 @@ export class ReqResp implements IReqResp {
     this.libp2p = modules.libp2p;
     this.logger = modules.logger;
     this.forkDigestContext = modules.forkDigestContext;
-    this.reqRespHandler = modules.reqRespHandler;
+    this.reqRespHandlers = modules.reqRespHandlers;
     this.peerMetadata = modules.peerMetadata;
     this.metadataController = modules.metadata;
     this.peerRpcScores = modules.peerRpcScores;
@@ -226,13 +226,13 @@ export class ReqResp implements IReqResp {
       // Don't bubble Ping, Metadata, and, Goodbye requests to the app layer
 
       case Method.Status:
-        yield* this.reqRespHandler.onStatus();
+        yield* this.reqRespHandlers.onStatus();
         break;
       case Method.BeaconBlocksByRange:
-        yield* this.reqRespHandler.onBeaconBlocksByRange(requestTyped.body);
+        yield* this.reqRespHandlers.onBeaconBlocksByRange(requestTyped.body);
         break;
       case Method.BeaconBlocksByRoot:
-        yield* this.reqRespHandler.onBeaconBlocksByRoot(requestTyped.body);
+        yield* this.reqRespHandlers.onBeaconBlocksByRoot(requestTyped.body);
         break;
 
       default:

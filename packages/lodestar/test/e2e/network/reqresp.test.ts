@@ -22,6 +22,7 @@ import {expectRejectedWithLodestarError} from "../../utils/errors";
 import {connect, onPeerConnect} from "../../utils/network";
 import {StubbedBeaconDb} from "../../utils/stub";
 import {ForkName} from "@chainsafe/lodestar-params";
+import {GossipValidatorFns} from "../../../src/network/gossip/validation/validatorFns";
 
 chai.use(chaiAsPromised);
 
@@ -57,7 +58,7 @@ describe("network / ReqResp", function () {
   }
 
   async function createAndConnectPeers(
-    reqRespHandlerPartial?: Partial<IReqRespHandler>,
+    reqRespHandlersPartial?: Partial<IReqRespHandler>,
     reqRespOpts?: IReqRespOptions
   ): Promise<[Network, Network]> {
     const controller = new AbortController();
@@ -68,14 +69,17 @@ describe("network / ReqResp", function () {
     const notImplemented = async function* <T>(): AsyncIterable<T> {
       throw Error("not implemented");
     };
-    const reqRespHandler: IReqRespHandler = {
+
+    const reqRespHandlers: IReqRespHandler = {
       onStatus: notImplemented,
       onBeaconBlocksByRange: notImplemented,
       onBeaconBlocksByRoot: notImplemented,
-      ...reqRespHandlerPartial,
+      ...reqRespHandlersPartial,
     };
+
+    const gossipHandlers = {} as GossipValidatorFns;
     const opts = {...networkOptsDefault, ...reqRespOpts};
-    const modules = {config, db, chain, reqRespHandler, signal: controller.signal, metrics: null};
+    const modules = {config, db, chain, reqRespHandlers, gossipHandlers, signal: controller.signal, metrics: null};
     const netA = new Network(opts, {...modules, libp2p: libp2pA, logger: testLogger("A")});
     const netB = new Network(opts, {...modules, libp2p: libp2pB, logger: testLogger("B")});
     await Promise.all([netA.start(), netB.start()]);

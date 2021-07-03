@@ -12,7 +12,7 @@ import {ILogger} from "@chainsafe/lodestar-utils";
 import {Api} from "@chainsafe/lodestar-api";
 
 import {IBeaconDb} from "../db";
-import {INetwork, Network, ReqRespHandler} from "../network";
+import {INetwork, Network, getReqRespHandlers} from "../network";
 import {BeaconSync, IBeaconSync} from "../sync";
 import {BeaconChain, IBeaconChain, initBeaconMetrics} from "../chain";
 import {createMetrics, IMetrics, HttpMetricsServer} from "../metrics";
@@ -22,6 +22,7 @@ import {IBeaconNodeOptions} from "./options";
 import {Eth1ForBlockProduction, Eth1ForBlockProductionDisabled, Eth1Provider} from "../eth1";
 import {runNodeNotifier} from "./notifier";
 import {Registry} from "prom-client";
+import {getGossipValidatorFns} from "../network/gossip/validation/validatorFns";
 
 export * from "./options";
 
@@ -144,7 +145,8 @@ export class BeaconNode {
       metrics,
       chain,
       db,
-      reqRespHandler: new ReqRespHandler({db, chain}),
+      reqRespHandlers: getReqRespHandlers({db, chain}),
+      gossipHandlers: getGossipValidatorFns({chain, config, db, logger, metrics}),
       signal,
     });
     const sync = new BeaconSync(opts.sync, {

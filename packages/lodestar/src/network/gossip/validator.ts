@@ -1,186 +1,112 @@
-import {AbortSignal} from "@chainsafe/abort-controller";
-import {ATTESTATION_SUBNET_COUNT, ForkName, SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
-import {mapValues} from "@chainsafe/lodestar-utils";
-import {IMetrics} from "../../metrics";
-import {JobQueue, JobQueueOpts, QueueType} from "../../util/queue";
-import {stringifyGossipTopic} from "./topic";
-import {DEFAULT_ENCODING} from "./constants";
-import {validatorFns} from "./validatorFns";
-import {parseGossipMsg} from "./message";
-import {
-  GossipType,
-  TopicValidatorFn,
-  IObjectValidatorModules,
-  GossipTopic,
-  TopicValidatorFnMap,
-  GossipTopicMap,
-  GossipTypeMap,
-  GossipTopicTypeMap,
-} from "./interface";
 import {ERR_TOPIC_VALIDATOR_IGNORE, ERR_TOPIC_VALIDATOR_REJECT} from "libp2p-gossipsub/src/constants";
+import {AbortSignal} from "@chainsafe/abort-controller";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {Json, toHexString} from "@chainsafe/ssz";
+import {ILogger, mapValues} from "@chainsafe/lodestar-utils";
+import {IMetrics} from "../../metrics";
+import {getGossipSSZType, GossipTopicCache} from "./topic";
+import {GossipValidatorFns, GossipValidatorFn} from "./validation/validatorFns";
+import {GossipType, TopicValidatorFn, ValidatorFnsByType, GossipTypeMap, GossipTopicTypeMap} from "./interface";
 import {GossipValidationError} from "./errors";
 import {GossipActionError, GossipAction} from "../../chain/errors";
-import {Json, toHexString} from "@chainsafe/ssz";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {decodeMessageData, UncompressCache} from "./encoding";
+import {wrapWithQueue} from "./validation/queue";
+import {DEFAULT_ENCODING} from "./constants";
 
-// Numbers from https://github.com/sigp/lighthouse/blob/b34a79dc0b02e04441ba01fd0f304d1e203d877d/beacon_node/network/src/beacon_processor/mod.rs#L69
-const gossipQueueOpts: {[K in GossipType]: Pick<JobQueueOpts, "maxLength" | "type" | "maxConcurrency">} = {
-  [GossipType.beacon_block]: {maxLength: 1024, type: QueueType.FIFO},
-  // this is different from lighthouse's, there are more gossip aggregate_and_proof than gossip block
-  [GossipType.beacon_aggregate_and_proof]: {maxLength: 4096, type: QueueType.LIFO, maxConcurrency: 16},
-  [GossipType.beacon_attestation]: {maxLength: 16384, type: QueueType.LIFO, maxConcurrency: 64},
-  [GossipType.voluntary_exit]: {maxLength: 4096, type: QueueType.FIFO},
-  [GossipType.proposer_slashing]: {maxLength: 4096, type: QueueType.FIFO},
-  [GossipType.attester_slashing]: {maxLength: 4096, type: QueueType.FIFO},
-  [GossipType.sync_committee_contribution_and_proof]: {maxLength: 4096, type: QueueType.LIFO},
-  [GossipType.sync_committee]: {maxLength: 4096, type: QueueType.LIFO},
-};
-
-export function createTopicValidatorFnMap(
-  modules: IObjectValidatorModules,
+export function createValidatorFnsByType(
+  validatorFns: GossipValidatorFns,
+  config: IBeaconConfig,
+  logger: ILogger,
+  uncompressCache: UncompressCache,
+  gossipTopicCache: GossipTopicCache,
   metrics: IMetrics | null,
   signal: AbortSignal
-): TopicValidatorFnMap {
-  const wrappedValidatorFns = mapValues(validatorFns, (validatorFn, type) =>
-    wrapWithQueue(validatorFn as ValidatorFn<typeof type>, modules, {signal, ...gossipQueueOpts[type]}, metrics, type)
-  );
+): ValidatorFnsByType {
+  return mapValues(validatorFns, (validatorFn, type) => {
+    const gossipMessageHandler = getGossipMessageHandler(
+      validatorFn,
+      type,
+      config,
+      logger,
+      metrics,
+      uncompressCache,
+      gossipTopicCache
+    );
 
-  return createValidatorFnsByTopic(modules, wrappedValidatorFns);
+    return wrapWithQueue(gossipMessageHandler, type, signal, metrics);
+  });
 }
 
-/**
- * Intermediate type for gossip validation functions.
- * Gossip validation functions defined with this signature are easier to unit test
- */
-export type ValidatorFn<K extends GossipType> = (
-  modules: IObjectValidatorModules,
-  topic: GossipTopicMap[K],
-  object: GossipTypeMap[K]
-) => Promise<void>;
-
-/**
- * Wraps an ObjectValidatorFn as a TopicValidatorFn
- * See TopicValidatorFn here https://github.com/libp2p/js-libp2p-interfaces/blob/v0.5.2/src/pubsub/index.js#L529
- */
-export function wrapWithQueue<K extends GossipType>(
-  validatorFn: ValidatorFn<K>,
-  modules: IObjectValidatorModules,
-  queueOpts: JobQueueOpts,
+function getGossipMessageHandler<K extends GossipType>(
+  validatorFn: GossipValidatorFns[K],
+  type: K,
+  config: IBeaconConfig,
+  logger: ILogger,
   metrics: IMetrics | null,
-  type: GossipType
+  uncompressCache: UncompressCache,
+  gossipTopicCache: GossipTopicCache
 ): TopicValidatorFn {
-  const {logger, config} = modules;
-  const jobQueue = new JobQueue(
-    queueOpts,
-    metrics
-      ? {
-          length: metrics.gossipValidationQueueLength.child({topic: type}),
-          droppedJobs: metrics.gossipValidationQueueDroppedJobs.child({topic: type}),
-          jobTime: metrics.gossipValidationQueueJobTime.child({topic: type}),
-          jobWaitTime: metrics.gossipValidationQueueJobWaitTime.child({topic: type}),
-        }
-      : undefined
-  );
-  return async function (_topicStr, gossipMsg) {
-    const {gossipTopic, gossipObject} = parseGossipMsg<K>(gossipMsg);
-    await jobQueue.push(async () => {
+  const getGossipObjectAcceptMetadata = getGossipObjectAcceptMetadataObj[type] as GetGossipAcceptMetadataFn;
+
+  return async function (topicStr, gossipMsg) {
+    try {
+      const topic = gossipTopicCache.getTopic(topicStr);
+      const encoding = topic.encoding ?? DEFAULT_ENCODING;
+
+      // Deserialize object from bytes ONLY after being picked up from the validation queue
+      let gossipObject;
       try {
-        await validatorFn(modules, gossipTopic, gossipObject);
-
-        const metadata = getGossipObjectAcceptMetadataObj[type](config, gossipObject as any, gossipTopic as any);
-        logger.debug(`gossip - ${type} - accept`, metadata);
-        metrics?.gossipValidationAccept.inc({topic: type}, 1);
+        const sszType = getGossipSSZType(topic);
+        const messageData = decodeMessageData(encoding, gossipMsg.data, uncompressCache);
+        gossipObject =
+          // TODO: Review if it's really necessary to deserialize this as TreeBacked
+          topic.type === GossipType.beacon_block || topic.type === GossipType.beacon_aggregate_and_proof
+            ? sszType.createTreeBackedFromBytes(messageData)
+            : sszType.deserialize(messageData);
       } catch (e) {
-        if (!(e instanceof GossipActionError)) {
-          logger.error(`Gossip validation ${type} threw a non-GossipValidationError`, {}, e);
-          throw new GossipValidationError(ERR_TOPIC_VALIDATOR_IGNORE);
-        }
-
-        switch (e.action) {
-          case GossipAction.IGNORE:
-            logger.debug(`gossip - ${type} - ignore`, e.type as Json);
-            metrics?.gossipValidationIgnore.inc({topic: type}, 1);
-            throw new GossipValidationError(ERR_TOPIC_VALIDATOR_IGNORE);
-
-          case GossipAction.REJECT:
-            logger.debug(`gossip - ${type} - reject`, e.type as Json);
-            metrics?.gossipValidationReject.inc({topic: type}, 1);
-            throw new GossipValidationError(ERR_TOPIC_VALIDATOR_REJECT);
-        }
+        // TODO: Log the error or do something better with it
+        throw new GossipActionError(GossipAction.REJECT, {code: (e as Error).message});
       }
-    });
+
+      await (validatorFn as GossipValidatorFn)(gossipObject, topic);
+
+      const metadata = getGossipObjectAcceptMetadata(config, gossipObject, topic);
+      logger.debug(`gossip - ${type} - accept`, metadata);
+      metrics?.gossipValidationAccept.inc({topic: type}, 1);
+    } catch (e) {
+      if (!(e instanceof GossipActionError)) {
+        logger.error(`Gossip validation ${type} threw a non-GossipValidationError`, {}, e);
+        throw new GossipValidationError(ERR_TOPIC_VALIDATOR_IGNORE);
+      }
+
+      switch (e.action) {
+        case GossipAction.IGNORE:
+          logger.debug(`gossip - ${type} - ignore`, e.type as Json);
+          metrics?.gossipValidationIgnore.inc({topic: type}, 1);
+          throw new GossipValidationError(ERR_TOPIC_VALIDATOR_IGNORE);
+
+        case GossipAction.REJECT:
+          logger.debug(`gossip - ${type} - reject`, e.type as Json);
+          metrics?.gossipValidationReject.inc({topic: type}, 1);
+          throw new GossipValidationError(ERR_TOPIC_VALIDATOR_REJECT);
+      }
+    }
   };
 }
 
-// Gossip validation functions are wrappers around chain-level validation functions
-// With a few additional elements:
-//
-// - Gossip error handling - chain-level validation throws eg: `BlockErrorCode` with many possible error types.
-//   Gossip validation functions instead throw either "ignore" or "reject" errors.
-//
-// - Logging - chain-level validation has no logging.
-//   For gossip, its useful to know, via logs/metrics, when gossip is received/ignored/rejected.
-//
-// - Gossip type conversion - Gossip validation functions operate on messages of binary data.
-//   This data must be deserialized into the proper type, determined by the topic (fork digest)
-//   This deserialization must have happened prior to the topic validator running.
-
-export function createValidatorFnsByTopic(
-  modules: IObjectValidatorModules,
-  validatorFnsByType: {[K in GossipType]: TopicValidatorFn}
-): TopicValidatorFnMap {
-  const validatorFnsByTopic = new Map<string, TopicValidatorFn>();
-
-  const encoding = DEFAULT_ENCODING;
-  const allForkNames = Object.values(modules.config.forks).map((fork) => fork.name);
-  // TODO: Compute all forks after altair including altair
-  const allForksAfterAltair = allForkNames.filter((fork) => fork !== ForkName.phase0);
-
-  const staticGossipTypes = [
-    {type: GossipType.beacon_block, forks: allForkNames},
-    {type: GossipType.beacon_aggregate_and_proof, forks: allForkNames},
-    {type: GossipType.voluntary_exit, forks: allForkNames},
-    {type: GossipType.proposer_slashing, forks: allForkNames},
-    {type: GossipType.attester_slashing, forks: allForkNames},
-    // Note: Calling .handleTopic() does not subscribe. Safe to do in any fork
-    {type: GossipType.sync_committee_contribution_and_proof, forks: allForksAfterAltair},
-  ];
-
-  for (const {type, forks} of staticGossipTypes) {
-    for (const fork of forks) {
-      const topic = {type, fork, encoding} as GossipTopic;
-      const topicString = stringifyGossipTopic(modules.chain.forkDigestContext, topic);
-      validatorFnsByTopic.set(topicString, validatorFnsByType[type]);
-    }
-  }
-
-  for (const fork of allForkNames) {
-    for (let subnet = 0; subnet < ATTESTATION_SUBNET_COUNT; subnet++) {
-      const topic = {type: GossipType.beacon_attestation, fork, subnet, encoding};
-      const topicString = stringifyGossipTopic(modules.chain.forkDigestContext, topic);
-      const topicValidatorFn = validatorFnsByType[GossipType.beacon_attestation];
-      validatorFnsByTopic.set(topicString, topicValidatorFn);
-    }
-  }
-
-  for (const fork of allForksAfterAltair) {
-    for (let subnet = 0; subnet < SYNC_COMMITTEE_SUBNET_COUNT; subnet++) {
-      const topic = {type: GossipType.sync_committee, fork, subnet, encoding};
-      const topicString = stringifyGossipTopic(modules.chain.forkDigestContext, topic);
-      const topicValidatorFn = validatorFnsByType[GossipType.sync_committee];
-      validatorFnsByTopic.set(topicString, topicValidatorFn);
-    }
-  }
-
-  return validatorFnsByTopic;
-}
+type GetGossipAcceptMetadataFn = (
+  config: IBeaconConfig,
+  object: GossipTypeMap[GossipType],
+  topic: GossipTopicTypeMap[GossipType]
+) => Json;
+type GetGossipAcceptMetadataFns = {
+  [K in GossipType]: (config: IBeaconConfig, object: GossipTypeMap[K], topic: GossipTopicTypeMap[K]) => Json;
+};
 
 /**
  * Return succint but meaningful data about accepted gossip objects
  */
-const getGossipObjectAcceptMetadataObj: {
-  [K in GossipType]: (config: IBeaconConfig, object: GossipTypeMap[K], topic: GossipTopicTypeMap[K]) => Json;
-} = {
+const getGossipObjectAcceptMetadataObj: GetGossipAcceptMetadataFns = {
   [GossipType.beacon_block]: (config, signedBlock) => ({
     slot: signedBlock.message.slot,
     root: toHexString(config.getForkTypes(signedBlock.message.slot).BeaconBlock.hashTreeRoot(signedBlock.message)),
