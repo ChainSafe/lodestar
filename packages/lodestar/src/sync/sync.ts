@@ -48,7 +48,7 @@ export class BeaconSync implements IBeaconSync {
     this.rangeSync = new RangeSync(modules, this.opts);
     this.backfillSync = new BackfillSync(modules);
 
-    this.slotImportTolerance = modules.config.params.SLOTS_PER_EPOCH;
+    this.slotImportTolerance = SLOTS_PER_EPOCH;
 
     // Subscribe to RangeSync completing a SyncChain and recompute sync state
     this.rangeSync.on(RangeSyncEvent.completedChain, this.updateSyncState);

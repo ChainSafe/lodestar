@@ -1,8 +1,7 @@
-import {computeStartSlotAtEpoch, verifyBlockSignature} from "@chainsafe/lodestar-beacon-state-transition";
+import {computeStartSlotAtEpoch, allForks as allForksUtils} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {GENESIS_EPOCH} from "@chainsafe/lodestar-params";
-import {phase0, Root, Slot} from "@chainsafe/lodestar-types";
-import {SignedBeaconBlock} from "@chainsafe/lodestar-types/lib/allForks";
+import {phase0, Root, Slot, allForks} from "@chainsafe/lodestar-types";
 import {ErrorAborted, ILogger} from "@chainsafe/lodestar-utils";
 import {List} from "@chainsafe/ssz";
 import PeerId from "peer-id";
@@ -12,7 +11,6 @@ import {IBeaconDb} from "../../db";
 import {INetwork, NetworkEvent, PeerAction} from "../../network";
 import {ItTrigger} from "../../util/itTrigger";
 import {PeerMap} from "../../util/peerMap";
-import {ChainTarget} from "../range/chain";
 import {BackfillSyncError, BackfillSyncErrorCode} from "./errors";
 import {getRandomPeer} from "./util";
 import {verifyBlocks} from "./verify";
@@ -24,13 +22,6 @@ export enum BackfillSyncStatus {
   /** There are no suitable peers or we synced all required history blocks */
   Idle,
 }
-
-type BackfillSyncState =
-  | {
-      status: BackfillSyncStatus.Syncing;
-      target: ChainTarget;
-    }
-  | {status: BackfillSyncStatus.Idle};
 
 export type RangeSyncModules = {
   chain: IBeaconChain;
@@ -54,7 +45,7 @@ export class BackfillSync {
   //last fetched slot
   private lastFetchedSlot: Slot | null = null;
   //last trusted block
-  private anchorBlock: SignedBeaconBlock | null = null;
+  private anchorBlock: allForks.SignedBeaconBlock | null = null;
   private processor: ItTrigger = new ItTrigger();
   private peers: PeerMap<phase0.Status> = new PeerMap();
 
@@ -93,7 +84,7 @@ export class BackfillSync {
           GENESIS_EPOCH,
           this.chain.clock.currentEpoch - getMinEpochForBlockRequests(this.config)
         );
-        const oldestSlotRequired = computeStartSlotAtEpoch(this.config, oldestRequiredEpoch);
+        const oldestSlotRequired = computeStartSlotAtEpoch(oldestRequiredEpoch);
 
         if (this.anchorBlock) {
           try {
@@ -146,10 +137,12 @@ export class BackfillSync {
       if (blocks.length === 0) {
         throw new BackfillSyncError({code: BackfillSyncErrorCode.MISSING_BLOCKS, peerId: peer});
       }
-      const block = blocks[0] as SignedBeaconBlock;
-      try {
-        verifyBlockSignature(this.config, this.chain.getHeadState(), block);
-      } catch (e) {
+      const block = blocks[0] as allForks.SignedBeaconBlock;
+      if (
+        !(await this.chain.bls.verifySignatureSets([
+          allForksUtils.getProposerSignatureSet(this.chain.getHeadState(), block),
+        ]))
+      ) {
         throw new BackfillSyncError({code: BackfillSyncErrorCode.INVALID_SIGNATURE});
       }
       await this.db.blockArchive.put(block.message.slot, block);

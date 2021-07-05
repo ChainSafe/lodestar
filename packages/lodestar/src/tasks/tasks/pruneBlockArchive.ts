@@ -43,7 +43,7 @@ export class PruneBlockArchiveTask implements ITask {
     //prune from genesis till toEpoch
     const toEpoch = Math.max(GENESIS_EPOCH, currentEpoch - this.maxEpochForBlockRequests);
     this.logger.info("Started prunning block archive", {toEpoch});
-    const slotsToDelete = await this.db.blockArchive.keys({lt: computeStartSlotAtEpoch(this.config, toEpoch)});
+    const slotsToDelete = await this.db.blockArchive.keys({lt: computeStartSlotAtEpoch(toEpoch)});
     await this.db.blockArchive.batchDelete(slotsToDelete);
     this.logger.info("Block archive prunning completed!", {
       firstSlotDeleted: slotsToDelete[0],
