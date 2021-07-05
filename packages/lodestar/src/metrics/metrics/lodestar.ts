@@ -86,12 +86,12 @@ export function createLodestarMetrics(
       labelNames: ["topic"],
     }),
     gossipValidationIgnore: register.gauge<"topic">({
-      name: "lodestar_gossip_validation_accept",
+      name: "lodestar_gossip_validation_ignore",
       help: "Count of total gossip validation ignore",
       labelNames: ["topic"],
     }),
     gossipValidationReject: register.gauge<"topic">({
-      name: "lodestar_gossip_validation_accept",
+      name: "lodestar_gossip_validation_reject",
       help: "Count of total gossip validation reject",
       labelNames: ["topic"],
     }),

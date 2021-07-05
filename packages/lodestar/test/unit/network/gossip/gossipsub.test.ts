@@ -17,6 +17,7 @@ import {GossipValidationError} from "../../../../src/network/gossip/errors";
 import {generateEmptySignedBlock} from "../../../utils/block";
 import {createNode} from "../../../utils/network";
 import {testLogger} from "../../../utils/logger";
+import {GossipAction, GossipActionError} from "../../../../src/chain/errors";
 
 describe("network / gossip / validation", function () {
   const logger = testLogger();
@@ -52,7 +53,7 @@ describe("network / gossip / validation", function () {
   it("should throw on failed validation", async () => {
     const gossipHandlersPartial: Partial<GossipHandlers> = {
       [gossipType]: async () => {
-        throw new GossipValidationError(ERR_TOPIC_VALIDATOR_REJECT);
+        throw new GossipActionError(GossipAction.REJECT, {code: "TEST_ERROR"});
       },
     };
 
@@ -70,14 +71,20 @@ describe("network / gossip / validation", function () {
       await gossipSub.validate(message);
       assert.fail("Expect error here");
     } catch (e) {
-      expect((e as GossipValidationError).code).to.be.equal(ERR_TOPIC_VALIDATOR_REJECT);
+      expect({
+        message: (e as Error).message,
+        code: (e as GossipValidationError).code,
+      }).to.deep.equal({
+        message: "TEST_ERROR",
+        code: ERR_TOPIC_VALIDATOR_REJECT,
+      });
     }
   });
 
   it("should not throw on successful validation", async () => {
     const gossipHandlersPartial: Partial<GossipHandlers> = {
       [gossipType]: async () => {
-        throw new GossipValidationError(ERR_TOPIC_VALIDATOR_REJECT);
+        //
       },
     };
 

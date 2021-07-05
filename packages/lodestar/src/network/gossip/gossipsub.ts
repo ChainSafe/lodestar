@@ -135,13 +135,13 @@ export class Eth2Gossipsub extends Gossipsub {
 
       // message sanity check
       if (!topicStr || message.topicIDs.length > 1) {
-        throw Error("Not exactly one topicID"); // REJECT
+        throw new GossipValidationError(ERR_TOPIC_VALIDATOR_REJECT, "Not exactly one topicID");
       }
       if (!message.data) {
-        throw Error("No message.data"); // REJECT
+        throw new GossipValidationError(ERR_TOPIC_VALIDATOR_REJECT, "No message.data");
       }
       if (message.data.length > GOSSIP_MAX_SIZE) {
-        throw Error("message.data too big"); // REJECT
+        throw new GossipValidationError(ERR_TOPIC_VALIDATOR_REJECT, "message.data too big");
       }
 
       // We use 'StrictNoSign' policy, no need to validate message signature
@@ -157,7 +157,8 @@ export class Eth2Gossipsub extends Gossipsub {
       // No error here means that the incoming object is valid
       await validatorFn(topicStr, message);
     } catch (e) {
-      const code = e instanceof GossipValidationError ? e.code : ERR_TOPIC_VALIDATOR_REJECT;
+      // JobQueue may throw non-typed errors
+      const code = e instanceof GossipValidationError ? e.code : ERR_TOPIC_VALIDATOR_IGNORE;
       this.score.rejectMessage(message, code);
       this.gossipTracer.rejectMessage(message, code);
       throw e;

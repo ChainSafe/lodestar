@@ -87,20 +87,20 @@ function getGossipValidatorFn<K extends GossipType>(
       metrics?.gossipValidationAccept.inc({topic: type}, 1);
     } catch (e) {
       if (!(e instanceof GossipActionError)) {
-        logger.error(`Gossip validation ${type} threw a non-GossipValidationError`, {}, e);
-        throw new GossipValidationError(ERR_TOPIC_VALIDATOR_IGNORE);
+        logger.error(`Gossip validation ${type} threw a non-GossipActionError`, {}, e);
+        throw new GossipValidationError(ERR_TOPIC_VALIDATOR_IGNORE, (e as Error).message);
       }
 
       switch (e.action) {
         case GossipAction.IGNORE:
           logger.debug(`gossip - ${type} - ignore`, e.type as Json);
           metrics?.gossipValidationIgnore.inc({topic: type}, 1);
-          throw new GossipValidationError(ERR_TOPIC_VALIDATOR_IGNORE);
+          throw new GossipValidationError(ERR_TOPIC_VALIDATOR_IGNORE, e.message);
 
         case GossipAction.REJECT:
           logger.debug(`gossip - ${type} - reject`, e.type as Json);
           metrics?.gossipValidationReject.inc({topic: type}, 1);
-          throw new GossipValidationError(ERR_TOPIC_VALIDATOR_REJECT);
+          throw new GossipValidationError(ERR_TOPIC_VALIDATOR_REJECT, e.message);
       }
     }
   };
