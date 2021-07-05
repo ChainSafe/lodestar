@@ -1,6 +1,5 @@
 import {expect} from "chai";
 import {allForks} from "@chainsafe/lodestar-beacon-state-transition";
-
 import {StateContextCache} from "../../../../src/chain/stateCache";
 import {generateCachedState} from "../../../utils/state";
 import {ZERO_HASH} from "../../../../src/constants";

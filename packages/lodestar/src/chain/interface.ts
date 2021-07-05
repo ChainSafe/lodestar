@@ -8,11 +8,12 @@ import {IBeaconClock} from "./clock/interface";
 import {ChainEventEmitter} from "./emitter";
 import {IStateRegenerator} from "./regen";
 import {BlockPool} from "./blocks";
-import {AttestationPool} from "./attestation";
 import {StateContextCache, CheckpointStateCache} from "./stateCache";
 import {IBlsVerifier} from "./bls";
+import {SeenAttesters, SeenAggregators} from "./seenCache";
 import {IForkDigestContext} from "../util/forkDigestContext";
 import {LightClientIniter} from "./lightClient";
+import {AttestationPool} from "./opsPool/attestationPool";
 
 export interface IProcessBlock {
   /**
@@ -42,14 +43,6 @@ export interface IBlockJob extends IProcessBlock {
   signedBlock: allForks.SignedBeaconBlock;
 }
 
-export interface IAttestationJob {
-  attestation: phase0.Attestation;
-  /**
-   * `true` if the signature has already been verified
-   */
-  validSignature: boolean;
-}
-
 /**
  * The IBeaconChain service deals with processing incoming blocks, advancing a state transition
  * and applying the fork choice rule to update the chain head
@@ -66,10 +59,15 @@ export interface IBeaconChain {
   checkpointStateCache: CheckpointStateCache;
   regen: IStateRegenerator;
   pendingBlocks: BlockPool;
-  pendingAttestations: AttestationPool;
   forkDigestContext: IForkDigestContext;
   lightclientUpdater: LightClientUpdater;
   lightClientIniter: LightClientIniter;
+
+  // Ops pool
+  readonly attestationPool: AttestationPool;
+
+  readonly seenAttesters: SeenAttesters;
+  readonly seenAggregators: SeenAggregators;
 
   /** Stop beacon chain processing */
   close(): void;
@@ -91,8 +89,6 @@ export interface IBeaconChain {
   getUnfinalizedBlocksAtSlots(slots: Slot[]): Promise<allForks.SignedBeaconBlock[]>;
   getFinalizedCheckpoint(): phase0.Checkpoint;
 
-  /** Add attestation to the fork-choice rule */
-  receiveAttestation(attestation: phase0.Attestation): void;
   /** Pre-process and run the per slot state transition function */
   receiveBlock(signedBlock: allForks.SignedBeaconBlock, trusted?: boolean): void;
   /** Process a block until complete */

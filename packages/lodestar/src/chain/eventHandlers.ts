@@ -1,11 +1,11 @@
 import {AbortSignal} from "@chainsafe/abort-controller";
 import {readonlyValues, toHexString, TreeBacked} from "@chainsafe/ssz";
-import {allForks, altair, phase0, Slot, ssz, Version} from "@chainsafe/lodestar-types";
+import {allForks, altair, Epoch, phase0, Slot, ssz, Version} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {IBlockSummary} from "@chainsafe/lodestar-fork-choice";
 import {CachedBeaconState, computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 
-import {AttestationError, AttestationErrorCode, BlockError, BlockErrorCode} from "./errors";
+import {AttestationError, BlockError, BlockErrorCode} from "./errors";
 import {IBlockJob} from "./interface";
 import {ChainEvent, ChainEventEmitter, IChainEvents} from "./emitter";
 import {BeaconChain} from "./chain";
@@ -95,16 +95,7 @@ export async function onClockSlot(this: BeaconChain, slot: Slot): Promise<void> 
   this.forkChoice.updateTime(slot);
   this.metrics?.clockSlot.set(slot);
 
-  this.db.attestationPool.prune(slot);
-
-  await Promise.all(
-    // Attestations can only affect the fork choice of subsequent slots.
-    // Process the attestations in `slot - 1`, rather than `slot`
-    this.pendingAttestations.getBySlot(slot - 1).map((job) => {
-      this.pendingAttestations.remove(job);
-      return this.attestationProcessor.processAttestationJob(job);
-    })
-  );
+  this.attestationPool.prune(slot);
 
   await Promise.all(
     this.pendingBlocks.getBySlot(slot).map(async (root) => {
@@ -129,8 +120,9 @@ export async function onClockSlot(this: BeaconChain, slot: Slot): Promise<void> 
   });
 }
 
-export function onClockEpoch(): void {
-  //
+export function onClockEpoch(this: BeaconChain, currentEpoch: Epoch): void {
+  this.seenAttesters.prune(currentEpoch);
+  this.seenAggregators.prune(currentEpoch);
 }
 
 export function onForkVersion(this: BeaconChain, version: Version): void {
@@ -249,32 +241,19 @@ export async function onBlock(
     await this.db.block.add(block);
   }
 
+  // Only process attestations in response to an non-prefinalized block
   if (!job.prefinalized) {
     const attestations = Array.from(readonlyValues(block.message.body.attestations));
 
-    // Only process attestations in response to an non-prefinalized block
-    const indexedAttestations = await Promise.all([
-      // process the attestations in the block
-      ...attestations.map((attestation) => {
-        return this.attestationProcessor.processAttestationJob({
-          attestation,
-          // attestation signatures from blocks have already been verified
-          validSignature: true,
-        });
-      }),
-      // process pending attestations which needed the block
-      ...this.pendingAttestations.getByBlock(blockRoot).map((job) => {
-        this.pendingAttestations.remove(job);
-        return this.attestationProcessor.processAttestationJob(job);
-      }),
-    ]);
+    for (const attestation of attestations) {
+      try {
+        const indexedAttestation = postState.epochCtx.getIndexedAttestation(attestation);
+        this.forkChoice.onAttestation(indexedAttestation);
+        this.emitter.emit(ChainEvent.attestation, attestation);
 
-    if (this.metrics) {
-      // Register attestations in metrics
-      for (const attestation of indexedAttestations) {
-        if (attestation) {
-          this.metrics.registerAttestationInBlock(attestation, block.message);
-        }
+        this.metrics?.registerAttestationInBlock(indexedAttestation, block.message);
+      } catch (e) {
+        this.logger.error("Error processing attestation from block", {slot: block.message.slot}, e);
       }
     }
   }
@@ -320,33 +299,6 @@ export async function onErrorAttestation(this: BeaconChain, err: AttestationErro
   }
 
   this.logger.debug("Attestation error", {}, err);
-  const attestationRoot = ssz.phase0.Attestation.hashTreeRoot(err.job.attestation);
-
-  switch (err.type.code) {
-    case AttestationErrorCode.FUTURE_SLOT:
-      this.logger.debug("Add attestation to pool", {
-        reason: err.type.code,
-        attestationRoot: toHexString(attestationRoot),
-      });
-      this.pendingAttestations.putBySlot(err.type.attestationSlot, err.job);
-      break;
-
-    case AttestationErrorCode.UNKNOWN_TARGET_ROOT:
-      this.logger.debug("Add attestation to pool", {
-        reason: err.type.code,
-        attestationRoot: toHexString(attestationRoot),
-      });
-      this.pendingAttestations.putByBlock(err.type.root, err.job);
-      break;
-
-    case AttestationErrorCode.UNKNOWN_BEACON_BLOCK_ROOT:
-      this.pendingAttestations.putByBlock(err.type.beaconBlockRoot, err.job);
-      break;
-
-    // TODO: Why is necessary to remove the attestation from the DB on error?
-    // default:
-    //   await this.db.attestation.remove(err.job.attestation);
-  }
 }
 
 export async function onErrorBlock(this: BeaconChain, err: BlockError): Promise<void> {

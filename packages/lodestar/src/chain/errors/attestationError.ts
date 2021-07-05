@@ -1,8 +1,6 @@
 import {CommitteeIndex, Epoch, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {LodestarError} from "@chainsafe/lodestar-utils";
 
-import {IAttestationJob} from "../interface";
-
 export enum AttestationErrorCode {
   /**
    * The target state cannot be fetched
@@ -37,7 +35,7 @@ export enum AttestationErrorCode {
   /**
    * There has already been an aggregation observed for this validator, we refuse to process a second.
    */
-  AGGREGATE_ALREADY_KNOWN = "ATTESTATION_ERROR_AGGREGATE_ALREADY_KNOWN",
+  AGGREGATOR_ALREADY_KNOWN = "ATTESTATION_ERROR_AGGREGATOR_ALREADY_KNOWN",
   /**
    * The aggregator index is higher than the maximum possible validator count.
    */
@@ -110,7 +108,7 @@ export enum AttestationErrorCode {
   /**
    * The current finalized checkpoint is not an ancestor of the block defined by attestation.data.beacon_block_root.
    */
-  FINALIZED_CHECKPOINT_NOT_AN_ANCESTOR_OF_ROOT = "ATTESTATION_ERROR_FINALIZED_CHECKPOINT_NOT_AN_ANCESTOR_OF_ROOT",
+  INVALID_TARGET_ROOT = "ATTESTATION_ERROR_INVALID_TARGET_ROOT",
   /**
    * The The attestation target block is not an ancestor of the block named in the LMD vote.
    */
@@ -140,16 +138,16 @@ export type AttestationErrorType =
   | {code: AttestationErrorCode.EMPTY_AGGREGATION_BITFIELD}
   | {code: AttestationErrorCode.AGGREGATOR_NOT_IN_COMMITTEE}
   | {code: AttestationErrorCode.AGGREGATOR_PUBKEY_UNKNOWN; aggregatorIndex: ValidatorIndex}
-  | {code: AttestationErrorCode.ATTESTATION_ALREADY_KNOWN; root: Uint8Array}
-  | {code: AttestationErrorCode.AGGREGATE_ALREADY_KNOWN}
+  | {code: AttestationErrorCode.ATTESTATION_ALREADY_KNOWN; targetEpoch: Epoch; validatorIndex: number}
+  | {code: AttestationErrorCode.AGGREGATOR_ALREADY_KNOWN; targetEpoch: Epoch; aggregatorIndex: number}
   | {code: AttestationErrorCode.AGGREGATOR_INDEX_TOO_HIGH; aggregatorIndex: ValidatorIndex}
-  | {code: AttestationErrorCode.UNKNOWN_BEACON_BLOCK_ROOT; beaconBlockRoot: Uint8Array}
+  | {code: AttestationErrorCode.UNKNOWN_BEACON_BLOCK_ROOT; root: Uint8Array}
   | {code: AttestationErrorCode.BAD_TARGET_EPOCH}
   | {code: AttestationErrorCode.HEAD_NOT_TARGET_DESCENDANT}
   | {code: AttestationErrorCode.UNKNOWN_TARGET_ROOT; root: Uint8Array}
   | {code: AttestationErrorCode.INVALID_SIGNATURE}
   | {code: AttestationErrorCode.NO_COMMITTEE_FOR_SLOT_AND_INDEX; slot: Slot; index: CommitteeIndex}
-  | {code: AttestationErrorCode.NOT_EXACTLY_ONE_AGGREGATION_BIT_SET; numBits: number}
+  | {code: AttestationErrorCode.NOT_EXACTLY_ONE_AGGREGATION_BIT_SET}
   | {code: AttestationErrorCode.PRIOR_ATTESTATION_KNOWN; validatorIndex: ValidatorIndex; epoch: Epoch}
   | {code: AttestationErrorCode.FUTURE_EPOCH; attestationEpoch: Epoch; currentEpoch: Epoch}
   | {code: AttestationErrorCode.PAST_EPOCH; attestationEpoch: Epoch; currentEpoch: Epoch}
@@ -159,22 +157,11 @@ export type AttestationErrorType =
   | {code: AttestationErrorCode.BEACON_CHAIN_ERROR; error: Error}
   | {code: AttestationErrorCode.WRONG_NUMBER_OF_AGGREGATION_BITS}
   | {code: AttestationErrorCode.KNOWN_BAD_BLOCK}
-  | {code: AttestationErrorCode.FINALIZED_CHECKPOINT_NOT_AN_ANCESTOR_OF_ROOT}
+  | {code: AttestationErrorCode.INVALID_TARGET_ROOT; targetRoot: Uint8Array; expected: Uint8Array | null}
   | {code: AttestationErrorCode.TARGET_BLOCK_NOT_AN_ANCESTOR_OF_LMD_BLOCK}
   | {code: AttestationErrorCode.COMMITTEE_INDEX_OUT_OF_RANGE; index: number}
   | {code: AttestationErrorCode.MISSING_ATTESTATION_TARGET_STATE; error: Error}
   | {code: AttestationErrorCode.INVALID_AGGREGATOR}
   | {code: AttestationErrorCode.INVALID_INDEXED_ATTESTATION};
 
-type IJobObject = {
-  job: IAttestationJob;
-};
-
-export class AttestationError extends LodestarError<AttestationErrorType> {
-  job: IAttestationJob;
-
-  constructor({job, ...type}: AttestationErrorType & IJobObject) {
-    super(type);
-    this.job = job;
-  }
-}
+export class AttestationError extends LodestarError<AttestationErrorType> {}

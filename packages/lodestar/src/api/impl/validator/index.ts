@@ -15,7 +15,6 @@ import {
 import {allForks, Root, Slot} from "@chainsafe/lodestar-types";
 import {assembleAttestationData} from "../../../chain/factory/attestation";
 import {assembleBlock} from "../../../chain/factory/block";
-import {assembleAttesterDuty} from "../../../chain/factory/duties";
 import {AttestationError, AttestationErrorCode} from "../../../chain/errors";
 import {validateGossipAggregateAndProof} from "../../../chain/validation";
 import {ZERO_HASH} from "../../../constants";
@@ -26,7 +25,7 @@ import {validateSyncCommitteeGossipContributionAndProof} from "../../../chain/va
 import {SyncContributionError, SyncContributionErrorCode} from "../../../db/syncCommitteeContribution";
 import {CommitteeSubscription} from "../../../network/subnets";
 import {OpSource} from "../../../metrics/validatorMonitor";
-import {computeSubnetForCommitteesAtSlot, getSyncComitteeValidatorIndexMap} from "./utils";
+import {computeSubnetForCommitteesAtSlot, getPubkeysForIndices, getSyncComitteeValidatorIndexMap} from "./utils";
 import {ApiModules} from "../types";
 
 /**
@@ -185,12 +184,18 @@ export function getValidatorApi({
       await waitForSlot(startSlot); // Must never request for a future slot > currentSlot
 
       const state = await chain.getHeadStateAtCurrentEpoch();
+
+      // Note: Using a MutableVector is the fastest way of getting compressed pubkeys.
+      //       See benchmark -> packages/lodestar/test/perf/api/impl/validator/attester.test.ts
+      const validators = state.validators.persistent;
       const duties: routes.validator.ProposerDuty[] = [];
 
       for (let slot = startSlot; slot < startSlot + SLOTS_PER_EPOCH; slot++) {
         // getBeaconProposer ensures the requested epoch is correct
-        const blockProposerIndex = state.getBeaconProposer(slot);
-        duties.push({slot, validatorIndex: blockProposerIndex, pubkey: state.validators[blockProposerIndex].pubkey});
+        const validatorIndex = state.getBeaconProposer(slot);
+        const validator = validators.get(validatorIndex);
+        if (!validator) throw Error(`Unknown validatorIndex ${validatorIndex}`);
+        duties.push({slot, validatorIndex, pubkey: validator.pubkey});
       }
 
       // Returns `null` on the one-off scenario where the genesis block decides its own shuffling.
@@ -227,19 +232,15 @@ export function getValidatorApi({
       // the first `MAXIMUM_GOSSIP_CLOCK_DISPARITY` duration of the epoch `tolerantCurrentEpoch`
       // will equal `currentEpoch + 1`
 
-      const duties: routes.validator.AttesterDuty[] = [];
-      for (const validatorIndex of validatorIndices) {
-        const validator = state.validators[validatorIndex];
-        if (!validator) {
-          throw new ApiError(400, `Validator index ${validatorIndex} not in state`);
-        }
-        const duty = assembleAttesterDuty(
-          config,
-          {pubkey: validator.pubkey, index: validatorIndex},
-          state.epochCtx,
-          epoch
-        );
-        if (duty) duties.push(duty);
+      // Check that all validatorIndex belong to the state before calling getCommitteeAssignments()
+      const getPubkey = getPubkeysForIndices(state, validatorIndices);
+
+      const committeeAssignments = state.epochCtx.getCommitteeAssignments(epoch, validatorIndices);
+      const duties = committeeAssignments as routes.validator.AttesterDuty[];
+      for (const duty of duties) {
+        // Mutate existing object instead of re-creating another new object with spread operator
+        // Should be faster and require less memory
+        duty.pubkey = getPubkey(duty.validatorIndex);
       }
 
       const dependentRoot = attesterShufflingDecisionRoot(state, epoch) || (await getGenesisBlockRoot(state));
@@ -278,13 +279,14 @@ export function getValidatorApi({
 
       // Ensures `epoch // EPOCHS_PER_SYNC_COMMITTEE_PERIOD <= current_epoch // EPOCHS_PER_SYNC_COMMITTEE_PERIOD + 1`
       const syncComitteeValidatorIndexMap = getSyncComitteeValidatorIndexMap(state, epoch);
+      const getPubkey = getPubkeysForIndices(state, validatorIndices);
 
       const duties: routes.validator.SyncDuty[] = [];
       for (const validatorIndex of validatorIndices) {
         const validatorSyncCommitteeIndices = syncComitteeValidatorIndexMap.get(validatorIndex);
         if (validatorSyncCommitteeIndices) {
           duties.push({
-            pubkey: state.validators[validatorIndex].pubkey,
+            pubkey: getPubkey(validatorIndex),
             validatorIndex,
             validatorSyncCommitteeIndices,
           });
@@ -304,7 +306,7 @@ export function getValidatorApi({
       await waitForSlot(slot); // Must never request for a future slot > currentSlot
 
       return {
-        data: db.attestationPool.getAggregate(slot, attestationDataRoot),
+        data: chain.attestationPool.getAggregate(slot, attestationDataRoot),
       };
     },
 
@@ -317,22 +319,17 @@ export function getValidatorApi({
       await Promise.all(
         signedAggregateAndProofs.map(async (signedAggregateAndProof, i) => {
           try {
-            const attestation = signedAggregateAndProof.message.aggregate;
             // TODO: Validate in batch
-            const indexedAtt = await validateGossipAggregateAndProof(config, chain, db, signedAggregateAndProof, {
-              attestation: attestation,
-              validSignature: false,
-            });
+            const indexedAtt = await validateGossipAggregateAndProof(chain, signedAggregateAndProof);
 
             metrics?.registerAggregatedAttestation(OpSource.api, seenTimestampSec, signedAggregateAndProof, indexedAtt);
 
             await Promise.all([
               db.aggregateAndProof.add(signedAggregateAndProof.message),
-              db.seenAttestationCache.addAggregateAndProof(signedAggregateAndProof.message),
               network.gossip.publishBeaconAggregateAndProof(signedAggregateAndProof),
             ]);
           } catch (e) {
-            if (e instanceof AttestationError && e.type.code === AttestationErrorCode.AGGREGATE_ALREADY_KNOWN) {
+            if (e instanceof AttestationError && e.type.code === AttestationErrorCode.AGGREGATOR_ALREADY_KNOWN) {
               logger.debug("Ignoring known signedAggregateAndProof");
               return; // Ok to submit the same aggregate twice
             }

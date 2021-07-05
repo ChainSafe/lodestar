@@ -26,8 +26,6 @@ import {
   LatestFinalizedUpdate,
   LatestNonFinalizedUpdate,
 } from "./single";
-import {SeenAttestationCache} from "./seenAttestationCache";
-import {AttestationPool} from "./attestationPool";
 import {PendingBlockRepository} from "./repositories/pendingBlock";
 import {SyncCommitteeCache} from "./syncCommittee";
 import {SyncCommitteeContributionCache} from "./syncCommitteeContribution";
@@ -46,10 +44,6 @@ export interface IBeaconDb {
 
   // pending block
   pendingBlock: PendingBlockRepository;
-
-  // cache for partially aggregated attestations - also does caching for gossip validation
-  seenAttestationCache: SeenAttestationCache;
-  attestationPool: AttestationPool;
 
   // finalized blocks
   blockArchive: BlockArchiveRepository;

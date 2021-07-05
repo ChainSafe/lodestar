@@ -11,6 +11,7 @@ import {
 import {StubbedBeaconDb} from "../../../../../utils/stub";
 import {SinonStubbedInstance} from "sinon";
 import {IBeaconChain} from "../../../../../../src/chain";
+import {AttestationPool} from "../../../../../../src/chain/opsPool/attestationPool";
 import * as attesterSlashingValidation from "../../../../../../src/chain/validation/attesterSlashing";
 import * as proposerSlashingValidation from "../../../../../../src/chain/validation/proposerSlashing";
 import * as voluntaryExitValidation from "../../../../../../src/chain/validation/voluntaryExit";
@@ -33,11 +34,16 @@ describe("beacon pool api impl", function () {
   let validateGossipAttesterSlashing: SinonStubFn<typeof attesterSlashingValidation["validateGossipAttesterSlashing"]>;
   let validateGossipProposerSlashing: SinonStubFn<typeof proposerSlashingValidation["validateGossipProposerSlashing"]>;
   let validateVoluntaryExit: SinonStubFn<typeof voluntaryExitValidation["validateGossipVoluntaryExit"]>;
+  let attestationPool: SinonStubbedInstance<AttestationPool>;
 
   beforeEach(function () {
     const server = setupApiImplTestServer();
     dbStub = server.dbStub;
     chainStub = server.chainStub;
+    attestationPool = sinon.createStubInstance(AttestationPool);
+    ((chainStub as unknown) as {
+      attestationPool: SinonStubbedInstance<AttestationPool>;
+    }).attestationPool = attestationPool;
     gossipStub = sinon.createStubInstance(Eth2Gossipsub);
     gossipStub.publishAttesterSlashing = sinon.stub();
     gossipStub.publishProposerSlashing = sinon.stub();
@@ -63,13 +69,13 @@ describe("beacon pool api impl", function () {
 
   describe("getPoolAttestations", function () {
     it("no filters", async function () {
-      dbStub.attestationPool.getAll.returns([generateAttestation(), generateAttestation()]);
+      attestationPool.getAll.returns([generateAttestation(), generateAttestation()]);
       const {data: attestations} = await poolApi.getPoolAttestations();
       expect(attestations.length).to.be.equal(2);
     });
 
     it("with filters", async function () {
-      dbStub.attestationPool.getAll.returns([
+      attestationPool.getAll.returns([
         generateAttestation({data: generateAttestationData(0, 1, 0, 1)}),
         generateAttestation({data: generateAttestationData(0, 1, 1, 0)}),
         generateAttestation({data: generateAttestationData(0, 1, 3, 2)}),
