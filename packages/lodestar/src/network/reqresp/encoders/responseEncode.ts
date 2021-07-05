@@ -13,7 +13,7 @@ import {
   contextBytesTypeByProtocol,
   getResponseSzzTypeByMethod,
 } from "../types";
-import {IChainForkConfig} from "../../../../../config/lib";
+import {IChainForkConfig} from "@chainsafe/lodestar-config";
 
 /**
  * Yields byte chunks for a `<response>` with a zero response code `<result>`

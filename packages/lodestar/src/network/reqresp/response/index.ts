@@ -12,7 +12,7 @@ import {Libp2pStream} from "../interface";
 import {requestDecode} from "../encoders/requestDecode";
 import {responseEncodeError, responseEncodeSuccess} from "../encoders/responseEncode";
 import {ResponseError} from "./errors";
-import {IChainForkConfig} from "../../../../../config/lib";
+import {IChainForkConfig} from "@chainsafe/lodestar-config";
 
 export {ResponseError};
 

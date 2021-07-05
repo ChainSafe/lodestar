@@ -16,7 +16,7 @@ import {waitForEvent} from "../../../utils/events/resolver";
 import {testLogger} from "../../../utils/logger";
 import {getValidPeerId} from "../../../utils/peer";
 import {IAttnetsService} from "../../../../src/network/subnets";
-import {createIBeaconConfig} from "../../../../../config/lib";
+import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 
 const logger = testLogger();
 

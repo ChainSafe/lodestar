@@ -14,7 +14,7 @@ import {readLodestarGitData} from "../../util/gitData";
 import {FileENR, overwriteEnrWithCliArgs, readPeerId} from "../../config";
 import {initBeaconState} from "./initBeaconState";
 import {createDbMetrics} from "@chainsafe/lodestar/lib/metrics";
-import {createIBeaconConfig} from "../../../../config/lib";
+import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 
 /**
  * Run a beacon node

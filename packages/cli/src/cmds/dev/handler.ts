@@ -17,7 +17,7 @@ import {getBeaconPaths} from "../beacon/paths";
 import {getValidatorPaths} from "../validator/paths";
 import {interopSecretKey} from "@chainsafe/lodestar-beacon-state-transition";
 import {SecretKey} from "@chainsafe/bls";
-import {createIBeaconConfig} from "../../../../config/lib";
+import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 
 /**
  * Run a beacon node with validator

@@ -1,5 +1,5 @@
 import {allForks} from "@chainsafe/lodestar-types";
-import {IChainForkConfig} from "../../../../../config/lib";
+import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {byteArrayConcat} from "../../../util/bytes";
 
 /**

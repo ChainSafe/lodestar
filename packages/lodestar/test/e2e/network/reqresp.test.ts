@@ -22,7 +22,7 @@ import {expectRejectedWithLodestarError} from "../../utils/errors";
 import {connect, onPeerConnect} from "../../utils/network";
 import {StubbedBeaconDb} from "../../utils/stub";
 import {ForkName} from "@chainsafe/lodestar-params";
-import {createIBeaconConfig} from "../../../../config/lib";
+import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 
 chai.use(chaiAsPromised);
 

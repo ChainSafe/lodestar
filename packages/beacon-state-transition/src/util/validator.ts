@@ -5,7 +5,7 @@
 import {readonlyValues} from "@chainsafe/ssz";
 import {Epoch, phase0, ValidatorIndex, allForks} from "@chainsafe/lodestar-types";
 import {intDiv} from "@chainsafe/lodestar-utils";
-import {IChainForkConfig} from "../../../config/lib";
+import {IChainForkConfig} from "@chainsafe/lodestar-config";
 
 /**
  * Check if [[validator]] is active

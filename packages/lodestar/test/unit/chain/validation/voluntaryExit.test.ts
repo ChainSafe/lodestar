@@ -21,7 +21,7 @@ import {VoluntaryExitErrorCode} from "../../../../src/chain/errors/voluntaryExit
 import {expectRejectedWithLodestarError} from "../../../utils/errors";
 import {DOMAIN_VOLUNTARY_EXIT, FAR_FUTURE_EPOCH, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {PointFormat, SecretKey} from "@chainsafe/bls";
-import {createIBeaconConfig} from "../../../../../config/lib";
+import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 
 describe("validate voluntary exit", () => {
   const sandbox = sinon.createSandbox();

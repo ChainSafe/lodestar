@@ -20,7 +20,7 @@ import {StubbedBeaconDb} from "../../utils/stub";
 import {connect, disconnect, onPeerConnect, onPeerDisconnect} from "../../utils/network";
 import {testLogger} from "../../utils/logger";
 import {CommitteeSubscription} from "../../../src/network/subnets";
-import {createIBeaconConfig} from "../../../../config/lib";
+import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 
 const multiaddr = "/ip4/127.0.0.1/tcp/0";
 
