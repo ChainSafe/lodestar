@@ -91,7 +91,6 @@ export function computeMsgIdPhase0(
       } catch (e) {
         return hashGossipMsgData(MESSAGE_DOMAIN_INVALID_SNAPPY, msgData);
       }
-      break;
   }
 }
 

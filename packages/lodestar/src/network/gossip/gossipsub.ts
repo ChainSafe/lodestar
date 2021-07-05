@@ -127,6 +127,7 @@ export class Eth2Gossipsub extends Gossipsub {
   /**
    * @override https://github.com/ChainSafe/js-libp2p-gossipsub/blob/3c3c46595f65823fcd7900ed716f43f76c6b355c/ts/index.ts#L436
    * @override https://github.com/libp2p/js-libp2p-interfaces/blob/ff3bd10704a4c166ce63135747e3736915b0be8d/src/pubsub/index.js#L513
+   * Note: this does not call super. All logic is re-implemented below
    */
   async validate(message: InMessage): Promise<void> {
     try {
@@ -142,6 +143,10 @@ export class Eth2Gossipsub extends Gossipsub {
       }
       if (message.data.length > GOSSIP_MAX_SIZE) {
         throw new GossipValidationError(ERR_TOPIC_VALIDATOR_REJECT, "message.data too big");
+      }
+
+      if (message.from || message.signature || message.key || message.seqno) {
+        throw new GossipValidationError(ERR_TOPIC_VALIDATOR_REJECT, "StrictNoSigning invalid");
       }
 
       // We use 'StrictNoSign' policy, no need to validate message signature
