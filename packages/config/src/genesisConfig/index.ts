@@ -7,16 +7,15 @@ export function createICachedGenesis(chainForkConfig: IChainForkConfig, genesisV
   const domainCache = new Map<ForkName, Map<DomainType, Buffer>>();
   return {
     getDomain(domainType: DomainType, slot: Slot): Buffer {
-      const forkName = chainForkConfig.getForkName(slot);
-      let domainByType = domainCache.get(forkName);
+      const forkInfo = chainForkConfig.getForkInfo(slot);
+      let domainByType = domainCache.get(forkInfo.name);
       if (!domainByType) {
         domainByType = new Map<DomainType, Buffer>();
-        domainCache.set(forkName, domainByType);
+        domainCache.set(forkInfo.name, domainByType);
       }
       let domain = domainByType.get(domainType);
       if (!domain) {
-        const forkVersion = chainForkConfig.getForkVersion(slot);
-        domain = computeDomain(domainType, forkVersion, genesisValidatorsRoot);
+        domain = computeDomain(domainType, forkInfo.version, genesisValidatorsRoot);
         domainByType.set(domainType, domain);
       }
       return domain;
