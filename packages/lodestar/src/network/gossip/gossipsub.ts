@@ -125,34 +125,43 @@ export class Eth2Gossipsub extends Gossipsub {
   }
 
   /**
-   * @override
+   * @override https://github.com/ChainSafe/js-libp2p-gossipsub/blob/3c3c46595f65823fcd7900ed716f43f76c6b355c/ts/index.ts#L436
+   * @override https://github.com/libp2p/js-libp2p-interfaces/blob/ff3bd10704a4c166ce63135747e3736915b0be8d/src/pubsub/index.js#L513
    */
   async validate(message: InMessage): Promise<void> {
-    // messages must have a single topicID
-    const topicStr = (message.topicIDs || [])[0];
-
     try {
+      // messages must have a single topicID
+      const topicStr = (message.topicIDs || [])[0];
+
       // message sanity check
-      if (!topicStr || message.topicIDs.length > 1 || !message.data || message.data.length > GOSSIP_MAX_SIZE) {
-        // TODO: Why throw null here?
-        throw null;
+      if (!topicStr || message.topicIDs.length > 1) {
+        throw Error("Not exactly one topicID"); // REJECT
       }
+      if (!message.data) {
+        throw Error("No message.data"); // REJECT
+      }
+      if (message.data.length > GOSSIP_MAX_SIZE) {
+        throw Error("message.data too big"); // REJECT
+      }
+
+      // We use 'StrictNoSign' policy, no need to validate message signature
+
+      // Ensure we have a validate function associated with all topics.
+      // Otherwise super.validate() blindly accepts the object.
+      const validatorFn = this.topicValidators.get(topicStr);
+      if (!validatorFn) {
+        this.logger.error("No gossip validatorFn", {topic: topicStr});
+        throw new GossipValidationError(ERR_TOPIC_VALIDATOR_IGNORE, `No gossip validatorFn for topic ${topicStr}`);
+      }
+
+      // No error here means that the incoming object is valid
+      await validatorFn(topicStr, message);
     } catch (e) {
-      const err = new GossipValidationError(ERR_TOPIC_VALIDATOR_REJECT);
-      // must set gossip scores manually, since this usually happens in super.validate
-      this.score.rejectMessage(message, err.code);
-      this.gossipTracer.rejectMessage(message, err.code);
+      const code = e instanceof GossipValidationError ? e.code : ERR_TOPIC_VALIDATOR_REJECT;
+      this.score.rejectMessage(message, code);
+      this.gossipTracer.rejectMessage(message, code);
       throw e;
     }
-
-    // Ensure we have a validate function associated with all topics.
-    // Otherwise super.validate() blindly accepts the object.
-    if (!this.topicValidators.get(topicStr)) {
-      this.logger.error("No gossip validator function", {topic: topicStr});
-      throw new GossipValidationError(ERR_TOPIC_VALIDATOR_IGNORE);
-    }
-
-    await super.validate(message); // No error here means that the incoming object is valid
   }
 
   /**
