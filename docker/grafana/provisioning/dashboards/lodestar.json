@@ -6059,10 +6059,10 @@
           "pluginVersion": "7.4.5",
           "targets": [
             {
-              "expr": "lodestar_gossip_mesh_peers_by_type{gossipType!~\"beacon_attestation\"}",
+              "expr": "lodestar_gossip_mesh_peers_by_type{type!~\"beacon_attestation\"}",
               "format": "time_series",
               "interval": "",
-              "legendFormat": "{{gossipType}}",
+              "legendFormat": "{{type}}",
               "refId": "A"
             }
           ],

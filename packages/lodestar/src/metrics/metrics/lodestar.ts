@@ -69,20 +69,20 @@ export function createLodestarMetrics(
       help: "Total number of unique peers that have had a connection with",
     }),
 
-    gossipMeshPeersByType: register.gauge<"gossipType">({
+    gossipMeshPeersByType: register.gauge<"type" | "fork">({
       name: "lodestar_gossip_mesh_peers_by_type",
       help: "Number of connected mesh peers per gossip type",
-      labelNames: ["gossipType"],
+      labelNames: ["type", "fork"],
     }),
-    gossipMeshPeersByBeaconAttestationSubnet: register.gauge<"subnet">({
+    gossipMeshPeersByBeaconAttestationSubnet: register.gauge<"subnet" | "fork">({
       name: "lodestar_gossip_mesh_peers_by_beacon_attestation_subnet",
       help: "Number of connected mesh peers per beacon attestation subnet",
-      labelNames: ["subnet"],
+      labelNames: ["subnet", "fork"],
     }),
-    gossipMeshPeersBySyncCommitteeSubnet: register.gauge<"subnet">({
+    gossipMeshPeersBySyncCommitteeSubnet: register.gauge<"subnet" | "fork">({
       name: "lodestar_gossip_mesh_peers_by_sync_committee_subnet",
       help: "Number of connected mesh peers per sync committee subnet",
-      labelNames: ["subnet"],
+      labelNames: ["subnet", "fork"],
     }),
 
     gossipValidationAccept: register.gauge<"topic">({
