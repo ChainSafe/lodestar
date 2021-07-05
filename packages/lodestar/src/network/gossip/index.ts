@@ -1,7 +1,3 @@
-export * from "./gossipsub";
-export * from "./validator";
+export {Eth2Gossipsub} from "./gossipsub";
+export {GossipHandlers, getGossipHandlers} from "./handlers";
 export * from "./interface";
-export * from "./topic";
-export * from "./constants";
-export * from "./errors";
-export * from "./encoding";

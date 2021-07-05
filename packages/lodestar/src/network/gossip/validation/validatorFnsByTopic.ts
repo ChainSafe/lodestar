@@ -3,39 +3,31 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IForkDigestContext} from "../../../util/forkDigestContext";
 import {stringifyGossipTopic} from "../topic";
 import {DEFAULT_ENCODING} from "../constants";
-import {
-  GossipType,
-  TopicValidatorFn,
-  GossipTopic,
-  ValidatorFnsByTopic,
-  ValidatorFnsByType,
-  TopicsByTopicStrMap,
-} from "../interface";
+import {GossipType, GossipValidatorFn, GossipTopic, ValidatorFnsByType} from "../interface";
 
-// Gossip validation functions are wrappers around chain-level validation functions
-// With a few additional elements:
-//
-// - Gossip error handling - chain-level validation throws eg: `BlockErrorCode` with many possible error types.
-//   Gossip validation functions instead throw either "ignore" or "reject" errors.
-//
-// - Logging - chain-level validation has no logging.
-//   For gossip, its useful to know, via logs/metrics, when gossip is received/ignored/rejected.
-//
-// - Gossip type conversion - Gossip validation functions operate on messages of binary data.
-//   This data must be deserialized into the proper type, determined by the topic (fork digest)
-//   This deserialization must have happened prior to the topic validator running.
-
+/**
+ * Associate a GossipValidator function to every possible topic that the node may subscribe too.
+ *
+ * GossipSub gets validator functions from the Map Eth2Gossipsub.topicValidators by message topicStr.
+ * https://github.com/libp2p/js-libp2p-interfaces/blob/ff3bd10704a4c166ce63135747e3736915b0be8d/src/pubsub/index.js#L525
+ *
+ * Eth2Gossipsub MUST customize the validate() function above to ensure all validator functions are registered.
+ *
+ * Note: topics of the same type share validator functions
+ * ```ts
+ * '/eth2/0011aabb/beacon_attestation_0/ssz_snappy' -> ValidatorFnsByType[GossipType.beacon_attestation]
+ * '/eth2/0011aabb/beacon_attestation_1/ssz_snappy' -> ValidatorFnsByType[GossipType.beacon_attestation]
+ * ```
+ */
 export function createValidatorFnsByTopic(
   config: IBeaconConfig,
   forkDigestContext: IForkDigestContext,
   validatorFnsByType: ValidatorFnsByType
-): {validatorFnsByTopic: ValidatorFnsByTopic; topicsByTopicStr: TopicsByTopicStrMap} {
-  const validatorFnsByTopic = new Map<string, TopicValidatorFn>();
-  const topicsByTopicStr = new Map<string, Required<GossipTopic>>();
+): Map<string, GossipValidatorFn> {
+  const validatorFnsByTopic = new Map<string, GossipValidatorFn>();
 
   const encoding = DEFAULT_ENCODING;
   const allForkNames = Object.values(config.forks).map((fork) => fork.name);
-  // TODO: Compute all forks after altair including altair
   const allForksAfterAltair = allForkNames.filter((fork) => fork !== ForkName.phase0);
 
   const staticGossipTypes = [
@@ -53,7 +45,6 @@ export function createValidatorFnsByTopic(
       const topic = {type, fork, encoding} as Required<GossipTopic>;
       const topicStr = stringifyGossipTopic(forkDigestContext, topic);
       validatorFnsByTopic.set(topicStr, validatorFnsByType[type]);
-      topicsByTopicStr.set(topicStr, topic);
     }
   }
 
@@ -63,7 +54,6 @@ export function createValidatorFnsByTopic(
       const topicStr = stringifyGossipTopic(forkDigestContext, topic);
       const topicValidatorFn = validatorFnsByType[GossipType.beacon_attestation];
       validatorFnsByTopic.set(topicStr, topicValidatorFn);
-      topicsByTopicStr.set(topicStr, topic);
     }
   }
 
@@ -73,9 +63,8 @@ export function createValidatorFnsByTopic(
       const topicStr = stringifyGossipTopic(forkDigestContext, topic);
       const topicValidatorFn = validatorFnsByType[GossipType.sync_committee];
       validatorFnsByTopic.set(topicStr, topicValidatorFn);
-      topicsByTopicStr.set(topicStr, topic);
     }
   }
 
-  return {validatorFnsByTopic, topicsByTopicStr};
+  return validatorFnsByTopic;
 }

@@ -2,8 +2,9 @@ import {expect} from "chai";
 import {config} from "@chainsafe/lodestar-config/default";
 import {ForkName} from "@chainsafe/lodestar-params";
 import {ssz} from "@chainsafe/lodestar-types";
-import {stringifyGossipTopic, GossipType, GossipEncoding, GossipTopicMap} from "../../../../src/network/gossip";
+import {GossipType, GossipEncoding, GossipTopicMap} from "../../../../src/network/gossip";
 import {ForkDigestContext} from "../../../../src/util/forkDigestContext";
+import {parseGossipTopic, stringifyGossipTopic} from "../../../../src/network/gossip/topic";
 
 describe("network / gossip / topic", function () {
   const genesisValidatorsRoot = ssz.Root.defaultValue();
@@ -70,6 +71,32 @@ describe("network / gossip / topic", function () {
         const topicStrRes = stringifyGossipTopic(forkDigestContext, topic);
         expect(topicStrRes).to.equal(topicStr);
       });
+
+      it(`should decode gossip topic ${topicStr}`, async () => {
+        const outputTopic = parseGossipTopic(forkDigestContext, topicStr);
+        expect(outputTopic).to.deep.equal(topic);
+      });
     }
+  }
+
+  const badTopicStrings: string[] = [
+    // completely invalid
+    "/different/protocol/entirely",
+    // invalid fork digest
+    "/eth2/ffffffff/beacon_attestation_5/ssz_snappy",
+    // invalid gossip type
+    "/eth2/18ae4ccb/beacon_attestation_foo/ssz_snappy",
+    // invalid gossip type
+    "/eth2/18ae4ccb/something_different/ssz_snappy",
+    "/eth2/18ae4ccb/beacon_attestation/ssz_snappy",
+    "/eth2/18ae4ccb/beacon_attestation_/ssz_snappy",
+    "/eth2/18ae4ccb/beacon_attestation_PP/ssz_snappy",
+    // invalid encoding
+    "/eth2/18ae4ccb/beacon_attestation_5/ssz_supersnappy",
+  ];
+  for (const topicStr of badTopicStrings) {
+    it(`should fail to decode invalid gossip topic string ${topicStr}`, async () => {
+      expect(() => parseGossipTopic(forkDigestContext, topicStr), topicStr).to.throw();
+    });
   }
 });

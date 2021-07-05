@@ -8,7 +8,7 @@ import {IForkDigestContext} from "../../util/forkDigestContext";
 import {IPeerMetadataStore, IPeerRpcScoreStore} from "../peers";
 import {MetadataController} from "../metadata";
 import {INetworkEventBus} from "../events";
-import {IReqRespHandler} from "./handlers";
+import {ReqRespHandlers} from "./handlers";
 import {IMetrics} from "../../metrics";
 
 export interface IReqResp {
@@ -31,7 +31,7 @@ export interface IReqRespModules {
   logger: ILogger;
   forkDigestContext: IForkDigestContext;
   metadata: MetadataController;
-  reqRespHandlers: IReqRespHandler;
+  reqRespHandlers: ReqRespHandlers;
   peerMetadata: IPeerMetadataStore;
   peerRpcScores: IPeerRpcScoreStore;
   networkEventBus: INetworkEventBus;

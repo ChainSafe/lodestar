@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import Gossipsub from "libp2p-gossipsub";
 import {ERR_TOPIC_VALIDATOR_IGNORE, ERR_TOPIC_VALIDATOR_REJECT} from "libp2p-gossipsub/src/constants";
+import {InMessage} from "libp2p-interfaces/src/pubsub";
 import Libp2p from "libp2p";
 import {AbortSignal} from "@chainsafe/abort-controller";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
@@ -18,9 +19,8 @@ import {GossipValidationError} from "./errors";
 import {IForkDigestContext} from "../../util/forkDigestContext";
 import {GOSSIP_MAX_SIZE} from "../../constants";
 import {createValidatorFnsByTopic} from "./validation/validatorFnsByTopic";
-import {createValidatorFnsByType} from "./validator";
-import {GossipValidatorFns} from "./validation/validatorFns";
-import {InMessage} from "libp2p-interfaces/src/pubsub";
+import {createValidatorFnsByType} from "./validation";
+import {GossipHandlers} from "./handlers";
 
 interface IGossipsubModules {
   config: IBeaconConfig;
@@ -29,7 +29,7 @@ interface IGossipsubModules {
   metrics: IMetrics | null;
   signal: AbortSignal;
   forkDigestContext: IForkDigestContext;
-  gossipHandlers: GossipValidatorFns;
+  gossipHandlers: GossipHandlers;
 }
 
 /**
@@ -51,7 +51,7 @@ export class Eth2Gossipsub extends Gossipsub {
   private readonly logger: ILogger;
 
   // Internal caches
-  private readonly topicsCache = new GossipTopicCache();
+  private readonly gossipTopicCache: GossipTopicCache;
   private readonly uncompressCache = new UncompressCache();
   private readonly msgIdCache = new WeakMap<InMessage, Uint8Array>();
 
@@ -70,35 +70,25 @@ export class Eth2Gossipsub extends Gossipsub {
     this.config = config;
     this.forkDigestContext = forkDigestContext;
     this.logger = logger;
+    this.gossipTopicCache = new GossipTopicCache(forkDigestContext);
 
     // Note: We use the validator functions as handlers. No handler will be registered to gossipsub.
     // libp2p-js layer will emit the message to an EventEmitter that won't be listened by anyone.
     // TODO: Force to ensure there's a validatorFunction attached to every received topic.
-    const validatorFnsByType = createValidatorFnsByType(
-      gossipHandlers,
+    const validatorFnsByType = createValidatorFnsByType(gossipHandlers, {
       config,
       logger,
-      this.uncompressCache,
-      this.topicsCache,
+      uncompressCache: this.uncompressCache,
+      gossipTopicCache: this.gossipTopicCache,
       metrics,
-      signal
-    );
+      signal,
+    });
 
-    const {validatorFnsByTopic, topicsByTopicStr} = createValidatorFnsByTopic(
-      config,
-      forkDigestContext,
-      validatorFnsByType
-    );
+    const validatorFnsByTopic = createValidatorFnsByTopic(config, forkDigestContext, validatorFnsByType);
 
     // Register validator functions for all topics, forks and encodings
     for (const [topicStr, validatorFn] of validatorFnsByTopic.entries()) {
       this.topicValidators.set(topicStr, validatorFn);
-    }
-
-    // TODO: Can we just register to the topic cache in `this.subscribeTopic()`?
-    // Register topic cache for all topics with validator functions
-    for (const [topicStr, topic] of topicsByTopicStr.entries()) {
-      this.topicsCache.setTOpic(topicStr, topic);
     }
 
     if (metrics) {
@@ -127,7 +117,7 @@ export class Eth2Gossipsub extends Gossipsub {
     let msgId = this.msgIdCache.get(msg);
     if (!msgId) {
       const topicStr = msg.topicIDs[0];
-      const topic = this.topicsCache.getTopic(topicStr);
+      const topic = this.gossipTopicCache.getTopic(topicStr);
       msgId = computeMsgId(topic, topicStr, msg.data, this.uncompressCache);
       this.msgIdCache.set(msg, msgId);
     }
@@ -210,6 +200,9 @@ export class Eth2Gossipsub extends Gossipsub {
    */
   subscribeTopic(topic: GossipTopic): void {
     const topicStr = this.getGossipTopicString(topic);
+    // Register known topicStr
+    this.gossipTopicCache.setTopic(topicStr, topic);
+
     this.logger.verbose("Subscribe to gossipsub topic", {topic: topicStr});
     this.subscribe(topicStr);
   }
@@ -296,7 +289,7 @@ export class Eth2Gossipsub extends Gossipsub {
     }
     // loop through all mesh entries, count each set size
     for (const [topicString, peers] of this.mesh.entries()) {
-      const topic = this.topicsCache.getTopic(topicString);
+      const topic = this.gossipTopicCache.getTopic(topicString);
       if (topic.type === GossipType.beacon_attestation) {
         metrics.gossipMeshPeersByBeaconAttestationSubnet.set({subnet: subnetLabel(topic.subnet)}, peers.size);
       } else {

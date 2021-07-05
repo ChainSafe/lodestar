@@ -1,9 +1,11 @@
 import {AbortSignal} from "@chainsafe/abort-controller";
 import {IMetrics} from "../../../metrics";
 import {JobQueue, JobQueueOpts, QueueType} from "../../../util/queue";
-import {GossipType, TopicValidatorFn} from "../interface";
+import {GossipType, GossipValidatorFn} from "../interface";
 
-// Numbers from https://github.com/sigp/lighthouse/blob/b34a79dc0b02e04441ba01fd0f304d1e203d877d/beacon_node/network/src/beacon_processor/mod.rs#L69
+/**
+ * Numbers from https://github.com/sigp/lighthouse/blob/b34a79dc0b02e04441ba01fd0f304d1e203d877d/beacon_node/network/src/beacon_processor/mod.rs#L69
+ */
 const gossipQueueOpts: {[K in GossipType]: Pick<JobQueueOpts, "maxLength" | "type" | "maxConcurrency">} = {
   [GossipType.beacon_block]: {maxLength: 1024, type: QueueType.FIFO},
   // this is different from lighthouse's, there are more gossip aggregate_and_proof than gossip block
@@ -17,15 +19,27 @@ const gossipQueueOpts: {[K in GossipType]: Pick<JobQueueOpts, "maxLength" | "typ
 };
 
 /**
- * Wraps an ObjectValidatorFn as a TopicValidatorFn
- * See TopicValidatorFn here https://github.com/libp2p/js-libp2p-interfaces/blob/v0.5.2/src/pubsub/index.js#L529
+ * Wraps a GossipValidatorFn with a queue, to limit the processing of gossip objects by type.
+ *
+ * A queue here is essential to protect against DOS attacks, where a peer may send many messages at once.
+ * Queues also protect the node against overloading. If the node gets bussy with an expensive epoch transition,
+ * it may buffer too many gossip objects causing an Out of memory (OOM) error. With a queue the node will reject
+ * new objects to fit its current throughput.
+ *
+ * Queues may buffer objects by
+ *  - topic '/eth2/0011aabb/beacon_attestation_0/ssz_snappy'
+ *  - type `GossipType.beacon_attestation`
+ *  - all objects in one queue
+ *
+ * By topic is too specific, so by type groups all similar objects in the same queue. All in the same won't allow
+ * to customize different queue behaviours per object type (see `gossipQueueOpts`).
  */
 export function wrapWithQueue(
-  gossipMessageHandler: TopicValidatorFn,
+  gossipValidatorFn: GossipValidatorFn,
   type: GossipType,
   signal: AbortSignal,
   metrics: IMetrics | null
-): TopicValidatorFn {
+): GossipValidatorFn {
   const jobQueue = new JobQueue(
     {signal, ...gossipQueueOpts[type]},
     metrics
@@ -39,6 +53,6 @@ export function wrapWithQueue(
   );
 
   return async function (topicStr, gossipMsg) {
-    await jobQueue.push(async () => gossipMessageHandler(topicStr, gossipMsg));
+    await jobQueue.push(async () => gossipValidatorFn(topicStr, gossipMsg));
   };
 }

@@ -19,7 +19,7 @@ import {IPeerMetadataStore, IPeerRpcScoreStore} from "../peers";
 import {assertSequentialBlocksInRange, formatProtocolId} from "./utils";
 import {MetadataController} from "../metadata";
 import {INetworkEventBus, NetworkEvent} from "../events";
-import {IReqRespHandler} from "./handlers";
+import {ReqRespHandlers} from "./handlers";
 import {IMetrics} from "../../metrics";
 import {RequestError, RequestErrorCode} from "./request";
 import {
@@ -45,7 +45,7 @@ export class ReqResp implements IReqResp {
   private libp2p: LibP2p;
   private logger: ILogger;
   private forkDigestContext: IForkDigestContext;
-  private reqRespHandlers: IReqRespHandler;
+  private reqRespHandlers: ReqRespHandlers;
   private metadataController: MetadataController;
   private peerMetadata: IPeerMetadataStore;
   private peerRpcScores: IPeerRpcScoreStore;

@@ -8,20 +8,15 @@ import {config} from "@chainsafe/lodestar-config/default";
 import {ForkName} from "@chainsafe/lodestar-params";
 import {ssz} from "@chainsafe/lodestar-types";
 
-import {
-  Eth2Gossipsub,
-  stringifyGossipTopic,
-  GossipType,
-  GossipValidationError,
-  encodeMessageData,
-  GossipEncoding,
-} from "../../../../src/network/gossip";
+import {Eth2Gossipsub, GossipHandlers, GossipType, GossipEncoding} from "../../../../src/network/gossip";
+import {stringifyGossipTopic} from "../../../../src/network/gossip/topic";
+import {ForkDigestContext} from "../../../../src/util/forkDigestContext";
+import {encodeMessageData} from "../../../../src/network/gossip/encoding";
+import {GossipValidationError} from "../../../../src/network/gossip/errors";
 
 import {generateEmptySignedBlock} from "../../../utils/block";
 import {createNode} from "../../../utils/network";
 import {testLogger} from "../../../utils/logger";
-import {ForkDigestContext} from "../../../../src/util/forkDigestContext";
-import {GossipValidatorFns} from "../../../../src/network/gossip/validation/validatorFns";
 
 describe("network / gossip / validation", function () {
   const logger = testLogger();
@@ -55,7 +50,7 @@ describe("network / gossip / validation", function () {
   });
 
   it("should throw on failed validation", async () => {
-    const gossipHandlersPartial: Partial<GossipValidatorFns> = {
+    const gossipHandlersPartial: Partial<GossipHandlers> = {
       [gossipType]: async () => {
         throw new GossipValidationError(ERR_TOPIC_VALIDATOR_REJECT);
       },
@@ -63,7 +58,7 @@ describe("network / gossip / validation", function () {
 
     const gossipSub = new Eth2Gossipsub({
       config,
-      gossipHandlers: gossipHandlersPartial as GossipValidatorFns,
+      gossipHandlers: gossipHandlersPartial as GossipHandlers,
       logger,
       forkDigestContext,
       libp2p,
@@ -80,7 +75,7 @@ describe("network / gossip / validation", function () {
   });
 
   it("should not throw on successful validation", async () => {
-    const gossipHandlersPartial: Partial<GossipValidatorFns> = {
+    const gossipHandlersPartial: Partial<GossipHandlers> = {
       [gossipType]: async () => {
         throw new GossipValidationError(ERR_TOPIC_VALIDATOR_REJECT);
       },
@@ -88,7 +83,7 @@ describe("network / gossip / validation", function () {
 
     const gossipSub = new Eth2Gossipsub({
       config,
-      gossipHandlers: gossipHandlersPartial as GossipValidatorFns,
+      gossipHandlers: gossipHandlersPartial as GossipHandlers,
       logger,
       forkDigestContext,
       libp2p,

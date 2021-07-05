@@ -13,19 +13,17 @@ import {Discv5Discovery, ENR} from "@chainsafe/discv5";
 import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {Epoch} from "@chainsafe/lodestar-types";
 import {IMetrics} from "../metrics";
-import {ReqResp, IReqResp, IReqRespOptions} from "./reqresp";
+import {ChainEvent, IBeaconChain, IBeaconClock} from "../chain";
+import {IBeaconDb} from "../db";
 import {INetworkOptions} from "./options";
 import {INetwork} from "./interface";
-import {ChainEvent, IBeaconChain, IBeaconClock} from "../chain";
+import {ReqResp, IReqResp, IReqRespOptions, ReqRespHandlers} from "./reqresp";
+import {Eth2Gossipsub, GossipType, GossipHandlers} from "./gossip";
 import {MetadataController} from "./metadata";
 import {getActiveForks, getCurrentAndNextFork, FORK_EPOCH_LOOKAHEAD} from "./forks";
 import {IPeerMetadataStore, Libp2pPeerMetadataStore} from "./peers/metastore";
 import {PeerManager} from "./peers/peerManager";
 import {IPeerRpcScoreStore, PeerRpcScoreStore} from "./peers";
-import {IBeaconDb} from "../db";
-import {Eth2Gossipsub, GossipType} from "./gossip";
-import {GossipValidatorFns} from "./gossip/validation/validatorFns";
-import {IReqRespHandler} from "./reqresp/handlers";
 import {INetworkEventBus, NetworkEventBus} from "./events";
 import {AttnetsService, SyncnetsService, CommitteeSubscription} from "./subnets";
 
@@ -36,8 +34,8 @@ interface INetworkModules {
   metrics: IMetrics | null;
   chain: IBeaconChain;
   db: IBeaconDb;
-  reqRespHandlers: IReqRespHandler;
-  gossipHandlers: GossipValidatorFns;
+  reqRespHandlers: ReqRespHandlers;
+  gossipHandlers: GossipHandlers;
   signal: AbortSignal;
 }
 

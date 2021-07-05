@@ -7,7 +7,7 @@ import {sleep} from "@chainsafe/lodestar-utils";
 
 import {getReqRespHandlers, Network} from "../../../src/network";
 import {INetworkOptions} from "../../../src/network/options";
-import {GossipValidatorFns} from "../../../src/network/gossip/validation/validatorFns";
+import {GossipHandlers} from "../../../src/network/gossip/handlers";
 import {GossipType} from "../../../src/network/gossip";
 
 import {generateEmptySignedBlock} from "../../utils/block";
@@ -41,7 +41,7 @@ describe("network", function () {
   });
 
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  async function mockModules(gossipHandlersPartial?: Partial<GossipValidatorFns>) {
+  async function mockModules(gossipHandlersPartial?: Partial<GossipHandlers>) {
     const controller = new AbortController();
 
     const block = generateEmptySignedBlock();
@@ -55,7 +55,7 @@ describe("network", function () {
     const chain = new MockBeaconChain({genesisTime: 0, chainId: 0, networkId: BigInt(0), state, config});
     const db = new StubbedBeaconDb(sinon, config);
     const reqRespHandlers = getReqRespHandlers({db, chain});
-    const gossipHandlers = gossipHandlersPartial as GossipValidatorFns;
+    const gossipHandlers = gossipHandlersPartial as GossipHandlers;
 
     const [libp2pA, libp2pB] = await Promise.all([createNode(multiaddr), createNode(multiaddr)]);
     const loggerA = testLogger("A");
