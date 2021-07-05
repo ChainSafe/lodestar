@@ -143,11 +143,9 @@ function aggregateContributionInto(
     if (participated) {
       const syncCommitteeIndex = indexOffset + index;
       if (aggregate.syncCommitteeBits[syncCommitteeIndex] === true) {
-        throw new SyncContributionError({
-          code: SyncContributionErrorCode.ALREADY_KNOWN,
-          syncCommitteeIndex,
-          slot: contribution.slot,
-        });
+        // there are multiple SyncCommitteeContribution messaages of the same sub committee
+        // this means we aggregated a contribution of same sub committee already
+        return;
       }
 
       aggregate.syncCommitteeBits[syncCommitteeIndex] = true;
