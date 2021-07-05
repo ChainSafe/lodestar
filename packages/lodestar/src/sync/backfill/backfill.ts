@@ -3,16 +3,16 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {GENESIS_EPOCH} from "@chainsafe/lodestar-params";
 import {phase0, Root, Slot} from "@chainsafe/lodestar-types";
 import {SignedBeaconBlock} from "@chainsafe/lodestar-types/lib/allForks";
-import {ErrorAborted, ILogger, LodestarError} from "@chainsafe/lodestar-utils";
+import {ErrorAborted, ILogger} from "@chainsafe/lodestar-utils";
 import {List} from "@chainsafe/ssz";
 import PeerId from "peer-id";
-import {ItTrigger} from "../../../lib/util/itTrigger";
 import {IBeaconChain} from "../../chain";
 import {getMinEpochForBlockRequests} from "../../constants";
 import {IBeaconDb} from "../../db";
-import {INetwork, NetworkEvent} from "../../network";
+import {INetwork, NetworkEvent, PeerAction} from "../../network";
+import {ItTrigger} from "../../util/itTrigger";
 import {PeerMap} from "../../util/peerMap";
-import {ChainTarget, SyncChainFns} from "../range/chain";
+import {ChainTarget} from "../range/chain";
 import {BackfillSyncError, BackfillSyncErrorCode} from "./errors";
 import {getRandomPeer} from "./util";
 import {verifyBlocks} from "./verify";
@@ -109,7 +109,7 @@ export class BackfillSync {
           }
         } else {
           try {
-            await this.syncBlock(this.chain.getHeadState().latestBlockHeader.parentRoot);
+            await this.syncBlock(this.chain.getFinalizedCheckpoint().root);
           } catch (e) {
             this.logger.debug("Error while backfilling anchor block", e);
           }
@@ -135,6 +135,7 @@ export class BackfillSync {
    * Remove this peer from all sync chains
    */
   private removePeer(peerId: PeerId): void {
+    this.network.peerRpcScores.applyAction(peerId, PeerAction.MidToleranceError);
     this.peers.delete(peerId);
   }
 
@@ -151,14 +152,13 @@ export class BackfillSync {
       } catch (e) {
         throw new BackfillSyncError({code: BackfillSyncErrorCode.INVALID_SIGNATURE});
       }
-
       await this.db.blockArchive.put(block.message.slot, block);
       this.anchorBlock = block;
-      this.processor.trigger();
     } catch (e) {
-      this.peers.delete(peer);
-      setTimeout(this.processor.trigger, 2000);
+      this.removePeer(peer);
       throw e;
+    } finally {
+      this.processor.trigger();
     }
   }
 
@@ -169,14 +169,14 @@ export class BackfillSync {
       await verifyBlocks(this.config, this.chain.bls, this.chain.getHeadState(), blocks, anchorRoot);
       await this.db.blockArchive.batchAdd(blocks);
       this.anchorBlock = blocks[blocks.length - 1];
-      this.processor.trigger();
     } catch (e) {
       if ((e as BackfillSyncError).type.code === BackfillSyncErrorCode.NOT_ANCHORED) {
         this.lastFetchedSlot = this.anchorBlock?.message.slot ?? null;
       }
-      this.peers.delete(peer);
-      setTimeout(this.processor.trigger, 2000);
+      this.removePeer(peer);
       throw e;
+    } finally {
+      this.processor.trigger();
     }
   }
 }

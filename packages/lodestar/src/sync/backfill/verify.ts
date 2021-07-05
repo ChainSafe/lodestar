@@ -16,7 +16,6 @@ export async function verifyBlocks(
     return;
   }
   const nextRoot: Root = anchorRoot;
-  const signatures: ReturnType<typeof allForks["getProposerSignatureSet"]>[] = [];
   for (const block of blocks.reverse()) {
     if (
       !config.types.Root.equals(
@@ -29,8 +28,8 @@ export async function verifyBlocks(
       }
       throw new BackfillSyncError({code: BackfillSyncErrorCode.NOT_LINEAR});
     }
-    signatures.push(allForks.getProposerSignatureSet(state, block));
   }
+  const signatures = blocks.map((block) => allForks.getProposerSignatureSet(state, block));
   if (!(await bls.verifySignatureSets(signatures))) {
     throw new BackfillSyncError({code: BackfillSyncErrorCode.INVALID_SIGNATURE});
   }
