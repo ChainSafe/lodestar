@@ -1,13 +1,9 @@
-import {config} from "@chainsafe/lodestar-config/default";
 import {generateSignedBlock} from "../../../utils/block";
 import {groupBlocksByEpoch} from "../../../../src/chain/blocks/util";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {expect} from "chai";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 
 describe("chain / blocks / util / groupBlocksByEpoch", function () {
-  const fastConfig: IBeaconConfig = config;
-
   const testCases: {id: string; blocksSlot: number[]; blocksByEpochSlot: number[][]}[] = [
     {
       id: "Regular segment with all slots",
@@ -45,7 +41,7 @@ describe("chain / blocks / util / groupBlocksByEpoch", function () {
   for (const {id, blocksSlot, blocksByEpochSlot} of testCases) {
     it(id, () => {
       const blocks = blocksSlot.map((slot) => generateSignedBlock({message: {slot}}));
-      const blocksByEpoch = groupBlocksByEpoch(fastConfig, blocks);
+      const blocksByEpoch = groupBlocksByEpoch(blocks);
 
       expect(blocksByEpoch.map((blockInEpoch) => blockInEpoch.map((block) => block.message.slot))).to.deep.equal(
         blocksByEpochSlot

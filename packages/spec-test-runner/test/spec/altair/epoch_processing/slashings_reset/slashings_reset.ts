@@ -7,12 +7,12 @@ import {altair as altairTypes, ssz} from "@chainsafe/lodestar-types";
 import {SPEC_TEST_LOCATION} from "../../../../utils/specTestCases";
 import {IAltairStateTestCase} from "../../stateTestCase";
 import {TreeBacked} from "@chainsafe/ssz";
-import {createIBeaconConfig} from "@chainsafe/lodestar-config";
+import {createIChainForkConfig} from "@chainsafe/lodestar-config";
 import {PresetName} from "@chainsafe/lodestar-params";
 
 export function runSlashingsReset(presetName: PresetName): void {
   // eslint-disable-next-line @typescript-eslint/naming-convention
-  const config = createIBeaconConfig({ALTAIR_FORK_EPOCH: 0});
+  const config = createIChainForkConfig({ALTAIR_FORK_EPOCH: 0});
 
   describeDirectorySpecTest<IAltairStateTestCase, altairTypes.BeaconState>(
     `altair epoch slashings reset ${presetName}`,

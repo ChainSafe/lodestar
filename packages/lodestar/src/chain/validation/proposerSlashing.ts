@@ -1,11 +1,9 @@
 import {phase0, allForks} from "@chainsafe/lodestar-beacon-state-transition";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBeaconChain} from "..";
 import {ProposerSlashingError, ProposerSlashingErrorCode} from "../errors/proposerSlashingError";
 import {IBeaconDb} from "../../db";
 
 export async function validateGossipProposerSlashing(
-  config: IBeaconConfig,
   chain: IBeaconChain,
   db: IBeaconDb,
   proposerSlashing: phase0.ProposerSlashing

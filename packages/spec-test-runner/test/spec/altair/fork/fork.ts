@@ -54,7 +54,7 @@ export function runFork(presetName: PresetName): void {
       shouldError: (testCase) => !testCase.post,
       getExpected: (testCase) => testCase.post,
       expectFunc: (testCase, expected, actual) => {
-        expectEqualBeaconState(config, expected, actual);
+        expectEqualBeaconState(expected, actual);
       },
     }
   );

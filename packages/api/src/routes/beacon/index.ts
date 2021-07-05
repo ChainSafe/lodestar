@@ -1,4 +1,4 @@
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {phase0, ssz} from "@chainsafe/lodestar-types";
 import {RoutesData, ReturnTypes, reqEmpty, ContainerData} from "../../utils";
 import * as block from "./block";
@@ -44,7 +44,7 @@ export type ReqTypes = {
 };
 
 // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types, @typescript-eslint/explicit-function-return-type
-export function getReqSerializers(config: IBeaconConfig) {
+export function getReqSerializers(config: IChainForkConfig) {
   return {
     getGenesis: reqEmpty,
     ...block.getReqSerializers(config),

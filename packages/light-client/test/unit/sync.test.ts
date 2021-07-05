@@ -1,7 +1,7 @@
 import {expect} from "chai";
 import {SecretKey} from "@chainsafe/bls";
 import {chainConfig} from "@chainsafe/lodestar-config/default";
-import {createIBeaconConfig} from "@chainsafe/lodestar-config";
+import {createIChainForkConfig} from "@chainsafe/lodestar-config";
 import {toHexString} from "@chainsafe/ssz";
 import {WinstonLogger} from "@chainsafe/lodestar-utils";
 import {altair, Root, Slot, ssz, SyncPeriod} from "@chainsafe/lodestar-types";
@@ -36,7 +36,7 @@ describe("Lightclient flow with LightClientUpdater", () => {
     ...chainConfig,
     ALTAIR_FORK_EPOCH: 0,
   };
-  const config = createIBeaconConfig(customConfig);
+  const config = createIChainForkConfig(customConfig);
 
   // Compute all periods until toSlot
   const lastPeriod = computeSyncPeriodAtSlot(toSlot);

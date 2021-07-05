@@ -20,6 +20,7 @@ import {StubbedBeaconDb} from "../../utils/stub";
 import {connect, disconnect, onPeerConnect, onPeerDisconnect} from "../../utils/network";
 import {testLogger} from "../../utils/logger";
 import {CommitteeSubscription} from "../../../src/network/subnets";
+import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 
 const multiaddr = "/ip4/127.0.0.1/tcp/0";
 
@@ -53,7 +54,8 @@ describe("network", function () {
       },
     });
 
-    const chain = new MockBeaconChain({genesisTime: 0, chainId: 0, networkId: BigInt(0), state, config});
+    const beaconConfig = createIBeaconConfig(config, state.genesisValidatorsRoot);
+    const chain = new MockBeaconChain({genesisTime: 0, chainId: 0, networkId: BigInt(0), state, config: beaconConfig});
     const db = new StubbedBeaconDb(sinon, config);
     const reqRespHandler = new ReqRespHandler({db, chain});
 
@@ -61,7 +63,7 @@ describe("network", function () {
     const loggerA = testLogger("A");
     const loggerB = testLogger("B");
 
-    const modules = {config, chain, db, reqRespHandler, signal: controller.signal, metrics: null};
+    const modules = {config: beaconConfig, chain, db, reqRespHandler, signal: controller.signal, metrics: null};
     const netA = new Network(opts, {...modules, libp2p: libp2pA, logger: loggerA});
     const netB = new Network(opts, {...modules, libp2p: libp2pB, logger: loggerB});
 

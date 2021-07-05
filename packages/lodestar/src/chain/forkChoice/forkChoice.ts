@@ -4,7 +4,7 @@
 
 import {toHexString} from "@chainsafe/ssz";
 import {allForks, Slot} from "@chainsafe/lodestar-types";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {ForkChoice, ProtoArray} from "@chainsafe/lodestar-fork-choice";
 
 import {computeAnchorCheckpoint} from "../initState";
@@ -24,7 +24,7 @@ export class LodestarForkChoice extends ForkChoice {
     state,
     metrics,
   }: {
-    config: IBeaconConfig;
+    config: IChainForkConfig;
     emitter: ChainEventEmitter;
     currentSlot: Slot;
     state: CachedBeaconState<allForks.BeaconState>;

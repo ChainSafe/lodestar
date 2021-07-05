@@ -6,7 +6,7 @@ import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-tes
 import {altair, allForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {SPEC_TEST_LOCATION} from "../../../../utils/specTestCases";
 import {TreeBacked} from "@chainsafe/ssz";
-import {createIBeaconConfig} from "@chainsafe/lodestar-config";
+import {createIChainForkConfig} from "@chainsafe/lodestar-config";
 import {
   PresetName,
   TIMELY_HEAD_FLAG_INDEX,
@@ -17,7 +17,7 @@ import {ssz} from "@chainsafe/lodestar-types";
 import {Deltas, Output, RewardTestCase} from "../type";
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
-const config = createIBeaconConfig({ALTAIR_FORK_EPOCH: 0});
+const config = createIChainForkConfig({ALTAIR_FORK_EPOCH: 0});
 
 export function runRandom(presetName: PresetName): void {
   describeDirectorySpecTest<RewardTestCase, Output>(

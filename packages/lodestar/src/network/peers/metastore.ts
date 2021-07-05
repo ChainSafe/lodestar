@@ -1,5 +1,4 @@
 import MetadataBook from "libp2p/src/peer-store/metadata-book";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import PeerId from "peer-id";
 import {altair, ssz} from "@chainsafe/lodestar-types";
 import {ReqRespEncoding} from "../reqresp";
@@ -35,11 +34,9 @@ export class Libp2pPeerMetadataStore implements IPeerMetadataStore {
   rpcScore: PeerStoreBucket<number>;
   rpcScoreLastUpdate: PeerStoreBucket<number>;
 
-  private readonly config: IBeaconConfig;
   private readonly metabook: MetadataBook;
 
-  constructor(config: IBeaconConfig, metabook: MetadataBook) {
-    this.config = config;
+  constructor(metabook: MetadataBook) {
     this.metabook = metabook;
 
     const number64Serdes = typeToSerdes(ssz.Number64);

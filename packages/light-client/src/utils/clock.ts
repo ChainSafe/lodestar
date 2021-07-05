@@ -1,6 +1,6 @@
 import {AbortSignal} from "@chainsafe/abort-controller";
 import {Slot} from "@chainsafe/lodestar-types";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {ErrorAborted, sleep} from "@chainsafe/lodestar-utils";
 
@@ -16,7 +16,7 @@ export class Clock implements IClock {
   private readonly fns: OnSlotFn[] = [];
 
   constructor(
-    private readonly config: IBeaconConfig,
+    private readonly config: IChainForkConfig,
     private readonly genesisTime: number,
     private readonly onError?: (e: Error) => void
   ) {}

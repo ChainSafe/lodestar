@@ -4,7 +4,7 @@ import {allForks} from "@chainsafe/lodestar-types";
 import {IBeaconNodeOptions} from "@chainsafe/lodestar";
 // eslint-disable-next-line no-restricted-imports
 import {getStateTypeFromBytes} from "@chainsafe/lodestar/lib/util/multifork";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {RecursivePartial} from "@chainsafe/lodestar-utils";
 import {IBeaconParamsUnparsed} from "../config/types";
 import * as mainnet from "./mainnet";
@@ -113,7 +113,7 @@ export function getInfuraBeaconUrl(network: NetworkName): string | undefined {
  * Fetch weak subjectivity state from a remote beacon node
  */
 export async function fetchWeakSubjectivityState(
-  config: IBeaconConfig,
+  config: IChainForkConfig,
   url: string
 ): Promise<TreeBacked<allForks.BeaconState>> {
   try {

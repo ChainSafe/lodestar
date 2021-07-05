@@ -1,5 +1,4 @@
 import {computeStartSlotAtEpoch, getBlockRootAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Epoch, ForkDigest, Root, phase0, ssz} from "@chainsafe/lodestar-types";
 import {LodestarError} from "@chainsafe/lodestar-utils";
 import {toHexString} from "@chainsafe/ssz";
@@ -28,7 +27,7 @@ export class IrrelevantPeerError extends LodestarError<IrrelevantPeerErrorType> 
  * Process a `Status` message to determine if a peer is relevant to us. If the peer is
  * irrelevant the reason is returned.
  */
-export function assertPeerRelevance(remote: phase0.Status, chain: IBeaconChain, config: IBeaconConfig): void {
+export function assertPeerRelevance(remote: phase0.Status, chain: IBeaconChain): void {
   const local = chain.getStatus();
 
   // The node is on a different network/fork
@@ -49,7 +48,7 @@ export function assertPeerRelevance(remote: phase0.Status, chain: IBeaconChain, 
   }
 
   // TODO: Is this check necessary?
-  if (remote.finalizedEpoch === GENESIS_EPOCH && !isZeroRoot(config, remote.finalizedRoot)) {
+  if (remote.finalizedEpoch === GENESIS_EPOCH && !isZeroRoot(remote.finalizedRoot)) {
     throw new IrrelevantPeerError({
       code: IrrelevantPeerErrorCode.GENESIS_NONZERO,
       root: toHexString(remote.finalizedRoot),
@@ -62,15 +61,15 @@ export function assertPeerRelevance(remote: phase0.Status, chain: IBeaconChain, 
 
   if (
     remote.finalizedEpoch <= local.finalizedEpoch &&
-    !isZeroRoot(config, remote.finalizedRoot) &&
-    !isZeroRoot(config, local.finalizedRoot)
+    !isZeroRoot(remote.finalizedRoot) &&
+    !isZeroRoot(local.finalizedRoot)
   ) {
     const remoteRoot = remote.finalizedRoot;
     const expectedRoot =
       remote.finalizedEpoch === local.finalizedEpoch
         ? local.finalizedRoot
         : // This will get the latest known block at the start of the epoch.
-          getRootAtHistoricalEpoch(config, chain, remote.finalizedEpoch);
+          getRootAtHistoricalEpoch(chain, remote.finalizedEpoch);
 
     if (!ssz.Root.equals(remoteRoot, expectedRoot)) {
       throw new IrrelevantPeerError({
@@ -84,12 +83,12 @@ export function assertPeerRelevance(remote: phase0.Status, chain: IBeaconChain, 
   // Note: Accept request status finalized checkpoint in the future, we do not know if it is a true finalized root
 }
 
-export function isZeroRoot(config: IBeaconConfig, root: Root): boolean {
+export function isZeroRoot(root: Root): boolean {
   const ZERO_ROOT = ssz.Root.defaultValue();
   return ssz.Root.equals(root, ZERO_ROOT);
 }
 
-function getRootAtHistoricalEpoch(config: IBeaconConfig, chain: IBeaconChain, epoch: Epoch): Root {
+function getRootAtHistoricalEpoch(chain: IBeaconChain, epoch: Epoch): Root {
   const headState = chain.getHeadState();
 
   const slot = computeStartSlotAtEpoch(epoch);

@@ -1,5 +1,4 @@
 import {phase0, allForks} from "@chainsafe/lodestar-beacon-state-transition";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ssz, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {IBeaconChain} from "..";
 import {AttesterSlashingError, AttesterSlashingErrorCode} from "../errors/attesterSlashingError";
@@ -7,7 +6,6 @@ import {IBeaconDb} from "../../db";
 import {arrayIntersection, sszEqualPredicate} from "../../util/objects";
 
 export async function validateGossipAttesterSlashing(
-  config: IBeaconConfig,
   chain: IBeaconChain,
   db: IBeaconDb,
   attesterSlashing: phase0.AttesterSlashing

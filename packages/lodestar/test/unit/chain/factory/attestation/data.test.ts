@@ -20,7 +20,7 @@ describe("assemble attestation data", function () {
       balances: generateInitialMaxBalances(config),
     });
     const blockRoot = ssz.phase0.BeaconBlock.hashTreeRoot(generateEmptyBlock());
-    const result = assembleAttestationData(config, state as CachedBeaconState<phase0.BeaconState>, blockRoot, 2, 1);
+    const result = assembleAttestationData(state as CachedBeaconState<phase0.BeaconState>, blockRoot, 2, 1);
     expect(result).to.not.be.null;
   });
 });

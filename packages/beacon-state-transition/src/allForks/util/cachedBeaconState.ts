@@ -11,7 +11,7 @@ import {
   TreeBacked,
 } from "@chainsafe/ssz";
 import {allForks, altair, ParticipationFlags} from "@chainsafe/lodestar-types";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {createIBeaconConfig, IBeaconConfig, IChainForkConfig} from "@chainsafe/lodestar-config";
 import {Tree} from "@chainsafe/persistent-merkle-tree";
 import {MutableVector} from "@chainsafe/persistent-ts";
 import {createValidatorFlat} from "./flat";
@@ -55,10 +55,11 @@ export type CachedBeaconState<T extends allForks.BeaconState> =
     T;
 
 export function createCachedBeaconState<T extends allForks.BeaconState>(
-  config: IBeaconConfig,
+  chainForkConfig: IChainForkConfig,
   state: TreeBacked<T>,
   opts?: EpochContextOpts
 ): CachedBeaconState<T> {
+  const config = createIBeaconConfig(chainForkConfig, state.genesisValidatorsRoot);
   const cachedValidators = MutableVector.from(
     Array.from(readonlyValues(state.validators), (v) => createValidatorFlat(v))
   );

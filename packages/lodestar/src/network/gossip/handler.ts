@@ -1,6 +1,6 @@
 import {allForks, altair, Epoch, phase0} from "@chainsafe/lodestar-types";
 import {ATTESTATION_SUBNET_COUNT, ForkName, SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {SyncCommitteeSignatureIndexed} from "../../chain/validation/syncCommittee";
@@ -20,7 +20,7 @@ export class GossipHandler {
   private subscribedForks = new Set<ForkName>();
 
   constructor(
-    private readonly config: IBeaconConfig,
+    private readonly config: IChainForkConfig,
     private readonly chain: IBeaconChain,
     private readonly gossip: Eth2Gossipsub,
     private readonly attnetsService: IAttnetsService,

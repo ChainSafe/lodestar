@@ -12,12 +12,11 @@ import {OpSource} from "../../../../metrics/validatorMonitor";
 
 export function getBeaconPoolApi({
   chain,
-  config,
   logger,
   metrics,
   network,
   db,
-}: Pick<ApiModules, "chain" | "config" | "logger" | "metrics" | "network" | "db">): IBeaconPoolApi {
+}: Pick<ApiModules, "chain" | "logger" | "metrics" | "network" | "db">): IBeaconPoolApi {
   return {
     async getPoolAttestations(filters) {
       // Already filtered by slot
@@ -76,17 +75,17 @@ export function getBeaconPoolApi({
     },
 
     async submitPoolAttesterSlashing(slashing) {
-      await validateGossipAttesterSlashing(config, chain, db, slashing);
+      await validateGossipAttesterSlashing(chain, db, slashing);
       await Promise.all([network.gossip.publishAttesterSlashing(slashing), db.attesterSlashing.add(slashing)]);
     },
 
     async submitPoolProposerSlashing(slashing) {
-      await validateGossipProposerSlashing(config, chain, db, slashing);
+      await validateGossipProposerSlashing(chain, db, slashing);
       await Promise.all([network.gossip.publishProposerSlashing(slashing), db.proposerSlashing.add(slashing)]);
     },
 
     async submitPoolVoluntaryExit(exit) {
-      await validateGossipVoluntaryExit(config, chain, db, exit);
+      await validateGossipVoluntaryExit(chain, db, exit);
       await Promise.all([network.gossip.publishVoluntaryExit(exit), db.voluntaryExit.add(exit)]);
     },
 

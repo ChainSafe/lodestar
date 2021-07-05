@@ -5,6 +5,7 @@ import {LevelDbController} from "@chainsafe/lodestar-db";
 import {BeaconNode, BeaconDb, createNodeJsLibp2p} from "@chainsafe/lodestar";
 // eslint-disable-next-line no-restricted-imports
 import {createDbMetrics} from "@chainsafe/lodestar/lib/metrics";
+import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 
 import {IGlobalArgs} from "../../options";
 import {parseEnrArgs} from "../../options/enrOptions";
@@ -68,9 +69,10 @@ export async function beaconHandler(args: IBeaconArgs & IGlobalArgs): Promise<vo
   // BeaconNode setup
   try {
     const anchorState = await initBeaconState(options, args, config, db, logger, abortController.signal);
+    const beaconConfig = createIBeaconConfig(config, anchorState.genesisValidatorsRoot);
     const node = await BeaconNode.init({
       opts: options,
-      config,
+      config: beaconConfig,
       db,
       logger,
       libp2p: await createNodeJsLibp2p(peerId, options.network, {peerStoreDir: beaconPaths.peerStoreDir}),

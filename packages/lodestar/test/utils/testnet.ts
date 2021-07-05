@@ -1,5 +1,5 @@
 import {phase0} from "@chainsafe/lodestar-types";
-import {createIBeaconConfig, IBeaconConfig} from "@chainsafe/lodestar-config";
+import {createIChainForkConfig, IChainForkConfig} from "@chainsafe/lodestar-config";
 import {chainConfig} from "@chainsafe/lodestar-config/default";
 import {goerliRpcUrl} from "../testParams";
 import {fromHexString} from "@chainsafe/ssz";
@@ -13,8 +13,8 @@ export const testnet = {
 };
 
 /** Testnet specs for the Medalla testnet */
-export function getTestnetConfig(): IBeaconConfig {
-  const config = createIBeaconConfig(chainConfig);
+export function getTestnetConfig(): IChainForkConfig {
+  const config = createIChainForkConfig(chainConfig);
   config.DEPOSIT_NETWORK_ID = 5;
   config.DEPOSIT_CONTRACT_ADDRESS = Buffer.from("07b39F4fDE4A38bACe212b546dAc87C58DfE3fDC", "hex");
   config.MIN_GENESIS_TIME = 1596546000;

@@ -2,7 +2,6 @@ import PeerId from "peer-id";
 import pipe from "it-pipe";
 import {AbortSignal} from "@chainsafe/abort-controller";
 import {Libp2p} from "libp2p/src/connection-manager";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Context, ILogger, TimeoutError, withTimeout} from "@chainsafe/lodestar-utils";
 import {IForkDigestContext} from "../../../util/forkDigestContext";
 import {REQUEST_TIMEOUT, RespStatus} from "../../../constants";
@@ -13,6 +12,7 @@ import {Libp2pStream} from "../interface";
 import {requestDecode} from "../encoders/requestDecode";
 import {responseEncodeError, responseEncodeSuccess} from "../encoders/responseEncode";
 import {ResponseError} from "./errors";
+import {IChainForkConfig} from "@chainsafe/lodestar-config";
 
 export {ResponseError};
 
@@ -23,7 +23,7 @@ export type PerformRequestHandler = (
 ) => AsyncIterable<ResponseBody>;
 
 type HandleRequestModules = {
-  config: IBeaconConfig;
+  config: IChainForkConfig;
   logger: ILogger;
   forkDigestContext: IForkDigestContext;
   libp2p: Libp2p;
@@ -59,7 +59,7 @@ export async function handleRequest(
     (async function* () {
       try {
         const requestBody = await withTimeout(
-          () => pipe(stream.source, requestDecode(config, protocol)),
+          () => pipe(stream.source, requestDecode(protocol)),
           REQUEST_TIMEOUT,
           signal
         ).catch((e: unknown) => {

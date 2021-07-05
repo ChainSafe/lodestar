@@ -2,7 +2,7 @@ import {join} from "path";
 
 import {TreeBacked} from "@chainsafe/ssz";
 import {allForks, altair} from "@chainsafe/lodestar-beacon-state-transition";
-import {createIBeaconConfig} from "@chainsafe/lodestar-config";
+import {createIChainForkConfig} from "@chainsafe/lodestar-config";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
 import {IProcessAttesterSlashingTestCase} from "./type";
 import {SPEC_TEST_LOCATION} from "../../../../utils/specTestCases";
@@ -12,7 +12,7 @@ import {PresetName} from "@chainsafe/lodestar-params";
 
 export function runAttesterSlashing(presetName: PresetName): void {
   // eslint-disable-next-line @typescript-eslint/naming-convention
-  const config = createIBeaconConfig({ALTAIR_FORK_EPOCH: 0});
+  const config = createIChainForkConfig({ALTAIR_FORK_EPOCH: 0});
 
   describeDirectorySpecTest<IProcessAttesterSlashingTestCase, altair.BeaconState>(
     `process attester slashing ${presetName}`,
@@ -48,7 +48,7 @@ export function runAttesterSlashing(presetName: PresetName): void {
       shouldError: (testCase) => !testCase.post,
       getExpected: (testCase) => testCase.post,
       expectFunc: (testCase, expected, actual) => {
-        expectEqualBeaconState(config, expected, actual);
+        expectEqualBeaconState(expected, actual);
       },
     }
   );

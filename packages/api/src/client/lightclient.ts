@@ -1,4 +1,4 @@
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {deserializeProof} from "@chainsafe/persistent-merkle-tree";
 import {IHttpClient, getFetchOptsSerializers, generateGenericJsonClient} from "./utils";
 import {Api, ReqTypes, routesData, getReqSerializers, getReturnTypes} from "../routes/lightclient";
@@ -6,7 +6,7 @@ import {Api, ReqTypes, routesData, getReqSerializers, getReturnTypes} from "../r
 /**
  * REST HTTP client for lightclient routes
  */
-export function getClient(_config: IBeaconConfig, httpClient: IHttpClient): Api {
+export function getClient(_config: IChainForkConfig, httpClient: IHttpClient): Api {
   const reqSerializers = getReqSerializers();
   const returnTypes = getReturnTypes();
 

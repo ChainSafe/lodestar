@@ -1,11 +1,9 @@
 import {phase0, allForks} from "@chainsafe/lodestar-beacon-state-transition";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBeaconChain} from "..";
 import {VoluntaryExitError, VoluntaryExitErrorCode} from "../errors/voluntaryExitError";
 import {IBeaconDb} from "../../db";
 
 export async function validateGossipVoluntaryExit(
-  config: IBeaconConfig,
   chain: IBeaconChain,
   db: IBeaconDb,
   voluntaryExit: phase0.SignedVoluntaryExit
