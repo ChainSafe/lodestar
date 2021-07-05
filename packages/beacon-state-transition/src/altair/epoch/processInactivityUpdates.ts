@@ -16,16 +16,22 @@ export function processInactivityUpdates(state: CachedBeaconState<altair.BeaconS
   const {config} = state;
   const {INACTIVITY_SCORE_BIAS, INACTIVITY_SCORE_RECOVERY_RATE} = config;
   const inActivityLeak = isInInactivityLeak((state as unknown) as phase0.BeaconState);
+  const {inactivityScores} = state;
   for (let i = 0; i < process.statuses.length; i++) {
     const status = process.statuses[i];
     if (hasMarkers(status.flags, FLAG_ELIGIBLE_ATTESTER)) {
+      let inactivityScore = inactivityScores[i];
+      const prevInactivityScore = inactivityScore;
       if (hasMarkers(status.flags, FLAG_PREV_TARGET_ATTESTER_OR_UNSLASHED)) {
-        state.inactivityScores[i] -= Math.min(1, state.inactivityScores[i]);
+        inactivityScore -= Math.min(1, inactivityScore);
       } else {
-        state.inactivityScores[i] += Number(INACTIVITY_SCORE_BIAS);
+        inactivityScore += Number(INACTIVITY_SCORE_BIAS);
       }
       if (!inActivityLeak) {
-        state.inactivityScores[i] -= Math.min(Number(INACTIVITY_SCORE_RECOVERY_RATE), state.inactivityScores[i]);
+        inactivityScore -= Math.min(Number(INACTIVITY_SCORE_RECOVERY_RATE), inactivityScore);
+      }
+      if (inactivityScore !== prevInactivityScore) {
+        inactivityScores[i] = inactivityScore;
       }
     }
   }

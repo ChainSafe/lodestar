@@ -77,7 +77,7 @@ export function getSecretKeyFromIndexCached(validatorIndex: number): SecretKey {
 export function generatePerfTestCachedStatePhase0(opts?: {
   goBackOneSlot: boolean;
 }): allForks.CachedBeaconState<phase0.BeaconState> {
-   // Generate only some publicKeys
+  // Generate only some publicKeys
   const {pubkeys, pubkeysMod, pubkeysModObj} = getPubkeys();
 
   // Manually sync pubkeys to prevent doing BLS opts 110_000 times

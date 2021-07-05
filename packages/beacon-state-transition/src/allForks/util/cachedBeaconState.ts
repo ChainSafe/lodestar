@@ -10,7 +10,7 @@ import {
   readonlyValues,
   TreeBacked,
 } from "@chainsafe/ssz";
-import {allForks, altair, ParticipationFlags} from "@chainsafe/lodestar-types";
+import {allForks, altair, Number64, ParticipationFlags} from "@chainsafe/lodestar-types";
 import {createIBeaconConfig, IBeaconConfig, IChainForkConfig} from "@chainsafe/lodestar-config";
 import {Tree} from "@chainsafe/persistent-merkle-tree";
 import {MutableVector} from "@chainsafe/persistent-ts";
@@ -33,6 +33,7 @@ import {
 } from "./indexedSyncCommittee";
 import {getNextSyncCommittee} from "../../altair/epoch/sync_committee";
 import {ssz} from "@chainsafe/lodestar-types";
+import {CachedInactivityScoreList, CachedInactivityScoreListProxyHandler} from "./cachedInactivityScoreList";
 
 /**
  * `BeaconState` with various caches
@@ -69,6 +70,7 @@ export function createCachedBeaconState<T extends allForks.BeaconState>(
   let currIndexedSyncCommittee: IndexedSyncCommittee;
   let nextIndexedSyncCommittee: IndexedSyncCommittee;
   const epochCtx = createEpochContext(config, state, cachedValidators, opts);
+  let cachedInactivityScores: MutableVector<Number64>;
   if (forkName === ForkName.phase0) {
     const emptyParticipationStatus = {
       timelyHead: false,
@@ -83,6 +85,7 @@ export function createCachedBeaconState<T extends allForks.BeaconState>(
     cachedCurrentParticipation = MutableVector.from(
       Array.from({length: cachedValidators.length}, () => emptyParticipationStatus)
     );
+    cachedInactivityScores = MutableVector.empty();
   } else {
     const {pubkey2index} = epochCtx;
     const altairState = (state as unknown) as TreeBacked<altair.BeaconState>;
@@ -94,6 +97,7 @@ export function createCachedBeaconState<T extends allForks.BeaconState>(
     cachedCurrentParticipation = MutableVector.from(
       Array.from(readonlyValues(altairState.currentEpochParticipation), fromParticipationFlags)
     );
+    cachedInactivityScores = MutableVector.from(readonlyValues(altairState.inactivityScores));
   }
   return new Proxy(
     new BeaconStateContext(
@@ -105,6 +109,7 @@ export function createCachedBeaconState<T extends allForks.BeaconState>(
       cachedCurrentParticipation,
       currIndexedSyncCommittee,
       nextIndexedSyncCommittee,
+      cachedInactivityScores,
       epochCtx
     ),
     (CachedBeaconStateProxyHandler as unknown) as ProxyHandler<BeaconStateContext<T>>
@@ -128,6 +133,7 @@ export class BeaconStateContext<T extends allForks.BeaconState> {
   // phase0 has no sync committee
   currentSyncCommittee: IndexedSyncCommittee;
   nextSyncCommittee: IndexedSyncCommittee;
+  inactivityScores: CachedInactivityScoreList & List<Number64>;
 
   constructor(
     type: ContainerType<T>,
@@ -138,6 +144,7 @@ export class BeaconStateContext<T extends allForks.BeaconState> {
     currentEpochParticipationCache: MutableVector<IParticipationStatus>,
     currentSyncCommittee: IndexedSyncCommittee,
     nextSyncCommittee: IndexedSyncCommittee,
+    inactivityScoresCache: MutableVector<Number64>,
     epochCtx: EpochContext
   ) {
     this.config = epochCtx.config;
@@ -178,6 +185,14 @@ export class BeaconStateContext<T extends allForks.BeaconState> {
     ) as unknown) as CachedEpochParticipation & List<ParticipationFlags>;
     this.currentSyncCommittee = currentSyncCommittee;
     this.nextSyncCommittee = nextSyncCommittee;
+    this.inactivityScores = (new Proxy(
+      new CachedInactivityScoreList(
+        this.type.fields["inactivityScores"] as BasicListType<List<Number64>>,
+        this.type.tree_getProperty(this.tree, "inactivityScores") as Tree,
+        inactivityScoresCache
+      ),
+      CachedInactivityScoreListProxyHandler
+    ) as unknown) as CachedInactivityScoreList & List<Number64>;
   }
 
   clone(): CachedBeaconState<T> {
@@ -192,6 +207,7 @@ export class BeaconStateContext<T extends allForks.BeaconState> {
         // states in the same sync period has same sync committee
         this.currentSyncCommittee,
         this.nextSyncCommittee,
+        this.inactivityScores.persistent.clone(),
         this.epochCtx.copy()
       ),
       (CachedBeaconStateProxyHandler as unknown) as ProxyHandler<BeaconStateContext<T>>
@@ -242,6 +258,8 @@ export const CachedBeaconStateProxyHandler: ProxyHandler<CachedBeaconState<allFo
       return target.currentSyncCommittee;
     } else if (key === "nextSyncCommittee") {
       return target.nextSyncCommittee;
+    } else if (key === "inactivityScores") {
+      return target.inactivityScores;
     } else if (target.type.fields[key]) {
       const propType = target.type.fields[key];
       const propValue = target.type.tree_getProperty(target.tree, key);
@@ -271,6 +289,8 @@ export const CachedBeaconStateProxyHandler: ProxyHandler<CachedBeaconState<allFo
       throw new Error("Cannot set previousEpochParticipation");
     } else if (key === "currentEpochParticipation") {
       throw new Error("Cannot set currentEpochParticipation");
+    } else if (key === "inactivityScores") {
+      throw new Error("Cannot set inactivityScores");
     } else if (target.type.fields[key]) {
       const propType = target.type.fields[key];
       if (!isCompositeType(propType)) {
