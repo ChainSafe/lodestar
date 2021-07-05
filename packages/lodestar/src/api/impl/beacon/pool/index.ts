@@ -1,3 +1,4 @@
+// eslint-disable-next-line no-restricted-imports
 import {Api as IBeaconPoolApi} from "@chainsafe/lodestar-api/lib/routes/beacon/pool";
 import {Epoch} from "@chainsafe/lodestar-types";
 import {SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";

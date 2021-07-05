@@ -78,6 +78,7 @@ export class Network implements INetwork {
         peerRpcScores,
         logger,
         networkEventBus,
+        metrics,
       },
       opts
     );

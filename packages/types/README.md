@@ -26,25 +26,12 @@ const b: BeaconState = {
 #### Using the ssz types
 
 ```typescript
-// mainnet and minimal types pre-generated under non-default export
-import {types as mainnetTypes} from "@chainsafe/lodestar-types/lib/presets/mainnet";
-import {types as minimalTypes} from "@chainsafe/lodestar-types/lib/presets/mainnet";
+import {ssz} from "@chainsafe/lodestar-types";
 
-mainnetTypes.phase0.BeaconState.defaultValue();
-minimalTypes.phase0.BeaconState.defaultValue();
-
+ssz.phase0.BeaconState.defaultValue();
+ssz.altair.BeaconState.defaultValue();
 ...
 
-// create your own IBeaconSSZTypes object from an IBeaconParams
-import {createIBeaconSSZTypes} from "@chainsafe/lodestar-types";
-import {IBeaconParams} from "@chainsafe/lodestar-params";
-const testnetParams: IBeaconParams = {
-  ...
-};
-
-const testnetTypes = createIBeaconSSZTypes(testnetParams);
-
-testnetTypes.BeaconState.defaultValue();
 ```
 
 ## License

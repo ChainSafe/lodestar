@@ -13,7 +13,7 @@ import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {allForks, ForkDigest, Number64, Root, phase0, Slot} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {TreeBacked} from "@chainsafe/ssz";
-import {LightClientUpdater} from "@chainsafe/lodestar-light-client/lib/server/LightClientUpdater";
+import {LightClientUpdater} from "@chainsafe/lodestar-light-client/server";
 import {AbortController} from "@chainsafe/abort-controller";
 import {GENESIS_EPOCH, ZERO_HASH} from "../constants";
 import {IBeaconDb} from "../db";

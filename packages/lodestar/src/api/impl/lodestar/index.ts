@@ -1,5 +1,5 @@
 import {routes} from "@chainsafe/lodestar-api";
-import {getLatestWeakSubjectivityCheckpointEpoch} from "@chainsafe/lodestar-beacon-state-transition/lib/allForks/util/weakSubjectivity";
+import {allForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {ApiModules} from "../types";
 
 export function getLodestarApi({
@@ -33,7 +33,7 @@ export function getLodestarApi({
 
     async getLatestWeakSubjectivityCheckpointEpoch() {
       const state = chain.getHeadState();
-      return {data: getLatestWeakSubjectivityCheckpointEpoch(config, state)};
+      return {data: allForks.getLatestWeakSubjectivityCheckpointEpoch(config, state)};
     },
 
     async getSyncChainsDebugState() {

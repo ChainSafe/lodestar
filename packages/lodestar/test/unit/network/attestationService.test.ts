@@ -7,6 +7,7 @@ import {
 } from "@chainsafe/lodestar-params";
 import {createIChainForkConfig} from "@chainsafe/lodestar-config";
 import {getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
+// eslint-disable-next-line no-restricted-imports
 import * as mathUtils from "@chainsafe/lodestar-utils/lib/math";
 import * as shuffleUtils from "../../../src/util/shuffle";
 import sinon, {SinonStubbedInstance} from "sinon";

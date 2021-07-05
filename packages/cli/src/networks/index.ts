@@ -2,6 +2,7 @@ import got from "got";
 import {TreeBacked} from "@chainsafe/ssz";
 import {allForks} from "@chainsafe/lodestar-types";
 import {IBeaconNodeOptions} from "@chainsafe/lodestar";
+// eslint-disable-next-line no-restricted-imports
 import {getStateTypeFromBytes} from "@chainsafe/lodestar/lib/util/multifork";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {RecursivePartial} from "@chainsafe/lodestar-utils";
@@ -61,12 +62,10 @@ export function getNetworkBeaconNodeOptions(network: NetworkName): RecursivePart
   const {depositContractDeployBlock, bootEnrs, beaconParams} = getNetworkData(network);
   const networkId = parseInt((beaconParams.DEPOSIT_NETWORK_ID || 1) as string, 10);
   return {
-    api: {rest: {enabled: true}},
     eth1: {
       providerUrl: getEth1ProviderUrl(networkId),
       depositContractDeployBlock,
     },
-    metrics: {enabled: true},
     network: {
       discv5: {
         enabled: true,

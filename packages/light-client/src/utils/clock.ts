@@ -2,8 +2,7 @@ import {AbortSignal} from "@chainsafe/abort-controller";
 import {Slot} from "@chainsafe/lodestar-types";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
-import {sleep} from "@chainsafe/lodestar-utils/lib/sleep";
-import {ErrorAborted} from "@chainsafe/lodestar-utils/lib/errors";
+import {ErrorAborted, sleep} from "@chainsafe/lodestar-utils";
 
 type OnSlotFn = (slot: Slot, signal: AbortSignal) => Promise<void>;
 

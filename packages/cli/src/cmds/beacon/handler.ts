@@ -3,6 +3,9 @@ import {AbortController} from "@chainsafe/abort-controller";
 import {ErrorAborted} from "@chainsafe/lodestar-utils";
 import {LevelDbController} from "@chainsafe/lodestar-db";
 import {BeaconNode, BeaconDb, createNodeJsLibp2p} from "@chainsafe/lodestar";
+// eslint-disable-next-line no-restricted-imports
+import {createDbMetrics} from "@chainsafe/lodestar/lib/metrics";
+import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 
 import {IGlobalArgs} from "../../options";
 import {parseEnrArgs} from "../../options/enrOptions";
@@ -13,8 +16,6 @@ import {initBLS, onGracefulShutdown, getCliLogger} from "../../util";
 import {readLodestarGitData} from "../../util/gitData";
 import {FileENR, overwriteEnrWithCliArgs, readPeerId} from "../../config";
 import {initBeaconState} from "./initBeaconState";
-import {createDbMetrics} from "@chainsafe/lodestar/lib/metrics";
-import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 
 /**
  * Run a beacon node

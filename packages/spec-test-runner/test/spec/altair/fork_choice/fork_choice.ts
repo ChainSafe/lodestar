@@ -23,12 +23,15 @@ import {
   isBlock,
   isCheck,
 } from "./type";
+// eslint-disable-next-line no-restricted-imports
 import {LodestarForkChoice} from "@chainsafe/lodestar/lib/chain/forkChoice/forkChoice";
-import {SPEC_TEST_LOCATION} from "../../../utils/specTestCases";
+// eslint-disable-next-line no-restricted-imports
+import {CheckpointStateCache} from "@chainsafe/lodestar/lib/chain/stateCache/stateContextCheckpointsCache";
+// eslint-disable-next-line no-restricted-imports
 import {ChainEventEmitter} from "@chainsafe/lodestar/lib/chain/emitter";
+import {SPEC_TEST_LOCATION} from "../../../utils/specTestCases";
 import {toHexString} from "@chainsafe/ssz";
 import {createIChainForkConfig} from "@chainsafe/lodestar-config";
-import {CheckpointStateCache} from "@chainsafe/lodestar/lib/chain/stateCache/stateContextCheckpointsCache";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {ssz} from "@chainsafe/lodestar-types";
 import {PresetName, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";

@@ -2,15 +2,14 @@ import {join} from "path";
 
 import {TreeBacked} from "@chainsafe/ssz";
 import {config} from "@chainsafe/lodestar-config/default";
-import {allForks, altair, phase0} from "@chainsafe/lodestar-beacon-state-transition";
+import {allForks, phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
-import {IUpgradeStateCase} from "./type";
-import {upgradeState} from "@chainsafe/lodestar-beacon-state-transition/lib/altair";
-import {SPEC_TEST_LOCATION} from "../../../utils/specTestCases";
-import {expectEqualBeaconState} from "../util";
+import {altair} from "@chainsafe/lodestar-beacon-state-transition";
 import {ssz} from "@chainsafe/lodestar-types";
 import {PresetName} from "@chainsafe/lodestar-params";
-import {convertToIndexedSyncCommittee} from "@chainsafe/lodestar-beacon-state-transition/lib/allForks/util/indexedSyncCommittee";
+import {SPEC_TEST_LOCATION} from "../../../utils/specTestCases";
+import {expectEqualBeaconState} from "../util";
+import {IUpgradeStateCase} from "./type";
 
 export function runFork(presetName: PresetName): void {
   describeDirectorySpecTest<IUpgradeStateCase, altair.BeaconState>(
@@ -21,14 +20,14 @@ export function runFork(presetName: PresetName): void {
         config,
         testcase.pre as TreeBacked<phase0.BeaconState>
       );
-      const altairState = upgradeState(phase0State);
+      const altairState = altair.upgradeState(phase0State);
       // this test has a random slot so createCachedBeaconState is not able to create indexed sync committee
       const tbAltairState = altairState.type.createTreeBacked(altairState.tree);
-      altairState.currentSyncCommittee = convertToIndexedSyncCommittee(
+      altairState.currentSyncCommittee = allForks.convertToIndexedSyncCommittee(
         tbAltairState.currentSyncCommittee as TreeBacked<altair.SyncCommittee>,
         altairState.pubkey2index
       );
-      altairState.nextSyncCommittee = convertToIndexedSyncCommittee(
+      altairState.nextSyncCommittee = allForks.convertToIndexedSyncCommittee(
         tbAltairState.nextSyncCommittee as TreeBacked<altair.SyncCommittee>,
         altairState.pubkey2index
       );
