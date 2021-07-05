@@ -3,11 +3,7 @@ import {AbortSignal} from "@chainsafe/abort-controller";
 import {TreeBacked} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {fromHex, ILogger} from "@chainsafe/lodestar-utils";
-import {allForks} from "@chainsafe/lodestar-types";
-import {
-  getLatestBlockRoot,
-  isWithinWeakSubjectivityPeriod,
-} from "@chainsafe/lodestar-beacon-state-transition/lib/allForks/util/weakSubjectivity";
+import {computeEpochAtSlot, allForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {
   IBeaconDb,
   Eth1Provider,
@@ -15,6 +11,7 @@ import {
   initStateFromAnchorState,
   initStateFromEth1,
 } from "@chainsafe/lodestar";
+// eslint-disable-next-line no-restricted-imports
 import {getStateTypeFromBytes} from "@chainsafe/lodestar/lib/util/multifork";
 import {downloadOrLoadFile} from "../../util";
 import {IBeaconArgs} from "./options";
@@ -22,7 +19,6 @@ import {defaultNetwork, IGlobalArgs} from "../../options/globalOptions";
 import {fetchWeakSubjectivityState, getGenesisFileUrl, getInfuraBeaconUrl, infuraNetworks} from "../../networks";
 import {Checkpoint} from "@chainsafe/lodestar-types/phase0";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
-import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 
 const checkpointRegex = new RegExp("^(?:0x)?([0-9a-f]{64}):([0-9]+)$");
 
@@ -37,7 +33,7 @@ function getCheckpointFromArg(checkpointStr: string): Checkpoint {
 function getCheckpointFromState(config: IBeaconConfig, state: allForks.BeaconState): Checkpoint {
   return {
     epoch: computeEpochAtSlot(state.latestBlockHeader.slot),
-    root: getLatestBlockRoot(config, state),
+    root: allForks.getLatestBlockRoot(config, state),
   };
 }
 
@@ -49,7 +45,7 @@ async function initAndVerifyWeakSubjectivityState(
   wsState: TreeBacked<allForks.BeaconState>,
   wsCheckpoint: Checkpoint
 ): Promise<TreeBacked<allForks.BeaconState>> {
-  if (!isWithinWeakSubjectivityPeriod(config, store, wsState, wsCheckpoint)) {
+  if (!allForks.isWithinWeakSubjectivityPeriod(config, store, wsState, wsCheckpoint)) {
     throw new Error("Fetched weak subjectivity checkpoint not within weak subjectivity period.");
   }
   return await initStateFromAnchorState(config, db, logger, wsState);

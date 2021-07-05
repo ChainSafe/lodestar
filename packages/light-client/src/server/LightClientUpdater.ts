@@ -7,7 +7,8 @@ import {
   getForkVersion,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {FINALIZED_ROOT_INDEX, NEXT_SYNC_COMMITTEE_INDEX} from "@chainsafe/lodestar-params";
-import {isZeroHash, sumBits, toBlockHeader} from "../utils/utils";
+import {toBlockHeader} from "../utils/utils";
+import {isBetterUpdate, isLatestBestFinalizedUpdate, isLatestBestNonFinalizedUpdate} from "./utils";
 
 type DbRepo<K, T> = {put(key: K, data: T): Promise<void>; get(key: K): Promise<T | null>};
 type DbItem<T> = {put(data: T): Promise<void>; get(): Promise<T | null>};
@@ -275,41 +276,4 @@ export class LightClientUpdater implements ILightClientUpdater {
       await this.db.latestNonFinalizedUpdate.put(newUpdate);
     }
   }
-}
-
-/**
- * Returns the update with more bits. On ties, newUpdate is the better
- */
-function isBetterUpdate(prevUpdate: altair.LightClientUpdate, newUpdate: altair.LightClientUpdate): boolean {
-  const prevIsFinalized = isFinalizedUpdate(prevUpdate);
-  const newIsFinalized = isFinalizedUpdate(newUpdate);
-
-  // newUpdate becomes finalized, it's better
-  if (newIsFinalized && !prevIsFinalized) return true;
-  // newUpdate is no longer finalized, it's worse
-  if (!newIsFinalized && prevIsFinalized) return false;
-  // For two finalized, or two non-finalized: compare bit count
-  return sumBits(newUpdate.syncCommitteeBits) >= sumBits(prevUpdate.syncCommitteeBits);
-}
-
-function isLatestBestFinalizedUpdate(
-  prevUpdate: altair.LightClientUpdate,
-  newUpdate: altair.LightClientUpdate
-): boolean {
-  if (newUpdate.finalityHeader.slot > prevUpdate.finalityHeader.slot) return true;
-  if (newUpdate.finalityHeader.slot < prevUpdate.finalityHeader.slot) return false;
-  return sumBits(newUpdate.syncCommitteeBits) >= sumBits(prevUpdate.syncCommitteeBits);
-}
-
-function isLatestBestNonFinalizedUpdate(
-  prevUpdate: altair.LightClientUpdate,
-  newUpdate: altair.LightClientUpdate
-): boolean {
-  if (newUpdate.header.slot > prevUpdate.header.slot) return true;
-  if (newUpdate.header.slot < prevUpdate.header.slot) return false;
-  return sumBits(newUpdate.syncCommitteeBits) >= sumBits(prevUpdate.syncCommitteeBits);
-}
-
-function isFinalizedUpdate(update: altair.LightClientUpdate): boolean {
-  return !isZeroHash(update.finalityHeader.stateRoot);
 }

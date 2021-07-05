@@ -116,6 +116,7 @@ module.exports = {
     "prefer-const": "error",
     quotes: ["error", "double"],
     semi: "off",
+    "no-restricted-imports": ["error", {patterns: ["../lib/*", "@chainsafe/*/lib/*"]}],
 
     // Prevents accidentally pushing a commit with .only in Mocha tests
     "no-only-tests/no-only-tests": "error",

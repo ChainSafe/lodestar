@@ -10,6 +10,7 @@ import {expectRejectedWithLodestarError} from "../../../utils/errors";
 import {StubbedBeaconDb} from "../../../utils/stub";
 import {generateSignedContributionAndProof} from "../../../utils/contributionAndProof";
 import {validateSyncCommitteeGossipContributionAndProof} from "../../../../src/chain/validation/syncCommitteeContributionAndProof";
+// eslint-disable-next-line no-restricted-imports
 import * as syncCommitteeUtils from "@chainsafe/lodestar-beacon-state-transition/lib/util/aggregator";
 import {SinonStubFn} from "../../../utils/types";
 import {generateCachedStateWithPubkeys} from "../../../utils/state";

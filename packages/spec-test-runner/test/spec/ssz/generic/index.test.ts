@@ -1,6 +1,7 @@
 import {expect} from "chai";
-import {getInvalidTestcases, getValidTestcases} from "@chainsafe/lodestar-spec-test-util/lib/sszGeneric";
 import {join} from "path";
+// eslint-disable-next-line no-restricted-imports
+import {getInvalidTestcases, getValidTestcases} from "@chainsafe/lodestar-spec-test-util/lib/sszGeneric";
 import {CompositeValue, isCompositeType} from "@chainsafe/ssz";
 
 // Test types defined here

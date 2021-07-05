@@ -2,7 +2,7 @@ import {ssz, SyncPeriod} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {bytesToInt} from "@chainsafe/lodestar-utils";
 import {IDatabaseController, Bucket, Repository, IDbMetrics} from "@chainsafe/lodestar-db";
-import {FinalizedCheckpointData} from "@chainsafe/lodestar-light-client/lib/server/LightClientUpdater";
+import {FinalizedCheckpointData} from "@chainsafe/lodestar-light-client/server";
 import {ContainerType} from "@chainsafe/ssz";
 
 export class LightclientFinalizedCheckpoint extends Repository<SyncPeriod, FinalizedCheckpointData> {

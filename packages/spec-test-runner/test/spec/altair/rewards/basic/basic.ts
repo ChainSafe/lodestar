@@ -4,13 +4,8 @@ import {expect} from "chai";
 
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
 import {altair, allForks} from "@chainsafe/lodestar-beacon-state-transition";
-import {SPEC_TEST_LOCATION} from "../../../../utils/specTestCases";
 import {TreeBacked} from "@chainsafe/ssz";
 import {createIBeaconConfig} from "@chainsafe/lodestar-config";
-import {
-  getFlagIndexDeltas,
-  getInactivityPenaltyDeltas,
-} from "@chainsafe/lodestar-beacon-state-transition/lib/altair/epoch/balance";
 import {
   PresetName,
   TIMELY_HEAD_FLAG_INDEX,
@@ -18,6 +13,7 @@ import {
   TIMELY_TARGET_FLAG_INDEX,
 } from "@chainsafe/lodestar-params";
 import {ssz} from "@chainsafe/lodestar-types";
+import {SPEC_TEST_LOCATION} from "../../../../utils/specTestCases";
 import {Deltas, Output, RewardTestCase} from "../type";
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
@@ -34,10 +30,10 @@ export function runBasic(presetName: PresetName): void {
       );
       const process = allForks.prepareEpochProcessState(wrappedState);
       return {
-        head_deltas: getFlagIndexDeltas(wrappedState, process, TIMELY_HEAD_FLAG_INDEX),
-        source_deltas: getFlagIndexDeltas(wrappedState, process, TIMELY_SOURCE_FLAG_INDEX),
-        target_deltas: getFlagIndexDeltas(wrappedState, process, TIMELY_TARGET_FLAG_INDEX),
-        inactivity_penalty_deltas: getInactivityPenaltyDeltas(wrappedState, process),
+        head_deltas: altair.getFlagIndexDeltas(wrappedState, process, TIMELY_HEAD_FLAG_INDEX),
+        source_deltas: altair.getFlagIndexDeltas(wrappedState, process, TIMELY_SOURCE_FLAG_INDEX),
+        target_deltas: altair.getFlagIndexDeltas(wrappedState, process, TIMELY_TARGET_FLAG_INDEX),
+        inactivity_penalty_deltas: altair.getInactivityPenaltyDeltas(wrappedState, process),
       };
     },
     {
