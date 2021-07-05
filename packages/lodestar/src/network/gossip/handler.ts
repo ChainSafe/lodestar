@@ -1,6 +1,6 @@
 import {allForks, altair, Epoch, phase0} from "@chainsafe/lodestar-types";
-import {ATTESTATION_SUBNET_COUNT, SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
-import {IBeaconConfig, ForkName} from "@chainsafe/lodestar-config";
+import {ATTESTATION_SUBNET_COUNT, ForkName, SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {SyncCommitteeSignatureIndexed} from "../../chain/validation/syncCommittee";
@@ -50,7 +50,7 @@ export class GossipHandler {
       this.logger.info("Subscribed gossip core topics");
     }
 
-    const currentEpoch = computeEpochAtSlot(this.config, this.chain.forkChoice.getHead().slot);
+    const currentEpoch = computeEpochAtSlot(this.chain.forkChoice.getHead().slot);
     for (const fork of getActiveForks(this.config, currentEpoch)) {
       this.subscribeCoreTopicsAtFork(fork);
     }
@@ -119,14 +119,11 @@ export class GossipHandler {
   private onAttestation = async (subnet: number, attestation: phase0.Attestation): Promise<void> => {
     // TODO: Review if it's really necessary to check shouldProcessAttestation()
     if (this.attnetsService.shouldProcess(subnet, attestation.data.slot)) {
-      await this.db.attestation.add(attestation);
+      this.chain.attestationPool.add(attestation);
     }
   };
 
-  private onSyncCommitteeSignature = async (
-    subnet: number,
-    signature: altair.SyncCommitteeSignature
-  ): Promise<void> => {
+  private onSyncCommitteeSignature = async (subnet: number, signature: altair.SyncCommitteeMessage): Promise<void> => {
     // Note: not calling checking `syncnetsService.shouldProcess()` here since the validators will always aggregate
 
     // TODO: Do this much better to be able to access this property in the handler
@@ -203,7 +200,7 @@ export class GossipHandler {
     for (const fork of allForksAfterAltair) {
       for (let subnet = 0; subnet < SYNC_COMMITTEE_SUBNET_COUNT; subnet++) {
         const topic = {type: GossipType.sync_committee, fork, subnet};
-        const handlerWrapped = (async (signature: altair.SyncCommitteeSignature): Promise<void> =>
+        const handlerWrapped = (async (signature: altair.SyncCommitteeMessage): Promise<void> =>
           await this.onSyncCommitteeSignature(subnet, signature)) as GossipHandlerFn;
         this.gossip.handleTopic(topic, handlerWrapped);
         this.topicHandlers.push({topic, handler: handlerWrapped});

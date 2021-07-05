@@ -1,6 +1,6 @@
 {
   "name": "@chainsafe/lodestar-validator",
-  "version": "0.22.0",
+  "version": "0.25.1",
   "description": "A Typescript implementation of the validator client",
   "author": "ChainSafe Systems",
   "license": "LGPL-3.0",
@@ -12,7 +12,9 @@
   "files": [
     "lib/**/*.js",
     "lib/**/*.js.map",
-    "lib/**/*.d.ts"
+    "lib/**/*.d.ts",
+    "*.d.ts",
+    "*.js"
   ],
   "scripts": {
     "clean": "rm -rf lib && rm -f *.tsbuildinfo",
@@ -29,9 +31,9 @@
     "pretest": "yarn run check-types",
     "test:unit": "nyc --cache-dir .nyc_output/.cache -e .ts mocha 'test/unit/**/*.test.ts'",
     "test": "yarn test:unit",
-    "test:e2e": "mocha --timeout 5000 'test/e2e/**/*.test.ts'",
-    "coverage": "codecov -F lodestar-validator",
-    "benchmark": "ts-node test/benchmarks"
+    "test:e2e": "yarn run download-test-cases && mocha 'test/e2e/**/*.test.ts'",
+    "download-test-cases": "node -r ts-node/register test/e2e/slashing-protection-interchange-tests/downloadTests.ts",
+    "coverage": "codecov -F lodestar-validator"
   },
   "repository": {
     "type": "git",
@@ -44,24 +46,19 @@
     "blockchain"
   ],
   "dependencies": {
+    "@chainsafe/abort-controller": "^3.0.1",
     "@chainsafe/bls": "6.0.1",
-    "@chainsafe/lodestar-beacon-state-transition": "^0.22.0",
-    "@chainsafe/lodestar-config": "^0.22.0",
-    "@chainsafe/lodestar-db": "^0.22.0",
-    "@chainsafe/lodestar-params": "^0.22.0",
-    "@chainsafe/lodestar-types": "^0.22.0",
-    "@chainsafe/lodestar-utils": "^0.22.0",
-    "@chainsafe/ssz": "^0.8.6",
-    "abort-controller": "^3.0.0",
-    "axios": "^0.21.1",
-    "axios-mock-adapter": "^1.17.0",
-    "bigint-buffer": "^1.1.5",
-    "eventsource": "^1.0.7",
-    "strict-event-emitter-types": "^2.0.0"
+    "@chainsafe/lodestar-api": "^0.25.1",
+    "@chainsafe/lodestar-beacon-state-transition": "^0.25.1",
+    "@chainsafe/lodestar-config": "^0.25.1",
+    "@chainsafe/lodestar-db": "^0.25.1",
+    "@chainsafe/lodestar-params": "^0.25.0",
+    "@chainsafe/lodestar-types": "^0.25.0",
+    "@chainsafe/lodestar-utils": "^0.25.1",
+    "@chainsafe/ssz": "^0.8.11",
+    "bigint-buffer": "^1.1.5"
   },
   "devDependencies": {
-    "@chainsafe/slashing-protection-interchange-tests": "^4.0.0",
-    "@types/eventsource": "^1.1.5",
     "bigint-buffer": "^1.1.5"
   }
 }

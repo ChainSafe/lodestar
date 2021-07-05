@@ -1,33 +1,51 @@
 import {expect} from "chai";
-import {config} from "@chainsafe/lodestar-config/mainnet";
-import {ForkName} from "@chainsafe/lodestar-config";
+import {config} from "@chainsafe/lodestar-config/default";
+import {ForkName} from "@chainsafe/lodestar-params";
+import {ssz} from "@chainsafe/lodestar-types";
 import {
-  getGossipTopic,
-  getGossipTopicString,
+  parseGossipTopic,
+  stringifyGossipTopic,
   GossipType,
-  GossipTopic,
-  DEFAULT_ENCODING,
+  GossipEncoding,
+  GossipTopicMap,
+  getForkFromGossipTopic,
 } from "../../../../src/network/gossip";
 import {ForkDigestContext} from "../../../../src/util/forkDigestContext";
 
 describe("GossipTopic", function () {
-  const genesisValidatorsRoot = config.types.Root.defaultValue();
+  const genesisValidatorsRoot = ssz.Root.defaultValue();
   const forkDigestContext = new ForkDigestContext(config, genesisValidatorsRoot);
+  const encoding = GossipEncoding.ssz_snappy;
 
-  const topics: GossipTopic[] = [
-    {type: GossipType.beacon_block, fork: ForkName.phase0, encoding: DEFAULT_ENCODING},
-    {type: GossipType.beacon_aggregate_and_proof, fork: ForkName.phase0, encoding: DEFAULT_ENCODING},
-    {type: GossipType.beacon_attestation, fork: ForkName.phase0, subnet: 5, encoding: DEFAULT_ENCODING},
-    {type: GossipType.voluntary_exit, fork: ForkName.phase0, encoding: DEFAULT_ENCODING},
-    {type: GossipType.proposer_slashing, fork: ForkName.phase0, encoding: DEFAULT_ENCODING},
-    {type: GossipType.attester_slashing, fork: ForkName.phase0, encoding: DEFAULT_ENCODING},
-  ];
-  for (const topic of topics) {
-    it(`should round trip encode/decode gossip topic ${topic.type} ${topic.fork} ${topic.encoding}`, async () => {
-      const topicString = getGossipTopicString(forkDigestContext, topic);
-      const outputTopic = getGossipTopic(forkDigestContext, topicString);
-      expect(outputTopic).to.deep.equal(topic);
-    });
+  // Enforce with Typescript that we test all GossipType
+  const testCases: {[K in GossipType]: GossipTopicMap[K][]} = {
+    [GossipType.beacon_block]: [{type: GossipType.beacon_block, fork: ForkName.phase0, encoding}],
+    [GossipType.beacon_aggregate_and_proof]: [
+      {type: GossipType.beacon_aggregate_and_proof, fork: ForkName.phase0, encoding},
+    ],
+    [GossipType.beacon_attestation]: [
+      {type: GossipType.beacon_attestation, fork: ForkName.phase0, subnet: 5, encoding},
+    ],
+    [GossipType.voluntary_exit]: [{type: GossipType.voluntary_exit, fork: ForkName.phase0, encoding}],
+    [GossipType.proposer_slashing]: [{type: GossipType.proposer_slashing, fork: ForkName.phase0, encoding}],
+    [GossipType.attester_slashing]: [{type: GossipType.attester_slashing, fork: ForkName.phase0, encoding}],
+    [GossipType.sync_committee_contribution_and_proof]: [
+      {type: GossipType.sync_committee_contribution_and_proof, fork: ForkName.altair, encoding},
+    ],
+    [GossipType.sync_committee]: [{type: GossipType.sync_committee, fork: ForkName.altair, subnet: 5, encoding}],
+  };
+
+  for (const topics of Object.values(testCases)) {
+    if (topics.length === 0) throw Error("Must have a least 1 testCase for each GossipType");
+
+    for (const topic of topics) {
+      it(`should round trip encode/decode gossip topic ${topic.type} ${topic.fork} ${topic.encoding}`, async () => {
+        const topicString = stringifyGossipTopic(forkDigestContext, topic);
+        const outputTopic = parseGossipTopic(forkDigestContext, topicString);
+        expect(outputTopic).to.deep.equal(topic);
+        expect(getForkFromGossipTopic(forkDigestContext, topicString)).to.be.equal(topic.fork, "Incorrect fork");
+      });
+    }
   }
 
   const topicStrings: string[] = [
@@ -39,12 +57,15 @@ describe("GossipTopic", function () {
     "/eth2/18ae4ccb/beacon_attestation_foo/ssz_snappy",
     // invalid gossip type
     "/eth2/18ae4ccb/something_different/ssz_snappy",
+    "/eth2/18ae4ccb/beacon_attestation/ssz_snappy",
+    "/eth2/18ae4ccb/beacon_attestation_/ssz_snappy",
+    "/eth2/18ae4ccb/beacon_attestation_PP/ssz_snappy",
     // invalid encoding
     "/eth2/18ae4ccb/beacon_attestation_5/ssz_supersnappy",
   ];
   for (const topicString of topicStrings) {
     it(`should fail to decode invalid gossip topic string ${topicString}`, async () => {
-      expect(() => getGossipTopic(forkDigestContext, topicString), topicString).to.throw();
+      expect(() => parseGossipTopic(forkDigestContext, topicString), topicString).to.throw();
     });
   }
 });

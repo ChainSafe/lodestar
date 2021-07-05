@@ -1,6 +1,6 @@
 import {fromHexString, List} from "@chainsafe/ssz";
+import {FAR_FUTURE_EPOCH} from "@chainsafe/lodestar-params";
 import {phase0} from "@chainsafe/lodestar-types";
-import {FAR_FUTURE_EPOCH} from "../../src/constants";
 
 export interface IValidatorGeneratorOpts {
   activation?: number;

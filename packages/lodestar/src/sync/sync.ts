@@ -1,7 +1,8 @@
 import PeerId from "peer-id";
-import {IBeaconSync, ISyncModules} from "./interface";
+import {IBeaconSync, ISyncModules, SyncingStatus} from "./interface";
 import {INetwork, NetworkEvent} from "../network";
 import {ILogger} from "@chainsafe/lodestar-utils";
+import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Slot, phase0} from "@chainsafe/lodestar-types";
 import {toHexString} from "@chainsafe/ssz";
@@ -44,7 +45,7 @@ export class BeaconSync implements IBeaconSync {
     this.network = network;
     this.chain = chain;
     this.logger = logger;
-    this.rangeSync = new RangeSync(modules);
+    this.rangeSync = new RangeSync(modules, this.opts);
     this.backfillSync = new BackfillSync(modules);
 
     this.slotImportTolerance = modules.config.params.SLOTS_PER_EPOCH;
@@ -71,7 +72,7 @@ export class BeaconSync implements IBeaconSync {
     this.backfillSync.close();
   }
 
-  getSyncStatus(): phase0.SyncingStatus {
+  getSyncStatus(): SyncingStatus {
     const currentSlot = this.chain.clock.currentSlot;
     const headSlot = this.chain.forkChoice.getHead().slot;
     switch (this.state) {
@@ -79,13 +80,13 @@ export class BeaconSync implements IBeaconSync {
       case SyncState.SyncingHead:
       case SyncState.Stalled:
         return {
-          headSlot: BigInt(headSlot),
-          syncDistance: BigInt(currentSlot - headSlot),
+          headSlot: headSlot,
+          syncDistance: currentSlot - headSlot,
         };
       case SyncState.Synced:
         return {
-          headSlot: BigInt(headSlot),
-          syncDistance: BigInt(0),
+          headSlot: headSlot,
+          syncDistance: 0,
         };
       default:
         throw new Error("Node is stopped, cannot get sync status");
@@ -202,7 +203,7 @@ export class BeaconSync implements IBeaconSync {
   private onUnknownBlockRoot = async (err: BlockError): Promise<void> => {
     if (err.type.code !== BlockErrorCode.PARENT_UNKNOWN) return;
 
-    const block = err.job.signedBlock.message;
+    const block = err.signedBlock.message;
     const blockRoot = this.config.getForkTypes(block.slot).BeaconBlock.hashTreeRoot(block);
     const parentRoot = this.chain.pendingBlocks.getMissingAncestor(blockRoot);
     const parentRootHex = toHexString(parentRoot);

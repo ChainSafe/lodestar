@@ -3,8 +3,15 @@
  */
 
 import {List} from "@chainsafe/ssz";
+import {
+  ForkName,
+  MAX_ATTESTATIONS,
+  MAX_ATTESTER_SLASHINGS,
+  MAX_PROPOSER_SLASHINGS,
+  MAX_VOLUNTARY_EXITS,
+} from "@chainsafe/lodestar-params";
 import {Bytes96, Bytes32, phase0, allForks, altair, Root, Slot} from "@chainsafe/lodestar-types";
-import {ForkName, IBeaconConfig} from "@chainsafe/lodestar-config";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
 
 import {IBeaconDb} from "../../../db";
@@ -18,13 +25,23 @@ export async function assembleBody(
   blockSlot: Slot,
   syncAggregateData: {parentSlot: Slot; parentBlockRoot: Root}
 ): Promise<allForks.BeaconBlockBody> {
+  // TODO:
+  // Iterate through the naive aggregation pool and ensure all the attestations from there
+  // are included in the operation pool.
+  // for (const attestation of db.attestationPool.getAll()) {
+  //   try {
+  //     opPool.insertAttestation(attestation);
+  //   } catch (e) {
+  //     // Don't stop block production if there's an error, just create a log.
+  //     logger.error("Attestation did not transfer to op pool", {}, e);
+  //   }
+  // }
+
   const [proposerSlashings, attesterSlashings, attestations, voluntaryExits, {eth1Data, deposits}] = await Promise.all([
-    db.proposerSlashing.values({limit: config.params.MAX_PROPOSER_SLASHINGS}),
-    db.attesterSlashing.values({limit: config.params.MAX_ATTESTER_SLASHINGS}),
-    db.aggregateAndProof
-      .getBlockAttestations(currentState)
-      .then((value) => value.slice(0, config.params.MAX_ATTESTATIONS)),
-    db.voluntaryExit.values({limit: config.params.MAX_VOLUNTARY_EXITS}),
+    db.proposerSlashing.values({limit: MAX_PROPOSER_SLASHINGS}),
+    db.attesterSlashing.values({limit: MAX_ATTESTER_SLASHINGS}),
+    db.aggregateAndProof.getBlockAttestations(currentState).then((value) => value.slice(0, MAX_ATTESTATIONS)),
+    db.voluntaryExit.values({limit: MAX_VOLUNTARY_EXITS}),
     eth1.getEth1DataAndDeposits(currentState as CachedBeaconState<allForks.BeaconState>),
   ]);
 

@@ -1,4 +1,5 @@
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {DOMAIN_AGGREGATE_AND_PROOF} from "@chainsafe/lodestar-params";
+import {ssz} from "@chainsafe/lodestar-types";
 import {allForks, Epoch, phase0} from "@chainsafe/lodestar-types";
 import {PublicKey} from "@chainsafe/bls";
 import {
@@ -9,19 +10,13 @@ import {
 } from "@chainsafe/lodestar-beacon-state-transition";
 
 export function getAggregateAndProofSignatureSet(
-  config: IBeaconConfig,
   state: allForks.BeaconState,
   epoch: Epoch,
   aggregator: PublicKey,
   aggregateAndProof: phase0.SignedAggregateAndProof
 ): ISignatureSet {
-  const aggregatorDomain = getDomain(config, state, config.params.DOMAIN_AGGREGATE_AND_PROOF, epoch);
-  const signingRoot = computeSigningRoot(
-    config,
-    config.types.phase0.AggregateAndProof,
-    aggregateAndProof.message,
-    aggregatorDomain
-  );
+  const aggregatorDomain = getDomain(state, DOMAIN_AGGREGATE_AND_PROOF, epoch);
+  const signingRoot = computeSigningRoot(ssz.phase0.AggregateAndProof, aggregateAndProof.message, aggregatorDomain);
 
   return {
     type: SignatureSetType.single,

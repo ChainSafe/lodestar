@@ -1,4 +1,5 @@
 import {BasicListType, List, TreeBacked} from "@chainsafe/ssz";
+import {TIMELY_HEAD_FLAG_INDEX, TIMELY_SOURCE_FLAG_INDEX, TIMELY_TARGET_FLAG_INDEX} from "@chainsafe/lodestar-params";
 import {ParticipationFlags, Uint8} from "@chainsafe/lodestar-types";
 import {MutableVector, PersistentVector, TransientVector} from "@chainsafe/persistent-ts";
 import {Tree} from "@chainsafe/persistent-merkle-tree";
@@ -10,9 +11,10 @@ export interface IParticipationStatus {
   timelySource: boolean;
 }
 
-const TIMELY_HEAD = 1 << 0;
-const TIMELY_SOURCE = 1 << 1;
-const TIMELY_TARGET = 1 << 2;
+/** Same to https://github.com/ethereum/eth2.0-specs/blob/v1.1.0-alpha.5/specs/altair/beacon-chain.md#has_flag */
+const TIMELY_SOURCE = 1 << TIMELY_SOURCE_FLAG_INDEX;
+const TIMELY_TARGET = 1 << TIMELY_TARGET_FLAG_INDEX;
+const TIMELY_HEAD = 1 << TIMELY_HEAD_FLAG_INDEX;
 
 export function toParticipationFlags(data: IParticipationStatus): ParticipationFlags {
   return (
@@ -24,9 +26,9 @@ export function toParticipationFlags(data: IParticipationStatus): ParticipationF
 
 export function fromParticipationFlags(flags: ParticipationFlags): IParticipationStatus {
   return {
-    timelyHead: (TIMELY_HEAD & flags) === TIMELY_HEAD,
     timelySource: (TIMELY_SOURCE & flags) === TIMELY_SOURCE,
     timelyTarget: (TIMELY_TARGET & flags) === TIMELY_TARGET,
+    timelyHead: (TIMELY_HEAD & flags) === TIMELY_HEAD,
   };
 }
 

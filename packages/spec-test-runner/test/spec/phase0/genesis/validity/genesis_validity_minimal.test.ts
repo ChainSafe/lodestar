@@ -1,13 +1,14 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import {join} from "path";
 
-import {config} from "@chainsafe/lodestar-config/minimal";
-import {phase0} from "@chainsafe/lodestar-types";
+import {config} from "@chainsafe/lodestar-config/default";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
-import {isValidGenesisState} from "@chainsafe/lodestar-beacon-state-transition";
+import {phase0, isValidGenesisState} from "@chainsafe/lodestar-beacon-state-transition";
 import {SPEC_TEST_LOCATION} from "../../../../utils/specTestCases";
+import {IBaseSpecTest} from "../../../type";
+import {ssz} from "@chainsafe/lodestar-types";
 
-interface IGenesisValidityTestCase {
+interface IGenesisValidityTestCase extends IBaseSpecTest {
   is_valid: boolean;
   genesis: phase0.BeaconState;
 }
@@ -26,7 +27,7 @@ describeDirectorySpecTest<IGenesisValidityTestCase, boolean>(
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
     sszTypes: {
-      genesis: config.types.phase0.BeaconState,
+      genesis: ssz.phase0.BeaconState,
     },
     getExpected: (testCase) => testCase.is_valid,
   }

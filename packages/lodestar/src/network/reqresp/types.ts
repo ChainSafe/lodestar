@@ -1,5 +1,6 @@
-import {ForkName, IBeaconConfig} from "@chainsafe/lodestar-config";
-import {allForks, phase0} from "@chainsafe/lodestar-types";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {ForkName} from "@chainsafe/lodestar-params";
+import {allForks, phase0, ssz} from "@chainsafe/lodestar-types";
 
 export const protocolPrefix = "/eth2/beacon_chain/req";
 
@@ -96,17 +97,17 @@ export function contextBytesTypeByProtocol(protocol: Protocol): ContextBytesType
 export function getRequestSzzTypeByMethod(config: IBeaconConfig, method: Method) {
   switch (method) {
     case Method.Status:
-      return config.types.phase0.Status;
+      return ssz.phase0.Status;
     case Method.Goodbye:
-      return config.types.phase0.Goodbye;
+      return ssz.phase0.Goodbye;
     case Method.Ping:
-      return config.types.phase0.Ping;
+      return ssz.phase0.Ping;
     case Method.Metadata:
       return null;
     case Method.BeaconBlocksByRange:
-      return config.types.phase0.BeaconBlocksByRangeRequest;
+      return ssz.phase0.BeaconBlocksByRangeRequest;
     case Method.BeaconBlocksByRoot:
-      return config.types.phase0.BeaconBlocksByRootRequest;
+      return ssz.phase0.BeaconBlocksByRootRequest;
   }
 }
 
@@ -124,20 +125,20 @@ export type RequestBodyByMethod = {
 export function getResponseSzzTypeByMethod(config: IBeaconConfig, protocol: Protocol, forkName: ForkName) {
   switch (protocol.method) {
     case Method.Status:
-      return config.types.phase0.Status;
+      return ssz.phase0.Status;
     case Method.Goodbye:
-      return config.types.phase0.Goodbye;
+      return ssz.phase0.Goodbye;
     case Method.Ping:
-      return config.types.phase0.Ping;
+      return ssz.phase0.Ping;
     case Method.Metadata: {
       // V1 -> phase0.Metadata, V2 -> altair.Metadata
       const fork = protocol.version === Version.V1 ? ForkName.phase0 : ForkName.altair;
-      return config.types[fork].Metadata;
+      return ssz[fork].Metadata;
     }
     case Method.BeaconBlocksByRange:
     case Method.BeaconBlocksByRoot:
       // SignedBeaconBlock type is changed in altair
-      return config.types[forkName].SignedBeaconBlock;
+      return ssz[forkName].SignedBeaconBlock;
   }
 }
 

@@ -1,4 +1,5 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {
   ILogger,
   LogLevel,
@@ -14,6 +15,8 @@ export interface ILogArgs {
   logLevelFile?: LogLevel;
   logFormatGenesisTime?: number;
   logFormatId?: string;
+  logRotate?: boolean;
+  logMaxFiles?: number;
 }
 
 export function errorLogger(): ILogger {
@@ -26,7 +29,13 @@ export function errorLogger(): ILogger {
 export function getCliLogger(args: ILogArgs, paths: {logFile?: string}, config: IBeaconConfig): ILogger {
   const transports: TransportOpts[] = [{type: TransportType.console}];
   if (paths.logFile) {
-    transports.push({type: TransportType.file, filename: paths.logFile, level: args.logLevelFile});
+    transports.push({
+      type: TransportType.file,
+      filename: paths.logFile,
+      level: args.logLevelFile,
+      rotate: args.logRotate,
+      maxfiles: args.logMaxFiles,
+    });
   }
 
   const timestampFormat: TimestampFormat =
@@ -34,8 +43,8 @@ export function getCliLogger(args: ILogArgs, paths: {logFile?: string}, config: 
       ? {
           format: TimestampFormatCode.EpochSlot,
           genesisTime: args.logFormatGenesisTime,
-          secondsPerSlot: config.params.SECONDS_PER_SLOT,
-          slotsPerEpoch: config.params.SLOTS_PER_EPOCH,
+          secondsPerSlot: config.SECONDS_PER_SLOT,
+          slotsPerEpoch: SLOTS_PER_EPOCH,
         }
       : {
           format: TimestampFormatCode.DateRegular,

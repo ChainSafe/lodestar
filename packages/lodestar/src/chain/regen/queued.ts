@@ -1,4 +1,4 @@
-import {AbortSignal} from "abort-controller";
+import {AbortSignal} from "@chainsafe/abort-controller";
 import {Root, phase0, Slot, allForks} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
@@ -61,8 +61,8 @@ export class QueuedStateRegenerator implements IStateRegenerator {
       });
     }
 
-    const parentEpoch = computeEpochAtSlot(this.config, parentBlock.slot);
-    const blockEpoch = computeEpochAtSlot(this.config, block.slot);
+    const parentEpoch = computeEpochAtSlot(parentBlock.slot);
+    const blockEpoch = computeEpochAtSlot(block.slot);
 
     // Check the checkpoint cache (if the pre-state is a checkpoint state)
     if (parentEpoch < blockEpoch) {

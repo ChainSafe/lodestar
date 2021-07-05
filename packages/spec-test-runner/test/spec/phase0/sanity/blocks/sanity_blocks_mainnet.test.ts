@@ -3,12 +3,12 @@ import {expect} from "chai";
 
 import {TreeBacked} from "@chainsafe/ssz";
 import {allForks, phase0} from "@chainsafe/lodestar-beacon-state-transition";
-import {config} from "@chainsafe/lodestar-config/mainnet";
+import {config} from "@chainsafe/lodestar-config/default";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
 import {IBlockSanityTestCase} from "./type";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {SPEC_TEST_LOCATION} from "../../../../utils/specTestCases";
 import {BeaconState} from "@chainsafe/lodestar-types/phase0";
+import {ssz} from "@chainsafe/lodestar-types";
 
 describeDirectorySpecTest<IBlockSanityTestCase, allForks.BeaconState>(
   "block sanity mainnet",
@@ -41,9 +41,9 @@ describeDirectorySpecTest<IBlockSanityTestCase, allForks.BeaconState>(
       meta: InputType.YAML,
     },
     sszTypes: {
-      pre: config.types.phase0.BeaconState,
-      post: config.types.phase0.BeaconState,
-      ...generateBlocksSZZTypeMapping(99, config),
+      pre: ssz.phase0.BeaconState,
+      post: ssz.phase0.BeaconState,
+      ...generateBlocksSZZTypeMapping(99),
     },
     shouldError: (testCase) => {
       return !testCase.post;
@@ -51,18 +51,15 @@ describeDirectorySpecTest<IBlockSanityTestCase, allForks.BeaconState>(
     timeout: 10000000,
     getExpected: (testCase) => testCase.post as BeaconState,
     expectFunc: (testCase, expected, actual) => {
-      expect(config.types.phase0.BeaconState.equals(actual, expected)).to.be.true;
+      expect(ssz.phase0.BeaconState.equals(actual, expected)).to.be.true;
     },
   }
 );
 
-function generateBlocksSZZTypeMapping(
-  n: number,
-  config: IBeaconConfig
-): Record<string, typeof config.types.phase0.SignedBeaconBlock> {
-  const blocksMapping: Record<string, typeof config.types.phase0.SignedBeaconBlock> = {};
+function generateBlocksSZZTypeMapping(n: number): Record<string, typeof ssz.phase0.SignedBeaconBlock> {
+  const blocksMapping: Record<string, typeof ssz.phase0.SignedBeaconBlock> = {};
   for (let i = 0; i < n; i++) {
-    blocksMapping[`blocks_${i}`] = config.types.phase0.SignedBeaconBlock;
+    blocksMapping[`blocks_${i}`] = ssz.phase0.SignedBeaconBlock;
   }
   return blocksMapping;
 }

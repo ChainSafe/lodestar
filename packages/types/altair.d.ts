@@ -1,1 +1,1 @@
-export * from "./lib/altair";
+export * from "./lib/altair/types";

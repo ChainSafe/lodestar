@@ -6,13 +6,12 @@ export function processRegistryUpdates(state: CachedBeaconState<allForks.BeaconS
   const {config, validators, epochCtx} = state;
   let exitEnd = process.exitQueueEnd;
   let endChurn = process.exitQueueEndChurn;
-  const {MIN_VALIDATOR_WITHDRAWABILITY_DELAY} = config.params;
   // process ejections
   for (const index of process.indicesToEject) {
     // set validator exit epoch and withdrawable epoch
     validators.update(index, {
       exitEpoch: exitEnd,
-      withdrawableEpoch: exitEnd + MIN_VALIDATOR_WITHDRAWABILITY_DELAY,
+      withdrawableEpoch: exitEnd + config.MIN_VALIDATOR_WITHDRAWABILITY_DELAY,
     });
 
     endChurn += 1;
@@ -37,7 +36,7 @@ export function processRegistryUpdates(state: CachedBeaconState<allForks.BeaconS
       break; // remaining validators all have an activationEligibilityEpoch that is higher anyway, break early
     }
     validators.update(index, {
-      activationEpoch: computeActivationExitEpoch(config, process.currentEpoch),
+      activationEpoch: computeActivationExitEpoch(process.currentEpoch),
     });
   }
 }

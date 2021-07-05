@@ -1,18 +1,20 @@
-import {allForks, Number64, Root, Slot} from "@chainsafe/lodestar-types";
-import {ForkName} from "@chainsafe/lodestar-config";
-import {phase0, CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
+import {ForkName} from "@chainsafe/lodestar-params";
+import {allForks, Number64, Root, phase0, Slot} from "@chainsafe/lodestar-types";
+import {CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
+import {LightClientUpdater} from "@chainsafe/lodestar-light-client/lib/server/LightClientUpdater";
 
 import {IBeaconClock} from "./clock/interface";
 import {ChainEventEmitter} from "./emitter";
 import {IStateRegenerator} from "./regen";
 import {BlockPool} from "./blocks";
-import {AttestationPool} from "./attestation";
 import {StateContextCache, CheckpointStateCache} from "./stateCache";
 import {IBlsVerifier} from "./bls";
+import {SeenAttesters, SeenAggregators} from "./seenCache";
 import {IForkDigestContext} from "../util/forkDigestContext";
+import {AttestationPool} from "./opsPool/attestationPool";
 
-interface IProcessBlock {
+export interface IProcessBlock {
   /**
    * Metadata: lets a block thats already been processed to be processed again.
    * After processing, the block will not be stored in the database
@@ -40,14 +42,6 @@ export interface IBlockJob extends IProcessBlock {
   signedBlock: allForks.SignedBeaconBlock;
 }
 
-export interface IAttestationJob {
-  attestation: phase0.Attestation;
-  /**
-   * `true` if the signature has already been verified
-   */
-  validSignature: boolean;
-}
-
 /**
  * The IBeaconChain service deals with processing incoming blocks, advancing a state transition
  * and applying the fork choice rule to update the chain head
@@ -64,8 +58,14 @@ export interface IBeaconChain {
   checkpointStateCache: CheckpointStateCache;
   regen: IStateRegenerator;
   pendingBlocks: BlockPool;
-  pendingAttestations: AttestationPool;
   forkDigestContext: IForkDigestContext;
+  lightclientUpdater: LightClientUpdater;
+
+  // Ops pool
+  readonly attestationPool: AttestationPool;
+
+  readonly seenAttesters: SeenAttesters;
+  readonly seenAggregators: SeenAggregators;
 
   /** Stop beacon chain processing */
   close(): void;
@@ -87,10 +87,13 @@ export interface IBeaconChain {
   getUnfinalizedBlocksAtSlots(slots: Slot[]): Promise<allForks.SignedBeaconBlock[]>;
   getFinalizedCheckpoint(): phase0.Checkpoint;
 
-  /** Add attestation to the fork-choice rule */
-  receiveAttestation(attestation: phase0.Attestation): void;
   /** Pre-process and run the per slot state transition function */
   receiveBlock(signedBlock: allForks.SignedBeaconBlock, trusted?: boolean): void;
+  /** Process a block until complete */
+  processBlock(
+    signedBlock: allForks.SignedBeaconBlock,
+    flags: {prefinalized: boolean; trusted: boolean}
+  ): Promise<void>;
   /** Process a chain of blocks until complete */
   processChainSegment(
     signedBlocks: allForks.SignedBeaconBlock[],

@@ -23,7 +23,7 @@ import {
   computeMostCommonTarget,
 } from "./utils";
 
-export type SyncChainOpts = BatchOpts;
+export type SyncChainOpts = Partial<BatchOpts>;
 
 export type SyncChainModules = {
   config: IBeaconConfig;
@@ -107,7 +107,7 @@ export class SyncChain {
 
   private readonly logger: ILogger;
   private readonly config: IBeaconConfig;
-  private readonly opts: SyncChainOpts;
+  private readonly opts: BatchOpts;
 
   constructor(
     startEpoch: Epoch,
@@ -256,7 +256,7 @@ export class SyncChain {
 
         // If startEpoch of the next batch to be processed > targetEpoch -> Done
         const toBeProcessedEpoch = toBeProcessedStartEpoch(toArr(this.batches), this.startEpoch, this.opts);
-        if (this.target && computeStartSlotAtEpoch(this.config, toBeProcessedEpoch) >= this.target.slot) {
+        if (this.target && computeStartSlotAtEpoch(toBeProcessedEpoch) >= this.target.slot) {
           break;
         }
 
@@ -362,7 +362,7 @@ export class SyncChain {
 
     // This line decides the starting epoch of the next batch. MUST ensure no duplicate batch for the same startEpoch
     const startEpoch = toBeDownloadedStartEpoch(batches, this.startEpoch, this.opts);
-    const toBeDownloadedSlot = computeStartSlotAtEpoch(this.config, startEpoch) + BATCH_SLOT_OFFSET;
+    const toBeDownloadedSlot = computeStartSlotAtEpoch(startEpoch) + BATCH_SLOT_OFFSET;
 
     // Don't request batches beyond the target head slot
     if (this.target && toBeDownloadedSlot > this.target.slot) {

@@ -3,7 +3,7 @@ import "mocha";
 import {expect} from "chai";
 import {promisify} from "es6-promisify";
 import leveldown from "leveldown";
-import {AbortController} from "abort-controller";
+import {AbortController} from "@chainsafe/abort-controller";
 import {sleep} from "@chainsafe/lodestar-utils";
 import {LevelDbController} from "@chainsafe/lodestar-db";
 
@@ -14,7 +14,7 @@ import {testLogger} from "../../utils/logger";
 import {BeaconDb} from "../../../src/db";
 import {generateState} from "../../utils/state";
 import {fromHexString, List, toHexString} from "@chainsafe/ssz";
-import {Root} from "@chainsafe/lodestar-types";
+import {Root, ssz} from "@chainsafe/lodestar-types";
 import {createCachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
 
 const dbLocation = "./.__testdb";
@@ -93,12 +93,12 @@ describe("eth1 / Eth1Provider", function () {
     if (eth1Datas.length === 0) throw Error("No eth1Datas");
     const {key: maxTimestamp, value: latestEth1Data} = eth1Datas[eth1Datas.length - 1];
 
-    const {SECONDS_PER_ETH1_BLOCK, ETH1_FOLLOW_DISTANCE} = config.params;
+    const {SECONDS_PER_ETH1_BLOCK, ETH1_FOLLOW_DISTANCE} = config;
     // block.timestamp + SECONDS_PER_ETH1_BLOCK * ETH1_FOLLOW_DISTANCE <= period_start && ...
     const periodStart = maxTimestamp + SECONDS_PER_ETH1_BLOCK * ETH1_FOLLOW_DISTANCE;
 
     // Compute correct deposit root tree
-    const depositRootTree = config.types.phase0.DepositDataRootList.createTreeBackedFromStruct(
+    const depositRootTree = ssz.phase0.DepositDataRootList.createTreeBackedFromStruct(
       pyrmontDepositsDataRoot.map((root) => fromHexString(root)) as List<Root>
     );
 
@@ -126,7 +126,7 @@ describe("eth1 / Eth1Provider", function () {
     const result = await eth1ForBlockProduction.getEth1DataAndDeposits(state);
     expect(result.eth1Data).to.deep.equal(latestEth1Data, "Wrong eth1Data for block production");
     expect(
-      result.deposits.map((deposit) => toHexString(config.types.phase0.DepositData.hashTreeRoot(deposit.data)))
+      result.deposits.map((deposit) => toHexString(ssz.phase0.DepositData.hashTreeRoot(deposit.data)))
     ).to.deep.equal(pyrmontDepositsDataRoot, "Wrong deposits for for block production");
   });
 });

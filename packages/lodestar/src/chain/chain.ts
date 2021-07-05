@@ -2,23 +2,23 @@
  * @module chain
  */
 
+import {ForkName} from "@chainsafe/lodestar-params";
 import {
   CachedBeaconState,
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
 } from "@chainsafe/lodestar-beacon-state-transition";
-import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
-import {IBeaconConfig, ForkName} from "@chainsafe/lodestar-config";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
-import {allForks, ForkDigest, Number64, Root, Slot} from "@chainsafe/lodestar-types";
+import {allForks, ForkDigest, Number64, Root, phase0, Slot} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {TreeBacked} from "@chainsafe/ssz";
-import {AbortController} from "abort-controller";
+import {LightClientUpdater} from "@chainsafe/lodestar-light-client/lib/server/LightClientUpdater";
+import {AbortController} from "@chainsafe/abort-controller";
 import {GENESIS_EPOCH, ZERO_HASH} from "../constants";
 import {IBeaconDb} from "../db";
 import {CheckpointStateCache, StateContextCache} from "./stateCache";
 import {IMetrics} from "../metrics";
-import {AttestationPool, AttestationProcessor} from "./attestation";
 import {BlockPool, BlockProcessor} from "./blocks";
 import {IBeaconClock, LocalClock} from "./clock";
 import {ChainEventEmitter} from "./emitter";
@@ -28,11 +28,12 @@ import {IChainOptions} from "./options";
 import {IStateRegenerator, QueuedStateRegenerator} from "./regen";
 import {LodestarForkChoice} from "./forkChoice";
 import {restoreStateCaches} from "./initState";
-import {BlsVerifier, IBlsVerifier} from "./bls";
+import {IBlsVerifier, BlsSingleThreadVerifier, BlsMultiThreadWorkerPool} from "./bls";
+import {SeenAttesters, SeenAggregators} from "./seenCache";
 import {ForkDigestContext, IForkDigestContext} from "../util/forkDigestContext";
+import {AttestationPool} from "./opsPool/attestationPool";
 
 export interface IBeaconChainModules {
-  opts: IChainOptions;
   config: IBeaconConfig;
   db: IBeaconDb;
   logger: ILogger;
@@ -51,11 +52,16 @@ export class BeaconChain implements IBeaconChain {
   stateCache: StateContextCache;
   checkpointStateCache: CheckpointStateCache;
   regen: IStateRegenerator;
-  pendingAttestations: AttestationPool;
   pendingBlocks: BlockPool;
   forkDigestContext: IForkDigestContext;
+  lightclientUpdater: LightClientUpdater;
 
-  protected attestationProcessor: AttestationProcessor;
+  // Ops pool
+  readonly attestationPool = new AttestationPool();
+
+  readonly seenAttesters = new SeenAttesters();
+  readonly seenAggregators = new SeenAggregators();
+
   protected blockProcessor: BlockProcessor;
   protected readonly config: IBeaconConfig;
   protected readonly db: IBeaconDb;
@@ -69,7 +75,7 @@ export class BeaconChain implements IBeaconChain {
   protected internalEmitter = new ChainEventEmitter();
   private abortController = new AbortController();
 
-  constructor({opts, config, db, logger, metrics, anchorState}: IBeaconChainModules) {
+  constructor(opts: IChainOptions, {config, db, logger, metrics, anchorState}: IBeaconChainModules) {
     this.opts = opts;
     this.config = config;
     this.db = db;
@@ -82,13 +88,21 @@ export class BeaconChain implements IBeaconChain {
 
     const signal = this.abortController.signal;
     const emitter = this.internalEmitter; // All internal compoments emit to the internal emitter first
-    const bls = new BlsVerifier({logger, metrics, signal: this.abortController.signal});
+    const bls = opts.useSingleThreadVerifier
+      ? new BlsSingleThreadVerifier()
+      : new BlsMultiThreadWorkerPool({logger, metrics, signal: this.abortController.signal});
 
     const clock = new LocalClock({config, emitter, genesisTime: this.genesisTime, signal});
     const stateCache = new StateContextCache();
     const checkpointStateCache = new CheckpointStateCache(config);
     const cachedState = restoreStateCaches(config, stateCache, checkpointStateCache, anchorState);
-    const forkChoice = new LodestarForkChoice({config, emitter, currentSlot: clock.currentSlot, state: cachedState});
+    const forkChoice = new LodestarForkChoice({
+      config,
+      emitter,
+      currentSlot: clock.currentSlot,
+      state: cachedState,
+      metrics,
+    });
     const regen = new QueuedStateRegenerator({
       config,
       emitter,
@@ -99,9 +113,7 @@ export class BeaconChain implements IBeaconChain {
       metrics,
       signal,
     });
-    this.pendingAttestations = new AttestationPool({config});
-    this.pendingBlocks = new BlockPool({config});
-    this.attestationProcessor = new AttestationProcessor({config, forkChoice, emitter, clock, regen});
+    this.pendingBlocks = new BlockPool(config, logger);
     this.blockProcessor = new BlockProcessor({
       config,
       forkChoice,
@@ -112,6 +124,7 @@ export class BeaconChain implements IBeaconChain {
       emitter,
       checkpointStateCache,
       signal,
+      opts,
     });
 
     this.forkChoice = forkChoice;
@@ -120,6 +133,8 @@ export class BeaconChain implements IBeaconChain {
     this.bls = bls;
     this.checkpointStateCache = checkpointStateCache;
     this.stateCache = stateCache;
+
+    this.lightclientUpdater = new LightClientUpdater(this.db);
 
     handleChainEvents.bind(this)(this.abortController.signal);
   }
@@ -147,7 +162,7 @@ export class BeaconChain implements IBeaconChain {
   }
 
   async getHeadStateAtCurrentEpoch(): Promise<CachedBeaconState<allForks.BeaconState>> {
-    const currentEpochStartSlot = computeStartSlotAtEpoch(this.config, this.clock.currentEpoch);
+    const currentEpochStartSlot = computeStartSlotAtEpoch(this.clock.currentEpoch);
     const head = this.forkChoice.getHead();
     const bestSlot = currentEpochStartSlot > head.slot ? currentEpochStartSlot : head.slot;
     return await this.regen.getBlockSlotState(head.blockRoot, bestSlot);
@@ -168,7 +183,7 @@ export class BeaconChain implements IBeaconChain {
 
   async getCanonicalBlockAtSlot(slot: Slot): Promise<allForks.SignedBeaconBlock | null> {
     const finalizedCheckpoint = this.forkChoice.getFinalizedCheckpoint();
-    if (finalizedCheckpoint.epoch > computeEpochAtSlot(this.config, slot)) {
+    if (finalizedCheckpoint.epoch > computeEpochAtSlot(slot)) {
       return this.db.blockArchive.get(slot);
     }
     const summary = this.forkChoice.getCanonicalBlockSummaryAtSlot(slot);
@@ -214,12 +229,6 @@ export class BeaconChain implements IBeaconChain {
     return this.forkChoice.getFinalizedCheckpoint();
   }
 
-  receiveAttestation(attestation: phase0.Attestation): void {
-    this.attestationProcessor
-      .processAttestationJob({attestation, validSignature: false})
-      .catch(() => /* unreachable */ ({}));
-  }
-
   receiveBlock(signedBlock: allForks.SignedBeaconBlock, trusted = false): void {
     this.blockProcessor
       .processBlockJob({
@@ -230,6 +239,19 @@ export class BeaconChain implements IBeaconChain {
         validProposerSignature: trusted,
       })
       .catch(() => /* unreachable */ ({}));
+  }
+
+  async processBlock(
+    signedBlock: allForks.SignedBeaconBlock,
+    {prefinalized, trusted = false}: {prefinalized: boolean; trusted: boolean}
+  ): Promise<void> {
+    return await this.blockProcessor.processBlockJob({
+      signedBlock,
+      reprocess: false,
+      prefinalized,
+      validSignatures: trusted,
+      validProposerSignature: trusted,
+    });
   }
 
   async processChainSegment(
@@ -262,7 +284,11 @@ export class BeaconChain implements IBeaconChain {
     const head = this.forkChoice.getHead();
     const finalizedCheckpoint = this.forkChoice.getFinalizedCheckpoint();
     return {
-      forkDigest: this.forkDigestContext.forkName2ForkDigest(this.config.getForkName(head.slot)),
+      // fork_digest: The node's ForkDigest (compute_fork_digest(current_fork_version, genesis_validators_root)) where
+      // - current_fork_version is the fork version at the node's current epoch defined by the wall-clock time (not necessarily the epoch to which the node is sync)
+      // - genesis_validators_root is the static Root found in state.genesis_validators_root
+      forkDigest: this.forkDigestContext.forkName2ForkDigest(this.config.getForkName(this.clock.currentSlot)),
+      // finalized_root: state.finalized_checkpoint.root for the state corresponding to the head block (Note this defaults to Root(b'\x00' * 32) for the genesis finalized checkpoint).
       finalizedRoot: finalizedCheckpoint.epoch === GENESIS_EPOCH ? ZERO_HASH : finalizedCheckpoint.root,
       finalizedEpoch: finalizedCheckpoint.epoch,
       headRoot: head.blockRoot,

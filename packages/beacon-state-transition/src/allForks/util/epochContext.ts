@@ -1,22 +1,57 @@
-import {ByteVector, hash, toHexString, BitList, List, readonlyValues} from "@chainsafe/ssz";
+import {ByteVector, hash, toHexString, BitList, List} from "@chainsafe/ssz";
 import bls, {CoordType, PublicKey} from "@chainsafe/bls";
-import {BLSSignature, CommitteeIndex, Epoch, Slot, ValidatorIndex, phase0, allForks} from "@chainsafe/lodestar-types";
+import {
+  BLSSignature,
+  CommitteeIndex,
+  Epoch,
+  Slot,
+  ValidatorIndex,
+  phase0,
+  allForks,
+  Gwei,
+  Number64,
+} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {intToBytes} from "@chainsafe/lodestar-utils";
+import {
+  BASE_REWARD_FACTOR,
+  DOMAIN_BEACON_PROPOSER,
+  EFFECTIVE_BALANCE_INCREMENT,
+  GENESIS_EPOCH,
+  PROPOSER_WEIGHT,
+  SLOTS_PER_EPOCH,
+  SYNC_COMMITTEE_SIZE,
+  SYNC_REWARD_WEIGHT,
+  WEIGHT_DENOMINATOR,
+} from "@chainsafe/lodestar-params";
+import {bigIntSqrt, intToBytes, LodestarError} from "@chainsafe/lodestar-utils";
 
-import {GENESIS_EPOCH} from "../../constants";
 import {
   computeEpochAtSlot,
   computeProposerIndex,
   computeStartSlotAtEpoch,
-  getAttestingIndicesFromCommittee,
   getSeed,
+  getTotalActiveBalance,
   isAggregatorFromCommitteeLength,
+  zipIndexesCommitteeBits,
 } from "../../util";
-import {getSyncCommitteeIndices} from "../../altair/state_accessor/sync_committee";
 import {computeEpochShuffling, IEpochShuffling} from "./epochShuffling";
 import {MutableVector} from "@chainsafe/persistent-ts";
 import {CachedValidatorList} from "./cachedValidatorList";
+import {computeBaseRewardPerIncrement} from "../../altair/misc";
+
+export type AttesterDuty = {
+  // Index of validator in validator registry
+  validatorIndex: ValidatorIndex;
+  committeeIndex: CommitteeIndex;
+  // Number of validators in committee
+  committeeLength: Number64;
+  // Number of committees at the provided slot
+  committeesAtSlot: Number64;
+  // Index of validator in committee
+  validatorCommitteeIndex: Number64;
+  // The slot at which the validator must attest.
+  slot: Slot;
+};
 
 export type EpochContextOpts = {
   pubkey2index?: PubkeyIndexMap;
@@ -24,12 +59,25 @@ export type EpochContextOpts = {
   skipSyncPubkeys?: boolean;
 };
 
-export class PubkeyIndexMap extends Map<ByteVector, ValidatorIndex> {
-  get(key: ByteVector): ValidatorIndex | undefined {
-    return super.get((toHexString(key) as unknown) as ByteVector);
+type PubkeyHex = string;
+
+function toHexStringMaybe(hex: ByteVector | string): string {
+  return typeof hex === "string" ? hex : toHexString(hex);
+}
+
+export class PubkeyIndexMap {
+  private readonly map = new Map<PubkeyHex, ValidatorIndex>();
+
+  get size(): number {
+    return this.map.size;
   }
-  set(key: ByteVector, value: ValidatorIndex): this {
-    return super.set((toHexString(key) as unknown) as ByteVector, value);
+
+  get(key: ByteVector | PubkeyHex): ValidatorIndex | undefined {
+    return this.map.get(toHexStringMaybe(key));
+  }
+
+  set(key: ByteVector | PubkeyHex, value: ValidatorIndex): void {
+    this.map.set(toHexStringMaybe(key), value);
   }
 }
 
@@ -49,7 +97,7 @@ export function createEpochContext(
     syncPubkeys(state, pubkey2index, index2pubkey);
   }
 
-  const currentEpoch = computeEpochAtSlot(config, state.slot);
+  const currentEpoch = computeEpochAtSlot(state.slot);
   const previousEpoch = currentEpoch === GENESIS_EPOCH ? GENESIS_EPOCH : currentEpoch - 1;
   const nextEpoch = currentEpoch + 1;
 
@@ -59,22 +107,29 @@ export function createEpochContext(
     v.exitEpoch,
   ]);
 
-  const currentShuffling = computeEpochShuffling(config, state, indicesBounded, currentEpoch);
+  const currentShuffling = computeEpochShuffling(state, indicesBounded, currentEpoch);
   let previousShuffling;
   if (previousEpoch === currentEpoch) {
     // in case of genesis
     previousShuffling = currentShuffling;
   } else {
-    previousShuffling = computeEpochShuffling(config, state, indicesBounded, previousEpoch);
+    previousShuffling = computeEpochShuffling(state, indicesBounded, previousEpoch);
   }
-  const nextShuffling = computeEpochShuffling(config, state, indicesBounded, nextEpoch);
-  const proposers = computeProposers(config, state, currentShuffling);
+  const nextShuffling = computeEpochShuffling(state, indicesBounded, nextEpoch);
+
+  // Allow to create CachedBeaconState for empty states
+  const proposers = state.validators.length > 0 ? computeProposers(state, currentShuffling) : [];
 
   // Only after altair, compute the indices of the current sync committee
-  const onAltairFork = currentEpoch >= config.params.ALTAIR_FORK_EPOCH;
-  const nextPeriodEpoch = currentEpoch + config.params.EPOCHS_PER_SYNC_COMMITTEE_PERIOD;
-  const currSyncCommitteeIndexes = onAltairFork ? getSyncCommitteeIndices(config, state, currentEpoch) : [];
-  const nextSyncCommitteeIndexes = onAltairFork ? getSyncCommitteeIndices(config, state, nextPeriodEpoch) : [];
+  const onAltairFork = currentEpoch >= config.ALTAIR_FORK_EPOCH;
+
+  const totalActiveBalance = getTotalActiveBalance(state);
+  const syncParticipantReward = onAltairFork ? computeSyncParticipantReward(config, totalActiveBalance) : BigInt(0);
+  const syncProposerReward = onAltairFork
+    ? (syncParticipantReward * PROPOSER_WEIGHT) / (WEIGHT_DENOMINATOR - PROPOSER_WEIGHT)
+    : BigInt(0);
+
+  const baseRewardPerIncrement = onAltairFork ? computeBaseRewardPerIncrement(totalActiveBalance) : BigInt(0);
 
   return new EpochContext({
     config,
@@ -84,10 +139,9 @@ export function createEpochContext(
     previousShuffling,
     currentShuffling,
     nextShuffling,
-    currSyncCommitteeIndexes,
-    nextSyncCommitteeIndexes,
-    currSyncComitteeValidatorIndexMap: computeSyncComitteeMap(currSyncCommitteeIndexes),
-    nextSyncComitteeValidatorIndexMap: computeSyncComitteeMap(nextSyncCommitteeIndexes),
+    syncParticipantReward,
+    syncProposerReward,
+    baseRewardPerIncrement,
   });
 }
 
@@ -119,45 +173,28 @@ export function syncPubkeys(
 /**
  * Compute proposer indices for an epoch
  */
-export function computeProposers(
-  config: IBeaconConfig,
-  state: allForks.BeaconState,
-  shuffling: IEpochShuffling
-): number[] {
-  const epochSeed = getSeed(config, state, shuffling.epoch, config.params.DOMAIN_BEACON_PROPOSER);
-  const startSlot = computeStartSlotAtEpoch(config, shuffling.epoch);
+export function computeProposers(state: allForks.BeaconState, shuffling: IEpochShuffling): number[] {
+  const epochSeed = getSeed(state, shuffling.epoch, DOMAIN_BEACON_PROPOSER);
+  const startSlot = computeStartSlotAtEpoch(shuffling.epoch);
   const proposers = [];
-  for (let slot = startSlot; slot < startSlot + config.params.SLOTS_PER_EPOCH; slot++) {
+  for (let slot = startSlot; slot < startSlot + SLOTS_PER_EPOCH; slot++) {
     proposers.push(
-      computeProposerIndex(
-        config,
-        state,
-        shuffling.activeIndices,
-        hash(Buffer.concat([epochSeed, intToBytes(slot, 8)]))
-      )
+      computeProposerIndex(state, shuffling.activeIndices, hash(Buffer.concat([epochSeed, intToBytes(slot, 8)])))
     );
   }
   return proposers;
 }
 
 /**
- * Compute all index in sync committee for all validatorIndexes in `syncCommitteeIndexes`.
- * Helps reduce work necessary to verify a validatorIndex belongs in a sync committee and which.
+ * Same logic in https://github.com/ethereum/eth2.0-specs/blob/v1.1.0-alpha.5/specs/altair/beacon-chain.md#sync-committee-processing
  */
-export function computeSyncComitteeMap(syncCommitteeIndexes: ValidatorIndex[]): SyncComitteeValidatorIndexMap {
-  const map = new Map<ValidatorIndex, number[]>();
-
-  for (let i = 0, len = syncCommitteeIndexes.length; i < len; i++) {
-    const validatorIndex = syncCommitteeIndexes[i];
-    let indexes = map.get(validatorIndex);
-    if (!indexes) {
-      indexes = [];
-      map.set(validatorIndex, indexes);
-    }
-    indexes.push(i);
-  }
-
-  return map;
+export function computeSyncParticipantReward(config: IBeaconConfig, totalActiveBalance: Gwei): Gwei {
+  const totalActiveIncrements = totalActiveBalance / EFFECTIVE_BALANCE_INCREMENT;
+  const baseRewardPerIncrement =
+    (EFFECTIVE_BALANCE_INCREMENT * BigInt(BASE_REWARD_FACTOR)) / bigIntSqrt(totalActiveBalance);
+  const totalBaseRewards = baseRewardPerIncrement * totalActiveIncrements;
+  const maxParticipantRewards = (totalBaseRewards * SYNC_REWARD_WEIGHT) / WEIGHT_DENOMINATOR / BigInt(SLOTS_PER_EPOCH);
+  return maxParticipantRewards / BigInt(SYNC_COMMITTEE_SIZE);
 }
 
 /**
@@ -178,32 +215,19 @@ export function rotateEpochs(
     v.activationEpoch,
     v.exitEpoch,
   ]);
-  epochCtx.nextShuffling = computeEpochShuffling(epochCtx.config, state, indicesBounded, nextEpoch);
-  epochCtx.proposers = computeProposers(epochCtx.config, state, epochCtx.currentShuffling);
+  epochCtx.nextShuffling = computeEpochShuffling(state, indicesBounded, nextEpoch);
+  epochCtx.proposers = computeProposers(state, epochCtx.currentShuffling);
 
-  // State slot has already been += 1
-  if (
-    currEpoch % epochCtx.config.params.EPOCHS_PER_SYNC_COMMITTEE_PERIOD === 0 &&
-    currEpoch > epochCtx.config.params.ALTAIR_FORK_EPOCH
-  ) {
-    const nextPeriodEpoch = currEpoch + epochCtx.config.params.EPOCHS_PER_SYNC_COMMITTEE_PERIOD;
-    epochCtx.currSyncCommitteeIndexes = epochCtx.nextSyncCommitteeIndexes;
-    epochCtx.nextSyncCommitteeIndexes = getSyncCommitteeIndices(epochCtx.config, state, nextPeriodEpoch);
-    epochCtx.currSyncComitteeValidatorIndexMap = epochCtx.nextSyncComitteeValidatorIndexMap;
-    epochCtx.nextSyncComitteeValidatorIndexMap = computeSyncComitteeMap(epochCtx.nextSyncCommitteeIndexes);
-  }
+  if (currEpoch >= epochCtx.config.ALTAIR_FORK_EPOCH) {
+    const totalActiveBalance = getTotalActiveBalance(state);
+    epochCtx.syncParticipantReward = computeSyncParticipantReward(epochCtx.config, totalActiveBalance);
+    epochCtx.syncProposerReward =
+      (epochCtx.syncParticipantReward * PROPOSER_WEIGHT) / (WEIGHT_DENOMINATOR - PROPOSER_WEIGHT);
 
-  // If crossing through the altair fork the caches will be empty, fill them up
-  if (currEpoch === epochCtx.config.params.ALTAIR_FORK_EPOCH) {
-    const nextPeriodEpoch = currEpoch + epochCtx.config.params.EPOCHS_PER_SYNC_COMMITTEE_PERIOD;
-    epochCtx.currSyncCommitteeIndexes = getSyncCommitteeIndices(epochCtx.config, state, currEpoch);
-    epochCtx.nextSyncCommitteeIndexes = getSyncCommitteeIndices(epochCtx.config, state, nextPeriodEpoch);
-    epochCtx.currSyncComitteeValidatorIndexMap = computeSyncComitteeMap(epochCtx.currSyncCommitteeIndexes);
-    epochCtx.nextSyncComitteeValidatorIndexMap = computeSyncComitteeMap(epochCtx.nextSyncCommitteeIndexes);
+    epochCtx.baseRewardPerIncrement = computeBaseRewardPerIncrement(totalActiveBalance);
   }
 }
 
-type SyncComitteeValidatorIndexMap = Map<ValidatorIndex, number[]>;
 interface IEpochContextData {
   config: IBeaconConfig;
   pubkey2index: PubkeyIndexMap;
@@ -212,10 +236,9 @@ interface IEpochContextData {
   previousShuffling: IEpochShuffling;
   currentShuffling: IEpochShuffling;
   nextShuffling: IEpochShuffling;
-  currSyncCommitteeIndexes: ValidatorIndex[];
-  nextSyncCommitteeIndexes: ValidatorIndex[];
-  currSyncComitteeValidatorIndexMap: SyncComitteeValidatorIndexMap;
-  nextSyncComitteeValidatorIndexMap: SyncComitteeValidatorIndexMap;
+  syncParticipantReward: Gwei;
+  syncProposerReward: Gwei;
+  baseRewardPerIncrement: Gwei;
 }
 
 /**
@@ -237,19 +260,14 @@ export class EpochContext {
   previousShuffling: IEpochShuffling;
   currentShuffling: IEpochShuffling;
   nextShuffling: IEpochShuffling;
-  /**
-   * Update freq: every ~ 27h.
-   * Memory cost: 1024 Number integers.
-   */
-  currSyncCommitteeIndexes: ValidatorIndex[];
-  nextSyncCommitteeIndexes: ValidatorIndex[];
-  /**
-   * Update freq: every ~ 27h.
-   * Memory cost: Map of Number -> Number with 1024 entries.
-   */
-  currSyncComitteeValidatorIndexMap: SyncComitteeValidatorIndexMap;
-  nextSyncComitteeValidatorIndexMap: SyncComitteeValidatorIndexMap;
+  syncParticipantReward: phase0.Gwei;
+  syncProposerReward: phase0.Gwei;
   config: IBeaconConfig;
+  /**
+   * Update freq: once per epoch after `process_effective_balance_updates()`
+   * Memory cost: 1 bigint
+   */
+  baseRewardPerIncrement: Gwei;
 
   constructor(data: IEpochContextData) {
     this.config = data.config;
@@ -259,10 +277,9 @@ export class EpochContext {
     this.previousShuffling = data.previousShuffling;
     this.currentShuffling = data.currentShuffling;
     this.nextShuffling = data.nextShuffling;
-    this.currSyncCommitteeIndexes = data.currSyncCommitteeIndexes;
-    this.nextSyncCommitteeIndexes = data.nextSyncCommitteeIndexes;
-    this.currSyncComitteeValidatorIndexMap = data.currSyncComitteeValidatorIndexMap;
-    this.nextSyncComitteeValidatorIndexMap = data.nextSyncComitteeValidatorIndexMap;
+    this.syncParticipantReward = data.syncParticipantReward;
+    this.syncProposerReward = data.syncProposerReward;
+    this.baseRewardPerIncrement = data.baseRewardPerIncrement;
   }
 
   /**
@@ -279,41 +296,39 @@ export class EpochContext {
    * Return the beacon committee at slot for index.
    */
   getBeaconCommittee(slot: Slot, index: CommitteeIndex): ValidatorIndex[] {
-    const slotCommittees = this._getSlotCommittees(slot);
+    const slotCommittees = this.getShufflingAtSlot(slot).committees[slot % SLOTS_PER_EPOCH];
     if (index >= slotCommittees.length) {
-      throw new Error(`Requesting beacon committee index ${index} over slot committees len ${slotCommittees.length}`);
+      throw new EpochContextError({
+        code: EpochContextErrorCode.COMMITTEE_INDEX_OUT_OF_RANGE,
+        index,
+        maxIndex: slotCommittees.length,
+      });
     }
     return slotCommittees[index];
   }
 
-  getCommitteeCountAtSlot(slot: Slot): number {
-    return this._getSlotCommittees(slot).length;
+  getCommitteeCountPerSlot(epoch: Epoch): number {
+    return this.getShufflingAtEpoch(epoch).committeesPerSlot;
   }
 
   getBeaconProposer(slot: Slot): ValidatorIndex {
-    const epoch = computeEpochAtSlot(this.config, slot);
+    const epoch = computeEpochAtSlot(slot);
     if (epoch !== this.currentShuffling.epoch) {
       throw new Error(
         `Requesting beacon proposer for different epoch current shuffling: ${epoch} != ${this.currentShuffling.epoch}`
       );
     }
-    return this.proposers[slot % this.config.params.SLOTS_PER_EPOCH];
+    return this.proposers[slot % SLOTS_PER_EPOCH];
   }
 
   /**
    * Return the indexed attestation corresponding to ``attestation``.
    */
   getIndexedAttestation(attestation: phase0.Attestation): phase0.IndexedAttestation {
-    const data = attestation.data;
-    const bits = Array.from(readonlyValues(attestation.aggregationBits));
-    const committee = this.getBeaconCommittee(data.slot, data.index);
-    // No need for a Set, the indices in the committee are already unique.
-    const attestingIndices: ValidatorIndex[] = [];
-    for (const [i, index] of committee.entries()) {
-      if (bits[i]) {
-        attestingIndices.push(index);
-      }
-    }
+    const {aggregationBits, data} = attestation;
+    const committeeIndices = this.getBeaconCommittee(data.slot, data.index);
+    const attestingIndices = zipIndexesCommitteeBits(committeeIndices, aggregationBits);
+
     // sort in-place
     attestingIndices.sort((a, b) => a - b);
     return {
@@ -324,8 +339,34 @@ export class EpochContext {
   }
 
   getAttestingIndices(data: phase0.AttestationData, bits: BitList): ValidatorIndex[] {
-    const committee = this.getBeaconCommittee(data.slot, data.index);
-    return getAttestingIndicesFromCommittee(committee, Array.from(readonlyValues(bits)) as List<boolean>);
+    const committeeIndices = this.getBeaconCommittee(data.slot, data.index);
+    const validatorIndices = zipIndexesCommitteeBits(committeeIndices, bits);
+    return validatorIndices;
+  }
+
+  getCommitteeAssignments(epoch: Epoch, requestedValidatorIndices: ValidatorIndex[]): AttesterDuty[] {
+    const requestedValidatorIndicesSet = new Set(requestedValidatorIndices);
+    const duties = [];
+    const epochCommittees = this.getShufflingAtEpoch(epoch).committees;
+    for (let epochSlot = 0; epochSlot < SLOTS_PER_EPOCH; epochSlot++) {
+      const slotCommittees = epochCommittees[epochSlot];
+      for (let i = 0, committeesAtSlot = slotCommittees.length; i < committeesAtSlot; i++) {
+        for (let j = 0, committeeLength = slotCommittees[i].length; j < committeeLength; j++) {
+          const validatorIndex = slotCommittees[i][j];
+          if (requestedValidatorIndicesSet.has(validatorIndex)) {
+            duties.push({
+              validatorIndex,
+              committeeLength,
+              committeesAtSlot,
+              validatorCommitteeIndex: j,
+              committeeIndex: i,
+              slot: epoch * SLOTS_PER_EPOCH + epochSlot,
+            });
+          }
+        }
+      }
+    }
+    return duties;
   }
 
   /**
@@ -343,10 +384,10 @@ export class EpochContext {
       );
     }
 
-    const epochStartSlot = computeStartSlotAtEpoch(this.config, epoch);
-    for (let slot = epochStartSlot; slot < epochStartSlot + this.config.params.SLOTS_PER_EPOCH; slot++) {
-      const committeeCount = this.getCommitteeCountAtSlot(slot);
-      for (let i = 0; i < committeeCount; i++) {
+    const epochStartSlot = computeStartSlotAtEpoch(epoch);
+    const committeeCountPerSlot = this.getCommitteeCountPerSlot(epoch);
+    for (let slot = epochStartSlot; slot < epochStartSlot + SLOTS_PER_EPOCH; slot++) {
+      for (let i = 0; i < committeeCountPerSlot; i++) {
         const committee = this.getBeaconCommittee(slot, i);
         if (committee.includes(validatorIndex)) {
           return {
@@ -357,13 +398,12 @@ export class EpochContext {
         }
       }
     }
-
     return null;
   }
 
   isAggregator(slot: Slot, index: CommitteeIndex, slotSignature: BLSSignature): boolean {
     const committee = this.getBeaconCommittee(slot, index);
-    return isAggregatorFromCommitteeLength(this.config, committee.length, slotSignature);
+    return isAggregatorFromCommitteeLength(committee.length, slotSignature);
   }
 
   addPubkey(index: ValidatorIndex, pubkey: Uint8Array): void {
@@ -371,17 +411,32 @@ export class EpochContext {
     this.index2pubkey[index] = bls.PublicKey.fromBytes(pubkey, CoordType.jacobian); // Optimize for aggregation
   }
 
-  private _getSlotCommittees(slot: Slot): ValidatorIndex[][] {
-    const epoch = computeEpochAtSlot(this.config, slot);
-    const epochSlot = slot % this.config.params.SLOTS_PER_EPOCH;
+  getShufflingAtSlot(slot: Slot): IEpochShuffling {
+    const epoch = computeEpochAtSlot(slot);
+    return this.getShufflingAtEpoch(epoch);
+  }
+
+  getShufflingAtEpoch(epoch: Epoch): IEpochShuffling {
     if (epoch === this.previousShuffling.epoch) {
-      return this.previousShuffling.committees[epochSlot];
+      return this.previousShuffling;
     } else if (epoch === this.currentShuffling.epoch) {
-      return this.currentShuffling.committees[epochSlot];
+      return this.currentShuffling;
     } else if (epoch === this.nextShuffling.epoch) {
-      return this.nextShuffling.committees[epochSlot];
+      return this.nextShuffling;
     } else {
       throw new Error(`Requesting slot committee out of range epoch: ${epoch} current: ${this.currentShuffling.epoch}`);
     }
   }
 }
+
+export enum EpochContextErrorCode {
+  COMMITTEE_INDEX_OUT_OF_RANGE = "EPOCH_CONTEXT_ERROR_COMMITTEE_INDEX_OUT_OF_RANGE",
+}
+
+type EpochContextErrorType = {
+  code: EpochContextErrorCode.COMMITTEE_INDEX_OUT_OF_RANGE;
+  index: number;
+  maxIndex: number;
+};
+
+export class EpochContextError extends LodestarError<EpochContextErrorType> {}

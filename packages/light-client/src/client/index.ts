@@ -1,13 +1,13 @@
 import mitt from "mitt";
-import {altair, Root, Slot, SyncPeriod} from "@chainsafe/lodestar-types";
+import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
+import {getClient, Api} from "@chainsafe/lodestar-api";
+import {altair, Root, ssz, SyncPeriod} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {LIGHT_CLIENT_UPDATE_TIMEOUT} from "@chainsafe/lodestar-params";
-import {computeSyncPeriodAtSlot, ZERO_HASH} from "@chainsafe/lodestar-beacon-state-transition";
+import {computeSyncPeriodAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {TreeOffsetProof} from "@chainsafe/persistent-merkle-tree";
-import {toHexString} from "@chainsafe/ssz";
-import {BeaconBlockHeader} from "@chainsafe/lodestar-types/phase0";
-import {LightclientApiClient, Paths} from "./apiClient";
-import {IClock} from "../utils/clock";
+import {Path, toHexString} from "@chainsafe/ssz";
+import {BeaconBlockHeader, Checkpoint} from "@chainsafe/lodestar-types/phase0";
+import {Clock, IClock} from "../utils/clock";
 import {deserializeSyncCommittee, isEmptyHeader, serializeSyncCommittee, sumBits} from "../utils/utils";
 import {LightClientStoreFast} from "./types";
 import {chunkifyInclusiveRange} from "../utils/chunkify";
@@ -28,7 +28,7 @@ export type LightclientModules = {
 const maxPeriodPerRequest = 32;
 
 export class Lightclient {
-  readonly apiClient: ReturnType<typeof LightclientApiClient>;
+  readonly api: Api;
   readonly emitter: LightclientEmitter = mitt();
 
   readonly config: IBeaconConfig;
@@ -42,31 +42,64 @@ export class Lightclient {
     this.clock = clock;
     this.genesisValidatorsRoot = genesisValidatorsRoot;
     this.beaconApiUrl = beaconApiUrl;
-    this.apiClient = LightclientApiClient(beaconApiUrl, config.types);
+    this.api = getClient(config, {baseUrl: beaconApiUrl});
     this.clock.runEverySlot(this.syncToLatest);
   }
 
-  static async initializeFromTrustedStateRoot(
-    modules: LightclientModules,
-    trustedRoot: {stateRoot: Root; slot: Slot}
+  static async initializeFromCheckpoint(
+    config: IBeaconConfig,
+    beaconApiUrl: string,
+    checkpoint: Checkpoint
   ): Promise<Lightclient> {
-    const {config, beaconApiUrl} = modules;
-    const {slot, stateRoot} = trustedRoot;
-    const apiClient = LightclientApiClient(beaconApiUrl, config.types);
+    const api = getClient(config, {baseUrl: beaconApiUrl});
 
-    const paths = getSyncCommitteesProofPaths(config);
-    const proof = await apiClient.getStateProof(toHexString(stateRoot), paths);
+    // fetch block header matching checkpoint root
+    const headerResp = await api.beacon.getBlockHeader(toHexString(checkpoint.root));
 
-    const state = config.types.altair.BeaconState.createTreeBackedFromProof(stateRoot as Uint8Array, proof);
+    // verify the response matches the requested root
+    if (
+      !ssz.Root.equals(headerResp.data.root, ssz.phase0.BeaconBlockHeader.hashTreeRoot(headerResp.data.header.message))
+    ) {
+      throw new Error("Invalid header response, data.root != data.header");
+    }
+
+    if (!ssz.Root.equals(checkpoint.root, headerResp.data.root)) {
+      throw new Error("Retrieved header does not match trusted checkpoint");
+    }
+
+    const header = headerResp.data.header.message;
+    const stateRoot = header.stateRoot;
+
+    // fetch a proof with everything needed to bootstrap the client
+    const paths = [
+      // initial sync committee list
+      ...getSyncCommitteesProofPaths(),
+      // required to initialize a slot clock
+      ["genesisTime"],
+      // required to verify signatures
+      ["genesisValidatorsRoot"],
+    ];
+    const proof = await api.lightclient.getStateProof(toHexString(stateRoot), paths);
+
+    const state = ssz.altair.BeaconState.createTreeBackedFromProof(stateRoot as Uint8Array, proof.data);
     const store: LightClientStoreFast = {
       bestUpdates: new Map<SyncPeriod, altair.LightClientUpdate>(),
       snapshot: {
-        header: {slot, proposerIndex: 0, parentRoot: ZERO_HASH, stateRoot, bodyRoot: ZERO_HASH},
+        header,
         currentSyncCommittee: deserializeSyncCommittee(state.currentSyncCommittee),
         nextSyncCommittee: deserializeSyncCommittee(state.nextSyncCommittee),
       },
     };
-    return new Lightclient(modules, store);
+
+    return new Lightclient(
+      {
+        config,
+        beaconApiUrl,
+        clock: new Clock(config, state.genesisTime),
+        genesisValidatorsRoot: state.genesisValidatorsRoot.valueOf() as Root,
+      },
+      store
+    );
   }
 
   static initializeFromTrustedSnapshot(modules: LightclientModules, snapshot: altair.LightClientSnapshot): Lightclient {
@@ -95,11 +128,11 @@ export class Lightclient {
 
   async sync(): Promise<void> {
     const currentSlot = this.clock.currentSlot;
-    const lastPeriod = computeSyncPeriodAtSlot(this.config, this.store.snapshot.header.slot);
-    const currentPeriod = computeSyncPeriodAtSlot(this.config, currentSlot);
+    const lastPeriod = computeSyncPeriodAtSlot(this.store.snapshot.header.slot);
+    const currentPeriod = computeSyncPeriodAtSlot(currentSlot);
     const periodRanges = chunkifyInclusiveRange(lastPeriod, currentPeriod, maxPeriodPerRequest);
     for (const [fromPeriod, toPeriod] of periodRanges) {
-      const updates = await this.apiClient.getBestUpdates(fromPeriod, toPeriod);
+      const {data: updates} = await this.api.lightclient.getBestUpdates(fromPeriod, toPeriod);
       for (const update of updates) {
         this.processLightClientUpdate(update);
         // Yield to the macro queue, verifying updates is somewhat expensive and we want responsiveness
@@ -109,14 +142,16 @@ export class Lightclient {
   }
 
   async syncToLatest(): Promise<void> {
-    const update = await this.apiClient.getLatestUpdateFinalized();
+    const {data: update} = await this.api.lightclient.getLatestUpdateFinalized();
     if (update) {
       this.processLightClientUpdate(update);
     }
   }
 
-  async getStateProof(paths: Paths): Promise<TreeOffsetProof> {
-    return await this.apiClient.getStateProof(toHexString(this.store.snapshot.header.stateRoot), paths);
+  async getStateProof(paths: Path[]): Promise<TreeOffsetProof> {
+    const stateId = toHexString(this.store.snapshot.header.stateRoot);
+    const res = await this.api.lightclient.getStateProof(stateId, paths);
+    return res.data as TreeOffsetProof;
   }
 
   onSlot = async (): Promise<void> => {
@@ -128,28 +163,30 @@ export class Lightclient {
   };
 
   private processLightClientUpdate(update: altair.LightClientUpdate): void {
-    validateLightClientUpdate(this.config, this.store.snapshot, update, this.genesisValidatorsRoot);
+    validateLightClientUpdate(this.store.snapshot, update, this.genesisValidatorsRoot);
 
-    const syncPeriod = computeSyncPeriodAtSlot(this.config, update.header.slot);
+    const syncPeriod = computeSyncPeriodAtSlot(update.header.slot);
     const prevBestUpdate = this.store.bestUpdates.get(syncPeriod);
     if (!prevBestUpdate || isBetterUpdate(prevBestUpdate, update)) {
       this.store.bestUpdates.set(syncPeriod, update);
     }
 
+    const updateTimeout = SLOTS_PER_EPOCH * EPOCHS_PER_SYNC_COMMITTEE_PERIOD;
+
     // Apply update if (1) 2/3 quorum is reached and (2) we have a finality proof.
     // Note that (2) means that the current light client design needs finality.
     // It may be changed to re-organizable light client design. See the on-going issue eth2.0-specs#2182.
     if (
-      sumBits(update.syncCommitteeBits) * 3 > update.syncCommitteeBits.length * 2 &&
-      !isEmptyHeader(this.config, update.finalityHeader)
+      sumBits(update.syncCommitteeBits) * 3 >= update.syncCommitteeBits.length * 2 &&
+      !isEmptyHeader(update.finalityHeader)
     ) {
       this.applyLightClientUpdate(update);
       this.store.bestUpdates.delete(syncPeriod);
     }
 
     // Forced best update when the update timeout has elapsed
-    else if (this.clock.currentSlot > this.store.snapshot.header.slot + LIGHT_CLIENT_UPDATE_TIMEOUT) {
-      const prevSyncPeriod = computeSyncPeriodAtSlot(this.config, this.store.snapshot.header.slot);
+    else if (this.clock.currentSlot > this.store.snapshot.header.slot + updateTimeout) {
+      const prevSyncPeriod = computeSyncPeriodAtSlot(this.store.snapshot.header.slot);
       const bestUpdate = this.store.bestUpdates.get(prevSyncPeriod);
       if (bestUpdate) {
         this.applyLightClientUpdate(bestUpdate);
@@ -159,8 +196,8 @@ export class Lightclient {
   }
 
   private applyLightClientUpdate(update: altair.LightClientUpdate): void {
-    const snapshotPeriod = computeSyncPeriodAtSlot(this.config, this.store.snapshot.header.slot);
-    const updatePeriod = computeSyncPeriodAtSlot(this.config, update.header.slot);
+    const snapshotPeriod = computeSyncPeriodAtSlot(this.store.snapshot.header.slot);
+    const updatePeriod = computeSyncPeriodAtSlot(update.header.slot);
     if (updatePeriod < snapshotPeriod) {
       throw Error("Cannot rollback sync period");
     }

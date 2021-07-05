@@ -1,5 +1,4 @@
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {altair} from "@chainsafe/lodestar-types";
+import {altair, ssz} from "@chainsafe/lodestar-types";
 import {isValidMerkleBranch} from "../utils/verifyMerkleBranch";
 import {computeDomain, computeSyncPeriodAtSlot, computeSigningRoot} from "@chainsafe/lodestar-beacon-state-transition";
 import {PublicKey, Signature} from "@chainsafe/bls";
@@ -9,6 +8,7 @@ import {
   MIN_SYNC_COMMITTEE_PARTICIPANTS,
   FINALIZED_ROOT_INDEX_FLOORLOG2,
   NEXT_SYNC_COMMITTEE_INDEX_FLOORLOG2,
+  DOMAIN_SYNC_COMMITTEE,
 } from "@chainsafe/lodestar-params";
 import {assertZeroHashes, getParticipantPubkeys, isEmptyHeader, isEmptySyncCommitte} from "../utils/utils";
 import {LightClientSnapshotFast} from "./types";
@@ -17,7 +17,6 @@ import {LightClientSnapshotFast} from "./types";
  * Spec v1.0.1
  */
 export function validateLightClientUpdate(
-  config: IBeaconConfig,
   snapshot: LightClientSnapshotFast,
   update: altair.LightClientUpdate,
   genesisValidatorsRoot: altair.Root
@@ -31,14 +30,14 @@ export function validateLightClientUpdate(
   // }
 
   // Verify update does not skip a sync committee period
-  const snapshotPeriod = computeSyncPeriodAtSlot(config, snapshot.header.slot);
-  const updatePeriod = computeSyncPeriodAtSlot(config, update.header.slot);
+  const snapshotPeriod = computeSyncPeriodAtSlot(snapshot.header.slot);
+  const updatePeriod = computeSyncPeriodAtSlot(update.header.slot);
   if (updatePeriod !== snapshotPeriod && updatePeriod !== snapshotPeriod + 1) {
     throw Error("Update skips a sync committee period");
   }
 
   // Verify update header root is the finalized root of the finality header, if specified
-  const finalityHeaderSpecified = !isEmptyHeader(config, update.finalityHeader);
+  const finalityHeaderSpecified = !isEmptyHeader(update.finalityHeader);
   const signedHeader = finalityHeaderSpecified ? update.finalityHeader : update.header;
   if (finalityHeaderSpecified) {
     // Proof that the state referenced in `update.finalityHeader.stateRoot` includes
@@ -51,7 +50,7 @@ export function validateLightClientUpdate(
     // Where `hashTreeRoot(state) == update.finalityHeader.stateRoot`
     if (
       !isValidMerkleBranch(
-        config.types.phase0.BeaconBlockHeader.hashTreeRoot(update.header),
+        ssz.phase0.BeaconBlockHeader.hashTreeRoot(update.header),
         Array.from(update.finalityBranch).map((i) => i.valueOf() as Uint8Array),
         FINALIZED_ROOT_INDEX_FLOORLOG2,
         FINALIZED_ROOT_INDEX % 2 ** FINALIZED_ROOT_INDEX_FLOORLOG2,
@@ -61,7 +60,7 @@ export function validateLightClientUpdate(
       throw Error("Invalid finality header merkle branch");
     }
 
-    const updateFinalityPeriod = computeSyncPeriodAtSlot(config, update.finalityHeader.slot);
+    const updateFinalityPeriod = computeSyncPeriodAtSlot(update.finalityHeader.slot);
     if (updateFinalityPeriod !== updatePeriod) {
       throw Error(`finalityHeader period ${updateFinalityPeriod} != header period ${updatePeriod}`);
     }
@@ -77,7 +76,7 @@ export function validateLightClientUpdate(
   // I believe the nextSyncCommitteeBranch should be check always not only when updatePeriodIncremented
   // An update may not increase the period but still be stored in validUpdates and be used latter
 
-  if (!isEmptySyncCommitte(config, update.nextSyncCommittee)) {
+  if (!isEmptySyncCommitte(update.nextSyncCommittee)) {
     // Proof that the state referenced in `update.header.stateRoot` includes
     // state = {
     //   nextSyncCommittee: update.nextSyncCommittee
@@ -86,7 +85,7 @@ export function validateLightClientUpdate(
     // Where `hashTreeRoot(state) == update.header.stateRoot`
     if (
       !isValidMerkleBranch(
-        config.types.altair.SyncCommittee.hashTreeRoot(update.nextSyncCommittee),
+        ssz.altair.SyncCommittee.hashTreeRoot(update.nextSyncCommittee),
         Array.from(update.nextSyncCommitteeBranch).map((i) => i.valueOf() as Uint8Array),
         NEXT_SYNC_COMMITTEE_INDEX_FLOORLOG2,
         NEXT_SYNC_COMMITTEE_INDEX % 2 ** NEXT_SYNC_COMMITTEE_INDEX_FLOORLOG2,
@@ -114,8 +113,8 @@ export function validateLightClientUpdate(
   // ```
   // Ref: https://github.com/ethereum/eth2.0-specs/blob/dev/specs/altair/beacon-chain.md#sync-committee-processing
   const participantPubkeys = getParticipantPubkeys(syncCommittee.pubkeys, update.syncCommitteeBits);
-  const domain = computeDomain(config, config.params.DOMAIN_SYNC_COMMITTEE, update.forkVersion, genesisValidatorsRoot);
-  const signingRoot = computeSigningRoot(config, config.types.phase0.BeaconBlockHeader, signedHeader, domain);
+  const domain = computeDomain(DOMAIN_SYNC_COMMITTEE, update.forkVersion, genesisValidatorsRoot);
+  const signingRoot = computeSigningRoot(ssz.phase0.BeaconBlockHeader, signedHeader, domain);
   if (!isValidBlsAggregate(participantPubkeys, signingRoot, update.syncCommitteeSignature.valueOf() as Uint8Array)) {
     throw Error("Invalid aggregate signature");
   }

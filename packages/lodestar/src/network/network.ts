@@ -5,7 +5,7 @@
 import LibP2p, {Connection} from "libp2p";
 import PeerId from "peer-id";
 import Multiaddr from "multiaddr";
-import {AbortSignal} from "abort-controller";
+import {AbortSignal} from "@chainsafe/abort-controller";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {IMetrics} from "../metrics";
@@ -78,13 +78,14 @@ export class Network implements INetwork {
         peerRpcScores,
         logger,
         networkEventBus,
+        metrics,
       },
       opts
     );
     this.gossip = new Eth2Gossipsub({
       config,
       libp2p,
-      validatorFns: createTopicValidatorFnMap({config, chain, db, logger}, metrics, signal),
+      validatorFns: createTopicValidatorFnMap({config, chain, db, logger, metrics}, metrics, signal),
       logger,
       forkDigestContext: chain.forkDigestContext,
       metrics,

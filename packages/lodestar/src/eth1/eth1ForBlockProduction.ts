@@ -2,7 +2,7 @@ import {phase0} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {CachedBeaconState, allForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {ILogger, sleep} from "@chainsafe/lodestar-utils";
-import {AbortSignal} from "abort-controller";
+import {AbortSignal} from "@chainsafe/abort-controller";
 import {IBeaconDb} from "../db";
 import {Eth1DepositsCache} from "./eth1DepositsCache";
 import {Eth1DataCache} from "./eth1DataCache";
@@ -57,7 +57,7 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
       this.logger.warn("No depositContractDeployBlock provided");
     }
 
-    const autoUpdateIntervalMs = 1000 * config.params.SECONDS_PER_ETH1_BLOCK;
+    const autoUpdateIntervalMs = 1000 * config.SECONDS_PER_ETH1_BLOCK;
     this.runAutoUpdate(autoUpdateIntervalMs).catch((e) => {
       this.logger.error("Aborted", e);
     });
@@ -130,7 +130,7 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
    */
   private async update(): Promise<boolean> {
     const remoteHighestBlock = await this.eth1Provider.getBlockNumber();
-    const remoteFollowBlock = Math.max(0, remoteHighestBlock - this.config.params.ETH1_FOLLOW_DISTANCE);
+    const remoteFollowBlock = Math.max(0, remoteHighestBlock - this.config.ETH1_FOLLOW_DISTANCE);
     const catchedUpDeposits = await this.updateDepositCache(remoteFollowBlock);
     const catchedUpBlocks = await this.updateBlockCache(remoteFollowBlock);
     return catchedUpDeposits && catchedUpBlocks;

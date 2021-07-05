@@ -1,7 +1,7 @@
 import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
 import sinon from "sinon";
-import {config} from "@chainsafe/lodestar-config/mainnet";
+import {config} from "@chainsafe/lodestar-config/default";
 import {LevelDbController} from "@chainsafe/lodestar-db";
 import {BeaconDb} from "../../../../src/db";
 import {generateEmptySignedBlock} from "../../../utils/block";
@@ -12,7 +12,6 @@ import {
   DepositEventRepository,
   ProposerSlashingRepository,
   VoluntaryExitRepository,
-  AttestationRepository,
   AggregateAndProofRepository,
   StateArchiveRepository,
 } from "../../../../src/db/repositories";
@@ -34,7 +33,6 @@ describe("beacon db - post block processing", function () {
     dbStub.voluntaryExit = createStubInstance(VoluntaryExitRepository);
     dbStub.proposerSlashing = createStubInstance(ProposerSlashingRepository);
     dbStub.attesterSlashing = createStubInstance(AttesterSlashingRepository);
-    dbStub.attestation = createStubInstance(AttestationRepository);
     dbStub.aggregateAndProof = createStubInstance(AggregateAndProofRepository);
     dbStub.stateArchive = createStubInstance(StateArchiveRepository);
 

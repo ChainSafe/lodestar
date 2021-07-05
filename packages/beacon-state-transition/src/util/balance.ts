@@ -2,7 +2,7 @@
  * @module chain/stateTransition/util
  */
 
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {EFFECTIVE_BALANCE_INCREMENT} from "@chainsafe/lodestar-params";
 import {allForks, Gwei, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {bigIntMax} from "@chainsafe/lodestar-utils";
 import {CachedBeaconState} from "../allForks";
@@ -13,9 +13,9 @@ import {getActiveValidatorIndices, isActiveValidator} from "./validator";
  * Return the combined effective balance of the [[indices]].
  * `EFFECTIVE_BALANCE_INCREMENT` Gwei minimum to avoid divisions by zero.
  */
-export function getTotalBalance(config: IBeaconConfig, state: allForks.BeaconState, indices: ValidatorIndex[]): Gwei {
+export function getTotalBalance(state: allForks.BeaconState, indices: ValidatorIndex[]): Gwei {
   return bigIntMax(
-    config.params.EFFECTIVE_BALANCE_INCREMENT,
+    EFFECTIVE_BALANCE_INCREMENT,
     indices.reduce(
       (total: Gwei, index: ValidatorIndex): Gwei => total + state.validators[index].effectiveBalance,
       BigInt(0)
@@ -27,14 +27,15 @@ export function getTotalBalance(config: IBeaconConfig, state: allForks.BeaconSta
  * Return the combined effective balance of the active validators.
  * Note: `getTotalBalance` returns `EFFECTIVE_BALANCE_INCREMENT` Gwei minimum to avoid divisions by zero.
  */
-export function getTotalActiveBalance(config: IBeaconConfig, state: allForks.BeaconState): Gwei {
-  return getTotalBalance(config, state, getActiveValidatorIndices(state, getCurrentEpoch(config, state)));
+export function getTotalActiveBalance(state: allForks.BeaconState): Gwei {
+  return getTotalBalance(state, getActiveValidatorIndices(state, getCurrentEpoch(state)));
 }
 
 /**
  * Increase the balance for a validator with the given ``index`` by ``delta``.
  */
 export function increaseBalance(state: allForks.BeaconState, index: ValidatorIndex, delta: Gwei): void {
+  // TODO: Inline this
   state.balances[index] = state.balances[index] + delta;
 }
 
@@ -49,6 +50,7 @@ export function decreaseBalance(state: allForks.BeaconState, index: ValidatorInd
 }
 
 /**
+ * TODO - PERFORMANCE WARNING - NAIVE CODE
  * This method is used to get justified balances from a justified state.
  */
 export function getEffectiveBalances(justifiedState: CachedBeaconState<allForks.BeaconState>): Gwei[] {

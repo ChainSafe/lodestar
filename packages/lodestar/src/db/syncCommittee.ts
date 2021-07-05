@@ -1,5 +1,5 @@
 import bls, {PointFormat, Signature} from "@chainsafe/bls";
-import {SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
+import {SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
 import {newFilledArray} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {altair, phase0, Slot} from "@chainsafe/lodestar-types";
@@ -21,8 +21,8 @@ type ValidataorSubnetKey = string;
 type BlockRootHex = string;
 
 /**
- * Preaggregate SyncCommitteeSignature into SyncCommitteeContribution
- * and cache seen SyncCommitteeSignature by slot + validator index.
+ * Preaggregate SyncCommitteeMessage into SyncCommitteeContribution
+ * and cache seen SyncCommitteeMessage by slot + validator index.
  * This stays in-memory and should be pruned per slot.
  */
 export class SyncCommitteeCache {
@@ -37,14 +37,14 @@ export class SyncCommitteeCache {
 
   /**
    * Each array item is respective to a subCommitteeIndex.
-   * A seen SyncCommitteeSignature is decided by slot + validator index.
+   * A seen SyncCommitteeMessage is decided by slot + validator index.
    */
   private readonly seenCacheBySlot = new Map<phase0.Slot, Set<ValidataorSubnetKey>>();
 
   constructor(private readonly config: IBeaconConfig) {}
 
   /** Register item as seen in the cache */
-  seen(subnet: phase0.SubCommitteeIndex, syncCommitteeSignature: altair.SyncCommitteeSignature): void {
+  seen(subnet: phase0.SubCommitteeIndex, syncCommitteeSignature: altair.SyncCommitteeMessage): void {
     const {slot} = syncCommitteeSignature;
     let seenCache = this.seenCacheBySlot.get(slot);
     if (!seenCache) {
@@ -55,7 +55,7 @@ export class SyncCommitteeCache {
   }
 
   // TODO: indexInSubCommittee: number should be indicesInSyncCommittee
-  add(subnet: phase0.SubCommitteeIndex, signature: altair.SyncCommitteeSignature, indexInSubCommittee: number): void {
+  add(subnet: phase0.SubCommitteeIndex, signature: altair.SyncCommitteeMessage, indexInSubCommittee: number): void {
     const {slot, beaconBlockRoot} = signature;
     const rootHex = toHexString(beaconBlockRoot);
 
@@ -89,7 +89,7 @@ export class SyncCommitteeCache {
   /**
    * based on slot + validator index
    */
-  has(subnet: phase0.SubCommitteeIndex, syncCommittee: altair.SyncCommitteeSignature): boolean {
+  has(subnet: phase0.SubCommitteeIndex, syncCommittee: altair.SyncCommitteeMessage): boolean {
     return this.seenCacheBySlot.get(syncCommittee.slot)?.has(seenCacheKey(subnet, syncCommittee)) === true;
   }
 
@@ -102,15 +102,15 @@ export class SyncCommitteeCache {
     prevBlockRoot: phase0.Root
   ): altair.SyncCommitteeContribution | null {
     const contribution = this.contributionsByRootBySubnetBySlot.get(slot)?.get(subnet)?.get(toHexString(prevBlockRoot));
-    if (contribution) {
-      return {
-        ...contribution,
-        aggregationBits: contribution.aggregationBits as BitList,
-        signature: contribution.signature.toBytes(PointFormat.compressed),
-      };
-    } else {
+    if (!contribution) {
       return null;
     }
+
+    return {
+      ...contribution,
+      aggregationBits: contribution.aggregationBits as BitList,
+      signature: contribution.signature.toBytes(PointFormat.compressed),
+    };
   }
 
   /**
@@ -137,9 +137,15 @@ export class SyncCommitteeCache {
  */
 function aggregateSignatureInto(
   contribution: ContributionFast,
-  signature: altair.SyncCommitteeSignature,
+  signature: altair.SyncCommitteeMessage,
   indexInSubCommittee: number
 ): void {
+  if (contribution.aggregationBits[indexInSubCommittee] === true) {
+    throw Error(
+      `Already aggregated SyncCommitteeMessage - subCommitteeIndex=${contribution.subCommitteeIndex} indexInSubCommittee=${indexInSubCommittee}`
+    );
+  }
+
   contribution.aggregationBits[indexInSubCommittee] = true;
 
   contribution.signature = Signature.aggregate([
@@ -154,10 +160,10 @@ function aggregateSignatureInto(
 function signatureToAggregate(
   config: IBeaconConfig,
   subnet: number,
-  signature: altair.SyncCommitteeSignature,
+  signature: altair.SyncCommitteeMessage,
   indexInSubCommittee: number
 ): ContributionFast {
-  const indexesPerSubnet = Math.floor(config.params.SYNC_COMMITTEE_SIZE / SYNC_COMMITTEE_SUBNET_COUNT);
+  const indexesPerSubnet = Math.floor(SYNC_COMMITTEE_SIZE / SYNC_COMMITTEE_SUBNET_COUNT);
   const aggregationBits = newFilledArray(indexesPerSubnet, false);
   aggregationBits[indexInSubCommittee] = true;
 
@@ -170,6 +176,6 @@ function signatureToAggregate(
   };
 }
 
-function seenCacheKey(subnet: number, syncCommittee: altair.SyncCommitteeSignature): ValidataorSubnetKey {
+function seenCacheKey(subnet: number, syncCommittee: altair.SyncCommitteeMessage): ValidataorSubnetKey {
   return `${subnet}-${syncCommittee.validatorIndex}`;
 }

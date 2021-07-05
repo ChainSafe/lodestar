@@ -1,11 +1,11 @@
-import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
+import {computeEpochAtSlot, isAggregatorFromCommitteeLength} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {BLSSignature, Epoch, phase0, Root, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {BLSSignature, Epoch, Root, Slot, ssz, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
+import {Api, routes} from "@chainsafe/lodestar-api";
 import {toHexString} from "@chainsafe/ssz";
 import {IndicesService} from "./indices";
-import {IApiClient} from "../api";
-import {extendError, isAttestationAggregator, notAborted} from "../util";
+import {extendError, notAborted} from "../util";
 import {IClock} from "../util/clock";
 import {ValidatorStore} from "./validatorStore";
 
@@ -14,7 +14,7 @@ const HISTORICAL_DUTIES_EPOCHS = 2;
 
 /** Neatly joins the server-generated `AttesterData` with the locally-generated `selectionProof`. */
 export type AttDutyAndProof = {
-  duty: phase0.AttesterDuty;
+  duty: routes.validator.AttesterDuty;
   /** This value is only set to not null if the proof indicates that the validator is an aggregator. */
   selectionProof: BLSSignature | null;
 };
@@ -29,7 +29,7 @@ export class AttestationDutiesService {
   constructor(
     private readonly config: IBeaconConfig,
     private readonly logger: ILogger,
-    private readonly apiClient: IApiClient,
+    private readonly api: Api,
     clock: IClock,
     private readonly validatorStore: ValidatorStore,
     private readonly indicesService: IndicesService
@@ -41,7 +41,7 @@ export class AttestationDutiesService {
 
   /** Returns all `ValidatorDuty` for the given `slot` */
   getDutiesAtSlot(slot: Slot): AttDutyAndProof[] {
-    const epoch = computeEpochAtSlot(this.config, slot);
+    const epoch = computeEpochAtSlot(slot);
     const duties: AttDutyAndProof[] = [];
 
     for (const dutiesByEpoch of this.dutiesByEpochByIndex.values()) {
@@ -99,7 +99,7 @@ export class AttestationDutiesService {
       });
     }
 
-    const beaconCommitteeSubscriptions: phase0.BeaconCommitteeSubscription[] = [];
+    const beaconCommitteeSubscriptions: routes.validator.BeaconCommitteeSubscription[] = [];
 
     // For this epoch and the next epoch, produce any beacon committee subscriptions.
     //
@@ -128,7 +128,7 @@ export class AttestationDutiesService {
     // If there are any subscriptions, push them out to the beacon node.
     if (beaconCommitteeSubscriptions.length > 0) {
       // TODO: Should log or throw?
-      await this.apiClient.validator.prepareBeaconCommitteeSubnet(beaconCommitteeSubscriptions).catch((e) => {
+      await this.api.validator.prepareBeaconCommitteeSubnet(beaconCommitteeSubscriptions).catch((e) => {
         throw extendError(e, "Failed to subscribe to beacon committee subnets");
       });
     }
@@ -144,7 +144,7 @@ export class AttestationDutiesService {
     }
 
     // TODO: Implement dependentRoot logic
-    const attesterDuties = await this.apiClient.validator.getAttesterDuties(epoch, indexArr).catch((e) => {
+    const attesterDuties = await this.api.validator.getAttesterDuties(epoch, indexArr).catch((e) => {
       throw extendError(e, "Failed to obtain attester duty");
     });
     const dependentRoot = attesterDuties.dependentRoot;
@@ -171,7 +171,7 @@ export class AttestationDutiesService {
       // - There were no known duties for this epoch.
       // - The dependent root has changed, signalling a re-org.
       const prior = dutiesByEpoch.get(epoch);
-      const dependentRootChanged = prior && !this.config.types.Root.equals(prior.dependentRoot, dependentRoot);
+      const dependentRootChanged = prior && !ssz.Root.equals(prior.dependentRoot, dependentRoot);
 
       if (!prior || dependentRootChanged) {
         const dutyAndProof = await this.getDutyAndProof(duty);
@@ -189,9 +189,9 @@ export class AttestationDutiesService {
     }
   }
 
-  private async getDutyAndProof(duty: phase0.AttesterDuty): Promise<AttDutyAndProof> {
+  private async getDutyAndProof(duty: routes.validator.AttesterDuty): Promise<AttDutyAndProof> {
     const selectionProof = await this.validatorStore.signAttestationSelectionProof(duty.pubkey, duty.slot);
-    const isAggregator = isAttestationAggregator(this.config, duty, selectionProof);
+    const isAggregator = isAggregatorFromCommitteeLength(duty.committeeLength, selectionProof);
 
     return {
       duty,

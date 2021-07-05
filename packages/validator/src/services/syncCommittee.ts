@@ -1,12 +1,12 @@
-import {AbortSignal} from "abort-controller";
+import {AbortSignal} from "@chainsafe/abort-controller";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Slot, CommitteeIndex, altair, Root} from "@chainsafe/lodestar-types";
 import {ILogger, prettyBytes, sleep} from "@chainsafe/lodestar-utils";
-import {IApiClient} from "../api";
+import {Api} from "@chainsafe/lodestar-api";
 import {extendError, notAborted, IClock} from "../util";
 import {ValidatorStore} from "./validatorStore";
-import {SyncCommitteeDutiesService, SyncDutyAndProof} from "./syncCommitteeDuties";
-import {groupSyncDutiesBySubCommitteeIndex} from "./utils";
+import {SyncCommitteeDutiesService, SyncDutyAndProofs} from "./syncCommitteeDuties";
+import {groupSyncDutiesBySubCommitteeIndex, SubCommitteeDuty} from "./utils";
 import {IndicesService} from "./indices";
 import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 
@@ -19,61 +19,58 @@ export class SyncCommitteeService {
   constructor(
     private readonly config: IBeaconConfig,
     private readonly logger: ILogger,
-    private readonly apiClient: IApiClient,
+    private readonly api: Api,
     private readonly clock: IClock,
     private readonly validatorStore: ValidatorStore,
     indicesService: IndicesService
   ) {
-    this.dutiesService = new SyncCommitteeDutiesService(
-      config,
-      logger,
-      apiClient,
-      clock,
-      validatorStore,
-      indicesService
-    );
+    this.dutiesService = new SyncCommitteeDutiesService(config, logger, api, clock, validatorStore, indicesService);
 
     // At most every slot, check existing duties from SyncCommitteeDutiesService and run tasks
     clock.runEverySlot(this.runSyncCommitteeTasks);
   }
 
   private runSyncCommitteeTasks = async (slot: Slot, signal: AbortSignal): Promise<void> => {
-    // Before altair fork no need to check duties
-    if (computeEpochAtSlot(this.config, slot) < this.config.params.ALTAIR_FORK_EPOCH) {
-      return;
+    try {
+      // Before altair fork no need to check duties
+      if (computeEpochAtSlot(slot) < this.config.ALTAIR_FORK_EPOCH) {
+        return;
+      }
+
+      // Fetch info first so a potential delay is absorved by the sleep() below
+      const dutiesAtSlot = await this.dutiesService.getDutiesAtSlot(slot);
+      if (dutiesAtSlot.length === 0) {
+        return;
+      }
+
+      // Lighthouse recommends to always wait to 1/3 of the slot, even if the block comes early
+      await sleep(this.clock.msToSlotFraction(slot, 1 / 3), signal);
+
+      // Step 1. Download, sign and publish an `SyncCommitteeMessage` for each validator.
+      //         Differs from AttestationService, `SyncCommitteeMessage` are equal for all
+      const beaconBlockRoot = await this.produceAndPublishSyncCommittees(slot, dutiesAtSlot);
+
+      // Step 2. If an attestation was produced, make an aggregate.
+      // First, wait until the `aggregation_production_instant` (2/3rds of the way though the slot)
+      await sleep(this.clock.msToSlotFraction(slot, 2 / 3), signal);
+
+      // await for all so if the Beacon node is overloaded it auto-throttles
+      // TODO: This approach is convervative to reduce the node's load, review
+      const dutiesBySubcommitteeIndex = groupSyncDutiesBySubCommitteeIndex(dutiesAtSlot);
+      await Promise.all(
+        Array.from(dutiesBySubcommitteeIndex.entries()).map(async ([subcommitteeIndex, duties]) => {
+          if (duties.length === 0) return;
+          // Then download, sign and publish a `SignedAggregateAndProof` for each
+          // validator that is elected to aggregate for this `slot` and `subcommitteeIndex`.
+          await this.produceAndPublishAggregates(slot, subcommitteeIndex, beaconBlockRoot, duties).catch((e) => {
+            if (notAborted(e))
+              this.logger.error("Error on SyncCommitteeContribution", {slot, index: subcommitteeIndex}, e);
+          });
+        })
+      );
+    } catch (e) {
+      this.logger.error("Error on runSyncCommitteeTasks", {slot}, e);
     }
-
-    // Fetch info first so a potential delay is absorved by the sleep() below
-    const dutiesAtSlot = await this.dutiesService.getDutiesAtSlot(slot);
-    const dutiesBySubcommitteeIndex = groupSyncDutiesBySubCommitteeIndex(dutiesAtSlot);
-    if (dutiesAtSlot.length === 0) {
-      return;
-    }
-
-    // Lighthouse recommends to always wait to 1/3 of the slot, even if the block comes early
-    await sleep(this.clock.msToSlotFraction(slot, 1 / 3), signal);
-
-    // Step 1. Download, sign and publish an `SyncCommitteeSignature` for each validator.
-    //         Differs from AttestationService, `SyncCommitteeSignature` are equal for all
-    const beaconBlockRoot = await this.produceAndPublishSyncCommittees(slot, dutiesAtSlot);
-
-    // Step 2. If an attestation was produced, make an aggregate.
-    // First, wait until the `aggregation_production_instant` (2/3rds of the way though the slot)
-    await sleep(this.clock.msToSlotFraction(slot, 2 / 3), signal);
-
-    // await for all so if the Beacon node is overloaded it auto-throttles
-    // TODO: This approach is convervative to reduce the node's load, review
-    await Promise.all(
-      Array.from(dutiesBySubcommitteeIndex.entries()).map(async ([subcommitteeIndex, duties]) => {
-        if (duties.length === 0) return;
-        // Then download, sign and publish a `SignedAggregateAndProof` for each
-        // validator that is elected to aggregate for this `slot` and `subcommitteeIndex`.
-        await this.produceAndPublishAggregates(slot, subcommitteeIndex, beaconBlockRoot, duties).catch((e) => {
-          if (notAborted(e))
-            this.logger.error("Error on SyncCommitteeContribution", {slot, index: subcommitteeIndex}, e);
-        });
-      })
-    );
   };
 
   /**
@@ -85,42 +82,43 @@ export class SyncCommitteeService {
    * Only one `SyncCommittee` is downloaded from the BN. It is then signed by each
    * validator and the list of individually-signed `SyncCommittee` objects is returned to the BN.
    */
-  private async produceAndPublishSyncCommittees(slot: Slot, duties: SyncDutyAndProof[]): Promise<Root> {
+  private async produceAndPublishSyncCommittees(slot: Slot, duties: SyncDutyAndProofs[]): Promise<Root> {
     const logCtx = {slot};
 
     // /eth/v1/beacon/blocks/:blockId/root -> at slot -1
 
     // Produce one attestation data per slot and subcommitteeIndex
-    // Spec: the validator should prepare a SyncCommitteeSignature for the previous slot (slot - 1)
+    // Spec: the validator should prepare a SyncCommitteeMessage for the previous slot (slot - 1)
     // as soon as they have determined the head block of slot - 1
-    const beaconBlockRoot = await this.apiClient.beacon.blocks.getBlockRoot(slot).catch((e) => {
-      throw extendError(e, "Error producing SyncCommitteeSignature");
+    const beaconBlockRoot = await this.api.beacon.getBlockRoot(slot).catch((e) => {
+      throw extendError(e, "Error producing SyncCommitteeMessage");
     });
 
-    const signatures: altair.SyncCommitteeSignature[] = [];
+    const blockRoot = beaconBlockRoot.data;
+    const signatures: altair.SyncCommitteeMessage[] = [];
 
     for (const {duty} of duties) {
       const logCtxValidator = {...logCtx, validator: prettyBytes(duty.pubkey)};
       try {
         signatures.push(
-          await this.validatorStore.signSyncCommitteeSignature(duty.pubkey, duty.validatorIndex, slot, beaconBlockRoot)
+          await this.validatorStore.signSyncCommitteeSignature(duty.pubkey, duty.validatorIndex, slot, blockRoot)
         );
-        this.logger.debug("Signed SyncCommitteeSignature", logCtxValidator);
+        this.logger.debug("Signed SyncCommitteeMessage", logCtxValidator);
       } catch (e) {
-        if (notAborted(e)) this.logger.error("Error signing SyncCommitteeSignature", logCtxValidator, e);
+        if (notAborted(e)) this.logger.error("Error signing SyncCommitteeMessage", logCtxValidator, e);
       }
     }
 
     if (signatures.length > 0) {
       try {
-        await this.apiClient.beacon.pool.submitSyncCommitteeSignatures(signatures);
-        this.logger.info("Published SyncCommitteeSignature", {...logCtx, count: signatures.length});
+        await this.api.beacon.submitPoolSyncCommitteeSignatures(signatures);
+        this.logger.info("Published SyncCommitteeMessage", {...logCtx, count: signatures.length});
       } catch (e) {
-        if (notAborted(e)) this.logger.error("Error publishing SyncCommitteeSignature", logCtx, e);
+        if (notAborted(e)) this.logger.error("Error publishing SyncCommitteeMessage", logCtx, e);
       }
     }
 
-    return beaconBlockRoot;
+    return blockRoot;
   }
 
   /**
@@ -137,7 +135,7 @@ export class SyncCommitteeService {
     slot: Slot,
     subcommitteeIndex: CommitteeIndex,
     beaconBlockRoot: Root,
-    duties: SyncDutyAndProof[]
+    duties: SubCommitteeDuty[]
   ): Promise<void> {
     const logCtx = {slot, index: subcommitteeIndex};
 
@@ -147,7 +145,7 @@ export class SyncCommitteeService {
     }
 
     this.logger.verbose("Producing SyncCommitteeContribution", logCtx);
-    const contribution = await this.apiClient.validator
+    const contribution = await this.api.validator
       .produceSyncCommitteeContribution(slot, subcommitteeIndex, beaconBlockRoot)
       .catch((e) => {
         throw extendError(e, "Error producing SyncCommitteeContribution");
@@ -161,7 +159,7 @@ export class SyncCommitteeService {
         // Produce signed contributions only for validators that are subscribed aggregators.
         if (selectionProof !== null) {
           signedContributions.push(
-            await this.validatorStore.signContributionAndProof(duty, selectionProof, contribution)
+            await this.validatorStore.signContributionAndProof(duty, selectionProof, contribution.data)
           );
           this.logger.debug("Signed SyncCommitteeContribution", logCtxValidator);
         }
@@ -172,7 +170,7 @@ export class SyncCommitteeService {
 
     if (signedContributions.length > 0) {
       try {
-        await this.apiClient.validator.publishContributionAndProofs(signedContributions);
+        await this.api.validator.publishContributionAndProofs(signedContributions);
         this.logger.info("Published SyncCommitteeContribution", {...logCtx, count: signedContributions.length});
       } catch (e) {
         if (notAborted(e)) this.logger.error("Error publishing SyncCommitteeContribution", logCtx, e);

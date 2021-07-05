@@ -1,5 +1,5 @@
-import {config} from "@chainsafe/lodestar-config/minimal";
-import {altair} from "@chainsafe/lodestar-types";
+import {config} from "@chainsafe/lodestar-config/default";
+import {altair, ssz} from "@chainsafe/lodestar-types";
 import {expect} from "chai";
 import {SyncCommitteeContributionCache} from "../../../src/db/syncCommitteeContribution";
 import {generateContributionAndProof} from "../../utils/contributionAndProof";
@@ -36,8 +36,7 @@ describe("syncCommitteeContribution", function () {
     });
     cache.add(newContributionAndProof);
     const aggregate = cache.getSyncAggregate(slot, beaconBlockRoot);
-    expect(config.types.altair.SyncAggregate.equals(aggregate, config.types.altair.SyncAggregate.defaultValue())).to.be
-      .false;
+    expect(ssz.altair.SyncAggregate.equals(aggregate, ssz.altair.SyncAggregate.defaultValue())).to.be.false;
     // TODO Test it's correct. Modify the contributions above so they have 1 bit set to true
     expect(aggregate.syncCommitteeBits.length).to.be.equal(32);
   });

@@ -1,5 +1,5 @@
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {allForks, phase0, Slot} from "@chainsafe/lodestar-types";
+import {DOMAIN_SELECTION_PROOF} from "@chainsafe/lodestar-params";
+import {allForks, phase0, Slot, ssz} from "@chainsafe/lodestar-types";
 import {PublicKey} from "@chainsafe/bls";
 import {
   computeEpochAtSlot,
@@ -10,19 +10,18 @@ import {
 } from "@chainsafe/lodestar-beacon-state-transition";
 
 export function getSelectionProofSignatureSet(
-  config: IBeaconConfig,
   state: allForks.BeaconState,
   slot: Slot,
   aggregator: PublicKey,
   aggregateAndProof: phase0.SignedAggregateAndProof
 ): ISignatureSet {
-  const epoch = computeEpochAtSlot(config, slot);
-  const selectionProofDomain = getDomain(config, state, config.params.DOMAIN_SELECTION_PROOF, epoch);
+  const epochSig = computeEpochAtSlot(slot);
+  const selectionProofDomain = getDomain(state, DOMAIN_SELECTION_PROOF, epochSig);
 
   return {
     type: SignatureSetType.single,
     pubkey: aggregator,
-    signingRoot: computeSigningRoot(config, config.types.Slot, slot, selectionProofDomain),
+    signingRoot: computeSigningRoot(ssz.Slot, slot, selectionProofDomain),
     signature: aggregateAndProof.message.selectionProof.valueOf() as Uint8Array,
   };
 }

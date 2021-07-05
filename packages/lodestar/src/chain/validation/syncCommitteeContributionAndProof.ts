@@ -12,7 +12,7 @@ import {
 } from "./signatureSets";
 
 /**
- * Spec v1.1.0-alpha.3
+ * Spec v1.1.0-alpha.5
  */
 export async function validateSyncCommitteeGossipContributionAndProof(
   config: IBeaconConfig,
@@ -49,7 +49,7 @@ export async function validateSyncCommitteeGossipContributionAndProof(
 
   // [REJECT] contribution_and_proof.selection_proof selects the validator as an aggregator for the slot --
   // i.e. is_sync_committee_aggregator(contribution_and_proof.selection_proof) returns True.
-  if (!isSyncCommitteeAggregator(config, contributionAndProof.selectionProof)) {
+  if (!isSyncCommitteeAggregator(contributionAndProof.selectionProof)) {
     throw new SyncCommitteeError(GossipAction.REJECT, {
       code: SyncCommitteeErrorCode.INVALID_AGGREGATOR,
       aggregatorIndex: contributionAndProof.aggregatorIndex,

@@ -1,6 +1,5 @@
-import {isValidVoluntaryExit, allForks} from "@chainsafe/lodestar-beacon-state-transition";
+import {phase0, allForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {phase0} from "@chainsafe/lodestar-types";
 import {IBeaconChain} from "..";
 import {VoluntaryExitError, VoluntaryExitErrorCode} from "../errors/voluntaryExitError";
 import {IBeaconDb} from "../../db";
@@ -13,7 +12,7 @@ export async function validateGossipVoluntaryExit(
 ): Promise<void> {
   if (await db.voluntaryExit.has(voluntaryExit.message.validatorIndex)) {
     throw new VoluntaryExitError({
-      code: VoluntaryExitErrorCode.EXIT_ALREADY_EXISTS,
+      code: VoluntaryExitErrorCode.ALREADY_EXISTS,
     });
   }
 
@@ -22,17 +21,21 @@ export async function validateGossipVoluntaryExit(
     epoch: voluntaryExit.message.epoch,
   });
 
-  // verifySignature = false, verified in batch below
-  if (!isValidVoluntaryExit(config, state, voluntaryExit, false)) {
+  try {
+    // verifySignature = false, verified in batch below
+    allForks.assertValidVoluntaryExit(state, voluntaryExit, false);
+  } catch (e) {
     throw new VoluntaryExitError({
-      code: VoluntaryExitErrorCode.INVALID_EXIT,
+      code: VoluntaryExitErrorCode.INVALID,
+      error: e as Error,
     });
   }
 
   const signatureSet = allForks.getVoluntaryExitSignatureSet(state, voluntaryExit);
   if (!(await chain.bls.verifySignatureSets([signatureSet]))) {
     throw new VoluntaryExitError({
-      code: VoluntaryExitErrorCode.INVALID_EXIT,
+      code: VoluntaryExitErrorCode.INVALID,
+      error: Error("Invalid signature"),
     });
   }
 }

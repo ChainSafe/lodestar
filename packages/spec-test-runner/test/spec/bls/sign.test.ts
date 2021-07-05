@@ -4,8 +4,9 @@ import bls from "@chainsafe/bls";
 import {ZeroSecretKeyError} from "@chainsafe/bls/lib/errors";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {SPEC_TEST_LOCATION} from "../../utils/specTestCases";
+import {IBaseSpecTest} from "../type";
 
-interface ISignMessageTestCase {
+interface ISignMessageTestCase extends IBaseSpecTest {
   data: {
     input: {
       privkey: string;

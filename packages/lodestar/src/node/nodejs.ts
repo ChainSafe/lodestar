@@ -2,24 +2,26 @@
  * @module node
  */
 
-import {AbortController} from "abort-controller";
+import {AbortController} from "@chainsafe/abort-controller";
 import LibP2p from "libp2p";
 
 import {TreeBacked} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {allForks} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
+import {Api} from "@chainsafe/lodestar-api";
 
 import {IBeaconDb} from "../db";
 import {INetwork, Network, ReqRespHandler} from "../network";
 import {BeaconSync, IBeaconSync} from "../sync";
 import {BeaconChain, IBeaconChain, initBeaconMetrics} from "../chain";
 import {createMetrics, IMetrics, HttpMetricsServer} from "../metrics";
-import {Api, IApi, RestApi} from "../api";
+import {getApi, RestApi} from "../api";
 import {TasksService} from "../tasks";
 import {IBeaconNodeOptions} from "./options";
 import {Eth1ForBlockProduction, Eth1ForBlockProductionDisabled, Eth1Provider} from "../eth1";
 import {runNodeNotifier} from "./notifier";
+import {Registry} from "prom-client";
 
 export * from "./options";
 
@@ -30,7 +32,7 @@ export interface IBeaconNodeModules {
   metrics: IMetrics | null;
   network: INetwork;
   chain: IBeaconChain;
-  api: IApi;
+  api: Api;
   sync: IBeaconSync;
   chores: TasksService;
   metricsServer?: HttpMetricsServer;
@@ -45,6 +47,7 @@ export interface IBeaconNodeInitModules {
   logger: ILogger;
   libp2p: LibP2p;
   anchorState: TreeBacked<allForks.BeaconState>;
+  metricsRegistries?: Registry[];
 }
 
 export enum BeaconNodeStatus {
@@ -65,7 +68,7 @@ export class BeaconNode {
   metricsServer?: HttpMetricsServer;
   network: INetwork;
   chain: IBeaconChain;
-  api: IApi;
+  api: Api;
   restApi?: RestApi;
   sync: IBeaconSync;
   chores: TasksService;
@@ -114,6 +117,7 @@ export class BeaconNode {
     logger,
     libp2p,
     anchorState,
+    metricsRegistries = [],
   }: IBeaconNodeInitModules): Promise<T> {
     const controller = new AbortController();
     const signal = controller.signal;
@@ -121,13 +125,12 @@ export class BeaconNode {
     // start db if not already started
     await db.start();
 
-    const metrics = opts.metrics.enabled ? createMetrics(opts.metrics, anchorState) : null;
+    const metrics = opts.metrics.enabled ? createMetrics(opts.metrics, config, anchorState, metricsRegistries) : null;
     if (metrics) {
       initBeaconMetrics(metrics, anchorState);
     }
 
-    const chain = new BeaconChain({
-      opts: opts.chain,
+    const chain = new BeaconChain(opts.chain, {
       config,
       db,
       logger: logger.child(opts.logger.chain),
@@ -162,7 +165,7 @@ export class BeaconNode {
       logger: logger.child(opts.logger.chores),
     });
 
-    const api = new Api(opts.api, {
+    const api = getApi({
       config,
       logger: logger.child(opts.logger.api),
       db,
@@ -189,12 +192,15 @@ export class BeaconNode {
       await metricsServer.start();
     }
 
-    const restApi = await RestApi.init(opts.api.rest, {
+    const restApi = new RestApi(opts.api.rest, {
       config,
       logger: logger.child(opts.logger.api),
       api,
       metrics,
     });
+    if (opts.api.rest.enabled) {
+      await restApi.listen();
+    }
 
     await network.start();
     chores.start();

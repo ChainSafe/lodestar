@@ -2,7 +2,7 @@
  * @module chain
  */
 
-import {AbortSignal} from "abort-controller";
+import {AbortSignal} from "@chainsafe/abort-controller";
 import {
   blockToHeader,
   computeEpochAtSlot,
@@ -10,7 +10,7 @@ import {
   phase0,
   CachedBeaconState,
 } from "@chainsafe/lodestar-beacon-state-transition";
-import {allForks} from "@chainsafe/lodestar-types";
+import {allForks, ssz} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {toHexString, TreeBacked} from "@chainsafe/ssz";
@@ -140,7 +140,7 @@ export async function initStateFromDb(
 
   logger.info("Initializing beacon state from db", {
     slot: state.slot,
-    epoch: computeEpochAtSlot(config, state.slot),
+    epoch: computeEpochAtSlot(state.slot),
     stateRoot: toHexString(config.getForkTypes(state.slot).BeaconState.hashTreeRoot(state)),
   });
 
@@ -158,7 +158,7 @@ export async function initStateFromAnchorState(
 ): Promise<TreeBacked<allForks.BeaconState>> {
   logger.info("Initializing beacon state", {
     slot: anchorState.slot,
-    epoch: computeEpochAtSlot(config, anchorState.slot),
+    epoch: computeEpochAtSlot(anchorState.slot),
     stateRoot: toHexString(config.getForkTypes(anchorState.slot).BeaconState.hashTreeRoot(anchorState)),
   });
 
@@ -205,19 +205,19 @@ export function computeAnchorCheckpoint(
     const block = blockTypes.BeaconBlock.defaultValue();
     block.stateRoot = stateTypes.BeaconState.hashTreeRoot(anchorState);
     blockHeader = blockToHeader(config, block);
-    root = config.types.phase0.BeaconBlockHeader.hashTreeRoot(blockHeader);
+    root = ssz.phase0.BeaconBlockHeader.hashTreeRoot(blockHeader);
   } else {
-    blockHeader = config.types.phase0.BeaconBlockHeader.clone(anchorState.latestBlockHeader);
-    if (config.types.Root.equals(blockHeader.stateRoot, ZERO_HASH)) {
+    blockHeader = ssz.phase0.BeaconBlockHeader.clone(anchorState.latestBlockHeader);
+    if (ssz.Root.equals(blockHeader.stateRoot, ZERO_HASH)) {
       blockHeader.stateRoot = stateTypes.BeaconState.hashTreeRoot(anchorState);
     }
-    root = config.types.phase0.BeaconBlockHeader.hashTreeRoot(blockHeader);
+    root = ssz.phase0.BeaconBlockHeader.hashTreeRoot(blockHeader);
   }
 
   return {
     checkpoint: {
       root,
-      epoch: computeEpochAtSlot(config, anchorState.slot),
+      epoch: computeEpochAtSlot(anchorState.slot),
     },
     blockHeader,
   };

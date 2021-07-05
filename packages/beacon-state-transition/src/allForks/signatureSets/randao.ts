@@ -1,4 +1,5 @@
-import {allForks} from "@chainsafe/lodestar-types";
+import {DOMAIN_RANDAO} from "@chainsafe/lodestar-params";
+import {allForks, ssz} from "@chainsafe/lodestar-types";
 import {
   computeEpochAtSlot,
   computeSigningRoot,
@@ -23,15 +24,15 @@ export function getRandaoRevealSignatureSet(
   state: CachedBeaconState<allForks.BeaconState>,
   block: allForks.BeaconBlock
 ): ISignatureSet {
-  const {config, epochCtx} = state;
+  const {epochCtx} = state;
   // should not get epoch from epochCtx
-  const epoch = computeEpochAtSlot(config, block.slot);
-  const domain = getDomain(config, state, config.params.DOMAIN_RANDAO);
+  const epoch = computeEpochAtSlot(block.slot);
+  const domain = getDomain(state, DOMAIN_RANDAO, epoch);
 
   return {
     type: SignatureSetType.single,
     pubkey: epochCtx.index2pubkey[block.proposerIndex],
-    signingRoot: computeSigningRoot(config, config.types.Epoch, epoch, domain),
+    signingRoot: computeSigningRoot(ssz.Epoch, epoch, domain),
     signature: block.body.randaoReveal.valueOf() as Uint8Array,
   };
 }

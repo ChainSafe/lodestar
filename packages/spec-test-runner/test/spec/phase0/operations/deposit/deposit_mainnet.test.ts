@@ -1,11 +1,12 @@
 import {TreeBacked} from "@chainsafe/ssz";
 import {allForks, phase0} from "@chainsafe/lodestar-beacon-state-transition";
-import {config} from "@chainsafe/lodestar-config/mainnet";
+import {config} from "@chainsafe/lodestar-config/default";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
 import {expect} from "chai";
 import {join} from "path";
 import {SPEC_TEST_LOCATION} from "../../../../utils/specTestCases";
 import {IProcessDepositTestCase} from "./type";
+import {ssz} from "@chainsafe/lodestar-types";
 
 describeDirectorySpecTest<IProcessDepositTestCase, phase0.BeaconState>(
   "process deposit mainnet",
@@ -30,15 +31,15 @@ describeDirectorySpecTest<IProcessDepositTestCase, phase0.BeaconState>(
       },
     },
     sszTypes: {
-      pre: config.types.phase0.BeaconState,
-      post: config.types.phase0.BeaconState,
-      deposit: config.types.phase0.Deposit,
+      pre: ssz.phase0.BeaconState,
+      post: ssz.phase0.BeaconState,
+      deposit: ssz.phase0.Deposit,
     },
     timeout: 100000000,
     shouldError: (testCase) => !testCase.post,
     getExpected: (testCase) => testCase.post,
     expectFunc: (testCase, expected, actual) => {
-      expect(config.types.phase0.BeaconState.equals(actual, expected)).to.be.true;
+      expect(ssz.phase0.BeaconState.equals(actual, expected)).to.be.true;
     },
   }
 );

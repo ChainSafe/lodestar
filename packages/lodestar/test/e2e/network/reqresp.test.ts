@@ -1,11 +1,11 @@
 import sinon from "sinon";
 import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
-import {AbortController} from "abort-controller";
+import {AbortController} from "@chainsafe/abort-controller";
 import PeerId from "peer-id";
-import {config} from "@chainsafe/lodestar-config/minimal";
+import {config} from "@chainsafe/lodestar-config/default";
 import {sleep as _sleep} from "@chainsafe/lodestar-utils";
-import {altair, phase0} from "@chainsafe/lodestar-types";
+import {altair, phase0, ssz} from "@chainsafe/lodestar-types";
 import {createPeerId, IReqRespOptions, Network, prettyPrintPeerId} from "../../../src/network";
 import {INetworkOptions} from "../../../src/network/options";
 import {Method, Encoding} from "../../../src/network/reqresp/types";
@@ -21,7 +21,7 @@ import {generateEmptySignedBlock} from "../../utils/block";
 import {expectRejectedWithLodestarError} from "../../utils/errors";
 import {connect, onPeerConnect} from "../../utils/network";
 import {StubbedBeaconDb} from "../../utils/stub";
-import {ForkName} from "@chainsafe/lodestar-config";
+import {ForkName} from "@chainsafe/lodestar-params";
 
 chai.use(chaiAsPromised);
 
@@ -173,10 +173,7 @@ describe("network / ReqResp", function () {
     expect(returnedBlocks).to.have.length(req.count, "Wrong returnedBlocks lenght");
 
     for (const [i, returnedBlock] of returnedBlocks.entries()) {
-      expect(config.types.phase0.SignedBeaconBlock.equals(returnedBlock, blocks[i])).to.equal(
-        true,
-        `Wrong returnedBlock[${i}]`
-      );
+      expect(ssz.phase0.SignedBeaconBlock.equals(returnedBlock, blocks[i])).to.equal(true, `Wrong returnedBlock[${i}]`);
     }
   });
 

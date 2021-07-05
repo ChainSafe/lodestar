@@ -1,5 +1,4 @@
 import {join} from "path";
-import {config} from "@chainsafe/lodestar-config/mainnet";
 import {unshuffleList} from "@chainsafe/lodestar-beacon-state-transition";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
 import {IShufflingTestCase} from "./type";
@@ -11,7 +10,7 @@ describeDirectorySpecTest<IShufflingTestCase, number[]>(
   (testcase) => {
     const seed = Buffer.from(testcase.mapping.seed.replace("0x", ""), "hex");
     const output = Array.from({length: Number(testcase.mapping.count)}, (_, i) => i);
-    unshuffleList(config, output, seed);
+    unshuffleList(output, seed);
     return output;
   },
   {

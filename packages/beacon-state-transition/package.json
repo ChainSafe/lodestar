@@ -11,12 +11,14 @@
   "bugs": {
     "url": "https://github.com/ChainSafe/lodestar/issues"
   },
-  "version": "0.22.0",
+  "version": "0.25.1",
   "main": "lib/index.js",
   "files": [
     "lib/**/*.d.ts",
     "lib/**/*.js",
-    "lib/**/*.js.map"
+    "lib/**/*.js.map",
+    "*.d.ts",
+    "*.js"
   ],
   "scripts": {
     "clean": "rm -rf lib && rm -f *.tsbuildinfo",
@@ -30,20 +32,18 @@
     "check-types": "tsc",
     "lint": "eslint --color --ext .ts src/ test/",
     "lint:fix": "yarn run lint --fix",
-    "prepublishOnly": "yarn build",
-    "test:unit": "mocha 'test/unit/**/*.test.ts'",
-    "test:perf": "mocha 'test/perf/**/*.test.ts'"
+    "test:unit": "mocha 'test/unit/**/*.test.ts'"
   },
   "types": "lib/index.d.ts",
   "dependencies": {
     "@chainsafe/bls": "6.0.1",
-    "@chainsafe/lodestar-config": "^0.22.0",
-    "@chainsafe/lodestar-params": "^0.22.0",
-    "@chainsafe/lodestar-types": "^0.22.0",
-    "@chainsafe/lodestar-utils": "^0.22.0",
-    "@chainsafe/persistent-merkle-tree": "^0.3.2",
+    "@chainsafe/lodestar-config": "^0.25.1",
+    "@chainsafe/lodestar-params": "^0.25.0",
+    "@chainsafe/lodestar-types": "^0.25.0",
+    "@chainsafe/lodestar-utils": "^0.25.1",
+    "@chainsafe/persistent-merkle-tree": "^0.3.3",
     "@chainsafe/persistent-ts": "^0.19.0",
-    "@chainsafe/ssz": "^0.8.6",
+    "@chainsafe/ssz": "^0.8.11",
     "bigint-buffer": "^1.1.5",
     "buffer-xor": "^2.0.2"
   },

@@ -1,6 +1,6 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {Bucket, IDatabaseController, Repository} from "@chainsafe/lodestar-db";
-import {allForks} from "@chainsafe/lodestar-types";
+import {Bucket, IDatabaseController, IDbMetrics, Repository} from "@chainsafe/lodestar-db";
+import {allForks, ssz} from "@chainsafe/lodestar-types";
 import {getSignedBlockTypeFromBytes} from "../../util/multifork";
 
 /**
@@ -9,9 +9,9 @@ import {getSignedBlockTypeFromBytes} from "../../util/multifork";
  * Used to store pending blocks
  */
 export class PendingBlockRepository extends Repository<Uint8Array, allForks.SignedBeaconBlock> {
-  constructor(config: IBeaconConfig, db: IDatabaseController<Buffer, Buffer>) {
-    const type = config.types.phase0.SignedBeaconBlock; // Pick some type but won't be used
-    super(config, db, Bucket.allForks_pendingBlock, type);
+  constructor(config: IBeaconConfig, db: IDatabaseController<Buffer, Buffer>, metrics?: IDbMetrics) {
+    const type = ssz.phase0.SignedBeaconBlock; // Pick some type but won't be used
+    super(config, db, Bucket.allForks_pendingBlock, type, metrics);
   }
 
   /**
@@ -26,6 +26,6 @@ export class PendingBlockRepository extends Repository<Uint8Array, allForks.Sign
   }
 
   decodeValue(data: Buffer): allForks.SignedBeaconBlock {
-    return getSignedBlockTypeFromBytes(this.config, data).deserialize(data);
+    return getSignedBlockTypeFromBytes(this.config, data).createTreeBackedFromBytes(data);
   }
 }

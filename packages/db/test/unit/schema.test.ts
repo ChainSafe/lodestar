@@ -6,16 +6,16 @@ import {BUCKET_LENGTH} from "../../src";
 describe("encodeKey", () => {
   const testCases = [
     {
-      input: {bucket: Bucket.phase0_attestation, key: Buffer.from([0, 0, 0, 1])},
+      input: {bucket: Bucket.allForks_block, key: Buffer.from([0, 0, 0, 1])},
       type: "Buffer",
     },
     {
-      input: {bucket: Bucket.phase0_attestation, key: Buffer.from([0, 1, 0, 1])},
+      input: {bucket: Bucket.allForks_block, key: Buffer.from([0, 1, 0, 1])},
       type: "Buffer",
     },
-    {input: {bucket: Bucket.phase0_attestation, key: 5}, type: "number"},
-    {input: {bucket: Bucket.phase0_attestation, key: BigInt(5)}, type: "number"},
-    {input: {bucket: Bucket.phase0_attestation, key: "test"}, type: "string"},
+    {input: {bucket: Bucket.allForks_block, key: 5}, type: "number"},
+    {input: {bucket: Bucket.allForks_block, key: BigInt(5)}, type: "number"},
+    {input: {bucket: Bucket.allForks_block, key: "test"}, type: "string"},
   ];
   for (const {
     input: {bucket, key},

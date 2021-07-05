@@ -432,15 +432,15 @@ export class ProtoArray {
   /**
    * This is the equivalent to the `filter_block_tree` function in the eth2 spec:
    *
-   * https://github.com/ethereum/eth2.0-specs/blob/v0.12.2/specs/phase0/fork-choice.md#filter_block_tree
+   * https://github.com/ethereum/eth2.0-specs/blob/v1.0.1/specs/phase0/fork-choice.md#filter_block_tree
    *
    * Any node that has a different finalized or justified epoch should not be viable for the
    * head.
    */
   nodeIsViableForHead(node: IProtoNode): boolean {
     return (
-      (node.justifiedEpoch === this.justifiedEpoch || node.justifiedEpoch === 0) &&
-      (node.finalizedEpoch === this.finalizedEpoch || node.finalizedEpoch === 0)
+      (node.justifiedEpoch === this.justifiedEpoch || this.justifiedEpoch === 0) &&
+      (node.finalizedEpoch === this.finalizedEpoch || this.finalizedEpoch === 0)
     );
   }
 

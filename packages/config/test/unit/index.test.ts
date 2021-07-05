@@ -1,6 +1,6 @@
+import {ForkName} from "@chainsafe/lodestar-params";
 import {expect} from "chai";
-import {ForkName} from "../../src";
-import {config} from "../../src/presets/mainnet";
+import {config} from "../../src/default";
 
 describe("forks", () => {
   it("Forks should be in ascending order", () => {

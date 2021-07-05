@@ -2,7 +2,9 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ArrayLike, Type} from "@chainsafe/ssz";
 import {BUCKET_LENGTH} from ".";
 import {IDatabaseController, IFilterOptions, IKeyValue} from "./controller";
+import {DbMetricCounter, IDbMetrics} from "./metrics";
 import {Bucket, encodeKey as _encodeKey} from "./schema";
+import {getBucketNameByValue} from "./util";
 
 export type Id = Uint8Array | string | number | bigint;
 
@@ -23,11 +25,22 @@ export abstract class Repository<I extends Id, T> {
 
   protected type: Type<T>;
 
-  protected constructor(config: IBeaconConfig, db: IDatabaseController<Buffer, Buffer>, bucket: Bucket, type: Type<T>) {
+  protected dbReadsMetrics?: ReturnType<DbMetricCounter["labels"]>;
+  protected dbWriteMetrics?: ReturnType<DbMetricCounter["labels"]>;
+
+  protected constructor(
+    config: IBeaconConfig,
+    db: IDatabaseController<Buffer, Buffer>,
+    bucket: Bucket,
+    type: Type<T>,
+    metrics?: IDbMetrics
+  ) {
     this.config = config;
     this.db = db;
     this.bucket = bucket;
     this.type = type;
+    this.dbReadsMetrics = metrics?.dbReads.labels({bucket: getBucketNameByValue(bucket)});
+    this.dbWriteMetrics = metrics?.dbWrites.labels({bucket: getBucketNameByValue(bucket)});
   }
 
   encodeValue(value: T): Buffer {
@@ -47,12 +60,14 @@ export abstract class Repository<I extends Id, T> {
   }
 
   async get(id: I): Promise<T | null> {
+    this.dbReadsMetrics?.inc();
     const value = await this.db.get(this.encodeKey(id));
     if (!value) return null;
     return this.decodeValue(value);
   }
 
   async getBinary(id: I): Promise<Buffer | null> {
+    this.dbReadsMetrics?.inc();
     const value = await this.db.get(this.encodeKey(id));
     if (!value) return null;
     return value;
@@ -63,14 +78,17 @@ export abstract class Repository<I extends Id, T> {
   }
 
   async put(id: I, value: T): Promise<void> {
+    this.dbWriteMetrics?.inc();
     await this.db.put(this.encodeKey(id), this.encodeValue(value));
   }
 
   async putBinary(id: I, value: Buffer): Promise<void> {
+    this.dbWriteMetrics?.inc();
     await this.db.put(this.encodeKey(id), value);
   }
 
   async delete(id: I): Promise<void> {
+    this.dbWriteMetrics?.inc();
     await this.db.delete(this.encodeKey(id));
   }
 
@@ -88,6 +106,7 @@ export abstract class Repository<I extends Id, T> {
   }
 
   async batchPut(items: ArrayLike<IKeyValue<I, T>>): Promise<void> {
+    this.dbWriteMetrics?.inc();
     await this.db.batchPut(
       Array.from({length: items.length}, (_, i) => ({
         key: this.encodeKey(items[i].key),
@@ -98,6 +117,7 @@ export abstract class Repository<I extends Id, T> {
 
   // Similar to batchPut but we support value as Buffer
   async batchPutBinary(items: ArrayLike<IKeyValue<I, Buffer>>): Promise<void> {
+    this.dbWriteMetrics?.inc();
     await this.db.batchPut(
       Array.from({length: items.length}, (_, i) => ({
         key: this.encodeKey(items[i].key),
@@ -107,6 +127,7 @@ export abstract class Repository<I extends Id, T> {
   }
 
   async batchDelete(ids: ArrayLike<I>): Promise<void> {
+    this.dbWriteMetrics?.inc();
     await this.db.batchDelete(Array.from({length: ids.length}, (_, i) => this.encodeKey(ids[i])));
   }
 
@@ -124,10 +145,12 @@ export abstract class Repository<I extends Id, T> {
   }
 
   async keys(opts?: IFilterOptions<I>): Promise<I[]> {
+    this.dbReadsMetrics?.inc();
     const data = await this.db.keys(this.dbFilterOptions(opts));
     return (data || []).map((data) => this.decodeKey(data));
   }
   async *keysStream(opts?: IFilterOptions<I>): AsyncIterable<I> {
+    this.dbReadsMetrics?.inc();
     const keysStream = this.db.keysStream(this.dbFilterOptions(opts));
     const decodeKey = this.decodeKey.bind(this);
     for await (const key of keysStream) {
@@ -135,10 +158,12 @@ export abstract class Repository<I extends Id, T> {
     }
   }
   async values(opts?: IFilterOptions<I>): Promise<T[]> {
+    this.dbReadsMetrics?.inc();
     const data = await this.db.values(this.dbFilterOptions(opts));
     return (data || []).map((data) => this.decodeValue(data));
   }
   async *valuesStream(opts?: IFilterOptions<I>): AsyncIterable<T> {
+    this.dbReadsMetrics?.inc();
     const valuesStream = this.db.valuesStream(this.dbFilterOptions(opts));
     const decodeValue = this.decodeValue.bind(this);
     for await (const value of valuesStream) {
@@ -146,6 +171,7 @@ export abstract class Repository<I extends Id, T> {
     }
   }
   async entries(opts?: IFilterOptions<I>): Promise<IKeyValue<I, T>[]> {
+    this.dbReadsMetrics?.inc();
     const data = await this.db.entries(this.dbFilterOptions(opts));
     return (data || []).map((data) => ({
       key: this.decodeKey(data.key),
@@ -153,6 +179,7 @@ export abstract class Repository<I extends Id, T> {
     }));
   }
   async *entriesStream(opts?: IFilterOptions<I>): AsyncIterable<IKeyValue<I, T>> {
+    this.dbReadsMetrics?.inc();
     const entriesStream = this.db.entriesStream(this.dbFilterOptions(opts));
     const decodeKey = this.decodeKey.bind(this);
     const decodeValue = this.decodeValue.bind(this);
@@ -165,6 +192,7 @@ export abstract class Repository<I extends Id, T> {
   }
 
   async firstKey(): Promise<I | null> {
+    this.dbReadsMetrics?.inc();
     const keys = await this.keys({limit: 1});
     if (!keys.length) {
       return null;
@@ -173,6 +201,7 @@ export abstract class Repository<I extends Id, T> {
   }
 
   async lastKey(): Promise<I | null> {
+    this.dbReadsMetrics?.inc();
     const keys = await this.keys({limit: 1, reverse: true});
     if (!keys.length) {
       return null;
@@ -181,6 +210,7 @@ export abstract class Repository<I extends Id, T> {
   }
 
   async firstValue(): Promise<T | null> {
+    this.dbReadsMetrics?.inc();
     const values = await this.values({limit: 1});
     if (!values.length) {
       return null;
@@ -189,6 +219,7 @@ export abstract class Repository<I extends Id, T> {
   }
 
   async lastValue(): Promise<T | null> {
+    this.dbReadsMetrics?.inc();
     const values = await this.values({limit: 1, reverse: true});
     if (!values.length) {
       return null;
@@ -197,6 +228,7 @@ export abstract class Repository<I extends Id, T> {
   }
 
   async firstEntry(): Promise<IKeyValue<I, T> | null> {
+    this.dbReadsMetrics?.inc();
     const entries = await this.entries({limit: 1});
     if (!entries.length) {
       return null;
@@ -205,6 +237,7 @@ export abstract class Repository<I extends Id, T> {
   }
 
   async lastEntry(): Promise<IKeyValue<I, T> | null> {
+    this.dbReadsMetrics?.inc();
     const entries = await this.entries({limit: 1, reverse: true});
     if (!entries.length) {
       return null;

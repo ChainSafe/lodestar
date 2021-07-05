@@ -8,6 +8,9 @@ interface IBeaconExtraArgs {
   forceGenesis?: boolean;
   genesisStateFile?: string;
   weakSubjectivityStateFile?: string;
+  weakSubjectivityCheckpoint?: string;
+  weakSubjectivityServerUrl?: string;
+  weakSubjectivitySyncLatest?: string;
 }
 
 export const beaconExtraOptions: ICliCommandOptions<IBeaconExtraArgs> = {
@@ -23,6 +26,25 @@ export const beaconExtraOptions: ICliCommandOptions<IBeaconExtraArgs> = {
 
   weakSubjectivityStateFile: {
     description: "Path or URL to download a weak subjectivity state file in ssz-encoded format",
+    type: "string",
+  },
+
+  weakSubjectivitySyncLatest: {
+    description:
+      "Enable fetching of a weak subjectivity state via --weakSubjectivityServerUrl.  If an argument is provided to --weakSubjectivityCheckpoint, fetch the state at that checkpoint.  Else, fetch the latest finalized state.",
+    type: "boolean",
+    default: false,
+  },
+
+  weakSubjectivityCheckpoint: {
+    description:
+      "Tell the beacon node to fetch a weak subjectivity state at the specified checkpoint. The string arg must be in the form <blockRoot>:<epoch>. For example, 0x1234:100 would ask for the weak subjectivity state at checkpoint of epoch 100 with block root 0x1234.",
+    type: "string",
+  },
+
+  weakSubjectivityServerUrl: {
+    description:
+      "Pass in a custom server from which to fetch weak subjectivity states (if you don't want to use the built-in Lodestar servers).",
     type: "string",
   },
 };
@@ -52,6 +74,16 @@ export const logOptions: ICliCommandOptions<ILogArgs> = {
     hidden: true,
     description: "Logger format - Prefix module field with a string ID",
     type: "string",
+  },
+
+  logRotate: {
+    description: "Daily rotate log files",
+    type: "boolean",
+  },
+
+  logMaxFiles: {
+    description: "Number of log files to maintain while rotating logs(if provided with logRotate)",
+    type: "number",
   },
 };
 

@@ -1,6 +1,6 @@
 import {expect} from "chai";
 import PeerId from "peer-id";
-import {config} from "@chainsafe/lodestar-config/minimal";
+import {config} from "@chainsafe/lodestar-config/default";
 import {Batch, BatchOpts} from "../../../../../src/sync/range/batch";
 import {ChainPeersBalancer} from "../../../../../src/sync/range/utils/peerBalancer";
 

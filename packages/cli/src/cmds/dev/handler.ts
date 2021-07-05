@@ -2,10 +2,10 @@ import fs from "fs";
 import {promisify} from "util";
 import rimraf from "rimraf";
 import path from "path";
-import {AbortController} from "abort-controller";
+import {AbortController} from "@chainsafe/abort-controller";
 import {GENESIS_SLOT} from "@chainsafe/lodestar-params";
 import {BeaconNode, BeaconDb, initStateFromAnchorState, createNodeJsLibp2p, nodeUtils} from "@chainsafe/lodestar";
-import {IApiClient, SlashingProtection, Validator} from "@chainsafe/lodestar-validator";
+import {SlashingProtection, Validator} from "@chainsafe/lodestar-validator";
 import {LevelDbController} from "@chainsafe/lodestar-db";
 import {onGracefulShutdown} from "../../util/process";
 import {createEnr, createPeerId} from "../../config";
@@ -46,30 +46,33 @@ export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
   beaconNodeOptions.set({db: {name: beaconPaths.dbDir}});
   const options = beaconNodeOptions.getWithDefaults();
 
+  // Genesis params
+  const validatorCount = args.genesisValidators || 8;
+  const genesisTime = args.genesisTime || Math.floor(Date.now() / 1000) + 5;
+  // Set logger format to Eph with provided genesisTime
+  if (args.logFormatGenesisTime === undefined) args.logFormatGenesisTime = genesisTime;
+
   // BeaconNode setup
   const libp2p = await createNodeJsLibp2p(peerId, options.network);
   const logger = getCliLogger(args, beaconPaths, config);
+  logger.info("Lodestar dev", {network: args.network, preset: args.preset});
 
   const db = new BeaconDb({config, controller: new LevelDbController(options.db, {logger})});
   await db.start();
 
   let anchorState;
-  if (args.genesisValidators) {
-    anchorState = await nodeUtils.initDevState(config, db, args.genesisValidators);
-    nodeUtils.storeSSZState(config, anchorState, path.join(args.rootDir, "dev", "genesis.ssz"));
-  } else if (args.genesisStateFile) {
+  if (args.genesisStateFile) {
+    const state = config
+      .getForkTypes(GENESIS_SLOT)
+      .BeaconState.createTreeBackedFromBytes(await fs.promises.readFile(args.genesisStateFile));
+    anchorState = await initStateFromAnchorState(config, db, logger, state);
+  } else {
     anchorState = await initStateFromAnchorState(
       config,
       db,
       logger,
-      config
-        .getForkTypes(GENESIS_SLOT)
-        .BeaconState.createTreeBackedFromBytes(
-          await fs.promises.readFile(path.join(args.rootDir, args.genesisStateFile))
-        )
+      await nodeUtils.initDevState(config, db, validatorCount, genesisTime)
     );
-  } else {
-    throw new Error("Unable to start node: no available genesis state");
   }
 
   const validators: Validator[] = [];
@@ -97,14 +100,24 @@ export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
   if (args.startValidators) {
     const secretKeys: SecretKey[] = [];
     const [fromIndex, toIndex] = args.startValidators.split(":").map((s) => parseInt(s));
-    for (let i = fromIndex; i < toIndex; i++) {
+    const maxIndex = anchorState.validators.length - 1;
+
+    if (fromIndex > toIndex) {
+      throw Error(`Invalid startValidators arg '${args.startValidators}' - fromIndex > toIndex`);
+    }
+
+    if (toIndex > maxIndex) {
+      throw Error(`Invalid startValidators arg '${args.startValidators}' - state has ${maxIndex} validators`);
+    }
+
+    for (let i = fromIndex; i <= toIndex; i++) {
       secretKeys.push(interopSecretKey(i));
     }
 
     const dbPath = path.join(validatorsDbDir, "validators");
     fs.mkdirSync(dbPath, {recursive: true});
 
-    const api = args.server === "memory" ? (node.api as IApiClient) : args.server;
+    const api = args.server === "memory" ? node.api : args.server;
     const slashingProtection = new SlashingProtection({
       config: config,
       controller: new LevelDbController({name: dbPath}, {logger}),
@@ -114,7 +127,13 @@ export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
     onGracefulShutdownCbs.push(async () => controller.abort());
 
     // Initailize genesis once for all validators
-    const validator = await Validator.initializeFromBeaconNode({config, slashingProtection, api, logger, secretKeys});
+    const validator = await Validator.initializeFromBeaconNode({
+      config,
+      slashingProtection,
+      api,
+      logger: logger.child({module: "vali"}),
+      secretKeys,
+    });
 
     onGracefulShutdownCbs.push(() => validator.stop());
     await validator.start();

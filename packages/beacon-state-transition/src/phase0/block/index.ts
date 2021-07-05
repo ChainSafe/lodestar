@@ -3,8 +3,8 @@ import {CachedBeaconState} from "../../allForks/util";
 import {processBlockHeader, processEth1Data, processRandao} from "../../allForks/block";
 import {processOperations} from "./processOperations";
 import {processAttestation} from "./processAttestation";
-import {processAttesterSlashing} from "./processAttesterSlashing";
 import {processDeposit} from "./processDeposit";
+import {processAttesterSlashing} from "./processAttesterSlashing";
 import {processProposerSlashing} from "./processProposerSlashing";
 import {processVoluntaryExit} from "./processVoluntaryExit";
 
@@ -14,8 +14,8 @@ export {isValidIndexedAttestation} from "../../allForks/block";
 export {
   processOperations,
   processAttestation,
-  processAttesterSlashing,
   processDeposit,
+  processAttesterSlashing,
   processProposerSlashing,
   processVoluntaryExit,
 };
@@ -25,8 +25,9 @@ export function processBlock(
   block: phase0.BeaconBlock,
   verifySignatures = true
 ): void {
+  const blockProcess = {validatorExitCache: {}};
   processBlockHeader(state as CachedBeaconState<allForks.BeaconState>, block);
   processRandao(state as CachedBeaconState<allForks.BeaconState>, block, verifySignatures);
   processEth1Data(state as CachedBeaconState<allForks.BeaconState>, block.body);
-  processOperations(state, block.body, verifySignatures);
+  processOperations(state, block.body, blockProcess, verifySignatures);
 }

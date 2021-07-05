@@ -24,8 +24,10 @@
     "test:spec-min": "lerna run test:spec-min --no-bail",
     "test:spec-fast": "lerna run test:spec-fast --no-bail",
     "test:spec-main": "lerna run test:spec-main --no-bail",
+    "benchmark": "node --max-old-space-size=4096 -r ts-node/register -r ./packages/lodestar/test/setup.ts ./node_modules/.bin/benchmark 'packages/*/test/perf/**/*.test.ts'",
+    "benchmark:local": "yarn benchmark --local",
     "cli": "node --trace-deprecation --max-old-space-size=8192 ./packages/cli/bin/lodestar",
-    "publish": "lerna publish from-package --yes --no-verify-access",
+    "publish:release": "lerna publish from-package --yes --no-verify-access",
     "release": "lerna version --no-push --sign-git-commit",
     "postrelease": "git tag -d $(git describe --abbrev=0)"
   },
@@ -39,6 +41,7 @@
     "@babel/preset-env": "^7.12.7",
     "@babel/preset-typescript": "^7.12.7",
     "@babel/register": "^7.12.1",
+    "@dapplion/benchmark": "^0.1.6",
     "@types/chai": "4.2.0",
     "@types/chai-as-promised": "^7.1.2",
     "@types/mocha": "^8.0.3",
@@ -56,7 +59,7 @@
     "eslint-plugin-no-only-tests": "^2.4.0",
     "eslint-plugin-node": "^11.1.0",
     "eslint-plugin-prettier": "^3.1.4",
-    "lerna": "^3.20.2",
+    "lerna": "^4.0.0",
     "mocha": "^8.3.0",
     "npm-run-all": "^4.1.5",
     "nyc": "^15.1.0",
@@ -71,5 +74,8 @@
     "typescript": "^4.2.0",
     "webpack": "^5.36.2"
   },
-  "dependencies": {}
+  "dependencies": {},
+  "resolutions": {
+    "libnpmpublish": "4.0.0"
+  }
 }

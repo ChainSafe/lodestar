@@ -1,9 +1,10 @@
 import bls, {PointFormat, Signature} from "@chainsafe/bls";
-import {SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
+import {SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {phase0, altair, Slot} from "@chainsafe/lodestar-types";
+import {phase0, altair, Slot, ssz} from "@chainsafe/lodestar-types";
 import {newFilledArray} from "@chainsafe/lodestar-beacon-state-transition";
 import {readonlyValues, toHexString} from "@chainsafe/ssz";
+import {LodestarError} from "@chainsafe/lodestar-utils";
 
 /**
  * SyncCommittee aggregates are only useful for the next block they have signed.
@@ -84,15 +85,15 @@ export class SyncCommitteeContributionCache {
    */
   getSyncAggregate(slot: phase0.Slot, prevBlockRoot: phase0.Root): altair.SyncAggregate {
     const aggregate = this.aggregateByRootBySlot.get(slot)?.get(toHexString(prevBlockRoot));
-    if (aggregate) {
-      return {
-        syncCommitteeBits: aggregate.syncCommitteeBits,
-        syncCommitteeSignature: aggregate.syncCommitteeSignature.toBytes(PointFormat.compressed),
-      };
-    } else {
+    if (!aggregate) {
       // TODO: Add metric for missing SyncAggregate
-      return this.config.types.altair.SyncAggregate.defaultValue();
+      return ssz.altair.SyncAggregate.defaultValue();
     }
+
+    return {
+      syncCommitteeBits: aggregate.syncCommitteeBits,
+      syncCommitteeSignature: aggregate.syncCommitteeSignature.toBytes(PointFormat.compressed),
+    };
   }
 
   /**
@@ -115,6 +116,18 @@ export class SyncCommitteeContributionCache {
   }
 }
 
+export enum SyncContributionErrorCode {
+  ALREADY_KNOWN = "SYNC_COMMITTEE_CONTRIBUTION_ERROR_ALREADY_KNOWN",
+}
+
+type SyncContributionErrorType = {
+  code: SyncContributionErrorCode.ALREADY_KNOWN;
+  syncCommitteeIndex: number;
+  slot: Slot;
+};
+
+export class SyncContributionError extends LodestarError<SyncContributionErrorType> {}
+
 /**
  * Aggregate a new contribution into `aggregate` mutating it
  */
@@ -123,12 +136,21 @@ function aggregateContributionInto(
   aggregate: SyncAggregateFast,
   contribution: altair.SyncCommitteeContribution
 ): void {
-  const indexesPerSubnet = Math.floor(config.params.SYNC_COMMITTEE_SIZE / SYNC_COMMITTEE_SUBNET_COUNT);
+  const indexesPerSubnet = Math.floor(SYNC_COMMITTEE_SIZE / SYNC_COMMITTEE_SUBNET_COUNT);
   const indexOffset = indexesPerSubnet * contribution.subCommitteeIndex;
 
   for (const [index, participated] of Array.from(readonlyValues(contribution.aggregationBits)).entries()) {
     if (participated) {
-      aggregate.syncCommitteeBits[indexOffset + index] = true;
+      const syncCommitteeIndex = indexOffset + index;
+      if (aggregate.syncCommitteeBits[syncCommitteeIndex] === true) {
+        throw new SyncContributionError({
+          code: SyncContributionErrorCode.ALREADY_KNOWN,
+          syncCommitteeIndex,
+          slot: contribution.slot,
+        });
+      }
+
+      aggregate.syncCommitteeBits[syncCommitteeIndex] = true;
     }
   }
 
@@ -145,10 +167,10 @@ function contributionToAggregate(
   config: IBeaconConfig,
   contribution: altair.SyncCommitteeContribution
 ): SyncAggregateFast {
-  const indexesPerSubnet = Math.floor(config.params.SYNC_COMMITTEE_SIZE / SYNC_COMMITTEE_SUBNET_COUNT);
+  const indexesPerSubnet = Math.floor(SYNC_COMMITTEE_SIZE / SYNC_COMMITTEE_SUBNET_COUNT);
   const indexOffset = indexesPerSubnet * contribution.subCommitteeIndex;
 
-  const syncCommitteeBits = newFilledArray(config.params.SYNC_COMMITTEE_SIZE, false);
+  const syncCommitteeBits = newFilledArray(SYNC_COMMITTEE_SIZE, false);
   for (const [index, participated] of Array.from(readonlyValues(contribution.aggregationBits)).entries()) {
     if (participated) {
       syncCommitteeBits[indexOffset + index] = true;

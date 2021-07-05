@@ -6,9 +6,7 @@ import {allForks} from "@chainsafe/lodestar-types";
 
 import {
   AggregateAndProofRepository,
-  AttestationRepository,
   AttesterSlashingRepository,
-  BadBlockRepository,
   BlockArchiveRepository,
   BlockRepository,
   DepositEventRepository,
@@ -17,12 +15,19 @@ import {
   ProposerSlashingRepository,
   StateArchiveRepository,
   VoluntaryExitRepository,
+  BestUpdatePerCommitteePeriod,
+  LightclientFinalizedCheckpoint,
 } from "./repositories";
-import {PreGenesisState, PreGenesisStateLastProcessedBlock} from "./single";
-import {SeenAttestationCache} from "./seenAttestationCache";
+import {
+  PreGenesisState,
+  PreGenesisStateLastProcessedBlock,
+  LatestFinalizedUpdate,
+  LatestNonFinalizedUpdate,
+} from "./single";
 import {PendingBlockRepository} from "./repositories/pendingBlock";
 import {SyncCommitteeCache} from "./syncCommittee";
 import {SyncCommitteeContributionCache} from "./syncCommitteeContribution";
+import {IDbMetrics} from "../../../db/lib";
 
 /**
  * The DB service manages the data layer of the beacon chain
@@ -30,17 +35,13 @@ import {SyncCommitteeContributionCache} from "./syncCommitteeContribution";
  * but instead expose relevent beacon chain objects
  */
 export interface IBeaconDb {
-  // bad blocks
-  badBlock: BadBlockRepository;
+  metrics?: IDbMetrics;
 
   // unfinalized blocks
   block: BlockRepository;
 
   // pending block
   pendingBlock: PendingBlockRepository;
-
-  // cache for attestations that have already been seen via gossip or other sources
-  seenAttestationCache: SeenAttestationCache;
 
   // finalized blocks
   blockArchive: BlockArchiveRepository;
@@ -49,7 +50,6 @@ export interface IBeaconDb {
   stateArchive: StateArchiveRepository;
 
   // op pool
-  attestation: AttestationRepository;
   aggregateAndProof: AggregateAndProofRepository;
   voluntaryExit: VoluntaryExitRepository;
   proposerSlashing: ProposerSlashingRepository;
@@ -67,6 +67,10 @@ export interface IBeaconDb {
   // altair
   syncCommittee: SyncCommitteeCache;
   syncCommitteeContribution: SyncCommitteeContributionCache;
+  bestUpdatePerCommitteePeriod: BestUpdatePerCommitteePeriod;
+  latestFinalizedUpdate: LatestFinalizedUpdate;
+  latestNonFinalizedUpdate: LatestNonFinalizedUpdate;
+  lightclientFinalizedCheckpoint: LightclientFinalizedCheckpoint;
 
   processBlockOperations(signedBlock: allForks.SignedBeaconBlock): Promise<void>;
 

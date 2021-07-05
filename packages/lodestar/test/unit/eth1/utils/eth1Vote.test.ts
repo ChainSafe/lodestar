@@ -1,7 +1,7 @@
 import {expect} from "chai";
-import {config} from "@chainsafe/lodestar-config/minimal";
+import {config} from "@chainsafe/lodestar-config/default";
 import {List, TreeBacked} from "@chainsafe/ssz";
-import {allForks, phase0} from "@chainsafe/lodestar-types";
+import {allForks, phase0, ssz} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {generateState} from "../../../utils/state";
 import {filterBy} from "../../../utils/db";
@@ -85,7 +85,7 @@ describe("eth1 / util / eth1Vote", function () {
       it(`get eth1 vote: ${id}`, async function () {
         const state = generateState({slot: 5, eth1DataVotes: eth1DataVotesInState as List<phase0.Eth1Data>});
         const eth1Vote = pickEth1Vote(config, state, votesToConsider);
-        expect(config.types.phase0.Eth1Data.equals(eth1Vote, expectedEth1Vote)).to.be.true;
+        expect(ssz.phase0.Eth1Data.equals(eth1Vote, expectedEth1Vote)).to.be.true;
       });
     }
   });
@@ -162,7 +162,7 @@ function getEth1DataBlock(eth1DataBlock: Partial<IEth1DataWithTimestamp>): IEth1
  * @param state
  */
 function getTimestampInRange(config: IBeaconConfig, state: TreeBacked<allForks.BeaconState>): number {
-  const {SECONDS_PER_ETH1_BLOCK, ETH1_FOLLOW_DISTANCE} = config.params;
+  const {SECONDS_PER_ETH1_BLOCK, ETH1_FOLLOW_DISTANCE} = config;
   const periodStart = votingPeriodStartTime(config, state);
   return periodStart - SECONDS_PER_ETH1_BLOCK * ETH1_FOLLOW_DISTANCE;
 }

@@ -1,7 +1,7 @@
-import {config} from "@chainsafe/lodestar-config/minimal";
+import {config} from "@chainsafe/lodestar-config/default";
 import {SinonSandbox, SinonStubbedInstance} from "sinon";
 import sinon from "sinon";
-import {BeaconBlockApi} from "../../../../src/api/impl/beacon/blocks";
+import {getBeaconBlockApi} from "../../../../src/api/impl/beacon/blocks";
 import {ForkChoice, BeaconChain} from "../../../../src/chain";
 import {Network} from "../../../../src/network";
 import {BeaconSync} from "../../../../src/sync";
@@ -15,7 +15,7 @@ export type ApiImplTestModules = {
   syncStub: SinonStubbedInstance<BeaconSync>;
   dbStub: StubbedBeaconDb;
   networkStub: SinonStubbedInstance<Network>;
-  blockApi: BeaconBlockApi;
+  blockApi: ReturnType<typeof getBeaconBlockApi>;
   config: IBeaconConfig;
 };
 
@@ -26,16 +26,13 @@ export function setupApiImplTestServer(): ApiImplTestModules {
   const syncStub = sinon.createStubInstance(BeaconSync);
   const dbStub = new StubbedBeaconDb(sinon, config);
   const networkStub = sinon.createStubInstance(Network);
-  const blockApi = new BeaconBlockApi(
-    {},
-    {
-      chain: chainStub,
-      config,
-      db: dbStub,
-      network: networkStub,
-      sync: syncStub,
-    }
-  );
+  const blockApi = getBeaconBlockApi({
+    chain: chainStub,
+    config,
+    db: dbStub,
+    network: networkStub,
+    metrics: null,
+  });
   chainStub.forkChoice = forkChoiceStub;
   return {
     sandbox,

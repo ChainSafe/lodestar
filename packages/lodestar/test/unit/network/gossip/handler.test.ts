@@ -1,13 +1,14 @@
 import sinon, {SinonStubbedInstance} from "sinon";
 import {expect} from "chai";
-import {config} from "@chainsafe/lodestar-config/mainnet";
-import {ForkName} from "@chainsafe/lodestar-config";
+import {config} from "@chainsafe/lodestar-config/default";
+import {ForkName} from "@chainsafe/lodestar-params";
+import {ssz} from "@chainsafe/lodestar-types";
 
 import {BeaconChain, ChainEventEmitter, IBeaconChain} from "../../../../src/chain";
 import {INetwork, Network} from "../../../../src/network";
 import {
   Eth2Gossipsub,
-  getGossipTopicString,
+  stringifyGossipTopic,
   GossipEncoding,
   GossipType,
   encodeMessageData,
@@ -89,12 +90,12 @@ describe("gossip handler", function () {
       SignedVoluntaryExit,
       ProposerSlashing,
       AttesterSlashing,
-    } = config.types.phase0;
+    } = ssz.phase0;
 
     await gossipsub._processRpcMessage({
       data: encodeMessageData(GossipEncoding.ssz_snappy, SignedBeaconBlock.serialize(SignedBeaconBlock.defaultValue())),
       receivedFrom: "foo",
-      topicIDs: [getGossipTopicString(forkDigestContext, {type: GossipType.beacon_block, fork})],
+      topicIDs: [stringifyGossipTopic(forkDigestContext, {type: GossipType.beacon_block, fork})],
     });
     expect(chainStub.receiveBlock.calledOnce).to.be.true;
 
@@ -104,7 +105,7 @@ describe("gossip handler", function () {
         SignedAggregateAndProof.serialize(SignedAggregateAndProof.defaultValue())
       ),
       receivedFrom: "foo",
-      topicIDs: [getGossipTopicString(forkDigestContext, {type: GossipType.beacon_aggregate_and_proof, fork})],
+      topicIDs: [stringifyGossipTopic(forkDigestContext, {type: GossipType.beacon_aggregate_and_proof, fork})],
     });
     expect(dbStub.aggregateAndProof.add.calledOnce).to.be.true;
 
@@ -114,21 +115,21 @@ describe("gossip handler", function () {
         SignedVoluntaryExit.serialize(SignedVoluntaryExit.defaultValue())
       ),
       receivedFrom: "foo",
-      topicIDs: [getGossipTopicString(forkDigestContext, {type: GossipType.voluntary_exit, fork})],
+      topicIDs: [stringifyGossipTopic(forkDigestContext, {type: GossipType.voluntary_exit, fork})],
     });
     expect(dbStub.voluntaryExit.add.calledOnce).to.be.true;
 
     await gossipsub._processRpcMessage({
       data: encodeMessageData(GossipEncoding.ssz_snappy, ProposerSlashing.serialize(ProposerSlashing.defaultValue())),
       receivedFrom: "foo",
-      topicIDs: [getGossipTopicString(forkDigestContext, {type: GossipType.proposer_slashing, fork})],
+      topicIDs: [stringifyGossipTopic(forkDigestContext, {type: GossipType.proposer_slashing, fork})],
     });
     expect(dbStub.proposerSlashing.add.calledOnce).to.be.true;
 
     await gossipsub._processRpcMessage({
       data: encodeMessageData(GossipEncoding.ssz_snappy, AttesterSlashing.serialize(AttesterSlashing.defaultValue())),
       receivedFrom: "foo",
-      topicIDs: [getGossipTopicString(forkDigestContext, {type: GossipType.attester_slashing, fork})],
+      topicIDs: [stringifyGossipTopic(forkDigestContext, {type: GossipType.attester_slashing, fork})],
     });
     expect(dbStub.attesterSlashing.add.calledOnce).to.be.true;
 

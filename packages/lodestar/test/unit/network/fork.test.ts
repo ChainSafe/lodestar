@@ -1,5 +1,6 @@
 import {expect} from "chai";
-import {ForkName, IBeaconConfig, IForkInfo} from "@chainsafe/lodestar-config";
+import {ForkName} from "@chainsafe/lodestar-params";
+import {IBeaconConfig, IForkInfo} from "@chainsafe/lodestar-config";
 import {getCurrentAndNextFork} from "../../../src/network/forks";
 
 describe("network / fork", () => {

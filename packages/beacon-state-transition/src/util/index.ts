@@ -2,16 +2,13 @@
  * @module chain/stateTransition/util
  */
 
-export * from "./activation";
 export * from "./aggregationBits";
+export * from "./aggregator";
 export * from "./array";
 export * from "./attestation";
 export * from "./balance";
-export * from "./block";
 export * from "./blockRoot";
-export * from "./committee";
 export * from "./domain";
-export * from "./duties";
 export * from "./epoch";
 export * from "./fork";
 export * from "./genesis";
@@ -24,6 +21,5 @@ export * from "./signatureSets";
 export * from "./signingRoot";
 export * from "./slot";
 export * from "./validator";
-export * from "./validatorStatus";
-export * from "./syncCommittee";
 export * from "./finality";
+export * from "./blockProcess";

@@ -2,7 +2,7 @@ import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
 import all from "it-all";
 import pipe from "it-pipe";
-import {config} from "@chainsafe/lodestar-config/minimal";
+import {config} from "@chainsafe/lodestar-config/default";
 import {Method, Encoding, RequestBody} from "../../../../../src/network/reqresp/types";
 import {SszSnappyErrorCode} from "../../../../../src/network/reqresp/encodingStrategies/sszSnappy";
 import {requestEncode} from "../../../../../src/network/reqresp/encoders/requestEncode";

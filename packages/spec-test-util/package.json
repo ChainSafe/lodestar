@@ -1,6 +1,6 @@
 {
   "name": "@chainsafe/lodestar-spec-test-util",
-  "version": "0.22.0",
+  "version": "0.25.1",
   "description": "Spec test suite generator from yaml test files",
   "author": "ChainSafe Systems",
   "license": "Apache-2.0",
@@ -13,7 +13,9 @@
   "files": [
     "lib/**/*.js",
     "lib/**/*.js.map",
-    "lib/**/*.d.ts"
+    "lib/**/*.d.ts",
+    "*.d.ts",
+    "*.js"
   ],
   "bin": {
     "eth2-spec-test-download": "lib/downloadTestsCli.js"
@@ -30,7 +32,6 @@
     "check-types": "tsc",
     "lint": "eslint --color --ext .ts src/ test/",
     "lint:fix": "yarn run lint --fix",
-    "prepublishOnly": "yarn build",
     "pretest": "yarn run check-types",
     "test:e2e": "mocha 'test/e2e/**/*.test.ts'"
   },
@@ -45,8 +46,8 @@
     "blockchain"
   ],
   "dependencies": {
-    "@chainsafe/lodestar-utils": "^0.22.0",
-    "@chainsafe/ssz": "^0.8.6",
+    "@chainsafe/lodestar-utils": "^0.25.1",
+    "@chainsafe/ssz": "^0.8.11",
     "axios": "^0.21.0",
     "chai": "^4.2.0",
     "mocha": "^8.1.1",

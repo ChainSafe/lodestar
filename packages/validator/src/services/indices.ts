@@ -1,8 +1,15 @@
 import {ValidatorIndex} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {toHexString} from "@chainsafe/ssz";
-import {IApiClient} from "../api";
+import {Api} from "@chainsafe/lodestar-api";
 import {ValidatorStore} from "./validatorStore";
+import {batchItems} from "../util/batch";
+
+/**
+ * URLs have a limitation on size, adding an unbounded num of pubkeys will break the request.
+ * For reasoning on the specific number see: https://github.com/ChainSafe/lodestar/pull/2730#issuecomment-866749083
+ */
+const PUBKEYS_PER_REQUEST = 10;
 
 // To assist with readability
 type PubkeyHex = string;
@@ -16,7 +23,7 @@ export class IndicesService {
 
   constructor(
     private readonly logger: ILogger,
-    private readonly apiClient: IApiClient,
+    private readonly api: Api,
     private readonly validatorStore: ValidatorStore
   ) {}
 
@@ -58,10 +65,23 @@ export class IndicesService {
     }
 
     // Query the remote BN to resolve a pubkey to a validator index.
-    const validatorsState = await this.apiClient.beacon.state.getStateValidators("head", {indices: pubkeysToPoll});
+    // support up to 1000 pubkeys per poll
+    const pubkeysHex = pubkeysToPoll.map((pubkey) => toHexString(pubkey));
+    const pubkeysHexBatches = batchItems(pubkeysHex, {batchSize: PUBKEYS_PER_REQUEST});
 
+    const newIndices: number[] = [];
+    for (const pubkeysHexBatch of pubkeysHexBatches) {
+      const validatorIndicesArr = await this.fetchValidatorIndices(pubkeysHexBatch);
+      newIndices.push(...validatorIndicesArr);
+    }
+    this.logger.info("Discovered new validators", {count: newIndices.length});
+    return newIndices;
+  }
+
+  private async fetchValidatorIndices(pubkeysHex: string[]): Promise<ValidatorIndex[]> {
+    const validatorsState = await this.api.beacon.getStateValidators("head", {indices: pubkeysHex});
     const newIndices = [];
-    for (const validatorState of validatorsState) {
+    for (const validatorState of validatorsState.data) {
       const pubkeyHex = toHexString(validatorState.validator.pubkey);
       if (!this.pubkey2index.has(pubkeyHex)) {
         this.logger.debug("Discovered validator", {pubkey: pubkeyHex, index: validatorState.index});
@@ -70,7 +90,6 @@ export class IndicesService {
         newIndices.push(validatorState.index);
       }
     }
-
     return newIndices;
   }
 }

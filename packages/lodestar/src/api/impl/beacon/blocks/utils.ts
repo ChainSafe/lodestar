@@ -1,8 +1,8 @@
-import {phase0, allForks} from "@chainsafe/lodestar-types";
+import {allForks} from "@chainsafe/lodestar-types";
+import {routes} from "@chainsafe/lodestar-api";
 import {blockToHeader} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
-import {BlockId} from "./interface";
 import {IBeaconDb} from "../../../../db";
 import {GENESIS_SLOT} from "../../../../constants";
 import {fromHexString} from "@chainsafe/ssz";
@@ -12,7 +12,7 @@ export function toBeaconHeaderResponse(
   config: IBeaconConfig,
   block: allForks.SignedBeaconBlock,
   canonical = false
-): phase0.SignedBeaconHeaderResponse {
+): routes.beacon.BlockHeaderResponse {
   return {
     root: config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message),
     canonical,
@@ -26,7 +26,7 @@ export function toBeaconHeaderResponse(
 export async function resolveBlockId(
   forkChoice: IForkChoice,
   db: IBeaconDb,
-  blockId: BlockId
+  blockId: routes.beacon.BlockId
 ): Promise<allForks.SignedBeaconBlock> {
   const block = await resolveBlockIdOrNull(forkChoice, db, blockId);
   if (!block) {
@@ -39,7 +39,7 @@ export async function resolveBlockId(
 async function resolveBlockIdOrNull(
   forkChoice: IForkChoice,
   db: IBeaconDb,
-  blockId: BlockId
+  blockId: routes.beacon.BlockId
 ): Promise<allForks.SignedBeaconBlock | null> {
   blockId = String(blockId).toLowerCase();
   if (blockId === "head") {

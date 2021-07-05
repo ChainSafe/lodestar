@@ -1,9 +1,9 @@
-import {AbortSignal} from "abort-controller";
+import {AbortSignal} from "@chainsafe/abort-controller";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {phase0, Slot, CommitteeIndex} from "@chainsafe/lodestar-types";
+import {phase0, Slot, CommitteeIndex, ssz} from "@chainsafe/lodestar-types";
 import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {ILogger, prettyBytes, sleep} from "@chainsafe/lodestar-utils";
-import {IApiClient} from "../api";
+import {Api} from "@chainsafe/lodestar-api";
 import {extendError, notAborted, IClock} from "../util";
 import {ValidatorStore} from "./validatorStore";
 import {AttestationDutiesService, AttDutyAndProof} from "./attestationDuties";
@@ -19,12 +19,12 @@ export class AttestationService {
   constructor(
     private readonly config: IBeaconConfig,
     private readonly logger: ILogger,
-    private readonly apiClient: IApiClient,
+    private readonly api: Api,
     private readonly clock: IClock,
     private readonly validatorStore: ValidatorStore,
     indicesService: IndicesService
   ) {
-    this.dutiesService = new AttestationDutiesService(config, logger, apiClient, clock, validatorStore, indicesService);
+    this.dutiesService = new AttestationDutiesService(config, logger, api, clock, validatorStore, indicesService);
 
     // At most every slot, check existing duties from AttestationDutiesService and run tasks
     clock.runEverySlot(this.runAttestationTasks);
@@ -85,11 +85,12 @@ export class AttestationService {
     const logCtx = {slot, index: committeeIndex};
 
     // Produce one attestation data per slot and committeeIndex
-    const attestation = await this.apiClient.validator.produceAttestationData(committeeIndex, slot).catch((e) => {
+    const attestationRes = await this.api.validator.produceAttestationData(committeeIndex, slot).catch((e) => {
       throw extendError(e, "Error producing attestation");
     });
+    const attestation = attestationRes.data;
 
-    const currentEpoch = computeEpochAtSlot(this.config, slot);
+    const currentEpoch = computeEpochAtSlot(slot);
     const signedAttestations: phase0.Attestation[] = [];
 
     for (const {duty} of duties) {
@@ -104,7 +105,7 @@ export class AttestationService {
 
     if (signedAttestations.length > 0) {
       try {
-        await this.apiClient.beacon.pool.submitAttestations(signedAttestations);
+        await this.api.beacon.submitPoolAttestations(signedAttestations);
         this.logger.info("Published attestations", {...logCtx, count: signedAttestations.length});
       } catch (e) {
         if (notAborted(e)) this.logger.error("Error publishing attestations", logCtx, e);
@@ -136,8 +137,8 @@ export class AttestationService {
     }
 
     this.logger.verbose("Aggregating attestations", logCtx);
-    const aggregate = await this.apiClient.validator
-      .getAggregatedAttestation(this.config.types.phase0.AttestationData.hashTreeRoot(attestation), attestation.slot)
+    const aggregate = await this.api.validator
+      .getAggregatedAttestation(ssz.phase0.AttestationData.hashTreeRoot(attestation), attestation.slot)
       .catch((e) => {
         throw extendError(e, "Error producing aggregateAndProofs");
       });
@@ -150,7 +151,7 @@ export class AttestationService {
         // Produce signed aggregates only for validators that are subscribed aggregators.
         if (selectionProof !== null) {
           signedAggregateAndProofs.push(
-            await this.validatorStore.signAggregateAndProof(duty, selectionProof, aggregate)
+            await this.validatorStore.signAggregateAndProof(duty, selectionProof, aggregate.data)
           );
           this.logger.debug("Signed aggregateAndProofs", logCtxValidator);
         }
@@ -161,7 +162,7 @@ export class AttestationService {
 
     if (signedAggregateAndProofs.length > 0) {
       try {
-        await this.apiClient.validator.publishAggregateAndProofs(signedAggregateAndProofs);
+        await this.api.validator.publishAggregateAndProofs(signedAggregateAndProofs);
         this.logger.info("Published aggregateAndProofs", {...logCtx, count: signedAggregateAndProofs.length});
       } catch (e) {
         if (notAborted(e)) this.logger.error("Error publishing aggregateAndProofs", logCtx, e);

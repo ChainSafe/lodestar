@@ -1,7 +1,7 @@
 // Uses cross-fetch for browser + NodeJS cross compatibility
 // Note: isomorphic-fetch is not well mantained and does not support abort signals
 import fetch from "cross-fetch";
-import {AbortSignal} from "abort-controller";
+import {AbortSignal} from "@chainsafe/abort-controller";
 import {IJsonRpcClient, IRpcPayload} from "./interface";
 import {toJson, toString} from "@chainsafe/lodestar-utils";
 import {Json} from "@chainsafe/ssz";

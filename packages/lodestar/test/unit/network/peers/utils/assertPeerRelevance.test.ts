@@ -1,4 +1,4 @@
-import {config} from "@chainsafe/lodestar-config/minimal";
+import {config} from "@chainsafe/lodestar-config/default";
 import {phase0} from "@chainsafe/lodestar-types";
 import {MockBeaconChain} from "../../../../utils/mocks/chain/chain";
 import {

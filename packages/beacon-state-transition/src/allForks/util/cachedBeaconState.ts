@@ -11,7 +11,7 @@ import {
   TreeBacked,
 } from "@chainsafe/ssz";
 import {allForks, altair, ParticipationFlags} from "@chainsafe/lodestar-types";
-import {ForkName, IBeaconConfig} from "@chainsafe/lodestar-config";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Tree} from "@chainsafe/persistent-merkle-tree";
 import {MutableVector} from "@chainsafe/persistent-ts";
 import {createValidatorFlat} from "./flat";
@@ -24,6 +24,15 @@ import {
   fromParticipationFlags,
   IParticipationStatus,
 } from "./cachedEpochParticipation";
+import {ForkName} from "@chainsafe/lodestar-params";
+import {
+  convertToIndexedSyncCommittee,
+  createIndexedSyncCommittee,
+  emptyIndexedSyncCommittee,
+  IndexedSyncCommittee,
+} from "./indexedSyncCommittee";
+import {getNextSyncCommittee} from "../../altair/epoch/sync_committee";
+import {ssz} from "@chainsafe/lodestar-types";
 
 /**
  * `BeaconState` with various caches
@@ -56,12 +65,17 @@ export function createCachedBeaconState<T extends allForks.BeaconState>(
   const cachedBalances = MutableVector.from(readonlyValues(state.balances));
   let cachedPreviousParticipation, cachedCurrentParticipation;
   const forkName = config.getForkName(state.slot);
+  let currIndexedSyncCommittee: IndexedSyncCommittee;
+  let nextIndexedSyncCommittee: IndexedSyncCommittee;
+  const epochCtx = createEpochContext(config, state, cachedValidators, opts);
   if (forkName === ForkName.phase0) {
     const emptyParticipationStatus = {
       timelyHead: false,
       timelySource: false,
       timelyTarget: false,
     };
+    currIndexedSyncCommittee = emptyIndexedSyncCommittee;
+    nextIndexedSyncCommittee = emptyIndexedSyncCommittee;
     cachedPreviousParticipation = MutableVector.from(
       Array.from({length: cachedValidators.length}, () => emptyParticipationStatus)
     );
@@ -69,20 +83,17 @@ export function createCachedBeaconState<T extends allForks.BeaconState>(
       Array.from({length: cachedValidators.length}, () => emptyParticipationStatus)
     );
   } else {
+    const {pubkey2index} = epochCtx;
+    const altairState = (state as unknown) as TreeBacked<altair.BeaconState>;
+    currIndexedSyncCommittee = createIndexedSyncCommittee(pubkey2index, altairState, false);
+    nextIndexedSyncCommittee = createIndexedSyncCommittee(pubkey2index, altairState, true);
     cachedPreviousParticipation = MutableVector.from(
-      Array.from(
-        readonlyValues(((state as unknown) as TreeBacked<altair.BeaconState>).previousEpochParticipation),
-        fromParticipationFlags
-      )
+      Array.from(readonlyValues(altairState.previousEpochParticipation), fromParticipationFlags)
     );
     cachedCurrentParticipation = MutableVector.from(
-      Array.from(
-        readonlyValues(((state as unknown) as TreeBacked<altair.BeaconState>).currentEpochParticipation),
-        fromParticipationFlags
-      )
+      Array.from(readonlyValues(altairState.currentEpochParticipation), fromParticipationFlags)
     );
   }
-  const epochCtx = createEpochContext(config, state, cachedValidators, opts);
   return new Proxy(
     new BeaconStateContext(
       state.type as ContainerType<T>,
@@ -91,6 +102,8 @@ export function createCachedBeaconState<T extends allForks.BeaconState>(
       cachedBalances,
       cachedPreviousParticipation,
       cachedCurrentParticipation,
+      currIndexedSyncCommittee,
+      nextIndexedSyncCommittee,
       epochCtx
     ),
     (CachedBeaconStateProxyHandler as unknown) as ProxyHandler<BeaconStateContext<T>>
@@ -111,6 +124,9 @@ export class BeaconStateContext<T extends allForks.BeaconState> {
   balances: CachedBalanceList & T["balances"];
   previousEpochParticipation: CachedEpochParticipation & List<ParticipationFlags>;
   currentEpochParticipation: CachedEpochParticipation & List<ParticipationFlags>;
+  // phase0 has no sync committee
+  currentSyncCommittee: IndexedSyncCommittee;
+  nextSyncCommittee: IndexedSyncCommittee;
 
   constructor(
     type: ContainerType<T>,
@@ -119,6 +135,8 @@ export class BeaconStateContext<T extends allForks.BeaconState> {
     balanceCache: MutableVector<T["balances"][number]>,
     previousEpochParticipationCache: MutableVector<IParticipationStatus>,
     currentEpochParticipationCache: MutableVector<IParticipationStatus>,
+    currentSyncCommittee: IndexedSyncCommittee,
+    nextSyncCommittee: IndexedSyncCommittee,
     epochCtx: EpochContext
   ) {
     this.config = epochCtx.config;
@@ -157,6 +175,8 @@ export class BeaconStateContext<T extends allForks.BeaconState> {
       }),
       CachedEpochParticipationProxyHandler
     ) as unknown) as CachedEpochParticipation & List<ParticipationFlags>;
+    this.currentSyncCommittee = currentSyncCommittee;
+    this.nextSyncCommittee = nextSyncCommittee;
   }
 
   clone(): CachedBeaconState<T> {
@@ -168,10 +188,22 @@ export class BeaconStateContext<T extends allForks.BeaconState> {
         this.balances.persistent.clone(),
         this.previousEpochParticipation.persistent.clone(),
         this.currentEpochParticipation.persistent.clone(),
+        // states in the same sync period has same sync committee
+        this.currentSyncCommittee,
+        this.nextSyncCommittee,
         this.epochCtx.copy()
       ),
       (CachedBeaconStateProxyHandler as unknown) as ProxyHandler<BeaconStateContext<T>>
     ) as CachedBeaconState<T>;
+  }
+
+  rotateSyncCommittee(): void {
+    const state = (this.type.createTreeBacked(this.tree) as unknown) as TreeBacked<altair.BeaconState>;
+    this.currentSyncCommittee = this.nextSyncCommittee;
+    state.currentSyncCommittee = state.nextSyncCommittee;
+    const nextSyncCommittee = ssz.altair.SyncCommittee.createTreeBackedFromStruct(getNextSyncCommittee(state));
+    this.nextSyncCommittee = convertToIndexedSyncCommittee(nextSyncCommittee, this.epochCtx.pubkey2index);
+    state.nextSyncCommittee = nextSyncCommittee;
   }
 
   /**
@@ -205,6 +237,10 @@ export const CachedBeaconStateProxyHandler: ProxyHandler<CachedBeaconState<allFo
       return target.previousEpochParticipation;
     } else if (key === "currentEpochParticipation") {
       return target.currentEpochParticipation;
+    } else if (key === "currentSyncCommittee") {
+      return target.currentSyncCommittee;
+    } else if (key === "nextSyncCommittee") {
+      return target.nextSyncCommittee;
     } else if (target.type.fields[key]) {
       const propType = target.type.fields[key];
       const propValue = target.type.tree_getProperty(target.tree, key);
@@ -240,8 +276,28 @@ export const CachedBeaconStateProxyHandler: ProxyHandler<CachedBeaconState<allFo
         return target.type.tree_setProperty(target.tree, key, value);
       } else {
         if (isTreeBacked(value)) {
+          if (key === "currentSyncCommittee") {
+            target.currentSyncCommittee = convertToIndexedSyncCommittee(
+              (value as unknown) as TreeBacked<altair.SyncCommittee>,
+              target.epochCtx.pubkey2index
+            );
+          } else if (key === "nextSyncCommittee") {
+            target.nextSyncCommittee = convertToIndexedSyncCommittee(
+              (value as unknown) as TreeBacked<altair.SyncCommittee>,
+              target.epochCtx.pubkey2index
+            );
+          }
           return target.type.tree_setProperty(target.tree, key, value.tree);
         } else {
+          if (key === "currentSyncCommittee") {
+            const treeBackedValue = ssz.altair.SyncCommittee.createTreeBackedFromStruct(value as altair.SyncCommittee);
+            target.currentSyncCommittee = convertToIndexedSyncCommittee(treeBackedValue, target.epochCtx.pubkey2index);
+            return target.type.tree_setProperty(target.tree, key, treeBackedValue.tree);
+          } else if (key === "nextSyncCommittee") {
+            const treeBackedValue = ssz.altair.SyncCommittee.createTreeBackedFromStruct(value as altair.SyncCommittee);
+            target.nextSyncCommittee = convertToIndexedSyncCommittee(treeBackedValue, target.epochCtx.pubkey2index);
+            return target.type.tree_setProperty(target.tree, key, treeBackedValue.tree);
+          }
           return target.type.tree_setProperty(
             target.tree,
             key,

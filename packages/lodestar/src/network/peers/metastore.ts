@@ -1,7 +1,7 @@
 import MetadataBook from "libp2p/src/peer-store/metadata-book";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import PeerId from "peer-id";
-import {altair} from "@chainsafe/lodestar-types";
+import {altair, ssz} from "@chainsafe/lodestar-types";
 import {ReqRespEncoding} from "../reqresp";
 import {Type} from "@chainsafe/ssz";
 
@@ -42,8 +42,8 @@ export class Libp2pPeerMetadataStore implements IPeerMetadataStore {
     this.config = config;
     this.metabook = metabook;
 
-    const number64Serdes = typeToSerdes(this.config.types.Number64);
-    const metadataV2Serdes = typeToSerdes(this.config.types.altair.Metadata);
+    const number64Serdes = typeToSerdes(ssz.Number64);
+    const metadataV2Serdes = typeToSerdes(ssz.altair.Metadata);
     const stringSerdes: BucketSerdes<ReqRespEncoding> = {
       serialize: (v) => Buffer.from(v, "utf8"),
       deserialize: (b) => Buffer.from(b).toString("utf8") as ReqRespEncoding,

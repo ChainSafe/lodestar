@@ -1,17 +1,18 @@
 import {expect} from "chai";
 import sinon, {SinonStubbedInstance} from "sinon";
 
-import {config} from "@chainsafe/lodestar-config/minimal";
+import {config} from "@chainsafe/lodestar-config/default";
 import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
 
 import {ChainEventEmitter} from "../../../../src/chain";
 import {BlockError, BlockErrorCode} from "../../../../src/chain/errors";
 import {CheckpointStateCache} from "../../../../src/chain/stateCache";
 import {processBlock} from "../../../../src/chain/blocks/process";
-import {BlsVerifier} from "../../../../src/chain/bls";
+import {BlsSingleThreadVerifier} from "../../../../src/chain/bls";
 import {RegenError, RegenErrorCode, StateRegenerator} from "../../../../src/chain/regen";
 import {getNewBlockJob} from "../../../utils/block";
 import {createStubInstance} from "../../../utils/types";
+import {ssz} from "@chainsafe/lodestar-types";
 
 describe("processBlock", function () {
   const emitter = new ChainEventEmitter();
@@ -19,13 +20,13 @@ describe("processBlock", function () {
   let forkChoice: SinonStubbedInstance<ForkChoice>;
   let checkpointStateCache: SinonStubbedInstance<CheckpointStateCache> & CheckpointStateCache;
   let regen: SinonStubbedInstance<StateRegenerator>;
-  let bls: SinonStubbedInstance<BlsVerifier>;
+  let bls: SinonStubbedInstance<BlsSingleThreadVerifier>;
 
   beforeEach(function () {
     forkChoice = sinon.createStubInstance(ForkChoice);
     checkpointStateCache = createStubInstance(CheckpointStateCache);
     regen = sinon.createStubInstance(StateRegenerator);
-    bls = sinon.createStubInstance(BlsVerifier);
+    bls = sinon.createStubInstance(BlsSingleThreadVerifier);
   });
 
   afterEach(function () {
@@ -33,7 +34,7 @@ describe("processBlock", function () {
   });
 
   it("should throw on unknown parent", async function () {
-    const signedBlock = config.types.phase0.SignedBeaconBlock.defaultValue();
+    const signedBlock = ssz.phase0.SignedBeaconBlock.defaultValue();
     signedBlock.message.slot = 1;
     const job = getNewBlockJob(signedBlock);
     forkChoice.hasBlock.returns(false);
@@ -46,7 +47,7 @@ describe("processBlock", function () {
   });
 
   it("should throw on missing prestate", async function () {
-    const signedBlock = config.types.phase0.SignedBeaconBlock.defaultValue();
+    const signedBlock = ssz.phase0.SignedBeaconBlock.defaultValue();
     signedBlock.message.slot = 1;
     const job = getNewBlockJob(signedBlock);
     forkChoice.hasBlock.returns(true);

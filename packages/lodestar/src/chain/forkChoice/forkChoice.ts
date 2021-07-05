@@ -11,6 +11,7 @@ import {computeAnchorCheckpoint} from "../initState";
 import {ChainEventEmitter} from "../emitter";
 import {ForkChoiceStore} from "./store";
 import {getEffectiveBalances, CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
+import {IMetrics} from "../../metrics";
 
 /**
  * Fork Choice extended with a ChainEventEmitter
@@ -21,11 +22,13 @@ export class LodestarForkChoice extends ForkChoice {
     emitter,
     currentSlot,
     state,
+    metrics,
   }: {
     config: IBeaconConfig;
     emitter: ChainEventEmitter;
     currentSlot: Slot;
     state: CachedBeaconState<allForks.BeaconState>;
+    metrics?: IMetrics | null;
   }) {
     const {blockHeader, checkpoint} = computeAnchorCheckpoint(config, state);
     const finalizedCheckpoint = {...checkpoint};
@@ -37,6 +40,7 @@ export class LodestarForkChoice extends ForkChoice {
       // with the head not matching the fork choice justified and finalized epochs.
       epoch: checkpoint.epoch === 0 ? checkpoint.epoch : checkpoint.epoch + 1,
     };
+    // TODO - PERFORMANCE WARNING - NAIVE CODE
     const justifiedBalances = getEffectiveBalances(state);
     super({
       config,
@@ -59,6 +63,7 @@ export class LodestarForkChoice extends ForkChoice {
 
       queuedAttestations: new Set(),
       justifiedBalances,
+      metrics,
     });
   }
 }

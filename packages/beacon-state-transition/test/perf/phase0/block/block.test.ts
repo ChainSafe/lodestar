@@ -1,37 +1,30 @@
-import {config} from "@chainsafe/lodestar-config/mainnet";
+import {itBench, setBenchOpts} from "@dapplion/benchmark";
+import {MAX_VOLUNTARY_EXITS} from "@chainsafe/lodestar-params";
+import {phase0} from "@chainsafe/lodestar-types";
 import {List} from "@chainsafe/ssz";
-import {expect} from "chai";
-import {generatePerformanceBlock, generatePerfTestCachedBeaconState, initBLS} from "../../util";
-import {phase0, allForks} from "../../../../src";
-import {profilerLogger} from "../../../utils/logger";
+import {allForks} from "../../../../src";
+import {generatePerformanceBlock, generatePerfTestCachedBeaconState} from "../../util";
 
-describe("Process Blocks Performance Test", function () {
-  this.timeout(0);
-  let state: allForks.CachedBeaconState<allForks.BeaconState>;
-  const logger = profilerLogger();
-  before(async () => {
-    await initBLS();
-    state = generatePerfTestCachedBeaconState() as allForks.CachedBeaconState<allForks.BeaconState>;
+// As of Jun 12 2021
+// Process block
+// ================================================================
+// Process block with 0 validator exit                                    233.6434 ops/s      4.280027 ms/op   3491 runs    15.01 s
+// Process block with 1 validator exit                                    41.33581 ops/s      24.19210 ms/op    619 runs    15.00 s
+// Process block with 16 validator exits                                  42.34492 ops/s      23.61558 ms/op    635 runs    15.02 s
+
+describe("Process block", () => {
+  setBenchOpts({
+    maxMs: 60 * 1000,
+    minMs: 15 * 1000,
+    runs: 64,
   });
 
-  it("should process block", async () => {
-    const signedBlock = generatePerformanceBlock();
-    logger.profile(`Process block ${signedBlock.message.slot}`);
-    const start = Date.now();
-    allForks.stateTransition(state, signedBlock, {
-      verifyProposer: false,
-      verifySignatures: false,
-      verifyStateRoot: false,
-    });
-    expect(Date.now() - start).lte(15);
-    logger.profile(`Process block ${signedBlock.message.slot}`);
-  });
-
-  it("should process multiple validator exits in same block", async () => {
-    const signedBlock: phase0.SignedBeaconBlock = generatePerformanceBlock();
-    const exitEpoch = state.epochCtx.currentShuffling.epoch;
+  const originalState = generatePerfTestCachedBeaconState() as allForks.CachedBeaconState<allForks.BeaconState>;
+  const regularBlock = generatePerformanceBlock();
+  const [oneValidatorExitBlock, maxValidatorExitBlock] = [1, MAX_VOLUNTARY_EXITS].map((numValidatorExits) => {
+    const signedBlock = regularBlock.clone();
+    const exitEpoch = originalState.epochCtx.currentShuffling.epoch;
     const voluntaryExits: phase0.SignedVoluntaryExit[] = [];
-    const numValidatorExits = config.params.MAX_VOLUNTARY_EXITS;
     for (let i = 0; i < numValidatorExits; i++) {
       voluntaryExits.push({
         message: {epoch: exitEpoch, validatorIndex: 40000 + i},
@@ -39,19 +32,25 @@ describe("Process Blocks Performance Test", function () {
       });
     }
     signedBlock.message.body.voluntaryExits = (voluntaryExits as unknown) as List<phase0.SignedVoluntaryExit>;
-    const start = Date.now();
-    logger.profile(`Process block ${signedBlock.message.slot} with ${numValidatorExits} validator exits`);
-    allForks.stateTransition(state, signedBlock, {
-      verifyProposer: false,
-      verifySignatures: false,
-      verifyStateRoot: false,
-    });
-    expect(Date.now() - start).lt(430);
-    logger.profile(`Process block ${signedBlock.message.slot} with ${numValidatorExits} validator exits`);
+    return signedBlock;
   });
 
-  // Uncomment to hang test forever to view detailed source info in Chrome devtools profiler
-  // after(async () => {
-  //   await new Promise((r) => setTimeout(r, 1e8));
-  // });
+  const validatorCount = originalState.validators.length;
+  const idPrefix = `Process block - ${validatorCount} vs`;
+
+  const testCases = [
+    {signedBlock: regularBlock, id: `${idPrefix} - with 0 validator exit`},
+    {signedBlock: oneValidatorExitBlock, id: `${idPrefix} - with 1 validator exit`},
+    {signedBlock: maxValidatorExitBlock, id: `${idPrefix} - with ${MAX_VOLUNTARY_EXITS} validator exits`},
+  ];
+
+  for (const {id, signedBlock} of testCases) {
+    itBench({id, beforeEach: () => originalState.clone()}, (state) => {
+      allForks.stateTransition(state, signedBlock, {
+        verifyProposer: false,
+        verifySignatures: false,
+        verifyStateRoot: false,
+      });
+    });
+  }
 });

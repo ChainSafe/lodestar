@@ -1,32 +1,16 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
-import {AbortSignal} from "abort-controller";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
-import {allForks} from "@chainsafe/lodestar-types";
+import {AbortSignal} from "@chainsafe/abort-controller";
+import {allForks, ssz} from "@chainsafe/lodestar-types";
 
 import {IBlockJob, IChainSegmentJob} from "../interface";
-import {ChainEvent, ChainEventEmitter} from "../emitter";
-import {IBeaconClock} from "../clock";
-import {IStateRegenerator} from "../regen";
+import {ChainEvent} from "../emitter";
 import {JobQueue} from "../../util/queue";
-import {CheckpointStateCache} from "../stateCache";
 import {BlockError, BlockErrorCode, ChainSegmentError} from "../errors";
-import {IMetrics} from "../../metrics";
-import {IBlsVerifier} from "../bls";
 
-import {processBlock, processChainSegment} from "./process";
-import {validateBlock} from "./validate";
+import {processBlock, processChainSegment, BlockProcessModules} from "./process";
+import {validateBlock, BlockValidateModules} from "./validate";
 
-type BlockProcessorModules = {
-  config: IBeaconConfig;
-  forkChoice: IForkChoice;
-  regen: IStateRegenerator;
-  emitter: ChainEventEmitter;
-  bls: IBlsVerifier;
-  metrics: IMetrics | null;
-  clock: IBeaconClock;
-  checkpointStateCache: CheckpointStateCache;
-};
+export type BlockProcessorModules = BlockProcessModules & BlockValidateModules;
 
 /**
  * BlockProcessor processes block jobs in a queued fashion, one after the other.
@@ -97,7 +81,7 @@ export async function processChainSegmentJob(modules: BlockProcessorModules, job
       // Without this check it would be possible to have a block verified using the
       // incorrect shuffling. That would be bad, mmkay.
       if (
-        !config.types.Root.equals(
+        !ssz.Root.equals(
           config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message),
           child.message.parentRoot
         )

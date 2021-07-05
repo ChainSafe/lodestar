@@ -1,6 +1,5 @@
-import {config} from "@chainsafe/lodestar-config/minimal";
 import {fromHexString, List} from "@chainsafe/ssz";
-import {altair, phase0} from "@chainsafe/lodestar-types";
+import {altair, phase0, ssz} from "@chainsafe/lodestar-types";
 import {RequestOrResponseBody, RequestOrResponseType} from "../../../../../../src/network/reqresp/types";
 
 // This test data generated with code from 'master' at Jan 1st 2021
@@ -15,7 +14,7 @@ export interface ISszSnappyTestData<T extends RequestOrResponseBody> {
 
 export const sszSnappyPing: ISszSnappyTestData<phase0.Ping> = {
   id: "Ping type",
-  type: config.types.phase0.Ping,
+  type: ssz.phase0.Ping,
   body: BigInt(1),
   chunks: [
     "0x08", // length prefix
@@ -26,7 +25,7 @@ export const sszSnappyPing: ISszSnappyTestData<phase0.Ping> = {
 
 export const sszSnappyStatus: ISszSnappyTestData<phase0.Status> = {
   id: "Status type",
-  type: config.types.phase0.Status,
+  type: ssz.phase0.Status,
   body: {
     forkDigest: Buffer.alloc(4, 0xda),
     finalizedRoot: Buffer.alloc(32, 0xda),
@@ -43,7 +42,7 @@ export const sszSnappyStatus: ISszSnappyTestData<phase0.Status> = {
 
 export const sszSnappySignedBeaconBlockPhase0: ISszSnappyTestData<phase0.SignedBeaconBlock> = {
   id: "SignedBeaconBlock type",
-  type: config.types.phase0.SignedBeaconBlock,
+  type: ssz.phase0.SignedBeaconBlock,
   body: {
     message: {
       slot: 9,
@@ -76,7 +75,7 @@ export const sszSnappySignedBeaconBlockPhase0: ISszSnappyTestData<phase0.SignedB
 
 export const sszSnappySignedBeaconBlockAltair: ISszSnappyTestData<altair.SignedBeaconBlock> = {
   id: "SignedBeaconBlock type",
-  type: config.types.phase0.SignedBeaconBlock,
+  type: ssz.phase0.SignedBeaconBlock,
   body: {
     ...sszSnappySignedBeaconBlockPhase0.body,
     message: {
@@ -84,7 +83,7 @@ export const sszSnappySignedBeaconBlockAltair: ISszSnappyTestData<altair.SignedB
       slot: 90009,
       body: {
         ...sszSnappySignedBeaconBlockPhase0.body.message.body,
-        syncAggregate: config.types.altair.SyncAggregate.defaultValue(),
+        syncAggregate: ssz.altair.SyncAggregate.defaultValue(),
       },
     },
   },

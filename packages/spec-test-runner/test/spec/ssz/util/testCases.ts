@@ -1,11 +1,11 @@
 import {describeDirectorySpecTest, InputType, safeType} from "@chainsafe/lodestar-spec-test-util";
-import {Bytes32, IBeaconSSZTypes} from "@chainsafe/lodestar-types";
+import {Bytes32, ssz} from "@chainsafe/lodestar-types";
 import {join} from "path";
-import {config} from "@chainsafe/lodestar-config/minimal";
 import {expect} from "chai";
 import {CompositeType} from "@chainsafe/ssz";
 import {IBaseSSZStaticTestCase} from "../type";
 import {SPEC_TEST_LOCATION} from "../../../utils/specTestCases";
+import {ForkName, PresetName} from "@chainsafe/lodestar-params";
 
 /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, no-console */
 
@@ -14,20 +14,43 @@ interface IResult {
   serialized: Uint8Array;
 }
 
-export function testStatic(type: keyof IBeaconSSZTypes["phase0"]): void {
-  const sszType = safeType(config.types.phase0[type]) as CompositeType<any>;
-  for (const caseName of [
-    "ssz_lengthy",
-    "ssz_max",
-    "ssz_one",
-    "ssz_nil",
-    "ssz_random",
-    "ssz_random_chaos",
-    "ssz_zero",
-  ]) {
+export function testStaticPhase0(type: keyof typeof ssz["phase0"], preset: PresetName): void {
+  const sszType = safeType(ssz.phase0[type]) as CompositeType<any>;
+  testStatic(type, sszType, ForkName.phase0, preset);
+}
+
+type NewAltairTypes = {
+  fork: ForkName.altair;
+  type: keyof typeof ssz["altair"];
+};
+
+type AltairTypesFromPhase0 = {
+  fork: ForkName.phase0;
+  type: keyof typeof ssz["phase0"];
+};
+
+export function testStaticAltair(typeWithFork: NewAltairTypes | AltairTypesFromPhase0, preset: PresetName): void {
+  let sszType: CompositeType<any> | undefined;
+  if (typeWithFork.fork === ForkName.phase0) {
+    sszType = safeType(ssz.phase0[typeWithFork.type]) as CompositeType<any>;
+  } else if (typeWithFork.fork === ForkName.altair) {
+    sszType = safeType(ssz.altair[typeWithFork.type]) as CompositeType<any>;
+  }
+  if (!sszType) {
+    throw new Error(`Not found type for fork ${typeWithFork.fork} and type ${typeWithFork.type}`);
+  }
+  testStatic(typeWithFork.type, sszType, ForkName.altair, preset);
+}
+
+function testStatic(type: string, sszType: CompositeType<any>, forkName: ForkName, preset: PresetName): void {
+  const caseNames =
+    preset === PresetName.mainnet
+      ? ["ssz_random"]
+      : ["ssz_lengthy", "ssz_max", "ssz_one", "ssz_nil", "ssz_random", "ssz_random_chaos", "ssz_zero"];
+  for (const caseName of caseNames) {
     describeDirectorySpecTest<IBaseSSZStaticTestCase<any>, IResult>(
-      `SSZ - ${type} ${caseName} minimal`,
-      join(SPEC_TEST_LOCATION, `tests/minimal/phase0/ssz_static/${type}/${caseName}`),
+      `SSZ ${forkName} - ${type} ${caseName} ${preset}`,
+      join(SPEC_TEST_LOCATION, `tests/${preset}/${forkName}/ssz_static/${type}/${caseName}`),
       (testcase) => {
         //debugger;
         const serialized = sszType.serialize(testcase.serialized);

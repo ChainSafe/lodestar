@@ -24,6 +24,7 @@ export interface IForkChoice {
    */
   getHeadRoot(): Uint8Array;
   getHead(): IBlockSummary;
+  updateHead(): IBlockSummary;
   /**
    * Retrieves all possible chain heads (leaves of fork choice tree).
    */
@@ -88,6 +89,7 @@ export interface IForkChoice {
    */
   getBlock(blockRoot: phase0.Root): IBlockSummary | null;
   getFinalizedBlock(): IBlockSummary;
+  getJustifiedBlock(): IBlockSummary;
   /**
    * Return `true` if `block_root` is equal to the finalized root, or a known descendant of it.
    */

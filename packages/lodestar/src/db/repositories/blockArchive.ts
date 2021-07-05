@@ -1,9 +1,9 @@
 import all from "it-all";
 import {ArrayLike} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {IDatabaseController, Repository, IKeyValue, IFilterOptions, Bucket} from "@chainsafe/lodestar-db";
+import {IDatabaseController, Repository, IKeyValue, IFilterOptions, Bucket, IDbMetrics} from "@chainsafe/lodestar-db";
 import {IBlockSummary} from "@chainsafe/lodestar-fork-choice";
-import {Slot, Root, allForks} from "@chainsafe/lodestar-types";
+import {Slot, Root, allForks, ssz} from "@chainsafe/lodestar-types";
 import {bytesToInt} from "@chainsafe/lodestar-utils";
 import {getSignedBlockTypeFromBytes} from "../../util/multifork";
 import {getRootIndexKey, getParentRootIndexKey} from "./blockArchiveIndex";
@@ -21,9 +21,9 @@ export interface IKeyValueSummary<K, V, S> extends IKeyValue<K, V> {
  * Stores finalized blocks. Block slot is identifier.
  */
 export class BlockArchiveRepository extends Repository<Slot, allForks.SignedBeaconBlock> {
-  constructor(config: IBeaconConfig, db: IDatabaseController<Buffer, Buffer>) {
-    const type = config.types.phase0.SignedBeaconBlock; // Pick some type but won't be used
-    super(config, db, Bucket.allForks_blockArchive, type);
+  constructor(config: IBeaconConfig, db: IDatabaseController<Buffer, Buffer>, metrics?: IDbMetrics) {
+    const type = ssz.phase0.SignedBeaconBlock; // Pick some type but won't be used
+    super(config, db, Bucket.allForks_blockArchive, type, metrics);
   }
 
   // Overrides for multi-fork

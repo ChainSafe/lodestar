@@ -1,5 +1,6 @@
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {BitList, TreeBacked} from "@chainsafe/ssz";
+import {BitList, BitListType, BitVector, isTreeBacked, TreeBacked, Type} from "@chainsafe/ssz";
+import {ssz} from "@chainsafe/lodestar-types";
+import {LodestarError} from "@chainsafe/lodestar-utils";
 
 const BITS_PER_BYTE = 8;
 /** Globally cache this information. @see getUint8ByteToBitBooleanArray */
@@ -31,8 +32,52 @@ function computeUint8ByteToBitBooleanArray(byte: number): boolean[] {
   });
 }
 
+/** zipIndexes for CommitteeBits. @see zipIndexes */
+export function zipIndexesCommitteeBits(indexes: number[], bits: TreeBacked<BitVector> | BitVector): number[] {
+  return zipIndexes(indexes, bits, ssz.phase0.CommitteeBits)[0];
+}
+
+/** zipIndexes for SyncCommitteeBits. @see zipIndexes */
+export function zipIndexesSyncCommitteeBits(indexes: number[], bits: TreeBacked<BitVector> | BitVector): number[] {
+  return zipIndexes(indexes, bits, ssz.altair.SyncCommitteeBits)[0];
+}
+
+/** Similar to zipIndexesSyncCommitteeBits but we extract both participant and unparticipant indices*/
+export function zipAllIndexesSyncCommitteeBits(
+  indexes: number[],
+  bits: TreeBacked<BitVector> | BitVector
+): [number[], number[]] {
+  return zipIndexes(indexes, bits, ssz.altair.SyncCommitteeBits);
+}
+
 /**
- * Returns a new `indexes` array with only the indexes that participated in `bitlist`.
+ * Performant indexing of a BitList, both as struct or TreeBacked
+ * Return [0] as participant indices and [1] as unparticipant indices
+ * @see zipIndexesInBitListTreeBacked
+ */
+export function zipIndexes<BitArr extends BitList | BitVector>(
+  indexes: number[],
+  bitlist: TreeBacked<BitArr> | BitArr,
+  sszType: Type<BitArr>
+): [number[], number[]] {
+  if (isTreeBacked<BitArr>(bitlist)) {
+    return zipIndexesTreeBacked(indexes, bitlist, sszType);
+  } else {
+    const attestingIndices = [];
+    const unattestingIndices = [];
+    for (let i = 0, len = indexes.length; i < len; i++) {
+      if (bitlist[i]) {
+        attestingIndices.push(indexes[i]);
+      } else {
+        unattestingIndices.push(indexes[i]);
+      }
+    }
+    return [attestingIndices, unattestingIndices];
+  }
+}
+
+/**
+ * Returns [0] as indices that participated in `bitlist` and [1] as indices that did not participated in `bitlist`.
  * Participation of `indexes[i]` means that the bit at position `i` in `bitlist` is true.
  *
  * Previously we computed this information with `readonlyValues(TreeBacked<BitList>)`.
@@ -40,39 +85,105 @@ function computeUint8ByteToBitBooleanArray(byte: number): boolean[] {
  * This function uses a precomputed array of booleans `Uint8 -> boolean[]` @see uint8ByteToBitBooleanArrays.
  * This approach is x15 times faster.
  */
-export function zipIndexesInBitList(config: IBeaconConfig, indexes: number[], bitlist: TreeBacked<BitList>): number[] {
-  const attBytes = bitlistToUint8Array(config, bitlist as TreeBacked<BitList>);
+export function zipIndexesTreeBacked<BitArr extends BitList | BitVector>(
+  indexes: number[],
+  bits: TreeBacked<BitArr>,
+  sszType: Type<BitArr>
+): [number[], number[]] {
+  const bytes = bitsToUint8Array(bits, sszType);
 
-  const indexesSelected: number[] = [];
+  const participantIndices: number[] = [];
+  const unparticipantIndices: number[] = [];
 
-  // Iterate over each byte of bitlist
-  for (let iByte = 0, byteLen = attBytes.length; iByte < byteLen; iByte++) {
+  // Iterate over each byte of bits
+  for (let iByte = 0, byteLen = bytes.length; iByte < byteLen; iByte++) {
     // Get the precomputed boolean array for this byte
-    const booleansInByte = getUint8ByteToBitBooleanArray(attBytes[iByte]);
+    const booleansInByte = getUint8ByteToBitBooleanArray(bytes[iByte]);
     // For each bit in the byte check participation and add to indexesSelected array
     for (let iBit = 0; iBit < BITS_PER_BYTE; iBit++) {
-      if (booleansInByte[iBit]) {
-        indexesSelected.push(indexes[iByte * BITS_PER_BYTE + iBit]);
+      const committeeIndex = indexes[iByte * BITS_PER_BYTE + iBit];
+      if (committeeIndex !== undefined) {
+        if (booleansInByte[iBit]) {
+          participantIndices.push(committeeIndex);
+        } else {
+          unparticipantIndices.push(committeeIndex);
+        }
       }
     }
   }
 
-  return indexesSelected;
+  return [participantIndices, unparticipantIndices];
 }
 
 /**
  * Efficiently extract the Uint8Array inside a `TreeBacked<BitList>` structure.
- * @see zipIndexesInBitList for reasoning and advantatges.
+ * @see zipIndexesInBitListTreeBacked for reasoning and advantatges.
  */
-export function bitlistToUint8Array(config: IBeaconConfig, aggregationBits: TreeBacked<BitList>): Uint8Array {
-  const sszType = config.types.phase0.CommitteeBits;
-  const tree = aggregationBits.tree;
-  const chunkCount = sszType.tree_getChunkCount(tree);
-  const chunkDepth = sszType.getChunkDepth();
+export function bitsToUint8Array<BitArr extends BitList | BitVector>(
+  bits: TreeBacked<BitArr>,
+  sszType: Type<BitArr>
+): Uint8Array {
+  const tree = bits.tree;
+  const treeType = (sszType as unknown) as BitListType;
+  const chunkCount = treeType.tree_getChunkCount(tree);
+  const chunkDepth = treeType.getChunkDepth();
   const nodeIterator = tree.iterateNodesAtDepth(chunkDepth, 0, chunkCount);
   const chunks: Uint8Array[] = [];
   for (const node of nodeIterator) {
     chunks.push(node.root);
   }
-  return Buffer.concat(chunks);
+  // the last chunk has 32 bytes but we don't use all of them
+  return Buffer.concat(chunks).subarray(0, Math.ceil(bits.length / BITS_PER_BYTE));
 }
+
+/**
+ * Variant to extract a single bit (for un-aggregated attestations)
+ */
+export function getSingleBitIndex(bits: BitList | TreeBacked<BitList>): number {
+  let index: number | null = null;
+
+  if (isTreeBacked<BitList>(bits)) {
+    const bytes = bitsToUint8Array(bits, ssz.phase0.CommitteeBits);
+
+    // Iterate over each byte of bits
+    for (let iByte = 0, byteLen = bytes.length; iByte < byteLen; iByte++) {
+      // If it's exactly zero, there won't be any indexes, continue early
+      if (bytes[iByte] === 0) {
+        continue;
+      }
+
+      // Get the precomputed boolean array for this byte
+      const booleansInByte = getUint8ByteToBitBooleanArray(bytes[iByte]);
+      // For each bit in the byte check participation and add to indexesSelected array
+      for (let iBit = 0; iBit < BITS_PER_BYTE; iBit++) {
+        if (booleansInByte[iBit] === true) {
+          if (index !== null) throw new AggregationBitsError({code: AggregationBitsErrorCode.NOT_EXACTLY_ONE_BIT_SET});
+          index = iByte * BITS_PER_BYTE + iBit;
+        }
+      }
+    }
+  } else {
+    for (let i = 0, len = bits.length; i < len; i++) {
+      if (bits[i] === true) {
+        if (index !== null) throw new AggregationBitsError({code: AggregationBitsErrorCode.NOT_EXACTLY_ONE_BIT_SET});
+        index = i;
+      }
+    }
+  }
+
+  if (index === null) {
+    throw new AggregationBitsError({code: AggregationBitsErrorCode.NOT_EXACTLY_ONE_BIT_SET});
+  } else {
+    return index;
+  }
+}
+
+export enum AggregationBitsErrorCode {
+  NOT_EXACTLY_ONE_BIT_SET = "AGGREGATION_BITS_ERROR_NOT_EXACTLY_ONE_BIT_SET",
+}
+
+type AggregationBitsErrorType = {
+  code: AggregationBitsErrorCode.NOT_EXACTLY_ONE_BIT_SET;
+};
+
+export class AggregationBitsError extends LodestarError<AggregationBitsErrorType> {}

@@ -1,18 +1,19 @@
-import {AbortController} from "abort-controller";
+import {AbortController} from "@chainsafe/abort-controller";
 import {toBufferBE} from "bigint-buffer";
 import {expect} from "chai";
 import sinon from "sinon";
 import bls from "@chainsafe/bls";
 import {createIBeaconConfig} from "@chainsafe/lodestar-config";
-import {config as mainnetConfig} from "@chainsafe/lodestar-config/mainnet";
-import {altair} from "@chainsafe/lodestar-types";
+import {config as mainnetConfig} from "@chainsafe/lodestar-config/default";
 import {toHexString} from "@chainsafe/ssz";
+import {routes} from "@chainsafe/lodestar-api";
 import {SyncCommitteeDutiesService} from "../../../src/services/syncCommitteeDuties";
 import {ValidatorStore} from "../../../src/services/validatorStore";
-import {ApiClientStub} from "../../utils/apiStub";
+import {getApiClientStub} from "../../utils/apiStub";
 import {testLogger} from "../../utils/logger";
 import {ClockMock} from "../../utils/clock";
 import {IndicesService} from "../../../src/services/indices";
+import {ssz} from "@chainsafe/lodestar-types";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
@@ -21,20 +22,24 @@ describe("SyncCommitteeDutiesService", function () {
   const logger = testLogger();
   const ZERO_HASH = Buffer.alloc(32, 0);
 
-  const apiClient = ApiClientStub(sandbox);
+  const api = getApiClientStub(sandbox);
   const validatorStore = sinon.createStubInstance(ValidatorStore) as ValidatorStore &
     sinon.SinonStubbedInstance<ValidatorStore>;
   let pubkeys: Uint8Array[]; // Initialize pubkeys in before() so bls is already initialized
 
   const config = createIBeaconConfig({
-    ...mainnetConfig.params,
+    ...mainnetConfig,
     ALTAIR_FORK_EPOCH: 0, // Activate Altair immediatelly
   });
 
-  // Sample validator
-  const defaultValidator = config.types.phase0.ValidatorResponse.defaultValue();
   const index = 4;
-  defaultValidator.index = index;
+  // Sample validator
+  const defaultValidator: routes.beacon.ValidatorResponse = {
+    index,
+    balance: BigInt(32e9),
+    status: "active",
+    validator: ssz.phase0.Validator.defaultValue(),
+  };
 
   before(() => {
     const secretKeys = [bls.SecretKey.fromBytes(toBufferBE(BigInt(98), 32))];
@@ -56,31 +61,24 @@ describe("SyncCommitteeDutiesService", function () {
       index,
       validator: {...defaultValidator.validator, pubkey: pubkeys[0]},
     };
-    apiClient.beacon.state.getStateValidators.resolves([validatorResponse]);
+    api.beacon.getStateValidators.resolves({data: [validatorResponse]});
 
     // Reply with some duties
     const slot = 1;
-    const duty: altair.SyncDuty = {
+    const duty: routes.validator.SyncDuty = {
       pubkey: pubkeys[0],
       validatorIndex: index,
       validatorSyncCommitteeIndices: [7],
     };
-    apiClient.validator.getSyncCommitteeDuties.resolves({dependentRoot: ZERO_HASH, data: [duty]});
+    api.validator.getSyncCommitteeDuties.resolves({dependentRoot: ZERO_HASH, data: [duty]});
 
     // Accept all subscriptions
-    apiClient.validator.prepareSyncCommitteeSubnets.resolves();
+    api.validator.prepareSyncCommitteeSubnets.resolves();
 
     // Clock will call runAttesterDutiesTasks() immediatelly
     const clock = new ClockMock();
-    const indicesService = new IndicesService(logger, apiClient, validatorStore);
-    const dutiesService = new SyncCommitteeDutiesService(
-      config,
-      logger,
-      apiClient,
-      clock,
-      validatorStore,
-      indicesService
-    );
+    const indicesService = new IndicesService(logger, api, validatorStore);
+    const dutiesService = new SyncCommitteeDutiesService(config, logger, api, clock, validatorStore, indicesService);
 
     // Trigger clock onSlot for slot 0
     await clock.tickEpochFns(0, controller.signal);
@@ -92,30 +90,26 @@ describe("SyncCommitteeDutiesService", function () {
     );
 
     // Duties for this and next epoch should be persisted
-    expect(Object.fromEntries(dutiesService["dutiesByPeriodByIndex"].get(index) || new Map())).to.deep.equal(
+    const dutiesByIndexByPeriodObj = Object.fromEntries(
+      Array.from(dutiesService["dutiesByIndexByPeriod"].entries()).map(([period, dutiesByIndex]) => [
+        period,
+        Object.fromEntries(dutiesByIndex),
+      ])
+    );
+    expect(dutiesByIndexByPeriodObj).to.deep.equal(
       {
-        0: {dependentRoot: ZERO_HASH, duty},
-        1: {dependentRoot: ZERO_HASH, duty},
+        0: {[index]: {dependentRoot: ZERO_HASH, duty}},
+        1: {[index]: {dependentRoot: ZERO_HASH, duty}},
       },
-      "Wrong dutiesService.attesters Map"
+      "Wrong dutiesService.dutiesByIndexByPeriod Map"
     );
 
     expect(await dutiesService.getDutiesAtSlot(slot)).to.deep.equal(
-      [
-        {
-          duty: {
-            pubkey: duty.pubkey,
-            validatorIndex: duty.validatorIndex,
-            validatorSyncCommitteeIndex: duty.validatorSyncCommitteeIndices[0],
-          },
-          selectionProof: null,
-          subCommitteeIndex: 0,
-        },
-      ],
+      [{duty, selectionProofs: [{selectionProof: null, subCommitteeIndex: 0}]}],
       "Wrong getAttestersAtSlot()"
     );
 
-    expect(apiClient.validator.prepareSyncCommitteeSubnets.callCount).to.equal(
+    expect(api.validator.prepareSyncCommitteeSubnets.callCount).to.equal(
       1,
       "prepareSyncCommitteeSubnets() must be called once after getting the duties"
     );

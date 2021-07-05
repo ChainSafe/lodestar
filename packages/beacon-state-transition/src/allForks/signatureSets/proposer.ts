@@ -1,5 +1,6 @@
+import {DOMAIN_BEACON_PROPOSER} from "@chainsafe/lodestar-params";
 import {allForks} from "@chainsafe/lodestar-types";
-import {computeSigningRoot, getDomain} from "../../util";
+import {computeEpochAtSlot, computeSigningRoot, getDomain} from "../../util";
 import {ISignatureSet, SignatureSetType, verifySignatureSet} from "../../util/signatureSets";
 import {CachedBeaconState} from "../util";
 
@@ -16,13 +17,13 @@ export function getProposerSignatureSet(
   signedBlock: allForks.SignedBeaconBlock
 ): ISignatureSet {
   const {config, epochCtx} = state;
-  const domain = getDomain(config, state, config.params.DOMAIN_BEACON_PROPOSER);
+  const epochSig = computeEpochAtSlot(signedBlock.message.slot);
+  const domain = getDomain(state, DOMAIN_BEACON_PROPOSER, epochSig);
 
   return {
     type: SignatureSetType.single,
     pubkey: epochCtx.index2pubkey[signedBlock.message.proposerIndex],
     signingRoot: computeSigningRoot(
-      config,
       config.getForkTypes(signedBlock.message.slot).BeaconBlock,
       signedBlock.message,
       domain

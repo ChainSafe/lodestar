@@ -1,4 +1,4 @@
-import {AbortSignal} from "abort-controller";
+import {AbortSignal} from "@chainsafe/abort-controller";
 import {Slot} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
@@ -61,7 +61,7 @@ export class Clock implements IClock {
   }
 
   private timeUntilNextSlot(): number {
-    const miliSecondsPerSlot = this.config.params.SECONDS_PER_SLOT * 1000;
+    const miliSecondsPerSlot = this.config.SECONDS_PER_SLOT * 1000;
     const msFromGenesis = Date.now() - this.genesisTime * 1000;
     return miliSecondsPerSlot - Math.abs(msFromGenesis % miliSecondsPerSlot);
   }

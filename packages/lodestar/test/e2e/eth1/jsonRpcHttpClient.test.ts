@@ -2,7 +2,7 @@ import "mocha";
 import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
 import http from "http";
-import {AbortController} from "abort-controller";
+import {AbortController} from "@chainsafe/abort-controller";
 import {JsonRpcHttpClient} from "../../../src/eth1/jsonRpcHttpClient";
 import {goerliRpcUrl} from "../../testParams";
 import {IRpcPayload} from "../../../src/eth1/interface";

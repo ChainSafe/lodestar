@@ -1,13 +1,13 @@
 import {BitList, Vector} from "@chainsafe/ssz";
 
-import * as phase0 from "../../phase0";
+import * as phase0 from "../../phase0/types";
 
 export interface SyncCommittee {
   pubkeys: Vector<phase0.BLSPubkey>;
-  pubkeyAggregates: Vector<phase0.BLSPubkey>;
+  aggregatePubkey: phase0.BLSPubkey;
 }
 
-export interface SyncCommitteeSignature {
+export interface SyncCommitteeMessage {
   slot: phase0.Slot;
   beaconBlockRoot: phase0.Root;
   validatorIndex: phase0.ValidatorIndex;
@@ -33,7 +33,7 @@ export interface SignedContributionAndProof {
   signature: phase0.BLSSignature;
 }
 
-export interface SyncCommitteeSigningData {
+export interface SyncAggregatorSelectionData {
   slot: phase0.Slot;
   subCommitteeIndex: phase0.SubCommitteeIndex;
 }

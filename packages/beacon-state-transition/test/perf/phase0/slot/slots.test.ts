@@ -1,46 +1,35 @@
-import {Slot} from "@chainsafe/lodestar-types";
-import {expect} from "chai";
-import {phase0, allForks} from "../../../../src";
-import {profilerLogger} from "../../../utils/logger";
-import {initBLS, generatePerfTestCachedBeaconState} from "../../util";
+import {itBench, setBenchOpts} from "@dapplion/benchmark";
+import {generatePerfTestCachedBeaconState} from "../../util";
+import {allForks} from "../../../../src";
 
-describe("Process Slots Performance Test", function () {
-  this.timeout(0);
-  const logger = profilerLogger();
-  let state: allForks.CachedBeaconState<phase0.BeaconState>;
+// As of Jun 01 2021
+// Epoch transitions
+// ================================================================
+// process 1 empty epoch                                                0.6716265 ops/s   1.488923e+9 ns/op     10 runs
+// process double empty epochs                                          0.3565964 ops/s   2.804291e+9 ns/op     10 runs
+// process 4 empty epochs                                               0.2250960 ops/s   4.442549e+9 ns/op     10 runs
 
-  function processEpochTest(numSlot: Slot, expectedValue: number, maxTry = 10): void {
-    logger.profile(`Process ${numSlot} slots ${maxTry} times`);
-    let duration = 0;
-    for (let i = 0; i < maxTry; i++) {
-      state = generatePerfTestCachedBeaconState({goBackOneSlot: true});
-      const start = Date.now();
-      allForks.processSlots(state as allForks.CachedBeaconState<allForks.BeaconState>, state.slot + numSlot);
-      duration += Date.now() - start;
-    }
-    logger.profile(`Process ${numSlot} slots ${maxTry} times`);
-    const average = duration / maxTry;
-    logger.info(`Processing ${numSlot} slots in ${average}ms`);
-    expect(average).lt(expectedValue, `process ${numSlot} takes longer than ${expectedValue} ms`);
-  }
-
-  const testValues = [
-    {numSlot: 32, expectedValue: 1500, name: "process 1 empty epoch"},
-    {numSlot: 64, expectedValue: 2750, name: "process double empty epochs"},
-    {numSlot: 128, expectedValue: 4300, name: "process 4 empty epochs"},
-  ];
-
-  before(async () => {
-    await initBLS();
+describe("Epoch transitions", () => {
+  setBenchOpts({
+    maxMs: 60 * 1000,
+    minMs: 15 * 1000,
+    runs: 64,
   });
 
-  for (const testValue of testValues) {
-    it(testValue.name, async () => {
-      processEpochTest(testValue.numSlot, testValue.expectedValue);
+  const originalState = generatePerfTestCachedBeaconState({goBackOneSlot: true});
+  const valCount = originalState.validators.length;
+
+  // Testing going through 1,2,4 epoch transitions has the same proportional result
+  const testCases = [
+    {
+      numSlot: 32,
+      id: `processSlots - ${valCount} vs - 32 empty slots`,
+    },
+  ];
+
+  for (const {id, numSlot} of testCases) {
+    itBench({id, beforeEach: () => originalState.clone()}, (state) => {
+      allForks.processSlots(state as allForks.CachedBeaconState<allForks.BeaconState>, state.slot + numSlot);
     });
   }
-
-  // after(async () => {
-  //   await new Promise((r) => setTimeout(r, 1e8));
-  // });
 });

@@ -1,68 +1,56 @@
-import {profilerLogger} from "../../../utils/logger";
-import {generatePerfTestCachedBeaconState, initBLS} from "../../util";
-import {expect} from "chai";
-import {phase0, allForks} from "../../../../src";
+import {itBench, setBenchOpts} from "@dapplion/benchmark";
+import {allForks, phase0} from "../../../../src";
+import {generatePerfTestCachedBeaconState} from "../../util";
 
-describe("Epoch Processing Performance Tests", function () {
-  let state: allForks.CachedBeaconState<phase0.BeaconState>;
-  let process: allForks.IEpochProcess;
-  const logger = profilerLogger();
-  let start: number;
-
-  before(async function () {
-    this.timeout(0);
-    await initBLS();
-    state = generatePerfTestCachedBeaconState({goBackOneSlot: true});
-    process = allForks.prepareEpochProcessState(state);
+describe("Epoch transition steps", () => {
+  setBenchOpts({
+    maxMs: 60 * 1000,
+    minMs: 15 * 1000,
+    runs: 64,
   });
 
-  beforeEach(function () {
-    start = Date.now();
+  const originalState = generatePerfTestCachedBeaconState({goBackOneSlot: true});
+  const process = allForks.prepareEpochProcessState(originalState);
+
+  const valCount = originalState.validators.length;
+  const idPrefix = `epoch - ${valCount} vs`;
+
+  itBench({
+    id: `${idPrefix} - processJustificationAndFinalization`,
+    beforeEach: () => originalState.clone() as allForks.CachedBeaconState<allForks.BeaconState>,
+    fn: (state) => phase0.processJustificationAndFinalization(state, process),
   });
 
-  const testValues: {
-    testFunc?: (state: allForks.CachedBeaconState<phase0.BeaconState>, process: allForks.IEpochProcess) => void;
-    expected: number;
-  }[] = [
-    {
-      // not stable, sometimes < 1400, sometimes > 2000
-      expected: 100,
-    },
-    {
-      testFunc: phase0.processJustificationAndFinalization as (
-        state: allForks.CachedBeaconState<phase0.BeaconState>,
-        process: allForks.IEpochProcess
-      ) => void,
-      expected: 2,
-    },
-    {
-      testFunc: phase0.processRewardsAndPenalties,
-      expected: 240,
-    },
-    {
-      testFunc: phase0.processRegistryUpdates as (
-        state: allForks.CachedBeaconState<phase0.BeaconState>,
-        process: allForks.IEpochProcess
-      ) => void,
-      expected: 2,
-    },
-    {
-      testFunc: phase0.processSlashings,
-      expected: 8,
-    },
-    {
-      testFunc: phase0.processFinalUpdates,
-      expected: 36,
-    },
-  ];
+  itBench({
+    id: `${idPrefix} - processRewardsAndPenalties`,
+    beforeEach: () => originalState.clone(),
+    fn: (state) => phase0.processRewardsAndPenalties(state, process),
+  });
 
-  for (const testValue of testValues) {
-    const name = testValue.testFunc ? testValue.testFunc.name : "prepareEpochProcessState";
-    it(name, async () => {
-      logger.profile(name);
-      testValue.testFunc && testValue.testFunc(state, process);
-      logger.profile(name);
-      expect(Date.now() - start).lte(testValue.expected);
-    });
-  }
+  itBench({
+    id: `${idPrefix} - processRegistryUpdates`,
+    beforeEach: () => originalState.clone() as allForks.CachedBeaconState<allForks.BeaconState>,
+    fn: (state) => phase0.processRegistryUpdates(state, process),
+  });
+
+  itBench({
+    id: `${idPrefix} - processSlashings`,
+    beforeEach: () => originalState.clone(),
+    fn: (state) => phase0.processSlashings(state, process),
+  });
+
+  itBench({
+    id: `${idPrefix} - processFinalUpdates`,
+    beforeEach: () => originalState.clone(),
+    fn: (state) => phase0.processFinalUpdates(state, process),
+  });
+
+  // Non-action perf
+
+  itBench({
+    id: `${idPrefix} - prepareEpochProcessState`,
+    fn: () => {
+      allForks.prepareEpochProcessState(originalState);
+    },
+  });
 });

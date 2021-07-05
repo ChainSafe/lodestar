@@ -1,9 +1,12 @@
 import {allForks} from "@chainsafe/lodestar-types";
-import {ATTESTATION_SUBNET_COUNT} from "@chainsafe/lodestar-params";
-import {createIBeaconConfig, ForkName} from "@chainsafe/lodestar-config";
-import {params} from "@chainsafe/lodestar-params/minimal";
+import {
+  ATTESTATION_SUBNET_COUNT,
+  EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION,
+  ForkName,
+  SLOTS_PER_EPOCH,
+} from "@chainsafe/lodestar-params";
+import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 import {getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
-import * as stateTransitionUtils from "@chainsafe/lodestar-beacon-state-transition/lib/util/attestation";
 import * as mathUtils from "@chainsafe/lodestar-utils/lib/math";
 import * as shuffleUtils from "../../../src/util/shuffle";
 import sinon, {SinonStubbedInstance} from "sinon";
@@ -19,18 +22,17 @@ import {AttnetsService, CommitteeSubscription} from "../../../src/network/subnet
 import {ChainEvent, IBeaconChain} from "../../../src/chain";
 
 describe("AttnetsService", function () {
-  const {SLOTS_PER_EPOCH, SECONDS_PER_SLOT, EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION} = params;
   const COMMITTEE_SUBNET_SUBSCRIPTION = 10;
-  const ALTAIR_FORK_EPOCH = 1 * params.EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION;
+  const ALTAIR_FORK_EPOCH = 1 * EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION;
   // eslint-disable-next-line @typescript-eslint/naming-convention
-  const config = createIBeaconConfig({...params, ALTAIR_FORK_EPOCH});
+  const config = createIBeaconConfig({ALTAIR_FORK_EPOCH});
+  const {SECONDS_PER_SLOT} = config;
 
   let service: AttnetsService;
 
   const sandbox = sinon.createSandbox();
   // let clock: SinonFakeTimers;
   let gossipStub: SinonStubbedInstance<Eth2Gossipsub> & Eth2Gossipsub;
-  let computeSubnetUtil: SinonStubFn<typeof stateTransitionUtils["computeSubnetForCommitteesAtSlot"]>;
   let randomUtil: SinonStubFn<typeof mathUtils["randBetween"]>;
   let metadata: MetadataController;
 
@@ -47,8 +49,6 @@ describe("AttnetsService", function () {
   beforeEach(function () {
     sandbox.useFakeTimers(Date.now());
     gossipStub = sandbox.createStubInstance(Eth2Gossipsub) as SinonStubbedInstance<Eth2Gossipsub> & Eth2Gossipsub;
-    computeSubnetUtil = sandbox.stub(stateTransitionUtils, "computeSubnetForCommitteesAtSlot");
-    computeSubnetUtil.returns(COMMITTEE_SUBNET_SUBSCRIPTION);
     randomUtil = sandbox.stub(mathUtils, "randBetween");
     randomUtil
       .withArgs(EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION, 2 * EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION)

@@ -1,20 +1,19 @@
 /* eslint-disable import/namespace */
-import {ForkName} from "@chainsafe/lodestar-config";
-import {allForks, Slot} from "@chainsafe/lodestar-types";
+import {allForks, phase0 as phase0Types, Slot, ssz} from "@chainsafe/lodestar-types";
+import {ForkName, GENESIS_EPOCH, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import * as phase0 from "../phase0";
 import * as altair from "../altair";
 import {IBeaconStateTransitionMetrics} from "../metrics";
 import {verifyProposerSignature} from "./signatureSets";
-import {CachedBeaconState, rotateEpochs} from "./util";
+import {CachedBeaconState, IEpochProcess, rotateEpochs} from "./util";
 import {processSlot} from "./slot";
 import {computeEpochAtSlot} from "../util";
-import {GENESIS_EPOCH} from "../constants";
 
 type StateAllForks = CachedBeaconState<allForks.BeaconState>;
-type StatePhase0 = CachedBeaconState<phase0.BeaconState>;
+type StatePhase0 = CachedBeaconState<phase0Types.BeaconState>;
 
 type ProcessBlockFn = (state: StateAllForks, block: allForks.BeaconBlock, verifySignatures: boolean) => void;
-type ProcessEpochFn = (state: StateAllForks) => CachedBeaconState<allForks.BeaconState>;
+type ProcessEpochFn = (state: StateAllForks) => IEpochProcess;
 
 const processBlockByFork: Record<ForkName, ProcessBlockFn> = {
   [ForkName.phase0]: phase0.processBlock as ProcessBlockFn,
@@ -38,7 +37,6 @@ export function stateTransition(
   metrics?: IBeaconStateTransitionMetrics | null
 ): CachedBeaconState<allForks.BeaconState> {
   const {verifyStateRoot = true, verifyProposer = true} = options || {};
-  const {config} = state;
 
   const block = signedBlock.message;
   const blockSlot = block.slot;
@@ -64,7 +62,7 @@ export function stateTransition(
 
   // Verify state root
   if (verifyStateRoot) {
-    if (!config.types.Root.equals(block.stateRoot, postState.tree.root)) {
+    if (!ssz.Root.equals(block.stateRoot, postState.tree.root)) {
       throw new Error("Invalid state root");
     }
   }
@@ -137,12 +135,14 @@ function processSlotsWithTransientCache(
     processSlot(postState);
 
     // Process epoch on the first slot of the next epoch
-    if ((postState.slot + 1) % config.params.SLOTS_PER_EPOCH === 0) {
+    if ((postState.slot + 1) % SLOTS_PER_EPOCH === 0) {
       // At fork boundary we don't want to process "next fork" epoch before upgrading state
       const fork = postState.config.getForkName(postState.slot);
       const timer = metrics?.stfnEpochTransition.startTimer();
       try {
-        processEpochByFork[fork](postState);
+        const process = processEpochByFork[fork](postState);
+        metrics?.registerValidatorStatuses(process.currentEpoch, process.statuses);
+
         postState.slot++;
         rotateEpochs(postState.epochCtx, postState, postState.validators);
       } finally {
@@ -150,10 +150,10 @@ function processSlotsWithTransientCache(
       }
 
       // Upgrade state if exactly at epoch boundary
-      switch (computeEpochAtSlot(config, postState.slot)) {
+      switch (computeEpochAtSlot(postState.slot)) {
         case GENESIS_EPOCH:
           break; // Don't do any upgrades at genesis epoch
-        case config.params.ALTAIR_FORK_EPOCH:
+        case config.ALTAIR_FORK_EPOCH:
           postState = altair.upgradeState(postState as StatePhase0) as StateAllForks;
           break;
       }

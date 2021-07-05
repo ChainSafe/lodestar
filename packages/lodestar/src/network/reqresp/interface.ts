@@ -1,6 +1,7 @@
 import LibP2p from "libp2p";
 import PeerId from "peer-id";
-import {ForkName, IBeaconConfig} from "@chainsafe/lodestar-config";
+import {ForkName} from "@chainsafe/lodestar-params";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {allForks, phase0} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {IForkDigestContext} from "../../util/forkDigestContext";
@@ -8,6 +9,7 @@ import {IPeerMetadataStore, IPeerRpcScoreStore} from "../peers";
 import {MetadataController} from "../metadata";
 import {INetworkEventBus} from "../events";
 import {IReqRespHandler} from "./handlers";
+import {IMetrics} from "../../metrics";
 
 export interface IReqResp {
   start(): void;
@@ -33,6 +35,7 @@ export interface IReqRespModules {
   peerMetadata: IPeerMetadataStore;
   peerRpcScores: IPeerRpcScoreStore;
   networkEventBus: INetworkEventBus;
+  metrics: IMetrics | null;
 }
 
 export type Libp2pConnection = {

@@ -120,5 +120,52 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
       name: "beacon_observed_epoch_aggregators",
       help: "number of aggregators for which we have seen an attestation, not necessarily included on chain.",
     }),
+
+    forkChoiceFindHead: register.histogram({
+      name: "beacon_fork_choice_find_head_seconds",
+      help: "Time taken to find head in seconds",
+      buckets: [0.1, 1, 10],
+    }),
+    forkChoiceRequests: register.gauge({
+      name: "beacon_fork_choice_requests_total",
+      help: "Count of occasions where fork choice has tried to find a head",
+    }),
+    forkChoiceErrors: register.gauge({
+      name: "beacon_fork_choice_errors_total",
+      help: "Count of occasions where fork choice has returned an error when trying to find a head",
+    }),
+    forkChoiceChangedHead: register.gauge({
+      name: "beacon_fork_choice_changed_head_total",
+      help: "Count of occasions fork choice has found a new head",
+    }),
+    forkChoiceReorg: register.gauge({
+      name: "beacon_fork_choice_reorg_total",
+      help: "Count of occasions fork choice has switched to a different chain",
+    }),
+
+    reqRespOutgoingRequests: register.gauge<"method">({
+      name: "beacon_reqresp_outgoing_requests_total",
+      labelNames: ["method"],
+      help: "Counts total requests done per method",
+    }),
+    reqRespOutgoingErrors: register.gauge<"method">({
+      name: "beacon_reqresp_outgoing_requests_error_total",
+      labelNames: ["method"],
+      help: "Counts total failed requests done per method",
+    }),
+    reqRespIncomingRequests: register.gauge<"method">({
+      name: "beacon_reqresp_incoming_requests_total",
+      labelNames: ["method"],
+      help: "Counts total responses handled per method",
+    }),
+    reqRespIncomingErrors: register.gauge<"method">({
+      name: "beacon_reqresp_incoming_requests_error_total",
+      help: "Counts total failed responses handled per method",
+      labelNames: ["method"],
+    }),
+    reqRespDialErrors: register.gauge({
+      name: "beacon_reqresp_dial_errors_total",
+      help: "Count total dial errors",
+    }),
   };
 }

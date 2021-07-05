@@ -1,9 +1,14 @@
-import {ForkName} from "@chainsafe/lodestar-config";
 import {Epoch, ValidatorIndex, Gwei, phase0, allForks} from "@chainsafe/lodestar-types";
 import {intDiv} from "@chainsafe/lodestar-utils";
+import {
+  EFFECTIVE_BALANCE_INCREMENT,
+  EPOCHS_PER_SLASHINGS_VECTOR,
+  FAR_FUTURE_EPOCH,
+  ForkName,
+  MAX_EFFECTIVE_BALANCE,
+} from "@chainsafe/lodestar-params";
 
 import {computeActivationExitEpoch, getChurnLimit, isActiveValidator} from "../../util";
-import {FAR_FUTURE_EPOCH} from "../../constants";
 import {
   IAttesterStatus,
   createIAttesterStatus,
@@ -20,6 +25,7 @@ import {
 import {IEpochStakeSummary} from "./epochStakeSummary";
 import {CachedBeaconState} from "./cachedBeaconState";
 import {statusProcessEpoch} from "../../phase0/epoch/processPendingAttestations";
+import {computeBaseRewardPerIncrement} from "../../altair/misc";
 
 /**
  * The AttesterStatus (and FlatValidator under status.validator) objects and
@@ -30,6 +36,8 @@ export interface IEpochProcess {
   prevEpoch: Epoch;
   currentEpoch: Epoch;
   totalActiveStake: Gwei;
+  /** For altair */
+  baseRewardPerIncrement: Gwei;
   prevEpochUnslashedStake: IEpochStakeSummary;
   currEpochUnslashedTargetStake: Gwei;
   indicesToSlash: ValidatorIndex[];
@@ -53,6 +61,7 @@ export function createIEpochProcess(): IEpochProcess {
     prevEpoch: 0,
     currentEpoch: 0,
     totalActiveStake: BigInt(0),
+    baseRewardPerIncrement: BigInt(0),
     prevEpochUnslashedStake: {
       sourceStake: BigInt(0),
       targetStake: BigInt(0),
@@ -76,19 +85,13 @@ export function prepareEpochProcessState<T extends allForks.BeaconState>(state: 
 
   const {config, epochCtx, validators} = state;
   const forkName = config.getForkName(state.slot);
-  const {
-    EPOCHS_PER_SLASHINGS_VECTOR,
-    MAX_EFFECTIVE_BALANCE,
-    EFFECTIVE_BALANCE_INCREMENT,
-    EJECTION_BALANCE,
-  } = config.params;
   const currentEpoch = epochCtx.currentShuffling.epoch;
   const prevEpoch = epochCtx.previousShuffling.epoch;
   out.currentEpoch = currentEpoch;
   out.prevEpoch = prevEpoch;
 
   const slashingsEpoch = currentEpoch + intDiv(EPOCHS_PER_SLASHINGS_VECTOR, 2);
-  let exitQueueEnd = computeActivationExitEpoch(config, currentEpoch);
+  let exitQueueEnd = computeActivationExitEpoch(currentEpoch);
   let exitQueueEndChurn = 0;
 
   let activeCount = 0;
@@ -127,7 +130,7 @@ export function prepareEpochProcessState<T extends allForks.BeaconState>(state: 
       out.indicesToMaybeActivate.push(i);
     }
 
-    if (status.active && v.exitEpoch === FAR_FUTURE_EPOCH && v.effectiveBalance <= EJECTION_BALANCE) {
+    if (status.active && v.exitEpoch === FAR_FUTURE_EPOCH && v.effectiveBalance <= config.EJECTION_BALANCE) {
       out.indicesToEject.push(i);
     }
 
@@ -138,6 +141,9 @@ export function prepareEpochProcessState<T extends allForks.BeaconState>(state: 
   if (out.totalActiveStake < EFFECTIVE_BALANCE_INCREMENT) {
     out.totalActiveStake = EFFECTIVE_BALANCE_INCREMENT;
   }
+
+  // SPEC: function getBaseRewardPerIncrement()
+  out.baseRewardPerIncrement = computeBaseRewardPerIncrement(out.totalActiveStake);
 
   // order by sequence of activationEligibilityEpoch setting and then index
   out.indicesToMaybeActivate.sort(
@@ -200,26 +206,31 @@ export function prepareEpochProcessState<T extends allForks.BeaconState>(state: 
 
   let currTargetUnslStake = BigInt(0);
 
+  const FLAG_PREV_SOURCE_ATTESTER_UNSLASHED = FLAG_PREV_SOURCE_ATTESTER | FLAG_UNSLASHED;
+  const FLAG_PREV_TARGET_ATTESTER_UNSLASHED = FLAG_PREV_TARGET_ATTESTER | FLAG_UNSLASHED;
+  const FLAG_PREV_HEAD_ATTESTER_UNSLASHED = FLAG_PREV_HEAD_ATTESTER | FLAG_UNSLASHED;
+  const FLAG_CURR_TARGET_UNSLASHED = FLAG_CURR_TARGET_ATTESTER | FLAG_UNSLASHED;
+
   for (let i = 0; i < out.statuses.length; i++) {
     const status = out.statuses[i];
     const effectiveBalance = out.validators[i].effectiveBalance;
-    if (hasMarkers(status.flags, FLAG_PREV_SOURCE_ATTESTER | FLAG_UNSLASHED)) {
+    if (hasMarkers(status.flags, FLAG_PREV_SOURCE_ATTESTER_UNSLASHED)) {
       prevSourceUnslStake += effectiveBalance;
-      if (hasMarkers(status.flags, FLAG_PREV_TARGET_ATTESTER)) {
-        prevTargetUnslStake += effectiveBalance;
-        if (hasMarkers(status.flags, FLAG_PREV_HEAD_ATTESTER)) {
-          prevHeadUnslStake += effectiveBalance;
-        }
-      }
     }
-    if (hasMarkers(status.flags, FLAG_CURR_TARGET_ATTESTER | FLAG_UNSLASHED)) {
+    if (hasMarkers(status.flags, FLAG_PREV_TARGET_ATTESTER_UNSLASHED)) {
+      prevTargetUnslStake += effectiveBalance;
+    }
+    if (hasMarkers(status.flags, FLAG_PREV_HEAD_ATTESTER_UNSLASHED)) {
+      prevHeadUnslStake += effectiveBalance;
+    }
+    if (hasMarkers(status.flags, FLAG_CURR_TARGET_UNSLASHED)) {
       currTargetUnslStake += effectiveBalance;
     }
   }
   // As per spec of `get_total_balance`:
   // EFFECTIVE_BALANCE_INCREMENT Gwei minimum to avoid divisions by zero.
   // Math safe up to ~10B ETH, afterwhich this overflows uint64.
-  const increment = config.params.EFFECTIVE_BALANCE_INCREMENT;
+  const increment = EFFECTIVE_BALANCE_INCREMENT;
   if (prevSourceUnslStake < increment) prevSourceUnslStake = increment;
   if (prevTargetUnslStake < increment) prevTargetUnslStake = increment;
   if (prevHeadUnslStake < increment) prevHeadUnslStake = increment;

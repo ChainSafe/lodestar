@@ -1,4 +1,5 @@
-import {allForks, altair} from "@chainsafe/lodestar-types";
+import {DOMAIN_SYNC_COMMITTEE} from "@chainsafe/lodestar-params";
+import {allForks, altair, ssz} from "@chainsafe/lodestar-types";
 import {
   CachedBeaconState,
   computeEpochAtSlot,
@@ -10,16 +11,15 @@ import {
 
 export function getSyncCommitteeSignatureSet(
   state: CachedBeaconState<allForks.BeaconState>,
-  syncCommittee: altair.SyncCommitteeSignature
+  syncCommittee: altair.SyncCommitteeMessage
 ): ISignatureSet {
-  const {config} = state;
-  const msgEpoch = computeEpochAtSlot(config, syncCommittee.slot);
-  const domain = getDomain(config, state, config.params.DOMAIN_SYNC_COMMITTEE, msgEpoch);
+  const epochSig = computeEpochAtSlot(syncCommittee.slot);
+  const domain = getDomain(state, DOMAIN_SYNC_COMMITTEE, epochSig);
 
   return {
     type: SignatureSetType.single,
     pubkey: state.epochCtx.index2pubkey[syncCommittee.validatorIndex],
-    signingRoot: computeSigningRoot(config, config.types.Root, syncCommittee.beaconBlockRoot, domain),
+    signingRoot: computeSigningRoot(ssz.Root, syncCommittee.beaconBlockRoot, domain),
     signature: syncCommittee.signature.valueOf() as Uint8Array,
   };
 }

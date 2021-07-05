@@ -44,7 +44,9 @@ export type RangeSyncModules = {
   logger: ILogger;
 };
 
-export type RangeSyncOpts = SyncChainOpts;
+export type RangeSyncOpts = SyncChainOpts & {
+  disableProcessAsChainSegment?: boolean;
+};
 
 /**
  * RangeSync groups peers by their `status` into static target `SyncChain` instances
@@ -79,9 +81,9 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
   /** There is a single chain per type, 1 finalized sync, 1 head sync */
   private readonly chains = new Map<RangeSyncType, SyncChain>();
 
-  private opts?: SyncChainOpts;
+  private opts?: RangeSyncOpts;
 
-  constructor(modules: RangeSyncModules, opts?: SyncChainOpts) {
+  constructor(modules: RangeSyncModules, opts?: RangeSyncOpts) {
     super();
     this.chain = modules.chain;
     this.network = modules.network;
@@ -113,7 +115,7 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
       case RangeSyncType.Finalized: {
         startEpoch = localStatus.finalizedEpoch;
         target = {
-          slot: computeStartSlotAtEpoch(this.config, peerStatus.finalizedEpoch),
+          slot: computeStartSlotAtEpoch(peerStatus.finalizedEpoch),
           root: peerStatus.finalizedRoot,
         };
         break;
@@ -122,7 +124,7 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
       case RangeSyncType.Head: {
         // The new peer has the same finalized (earlier filters should prevent a peer with an
         // earlier finalized chain from reaching here).
-        startEpoch = Math.min(computeEpochAtSlot(this.config, localStatus.headSlot), peerStatus.finalizedEpoch);
+        startEpoch = Math.min(computeEpochAtSlot(localStatus.headSlot), peerStatus.finalizedEpoch);
         target = {
           slot: peerStatus.headSlot,
           root: peerStatus.headRoot,
@@ -181,7 +183,15 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
 
   /** Convenience method for `SyncChain` */
   private processChainSegment: SyncChainFns["processChainSegment"] = async (blocks) => {
-    await this.chain.processChainSegment(blocks, {prefinalized: true, trusted: false}); // Not trusted, verify signatures
+    // Not trusted, verify signatures
+    const flags = {prefinalized: true, trusted: false};
+
+    if (this.opts?.disableProcessAsChainSegment) {
+      // Should only be used for debugging or testing
+      for (const block of blocks) await this.chain.processBlock(block, flags);
+    } else {
+      await this.chain.processChainSegment(blocks, flags);
+    }
   };
 
   /** Convenience method for `SyncChain` */
@@ -224,7 +234,7 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
   }
 
   private update(localFinalizedEpoch: Epoch): void {
-    const localFinalizedSlot = computeStartSlotAtEpoch(this.config, localFinalizedEpoch);
+    const localFinalizedSlot = computeStartSlotAtEpoch(localFinalizedEpoch);
 
     // Remove chains that are out-dated, peer-empty, completed or failed
     for (const [id, syncChain] of this.chains.entries()) {
