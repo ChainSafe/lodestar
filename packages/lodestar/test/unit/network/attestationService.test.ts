@@ -128,17 +128,12 @@ describe("AttnetsService", function () {
   });
 
   it("should prepare for a hard fork", async () => {
-    const altairEpoch = config.forks.altair.epoch;
     service.addCommitteeSubscriptions([subscription]);
-    // run every epoch (or any num slots < 150)
-    while (chain.clock.currentSlot < altairEpoch * SLOTS_PER_EPOCH) {
-      // avoid known validator expiry
-      service.addCommitteeSubscriptions([subscription]);
-      sandbox.clock.tick(SLOTS_PER_EPOCH * SECONDS_PER_SLOT * 1000);
-    }
+
+    // Run the pre-fork transition
+    service.subscribeSubnetsToNextFork(ForkName.altair);
 
     // Should have already subscribed to both forks
-
     const forkTransitionSubscribeCalls = gossipStub.subscribeTopic.getCalls().map((call) => call.args[0]);
     const subToPhase0 = forkTransitionSubscribeCalls.find((topic) => topic.fork === ForkName.phase0);
     const subToAltair = forkTransitionSubscribeCalls.find((topic) => topic.fork === ForkName.altair);
@@ -146,11 +141,7 @@ describe("AttnetsService", function () {
     if (!subToAltair) throw Error("Must subscribe to one subnet on altair");
 
     // Advance through the fork transition so it un-subscribes from all phase0 subs
-
-    while (chain.clock.currentSlot < (altairEpoch + EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION) * SLOTS_PER_EPOCH) {
-      service.addCommitteeSubscriptions([subscription]);
-      sandbox.clock.tick(SLOTS_PER_EPOCH * SECONDS_PER_SLOT * 1000);
-    }
+    service.unsubscribeSubnetsFromPrevFork(ForkName.phase0);
 
     const forkTransitionUnSubscribeCalls = gossipStub.unsubscribeTopic.getCalls().map((call) => call.args[0]);
     const unsubbedPhase0Subnets = new Set<number>();
