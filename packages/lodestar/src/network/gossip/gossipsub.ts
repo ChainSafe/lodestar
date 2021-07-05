@@ -5,7 +5,7 @@ import {InMessage} from "libp2p-interfaces/src/pubsub";
 import Libp2p from "libp2p";
 import {AbortSignal} from "@chainsafe/abort-controller";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {ATTESTATION_SUBNET_COUNT} from "@chainsafe/lodestar-params";
+import {ATTESTATION_SUBNET_COUNT, SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
 import {allForks, altair, phase0} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
@@ -177,8 +177,7 @@ export class Eth2Gossipsub extends Gossipsub {
    * Our handlers are attached on the validator functions, so no need to emit the objects internally.
    */
   _emitMessage(): void {
-    // Objects are handled in the validator functions
-    // TODO @wemeetagain does it break something to not emit here?
+    // Objects are handled in the validator functions, no need to do anything here
   }
 
   /**
@@ -292,7 +291,6 @@ export class Eth2Gossipsub extends Gossipsub {
 
   private onScrapeMetrics(metrics: IMetrics): void {
     // TODO: Handle forks
-    // TODO: Register peers for GossipType.sync_committee splitted by subnet
 
     // beacon attestation mesh gets counted separately so we can track mesh peers by subnet
     // zero out all gossip type & subnet choices, so the dashboard will register them
@@ -300,13 +298,20 @@ export class Eth2Gossipsub extends Gossipsub {
       metrics.gossipMeshPeersByType.set({gossipType}, 0);
     }
     for (let subnet = 0; subnet < ATTESTATION_SUBNET_COUNT; subnet++) {
-      metrics.gossipMeshPeersByBeaconAttestationSubnet.set({subnet: subnetLabel(subnet)}, 0);
+      metrics.gossipMeshPeersByBeaconAttestationSubnet.set({subnet: attSubnetLabel(subnet)}, 0);
     }
+    for (let subnet = 0; subnet < SYNC_COMMITTEE_SUBNET_COUNT; subnet++) {
+      // SYNC_COMMITTEE_SUBNET_COUNT is < 9, no need to prepend a 0 to the label
+      metrics.gossipMeshPeersBySyncCommitteeSubnet.set({subnet}, 0);
+    }
+
     // loop through all mesh entries, count each set size
     for (const [topicString, peers] of this.mesh.entries()) {
       const topic = this.gossipTopicCache.getTopic(topicString);
       if (topic.type === GossipType.beacon_attestation) {
-        metrics.gossipMeshPeersByBeaconAttestationSubnet.set({subnet: subnetLabel(topic.subnet)}, peers.size);
+        metrics.gossipMeshPeersByBeaconAttestationSubnet.set({subnet: attSubnetLabel(topic.subnet)}, peers.size);
+      } else if (topic.type === GossipType.sync_committee) {
+        metrics.gossipMeshPeersBySyncCommitteeSubnet.set({subnet: topic.subnet}, peers.size);
       } else {
         metrics.gossipMeshPeersByType.set({gossipType: topic.type}, peers.size);
       }
@@ -318,7 +323,7 @@ export class Eth2Gossipsub extends Gossipsub {
  * Left pad subnets to two characters. Assumes ATTESTATION_SUBNET_COUNT < 99
  * Otherwise grafana sorts the mesh peers chart as: [1,11,12,13,...]
  */
-function subnetLabel(subnet: number): string {
+function attSubnetLabel(subnet: number): string {
   if (subnet > 9) return String(subnet);
   else return `0${subnet}`;
 }

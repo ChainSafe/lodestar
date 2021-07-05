@@ -79,6 +79,11 @@ export function createLodestarMetrics(
       help: "Number of connected mesh peers per beacon attestation subnet",
       labelNames: ["subnet"],
     }),
+    gossipMeshPeersBySyncCommitteeSubnet: register.gauge<"subnet">({
+      name: "lodestar_gossip_mesh_peers_by_sync_committee_subnet",
+      help: "Number of connected mesh peers per sync committee subnet",
+      labelNames: ["subnet"],
+    }),
 
     gossipValidationAccept: register.gauge<"topic">({
       name: "lodestar_gossip_validation_accept",
