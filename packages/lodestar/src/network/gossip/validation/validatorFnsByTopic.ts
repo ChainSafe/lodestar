@@ -28,7 +28,7 @@ export function createValidatorFnsByTopic(
 
   const encoding = DEFAULT_ENCODING;
   const allForkNames = Object.values(config.forks).map((fork) => fork.name);
-  const allForksAfterAltair = allForkNames.filter((fork) => fork !== ForkName.phase0);
+  const allForksAfterPhase0 = allForkNames.filter((fork) => fork !== ForkName.phase0);
 
   const staticGossipTypes = [
     {type: GossipType.beacon_block, forks: allForkNames},
@@ -37,7 +37,7 @@ export function createValidatorFnsByTopic(
     {type: GossipType.proposer_slashing, forks: allForkNames},
     {type: GossipType.attester_slashing, forks: allForkNames},
     // Note: Calling .handleTopic() does not subscribe. Safe to do in any fork
-    {type: GossipType.sync_committee_contribution_and_proof, forks: allForksAfterAltair},
+    {type: GossipType.sync_committee_contribution_and_proof, forks: allForksAfterPhase0},
   ];
 
   for (const {type, forks} of staticGossipTypes) {
@@ -57,7 +57,7 @@ export function createValidatorFnsByTopic(
     }
   }
 
-  for (const fork of allForksAfterAltair) {
+  for (const fork of allForksAfterPhase0) {
     for (let subnet = 0; subnet < SYNC_COMMITTEE_SUBNET_COUNT; subnet++) {
       const topic = {type: GossipType.sync_committee, fork, subnet, encoding};
       const topicStr = stringifyGossipTopic(forkDigestContext, topic);
