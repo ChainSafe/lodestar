@@ -1,5 +1,5 @@
 import {AbortSignal} from "@chainsafe/abort-controller";
-import {ATTESTATION_SUBNET_COUNT, ForkName} from "@chainsafe/lodestar-params";
+import {ATTESTATION_SUBNET_COUNT, ForkName, SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
 import {mapValues} from "@chainsafe/lodestar-utils";
 import {IMetrics} from "../../metrics";
 import {JobQueue, JobQueueOpts, QueueType} from "../../util/queue";
@@ -98,24 +98,32 @@ export function createValidatorFnsByTopic(
   validatorFnsByType: {[K in GossipType]: TopicValidatorFn}
 ): TopicValidatorFnMap {
   const validatorFnsByTopic = new Map<string, TopicValidatorFn>();
-  const staticGossipTypes: GossipType[] = [
+  // static topics
+  const staticGossipTypesPhase0: GossipType[] = [
     GossipType.beacon_block,
     GossipType.beacon_aggregate_and_proof,
     GossipType.voluntary_exit,
     GossipType.proposer_slashing,
     GossipType.attester_slashing,
   ];
+  const staticGossipTypesAltair: GossipType[] = [GossipType.sync_committee_contribution_and_proof];
+  const staticGossipTypesByFork = {
+    [ForkName.phase0]: staticGossipTypesPhase0,
+    [ForkName.altair]: staticGossipTypesAltair,
+  };
 
-  // TODO: other fork topics should get added here
-  // phase0
-  const fork = ForkName.phase0;
-
-  for (const type of staticGossipTypes) {
-    const topic = {type, fork, encoding: DEFAULT_ENCODING} as GossipTopic;
-    const topicString = stringifyGossipTopic(modules.chain.forkDigestContext, topic);
-    validatorFnsByTopic.set(topicString, validatorFnsByType[type]);
+  for (const fork of [ForkName.phase0, ForkName.altair]) {
+    const staticGossipTypes = staticGossipTypesByFork[fork];
+    for (const type of staticGossipTypes) {
+      const topic = {type, fork, encoding: DEFAULT_ENCODING} as GossipTopic;
+      const topicString = stringifyGossipTopic(modules.chain.forkDigestContext, topic);
+      validatorFnsByTopic.set(topicString, validatorFnsByType[type]);
+    }
   }
 
+  // dynamic topics
+  // phase0
+  let fork = ForkName.phase0;
   // create an entry for every committee subnet - phase0
   for (let subnet = 0; subnet < ATTESTATION_SUBNET_COUNT; subnet++) {
     const topic = {
@@ -126,6 +134,19 @@ export function createValidatorFnsByTopic(
     } as GossipTopic;
     const topicString = stringifyGossipTopic(modules.chain.forkDigestContext, topic);
     const topicValidatorFn = validatorFnsByType[GossipType.beacon_attestation];
+    validatorFnsByTopic.set(topicString, topicValidatorFn);
+  }
+  // altair
+  fork = ForkName.altair;
+  for (let subnet = 0; subnet < SYNC_COMMITTEE_SUBNET_COUNT; subnet++) {
+    const topic = {
+      type: GossipType.sync_committee,
+      fork,
+      encoding: DEFAULT_ENCODING,
+      subnet,
+    } as GossipTopic;
+    const topicString = stringifyGossipTopic(modules.chain.forkDigestContext, topic);
+    const topicValidatorFn = validatorFnsByType[GossipType.sync_committee];
     validatorFnsByTopic.set(topicString, topicValidatorFn);
   }
 
