@@ -7,12 +7,12 @@ import {IObjectValidatorModules, GossipTopic} from "../interface";
 import {GossipValidationError} from "../errors";
 
 export async function validateVoluntaryExit(
-  {chain, db, config, logger}: IObjectValidatorModules,
+  {chain, db, logger}: IObjectValidatorModules,
   _topic: GossipTopic,
   voluntaryExit: phase0.SignedVoluntaryExit
 ): Promise<void> {
   try {
-    await validateGossipVoluntaryExit(config, chain, db, voluntaryExit);
+    await validateGossipVoluntaryExit(chain, db, voluntaryExit);
     logger.debug("gossip - VoluntaryExit - accept");
   } catch (e) {
     if (!(e instanceof VoluntaryExitError)) {

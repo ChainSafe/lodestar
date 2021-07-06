@@ -157,7 +157,7 @@ export function getValidatorApi({
 
       const headRoot = chain.forkChoice.getHeadRoot();
       const state = await chain.regen.getBlockSlotState(headRoot, slot);
-      return {data: assembleAttestationData(state.config, state, headRoot, slot, committeeIndex)};
+      return {data: assembleAttestationData(state, headRoot, slot, committeeIndex)};
     },
 
     /**
@@ -370,7 +370,7 @@ export function getValidatorApi({
         contributionAndProofs.map(async (contributionAndProof, i) => {
           try {
             // TODO: Validate in batch
-            await validateSyncCommitteeGossipContributionAndProof(config, chain, db, {
+            await validateSyncCommitteeGossipContributionAndProof(chain, db, {
               contributionAndProof,
               validSignature: false,
             });

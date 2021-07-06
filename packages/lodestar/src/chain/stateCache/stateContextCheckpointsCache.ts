@@ -1,6 +1,5 @@
 import {toHexString} from "@chainsafe/ssz";
 import {phase0, Epoch, allForks} from "@chainsafe/lodestar-types";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
 
 const MAX_EPOCHS = 10;
@@ -12,14 +11,9 @@ const MAX_EPOCHS = 10;
  * Similar API to Repository
  */
 export class CheckpointStateCache {
-  private readonly config: IBeaconConfig;
   private cache = new Map<string, CachedBeaconState<allForks.BeaconState>>();
   /** Epoch -> Set<blockRoot> */
   private epochIndex = new Map<Epoch, Set<string>>();
-
-  constructor(config: IBeaconConfig) {
-    this.config = config;
-  }
 
   get(cp: phase0.Checkpoint): CachedBeaconState<allForks.BeaconState> | null {
     const item = this.cache.get(toCheckpointKey(cp));

@@ -1,5 +1,5 @@
 import {fromHexString, toHexString} from "@chainsafe/ssz";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {Root, Slot, allForks} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
 
@@ -24,7 +24,7 @@ export class BlockPool {
    */
   private blocksBySlot = new Map<number, Set<string>>();
 
-  constructor(private readonly config: IBeaconConfig, private readonly logger: ILogger) {}
+  constructor(private readonly config: IChainForkConfig, private readonly logger: ILogger) {}
 
   addByParent(signedBlock: allForks.SignedBeaconBlock): void {
     // put block in two indices:

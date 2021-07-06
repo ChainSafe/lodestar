@@ -102,26 +102,25 @@ describe("eth1 / Eth1Provider", function () {
       pyrmontDepositsDataRoot.map((root) => fromHexString(root)) as List<Root>
     );
 
-    const state = createCachedBeaconState(
-      config,
-      generateState(
-        {
-          // Set genesis time and slot so latestEth1Data is considered
-          slot: 0,
-          genesisTime: periodStart,
-          // No deposits processed yet
-          // eth1_deposit_index represents the next deposit index to be added
-          eth1DepositIndex: 0,
-          // Set eth1Data with deposit length to return them
-          eth1Data: {
-            depositCount: deposits.length,
-            depositRoot: depositRootTree.hashTreeRoot(),
-            blockHash: Buffer.alloc(32),
-          },
+    const tbState = generateState(
+      {
+        // Set genesis time and slot so latestEth1Data is considered
+        slot: 0,
+        genesisTime: periodStart,
+        // No deposits processed yet
+        // eth1_deposit_index represents the next deposit index to be added
+        eth1DepositIndex: 0,
+        // Set eth1Data with deposit length to return them
+        eth1Data: {
+          depositCount: deposits.length,
+          depositRoot: depositRootTree.hashTreeRoot(),
+          blockHash: Buffer.alloc(32),
         },
-        config
-      )
+      },
+      config
     );
+
+    const state = createCachedBeaconState(config, tbState);
 
     const result = await eth1ForBlockProduction.getEth1DataAndDeposits(state);
     expect(result.eth1Data).to.deep.equal(latestEth1Data, "Wrong eth1Data for block production");

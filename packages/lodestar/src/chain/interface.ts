@@ -2,7 +2,7 @@ import {ForkName} from "@chainsafe/lodestar-params";
 import {allForks, Number64, Root, phase0, Slot} from "@chainsafe/lodestar-types";
 import {CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
-import {LightClientUpdater} from "@chainsafe/lodestar-light-client/lib/server/LightClientUpdater";
+import {LightClientUpdater} from "@chainsafe/lodestar-light-client/server";
 
 import {IBeaconClock} from "./clock/interface";
 import {ChainEventEmitter} from "./emitter";

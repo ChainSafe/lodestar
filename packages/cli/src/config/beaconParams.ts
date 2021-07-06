@@ -1,8 +1,8 @@
 import {
   ChainConfig,
-  createIBeaconConfig,
+  createIChainForkConfig,
   createIChainConfig,
-  IBeaconConfig,
+  IChainForkConfig,
   IChainConfig,
   parsePartialIChainConfigJson,
 } from "@chainsafe/lodestar-config";
@@ -29,8 +29,8 @@ interface IBeaconParamsArgs {
  * Convenience method to parse yargs CLI args and call getBeaconParams
  * @see getBeaconConfig
  */
-export function getBeaconConfigFromArgs(args: IBeaconParamsCliArgs): IBeaconConfig {
-  return createIBeaconConfig(getBeaconParamsFromArgs(args));
+export function getBeaconConfigFromArgs(args: IBeaconParamsCliArgs): IChainForkConfig {
+  return createIChainForkConfig(getBeaconParamsFromArgs(args));
 }
 
 /**
@@ -50,8 +50,8 @@ export function getBeaconParamsFromArgs(args: IBeaconParamsCliArgs): IChainConfi
  * Initializes IBeaconConfig with params
  * @see getBeaconParams
  */
-export function getBeaconConfig(args: IBeaconParamsArgs): IBeaconConfig {
-  return createIBeaconConfig(getBeaconParams(args));
+export function getBeaconConfig(args: IBeaconParamsArgs): IChainForkConfig {
+  return createIChainForkConfig(getBeaconParams(args));
 }
 
 /**

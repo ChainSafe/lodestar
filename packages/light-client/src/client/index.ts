@@ -2,7 +2,7 @@ import mitt from "mitt";
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {getClient, Api} from "@chainsafe/lodestar-api";
 import {altair, Root, ssz, SyncPeriod} from "@chainsafe/lodestar-types";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {computeSyncPeriodAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {TreeOffsetProof} from "@chainsafe/persistent-merkle-tree";
 import {Path, toHexString} from "@chainsafe/ssz";
@@ -18,7 +18,7 @@ import {isBetterUpdate} from "./update";
 export {LightclientEvent} from "./events";
 
 export type LightclientModules = {
-  config: IBeaconConfig;
+  config: IChainForkConfig;
   clock: IClock;
   genesisValidatorsRoot: Root;
   beaconApiUrl: string;
@@ -30,7 +30,7 @@ export class Lightclient {
   readonly api: Api;
   readonly emitter: LightclientEmitter = mitt();
 
-  readonly config: IBeaconConfig;
+  readonly config: IChainForkConfig;
   readonly clock: IClock;
   readonly genesisValidatorsRoot: Root;
   readonly beaconApiUrl: string;
@@ -46,7 +46,7 @@ export class Lightclient {
   }
 
   static async initializeFromCheckpoint(
-    config: IBeaconConfig,
+    config: IChainForkConfig,
     beaconApiUrl: string,
     checkpoint: Checkpoint
   ): Promise<Lightclient> {

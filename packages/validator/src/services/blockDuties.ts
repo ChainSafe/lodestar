@@ -1,5 +1,5 @@
 import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {BLSPubkey, Epoch, Root, Slot, ssz} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {toHexString} from "@chainsafe/ssz";
@@ -26,7 +26,7 @@ export class BlockDutiesService {
   private readonly proposers = new Map<Epoch, BlockDutyAtEpoch>();
 
   constructor(
-    private readonly config: IBeaconConfig,
+    private readonly config: IChainForkConfig,
     private readonly logger: ILogger,
     private readonly api: Api,
     clock: IClock,

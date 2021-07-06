@@ -3,7 +3,7 @@
  */
 
 import {Epoch, Slot, Root, phase0, allForks} from "@chainsafe/lodestar-types";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {assert} from "@chainsafe/lodestar-utils";
 
 import {ZERO_HASH} from "../constants";
@@ -32,7 +32,10 @@ export function getBlockRoot(state: allForks.BeaconState, epoch: Epoch): Root {
 /**
  * Return the block header corresponding to a block with ``state_root`` set to ``ZERO_HASH``.
  */
-export function getTemporaryBlockHeader(config: IBeaconConfig, block: allForks.BeaconBlock): phase0.BeaconBlockHeader {
+export function getTemporaryBlockHeader(
+  config: IChainForkConfig,
+  block: allForks.BeaconBlock
+): phase0.BeaconBlockHeader {
   return {
     slot: block.slot,
     proposerIndex: block.proposerIndex,
@@ -46,7 +49,7 @@ export function getTemporaryBlockHeader(config: IBeaconConfig, block: allForks.B
 /**
  * Receives a BeaconBlock, and produces the corresponding BeaconBlockHeader.
  */
-export function blockToHeader(config: IBeaconConfig, block: allForks.BeaconBlock): phase0.BeaconBlockHeader {
+export function blockToHeader(config: IChainForkConfig, block: allForks.BeaconBlock): phase0.BeaconBlockHeader {
   return {
     stateRoot: block.stateRoot,
     proposerIndex: block.proposerIndex,

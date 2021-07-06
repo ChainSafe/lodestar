@@ -13,11 +13,11 @@ import {mkdir} from "../../util";
 import {fetchBootnodes} from "../../networks";
 import {getBeaconPaths} from "../beacon/paths";
 import {IBeaconArgs} from "../beacon/options";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {IChainForkConfig} from "@chainsafe/lodestar-config";
 
 export type ReturnType = {
   beaconNodeOptions: BeaconNodeOptions;
-  config: IBeaconConfig;
+  config: IChainForkConfig;
 };
 
 /**
@@ -61,7 +61,7 @@ export async function initializeOptionsAndConfig(args: IBeaconArgs & IGlobalArgs
 export async function persistOptionsAndConfig(
   args: IBeaconArgs & IGlobalArgs,
   beaconNodeOptions: BeaconNodeOptions,
-  beaconConfig: IBeaconConfig
+  beaconConfig: IChainForkConfig
 ): Promise<void> {
   const beaconPaths = getBeaconPaths(args);
 

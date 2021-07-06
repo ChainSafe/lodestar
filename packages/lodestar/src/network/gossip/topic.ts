@@ -5,7 +5,6 @@
 import {ContainerType} from "@chainsafe/ssz";
 import {ssz} from "@chainsafe/lodestar-types";
 import {ForkName} from "@chainsafe/lodestar-params";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IForkDigestContext, toHexStringNoPrefix} from "../../util/forkDigestContext";
 import {DEFAULT_ENCODING} from "./constants";
 import {GossipEncoding, GossipDeserializer, GossipObject, GossipSerializer, GossipType, GossipTopic} from "./interface";
@@ -117,7 +116,7 @@ function parseEncodingStr(encodingStr: string): GossipEncoding {
   }
 }
 
-export function getGossipSSZType<T extends GossipObject>(config: IBeaconConfig, topic: GossipTopic): ContainerType<T> {
+export function getGossipSSZType<T extends GossipObject>(topic: GossipTopic): ContainerType<T> {
   switch (topic.type) {
     case GossipType.beacon_block:
       // beacon_block is updated in altair to support the updated SignedBeaconBlock type
@@ -144,8 +143,8 @@ export function getGossipSSZType<T extends GossipObject>(config: IBeaconConfig, 
 /**
  * Return a ssz deserialize function for a gossip topic
  */
-export function getGossipSSZDeserializer(config: IBeaconConfig, topic: GossipTopic): GossipDeserializer {
-  const sszType = getGossipSSZType(config, topic);
+export function getGossipSSZDeserializer(topic: GossipTopic): GossipDeserializer {
+  const sszType = getGossipSSZType(topic);
 
   switch (topic.type) {
     case GossipType.beacon_block:
@@ -165,7 +164,7 @@ export function getGossipSSZDeserializer(config: IBeaconConfig, topic: GossipTop
 /**
  * Return a ssz serialize function for a gossip topic
  */
-export function getGossipSSZSerializer(config: IBeaconConfig, topic: GossipTopic): GossipSerializer {
-  const sszType = getGossipSSZType(config, topic);
+export function getGossipSSZSerializer(topic: GossipTopic): GossipSerializer {
+  const sszType = getGossipSSZType(topic);
   return sszType.serialize.bind(sszType);
 }

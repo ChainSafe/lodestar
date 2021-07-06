@@ -12,7 +12,7 @@ import {StubbedBeaconDb} from "../../../utils/stub";
 import {generateSyncCommitteeSignature} from "../../../utils/syncCommittee";
 import {phase0} from "@chainsafe/lodestar-types";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
-import {createIBeaconConfig, defaultChainConfig} from "@chainsafe/lodestar-config";
+import {createIChainForkConfig, defaultChainConfig} from "@chainsafe/lodestar-config";
 
 // https://github.com/ethereum/eth2.0-specs/blob/v1.1.0-alpha.3/specs/altair/p2p-interface.md
 describe("Sync Committee Signature validation", function () {
@@ -26,7 +26,7 @@ describe("Sync Committee Signature validation", function () {
   const altairForkEpoch = 2020;
   const currentSlot = SLOTS_PER_EPOCH * (altairForkEpoch + 1);
   // eslint-disable-next-line @typescript-eslint/naming-convention
-  const config = createIBeaconConfig(Object.assign({}, defaultChainConfig, {ALTAIR_FORK_EPOCH: altairForkEpoch}));
+  const config = createIChainForkConfig(Object.assign({}, defaultChainConfig, {ALTAIR_FORK_EPOCH: altairForkEpoch}));
   // all validators have same pubkey
   const validatorIndexInSyncCommittee = 3;
 

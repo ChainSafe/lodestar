@@ -1,4 +1,4 @@
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {IBeaconChain, IBlockJob} from "..";
 import {IBeaconDb} from "../../db";
 import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
@@ -6,7 +6,7 @@ import {allForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {BlockError, BlockErrorCode} from "../errors";
 
 export async function validateGossipBlock(
-  config: IBeaconConfig,
+  config: IChainForkConfig,
   chain: IBeaconChain,
   db: IBeaconDb,
   blockJob: IBlockJob

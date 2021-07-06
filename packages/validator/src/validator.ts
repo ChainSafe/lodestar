@@ -1,7 +1,7 @@
 import {AbortController, AbortSignal} from "@chainsafe/abort-controller";
 import {SecretKey} from "@chainsafe/bls";
 import {ssz} from "@chainsafe/lodestar-types";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {createIBeaconConfig, IBeaconConfig, IChainForkConfig} from "@chainsafe/lodestar-config";
 import {Genesis} from "@chainsafe/lodestar-types/phase0";
 import {fromHex, ILogger} from "@chainsafe/lodestar-utils";
 import {getClient, Api} from "@chainsafe/lodestar-api";
@@ -18,7 +18,7 @@ import {assertEqualParams} from "./util/params";
 
 export type ValidatorOptions = {
   slashingProtection: ISlashingProtection;
-  config: IBeaconConfig;
+  config: IChainForkConfig;
   api: Api | string;
   secretKeys: SecretKey[];
   logger: ILogger;
@@ -48,7 +48,8 @@ export class Validator {
   private state: State = {status: Status.stopped};
 
   constructor(opts: ValidatorOptions, genesis: Genesis) {
-    const {config, logger, slashingProtection, secretKeys, graffiti} = opts;
+    const {config: chainForkConfig, logger, slashingProtection, secretKeys, graffiti} = opts;
+    const config = createIBeaconConfig(chainForkConfig, genesis.genesisValidatorsRoot);
 
     const api =
       typeof opts.api === "string"

@@ -11,7 +11,7 @@ import {
   CachedBeaconState,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {allForks, ssz} from "@chainsafe/lodestar-types";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {IBeaconConfig, IChainForkConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {toHexString, TreeBacked} from "@chainsafe/ssz";
 import {GENESIS_SLOT, ZERO_HASH} from "../constants";
@@ -40,7 +40,7 @@ export async function persistGenesisResult(
 }
 
 export async function persistAnchorState(
-  config: IBeaconConfig,
+  config: IChainForkConfig,
   db: IBeaconDb,
   anchorState: TreeBacked<allForks.BeaconState>
 ): Promise<void> {
@@ -57,7 +57,7 @@ export async function persistAnchorState(
 }
 
 export function createGenesisBlock(
-  config: IBeaconConfig,
+  config: IChainForkConfig,
   genesisState: allForks.BeaconState
 ): allForks.SignedBeaconBlock {
   const types = config.getForkTypes(GENESIS_SLOT);
@@ -71,7 +71,7 @@ export function createGenesisBlock(
  * Initialize and persist a genesis state and related data
  */
 export async function initStateFromEth1(
-  config: IBeaconConfig,
+  config: IChainForkConfig,
   db: IBeaconDb,
   logger: ILogger,
   eth1Provider: Eth1Provider,
@@ -129,7 +129,7 @@ export async function initStateFromEth1(
  * Restore the latest beacon state from db
  */
 export async function initStateFromDb(
-  config: IBeaconConfig,
+  config: IChainForkConfig,
   db: IBeaconDb,
   logger: ILogger
 ): Promise<TreeBacked<allForks.BeaconState>> {
@@ -151,7 +151,7 @@ export async function initStateFromDb(
  * Initialize and persist an anchor state (either weak subjectivity or genesis)
  */
 export async function initStateFromAnchorState(
-  config: IBeaconConfig,
+  config: IChainForkConfig,
   db: IBeaconDb,
   logger: ILogger,
   anchorState: TreeBacked<allForks.BeaconState>
@@ -194,7 +194,7 @@ export function initBeaconMetrics(metrics: IMetrics, state: TreeBacked<allForks.
 }
 
 export function computeAnchorCheckpoint(
-  config: IBeaconConfig,
+  config: IChainForkConfig,
   anchorState: allForks.BeaconState
 ): {checkpoint: phase0.Checkpoint; blockHeader: phase0.BeaconBlockHeader} {
   let blockHeader;

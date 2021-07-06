@@ -1,6 +1,5 @@
 import sinon from "sinon";
 
-import {config} from "@chainsafe/lodestar-config/default";
 import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {ssz} from "@chainsafe/lodestar-types";
@@ -42,7 +41,7 @@ describe("GossipMessageValidator", () => {
       dbStub.attesterSlashing.hasAll.resolves(true);
 
       await expectRejectedWithLodestarError(
-        validateGossipAttesterSlashing(config, chainStub, dbStub, attesterSlashing),
+        validateGossipAttesterSlashing(chainStub, dbStub, attesterSlashing),
         AttesterSlashingErrorCode.ALREADY_EXISTS
       );
     });
@@ -51,7 +50,7 @@ describe("GossipMessageValidator", () => {
       const attesterSlashing = ssz.phase0.AttesterSlashing.defaultValue();
 
       await expectRejectedWithLodestarError(
-        validateGossipAttesterSlashing(config, chainStub, dbStub, attesterSlashing),
+        validateGossipAttesterSlashing(chainStub, dbStub, attesterSlashing),
         AttesterSlashingErrorCode.INVALID
       );
     });
@@ -71,7 +70,7 @@ describe("GossipMessageValidator", () => {
         },
       };
 
-      await validateGossipAttesterSlashing(config, chainStub, dbStub, attesterSlashing);
+      await validateGossipAttesterSlashing(chainStub, dbStub, attesterSlashing);
     });
   });
 });

@@ -1,4 +1,4 @@
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {Api} from "../interface";
 import {IHttpClient, HttpClient, HttpClientOptions} from "./utils";
 
@@ -14,7 +14,7 @@ import * as validator from "./validator";
 /**
  * REST HTTP client for all routes
  */
-export function getClient(config: IBeaconConfig, opts: HttpClientOptions, httpClient?: IHttpClient): Api {
+export function getClient(config: IChainForkConfig, opts: HttpClientOptions, httpClient?: IHttpClient): Api {
   if (!httpClient) httpClient = new HttpClient(opts);
 
   return {

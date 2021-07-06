@@ -1,6 +1,6 @@
 import {AbortSignal} from "@chainsafe/abort-controller";
 import {Epoch, Slot} from "@chainsafe/lodestar-types";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {ErrorAborted} from "@chainsafe/lodestar-utils";
 import {computeEpochAtSlot, computeTimeAtSlot, getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
 
@@ -13,7 +13,7 @@ import {MAXIMUM_GOSSIP_CLOCK_DISPARITY} from "../../constants";
  * A local clock, the clock time is assumed to be trusted
  */
 export class LocalClock implements IBeaconClock {
-  private readonly config: IBeaconConfig;
+  private readonly config: IChainForkConfig;
   private readonly genesisTime: number;
   private timeoutId: number;
   private readonly emitter: ChainEventEmitter;
@@ -26,7 +26,7 @@ export class LocalClock implements IBeaconClock {
     emitter,
     signal,
   }: {
-    config: IBeaconConfig;
+    config: IChainForkConfig;
     genesisTime: number;
     emitter: ChainEventEmitter;
     signal: AbortSignal;

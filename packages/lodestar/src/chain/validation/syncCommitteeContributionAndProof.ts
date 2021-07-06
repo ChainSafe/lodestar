@@ -1,5 +1,4 @@
 import {CachedBeaconState, isSyncCommitteeAggregator} from "@chainsafe/lodestar-beacon-state-transition";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {altair} from "@chainsafe/lodestar-types";
 import {IBeaconDb} from "../../db";
 import {GossipAction, IContributionAndProofJob, SyncCommitteeError, SyncCommitteeErrorCode} from "../errors";
@@ -15,7 +14,6 @@ import {
  * Spec v1.1.0-alpha.5
  */
 export async function validateSyncCommitteeGossipContributionAndProof(
-  config: IBeaconConfig,
   chain: IBeaconChain,
   db: IBeaconDb,
   job: IContributionAndProofJob

@@ -1,5 +1,6 @@
 import {Version, Root, phase0, ForkDigest, ssz} from "@chainsafe/lodestar-types";
 
+// TODO: remove?
 /**
  * Used primarily in signature domains to avoid collisions across forks/chains.
  */

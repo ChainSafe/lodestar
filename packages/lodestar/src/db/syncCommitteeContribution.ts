@@ -1,6 +1,6 @@
 import bls, {PointFormat, Signature} from "@chainsafe/bls";
 import {SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {phase0, altair, Slot, ssz} from "@chainsafe/lodestar-types";
 import {newFilledArray} from "@chainsafe/lodestar-beacon-state-transition";
 import {readonlyValues, toHexString} from "@chainsafe/ssz";
@@ -30,7 +30,7 @@ export class SyncCommitteeContributionCache {
   private readonly aggregateByRootBySlot = new Map<phase0.Slot, Map<BlockRootHex, SyncAggregateFast>>();
   private readonly seenCacheBySlot = new Map<phase0.Slot, Set<AggregatorSubnetKey>>();
 
-  constructor(private readonly config: IBeaconConfig) {}
+  constructor(private readonly config: IChainForkConfig) {}
 
   /** Register item as seen in the cache */
   seen(contributionAndProof: altair.ContributionAndProof): void {
@@ -132,7 +132,7 @@ export class SyncContributionError extends LodestarError<SyncContributionErrorTy
  * Aggregate a new contribution into `aggregate` mutating it
  */
 function aggregateContributionInto(
-  config: IBeaconConfig,
+  config: IChainForkConfig,
   aggregate: SyncAggregateFast,
   contribution: altair.SyncCommitteeContribution
 ): void {
@@ -164,7 +164,7 @@ function aggregateContributionInto(
  * Format `contribution` into an efficient `aggregate` to add more contributions in with aggregateContributionInto()
  */
 function contributionToAggregate(
-  config: IBeaconConfig,
+  config: IChainForkConfig,
   contribution: altair.SyncCommitteeContribution
 ): SyncAggregateFast {
   const indexesPerSubnet = Math.floor(SYNC_COMMITTEE_SIZE / SYNC_COMMITTEE_SUBNET_COUNT);

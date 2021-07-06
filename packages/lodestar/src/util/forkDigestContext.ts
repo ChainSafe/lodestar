@@ -1,6 +1,6 @@
 import {computeForkDigest} from "@chainsafe/lodestar-beacon-state-transition";
 import {ForkName} from "@chainsafe/lodestar-params";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {ForkDigest, Root} from "@chainsafe/lodestar-types";
 import {ByteVector, toHexString} from "@chainsafe/ssz";
 
@@ -19,7 +19,7 @@ export class ForkDigestContext implements IForkDigestContext {
   /** Map of ForkDigest in hex format without prefix: `0011aabb` */
   private forkNameByForkDigest = new Map<ForkDigestHex, ForkName>();
 
-  constructor(config: IBeaconConfig, genesisValidatorsRoot: Root) {
+  constructor(config: IChainForkConfig, genesisValidatorsRoot: Root) {
     for (const fork of Object.values(config.forks)) {
       const forkDigest = computeForkDigest(fork.version, genesisValidatorsRoot);
       this.forkNameByForkDigest.set(toHexStringNoPrefix(forkDigest), fork.name);

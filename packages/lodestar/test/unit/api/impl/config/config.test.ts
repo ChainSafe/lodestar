@@ -1,3 +1,4 @@
+// eslint-disable-next-line no-restricted-imports
 import * as params from "@chainsafe/lodestar-params/lib/activePreset";
 import {chainConfig, config} from "@chainsafe/lodestar-config/default";
 import {expect} from "chai";

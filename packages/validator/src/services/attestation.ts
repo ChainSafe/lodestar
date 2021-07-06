@@ -1,5 +1,5 @@
 import {AbortSignal} from "@chainsafe/abort-controller";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {phase0, Slot, CommitteeIndex, ssz} from "@chainsafe/lodestar-types";
 import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {ILogger, prettyBytes, sleep} from "@chainsafe/lodestar-utils";
@@ -17,7 +17,7 @@ export class AttestationService {
   private readonly dutiesService: AttestationDutiesService;
 
   constructor(
-    private readonly config: IBeaconConfig,
+    private readonly config: IChainForkConfig,
     private readonly logger: ILogger,
     private readonly api: Api,
     private readonly clock: IClock,

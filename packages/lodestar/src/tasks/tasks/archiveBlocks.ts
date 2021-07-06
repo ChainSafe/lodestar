@@ -4,7 +4,6 @@
 
 import {phase0} from "@chainsafe/lodestar-types";
 import {toHexString} from "@chainsafe/ssz";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBlockSummary, IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {IBeaconDb} from "../../db";
@@ -19,15 +18,13 @@ export interface IArchiveBlockModules {
  * Archives finalized blocks from active bucket to archive bucket.
  */
 export class ArchiveBlocksTask implements ITask {
-  private readonly config: IBeaconConfig;
   private readonly db: IBeaconDb;
   private readonly forkChoice: IForkChoice;
   private readonly logger: ILogger;
 
   private finalized: phase0.Checkpoint;
 
-  constructor(config: IBeaconConfig, modules: IArchiveBlockModules, finalized: phase0.Checkpoint) {
-    this.config = config;
+  constructor(modules: IArchiveBlockModules, finalized: phase0.Checkpoint) {
     this.db = modules.db;
     this.forkChoice = modules.forkChoice;
     this.logger = modules.logger;

@@ -14,11 +14,13 @@ import {
   isBlock,
   isCheck,
 } from "./type";
+// eslint-disable-next-line no-restricted-imports
 import {LodestarForkChoice} from "@chainsafe/lodestar/lib/chain/forkChoice/forkChoice";
-import {SPEC_TEST_LOCATION} from "../../../utils/specTestCases";
+// eslint-disable-next-line no-restricted-imports
 import {ChainEventEmitter} from "@chainsafe/lodestar/lib/chain/emitter";
 import {toHexString} from "@chainsafe/ssz";
 import {ssz} from "@chainsafe/lodestar-types";
+import {SPEC_TEST_LOCATION} from "../../../utils/specTestCases";
 
 describeDirectorySpecTest<IForkChoiceTestCase, void>(
   "forkchoice get_head",

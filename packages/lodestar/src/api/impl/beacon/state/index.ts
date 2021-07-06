@@ -1,4 +1,5 @@
 import {routes} from "@chainsafe/lodestar-api";
+// eslint-disable-next-line no-restricted-imports
 import {Api as IBeaconStateApi} from "@chainsafe/lodestar-api/lib/routes/beacon/state";
 import {allForks, altair} from "@chainsafe/lodestar-types";
 import {readonlyValues} from "@chainsafe/ssz";

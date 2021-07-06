@@ -2,7 +2,7 @@ import {join} from "path";
 import {allForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {altair, phase0, ssz} from "@chainsafe/lodestar-types";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
-import {IBeaconConfig, createIBeaconConfig} from "@chainsafe/lodestar-config";
+import {createIChainForkConfig} from "@chainsafe/lodestar-config";
 import {ITransitionTestCase} from "./types";
 import {SPEC_TEST_LOCATION} from "../../../utils/specTestCases";
 import {TreeBacked} from "@chainsafe/ssz";
@@ -10,9 +10,6 @@ import {expectEqualBeaconState} from "../util";
 import {PresetName} from "@chainsafe/lodestar-params";
 
 export function runTransition(presetName: PresetName): void {
-  // eslint-disable-next-line @typescript-eslint/naming-convention
-  const config = createIBeaconConfig({ALTAIR_FORK_EPOCH: 0});
-
   describeDirectorySpecTest<ITransitionTestCase, allForks.BeaconState>(
     `altair transition ${presetName}`,
     join(SPEC_TEST_LOCATION, `/tests/${presetName}/altair/transition/core/pyspec_tests`),
@@ -21,7 +18,7 @@ export function runTransition(presetName: PresetName): void {
       const {forkEpoch, blocksCount, forkBlock} = meta;
       // testConfig is used here to load forkEpoch from meta.yaml
       // eslint-disable-next-line @typescript-eslint/naming-convention
-      const testConfig = createIBeaconConfig({ALTAIR_FORK_EPOCH: Number(forkEpoch)});
+      const testConfig = createIChainForkConfig({ALTAIR_FORK_EPOCH: Number(forkEpoch)});
       let wrappedState = allForks.createCachedBeaconState<allForks.BeaconState>(
         testConfig,
         testcase.pre as TreeBacked<allForks.BeaconState>
@@ -59,7 +56,7 @@ export function runTransition(presetName: PresetName): void {
         return {
           pre: ssz.phase0.BeaconState,
           post: ssz.altair.BeaconState,
-          ...generateBlocksSZZTypeMapping(config, meta),
+          ...generateBlocksSZZTypeMapping(meta),
         };
       },
       shouldError: (testCase) => {
@@ -68,7 +65,7 @@ export function runTransition(presetName: PresetName): void {
       timeout: 10000,
       getExpected: (testCase) => testCase.post,
       expectFunc: (testCase, expected, actual) => {
-        expectEqualBeaconState(config, expected, actual);
+        expectEqualBeaconState(expected, actual);
       },
     }
   );
@@ -78,7 +75,6 @@ export function runTransition(presetName: PresetName): void {
  * https://github.com/ethereum/eth2.0-specs/tree/v1.1.0-alpha.5/tests/formats/transition
  */
 function generateBlocksSZZTypeMapping(
-  config: IBeaconConfig,
   meta: ITransitionTestCase["meta"]
 ): Record<string, typeof ssz.phase0.SignedBeaconBlock | typeof ssz.altair.SignedBeaconBlock> {
   if (!meta) {

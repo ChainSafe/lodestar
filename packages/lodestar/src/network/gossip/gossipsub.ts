@@ -2,7 +2,7 @@
 import Gossipsub from "libp2p-gossipsub";
 import {InMessage} from "libp2p-interfaces/src/pubsub";
 import Libp2p from "libp2p";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {ATTESTATION_SUBNET_COUNT} from "@chainsafe/lodestar-params";
 import {allForks, altair, phase0} from "@chainsafe/lodestar-types";
 import {ILogger, toJson} from "@chainsafe/lodestar-utils";
@@ -20,7 +20,7 @@ import {prepareGossipMsg} from "./message";
 import {IForkDigestContext} from "../../util/forkDigestContext";
 
 interface IGossipsubModules {
-  config: IBeaconConfig;
+  config: IChainForkConfig;
   libp2p: Libp2p;
   validatorFns: TopicValidatorFnMap;
   forkDigestContext: IForkDigestContext;
@@ -42,7 +42,7 @@ interface IGossipsubModules {
  * See https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/p2p-interface.md#the-gossip-domain-gossipsub
  */
 export class Eth2Gossipsub extends Gossipsub {
-  private readonly config: IBeaconConfig;
+  private readonly config: IChainForkConfig;
   private readonly forkDigestContext: IForkDigestContext;
   private readonly logger: ILogger;
   private readonly metrics: IMetrics | null;
@@ -121,7 +121,7 @@ export class Eth2Gossipsub extends Gossipsub {
       }
       // get GossipTopic and GossipObject, set on IGossipMessage
       const gossipTopic = this.getGossipTopic(message.topicIDs[0]);
-      prepareGossipMsg(message, gossipTopic, this.config);
+      prepareGossipMsg(message, gossipTopic);
     } catch (e) {
       const err = new GossipValidationError(ERR_TOPIC_VALIDATOR_REJECT);
       // must set gossip scores manually, since this usually happens in super.validate
@@ -182,7 +182,7 @@ export class Eth2Gossipsub extends Gossipsub {
     this.logger.verbose("Publish to topic", toJson(topic));
     await this.publish(
       this.getGossipTopicString(topic),
-      encodeMessageData(topic.encoding ?? DEFAULT_ENCODING, getGossipSSZSerializer(this.config, topic)(object))
+      encodeMessageData(topic.encoding ?? DEFAULT_ENCODING, getGossipSSZSerializer(topic)(object))
     );
   }
 

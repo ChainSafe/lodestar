@@ -1,5 +1,5 @@
 import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 
 import {IBlockJob} from "../interface";
@@ -7,7 +7,7 @@ import {IBeaconClock} from "../clock";
 import {BlockError, BlockErrorCode} from "../errors";
 
 export type BlockValidateModules = {
-  config: IBeaconConfig;
+  config: IChainForkConfig;
   forkChoice: IForkChoice;
   clock: IBeaconClock;
 };
