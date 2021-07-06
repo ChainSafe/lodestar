@@ -1,4 +1,3 @@
-import {fromHexString} from "@chainsafe/ssz";
 import {altair, ssz} from "@chainsafe/lodestar-types";
 import {ApiModules} from "../types";
 import {resolveStateId} from "../beacon/state/utils";
@@ -43,13 +42,8 @@ export function getLightclientApi({
 
     // Init API
 
-    async getInitProof(stateId) {
-      let proof;
-      if (stateId.startsWith("0x")) {
-        proof = await chain.lightClientIniter.getInitProofByStateRoot(fromHexString(stateId));
-      } else {
-        proof = await chain.lightClientIniter.getInitProofByEpoch(Number(stateId));
-      }
+    async getInitProof(epoch) {
+      const proof = await chain.lightClientIniter.getInitProofByEpoch(Number(epoch));
       if (!proof) {
         throw new ApiError(404, "No init proof available");
       }

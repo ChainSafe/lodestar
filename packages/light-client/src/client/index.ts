@@ -69,7 +69,7 @@ export class Lightclient {
     const header = headerResp.data.header.message;
     const stateRoot = header.stateRoot;
 
-    const proof = await api.lightclient.getInitProof(toHexString(stateRoot));
+    const proof = await api.lightclient.getInitProof(checkpoint.epoch);
 
     const state = ssz.altair.BeaconState.createTreeBackedFromProof(stateRoot as Uint8Array, proof.data);
     const store: LightClientStoreFast = {

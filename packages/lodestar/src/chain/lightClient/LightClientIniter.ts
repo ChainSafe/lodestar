@@ -1,12 +1,12 @@
-import {Proof} from "@chainsafe/persistent-merkle-tree";
-import {Path} from "@chainsafe/ssz";
-import {SLOTS_PER_EPOCH, SYNC_COMMITTEE_SIZE} from "@chainsafe/lodestar-params";
-import {altair, Epoch, phase0} from "@chainsafe/lodestar-types";
+import {Proof, ProofType, TreeOffsetProof} from "@chainsafe/persistent-merkle-tree";
+import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
+import {Epoch, phase0} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
+import {computeSyncPeriodAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {IBeaconDb} from "../../db";
 import {StateContextCache} from "../stateCache";
+import { computeWeakSubjectivityPeriod } from "../../../../beacon-state-transition/lib/allForks/util/weakSubjectivity";
 
 interface ILightClientIniterModules {
   config: IBeaconConfig;
@@ -15,26 +15,11 @@ interface ILightClientIniterModules {
   stateCache: StateContextCache;
 }
 
-export function getSyncCommitteesProofPaths(): Path[] {
-  const paths: Path[] = [];
-  for (let i = 0; i < SYNC_COMMITTEE_SIZE; i++) {
-    // hacky, but fetch both the first and second half of the pubkeys
-    paths.push(["currentSyncCommittee", "pubkeys", i, 0]);
-    paths.push(["currentSyncCommittee", "pubkeys", i, 32]);
-    paths.push(["nextSyncCommittee", "pubkeys", i, 0]);
-    paths.push(["nextSyncCommittee", "pubkeys", i, 32]);
-  }
-  paths.push(["currentSyncCommittee", "aggregatePubkey", 0]);
-  paths.push(["currentSyncCommittee", "aggregatePubkey", 32]);
-  paths.push(["nextSyncCommittee", "aggregatePubkey", 0]);
-  paths.push(["nextSyncCommittee", "aggregatePubkey", 32]);
-  return paths;
-}
-
 /* paths needed to bootstrap the light client */
-export const initProofPaths = [
+export const stateProofPaths = [
   // initial sync committee list
-  ...getSyncCommitteesProofPaths(),
+  ["currentSyncCommittee"],
+  ["nextSyncCommittee"],
   // required to initialize a slot clock
   ["genesisTime"],
   // required to verify signatures
@@ -61,18 +46,22 @@ export class LightClientIniter {
    * To be called in API route GET /eth/v1/lightclient/init_proof/:epoch
    */
   async getInitProofByEpoch(epoch: Epoch): Promise<Proof | null> {
-    const stateRoot = await this.db.lightClientInitProofStateRoot.get(epoch);
-    if (!stateRoot) {
+    const currentPeriod = computeSyncPeriodAtEpoch(epoch);
+    const nextPeriod = currentPeriod + 1;
+    const [stateProof, currentSyncCommitteeProof, nextSyncCommitteeProof] = (await Promise.all([
+      this.db.lightClientInitProof.get(epoch),
+      this.db.lightClientSyncCommitteeProof.get(currentPeriod),
+      this.db.lightClientSyncCommitteeProof.get(nextPeriod),
+    ])) as [TreeOffsetProof | null, TreeOffsetProof | null, TreeOffsetProof | null];
+    if (!stateProof || !currentSyncCommitteeProof || !nextSyncCommitteeProof) {
       return null;
     }
-    return await this.db.lightClientInitProof.get(stateRoot);
-  }
+    // splice in committee proofs
+    // re-add the offsets we removed
+    stateProof.offsets.splice(7, 0, 1, 1026, ...currentSyncCommitteeProof.offsets, ...nextSyncCommitteeProof.offsets);
+    stateProof.leaves.splice(7, 0, ...currentSyncCommitteeProof.leaves, ...nextSyncCommitteeProof.leaves);
 
-  /**
-   * To be called in API route GET /eth/v1/lightclient/init_proof/:state_root
-   */
-  async getInitProofByStateRoot(stateRoot: Uint8Array): Promise<Proof | null> {
-    return await this.db.lightClientInitProof.get(stateRoot);
+    return stateProof;
   }
 
   /**
@@ -87,7 +76,8 @@ export class LightClientIniter {
       throw new Error("Block not found in fork choice");
     }
     const finalizedBlockSlot = finalizedSummary.slot;
-    if (Math.floor(finalizedBlockSlot / SLOTS_PER_EPOCH) < this.config.ALTAIR_FORK_EPOCH) {
+    const finalizedBlockEpoch = Math.floor(finalizedBlockSlot / SLOTS_PER_EPOCH);
+    if (finalizedBlockEpoch < this.config.ALTAIR_FORK_EPOCH) {
       return;
     }
 
@@ -98,10 +88,58 @@ export class LightClientIniter {
       throw new Error("State not found in cache");
     }
 
-    const proof = finalizedState.createProof(initProofPaths);
+    // state proof
+    const stateProof = finalizedState.createProof(stateProofPaths) as TreeOffsetProof;
+
+    // sync committees stored separately to deduplicate
+    const currentPeriod = computeSyncPeriodAtEpoch(finalizedBlockEpoch);
+    const nextPeriod = currentPeriod + 1;
+
+    // Create sync committee proofs by _splicing_ the committee sections out of the state proof
+
+    // We aren't creating the sync committee proofs separately because our ssz library automatically adds leaves to composite types,
+    // so they're already included in the state proof, currently with no way to specify otherwise
+
+    // remove two offsets so the # of offsets in the state proof will be the # expected
+    // This is a hack, but properly setting the offsets in the state proof would require either removing witnesses needed for the committees
+    // or setting the roots of the committees in the state proof
+    // this will always be 1, 1026
+    stateProof.offsets.splice(7, 2);
+
+    const currentSyncCommitteeProof: TreeOffsetProof = {
+      type: ProofType.treeOffset,
+      offsets: stateProof.offsets.splice(7, 1025),
+      leaves: stateProof.leaves.splice(7, 1026),
+    };
+
+    const nextSyncCommitteeProof: TreeOffsetProof = {
+      type: ProofType.treeOffset,
+      offsets: stateProof.offsets.splice(7, 1025),
+      leaves: stateProof.leaves.splice(7, 1026),
+    };
+
+    // calculate beginning of weak subjectivity period to prune from there
+    const wsPeriod = computeWeakSubjectivityPeriod(this.config, finalizedState);
+    const wsEpoch = Math.max(0, finalizedBlockEpoch - wsPeriod);
+    const wsSyncPeriod = computeSyncPeriodAtEpoch(wsEpoch);
+
+    const [oldStateProofKeys, oldCommitteeProofKeys] = await Promise.all([
+      this.db.lightClientInitProof.keys({lt: wsEpoch}),
+      this.db.lightClientSyncCommitteeProof.keys({lt: wsSyncPeriod}),
+    ]);
+
+
     await Promise.all([
-      this.db.lightClientInitProof.put(finalizedStateRoot, proof),
-      this.db.lightClientInitProofStateRoot.put(checkpoint.epoch, finalizedStateRoot),
+      // prune old proofs
+      this.db.lightClientInitProof.batchDelete(oldStateProofKeys),
+      this.db.lightClientSyncCommitteeProof.batchDelete(oldCommitteeProofKeys),
+      // store state proof
+      this.db.lightClientInitProof.put(checkpoint.epoch, stateProof),
+      // store sync committee proofs
+      this.db.lightClientSyncCommitteeProof.batchPut([
+        {key: currentPeriod, value: currentSyncCommitteeProof},
+        {key: nextPeriod, value: nextSyncCommitteeProof},
+      ]),
     ]);
   }
 }

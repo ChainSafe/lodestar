@@ -18,7 +18,7 @@ import {
   BestUpdatePerCommitteePeriod,
   LightclientFinalizedCheckpoint,
   LightClientInitProofRepository,
-  LightClientInitProofStateRootRepository,
+  LightClientSyncCommitteeProofRepository,
 } from "./repositories";
 import {
   PreGenesisState,
@@ -74,7 +74,7 @@ export interface IBeaconDb {
   latestNonFinalizedUpdate: LatestNonFinalizedUpdate;
   lightclientFinalizedCheckpoint: LightclientFinalizedCheckpoint;
   lightClientInitProof: LightClientInitProofRepository;
-  lightClientInitProofStateRoot: LightClientInitProofStateRootRepository;
+  lightClientSyncCommitteeProof: LightClientSyncCommitteeProofRepository;
 
   processBlockOperations(signedBlock: allForks.SignedBeaconBlock): Promise<void>;
 
