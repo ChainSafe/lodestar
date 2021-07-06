@@ -2,7 +2,6 @@ import {itBench, setBenchOpts} from "@dapplion/benchmark";
 import {allForks, altair} from "../../../../src";
 import {generatePerfTestCachedStateAltair} from "../../util";
 
-
 describe.skip("Altair epoch transition steps", () => {
   setBenchOpts({
     maxMs: 60 * 1000,
