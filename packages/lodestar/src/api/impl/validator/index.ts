@@ -135,18 +135,24 @@ export function getValidatorApi({
 
   return {
     async produceBlock(slot, randaoReveal, graffiti = "") {
-      notWhileSyncing();
+      let timer;
+      metrics?.blockProductionRequests.inc();
+      try {
+        notWhileSyncing();
+        await waitForSlot(slot); // Must never request for a future slot > currentSlot
 
-      await waitForSlot(slot); // Must never request for a future slot > currentSlot
-
-      const block = await assembleBlock(
-        {config, chain, db, eth1, metrics},
-        slot,
-        randaoReveal,
-        toGraffitiBuffer(graffiti)
-      );
-
-      return {data: block, version: config.getForkName(block.slot)};
+        timer = metrics?.blockProductionTime.startTimer();
+        const block = await assembleBlock(
+          {config, chain, db, eth1, metrics},
+          slot,
+          randaoReveal,
+          toGraffitiBuffer(graffiti)
+        );
+        metrics?.blockProductionSuccess.inc();
+        return {data: block, version: config.getForkName(block.slot)};
+      } finally {
+        if (timer) timer();
+      }
     },
 
     async produceAttestationData(committeeIndex, slot) {

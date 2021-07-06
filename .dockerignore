@@ -1,5 +1,8 @@
-node_modules
+# Comment out if you build from source and need to see the commit and branch in logs + metrics
 .git
+# ^^^
+
+node_modules
 
 # Docs
 assets
