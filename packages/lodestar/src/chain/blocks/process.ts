@@ -1,4 +1,3 @@
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {sleep} from "@chainsafe/lodestar-utils";
 import {ChainEventEmitter} from "../emitter";
@@ -23,7 +22,6 @@ export type BlockProcessOpts = {
 export type BlockProcessModules = {
   bls: IBlsVerifier;
   checkpointStateCache: CheckpointStateCache;
-  config: IBeaconConfig;
   emitter: ChainEventEmitter;
   forkChoice: IForkChoice;
   metrics: IMetrics | null;
@@ -45,7 +43,7 @@ export async function processBlock(modules: BlockProcessModules, job: IBlockJob)
 }
 
 export async function processChainSegment(modules: BlockProcessModules, job: IChainSegmentJob): Promise<void> {
-  const {config, forkChoice} = modules;
+  const {forkChoice} = modules;
   const blocks = job.signedBlocks;
 
   const firstSegBlock = blocks[0];
@@ -64,7 +62,7 @@ export async function processChainSegment(modules: BlockProcessModules, job: ICh
   // Split off the first section blocks that are all either within the current epoch of
   // the first block. These blocks can all be signature-verified with the same
   // `BeaconState`.
-  const blocksByEpoch = groupBlocksByEpoch(config, blocks);
+  const blocksByEpoch = groupBlocksByEpoch(blocks);
 
   // Process segment epoch by epoch
   for (const blocksInEpoch of blocksByEpoch) {

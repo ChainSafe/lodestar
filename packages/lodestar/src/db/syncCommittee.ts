@@ -1,7 +1,7 @@
 import bls, {PointFormat, Signature} from "@chainsafe/bls";
 import {SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
 import {newFilledArray} from "@chainsafe/lodestar-beacon-state-transition";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {altair, phase0, Slot} from "@chainsafe/lodestar-types";
 import {BitList, toHexString} from "@chainsafe/ssz";
 
@@ -41,7 +41,7 @@ export class SyncCommitteeCache {
    */
   private readonly seenCacheBySlot = new Map<phase0.Slot, Set<ValidataorSubnetKey>>();
 
-  constructor(private readonly config: IBeaconConfig) {}
+  constructor(private readonly config: IChainForkConfig) {}
 
   /** Register item as seen in the cache */
   seen(subnet: phase0.SubCommitteeIndex, syncCommitteeSignature: altair.SyncCommitteeMessage): void {
@@ -158,7 +158,7 @@ function aggregateSignatureInto(
  * Format `signature` into an efficient `contribution` to add more signatures in with aggregateSignatureInto()
  */
 function signatureToAggregate(
-  config: IBeaconConfig,
+  config: IChainForkConfig,
   subnet: number,
   signature: altair.SyncCommitteeMessage,
   indexInSubCommittee: number

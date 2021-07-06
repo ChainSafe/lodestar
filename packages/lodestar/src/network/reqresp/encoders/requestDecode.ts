@@ -1,5 +1,4 @@
 import BufferList from "bl";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {getRequestSzzTypeByMethod, Protocol, RequestBody} from "../types";
 import {BufferedSource} from "../utils";
 import {readEncodedPayload} from "../encodingStrategies";
@@ -11,11 +10,10 @@ import {readEncodedPayload} from "../encodingStrategies";
  * ```
  */
 export function requestDecode(
-  config: IBeaconConfig,
   protocol: Pick<Protocol, "method" | "encoding">
 ): (source: AsyncIterable<Buffer | BufferList>) => Promise<RequestBody> {
   return async function (source) {
-    const type = getRequestSzzTypeByMethod(config, protocol.method);
+    const type = getRequestSzzTypeByMethod(protocol.method);
     if (!type) {
       // method has no body
       return null;

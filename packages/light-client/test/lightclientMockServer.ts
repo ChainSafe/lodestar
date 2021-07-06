@@ -1,6 +1,6 @@
 import {FastifyInstance} from "fastify";
 import {computeEpochAtSlot, computeSyncPeriodAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {toHexString, TreeBacked} from "@chainsafe/ssz";
 import {altair, phase0, Epoch, Root, Slot, ssz, SyncPeriod} from "@chainsafe/lodestar-types";
 import {FinalizedCheckpointData, LightClientUpdater, LightClientUpdaterDb} from "../src/server/LightClientUpdater";
@@ -34,7 +34,7 @@ export class LightclientMockServer {
   private apiState: ApiState = {status: ApiStatus.stopped};
 
   constructor(
-    private readonly config: IBeaconConfig,
+    private readonly config: IChainForkConfig,
     private readonly logger: ILogger,
     private readonly genesisValidatorsRoot: Root
   ) {

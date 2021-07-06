@@ -4,6 +4,7 @@ import {AbortController} from "@chainsafe/abort-controller";
 
 import PeerId from "peer-id";
 import {Discv5Discovery, ENR} from "@chainsafe/discv5";
+import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 import {config} from "@chainsafe/lodestar-config/default";
 import {phase0, ssz} from "@chainsafe/lodestar-types";
 import {sleep} from "@chainsafe/lodestar-utils";
@@ -54,7 +55,8 @@ describe("network", function () {
       },
     });
 
-    const chain = new MockBeaconChain({genesisTime: 0, chainId: 0, networkId: BigInt(0), state, config});
+    const beaconConfig = createIBeaconConfig(config, state.genesisValidatorsRoot);
+    const chain = new MockBeaconChain({genesisTime: 0, chainId: 0, networkId: BigInt(0), state, config: beaconConfig});
     const db = new StubbedBeaconDb(sinon, config);
     const reqRespHandlers = getReqRespHandlers({db, chain});
     const gossipHandlers = {} as GossipHandlers;
@@ -63,7 +65,15 @@ describe("network", function () {
     const loggerA = testLogger("A");
     const loggerB = testLogger("B");
 
-    const modules = {config, chain, db, reqRespHandlers, gossipHandlers, signal: controller.signal, metrics: null};
+    const modules = {
+      config: beaconConfig,
+      chain,
+      db,
+      reqRespHandlers,
+      gossipHandlers,
+      signal: controller.signal,
+      metrics: null,
+    };
     const netA = new Network(opts, {...modules, libp2p: libp2pA, logger: loggerA});
     const netB = new Network(opts, {...modules, libp2p: libp2pB, logger: loggerB});
 

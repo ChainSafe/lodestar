@@ -15,7 +15,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "id": 1,
+  "id": 3,
   "links": [],
   "panels": [
     {
@@ -4636,9 +4636,7 @@
             "justifyMode": "auto",
             "orientation": "auto",
             "reduceOptions": {
-              "calcs": [
-                "lastNotNull"
-              ],
+              "calcs": ["lastNotNull"],
               "fields": "",
               "values": false
             },
@@ -6154,6 +6152,7 @@
                 "fillOpacity": 0,
                 "gradientMode": "none",
                 "hideFrom": {
+                  "graph": false,
                   "legend": false,
                   "tooltip": false,
                   "viz": false
@@ -6166,13 +6165,8 @@
                 },
                 "showPoints": "auto",
                 "spanNulls": false,
-                "stacking": {
-                  "group": "A",
-                  "mode": "normal"
-                },
-                "thresholdsStyle": {
-                  "mode": "off"
-                }
+                "stacking": {},
+                "thresholdsStyle": {}
               },
               "mappings": [],
               "thresholds": {
@@ -6196,7 +6190,7 @@
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 14
+            "y": 29
           },
           "id": 150,
           "options": {
@@ -6206,6 +6200,9 @@
               "placement": "bottom"
             },
             "tooltip": {
+              "mode": "single"
+            },
+            "tooltipOptions": {
               "mode": "single"
             }
           },
@@ -6236,6 +6233,7 @@
                 "fillOpacity": 0,
                 "gradientMode": "none",
                 "hideFrom": {
+                  "graph": false,
                   "legend": false,
                   "tooltip": false,
                   "viz": false
@@ -6248,13 +6246,8 @@
                 },
                 "showPoints": "auto",
                 "spanNulls": false,
-                "stacking": {
-                  "group": "A",
-                  "mode": "normal"
-                },
-                "thresholdsStyle": {
-                  "mode": "off"
-                }
+                "stacking": {},
+                "thresholdsStyle": {}
               },
               "mappings": [],
               "thresholds": {
@@ -6277,7 +6270,7 @@
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 14
+            "y": 29
           },
           "id": 155,
           "options": {
@@ -6287,6 +6280,9 @@
               "placement": "bottom"
             },
             "tooltip": {
+              "mode": "single"
+            },
+            "tooltipOptions": {
               "mode": "single"
             }
           },
@@ -6317,6 +6313,7 @@
                 "fillOpacity": 0,
                 "gradientMode": "none",
                 "hideFrom": {
+                  "graph": false,
                   "legend": false,
                   "tooltip": false,
                   "viz": false
@@ -6329,13 +6326,8 @@
                 },
                 "showPoints": "auto",
                 "spanNulls": false,
-                "stacking": {
-                  "group": "A",
-                  "mode": "none"
-                },
-                "thresholdsStyle": {
-                  "mode": "off"
-                }
+                "stacking": {},
+                "thresholdsStyle": {}
               },
               "mappings": [],
               "thresholds": {
@@ -6359,7 +6351,7 @@
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 22
+            "y": 37
           },
           "id": 152,
           "options": {
@@ -6369,6 +6361,9 @@
               "placement": "bottom"
             },
             "tooltip": {
+              "mode": "single"
+            },
+            "tooltipOptions": {
               "mode": "single"
             }
           },
@@ -6399,6 +6394,7 @@
                 "fillOpacity": 0,
                 "gradientMode": "none",
                 "hideFrom": {
+                  "graph": false,
                   "legend": false,
                   "tooltip": false,
                   "viz": false
@@ -6411,13 +6407,8 @@
                 },
                 "showPoints": "auto",
                 "spanNulls": false,
-                "stacking": {
-                  "group": "A",
-                  "mode": "none"
-                },
-                "thresholdsStyle": {
-                  "mode": "off"
-                }
+                "stacking": {},
+                "thresholdsStyle": {}
               },
               "mappings": [],
               "thresholds": {
@@ -6441,7 +6432,7 @@
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 22
+            "y": 37
           },
           "id": 156,
           "options": {
@@ -6451,6 +6442,9 @@
               "placement": "bottom"
             },
             "tooltip": {
+              "mode": "single"
+            },
+            "tooltipOptions": {
               "mode": "single"
             }
           },
@@ -6466,6 +6460,270 @@
           "title": "Incoming requests error rate",
           "type": "timeseries"
         },
+        {
+          "datasource": null,
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 0,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "graph": false,
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "auto",
+                "spanNulls": false,
+                "stacking": {},
+                "thresholdsStyle": {}
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 24,
+            "x": 0,
+            "y": 45
+          },
+          "id": 158,
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "hidden",
+              "placement": "bottom"
+            },
+            "tooltip": {
+              "mode": "single"
+            },
+            "tooltipOptions": {
+              "mode": "single"
+            }
+          },
+          "targets": [
+            {
+              "exemplar": true,
+              "expr": "rate(beacon_reqresp_dial_errors_total[$__rate_interval])",
+              "interval": "",
+              "legendFormat": "",
+              "refId": "A"
+            }
+          ],
+          "title": "Dial errors rate",
+          "type": "timeseries"
+        }
+      ],
+      "title": "ReqResp Stats",
+      "type": "row"
+    },
+    {
+      "collapsed": true,
+      "datasource": null,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 29
+      },
+      "id": 164,
+      "panels": [
+        {
+          "datasource": null,
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 10,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "graph": false,
+                  "legend": false,
+                  "tooltip": false
+                },
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "log": 2,
+                  "type": "log"
+                },
+                "showPoints": "never",
+                "spanNulls": true
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              },
+              "unit": "short"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 9,
+            "w": 12,
+            "x": 0,
+            "y": 30
+          },
+          "id": 160,
+          "options": {
+            "graph": {},
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom"
+            },
+            "tooltipOptions": {
+              "mode": "multi"
+            }
+          },
+          "pluginVersion": "7.4.5",
+          "targets": [
+            {
+              "expr": "rate(lodestar_db_reads[$__rate_interval])",
+              "interval": "",
+              "legendFormat": "{{bucket}}",
+              "refId": "A"
+            }
+          ],
+          "title": "DB - reads / sec",
+          "type": "timeseries"
+        },
+        {
+          "datasource": null,
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 10,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "graph": false,
+                  "legend": false,
+                  "tooltip": false
+                },
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "log": 2,
+                  "type": "log"
+                },
+                "showPoints": "never",
+                "spanNulls": true
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              },
+              "unit": "short"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 9,
+            "w": 12,
+            "x": 12,
+            "y": 30
+          },
+          "id": 162,
+          "options": {
+            "graph": {},
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom"
+            },
+            "tooltipOptions": {
+              "mode": "multi"
+            }
+          },
+          "pluginVersion": "7.4.5",
+          "targets": [
+            {
+              "expr": "rate(lodestar_db_writes[$__rate_interval])",
+              "interval": "",
+              "legendFormat": "{{bucket}}",
+              "refId": "A"
+            }
+          ],
+          "title": "DB - writes / sec",
+          "type": "timeseries"
+        }
+      ],
+      "title": "DB disk",
+      "type": "row"
+    },
+    {
+      "collapsed": true,
+      "datasource": null,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 30
+      },
+      "id": 166,
+      "panels": [
         {
           "datasource": null,
           "fieldConfig": {
@@ -6516,19 +6774,65 @@
                 ]
               }
             },
-            "overrides": []
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "total"
+                },
+                "properties": [
+                  {
+                    "id": "color",
+                    "value": {
+                      "fixedColor": "yellow",
+                      "mode": "fixed"
+                    }
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "successes"
+                },
+                "properties": [
+                  {
+                    "id": "color",
+                    "value": {
+                      "fixedColor": "green",
+                      "mode": "fixed"
+                    }
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "success"
+                },
+                "properties": [
+                  {
+                    "id": "color",
+                    "value": {
+                      "fixedColor": "green",
+                      "mode": "fixed"
+                    }
+                  }
+                ]
+              }
+            ]
           },
           "gridPos": {
             "h": 8,
-            "w": 24,
+            "w": 12,
             "x": 0,
-            "y": 30
+            "y": 16
           },
-          "id": 158,
+          "id": 168,
           "options": {
             "legend": {
               "calcs": [],
-              "displayMode": "hidden",
+              "displayMode": "list",
               "placement": "bottom"
             },
             "tooltip": {
@@ -6538,17 +6842,107 @@
           "targets": [
             {
               "exemplar": true,
-              "expr": "rate(beacon_reqresp_dial_errors_total[$__rate_interval])",
+              "expr": "increase(beacon_block_production_requests_total[$__rate_interval])",
+              "interval": "",
+              "legendFormat": "total",
+              "refId": "A"
+            },
+            {
+              "exemplar": true,
+              "expr": "increase(beacon_block_production_successes_total[$__rate_interval])",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "success",
+              "refId": "B"
+            }
+          ],
+          "title": "Attempts vs successes",
+          "type": "timeseries"
+        },
+        {
+          "datasource": null,
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "bars",
+                "fillOpacity": 0,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "auto",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              },
+              "unit": "s"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 16
+          },
+          "id": 170,
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom"
+            },
+            "tooltip": {
+              "mode": "single"
+            }
+          },
+          "targets": [
+            {
+              "exemplar": true,
+              "expr": "delta(beacon_block_production_seconds_sum[$__rate_interval])/delta(beacon_block_production_seconds_count[$__rate_interval])",
               "interval": "",
               "legendFormat": "",
               "refId": "A"
             }
           ],
-          "title": "Dial errors rate",
+          "title": "Block production avg time",
           "type": "timeseries"
         }
       ],
-      "title": "ReqResp Stats",
+      "title": "Block Production Stats",
       "type": "row"
     }
   ],

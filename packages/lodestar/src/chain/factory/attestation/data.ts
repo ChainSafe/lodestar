@@ -1,5 +1,4 @@
 import {phase0, CommitteeIndex, Slot, Root, allForks} from "@chainsafe/lodestar-types";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {
   computeStartSlotAtEpoch,
   getBlockRootAtSlot,
@@ -7,7 +6,6 @@ import {
 } from "@chainsafe/lodestar-beacon-state-transition";
 
 export function assembleAttestationData(
-  config: IBeaconConfig,
   headState: allForks.BeaconState,
   headBlockRoot: Uint8Array,
   slot: Slot,

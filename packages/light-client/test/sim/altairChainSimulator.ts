@@ -1,5 +1,5 @@
 import {init} from "@chainsafe/bls";
-import {createIBeaconConfig} from "@chainsafe/lodestar-config";
+import {createIChainForkConfig} from "@chainsafe/lodestar-config";
 import {toHexString} from "@chainsafe/ssz";
 import {WinstonLogger} from "@chainsafe/lodestar-utils";
 import {altair, ssz} from "@chainsafe/lodestar-types";
@@ -14,7 +14,7 @@ import {generateBalances, generateValidators, getInteropSyncCommittee} from "../
 async function runAltairChainSimulator(): Promise<void> {
   await init("blst-native");
 
-  const config = createIBeaconConfig(leveParams);
+  const config = createIChainForkConfig(leveParams);
 
   // Create blocks and state
   const validatorCount = 4;

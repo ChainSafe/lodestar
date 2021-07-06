@@ -45,7 +45,7 @@ type SendRequestModules = {
  *    - The maximum number of requested chunks are read. Does not throw, returns read chunks only.
  */
 export async function sendRequest<T extends ResponseBody | ResponseBody[]>(
-  {config, logger, forkDigestContext, libp2p}: SendRequestModules,
+  {logger, forkDigestContext, libp2p}: SendRequestModules,
   peerId: PeerId,
   method: Method,
   encoding: Encoding,
@@ -117,20 +117,18 @@ export async function sendRequest<T extends ResponseBody | ResponseBody[]>(
 
     // REQUEST_TIMEOUT: Non-spec timeout from sending request until write stream closed by responder
     // Note: libp2p.stop() will close all connections, so not necessary to abort this pipe on parent stop
-    await withTimeout(
-      () => pipe(requestEncode(config, protocol, requestBody), stream.sink),
-      REQUEST_TIMEOUT,
-      signal
-    ).catch((e) => {
-      // Must close the stream read side (stream.source) manually AND the write side
-      stream.abort(e);
+    await withTimeout(() => pipe(requestEncode(protocol, requestBody), stream.sink), REQUEST_TIMEOUT, signal).catch(
+      (e) => {
+        // Must close the stream read side (stream.source) manually AND the write side
+        stream.abort(e);
 
-      if (e instanceof TimeoutError) {
-        throw new RequestInternalError({code: RequestErrorCode.REQUEST_TIMEOUT});
-      } else {
-        throw new RequestInternalError({code: RequestErrorCode.REQUEST_ERROR, error: e as Error});
+        if (e instanceof TimeoutError) {
+          throw new RequestInternalError({code: RequestErrorCode.REQUEST_TIMEOUT});
+        } else {
+          throw new RequestInternalError({code: RequestErrorCode.REQUEST_ERROR, error: e as Error});
+        }
       }
-    });
+    );
 
     logger.debug("Req  request sent", logCtx);
 
@@ -140,7 +138,7 @@ export async function sendRequest<T extends ResponseBody | ResponseBody[]>(
         () =>
           pipe(
             stream.source,
-            responseTimeoutsHandler(responseDecode(config, forkDigestContext, protocol), options),
+            responseTimeoutsHandler(responseDecode(forkDigestContext, protocol), options),
             collectResponses(method, maxResponses)
           ),
         maxTotalResponseTimeout(maxResponses, options)

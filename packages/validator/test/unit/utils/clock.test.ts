@@ -5,7 +5,7 @@ import {config} from "@chainsafe/lodestar-config/default";
 import {Clock, getCurrentSlotAround} from "../../../src/util/clock";
 import {testLogger} from "../../utils/logger";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
-import {IBeaconConfig} from "../../../../config/lib";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
 describe("util / Clock", function () {
   const logger = testLogger();

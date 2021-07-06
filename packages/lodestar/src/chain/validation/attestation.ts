@@ -227,7 +227,7 @@ function verifyHeadBlockIsKnown(chain: IBeaconChain, beaconBlockRoot: Root): IBl
   if (headBlock === null) {
     throw new AttestationError(GossipAction.IGNORE, {
       code: AttestationErrorCode.UNKNOWN_BEACON_BLOCK_ROOT,
-      root: beaconBlockRoot as Uint8Array,
+      root: beaconBlockRoot.valueOf() as Uint8Array,
     });
   }
 
@@ -255,7 +255,7 @@ function verifyAttestationTargetRoot(headBlock: IBlockSummary, targetRoot: Root,
     // https://github.com/ethereum/eth2.0-specs/pull/2001#issuecomment-699246659
     throw new AttestationError(GossipAction.REJECT, {
       code: AttestationErrorCode.INVALID_TARGET_ROOT,
-      targetRoot: targetRoot as Uint8Array,
+      targetRoot: targetRoot.valueOf() as Uint8Array,
       expected: null,
     });
   } else {
@@ -274,7 +274,7 @@ function verifyAttestationTargetRoot(headBlock: IBlockSummary, targetRoot: Root,
       // Reject any attestation with an invalid target root.
       throw new AttestationError(GossipAction.REJECT, {
         code: AttestationErrorCode.INVALID_TARGET_ROOT,
-        targetRoot: targetRoot as Uint8Array,
+        targetRoot: targetRoot.valueOf() as Uint8Array,
         expected: expectedTargetRoot,
       });
     }

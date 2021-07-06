@@ -67,7 +67,7 @@ export class Network implements INetwork {
     this.chain = chain;
     const networkEventBus = new NetworkEventBus();
     const metadata = new MetadataController({}, {config, chain, logger});
-    const peerMetadata = new Libp2pPeerMetadataStore(config, libp2p.peerStore.metadataBook);
+    const peerMetadata = new Libp2pPeerMetadataStore(libp2p.peerStore.metadataBook);
     const peerRpcScores = new PeerRpcScoreStore(peerMetadata);
     this.events = networkEventBus;
     this.metadata = metadata;

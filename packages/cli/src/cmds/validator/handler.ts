@@ -13,6 +13,7 @@ import {getValidatorPaths} from "./paths";
 import {IValidatorCliArgs} from "./options";
 import {onGracefulShutdown} from "../../util/process";
 import {getBeaconPaths} from "../beacon/paths";
+import {readLodestarGitData} from "../../util/gitData";
 
 /**
  * Run a validator client
@@ -27,6 +28,9 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
   const config = getBeaconConfigFromArgs(args);
 
   const logger = getCliLogger(args, beaconPaths, config);
+
+  const lodestarGitData = readLodestarGitData();
+  logger.info("Lodestar", {version: lodestarGitData.version, network: args.network});
 
   const secretKeys = await getSecretKeys(args);
   if (secretKeys.length === 0) throw new YargsError("No validator keystores found");

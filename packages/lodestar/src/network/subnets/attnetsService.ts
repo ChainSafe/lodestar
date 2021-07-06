@@ -1,5 +1,5 @@
 import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {
   ATTESTATION_SUBNET_COUNT,
   EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION,
@@ -48,7 +48,7 @@ export class AttnetsService implements IAttnetsService {
   private knownValidators = new Map<number, Slot>();
 
   constructor(
-    private readonly config: IBeaconConfig,
+    private readonly config: IChainForkConfig,
     private readonly chain: IBeaconChain,
     private readonly gossip: Eth2Gossipsub,
     private readonly metadata: MetadataController,

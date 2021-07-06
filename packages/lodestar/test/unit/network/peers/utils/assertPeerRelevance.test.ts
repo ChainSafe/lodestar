@@ -1,4 +1,3 @@
-import {config} from "@chainsafe/lodestar-config/default";
 import {phase0} from "@chainsafe/lodestar-types";
 import {MockBeaconChain} from "../../../../utils/mocks/chain/chain";
 import {
@@ -105,9 +104,9 @@ describe("network / peers / utils / assertPeerRelevance", () => {
       } as Partial<MockBeaconChain>) as MockBeaconChain;
 
       if (error) {
-        expectThrowsLodestarError(() => assertPeerRelevance(remote, chain, config), error);
+        expectThrowsLodestarError(() => assertPeerRelevance(remote, chain), error);
       } else {
-        assertPeerRelevance(remote, chain, config);
+        assertPeerRelevance(remote, chain);
       }
     });
   }

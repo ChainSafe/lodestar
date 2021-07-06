@@ -1,5 +1,4 @@
 import {itBench, setBenchOpts} from "@dapplion/benchmark";
-import {config} from "@chainsafe/lodestar-config/default";
 import {CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
 import {allForks, ssz} from "@chainsafe/lodestar-types";
 import {generateCachedState} from "../../../utils/state";
@@ -18,7 +17,7 @@ describe("CheckpointStateCache perf tests", function () {
   });
 
   before(() => {
-    checkpointStateCache = new CheckpointStateCache(config);
+    checkpointStateCache = new CheckpointStateCache();
     state = generateCachedState();
     checkpoint = ssz.phase0.Checkpoint.defaultValue();
   });

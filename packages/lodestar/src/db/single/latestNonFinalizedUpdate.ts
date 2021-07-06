@@ -1,5 +1,5 @@
 import {Type} from "@chainsafe/ssz";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {altair, ssz} from "@chainsafe/lodestar-types";
 import {IDatabaseController, Bucket, IDbMetrics} from "@chainsafe/lodestar-db";
 
@@ -10,7 +10,7 @@ export class LatestNonFinalizedUpdate {
   private readonly db: IDatabaseController<Buffer, Buffer>;
   private readonly metrics?: IDbMetrics;
 
-  constructor(config: IBeaconConfig, db: IDatabaseController<Buffer, Buffer>, metrics?: IDbMetrics) {
+  constructor(config: IChainForkConfig, db: IDatabaseController<Buffer, Buffer>, metrics?: IDbMetrics) {
     this.db = db;
     this.type = ssz.altair.LightClientUpdate;
     this.metrics = metrics;

@@ -167,5 +167,19 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
       name: "beacon_reqresp_dial_errors_total",
       help: "Count total dial errors",
     }),
+
+    blockProductionTime: register.histogram({
+      name: "beacon_block_production_seconds",
+      help: "Full runtime of block production",
+      buckets: [0.1, 1, 10],
+    }),
+    blockProductionRequests: register.gauge({
+      name: "beacon_block_production_requests_total",
+      help: "Count of all block production requests",
+    }),
+    blockProductionSuccess: register.gauge({
+      name: "beacon_block_production_successes_total",
+      help: "Count of blocks successfully produced",
+    }),
   };
 }

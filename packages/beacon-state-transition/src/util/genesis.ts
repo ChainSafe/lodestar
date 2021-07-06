@@ -1,5 +1,5 @@
 import {List, TreeBacked} from "@chainsafe/ssz";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {IBeaconConfig, IChainForkConfig} from "@chainsafe/lodestar-config";
 import {
   EFFECTIVE_BALANCE_INCREMENT,
   EPOCHS_PER_HISTORICAL_VECTOR,
@@ -23,7 +23,7 @@ import {CachedBeaconState, createCachedBeaconState, processDeposit} from "../all
  * @param config
  * @param state
  */
-export function isValidGenesisState(config: IBeaconConfig, state: allForks.BeaconState): boolean {
+export function isValidGenesisState(config: IChainForkConfig, state: allForks.BeaconState): boolean {
   return state.genesisTime >= config.MIN_GENESIS_TIME && isValidGenesisValidators(config, state);
 }
 
@@ -32,7 +32,7 @@ export function isValidGenesisState(config: IBeaconConfig, state: allForks.Beaco
  * @param config
  * @param state
  */
-export function isValidGenesisValidators(config: IBeaconConfig, state: allForks.BeaconState): boolean {
+export function isValidGenesisValidators(config: IChainForkConfig, state: allForks.BeaconState): boolean {
   return (
     getActiveValidatorIndices(state, computeEpochAtSlot(GENESIS_SLOT)).length >=
     config.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT
@@ -81,7 +81,7 @@ export function getGenesisBeaconState(
 
 /**
  * Apply eth1 block hash to state.
- * @param config IBeaconConfig
+ * @param config IChainForkConfig
  * @param state BeaconState
  * @param eth1BlockHash eth1 block hash
  */
@@ -97,7 +97,7 @@ export function applyEth1BlockHash(state: allForks.BeaconState, eth1BlockHash: B
  * @param eth1Timestamp eth1 block timestamp
  */
 export function applyTimestamp(
-  config: IBeaconConfig,
+  config: IChainForkConfig,
   state: TreeBacked<allForks.BeaconState>,
   eth1Timestamp: number
 ): void {
@@ -108,13 +108,13 @@ export function applyTimestamp(
  * Apply deposits to state.
  * For spec test, fullDepositDataRootList is undefined.
  * For genesis builder, fullDepositDataRootList is full list of deposit data root from index 0.
- * @param config IBeaconConfig
+ * @param config IChainForkConfig
  * @param state BeaconState
  * @param newDeposits new deposits
  * @param fullDepositDataRootList full list of deposit data root from index 0
  */
 export function applyDeposits(
-  config: IBeaconConfig,
+  config: IChainForkConfig,
   state: CachedBeaconState<allForks.BeaconState>,
   newDeposits: phase0.Deposit[],
   fullDepositDataRootList?: TreeBacked<List<Root>>
@@ -177,13 +177,15 @@ export function applyDeposits(
  * @param deposits
  */
 export function initializeBeaconStateFromEth1(
-  config: IBeaconConfig,
+  config: IChainForkConfig,
   eth1BlockHash: Bytes32,
   eth1Timestamp: Number64,
   deposits: phase0.Deposit[]
 ): TreeBacked<allForks.BeaconState> {
   const state = getGenesisBeaconState(
-    config,
+    // CachedBeaconcState is used for convinience only, we return TreeBacked<allForks.BeaconState> anyway
+    // so it's safe to do a cast here, we can't use get domain until we have genesisValidatorRoot
+    config as IBeaconConfig,
     ssz.phase0.Eth1Data.defaultValue(),
     getTemporaryBlockHeader(config, config.getForkTypes(GENESIS_SLOT).BeaconBlock.defaultValue())
   );

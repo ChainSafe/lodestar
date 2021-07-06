@@ -1,6 +1,6 @@
 import {hash, TreeBacked, List} from "@chainsafe/ssz";
 import {phase0, Root, ssz} from "@chainsafe/lodestar-types";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {
   computeDomain,
   computeSigningRoot,
@@ -13,7 +13,7 @@ import {BLS_WITHDRAWAL_PREFIX, DOMAIN_DEPOSIT, MAX_EFFECTIVE_BALANCE} from "@cha
  * Compute and return deposit data from other validators.
  */
 export function interopDeposits(
-  config: IBeaconConfig,
+  config: IChainForkConfig,
   depositDataRootList: TreeBacked<List<Root>>,
   validatorCount: number
 ): phase0.Deposit[] {

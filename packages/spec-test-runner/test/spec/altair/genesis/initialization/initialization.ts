@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import {join} from "path";
-import {createIBeaconConfig} from "@chainsafe/lodestar-config";
+import {createIChainForkConfig} from "@chainsafe/lodestar-config";
 import {altair, Uint64, Root, ssz} from "@chainsafe/lodestar-types";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
 import {initializeBeaconStateFromEth1} from "@chainsafe/lodestar-beacon-state-transition";
@@ -21,7 +21,7 @@ interface IGenesisInitSpecTest {
 
 export function runInitialization(presetName: PresetName): void {
   // eslint-disable-next-line @typescript-eslint/naming-convention
-  const config = createIBeaconConfig({ALTAIR_FORK_EPOCH: 0});
+  const config = createIChainForkConfig({ALTAIR_FORK_EPOCH: 0});
 
   describeDirectorySpecTest<IGenesisInitSpecTest, altair.BeaconState>(
     `genesis initialization ${presetName}`,
@@ -59,7 +59,7 @@ export function runInitialization(presetName: PresetName): void {
       timeout: 10000,
       getExpected: (testCase) => testCase.state,
       expectFunc: (testCase, expected, actual) => {
-        expectEqualBeaconState(config, expected, actual);
+        expectEqualBeaconState(expected, actual);
       },
     }
   );

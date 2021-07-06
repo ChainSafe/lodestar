@@ -1,4 +1,4 @@
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {
   ILogger,
@@ -26,7 +26,7 @@ export function errorLogger(): ILogger {
 /**
  * Setup a CLI logger, common for beacon, validator and dev commands
  */
-export function getCliLogger(args: ILogArgs, paths: {logFile?: string}, config: IBeaconConfig): ILogger {
+export function getCliLogger(args: ILogArgs, paths: {logFile?: string}, config: IChainForkConfig): ILogger {
   const transports: TransportOpts[] = [{type: TransportType.console}];
   if (paths.logFile) {
     transports.push({

@@ -17,6 +17,7 @@ import {getBeaconPaths} from "../beacon/paths";
 import {getValidatorPaths} from "../validator/paths";
 import {interopSecretKey} from "@chainsafe/lodestar-beacon-state-transition";
 import {SecretKey} from "@chainsafe/bls";
+import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 
 /**
  * Run a beacon node with validator
@@ -74,12 +75,13 @@ export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
       await nodeUtils.initDevState(config, db, validatorCount, genesisTime)
     );
   }
+  const beaconConfig = createIBeaconConfig(config, anchorState.genesisValidatorsRoot);
 
   const validators: Validator[] = [];
 
   const node = await BeaconNode.init({
     opts: options,
-    config,
+    config: beaconConfig,
     db,
     logger,
     libp2p,

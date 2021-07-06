@@ -1,4 +1,5 @@
 import {routes} from "@chainsafe/lodestar-api";
+// eslint-disable-next-line no-restricted-imports
 import {Api as IBeaconBlocksApi} from "@chainsafe/lodestar-api/lib/routes/beacon/block";
 import {SLOTS_PER_HISTORICAL_ROOT} from "@chainsafe/lodestar-params";
 import {ssz} from "@chainsafe/lodestar-types";

@@ -1,7 +1,6 @@
 import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
 import pipe from "it-pipe";
-import {config} from "@chainsafe/lodestar-config/default";
 import {phase0} from "@chainsafe/lodestar-types";
 import {Method, Encoding, getRequestSzzTypeByMethod, RequestBody} from "../../../../../src/network/reqresp/types";
 import {requestEncode} from "../../../../../src/network/reqresp/encoders/requestEncode";
@@ -42,11 +41,11 @@ describe("network / reqresp / encoders / request - types", () => {
       for (const [i, request] of requests.entries()) {
         it(`${encoding} ${method} - req ${i}`, async () => {
           const returnedRequest = await pipe(
-            requestEncode(config, {method, encoding}, request),
-            requestDecode(config, {method, encoding})
+            requestEncode({method, encoding}, request),
+            requestDecode({method, encoding})
           );
 
-          const type = getRequestSzzTypeByMethod(config, method);
+          const type = getRequestSzzTypeByMethod(method);
           if (!type) throw Error("no type");
 
           expect(isEqualSszType(type, returnedRequest, request)).to.equal(

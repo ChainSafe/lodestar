@@ -5,6 +5,7 @@ import {Epoch, Version, Root, DomainType, allForks} from "@chainsafe/lodestar-ty
 
 import {computeForkDataRoot} from "./fork";
 
+// Only used by processDeposit
 /**
  * Return the domain for the [[domainType]] and [[forkVersion]].
  */
@@ -18,12 +19,4 @@ export function computeDomain(domainType: DomainType, forkVersion: Version, gene
  */
 export function getForkVersion(fork: allForks.BeaconState["fork"], epoch: Epoch): Version {
   return epoch < fork.epoch ? fork.previousVersion : fork.currentVersion;
-}
-
-/**
- * Return the signature domain (fork version concatenated with domain type) of a message.
- */
-export function getDomain(state: allForks.BeaconState, domainType: DomainType, messageEpoch: Epoch): Buffer {
-  const forkVersion = getForkVersion(state.fork, messageEpoch);
-  return computeDomain(domainType, forkVersion, state.genesisValidatorsRoot);
 }

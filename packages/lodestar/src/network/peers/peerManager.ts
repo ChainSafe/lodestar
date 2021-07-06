@@ -233,7 +233,7 @@ export class PeerManager {
     this.peersToStatus.requestAfter(peer);
 
     try {
-      assertPeerRelevance(status, this.chain, this.config);
+      assertPeerRelevance(status, this.chain);
     } catch (e) {
       if (e instanceof IrrelevantPeerError) {
         this.logger.debug("Irrelevant peer", {peer: prettyPrintPeerId(peer), reason: e.getMetadata()});

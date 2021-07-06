@@ -6,7 +6,7 @@ import {
   computeSigningRoot,
   getCurrentSlot,
 } from "@chainsafe/lodestar-beacon-state-transition";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {phase0, ssz} from "@chainsafe/lodestar-types";
 import {Api} from "@chainsafe/lodestar-api";
 
@@ -18,7 +18,7 @@ export async function signAndSubmitVoluntaryExit(
   exitEpoch: number,
   secretKey: SecretKey,
   api: Api,
-  config: IBeaconConfig
+  config: IChainForkConfig
 ): Promise<void> {
   const stateValidatorRes = await api.beacon.getStateValidators("head", {indices: [publicKey]});
   const stateValidator = stateValidatorRes.data[0];

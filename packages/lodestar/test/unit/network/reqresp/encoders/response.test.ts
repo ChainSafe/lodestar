@@ -4,7 +4,7 @@ import pipe from "it-pipe";
 import all from "it-all";
 import {ForkName, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {chainConfig} from "@chainsafe/lodestar-config/default";
-import {createIBeaconConfig} from "@chainsafe/lodestar-config";
+import {createIChainForkConfig} from "@chainsafe/lodestar-config";
 import {LodestarError} from "@chainsafe/lodestar-utils";
 import {Method, Version, Encoding, Protocol, ResponseBody} from "../../../../../src/network/reqresp/types";
 import {getResponseSzzTypeByMethod} from "../../../../../src/network/reqresp/types";
@@ -45,7 +45,7 @@ describe("network / reqresp / encoders / response - Success and error cases", ()
   }
   const ALTAIR_FORK_EPOCH = Math.floor(slotBlockAltair / SLOTS_PER_EPOCH);
   // eslint-disable-next-line @typescript-eslint/naming-convention
-  const config = createIBeaconConfig({...chainConfig, ALTAIR_FORK_EPOCH});
+  const config = createIChainForkConfig({...chainConfig, ALTAIR_FORK_EPOCH});
 
   const forkDigestContext = new ForkDigestContext(config, Buffer.alloc(32, 0));
 
@@ -270,11 +270,7 @@ describe("network / reqresp / encoders / response - Success and error cases", ()
 
     if (chunks) {
       it(`${id} - responseDecode`, async () => {
-        const responseDecodePromise = pipe(
-          arrToSource(chunks),
-          responseDecode(config, forkDigestContext, protocol),
-          all
-        );
+        const responseDecodePromise = pipe(arrToSource(chunks), responseDecode(forkDigestContext, protocol), all);
 
         if (decodeError) {
           await expectRejectedWithLodestarError(responseDecodePromise, decodeError);
@@ -282,7 +278,7 @@ describe("network / reqresp / encoders / response - Success and error cases", ()
           const responses = await responseDecodePromise;
           const typeArr = responses.map((body) => {
             const forkName = getForkNameFromResponseBody(config, protocol, body);
-            return getResponseSzzTypeByMethod(config, protocol, forkName);
+            return getResponseSzzTypeByMethod(protocol, forkName);
           });
           expectIsEqualSszTypeArr(typeArr, responses, onlySuccessChunks(responseChunks), "Response chunks");
         } else {

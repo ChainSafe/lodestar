@@ -4,7 +4,7 @@ import {ERR_TOPIC_VALIDATOR_IGNORE, ERR_TOPIC_VALIDATOR_REJECT} from "libp2p-gos
 import {InMessage} from "libp2p-interfaces/src/pubsub";
 import Libp2p from "libp2p";
 import {AbortSignal} from "@chainsafe/abort-controller";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {ATTESTATION_SUBNET_COUNT, ForkName, SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
 import {allForks, altair, phase0} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
@@ -24,7 +24,7 @@ import {GossipHandlers} from "./handlers";
 import {Map2d, Map2dArr} from "../../util/map";
 
 interface IGossipsubModules {
-  config: IBeaconConfig;
+  config: IChainForkConfig;
   libp2p: Libp2p;
   logger: ILogger;
   metrics: IMetrics | null;
@@ -47,7 +47,7 @@ interface IGossipsubModules {
  * See https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/p2p-interface.md#the-gossip-domain-gossipsub
  */
 export class Eth2Gossipsub extends Gossipsub {
-  private readonly config: IBeaconConfig;
+  private readonly config: IChainForkConfig;
   private readonly forkDigestContext: IForkDigestContext;
   private readonly logger: ILogger;
 
