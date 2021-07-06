@@ -1,12 +1,13 @@
 import {Proof, ProofType, TreeOffsetProof} from "@chainsafe/persistent-merkle-tree";
-import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
+import {SLOTS_PER_EPOCH, SYNC_COMMITTEE_SIZE} from "@chainsafe/lodestar-params";
 import {Epoch, phase0} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {computeSyncPeriodAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
+// eslint-disable-next-line no-restricted-imports
+import {computeWeakSubjectivityPeriod} from "@chainsafe/lodestar-beacon-state-transition/lib/allForks/util/weakSubjectivity";
 import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {IBeaconDb} from "../../db";
 import {StateContextCache} from "../stateCache";
-import { computeWeakSubjectivityPeriod } from "../../../../beacon-state-transition/lib/allForks/util/weakSubjectivity";
 
 interface ILightClientIniterModules {
   config: IBeaconConfig;
@@ -25,6 +26,8 @@ export const stateProofPaths = [
   // required to verify signatures
   ["genesisValidatorsRoot"],
 ];
+
+const syncProofLeavesLength = SYNC_COMMITTEE_SIZE * 2 + 2;
 
 /**
  * Compute and cache "init" proofs as the chain advances
@@ -56,9 +59,18 @@ export class LightClientIniter {
     if (!stateProof || !currentSyncCommitteeProof || !nextSyncCommitteeProof) {
       return null;
     }
+
     // splice in committee proofs
-    // re-add the offsets we removed
-    stateProof.offsets.splice(7, 0, 1, 1026, ...currentSyncCommitteeProof.offsets, ...nextSyncCommitteeProof.offsets);
+    stateProof.offsets.splice(
+      7,
+      0,
+      // re-add the offsets we removed
+      1,
+      syncProofLeavesLength,
+      // committee proof offsets
+      ...currentSyncCommitteeProof.offsets,
+      ...nextSyncCommitteeProof.offsets
+    );
     stateProof.leaves.splice(7, 0, ...currentSyncCommitteeProof.leaves, ...nextSyncCommitteeProof.leaves);
 
     return stateProof;
@@ -103,7 +115,7 @@ export class LightClientIniter {
     // remove two offsets so the # of offsets in the state proof will be the # expected
     // This is a hack, but properly setting the offsets in the state proof would require either removing witnesses needed for the committees
     // or setting the roots of the committees in the state proof
-    // this will always be 1, 1026
+    // this will always be 1, syncProofLeavesLength
     stateProof.offsets.splice(7, 2);
 
     const currentSyncCommitteeProof: TreeOffsetProof = {
@@ -127,7 +139,6 @@ export class LightClientIniter {
       this.db.lightClientInitProof.keys({lt: wsEpoch}),
       this.db.lightClientSyncCommitteeProof.keys({lt: wsSyncPeriod}),
     ]);
-
 
     await Promise.all([
       // prune old proofs
