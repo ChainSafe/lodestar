@@ -1,10 +1,10 @@
 import {deserializeProof, Proof, serializeProof} from "@chainsafe/persistent-merkle-tree";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {Bucket, IDatabaseController, IDbMetrics, Repository} from "@chainsafe/lodestar-db";
 import {Type} from "@chainsafe/ssz";
 
 export class LightClientInitProofRepository extends Repository<number, Proof> {
-  constructor(config: IBeaconConfig, db: IDatabaseController<Buffer, Buffer>, metrics?: IDbMetrics) {
+  constructor(config: IChainForkConfig, db: IDatabaseController<Buffer, Buffer>, metrics?: IDbMetrics) {
     super(config, db, Bucket.altair_lightClientInitProof, (undefined as unknown) as Type<Proof>, metrics);
   }
 
@@ -23,7 +23,7 @@ export class LightClientInitProofRepository extends Repository<number, Proof> {
 }
 
 export class LightClientSyncCommitteeProofRepository extends Repository<number, Proof> {
-  constructor(config: IBeaconConfig, db: IDatabaseController<Buffer, Buffer>, metrics?: IDbMetrics) {
+  constructor(config: IChainForkConfig, db: IDatabaseController<Buffer, Buffer>, metrics?: IDbMetrics) {
     super(config, db, Bucket.altair_lightClientSyncCommitteeProof, (undefined as unknown) as Type<Proof>, metrics);
   }
 
