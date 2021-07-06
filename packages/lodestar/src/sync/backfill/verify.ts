@@ -14,14 +14,16 @@ export async function verifyBlocks(
   if (blocks.length === 0) {
     return;
   }
-  const nextRoot: Root = anchorRoot;
-  for (const block of blocks.reverse()) {
-    if (!ssz.Root.equals(config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message), nextRoot)) {
+  let nextRoot: Root = anchorRoot;
+  for (const block of blocks.slice(0).reverse()) {
+    const blockRoot = config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message);
+    if (!ssz.Root.equals(blockRoot, nextRoot)) {
       if (ssz.Root.equals(nextRoot, anchorRoot)) {
         throw new BackfillSyncError({code: BackfillSyncErrorCode.NOT_ANCHORED});
       }
       throw new BackfillSyncError({code: BackfillSyncErrorCode.NOT_LINEAR});
     }
+    nextRoot = block.message.parentRoot;
   }
   const signatures = blocks.map((block) => allForks.getProposerSignatureSet(state, block));
   if (!(await bls.verifySignatureSets(signatures))) {

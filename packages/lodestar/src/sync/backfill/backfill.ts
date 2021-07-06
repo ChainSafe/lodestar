@@ -1,7 +1,7 @@
 import {computeStartSlotAtEpoch, allForks as allForksUtils} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {GENESIS_EPOCH} from "@chainsafe/lodestar-params";
-import {phase0, Root, Slot, allForks} from "@chainsafe/lodestar-types";
+import {phase0, Root, Slot, allForks, ssz} from "@chainsafe/lodestar-types";
 import {ErrorAborted, ILogger} from "@chainsafe/lodestar-utils";
 import {List} from "@chainsafe/ssz";
 import PeerId from "peer-id";
@@ -47,7 +47,7 @@ export class BackfillSync {
   //last trusted block
   private anchorBlock: allForks.SignedBeaconBlock | null = null;
   private processor: ItTrigger = new ItTrigger();
-  private peers: PeerMap<phase0.Status> = new PeerMap();
+  private peers: PeerMap<phase0.Status | null> = new PeerMap();
 
   constructor(modules: RangeSyncModules, opts?: BackfillSyncOpts) {
     this.chain = modules.chain;
@@ -56,28 +56,33 @@ export class BackfillSync {
     this.config = modules.config;
     this.logger = modules.logger;
     this.opts = opts ?? {batchSize: 32};
-    this.network.events.addListener(NetworkEvent.peerConnected, this.addPeer);
-    this.network.events.addListener(NetworkEvent.peerDisconnected, this.removePeer);
+    this.network.events.on(NetworkEvent.peerConnected, this.addPeer);
+    this.network.events.on(NetworkEvent.peerDisconnected, this.removePeer);
+    this.network.getConnectedPeers().forEach((peer) => this.peers.set(peer, null));
     void this.init();
   }
 
   /** Throw / return all AsyncGenerators */
   close(): void {
-    this.network.events.removeListener(NetworkEvent.peerConnected, this.addPeer);
-    this.network.events.removeListener(NetworkEvent.peerDisconnected, this.removePeer);
+    this.network.events.off(NetworkEvent.peerConnected, this.addPeer);
+    this.network.events.off(NetworkEvent.peerDisconnected, this.removePeer);
     this.processor.end(new ErrorAborted("BackfillSync"));
   }
 
   async init(): Promise<void> {
-    const anchorState = this.chain.getHeadState();
-    const parentBlockRoot: Root = anchorState.latestBlockHeader.parentRoot;
-    this.anchorBlock = await this.db.blockArchive.getByRoot(parentBlockRoot);
+    const finalizedCheckpoint = this.chain.getFinalizedCheckpoint();
+    this.logger.debug("Initializing backfill sync from finalizedCheckpoint", {
+      checkpoint: ssz.phase0.Checkpoint.toJson(finalizedCheckpoint),
+    });
+    this.anchorBlock = await this.db.blockArchive.getByRoot(finalizedCheckpoint.root);
     void this.sync();
+    this.processor.trigger();
   }
 
   async sync(): Promise<void> {
     try {
       for await (const _ of this.processor) {
+        this.logger.debug("Backfill Sync - Peer count", {peerCount: this.peers.size});
         if (this.peers.size === 0) continue;
 
         const oldestRequiredEpoch = Math.max(
@@ -85,7 +90,7 @@ export class BackfillSync {
           this.chain.clock.currentEpoch - getMinEpochForBlockRequests(this.config)
         );
         const oldestSlotRequired = computeStartSlotAtEpoch(oldestRequiredEpoch);
-
+        this.logger.debug("Backfill sync", {oldestSlotRequired, anchorSlot: this.anchorBlock?.message.slot ?? 0});
         if (this.anchorBlock) {
           try {
             const toSlot = this.lastFetchedSlot ?? this.anchorBlock.message.slot;
@@ -94,6 +99,12 @@ export class BackfillSync {
               this.logger.info("Backfill sync completed");
               break;
             }
+            this.logger.debug("BackfillSync - range sync", {
+              fromSlot,
+              toSlot,
+              anchorSlot: this.anchorBlock.message.slot,
+              lastFetched: this.lastFetchedSlot ?? -1,
+            });
             await this.syncRange(fromSlot, toSlot, this.anchorBlock.message.parentRoot);
           } catch (e) {
             this.logger.debug("Error while backfiling by range", e);
@@ -114,13 +125,15 @@ export class BackfillSync {
     }
   }
 
-  private async addPeer(peerId: PeerId, peerStatus: phase0.Status): Promise<void> {
-    const requiredSlot = this.anchorBlock?.message.slot ?? this.chain.getHeadState().slot;
+  private addPeer = (peerId: PeerId, peerStatus: phase0.Status): void => {
+    const requiredSlot =
+      this.anchorBlock?.message.slot ?? computeStartSlotAtEpoch(this.chain.getFinalizedCheckpoint().epoch);
+    this.logger.debug("Backfill sync - add peer", {peerhead: peerStatus.headSlot, requiredSlot});
     if (peerStatus.headSlot >= requiredSlot) {
       this.peers.set(peerId, peerStatus);
       this.processor.trigger();
     }
-  }
+  };
 
   /**
    * Remove this peer from all sync chains
