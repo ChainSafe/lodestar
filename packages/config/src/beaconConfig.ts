@@ -1,4 +1,4 @@
-import {Root} from "../../types";
+import {Root} from "@chainsafe/lodestar-types";
 import {createIChainConfig, IChainConfig} from "./chainConfig";
 import {createIForkConfig, IForkConfig} from "./forkConfig";
 import {createICachedGenesis} from "./genesisConfig";
