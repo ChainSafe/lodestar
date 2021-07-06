@@ -1,6 +1,6 @@
 import {ERR_TOPIC_VALIDATOR_IGNORE, ERR_TOPIC_VALIDATOR_REJECT} from "libp2p-gossipsub/src/constants";
 import {AbortSignal} from "@chainsafe/abort-controller";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {Json} from "@chainsafe/ssz";
 import {ILogger, mapValues} from "@chainsafe/lodestar-utils";
 import {IMetrics} from "../../../metrics";
@@ -15,7 +15,7 @@ import {DEFAULT_ENCODING} from "../constants";
 import {getGossipAcceptMetadataByType, GetGossipAcceptMetadataFn} from "./onAccept";
 
 type ValidatorFnModules = {
-  config: IBeaconConfig;
+  config: IChainForkConfig;
   logger: ILogger;
   metrics: IMetrics | null;
   uncompressCache: UncompressCache;

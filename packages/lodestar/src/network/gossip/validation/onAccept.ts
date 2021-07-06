@@ -1,14 +1,14 @@
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {Json, toHexString} from "@chainsafe/ssz";
 import {GossipType, GossipTypeMap, GossipTopicTypeMap} from "../interface";
 
 export type GetGossipAcceptMetadataFn = (
-  config: IBeaconConfig,
+  config: IChainForkConfig,
   object: GossipTypeMap[GossipType],
   topic: GossipTopicTypeMap[GossipType]
 ) => Json;
 export type GetGossipAcceptMetadataFns = {
-  [K in GossipType]: (config: IBeaconConfig, object: GossipTypeMap[K], topic: GossipTopicTypeMap[K]) => Json;
+  [K in GossipType]: (config: IChainForkConfig, object: GossipTypeMap[K], topic: GossipTopicTypeMap[K]) => Json;
 };
 
 /**

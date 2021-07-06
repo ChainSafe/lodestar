@@ -1,5 +1,5 @@
 import {ATTESTATION_SUBNET_COUNT, ForkName, SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {IForkDigestContext} from "../../../util/forkDigestContext";
 import {stringifyGossipTopic} from "../topic";
 import {DEFAULT_ENCODING} from "../constants";
@@ -20,7 +20,7 @@ import {GossipType, GossipValidatorFn, GossipTopic, ValidatorFnsByType} from "..
  * ```
  */
 export function createValidatorFnsByTopic(
-  config: IBeaconConfig,
+  config: IChainForkConfig,
   forkDigestContext: IForkDigestContext,
   validatorFnsByType: ValidatorFnsByType
 ): Map<string, GossipValidatorFn> {
