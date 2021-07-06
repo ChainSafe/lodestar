@@ -76,6 +76,8 @@ export class TasksService {
 
   private processFinalizedCheckpoint = async (finalized: phase0.Checkpoint): Promise<void> => {
     try {
+      const finalizedEpoch = finalized.epoch;
+      this.logger.verbose("Start processing finalized checkpoint", {epoch: finalizedEpoch});
       await new ArchiveBlocksTask(
         {db: this.db, forkChoice: this.chain.forkChoice, logger: this.logger},
         finalized
@@ -84,7 +86,6 @@ export class TasksService {
       // should be after ArchiveBlocksTask to handle restart cleanly
       await this.statesArchiver.maybeArchiveState(finalized);
 
-      const finalizedEpoch = finalized.epoch;
       await Promise.all([
         this.chain.checkpointStateCache.pruneFinalized(finalizedEpoch),
         this.chain.stateCache.deleteAllBeforeEpoch(finalizedEpoch),

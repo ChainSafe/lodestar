@@ -143,10 +143,12 @@ describe("LodestarForkChoice", function () {
       forkChoice.onBlock(block24.message, state24, justifiedBalances);
       forkChoice.onBlock(block28.message, state28, justifiedBalances);
       expect(forkChoice.iterateBlockSummaries(ssz.phase0.BeaconBlock.hashTreeRoot(block16.message)).length).to.be.equal(
-        4
+        3,
+        "iterateBlockSummaries should return 3 blocks"
       );
       expect(forkChoice.iterateBlockSummaries(ssz.phase0.BeaconBlock.hashTreeRoot(block24.message)).length).to.be.equal(
-        6
+        5,
+        "iterateBlockSummaries should return 5 blocks"
       );
       expect(forkChoice.getBlock(ssz.phase0.BeaconBlock.hashTreeRoot(block08.message))).to.be.not.null;
       expect(forkChoice.getBlock(ssz.phase0.BeaconBlock.hashTreeRoot(block12.message))).to.be.not.null;
@@ -155,10 +157,12 @@ describe("LodestarForkChoice", function () {
       forkChoice.onBlock(block32.message, state32, justifiedBalances);
       forkChoice.prune(ssz.phase0.BeaconBlock.hashTreeRoot(block16.message));
       expect(forkChoice.iterateBlockSummaries(ssz.phase0.BeaconBlock.hashTreeRoot(block16.message)).length).to.be.equal(
-        1
+        0,
+        "iterateBlockSummaries should not return finalized block"
       );
       expect(forkChoice.iterateBlockSummaries(ssz.phase0.BeaconBlock.hashTreeRoot(block24.message)).length).to.be.equal(
-        3
+        2,
+        "iterateBlockSummaries should return 2 blocks"
       );
       expect(forkChoice.getBlock(ssz.phase0.BeaconBlock.hashTreeRoot(block08.message))).to.be.null;
       expect(forkChoice.getBlock(ssz.phase0.BeaconBlock.hashTreeRoot(block12.message))).to.be.null;

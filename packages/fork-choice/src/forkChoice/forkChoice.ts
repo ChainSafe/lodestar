@@ -552,10 +552,13 @@ export class ForkChoice implements IForkChoice {
   }
 
   /**
-   * Iterates backwards through block summaries, starting from a block root
+   * Iterates backwards through block summaries, starting from a block root.
+   * Return only the non-finalized blocks.
    */
   iterateBlockSummaries(blockRoot: phase0.Root): IBlockSummary[] {
-    return this.protoArray.iterateNodes(toHexString(blockRoot)).map(toBlockSummary);
+    const blocks = this.protoArray.iterateNodes(toHexString(blockRoot)).map(toBlockSummary);
+    // the last node is the previous finalized one, it's there to check onBlock finalized checkpoint only.
+    return blocks.slice(0, blocks.length - 1);
   }
 
   /**
