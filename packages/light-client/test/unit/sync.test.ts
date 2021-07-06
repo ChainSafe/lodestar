@@ -157,7 +157,7 @@ describe("Lightclient flow with LightClientUpdater", () => {
     expect(lightclient.getHeader().slot).to.equal(80, "Wrong store.snapshot.header.slot after applying updates");
   });
 
-  it("Simulate a second lightclient syncing over the API from a checkpoint", async () => {
+  it.skip("Simulate a second lightclient syncing over the API from a checkpoint", async () => {
     const lightclient = await Lightclient.initializeFromCheckpoint(config, beaconApiUrl, genesisCheckpoint);
 
     await lightclient.sync();
