@@ -11,7 +11,7 @@ import {
   getCurrentEpoch,
   getSeed,
 } from "../../src";
-import {createIBeaconConfig} from "@chainsafe/lodestar-config";
+import {createIChainForkConfig} from "@chainsafe/lodestar-config";
 import {computeCommitteeCount, PubkeyIndexMap} from "../../src/allForks";
 import {profilerLogger} from "../utils/logger";
 import {interopPubkeysCached} from "../utils/interop";
@@ -117,7 +117,7 @@ export function generatePerfTestCachedStateAltair(opts?: {
 }): allForks.CachedBeaconState<altair.BeaconState> {
   const {pubkeys, pubkeysMod, pubkeysModObj} = getPubkeys();
   // eslint-disable-next-line @typescript-eslint/naming-convention
-  const altairConfig = createIBeaconConfig({ALTAIR_FORK_EPOCH: 0});
+  const altairConfig = createIChainForkConfig({ALTAIR_FORK_EPOCH: 0});
 
   // Manually sync pubkeys to prevent doing BLS opts 110_000 times
   const pubkey2index = new PubkeyIndexMap();

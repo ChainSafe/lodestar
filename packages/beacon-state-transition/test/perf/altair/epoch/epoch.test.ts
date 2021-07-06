@@ -1,21 +1,14 @@
-// import {init} from "@chainsafe/bls";
 import {itBench, setBenchOpts} from "@dapplion/benchmark";
 import {allForks, altair} from "../../../../src";
 import {generatePerfTestCachedStateAltair} from "../../util";
 
-/**
- * TODO: got OOM if we run all steps so it's not part of benchmark workflow for now.
- * Comment out some steps to run locally.
- */
 
-describe("Altair epoch transition steps", () => {
+describe.skip("Altair epoch transition steps", () => {
   setBenchOpts({
     maxMs: 60 * 1000,
     minMs: 15 * 1000,
     runs: 64,
   });
-
-  // await init("blst-native");
 
   const originalState = generatePerfTestCachedStateAltair({goBackOneSlot: true});
   const process = allForks.prepareEpochProcessState(originalState);
