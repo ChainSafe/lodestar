@@ -1,7 +1,7 @@
 import {Proof, ProofType, TreeOffsetProof} from "@chainsafe/persistent-merkle-tree";
 import {SLOTS_PER_EPOCH, SYNC_COMMITTEE_SIZE} from "@chainsafe/lodestar-params";
 import {Epoch, phase0} from "@chainsafe/lodestar-types";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {computeSyncPeriodAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 // eslint-disable-next-line no-restricted-imports
 import {computeWeakSubjectivityPeriod} from "@chainsafe/lodestar-beacon-state-transition/lib/allForks/util/weakSubjectivity";
@@ -10,7 +10,7 @@ import {IBeaconDb} from "../../db";
 import {StateContextCache} from "../stateCache";
 
 interface ILightClientIniterModules {
-  config: IBeaconConfig;
+  config: IChainForkConfig;
   db: IBeaconDb;
   forkChoice: ForkChoice;
   stateCache: StateContextCache;
@@ -33,7 +33,7 @@ const syncProofLeavesLength = SYNC_COMMITTEE_SIZE * 2 + 2;
  * Compute and cache "init" proofs as the chain advances
  */
 export class LightClientIniter {
-  private readonly config: IBeaconConfig;
+  private readonly config: IChainForkConfig;
   private readonly db: IBeaconDb;
   private readonly forkChoice: ForkChoice;
   private readonly stateCache: StateContextCache;

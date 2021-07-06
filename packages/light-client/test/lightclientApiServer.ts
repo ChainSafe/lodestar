@@ -86,6 +86,11 @@ function getLightclientServerApi(modules: ServerModules): Api["lightclient"] {
       if (!data) throw Error("No update available");
       return {data};
     },
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    async getInitProof(epoch) {
+      throw Error("No init proof available");
+    },
   };
 }
 
