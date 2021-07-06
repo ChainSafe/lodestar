@@ -1,6 +1,6 @@
 import {altair, ssz} from "@chainsafe/lodestar-types";
 import {expect} from "chai";
-import {SyncContributionAndProofPool} from "../../../../src/chain/opsPool";
+import {SyncContributionAndProofPool} from "../../../../src/chain/opPools";
 import {generateContributionAndProof} from "../../../utils/contributionAndProof";
 
 describe("chain / opPools / SyncContributionAndProofPool", function () {
