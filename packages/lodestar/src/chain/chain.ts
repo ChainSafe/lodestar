@@ -29,9 +29,9 @@ import {IStateRegenerator, QueuedStateRegenerator} from "./regen";
 import {LodestarForkChoice} from "./forkChoice";
 import {restoreStateCaches} from "./initState";
 import {IBlsVerifier, BlsSingleThreadVerifier, BlsMultiThreadWorkerPool} from "./bls";
-import {SeenAttesters, SeenAggregators} from "./seenCache";
+import {SeenAttesters, SeenAggregators, SeenSyncCommitteeMessages, SeenContributionAndProof} from "./seenCache";
+import {AttestationPool, SyncCommitteeMessagePool, SyncContributionAndProofPool} from "./opPools";
 import {ForkDigestContext, IForkDigestContext} from "../util/forkDigestContext";
-import {AttestationPool} from "./opsPool/attestationPool";
 
 export interface IBeaconChainModules {
   config: IBeaconConfig;
@@ -58,9 +58,14 @@ export class BeaconChain implements IBeaconChain {
 
   // Ops pool
   readonly attestationPool = new AttestationPool();
+  readonly syncCommitteeMessagePool = new SyncCommitteeMessagePool();
+  readonly syncContributionAndProofPool = new SyncContributionAndProofPool();
 
+  // Gossip seen cache
   readonly seenAttesters = new SeenAttesters();
   readonly seenAggregators = new SeenAggregators();
+  readonly seenSyncCommitteeMessages = new SeenSyncCommitteeMessages();
+  readonly seenContributionAndProof = new SeenContributionAndProof();
 
   protected blockProcessor: BlockProcessor;
   protected readonly config: IBeaconConfig;

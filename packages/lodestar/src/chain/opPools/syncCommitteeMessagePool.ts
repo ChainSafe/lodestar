@@ -1,102 +1,82 @@
 import bls, {PointFormat, Signature} from "@chainsafe/bls";
 import {SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
 import {newFilledArray} from "@chainsafe/lodestar-beacon-state-transition";
-import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {altair, phase0, Slot} from "@chainsafe/lodestar-types";
 import {BitList, toHexString} from "@chainsafe/ssz";
+import {MapDef} from "../../util/map";
+import {InsertOutcome, OpPoolError, OpPoolErrorCode} from "./types";
+import {pruneBySlot} from "./utils";
 
 /**
  * SyncCommittee signatures are only useful during a single slot according to our peer's clocks
  */
-const MAX_SLOTS_IN_CACHE = 3;
+const SLOTS_RETAINED = 3;
+
+/**
+ * The maximum number of distinct `ContributionFast` that will be stored in each slot.
+ *
+ * This is a DoS protection measure.
+ */
+const MAX_ITEMS_PER_SLOT = 512;
 
 type ContributionFast = Omit<altair.SyncCommitteeContribution, "aggregationBits" | "signature"> & {
   aggregationBits: boolean[];
   signature: Signature;
 };
 
-/** ValidataorSubnetKey = `validatorIndex + subCommitteeIndex` */
-type ValidataorSubnetKey = string;
 /** Hex string of `contribution.beaconBlockRoot` */
 type BlockRootHex = string;
+type Subnet = phase0.SubCommitteeIndex;
 
 /**
  * Preaggregate SyncCommitteeMessage into SyncCommitteeContribution
  * and cache seen SyncCommitteeMessage by slot + validator index.
  * This stays in-memory and should be pruned per slot.
  */
-export class SyncCommitteeCache {
+export class SyncCommitteeMessagePool {
   /**
    * Each array item is respective to a subCommitteeIndex.
    * Preaggregate into SyncCommitteeContribution.
    * */
-  private readonly contributionsByRootBySubnetBySlot = new Map<
+  private readonly contributionsByRootBySubnetBySlot = new MapDef<
     phase0.Slot,
-    Map<number, Map<BlockRootHex, ContributionFast>>
-  >();
-
-  /**
-   * Each array item is respective to a subCommitteeIndex.
-   * A seen SyncCommitteeMessage is decided by slot + validator index.
-   */
-  private readonly seenCacheBySlot = new Map<phase0.Slot, Set<ValidataorSubnetKey>>();
-
-  constructor(private readonly config: IChainForkConfig) {}
-
-  /** Register item as seen in the cache */
-  seen(subnet: phase0.SubCommitteeIndex, syncCommitteeSignature: altair.SyncCommitteeMessage): void {
-    const {slot} = syncCommitteeSignature;
-    let seenCache = this.seenCacheBySlot.get(slot);
-    if (!seenCache) {
-      seenCache = new Set<ValidataorSubnetKey>();
-      this.seenCacheBySlot.set(slot, seenCache);
-    }
-    seenCache.add(seenCacheKey(subnet, syncCommitteeSignature));
-  }
+    MapDef<Subnet, Map<BlockRootHex, ContributionFast>>
+  >(() => new MapDef<Subnet, Map<BlockRootHex, ContributionFast>>(() => new Map<BlockRootHex, ContributionFast>()));
+  private lowestPermissibleSlot = 0;
 
   // TODO: indexInSubCommittee: number should be indicesInSyncCommittee
-  add(subnet: phase0.SubCommitteeIndex, signature: altair.SyncCommitteeMessage, indexInSubCommittee: number): void {
+  add(subnet: Subnet, signature: altair.SyncCommitteeMessage, indexInSubCommittee: number): InsertOutcome {
     const {slot, beaconBlockRoot} = signature;
     const rootHex = toHexString(beaconBlockRoot);
+    const lowestPermissibleSlot = this.lowestPermissibleSlot;
+
+    // Reject if too old.
+    if (slot < lowestPermissibleSlot) {
+      throw new OpPoolError({code: OpPoolErrorCode.SLOT_TOO_LOW, slot, lowestPermissibleSlot});
+    }
+
+    // Limit object per slot
+    const contributionsByRoot = this.contributionsByRootBySubnetBySlot.getOrDefault(slot).getOrDefault(subnet);
+    if (contributionsByRoot.size >= MAX_ITEMS_PER_SLOT) {
+      throw new OpPoolError({code: OpPoolErrorCode.REACHED_MAX_PER_SLOT});
+    }
 
     // Pre-aggregate the contribution with existing items
-    // Level 1 - by slot
-    let contributionsByRootBySubnet = this.contributionsByRootBySubnetBySlot.get(slot);
-    if (!contributionsByRootBySubnet) {
-      contributionsByRootBySubnet = new Map<number, Map<BlockRootHex, ContributionFast>>();
-      this.contributionsByRootBySubnetBySlot.set(slot, contributionsByRootBySubnet);
-    }
-    // Level 2 - by subnet
-    let contributionsByRoot = contributionsByRootBySubnet.get(subnet);
-    if (!contributionsByRoot) {
-      contributionsByRoot = new Map<BlockRootHex, ContributionFast>();
-      contributionsByRootBySubnet.set(subnet, contributionsByRoot);
-    }
-    // Level 3 - by root
     const contribution = contributionsByRoot.get(rootHex);
     if (contribution) {
       // Aggregate mutating
-      aggregateSignatureInto(contribution, signature, indexInSubCommittee);
+      return aggregateSignatureInto(contribution, signature, indexInSubCommittee);
     } else {
       // Create new aggregate
-      contributionsByRoot.set(rootHex, signatureToAggregate(this.config, subnet, signature, indexInSubCommittee));
+      contributionsByRoot.set(rootHex, signatureToAggregate(subnet, signature, indexInSubCommittee));
+      return InsertOutcome.NewData;
     }
-
-    // Mark this item as seen for has()
-    this.seen(subnet, signature);
-  }
-
-  /**
-   * based on slot + validator index
-   */
-  has(subnet: phase0.SubCommitteeIndex, syncCommittee: altair.SyncCommitteeMessage): boolean {
-    return this.seenCacheBySlot.get(syncCommittee.slot)?.has(seenCacheKey(subnet, syncCommittee)) === true;
   }
 
   /**
    * This is for the aggregator to produce ContributionAndProof.
    */
-  getSyncCommitteeContribution(
+  getContribution(
     subnet: phase0.SubCommitteeIndex,
     slot: phase0.Slot,
     prevBlockRoot: phase0.Root
@@ -118,17 +98,8 @@ export class SyncCommitteeCache {
    * SyncCommittee signatures are only useful during a single slot according to our peer's clocks
    */
   prune(clockSlot: Slot): void {
-    for (const slot of this.contributionsByRootBySubnetBySlot.keys()) {
-      if (slot < clockSlot - MAX_SLOTS_IN_CACHE) {
-        this.contributionsByRootBySubnetBySlot.delete(slot);
-      }
-    }
-
-    for (const slot of this.seenCacheBySlot.keys()) {
-      if (slot < clockSlot - MAX_SLOTS_IN_CACHE) {
-        this.seenCacheBySlot.delete(slot);
-      }
-    }
+    pruneBySlot(this.contributionsByRootBySubnetBySlot, clockSlot, SLOTS_RETAINED);
+    this.lowestPermissibleSlot = Math.max(clockSlot - SLOTS_RETAINED, 0);
   }
 }
 
@@ -139,11 +110,9 @@ function aggregateSignatureInto(
   contribution: ContributionFast,
   signature: altair.SyncCommitteeMessage,
   indexInSubCommittee: number
-): void {
+): InsertOutcome {
   if (contribution.aggregationBits[indexInSubCommittee] === true) {
-    throw Error(
-      `Already aggregated SyncCommitteeMessage - subCommitteeIndex=${contribution.subCommitteeIndex} indexInSubCommittee=${indexInSubCommittee}`
-    );
+    return InsertOutcome.AlreadyKnown;
   }
 
   contribution.aggregationBits[indexInSubCommittee] = true;
@@ -152,13 +121,13 @@ function aggregateSignatureInto(
     contribution.signature,
     bls.Signature.fromBytes(signature.signature.valueOf() as Uint8Array),
   ]);
+  return InsertOutcome.Aggregated;
 }
 
 /**
  * Format `signature` into an efficient `contribution` to add more signatures in with aggregateSignatureInto()
  */
 function signatureToAggregate(
-  config: IChainForkConfig,
   subnet: number,
   signature: altair.SyncCommitteeMessage,
   indexInSubCommittee: number
@@ -174,8 +143,4 @@ function signatureToAggregate(
     aggregationBits,
     signature: bls.Signature.fromBytes(signature.signature.valueOf() as Uint8Array),
   };
-}
-
-function seenCacheKey(subnet: number, syncCommittee: altair.SyncCommitteeMessage): ValidataorSubnetKey {
-  return `${subnet}-${syncCommittee.validatorIndex}`;
 }

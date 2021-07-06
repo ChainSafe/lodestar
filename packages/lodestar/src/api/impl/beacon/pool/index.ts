@@ -131,7 +131,7 @@ export function getBeaconPoolApi({
                 // Sync committee subnet members are just sequential in the order they appear in SyncCommitteeIndexes array
                 const subnet = Math.floor(indexInCommittee / SYNC_COMMITTEE_SUBNET_SIZE);
                 const indexInSubCommittee = indexInCommittee % SYNC_COMMITTEE_SUBNET_SIZE;
-                db.syncCommittee.add(subnet, signature, indexInSubCommittee);
+                chain.syncCommitteeMessagePool.add(subnet, signature, indexInSubCommittee);
                 await network.gossip.publishSyncCommitteeSignature(signature, subnet);
               })
             );

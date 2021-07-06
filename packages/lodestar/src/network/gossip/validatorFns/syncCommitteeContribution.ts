@@ -10,14 +10,14 @@ import {GossipTopic, IObjectValidatorModules} from "../interface";
  * Validate messages from `sync_committee_contribution_and_proof`
  */
 export async function validateSyncCommitteeContribution(
-  {chain, db, logger}: IObjectValidatorModules,
+  {chain, logger}: IObjectValidatorModules,
   _topic: GossipTopic,
   contributionAndProof: altair.SignedContributionAndProof
 ): Promise<void> {
   const metadata = {slot: contributionAndProof.message.contribution.slot};
   try {
     const contributionAndProofJob: IContributionAndProofJob = {contributionAndProof, validSignature: false};
-    await validateSyncCommitteeGossipContributionAndProof(chain, db, contributionAndProofJob);
+    await validateSyncCommitteeGossipContributionAndProof(chain, contributionAndProofJob);
     logger.debug("gossip - sync_committee_contribution_and_proof - accept", metadata);
   } catch (e) {
     if (!(e instanceof SyncCommitteeError)) {

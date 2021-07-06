@@ -22,8 +22,14 @@ import {ForkDigestContext, IForkDigestContext} from "../../../../src/util/forkDi
 import {generateEmptyBlockSummary} from "../../block";
 import {ForkName} from "@chainsafe/lodestar-params";
 import {testLogger} from "../../logger";
-import {AttestationPool} from "../../../../src/chain/opsPool/attestationPool";
-import {SeenAggregators, SeenAttesters} from "../../../../src/chain/seenCache";
+import {AttestationPool} from "../../../../src/chain/opPools/attestationPool";
+import {
+  SeenAggregators,
+  SeenAttesters,
+  SeenContributionAndProof,
+  SeenSyncCommitteeMessages,
+} from "../../../../src/chain/seenCache";
+import {SyncCommitteeMessagePool, SyncContributionAndProofPool} from "../../../../src/chain/opPools";
 
 /* eslint-disable @typescript-eslint/no-empty-function */
 
@@ -53,9 +59,14 @@ export class MockBeaconChain implements IBeaconChain {
 
   // Ops pool
   readonly attestationPool = new AttestationPool();
+  readonly syncCommitteeMessagePool = new SyncCommitteeMessagePool();
+  readonly syncContributionAndProofPool = new SyncContributionAndProofPool();
 
+  // Gossip seen cache
   readonly seenAttesters = new SeenAttesters();
   readonly seenAggregators = new SeenAggregators();
+  readonly seenSyncCommitteeMessages = new SeenSyncCommitteeMessages();
+  readonly seenContributionAndProof = new SeenContributionAndProof();
 
   private state: TreeBacked<allForks.BeaconState>;
   private config: IChainForkConfig;

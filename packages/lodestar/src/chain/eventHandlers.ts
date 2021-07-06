@@ -96,6 +96,8 @@ export async function onClockSlot(this: BeaconChain, slot: Slot): Promise<void> 
   this.metrics?.clockSlot.set(slot);
 
   this.attestationPool.prune(slot);
+  this.syncCommitteeMessagePool.prune(slot);
+  this.seenSyncCommitteeMessages.prune(slot);
 
   await Promise.all(
     this.pendingBlocks.getBySlot(slot).map(async (root) => {
@@ -203,6 +205,8 @@ export function onForkChoiceHead(this: BeaconChain, head: IBlockSummary): void {
     headSlot: head.slot,
     headRoot: toHexString(head.blockRoot),
   });
+  this.syncContributionAndProofPool.prune(head.slot);
+  this.seenContributionAndProof.prune(head.slot);
   this.metrics?.headSlot.set(head.slot);
 }
 

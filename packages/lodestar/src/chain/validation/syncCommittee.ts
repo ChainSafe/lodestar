@@ -1,7 +1,6 @@
 import {CachedBeaconState, computeSyncPeriodAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
 import {allForks, altair} from "@chainsafe/lodestar-types";
-import {IBeaconDb} from "../../db";
 import {GossipAction, ISyncCommitteeJob, SyncCommitteeError, SyncCommitteeErrorCode} from "../errors";
 import {IBeaconChain} from "../interface";
 import {getSyncCommitteeSignatureSet} from "./signatureSets";
@@ -16,11 +15,11 @@ type IndexInSubCommittee = number;
  */
 export async function validateGossipSyncCommittee(
   chain: IBeaconChain,
-  db: IBeaconDb,
   job: ISyncCommitteeJob,
   subnet: number
 ): Promise<void> {
   const {signature: syncCommittee, validSignature} = job;
+  const {slot, validatorIndex} = syncCommittee;
 
   const headState = chain.getHeadState();
   const indexInSubCommittee = validateGossipSyncCommitteeExceptSig(chain, headState, subnet, syncCommittee);
@@ -36,7 +35,7 @@ export async function validateGossipSyncCommittee(
 
   // [IGNORE] There has been no other valid sync committee signature for the declared slot for the validator referenced
   // by sync_committee_signature.validator_index.
-  if (db.syncCommittee.has(subnet, syncCommittee)) {
+  if (chain.seenSyncCommitteeMessages.isKnown(slot, subnet, validatorIndex)) {
     throw new SyncCommitteeError(GossipAction.IGNORE, {
       code: SyncCommitteeErrorCode.SYNC_COMMITTEE_ALREADY_KNOWN,
     });
@@ -52,7 +51,7 @@ export async function validateGossipSyncCommittee(
   }
 
   // Register this valid item as seen
-  db.syncCommittee.seen(subnet, syncCommittee);
+  chain.seenSyncCommitteeMessages.add(slot, subnet, validatorIndex);
 }
 
 /**

@@ -10,14 +10,14 @@ import {GossipTopicMap, IObjectValidatorModules} from "../interface";
  * Validate messages from `sync_committee_{subnet_id}` channels
  */
 export async function validateSyncCommittee(
-  {chain, db, logger}: IObjectValidatorModules,
+  {chain, logger}: IObjectValidatorModules,
   {subnet}: GossipTopicMap[GossipType.sync_committee],
   syncCommittee: altair.SyncCommitteeMessage
 ): Promise<void> {
   const metadata = {subnet, slot: syncCommittee.slot};
   try {
     const syncCommitteeJob: ISyncCommitteeJob = {signature: syncCommittee, validSignature: false};
-    await validateGossipSyncCommittee(chain, db, syncCommitteeJob, subnet);
+    await validateGossipSyncCommittee(chain, syncCommitteeJob, subnet);
     logger.debug("gossip - sync_committee - accept", metadata);
   } catch (e) {
     if (!(e instanceof SyncCommitteeError)) {

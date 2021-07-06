@@ -113,7 +113,7 @@ export class GossipHandler {
   };
 
   private onSyncCommitteeContribution = async (contribution: altair.SignedContributionAndProof): Promise<void> => {
-    this.db.syncCommitteeContribution.add(contribution.message);
+    this.chain.syncContributionAndProofPool.add(contribution.message);
   };
 
   private onAttestation = async (subnet: number, attestation: phase0.Attestation): Promise<void> => {
@@ -128,7 +128,7 @@ export class GossipHandler {
 
     // TODO: Do this much better to be able to access this property in the handler
     const indexInSubCommittee = (signature as SyncCommitteeSignatureIndexed).indexInSubCommittee;
-    this.db.syncCommittee.add(subnet, signature, indexInSubCommittee);
+    this.chain.syncCommitteeMessagePool.add(subnet, signature, indexInSubCommittee);
   };
 
   private subscribeCoreTopicsAtFork = (fork: ForkName): void => {
