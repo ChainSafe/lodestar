@@ -20,7 +20,7 @@ import {validateGossipAggregateAndProof} from "../../../chain/validation";
 import {ZERO_HASH} from "../../../constants";
 import {SyncState} from "../../../sync";
 import {toGraffitiBuffer} from "../../../util/graffiti";
-import {ApiError} from "../errors";
+import {ApiError, NodeIsSyncing} from "../errors";
 import {validateSyncCommitteeGossipContributionAndProof} from "../../../chain/validation/syncCommitteeContributionAndProof";
 import {SyncContributionError, SyncContributionErrorCode} from "../../../db/syncCommitteeContribution";
 import {CommitteeSubscription} from "../../../network/subnets";
@@ -120,7 +120,7 @@ export function getValidatorApi({
         const currentSlot = chain.clock.currentSlot;
         const headSlot = chain.forkChoice.getHead().slot;
         if (currentSlot - headSlot > SYNC_TOLERANCE_EPOCHS * SLOTS_PER_EPOCH) {
-          throw new ApiError(503, `Node is syncing, headSlot ${headSlot} currentSlot ${currentSlot}`);
+          throw new NodeIsSyncing(`headSlot ${headSlot} currentSlot ${currentSlot}`);
         } else {
           return;
         }
@@ -130,7 +130,7 @@ export function getValidatorApi({
         return;
 
       case SyncState.Stalled:
-        throw new ApiError(503, "Node is waiting for peers");
+        throw new NodeIsSyncing("waiting for peers");
     }
   }
 

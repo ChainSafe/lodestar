@@ -7,7 +7,7 @@ import {registerRoutes, RouteConfig} from "@chainsafe/lodestar-api/server";
 import {ErrorAborted, ILogger} from "@chainsafe/lodestar-utils";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IMetrics} from "../../metrics";
-import {ApiError} from "../impl/errors";
+import {ApiError, NodeIsSyncing} from "../impl/errors";
 export {allNamespaces} from "@chainsafe/lodestar-api";
 
 export type RestApiOptions = {
@@ -94,6 +94,8 @@ export class RestApi {
       this.activeRequests.delete(req.raw);
       // Don't log ErrorAborted errors, they happen on node shutdown and are not usefull
       if (err instanceof ErrorAborted) return;
+      // Don't log NodeISSyncing errors, they happen very frequently while syncing and the validator checks the style
+      if (err instanceof NodeIsSyncing) return;
 
       const {operationId} = res.context.config as RouteConfig;
       this.logger.error(`Req ${req.id} ${operationId} error`, {}, err);
