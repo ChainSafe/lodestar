@@ -55,6 +55,6 @@ describe("api - validator - produceAttestationData", function () {
 
     // Should not allow any call to validator API
     const api = getValidatorApi(modules);
-    await expect(api.produceAttestationData(0, 0)).to.be.rejectedWith("Node is waiting for peers");
+    await expect(api.produceAttestationData(0, 0)).to.be.rejectedWith("Node is syncing - waiting for peers");
   });
 });
