@@ -14,7 +14,7 @@ import {AttestationService} from "./services/attestation";
 import {IndicesService} from "./services/indices";
 import {SyncCommitteeService} from "./services/syncCommittee";
 import {ISlashingProtection} from "./slashingProtection";
-import {assertEqualParams} from "./util/params";
+import {assertEqualParams, getLoggerVc} from "./util";
 
 export type ValidatorOptions = {
   slashingProtection: ISlashingProtection;
@@ -63,9 +63,10 @@ export class Validator {
     const clock = new Clock(config, logger, {genesisTime: Number(genesis.genesisTime)});
     const validatorStore = new ValidatorStore(config, slashingProtection, secretKeys, genesis);
     const indicesService = new IndicesService(logger, api, validatorStore);
-    new BlockProposingService(config, logger, api, clock, validatorStore, graffiti);
-    new AttestationService(config, logger, api, clock, validatorStore, indicesService);
-    new SyncCommitteeService(config, logger, api, clock, validatorStore, indicesService);
+    const loggerVc = getLoggerVc(logger, clock);
+    new BlockProposingService(loggerVc, api, clock, validatorStore, graffiti);
+    new AttestationService(loggerVc, api, clock, validatorStore, indicesService);
+    new SyncCommitteeService(config, loggerVc, api, clock, validatorStore, indicesService);
 
     this.config = config;
     this.logger = logger;

@@ -2,20 +2,18 @@ import {AbortController} from "@chainsafe/abort-controller";
 import {expect} from "chai";
 import sinon from "sinon";
 import bls from "@chainsafe/bls";
-import {config} from "@chainsafe/lodestar-config/default";
 import {Root} from "@chainsafe/lodestar-types";
 import {routes} from "@chainsafe/lodestar-api";
 import {BlockDutiesService} from "../../../src/services/blockDuties";
 import {ValidatorStore} from "../../../src/services/validatorStore";
 import {getApiClientStub} from "../../utils/apiStub";
-import {testLogger} from "../../utils/logger";
+import {loggerVc} from "../../utils/logger";
 import {ClockMock} from "../../utils/clock";
 
 type ProposerDutiesRes = {dependentRoot: Root; data: routes.validator.ProposerDuty[]};
 
 describe("BlockDutiesService", function () {
   const sandbox = sinon.createSandbox();
-  const logger = testLogger();
   const ZERO_HASH = Buffer.alloc(32, 0);
 
   const api = getApiClientStub(sandbox);
@@ -47,7 +45,7 @@ describe("BlockDutiesService", function () {
     const notifyBlockProductionFn = sinon.stub(); // Returns void
 
     const clock = new ClockMock();
-    const dutiesService = new BlockDutiesService(config, logger, api, clock, validatorStore, notifyBlockProductionFn);
+    const dutiesService = new BlockDutiesService(loggerVc, api, clock, validatorStore, notifyBlockProductionFn);
 
     // Trigger clock onSlot for slot 0
     await clock.tickSlotFns(0, controller.signal);
@@ -82,7 +80,7 @@ describe("BlockDutiesService", function () {
 
     // Clock will call runAttesterDutiesTasks() immediatelly
     const clock = new ClockMock();
-    const dutiesService = new BlockDutiesService(config, logger, api, clock, validatorStore, notifyBlockProductionFn);
+    const dutiesService = new BlockDutiesService(loggerVc, api, clock, validatorStore, notifyBlockProductionFn);
 
     // Trigger clock onSlot for slot 0
     api.validator.getProposerDuties.resolves(dutiesBeforeReorg);

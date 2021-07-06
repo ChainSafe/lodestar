@@ -10,12 +10,10 @@ import {
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {BLSSignature, Epoch, Root, Slot, SyncPeriod, ValidatorIndex} from "@chainsafe/lodestar-types";
-import {ILogger} from "@chainsafe/lodestar-utils";
 import {toHexString} from "@chainsafe/ssz";
 import {Api, routes} from "@chainsafe/lodestar-api";
 import {IndicesService} from "./indices";
-import {extendError, notAborted} from "../util";
-import {IClock} from "../util/clock";
+import {IClock, extendError, notAborted, isSyncing, ILoggerVc} from "../util";
 import {ValidatorStore} from "./validatorStore";
 
 /** Only retain `HISTORICAL_DUTIES_PERIODS` duties prior to the current periods. */
@@ -50,7 +48,7 @@ export class SyncCommitteeDutiesService {
 
   constructor(
     private readonly config: IChainForkConfig,
-    private readonly logger: ILogger,
+    private readonly logger: ILoggerVc,
     private readonly api: Api,
     clock: IClock,
     private readonly validatorStore: ValidatorStore,
@@ -132,7 +130,8 @@ export class SyncCommitteeDutiesService {
     for (const epoch of [currentEpoch, nextPeriodEpoch]) {
       // Download the duties and update the duties for the current and next period.
       await this.pollSyncCommitteesForEpoch(epoch, indexArr).catch((e) => {
-        if (notAborted(e)) this.logger.error("Failed to download SyncDuties", {epoch}, e);
+        if (isSyncing(e)) this.logger.isSyncing(e);
+        else if (notAborted(e)) this.logger.error("Failed to download SyncDuties", {epoch}, e);
       });
     }
 

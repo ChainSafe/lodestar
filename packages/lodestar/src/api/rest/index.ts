@@ -94,7 +94,7 @@ export class RestApi {
       this.activeRequests.delete(req.raw);
       // Don't log ErrorAborted errors, they happen on node shutdown and are not usefull
       if (err instanceof ErrorAborted) return;
-      // Don't log NodeISSyncing errors, they happen very frequently while syncing and the validator checks the style
+      // Don't log NodeISSyncing errors, they happen very frequently while syncing and the validator polls duties
       if (err instanceof NodeIsSyncing) return;
 
       const {operationId} = res.context.config as RouteConfig;

@@ -1,12 +1,10 @@
 import {BLSPubkey, Slot} from "@chainsafe/lodestar-types";
-import {IChainForkConfig} from "@chainsafe/lodestar-config";
-import {ILogger, prettyBytes} from "@chainsafe/lodestar-utils";
+import {prettyBytes} from "@chainsafe/lodestar-utils";
 import {toHexString} from "@chainsafe/ssz";
 import {Api} from "@chainsafe/lodestar-api";
-import {extendError, notAborted} from "../util";
+import {IClock, extendError, notAborted, ILoggerVc} from "../util";
 import {ValidatorStore} from "./validatorStore";
 import {BlockDutiesService, GENESIS_SLOT} from "./blockDuties";
-import {IClock} from "../util/clock";
 
 /**
  * Service that sets up and handles validator block proposal duties.
@@ -15,21 +13,13 @@ export class BlockProposingService {
   private readonly dutiesService: BlockDutiesService;
 
   constructor(
-    config: IChainForkConfig,
-    private readonly logger: ILogger,
+    private readonly logger: ILoggerVc,
     private readonly api: Api,
     clock: IClock,
     private readonly validatorStore: ValidatorStore,
     private readonly graffiti?: string
   ) {
-    this.dutiesService = new BlockDutiesService(
-      config,
-      logger,
-      api,
-      clock,
-      validatorStore,
-      this.notifyBlockProductionFn
-    );
+    this.dutiesService = new BlockDutiesService(logger, api, clock, validatorStore, this.notifyBlockProductionFn);
   }
 
   /**
