@@ -55,7 +55,10 @@ function formatVersion({semver, branch, commit}: Partial<GitData>): string {
 
 function getGitData(): Partial<GitData> {
   try {
-    const shell = (cmd: string): string => execSync(cmd).toString().trim();
+    const shell = (cmd: string): string =>
+      execSync(cmd, {stdio: ["ignore", "pipe", "ignore"]})
+        .toString()
+        .trim();
     const branch = shell("git rev-parse --abbrev-ref HEAD");
     const commit = shell("git rev-parse --verify HEAD");
     return {branch, commit};
