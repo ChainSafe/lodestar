@@ -1,6 +1,6 @@
 import {itBench, setBenchOpts} from "@dapplion/benchmark";
 import {allForks, altair} from "../../../../src";
-import {generatePerfTestCachedStateAltair, versionPrefix} from "../../util";
+import {generatePerfTestCachedStateAltair, perfStateId} from "../../util";
 
 describe("Altair epoch transition steps", () => {
   setBenchOpts({
@@ -12,8 +12,7 @@ describe("Altair epoch transition steps", () => {
   const originalState = generatePerfTestCachedStateAltair({goBackOneSlot: true});
   const process = allForks.prepareEpochProcessState(originalState);
 
-  const valCount = originalState.validators.length;
-  const idPrefix = `${versionPrefix} - altair - ${valCount} validators`;
+  const idPrefix = `epoch altair - ${perfStateId}`;
 
   itBench({
     id: `${idPrefix} - processJustificationAndFinalization`,

@@ -1,5 +1,5 @@
 import {itBench, setBenchOpts} from "@dapplion/benchmark";
-import {generatePerfTestCachedStatePhase0, versionPrefix} from "../../util";
+import {generatePerfTestCachedStatePhase0, perfStateId} from "../../util";
 import {allForks} from "../../../../src";
 
 // As of Jun 01 2021
@@ -17,13 +17,12 @@ describe("Epoch transitions", () => {
   });
 
   const originalState = generatePerfTestCachedStatePhase0({goBackOneSlot: true});
-  const valCount = originalState.validators.length;
 
   // Testing going through 1,2,4 epoch transitions has the same proportional result
   const testCases = [
     {
       numSlot: 32,
-      id: `${versionPrefix} - processSlots - ${valCount} vs - 32 empty slots`,
+      id: `processSlots - ${perfStateId} - 32 empty slots`,
     },
   ];
 
