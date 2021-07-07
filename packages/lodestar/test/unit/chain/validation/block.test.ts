@@ -76,7 +76,7 @@ describe("gossip block validation", function () {
       epoch: 0,
       root: Buffer.alloc(32),
     });
-    regenStub.getBlockSlotState.throws();
+    regenStub.getBlockSlotState.rejects();
 
     await expectRejectedWithLodestarError(
       validateGossipBlock(config, chainStub, dbStub, job),

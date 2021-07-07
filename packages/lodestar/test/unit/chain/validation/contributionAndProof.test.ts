@@ -57,10 +57,7 @@ describe("Sync Committee Contribution And Proof validation", function () {
 
     const signedContributionAndProof = generateSignedContributionAndProof({contribution: {slot: 1}});
     await expectRejectedWithLodestarError(
-      validateSyncCommitteeGossipContributionAndProof(chain, db, {
-        contributionAndProof: signedContributionAndProof,
-        validSignature: false,
-      }),
+      validateSyncCommitteeGossipContributionAndProof(chain, db, signedContributionAndProof),
       SyncCommitteeErrorCode.NOT_CURRENT_SLOT
     );
   });
@@ -70,10 +67,7 @@ describe("Sync Committee Contribution And Proof validation", function () {
     forkChoiceStub.hasBlock.returns(false);
 
     await expectRejectedWithLodestarError(
-      validateSyncCommitteeGossipContributionAndProof(chain, db, {
-        contributionAndProof: signedContributionAndProof,
-        validSignature: false,
-      }),
+      validateSyncCommitteeGossipContributionAndProof(chain, db, signedContributionAndProof),
       SyncCommitteeErrorCode.UNKNOWN_BEACON_BLOCK_ROOT
     );
   });
@@ -85,10 +79,7 @@ describe("Sync Committee Contribution And Proof validation", function () {
     forkChoiceStub.hasBlock.returns(true);
 
     await expectRejectedWithLodestarError(
-      validateSyncCommitteeGossipContributionAndProof(chain, db, {
-        contributionAndProof: signedContributionAndProof,
-        validSignature: false,
-      }),
+      validateSyncCommitteeGossipContributionAndProof(chain, db, signedContributionAndProof),
       SyncCommitteeErrorCode.INVALID_SUB_COMMITTEE_INDEX
     );
   });
@@ -100,10 +91,7 @@ describe("Sync Committee Contribution And Proof validation", function () {
     chain.getHeadState.returns(headState);
     db.syncCommitteeContribution.has.returns(true);
     await expectRejectedWithLodestarError(
-      validateSyncCommitteeGossipContributionAndProof(chain, db, {
-        contributionAndProof: signedContributionAndProof,
-        validSignature: false,
-      }),
+      validateSyncCommitteeGossipContributionAndProof(chain, db, signedContributionAndProof),
       SyncCommitteeErrorCode.SYNC_COMMITTEE_ALREADY_KNOWN
     );
   });
@@ -116,10 +104,7 @@ describe("Sync Committee Contribution And Proof validation", function () {
     chain.getHeadState.returns(headState);
     isSyncCommitteeAggregatorStub.returns(false);
     await expectRejectedWithLodestarError(
-      validateSyncCommitteeGossipContributionAndProof(chain, db, {
-        contributionAndProof: signedContributionAndProof,
-        validSignature: false,
-      }),
+      validateSyncCommitteeGossipContributionAndProof(chain, db, signedContributionAndProof),
       SyncCommitteeErrorCode.INVALID_AGGREGATOR
     );
   });
@@ -136,10 +121,7 @@ describe("Sync Committee Contribution And Proof validation", function () {
     const headState = await generateCachedStateWithPubkeys({slot: currentSlot}, config, true);
     chain.getHeadState.returns(headState);
     await expectRejectedWithLodestarError(
-      validateSyncCommitteeGossipContributionAndProof(chain, db, {
-        contributionAndProof: signedContributionAndProof,
-        validSignature: false,
-      }),
+      validateSyncCommitteeGossipContributionAndProof(chain, db, signedContributionAndProof),
       SyncCommitteeErrorCode.AGGREGATOR_PUBKEY_UNKNOWN
     );
   });
@@ -153,10 +135,7 @@ describe("Sync Committee Contribution And Proof validation", function () {
     chain.getHeadState.returns(headState);
     chain.bls = {verifySignatureSets: async () => false};
     await expectRejectedWithLodestarError(
-      validateSyncCommitteeGossipContributionAndProof(chain, db, {
-        contributionAndProof: signedContributionAndProof,
-        validSignature: false,
-      }),
+      validateSyncCommitteeGossipContributionAndProof(chain, db, signedContributionAndProof),
       SyncCommitteeErrorCode.INVALID_SIGNATURE
     );
   });

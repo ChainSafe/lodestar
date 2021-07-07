@@ -2,14 +2,36 @@
  * @module network/gossip
  */
 
-import {ContainerType} from "@chainsafe/ssz";
 import {ssz} from "@chainsafe/lodestar-types";
-import {ForkName} from "@chainsafe/lodestar-params";
 import {IForkDigestContext, toHexStringNoPrefix} from "../../util/forkDigestContext";
+import {GossipType, GossipTopic, GossipEncoding} from "./interface";
 import {DEFAULT_ENCODING} from "./constants";
-import {GossipEncoding, GossipDeserializer, GossipObject, GossipSerializer, GossipType, GossipTopic} from "./interface";
 
-const gossipTopicRegex = new RegExp("^/eth2/(\\w+)/(\\w+)/(\\w+)");
+export interface IGossipTopicCache {
+  getTopic(topicStr: string): GossipTopic;
+}
+
+export class GossipTopicCache implements IGossipTopicCache {
+  private topicsByTopicStr = new Map<string, Required<GossipTopic>>();
+
+  constructor(private readonly forkDigestContext: IForkDigestContext) {}
+
+  getTopic(topicStr: string): GossipTopic {
+    let topic = this.topicsByTopicStr.get(topicStr);
+    if (topic === undefined) {
+      topic = parseGossipTopic(this.forkDigestContext, topicStr);
+      // TODO: Consider just throwing here. We should only receive messages from known subscribed topics
+      this.topicsByTopicStr.set(topicStr, topic);
+    }
+    return topic;
+  }
+
+  setTopic(topicStr: string, topic: GossipTopic): void {
+    if (!this.topicsByTopicStr.has(topicStr)) {
+      this.topicsByTopicStr.set(topicStr, {encoding: DEFAULT_ENCODING, ...topic});
+    }
+  }
+}
 
 /**
  * Stringify a GossipTopic into a spec-ed formated topic string
@@ -40,21 +62,34 @@ function stringifyGossipTopicType(topic: GossipTopic): string {
   }
 }
 
-/**
- * Parse a gossip string to a fork.
- * A gossip topic has the format
- * ```ts
- * /eth2/$FORK_DIGEST/$GOSSIP_TYPE/$ENCODING
- * ```
- */
-export function getForkFromGossipTopic(forkDigestContext: IForkDigestContext, topicStr: string): ForkName {
-  const matches = topicStr.match(gossipTopicRegex);
-  if (matches === null) {
-    throw Error(`Must match regex ${gossipTopicRegex}`);
+// eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types, @typescript-eslint/explicit-function-return-type
+export function getGossipSSZType(topic: GossipTopic) {
+  switch (topic.type) {
+    case GossipType.beacon_block:
+      // beacon_block is updated in altair to support the updated SignedBeaconBlock type
+      return ssz[topic.fork].SignedBeaconBlock;
+    case GossipType.beacon_aggregate_and_proof:
+      return ssz.phase0.SignedAggregateAndProof;
+    case GossipType.beacon_attestation:
+      return ssz.phase0.Attestation;
+    case GossipType.proposer_slashing:
+      return ssz.phase0.ProposerSlashing;
+    case GossipType.attester_slashing:
+      return ssz.phase0.AttesterSlashing;
+    case GossipType.voluntary_exit:
+      return ssz.phase0.SignedVoluntaryExit;
+    case GossipType.sync_committee_contribution_and_proof:
+      return ssz.altair.SignedContributionAndProof;
+    case GossipType.sync_committee:
+      return ssz.altair.SyncCommitteeMessage;
+    default:
+      throw new Error(`No ssz gossip type for ${(topic as GossipTopic).type}`);
   }
-
-  return forkDigestContext.forkDigest2ForkName(matches[1]);
 }
+
+// Parsing
+
+const gossipTopicRegex = new RegExp("^/eth2/(\\w+)/(\\w+)/(\\w+)");
 
 /**
  * Parse a `GossipTopic` object from its stringified form.
@@ -63,7 +98,7 @@ export function getForkFromGossipTopic(forkDigestContext: IForkDigestContext, to
  * /eth2/$FORK_DIGEST/$GOSSIP_TYPE/$ENCODING
  * ```
  */
-export function parseGossipTopic(forkDigestContext: IForkDigestContext, topicStr: string): GossipTopic {
+export function parseGossipTopic(forkDigestContext: IForkDigestContext, topicStr: string): Required<GossipTopic> {
   try {
     const matches = topicStr.match(gossipTopicRegex);
     if (matches === null) {
@@ -107,64 +142,10 @@ export function parseGossipTopic(forkDigestContext: IForkDigestContext, topicStr
  */
 function parseEncodingStr(encodingStr: string): GossipEncoding {
   switch (encodingStr) {
-    case GossipEncoding.ssz:
     case GossipEncoding.ssz_snappy:
       return encodingStr;
 
     default:
       throw Error(`Unknown encoding ${encodingStr}`);
   }
-}
-
-export function getGossipSSZType<T extends GossipObject>(topic: GossipTopic): ContainerType<T> {
-  switch (topic.type) {
-    case GossipType.beacon_block:
-      // beacon_block is updated in altair to support the updated SignedBeaconBlock type
-      return (ssz[topic.fork].SignedBeaconBlock as unknown) as ContainerType<T>;
-    case GossipType.beacon_aggregate_and_proof:
-      return (ssz.phase0.SignedAggregateAndProof as unknown) as ContainerType<T>;
-    case GossipType.beacon_attestation:
-      return (ssz.phase0.Attestation as unknown) as ContainerType<T>;
-    case GossipType.proposer_slashing:
-      return (ssz.phase0.ProposerSlashing as unknown) as ContainerType<T>;
-    case GossipType.attester_slashing:
-      return (ssz.phase0.AttesterSlashing as unknown) as ContainerType<T>;
-    case GossipType.voluntary_exit:
-      return (ssz.phase0.SignedVoluntaryExit as unknown) as ContainerType<T>;
-    case GossipType.sync_committee_contribution_and_proof:
-      return (ssz.altair.SignedContributionAndProof as unknown) as ContainerType<T>;
-    case GossipType.sync_committee:
-      return (ssz.altair.SyncCommitteeMessage as unknown) as ContainerType<T>;
-    default:
-      throw new Error(`No ssz gossip type for ${(topic as GossipTopic).type}`);
-  }
-}
-
-/**
- * Return a ssz deserialize function for a gossip topic
- */
-export function getGossipSSZDeserializer(topic: GossipTopic): GossipDeserializer {
-  const sszType = getGossipSSZType(topic);
-
-  switch (topic.type) {
-    case GossipType.beacon_block:
-    case GossipType.beacon_aggregate_and_proof:
-      // all other gossip can be deserialized to struct
-      return sszType.createTreeBackedFromBytes.bind(sszType);
-    case GossipType.beacon_attestation:
-    case GossipType.proposer_slashing:
-    case GossipType.attester_slashing:
-    case GossipType.voluntary_exit:
-    case GossipType.sync_committee_contribution_and_proof:
-    case GossipType.sync_committee:
-      return sszType.deserialize.bind(sszType);
-  }
-}
-
-/**
- * Return a ssz serialize function for a gossip topic
- */
-export function getGossipSSZSerializer(topic: GossipTopic): GossipSerializer {
-  const sszType = getGossipSSZType(topic);
-  return sszType.serialize.bind(sszType);
 }

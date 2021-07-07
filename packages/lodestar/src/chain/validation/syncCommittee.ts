@@ -2,12 +2,9 @@ import {CachedBeaconState, computeSyncPeriodAtSlot} from "@chainsafe/lodestar-be
 import {SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
 import {allForks, altair} from "@chainsafe/lodestar-types";
 import {IBeaconDb} from "../../db";
-import {GossipAction, ISyncCommitteeJob, SyncCommitteeError, SyncCommitteeErrorCode} from "../errors";
+import {GossipAction, SyncCommitteeError, SyncCommitteeErrorCode} from "../errors";
 import {IBeaconChain} from "../interface";
 import {getSyncCommitteeSignatureSet} from "./signatureSets";
-
-/** TODO: Do this much better to be able to access this property in the handler */
-export type SyncCommitteeSignatureIndexed = altair.SyncCommitteeMessage & {indexInSubCommittee: number};
 
 type IndexInSubCommittee = number;
 
@@ -17,16 +14,11 @@ type IndexInSubCommittee = number;
 export async function validateGossipSyncCommittee(
   chain: IBeaconChain,
   db: IBeaconDb,
-  job: ISyncCommitteeJob,
+  syncCommittee: altair.SyncCommitteeMessage,
   subnet: number
-): Promise<void> {
-  const {signature: syncCommittee, validSignature} = job;
-
+): Promise<{indexInSubCommittee: IndexInSubCommittee}> {
   const headState = chain.getHeadState();
   const indexInSubCommittee = validateGossipSyncCommitteeExceptSig(chain, headState, subnet, syncCommittee);
-
-  // TODO: Do this much better to be able to access this property in the handler
-  (syncCommittee as SyncCommitteeSignatureIndexed).indexInSubCommittee = indexInSubCommittee;
 
   // [IGNORE] The signature's slot is for the current slot, i.e. sync_committee_signature.slot == current_slot.
   // > Checked in validateGossipSyncCommitteeExceptSig()
@@ -46,13 +38,13 @@ export async function validateGossipSyncCommittee(
   // Note this validation implies the validator is part of the broader current sync committee along with the correct subcommittee.
   // > Checked in validateGossipSyncCommitteeExceptSig()
 
-  if (!validSignature) {
-    // [REJECT] The signature is valid for the message beacon_block_root for the validator referenced by validator_index.
-    await validateSyncCommitteeSigOnly(chain, headState, syncCommittee);
-  }
+  // [REJECT] The signature is valid for the message beacon_block_root for the validator referenced by validator_index.
+  await validateSyncCommitteeSigOnly(chain, headState, syncCommittee);
 
   // Register this valid item as seen
   db.syncCommittee.seen(subnet, syncCommittee);
+
+  return {indexInSubCommittee};
 }
 
 /**

@@ -1,4 +1,4 @@
-import {LodestarError} from "@chainsafe/lodestar-utils";
+import {GossipActionError} from "./gossipValidation";
 
 export enum AttesterSlashingErrorCode {
   ALREADY_EXISTS = "ATTESTATION_SLASHING_ERROR_ALREADY_EXISTS",
@@ -8,8 +8,4 @@ export type AttesterSlashingErrorType =
   | {code: AttesterSlashingErrorCode.ALREADY_EXISTS}
   | {code: AttesterSlashingErrorCode.INVALID; error: Error};
 
-export class AttesterSlashingError extends LodestarError<AttesterSlashingErrorType> {
-  constructor(type: AttesterSlashingErrorType) {
-    super(type);
-  }
-}
+export class AttesterSlashingError extends GossipActionError<AttesterSlashingErrorType> {}

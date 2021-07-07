@@ -4,7 +4,7 @@ import {ForkName, SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params"
 import {Epoch, ssz} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {ChainEvent, IBeaconChain} from "../../chain";
-import {getActiveForks, runForkTransitionHooks} from "../forks";
+import {getActiveForks} from "../forks";
 import {Eth2Gossipsub, GossipType} from "../gossip";
 import {MetadataController} from "../metadata";
 import {SubnetMap} from "../peers/utils";
@@ -68,6 +68,24 @@ export class SyncnetsService implements ISubnetsService {
     this.updateMetadata();
   }
 
+  /** Call ONLY ONCE: Two epoch before the fork, re-subscribe all existing random subscriptions to the new fork  */
+  subscribeSubnetsToNextFork(nextFork: ForkName): void {
+    if (nextFork === ForkName.altair) return;
+    this.logger.info("Suscribing to random attnets to next fork", {nextFork});
+    for (const subnet of this.subscriptionsCommittee.getAll()) {
+      this.gossip.subscribeTopic({type: gossipType, fork: nextFork, subnet});
+    }
+  }
+
+  /** Call  ONLY ONCE: Two epochs after the fork, un-subscribe all subnets from the old fork */
+  unsubscribeSubnetsFromPrevFork(prevFork: ForkName): void {
+    if (prevFork === ForkName.phase0) return;
+    this.logger.info("Unsuscribing to random attnets from prev fork", {prevFork});
+    for (let subnet = 0; subnet < SYNC_COMMITTEE_SUBNET_COUNT; subnet++) {
+      this.gossip.unsubscribeTopic({type: gossipType, fork: prevFork, subnet});
+    }
+  }
+
   /**
    * Run per epoch, clean-up operations that are not urgent
    */
@@ -76,26 +94,6 @@ export class SyncnetsService implements ISubnetsService {
       const slot = computeStartSlotAtEpoch(epoch);
       // Unsubscribe to a committee subnet from subscriptionsCommittee.
       this.unsubscribeSubnets(this.subscriptionsCommittee.getExpired(slot));
-
-      // Fork transition for altair -> nextFork
-      runForkTransitionHooks(this.config, epoch, {
-        beforeForkTransition: (nextFork) => {
-          if (nextFork === ForkName.altair) return;
-          this.logger.info("Suscribing to random attnets to next fork", {nextFork});
-          // ONLY ONCE: Two epoch before the fork, re-subscribe all existing random subscriptions to the new fork
-          for (const subnet of this.subscriptionsCommittee.getAll()) {
-            this.gossip.subscribeTopic({type: gossipType, fork: nextFork, subnet});
-          }
-        },
-        afterForkTransition: (prevFork) => {
-          if (prevFork === ForkName.phase0) return;
-          this.logger.info("Unsuscribing to random attnets from prev fork", {prevFork});
-          // ONLY ONCE: Two epochs after the fork, un-subscribe all subnets from the old fork
-          for (let subnet = 0; subnet < SYNC_COMMITTEE_SUBNET_COUNT; subnet++) {
-            this.gossip.unsubscribeTopic({type: gossipType, fork: prevFork, subnet});
-          }
-        },
-      });
     } catch (e) {
       this.logger.error("Error on SyncnetsService.onEpoch", {epoch}, e);
     }

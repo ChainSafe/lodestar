@@ -62,7 +62,7 @@ describe("Sync Committee Signature validation", function () {
 
     const syncCommittee = generateSyncCommitteeSignature({slot: 1});
     await expectRejectedWithLodestarError(
-      validateGossipSyncCommittee(chain, db, {signature: syncCommittee, validSignature: false}, 0),
+      validateGossipSyncCommittee(chain, db, syncCommittee, 0),
       SyncCommitteeErrorCode.NOT_CURRENT_SLOT
     );
   });
@@ -71,7 +71,7 @@ describe("Sync Committee Signature validation", function () {
     const syncCommittee = generateSyncCommitteeSignature({slot: currentSlot});
     forkChoiceStub.hasBlock.returns(false);
     await expectRejectedWithLodestarError(
-      validateGossipSyncCommittee(chain, db, {signature: syncCommittee, validSignature: false}, 0),
+      validateGossipSyncCommittee(chain, db, syncCommittee, 0),
       SyncCommitteeErrorCode.UNKNOWN_BEACON_BLOCK_ROOT
     );
   });
@@ -86,7 +86,7 @@ describe("Sync Committee Signature validation", function () {
     chain.getHeadState.returns(headState);
     db.syncCommittee.has.returns(true);
     await expectRejectedWithLodestarError(
-      validateGossipSyncCommittee(chain, db, {signature: syncCommittee, validSignature: false}, 0),
+      validateGossipSyncCommittee(chain, db, syncCommittee, 0),
       SyncCommitteeErrorCode.SYNC_COMMITTEE_ALREADY_KNOWN
     );
   });
@@ -99,7 +99,7 @@ describe("Sync Committee Signature validation", function () {
     chain.getHeadState.returns(headState);
 
     await expectRejectedWithLodestarError(
-      validateGossipSyncCommittee(chain, db, {signature: syncCommittee, validSignature: false}, 0),
+      validateGossipSyncCommittee(chain, db, syncCommittee, 0),
       SyncCommitteeErrorCode.VALIDATOR_NOT_IN_SYNC_COMMITTEE
     );
   });
@@ -115,7 +115,7 @@ describe("Sync Committee Signature validation", function () {
     const headState = generateCachedState({slot: currentSlot}, config, true);
     chain.getHeadState.returns(headState);
     await expectRejectedWithLodestarError(
-      validateGossipSyncCommittee(chain, db, {signature: syncCommittee, validSignature: false}, 0),
+      validateGossipSyncCommittee(chain, db, syncCommittee, 0),
       SyncCommitteeErrorCode.INVALID_SUB_COMMITTEE_INDEX
     );
   });
@@ -132,7 +132,7 @@ describe("Sync Committee Signature validation", function () {
     chain.getHeadState.returns(headState);
     chain.bls = {verifySignatureSets: async () => false};
     await expectRejectedWithLodestarError(
-      validateGossipSyncCommittee(chain, db, {signature: syncCommittee, validSignature: false}, 0),
+      validateGossipSyncCommittee(chain, db, syncCommittee, 0),
       SyncCommitteeErrorCode.INVALID_SIGNATURE
     );
   });
