@@ -9,12 +9,11 @@ import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 
 import {IGlobalArgs} from "../../options";
 import {parseEnrArgs} from "../../options/enrOptions";
+import {initBLS, onGracefulShutdown, getCliLogger, readLodestarGitData} from "../../util";
+import {FileENR, overwriteEnrWithCliArgs, readPeerId} from "../../config";
 import {initializeOptionsAndConfig, persistOptionsAndConfig} from "../init/handler";
 import {IBeaconArgs} from "./options";
 import {getBeaconPaths} from "./paths";
-import {initBLS, onGracefulShutdown, getCliLogger} from "../../util";
-import {readLodestarGitData} from "../../util/gitData";
-import {FileENR, overwriteEnrWithCliArgs, readPeerId} from "../../config";
 import {initBeaconState} from "./initBeaconState";
 
 /**
