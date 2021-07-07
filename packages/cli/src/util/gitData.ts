@@ -1,11 +1,10 @@
 import fs from "fs";
-import path from "path";
 import {execSync} from "child_process";
 import {getLocalVersion} from "./version";
 
 // This file is created in the build step and is distributed through NPM
 // MUST be in sync with packages/cli/scripts/getGitData.js, and package.json .files
-const LOCAL_GIT_DATA_FILEPATH = path.join(__dirname, "../../.git-data.json");
+import {gitDataPath, GitDataFile} from "../gitData/gitDataPath";
 
 /* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
 type GitData = {
@@ -69,12 +68,16 @@ function getGitData(): Partial<GitData> {
 
 function getPersistedGitData(): Partial<GitData> {
   try {
-    const gitDataFilepath = LOCAL_GIT_DATA_FILEPATH;
+    const gitData = JSON.parse(fs.readFileSync(gitDataPath, "utf8")) as GitDataFile;
+    const {semver, branch, commit} = gitData;
 
-    // eslint-disable-next-line
-    const gitData = JSON.parse(fs.readFileSync(gitDataFilepath, "utf8"));
-    const {version: semver, branch, commit} = gitData;
-    return {semver, branch, commit, version: `${semver} ${branch} ${commit.slice(0, 8)}`};
+    const version = [semver, branch, commit && commit.slice(0, 8)].filter((s) => s).join(" ");
+    return {
+      semver: semver || "-",
+      branch: branch || "-",
+      commit: commit || "-",
+      version: version || "-",
+    };
   } catch (e) {
     return {};
   }

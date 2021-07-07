@@ -26,6 +26,8 @@ jobs:
       - name: Build
         run: yarn build
         if: steps.cache-deps.outputs.cache-hit == 'true'
+      - name: Validate gitData file
+        run: node packages/cli/lib/gitData/scripts/validateGitData.js
       # </common-build>
       - name: Check Types
         run: yarn run check-types
