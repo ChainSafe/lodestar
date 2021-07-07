@@ -3,7 +3,7 @@ import {MAX_VOLUNTARY_EXITS} from "@chainsafe/lodestar-params";
 import {phase0} from "@chainsafe/lodestar-types";
 import {List} from "@chainsafe/ssz";
 import {allForks} from "../../../../src";
-import {generatePerformanceBlockPhase0, generatePerfTestCachedStatePhase0} from "../../util";
+import {generatePerformanceBlockPhase0, generatePerfTestCachedStatePhase0, versionPrefix} from "../../util";
 
 // As of Jun 12 2021
 // Process block
@@ -36,7 +36,7 @@ describe("Process block", () => {
   });
 
   const validatorCount = originalState.validators.length;
-  const idPrefix = `Process block - ${validatorCount} vs`;
+  const idPrefix = `${versionPrefix} - Process block - ${validatorCount} vs`;
 
   const testCases = [
     {signedBlock: regularBlock, id: `${idPrefix} - with 0 validator exit`},

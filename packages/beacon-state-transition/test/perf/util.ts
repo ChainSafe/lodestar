@@ -40,6 +40,12 @@ let altairCachedState23637: allForks.CachedBeaconState<altair.BeaconState> | nul
 let altairCachedState23638: allForks.CachedBeaconState<altair.BeaconState> | null = null;
 const logger = profilerLogger();
 
+// As of Jul 07 2021, the performance state has
+// out.prevEpochUnslashedStake.targetStake 7750000000000000n
+// out.currEpochUnslashedTargetStake 7750000000000000n
+// so make this prefix represent that
+export const versionPrefix = "7YWei";
+
 /**
  * Number of validators in prater is 210000 as of May 2021
  */

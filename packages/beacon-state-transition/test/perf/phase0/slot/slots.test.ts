@@ -1,5 +1,5 @@
 import {itBench, setBenchOpts} from "@dapplion/benchmark";
-import {generatePerfTestCachedStatePhase0} from "../../util";
+import {generatePerfTestCachedStatePhase0, versionPrefix} from "../../util";
 import {allForks} from "../../../../src";
 
 // As of Jun 01 2021
@@ -23,7 +23,7 @@ describe("Epoch transitions", () => {
   const testCases = [
     {
       numSlot: 32,
-      id: `processSlots - ${valCount} vs - 32 empty slots`,
+      id: `${versionPrefix} - processSlots - ${valCount} vs - 32 empty slots`,
     },
   ];
 

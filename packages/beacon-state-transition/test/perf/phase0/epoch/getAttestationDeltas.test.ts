@@ -1,6 +1,6 @@
 import {itBench, setBenchOpts} from "@dapplion/benchmark";
 import {allForks, phase0} from "../../../../src";
-import {generatePerfTestCachedStatePhase0} from "../../util";
+import {generatePerfTestCachedStatePhase0, versionPrefix} from "../../util";
 
 describe("getAttestationDeltas", () => {
   setBenchOpts({
@@ -14,7 +14,7 @@ describe("getAttestationDeltas", () => {
 
   const valCount = state.validators.length;
 
-  itBench(`getAttestationDeltas - ${valCount} vs`, () => {
+  itBench(`${versionPrefix} - getAttestationDeltas - ${valCount} vs`, () => {
     phase0.getAttestationDeltas(state, epochProcess);
   });
 });
