@@ -1,4 +1,4 @@
-import {LodestarError} from "@chainsafe/lodestar-utils";
+import {GossipActionError} from "./gossipValidation";
 
 export enum ProposerSlashingErrorCode {
   ALREADY_EXISTS = "PROPOSER_SLASHING_ERROR_ALREADY_EXISTS",
@@ -8,8 +8,4 @@ export type ProposerSlashingErrorType =
   | {code: ProposerSlashingErrorCode.ALREADY_EXISTS}
   | {code: ProposerSlashingErrorCode.INVALID; error: Error};
 
-export class ProposerSlashingError extends LodestarError<ProposerSlashingErrorType> {
-  constructor(type: ProposerSlashingErrorType) {
-    super(type);
-  }
-}
+export class ProposerSlashingError extends GossipActionError<ProposerSlashingErrorType> {}

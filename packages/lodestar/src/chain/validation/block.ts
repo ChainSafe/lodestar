@@ -3,7 +3,7 @@ import {IBeaconChain, IBlockJob} from "..";
 import {IBeaconDb} from "../../db";
 import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 import {allForks} from "@chainsafe/lodestar-beacon-state-transition";
-import {BlockError, BlockErrorCode} from "../errors";
+import {BlockGossipError, BlockErrorCode, GossipAction} from "../errors";
 
 export async function validateGossipBlock(
   config: IChainForkConfig,
@@ -18,12 +18,16 @@ export async function validateGossipBlock(
   const finalizedSlot = computeStartSlotAtEpoch(finalizedCheckpoint.epoch);
   // block is too old
   if (blockSlot <= finalizedSlot) {
-    throw new BlockError(block, {code: BlockErrorCode.WOULD_REVERT_FINALIZED_SLOT, blockSlot, finalizedSlot});
+    throw new BlockGossipError(GossipAction.IGNORE, {
+      code: BlockErrorCode.WOULD_REVERT_FINALIZED_SLOT,
+      blockSlot,
+      finalizedSlot,
+    });
   }
 
   const currentSlotWithGossipDisparity = chain.clock.currentSlotWithGossipDisparity;
   if (currentSlotWithGossipDisparity < blockSlot) {
-    throw new BlockError(block, {
+    throw new BlockGossipError(GossipAction.IGNORE, {
       code: BlockErrorCode.FUTURE_SLOT,
       currentSlot: currentSlotWithGossipDisparity,
       blockSlot,
@@ -35,23 +39,23 @@ export async function validateGossipBlock(
 
   const existingBlock = await db.block.get(blockRoot);
   if (existingBlock?.message.proposerIndex === block.message.proposerIndex) {
-    throw new BlockError(block, {code: BlockErrorCode.REPEAT_PROPOSAL, proposer: block.message.proposerIndex});
-  }
-
-  let blockState;
-  try {
-    // getBlockSlotState also checks for whether the current finalized checkpoint is an ancestor of the block.  as a result, we throw an IGNORE (whereas the spec says we should REJECT for this scenario).  this is something we should change this in the future to make the code airtight to the spec.
-    blockState = await chain.regen.getBlockSlotState(block.message.parentRoot, block.message.slot);
-  } catch (e) {
-    throw new BlockError(block, {
-      code: BlockErrorCode.PARENT_UNKNOWN,
-      parentRoot: block.message.parentRoot.valueOf() as Uint8Array,
+    throw new BlockGossipError(GossipAction.IGNORE, {
+      code: BlockErrorCode.REPEAT_PROPOSAL,
+      proposer: block.message.proposerIndex,
     });
   }
 
+  // getBlockSlotState also checks for whether the current finalized checkpoint is an ancestor of the block.  as a result, we throw an IGNORE (whereas the spec says we should REJECT for this scenario).  this is something we should change this in the future to make the code airtight to the spec.
+  const blockState = await chain.regen.getBlockSlotState(block.message.parentRoot, block.message.slot).catch(() => {
+    throw new BlockGossipError(GossipAction.IGNORE, {
+      code: BlockErrorCode.PARENT_UNKNOWN,
+      parentRoot: block.message.parentRoot.valueOf() as Uint8Array,
+    });
+  });
+
   const signatureSet = allForks.getProposerSignatureSet(blockState, block);
   if (!(await chain.bls.verifySignatureSets([signatureSet]))) {
-    throw new BlockError(block, {code: BlockErrorCode.PROPOSAL_SIGNATURE_INVALID});
+    throw new BlockGossipError(GossipAction.REJECT, {code: BlockErrorCode.PROPOSAL_SIGNATURE_INVALID});
   }
 
   try {
@@ -60,7 +64,7 @@ export async function validateGossipBlock(
       throw Error("INCORRECT_PROPOSER");
     }
   } catch (error) {
-    throw new BlockError(block, {
+    throw new BlockGossipError(GossipAction.REJECT, {
       code: BlockErrorCode.INCORRECT_PROPOSER,
       blockProposer: block.message.proposerIndex,
     });

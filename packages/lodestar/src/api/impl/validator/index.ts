@@ -375,10 +375,7 @@ export function getValidatorApi({
         contributionAndProofs.map(async (contributionAndProof, i) => {
           try {
             // TODO: Validate in batch
-            await validateSyncCommitteeGossipContributionAndProof(chain, {
-              contributionAndProof,
-              validSignature: false,
-            });
+            await validateSyncCommitteeGossipContributionAndProof(chain, db, contributionAndProof);
             chain.syncContributionAndProofPool.add(contributionAndProof.message);
             await network.gossip.publishContributionAndProof(contributionAndProof);
           } catch (e) {

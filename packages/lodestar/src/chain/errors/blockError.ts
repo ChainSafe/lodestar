@@ -2,6 +2,7 @@ import {Root, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {LodestarError} from "@chainsafe/lodestar-utils";
 
 import {IBlockJob, IChainSegmentJob} from "../interface";
+import {GossipActionError} from "./gossipValidation";
 
 export enum BlockErrorCode {
   /**
@@ -103,6 +104,8 @@ export type BlockErrorType =
   | {code: BlockErrorCode.PER_BLOCK_PROCESSING_ERROR; error: Error}
   | {code: BlockErrorCode.BEACON_CHAIN_ERROR; error: Error}
   | {code: BlockErrorCode.KNOWN_BAD_BLOCK};
+
+export class BlockGossipError extends GossipActionError<BlockErrorType> {}
 
 export class BlockError extends LodestarError<BlockErrorType> {
   signedBlock: IBlockJob["signedBlock"];
