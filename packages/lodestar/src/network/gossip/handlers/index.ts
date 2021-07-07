@@ -153,24 +153,24 @@ export function getGossipHandlers(modules: ValidatorFnsModules): GossipHandlers 
     },
 
     [GossipType.sync_committee_contribution_and_proof]: async (contributionAndProof) => {
-      await validateSyncCommitteeGossipContributionAndProof(chain, db, contributionAndProof);
+      await validateSyncCommitteeGossipContributionAndProof(chain, contributionAndProof);
 
       // Handler
 
       try {
-        db.syncCommitteeContribution.add(contributionAndProof.message);
+        chain.syncContributionAndProofPool.add(contributionAndProof.message);
       } catch (e) {
         logger.error("Error adding to contributionAndProof pool", {}, e);
       }
     },
 
     [GossipType.sync_committee]: async (syncCommittee, {subnet}) => {
-      const {indexInSubCommittee} = await validateGossipSyncCommittee(chain, db, syncCommittee, subnet);
+      const {indexInSubCommittee} = await validateGossipSyncCommittee(chain, syncCommittee, subnet);
 
       // Handler
 
       try {
-        db.syncCommittee.add(subnet, syncCommittee, indexInSubCommittee);
+        chain.syncCommitteeMessagePool.add(subnet, syncCommittee, indexInSubCommittee);
       } catch (e) {
         logger.error("Error adding to syncCommittee pool", {subnet}, e);
       }
