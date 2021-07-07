@@ -1,6 +1,7 @@
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {Api} from "../interface";
-import {IHttpClient, HttpClient, HttpClientOptions} from "./utils";
+import {IHttpClient, HttpClient, HttpClientOptions, HttpError} from "./utils";
+export {HttpClient, HttpClientOptions, HttpError};
 
 import * as beacon from "./beacon";
 import * as configApi from "./config";

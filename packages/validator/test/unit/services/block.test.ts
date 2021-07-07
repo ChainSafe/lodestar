@@ -2,7 +2,6 @@ import {AbortController} from "@chainsafe/abort-controller";
 import {expect} from "chai";
 import sinon from "sinon";
 import bls from "@chainsafe/bls";
-import {config} from "@chainsafe/lodestar-config/default";
 import {Root} from "@chainsafe/lodestar-types";
 import {sleep} from "@chainsafe/lodestar-utils";
 import {routes} from "@chainsafe/lodestar-api";
@@ -10,7 +9,7 @@ import {generateEmptySignedBlock} from "@chainsafe/lodestar/test/utils/block";
 import {BlockProposingService} from "../../../src/services/block";
 import {ValidatorStore} from "../../../src/services/validatorStore";
 import {getApiClientStub} from "../../utils/apiStub";
-import {testLogger} from "../../utils/logger";
+import {loggerVc} from "../../utils/logger";
 import {ClockMock} from "../../utils/clock";
 import {ForkName} from "@chainsafe/lodestar-params";
 
@@ -18,7 +17,6 @@ type ProposerDutiesRes = {dependentRoot: Root; data: routes.validator.ProposerDu
 
 describe("BlockDutiesService", function () {
   const sandbox = sinon.createSandbox();
-  const logger = testLogger();
   const ZERO_HASH = Buffer.alloc(32, 0);
 
   const api = getApiClientStub(sandbox);
@@ -46,7 +44,7 @@ describe("BlockDutiesService", function () {
     api.validator.getProposerDuties.resolves(duties);
 
     const clock = new ClockMock();
-    const blockService = new BlockProposingService(config, logger, api, clock, validatorStore);
+    const blockService = new BlockProposingService(loggerVc, api, clock, validatorStore);
 
     const signedBlock = generateEmptySignedBlock();
     validatorStore.signRandao.resolves(signedBlock.message.body.randaoReveal);

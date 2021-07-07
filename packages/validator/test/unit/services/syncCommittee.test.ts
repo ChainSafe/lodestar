@@ -8,7 +8,7 @@ import {SyncCommitteeService} from "../../../src/services/syncCommittee";
 import {SyncDutyAndProofs} from "../../../src/services/syncCommitteeDuties";
 import {ValidatorStore} from "../../../src/services/validatorStore";
 import {getApiClientStub} from "../../utils/apiStub";
-import {testLogger} from "../../utils/logger";
+import {loggerVc, testLogger} from "../../utils/logger";
 import {ClockMock} from "../../utils/clock";
 import {IndicesService} from "../../../src/services/indices";
 import {ssz} from "@chainsafe/lodestar-types";
@@ -47,7 +47,7 @@ describe("SyncCommitteeService", function () {
   it("Should produce, sign, and publish a sync committee + contribution", async () => {
     const clock = new ClockMock();
     const indicesService = new IndicesService(logger, api, validatorStore);
-    const syncCommitteeService = new SyncCommitteeService(config, logger, api, clock, validatorStore, indicesService);
+    const syncCommitteeService = new SyncCommitteeService(config, loggerVc, api, clock, validatorStore, indicesService);
 
     const beaconBlockRoot = Buffer.alloc(32, 0x4d);
     const syncCommitteeSignature = ssz.altair.SyncCommitteeMessage.defaultValue();

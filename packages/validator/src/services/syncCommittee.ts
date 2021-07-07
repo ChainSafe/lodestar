@@ -1,14 +1,14 @@
 import {AbortSignal} from "@chainsafe/abort-controller";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {Slot, CommitteeIndex, altair, Root} from "@chainsafe/lodestar-types";
-import {ILogger, prettyBytes, sleep} from "@chainsafe/lodestar-utils";
+import {prettyBytes, sleep} from "@chainsafe/lodestar-utils";
+import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {Api} from "@chainsafe/lodestar-api";
-import {extendError, notAborted, IClock} from "../util";
+import {IClock, extendError, notAborted, ILoggerVc} from "../util";
 import {ValidatorStore} from "./validatorStore";
 import {SyncCommitteeDutiesService, SyncDutyAndProofs} from "./syncCommitteeDuties";
 import {groupSyncDutiesBySubCommitteeIndex, SubCommitteeDuty} from "./utils";
 import {IndicesService} from "./indices";
-import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 
 /**
  * Service that sets up and handles validator sync duties.
@@ -18,7 +18,7 @@ export class SyncCommitteeService {
 
   constructor(
     private readonly config: IChainForkConfig,
-    private readonly logger: ILogger,
+    private readonly logger: ILoggerVc,
     private readonly api: Api,
     private readonly clock: IClock,
     private readonly validatorStore: ValidatorStore,

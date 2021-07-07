@@ -1,10 +1,9 @@
 import {AbortSignal} from "@chainsafe/abort-controller";
-import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {phase0, Slot, CommitteeIndex, ssz} from "@chainsafe/lodestar-types";
 import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
-import {ILogger, prettyBytes, sleep} from "@chainsafe/lodestar-utils";
+import {prettyBytes, sleep} from "@chainsafe/lodestar-utils";
 import {Api} from "@chainsafe/lodestar-api";
-import {extendError, notAborted, IClock} from "../util";
+import {extendError, notAborted, IClock, ILoggerVc} from "../util";
 import {ValidatorStore} from "./validatorStore";
 import {AttestationDutiesService, AttDutyAndProof} from "./attestationDuties";
 import {groupAttDutiesByCommitteeIndex} from "./utils";
@@ -17,14 +16,13 @@ export class AttestationService {
   private readonly dutiesService: AttestationDutiesService;
 
   constructor(
-    private readonly config: IChainForkConfig,
-    private readonly logger: ILogger,
+    private readonly logger: ILoggerVc,
     private readonly api: Api,
     private readonly clock: IClock,
     private readonly validatorStore: ValidatorStore,
     indicesService: IndicesService
   ) {
-    this.dutiesService = new AttestationDutiesService(config, logger, api, clock, validatorStore, indicesService);
+    this.dutiesService = new AttestationDutiesService(logger, api, clock, validatorStore, indicesService);
 
     // At most every slot, check existing duties from AttestationDutiesService and run tasks
     clock.runEverySlot(this.runAttestationTasks);
