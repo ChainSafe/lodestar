@@ -40,22 +40,22 @@ export function getLodestarApi({
       if (writingHeapdump) {
         throw Error("Already writing heapdump");
       }
-
       // Lazily import NodeJS only modules
       const fs = await import("fs");
       const v8 = await import("v8");
-      const {pipeline} = await import("stream");
-      const {promisify} = await import("util");
-
       const snapshotStream = v8.getHeapSnapshot();
       // It's important that the filename end with `.heapsnapshot`,
       // otherwise Chrome DevTools won't open it.
       const filepath = `${dirpath}/${new Date().toISOString()}.heapsnapshot`;
       const fileStream = fs.createWriteStream(filepath);
-
       try {
         writingHeapdump = true;
-        await promisify(pipeline)(snapshotStream, fileStream);
+        await new Promise<void>((resolve) => {
+          snapshotStream.pipe(fileStream);
+          snapshotStream.on("end", () => {
+            resolve();
+          });
+        });
         return {data: {filepath}};
       } finally {
         writingHeapdump = false;
