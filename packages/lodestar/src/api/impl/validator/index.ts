@@ -22,7 +22,6 @@ import {SyncState} from "../../../sync";
 import {toGraffitiBuffer} from "../../../util/graffiti";
 import {ApiError, NodeIsSyncing} from "../errors";
 import {validateSyncCommitteeGossipContributionAndProof} from "../../../chain/validation/syncCommitteeContributionAndProof";
-import {SyncContributionError, SyncContributionErrorCode} from "../../../db/syncCommitteeContribution";
 import {CommitteeSubscription} from "../../../network/subnets";
 import {OpSource} from "../../../metrics/validatorMonitor";
 import {computeSubnetForCommitteesAtSlot, getPubkeysForIndices, getSyncComitteeValidatorIndexMap} from "./utils";
@@ -144,7 +143,7 @@ export function getValidatorApi({
 
         timer = metrics?.blockProductionTime.startTimer();
         const block = await assembleBlock(
-          {config: config, chain: chain, db: db, eth1: eth1, metrics: metrics},
+          {config, chain, db, eth1, metrics},
           slot,
           randaoReveal,
           toGraffitiBuffer(graffiti)
@@ -178,7 +177,7 @@ export function getValidatorApi({
      * @param beaconBlockRoot The block root for which to produce the contribution.
      */
     async produceSyncCommitteeContribution(slot, subcommitteeIndex, beaconBlockRoot) {
-      const contribution = db.syncCommittee.getSyncCommitteeContribution(subcommitteeIndex, slot, beaconBlockRoot);
+      const contribution = chain.syncCommitteeMessagePool.getContribution(subcommitteeIndex, slot, beaconBlockRoot);
       if (!contribution) throw new ApiError(500, "No contribution available");
       return {data: contribution};
     },
@@ -376,15 +375,10 @@ export function getValidatorApi({
         contributionAndProofs.map(async (contributionAndProof, i) => {
           try {
             // TODO: Validate in batch
-            await validateSyncCommitteeGossipContributionAndProof(chain, db, contributionAndProof);
-            db.syncCommitteeContribution.add(contributionAndProof.message);
+            await validateSyncCommitteeGossipContributionAndProof(chain, contributionAndProof);
+            chain.syncContributionAndProofPool.add(contributionAndProof.message);
             await network.gossip.publishContributionAndProof(contributionAndProof);
           } catch (e) {
-            if (e instanceof SyncContributionError && e.type.code === SyncContributionErrorCode.ALREADY_KNOWN) {
-              logger.debug("Ignoring known contributionAndProof");
-              return; // Ok to submit the same aggregate twice
-            }
-
             errors.push(e);
             logger.error(
               `Error on publishContributionAndProofs [${i}]`,
