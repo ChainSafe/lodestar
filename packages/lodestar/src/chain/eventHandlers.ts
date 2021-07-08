@@ -171,12 +171,20 @@ export function onJustified(
 export async function onFinalized(this: BeaconChain, cp: phase0.Checkpoint): Promise<void> {
   this.logger.verbose("Checkpoint finalized", ssz.phase0.Checkpoint.toJson(cp));
   this.metrics?.finalizedEpoch.set(cp.epoch);
+}
 
+export function onForkChoiceJustified(this: BeaconChain, cp: phase0.Checkpoint): void {
+  this.logger.verbose("Fork choice justified", ssz.phase0.Checkpoint.toJson(cp));
+}
+
+export async function onForkChoiceFinalized(this: BeaconChain, cp: phase0.Checkpoint): Promise<void> {
+  this.logger.verbose("Fork choice finalized", ssz.phase0.Checkpoint.toJson(cp));
   // Only after altair
   if (cp.epoch >= this.config.ALTAIR_FORK_EPOCH) {
     try {
       const state = await this.regen.getCheckpointState(cp);
-      const block = await this.getCanonicalBlockAtSlot(state.slot);
+      // using state.slot is not correct for a checkpoint with skipped slot
+      const block = await this.getCanonicalBlockAtSlot(state.latestBlockHeader.slot);
       if (!block) {
         throw Error(`No block found for checkpoint ${cp.epoch} : ${toHexString(cp.root)}`);
       }
@@ -190,14 +198,6 @@ export async function onFinalized(this: BeaconChain, cp: phase0.Checkpoint): Pro
       this.logger.error("Error lightclientUpdater.onFinalized", {epoch: cp.epoch}, e);
     }
   }
-}
-
-export function onForkChoiceJustified(this: BeaconChain, cp: phase0.Checkpoint): void {
-  this.logger.verbose("Fork choice justified", ssz.phase0.Checkpoint.toJson(cp));
-}
-
-export function onForkChoiceFinalized(this: BeaconChain, cp: phase0.Checkpoint): void {
-  this.logger.verbose("Fork choice finalized", ssz.phase0.Checkpoint.toJson(cp));
 }
 
 export function onForkChoiceHead(this: BeaconChain, head: IBlockSummary): void {

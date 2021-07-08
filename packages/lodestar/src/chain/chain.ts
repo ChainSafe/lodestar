@@ -3,11 +3,7 @@
  */
 
 import {ForkName} from "@chainsafe/lodestar-params";
-import {
-  CachedBeaconState,
-  computeEpochAtSlot,
-  computeStartSlotAtEpoch,
-} from "@chainsafe/lodestar-beacon-state-transition";
+import {CachedBeaconState, computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {allForks, ForkDigest, Number64, Root, phase0, Slot} from "@chainsafe/lodestar-types";
@@ -187,8 +183,8 @@ export class BeaconChain implements IBeaconChain {
   }
 
   async getCanonicalBlockAtSlot(slot: Slot): Promise<allForks.SignedBeaconBlock | null> {
-    const finalizedCheckpoint = this.forkChoice.getFinalizedCheckpoint();
-    if (finalizedCheckpoint.epoch > computeEpochAtSlot(slot)) {
+    const finalizedBlock = this.forkChoice.getFinalizedBlock();
+    if (finalizedBlock.slot > slot) {
       return this.db.blockArchive.get(slot);
     }
     const summary = this.forkChoice.getCanonicalBlockSummaryAtSlot(slot);
