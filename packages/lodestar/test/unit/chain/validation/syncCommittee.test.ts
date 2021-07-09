@@ -1,5 +1,4 @@
 import {initBLS} from "@chainsafe/lodestar-cli/src/util";
-import {ForkChoice, IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import sinon from "sinon";
 import {SinonStubbedInstance} from "sinon";
 import {BeaconChain, IBeaconChain} from "../../../../src/chain";
@@ -18,7 +17,6 @@ import {SeenSyncCommitteeMessages} from "../../../../src/chain/seenCache";
 describe("Sync Committee Signature validation", function () {
   const sandbox = sinon.createSandbox();
   let chain: SinonStubbedInstance<IBeaconChain>;
-  let forkChoiceStub: SinonStubbedInstance<IForkChoice>;
   let clockStub: SinonStubbedInstance<LocalClock>;
   // let computeSubnetsForSyncCommitteeStub: SinonStubFn<typeof syncCommitteeUtils["computeSubnetsForSyncCommittee"]>;
   let altairForkEpochBk: phase0.Epoch;
@@ -48,8 +46,6 @@ describe("Sync Committee Signature validation", function () {
     clockStub = sandbox.createStubInstance(LocalClock);
     chain.clock = clockStub;
     clockStub.isCurrentSlotGivenGossipDisparity.returns(true);
-    forkChoiceStub = sandbox.createStubInstance(ForkChoice);
-    chain.forkChoice = forkChoiceStub;
   });
 
   afterEach(function () {
@@ -67,21 +63,11 @@ describe("Sync Committee Signature validation", function () {
     );
   });
 
-  it("should throw error - the block being signed over has not been seen", async function () {
-    const syncCommittee = generateSyncCommitteeSignature({slot: currentSlot});
-    forkChoiceStub.hasBlock.returns(false);
-    await expectRejectedWithLodestarError(
-      validateGossipSyncCommittee(chain, syncCommittee, 0),
-      SyncCommitteeErrorCode.UNKNOWN_BEACON_BLOCK_ROOT
-    );
-  });
-
   it("should throw error - there has been another valid sync committee signature for the declared slot", async function () {
     const syncCommittee = generateSyncCommitteeSignature({
       slot: currentSlot,
       validatorIndex: validatorIndexInSyncCommittee,
     });
-    forkChoiceStub.hasBlock.returns(true);
     const headState = generateCachedState({slot: currentSlot}, config, true);
     chain.getHeadState.returns(headState);
     chain.seenSyncCommitteeMessages.isKnown = () => true;
@@ -93,7 +79,6 @@ describe("Sync Committee Signature validation", function () {
 
   it("should throw error - the validator is not part of the current sync committee", async function () {
     const syncCommittee = generateSyncCommitteeSignature({slot: currentSlot, validatorIndex: 100});
-    forkChoiceStub.hasBlock.returns(true);
     const headState = generateCachedState({slot: currentSlot}, config, true);
     chain.getHeadState.returns(headState);
 
@@ -109,7 +94,6 @@ describe("Sync Committee Signature validation", function () {
    */
   it.skip("should throw error - incorrect subnet", async function () {
     const syncCommittee = generateSyncCommitteeSignature({slot: currentSlot, validatorIndex: 1});
-    forkChoiceStub.hasBlock.returns(true);
     const headState = generateCachedState({slot: currentSlot}, config, true);
     chain.getHeadState.returns(headState);
     await expectRejectedWithLodestarError(
@@ -123,7 +107,6 @@ describe("Sync Committee Signature validation", function () {
       slot: currentSlot,
       validatorIndex: validatorIndexInSyncCommittee,
     });
-    forkChoiceStub.hasBlock.returns(true);
     const headState = generateCachedState({slot: currentSlot}, config, true);
 
     chain.getHeadState.returns(headState);
