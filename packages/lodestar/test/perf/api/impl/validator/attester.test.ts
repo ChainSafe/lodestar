@@ -1,12 +1,9 @@
 import {itBench, setBenchOpts} from "@dapplion/benchmark";
 import {PointFormat} from "@chainsafe/bls";
-import {config} from "@chainsafe/lodestar-config/default";
-import {MAX_EFFECTIVE_BALANCE, FAR_FUTURE_EPOCH} from "@chainsafe/lodestar-params";
-import {CachedBeaconState, createCachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
-import {generateInitialMaxBalances} from "../../../../utils/balances";
-import {generateState} from "../../../../utils/state";
-import {generateValidators} from "../../../../utils/validator";
-import {BeaconState} from "../../../../../../beacon-state-transition/src/allForks";
+import {
+  generatePerfTestCachedStatePhase0,
+  numValidators,
+} from "@chainsafe/lodestar-beacon-state-transition/test/perf/util";
 
 // Using state.validators.persistent is the fastest way of retrieving pubkeys by far
 // Benchmark data from Wed Jun 30 2021 - Intel(R) Core(TM) i5-8250U CPU @ 1.60GHz
@@ -28,28 +25,11 @@ enum Impl {
 }
 
 describe("api / impl / validator", () => {
-  let state: CachedBeaconState<BeaconState>;
-
-  const validatorCount = 200000;
+  let state: ReturnType<typeof generatePerfTestCachedStatePhase0>;
 
   before(function () {
     this.timeout(60 * 1000);
-
-    const validators = generateValidators(validatorCount, {
-      effectiveBalance: MAX_EFFECTIVE_BALANCE,
-      activationEpoch: 0,
-      exitEpoch: FAR_FUTURE_EPOCH,
-    });
-
-    const _state = generateState(
-      {
-        slot: 0,
-        validators,
-        balances: generateInitialMaxBalances(config, validatorCount),
-      },
-      config
-    );
-    state = createCachedBeaconState(config, _state);
+    state = generatePerfTestCachedStatePhase0();
   });
 
   setBenchOpts({
@@ -64,7 +44,7 @@ describe("api / impl / validator", () => {
 
   if (impls.includes(Impl.index2pubkey)) {
     for (const reqCount of reqCounts) {
-      itBench(`getPubkeys - index2pubkey - req ${reqCount} vs - ${validatorCount} vc`, () => {
+      itBench(`getPubkeys - index2pubkey - req ${reqCount} vs - ${numValidators} vc`, () => {
         for (let i = 0; i < reqCount; i++) {
           const pubkey = state.index2pubkey[i];
           pubkey.toBytes(PointFormat.compressed);
@@ -75,7 +55,7 @@ describe("api / impl / validator", () => {
 
   if (impls.includes(Impl.validatorsArr)) {
     for (const reqCount of reqCounts) {
-      itBench(`getPubkeys - validatorsArr - req ${reqCount} vs - ${validatorCount} vc`, () => {
+      itBench(`getPubkeys - validatorsArr - req ${reqCount} vs - ${numValidators} vc`, () => {
         for (let i = 0; i < reqCount; i++) {
           const validator = state.validators[i];
           validator.pubkey;
@@ -86,7 +66,7 @@ describe("api / impl / validator", () => {
 
   if (impls.includes(Impl.persistent)) {
     for (const reqCount of reqCounts) {
-      itBench(`getPubkeys - persistent - req ${reqCount} vs - ${validatorCount} vc`, () => {
+      itBench(`getPubkeys - persistent - req ${reqCount} vs - ${numValidators} vc`, () => {
         const validators = state.validators.persistent;
         for (let i = 0; i < reqCount; i++) {
           const validator = validators.get(i);
