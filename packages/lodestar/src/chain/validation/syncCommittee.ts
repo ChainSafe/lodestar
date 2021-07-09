@@ -8,7 +8,7 @@ import {getSyncCommitteeSignatureSet} from "./signatureSets";
 type IndexInSubCommittee = number;
 
 /**
- * Spec v1.1.0-alpha.5
+ * Spec v1.1.0-alpha.8
  */
 export async function validateGossipSyncCommittee(
   chain: IBeaconChain,
@@ -23,7 +23,7 @@ export async function validateGossipSyncCommittee(
   // [IGNORE] The signature's slot is for the current slot, i.e. sync_committee_signature.slot == current_slot.
   // > Checked in validateGossipSyncCommitteeExceptSig()
 
-  // [IGNORE] The block being signed over (sync_committee_signature.beacon_block_root) has been seen (via both gossip and non-gossip sources).
+  // [REJECT] The subnet_id is valid for the given validator, i.e. subnet_id in compute_subnets_for_sync_committee(state, sync_committee_message.validator_index). Note this validation implies the validator is part of the broader current sync committee along with the correct subcommittee.
   // > Checked in validateGossipSyncCommitteeExceptSig()
 
   // [IGNORE] There has been no other valid sync committee signature for the declared slot for the validator referenced
@@ -64,15 +64,15 @@ export async function validateSyncCommitteeSigOnly(
 }
 
 /**
- * Spec v1.1.0-alpha.3
+ * Spec v1.1.0-alpha.8
  */
 export function validateGossipSyncCommitteeExceptSig(
   chain: IBeaconChain,
   headState: CachedBeaconState<allForks.BeaconState>,
   subnet: number,
-  data: Pick<altair.SyncCommitteeMessage, "slot" | "beaconBlockRoot" | "validatorIndex">
+  data: Pick<altair.SyncCommitteeMessage, "slot" | "validatorIndex">
 ): IndexInSubCommittee {
-  const {slot, beaconBlockRoot, validatorIndex} = data;
+  const {slot, validatorIndex} = data;
   // [IGNORE] The signature's slot is for the current slot, i.e. sync_committee_signature.slot == current_slot.
   // (with a MAXIMUM_GOSSIP_CLOCK_DISPARITY allowance)
   if (!chain.clock.isCurrentSlotGivenGossipDisparity(slot)) {
@@ -80,14 +80,6 @@ export function validateGossipSyncCommitteeExceptSig(
       code: SyncCommitteeErrorCode.NOT_CURRENT_SLOT,
       currentSlot: chain.clock.currentSlot,
       slot,
-    });
-  }
-
-  // [IGNORE] The block being signed over (sync_committee_signature.beacon_block_root) has been seen (via both gossip and non-gossip sources).
-  if (!chain.forkChoice.hasBlock(beaconBlockRoot)) {
-    throw new SyncCommitteeError(GossipAction.IGNORE, {
-      code: SyncCommitteeErrorCode.UNKNOWN_BEACON_BLOCK_ROOT,
-      beaconBlockRoot: beaconBlockRoot as Uint8Array,
     });
   }
 
