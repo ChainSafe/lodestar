@@ -93,9 +93,12 @@ export class SyncCommitteeService {
     // Spec: the validator should prepare a SyncCommitteeMessage for the previous slot (slot - 1)
     // as soon as they have determined the head block of slot - 1
 
-    const blockRoot = this.chainHeaderTracker.getCurrentChainHead(slot);
+    let blockRoot = this.chainHeaderTracker.getCurrentChainHead(slot);
     if (blockRoot === null) {
-      throw new Error("not able to get head at slot " + slot);
+      const blockRootData = await this.api.beacon.getBlockRoot("head").catch((e) => {
+        throw extendError(e, "Error producing SyncCommitteeMessage");
+      });
+      blockRoot = blockRootData.data;
     }
 
     const signatures: altair.SyncCommitteeMessage[] = [];
