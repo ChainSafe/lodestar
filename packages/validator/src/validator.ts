@@ -65,7 +65,7 @@ export class Validator {
     const clock = new Clock(config, logger, {genesisTime: Number(genesis.genesisTime)});
     const validatorStore = new ValidatorStore(config, slashingProtection, secretKeys, genesis);
     const indicesService = new IndicesService(logger, api, validatorStore);
-    this.chainHeaderTracker = new ChainHeaderTracker(api);
+    this.chainHeaderTracker = new ChainHeaderTracker(logger, api);
     const loggerVc = getLoggerVc(logger, clock);
     new BlockProposingService(loggerVc, api, clock, validatorStore, graffiti);
     new AttestationService(loggerVc, api, clock, validatorStore, indicesService);

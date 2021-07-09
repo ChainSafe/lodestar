@@ -1,7 +1,9 @@
 import {Api, routes} from "@chainsafe/lodestar-api";
+import {ILogger} from "@chainsafe/lodestar-utils";
 import {phase0} from "@chainsafe/lodestar-types";
 import {GENESIS_SLOT} from "@chainsafe/lodestar-params";
 import {ZERO_HASH} from "../constants";
+import {toHexString} from "@chainsafe/ssz";
 
 const {EventType} = routes.events;
 
@@ -12,13 +14,14 @@ export class ChainHeaderTracker {
   private headBlockSlot: phase0.Slot;
   private headBlockRoot: phase0.Root;
 
-  constructor(private readonly api: Api) {
+  constructor(private readonly logger: ILogger, private readonly api: Api) {
     this.headBlockSlot = GENESIS_SLOT;
     this.headBlockRoot = ZERO_HASH;
   }
 
   start(signal: AbortSignal): void {
     this.api.events.eventstream([EventType.head], signal, this.onHeadUpdate);
+    this.logger.verbose("Subscribed to head event");
   }
 
   getCurrentChainHead(slot: phase0.Slot): phase0.Root | null {
@@ -34,6 +37,10 @@ export class ChainHeaderTracker {
       const {message} = event;
       this.headBlockSlot = message.slot;
       this.headBlockRoot = message.block;
+      this.logger.verbose("Found new chain head", {
+        slot: this.headBlockSlot,
+        blockRoot: toHexString(this.headBlockRoot),
+      });
     }
   };
 }
