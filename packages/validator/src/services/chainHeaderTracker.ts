@@ -25,7 +25,7 @@ export class ChainHeaderTracker {
   }
 
   getCurrentChainHead(slot: phase0.Slot): phase0.Root | null {
-    if (slot > this.headBlockSlot) {
+    if (slot >= this.headBlockSlot) {
       return this.headBlockRoot;
     }
     // We don't know head of an old block
