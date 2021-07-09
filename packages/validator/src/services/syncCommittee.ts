@@ -9,6 +9,7 @@ import {ValidatorStore} from "./validatorStore";
 import {SyncCommitteeDutiesService, SyncDutyAndProofs} from "./syncCommitteeDuties";
 import {groupSyncDutiesBySubCommitteeIndex, SubCommitteeDuty} from "./utils";
 import {IndicesService} from "./indices";
+import {ChainHeaderTracker} from "./chainHeaderTracker";
 
 /**
  * Service that sets up and handles validator sync duties.
@@ -22,6 +23,7 @@ export class SyncCommitteeService {
     private readonly api: Api,
     private readonly clock: IClock,
     private readonly validatorStore: ValidatorStore,
+    private readonly chainHeaderTracker: ChainHeaderTracker,
     indicesService: IndicesService
   ) {
     this.dutiesService = new SyncCommitteeDutiesService(config, logger, api, clock, validatorStore, indicesService);
@@ -90,11 +92,12 @@ export class SyncCommitteeService {
     // Produce one attestation data per slot and subcommitteeIndex
     // Spec: the validator should prepare a SyncCommitteeMessage for the previous slot (slot - 1)
     // as soon as they have determined the head block of slot - 1
-    const beaconBlockRoot = await this.api.beacon.getBlockRoot(slot).catch((e) => {
-      throw extendError(e, "Error producing SyncCommitteeMessage");
-    });
 
-    const blockRoot = beaconBlockRoot.data;
+    const blockRoot = this.chainHeaderTracker.getCurrentChainHead(slot);
+    if (blockRoot === null) {
+      throw new Error("not able to get head at slot " + slot);
+    }
+
     const signatures: altair.SyncCommitteeMessage[] = [];
 
     for (const {duty} of duties) {
