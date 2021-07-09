@@ -29,7 +29,9 @@ export async function validateSyncCommitteeGossipContributionAndProof(
   // [IGNORE] The contribution's slot is for the current slot, i.e. contribution.slot == current_slot.
   // > Checked in validateGossipSyncCommitteeExceptSig()
 
-  // [REJECT] The aggregator's validator index is in the declared subcommittee of the current sync committee -- i.e. state.validators[contribution_and_proof.aggregator_index].pubkey in get_sync_subcommittee_pubkeys(state, contribution.subcommittee_index).
+  // [REJECT] The aggregator's validator index is in the declared subcommittee of the current sync committee
+  // -- i.e. state.validators[contribution_and_proof.aggregator_index].pubkey in
+  // get_sync_subcommittee_pubkeys(state, contribution.subcommittee_index).
   // > Checked in validateGossipSyncCommitteeExceptSig()
 
   // [IGNORE] The sync committee contribution is the first valid contribution received for the aggregator with index
