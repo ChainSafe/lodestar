@@ -1,12 +1,13 @@
-# Getting started
-
 ![lodestar logo](assets/300ppi/FullMark-BLACK.png)
 
-## Welcome to the ChainSafe lodestar documentation!
+## Welcome to the Lodestar documentation!
 
-**Lodestar is a Typescript implementation** of the official [Ethereum 2.0 specification](https://github.com/ethereum/eth2.0-specs) which is the product of an ongoing collective research and development effort by various teams.
+> **Lodestar is an open-source Ethereum Consensus (Eth2) client and Typescript ecosystem, maintained by ChainSafe Systems**
 
-- Follow the [installation guide](installation) to install Lodestar.
+### Getting started
+
+- Follow the [installation guide](installation) to install the Lodestar CLI.
+- Use [lodestar libraries](libraries) in your next Ethereum Typescript project.
 - Run a node on [mainnet or a public testnet](usage/testnet).
 - Utilize the whole stack by [starting a local testnet](usage/local).
 - View the lodestar [cli commands and options](https://chainsafe.github.io/lodestar/reference/cli/)
@@ -15,8 +16,8 @@
 
 ## About this docs
 
-This documentation is open source, contribute at [github.com/chainsafe/lodestar/docs](https://github.com/chainsafe/lodestar).
+This documentation is open source, contribute at [github.com/chainsafe/lodestar/docs](https://github.com/ChainSafe/lodestar/tree/master/docs).
 
 ## Need assistance?
 
-If you have questions about this documentation, feel free to talk to us on our [discord](https://discord.gg/yjyvFRP) and a member of the team or our community will be happy to assist you.
+If you have questions about this documentation, feel free to talk to us on our [discord](https://discord.gg/yjyvFRP) or [open an issue](https://github.com/ChainSafe/lodestar/issues/new/choose) and a member of the team or our community will be happy to assist you.
