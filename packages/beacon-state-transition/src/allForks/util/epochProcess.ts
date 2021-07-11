@@ -121,8 +121,13 @@ export function prepareEpochProcessState<T extends allForks.BeaconState>(state: 
       activeCount += 1;
     }
 
-    if (v.exitEpoch !== FAR_FUTURE_EPOCH && v.exitEpoch > exitQueueEnd) {
-      exitQueueEnd = v.exitEpoch;
+    if (v.exitEpoch !== FAR_FUTURE_EPOCH) {
+      if (v.exitEpoch > exitQueueEnd) {
+        exitQueueEnd = v.exitEpoch;
+        exitQueueEndChurn = 1;
+      } else if (v.exitEpoch === exitQueueEnd) {
+        exitQueueEndChurn += 1;
+      }
     }
 
     if (v.activationEligibilityEpoch === FAR_FUTURE_EPOCH && v.effectiveBalance === MAX_EFFECTIVE_BALANCE) {
@@ -153,12 +158,6 @@ export function prepareEpochProcessState<T extends allForks.BeaconState>(state: 
   out.indicesToMaybeActivate.sort(
     (a, b) => out.validators[a].activationEligibilityEpoch - out.validators[b].activationEligibilityEpoch || a - b
   );
-
-  for (const validator of out.validators) {
-    if (validator.exitEpoch === exitQueueEnd) {
-      exitQueueEndChurn += 1;
-    }
-  }
 
   const churnLimit = getChurnLimit(config, activeCount);
   if (exitQueueEndChurn >= churnLimit) {

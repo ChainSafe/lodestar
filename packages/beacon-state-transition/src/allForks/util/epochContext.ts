@@ -36,7 +36,6 @@ import {
 } from "../../util";
 import {computeEpochShuffling, IEpochShuffling} from "./epochShuffling";
 import {MutableVector} from "@chainsafe/persistent-ts";
-import {CachedValidatorList} from "./cachedValidatorList";
 import {computeBaseRewardPerIncrement} from "../../altair/misc";
 
 export type AttesterDuty = {
