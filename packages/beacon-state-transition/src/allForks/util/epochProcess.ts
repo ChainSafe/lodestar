@@ -54,6 +54,8 @@ export interface IEpochProcess {
   statuses: IAttesterStatus[];
   validators: phase0.Validator[];
   balances?: BigUint64Array;
+  // to be used for rotateEpochs()
+  indicesBounded: [ValidatorIndex, Epoch, Epoch][];
 }
 
 export function createIEpochProcess(): IEpochProcess {
@@ -77,6 +79,7 @@ export function createIEpochProcess(): IEpochProcess {
     churnLimit: 0,
     statuses: [],
     validators: [],
+    indicesBounded: [],
   };
 }
 
@@ -136,6 +139,7 @@ export function prepareEpochProcessState<T extends allForks.BeaconState>(state: 
 
     out.statuses.push(status);
     out.validators.push(v);
+    out.indicesBounded.push([i, v.activationEpoch, v.exitEpoch]);
   });
 
   if (out.totalActiveStake < EFFECTIVE_BALANCE_INCREMENT) {
