@@ -42,6 +42,8 @@ export function getRewardsPenaltiesDeltas(
   const penalties = newZeroedBigIntArray(validatorCount);
 
   const isInInactivityLeakBn = isInInactivityLeak((state as unknown) as phase0.BeaconState);
+  // effectiveBalance is multiple of EFFECTIVE_BALANCE_INCREMENT and less than MAX_EFFECTIVE_BALANCE
+  // so there are limited values of them like 32000000000, 31000000000, 30000000000
   const rewardPenaltyItemCache = new Map<number, IRewardPenaltyItem>();
   const {config} = state;
   const penaltyDenominator = config.INACTIVITY_SCORE_BIAS * INACTIVITY_PENALTY_QUOTIENT_ALTAIR;

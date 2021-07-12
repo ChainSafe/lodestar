@@ -64,6 +64,8 @@ export function getAttestationDeltas(
   const proposerRewardQuotient = Number(PROPOSER_REWARD_QUOTIENT);
   const isInInactivityLeak = finalityDelay > MIN_EPOCHS_TO_INACTIVITY_PENALTY;
 
+  // effectiveBalance is multiple of EFFECTIVE_BALANCE_INCREMENT and less than MAX_EFFECTIVE_BALANCE
+  // so there are limited values of them like 32000000000, 31000000000, 30000000000
   const rewardPnaltyItemCache = new Map<number, IRewardPenaltyItem>();
   for (const [i, status] of process.statuses.entries()) {
     const effBalance = process.validators[i].effectiveBalance;
