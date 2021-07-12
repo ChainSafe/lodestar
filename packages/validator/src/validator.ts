@@ -15,6 +15,7 @@ import {IndicesService} from "./services/indices";
 import {SyncCommitteeService} from "./services/syncCommittee";
 import {ISlashingProtection} from "./slashingProtection";
 import {assertEqualParams, getLoggerVc} from "./util";
+import {ChainHeaderTracker} from "./services/chainHeaderTracker";
 
 export type ValidatorOptions = {
   slashingProtection: ISlashingProtection;
@@ -44,6 +45,7 @@ export class Validator {
   private readonly api: Api;
   private readonly secretKeys: SecretKey[];
   private readonly clock: IClock;
+  private readonly chainHeaderTracker: ChainHeaderTracker;
   private readonly logger: ILogger;
   private state: State = {status: Status.stopped};
 
@@ -63,10 +65,11 @@ export class Validator {
     const clock = new Clock(config, logger, {genesisTime: Number(genesis.genesisTime)});
     const validatorStore = new ValidatorStore(config, slashingProtection, secretKeys, genesis);
     const indicesService = new IndicesService(logger, api, validatorStore);
+    this.chainHeaderTracker = new ChainHeaderTracker(logger, api);
     const loggerVc = getLoggerVc(logger, clock);
     new BlockProposingService(loggerVc, api, clock, validatorStore, graffiti);
     new AttestationService(loggerVc, api, clock, validatorStore, indicesService);
-    new SyncCommitteeService(config, loggerVc, api, clock, validatorStore, indicesService);
+    new SyncCommitteeService(config, loggerVc, api, clock, validatorStore, this.chainHeaderTracker, indicesService);
 
     this.config = config;
     this.logger = logger;
@@ -99,8 +102,9 @@ export class Validator {
     if (this.state.status === Status.running) return;
     const controller = new AbortController();
     this.state = {status: Status.running, controller};
-
-    this.clock.start(controller.signal);
+    const {signal} = controller;
+    this.clock.start(signal);
+    this.chainHeaderTracker.start(signal);
   }
 
   /**
