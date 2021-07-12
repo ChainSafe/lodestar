@@ -6,7 +6,7 @@ import {allForks, ForkDigest, Number64, Root, Slot, ssz, Uint16, Uint64} from "@
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {CachedBeaconState, createCachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
 import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
-import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
+import {ForkChoice, IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {LightClientUpdater} from "@chainsafe/lodestar-light-client/server";
 
 import {ChainEventEmitter, IBeaconChain} from "../../../../src/chain";
@@ -30,6 +30,7 @@ import {
   SeenSyncCommitteeMessages,
 } from "../../../../src/chain/seenCache";
 import {SyncCommitteeMessagePool, SyncContributionAndProofPool} from "../../../../src/chain/opPools";
+import {LightClientIniter} from "../../../../src/chain/lightClient";
 
 /* eslint-disable @typescript-eslint/no-empty-function */
 
@@ -56,6 +57,7 @@ export class MockBeaconChain implements IBeaconChain {
   pendingBlocks: BlockPool;
   forkDigestContext: IForkDigestContext;
   lightclientUpdater: LightClientUpdater;
+  lightClientIniter: LightClientIniter;
 
   // Ops pool
   readonly attestationPool = new AttestationPool();
@@ -105,6 +107,12 @@ export class MockBeaconChain implements IBeaconChain {
     });
     this.forkDigestContext = new ForkDigestContext(this.config, this.genesisValidatorsRoot);
     this.lightclientUpdater = new LightClientUpdater(db);
+    this.lightClientIniter = new LightClientIniter({
+      config: this.config,
+      db: db,
+      forkChoice: this.forkChoice as ForkChoice,
+      stateCache: this.stateCache,
+    });
   }
 
   async getHeadBlock(): Promise<null> {

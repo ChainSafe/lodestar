@@ -197,6 +197,11 @@ export async function onForkChoiceFinalized(this: BeaconChain, cp: phase0.Checkp
     } catch (e) {
       this.logger.error("Error lightclientUpdater.onFinalized", {epoch: cp.epoch}, e);
     }
+    try {
+      await this.lightClientIniter.onFinalized(cp);
+    } catch (e) {
+      this.logger.error("Error LightClientIniter.onFinalized", {epoch: cp.epoch}, e);
+    }
   }
 }
 

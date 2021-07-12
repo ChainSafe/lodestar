@@ -18,6 +18,8 @@ import {
   VoluntaryExitRepository,
   BestUpdatePerCommitteePeriod,
   LightclientFinalizedCheckpoint,
+  LightClientInitProofRepository,
+  LightClientSyncCommitteeProofRepository,
 } from "./repositories";
 import {
   PreGenesisState,
@@ -51,6 +53,8 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
   latestFinalizedUpdate: LatestFinalizedUpdate;
   latestNonFinalizedUpdate: LatestNonFinalizedUpdate;
   lightclientFinalizedCheckpoint: LightclientFinalizedCheckpoint;
+  lightClientInitProof: LightClientInitProofRepository;
+  lightClientSyncCommitteeProof: LightClientSyncCommitteeProofRepository;
 
   constructor(opts: IDatabaseApiOptions) {
     super(opts);
@@ -74,6 +78,12 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
     this.latestFinalizedUpdate = new LatestFinalizedUpdate(this.config, this.db, this.metrics);
     this.latestNonFinalizedUpdate = new LatestNonFinalizedUpdate(this.config, this.db, this.metrics);
     this.lightclientFinalizedCheckpoint = new LightclientFinalizedCheckpoint(this.config, this.db, this.metrics);
+    this.lightClientInitProof = new LightClientInitProofRepository(this.config, this.db, this.metrics);
+    this.lightClientSyncCommitteeProof = new LightClientSyncCommitteeProofRepository(
+      this.config,
+      this.db,
+      this.metrics
+    );
   }
 
   /**

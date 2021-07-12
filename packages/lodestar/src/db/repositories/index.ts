@@ -14,3 +14,4 @@ export * from "./eth1Data";
 
 export * from "./bestUpdatePerCommitteePeriod";
 export * from "./lightclientFinalizedCheckpoint";
+export * from "./lightClientInitProof";

@@ -39,5 +39,15 @@ export function getLightclientApi({
       if (!update) throw new ApiError(404, "No update available");
       return {data: update};
     },
+
+    // Init API
+
+    async getInitProof(epoch) {
+      const proof = await chain.lightClientIniter.getInitProofByEpoch(Number(epoch));
+      if (!proof) {
+        throw new ApiError(404, "No init proof available");
+      }
+      return {data: proof};
+    },
   };
 }

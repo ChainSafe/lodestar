@@ -13,6 +13,7 @@ import {IBlsVerifier} from "./bls";
 import {SeenAttesters, SeenAggregators, SeenSyncCommitteeMessages, SeenContributionAndProof} from "./seenCache";
 import {AttestationPool, SyncCommitteeMessagePool, SyncContributionAndProofPool} from "./opPools";
 import {IForkDigestContext} from "../util/forkDigestContext";
+import {LightClientIniter} from "./lightClient";
 
 export interface IProcessBlock {
   /**
@@ -60,6 +61,7 @@ export interface IBeaconChain {
   pendingBlocks: BlockPool;
   forkDigestContext: IForkDigestContext;
   lightclientUpdater: LightClientUpdater;
+  lightClientIniter: LightClientIniter;
 
   // Ops pool
   readonly attestationPool: AttestationPool;

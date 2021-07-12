@@ -28,6 +28,7 @@ import {IBlsVerifier, BlsSingleThreadVerifier, BlsMultiThreadWorkerPool} from ".
 import {SeenAttesters, SeenAggregators, SeenSyncCommitteeMessages, SeenContributionAndProof} from "./seenCache";
 import {AttestationPool, SyncCommitteeMessagePool, SyncContributionAndProofPool} from "./opPools";
 import {ForkDigestContext, IForkDigestContext} from "../util/forkDigestContext";
+import {LightClientIniter} from "./lightClient";
 
 export interface IBeaconChainModules {
   config: IBeaconConfig;
@@ -51,6 +52,7 @@ export class BeaconChain implements IBeaconChain {
   pendingBlocks: BlockPool;
   forkDigestContext: IForkDigestContext;
   lightclientUpdater: LightClientUpdater;
+  lightClientIniter: LightClientIniter;
 
   // Ops pool
   readonly attestationPool = new AttestationPool();
@@ -136,6 +138,7 @@ export class BeaconChain implements IBeaconChain {
     this.stateCache = stateCache;
 
     this.lightclientUpdater = new LightClientUpdater(this.db);
+    this.lightClientIniter = new LightClientIniter({config: this.config, forkChoice, db: this.db, stateCache});
 
     handleChainEvents.bind(this)(this.abortController.signal);
   }
