@@ -1,5 +1,4 @@
 import {join} from "path";
-import {expect} from "chai";
 
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
 import {altair, allForks} from "@chainsafe/lodestar-beacon-state-transition";
@@ -9,6 +8,7 @@ import {IAltairStateTestCase} from "../../stateTestCase";
 import {TreeBacked} from "@chainsafe/ssz";
 import {createIChainForkConfig} from "@chainsafe/lodestar-config";
 import {PresetName} from "@chainsafe/lodestar-params";
+import {expectEqualBeaconState} from "../../util";
 
 export function runRewardsAndPenalties(presetName: PresetName): void {
   // eslint-disable-next-line @typescript-eslint/naming-convention
@@ -43,7 +43,7 @@ export function runRewardsAndPenalties(presetName: PresetName): void {
       },
       getExpected: (testCase) => testCase.post,
       expectFunc: (testCase, expected, actual) => {
-        expect(ssz.altair.BeaconState.equals(actual, expected)).to.be.true;
+        expectEqualBeaconState(expected, actual);
       },
     }
   );
