@@ -2,7 +2,6 @@ import {Api, routes} from "@chainsafe/lodestar-api";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {phase0} from "@chainsafe/lodestar-types";
 import {GENESIS_SLOT} from "@chainsafe/lodestar-params";
-import {ZERO_HASH} from "../constants";
 import {toHexString} from "@chainsafe/ssz";
 
 const {EventType} = routes.events;
@@ -12,11 +11,11 @@ const {EventType} = routes.events;
  */
 export class ChainHeaderTracker {
   private headBlockSlot: phase0.Slot;
-  private headBlockRoot: phase0.Root;
+  private headBlockRoot: phase0.Root | null;
 
   constructor(private readonly logger: ILogger, private readonly api: Api) {
     this.headBlockSlot = GENESIS_SLOT;
-    this.headBlockRoot = ZERO_HASH;
+    this.headBlockRoot = null;
   }
 
   start(signal: AbortSignal): void {
