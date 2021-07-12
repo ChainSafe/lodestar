@@ -4,9 +4,9 @@ Lodestar runs on Linux, MacOS and Windows.
 
 [TOC]
 
-## Install and build from source
+## Install from source
 
-Make sure to have [Yarn installed](https://classic.yarnpkg.com/en/docs/install). It is also recommended to [install NVM (Node Version Manager)](https://github.com/nvm-sh/nvm) and use NodeJS latest stable version [v12.13.0](https://nodejs.org/en/blog/release/v12.13.0/).
+Make sure to have [Yarn installed](https://classic.yarnpkg.com/en/docs/install). It is also recommended to [install NVM (Node Version Manager)](https://github.com/nvm-sh/nvm) and use the latest LTS version of [NodeJS](https://nodejs.org/en/).
 
 <!-- prettier-ignore-start -->
 !!! info
@@ -50,7 +50,7 @@ Install globally
 ```
 npm install -g @chainsafe/lodestar-cli
 ```
-
+or
 ```
 yarn global add @chainsafe/lodestar-cli
 ```
@@ -63,22 +63,24 @@ lodestar --help
 
 ## Install with docker
 
-The [`chainsafe/lodestar`](https://hub.docker.com/r/chainsafe/lodestar) Docker Hub repository is mantained actively. It contains all lodestar components, accessible via the `lodestar`.
+The [`chainsafe/lodestar`](https://hub.docker.com/r/chainsafe/lodestar) Docker Hub repository is mantained actively. It contains the `lodestar` CLI preinstalled.
 
 <!-- prettier-ignore-start -->
 !!! info
     The Docker Hub image in run on CI every nightly release on `master`
 <!-- prettier-ignore-end -->
 
-Ensure you have Docker installed by issuing the command. It should return a non error message such as `Docker version xxxx, build xxxx`.
+Ensure you have Docker installed by issuing the command:
 
 ```bash
 docker -v
 ```
+It should return a non error message such as `Docker version xxxx, build xxxx`.
 
 Pull, run the image and Lodestar should now be ready to use
 
 ```bash
+docker pull chainsafe/lodestar
 docker run chainsafe/lodestar --help
 ```
 
