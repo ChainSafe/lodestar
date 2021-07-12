@@ -1,4 +1,6 @@
 import {WinstonLogger, LogLevel} from "@chainsafe/lodestar-utils";
+import {getLoggerVc} from "../../src/util";
+import {ClockMock} from "./clock";
 
 /**
  * Run the test with ENVs to control log level:
@@ -18,3 +20,5 @@ function getLogLevel(): LogLevel {
   if (process.env["VERBOSE"]) return LogLevel.verbose;
   return LogLevel.error;
 }
+
+export const loggerVc = getLoggerVc(testLogger(), new ClockMock());

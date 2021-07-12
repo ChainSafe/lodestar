@@ -10,7 +10,7 @@ import {
 import {StubbedBeaconDb} from "../../../../../utils/stub";
 import {SinonStubbedInstance} from "sinon";
 import {IBeaconChain} from "../../../../../../src/chain";
-import {AttestationPool} from "../../../../../../src/chain/opsPool/attestationPool";
+import {AttestationPool} from "../../../../../../src/chain/opPools/attestationPool";
 import * as attesterSlashingValidation from "../../../../../../src/chain/validation/attesterSlashing";
 import * as proposerSlashingValidation from "../../../../../../src/chain/validation/proposerSlashing";
 import * as voluntaryExitValidation from "../../../../../../src/chain/validation/voluntaryExit";

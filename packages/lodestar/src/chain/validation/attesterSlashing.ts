@@ -1,7 +1,7 @@
 import {phase0, allForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {ssz, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {IBeaconChain} from "..";
-import {AttesterSlashingError, AttesterSlashingErrorCode} from "../errors/attesterSlashingError";
+import {AttesterSlashingError, AttesterSlashingErrorCode, GossipAction} from "../errors";
 import {IBeaconDb} from "../../db";
 import {arrayIntersection, sszEqualPredicate} from "../../util/objects";
 
@@ -17,7 +17,7 @@ export async function validateGossipAttesterSlashing(
   );
 
   if (await db.attesterSlashing.hasAll(attesterSlashedIndices)) {
-    throw new AttesterSlashingError({
+    throw new AttesterSlashingError(GossipAction.IGNORE, {
       code: AttesterSlashingErrorCode.ALREADY_EXISTS,
     });
   }
@@ -28,7 +28,7 @@ export async function validateGossipAttesterSlashing(
     // verifySignature = false, verified in batch below
     allForks.assertValidAttesterSlashing(state, attesterSlashing, false);
   } catch (e) {
-    throw new AttesterSlashingError({
+    throw new AttesterSlashingError(GossipAction.REJECT, {
       code: AttesterSlashingErrorCode.INVALID,
       error: e as Error,
     });
@@ -36,7 +36,7 @@ export async function validateGossipAttesterSlashing(
 
   const signatureSets = allForks.getAttesterSlashingSignatureSets(state, attesterSlashing);
   if (!(await chain.bls.verifySignatureSets(signatureSets))) {
-    throw new AttesterSlashingError({
+    throw new AttesterSlashingError(GossipAction.REJECT, {
       code: AttesterSlashingErrorCode.INVALID,
       error: Error("Invalid signature"),
     });

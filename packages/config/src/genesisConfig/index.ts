@@ -1,5 +1,5 @@
-import {ForkName} from "../../../params";
-import {DomainType, phase0, Root, Slot, ssz, Version} from "../../../types";
+import {ForkName} from "@chainsafe/lodestar-params";
+import {DomainType, phase0, Root, Slot, ssz, Version} from "@chainsafe/lodestar-types";
 import {IChainForkConfig} from "../beaconConfig";
 import {ICachedGenesis} from "./types";
 

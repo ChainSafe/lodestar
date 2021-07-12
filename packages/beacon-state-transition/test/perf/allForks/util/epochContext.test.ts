@@ -1,7 +1,7 @@
 import {Epoch} from "@chainsafe/lodestar-types";
 import {itBench, setBenchOpts} from "@dapplion/benchmark";
 import {allForks, computeEpochAtSlot} from "../../../../src";
-import {generatePerfTestCachedBeaconState, numValidators} from "../../util";
+import {generatePerfTestCachedStatePhase0, numValidators} from "../../util";
 
 // Current implementation scales very well with number of requested validators
 // Benchmark data from Wed Jun 30 2021 - Intel(R) Core(TM) i5-8250U CPU @ 1.60GHz
@@ -15,7 +15,7 @@ describe("epochCtx.getCommitteeAssignments", () => {
 
   before(function () {
     this.timeout(60 * 1000);
-    state = generatePerfTestCachedBeaconState() as allForks.CachedBeaconState<allForks.BeaconState>;
+    state = generatePerfTestCachedStatePhase0() as allForks.CachedBeaconState<allForks.BeaconState>;
     epoch = computeEpochAtSlot(state.slot);
 
     // Sanity check to ensure numValidators doesn't go stale

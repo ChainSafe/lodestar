@@ -8,12 +8,11 @@ import {getBeaconConfigFromArgs} from "../../config";
 import {IGlobalArgs} from "../../options";
 import {YargsError, getDefaultGraffiti, initBLS, mkdir, getCliLogger, parseRange} from "../../util";
 import {ValidatorDirManager} from "../../validatorDir";
+import {onGracefulShutdown, readLodestarGitData} from "../../util";
 import {getAccountPaths} from "../account/paths";
+import {getBeaconPaths} from "../beacon/paths";
 import {getValidatorPaths} from "./paths";
 import {IValidatorCliArgs} from "./options";
-import {onGracefulShutdown} from "../../util/process";
-import {getBeaconPaths} from "../beacon/paths";
-import {readLodestarGitData} from "../../util/gitData";
 
 /**
  * Run a validator client

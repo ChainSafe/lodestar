@@ -16,6 +16,7 @@ import {generateEmptySignedVoluntaryExit} from "../../../../utils/voluntaryExits
 import {generateDeposit} from "../../../../utils/deposit";
 import {StubbedBeaconDb} from "../../../../utils/stub";
 import {Eth1ForBlockProduction} from "../../../../../src/eth1/";
+import {BeaconChain} from "../../../../../src/chain";
 
 describe("blockAssembly - body", function () {
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
@@ -24,12 +25,13 @@ describe("blockAssembly - body", function () {
     const state = generateCachedState();
     const eth1 = sandbox.createStubInstance(Eth1ForBlockProduction);
     eth1.getEth1DataAndDeposits.resolves({eth1Data: state.eth1Data, deposits: [generateDeposit()]});
+    const chain = sandbox.createStubInstance(BeaconChain);
 
-    return {dbStub: new StubbedBeaconDb(sandbox), eth1};
+    return {chain, dbStub: new StubbedBeaconDb(sandbox), eth1};
   }
 
   it("should generate block body", async function () {
-    const {dbStub, eth1} = getStubs();
+    const {chain, dbStub, eth1} = getStubs();
     dbStub.proposerSlashing.values.resolves([ssz.phase0.ProposerSlashing.defaultValue()]);
     dbStub.attesterSlashing.values.resolves([ssz.phase0.AttesterSlashing.defaultValue()]);
     dbStub.aggregateAndProof.getBlockAttestations.resolves([generateEmptyAttestation()]);
@@ -37,7 +39,7 @@ describe("blockAssembly - body", function () {
     dbStub.depositDataRoot.getTreeBacked.resolves(ssz.phase0.DepositDataRootList.defaultTreeBacked());
 
     const result = await assembleBody(
-      {config, db: dbStub, eth1},
+      {chain, config, db: dbStub, eth1},
       generateCachedState(),
       Buffer.alloc(96, 0),
       Buffer.alloc(32, 0),
@@ -54,7 +56,7 @@ describe("blockAssembly - body", function () {
   });
 
   it("should generate block body with max respective field lengths", async function () {
-    const {dbStub, eth1} = getStubs();
+    const {chain, dbStub, eth1} = getStubs();
     dbStub.proposerSlashing.values.resolves(
       Array.from({length: MAX_PROPOSER_SLASHINGS}, () => ssz.phase0.ProposerSlashing.defaultValue())
     );
@@ -67,7 +69,7 @@ describe("blockAssembly - body", function () {
     dbStub.voluntaryExit.values.resolves(Array.from({length: MAX_VOLUNTARY_EXITS}, generateEmptySignedVoluntaryExit));
 
     const result = await assembleBody(
-      {config, db: dbStub, eth1},
+      {chain, config, db: dbStub, eth1},
       generateCachedState(),
       Buffer.alloc(96, 0),
       Buffer.alloc(32, 0),

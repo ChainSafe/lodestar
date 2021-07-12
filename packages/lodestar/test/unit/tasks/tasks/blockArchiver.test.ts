@@ -22,11 +22,6 @@ describe("block archiver task", function () {
     forkChoiceStub = sinon.createStubInstance(ForkChoice);
   });
 
-  /**
-   * A(1) - B(2) - D(4) - finalized(5) - E
-   *      \
-   *       C(3)
-   */
   it("should archive finalized blocks", async function () {
     const blockBuffer = Buffer.from(ssz.phase0.SignedBeaconBlock.serialize(generateEmptySignedBlock()));
     dbStub.block.getBinary.resolves(blockBuffer);
@@ -52,8 +47,7 @@ describe("block archiver task", function () {
     await archiverTask.run();
     expect(
       dbStub.blockArchive.batchPutBinary.calledWith(
-        // don't want to process the finalized block, keep it in both db and forkchoice until next time
-        canonicalBlocks.slice(1).map((summary) => ({
+        canonicalBlocks.map((summary) => ({
           key: summary.slot,
           value: blockBuffer,
           summary,
@@ -61,8 +55,11 @@ describe("block archiver task", function () {
       )
     ).to.be.true;
     // delete canonical blocks
-    expect(dbStub.block.batchDelete.calledWith([blocks[3], blocks[1], blocks[0]].map((summary) => summary.blockRoot)))
-      .to.be.true;
+    expect(
+      dbStub.block.batchDelete.calledWith(
+        [blocks[4], blocks[3], blocks[1], blocks[0]].map((summary) => summary.blockRoot)
+      )
+    ).to.be.true;
     // delete non canonical blocks
     expect(dbStub.block.batchDelete.calledWith([blocks[2]].map((summary) => summary.blockRoot))).to.be.true;
   });

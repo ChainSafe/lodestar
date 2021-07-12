@@ -3,13 +3,15 @@ import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
 import {AbortController} from "@chainsafe/abort-controller";
 import PeerId from "peer-id";
+import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 import {config} from "@chainsafe/lodestar-config/default";
 import {sleep as _sleep} from "@chainsafe/lodestar-utils";
 import {altair, phase0, ssz} from "@chainsafe/lodestar-types";
+import {ForkName} from "@chainsafe/lodestar-params";
 import {createPeerId, IReqRespOptions, Network, prettyPrintPeerId} from "../../../src/network";
 import {INetworkOptions} from "../../../src/network/options";
 import {Method, Encoding} from "../../../src/network/reqresp/types";
-import {IReqRespHandler} from "../../../src/network/reqresp/handlers";
+import {ReqRespHandlers} from "../../../src/network/reqresp/handlers";
 import {RequestError, RequestErrorCode} from "../../../src/network/reqresp/request";
 import {IRequestErrorMetadata} from "../../../src/network/reqresp/request/errors";
 import {testLogger} from "../../utils/logger";
@@ -21,8 +23,7 @@ import {generateEmptySignedBlock} from "../../utils/block";
 import {expectRejectedWithLodestarError} from "../../utils/errors";
 import {connect, onPeerConnect} from "../../utils/network";
 import {StubbedBeaconDb} from "../../utils/stub";
-import {ForkName} from "@chainsafe/lodestar-params";
-import {createIBeaconConfig} from "@chainsafe/lodestar-config";
+import {GossipHandlers} from "../../../src/network/gossip";
 
 chai.use(chaiAsPromised);
 
@@ -59,7 +60,7 @@ describe("network / ReqResp", function () {
   }
 
   async function createAndConnectPeers(
-    reqRespHandlerPartial?: Partial<IReqRespHandler>,
+    reqRespHandlersPartial?: Partial<ReqRespHandlers>,
     reqRespOpts?: IReqRespOptions
   ): Promise<[Network, Network]> {
     const controller = new AbortController();
@@ -70,14 +71,25 @@ describe("network / ReqResp", function () {
     const notImplemented = async function* <T>(): AsyncIterable<T> {
       throw Error("not implemented");
     };
-    const reqRespHandler: IReqRespHandler = {
+
+    const reqRespHandlers: ReqRespHandlers = {
       onStatus: notImplemented,
       onBeaconBlocksByRange: notImplemented,
       onBeaconBlocksByRoot: notImplemented,
-      ...reqRespHandlerPartial,
+      ...reqRespHandlersPartial,
     };
+
+    const gossipHandlers = {} as GossipHandlers;
     const opts = {...networkOptsDefault, ...reqRespOpts};
-    const modules = {config: beaconConfig, db, chain, reqRespHandler, signal: controller.signal, metrics: null};
+    const modules = {
+      config: beaconConfig,
+      db,
+      chain,
+      reqRespHandlers,
+      gossipHandlers,
+      signal: controller.signal,
+      metrics: null,
+    };
     const netA = new Network(opts, {...modules, libp2p: libp2pA, logger: testLogger("A")});
     const netB = new Network(opts, {...modules, libp2p: libp2pB, logger: testLogger("B")});
     await Promise.all([netA.start(), netB.start()]);

@@ -1,6 +1,6 @@
 import {itBench, setBenchOpts} from "@dapplion/benchmark";
 import {allForks, phase0} from "../../../../src";
-import {generatePerfTestCachedBeaconState} from "../../util";
+import {generatePerfTestCachedStatePhase0, perfStateId} from "../../util";
 
 describe("getAttestationDeltas", () => {
   setBenchOpts({
@@ -9,12 +9,10 @@ describe("getAttestationDeltas", () => {
     runs: 64,
   });
 
-  const state = generatePerfTestCachedBeaconState({goBackOneSlot: true});
+  const state = generatePerfTestCachedStatePhase0({goBackOneSlot: true});
   const epochProcess = allForks.prepareEpochProcessState(state);
 
-  const valCount = state.validators.length;
-
-  itBench(`getAttestationDeltas - ${valCount} vs`, () => {
+  itBench(`getAttestationDeltas - ${perfStateId}`, () => {
     phase0.getAttestationDeltas(state, epochProcess);
   });
 });

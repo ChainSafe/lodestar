@@ -1,5 +1,4 @@
 import {initBLS} from "@chainsafe/lodestar-cli/src/util";
-import {ForkChoice, IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import sinon from "sinon";
 import {SinonStubbedInstance} from "sinon";
 import {BeaconChain, IBeaconChain} from "../../../../src/chain";
@@ -8,20 +7,18 @@ import {SyncCommitteeErrorCode} from "../../../../src/chain/errors/syncCommittee
 import {validateGossipSyncCommittee} from "../../../../src/chain/validation/syncCommittee";
 import {expectRejectedWithLodestarError} from "../../../utils/errors";
 import {generateCachedState} from "../../../utils/state";
-import {StubbedBeaconDb} from "../../../utils/stub";
 import {generateSyncCommitteeSignature} from "../../../utils/syncCommittee";
 import {phase0} from "@chainsafe/lodestar-types";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {createIChainForkConfig, defaultChainConfig} from "@chainsafe/lodestar-config";
+import {SeenSyncCommitteeMessages} from "../../../../src/chain/seenCache";
 
 // https://github.com/ethereum/eth2.0-specs/blob/v1.1.0-alpha.3/specs/altair/p2p-interface.md
 describe("Sync Committee Signature validation", function () {
   const sandbox = sinon.createSandbox();
   let chain: SinonStubbedInstance<IBeaconChain>;
-  let forkChoiceStub: SinonStubbedInstance<IForkChoice>;
   let clockStub: SinonStubbedInstance<LocalClock>;
   // let computeSubnetsForSyncCommitteeStub: SinonStubFn<typeof syncCommitteeUtils["computeSubnetsForSyncCommittee"]>;
-  let db: StubbedBeaconDb;
   let altairForkEpochBk: phase0.Epoch;
   const altairForkEpoch = 2020;
   const currentSlot = SLOTS_PER_EPOCH * (altairForkEpoch + 1);
@@ -42,14 +39,13 @@ describe("Sync Committee Signature validation", function () {
 
   beforeEach(function () {
     chain = sandbox.createStubInstance(BeaconChain);
+    (chain as {
+      seenSyncCommitteeMessages: SeenSyncCommitteeMessages;
+    }).seenSyncCommitteeMessages = new SeenSyncCommitteeMessages();
     chain.getGenesisTime.returns(Math.floor(Date.now() / 1000));
     clockStub = sandbox.createStubInstance(LocalClock);
     chain.clock = clockStub;
     clockStub.isCurrentSlotGivenGossipDisparity.returns(true);
-    forkChoiceStub = sandbox.createStubInstance(ForkChoice);
-    chain.forkChoice = forkChoiceStub;
-    db = new StubbedBeaconDb(sandbox, config);
-    // computeSubnetsForSyncCommitteeStub = sandbox.stub(syncCommitteeUtils, "computeSubnetsForSyncCommittee");
   });
 
   afterEach(function () {
@@ -62,17 +58,8 @@ describe("Sync Committee Signature validation", function () {
 
     const syncCommittee = generateSyncCommitteeSignature({slot: 1});
     await expectRejectedWithLodestarError(
-      validateGossipSyncCommittee(chain, db, {signature: syncCommittee, validSignature: false}, 0),
+      validateGossipSyncCommittee(chain, syncCommittee, 0),
       SyncCommitteeErrorCode.NOT_CURRENT_SLOT
-    );
-  });
-
-  it("should throw error - the block being signed over has not been seen", async function () {
-    const syncCommittee = generateSyncCommitteeSignature({slot: currentSlot});
-    forkChoiceStub.hasBlock.returns(false);
-    await expectRejectedWithLodestarError(
-      validateGossipSyncCommittee(chain, db, {signature: syncCommittee, validSignature: false}, 0),
-      SyncCommitteeErrorCode.UNKNOWN_BEACON_BLOCK_ROOT
     );
   });
 
@@ -81,25 +68,22 @@ describe("Sync Committee Signature validation", function () {
       slot: currentSlot,
       validatorIndex: validatorIndexInSyncCommittee,
     });
-    forkChoiceStub.hasBlock.returns(true);
     const headState = generateCachedState({slot: currentSlot}, config, true);
     chain.getHeadState.returns(headState);
-    db.syncCommittee.has.returns(true);
+    chain.seenSyncCommitteeMessages.isKnown = () => true;
     await expectRejectedWithLodestarError(
-      validateGossipSyncCommittee(chain, db, {signature: syncCommittee, validSignature: false}, 0),
+      validateGossipSyncCommittee(chain, syncCommittee, 0),
       SyncCommitteeErrorCode.SYNC_COMMITTEE_ALREADY_KNOWN
     );
   });
 
   it("should throw error - the validator is not part of the current sync committee", async function () {
     const syncCommittee = generateSyncCommitteeSignature({slot: currentSlot, validatorIndex: 100});
-    forkChoiceStub.hasBlock.returns(true);
-    db.syncCommittee.has.returns(false);
     const headState = generateCachedState({slot: currentSlot}, config, true);
     chain.getHeadState.returns(headState);
 
     await expectRejectedWithLodestarError(
-      validateGossipSyncCommittee(chain, db, {signature: syncCommittee, validSignature: false}, 0),
+      validateGossipSyncCommittee(chain, syncCommittee, 0),
       SyncCommitteeErrorCode.VALIDATOR_NOT_IN_SYNC_COMMITTEE
     );
   });
@@ -110,12 +94,10 @@ describe("Sync Committee Signature validation", function () {
    */
   it.skip("should throw error - incorrect subnet", async function () {
     const syncCommittee = generateSyncCommitteeSignature({slot: currentSlot, validatorIndex: 1});
-    forkChoiceStub.hasBlock.returns(true);
-    db.syncCommittee.has.returns(false);
     const headState = generateCachedState({slot: currentSlot}, config, true);
     chain.getHeadState.returns(headState);
     await expectRejectedWithLodestarError(
-      validateGossipSyncCommittee(chain, db, {signature: syncCommittee, validSignature: false}, 0),
+      validateGossipSyncCommittee(chain, syncCommittee, 0),
       SyncCommitteeErrorCode.INVALID_SUB_COMMITTEE_INDEX
     );
   });
@@ -125,14 +107,12 @@ describe("Sync Committee Signature validation", function () {
       slot: currentSlot,
       validatorIndex: validatorIndexInSyncCommittee,
     });
-    forkChoiceStub.hasBlock.returns(true);
-    db.syncCommittee.has.returns(false);
     const headState = generateCachedState({slot: currentSlot}, config, true);
 
     chain.getHeadState.returns(headState);
     chain.bls = {verifySignatureSets: async () => false};
     await expectRejectedWithLodestarError(
-      validateGossipSyncCommittee(chain, db, {signature: syncCommittee, validSignature: false}, 0),
+      validateGossipSyncCommittee(chain, syncCommittee, 0),
       SyncCommitteeErrorCode.INVALID_SIGNATURE
     );
   });

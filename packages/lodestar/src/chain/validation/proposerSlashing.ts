@@ -1,6 +1,6 @@
 import {phase0, allForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconChain} from "..";
-import {ProposerSlashingError, ProposerSlashingErrorCode} from "../errors/proposerSlashingError";
+import {ProposerSlashingError, ProposerSlashingErrorCode, GossipAction} from "../errors";
 import {IBeaconDb} from "../../db";
 
 export async function validateGossipProposerSlashing(
@@ -9,7 +9,7 @@ export async function validateGossipProposerSlashing(
   proposerSlashing: phase0.ProposerSlashing
 ): Promise<void> {
   if (await db.proposerSlashing.has(proposerSlashing.signedHeader1.message.proposerIndex)) {
-    throw new ProposerSlashingError({
+    throw new ProposerSlashingError(GossipAction.IGNORE, {
       code: ProposerSlashingErrorCode.ALREADY_EXISTS,
     });
   }
@@ -20,7 +20,7 @@ export async function validateGossipProposerSlashing(
     // verifySignature = false, verified in batch below
     allForks.assertValidProposerSlashing(state, proposerSlashing, false);
   } catch (e) {
-    throw new ProposerSlashingError({
+    throw new ProposerSlashingError(GossipAction.REJECT, {
       code: ProposerSlashingErrorCode.INVALID,
       error: e as Error,
     });
@@ -28,7 +28,7 @@ export async function validateGossipProposerSlashing(
 
   const signatureSets = allForks.getProposerSlashingSignatureSets(state, proposerSlashing);
   if (!(await chain.bls.verifySignatureSets(signatureSets))) {
-    throw new ProposerSlashingError({
+    throw new ProposerSlashingError(GossipAction.REJECT, {
       code: ProposerSlashingErrorCode.INVALID,
       error: Error("Invalid signature"),
     });

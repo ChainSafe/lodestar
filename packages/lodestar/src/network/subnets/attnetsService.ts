@@ -3,6 +3,7 @@ import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {
   ATTESTATION_SUBNET_COUNT,
   EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION,
+  ForkName,
   RANDOM_SUBNETS_PER_VALIDATOR,
   SLOTS_PER_EPOCH,
 } from "@chainsafe/lodestar-params";
@@ -13,7 +14,7 @@ import {ChainEvent, IBeaconChain} from "../../chain";
 import {Eth2Gossipsub, GossipType} from "../gossip";
 import {MetadataController} from "../metadata";
 import {SubnetMap, RequestedSubnet} from "../peers/utils";
-import {getActiveForks, runForkTransitionHooks} from "../forks";
+import {getActiveForks} from "../forks";
 import {IAttnetsService, CommitteeSubscription} from "./interface";
 
 /**
@@ -113,6 +114,22 @@ export class AttnetsService implements IAttnetsService {
     return this.subscriptionsCommittee.isActiveAtSlot(subnet, slot);
   }
 
+  /** Call ONLY ONCE: Two epoch before the fork, re-subscribe all existing random subscriptions to the new fork  */
+  subscribeSubnetsToNextFork(nextFork: ForkName): void {
+    this.logger.info("Suscribing to random attnets to next fork", {nextFork});
+    for (const subnet of this.subscriptionsRandom.getAll()) {
+      this.gossip.subscribeTopic({type: gossipType, fork: nextFork, subnet});
+    }
+  }
+
+  /** Call  ONLY ONCE: Two epochs after the fork, un-subscribe all subnets from the old fork */
+  unsubscribeSubnetsFromPrevFork(prevFork: ForkName): void {
+    this.logger.info("Unsuscribing to random attnets from prev fork", {prevFork});
+    for (let subnet = 0; subnet < ATTESTATION_SUBNET_COUNT; subnet++) {
+      this.gossip.unsubscribeTopic({type: gossipType, fork: prevFork, subnet});
+    }
+  }
+
   /**
    * Run per slot.
    */
@@ -132,23 +149,6 @@ export class AttnetsService implements IAttnetsService {
       const slot = computeStartSlotAtEpoch(epoch);
       this.unsubscribeExpiredRandomSubnets(slot);
       this.pruneExpiredKnownValidators(slot);
-
-      runForkTransitionHooks(this.config, epoch, {
-        beforeForkTransition: (nextFork) => {
-          this.logger.info("Suscribing to random attnets to next fork", {nextFork});
-          // ONLY ONCE: Two epoch before the fork, re-subscribe all existing random subscriptions to the new fork
-          for (const subnet of this.subscriptionsRandom.getAll()) {
-            this.gossip.subscribeTopic({type: gossipType, fork: nextFork, subnet});
-          }
-        },
-        afterForkTransition: (prevFork) => {
-          this.logger.info("Unsuscribing to random attnets from prev fork", {prevFork});
-          // ONLY ONCE: Two epochs after the fork, un-subscribe all subnets from the old fork
-          for (let subnet = 0; subnet < ATTESTATION_SUBNET_COUNT; subnet++) {
-            this.gossip.unsubscribeTopic({type: gossipType, fork: prevFork, subnet});
-          }
-        },
-      });
     } catch (e) {
       this.logger.error("Error on AttnetsService.onEpoch", {epoch}, e);
     }

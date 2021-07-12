@@ -1,4 +1,5 @@
 import {Epoch, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {MapDef} from "../../util/map";
 
 // The next, current and previous epochs. We require the next epoch due to the
 // `MAXIMUM_GOSSIP_CLOCK_DISPARITY`. We require the previous epoch since the
@@ -17,7 +18,7 @@ const MAX_EPOCHS = 3;
  * Keeps a cache to filter unaggregated attestations from the same validator in the same epoch.
  */
 export class SeenAttesters {
-  private validatorIndexesByEpoch = new Map<Epoch, Set<ValidatorIndex>>();
+  private readonly validatorIndexesByEpoch = new MapDef<Epoch, Set<ValidatorIndex>>(() => new Set<ValidatorIndex>());
   private lowestPermissibleEpoch: Epoch = 0;
 
   isKnown(targetEpoch: Epoch, validatorIndex: ValidatorIndex): boolean {
@@ -29,12 +30,7 @@ export class SeenAttesters {
       throw Error(`EpochTooLow ${targetEpoch} < ${this.lowestPermissibleEpoch}`);
     }
 
-    let validatorIndexes = this.validatorIndexesByEpoch.get(targetEpoch);
-    if (!validatorIndexes) {
-      validatorIndexes = new Set();
-      this.validatorIndexesByEpoch.set(targetEpoch, validatorIndexes);
-    }
-
+    const validatorIndexes = this.validatorIndexesByEpoch.getOrDefault(targetEpoch);
     validatorIndexes.add(validatorIndex);
   }
 

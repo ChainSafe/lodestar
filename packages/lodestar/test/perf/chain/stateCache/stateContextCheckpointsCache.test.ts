@@ -5,7 +5,7 @@ import {generateCachedState} from "../../../utils/state";
 import {CheckpointStateCache} from "../../../../src/chain/stateCache";
 import {Checkpoint} from "../../../../../types/phase0";
 
-describe("CheckpointStateCache perf tests", function () {
+describe.skip("CheckpointStateCache perf tests", function () {
   let state: CachedBeaconState<allForks.BeaconState>;
   let checkpoint: Checkpoint;
   let checkpointStateCache: CheckpointStateCache;

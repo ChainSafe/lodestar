@@ -10,10 +10,10 @@ import {IStateRegenerator} from "./regen";
 import {BlockPool} from "./blocks";
 import {StateContextCache, CheckpointStateCache} from "./stateCache";
 import {IBlsVerifier} from "./bls";
-import {SeenAttesters, SeenAggregators} from "./seenCache";
+import {SeenAttesters, SeenAggregators, SeenSyncCommitteeMessages, SeenContributionAndProof} from "./seenCache";
+import {AttestationPool, SyncCommitteeMessagePool, SyncContributionAndProofPool} from "./opPools";
 import {IForkDigestContext} from "../util/forkDigestContext";
 import {LightClientIniter} from "./lightClient";
-import {AttestationPool} from "./opsPool/attestationPool";
 
 export interface IProcessBlock {
   /**
@@ -65,9 +65,14 @@ export interface IBeaconChain {
 
   // Ops pool
   readonly attestationPool: AttestationPool;
+  readonly syncCommitteeMessagePool: SyncCommitteeMessagePool;
+  readonly syncContributionAndProofPool: SyncContributionAndProofPool;
 
+  // Gossip seen cache
   readonly seenAttesters: SeenAttesters;
   readonly seenAggregators: SeenAggregators;
+  readonly seenSyncCommitteeMessages: SeenSyncCommitteeMessages;
+  readonly seenContributionAndProof: SeenContributionAndProof;
 
   /** Stop beacon chain processing */
   close(): void;

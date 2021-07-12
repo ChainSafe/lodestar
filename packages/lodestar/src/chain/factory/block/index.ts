@@ -34,7 +34,7 @@ export async function assembleBlock(
     proposerIndex: state.getBeaconProposer(slot),
     parentRoot: head.blockRoot,
     stateRoot: ZERO_HASH,
-    body: await assembleBody({config, db, eth1}, state, randaoReveal, graffiti, slot, {
+    body: await assembleBody({config, chain, db, eth1}, state, randaoReveal, graffiti, slot, {
       parentSlot: slot - 1,
       parentBlockRoot: head.blockRoot,
     }),

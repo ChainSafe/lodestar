@@ -8,30 +8,72 @@
 
 > This package is part of [ChainSafe's Lodestar](https://lodestar.chainsafe.io) project
 
-Typescript and SSZ types for Eth2 datastructures
+Lodestar defines all datatypes defined in the [Ethereum Consensus / Eth2 spec](https://github.com/ethereum/eth2.0-specs). This tooling can be used for any Typescript project looking to operate on these types. Both Typescript interfaces _and_ Simple Serialize (SSZ) methods are exported for consumers.
+
+## Installation
+
+```sh
+npm install @chainsafe/lodestar-types
+```
 
 ## Usage
 
-#### Using the typescript types
+The lodestar types library organizes datatypes on several dimensions:
 
-```typescript
-import {BeaconState} from "@chainsafe/lodestar-types";
+- Typescript interfaces vs SSZ objects
+- By fork
 
-const b: BeaconState = {
-  slot: 5,
-  ...
-};
+### Typescript interfaces
+
+Lodestar types are all defined as typescript interfaces. These interfaces can be used independently, and are used throughout downstream Lodestar packages (eg: in the beacon node).
+
+These interfaces are accessible via named exports.
+
+```ts
+import {Epoch} from "@chainsafe/lodestar-types";
+
+const x: Epoch = 5;
 ```
 
-#### Using the ssz types
+### SSZ objects
 
-```typescript
-import {ssz} from "@chainsafe/lodestar-types";
+Lodestar types are also defined as SSZ objects. These "Type" objects provide convenient methods to perform SSZ operations (serialization / deserialization / merkleization/etc). The library exports a singleton object containing all SSZ objects.
 
-ssz.phase0.BeaconState.defaultValue();
-ssz.altair.BeaconState.defaultValue();
-...
+```ts
+import {Type} from "@chainsafe/ssz";
+import {ssz, Epoch} from "@chainsafe/lodestar-types";
 
+const EpochType: Type<Epoch> = ssz.Epoch;
+
+const e = EpochType.defaultValue();
+```
+
+### By fork
+
+Lodestar types support multiple different consensus forks. In order to easily differentiate types that may change across forks, types are organized in namespaces according to the fork in which they're introduced. Types introduced in phase 0 are available under the `phase0` namespace. Types introduced in altair are available under the `altair` namespace.
+
+```ts
+import {altair, phase0, ssz} from "@chainsafe/lodestar-types";
+
+const phase0State: phase0.BeaconState = ssz.phase0.BeaconState.defaultValue();
+const altairState: altair.BeaconState = ssz.altair.BeaconState.defaultValue();
+```
+
+Primitive types are directly available without a namespace.
+
+```ts
+import {Epoch, ssz} from "@chainsafe/lodestar-types";
+
+const epoch: Epoch = ssz.Epoch.defaultValue();
+```
+
+In some cases, we need interfaces that accept types across all forks, eg: when the fork is not known ahead of time. Typescript interfaces for this purpose are exported under the `allForks` namespace. SSZ Types typed to these interfaces are also provided under an `allForks` namespace, but keyed by `ForkName`.
+
+```ts
+import {ForkName} from "@chainsafe/lodestar-params";
+import {allForks, ssz} from "@chainsafe/lodestar-types";
+
+const state: allForks.BeaconState = ssz.allForks[ForkName.phase0].BeaconState.defaultValue();
 ```
 
 ## License
