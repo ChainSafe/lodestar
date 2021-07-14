@@ -15,8 +15,6 @@ import {defaultOptions} from "../../../src/node/options";
 import {BeaconDb} from "../../../src/db";
 import {testLogger} from "../logger";
 import PeerId from "peer-id";
-import {TreeBacked} from "@chainsafe/ssz";
-import {BeaconState} from "@chainsafe/lodestar-beacon-state-transition/lib/allForks";
 
 export async function getDevBeaconNode({
   params,
@@ -26,7 +24,6 @@ export async function getDevBeaconNode({
   logger,
   peerId,
   peerStoreDir,
-  anchorState,
 }: {
   params: Partial<IChainConfig>;
   options?: RecursivePartial<IBeaconNodeOptions>;
@@ -35,7 +32,6 @@ export async function getDevBeaconNode({
   logger?: ILogger;
   peerId?: PeerId;
   peerStoreDir?: string;
-  anchorState?: TreeBacked<BeaconState>;
 }): Promise<BeaconNode> {
   if (!peerId) peerId = await createPeerId();
   const tmpDir = tmp.dirSync({unsafeCleanup: true});

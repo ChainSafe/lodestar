@@ -90,7 +90,10 @@ export class BackfillSync {
           this.chain.clock.currentEpoch - getMinEpochForBlockRequests(this.config)
         );
         const oldestSlotRequired = computeStartSlotAtEpoch(oldestRequiredEpoch);
-        this.logger.debug("Backfill sync", {oldestSlotRequired, anchorSlot: this.anchorBlock?.message.slot ?? 0});
+        this.logger.debug("Backfill sync", {
+          oldestSlotRequired,
+          anchorSlot: this.anchorBlock?.message.slot ?? Infinity,
+        });
         if (this.anchorBlock) {
           try {
             const toSlot = this.lastFetchedSlot ?? this.anchorBlock.message.slot;
@@ -148,7 +151,7 @@ export class BackfillSync {
     try {
       const blocks = await this.network.reqResp.beaconBlocksByRoot(peer, [root] as List<Root>);
       if (blocks.length === 0) {
-        throw new BackfillSyncError({ code: BackfillSyncErrorCode.MISSING_BLOCKS, roots: [root], peerId: peer });
+        throw new BackfillSyncError({code: BackfillSyncErrorCode.MISSING_BLOCKS, roots: [root], peerId: peer});
       }
       const block = blocks[0] as allForks.SignedBeaconBlock;
       if (
@@ -174,7 +177,9 @@ export class BackfillSync {
       const blocks = await this.network.reqResp.beaconBlocksByRange(peer, {startSlot: from, count: to - from, step: 1});
       await verifyBlocks(this.config, this.chain.bls, this.chain.getHeadState(), blocks, anchorRoot);
       await this.db.blockArchive.batchAdd(blocks);
-      this.anchorBlock = blocks[blocks.length - 1];
+      //first block is oldest
+      this.anchorBlock = blocks[0];
+      this.lastFetchedSlot = this.anchorBlock?.message.slot ?? null;
     } catch (e) {
       if ((e as BackfillSyncError).type.code === BackfillSyncErrorCode.NOT_ANCHORED) {
         this.lastFetchedSlot = this.anchorBlock?.message.slot ?? null;

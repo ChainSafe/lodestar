@@ -3,7 +3,7 @@
  */
 
 import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition/src/util/epoch";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {GENESIS_EPOCH} from "@chainsafe/lodestar-params";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {IBeaconClock} from "../../chain";
@@ -21,13 +21,13 @@ export interface IPruneBlockArchiveModules {
  * We can delete it periodically.
  */
 export class PruneBlockArchiveTask implements ITask {
-  private readonly config: IBeaconConfig;
+  private readonly config: IChainForkConfig;
   private readonly db: IBeaconDb;
   private readonly clock: IBeaconClock;
   private readonly logger: ILogger;
   private readonly maxEpochForBlockRequests: number;
 
-  constructor(config: IBeaconConfig, modules: IPruneBlockArchiveModules) {
+  constructor(config: IChainForkConfig, modules: IPruneBlockArchiveModules) {
     this.config = config;
     this.db = modules.db;
     this.logger = modules.logger;

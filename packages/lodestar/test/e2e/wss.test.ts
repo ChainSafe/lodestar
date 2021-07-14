@@ -1,5 +1,5 @@
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
-import {phase0, ssz} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {getDevBeaconNode} from "../utils/node/beacon";
 import {waitForEvent} from "../utils/events/resolver";
 import {getAndInitDevValidators} from "../utils/node/validator";
@@ -102,7 +102,7 @@ describe("Start from WSS", function () {
       bnStartingFromWSS.chain.emitter,
       ChainEvent.block,
       100000,
-      (block) => block.message.slot === 200
+      (block) => block.message.slot === head.message.slot
     );
 
     await connect(bnStartingFromWSS.network as Network, bn.network.peerId, bn.network.localMultiaddrs);
@@ -111,6 +111,10 @@ describe("Start from WSS", function () {
       await waitForSynced;
     } catch (e) {
       assert.fail("Failed to sync to other node in time");
+    }
+    const genesisBlock = await bnStartingFromWSS.api.beacon.getBlock(0);
+    if (!genesisBlock) {
+      assert.fail("Failed to backfill sync");
     }
     await bnStartingFromWSS.close();
     await Promise.all(validators.map((v) => v.stop()));

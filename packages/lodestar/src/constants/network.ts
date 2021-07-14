@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/explicit-module-boundary-types */
 
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {intDiv} from "@chainsafe/lodestar-utils";
 
 /**
@@ -43,7 +43,7 @@ export type RpcResponseStatusError = Exclude<RespStatus, RespStatus.SUCCESS>;
 export const GOSSIP_MAX_SIZE = 2 ** 20;
 
 // source: https://github.com/ethereum/eth2.0-specs/blob/f52f067b8ea3f8adbebc936207b06459d1956e72/specs/phase0/p2p-interface.md#why-are-blocksbyrange-requests-only-required-to-be-served-for-the-latest-min_epochs_for_block_requests-epochs
-export function getMinEpochForBlockRequests(config: IBeaconConfig): number {
+export function getMinEpochForBlockRequests(config: IChainForkConfig): number {
   return config.MIN_VALIDATOR_WITHDRAWABILITY_DELAY + intDiv(config.CHURN_LIMIT_QUOTIENT, 2);
 }
 
