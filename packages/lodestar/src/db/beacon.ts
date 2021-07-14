@@ -18,6 +18,8 @@ import {
   VoluntaryExitRepository,
   BestUpdatePerCommitteePeriod,
   LightclientFinalizedCheckpoint,
+  LightClientInitProofRepository,
+  LightClientSyncCommitteeProofRepository,
 } from "./repositories";
 import {
   PreGenesisState,
@@ -26,8 +28,6 @@ import {
   LatestNonFinalizedUpdate,
 } from "./single";
 import {PendingBlockRepository} from "./repositories/pendingBlock";
-import {SyncCommitteeCache} from "./syncCommittee";
-import {SyncCommitteeContributionCache} from "./syncCommitteeContribution";
 
 export class BeaconDb extends DatabaseService implements IBeaconDb {
   metrics?: IDbMetrics;
@@ -49,12 +49,12 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
   preGenesisStateLastProcessedBlock: PreGenesisStateLastProcessedBlock;
 
   // altair
-  syncCommittee: SyncCommitteeCache;
-  syncCommitteeContribution: SyncCommitteeContributionCache;
   bestUpdatePerCommitteePeriod: BestUpdatePerCommitteePeriod;
   latestFinalizedUpdate: LatestFinalizedUpdate;
   latestNonFinalizedUpdate: LatestNonFinalizedUpdate;
   lightclientFinalizedCheckpoint: LightclientFinalizedCheckpoint;
+  lightClientInitProof: LightClientInitProofRepository;
+  lightClientSyncCommitteeProof: LightClientSyncCommitteeProofRepository;
 
   constructor(opts: IDatabaseApiOptions) {
     super(opts);
@@ -74,12 +74,16 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
     this.preGenesisState = new PreGenesisState(this.config, this.db, this.metrics);
     this.preGenesisStateLastProcessedBlock = new PreGenesisStateLastProcessedBlock(this.config, this.db, this.metrics);
     // altair
-    this.syncCommittee = new SyncCommitteeCache(this.config);
-    this.syncCommitteeContribution = new SyncCommitteeContributionCache(this.config);
     this.bestUpdatePerCommitteePeriod = new BestUpdatePerCommitteePeriod(this.config, this.db, this.metrics);
     this.latestFinalizedUpdate = new LatestFinalizedUpdate(this.config, this.db, this.metrics);
     this.latestNonFinalizedUpdate = new LatestNonFinalizedUpdate(this.config, this.db, this.metrics);
     this.lightclientFinalizedCheckpoint = new LightclientFinalizedCheckpoint(this.config, this.db, this.metrics);
+    this.lightClientInitProof = new LightClientInitProofRepository(this.config, this.db, this.metrics);
+    this.lightClientSyncCommitteeProof = new LightClientSyncCommitteeProofRepository(
+      this.config,
+      this.db,
+      this.metrics
+    );
   }
 
   /**

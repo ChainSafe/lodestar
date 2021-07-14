@@ -3,13 +3,12 @@ import {toBufferBE} from "bigint-buffer";
 import {expect} from "chai";
 import sinon from "sinon";
 import bls from "@chainsafe/bls";
-import {config} from "@chainsafe/lodestar-config/default";
 import {toHexString} from "@chainsafe/ssz";
 import {routes} from "@chainsafe/lodestar-api";
 import {AttestationDutiesService} from "../../../src/services/attestationDuties";
 import {ValidatorStore} from "../../../src/services/validatorStore";
 import {getApiClientStub} from "../../utils/apiStub";
-import {testLogger} from "../../utils/logger";
+import {loggerVc, testLogger} from "../../utils/logger";
 import {ClockMock} from "../../utils/clock";
 import {IndicesService} from "../../../src/services/indices";
 import {ssz} from "@chainsafe/lodestar-types";
@@ -74,7 +73,7 @@ describe("AttestationDutiesService", function () {
     // Clock will call runAttesterDutiesTasks() immediatelly
     const clock = new ClockMock();
     const indicesService = new IndicesService(logger, api, validatorStore);
-    const dutiesService = new AttestationDutiesService(config, logger, api, clock, validatorStore, indicesService);
+    const dutiesService = new AttestationDutiesService(loggerVc, api, clock, validatorStore, indicesService);
 
     // Trigger clock onSlot for slot 0
     await clock.tickEpochFns(0, controller.signal);

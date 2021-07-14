@@ -9,7 +9,7 @@ import {
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {altair, phase0} from "@chainsafe/lodestar-types";
 import {allForks} from "@chainsafe/lodestar-beacon-state-transition";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {Epoch, ValidatorIndex, Gwei, Slot} from "@chainsafe/lodestar-types";
 import {ByteVector, fromHexString, readonlyValues, TreeBacked} from "@chainsafe/ssz";
@@ -29,7 +29,7 @@ type ResolveStateIdOpts = {
 };
 
 export async function resolveStateId(
-  config: IBeaconConfig,
+  config: IChainForkConfig,
   chain: IBeaconChain,
   db: IBeaconDb,
   stateId: routes.beacon.StateId,
@@ -44,7 +44,7 @@ export async function resolveStateId(
 }
 
 async function resolveStateIdOrNull(
-  config: IBeaconConfig,
+  config: IChainForkConfig,
   chain: IBeaconChain,
   db: IBeaconDb,
   stateId: routes.beacon.StateId,
@@ -200,7 +200,7 @@ async function stateByRoot(
 }
 
 async function stateBySlot(
-  config: IBeaconConfig,
+  config: IChainForkConfig,
   db: IBeaconDb,
   stateCache: StateContextCache,
   forkChoice: IForkChoice,
@@ -244,7 +244,7 @@ export function filterStateValidatorsByStatuses(
  * Get the archived state nearest to `slot`.
  */
 async function getNearestArchivedState(
-  config: IBeaconConfig,
+  config: IChainForkConfig,
   db: IBeaconDb,
   slot: Slot
 ): Promise<CachedBeaconState<allForks.BeaconState>> {
@@ -254,7 +254,7 @@ async function getNearestArchivedState(
 }
 
 async function getFinalizedState(
-  config: IBeaconConfig,
+  config: IChainForkConfig,
   db: IBeaconDb,
   forkChoice: IForkChoice,
   slot: Slot

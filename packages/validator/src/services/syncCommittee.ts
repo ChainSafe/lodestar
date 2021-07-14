@@ -1,14 +1,15 @@
 import {AbortSignal} from "@chainsafe/abort-controller";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {Slot, CommitteeIndex, altair, Root} from "@chainsafe/lodestar-types";
-import {ILogger, prettyBytes, sleep} from "@chainsafe/lodestar-utils";
+import {prettyBytes, sleep} from "@chainsafe/lodestar-utils";
+import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {Api} from "@chainsafe/lodestar-api";
-import {extendError, notAborted, IClock} from "../util";
+import {IClock, extendError, notAborted, ILoggerVc} from "../util";
 import {ValidatorStore} from "./validatorStore";
 import {SyncCommitteeDutiesService, SyncDutyAndProofs} from "./syncCommitteeDuties";
 import {groupSyncDutiesBySubCommitteeIndex, SubCommitteeDuty} from "./utils";
 import {IndicesService} from "./indices";
-import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
+import {ChainHeaderTracker} from "./chainHeaderTracker";
 
 /**
  * Service that sets up and handles validator sync duties.
@@ -17,11 +18,12 @@ export class SyncCommitteeService {
   private readonly dutiesService: SyncCommitteeDutiesService;
 
   constructor(
-    private readonly config: IBeaconConfig,
-    private readonly logger: ILogger,
+    private readonly config: IChainForkConfig,
+    private readonly logger: ILoggerVc,
     private readonly api: Api,
     private readonly clock: IClock,
     private readonly validatorStore: ValidatorStore,
+    private readonly chainHeaderTracker: ChainHeaderTracker,
     indicesService: IndicesService
   ) {
     this.dutiesService = new SyncCommitteeDutiesService(config, logger, api, clock, validatorStore, indicesService);
@@ -90,11 +92,15 @@ export class SyncCommitteeService {
     // Produce one attestation data per slot and subcommitteeIndex
     // Spec: the validator should prepare a SyncCommitteeMessage for the previous slot (slot - 1)
     // as soon as they have determined the head block of slot - 1
-    const beaconBlockRoot = await this.api.beacon.getBlockRoot(slot).catch((e) => {
-      throw extendError(e, "Error producing SyncCommitteeMessage");
-    });
 
-    const blockRoot = beaconBlockRoot.data;
+    let blockRoot = this.chainHeaderTracker.getCurrentChainHead(slot);
+    if (blockRoot === null) {
+      const blockRootData = await this.api.beacon.getBlockRoot("head").catch((e) => {
+        throw extendError(e, "Error producing SyncCommitteeMessage");
+      });
+      blockRoot = blockRootData.data;
+    }
+
     const signatures: altair.SyncCommitteeMessage[] = [];
 
     for (const {duty} of duties) {

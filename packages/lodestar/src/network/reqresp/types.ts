@@ -1,4 +1,3 @@
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ForkName} from "@chainsafe/lodestar-params";
 import {allForks, phase0, ssz} from "@chainsafe/lodestar-types";
 
@@ -94,7 +93,7 @@ export function contextBytesTypeByProtocol(protocol: Protocol): ContextBytesType
 
 /** Request SSZ type for each method and ForkName */
 // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types, @typescript-eslint/explicit-function-return-type
-export function getRequestSzzTypeByMethod(config: IBeaconConfig, method: Method) {
+export function getRequestSzzTypeByMethod(method: Method) {
   switch (method) {
     case Method.Status:
       return ssz.phase0.Status;
@@ -122,7 +121,7 @@ export type RequestBodyByMethod = {
 
 /** Response SSZ type for each method and ForkName */
 // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types, @typescript-eslint/explicit-function-return-type
-export function getResponseSzzTypeByMethod(config: IBeaconConfig, protocol: Protocol, forkName: ForkName) {
+export function getResponseSzzTypeByMethod(protocol: Protocol, forkName: ForkName) {
   switch (protocol.method) {
     case Method.Status:
       return ssz.phase0.Status;

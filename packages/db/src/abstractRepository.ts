@@ -1,4 +1,4 @@
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {ArrayLike, Type} from "@chainsafe/ssz";
 import {BUCKET_LENGTH} from ".";
 import {IDatabaseController, IFilterOptions, IKeyValue} from "./controller";
@@ -17,7 +17,7 @@ export type Id = Uint8Array | string | number | bigint;
  * indexed by root
  */
 export abstract class Repository<I extends Id, T> {
-  protected config: IBeaconConfig;
+  protected config: IChainForkConfig;
 
   protected db: IDatabaseController<Buffer, Buffer>;
 
@@ -29,7 +29,7 @@ export abstract class Repository<I extends Id, T> {
   protected dbWriteMetrics?: ReturnType<DbMetricCounter["labels"]>;
 
   protected constructor(
-    config: IBeaconConfig,
+    config: IChainForkConfig,
     db: IDatabaseController<Buffer, Buffer>,
     bucket: Bucket,
     type: Type<T>,

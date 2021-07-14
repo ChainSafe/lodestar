@@ -1,8 +1,8 @@
 # Connect to Mainnet or a Public Testnet
 
-Running a Lodestar node on a multi-client testnet or mainnet only requires basic familiarity with the terminal.
+Running a Lodestar node on mainnet or a testnet only requires basic familiarity with the terminal.
 
-Make sure lodestar is installed in your local environment. The following command should return a non error message. If it fails, go the [install guide](../../installation/).
+Make sure lodestar is installed in your local environment, following the [install guide](../../installation/). The following command should return a non error message.
 
 ```bash
 ./lodestar --help
@@ -10,24 +10,17 @@ Make sure lodestar is installed in your local environment. The following command
 
 For a complete list of beacon node CLI commands and options, see the [Command Line Reference](../../reference/cli/)
 
-For a list of available testnets to use for the `--network` flag (as shown anywhere below where `--network $NETWORK_NAME` is shown), look for the `testnet` option as listed with the `--help` flag above. You should see something like this:
-
-> --network Use a network configuration [string][choices: "pyrmont", "mainnet"]
-
-In this case, the two networks that are available are the pyrmont multiclient testnet, and the eth2 mainnet.
-
-<!-- prettier-ignore-start -->
-!!! info
-Only use `mainnet` if you wish to interact with data on the live eth2 beacon chain.
-<!-- prettier-ignore-end -->
+To select a known testnet or mainnet, use the `--network` flag. `mainnet` is selected by default, and a list of available networks is listed with the `--help` flag. Setting the `--network` flag will conveniently configure the beacon node or validator client for the selected network. For power users, any configuration option should be able to be overridden.
 
 ## Initialize a beacon node (optional)
 
-If you would like to initialize your beacon node with the basic files required to run on a testnet or mainnet before actually running the node (e.g. perhaps you want a basic configuration setup that you would like to then configure yourself), you can run the following command:
+If you would like to initialize your beacon node with the basic files required to run on a testnet or mainnet before actually running the node (Especially useful for configuring a new testnet), you can run the following command:
 
 ```bash
-./lodestar beacon --network $NETWORK_NAME
+./lodestar beacon init --network $NETWORK_NAME
 ```
+
+By default, lodestar stores all configuration and chain data at the path `$XDG_DATA_HOME/lodestar/$NETWORK_NAME`.
 
 ## Run a beacon node
 
@@ -37,45 +30,32 @@ To start a Lodestar beacon run the command:
 ./lodestar beacon --network $NETWORK_NAME
 ```
 
-<!-- prettier-ignore-start -->
-!!! info
-    Until genesis for the given network, the node will stay idle waiting for all genesis conditions to pass.  In the case of mainnet, this condition should not happen since genesis has already begun since Dec 1, 2020.
-<!-- prettier-ignore-end -->
-
-Immediately you should see confirmation that the different modules have started
+Immediately you should see confirmation that the node has started
 
 ```bash
-2020-12-15 15:45:21 [DB]               info: Connected to LevelDB database name=/home/yourNameHere/.local/share/lodestar/pyrmont/chain-db
-2020-12-15 15:45:25 []                 info: Initializing beacon state from db slot=0, epoch=0, stateRoot=0x2bb257ca66d05a047a65fe43a5f457b674de445d917cca029efb09b3ba4758c4
-2020-12-15 15:45:25 [DB]               info: Connected to LevelDB database name=/home/yourNameHere/.local/share/lodestar/pyrmont/chain-db
-2020-12-15 15:45:29 [API]              warn: Server listening at http://127.0.0.1:9596
-2020-12-15 15:45:29 [API]              info: Started rest api server address=http://127.0.0.1:9596
-2020-12-15 15:45:29 [METRICS]          info: Starting metrics HTTP server port=8008
-2020-12-15 15:45:30 [NETWORK]          info: PeerId 16Uiu2HAmTfyqcJ8Ym8oUXGtsSLoDZUeScGASkPBmSskUVrGWGWPW, Multiaddrs /ip4/127.0.0.1/tcp/9000,/ip4/192.168.1.70/tcp/9000,/ip4/172.18.0.1/tcp/9000
-2020-12-15 15:45:30 [SYNC]             info: Waiting for peers...
-2020-12-15 15:45:30 [SYNC]             warn: Current peerCount=0, required = 3
-```
-
-After finding some peers the chain should start processing blocks up to the current head
-
-```
-2020-06-21 17:35:31  [CHAIN]            info: Processed new chain head newChainHeadRoot=0x993d99d17c176263f246c96a232bd96d847543d7c90cc60ddc559edcab99b2e6, slot=111, epoch=3
-2020-06-21 17:35:31  [CHAIN]            info: Processed new chain head newChainHeadRoot=0xcc1eb4c83cb0d9a9f7ed0045d2cd6257aadd226420baabd3d672be35605fe470, slot=112, epoch=3
-2020-06-21 17:35:31  [CHAIN]            info: Processed new chain head newChainHeadRoot=0xb5c7b08a369c0943292a91e733f3feed184bc3c0b49d04878bc86e0705c15fe8, slot=113, epoch=3
+Jul-09 17:32:34.895 []                 info: Lodestar version=0.26.0 master 8058d367, network=prater
+Jul-09 17:32:34.920 [DB]               info: Connected to LevelDB database name=/home/user/.local/share/lodestar/prater/chain-db
+Jul-09 17:32:46.419 []                 info: Initializing beacon state slot=0, epoch=0, stateRoot=0x895390e92edc03df7096e9f51e51896e8dbe6e7e838180dadbfd869fdd77a659
+Jul-09 17:33:13.502 [NETWORK]          info: PeerId 16Uiu2HAmHXf37Pa4whSF1rdwWbkqDuiwd3U7wqTgadQVza48MTn4, Multiaddrs /ip4/127.0.0.1/tcp/9000
+Jul-09 17:33:13.503 []                 warn: Low peer count peers=0
+Jul-09 17:33:13.504 []                 info: Searching for peers - peers: 0 - finalized: 0 0x0000…0000 - head: 0 0x8c0e…ee87 - clockSlot: 780166
+Jul-09 17:33:18.001 []                 info: Searching for peers - peers: 0 - finalized: 0 0x0000…0000 - head: 0 0x8c0e…ee87 - clockSlot: 780166
+Jul-09 17:33:30.000 []                 info: Searching for peers - peers: 0 - finalized: 0 0x0000…0000 - head: 0 0x8c0e…ee87 - clockSlot: 780167
+Jul-09 17:33:42.002 []                 info: Searching for peers - peers: 0 - finalized: 0 0x0000…0000 - head: 0 0x8c0e…ee87 - clockSlot: 780168
+Jul-09 17:33:54.000 []                 info: Searching for peers - peers: 0 - finalized: 0 0x0000…0000 - head: 0 0x8c0e…ee87 - clockSlot: 780169
+Jul-09 17:34:06.000 []                 info: Searching for peers - peers: 0 - finalized: 0 0x0000…0000 - head: 0 0x8c0e…ee87 - clockSlot: 780170
+Jul-09 17:34:18.386 []                 info: Syncing - 30 days left - 0.297 slots/s - finalized: 0 0x0000…0000 - head: 30 0x0bcf…0506 - clockSlot: 780171 - peers: 1
+Jul-09 17:34:30.448 []                 info: Syncing - 8.1 days left - 1.12 slots/s - finalized: 2 0x8e30…3ce0 - head: 128 0xd4f1…d32b - clockSlot: 780172 - peers: 1
+Jul-09 17:34:42.205 []                 info: Syncing - 4.2 days left - 2.15 slots/s - finalized: 5 0x2811…5120 - head: 255 0x6c99…033b - clockSlot: 780173 - peers: 1
+Jul-09 17:34:54.278 []                 info: Syncing - 3 days left - 3.00 slots/s - finalized: 8 0x65e2…52a9 - head: 351 0x0f5a…1cd3 - clockSlot: 780174 - peers: 1
 ```
 
 <!-- prettier-ignore-start -->
 !!! info
-    If your node is stuck with `Current peerCount=0` review your network configuration to make sure your ports are open.
+    If your node is stuck with `Searching for peers` review your network configuration to make sure your ports are open.
 <!-- prettier-ignore-end -->
 
-A young testnet (i.e. one whose genesis time was relatively recently) should take a few hours to sync. If you see multiple or consistent errors in the logs, please open a [Github issue](https://github.com/ChainSafe/lodestar/issues/new) or reach out to us in [Discord](https://discord.gg/yjyvFRP). Just by reporting anomalities you are helping accelerate the progress of Eth2.0, thanks for contributing!
-
-The `--network $NETWORK_NAME` flag automatically sets the following configuration options. You may overwrite them with flags if necessary:
-
-- Use a genesis state file from [eth2-clients/eth2-testnets](https://github.com/eth2-clients/eth2-testnets/) since Eth1 genesis state processing is slow.
-- Set `eth1.enabled` to false.
-- Set the root directory to `.$NETWORK_NAME`.
+A young testnet should take a few hours to sync. If you see multiple or consistent errors in the logs, please open a [Github issue](https://github.com/ChainSafe/lodestar/issues/new) or reach out to us in [Discord](https://discord.gg/yjyvFRP). Just by reporting anomalities you are helping accelerate the progress of Eth2.0, thanks for contributing!
 
 ## Run a validator
 

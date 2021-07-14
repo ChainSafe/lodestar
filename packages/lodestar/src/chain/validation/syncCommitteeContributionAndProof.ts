@@ -1,8 +1,6 @@
 import {CachedBeaconState, isSyncCommitteeAggregator} from "@chainsafe/lodestar-beacon-state-transition";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {altair} from "@chainsafe/lodestar-types";
-import {IBeaconDb} from "../../db";
-import {GossipAction, IContributionAndProofJob, SyncCommitteeError, SyncCommitteeErrorCode} from "../errors";
+import {GossipAction, SyncCommitteeError, SyncCommitteeErrorCode} from "../errors";
 import {IBeaconChain} from "../interface";
 import {validateGossipSyncCommitteeExceptSig} from "./syncCommittee";
 import {
@@ -12,36 +10,33 @@ import {
 } from "./signatureSets";
 
 /**
- * Spec v1.1.0-alpha.5
+ * Spec v1.1.0-alpha.8
  */
 export async function validateSyncCommitteeGossipContributionAndProof(
-  config: IBeaconConfig,
   chain: IBeaconChain,
-  db: IBeaconDb,
-  job: IContributionAndProofJob
+  signedContributionAndProof: altair.SignedContributionAndProof
 ): Promise<void> {
-  const signedContributionAndProof = job.contributionAndProof;
   const contributionAndProof = signedContributionAndProof.message;
-  const contribution = contributionAndProof.contribution;
-  const subCommitteeIndex = contribution.subCommitteeIndex;
-  const subnet = subCommitteeIndex;
+  const {contribution, aggregatorIndex} = contributionAndProof;
+  const {subCommitteeIndex, slot} = contribution;
 
   const headState = chain.getHeadState();
-  validateGossipSyncCommitteeExceptSig(chain, headState, subnet, {
-    slot: contribution.slot,
-    beaconBlockRoot: contribution.beaconBlockRoot,
+  validateGossipSyncCommitteeExceptSig(chain, headState, subCommitteeIndex, {
+    slot,
     validatorIndex: contributionAndProof.aggregatorIndex,
   });
 
   // [IGNORE] The contribution's slot is for the current slot, i.e. contribution.slot == current_slot.
   // > Checked in validateGossipSyncCommitteeExceptSig()
 
-  // [IGNORE] The block being signed over (contribution.beacon_block_root) has been seen (via both gossip and non-gossip sources).
+  // [REJECT] The aggregator's validator index is in the declared subcommittee of the current sync committee
+  // -- i.e. state.validators[contribution_and_proof.aggregator_index].pubkey in
+  // get_sync_subcommittee_pubkeys(state, contribution.subcommittee_index).
   // > Checked in validateGossipSyncCommitteeExceptSig()
 
   // [IGNORE] The sync committee contribution is the first valid contribution received for the aggregator with index
   // contribution_and_proof.aggregator_index for the slot contribution.slot and subcommittee index contribution.subcommittee_index.
-  if (db.syncCommitteeContribution.has(contributionAndProof)) {
+  if (chain.seenContributionAndProof.isKnown(slot, subCommitteeIndex, aggregatorIndex)) {
     throw new SyncCommitteeError(GossipAction.IGNORE, {
       code: SyncCommitteeErrorCode.SYNC_COMMITTEE_ALREADY_KNOWN,
     });
@@ -78,5 +73,7 @@ export async function validateSyncCommitteeGossipContributionAndProof(
       code: SyncCommitteeErrorCode.INVALID_SIGNATURE,
     });
   }
+
   // no need to add to seenSyncCommittteeContributionCache here, gossip handler will do that
+  chain.seenContributionAndProof.add(slot, subCommitteeIndex, aggregatorIndex);
 }

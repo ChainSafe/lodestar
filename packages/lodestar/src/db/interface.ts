@@ -17,6 +17,8 @@ import {
   VoluntaryExitRepository,
   BestUpdatePerCommitteePeriod,
   LightclientFinalizedCheckpoint,
+  LightClientInitProofRepository,
+  LightClientSyncCommitteeProofRepository,
 } from "./repositories";
 import {
   PreGenesisState,
@@ -25,8 +27,6 @@ import {
   LatestNonFinalizedUpdate,
 } from "./single";
 import {PendingBlockRepository} from "./repositories/pendingBlock";
-import {SyncCommitteeCache} from "./syncCommittee";
-import {SyncCommitteeContributionCache} from "./syncCommitteeContribution";
 import {IDbMetrics} from "../../../db/lib";
 
 /**
@@ -65,12 +65,12 @@ export interface IBeaconDb {
   eth1Data: Eth1DataRepository;
 
   // altair
-  syncCommittee: SyncCommitteeCache;
-  syncCommitteeContribution: SyncCommitteeContributionCache;
   bestUpdatePerCommitteePeriod: BestUpdatePerCommitteePeriod;
   latestFinalizedUpdate: LatestFinalizedUpdate;
   latestNonFinalizedUpdate: LatestNonFinalizedUpdate;
   lightclientFinalizedCheckpoint: LightclientFinalizedCheckpoint;
+  lightClientInitProof: LightClientInitProofRepository;
+  lightClientSyncCommitteeProof: LightClientSyncCommitteeProofRepository;
 
   processBlockOperations(signedBlock: allForks.SignedBeaconBlock): Promise<void>;
 

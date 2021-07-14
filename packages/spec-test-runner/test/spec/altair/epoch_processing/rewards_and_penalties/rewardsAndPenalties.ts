@@ -1,5 +1,4 @@
 import {join} from "path";
-import {expect} from "chai";
 
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
 import {altair, allForks} from "@chainsafe/lodestar-beacon-state-transition";
@@ -7,12 +6,13 @@ import {altair as altairTypes, ssz} from "@chainsafe/lodestar-types";
 import {SPEC_TEST_LOCATION} from "../../../../utils/specTestCases";
 import {IAltairStateTestCase} from "../../stateTestCase";
 import {TreeBacked} from "@chainsafe/ssz";
-import {createIBeaconConfig} from "@chainsafe/lodestar-config";
+import {createIChainForkConfig} from "@chainsafe/lodestar-config";
 import {PresetName} from "@chainsafe/lodestar-params";
+import {expectEqualBeaconState} from "../../util";
 
 export function runRewardsAndPenalties(presetName: PresetName): void {
   // eslint-disable-next-line @typescript-eslint/naming-convention
-  const config = createIBeaconConfig({ALTAIR_FORK_EPOCH: 0});
+  const config = createIChainForkConfig({ALTAIR_FORK_EPOCH: 0});
 
   describeDirectorySpecTest<IAltairStateTestCase, altairTypes.BeaconState>(
     `altair epoch rewards and penalties ${presetName}`,
@@ -43,7 +43,7 @@ export function runRewardsAndPenalties(presetName: PresetName): void {
       },
       getExpected: (testCase) => testCase.post,
       expectFunc: (testCase, expected, actual) => {
-        expect(ssz.altair.BeaconState.equals(actual, expected)).to.be.true;
+        expectEqualBeaconState(expected, actual);
       },
     }
   );

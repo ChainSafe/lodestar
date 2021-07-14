@@ -5,7 +5,6 @@
 import {Interface} from "@ethersproject/abi";
 import {fromHexString} from "@chainsafe/ssz";
 import {phase0, ssz} from "@chainsafe/lodestar-types";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
 const depositEventFragment =
   "event DepositEvent(bytes pubkey, bytes withdrawal_credentials, bytes amount, bytes signature, bytes index)";
@@ -20,10 +19,7 @@ export const depositEventTopics = [depositContractInterface.getEventTopic("Depos
 /**
  * Parse DepositEvent log
  */
-export function parseDepositLog(
-  config: IBeaconConfig,
-  log: {blockNumber: number; data: string; topics: string[]}
-): phase0.DepositEvent {
+export function parseDepositLog(log: {blockNumber: number; data: string; topics: string[]}): phase0.DepositEvent {
   const event = depositContractInterface.parseLog(log);
   const values = event.args;
   if (!values) throw Error(`DepositEvent at ${log.blockNumber} has no values`);

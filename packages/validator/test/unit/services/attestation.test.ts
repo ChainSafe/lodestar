@@ -2,7 +2,6 @@ import {AbortController} from "@chainsafe/abort-controller";
 import {expect} from "chai";
 import sinon from "sinon";
 import bls from "@chainsafe/bls";
-import {config as mainnetConfig} from "@chainsafe/lodestar-config/default";
 import {
   generateEmptyAttestation,
   generateEmptySignedAggregateAndProof,
@@ -11,10 +10,9 @@ import {AttestationService} from "../../../src/services/attestation";
 import {AttDutyAndProof} from "../../../src/services/attestationDuties";
 import {ValidatorStore} from "../../../src/services/validatorStore";
 import {getApiClientStub} from "../../utils/apiStub";
-import {testLogger} from "../../utils/logger";
+import {loggerVc, testLogger} from "../../utils/logger";
 import {ClockMock} from "../../utils/clock";
 import {IndicesService} from "../../../src/services/indices";
-import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 
 describe("AttestationService", function () {
   const sandbox = sinon.createSandbox();
@@ -25,13 +23,6 @@ describe("AttestationService", function () {
   const validatorStore = sinon.createStubInstance(ValidatorStore) as ValidatorStore &
     sinon.SinonStubbedInstance<ValidatorStore>;
   let pubkeys: Uint8Array[]; // Initialize pubkeys in before() so bls is already initialized
-
-  // Clone before mutating
-  const config: typeof mainnetConfig = createIBeaconConfig({
-    ...mainnetConfig,
-    // eslint-disable-next-line @typescript-eslint/naming-convention
-    SECONDS_PER_SLOT: 1 / 1000, // Make slot time super short: 1 ms
-  });
 
   before(() => {
     const secretKeys = Array.from({length: 1}, (_, i) => bls.SecretKey.fromBytes(Buffer.alloc(32, i + 1)));
@@ -49,7 +40,7 @@ describe("AttestationService", function () {
   it("Should produce, sign, and publish an attestation + aggregate", async () => {
     const clock = new ClockMock();
     const indicesService = new IndicesService(logger, api, validatorStore);
-    const attestationService = new AttestationService(config, logger, api, clock, validatorStore, indicesService);
+    const attestationService = new AttestationService(loggerVc, api, clock, validatorStore, indicesService);
 
     const attestation = generateEmptyAttestation();
     const aggregate = generateEmptySignedAggregateAndProof();

@@ -16,6 +16,7 @@ import {waitForEvent} from "../../../utils/events/resolver";
 import {testLogger} from "../../../utils/logger";
 import {getValidPeerId} from "../../../utils/peer";
 import {IAttnetsService} from "../../../../src/network/subnets";
+import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 
 const logger = testLogger();
 
@@ -40,12 +41,13 @@ describe("network / peers / PeerManager", function () {
         root: ssz.phase0.BeaconBlock.hashTreeRoot(block.message),
       },
     });
+    const beaconConfig = createIBeaconConfig(config, state.genesisValidatorsRoot);
     const chain = new MockBeaconChain({
       genesisTime: 0,
       chainId: 0,
       networkId: BigInt(0),
       state,
-      config,
+      config: beaconConfig,
     });
     const libp2p = await createNode("/ip4/127.0.0.1/tcp/0");
 
@@ -55,18 +57,18 @@ describe("network / peers / PeerManager", function () {
     });
 
     const reqResp = new ReqRespFake();
-    const peerMetadata = new Libp2pPeerMetadataStore(config, libp2p.peerStore.metadataBook);
+    const peerMetadata = new Libp2pPeerMetadataStore(libp2p.peerStore.metadataBook);
     const peerRpcScores = new PeerRpcScoreStore(peerMetadata);
     const networkEventBus = new NetworkEventBus();
+    /* eslint-disable @typescript-eslint/no-empty-function */
     const mockSubnetsService: IAttnetsService = {
       getActiveSubnets: () => [],
       shouldProcess: () => true,
-      // eslint-disable-next-line @typescript-eslint/no-empty-function
       addCommitteeSubscriptions: () => {},
-      // eslint-disable-next-line @typescript-eslint/no-empty-function
       start: () => {},
-      // eslint-disable-next-line @typescript-eslint/no-empty-function
       stop: () => {},
+      subscribeSubnetsToNextFork: () => {},
+      unsubscribeSubnetsFromPrevFork: () => {},
     };
 
     const peerManager = new PeerManager(
@@ -76,7 +78,7 @@ describe("network / peers / PeerManager", function () {
         logger,
         metrics: null,
         chain,
-        config,
+        config: beaconConfig,
         peerMetadata,
         peerRpcScores,
         networkEventBus,

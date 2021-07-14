@@ -116,6 +116,24 @@ describe("httpClient json client", () => {
     }
   });
 
+  it("should handle http status with custom code 503", async () => {
+    const httpClient = await getServerWithClient({
+      ...testRoute,
+      handler: async (req, res) => {
+        return res.code(503).send("Node is syncing");
+      },
+    });
+
+    try {
+      await httpClient.json(testRoute);
+      return Promise.reject(Error("did not throw"));
+    } catch (e) {
+      if (!(e instanceof HttpError)) throw Error(`Not an HttpError: ${(e as Error).message}`);
+      expect(e.message).to.equal("Service Unavailable: Node is syncing");
+      expect(e.status).to.equal(503, "Wrong error status code");
+    }
+  });
+
   it("should handle aborting request with timeout", async () => {
     const {baseUrl} = await getServer({
       ...testRoute,

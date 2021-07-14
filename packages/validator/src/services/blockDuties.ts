@@ -1,12 +1,8 @@
 import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {BLSPubkey, Epoch, Root, Slot, ssz} from "@chainsafe/lodestar-types";
-import {ILogger} from "@chainsafe/lodestar-utils";
 import {toHexString} from "@chainsafe/ssz";
 import {Api, routes} from "@chainsafe/lodestar-api";
-import {extendError, notAborted} from "../util";
-import {IClock} from "../util/clock";
-import {differenceHex} from "../util/difference";
+import {IClock, extendError, isSyncing, notAborted, differenceHex, ILoggerVc} from "../util";
 import {ValidatorStore} from "./validatorStore";
 
 /** Only retain `HISTORICAL_DUTIES_EPOCHS` duties prior to the current epoch */
@@ -26,8 +22,7 @@ export class BlockDutiesService {
   private readonly proposers = new Map<Epoch, BlockDutyAtEpoch>();
 
   constructor(
-    private readonly config: IBeaconConfig,
-    private readonly logger: ILogger,
+    private readonly logger: ILoggerVc,
     private readonly api: Api,
     clock: IClock,
     private readonly validatorStore: ValidatorStore,
@@ -64,17 +59,20 @@ export class BlockDutiesService {
   }
 
   private runBlockDutiesTask = async (slot: Slot): Promise<void> => {
-    if (slot < 0) {
-      // Before genesis, fetch the genesis duties but don't notify block production
-      // Only fetch duties once since there is not possible to re-org. TODO: Review
-      if (!this.proposers.has(GENESIS_EPOCH)) {
-        await this.pollBeaconProposers(GENESIS_EPOCH);
+    try {
+      if (slot < 0) {
+        // Before genesis, fetch the genesis duties but don't notify block production
+        // Only fetch duties once since there is not possible to re-org. TODO: Review
+        if (!this.proposers.has(GENESIS_EPOCH)) {
+          await this.pollBeaconProposers(GENESIS_EPOCH);
+        }
+      } else {
+        await this.pollBeaconProposersAndNotify(slot);
       }
-    } else {
-      await this.pollBeaconProposersAndNotify(slot).catch((e) => {
-        if (notAborted(e)) this.logger.error("Error on pollBeaconProposers", {}, e);
-      });
-
+    } catch (e) {
+      if (isSyncing(e)) this.logger.isSyncing(e);
+      else if (notAborted(e)) this.logger.error("Error on pollBeaconProposers", {}, e);
+    } finally {
       this.pruneOldDuties(computeEpochAtSlot(slot));
     }
   };

@@ -1,19 +1,18 @@
 import {itBench, setBenchOpts} from "@dapplion/benchmark";
 import {allForks, phase0} from "../../../../src";
-import {generatePerfTestCachedBeaconState} from "../../util";
+import {generatePerfTestCachedStatePhase0, perfStateId} from "../../util";
 
-describe("Epoch transition steps", () => {
+describe("Phase 0 epoch transition steps", () => {
   setBenchOpts({
     maxMs: 60 * 1000,
     minMs: 15 * 1000,
     runs: 64,
   });
 
-  const originalState = generatePerfTestCachedBeaconState({goBackOneSlot: true});
+  const originalState = generatePerfTestCachedStatePhase0({goBackOneSlot: true});
   const process = allForks.prepareEpochProcessState(originalState);
 
-  const valCount = originalState.validators.length;
-  const idPrefix = `epoch - ${valCount} vs`;
+  const idPrefix = `epoch phase0 - ${perfStateId}`;
 
   itBench({
     id: `${idPrefix} - processJustificationAndFinalization`,

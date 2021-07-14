@@ -1,7 +1,7 @@
 import {AbortController, AbortSignal} from "@chainsafe/abort-controller";
 import {SecretKey} from "@chainsafe/bls";
 import {ssz} from "@chainsafe/lodestar-types";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {createIBeaconConfig, IBeaconConfig, IChainForkConfig} from "@chainsafe/lodestar-config";
 import {Genesis} from "@chainsafe/lodestar-types/phase0";
 import {fromHex, ILogger} from "@chainsafe/lodestar-utils";
 import {getClient, Api} from "@chainsafe/lodestar-api";
@@ -14,11 +14,12 @@ import {AttestationService} from "./services/attestation";
 import {IndicesService} from "./services/indices";
 import {SyncCommitteeService} from "./services/syncCommittee";
 import {ISlashingProtection} from "./slashingProtection";
-import {assertEqualParams} from "./util/params";
+import {assertEqualParams, getLoggerVc} from "./util";
+import {ChainHeaderTracker} from "./services/chainHeaderTracker";
 
 export type ValidatorOptions = {
   slashingProtection: ISlashingProtection;
-  config: IBeaconConfig;
+  config: IChainForkConfig;
   api: Api | string;
   secretKeys: SecretKey[];
   logger: ILogger;
@@ -44,11 +45,13 @@ export class Validator {
   private readonly api: Api;
   private readonly secretKeys: SecretKey[];
   private readonly clock: IClock;
+  private readonly chainHeaderTracker: ChainHeaderTracker;
   private readonly logger: ILogger;
   private state: State = {status: Status.stopped};
 
   constructor(opts: ValidatorOptions, genesis: Genesis) {
-    const {config, logger, slashingProtection, secretKeys, graffiti} = opts;
+    const {config: chainForkConfig, logger, slashingProtection, secretKeys, graffiti} = opts;
+    const config = createIBeaconConfig(chainForkConfig, genesis.genesisValidatorsRoot);
 
     const api =
       typeof opts.api === "string"
@@ -62,9 +65,11 @@ export class Validator {
     const clock = new Clock(config, logger, {genesisTime: Number(genesis.genesisTime)});
     const validatorStore = new ValidatorStore(config, slashingProtection, secretKeys, genesis);
     const indicesService = new IndicesService(logger, api, validatorStore);
-    new BlockProposingService(config, logger, api, clock, validatorStore, graffiti);
-    new AttestationService(config, logger, api, clock, validatorStore, indicesService);
-    new SyncCommitteeService(config, logger, api, clock, validatorStore, indicesService);
+    this.chainHeaderTracker = new ChainHeaderTracker(logger, api);
+    const loggerVc = getLoggerVc(logger, clock);
+    new BlockProposingService(loggerVc, api, clock, validatorStore, graffiti);
+    new AttestationService(loggerVc, api, clock, validatorStore, indicesService);
+    new SyncCommitteeService(config, loggerVc, api, clock, validatorStore, this.chainHeaderTracker, indicesService);
 
     this.config = config;
     this.logger = logger;
@@ -97,8 +102,9 @@ export class Validator {
     if (this.state.status === Status.running) return;
     const controller = new AbortController();
     this.state = {status: Status.running, controller};
-
-    this.clock.start(controller.signal);
+    const {signal} = controller;
+    this.clock.start(signal);
+    this.chainHeaderTracker.start(signal);
   }
 
   /**

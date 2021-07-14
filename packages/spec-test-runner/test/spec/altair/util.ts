@@ -1,15 +1,10 @@
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {altair, ssz} from "@chainsafe/lodestar-types";
 import {expect} from "chai";
 
 /**
  * Compare each field in BeaconState to help debug failed test easier.
  */
-export function expectEqualBeaconState(
-  config: IBeaconConfig,
-  expected: altair.BeaconState,
-  actual: altair.BeaconState
-): void {
+export function expectEqualBeaconState(expected: altair.BeaconState, actual: altair.BeaconState): void {
   const fields = ssz.altair.BeaconState.fields;
   for (const field of Object.keys(fields)) {
     expect(

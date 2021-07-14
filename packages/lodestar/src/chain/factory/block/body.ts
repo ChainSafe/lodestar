@@ -11,14 +11,20 @@ import {
   MAX_VOLUNTARY_EXITS,
 } from "@chainsafe/lodestar-params";
 import {Bytes96, Bytes32, phase0, allForks, altair, Root, Slot} from "@chainsafe/lodestar-types";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
 
 import {IBeaconDb} from "../../../db";
 import {IEth1ForBlockProduction} from "../../../eth1";
+import {IBeaconChain} from "../../interface";
 
 export async function assembleBody(
-  {config, db, eth1}: {config: IBeaconConfig; db: IBeaconDb; eth1: IEth1ForBlockProduction},
+  {
+    chain,
+    config,
+    db,
+    eth1,
+  }: {chain: IBeaconChain; config: IChainForkConfig; db: IBeaconDb; eth1: IEth1ForBlockProduction},
   currentState: CachedBeaconState<allForks.BeaconState>,
   randaoReveal: Bytes96,
   graffiti: Bytes32,
@@ -64,7 +70,7 @@ export async function assembleBody(
     case ForkName.altair: {
       const block: altair.BeaconBlockBody = {
         ...blockBodyPhase0,
-        syncAggregate: db.syncCommitteeContribution.getSyncAggregate(
+        syncAggregate: chain.syncContributionAndProofPool.getAggregate(
           syncAggregateData.parentSlot,
           syncAggregateData.parentBlockRoot
         ),

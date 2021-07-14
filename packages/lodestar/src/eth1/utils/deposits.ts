@@ -1,5 +1,4 @@
 import {MAX_DEPOSITS} from "@chainsafe/lodestar-params";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Root, phase0, allForks, ssz} from "@chainsafe/lodestar-types";
 import {TreeBacked, List, toHexString} from "@chainsafe/ssz";
 import {IFilterOptions} from "@chainsafe/lodestar-db";
@@ -8,7 +7,6 @@ import {getTreeAtIndex} from "../../util/tree";
 export type DepositGetter<T> = (indexRange: IFilterOptions<number>, eth1Data: phase0.Eth1Data) => Promise<T[]>;
 
 export async function getDeposits<T>(
-  config: IBeaconConfig,
   // eth1_deposit_index represents the next deposit index to be added
   state: allForks.BeaconState,
   eth1Data: phase0.Eth1Data,
@@ -33,7 +31,6 @@ export async function getDeposits<T>(
 }
 
 export function getDepositsWithProofs(
-  config: IBeaconConfig,
   depositEvents: phase0.DepositEvent[],
   depositRootTree: TreeBacked<List<Root>>,
   eth1Data: phase0.Eth1Data

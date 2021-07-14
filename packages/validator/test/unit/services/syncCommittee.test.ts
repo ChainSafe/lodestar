@@ -2,16 +2,17 @@ import {AbortController} from "@chainsafe/abort-controller";
 import {expect} from "chai";
 import sinon from "sinon";
 import bls from "@chainsafe/bls";
-import {createIBeaconConfig} from "@chainsafe/lodestar-config";
+import {createIChainForkConfig} from "@chainsafe/lodestar-config";
 import {config as mainnetConfig} from "@chainsafe/lodestar-config/default";
 import {SyncCommitteeService} from "../../../src/services/syncCommittee";
 import {SyncDutyAndProofs} from "../../../src/services/syncCommitteeDuties";
 import {ValidatorStore} from "../../../src/services/validatorStore";
 import {getApiClientStub} from "../../utils/apiStub";
-import {testLogger} from "../../utils/logger";
+import {loggerVc, testLogger} from "../../utils/logger";
 import {ClockMock} from "../../utils/clock";
 import {IndicesService} from "../../../src/services/indices";
 import {ssz} from "@chainsafe/lodestar-types";
+import {ChainHeaderTracker} from "../../../src/services/chainHeaderTracker";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
@@ -23,9 +24,11 @@ describe("SyncCommitteeService", function () {
   const api = getApiClientStub(sandbox);
   const validatorStore = sinon.createStubInstance(ValidatorStore) as ValidatorStore &
     sinon.SinonStubbedInstance<ValidatorStore>;
+  const chainHeaderTracker = sinon.createStubInstance(ChainHeaderTracker) as ChainHeaderTracker &
+    sinon.SinonStubbedInstance<ChainHeaderTracker>;
   let pubkeys: Uint8Array[]; // Initialize pubkeys in before() so bls is already initialized
 
-  const config = createIBeaconConfig({
+  const config = createIChainForkConfig({
     ...mainnetConfig,
     SECONDS_PER_SLOT: 1 / 1000, // Make slot time super short: 1 ms
     ALTAIR_FORK_EPOCH: 0, // Activate Altair immediatelly
@@ -47,7 +50,15 @@ describe("SyncCommitteeService", function () {
   it("Should produce, sign, and publish a sync committee + contribution", async () => {
     const clock = new ClockMock();
     const indicesService = new IndicesService(logger, api, validatorStore);
-    const syncCommitteeService = new SyncCommitteeService(config, logger, api, clock, validatorStore, indicesService);
+    const syncCommitteeService = new SyncCommitteeService(
+      config,
+      loggerVc,
+      api,
+      clock,
+      validatorStore,
+      chainHeaderTracker,
+      indicesService
+    );
 
     const beaconBlockRoot = Buffer.alloc(32, 0x4d);
     const syncCommitteeSignature = ssz.altair.SyncCommitteeMessage.defaultValue();
@@ -73,7 +84,7 @@ describe("SyncCommitteeService", function () {
 
     // Mock beacon's sync committee and contribution routes
 
-    api.beacon.getBlockRoot.resolves({data: beaconBlockRoot});
+    chainHeaderTracker.getCurrentChainHead.returns(beaconBlockRoot);
     api.beacon.submitPoolSyncCommitteeSignatures.resolves();
     api.validator.produceSyncCommitteeContribution.resolves({data: contribution});
     api.validator.publishContributionAndProofs.resolves();

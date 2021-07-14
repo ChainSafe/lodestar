@@ -3,11 +3,11 @@ import sinon from "sinon";
 
 import {TreeBacked} from "@chainsafe/ssz";
 import {allForks, ForkDigest, Number64, Root, Slot, ssz, Uint16, Uint64} from "@chainsafe/lodestar-types";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {CachedBeaconState, createCachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
 import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
-import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
-import {LightClientUpdater} from "@chainsafe/lodestar-light-client/lib/server/LightClientUpdater";
+import {ForkChoice, IForkChoice} from "@chainsafe/lodestar-fork-choice";
+import {LightClientUpdater} from "@chainsafe/lodestar-light-client/server";
 
 import {ChainEventEmitter, IBeaconChain} from "../../../../src/chain";
 import {IBeaconClock} from "../../../../src/chain/clock/interface";
@@ -22,8 +22,15 @@ import {ForkDigestContext, IForkDigestContext} from "../../../../src/util/forkDi
 import {generateEmptyBlockSummary} from "../../block";
 import {ForkName} from "@chainsafe/lodestar-params";
 import {testLogger} from "../../logger";
-import {AttestationPool} from "../../../../src/chain/opsPool/attestationPool";
-import {SeenAggregators, SeenAttesters} from "../../../../src/chain/seenCache";
+import {AttestationPool} from "../../../../src/chain/opPools/attestationPool";
+import {
+  SeenAggregators,
+  SeenAttesters,
+  SeenContributionAndProof,
+  SeenSyncCommitteeMessages,
+} from "../../../../src/chain/seenCache";
+import {SyncCommitteeMessagePool, SyncContributionAndProofPool} from "../../../../src/chain/opPools";
+import {LightClientIniter} from "../../../../src/chain/lightClient";
 
 /* eslint-disable @typescript-eslint/no-empty-function */
 
@@ -32,7 +39,7 @@ export interface IMockChainParams {
   chainId: Uint16;
   networkId: Uint64;
   state: TreeBacked<allForks.BeaconState>;
-  config: IBeaconConfig;
+  config: IChainForkConfig;
 }
 
 export class MockBeaconChain implements IBeaconChain {
@@ -50,15 +57,21 @@ export class MockBeaconChain implements IBeaconChain {
   pendingBlocks: BlockPool;
   forkDigestContext: IForkDigestContext;
   lightclientUpdater: LightClientUpdater;
+  lightClientIniter: LightClientIniter;
 
   // Ops pool
   readonly attestationPool = new AttestationPool();
+  readonly syncCommitteeMessagePool = new SyncCommitteeMessagePool();
+  readonly syncContributionAndProofPool = new SyncContributionAndProofPool();
 
+  // Gossip seen cache
   readonly seenAttesters = new SeenAttesters();
   readonly seenAggregators = new SeenAggregators();
+  readonly seenSyncCommitteeMessages = new SeenSyncCommitteeMessages();
+  readonly seenContributionAndProof = new SeenContributionAndProof();
 
   private state: TreeBacked<allForks.BeaconState>;
-  private config: IBeaconConfig;
+  private config: IChainForkConfig;
   private abortController: AbortController;
 
   constructor({genesisTime, chainId, networkId, state, config}: IMockChainParams) {
@@ -80,7 +93,7 @@ export class MockBeaconChain implements IBeaconChain {
     });
     this.forkChoice = mockForkChoice();
     this.stateCache = new StateContextCache();
-    this.checkpointStateCache = new CheckpointStateCache(this.config);
+    this.checkpointStateCache = new CheckpointStateCache();
     this.pendingBlocks = new BlockPool(config, logger);
     const db = new StubbedBeaconDb(sinon);
     this.regen = new StateRegenerator({
@@ -94,6 +107,12 @@ export class MockBeaconChain implements IBeaconChain {
     });
     this.forkDigestContext = new ForkDigestContext(this.config, this.genesisValidatorsRoot);
     this.lightclientUpdater = new LightClientUpdater(db);
+    this.lightClientIniter = new LightClientIniter({
+      config: this.config,
+      db: db,
+      forkChoice: this.forkChoice as ForkChoice,
+      stateCache: this.stateCache,
+    });
   }
 
   async getHeadBlock(): Promise<null> {

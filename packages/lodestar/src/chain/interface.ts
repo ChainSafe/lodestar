@@ -2,7 +2,7 @@ import {ForkName} from "@chainsafe/lodestar-params";
 import {allForks, Number64, Root, phase0, Slot} from "@chainsafe/lodestar-types";
 import {CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
-import {LightClientUpdater} from "@chainsafe/lodestar-light-client/lib/server/LightClientUpdater";
+import {LightClientUpdater} from "@chainsafe/lodestar-light-client/server";
 
 import {IBeaconClock} from "./clock/interface";
 import {ChainEventEmitter} from "./emitter";
@@ -10,9 +10,10 @@ import {IStateRegenerator} from "./regen";
 import {BlockPool} from "./blocks";
 import {StateContextCache, CheckpointStateCache} from "./stateCache";
 import {IBlsVerifier} from "./bls";
-import {SeenAttesters, SeenAggregators} from "./seenCache";
+import {SeenAttesters, SeenAggregators, SeenSyncCommitteeMessages, SeenContributionAndProof} from "./seenCache";
+import {AttestationPool, SyncCommitteeMessagePool, SyncContributionAndProofPool} from "./opPools";
 import {IForkDigestContext} from "../util/forkDigestContext";
-import {AttestationPool} from "./opsPool/attestationPool";
+import {LightClientIniter} from "./lightClient";
 
 export interface IProcessBlock {
   /**
@@ -60,12 +61,18 @@ export interface IBeaconChain {
   pendingBlocks: BlockPool;
   forkDigestContext: IForkDigestContext;
   lightclientUpdater: LightClientUpdater;
+  lightClientIniter: LightClientIniter;
 
   // Ops pool
   readonly attestationPool: AttestationPool;
+  readonly syncCommitteeMessagePool: SyncCommitteeMessagePool;
+  readonly syncContributionAndProofPool: SyncContributionAndProofPool;
 
+  // Gossip seen cache
   readonly seenAttesters: SeenAttesters;
   readonly seenAggregators: SeenAggregators;
+  readonly seenSyncCommitteeMessages: SeenSyncCommitteeMessages;
+  readonly seenContributionAndProof: SeenContributionAndProof;
 
   /** Stop beacon chain processing */
   close(): void;

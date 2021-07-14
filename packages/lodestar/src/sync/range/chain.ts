@@ -2,7 +2,7 @@ import PeerId from "peer-id";
 import {Epoch, Root, Slot, phase0, allForks} from "@chainsafe/lodestar-types";
 import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 import {ErrorAborted, ILogger} from "@chainsafe/lodestar-utils";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {toHexString} from "@chainsafe/ssz";
 import {PeerAction} from "../../network";
 import {ChainSegmentError} from "../../chain/errors";
@@ -26,7 +26,7 @@ import {
 export type SyncChainOpts = Partial<BatchOpts>;
 
 export type SyncChainModules = {
-  config: IBeaconConfig;
+  config: IChainForkConfig;
   logger: ILogger;
 };
 
@@ -106,7 +106,7 @@ export class SyncChain {
   private readonly peerset = new PeerMap<ChainTarget>();
 
   private readonly logger: ILogger;
-  private readonly config: IBeaconConfig;
+  private readonly config: IChainForkConfig;
   private readonly opts: BatchOpts;
 
   constructor(

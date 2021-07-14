@@ -1,6 +1,5 @@
 import {SecretKey} from "@chainsafe/bls";
 import {
-  computeDomain,
   computeEpochAtSlot,
   computeSigningRoot,
   computeStartSlotAtEpoch,
@@ -16,18 +15,7 @@ import {
   DOMAIN_SYNC_COMMITTEE,
   DOMAIN_SYNC_COMMITTEE_SELECTION_PROOF,
 } from "@chainsafe/lodestar-params";
-import {
-  allForks,
-  altair,
-  BLSPubkey,
-  BLSSignature,
-  DomainType,
-  Epoch,
-  phase0,
-  Root,
-  Slot,
-  ssz,
-} from "@chainsafe/lodestar-types";
+import {allForks, altair, BLSPubkey, BLSSignature, Epoch, phase0, Root, Slot, ssz} from "@chainsafe/lodestar-types";
 import {Genesis, ValidatorIndex} from "@chainsafe/lodestar-types/phase0";
 import {List, toHexString} from "@chainsafe/ssz";
 import {routes} from "@chainsafe/lodestar-api";
@@ -76,7 +64,7 @@ export class ValidatorStore {
       throw Error(`Not signing block with slot ${block.slot} greater than current slot ${currentSlot}`);
     }
 
-    const proposerDomain = await this.getDomain(DOMAIN_BEACON_PROPOSER, computeEpochAtSlot(block.slot));
+    const proposerDomain = this.config.getDomain(DOMAIN_BEACON_PROPOSER, block.slot);
     const blockType = this.config.getForkTypes(block.slot).BeaconBlock;
     const signingRoot = computeSigningRoot(blockType, block, proposerDomain);
 
@@ -91,7 +79,7 @@ export class ValidatorStore {
 
   async signRandao(pubkey: BLSPubkey, slot: Slot): Promise<BLSSignature> {
     const epoch = computeEpochAtSlot(slot);
-    const randaoDomain = await this.getDomain(DOMAIN_RANDAO, epoch);
+    const randaoDomain = this.config.getDomain(DOMAIN_RANDAO, slot);
     const randaoSigningRoot = computeSigningRoot(ssz.Epoch, epoch, randaoDomain);
 
     return this.getSecretKey(pubkey).sign(randaoSigningRoot).toBytes();
@@ -110,8 +98,8 @@ export class ValidatorStore {
     }
 
     this.validateAttestationDuty(duty, attestationData);
-
-    const domain = await this.getDomain(DOMAIN_BEACON_ATTESTER, attestationData.target.epoch);
+    const slot = computeStartSlotAtEpoch(attestationData.target.epoch);
+    const domain = this.config.getDomain(DOMAIN_BEACON_ATTESTER, slot);
     const signingRoot = computeSigningRoot(ssz.phase0.AttestationData, attestationData, domain);
 
     const secretKey = this.getSecretKey(duty.pubkey); // Get before writing to slashingProtection
@@ -141,7 +129,7 @@ export class ValidatorStore {
       selectionProof,
     };
 
-    const domain = await this.getDomain(DOMAIN_AGGREGATE_AND_PROOF, computeEpochAtSlot(aggregate.data.slot));
+    const domain = this.config.getDomain(DOMAIN_AGGREGATE_AND_PROOF, aggregate.data.slot);
     const signingRoot = computeSigningRoot(ssz.phase0.AggregateAndProof, aggregateAndProof, domain);
 
     return {
@@ -156,7 +144,7 @@ export class ValidatorStore {
     slot: Slot,
     beaconBlockRoot: Root
   ): Promise<altair.SyncCommitteeMessage> {
-    const domain = await this.getDomain(DOMAIN_SYNC_COMMITTEE, computeEpochAtSlot(slot));
+    const domain = this.config.getDomain(DOMAIN_SYNC_COMMITTEE, slot);
     const signingRoot = computeSigningRoot(ssz.Root, beaconBlockRoot, domain);
 
     return {
@@ -178,7 +166,7 @@ export class ValidatorStore {
       selectionProof,
     };
 
-    const domain = await this.getDomain(DOMAIN_CONTRIBUTION_AND_PROOF, computeEpochAtSlot(contribution.slot));
+    const domain = this.config.getDomain(DOMAIN_CONTRIBUTION_AND_PROOF, contribution.slot);
     const signingRoot = computeSigningRoot(ssz.altair.ContributionAndProof, contributionAndProof, domain);
 
     return {
@@ -188,7 +176,7 @@ export class ValidatorStore {
   }
 
   async signAttestationSelectionProof(pubkey: BLSPubkey, slot: Slot): Promise<BLSSignature> {
-    const domain = await this.getDomain(DOMAIN_SELECTION_PROOF, computeEpochAtSlot(slot));
+    const domain = this.config.getDomain(DOMAIN_SELECTION_PROOF, slot);
     const signingRoot = computeSigningRoot(ssz.Slot, slot, domain);
     return this.getSecretKey(pubkey).sign(signingRoot).toBytes();
   }
@@ -198,7 +186,7 @@ export class ValidatorStore {
     slot: Slot,
     subCommitteeIndex: number
   ): Promise<BLSSignature> {
-    const domain = await this.getDomain(DOMAIN_SYNC_COMMITTEE_SELECTION_PROOF, computeEpochAtSlot(slot));
+    const domain = this.config.getDomain(DOMAIN_SYNC_COMMITTEE_SELECTION_PROOF, slot);
     const signingData: altair.SyncAggregatorSelectionData = {
       slot,
       subCommitteeIndex: subCommitteeIndex,
@@ -206,16 +194,6 @@ export class ValidatorStore {
 
     const signingRoot = computeSigningRoot(ssz.altair.SyncAggregatorSelectionData, signingData, domain);
     return this.getSecretKey(pubkey).sign(signingRoot).toBytes();
-  }
-
-  private async getDomain(domainType: DomainType, epoch: Epoch): Promise<Buffer> {
-    // We don't fetch the Fork from the beacon node dynamically.
-    // The Fork object should not change during the runtime of the validator. When a new planned fork happens
-    // node operators would have to update the validator client software at least once.
-    // If we wanted to have long-term independent validator client we can review this approach.
-    // On start-up the validator client fetches the full config from the beacon node and ensures they match.
-    const forkVersion = this.config.getForkVersion(computeStartSlotAtEpoch(epoch));
-    return computeDomain(domainType, forkVersion, this.genesisValidatorsRoot);
   }
 
   private getSecretKey(pubkey: BLSPubkey | string): SecretKey {

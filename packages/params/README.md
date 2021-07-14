@@ -8,26 +8,66 @@
 
 > This package is part of [ChainSafe's Lodestar](https://lodestar.chainsafe.io) project
 
-Parameters for configuring an Eth2 network
+
+Lodestar defines all constants and presets defined in the [Ethereum Consensus / Eth2 spec](https://github.com/ethereum/eth2.0-specs). This can be used in conjunction with other Lodestar libraries to interact with the Ethereum consensus.
+
+## Installation
+
+```sh
+npm install @chainsafe/lodestar-params
+```
 
 ## Usage
 
-```typescript
-// mainnet and minimal presets are available under non-default exports
-import {params as mainnetPreset} from "@chainsafe/lodestar-params/mainnet";
-import {params as minimalPreset} from "@chainsafe/lodestar-params/mainnet";
+The Lodestar params package contains several items used in all downstream Lodestar libraries:
 
-mainnetPreset.SHARD_COUNT;
+- Fork names
+- Constants
+- Presets
 
-// custom params should follow the IBeaconPreset interface
+### Fork names
 
-import {IBeaconPreset} from "@chainsafe/lodestar-params";
+Many downstream components are namespaced on fork names, or otherwise rely on knowing the fork names ahead of time. The Lodestar params package exports an enum `ForkName` the enumerates all known fork names.
 
-const testnetPreset: IBeaconPreset = {
-  ...mainnetPreset,
-  SHARD_COUNT: 4,
-};
+```ts
+import {ForkName} from "@chainsafe/lodestar-params";
+
+let f: ForkName;
+switch (f) {
+  case ForkName.phase0:
+  case ForkName.altair:
+  default:
+}
 ```
+
+### Constants
+
+All constants defined in the spec are exported verbatim.
+
+```ts
+import {GENESIS_SLOT} from "@chainsafe/lodestar-params";
+```
+
+### Presets
+
+Presets are "constants"-ish defined in the spec that can only be configured at build-time. These are meant to be treated as constants, and indeed are treated as constants by all downstream Lodestar libraries. The default preset is `mainnet`.  The only other preset defined is `minimal`, used only in testing environments.
+
+The active preset is exported under the `ACTIVE_PRESET` named export.
+
+```ts
+import {ACTIVE_PRESET, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
+```
+
+The preset may be set in one of two ways:
+
+1. by setting the `LODESTAR_PRESET` environment variable
+2. by executing the `setActivePreset(preset: Preset)` function
+
+Important Notes:
+
+- Interacting with and understanding the active preset is only necessary in very limited testing environments, eg: for ephemeral testnets
+- The `minimal` preset is NOT compatible with the `mainnet` preset.
+- using `setActivePreset` may be dangerous, and only should be run once before loading any other libraries. All downstream Lodestar libraries expect the active preset to never change.
 
 ## License
 

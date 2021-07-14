@@ -2,7 +2,7 @@ import mitt from "mitt";
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {getClient, Api} from "@chainsafe/lodestar-api";
 import {altair, Root, ssz, SyncPeriod} from "@chainsafe/lodestar-types";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {computeSyncPeriodAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {TreeOffsetProof} from "@chainsafe/persistent-merkle-tree";
 import {Path, toHexString} from "@chainsafe/ssz";
@@ -12,14 +12,13 @@ import {deserializeSyncCommittee, isEmptyHeader, serializeSyncCommittee, sumBits
 import {LightClientStoreFast} from "./types";
 import {chunkifyInclusiveRange} from "../utils/chunkify";
 import {LightclientEmitter, LightclientEvent} from "./events";
-import {getSyncCommitteesProofPaths} from "../utils/proof";
 import {validateLightClientUpdate} from "./validation";
 import {isBetterUpdate} from "./update";
 // Re-export event types
 export {LightclientEvent} from "./events";
 
 export type LightclientModules = {
-  config: IBeaconConfig;
+  config: IChainForkConfig;
   clock: IClock;
   genesisValidatorsRoot: Root;
   beaconApiUrl: string;
@@ -31,7 +30,7 @@ export class Lightclient {
   readonly api: Api;
   readonly emitter: LightclientEmitter = mitt();
 
-  readonly config: IBeaconConfig;
+  readonly config: IChainForkConfig;
   readonly clock: IClock;
   readonly genesisValidatorsRoot: Root;
   readonly beaconApiUrl: string;
@@ -47,7 +46,7 @@ export class Lightclient {
   }
 
   static async initializeFromCheckpoint(
-    config: IBeaconConfig,
+    config: IChainForkConfig,
     beaconApiUrl: string,
     checkpoint: Checkpoint
   ): Promise<Lightclient> {
@@ -70,16 +69,7 @@ export class Lightclient {
     const header = headerResp.data.header.message;
     const stateRoot = header.stateRoot;
 
-    // fetch a proof with everything needed to bootstrap the client
-    const paths = [
-      // initial sync committee list
-      ...getSyncCommitteesProofPaths(),
-      // required to initialize a slot clock
-      ["genesisTime"],
-      // required to verify signatures
-      ["genesisValidatorsRoot"],
-    ];
-    const proof = await api.lightclient.getStateProof(toHexString(stateRoot), paths);
+    const proof = await api.lightclient.getInitProof(checkpoint.epoch);
 
     const state = ssz.altair.BeaconState.createTreeBackedFromProof(stateRoot as Uint8Array, proof.data);
     const store: LightClientStoreFast = {

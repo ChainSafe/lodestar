@@ -1,6 +1,8 @@
 import {defaultOptions, IBeaconNodeOptions, allNamespaces} from "@chainsafe/lodestar";
 import {ICliCommandOptions} from "../../util";
 
+const enabledAll = "*";
+
 export interface IApiArgs {
   "api.rest.api": string[];
   "api.rest.cors": string;
@@ -24,12 +26,16 @@ export function parseArgs(args: IApiArgs): IBeaconNodeOptions["api"] {
 export const options: ICliCommandOptions<IApiArgs> = {
   "api.rest.api": {
     type: "array",
-    choices: allNamespaces,
-    description: "Pick namespaces to expose for HTTP API",
+    choices: [...allNamespaces, enabledAll],
+    description: `Pick namespaces to expose for HTTP API. Set to '${enabledAll}' to enable all namespaces`,
     defaultDescription: JSON.stringify(defaultOptions.api.rest.api),
     group: "api",
-    // Parse ["debug,lodestar"] to ["debug", "lodestar"]
-    coerce: (namespaces: string[]): string[] => namespaces.map((val) => val.split(",")).flat(1),
+    coerce: (namespaces: string[]): string[] => {
+      // Enable all
+      if (namespaces.includes(enabledAll)) return allNamespaces;
+      // Parse ["debug,lodestar"] to ["debug", "lodestar"]
+      return namespaces.map((val) => val.split(",")).flat(1);
+    },
   },
 
   "api.rest.cors": {

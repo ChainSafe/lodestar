@@ -3,7 +3,7 @@ import {MAX_VOLUNTARY_EXITS} from "@chainsafe/lodestar-params";
 import {phase0} from "@chainsafe/lodestar-types";
 import {List} from "@chainsafe/ssz";
 import {allForks} from "../../../../src";
-import {generatePerformanceBlock, generatePerfTestCachedBeaconState} from "../../util";
+import {generatePerformanceBlockPhase0, generatePerfTestCachedStatePhase0, perfStateId} from "../../util";
 
 // As of Jun 12 2021
 // Process block
@@ -19,8 +19,8 @@ describe("Process block", () => {
     runs: 64,
   });
 
-  const originalState = generatePerfTestCachedBeaconState() as allForks.CachedBeaconState<allForks.BeaconState>;
-  const regularBlock = generatePerformanceBlock();
+  const originalState = generatePerfTestCachedStatePhase0() as allForks.CachedBeaconState<allForks.BeaconState>;
+  const regularBlock = generatePerformanceBlockPhase0();
   const [oneValidatorExitBlock, maxValidatorExitBlock] = [1, MAX_VOLUNTARY_EXITS].map((numValidatorExits) => {
     const signedBlock = regularBlock.clone();
     const exitEpoch = originalState.epochCtx.currentShuffling.epoch;
@@ -35,8 +35,7 @@ describe("Process block", () => {
     return signedBlock;
   });
 
-  const validatorCount = originalState.validators.length;
-  const idPrefix = `Process block - ${validatorCount} vs`;
+  const idPrefix = `Process block - ${perfStateId}`;
 
   const testCases = [
     {signedBlock: regularBlock, id: `${idPrefix} - with 0 validator exit`},

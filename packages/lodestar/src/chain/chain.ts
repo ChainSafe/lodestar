@@ -3,17 +3,13 @@
  */
 
 import {ForkName} from "@chainsafe/lodestar-params";
-import {
-  CachedBeaconState,
-  computeEpochAtSlot,
-  computeStartSlotAtEpoch,
-} from "@chainsafe/lodestar-beacon-state-transition";
+import {CachedBeaconState, computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {allForks, ForkDigest, Number64, Root, phase0, Slot} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {TreeBacked} from "@chainsafe/ssz";
-import {LightClientUpdater} from "@chainsafe/lodestar-light-client/lib/server/LightClientUpdater";
+import {LightClientUpdater} from "@chainsafe/lodestar-light-client/server";
 import {AbortController} from "@chainsafe/abort-controller";
 import {GENESIS_EPOCH, ZERO_HASH} from "../constants";
 import {IBeaconDb} from "../db";
@@ -29,9 +25,10 @@ import {IStateRegenerator, QueuedStateRegenerator} from "./regen";
 import {LodestarForkChoice} from "./forkChoice";
 import {restoreStateCaches} from "./initState";
 import {IBlsVerifier, BlsSingleThreadVerifier, BlsMultiThreadWorkerPool} from "./bls";
-import {SeenAttesters, SeenAggregators} from "./seenCache";
+import {SeenAttesters, SeenAggregators, SeenSyncCommitteeMessages, SeenContributionAndProof} from "./seenCache";
+import {AttestationPool, SyncCommitteeMessagePool, SyncContributionAndProofPool} from "./opPools";
 import {ForkDigestContext, IForkDigestContext} from "../util/forkDigestContext";
-import {AttestationPool} from "./opsPool/attestationPool";
+import {LightClientIniter} from "./lightClient";
 
 export interface IBeaconChainModules {
   config: IBeaconConfig;
@@ -55,12 +52,18 @@ export class BeaconChain implements IBeaconChain {
   pendingBlocks: BlockPool;
   forkDigestContext: IForkDigestContext;
   lightclientUpdater: LightClientUpdater;
+  lightClientIniter: LightClientIniter;
 
   // Ops pool
   readonly attestationPool = new AttestationPool();
+  readonly syncCommitteeMessagePool = new SyncCommitteeMessagePool();
+  readonly syncContributionAndProofPool = new SyncContributionAndProofPool();
 
+  // Gossip seen cache
   readonly seenAttesters = new SeenAttesters();
   readonly seenAggregators = new SeenAggregators();
+  readonly seenSyncCommitteeMessages = new SeenSyncCommitteeMessages();
+  readonly seenContributionAndProof = new SeenContributionAndProof();
 
   protected blockProcessor: BlockProcessor;
   protected readonly config: IBeaconConfig;
@@ -94,7 +97,7 @@ export class BeaconChain implements IBeaconChain {
 
     const clock = new LocalClock({config, emitter, genesisTime: this.genesisTime, signal});
     const stateCache = new StateContextCache();
-    const checkpointStateCache = new CheckpointStateCache(config);
+    const checkpointStateCache = new CheckpointStateCache();
     const cachedState = restoreStateCaches(config, stateCache, checkpointStateCache, anchorState);
     const forkChoice = new LodestarForkChoice({
       config,
@@ -135,6 +138,7 @@ export class BeaconChain implements IBeaconChain {
     this.stateCache = stateCache;
 
     this.lightclientUpdater = new LightClientUpdater(this.db);
+    this.lightClientIniter = new LightClientIniter({config: this.config, forkChoice, db: this.db, stateCache});
 
     handleChainEvents.bind(this)(this.abortController.signal);
   }
@@ -182,8 +186,8 @@ export class BeaconChain implements IBeaconChain {
   }
 
   async getCanonicalBlockAtSlot(slot: Slot): Promise<allForks.SignedBeaconBlock | null> {
-    const finalizedCheckpoint = this.forkChoice.getFinalizedCheckpoint();
-    if (finalizedCheckpoint.epoch > computeEpochAtSlot(slot)) {
+    const finalizedBlock = this.forkChoice.getFinalizedBlock();
+    if (finalizedBlock.slot > slot) {
       return this.db.blockArchive.get(slot);
     }
     const summary = this.forkChoice.getCanonicalBlockSummaryAtSlot(slot);

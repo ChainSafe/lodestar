@@ -1,6 +1,6 @@
 import {Path} from "@chainsafe/ssz";
 import {Proof} from "@chainsafe/persistent-merkle-tree";
-import {altair, ssz, SyncPeriod} from "@chainsafe/lodestar-types";
+import {altair, Epoch, ssz, SyncPeriod} from "@chainsafe/lodestar-types";
 import {
   ArrayOf,
   reqEmpty,
@@ -24,6 +24,10 @@ export type Api = {
   getLatestUpdateFinalized(): Promise<{data: altair.LightClientUpdate}>;
   /** TODO: description */
   getLatestUpdateNonFinalized(): Promise<{data: altair.LightClientUpdate}>;
+  /**
+   * Fetch a proof needed for light client initialization
+   */
+  getInitProof(epoch: Epoch): Promise<{data: Proof}>;
 };
 
 /**
@@ -34,6 +38,7 @@ export const routesData: RoutesData<Api> = {
   getBestUpdates: {url: "/eth/v1/lightclient/best_updates/", method: "GET"},
   getLatestUpdateFinalized: {url: "/eth/v1/lightclient/latest_update_finalized/", method: "GET"},
   getLatestUpdateNonFinalized: {url: "/eth/v1/lightclient/latest_update_nonfinalized/", method: "GET"},
+  getInitProof: {url: "/eth/v1/lightclient/init_proof/:epoch", method: "GET"},
 };
 
 export type ReqTypes = {
@@ -41,6 +46,7 @@ export type ReqTypes = {
   getBestUpdates: {query: {from: number; to: number}};
   getLatestUpdateFinalized: ReqEmpty;
   getLatestUpdateNonFinalized: ReqEmpty;
+  getInitProof: {params: {epoch: number}};
 };
 
 export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
@@ -59,6 +65,12 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
 
     getLatestUpdateFinalized: reqEmpty,
     getLatestUpdateNonFinalized: reqEmpty,
+
+    getInitProof: {
+      writeReq: (epoch) => ({params: {epoch}}),
+      parseReq: ({params}) => [params.epoch],
+      schema: {params: {epoch: Schema.UintRequired}},
+    },
   };
 }
 
@@ -69,5 +81,7 @@ export function getReturnTypes(): ReturnTypes<Api> {
     getBestUpdates: ContainerData(ArrayOf(ssz.altair.LightClientUpdate)),
     getLatestUpdateFinalized: ContainerData(ssz.altair.LightClientUpdate),
     getLatestUpdateNonFinalized: ContainerData(ssz.altair.LightClientUpdate),
+    // Just sent the proof JSON as-is
+    getInitProof: sameType(),
   };
 }

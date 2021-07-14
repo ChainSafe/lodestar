@@ -1,8 +1,8 @@
 import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
-import {parseAttesterFlags, IAttesterStatus} from "@chainsafe/lodestar-beacon-state-transition/lib/allForks";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {allForks} from "@chainsafe/lodestar-beacon-state-transition";
+import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {MIN_ATTESTATION_INCLUSION_DELAY, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
-import {allForks, Epoch, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {Epoch, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {IndexedAttestation, SignedAggregateAndProof} from "@chainsafe/lodestar-types/phase0";
 import {ILodestarMetrics} from "./metrics/lodestar";
 
@@ -19,7 +19,7 @@ export enum OpSource {
 
 export interface IValidatorMonitor {
   registerLocalValidator(index: number): void;
-  registerValidatorStatuses(currentEpoch: Epoch, statuses: IAttesterStatus[]): void;
+  registerValidatorStatuses(currentEpoch: Epoch, statuses: allForks.IAttesterStatus[]): void;
   registerBeaconBlock(src: OpSource, seenTimestampSec: Seconds, block: allForks.BeaconBlock): void;
   registerUnaggregatedAttestation(
     src: OpSource,
@@ -69,8 +69,8 @@ type ValidatorStatus = {
   inclusionDistance: number;
 };
 
-function statusToSummary(status: IAttesterStatus): ValidatorStatus {
-  const flags = parseAttesterFlags(status.flags);
+function statusToSummary(status: allForks.IAttesterStatus): ValidatorStatus {
+  const flags = allForks.parseAttesterFlags(status.flags);
   return {
     isSlashed: flags.unslashed,
     isActiveInCurrentEpoch: status.active,
@@ -153,7 +153,7 @@ type MonitoredValidator = {
 
 export function createValidatorMonitor(
   metrics: ILodestarMetrics,
-  config: IBeaconConfig,
+  config: IChainForkConfig,
   genesisTime: number
 ): IValidatorMonitor {
   /** The validators that require additional monitoring. */

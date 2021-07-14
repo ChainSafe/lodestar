@@ -1,7 +1,7 @@
 import {ethers} from "ethers";
 import {hash, Json, toHexString} from "@chainsafe/ssz";
 import {phase0, ssz} from "@chainsafe/lodestar-types";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import bls, {SecretKey, PublicKey} from "@chainsafe/bls";
 import {computeSigningRoot, computeDomain, ZERO_HASH} from "@chainsafe/lodestar-beacon-state-transition";
 import {BLS_WITHDRAWAL_PREFIX, DOMAIN_DEPOSIT} from "@chainsafe/lodestar-params";
@@ -35,7 +35,7 @@ export function encodeDepositData(
   amount: bigint,
   withdrawalPublicKey: PublicKey,
   signingKey: SecretKey,
-  config: IBeaconConfig
+  config: IChainForkConfig
 ): string {
   const pubkey = signingKey.toPublicKey().toBytes();
   const withdrawalCredentials = Buffer.concat([BLS_WITHDRAWAL_PREFIX, hash(withdrawalPublicKey.toBytes()).slice(1)]);

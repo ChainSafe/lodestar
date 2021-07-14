@@ -1,7 +1,7 @@
 import {AbortSignal} from "@chainsafe/abort-controller";
 import {ErrorAborted, ILogger, sleep} from "@chainsafe/lodestar-utils";
 import {GENESIS_SLOT, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {Epoch, Number64, Slot} from "@chainsafe/lodestar-types";
 import {computeEpochAtSlot, getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
 
@@ -21,11 +21,11 @@ export enum TimeItem {
 
 export class Clock implements IClock {
   readonly genesisTime: number;
-  private readonly config: IBeaconConfig;
+  private readonly config: IChainForkConfig;
   private readonly logger: ILogger;
   private readonly fns: {timeItem: TimeItem; fn: RunEveryFn}[] = [];
 
-  constructor(config: IBeaconConfig, logger: ILogger, opts: {genesisTime: number}) {
+  constructor(config: IChainForkConfig, logger: ILogger, opts: {genesisTime: number}) {
     this.genesisTime = opts.genesisTime;
     this.config = config;
     this.logger = logger;
@@ -106,7 +106,7 @@ export class Clock implements IClock {
 /**
  * Same to the spec but we use Math.round instead of Math.floor.
  */
-export function getCurrentSlotAround(config: IBeaconConfig, genesisTime: Number64): Slot {
+export function getCurrentSlotAround(config: IChainForkConfig, genesisTime: Number64): Slot {
   const diffInSeconds = Date.now() / 1000 - genesisTime;
   const slotsSinceGenesis = Math.round(diffInSeconds / config.SECONDS_PER_SLOT);
   return GENESIS_SLOT + slotsSinceGenesis;

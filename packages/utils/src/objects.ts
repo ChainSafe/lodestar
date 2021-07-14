@@ -1,9 +1,7 @@
-/* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
+// eslint-disable-next-line no-restricted-imports
 import {toExpectedCase} from "@chainsafe/ssz/lib/util/json";
 
-/**
- * @module objects
- */
+/* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
 
 function isObjectObject(val: unknown): boolean {
   return val != null && typeof val === "object" && Array.isArray(val) === false;

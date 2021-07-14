@@ -12,7 +12,7 @@ import {
   RouteGroupDefinition,
 } from "../../utils/types";
 import {getFastifySchema} from "../../utils/schema";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {IChainForkConfig} from "@chainsafe/lodestar-config";
 
 // See /packages/api/src/routes/index.ts for reasoning
 
@@ -49,7 +49,7 @@ export function getGenericJsonServer<
   ReqTypes extends {[K in keyof Api]: ReqGeneric}
 >(
   {routesData, getReqSerializers, getReturnTypes}: RouteGroupDefinition<Api, ReqTypes>,
-  config: IBeaconConfig,
+  config: IChainForkConfig,
   api: Api
 ): ServerRoutes<Api, ReqTypes> {
   const reqSerializers = getReqSerializers(config);

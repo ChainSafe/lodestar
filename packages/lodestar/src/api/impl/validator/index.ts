@@ -20,9 +20,8 @@ import {validateGossipAggregateAndProof} from "../../../chain/validation";
 import {ZERO_HASH} from "../../../constants";
 import {SyncState} from "../../../sync";
 import {toGraffitiBuffer} from "../../../util/graffiti";
-import {ApiError} from "../errors";
+import {ApiError, NodeIsSyncing} from "../errors";
 import {validateSyncCommitteeGossipContributionAndProof} from "../../../chain/validation/syncCommitteeContributionAndProof";
-import {SyncContributionError, SyncContributionErrorCode} from "../../../db/syncCommitteeContribution";
 import {CommitteeSubscription} from "../../../network/subnets";
 import {OpSource} from "../../../metrics/validatorMonitor";
 import {computeSubnetForCommitteesAtSlot, getPubkeysForIndices, getSyncComitteeValidatorIndexMap} from "./utils";
@@ -120,7 +119,7 @@ export function getValidatorApi({
         const currentSlot = chain.clock.currentSlot;
         const headSlot = chain.forkChoice.getHead().slot;
         if (currentSlot - headSlot > SYNC_TOLERANCE_EPOCHS * SLOTS_PER_EPOCH) {
-          throw new ApiError(503, `Node is syncing, headSlot ${headSlot} currentSlot ${currentSlot}`);
+          throw new NodeIsSyncing(`headSlot ${headSlot} currentSlot ${currentSlot}`);
         } else {
           return;
         }
@@ -130,24 +129,30 @@ export function getValidatorApi({
         return;
 
       case SyncState.Stalled:
-        throw new ApiError(503, "Node is waiting for peers");
+        throw new NodeIsSyncing("waiting for peers");
     }
   }
 
   return {
     async produceBlock(slot, randaoReveal, graffiti = "") {
-      notWhileSyncing();
+      let timer;
+      metrics?.blockProductionRequests.inc();
+      try {
+        notWhileSyncing();
+        await waitForSlot(slot); // Must never request for a future slot > currentSlot
 
-      await waitForSlot(slot); // Must never request for a future slot > currentSlot
-
-      const block = await assembleBlock(
-        {config: config, chain: chain, db: db, eth1: eth1, metrics: metrics},
-        slot,
-        randaoReveal,
-        toGraffitiBuffer(graffiti)
-      );
-
-      return {data: block, version: config.getForkName(block.slot)};
+        timer = metrics?.blockProductionTime.startTimer();
+        const block = await assembleBlock(
+          {config, chain, db, eth1, metrics},
+          slot,
+          randaoReveal,
+          toGraffitiBuffer(graffiti)
+        );
+        metrics?.blockProductionSuccess.inc();
+        return {data: block, version: config.getForkName(block.slot)};
+      } finally {
+        if (timer) timer();
+      }
     },
 
     async produceAttestationData(committeeIndex, slot) {
@@ -157,7 +162,7 @@ export function getValidatorApi({
 
       const headRoot = chain.forkChoice.getHeadRoot();
       const state = await chain.regen.getBlockSlotState(headRoot, slot);
-      return {data: assembleAttestationData(state.config, state, headRoot, slot, committeeIndex)};
+      return {data: assembleAttestationData(state, headRoot, slot, committeeIndex)};
     },
 
     /**
@@ -172,7 +177,7 @@ export function getValidatorApi({
      * @param beaconBlockRoot The block root for which to produce the contribution.
      */
     async produceSyncCommitteeContribution(slot, subcommitteeIndex, beaconBlockRoot) {
-      const contribution = db.syncCommittee.getSyncCommitteeContribution(subcommitteeIndex, slot, beaconBlockRoot);
+      const contribution = chain.syncCommitteeMessagePool.getContribution(subcommitteeIndex, slot, beaconBlockRoot);
       if (!contribution) throw new ApiError(500, "No contribution available");
       return {data: contribution};
     },
@@ -370,18 +375,10 @@ export function getValidatorApi({
         contributionAndProofs.map(async (contributionAndProof, i) => {
           try {
             // TODO: Validate in batch
-            await validateSyncCommitteeGossipContributionAndProof(config, chain, db, {
-              contributionAndProof,
-              validSignature: false,
-            });
-            db.syncCommitteeContribution.add(contributionAndProof.message);
+            await validateSyncCommitteeGossipContributionAndProof(chain, contributionAndProof);
+            chain.syncContributionAndProofPool.add(contributionAndProof.message);
             await network.gossip.publishContributionAndProof(contributionAndProof);
           } catch (e) {
-            if (e instanceof SyncContributionError && e.type.code === SyncContributionErrorCode.ALREADY_KNOWN) {
-              logger.debug("Ignoring known contributionAndProof");
-              return; // Ok to submit the same aggregate twice
-            }
-
             errors.push(e);
             logger.error(
               `Error on publishContributionAndProofs [${i}]`,

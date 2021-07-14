@@ -1,4 +1,3 @@
-import {config} from "@chainsafe/lodestar-config/default";
 import {expect} from "chai";
 import sinon from "sinon";
 import {getBeaconPoolApi} from "../../../../../../src/api/impl/beacon/pool";
@@ -11,7 +10,7 @@ import {
 import {StubbedBeaconDb} from "../../../../../utils/stub";
 import {SinonStubbedInstance} from "sinon";
 import {IBeaconChain} from "../../../../../../src/chain";
-import {AttestationPool} from "../../../../../../src/chain/opsPool/attestationPool";
+import {AttestationPool} from "../../../../../../src/chain/opPools/attestationPool";
 import * as attesterSlashingValidation from "../../../../../../src/chain/validation/attesterSlashing";
 import * as proposerSlashingValidation from "../../../../../../src/chain/validation/proposerSlashing";
 import * as voluntaryExitValidation from "../../../../../../src/chain/validation/voluntaryExit";
@@ -51,7 +50,6 @@ describe("beacon pool api impl", function () {
     networkStub = server.networkStub;
     networkStub.gossip = (gossipStub as unknown) as Eth2Gossipsub;
     poolApi = getBeaconPoolApi({
-      config,
       db: server.dbStub,
       logger,
       network: networkStub,

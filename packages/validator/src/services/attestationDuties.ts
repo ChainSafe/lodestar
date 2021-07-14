@@ -1,12 +1,9 @@
 import {computeEpochAtSlot, isAggregatorFromCommitteeLength} from "@chainsafe/lodestar-beacon-state-transition";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {BLSSignature, Epoch, Root, Slot, ssz, ValidatorIndex} from "@chainsafe/lodestar-types";
-import {ILogger} from "@chainsafe/lodestar-utils";
 import {Api, routes} from "@chainsafe/lodestar-api";
 import {toHexString} from "@chainsafe/ssz";
 import {IndicesService} from "./indices";
-import {extendError, notAborted} from "../util";
-import {IClock} from "../util/clock";
+import {IClock, extendError, notAborted, isSyncing, ILoggerVc} from "../util";
 import {ValidatorStore} from "./validatorStore";
 
 /** Only retain `HISTORICAL_DUTIES_EPOCHS` duties prior to the current epoch. */
@@ -27,8 +24,7 @@ export class AttestationDutiesService {
   private readonly dutiesByEpochByIndex = new Map<ValidatorIndex, Map<Epoch, AttDutyAtEpoch>>();
 
   constructor(
-    private readonly config: IBeaconConfig,
-    private readonly logger: ILogger,
+    private readonly logger: ILoggerVc,
     private readonly api: Api,
     clock: IClock,
     private readonly validatorStore: ValidatorStore,
@@ -95,7 +91,8 @@ export class AttestationDutiesService {
     for (const epoch of [currentEpoch, nextEpoch]) {
       // Download the duties and update the duties for the current and next epoch.
       await this.pollBeaconAttestersForEpoch(epoch, indexArr).catch((e) => {
-        if (notAborted(e)) this.logger.error("Failed to download attester duties", {epoch}, e);
+        if (isSyncing(e)) this.logger.isSyncing(e);
+        else if (notAborted(e)) this.logger.error("Failed to download attester duties", {epoch}, e);
       });
     }
 

@@ -3,14 +3,14 @@ import {toBufferBE} from "bigint-buffer";
 import {expect} from "chai";
 import sinon from "sinon";
 import bls from "@chainsafe/bls";
-import {createIBeaconConfig} from "@chainsafe/lodestar-config";
+import {createIChainForkConfig} from "@chainsafe/lodestar-config";
 import {config as mainnetConfig} from "@chainsafe/lodestar-config/default";
 import {toHexString} from "@chainsafe/ssz";
 import {routes} from "@chainsafe/lodestar-api";
 import {SyncCommitteeDutiesService} from "../../../src/services/syncCommitteeDuties";
 import {ValidatorStore} from "../../../src/services/validatorStore";
 import {getApiClientStub} from "../../utils/apiStub";
-import {testLogger} from "../../utils/logger";
+import {loggerVc, testLogger} from "../../utils/logger";
 import {ClockMock} from "../../utils/clock";
 import {IndicesService} from "../../../src/services/indices";
 import {ssz} from "@chainsafe/lodestar-types";
@@ -27,7 +27,7 @@ describe("SyncCommitteeDutiesService", function () {
     sinon.SinonStubbedInstance<ValidatorStore>;
   let pubkeys: Uint8Array[]; // Initialize pubkeys in before() so bls is already initialized
 
-  const config = createIBeaconConfig({
+  const config = createIChainForkConfig({
     ...mainnetConfig,
     ALTAIR_FORK_EPOCH: 0, // Activate Altair immediatelly
   });
@@ -78,7 +78,7 @@ describe("SyncCommitteeDutiesService", function () {
     // Clock will call runAttesterDutiesTasks() immediatelly
     const clock = new ClockMock();
     const indicesService = new IndicesService(logger, api, validatorStore);
-    const dutiesService = new SyncCommitteeDutiesService(config, logger, api, clock, validatorStore, indicesService);
+    const dutiesService = new SyncCommitteeDutiesService(config, loggerVc, api, clock, validatorStore, indicesService);
 
     // Trigger clock onSlot for slot 0
     await clock.tickEpochFns(0, controller.signal);

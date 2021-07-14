@@ -4,7 +4,7 @@ import {registerRoutes} from "@chainsafe/lodestar-api/server";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import fastifyCors from "fastify-cors";
 import querystring from "querystring";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {TreeBacked} from "@chainsafe/ssz";
 import {altair, ssz} from "@chainsafe/lodestar-types";
 import {blockToHeader} from "@chainsafe/lodestar-beacon-state-transition";
@@ -28,7 +28,7 @@ export type ServerOpts = {
 };
 
 export type ServerModules = {
-  config: IBeaconConfig;
+  config: IChainForkConfig;
   lightClientUpdater: LightClientUpdater;
   logger: ILogger;
   stateRegen: IStateRegen;
@@ -85,6 +85,11 @@ function getLightclientServerApi(modules: ServerModules): Api["lightclient"] {
       const data = await lightClientUpdater.getLatestUpdateNonFinalized();
       if (!data) throw Error("No update available");
       return {data};
+    },
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    async getInitProof(epoch) {
+      throw Error("No init proof available");
     },
   };
 }
