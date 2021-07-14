@@ -86,7 +86,19 @@ export function processAttestation(
   const totalIncrements = totalBalancesWithWeight / EFFECTIVE_BALANCE_INCREMENT;
   const proposerRewardNumerator = totalIncrements * state.baseRewardPerIncrement;
   const proposerReward = proposerRewardNumerator / PROPOSER_REWARD_DOMINATOR;
-  increaseBalance(state, epochCtx.getBeaconProposer(state.slot), proposerReward);
+  const proposerIndex = epochCtx.getBeaconProposer(state.slot);
+  // we increase proposer reward multiple times per block process, it's better to do that in batch
+  if (blockProcess.increaseBalanceCache) {
+    let increaseBalanceValue = blockProcess.increaseBalanceCache.get(proposerIndex);
+    if (increaseBalanceValue === undefined) {
+      increaseBalanceValue = BigInt(0);
+    }
+    increaseBalanceValue += proposerReward;
+    blockProcess.increaseBalanceCache.set(proposerIndex, increaseBalanceValue);
+  } else {
+    // for spec test only
+    increaseBalance(state, proposerIndex, proposerReward);
+  }
 }
 
 /**

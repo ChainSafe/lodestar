@@ -9,7 +9,7 @@ import {processDeposit} from "./processDeposit";
 import {processProposerSlashing} from "./processProposerSlashing";
 import {processVoluntaryExit} from "./processVoluntaryExit";
 import {processSyncAggregate} from "./processSyncCommittee";
-import {getEmptyBlockProcess} from "../../util";
+import {getEmptyBlockProcess, increaseBalance} from "../../util";
 
 export {
   processOperations,
@@ -27,9 +27,14 @@ export function processBlock(
   verifySignatures = true
 ): void {
   const blockProcess = getEmptyBlockProcess();
+  // increasing balance on the same validator index multiple times per epoch transition is not efficient
+  blockProcess.increaseBalanceCache = new Map();
   processBlockHeader(state as CachedBeaconState<allForks.BeaconState>, block);
   processRandao(state as CachedBeaconState<allForks.BeaconState>, block, verifySignatures);
   processEth1Data(state as CachedBeaconState<allForks.BeaconState>, block.body);
   processOperations(state, block.body, blockProcess, verifySignatures);
-  processSyncAggregate(state, block, verifySignatures);
+  processSyncAggregate(state, block, blockProcess, verifySignatures);
+  for (const [validatorIndex, increaseBalanceValue] of blockProcess.increaseBalanceCache.entries()) {
+    increaseBalance(state, validatorIndex, increaseBalanceValue);
+  }
 }
