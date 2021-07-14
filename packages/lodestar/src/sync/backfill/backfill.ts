@@ -148,7 +148,7 @@ export class BackfillSync {
     try {
       const blocks = await this.network.reqResp.beaconBlocksByRoot(peer, [root] as List<Root>);
       if (blocks.length === 0) {
-        throw new BackfillSyncError({code: BackfillSyncErrorCode.MISSING_BLOCKS, peerId: peer});
+        throw new BackfillSyncError({ code: BackfillSyncErrorCode.MISSING_BLOCKS, roots: [root], peerId: peer });
       }
       const block = blocks[0] as allForks.SignedBeaconBlock;
       if (

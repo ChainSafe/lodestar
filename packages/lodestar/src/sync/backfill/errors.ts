@@ -1,4 +1,5 @@
 import PeerId from "peer-id";
+import {Root} from "@chainsafe/lodestar-types"
 import {LodestarError} from "../../../../utils/lib";
 
 export enum BackfillSyncErrorCode {
@@ -15,6 +16,6 @@ export type BackfillSyncErrorType =
   | {code: BackfillSyncErrorCode.NOT_ANCHORED}
   | {code: BackfillSyncErrorCode.NOT_LINEAR}
   | {code: BackfillSyncErrorCode.INVALID_SIGNATURE}
-  | {code: BackfillSyncErrorCode.MISSING_BLOCKS; peerId: PeerId};
+  | {code: BackfillSyncErrorCode.MISSING_BLOCKS; roots: Root[]; peerId: PeerId};
 
 export class BackfillSyncError extends LodestarError<BackfillSyncErrorType> {}
