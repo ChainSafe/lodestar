@@ -99,7 +99,8 @@ export function prepareEpochProcessState<T extends allForks.BeaconState>(state: 
 
   let activeCount = 0;
 
-  validators.forEach((v, i) => {
+  out.validators = validators.persistent.toArray();
+  out.validators.forEach((v, i) => {
     const status = createIAttesterStatus();
 
     if (v.slashed) {
@@ -143,7 +144,6 @@ export function prepareEpochProcessState<T extends allForks.BeaconState>(state: 
     }
 
     out.statuses.push(status);
-    out.validators.push(v);
     out.indicesBounded.push([i, v.activationEpoch, v.exitEpoch]);
   });
 
