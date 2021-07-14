@@ -1,7 +1,7 @@
 import {allForks, altair, phase0, ssz} from "@chainsafe/lodestar-types";
 import {intSqrt} from "@chainsafe/lodestar-utils";
 
-import {getBlockRoot, getBlockRootAtSlot, increaseBalance} from "../../util";
+import {computeStartSlotAtEpoch, getBlockRootAtSlot, increaseBalance} from "../../util";
 import {CachedBeaconState} from "../../allForks/util";
 import {isValidIndexedAttestation} from "../../allForks/block";
 import {IParticipationStatus} from "../../allForks/util/cachedEpochParticipation";
@@ -16,15 +16,14 @@ import {
   WEIGHT_DENOMINATOR,
 } from "@chainsafe/lodestar-params";
 import {validateAttestation} from "../../phase0/block/processAttestation";
-import {BlockProcess} from "../../util/blockProcess";
+import {BlockProcess, getEmptyBlockProcess} from "../../util/blockProcess";
 
 const PROPOSER_REWARD_DOMINATOR = ((WEIGHT_DENOMINATOR - PROPOSER_WEIGHT) * WEIGHT_DENOMINATOR) / PROPOSER_WEIGHT;
 
 export function processAttestation(
   state: CachedBeaconState<altair.BeaconState>,
   attestation: phase0.Attestation,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  blockProcess: BlockProcess = {validatorExitCache: {}},
+  blockProcess: BlockProcess = getEmptyBlockProcess(),
   verifySignature = true
 ): void {
   const {epochCtx} = state;
@@ -52,7 +51,8 @@ export function processAttestation(
   const {timelySource, timelyTarget, timelyHead} = getAttestationParticipationStatus(
     state,
     data,
-    state.slot - data.slot
+    state.slot - data.slot,
+    blockProcess
   );
 
   // Retrieve the validator indices from the attestation participation bitfield
@@ -95,7 +95,8 @@ export function processAttestation(
 export function getAttestationParticipationStatus(
   state: CachedBeaconState<altair.BeaconState>,
   data: phase0.AttestationData,
-  inclusionDelay: number
+  inclusionDelay: number,
+  blockProcess: BlockProcess = getEmptyBlockProcess()
 ): IParticipationStatus {
   const {epochCtx} = state;
   let justifiedCheckpoint;
@@ -118,10 +119,28 @@ export function getAttestationParticipationStatus(
         `justifiedCheckpoint=${JSON.stringify(ssz.phase0.Checkpoint.toJson(justifiedCheckpoint))}`
     );
   }
-  const isMatchingTarget = ssz.Root.equals(data.target.root, getBlockRoot(state, data.target.epoch));
+  const {blockRootCache} = blockProcess;
+  const targetSlot = computeStartSlotAtEpoch(data.target.epoch);
+  let actualTargetBlockRoot = blockRootCache.get(targetSlot);
+  if (!actualTargetBlockRoot) {
+    actualTargetBlockRoot = getBlockRootAtSlot(state, targetSlot);
+    if (!actualTargetBlockRoot) {
+      throw new Error("Not block root at target slot " + targetSlot);
+    }
+    blockRootCache.set(targetSlot, actualTargetBlockRoot);
+  }
+  const isMatchingTarget = ssz.Root.equals(data.target.root, actualTargetBlockRoot);
+  const {beaconBlockRoot, slot} = data;
+  let actualBlockRoot = blockRootCache.get(slot);
+  if (!actualBlockRoot) {
+    actualBlockRoot = getBlockRootAtSlot(state, slot);
+    if (!actualBlockRoot) {
+      throw new Error("Not block root at slot " + slot);
+    }
+    blockRootCache.set(slot, actualBlockRoot);
+  }
   // a timely head is only be set if the target is _also_ matching
-  const isMatchingHead =
-    isMatchingTarget && ssz.Root.equals(data.beaconBlockRoot, getBlockRootAtSlot(state, data.slot));
+  const isMatchingHead = isMatchingTarget && ssz.Root.equals(beaconBlockRoot, actualBlockRoot);
   return {
     timelySource: isMatchingSource && inclusionDelay <= intSqrt(SLOTS_PER_EPOCH),
     timelyTarget: isMatchingTarget && inclusionDelay <= SLOTS_PER_EPOCH,
