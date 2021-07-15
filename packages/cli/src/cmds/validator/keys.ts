@@ -8,7 +8,10 @@ import {getAccountPaths} from "../account/paths";
 import {IValidatorCliArgs} from "./options";
 import {IAccountPathOptions} from "@chainsafe/lodestar-validator";
 
-export async function getSecretKeys(args: IValidatorCliArgs & IGlobalArgs, opts?: IAccountPathOptions): Promise<SecretKey[]> {
+export async function getSecretKeys(
+  args: IValidatorCliArgs & IGlobalArgs,
+  opts?: IAccountPathOptions
+): Promise<SecretKey[]> {
   // UNSAFE - ONLY USE FOR TESTNETS. Derive keys directly from a mnemonic
   if (args.fromMnemonic) {
     if (args.network === defaultNetwork) {

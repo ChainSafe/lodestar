@@ -19,7 +19,7 @@ import {ChainHeaderTracker} from "./services/chainHeaderTracker";
 import {IValidatorOptions} from "./options";
 
 export type IValidatorModules = {
-  opts: IValidatorOptions;
+  opts?: IValidatorOptions;
   slashingProtection: ISlashingProtection;
   config: IChainForkConfig;
   api: Api | string;
@@ -43,7 +43,7 @@ type State = {status: Status.running; controller: AbortController} | {status: St
  * Main class for the Validator client.
  */
 export class Validator {
-  private readonly opts: IValidatorOptions;
+  private readonly opts?: IValidatorOptions;
   private readonly config: IBeaconConfig;
   private readonly api: Api;
   private readonly secretKeys: SecretKey[];
