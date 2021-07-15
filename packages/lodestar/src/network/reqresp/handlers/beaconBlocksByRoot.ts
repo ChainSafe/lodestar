@@ -10,7 +10,14 @@ export async function* onBeaconBlocksByRoot(
   for (const blockRoot of requestBody) {
     const root = blockRoot.valueOf() as Uint8Array;
     const summary = chain.forkChoice.getBlock(root);
-    const block = summary ? await db.block.get(root) : await db.blockArchive.getByRoot(root);
+    let block: allForks.SignedBeaconBlock | null = null;
+    // finalized block has summary in forkchoice but it stays in blockArchive db
+    if (summary) {
+      block = await db.block.get(root);
+    }
+    if (!block) {
+      block = await db.blockArchive.getByRoot(root);
+    }
     if (block) {
       yield block;
     }

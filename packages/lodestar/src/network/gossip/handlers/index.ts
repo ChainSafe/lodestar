@@ -1,10 +1,10 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {ILogger} from "@chainsafe/lodestar-utils";
+import {ILogger, prettyBytes} from "@chainsafe/lodestar-utils";
 import {IMetrics} from "../../../metrics";
 import {OpSource} from "../../../metrics/validatorMonitor";
 import {IBeaconDb} from "../../../db";
 import {IBeaconChain} from "../../../chain";
-import {BlockError, BlockErrorCode} from "../../../chain/errors";
+import {BlockErrorCode, BlockGossipError} from "../../../chain/errors";
 import {GossipTopicMap, GossipType, GossipTypeMap} from "../interface";
 import {
   validateGossipAggregateAndProof,
@@ -50,7 +50,12 @@ export function getGossipHandlers(modules: ValidatorFnsModules): GossipHandlers 
   return {
     [GossipType.beacon_block]: async (signedBlock) => {
       const seenTimestampSec = Date.now() / 1000;
-
+      const slot = signedBlock.message.slot;
+      const blockHex = prettyBytes(config.getForkTypes(slot).BeaconBlock.hashTreeRoot(signedBlock.message));
+      logger.verbose("Received gossip block", {
+        slot: slot,
+        root: blockHex,
+      });
       try {
         await validateGossipBlock(config, chain, db, {
           signedBlock,
@@ -59,7 +64,6 @@ export function getGossipHandlers(modules: ValidatorFnsModules): GossipHandlers 
           validSignatures: false,
           validProposerSignature: false,
         });
-
         metrics?.registerBeaconBlock(OpSource.api, seenTimestampSec, signedBlock.message);
 
         // Handler
@@ -71,9 +75,10 @@ export function getGossipHandlers(modules: ValidatorFnsModules): GossipHandlers 
         }
       } catch (e) {
         if (
-          e instanceof BlockError &&
+          e instanceof BlockGossipError &&
           (e.type.code === BlockErrorCode.FUTURE_SLOT || e.type.code === BlockErrorCode.PARENT_UNKNOWN)
         ) {
+          logger.debug("Gossip block has error", {slot, root: blockHex, code: e.type.code});
           chain.receiveBlock(signedBlock);
         }
 
