@@ -92,7 +92,11 @@ export class AttestationService {
     const signedAttestations: phase0.Attestation[] = [];
 
     for (const {duty} of duties) {
-      const logCtxValidator = {...logCtx, validator: prettyBytes(duty.pubkey)};
+      const logCtxValidator = {
+        ...logCtx,
+        head: prettyBytes(attestation.beaconBlockRoot),
+        validator: prettyBytes(duty.pubkey),
+      };
       try {
         signedAttestations.push(await this.validatorStore.signAttestation(duty, attestation, currentEpoch));
         this.logger.debug("Signed attestation", logCtxValidator);

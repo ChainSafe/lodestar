@@ -107,7 +107,6 @@ export async function runStateTransition(
     justifiedBalances = getEffectiveBalances(justifiedState);
   }
   forkChoice.onBlock(job.signedBlock.message, postState, justifiedBalances);
-  forkChoice.updateHead();
 
   if (!job.reprocess) {
     if (postSlot % SLOTS_PER_EPOCH === 0) {
@@ -115,6 +114,7 @@ export async function runStateTransition(
     }
 
     emitBlockEvent(emitter, job, postState);
+    forkChoice.updateHead();
     emitForkChoiceHeadEvents(emitter, forkChoice, forkChoice.getHead(), oldHead, metrics);
   }
 
