@@ -4,7 +4,9 @@ import {GENESIS_EPOCH} from "@chainsafe/lodestar-params";
 import {phase0, Root, Slot, allForks, ssz} from "@chainsafe/lodestar-types";
 import {ErrorAborted, ILogger} from "@chainsafe/lodestar-utils";
 import {List} from "@chainsafe/ssz";
+import {EventEmitter} from "events";
 import PeerId from "peer-id";
+import {StrictEventEmitter} from "strict-event-emitter-types";
 import {IBeaconChain} from "../../chain";
 import {getMinEpochForBlockRequests} from "../../constants";
 import {IBeaconDb} from "../../db";
@@ -35,7 +37,18 @@ export type BackfillSyncOpts = {
   batchSize: number;
 };
 
-export class BackfillSync {
+export enum BackfillSyncEvent {
+  completed = "BackfillSync-completed",
+}
+
+type BackfillSyncEvents = {
+  //slot param is oldest slot synced
+  [BackfillSyncEvent.completed]: (slot: Slot) => void;
+};
+
+type BackfillSyncEmitter = StrictEventEmitter<EventEmitter, BackfillSyncEvents>;
+
+export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}) {
   private readonly chain: IBeaconChain;
   private readonly network: INetwork;
   private readonly db: IBeaconDb;
@@ -50,6 +63,7 @@ export class BackfillSync {
   private peers: PeerMap<phase0.Status | null> = new PeerMap();
 
   constructor(modules: RangeSyncModules, opts?: BackfillSyncOpts) {
+    super();
     this.chain = modules.chain;
     this.network = modules.network;
     this.db = modules.db;
@@ -99,6 +113,7 @@ export class BackfillSync {
             const toSlot = this.lastFetchedSlot ?? this.anchorBlock.message.slot;
             const fromSlot = Math.max(toSlot - this.opts.batchSize, oldestSlotRequired);
             if (fromSlot >= toSlot) {
+              this.emit(BackfillSyncEvent.completed, toSlot);
               this.logger.info("Backfill sync completed");
               break;
             }
@@ -181,7 +196,7 @@ export class BackfillSync {
       this.anchorBlock = blocks[0];
       this.lastFetchedSlot = this.anchorBlock?.message.slot ?? null;
     } catch (e) {
-      if ((e as BackfillSyncError).type.code === BackfillSyncErrorCode.NOT_ANCHORED) {
+      if ((e as BackfillSyncError).type?.code === BackfillSyncErrorCode.NOT_ANCHORED) {
         this.lastFetchedSlot = this.anchorBlock?.message.slot ?? null;
       }
       this.removePeer(peer);

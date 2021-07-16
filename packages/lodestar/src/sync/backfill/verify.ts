@@ -1,6 +1,7 @@
 import {allForks, CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Root, allForks as allForkTypes, ssz} from "@chainsafe/lodestar-types";
+import {GENESIS_SLOT} from "../../../../params/lib";
 import {IBlsVerifier} from "../../chain/bls";
 import {BackfillSyncError, BackfillSyncErrorCode} from "./errors";
 
@@ -25,7 +26,10 @@ export async function verifyBlocks(
     }
     nextRoot = block.message.parentRoot;
   }
-  const signatures = blocks.map((block) => allForks.getProposerSignatureSet(state, block));
+  const signatures = blocks
+    //genesis block doesn't have valid signature
+    .filter((block) => block.message.slot !== GENESIS_SLOT)
+    .map((block) => allForks.getProposerSignatureSet(state, block));
   if (!(await bls.verifySignatureSets(signatures))) {
     throw new BackfillSyncError({code: BackfillSyncErrorCode.INVALID_SIGNATURE});
   }

@@ -1,5 +1,5 @@
-import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
-import {phase0} from "@chainsafe/lodestar-types";
+import {GENESIS_SLOT, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
+import {phase0, Slot} from "@chainsafe/lodestar-types";
 import {getDevBeaconNode} from "../utils/node/beacon";
 import {waitForEvent} from "../utils/events/resolver";
 import {getAndInitDevValidators} from "../utils/node/validator";
@@ -13,6 +13,7 @@ import {config} from "@chainsafe/lodestar-config/default";
 import {connect} from "../utils/network";
 import {Network} from "../../src/network";
 import {assert} from "chai";
+import {BackfillSyncEvent} from "../../src/sync/backfill";
 
 /* eslint-disable no-console, @typescript-eslint/naming-convention */
 describe("Start from WSS", function () {
@@ -98,11 +99,11 @@ describe("Start from WSS", function () {
     });
     const head = await bn.chain.getHeadBlock();
     if (!head) throw Error("First beacon node has no head block");
-    const waitForSynced = waitForEvent<phase0.SignedBeaconBlock>(
-      bnStartingFromWSS.chain.emitter,
-      ChainEvent.block,
+    const waitForSynced = waitForEvent<Slot>(
+      bnStartingFromWSS.sync.backfillSync,
+      BackfillSyncEvent.completed,
       100000,
-      (block) => block.message.slot === head.message.slot
+      (slot) => slot == GENESIS_SLOT
     );
 
     await connect(bnStartingFromWSS.network as Network, bn.network.peerId, bn.network.localMultiaddrs);
@@ -110,11 +111,7 @@ describe("Start from WSS", function () {
     try {
       await waitForSynced;
     } catch (e) {
-      assert.fail("Failed to sync to other node in time");
-    }
-    const genesisBlock = await bnStartingFromWSS.api.beacon.getBlock(0);
-    if (!genesisBlock) {
-      assert.fail("Failed to backfill sync");
+      assert.fail("Failed to backfill sync to other node in time");
     }
     await bnStartingFromWSS.close();
     await Promise.all(validators.map((v) => v.stop()));

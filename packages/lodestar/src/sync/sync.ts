@@ -16,6 +16,8 @@ import {ISyncOptions} from "./options";
 import {BackfillSync} from "./backfill";
 
 export class BeaconSync implements IBeaconSync {
+  readonly backfillSync: BackfillSync;
+
   private readonly config: IBeaconConfig;
   private readonly logger: ILogger;
   private readonly network: INetwork;
@@ -23,7 +25,6 @@ export class BeaconSync implements IBeaconSync {
   private readonly opts: ISyncOptions;
 
   private readonly rangeSync: RangeSync;
-  private readonly backfillSync: BackfillSync;
 
   // avoid finding same root at the same time
   private readonly processingRoots = new Set<string>();
