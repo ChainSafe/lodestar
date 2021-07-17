@@ -1,7 +1,7 @@
 import bls, {PointFormat, Signature} from "@chainsafe/bls";
 import {SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
 import {phase0, altair, Slot, ssz} from "@chainsafe/lodestar-types";
-import {newFilledArray} from "@chainsafe/lodestar-beacon-state-transition";
+import {newFilledArray, G2_POINT_AT_INFINITY} from "@chainsafe/lodestar-beacon-state-transition";
 import {readonlyValues, toHexString} from "@chainsafe/ssz";
 import {MapDef} from "../../util/map";
 import {InsertOutcome, OpPoolError, OpPoolErrorCode} from "./types";
@@ -77,7 +77,12 @@ export class SyncContributionAndProofPool {
     const aggregate = this.aggregateByRootBySlot.get(slot)?.get(toHexString(prevBlockRoot));
     if (!aggregate) {
       // TODO: Add metric for missing SyncAggregate
-      return ssz.altair.SyncAggregate.defaultValue();
+      // Must return signature as G2_POINT_AT_INFINITY when participating bits are empty
+      // https://github.com/ethereum/eth2.0-specs/blob/30f2a076377264677e27324a8c3c78c590ae5e20/specs/altair/bls.md#eth2_fast_aggregate_verify
+      return {
+        syncCommitteeBits: ssz.altair.SyncCommitteeBits.defaultValue(),
+        syncCommitteeSignature: G2_POINT_AT_INFINITY,
+      };
     }
 
     return {
