@@ -1,4 +1,4 @@
-import {createIChainForkConfig} from "../src";
+import {createIChainForkConfig} from "../";
 import {defaultChainConfig} from "./chainConfig";
 
 export const chainConfig = defaultChainConfig;
