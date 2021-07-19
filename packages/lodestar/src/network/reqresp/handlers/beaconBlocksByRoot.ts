@@ -1,5 +1,4 @@
 import {allForks, phase0} from "@chainsafe/lodestar-types";
-import {SignedBeaconBlock} from "../../../../../beacon-state-transition/lib/allForks";
 import {IBeaconChain} from "../../../chain";
 import {IBeaconDb} from "../../../db";
 
