@@ -14,6 +14,7 @@ import {SeenAttesters, SeenAggregators, SeenSyncCommitteeMessages, SeenContribut
 import {AttestationPool, SyncCommitteeMessagePool, SyncContributionAndProofPool} from "./opPools";
 import {IForkDigestContext} from "../util/forkDigestContext";
 import {LightClientIniter} from "./lightClient";
+import {AggregatedAttestationPool} from "./opPools/aggregatedAttestationPool";
 
 export interface IProcessBlock {
   /**
@@ -65,6 +66,7 @@ export interface IBeaconChain {
 
   // Ops pool
   readonly attestationPool: AttestationPool;
+  readonly aggregatedAttestationPool: AggregatedAttestationPool;
   readonly syncCommitteeMessagePool: SyncCommitteeMessagePool;
   readonly syncContributionAndProofPool: SyncContributionAndProofPool;
 

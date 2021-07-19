@@ -29,6 +29,7 @@ import {SeenAttesters, SeenAggregators, SeenSyncCommitteeMessages, SeenContribut
 import {AttestationPool, SyncCommitteeMessagePool, SyncContributionAndProofPool} from "./opPools";
 import {ForkDigestContext, IForkDigestContext} from "../util/forkDigestContext";
 import {LightClientIniter} from "./lightClient";
+import {AggregatedAttestationPool} from "./opPools/aggregatedAttestationPool";
 
 export interface IBeaconChainModules {
   config: IBeaconConfig;
@@ -56,6 +57,7 @@ export class BeaconChain implements IBeaconChain {
 
   // Ops pool
   readonly attestationPool = new AttestationPool();
+  readonly aggregatedAttestationPool = new AggregatedAttestationPool();
   readonly syncCommitteeMessagePool = new SyncCommitteeMessagePool();
   readonly syncContributionAndProofPool = new SyncContributionAndProofPool();
 

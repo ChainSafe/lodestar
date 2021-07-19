@@ -87,7 +87,6 @@ export class TasksService {
       await Promise.all([
         this.chain.checkpointStateCache.pruneFinalized(finalizedEpoch),
         this.chain.stateCache.deleteAllBeforeEpoch(finalizedEpoch),
-        this.db.aggregateAndProof.pruneFinalized(finalizedEpoch),
       ]);
 
       // tasks rely on extended fork choice

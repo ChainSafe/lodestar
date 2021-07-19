@@ -6,7 +6,6 @@ import {allForks} from "@chainsafe/lodestar-types";
 import {DatabaseService, IDatabaseApiOptions, IDbMetrics} from "@chainsafe/lodestar-db";
 import {IBeaconDb} from "./interface";
 import {
-  AggregateAndProofRepository,
   AttesterSlashingRepository,
   BlockArchiveRepository,
   BlockRepository,
@@ -37,7 +36,6 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
   blockArchive: BlockArchiveRepository;
   stateArchive: StateArchiveRepository;
 
-  aggregateAndProof: AggregateAndProofRepository;
   voluntaryExit: VoluntaryExitRepository;
   proposerSlashing: ProposerSlashingRepository;
   attesterSlashing: AttesterSlashingRepository;
@@ -64,7 +62,6 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
     this.pendingBlock = new PendingBlockRepository(this.config, this.db, this.metrics);
     this.blockArchive = new BlockArchiveRepository(this.config, this.db, this.metrics);
     this.stateArchive = new StateArchiveRepository(this.config, this.db, this.metrics);
-    this.aggregateAndProof = new AggregateAndProofRepository(this.config, this.db, this.metrics);
     this.voluntaryExit = new VoluntaryExitRepository(this.config, this.db, this.metrics);
     this.proposerSlashing = new ProposerSlashingRepository(this.config, this.db, this.metrics);
     this.attesterSlashing = new AttesterSlashingRepository(this.config, this.db, this.metrics);
@@ -95,7 +92,6 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
       this.depositEvent.deleteOld(signedBlock.message.body.eth1Data.depositCount),
       this.proposerSlashing.batchRemove(signedBlock.message.body.proposerSlashings),
       this.attesterSlashing.batchRemove(signedBlock.message.body.attesterSlashings),
-      this.aggregateAndProof.removeIncluded(signedBlock.message.body.attestations),
     ]);
   }
 

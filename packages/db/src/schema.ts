@@ -30,7 +30,7 @@ export enum Bucket {
   phase0_preGenesisStateLastProcessedBlock = 31, // Single = Uint8
   // op pool
   // phase0_attestation = 10, // DEPRECATED on v0.25.0
-  phase0_aggregateAndProof = 11, // Root -> AggregateAndProof
+  // phase0_aggregateAndProof = 11, // Root -> AggregateAndProof, DEPRECATED on v.27.0
   phase0_depositData = 12, // [DEPRECATED] index -> DepositData
   phase0_exit = 13, // ValidatorIndex -> VoluntaryExit
   phase0_proposerSlashing = 14, // ValidatorIndex -> ProposerSlashing

@@ -1,4 +1,4 @@
-import {ssz} from "@chainsafe/lodestar-types";
+import {ssz, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {List} from "@chainsafe/ssz";
 import {
   phase0,
@@ -15,7 +15,7 @@ import {getCommitteeIndices, verifyHeadBlockAndTargetRoot, verifyPropagationSlot
 export async function validateGossipAggregateAndProof(
   chain: IBeaconChain,
   signedAggregateAndProof: phase0.SignedAggregateAndProof
-): Promise<phase0.IndexedAttestation> {
+): Promise<{indexedAttestation: phase0.IndexedAttestation; committeeIndices: ValidatorIndex[]}> {
   // Do checks in this order:
   // - do early checks (w/o indexed attestation)
   // - > obtain indexed attestation and committes per slot
@@ -122,5 +122,5 @@ export async function validateGossipAggregateAndProof(
 
   chain.seenAggregators.add(targetEpoch, aggregatorIndex);
 
-  return indexedAttestation;
+  return {indexedAttestation, committeeIndices};
 }

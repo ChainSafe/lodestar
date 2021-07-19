@@ -1,4 +1,4 @@
-import sinon from "sinon";
+import sinon, {SinonStubbedInstance} from "sinon";
 import {expect} from "chai";
 
 import {ssz} from "@chainsafe/lodestar-types";
@@ -17,6 +17,7 @@ import {generateDeposit} from "../../../../utils/deposit";
 import {StubbedBeaconDb} from "../../../../utils/stub";
 import {Eth1ForBlockProduction} from "../../../../../src/eth1/";
 import {BeaconChain} from "../../../../../src/chain";
+import {AggregatedAttestationPool} from "../../../../../src/chain/opPools";
 
 describe("blockAssembly - body", function () {
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
@@ -26,15 +27,18 @@ describe("blockAssembly - body", function () {
     const eth1 = sandbox.createStubInstance(Eth1ForBlockProduction);
     eth1.getEth1DataAndDeposits.resolves({eth1Data: state.eth1Data, deposits: [generateDeposit()]});
     const chain = sandbox.createStubInstance(BeaconChain);
-
-    return {chain, dbStub: new StubbedBeaconDb(sandbox), eth1};
+    const aggregatedAttestationPool = sinon.createStubInstance(AggregatedAttestationPool);
+    ((chain as unknown) as {
+      aggregatedAttestationPool: SinonStubbedInstance<AggregatedAttestationPool>;
+    }).aggregatedAttestationPool = aggregatedAttestationPool;
+    return {chain, aggregatedAttestationPool, dbStub: new StubbedBeaconDb(sandbox), eth1};
   }
 
   it("should generate block body", async function () {
-    const {chain, dbStub, eth1} = getStubs();
+    const {chain, dbStub, eth1, aggregatedAttestationPool} = getStubs();
     dbStub.proposerSlashing.values.resolves([ssz.phase0.ProposerSlashing.defaultValue()]);
     dbStub.attesterSlashing.values.resolves([ssz.phase0.AttesterSlashing.defaultValue()]);
-    dbStub.aggregateAndProof.getBlockAttestations.resolves([generateEmptyAttestation()]);
+    aggregatedAttestationPool.getAttestationsForBlock.returns([generateEmptyAttestation()]);
     dbStub.voluntaryExit.values.resolves([generateEmptySignedVoluntaryExit()]);
     dbStub.depositDataRoot.getTreeBacked.resolves(ssz.phase0.DepositDataRootList.defaultTreeBacked());
 
@@ -56,14 +60,14 @@ describe("blockAssembly - body", function () {
   });
 
   it("should generate block body with max respective field lengths", async function () {
-    const {chain, dbStub, eth1} = getStubs();
+    const {chain, dbStub, eth1, aggregatedAttestationPool} = getStubs();
     dbStub.proposerSlashing.values.resolves(
       Array.from({length: MAX_PROPOSER_SLASHINGS}, () => ssz.phase0.ProposerSlashing.defaultValue())
     );
     dbStub.attesterSlashing.values.resolves(
       Array.from({length: MAX_ATTESTER_SLASHINGS}, () => ssz.phase0.AttesterSlashing.defaultValue())
     );
-    dbStub.aggregateAndProof.getBlockAttestations.resolves(
+    aggregatedAttestationPool.getAttestationsForBlock.returns(
       Array.from({length: MAX_ATTESTATIONS}, generateEmptyAttestation)
     );
     dbStub.voluntaryExit.values.resolves(Array.from({length: MAX_VOLUNTARY_EXITS}, generateEmptySignedVoluntaryExit));
