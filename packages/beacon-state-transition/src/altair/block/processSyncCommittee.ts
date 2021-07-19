@@ -13,6 +13,7 @@ import {
   zipIndexesSyncCommitteeBits,
 } from "../../util";
 import {CachedBeaconState} from "../../allForks/util";
+import {G2_POINT_AT_INFINITY} from "../../constants";
 
 export function processSyncAggregate(
   state: CachedBeaconState<altair.BeaconState>,
@@ -50,6 +51,7 @@ export function getSyncCommitteeSignatureSet(
 ): ISignatureSet | null {
   const {epochCtx} = state;
   const {syncAggregate} = block.body;
+  const signature = syncAggregate.syncCommitteeSignature.valueOf() as Uint8Array;
 
   // The spec uses the state to get the previous slot
   // ```python
@@ -71,7 +73,13 @@ export function getSyncCommitteeSignatureSet(
 
   // When there's no participation we consider the signature valid and just ignore it
   if (participantIndices.length === 0) {
-    return null;
+    // Must set signature as G2_POINT_AT_INFINITY when participating bits are empty
+    // https://github.com/ethereum/eth2.0-specs/blob/30f2a076377264677e27324a8c3c78c590ae5e20/specs/altair/bls.md#eth2_fast_aggregate_verify
+    if (ssz.BLSSignature.equals(signature, G2_POINT_AT_INFINITY)) {
+      return null;
+    } else {
+      throw Error("Empty sync committee signature is not infinity");
+    }
   }
 
   const domain = state.config.getDomain(DOMAIN_SYNC_COMMITTEE, previousSlot);
@@ -80,7 +88,7 @@ export function getSyncCommitteeSignatureSet(
     type: SignatureSetType.aggregate,
     pubkeys: participantIndices.map((i) => epochCtx.index2pubkey[i]),
     signingRoot: computeSigningRoot(ssz.Root, rootSigned, domain),
-    signature: syncAggregate.syncCommitteeSignature.valueOf() as Uint8Array,
+    signature,
   };
 }
 

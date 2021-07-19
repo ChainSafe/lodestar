@@ -11,6 +11,8 @@ export type IValidatorCliArgs = IAccountValidatorArgs &
     force: boolean;
     graffiti: string;
     interopIndexes?: string;
+    fromMnemonic?: string;
+    mnemonicIndexes?: string;
     logFile: IBeaconPaths["logFile"];
   };
 
@@ -45,6 +47,18 @@ export const validatorOptions: ICliCommandOptions<IValidatorCliArgs> = {
   interopIndexes: {
     hidden: true,
     description: "Range (inclusive) of interop key indexes to validate with: 0..16",
+    type: "string",
+  },
+
+  fromMnemonic: {
+    hidden: true,
+    description: "UNSAFE. Run keys from a mnemonic. Requires mnemonicIndexes option",
+    type: "string",
+  },
+
+  mnemonicIndexes: {
+    hidden: true,
+    description: "UNSAFE. Range (inclusive) of mnemonic key indexes to validate with: 0..16",
     type: "string",
   },
 };
