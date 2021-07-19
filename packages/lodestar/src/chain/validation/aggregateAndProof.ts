@@ -11,6 +11,7 @@ import {IBeaconChain} from "..";
 import {getSelectionProofSignatureSet, getAggregateAndProofSignatureSet} from "./signatureSets";
 import {AttestationError, AttestationErrorCode, GossipAction} from "../errors";
 import {getCommitteeIndices, verifyHeadBlockAndTargetRoot, verifyPropagationSlotRange} from "./attestation";
+import {RegenCaller} from "../regen";
 
 export async function validateGossipAggregateAndProof(
   chain: IBeaconChain,
@@ -60,12 +61,14 @@ export async function validateGossipAggregateAndProof(
   // -- i.e. get_ancestor(store, aggregate.data.beacon_block_root, compute_start_slot_at_epoch(store.finalized_checkpoint.epoch)) == store.finalized_checkpoint.root
   // > Altready check in `chain.forkChoice.hasBlock(attestation.data.beaconBlockRoot)`
 
-  const targetState = await chain.regen.getCheckpointState(attTarget).catch((e) => {
-    throw new AttestationError(GossipAction.REJECT, {
-      code: AttestationErrorCode.MISSING_ATTESTATION_TARGET_STATE,
-      error: e as Error,
+  const targetState = await chain.regen
+    .getCheckpointState(attTarget, {caller: RegenCaller.validateGossipAggregateAndProof})
+    .catch((e) => {
+      throw new AttestationError(GossipAction.REJECT, {
+        code: AttestationErrorCode.MISSING_ATTESTATION_TARGET_STATE,
+        error: e as Error,
+      });
     });
-  });
 
   const committeeIndices = getCommitteeIndices(targetState, attSlot, attData.index);
   const attestingIndices = zipIndexesCommitteeBits(committeeIndices, aggregate.aggregationBits);

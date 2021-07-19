@@ -2,6 +2,7 @@ import {phase0, allForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconChain} from "..";
 import {VoluntaryExitError, VoluntaryExitErrorCode, GossipAction} from "../errors";
 import {IBeaconDb} from "../../db";
+import {RegenCaller} from "../regen";
 
 export async function validateGossipVoluntaryExit(
   chain: IBeaconChain,
@@ -14,10 +15,13 @@ export async function validateGossipVoluntaryExit(
     });
   }
 
-  const state = await chain.regen.getCheckpointState({
-    root: chain.forkChoice.getHeadRoot(),
-    epoch: voluntaryExit.message.epoch,
-  });
+  const state = await chain.regen.getCheckpointState(
+    {
+      root: chain.forkChoice.getHeadRoot(),
+      epoch: voluntaryExit.message.epoch,
+    },
+    {caller: RegenCaller.validateGossipVoluntaryExit}
+  );
 
   try {
     // verifySignature = false, verified in batch below

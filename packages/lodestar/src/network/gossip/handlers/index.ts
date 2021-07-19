@@ -67,6 +67,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules): GossipHandlers 
           validSignatures: false,
           validProposerSignature: false,
         });
+
         metrics?.registerBeaconBlock(OpSource.api, seenTimestampSec, signedBlock.message);
 
         // Handler

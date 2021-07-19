@@ -404,5 +404,26 @@ export function createLodestarMetrics(
         labelNames: ["index", "src"],
       }),
     },
+    //regen metrics
+    regenStateCacheLookupTotal: register.gauge<"entrypoint" | "caller">({
+      name: "regen_state_cache_lookup_total",
+      help: "Number of cache lookup",
+      labelNames: ["entrypoint", "caller"],
+    }),
+    regenStateCacheLoopkupHits: register.gauge<"entrypoint" | "caller">({
+      name: "regen_state_cache_hits_total",
+      help: "Number of total cache hits",
+      labelNames: ["entrypoint", "caller"],
+    }),
+    regenCPStateCacheLookupTotal: register.gauge<"entrypoint" | "caller">({
+      name: "regen_cp_cache_lookup_total",
+      help: "Number of checkpoint cache lookup",
+      labelNames: ["entrypoint", "caller"],
+    }),
+    regenCPStateCacheLookupHits: register.gauge<"entrypoint" | "caller">({
+      name: "regen_cp_cache_hits_total",
+      help: "Number of checkpoint cache hits",
+      labelNames: ["entrypoint", "caller"],
+    }),
   };
 }

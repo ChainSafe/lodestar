@@ -11,6 +11,7 @@ import {IEth1ForBlockProduction} from "../../../eth1";
 import {IMetrics} from "../../../metrics";
 import {IBeaconChain} from "../../interface";
 import {assembleBody} from "./body";
+import {RegenCaller} from "../../regen";
 
 type AssembleBlockModules = {
   config: IChainForkConfig;
@@ -27,7 +28,7 @@ export async function assembleBlock(
   graffiti = ZERO_HASH
 ): Promise<allForks.BeaconBlock> {
   const head = chain.forkChoice.getHead();
-  const state = await chain.regen.getBlockSlotState(head.blockRoot, slot);
+  const state = await chain.regen.getBlockSlotState(head.blockRoot, slot, {caller: RegenCaller.produceBlock});
 
   const block: allForks.BeaconBlock = {
     slot,

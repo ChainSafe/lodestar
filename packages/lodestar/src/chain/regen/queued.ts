@@ -8,7 +8,7 @@ import {ChainEventEmitter} from "../emitter";
 import {IMetrics} from "../../metrics";
 import {IBeaconDb} from "../../db";
 import {JobItemQueue} from "../../util/queue";
-import {IStateRegenerator} from "./interface";
+import {IStateRegenerator,IRegenCaller} from "./interface";
 import {StateRegenerator} from "./regen";
 import {RegenError, RegenErrorCode} from "./errors";
 
@@ -54,7 +54,10 @@ export class QueuedStateRegenerator implements IStateRegenerator {
     this.checkpointStateCache = modules.checkpointStateCache;
   }
 
-  async getPreState(block: allForks.BeaconBlock): Promise<CachedBeaconState<allForks.BeaconState>> {
+  async getPreState(
+    block: allForks.BeaconBlock,
+    rCaller?: IRegenCaller
+  ): Promise<CachedBeaconState<allForks.BeaconState>> {
     // First attempt to fetch the state from caches before queueing
     const parentBlock = this.forkChoice.getBlock(block.parentRoot);
     if (!parentBlock) {
@@ -81,43 +84,46 @@ export class QueuedStateRegenerator implements IStateRegenerator {
     }
 
     // The state is not immediately available in the caches, enqueue the job
-    return this.jobQueue.push({key: "getPreState", args: [block]});
+    return this.jobQueue.push({key: "getPreState", args: [block, rCaller]});
   }
 
-  async getCheckpointState(cp: phase0.Checkpoint): Promise<CachedBeaconState<allForks.BeaconState>> {
+  async getCheckpointState(
+    cp: phase0.Checkpoint,
+    rCaller?: IRegenCaller
+  ): Promise<CachedBeaconState<allForks.BeaconState>> {
     // First attempt to fetch the state from cache before queueing
     const checkpointState = this.checkpointStateCache.get(cp);
     if (checkpointState) {
       return checkpointState;
     }
     // The state is not immediately available in the cache, enqueue the job
-    return this.jobQueue.push({key: "getCheckpointState", args: [cp]});
+    return this.jobQueue.push({key: "getCheckpointState", args: [cp,rCaller]});
   }
 
-  async getBlockSlotState(blockRoot: Root, slot: Slot): Promise<CachedBeaconState<allForks.BeaconState>> {
-    return this.jobQueue.push({key: "getBlockSlotState", args: [blockRoot, slot]});
+  async getBlockSlotState(blockRoot: Root, slot: Slot, rCaller?: IRegenCaller): Promise<CachedBeaconState<allForks.BeaconState>> {
+    return this.jobQueue.push({key: "getBlockSlotState", args: [blockRoot, slot,rCaller]});
   }
 
-  async getState(stateRoot: Root): Promise<CachedBeaconState<allForks.BeaconState>> {
+  async getState(stateRoot: Root, rCaller?: IRegenCaller): Promise<CachedBeaconState<allForks.BeaconState>> {
     // First attempt to fetch the state from cache before queueing
     const state = this.stateCache.get(stateRoot);
     if (state) {
       return state;
     }
     // The state is not immediately available in the cache, enqueue the job
-    return this.jobQueue.push({key: "getState", args: [stateRoot]});
+    return this.jobQueue.push({key: "getState", args: [stateRoot, rCaller]});
   }
 
   private jobQueueProcessor = async (regenRequest: RegenRequest): Promise<CachedBeaconState<allForks.BeaconState>> => {
     switch (regenRequest.key) {
       case "getPreState":
-        return this.regen.getPreState(regenRequest.args[0]);
+        return this.regen.getPreState(...regenRequest.args);
       case "getCheckpointState":
-        return this.regen.getCheckpointState(regenRequest.args[0]);
+        return this.regen.getCheckpointState(...regenRequest.args);
       case "getBlockSlotState":
         return this.regen.getBlockSlotState(...regenRequest.args);
       case "getState":
-        return this.regen.getState(regenRequest.args[0]);
+        return this.regen.getState(...regenRequest.args);
     }
   };
 }

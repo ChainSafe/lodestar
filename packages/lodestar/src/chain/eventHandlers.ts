@@ -9,6 +9,7 @@ import {AttestationError, BlockError, BlockErrorCode} from "./errors";
 import {IBlockJob} from "./interface";
 import {ChainEvent, ChainEventEmitter, IChainEvents} from "./emitter";
 import {BeaconChain} from "./chain";
+import {RegenCaller} from "./regen";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type ListenerType<T> = [T] extends [(...args: infer U) => any] ? U : [T] extends [void] ? [] : [T];
@@ -183,7 +184,7 @@ export async function onForkChoiceFinalized(this: BeaconChain, cp: phase0.Checkp
   // Only after altair
   if (cp.epoch >= this.config.ALTAIR_FORK_EPOCH) {
     try {
-      const state = await this.regen.getCheckpointState(cp);
+      const state = await this.regen.getCheckpointState(cp, {caller: RegenCaller.onForkChoiceFinalized});
       // using state.slot is not correct for a checkpoint with skipped slot
       const block = await this.getCanonicalBlockAtSlot(state.latestBlockHeader.slot);
       if (!block) {

@@ -4,6 +4,7 @@ import {IBeaconDb} from "../../db";
 import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 import {allForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {BlockGossipError, BlockErrorCode, GossipAction} from "../errors";
+import {RegenCaller} from "../regen";
 
 export async function validateGossipBlock(
   config: IChainForkConfig,
@@ -46,12 +47,14 @@ export async function validateGossipBlock(
   }
 
   // getBlockSlotState also checks for whether the current finalized checkpoint is an ancestor of the block.  as a result, we throw an IGNORE (whereas the spec says we should REJECT for this scenario).  this is something we should change this in the future to make the code airtight to the spec.
-  const blockState = await chain.regen.getBlockSlotState(block.message.parentRoot, block.message.slot).catch(() => {
-    throw new BlockGossipError(GossipAction.IGNORE, {
-      code: BlockErrorCode.PARENT_UNKNOWN,
-      parentRoot: block.message.parentRoot.valueOf() as Uint8Array,
+  const blockState = await chain.regen
+    .getBlockSlotState(block.message.parentRoot, block.message.slot, {caller: RegenCaller.validateGossipBlock})
+    .catch(() => {
+      throw new BlockGossipError(GossipAction.IGNORE, {
+        code: BlockErrorCode.PARENT_UNKNOWN,
+        parentRoot: block.message.parentRoot.valueOf() as Uint8Array,
+      });
     });
-  });
 
   const signatureSet = allForks.getProposerSignatureSet(blockState, block);
   // Don't batch so verification is not delayed

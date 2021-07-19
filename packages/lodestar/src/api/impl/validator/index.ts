@@ -26,6 +26,7 @@ import {CommitteeSubscription} from "../../../network/subnets";
 import {OpSource} from "../../../metrics/validatorMonitor";
 import {computeSubnetForCommitteesAtSlot, getPubkeysForIndices, getSyncComitteeValidatorIndexMap} from "./utils";
 import {ApiModules} from "../types";
+import {RegenCaller} from "../../../chain/regen";
 
 /**
  * Validator clock may be advanced from beacon's clock. If the validator requests a resource in a
@@ -161,7 +162,7 @@ export function getValidatorApi({
       await waitForSlot(slot); // Must never request for a future slot > currentSlot
 
       const headRoot = chain.forkChoice.getHeadRoot();
-      const state = await chain.regen.getBlockSlotState(headRoot, slot);
+      const state = await chain.regen.getBlockSlotState(headRoot, slot, {caller: RegenCaller.produceAttestationData});
       return {data: assembleAttestationData(state, headRoot, slot, committeeIndex)};
     },
 
