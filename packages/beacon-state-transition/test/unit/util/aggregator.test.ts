@@ -50,7 +50,7 @@ describe("isSyncCommitteeAggregator", function () {
     }).to.deep.equal({
       SYNC_COMMITTEE_SIZE: 512,
       SYNC_COMMITTEE_SUBNET_COUNT: 4,
-      TARGET_AGGREGATORS_PER_SYNC_SUBCOMMITTEE: 4,
+      TARGET_AGGREGATORS_PER_SYNC_SUBCOMMITTEE: 16,
     });
   });
 

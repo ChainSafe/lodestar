@@ -54,7 +54,7 @@ export const ATTESTATION_SUBNET_COUNT = 64;
 
 // altair validator
 
-export const TARGET_AGGREGATORS_PER_SYNC_SUBCOMMITTEE = 4;
+export const TARGET_AGGREGATORS_PER_SYNC_SUBCOMMITTEE = 16;
 export const SYNC_COMMITTEE_SUBNET_COUNT = 4;
 
 export const MAX_REQUEST_BLOCKS = 2 ** 10; // 1024
