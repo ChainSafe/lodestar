@@ -1,11 +1,11 @@
 import bls from "@chainsafe/bls";
-import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
-import {allForks, Slot, ssz, ValidatorIndex} from "@chainsafe/lodestar-types";
-import {CachedBeaconState, phase0} from "@chainsafe/lodestar-beacon-state-transition";
+import {ForkName, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
+import {allForks, altair, Slot, ssz, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {CachedBeaconState, computeEpochAtSlot, phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {List, toHexString} from "@chainsafe/ssz";
 import {MapDef} from "../../util/map";
 import {pruneBySlot} from "./utils";
-import {InsertOutcome} from "./types";
+import {InsertOutcome, OpPoolError, OpPoolErrorCode} from "./types";
 
 type DataRootHex = string;
 /**
@@ -19,9 +19,16 @@ export class AggregatedAttestationPool {
     phase0.Slot,
     Map<DataRootHex, MatchingDataAttestationGroup>
   >(() => new Map<DataRootHex, MatchingDataAttestationGroup>());
-  // no need to maintain lowestPermissibleSlot since it's checked via gossip validation fn
+  private lowestPermissibleSlot = 0;
+
   add(attestation: phase0.Attestation, attestingIndices: ValidatorIndex[], committee: ValidatorIndex[]): InsertOutcome {
     const slot = attestation.data.slot;
+    const lowestPermissibleSlot = this.lowestPermissibleSlot;
+
+    // Reject any attestations that are too old.
+    if (slot < lowestPermissibleSlot) {
+      throw new OpPoolError({code: OpPoolErrorCode.SLOT_TOO_LOW, slot, lowestPermissibleSlot});
+    }
     const attestationGroupByDataHash = this.attestationGroupByDataHashBySlot.getOrDefault(slot);
     const dataRoot = ssz.phase0.AttestationData.hashTreeRoot(attestation.data);
     const dataRootHex = toHexString(dataRoot);
@@ -29,32 +36,18 @@ export class AggregatedAttestationPool {
     if (attestationGroup) {
       return attestationGroup.add({attestation, attestingIndices});
     } else {
-      attestationGroup = new MatchingDataAttestationGroup({attestation, attestingIndices}, committee);
+      attestationGroup = new MatchingDataAttestationGroup(committee);
+      attestationGroup.add({attestation, attestingIndices});
       attestationGroupByDataHash.set(dataRootHex, attestationGroup);
       return InsertOutcome.NewData;
     }
-  }
-
-  /** Remove attestations included in the chain, return number of attestations removed */
-  removeIncluded(attestation: phase0.Attestation, attestingIndices: ValidatorIndex[]): number {
-    const slot = attestation.data.slot;
-    const attestationGroupByDataHash = this.attestationGroupByDataHashBySlot.get(slot);
-    if (!attestationGroupByDataHash) {
-      return 0;
-    }
-    const dataRoot = ssz.phase0.AttestationData.hashTreeRoot(attestation.data);
-    const dataRootHex = toHexString(dataRoot);
-    const attestationGroup = attestationGroupByDataHash.get(dataRootHex);
-    if (!attestationGroup) {
-      return 0;
-    }
-    return attestationGroup.removeIncluded({attestation, attestingIndices});
   }
 
   /** Remove attestations which are too old to be included in a block. */
   prune(clockSlot: Slot): void {
     // Only retain SLOTS_PER_EPOCH slots
     pruneBySlot(this.attestationGroupByDataHashBySlot, clockSlot, SLOTS_PER_EPOCH);
+    this.lowestPermissibleSlot = Math.max(clockSlot - SLOTS_PER_EPOCH, 0);
   }
 
   /**
@@ -63,6 +56,14 @@ export class AggregatedAttestationPool {
    * Attestations should pass the validation when processing attestations in beacon-state-transition.
    */
   getAttestationsForBlock(state: CachedBeaconState<allForks.BeaconState>): phase0.Attestation[] {
+    // only propose block for altair
+    if (state.config.getForkName(state.slot) == ForkName.phase0) {
+      throw new Error(`Not support proposing block at slot ${state.slot}`);
+    }
+    const altairState = state as CachedBeaconState<altair.BeaconState>;
+    const currentEpoch = computeEpochAtSlot(state.slot);
+    const previousParticipation = altairState.previousEpochParticipation.persistent.toArray();
+    const currentParticipation = altairState.currentEpochParticipation.persistent.toArray();
     const slots = Array.from(this.attestationGroupByDataHashBySlot.keys()).sort((a, b) => b - a);
     const attestations: phase0.Attestation[] = [];
     for (const slot of slots) {
@@ -72,6 +73,19 @@ export class AggregatedAttestationPool {
         throw Error(`No aggregated attestation pool for slot=${slot}`);
       }
       const attestationGroups = Array.from(attestationGroupByDataHash.values());
+      const epoch = computeEpochAtSlot(slot);
+      const participationStatus =
+        epoch === currentEpoch ? currentParticipation : epoch === currentEpoch - 1 ? previousParticipation : null;
+      if (!participationStatus) {
+        continue;
+      }
+      for (const attestationGroup of attestationGroups) {
+        const committee = attestationGroup.getCommittee();
+        const attestingIndices = committee.filter(
+          (index) => participationStatus[index] && participationStatus[index].timelySource
+        );
+        attestationGroup.removeBySeenValidators(attestingIndices);
+      }
       attestations.push(...attestationGroups.map((group) => group.getAttestations()).flat());
     }
     // consumer should limit MAX_ATTESTATIONS items
@@ -127,21 +141,15 @@ interface AttestationWithIndex {
  */
 export class MatchingDataAttestationGroup {
   private readonly attestations: AttestationWithIndex[];
-  // Manage seenValidators by a regular set instead of aggregationBits to improve performance
-  private readonly seenValidators = new Set<ValidatorIndex>();
   private readonly committee: ValidatorIndex[];
-  constructor(attestation: AttestationWithIndex, committee: ValidatorIndex[]) {
+  constructor(committee: ValidatorIndex[]) {
     this.committee = committee;
-    this.attestations = [attestation];
+    this.attestations = [];
   }
 
   /** Add an attestation. */
   add(attestation: AttestationWithIndex): InsertOutcome {
     const attestingIndices = attestation.attestingIndices.valueOf() as ValidatorIndex[];
-    if (attestingIndices.every((attestingIndex) => this.seenValidators.has(attestingIndex))) {
-      // We've already seen these attesters
-      return InsertOutcome.AlreadyKnown;
-    }
     // preaggregate
     let aggregated = false;
     for (const existingAttestation of this.attestations) {
@@ -161,25 +169,15 @@ export class MatchingDataAttestationGroup {
     return aggregated ? InsertOutcome.Aggregated : InsertOutcome.NewData;
   }
 
-  /** See an attestation from the chain, remove all attestations with seen validators. */
-  removeIncluded(attestation: AttestationWithIndex): number {
-    const attestingIndices = attestation.attestingIndices.valueOf() as ValidatorIndex[];
-    let seeAll = true;
-    for (const attester of attestingIndices) {
-      if (!this.seenValidators.has(attester)) {
-        seeAll = false;
-        this.seenValidators.add(attester);
-      }
-    }
-    if (seeAll) {
-      // We've already seen and filtered out these attesters, nothing to do
-      return 0;
-    }
+  /** Remove all attestations with seen validators. */
+  removeBySeenValidators(seenAttestingIndices: ValidatorIndex[]): number {
     let index = this.attestations.length - 1;
     let numRemoved = 0;
     while (index >= 0) {
       const existingAttestation = this.attestations[index];
-      if (existingAttestation.attestingIndices.every((attestingIndex) => this.seenValidators.has(attestingIndex))) {
+      if (
+        existingAttestation.attestingIndices.every((attestingIndex) => seenAttestingIndices.includes(attestingIndex))
+      ) {
         this.attestations.splice(index, 1);
         numRemoved++;
       }
@@ -194,6 +192,10 @@ export class MatchingDataAttestationGroup {
     return this.attestations
       .sort((attestation1, attestation2) => attestation2.attestingIndices.length - attestation1.attestingIndices.length)
       .map((attestation) => attestation.attestation);
+  }
+
+  getCommittee(): ValidatorIndex[] {
+    return this.committee;
   }
 }
 

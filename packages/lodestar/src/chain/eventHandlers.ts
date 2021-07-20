@@ -1,6 +1,6 @@
 import {AbortSignal} from "@chainsafe/abort-controller";
 import {readonlyValues, toHexString, TreeBacked} from "@chainsafe/ssz";
-import {allForks, altair, Epoch, phase0, Slot, ssz, ValidatorIndex, Version} from "@chainsafe/lodestar-types";
+import {allForks, altair, Epoch, phase0, Slot, ssz, Version} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {IBlockSummary} from "@chainsafe/lodestar-fork-choice";
 import {CachedBeaconState, computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
@@ -253,10 +253,6 @@ export async function onBlock(
     for (const attestation of attestations) {
       try {
         const indexedAttestation = postState.epochCtx.getIndexedAttestation(attestation);
-        this.aggregatedAttestationPool.removeIncluded(
-          attestation,
-          indexedAttestation.attestingIndices.valueOf() as ValidatorIndex[]
-        );
         this.forkChoice.onAttestation(indexedAttestation);
         this.emitter.emit(ChainEvent.attestation, attestation);
 

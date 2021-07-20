@@ -1,28 +1,83 @@
-import {bls} from "@chainsafe/bls";
+import {bls, SecretKey} from "@chainsafe/bls";
+import {initBLS} from "@chainsafe/lodestar-cli/src/util";
+import {createIChainForkConfig, defaultChainConfig} from "@chainsafe/lodestar-config";
+import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {List} from "@chainsafe/ssz";
 import {expect} from "chai";
 import {ssz} from "../../../../../types/lib/phase0";
-import {aggregateInto, MatchingDataAttestationGroup} from "../../../../src/chain/opPools";
+import {
+  AggregatedAttestationPool,
+  aggregateInto,
+  MatchingDataAttestationGroup,
+} from "../../../../src/chain/opPools/aggregatedAttestationPool";
 import {InsertOutcome} from "../../../../src/chain/opPools/types";
-import {generateEmptyAttestation} from "../../../utils/attestation";
+import {generateAttestation, generateEmptyAttestation} from "../../../utils/attestation";
+import {generateCachedState} from "../../../utils/state";
+// eslint-disable-next-line no-restricted-imports
+import * as attestationUtils from "@chainsafe/lodestar-beacon-state-transition/lib/phase0/block/processAttestation";
+import {SinonStubFn} from "../../../utils/types";
+import sinon from "sinon";
+import {phase0} from "../../../../../types/lib";
+
+describe("AggregatedAttestationPool", function () {
+  let pool: AggregatedAttestationPool;
+  const altairForkEpoch = 2020;
+  const currentSlot = SLOTS_PER_EPOCH * (altairForkEpoch + 10);
+  // eslint-disable-next-line @typescript-eslint/naming-convention
+  const config = createIChainForkConfig(Object.assign({}, defaultChainConfig, {ALTAIR_FORK_EPOCH: altairForkEpoch}));
+  let validateAttestationStub: SinonStubFn<typeof attestationUtils["validateAttestation"]>;
+  const altairState = generateCachedState({slot: currentSlot}, config, true);
+  const attestation = generateAttestation({data: {slot: currentSlot - 2}});
+
+  before(async function () {
+    await initBLS();
+  });
+
+  beforeEach(() => {
+    validateAttestationStub = sinon.stub(attestationUtils, "validateAttestation");
+    pool = new AggregatedAttestationPool();
+  });
+
+  this.afterEach(() => {
+    sinon.restore();
+  });
+
+  const testCases: {name: string; attestingIndices: number[]; expected: phase0.Attestation[]}[] = [
+    {name: "all validators are seen", attestingIndices: [0, 1], expected: []},
+    {name: "all validators are NOT seen", attestingIndices: [2, 3], expected: [attestation]},
+    {name: "one is seen and one is NOT", attestingIndices: [1, 2], expected: [attestation]},
+  ];
+
+  for (const {name, attestingIndices, expected} of testCases) {
+    it(name, function () {
+      validateAttestationStub.returns();
+      const committee = [0, 1, 2, 3];
+      pool.add(attestation, attestingIndices, committee);
+      expect(pool.getAttestationsForBlock(altairState)).to.be.deep.equal(expected, "incorrect returned attestations");
+    });
+  }
+});
 
 describe("MatchingDataAttestationGroup", function () {
   let attestationGroup: MatchingDataAttestationGroup;
   const committee = [100, 200, 300];
   const attestationSeed = generateEmptyAttestation();
   const attestationDataRoot = ssz.AttestationData.serialize(attestationSeed.data);
-
+  let sk1: SecretKey;
   const attestation1 = {...attestationSeed, ...{aggregationBits: [true, true, false] as List<boolean>}};
-  const sk1 = bls.SecretKey.fromBytes(Buffer.alloc(32, 1));
-  attestation1.signature = sk1.sign(attestationDataRoot).toBytes();
+
+  before(async () => {
+    await initBLS();
+    sk1 = bls.SecretKey.fromBytes(Buffer.alloc(32, 1));
+    attestation1.signature = sk1.sign(attestationDataRoot).toBytes();
+  });
+
   beforeEach(() => {
-    attestationGroup = new MatchingDataAttestationGroup(
-      {
-        attestation: attestation1,
-        attestingIndices: [100, 200],
-      },
-      committee
-    );
+    attestationGroup = new MatchingDataAttestationGroup(committee);
+    attestationGroup.add({
+      attestation: attestation1,
+      attestingIndices: [100, 200],
+    });
   });
 
   it("add - new data, getAttestations() return 2", () => {
@@ -50,21 +105,13 @@ describe("MatchingDataAttestationGroup", function () {
     expect(attestations[0].data).to.be.deep.equal(attestation1.data, "incorrect AttestationData");
   });
 
-  it("add - attestations are already known by chain", () => {
-    const seenAttestation = {...attestationSeed, ...{aggregationBits: [false, false, true] as List<boolean>}};
-    const numRemoved = attestationGroup.removeIncluded({attestation: seenAttestation, attestingIndices: [300]});
+  it("removeIncluded - numRemoved is 0", () => {
+    const numRemoved = attestationGroup.removeBySeenValidators([300]);
     expect(numRemoved).to.be.equal(0, "expect no attestation is removed");
-    // same to seen attestation
-    const attestation2 = {...seenAttestation};
-    const result = attestationGroup.add({attestation: attestation2, attestingIndices: [300]});
-    expect(result).to.be.equal(InsertOutcome.AlreadyKnown, "incorrect InsertOutcome");
   });
 
-  // removeIncluded - numRemoved is 0: tested above
-
   it("removeIncluded - numRemoved is 1", () => {
-    const seenAttestation = {...attestationSeed, ...{aggregationBits: [true, true, true] as List<boolean>}};
-    const numRemoved = attestationGroup.removeIncluded({attestation: seenAttestation, attestingIndices: committee});
+    const numRemoved = attestationGroup.removeBySeenValidators(committee);
     expect(numRemoved).to.be.equal(1, "expect exactly 1 attestation is removed");
   });
 });
@@ -74,9 +121,12 @@ describe("aggregateInto", function () {
   const attestation1 = {...attestationSeed, ...{aggregationBits: [false, true] as List<boolean>}};
   const attestation2 = {...attestationSeed, ...{aggregationBits: [true, false] as List<boolean>}};
   const attestationDataRoot = ssz.AttestationData.serialize(attestationSeed.data);
-  const sk1 = bls.SecretKey.fromBytes(Buffer.alloc(32, 1));
-  const sk2 = bls.SecretKey.fromBytes(Buffer.alloc(32, 2));
+  let sk1: SecretKey;
+  let sk2: SecretKey;
   before("Init BLS", async () => {
+    await initBLS();
+    sk1 = bls.SecretKey.fromBytes(Buffer.alloc(32, 1));
+    sk2 = bls.SecretKey.fromBytes(Buffer.alloc(32, 2));
     attestation1.signature = sk1.sign(attestationDataRoot).toBytes();
     attestation2.signature = sk2.sign(attestationDataRoot).toBytes();
   });
