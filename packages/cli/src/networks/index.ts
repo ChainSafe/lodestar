@@ -10,19 +10,10 @@ import {IBeaconParamsUnparsed} from "../config/types";
 import * as mainnet from "./mainnet";
 import * as pyrmont from "./pyrmont";
 import * as prater from "./prater";
-import * as oonoonba from "./oonoonba";
-import * as yeerongpilly from "./yeerongpilly";
 import * as altairDevnet1 from "./altair-devnet-1";
 
-export type NetworkName = "mainnet" | "pyrmont" | "prater" | "dev" | "oonoonba" | "yeerongpilly" | "altair-devnet-1";
-export const networkNames: NetworkName[] = [
-  "mainnet",
-  "pyrmont",
-  "prater",
-  "oonoonba",
-  "yeerongpilly",
-  "altair-devnet-1",
-];
+export type NetworkName = "mainnet" | "pyrmont" | "prater" | "dev" | "altair-devnet-1";
+export const networkNames: NetworkName[] = ["mainnet", "pyrmont", "prater", "altair-devnet-1"];
 /** Networks that infura supports */
 export const infuraNetworks: NetworkName[] = ["mainnet", "pyrmont", "prater"];
 
@@ -42,10 +33,6 @@ function getNetworkData(
       return pyrmont;
     case "prater":
       return prater;
-    case "oonoonba":
-      return oonoonba;
-    case "yeerongpilly":
-      return yeerongpilly;
     case "altair-devnet-1":
       return altairDevnet1;
     default:
