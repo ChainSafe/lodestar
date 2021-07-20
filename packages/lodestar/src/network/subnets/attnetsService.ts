@@ -274,6 +274,7 @@ export class AttnetsService implements IAttnetsService {
 
   /** Trigger a gossip un-subscrition only if no-one is still subscribed */
   private unsubscribeSubnets(subnets: number[], slot: Slot): void {
+    // No need to unsubscribeTopic(). Return early to prevent repetitive extra work
     if (this.opts?.subscribeAllSubnets) return;
 
     const forks = getActiveForks(this.config, this.chain.clock.currentEpoch);
@@ -283,9 +284,7 @@ export class AttnetsService implements IAttnetsService {
         !this.subscriptionsRandom.isActiveAtSlot(subnet, slot)
       ) {
         for (const fork of forks) {
-          if (!this.opts?.subscribeAllSubnets) {
-            this.gossip.unsubscribeTopic({type: gossipType, fork, subnet});
-          }
+          this.gossip.unsubscribeTopic({type: gossipType, fork, subnet});
         }
       }
     }
