@@ -33,7 +33,7 @@ export function responseDecode(
   forkDigestContext: IForkDigestContext,
   protocol: Protocol
 ): (source: AsyncIterable<Buffer>) => AsyncGenerator<ResponseBody> {
-  return async function* (source) {
+  return async function* responseDecodeSink(source) {
     const deserializeToTree = deserializeToTreeByMethod[protocol.method];
     const contextBytesType = contextBytesTypeByProtocol(protocol);
     const bufferedSource = new BufferedSource(source as AsyncGenerator<Buffer>);

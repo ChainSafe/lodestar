@@ -11,7 +11,7 @@ export const yamlSchema = new Schema({
   implicit: [
     new Type("tag:yaml.org,2002:str", {
       kind: "scalar",
-      construct: function (data) {
+      construct: function construct(data) {
         // eslint-disable-next-line @typescript-eslint/no-unsafe-return
         return data !== null ? data : "";
       },

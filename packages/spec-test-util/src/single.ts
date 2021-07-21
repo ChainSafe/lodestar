@@ -1,10 +1,16 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return, @typescript-eslint/no-explicit-any */
 import {expect} from "chai";
 import {readdirSync, readFileSync, existsSync} from "fs";
 import {basename, join, parse} from "path";
 import {Type, CompositeType} from "@chainsafe/ssz";
 import {uncompress} from "snappyjs";
 import {isDirectory, loadYamlFile} from "./util";
+
+/* eslint-disable
+  @typescript-eslint/no-unsafe-assignment,
+  @typescript-eslint/no-unsafe-member-access,
+  @typescript-eslint/no-unsafe-return,
+  @typescript-eslint/no-explicit-any,
+  func-names */
 
 export enum InputType {
   SSZ = "ssz",

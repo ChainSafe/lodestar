@@ -3,7 +3,7 @@
  * Useful for logging, or cancelling timeouts
  */
 export function onChunk<T>(callback: (chunk: T) => void): (source: AsyncIterable<T>) => AsyncIterable<T> {
-  return async function* (source) {
+  return async function* onChunkTransform(source) {
     for await (const chunk of source) {
       callback(chunk);
       yield chunk;

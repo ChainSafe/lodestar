@@ -65,7 +65,7 @@ export function compileRouteUrlFormater(path: string): (arg: Args) => string {
     }
   });
 
-  return function (args: Args) {
+  return function urlFormater(args: Args) {
     // Don't use .map() or .join(), it's x3 slower
     let s = "";
     for (const fn of fns) s += fn(args);

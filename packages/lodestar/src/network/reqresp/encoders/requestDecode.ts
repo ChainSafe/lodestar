@@ -12,7 +12,7 @@ import {readEncodedPayload} from "../encodingStrategies";
 export function requestDecode(
   protocol: Pick<Protocol, "method" | "encoding">
 ): (source: AsyncIterable<Buffer | BufferList>) => Promise<RequestBody> {
-  return async function (source) {
+  return async function requestDecodeSink(source) {
     const type = getRequestSzzTypeByMethod(protocol.method);
     if (!type) {
       // method has no body

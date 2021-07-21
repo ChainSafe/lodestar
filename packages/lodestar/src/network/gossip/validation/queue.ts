@@ -52,7 +52,7 @@ export function wrapWithQueue(
       : undefined
   );
 
-  return async function (topicStr, gossipMsg) {
+  return async function gossipValidatorFnWithQueue(topicStr, gossipMsg) {
     await jobQueue.push(async () => gossipValidatorFn(topicStr, gossipMsg));
   };
 }

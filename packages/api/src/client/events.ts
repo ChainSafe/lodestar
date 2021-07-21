@@ -28,7 +28,7 @@ export function getClient(_config: IChainForkConfig, baseUrl: string): Api {
           // EventSource will try to reconnect always on all errors
           // `eventSource.onerror` events are informative but don't indicate the EventSource closed
           // The only way to abort the connection from the client is via eventSource.close()
-          eventSource.onerror = function (err) {
+          eventSource.onerror = function onerror(err) {
             const errEs = (err as unknown) as EventSourceError;
             // Consider 400 and 500 status errors unrecoverable, close the eventsource
             if (errEs.status === 400) {
