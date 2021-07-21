@@ -119,15 +119,15 @@ export class AggregatedAttestationPool {
       const epoch = computeEpochAtSlot(slot);
       const participants =
         epoch === currentEpoch
-          ? currentEpochParticipants
+          ? Array.from(currentEpochParticipants)
           : epoch === currentEpoch - 1
-          ? previousEpochParticipants
+          ? Array.from(previousEpochParticipants)
           : null;
       if (!participants) {
         continue;
       }
       for (const attestationGroup of attestationGroups) {
-        attestationGroup.removeBySeenValidators(Array.from(participants));
+        attestationGroup.removeBySeenValidators(participants);
         attestations.push(...attestationGroup.getAttestations());
       }
     }

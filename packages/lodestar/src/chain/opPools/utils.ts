@@ -13,7 +13,7 @@ export function pruneBySlot(map: Map<Slot, unknown>, slot: Slot, slotsRetained: 
 
   // Remove the oldest slots to keep a max of `slotsRetained` slots
   const slots = Array.from(map.keys());
-  const slotsToDelete = slots.sort().reverse().slice(slotsRetained);
+  const slotsToDelete = slots.sort((a, b) => b - a).slice(slotsRetained);
   for (const slot of slotsToDelete) {
     map.delete(slot);
   }
