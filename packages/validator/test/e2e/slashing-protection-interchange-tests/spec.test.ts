@@ -3,7 +3,6 @@ import path from "path";
 import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
 import {fromHexString} from "@chainsafe/ssz";
-import {phase0} from "@chainsafe/lodestar-types";
 import {LevelDbController} from "@chainsafe/lodestar-db";
 import {LogLevel, WinstonLogger} from "@chainsafe/lodestar-utils";
 import {config} from "@chainsafe/lodestar-config/default";
@@ -13,6 +12,8 @@ import {
   InterchangeError,
   InvalidAttestationError,
   InvalidBlockError,
+  SlashingProtectionBlock,
+  SlashingProtectionAttestation,
 } from "../../../src/slashingProtection";
 import {ISlashingProtectionInterchangeTest, SPEC_TEST_LOCATION} from "./params";
 
@@ -66,7 +67,7 @@ describe("slashing-protection-interchange-tests", () => {
           for (const [i, blockRaw] of step.blocks.entries()) {
             it(`Add block ${i}`, async () => {
               const pubkey = fromHexString(blockRaw.pubkey);
-              const block: phase0.SlashingProtectionBlock = {
+              const block: SlashingProtectionBlock = {
                 slot: parseInt(blockRaw.slot),
                 signingRoot: blockRaw.signing_root ? fromHexString(blockRaw.signing_root) : ZERO_HASH,
               };
@@ -84,7 +85,7 @@ describe("slashing-protection-interchange-tests", () => {
           for (const [i, attestationRaw] of step.attestations.entries()) {
             it(`Add attestation ${i}`, async () => {
               const pubkey = fromHexString(attestationRaw.pubkey);
-              const attestation: phase0.SlashingProtectionAttestation = {
+              const attestation: SlashingProtectionAttestation = {
                 sourceEpoch: parseInt(attestationRaw.source_epoch),
                 targetEpoch: parseInt(attestationRaw.target_epoch),
                 signingRoot: attestationRaw.signing_root ? fromHexString(attestationRaw.signing_root) : ZERO_HASH,

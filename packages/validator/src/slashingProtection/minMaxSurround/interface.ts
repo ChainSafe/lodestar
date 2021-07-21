@@ -1,13 +1,13 @@
 import {BLSPubkey, Epoch} from "@chainsafe/lodestar-types";
 
-export type Att = {
-  target: number;
-  source: number;
+export type MinMaxSurroundAttestation = {
+  targetEpoch: number;
+  sourceEpoch: number;
 };
 
 export interface IMinMaxSurround {
-  assertNoSurround(pubKey: BLSPubkey, att: Att): Promise<void>;
-  insertAttestation(pubKey: BLSPubkey, att: Att): Promise<void>;
+  assertNoSurround(pubKey: BLSPubkey, attestation: MinMaxSurroundAttestation): Promise<void>;
+  insertAttestation(pubKey: BLSPubkey, attestation: MinMaxSurroundAttestation): Promise<void>;
 }
 
 export interface IDistanceEntry {

@@ -419,32 +419,5 @@ export const Genesis = new ContainerType<phase0.Genesis>({
   },
 });
 
-// Non-speced types
-// ================
-
-export const SlashingProtectionBlock = new ContainerType<phase0.SlashingProtectionBlock>({
-  fields: {
-    slot: Slot,
-    signingRoot: Root,
-  },
-});
-
-export const SlashingProtectionAttestation = new ContainerType<phase0.SlashingProtectionAttestation>({
-  fields: {
-    sourceEpoch: Epoch,
-    targetEpoch: Epoch,
-    signingRoot: Root,
-  },
-});
-
-export const SlashingProtectionAttestationLowerBound = new ContainerType<
-  phase0.SlashingProtectionAttestationLowerBound
->({
-  fields: {
-    minSourceEpoch: Epoch,
-    minTargetEpoch: Epoch,
-  },
-});
-
 // MUST set typesRef here, otherwise expandedType() calls will throw
 typesRef.set({BeaconBlock, BeaconState});
