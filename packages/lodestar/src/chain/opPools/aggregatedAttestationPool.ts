@@ -58,12 +58,15 @@ export class AggregatedAttestationPool {
   /**
    * Get attestations to be included in a block.
    */
-  getAttestationsForBlock(state: CachedBeaconState<allForks.BeaconState>): phase0.Attestation[] {
+  getAttestationsForBlock(
+    state: CachedBeaconState<allForks.BeaconState>,
+    isValidAttestation = false
+  ): phase0.Attestation[] {
     const forkName = state.config.getForkName(state.slot);
     if (forkName === ForkName.phase0) {
-      return this.getAttestationsForPhase0Block(state);
+      return this.getAttestationsForPhase0Block(state, isValidAttestation);
     }
-    return this.getAttestationsForAltairBlock(state);
+    return this.getAttestationsForAltairBlock(state, isValidAttestation);
   }
 
   /**
@@ -71,7 +74,8 @@ export class AggregatedAttestationPool {
    * @param bySlot slot to filter, `bySlot === attestation.data.slot`
    */
   getAll(state: CachedBeaconState<allForks.BeaconState>, bySlot?: Slot): phase0.Attestation[] {
-    let attestations = this.getAttestationsForBlock(state);
+    // we don't want to validate attestations
+    let attestations = this.getAttestationsForBlock(state, true);
     if (bySlot) {
       attestations = attestations.filter((att) => att.data.slot === bySlot);
     }
@@ -83,7 +87,10 @@ export class AggregatedAttestationPool {
    * As we are close to altair, this is not really important, it's mainly for e2e.
    * The performance is not great due to the different BeaconState data structure to altair.
    */
-  private getAttestationsForPhase0Block(state: CachedBeaconState<allForks.BeaconState>): phase0.Attestation[] {
+  private getAttestationsForPhase0Block(
+    state: CachedBeaconState<allForks.BeaconState>,
+    isValidAttestation = false
+  ): phase0.Attestation[] {
     if (state.config.getForkName(state.slot) !== ForkName.phase0) {
       throw new Error(`Not support proposing block at slot ${state.slot}`);
     }
@@ -132,7 +139,9 @@ export class AggregatedAttestationPool {
       }
     }
     // consumer should limit MAX_ATTESTATIONS items
-    return attestations.filter((attestation) => safeValidateAttestation(state, attestation));
+    return isValidAttestation
+      ? attestations
+      : attestations.filter((attestation) => safeValidateAttestation(state, attestation));
   }
 
   /**
@@ -140,7 +149,10 @@ export class AggregatedAttestationPool {
    * Attestations are sorted by inclusion distance then number of attesters.
    * Attestations should pass the validation when processing attestations in beacon-state-transition.
    */
-  private getAttestationsForAltairBlock(state: CachedBeaconState<allForks.BeaconState>): phase0.Attestation[] {
+  private getAttestationsForAltairBlock(
+    state: CachedBeaconState<allForks.BeaconState>,
+    isValidAttestation = false
+  ): phase0.Attestation[] {
     // only propose block for altair
     if (state.config.getForkName(state.slot) === ForkName.phase0) {
       throw new Error(`Not support proposing block at slot ${state.slot}`);
@@ -174,7 +186,9 @@ export class AggregatedAttestationPool {
       }
     }
     // consumer should limit MAX_ATTESTATIONS items
-    return attestations.filter((attestation) => safeValidateAttestation(state, attestation));
+    return isValidAttestation
+      ? attestations
+      : attestations.filter((attestation) => safeValidateAttestation(state, attestation));
   }
 }
 
