@@ -25,7 +25,7 @@ export enum BackfillSyncStatus {
   Idle,
 }
 
-export type RangeSyncModules = {
+export type BackfillSyncModules = {
   chain: IBeaconChain;
   db: IBeaconDb;
   network: INetwork;
@@ -62,7 +62,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
   private processor: ItTrigger = new ItTrigger();
   private peers: PeerMap<phase0.Status | null> = new PeerMap();
 
-  constructor(modules: RangeSyncModules, opts?: BackfillSyncOpts) {
+  constructor(modules: BackfillSyncModules, opts?: BackfillSyncOpts) {
     super();
     this.chain = modules.chain;
     this.network = modules.network;
@@ -125,7 +125,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
             });
             await this.syncRange(fromSlot, toSlot, this.anchorBlock.message.parentRoot);
           } catch (e) {
-            this.logger.debug("Error while backfiling by range", e);
+            this.logger.debug("Error while backfilling by range", e);
           }
         } else {
           try {

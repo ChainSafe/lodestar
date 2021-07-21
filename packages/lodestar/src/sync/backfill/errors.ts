@@ -1,14 +1,14 @@
+import {LodestarError} from "@chainsafe/lodestar-utils";
 import PeerId from "peer-id";
 import {Root} from "@chainsafe/lodestar-types";
-import {LodestarError} from "../../../../utils/lib";
 
 export enum BackfillSyncErrorCode {
-  //fetched block doesn't connect to anchor block
+  /** fetched block doesn't connect to anchor block */
   NOT_ANCHORED = "not_anchored",
   // fetched blocks are not linear
   NOT_LINEAR = "not_linear",
   // peer doesn't have required blocks
-  MISSING_BLOCKS = "mssing_blocks",
+  MISSING_BLOCKS = "missing_blocks",
   INVALID_SIGNATURE = "invalid_proposer_signature",
 }
 
