@@ -104,7 +104,7 @@ export class ValidatorStore {
 
     const secretKey = this.getSecretKey(duty.pubkey); // Get before writing to slashingProtection
     await this.slashingProtection.checkAndInsertAttestation(duty.pubkey, {
-      sourceEpoch: attestationData.target.epoch,
+      sourceEpoch: attestationData.source.epoch,
       targetEpoch: attestationData.target.epoch,
       signingRoot,
     });
