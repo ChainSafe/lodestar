@@ -1,8 +1,13 @@
 import bls from "@chainsafe/bls";
 import {ForkName, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {allForks, altair, Slot, ssz, ValidatorIndex} from "@chainsafe/lodestar-types";
-import {CachedBeaconState, computeEpochAtSlot, phase0} from "@chainsafe/lodestar-beacon-state-transition";
-import {List, toHexString} from "@chainsafe/ssz";
+import {
+  CachedBeaconState,
+  computeEpochAtSlot,
+  phase0,
+  zipIndexesCommitteeBits,
+} from "@chainsafe/lodestar-beacon-state-transition";
+import {List, readonlyValues, toHexString} from "@chainsafe/ssz";
 import {MapDef} from "../../util/map";
 import {pruneBySlot} from "./utils";
 import {InsertOutcome, OpPoolError, OpPoolErrorCode} from "./types";
@@ -52,12 +57,92 @@ export class AggregatedAttestationPool {
 
   /**
    * Get attestations to be included in a block.
+   */
+  getAttestationsForBlock(state: CachedBeaconState<allForks.BeaconState>): phase0.Attestation[] {
+    const forkName = state.config.getForkName(state.slot);
+    if (forkName === ForkName.phase0) {
+      return this.getAttestationsForPhase0Block(state);
+    }
+    return this.getAttestationsForAltairBlock(state);
+  }
+
+  /**
+   * Get all attestations optionally filtered by `attestation.data.slot`
+   * @param bySlot slot to filter, `bySlot === attestation.data.slot`
+   */
+  getAll(state: CachedBeaconState<allForks.BeaconState>, bySlot?: Slot): phase0.Attestation[] {
+    let attestations = this.getAttestationsForBlock(state);
+    if (bySlot) {
+      attestations = attestations.filter((att) => att.data.slot === bySlot);
+    }
+    return attestations;
+  }
+
+  /**
+   * Get attestations to be included in a phase0 block.
+   * As we are close to altair, this is not really important, it's mainly for e2e.
+   * The performance is not great due to the different BeaconState data structure to altair.
+   */
+  private getAttestationsForPhase0Block(state: CachedBeaconState<allForks.BeaconState>): phase0.Attestation[] {
+    if (state.config.getForkName(state.slot) !== ForkName.phase0) {
+      throw new Error(`Not support proposing block at slot ${state.slot}`);
+    }
+    const phase0State = state as CachedBeaconState<phase0.BeaconState>;
+    const {epochCtx} = phase0State;
+    const currentEpoch = computeEpochAtSlot(state.slot);
+    const extractParticipation = (attestations: List<phase0.PendingAttestation>): Set<ValidatorIndex> => {
+      const allParticipants = new Set<ValidatorIndex>();
+      for (const att of readonlyValues(attestations)) {
+        const aggregationBits = att.aggregationBits;
+        const attData = att.data;
+        const attSlot = attData.slot;
+        const committeeIndex = attData.index;
+        const committee = epochCtx.getBeaconCommittee(attSlot, committeeIndex);
+        const participants = zipIndexesCommitteeBits(committee, aggregationBits);
+        for (const participant of participants) {
+          allParticipants.add(participant);
+        }
+      }
+      return allParticipants;
+    };
+    const previousEpochParticipants = extractParticipation(phase0State.previousEpochAttestations);
+    const currentEpochParticipants = extractParticipation(phase0State.currentEpochAttestations);
+    const slots = Array.from(this.attestationGroupByDataHashBySlot.keys()).sort((a, b) => b - a);
+    const attestations: phase0.Attestation[] = [];
+    for (const slot of slots) {
+      const attestationGroupByDataHash = this.attestationGroupByDataHashBySlot.get(slot);
+      // should not happen
+      if (!attestationGroupByDataHash) {
+        throw Error(`No aggregated attestation pool for slot=${slot}`);
+      }
+      const attestationGroups = Array.from(attestationGroupByDataHash.values());
+      const epoch = computeEpochAtSlot(slot);
+      const participants =
+        epoch === currentEpoch
+          ? currentEpochParticipants
+          : epoch === currentEpoch - 1
+          ? previousEpochParticipants
+          : null;
+      if (!participants) {
+        continue;
+      }
+      for (const attestationGroup of attestationGroups) {
+        attestationGroup.removeBySeenValidators(Array.from(participants));
+        attestations.push(...attestationGroup.getAttestations());
+      }
+    }
+    // consumer should limit MAX_ATTESTATIONS items
+    return attestations.filter((attestation) => safeValidateAttestation(state, attestation));
+  }
+
+  /**
+   * Get attestations to be included in an altair block.
    * Attestations are sorted by inclusion distance then number of attesters.
    * Attestations should pass the validation when processing attestations in beacon-state-transition.
    */
-  getAttestationsForBlock(state: CachedBeaconState<allForks.BeaconState>): phase0.Attestation[] {
+  private getAttestationsForAltairBlock(state: CachedBeaconState<allForks.BeaconState>): phase0.Attestation[] {
     // only propose block for altair
-    if (state.config.getForkName(state.slot) == ForkName.phase0) {
+    if (state.config.getForkName(state.slot) === ForkName.phase0) {
       throw new Error(`Not support proposing block at slot ${state.slot}`);
     }
     const altairState = state as CachedBeaconState<altair.BeaconState>;
@@ -85,33 +170,11 @@ export class AggregatedAttestationPool {
           (index) => participationStatus[index] && participationStatus[index].timelySource
         );
         attestationGroup.removeBySeenValidators(attestingIndices);
+        attestations.push(...attestationGroup.getAttestations());
       }
-      attestations.push(...attestationGroups.map((group) => group.getAttestations()).flat());
     }
     // consumer should limit MAX_ATTESTATIONS items
     return attestations.filter((attestation) => safeValidateAttestation(state, attestation));
-  }
-
-  /**
-   * Get all attestations optionally filtered by `attestation.data.slot`
-   * @param bySlot slot to filter, `bySlot === attestation.data.slot`
-   */
-  getAll(bySlot?: Slot): phase0.Attestation[] {
-    const attestationGroupByDataHashs =
-      bySlot === undefined
-        ? Array.from(this.attestationGroupByDataHashBySlot.values())
-        : [this.attestationGroupByDataHashBySlot.get(bySlot)];
-    const attestations: phase0.Attestation[] = [];
-    for (const attestationGroupByDataHash of attestationGroupByDataHashs) {
-      if (attestationGroupByDataHash) {
-        attestations.push(
-          ...Array.from(attestationGroupByDataHash.values())
-            .map((group) => group.getAttestations())
-            .flat()
-        );
-      }
-    }
-    return attestations;
   }
 }
 
@@ -131,6 +194,9 @@ function safeValidateAttestation(
 interface AttestationWithIndex {
   attestation: phase0.Attestation;
   attestingIndices: ValidatorIndex[];
+  // this is <= attestingIndices.count since some attesters may be seen by the chain
+  // this is only updated and used in removeBySeenValidators function
+  freshAttesterCount?: number;
 }
 
 /**
@@ -147,26 +213,33 @@ export class MatchingDataAttestationGroup {
     this.attestations = [];
   }
 
-  /** Add an attestation. */
+  /** Add an attestation.
+   * Try to preaggregate to existing attestations if possible.
+   * If it's a subset of an existing attestations, it's not neccesrary to add to our pool.
+   */
   add(attestation: AttestationWithIndex): InsertOutcome {
     const attestingIndices = attestation.attestingIndices.valueOf() as ValidatorIndex[];
     // preaggregate
-    let aggregated = false;
+    let insertResult = InsertOutcome.NewData;
     for (const existingAttestation of this.attestations) {
       const existingAttestingIndices = existingAttestation.attestingIndices.valueOf() as ValidatorIndex[];
+      let numIntersection = 0;
+      for (const index of attestingIndices) {
+        if (existingAttestingIndices.includes(index)) numIntersection++;
+      }
       // no intersection
-      if (
-        new Set([...attestingIndices, ...existingAttestingIndices]).size ===
-        attestingIndices.length + existingAttestingIndices.length
-      ) {
-        aggregated = true;
+      if (numIntersection === 0) {
         aggregateInto(existingAttestation, attestation, this.committee);
+        insertResult = InsertOutcome.Aggregated;
+      } else if (numIntersection === attestingIndices.length) {
+        // this new attestation is actually a subset of an existing one, don't want to add it
+        insertResult = InsertOutcome.AlreadyKnown;
       }
     }
-    if (!aggregated) {
+    if (insertResult === InsertOutcome.NewData) {
       this.attestations.push(attestation);
     }
-    return aggregated ? InsertOutcome.Aggregated : InsertOutcome.NewData;
+    return insertResult;
   }
 
   /** Remove all attestations with seen validators. */
@@ -175,9 +248,10 @@ export class MatchingDataAttestationGroup {
     let numRemoved = 0;
     while (index >= 0) {
       const existingAttestation = this.attestations[index];
-      if (
-        existingAttestation.attestingIndices.every((attestingIndex) => seenAttestingIndices.includes(attestingIndex))
-      ) {
+      existingAttestation.freshAttesterCount = existingAttestation.attestingIndices.filter(
+        (attIndex) => !seenAttestingIndices.includes(attIndex)
+      ).length;
+      if (existingAttestation.freshAttesterCount === 0) {
         this.attestations.splice(index, 1);
         numRemoved++;
       }
@@ -188,9 +262,13 @@ export class MatchingDataAttestationGroup {
 
   /** Get unseen attestations to be included in a block or API. */
   getAttestations(): phase0.Attestation[] {
-    // order by num attestingIndices desc
+    // order by number of fresh (not-seen) attesters
     return this.attestations
-      .sort((attestation1, attestation2) => attestation2.attestingIndices.length - attestation1.attestingIndices.length)
+      .sort((attestation1, attestation2) => {
+        const freshAttesterCount1 = attestation1.freshAttesterCount ?? attestation1.attestingIndices.length;
+        const freshAttesterCount2 = attestation2.freshAttesterCount ?? attestation2.attestingIndices.length;
+        return freshAttesterCount2 - freshAttesterCount1;
+      })
       .map((attestation) => attestation.attestation);
   }
 

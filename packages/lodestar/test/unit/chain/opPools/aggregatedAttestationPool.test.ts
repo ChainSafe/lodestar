@@ -89,6 +89,15 @@ describe("MatchingDataAttestationGroup", function () {
     expect(attestations).to.be.deep.equal([attestation2, attestation1], "Incorrect attestations for block");
   });
 
+  it("add - already known, getAttestations() return 1", () => {
+    const attestation2 = {...attestationSeed, ...{aggregationBits: [true, false, false] as List<boolean>}};
+    // attestingIndices is subset of an existing one
+    const result = attestationGroup.add({attestation: attestation2, attestingIndices: [100]});
+    expect(result).to.be.equal(InsertOutcome.AlreadyKnown, "incorrect InsertOutcome");
+    const attestations = attestationGroup.getAttestations();
+    expect(attestations).to.be.deep.equal([attestation1], "expect exactly 1 attestation");
+  });
+
   it("add - aggregate into existing attestation, getAttestations() return 1", () => {
     const attestation2 = {...attestationSeed, ...{aggregationBits: [false, false, true] as List<boolean>}};
     const sk2 = bls.SecretKey.fromBytes(Buffer.alloc(32, 2));
@@ -106,13 +115,29 @@ describe("MatchingDataAttestationGroup", function () {
   });
 
   it("removeIncluded - numRemoved is 0", () => {
-    const numRemoved = attestationGroup.removeBySeenValidators([300]);
+    const numRemoved = attestationGroup.removeBySeenValidators([200]);
     expect(numRemoved).to.be.equal(0, "expect no attestation is removed");
+    const attestations = attestationGroup.getAttestations();
+    expect(attestations).to.be.deep.equal([attestation1], "incorrect getAttestations() result");
   });
 
   it("removeIncluded - numRemoved is 1", () => {
     const numRemoved = attestationGroup.removeBySeenValidators(committee);
     expect(numRemoved).to.be.equal(1, "expect exactly 1 attestation is removed");
+    expect(attestationGroup.getAttestations()).to.be.deep.equal([], "the resulted attestations should be empty");
+  });
+
+  it("getAttestations - order by number of fresh attesters", () => {
+    const attestation2 = {...attestationSeed, ...{aggregationBits: [true, false, true] as List<boolean>}};
+    const result = attestationGroup.add({attestation: attestation2, attestingIndices: [100, 300]});
+    expect(result).to.be.equal(InsertOutcome.NewData, "incorrect InsertOutcome");
+    const numRemoved = attestationGroup.removeBySeenValidators([300]);
+    expect(numRemoved).to.be.equal(0, "expect no attestation is removed");
+    // attestation1 has 2 fresh attesters, attestation 2 has 1 fresh attesters
+    expect(attestationGroup.getAttestations()).to.be.deep.equal(
+      [attestation1, attestation2],
+      "incorrect getAttestations() result"
+    );
   });
 });
 

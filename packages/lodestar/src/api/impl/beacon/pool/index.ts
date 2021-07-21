@@ -20,7 +20,8 @@ export function getBeaconPoolApi({
   return {
     async getPoolAttestations(filters) {
       // Already filtered by slot
-      let attestations = chain.aggregatedAttestationPool.getAll(filters?.slot);
+      const headState = chain.getHeadState();
+      let attestations = chain.aggregatedAttestationPool.getAll(headState, filters?.slot);
 
       if (filters?.committeeIndex !== undefined) {
         attestations = attestations.filter((attestation) => filters.committeeIndex === attestation.data.index);
