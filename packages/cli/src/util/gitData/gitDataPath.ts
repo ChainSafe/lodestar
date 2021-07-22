@@ -8,7 +8,7 @@ import path from "path";
  * WARNING!! If you change this path make sure to update:
  * - 'packages/cli/package.json' -> .files -> `".git-data.json"`
  */
-export const gitDataPath = path.resolve(__dirname, "../.git-data.json");
+export const gitDataPath = path.resolve(__dirname, "../../../.git-data.json");
 
 export type GitDataFile = {
   /** "developer/feature-1" */

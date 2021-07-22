@@ -8,8 +8,8 @@ describe("util / gitData", () => {
   it("gitData file must exist", () => {
     const gitData = readGitDataFile();
 
-    if (gitData.branch) throw Error("No gitData.branch");
-    if (gitData.commit) throw Error("No gitData.commit");
+    if (!gitData.branch) throw Error("No gitData.branch");
+    if (!gitData.commit) throw Error("No gitData.commit");
   });
 
   it("gitData path must be included in the package.json", () => {
@@ -19,7 +19,7 @@ describe("util / gitData", () => {
     }
 
     const pkgJson = JSON.parse(fs.readFileSync(pkgJsonPath, "utf8")) as {files: string[]};
-    const gitDataPathFromPkgJson = path.relative(pkgJsonPath, gitDataPath);
+    const gitDataPathFromPkgJson = path.relative(path.dirname(pkgJsonPath), gitDataPath);
 
     expect(pkgJson.files).to.include(gitDataPathFromPkgJson, "package.json .files does not include gitData path");
   });
