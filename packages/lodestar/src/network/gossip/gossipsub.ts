@@ -11,14 +11,13 @@ import {ILogger} from "@chainsafe/lodestar-utils";
 import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 
 import {IMetrics} from "../../metrics";
-import {GossipTopic, GossipTopicMap, GossipType, GossipTypeMap} from "./interface";
+import {GossipJobQueues, GossipTopic, GossipTopicMap, GossipType, GossipTypeMap, ValidatorFnsByType} from "./interface";
 import {getGossipSSZType, GossipTopicCache, stringifyGossipTopic} from "./topic";
 import {computeMsgId, encodeMessageData, UncompressCache} from "./encoding";
 import {DEFAULT_ENCODING} from "./constants";
 import {GossipValidationError} from "./errors";
 import {IForkDigestContext} from "../../util/forkDigestContext";
 import {GOSSIP_MAX_SIZE} from "../../constants";
-import {createValidatorFnsByTopic} from "./validation/validatorFnsByTopic";
 import {createValidatorFnsByType} from "./validation";
 import {GossipHandlers} from "./handlers";
 import {Map2d, Map2dArr} from "../../util/map";
@@ -47,6 +46,7 @@ interface IGossipsubModules {
  * See https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/p2p-interface.md#the-gossip-domain-gossipsub
  */
 export class Eth2Gossipsub extends Gossipsub {
+  readonly jobQueues: GossipJobQueues;
   private readonly config: IChainForkConfig;
   private readonly forkDigestContext: IForkDigestContext;
   private readonly logger: ILogger;
@@ -55,6 +55,8 @@ export class Eth2Gossipsub extends Gossipsub {
   private readonly gossipTopicCache: GossipTopicCache;
   private readonly uncompressCache = new UncompressCache();
   private readonly msgIdCache = new WeakMap<InMessage, Uint8Array>();
+
+  private readonly validatorFnsByType: ValidatorFnsByType;
 
   constructor(modules: IGossipsubModules) {
     // Gossipsub parameters defined here:
@@ -76,21 +78,15 @@ export class Eth2Gossipsub extends Gossipsub {
     // Note: We use the validator functions as handlers. No handler will be registered to gossipsub.
     // libp2p-js layer will emit the message to an EventEmitter that won't be listened by anyone.
     // TODO: Force to ensure there's a validatorFunction attached to every received topic.
-    const validatorFnsByType = createValidatorFnsByType(gossipHandlers, {
+    const {validatorFnsByType, jobQueues} = createValidatorFnsByType(gossipHandlers, {
       config,
       logger,
       uncompressCache: this.uncompressCache,
-      gossipTopicCache: this.gossipTopicCache,
       metrics,
       signal,
     });
-
-    const validatorFnsByTopic = createValidatorFnsByTopic(config, forkDigestContext, validatorFnsByType);
-
-    // Register validator functions for all topics, forks and encodings
-    for (const [topicStr, validatorFn] of validatorFnsByTopic.entries()) {
-      this.topicValidators.set(topicStr, validatorFn);
-    }
+    this.validatorFnsByType = validatorFnsByType;
+    this.jobQueues = jobQueues;
 
     if (metrics) {
       metrics.gossipMeshPeersByType.addCollect(() => this.onScrapeMetrics(metrics));
@@ -152,16 +148,11 @@ export class Eth2Gossipsub extends Gossipsub {
 
       // We use 'StrictNoSign' policy, no need to validate message signature
 
-      // Ensure we have a validate function associated with all topics.
-      // Otherwise super.validate() blindly accepts the object.
-      const validatorFn = this.topicValidators.get(topicStr);
-      if (!validatorFn) {
-        this.logger.error("No gossip validatorFn", {topic: topicStr});
-        throw new GossipValidationError(ERR_TOPIC_VALIDATOR_IGNORE, `No gossip validatorFn for topic ${topicStr}`);
-      }
+      // Also validates that the topicStr is known
+      const topic = this.gossipTopicCache.getTopic(topicStr);
 
       // No error here means that the incoming object is valid
-      await validatorFn(topicStr, message);
+      await this.validatorFnsByType[topic.type](topic, message);
     } catch (e) {
       // JobQueue may throw non-typed errors
       const code = e instanceof GossipValidationError ? e.code : ERR_TOPIC_VALIDATOR_IGNORE;

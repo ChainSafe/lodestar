@@ -13,7 +13,7 @@ import {ArchiveBlocksTask} from "./tasks/archiveBlocks";
 import {StatesArchiver} from "./tasks/archiveStates";
 import {IBeaconSync} from "../sync";
 import {INetwork} from "../network";
-import {JobQueue} from "../util/queue";
+import {JobFnQueue} from "../util/queue";
 
 export interface ITasksModules {
   db: IBeaconDb;
@@ -33,7 +33,7 @@ export class TasksService {
   private readonly chain: IBeaconChain;
   private readonly network: INetwork;
   private readonly logger: ILogger;
-  private jobQueue: JobQueue;
+  private jobQueue: JobFnQueue;
 
   private readonly statesArchiver: StatesArchiver;
 
@@ -53,7 +53,7 @@ export class TasksService {
     this.logger = modules.logger;
     this.network = modules.network;
     this.statesArchiver = new StatesArchiver(this.config, modules);
-    this.jobQueue = new JobQueue({maxLength, signal});
+    this.jobQueue = new JobFnQueue({maxLength, signal});
   }
 
   start(): void {

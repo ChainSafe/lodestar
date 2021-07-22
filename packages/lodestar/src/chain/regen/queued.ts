@@ -7,7 +7,7 @@ import {CheckpointStateCache, StateContextCache} from "../stateCache";
 import {ChainEventEmitter} from "../emitter";
 import {IMetrics} from "../../metrics";
 import {IBeaconDb} from "../../db";
-import {JobQueue} from "../../util/queue";
+import {JobFnQueue} from "../../util/queue/fnQueue";
 import {IStateRegenerator} from "./interface";
 import {StateRegenerator} from "./regen";
 import {RegenError, RegenErrorCode} from "./errors";
@@ -32,7 +32,7 @@ type QueuedStateRegeneratorModules = {
  */
 export class QueuedStateRegenerator implements IStateRegenerator {
   private regen: StateRegenerator;
-  private jobQueue: JobQueue;
+  private jobQueue: JobFnQueue;
 
   private config: IBeaconConfig;
   private forkChoice: IForkChoice;
@@ -41,7 +41,7 @@ export class QueuedStateRegenerator implements IStateRegenerator {
 
   constructor(modules: QueuedStateRegeneratorModules) {
     this.regen = new StateRegenerator(modules);
-    this.jobQueue = new JobQueue(
+    this.jobQueue = new JobFnQueue(
       {maxLength: REGEN_QUEUE_MAX_LEN, signal: modules.signal},
       modules.metrics ? modules.metrics.regenQueue : undefined
     );

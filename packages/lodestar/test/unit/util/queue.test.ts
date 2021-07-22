@@ -2,7 +2,7 @@ import {sleep} from "@chainsafe/lodestar-utils";
 import {AbortController} from "@chainsafe/abort-controller";
 import {expect} from "chai";
 
-import {JobQueue, QueueError, QueueErrorCode, QueueType} from "../../../src/util/queue";
+import {JobFnQueue, QueueError, QueueErrorCode, QueueType} from "../../../src/util/queue";
 import {expectLodestarError, expectRejectedWithLodestarError} from "../../utils/errors";
 
 describe("Job queue", () => {
@@ -11,7 +11,7 @@ describe("Job queue", () => {
 
   it("should only allow a single job at a time to run", async () => {
     const controller = new AbortController();
-    const jobQueue = new JobQueue({maxLength, signal: controller.signal});
+    const jobQueue = new JobFnQueue({maxLength, signal: controller.signal});
 
     let activeJobs = 0;
     async function job(): Promise<void> {
@@ -30,7 +30,7 @@ describe("Job queue", () => {
 
   it("should throw after the queue is full", async () => {
     const controller = new AbortController();
-    const jobQueue = new JobQueue({maxLength, signal: controller.signal});
+    const jobQueue = new JobFnQueue({maxLength, signal: controller.signal});
 
     async function job(): Promise<void> {
       await sleep(jobDuration);
@@ -47,7 +47,7 @@ describe("Job queue", () => {
 
   it("should throw after the queue is aborted", async () => {
     const controller = new AbortController();
-    const jobQueue = new JobQueue({maxLength, signal: controller.signal});
+    const jobQueue = new JobFnQueue({maxLength, signal: controller.signal});
 
     async function job(): Promise<void> {
       await sleep(jobDuration);
@@ -81,7 +81,7 @@ describe("Job queue", () => {
     for (const {type, expectedResults} of testCases) {
       it(type, async () => {
         const controller = new AbortController();
-        const jobQueue = new JobQueue({maxLength, type, signal: controller.signal});
+        const jobQueue = new JobFnQueue({maxLength, type, signal: controller.signal});
 
         const results: number[] = [];
         const jobPromises: Promise<void>[] = [];

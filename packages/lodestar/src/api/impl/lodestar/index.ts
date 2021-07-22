@@ -1,12 +1,14 @@
 import {routes} from "@chainsafe/lodestar-api";
 import {allForks} from "@chainsafe/lodestar-beacon-state-transition";
+import {GossipType} from "../../../network";
 import {ApiModules} from "../types";
 
 export function getLodestarApi({
   chain,
   config,
+  network,
   sync,
-}: Pick<ApiModules, "chain" | "config" | "sync">): routes.lodestar.Api {
+}: Pick<ApiModules, "chain" | "config" | "network" | "sync">): routes.lodestar.Api {
   let writingHeapdump = false;
 
   return {
@@ -69,6 +71,20 @@ export function getLodestarApi({
 
     async getSyncChainsDebugState() {
       return {data: sync.getSyncChainsDebugState()};
+    },
+
+    async getGossipQueueItems(gossipType: GossipType) {
+      const jobQueue = network.gossip.jobQueues[gossipType];
+      if (!jobQueue) {
+        throw Error(`Unknown gossipType ${gossipType}, known values: ${Object.keys(jobQueue).join(", ")}`);
+      }
+
+      return jobQueue.getItems().map((item) => ({
+        topic: item.item.topic,
+        receivedFrom: item.item.message.receivedFrom,
+        data: item.item.message.data,
+        addedTimeMs: item.addedTimeMs,
+      }));
     },
   };
 }

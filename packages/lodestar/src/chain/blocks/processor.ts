@@ -4,7 +4,7 @@ import {allForks, ssz} from "@chainsafe/lodestar-types";
 
 import {IBlockJob, IChainSegmentJob} from "../interface";
 import {ChainEvent} from "../emitter";
-import {JobQueue} from "../../util/queue";
+import {JobFnQueue} from "../../util/queue";
 import {BlockError, BlockErrorCode, ChainSegmentError} from "../errors";
 
 import {processBlock, processChainSegment, BlockProcessModules} from "./process";
@@ -17,7 +17,7 @@ export type BlockProcessorModules = BlockProcessModules & BlockValidateModules;
  */
 export class BlockProcessor {
   private modules: BlockProcessorModules;
-  private jobQueue: JobQueue;
+  private jobQueue: JobFnQueue;
 
   constructor({
     signal,
@@ -28,7 +28,7 @@ export class BlockProcessor {
     maxLength?: number;
   }) {
     this.modules = modules;
-    this.jobQueue = new JobQueue(
+    this.jobQueue = new JobFnQueue(
       {maxLength, signal},
       modules.metrics ? modules.metrics.blockProcessorQueue : undefined
     );

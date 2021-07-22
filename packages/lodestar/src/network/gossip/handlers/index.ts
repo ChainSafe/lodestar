@@ -16,6 +16,7 @@ import {
   validateSyncCommitteeGossipContributionAndProof,
   validateGossipVoluntaryExit,
 } from "../../../chain/validation";
+import {INetwork} from "../../interface";
 
 export type GossipHandlerFn = (object: GossipTypeMap[GossipType], topic: GossipTopicMap[GossipType]) => Promise<void>;
 export type GossipHandlers = {
@@ -27,6 +28,7 @@ type ValidatorFnsModules = {
   config: IBeaconConfig;
   db: IBeaconDb;
   logger: ILogger;
+  network: INetwork;
   metrics: IMetrics | null;
 };
 
@@ -45,7 +47,7 @@ type ValidatorFnsModules = {
  * - Eth2.0 gossipsub protocol strictly defined a single topic for message
  */
 export function getGossipHandlers(modules: ValidatorFnsModules): GossipHandlers {
-  const {chain, db, config, metrics, logger} = modules;
+  const {chain, db, config, metrics, network, logger} = modules;
 
   return {
     [GossipType.beacon_block]: async (signedBlock) => {
@@ -119,6 +121,12 @@ export function getGossipHandlers(modules: ValidatorFnsModules): GossipHandlers 
       metrics?.registerUnaggregatedAttestation(OpSource.gossip, seenTimestampSec, indexedAttestation);
 
       // Handler
+
+      // Node may be subscribe to extra subnets (long-lived random subnets). For those, validate the messages
+      // but don't import them, to save CPU and RAM
+      if (!network.attnetsService.shouldProcess(subnet, attestation.data.slot)) {
+        return;
+      }
 
       try {
         chain.attestationPool.add(attestation);

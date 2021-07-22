@@ -4,13 +4,13 @@ import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {Json} from "@chainsafe/ssz";
 import {ILogger, mapValues} from "@chainsafe/lodestar-utils";
 import {IMetrics} from "../../../metrics";
-import {getGossipSSZType, GossipTopicCache} from "../topic";
+import {getGossipSSZType} from "../topic";
 import {GossipHandlers, GossipHandlerFn} from "../handlers";
-import {GossipType, GossipValidatorFn, ValidatorFnsByType} from "../interface";
+import {GossipJobQueues, GossipType, GossipValidatorFn, ValidatorFnsByType} from "../interface";
 import {GossipValidationError} from "../errors";
 import {GossipActionError, GossipAction} from "../../../chain/errors";
 import {decodeMessageData, UncompressCache} from "../encoding";
-import {wrapWithQueue} from "./queue";
+import {createValidationQueues} from "./queue";
 import {DEFAULT_ENCODING} from "../constants";
 import {getGossipAcceptMetadataByType, GetGossipAcceptMetadataFn} from "./onAccept";
 
@@ -19,7 +19,6 @@ type ValidatorFnModules = {
   logger: ILogger;
   metrics: IMetrics | null;
   uncompressCache: UncompressCache;
-  gossipTopicCache: GossipTopicCache;
 };
 
 /**
@@ -30,12 +29,23 @@ type ValidatorFnModules = {
 export function createValidatorFnsByType(
   gossipHandlers: GossipHandlers,
   modules: ValidatorFnModules & {signal: AbortSignal}
-): ValidatorFnsByType {
-  return mapValues(gossipHandlers, (gossipHandler, type) => {
-    const gossipValidatorFn = getGossipValidatorFn(gossipHandler, type, modules);
-
-    return wrapWithQueue(gossipValidatorFn, type, modules.signal, modules.metrics);
+): {validatorFnsByType: ValidatorFnsByType; jobQueues: GossipJobQueues} {
+  const gossipValidatorFns = mapValues(gossipHandlers, (gossipHandler, type) => {
+    return getGossipValidatorFn(gossipHandler, type, modules);
   });
+
+  const jobQueues = createValidationQueues(gossipValidatorFns, modules.signal, modules.metrics);
+
+  const validatorFnsByType = mapValues(
+    jobQueues,
+    (jobQueue): GossipValidatorFn => {
+      return async function gossipValidatorFnWithQueue(topic, gossipMsg) {
+        await jobQueue.push({topic, message: gossipMsg});
+      };
+    }
+  );
+
+  return {jobQueues, validatorFnsByType};
 }
 
 /**
@@ -57,12 +67,11 @@ function getGossipValidatorFn<K extends GossipType>(
   type: K,
   modules: ValidatorFnModules
 ): GossipValidatorFn {
-  const {config, logger, metrics, uncompressCache, gossipTopicCache} = modules;
+  const {config, logger, metrics, uncompressCache} = modules;
   const getGossipObjectAcceptMetadata = getGossipAcceptMetadataByType[type] as GetGossipAcceptMetadataFn;
 
-  return async function gossipValidatorFn(topicStr, gossipMsg) {
+  return async function gossipValidatorFn(topic, gossipMsg) {
     try {
-      const topic = gossipTopicCache.getTopic(topicStr);
       const encoding = topic.encoding ?? DEFAULT_ENCODING;
 
       // Deserialize object from bytes ONLY after being picked up from the validation queue
