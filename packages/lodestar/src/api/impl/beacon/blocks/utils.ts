@@ -5,7 +5,7 @@ import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {IBeaconDb} from "../../../../db";
 import {GENESIS_SLOT} from "../../../../constants";
-import {fromHexString} from "@chainsafe/ssz";
+import {byteArrayEquals, fromHexString} from "@chainsafe/ssz";
 import {ApiError, ValidationError} from "../../errors";
 
 export function toBeaconHeaderResponse(
@@ -52,14 +52,21 @@ async function resolveBlockIdOrNull(
   }
 
   if (blockId === "finalized") {
-    return await db.blockArchive.get(forkChoice.getFinalizedCheckpoint().epoch);
+    return await db.blockArchive.get(forkChoice.getFinalizedBlock().slot);
   }
 
   if (blockId.startsWith("0x")) {
     const root = fromHexString(blockId);
     const summary = forkChoice.getBlock(root);
     if (summary) {
-      return await db.block.get(summary.blockRoot);
+      // All unfinalized blocks and the finalized block are tracked by the fork choice.
+      // Unfinalized blocks are stored in the block repository, but the finalized block is in the block archive
+      const finalized = forkChoice.getFinalizedBlock();
+      if (byteArrayEquals(summary.blockRoot, finalized.blockRoot)) {
+        return await db.blockArchive.getByRoot(root);
+      } else {
+        return await db.block.get(root);
+      }
     } else {
       return await db.blockArchive.getByRoot(root);
     }
@@ -73,7 +80,14 @@ async function resolveBlockIdOrNull(
 
   const blockSummary = forkChoice.getCanonicalBlockSummaryAtSlot(slot);
   if (blockSummary) {
-    return db.block.get(blockSummary.blockRoot);
+    // All unfinalized blocks and the finalized block are tracked by the fork choice.
+    // Unfinalized blocks are stored in the block repository, but the finalized block is in the block archive
+    const finalized = forkChoice.getFinalizedBlock();
+    if (byteArrayEquals(blockSummary.blockRoot, finalized.blockRoot)) {
+      return await db.blockArchive.get(blockSummary.slot);
+    } else {
+      return await db.block.get(blockSummary.blockRoot);
+    }
   } else {
     return await db.blockArchive.get(slot);
   }
