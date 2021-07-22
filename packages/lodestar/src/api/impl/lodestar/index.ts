@@ -131,7 +131,7 @@ function regenRequestToJson(config: IChainForkConfig, regenRequest: RegenRequest
       };
 
     case "getCheckpointState":
-      return ssz.Checkpoint.toJson(regenRequest.args[0]);
+      return ssz.phase0.Checkpoint.toJson(regenRequest.args[0]);
 
     case "getPreState": {
       const slot = regenRequest.args[0].slot;
