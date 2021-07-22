@@ -5,7 +5,7 @@ import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {IBeaconDb} from "../../../../db";
 import {GENESIS_SLOT} from "../../../../constants";
-import {byteArrayEquals, fromHexString} from "@chainsafe/ssz";
+import {fromHexString} from "@chainsafe/ssz";
 import {ApiError, ValidationError} from "../../errors";
 
 export function toBeaconHeaderResponse(
@@ -55,40 +55,34 @@ async function resolveBlockIdOrNull(
     return await db.blockArchive.get(forkChoice.getFinalizedBlock().slot);
   }
 
+  let blockSummary;
+  let getBlockByBlockArchive;
+
   if (blockId.startsWith("0x")) {
-    const root = fromHexString(blockId);
-    const summary = forkChoice.getBlock(root);
-    if (summary) {
-      // All unfinalized blocks and the finalized block are tracked by the fork choice.
-      // Unfinalized blocks are stored in the block repository, but the finalized block is in the block archive
-      const finalized = forkChoice.getFinalizedBlock();
-      if (byteArrayEquals(summary.blockRoot, finalized.blockRoot)) {
-        return await db.blockArchive.getByRoot(root);
-      } else {
-        return await db.block.get(root);
-      }
-    } else {
-      return await db.blockArchive.getByRoot(root);
+    const blockHash = fromHexString(blockId);
+    blockSummary = forkChoice.getBlock(blockHash);
+    getBlockByBlockArchive = async () => await db.blockArchive.getByRoot(blockHash);
+  } else {
+    // block id must be slot
+    const blockSlot = parseInt(blockId, 10);
+    if (isNaN(blockSlot) && isNaN(blockSlot - 0)) {
+      throw new ValidationError(`Invalid block id '${blockId}'`, "blockId");
     }
+    blockSummary = forkChoice.getCanonicalBlockSummaryAtSlot(blockSlot);
+    getBlockByBlockArchive = async () => await db.blockArchive.get(blockSlot);
   }
 
-  // block id must be slot
-  const slot = parseInt(blockId, 10);
-  if (isNaN(slot) && isNaN(slot - 0)) {
-    throw new ValidationError(`Invalid block id '${blockId}'`, "blockId");
-  }
-
-  const blockSummary = forkChoice.getCanonicalBlockSummaryAtSlot(slot);
   if (blockSummary) {
-    // All unfinalized blocks and the finalized block are tracked by the fork choice.
+    // All unfinalized blocks **and the finalized block** are tracked by the fork choice.
     // Unfinalized blocks are stored in the block repository, but the finalized block is in the block archive
     const finalized = forkChoice.getFinalizedBlock();
-    if (byteArrayEquals(blockSummary.blockRoot, finalized.blockRoot)) {
-      return await db.blockArchive.get(blockSummary.slot);
+    if (blockSummary.slot === finalized.slot) {
+      return await db.blockArchive.get(finalized.slot);
     } else {
       return await db.block.get(blockSummary.blockRoot);
     }
   } else {
-    return await db.blockArchive.get(slot);
+    // Blocks not in the fork choice are in the block archive
+    return await getBlockByBlockArchive();
   }
 }
