@@ -12,10 +12,10 @@ export function onGracefulShutdown(
   logFn: (msg: string) => void = console.log
 ): void {
   for (const signal of exitSignals) {
-    process.once(signal, async () => {
+    process.once(signal, async function onSignal() {
       logFn("Stopping gracefully, use Ctrl+C again to force process exit");
 
-      process.on(signal, () => {
+      process.on(signal, function onSecondSignal() {
         logFn("Forcing process exit");
         process.exit(1);
       });

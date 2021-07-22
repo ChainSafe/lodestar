@@ -34,6 +34,7 @@ import {
 import {getNextSyncCommittee} from "../../altair/epoch/sync_committee";
 import {ssz} from "@chainsafe/lodestar-types";
 import {CachedInactivityScoreList, CachedInactivityScoreListProxyHandler} from "./cachedInactivityScoreList";
+import {newFilledArray} from "../../util";
 
 /**
  * `BeaconState` with various caches
@@ -79,12 +80,8 @@ export function createCachedBeaconState<T extends allForks.BeaconState>(
     };
     currIndexedSyncCommittee = emptyIndexedSyncCommittee;
     nextIndexedSyncCommittee = emptyIndexedSyncCommittee;
-    cachedPreviousParticipation = MutableVector.from(
-      Array.from({length: cachedValidators.length}, () => emptyParticipationStatus)
-    );
-    cachedCurrentParticipation = MutableVector.from(
-      Array.from({length: cachedValidators.length}, () => emptyParticipationStatus)
-    );
+    cachedPreviousParticipation = MutableVector.from(newFilledArray(cachedValidators.length, emptyParticipationStatus));
+    cachedCurrentParticipation = MutableVector.from(newFilledArray(cachedValidators.length, emptyParticipationStatus));
     cachedInactivityScores = MutableVector.empty();
   } else {
     const {pubkey2index} = epochCtx;

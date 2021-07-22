@@ -117,6 +117,8 @@ module.exports = {
     quotes: ["error", "double"],
     semi: "off",
     "no-restricted-imports": ["error", {patterns: ["../lib/*", "@chainsafe/*/lib/*"]}],
+    // Force to add names to all functions to ease CPU profiling
+    "func-names": ["error", "always"],
 
     // Prevents accidentally pushing a commit with .only in Mocha tests
     "no-only-tests/no-only-tests": "error",
@@ -127,6 +129,7 @@ module.exports = {
       rules: {
         "import/no-extraneous-dependencies": "off",
         "@typescript-eslint/no-explicit-any": "off",
+        "func-names": "off",
       },
     },
     {

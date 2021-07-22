@@ -119,8 +119,8 @@ export class PeerManager {
     // On start-up will connected to existing peers in libp2p.peerStore, same as autoDial behaviour
     this.heartbeat();
     this.intervals = [
-      setInterval(() => this.pingAndStatusTimeouts(), CHECK_PING_STATUS_INTERVAL),
-      setInterval(() => this.heartbeat(), HEARTBEAT_INTERVAL_MS),
+      setInterval(this.pingAndStatusTimeouts.bind(this), CHECK_PING_STATUS_INTERVAL),
+      setInterval(this.heartbeat.bind(this), HEARTBEAT_INTERVAL_MS),
     ];
   }
 

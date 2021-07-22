@@ -56,7 +56,7 @@ export async function handleRequest(
     // Yields success chunks and error chunks in the same generator
     // This syntax allows to recycle stream.sink to send success and error chunks without returning
     // in case request whose body is a List fails at chunk_i > 0, without breaking out of the for..await..of
-    (async function* () {
+    (async function* requestHandlerSource() {
       try {
         const requestBody = await withTimeout(
           () => pipe(stream.source, requestDecode(protocol)),

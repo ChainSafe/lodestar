@@ -31,7 +31,7 @@ export function responseEncodeSuccess(
 ): (source: AsyncIterable<ResponseBody>) => AsyncIterable<Buffer> {
   const contextBytesType = contextBytesTypeByProtocol(protocol);
 
-  return async function* (source) {
+  return async function* responseEncodeSuccessTransform(source) {
     for await (const chunk of source) {
       // <result>
       yield Buffer.from([RespStatus.SUCCESS]);

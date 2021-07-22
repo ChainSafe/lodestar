@@ -1,7 +1,14 @@
-/* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any,@typescript-eslint/no-unused-vars */
-import {writeFile} from "fs";
 import {expect} from "chai";
 import {loadYamlFile} from "./util";
+
+/* eslint-disable
+  @typescript-eslint/no-unsafe-call,
+  @typescript-eslint/no-unsafe-member-access,
+  @typescript-eslint/no-unsafe-return,
+  @typescript-eslint/no-unsafe-assignment,
+  @typescript-eslint/no-explicit-any,
+  @typescript-eslint/no-unused-vars,
+  func-names */
 
 export interface IBaseCase {
   description: string;
@@ -22,8 +29,6 @@ interface TestSpec<TestCase extends IBaseCase> {
   handler: string;
   testCases: TestCase[];
 }
-
-const env = process.env;
 
 /**
  * Run yaml Eth2.0 bulk spec tests (m) for a certain function

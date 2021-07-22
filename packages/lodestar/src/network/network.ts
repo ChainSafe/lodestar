@@ -120,7 +120,7 @@ export class Network implements INetwork {
     );
 
     this.chain.emitter.on(ChainEvent.clockEpoch, this.onEpoch);
-    modules.signal.addEventListener("abort", () => this.close(), {once: true});
+    modules.signal.addEventListener("abort", this.close.bind(this), {once: true});
   }
 
   /** Destroy this instance. Can only be called once. */

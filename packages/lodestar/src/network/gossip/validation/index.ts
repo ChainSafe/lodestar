@@ -60,7 +60,7 @@ function getGossipValidatorFn<K extends GossipType>(
   const {config, logger, metrics, uncompressCache, gossipTopicCache} = modules;
   const getGossipObjectAcceptMetadata = getGossipAcceptMetadataByType[type] as GetGossipAcceptMetadataFn;
 
-  return async function (topicStr, gossipMsg) {
+  return async function gossipValidatorFn(topicStr, gossipMsg) {
     try {
       const topic = gossipTopicCache.getTopic(topicStr);
       const encoding = topic.encoding ?? DEFAULT_ENCODING;
