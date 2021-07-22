@@ -169,7 +169,7 @@ export class AggregatedAttestationPool {
         const committee = attestationGroup.getCommittee();
         const seenValidatorIndices = new Set<ValidatorIndex>();
         for (const validatorIndex of committee) {
-          if (participationStatus[validatorIndex] && participationStatus[validatorIndex].timelySource) {
+          if (participationStatus[validatorIndex]?.timelySource) {
             seenValidatorIndices.add(validatorIndex);
           }
         }
