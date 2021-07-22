@@ -108,7 +108,7 @@ export class QueuedStateRegenerator implements IStateRegenerator {
     return this.jobQueue.push({key: "getState", args: [stateRoot]});
   }
 
-  private async jobQueueProcessor(regenRequest: RegenRequest): Promise<CachedBeaconState<allForks.BeaconState>> {
+  private jobQueueProcessor = async (regenRequest: RegenRequest): Promise<CachedBeaconState<allForks.BeaconState>> => {
     switch (regenRequest.key) {
       case "getPreState":
         return this.regen.getPreState(regenRequest.args[0]);
@@ -119,5 +119,5 @@ export class QueuedStateRegenerator implements IStateRegenerator {
       case "getState":
         return this.regen.getState(regenRequest.args[0]);
     }
-  }
+  };
 }
