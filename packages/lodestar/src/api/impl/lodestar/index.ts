@@ -1,8 +1,8 @@
 import {routes} from "@chainsafe/lodestar-api";
 import {allForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {Json, toHexString} from "@chainsafe/ssz";
-import {IChainForkConfig} from "../../../../../config/lib";
-import {ssz} from "../../../../../types/lib/phase0";
+import {IChainForkConfig} from "@chainsafe/lodestar-config";
+import {ssz} from "@chainsafe/lodestar-types";
 import {BeaconChain, IBlockJob, IChainSegmentJob} from "../../../chain";
 import {QueuedStateRegenerator, RegenRequest} from "../../../chain/regen";
 import {GossipType} from "../../../network";

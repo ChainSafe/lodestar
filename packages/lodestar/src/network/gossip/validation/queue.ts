@@ -1,6 +1,6 @@
 import {AbortSignal} from "@chainsafe/abort-controller";
 import {InMessage} from "libp2p-interfaces/src/pubsub";
-import {mapValues} from "../../../../../utils/lib";
+import {mapValues} from "@chainsafe/lodestar-utils";
 import {IMetrics} from "../../../metrics";
 import {JobItemQueue, JobQueueOpts, QueueType} from "../../../util/queue";
 import {GossipJobQueues, GossipTopic, GossipType, ValidatorFnsByType} from "../interface";
