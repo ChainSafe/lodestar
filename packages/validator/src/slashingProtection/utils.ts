@@ -9,7 +9,7 @@ export function isEqualRoot(root1: Root, root2: Root): boolean {
 }
 
 export function isEqualNonZeroRoot(root1: Root, root2: Root): boolean {
-  return !isEqualRoot(root1, ZERO_ROOT) && !isEqualRoot(root2, ZERO_ROOT) && isEqualRoot(root1, root2);
+  return !isEqualRoot(root1, ZERO_ROOT) && isEqualRoot(root1, root2);
 }
 
 export function fromOptionalHexString(hex: string | undefined): Root {
