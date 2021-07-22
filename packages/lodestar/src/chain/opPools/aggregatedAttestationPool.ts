@@ -62,13 +62,18 @@ export class AggregatedAttestationPool {
    */
   getAttestationsForBlock(
     state: CachedBeaconState<allForks.BeaconState>,
-    isValidAttestation = false
+    validateAttestations = false
   ): phase0.Attestation[] {
     const forkName = state.config.getForkName(state.slot);
-    if (forkName === ForkName.phase0) {
-      return this.getAttestationsForPhase0Block(state, isValidAttestation);
-    }
-    return this.getAttestationsForAltairBlock(state, isValidAttestation);
+
+    const attestations =
+      forkName === ForkName.phase0
+        ? this.getAttestationsForPhase0Block(state)
+        : this.getAttestationsForAltairBlock(state);
+
+    return validateAttestations
+      ? attestations.slice(0, MAX_ATTESTATIONS)
+      : attestations.filter((attestation) => safeValidateAttestation(state, attestation)).slice(0, MAX_ATTESTATIONS);
   }
 
   /**
@@ -89,10 +94,7 @@ export class AggregatedAttestationPool {
    * As we are close to altair, this is not really important, it's mainly for e2e.
    * The performance is not great due to the different BeaconState data structure to altair.
    */
-  private getAttestationsForPhase0Block(
-    state: CachedBeaconState<allForks.BeaconState>,
-    isValidAttestation = false
-  ): phase0.Attestation[] {
+  private getAttestationsForPhase0Block(state: CachedBeaconState<allForks.BeaconState>): phase0.Attestation[] {
     // check for phase0 block already
     const phase0State = state as CachedBeaconState<phase0.BeaconState>;
     const {epochCtx} = phase0State;
@@ -130,9 +132,7 @@ export class AggregatedAttestationPool {
       }
     }
 
-    return isValidAttestation
-      ? attestations.slice(0, MAX_ATTESTATIONS)
-      : attestations.filter((attestation) => safeValidateAttestation(state, attestation)).slice(0, MAX_ATTESTATIONS);
+    return attestations;
   }
 
   /**
@@ -140,10 +140,7 @@ export class AggregatedAttestationPool {
    * Attestations are sorted by inclusion distance then number of attesters.
    * Attestations should pass the validation when processing attestations in beacon-state-transition.
    */
-  private getAttestationsForAltairBlock(
-    state: CachedBeaconState<allForks.BeaconState>,
-    isValidAttestation = false
-  ): phase0.Attestation[] {
+  private getAttestationsForAltairBlock(state: CachedBeaconState<allForks.BeaconState>): phase0.Attestation[] {
     // check for altair block already
     const altairState = state as CachedBeaconState<altair.BeaconState>;
     const currentEpoch = computeEpochAtSlot(state.slot);
@@ -182,9 +179,7 @@ export class AggregatedAttestationPool {
       }
     }
 
-    return isValidAttestation
-      ? attestations.slice(0, MAX_ATTESTATIONS)
-      : attestations.filter((attestation) => safeValidateAttestation(state, attestation)).slice(0, MAX_ATTESTATIONS);
+    return attestations;
   }
 }
 
