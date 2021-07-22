@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
+import rimraf from "rimraf";
 import {fromHexString} from "@chainsafe/ssz";
 import {LevelDbController} from "@chainsafe/lodestar-db";
 import {LogLevel, WinstonLogger} from "@chainsafe/lodestar-utils";
@@ -25,6 +26,10 @@ describe("slashing-protection-interchange-tests", () => {
   const testCases = loadTestCases(path.join(SPEC_TEST_LOCATION, "/tests/generated"));
   const dbLocation = "./.__testdb";
   const controller = new LevelDbController({name: dbLocation}, {logger: new WinstonLogger({level: LogLevel.error})});
+
+  after(() => {
+    rimraf.sync(dbLocation);
+  });
 
   for (const testCase of testCases) {
     describe(testCase.name, async () => {

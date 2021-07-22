@@ -1,5 +1,6 @@
 import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
+import rimraf from "rimraf";
 import {LevelDbController} from "@chainsafe/lodestar-db";
 import {LogLevel, WinstonLogger} from "@chainsafe/lodestar-utils";
 import {config} from "@chainsafe/lodestar-config/default";
@@ -16,13 +17,18 @@ chai.use(chaiAsPromised);
 /* eslint-disable no-console */
 
 describe("slashing-protection custom tests", () => {
-  const dbLocation = "./.__testdb";
+  const dbLocation = "./.__testdb_2";
   const controller = new LevelDbController({name: dbLocation}, {logger: new WinstonLogger({level: LogLevel.error})});
   const pubkey = Buffer.alloc(96, 1);
 
-  beforeEach(async () => {
+  before(async () => {
     await controller.start();
+  });
+
+  after(async () => {
     await controller.clear();
+    await controller.stop();
+    rimraf.sync(dbLocation);
   });
 
   it("Should reject same block", async () => {
