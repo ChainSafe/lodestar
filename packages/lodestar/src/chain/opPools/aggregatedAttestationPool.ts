@@ -36,18 +36,18 @@ export class AggregatedAttestationPool {
     if (slot < lowestPermissibleSlot) {
       return InsertOutcome.Old;
     }
+
     const attestationGroupByDataHash = this.attestationGroupByDataHashBySlot.getOrDefault(slot);
     const dataRoot = ssz.phase0.AttestationData.hashTreeRoot(attestation.data);
     const dataRootHex = toHexString(dataRoot);
+
     let attestationGroup = attestationGroupByDataHash.get(dataRootHex);
-    if (attestationGroup) {
-      return attestationGroup.add({attestation, attestingIndices: new Set(attestingIndices)});
-    } else {
+    if (!attestationGroup) {
       attestationGroup = new MatchingDataAttestationGroup(committee);
-      attestationGroup.add({attestation, attestingIndices: new Set(attestingIndices)});
       attestationGroupByDataHash.set(dataRootHex, attestationGroup);
-      return InsertOutcome.NewData;
     }
+
+    return attestationGroup.add({attestation, attestingIndices: new Set(attestingIndices)});
   }
 
   /** Remove attestations which are too old to be included in a block. */
@@ -100,16 +100,20 @@ export class AggregatedAttestationPool {
 
     const previousEpochParticipants = extractParticipation(phase0State.previousEpochAttestations, epochCtx);
     const currentEpochParticipants = extractParticipation(phase0State.currentEpochAttestations, epochCtx);
-    const slots = Array.from(this.attestationGroupByDataHashBySlot.keys()).sort((a, b) => b - a);
+
     const attestations: phase0.Attestation[] = [];
+
+    const slots = Array.from(this.attestationGroupByDataHashBySlot.keys()).sort((a, b) => b - a);
     for (const slot of slots) {
       const attestationGroupByDataHash = this.attestationGroupByDataHashBySlot.get(slot);
       // should not happen
       if (!attestationGroupByDataHash) {
         throw Error(`No aggregated attestation pool for slot=${slot}`);
       }
+
       const attestationGroups = Array.from(attestationGroupByDataHash.values());
       const epoch = computeEpochAtSlot(slot);
+
       const participants =
         epoch === currentEpoch
           ? currentEpochParticipants
@@ -119,11 +123,13 @@ export class AggregatedAttestationPool {
       if (!participants) {
         continue;
       }
+
       for (const attestationGroup of attestationGroups) {
         attestationGroup.removeBySeenValidators(participants);
         attestations.push(...attestationGroup.getAttestations());
       }
     }
+
     return isValidAttestation
       ? attestations.slice(0, MAX_ATTESTATIONS)
       : attestations.filter((attestation) => safeValidateAttestation(state, attestation)).slice(0, MAX_ATTESTATIONS);
@@ -143,14 +149,17 @@ export class AggregatedAttestationPool {
     const currentEpoch = computeEpochAtSlot(state.slot);
     const previousParticipation = altairState.previousEpochParticipation.persistent.toArray();
     const currentParticipation = altairState.currentEpochParticipation.persistent.toArray();
-    const slots = Array.from(this.attestationGroupByDataHashBySlot.keys()).sort((a, b) => b - a);
+
     const attestations: phase0.Attestation[] = [];
+
+    const slots = Array.from(this.attestationGroupByDataHashBySlot.keys()).sort((a, b) => b - a);
     for (const slot of slots) {
       const attestationGroupByDataHash = this.attestationGroupByDataHashBySlot.get(slot);
       // should not happen
       if (!attestationGroupByDataHash) {
         throw Error(`No aggregated attestation pool for slot=${slot}`);
       }
+
       const attestationGroups = Array.from(attestationGroupByDataHash.values());
       const epoch = computeEpochAtSlot(slot);
       const participationStatus =
@@ -158,6 +167,7 @@ export class AggregatedAttestationPool {
       if (!participationStatus) {
         continue;
       }
+
       for (const attestationGroup of attestationGroups) {
         const committee = attestationGroup.getCommittee();
         const seenValidatorIndices = new Set<ValidatorIndex>();
@@ -166,10 +176,12 @@ export class AggregatedAttestationPool {
             seenValidatorIndices.add(validatorIndex);
           }
         }
+
         attestationGroup.removeBySeenValidators(seenValidatorIndices);
         attestations.push(...attestationGroup.getAttestations());
       }
     }
+
     return isValidAttestation
       ? attestations.slice(0, MAX_ATTESTATIONS)
       : attestations.filter((attestation) => safeValidateAttestation(state, attestation)).slice(0, MAX_ATTESTATIONS);
@@ -284,9 +296,11 @@ export function aggregateInto(
   for (const attIndex of attestation2.attestingIndices) {
     attestation1.attestingIndices.add(attIndex);
   }
+
   attestation1.attestation.aggregationBits = Array.from({length: committee.length}, (_, i) =>
     attestation1.attestingIndices.has(committee[i])
   ) as List<boolean>;
+
   const signature1 = bls.Signature.fromBytes(attestation1.attestation.signature.valueOf() as Uint8Array);
   const signature2 = bls.Signature.fromBytes(attestation2.attestation.signature.valueOf() as Uint8Array);
   attestation1.attestation.signature = bls.Signature.aggregate([signature1, signature2]).toBytes();
