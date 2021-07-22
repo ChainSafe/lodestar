@@ -30,8 +30,6 @@ interface TestSpec<TestCase extends IBaseCase> {
   testCases: TestCase[];
 }
 
-const env = process.env;
-
 /**
  * Run yaml Eth2.0 bulk spec tests (m) for a certain function
  * Compares actual vs expected for all test cases
