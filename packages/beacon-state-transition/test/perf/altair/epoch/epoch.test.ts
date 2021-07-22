@@ -10,14 +10,14 @@ describe("Altair epoch transition steps", () => {
   });
 
   const originalState = generatePerfTestCachedStateAltair({goBackOneSlot: true});
-  const process = allForks.prepareEpochProcessState(originalState);
+  const epochProcess = allForks.prepareEpochProcessState(originalState);
 
   const idPrefix = `epoch altair - ${perfStateId}`;
 
   itBench({
     id: `${idPrefix} - processJustificationAndFinalization`,
     beforeEach: () => originalState.clone() as allForks.CachedBeaconState<allForks.BeaconState>,
-    fn: (state) => altair.processJustificationAndFinalization(state, process),
+    fn: (state) => altair.processJustificationAndFinalization(state, epochProcess),
   });
 
   // As of Jun 18
@@ -27,67 +27,74 @@ describe("Altair epoch transition steps", () => {
   itBench({
     id: `${idPrefix} - processInactivityUpdates`,
     beforeEach: () => originalState.clone(),
-    fn: (state) => altair.processInactivityUpdates(state, process),
+    fn: (state) => altair.processInactivityUpdates(state, epochProcess),
   });
 
   itBench({
     id: `${idPrefix} - processRewardsAndPenalties`,
     beforeEach: () => originalState.clone(),
-    fn: (state) => altair.processRewardsAndPenalties(state, process),
+    fn: (state) => altair.processRewardsAndPenalties(state, epochProcess),
   });
 
   itBench({
     id: `${idPrefix} - processRegistryUpdates`,
     beforeEach: () => originalState.clone() as allForks.CachedBeaconState<allForks.BeaconState>,
-    fn: (state) => altair.processRegistryUpdates(state, process),
+    fn: (state) => altair.processRegistryUpdates(state, epochProcess),
   });
 
   itBench({
     id: `${idPrefix} - processSlashings`,
     beforeEach: () => originalState.clone(),
-    fn: (state) => altair.processSlashings(state, process),
+    fn: (state) => altair.processSlashings(state, epochProcess),
   });
 
-  itBench({
-    id: `${idPrefix} - processEth1DataReset`,
-    beforeEach: () => originalState.clone() as allForks.CachedBeaconState<allForks.BeaconState>,
-    fn: (state) => allForks.processEth1DataReset(state, process),
-  });
+  if (!process.env.CI) {
+    // very simple and fast function, no need to benchmark
+    itBench({
+      id: `${idPrefix} - processEth1DataReset`,
+      beforeEach: () => originalState.clone() as allForks.CachedBeaconState<allForks.BeaconState>,
+      fn: (state) => allForks.processEth1DataReset(state, epochProcess),
+    });
+
+    // very simple and fast function, no need to benchmark
+    itBench({
+      id: `${idPrefix} - processHistoricalRootsUpdate`,
+      beforeEach: () => originalState.clone() as allForks.CachedBeaconState<allForks.BeaconState>,
+      fn: (state) => allForks.processHistoricalRootsUpdate(state, epochProcess),
+    });
+
+    // very simple and fast function, no need to benchmark
+    itBench({
+      id: `${idPrefix} - processSyncCommitteeUpdates`,
+      beforeEach: () => originalState.clone(),
+      fn: (state) => altair.processSyncCommitteeUpdates(state, epochProcess),
+    });
+
+    // very simple and fast function, no need to benchmark
+    itBench({
+      id: `${idPrefix} - processSlashingsReset`,
+      beforeEach: () => originalState.clone() as allForks.CachedBeaconState<allForks.BeaconState>,
+      fn: (state) => allForks.processSlashingsReset(state, epochProcess),
+    });
+
+    // very simple and fast function, no need to benchmark
+    itBench({
+      id: `${idPrefix} - processRandaoMixesReset`,
+      beforeEach: () => originalState.clone() as allForks.CachedBeaconState<allForks.BeaconState>,
+      fn: (state) => allForks.processRandaoMixesReset(state, epochProcess),
+    });
+  }
 
   itBench({
     id: `${idPrefix} - processEffectiveBalanceUpdates`,
     beforeEach: () => originalState.clone() as allForks.CachedBeaconState<allForks.BeaconState>,
-    fn: (state) => allForks.processEffectiveBalanceUpdates(state, process),
-  });
-
-  itBench({
-    id: `${idPrefix} - processSlashingsReset`,
-    beforeEach: () => originalState.clone() as allForks.CachedBeaconState<allForks.BeaconState>,
-    fn: (state) => allForks.processSlashingsReset(state, process),
-  });
-
-  itBench({
-    id: `${idPrefix} - processRandaoMixesReset`,
-    beforeEach: () => originalState.clone() as allForks.CachedBeaconState<allForks.BeaconState>,
-    fn: (state) => allForks.processRandaoMixesReset(state, process),
-  });
-
-  itBench({
-    id: `${idPrefix} - processHistoricalRootsUpdate`,
-    beforeEach: () => originalState.clone() as allForks.CachedBeaconState<allForks.BeaconState>,
-    fn: (state) => allForks.processHistoricalRootsUpdate(state, process),
+    fn: (state) => allForks.processEffectiveBalanceUpdates(state, epochProcess),
   });
 
   itBench({
     id: `${idPrefix} - processParticipationFlagUpdates`,
     beforeEach: () => originalState.clone(),
     fn: (state) => altair.processParticipationFlagUpdates(state),
-  });
-
-  itBench({
-    id: `${idPrefix} - processSyncCommitteeUpdates`,
-    beforeEach: () => originalState.clone(),
-    fn: (state) => altair.processSyncCommitteeUpdates(state, process),
   });
 
   // do prepareEpochProcessState last

@@ -20,12 +20,12 @@ describe("root equals", () => {
     runs: 1024,
   });
 
-  itBench("ssz.Root.equals", () => {
-    ssz.Root.equals(rootTree, stateRoot);
-  });
-
-  // We only ssz.Root.equals(), benchmark only that one in CI
+  // This benchmark is very unstable in CI. We already know that "ssz.Root.equals" is the fastest
   if (!process.env.CI) {
+    itBench("ssz.Root.equals", () => {
+      ssz.Root.equals(rootTree, stateRoot);
+    });
+
     itBench("ssz.Root.equals with valueOf()", () => {
       ssz.Root.equals(rootTree.valueOf() as Uint8Array, stateRoot);
     });

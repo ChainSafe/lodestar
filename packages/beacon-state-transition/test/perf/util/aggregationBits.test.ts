@@ -18,11 +18,17 @@ describe("aggregationBits", () => {
 
   const idPrefix = `aggregationBits - ${len} els`;
 
-  itBench(`${idPrefix} - readonlyValues`, () => {
-    Array.from(readonlyValues(bitlistTree));
-  });
+  // aggregationBits - 2048 els - readonlyValues	228.51 us/op	583.42 us/op	0.39
+  // aggregationBits - 2048 els - zipIndexesInBitList	50.904 us/op	236.17 us/op	0.22
 
-  itBench(`${idPrefix} - zipIndexesInBitList`, () => {
-    zipIndexesCommitteeBits(indexes, bitlistTree);
-  });
+  // This benchmark is very unstable in CI. We already know that zipIndexesInBitList is faster
+  if (!process.env.CI) {
+    itBench(`${idPrefix} - readonlyValues`, () => {
+      Array.from(readonlyValues(bitlistTree));
+    });
+
+    itBench(`${idPrefix} - zipIndexesInBitList`, () => {
+      zipIndexesCommitteeBits(indexes, bitlistTree);
+    });
+  }
 });
