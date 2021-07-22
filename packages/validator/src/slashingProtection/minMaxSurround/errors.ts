@@ -1,5 +1,5 @@
 import {LodestarError} from "@chainsafe/lodestar-utils";
-import {Att} from "./interface";
+import {MinMaxSurroundAttestation} from "./interface";
 
 export enum SurroundAttestationErrorCode {
   /**
@@ -13,8 +13,16 @@ export enum SurroundAttestationErrorCode {
 }
 
 type SurroundAttestationErrorType =
-  | {code: SurroundAttestationErrorCode.IS_SURROUNDING; att: Att; att2Target: number}
-  | {code: SurroundAttestationErrorCode.IS_SURROUNDED; att: Att; att2Target: number};
+  | {
+      code: SurroundAttestationErrorCode.IS_SURROUNDING;
+      attestation: MinMaxSurroundAttestation;
+      attestation2Target: number;
+    }
+  | {
+      code: SurroundAttestationErrorCode.IS_SURROUNDED;
+      attestation: MinMaxSurroundAttestation;
+      attestation2Target: number;
+    };
 
 export class SurroundAttestationError extends LodestarError<SurroundAttestationErrorType> {
   constructor(type: SurroundAttestationErrorType) {

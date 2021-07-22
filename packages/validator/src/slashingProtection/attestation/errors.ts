@@ -1,5 +1,6 @@
-import {Epoch, phase0} from "@chainsafe/lodestar-types";
+import {Epoch} from "@chainsafe/lodestar-types";
 import {LodestarError} from "@chainsafe/lodestar-utils";
+import {SlashingProtectionAttestation} from "../types";
 
 export enum InvalidAttestationErrorCode {
   /**
@@ -33,20 +34,20 @@ export enum InvalidAttestationErrorCode {
 type InvalidAttestationErrorType =
   | {
       code: InvalidAttestationErrorCode.DOUBLE_VOTE;
-      att: phase0.SlashingProtectionAttestation;
-      prev: phase0.SlashingProtectionAttestation;
+      attestation: SlashingProtectionAttestation;
+      prev: SlashingProtectionAttestation;
     }
   | {
       code: InvalidAttestationErrorCode.NEW_SURROUNDS_PREV;
-      att: phase0.SlashingProtectionAttestation;
+      attestation: SlashingProtectionAttestation;
       // Since using min-max surround, the actual attestation may not be available
-      prev: phase0.SlashingProtectionAttestation | null;
+      prev: SlashingProtectionAttestation | null;
     }
   | {
       code: InvalidAttestationErrorCode.PREV_SURROUNDS_NEW;
-      att: phase0.SlashingProtectionAttestation;
+      attestation: SlashingProtectionAttestation;
       // Since using min-max surround, the actual attestation may not be available
-      prev: phase0.SlashingProtectionAttestation | null;
+      prev: SlashingProtectionAttestation | null;
     }
   | {
       code: InvalidAttestationErrorCode.SOURCE_EXCEEDS_TARGET;

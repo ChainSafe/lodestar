@@ -1,4 +1,5 @@
-import {BLSPubkey, Root, phase0} from "@chainsafe/lodestar-types";
+import {BLSPubkey, Root} from "@chainsafe/lodestar-types";
+import {SlashingProtectionAttestation, SlashingProtectionBlock} from "../types";
 import {IInterchangeCompleteV4} from "./formats/completeV4";
 import {IInterchangeV5} from "./formats/v5";
 
@@ -11,7 +12,7 @@ export interface IInterchangeLodestar {
   genesisValidatorsRoot: Root;
   data: {
     pubkey: BLSPubkey;
-    signedBlocks: phase0.SlashingProtectionBlock[];
-    signedAttestations: phase0.SlashingProtectionAttestation[];
+    signedBlocks: SlashingProtectionBlock[];
+    signedAttestations: SlashingProtectionAttestation[];
   }[];
 }
