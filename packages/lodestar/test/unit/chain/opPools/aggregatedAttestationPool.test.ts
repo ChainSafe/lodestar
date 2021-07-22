@@ -76,13 +76,13 @@ describe("MatchingDataAttestationGroup", function () {
     attestationGroup = new MatchingDataAttestationGroup(committee);
     attestationGroup.add({
       attestation: attestation1,
-      attestingIndices: [100, 200],
+      attestingIndices: new Set([100, 200]),
     });
   });
 
   it("add - new data, getAttestations() return 2", () => {
     const attestation2 = {...attestationSeed, ...{aggregationBits: [true, true, true] as List<boolean>}};
-    const result = attestationGroup.add({attestation: attestation2, attestingIndices: committee});
+    const result = attestationGroup.add({attestation: attestation2, attestingIndices: new Set(committee)});
     expect(result).to.be.equal(InsertOutcome.NewData, "incorrect InsertOutcome");
     const attestations = attestationGroup.getAttestations();
     // attestation2 should be first since it has more attesters there
@@ -92,7 +92,7 @@ describe("MatchingDataAttestationGroup", function () {
   it("add - already known, getAttestations() return 1", () => {
     const attestation2 = {...attestationSeed, ...{aggregationBits: [true, false, false] as List<boolean>}};
     // attestingIndices is subset of an existing one
-    const result = attestationGroup.add({attestation: attestation2, attestingIndices: [100]});
+    const result = attestationGroup.add({attestation: attestation2, attestingIndices: new Set([100])});
     expect(result).to.be.equal(InsertOutcome.AlreadyKnown, "incorrect InsertOutcome");
     const attestations = attestationGroup.getAttestations();
     expect(attestations).to.be.deep.equal([attestation1], "expect exactly 1 attestation");
@@ -102,7 +102,7 @@ describe("MatchingDataAttestationGroup", function () {
     const attestation2 = {...attestationSeed, ...{aggregationBits: [false, false, true] as List<boolean>}};
     const sk2 = bls.SecretKey.fromBytes(Buffer.alloc(32, 2));
     attestation2.signature = sk2.sign(attestationDataRoot).toBytes();
-    const result = attestationGroup.add({attestation: attestation2, attestingIndices: [300]});
+    const result = attestationGroup.add({attestation: attestation2, attestingIndices: new Set([300])});
     expect(result).to.be.equal(InsertOutcome.Aggregated, "incorrect InsertOutcome");
     const attestations = attestationGroup.getAttestations();
     expect(attestations.length).to.be.equal(1, "expect exactly 1 aggregated attestation");
@@ -115,23 +115,23 @@ describe("MatchingDataAttestationGroup", function () {
   });
 
   it("removeIncluded - numRemoved is 0", () => {
-    const numRemoved = attestationGroup.removeBySeenValidators([200]);
+    const numRemoved = attestationGroup.removeBySeenValidators(new Set([200]));
     expect(numRemoved).to.be.equal(0, "expect no attestation is removed");
     const attestations = attestationGroup.getAttestations();
     expect(attestations).to.be.deep.equal([attestation1], "incorrect getAttestations() result");
   });
 
   it("removeIncluded - numRemoved is 1", () => {
-    const numRemoved = attestationGroup.removeBySeenValidators(committee);
+    const numRemoved = attestationGroup.removeBySeenValidators(new Set(committee));
     expect(numRemoved).to.be.equal(1, "expect exactly 1 attestation is removed");
     expect(attestationGroup.getAttestations()).to.be.deep.equal([], "the resulted attestations should be empty");
   });
 
   it("getAttestations - order by number of fresh attesters", () => {
     const attestation2 = {...attestationSeed, ...{aggregationBits: [true, false, true] as List<boolean>}};
-    const result = attestationGroup.add({attestation: attestation2, attestingIndices: [100, 300]});
+    const result = attestationGroup.add({attestation: attestation2, attestingIndices: new Set([100, 300])});
     expect(result).to.be.equal(InsertOutcome.NewData, "incorrect InsertOutcome");
-    const numRemoved = attestationGroup.removeBySeenValidators([300]);
+    const numRemoved = attestationGroup.removeBySeenValidators(new Set([300]));
     expect(numRemoved).to.be.equal(0, "expect no attestation is removed");
     // attestation1 has 2 fresh attesters, attestation 2 has 1 fresh attesters
     expect(attestationGroup.getAttestations()).to.be.deep.equal(
@@ -158,10 +158,10 @@ describe("aggregateInto", function () {
 
   it("should aggregate 2 attestations", () => {
     const committee = [100, 200];
-    const attWithIndex1 = {attestation: attestation1, attestingIndices: [100]};
-    const attWithIndex2 = {attestation: attestation2, attestingIndices: [200]};
+    const attWithIndex1 = {attestation: attestation1, attestingIndices: new Set([100])};
+    const attWithIndex2 = {attestation: attestation2, attestingIndices: new Set([200])};
     aggregateInto(attWithIndex1, attWithIndex2, committee);
-    expect(attWithIndex1.attestingIndices).to.be.deep.equal([100, 200], "invalid aggregated attestingIndices");
+    expect(attWithIndex1.attestingIndices).to.be.deep.equal(new Set([100, 200]), "invalid aggregated attestingIndices");
     expect(attWithIndex1.attestation.aggregationBits).to.be.deep.equal([true, true], "invalid aggregationBits");
     const aggregatedSignature = bls.Signature.fromBytes(attWithIndex1.attestation.signature.valueOf() as Uint8Array);
     expect(
