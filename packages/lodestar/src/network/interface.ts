@@ -8,10 +8,9 @@ import PeerId from "peer-id";
 import {INetworkEventBus} from "./events";
 import {Eth2Gossipsub} from "./gossip";
 import {MetadataController} from "./metadata";
-import {IPeerRpcScoreStore, IPeerMetadataStore} from "./peers";
+import {IPeerRpcScoreStore, IPeerMetadataStore, PeerAction} from "./peers";
 import {IReqResp} from "./reqresp";
 import {ISubnetsService, CommitteeSubscription} from "./subnets";
-import {PeerAction} from "../../lib/network";
 
 export type PeerSearchOptions = {
   supportsProtocols?: string[];

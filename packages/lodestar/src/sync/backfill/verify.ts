@@ -1,7 +1,7 @@
 import {allForks, CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Root, allForks as allForkTypes, ssz} from "@chainsafe/lodestar-types";
-import {GENESIS_SLOT} from "../../../../params/lib";
+import {GENESIS_SLOT} from "@chainsafe/lodestar-params";
 import {IBlsVerifier} from "../../chain/bls";
 import {BackfillSyncError, BackfillSyncErrorCode} from "./errors";
 
