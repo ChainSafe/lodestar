@@ -38,7 +38,7 @@ export async function validateGossipAttestation(
   const targetEpoch = attTarget.epoch;
 
   // [REJECT] The attestation's epoch matches its target -- i.e. attestation.data.target.epoch == compute_epoch_at_slot(attestation.data.slot)
-  if (!ssz.Epoch.equals(targetEpoch, attEpoch)) {
+  if (targetEpoch !== attEpoch) {
     throw new AttestationError(GossipAction.REJECT, {
       code: AttestationErrorCode.BAD_TARGET_EPOCH,
     });
