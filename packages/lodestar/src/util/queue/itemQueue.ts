@@ -2,11 +2,15 @@ import {sleep} from "@chainsafe/lodestar-utils";
 import {QueueError, QueueErrorCode} from "./errors";
 import {defaultQueueOpts, IQueueMetrics, JobQueueOpts, QueueType} from "./options";
 
-export class JobItemQueue<T, R> {
+/**
+ * JobQueue that stores arguments in the job array instead of closures.
+ * Supports a single itemProcessor, for arbitrary functions use the JobFnQueue
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export class JobItemQueue<Args extends any[], R> {
   private readonly opts: Required<JobQueueOpts>;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private readonly jobs: {
-    item: T;
+    args: Args;
     addedTimeMs: number;
     resolve: (result: R | PromiseLike<R>) => void;
     reject: (error?: Error) => void;
@@ -15,9 +19,13 @@ export class JobItemQueue<T, R> {
   private runningJobs = 0;
   private lastYield = 0;
 
-  constructor(private readonly itemProcessor: (item: T) => Promise<R>, opts: JobQueueOpts, metrics?: IQueueMetrics) {
+  constructor(
+    private readonly itemProcessor: (...args: Args) => Promise<R>,
+    opts: JobQueueOpts,
+    metrics?: IQueueMetrics
+  ) {
     this.opts = {...defaultQueueOpts, ...opts};
-    this.opts.signal.addEventListener("abort", this.dropAllJobs, {once: true});
+    this.opts.signal.addEventListener("abort", this.abortAllJobs, {once: true});
 
     if (metrics) {
       this.metrics = metrics;
@@ -25,7 +33,7 @@ export class JobItemQueue<T, R> {
     }
   }
 
-  push(item: T): Promise<R> {
+  push(...args: Args): Promise<R> {
     if (this.opts.signal.aborted) {
       throw new QueueError({code: QueueErrorCode.QUEUE_ABORTED});
     }
@@ -42,13 +50,13 @@ export class JobItemQueue<T, R> {
     }
 
     return new Promise<R>((resolve, reject) => {
-      this.jobs.push({item, resolve, reject, addedTimeMs: Date.now()});
+      this.jobs.push({args, resolve, reject, addedTimeMs: Date.now()});
       setTimeout(this.runJob, 0);
     });
   }
 
-  getItems(): {item: T; addedTimeMs: number}[] {
-    return this.jobs.map((job) => ({item: job.item, addedTimeMs: job.addedTimeMs}));
+  getItems(): {args: Args; addedTimeMs: number}[] {
+    return this.jobs.map((job) => ({args: job.args, addedTimeMs: job.addedTimeMs}));
   }
 
   dropAllJobs = (): void => {
@@ -74,7 +82,7 @@ export class JobItemQueue<T, R> {
       const timer = this.metrics?.jobTime.startTimer();
       this.metrics?.jobWaitTime.observe((Date.now() - job.addedTimeMs) / 1000);
 
-      const result = await this.itemProcessor(job.item);
+      const result = await this.itemProcessor(...job.args);
       job.resolve(result);
 
       if (timer) timer();
@@ -92,5 +100,12 @@ export class JobItemQueue<T, R> {
 
     // Potentially run a new job
     void this.runJob();
+  };
+
+  private abortAllJobs = (): void => {
+    while (this.jobs.length > 0) {
+      const job = this.jobs.pop();
+      if (job) job.reject(new QueueError({code: QueueErrorCode.QUEUE_ABORTED}));
+    }
   };
 }

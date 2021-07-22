@@ -1,6 +1,17 @@
-import {Epoch} from "@chainsafe/lodestar-types";
-import {fromHexString, Json, toHexString} from "@chainsafe/ssz";
-import {jsonType, ReqEmpty, reqEmpty, ReturnTypes, ReqSerializers, RoutesData, sameType, Schema} from "../utils";
+import {Epoch, Slot, ssz} from "@chainsafe/lodestar-types";
+import {ByteVectorType, ContainerType, Json} from "@chainsafe/ssz";
+import {
+  jsonType,
+  ReqEmpty,
+  reqEmpty,
+  ReturnTypes,
+  ReqSerializers,
+  RoutesData,
+  sameType,
+  Schema,
+  StringType,
+  ArrayOf,
+} from "../utils";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
@@ -22,10 +33,15 @@ export type GossipQueueItem = {
   addedTimeMs: number;
 };
 
-type GossipQueueItemJson = {
-  topic: unknown;
-  receivedFrom: string;
-  data: string;
+export type RegenQueueItem = {
+  key: string;
+  args: Json;
+  addedTimeMs: number;
+};
+
+export type BlockProcessorQueueItem = {
+  blocks: Slot[];
+  jobOpts: Json;
   addedTimeMs: number;
 };
 
@@ -40,6 +56,10 @@ export type Api = {
   getSyncChainsDebugState(): Promise<{data: SyncChainDebugState[]}>;
   /** Dump all items in a gossip queue, by gossipType */
   getGossipQueueItems(gossipType: string): Promise<GossipQueueItem[]>;
+  /** Dump all items in the regen queue */
+  getRegenQueueItems(): Promise<RegenQueueItem[]>;
+  /** Dump all items in the block processor queue */
+  getBlockProcessorQueueItems(): Promise<BlockProcessorQueueItem[]>;
 };
 
 /**
@@ -49,8 +69,10 @@ export const routesData: RoutesData<Api> = {
   getWtfNode: {url: "/eth/v1/lodestar/wtfnode/", method: "GET"},
   writeHeapdump: {url: "/eth/v1/lodestar/writeheapdump/", method: "GET"},
   getLatestWeakSubjectivityCheckpointEpoch: {url: "/eth/v1/lodestar/ws_epoch/", method: "GET"},
-  getSyncChainsDebugState: {url: "/eth/v1/lodestar/sync-chains-debug-state", method: "GET"},
+  getSyncChainsDebugState: {url: "/eth/v1/lodestar/sync-chains-debug-state/", method: "GET"},
   getGossipQueueItems: {url: "/eth/v1/lodestar/gossip-queue-items/:gossipType", method: "GET"},
+  getRegenQueueItems: {url: "/eth/v1/lodestar/regen-queue-items/", method: "GET"},
+  getBlockProcessorQueueItems: {url: "/eth/v1/lodestar/block-processor-queue-items/", method: "GET"},
 };
 
 export type ReqTypes = {
@@ -59,6 +81,8 @@ export type ReqTypes = {
   getLatestWeakSubjectivityCheckpointEpoch: ReqEmpty;
   getSyncChainsDebugState: ReqEmpty;
   getGossipQueueItems: {params: {gossipType: string}};
+  getRegenQueueItems: ReqEmpty;
+  getBlockProcessorQueueItems: ReqEmpty;
 };
 
 export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
@@ -76,35 +100,30 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
       parseReq: ({params}) => [params.gossipType],
       schema: {params: {gossipType: Schema.StringRequired}},
     },
+    getRegenQueueItems: reqEmpty,
+    getBlockProcessorQueueItems: reqEmpty,
   };
 }
 
+/* eslint-disable @typescript-eslint/naming-convention */
 export function getReturnTypes(): ReturnTypes<Api> {
+  const stringType = new StringType();
+  const GossipQueueItem = new ContainerType<GossipQueueItem>({
+    fields: {
+      topic: stringType,
+      receivedFrom: stringType,
+      data: new ByteVectorType({length: 256}),
+      addedTimeMs: ssz.Slot,
+    },
+  });
+
   return {
     getWtfNode: sameType(),
     writeHeapdump: sameType(),
     getLatestWeakSubjectivityCheckpointEpoch: sameType(),
     getSyncChainsDebugState: jsonType(),
-
-    getGossipQueueItems: {
-      toJson: (valueArr) =>
-        valueArr.map(
-          (val): GossipQueueItemJson => ({
-            topic: val.topic,
-            receivedFrom: val.receivedFrom,
-            data: toHexString(val.data),
-            addedTimeMs: val.addedTimeMs,
-          })
-        ) as Json[],
-      fromJson: (jsonArr) =>
-        (jsonArr as GossipQueueItemJson[]).map(
-          (json): GossipQueueItem => ({
-            topic: json.topic,
-            receivedFrom: json.receivedFrom,
-            data: fromHexString(json.data),
-            addedTimeMs: json.addedTimeMs,
-          })
-        ),
-    },
+    getGossipQueueItems: ArrayOf(GossipQueueItem),
+    getRegenQueueItems: jsonType(),
+    getBlockProcessorQueueItems: jsonType(),
   };
 }

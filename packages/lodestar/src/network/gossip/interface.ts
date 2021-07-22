@@ -118,4 +118,4 @@ export type GossipValidatorFn = (topic: GossipTopic, message: InMessage) => Prom
 
 export type ValidatorFnsByType = {[K in GossipType]: GossipValidatorFn};
 
-export type GossipJobQueues = {[K in GossipType]: JobItemQueue<{topic: GossipTopic; message: InMessage}, void>};
+export type GossipJobQueues = {[K in GossipType]: JobItemQueue<[GossipTopic, InMessage], void>};

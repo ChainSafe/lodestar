@@ -3,7 +3,7 @@ import {InMessage} from "libp2p-interfaces/src/pubsub";
 import {mapValues} from "../../../../../utils/lib";
 import {IMetrics} from "../../../metrics";
 import {JobItemQueue, JobQueueOpts, QueueType} from "../../../util/queue";
-import {GossipJobQueues, GossipTopic, GossipType, GossipValidatorFn, ValidatorFnsByType} from "../interface";
+import {GossipJobQueues, GossipTopic, GossipType, ValidatorFnsByType} from "../interface";
 
 /**
  * Numbers from https://github.com/sigp/lighthouse/blob/b34a79dc0b02e04441ba01fd0f304d1e203d877d/beacon_node/network/src/beacon_processor/mod.rs#L69
@@ -43,8 +43,8 @@ export function createValidationQueues(
 ): GossipJobQueues {
   return mapValues(gossipQueueOpts, (opts, type) => {
     const gossipValidatorFn = gossipValidatorFns[type];
-    return new JobItemQueue<{topic: GossipTopic; message: InMessage}, void>(
-      ({topic, message}) => gossipValidatorFn(topic, message),
+    return new JobItemQueue<[GossipTopic, InMessage], void>(
+      (topic, message) => gossipValidatorFn(topic, message),
       {signal, ...opts},
       metrics
         ? {
@@ -56,28 +56,4 @@ export function createValidationQueues(
         : undefined
     );
   });
-}
-
-export function wrapWithQueue(
-  gossipValidatorFn: GossipValidatorFn,
-  type: GossipType,
-  signal: AbortSignal,
-  metrics: IMetrics | null
-): GossipValidatorFn {
-  const jobQueue = new JobItemQueue<{topic: GossipTopic; gossipMsg: InMessage}, void>(
-    ({topic, gossipMsg}) => gossipValidatorFn(topic, gossipMsg),
-    {signal, ...gossipQueueOpts[type]},
-    metrics
-      ? {
-          length: metrics.gossipValidationQueueLength.child({topic: type}),
-          droppedJobs: metrics.gossipValidationQueueDroppedJobs.child({topic: type}),
-          jobTime: metrics.gossipValidationQueueJobTime.child({topic: type}),
-          jobWaitTime: metrics.gossipValidationQueueJobWaitTime.child({topic: type}),
-        }
-      : undefined
-  );
-
-  return async function gossipValidatorFnWithQueue(topic, gossipMsg) {
-    await jobQueue.push({topic, gossipMsg});
-  };
 }

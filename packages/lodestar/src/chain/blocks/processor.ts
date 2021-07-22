@@ -4,7 +4,7 @@ import {allForks, ssz} from "@chainsafe/lodestar-types";
 
 import {IBlockJob, IChainSegmentJob} from "../interface";
 import {ChainEvent} from "../emitter";
-import {JobFnQueue} from "../../util/queue";
+import {JobItemQueue} from "../../util/queue";
 import {BlockError, BlockErrorCode, ChainSegmentError} from "../errors";
 
 import {processBlock, processChainSegment, BlockProcessModules} from "./process";
@@ -16,8 +16,8 @@ export type BlockProcessorModules = BlockProcessModules & BlockValidateModules;
  * BlockProcessor processes block jobs in a queued fashion, one after the other.
  */
 export class BlockProcessor {
+  readonly jobQueue: JobItemQueue<[IChainSegmentJob | IBlockJob], void>;
   private modules: BlockProcessorModules;
-  private jobQueue: JobFnQueue;
 
   constructor({
     signal,
@@ -28,18 +28,25 @@ export class BlockProcessor {
     maxLength?: number;
   }) {
     this.modules = modules;
-    this.jobQueue = new JobFnQueue(
+    this.jobQueue = new JobItemQueue(
+      (job) => {
+        if ((job as IBlockJob).signedBlock) {
+          return processBlockJob(this.modules, job as IBlockJob);
+        } else {
+          return processChainSegmentJob(this.modules, job as IChainSegmentJob);
+        }
+      },
       {maxLength, signal},
       modules.metrics ? modules.metrics.blockProcessorQueue : undefined
     );
   }
 
   async processBlockJob(job: IBlockJob): Promise<void> {
-    await this.jobQueue.push(async () => await processBlockJob(this.modules, job));
+    await this.jobQueue.push(job);
   }
 
   async processChainSegment(job: IChainSegmentJob): Promise<void> {
-    await this.jobQueue.push(async () => await processChainSegmentJob(this.modules, job));
+    await this.jobQueue.push(job);
   }
 }
 

@@ -40,7 +40,7 @@ export function createValidatorFnsByType(
     jobQueues,
     (jobQueue): GossipValidatorFn => {
       return async function gossipValidatorFnWithQueue(topic, gossipMsg) {
-        await jobQueue.push({topic, message: gossipMsg});
+        await jobQueue.push(topic, gossipMsg);
       };
     }
   );
