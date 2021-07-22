@@ -11,6 +11,7 @@ import {MetadataController} from "./metadata";
 import {IPeerRpcScoreStore, IPeerMetadataStore} from "./peers";
 import {IReqResp} from "./reqresp";
 import {ISubnetsService, CommitteeSubscription} from "./subnets";
+import {PeerAction} from "../../lib/network";
 
 export type PeerSearchOptions = {
   supportsProtocols?: string[];
@@ -38,6 +39,7 @@ export interface INetwork {
   /** Subscribe, search peers, join long-lived syncnets */
   prepareSyncCommitteeSubnets(subscriptions: CommitteeSubscription[]): void;
   reStatusPeers(peers: PeerId[]): void;
+  reportPeer(peer: PeerId, action: PeerAction, actionName?: string): void;
 
   // Gossip handler
   subscribeGossipCoreTopics(): void;

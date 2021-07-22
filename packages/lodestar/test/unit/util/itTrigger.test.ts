@@ -48,4 +48,21 @@ describe("util / itTrigger", () => {
 
     await expect(all(itTrigger)).to.be.rejectedWith(testError);
   });
+
+  it("ItTrigger as a single thread processor", async () => {
+    const processor = new ItTrigger();
+
+    for (let i = 0; i <= 4; i++) {
+      setTimeout(() => {
+        processor.trigger();
+      }, i * 5);
+    }
+
+    let counter = 0;
+    for await (const _ of processor) {
+      if (counter++ >= 3) {
+        break;
+      }
+    }
+  });
 });

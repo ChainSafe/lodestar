@@ -43,14 +43,6 @@ export class WinstonLogger implements ILogger {
     this._transportOptsArr = transportOptsArr;
   }
 
-  mute(): void {
-    this.winston.silent = true;
-  }
-
-  unmute(): void {
-    this.winston.silent = false;
-  }
-
   error(message: string, context?: Context, error?: Error): void {
     this.createLogEntry(LogLevel.error, message, context, error);
   }

@@ -7,8 +7,8 @@ export enum BackfillSyncErrorCode {
   NOT_ANCHORED = "not_anchored",
   // fetched blocks are not linear
   NOT_LINEAR = "not_linear",
-  // peer doesn't have required blocks
-  MISSING_BLOCKS = "missing_blocks",
+  // peer doesn't have required block by root
+  MISSING_BLOCK = "missing_blocks",
   INVALID_SIGNATURE = "invalid_proposer_signature",
 }
 
@@ -16,6 +16,6 @@ export type BackfillSyncErrorType =
   | {code: BackfillSyncErrorCode.NOT_ANCHORED}
   | {code: BackfillSyncErrorCode.NOT_LINEAR}
   | {code: BackfillSyncErrorCode.INVALID_SIGNATURE}
-  | {code: BackfillSyncErrorCode.MISSING_BLOCKS; roots: Root[]; peerId: PeerId};
+  | {code: BackfillSyncErrorCode.MISSING_BLOCK; root: Root; peerId: PeerId};
 
 export class BackfillSyncError extends LodestarError<BackfillSyncErrorType> {}

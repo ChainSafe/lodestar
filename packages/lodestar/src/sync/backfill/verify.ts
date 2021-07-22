@@ -5,16 +5,11 @@ import {GENESIS_SLOT} from "../../../../params/lib";
 import {IBlsVerifier} from "../../chain/bls";
 import {BackfillSyncError, BackfillSyncErrorCode} from "./errors";
 
-export async function verifyBlocks(
+export function verifyBlockSequence(
   config: IBeaconConfig,
-  bls: IBlsVerifier,
-  state: CachedBeaconState<allForks.BeaconState>,
   blocks: allForkTypes.SignedBeaconBlock[],
   anchorRoot: Root
-): Promise<void> {
-  if (blocks.length === 0) {
-    return;
-  }
+): void {
   let nextRoot: Root = anchorRoot;
   for (const block of blocks.slice(0).reverse()) {
     const blockRoot = config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message);
@@ -26,10 +21,18 @@ export async function verifyBlocks(
     }
     nextRoot = block.message.parentRoot;
   }
+}
+
+export async function verifyBlockProposerSignature(
+  bls: IBlsVerifier,
+  state: CachedBeaconState<allForks.BeaconState>,
+  blocks: allForkTypes.SignedBeaconBlock[]
+): Promise<void> {
   const signatures = blocks
-    //genesis block doesn't have valid signature
+    // genesis block doesn't have valid signature
     .filter((block) => block.message.slot !== GENESIS_SLOT)
     .map((block) => allForks.getProposerSignatureSet(state, block));
+
   if (!(await bls.verifySignatureSets(signatures))) {
     throw new BackfillSyncError({code: BackfillSyncErrorCode.INVALID_SIGNATURE});
   }

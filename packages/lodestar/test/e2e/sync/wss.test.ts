@@ -1,21 +1,22 @@
+import {assert} from "chai";
 import {GENESIS_SLOT, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {phase0, Slot} from "@chainsafe/lodestar-types";
-import {getDevBeaconNode} from "../utils/node/beacon";
-import {waitForEvent} from "../utils/events/resolver";
-import {getAndInitDevValidators} from "../utils/node/validator";
-import {ChainEvent} from "../../src/chain";
-import {RestApiOptions} from "../../src/api/rest";
-import {testLogger, TestLoggerOpts, LogLevel} from "../utils/logger";
 import {initBLS} from "@chainsafe/lodestar-cli/src/util";
 import {IChainConfig} from "@chainsafe/lodestar-config";
 import {fetchWeakSubjectivityState} from "@chainsafe/lodestar-cli/src/networks";
 import {config} from "@chainsafe/lodestar-config/default";
-import {connect} from "../utils/network";
-import {Network} from "../../src/network";
-import {assert} from "chai";
-import {BackfillSyncEvent} from "../../src/sync/backfill";
+import {getDevBeaconNode} from "../../utils/node/beacon";
+import {waitForEvent} from "../../utils/events/resolver";
+import {getAndInitDevValidators} from "../../utils/node/validator";
+import {ChainEvent} from "../../../src/chain";
+import {RestApiOptions} from "../../../src/api/rest";
+import {testLogger, TestLoggerOpts} from "../../utils/logger";
+import {connect} from "../../utils/network";
+import {Network} from "../../../src/network";
+import {BackfillSyncEvent} from "../../../src/sync/backfill";
+import {TimestampFormatCode} from "../../../../utils/lib";
 
-/* eslint-disable no-console, @typescript-eslint/naming-convention */
+/* eslint-disable @typescript-eslint/naming-convention */
 describe("Start from WSS", function () {
   const testParams: Pick<IChainConfig, "SECONDS_PER_SLOT"> = {
     SECONDS_PER_SLOT: 2,
@@ -23,6 +24,14 @@ describe("Start from WSS", function () {
 
   before(async function () {
     await initBLS();
+  });
+
+  const afterEachCallbacks: (() => Promise<unknown> | void)[] = [];
+  afterEach(async () => {
+    while (afterEachCallbacks.length > 0) {
+      const callback = afterEachCallbacks.pop();
+      if (callback) await callback();
+    }
   });
 
   it("using another node", async function () {
@@ -44,9 +53,16 @@ describe("Start from WSS", function () {
 
     const genesisTime = Math.floor(Date.now() / 1000) + genesisSlotsDelay * testParams.SECONDS_PER_SLOT;
 
-    const testLoggerOpts: TestLoggerOpts = {logLevel: LogLevel.info};
+    const testLoggerOpts: TestLoggerOpts = {
+      timestampFormat: {
+        format: TimestampFormatCode.EpochSlot,
+        genesisTime: genesisTime,
+        slotsPerEpoch: SLOTS_PER_EPOCH,
+        secondsPerSlot: testParams.SECONDS_PER_SLOT,
+      },
+    };
     const loggerNodeA = testLogger("Node-A", testLoggerOpts);
-    const loggerNodeB = testLogger("Node-B", {logLevel: LogLevel.debug});
+    const loggerNodeB = testLogger("Node-B", testLoggerOpts);
 
     const bn = await getDevBeaconNode({
       params: {...testParams, ALTAIR_FORK_EPOCH: Infinity},
@@ -60,6 +76,7 @@ describe("Start from WSS", function () {
       logger: loggerNodeA,
       genesisTime,
     });
+    afterEachCallbacks.push(() => bn.close());
 
     const finalizedEventistener = waitForEvent<phase0.Checkpoint>(bn.chain.emitter, ChainEvent.finalized, timeout);
     const validators = await getAndInitDevValidators({
@@ -69,15 +86,16 @@ describe("Start from WSS", function () {
       startIndex: 0,
       // At least one sim test must use the REST API for beacon <-> validator comms
       useRestApi: true,
-      testLoggerOpts: {logLevel: LogLevel.error},
+      testLoggerOpts,
     });
 
+    afterEachCallbacks.push(() => Promise.all(validators.map((v) => v.stop())));
     await Promise.all(validators.map((v) => v.start()));
 
     try {
       await finalizedEventistener;
       await waitForEvent<phase0.Checkpoint>(bn.chain.emitter, ChainEvent.finalized, timeout);
-      console.log("\nNode A finalized\n");
+      loggerNodeA.important("\n\nNode A finalized\n\n");
     } catch (e) {
       (e as Error).message = `Node A failed to finalize: ${(e as Error).message}`;
       throw e;
@@ -85,10 +103,10 @@ describe("Start from WSS", function () {
 
     const url = "http://127.0.0.1:9596/eth/v1/debug/beacon/states/finalized";
 
-    console.log("Fetching weak subjectivity state from " + url);
+    loggerNodeB.important("Fetching weak subjectivity state from " + url);
     const wsState = await fetchWeakSubjectivityState(config, url);
-    console.log("Fetched wss state");
-    loggerNodeA.mute();
+    loggerNodeB.important("Fetched wss state");
+
     const bnStartingFromWSS = await getDevBeaconNode({
       params: {...testParams, ALTAIR_FORK_EPOCH: Infinity},
       options: {api: {rest: {enabled: true, port: 9587} as RestApiOptions}, sync: {isSingleNode: true}},
@@ -97,6 +115,8 @@ describe("Start from WSS", function () {
       genesisTime,
       anchorState: wsState,
     });
+    afterEachCallbacks.push(() => bnStartingFromWSS.close());
+
     const head = await bn.chain.getHeadBlock();
     if (!head) throw Error("First beacon node has no head block");
     const waitForSynced = waitForEvent<Slot>(
@@ -113,8 +133,5 @@ describe("Start from WSS", function () {
     } catch (e) {
       assert.fail("Failed to backfill sync to other node in time");
     }
-    await bnStartingFromWSS.close();
-    await Promise.all(validators.map((v) => v.stop()));
-    await bn.close();
   });
 });
