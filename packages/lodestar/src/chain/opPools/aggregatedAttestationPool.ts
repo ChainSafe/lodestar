@@ -80,11 +80,21 @@ export class AggregatedAttestationPool {
    * Get all attestations optionally filtered by `attestation.data.slot`
    * @param bySlot slot to filter, `bySlot === attestation.data.slot`
    */
-  getAll(state: CachedBeaconState<allForks.BeaconState>, bySlot?: Slot): phase0.Attestation[] {
-    // we don't want to validate attestations
-    let attestations = this.getAttestationsForBlock(state, true);
-    if (bySlot) {
-      attestations = attestations.filter((att) => att.data.slot === bySlot);
+  getAll(bySlot?: Slot): phase0.Attestation[] {
+    let attestationGroupsArr: Map<string, MatchingDataAttestationGroup>[];
+    if (bySlot === undefined) {
+      attestationGroupsArr = Array.from(this.attestationGroupByDataHashBySlot.values());
+    } else {
+      const attestationGroups = this.attestationGroupByDataHashBySlot.get(bySlot);
+      if (!attestationGroups) throw Error(`No attestations for slot ${bySlot}`);
+      attestationGroupsArr = [attestationGroups];
+    }
+
+    const attestations: phase0.Attestation[] = [];
+    for (const attestationGroups of attestationGroupsArr) {
+      for (const attestationGroup of attestationGroups.values()) {
+        attestations.push(...attestationGroup.getAttestations());
+      }
     }
     return attestations;
   }
@@ -266,8 +276,7 @@ export class MatchingDataAttestationGroup {
     return indicesToRemove.length;
   }
 
-  /** Get unseen attestations to be included in a block or API. */
-  getAttestations(): phase0.Attestation[] {
+  getAttestationsForBlock(): phase0.Attestation[] {
     // order by number of fresh (not-seen) attesters
     return this.attestations
       .sort((attestation1, attestation2) => {
@@ -276,6 +285,11 @@ export class MatchingDataAttestationGroup {
         return freshAttesterCount2 - freshAttesterCount1;
       })
       .map((attestation) => attestation.attestation);
+  }
+
+  /** Get attestations for API. */
+  getAttestations(): phase0.Attestation[] {
+    return this.attestations.map((attestation) => attestation.attestation);
   }
 
   getCommittee(): ValidatorIndex[] {
