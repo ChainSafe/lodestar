@@ -40,7 +40,10 @@ describe("Job queue", () => {
     const jobs = Promise.all(Array.from({length: maxLength}, () => jobQueue.push(job)));
 
     // the next enqueued job should go over the limit
-    await expectRejectedWithLodestarError(jobQueue.push(job), new QueueError({code: QueueErrorCode.QUEUE_MAX_LENGTH}));
+    await expectRejectedWithLodestarError(
+      wrapFn(() => jobQueue.push(job)),
+      new QueueError({code: QueueErrorCode.QUEUE_MAX_LENGTH})
+    );
 
     await jobs;
   });
@@ -66,7 +69,10 @@ describe("Job queue", () => {
     }
 
     // any subsequently enqueued job should also be rejected
-    await expectRejectedWithLodestarError(jobQueue.push(job), new QueueError({code: QueueErrorCode.QUEUE_ABORTED}));
+    await expectRejectedWithLodestarError(
+      wrapFn(() => jobQueue.push(job)),
+      new QueueError({code: QueueErrorCode.QUEUE_ABORTED})
+    );
   });
 
   describe("Queue types", () => {
@@ -106,3 +112,11 @@ describe("Job queue", () => {
     }
   });
 });
+
+async function wrapFn(fn: () => Promise<unknown>): Promise<unknown> {
+  try {
+    return await fn();
+  } catch (e) {
+    return Promise.reject(e);
+  }
+}
