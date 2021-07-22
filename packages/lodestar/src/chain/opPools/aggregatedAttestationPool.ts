@@ -16,6 +16,14 @@ import {EpochContext} from "../../../../beacon-state-transition/lib/allForks";
 type DataRootHex = string;
 
 /**
+ * Limit the max attestations with the same AttestationData.
+ * Processing cost increases with each new attestation. This number is not backed by data.
+ * After merging AggregatedAttestationPool, gather numbers from a real network and investigate
+ * how does participation looks like in attestations.
+ */
+const MAX_ATTESTATIONS_PER_GROUP = 4;
+
+/**
  * Maintain a pool of aggregated attestations. Attestations can be retrieved for inclusion in a block
  * or api. The returned attestations are aggregated to maximise the number of validators that can be
  * included.
@@ -253,6 +261,12 @@ export class MatchingDataAttestationGroup {
     }
     if (insertResult === InsertOutcome.NewData) {
       this.attestations.push(attestation);
+
+      // Remove the attestations with less participation
+      if (this.attestations.length > MAX_ATTESTATIONS_PER_GROUP) {
+        this.attestations.sort((a, b) => b.attestingIndices.size - a.attestingIndices.size);
+        this.attestations.splice(MAX_ATTESTATIONS_PER_GROUP, this.attestations.length - MAX_ATTESTATIONS_PER_GROUP);
+      }
     }
     return insertResult;
   }
