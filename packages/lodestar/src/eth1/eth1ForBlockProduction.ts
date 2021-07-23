@@ -11,6 +11,11 @@ import {getDeposits} from "./utils/deposits";
 import {IEth1ForBlockProduction, IEth1Provider} from "./interface";
 import {IEth1Options} from "./options";
 
+const MAX_BLOCKS_PER_BLOCK_QUERY = 1000;
+const MAX_BLOCKS_PER_LOG_QUERY = 1000;
+/** Eth1 blocks happen every 14s approx, not need to update too often once synced */
+const AUTO_UPDATE_PERIOD_MS = 60 * 1000;
+
 /**
  * Main class handling eth1 data fetching, processing and storing
  * Upon instantiation, starts fetcheing deposits and blocks at regular intervals
@@ -25,10 +30,6 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
   private eth1DataCache: Eth1DataCache;
   private eth1Provider: IEth1Provider;
   private lastProcessedDepositBlockNumber: number | null;
-  // eslint-disable-next-line @typescript-eslint/naming-convention
-  private MAX_BLOCKS_PER_BLOCK_QUERY = 1000;
-  // eslint-disable-next-line @typescript-eslint/naming-convention
-  private MAX_BLOCKS_PER_LOG_QUERY = 1000;
 
   constructor({
     config,
@@ -57,7 +58,7 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
       this.logger.warn("No depositContractDeployBlock provided");
     }
 
-    const autoUpdateIntervalMs = 1000 * config.SECONDS_PER_ETH1_BLOCK;
+    this.runAutoUpdate().catch((e) => {
       if (!(e instanceof ErrorAborted)) {
         this.logger.error("Error on eth1 loop", {}, e);
       }
@@ -107,7 +108,7 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
   /**
    * Abortable async setInterval that runs its callback once at max between `ms` at minimum
    */
-  private async runAutoUpdate(intervalMs: number): Promise<void> {
+  private async runAutoUpdate(): Promise<void> {
     let lastRunMs = 0;
 
     // eslint-disable-next-line no-constant-condition
@@ -119,7 +120,7 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
       });
 
       if (hasCatchedUp) {
-        const sleepTime = Math.max(intervalMs + lastRunMs - Date.now(), 0);
+        const sleepTime = Math.max(AUTO_UPDATE_PERIOD_MS + lastRunMs - Date.now(), 0);
         await sleep(sleepTime, this.signal);
       }
     }
@@ -144,7 +145,7 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
   private async updateDepositCache(remoteFollowBlock: number): Promise<boolean> {
     const lastProcessedDepositBlockNumber = await this.getLastProcessedDepositBlockNumber();
     const fromBlock = this.getFromBlockToFetch(lastProcessedDepositBlockNumber);
-    const toBlock = Math.min(remoteFollowBlock, fromBlock + this.MAX_BLOCKS_PER_LOG_QUERY - 1);
+    const toBlock = Math.min(remoteFollowBlock, fromBlock + MAX_BLOCKS_PER_LOG_QUERY - 1);
 
     const depositEvents = await this.eth1Provider.getDepositEvents(fromBlock, toBlock);
     this.logger.verbose("Fetched deposits", {depositCount: depositEvents.length, fromBlock, toBlock});
@@ -178,7 +179,7 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
     const fromBlock = Math.max(this.getFromBlockToFetch(lastCachedBlock), lowestEventBlockNumber);
     const toBlock = Math.min(
       remoteFollowBlock,
-      fromBlock + this.MAX_BLOCKS_PER_BLOCK_QUERY - 1, // Block range is inclusive
+      fromBlock + MAX_BLOCKS_PER_BLOCK_QUERY - 1, // Block range is inclusive
       lastProcessedDepositBlockNumber
     );
 
