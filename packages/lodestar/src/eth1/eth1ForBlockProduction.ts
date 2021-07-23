@@ -1,7 +1,7 @@
 import {phase0} from "@chainsafe/lodestar-types";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {CachedBeaconState, allForks} from "@chainsafe/lodestar-beacon-state-transition";
-import {ILogger, sleep} from "@chainsafe/lodestar-utils";
+import {ErrorAborted, ILogger, sleep} from "@chainsafe/lodestar-utils";
 import {AbortSignal} from "@chainsafe/abort-controller";
 import {IBeaconDb} from "../db";
 import {Eth1DepositsCache} from "./eth1DepositsCache";
@@ -58,8 +58,9 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
     }
 
     const autoUpdateIntervalMs = 1000 * config.SECONDS_PER_ETH1_BLOCK;
-    this.runAutoUpdate(autoUpdateIntervalMs).catch((e) => {
-      this.logger.error("Aborted", e);
+      if (!(e instanceof ErrorAborted)) {
+        this.logger.error("Error on eth1 loop", {}, e);
+      }
     });
   }
 
