@@ -96,6 +96,7 @@ export async function onClockSlot(this: BeaconChain, slot: Slot): Promise<void> 
   this.metrics?.clockSlot.set(slot);
 
   this.attestationPool.prune(slot);
+  this.aggregatedAttestationPool.prune(slot);
   this.syncCommitteeMessagePool.prune(slot);
   this.seenSyncCommitteeMessages.prune(slot);
 

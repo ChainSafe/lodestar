@@ -1,4 +1,5 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {ValidatorIndex} from "@chainsafe/lodestar-types";
 import {ILogger, prettyBytes} from "@chainsafe/lodestar-utils";
 import {IMetrics} from "../../../metrics";
 import {OpSource} from "../../../metrics/validatorMonitor";
@@ -89,9 +90,17 @@ export function getGossipHandlers(modules: ValidatorFnsModules): GossipHandlers 
     [GossipType.beacon_aggregate_and_proof]: async (signedAggregateAndProof) => {
       const seenTimestampSec = Date.now() / 1000;
 
-      const indexedAtt = await validateGossipAggregateAndProof(chain, signedAggregateAndProof);
+      const {indexedAttestation, committeeIndices} = await validateGossipAggregateAndProof(
+        chain,
+        signedAggregateAndProof
+      );
 
-      metrics?.registerAggregatedAttestation(OpSource.gossip, seenTimestampSec, signedAggregateAndProof, indexedAtt);
+      metrics?.registerAggregatedAttestation(
+        OpSource.gossip,
+        seenTimestampSec,
+        signedAggregateAndProof,
+        indexedAttestation
+      );
 
       // TODO: Add DoS resistant pending attestation pool
       // switch (e.type.code) {
@@ -105,10 +114,13 @@ export function getGossipHandlers(modules: ValidatorFnsModules): GossipHandlers 
       // }
 
       // Handler
+      const aggregatedAttestation = signedAggregateAndProof.message.aggregate;
 
-      db.aggregateAndProof.add(signedAggregateAndProof.message).catch((e) => {
-        logger.error("Error adding aggregateAndProof to pool", {}, e);
-      });
+      chain.aggregatedAttestationPool.add(
+        aggregatedAttestation,
+        indexedAttestation.attestingIndices as ValidatorIndex[],
+        committeeIndices
+      );
     },
 
     [GossipType.beacon_attestation]: async (attestation, {subnet}) => {

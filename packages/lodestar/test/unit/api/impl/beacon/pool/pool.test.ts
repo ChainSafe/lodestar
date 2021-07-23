@@ -10,7 +10,6 @@ import {
 import {StubbedBeaconDb} from "../../../../../utils/stub";
 import {SinonStubbedInstance} from "sinon";
 import {IBeaconChain} from "../../../../../../src/chain";
-import {AttestationPool} from "../../../../../../src/chain/opPools/attestationPool";
 import * as attesterSlashingValidation from "../../../../../../src/chain/validation/attesterSlashing";
 import * as proposerSlashingValidation from "../../../../../../src/chain/validation/proposerSlashing";
 import * as voluntaryExitValidation from "../../../../../../src/chain/validation/voluntaryExit";
@@ -22,6 +21,7 @@ import {generateEmptySignedBlockHeader} from "../../../../../utils/block";
 import {setupApiImplTestServer} from "../../index.test";
 import {SinonStubFn} from "../../../../../utils/types";
 import {testLogger} from "../../../../../utils/logger";
+import {AggregatedAttestationPool} from "../../../../../../src/chain/opPools";
 
 describe("beacon pool api impl", function () {
   const logger = testLogger();
@@ -33,16 +33,16 @@ describe("beacon pool api impl", function () {
   let validateGossipAttesterSlashing: SinonStubFn<typeof attesterSlashingValidation["validateGossipAttesterSlashing"]>;
   let validateGossipProposerSlashing: SinonStubFn<typeof proposerSlashingValidation["validateGossipProposerSlashing"]>;
   let validateVoluntaryExit: SinonStubFn<typeof voluntaryExitValidation["validateGossipVoluntaryExit"]>;
-  let attestationPool: SinonStubbedInstance<AttestationPool>;
+  let aggregatedAttestationPool: SinonStubbedInstance<AggregatedAttestationPool>;
 
   beforeEach(function () {
     const server = setupApiImplTestServer();
     dbStub = server.dbStub;
     chainStub = server.chainStub;
-    attestationPool = sinon.createStubInstance(AttestationPool);
+    aggregatedAttestationPool = sinon.createStubInstance(AggregatedAttestationPool);
     ((chainStub as unknown) as {
-      attestationPool: SinonStubbedInstance<AttestationPool>;
-    }).attestationPool = attestationPool;
+      aggregatedAttestationPool: SinonStubbedInstance<AggregatedAttestationPool>;
+    }).aggregatedAttestationPool = aggregatedAttestationPool;
     gossipStub = sinon.createStubInstance(Eth2Gossipsub);
     gossipStub.publishAttesterSlashing = sinon.stub();
     gossipStub.publishProposerSlashing = sinon.stub();
@@ -67,13 +67,13 @@ describe("beacon pool api impl", function () {
 
   describe("getPoolAttestations", function () {
     it("no filters", async function () {
-      attestationPool.getAll.returns([generateAttestation(), generateAttestation()]);
+      aggregatedAttestationPool.getAll.returns([generateAttestation(), generateAttestation()]);
       const {data: attestations} = await poolApi.getPoolAttestations();
       expect(attestations.length).to.be.equal(2);
     });
 
     it("with filters", async function () {
-      attestationPool.getAll.returns([
+      aggregatedAttestationPool.getAll.returns([
         generateAttestation({data: generateAttestationData(0, 1, 0, 1)}),
         generateAttestation({data: generateAttestationData(0, 1, 1, 0)}),
         generateAttestation({data: generateAttestationData(0, 1, 3, 2)}),

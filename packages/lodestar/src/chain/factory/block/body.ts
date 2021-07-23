@@ -46,7 +46,7 @@ export async function assembleBody(
   const [proposerSlashings, attesterSlashings, attestations, voluntaryExits, {eth1Data, deposits}] = await Promise.all([
     db.proposerSlashing.values({limit: MAX_PROPOSER_SLASHINGS}),
     db.attesterSlashing.values({limit: MAX_ATTESTER_SLASHINGS}),
-    db.aggregateAndProof.getBlockAttestations(currentState).then((value) => value.slice(0, MAX_ATTESTATIONS)),
+    chain.aggregatedAttestationPool.getAttestationsForBlock(currentState).slice(0, MAX_ATTESTATIONS),
     db.voluntaryExit.values({limit: MAX_VOLUNTARY_EXITS}),
     eth1.getEth1DataAndDeposits(currentState as CachedBeaconState<allForks.BeaconState>),
   ]);

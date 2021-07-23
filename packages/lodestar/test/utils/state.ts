@@ -106,6 +106,8 @@ export function generateState(
     const defaultAltairState: altair.BeaconState = {
       ...ssz.altair.BeaconState.struct_defaultValue(),
       ...defaultState,
+      previousEpochParticipation: [0xff, 0xff, 0, 0] as List<number>,
+      currentEpochParticipation: [0xff, 0xff, 0, 0] as List<number>,
       currentSyncCommittee: {
         pubkeys: Array.from({length: SYNC_COMMITTEE_SIZE}, (_, i) => validators[i % validators.length].pubkey),
         aggregatePubkey: ssz.BLSPubkey.defaultValue(),

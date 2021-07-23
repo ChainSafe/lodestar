@@ -2,7 +2,6 @@ export * from "./block";
 export * from "./blockArchive";
 export * from "./stateArchive";
 
-export * from "./aggregateAndProof";
 export * from "./attesterSlashing";
 export * from "./proposerSlashing";
 export * from "./voluntaryExit";

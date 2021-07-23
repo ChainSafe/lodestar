@@ -83,7 +83,7 @@ export class AttestationPool {
 
     // Reject any attestations that are too old.
     if (slot < lowestPermissibleSlot) {
-      throw new OpPoolError({code: OpPoolErrorCode.SLOT_TOO_LOW, slot, lowestPermissibleSlot});
+      return InsertOutcome.Old;
     }
 
     // Limit object per slot
