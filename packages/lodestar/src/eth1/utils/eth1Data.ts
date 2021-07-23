@@ -2,6 +2,7 @@ import {Root, phase0} from "@chainsafe/lodestar-types";
 import {List, TreeBacked} from "@chainsafe/ssz";
 import {getTreeAtIndex} from "../../util/tree";
 import {binarySearchLte} from "../../util/binarySearch";
+import {Eth1Error, Eth1ErrorCode} from "../errors";
 
 type BlockNumber = number;
 
@@ -30,7 +31,7 @@ export async function getEth1DataForBlocks(
   const toBlock = blocks[blocks.length - 1].blockNumber;
   const depositsByBlockNumber = await getDepositsByBlockNumber(fromBlock, toBlock, depositDescendingStream);
   if (depositsByBlockNumber.length === 0) {
-    throw new ErrorNoDepositsForBlockRange(fromBlock, toBlock);
+    throw new Eth1Error({code: Eth1ErrorCode.NO_DEPOSITS_FOR_BLOCK_RANGE, fromBlock, toBlock});
   }
 
   // Precompute a map of depositCount => depositRoot (from depositRootTree)
@@ -42,7 +43,9 @@ export async function getEth1DataForBlocks(
     const deposit = binarySearchLte(depositsByBlockNumber, block.blockNumber, (event) => event.blockNumber);
     const depositCount = deposit.index + 1;
     const depositRoot = depositRootByDepositCount.get(depositCount);
-    if (depositRoot === undefined) throw new ErrorNoDepositRoot(depositCount);
+    if (depositRoot === undefined) {
+      throw new Eth1Error({code: Eth1ErrorCode.NO_DEPOSIT_ROOT, depositCount});
+    }
     eth1Datas.push({...block, depositCount, depositRoot});
   }
   return eth1Datas;
@@ -87,7 +90,7 @@ export function getDepositRootByDepositCount(
     const maxIndex = depositCounts[0] - 1;
     const treeLength = depositRootTree.length - 1;
     if (maxIndex > treeLength) {
-      throw new ErrorNotEnoughDepositRoots(maxIndex, treeLength);
+      throw new Eth1Error({code: Eth1ErrorCode.NOT_ENOUGH_DEPOSIT_ROOTS, index: maxIndex, treeLength});
     }
   }
 
@@ -97,32 +100,4 @@ export function getDepositRootByDepositCount(
     depositRootByDepositCount.set(depositCount, depositRootTree.hashTreeRoot());
   }
   return depositRootByDepositCount;
-}
-
-export class ErrorNoDepositsForBlockRange extends Error {
-  fromBlock: number;
-  toBlock: number;
-  constructor(fromBlock: number, toBlock: number) {
-    super(`No deposits found for block range [${fromBlock}, ${toBlock}]`);
-    this.fromBlock = fromBlock;
-    this.toBlock = toBlock;
-  }
-}
-
-export class ErrorNoDepositRoot extends Error {
-  depositCount: number;
-  constructor(depositCount: number) {
-    super(`No depositRoot for depositCount ${depositCount}`);
-    this.depositCount = depositCount;
-  }
-}
-
-export class ErrorNotEnoughDepositRoots extends Error {
-  index: number;
-  treeLength: number;
-  constructor(index: number, treeLength: number) {
-    super(`Not enough deposit roots for index ${index}, current length ${treeLength}`);
-    this.index = index;
-    this.treeLength = treeLength;
-  }
 }

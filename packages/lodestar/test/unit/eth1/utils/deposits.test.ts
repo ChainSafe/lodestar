@@ -6,15 +6,11 @@ import {MAX_DEPOSITS} from "@chainsafe/lodestar-params";
 import {verifyMerkleBranch} from "@chainsafe/lodestar-utils";
 import {filterBy} from "../../../utils/db";
 import {getTreeAtIndex} from "../../../../src/util/tree";
+import {Eth1ErrorCode} from "../../../../src/eth1/errors";
 import {generateDepositData, generateDepositEvent} from "../../../utils/deposit";
 import {generateState} from "../../../utils/state";
-import {
-  getDeposits,
-  getDepositsWithProofs,
-  DepositGetter,
-  ErrorDepositIndexTooHigh,
-  ErrorNotEnoughDeposits,
-} from "../../../../src/eth1/utils/deposits";
+import {expectRejectedWithLodestarError} from "../../../utils/errors";
+import {getDeposits, getDepositsWithProofs, DepositGetter} from "../../../../src/eth1/utils/deposits";
 
 chai.use(chaiAsPromised);
 
@@ -26,7 +22,7 @@ describe("eth1 / util / deposits", function () {
       eth1DepositIndex: number;
       depositIndexes: number[];
       expectedReturnedIndexes?: number[];
-      error?: unknown;
+      error?: Eth1ErrorCode;
     }
 
     const testCases: ITestCase[] = [
@@ -63,14 +59,14 @@ describe("eth1 / util / deposits", function () {
         depositCount: 0,
         eth1DepositIndex: 1,
         depositIndexes: [],
-        error: ErrorDepositIndexTooHigh,
+        error: Eth1ErrorCode.DEPOSIT_INDEX_TOO_HIGH,
       },
       {
         id: "Should throw if DB returns less deposits than expected",
         depositCount: 1,
         eth1DepositIndex: 0,
         depositIndexes: [],
-        error: ErrorNotEnoughDeposits,
+        error: Eth1ErrorCode.NOT_ENOUGH_DEPOSITS,
       },
       {
         id: "Empty case",
@@ -96,7 +92,7 @@ describe("eth1 / util / deposits", function () {
           const result = await resultPromise;
           expect(result.map((deposit) => deposit.index)).to.deep.equal(expectedReturnedIndexes);
         } else if (error) {
-          await expect(resultPromise).to.be.rejectedWith(error as Error);
+          await expectRejectedWithLodestarError(resultPromise, error);
         } else {
           throw Error("Test case must have 'result' or 'error'");
         }
