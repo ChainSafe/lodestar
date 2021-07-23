@@ -64,7 +64,7 @@ describe("block api utils", function () {
       forkChoiceStub.getFinalizedBlock.returns(expectedSummary);
       dbStub.blockArchive.getByRoot.withArgs(bufferEqualsMatcher(expectedBuffer)).resolves(null);
       await resolveBlockId(forkChoiceStub, dbStub, toHexString(expectedBuffer)).catch(() => {});
-      expect(dbStub.blockArchive.getByRoot.withArgs(bufferEqualsMatcher(expectedBuffer)).calledOnce).to.be.true;
+      expect(dbStub.blockArchive.get.withArgs(expectedSummary.slot).calledOnce).to.be.true;
     });
 
     it("should resolve non finalized block root", async function () {
