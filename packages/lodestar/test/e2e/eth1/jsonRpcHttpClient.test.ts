@@ -54,7 +54,7 @@ describe("eth1 / jsonRpcHttpClient", function () {
         res.statusCode = 404;
         res.end();
       },
-      error: "404 Not Found",
+      error: "Not Found",
     },
     {
       id: "RPC payload with error",
