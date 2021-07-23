@@ -4,7 +4,7 @@ import {AbortSignal} from "@chainsafe/abort-controller";
 import {chunkifyInclusiveRange} from "../../util/chunkify";
 import {linspace} from "../../util/numpy";
 import {retry} from "../../util/retry";
-import {ErrorJsonRpcResponse, ErrorParseJson, JsonRpcHttpClient} from "./jsonRpcHttpClient";
+import {ErrorParseJson, JsonRpcHttpClient} from "./jsonRpcHttpClient";
 import {depositEventTopics, parseDepositLog} from "../utils/depositContract";
 import {IEth1Provider} from "../interface";
 import {IEth1Options} from "../options";
@@ -178,8 +178,9 @@ function parseBlock(blockRaw: IEthJsonRpcTypes["eth_getBlockByNumber"]): phase0.
 
 export function isJsonRpcTruncatedError(error: Error): boolean {
   return (
+    // Truncated responses usually get as 200 but since it's truncated the JSON will be invalid
     error instanceof ErrorParseJson ||
-    error instanceof ErrorJsonRpcResponse ||
+    // Otherwise guess Infura error message of too many events
     (error instanceof Error && error.message.includes("query returned more than 10000 results"))
   );
 }
