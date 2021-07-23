@@ -5,7 +5,6 @@
 import {allForks} from "@chainsafe/lodestar-types";
 
 import {
-  AggregateAndProofRepository,
   AttesterSlashingRepository,
   BlockArchiveRepository,
   BlockRepository,
@@ -50,7 +49,6 @@ export interface IBeaconDb {
   stateArchive: StateArchiveRepository;
 
   // op pool
-  aggregateAndProof: AggregateAndProofRepository;
   voluntaryExit: VoluntaryExitRepository;
   proposerSlashing: ProposerSlashingRepository;
   attesterSlashing: AttesterSlashingRepository;

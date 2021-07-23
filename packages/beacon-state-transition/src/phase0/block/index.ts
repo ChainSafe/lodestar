@@ -2,7 +2,7 @@ import {allForks, phase0} from "@chainsafe/lodestar-types";
 import {CachedBeaconState} from "../../allForks/util";
 import {processBlockHeader, processEth1Data, processRandao} from "../../allForks/block";
 import {processOperations} from "./processOperations";
-import {processAttestation} from "./processAttestation";
+import {processAttestation, validateAttestation} from "./processAttestation";
 import {processDeposit} from "./processDeposit";
 import {processAttesterSlashing} from "./processAttesterSlashing";
 import {processProposerSlashing} from "./processProposerSlashing";
@@ -13,6 +13,7 @@ export {isValidIndexedAttestation} from "../../allForks/block";
 
 export {
   processOperations,
+  validateAttestation,
   processAttestation,
   processDeposit,
   processAttesterSlashing,

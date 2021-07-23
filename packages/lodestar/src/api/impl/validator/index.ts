@@ -12,7 +12,7 @@ import {
   SYNC_COMMITTEE_SIZE,
   SYNC_COMMITTEE_SUBNET_COUNT,
 } from "@chainsafe/lodestar-params";
-import {allForks, Root, Slot} from "@chainsafe/lodestar-types";
+import {allForks, Root, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {assembleAttestationData} from "../../../chain/factory/attestation";
 import {assembleBlock} from "../../../chain/factory/block";
 import {AttestationError, AttestationErrorCode} from "../../../chain/errors";
@@ -325,12 +325,24 @@ export function getValidatorApi({
         signedAggregateAndProofs.map(async (signedAggregateAndProof, i) => {
           try {
             // TODO: Validate in batch
-            const indexedAtt = await validateGossipAggregateAndProof(chain, signedAggregateAndProof);
+            const {indexedAttestation, committeeIndices} = await validateGossipAggregateAndProof(
+              chain,
+              signedAggregateAndProof
+            );
 
-            metrics?.registerAggregatedAttestation(OpSource.api, seenTimestampSec, signedAggregateAndProof, indexedAtt);
+            metrics?.registerAggregatedAttestation(
+              OpSource.api,
+              seenTimestampSec,
+              signedAggregateAndProof,
+              indexedAttestation
+            );
 
             await Promise.all([
-              db.aggregateAndProof.add(signedAggregateAndProof.message),
+              chain.aggregatedAttestationPool.add(
+                signedAggregateAndProof.message.aggregate,
+                indexedAttestation.attestingIndices.valueOf() as ValidatorIndex[],
+                committeeIndices
+              ),
               network.gossip.publishBeaconAggregateAndProof(signedAggregateAndProof),
             ]);
           } catch (e) {

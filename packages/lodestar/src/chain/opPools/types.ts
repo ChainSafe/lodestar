@@ -9,6 +9,8 @@ export enum InsertOutcome {
   NewData = "NewData",
   /** A validator signature for a participant of this data is already known. No changes were made. */
   AlreadyKnown = "AlreadyKnown",
+  /** Not existing in the pool but it's too old to add. No changes were made. */
+  Old = "Old",
   /** The data is know, and the new participants have been added to the aggregated signature */
   Aggregated = "Aggregated",
 }

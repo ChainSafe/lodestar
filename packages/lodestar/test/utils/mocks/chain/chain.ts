@@ -29,7 +29,11 @@ import {
   SeenContributionAndProof,
   SeenSyncCommitteeMessages,
 } from "../../../../src/chain/seenCache";
-import {SyncCommitteeMessagePool, SyncContributionAndProofPool} from "../../../../src/chain/opPools";
+import {
+  SyncCommitteeMessagePool,
+  SyncContributionAndProofPool,
+  AggregatedAttestationPool,
+} from "../../../../src/chain/opPools";
 import {LightClientIniter} from "../../../../src/chain/lightClient";
 
 /* eslint-disable @typescript-eslint/no-empty-function */
@@ -61,6 +65,7 @@ export class MockBeaconChain implements IBeaconChain {
 
   // Ops pool
   readonly attestationPool = new AttestationPool();
+  readonly aggregatedAttestationPool = new AggregatedAttestationPool();
   readonly syncCommitteeMessagePool = new SyncCommitteeMessagePool();
   readonly syncContributionAndProofPool = new SyncContributionAndProofPool();
 
