@@ -79,6 +79,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
           return; // Ignore
         }
         this.logger.error("BackfillSync processor error", e);
+        this.close();
       });
   }
 
