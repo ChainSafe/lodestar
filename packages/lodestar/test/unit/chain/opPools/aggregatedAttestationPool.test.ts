@@ -85,8 +85,7 @@ describe("MatchingDataAttestationGroup", function () {
     const result = attestationGroup.add({attestation: attestation2, attestingIndices: new Set(committee)});
     expect(result).to.be.equal(InsertOutcome.NewData, "incorrect InsertOutcome");
     const attestations = attestationGroup.getAttestations();
-    // attestation2 should be first since it has more attesters there
-    expect(attestations).to.be.deep.equal([attestation2, attestation1], "Incorrect attestations for block");
+    expect(attestations).to.be.deep.equal([attestation1, attestation2], "Incorrect attestations for block");
   });
 
   it("add - already known, getAttestations() return 1", () => {
@@ -114,30 +113,53 @@ describe("MatchingDataAttestationGroup", function () {
     expect(attestations[0].data).to.be.deep.equal(attestation1.data, "incorrect AttestationData");
   });
 
-  it("removeIncluded - numRemoved is 0", () => {
-    const numRemoved = attestationGroup.removeBySeenValidators(new Set([200]));
-    expect(numRemoved).to.be.equal(0, "expect no attestation is removed");
-    const attestations = attestationGroup.getAttestations();
-    expect(attestations).to.be.deep.equal([attestation1], "incorrect getAttestations() result");
+  it("getAttestationsForBlock - return 0", () => {
+    const attestations = attestationGroup.getAttestationsForBlock(new Set(committee));
+    expect(attestations).to.be.deep.equal([], "all attesters are seen, should remove empty");
   });
 
-  it("removeIncluded - numRemoved is 1", () => {
-    const numRemoved = attestationGroup.removeBySeenValidators(new Set(committee));
-    expect(numRemoved).to.be.equal(1, "expect exactly 1 attestation is removed");
-    expect(attestationGroup.getAttestations()).to.be.deep.equal([], "the resulted attestations should be empty");
+  it("getAttestationsForBlock - return 1", () => {
+    const attestations = attestationGroup.getAttestationsForBlock(new Set([200]));
+    expect(attestations).to.be.deep.equal(
+      [
+        {
+          attestation: attestation1,
+          attestingIndices: new Set([100, 200]),
+          notSeenAttesterCount: 1,
+        },
+      ],
+      "incorrect attestations"
+    );
   });
 
-  it("getAttestations - order by number of fresh attesters", () => {
+  it("getAttestationsForBlock - return 2", () => {
+    const attestation2 = {...attestationSeed, ...{aggregationBits: [true, true, true] as List<boolean>}};
+    const result = attestationGroup.add({attestation: attestation2, attestingIndices: new Set(committee)});
+    expect(result).to.be.equal(InsertOutcome.NewData, "incorrect InsertOutcome");
+    const attestations = attestationGroup.getAttestationsForBlock(new Set([200]));
+    expect(attestations).to.be.deep.equal(
+      [
+        {
+          attestation: attestation1,
+          attestingIndices: new Set([100, 200]),
+          notSeenAttesterCount: 1,
+        },
+        {
+          attestation: attestation2,
+          attestingIndices: new Set(committee),
+          notSeenAttesterCount: 2,
+        },
+      ],
+      "incorrect attestations"
+    );
+  });
+
+  it("getAttestations", () => {
     const attestation2 = {...attestationSeed, ...{aggregationBits: [true, false, true] as List<boolean>}};
     const result = attestationGroup.add({attestation: attestation2, attestingIndices: new Set([100, 300])});
     expect(result).to.be.equal(InsertOutcome.NewData, "incorrect InsertOutcome");
-    const numRemoved = attestationGroup.removeBySeenValidators(new Set([300]));
-    expect(numRemoved).to.be.equal(0, "expect no attestation is removed");
-    // attestation1 has 2 fresh attesters, attestation 2 has 1 fresh attesters
-    expect(attestationGroup.getAttestations()).to.be.deep.equal(
-      [attestation1, attestation2],
-      "incorrect getAttestations() result"
-    );
+    const attestations = attestationGroup.getAttestations();
+    expect(attestations).to.be.deep.equal([attestation1, attestation2]);
   });
 });
 

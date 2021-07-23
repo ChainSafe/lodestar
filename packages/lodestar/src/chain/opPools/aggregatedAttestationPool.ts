@@ -91,17 +91,17 @@ export class AggregatedAttestationPool {
         throw Error(`No aggregated attestation pool for slot=${slot}`);
       }
 
+      const epoch = computeEpochAtSlot(slot);
       // validateAttestation condition: Attestation target epoch not in previous or current epoch
-      if (!(slot === stateEpoch || slot === statePrevEpoch)) {
+      if (!(epoch === stateEpoch || epoch === statePrevEpoch)) {
         continue; // Invalid attestations
       }
       // validateAttestation condition: Attestation slot not within inclusion window
-      if (!(slot + MIN_ATTESTATION_INCLUSION_DELAY <= slot && slot <= slot + SLOTS_PER_EPOCH)) {
+      if (!(slot + MIN_ATTESTATION_INCLUSION_DELAY <= stateSlot && stateSlot <= slot + SLOTS_PER_EPOCH)) {
         continue; // Invalid attestations
       }
 
       const attestationGroups = Array.from(attestationGroupByDataHash.values());
-      const epoch = computeEpochAtSlot(slot);
 
       for (const attestationGroup of attestationGroups) {
         const participation = getParticipationFn(epoch, attestationGroup.committee);
