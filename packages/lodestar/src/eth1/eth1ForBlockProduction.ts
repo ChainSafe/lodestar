@@ -181,7 +181,7 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
       lastProcessedDepositBlockNumber
     );
 
-    const eth1Blocks = await this.eth1Provider.getBlocksByNumber(fromBlock, toBlock, this.signal);
+    const eth1Blocks = await this.eth1Provider.getBlocksByNumber(fromBlock, toBlock);
     this.logger.verbose("Fetched eth1 blocks", {blockCount: eth1Blocks.length, fromBlock, toBlock});
 
     const eth1Datas = await this.depositsCache.getEth1DataForBlocks(eth1Blocks, lastProcessedDepositBlockNumber);

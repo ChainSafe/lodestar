@@ -4,13 +4,14 @@ import {ICliCommandOptions} from "../../util";
 export interface IEth1Args {
   "eth1.enabled": boolean;
   "eth1.providerUrl": string;
+  "eth1.providerUrls": string[];
   "eth1.depositContractDeployBlock": number;
 }
 
 export function parseArgs(args: IEth1Args): IBeaconNodeOptions["eth1"] {
   return {
     enabled: args["eth1.enabled"],
-    providerUrl: args["eth1.providerUrl"],
+    providerUrls: args["eth1.providerUrls"] ?? [args["eth1.providerUrl"]],
     depositContractDeployBlock: args["eth1.depositContractDeployBlock"],
   };
 }
@@ -24,9 +25,16 @@ export const options: ICliCommandOptions<IEth1Args> = {
   },
 
   "eth1.providerUrl": {
-    description: "Url to Eth1 node with enabled rpc",
+    description: "[DEPRECATED] Url to Eth1 node with enabled rpc",
     type: "string",
-    defaultDescription: defaultOptions.eth1.providerUrl,
+    defaultDescription: "[DEPRECATED]",
+    group: "eth1",
+  },
+
+  "eth1.providerUrls": {
+    description: "Urls to Eth1 node with enabled rpc",
+    type: "array",
+    defaultDescription: JSON.stringify(defaultOptions.eth1.providerUrls),
     group: "eth1",
   },
 
