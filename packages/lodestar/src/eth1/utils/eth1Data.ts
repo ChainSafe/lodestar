@@ -3,6 +3,8 @@ import {List, TreeBacked} from "@chainsafe/ssz";
 import {getTreeAtIndex} from "../../util/tree";
 import {binarySearchLte} from "../../util/binarySearch";
 
+type BlockNumber = number;
+
 /**
  * Appends partial eth1 data (depositRoot, depositCount) in a sequence of blocks
  * eth1 data deposit is inferred from sparse eth1 data obtained from the deposit logs
@@ -11,7 +13,7 @@ export async function getEth1DataForBlocks(
   blocks: phase0.Eth1Block[],
   depositDescendingStream: AsyncIterable<phase0.DepositEvent>,
   depositRootTree: TreeBacked<List<Root>>,
-  lastProcessedDepositBlockNumber: number | null
+  lastProcessedDepositBlockNumber: BlockNumber | null
 ): Promise<(phase0.Eth1Data & phase0.Eth1Block)[]> {
   // Exclude blocks for which there is no valid eth1 data deposit
   if (lastProcessedDepositBlockNumber) {
@@ -53,11 +55,11 @@ export async function getEth1DataForBlocks(
  * @returns array ascending by blockNumber
  */
 export async function getDepositsByBlockNumber(
-  fromBlock: number,
-  toBlock: number,
+  fromBlock: BlockNumber,
+  toBlock: BlockNumber,
   depositEventDescendingStream: AsyncIterable<phase0.DepositEvent>
 ): Promise<phase0.DepositEvent[]> {
-  const depositCountMap = new Map<number, phase0.DepositEvent>();
+  const depositCountMap = new Map<BlockNumber, phase0.DepositEvent>();
   // Take blocks until the block under the range lower bound (included)
   for await (const deposit of depositEventDescendingStream) {
     if (deposit.blockNumber <= toBlock && !depositCountMap.has(deposit.blockNumber)) {
@@ -89,11 +91,12 @@ export function getDepositRootByDepositCount(
     }
   }
 
-  return depositCounts.reduce((map: Map<number, Root>, depositCount) => {
+  const depositRootByDepositCount = new Map<number, Root>();
+  for (const depositCount of depositCounts) {
     depositRootTree = getTreeAtIndex(depositRootTree, depositCount - 1);
-    map.set(depositCount, depositRootTree.hashTreeRoot());
-    return map;
-  }, new Map());
+    depositRootByDepositCount.set(depositCount, depositRootTree.hashTreeRoot());
+  }
+  return depositRootByDepositCount;
 }
 
 export class ErrorNoDepositsForBlockRange extends Error {
