@@ -2,7 +2,7 @@
 // Note: isomorphic-fetch is not well mantained and does not support abort signals
 import fetch from "cross-fetch";
 import {AbortController, AbortSignal} from "@chainsafe/abort-controller";
-import {IJsonRpcClient, IRpcPayload, ReqOpts} from "../interface";
+import {IRpcPayload, ReqOpts} from "../interface";
 import {toJson, toString} from "@chainsafe/lodestar-utils";
 import {Json} from "@chainsafe/ssz";
 
@@ -25,7 +25,7 @@ interface IRpcResponseError {
   };
 }
 
-export class JsonRpcHttpClient implements IJsonRpcClient {
+export class JsonRpcHttpClient {
   constructor(
     private readonly urls: string[],
     private readonly opts: {

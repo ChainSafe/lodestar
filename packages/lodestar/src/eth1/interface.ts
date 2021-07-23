@@ -51,8 +51,3 @@ export interface IRpcPayload {
 export type ReqOpts = {
   timeout?: number;
 };
-
-export interface IJsonRpcClient {
-  fetch<R>({method, params}: IRpcPayload, opts?: ReqOpts): Promise<R>;
-  fetchBatch<R>(rpcPayloadArr: IRpcPayload[], opts?: ReqOpts): Promise<R[]>;
-}
