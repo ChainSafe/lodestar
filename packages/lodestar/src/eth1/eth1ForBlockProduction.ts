@@ -10,11 +10,14 @@ import {getEth1VotesToConsider, pickEth1Vote} from "./utils/eth1Vote";
 import {getDeposits} from "./utils/deposits";
 import {IEth1ForBlockProduction, IEth1Provider} from "./interface";
 import {IEth1Options} from "./options";
+import {HttpRpcError} from "./provider/jsonRpcHttpClient";
 
 const MAX_BLOCKS_PER_BLOCK_QUERY = 1000;
 const MAX_BLOCKS_PER_LOG_QUERY = 1000;
 /** Eth1 blocks happen every 14s approx, not need to update too often once synced */
 const AUTO_UPDATE_PERIOD_MS = 60 * 1000;
+/** Miliseconds to wait after getting 429 Too Many Requests */
+const RATE_LIMITED_WAIT_MS = 30 * 1000;
 
 /**
  * Main class handling eth1 data fetching, processing and storing
@@ -115,13 +118,21 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
     while (true) {
       lastRunMs = Date.now();
 
-      const hasCatchedUp = await this.update().catch((e) => {
-        this.logger.error("Error updating eth1 chain cache", e);
-      });
+      try {
+        const hasCatchedUp = await this.update();
 
-      if (hasCatchedUp) {
-        const sleepTime = Math.max(AUTO_UPDATE_PERIOD_MS + lastRunMs - Date.now(), 0);
-        await sleep(sleepTime, this.signal);
+        if (hasCatchedUp) {
+          const sleepTime = Math.max(AUTO_UPDATE_PERIOD_MS + lastRunMs - Date.now(), 0);
+          await sleep(sleepTime, this.signal);
+        }
+      } catch (e) {
+        // From Infura: 429 Too Many Requests
+        if (e instanceof HttpRpcError && e.status === 429) {
+          this.logger.debug("Eth1 provider rate limited", {}, e);
+          await sleep(RATE_LIMITED_WAIT_MS, this.signal);
+        } else {
+          this.logger.error("Error updating eth1 chain cache", {}, e);
+        }
       }
     }
   }

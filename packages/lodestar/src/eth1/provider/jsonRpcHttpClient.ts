@@ -168,7 +168,7 @@ export class ErrorJsonRpcResponse extends Error {
 }
 
 export class HttpRpcError extends Error {
-  constructor(readonly code: number, message: string) {
+  constructor(readonly status: number, message: string) {
     super(message);
   }
 }
