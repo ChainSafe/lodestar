@@ -25,7 +25,13 @@ type GetParticipationFn = (epoch: Epoch, committee: number[]) => Set<number> | n
  * After merging AggregatedAttestationPool, gather numbers from a real network and investigate
  * how does participation looks like in attestations.
  */
-const MAX_ATTESTATIONS_PER_GROUP = 4;
+const MAX_RETAINED_ATTESTATIONS_PER_GROUP = 4;
+
+/**
+ * On mainnet, each slot has 64 committees, and each block has 128 attestations max so we don't
+ * want to store more than 2 per group.
+ */
+const MAX_ATTESTATIONS_PER_GROUP = 2;
 
 /**
  * Maintain a pool of aggregated attestations. Attestations can be retrieved for inclusion in a block
@@ -232,20 +238,23 @@ export class MatchingDataAttestationGroup {
 
   constructor(readonly committee: ValidatorIndex[]) {}
 
-  /** Add an attestation.
+  /**
+   * Add an attestation.
    * Try to preaggregate to existing attestations if possible.
    * If it's a subset of an existing attestations, it's not neccesrary to add to our pool.
+   * If it's a superset of an existing attestation, remove the existing attestation and add new.
    */
   add(attestation: AttestationWithIndex): InsertOutcome {
     const {attestingIndices} = attestation;
     // preaggregate
     let insertResult = InsertOutcome.NewData;
-    for (const existingAttestation of this.attestations) {
+    const indicesToRemove = [];
+    for (const [i, existingAttestation] of this.attestations.entries()) {
       const existingAttestingIndices = existingAttestation.attestingIndices;
-      let numIntersection = 0;
-      for (const index of attestingIndices) {
-        if (existingAttestingIndices.has(index)) numIntersection++;
-      }
+      const numIntersection =
+        existingAttestingIndices.size >= attestingIndices.size
+          ? intersection(existingAttestingIndices, attestingIndices)
+          : intersection(attestingIndices, existingAttestingIndices);
       // no intersection
       if (numIntersection === 0) {
         aggregateInto(existingAttestation, attestation, this.committee);
@@ -253,15 +262,23 @@ export class MatchingDataAttestationGroup {
       } else if (numIntersection === attestingIndices.size) {
         // this new attestation is actually a subset of an existing one, don't want to add it
         insertResult = InsertOutcome.AlreadyKnown;
+      } else if (numIntersection === existingAttestingIndices.size) {
+        // this new attestation is superset of an existing one, remove existing one
+        indicesToRemove.push(i);
       }
     }
     if (insertResult === InsertOutcome.NewData) {
+      for (const index of indicesToRemove.reverse()) {
+        this.attestations.splice(index, 1);
+      }
       this.attestations.push(attestation);
-
       // Remove the attestations with less participation
-      if (this.attestations.length > MAX_ATTESTATIONS_PER_GROUP) {
+      if (this.attestations.length > MAX_RETAINED_ATTESTATIONS_PER_GROUP) {
         this.attestations.sort((a, b) => b.attestingIndices.size - a.attestingIndices.size);
-        this.attestations.splice(MAX_ATTESTATIONS_PER_GROUP, this.attestations.length - MAX_ATTESTATIONS_PER_GROUP);
+        this.attestations.splice(
+          MAX_RETAINED_ATTESTATIONS_PER_GROUP,
+          this.attestations.length - MAX_RETAINED_ATTESTATIONS_PER_GROUP
+        );
       }
     }
     return insertResult;
@@ -280,7 +297,12 @@ export class MatchingDataAttestationGroup {
       }
     }
 
-    return attestations;
+    return attestations
+      .sort(
+        (a, b) =>
+          (b.notSeenAttesterCount ?? b.attestingIndices.size) - (a.notSeenAttesterCount ?? a.attestingIndices.size)
+      )
+      .slice(0, MAX_ATTESTATIONS_PER_GROUP);
   }
 
   /** Get attestations for API. */
@@ -324,4 +346,12 @@ export function extractParticipation(
     }
   }
   return allParticipants;
+}
+
+export function intersection(bigSet: Set<ValidatorIndex>, smallSet: Set<ValidatorIndex>): number {
+  let numIntersection = 0;
+  for (const validatorIndex of smallSet) {
+    if (bigSet.has(validatorIndex)) numIntersection++;
+  }
+  return numIntersection;
 }

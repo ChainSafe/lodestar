@@ -81,11 +81,19 @@ describe("MatchingDataAttestationGroup", function () {
   });
 
   it("add - new data, getAttestations() return 2", () => {
+    const attestation2 = {...attestationSeed, ...{aggregationBits: [true, false, true] as List<boolean>}};
+    const result = attestationGroup.add({attestation: attestation2, attestingIndices: new Set([100, 300])});
+    expect(result).to.be.equal(InsertOutcome.NewData, "incorrect InsertOutcome");
+    const attestations = attestationGroup.getAttestations();
+    expect(attestations).to.be.deep.equal([attestation1, attestation2], "Incorrect attestations for block");
+  });
+
+  it("add - new data, remove existing attestation, getAttestations() return 1", () => {
     const attestation2 = {...attestationSeed, ...{aggregationBits: [true, true, true] as List<boolean>}};
     const result = attestationGroup.add({attestation: attestation2, attestingIndices: new Set(committee)});
     expect(result).to.be.equal(InsertOutcome.NewData, "incorrect InsertOutcome");
     const attestations = attestationGroup.getAttestations();
-    expect(attestations).to.be.deep.equal([attestation1, attestation2], "Incorrect attestations for block");
+    expect(attestations).to.be.deep.equal([attestation2], "should return only new attestation");
   });
 
   it("add - already known, getAttestations() return 1", () => {
@@ -133,21 +141,21 @@ describe("MatchingDataAttestationGroup", function () {
   });
 
   it("getAttestationsForBlock - return 2", () => {
-    const attestation2 = {...attestationSeed, ...{aggregationBits: [true, true, true] as List<boolean>}};
-    const result = attestationGroup.add({attestation: attestation2, attestingIndices: new Set(committee)});
+    const attestation2 = {...attestationSeed, ...{aggregationBits: [true, false, true] as List<boolean>}};
+    const result = attestationGroup.add({attestation: attestation2, attestingIndices: new Set([100, 300])});
     expect(result).to.be.equal(InsertOutcome.NewData, "incorrect InsertOutcome");
     const attestations = attestationGroup.getAttestationsForBlock(new Set([200]));
     expect(attestations).to.be.deep.equal(
       [
         {
+          attestation: attestation2,
+          attestingIndices: new Set([100, 300]),
+          notSeenAttesterCount: 2,
+        },
+        {
           attestation: attestation1,
           attestingIndices: new Set([100, 200]),
           notSeenAttesterCount: 1,
-        },
-        {
-          attestation: attestation2,
-          attestingIndices: new Set(committee),
-          notSeenAttesterCount: 2,
         },
       ],
       "incorrect attestations"
