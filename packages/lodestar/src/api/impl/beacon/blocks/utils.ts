@@ -52,29 +52,37 @@ async function resolveBlockIdOrNull(
   }
 
   if (blockId === "finalized") {
-    return await db.blockArchive.get(forkChoice.getFinalizedCheckpoint().epoch);
+    return await db.blockArchive.get(forkChoice.getFinalizedBlock().slot);
   }
+
+  let blockSummary;
+  let getBlockByBlockArchive;
 
   if (blockId.startsWith("0x")) {
-    const root = fromHexString(blockId);
-    const summary = forkChoice.getBlock(root);
-    if (summary) {
-      return await db.block.get(summary.blockRoot);
-    } else {
-      return await db.blockArchive.getByRoot(root);
-    }
-  }
-
-  // block id must be slot
-  const slot = parseInt(blockId, 10);
-  if (isNaN(slot) && isNaN(slot - 0)) {
-    throw new ValidationError(`Invalid block id '${blockId}'`, "blockId");
-  }
-
-  const blockSummary = forkChoice.getCanonicalBlockSummaryAtSlot(slot);
-  if (blockSummary) {
-    return db.block.get(blockSummary.blockRoot);
+    const blockHash = fromHexString(blockId);
+    blockSummary = forkChoice.getBlock(blockHash);
+    getBlockByBlockArchive = async () => await db.blockArchive.getByRoot(blockHash);
   } else {
-    return await db.blockArchive.get(slot);
+    // block id must be slot
+    const blockSlot = parseInt(blockId, 10);
+    if (isNaN(blockSlot) && isNaN(blockSlot - 0)) {
+      throw new ValidationError(`Invalid block id '${blockId}'`, "blockId");
+    }
+    blockSummary = forkChoice.getCanonicalBlockSummaryAtSlot(blockSlot);
+    getBlockByBlockArchive = async () => await db.blockArchive.get(blockSlot);
+  }
+
+  if (blockSummary) {
+    // All unfinalized blocks **and the finalized block** are tracked by the fork choice.
+    // Unfinalized blocks are stored in the block repository, but the finalized block is in the block archive
+    const finalized = forkChoice.getFinalizedBlock();
+    if (blockSummary.slot === finalized.slot) {
+      return await db.blockArchive.get(finalized.slot);
+    } else {
+      return await db.block.get(blockSummary.blockRoot);
+    }
+  } else {
+    // Blocks not in the fork choice are in the block archive
+    return await getBlockByBlockArchive();
   }
 }

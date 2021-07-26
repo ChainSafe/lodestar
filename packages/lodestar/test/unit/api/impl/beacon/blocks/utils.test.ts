@@ -54,16 +54,17 @@ describe("block api utils", function () {
 
     it("should resolve finalized", async function () {
       const expected = 0;
-      forkChoiceStub.getFinalizedCheckpoint.returns({epoch: expected, root: Buffer.alloc(32, 2)});
+      forkChoiceStub.getFinalizedBlock.returns(expectedSummary);
       await resolveBlockId(forkChoiceStub, dbStub, "finalized").catch(() => {});
       expect(dbStub.blockArchive.get.withArgs(expected).calledOnce).to.be.true;
     });
 
     it("should resolve finalized block root", async function () {
       forkChoiceStub.getBlock.returns(expectedSummary);
-      dbStub.block.get.withArgs(bufferEqualsMatcher(expectedBuffer)).resolves(null);
+      forkChoiceStub.getFinalizedBlock.returns(expectedSummary);
+      dbStub.blockArchive.getByRoot.withArgs(bufferEqualsMatcher(expectedBuffer)).resolves(null);
       await resolveBlockId(forkChoiceStub, dbStub, toHexString(expectedBuffer)).catch(() => {});
-      expect(dbStub.block.get.withArgs(bufferEqualsMatcher(expectedBuffer)).calledOnce).to.be.true;
+      expect(dbStub.blockArchive.get.withArgs(expectedSummary.slot).calledOnce).to.be.true;
     });
 
     it("should resolve non finalized block root", async function () {
