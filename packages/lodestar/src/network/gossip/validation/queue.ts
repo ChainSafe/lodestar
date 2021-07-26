@@ -1,7 +1,9 @@
 import {AbortSignal} from "@chainsafe/abort-controller";
+import {InMessage} from "libp2p-interfaces/src/pubsub";
+import {mapValues} from "@chainsafe/lodestar-utils";
 import {IMetrics} from "../../../metrics";
-import {JobQueue, JobQueueOpts, QueueType} from "../../../util/queue";
-import {GossipType, GossipValidatorFn} from "../interface";
+import {JobItemQueue, JobQueueOpts, QueueType} from "../../../util/queue";
+import {GossipJobQueues, GossipTopic, GossipType, ValidatorFnsByType} from "../interface";
 
 /**
  * Numbers from https://github.com/sigp/lighthouse/blob/b34a79dc0b02e04441ba01fd0f304d1e203d877d/beacon_node/network/src/beacon_processor/mod.rs#L69
@@ -34,25 +36,24 @@ const gossipQueueOpts: {[K in GossipType]: Pick<JobQueueOpts, "maxLength" | "typ
  * By topic is too specific, so by type groups all similar objects in the same queue. All in the same won't allow
  * to customize different queue behaviours per object type (see `gossipQueueOpts`).
  */
-export function wrapWithQueue(
-  gossipValidatorFn: GossipValidatorFn,
-  type: GossipType,
+export function createValidationQueues(
+  gossipValidatorFns: ValidatorFnsByType,
   signal: AbortSignal,
   metrics: IMetrics | null
-): GossipValidatorFn {
-  const jobQueue = new JobQueue(
-    {signal, ...gossipQueueOpts[type]},
-    metrics
-      ? {
-          length: metrics.gossipValidationQueueLength.child({topic: type}),
-          droppedJobs: metrics.gossipValidationQueueDroppedJobs.child({topic: type}),
-          jobTime: metrics.gossipValidationQueueJobTime.child({topic: type}),
-          jobWaitTime: metrics.gossipValidationQueueJobWaitTime.child({topic: type}),
-        }
-      : undefined
-  );
-
-  return async function gossipValidatorFnWithQueue(topicStr, gossipMsg) {
-    await jobQueue.push(async () => gossipValidatorFn(topicStr, gossipMsg));
-  };
+): GossipJobQueues {
+  return mapValues(gossipQueueOpts, (opts, type) => {
+    const gossipValidatorFn = gossipValidatorFns[type];
+    return new JobItemQueue<[GossipTopic, InMessage], void>(
+      (topic, message) => gossipValidatorFn(topic, message),
+      {signal, ...opts},
+      metrics
+        ? {
+            length: metrics.gossipValidationQueueLength.child({topic: type}),
+            droppedJobs: metrics.gossipValidationQueueDroppedJobs.child({topic: type}),
+            jobTime: metrics.gossipValidationQueueJobTime.child({topic: type}),
+            jobWaitTime: metrics.gossipValidationQueueJobWaitTime.child({topic: type}),
+          }
+        : undefined
+    );
+  });
 }

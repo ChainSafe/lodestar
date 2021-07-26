@@ -1,12 +1,19 @@
 import {routes} from "@chainsafe/lodestar-api";
 import {allForks} from "@chainsafe/lodestar-beacon-state-transition";
+import {Json, toHexString} from "@chainsafe/ssz";
+import {IChainForkConfig} from "@chainsafe/lodestar-config";
+import {ssz} from "@chainsafe/lodestar-types";
+import {BeaconChain, IBlockJob, IChainSegmentJob} from "../../../chain";
+import {QueuedStateRegenerator, RegenRequest} from "../../../chain/regen";
+import {GossipType} from "../../../network";
 import {ApiModules} from "../types";
 
 export function getLodestarApi({
   chain,
   config,
+  network,
   sync,
-}: Pick<ApiModules, "chain" | "config" | "sync">): routes.lodestar.Api {
+}: Pick<ApiModules, "chain" | "config" | "network" | "sync">): routes.lodestar.Api {
   let writingHeapdump = false;
 
   return {
@@ -70,5 +77,73 @@ export function getLodestarApi({
     async getSyncChainsDebugState() {
       return {data: sync.getSyncChainsDebugState()};
     },
+
+    async getGossipQueueItems(gossipType: GossipType) {
+      const jobQueue = network.gossip.jobQueues[gossipType];
+      if (!jobQueue) {
+        throw Error(`Unknown gossipType ${gossipType}, known values: ${Object.keys(jobQueue).join(", ")}`);
+      }
+
+      return jobQueue.getItems().map((item) => {
+        const [topic, message] = item.args;
+        return {
+          topic: topic,
+          receivedFrom: message.receivedFrom,
+          data: message.data,
+          addedTimeMs: item.addedTimeMs,
+        };
+      });
+    },
+
+    async getRegenQueueItems() {
+      return (chain.regen as QueuedStateRegenerator).jobQueue.getItems().map((item) => ({
+        key: item.args[0].key,
+        args: regenRequestToJson(config, item.args[0]),
+        addedTimeMs: item.addedTimeMs,
+      }));
+    },
+
+    async getBlockProcessorQueueItems() {
+      return (chain as BeaconChain)["blockProcessor"].jobQueue.getItems().map((item) => {
+        const [job] = item.args;
+        const blocks = (job as IChainSegmentJob).signedBlocks ?? [(job as IBlockJob).signedBlock];
+        return {
+          blocks: blocks.map((block) => block.message.slot),
+          jobOpts: {
+            reprocess: job.reprocess,
+            prefinalized: job.prefinalized,
+            validProposerSignature: job.validProposerSignature,
+            validSignatures: job.validSignatures,
+          },
+          addedTimeMs: item.addedTimeMs,
+        };
+      });
+    },
   };
+}
+
+function regenRequestToJson(config: IChainForkConfig, regenRequest: RegenRequest): Json {
+  switch (regenRequest.key) {
+    case "getBlockSlotState":
+      return {
+        root: toHexString(regenRequest.args[0]),
+        slot: regenRequest.args[1],
+      };
+
+    case "getCheckpointState":
+      return ssz.phase0.Checkpoint.toJson(regenRequest.args[0]);
+
+    case "getPreState": {
+      const slot = regenRequest.args[0].slot;
+      return {
+        root: toHexString(config.getForkTypes(slot).BeaconBlock.hashTreeRoot(regenRequest.args[0])),
+        slot,
+      };
+    }
+
+    case "getState":
+      return {
+        root: toHexString(regenRequest.args[0]),
+      };
+  }
 }

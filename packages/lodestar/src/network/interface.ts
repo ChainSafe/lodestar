@@ -10,7 +10,7 @@ import {Eth2Gossipsub} from "./gossip";
 import {MetadataController} from "./metadata";
 import {IPeerRpcScoreStore, IPeerMetadataStore} from "./peers";
 import {IReqResp} from "./reqresp";
-import {ISubnetsService, CommitteeSubscription} from "./subnets";
+import {IAttnetsService, ISubnetsService, CommitteeSubscription} from "./subnets";
 
 export type PeerSearchOptions = {
   supportsProtocols?: string[];
@@ -20,7 +20,7 @@ export type PeerSearchOptions = {
 export interface INetwork {
   events: INetworkEventBus;
   reqResp: IReqResp;
-  attnetsService: ISubnetsService;
+  attnetsService: IAttnetsService;
   syncnetsService: ISubnetsService;
   gossip: Eth2Gossipsub;
   metadata: MetadataController;

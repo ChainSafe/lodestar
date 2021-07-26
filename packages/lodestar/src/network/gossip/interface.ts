@@ -12,6 +12,7 @@ import {ILogger} from "@chainsafe/lodestar-utils";
 import {InMessage} from "libp2p-interfaces/src/pubsub";
 import {IBeaconChain} from "../../chain";
 import {NetworkEvent} from "../events";
+import {JobItemQueue} from "../../util/queue";
 
 export enum GossipType {
   // phase0
@@ -113,6 +114,8 @@ export interface IGossipModules {
  *
  * js-libp2p-gossipsub expects validation functions that look like this
  */
-export type GossipValidatorFn = (topicStr: string, message: InMessage) => Promise<void>;
+export type GossipValidatorFn = (topic: GossipTopic, message: InMessage) => Promise<void>;
 
 export type ValidatorFnsByType = {[K in GossipType]: GossipValidatorFn};
+
+export type GossipJobQueues = {[K in GossipType]: JobItemQueue<[GossipTopic, InMessage], void>};

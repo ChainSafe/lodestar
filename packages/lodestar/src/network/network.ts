@@ -18,7 +18,7 @@ import {IBeaconDb} from "../db";
 import {INetworkOptions} from "./options";
 import {INetwork} from "./interface";
 import {ReqResp, IReqResp, IReqRespOptions, ReqRespHandlers} from "./reqresp";
-import {Eth2Gossipsub, GossipType, GossipHandlers} from "./gossip";
+import {Eth2Gossipsub, GossipType, GossipHandlers, getGossipHandlers} from "./gossip";
 import {MetadataController} from "./metadata";
 import {getActiveForks, getCurrentAndNextFork, FORK_EPOCH_LOOKAHEAD} from "./forks";
 import {IPeerMetadataStore, Libp2pPeerMetadataStore} from "./peers/metastore";
@@ -35,8 +35,9 @@ interface INetworkModules {
   chain: IBeaconChain;
   db: IBeaconDb;
   reqRespHandlers: ReqRespHandlers;
-  gossipHandlers: GossipHandlers;
   signal: AbortSignal;
+  // Optionally pass custom GossipHandlers, for testing
+  gossipHandlers?: GossipHandlers;
 }
 
 export class Network implements INetwork {
@@ -59,7 +60,7 @@ export class Network implements INetwork {
   private subscribedForks = new Set<ForkName>();
 
   constructor(private readonly opts: INetworkOptions & IReqRespOptions, modules: INetworkModules) {
-    const {config, libp2p, logger, metrics, chain, reqRespHandlers, gossipHandlers, signal} = modules;
+    const {config, db, libp2p, logger, metrics, chain, reqRespHandlers, gossipHandlers, signal} = modules;
     this.libp2p = libp2p;
     this.logger = logger;
     this.config = config;
@@ -95,7 +96,7 @@ export class Network implements INetwork {
       logger,
       metrics,
       signal,
-      gossipHandlers,
+      gossipHandlers: gossipHandlers ?? getGossipHandlers({chain, config, db, logger, network: this, metrics}),
       forkDigestContext: chain.forkDigestContext,
     });
 
@@ -218,6 +219,11 @@ export class Network implements INetwork {
   unsubscribeGossipCoreTopics(): void {
     for (const fork of this.subscribedForks.values()) {
       this.unsubscribeCoreTopicsAtFork(fork);
+    }
+
+    // Drop all the gossip validation queues
+    for (const jobQueue of Object.values(this.gossip.jobQueues)) {
+      jobQueue.dropAllJobs();
     }
   }
 

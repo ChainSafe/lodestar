@@ -1,4 +1,4 @@
-import {ssz, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {ValidatorIndex} from "@chainsafe/lodestar-types";
 import {List} from "@chainsafe/ssz";
 import {
   phase0,
@@ -32,7 +32,7 @@ export async function validateGossipAggregateAndProof(
   const targetEpoch = attTarget.epoch;
 
   // [REJECT] The attestation's epoch matches its target -- i.e. attestation.data.target.epoch == compute_epoch_at_slot(attestation.data.slot)
-  if (!ssz.Epoch.equals(targetEpoch, attEpoch)) {
+  if (targetEpoch !== attEpoch) {
     throw new AttestationError(GossipAction.REJECT, {code: AttestationErrorCode.BAD_TARGET_EPOCH});
   }
 
