@@ -33,7 +33,17 @@ export class JsonRpcHttpClient {
       /** If returns true, do not fallback to other urls and throw early */
       shouldNotFallback?: (error: Error) => boolean;
     }
-  ) {}
+  ) {
+    // Sanity check for all URLs to be properly defined. Otherwise it will error in loop on fetch
+    if (urls.length === 0) {
+      throw Error("No urls provided to JsonRpcHttpClient");
+    }
+    for (const [i, url] of urls.entries()) {
+      if (!url) {
+        throw Error(`JsonRpcHttpClient.urls[${i}] is empty or undefined: ${url}`);
+      }
+    }
+  }
 
   /**
    * Perform RPC request

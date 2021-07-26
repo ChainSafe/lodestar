@@ -9,9 +9,16 @@ export interface IEth1Args {
 }
 
 export function parseArgs(args: IEth1Args): IBeaconNodeOptions["eth1"] {
+  // Support deprecated flag 'eth1.providerUrl' only if 'eth1.providerUrls' is not defined
+  // Safe default to '--eth1.providerUrl' only if it's defined. Prevent returning providerUrls: [undefined]
+  let providerUrls = args["eth1.providerUrls"];
+  if (!providerUrls && args["eth1.providerUrl"]) {
+    providerUrls = [args["eth1.providerUrl"]];
+  }
+
   return {
     enabled: args["eth1.enabled"],
-    providerUrls: args["eth1.providerUrls"] ?? [args["eth1.providerUrl"]],
+    providerUrls: providerUrls,
     depositContractDeployBlock: args["eth1.depositContractDeployBlock"],
   };
 }
