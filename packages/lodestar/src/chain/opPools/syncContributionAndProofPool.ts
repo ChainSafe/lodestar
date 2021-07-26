@@ -1,6 +1,6 @@
 import bls, {PointFormat, Signature} from "@chainsafe/bls";
 import {SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
-import {phase0, altair, Slot, ssz} from "@chainsafe/lodestar-types";
+import {phase0, altair, Slot, ssz, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {newFilledArray, G2_POINT_AT_INFINITY} from "@chainsafe/lodestar-beacon-state-transition";
 import {readonlyValues, toHexString} from "@chainsafe/ssz";
 import {MapDef} from "../../util/map";
@@ -112,15 +112,19 @@ function aggregateContributionInto(
   const indexesPerSubnet = Math.floor(SYNC_COMMITTEE_SIZE / SYNC_COMMITTEE_SUBNET_COUNT);
   const indexOffset = indexesPerSubnet * contribution.subCommitteeIndex;
 
+  const syncCommitteeIndices: ValidatorIndex[] = [];
   for (const [index, participated] of Array.from(readonlyValues(contribution.aggregationBits)).entries()) {
     if (participated) {
       const syncCommitteeIndex = indexOffset + index;
       if (aggregate.syncCommitteeBits[syncCommitteeIndex] === true) {
         return InsertOutcome.AlreadyKnown;
       }
-
-      aggregate.syncCommitteeBits[syncCommitteeIndex] = true;
+      syncCommitteeIndices.push(syncCommitteeIndex);
     }
+  }
+
+  for (const syncCommitteeIndex of syncCommitteeIndices) {
+    aggregate.syncCommitteeBits[syncCommitteeIndex] = true;
   }
 
   aggregate.syncCommitteeSignature = Signature.aggregate([
