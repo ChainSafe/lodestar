@@ -18,6 +18,8 @@ const MAX_BLOCKS_PER_LOG_QUERY = 1000;
 const AUTO_UPDATE_PERIOD_MS = 60 * 1000;
 /** Miliseconds to wait after getting 429 Too Many Requests */
 const RATE_LIMITED_WAIT_MS = 30 * 1000;
+/** Min time to wait on auto update loop on unknown error */
+const MIN_WAIT_ON_ERORR_MS = 1 * 1000;
 
 /**
  * Main class handling eth1 data fetching, processing and storing
@@ -132,6 +134,7 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
           await sleep(RATE_LIMITED_WAIT_MS, this.signal);
         } else {
           this.logger.error("Error updating eth1 chain cache", {}, e);
+          await sleep(MIN_WAIT_ON_ERORR_MS, this.signal);
         }
       }
     }
