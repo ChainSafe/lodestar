@@ -4,8 +4,10 @@ import {itBench, setBenchOpts} from "@dapplion/benchmark";
 
 // Benchmark data from July 2021 - Intel(R) Core(TM) i5-8250U CPU @ 1.60GHz
 //
-// ✓ ssz.phase0.Eth1Data.equals                                          17059.32 ops/s    58.61900 us/op        -      84668 runs   5.01 s
-// ✓ compare with serializeEth1Data                                      257201.6 ops/s    3.888000 us/op        -    1180606 runs   5.07 s
+// eth1Data isEqual
+// ✓ each field with ssz.Root.equals                                      1364256 ops/s    733.0000 ns/op        -    4619587 runs   5.28 s
+// ✓ compare with serializeEth1Data                                      257267.8 ops/s    3.887000 us/op        -    1183689 runs   5.08 s
+// ✓ ssz.phase0.Eth1Data.equals                                          16932.79 ops/s    59.05700 us/op        -      84084 runs   5.01 s
 
 describe("eth1Data isEqual", () => {
   setBenchOpts({
@@ -28,12 +30,18 @@ describe("eth1Data isEqual", () => {
   };
 
   if (!process.env.CI) {
-    itBench("ssz.phase0.Eth1Data.equals", () => {
-      ssz.phase0.Eth1Data.equals(eth1Data1, eth1Data2);
+    itBench("each field with ssz.Root.equals", () => {
+      eth1Data1.depositCount === eth1Data2.depositCount &&
+        ssz.Root.equals(eth1Data1.depositRoot, eth1Data2.depositRoot) &&
+        ssz.Root.equals(eth1Data1.blockHash, eth1Data2.blockHash);
     });
 
     itBench("compare with serializeEth1Data", () => {
       serializeEth1Data(eth1Data1) === serializeEth1Data(eth1Data2);
+    });
+
+    itBench("ssz.phase0.Eth1Data.equals", () => {
+      ssz.phase0.Eth1Data.equals(eth1Data1, eth1Data2);
     });
   }
 });
