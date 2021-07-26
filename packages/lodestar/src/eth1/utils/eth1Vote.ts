@@ -36,7 +36,9 @@ export async function getEth1VotesToConsider(
 
 export function pickEth1Vote(state: allForks.BeaconState, votesToConsider: phase0.Eth1Data[]): phase0.Eth1Data {
   const votesToConsiderHashMap = new Set<string>();
-  for (const eth1Data of votesToConsider) votesToConsiderHashMap.add(serializeEth1Data(eth1Data));
+  for (const eth1Data of votesToConsider) {
+    votesToConsiderHashMap.add(serializeEth1Data(eth1Data));
+  }
 
   const validVotes = Array.from(readonlyValues(state.eth1DataVotes)).filter((eth1Data) =>
     votesToConsiderHashMap.has(serializeEth1Data(eth1Data))

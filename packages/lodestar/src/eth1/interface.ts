@@ -2,18 +2,17 @@
  * @module eth1
  */
 
-import {AbortSignal} from "@chainsafe/abort-controller";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {allForks, phase0} from "@chainsafe/lodestar-types";
 import {CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
 
 export interface IEth1Provider {
   deployBlock: number;
-  getBlockNumber(signal?: AbortSignal): Promise<number>;
-  getBlockByNumber(blockNumber: number, signal?: AbortSignal): Promise<phase0.Eth1Block>;
-  getBlocksByNumber(fromBlock: number, toBlock: number, signal?: AbortSignal): Promise<phase0.Eth1Block[]>;
-  getDepositEvents(fromBlock: number, toBlock: number, signal?: AbortSignal): Promise<phase0.DepositEvent[]>;
-  validateContract(signal?: AbortSignal): Promise<void>;
+  getBlockNumber(): Promise<number>;
+  getBlockByNumber(blockNumber: number): Promise<phase0.Eth1Block>;
+  getBlocksByNumber(fromBlock: number, toBlock: number): Promise<phase0.Eth1Block[]>;
+  getDepositEvents(fromBlock: number, toBlock: number): Promise<phase0.DepositEvent[]>;
+  validateContract(): Promise<void>;
 }
 
 export interface IEth1ForBlockProduction {
@@ -49,7 +48,6 @@ export interface IRpcPayload {
   params: IJson[];
 }
 
-export interface IJsonRpcClient {
-  fetch<R>({method, params}: IRpcPayload, signal?: AbortSignal): Promise<R>;
-  fetchBatch<R>(rpcPayloadArr: IRpcPayload[], signal?: AbortSignal): Promise<R[]>;
-}
+export type ReqOpts = {
+  timeout?: number;
+};

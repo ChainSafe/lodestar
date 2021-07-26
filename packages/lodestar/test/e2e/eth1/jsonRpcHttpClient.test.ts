@@ -3,7 +3,7 @@ import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
 import http from "http";
 import {AbortController} from "@chainsafe/abort-controller";
-import {JsonRpcHttpClient} from "../../../src/eth1/jsonRpcHttpClient";
+import {JsonRpcHttpClient} from "../../../src/eth1/provider/jsonRpcHttpClient";
 import {goerliRpcUrl} from "../../testParams";
 import {IRpcPayload} from "../../../src/eth1/interface";
 
@@ -54,7 +54,7 @@ describe("eth1 / jsonRpcHttpClient", function () {
         res.statusCode = 404;
         res.end();
       },
-      error: "404 Not Found",
+      error: "Not Found",
     },
     {
       id: "RPC payload with error",
@@ -136,10 +136,10 @@ describe("eth1 / jsonRpcHttpClient", function () {
       if (!url) url = goerliRpcUrl;
       if (!payload) payload = {method: "no-method", params: []};
 
-      const eth1JsonRpcClient = new JsonRpcHttpClient(url);
       const controller = new AbortController();
       if (abort) setTimeout(() => controller.abort(), 50);
-      await expect(eth1JsonRpcClient.fetch(payload, controller.signal)).to.be.rejectedWith(error);
+      const eth1JsonRpcClient = new JsonRpcHttpClient([url], {signal: controller.signal});
+      await expect(eth1JsonRpcClient.fetch(payload)).to.be.rejectedWith(error);
     });
   }
 });

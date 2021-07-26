@@ -9,10 +9,9 @@ import {
   getEth1DataForBlocks,
   getDepositsByBlockNumber,
   getDepositRootByDepositCount,
-  ErrorNoDepositsForBlockRange,
-  ErrorNotEnoughDepositRoots,
 } from "../../../../src/eth1/utils/eth1Data";
-import {DepositData} from "@chainsafe/lodestar-types/phase0";
+import {expectRejectedWithLodestarError} from "../../../utils/errors";
+import {Eth1ErrorCode} from "../../../../src/eth1/errors";
 
 chai.use(chaiAsPromised);
 
@@ -24,7 +23,7 @@ describe("eth1 / util / getEth1DataForBlocks", function () {
     depositRootTree: TreeBacked<List<Root>>;
     lastProcessedDepositBlockNumber: number;
     expectedEth1Data?: Partial<phase0.Eth1Data & phase0.Eth1Block>[];
-    error?: unknown;
+    error?: Eth1ErrorCode;
   }
 
   const testCases: (() => ITestCase)[] = [
@@ -69,7 +68,7 @@ describe("eth1 / util / getEth1DataForBlocks", function () {
         deposits: [],
         depositRootTree: ssz.phase0.DepositDataRootList.defaultTreeBacked(),
         lastProcessedDepositBlockNumber: 0,
-        error: ErrorNoDepositsForBlockRange,
+        error: Eth1ErrorCode.NO_DEPOSITS_FOR_BLOCK_RANGE,
       };
     },
 
@@ -80,7 +79,7 @@ describe("eth1 / util / getEth1DataForBlocks", function () {
         deposits: [getMockDeposit({blockNumber: 0, index: 0})],
         depositRootTree: ssz.phase0.DepositDataRootList.defaultTreeBacked(),
         lastProcessedDepositBlockNumber: 0,
-        error: ErrorNotEnoughDepositRoots,
+        error: Eth1ErrorCode.NOT_ENOUGH_DEPOSIT_ROOTS,
       };
     },
 
@@ -120,7 +119,7 @@ describe("eth1 / util / getEth1DataForBlocks", function () {
         const eth1DatasPartial = eth1Datas.map((eth1Data) => pick(eth1Data, Object.keys(expectedEth1Data[0])));
         expect(eth1DatasPartial).to.deep.equal(expectedEth1Data);
       } else if (error) {
-        await expect(eth1DatasPromise).to.be.rejectedWith(error as Error);
+        await expectRejectedWithLodestarError(eth1DatasPromise, error);
       } else {
         throw Error("Test case must have 'expectedEth1Data' or 'error'");
       }
@@ -273,6 +272,6 @@ function getMockDeposit({blockNumber, index}: {blockNumber: number; index: numbe
   return {
     blockNumber,
     index,
-    depositData: {} as DepositData, // Not used
+    depositData: {} as phase0.DepositData, // Not used
   };
 }

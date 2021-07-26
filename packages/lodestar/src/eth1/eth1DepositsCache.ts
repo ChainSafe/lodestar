@@ -5,6 +5,7 @@ import {IBeaconDb} from "../db";
 import {getEth1DataForBlocks} from "./utils/eth1Data";
 import {assertConsecutiveDeposits} from "./utils/eth1DepositEvent";
 import {getDepositsWithProofs} from "./utils/deposits";
+import {Eth1Error, Eth1ErrorCode} from "./errors";
 
 export class Eth1DepositsCache {
   db: IBeaconDb;
@@ -38,11 +39,13 @@ export class Eth1DepositsCache {
     const lastLog = await this.db.depositEvent.lastValue();
     const firstEvent = depositEvents[0];
     if (lastLog && firstEvent) {
-      if (firstEvent.index <= lastLog.index) {
-        throw Error("DuplicateDistinctLog");
+      const newIndex = firstEvent.index;
+      const prevIndex = lastLog.index;
+      if (newIndex <= prevIndex) {
+        throw new Eth1Error({code: Eth1ErrorCode.DUPLICATE_DISTINCT_LOG, newIndex, prevIndex});
       }
-      if (firstEvent.index > lastLog.index + 1) {
-        throw Error("Non consecutive logs");
+      if (newIndex > prevIndex + 1) {
+        throw new Eth1Error({code: Eth1ErrorCode.NON_CONSECUTIVE_LOGS, newIndex, prevIndex});
       }
     }
 

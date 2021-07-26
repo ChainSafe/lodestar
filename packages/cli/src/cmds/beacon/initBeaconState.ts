@@ -131,7 +131,7 @@ export async function initBeaconState(
         chainForkConfig,
         db,
         logger,
-        new Eth1Provider(chainForkConfig, options.eth1),
+        new Eth1Provider(chainForkConfig, options.eth1, signal),
         signal
       );
     }

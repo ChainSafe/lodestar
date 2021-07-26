@@ -32,14 +32,14 @@ describe("eth1 / Eth1Provider", function () {
 
   const eth1Options: IEth1Options = {
     enabled: true,
-    providerUrl: testnet.providerUrl,
+    providerUrls: [testnet.providerUrl],
     depositContractDeployBlock: testnet.depositBlock,
   };
   const controller = new AbortController();
 
   const config = getTestnetConfig();
   const logger = testLogger();
-  const eth1Provider = new Eth1Provider(config, eth1Options);
+  const eth1Provider = new Eth1Provider(config, eth1Options, controller.signal);
 
   let db: BeaconDb;
   let dbController: LevelDbController;

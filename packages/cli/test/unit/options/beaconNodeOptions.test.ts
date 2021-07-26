@@ -18,6 +18,7 @@ describe("options / beaconNodeOptions", () => {
 
       "eth1.enabled": true,
       "eth1.providerUrl": "http://my.node:8545",
+      "eth1.providerUrls": ["http://my.node:8545"],
       "eth1.depositContractDeployBlock": 1625314,
 
       "logger.eth1.level": "debug",
@@ -58,7 +59,7 @@ describe("options / beaconNodeOptions", () => {
       },
       eth1: {
         enabled: true,
-        providerUrl: "http://my.node:8545",
+        providerUrls: ["http://my.node:8545"],
         depositContractDeployBlock: 1625314,
       },
       logger: {

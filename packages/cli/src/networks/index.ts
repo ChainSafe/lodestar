@@ -60,7 +60,7 @@ export function getNetworkBeaconNodeOptions(network: NetworkName): RecursivePart
   const networkId = parseInt((beaconParams.DEPOSIT_NETWORK_ID || 1) as string, 10);
   return {
     eth1: {
-      providerUrl: getEth1ProviderUrl(networkId),
+      providerUrls: [getEth1ProviderUrl(networkId)],
       depositContractDeployBlock,
     },
     network: {

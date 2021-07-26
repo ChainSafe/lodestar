@@ -174,7 +174,7 @@ export class BeaconNode {
         ? new Eth1ForBlockProduction({
             config,
             db,
-            eth1Provider: new Eth1Provider(config, opts.eth1),
+            eth1Provider: new Eth1Provider(config, opts.eth1, controller.signal),
             logger: logger.child(opts.logger.eth1),
             opts: opts.eth1,
             signal,
