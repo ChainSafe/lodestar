@@ -58,28 +58,6 @@ export class StateRegenerator implements IStateRegenerator {
     this.rmetricsMap = new Map<string, IRegenFnMetrics>();
   }
 
-  getRegenFnMetrics({
-    entrypoint,
-    caller,
-  }: {
-    entrypoint?: RegenEntrypoint;
-    caller: RegenCaller;
-  }): IRegenFnMetrics | undefined {
-    if (!(this.metrics && entrypoint)) return undefined;
-    const key = `${entrypoint}-${caller}`;
-    let rmetrics = this.rmetricsMap.get(key);
-    if (!rmetrics) {
-      rmetrics = {
-        stateLookupsTotal: this.metrics.regenStateCacheLookupTotal.child({entrypoint, caller}),
-        stateLookupHits: this.metrics.regenStateCacheLoopkupHits.child({entrypoint, caller}),
-        stateCpLookupsTotal: this.metrics.regenCPStateCacheLookupTotal.child({entrypoint, caller}),
-        stateCpLookupsHits: this.metrics.regenCPStateCacheLookupHits.child({entrypoint, caller}),
-      };
-      this.rmetricsMap.set(key, rmetrics);
-    }
-    return rmetrics;
-  }
-
   async getPreState(
     block: allForks.BeaconBlock,
     rCaller?: IRegenCaller
@@ -257,5 +235,27 @@ export class StateRegenerator implements IStateRegenerator {
     }
 
     return state as CachedBeaconState<allForks.BeaconState>;
+  }
+  
+  getRegenFnMetrics({
+    entrypoint,
+    caller,
+  }: {
+    entrypoint?: RegenEntrypoint;
+    caller: RegenCaller;
+  }): IRegenFnMetrics | undefined {
+    if (!(this.metrics && entrypoint)) return undefined;
+    const key = `${entrypoint}-${caller}`;
+    let rmetrics = this.rmetricsMap.get(key);
+    if (!rmetrics) {
+      rmetrics = {
+        stateLookupsTotal: this.metrics.regenStateCacheLookupTotal.child({entrypoint, caller}),
+        stateLookupHits: this.metrics.regenStateCacheLoopkupHits.child({entrypoint, caller}),
+        stateCpLookupsTotal: this.metrics.regenCPStateCacheLookupTotal.child({entrypoint, caller}),
+        stateCpLookupsHits: this.metrics.regenCPStateCacheLookupHits.child({entrypoint, caller}),
+      };
+      this.rmetricsMap.set(key, rmetrics);
+    }
+    return rmetrics;
   }
 }
