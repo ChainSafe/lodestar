@@ -167,6 +167,7 @@ describe("Lightclient flow with LightClientUpdater", () => {
 });
 
 class MockClock implements IClock {
+  readonly genesisTime = 0;
   constructor(readonly currentSlot: Slot) {}
   start(): void {
     //
