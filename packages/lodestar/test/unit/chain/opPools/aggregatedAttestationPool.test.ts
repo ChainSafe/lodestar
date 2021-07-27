@@ -4,7 +4,7 @@ import {createIChainForkConfig, defaultChainConfig} from "@chainsafe/lodestar-co
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {List} from "@chainsafe/ssz";
 import {expect} from "chai";
-import {ssz} from "../../../../../types/lib/phase0";
+import {ssz, phase0} from "@chainsafe/lodestar-types";
 import {
   AggregatedAttestationPool,
   aggregateInto,
@@ -17,7 +17,6 @@ import {generateCachedState} from "../../../utils/state";
 import * as attestationUtils from "@chainsafe/lodestar-beacon-state-transition/lib/phase0/block/processAttestation";
 import {SinonStubFn} from "../../../utils/types";
 import sinon from "sinon";
-import {phase0} from "../../../../../types/lib";
 
 describe("AggregatedAttestationPool", function () {
   let pool: AggregatedAttestationPool;
@@ -62,7 +61,7 @@ describe("MatchingDataAttestationGroup", function () {
   let attestationGroup: MatchingDataAttestationGroup;
   const committee = [100, 200, 300];
   const attestationSeed = generateEmptyAttestation();
-  const attestationDataRoot = ssz.AttestationData.serialize(attestationSeed.data);
+  const attestationDataRoot = ssz.phase0.AttestationData.serialize(attestationSeed.data);
   let sk1: SecretKey;
   const attestation1 = {...attestationSeed, ...{aggregationBits: [true, true, false] as List<boolean>}};
 
@@ -175,7 +174,7 @@ describe("aggregateInto", function () {
   const attestationSeed = generateEmptyAttestation();
   const attestation1 = {...attestationSeed, ...{aggregationBits: [false, true] as List<boolean>}};
   const attestation2 = {...attestationSeed, ...{aggregationBits: [true, false] as List<boolean>}};
-  const attestationDataRoot = ssz.AttestationData.serialize(attestationSeed.data);
+  const attestationDataRoot = ssz.phase0.AttestationData.serialize(attestationSeed.data);
   let sk1: SecretKey;
   let sk2: SecretKey;
   before("Init BLS", async () => {

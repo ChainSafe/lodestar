@@ -9,7 +9,7 @@ import {AggregatedAttestationPool} from "../../../../src/chain/opPools/aggregate
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {List} from "@chainsafe/ssz";
 import {profilerLogger} from "@chainsafe/lodestar-beacon-state-transition/test/utils/logger";
-import {generatePerfTestCachedStateAltair} from "../../../../../beacon-state-transition/test/perf/util";
+import {generatePerfTestCachedStateAltair} from "@chainsafe/lodestar-beacon-state-transition/test/perf/util";
 
 // Jul-21 09:20:46.653 []                 info: Number of participations in state previousEpoch=250000, currentEpoch=250000
 // Jul-21 09:23:38.382 []                 info: Number of attestations in pool 1952
