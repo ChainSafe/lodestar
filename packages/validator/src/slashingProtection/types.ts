@@ -1,4 +1,4 @@
-import {Epoch, Root, Slot} from "../../../types/phase0";
+import {Epoch, Root, Slot} from "@chainsafe/lodestar-types";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
