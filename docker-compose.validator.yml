@@ -12,7 +12,7 @@ services:
     command: validator --rootDir /data --keystoresDir /keystores --secretsDir /secrets --server http://beacon_node:9596 --logFile /logs/validator.log --logLevelFile debug --logRotate --logMaxFiles 5
     # A validator client requires very little memory. This limit allows to run the validator
     # along with the beacon_node in a 8GB machine and be safe on memory spikes.
-    env:
+    environment:
       NODE_OPTIONS: --max_old_space_size=2048
 
 volumes:
