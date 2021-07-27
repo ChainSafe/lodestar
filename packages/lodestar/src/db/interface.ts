@@ -3,6 +3,7 @@
  */
 
 import {allForks} from "@chainsafe/lodestar-types";
+import {IDbMetrics} from "@chainsafe/lodestar-db";
 
 import {
   AttesterSlashingRepository,
@@ -26,7 +27,6 @@ import {
   LatestNonFinalizedUpdate,
 } from "./single";
 import {PendingBlockRepository} from "./repositories/pendingBlock";
-import {IDbMetrics} from "../../../db/lib";
 
 /**
  * The DB service manages the data layer of the beacon chain

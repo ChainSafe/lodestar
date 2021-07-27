@@ -1,4 +1,4 @@
-import {sleep} from "../../../utils/lib";
+import {sleep} from "@chainsafe/lodestar-utils";
 
 export interface IRetryOptions {
   /**
