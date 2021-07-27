@@ -27,6 +27,8 @@ jobs:
         run: yarn build
         if: steps.cache-deps.outputs.cache-hit == 'true'
       # </common-build>
+      - name: Test root binary exists
+        run: ./lodestar --version
       - name: Check Types
         run: yarn run check-types
       - name: Lint
