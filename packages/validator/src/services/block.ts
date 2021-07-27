@@ -2,7 +2,7 @@ import {BLSPubkey, Slot} from "@chainsafe/lodestar-types";
 import {prettyBytes} from "@chainsafe/lodestar-utils";
 import {toHexString} from "@chainsafe/ssz";
 import {Api} from "@chainsafe/lodestar-api";
-import {IClock, extendError, notAborted, ILoggerVc} from "../util";
+import {IClock, extendError, ILoggerVc} from "../util";
 import {ValidatorStore} from "./validatorStore";
 import {BlockDutiesService, GENESIS_SLOT} from "./blockDuties";
 
@@ -37,7 +37,7 @@ export class BlockProposingService {
     }
 
     Promise.all(proposers.map((pubkey) => this.createAndPublishBlock(pubkey, slot))).catch((e) => {
-      if (notAborted(e)) this.logger.error("Error on block duties", {slot}, e);
+      this.logger.error("Error on block duties", {slot}, e);
     });
   };
 
@@ -63,7 +63,7 @@ export class BlockProposingService {
       });
       this.logger.info("Published block", {...logCtx, graffiti});
     } catch (e) {
-      if (notAborted(e)) this.logger.error("Error proposing block", logCtx, e);
+      this.logger.error("Error proposing block", logCtx, e);
     }
   }
 }

@@ -4,7 +4,7 @@ import {Slot, CommitteeIndex, altair, Root} from "@chainsafe/lodestar-types";
 import {prettyBytes, sleep} from "@chainsafe/lodestar-utils";
 import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {Api} from "@chainsafe/lodestar-api";
-import {IClock, extendError, notAborted, ILoggerVc} from "../util";
+import {IClock, extendError, ILoggerVc} from "../util";
 import {ValidatorStore} from "./validatorStore";
 import {SyncCommitteeDutiesService, SyncDutyAndProofs} from "./syncCommitteeDuties";
 import {groupSyncDutiesBySubCommitteeIndex, SubCommitteeDuty} from "./utils";
@@ -65,8 +65,7 @@ export class SyncCommitteeService {
           // Then download, sign and publish a `SignedAggregateAndProof` for each
           // validator that is elected to aggregate for this `slot` and `subcommitteeIndex`.
           await this.produceAndPublishAggregates(slot, subcommitteeIndex, beaconBlockRoot, duties).catch((e) => {
-            if (notAborted(e))
-              this.logger.error("Error on SyncCommitteeContribution", {slot, index: subcommitteeIndex}, e);
+            this.logger.error("Error on SyncCommitteeContribution", {slot, index: subcommitteeIndex}, e);
           });
         })
       );
@@ -111,7 +110,7 @@ export class SyncCommitteeService {
         );
         this.logger.debug("Signed SyncCommitteeMessage", logCtxValidator);
       } catch (e) {
-        if (notAborted(e)) this.logger.error("Error signing SyncCommitteeMessage", logCtxValidator, e);
+        this.logger.error("Error signing SyncCommitteeMessage", logCtxValidator, e);
       }
     }
 
@@ -120,7 +119,7 @@ export class SyncCommitteeService {
         await this.api.beacon.submitPoolSyncCommitteeSignatures(signatures);
         this.logger.info("Published SyncCommitteeMessage", {...logCtx, count: signatures.length});
       } catch (e) {
-        if (notAborted(e)) this.logger.error("Error publishing SyncCommitteeMessage", logCtx, e);
+        this.logger.error("Error publishing SyncCommitteeMessage", logCtx, e);
       }
     }
 
@@ -170,7 +169,7 @@ export class SyncCommitteeService {
           this.logger.debug("Signed SyncCommitteeContribution", logCtxValidator);
         }
       } catch (e) {
-        if (notAborted(e)) this.logger.error("Error signing SyncCommitteeContribution", logCtxValidator, e);
+        this.logger.error("Error signing SyncCommitteeContribution", logCtxValidator, e);
       }
     }
 
@@ -179,7 +178,7 @@ export class SyncCommitteeService {
         await this.api.validator.publishContributionAndProofs(signedContributions);
         this.logger.info("Published SyncCommitteeContribution", {...logCtx, count: signedContributions.length});
       } catch (e) {
-        if (notAborted(e)) this.logger.error("Error publishing SyncCommitteeContribution", logCtx, e);
+        this.logger.error("Error publishing SyncCommitteeContribution", logCtx, e);
       }
     }
   }

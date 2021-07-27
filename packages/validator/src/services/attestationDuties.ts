@@ -3,7 +3,7 @@ import {BLSSignature, Epoch, Root, Slot, ssz, ValidatorIndex} from "@chainsafe/l
 import {Api, routes} from "@chainsafe/lodestar-api";
 import {toHexString} from "@chainsafe/ssz";
 import {IndicesService} from "./indices";
-import {IClock, extendError, notAborted, isSyncing, ILoggerVc} from "../util";
+import {IClock, extendError, ILoggerVc} from "../util";
 import {ValidatorStore} from "./validatorStore";
 
 /** Only retain `HISTORICAL_DUTIES_EPOCHS` duties prior to the current epoch. */
@@ -54,7 +54,7 @@ export class AttestationDutiesService {
     await Promise.all([
       // Run pollBeaconAttesters immediately for all known local indices
       this.pollBeaconAttesters(epoch, this.indicesService.getAllLocalIndices()).catch((e) => {
-        if (notAborted(e)) this.logger.error("Error on poll attesters", {epoch}, e);
+        this.logger.error("Error on poll attesters", {epoch}, e);
       }),
 
       // At the same time fetch any remaining unknown validator indices, then poll duties for those newIndices only
@@ -62,7 +62,7 @@ export class AttestationDutiesService {
         .pollValidatorIndices()
         .then((newIndices) => this.pollBeaconAttesters(epoch, newIndices))
         .catch((e) => {
-          if (notAborted(e)) this.logger.error("Error on poll indices and attesters", {epoch}, e);
+          this.logger.error("Error on poll indices and attesters", {epoch}, e);
         }),
     ]);
 
@@ -91,8 +91,7 @@ export class AttestationDutiesService {
     for (const epoch of [currentEpoch, nextEpoch]) {
       // Download the duties and update the duties for the current and next epoch.
       await this.pollBeaconAttestersForEpoch(epoch, indexArr).catch((e) => {
-        if (isSyncing(e)) this.logger.isSyncing(e);
-        else if (notAborted(e)) this.logger.error("Failed to download attester duties", {epoch}, e);
+        this.logger.error("Failed to download attester duties", {epoch}, e);
       });
     }
 
