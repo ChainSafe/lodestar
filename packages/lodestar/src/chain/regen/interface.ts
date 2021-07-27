@@ -20,9 +20,10 @@ export enum RegenCaller {
   validateGossipAttestation = "validateGossipAttestation",
   validateGossipVoluntaryExit = "validateGossipVoluntaryExit",
   onForkChoiceFinalized = "onForkChoiceFinalized",
+  dummyCallerfromTests = "dummyCallerfromTests",
 }
 
-export enum RegenEntrypoint {
+export enum RegenFnName {
   getBlockSlotState = "getBlockSlotState",
   getState = "getState",
   getPreState = "getPreState",
@@ -30,7 +31,7 @@ export enum RegenEntrypoint {
 }
 
 export interface IRegenCaller {
-  entrypoint?: RegenEntrypoint;
+  entrypoint?: RegenFnName;
   caller: RegenCaller;
 }
 
@@ -42,10 +43,7 @@ export interface IStateRegenerator {
    * Return a valid pre-state for a beacon block
    * This will always return a state in the latest viable epoch
    */
-  getPreState: (
-    block: allForks.BeaconBlock,
-    rCaller?: IRegenCaller
-  ) => Promise<CachedBeaconState<allForks.BeaconState>>;
+  getPreState: (block: allForks.BeaconBlock, rCaller: IRegenCaller) => Promise<CachedBeaconState<allForks.BeaconState>>;
 
   /**
    * Return a valid checkpoint state
@@ -53,7 +51,7 @@ export interface IStateRegenerator {
    */
   getCheckpointState: (
     cp: phase0.Checkpoint,
-    rCaller?: IRegenCaller
+    rCaller: IRegenCaller
   ) => Promise<CachedBeaconState<allForks.BeaconState>>;
 
   /**
@@ -62,11 +60,11 @@ export interface IStateRegenerator {
   getBlockSlotState: (
     blockRoot: Root,
     slot: Slot,
-    rCaller?: IRegenCaller
+    rCaller: IRegenCaller
   ) => Promise<CachedBeaconState<allForks.BeaconState>>;
 
   /**
    * Return the exact state with `stateRoot`
    */
-  getState: (stateRoot: Root, rCaller?: IRegenCaller) => Promise<CachedBeaconState<allForks.BeaconState>>;
+  getState: (stateRoot: Root, rCaller: IRegenCaller) => Promise<CachedBeaconState<allForks.BeaconState>>;
 }

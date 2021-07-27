@@ -425,5 +425,21 @@ export function createLodestarMetrics(
       help: "Number of checkpoint cache hits",
       labelNames: ["entrypoint", "caller"],
     }),
+    regenFnCallTotal: register.gauge<"entrypoint" | "caller">({
+      name: "regen_fn_call_total",
+      help: "Number of calls for regen functions",
+      labelNames: ["entrypoint", "caller"],
+    }),
+    regenFnCallDuration: register.histogram<"entrypoint" | "caller">({
+      name: "regen_fn_call_duration",
+      help: "regen function duration",
+      labelNames: ["entrypoint", "caller"],
+      buckets: [0.1, 1, 10, 100],
+    }),
+    regenFnTotalErrors: register.gauge<"entrypoint" | "caller">({
+      name: "regen_fn_total_errors",
+      help: "regen function total errors",
+      labelNames: ["entrypoint", "caller"],
+    }),
   };
 }
