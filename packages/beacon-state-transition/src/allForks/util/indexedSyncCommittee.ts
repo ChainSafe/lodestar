@@ -1,5 +1,7 @@
-import {altair, phase0, ssz} from "@chainsafe/lodestar-types";
+import {altair, phase0, ssz, allForks, Slot} from "@chainsafe/lodestar-types";
 import {TreeBacked, Vector} from "@chainsafe/ssz";
+import {computeSyncPeriodAtSlot} from "../../util/epoch";
+import {CachedBeaconState} from "./cachedBeaconState";
 import {PubkeyIndexMap} from "./epochContext";
 
 type SyncComitteeValidatorIndexMap = Map<phase0.ValidatorIndex, number[]>;
@@ -104,4 +106,24 @@ function computeSyncCommitteeIndices(
     }
   }
   return result;
+}
+
+/**
+ * Note: The range of slots a validator has to perform duties is off by one.
+ * The previous slot wording means that if your validator is in a sync committee for a period that runs from slot
+ * 100 to 200,then you would actually produce signatures in slot 99 - 199.
+ */
+export function getIndexedSyncCommittee(
+  state: CachedBeaconState<allForks.BeaconState> | CachedBeaconState<altair.BeaconState>,
+  slot: Slot
+): IndexedSyncCommittee {
+  const statePeriod = computeSyncPeriodAtSlot(state.slot);
+  const slotPeriod = computeSyncPeriodAtSlot(slot + 1); // See note above for the +1 offset
+  if (slotPeriod === statePeriod) {
+    return state.currentSyncCommittee;
+  } else if (slotPeriod === statePeriod + 1) {
+    return state.nextSyncCommittee;
+  } else {
+    throw new Error(`State ${state.slot} does not contain sync committee for slot ${slot}`);
+  }
 }

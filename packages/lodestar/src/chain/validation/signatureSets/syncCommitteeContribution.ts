@@ -1,5 +1,6 @@
 import {PublicKey} from "@chainsafe/bls";
 import {altair, ssz} from "@chainsafe/lodestar-types";
+import {allForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {DOMAIN_SYNC_COMMITTEE, SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
 import {readonlyValues} from "@chainsafe/ssz";
 import {
@@ -36,11 +37,11 @@ function getContributionPubkeys(
   const subCommitteeSize = Math.floor(SYNC_COMMITTEE_SIZE / SYNC_COMMITTEE_SUBNET_COUNT);
   const startIndex = contribution.subCommitteeIndex * subCommitteeSize;
   const aggBits = Array.from(readonlyValues(contribution.aggregationBits));
-
+  const syncCommittee = allForks.getIndexedSyncCommittee(state, contribution.slot);
   for (const [i, bit] of aggBits.entries()) {
     if (bit) {
       const indexInCommittee = startIndex + i;
-      const validatorIndex = state.currentSyncCommittee.validatorIndices[indexInCommittee];
+      const validatorIndex = syncCommittee.validatorIndices[indexInCommittee];
       const pubkey = state.index2pubkey[validatorIndex];
       pubkeys.push(pubkey);
     }

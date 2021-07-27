@@ -1,6 +1,6 @@
-import {CachedBeaconState, computeSyncPeriodAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
+import {CachedBeaconState, allForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
-import {allForks, altair} from "@chainsafe/lodestar-types";
+import {altair} from "@chainsafe/lodestar-types";
 import {GossipAction, SyncCommitteeError, SyncCommitteeErrorCode} from "../errors";
 import {IBeaconChain} from "../interface";
 import {getSyncCommitteeSignatureSet} from "./signatureSets";
@@ -115,18 +115,8 @@ function getIndexInSubCommittee(
   subnet: number,
   data: Pick<altair.SyncCommitteeMessage, "slot" | "validatorIndex">
 ): IndexInSubCommittee | null {
-  // Note: The range of slots a validator has to perform duties is off by one.
-  // The previous slot wording means that if your validator is in a sync committee for a period that runs from slot
-  // 100 to 200,then you would actually produce signatures in slot 99 - 199.
-  const statePeriod = computeSyncPeriodAtSlot(headState.slot);
-  const dataPeriod = computeSyncPeriodAtSlot(data.slot + 1); // See note above for the +1 offset
-
-  const syncComitteeValidatorIndexMap =
-    dataPeriod === statePeriod + 1
-      ? headState.nextSyncCommittee.validatorIndexMap
-      : headState.currentSyncCommittee.validatorIndexMap;
-
-  const indexesInCommittee = syncComitteeValidatorIndexMap?.get(data.validatorIndex);
+  const syncCommittee = allForks.getIndexedSyncCommittee(headState, data.slot);
+  const indexesInCommittee = syncCommittee.validatorIndexMap.get(data.validatorIndex);
   if (indexesInCommittee === undefined) {
     // Not part of the sync committee
     return null;
