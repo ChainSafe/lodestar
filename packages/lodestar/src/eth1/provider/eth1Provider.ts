@@ -1,6 +1,7 @@
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {phase0} from "@chainsafe/lodestar-types";
 import {AbortSignal} from "@chainsafe/abort-controller";
+import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {chunkifyInclusiveRange} from "../../util/chunkify";
 import {linspace} from "../../util/numpy";
 import {retry} from "../../util/retry";
@@ -8,7 +9,6 @@ import {ErrorParseJson, JsonRpcHttpClient} from "./jsonRpcHttpClient";
 import {depositEventTopics, parseDepositLog} from "../utils/depositContract";
 import {IEth1Provider} from "../interface";
 import {IEth1Options} from "../options";
-import {IChainForkConfig} from "../../../../config/lib";
 import {isValidAddress} from "../../util/address";
 
 /* eslint-disable @typescript-eslint/naming-convention */

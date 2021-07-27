@@ -1,6 +1,7 @@
 import bls from "@chainsafe/bls";
 import {ForkName, MAX_ATTESTATIONS, MIN_ATTESTATION_INCLUSION_DELAY, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
-import {allForks, altair, Epoch, Slot, ssz, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {altair, Epoch, Slot, ssz, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {allForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {
   CachedBeaconState,
   computeEpochAtSlot,
@@ -11,7 +12,6 @@ import {List, readonlyValues, toHexString} from "@chainsafe/ssz";
 import {MapDef} from "../../util/map";
 import {pruneBySlot} from "./utils";
 import {InsertOutcome} from "./types";
-import {EpochContext} from "../../../../beacon-state-transition/lib/allForks";
 
 type DataRootHex = string;
 
@@ -331,7 +331,7 @@ export function aggregateInto(
 
 export function extractParticipation(
   attestations: List<phase0.PendingAttestation>,
-  epochCtx: EpochContext
+  epochCtx: allForks.EpochContext
 ): Set<ValidatorIndex> {
   const allParticipants = new Set<ValidatorIndex>();
   for (const att of readonlyValues(attestations)) {
