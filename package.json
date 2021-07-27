@@ -26,6 +26,7 @@
     "test:spec-main": "lerna run test:spec-main --no-bail",
     "benchmark": "node --max-old-space-size=4096 -r ts-node/register -r ./packages/lodestar/test/setup.ts ./node_modules/.bin/benchmark 'packages/*/test/perf/**/*.test.ts'",
     "benchmark:local": "yarn benchmark --local",
+    "cli": "node --trace-deprecation --max-old-space-size=8192 ./packages/cli/bin/lodestar",
     "publish:release": "lerna publish from-package --yes --no-verify-access",
     "release": "lerna version --no-push --sign-git-commit",
     "postrelease": "git tag -d $(git describe --abbrev=0)",
