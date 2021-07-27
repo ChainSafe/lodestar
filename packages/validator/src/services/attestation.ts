@@ -3,7 +3,7 @@ import {phase0, Slot, CommitteeIndex, ssz} from "@chainsafe/lodestar-types";
 import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {prettyBytes, sleep} from "@chainsafe/lodestar-utils";
 import {Api} from "@chainsafe/lodestar-api";
-import {extendError, notAborted, IClock, ILoggerVc} from "../util";
+import {extendError, IClock, ILoggerVc} from "../util";
 import {ValidatorStore} from "./validatorStore";
 import {AttestationDutiesService, AttDutyAndProof} from "./attestationDuties";
 import {groupAttDutiesByCommitteeIndex} from "./utils";
@@ -41,7 +41,7 @@ export class AttestationService {
       Array.from(dutiesByCommitteeIndex.entries()).map(async ([committeeIndex, duties]) => {
         if (duties.length === 0) return;
         await this.publishAttestationsAndAggregates(slot, committeeIndex, duties, signal).catch((e) => {
-          if (notAborted(e)) this.logger.error("Error on attestations routine", {slot, committeeIndex}, e);
+          this.logger.error("Error on attestations routine", {slot, committeeIndex}, e);
         });
       })
     );
@@ -101,7 +101,7 @@ export class AttestationService {
         signedAttestations.push(await this.validatorStore.signAttestation(duty, attestation, currentEpoch));
         this.logger.debug("Signed attestation", logCtxValidator);
       } catch (e) {
-        if (notAborted(e)) this.logger.error("Error signing attestation", logCtxValidator, e);
+        this.logger.error("Error signing attestation", logCtxValidator, e);
       }
     }
 
@@ -110,7 +110,7 @@ export class AttestationService {
         await this.api.beacon.submitPoolAttestations(signedAttestations);
         this.logger.info("Published attestations", {...logCtx, count: signedAttestations.length});
       } catch (e) {
-        if (notAborted(e)) this.logger.error("Error publishing attestations", logCtx, e);
+        this.logger.error("Error publishing attestations", logCtx, e);
       }
     }
 
@@ -158,7 +158,7 @@ export class AttestationService {
           this.logger.debug("Signed aggregateAndProofs", logCtxValidator);
         }
       } catch (e) {
-        if (notAborted(e)) this.logger.error("Error signing aggregateAndProofs", logCtxValidator, e);
+        this.logger.error("Error signing aggregateAndProofs", logCtxValidator, e);
       }
     }
 
@@ -167,7 +167,7 @@ export class AttestationService {
         await this.api.validator.publishAggregateAndProofs(signedAggregateAndProofs);
         this.logger.info("Published aggregateAndProofs", {...logCtx, count: signedAggregateAndProofs.length});
       } catch (e) {
-        if (notAborted(e)) this.logger.error("Error publishing aggregateAndProofs", logCtx, e);
+        this.logger.error("Error publishing aggregateAndProofs", logCtx, e);
       }
     }
   }
