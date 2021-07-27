@@ -5,12 +5,13 @@ COPY provisioning/dashboards/*.json /provisioning/dashboards/
 COPY grafana.ini /etc/grafana.ini
 
 # Modified datasource to work with a network_mode: host
-ARG datasource_file=./datasource.yml
-COPY ${datasource_file} /etc/grafana/provisioning/datasources/datasource.yml
+ARG DATASOURCE_FILE=./datasource.yml
+COPY ${DATASOURCE_FILE} /etc/grafana/provisioning/datasources/datasource.yml
 
-ENV GF_AUTH_ANONYMOUS_ENABLED="true" \
-  GF_AUTH_ANONYMOUS_ORG_ROLE="Admin" \
-  GF_AUTH_DISABLE_LOGIN_FORM="true"
+# Set GF_SECURITY_ADMIN_PASSWORD=your-password to the root .env file
+ARG GF_SECURITY_ADMIN_PASSWORD
+ENV GF_SECURITY_ADMIN_USER=admin \
+  GF_SECURITY_ADMIN_PASSWORD=${GF_SECURITY_ADMIN_PASSWORD}
 
 CMD [ \
   "--homepath=/usr/share/grafana", \
