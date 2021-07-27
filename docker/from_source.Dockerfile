@@ -36,4 +36,9 @@ FROM node:14-alpine
 WORKDIR /usr/app
 COPY --from=build /usr/app .
 
-ENTRYPOINT ["node", "--max-old-space-size=8192", "./packages/cli/bin/lodestar"]
+# NodeJS applications have a default memory limit of 2.5GB.
+# This limit is bit tight for a Prater node, it is recommended to raise the limit
+# since memory may spike during certain network conditions.
+ENV NODE_OPTIONS=--max_old_space_size=6144
+
+ENTRYPOINT ["node", "./packages/cli/bin/lodestar"]
