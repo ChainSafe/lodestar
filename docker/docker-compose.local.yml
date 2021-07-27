@@ -22,7 +22,7 @@ services:
     build:
       context: grafana
       args:
-        datasource_file: datasource.local.yml
+        DATASOURCE_FILE: datasource.local.yml
     restart: always
     volumes:
       - "grafana:/var/lib/grafana"
