@@ -1,4 +1,4 @@
-![lodestar logo](assets/300ppi/FullMark-BLACK.png)
+![lodestar logo](assets/lodestar_icon_text_black_stroke.png)
 
 ## Welcome to the Lodestar documentation!
 

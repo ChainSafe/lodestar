@@ -8,11 +8,23 @@ repo_url: https://github.com/chainsafe/lodestar
 # Configuration
 theme:
   name: material
-  logo: assets/300ppi/short-LS-hookS-WHITE.png
-  favicon: images/favicon.ico
+  logo: assets/lodestar_icon_300.png
+  favicon: assets/round-icon.ico
   palette:
-    scheme: preference
-    accent: black
+    - scheme: preference
+      media: "(prefers-color-scheme: light)"
+      primary: black
+      accent: deep purple
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - scheme: slate
+      media: "(prefers-color-scheme: dark)"
+      primary: black
+      accent: deep purple
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
   nav_style: dark
 
 plugins:
