@@ -13,7 +13,7 @@ import {IMetrics} from "../../../metrics";
 import {IBlsVerifier, VerifySignatureOpts} from "../interface";
 import {BlsWorkReq, BlsWorkResult, WorkerData, WorkResultCode} from "./types";
 import {chunkifyMaximizeChunkSize, getDefaultPoolSize} from "./utils";
-import {ISignatureSet} from "@chainsafe/lodestar-beacon-state-transition/src";
+import {ISignatureSet} from "@chainsafe/lodestar-beacon-state-transition";
 import {getAggregatedPubkey} from "../utils";
 
 export type BlsMultiThreadWorkerPoolModules = {

@@ -1,4 +1,4 @@
-import {createIChainForkConfig} from "../src";
+import {createIChainForkConfig} from "./beaconConfig";
 import {defaultChainConfig} from "./chainConfig";
 
 export const chainConfig = defaultChainConfig;
