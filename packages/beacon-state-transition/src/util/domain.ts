@@ -5,13 +5,16 @@ import {Epoch, Version, Root, DomainType, allForks} from "@chainsafe/lodestar-ty
 
 import {computeForkDataRoot} from "./fork";
 
-// Only used by processDeposit
+// Only used by processDeposit +  lightclient
 /**
  * Return the domain for the [[domainType]] and [[forkVersion]].
  */
-export function computeDomain(domainType: DomainType, forkVersion: Version, genesisValidatorRoot: Root): Buffer {
+export function computeDomain(domainType: DomainType, forkVersion: Version, genesisValidatorRoot: Root): Uint8Array {
   const forkDataRoot = computeForkDataRoot(forkVersion, genesisValidatorRoot);
-  return Buffer.concat([domainType as Buffer, forkDataRoot.slice(0, 28)]);
+  const domain = new Uint8Array(32);
+  domain.set(domainType, 0);
+  domain.set(forkDataRoot.slice(0, 28), 4);
+  return domain;
 }
 
 /**

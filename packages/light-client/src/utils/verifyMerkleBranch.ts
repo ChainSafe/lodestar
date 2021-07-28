@@ -1,4 +1,5 @@
-import {hash, byteArrayEquals} from "@chainsafe/ssz";
+import {byteArrayEquals} from "@chainsafe/ssz";
+import {hash} from "@chainsafe/persistent-merkle-tree";
 
 /**
  * Verify that the given ``leaf`` is on the merkle branch ``proof``
@@ -16,9 +17,9 @@ export function isValidMerkleBranch(
   let value = leaf;
   for (let i = 0; i < depth; i++) {
     if (Math.floor(index / 2 ** i) % 2) {
-      value = hash(Buffer.concat([proof[i], value]));
+      value = hash(proof[i], value);
     } else {
-      value = hash(Buffer.concat([value, proof[i]]));
+      value = hash(value, proof[i]);
     }
   }
   return byteArrayEquals(value, root);

@@ -8,6 +8,7 @@ type OnSlotFn = (slot: Slot, signal: AbortSignal) => Promise<void>;
 
 export interface IClock {
   readonly currentSlot: Slot;
+  readonly genesisTime: number;
   start(signal: AbortSignal): void;
   runEverySlot(fn: OnSlotFn): void;
 }
@@ -17,7 +18,7 @@ export class Clock implements IClock {
 
   constructor(
     private readonly config: IChainForkConfig,
-    private readonly genesisTime: number,
+    readonly genesisTime: number,
     private readonly onError?: (e: Error) => void
   ) {}
 
