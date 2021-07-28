@@ -1,4 +1,4 @@
-import {ISignatureSet} from "@chainsafe/lodestar-beacon-state-transition/src";
+import {ISignatureSet} from "@chainsafe/lodestar-beacon-state-transition";
 
 export type VerifySignatureOpts = {
   /**

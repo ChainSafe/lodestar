@@ -1,4 +1,4 @@
-import {ISignatureSet} from "@chainsafe/lodestar-beacon-state-transition/src";
+import {ISignatureSet} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBlsVerifier} from "./interface";
 import {verifySignatureSetsMaybeBatch} from "./maybeBatch";
 import {getAggregatedPubkey} from "./utils";
