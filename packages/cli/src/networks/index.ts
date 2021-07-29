@@ -10,10 +10,10 @@ import {IBeaconParamsUnparsed} from "../config/types";
 import * as mainnet from "./mainnet";
 import * as pyrmont from "./pyrmont";
 import * as prater from "./prater";
-import * as altairDevnet1 from "./altair-devnet-1";
+import * as altairDevnet2 from "./altair-devnet-2";
 
-export type NetworkName = "mainnet" | "pyrmont" | "prater" | "dev" | "altair-devnet-1";
-export const networkNames: NetworkName[] = ["mainnet", "pyrmont", "prater", "altair-devnet-1"];
+export type NetworkName = "mainnet" | "pyrmont" | "prater" | "dev" | "altair-devnet-2";
+export const networkNames: NetworkName[] = ["mainnet", "pyrmont", "prater", "altair-devnet-2"];
 /** Networks that infura supports */
 export const infuraNetworks: NetworkName[] = ["mainnet", "pyrmont", "prater"];
 
@@ -33,8 +33,8 @@ function getNetworkData(
       return pyrmont;
     case "prater":
       return prater;
-    case "altair-devnet-1":
-      return altairDevnet1;
+    case "altair-devnet-2":
+      return altairDevnet2;
     default:
       throw Error(`Network not supported: ${network}`);
   }
