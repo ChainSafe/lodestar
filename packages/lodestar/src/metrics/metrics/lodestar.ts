@@ -230,6 +230,21 @@ export function createLodestarMetrics(
       help: "Range sync status: [Stalled, SyncingFinalized, SyncingHead, Synced]",
     }),
 
+    backfillSync: {
+      totalBlocks: register.gauge({
+        name: "lodestar__backfill_sync_total_blocks",
+        help: "Total amount of backfilled blocks",
+      }),
+      errors: register.gauge({
+        name: "lodestar__backfill_sync_errors",
+        help: "Total number of errors while backfilling",
+      }),
+      status: register.gauge<"status">({
+        name: "lodestar__backfill_sync_status",
+        help: "Current backfill syncing status: [Syncing, Completed]",
+      }),
+    },
+
     // Validator monitoring
 
     validatorMonitor: {

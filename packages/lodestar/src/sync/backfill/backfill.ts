@@ -1,3 +1,4 @@
+import {IMetrics} from "../../metrics/metrics";
 import {EventEmitter} from "events";
 import PeerId from "peer-id";
 import {StrictEventEmitter} from "strict-event-emitter-types";
@@ -26,6 +27,7 @@ export type BackfillSyncModules = {
   network: INetwork;
   config: IBeaconConfig;
   logger: ILogger;
+  metrics: IMetrics | null;
 };
 
 export type BackfillSyncOpts = {
@@ -35,6 +37,19 @@ export type BackfillSyncOpts = {
 export enum BackfillSyncEvent {
   completed = "BackfillSync-completed",
 }
+
+export enum BackfillSyncStatus {
+  pending = "pending",
+  syncing = "syncing",
+  completed = "completed",
+}
+
+/** Map a SyncState to an integer for rendering in Grafana */
+const syncStatus: {[K in BackfillSyncStatus]: number} = {
+  [BackfillSyncStatus.pending]: 0,
+  [BackfillSyncStatus.syncing]: 1,
+  [BackfillSyncStatus.completed]: 2,
+};
 
 type BackfillSyncEvents = {
   // slot param is oldest slot synced
@@ -49,11 +64,13 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
   private readonly db: IBeaconDb;
   private readonly config: IBeaconConfig;
   private readonly logger: ILogger;
+  private readonly metrics: IMetrics | null;
   private opts: BackfillSyncOpts;
   /** last trusted block */
   private anchorBlock: allForks.SignedBeaconBlock | null = null;
   private processor = new ItTrigger();
   private peers = new PeerSet();
+  private status: BackfillSyncStatus = BackfillSyncStatus.pending;
 
   constructor(modules: BackfillSyncModules, opts?: BackfillSyncOpts) {
     super();
@@ -62,6 +79,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
     this.db = modules.db;
     this.config = modules.config;
     this.logger = modules.logger;
+    this.metrics = modules.metrics;
     this.opts = opts ?? {batchSize: BATCH_SIZE};
     this.network.events.on(NetworkEvent.peerConnected, this.addPeer);
     this.network.events.on(NetworkEvent.peerDisconnected, this.removePeer);
@@ -70,6 +88,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
       .then((oldestSlotSynced) => {
         this.emit(BackfillSyncEvent.completed, oldestSlotSynced);
         this.logger.info("BackfillSync completed", {oldestSlotSynced});
+        this.status = BackfillSyncStatus.completed;
         // Sync completed, unsubscribe listeners and don't run the processor again
         // Backfill is never necessary again until the node shuts down
         this.close();
@@ -79,8 +98,12 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
           return; // Ignore
         }
         this.logger.error("BackfillSync processor error", e);
+        this.status = BackfillSyncStatus.completed;
         this.close();
       });
+    if (this.metrics) {
+      this.metrics.backfillSync.status.addCollect(() => this.metrics?.backfillSync.status.set(syncStatus[this.status]));
+    }
   }
 
   /** Throw / return all AsyncGenerators */
@@ -153,6 +176,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
         this.logger.debug("BackfillSync syncing range", {fromSlot, toSlot});
         await this.syncRange(peer, fromSlot, toSlot, this.anchorBlock.message.parentRoot);
       } catch (e) {
+        this.metrics?.backfillSync.errors.inc();
         this.logger.debug("BackfillSync sync error", e);
 
         if (e instanceof BackfillSyncError) {
@@ -197,9 +221,9 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
     const [block] = await this.network.reqResp.beaconBlocksByRoot(peer, [root] as List<Root>);
     if (block) {
       await verifyBlockProposerSignature(this.chain.bls, this.chain.getHeadState(), [block]);
-
       await this.db.blockArchive.put(block.message.slot, block);
       this.anchorBlock = block;
+      this.metrics?.backfillSync.totalBlocks.inc();
     }
   }
 
@@ -213,6 +237,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
     await verifyBlockProposerSignature(this.chain.bls, this.chain.getHeadState(), blocks);
 
     await this.db.blockArchive.batchAdd(blocks);
+    this.metrics?.backfillSync.totalBlocks.inc(blocks.length);
     // first block is oldest
     if (blocks[0]) {
       this.anchorBlock = blocks[0];

@@ -44,9 +44,9 @@ describe("backfill sync - verify block sequence", function () {
 
   //first 4 mainnet blocks
   function getBlocks(): phase0.SignedBeaconBlock[] {
-    const json = JSON.parse(readFileSync(path.join(__dirname, "./blocks.json"), "utf-8")) as Json;
+    const json = JSON.parse(readFileSync(path.join(__dirname, "./blocks.json"), "utf-8")) as Json[];
     return json.map((b) => {
-      return ssz.phase0.SignedBeaconBlock.fromJson(b, {case: "snake"}) as phase0.SignedBeaconBlock;
+      return ssz.phase0.SignedBeaconBlock.fromJson(b, {case: "snake"});
     });
   }
 });
