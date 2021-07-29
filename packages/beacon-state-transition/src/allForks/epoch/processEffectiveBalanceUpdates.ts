@@ -22,7 +22,7 @@ export function processEffectiveBalanceUpdates(
   (process.balances ?? state.balances).forEach((balance: bigint, i: number) => {
     const effectiveBalance = process.validators[i].effectiveBalance;
     const isTooBig = effectiveBalance > balance + DOWNWARD_THRESHOLD;
-    const isTooSmall = effectiveBalance !== MAX_EFFECTIVE_BALANCE && effectiveBalance < balance - UPWARD_THRESHOLD;
+    const isTooSmall = effectiveBalance < MAX_EFFECTIVE_BALANCE && effectiveBalance < balance - UPWARD_THRESHOLD;
     if (isTooBig || isTooSmall) {
       validators.update(i, {
         effectiveBalance: bigIntMin(balance - (balance % EFFECTIVE_BALANCE_INCREMENT), MAX_EFFECTIVE_BALANCE),
