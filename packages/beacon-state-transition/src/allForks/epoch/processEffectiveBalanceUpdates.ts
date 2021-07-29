@@ -21,9 +21,12 @@ export function processEffectiveBalanceUpdates(
   // update effective balances with hysteresis
   (process.balances ?? state.balances).forEach((balance: bigint, i: number) => {
     const effectiveBalance = process.validators[i].effectiveBalance;
-    const isTooBig = effectiveBalance > balance + DOWNWARD_THRESHOLD;
-    const isTooSmall = effectiveBalance < MAX_EFFECTIVE_BALANCE && effectiveBalance < balance - UPWARD_THRESHOLD;
-    if (isTooBig || isTooSmall) {
+    if (
+      // Too big
+      effectiveBalance > balance + DOWNWARD_THRESHOLD ||
+      // Too small. Check effectiveBalance < MAX_EFFECTIVE_BALANCE to prevent unnecessary updates
+      (effectiveBalance < MAX_EFFECTIVE_BALANCE && effectiveBalance < balance - UPWARD_THRESHOLD)
+    ) {
       validators.update(i, {
         effectiveBalance: bigIntMin(balance - (balance % EFFECTIVE_BALANCE_INCREMENT), MAX_EFFECTIVE_BALANCE),
       });
