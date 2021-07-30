@@ -4,12 +4,11 @@ import PeerId from "peer-id";
 import {StrictEventEmitter} from "strict-event-emitter-types";
 import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {GENESIS_EPOCH} from "@chainsafe/lodestar-params";
 import {phase0, Root, Slot, allForks} from "@chainsafe/lodestar-types";
 import {ErrorAborted, ILogger} from "@chainsafe/lodestar-utils";
 import {List, toHexString} from "@chainsafe/ssz";
 import {IBeaconChain} from "../../chain";
-import {getMinEpochForBlockRequests} from "../../constants";
+import {GENESIS_SLOT} from "../../constants";
 import {IBeaconDb} from "../../db";
 import {INetwork, NetworkEvent, PeerAction} from "../../network";
 import {ItTrigger} from "../../util/itTrigger";
@@ -123,22 +122,23 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
 
     this.logger.debug("BackfillSync initializing from cp", {epoch, root: toHexString(root)});
 
-    // Try to figure out if BackfillSync is necessary. Note that this check is very inexact
-    // - Define "target range" to backfill as: [oldestSlotRequired, cpStartSlot]
-    // - If there's at least 1 block in target range, consider yourself BackfillSynced
-    const cpStartSlot = computeStartSlotAtEpoch(epoch);
-    const oldestSlotRequired = this.getOldestRequiredSlot();
-    const slots = await this.db.blockArchive.keys({gte: oldestSlotRequired, lte: cpStartSlot, limit: 1});
-    if (slots.length > 0) {
-      this.logger.debug("BackfillSync has at least one block in range, skipping", {oldestSlotRequired, cpStartSlot});
-      return slots[0];
+    //Initial check, could be issue if somebody stops and starts node later from WSS
+    // as it will already contain genesis block but not blkocks in between
+    const oldestBlock = await this.db.blockArchive.firstValue();
+    if (oldestBlock?.message.slot === GENESIS_SLOT) {
+      this.logger.debug("BackfillSync already synced to genesis block");
+      return GENESIS_SLOT;
     }
 
-    // Attempt to find the anchor block in the DB
-    try {
-      this.anchorBlock = await this.db.blockArchive.getByRoot(root);
-    } catch (e) {
-      this.logger.error("Error fetching blockArchive", {root: toHexString(root)}, e);
+    this.anchorBlock = oldestBlock ?? null;
+
+    if (!this.anchorBlock) {
+      // Attempt to find the anchor block in the DB
+      try {
+        this.anchorBlock = await this.db.blockArchive.getByRoot(root);
+      } catch (e) {
+        this.logger.error("Error fetching blockArchive", {root: toHexString(root)}, e);
+      }
     }
 
     // Start processor loop
@@ -164,15 +164,13 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
           }
         }
 
-        const oldestSlotRequired = this.getOldestRequiredSlot();
-        const anchorBlockSlot = this.anchorBlock.message.slot;
-        if (anchorBlockSlot <= oldestSlotRequired) {
-          // Sync completed, return the oldestSlotSynced
-          return anchorBlockSlot;
+        //synced to genesis
+        if (this.anchorBlock.message.slot === GENESIS_SLOT) {
+          return GENESIS_SLOT;
         }
 
-        const toSlot = anchorBlockSlot;
-        const fromSlot = Math.max(toSlot - this.opts.batchSize, oldestSlotRequired);
+        const toSlot = this.anchorBlock.message.slot;
+        const fromSlot = Math.max(toSlot - this.opts.batchSize, GENESIS_SLOT);
         this.logger.debug("BackfillSync syncing range", {fromSlot, toSlot});
         await this.syncRange(peer, fromSlot, toSlot, this.anchorBlock.message.parentRoot);
       } catch (e) {
@@ -193,14 +191,6 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
     }
 
     throw new ErrorAborted("BackfillSync");
-  }
-
-  private getOldestRequiredSlot(): number {
-    const oldestRequiredEpoch = Math.max(
-      GENESIS_EPOCH,
-      this.chain.clock.currentEpoch - getMinEpochForBlockRequests(this.config)
-    );
-    return computeStartSlotAtEpoch(oldestRequiredEpoch);
   }
 
   private addPeer = (peerId: PeerId, peerStatus: phase0.Status): void => {
