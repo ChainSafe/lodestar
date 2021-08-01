@@ -68,6 +68,7 @@ function toHexStringMaybe(hex: ByteVector | string): string {
 }
 
 export class PubkeyIndexMap {
+  // We don't really need the full pubkey. We could just use the first 20 bytes like an Ethereum address
   private readonly map = new Map<PubkeyHex, ValidatorIndex>();
 
   get size(): number {
@@ -253,27 +254,52 @@ interface IEpochContextData {
 }
 
 /**
- * The standard / Exchange Interface of EpochContext, this is what's exported from
- * lodestar-beacon-state-transition.
- * A collection of contextual information to re-use during an epoch, and rotating precomputed data of
- * the next epoch into the current epoch. This includes shuffling, but also proposer information is
- * available.
+ * Cached persisted data constant through an epoch attached to a state:
+ * - pubkey cache
+ * - proposer indexes
+ * - shufflings
+ *
+ * This data is used for faster processing of the beacon-state-transition-function plus gossip and API validation.
  **/
 export class EpochContext {
-  // TODO: this is a hack, we need a safety mechanism in case a bad eth1 majority vote is in,
-  // or handle non finalized data differently, or use an immutable.js structure for cheap copies
-  // Warning: may contain pubkeys that do not yet exist in the current state, but do in a later processed state.
+  config: IBeaconConfig;
+  /**
+   * Unique globally shared pubkey registry. There should only exist one for the entire application.
+   *
+   * TODO: this is a hack, we need a safety mechanism in case a bad eth1 majority vote is in,
+   * or handle non finalized data differently, or use an immutable.js structure for cheap copies
+   * Warning: may contain pubkeys that do not yet exist in the current state, but do in a later processed state.
+   *
+   * $VALIDATOR_COUNT x 192 char String -> Number Map
+   */
   pubkey2index: PubkeyIndexMap;
-  // Warning: may contain indices that do not yet exist in the current state, but do in a later processed state.
+  /**
+   * Unique globally shared pubkey registry. There should only exist one for the entire application.
+   *
+   * Warning: may contain indices that do not yet exist in the current state, but do in a later processed state.
+   *
+   * $VALIDATOR_COUNT x BLST deserialized pubkey (Jacobian coordinates)
+   */
   index2pubkey: PublicKey[];
-  proposers: number[];
-  // Per spec definition, shuffling will always be defined. They are never called before loadState()
+  /**
+   * Indexes of the block proposers for the current epoch.
+   *
+   * 32 x Number
+   */
+  proposers: ValidatorIndex[];
+  /**
+   * Shuffling of validator indexes. Immutable through the epoch, then it's replaced entirely.
+   * Note: Per spec definition, shuffling will always be defined. They are never called before loadState()
+   *
+   * $VALIDATOR_COUNT x Number
+   */
   previousShuffling: IEpochShuffling;
+  /** Same as previousShuffling */
   currentShuffling: IEpochShuffling;
+  /** Same as previousShuffling */
   nextShuffling: IEpochShuffling;
   syncParticipantReward: phase0.Gwei;
   syncProposerReward: phase0.Gwei;
-  config: IBeaconConfig;
   /**
    * Update freq: once per epoch after `process_effective_balance_updates()`
    * Memory cost: 1 bigint
