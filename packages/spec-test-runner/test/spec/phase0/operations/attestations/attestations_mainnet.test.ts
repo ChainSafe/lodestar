@@ -17,7 +17,7 @@ describeDirectorySpecTest<IProcessAttestationTestCase, phase0.BeaconState>(
       config,
       testcase.pre as TreeBacked<phase0.BeaconState>
     );
-    phase0.processAttestation(wrappedState, testcase.attestation);
+    phase0.processAttestation(wrappedState, testcase.attestation, {});
     return wrappedState;
   },
   {

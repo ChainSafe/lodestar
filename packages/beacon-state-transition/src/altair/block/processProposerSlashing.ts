@@ -7,7 +7,7 @@ import {BlockProcess} from "../../util/blockProcess";
 export function processProposerSlashing(
   state: CachedBeaconState<altair.BeaconState>,
   proposerSlashing: phase0.ProposerSlashing,
-  blockProcess: BlockProcess = {validatorExitCache: {}},
+  blockProcess: BlockProcess,
   verifySignatures = true
 ): void {
   processProposerSlashingAllForks(

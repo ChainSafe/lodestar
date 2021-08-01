@@ -18,10 +18,11 @@ export function initiateValidatorExit(
   if (validators[index].exitEpoch !== FAR_FUTURE_EPOCH) {
     return;
   }
-  const {validatorExitCache: cache} = blockProcess;
+
+  let validatorExitCache = blockProcess.validatorExitCache;
 
   // the 1st time we process validator exit in this block
-  if (cache.exitQueueEpoch === undefined) {
+  if (validatorExitCache === undefined) {
     const currentEpoch = epochCtx.currentShuffling.epoch;
     // compute exit queue epoch
     const validatorArr = validators.persistent.toArray();
@@ -48,25 +49,22 @@ export function initiateValidatorExit(
       exitQueueChurn = 1;
     }
 
-    cache.exitQueueEpoch = exitQueueEpoch;
-    cache.exitQueueChurn = exitQueueChurn;
-    cache.churnLimit = churnLimit;
+    validatorExitCache = {
+      exitQueueEpoch: exitQueueEpoch,
+      exitQueueChurn: exitQueueChurn,
+      churnLimit: churnLimit,
+    };
   } else {
-    let {exitQueueChurn} = cache;
-    if (exitQueueChurn === undefined || cache.churnLimit === undefined) {
-      throw new Error("Invalid ValidatorExitProcess");
-    }
-    exitQueueChurn++;
-    if (exitQueueChurn >= cache.churnLimit) {
+    validatorExitCache.exitQueueChurn++;
+    if (validatorExitCache.exitQueueChurn >= validatorExitCache.churnLimit) {
       // 1st validator with this exitQueueEpoch
-      cache.exitQueueEpoch += 1;
-      exitQueueChurn = 0;
+      validatorExitCache.exitQueueEpoch += 1;
+      validatorExitCache.exitQueueChurn = 0;
     }
-    cache.exitQueueChurn = exitQueueChurn;
   }
 
   // set validator exit epoch and withdrawable epoch
-  const {exitQueueEpoch} = cache;
+  const {exitQueueEpoch} = validatorExitCache;
   validators.update(index, {
     exitEpoch: exitQueueEpoch,
     withdrawableEpoch: exitQueueEpoch + config.MIN_VALIDATOR_WITHDRAWABILITY_DELAY,

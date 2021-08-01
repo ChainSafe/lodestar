@@ -6,7 +6,7 @@ import {BlockProcess} from "../../util/blockProcess";
 export function processVoluntaryExit(
   state: CachedBeaconState<phase0.BeaconState>,
   signedVoluntaryExit: phase0.SignedVoluntaryExit,
-  blockProcess: BlockProcess = {validatorExitCache: {}},
+  blockProcess: BlockProcess,
   verifySignature = true
 ): void {
   processVoluntaryExitAllForks(

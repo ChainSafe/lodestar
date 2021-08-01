@@ -22,7 +22,7 @@ export function runProposerSlashing(presetName: PresetName): void {
         config,
         testcase.pre as TreeBacked<altair.BeaconState>
       );
-      altair.processProposerSlashing(wrappedState, testcase.proposer_slashing);
+      altair.processProposerSlashing(wrappedState, testcase.proposer_slashing, {});
       return wrappedState;
     },
     {
