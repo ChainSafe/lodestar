@@ -17,7 +17,7 @@ describeDirectorySpecTest<IProcessVoluntaryExitTestCase, phase0.BeaconState>(
       config,
       testcase.pre as TreeBacked<phase0.BeaconState>
     );
-    phase0.processVoluntaryExit(wrappedState, testcase.voluntary_exit);
+    phase0.processVoluntaryExit(wrappedState, testcase.voluntary_exit, {});
     return wrappedState;
   },
   {

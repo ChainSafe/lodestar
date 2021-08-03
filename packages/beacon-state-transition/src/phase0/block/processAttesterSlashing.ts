@@ -8,7 +8,7 @@ import {BlockProcess} from "../../util/blockProcess";
 export function processAttesterSlashing(
   state: CachedBeaconState<phase0.BeaconState>,
   attesterSlashing: phase0.AttesterSlashing,
-  blockProcess: BlockProcess = {validatorExitCache: {}},
+  blockProcess: BlockProcess,
   verifySignatures = true
 ): void {
   processAttesterSlashingAllForks(

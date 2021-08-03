@@ -23,7 +23,7 @@ export function runAttesterSlashing(presetName: PresetName): void {
         testcase.pre as TreeBacked<altair.BeaconState>
       );
       const verify = !!testcase.meta && !!testcase.meta.blsSetting && testcase.meta.blsSetting === BigInt(1);
-      altair.processAttesterSlashing(wrappedState, testcase.attester_slashing, undefined, verify);
+      altair.processAttesterSlashing(wrappedState, testcase.attester_slashing, {}, verify);
       return wrappedState;
     },
     {

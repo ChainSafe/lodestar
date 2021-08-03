@@ -10,7 +10,7 @@ export function processAttestation(
   state: CachedBeaconState<phase0.BeaconState>,
   attestation: phase0.Attestation,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  blockProcess: BlockProcess = {validatorExitCache: {}},
+  blockProcess: BlockProcess,
   verifySignature = true
 ): void {
   const {epochCtx} = state;

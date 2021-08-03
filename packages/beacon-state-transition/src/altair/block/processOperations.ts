@@ -26,7 +26,7 @@ type OperationFunction = (
 export function processOperations(
   state: CachedBeaconState<altair.BeaconState>,
   body: altair.BeaconBlockBody,
-  blockProcess: BlockProcess = {validatorExitCache: {}},
+  blockProcess: BlockProcess,
   verifySignatures = true
 ): void {
   // verify that outstanding deposits are processed up to the maximum number of deposits

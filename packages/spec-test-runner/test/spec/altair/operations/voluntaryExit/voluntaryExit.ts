@@ -22,7 +22,7 @@ export function runVoluntaryExit(presetName: PresetName): void {
         config,
         testcase.pre as TreeBacked<altair.BeaconState>
       );
-      altair.processVoluntaryExit(wrappedState, testcase.voluntary_exit);
+      altair.processVoluntaryExit(wrappedState, testcase.voluntary_exit, {});
       return wrappedState;
     },
     {
