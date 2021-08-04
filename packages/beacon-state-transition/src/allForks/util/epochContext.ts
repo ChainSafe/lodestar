@@ -30,7 +30,8 @@ import {
   computeProposerIndex,
   computeStartSlotAtEpoch,
   getSeed,
-  getTotalActiveBalance,
+  getTotalBalance,
+  isActiveValidator,
   isAggregatorFromCommitteeLength,
   zipIndexesCommitteeBits,
 } from "../../util";
@@ -100,21 +101,30 @@ export function createEpochContext(
   const previousEpoch = currentEpoch === GENESIS_EPOCH ? GENESIS_EPOCH : currentEpoch - 1;
   const nextEpoch = currentEpoch + 1;
 
-  const indicesBounded: [ValidatorIndex, Epoch, Epoch][] = validators.map((v, i) => [
-    i,
-    v.activationEpoch,
-    v.exitEpoch,
-  ]);
+  const previousActiveIndices: ValidatorIndex[] = [];
+  const currentActiveIndices: ValidatorIndex[] = [];
+  const nextActiveIndices: ValidatorIndex[] = [];
+  validators.forEach(function processActiveIndices(v, i) {
+    if (isActiveValidator(v, previousEpoch)) {
+      previousActiveIndices.push(i);
+    }
+    if (isActiveValidator(v, currentEpoch)) {
+      currentActiveIndices.push(i);
+    }
+    if (isActiveValidator(v, nextEpoch)) {
+      nextActiveIndices.push(i);
+    }
+  });
 
-  const currentShuffling = computeEpochShuffling(state, indicesBounded, currentEpoch);
+  const currentShuffling = computeEpochShuffling(state, currentActiveIndices, currentEpoch);
   let previousShuffling;
   if (previousEpoch === currentEpoch) {
     // in case of genesis
     previousShuffling = currentShuffling;
   } else {
-    previousShuffling = computeEpochShuffling(state, indicesBounded, previousEpoch);
+    previousShuffling = computeEpochShuffling(state, previousActiveIndices, previousEpoch);
   }
-  const nextShuffling = computeEpochShuffling(state, indicesBounded, nextEpoch);
+  const nextShuffling = computeEpochShuffling(state, nextActiveIndices, nextEpoch);
 
   // Allow to create CachedBeaconState for empty states
   const proposers = state.validators.length > 0 ? computeProposers(state, currentShuffling) : [];
@@ -122,7 +132,7 @@ export function createEpochContext(
   // Only after altair, compute the indices of the current sync committee
   const onAltairFork = currentEpoch >= config.ALTAIR_FORK_EPOCH;
 
-  const totalActiveBalance = getTotalActiveBalance(state);
+  const totalActiveBalance = getTotalBalance(state, currentShuffling.activeIndices);
   const syncParticipantReward = onAltairFork ? computeSyncParticipantReward(config, totalActiveBalance) : BigInt(0);
   const syncProposerReward = onAltairFork
     ? (syncParticipantReward * PROPOSER_WEIGHT) / (WEIGHT_DENOMINATOR - PROPOSER_WEIGHT)
@@ -203,17 +213,17 @@ export function computeSyncParticipantReward(config: IBeaconConfig, totalActiveB
 export function rotateEpochs(
   epochCtx: EpochContext,
   state: allForks.BeaconState,
-  indicesBounded: [ValidatorIndex, Epoch, Epoch][]
+  activeValidatorIndices: ValidatorIndex[]
 ): void {
   epochCtx.previousShuffling = epochCtx.currentShuffling;
   epochCtx.currentShuffling = epochCtx.nextShuffling;
   const currEpoch = epochCtx.currentShuffling.epoch;
   const nextEpoch = currEpoch + 1;
-  epochCtx.nextShuffling = computeEpochShuffling(state, indicesBounded, nextEpoch);
+  epochCtx.nextShuffling = computeEpochShuffling(state, activeValidatorIndices, nextEpoch);
   epochCtx.proposers = computeProposers(state, epochCtx.currentShuffling);
 
   if (currEpoch >= epochCtx.config.ALTAIR_FORK_EPOCH) {
-    const totalActiveBalance = getTotalActiveBalance(state);
+    const totalActiveBalance = getTotalBalance(state, activeValidatorIndices);
     epochCtx.syncParticipantReward = computeSyncParticipantReward(epochCtx.config, totalActiveBalance);
     epochCtx.syncProposerReward =
       (epochCtx.syncParticipantReward * PROPOSER_WEIGHT) / (WEIGHT_DENOMINATOR - PROPOSER_WEIGHT);

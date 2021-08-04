@@ -55,7 +55,7 @@ export interface IEpochProcess {
   validators: phase0.Validator[];
   balances?: BigUint64Array;
   // to be used for rotateEpochs()
-  indicesBounded: [ValidatorIndex, Epoch, Epoch][];
+  nextEpochActiveValidatorIndices: ValidatorIndex[];
 }
 
 export function createIEpochProcess(): IEpochProcess {
@@ -79,7 +79,7 @@ export function createIEpochProcess(): IEpochProcess {
     churnLimit: 0,
     statuses: [],
     validators: [],
-    indicesBounded: [],
+    nextEpochActiveValidatorIndices: [],
   };
 }
 
@@ -90,6 +90,7 @@ export function prepareEpochProcessState<T extends allForks.BeaconState>(state: 
   const forkName = config.getForkName(state.slot);
   const currentEpoch = epochCtx.currentShuffling.epoch;
   const prevEpoch = epochCtx.previousShuffling.epoch;
+  const nextEpoch = currentEpoch + 1;
   out.currentEpoch = currentEpoch;
   out.prevEpoch = prevEpoch;
 
@@ -144,7 +145,9 @@ export function prepareEpochProcessState<T extends allForks.BeaconState>(state: 
     }
 
     out.statuses.push(status);
-    out.indicesBounded.push([i, v.activationEpoch, v.exitEpoch]);
+    if (isActiveValidator(v, nextEpoch)) {
+      out.nextEpochActiveValidatorIndices.push(i);
+    }
   });
 
   if (out.totalActiveStake < EFFECTIVE_BALANCE_INCREMENT) {

@@ -181,7 +181,9 @@ export function generatePerformanceStateAltair(pubkeysArg?: Uint8Array[]): TreeB
       ParticipationFlags
     >;
     state.inactivityScores = Array.from({length: pubkeys.length}, (_, i) => i % 2) as List<ParticipationFlags>;
-    const syncCommittee = getNextSyncCommittee(state);
+    const epoch = computeEpochAtSlot(state.slot);
+    const activeValidatorIndices = getActiveValidatorIndices(state, epoch);
+    const syncCommittee = getNextSyncCommittee(state, activeValidatorIndices);
     state.currentSyncCommittee = syncCommittee;
     state.nextSyncCommittee = syncCommittee;
     altairState = ssz.altair.BeaconState.createTreeBackedFromStruct(state);
