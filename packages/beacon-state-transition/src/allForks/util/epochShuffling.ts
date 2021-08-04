@@ -57,17 +57,10 @@ export function computeCommitteeCount(activeValidatorCount: number): number {
 
 export function computeEpochShuffling(
   state: allForks.BeaconState,
-  indicesBounded: [ValidatorIndex, Epoch, Epoch][],
+  activeIndices: ValidatorIndex[],
   epoch: Epoch
 ): IEpochShuffling {
   const seed = getSeed(state, epoch, DOMAIN_BEACON_ATTESTER);
-
-  const activeIndices: ValidatorIndex[] = [];
-  for (const [index, activationEpoch, exitEpoch] of indicesBounded) {
-    if (activationEpoch <= epoch && epoch < exitEpoch) {
-      activeIndices.push(index);
-    }
-  }
 
   // copy
   const shuffling = activeIndices.slice();

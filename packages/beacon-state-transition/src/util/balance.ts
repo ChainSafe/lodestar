@@ -24,6 +24,7 @@ export function getTotalBalance(state: allForks.BeaconState, indices: ValidatorI
 }
 
 /**
+ * Call this function with care since it has to loop through validators which is expensive.
  * Return the combined effective balance of the active validators.
  * Note: `getTotalBalance` returns `EFFECTIVE_BALANCE_INCREMENT` Gwei minimum to avoid divisions by zero.
  */

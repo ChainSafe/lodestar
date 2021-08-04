@@ -1,4 +1,4 @@
-import {altair, ParticipationFlags, phase0, ssz, Uint8} from "@chainsafe/lodestar-types";
+import {altair, ParticipationFlags, phase0, ssz, Uint8, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {CachedBeaconState, createCachedBeaconState} from "../allForks/util";
 import {getCurrentEpoch, newZeroedArray} from "../util";
 import {List, TreeBacked} from "@chainsafe/ssz";
@@ -13,7 +13,12 @@ import {getNextSyncCommittee} from "./epoch/sync_committee";
 export function upgradeState(state: CachedBeaconState<phase0.BeaconState>): CachedBeaconState<altair.BeaconState> {
   const {config} = state;
   const pendingAttesations = Array.from(state.previousEpochAttestations);
-  const postTreeBackedState = upgradeTreeBackedState(config, ssz.phase0.BeaconState.createTreeBacked(state.tree));
+  const nextEpochActiveIndices = state.nextShuffling.activeIndices;
+  const postTreeBackedState = upgradeTreeBackedState(
+    config,
+    ssz.phase0.BeaconState.createTreeBacked(state.tree),
+    nextEpochActiveIndices
+  );
   const postState = createCachedBeaconState(config, postTreeBackedState);
   translateParticipation(postState, pendingAttesations);
   return postState;
@@ -21,7 +26,8 @@ export function upgradeState(state: CachedBeaconState<phase0.BeaconState>): Cach
 
 function upgradeTreeBackedState(
   config: IBeaconConfig,
-  state: TreeBacked<phase0.BeaconState>
+  state: TreeBacked<phase0.BeaconState>,
+  nextEpochActiveIndices: ValidatorIndex[]
 ): TreeBacked<altair.BeaconState> {
   const validatorCount = state.validators.length;
   const epoch = getCurrentEpoch(state);
@@ -34,7 +40,7 @@ function upgradeTreeBackedState(
   postState.previousEpochParticipation = newZeroedArray(validatorCount) as List<ParticipationFlags>;
   postState.currentEpochParticipation = newZeroedArray(validatorCount) as List<ParticipationFlags>;
   postState.inactivityScores = newZeroedArray(validatorCount) as List<Uint8>;
-  const syncCommittee = getNextSyncCommittee(state);
+  const syncCommittee = getNextSyncCommittee(state, nextEpochActiveIndices);
   postState.currentSyncCommittee = syncCommittee;
   postState.nextSyncCommittee = syncCommittee;
   return postState;

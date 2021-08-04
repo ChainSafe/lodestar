@@ -7,7 +7,7 @@ import {
   GENESIS_SLOT,
   MAX_EFFECTIVE_BALANCE,
 } from "@chainsafe/lodestar-params";
-import {allForks, altair, Bytes32, Number64, phase0, Root, ssz} from "@chainsafe/lodestar-types";
+import {allForks, altair, Bytes32, Number64, phase0, Root, ssz, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {bigIntMin} from "@chainsafe/lodestar-utils";
 
 import {computeEpochAtSlot} from "./epoch";
@@ -112,13 +112,14 @@ export function applyTimestamp(
  * @param state BeaconState
  * @param newDeposits new deposits
  * @param fullDepositDataRootList full list of deposit data root from index 0
+ * @returns active validator indices
  */
 export function applyDeposits(
   config: IChainForkConfig,
   state: CachedBeaconState<allForks.BeaconState>,
   newDeposits: phase0.Deposit[],
   fullDepositDataRootList?: TreeBacked<List<Root>>
-): void {
+): ValidatorIndex[] {
   const depositDataRootList: Root[] = [];
   if (fullDepositDataRootList) {
     for (let index = 0; index < state.eth1Data.depositCount; index++) {
@@ -147,6 +148,7 @@ export function applyDeposits(
     processDeposit(forkName, state, deposit);
   }
 
+  const activeValidatorIndices: ValidatorIndex[] = [];
   // Process activations
   // validators are edited, so we're not iterating (read-only) through the validators
   const validatorLength = state.validators.length;
@@ -158,6 +160,7 @@ export function applyDeposits(
     if (validator.effectiveBalance === MAX_EFFECTIVE_BALANCE) {
       validator.activationEligibilityEpoch = computeEpochAtSlot(GENESIS_SLOT);
       validator.activationEpoch = computeEpochAtSlot(GENESIS_SLOT);
+      activeValidatorIndices.push(index);
     }
     // If state is a CachedBeaconState<> validator has to be re-assigned manually
     state.validators[index] = validator;
@@ -167,6 +170,7 @@ export function applyDeposits(
   state.genesisValidatorsRoot = config
     .getForkTypes(state.slot)
     .BeaconState.fields.validators.hashTreeRoot(state.validators);
+  return activeValidatorIndices;
 }
 
 /**
@@ -194,10 +198,10 @@ export function initializeBeaconStateFromEth1(
   applyEth1BlockHash(state, eth1BlockHash);
 
   // Process deposits
-  applyDeposits(config, state, deposits);
+  const activeValidatorIndices = applyDeposits(config, state, deposits);
 
   if (config.getForkName(GENESIS_SLOT) === ForkName.altair) {
-    const syncCommittees = getNextSyncCommittee(state);
+    const syncCommittees = getNextSyncCommittee(state, activeValidatorIndices);
     const altairState = state as TreeBacked<altair.BeaconState>;
     altairState.currentSyncCommittee = syncCommittees;
     altairState.nextSyncCommittee = syncCommittees;
