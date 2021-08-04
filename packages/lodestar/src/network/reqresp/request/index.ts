@@ -89,7 +89,7 @@ export async function sendRequest<T extends ResponseBody | ResponseBody[]>(
     const {stream, protocol: protocolId} = await withTimeout(
       async (timeoutAndParentSignal) => {
         const protocolIds = Array.from(protocols.keys());
-        const conn = (await libp2p.dialProtocol(peerId, protocolIds, {signal: timeoutAndParentSignal})) as Connection;
+        const conn = await libp2p.dialProtocol(peerId, protocolIds, {signal: timeoutAndParentSignal});
         if (!conn) throw Error("dialProtocol timeout");
         // TODO: libp2p-ts type Stream does not declare .abort() and requires casting to unknown here
         // Remove when https://github.com/ChainSafe/lodestar/issues/2167

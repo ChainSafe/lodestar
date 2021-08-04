@@ -10,6 +10,7 @@ import {MetadataController} from "../metadata";
 import {INetworkEventBus} from "../events";
 import {ReqRespHandlers} from "./handlers";
 import {IMetrics} from "../../metrics";
+import BufferList from "bl";
 
 export interface IReqResp {
   start(): void;
@@ -53,8 +54,8 @@ export type Libp2pConnection = {
  * These source and sink types are more precise to our usage
  */
 export type Libp2pStream = {
-  source: AsyncIterable<Buffer>;
-  sink: (source: AsyncIterable<Buffer>) => Promise<void>;
+  source: AsyncIterable<BufferList | Uint8Array>;
+  sink: (source: Uint8Array) => Promise<void>;
   /**
    * `libp2p-mplex`: Close for reading
    * ```ts

@@ -68,7 +68,7 @@ export async function handleRequest(
           } else {
             throw new ResponseError(RespStatus.INVALID_REQUEST, (e as Error).message);
           }
-        });
+        }) as RequestBody;
 
         logger.debug("Resp received request", {...logCtx, requestBody} as Context);
 
