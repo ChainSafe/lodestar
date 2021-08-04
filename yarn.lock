@@ -1152,6 +1152,27 @@
     strict-event-emitter-types "^2.0.0"
     varint "^6.0.0"
 
+"@chainsafe/discv5@^0.6.3":
+  version "0.6.3"
+  resolved "https://registry.yarnpkg.com/@chainsafe/discv5/-/discv5-0.6.3.tgz#217d6287c89ea694150834a41b4bce9f5babb263"
+  integrity sha512-sgypqk1JYs6Cf+5YnBtrSpyFswawt2NZV+WKx3HhzSETgCTqFyd8miEbaFLb1OIYWytxRP9/f+BG/EMVKLZmAA==
+  dependencies:
+    "@chainsafe/abort-controller" "^3.0.1"
+    base64url "^3.0.1"
+    bcrypto "^5.4.0"
+    bigint-buffer "^1.1.5"
+    debug "^4.3.1"
+    dgram "^1.0.1"
+    err-code "^3.0.1"
+    ip6addr "^0.2.3"
+    is-ip "^3.1.0"
+    libp2p-crypto "^0.19.4"
+    multiaddr "^9.0.2"
+    peer-id "^0.14.8"
+    rlp "^2.2.6"
+    strict-event-emitter-types "^2.0.0"
+    varint "^6.0.0"
+
 "@chainsafe/fast-crc32c@3.0.0":
   version "3.0.0"
   resolved "https://registry.yarnpkg.com/@chainsafe/fast-crc32c/-/fast-crc32c-3.0.0.tgz#34879af40d7e75643bc5206e6502c2231494a7ba"
@@ -2879,13 +2900,6 @@
   resolved "https://registry.yarnpkg.com/@types/abstract-leveldown/-/abstract-leveldown-5.0.1.tgz#3c7750d0186b954c7f2d2f6acc8c3c7ba0c3412e"
   integrity sha512-wYxU3kp5zItbxKmeRYCEplS2MW7DzyBnxPGj+GJVHZEUZiK/nn5Ei1sUFgURDh+X051+zsGe28iud3oHjrYWQQ==
 
-"@types/bl@^2.1.0":
-  version "2.1.0"
-  resolved "https://registry.yarnpkg.com/@types/bl/-/bl-2.1.0.tgz#45c881c97feae1223d63bbc5b83166153fcb2a15"
-  integrity sha512-1TdA9IXOy4sdqn8vgieQ6GZAiHiPNrOiO1s2GJjuYPw4QVY7gYoVjkW049avj33Ez7IcIvu43hQsMsoUFbCn2g==
-  dependencies:
-    "@types/node" "*"
-
 "@types/bl@^4.1.0":
   version "4.1.0"
   resolved "https://registry.yarnpkg.com/@types/bl/-/bl-4.1.0.tgz#fadef609edc9be15e7941aa61bf309df3dc9b135"
@@ -4020,15 +4034,6 @@ bl@^1.0.0:
     readable-stream "^2.3.5"
     safe-buffer "^5.1.1"
 
-bl@^4.0.2:
-  version "4.1.0"
-  resolved "https://registry.yarnpkg.com/bl/-/bl-4.1.0.tgz#451535264182bec2fbbc83a62ab98cf11d9f7b3a"
-  integrity sha512-1W07cM9gS6DcLperZfFSj+bWLtaPGSOHWhPiGzXmvVJbRLdG82sH/Kn8EtW1VqWVA54AKf2h5k5BbnIbwF3h6w==
-  dependencies:
-    buffer "^5.5.0"
-    inherits "^2.0.4"
-    readable-stream "^3.4.0"
-
 bl@^5.0.0:
   version "5.0.0"
   resolved "https://registry.yarnpkg.com/bl/-/bl-5.0.0.tgz#6928804a41e9da9034868e1c50ca88f21f57aea2"
@@ -5039,6 +5044,19 @@ dashdash@^1.12.0:
   dependencies:
     assert-plus "^1.0.0"
 
+datastore-core@^4.0.0:
+  version "4.0.0"
+  resolved "https://registry.yarnpkg.com/datastore-core/-/datastore-core-4.0.0.tgz#b62184244929109ba05f935fc2abb9d0d7cbb691"
+  integrity sha512-gTSysof1fKNNpNa2N3uCerp5zE10KvWci/OucmuR+4uWODLu3i6Egp6EDDC4mK/xPremRF9rj92jnGVBjCe5Zg==
+  dependencies:
+    debug "^4.1.1"
+    interface-datastore "^4.0.0"
+    it-filter "^1.0.2"
+    it-map "^1.0.5"
+    it-merge "^1.0.1"
+    it-take "^1.0.1"
+    uint8arrays "^2.1.5"
+
 datastore-core@^5.0.0:
   version "5.0.1"
   resolved "https://registry.yarnpkg.com/datastore-core/-/datastore-core-5.0.1.tgz#1b68fd8f5c376ddabd4854bb7ee59ca677c36895"
@@ -5055,13 +5073,25 @@ datastore-core@^5.0.0:
     it-take "^1.0.1"
     uint8arrays "^2.1.5"
 
-datastore-level@*, datastore-level@^6.0.0:
+datastore-level@*:
   version "6.0.2"
   resolved "https://registry.yarnpkg.com/datastore-level/-/datastore-level-6.0.2.tgz#ad4f2dd531c5fd5b72e38b2307843515f7896e2b"
   integrity sha512-nVpI3TG4PNs6GszdJxCNF9Gc94tksKpAp6Ci4jrLKTf8EuoIumS1cQ44+1eg3E3ck8bG9Nu/x5AhL/5nxTNTyA==
   dependencies:
     datastore-core "^5.0.0"
     interface-datastore "^5.1.1"
+    it-filter "^1.0.2"
+    it-map "^1.0.5"
+    it-take "^1.0.1"
+    level "^7.0.0"
+
+datastore-level@^5.0.0:
+  version "5.0.1"
+  resolved "https://registry.yarnpkg.com/datastore-level/-/datastore-level-5.0.1.tgz#a8216db8f9d68e904eab176a8649f807b5590c3c"
+  integrity sha512-cCivAtFTfDslingk9YkY+n9icSbCeG53zduNmO2XtmXBKoH3rEttRJAdQxt4W2fF2kr0DLmOV40f9vcqUBZ1Ew==
+  dependencies:
+    datastore-core "^4.0.0"
+    interface-datastore "^4.0.0"
     it-filter "^1.0.2"
     it-map "^1.0.5"
     it-take "^1.0.1"
@@ -9029,7 +9059,7 @@ multiaddr@^9.0.0:
     uint8arrays "^2.1.3"
     varint "^6.0.0"
 
-multiaddr@^9.0.1:
+multiaddr@^9.0.1, multiaddr@^9.0.2:
   version "9.0.2"
   resolved "https://registry.yarnpkg.com/multiaddr/-/multiaddr-9.0.2.tgz#ab322bb768e77270650ebce71a452fdc760bda0d"
   integrity sha512-YFaEb9t4yXSbaGksSEdg+Kn2U02s7w4wXUgyEMQmPxFJj7CfVHY10WOsScAX/rK6Soa15S1zXYadqH9TtlVreQ==

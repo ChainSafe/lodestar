@@ -46,7 +46,7 @@
   "dependencies": {
     "@chainsafe/abort-controller": "^3.0.1",
     "@chainsafe/bls": "6.0.1",
-    "@chainsafe/discv5": "^0.6.2",
+    "@chainsafe/discv5": "^0.6.3",
     "@chainsafe/lodestar-api": "^0.27.0",
     "@chainsafe/lodestar-beacon-state-transition": "^0.27.0",
     "@chainsafe/lodestar-config": "^0.27.0",
@@ -62,9 +62,9 @@
     "@chainsafe/ssz": "^0.8.12",
     "@ethersproject/abi": "^5.0.0",
     "@types/datastore-level": "^3.0.0",
-    "bl": "^4.0.2",
+    "bl": "^5.0.0",
     "cross-fetch": "^3.1.4",
-    "datastore-level": "^6.0.0",
+    "datastore-level": "^5.0.0",
     "deepmerge": "^3.2.0",
     "es6-promisify": "6.0.2",
     "fastify": "3.15.1",
@@ -94,7 +94,7 @@
     "wtfnode": "^0.8.4"
   },
   "devDependencies": {
-    "@types/bl": "^2.1.0",
+    "@types/bl": "^4.1.0",
     "@types/es6-promisify": "6.0.0",
     "@types/eventsource": "^1.1.5",
     "@types/http-terminator": "^2.0.1",
