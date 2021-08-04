@@ -1,7 +1,7 @@
 import {Root, phase0} from "@chainsafe/lodestar-types";
 import {List, toHexString} from "@chainsafe/ssz";
 import {expect} from "chai";
-import {Libp2pStream} from "../../../../src/network";
+import {MuxedStream} from "libp2p-interfaces/src/stream-muxer/types";
 import {generateEmptySignedBlock} from "../../../utils/block";
 
 export function createStatus(): phase0.Status {
@@ -47,21 +47,21 @@ export function expectEqualByteChunks(chunks: Buffer[], expectedChunks: Buffer[]
  * Useful to simulate a LibP2P stream source emitting prepared bytes
  * and capture the response with a sink accessible via `this.resultChunks`
  */
-export class MockLibP2pStream implements Libp2pStream {
-  source: Libp2pStream["source"];
+export class MockLibP2pStream implements MuxedStream {
+  source: MuxedStream["source"];
   resultChunks: Buffer[] = [];
 
   constructor(requestChunks: Buffer[]) {
     this.source = arrToSource(requestChunks);
   }
 
-  sink: Libp2pStream["sink"] = async (source) => {
+  sink: MuxedStream["sink"] = async (source) => {
     for await (const chunk of source) {
       this.resultChunks.push(chunk);
     }
   };
   // eslint-disable-next-line @typescript-eslint/no-empty-function
-  close: Libp2pStream["close"] = () => {};
-  reset: Libp2pStream["reset"] = () => this.close();
-  abort: Libp2pStream["abort"] = () => this.close();
+  close: MuxedStream["close"] = () => {};
+  reset: MuxedStream["reset"] = () => this.close();
+  abort: MuxedStream["abort"] = () => this.close();
 }

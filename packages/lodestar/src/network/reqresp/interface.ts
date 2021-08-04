@@ -10,7 +10,6 @@ import {MetadataController} from "../metadata";
 import {INetworkEventBus} from "../events";
 import {ReqRespHandlers} from "./handlers";
 import {IMetrics} from "../../metrics";
-import BufferList from "bl";
 
 export interface IReqResp {
   start(): void;
@@ -38,38 +37,3 @@ export interface IReqRespModules {
   networkEventBus: INetworkEventBus;
   metrics: IMetrics | null;
 }
-
-export type Libp2pConnection = {
-  stream: Libp2pStream;
-  /**
-   * When dialing a protocol you may request multiple protocols by order of preference.
-   * Libp2p will negotiate a protocol and the one stablished will be returned in this variable.
-   * Example value: `'/eth2/beacon_chain/req/metadata/1/ssz_snappy'`
-   */
-  protocol: string;
-};
-
-/**
- * Stream types from libp2p.dialProtocol are too vage and cause compilation type issues
- * These source and sink types are more precise to our usage
- */
-export type Libp2pStream = {
-  source: AsyncIterable<BufferList | Uint8Array>;
-  sink: (source: Uint8Array) => Promise<void>;
-  /**
-   * `libp2p-mplex`: Close for reading
-   * ```ts
-   * () => stream.source.end()
-   * ```
-   */
-  close: () => void;
-  /**
-   * `libp2p-mplex`: Close immediately for reading and writing (remote error)
-   */
-  reset: () => void;
-  /**
-   * `libp2p-mplex`: Close for reading and writing (local error)
-   */
-  abort: (err: Error) => void;
-};
-

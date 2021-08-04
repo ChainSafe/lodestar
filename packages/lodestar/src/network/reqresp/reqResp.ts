@@ -11,7 +11,7 @@ import LibP2p from "libp2p";
 import PeerId from "peer-id";
 import {timeoutOptions} from "../../constants";
 import {IForkDigestContext} from "../../util/forkDigestContext";
-import {IReqResp, IReqRespModules, Libp2pStream} from "./interface";
+import {IReqResp, IReqRespModules} from "./interface";
 import {sendRequest} from "./request";
 import {handleRequest} from "./response";
 import {onOutgoingReqRespError} from "./score";
@@ -32,6 +32,7 @@ import {
   RequestTypedContainer,
   protocolsSupported,
 } from "./types";
+import {MuxedStream} from "libp2p-interfaces/src/stream-muxer/types";
 
 export type IReqRespOptions = Partial<typeof timeoutOptions>;
 
@@ -176,7 +177,7 @@ export class ReqResp implements IReqResp {
   }
 
   private getRequestHandler({method, version, encoding}: Protocol) {
-    return async ({connection, stream}: {connection: Connection; stream: Libp2pStream}) => {
+    return async ({connection, stream}: {connection: Connection; stream: MuxedStream}) => {
       const peerId = connection.remotePeer;
 
       // TODO: Do we really need this now that there is only one encoding?

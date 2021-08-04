@@ -174,12 +174,14 @@ export function generatePerformanceStateAltair(pubkeysArg?: Uint8Array[]): TreeB
     if (fullParticpation !== 7) {
       throw new Error("Not correct fullParticipation");
     }
-    state.previousEpochParticipation = Array.from({length: pubkeys.length}, () => fullParticpation) as List<
-      ParticipationFlags
-    >;
-    state.currentEpochParticipation = Array.from({length: pubkeys.length}, () => fullParticpation) as List<
-      ParticipationFlags
-    >;
+    state.previousEpochParticipation = Array.from(
+      {length: pubkeys.length},
+      () => fullParticpation
+    ) as List<ParticipationFlags>;
+    state.currentEpochParticipation = Array.from(
+      {length: pubkeys.length},
+      () => fullParticpation
+    ) as List<ParticipationFlags>;
     state.inactivityScores = Array.from({length: pubkeys.length}, (_, i) => i % 2) as List<ParticipationFlags>;
     const syncCommittee = getNextSyncCommittee(state);
     state.currentSyncCommittee = syncCommittee;
