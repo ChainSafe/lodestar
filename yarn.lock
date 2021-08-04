@@ -1365,10 +1365,10 @@
     buffer-from "^1.1.1"
     snappy "^6.3.5"
 
-"@chainsafe/ssz@^0.8.12":
-  version "0.8.12"
-  resolved "https://registry.yarnpkg.com/@chainsafe/ssz/-/ssz-0.8.12.tgz#6d381952b5b6360a2a7ebf7c438a5922ed2cb830"
-  integrity sha512-tktiu0w2hiHBXQJ5Qei+I2cVWyrIlqZ8xc3aDpjtHAZIHaqPts9TghB8gM2ff2ll9xKEVzXtVy2BWPyyRI/70A==
+"@chainsafe/ssz@^0.8.13":
+  version "0.8.13"
+  resolved "https://registry.yarnpkg.com/@chainsafe/ssz/-/ssz-0.8.13.tgz#ca9476d67f355d7f82894c20cd4837d78a210d86"
+  integrity sha512-icr1ZM+es6wq9n8JG4bxHMOvnV8UoRqW9xnC+nyH+2ACYN24eWT4G7xpEJuo8rkt1bLsHiyBISw7FR8wQEJEBQ==
   dependencies:
     "@chainsafe/as-sha256" "^0.2.2"
     "@chainsafe/persistent-merkle-tree" "^0.3.3"
