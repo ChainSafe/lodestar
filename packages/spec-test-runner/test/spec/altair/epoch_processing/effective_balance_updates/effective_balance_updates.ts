@@ -23,7 +23,7 @@ export function runEffectiveBalanceUpdates(presetName: PresetName): void {
         (testcase.pre as TreeBacked<altair.BeaconState>).clone()
       );
       const epochProcess = allForks.prepareEpochProcessState(wrappedState);
-      altair.processEffectiveBalanceUpdates(wrappedState as CachedBeaconState<allForks.BeaconState>, epochProcess);
+      allForks.processEffectiveBalanceUpdates(wrappedState as CachedBeaconState<allForks.BeaconState>, epochProcess);
       return wrappedState;
     },
     {
