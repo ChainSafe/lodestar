@@ -12,6 +12,12 @@ describe("Altair epoch transition steps", () => {
   const originalState = generatePerfTestCachedStateAltair({goBackOneSlot: true});
   const epochProcess = allForks.prepareEpochProcessState(originalState);
 
+  const getPerfState = () => {
+    const state = originalState.clone();
+    state.setStateCachesAsTransient();
+    return state;
+  };
+
   const idPrefix = `epoch altair - ${perfStateId}`;
 
   // Note: tests altair only methods. All other are benchmarked in phase/epoch
@@ -40,13 +46,13 @@ describe("Altair epoch transition steps", () => {
 
   itBench({
     id: `${idPrefix} - processInactivityUpdates`,
-    beforeEach: () => originalState.clone(),
+    beforeEach: () => getPerfState(),
     fn: (state) => altair.processInactivityUpdates(state, epochProcess),
   });
 
   itBench({
     id: `${idPrefix} - processRewardsAndPenalties`,
-    beforeEach: () => originalState.clone(),
+    beforeEach: () => getPerfState(),
     fn: (state) => altair.processRewardsAndPenalties(state, epochProcess),
   });
 
@@ -56,7 +62,7 @@ describe("Altair epoch transition steps", () => {
   if (!process.env.CI)
     itBench({
       id: `${idPrefix} - processSlashings`,
-      beforeEach: () => originalState.clone(),
+      beforeEach: () => getPerfState(),
       fn: (state) => altair.processSlashings(state, epochProcess),
     });
 
@@ -68,7 +74,7 @@ describe("Altair epoch transition steps", () => {
 
   itBench({
     id: `${idPrefix} - processParticipationFlagUpdates`,
-    beforeEach: () => originalState.clone(),
+    beforeEach: () => getPerfState(),
     fn: (state) => altair.processParticipationFlagUpdates(state),
   });
 
@@ -76,7 +82,7 @@ describe("Altair epoch transition steps", () => {
   if (!process.env.CI)
     itBench({
       id: `${idPrefix} - processSyncCommitteeUpdates`,
-      beforeEach: () => originalState.clone(),
+      beforeEach: () => getPerfState(),
       fn: (state) => altair.processSyncCommitteeUpdates(state, epochProcess),
     });
 });
