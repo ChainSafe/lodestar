@@ -22,8 +22,8 @@ export function runSlashings(presetName: PresetName): void {
         config,
         (testcase.pre as TreeBacked<altair.BeaconState>).clone()
       );
-      const process = allForks.prepareEpochProcessState(wrappedState);
-      altair.processSlashings(wrappedState, process);
+      const epochProcess = allForks.prepareEpochProcessState(wrappedState);
+      altair.processSlashings(wrappedState, epochProcess);
       return wrappedState;
     },
     {

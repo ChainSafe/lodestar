@@ -140,11 +140,11 @@ function processSlotsWithTransientCache(
       const fork = postState.config.getForkName(postState.slot);
       const timer = metrics?.stfnEpochTransition.startTimer();
       try {
-        const process = processEpochByFork[fork](postState);
-        metrics?.registerValidatorStatuses(process.currentEpoch, process.statuses);
+        const epochProcess = processEpochByFork[fork](postState);
+        metrics?.registerValidatorStatuses(epochProcess.currentEpoch, epochProcess.statuses);
 
         postState.slot++;
-        rotateEpochs(postState.epochCtx, postState, process.nextEpochActiveValidatorIndices);
+        rotateEpochs(postState.epochCtx, postState, epochProcess.nextEpochActiveValidatorIndices);
       } finally {
         if (timer) timer();
       }

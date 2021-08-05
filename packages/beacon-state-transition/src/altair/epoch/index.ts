@@ -1,5 +1,5 @@
 import {allForks, altair} from "@chainsafe/lodestar-types";
-import {prepareEpochProcessState, CachedBeaconState, IEpochProcess} from "../../allForks/util";
+import {CachedBeaconState, IEpochProcess, prepareEpochProcessState} from "../../allForks/util";
 import {
   processJustificationAndFinalization,
   processRegistryUpdates,
@@ -30,18 +30,18 @@ export {
 };
 
 export function processEpoch(state: CachedBeaconState<altair.BeaconState>): IEpochProcess {
-  const process = prepareEpochProcessState(state);
-  processJustificationAndFinalization(state as CachedBeaconState<allForks.BeaconState>, process);
-  processInactivityUpdates(state, process);
-  processRewardsAndPenalties(state, process);
-  processRegistryUpdates(state as CachedBeaconState<allForks.BeaconState>, process);
-  processSlashings(state, process);
-  processEth1DataReset(state as CachedBeaconState<allForks.BeaconState>, process);
-  processEffectiveBalanceUpdates(state as CachedBeaconState<allForks.BeaconState>, process);
-  processSlashingsReset(state as CachedBeaconState<allForks.BeaconState>, process);
-  processRandaoMixesReset(state as CachedBeaconState<allForks.BeaconState>, process);
-  processHistoricalRootsUpdate(state as CachedBeaconState<allForks.BeaconState>, process);
+  const epochProcess = prepareEpochProcessState(state);
+  processJustificationAndFinalization(state as CachedBeaconState<allForks.BeaconState>, epochProcess);
+  processInactivityUpdates(state, epochProcess);
+  processRewardsAndPenalties(state, epochProcess);
+  processRegistryUpdates(state as CachedBeaconState<allForks.BeaconState>, epochProcess);
+  processSlashings(state, epochProcess);
+  processEth1DataReset(state as CachedBeaconState<allForks.BeaconState>, epochProcess);
+  processEffectiveBalanceUpdates(state as CachedBeaconState<allForks.BeaconState>, epochProcess);
+  processSlashingsReset(state as CachedBeaconState<allForks.BeaconState>, epochProcess);
+  processRandaoMixesReset(state as CachedBeaconState<allForks.BeaconState>, epochProcess);
+  processHistoricalRootsUpdate(state as CachedBeaconState<allForks.BeaconState>, epochProcess);
   processParticipationFlagUpdates(state);
-  processSyncCommitteeUpdates(state, process);
-  return process;
+  processSyncCommitteeUpdates(state, epochProcess);
+  return epochProcess;
 }

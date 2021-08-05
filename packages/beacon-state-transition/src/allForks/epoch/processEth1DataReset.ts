@@ -3,8 +3,11 @@ import {allForks, phase0} from "@chainsafe/lodestar-types";
 import {List} from "@chainsafe/ssz";
 import {IEpochProcess, CachedBeaconState} from "../util";
 
-export function processEth1DataReset(state: CachedBeaconState<allForks.BeaconState>, process: IEpochProcess): void {
-  const nextEpoch = process.currentEpoch + 1;
+export function processEth1DataReset(
+  state: CachedBeaconState<allForks.BeaconState>,
+  epochProcess: IEpochProcess
+): void {
+  const nextEpoch = epochProcess.currentEpoch + 1;
 
   // reset eth1 data votes
   if (nextEpoch % EPOCHS_PER_ETH1_VOTING_PERIOD === 0) {

@@ -4,14 +4,17 @@ import {CachedBeaconState, IEpochProcess} from "../../allForks/util";
 import {GENESIS_EPOCH} from "@chainsafe/lodestar-params";
 import {getRewardsPenaltiesDeltas} from "./balance";
 
-export function processRewardsAndPenalties(state: CachedBeaconState<altair.BeaconState>, process: IEpochProcess): void {
+export function processRewardsAndPenalties(
+  state: CachedBeaconState<altair.BeaconState>,
+  epochProcess: IEpochProcess
+): void {
   const {balances} = state;
 
   if (getCurrentEpoch(state) == GENESIS_EPOCH) {
     return;
   }
 
-  const [rewards, penalties] = getRewardsPenaltiesDeltas(state, process);
+  const [rewards, penalties] = getRewardsPenaltiesDeltas(state, epochProcess);
 
   const newBalances = new BigUint64Array(balances.length);
   balances.forEach((balance, i) => {
@@ -51,5 +54,5 @@ export function processRewardsAndPenalties(state: CachedBeaconState<altair.Beaco
   // set them all at once, constructing the tree in one go
   balances.updateAll(newBalances);
   // cache the balances array, too
-  process.balances = newBalances;
+  epochProcess.balances = newBalances;
 }

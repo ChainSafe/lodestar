@@ -11,7 +11,7 @@ import {IEpochProcess, CachedBeaconState} from "../util";
 
 export function processEffectiveBalanceUpdates(
   state: CachedBeaconState<allForks.BeaconState>,
-  process: IEpochProcess
+  epochProcess: IEpochProcess
 ): void {
   const {validators} = state;
   const HYSTERESIS_INCREMENT = EFFECTIVE_BALANCE_INCREMENT / BigInt(HYSTERESIS_QUOTIENT);
@@ -19,8 +19,8 @@ export function processEffectiveBalanceUpdates(
   const UPWARD_THRESHOLD = HYSTERESIS_INCREMENT * BigInt(HYSTERESIS_UPWARD_MULTIPLIER);
 
   // update effective balances with hysteresis
-  (process.balances ?? state.balances).forEach((balance: bigint, i: number) => {
-    const effectiveBalance = process.validators[i].effectiveBalance;
+  (epochProcess.balances ?? state.balances).forEach((balance: bigint, i: number) => {
+    const effectiveBalance = epochProcess.validators[i].effectiveBalance;
     if (
       // Too big
       effectiveBalance > balance + DOWNWARD_THRESHOLD ||

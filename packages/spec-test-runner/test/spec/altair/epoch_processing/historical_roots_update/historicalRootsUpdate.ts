@@ -22,8 +22,8 @@ export function runHistoricalRootsUpdate(presetName: PresetName): void {
         config,
         (testcase.pre as TreeBacked<altair.BeaconState>).clone()
       );
-      const process = allForks.prepareEpochProcessState(wrappedState);
-      allForks.processHistoricalRootsUpdate(wrappedState as CachedBeaconState<allForks.BeaconState>, process);
+      const epochProcess = allForks.prepareEpochProcessState(wrappedState);
+      allForks.processHistoricalRootsUpdate(wrappedState as CachedBeaconState<allForks.BeaconState>, epochProcess);
       return wrappedState;
     },
     {

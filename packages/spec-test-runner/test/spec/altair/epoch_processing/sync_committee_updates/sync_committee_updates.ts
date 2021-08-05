@@ -22,8 +22,8 @@ export function runSyncCommitteeUpdates(presetName: PresetName): void {
         config,
         (testcase.pre as TreeBacked<altair.BeaconState>).clone()
       );
-      const process = allForks.prepareEpochProcessState(wrappedState);
-      altair.processSyncCommitteeUpdates(wrappedState, process);
+      const epochProcess = allForks.prepareEpochProcessState(wrappedState);
+      altair.processSyncCommitteeUpdates(wrappedState, epochProcess);
       return wrappedState;
     },
     {

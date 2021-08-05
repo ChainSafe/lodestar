@@ -2,12 +2,15 @@ import {allForks} from "@chainsafe/lodestar-types";
 import {computeActivationExitEpoch} from "../../util";
 import {IEpochProcess, CachedBeaconState} from "../util";
 
-export function processRegistryUpdates(state: CachedBeaconState<allForks.BeaconState>, process: IEpochProcess): void {
+export function processRegistryUpdates(
+  state: CachedBeaconState<allForks.BeaconState>,
+  epochProcess: IEpochProcess
+): void {
   const {config, validators, epochCtx} = state;
-  let exitEnd = process.exitQueueEnd;
-  let endChurn = process.exitQueueEndChurn;
+  let exitEnd = epochProcess.exitQueueEnd;
+  let endChurn = epochProcess.exitQueueEndChurn;
   // process ejections
-  for (const index of process.indicesToEject) {
+  for (const index of epochProcess.indicesToEject) {
     // set validator exit epoch and withdrawable epoch
     validators.update(index, {
       exitEpoch: exitEnd,
@@ -15,14 +18,14 @@ export function processRegistryUpdates(state: CachedBeaconState<allForks.BeaconS
     });
 
     endChurn += 1;
-    if (endChurn >= process.churnLimit) {
+    if (endChurn >= epochProcess.churnLimit) {
       endChurn = 0;
       exitEnd += 1;
     }
   }
 
   // set new activation eligibilities
-  for (const index of process.indicesToSetActivationEligibility) {
+  for (const index of epochProcess.indicesToSetActivationEligibility) {
     validators.update(index, {
       activationEligibilityEpoch: epochCtx.currentShuffling.epoch + 1,
     });
@@ -30,13 +33,13 @@ export function processRegistryUpdates(state: CachedBeaconState<allForks.BeaconS
 
   const finalityEpoch = state.finalizedCheckpoint.epoch;
   // dequeue validators for activation up to churn limit
-  for (const index of process.indicesToMaybeActivate.slice(0, process.churnLimit)) {
+  for (const index of epochProcess.indicesToMaybeActivate.slice(0, epochProcess.churnLimit)) {
     // placement in queue is finalized
-    if (process.validators[index].activationEligibilityEpoch > finalityEpoch) {
+    if (epochProcess.validators[index].activationEligibilityEpoch > finalityEpoch) {
       break; // remaining validators all have an activationEligibilityEpoch that is higher anyway, break early
     }
     validators.update(index, {
-      activationEpoch: computeActivationExitEpoch(process.currentEpoch),
+      activationEpoch: computeActivationExitEpoch(epochProcess.currentEpoch),
     });
   }
 }
