@@ -10,38 +10,38 @@ describe("Phase 0 epoch transition steps", () => {
   });
 
   const originalState = generatePerfTestCachedStatePhase0({goBackOneSlot: true});
-  const process = allForks.prepareEpochProcessState(originalState);
+  const epochProcess = allForks.prepareEpochProcessState(originalState);
 
   const idPrefix = `epoch phase0 - ${perfStateId}`;
 
   itBench({
     id: `${idPrefix} - processJustificationAndFinalization`,
     beforeEach: () => originalState.clone() as allForks.CachedBeaconState<allForks.BeaconState>,
-    fn: (state) => phase0.processJustificationAndFinalization(state, process),
+    fn: (state) => phase0.processJustificationAndFinalization(state, epochProcess),
   });
 
   itBench({
     id: `${idPrefix} - processRewardsAndPenalties`,
     beforeEach: () => originalState.clone(),
-    fn: (state) => phase0.processRewardsAndPenalties(state, process),
+    fn: (state) => phase0.processRewardsAndPenalties(state, epochProcess),
   });
 
   itBench({
     id: `${idPrefix} - processRegistryUpdates`,
     beforeEach: () => originalState.clone() as allForks.CachedBeaconState<allForks.BeaconState>,
-    fn: (state) => phase0.processRegistryUpdates(state, process),
+    fn: (state) => phase0.processRegistryUpdates(state, epochProcess),
   });
 
   itBench({
     id: `${idPrefix} - processSlashings`,
     beforeEach: () => originalState.clone(),
-    fn: (state) => phase0.processSlashings(state, process),
+    fn: (state) => phase0.processSlashings(state, epochProcess),
   });
 
   itBench({
     id: `${idPrefix} - processFinalUpdates`,
     beforeEach: () => originalState.clone(),
-    fn: (state) => phase0.processFinalUpdates(state, process),
+    fn: (state) => phase0.processFinalUpdates(state, epochProcess),
   });
 
   // Non-action perf

@@ -3,8 +3,11 @@ import {allForks} from "@chainsafe/lodestar-types";
 import {getRandaoMix} from "../../util";
 import {IEpochProcess, CachedBeaconState} from "../util";
 
-export function processRandaoMixesReset(state: CachedBeaconState<allForks.BeaconState>, process: IEpochProcess): void {
-  const currentEpoch = process.currentEpoch;
+export function processRandaoMixesReset(
+  state: CachedBeaconState<allForks.BeaconState>,
+  epochProcess: IEpochProcess
+): void {
+  const currentEpoch = epochProcess.currentEpoch;
   const nextEpoch = currentEpoch + 1;
 
   // set randao mix

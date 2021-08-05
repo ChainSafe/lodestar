@@ -29,12 +29,12 @@ export function runLeak(presetName: PresetName): void {
         (testcase.pre as TreeBacked<altair.BeaconState>).clone()
       );
 
-      const process = allForks.prepareEpochProcessState(wrappedState);
+      const epochProcess = allForks.prepareEpochProcessState(wrappedState);
       return {
-        head_deltas: altair.getFlagIndexDeltas(wrappedState, process, TIMELY_HEAD_FLAG_INDEX),
-        source_deltas: altair.getFlagIndexDeltas(wrappedState, process, TIMELY_SOURCE_FLAG_INDEX),
-        target_deltas: altair.getFlagIndexDeltas(wrappedState, process, TIMELY_TARGET_FLAG_INDEX),
-        inactivity_penalty_deltas: altair.getInactivityPenaltyDeltas(wrappedState, process),
+        head_deltas: altair.getFlagIndexDeltas(wrappedState, epochProcess, TIMELY_HEAD_FLAG_INDEX),
+        source_deltas: altair.getFlagIndexDeltas(wrappedState, epochProcess, TIMELY_SOURCE_FLAG_INDEX),
+        target_deltas: altair.getFlagIndexDeltas(wrappedState, epochProcess, TIMELY_TARGET_FLAG_INDEX),
+        inactivity_penalty_deltas: altair.getInactivityPenaltyDeltas(wrappedState, epochProcess),
       };
     },
     {

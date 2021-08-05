@@ -9,7 +9,10 @@ import {
 } from "../../allForks/util";
 import {isInInactivityLeak} from "../../util";
 
-export function processInactivityUpdates(state: CachedBeaconState<altair.BeaconState>, process: IEpochProcess): void {
+export function processInactivityUpdates(
+  state: CachedBeaconState<altair.BeaconState>,
+  epochProcess: IEpochProcess
+): void {
   if (state.currentShuffling.epoch === GENESIS_EPOCH) {
     return;
   }
@@ -17,8 +20,8 @@ export function processInactivityUpdates(state: CachedBeaconState<altair.BeaconS
   const {INACTIVITY_SCORE_BIAS, INACTIVITY_SCORE_RECOVERY_RATE} = config;
   const inActivityLeak = isInInactivityLeak((state as unknown) as phase0.BeaconState);
   const {inactivityScores} = state;
-  for (let i = 0; i < process.statuses.length; i++) {
-    const status = process.statuses[i];
+  for (let i = 0; i < epochProcess.statuses.length; i++) {
+    const status = epochProcess.statuses[i];
     if (hasMarkers(status.flags, FLAG_ELIGIBLE_ATTESTER)) {
       let inactivityScore = inactivityScores[i];
       const prevInactivityScore = inactivityScore;

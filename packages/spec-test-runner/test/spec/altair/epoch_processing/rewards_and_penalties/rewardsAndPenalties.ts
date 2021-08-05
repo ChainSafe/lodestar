@@ -22,8 +22,8 @@ export function runRewardsAndPenalties(presetName: PresetName): void {
         config,
         (testcase.pre as TreeBacked<altair.BeaconState>).clone()
       );
-      const process = allForks.prepareEpochProcessState(wrappedState);
-      altair.processRewardsAndPenalties(wrappedState, process);
+      const epochProcess = allForks.prepareEpochProcessState(wrappedState);
+      altair.processRewardsAndPenalties(wrappedState, epochProcess);
       return wrappedState;
     },
     {

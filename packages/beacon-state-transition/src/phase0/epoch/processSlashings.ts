@@ -11,8 +11,8 @@ import {
 import {decreaseBalance} from "../../util";
 import {CachedBeaconState, IEpochProcess} from "../../allForks/util";
 
-export function processSlashings(state: CachedBeaconState<phase0.BeaconState>, process: IEpochProcess): void {
-  processSlashingsAllForks(ForkName.phase0, state as CachedBeaconState<allForks.BeaconState>, process);
+export function processSlashings(state: CachedBeaconState<phase0.BeaconState>, epochProcess: IEpochProcess): void {
+  processSlashingsAllForks(ForkName.phase0, state as CachedBeaconState<allForks.BeaconState>, epochProcess);
 }
 
 export function processSlashingsAllForks(

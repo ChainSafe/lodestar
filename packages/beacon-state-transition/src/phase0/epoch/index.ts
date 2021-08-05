@@ -16,11 +16,11 @@ export {
 };
 
 export function processEpoch(state: CachedBeaconState<phase0.BeaconState>): IEpochProcess {
-  const process = prepareEpochProcessState(state);
-  processJustificationAndFinalization(state as CachedBeaconState<allForks.BeaconState>, process);
-  processRewardsAndPenalties(state, process);
-  processRegistryUpdates(state as CachedBeaconState<allForks.BeaconState>, process);
-  processSlashings(state, process);
-  processFinalUpdates(state, process);
-  return process;
+  const epochProcess = prepareEpochProcessState(state);
+  processJustificationAndFinalization(state as CachedBeaconState<allForks.BeaconState>, epochProcess);
+  processRewardsAndPenalties(state, epochProcess);
+  processRegistryUpdates(state as CachedBeaconState<allForks.BeaconState>, epochProcess);
+  processSlashings(state, epochProcess);
+  processFinalUpdates(state, epochProcess);
+  return epochProcess;
 }
