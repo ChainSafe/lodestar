@@ -17,7 +17,7 @@ describe("Phase 0 epoch transition steps", () => {
   itBench({
     id: `${idPrefix} - processJustificationAndFinalization`,
     beforeEach: () => originalState.clone() as allForks.CachedBeaconState<allForks.BeaconState>,
-    fn: (state) => phase0.processJustificationAndFinalization(state, epochProcess),
+    fn: (state) => allForks.processJustificationAndFinalization(state, epochProcess),
   });
 
   itBench({
@@ -29,7 +29,7 @@ describe("Phase 0 epoch transition steps", () => {
   itBench({
     id: `${idPrefix} - processRegistryUpdates`,
     beforeEach: () => originalState.clone() as allForks.CachedBeaconState<allForks.BeaconState>,
-    fn: (state) => phase0.processRegistryUpdates(state, epochProcess),
+    fn: (state) => allForks.processRegistryUpdates(state, epochProcess),
   });
 
   itBench({
@@ -37,6 +37,43 @@ describe("Phase 0 epoch transition steps", () => {
     beforeEach: () => originalState.clone(),
     fn: (state) => phase0.processSlashings(state, epochProcess),
   });
+
+  itBench({
+    id: `${idPrefix} - processEffectiveBalanceUpdates`,
+    beforeEach: () => originalState.clone() as allForks.CachedBeaconState<allForks.BeaconState>,
+    fn: (state) => allForks.processEffectiveBalanceUpdates(state, epochProcess),
+  });
+
+  // very simple and fast functions, no need to benchmark
+  if (!process.env.CI) {
+    itBench({
+      id: `${idPrefix} - processEth1DataReset`,
+      beforeEach: () => originalState.clone() as allForks.CachedBeaconState<allForks.BeaconState>,
+      fn: (state) => allForks.processEth1DataReset(state, epochProcess),
+    });
+
+    itBench({
+      id: `${idPrefix} - processSlashingsReset`,
+      beforeEach: () => originalState.clone() as allForks.CachedBeaconState<allForks.BeaconState>,
+      fn: (state) => allForks.processSlashingsReset(state, epochProcess),
+    });
+
+    itBench({
+      id: `${idPrefix} - processRandaoMixesReset`,
+      beforeEach: () => originalState.clone() as allForks.CachedBeaconState<allForks.BeaconState>,
+      fn: (state) => allForks.processRandaoMixesReset(state, epochProcess),
+    });
+
+    itBench({
+      id: `${idPrefix} - processHistoricalRootsUpdate`,
+      beforeEach: () => originalState.clone() as allForks.CachedBeaconState<allForks.BeaconState>,
+      fn: (state) => allForks.processHistoricalRootsUpdate(state, epochProcess),
+    });
+
+    // processParticipationRecordUpdates, no need to benchmark. Way too simple
+  }
+
+  // Other items in phase0 epoch processing are too small to care about performance
 
   // Non-action perf
 

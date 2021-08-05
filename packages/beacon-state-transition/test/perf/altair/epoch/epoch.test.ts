@@ -14,16 +14,8 @@ describe("Altair epoch transition steps", () => {
 
   const idPrefix = `epoch altair - ${perfStateId}`;
 
-  itBench({
-    id: `${idPrefix} - processJustificationAndFinalization`,
-    beforeEach: () => originalState.clone() as allForks.CachedBeaconState<allForks.BeaconState>,
-    fn: (state) => altair.processJustificationAndFinalization(state, epochProcess),
-  });
+  // Note: tests altair only methods. All other are benchmarked in phase/epoch
 
-  // As of Jun 18
-  // Altair epoch transition steps
-  // ================================================================
-  // processInactivityUpdates                                              0.6118570 ops/s      1.634369  s/op     36 runs    60.48 s
   itBench({
     id: `${idPrefix} - processInactivityUpdates`,
     beforeEach: () => originalState.clone(),
@@ -37,58 +29,9 @@ describe("Altair epoch transition steps", () => {
   });
 
   itBench({
-    id: `${idPrefix} - processRegistryUpdates`,
-    beforeEach: () => originalState.clone() as allForks.CachedBeaconState<allForks.BeaconState>,
-    fn: (state) => altair.processRegistryUpdates(state, epochProcess),
-  });
-
-  itBench({
     id: `${idPrefix} - processSlashings`,
     beforeEach: () => originalState.clone(),
     fn: (state) => altair.processSlashings(state, epochProcess),
-  });
-
-  if (!process.env.CI) {
-    // very simple and fast function, no need to benchmark
-    itBench({
-      id: `${idPrefix} - processEth1DataReset`,
-      beforeEach: () => originalState.clone() as allForks.CachedBeaconState<allForks.BeaconState>,
-      fn: (state) => allForks.processEth1DataReset(state, epochProcess),
-    });
-
-    // very simple and fast function, no need to benchmark
-    itBench({
-      id: `${idPrefix} - processHistoricalRootsUpdate`,
-      beforeEach: () => originalState.clone() as allForks.CachedBeaconState<allForks.BeaconState>,
-      fn: (state) => allForks.processHistoricalRootsUpdate(state, epochProcess),
-    });
-
-    // very simple and fast function, no need to benchmark
-    itBench({
-      id: `${idPrefix} - processSyncCommitteeUpdates`,
-      beforeEach: () => originalState.clone(),
-      fn: (state) => altair.processSyncCommitteeUpdates(state, epochProcess),
-    });
-
-    // very simple and fast function, no need to benchmark
-    itBench({
-      id: `${idPrefix} - processSlashingsReset`,
-      beforeEach: () => originalState.clone() as allForks.CachedBeaconState<allForks.BeaconState>,
-      fn: (state) => allForks.processSlashingsReset(state, epochProcess),
-    });
-
-    // very simple and fast function, no need to benchmark
-    itBench({
-      id: `${idPrefix} - processRandaoMixesReset`,
-      beforeEach: () => originalState.clone() as allForks.CachedBeaconState<allForks.BeaconState>,
-      fn: (state) => allForks.processRandaoMixesReset(state, epochProcess),
-    });
-  }
-
-  itBench({
-    id: `${idPrefix} - processEffectiveBalanceUpdates`,
-    beforeEach: () => originalState.clone() as allForks.CachedBeaconState<allForks.BeaconState>,
-    fn: (state) => allForks.processEffectiveBalanceUpdates(state, epochProcess),
   });
 
   itBench({
@@ -97,10 +40,12 @@ describe("Altair epoch transition steps", () => {
     fn: (state) => altair.processParticipationFlagUpdates(state),
   });
 
-  // do prepareEpochProcessState last
-  itBench({
-    id: `${idPrefix} - prepareEpochProcessState`,
-    beforeEach: () => originalState.clone() as allForks.CachedBeaconState<allForks.BeaconState>,
-    fn: (state) => void allForks.prepareEpochProcessState(state),
-  });
+  // very simple and fast function, no need to benchmark
+  if (!process.env.CI) {
+    itBench({
+      id: `${idPrefix} - processSyncCommitteeUpdates`,
+      beforeEach: () => originalState.clone(),
+      fn: (state) => altair.processSyncCommitteeUpdates(state, epochProcess),
+    });
+  }
 });

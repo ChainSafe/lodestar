@@ -24,7 +24,10 @@ export function runJustificationAndFinalization(presetName: PresetName): void {
         (testcase.pre as TreeBacked<altair.BeaconState>).clone()
       );
       const epochProcess = allForks.prepareEpochProcessState(wrappedState);
-      altair.processJustificationAndFinalization(wrappedState as CachedBeaconState<allForks.BeaconState>, epochProcess);
+      allForks.processJustificationAndFinalization(
+        wrappedState as CachedBeaconState<allForks.BeaconState>,
+        epochProcess
+      );
       return wrappedState;
     },
     {

@@ -14,13 +14,7 @@ import {getAttestationDeltas} from "./getAttestationDeltas";
 import {processParticipationRecordUpdates} from "./processParticipationRecordUpdates";
 import {allForks, phase0} from "@chainsafe/lodestar-types";
 
-export {
-  processJustificationAndFinalization,
-  processRewardsAndPenalties,
-  processRegistryUpdates,
-  processSlashings,
-  getAttestationDeltas,
-};
+export {processRewardsAndPenalties, processSlashings, getAttestationDeltas};
 
 export function processEpoch(state: CachedBeaconState<phase0.BeaconState>): IEpochProcess {
   const epochProcess = prepareEpochProcessState(state);

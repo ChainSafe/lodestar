@@ -19,13 +19,10 @@ import {processSyncCommitteeUpdates} from "./processSyncCommitteeUpdates";
 export {getFlagIndexDeltas, getInactivityPenaltyDeltas} from "./balance";
 
 export {
-  processJustificationAndFinalization,
   processInactivityUpdates,
   processRewardsAndPenalties,
-  processRegistryUpdates,
   processSlashings,
   processSyncCommitteeUpdates,
-  processEffectiveBalanceUpdates,
   processParticipationFlagUpdates,
 };
 
