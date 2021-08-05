@@ -1,9 +1,17 @@
 import {CachedBeaconState, IEpochProcess, prepareEpochProcessState} from "../../allForks/util";
-import {processJustificationAndFinalization, processRegistryUpdates} from "../../allForks/epoch";
+import {
+  processJustificationAndFinalization,
+  processRegistryUpdates,
+  processEth1DataReset,
+  processEffectiveBalanceUpdates,
+  processSlashingsReset,
+  processRandaoMixesReset,
+  processHistoricalRootsUpdate,
+} from "../../allForks/epoch";
 import {processRewardsAndPenalties} from "./processRewardsAndPenalties";
 import {processSlashings} from "./processSlashings";
-import {processFinalUpdates} from "./processFinalUpdates";
 import {getAttestationDeltas} from "./getAttestationDeltas";
+import {processParticipationRecordUpdates} from "./processParticipationRecordUpdates";
 import {allForks, phase0} from "@chainsafe/lodestar-types";
 
 export {
@@ -11,7 +19,6 @@ export {
   processRewardsAndPenalties,
   processRegistryUpdates,
   processSlashings,
-  processFinalUpdates,
   getAttestationDeltas,
 };
 
@@ -21,6 +28,12 @@ export function processEpoch(state: CachedBeaconState<phase0.BeaconState>): IEpo
   processRewardsAndPenalties(state, epochProcess);
   processRegistryUpdates(state as CachedBeaconState<allForks.BeaconState>, epochProcess);
   processSlashings(state, epochProcess);
-  processFinalUpdates(state, epochProcess);
+  // inline processFinalUpdates() to follow altair and for clarity
+  processEth1DataReset(state as CachedBeaconState<allForks.BeaconState>, epochProcess);
+  processEffectiveBalanceUpdates(state as CachedBeaconState<allForks.BeaconState>, epochProcess);
+  processSlashingsReset(state as CachedBeaconState<allForks.BeaconState>, epochProcess);
+  processRandaoMixesReset(state as CachedBeaconState<allForks.BeaconState>, epochProcess);
+  processHistoricalRootsUpdate(state as CachedBeaconState<allForks.BeaconState>, epochProcess);
+  processParticipationRecordUpdates(state);
   return epochProcess;
 }
