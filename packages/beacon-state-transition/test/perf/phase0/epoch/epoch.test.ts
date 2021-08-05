@@ -14,29 +14,60 @@ describe("Phase 0 epoch transition steps", () => {
 
   const idPrefix = `epoch phase0 - ${perfStateId}`;
 
+  // Functions in same order as phase0.processEpoch()
+  // Rough summary as of Aug 5th 2021
+  //
+  // epoch process function              | ms / op     | % bar chart
+  // ----------------------------------- | ----------- | --------------
+  // prepareEpochProcessState            | 700.0 ms/op | xxxxxxxxxxxxxx
+  // processJustificationAndFinalization | 0.180 ms/op |
+  // processRewardsAndPenalties          | 600.0 ms/op | xxxxxxxxxxxx
+  // processRegistryUpdates              | 0.017 ms/op |
+  // processSlashings                    | 0.042 ms/op |
+  // processEth1DataReset                | 0.000 ms/op |
+  // processEffectiveBalanceUpdates      | 57.20 ms/op | x
+  // processSlashingsReset               | 0.000 ms/op |
+  // processRandaoMixesReset             | 0.000 ms/op |
+  // processHistoricalRootsUpdate        | 0.000 ms/op |
+  // processParticipationRecordUpdates   | 0.000 ms/op |
+
   itBench({
-    id: `${idPrefix} - processJustificationAndFinalization`,
-    beforeEach: () => originalState.clone() as allForks.CachedBeaconState<allForks.BeaconState>,
-    fn: (state) => allForks.processJustificationAndFinalization(state, epochProcess),
+    id: `${idPrefix} - prepareEpochProcessState`,
+    fn: () => {
+      allForks.prepareEpochProcessState(originalState);
+    },
   });
 
+  // Very cheap 187.21 us/op and unstable, skip in CI
+  if (!process.env.CI)
+    itBench({
+      id: `${idPrefix} - processJustificationAndFinalization`,
+      beforeEach: () => originalState.clone() as allForks.CachedBeaconState<allForks.BeaconState>,
+      fn: (state) => allForks.processJustificationAndFinalization(state, epochProcess),
+    });
+
+  // Very expensive 976.40 ms/op good target to optimize
   itBench({
     id: `${idPrefix} - processRewardsAndPenalties`,
     beforeEach: () => originalState.clone(),
     fn: (state) => phase0.processRewardsAndPenalties(state, epochProcess),
   });
 
-  itBench({
-    id: `${idPrefix} - processRegistryUpdates`,
-    beforeEach: () => originalState.clone() as allForks.CachedBeaconState<allForks.BeaconState>,
-    fn: (state) => allForks.processRegistryUpdates(state, epochProcess),
-  });
+  // TODO: Needs a better state to test with, current does not include enough actions: 17.715 us/op
+  if (!process.env.CI)
+    itBench({
+      id: `${idPrefix} - processRegistryUpdates`,
+      beforeEach: () => originalState.clone() as allForks.CachedBeaconState<allForks.BeaconState>,
+      fn: (state) => allForks.processRegistryUpdates(state, epochProcess),
+    });
 
-  itBench({
-    id: `${idPrefix} - processSlashings`,
-    beforeEach: () => originalState.clone(),
-    fn: (state) => phase0.processSlashings(state, epochProcess),
-  });
+  // TODO: Needs a better state to test with, current does not include enough actions: 39.985 us/op
+  if (!process.env.CI)
+    itBench({
+      id: `${idPrefix} - processSlashings`,
+      beforeEach: () => originalState.clone(),
+      fn: (state) => phase0.processSlashings(state, epochProcess),
+    });
 
   itBench({
     id: `${idPrefix} - processEffectiveBalanceUpdates`,
@@ -74,13 +105,4 @@ describe("Phase 0 epoch transition steps", () => {
   }
 
   // Other items in phase0 epoch processing are too small to care about performance
-
-  // Non-action perf
-
-  itBench({
-    id: `${idPrefix} - prepareEpochProcessState`,
-    fn: () => {
-      allForks.prepareEpochProcessState(originalState);
-    },
-  });
 });
