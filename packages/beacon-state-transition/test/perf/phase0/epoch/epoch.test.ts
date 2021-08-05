@@ -38,12 +38,6 @@ describe("Phase 0 epoch transition steps", () => {
     fn: (state) => phase0.processSlashings(state, epochProcess),
   });
 
-  itBench({
-    id: `${idPrefix} - processFinalUpdates`,
-    beforeEach: () => originalState.clone(),
-    fn: (state) => phase0.processFinalUpdates(state, epochProcess),
-  });
-
   // Non-action perf
 
   itBench({
