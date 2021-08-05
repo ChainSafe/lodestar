@@ -1,3 +1,4 @@
+import {LeafNode, subtreeFillToLength, toGindex, Tree, zeroNode} from "@chainsafe/persistent-merkle-tree";
 import {MutableVector} from "@chainsafe/persistent-ts";
 import {itBench, setBenchOpts} from "@dapplion/benchmark";
 
@@ -32,6 +33,71 @@ const ihi = n - 1;
 // ✓ Array 250000 set(249999)                                             2398082 ops/s    417.0000 ns/op   x0.993    1437819 runs   1.07 s
 // ✓ Array 250000 iterate all - loop                                     3784.639 ops/s    264.2260 us/op   x0.898       3774 runs   1.00 s
 
+describe("Tree (persistent-merkle-tree)", () => {
+  // Don't run on CI
+  if (process.env.CI) return;
+
+  setBenchOpts({
+    maxMs: 10 * 1000,
+    minMs: 1 * 1000,
+    runs: 1024,
+  });
+
+  const d = 40;
+  const tree = getTree(d, n);
+  const gilo = toGindex(d, BigInt(ilo));
+  const gihi = toGindex(d, BigInt(ihi));
+  const n2 = new LeafNode(Buffer.alloc(32, 2));
+
+  itBench(`Tree ${d} ${n} create`, () => {
+    getTree(d, n);
+  });
+
+  itBench(`Tree ${d} ${n} get(${ilo})`, () => {
+    tree.getNode(gilo);
+  });
+
+  itBench(`Tree ${d} ${n} get(${ihi})`, () => {
+    tree.getNode(gihi);
+  });
+
+  itBench(`Tree ${d} ${n} set(${ilo})`, () => {
+    tree.setNode(gilo, n2);
+  });
+
+  itBench(`Tree ${d} ${n} set(${ihi})`, () => {
+    tree.setNode(gihi, n2);
+  });
+
+  itBench(`Tree ${d} ${n} toArray()`, () => {
+    Array.from(tree.iterateNodesAtDepth(d, 0, n));
+  });
+
+  itBench(`Tree ${d} ${n} iterate all - toArray() + loop`, () => {
+    const treeArr = Array.from(tree.iterateNodesAtDepth(d, 0, n));
+    for (let i = 0; i < n; i++) {
+      treeArr[i];
+    }
+  });
+
+  itBench(`Tree ${d} ${n} iterate all - get(i)`, () => {
+    const startIndex = BigInt(2 ** d);
+    for (let i = BigInt(0), nB = BigInt(n); i < nB; i++) {
+      tree.getNode(startIndex + i);
+    }
+  });
+
+  function getTree(d: number, n: number): Tree {
+    const leaf = new LeafNode(Buffer.alloc(32, 1));
+    const startIndex = BigInt(2 ** d);
+    const tree = new Tree(zeroNode(d));
+    for (let i = BigInt(0), nB = BigInt(n); i < nB; i++) {
+      tree.setNode(startIndex + i, leaf);
+    }
+    return tree;
+  }
+});
+
 describe("MutableVector", () => {
   // Don't run on CI
   if (process.env.CI) return;
@@ -53,12 +119,12 @@ describe("MutableVector", () => {
     mutableVector.get(ilo);
   });
 
-  itBench(`MutableVector ${n} set(${ilo})`, () => {
-    mutableVector.set(ilo, 10000000);
-  });
-
   itBench(`MutableVector ${n} get(${ihi})`, () => {
     mutableVector.get(ihi);
+  });
+
+  itBench(`MutableVector ${n} set(${ilo})`, () => {
+    mutableVector.set(ilo, 10000000);
   });
 
   itBench(`MutableVector ${n} set(${ihi})`, () => {
@@ -99,16 +165,20 @@ describe("Array", () => {
     createArray(n);
   });
 
+  itBench(`Array ${n} clone - spread`, () => {
+    [...arr];
+  });
+
   itBench(`Array ${n} get(${ilo})`, () => {
     arr[ilo];
   });
 
-  itBench(`Array ${n} set(${ilo})`, () => {
-    arr[ilo] = 10000000;
-  });
-
   itBench(`Array ${n} get(${ihi})`, () => {
     arr[ihi];
+  });
+
+  itBench(`Array ${n} set(${ilo})`, () => {
+    arr[ilo] = 10000000;
   });
 
   itBench(`Array ${n} set(${ihi})`, () => {
