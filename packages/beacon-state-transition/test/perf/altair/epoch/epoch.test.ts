@@ -1,5 +1,5 @@
 import {itBench, setBenchOpts} from "@dapplion/benchmark";
-import {allForks, altair} from "../../../../src";
+import {allForks, altair, CachedBeaconState} from "../../../../src";
 import {generatePerfTestCachedStateAltair, perfStateId} from "../../util";
 
 describe("Altair epoch transition steps", () => {
@@ -12,7 +12,7 @@ describe("Altair epoch transition steps", () => {
   const originalState = generatePerfTestCachedStateAltair({goBackOneSlot: true});
   const epochProcess = allForks.prepareEpochProcessState(originalState);
 
-  const getPerfState = () => {
+  const getPerfState = (): CachedBeaconState<altair.BeaconState> => {
     const state = originalState.clone();
     state.setStateCachesAsTransient();
     return state;
