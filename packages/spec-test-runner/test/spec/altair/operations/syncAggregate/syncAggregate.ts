@@ -15,7 +15,7 @@ export function runSyncAggregate(presetName: PresetName): void {
   const config = createIChainForkConfig({ALTAIR_FORK_EPOCH: 0});
 
   describeDirectorySpecTest<IProcessSyncCommitteeTestCase, altair.BeaconState>(
-    `process sync committee ${presetName}`,
+    `process sync aggregate ${presetName}`,
     join(SPEC_TEST_LOCATION, `/tests/${presetName}/altair/operations/sync_aggregate/pyspec_tests`),
     (testcase) => {
       const wrappedState = allForks.createCachedBeaconState<altair.BeaconState>(
