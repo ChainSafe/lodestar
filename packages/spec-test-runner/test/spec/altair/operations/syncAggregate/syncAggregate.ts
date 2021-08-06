@@ -10,7 +10,7 @@ import {expectEqualBeaconState} from "../../util";
 import {ssz} from "@chainsafe/lodestar-types";
 import {PresetName} from "@chainsafe/lodestar-params";
 
-export function runSyncCommittee(presetName: PresetName): void {
+export function runSyncAggregate(presetName: PresetName): void {
   // eslint-disable-next-line @typescript-eslint/naming-convention
   const config = createIChainForkConfig({ALTAIR_FORK_EPOCH: 0});
 
