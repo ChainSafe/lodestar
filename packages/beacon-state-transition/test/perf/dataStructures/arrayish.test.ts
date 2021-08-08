@@ -15,23 +15,34 @@ const ihi = n - 1;
 // - Memory cost of a full array
 
 // Benchmark data from Aug 2021 - Intel(R) Core(TM) i5-8250U CPU @ 1.60GHz
+// Tree (persistent-merkle-tree)
+// ✓ Tree 40 250000 create                                              0.9570626 ops/s    1.044864  s/op        -          9 runs   10.4 s
+// ✓ Tree 40 250000 get(0)                                               621118.0 ops/s    1.610000 us/op        -     527363 runs   1.03 s
+// ✓ Tree 40 250000 get(249999)                                          600961.5 ops/s    1.664000 us/op        -     512426 runs   1.03 s
+// ✓ Tree 40 250000 set(0)                                               244978.0 ops/s    4.082000 us/op        -     227418 runs   1.01 s
+// ✓ Tree 40 250000 set(249999)                                          197083.2 ops/s    5.074000 us/op        -     183365 runs   1.01 s
+// ✓ Tree 40 250000 toArray()                                            13.48403 ops/s    74.16183 ms/op        -        134 runs   10.0 s
+// ✓ Tree 40 250000 iterate all - toArray() + loop                       13.78103 ops/s    72.56350 ms/op        -        137 runs   10.0 s
+// ✓ Tree 40 250000 iterate all - get(i)                                 2.820850 ops/s    354.5030 ms/op        -         28 runs   10.3 s
+
 // MutableVector
-// ✓ MutableVector 250000 create                                         69.60118 ops/s    14.36757 ms/op   x1.078        695 runs   10.0 s
-// ✓ MutableVector 250000 get(0)                                          2277904 ops/s    439.0000 ns/op   x1.149    1427700 runs   1.07 s
-// ✓ MutableVector 250000 set(0)                                          1055966 ops/s    947.0000 ns/op   x1.205     825882 runs   1.04 s
-// ✓ MutableVector 250000 get(249999)                                     2469136 ops/s    405.0000 ns/op   x1.134    1464511 runs   1.07 s
-// ✓ MutableVector 250000 set(249999)                                     1912046 ops/s    523.0000 ns/op   x1.236    1227883 runs   1.06 s
-// ✓ MutableVector 250000 toArray()                                      173.7822 ops/s    5.754330 ms/op        -       1024 runs   5.90 s
-// ✓ MutableVector 250000 iterate all - toArray() + loop                 165.5760 ops/s    6.039522 ms/op        -       1024 runs   6.19 s
-// ✓ MutableVector 250000 iterate all - get(i)                           342.0903 ops/s    2.923205 ms/op   x1.081       1024 runs   2.99 s
+// ✓ MutableVector 250000 create                                         60.84465 ops/s    16.43530 ms/op        -        609 runs   10.0 s
+// ✓ MutableVector 250000 get(0)                                          1893939 ops/s    528.0000 ns/op        -    1150568 runs   1.07 s
+// ✓ MutableVector 250000 get(249999)                                     1953125 ops/s    512.0000 ns/op        -    1176768 runs   1.08 s
+// ✓ MutableVector 250000 set(0)                                         811030.0 ops/s    1.233000 us/op        -     637508 runs   1.04 s
+// ✓ MutableVector 250000 set(249999)                                     1579779 ops/s    633.0000 ns/op        -    1011919 runs   1.18 s
+// ✓ MutableVector 250000 toArray()                                      134.9621 ops/s    7.409485 ms/op        -       1024 runs   7.59 s
+// ✓ MutableVector 250000 iterate all - toArray() + loop                 117.5826 ops/s    8.504657 ms/op        -       1024 runs   8.71 s
+// ✓ MutableVector 250000 iterate all - get(i)                           274.0159 ops/s    3.649423 ms/op        -       1024 runs   3.74 s
 
 // Array
-// ✓ Array 250000 create                                                 238.7041 ops/s    4.189287 ms/op   x0.941       1024 runs   4.29 s
-// ✓ Array 250000 get(0)                                                  2604167 ops/s    384.0000 ns/op   x0.798    1557414 runs   1.07 s
-// ✓ Array 250000 set(0)                                                  2427184 ops/s    412.0000 ns/op   x0.846    1429521 runs   1.07 s
-// ✓ Array 250000 get(249999)                                             2652520 ops/s    377.0000 ns/op   x0.684    1588011 runs   1.07 s
-// ✓ Array 250000 set(249999)                                             2398082 ops/s    417.0000 ns/op   x0.993    1437819 runs   1.07 s
-// ✓ Array 250000 iterate all - loop                                     3784.639 ops/s    264.2260 us/op   x0.898       3774 runs   1.00 s
+// ✓ Array 250000 create                                                 182.7870 ops/s    5.470849 ms/op        -       1024 runs   5.61 s
+// ✓ Array 250000 clone - spread                                         549.0822 ops/s    1.821221 ms/op        -       1024 runs   1.87 s
+// ✓ Array 250000 get(0)                                                  1968504 ops/s    508.0000 ns/op        -    1176396 runs   1.09 s
+// ✓ Array 250000 get(249999)                                             2032520 ops/s    492.0000 ns/op        -    1200057 runs   1.17 s
+// ✓ Array 250000 set(0)                                                  2100840 ops/s    476.0000 ns/op        -    1248220 runs   1.08 s
+// ✓ Array 250000 set(249999)                                             2100840 ops/s    476.0000 ns/op        -    1245961 runs   1.08 s
+// ✓ Array 250000 iterate all - loop                                     3009.592 ops/s    332.2710 us/op        -       3006 runs   1.00 s
 
 describe("Tree (persistent-merkle-tree)", () => {
   // Don't run on CI
