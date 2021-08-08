@@ -61,12 +61,20 @@ describe("Tree (persistent-merkle-tree)", () => {
     tree.getNode(gihi);
   });
 
+  itBench(`Tree ${d} ${n} get(${ihi}) x1000`, () => {
+    for (let i = 0; i < 1000; i++) tree.getNode(gihi);
+  });
+
   itBench(`Tree ${d} ${n} set(${ilo})`, () => {
     tree.setNode(gilo, n2);
   });
 
   itBench(`Tree ${d} ${n} set(${ihi})`, () => {
     tree.setNode(gihi, n2);
+  });
+
+  itBench(`Tree ${d} ${n} set(${ihi}) x1000`, () => {
+    for (let i = 0; i < 1000; i++) tree.setNode(gihi, n2);
   });
 
   itBench(`Tree ${d} ${n} toArray()`, () => {
@@ -123,12 +131,20 @@ describe("MutableVector", () => {
     mutableVector.get(ihi);
   });
 
+  itBench(`MutableVector ${n} get(${ihi}) x1000`, () => {
+    for (let i = 0; i < 1000; i++) mutableVector.get(ihi - i);
+  });
+
   itBench(`MutableVector ${n} set(${ilo})`, () => {
     mutableVector.set(ilo, 10000000);
   });
 
   itBench(`MutableVector ${n} set(${ihi})`, () => {
     mutableVector.set(ihi, 10000000);
+  });
+
+  itBench(`MutableVector ${n} set(${ihi}) x1000`, () => {
+    for (let i = 0; i < 1000; i++) mutableVector.set(ihi - i, 10000000);
   });
 
   itBench(`MutableVector ${n} toArray()`, () => {
@@ -177,12 +193,20 @@ describe("Array", () => {
     arr[ihi];
   });
 
+  itBench(`Array ${n} get(${ihi}) x1000`, () => {
+    for (let i = 0; i < 1000; i++) arr[ihi - 1];
+  });
+
   itBench(`Array ${n} set(${ilo})`, () => {
     arr[ilo] = 10000000;
   });
 
   itBench(`Array ${n} set(${ihi})`, () => {
     arr[ihi] = 10000000;
+  });
+
+  itBench(`Array ${n} set(${ihi}) x1000`, () => {
+    for (let i = 0; i < 1000; i++) arr[ihi - 1] = 10000000;
   });
 
   itBench(`Array ${n} iterate all - loop`, () => {
