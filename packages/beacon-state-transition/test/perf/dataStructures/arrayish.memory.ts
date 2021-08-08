@@ -15,10 +15,12 @@ enum TestType {
   MutableVector,
   MutableVectorClone,
   MutableVectorCloneAndMutate,
+  Set,
+  Map,
 }
 
-const size = 1000;
-const testType = TestType.MutableVector;
+const size = 100;
+const testType = TestType.Set;
 
 let arrayNumGlobal: number[] | null = null;
 let mutableVectorGlobal: MutableVector<number> | null = null;
@@ -29,7 +31,10 @@ for (let i = 0; i < 1e8; i++) {
     // ---- | ------ | ------ |
     // rssM | 855.46 | 8107.7 |
     case TestType.ArrayNew: {
-      const arrNum = Array.from({length: size}, (_, k) => k);
+      const arrNum = new Array(size);
+      for (let j = 0; j < size; j++) {
+        arrNum[j] = j;
+      }
       refs.push(arrNum);
       break;
     }
@@ -100,6 +105,30 @@ for (let i = 0; i < 1e8; i++) {
         newArr.set(j, i);
       }
       refs.push(newArr);
+      break;
+    }
+
+    // size | 100    | 1000   |
+    // ---- | ------ | ------ |
+    // rssM | 2646.8 | 20855. |
+    case TestType.Set: {
+      const set = new Set<number>();
+      for (let j = 0; j < size; j++) {
+        set.add(j);
+      }
+      refs.push(set);
+      break;
+    }
+
+    // size | 100    | 1000   |
+    // ---- | ------ | ------ |
+    // rssM | 3668.4 | 29089. |
+    case TestType.Map: {
+      const map = new Map<number, number>();
+      for (let j = 0; j < size; j++) {
+        map.set(j, j);
+      }
+      refs.push(map);
       break;
     }
 
