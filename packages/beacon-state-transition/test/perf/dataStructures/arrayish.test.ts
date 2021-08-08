@@ -1,4 +1,4 @@
-import {LeafNode, subtreeFillToLength, toGindex, Tree, zeroNode} from "@chainsafe/persistent-merkle-tree";
+import {LeafNode, toGindex, Tree, zeroNode} from "@chainsafe/persistent-merkle-tree";
 import {MutableVector} from "@chainsafe/persistent-ts";
 import {itBench, setBenchOpts} from "@dapplion/benchmark";
 
