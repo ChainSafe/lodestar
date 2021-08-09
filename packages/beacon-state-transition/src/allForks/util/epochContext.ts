@@ -103,6 +103,8 @@ export function createEpochContext(
   const previousEpoch = currentEpoch === GENESIS_EPOCH ? GENESIS_EPOCH : currentEpoch - 1;
   const nextEpoch = currentEpoch + 1;
 
+  let totalActiveBalance = BigInt(0);
+
   const previousActiveIndices: ValidatorIndex[] = [];
   const currentActiveIndices: ValidatorIndex[] = [];
   const nextActiveIndices: ValidatorIndex[] = [];
@@ -112,11 +114,17 @@ export function createEpochContext(
     }
     if (isActiveValidator(v, currentEpoch)) {
       currentActiveIndices.push(i);
+      totalActiveBalance += v.effectiveBalance;
     }
     if (isActiveValidator(v, nextEpoch)) {
       nextActiveIndices.push(i);
     }
   });
+
+  // Spec: `EFFECTIVE_BALANCE_INCREMENT` Gwei minimum to avoid divisions by zero
+  if (totalActiveBalance < EFFECTIVE_BALANCE_INCREMENT) {
+    totalActiveBalance = EFFECTIVE_BALANCE_INCREMENT;
+  }
 
   const currentShuffling = computeEpochShuffling(state, currentActiveIndices, currentEpoch);
   let previousShuffling;
@@ -134,7 +142,6 @@ export function createEpochContext(
   // Only after altair, compute the indices of the current sync committee
   const onAltairFork = currentEpoch >= config.ALTAIR_FORK_EPOCH;
 
-  const totalActiveBalance = getTotalBalance(state, currentShuffling.activeIndices);
   const syncParticipantReward = onAltairFork ? computeSyncParticipantReward(config, totalActiveBalance) : BigInt(0);
   const syncProposerReward = onAltairFork
     ? (syncParticipantReward * PROPOSER_WEIGHT) / (WEIGHT_DENOMINATOR - PROPOSER_WEIGHT)
