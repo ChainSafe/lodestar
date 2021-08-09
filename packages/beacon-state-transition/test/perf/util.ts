@@ -1,24 +1,15 @@
 import {config} from "@chainsafe/lodestar-config/default";
-import {Gwei, phase0, ssz, Slot, ValidatorIndex, altair, ParticipationFlags} from "@chainsafe/lodestar-types";
+import {Gwei, phase0, ssz, Slot, altair, ParticipationFlags} from "@chainsafe/lodestar-types";
 import bls, {CoordType, PublicKey, SecretKey} from "@chainsafe/bls";
-import {fromHexString, List, TreeBacked, hash} from "@chainsafe/ssz";
-import {
-  allForks,
-  interopSecretKey,
-  computeEpochAtSlot,
-  computeProposerIndex,
-  getActiveValidatorIndices,
-  getCurrentEpoch,
-  getSeed,
-} from "../../src";
+import {fromHexString, List, TreeBacked} from "@chainsafe/ssz";
+import {allForks, interopSecretKey, computeEpochAtSlot, getActiveValidatorIndices} from "../../src";
 import {createIChainForkConfig} from "@chainsafe/lodestar-config";
 import {computeCommitteeCount, PubkeyIndexMap} from "../../src/allForks";
 import {profilerLogger} from "../utils/logger";
 import {interopPubkeysCached} from "../utils/interop";
 import {PendingAttestation} from "@chainsafe/lodestar-types/phase0";
-import {intDiv, intToBytes} from "@chainsafe/lodestar-utils";
+import {intDiv} from "@chainsafe/lodestar-utils";
 import {
-  DOMAIN_BEACON_PROPOSER,
   EPOCHS_PER_ETH1_VOTING_PERIOD,
   EPOCHS_PER_HISTORICAL_VECTOR,
   MAX_ATTESTATIONS,
@@ -264,11 +255,9 @@ export function generatePerformanceStatePhase0(pubkeysArg?: Uint8Array[]): TreeB
 export function generatePerformanceBlockPhase0(): TreeBacked<phase0.SignedBeaconBlock> {
   if (!phase0SignedBlock) {
     const block = ssz.phase0.SignedBeaconBlock.defaultValue();
-    const parentState = generatePerformanceStatePhase0();
-    const newState = parentState.clone();
-    newState.slot++;
-    block.message.slot = newState.slot;
-    block.message.proposerIndex = getBeaconProposerIndex(newState);
+    const parentState = generatePerfTestCachedStatePhase0();
+    block.message.slot = parentState.slot;
+    block.message.proposerIndex = parentState.getBeaconProposer(parentState.slot);
     block.message.parentRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(parentState.latestBlockHeader);
     block.message.stateRoot = fromHexString("0x6c86ca3c4c6688cf189421b8a68bf2dbc91521609965e6f4e207d44347061fee");
     block.message.body.randaoReveal = fromHexString(
@@ -345,17 +334,6 @@ function buildPerformanceStateAllForks(state: allForks.BeaconState, pubkeysArg?:
     root: fromHexString("0x122b8ff579d0c8f8a8b66326bdfec3f685007d2842f01615a0768870961ccc17"),
   };
   return state;
-}
-
-/**
- * TODO - PERFORMANCE WARNING - NAIVE CODE
- * Return the beacon proposer index at ``state.slot``.
- */
-function getBeaconProposerIndex(state: allForks.BeaconState): ValidatorIndex {
-  const currentEpoch = getCurrentEpoch(state);
-  const seed = hash(Buffer.concat([getSeed(state, currentEpoch, DOMAIN_BEACON_PROPOSER), intToBytes(state.slot, 8)]));
-  const indices = getActiveValidatorIndices(state, currentEpoch);
-  return computeProposerIndex(state, indices, seed);
 }
 
 export function generateTestCachedBeaconStateOnlyValidators({
