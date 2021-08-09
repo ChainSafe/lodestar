@@ -1,4 +1,4 @@
-import {CachedBeaconState, IEpochProcess, prepareEpochProcessState} from "../../allForks/util";
+import {CachedBeaconState, IEpochProcess} from "../../allForks/util";
 import {
   processJustificationAndFinalization,
   processRegistryUpdates,
@@ -16,8 +16,7 @@ import {allForks, phase0} from "@chainsafe/lodestar-types";
 
 export {processRewardsAndPenalties, processSlashings, getAttestationDeltas};
 
-export function processEpoch(state: CachedBeaconState<phase0.BeaconState>): IEpochProcess {
-  const epochProcess = prepareEpochProcessState(state);
+export function processEpoch(state: CachedBeaconState<phase0.BeaconState>, epochProcess: IEpochProcess): void {
   processJustificationAndFinalization(state as CachedBeaconState<allForks.BeaconState>, epochProcess);
   processRewardsAndPenalties(state, epochProcess);
   processRegistryUpdates(state as CachedBeaconState<allForks.BeaconState>, epochProcess);
@@ -29,5 +28,4 @@ export function processEpoch(state: CachedBeaconState<phase0.BeaconState>): IEpo
   processRandaoMixesReset(state as CachedBeaconState<allForks.BeaconState>, epochProcess);
   processHistoricalRootsUpdate(state as CachedBeaconState<allForks.BeaconState>, epochProcess);
   processParticipationRecordUpdates(state);
-  return epochProcess;
 }

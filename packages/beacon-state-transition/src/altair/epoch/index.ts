@@ -1,5 +1,5 @@
 import {allForks, altair} from "@chainsafe/lodestar-types";
-import {CachedBeaconState, IEpochProcess, prepareEpochProcessState} from "../../allForks/util";
+import {CachedBeaconState, IEpochProcess} from "../../allForks/util";
 import {
   processJustificationAndFinalization,
   processRegistryUpdates,
@@ -26,8 +26,7 @@ export {
   processParticipationFlagUpdates,
 };
 
-export function processEpoch(state: CachedBeaconState<altair.BeaconState>): IEpochProcess {
-  const epochProcess = prepareEpochProcessState(state);
+export function processEpoch(state: CachedBeaconState<altair.BeaconState>, epochProcess: IEpochProcess): void {
   processJustificationAndFinalization(state as CachedBeaconState<allForks.BeaconState>, epochProcess);
   processInactivityUpdates(state, epochProcess);
   processRewardsAndPenalties(state, epochProcess);
@@ -40,5 +39,4 @@ export function processEpoch(state: CachedBeaconState<altair.BeaconState>): IEpo
   processHistoricalRootsUpdate(state as CachedBeaconState<allForks.BeaconState>, epochProcess);
   processParticipationFlagUpdates(state);
   processSyncCommitteeUpdates(state, epochProcess);
-  return epochProcess;
 }

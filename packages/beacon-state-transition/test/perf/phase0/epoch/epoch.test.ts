@@ -10,7 +10,7 @@ describe("Phase 0 epoch transition steps", () => {
   });
 
   const originalState = generatePerfTestCachedStatePhase0({goBackOneSlot: true});
-  const epochProcess = allForks.prepareEpochProcessState(originalState);
+  const epochProcess = allForks.beforeProcessEpoch(originalState);
 
   const idPrefix = `epoch phase0 - ${perfStateId}`;
 
@@ -19,7 +19,7 @@ describe("Phase 0 epoch transition steps", () => {
   //
   // epoch process function              | ms / op     | % bar chart
   // ----------------------------------- | ----------- | --------------
-  // prepareEpochProcessState            | 700.0 ms/op | xxxxxxxxxxxxxx
+  // beforeProcessEpoch                  | 700.0 ms/op | xxxxxxxxxxxxxx
   // processJustificationAndFinalization | 0.180 ms/op |
   // processRewardsAndPenalties          | 600.0 ms/op | xxxxxxxxxxxx
   // processRegistryUpdates              | 0.017 ms/op |
@@ -32,9 +32,9 @@ describe("Phase 0 epoch transition steps", () => {
   // processParticipationRecordUpdates   | 0.000 ms/op |
 
   itBench({
-    id: `${idPrefix} - prepareEpochProcessState`,
+    id: `${idPrefix} - beforeProcessEpoch`,
     fn: () => {
-      allForks.prepareEpochProcessState(originalState);
+      allForks.beforeProcessEpoch(originalState);
     },
   });
 

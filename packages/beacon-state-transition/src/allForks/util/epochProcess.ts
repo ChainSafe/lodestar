@@ -54,7 +54,7 @@ export interface IEpochProcess {
   statuses: IAttesterStatus[];
   validators: phase0.Validator[];
   balances?: BigUint64Array;
-  // to be used for rotateEpochs()
+  // to be used for afterProcessEpoch()
   nextEpochActiveValidatorIndices: ValidatorIndex[];
 }
 
@@ -83,7 +83,7 @@ export function createIEpochProcess(): IEpochProcess {
   };
 }
 
-export function prepareEpochProcessState<T extends allForks.BeaconState>(state: CachedBeaconState<T>): IEpochProcess {
+export function beforeProcessEpoch<T extends allForks.BeaconState>(state: CachedBeaconState<T>): IEpochProcess {
   const out = createIEpochProcess();
 
   const {config, epochCtx, validators} = state;

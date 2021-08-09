@@ -22,7 +22,7 @@ export function runEth1DataReset(presetName: PresetName): void {
         config,
         (testcase.pre as TreeBacked<altair.BeaconState>).clone()
       );
-      const epochProcess = allForks.prepareEpochProcessState(wrappedState);
+      const epochProcess = allForks.beforeProcessEpoch(wrappedState);
       allForks.processEth1DataReset(wrappedState as CachedBeaconState<allForks.BeaconState>, epochProcess);
       return wrappedState;
     },

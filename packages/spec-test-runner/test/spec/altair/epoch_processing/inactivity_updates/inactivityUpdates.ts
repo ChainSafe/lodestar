@@ -23,7 +23,7 @@ export function runInactivityUpdates(presetName: PresetName): void {
         config,
         (testcase.pre as TreeBacked<altair.BeaconState>).clone()
       );
-      const epochProcess = allForks.prepareEpochProcessState(wrappedState);
+      const epochProcess = allForks.beforeProcessEpoch(wrappedState);
       altair.processInactivityUpdates(wrappedState, epochProcess);
       return wrappedState;
     },

@@ -17,7 +17,7 @@ describeDirectorySpecTest<IStateTestCase, phase0.BeaconState>(
       config,
       testcase.pre as TreeBacked<phase0.BeaconState>
     );
-    const epochProcess = allForks.prepareEpochProcessState(wrappedState);
+    const epochProcess = allForks.beforeProcessEpoch(wrappedState);
     phase0.processSlashings(wrappedState, epochProcess);
     return wrappedState;
   },

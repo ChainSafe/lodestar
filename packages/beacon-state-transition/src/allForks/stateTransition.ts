@@ -5,7 +5,7 @@ import * as phase0 from "../phase0";
 import * as altair from "../altair";
 import {IBeaconStateTransitionMetrics} from "../metrics";
 import {verifyProposerSignature} from "./signatureSets";
-import {CachedBeaconState, IEpochProcess, rotateEpochs} from "./util";
+import {beforeProcessEpoch, CachedBeaconState, IEpochProcess, afterProcessEpoch} from "./util";
 import {processSlot} from "./slot";
 import {computeEpochAtSlot} from "../util";
 
@@ -13,7 +13,7 @@ type StateAllForks = CachedBeaconState<allForks.BeaconState>;
 type StatePhase0 = CachedBeaconState<phase0Types.BeaconState>;
 
 type ProcessBlockFn = (state: StateAllForks, block: allForks.BeaconBlock, verifySignatures: boolean) => void;
-type ProcessEpochFn = (state: StateAllForks) => IEpochProcess;
+type ProcessEpochFn = (state: StateAllForks, epochProcess: IEpochProcess) => void;
 
 const processBlockByFork: Record<ForkName, ProcessBlockFn> = {
   [ForkName.phase0]: phase0.processBlock as ProcessBlockFn,
@@ -140,11 +140,12 @@ function processSlotsWithTransientCache(
       const fork = postState.config.getForkName(postState.slot);
       const timer = metrics?.stfnEpochTransition.startTimer();
       try {
-        const epochProcess = processEpochByFork[fork](postState);
+        const epochProcess = beforeProcessEpoch(postState);
+        processEpochByFork[fork](postState, epochProcess);
         metrics?.registerValidatorStatuses(epochProcess.currentEpoch, epochProcess.statuses);
 
         postState.slot++;
-        rotateEpochs(postState.epochCtx, postState, epochProcess.nextEpochActiveValidatorIndices);
+        afterProcessEpoch(postState, epochProcess);
       } finally {
         if (timer) timer();
       }
