@@ -1,5 +1,4 @@
 import {join} from "path";
-import {expect} from "chai";
 
 import {TreeBacked} from "@chainsafe/ssz";
 import {config} from "@chainsafe/lodestar-config/default";
@@ -9,6 +8,7 @@ import {IProcessSlotsTestCase} from "./type";
 import {SPEC_TEST_LOCATION} from "../../../../utils/specTestCases";
 import {BeaconState} from "@chainsafe/lodestar-types/phase0";
 import {ssz} from "@chainsafe/lodestar-types";
+import {expectEqualBeaconStatePhase0} from "../../../util";
 
 describeDirectorySpecTest<IProcessSlotsTestCase, phase0.BeaconState>(
   "slot sanity mainnet",
@@ -50,7 +50,7 @@ describeDirectorySpecTest<IProcessSlotsTestCase, phase0.BeaconState>(
     timeout: 10000000,
     getExpected: (testCase) => testCase.post as BeaconState,
     expectFunc: (testCase, expected, actual) => {
-      expect(ssz.phase0.BeaconState.equals(actual, expected)).to.be.true;
+      expectEqualBeaconStatePhase0(expected, actual);
     },
   }
 );

@@ -5,7 +5,7 @@ import {createIChainForkConfig} from "@chainsafe/lodestar-config";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
 import {IFinalityTestCase} from "./type";
 import {SPEC_TEST_LOCATION} from "../../../utils/specTestCases";
-import {expectEqualBeaconState} from "../util";
+import {expectEqualBeaconStateAltair} from "../../util";
 import {ssz} from "@chainsafe/lodestar-types";
 import {PresetName} from "@chainsafe/lodestar-params";
 
@@ -60,7 +60,7 @@ export function runFinality(presetName: PresetName): void {
       timeout: 10000,
       getExpected: (testCase) => testCase.post,
       expectFunc: (testCase, expected, actual) => {
-        expectEqualBeaconState(expected, actual);
+        expectEqualBeaconStateAltair(expected, actual);
       },
     }
   );

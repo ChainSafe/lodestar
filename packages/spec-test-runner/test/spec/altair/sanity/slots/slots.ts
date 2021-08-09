@@ -5,7 +5,7 @@ import {SPEC_TEST_LOCATION} from "../../../../utils/specTestCases";
 import {altair, allForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {TreeBacked} from "@chainsafe/ssz";
 import {createIChainForkConfig} from "@chainsafe/lodestar-config";
-import {expectEqualBeaconState} from "../../util";
+import {expectEqualBeaconStateAltair} from "../../../util";
 import {ssz} from "@chainsafe/lodestar-types";
 import {PresetName} from "@chainsafe/lodestar-params";
 
@@ -49,7 +49,7 @@ export function runSlots(presetName: PresetName): void {
       timeout: 10000,
       getExpected: (testCase) => testCase.post,
       expectFunc: (testCase, expected, actual) => {
-        expectEqualBeaconState(expected, actual);
+        expectEqualBeaconStateAltair(expected, actual);
       },
     }
   );

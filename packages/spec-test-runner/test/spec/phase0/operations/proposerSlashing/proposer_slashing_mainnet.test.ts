@@ -1,5 +1,4 @@
 import {join} from "path";
-import {expect} from "chai";
 
 import {TreeBacked} from "@chainsafe/ssz";
 import {config} from "@chainsafe/lodestar-config/default";
@@ -8,6 +7,7 @@ import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-tes
 import {IProcessProposerSlashingTestCase} from "./type";
 import {SPEC_TEST_LOCATION} from "../../../../utils/specTestCases";
 import {ssz} from "@chainsafe/lodestar-types";
+import {expectEqualBeaconStatePhase0} from "../../../util";
 
 describeDirectorySpecTest<IProcessProposerSlashingTestCase, phase0.BeaconState>(
   "process proposer slashing mainnet",
@@ -41,7 +41,7 @@ describeDirectorySpecTest<IProcessProposerSlashingTestCase, phase0.BeaconState>(
     shouldError: (testCase) => !testCase.post,
     getExpected: (testCase) => testCase.post,
     expectFunc: (testCase, expected, actual) => {
-      expect(ssz.phase0.BeaconState.equals(actual, expected)).to.be.true;
+      expectEqualBeaconStatePhase0(expected, actual);
     },
   }
 );

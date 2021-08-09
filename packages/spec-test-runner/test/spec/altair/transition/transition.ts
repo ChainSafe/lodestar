@@ -6,7 +6,7 @@ import {createIChainForkConfig} from "@chainsafe/lodestar-config";
 import {ITransitionTestCase} from "./types";
 import {SPEC_TEST_LOCATION} from "../../../utils/specTestCases";
 import {TreeBacked} from "@chainsafe/ssz";
-import {expectEqualBeaconState} from "../util";
+import {expectEqualBeaconStateAltair} from "../../util";
 import {PresetName} from "@chainsafe/lodestar-params";
 
 export function runTransition(presetName: PresetName): void {
@@ -65,7 +65,7 @@ export function runTransition(presetName: PresetName): void {
       timeout: 10000,
       getExpected: (testCase) => testCase.post,
       expectFunc: (testCase, expected, actual) => {
-        expectEqualBeaconState(expected, actual);
+        expectEqualBeaconStateAltair(expected, actual);
       },
     }
   );
