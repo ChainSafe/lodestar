@@ -8,6 +8,7 @@ export enum SyncCommitteeErrorCode {
   VALIDATOR_NOT_IN_SYNC_COMMITTEE = "SYNC_COMMITTEE_ERROR_VALIDATOR_NOT_IN_SYNC_COMMITTEE",
   INVALID_SIGNATURE = "SYNC_COMMITTEE_INVALID_SIGNATURE",
   INVALID_SUB_COMMITTEE_INDEX = "SYNC_COMMITTEE_INVALID_SUB_COMMITTEE_INDEX",
+  NO_PARTICIPANT = "SYNC_COMMITTEE_NO_PARTICIPANT",
   INVALID_AGGREGATOR = "SYNC_COMMITTEE_ERROR_INVALID_AGGREGATOR",
   AGGREGATOR_PUBKEY_UNKNOWN = "SYNC_COMMITTEE_ERROR_AGGREGATOR_PUBKEY_UNKNOWN",
 }
@@ -18,6 +19,7 @@ export type SyncCommitteeErrorType =
   | {code: SyncCommitteeErrorCode.VALIDATOR_NOT_IN_SYNC_COMMITTEE; validatorIndex: phase0.ValidatorIndex}
   | {code: SyncCommitteeErrorCode.INVALID_SIGNATURE}
   | {code: SyncCommitteeErrorCode.INVALID_SUB_COMMITTEE_INDEX; subCommitteeIndex: number}
+  | {code: SyncCommitteeErrorCode.NO_PARTICIPANT}
   | {code: SyncCommitteeErrorCode.INVALID_AGGREGATOR; aggregatorIndex: phase0.ValidatorIndex}
   | {code: SyncCommitteeErrorCode.AGGREGATOR_PUBKEY_UNKNOWN; aggregatorIndex: phase0.ValidatorIndex};
 

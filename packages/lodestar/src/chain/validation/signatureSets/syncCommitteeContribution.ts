@@ -12,12 +12,13 @@ import {
 
 export function getSyncCommitteeContributionSignatureSet(
   state: CachedBeaconState<altair.BeaconState>,
-  contribution: altair.SyncCommitteeContribution
+  contribution: altair.SyncCommitteeContribution,
+  pubkeys: PublicKey[]
 ): ISignatureSet {
   const domain = state.config.getDomain(DOMAIN_SYNC_COMMITTEE, contribution.slot);
   return {
     type: SignatureSetType.aggregate,
-    pubkeys: getContributionPubkeys(state, contribution),
+    pubkeys,
     signingRoot: computeSigningRoot(ssz.Root, contribution.beaconBlockRoot, domain),
     signature: contribution.signature.valueOf() as Uint8Array,
   };
@@ -28,7 +29,7 @@ export function getSyncCommitteeContributionSignatureSet(
  * - currSyncCommitteeIndexes cache
  * - index2pubkey cache
  */
-function getContributionPubkeys(
+export function getContributionPubkeys(
   state: CachedBeaconState<altair.BeaconState>,
   contribution: altair.SyncCommitteeContribution
 ): PublicKey[] {

@@ -10,12 +10,12 @@ import {expectEqualBeaconState} from "../../util";
 import {ssz} from "@chainsafe/lodestar-types";
 import {PresetName} from "@chainsafe/lodestar-params";
 
-export function runSyncCommittee(presetName: PresetName): void {
+export function runSyncAggregate(presetName: PresetName): void {
   // eslint-disable-next-line @typescript-eslint/naming-convention
   const config = createIChainForkConfig({ALTAIR_FORK_EPOCH: 0});
 
   describeDirectorySpecTest<IProcessSyncCommitteeTestCase, altair.BeaconState>(
-    `process sync committee ${presetName}`,
+    `process sync aggregate ${presetName}`,
     join(SPEC_TEST_LOCATION, `/tests/${presetName}/altair/operations/sync_aggregate/pyspec_tests`),
     (testcase) => {
       const wrappedState = allForks.createCachedBeaconState<altair.BeaconState>(
