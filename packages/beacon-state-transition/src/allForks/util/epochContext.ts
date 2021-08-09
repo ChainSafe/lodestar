@@ -119,6 +119,11 @@ export function createEpochContext(
     }
   });
 
+  // Spec: `EFFECTIVE_BALANCE_INCREMENT` Gwei minimum to avoid divisions by zero
+  if (totalActiveBalance < EFFECTIVE_BALANCE_INCREMENT) {
+    totalActiveBalance = EFFECTIVE_BALANCE_INCREMENT;
+  }
+
   const currentShuffling = computeEpochShuffling(state, currentActiveIndices, currentEpoch);
   let previousShuffling;
   if (previousEpoch === currentEpoch) {
