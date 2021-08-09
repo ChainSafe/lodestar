@@ -41,10 +41,10 @@ export interface IEpochProcess {
   prevEpochUnslashedStake: IEpochStakeSummary;
   currEpochUnslashedTargetStake: Gwei;
   indicesToSlash: ValidatorIndex[];
-  indicesToSetActivationEligibility: ValidatorIndex[];
+  indicesEligibleForActivationQueue: ValidatorIndex[];
   // ignores churn, apply churn-limit manually.
   // maybe, because finality affects it still
-  indicesToMaybeActivate: ValidatorIndex[];
+  indicesEligibleForActivation: ValidatorIndex[];
 
   indicesToEject: ValidatorIndex[];
   exitQueueEnd: Epoch;
@@ -71,8 +71,8 @@ export function createIEpochProcess(): IEpochProcess {
     },
     currEpochUnslashedTargetStake: BigInt(0),
     indicesToSlash: [],
-    indicesToSetActivationEligibility: [],
-    indicesToMaybeActivate: [],
+    indicesEligibleForActivationQueue: [],
+    indicesEligibleForActivation: [],
     indicesToEject: [],
     exitQueueEnd: 0,
     exitQueueEndChurn: 0,
@@ -133,11 +133,11 @@ export function beforeProcessEpoch<T extends allForks.BeaconState>(state: Cached
     }
 
     if (v.activationEligibilityEpoch === FAR_FUTURE_EPOCH && v.effectiveBalance === MAX_EFFECTIVE_BALANCE) {
-      out.indicesToSetActivationEligibility.push(i);
+      out.indicesEligibleForActivationQueue.push(i);
     }
 
     if (v.activationEpoch === FAR_FUTURE_EPOCH && v.activationEligibilityEpoch <= currentEpoch) {
-      out.indicesToMaybeActivate.push(i);
+      out.indicesEligibleForActivation.push(i);
     }
 
     if (status.active && v.exitEpoch === FAR_FUTURE_EPOCH && v.effectiveBalance <= config.EJECTION_BALANCE) {
@@ -158,7 +158,7 @@ export function beforeProcessEpoch<T extends allForks.BeaconState>(state: Cached
   out.baseRewardPerIncrement = computeBaseRewardPerIncrement(out.totalActiveStake);
 
   // order by sequence of activationEligibilityEpoch setting and then index
-  out.indicesToMaybeActivate.sort(
+  out.indicesEligibleForActivation.sort(
     (a, b) => out.validators[a].activationEligibilityEpoch - out.validators[b].activationEligibilityEpoch || a - b
   );
 

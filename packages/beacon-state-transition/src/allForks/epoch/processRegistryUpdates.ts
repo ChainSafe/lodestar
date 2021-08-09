@@ -25,7 +25,7 @@ export function processRegistryUpdates(
   }
 
   // set new activation eligibilities
-  for (const index of epochProcess.indicesToSetActivationEligibility) {
+  for (const index of epochProcess.indicesEligibleForActivationQueue) {
     validators.update(index, {
       activationEligibilityEpoch: epochCtx.currentShuffling.epoch + 1,
     });
@@ -33,7 +33,7 @@ export function processRegistryUpdates(
 
   const finalityEpoch = state.finalizedCheckpoint.epoch;
   // dequeue validators for activation up to churn limit
-  for (const index of epochProcess.indicesToMaybeActivate.slice(0, epochProcess.churnLimit)) {
+  for (const index of epochProcess.indicesEligibleForActivation.slice(0, epochProcess.churnLimit)) {
     // placement in queue is finalized
     if (epochProcess.validators[index].activationEligibilityEpoch > finalityEpoch) {
       break; // remaining validators all have an activationEligibilityEpoch that is higher anyway, break early
