@@ -6,6 +6,11 @@ import {initiateValidatorExit} from "../../allForks/block";
 import {verifyVoluntaryExitSignature} from "../../allForks/signatureSets";
 import {BlockProcess} from "../../util/blockProcess";
 
+/**
+ * Process a VoluntaryExit operation. Initiates the exit of a validator.
+ *
+ * PERF: Work depends on number of VoluntaryExit per block. On regular networks the average is 0 / block.
+ */
 export function processVoluntaryExitAllForks(
   state: CachedBeaconState<allForks.BeaconState>,
   signedVoluntaryExit: phase0.SignedVoluntaryExit,

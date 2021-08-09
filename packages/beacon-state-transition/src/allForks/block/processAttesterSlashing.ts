@@ -7,6 +7,12 @@ import {isValidIndexedAttestation} from "./isValidIndexedAttestation";
 import {slashValidatorAllForks} from "./slashValidator";
 import {BlockProcess} from "../../util/blockProcess";
 
+/**
+ * Process an AttesterSlashing operation. Initiates the exit of a validator, decreases the balance of the slashed
+ * validators and increases the block proposer balance.
+ *
+ * PERF: Work depends on number of AttesterSlashing per block. On regular networks the average is 0 / block.
+ */
 export function processAttesterSlashing(
   fork: ForkName,
   state: CachedBeaconState<allForks.BeaconState>,

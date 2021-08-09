@@ -7,6 +7,13 @@ import {MIN_ATTESTATION_INCLUSION_DELAY, SLOTS_PER_EPOCH} from "@chainsafe/lodes
 import {BlockProcess} from "../../util/blockProcess";
 import {toHexString} from "@chainsafe/ssz";
 
+/**
+ * Process an Attestation operation. Validates an attestation and appends it to state.currentEpochAttestations or
+ * state.previousEpochAttestations to be processed in bulk at the epoch transition.
+ *
+ * PERF: Work depends on number of Attestation per block. On mainnet the average is 89.7 / block, with 87.8 participant
+ * true bits on average. See `packages/beacon-state-transition/test/perf/analyzeBlocks.ts`
+ */
 export function processAttestation(
   state: CachedBeaconState<phase0.BeaconState>,
   attestation: phase0.Attestation,

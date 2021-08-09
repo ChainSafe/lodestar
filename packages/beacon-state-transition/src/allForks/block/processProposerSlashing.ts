@@ -7,6 +7,12 @@ import {slashValidatorAllForks} from "../../allForks/block/slashValidator";
 import {verifySignatureSet} from "../../util/signatureSets";
 import {BlockProcess} from "../../util/blockProcess";
 
+/**
+ * Process a ProposerSlashing operation. Initiates the exit of a validator, decreases the balance of the slashed
+ * validator and increases the block proposer balance.
+ *
+ * PERF: Work depends on number of ProposerSlashing per block. On regular networks the average is 0 / block.
+ */
 export function processProposerSlashing(
   fork: ForkName,
   state: CachedBeaconState<allForks.BeaconState>,

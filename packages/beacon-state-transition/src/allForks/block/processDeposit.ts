@@ -14,6 +14,12 @@ import {ZERO_HASH} from "../../constants";
 import {computeDomain, computeSigningRoot, increaseBalance} from "../../util";
 import {CachedBeaconState} from "../../allForks/util";
 
+/**
+ * Process a Deposit operation. Potentially adds a new validator to the registry. Mutates the validators and balances
+ * trees, pushing contigious values at the end.
+ *
+ * PERF: Work depends on number of Deposit per block. On regular networks the average is 0 / block.
+ */
 export function processDeposit(
   fork: ForkName,
   state: CachedBeaconState<allForks.BeaconState>,
