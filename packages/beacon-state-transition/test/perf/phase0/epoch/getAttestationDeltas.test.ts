@@ -10,7 +10,7 @@ describe("getAttestationDeltas", () => {
   });
 
   const state = generatePerfTestCachedStatePhase0({goBackOneSlot: true});
-  const epochProcess = allForks.prepareEpochProcessState(state);
+  const epochProcess = allForks.beforeProcessEpoch(state);
 
   itBench(`getAttestationDeltas - ${perfStateId}`, () => {
     phase0.getAttestationDeltas(state, epochProcess);

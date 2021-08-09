@@ -17,7 +17,7 @@ for (const testSuite of ["basic", "leak", "random"]) {
         config,
         testcase.pre as TreeBacked<phase0.BeaconState>
       );
-      const epochProcess = allForks.prepareEpochProcessState(wrappedState);
+      const epochProcess = allForks.beforeProcessEpoch(wrappedState);
       const [rewards, penalties] = phase0.getAttestationDeltas(wrappedState, epochProcess);
       return {
         rewards: rewards.map((reward) => BigInt(reward)),

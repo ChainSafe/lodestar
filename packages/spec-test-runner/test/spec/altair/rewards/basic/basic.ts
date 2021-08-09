@@ -28,7 +28,7 @@ export function runBasic(presetName: PresetName): void {
         config,
         (testcase.pre as TreeBacked<altair.BeaconState>).clone()
       );
-      const epochProcess = allForks.prepareEpochProcessState(wrappedState);
+      const epochProcess = allForks.beforeProcessEpoch(wrappedState);
       return {
         head_deltas: altair.getFlagIndexDeltas(wrappedState, epochProcess, TIMELY_HEAD_FLAG_INDEX),
         source_deltas: altair.getFlagIndexDeltas(wrappedState, epochProcess, TIMELY_SOURCE_FLAG_INDEX),

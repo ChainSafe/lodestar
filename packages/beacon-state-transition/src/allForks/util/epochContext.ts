@@ -38,6 +38,8 @@ import {
 import {computeEpochShuffling, IEpochShuffling} from "./epochShuffling";
 import {MutableVector} from "@chainsafe/persistent-ts";
 import {computeBaseRewardPerIncrement} from "../../altair/misc";
+import {CachedBeaconState} from "./cachedBeaconState";
+import {IEpochProcess} from "./epochProcess";
 
 export type AttesterDuty = {
   // Index of validator in validator registry
@@ -210,11 +212,9 @@ export function computeSyncParticipantReward(config: IBeaconConfig, totalActiveB
  * Called to re-use information, such as the shuffling of the next epoch, after transitioning into a
  * new epoch.
  */
-export function rotateEpochs(
-  epochCtx: EpochContext,
-  state: allForks.BeaconState,
-  activeValidatorIndices: ValidatorIndex[]
-): void {
+export function afterProcessEpoch(state: CachedBeaconState<allForks.BeaconState>, epochProcess: IEpochProcess): void {
+  const {epochCtx} = state;
+  const activeValidatorIndices = epochProcess.nextEpochActiveValidatorIndices;
   epochCtx.previousShuffling = epochCtx.currentShuffling;
   epochCtx.currentShuffling = epochCtx.nextShuffling;
   const currEpoch = epochCtx.currentShuffling.epoch;

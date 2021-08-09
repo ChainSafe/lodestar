@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import {prepareEpochProcessState} from "../../src/allForks";
+import {beforeProcessEpoch} from "../../src/allForks";
 import {generatePerfTestCachedStateAltair, generatePerfTestCachedStatePhase0, perfStateId} from "./util";
 
 describe("Perf test sanity check", function () {
@@ -25,7 +25,7 @@ describe("Perf test sanity check", function () {
 
   it("targetStake is in the same range", () => {
     const phase0State = generatePerfTestCachedStatePhase0();
-    const epochProcess = prepareEpochProcessState(phase0State);
+    const epochProcess = beforeProcessEpoch(phase0State);
     expect(epochProcess.prevEpochUnslashedStake.targetStake > targetStake).to.equal(
       true,
       `targetStake too low: ${epochProcess.prevEpochUnslashedStake.targetStake} > ${targetStake}`

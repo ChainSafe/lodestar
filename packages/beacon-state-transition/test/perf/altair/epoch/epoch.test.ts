@@ -10,7 +10,7 @@ describe("Altair epoch transition steps", () => {
   });
 
   const originalState = generatePerfTestCachedStateAltair({goBackOneSlot: true});
-  const epochProcess = allForks.prepareEpochProcessState(originalState);
+  const epochProcess = allForks.beforeProcessEpoch(originalState);
 
   const getPerfState = (): CachedBeaconState<altair.BeaconState> => {
     const state = originalState.clone();
@@ -27,7 +27,7 @@ describe("Altair epoch transition steps", () => {
   //
   // epoch process function              | ms / op     | % bar chart
   // ----------------------------------- | ----------- | --------------
-  // prepareEpochProcessState            | 700.0 ms/op | xxxxxxxxxxxxxx
+  // beforeProcessEpoch                  | 700.0 ms/op | xxxxxxxxxxxxxx
   // processJustificationAndFinalization | 0.180 ms/op |
   // processInactivityUpdates            | 7500. ms/op | xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
   // processRewardsAndPenalties          | 900.0 ms/op | xxxxxxxxxxxxxxxxxx
@@ -41,7 +41,7 @@ describe("Altair epoch transition steps", () => {
   // processParticipationFlagUpdates     | 300.0 ms/op | xxxxxx
   // processSyncCommitteeUpdates         | 0.000 ms/op |
 
-  // prepareEpochProcessState - in phase0
+  // beforeProcessEpoch - in phase0
   // processJustificationAndFinalization - in phase0
 
   itBench({
