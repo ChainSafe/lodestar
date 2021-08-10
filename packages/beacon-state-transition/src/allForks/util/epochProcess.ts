@@ -28,6 +28,8 @@ import {statusProcessEpoch} from "../../phase0/epoch/processPendingAttestations"
 import {computeBaseRewardPerIncrement} from "../../altair/misc";
 
 /**
+ * Pre-computed disposable data to process epoch transitions faster at the cost of more memory.
+ *
  * The AttesterStatus (and FlatValidator under status.validator) objects and
  * EpochStakeSummary are tracked in the IEpochProcess and made available as additional context in the
  * epoch transition.
