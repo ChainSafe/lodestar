@@ -2,12 +2,14 @@ import {itBench, setBenchOpts} from "@dapplion/benchmark";
 import {phase0, ssz} from "@chainsafe/lodestar-types";
 import {SecretKey} from "@chainsafe/blst";
 import {
+  ACTIVE_PRESET,
   DOMAIN_DEPOSIT,
   MAX_ATTESTATIONS,
   MAX_ATTESTER_SLASHINGS,
   MAX_DEPOSITS,
   MAX_PROPOSER_SLASHINGS,
   MAX_VOLUNTARY_EXITS,
+  PresetName,
 } from "@chainsafe/lodestar-params";
 import {config} from "@chainsafe/lodestar-config/default";
 import {List} from "@chainsafe/ssz";
@@ -29,6 +31,7 @@ import {LeafNode} from "@chainsafe/persistent-merkle-tree";
 //
 // Performance cost of each block depends on the size of the state + the operation counts in the block
 //
+//
 // ### Verifying signatures
 // Signature verification is done in bulk using batch BLS verification. Performance is proportional to the amount of
 // sigs to verify and the cost to construct the signature sets from TreeBacked data.
@@ -49,9 +52,8 @@ import {LeafNode} from "@chainsafe/persistent-merkle-tree";
 //   2 * 2 * 128 + 128 * 128 = 16896 pubkey aggregations
 //
 // ### Running block processing
-// Block processing is relatively fast, most of the cost is reading and writing tree data.
-//
-//
+// Block processing is relatively fast, most of the cost is reading and writing tree data. The performance of
+// processBlock is properly tracked with this performance test.
 //
 //
 // ### Hashing the state
@@ -66,22 +68,11 @@ describe("Process block", () => {
     runs: 1024,
   });
 
-  const baseState = generatePerfTestCachedStatePhase0();
-  // const [oneValidatorExitBlock, maxValidatorExitBlock] = [1, MAX_VOLUNTARY_EXITS].map((numValidatorExits) => {
-  //   const signedBlock = regularBlock.clone();
-  //   const exitEpoch = baseState.epochCtx.currentShuffling.epoch;
-  //   const voluntaryExits: phase0.SignedVoluntaryExit[] = [];
-  //   for (let i = 0; i < numValidatorExits; i++) {
-  //     voluntaryExits.push({
-  //       message: {epoch: exitEpoch, validatorIndex: 40000 + i},
-  //       signature: Buffer.alloc(96),
-  //     });
-  //   }
-  //   signedBlock.message.body.voluntaryExits = (voluntaryExits as unknown) as List<phase0.SignedVoluntaryExit>;
-  //   return signedBlock;
-  // });
+  if (ACTIVE_PRESET !== PresetName.mainnet) {
+    throw Error(`ACTIVE_PRESET ${ACTIVE_PRESET} must be mainnet`);
+  }
 
-  // const block = regularBlock.clone();
+  const baseState = generatePerfTestCachedStatePhase0();
 
   const worstCaseBlockState = baseState.clone();
   const worstCaseBlock = getBlock(worstCaseBlockState, {
@@ -104,7 +95,7 @@ describe("Process block", () => {
   });
 
   itBench(
-    {id: `processBlock phase0 - worst case - ${perfStateId}`, beforeEach: () => worstCaseBlockState.clone()},
+    {id: `processBlock phase0 ${perfStateId} - maxed ops`, beforeEach: () => worstCaseBlockState.clone()},
     (state) => {
       allForks.stateTransition(state as allForks.CachedBeaconState<allForks.BeaconState>, worstCaseBlock, {
         verifyProposer: false,
@@ -115,7 +106,7 @@ describe("Process block", () => {
   );
 
   itBench(
-    {id: `processBlock phase0 - average - ${perfStateId}`, beforeEach: () => averageMainnetBlockState.clone()},
+    {id: `processBlock phase0 ${perfStateId} - average`, beforeEach: () => averageMainnetBlockState.clone()},
     (state) => {
       allForks.stateTransition(state as allForks.CachedBeaconState<allForks.BeaconState>, averageMainnetBlock, {
         verifyProposer: false,
@@ -124,46 +115,11 @@ describe("Process block", () => {
       });
     }
   );
-
-  // Add ops
-
-  // Test individual operations maxing them to the worst case
-  // itBench(
-  //   {id: `phase0 processAttestation - ${MAX_ATTESTATIONS} - ${perfStateId}`, beforeEach: () => originalState.clone()},
-  //   (state) => {
-  //     for (let i = 0; i < MAX_ATTESTATIONS; i++) {
-  //       processAttestation(state, attestation, {}, false);
-  //       allForks.stateTransition(state, signedBlock, {
-  //         verifyProposer: false,
-  //         verifySignatures: false,
-  //         verifyStateRoot: false,
-  //       });
-  //     }
-  //   }
-  // );
-
-  // const idPrefix = `Process block - ${perfStateId}`;
-
-  // const testCases = [
-  //   {signedBlock: regularBlock, id: `${idPrefix} - with 0 validator exit`},
-  //   {signedBlock: oneValidatorExitBlock, id: `${idPrefix} - with 1 validator exit`},
-  //   {signedBlock: maxValidatorExitBlock, id: `${idPrefix} - with ${MAX_VOLUNTARY_EXITS} validator exits`},
-  // ];
-
-  // for (const {id, signedBlock} of testCases) {
-  //   itBench({id, beforeEach: () => originalState.clone()}, (state) => {
-  //     allForks.stateTransition(state, signedBlock, {
-  //       verifyProposer: false,
-  //       verifySignatures: false,
-  //       verifyStateRoot: false,
-  //     });
-  //   });
-  // }
-
-  // Process a regular mainnet block
-  // Process a worst case block with all operations full
 });
 
+/**
+ * Generate a block that would pass stateTransition with a customizable count of operations
+ */
 function getBlock(
   preState: allForks.CachedBeaconState<phase0.BeaconState>,
   {
@@ -306,6 +262,10 @@ function getBlock(
   });
 }
 
+/**
+ * Generate valid deposits with valid signatures and valid merkle proofs.
+ * NOTE: Mutates `preState` to add the new `eth1Data.depositRoot`
+ */
 function getDeposits(preState: allForks.CachedBeaconState<phase0.BeaconState>, count: number): List<phase0.Deposit> {
   const depositRootTree = ssz.phase0.DepositDataRootList.defaultTreeBacked();
   const depositCount = preState.eth1Data.depositCount;
