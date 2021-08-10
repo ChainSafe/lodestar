@@ -24,7 +24,7 @@
     "test:spec-min": "lerna run test:spec-min --no-bail",
     "test:spec-fast": "lerna run test:spec-fast --no-bail",
     "test:spec-main": "lerna run test:spec-main --no-bail",
-    "benchmark": "node --max-old-space-size=4096 -r ts-node/register -r ./packages/lodestar/test/setup.ts ./node_modules/.bin/benchmark 'packages/*/test/perf/**/*.test.ts'",
+    "benchmark": "LODESTAR_PRESET=mainnet node --max-old-space-size=4096 -r ts-node/register -r ./packages/lodestar/test/setupBLS.ts ./node_modules/.bin/benchmark 'packages/*/test/perf/**/*.test.ts'",
     "benchmark:local": "yarn benchmark --local",
     "publish:release": "lerna publish from-package --yes --no-verify-access",
     "release": "lerna version --no-push --sign-git-commit",

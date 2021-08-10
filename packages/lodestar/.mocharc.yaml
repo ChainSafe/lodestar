@@ -1,6 +1,7 @@
 colors: true
 require:
   - ts-node/register
-  - ./test/setup.ts
+  - ./test/setupBLS.ts
+  - ./test/setupPreset.ts
 timeout: 5000
 exit: true
