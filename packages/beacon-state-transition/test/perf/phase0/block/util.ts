@@ -1,142 +1,26 @@
-import {itBench, setBenchOpts} from "@dapplion/benchmark";
-import {phase0, ssz} from "@chainsafe/lodestar-types";
+import {altair, phase0, ssz} from "@chainsafe/lodestar-types";
 import {SecretKey} from "@chainsafe/blst";
-import {
-  ACTIVE_PRESET,
-  DOMAIN_DEPOSIT,
-  MAX_ATTESTATIONS,
-  MAX_ATTESTER_SLASHINGS,
-  MAX_DEPOSITS,
-  MAX_PROPOSER_SLASHINGS,
-  MAX_VOLUNTARY_EXITS,
-  PresetName,
-} from "@chainsafe/lodestar-params";
+import {DOMAIN_DEPOSIT, SYNC_COMMITTEE_SIZE} from "@chainsafe/lodestar-params";
 import {config} from "@chainsafe/lodestar-config/default";
 import {List} from "@chainsafe/ssz";
 import {allForks, computeDomain, computeEpochAtSlot, computeSigningRoot, ZERO_HASH} from "../../../../src";
-import {generatePerfTestCachedStatePhase0, perfStateId} from "../../util";
 import {LeafNode} from "@chainsafe/persistent-merkle-tree";
 
-// As of Jun 12 2021
-// Process block
-// ================================================================
-// Process block with 0 validator exit                                    233.6434 ops/s      4.280027 ms/op   3491 runs    15.01 s
-// Process block with 1 validator exit                                    41.33581 ops/s      24.19210 ms/op    619 runs    15.00 s
-// Process block with 16 validator exits                                  42.34492 ops/s      23.61558 ms/op    635 runs    15.02 s
-
-// Processing a block consist of three steps
-// 1. Verifying signatures
-// 2. Running block processing (state transition function)
-// 3. Hashing the state
-//
-// Performance cost of each block depends on the size of the state + the operation counts in the block
-//
-//
-// ### Verifying signatures
-// Signature verification is done in bulk using batch BLS verification. Performance is proportional to the amount of
-// sigs to verify and the cost to construct the signature sets from TreeBacked data.
-//
-// - Proposer sig:           1 single
-// - RandaoReveal sig:       1 single
-// - ProposerSlashings sigs: ops x 2 single
-// - AttesterSlashings sigs: ops x 2 agg (90 bits on avg)
-// - Attestations sigs:      ops x 1 agg (90 bits on avg)
-// - VoluntaryExits sigs:    ops x 1 single
-// - Deposits sigs:          ops x 1 single
-//
-// A mainnet average block has:
-//   1 + 1 + 90 = 92 sigs
-//   90 * 90 = 8100 pubkey aggregations
-// A worst case block would have:
-//   1 + 1 + 16 * 2 + 2 * 2 + 128 + 16 + 16 = 198 sigs
-//   2 * 2 * 128 + 128 * 128 = 16896 pubkey aggregations
-//
-// ### Running block processing
-// Block processing is relatively fast, most of the cost is reading and writing tree data. The performance of
-// processBlock is properly tracked with this performance test.
-//
-//
-// ### Hashing the state
-// Hashing cost is dependant on how many nodes have been modified in the tree. After mutating the state, just count
-// how many nodes have no cached _root, then multiply by the cost of hashing.
-//
-
-describe("Process block", () => {
-  setBenchOpts({
-    maxMs: 60 * 1000,
-    minMs: 15 * 1000,
-    runs: 1024,
-  });
-
-  if (ACTIVE_PRESET !== PresetName.mainnet) {
-    throw Error(`ACTIVE_PRESET ${ACTIVE_PRESET} must be mainnet`);
-  }
-
-  const baseState = generatePerfTestCachedStatePhase0();
-
-  const worstCaseBlockState = baseState.clone();
-  const worstCaseBlock = getBlock(worstCaseBlockState, {
-    proposerSlashingLen: MAX_PROPOSER_SLASHINGS,
-    attesterSlashingLen: MAX_ATTESTER_SLASHINGS,
-    attestationLen: MAX_ATTESTATIONS,
-    depositsLen: MAX_DEPOSITS,
-    voluntaryExitLen: MAX_VOLUNTARY_EXITS,
-    bitsLen: 128,
-  });
-
-  const averageMainnetBlockState = baseState.clone();
-  const averageMainnetBlock = getBlock(averageMainnetBlockState, {
-    proposerSlashingLen: 0,
-    attesterSlashingLen: 0,
-    attestationLen: 90,
-    depositsLen: 0,
-    voluntaryExitLen: 0,
-    bitsLen: 90,
-  });
-
-  itBench(
-    {id: `processBlock phase0 ${perfStateId} - maxed ops`, beforeEach: () => worstCaseBlockState.clone()},
-    (state) => {
-      allForks.stateTransition(state as allForks.CachedBeaconState<allForks.BeaconState>, worstCaseBlock, {
-        verifyProposer: false,
-        verifySignatures: false,
-        verifyStateRoot: false,
-      });
-    }
-  );
-
-  itBench(
-    {id: `processBlock phase0 ${perfStateId} - average`, beforeEach: () => averageMainnetBlockState.clone()},
-    (state) => {
-      allForks.stateTransition(state as allForks.CachedBeaconState<allForks.BeaconState>, averageMainnetBlock, {
-        verifyProposer: false,
-        verifySignatures: false,
-        verifyStateRoot: false,
-      });
-    }
-  );
-});
+type BlockOpts = {
+  proposerSlashingLen: number;
+  attesterSlashingLen: number;
+  attestationLen: number;
+  depositsLen: number;
+  voluntaryExitLen: number;
+  bitsLen: number;
+};
 
 /**
  * Generate a block that would pass stateTransition with a customizable count of operations
  */
-function getBlock(
-  preState: allForks.CachedBeaconState<phase0.BeaconState>,
-  {
-    proposerSlashingLen,
-    attesterSlashingLen,
-    attestationLen,
-    depositsLen,
-    voluntaryExitLen,
-    bitsLen,
-  }: {
-    proposerSlashingLen: number;
-    attesterSlashingLen: number;
-    attestationLen: number;
-    depositsLen: number;
-    voluntaryExitLen: number;
-    bitsLen: number;
-  }
+export function getBlockPhase0(
+  preState: allForks.CachedBeaconState<allForks.BeaconState>,
+  {proposerSlashingLen, attesterSlashingLen, attestationLen, depositsLen, voluntaryExitLen, bitsLen}: BlockOpts
 ): phase0.SignedBeaconBlock {
   const emptySig = Buffer.alloc(96);
   const rootA = Buffer.alloc(32, 0xda);
@@ -262,11 +146,33 @@ function getBlock(
   });
 }
 
+export function getBlockAltair(
+  preState: allForks.CachedBeaconState<allForks.BeaconState>,
+  opts: BlockOpts & {syncCommitteeBitsLen: number}
+): altair.SignedBeaconBlock {
+  const emptySig = Buffer.alloc(96);
+  const phase0Block = getBlockPhase0(preState as allForks.CachedBeaconState<allForks.BeaconState>, opts);
+
+  return {
+    message: {
+      ...phase0Block.message,
+      body: {
+        ...phase0Block.message.body,
+        syncAggregate: {
+          syncCommitteeBits: getAggregationBits(SYNC_COMMITTEE_SIZE, opts.syncCommitteeBitsLen),
+          syncCommitteeSignature: emptySig,
+        },
+      },
+    },
+    signature: emptySig,
+  };
+}
+
 /**
  * Generate valid deposits with valid signatures and valid merkle proofs.
  * NOTE: Mutates `preState` to add the new `eth1Data.depositRoot`
  */
-function getDeposits(preState: allForks.CachedBeaconState<phase0.BeaconState>, count: number): List<phase0.Deposit> {
+function getDeposits(preState: allForks.CachedBeaconState<allForks.BeaconState>, count: number): List<phase0.Deposit> {
   const depositRootTree = ssz.phase0.DepositDataRootList.defaultTreeBacked();
   const depositCount = preState.eth1Data.depositCount;
   const withdrawalCredentials = Buffer.alloc(32, 0xee);
