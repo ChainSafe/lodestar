@@ -62,8 +62,8 @@ import {LeafNode} from "@chainsafe/persistent-merkle-tree";
 describe("Process block", () => {
   setBenchOpts({
     maxMs: 60 * 1000,
-    minMs: 0 * 1000,
-    runs: 1,
+    minMs: 15 * 1000,
+    runs: 1024,
   });
 
   const baseState = generatePerfTestCachedStatePhase0();
