@@ -22,11 +22,9 @@
   },
   "scripts": {
     "clean": "rm -rf lib && rm -f *.tsbuildinfo",
-    "build": "concurrently \"yarn build:lib\" \"yarn build:types\"",
+    "build": "tsc -p tsconfig.build.json",
     "build:release": "yarn clean && yarn build && yarn build:typedocs",
-    "build:types": "tsc -p tsconfig.build.json",
     "build:types:watch": "yarn run build:types --watch",
-    "build:lib": "babel src -x .ts -d lib --source-maps",
     "build:lib:watch": "yarn run build:lib --watch",
     "build:typedocs": "typedoc --out typedocs src",
     "check-types": "tsc",
