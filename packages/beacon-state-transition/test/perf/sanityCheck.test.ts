@@ -1,9 +1,14 @@
 import {expect} from "chai";
+import {ACTIVE_PRESET, PresetName} from "@chainsafe/lodestar-params";
 import {beforeProcessEpoch} from "../../src/allForks";
 import {generatePerfTestCachedStateAltair, generatePerfTestCachedStatePhase0, perfStateId} from "./util";
 
 describe("Perf test sanity check", function () {
   this.timeout(60 * 1000);
+
+  if (ACTIVE_PRESET !== PresetName.mainnet) {
+    throw Error(`ACTIVE_PRESET '${ACTIVE_PRESET}' must be mainnet`);
+  }
 
   const numValidators = 250000;
   const targetStakeYWei = 7;
