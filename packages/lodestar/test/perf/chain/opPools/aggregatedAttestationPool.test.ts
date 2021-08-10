@@ -24,7 +24,9 @@ describe("getAttestationsForBlock", () => {
 
   let originalState: allForks.CachedBeaconState<allForks.BeaconState>;
 
-  before(() => {
+  before(function () {
+    this.timeout(2 * 60 * 1000); // Generating the states for the first time is very slow
+
     originalState = (generatePerfTestCachedStateAltair({
       goBackOneSlot: true,
     }) as unknown) as allForks.CachedBeaconState<allForks.BeaconState>;
