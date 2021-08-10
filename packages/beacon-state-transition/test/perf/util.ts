@@ -20,7 +20,7 @@ import {
   TIMELY_SOURCE_FLAG_INDEX,
   TIMELY_TARGET_FLAG_INDEX,
 } from "@chainsafe/lodestar-params";
-import {getNextSyncCommittee} from "../../src/altair/epoch/sync_committee";
+import {getNextSyncCommittee} from "../../src/altair/util/syncCommittee";
 
 let phase0State: TreeBacked<phase0.BeaconState> | null = null;
 let phase0CachedState23637: allForks.CachedBeaconState<phase0.BeaconState> | null = null;

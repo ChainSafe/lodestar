@@ -25,7 +25,7 @@ import {
 import {IEpochStakeSummary} from "./epochStakeSummary";
 import {CachedBeaconState} from "./cachedBeaconState";
 import {statusProcessEpoch} from "../../phase0/epoch/processPendingAttestations";
-import {computeBaseRewardPerIncrement} from "../../altair/misc";
+import {computeBaseRewardPerIncrement} from "../../altair/util/misc";
 
 /**
  * Pre-computed disposable data to process epoch transitions faster at the cost of more memory.
@@ -42,12 +42,58 @@ export interface IEpochProcess {
   baseRewardPerIncrement: Gwei;
   prevEpochUnslashedStake: IEpochStakeSummary;
   currEpochUnslashedTargetStake: Gwei;
+  /**
+   * Indices which will receive the slashing penalty
+   * ```
+   * v.withdrawableEpoch === currentEpoch + EPOCHS_PER_SLASHINGS_VECTOR / 2
+   * ```
+   * There's a practical limitation in number of possible validators slashed by epoch, which would share the same
+   * withdrawableEpoch. Note that after some count exitChurn would advance the withdrawableEpoch.
+   * ```
+   * maxSlashedPerSlot = SLOTS_PER_EPOCH * (MAX_PROPOSER_SLASHINGS + MAX_ATTESTER_SLASHINGS * bits)
+   * ```
+   * For current mainnet conditions (bits = 128) that's `maxSlashedPerSlot = 8704`.
+   * For less than 327680 validators, churnLimit = 4 (minimum possible)
+   * For exitChurn to overtake the slashing delay, there should be
+   * ```
+   * churnLimit * (EPOCHS_PER_SLASHINGS_VECTOR / 2 - 1 - MAX_SEED_LOOKAHEAD)
+   * ```
+   * For mainnet conditions that's 16364 validators. So the limiting factor is the max operations on the block. Note
+   * that on average indicesToSlash must contain churnLimit validators (4), but it can spike to a max of 8704 in a
+   * single epoch if there haven't been exits in a while and there's a massive attester slashing at once of validators
+   * that happen to be in the same committee, which is very unlikely.
+   */
   indicesToSlash: ValidatorIndex[];
+  /**
+   * Indices of validators that just joinned and will be eligible for the active queue.
+   * ```
+   * v.activationEligibilityEpoch === FAR_FUTURE_EPOCH && v.effectiveBalance === MAX_EFFECTIVE_BALANCE
+   * ```
+   * All validators in indicesEligibleForActivationQueue get activationEligibilityEpoch set. So it can only include
+   * validators that have just joinned the registry through a valid full deposit(s).
+   * ```
+   * max indicesEligibleForActivationQueue = SLOTS_PER_EPOCH * MAX_DEPOSITS
+   * ```
+   * For mainnet spec = 512
+   */
   indicesEligibleForActivationQueue: ValidatorIndex[];
-  // ignores churn, apply churn-limit manually.
-  // maybe, because finality affects it still
+  /**
+   * Indices of validators that may become active once churn and finaly allow.
+   * ```
+   * v.activationEpoch === FAR_FUTURE_EPOCH && v.activationEligibilityEpoch <= currentEpoch
+   * ```
+   * Many validators could be on indicesEligibleForActivation, but only up to churnLimit will be activated.
+   * For less than 327680 validators, churnLimit = 4 (minimum possible), so max processed is 4.
+   */
   indicesEligibleForActivation: ValidatorIndex[];
-
+  /**
+   * Indices of validators that will be ejected due to low balance.
+   * ```
+   * status.active && v.exitEpoch === FAR_FUTURE_EPOCH && v.effectiveBalance <= config.EJECTION_BALANCE
+   * ```
+   * Potentially the entire validator set could be added to indicesToEject, and all validators in the array will have
+   * their validator object mutated. Exit queue churn delays exit, but the object is mutated immediately.
+   */
   indicesToEject: ValidatorIndex[];
 
   statuses: IAttesterStatus[];
@@ -118,6 +164,7 @@ export function beforeProcessEpoch<T extends allForks.BeaconState>(state: Cached
       out.indicesEligibleForActivationQueue.push(i);
     }
 
+    // Note: ignores churn, apply churn limit latter, because finality may change
     if (v.activationEpoch === FAR_FUTURE_EPOCH && v.activationEligibilityEpoch <= currentEpoch) {
       out.indicesEligibleForActivation.push(i);
     }

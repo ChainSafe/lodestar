@@ -40,7 +40,7 @@ import {
 } from "../../util";
 import {computeEpochShuffling, IEpochShuffling} from "./epochShuffling";
 import {MutableVector} from "@chainsafe/persistent-ts";
-import {computeBaseRewardPerIncrement} from "../../altair/misc";
+import {computeBaseRewardPerIncrement} from "../../altair/util/misc";
 import {CachedBeaconState} from "./cachedBeaconState";
 import {IEpochProcess} from "./epochProcess";
 

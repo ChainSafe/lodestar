@@ -3,6 +3,11 @@ import {allForks, ssz} from "@chainsafe/lodestar-types";
 import {intDiv} from "@chainsafe/lodestar-utils";
 import {IEpochProcess, CachedBeaconState} from "../util";
 
+/**
+ * Persist blockRoots and stateRoots to historicalRoots.
+ *
+ * PERF: Very low (constant) cost. Most of the HistoricalBatch should already be hashed.
+ */
 export function processHistoricalRootsUpdate(
   state: CachedBeaconState<allForks.BeaconState>,
   epochProcess: IEpochProcess

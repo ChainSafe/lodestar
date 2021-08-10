@@ -9,6 +9,13 @@ import {allForks} from "@chainsafe/lodestar-types";
 import {bigIntMin} from "@chainsafe/lodestar-utils";
 import {IEpochProcess, CachedBeaconState} from "../util";
 
+/**
+ * Update effective balances if validator.balance has changed enough
+ *
+ * PERF: Cost 'proportional' to $VALIDATOR_COUNT, to iterate over all balances. Then cost is proportional to the amount
+ * of validators whose effectiveBalance changed. Worst case is a massive network leak or a big slashing event which
+ * causes a large amount of the network to decrease their balance simultaneously.
+ */
 export function processEffectiveBalanceUpdates(
   state: CachedBeaconState<allForks.BeaconState>,
   epochProcess: IEpochProcess

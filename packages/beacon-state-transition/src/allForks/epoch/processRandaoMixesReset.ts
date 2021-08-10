@@ -3,6 +3,11 @@ import {allForks} from "@chainsafe/lodestar-types";
 import {getRandaoMix} from "../../util";
 import {IEpochProcess, CachedBeaconState} from "../util";
 
+/**
+ * Write next randaoMix
+ *
+ * PERF: Almost no (constant) cost
+ */
 export function processRandaoMixesReset(
   state: CachedBeaconState<allForks.BeaconState>,
   epochProcess: IEpochProcess

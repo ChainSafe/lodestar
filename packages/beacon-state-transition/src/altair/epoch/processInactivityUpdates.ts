@@ -9,6 +9,13 @@ import {
 } from "../../allForks/util";
 import {isInInactivityLeak} from "../../util";
 
+/**
+ * Mutates `inactivityScores` from pre-calculated validator statuses.
+ *
+ * PERF: Cost = iterate over an array of size $VALIDATOR_COUNT + 'proportional' to how many validtors are inactive or
+ * have been inactive in the past, i.e. that require an update to their inactivityScore. Worst case = all validators
+ * need to update their non-zero `inactivityScore`.
+ */
 export function processInactivityUpdates(
   state: CachedBeaconState<altair.BeaconState>,
   epochProcess: IEpochProcess
