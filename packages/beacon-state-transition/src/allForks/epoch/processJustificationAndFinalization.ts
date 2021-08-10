@@ -4,6 +4,11 @@ import {allForks} from "@chainsafe/lodestar-types";
 import {getBlockRoot} from "../../util";
 import {CachedBeaconState, IEpochProcess} from "../util";
 
+/**
+ * Update justified and finalized checkpoints depending on network participation.
+ *
+ * PERF: Very low (constant) cost. Persist small objects to the tree.
+ */
 export function processJustificationAndFinalization(
   state: CachedBeaconState<allForks.BeaconState>,
   epochProcess: IEpochProcess

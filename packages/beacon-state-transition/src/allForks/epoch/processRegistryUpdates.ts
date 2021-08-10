@@ -3,6 +3,15 @@ import {computeActivationExitEpoch} from "../../util";
 import {initiateValidatorExit} from "../block";
 import {IEpochProcess, CachedBeaconState} from "../util";
 
+/**
+ * Update validator registry for validators that activate + exit
+ *
+ * PERF: Cost 'proportional' to only validators that active + exit. For mainnet conditions:
+ * - indicesEligibleForActivationQueue: Maxing deposits triggers 512 validator mutations
+ * - indicesEligibleForActivation: 4 per epoch
+ * - indicesToEject: Potentially the entire validator set. On a massive offline event this could trigger many mutations
+ *   per epoch. Note that once mutated that validator can't be added to indicesToEject.
+ */
 export function processRegistryUpdates(
   state: CachedBeaconState<allForks.BeaconState>,
   epochProcess: IEpochProcess

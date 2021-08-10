@@ -13,7 +13,7 @@ import {bigIntMin} from "@chainsafe/lodestar-utils";
 import {computeEpochAtSlot} from "./epoch";
 import {getActiveValidatorIndices} from "./validator";
 import {getTemporaryBlockHeader} from "./blockRoot";
-import {getNextSyncCommittee} from "../altair/epoch/sync_committee";
+import {getNextSyncCommittee} from "../altair/util/syncCommittee";
 import {CachedBeaconState, createCachedBeaconState, processDeposit} from "../allForks";
 
 // TODO: Refactor to work with non-phase0 genesis state

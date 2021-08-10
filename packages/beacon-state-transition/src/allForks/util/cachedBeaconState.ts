@@ -31,7 +31,7 @@ import {
   emptyIndexedSyncCommittee,
   IndexedSyncCommittee,
 } from "./indexedSyncCommittee";
-import {getNextSyncCommittee} from "../../altair/epoch/sync_committee";
+import {getNextSyncCommittee} from "../../altair/util/syncCommittee";
 import {ssz} from "@chainsafe/lodestar-types";
 import {CachedInactivityScoreList, CachedInactivityScoreListProxyHandler} from "./cachedInactivityScoreList";
 import {newFilledArray} from "../../util";

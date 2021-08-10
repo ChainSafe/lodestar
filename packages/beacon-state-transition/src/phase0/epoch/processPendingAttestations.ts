@@ -3,6 +3,11 @@ import {List, readonlyValues} from "@chainsafe/ssz";
 import {CachedBeaconState, IAttesterStatus} from "../../allForks/util";
 import {computeStartSlotAtEpoch, getBlockRootAtSlot, zipIndexesCommitteeBits} from "../../util";
 
+/**
+ * Mutates `statuses` from all pending attestations.
+ *
+ * PERF: Cost 'proportional' to attestation count + how many bits per attestation + how many flags the attestation triggers
+ */
 export function statusProcessEpoch<T extends allForks.BeaconState>(
   state: CachedBeaconState<T>,
   statuses: IAttesterStatus[],
