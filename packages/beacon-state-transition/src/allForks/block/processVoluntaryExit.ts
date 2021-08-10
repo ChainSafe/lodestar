@@ -6,7 +6,7 @@ import {initiateValidatorExit} from "../../allForks/block";
 import {verifyVoluntaryExitSignature} from "../../allForks/signatureSets";
 import {BlockProcess} from "../../util/blockProcess";
 
-export function processVoluntaryExit(
+export function processVoluntaryExitAllForks(
   state: CachedBeaconState<allForks.BeaconState>,
   signedVoluntaryExit: phase0.SignedVoluntaryExit,
   blockProcess: BlockProcess,
