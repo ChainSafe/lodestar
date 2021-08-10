@@ -8,6 +8,8 @@ type SyncComitteeValidatorIndexMap = Map<phase0.ValidatorIndex, number[]>;
 
 /**
  * A sync committee with additional index data.
+ *
+ * TODO: Rename to CachedSyncCommittee for consistency with other structures
  */
 export class IndexedSyncCommittee implements altair.SyncCommittee {
   treeBacked: TreeBacked<altair.SyncCommittee>;
@@ -15,12 +17,12 @@ export class IndexedSyncCommittee implements altair.SyncCommittee {
   aggregatePubkey: phase0.BLSPubkey;
   /**
    * Update freq: every ~ 27h.
-   * Memory cost: 1024 Number integers.
+   * Memory cost: 512 Number integers.
    */
   validatorIndices: phase0.ValidatorIndex[];
   /**
    * Update freq: every ~ 27h.
-   * Memory cost: Map of Number -> Number with 1024 entries.
+   * Memory cost: Map of Number -> Number with 512 entries.
    */
   validatorIndexMap: SyncComitteeValidatorIndexMap;
 
