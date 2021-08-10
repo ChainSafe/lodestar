@@ -1,4 +1,5 @@
 import {itBench, setBenchOpts} from "@dapplion/benchmark";
+import {expect} from "chai";
 import {
   allForks,
   computeEpochAtSlot,
@@ -8,7 +9,6 @@ import {
 import {AggregatedAttestationPool} from "../../../../src/chain/opPools/aggregatedAttestationPool";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {List} from "@chainsafe/ssz";
-import {profilerLogger} from "@chainsafe/lodestar-beacon-state-transition/test/utils/logger";
 import {generatePerfTestCachedStateAltair} from "@chainsafe/lodestar-beacon-state-transition/test/perf/util";
 
 // Jul-21 09:20:46.653 []                 info: Number of participations in state previousEpoch=250000, currentEpoch=250000
@@ -22,57 +22,27 @@ describe("getAttestationsForBlock", () => {
     runs: 64,
   });
 
-  const originalState = (generatePerfTestCachedStateAltair({
-    goBackOneSlot: true,
-  }) as unknown) as allForks.CachedBeaconState<allForks.BeaconState>;
-  const stateSlot = originalState.slot;
-  const logger = profilerLogger();
-  const numPreviousEpochParticipation = originalState.previousEpochParticipation.persistent
-    .toArray()
-    .filter((part) => part && part.timelySource).length;
-  const numCurrentEpochParticipation = originalState.currentEpochParticipation.persistent
-    .toArray()
-    .filter((part) => part && part.timelySource).length;
-  logger.info("Number of participations in state", {
-    previousEpoch: numPreviousEpochParticipation,
-    currentEpoch: numCurrentEpochParticipation,
+  let originalState: allForks.CachedBeaconState<allForks.BeaconState>;
+
+  before(() => {
+    originalState = (generatePerfTestCachedStateAltair({
+      goBackOneSlot: true,
+    }) as unknown) as allForks.CachedBeaconState<allForks.BeaconState>;
+    const numPreviousEpochParticipation = originalState.previousEpochParticipation.persistent
+      .toArray()
+      .filter((part) => part && part.timelySource).length;
+    const numCurrentEpochParticipation = originalState.currentEpochParticipation.persistent
+      .toArray()
+      .filter((part) => part && part.timelySource).length;
+
+    expect(numPreviousEpochParticipation).to.equal(250000, "Wrong numPreviousEpochParticipation");
+    expect(numCurrentEpochParticipation).to.equal(250000, "Wrong numCurrentEpochParticipation");
   });
+
   itBench(
     {
       id: "getAttestationsForBlock",
-      beforeEach: () => {
-        const pool = new AggregatedAttestationPool();
-        for (let epochSlot = 0; epochSlot < SLOTS_PER_EPOCH; epochSlot++) {
-          const slot = stateSlot - 1 - epochSlot;
-          const epoch = computeEpochAtSlot(slot);
-          const committeeCount = originalState.getCommitteeCountPerSlot(epoch);
-          const sourceCheckpoint = {
-            epoch: originalState.currentJustifiedCheckpoint.epoch,
-            root: originalState.currentJustifiedCheckpoint.root.valueOf() as Uint8Array,
-          };
-          for (let committeeIndex = 0; committeeIndex < committeeCount; committeeIndex++) {
-            const attestation = {
-              aggregationBits: Array.from({length: 64}, () => false) as List<boolean>,
-              data: {
-                slot: slot,
-                index: committeeIndex,
-                beaconBlockRoot: getBlockRootAtSlot(originalState, slot),
-                source: sourceCheckpoint,
-                target: {
-                  epoch,
-                  root: getBlockRootAtSlot(originalState, computeStartSlotAtEpoch(epoch)),
-                },
-              },
-              signature: Buffer.alloc(96),
-            };
-
-            const committee = originalState.getBeaconCommittee(slot, committeeIndex);
-            // all attestation has full participation so getAttestationsForBlock() has to do a lot of filter
-            pool.add(attestation, committee, committee);
-          }
-        }
-        return pool;
-      },
+      beforeEach: () => getAggregatedAttestationPool(originalState),
     },
     (pool) => {
       // logger.info("Number of attestations in pool", pool.getAll().length);
@@ -80,3 +50,39 @@ describe("getAttestationsForBlock", () => {
     }
   );
 });
+
+function getAggregatedAttestationPool(
+  state: allForks.CachedBeaconState<allForks.BeaconState>
+): AggregatedAttestationPool {
+  const pool = new AggregatedAttestationPool();
+  for (let epochSlot = 0; epochSlot < SLOTS_PER_EPOCH; epochSlot++) {
+    const slot = state.slot - 1 - epochSlot;
+    const epoch = computeEpochAtSlot(slot);
+    const committeeCount = state.getCommitteeCountPerSlot(epoch);
+    const sourceCheckpoint = {
+      epoch: state.currentJustifiedCheckpoint.epoch,
+      root: state.currentJustifiedCheckpoint.root.valueOf() as Uint8Array,
+    };
+    for (let committeeIndex = 0; committeeIndex < committeeCount; committeeIndex++) {
+      const attestation = {
+        aggregationBits: Array.from({length: 64}, () => false) as List<boolean>,
+        data: {
+          slot: slot,
+          index: committeeIndex,
+          beaconBlockRoot: getBlockRootAtSlot(state, slot),
+          source: sourceCheckpoint,
+          target: {
+            epoch,
+            root: getBlockRootAtSlot(state, computeStartSlotAtEpoch(epoch)),
+          },
+        },
+        signature: Buffer.alloc(96),
+      };
+
+      const committee = state.getBeaconCommittee(slot, committeeIndex);
+      // all attestation has full participation so getAttestationsForBlock() has to do a lot of filter
+      pool.add(attestation, committee, committee);
+    }
+  }
+  return pool;
+}
