@@ -8,7 +8,7 @@ import {
   MAX_EFFECTIVE_BALANCE,
 } from "@chainsafe/lodestar-params";
 
-import {computeActivationExitEpoch, getChurnLimit, isActiveValidator} from "../../util";
+import {isActiveValidator} from "../../util";
 import {
   IAttesterStatus,
   createIAttesterStatus,
@@ -47,9 +47,6 @@ export interface IEpochProcess {
   indicesEligibleForActivation: ValidatorIndex[];
 
   indicesToEject: ValidatorIndex[];
-  exitQueueEnd: Epoch;
-  exitQueueEndChurn: number;
-  churnLimit: number;
 
   statuses: IAttesterStatus[];
   validators: phase0.Validator[];
@@ -74,9 +71,6 @@ export function createIEpochProcess(): IEpochProcess {
     indicesEligibleForActivationQueue: [],
     indicesEligibleForActivation: [],
     indicesToEject: [],
-    exitQueueEnd: 0,
-    exitQueueEndChurn: 0,
-    churnLimit: 0,
     statuses: [],
     validators: [],
     nextEpochActiveValidatorIndices: [],
@@ -95,10 +89,6 @@ export function beforeProcessEpoch<T extends allForks.BeaconState>(state: Cached
   out.prevEpoch = prevEpoch;
 
   const slashingsEpoch = currentEpoch + intDiv(EPOCHS_PER_SLASHINGS_VECTOR, 2);
-  let exitQueueEnd = computeActivationExitEpoch(currentEpoch);
-  let exitQueueEndChurn = 0;
-
-  let activeCount = 0;
 
   out.validators = validators.persistent.toArray();
   out.validators.forEach((v, i) => {
@@ -120,16 +110,6 @@ export function beforeProcessEpoch<T extends allForks.BeaconState>(state: Cached
     if (active) {
       status.active = true;
       out.totalActiveStake += v.effectiveBalance;
-      activeCount += 1;
-    }
-
-    if (v.exitEpoch !== FAR_FUTURE_EPOCH) {
-      if (v.exitEpoch > exitQueueEnd) {
-        exitQueueEnd = v.exitEpoch;
-        exitQueueEndChurn = 1;
-      } else if (v.exitEpoch === exitQueueEnd) {
-        exitQueueEndChurn += 1;
-      }
     }
 
     if (v.activationEligibilityEpoch === FAR_FUTURE_EPOCH && v.effectiveBalance === MAX_EFFECTIVE_BALANCE) {
@@ -161,16 +141,6 @@ export function beforeProcessEpoch<T extends allForks.BeaconState>(state: Cached
   out.indicesEligibleForActivation.sort(
     (a, b) => out.validators[a].activationEligibilityEpoch - out.validators[b].activationEligibilityEpoch || a - b
   );
-
-  const churnLimit = getChurnLimit(config, activeCount);
-  if (exitQueueEndChurn >= churnLimit) {
-    exitQueueEnd += 1;
-    exitQueueEndChurn = 0;
-  }
-
-  out.exitQueueEndChurn = exitQueueEndChurn;
-  out.exitQueueEnd = exitQueueEnd;
-  out.churnLimit = churnLimit;
 
   if (forkName === ForkName.phase0) {
     statusProcessEpoch(
