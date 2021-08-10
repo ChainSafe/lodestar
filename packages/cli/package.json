@@ -20,12 +20,10 @@
   },
   "scripts": {
     "clean": "rm -rf lib && rm -f *.tsbuildinfo",
-    "build": "concurrently \"yarn build:lib\" \"yarn build:types\" && yarn write-git-data",
+    "build": "tsc -p tsconfig.build.json && yarn write-git-data",
     "build:release": "yarn clean && yarn run build && yarn run build:typedocs",
-    "build:lib": "babel src -x .ts -d lib --source-maps",
     "build:lib:watch": "yarn run build:lib --watch",
     "build:typedocs": "typedoc --exclude src/index.ts --out typedocs src",
-    "build:types": "tsc -p tsconfig.build.json",
     "build:types:watch": "yarn run build:types --watch",
     "build:refdocs": "ts-node docsgen docs/cli.md",
     "write-git-data": "node lib/util/gitData/writeGitData.js",
