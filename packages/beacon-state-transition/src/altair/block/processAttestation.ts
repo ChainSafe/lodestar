@@ -1,9 +1,8 @@
 import {allForks, altair, phase0, ssz} from "@chainsafe/lodestar-types";
 import {intSqrt} from "@chainsafe/lodestar-utils";
 
-import {getBlockRoot, getBlockRootAtSlot, increaseBalance} from "../../util";
+import {getBlockRoot, getBlockRootAtSlot, increaseBalance, verifySignatureSet} from "../../util";
 import {CachedBeaconState} from "../../allForks/util";
-import {isValidIndexedAttestation} from "../../allForks/block";
 import {IParticipationStatus} from "../../allForks/util/cachedEpochParticipation";
 import {
   EFFECTIVE_BALANCE_INCREMENT,
@@ -17,69 +16,80 @@ import {
 } from "@chainsafe/lodestar-params";
 import {checkpointToStr, validateAttestation} from "../../phase0/block/processAttestation";
 import {BlockProcess} from "../../util/blockProcess";
+import {getAttestationWithIndicesSignatureSet} from "../../allForks";
 
 const PROPOSER_REWARD_DOMINATOR = ((WEIGHT_DENOMINATOR - PROPOSER_WEIGHT) * WEIGHT_DENOMINATOR) / PROPOSER_WEIGHT;
 
-export function processAttestation(
+export function processAttestations(
   state: CachedBeaconState<altair.BeaconState>,
-  attestation: phase0.Attestation,
+  attestations: phase0.Attestation[],
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   blockProcess: BlockProcess,
   verifySignature = true
 ): void {
   const {epochCtx} = state;
-  const data = attestation.data;
-
-  validateAttestation(state as CachedBeaconState<allForks.BeaconState>, attestation);
-
-  let epochParticipation;
-  if (data.target.epoch === epochCtx.currentShuffling.epoch) {
-    epochParticipation = state.currentEpochParticipation;
-  } else {
-    epochParticipation = state.previousEpochParticipation;
-  }
-
-  // this check is done last because its the most expensive (if signature verification is toggled on)
-  if (
-    !isValidIndexedAttestation(
-      state as CachedBeaconState<allForks.BeaconState>,
-      epochCtx.getIndexedAttestation(attestation),
-      verifySignature
-    )
-  ) {
-    throw new Error("Attestation is not valid");
-  }
-  const {timelySource, timelyTarget, timelyHead} = getAttestationParticipationStatus(
-    state,
-    data,
-    state.slot - data.slot
-  );
-
-  // Retrieve the validator indices from the attestation participation bitfield
-  const attestingIndices = epochCtx.getAttestingIndices(data, attestation.aggregationBits);
-
-  // For each participant, update their participation
-  // In epoch processing, this participation info is used to calculate balance updates
+  const stateSlot = state.slot;
   let totalBalancesWithWeight = BigInt(0);
-  for (const index of attestingIndices) {
-    const status = epochParticipation.getStatus(index) as IParticipationStatus;
-    const newStatus = {
-      timelySource: status.timelySource || timelySource,
-      timelyTarget: status.timelyTarget || timelyTarget,
-      timelyHead: status.timelyHead || timelyHead,
-    };
-    epochParticipation.setStatus(index, newStatus);
-    /**
-     * Spec:
-     * baseReward = state.validators[index].effectiveBalance / EFFECTIVE_BALANCE_INCREMENT * baseRewardPerIncrement;
-     * proposerRewardNumerator += baseReward * totalWeight
-     */
-    const totalWeight =
-      BigInt(!status.timelySource && timelySource) * TIMELY_SOURCE_WEIGHT +
-      BigInt(!status.timelyTarget && timelyTarget) * TIMELY_TARGET_WEIGHT +
-      BigInt(!status.timelyHead && timelyHead) * TIMELY_HEAD_WEIGHT;
-    if (totalWeight > 0) {
-      totalBalancesWithWeight += state.validators[index].effectiveBalance * totalWeight;
+
+  // Process all attestations first and then increase the balance of the proposer once
+  for (const attestation of attestations) {
+    const data = attestation.data;
+
+    validateAttestation(state as CachedBeaconState<allForks.BeaconState>, attestation);
+
+    // Retrieve the validator indices from the attestation participation bitfield
+    const attestingIndices = epochCtx.getAttestingIndices(data, attestation.aggregationBits);
+
+    // this check is done last because its the most expensive (if signature verification is toggled on)
+    // TODO: Why should we verify an indexed attestation that we just created? If it's just for the signature
+    // we can verify only that and nothing else.
+    if (verifySignature) {
+      const sigSet = getAttestationWithIndicesSignatureSet(
+        state as CachedBeaconState<allForks.BeaconState>,
+        attestation,
+        attestingIndices
+      );
+      if (!verifySignatureSet(sigSet)) {
+        throw new Error("Attestation signature is not valid");
+      }
+    }
+
+    const epochParticipation =
+      data.target.epoch === epochCtx.currentShuffling.epoch
+        ? state.currentEpochParticipation
+        : state.previousEpochParticipation;
+
+    const {timelySource, timelyTarget, timelyHead} = getAttestationParticipationStatus(
+      state,
+      data,
+      stateSlot - data.slot
+    );
+
+    // For each participant, update their participation
+    // In epoch processing, this participation info is used to calculate balance updates
+
+    for (const index of attestingIndices) {
+      const status = epochParticipation.getStatus(index) as IParticipationStatus;
+      const newStatus = {
+        timelySource: status.timelySource || timelySource,
+        timelyTarget: status.timelyTarget || timelyTarget,
+        timelyHead: status.timelyHead || timelyHead,
+      };
+      epochParticipation.setStatus(index, newStatus);
+      /**
+       * Spec:
+       * baseReward = state.validators[index].effectiveBalance / EFFECTIVE_BALANCE_INCREMENT * baseRewardPerIncrement;
+       * proposerRewardNumerator += baseReward * totalWeight
+       */
+      const totalWeight =
+        BigInt(!status.timelySource && timelySource) * TIMELY_SOURCE_WEIGHT +
+        BigInt(!status.timelyTarget && timelyTarget) * TIMELY_TARGET_WEIGHT +
+        BigInt(!status.timelyHead && timelyHead) * TIMELY_HEAD_WEIGHT;
+      if (totalWeight > 0) {
+        // TODO: Cache effectiveBalance in a separate array
+        // TODO: Consider using number instead of bigint for faster math
+        totalBalancesWithWeight += state.validators[index].effectiveBalance * totalWeight;
+      }
     }
   }
 
