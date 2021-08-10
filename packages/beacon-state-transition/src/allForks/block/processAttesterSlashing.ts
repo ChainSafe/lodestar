@@ -22,7 +22,7 @@ export function processAttesterSlashing(
 ): void {
   assertValidAttesterSlashing(state as CachedBeaconState<allForks.BeaconState>, attesterSlashing, verifySignatures);
 
-  let slashedAny = false;
+  // TODO: Is there a more performant intersection algorythm? This should be a utility function: intersect()
   const attSet1 = new Set(attesterSlashing.attestation1.attestingIndices);
   const attSet2 = new Set(attesterSlashing.attestation2.attestingIndices);
   const indices: ValidatorIndex[] = [];
@@ -31,13 +31,17 @@ export function processAttesterSlashing(
       indices.push(i);
     }
   }
+
+  let slashedAny = false;
   const validators = state.validators;
+  // TODO: Why do we need to sort()? If it necessary add a comment with why
   for (const index of indices.sort((a, b) => a - b)) {
     if (isSlashableValidator(validators[index], state.epochCtx.currentShuffling.epoch)) {
       slashValidatorAllForks(fork, state, index, blockProcess);
       slashedAny = true;
     }
   }
+
   if (!slashedAny) {
     throw new Error("AttesterSlashing did not result in any slashings");
   }

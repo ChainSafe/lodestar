@@ -90,6 +90,8 @@ export class PubkeyIndexMap {
 /**
  * Create an epoch cache
  * @param validators cached validators that matches `state.validators`
+ *
+ * SLOW CODE - 🐢
  */
 export function createEpochContext(
   config: IBeaconConfig,
@@ -204,6 +206,8 @@ export function createEpochContext(
  * Checks the pubkey indices against a state and adds missing pubkeys
  *
  * Mutates `pubkey2index` and `index2pubkey`
+ *
+ * If pubkey caches are empty: SLOW CODE - 🐢
  */
 export function syncPubkeys(
   state: allForks.BeaconState,

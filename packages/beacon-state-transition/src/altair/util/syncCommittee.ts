@@ -9,10 +9,14 @@ import {computeEpochAtSlot, computeShuffledIndex, getSeed} from "../../util";
 const MAX_RANDOM_BYTE = BigInt(2 ** 8 - 1);
 
 /**
+ * TODO: NAIVE
+ *
  * Return the sync committee indices for a given state and epoch.
  * Aligns `epoch` to `baseEpoch` so the result is the same with any `epoch` within a sync period.
  *  Note: This function should only be called at sync committee period boundaries, as
-    ``get_sync_committee_indices`` is not stable within a given period.
+ *  ``get_sync_committee_indices`` is not stable within a given period.
+ *
+ * SLOW CODE - 🐢
  */
 export function getNextSyncCommitteeIndices(
   state: allForks.BeaconState,
@@ -39,6 +43,8 @@ export function getNextSyncCommitteeIndices(
 
 /**
  * Return the sync committee for a given state and epoch.
+ *
+ * SLOW CODE - 🐢
  */
 export function getNextSyncCommittee(
   state: allForks.BeaconState,

@@ -39,16 +39,19 @@ export function assertValidProposerSlashing(
   if (header1.slot !== header2.slot) {
     throw new Error(`ProposerSlashing slots do not match: slot1=${header1.slot} slot2=${header2.slot}`);
   }
+
   // verify header proposer indices match
   if (header1.proposerIndex !== header2.proposerIndex) {
     throw new Error(
       `ProposerSlashing proposer indices do not match: proposerIndex1=${header1.proposerIndex} proposerIndex2=${header2.proposerIndex}`
     );
   }
+
   // verify headers are different
   if (BeaconBlockHeader.equals(header1, header2)) {
     throw new Error("ProposerSlashing headers are equal");
   }
+
   // verify the proposer is slashable
   const proposer = state.validators[header1.proposerIndex];
   if (!isSlashableValidator(proposer, epochCtx.currentShuffling.epoch)) {

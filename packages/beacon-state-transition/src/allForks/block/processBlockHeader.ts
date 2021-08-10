@@ -45,7 +45,7 @@ export function processBlockHeader(state: CachedBeaconState<allForks.BeaconState
     bodyRoot: types.BeaconBlockBody.hashTreeRoot(block.body),
   };
 
-  // verify proposer is not slashed
+  // verify proposer is not slashed. Only once per block, may use the slower read from tree
   if (state.validators[proposerIndex].slashed) {
     throw new Error("Block proposer is slashed");
   }

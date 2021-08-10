@@ -23,6 +23,8 @@ export function isSlashableValidator(validator: phase0.Validator, epoch: Epoch):
 
 /**
  * Return the sequence of active validator indices at [[epoch]].
+ *
+ * NAIVE - SLOW CODE 🐢
  */
 export function getActiveValidatorIndices(state: allForks.BeaconState, epoch: Epoch): ValidatorIndex[] {
   const indices: ValidatorIndex[] = [];

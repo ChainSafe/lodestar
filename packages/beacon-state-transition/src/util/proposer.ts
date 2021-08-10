@@ -11,6 +11,8 @@ import {computeShuffledIndex} from "./seed";
 
 /**
  * Return from ``indices`` a random index sampled by effective balance.
+ *
+ * SLOW CODE - 🐢
  */
 export function computeProposerIndex(
   state: allForks.BeaconState,
@@ -18,7 +20,10 @@ export function computeProposerIndex(
   seed: Uint8Array
 ): ValidatorIndex {
   assert.gt(indices.length, 0, "Validator indices must not be empty");
+
+  // TODO: Inline outside this function
   const MAX_RANDOM_BYTE = BigInt(2 ** 8 - 1);
+
   let i = 0;
   /* eslint-disable-next-line no-constant-condition */
   while (true) {
