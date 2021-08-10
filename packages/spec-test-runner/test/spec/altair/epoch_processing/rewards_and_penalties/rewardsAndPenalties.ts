@@ -8,7 +8,7 @@ import {IAltairStateTestCase} from "../../stateTestCase";
 import {TreeBacked} from "@chainsafe/ssz";
 import {createIChainForkConfig} from "@chainsafe/lodestar-config";
 import {PresetName} from "@chainsafe/lodestar-params";
-import {expectEqualBeaconState} from "../../util";
+import {expectEqualBeaconStateAltair} from "../../../util";
 
 export function runRewardsAndPenalties(presetName: PresetName): void {
   // eslint-disable-next-line @typescript-eslint/naming-convention
@@ -43,7 +43,7 @@ export function runRewardsAndPenalties(presetName: PresetName): void {
       },
       getExpected: (testCase) => testCase.post,
       expectFunc: (testCase, expected, actual) => {
-        expectEqualBeaconState(expected, actual);
+        expectEqualBeaconStateAltair(expected, actual);
       },
     }
   );

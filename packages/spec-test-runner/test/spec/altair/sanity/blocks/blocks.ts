@@ -6,7 +6,7 @@ import {createIChainForkConfig} from "@chainsafe/lodestar-config";
 import {IBlockSanityTestCase} from "./types";
 import {SPEC_TEST_LOCATION} from "../../../../utils/specTestCases";
 import {TreeBacked} from "@chainsafe/ssz";
-import {expectEqualBeaconState} from "../../util";
+import {expectEqualBeaconStateAltair} from "../../../util";
 import {PresetName} from "@chainsafe/lodestar-params";
 
 export function runBlocks(presetName: PresetName): void {
@@ -59,7 +59,7 @@ export function runBlocks(presetName: PresetName): void {
       timeout: 10000,
       getExpected: (testCase) => testCase.post,
       expectFunc: (testCase, expected, actual) => {
-        expectEqualBeaconState(expected, actual);
+        expectEqualBeaconStateAltair(expected, actual);
       },
     }
   );

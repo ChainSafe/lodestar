@@ -3,10 +3,10 @@ import {config} from "@chainsafe/lodestar-config/default";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
 import {ssz} from "@chainsafe/lodestar-types";
 import {TreeBacked} from "@chainsafe/ssz";
-import {expect} from "chai";
 import {join} from "path";
 import {SPEC_TEST_LOCATION} from "../../../../utils/specTestCases";
 import {IStateTestCase} from "../../../../utils/specTestTypes/stateTestCase";
+import {expectEqualBeaconStatePhase0} from "../../../util";
 
 describeDirectorySpecTest<IStateTestCase, phase0.BeaconState>(
   "epoch justification and finalization mainnet",
@@ -37,7 +37,7 @@ describeDirectorySpecTest<IStateTestCase, phase0.BeaconState>(
     },
     getExpected: (testCase) => testCase.post,
     expectFunc: (testCase, expected, actual) => {
-      expect(ssz.phase0.BeaconState.equals(actual, expected)).to.be.true;
+      expectEqualBeaconStatePhase0(expected, actual);
     },
   }
 );

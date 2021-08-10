@@ -6,7 +6,7 @@ import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-tes
 import {initializeBeaconStateFromEth1} from "@chainsafe/lodestar-beacon-state-transition";
 
 import {SPEC_TEST_LOCATION} from "../../../../utils/specTestCases";
-import {expectEqualBeaconState} from "../../util";
+import {expectEqualBeaconStateAltair} from "../../../util";
 import {PresetName} from "@chainsafe/lodestar-params";
 
 interface IGenesisInitSpecTest {
@@ -59,7 +59,7 @@ export function runInitialization(presetName: PresetName): void {
       timeout: 10000,
       getExpected: (testCase) => testCase.state,
       expectFunc: (testCase, expected, actual) => {
-        expectEqualBeaconState(expected, actual);
+        expectEqualBeaconStateAltair(expected, actual);
       },
     }
   );

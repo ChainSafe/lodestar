@@ -1,12 +1,12 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import {join} from "path";
-import {expect} from "chai";
 import {config} from "@chainsafe/lodestar-config/default";
 import {phase0, Uint64, Root, ssz} from "@chainsafe/lodestar-types";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
 import {initializeBeaconStateFromEth1} from "@chainsafe/lodestar-beacon-state-transition";
 
 import {SPEC_TEST_LOCATION} from "../../../../utils/specTestCases";
+import {expectEqualBeaconStatePhase0} from "../../../util";
 
 interface IGenesisInitSpecTest {
   [k: string]: phase0.Deposit | unknown | null | undefined;
@@ -54,7 +54,7 @@ describeDirectorySpecTest<IGenesisInitSpecTest, phase0.BeaconState>(
     timeout: 60000,
     getExpected: (testCase) => testCase.state,
     expectFunc: (testCase, expected, actual) => {
-      expect(ssz.phase0.BeaconState.equals(actual, expected)).to.be.true;
+      expectEqualBeaconStatePhase0(expected, actual);
     },
     //shouldSkip: (_, __, index) => index !== 0,
   }

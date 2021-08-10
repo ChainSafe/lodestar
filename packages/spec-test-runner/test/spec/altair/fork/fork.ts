@@ -8,7 +8,7 @@ import {altair} from "@chainsafe/lodestar-beacon-state-transition";
 import {ssz} from "@chainsafe/lodestar-types";
 import {PresetName} from "@chainsafe/lodestar-params";
 import {SPEC_TEST_LOCATION} from "../../../utils/specTestCases";
-import {expectEqualBeaconState} from "../util";
+import {expectEqualBeaconStateAltair} from "../../util";
 import {IUpgradeStateCase} from "./type";
 
 export function runFork(presetName: PresetName): void {
@@ -54,7 +54,7 @@ export function runFork(presetName: PresetName): void {
       shouldError: (testCase) => !testCase.post,
       getExpected: (testCase) => testCase.post,
       expectFunc: (testCase, expected, actual) => {
-        expectEqualBeaconState(expected, actual);
+        expectEqualBeaconStateAltair(expected, actual);
       },
     }
   );
