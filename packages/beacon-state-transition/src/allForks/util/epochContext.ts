@@ -16,6 +16,7 @@ import {
   BASE_REWARD_FACTOR,
   DOMAIN_BEACON_PROPOSER,
   EFFECTIVE_BALANCE_INCREMENT,
+  FAR_FUTURE_EPOCH,
   GENESIS_EPOCH,
   PROPOSER_WEIGHT,
   SLOTS_PER_EPOCH,
@@ -26,9 +27,11 @@ import {
 import {bigIntSqrt, intToBytes, LodestarError} from "@chainsafe/lodestar-utils";
 
 import {
+  computeActivationExitEpoch,
   computeEpochAtSlot,
   computeProposerIndex,
   computeStartSlotAtEpoch,
+  getChurnLimit,
   getSeed,
   getTotalBalance,
   isActiveValidator,
@@ -105,6 +108,8 @@ export function createEpochContext(
   const nextEpoch = currentEpoch + 1;
 
   let totalActiveBalance = BigInt(0);
+  let exitQueueEpoch = computeActivationExitEpoch(currentEpoch);
+  let exitQueueChurn = 0;
 
   const previousActiveIndices: ValidatorIndex[] = [];
   const currentActiveIndices: ValidatorIndex[] = [];
@@ -119,6 +124,16 @@ export function createEpochContext(
     }
     if (isActiveValidator(v, nextEpoch)) {
       nextActiveIndices.push(i);
+    }
+
+    const {exitEpoch} = v;
+    if (exitEpoch !== FAR_FUTURE_EPOCH) {
+      if (exitEpoch > exitQueueEpoch) {
+        exitQueueEpoch = exitEpoch;
+        exitQueueChurn = 1;
+      } else if (exitEpoch === exitQueueEpoch) {
+        exitQueueChurn += 1;
+      }
     }
   });
 
@@ -150,6 +165,26 @@ export function createEpochContext(
 
   const baseRewardPerIncrement = onAltairFork ? computeBaseRewardPerIncrement(totalActiveBalance) : BigInt(0);
 
+  // Precompute churnLimit for efficient initiateValidatorExit() during block proposing MUST be recompute everytime the
+  // active validator indices set changes in size. Validators change active status only when:
+  // - validator.activation_epoch is set. Only changes in process_registry_updates() if validator can be activated. If
+  //   the value changes it will be set to `epoch + 1 + MAX_SEED_LOOKAHEAD`.
+  // - validator.exit_epoch is set. Only changes in initiate_validator_exit() if validator exits. If the value changes,
+  //   it will be set to at least `epoch + 1 + MAX_SEED_LOOKAHEAD`.
+  // ```
+  // is_active_validator = validator.activation_epoch <= epoch < validator.exit_epoch
+  // ```
+  // So the returned value of is_active_validator(epoch) is guaranteed to not change during `MAX_SEED_LOOKAHEAD` epochs.
+  //
+  // activeIndices size is dependant on the state epoch. The epoch is advanced after running the epoch transition, and
+  // the first block of the epoch process_block() call. So churnLimit must be computed at the end of the before epoch
+  // transition and the result is valid until the end of the next epoch transition
+  const churnLimit = getChurnLimit(config, currentShuffling.activeIndices.length);
+  if (exitQueueChurn >= churnLimit) {
+    exitQueueEpoch += 1;
+    exitQueueChurn = 0;
+  }
+
   return new EpochContext({
     config,
     pubkey2index,
@@ -161,6 +196,9 @@ export function createEpochContext(
     syncParticipantReward,
     syncProposerReward,
     baseRewardPerIncrement,
+    churnLimit,
+    exitQueueEpoch,
+    exitQueueChurn,
   });
 }
 
@@ -230,6 +268,31 @@ export function afterProcessEpoch(state: CachedBeaconState<allForks.BeaconState>
   epochCtx.nextShuffling = computeEpochShuffling(state, activeValidatorIndices, nextEpoch);
   epochCtx.proposers = computeProposers(state, epochCtx.currentShuffling);
 
+  // TODO: DEDUPLICATE from createEpochContext
+  //
+  // Precompute churnLimit for efficient initiateValidatorExit() during block proposing MUST be recompute everytime the
+  // active validator indices set changes in size. Validators change active status only when:
+  // - validator.activation_epoch is set. Only changes in process_registry_updates() if validator can be activated. If
+  //   the value changes it will be set to `epoch + 1 + MAX_SEED_LOOKAHEAD`.
+  // - validator.exit_epoch is set. Only changes in initiate_validator_exit() if validator exits. If the value changes,
+  //   it will be set to at least `epoch + 1 + MAX_SEED_LOOKAHEAD`.
+  // ```
+  // is_active_validator = validator.activation_epoch <= epoch < validator.exit_epoch
+  // ```
+  // So the returned value of is_active_validator(epoch) is guaranteed to not change during `MAX_SEED_LOOKAHEAD` epochs.
+  //
+  // activeIndices size is dependant on the state epoch. The epoch is advanced after running the epoch transition, and
+  // the first block of the epoch process_block() call. So churnLimit must be computed at the end of the before epoch
+  // transition and the result is valid until the end of the next epoch transition
+  epochCtx.churnLimit = getChurnLimit(epochCtx.config, epochCtx.currentShuffling.activeIndices.length);
+
+  // Maybe advance exitQueueEpoch at the end of the epoch if there haven't been any exists for a while
+  const exitQueueEpoch = computeActivationExitEpoch(currEpoch);
+  if (exitQueueEpoch > epochCtx.exitQueueEpoch) {
+    epochCtx.exitQueueEpoch = exitQueueEpoch;
+    epochCtx.exitQueueChurn = 0;
+  }
+
   if (currEpoch >= epochCtx.config.ALTAIR_FORK_EPOCH) {
     const totalActiveBalance = getTotalBalance(state, activeValidatorIndices);
     epochCtx.syncParticipantReward = computeSyncParticipantReward(epochCtx.config, totalActiveBalance);
@@ -251,6 +314,9 @@ interface IEpochContextData {
   syncParticipantReward: Gwei;
   syncProposerReward: Gwei;
   baseRewardPerIncrement: Gwei;
+  churnLimit: number;
+  exitQueueEpoch: Epoch;
+  exitQueueChurn: number;
 }
 
 /**
@@ -305,6 +371,25 @@ export class EpochContext {
    * Memory cost: 1 bigint
    */
   baseRewardPerIncrement: Gwei;
+  /**
+   * Rate at which validators can enter or leave the set per epoch. Depends only on activeIndexes, so it does not
+   * change through the epoch. It's used in initiateValidatorExit(). Must be update after changing active indexes.
+   */
+  churnLimit: number;
+  /**
+   * Closest epoch with available churn for validators to exit at. May be updated every block as validators are
+   * initiateValidatorExit(). This value may vary on each fork of the state.
+   *
+   * NOTE: Changes block to block
+   */
+  exitQueueEpoch: Epoch;
+  /**
+   * Number of validators initiating an exit at exitQueueEpoch. May be updated every block as validators are
+   * initiateValidatorExit(). This value may vary on each fork of the state.
+   *
+   * NOTE: Changes block to block
+   */
+  exitQueueChurn: number;
 
   constructor(data: IEpochContextData) {
     this.config = data.config;
@@ -317,6 +402,9 @@ export class EpochContext {
     this.syncParticipantReward = data.syncParticipantReward;
     this.syncProposerReward = data.syncProposerReward;
     this.baseRewardPerIncrement = data.baseRewardPerIncrement;
+    this.churnLimit = data.churnLimit;
+    this.exitQueueEpoch = data.exitQueueEpoch;
+    this.exitQueueChurn = data.exitQueueChurn;
   }
 
   /**

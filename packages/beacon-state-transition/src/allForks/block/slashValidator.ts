@@ -24,7 +24,7 @@ export function slashValidatorAllForks(
 ): void {
   const {validators, epochCtx} = state;
   const epoch = epochCtx.currentShuffling.epoch;
-  initiateValidatorExit(state as CachedBeaconState<allForks.BeaconState>, slashedIndex, blockProcess);
+  initiateValidatorExit(state as CachedBeaconState<allForks.BeaconState>, slashedIndex);
   const validator = validators[slashedIndex];
   validators.update(slashedIndex, {
     slashed: true,
