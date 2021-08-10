@@ -16,7 +16,6 @@
     "noImplicitReturns": true,
 
     "esModuleInterop": true,
-    // Babel builds source, Typescript is used only for .d.ts files
     "declaration": true,
     "declarationMap": true,
     "incremental": true,
