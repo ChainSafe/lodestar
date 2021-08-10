@@ -103,6 +103,6 @@ export function validateAttestation(
   }
 }
 
-function checkpointToStr(checkpoint: phase0.Checkpoint): string {
+export function checkpointToStr(checkpoint: phase0.Checkpoint): string {
   return `${toHexString(checkpoint.root)}:${checkpoint.epoch}`;
 }
