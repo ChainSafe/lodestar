@@ -143,13 +143,11 @@ export function createEpochContext(
   }
 
   const currentShuffling = computeEpochShuffling(state, currentActiveIndices, currentEpoch);
-  let previousShuffling;
-  if (previousEpoch === currentEpoch) {
-    // in case of genesis
-    previousShuffling = currentShuffling;
-  } else {
-    previousShuffling = computeEpochShuffling(state, previousActiveIndices, previousEpoch);
-  }
+  const previousShuffling =
+    previousEpoch === currentEpoch
+      ? // in case of genesis
+        currentShuffling
+      : computeEpochShuffling(state, previousActiveIndices, previousEpoch);
   const nextShuffling = computeEpochShuffling(state, nextActiveIndices, nextEpoch);
 
   // Allow to create CachedBeaconState for empty states
