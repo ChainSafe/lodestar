@@ -15,7 +15,7 @@ import {
   TIMELY_TARGET_WEIGHT,
   WEIGHT_DENOMINATOR,
 } from "@chainsafe/lodestar-params";
-import {validateAttestation} from "../../phase0/block/processAttestation";
+import {checkpointToStr, validateAttestation} from "../../phase0/block/processAttestation";
 import {BlockProcess} from "../../util/blockProcess";
 
 const PROPOSER_REWARD_DOMINATOR = ((WEIGHT_DENOMINATOR - PROPOSER_WEIGHT) * WEIGHT_DENOMINATOR) / PROPOSER_WEIGHT;
@@ -113,9 +113,9 @@ export function getAttestationParticipationStatus(
   const isMatchingSource = ssz.phase0.Checkpoint.equals(data.source, justifiedCheckpoint);
   if (!isMatchingSource) {
     throw new Error(
-      "Attestation source does not equal justified checkpoint: " +
-        `source=${JSON.stringify(ssz.phase0.Checkpoint.toJson(data.source))} ` +
-        `justifiedCheckpoint=${JSON.stringify(ssz.phase0.Checkpoint.toJson(justifiedCheckpoint))}`
+      `Attestation source does not equal justified checkpoint: source=${checkpointToStr(
+        data.source
+      )} justifiedCheckpoint=${checkpointToStr(justifiedCheckpoint)}`
     );
   }
   const isMatchingTarget = ssz.Root.equals(data.target.root, getBlockRoot(state, data.target.epoch));

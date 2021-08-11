@@ -31,13 +31,12 @@ export function assertValidProposerSlashing(
 
   // verify header slots match
   if (header1.slot !== header2.slot) {
-    throw new Error("ProposerSlashing slots do not match: " + `slot1=${header1.slot} slot2=${header2.slot}`);
+    throw new Error(`ProposerSlashing slots do not match: slot1=${header1.slot} slot2=${header2.slot}`);
   }
   // verify header proposer indices match
   if (header1.proposerIndex !== header2.proposerIndex) {
     throw new Error(
-      "ProposerSlashing proposer indices do not match: " +
-        `proposerIndex1=${header1.proposerIndex} slot2=${header2.proposerIndex}`
+      `ProposerSlashing proposer indices do not match: proposerIndex1=${header1.proposerIndex} proposerIndex2=${header2.proposerIndex}`
     );
   }
   // verify headers are different

@@ -6,21 +6,19 @@ export function processBlockHeader(state: CachedBeaconState<allForks.BeaconState
   const slot = state.slot;
   // verify that the slots match
   if (block.slot !== slot) {
-    throw new Error("Block slot does not match state slot" + `blockSlot=${block.slot} stateSlot=${slot}`);
+    throw new Error(`Block slot does not match state slot blockSlot=${block.slot} stateSlot=${slot}`);
   }
   // Verify that the block is newer than latest block header
   if (!(block.slot > state.latestBlockHeader.slot)) {
     throw new Error(
-      "Block is not newer than latest block header" +
-        `blockSlot=${block.slot} latestBlockHeader.slot=${state.latestBlockHeader.slot}`
+      `Block is not newer than latest block header blockSlot=${block.slot} latestBlockHeader.slot=${state.latestBlockHeader.slot}`
     );
   }
   // verify that proposer index is the correct index
   const proposerIndex = state.getBeaconProposer(slot);
   if (block.proposerIndex !== proposerIndex) {
     throw new Error(
-      "Block proposer index does not match state proposer index" +
-        `blockProposerIndex=${block.proposerIndex} stateProposerIndex=${proposerIndex}`
+      `Block proposer index does not match state proposer index blockProposerIndex=${block.proposerIndex} stateProposerIndex=${proposerIndex}`
     );
   }
 

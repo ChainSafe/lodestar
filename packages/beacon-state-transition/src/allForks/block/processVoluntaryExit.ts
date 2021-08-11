@@ -31,13 +31,11 @@ export function assertValidVoluntaryExit(
   }
   // verify exit has not been initiated
   if (validator.exitEpoch !== FAR_FUTURE_EPOCH) {
-    throw new Error("VoluntaryExit validator exit has already been initiated: " + `exitEpoch=${validator.exitEpoch}`);
+    throw new Error(`VoluntaryExit validator exit has already been initiated: exitEpoch=${validator.exitEpoch}`);
   }
   // exits must specify an epoch when they become valid; they are not valid before then
   if (!(currentEpoch >= voluntaryExit.epoch)) {
-    throw new Error(
-      "VoluntaryExit epoch is not yet valid: " + `epoch=${voluntaryExit.epoch} currentEpoch=${currentEpoch}`
-    );
+    throw new Error(`VoluntaryExit epoch is not yet valid: epoch=${voluntaryExit.epoch} currentEpoch=${currentEpoch}`);
   }
   // verify the validator had been active long enough
   if (!(currentEpoch >= validator.activationEpoch + config.SHARD_COMMITTEE_PERIOD)) {
