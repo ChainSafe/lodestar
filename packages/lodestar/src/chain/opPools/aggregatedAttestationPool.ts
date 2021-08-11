@@ -61,7 +61,7 @@ export class AggregatedAttestationPool {
 
     let attestationGroup = attestationGroupByDataHash.get(dataRootHex);
     if (!attestationGroup) {
-      attestationGroup = new MatchingDataAttestationGroup(committee);
+      attestationGroup = new MatchingDataAttestationGroup(committee, attestation.data);
       attestationGroupByDataHash.set(dataRootHex, attestationGroup);
     }
 
@@ -110,6 +110,9 @@ export class AggregatedAttestationPool {
       const attestationGroups = Array.from(attestationGroupByDataHash.values());
 
       for (const attestationGroup of attestationGroups) {
+        if (!isValidAttestationData(state, attestationGroup.data)) {
+          continue;
+        }
         const participation = getParticipationFn(epoch, attestationGroup.committee);
         if (participation === null) {
           continue;
@@ -236,7 +239,7 @@ interface AttestationWithIndex {
 export class MatchingDataAttestationGroup {
   private readonly attestations: AttestationWithIndex[] = [];
 
-  constructor(readonly committee: ValidatorIndex[]) {}
+  constructor(readonly committee: ValidatorIndex[], readonly data: phase0.AttestationData) {}
 
   /**
    * Add an attestation.
@@ -354,4 +357,22 @@ export function intersection(bigSet: Set<ValidatorIndex>, smallSet: Set<Validato
     if (bigSet.has(validatorIndex)) numIntersection++;
   }
   return numIntersection;
+}
+
+/**
+ * The state transition accepts incorrect target and head attestations.
+ * We only need to validate the source checkpoint.
+ * @returns
+ */
+export function isValidAttestationData(
+  state: CachedBeaconState<allForks.BeaconState>,
+  data: phase0.AttestationData
+): boolean {
+  let justifiedCheckpoint;
+  if (data.target.epoch === state.currentShuffling.epoch) {
+    justifiedCheckpoint = state.currentJustifiedCheckpoint;
+  } else {
+    justifiedCheckpoint = state.previousJustifiedCheckpoint;
+  }
+  return ssz.phase0.Checkpoint.equals(data.source, justifiedCheckpoint);
 }
