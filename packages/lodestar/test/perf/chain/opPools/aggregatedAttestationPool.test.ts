@@ -10,11 +10,11 @@ import {AggregatedAttestationPool} from "../../../../src/chain/opPools/aggregate
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {List} from "@chainsafe/ssz";
 import {generatePerfTestCachedStateAltair} from "@chainsafe/lodestar-beacon-state-transition/test/perf/util";
+import {ssz} from "@chainsafe/lodestar-types";
 
-// Jul-21 09:20:46.653 []                 info: Number of participations in state previousEpoch=250000, currentEpoch=250000
-// Jul-21 09:23:38.382 []                 info: Number of attestations in pool 1952
-//   getAttestationsForBlock
-//     ✓ getAttestationsForBlock                                             14.06524 ops/s    71.09726 ms/op        -         64 runs   31.9 s
+// Aug 11 2021
+// getAttestationsForBlock
+//     ✓ getAttestationsForBlock                                             4.410948 ops/s    226.7086 ms/op        -         64 runs   51.8 s
 describe("getAttestationsForBlock", () => {
   setBenchOpts({
     maxMs: 60 * 1000,
@@ -83,7 +83,8 @@ function getAggregatedAttestationPool(
 
       const committee = state.getBeaconCommittee(slot, committeeIndex);
       // all attestation has full participation so getAttestationsForBlock() has to do a lot of filter
-      pool.add(attestation, committee, committee);
+      // aggregate_and_proof messages are all TreeBacked
+      pool.add(ssz.phase0.Attestation.createTreeBackedFromStruct(attestation), committee, committee);
     }
   }
   return pool;
