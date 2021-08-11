@@ -23,6 +23,11 @@ export function processSlashingsAllForks(
   state: CachedBeaconState<allForks.BeaconState>,
   process: IEpochProcess
 ): void {
+  // No need to compute totalSlashings if there no index to slash
+  if (process.indicesToSlash.length === 0) {
+    return;
+  }
+
   const totalBalance = process.totalActiveStake;
   const totalSlashings = Array.from(readonlyValues(state.slashings)).reduce((a, b) => a + b, BigInt(0));
 
