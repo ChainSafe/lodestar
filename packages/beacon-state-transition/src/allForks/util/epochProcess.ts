@@ -103,48 +103,32 @@ export interface IEpochProcess {
   nextEpochActiveValidatorIndices: ValidatorIndex[];
 }
 
-export function createIEpochProcess(): IEpochProcess {
-  return {
-    prevEpoch: 0,
-    currentEpoch: 0,
-    totalActiveStake: BigInt(0),
-    baseRewardPerIncrement: BigInt(0),
-    prevEpochUnslashedStake: {
-      sourceStake: BigInt(0),
-      targetStake: BigInt(0),
-      headStake: BigInt(0),
-    },
-    currEpochUnslashedTargetStake: BigInt(0),
-    indicesToSlash: [],
-    indicesEligibleForActivationQueue: [],
-    indicesEligibleForActivation: [],
-    indicesToEject: [],
-    statuses: [],
-    validators: [],
-    nextEpochActiveValidatorIndices: [],
-  };
-}
-
 export function beforeProcessEpoch<T extends allForks.BeaconState>(state: CachedBeaconState<T>): IEpochProcess {
-  const out = createIEpochProcess();
-
-  const {config, epochCtx, validators} = state;
+  const {config, epochCtx} = state;
   const forkName = config.getForkName(state.slot);
   const currentEpoch = epochCtx.currentShuffling.epoch;
   const prevEpoch = epochCtx.previousShuffling.epoch;
   const nextEpoch = currentEpoch + 1;
-  out.currentEpoch = currentEpoch;
-  out.prevEpoch = prevEpoch;
 
   const slashingsEpoch = currentEpoch + intDiv(EPOCHS_PER_SLASHINGS_VECTOR, 2);
 
-  out.validators = validators.persistent.toArray();
-  out.validators.forEach((v, i) => {
+  const indicesToSlash: ValidatorIndex[] = [];
+  const indicesEligibleForActivationQueue: ValidatorIndex[] = [];
+  const indicesEligibleForActivation: ValidatorIndex[] = [];
+  const indicesToEject: ValidatorIndex[] = [];
+  const nextEpochActiveValidatorIndices: ValidatorIndex[] = [];
+
+  const statuses: IAttesterStatus[] = [];
+
+  let totalActiveStake = BigInt(0);
+
+  const validators = state.validators.persistent.toArray();
+  validators.forEach((v, i) => {
     const status = createIAttesterStatus();
 
     if (v.slashed) {
       if (slashingsEpoch === v.withdrawableEpoch) {
-        out.indicesToSlash.push(i);
+        indicesToSlash.push(i);
       }
     } else {
       status.flags |= FLAG_UNSLASHED;
@@ -157,44 +141,44 @@ export function beforeProcessEpoch<T extends allForks.BeaconState>(state: Cached
     const active = isActiveValidator(v, currentEpoch);
     if (active) {
       status.active = true;
-      out.totalActiveStake += v.effectiveBalance;
+      totalActiveStake += v.effectiveBalance;
     }
 
     if (v.activationEligibilityEpoch === FAR_FUTURE_EPOCH && v.effectiveBalance === MAX_EFFECTIVE_BALANCE) {
-      out.indicesEligibleForActivationQueue.push(i);
+      indicesEligibleForActivationQueue.push(i);
     }
 
     // Note: ignores churn, apply churn limit latter, because finality may change
     if (v.activationEpoch === FAR_FUTURE_EPOCH && v.activationEligibilityEpoch <= currentEpoch) {
-      out.indicesEligibleForActivation.push(i);
+      indicesEligibleForActivation.push(i);
     }
 
     if (status.active && v.exitEpoch === FAR_FUTURE_EPOCH && v.effectiveBalance <= config.EJECTION_BALANCE) {
-      out.indicesToEject.push(i);
+      indicesToEject.push(i);
     }
 
-    out.statuses.push(status);
+    statuses.push(status);
     if (isActiveValidator(v, nextEpoch)) {
-      out.nextEpochActiveValidatorIndices.push(i);
+      nextEpochActiveValidatorIndices.push(i);
     }
   });
 
-  if (out.totalActiveStake < EFFECTIVE_BALANCE_INCREMENT) {
-    out.totalActiveStake = EFFECTIVE_BALANCE_INCREMENT;
+  if (totalActiveStake < EFFECTIVE_BALANCE_INCREMENT) {
+    totalActiveStake = EFFECTIVE_BALANCE_INCREMENT;
   }
 
   // SPEC: function getBaseRewardPerIncrement()
-  out.baseRewardPerIncrement = computeBaseRewardPerIncrement(out.totalActiveStake);
+  const baseRewardPerIncrement = computeBaseRewardPerIncrement(totalActiveStake);
 
   // order by sequence of activationEligibilityEpoch setting and then index
-  out.indicesEligibleForActivation.sort(
-    (a, b) => out.validators[a].activationEligibilityEpoch - out.validators[b].activationEligibilityEpoch || a - b
+  indicesEligibleForActivation.sort(
+    (a, b) => validators[a].activationEligibilityEpoch - validators[b].activationEligibilityEpoch || a - b
   );
 
   if (forkName === ForkName.phase0) {
     statusProcessEpoch(
       state,
-      out.statuses,
+      statuses,
       ((state as unknown) as CachedBeaconState<phase0.BeaconState>).previousEpochAttestations,
       prevEpoch,
       FLAG_PREV_SOURCE_ATTESTER,
@@ -203,7 +187,7 @@ export function beforeProcessEpoch<T extends allForks.BeaconState>(state: Cached
     );
     statusProcessEpoch(
       state,
-      out.statuses,
+      statuses,
       ((state as unknown) as CachedBeaconState<phase0.BeaconState>).currentEpochAttestations,
       currentEpoch,
       FLAG_CURR_SOURCE_ATTESTER,
@@ -212,13 +196,13 @@ export function beforeProcessEpoch<T extends allForks.BeaconState>(state: Cached
     );
   } else {
     state.previousEpochParticipation.forEachStatus((status, i) => {
-      out.statuses[i].flags |=
+      statuses[i].flags |=
         ((status.timelySource && FLAG_PREV_SOURCE_ATTESTER) as number) |
         ((status.timelyTarget && FLAG_PREV_TARGET_ATTESTER) as number) |
         ((status.timelyHead && FLAG_PREV_HEAD_ATTESTER) as number);
     });
     state.currentEpochParticipation.forEachStatus((status, i) => {
-      out.statuses[i].flags |=
+      statuses[i].flags |=
         ((status.timelySource && FLAG_CURR_SOURCE_ATTESTER) as number) |
         ((status.timelyTarget && FLAG_CURR_TARGET_ATTESTER) as number) |
         ((status.timelyHead && FLAG_CURR_HEAD_ATTESTER) as number);
@@ -236,9 +220,9 @@ export function beforeProcessEpoch<T extends allForks.BeaconState>(state: Cached
   const FLAG_PREV_HEAD_ATTESTER_UNSLASHED = FLAG_PREV_HEAD_ATTESTER | FLAG_UNSLASHED;
   const FLAG_CURR_TARGET_UNSLASHED = FLAG_CURR_TARGET_ATTESTER | FLAG_UNSLASHED;
 
-  for (let i = 0; i < out.statuses.length; i++) {
-    const status = out.statuses[i];
-    const effectiveBalance = out.validators[i].effectiveBalance;
+  for (let i = 0; i < statuses.length; i++) {
+    const status = statuses[i];
+    const effectiveBalance = validators[i].effectiveBalance;
     if (hasMarkers(status.flags, FLAG_PREV_SOURCE_ATTESTER_UNSLASHED)) {
       prevSourceUnslStake += effectiveBalance;
     }
@@ -261,10 +245,25 @@ export function beforeProcessEpoch<T extends allForks.BeaconState>(state: Cached
   if (prevHeadUnslStake < increment) prevHeadUnslStake = increment;
   if (currTargetUnslStake < increment) currTargetUnslStake = increment;
 
-  out.prevEpochUnslashedStake.sourceStake = prevSourceUnslStake;
-  out.prevEpochUnslashedStake.targetStake = prevTargetUnslStake;
-  out.prevEpochUnslashedStake.headStake = prevHeadUnslStake;
-  out.currEpochUnslashedTargetStake = currTargetUnslStake;
+  return {
+    prevEpoch,
+    currentEpoch,
+    totalActiveStake,
 
-  return out;
+    baseRewardPerIncrement,
+    prevEpochUnslashedStake: {
+      sourceStake: prevSourceUnslStake,
+      targetStake: prevTargetUnslStake,
+      headStake: prevHeadUnslStake,
+    },
+    currEpochUnslashedTargetStake: currTargetUnslStake,
+    indicesToSlash,
+    indicesEligibleForActivationQueue,
+    indicesEligibleForActivation,
+    indicesToEject,
+    nextEpochActiveValidatorIndices,
+
+    statuses,
+    validators,
+  };
 }
