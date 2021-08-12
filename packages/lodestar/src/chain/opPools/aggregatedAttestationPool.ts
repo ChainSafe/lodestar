@@ -80,7 +80,7 @@ export class AggregatedAttestationPool {
    */
   getAttestationsForBlock(state: CachedBeaconState<allForks.BeaconState>): phase0.Attestation[] {
     const stateSlot = state.slot;
-    const stateEpoch = computeEpochAtSlot(stateSlot);
+    const stateEpoch = state.currentShuffling.epoch;
     const statePrevEpoch = stateEpoch - 1;
     const forkName = state.config.getForkName(stateSlot);
 
@@ -90,6 +90,7 @@ export class AggregatedAttestationPool {
     const attestationsByScore: AttestationWithScore[] = [];
 
     const slots = Array.from(this.attestationGroupByDataHashBySlot.keys()).sort((a, b) => b - a);
+    const {previousJustifiedCheckpoint, currentJustifiedCheckpoint} = state;
     slot: for (const slot of slots) {
       const attestationGroupByDataHash = this.attestationGroupByDataHashBySlot.get(slot);
       // should not happen
@@ -108,9 +109,15 @@ export class AggregatedAttestationPool {
       }
 
       const attestationGroups = Array.from(attestationGroupByDataHash.values());
-
       for (const attestationGroup of attestationGroups) {
-        if (!isValidAttestationData(state, attestationGroup.data)) {
+        if (
+          !isValidAttestationData(
+            stateEpoch,
+            previousJustifiedCheckpoint,
+            currentJustifiedCheckpoint,
+            attestationGroup.data
+          )
+        ) {
           continue;
         }
         const participation = getParticipationFn(epoch, attestationGroup.committee);
@@ -365,14 +372,16 @@ export function intersection(bigSet: Set<ValidatorIndex>, smallSet: Set<Validato
  * @returns
  */
 export function isValidAttestationData(
-  state: CachedBeaconState<allForks.BeaconState>,
+  currentEpoch: Epoch,
+  previousJustifiedCheckpoint: phase0.Checkpoint,
+  currentJustifiedCheckpoint: phase0.Checkpoint,
   data: phase0.AttestationData
 ): boolean {
   let justifiedCheckpoint;
-  if (data.target.epoch === state.currentShuffling.epoch) {
-    justifiedCheckpoint = state.currentJustifiedCheckpoint;
+  if (data.target.epoch === currentEpoch) {
+    justifiedCheckpoint = currentJustifiedCheckpoint;
   } else {
-    justifiedCheckpoint = state.previousJustifiedCheckpoint;
+    justifiedCheckpoint = previousJustifiedCheckpoint;
   }
   return ssz.phase0.Checkpoint.equals(data.source, justifiedCheckpoint);
 }
