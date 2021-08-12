@@ -31,6 +31,7 @@ function upgradeTreeBackedState(
 ): TreeBacked<altair.BeaconState> {
   const validatorCount = state.validators.length;
   const epoch = getCurrentEpoch(state);
+  // TODO: Does this preserve the hashing cache? In altair devnets memory spikes on the fork transition
   const postState = ssz.altair.BeaconState.createTreeBacked(state.tree);
   postState.fork = {
     previousVersion: state.fork.currentVersion,

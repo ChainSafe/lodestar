@@ -62,9 +62,12 @@ export function createCachedBeaconState<T extends allForks.BeaconState>(
   opts?: EpochContextOpts
 ): CachedBeaconState<T> {
   const config = createIBeaconConfig(chainForkConfig, state.genesisValidatorsRoot);
+
+  // SLOW CODE - 🐢
   const cachedValidators = MutableVector.from(
     Array.from(readonlyValues(state.validators), (v) => createValidatorFlat(v))
   );
+
   const cachedBalances = MutableVector.from(readonlyValues(state.balances));
   let cachedPreviousParticipation, cachedCurrentParticipation;
   const forkName = config.getForkName(state.slot);

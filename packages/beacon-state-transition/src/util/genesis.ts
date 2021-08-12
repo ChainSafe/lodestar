@@ -4,6 +4,7 @@ import {
   EFFECTIVE_BALANCE_INCREMENT,
   EPOCHS_PER_HISTORICAL_VECTOR,
   ForkName,
+  GENESIS_EPOCH,
   GENESIS_SLOT,
   MAX_EFFECTIVE_BALANCE,
 } from "@chainsafe/lodestar-params";
@@ -41,6 +42,8 @@ export function isValidGenesisValidators(config: IChainForkConfig, state: allFor
 
 /**
  * Generate the initial beacon chain state.
+ *
+ * SLOW CODE - 🐢
  */
 export function getGenesisBeaconState(
   config: IBeaconConfig,
@@ -108,6 +111,9 @@ export function applyTimestamp(
  * Apply deposits to state.
  * For spec test, fullDepositDataRootList is undefined.
  * For genesis builder, fullDepositDataRootList is full list of deposit data root from index 0.
+ *
+ * SLOW CODE - 🐢
+ *
  * @param config IChainForkConfig
  * @param state BeaconState
  * @param newDeposits new deposits
@@ -158,8 +164,8 @@ export function applyDeposits(
     validator.effectiveBalance = bigIntMin(balance - (balance % EFFECTIVE_BALANCE_INCREMENT), MAX_EFFECTIVE_BALANCE);
 
     if (validator.effectiveBalance === MAX_EFFECTIVE_BALANCE) {
-      validator.activationEligibilityEpoch = computeEpochAtSlot(GENESIS_SLOT);
-      validator.activationEpoch = computeEpochAtSlot(GENESIS_SLOT);
+      validator.activationEligibilityEpoch = GENESIS_EPOCH;
+      validator.activationEpoch = GENESIS_EPOCH;
       activeValidatorIndices.push(index);
     }
     // If state is a CachedBeaconState<> validator has to be re-assigned manually
@@ -175,6 +181,9 @@ export function applyDeposits(
 
 /**
  * Mainly used for spec test.
+ *
+ * SLOW CODE - 🐢
+ *
  * @param config
  * @param eth1BlockHash
  * @param eth1Timestamp
