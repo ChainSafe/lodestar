@@ -7739,7 +7739,7 @@
         "x": 0,
         "y": 31
       },
-      "id": 174,
+      "id": 214,
       "panels": [
         {
           "datasource": null,
@@ -7753,7 +7753,7 @@
                 "axisPlacement": "auto",
                 "barAlignment": 0,
                 "drawStyle": "line",
-                "fillOpacity": 20,
+                "fillOpacity": 0,
                 "gradientMode": "none",
                 "hideFrom": {
                   "legend": false,
@@ -7770,7 +7770,7 @@
                 "spanNulls": false,
                 "stacking": {
                   "group": "A",
-                  "mode": "normal"
+                  "mode": "none"
                 },
                 "thresholdsStyle": {
                   "mode": "off"
@@ -7791,427 +7791,7 @@
                 ]
               }
             },
-            "overrides": [
-              {
-                "matcher": {
-                  "id": "byName",
-                  "options": "Total Misses"
-                },
-                "properties": [
-                  {
-                    "id": "color",
-                    "value": {
-                      "fixedColor": "dark-red",
-                      "mode": "fixed"
-                    }
-                  }
-                ]
-              }
-            ]
-          },
-          "gridPos": {
-            "h": 8,
-            "w": 12,
-            "x": 0,
-            "y": 1
-          },
-          "id": 176,
-          "options": {
-            "legend": {
-              "calcs": [],
-              "displayMode": "list",
-              "placement": "bottom"
-            },
-            "tooltip": {
-              "mode": "single"
-            }
-          },
-          "targets": [
-            {
-              "exemplar": true,
-              "expr": "sum(rate(regen_state_cache_lookup_total{entrypoint=\"getBlockSlotState\"}[$__rate_interval]))-sum(rate(regen_state_cache_hits_total{entrypoint=\"getBlockSlotState\"}[$__rate_interval]))",
-              "interval": "",
-              "legendFormat": "Total Misses",
-              "refId": "A"
-            },
-            {
-              "exemplar": true,
-              "expr": "rate(regen_state_cache_hits_total{entrypoint=\"getBlockSlotState\"}[$__rate_interval])",
-              "hide": false,
-              "interval": "",
-              "legendFormat": "From {{caller}}",
-              "refId": "B"
-            }
-          ],
-          "title": "getBlockSlotState stateCache Hits vs Total misses (stacked)",
-          "type": "timeseries"
-        },
-        {
-          "datasource": null,
-          "fieldConfig": {
-            "defaults": {
-              "color": {
-                "mode": "palette-classic"
-              },
-              "custom": {
-                "axisLabel": "",
-                "axisPlacement": "auto",
-                "barAlignment": 0,
-                "drawStyle": "line",
-                "fillOpacity": 20,
-                "gradientMode": "none",
-                "hideFrom": {
-                  "legend": false,
-                  "tooltip": false,
-                  "viz": false
-                },
-                "lineInterpolation": "linear",
-                "lineWidth": 1,
-                "pointSize": 5,
-                "scaleDistribution": {
-                  "type": "linear"
-                },
-                "showPoints": "auto",
-                "spanNulls": false,
-                "stacking": {
-                  "group": "A",
-                  "mode": "normal"
-                },
-                "thresholdsStyle": {
-                  "mode": "off"
-                }
-              },
-              "mappings": [],
-              "thresholds": {
-                "mode": "absolute",
-                "steps": [
-                  {
-                    "color": "green",
-                    "value": null
-                  },
-                  {
-                    "color": "red",
-                    "value": 80
-                  }
-                ]
-              }
-            },
-            "overrides": [
-              {
-                "matcher": {
-                  "id": "byName",
-                  "options": "Total Misses"
-                },
-                "properties": [
-                  {
-                    "id": "color",
-                    "value": {
-                      "fixedColor": "dark-red",
-                      "mode": "fixed"
-                    }
-                  }
-                ]
-              }
-            ]
-          },
-          "gridPos": {
-            "h": 8,
-            "w": 12,
-            "x": 12,
-            "y": 1
-          },
-          "id": 177,
-          "options": {
-            "legend": {
-              "calcs": [],
-              "displayMode": "list",
-              "placement": "bottom"
-            },
-            "tooltip": {
-              "mode": "single"
-            }
-          },
-          "targets": [
-            {
-              "exemplar": true,
-              "expr": "sum(rate(regen_cp_cache_lookup_total{entrypoint=\"getBlockSlotState\"}[$__rate_interval]))-sum(rate(regen_cp_cache_hits_total{entrypoint=\"getBlockSlotState\"}[$__rate_interval]))",
-              "interval": "",
-              "legendFormat": "Total Misses",
-              "refId": "A"
-            },
-            {
-              "exemplar": true,
-              "expr": "rate(regen_cp_cache_hits_total{entrypoint=\"getBlockSlotState\"}[$__rate_interval])",
-              "hide": false,
-              "interval": "",
-              "legendFormat": "From {{caller}}",
-              "refId": "B"
-            }
-          ],
-          "title": "getBlockSlotState checkpointStateCache Hits vs Total misses (stacked)",
-          "type": "timeseries"
-        },
-        {
-          "datasource": null,
-          "fieldConfig": {
-            "defaults": {
-              "color": {
-                "mode": "palette-classic"
-              },
-              "custom": {
-                "axisLabel": "",
-                "axisPlacement": "auto",
-                "barAlignment": 0,
-                "drawStyle": "line",
-                "fillOpacity": 20,
-                "gradientMode": "none",
-                "hideFrom": {
-                  "legend": false,
-                  "tooltip": false,
-                  "viz": false
-                },
-                "lineInterpolation": "linear",
-                "lineWidth": 1,
-                "pointSize": 5,
-                "scaleDistribution": {
-                  "type": "linear"
-                },
-                "showPoints": "auto",
-                "spanNulls": false,
-                "stacking": {
-                  "group": "A",
-                  "mode": "normal"
-                },
-                "thresholdsStyle": {
-                  "mode": "off"
-                }
-              },
-              "mappings": [],
-              "thresholds": {
-                "mode": "absolute",
-                "steps": [
-                  {
-                    "color": "green",
-                    "value": null
-                  },
-                  {
-                    "color": "red",
-                    "value": 80
-                  }
-                ]
-              }
-            },
-            "overrides": [
-              {
-                "matcher": {
-                  "id": "byName",
-                  "options": "Total Misses"
-                },
-                "properties": [
-                  {
-                    "id": "color",
-                    "value": {
-                      "fixedColor": "dark-red",
-                      "mode": "fixed"
-                    }
-                  }
-                ]
-              }
-            ]
-          },
-          "gridPos": {
-            "h": 8,
-            "w": 12,
-            "x": 0,
-            "y": 9
-          },
-          "id": 184,
-          "options": {
-            "legend": {
-              "calcs": [],
-              "displayMode": "list",
-              "placement": "bottom"
-            },
-            "tooltip": {
-              "mode": "single"
-            }
-          },
-          "targets": [
-            {
-              "exemplar": true,
-              "expr": "rate(regen_state_cache_lookup_total{entrypoint=\"getBlockSlotState\"}[$__rate_interval])-rate(regen_state_cache_hits_total{entrypoint=\"getBlockSlotState\"}[$__rate_interval])",
-              "interval": "",
-              "legendFormat": "From {{caller}}",
-              "refId": "A"
-            }
-          ],
-          "title": "getBlockSlotState stateCache Misses (stacked)",
-          "type": "timeseries"
-        },
-        {
-          "datasource": null,
-          "fieldConfig": {
-            "defaults": {
-              "color": {
-                "mode": "palette-classic"
-              },
-              "custom": {
-                "axisLabel": "",
-                "axisPlacement": "auto",
-                "barAlignment": 0,
-                "drawStyle": "line",
-                "fillOpacity": 20,
-                "gradientMode": "none",
-                "hideFrom": {
-                  "legend": false,
-                  "tooltip": false,
-                  "viz": false
-                },
-                "lineInterpolation": "linear",
-                "lineWidth": 1,
-                "pointSize": 5,
-                "scaleDistribution": {
-                  "type": "linear"
-                },
-                "showPoints": "auto",
-                "spanNulls": false,
-                "stacking": {
-                  "group": "A",
-                  "mode": "normal"
-                },
-                "thresholdsStyle": {
-                  "mode": "off"
-                }
-              },
-              "mappings": [],
-              "thresholds": {
-                "mode": "absolute",
-                "steps": [
-                  {
-                    "color": "green",
-                    "value": null
-                  },
-                  {
-                    "color": "red",
-                    "value": 80
-                  }
-                ]
-              }
-            },
-            "overrides": [
-              {
-                "matcher": {
-                  "id": "byName",
-                  "options": "Total Misses"
-                },
-                "properties": [
-                  {
-                    "id": "color",
-                    "value": {
-                      "fixedColor": "dark-red",
-                      "mode": "fixed"
-                    }
-                  }
-                ]
-              }
-            ]
-          },
-          "gridPos": {
-            "h": 8,
-            "w": 12,
-            "x": 12,
-            "y": 9
-          },
-          "id": 185,
-          "options": {
-            "legend": {
-              "calcs": [],
-              "displayMode": "list",
-              "placement": "bottom"
-            },
-            "tooltip": {
-              "mode": "single"
-            }
-          },
-          "targets": [
-            {
-              "exemplar": true,
-              "expr": "rate(regen_cp_cache_lookup_total{entrypoint=\"getBlockSlotState\"}[$__rate_interval])-rate(regen_cp_cache_hits_total{entrypoint=\"getBlockSlotState\"}[$__rate_interval])",
-              "interval": "",
-              "legendFormat": "From {{caller}}",
-              "refId": "A"
-            }
-          ],
-          "title": "getBlockSlotState checkpointStateCache Misses (stacked)",
-          "type": "timeseries"
-        },
-        {
-          "datasource": null,
-          "fieldConfig": {
-            "defaults": {
-              "color": {
-                "mode": "palette-classic"
-              },
-              "custom": {
-                "axisLabel": "",
-                "axisPlacement": "auto",
-                "barAlignment": 0,
-                "drawStyle": "line",
-                "fillOpacity": 20,
-                "gradientMode": "none",
-                "hideFrom": {
-                  "legend": false,
-                  "tooltip": false,
-                  "viz": false
-                },
-                "lineInterpolation": "linear",
-                "lineWidth": 1,
-                "pointSize": 5,
-                "scaleDistribution": {
-                  "type": "linear"
-                },
-                "showPoints": "auto",
-                "spanNulls": false,
-                "stacking": {
-                  "group": "A",
-                  "mode": "normal"
-                },
-                "thresholdsStyle": {
-                  "mode": "off"
-                }
-              },
-              "mappings": [],
-              "thresholds": {
-                "mode": "absolute",
-                "steps": [
-                  {
-                    "color": "green",
-                    "value": null
-                  },
-                  {
-                    "color": "red",
-                    "value": 80
-                  }
-                ]
-              }
-            },
-            "overrides": [
-              {
-                "matcher": {
-                  "id": "byName",
-                  "options": "Total Misses"
-                },
-                "properties": [
-                  {
-                    "id": "color",
-                    "value": {
-                      "fixedColor": "dark-red",
-                      "mode": "fixed"
-                    }
-                  }
-                ]
-              }
-            ]
+            "overrides": []
           },
           "gridPos": {
             "h": 8,
@@ -8219,7 +7799,7 @@
             "x": 0,
             "y": 17
           },
-          "id": 180,
+          "id": 216,
           "options": {
             "legend": {
               "calcs": [],
@@ -8233,21 +7813,21 @@
           "targets": [
             {
               "exemplar": true,
-              "expr": "sum(rate(regen_state_cache_lookup_total{entrypoint=\"getPreState\"}[$__rate_interval]))-sum(rate(regen_state_cache_hits_total{entrypoint=\"getPreState\"}[$__rate_interval]))",
+              "expr": "rate(state_cache_lookups_total{}[$__rate_interval])",
               "interval": "",
-              "legendFormat": "Total Misses",
+              "legendFormat": "total lookups",
               "refId": "A"
             },
             {
               "exemplar": true,
-              "expr": "rate(regen_state_cache_hits_total{entrypoint=\"getPreState\"}[$__rate_interval])",
+              "expr": "rate(state_cache_hits_total{}[$__rate_interval])",
               "hide": false,
               "interval": "",
-              "legendFormat": "From {{caller}}",
+              "legendFormat": "cache hits",
               "refId": "B"
             }
           ],
-          "title": "getPreState stateCache Hits vs Total misses (stacked)",
+          "title": "stateCache total lookups vs hits",
           "type": "timeseries"
         },
         {
@@ -8262,7 +7842,7 @@
                 "axisPlacement": "auto",
                 "barAlignment": 0,
                 "drawStyle": "line",
-                "fillOpacity": 20,
+                "fillOpacity": 0,
                 "gradientMode": "none",
                 "hideFrom": {
                   "legend": false,
@@ -8279,7 +7859,7 @@
                 "spanNulls": false,
                 "stacking": {
                   "group": "A",
-                  "mode": "normal"
+                  "mode": "none"
                 },
                 "thresholdsStyle": {
                   "mode": "off"
@@ -8300,23 +7880,7 @@
                 ]
               }
             },
-            "overrides": [
-              {
-                "matcher": {
-                  "id": "byName",
-                  "options": "Total Misses"
-                },
-                "properties": [
-                  {
-                    "id": "color",
-                    "value": {
-                      "fixedColor": "dark-red",
-                      "mode": "fixed"
-                    }
-                  }
-                ]
-              }
-            ]
+            "overrides": []
           },
           "gridPos": {
             "h": 8,
@@ -8324,7 +7888,7 @@
             "x": 12,
             "y": 17
           },
-          "id": 181,
+          "id": 217,
           "options": {
             "legend": {
               "calcs": [],
@@ -8338,21 +7902,21 @@
           "targets": [
             {
               "exemplar": true,
-              "expr": "sum(rate(regen_cp_cache_lookup_total{entrypoint=\"getPreState\"}[$__rate_interval]))-sum(rate(regen_cp_cache_hits_total{entrypoint=\"getPreState\"}[$__rate_interval]))",
+              "expr": "rate(cp_state_cache_lookups_total{}[$__rate_interval])",
               "interval": "",
-              "legendFormat": "Total Misses",
+              "legendFormat": "total lookups",
               "refId": "A"
             },
             {
               "exemplar": true,
-              "expr": "rate(regen_cp_cache_hits_total{entrypoint=\"getPreState\"}[$__rate_interval])",
+              "expr": "rate(cp_state_cache_hits_total{}[$__rate_interval])",
               "hide": false,
               "interval": "",
-              "legendFormat": "From {{caller}}",
+              "legendFormat": "cache hits",
               "refId": "B"
             }
           ],
-          "title": "getPreState checkpointStateCache Hits vs Total misses (stacked)",
+          "title": "checkpointStateCache total lookups vs hits",
           "type": "timeseries"
         },
         {
@@ -8367,7 +7931,7 @@
                 "axisPlacement": "auto",
                 "barAlignment": 0,
                 "drawStyle": "line",
-                "fillOpacity": 20,
+                "fillOpacity": 0,
                 "gradientMode": "none",
                 "hideFrom": {
                   "legend": false,
@@ -8384,7 +7948,7 @@
                 "spanNulls": false,
                 "stacking": {
                   "group": "A",
-                  "mode": "normal"
+                  "mode": "none"
                 },
                 "thresholdsStyle": {
                   "mode": "off"
@@ -8405,23 +7969,7 @@
                 ]
               }
             },
-            "overrides": [
-              {
-                "matcher": {
-                  "id": "byName",
-                  "options": "Total Misses"
-                },
-                "properties": [
-                  {
-                    "id": "color",
-                    "value": {
-                      "fixedColor": "dark-red",
-                      "mode": "fixed"
-                    }
-                  }
-                ]
-              }
-            ]
+            "overrides": []
           },
           "gridPos": {
             "h": 8,
@@ -8429,7 +7977,7 @@
             "x": 0,
             "y": 25
           },
-          "id": 186,
+          "id": 219,
           "options": {
             "legend": {
               "calcs": [],
@@ -8443,13 +7991,13 @@
           "targets": [
             {
               "exemplar": true,
-              "expr": "rate(regen_state_cache_lookup_total{entrypoint=\"getPreState\"}[$__rate_interval])-rate(regen_state_cache_hits_total{entrypoint=\"getPreState\"}[$__rate_interval])",
+              "expr": "state_cache_size{}",
               "interval": "",
-              "legendFormat": "From {{caller}}",
+              "legendFormat": "states",
               "refId": "A"
             }
           ],
-          "title": "getPreState stateCache Misses (stacked)",
+          "title": "stateCache cache size",
           "type": "timeseries"
         },
         {
@@ -8464,7 +8012,7 @@
                 "axisPlacement": "auto",
                 "barAlignment": 0,
                 "drawStyle": "line",
-                "fillOpacity": 20,
+                "fillOpacity": 0,
                 "gradientMode": "none",
                 "hideFrom": {
                   "legend": false,
@@ -8481,7 +8029,7 @@
                 "spanNulls": false,
                 "stacking": {
                   "group": "A",
-                  "mode": "normal"
+                  "mode": "none"
                 },
                 "thresholdsStyle": {
                   "mode": "off"
@@ -8502,23 +8050,7 @@
                 ]
               }
             },
-            "overrides": [
-              {
-                "matcher": {
-                  "id": "byName",
-                  "options": "Total Misses"
-                },
-                "properties": [
-                  {
-                    "id": "color",
-                    "value": {
-                      "fixedColor": "dark-red",
-                      "mode": "fixed"
-                    }
-                  }
-                ]
-              }
-            ]
+            "overrides": []
           },
           "gridPos": {
             "h": 8,
@@ -8526,7 +8058,7 @@
             "x": 12,
             "y": 25
           },
-          "id": 187,
+          "id": 220,
           "options": {
             "legend": {
               "calcs": [],
@@ -8540,13 +8072,21 @@
           "targets": [
             {
               "exemplar": true,
-              "expr": "rate(regen_cp_cache_lookup_total{entrypoint=\"getPreState\"}[$__rate_interval])-rate(regen_cp_cache_hits_total{entrypoint=\"getPreState\"}[$__rate_interval])",
+              "expr": "cp_state_cache_size{}",
               "interval": "",
-              "legendFormat": "From {{caller}}",
+              "legendFormat": "states",
               "refId": "A"
+            },
+            {
+              "exemplar": true,
+              "expr": "cp_state_epoch_size",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "epochs",
+              "refId": "B"
             }
           ],
-          "title": "getPreState checkpointStateCache Misses (stacked)",
+          "title": "checkpointStateCache cache size",
           "type": "timeseries"
         },
         {
@@ -8561,7 +8101,7 @@
                 "axisPlacement": "auto",
                 "barAlignment": 0,
                 "drawStyle": "line",
-                "fillOpacity": 20,
+                "fillOpacity": 0,
                 "gradientMode": "none",
                 "hideFrom": {
                   "legend": false,
@@ -8578,7 +8118,7 @@
                 "spanNulls": false,
                 "stacking": {
                   "group": "A",
-                  "mode": "normal"
+                  "mode": "none"
                 },
                 "thresholdsStyle": {
                   "mode": "off"
@@ -8599,31 +8139,15 @@
                 ]
               }
             },
-            "overrides": [
-              {
-                "matcher": {
-                  "id": "byName",
-                  "options": "Total Misses"
-                },
-                "properties": [
-                  {
-                    "id": "color",
-                    "value": {
-                      "fixedColor": "dark-red",
-                      "mode": "fixed"
-                    }
-                  }
-                ]
-              }
-            ]
+            "overrides": []
           },
           "gridPos": {
             "h": 8,
-            "w": 12,
+            "w": 24,
             "x": 0,
             "y": 33
           },
-          "id": 182,
+          "id": 222,
           "options": {
             "legend": {
               "calcs": [],
@@ -8637,728 +8161,25 @@
           "targets": [
             {
               "exemplar": true,
-              "expr": "sum(rate(regen_state_cache_lookup_total{entrypoint=\"getCheckpointState\"}[$__rate_interval]))-sum(rate(regen_state_cache_hits_total{entrypoint=\"getCheckpointState\"}[$__rate_interval]))",
+              "expr": "rate(state_cache_adds_total{}[$__rate_interval])",
               "interval": "",
-              "legendFormat": "Total Misses",
+              "legendFormat": "state cache",
               "refId": "A"
             },
             {
               "exemplar": true,
-              "expr": "rate(regen_state_cache_hits_total{entrypoint=\"getCheckpointState\"}[$__rate_interval])",
+              "expr": "rate(cp_state_cache_adds_total{}[$__rate_interval])",
               "hide": false,
               "interval": "",
-              "legendFormat": "From {{caller}}",
+              "legendFormat": "checkpointState cache",
               "refId": "B"
             }
           ],
-          "title": "getCheckpointState stateCache Hits vs Total misses (stacked)",
-          "type": "timeseries"
-        },
-        {
-          "datasource": null,
-          "fieldConfig": {
-            "defaults": {
-              "color": {
-                "mode": "palette-classic"
-              },
-              "custom": {
-                "axisLabel": "",
-                "axisPlacement": "auto",
-                "barAlignment": 0,
-                "drawStyle": "line",
-                "fillOpacity": 20,
-                "gradientMode": "none",
-                "hideFrom": {
-                  "legend": false,
-                  "tooltip": false,
-                  "viz": false
-                },
-                "lineInterpolation": "linear",
-                "lineWidth": 1,
-                "pointSize": 5,
-                "scaleDistribution": {
-                  "type": "linear"
-                },
-                "showPoints": "auto",
-                "spanNulls": false,
-                "stacking": {
-                  "group": "A",
-                  "mode": "normal"
-                },
-                "thresholdsStyle": {
-                  "mode": "off"
-                }
-              },
-              "mappings": [],
-              "thresholds": {
-                "mode": "absolute",
-                "steps": [
-                  {
-                    "color": "green",
-                    "value": null
-                  },
-                  {
-                    "color": "red",
-                    "value": 80
-                  }
-                ]
-              }
-            },
-            "overrides": [
-              {
-                "matcher": {
-                  "id": "byName",
-                  "options": "Total Misses"
-                },
-                "properties": [
-                  {
-                    "id": "color",
-                    "value": {
-                      "fixedColor": "dark-red",
-                      "mode": "fixed"
-                    }
-                  }
-                ]
-              }
-            ]
-          },
-          "gridPos": {
-            "h": 8,
-            "w": 12,
-            "x": 12,
-            "y": 33
-          },
-          "id": 183,
-          "options": {
-            "legend": {
-              "calcs": [],
-              "displayMode": "list",
-              "placement": "bottom"
-            },
-            "tooltip": {
-              "mode": "single"
-            }
-          },
-          "targets": [
-            {
-              "exemplar": true,
-              "expr": "sum(rate(regen_cp_cache_lookup_total{entrypoint=\"getCheckpointState\"}[$__rate_interval]))-sum(rate(regen_cp_cache_hits_total{entrypoint=\"getCheckpointState\"}[$__rate_interval]))",
-              "interval": "",
-              "legendFormat": "Total Misses",
-              "refId": "A"
-            },
-            {
-              "exemplar": true,
-              "expr": "rate(regen_cp_cache_hits_total{entrypoint=\"getCheckpointState\"}[$__rate_interval])",
-              "hide": false,
-              "interval": "",
-              "legendFormat": "From {{caller}}",
-              "refId": "B"
-            }
-          ],
-          "title": "getCheckpointState checkpointStateCache Hits vs Total misses (stacked)",
-          "type": "timeseries"
-        },
-        {
-          "datasource": null,
-          "fieldConfig": {
-            "defaults": {
-              "color": {
-                "mode": "palette-classic"
-              },
-              "custom": {
-                "axisLabel": "",
-                "axisPlacement": "auto",
-                "barAlignment": 0,
-                "drawStyle": "line",
-                "fillOpacity": 20,
-                "gradientMode": "none",
-                "hideFrom": {
-                  "legend": false,
-                  "tooltip": false,
-                  "viz": false
-                },
-                "lineInterpolation": "linear",
-                "lineWidth": 1,
-                "pointSize": 5,
-                "scaleDistribution": {
-                  "type": "linear"
-                },
-                "showPoints": "auto",
-                "spanNulls": false,
-                "stacking": {
-                  "group": "A",
-                  "mode": "normal"
-                },
-                "thresholdsStyle": {
-                  "mode": "off"
-                }
-              },
-              "mappings": [],
-              "thresholds": {
-                "mode": "absolute",
-                "steps": [
-                  {
-                    "color": "green",
-                    "value": null
-                  },
-                  {
-                    "color": "red",
-                    "value": 80
-                  }
-                ]
-              }
-            },
-            "overrides": [
-              {
-                "matcher": {
-                  "id": "byName",
-                  "options": "Total Misses"
-                },
-                "properties": [
-                  {
-                    "id": "color",
-                    "value": {
-                      "fixedColor": "dark-red",
-                      "mode": "fixed"
-                    }
-                  }
-                ]
-              }
-            ]
-          },
-          "gridPos": {
-            "h": 8,
-            "w": 12,
-            "x": 0,
-            "y": 41
-          },
-          "id": 188,
-          "options": {
-            "legend": {
-              "calcs": [],
-              "displayMode": "list",
-              "placement": "bottom"
-            },
-            "tooltip": {
-              "mode": "single"
-            }
-          },
-          "targets": [
-            {
-              "exemplar": true,
-              "expr": "rate(regen_state_cache_lookup_total{entrypoint=\"getCheckpointState\"}[$__rate_interval])-rate(regen_state_cache_hits_total{entrypoint=\"getCheckpointState\"}[$__rate_interval])",
-              "interval": "",
-              "legendFormat": "From {{caller}}",
-              "refId": "A"
-            }
-          ],
-          "title": "getCheckpointState stateCache Misses (stacked)",
-          "type": "timeseries"
-        },
-        {
-          "datasource": null,
-          "fieldConfig": {
-            "defaults": {
-              "color": {
-                "mode": "palette-classic"
-              },
-              "custom": {
-                "axisLabel": "",
-                "axisPlacement": "auto",
-                "barAlignment": 0,
-                "drawStyle": "line",
-                "fillOpacity": 20,
-                "gradientMode": "none",
-                "hideFrom": {
-                  "legend": false,
-                  "tooltip": false,
-                  "viz": false
-                },
-                "lineInterpolation": "linear",
-                "lineWidth": 1,
-                "pointSize": 5,
-                "scaleDistribution": {
-                  "type": "linear"
-                },
-                "showPoints": "auto",
-                "spanNulls": false,
-                "stacking": {
-                  "group": "A",
-                  "mode": "normal"
-                },
-                "thresholdsStyle": {
-                  "mode": "off"
-                }
-              },
-              "mappings": [],
-              "thresholds": {
-                "mode": "absolute",
-                "steps": [
-                  {
-                    "color": "green",
-                    "value": null
-                  },
-                  {
-                    "color": "red",
-                    "value": 80
-                  }
-                ]
-              }
-            },
-            "overrides": [
-              {
-                "matcher": {
-                  "id": "byName",
-                  "options": "Total Misses"
-                },
-                "properties": [
-                  {
-                    "id": "color",
-                    "value": {
-                      "fixedColor": "dark-red",
-                      "mode": "fixed"
-                    }
-                  }
-                ]
-              }
-            ]
-          },
-          "gridPos": {
-            "h": 8,
-            "w": 12,
-            "x": 12,
-            "y": 41
-          },
-          "id": 189,
-          "options": {
-            "legend": {
-              "calcs": [],
-              "displayMode": "list",
-              "placement": "bottom"
-            },
-            "tooltip": {
-              "mode": "single"
-            }
-          },
-          "targets": [
-            {
-              "exemplar": true,
-              "expr": "rate(regen_cp_cache_lookup_total{entrypoint=\"getCheckpointState\"}[$__rate_interval])-rate(regen_cp_cache_hits_total{entrypoint=\"getCheckpointState\"}[$__rate_interval])",
-              "interval": "",
-              "legendFormat": "From {{caller}}",
-              "refId": "A"
-            }
-          ],
-          "title": "getCheckpointState checkpointStateCache Misses (stacked)",
-          "type": "timeseries"
-        },
-        {
-          "datasource": null,
-          "fieldConfig": {
-            "defaults": {
-              "color": {
-                "mode": "palette-classic"
-              },
-              "custom": {
-                "axisLabel": "",
-                "axisPlacement": "auto",
-                "barAlignment": 0,
-                "drawStyle": "line",
-                "fillOpacity": 20,
-                "gradientMode": "none",
-                "hideFrom": {
-                  "legend": false,
-                  "tooltip": false,
-                  "viz": false
-                },
-                "lineInterpolation": "linear",
-                "lineWidth": 1,
-                "pointSize": 5,
-                "scaleDistribution": {
-                  "type": "linear"
-                },
-                "showPoints": "auto",
-                "spanNulls": false,
-                "stacking": {
-                  "group": "A",
-                  "mode": "normal"
-                },
-                "thresholdsStyle": {
-                  "mode": "off"
-                }
-              },
-              "mappings": [],
-              "thresholds": {
-                "mode": "absolute",
-                "steps": [
-                  {
-                    "color": "green",
-                    "value": null
-                  },
-                  {
-                    "color": "red",
-                    "value": 80
-                  }
-                ]
-              }
-            },
-            "overrides": [
-              {
-                "matcher": {
-                  "id": "byName",
-                  "options": "Total Misses"
-                },
-                "properties": [
-                  {
-                    "id": "color",
-                    "value": {
-                      "fixedColor": "dark-red",
-                      "mode": "fixed"
-                    }
-                  }
-                ]
-              }
-            ]
-          },
-          "gridPos": {
-            "h": 8,
-            "w": 12,
-            "x": 0,
-            "y": 49
-          },
-          "id": 178,
-          "options": {
-            "legend": {
-              "calcs": [],
-              "displayMode": "list",
-              "placement": "bottom"
-            },
-            "tooltip": {
-              "mode": "single"
-            }
-          },
-          "targets": [
-            {
-              "exemplar": true,
-              "expr": "sum(rate(regen_state_cache_lookup_total{entrypoint=\"getState\"}[$__rate_interval]))-sum(rate(regen_state_cache_hits_total{entrypoint=\"getState\"}[$__rate_interval]))",
-              "interval": "",
-              "legendFormat": "Total Misses",
-              "refId": "A"
-            },
-            {
-              "exemplar": true,
-              "expr": "rate(regen_state_cache_hits_total{entrypoint=\"getState\"}[$__rate_interval])",
-              "hide": false,
-              "interval": "",
-              "legendFormat": "From {{caller}}",
-              "refId": "B"
-            }
-          ],
-          "title": "getState stateCache Hits vs Total misses (stacked)",
-          "type": "timeseries"
-        },
-        {
-          "datasource": null,
-          "fieldConfig": {
-            "defaults": {
-              "color": {
-                "mode": "palette-classic"
-              },
-              "custom": {
-                "axisLabel": "",
-                "axisPlacement": "auto",
-                "barAlignment": 0,
-                "drawStyle": "line",
-                "fillOpacity": 20,
-                "gradientMode": "none",
-                "hideFrom": {
-                  "legend": false,
-                  "tooltip": false,
-                  "viz": false
-                },
-                "lineInterpolation": "linear",
-                "lineWidth": 1,
-                "pointSize": 5,
-                "scaleDistribution": {
-                  "type": "linear"
-                },
-                "showPoints": "auto",
-                "spanNulls": false,
-                "stacking": {
-                  "group": "A",
-                  "mode": "normal"
-                },
-                "thresholdsStyle": {
-                  "mode": "off"
-                }
-              },
-              "mappings": [],
-              "thresholds": {
-                "mode": "absolute",
-                "steps": [
-                  {
-                    "color": "green",
-                    "value": null
-                  },
-                  {
-                    "color": "red",
-                    "value": 80
-                  }
-                ]
-              }
-            },
-            "overrides": [
-              {
-                "matcher": {
-                  "id": "byName",
-                  "options": "Total Misses"
-                },
-                "properties": [
-                  {
-                    "id": "color",
-                    "value": {
-                      "fixedColor": "dark-red",
-                      "mode": "fixed"
-                    }
-                  }
-                ]
-              }
-            ]
-          },
-          "gridPos": {
-            "h": 8,
-            "w": 12,
-            "x": 12,
-            "y": 49
-          },
-          "id": 179,
-          "options": {
-            "legend": {
-              "calcs": [],
-              "displayMode": "list",
-              "placement": "bottom"
-            },
-            "tooltip": {
-              "mode": "single"
-            }
-          },
-          "targets": [
-            {
-              "exemplar": true,
-              "expr": "sum(rate(regen_cp_cache_lookup_total{entrypoint=\"getState\"}[$__rate_interval]))-sum(rate(regen_cp_cache_hits_total{entrypoint=\"getState\"}[$__rate_interval]))",
-              "interval": "",
-              "legendFormat": "Total Misses",
-              "refId": "A"
-            },
-            {
-              "exemplar": true,
-              "expr": "rate(regen_cp_cache_hits_total{entrypoint=\"getState\"}[$__rate_interval])",
-              "hide": false,
-              "interval": "",
-              "legendFormat": "From {{caller}}",
-              "refId": "B"
-            }
-          ],
-          "title": "getState checkpointStateCache Hits vs Total misses (stacked)",
-          "type": "timeseries"
-        },
-        {
-          "datasource": null,
-          "fieldConfig": {
-            "defaults": {
-              "color": {
-                "mode": "palette-classic"
-              },
-              "custom": {
-                "axisLabel": "",
-                "axisPlacement": "auto",
-                "barAlignment": 0,
-                "drawStyle": "line",
-                "fillOpacity": 20,
-                "gradientMode": "none",
-                "hideFrom": {
-                  "legend": false,
-                  "tooltip": false,
-                  "viz": false
-                },
-                "lineInterpolation": "linear",
-                "lineWidth": 1,
-                "pointSize": 5,
-                "scaleDistribution": {
-                  "type": "linear"
-                },
-                "showPoints": "auto",
-                "spanNulls": false,
-                "stacking": {
-                  "group": "A",
-                  "mode": "normal"
-                },
-                "thresholdsStyle": {
-                  "mode": "off"
-                }
-              },
-              "mappings": [],
-              "thresholds": {
-                "mode": "absolute",
-                "steps": [
-                  {
-                    "color": "green",
-                    "value": null
-                  },
-                  {
-                    "color": "red",
-                    "value": 80
-                  }
-                ]
-              }
-            },
-            "overrides": [
-              {
-                "matcher": {
-                  "id": "byName",
-                  "options": "Total Misses"
-                },
-                "properties": [
-                  {
-                    "id": "color",
-                    "value": {
-                      "fixedColor": "dark-red",
-                      "mode": "fixed"
-                    }
-                  }
-                ]
-              }
-            ]
-          },
-          "gridPos": {
-            "h": 8,
-            "w": 12,
-            "x": 0,
-            "y": 57
-          },
-          "id": 190,
-          "options": {
-            "legend": {
-              "calcs": [],
-              "displayMode": "list",
-              "placement": "bottom"
-            },
-            "tooltip": {
-              "mode": "single"
-            }
-          },
-          "targets": [
-            {
-              "exemplar": true,
-              "expr": "rate(regen_state_cache_lookup_total{entrypoint=\"getState\"}[$__rate_interval])-rate(regen_state_cache_hits_total{entrypoint=\"getState\"}[$__rate_interval])",
-              "interval": "",
-              "legendFormat": "From {{caller}}",
-              "refId": "A"
-            }
-          ],
-          "title": "getState stateCache Misses (stacked)",
-          "type": "timeseries"
-        },
-        {
-          "datasource": null,
-          "fieldConfig": {
-            "defaults": {
-              "color": {
-                "mode": "palette-classic"
-              },
-              "custom": {
-                "axisLabel": "",
-                "axisPlacement": "auto",
-                "barAlignment": 0,
-                "drawStyle": "line",
-                "fillOpacity": 20,
-                "gradientMode": "none",
-                "hideFrom": {
-                  "legend": false,
-                  "tooltip": false,
-                  "viz": false
-                },
-                "lineInterpolation": "linear",
-                "lineWidth": 1,
-                "pointSize": 5,
-                "scaleDistribution": {
-                  "type": "linear"
-                },
-                "showPoints": "auto",
-                "spanNulls": false,
-                "stacking": {
-                  "group": "A",
-                  "mode": "normal"
-                },
-                "thresholdsStyle": {
-                  "mode": "off"
-                }
-              },
-              "mappings": [],
-              "thresholds": {
-                "mode": "absolute",
-                "steps": [
-                  {
-                    "color": "green",
-                    "value": null
-                  },
-                  {
-                    "color": "red",
-                    "value": 80
-                  }
-                ]
-              }
-            },
-            "overrides": [
-              {
-                "matcher": {
-                  "id": "byName",
-                  "options": "Total Misses"
-                },
-                "properties": [
-                  {
-                    "id": "color",
-                    "value": {
-                      "fixedColor": "dark-red",
-                      "mode": "fixed"
-                    }
-                  }
-                ]
-              }
-            ]
-          },
-          "gridPos": {
-            "h": 8,
-            "w": 12,
-            "x": 12,
-            "y": 57
-          },
-          "id": 191,
-          "options": {
-            "legend": {
-              "calcs": [],
-              "displayMode": "list",
-              "placement": "bottom"
-            },
-            "tooltip": {
-              "mode": "single"
-            }
-          },
-          "targets": [
-            {
-              "exemplar": true,
-              "expr": "rate(regen_cp_cache_lookup_total{entrypoint=\"getState\"}[$__rate_interval])-rate(regen_cp_cache_hits_total{entrypoint=\"getState\"}[$__rate_interval])",
-              "interval": "",
-              "legendFormat": "From {{caller}}",
-              "refId": "A"
-            }
-          ],
-          "title": "getCheckpointState checkpointStateCache Misses (stacked)",
+          "title": "cached state add(s)",
           "type": "timeseries"
         }
       ],
-      "title": "Regen Cache Stats",
+      "title": "stateCache and stateCheckpointCache Stats",
       "type": "row"
     },
     {
@@ -9442,7 +8263,7 @@
           },
           "gridPos": {
             "h": 8,
-            "w": 12,
+            "w": 8,
             "x": 0,
             "y": 18
           },
@@ -9475,6 +8296,271 @@
             }
           ],
           "title": "getBlockSlotState Successes vs Errors (stacked)",
+          "type": "timeseries"
+        },
+        {
+          "datasource": null,
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 0,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "auto",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "max": 1,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  }
+                ]
+              },
+              "unit": "percentunit"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 8,
+            "x": 8,
+            "y": 18
+          },
+          "id": 224,
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom"
+            },
+            "tooltip": {
+              "mode": "single"
+            }
+          },
+          "targets": [
+            {
+              "exemplar": true,
+              "expr": "(delta(regen_fn_call_total{entrypoint=\"getBlockSlotState\"}[$__rate_interval])-(delta(regen_fn_call_duration_count{entrypoint=\"getBlockSlotState\"}[$__rate_interval]) or delta(regen_fn_call_total{entrypoint=\"getBlockSlotState\"}[$__rate_interval])*0))/(delta(regen_fn_call_total{entrypoint=\"getBlockSlotState\"}[$__rate_interval]))",
+              "interval": "",
+              "legendFormat": "From {{caller}}",
+              "refId": "A"
+            },
+            {
+              "exemplar": true,
+              "expr": "",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "",
+              "refId": "B"
+            }
+          ],
+          "title": "getBlockSlotState cache hit ratio",
+          "type": "timeseries"
+        },
+        {
+          "datasource": null,
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 20,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "auto",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "normal"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              }
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Total Errors"
+                },
+                "properties": [
+                  {
+                    "id": "color",
+                    "value": {
+                      "fixedColor": "dark-red",
+                      "mode": "fixed"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 8,
+            "x": 16,
+            "y": 18
+          },
+          "id": 196,
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom"
+            },
+            "tooltip": {
+              "mode": "single"
+            }
+          },
+          "targets": [
+            {
+              "exemplar": true,
+              "expr": "rate(regen_fn_total_errors{entrypoint=\"getBlockSlotState\"}[$__rate_interval]) or  rate(regen_fn_call_total{entrypoint=\"getBlockSlotState\"}[$__rate_interval]) * 0",
+              "interval": "",
+              "legendFormat": "From {{caller}}",
+              "refId": "A"
+            }
+          ],
+          "title": "getBlockSlotState  Errors (stacked)",
+          "type": "timeseries"
+        },
+        {
+          "datasource": null,
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 20,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "auto",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "normal"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 26
+          },
+          "id": 209,
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom"
+            },
+            "tooltip": {
+              "mode": "single"
+            }
+          },
+          "targets": [
+            {
+              "exemplar": true,
+              "expr": "12*rate(regen_fn_call_duration_count{entrypoint=\"getBlockSlotState\"}[$__rate_interval])",
+              "interval": "",
+              "legendFormat": "From {{caller}}",
+              "refId": "A"
+            }
+          ],
+          "title": "getBlockSlotState jobProcessing computes per slot (stacked)",
           "type": "timeseries"
         },
         {
@@ -9534,7 +8620,7 @@
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 18
+            "y": 26
           },
           "id": 204,
           "options": {
@@ -9629,11 +8715,11 @@
           },
           "gridPos": {
             "h": 8,
-            "w": 12,
+            "w": 8,
             "x": 0,
-            "y": 26
+            "y": 34
           },
-          "id": 196,
+          "id": 200,
           "options": {
             "legend": {
               "calcs": [],
@@ -9647,13 +8733,21 @@
           "targets": [
             {
               "exemplar": true,
-              "expr": "rate(regen_fn_total_errors{entrypoint=\"getBlockSlotState\"}[$__rate_interval]) or  rate(regen_fn_call_total{entrypoint=\"getBlockSlotState\"}[$__rate_interval]) * 0",
+              "expr": "sum(rate(regen_fn_total_errors{entrypoint=\"getCheckpointState\"}[$__rate_interval])) or  sum(rate(regen_fn_call_total{entrypoint=\"getCheckpointState\"}[$__rate_interval])) * 0",
+              "interval": "",
+              "legendFormat": "Total Errors",
+              "refId": "A"
+            },
+            {
+              "exemplar": true,
+              "expr": "rate(regen_fn_call_total{entrypoint=\"getCheckpointState\"}[$__rate_interval])-(rate(regen_fn_total_errors{entrypoint=\"getCheckpointState\"}[$__rate_interval]) or rate(regen_fn_call_total{entrypoint=\"getCheckpointState\"}[$__rate_interval]) * 0 )",
+              "hide": false,
               "interval": "",
               "legendFormat": "From {{caller}}",
-              "refId": "A"
+              "refId": "B"
             }
           ],
-          "title": "getBlockSlotState  Errors (stacked)",
+          "title": "getCheckpointState Successes vs Errors (stacked)",
           "type": "timeseries"
         },
         {
@@ -9668,7 +8762,7 @@
                 "axisPlacement": "auto",
                 "barAlignment": 0,
                 "drawStyle": "line",
-                "fillOpacity": 20,
+                "fillOpacity": 0,
                 "gradientMode": "none",
                 "hideFrom": {
                   "legend": false,
@@ -9685,36 +8779,34 @@
                 "spanNulls": false,
                 "stacking": {
                   "group": "A",
-                  "mode": "normal"
+                  "mode": "none"
                 },
                 "thresholdsStyle": {
                   "mode": "off"
                 }
               },
               "mappings": [],
+              "max": 1,
               "thresholds": {
                 "mode": "absolute",
                 "steps": [
                   {
                     "color": "green",
                     "value": null
-                  },
-                  {
-                    "color": "red",
-                    "value": 80
                   }
                 ]
-              }
+              },
+              "unit": "percentunit"
             },
             "overrides": []
           },
           "gridPos": {
             "h": 8,
-            "w": 12,
-            "x": 12,
-            "y": 26
+            "w": 8,
+            "x": 8,
+            "y": 34
           },
-          "id": 209,
+          "id": 228,
           "options": {
             "legend": {
               "calcs": [],
@@ -9728,13 +8820,21 @@
           "targets": [
             {
               "exemplar": true,
-              "expr": "12*rate(regen_fn_call_duration_count{entrypoint=\"getBlockSlotState\"}[$__rate_interval])",
+              "expr": "(delta(regen_fn_call_total{entrypoint=\"getCheckpointState\"}[$__rate_interval])-(delta(regen_fn_call_duration_count{entrypoint=\"getCheckpointState\"}[$__rate_interval]) or delta(regen_fn_call_total{entrypoint=\"getCheckpointState\"}[$__rate_interval])*0))/(delta(regen_fn_call_total{entrypoint=\"getCheckpointState\"}[$__rate_interval]))",
               "interval": "",
               "legendFormat": "From {{caller}}",
               "refId": "A"
+            },
+            {
+              "exemplar": true,
+              "expr": "",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "",
+              "refId": "B"
             }
           ],
-          "title": "getBlockSlotState jobProcessing computes per slot (stacked)",
+          "title": "getCheckpointState cache hit ratio",
           "type": "timeseries"
         },
         {
@@ -9807,11 +8907,11 @@
           },
           "gridPos": {
             "h": 8,
-            "w": 12,
-            "x": 0,
+            "w": 8,
+            "x": 16,
             "y": 34
           },
-          "id": 200,
+          "id": 202,
           "options": {
             "legend": {
               "calcs": [],
@@ -9825,21 +8925,13 @@
           "targets": [
             {
               "exemplar": true,
-              "expr": "sum(rate(regen_fn_total_errors{entrypoint=\"getCheckpointState\"}[$__rate_interval])) or  sum(rate(regen_fn_call_total{entrypoint=\"getCheckpointState\"}[$__rate_interval])) * 0",
-              "interval": "",
-              "legendFormat": "Total Errors",
-              "refId": "A"
-            },
-            {
-              "exemplar": true,
-              "expr": "rate(regen_fn_call_total{entrypoint=\"getCheckpointState\"}[$__rate_interval])-(rate(regen_fn_total_errors{entrypoint=\"getCheckpointState\"}[$__rate_interval]) or rate(regen_fn_call_total{entrypoint=\"getCheckpointState\"}[$__rate_interval]) * 0 )",
-              "hide": false,
+              "expr": "rate(regen_fn_total_errors{entrypoint=\"getCheckpointState\"}[$__rate_interval]) or  rate(regen_fn_call_total{entrypoint=\"getCheckpointState\"}[$__rate_interval]) * 0",
               "interval": "",
               "legendFormat": "From {{caller}}",
-              "refId": "B"
+              "refId": "A"
             }
           ],
-          "title": "getCheckpointState Successes vs Errors (stacked)",
+          "title": "getCheckpointState  Errors (stacked)",
           "type": "timeseries"
         },
         {
@@ -9898,8 +8990,8 @@
           "gridPos": {
             "h": 8,
             "w": 12,
-            "x": 12,
-            "y": 34
+            "x": 0,
+            "y": 42
           },
           "id": 206,
           "options": {
@@ -9922,103 +9014,6 @@
             }
           ],
           "title": "getCheckpointState jobProcessing avg time (seconds)",
-          "type": "timeseries"
-        },
-        {
-          "datasource": null,
-          "fieldConfig": {
-            "defaults": {
-              "color": {
-                "mode": "palette-classic"
-              },
-              "custom": {
-                "axisLabel": "",
-                "axisPlacement": "auto",
-                "barAlignment": 0,
-                "drawStyle": "line",
-                "fillOpacity": 20,
-                "gradientMode": "none",
-                "hideFrom": {
-                  "legend": false,
-                  "tooltip": false,
-                  "viz": false
-                },
-                "lineInterpolation": "linear",
-                "lineWidth": 1,
-                "pointSize": 5,
-                "scaleDistribution": {
-                  "type": "linear"
-                },
-                "showPoints": "auto",
-                "spanNulls": false,
-                "stacking": {
-                  "group": "A",
-                  "mode": "normal"
-                },
-                "thresholdsStyle": {
-                  "mode": "off"
-                }
-              },
-              "mappings": [],
-              "thresholds": {
-                "mode": "absolute",
-                "steps": [
-                  {
-                    "color": "green",
-                    "value": null
-                  },
-                  {
-                    "color": "red",
-                    "value": 80
-                  }
-                ]
-              }
-            },
-            "overrides": [
-              {
-                "matcher": {
-                  "id": "byName",
-                  "options": "Total Errors"
-                },
-                "properties": [
-                  {
-                    "id": "color",
-                    "value": {
-                      "fixedColor": "dark-red",
-                      "mode": "fixed"
-                    }
-                  }
-                ]
-              }
-            ]
-          },
-          "gridPos": {
-            "h": 8,
-            "w": 12,
-            "x": 0,
-            "y": 42
-          },
-          "id": 202,
-          "options": {
-            "legend": {
-              "calcs": [],
-              "displayMode": "list",
-              "placement": "bottom"
-            },
-            "tooltip": {
-              "mode": "single"
-            }
-          },
-          "targets": [
-            {
-              "exemplar": true,
-              "expr": "rate(regen_fn_total_errors{entrypoint=\"getCheckpointState\"}[$__rate_interval]) or  rate(regen_fn_call_total{entrypoint=\"getCheckpointState\"}[$__rate_interval]) * 0",
-              "interval": "",
-              "legendFormat": "From {{caller}}",
-              "refId": "A"
-            }
-          ],
-          "title": "getCheckpointState  Errors (stacked)",
           "type": "timeseries"
         },
         {
@@ -10172,7 +9167,7 @@
           },
           "gridPos": {
             "h": 8,
-            "w": 12,
+            "w": 8,
             "x": 0,
             "y": 50
           },
@@ -10205,6 +9200,271 @@
             }
           ],
           "title": "getPreState Successes vs Errors (stacked)",
+          "type": "timeseries"
+        },
+        {
+          "datasource": null,
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 0,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "auto",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "max": 1,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  }
+                ]
+              },
+              "unit": "percentunit"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 8,
+            "x": 8,
+            "y": 50
+          },
+          "id": 229,
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom"
+            },
+            "tooltip": {
+              "mode": "single"
+            }
+          },
+          "targets": [
+            {
+              "exemplar": true,
+              "expr": "(delta(regen_fn_call_total{entrypoint=\"getPreState\"}[$__rate_interval])-(delta(regen_fn_call_duration_count{entrypoint=\"getPreState\"}[$__rate_interval]) or delta(regen_fn_call_total{entrypoint=\"getPreState\"}[$__rate_interval])*0))/(delta(regen_fn_call_total{entrypoint=\"getPreState\"}[$__rate_interval]))",
+              "interval": "",
+              "legendFormat": "From {{caller}}",
+              "refId": "A"
+            },
+            {
+              "exemplar": true,
+              "expr": "",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "",
+              "refId": "B"
+            }
+          ],
+          "title": "getPreState cache hit ratio",
+          "type": "timeseries"
+        },
+        {
+          "datasource": null,
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 20,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "auto",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "normal"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              }
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Total Errors"
+                },
+                "properties": [
+                  {
+                    "id": "color",
+                    "value": {
+                      "fixedColor": "dark-red",
+                      "mode": "fixed"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 8,
+            "x": 16,
+            "y": 50
+          },
+          "id": 198,
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom"
+            },
+            "tooltip": {
+              "mode": "single"
+            }
+          },
+          "targets": [
+            {
+              "exemplar": true,
+              "expr": "rate(regen_fn_total_errors{entrypoint=\"getPreState\"}[$__rate_interval]) or  rate(regen_fn_call_total{entrypoint=\"getPreState\"}[$__rate_interval]) * 0",
+              "interval": "",
+              "legendFormat": "From {{caller}}",
+              "refId": "A"
+            }
+          ],
+          "title": "getPreState  Errors (stacked)",
+          "type": "timeseries"
+        },
+        {
+          "datasource": null,
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 20,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "auto",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "normal"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 58
+          },
+          "id": 211,
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom"
+            },
+            "tooltip": {
+              "mode": "single"
+            }
+          },
+          "targets": [
+            {
+              "exemplar": true,
+              "expr": "12*rate(regen_fn_call_duration_count{entrypoint=\"getPreState\"}[$__rate_interval])",
+              "interval": "",
+              "legendFormat": "From {{caller}}",
+              "refId": "A"
+            }
+          ],
+          "title": "getPreState jobProcessing computes per slot (stacked)",
           "type": "timeseries"
         },
         {
@@ -10264,7 +9524,7 @@
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 50
+            "y": 58
           },
           "id": 205,
           "options": {
@@ -10359,185 +9619,7 @@
           },
           "gridPos": {
             "h": 8,
-            "w": 12,
-            "x": 0,
-            "y": 58
-          },
-          "id": 198,
-          "options": {
-            "legend": {
-              "calcs": [],
-              "displayMode": "list",
-              "placement": "bottom"
-            },
-            "tooltip": {
-              "mode": "single"
-            }
-          },
-          "targets": [
-            {
-              "exemplar": true,
-              "expr": "rate(regen_fn_total_errors{entrypoint=\"getPreState\"}[$__rate_interval]) or  rate(regen_fn_call_total{entrypoint=\"getPreState\"}[$__rate_interval]) * 0",
-              "interval": "",
-              "legendFormat": "From {{caller}}",
-              "refId": "A"
-            }
-          ],
-          "title": "getPreState  Errors (stacked)",
-          "type": "timeseries"
-        },
-        {
-          "datasource": null,
-          "fieldConfig": {
-            "defaults": {
-              "color": {
-                "mode": "palette-classic"
-              },
-              "custom": {
-                "axisLabel": "",
-                "axisPlacement": "auto",
-                "barAlignment": 0,
-                "drawStyle": "line",
-                "fillOpacity": 20,
-                "gradientMode": "none",
-                "hideFrom": {
-                  "legend": false,
-                  "tooltip": false,
-                  "viz": false
-                },
-                "lineInterpolation": "linear",
-                "lineWidth": 1,
-                "pointSize": 5,
-                "scaleDistribution": {
-                  "type": "linear"
-                },
-                "showPoints": "auto",
-                "spanNulls": false,
-                "stacking": {
-                  "group": "A",
-                  "mode": "normal"
-                },
-                "thresholdsStyle": {
-                  "mode": "off"
-                }
-              },
-              "mappings": [],
-              "thresholds": {
-                "mode": "absolute",
-                "steps": [
-                  {
-                    "color": "green",
-                    "value": null
-                  },
-                  {
-                    "color": "red",
-                    "value": 80
-                  }
-                ]
-              }
-            },
-            "overrides": []
-          },
-          "gridPos": {
-            "h": 8,
-            "w": 12,
-            "x": 12,
-            "y": 58
-          },
-          "id": 211,
-          "options": {
-            "legend": {
-              "calcs": [],
-              "displayMode": "list",
-              "placement": "bottom"
-            },
-            "tooltip": {
-              "mode": "single"
-            }
-          },
-          "targets": [
-            {
-              "exemplar": true,
-              "expr": "12*rate(regen_fn_call_duration_count{entrypoint=\"getPreState\"}[$__rate_interval])",
-              "interval": "",
-              "legendFormat": "From {{caller}}",
-              "refId": "A"
-            }
-          ],
-          "title": "getPreState jobProcessing computes per slot (stacked)",
-          "type": "timeseries"
-        },
-        {
-          "datasource": null,
-          "fieldConfig": {
-            "defaults": {
-              "color": {
-                "mode": "palette-classic"
-              },
-              "custom": {
-                "axisLabel": "",
-                "axisPlacement": "auto",
-                "barAlignment": 0,
-                "drawStyle": "line",
-                "fillOpacity": 20,
-                "gradientMode": "none",
-                "hideFrom": {
-                  "legend": false,
-                  "tooltip": false,
-                  "viz": false
-                },
-                "lineInterpolation": "linear",
-                "lineWidth": 1,
-                "pointSize": 5,
-                "scaleDistribution": {
-                  "type": "linear"
-                },
-                "showPoints": "auto",
-                "spanNulls": false,
-                "stacking": {
-                  "group": "A",
-                  "mode": "normal"
-                },
-                "thresholdsStyle": {
-                  "mode": "off"
-                }
-              },
-              "mappings": [],
-              "thresholds": {
-                "mode": "absolute",
-                "steps": [
-                  {
-                    "color": "green",
-                    "value": null
-                  },
-                  {
-                    "color": "red",
-                    "value": 80
-                  }
-                ]
-              }
-            },
-            "overrides": [
-              {
-                "matcher": {
-                  "id": "byName",
-                  "options": "Total Errors"
-                },
-                "properties": [
-                  {
-                    "id": "color",
-                    "value": {
-                      "fixedColor": "dark-red",
-                      "mode": "fixed"
-                    }
-                  }
-                ]
-              }
-            ]
-          },
-          "gridPos": {
-            "h": 8,
-            "w": 12,
+            "w": 8,
             "x": 0,
             "y": 66
           },
@@ -10583,7 +9665,7 @@
                 "axisLabel": "",
                 "axisPlacement": "auto",
                 "barAlignment": 0,
-                "drawStyle": "points",
+                "drawStyle": "line",
                 "fillOpacity": 0,
                 "gradientMode": "none",
                 "hideFrom": {
@@ -10608,30 +9690,27 @@
                 }
               },
               "mappings": [],
+              "max": 1,
               "thresholds": {
                 "mode": "absolute",
                 "steps": [
                   {
                     "color": "green",
                     "value": null
-                  },
-                  {
-                    "color": "red",
-                    "value": 80
                   }
                 ]
               },
-              "unit": "s"
+              "unit": "percentunit"
             },
             "overrides": []
           },
           "gridPos": {
             "h": 8,
-            "w": 12,
-            "x": 12,
+            "w": 8,
+            "x": 8,
             "y": 66
           },
-          "id": 207,
+          "id": 230,
           "options": {
             "legend": {
               "calcs": [],
@@ -10645,13 +9724,21 @@
           "targets": [
             {
               "exemplar": true,
-              "expr": "delta(regen_fn_call_duration_sum{entrypoint=\"getState\"}[$__rate_interval])/delta(regen_fn_call_duration_count{entrypoint=\"getState\"}[$__rate_interval])",
+              "expr": "(delta(regen_fn_call_total{entrypoint=\"getState\"}[$__rate_interval])-(delta(regen_fn_call_duration_count{entrypoint=\"getState\"}[$__rate_interval]) or delta(regen_fn_call_total{entrypoint=\"getState\"}[$__rate_interval])*0))/(delta(regen_fn_call_total{entrypoint=\"getState\"}[$__rate_interval]))",
               "interval": "",
               "legendFormat": "From {{caller}}",
               "refId": "A"
+            },
+            {
+              "exemplar": true,
+              "expr": "",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "",
+              "refId": "B"
             }
           ],
-          "title": "getState jobProcessing avg time (seconds)",
+          "title": "getState cache hit ratio",
           "type": "timeseries"
         },
         {
@@ -10724,9 +9811,9 @@
           },
           "gridPos": {
             "h": 8,
-            "w": 12,
-            "x": 0,
-            "y": 74
+            "w": 8,
+            "x": 16,
+            "y": 66
           },
           "id": 201,
           "options": {
@@ -10806,7 +9893,7 @@
           "gridPos": {
             "h": 8,
             "w": 12,
-            "x": 12,
+            "x": 0,
             "y": 74
           },
           "id": 212,
@@ -10830,6 +9917,88 @@
             }
           ],
           "title": "getState jobProcessing computes per slot (stacked)",
+          "type": "timeseries"
+        },
+        {
+          "datasource": null,
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "points",
+                "fillOpacity": 0,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "auto",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              },
+              "unit": "s"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 74
+          },
+          "id": 207,
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom"
+            },
+            "tooltip": {
+              "mode": "single"
+            }
+          },
+          "targets": [
+            {
+              "exemplar": true,
+              "expr": "delta(regen_fn_call_duration_sum{entrypoint=\"getState\"}[$__rate_interval])/delta(regen_fn_call_duration_count{entrypoint=\"getState\"}[$__rate_interval])",
+              "interval": "",
+              "legendFormat": "From {{caller}}",
+              "refId": "A"
+            }
+          ],
+          "title": "getState jobProcessing avg time (seconds)",
           "type": "timeseries"
         }
       ],
