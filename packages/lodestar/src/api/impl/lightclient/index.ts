@@ -4,8 +4,12 @@ import {resolveStateId} from "../beacon/state/utils";
 import {routes} from "@chainsafe/lodestar-api";
 import {ApiError} from "../errors";
 import {linspace} from "../../../util/numpy";
+import {isCompositeType} from "@chainsafe/ssz";
+import {ProofType} from "@chainsafe/persistent-merkle-tree";
 
 // TODO: Import from lightclient/server package
+
+const MAX_GINDICES_IN_PROOF = 512;
 
 export function getLightclientApi({
   chain,
@@ -18,7 +22,32 @@ export function getLightclientApi({
     async getStateProof(stateId, paths) {
       const state = await resolveStateId(config, chain, db, stateId);
       const stateTreeBacked = ssz.altair.BeaconState.createTreeBackedFromStruct(state as altair.BeaconState);
-      return {data: stateTreeBacked.createProof(paths)};
+      const tree = stateTreeBacked.tree;
+      // Logic from TreeBacked#createProof is (mostly) copied here to expose the # of gindices in the proof
+      let gindices = paths
+        .map((path) => {
+          const {type, gindex} = ssz.altair.BeaconState.getPathInfo(path);
+          if (!isCompositeType(type)) {
+            return gindex;
+          } else {
+            // if the path subtype is composite, include the gindices of all the leaves
+            return type.tree_getLeafGindices(
+              type.hasVariableSerializedLength() ? tree.getSubtree(gindex) : undefined,
+              gindex
+            );
+          }
+        })
+        .flat(1);
+      gindices = Array.from(new Set(gindices));
+      if (gindices.length > MAX_GINDICES_IN_PROOF) {
+        throw new Error("Requested proof is too large.");
+      }
+      return {
+        data: tree.getProof({
+          type: ProofType.treeOffset,
+          gindices,
+        }),
+      };
     },
 
     // Sync API
