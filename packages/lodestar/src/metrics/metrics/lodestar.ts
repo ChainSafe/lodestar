@@ -413,6 +413,15 @@ export function createLodestarMetrics(
       name: "state_cache_hits_total",
       help: "Number of total cache hits",
     }),
+    stateCacheAdds: register.gauge({
+      name: "state_cache_adds_total",
+      help: "Number of items added in state cache",
+    }),
+    stateCacheSize: register.gauge({
+      name: "state_cache_size",
+      help: "State cache size",
+    }),
+
     cpStateCacheLookups: register.gauge({
       name: "cp_state_cache_lookups_total",
       help: "Number of checkpoint cache lookup",
@@ -420,6 +429,18 @@ export function createLodestarMetrics(
     cpStateCacheHits: register.gauge({
       name: "cp_state_cache_hits_total",
       help: "Number of checkpoint cache hits",
+    }),
+    cpStateCacheAdds: register.gauge({
+      name: "cp_state_cache_adds_total",
+      help: "Number of items added in checkpoint state cache",
+    }),
+    cpStateCacheSize: register.gauge({
+      name: "cp_state_cache_size",
+      help: "Checkpoint state cache size",
+    }),
+    cpStateEpochSize: register.gauge({
+      name: "cp_state_epoch_size",
+      help: "Checkpoint state cache size",
     }),
 
     regenFnCallTotal: register.gauge<"entrypoint" | "caller">({

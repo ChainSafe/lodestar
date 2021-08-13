@@ -22,7 +22,10 @@ export class StateContextCache {
 
   constructor({maxStates = MAX_STATES, metrics}: {maxStates?: number; metrics?: IMetrics | null}) {
     this.maxStates = maxStates;
-    this.metrics = metrics;
+    if (metrics) {
+      this.metrics = metrics;
+      metrics.stateCacheSize.addCollect(() => metrics.stateCacheSize.set(this.cache.size));
+    }
   }
 
   get(root: ByteVector): CachedBeaconState<allForks.BeaconState> | null {
@@ -40,6 +43,7 @@ export class StateContextCache {
     if (this.cache.get(key)) {
       return;
     }
+    this.metrics?.stateCacheAdds.inc();
     this.cache.set(key, item.clone());
     const epoch = item.epochCtx.currentShuffling.epoch;
     const blockRoots = this.epochIndex.get(epoch);

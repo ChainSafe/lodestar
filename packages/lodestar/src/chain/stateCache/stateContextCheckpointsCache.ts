@@ -18,7 +18,11 @@ export class CheckpointStateCache {
   private metrics: IMetrics | null | undefined;
 
   constructor({metrics}: {metrics?: IMetrics | null}) {
-    this.metrics = metrics;
+    if (metrics) {
+      this.metrics = metrics;
+      metrics.cpStateCacheSize.addCollect(() => metrics.cpStateCacheSize.set(this.cache.size));
+      metrics.cpStateEpochSize.addCollect(() => metrics.cpStateEpochSize.set(this.epochIndex.size));
+    }
   }
 
   get(cp: phase0.Checkpoint): CachedBeaconState<allForks.BeaconState> | null {
@@ -33,6 +37,7 @@ export class CheckpointStateCache {
     if (this.cache.has(key)) {
       return;
     }
+    this.metrics?.cpStateCacheAdds.inc();
     this.cache.set(key, item.clone());
     const epochKey = toHexString(cp.root);
     const value = this.epochIndex.get(cp.epoch);
