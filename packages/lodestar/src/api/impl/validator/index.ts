@@ -162,7 +162,7 @@ export function getValidatorApi({
       await waitForSlot(slot); // Must never request for a future slot > currentSlot
 
       const headRoot = chain.forkChoice.getHeadRoot();
-      const state = await chain.regen.getBlockSlotState(headRoot, slot, {caller: RegenCaller.produceAttestationData});
+      const state = await chain.regen.getBlockSlotState(headRoot, slot, RegenCaller.produceAttestationData);
       return {data: assembleAttestationData(state, headRoot, slot, committeeIndex)};
     },
 

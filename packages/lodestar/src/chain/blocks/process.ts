@@ -103,7 +103,7 @@ async function processBlocksInEpoch(
   }
 
   try {
-    let preState = await regen.getPreState(firstBlock.message, {caller: RegenCaller.processBlocksInEpoch});
+    let preState = await regen.getPreState(firstBlock.message, RegenCaller.processBlocksInEpoch);
     for (const block of blocksInEpoch) {
       preState = await runStateTransition({emitter, forkChoice, metrics}, checkpointStateCache, preState, {
         reprocess: job.reprocess,

@@ -1,13 +1,9 @@
 import {toHexString} from "@chainsafe/ssz";
 import {phase0, Epoch, allForks} from "@chainsafe/lodestar-types";
 import {CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
-import {IGauge} from "../../metrics";
+import {IMetrics} from "../../metrics";
 
 const MAX_EPOCHS = 10;
-interface IStateCheckpointCacheMetrics {
-  stateCpLookupsTotal: IGauge;
-  stateCpLookupsHits: IGauge;
-}
 
 /**
  * In memory cache of CachedBeaconState
@@ -19,11 +15,16 @@ export class CheckpointStateCache {
   private cache = new Map<string, CachedBeaconState<allForks.BeaconState>>();
   /** Epoch -> Set<blockRoot> */
   private epochIndex = new Map<Epoch, Set<string>>();
+  private metrics: IMetrics | null | undefined;
 
-  get(cp: phase0.Checkpoint, metrics?: IStateCheckpointCacheMetrics): CachedBeaconState<allForks.BeaconState> | null {
-    metrics?.stateCpLookupsTotal.inc();
+  constructor({metrics}: {metrics?: IMetrics | null}) {
+    this.metrics = metrics;
+  }
+
+  get(cp: phase0.Checkpoint): CachedBeaconState<allForks.BeaconState> | null {
+    this.metrics?.cpStateCacheLookups.inc();
     const item = this.cache.get(toCheckpointKey(cp));
-    if (item) metrics?.stateCpLookupsHits.inc();
+    if (item) this.metrics?.cpStateCacheHits.inc();
     return item ? item.clone() : null;
   }
 
@@ -45,10 +46,7 @@ export class CheckpointStateCache {
   /**
    * Searches for the latest cached state with a `root`, starting with `epoch` and descending
    */
-  getLatest(
-    {root, epoch}: phase0.Checkpoint,
-    metrics?: IStateCheckpointCacheMetrics
-  ): CachedBeaconState<allForks.BeaconState> | null {
+  getLatest({root, epoch}: phase0.Checkpoint): CachedBeaconState<allForks.BeaconState> | null {
     const hexRoot = toHexString(root);
     // sort epochs in descending order, only consider epochs lte `epoch`
     const epochs = Array.from(this.epochIndex.keys())
@@ -57,7 +55,7 @@ export class CheckpointStateCache {
     for (const epoch of epochs) {
       const rootSet = this.epochIndex.get(epoch);
       if (rootSet && rootSet.has(hexRoot)) {
-        return this.get({root, epoch}, metrics);
+        return this.get({root, epoch});
       }
     }
     return null;

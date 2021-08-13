@@ -184,7 +184,7 @@ export async function onForkChoiceFinalized(this: BeaconChain, cp: phase0.Checkp
   // Only after altair
   if (cp.epoch >= this.config.ALTAIR_FORK_EPOCH) {
     try {
-      const state = await this.regen.getCheckpointState(cp, {caller: RegenCaller.onForkChoiceFinalized});
+      const state = await this.regen.getCheckpointState(cp, RegenCaller.onForkChoiceFinalized);
       // using state.slot is not correct for a checkpoint with skipped slot
       const block = await this.getCanonicalBlockAtSlot(state.latestBlockHeader.slot);
       if (!block) {

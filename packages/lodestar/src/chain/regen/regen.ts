@@ -13,7 +13,7 @@ import {CheckpointStateCache, StateContextCache} from "../stateCache";
 import {ChainEventEmitter} from "../emitter";
 import {IBeaconDb} from "../../db";
 import {processSlotsByCheckpoint, runStateTransition} from "../blocks/stateTransition";
-import {IStateRegenerator, IRegenFnMetrics, RegenCaller, RegenFnName, IRegenCaller} from "./interface";
+import {IStateRegenerator, RegenCaller} from "./interface";
 import {RegenError, RegenErrorCode} from "./errors";
 import {IMetrics} from "../../metrics";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
@@ -29,7 +29,6 @@ export class StateRegenerator implements IStateRegenerator {
   private checkpointStateCache: CheckpointStateCache;
   private db: IBeaconDb;
   private metrics: IMetrics | null;
-  private rmetricsMap: Map<string, IRegenFnMetrics>;
 
   constructor({
     config,
@@ -55,12 +54,11 @@ export class StateRegenerator implements IStateRegenerator {
     this.checkpointStateCache = checkpointStateCache;
     this.db = db;
     this.metrics = metrics;
-    this.rmetricsMap = new Map<string, IRegenFnMetrics>();
   }
 
   async getPreState(
     block: allForks.BeaconBlock,
-    rCaller: IRegenCaller
+    rCaller: RegenCaller
   ): Promise<CachedBeaconState<allForks.BeaconState>> {
     const parentBlock = this.forkChoice.getBlock(block.parentRoot);
     if (!parentBlock) {
@@ -78,7 +76,6 @@ export class StateRegenerator implements IStateRegenerator {
     // then we may use the checkpoint state before the block
     // We may have the checkpoint state with parent root inside the checkpoint state cache
     // through gossip validation.
-    if (rCaller && !rCaller.entrypoint) rCaller.entrypoint = RegenFnName.getPreState;
 
     if (parentEpoch < blockEpoch) {
       return await this.getCheckpointState({root: block.parentRoot, epoch: blockEpoch}, rCaller);
@@ -90,9 +87,8 @@ export class StateRegenerator implements IStateRegenerator {
 
   async getCheckpointState(
     cp: phase0.Checkpoint,
-    rCaller: IRegenCaller
+    rCaller: RegenCaller
   ): Promise<CachedBeaconState<allForks.BeaconState>> {
-    if (rCaller && !rCaller.entrypoint) rCaller.entrypoint = RegenFnName.getCheckpointState;
     const checkpointStartSlot = computeStartSlotAtEpoch(cp.epoch);
     return await this.getBlockSlotState(cp.root, checkpointStartSlot, rCaller);
   }
@@ -100,7 +96,7 @@ export class StateRegenerator implements IStateRegenerator {
   async getBlockSlotState(
     blockRoot: Root,
     slot: Slot,
-    rCaller: IRegenCaller
+    rCaller: RegenCaller
   ): Promise<CachedBeaconState<allForks.BeaconState>> {
     const block = this.forkChoice.getBlock(blockRoot);
     if (!block) {
@@ -118,18 +114,10 @@ export class StateRegenerator implements IStateRegenerator {
       });
     }
 
-    if (!rCaller.entrypoint) rCaller.entrypoint = RegenFnName.getBlockSlotState;
-    const rmetrics = rCaller
-      ? this.getRegenFnMetrics({caller: rCaller.caller, entrypoint: rCaller.entrypoint})
-      : undefined;
-
-    const latestCheckpointStateCtx = this.checkpointStateCache.getLatest(
-      {
-        root: blockRoot,
-        epoch: computeEpochAtSlot(slot),
-      },
-      rmetrics
-    );
+    const latestCheckpointStateCtx = this.checkpointStateCache.getLatest({
+      root: blockRoot,
+      epoch: computeEpochAtSlot(slot),
+    });
 
     // If a checkpoint state exists with the given checkpoint root, it either is in requested epoch
     // or needs to have empty slots processed until the requested epoch
@@ -148,14 +136,9 @@ export class StateRegenerator implements IStateRegenerator {
     return await processSlotsByCheckpoint({emitter: this.emitter, metrics: this.metrics}, blockStateCtx, slot);
   }
 
-  async getState(stateRoot: Root, rCaller: IRegenCaller): Promise<CachedBeaconState<allForks.BeaconState>> {
+  async getState(stateRoot: Root, _rCaller: RegenCaller): Promise<CachedBeaconState<allForks.BeaconState>> {
     // Trivial case, state at stateRoot is already cached
-    if (!rCaller.entrypoint) rCaller.entrypoint = RegenFnName.getState;
-    const rmetrics = rCaller
-      ? this.getRegenFnMetrics({caller: rCaller.caller, entrypoint: rCaller.entrypoint})
-      : undefined;
-
-    const cachedStateCtx = this.stateCache.get(stateRoot, rmetrics);
+    const cachedStateCtx = this.stateCache.get(stateRoot);
     if (cachedStateCtx) {
       return cachedStateCtx;
     }
@@ -180,7 +163,7 @@ export class StateRegenerator implements IStateRegenerator {
     const blocksToReplay = [block];
     let state: CachedBeaconState<allForks.BeaconState> | null = null;
     for (const b of this.forkChoice.iterateBlockSummaries(block.parentRoot)) {
-      state = this.stateCache.get(b.stateRoot, rmetrics);
+      state = this.stateCache.get(b.stateRoot);
       if (state) {
         break;
       }
@@ -239,27 +222,5 @@ export class StateRegenerator implements IStateRegenerator {
     }
 
     return state as CachedBeaconState<allForks.BeaconState>;
-  }
-
-  getRegenFnMetrics({
-    entrypoint,
-    caller,
-  }: {
-    entrypoint: RegenFnName;
-    caller?: RegenCaller;
-  }): IRegenFnMetrics | undefined {
-    if (!this.metrics) return undefined;
-    const key = `${entrypoint}-${caller}`;
-    let rmetrics = this.rmetricsMap.get(key);
-    if (!rmetrics) {
-      rmetrics = {
-        stateLookupsTotal: this.metrics.regenStateCacheLookupTotal.child({entrypoint, caller}),
-        stateLookupHits: this.metrics.regenStateCacheLoopkupHits.child({entrypoint, caller}),
-        stateCpLookupsTotal: this.metrics.regenCPStateCacheLookupTotal.child({entrypoint, caller}),
-        stateCpLookupsHits: this.metrics.regenCPStateCacheLookupHits.child({entrypoint, caller}),
-      };
-      this.rmetricsMap.set(key, rmetrics);
-    }
-    return rmetrics;
   }
 }

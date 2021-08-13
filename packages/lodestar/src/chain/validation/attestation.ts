@@ -86,7 +86,7 @@ export async function validateGossipAttestation(
   // > Altready check in `verifyHeadBlockAndTargetRoot()`
 
   const attestationTargetState = await chain.regen
-    .getCheckpointState(attTarget, {caller: RegenCaller.validateGossipAttestation})
+    .getCheckpointState(attTarget, RegenCaller.validateGossipAttestation)
     .catch((e) => {
       throw new AttestationError(GossipAction.REJECT, {
         code: AttestationErrorCode.MISSING_ATTESTATION_TARGET_STATE,

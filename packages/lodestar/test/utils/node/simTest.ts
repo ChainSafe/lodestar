@@ -57,13 +57,11 @@ export function simTestInfoTracker(bn: BeaconNode, logger: ILogger): () => void 
     if (checkpoint.epoch <= lastSeenEpoch) return;
     lastSeenEpoch = checkpoint.epoch;
 
-    // Recover the pre-epoch transition state
-    const checkpointState = await bn.chain.regen.getCheckpointState(checkpoint, {
-      caller: RegenCaller.dummyCallerfromTests,
-    });
+    // Recover the pre-epoch transition state, use any random caller for regen
+    const checkpointState = await bn.chain.regen.getCheckpointState(checkpoint, RegenCaller.onForkChoiceFinalized);
     const lastSlot = computeStartSlotAtEpoch(checkpoint.epoch) - 1;
     const lastStateRoot = checkpointState.stateRoots[lastSlot % SLOTS_PER_HISTORICAL_ROOT];
-    const lastState = await bn.chain.regen.getState(lastStateRoot, {caller: RegenCaller.dummyCallerfromTests});
+    const lastState = await bn.chain.regen.getState(lastStateRoot, RegenCaller.onForkChoiceFinalized);
     logParticipation(lastState);
   }
 

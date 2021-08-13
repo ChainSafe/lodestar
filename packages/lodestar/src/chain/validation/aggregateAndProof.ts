@@ -62,7 +62,7 @@ export async function validateGossipAggregateAndProof(
   // > Altready check in `chain.forkChoice.hasBlock(attestation.data.beaconBlockRoot)`
 
   const targetState = await chain.regen
-    .getCheckpointState(attTarget, {caller: RegenCaller.validateGossipAggregateAndProof})
+    .getCheckpointState(attTarget, RegenCaller.validateGossipAggregateAndProof)
     .catch((e) => {
       throw new AttestationError(GossipAction.REJECT, {
         code: AttestationErrorCode.MISSING_ATTESTATION_TARGET_STATE,

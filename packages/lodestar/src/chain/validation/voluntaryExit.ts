@@ -20,7 +20,7 @@ export async function validateGossipVoluntaryExit(
       root: chain.forkChoice.getHeadRoot(),
       epoch: voluntaryExit.message.epoch,
     },
-    {caller: RegenCaller.validateGossipVoluntaryExit}
+    RegenCaller.validateGossipVoluntaryExit
   );
 
   try {

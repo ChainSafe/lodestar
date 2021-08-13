@@ -17,7 +17,7 @@ describe.skip("CheckpointStateCache perf tests", function () {
   });
 
   before(() => {
-    checkpointStateCache = new CheckpointStateCache();
+    checkpointStateCache = new CheckpointStateCache({});
     state = generateCachedState();
     checkpoint = ssz.phase0.Checkpoint.defaultValue();
   });

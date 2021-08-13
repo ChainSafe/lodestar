@@ -405,26 +405,23 @@ export function createLodestarMetrics(
       }),
     },
     //regen metrics
-    regenStateCacheLookupTotal: register.gauge<"entrypoint" | "caller">({
-      name: "regen_state_cache_lookup_total",
+    stateCacheLookups: register.gauge({
+      name: "state_cache_lookups_total",
       help: "Number of cache lookup",
-      labelNames: ["entrypoint", "caller"],
     }),
-    regenStateCacheLoopkupHits: register.gauge<"entrypoint" | "caller">({
-      name: "regen_state_cache_hits_total",
+    stateCacheHits: register.gauge({
+      name: "state_cache_hits_total",
       help: "Number of total cache hits",
-      labelNames: ["entrypoint", "caller"],
     }),
-    regenCPStateCacheLookupTotal: register.gauge<"entrypoint" | "caller">({
-      name: "regen_cp_cache_lookup_total",
+    cpStateCacheLookups: register.gauge({
+      name: "cp_state_cache_lookups_total",
       help: "Number of checkpoint cache lookup",
-      labelNames: ["entrypoint", "caller"],
     }),
-    regenCPStateCacheLookupHits: register.gauge<"entrypoint" | "caller">({
-      name: "regen_cp_cache_hits_total",
+    cpStateCacheHits: register.gauge({
+      name: "cp_state_cache_hits_total",
       help: "Number of checkpoint cache hits",
-      labelNames: ["entrypoint", "caller"],
     }),
+
     regenFnCallTotal: register.gauge<"entrypoint" | "caller">({
       name: "regen_fn_call_total",
       help: "Number of calls for regen functions",

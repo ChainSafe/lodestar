@@ -28,7 +28,7 @@ export async function assembleBlock(
   graffiti = ZERO_HASH
 ): Promise<allForks.BeaconBlock> {
   const head = chain.forkChoice.getHead();
-  const state = await chain.regen.getBlockSlotState(head.blockRoot, slot, {caller: RegenCaller.produceBlock});
+  const state = await chain.regen.getBlockSlotState(head.blockRoot, slot, RegenCaller.produceBlock);
 
   const block: allForks.BeaconBlock = {
     slot,

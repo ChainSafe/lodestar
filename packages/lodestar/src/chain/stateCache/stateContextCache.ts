@@ -1,13 +1,9 @@
 import {ByteVector, toHexString} from "@chainsafe/ssz";
 import {Epoch, allForks} from "@chainsafe/lodestar-types";
 import {CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
-import {IGauge} from "../../metrics";
+import {IMetrics} from "../../metrics";
 
 const MAX_STATES = 96;
-interface IStateCacheMetrics {
-  stateLookupsTotal: IGauge;
-  stateLookupHits: IGauge;
-}
 /**
  * In memory cache of CachedBeaconState
  *
@@ -22,18 +18,20 @@ export class StateContextCache {
   private cache = new Map<string, CachedBeaconState<allForks.BeaconState>>();
   /** Epoch -> Set<blockRoot> */
   private epochIndex = new Map<Epoch, Set<string>>();
+  private metrics: IMetrics | null | undefined;
 
-  constructor(maxStates = MAX_STATES) {
+  constructor({maxStates = MAX_STATES, metrics}: {maxStates?: number; metrics?: IMetrics | null}) {
     this.maxStates = maxStates;
+    this.metrics = metrics;
   }
 
-  get(root: ByteVector, metrics?: IStateCacheMetrics): CachedBeaconState<allForks.BeaconState> | null {
-    metrics?.stateLookupsTotal.inc();
+  get(root: ByteVector): CachedBeaconState<allForks.BeaconState> | null {
+    this.metrics?.stateCacheLookups.inc();
     const item = this.cache.get(toHexString(root));
     if (!item) {
       return null;
     }
-    metrics?.stateLookupHits.inc();
+    this.metrics?.stateCacheHits.inc();
     return item.clone();
   }
 
