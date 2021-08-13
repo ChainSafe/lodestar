@@ -63,11 +63,6 @@ function getCommitsSinceRelease(): number | undefined {
   return numCommits;
 }
 
-/** Assumes release on tag commit. */
-function isRelease(): boolean {
-  return getCommitsSinceRelease() === 0;
-}
-
 /** Gets git data containing current branch and commit. */
 export function getGitData(): Partial<Pick<GitData, "branch" | "commit">> {
   return {

@@ -12,6 +12,10 @@ export type GitDataFile = {
   branch?: string;
   /** "80c248bb392f512cc115d95059e22239a17bbd7d" */
   commit?: string;
+  /** 0.28.2 */
+  tag?: string;
+  /** 5 (commits since tag) */
+  numCommits?: number;
 };
 
 /** Writs a persistent git data file. */
