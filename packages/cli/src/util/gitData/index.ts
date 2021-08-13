@@ -1,6 +1,6 @@
 import {execSync} from "child_process";
 
-/** 
+/**
  * Persist git data and distribute through NPM so CLI consumers can know exactly
  * at what commit was this src build. This is used in the metrics and to log initially.
  */
@@ -40,6 +40,32 @@ function getCommit(): string | undefined {
   } catch (e) {
     return undefined;
   }
+}
+
+/** Tries to get the latest tag. */
+function getLatestTag(): string | undefined {
+  try {
+    return shell("git describe --abbrev=0");
+  } catch (e) {
+    return undefined;
+  }
+}
+
+/** Gets number of commits since latest tag/release. */
+function getCommitsSinceRelease(): number | undefined {
+  let numCommits = 0;
+  let latestTag = getLatestTag();
+  try {
+    numCommits = +shell(`git rev-list ${latestTag}..HEAD --count`);
+  } catch (e) {
+    return undefined;
+  }
+  return numCommits;
+}
+
+/** Assumes release on tag commit. */
+function isRelease(): boolean {
+  return getCommitsSinceRelease() === 0;
 }
 
 /** Gets git data containing current branch and commit. */
