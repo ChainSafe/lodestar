@@ -262,12 +262,15 @@ export function computeSyncParticipantReward(config: IBeaconConfig, totalActiveB
  */
 export function afterProcessEpoch(state: CachedBeaconState<allForks.BeaconState>, epochProcess: IEpochProcess): void {
   const {epochCtx} = state;
-  const activeValidatorIndices = epochProcess.nextEpochActiveValidatorIndices;
   epochCtx.previousShuffling = epochCtx.currentShuffling;
   epochCtx.currentShuffling = epochCtx.nextShuffling;
   const currEpoch = epochCtx.currentShuffling.epoch;
   const nextEpoch = currEpoch + 1;
-  epochCtx.nextShuffling = computeEpochShuffling(state, activeValidatorIndices, nextEpoch);
+  epochCtx.nextShuffling = computeEpochShuffling(
+    state,
+    epochProcess.nextEpochShufflingActiveValidatorIndices,
+    nextEpoch
+  );
   epochCtx.proposers = computeProposers(state, epochCtx.currentShuffling);
 
   // TODO: DEDUPLICATE from createEpochContext
@@ -296,7 +299,7 @@ export function afterProcessEpoch(state: CachedBeaconState<allForks.BeaconState>
   }
 
   if (currEpoch >= epochCtx.config.ALTAIR_FORK_EPOCH) {
-    const totalActiveBalance = getTotalBalance(state, activeValidatorIndices);
+    const totalActiveBalance = getTotalBalance(state, epochCtx.currentShuffling.activeIndices);
     epochCtx.syncParticipantReward = computeSyncParticipantReward(epochCtx.config, totalActiveBalance);
     epochCtx.syncProposerReward =
       (epochCtx.syncParticipantReward * PROPOSER_WEIGHT) / (WEIGHT_DENOMINATOR - PROPOSER_WEIGHT);

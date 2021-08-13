@@ -100,7 +100,7 @@ export interface IEpochProcess {
   validators: phase0.Validator[];
   balances?: BigUint64Array;
   // to be used for afterProcessEpoch()
-  nextEpochActiveValidatorIndices: ValidatorIndex[];
+  nextEpochShufflingActiveValidatorIndices: ValidatorIndex[];
 }
 
 export function beforeProcessEpoch<T extends allForks.BeaconState>(state: CachedBeaconState<T>): IEpochProcess {
@@ -108,7 +108,8 @@ export function beforeProcessEpoch<T extends allForks.BeaconState>(state: Cached
   const forkName = config.getForkName(state.slot);
   const currentEpoch = epochCtx.currentShuffling.epoch;
   const prevEpoch = epochCtx.previousShuffling.epoch;
-  const nextEpoch = currentEpoch + 1;
+  // active validator indices for nextShuffling is ready, we want to precalculate for the one after that
+  const nextShufflingEpoch = currentEpoch + 2;
 
   const slashingsEpoch = currentEpoch + intDiv(EPOCHS_PER_SLASHINGS_VECTOR, 2);
 
@@ -116,7 +117,7 @@ export function beforeProcessEpoch<T extends allForks.BeaconState>(state: Cached
   const indicesEligibleForActivationQueue: ValidatorIndex[] = [];
   const indicesEligibleForActivation: ValidatorIndex[] = [];
   const indicesToEject: ValidatorIndex[] = [];
-  const nextEpochActiveValidatorIndices: ValidatorIndex[] = [];
+  const nextEpochShufflingActiveValidatorIndices: ValidatorIndex[] = [];
 
   const statuses: IAttesterStatus[] = [];
 
@@ -158,8 +159,8 @@ export function beforeProcessEpoch<T extends allForks.BeaconState>(state: Cached
     }
 
     statuses.push(status);
-    if (isActiveValidator(v, nextEpoch)) {
-      nextEpochActiveValidatorIndices.push(i);
+    if (isActiveValidator(v, nextShufflingEpoch)) {
+      nextEpochShufflingActiveValidatorIndices.push(i);
     }
   });
 
@@ -261,7 +262,7 @@ export function beforeProcessEpoch<T extends allForks.BeaconState>(state: Cached
     indicesEligibleForActivationQueue,
     indicesEligibleForActivation,
     indicesToEject,
-    nextEpochActiveValidatorIndices,
+    nextEpochShufflingActiveValidatorIndices,
 
     statuses,
     validators,
