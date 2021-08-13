@@ -5,14 +5,15 @@ import {LevelDbController} from "@chainsafe/lodestar-db";
 import {getBeaconConfigFromArgs} from "../../config";
 import {IGlobalArgs} from "../../options";
 import {YargsError, getDefaultGraffiti, initBLS, mkdir, getCliLogger} from "../../util";
-import {onGracefulShutdown, readLodestarGitData} from "../../util";
+import {onGracefulShutdown} from "../../util";
 import {getBeaconPaths} from "../beacon/paths";
 import {getValidatorPaths} from "./paths";
 import {IValidatorCliArgs} from "./options";
 import {getSecretKeys} from "./keys";
+import { getVersion } from "../../util/version";
 
 /**
- * Run a validator client
+ * Runs a validator client.
  */
 export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): Promise<void> {
   await initBLS();
@@ -25,8 +26,8 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
 
   const logger = getCliLogger(args, beaconPaths, config);
 
-  const lodestarGitData = readLodestarGitData();
-  logger.info("Lodestar", {version: lodestarGitData.version, network: args.network});
+  const version = getVersion();
+  logger.info("Lodestar", {version: version, network: args.network});
 
   const secretKeys = await getSecretKeys(args);
   if (secretKeys.length === 0) throw new YargsError("No validator keystores found");
