@@ -3,8 +3,10 @@ import yargs from "yargs";
 import {cmds} from "./cmds";
 import {globalOptions} from "./options";
 import {registerCommandToYargs} from "./util";
+import { getVersion } from "./util/version";
 
-const topBanner = "🌟 Lodestar: Ethereum 2.0 TypeScript Implementation of the Beacon Chain";
+const version = getVersion();
+const topBanner = `🌟 Lodestar: Ethereum 2.0 TypeScript Implementation of the Beacon Chain\n Version: ${version}`;
 const bottomBanner = "For more information, check the CLI reference https://chainsafe.github.io/lodestar/reference/cli";
 
 /**
