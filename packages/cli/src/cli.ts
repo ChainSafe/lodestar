@@ -1,7 +1,7 @@
 // Must not use `* as yargs`, see https://github.com/yargs/yargs/issues/1131
 import yargs from "yargs";
 import {cmds} from "./cmds";
-import {globalOptions} from "./options";
+import {globalOptions, rcConfigOption} from "./options";
 import {registerCommandToYargs} from "./util";
 
 const topBanner = "🌟 Lodestar: Ethereum 2.0 TypeScript Implementation of the Beacon Chain";
@@ -38,6 +38,7 @@ export function getLodestarCli(): yargs.Argv {
 
   // throw an error if we see an unrecognized cmd
   lodestar.recommendCommands().strict();
+  lodestar.config(...rcConfigOption);
 
   return lodestar;
 }
