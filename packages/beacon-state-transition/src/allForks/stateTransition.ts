@@ -8,6 +8,7 @@ import {verifyProposerSignature} from "./signatureSets";
 import {beforeProcessEpoch, CachedBeaconState, IEpochProcess, afterProcessEpoch} from "./util";
 import {processSlot} from "./slot";
 import {computeEpochAtSlot} from "../util";
+import {toHexString} from "@chainsafe/ssz";
 
 type StateAllForks = CachedBeaconState<allForks.BeaconState>;
 type StatePhase0 = CachedBeaconState<phase0Types.BeaconState>;
@@ -63,7 +64,11 @@ export function stateTransition(
   // Verify state root
   if (verifyStateRoot) {
     if (!ssz.Root.equals(block.stateRoot, postState.tree.root)) {
-      throw new Error("Invalid state root");
+      throw new Error(
+        `Invalid state root at slot ${block.slot}, wanted ${toHexString(block.stateRoot)}, got ${toHexString(
+          postState.tree.root
+        )}`
+      );
     }
   }
 
