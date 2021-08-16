@@ -1,11 +1,10 @@
 import {execSync} from "child_process";
-import { readGitDataFile, GitData } from "./gitDataPath";
 
 /**
- * Persist git data and distribute through NPM so CLI consumers can know exactly
- * at what commit was this source build. This is also used in the metrics and to log initially.
+ * This file is created in the build step and is distributed through NPM
+ * MUST be in sync with `-/gitDataPath.ts` and `package.json` files.
  */
-
+import { readGitDataFile, GitData } from "./gitDataPath";
 
 /** Silent shell that won't pollute stdout, or stderr */
 function shell(cmd: string): string {
