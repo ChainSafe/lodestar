@@ -119,6 +119,22 @@ export function getLodestarApi({
         };
       });
     },
+
+    async getStateCacheItems() {
+      const states = (chain as BeaconChain)["stateCache"]["cache"].values();
+      return Array.from(states).map((state) => ({
+        slot: state.slot,
+        root: state.hashTreeRoot(),
+      }));
+    },
+
+    async getCheckpointStateCacheItems() {
+      const states = (chain as BeaconChain)["checkpointStateCache"]["cache"].values();
+      return Array.from(states).map((state) => ({
+        slot: state.slot,
+        root: state.hashTreeRoot(),
+      }));
+    },
   };
 }
 
