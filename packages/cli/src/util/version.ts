@@ -1,32 +1,35 @@
 import fs from "fs";
 import findUp from "find-up";
-import { getCommitsSinceRelease, getLatestTag, getGitData } from "./gitData";
+import { readLodestarGitData } from "./gitData";
+import { GitData } from "./gitData/gitDataPath";
 
-type LernaJson = {
+type VersionJson = {
   /** "0.28.2-alpha" */
   version: string;
 };
 
 /**
  * Gathers all information on package version including Git data.
- * @returns a version string, e.g., "0.28.2-alpha+7(80c248bb)"
+ * @returns a version string, e.g., `v0.28.2-alpha/developer-feature/+7(80c248bb)`
  */
 export function getVersion(): string {
-  let semver = getLatestTag();
-  let numCommits = getCommitsSinceRelease();
+  const gitData: GitData = readLodestarGitData();
+  let semver: string | undefined = gitData.semver;
+  const numCommits: string | undefined = gitData.numCommits;
+  const commitSlice: string | undefined = gitData.commit?.slice(0, 8);
 
   // Fall back to local version if git is unavailable
-  if (semver === undefined) {
+  if (!semver) {
     semver = getLocalVersion();
   }
 
-  if (numCommits === 0) {
+  // If these values are empty/undefined, we assume tag release.
+  if (!commitSlice || !numCommits || numCommits === "") {
     return `${semver}`;
   }
 
-  let gitData = getGitData();
-  let commit = gitData.commit?.slice(0, 8);
-  return `${semver}/${gitData.branch}+${numCommits}(${commit})`;
+  // Otherwise get branch and commit information
+  return `${semver}/${gitData.branch}/${numCommits}(${commitSlice})`;
 }
 
 /** Returns local version from `lerna.json` or `package.json` as `"0.28.2-alpha"` */
@@ -34,47 +37,20 @@ function getLocalVersion(): string | undefined {
   return readVersionFromLernaJson() || readCliPackageJson();
 }
 
+/** Read version information from lerna.json */
 function readVersionFromLernaJson(): string | undefined {
-  const filePath = findUp.sync("lerna.json");
+  const filePath = findUp.sync("lerna.json", {cwd: __dirname});
   if (!filePath) return undefined;
 
-  const lernaJson = JSON.parse(fs.readFileSync(filePath, "utf8")) as LernaJson;
+  const lernaJson = JSON.parse(fs.readFileSync(filePath, "utf8")) as VersionJson;
   return lernaJson.version;
 }
 
+/** Read version information from package.json */
 function readCliPackageJson(): string | undefined {
   const filePath = findUp.sync("package.json", {cwd: __dirname});
   if (!filePath) return undefined;
 
-  const packageJson = JSON.parse(fs.readFileSync(filePath, "utf8")) as LernaJson;
+  const packageJson = JSON.parse(fs.readFileSync(filePath, "utf8")) as VersionJson;
   return packageJson.version;
 }
-
-
-// // This file is created in the build step and is distributed through NPM
-// // MUST be in sync with packages/cli/src/gitData/gitDataPath.ts, and package.json .files
-// import {GitDataFile, readGitDataFile} from "./gitDataPath";
-
-// @TODO @q9f - read git data from file instead of exposing git everywhere
-
-// /**
-//  * Reads git data from a persisted file at build time + the current version in the package.json
-//  */
-// export function readLodestarGitData(): GitData {
-//   try {
-//     const semver = getLocalVersion() ?? undefined;
-//     const currentGitData = getGitData();
-//     const persistedGitData = getPersistedGitData();
-//     // If the CLI is run from source, prioritze current git data over .git-data.json file, which might be stale
-//     const gitData = {...persistedGitData, ...currentGitData};
-
-//     return {
-//       semver: semver || "-",
-//       branch: gitData?.branch || "-",
-//       commit: gitData?.commit || "-",
-//       version: formatVersion({...gitData, semver}),
-//     };
-//   } catch (e) {
-//     return {semver: "", branch: "", commit: "", version: e.message};
-//   }
-// }
