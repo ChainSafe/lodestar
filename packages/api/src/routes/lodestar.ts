@@ -45,6 +45,11 @@ export type BlockProcessorQueueItem = {
   addedTimeMs: number;
 };
 
+export type StateCacheItem = {
+  slot: Slot;
+  root: Uint8Array;
+};
+
 export type Api = {
   /** TODO: description */
   getWtfNode(): Promise<{data: string}>;
@@ -60,6 +65,10 @@ export type Api = {
   getRegenQueueItems(): Promise<RegenQueueItem[]>;
   /** Dump all items in the block processor queue */
   getBlockProcessorQueueItems(): Promise<BlockProcessorQueueItem[]>;
+  /** Dump a summary of the states in the StateContextCache */
+  getStateCacheItems(): Promise<StateCacheItem[]>;
+  /** Dump a summary of the states in the CheckpointStateCache */
+  getCheckpointStateCacheItems(): Promise<StateCacheItem[]>;
 };
 
 /**
@@ -73,6 +82,8 @@ export const routesData: RoutesData<Api> = {
   getGossipQueueItems: {url: "/eth/v1/lodestar/gossip-queue-items/:gossipType", method: "GET"},
   getRegenQueueItems: {url: "/eth/v1/lodestar/regen-queue-items/", method: "GET"},
   getBlockProcessorQueueItems: {url: "/eth/v1/lodestar/block-processor-queue-items/", method: "GET"},
+  getStateCacheItems: {url: "/eth/v1/lodestar/state-cache-items/", method: "GET"},
+  getCheckpointStateCacheItems: {url: "/eth/v1/lodestar/checkpoint-state-cache-items/", method: "GET"},
 };
 
 export type ReqTypes = {
@@ -83,6 +94,8 @@ export type ReqTypes = {
   getGossipQueueItems: {params: {gossipType: string}};
   getRegenQueueItems: ReqEmpty;
   getBlockProcessorQueueItems: ReqEmpty;
+  getStateCacheItems: ReqEmpty;
+  getCheckpointStateCacheItems: ReqEmpty;
 };
 
 export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
@@ -102,6 +115,8 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
     },
     getRegenQueueItems: reqEmpty,
     getBlockProcessorQueueItems: reqEmpty,
+    getStateCacheItems: reqEmpty,
+    getCheckpointStateCacheItems: reqEmpty,
   };
 }
 
@@ -117,6 +132,13 @@ export function getReturnTypes(): ReturnTypes<Api> {
     },
   });
 
+  const StateCacheItem = new ContainerType<StateCacheItem>({
+    fields: {
+      slot: ssz.Slot,
+      root: ssz.Root,
+    },
+  });
+
   return {
     getWtfNode: sameType(),
     writeHeapdump: sameType(),
@@ -125,5 +147,7 @@ export function getReturnTypes(): ReturnTypes<Api> {
     getGossipQueueItems: ArrayOf(GossipQueueItem),
     getRegenQueueItems: jsonType(),
     getBlockProcessorQueueItems: jsonType(),
+    getStateCacheItems: ArrayOf(StateCacheItem),
+    getCheckpointStateCacheItems: ArrayOf(StateCacheItem),
   };
 }
