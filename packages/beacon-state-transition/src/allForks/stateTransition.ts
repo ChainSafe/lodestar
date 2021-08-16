@@ -127,31 +127,32 @@ function processSlotsWithTransientCache(
   metrics?: IBeaconStateTransitionMetrics | null
 ): StateAllForks {
   const {config} = postState;
-  if (postState.slot > slot) {
-    throw Error(`Too old slot ${slot}, current=${postState.slot}`);
+  const postStateSlot = postState.slot;
+  if (postStateSlot > slot) {
+    throw Error(`Too old slot ${slot}, current=${postStateSlot}`);
   }
 
-  while (postState.slot < slot) {
+  while (postStateSlot < slot) {
     processSlot(postState);
 
     // Process epoch on the first slot of the next epoch
-    if ((postState.slot + 1) % SLOTS_PER_EPOCH === 0) {
+    if ((postStateSlot + 1) % SLOTS_PER_EPOCH === 0) {
       // At fork boundary we don't want to process "next fork" epoch before upgrading state
-      const fork = postState.config.getForkName(postState.slot);
+      const fork = postState.config.getForkName(postStateSlot);
       const timer = metrics?.stfnEpochTransition.startTimer();
       try {
         const epochProcess = beforeProcessEpoch(postState);
         processEpochByFork[fork](postState, epochProcess);
         metrics?.registerValidatorStatuses(epochProcess.currentEpoch, epochProcess.statuses);
 
-        postState.slot++;
+        postState.slot = postStateSlot + 1;
         afterProcessEpoch(postState, epochProcess);
       } finally {
         if (timer) timer();
       }
 
       // Upgrade state if exactly at epoch boundary
-      switch (computeEpochAtSlot(postState.slot)) {
+      switch (computeEpochAtSlot(postStateSlot)) {
         case GENESIS_EPOCH:
           break; // Don't do any upgrades at genesis epoch
         case config.ALTAIR_FORK_EPOCH:
@@ -159,7 +160,7 @@ function processSlotsWithTransientCache(
           break;
       }
     } else {
-      postState.slot++;
+      postState.slot = postStateSlot + 1;
     }
   }
 

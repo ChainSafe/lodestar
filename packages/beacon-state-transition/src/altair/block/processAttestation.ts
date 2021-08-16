@@ -49,10 +49,11 @@ export function processAttestation(
   ) {
     throw new Error("Attestation is not valid");
   }
+  const stateSlot = state.slot;
   const {timelySource, timelyTarget, timelyHead} = getAttestationParticipationStatus(
     state,
     data,
-    state.slot - data.slot
+    stateSlot - data.slot
   );
 
   // Retrieve the validator indices from the attestation participation bitfield
@@ -86,7 +87,7 @@ export function processAttestation(
   const totalIncrements = totalBalancesWithWeight / EFFECTIVE_BALANCE_INCREMENT;
   const proposerRewardNumerator = totalIncrements * state.baseRewardPerIncrement;
   const proposerReward = proposerRewardNumerator / PROPOSER_REWARD_DOMINATOR;
-  increaseBalance(state, epochCtx.getBeaconProposer(state.slot), proposerReward);
+  increaseBalance(state, epochCtx.getBeaconProposer(stateSlot), proposerReward);
 }
 
 /**
