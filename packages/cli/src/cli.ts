@@ -6,8 +6,14 @@ import {registerCommandToYargs} from "./util";
 import { getVersion } from "./util/version";
 
 const version = getVersion();
-const topBanner = `🌟 Lodestar: Ethereum 2.0 TypeScript Implementation of the Beacon Chain\n Version: ${version}`;
-const bottomBanner = "For more information, check the CLI reference https://chainsafe.github.io/lodestar/reference/cli";
+const topBanner = `🌟 Lodestar: TypeScript Implementation of the Ethereum 2.0 Beacon Chain.
+  * Version: ${version}
+  * by ChainSafe Systems, 2018-2021`;
+const bottomBanner = `📖 For more information, check the CLI reference:
+  * https://chainsafe.github.io/lodestar/reference/cli
+
+✍️ Give feedback and report issues on GitHub:
+  * https://github.com/ChainSafe/lodestar`;
 
 /**
  * Common factory for running the CLI and running integration tests
@@ -29,6 +35,7 @@ export function getLodestarCli(): yargs.Argv {
     .showHelpOnFail(false)
     .usage(topBanner)
     .epilogue(bottomBanner)
+    .version(topBanner)
     .alias("h", "help")
     .alias("v", "version")
     .recommendCommands();
