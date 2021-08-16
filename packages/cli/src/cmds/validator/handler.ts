@@ -10,7 +10,7 @@ import {getBeaconPaths} from "../beacon/paths";
 import {getValidatorPaths} from "./paths";
 import {IValidatorCliArgs} from "./options";
 import {getSecretKeys} from "./keys";
-import { getVersion } from "../../util/version";
+import {getVersion} from "../../util/version";
 
 /**
  * Runs a validator client.

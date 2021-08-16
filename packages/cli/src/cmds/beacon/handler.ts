@@ -15,7 +15,7 @@ import {initializeOptionsAndConfig, persistOptionsAndConfig} from "../init/handl
 import {IBeaconArgs} from "./options";
 import {getBeaconPaths} from "./paths";
 import {initBeaconState} from "./initBeaconState";
-import { getVersion } from "../../util/version";
+import {getVersion} from "../../util/version";
 
 /**
  * Runs a beacon node.

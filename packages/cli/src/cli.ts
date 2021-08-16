@@ -3,7 +3,7 @@ import yargs from "yargs";
 import {cmds} from "./cmds";
 import {globalOptions} from "./options";
 import {registerCommandToYargs} from "./util";
-import { getVersion } from "./util/version";
+import {getVersion} from "./util/version";
 
 const version = getVersion();
 const topBanner = `🌟 Lodestar: TypeScript Implementation of the Ethereum 2.0 Beacon Chain.

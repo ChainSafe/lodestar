@@ -4,7 +4,7 @@ import {execSync} from "child_process";
  * This file is created in the build step and is distributed through NPM
  * MUST be in sync with `-/gitDataPath.ts` and `package.json` files.
  */
-import { readGitDataFile, GitData } from "./gitDataPath";
+import {readGitDataFile, GitData} from "./gitDataPath";
 
 /** Silent shell that won't pollute stdout, or stderr */
 function shell(cmd: string): string {
@@ -42,7 +42,7 @@ function getLatestTag(): string | undefined {
 
 /** Gets number of commits since latest tag/release. */
 function getCommitsSinceRelease(): number | undefined {
-  let numCommits: number = 0;
+  let numCommits = 0;
   const latestTag: string | undefined = getLatestTag();
   try {
     numCommits = +shell(`git rev-list ${latestTag}..HEAD --count`);
@@ -58,7 +58,7 @@ export function readLodestarGitData(): GitData {
     const currentGitData = getGitData();
     const persistedGitData = getPersistedGitData();
     // If the CLI is run from source, prioritze current git data 
-    // over .git-data.json file, which might be stale here.
+    // over `.git-data.json` file, which might be stale here.
     const gitData = {...persistedGitData, ...currentGitData};
 
     return {
@@ -73,14 +73,14 @@ export function readLodestarGitData(): GitData {
 }
 
 /** Wrapper for updating git data. ONLY to be used with build scripts! */
-export function _forceUpdateGitData(): Partial<GitData> {
+export function forceUpdateGitData(): Partial<GitData> {
   return getGitData();
 }
 
 /** Gets git data containing current branch and commit info from CLI. */
 function getGitData(): Partial<GitData> {
   const numCommits: number | undefined = getCommitsSinceRelease();
-  let strCommits: string = "";
+  let strCommits = "";
   if (numCommits && numCommits > 0) {
     strCommits = `+${numCommits}`;
   }

@@ -1,7 +1,7 @@
 import fs from "fs";
 import findUp from "find-up";
-import { readLodestarGitData } from "./gitData";
-import { GitData } from "./gitData/gitDataPath";
+import {readLodestarGitData} from "./gitData";
+import {GitData} from "./gitData/gitDataPath";
 
 type VersionJson = {
   /** "0.28.2-alpha" */
