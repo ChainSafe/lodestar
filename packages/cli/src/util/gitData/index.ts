@@ -57,9 +57,15 @@ export function readLodestarGitData(): GitData {
   try {
     const currentGitData = getGitData();
     const persistedGitData = getPersistedGitData();
+
     // If the CLI is run from source, prioritze current git data
     // over `.git-data.json` file, which might be stale here.
-    const gitData = {...persistedGitData, ...currentGitData};
+    let gitData = {...persistedGitData, ...currentGitData};
+
+    // If the CLI is not run from the git repository, fall back to persistent
+    if (!gitData.semver || !gitData.branch || !gitData.commit) {
+      gitData = persistedGitData;
+    }
 
     return {
       semver: gitData?.semver || "N/A",

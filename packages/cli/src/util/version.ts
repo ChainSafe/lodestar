@@ -9,7 +9,8 @@ type VersionJson = {
 };
 
 enum ReleaseTrack {
-  unstable = "unstable",
+  git = "git",
+  npm = "npm",
   nightly = "nightly",
   alpha = "alpha",
   beta = "beta",
@@ -27,13 +28,13 @@ const defaultReleaseTrack = ReleaseTrack.alpha;
  */
 export function getVersion(): string {
   const gitData: GitData = readLodestarGitData();
-  let semver: string | undefined = gitData.semver;
+  const semver: string | undefined = gitData.semver;
   const numCommits: string | undefined = gitData.numCommits;
   const commitSlice: string | undefined = gitData.commit?.slice(0, 8);
 
-  // Fall back to local version if git is unavailable
-  if (!semver) {
-    semver = `v${getLocalVersion()}`;
+  // Fall back to/assume local package version if git is unavailable
+  if (!semver || semver.includes("N/A")) {
+    return `v${getLocalVersion()} (${ReleaseTrack.npm})`;
   }
 
   // If these values are empty/undefined, we assume tag release.
@@ -42,7 +43,7 @@ export function getVersion(): string {
   }
 
   // Otherwise get branch and commit information
-  return `${semver}/${gitData.branch}/${numCommits}/${commitSlice} (${ReleaseTrack.unstable})`;
+  return `${semver}/${gitData.branch}/${numCommits}/${commitSlice} (${ReleaseTrack.git})`;
 }
 
 /** Returns local version from `lerna.json` or `package.json` as `"0.28.2"` */
