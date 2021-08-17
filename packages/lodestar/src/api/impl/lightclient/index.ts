@@ -6,16 +6,18 @@ import {ApiError} from "../errors";
 import {linspace} from "../../../util/numpy";
 import {isCompositeType} from "@chainsafe/ssz";
 import {ProofType} from "@chainsafe/persistent-merkle-tree";
+import {IApiOptions} from "../../options";
 
 // TODO: Import from lightclient/server package
 
-const MAX_GINDICES_IN_PROOF = 512;
+export function getLightclientApi(
+  opts: IApiOptions,
+  {chain, config, db}: Pick<ApiModules, "chain" | "config" | "db">
+): routes.lightclient.Api {
+  // It's currently possible to request gigantic proofs (eg: a proof of the entire beacon state)
+  // We want some some sort of resistance against this DoS vector.
+  const maxGindicesInProof = opts.maxGindicesInProof ?? 512;
 
-export function getLightclientApi({
-  chain,
-  config,
-  db,
-}: Pick<ApiModules, "chain" | "config" | "db">): routes.lightclient.Api {
   return {
     // Proofs API
 
@@ -39,7 +41,7 @@ export function getLightclientApi({
         })
         .flat(1);
       gindices = Array.from(new Set(gindices));
-      if (gindices.length > MAX_GINDICES_IN_PROOF) {
+      if (gindices.length > maxGindicesInProof) {
         throw new Error("Requested proof is too large.");
       }
       return {
