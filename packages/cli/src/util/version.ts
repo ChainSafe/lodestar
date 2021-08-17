@@ -33,7 +33,7 @@ export function getVersion(): string {
 
   // Fall back to local version if git is unavailable
   if (!semver) {
-    semver = getLocalVersion();
+    semver = `v${getLocalVersion()}`;
   }
 
   // If these values are empty/undefined, we assume tag release.
