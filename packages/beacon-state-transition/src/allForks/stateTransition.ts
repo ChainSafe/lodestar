@@ -65,7 +65,7 @@ export function stateTransition(
   if (verifyStateRoot) {
     if (!ssz.Root.equals(block.stateRoot, postState.tree.root)) {
       throw new Error(
-        `Invalid state root at slot ${block.slot}, wanted ${toHexString(block.stateRoot)}, got ${toHexString(
+        `Invalid state root at slot ${block.slot}, expected=${toHexString(block.stateRoot)}, actual=${toHexString(
           postState.tree.root
         )}`
       );
