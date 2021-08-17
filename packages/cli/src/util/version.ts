@@ -4,13 +4,26 @@ import {readLodestarGitData} from "./gitData";
 import {GitData} from "./gitData/gitDataPath";
 
 type VersionJson = {
-  /** "0.28.2-alpha" */
+  /** "0.28.2" */
   version: string;
 };
 
+enum ReleaseTrack {
+  unstable = "unstable",
+  nightly = "nightly",
+  alpha = "alpha",
+  beta = "beta",
+  rc = "release candidate",
+  stable = "stable",
+  lts = "long term support",
+}
+
+/** Defines default release track, i.e., the "stability" of tag releases */
+const defaultReleaseTrack = ReleaseTrack.alpha;
+
 /**
  * Gathers all information on package version including Git data.
- * @returns a version string, e.g., `v0.28.2-alpha/developer-feature/+7(80c248bb)`
+ * @returns a version string, e.g., `v0.28.2/developer-feature/+7/80c248bb (nightly)`
  */
 export function getVersion(): string {
   const gitData: GitData = readLodestarGitData();
@@ -25,14 +38,14 @@ export function getVersion(): string {
 
   // If these values are empty/undefined, we assume tag release.
   if (!commitSlice || !numCommits || numCommits === "") {
-    return `${semver}`;
+    return `${semver} (${defaultReleaseTrack})`;
   }
 
   // Otherwise get branch and commit information
-  return `${semver}/${gitData.branch}/${numCommits}(${commitSlice})`;
+  return `${semver}/${gitData.branch}/${numCommits}/${commitSlice} (${ReleaseTrack.unstable})`;
 }
 
-/** Returns local version from `lerna.json` or `package.json` as `"0.28.2-alpha"` */
+/** Returns local version from `lerna.json` or `package.json` as `"0.28.2"` */
 function getLocalVersion(): string | undefined {
   return readVersionFromLernaJson() || readCliPackageJson();
 }

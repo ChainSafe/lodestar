@@ -14,7 +14,7 @@ export const gitDataPath = path.resolve(__dirname, "../../../.git-data.json");
 
 /** Git data type used to construct version information string and persistence. */
 export type GitData = {
-  /** v0.28.2-alpha */
+  /** v0.28.2 */
   semver?: string;
   /** "developer-feature" */
   branch?: string;
