@@ -57,18 +57,18 @@ export function readLodestarGitData(): GitData {
   try {
     const currentGitData = getGitData();
     const persistedGitData = getPersistedGitData();
-    // If the CLI is run from source, prioritze current git data 
+    // If the CLI is run from source, prioritze current git data
     // over `.git-data.json` file, which might be stale here.
     const gitData = {...persistedGitData, ...currentGitData};
 
     return {
-      semver: gitData?.semver || "-",
-      branch: gitData?.branch || "-",
-      commit: gitData?.commit || "-",
+      semver: gitData?.semver || "N/A",
+      branch: gitData?.branch || "N/A",
+      commit: gitData?.commit || "N/A",
       numCommits: gitData?.numCommits || "",
     };
   } catch (e) {
-    return {semver: e.message, branch: "", commit: "", numCommits: ""};
+    return {semver: "", branch: "", commit: "", numCommits: ""};
   }
 }
 
