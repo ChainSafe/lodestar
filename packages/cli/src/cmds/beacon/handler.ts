@@ -9,15 +9,16 @@ import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 
 import {IGlobalArgs} from "../../options";
 import {parseEnrArgs} from "../../options/enrOptions";
-import {initBLS, onGracefulShutdown, getCliLogger, readLodestarGitData} from "../../util";
+import {initBLS, onGracefulShutdown, getCliLogger} from "../../util";
 import {FileENR, overwriteEnrWithCliArgs, readPeerId} from "../../config";
 import {initializeOptionsAndConfig, persistOptionsAndConfig} from "../init/handler";
 import {IBeaconArgs} from "./options";
 import {getBeaconPaths} from "./paths";
 import {initBeaconState} from "./initBeaconState";
+import {getVersion} from "../../util/version";
 
 /**
- * Run a beacon node
+ * Runs a beacon node.
  */
 export async function beaconHandler(args: IBeaconArgs & IGlobalArgs): Promise<void> {
   await initBLS();
@@ -25,12 +26,12 @@ export async function beaconHandler(args: IBeaconArgs & IGlobalArgs): Promise<vo
   const {beaconNodeOptions, config} = await initializeOptionsAndConfig(args);
   await persistOptionsAndConfig(args, beaconNodeOptions, config);
 
-  const lodestarGitData = readLodestarGitData();
+  const version = getVersion();
   const beaconPaths = getBeaconPaths(args);
   // TODO: Rename db.name to db.path or db.location
   beaconNodeOptions.set({db: {name: beaconPaths.dbDir}});
   // Add metrics metadata to show versioning + network info in Prometheus + Grafana
-  beaconNodeOptions.set({metrics: {metadata: {...lodestarGitData, network: args.network}}});
+  beaconNodeOptions.set({metrics: {metadata: {version, network: args.network}}});
 
   // ENR setup
   const peerId = await readPeerId(beaconPaths.peerIdFile);
@@ -48,7 +49,7 @@ export async function beaconHandler(args: IBeaconArgs & IGlobalArgs): Promise<vo
     abortController.abort();
   }, logger.info.bind(logger));
 
-  logger.info("Lodestar", {version: lodestarGitData.version, network: args.network});
+  logger.info("Lodestar", {version: version, network: args.network});
 
   let dbMetrics: null | ReturnType<typeof createDbMetrics> = null;
   // additional metrics registries
