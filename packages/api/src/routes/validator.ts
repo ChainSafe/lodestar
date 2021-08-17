@@ -130,6 +130,22 @@ export type Api = {
   ): Promise<{data: allForks.BeaconBlock; version: ForkName}>;
 
   /**
+   * Requests a beacon node to produce a valid block, which can then be signed by a validator.
+   * Metadata in the response indicates the type of block produced, and the supported types of block
+   * will be added to as forks progress.
+   * @param slot The slot for which the block should be proposed.
+   * @param randaoReveal The validator's randao reveal value.
+   * @param graffiti Arbitrary data validator wants to include in block.
+   * @returns any Success response
+   * @throws ApiError
+   */
+  produceBlockV2(
+    slot: Slot,
+    randaoReveal: BLSSignature,
+    graffiti: string
+  ): Promise<{data: allForks.BeaconBlock; version: ForkName}>;
+
+  /**
    * Produce an attestation data
    * Requests that the beacon node produce an AttestationData.
    * @param slot The slot for which an attestation data should be created.
@@ -195,6 +211,7 @@ export const routesData: RoutesData<Api> = {
   getProposerDuties: {url: "/eth/v1/validator/duties/proposer/:epoch", method: "GET"},
   getSyncCommitteeDuties: {url: "/eth/v1/validator/duties/sync/:epoch", method: "POST"},
   produceBlock: {url: "/eth/v1/validator/blocks/:slot", method: "GET"},
+  produceBlockV2: {url: "/eth/v2/validator/blocks/:slot", method: "GET"},
   produceAttestationData: {url: "/eth/v1/validator/attestation_data", method: "GET"},
   produceSyncCommitteeContribution: {url: "/eth/v1/validator/sync_committee_contribution", method: "GET"},
   getAggregatedAttestation: {url: "/eth/v1/validator/aggregate_attestation", method: "GET"},
@@ -210,6 +227,7 @@ export type ReqTypes = {
   getProposerDuties: {params: {epoch: Epoch}};
   getSyncCommitteeDuties: {params: {epoch: Epoch}; body: ValidatorIndex[]};
   produceBlock: {params: {slot: number}; query: {randao_reveal: string; grafitti: string}};
+  produceBlockV2: {params: {slot: number}; query: {randao_reveal: string; grafitti: string}};
   produceAttestationData: {query: {slot: number; committee_index: number}};
   produceSyncCommitteeContribution: {query: {slot: number; subcommittee_index: number; beacon_block_root: string}};
   getAggregatedAttestation: {query: {attestation_data_root: string; slot: number}};
@@ -238,6 +256,18 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
     },
   });
 
+  const produceBlock: ReqSerializers<Api, ReqTypes>["produceBlock"] = {
+    writeReq: (slot, randaoReveal, grafitti) => ({
+      params: {slot},
+      query: {randao_reveal: toHexString(randaoReveal), grafitti},
+    }),
+    parseReq: ({params, query}) => [params.slot, fromHexString(query.randao_reveal), query.grafitti],
+    schema: {
+      params: {slot: Schema.UintRequired},
+      query: {randao_reveal: Schema.StringRequired, grafitti: Schema.String},
+    },
+  };
+
   return {
     getAttesterDuties: {
       writeReq: (epoch, validatorIndexes) => ({params: {epoch}, body: validatorIndexes}),
@@ -265,17 +295,8 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
       },
     },
 
-    produceBlock: {
-      writeReq: (slot, randaoReveal, grafitti) => ({
-        params: {slot},
-        query: {randao_reveal: toHexString(randaoReveal), grafitti},
-      }),
-      parseReq: ({params, query}) => [params.slot, fromHexString(query.randao_reveal), query.grafitti],
-      schema: {
-        params: {slot: Schema.UintRequired},
-        query: {randao_reveal: Schema.StringRequired, grafitti: Schema.String},
-      },
-    },
+    produceBlock: produceBlock,
+    produceBlockV2: produceBlock,
 
     produceAttestationData: {
       writeReq: (index, slot) => ({query: {slot, committee_index: index}}),
@@ -346,11 +367,14 @@ export function getReturnTypes(): ReturnTypes<Api> {
     },
   });
 
+  const produceBlock: ReturnTypes<Api>["produceBlock"] = WithVersion((fork: ForkName) => ssz[fork].BeaconBlock);
+
   return {
     getAttesterDuties: WithDependentRoot(ArrayOf(AttesterDuty)),
     getProposerDuties: WithDependentRoot(ArrayOf(ProposerDuty)),
     getSyncCommitteeDuties: WithDependentRoot(ArrayOf(SyncDuty)),
-    produceBlock: WithVersion((fork: ForkName) => ssz[fork].BeaconBlock),
+    produceBlock: produceBlock,
+    produceBlockV2: produceBlock,
     produceAttestationData: ContainerData(ssz.phase0.AttestationData),
     produceSyncCommitteeContribution: ContainerData(ssz.altair.SyncCommitteeContribution),
     getAggregatedAttestation: ContainerData(ssz.phase0.Attestation),
