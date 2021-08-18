@@ -15,7 +15,7 @@ import {initializeOptionsAndConfig, persistOptionsAndConfig} from "../init/handl
 import {IBeaconArgs} from "./options";
 import {getBeaconPaths} from "./paths";
 import {initBeaconState} from "./initBeaconState";
-import {getVersion} from "../../util/version";
+import {getVersion, getVersionGitData} from "../../util/version";
 
 /**
  * Runs a beacon node.
@@ -27,11 +27,12 @@ export async function beaconHandler(args: IBeaconArgs & IGlobalArgs): Promise<vo
   await persistOptionsAndConfig(args, beaconNodeOptions, config);
 
   const version = getVersion();
+  const gitData = getVersionGitData();
   const beaconPaths = getBeaconPaths(args);
   // TODO: Rename db.name to db.path or db.location
   beaconNodeOptions.set({db: {name: beaconPaths.dbDir}});
   // Add metrics metadata to show versioning + network info in Prometheus + Grafana
-  beaconNodeOptions.set({metrics: {metadata: {version, network: args.network}}});
+  beaconNodeOptions.set({metrics: {metadata: {...gitData, version, network: args.network}}});
 
   // ENR setup
   const peerId = await readPeerId(beaconPaths.peerIdFile);
