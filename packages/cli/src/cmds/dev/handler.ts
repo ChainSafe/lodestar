@@ -102,7 +102,7 @@ export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
   if (args.startValidators) {
     const secretKeys: SecretKey[] = [];
     const [fromIndex, valCount] = args.startValidators.split(":").map((s) => parseInt(s));
-    const toIndex = valCount - 1;
+    const toIndex = valCount - fromIndex - 1;
     const maxIndex = anchorState.validators.length - 1;
 
     if (fromIndex > toIndex) {
