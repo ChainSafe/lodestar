@@ -192,6 +192,6 @@ function parseJsonRpcErrorCode(code: number): string {
   if (code === -32601) return "Method not found";
   if (code === -32602) return "Invalid params";
   if (code === -32603) return "Internal error";
-  if (code >= -32000 && code <= -32099) return "Server error";
+  if (code <= -32000 && code >= -32099) return "Server error";
   return `Unknown error code ${code}`;
 }
