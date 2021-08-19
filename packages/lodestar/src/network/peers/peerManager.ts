@@ -25,7 +25,7 @@ import {
 /** heartbeat performs regular updates such as updating reputations and performing discovery requests */
 const HEARTBEAT_INTERVAL_MS = 30 * 1000;
 /** The time in seconds between PING events. We do not send a ping if the other peer has PING'd us */
-const PING_INTERVAL_INBOUND_MS = 4 * 60 * 1000 - 30 * 1000; // Offset to not ping when outbound reqs
+const PING_INTERVAL_INBOUND_MS = 4 * 60 * 1000 - 11 * 1000; // Offset to not ping when outbound reqs
 const PING_INTERVAL_OUTBOUND_MS = 4 * 60 * 1000;
 /** The time in seconds between re-status's peers. */
 const STATUS_INTERVAL_MS = 5 * 60 * 1000;
