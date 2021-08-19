@@ -333,7 +333,7 @@ export const BeaconState = new ContainerType<phase0.BeaconState>({
     eth1DepositIndex: Number64,
     // Registry
     validators: new ListType({elementType: Validator, limit: VALIDATOR_REGISTRY_LIMIT}),
-    balances: new ListType({elementType: Gwei, limit: VALIDATOR_REGISTRY_LIMIT}),
+    balances: new ListType({elementType: Number64, limit: VALIDATOR_REGISTRY_LIMIT}),
     randaoMixes: new VectorType({elementType: Bytes32, length: EPOCHS_PER_HISTORICAL_VECTOR}),
     // Slashings
     slashings: new VectorType({elementType: Gwei, length: EPOCHS_PER_SLASHINGS_VECTOR}),

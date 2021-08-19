@@ -1,4 +1,4 @@
-import {altair, Gwei, phase0, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {altair, phase0, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {
   EFFECTIVE_BALANCE_INCREMENT,
   INACTIVITY_PENALTY_QUOTIENT_ALTAIR,
@@ -18,15 +18,15 @@ import {
   IEpochProcess,
   IEpochStakeSummary,
 } from "../../allForks/util";
-import {isInInactivityLeak, newZeroedBigIntArray} from "../../util";
+import {isInInactivityLeak, newZeroedArray} from "../../util";
 
 interface IRewardPenaltyItem {
-  baseReward: bigint;
-  timelySourceReward: bigint;
-  timelySourcePenalty: bigint;
-  timelyTargetReward: bigint;
-  timelyTargetPenalty: bigint;
-  timelyHeadReward: bigint;
+  baseReward: number;
+  timelySourceReward: number;
+  timelySourcePenalty: number;
+  timelyTargetReward: number;
+  timelyTargetPenalty: number;
+  timelyHeadReward: number;
 }
 
 /**
@@ -45,11 +45,11 @@ interface IRewardPenaltyItem {
 export function getRewardsPenaltiesDeltas(
   state: CachedBeaconState<altair.BeaconState>,
   process: IEpochProcess
-): [Gwei[], Gwei[]] {
+): [number[], number[]] {
   const validatorCount = state.validators.length;
   const activeIncrements = process.totalActiveStake / EFFECTIVE_BALANCE_INCREMENT;
-  const rewards = newZeroedBigIntArray(validatorCount);
-  const penalties = newZeroedBigIntArray(validatorCount);
+  const rewards = newZeroedArray(validatorCount);
+  const penalties = newZeroedArray(validatorCount);
 
   const isInInactivityLeakBn = isInInactivityLeak((state as unknown) as phase0.BeaconState);
   // effectiveBalance is multiple of EFFECTIVE_BALANCE_INCREMENT and less than MAX_EFFECTIVE_BALANCE
@@ -80,12 +80,12 @@ export function getRewardsPenaltiesDeltas(
       const ttRewardNumerator = baseReward * ttWeigh * ttUnslashedParticipatingIncrements;
       const thRewardNumerator = baseReward * thWeigh * thUnslashedParticipatingIncrements;
       rewardPenaltyItem = {
-        baseReward,
-        timelySourceReward: tsRewardNumerator / (activeIncrements * WEIGHT_DENOMINATOR),
-        timelyTargetReward: ttRewardNumerator / (activeIncrements * WEIGHT_DENOMINATOR),
-        timelyHeadReward: thRewardNumerator / (activeIncrements * WEIGHT_DENOMINATOR),
-        timelySourcePenalty: (baseReward * tsWeigh) / WEIGHT_DENOMINATOR,
-        timelyTargetPenalty: (baseReward * ttWeigh) / WEIGHT_DENOMINATOR,
+        baseReward: Number(baseReward),
+        timelySourceReward: Number(tsRewardNumerator / (activeIncrements * WEIGHT_DENOMINATOR)),
+        timelyTargetReward: Number(ttRewardNumerator / (activeIncrements * WEIGHT_DENOMINATOR)),
+        timelyHeadReward: Number(thRewardNumerator / (activeIncrements * WEIGHT_DENOMINATOR)),
+        timelySourcePenalty: Number((baseReward * tsWeigh) / WEIGHT_DENOMINATOR),
+        timelyTargetPenalty: Number((baseReward * ttWeigh) / WEIGHT_DENOMINATOR),
       };
       rewardPenaltyItemCache.set(effectiveBalanceNbr, rewardPenaltyItem);
     }
@@ -119,8 +119,9 @@ export function getRewardsPenaltiesDeltas(
     // Same logic to getInactivityPenaltyDeltas
     // TODO: if we have limited value in inactivityScores we can provide a cache too
     if (!hasMarkers(status.flags, FLAG_PREV_TARGET_ATTESTER_OR_UNSLASHED)) {
+      // TODO: effectiveBalance as number
       const penaltyNumerator = effectiveBalance * BigInt(state.inactivityScores[i]);
-      penalties[i] += penaltyNumerator / penaltyDenominator;
+      penalties[i] += Number(penaltyNumerator / penaltyDenominator);
     }
   }
   return [rewards, penalties];
@@ -134,10 +135,10 @@ export function getFlagIndexDeltas(
   state: CachedBeaconState<altair.BeaconState>,
   process: IEpochProcess,
   flagIndex: number
-): [Gwei[], Gwei[]] {
+): [number[], number[]] {
   const validatorCount = state.validators.length;
-  const rewards = newZeroedBigIntArray(validatorCount);
-  const penalties = newZeroedBigIntArray(validatorCount);
+  const rewards = newZeroedArray(validatorCount);
+  const penalties = newZeroedArray(validatorCount);
 
   let flag;
   let stakeSummaryKey: keyof IEpochStakeSummary;
@@ -169,10 +170,10 @@ export function getFlagIndexDeltas(
     if (hasMarkers(status.flags, flag)) {
       if (!isInInactivityLeak((state as unknown) as phase0.BeaconState)) {
         const rewardNumerator = baseReward * weight * unslashedParticipatingIncrements;
-        rewards[i] += rewardNumerator / (activeIncrements * WEIGHT_DENOMINATOR);
+        rewards[i] += Number(rewardNumerator / (activeIncrements * WEIGHT_DENOMINATOR));
       }
     } else if (flagIndex !== TIMELY_HEAD_FLAG_INDEX) {
-      penalties[i] += (baseReward * weight) / WEIGHT_DENOMINATOR;
+      penalties[i] += Number((baseReward * weight) / WEIGHT_DENOMINATOR);
     }
   }
   return [rewards, penalties];
@@ -185,11 +186,11 @@ export function getFlagIndexDeltas(
 export function getInactivityPenaltyDeltas(
   state: CachedBeaconState<altair.BeaconState>,
   process: IEpochProcess
-): [Gwei[], Gwei[]] {
+): [number[], number[]] {
   const {config} = state;
   const validatorCount = state.validators.length;
-  const rewards = newZeroedBigIntArray(validatorCount);
-  const penalties = newZeroedBigIntArray(validatorCount);
+  const rewards = newZeroedArray(validatorCount);
+  const penalties = newZeroedArray(validatorCount);
 
   for (let i = 0; i < process.statuses.length; i++) {
     const status = process.statuses[i];
@@ -197,13 +198,14 @@ export function getInactivityPenaltyDeltas(
       if (!hasMarkers(status.flags, FLAG_PREV_TARGET_ATTESTER_OR_UNSLASHED)) {
         const penaltyNumerator = process.validators[i].effectiveBalance * BigInt(state.inactivityScores[i]);
         const penaltyDenominator = config.INACTIVITY_SCORE_BIAS * INACTIVITY_PENALTY_QUOTIENT_ALTAIR;
-        penalties[i] += penaltyNumerator / penaltyDenominator;
+        penalties[i] += Number(penaltyNumerator / penaltyDenominator);
       }
     }
   }
   return [rewards, penalties];
 }
 
+// TODO: could this be number
 function getBaseReward(process: IEpochProcess, index: ValidatorIndex): bigint {
   const increments = process.validators[index].effectiveBalance / EFFECTIVE_BALANCE_INCREMENT;
   return increments * process.baseRewardPerIncrement;

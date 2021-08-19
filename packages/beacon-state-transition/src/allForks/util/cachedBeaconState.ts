@@ -68,7 +68,6 @@ export function createCachedBeaconState<T extends allForks.BeaconState>(
     Array.from(readonlyValues(state.validators), (v) => createValidatorFlat(v))
   );
 
-  const cachedBalances = MutableVector.from(readonlyValues(state.balances));
   let cachedPreviousParticipation, cachedCurrentParticipation;
   const forkName = config.getForkName(state.slot);
   let currIndexedSyncCommittee: IndexedSyncCommittee;
@@ -105,7 +104,6 @@ export function createCachedBeaconState<T extends allForks.BeaconState>(
       state.type as ContainerType<T>,
       state.tree,
       cachedValidators,
-      cachedBalances,
       cachedPreviousParticipation,
       cachedCurrentParticipation,
       currIndexedSyncCommittee,
@@ -222,7 +220,6 @@ export class BeaconStateContext<T extends allForks.BeaconState> {
     type: ContainerType<T>,
     tree: Tree,
     validatorCache: MutableVector<T["validators"][number]>,
-    balanceCache: MutableVector<T["balances"][number]>,
     previousEpochParticipationCache: MutableVector<IParticipationStatus>,
     currentEpochParticipationCache: MutableVector<IParticipationStatus>,
     currentSyncCommittee: IndexedSyncCommittee,
@@ -245,8 +242,7 @@ export class BeaconStateContext<T extends allForks.BeaconState> {
     this.balances = (new Proxy(
       new CachedBalanceList(
         this.type.fields["balances"] as BasicListType<List<T["balances"][number]>>,
-        this.type.tree_getProperty(this.tree, "balances") as Tree,
-        balanceCache
+        this.type.tree_getProperty(this.tree, "balances") as Tree
       ),
       CachedBalanceListProxyHandler
     ) as unknown) as CachedBalanceList & T["balances"];
@@ -284,7 +280,6 @@ export class BeaconStateContext<T extends allForks.BeaconState> {
         this.type,
         this.tree.clone(),
         this.validators.persistent.clone(),
-        this.balances.persistent.clone(),
         this.previousEpochParticipation.persistent.clone(),
         this.currentEpochParticipation.persistent.clone(),
         // states in the same sync period has same sync committee
@@ -313,7 +308,6 @@ export class BeaconStateContext<T extends allForks.BeaconState> {
    */
   setStateCachesAsTransient(): void {
     this.validators.persistent.asTransient();
-    this.balances.persistent.asTransient();
     this.previousEpochParticipation.persistent.asTransient();
     this.currentEpochParticipation.persistent.asTransient();
     this.inactivityScores.persistent.asTransient();
@@ -324,7 +318,6 @@ export class BeaconStateContext<T extends allForks.BeaconState> {
    */
   setStateCachesAsPersistent(): void {
     this.validators.persistent.asPersistent();
-    this.balances.persistent.asPersistent();
     this.previousEpochParticipation.persistent.asPersistent();
     this.currentEpochParticipation.persistent.asPersistent();
     this.inactivityScores.persistent.asPersistent();

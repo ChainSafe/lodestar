@@ -37,7 +37,7 @@ export function processSyncAggregate(
   for (const participantIndex of participantIndices) {
     increaseBalance(state, participantIndex, syncParticipantReward);
   }
-  increaseBalance(state, proposerIndex, syncProposerReward * BigInt(participantIndices.length));
+  increaseBalance(state, proposerIndex, syncProposerReward * participantIndices.length);
   for (const unparticipantIndex of unparticipantIndices) {
     decreaseBalance(state, unparticipantIndex, syncParticipantReward);
   }

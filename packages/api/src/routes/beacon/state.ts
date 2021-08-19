@@ -1,5 +1,5 @@
 import {ContainerType} from "@chainsafe/ssz";
-import {phase0, CommitteeIndex, Slot, ValidatorIndex, Epoch, Root, Gwei, ssz} from "@chainsafe/lodestar-types";
+import {phase0, CommitteeIndex, Slot, ValidatorIndex, Epoch, Root, ssz} from "@chainsafe/lodestar-types";
 import {
   RoutesData,
   ReturnTypes,
@@ -46,14 +46,14 @@ export type FinalityCheckpoints = {
 
 export type ValidatorResponse = {
   index: ValidatorIndex;
-  balance: Gwei;
+  balance: number;
   status: ValidatorStatus;
   validator: phase0.Validator;
 };
 
 export type ValidatorBalance = {
   index: ValidatorIndex;
-  balance: Gwei;
+  balance: number;
 };
 
 export type EpochCommitteeResponse = {

@@ -1,80 +1,70 @@
 import {BasicListType, List, TreeBacked} from "@chainsafe/ssz";
-import {Gwei} from "@chainsafe/lodestar-types";
 import {Tree} from "@chainsafe/persistent-merkle-tree";
-import {MutableVector, PersistentVector} from "@chainsafe/persistent-ts";
-import {unsafeUint8ArrayToTree} from "./unsafeUint8ArrayToTree";
 
 /**
  * Balances registry that synchronizes changes between two underlying implementations:
  *   an immutable-js-style backing and a merkle tree backing
  */
-export class CachedBalanceList implements List<Gwei> {
-  [index: number]: Gwei;
+export class CachedBalanceList implements List<number> {
+  [index: number]: number;
   tree: Tree;
-  type: BasicListType<List<Gwei>>;
-  persistent: MutableVector<Gwei>;
+  type: BasicListType<List<number>>;
 
-  constructor(type: BasicListType<List<Gwei>>, tree: Tree, persistent: MutableVector<Gwei>) {
+  constructor(type: BasicListType<List<number>>, tree: Tree) {
     this.type = type;
     this.tree = tree;
-    this.persistent = persistent;
   }
 
   get length(): number {
-    return this.persistent.length;
+    return this.type.tree_getLength(this.tree);
   }
 
-  get(index: number): Gwei | undefined {
-    return this.persistent.get(index) ?? undefined;
+  get(index: number): number | undefined {
+    return this.type.tree_getProperty(this.tree, index) as number | undefined;
   }
 
-  set(index: number, value: Gwei): void {
-    this.persistent.set(index, value);
+  set(index: number, value: number): void {
     this.type.tree_setProperty(this.tree, index, value);
   }
 
-  updateAll(balances: BigUint64Array): void {
-    this.persistent.vector = PersistentVector.from(balances);
-    this.tree.rootNode = unsafeUint8ArrayToTree(
-      new Uint8Array(balances.buffer, balances.byteOffset, balances.byteLength),
-      this.type.getChunkDepth()
-    );
-    this.type.tree_setLength(this.tree, balances.length);
+  updateDelta(index: number, delta: number): number {
+    return this.type.tree_applyUint64Delta(this.tree, index, delta);
   }
 
-  push(value: Gwei): number {
-    this.persistent.push(value);
+  /** Return the new balances */
+  updateAll(deltas: number[]): number[] {
+    const [node, newBalances] = this.type.tree_newTreeFromUint64Deltas(this.tree, deltas);
+    this.tree.rootNode = node;
+    this.type.tree_setLength(this.tree, newBalances.length);
+    return newBalances;
+  }
+
+  push(value: number): number {
     return this.type.tree_push(this.tree, value);
   }
 
-  pop(): Gwei {
-    this.type.tree_pop(this.tree);
-    return this.persistent.pop() as Gwei;
+  pop(): number {
+    return this.type.tree_pop(this.tree);
   }
 
-  *[Symbol.iterator](): Iterator<Gwei> {
-    yield* this.persistent[Symbol.iterator]();
+  *[Symbol.iterator](): Iterator<number> {
+    for (let i = 0; i < this.length; i++) {
+      yield this.get(i) as number;
+    }
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  find(fn: (value: Gwei, index: number, list: this) => boolean): Gwei | undefined {
+  find(fn: (value: number, index: number, list: this) => boolean): number | undefined {
     return;
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  findIndex(fn: (value: Gwei, index: number, list: this) => boolean): number {
+  findIndex(fn: (value: number, index: number, list: this) => boolean): number {
     return -1;
-  }
-
-  forEach(fn: (value: Gwei, index: number, list: this) => void): void {
-    this.persistent.forEach(fn as (value: Gwei, index: number) => void);
-  }
-
-  map<T>(fn: (value: Gwei, index: number) => T): T[] {
-    return this.persistent.map(fn);
   }
 }
 
+// TODO: remove the proxy as we don't have a persistent-ts array anymore
 // eslint-disable-next-line @typescript-eslint/naming-convention
 export const CachedBalanceListProxyHandler: ProxyHandler<CachedBalanceList> = {
   get(target: CachedBalanceList, key: PropertyKey): unknown {
@@ -85,12 +75,12 @@ export const CachedBalanceListProxyHandler: ProxyHandler<CachedBalanceList> = {
     } else {
       const treeBacked = target.type.createTreeBacked(target.tree);
       if (key in treeBacked) {
-        return treeBacked[key as keyof TreeBacked<List<Gwei>>];
+        return treeBacked[key as keyof TreeBacked<List<number>>];
       }
       return undefined;
     }
   },
-  set(target: CachedBalanceList, key: PropertyKey, value: Gwei): boolean {
+  set(target: CachedBalanceList, key: PropertyKey, value: number): boolean {
     if (!Number.isNaN(Number(key))) {
       target.set(key as number, value);
       return true;

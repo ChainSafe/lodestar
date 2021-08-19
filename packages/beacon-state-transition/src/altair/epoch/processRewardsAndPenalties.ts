@@ -14,31 +14,17 @@ export function processRewardsAndPenalties(
   state: CachedBeaconState<altair.BeaconState>,
   epochProcess: IEpochProcess
 ): void {
-  const {balances} = state;
-
   if (getCurrentEpoch(state) == GENESIS_EPOCH) {
     return;
   }
 
   const [rewards, penalties] = getRewardsPenaltiesDeltas(state, epochProcess);
-
-  const newBalances = new BigUint64Array(balances.length);
-  balances.forEach((balance, i) => {
-    let newBalance = balance;
-    const b = newBalance + BigInt(rewards[i] - penalties[i]);
-    if (b > 0) {
-      newBalance = b;
-    } else {
-      newBalance = BigInt(0);
-    }
-    newBalances[i] = newBalance;
-  });
-
+  const deltas = rewards.map((_, i) => Number(rewards[i] - penalties[i]));
   // important: do not change state one balance at a time
   // set them all at once, constructing the tree in one go
-  balances.updateAll(newBalances);
+  // balances.updateAll(newBalances);
   // cache the balances array, too
-  epochProcess.balances = newBalances;
+  epochProcess.balances = state.balances.updateAll(deltas);
 }
 
 // // naive version, leave here for debugging purposes

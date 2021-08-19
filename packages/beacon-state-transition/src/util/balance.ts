@@ -3,7 +3,7 @@
  */
 
 import {EFFECTIVE_BALANCE_INCREMENT} from "@chainsafe/lodestar-params";
-import {allForks, Gwei, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {allForks, altair, Gwei, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {bigIntMax} from "@chainsafe/lodestar-utils";
 import {CachedBeaconState} from "../allForks";
 import {getCurrentEpoch} from "./epoch";
@@ -39,9 +39,13 @@ export function getTotalActiveBalance(state: allForks.BeaconState): Gwei {
 /**
  * Increase the balance for a validator with the given ``index`` by ``delta``.
  */
-export function increaseBalance(state: allForks.BeaconState, index: ValidatorIndex, delta: Gwei): void {
+export function increaseBalance(
+  state: CachedBeaconState<allForks.BeaconState> | CachedBeaconState<altair.BeaconState>,
+  index: ValidatorIndex,
+  delta: number
+): void {
   // TODO: Inline this
-  state.balances[index] = state.balances[index] + delta;
+  state.balances.updateDelta(index, delta);
 }
 
 /**
@@ -49,9 +53,14 @@ export function increaseBalance(state: allForks.BeaconState, index: ValidatorInd
  *
  * Set to ``0`` when underflow.
  */
-export function decreaseBalance(state: allForks.BeaconState, index: ValidatorIndex, delta: Gwei): void {
-  const currentBalance = state.balances[index];
-  state.balances[index] = delta > currentBalance ? BigInt(0) : currentBalance - delta;
+export function decreaseBalance(
+  state: CachedBeaconState<allForks.BeaconState> | CachedBeaconState<altair.BeaconState>,
+  index: ValidatorIndex,
+  delta: number
+): void {
+  // const currentBalance = state.balances[index];
+  // state.balances[index] = delta > currentBalance ? 0 : currentBalance - delta;
+  state.balances.updateDelta(index, -delta);
 }
 
 /**

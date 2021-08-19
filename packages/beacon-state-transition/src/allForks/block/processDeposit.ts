@@ -77,7 +77,7 @@ export function processDeposit(
       effectiveBalance: bigIntMin(amount - (amount % EFFECTIVE_BALANCE_INCREMENT), MAX_EFFECTIVE_BALANCE),
       slashed: false,
     });
-    state.balances.push(amount);
+    state.balances.push(Number(amount));
 
     // add participation caches
     state.previousEpochParticipation.pushStatus({timelyHead: false, timelySource: false, timelyTarget: false});
@@ -91,6 +91,6 @@ export function processDeposit(
     epochCtx.addPubkey(validators.length - 1, pubkey);
   } else {
     // increase balance by deposit amount
-    increaseBalance(state, cachedIndex, amount);
+    increaseBalance(state, cachedIndex, Number(amount));
   }
 }
