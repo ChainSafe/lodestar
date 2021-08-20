@@ -102,14 +102,15 @@ export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
   if (args.startValidators) {
     const secretKeys: SecretKey[] = [];
     const [fromIndex, toIndex] = args.startValidators.split(":").map((s) => parseInt(s));
-    const maxIndex = anchorState.validators.length - 1;
+    const valCount = anchorState.validators.length;
+    const maxIndex = fromIndex + valCount - 1;
 
     if (fromIndex > toIndex) {
       throw Error(`Invalid startValidators arg '${args.startValidators}' - fromIndex > toIndex`);
     }
 
     if (toIndex > maxIndex) {
-      throw Error(`Invalid startValidators arg '${args.startValidators}' - state has ${maxIndex} validators`);
+      throw Error(`Invalid startValidators arg '${args.startValidators}' - state has ${valCount} validators`);
     }
 
     for (let i = fromIndex; i <= toIndex; i++) {
