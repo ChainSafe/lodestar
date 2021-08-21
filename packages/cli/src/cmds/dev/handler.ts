@@ -18,6 +18,7 @@ import {getValidatorPaths} from "../validator/paths";
 import {interopSecretKey} from "@chainsafe/lodestar-beacon-state-transition";
 import {SecretKey} from "@chainsafe/bls";
 import {createIBeaconConfig} from "@chainsafe/lodestar-config";
+import {getVersion} from "../../util/version";
 
 /**
  * Run a beacon node with validator
@@ -56,7 +57,7 @@ export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
   // BeaconNode setup
   const libp2p = await createNodeJsLibp2p(peerId, options.network);
   const logger = getCliLogger(args, beaconPaths, config);
-  logger.info("Lodestar dev", {network: args.network, preset: args.preset});
+  logger.info("Lodestar", {version: getVersion(), network: args.network, preset: args.preset});
 
   const db = new BeaconDb({config, controller: new LevelDbController(options.db, {logger})});
   await db.start();
