@@ -1,7 +1,7 @@
 import {defaultGlobalPaths} from "../paths/global";
 import {paramsOptions, IParamsArgs} from "./paramsOptions";
 import {NetworkName, networkNames} from "../networks";
-import {ICliCommandOptions} from "../util";
+import {ICliCommandOptions, readFile} from "../util";
 
 interface IGlobalSingleArgs {
   rootDir: string;
@@ -38,6 +38,12 @@ const globalSingleOptions: ICliCommandOptions<IGlobalSingleArgs> = {
     type: "string",
   },
 };
+
+export const rcConfigOption: [string, string, (configPath: string) => Record<string, unknown>] = [
+  "rcConfig",
+  "RC file to supplement command line args, accepted formats: .yml, .yaml, .json",
+  (configPath: string): Record<string, unknown> => readFile(configPath, ["json", "yml", "yaml"]),
+];
 
 export type IGlobalArgs = IGlobalSingleArgs & IParamsArgs;
 
