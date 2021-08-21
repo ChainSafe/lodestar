@@ -31,6 +31,7 @@ export type ReqGeneric = {
   params?: Record<string, string | number>;
   query?: Record<string, string | number | (string | number)[]>;
   body?: any;
+  headers?: Record<string, string[] | string | undefined>;
 };
 
 export type ReqEmpty = ReqGeneric;
