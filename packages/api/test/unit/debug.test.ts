@@ -1,6 +1,6 @@
 import {ForkName} from "@chainsafe/lodestar-params";
 import {ssz} from "@chainsafe/lodestar-types";
-import {fetch} from "cross-fetch";
+import {toHexString} from "@chainsafe/ssz";
 import {config} from "@chainsafe/lodestar-config/default";
 import {Api, ReqTypes, routesData} from "../../src/routes/debug";
 import {getClient} from "../../src/client/debug";
@@ -9,21 +9,25 @@ import {runGenericServerTest} from "../utils/genericServerTest";
 import {getMockApi, getTestServer} from "../utils/utils";
 import {registerRoutesGroup} from "../../src/server";
 import {expect} from "chai";
+import {HttpClient} from "../../src";
 
 const root = Buffer.alloc(32, 1);
 
-describe("debug", () => {
+describe("debug", function () {
+  // Extend timeout since states are very big
+  this.timeout(30 * 1000);
+
   runGenericServerTest<Api, ReqTypes>(config, getClient, getRoutes, {
     getHeads: {
       args: [],
       res: {data: [{slot: 1, root}]},
     },
     getState: {
-      args: ["head"],
+      args: ["head", "json"],
       res: {data: ssz.phase0.BeaconState.defaultValue()},
     },
     getStateV2: {
-      args: ["head"],
+      args: ["head", "json"],
       res: {data: ssz.altair.BeaconState.defaultValue(), version: ForkName.altair},
     },
     connectToPeer: {
@@ -38,31 +42,25 @@ describe("debug", () => {
 
   // Get state by SSZ
 
-  describe("get SSZ response", () => {
+  describe("getState() in SSZ format", () => {
     const {baseUrl, server} = getTestServer();
     const mockApi = getMockApi<Api>(routesData);
     const routes = getRoutes(config, mockApi);
     registerRoutesGroup(server, routes);
 
-    it("getState", async () => {
-      const state = ssz.phase0.BeaconState.defaultValue();
-      mockApi.getState.resolves({data: state});
+    for (const method of ["getState" as const, "getStateV2" as const]) {
+      it(method, async () => {
+        const state = ssz.phase0.BeaconState.defaultValue();
+        const stateSerialized = ssz.phase0.BeaconState.serialize(state);
+        mockApi[method].resolves(stateSerialized);
 
-      const url = baseUrl + routesData.getState.url;
-      const res = await fetch(url, {
-        method: routesData.getState.method,
-        headers: {accept: "application/octet-stream"},
+        const httpClient = new HttpClient({baseUrl});
+        const client = getClient(config, httpClient);
+
+        const res = await client[method]("head", "ssz");
+
+        expect(toHexString(res)).to.equal(toHexString(stateSerialized), "returned state value is not equal");
       });
-      if (!res.ok) throw Error(res.statusText);
-      const arrayBuffer = await res.arrayBuffer();
-
-      expect(res.headers.get("Content-Type")).to.equal("application/octet-stream", "Wrong Content-Type header value");
-
-      const stateRes = ssz.phase0.BeaconState.deserialize(new Uint8Array(arrayBuffer));
-      expect(ssz.phase0.BeaconState.toJson(state)).to.deep.equal(
-        ssz.phase0.BeaconState.toJson(stateRes),
-        "returned state value is not equal"
-      );
-    });
+    }
   });
 });
