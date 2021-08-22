@@ -62,15 +62,18 @@ export function getBeaconConfig(args: IBeaconParamsArgs): IChainForkConfig {
  * - CLI flags
  */
 export function getBeaconParams({network, paramsFile, additionalParamsCli}: IBeaconParamsArgs): IChainConfig {
-  const additionalParams = mergeBeaconParams(
-    // Default network params
-    network ? getNetworkBeaconParams(network) : {},
-    // Existing user custom params from file
-    readBeaconParamsIfExists(paramsFile),
-    // Params from CLI flags
-    additionalParamsCli || {}
-  );
-  return createIChainConfig(parsePartialIChainConfigJson(additionalParams));
+  // Default network params
+  const networkParams: Partial<IChainConfig> = network ? getNetworkBeaconParams(network) : {};
+  // Existing user custom params from file
+  const fileParams: Partial<IChainConfig> = parsePartialIChainConfigJson(readBeaconParamsIfExists(paramsFile));
+  // Params from CLI flags
+  const cliParams: Partial<IChainConfig> = parsePartialIChainConfigJson(additionalParamsCli);
+
+  return createIChainConfig({
+    ...networkParams,
+    ...fileParams,
+    ...cliParams,
+  });
 }
 
 export function writeBeaconParams(filepath: string, params: IChainConfig): void {
@@ -79,13 +82,4 @@ export function writeBeaconParams(filepath: string, params: IChainConfig): void 
 
 function readBeaconParamsIfExists(filepath: string): IBeaconParamsUnparsed {
   return readFileIfExists(filepath) || {};
-}
-
-/**
- * Typesafe wrapper to merge partial IBeaconNodeOptions objects
- */
-function mergeBeaconParams(...itemsArr: IBeaconParamsUnparsed[]): IBeaconParamsUnparsed {
-  return itemsArr.reduce((mergedItems, item) => {
-    return {...mergedItems, ...item};
-  }, itemsArr[0]);
 }
