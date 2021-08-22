@@ -14,11 +14,9 @@
 
 # Tests
 
-- Run `lerna run test:spec-min` for minimal spec tests
-- Run `lerna run test:spec-main` for mainnet spec tests
 - Run `lerna run test:unit` for unit tests
 - Run `lerna run test:e2e` for end-to-end tests
-- Run `lerna run test` to run all tests
+- Run `cd packages/spec-test-runner && yarn test:spec` for spec tests
 
 # Docker
 
