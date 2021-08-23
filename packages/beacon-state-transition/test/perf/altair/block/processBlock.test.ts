@@ -65,11 +65,7 @@ import {getBlockAltair} from "../../phase0/block/util";
 //
 
 describe("Process block", () => {
-  setBenchOpts({
-    maxMs: 60 * 1000,
-    minMs: 15 * 1000,
-    runs: 1024,
-  });
+  setBenchOpts({maxMs: 60 * 1000});
 
   if (ACTIVE_PRESET !== PresetName.mainnet) {
     throw Error(`ACTIVE_PRESET ${ACTIVE_PRESET} must be mainnet`);

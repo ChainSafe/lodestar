@@ -46,13 +46,7 @@ const ihi = n - 1;
 
 describe("Tree (persistent-merkle-tree)", () => {
   // Don't run on CI
-  if (process.env.CI) return;
-
-  setBenchOpts({
-    maxMs: 10 * 1000,
-    minMs: 1 * 1000,
-    runs: 1024,
-  });
+  setBenchOpts({maxMs: 10 * 1000, skip: Boolean(process.env.CI)});
 
   const d = 40;
   const tree = getTree(d, n);
@@ -119,13 +113,7 @@ describe("Tree (persistent-merkle-tree)", () => {
 
 describe("MutableVector", () => {
   // Don't run on CI
-  if (process.env.CI) return;
-
-  setBenchOpts({
-    maxMs: 10 * 1000,
-    minMs: 1 * 1000,
-    runs: 1024,
-  });
+  setBenchOpts({maxMs: 10 * 1000, skip: Boolean(process.env.CI)});
 
   const items = createArray(n);
   const mutableVector = MutableVector.from(items);
@@ -178,13 +166,7 @@ describe("MutableVector", () => {
 
 describe("Array", () => {
   // Don't run on CI
-  if (process.env.CI) return;
-
-  setBenchOpts({
-    maxMs: 10 * 1000,
-    minMs: 1 * 1000,
-    runs: 1024,
-  });
+  setBenchOpts({maxMs: 10 * 1000, skip: Boolean(process.env.CI)});
 
   const arr = createArray(n);
 

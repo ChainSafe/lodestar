@@ -5,11 +5,7 @@ import {List, readonlyValues} from "@chainsafe/ssz";
 import {zipIndexesCommitteeBits} from "../../../src";
 
 describe("aggregationBits", () => {
-  setBenchOpts({
-    maxMs: 60 * 1000,
-    minMs: 1 * 1000,
-    runs: 1024,
-  });
+  setBenchOpts({maxMs: 60 * 1000, threshold: Infinity});
 
   const len = MAX_VALIDATORS_PER_COMMITTEE;
   const aggregationBits = Array.from({length: len}, () => true);
@@ -22,13 +18,11 @@ describe("aggregationBits", () => {
   // aggregationBits - 2048 els - zipIndexesInBitList	50.904 us/op	236.17 us/op	0.22
 
   // This benchmark is very unstable in CI. We already know that zipIndexesInBitList is faster
-  if (!process.env.CI) {
-    itBench(`${idPrefix} - readonlyValues`, () => {
-      Array.from(readonlyValues(bitlistTree));
-    });
+  itBench(`${idPrefix} - readonlyValues`, () => {
+    Array.from(readonlyValues(bitlistTree));
+  });
 
-    itBench(`${idPrefix} - zipIndexesInBitList`, () => {
-      zipIndexesCommitteeBits(indexes, bitlistTree);
-    });
-  }
+  itBench(`${idPrefix} - zipIndexesInBitList`, () => {
+    zipIndexesCommitteeBits(indexes, bitlistTree);
+  });
 });
