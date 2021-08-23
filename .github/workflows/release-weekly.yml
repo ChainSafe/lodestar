@@ -6,7 +6,7 @@ concurrency:
 on:
   push:
     branches:
-      - "q9-ga-releases" # @TODO @q9f remove (just testing)
+      - "q9-ga-weekly" # @TODO @q9f remove (just testing)
   schedule:
     - cron: '23 4 * * WED'
 
@@ -41,7 +41,8 @@ jobs:
         if: steps.cache-deps.outputs.cache-hit == 'true'
       - name: Bump minor version
         run: |
-          node_modules/.bin/lerna version minor --yes --no-push --force-publish
+          node_modules/.bin/lerna version minor --yes \
+          --no-git-tag-version --no-push
       - name: Create Pull-Request
         uses: peter-evans/create-pull-request@v3
         with:
