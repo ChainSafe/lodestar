@@ -9,7 +9,7 @@ jobs:
     steps:
       # <common-build> - Uses YAML anchors in the future
       - uses: actions/checkout@v2
-      - uses: actions/setup-node@v2-beta
+      - uses: actions/setup-node@v2
         with:
           node-version: "lts/fermium"
       # As of October 2020, runner has +8GB of free space w/out this script (takes 1m30s to run)
