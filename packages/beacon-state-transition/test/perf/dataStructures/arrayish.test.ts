@@ -45,7 +45,7 @@ const ihi = n - 1;
 // ✓ Array 250000 iterate all - loop                                     3009.592 ops/s    332.2710 us/op        -       3006 runs   1.00 s
 
 describe("Tree (persistent-merkle-tree)", () => {
-  // Don't run on CI
+  // Don't track regressions in CI
   setBenchOpts({maxMs: 10 * 1000, skip: Boolean(process.env.CI)});
 
   const d = 40;
@@ -54,7 +54,7 @@ describe("Tree (persistent-merkle-tree)", () => {
   const gihi = toGindex(d, BigInt(ihi));
   const n2 = new LeafNode(Buffer.alloc(32, 2));
 
-  itBench(`Tree ${d} ${n} create`, () => {
+  itBench({id: `Tree ${d} ${n} create`, timeout: 60_000}, () => {
     getTree(d, n);
   });
 
@@ -112,7 +112,7 @@ describe("Tree (persistent-merkle-tree)", () => {
 });
 
 describe("MutableVector", () => {
-  // Don't run on CI
+  // Don't track regressions in CI
   setBenchOpts({maxMs: 10 * 1000, skip: Boolean(process.env.CI)});
 
   const items = createArray(n);
@@ -165,7 +165,7 @@ describe("MutableVector", () => {
 });
 
 describe("Array", () => {
-  // Don't run on CI
+  // Don't track regressions in CI
   setBenchOpts({maxMs: 10 * 1000, skip: Boolean(process.env.CI)});
 
   const arr = createArray(n);

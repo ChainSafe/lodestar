@@ -1,4 +1,3 @@
 colors: true
 require:
   - ts-node/register
-  - packages/lodestar/test/setupBLS.ts
