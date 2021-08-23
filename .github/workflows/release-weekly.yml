@@ -4,9 +4,6 @@ concurrency:
   group: cd-release-weekly
 
 on:
-  push:
-    branches:
-      - "q9-ga-weekly" # @TODO @q9f remove (just testing)
   schedule:
     - cron: '23 4 * * WED'
 
@@ -23,7 +20,7 @@ jobs:
       - name: Setup NodeJS
         uses: actions/setup-node@v2
         with:
-          node-version: "14.17.5"
+          node-version: "lts/fermium"
           registry-url: "https://registry.npmjs.org"
       - name: Restore dependencies
         uses: actions/cache@master
@@ -32,22 +29,22 @@ jobs:
           path: |
             node_modules
             packages/*/node_modules
-          key: ${{ runner.os }}-${{ hashFiles('**/yarn.lock') }}-ignore-optional-14.16.0
+          key: ${{ runner.os }}-${{ hashFiles('**/yarn.lock') }}-ignore-optional-fermium
+      - name: Bump minor version
+        run: |
+          node_modules/.bin/lerna version minor --yes \
+          --no-git-tag-version --no-push
       - name: Install & build
         if: steps.cache-deps.outputs.cache-hit != 'true'
         run: yarn install --frozen-lockfile --ignore-optional
       - name: Build
         run: yarn build
         if: steps.cache-deps.outputs.cache-hit == 'true'
-      - name: Bump minor version
-        run: |
-          node_modules/.bin/lerna version minor --yes \
-          --no-git-tag-version --no-push
       - name: Create Pull-Request
         uses: peter-evans/create-pull-request@v3
         with:
           author: q9f <q9f@users.noreply.github.com>
-          commiter: q9f <q9f@users.noreply.github.com>
+          committer: q9f <q9f@users.noreply.github.com>
           branch: gacpr-release
           branch-suffix: short-commit-hash
           delete-branch: true
