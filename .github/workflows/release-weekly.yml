@@ -49,6 +49,7 @@ jobs:
           branch-suffix: short-commit-hash
           delete-branch: true
           title: "Weekly minor release"
+          commit-message: "Weekly minor release"
           draft: true
       - name: Check outputs
         run: |
