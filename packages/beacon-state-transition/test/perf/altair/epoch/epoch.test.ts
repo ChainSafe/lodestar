@@ -3,11 +3,7 @@ import {allForks, altair, CachedBeaconState} from "../../../../src";
 import {generatePerfTestCachedStateAltair, perfStateId} from "../../util";
 
 describe("Altair epoch transition steps", () => {
-  setBenchOpts({
-    maxMs: 60 * 1000,
-    minMs: 15 * 1000,
-    runs: 64,
-  });
+  setBenchOpts({maxMs: 60 * 1000});
 
   const originalState = generatePerfTestCachedStateAltair({goBackOneSlot: true});
   const epochProcess = allForks.beforeProcessEpoch(originalState);

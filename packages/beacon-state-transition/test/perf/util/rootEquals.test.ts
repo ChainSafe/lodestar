@@ -13,25 +13,18 @@ describe("root equals", () => {
   const stateRoot = fromHexString("0x6c86ca3c4c6688cf189421b8a68bf2dbc91521609965e6f4e207d44347061fee");
   const rootTree = ssz.Root.createTreeBackedFromStruct(stateRoot);
 
-  setBenchOpts({
-    maxMs: 60 * 1000,
-    // This bench is very fast, with 1s it can do 300k runs
-    minMs: 1 * 1000,
-    runs: 1024,
-  });
+  setBenchOpts({maxMs: 60 * 1000, threshold: Infinity});
 
   // This benchmark is very unstable in CI. We already know that "ssz.Root.equals" is the fastest
-  if (!process.env.CI) {
-    itBench("ssz.Root.equals", () => {
-      ssz.Root.equals(rootTree, stateRoot);
-    });
+  itBench("ssz.Root.equals", () => {
+    ssz.Root.equals(rootTree, stateRoot);
+  });
 
-    itBench("ssz.Root.equals with valueOf()", () => {
-      ssz.Root.equals(rootTree.valueOf() as Uint8Array, stateRoot);
-    });
+  itBench("ssz.Root.equals with valueOf()", () => {
+    ssz.Root.equals(rootTree.valueOf() as Uint8Array, stateRoot);
+  });
 
-    itBench("byteArrayEquals with valueOf()", () => {
-      byteArrayEquals(rootTree.valueOf() as Uint8Array, stateRoot);
-    });
-  }
+  itBench("byteArrayEquals with valueOf()", () => {
+    byteArrayEquals(rootTree.valueOf() as Uint8Array, stateRoot);
+  });
 });
