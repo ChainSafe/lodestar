@@ -6,7 +6,11 @@ import {ICliCommandOptions} from "../util";
 interface IGlobalSingleArgs {
   rootDir: string;
   network: NetworkName;
-  preset: string;
+  paramsFile: string;
+}
+
+interface IGlobalDevArgs {
+  rootDir: string;
   paramsFile: string;
 }
 
@@ -25,10 +29,16 @@ const globalSingleOptions: ICliCommandOptions<IGlobalSingleArgs> = {
     choices: networkNames,
   },
 
-  preset: {
-    description: "Specifies the default eth2 spec type",
-    choices: ["mainnet", "minimal"],
-    default: "mainnet",
+  paramsFile: {
+    description: "Network configuration file",
+    defaultDescription: defaultGlobalPaths.paramsFile,
+    type: "string",
+  },
+};
+
+const globalDevOptions: ICliCommandOptions<IGlobalDevArgs> = {
+  rootDir: {
+    description: "Lodestar root directory",
     type: "string",
   },
 
@@ -43,5 +53,10 @@ export type IGlobalArgs = IGlobalSingleArgs & IParamsArgs;
 
 export const globalOptions = {
   ...globalSingleOptions,
+  ...paramsOptions,
+};
+
+export const devOptions = {
+  ...globalDevOptions,
   ...paramsOptions,
 };

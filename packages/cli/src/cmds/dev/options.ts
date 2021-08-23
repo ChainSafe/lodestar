@@ -1,7 +1,7 @@
 import {Options} from "yargs";
 import {ICliCommandOptions} from "../../util";
 import {beaconOptions, IBeaconArgs} from "../beacon/options";
-import {globalOptions, beaconNodeOptions} from "../../options";
+import {beaconNodeOptions} from "../../options";
 
 interface IDevOwnArgs {
   genesisValidators?: number;
@@ -78,10 +78,6 @@ const externalOptionsOverrides: {[k: string]: Options} = {
     ...beaconNodeOptions["api.rest.enabled"],
     defaultDescription: undefined,
     default: true,
-  },
-  preset: {
-    ...globalOptions.preset,
-    default: "minimal",
   },
 };
 

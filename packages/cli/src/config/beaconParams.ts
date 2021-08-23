@@ -13,13 +13,11 @@ import {IBeaconParamsUnparsed} from "./types";
 import {parseBeaconParamsArgs} from "../options";
 
 type IBeaconParamsCliArgs = {
-  preset: string;
   network?: NetworkName;
   paramsFile: string;
 } & Partial<IGlobalPaths>;
 
 interface IBeaconParamsArgs {
-  preset: string;
   network?: NetworkName;
   paramsFile: string;
   additionalParamsCli: IBeaconParamsUnparsed;
@@ -39,7 +37,6 @@ export function getBeaconConfigFromArgs(args: IBeaconParamsCliArgs): IChainForkC
  */
 export function getBeaconParamsFromArgs(args: IBeaconParamsCliArgs): IChainConfig {
   return getBeaconParams({
-    preset: args.preset,
     network: args.network,
     paramsFile: getGlobalPaths(args).paramsFile,
     additionalParamsCli: parseBeaconParamsArgs(args as Record<string, string | number>),
@@ -56,7 +53,6 @@ export function getBeaconConfig(args: IBeaconParamsArgs): IChainForkConfig {
 
 /**
  * Computes merged IBeaconParams type from (in order)
- * - preset
  * - Network params (diff)
  * - existing params file
  * - CLI flags
