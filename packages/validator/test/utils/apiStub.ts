@@ -10,7 +10,10 @@ export function getApiClientStub(
   return {
     beacon: sandbox.stub(api.beacon),
     config: sandbox.stub(api.config),
-    debug: sandbox.stub(api.debug),
+    // Typescript errors due to the multiple return types of debug.getState()
+    // Since the return type of this function is typed, casting to any to patch the error quickly
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    debug: sandbox.stub(api.debug) as any,
     events: sandbox.stub(api.events),
     lightclient: sandbox.stub(api.lightclient),
     lodestar: sandbox.stub(api.lodestar),

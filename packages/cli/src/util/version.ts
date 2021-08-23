@@ -46,6 +46,11 @@ export function getVersion(): string {
   return `${semver}/${gitData.branch}/${numCommits}/${commitSlice} (${ReleaseTrack.git})`;
 }
 
+/** Exposes raw version data wherever needed for reporting (metrics, grafana). */
+export function getVersionGitData(): GitData {
+  return readLodestarGitData();
+}
+
 /** Returns local version from `lerna.json` or `package.json` as `"0.28.2"` */
 function getLocalVersion(): string | undefined {
   return readVersionFromLernaJson() || readCliPackageJson();

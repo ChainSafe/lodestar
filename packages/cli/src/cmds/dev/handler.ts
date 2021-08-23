@@ -18,6 +18,7 @@ import {getValidatorPaths} from "../validator/paths";
 import {interopSecretKey} from "@chainsafe/lodestar-beacon-state-transition";
 import {SecretKey} from "@chainsafe/bls";
 import {createIBeaconConfig} from "@chainsafe/lodestar-config";
+import {getVersion} from "../../util/version";
 
 /**
  * Run a beacon node with validator
@@ -56,7 +57,7 @@ export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
   // BeaconNode setup
   const libp2p = await createNodeJsLibp2p(peerId, options.network);
   const logger = getCliLogger(args, beaconPaths, config);
-  logger.info("Lodestar dev", {network: args.network});
+  logger.info("Lodestar", {version: getVersion(), network: args.network});
 
   const db = new BeaconDb({config, controller: new LevelDbController(options.db, {logger})});
   await db.start();
@@ -102,14 +103,15 @@ export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
   if (args.startValidators) {
     const secretKeys: SecretKey[] = [];
     const [fromIndex, toIndex] = args.startValidators.split(":").map((s) => parseInt(s));
-    const maxIndex = anchorState.validators.length - 1;
+    const valCount = anchorState.validators.length;
+    const maxIndex = fromIndex + valCount - 1;
 
     if (fromIndex > toIndex) {
       throw Error(`Invalid startValidators arg '${args.startValidators}' - fromIndex > toIndex`);
     }
 
     if (toIndex > maxIndex) {
-      throw Error(`Invalid startValidators arg '${args.startValidators}' - state has ${maxIndex} validators`);
+      throw Error(`Invalid startValidators arg '${args.startValidators}' - state has ${valCount} validators`);
     }
 
     for (let i = fromIndex; i <= toIndex; i++) {

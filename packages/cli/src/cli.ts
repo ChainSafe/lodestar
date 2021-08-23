@@ -1,7 +1,7 @@
 // Must not use `* as yargs`, see https://github.com/yargs/yargs/issues/1131
 import yargs from "yargs";
 import {cmds} from "./cmds";
-import {devOptions, globalOptions} from "./options";
+import {devOptions, globalOptions, rcConfigOption} from "./options";
 import {registerCommandToYargs} from "./util";
 import {getVersion} from "./util/version";
 
@@ -65,5 +65,10 @@ export function getLodestarCli(): yargs.Argv {
   for (const cmd of cmds) {
     registerCommandToYargs(lodestar, cmd);
   }
+
+  // throw an error if we see an unrecognized cmd
+  lodestar.recommendCommands().strict();
+  lodestar.config(...rcConfigOption);
+
   return lodestar;
 }

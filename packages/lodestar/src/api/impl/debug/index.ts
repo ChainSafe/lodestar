@@ -18,14 +18,26 @@ export function getDebugApi({
       };
     },
 
-    async getState(stateId) {
+    async getState(stateId: string, format?: routes.debug.StateFormat) {
       const state = await resolveStateId(config, chain, db, stateId, {regenFinalizedState: true});
-      return {data: state};
+      if (format === "ssz") {
+        // Casting to any otherwise Typescript doesn't like the multi-type return
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-explicit-any
+        return config.getForkTypes(state.slot).BeaconState.serialize(state) as any;
+      } else {
+        return {data: state};
+      }
     },
 
-    async getStateV2(stateId) {
+    async getStateV2(stateId: string, format?: routes.debug.StateFormat) {
       const state = await resolveStateId(config, chain, db, stateId, {regenFinalizedState: true});
-      return {data: state, version: config.getForkName(state.slot)};
+      if (format === "ssz") {
+        // Casting to any otherwise Typescript doesn't like the multi-type return
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-explicit-any
+        return config.getForkTypes(state.slot).BeaconState.serialize(state) as any;
+      } else {
+        return {data: state, version: config.getForkName(state.slot)};
+      }
     },
 
     async connectToPeer(peerIdStr, multiaddrStr) {

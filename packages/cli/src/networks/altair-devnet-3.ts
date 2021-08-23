@@ -1,18 +1,22 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-import {IBeaconParamsUnparsed} from "../config/types";
+import {fromHexString as b} from "@chainsafe/ssz";
+import {mainnetChainConfig} from "@chainsafe/lodestar-config/presets";
+import {IChainConfig} from "@chainsafe/lodestar-config";
 
 /* eslint-disable max-len */
 
 // https://github.com/eth2-clients/eth2-networks/blob/master/shared/altair-devnet-3/config.yaml
-export const beaconParams: IBeaconParamsUnparsed = {
+export const chainConfig: IChainConfig = {
+  ...mainnetChainConfig,
+
   // Genesis
   MIN_GENESIS_ACTIVE_VALIDATOR_COUNT: 50000,
   MIN_GENESIS_TIME: 1628604000,
-  GENESIS_FORK_VERSION: "0x19504702",
+  GENESIS_FORK_VERSION: b("0x19504702"),
   GENESIS_DELAY: 86400,
 
   // Altair
-  ALTAIR_FORK_VERSION: "0x01000003",
+  ALTAIR_FORK_VERSION: b("0x01000003"),
   ALTAIR_FORK_EPOCH: 10,
 
   // Time parameters
@@ -23,7 +27,7 @@ export const beaconParams: IBeaconParamsUnparsed = {
   ETH1_FOLLOW_DISTANCE: 2048,
 
   // Validator cycle
-  INACTIVITY_SCORE_BIAS: 4,
+  INACTIVITY_SCORE_BIAS: BigInt(4),
   INACTIVITY_SCORE_RECOVERY_RATE: 16,
   EJECTION_BALANCE: 16000000000,
   MIN_PER_EPOCH_CHURN_LIMIT: 4,
@@ -32,7 +36,7 @@ export const beaconParams: IBeaconParamsUnparsed = {
   // Deposit contract
   DEPOSIT_CHAIN_ID: 5,
   DEPOSIT_NETWORK_ID: 5,
-  DEPOSIT_CONTRACT_ADDRESS: "0x0C862A922512A5416713421DD95ccE5a07AA80ff",
+  DEPOSIT_CONTRACT_ADDRESS: b("0x0C862A922512A5416713421DD95ccE5a07AA80ff"),
 };
 
 export const depositContractDeployBlock = 5288493;
