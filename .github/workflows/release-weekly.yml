@@ -1,0 +1,58 @@
+name: Release weekly (create PR only)
+
+concurrency:
+  group: cd-release-weekly
+
+on:
+  push:
+    branches:
+      - "q9-ga-releases" # @TODO @q9f remove (just testing)
+  schedule:
+    - cron: '23 4 * * WED'
+
+jobs:
+  prepare:
+    name: Prepare Pull-Request
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          ref: master
+          fetch-depth: 0
+      - name: Setup NodeJS
+        uses: actions/setup-node@v2
+        with:
+          node-version: "14.17.5"
+          registry-url: "https://registry.npmjs.org"
+      - name: Restore dependencies
+        uses: actions/cache@master
+        id: cache-deps
+        with:
+          path: |
+            node_modules
+            packages/*/node_modules
+          key: ${{ runner.os }}-${{ hashFiles('**/yarn.lock') }}-ignore-optional-14.16.0
+      - name: Install & build
+        if: steps.cache-deps.outputs.cache-hit != 'true'
+        run: yarn install --frozen-lockfile --ignore-optional
+      - name: Build
+        run: yarn build
+        if: steps.cache-deps.outputs.cache-hit == 'true'
+      - name: Bump minor version
+        run: |
+          node_modules/.bin/lerna version minor --yes --no-push --force-publish
+      - name: Create Pull-Request
+        uses: peter-evans/create-pull-request@v3
+        with:
+          author: q9f <q9f@users.noreply.github.com>
+          commiter: q9f <q9f@users.noreply.github.com>
+          branch: gacpr-release
+          branch-suffix: short-commit-hash
+          delete-branch: true
+          title: "Weekly minor release"
+          draft: true
+      - name: Check outputs
+        run: |
+          echo "Pull-Request Number - ${{ steps.cpr.outputs.pull-request-number }}"
+          echo "Pull-Request URL - ${{ steps.cpr.outputs.pull-request-url }}"
