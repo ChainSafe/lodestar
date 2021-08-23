@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-import {fromHexString} from "@chainsafe/ssz";
+import {fromHexString as b} from "@chainsafe/ssz";
 import {PresetName} from "@chainsafe/lodestar-params";
 import {IChainConfig} from "../types";
 
@@ -14,7 +14,7 @@ export const chainConfig: IChainConfig = {
   // Jan 3, 2020
   MIN_GENESIS_TIME: 1578009600,
   // Highest byte set to 0x01 to avoid collisions with mainnet versioning
-  GENESIS_FORK_VERSION: fromHexString("0x00000001"),
+  GENESIS_FORK_VERSION: b("0x00000001"),
   // [customized] Faster to spin up testnets, but does not give validator reasonable warning time for genesis
   GENESIS_DELAY: 300,
 
@@ -24,13 +24,13 @@ export const chainConfig: IChainConfig = {
   // Individual tests/testnets may set different values.
 
   // Altair
-  ALTAIR_FORK_VERSION: fromHexString("0x01000001"),
+  ALTAIR_FORK_VERSION: b("0x01000001"),
   ALTAIR_FORK_EPOCH: Infinity,
   // Merge
-  MERGE_FORK_VERSION: fromHexString("0x02000001"),
+  MERGE_FORK_VERSION: b("0x02000001"),
   MERGE_FORK_EPOCH: Infinity,
   // Sharding
-  SHARDING_FORK_VERSION: fromHexString("0x03000001"),
+  SHARDING_FORK_VERSION: b("0x03000001"),
   SHARDING_FORK_EPOCH: Infinity,
 
   // TBD, 2**32 is a placeholder. Merge transition approach is in active R&D.
@@ -68,5 +68,5 @@ export const chainConfig: IChainConfig = {
   DEPOSIT_CHAIN_ID: 5,
   DEPOSIT_NETWORK_ID: 5,
   // Configured on a per testnet basis
-  DEPOSIT_CONTRACT_ADDRESS: fromHexString("0x1234567890123456789012345678901234567890"),
+  DEPOSIT_CONTRACT_ADDRESS: b("0x1234567890123456789012345678901234567890"),
 };

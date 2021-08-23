@@ -4,9 +4,8 @@ import {allForks} from "@chainsafe/lodestar-types";
 import {IBeaconNodeOptions} from "@chainsafe/lodestar";
 // eslint-disable-next-line no-restricted-imports
 import {getStateTypeFromBytes} from "@chainsafe/lodestar/lib/util/multifork";
-import {IChainForkConfig} from "@chainsafe/lodestar-config";
+import {IChainConfig, IChainForkConfig} from "@chainsafe/lodestar-config";
 import {RecursivePartial} from "@chainsafe/lodestar-utils";
-import {IBeaconParamsUnparsed} from "../config/types";
 import * as mainnet from "./mainnet";
 import * as pyrmont from "./pyrmont";
 import * as prater from "./prater";
@@ -20,7 +19,7 @@ export const infuraNetworks: NetworkName[] = ["mainnet", "pyrmont", "prater"];
 function getNetworkData(
   network: NetworkName
 ): {
-  beaconParams: IBeaconParamsUnparsed;
+  chainConfig: IChainConfig;
   depositContractDeployBlock: number;
   genesisFileUrl: string | null;
   bootnodesFileUrl: string;
@@ -51,13 +50,13 @@ export function getEth1ProviderUrl(networkId: number): string {
   }
 }
 
-export function getNetworkBeaconParams(network: NetworkName): IBeaconParamsUnparsed {
-  return getNetworkData(network).beaconParams;
+export function getNetworkBeaconParams(network: NetworkName): IChainConfig {
+  return getNetworkData(network).chainConfig;
 }
 
 export function getNetworkBeaconNodeOptions(network: NetworkName): RecursivePartial<IBeaconNodeOptions> {
-  const {depositContractDeployBlock, bootEnrs, beaconParams} = getNetworkData(network);
-  const networkId = parseInt((beaconParams.DEPOSIT_NETWORK_ID || 1) as string, 10);
+  const {depositContractDeployBlock, bootEnrs, chainConfig} = getNetworkData(network);
+  const networkId = parseInt(String(chainConfig.DEPOSIT_NETWORK_ID || 1), 10);
   return {
     eth1: {
       providerUrls: [getEth1ProviderUrl(networkId)],
