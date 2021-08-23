@@ -1,7 +1,7 @@
 // Must not use `* as yargs`, see https://github.com/yargs/yargs/issues/1131
 import yargs from "yargs";
 import {cmds} from "./cmds";
-import {devOptions, globalOptions, rcConfigOption} from "./options";
+import {globalOptions, rcConfigOption} from "./options";
 import {registerCommandToYargs} from "./util";
 import {getVersion} from "./util/version";
 
@@ -20,7 +20,7 @@ const bottomBanner = `📖 For more information, check the CLI reference:
  * The CLI must actually be executed in a different script
  */
 export function getLodestarCli(): yargs.Argv {
-  let lodestar = yargs
+  const lodestar = yargs
     .env("LODESTAR")
     .parserConfiguration({
       // As of yargs v16.1.0 dot-notation breaks strictOptions()
@@ -38,28 +38,7 @@ export function getLodestarCli(): yargs.Argv {
     .version(topBanner)
     .alias("h", "help")
     .alias("v", "version")
-    .recommendCommands()
-    .strict();
-
-  // Override global options for the special dev command
-  if (lodestar.argv._[0] === "dev") {
-    return yargs
-    .env("LODESTAR")
-    .parserConfiguration({
-      "dot-notation": false,
-    })
-    .options(devOptions)
-    .scriptName("")
-    .demandCommand(1)
-    .showHelpOnFail(false)
-    .usage(topBanner)
-    .epilogue(bottomBanner)
-    .version(topBanner)
-    .alias("h", "help")
-    .alias("v", "version")
-    .recommendCommands()
-    .strict();
-  }
+    .recommendCommands();
 
   // yargs.command and all ./cmds
   for (const cmd of cmds) {

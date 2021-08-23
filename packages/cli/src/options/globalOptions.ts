@@ -9,11 +9,6 @@ interface IGlobalSingleArgs {
   paramsFile: string;
 }
 
-interface IGlobalDevArgs {
-  rootDir: string;
-  paramsFile: string;
-}
-
 export const defaultNetwork: NetworkName = "mainnet";
 
 const globalSingleOptions: ICliCommandOptions<IGlobalSingleArgs> = {
@@ -36,19 +31,6 @@ const globalSingleOptions: ICliCommandOptions<IGlobalSingleArgs> = {
   },
 };
 
-const globalDevOptions: ICliCommandOptions<IGlobalDevArgs> = {
-  rootDir: {
-    description: "Lodestar root directory",
-    type: "string",
-  },
-
-  paramsFile: {
-    description: "Network configuration file",
-    defaultDescription: defaultGlobalPaths.paramsFile,
-    type: "string",
-  },
-};
-
 export const rcConfigOption: [string, string, (configPath: string) => Record<string, unknown>] = [
   "rcConfig",
   "RC file to supplement command line args, accepted formats: .yml, .yaml, .json",
@@ -59,10 +41,5 @@ export type IGlobalArgs = IGlobalSingleArgs & IParamsArgs;
 
 export const globalOptions = {
   ...globalSingleOptions,
-  ...paramsOptions,
-};
-
-export const devOptions = {
-  ...globalDevOptions,
   ...paramsOptions,
 };
