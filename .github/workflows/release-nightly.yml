@@ -20,7 +20,7 @@ jobs:
           fetch-depth: 0
       - uses: actions/setup-node@v2
         with:
-          node-version: "14.16.0"
+          node-version: "lts/fermium"
           registry-url: "https://registry.npmjs.org"
       - name: Restore dependencies
         uses: actions/cache@master
@@ -29,7 +29,7 @@ jobs:
           path: |
             node_modules
             packages/*/node_modules
-          key: ${{ runner.os }}-${{ hashFiles('**/yarn.lock') }}-ignore-optional-14.16.0
+          key: ${{ runner.os }}-${{ hashFiles('**/yarn.lock') }}-ignore-optional-fermium
       - name: Install & build
         if: steps.cache-deps.outputs.cache-hit != 'true'
         run: yarn install --frozen-lockfile --ignore-optional
