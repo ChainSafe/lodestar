@@ -18,23 +18,13 @@ describe("validate gossip signedAggregateAndProof", () => {
   const aggStruct = signedAggregateAndProof;
   const aggTreeBacked = ssz.phase0.SignedAggregateAndProof.createTreeBackedFromStruct(aggStruct);
 
-  itBench({
-    id: "validate gossip signedAggregateAndProof - struct",
-    beforeEach: () => {
-      chain.seenAggregators["validatorIndexesByEpoch"].clear();
-    },
-    fn: async () => {
-      await validateGossipAggregateAndProof(chain, aggStruct);
-    },
-  });
-
-  itBench({
-    id: "validate gossip signedAggregateAndProof - treeBacked",
-    beforeEach: () => {
-      chain.seenAggregators["validatorIndexesByEpoch"].clear();
-    },
-    fn: async () => {
-      await validateGossipAggregateAndProof(chain, aggTreeBacked);
-    },
-  });
+  for (const [id, agg] of Object.entries({struct: aggStruct, treeBacked: aggTreeBacked})) {
+    itBench({
+      id: `validate gossip signedAggregateAndProof - ${id}`,
+      beforeEach: () => chain.seenAggregators["validatorIndexesByEpoch"].clear(),
+      fn: async () => {
+        await validateGossipAggregateAndProof(chain, agg);
+      },
+    });
+  }
 });

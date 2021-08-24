@@ -19,14 +19,14 @@ import {
 // ✓ getPubkeys - persistent - req 1000 vs - 200000 vc                   56593.10 ops/s    17.67000 us/op        -     111477 runs   2.00 s
 
 describe("api / impl / validator", () => {
+  setBenchOpts({maxMs: 10 * 1000});
+
   let state: ReturnType<typeof generatePerfTestCachedStatePhase0>;
 
   before(function () {
     this.timeout(60 * 1000);
     state = generatePerfTestCachedStatePhase0();
   });
-
-  setBenchOpts({maxMs: 10 * 1000});
 
   const reqCounts = process.env.CI ? [1000] : [1, 100, 1000];
 
