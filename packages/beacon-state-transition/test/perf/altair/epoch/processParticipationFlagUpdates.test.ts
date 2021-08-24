@@ -6,7 +6,7 @@ import {generatePerfTestCachedStateAltair, numValidators} from "../../util";
 // PERF: Cost = 'proportional' to $VALIDATOR_COUNT. Just copies a tree and recreates another
 
 describe("altair processParticipationFlagUpdates", () => {
-  setBenchOpts({maxMs: 60 * 1000});
+  setBenchOpts({maxMs: 60 * 1000, minRuns: 10});
 
   const vc = numValidators;
 

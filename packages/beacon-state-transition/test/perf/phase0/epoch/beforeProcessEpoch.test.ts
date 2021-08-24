@@ -9,7 +9,7 @@ import {generatePerfTestCachedStatePhase0, perfStateId} from "../../util";
 // 3. Iterate over status to compute total balances. Cost = 'proportional' to $VALIDATOR_COUNT not network conditions
 
 describe("phase0 beforeProcessEpoch", () => {
-  setBenchOpts({maxMs: 60 * 1000});
+  setBenchOpts({maxMs: 60 * 1000, minRuns: 10});
 
   itBench<State, State>({
     id: `phase0 beforeProcessEpoch - ${perfStateId}`,

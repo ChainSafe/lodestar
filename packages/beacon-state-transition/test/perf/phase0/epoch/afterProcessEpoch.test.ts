@@ -7,7 +7,7 @@ import {generatePerfTestCachedStatePhase0, perfStateId} from "../../util";
 // network conditions. See also individual benchmarks for shuffling computations.
 
 describe("phase0 afterProcessEpoch", () => {
-  setBenchOpts({maxMs: 60 * 1000});
+  setBenchOpts({maxMs: 60 * 1000, minRuns: 10});
 
   itBench<StateEpoch, StateEpoch>({
     id: `phase0 afterProcessEpoch - ${perfStateId}`,

@@ -9,7 +9,7 @@ const slot = computeStartSlotAtEpoch(epoch) - 1;
 const stateId = `${network}_e${epoch}`;
 
 describe(`altair processEpoch - ${stateId}`, () => {
-  setBenchOpts({maxMs: 60 * 1000});
+  setBenchOpts({maxMs: 60 * 1000, minRuns: 10});
 
   const stateOg = beforeValue(async () => {
     const state = await getNetworkCachedState(network, slot, 300_000);
@@ -31,7 +31,7 @@ describe(`altair processEpoch - ${stateId}`, () => {
 
   // Only in local environment compute a full breakdown of the cost of each step
   describe(`altair processEpoch steps - ${stateId}`, () => {
-    setBenchOpts({threshold: Infinity});
+    setBenchOpts({threshold: Infinity, minRuns: 10});
 
     benchmarkAltairEpochSteps(stateOg, stateId);
   });
@@ -147,6 +147,7 @@ function benchmarkAltairEpochSteps(
 
   itBench({
     id: `${stateId} - altair processSyncCommitteeUpdates`,
+    convergeFactor: 1 / 100, // Very unstable make it converge faster
     beforeEach: () => stateOg.value.clone() as allForks.CachedBeaconState<altair.BeaconState>,
     fn: (state) => altair.processSyncCommitteeUpdates(state, epochProcess.value),
   });

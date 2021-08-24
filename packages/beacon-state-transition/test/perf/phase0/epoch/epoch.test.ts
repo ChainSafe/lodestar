@@ -10,7 +10,7 @@ const slot = computeStartSlotAtEpoch(epoch) - 1;
 const stateId = `${network}_e${epoch}`;
 
 describe(`phase0 processEpoch - ${stateId}`, () => {
-  setBenchOpts({maxMs: 60 * 1000});
+  setBenchOpts({maxMs: 60 * 1000, minRuns: 10});
 
   const stateOg = beforeValue(async () => {
     const state = await getNetworkCachedState(network, slot, 300_000);
@@ -32,7 +32,7 @@ describe(`phase0 processEpoch - ${stateId}`, () => {
 
   // Only in local environment compute a full breakdown of the cost of each step
   describe(`phase0 processEpoch steps - ${stateId}`, () => {
-    setBenchOpts({threshold: Infinity});
+    setBenchOpts({threshold: Infinity, minRuns: 10});
 
     benchmarkPhase0EpochSteps(stateOg, stateId);
   });

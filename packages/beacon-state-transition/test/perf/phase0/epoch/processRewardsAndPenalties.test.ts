@@ -15,7 +15,7 @@ import {FlagFactors, generateBalanceDeltasEpochProcess} from "./util";
 //   - eligibleAttester:   98%
 
 describe("phase0 getAttestationDeltas", () => {
-  setBenchOpts({maxMs: 60 * 1000});
+  setBenchOpts({maxMs: 60 * 1000, minRuns: 10});
 
   const vc = numValidators;
   const testCases: {id: string; isInInactivityLeak: boolean; flagFactors: FlagFactors}[] = [
@@ -42,7 +42,7 @@ describe("phase0 getAttestationDeltas", () => {
 
   for (const {id, isInInactivityLeak, flagFactors} of testCases) {
     itBench<StatePhase0Epoch, StatePhase0Epoch>({
-      id: `phase0 processRewardsAndPenalties - ${vc} ${id}`,
+      id: `phase0 getAttestationDeltas - ${vc} ${id}`,
       before: () => {
         const state = generatePerfTestCachedStatePhase0({goBackOneSlot: true});
         const epochProcess = generateBalanceDeltasEpochProcess(state, isInInactivityLeak, flagFactors);

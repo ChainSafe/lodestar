@@ -13,7 +13,7 @@ import {mutateInactivityScores} from "./util";
 // inactivityScore > 0
 
 describe("altair processRewardsAndPenalties", () => {
-  setBenchOpts({maxMs: 60 * 1000});
+  setBenchOpts({maxMs: 60 * 1000, minRuns: 10});
 
   const vc = numValidators;
   const testCases: {id: string; isInInactivityLeak: boolean; flagFactors: FlagFactors; factorWithPositive: number}[] = [

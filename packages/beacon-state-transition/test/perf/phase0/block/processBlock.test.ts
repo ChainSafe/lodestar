@@ -68,7 +68,7 @@ import {StateBlock} from "../../types";
 //
 
 describe("phase0 processBlock", () => {
-  setBenchOpts({maxMs: 60 * 1000});
+  setBenchOpts({maxMs: 60 * 1000, minRuns: 10});
 
   if (ACTIVE_PRESET !== PresetName.mainnet) {
     throw Error(`ACTIVE_PRESET ${ACTIVE_PRESET} must be mainnet`);

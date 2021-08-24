@@ -14,14 +14,16 @@ import {StateEpoch} from "../../types";
 // statuses: All balances are low enough to trigger an effective balance change
 
 describe("phase0 processEffectiveBalanceUpdates", () => {
-  setBenchOpts({maxMs: 60 * 1000});
+  setBenchOpts({maxMs: 60 * 1000, minRuns: 5});
 
   const vc = numValidators;
   const testCases: {id: string; changeRatio: number}[] = [
     // Normal (optimal) mainnet network conditions: No effectiveBalance is udpated
     {id: "normalcase", changeRatio: 0},
     // Worst case: All effective balance are updated
-    {id: "worstcase", changeRatio: 1},
+    // NOTE: The maximum bad case will practically never happen and it's too slow.
+    // Use a 50% worst case since it's not that slow.
+    {id: "worstcase 0.5", changeRatio: 0.5},
   ];
 
   // Provide flat `epochProcess.balances` + flat `epochProcess.validators`
