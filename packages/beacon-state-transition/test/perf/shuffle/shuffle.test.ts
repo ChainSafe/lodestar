@@ -18,13 +18,15 @@ describe("shuffle list", () => {
     // Don't run 4_000_000 since it's very slow and not testnet has gotten there yet
     // 4e6,
   ]) {
-    const input: number[] = [];
-    for (let i = 0; i < listSize; i++) {
-      input[i] = i;
-    }
-
-    itBench(`shuffle list - ${listSize} els`, () => {
-      unshuffleList(input, seed);
+    itBench<number[], number[]>({
+      id: `shuffle list - ${listSize} els`,
+      before: () => {
+        const input: number[] = [];
+        for (let i = 0; i < listSize; i++) input[i] = i;
+        return input;
+      },
+      beforeEach: (input) => input,
+      fn: (input) => unshuffleList(input, seed),
     });
   }
 });

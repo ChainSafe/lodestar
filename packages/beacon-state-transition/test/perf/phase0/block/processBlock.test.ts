@@ -10,7 +10,8 @@ import {
 } from "@chainsafe/lodestar-params";
 import {allForks} from "../../../../src";
 import {generatePerfTestCachedStatePhase0, perfStateId} from "../../util";
-import {getBlockPhase0} from "./util";
+import {BlockOpts, getBlockPhase0} from "./util";
+import {StateBlock} from "../../types";
 
 // As of Jun 12 2021
 // Process block
@@ -66,54 +67,57 @@ import {getBlockPhase0} from "./util";
 // how many nodes have no cached _root, then multiply by the cost of hashing.
 //
 
-describe("Process block", () => {
+describe("phase0 processBlock", () => {
   setBenchOpts({maxMs: 60 * 1000});
 
   if (ACTIVE_PRESET !== PresetName.mainnet) {
     throw Error(`ACTIVE_PRESET ${ACTIVE_PRESET} must be mainnet`);
   }
 
-  const baseState = generatePerfTestCachedStatePhase0() as allForks.CachedBeaconState<allForks.BeaconState>;
+  const testCases: {id: string; opts: BlockOpts}[] = [
+    {
+      id: "normalcase",
+      opts: {
+        proposerSlashingLen: 0,
+        attesterSlashingLen: 0,
+        attestationLen: 90,
+        depositsLen: 0,
+        voluntaryExitLen: 0,
+        bitsLen: 90,
+      },
+    },
+    {
+      id: "worstcase",
+      opts: {
+        proposerSlashingLen: MAX_PROPOSER_SLASHINGS,
+        attesterSlashingLen: MAX_ATTESTER_SLASHINGS,
+        attestationLen: MAX_ATTESTATIONS,
+        depositsLen: MAX_DEPOSITS,
+        voluntaryExitLen: MAX_VOLUNTARY_EXITS,
+        bitsLen: 128,
+      },
+    },
+  ];
 
-  const worstCaseBlockState = baseState.clone();
-  const worstCaseBlock = getBlockPhase0(worstCaseBlockState, {
-    proposerSlashingLen: MAX_PROPOSER_SLASHINGS,
-    attesterSlashingLen: MAX_ATTESTER_SLASHINGS,
-    attestationLen: MAX_ATTESTATIONS,
-    depositsLen: MAX_DEPOSITS,
-    voluntaryExitLen: MAX_VOLUNTARY_EXITS,
-    bitsLen: 128,
-  });
-
-  const averageMainnetBlockState = baseState.clone();
-  const averageMainnetBlock = getBlockPhase0(averageMainnetBlockState, {
-    proposerSlashingLen: 0,
-    attesterSlashingLen: 0,
-    attestationLen: 90,
-    depositsLen: 0,
-    voluntaryExitLen: 0,
-    bitsLen: 90,
-  });
-
-  itBench(
-    {id: `processBlock phase0 ${perfStateId} - maxed ops`, beforeEach: () => worstCaseBlockState.clone()},
-    (state) => {
-      allForks.stateTransition(state as allForks.CachedBeaconState<allForks.BeaconState>, worstCaseBlock, {
-        verifyProposer: false,
-        verifySignatures: false,
-        verifyStateRoot: false,
-      });
-    }
-  );
-
-  itBench(
-    {id: `processBlock phase0 ${perfStateId} - average`, beforeEach: () => averageMainnetBlockState.clone()},
-    (state) => {
-      allForks.stateTransition(state as allForks.CachedBeaconState<allForks.BeaconState>, averageMainnetBlock, {
-        verifyProposer: false,
-        verifySignatures: false,
-        verifyStateRoot: false,
-      });
-    }
-  );
+  for (const {id, opts} of testCases) {
+    itBench<StateBlock, StateBlock>({
+      id: `phase0 processBlock - ${perfStateId} ${id}`,
+      before: () => {
+        const state = generatePerfTestCachedStatePhase0() as allForks.CachedBeaconState<allForks.BeaconState>;
+        const block = getBlockPhase0(state, opts);
+        state.hashTreeRoot();
+        return {block, state};
+      },
+      beforeEach: ({state, block}) => ({state: state.clone(), block}),
+      fn: ({state, block}) => {
+        allForks.stateTransition(state, block, {
+          verifyProposer: false,
+          verifySignatures: false,
+          verifyStateRoot: false,
+        });
+        // set verifyStateRoot = false, and get the root here because the block root is wrong
+        state.hashTreeRoot();
+      },
+    });
+  }
 });

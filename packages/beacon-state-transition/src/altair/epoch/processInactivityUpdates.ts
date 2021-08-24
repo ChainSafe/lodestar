@@ -15,6 +15,13 @@ import {isInInactivityLeak} from "../../util";
  * PERF: Cost = iterate over an array of size $VALIDATOR_COUNT + 'proportional' to how many validtors are inactive or
  * have been inactive in the past, i.e. that require an update to their inactivityScore. Worst case = all validators
  * need to update their non-zero `inactivityScore`.
+ *
+ * - On normal mainnet conditions
+ *   - prevTargetAttester: 96%
+ *   - unslashed:          100%
+ *   - eligibleAttester:   98%
+ *
+ * TODO: Compute from altair testnet inactivityScores updates on average
  */
 export function processInactivityUpdates(
   state: CachedBeaconState<altair.BeaconState>,
@@ -23,12 +30,13 @@ export function processInactivityUpdates(
   if (state.currentShuffling.epoch === GENESIS_EPOCH) {
     return;
   }
-  const {config} = state;
+  const {config, inactivityScores} = state;
   const {INACTIVITY_SCORE_BIAS, INACTIVITY_SCORE_RECOVERY_RATE} = config;
+  const {statuses} = epochProcess;
   const inActivityLeak = isInInactivityLeak((state as unknown) as phase0.BeaconState);
-  const {inactivityScores} = state;
-  for (let i = 0; i < epochProcess.statuses.length; i++) {
-    const status = epochProcess.statuses[i];
+
+  for (let i = 0; i < statuses.length; i++) {
+    const status = statuses[i];
     if (hasMarkers(status.flags, FLAG_ELIGIBLE_ATTESTER)) {
       let inactivityScore = inactivityScores[i];
       const prevInactivityScore = inactivityScore;

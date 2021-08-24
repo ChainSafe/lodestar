@@ -37,16 +37,14 @@ describe("getAttestationsForBlock", () => {
     expect(numCurrentEpochParticipation).to.equal(250000, "Wrong numCurrentEpochParticipation");
   });
 
-  itBench(
-    {
-      id: "getAttestationsForBlock",
-      beforeEach: () => getAggregatedAttestationPool(originalState),
-    },
-    (pool) => {
+  itBench({
+    id: "getAttestationsForBlock",
+    beforeEach: () => getAggregatedAttestationPool(originalState),
+    fn: (pool) => {
       // logger.info("Number of attestations in pool", pool.getAll().length);
       pool.getAttestationsForBlock(originalState);
-    }
-  );
+    },
+  });
 });
 
 function getAggregatedAttestationPool(

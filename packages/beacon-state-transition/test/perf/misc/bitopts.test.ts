@@ -1,5 +1,5 @@
-import {FLAG_PREV_SOURCE_ATTESTER, FLAG_UNSLASHED} from "../../../../src/allForks";
-import {profilerLogger} from "../../../utils/logger";
+import {FLAG_PREV_SOURCE_ATTESTER, FLAG_UNSLASHED} from "../../../src/allForks";
+import {profilerLogger} from "../../utils/logger";
 
 describe.skip("bit opts", function () {
   this.timeout(0);

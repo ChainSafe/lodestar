@@ -49,10 +49,15 @@ describe("Tree (persistent-merkle-tree)", () => {
   setBenchOpts({maxMs: 10 * 1000, skip: Boolean(process.env.CI)});
 
   const d = 40;
-  const tree = getTree(d, n);
   const gilo = toGindex(d, BigInt(ilo));
   const gihi = toGindex(d, BigInt(ihi));
   const n2 = new LeafNode(Buffer.alloc(32, 2));
+  let tree: Tree;
+
+  before(function () {
+    this.timeout(60_000);
+    tree = getTree(d, n);
+  });
 
   itBench({id: `Tree ${d} ${n} create`, timeout: 60_000}, () => {
     getTree(d, n);
@@ -115,8 +120,13 @@ describe("MutableVector", () => {
   // Don't track regressions in CI
   setBenchOpts({maxMs: 10 * 1000, skip: Boolean(process.env.CI)});
 
-  const items = createArray(n);
-  const mutableVector = MutableVector.from(items);
+  let items: number[];
+  let mutableVector: MutableVector<number>;
+
+  before(function () {
+    items = createArray(n);
+    mutableVector = MutableVector.from(items);
+  });
 
   itBench(`MutableVector ${n} create`, () => {
     MutableVector.from(items);
@@ -168,7 +178,11 @@ describe("Array", () => {
   // Don't track regressions in CI
   setBenchOpts({maxMs: 10 * 1000, skip: Boolean(process.env.CI)});
 
-  const arr = createArray(n);
+  let arr: number[];
+
+  before(function () {
+    arr = createArray(n);
+  });
 
   itBench(`Array ${n} create`, () => {
     createArray(n);

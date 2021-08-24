@@ -7,6 +7,12 @@ import {computeStartSlotAtEpoch, getBlockRootAtSlot, zipIndexesCommitteeBits} fr
  * Mutates `statuses` from all pending attestations.
  *
  * PERF: Cost 'proportional' to attestation count + how many bits per attestation + how many flags the attestation triggers
+ *
+ * - On normal mainnet conditions:
+ *   - previousEpochAttestations: 3403
+ *   - currentEpochAttestations:  3129
+ *   - previousEpochAttestationsBits: 83
+ *   - currentEpochAttestationsBits:  85
  */
 export function statusProcessEpoch<T extends allForks.BeaconState>(
   state: CachedBeaconState<T>,

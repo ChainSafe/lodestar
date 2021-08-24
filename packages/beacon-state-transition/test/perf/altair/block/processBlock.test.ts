@@ -11,7 +11,8 @@ import {
 } from "@chainsafe/lodestar-params";
 import {allForks} from "../../../../src";
 import {generatePerfTestCachedStateAltair, perfStateId} from "../../util";
-import {getBlockAltair} from "../../phase0/block/util";
+import {BlockAltairOpts, getBlockAltair} from "../../phase0/block/util";
+import {StateBlock} from "../../types";
 
 // As of Jun 12 2021
 // Process block
@@ -64,57 +65,60 @@ import {getBlockAltair} from "../../phase0/block/util";
 // how many nodes have no cached _root, then multiply by the cost of hashing.
 //
 
-describe("Process block", () => {
+describe("altair processBlock", () => {
   setBenchOpts({maxMs: 60 * 1000});
 
   if (ACTIVE_PRESET !== PresetName.mainnet) {
     throw Error(`ACTIVE_PRESET ${ACTIVE_PRESET} must be mainnet`);
   }
 
-  const baseState = generatePerfTestCachedStateAltair() as allForks.CachedBeaconState<allForks.BeaconState>;
+  const testCases: {id: string; opts: BlockAltairOpts}[] = [
+    {
+      id: "normalcase",
+      opts: {
+        proposerSlashingLen: 0,
+        attesterSlashingLen: 0,
+        attestationLen: 90,
+        depositsLen: 0,
+        voluntaryExitLen: 0,
+        bitsLen: 90,
+        // TODO: There's no data yet on how full syncCommittee will be. Assume same ratio of attestations
+        syncCommitteeBitsLen: Math.round(SYNC_COMMITTEE_SIZE * 0.7),
+      },
+    },
+    {
+      id: "worstcase",
+      opts: {
+        proposerSlashingLen: MAX_PROPOSER_SLASHINGS,
+        attesterSlashingLen: MAX_ATTESTER_SLASHINGS,
+        attestationLen: MAX_ATTESTATIONS,
+        depositsLen: MAX_DEPOSITS,
+        voluntaryExitLen: MAX_VOLUNTARY_EXITS,
+        bitsLen: 128,
+        syncCommitteeBitsLen: SYNC_COMMITTEE_SIZE,
+      },
+    },
+  ];
 
-  const worstCaseBlockState = baseState.clone();
-  const worstCaseBlock = getBlockAltair(worstCaseBlockState, {
-    proposerSlashingLen: MAX_PROPOSER_SLASHINGS,
-    attesterSlashingLen: MAX_ATTESTER_SLASHINGS,
-    attestationLen: MAX_ATTESTATIONS,
-    depositsLen: MAX_DEPOSITS,
-    voluntaryExitLen: MAX_VOLUNTARY_EXITS,
-    bitsLen: 128,
-    syncCommitteeBitsLen: SYNC_COMMITTEE_SIZE,
-  });
-
-  const averageMainnetBlockState = baseState.clone();
-  const averageMainnetBlock = getBlockAltair(averageMainnetBlockState, {
-    proposerSlashingLen: 0,
-    attesterSlashingLen: 0,
-    attestationLen: 90,
-    depositsLen: 0,
-    voluntaryExitLen: 0,
-    bitsLen: 90,
-    // TODO: There's no data yet on how full syncCommittee will be. Assume same ratio of attestations
-    syncCommitteeBitsLen: Math.round(SYNC_COMMITTEE_SIZE * 0.7),
-  });
-
-  itBench(
-    {id: `processBlock altair ${perfStateId} - maxed ops`, beforeEach: () => worstCaseBlockState.clone()},
-    (state) => {
-      allForks.stateTransition(state, worstCaseBlock, {
-        verifyProposer: false,
-        verifySignatures: false,
-        verifyStateRoot: false,
-      });
-    }
-  );
-
-  itBench(
-    {id: `processBlock altair ${perfStateId} - average`, beforeEach: () => averageMainnetBlockState.clone()},
-    (state) => {
-      allForks.stateTransition(state, averageMainnetBlock, {
-        verifyProposer: false,
-        verifySignatures: false,
-        verifyStateRoot: false,
-      });
-    }
-  );
+  for (const {id, opts} of testCases) {
+    itBench<StateBlock, StateBlock>({
+      id: `altair processBlock - ${perfStateId} ${id}`,
+      before: () => {
+        const state = generatePerfTestCachedStateAltair() as allForks.CachedBeaconState<allForks.BeaconState>;
+        const block = getBlockAltair(state, opts);
+        state.hashTreeRoot();
+        return {state, block};
+      },
+      beforeEach: ({state, block}) => ({state: state.clone(), block}),
+      fn: ({state, block}) => {
+        allForks.stateTransition(state, block, {
+          verifyProposer: false,
+          verifySignatures: false,
+          verifyStateRoot: false,
+        });
+        // set verifyStateRoot = false, and get the root here because the block root is wrong
+        state.hashTreeRoot();
+      },
+    });
+  }
 });
