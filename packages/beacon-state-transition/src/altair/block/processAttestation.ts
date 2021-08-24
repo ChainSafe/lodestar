@@ -29,9 +29,9 @@ export function processAttestations(
 ): void {
   const {epochCtx} = state;
   const stateSlot = state.slot;
-  let totalBalancesWithWeight = BigInt(0);
 
   // Process all attestations first and then increase the balance of the proposer once
+  let proposerReward = BigInt(0);
   for (const attestation of attestations) {
     const data = attestation.data;
 
@@ -67,7 +67,7 @@ export function processAttestations(
 
     // For each participant, update their participation
     // In epoch processing, this participation info is used to calculate balance updates
-
+    let totalBalancesWithWeight = BigInt(0);
     for (const index of attestingIndices) {
       const status = epochParticipation.getStatus(index) as IParticipationStatus;
       const newStatus = {
@@ -85,17 +85,19 @@ export function processAttestations(
         BigInt(!status.timelySource && timelySource) * TIMELY_SOURCE_WEIGHT +
         BigInt(!status.timelyTarget && timelyTarget) * TIMELY_TARGET_WEIGHT +
         BigInt(!status.timelyHead && timelyHead) * TIMELY_HEAD_WEIGHT;
+
       if (totalWeight > 0) {
         // TODO: Cache effectiveBalance in a separate array
         // TODO: Consider using number instead of bigint for faster math
         totalBalancesWithWeight += state.validators[index].effectiveBalance * totalWeight;
       }
     }
+
+    const totalIncrements = totalBalancesWithWeight / EFFECTIVE_BALANCE_INCREMENT;
+    const proposerRewardNumerator = totalIncrements * state.baseRewardPerIncrement;
+    proposerReward += proposerRewardNumerator / PROPOSER_REWARD_DOMINATOR;
   }
 
-  const totalIncrements = totalBalancesWithWeight / EFFECTIVE_BALANCE_INCREMENT;
-  const proposerRewardNumerator = totalIncrements * state.baseRewardPerIncrement;
-  const proposerReward = proposerRewardNumerator / PROPOSER_REWARD_DOMINATOR;
   increaseBalance(state, epochCtx.getBeaconProposer(state.slot), proposerReward);
 }
 
