@@ -1,8 +1,8 @@
-import {allForks, altair, phase0, ssz} from "@chainsafe/lodestar-types";
+import {allForks, altair, Epoch, phase0, Root, Slot, ssz} from "@chainsafe/lodestar-types";
 import {intSqrt} from "@chainsafe/lodestar-utils";
 
 import {getBlockRoot, getBlockRootAtSlot, increaseBalance, verifySignatureSet} from "../../util";
-import {CachedBeaconState} from "../../allForks/util";
+import {CachedBeaconState, EpochContext} from "../../allForks/util";
 import {IParticipationStatus} from "../../allForks/util/cachedEpochParticipation";
 import {
   EFFECTIVE_BALANCE_INCREMENT,
@@ -29,6 +29,7 @@ export function processAttestations(
 ): void {
   const {epochCtx} = state;
   const stateSlot = state.slot;
+  const rootCache = new RootCache(state);
 
   // Process all attestations first and then increase the balance of the proposer once
   let proposerReward = BigInt(0);
@@ -60,9 +61,10 @@ export function processAttestations(
         : state.previousEpochParticipation;
 
     const {timelySource, timelyTarget, timelyHead} = getAttestationParticipationStatus(
-      state,
       data,
-      stateSlot - data.slot
+      stateSlot - data.slot,
+      rootCache,
+      epochCtx
     );
 
     // For each participant, update their participation
@@ -105,17 +107,16 @@ export function processAttestations(
  * https://github.com/ethereum/eth2.0-specs/blob/v1.1.0-alpha.4/specs/altair/beacon-chain.md#get_attestation_participation_flag_indices
  */
 export function getAttestationParticipationStatus(
-  state: CachedBeaconState<altair.BeaconState>,
   data: phase0.AttestationData,
-  inclusionDelay: number
+  inclusionDelay: number,
+  rootCache: RootCache,
+  epochCtx: EpochContext
 ): IParticipationStatus {
-  const {epochCtx} = state;
-  let justifiedCheckpoint;
-  if (data.target.epoch === epochCtx.currentShuffling.epoch) {
-    justifiedCheckpoint = state.currentJustifiedCheckpoint;
-  } else {
-    justifiedCheckpoint = state.previousJustifiedCheckpoint;
-  }
+  const justifiedCheckpoint =
+    data.target.epoch === epochCtx.currentShuffling.epoch
+      ? rootCache.currentJustifiedCheckpoint
+      : rootCache.previousJustifiedCheckpoint;
+
   // The source and target votes are part of the FFG vote, the head vote is part of the fork choice vote
   // Both are tracked to properly incentivise validators
   //
@@ -130,13 +131,47 @@ export function getAttestationParticipationStatus(
       )} justifiedCheckpoint=${checkpointToStr(justifiedCheckpoint)}`
     );
   }
-  const isMatchingTarget = ssz.Root.equals(data.target.root, getBlockRoot(state, data.target.epoch));
+  const isMatchingTarget = ssz.Root.equals(data.target.root, rootCache.getBlockRoot(data.target.epoch));
   // a timely head is only be set if the target is _also_ matching
   const isMatchingHead =
-    isMatchingTarget && ssz.Root.equals(data.beaconBlockRoot, getBlockRootAtSlot(state, data.slot));
+    isMatchingTarget && ssz.Root.equals(data.beaconBlockRoot, rootCache.getBlockRootAtSlot(data.slot));
   return {
     timelySource: isMatchingSource && inclusionDelay <= intSqrt(SLOTS_PER_EPOCH),
     timelyTarget: isMatchingTarget && inclusionDelay <= SLOTS_PER_EPOCH,
     timelyHead: isMatchingHead && inclusionDelay === MIN_ATTESTATION_INCLUSION_DELAY,
   };
+}
+
+/**
+ * Cache to prevent accessing the state tree to fetch block roots repeteadly.
+ * In normal network conditions the same root is read multiple times, specially the target.
+ */
+export class RootCache {
+  readonly currentJustifiedCheckpoint: altair.Checkpoint;
+  readonly previousJustifiedCheckpoint: altair.Checkpoint;
+  private readonly blockRootEpochCache = new Map<Epoch, Root>();
+  private readonly blockRootSlotCache = new Map<Slot, Root>();
+
+  constructor(private readonly state: CachedBeaconState<altair.BeaconState>) {
+    this.currentJustifiedCheckpoint = state.currentJustifiedCheckpoint;
+    this.previousJustifiedCheckpoint = state.previousJustifiedCheckpoint;
+  }
+
+  getBlockRoot(epoch: Epoch): Root {
+    let root = this.blockRootEpochCache.get(epoch);
+    if (!root) {
+      root = getBlockRoot(this.state, epoch);
+      this.blockRootEpochCache.set(epoch, root);
+    }
+    return root;
+  }
+
+  getBlockRootAtSlot(slot: Slot): Root {
+    let root = this.blockRootSlotCache.get(slot);
+    if (!root) {
+      root = getBlockRootAtSlot(this.state, slot);
+      this.blockRootSlotCache.set(slot, root);
+    }
+    return root;
+  }
 }
