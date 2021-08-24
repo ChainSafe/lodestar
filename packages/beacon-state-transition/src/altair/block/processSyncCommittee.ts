@@ -1,11 +1,9 @@
-import {altair, ssz} from "@chainsafe/lodestar-types";
+import {altair, ssz, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {DOMAIN_SYNC_COMMITTEE} from "@chainsafe/lodestar-params";
 
 import {
   computeSigningRoot,
   getBlockRootAtSlot,
-  increaseBalance,
-  decreaseBalance,
   ISignatureSet,
   SignatureSetType,
   verifySignatureSet,
@@ -32,15 +30,16 @@ export function processSyncAggregate(
       throw Error("Sync committee signature invalid");
     }
   }
-
+  const deltaByIndex = new Map<ValidatorIndex, number>();
   const proposerIndex = state.epochCtx.getBeaconProposer(state.slot);
   for (const participantIndex of participantIndices) {
-    increaseBalance(state, participantIndex, syncParticipantReward);
+    accumulateDelta(deltaByIndex, participantIndex, syncParticipantReward);
   }
-  increaseBalance(state, proposerIndex, syncProposerReward * participantIndices.length);
+  accumulateDelta(deltaByIndex, proposerIndex, syncProposerReward * participantIndices.length);
   for (const unparticipantIndex of unparticipantIndices) {
-    decreaseBalance(state, unparticipantIndex, syncParticipantReward);
+    accumulateDelta(deltaByIndex, unparticipantIndex, -syncParticipantReward);
   }
+  state.balances.applyDeltaInBatch(deltaByIndex);
 }
 
 export function getSyncCommitteeSignatureSet(
@@ -108,4 +107,13 @@ function getParticipantInfo(
 ): [number[], number[]] {
   const committeeIndices = state.currentSyncCommittee.validatorIndices;
   return zipAllIndexesSyncCommitteeBits(committeeIndices, syncAggregate.syncCommitteeBits);
+}
+
+function accumulateDelta(deltaByIndex: Map<ValidatorIndex, number>, index: ValidatorIndex, delta: number): void {
+  const existingDelta = deltaByIndex.get(index);
+  if (existingDelta === undefined) {
+    deltaByIndex.set(index, delta);
+  } else {
+    deltaByIndex.set(index, delta + existingDelta);
+  }
 }
