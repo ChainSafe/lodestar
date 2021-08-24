@@ -1,7 +1,5 @@
-// eslint-disable-next-line no-restricted-imports
-import {Spec} from "@chainsafe/lodestar-api/src/routes/config";
-import {IChainConfig} from "@chainsafe/lodestar-config";
 import {config} from "@chainsafe/lodestar-config/default";
+import {toHexString} from "@chainsafe/ssz";
 import {expect} from "chai";
 import {getConfigApi} from "../../../../../src/api/impl/config";
 
@@ -31,10 +29,9 @@ describe("config api implementation", function () {
   describe("getSpec", function () {
     it("should get the spec", async function () {
       const {data: spec} = await api.getSpec();
-      const specJson = (Spec.toJson(spec) as unknown) as IChainConfig;
 
-      expect(specJson.SECONDS_PER_ETH1_BLOCK).to.equal("14", "Wrong SECONDS_PER_ETH1_BLOCK");
-      expect(specJson.DEPOSIT_CONTRACT_ADDRESS).to.equal(
+      expect(spec.SECONDS_PER_ETH1_BLOCK).to.equal(14, "Wrong SECONDS_PER_ETH1_BLOCK");
+      expect(toHexString(spec.DEPOSIT_CONTRACT_ADDRESS)).to.equal(
         "0x1234567890123456789012345678901234567890",
         "Wrong DEPOSIT_CONTRACT_ADDRESS"
       );
