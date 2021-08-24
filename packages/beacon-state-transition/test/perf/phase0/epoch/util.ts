@@ -5,7 +5,7 @@ import {
   CachedBeaconState,
   IAttesterStatus,
   IEpochProcess,
-  toAttestarFlags,
+  toAttesterFlags,
 } from "../../../../src/allForks";
 
 /**
@@ -65,7 +65,7 @@ function generateStatuses(vc: number, flagFactors: FlagFactors): IAttesterStatus
         eligibleAttester: i < vc * flagFactors.eligibleAttester, // 7
       };
       statuses.push({
-        flags: toAttestarFlags(flagsObj),
+        flags: toAttesterFlags(flagsObj),
         proposerIndex: i % totalProposers,
         inclusionDelay: 1 + (i % 4),
         active: true,

@@ -61,7 +61,7 @@ export function parseAttesterFlags(flags: number): AttesterFlags {
   };
 }
 
-export function toAttestarFlags(flagsObj: AttesterFlags): number {
+export function toAttesterFlags(flagsObj: AttesterFlags): number {
   let flag = 0;
   if (flagsObj.prevSourceAttester) flag |= FLAG_PREV_SOURCE_ATTESTER;
   if (flagsObj.prevTargetAttester) flag |= FLAG_PREV_TARGET_ATTESTER;
