@@ -1,7 +1,5 @@
 import {itBench, setBenchOpts} from "@dapplion/benchmark";
-import {phase0} from "@chainsafe/lodestar-types";
 import {allForks, altair, CachedBeaconState, computeStartSlotAtEpoch} from "../../../../src";
-import {processParticipationRecordUpdates} from "../../../../src/phase0/epoch/processParticipationRecordUpdates";
 import {beforeValue, getNetworkCachedState, LazyValue} from "../../util";
 import {StateEpoch} from "../../types";
 
@@ -142,9 +140,9 @@ function benchmarkAltairEpochSteps(
   });
 
   itBench({
-    id: `${stateId} - altair processParticipationRecordUpdates`,
-    beforeEach: () => stateOg.value.clone() as allForks.CachedBeaconState<phase0.BeaconState>,
-    fn: (state) => processParticipationRecordUpdates(state),
+    id: `${stateId} - altair processParticipationFlagUpdates`,
+    beforeEach: () => stateOg.value.clone() as allForks.CachedBeaconState<altair.BeaconState>,
+    fn: (state) => altair.processParticipationFlagUpdates(state),
   });
 
   itBench({
