@@ -24,7 +24,7 @@
     "test:spec-min": "lerna run test:spec-min --no-bail",
     "test:spec-fast": "lerna run test:spec-fast --no-bail",
     "test:spec-main": "lerna run test:spec-main --no-bail",
-    "benchmark": "LODESTAR_PRESET=mainnet node --max-old-space-size=4096 -r ts-node/register -r ./packages/lodestar/test/setupBLS.ts ./node_modules/.bin/benchmark 'packages/*/test/perf/**/*.test.ts'",
+    "benchmark": "LODESTAR_PRESET=mainnet NODE_OPTIONS=--max_old_space_size=4096 benchmark --config .benchrc.yaml 'packages/*/test/perf/**/*.test.ts'",
     "benchmark:local": "yarn benchmark --local",
     "publish:release": "lerna publish from-package --yes --no-verify-access",
     "release": "lerna version --no-push --sign-git-commit",
@@ -32,7 +32,7 @@
     "check-readme": "lerna run check-readme"
   },
   "devDependencies": {
-    "@dapplion/benchmark": "^0.1.6",
+    "@dapplion/benchmark": "^0.2.0",
     "@types/chai": "4.2.0",
     "@types/chai-as-promised": "^7.1.2",
     "@types/mocha": "^8.0.3",

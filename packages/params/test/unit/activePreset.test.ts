@@ -1,6 +1,7 @@
 import {preset as mainnetParams} from "../../src/presets/mainnet";
 import {preset as minimalParams} from "../../src/presets/minimal";
-import {ACTIVE_PRESET, PresetName, setActivePreset} from "../../src";
+import {ACTIVE_PRESET, PresetName} from "../../src";
+import {setActivePreset} from "../../setPreset";
 import {expect} from "chai";
 
 describe("active preset", () => {
@@ -11,19 +12,26 @@ describe("active preset", () => {
     [PresetName.minimal]: minimalParams,
   };
 
-  after(() => {
-    // reset preset to initial value
-    setActivePreset(ACTIVE_PRESET);
+  it("Active preset should be set to the correct value", () => {
+    if (process.env.LODESTAR_PRESET) {
+      expect(ACTIVE_PRESET).to.equal(
+        process.env.LODESTAR_PRESET,
+        "process.env.LODESTAR_PRESET must equal ACTIVE_PRESET"
+      );
+    } else {
+      expect(ACTIVE_PRESET).to.equal(PresetName.mainnet, "Default preset must be mainnet");
+    }
   });
 
-  it("setActivePreset should change exported params", () => {
-    for (const presetName of [PresetName.mainnet, PresetName.minimal]) {
-      setActivePreset(presetName);
-
-      expect(exports.ACTIVE_PRESET).to.equal(presetName);
-      for (const [k, v] of Object.entries(params[presetName])) {
-        expect(exports[k]).to.deep.equal(v);
-      }
+  it("Constants should be set to the correct value", () => {
+    for (const [k, v] of Object.entries(params[ACTIVE_PRESET])) {
+      expect(exports[k]).to.deep.equal(v);
     }
+  });
+
+  it("Should not allow to change preset", () => {
+    expect(() => {
+      setActivePreset(PresetName.minimal);
+    }).to.throw();
   });
 });

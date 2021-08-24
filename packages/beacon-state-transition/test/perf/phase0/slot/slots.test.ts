@@ -10,11 +10,7 @@ import {allForks} from "../../../../src";
 // process 4 empty epochs                                               0.2250960 ops/s   4.442549e+9 ns/op     10 runs
 
 describe("Epoch transitions", () => {
-  setBenchOpts({
-    maxMs: 60 * 1000,
-    minMs: 15 * 1000,
-    runs: 64,
-  });
+  setBenchOpts({maxMs: 60 * 1000});
 
   const originalState = generatePerfTestCachedStatePhase0({goBackOneSlot: true});
 
