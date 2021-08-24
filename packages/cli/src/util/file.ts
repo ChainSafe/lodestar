@@ -55,7 +55,12 @@ export function stringify<T = Json>(obj: T, fileFormat: FileFormat): string {
   let contents: string;
   switch (fileFormat) {
     case FileFormat.json:
-      contents = JSON.stringify(obj, null, 2);
+      contents = JSON.stringify(
+        obj,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+        (_, _v) => (typeof _v === "bigint" ? _v.toString() : _v),
+        2
+      );
       break;
     case FileFormat.yaml:
     case FileFormat.yml:

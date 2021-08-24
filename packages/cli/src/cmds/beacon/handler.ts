@@ -24,11 +24,20 @@ export async function beaconHandler(args: IBeaconArgs & IGlobalArgs): Promise<vo
   await initBLS();
 
   const {beaconNodeOptions, config} = await initializeOptionsAndConfig(args);
-  await persistOptionsAndConfig(args, beaconNodeOptions, config);
+  await persistOptionsAndConfig(args, config);
 
   const version = getVersion();
   const gitData = getVersionGitData();
   const beaconPaths = getBeaconPaths(args);
+
+  const logger = getCliLogger(args, beaconPaths, config);
+  const abortController = new AbortController();
+  onGracefulShutdown(async () => {
+    abortController.abort();
+  }, logger.info.bind(logger));
+
+  logger.info("Lodestar", {version: version, network: args.network});
+
   // TODO: Rename db.name to db.path or db.location
   beaconNodeOptions.set({db: {name: beaconPaths.dbDir}});
   // Add metrics metadata to show versioning + network info in Prometheus + Grafana
@@ -41,16 +50,12 @@ export async function beaconHandler(args: IBeaconArgs & IGlobalArgs): Promise<vo
   overwriteEnrWithCliArgs(enr, enrArgs, beaconNodeOptions.getWithDefaults());
   const enrUpdate = !enrArgs.ip && !enrArgs.ip6;
   beaconNodeOptions.set({network: {discv5: {enr, enrUpdate}}});
+
+  beaconNodeOptions.writeTo(beaconPaths.configFile);
+  logger.info("Starting Beacon Node, finalized (non default) options written to ", {
+    configFile: beaconPaths.configFile,
+  });
   const options = beaconNodeOptions.getWithDefaults();
-
-  const abortController = new AbortController();
-  const logger = getCliLogger(args, beaconPaths, config);
-
-  onGracefulShutdown(async () => {
-    abortController.abort();
-  }, logger.info.bind(logger));
-
-  logger.info("Lodestar", {version: version, network: args.network});
 
   let dbMetrics: null | ReturnType<typeof createDbMetrics> = null;
   // additional metrics registries

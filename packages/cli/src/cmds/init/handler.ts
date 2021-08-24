@@ -25,7 +25,7 @@ export type ReturnType = {
  */
 export async function initHandler(args: IBeaconArgs & IGlobalArgs): Promise<ReturnType> {
   const {beaconNodeOptions, config} = await initializeOptionsAndConfig(args);
-  await persistOptionsAndConfig(args, beaconNodeOptions, config);
+  await persistOptionsAndConfig(args, config);
   return {beaconNodeOptions, config};
 }
 
@@ -33,7 +33,6 @@ export async function initializeOptionsAndConfig(args: IBeaconArgs & IGlobalArgs
   const beaconPaths = getBeaconPaths(args);
   const beaconNodeOptions = new BeaconNodeOptions({
     network: args.network || "mainnet",
-    configFile: beaconPaths.configFile,
     beaconNodeOptionsCli: parseBeaconNodeArgs(args),
   });
 
@@ -60,7 +59,6 @@ export async function initializeOptionsAndConfig(args: IBeaconArgs & IGlobalArgs
  */
 export async function persistOptionsAndConfig(
   args: IBeaconArgs & IGlobalArgs,
-  beaconNodeOptions: BeaconNodeOptions,
   beaconConfig: IChainForkConfig
 ): Promise<void> {
   const beaconPaths = getBeaconPaths(args);
@@ -91,10 +89,5 @@ export async function persistOptionsAndConfig(
 
   if (!fs.existsSync(beaconPaths.paramsFile)) {
     writeBeaconParams(beaconPaths.paramsFile, beaconConfig);
-  }
-
-  // initialize beacon configuration file, if it doesn't exist
-  if (!fs.existsSync(beaconPaths.configFile)) {
-    beaconNodeOptions.writeTo(beaconPaths.configFile);
   }
 }

@@ -103,7 +103,7 @@ export const beaconPathsOptions: ICliCommandOptions<IBeaconPaths> = {
   },
 
   configFile: {
-    description: "Beacon node configuration file path",
+    description: "File path to write finalized (non default) Beacon node options",
     defaultDescription: defaultBeaconPaths.configFile,
     type: "string",
   },
