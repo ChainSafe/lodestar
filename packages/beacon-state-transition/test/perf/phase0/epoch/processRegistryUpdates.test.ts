@@ -1,9 +1,7 @@
 import {itBench, setBenchOpts} from "@dapplion/benchmark";
-import {ssz} from "@chainsafe/lodestar-types";
-import {config} from "@chainsafe/lodestar-config/default";
 import {allForks} from "../../../../src";
-import {createCachedBeaconState} from "../../../../src/allForks";
-import {numValidators} from "../../util";
+import {beforeProcessEpoch} from "../../../../src/allForks";
+import {generatePerfTestCachedStatePhase0, numValidators} from "../../util";
 import {StateEpoch} from "../../types";
 
 // PERF: Cost 'proportional' to only validators that active + exit. For mainnet conditions:
@@ -28,6 +26,15 @@ describe("phase0 processRegistryUpdates", () => {
       lengths: {
         indicesToEject: 0,
         indicesEligibleForActivationQueue: 0,
+        indicesEligibleForActivation: 4000,
+      },
+    },
+    // All blocks in epoch full of deposits
+    {
+      id: "badcase_full_deposits",
+      lengths: {
+        indicesToEject: 0,
+        indicesEligibleForActivationQueue: 512,
         indicesEligibleForActivation: 4000,
       },
     },
@@ -71,32 +78,16 @@ function getRegistryUpdatesTestData(
   state: allForks.CachedBeaconState<allForks.BeaconState>;
   epochProcess: allForks.IEpochProcess;
 } {
-  const stateTree = ssz.phase0.BeaconState.defaultTreeBacked();
-  stateTree.slot = 1;
+  const state = generatePerfTestCachedStatePhase0({goBackOneSlot: true});
+  const epochProcess = beforeProcessEpoch(state);
 
-  const activeValidator = {
-    ...ssz.phase0.Validator.defaultTreeBacked(),
-    exitEpoch: Infinity,
-    withdrawableEpoch: Infinity,
-    // Set current effective balance to max
-    effectiveBalance: BigInt(32e9),
-  };
-
-  // Initialize tree
-  for (let i = 0; i < vc; i++) {
-    stateTree.validators.push(activeValidator);
-  }
-
-  const cachedBeaconState = createCachedBeaconState(config, stateTree, {skipSyncPubkeys: true});
-  const epochProcess: Partial<allForks.IEpochProcess> = {
-    indicesToEject: linspace(lengths.indicesToEject),
-    indicesEligibleForActivationQueue: linspace(lengths.indicesEligibleForActivationQueue),
-    indicesEligibleForActivation: linspace(lengths.indicesEligibleForActivation),
-  };
+  epochProcess.indicesToEject = linspace(lengths.indicesToEject);
+  epochProcess.indicesEligibleForActivationQueue = linspace(lengths.indicesEligibleForActivationQueue);
+  epochProcess.indicesEligibleForActivation = linspace(lengths.indicesEligibleForActivation);
 
   return {
-    state: cachedBeaconState as allForks.CachedBeaconState<allForks.BeaconState>,
-    epochProcess: epochProcess as allForks.IEpochProcess,
+    state: state as allForks.CachedBeaconState<allForks.BeaconState>,
+    epochProcess,
   };
 }
 
