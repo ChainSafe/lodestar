@@ -1,4 +1,4 @@
-import * as constants from "../../src/constants";
+import * as constants from "../../src";
 import {ssz} from "@chainsafe/lodestar-types";
 import {expect} from "chai";
 

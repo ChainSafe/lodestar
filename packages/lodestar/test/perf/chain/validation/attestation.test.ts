@@ -5,11 +5,7 @@ import {generateTestCachedBeaconStateOnlyValidators} from "@chainsafe/lodestar-b
 import {getAttestationValidData} from "../../../utils/validationData/attestation";
 
 describe("validate gossip attestation", () => {
-  setBenchOpts({
-    maxMs: 60 * 1000,
-    minMs: 2 * 1000,
-    runs: 1024,
-  });
+  setBenchOpts({maxMs: 60 * 1000});
 
   const vc = 64;
   const stateSlot = 100;
