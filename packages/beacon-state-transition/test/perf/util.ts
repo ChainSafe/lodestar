@@ -443,17 +443,17 @@ export function getNetworkConfig(network: NetworkName): IChainForkConfig {
  */
 export async function getNetworkCachedState(
   network: NetworkName,
-  slot: number
+  slot: number,
+  timeout?: number
 ): Promise<CachedBeaconState<allForks.BeaconState>> {
   const config = getNetworkConfig(network);
 
   const filepath = path.join(testCachePath, `state_${network}_${slot}.ssz`);
   let stateSsz: Uint8Array;
-
   if (fs.existsSync(filepath)) {
     stateSsz = fs.readFileSync(filepath);
   } else {
-    const client = getClient(config, {baseUrl: getInfuraUrl("mainnet"), timeoutMs: 60 * 1000});
+    const client = getClient(config, {baseUrl: getInfuraUrl(network), timeoutMs: timeout || 300_000});
     stateSsz = await client.debug.getState(String(slot), "ssz");
     fs.writeFileSync(filepath, stateSsz);
   }
