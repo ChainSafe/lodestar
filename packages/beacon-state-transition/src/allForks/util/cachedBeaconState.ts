@@ -7,6 +7,7 @@ import {
   isTreeBacked,
   ITreeBacked,
   List,
+  Number64ListType,
   readonlyValues,
   TreeBacked,
 } from "@chainsafe/ssz";
@@ -17,7 +18,7 @@ import {MutableVector} from "@chainsafe/persistent-ts";
 import {createValidatorFlat} from "./flat";
 import {createEpochContext, EpochContext, EpochContextOpts} from "./epochContext";
 import {CachedValidatorList, CachedValidatorListProxyHandler} from "./cachedValidatorList";
-import {CachedBalanceList, CachedBalanceListProxyHandler} from "./cachedBalanceList";
+import {BalanceList, CachedBalanceListProxyHandler} from "./balanceList";
 import {
   CachedEpochParticipation,
   CachedEpochParticipationProxyHandler,
@@ -162,7 +163,7 @@ export class BeaconStateContext<T extends allForks.BeaconState> {
    * TODO: Individual balances could be stored as regular numbers:
    * - Number.MAX_SAFE_INTEGER = 9007199254740991, which is 9e6 GWEI
    */
-  balances: CachedBalanceList & T["balances"];
+  balances: BalanceList & T["balances"];
   /**
    * Returns a Proxy to CachedEpochParticipation
    *
@@ -240,12 +241,12 @@ export class BeaconStateContext<T extends allForks.BeaconState> {
       CachedValidatorListProxyHandler
     ) as unknown) as CachedValidatorList<T["validators"][number]> & T["validators"];
     this.balances = (new Proxy(
-      new CachedBalanceList(
-        this.type.fields["balances"] as BasicListType<List<T["balances"][number]>>,
+      new BalanceList(
+        this.type.fields["balances"] as Number64ListType,
         this.type.tree_getProperty(this.tree, "balances") as Tree
       ),
       CachedBalanceListProxyHandler
-    ) as unknown) as CachedBalanceList & T["balances"];
+    ) as unknown) as BalanceList & T["balances"];
     this.previousEpochParticipation = (new Proxy(
       new CachedEpochParticipation({
         type: this.type.fields["previousEpochParticipation"] as BasicListType<List<ParticipationFlags>>,

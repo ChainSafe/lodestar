@@ -45,7 +45,7 @@ export function increaseBalance(
   delta: number
 ): void {
   // TODO: Inline this
-  state.balances.updateDelta(index, delta);
+  state.balances.applyDelta(index, delta);
 }
 
 /**
@@ -60,7 +60,7 @@ export function decreaseBalance(
 ): void {
   // const currentBalance = state.balances[index];
   // state.balances[index] = delta > currentBalance ? 0 : currentBalance - delta;
-  state.balances.updateDelta(index, -delta);
+  state.balances.applyDelta(index, -delta);
 }
 
 /**

@@ -1,16 +1,15 @@
-import {BasicListType, List, TreeBacked} from "@chainsafe/ssz";
+import {List, Number64ListType, TreeBacked} from "@chainsafe/ssz";
 import {Tree} from "@chainsafe/persistent-merkle-tree";
 
 /**
- * Balances registry that synchronizes changes between two underlying implementations:
- *   an immutable-js-style backing and a merkle tree backing
+ * Manage balances of BeaconState.
  */
-export class CachedBalanceList implements List<number> {
+export class BalanceList implements List<number> {
   [index: number]: number;
   tree: Tree;
-  type: BasicListType<List<number>>;
+  type: Number64ListType;
 
-  constructor(type: BasicListType<List<number>>, tree: Tree) {
+  constructor(type: Number64ListType, tree: Tree) {
     this.type = type;
     this.tree = tree;
   }
@@ -27,7 +26,7 @@ export class CachedBalanceList implements List<number> {
     this.type.tree_setProperty(this.tree, index, value);
   }
 
-  updateDelta(index: number, delta: number): number {
+  applyDelta(index: number, delta: number): number {
     return this.type.tree_applyUint64Delta(this.tree, index, delta);
   }
 
@@ -64,14 +63,13 @@ export class CachedBalanceList implements List<number> {
   }
 }
 
-// TODO: remove the proxy as we don't have a persistent-ts array anymore
 // eslint-disable-next-line @typescript-eslint/naming-convention
-export const CachedBalanceListProxyHandler: ProxyHandler<CachedBalanceList> = {
-  get(target: CachedBalanceList, key: PropertyKey): unknown {
+export const CachedBalanceListProxyHandler: ProxyHandler<BalanceList> = {
+  get(target: BalanceList, key: PropertyKey): unknown {
     if (!Number.isNaN(Number(String(key)))) {
       return target.get(key as number);
-    } else if (target[key as keyof CachedBalanceList]) {
-      return target[key as keyof CachedBalanceList];
+    } else if (target[key as keyof BalanceList]) {
+      return target[key as keyof BalanceList];
     } else {
       const treeBacked = target.type.createTreeBacked(target.tree);
       if (key in treeBacked) {
@@ -80,7 +78,7 @@ export const CachedBalanceListProxyHandler: ProxyHandler<CachedBalanceList> = {
       return undefined;
     }
   },
-  set(target: CachedBalanceList, key: PropertyKey, value: number): boolean {
+  set(target: BalanceList, key: PropertyKey, value: number): boolean {
     if (!Number.isNaN(Number(key))) {
       target.set(key as number, value);
       return true;
