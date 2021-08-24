@@ -22,7 +22,7 @@ export function runAttestations(presetName: PresetName): void {
         config,
         testcase.pre as TreeBacked<altair.BeaconState>
       ) as CachedBeaconState<altair.BeaconState>;
-      altair.processAttestation(wrappedState, testcase.attestation, {});
+      altair.processAttestations(wrappedState, [testcase.attestation], {});
       return wrappedState;
     },
     {

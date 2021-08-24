@@ -3,7 +3,7 @@ import {allForks, altair} from "@chainsafe/lodestar-types";
 import {CachedBeaconState} from "../../allForks/util";
 import {processBlockHeader, processEth1Data, processRandao} from "../../allForks/block";
 import {processOperations} from "./processOperations";
-import {processAttestation} from "./processAttestation";
+import {processAttestations} from "./processAttestation";
 import {processAttesterSlashing} from "./processAttesterSlashing";
 import {processDeposit} from "./processDeposit";
 import {processProposerSlashing} from "./processProposerSlashing";
@@ -13,7 +13,7 @@ import {BlockProcess} from "../../util";
 
 export {
   processOperations,
-  processAttestation,
+  processAttestations,
   processAttesterSlashing,
   processDeposit,
   processProposerSlashing,
