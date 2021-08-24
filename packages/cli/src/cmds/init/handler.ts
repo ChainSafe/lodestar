@@ -48,6 +48,8 @@ export async function initializeOptionsAndConfig(args: IBeaconArgs & IGlobalArgs
     }
   }
 
+  beaconNodeOptions.writeTo(beaconPaths.configFile);
+
   // initialize params file, if it doesn't exist
   const config = getBeaconConfigFromArgs(args);
 
