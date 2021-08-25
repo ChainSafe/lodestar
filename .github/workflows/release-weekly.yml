@@ -20,10 +20,10 @@ jobs:
           W=$(date +%V)
           if [[ $(($W%2)) -eq 0 ]]; then
             export EVEN=true
-            env.$EVEN=true
+            env.EVEN=true
           else
             export EVEN=false
-            env.$EVEN=false
+            env.EVEN=false
           fi
       - name: Check run conditions
         run: |
