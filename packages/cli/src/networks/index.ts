@@ -13,7 +13,7 @@ import * as dev from "./dev";
 import * as altairDevnet3 from "./altair-devnet-3";
 
 export type NetworkName = "mainnet" | "pyrmont" | "prater" | "dev" | "altair-devnet-3";
-export const networkNames: NetworkName[] = ["mainnet", "pyrmont", "prater", "dev", "altair-devnet-3"];
+export const networkNames: NetworkName[] = ["mainnet", "pyrmont", "prater", "altair-devnet-3"];
 /** Networks that infura supports */
 export const infuraNetworks: NetworkName[] = ["mainnet", "pyrmont", "prater"];
 
@@ -44,6 +44,9 @@ function getNetworkData(
 
 export function getEth1ProviderUrl(networkId: number): string {
   switch (networkId) {
+    case 0:
+      // stub for the dev network that does not require any provider
+      return "";
     case 1:
       return "https://mainnet.infura.io/v3/84842078b09946638c03157f83405213";
     case 5:
