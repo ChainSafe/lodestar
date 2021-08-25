@@ -14,7 +14,7 @@ jobs:
   prepare:
     name: Prepare Pull-Request
     runs-on: ubuntu-latest
-    if: ${{ W=$(date +%V); if [[ $(($W%2)) -eq 0 ]]; then echo true; else echo false; fi }}
+    if: ${{ W=$(date +%V); if [[ $(($W%2)) -eq 1 ]]; then echo true; else echo false; fi }}
     steps:
       - name: Check run conditions
         run: echo "test 1-2-3-4"
