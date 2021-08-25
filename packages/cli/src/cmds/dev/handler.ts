@@ -30,6 +30,8 @@ export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
   args.preset = "minimal";
   const {beaconNodeOptions, config} = await initializeOptionsAndConfig(args);
 
+  // @TODO @Q9F The beacon node options are using mainnet, why???
+
   // ENR setup
   const peerId = await createPeerId();
   const enr = createEnr(peerId);

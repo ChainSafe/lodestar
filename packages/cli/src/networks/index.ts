@@ -62,6 +62,7 @@ export function getNetworkBeaconParams(network: NetworkName): IChainConfig {
 
 export function getNetworkBeaconNodeOptions(network: NetworkName): RecursivePartial<IBeaconNodeOptions> {
   const {depositContractDeployBlock, bootEnrs, chainConfig} = getNetworkData(network);
+  // @TODO @Q9F The following sets the Network ID to 1, why???
   const networkId = parseInt(String(chainConfig.DEPOSIT_NETWORK_ID || 1), 10);
   return {
     eth1: {

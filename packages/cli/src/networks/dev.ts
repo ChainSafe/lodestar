@@ -4,9 +4,15 @@ import {IChainConfig} from "@chainsafe/lodestar-config";
 
 /* eslint-disable max-len */
 export const chainConfig: IChainConfig = {
-    ...minimalChainConfig,
-    DEPOSIT_NETWORK_ID: 0,
-}
+  ...minimalChainConfig,
+  DEPOSIT_NETWORK_ID: 0,
+};
+
+/**
+ * @TODO @Q9F MINIMAL CONFIG IS EMPTY!?!
+ * { DEPOSIT_NETWORK_ID: 0 } ???
+ */
+
 export const depositContractDeployBlock = 0;
 export const genesisFileUrl = "";
 export const bootnodesFileUrl = "";

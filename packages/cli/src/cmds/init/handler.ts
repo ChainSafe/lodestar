@@ -39,7 +39,7 @@ export async function initializeOptionsAndConfig(args: IBeaconArgs & IGlobalArgs
 
   // Auto-setup network
   // Only download files if params file does not exist
-  if (args.network && !fs.existsSync(beaconPaths.paramsFile)) {
+  if (args.network && args.network != "dev" && !fs.existsSync(beaconPaths.paramsFile)) {
     try {
       const bootEnrs = await fetchBootnodes(args.network);
       beaconNodeOptions.set({network: {discv5: {bootEnrs}}});
