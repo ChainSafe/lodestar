@@ -12,6 +12,19 @@ jobs:
     name: Prepare Pull-Request
     runs-on: ubuntu-latest
     steps:
+      - name: Get current date
+        id: date
+        run: |
+          echo "::set-output name=week::$(date '+%V')"
+          echo "::set-output name=year::$(date '+%Y')"
+      - name: Fail every other week
+        run: |
+          if [[ $(($WEEK%2)) -eq 0 ]]; then
+            echo "Even week, skipping release..."
+            exit 1
+          fi
+        env:
+          WEEK: ${{ steps.date.outputs.week }}
       - name: Checkout
         uses: actions/checkout@v2
         with:
@@ -45,11 +58,11 @@ jobs:
         with:
           author: q9f <q9f@users.noreply.github.com>
           committer: q9f <q9f@users.noreply.github.com>
-          branch: gacpr-release
+          branch: gacpr-release-${{ steps.date.outputs.year }}${{ steps.date.outputs.week }}
           branch-suffix: short-commit-hash
           delete-branch: true
-          title: "Weekly minor release"
-          commit-message: "Weekly minor release"
+          title: "Minor release ${{ steps.date.outputs.week }}/${{ steps.date.outputs.year }}"
+          commit-message: "Minor release ${{ steps.date.outputs.week }}/${{ steps.date.outputs.year }}"
           draft: true
       - name: Check outputs
         run: |
