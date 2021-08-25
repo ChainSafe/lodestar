@@ -50,7 +50,7 @@ export interface IForkChoice {
    * `justifiedBalances` validator balances of justified checkpoint which is updated synchronously.
    * This ensures that the forkchoice is never out of sync.
    */
-  onBlock(block: allForks.BeaconBlock, state: allForks.BeaconState, justifiedBalances?: Gwei[]): void;
+  onBlock(block: allForks.BeaconBlock, state: allForks.BeaconState, justifiedBalances?: number[]): void;
   /**
    * Register `attestation` with the fork choice DAG so that it may influence future calls to `getHead`.
    *

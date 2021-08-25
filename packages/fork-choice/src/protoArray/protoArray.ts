@@ -79,7 +79,7 @@ export class ProtoArray {
    * should become the best child.
    * - If required, update the parents best-descendant with the current node or its best-descendant.
    */
-  applyScoreChanges(deltas: Gwei[], justifiedEpoch: Epoch, finalizedEpoch: Epoch): void {
+  applyScoreChanges(deltas: number[], justifiedEpoch: Epoch, finalizedEpoch: Epoch): void {
     if (deltas.length !== this.indices.size) {
       throw new ProtoArrayError({
         code: ProtoArrayErrorCode.INVALID_DELTA_LEN,
@@ -154,7 +154,7 @@ export class ProtoArray {
     const node: IProtoNode = {
       ...block,
       parent: this.indices.get(block.parentRoot),
-      weight: BigInt(0),
+      weight: 0,
       bestChild: undefined,
       bestDescendant: undefined,
     };

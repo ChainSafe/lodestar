@@ -22,7 +22,7 @@ export function computeProposerIndex(
   assert.gt(indices.length, 0, "Validator indices must not be empty");
 
   // TODO: Inline outside this function
-  const MAX_RANDOM_BYTE = BigInt(2 ** 8 - 1);
+  const MAX_RANDOM_BYTE = 2 ** 8 - 1;
 
   let i = 0;
   /* eslint-disable-next-line no-constant-condition */
@@ -30,7 +30,7 @@ export function computeProposerIndex(
     const candidateIndex = indices[computeShuffledIndex(i % indices.length, indices.length, seed)];
     const randByte = hash(Buffer.concat([seed, intToBytes(intDiv(i, 32), 8)]))[i % 32];
     const effectiveBalance = state.validators[candidateIndex].effectiveBalance;
-    if (effectiveBalance * MAX_RANDOM_BYTE >= MAX_EFFECTIVE_BALANCE * BigInt(randByte)) {
+    if (effectiveBalance * MAX_RANDOM_BYTE >= MAX_EFFECTIVE_BALANCE * randByte) {
       return candidateIndex;
     }
     i += 1;

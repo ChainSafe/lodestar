@@ -31,17 +31,18 @@ export function processSlashingsAllForks(
   }
 
   const totalBalance = process.totalActiveStake;
+  // TODO: could totalSlashings be number?
   const totalSlashings = Array.from(readonlyValues(state.slashings)).reduce((a, b) => a + b, BigInt(0));
 
   const proportionalSlashingMultiplier =
     fork === ForkName.phase0 ? PROPORTIONAL_SLASHING_MULTIPLIER : PROPORTIONAL_SLASHING_MULTIPLIER_ALTAIR;
 
-  const adjustedTotalSlashingBalance = bigIntMin(totalSlashings * proportionalSlashingMultiplier, totalBalance);
+  const adjustedTotalSlashingBalance = bigIntMin(totalSlashings * BigInt(proportionalSlashingMultiplier), totalBalance);
   const increment = EFFECTIVE_BALANCE_INCREMENT;
   for (const index of process.indicesToSlash) {
     const effectiveBalance = process.validators[index].effectiveBalance;
-    const penaltyNumerator = (effectiveBalance / increment) * adjustedTotalSlashingBalance;
-    const penalty = (penaltyNumerator / totalBalance) * increment;
+    const penaltyNumerator = BigInt(effectiveBalance / increment) * adjustedTotalSlashingBalance;
+    const penalty = (penaltyNumerator / totalBalance) * BigInt(increment);
     decreaseBalance(state, index, Number(penalty));
   }
 }

@@ -160,9 +160,8 @@ export function applyDeposits(
   const validatorLength = state.validators.length;
   for (let index = 0; index < validatorLength; index++) {
     const validator = state.validators[index];
-    const balance = BigInt(state.balances[index]);
-    // TODO: effectiveBalance as number
-    validator.effectiveBalance = bigIntMin(balance - (balance % EFFECTIVE_BALANCE_INCREMENT), MAX_EFFECTIVE_BALANCE);
+    const balance = state.balances[index];
+    validator.effectiveBalance = Math.min(balance - (balance % EFFECTIVE_BALANCE_INCREMENT), MAX_EFFECTIVE_BALANCE);
 
     if (validator.effectiveBalance === MAX_EFFECTIVE_BALANCE) {
       validator.activationEligibilityEpoch = GENESIS_EPOCH;

@@ -14,7 +14,7 @@ import {
   getChurnLimit,
 } from "../..";
 
-export const ETH_TO_GWEI = BigInt(10 ** 9);
+export const ETH_TO_GWEI = 10 ** 9;
 const SAFETY_DECAY = BigInt(10);
 
 /**
@@ -53,7 +53,7 @@ export function computeWeakSubjectivityPeriodFromConstituents(
   minWithdrawabilityDelay: number
 ): number {
   const N = activeValidatorCount;
-  const t = Number(totalBalance / BigInt(N) / ETH_TO_GWEI);
+  const t = Number(totalBalance / BigInt(N) / BigInt(ETH_TO_GWEI));
   const T = Number(MAX_EFFECTIVE_BALANCE / ETH_TO_GWEI);
   const delta = churnLimit;
   // eslint-disable-next-line @typescript-eslint/naming-convention

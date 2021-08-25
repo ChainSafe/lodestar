@@ -6,7 +6,6 @@ import {
   MAX_EFFECTIVE_BALANCE,
 } from "@chainsafe/lodestar-params";
 import {allForks} from "@chainsafe/lodestar-types";
-import {bigIntMin} from "@chainsafe/lodestar-utils";
 import {Gwei} from "../../phase0";
 import {isActiveValidator} from "../../util";
 import {IEpochProcess, CachedBeaconState} from "../util";
@@ -25,12 +24,14 @@ export function processEffectiveBalanceUpdates(
   state: CachedBeaconState<allForks.BeaconState>,
   epochProcess: IEpochProcess
 ): void {
-  const HYSTERESIS_INCREMENT = EFFECTIVE_BALANCE_INCREMENT / BigInt(HYSTERESIS_QUOTIENT);
-  const DOWNWARD_THRESHOLD = HYSTERESIS_INCREMENT * BigInt(HYSTERESIS_DOWNWARD_MULTIPLIER);
-  const UPWARD_THRESHOLD = HYSTERESIS_INCREMENT * BigInt(HYSTERESIS_UPWARD_MULTIPLIER);
+  const {validators} = state;
+  const HYSTERESIS_INCREMENT = EFFECTIVE_BALANCE_INCREMENT / HYSTERESIS_QUOTIENT;
+  const DOWNWARD_THRESHOLD = HYSTERESIS_INCREMENT * HYSTERESIS_DOWNWARD_MULTIPLIER;
+  const UPWARD_THRESHOLD = HYSTERESIS_INCREMENT * HYSTERESIS_UPWARD_MULTIPLIER;
   const {validators, epochCtx} = state;
   const nextEpoch = epochCtx.currentShuffling.epoch + 1;
   const isAltair = nextEpoch >= epochCtx.config.ALTAIR_FORK_EPOCH;
+  // TODO: ByIncrement
   let nextEpochTotalActiveBalance: Gwei = BigInt(0);
 
   // update effective balances with hysteresis
@@ -38,9 +39,7 @@ export function processEffectiveBalanceUpdates(
     // only do this for genesis epoch, or spec test
     epochProcess.balances = Array.from({length: state.balances.length}, (_, i) => state.balances[i]);
   }
-  epochProcess.balances.forEach((balanceNbr: number, i: number) => {
-    // TODO: effectiveBalance as number
-    const balance = BigInt(balanceNbr);
+  epochProcess.balances.forEach((balance: number, i: number) => {
     const validator = epochProcess.validators[i];
     let effectiveBalance = validator.effectiveBalance;
     if (
@@ -49,13 +48,14 @@ export function processEffectiveBalanceUpdates(
       // Too small. Check effectiveBalance < MAX_EFFECTIVE_BALANCE to prevent unnecessary updates
       (effectiveBalance < MAX_EFFECTIVE_BALANCE && effectiveBalance < balance - UPWARD_THRESHOLD)
     ) {
-      effectiveBalance = bigIntMin(balance - (balance % EFFECTIVE_BALANCE_INCREMENT), MAX_EFFECTIVE_BALANCE);
+      effectiveBalance = Math.min(balance - (balance % EFFECTIVE_BALANCE_INCREMENT), MAX_EFFECTIVE_BALANCE);
       validators.update(i, {
         effectiveBalance,
       });
     }
     if (isAltair && isActiveValidator(validator, nextEpoch)) {
-      nextEpochTotalActiveBalance += effectiveBalance;
+      // TODO: ByIncrement
+      nextEpochTotalActiveBalance += BigInt(effectiveBalance);
     }
   });
   epochProcess.nextEpochTotalActiveBalance = nextEpochTotalActiveBalance;

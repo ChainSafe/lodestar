@@ -39,7 +39,7 @@ export interface IEpochProcess {
   currentEpoch: Epoch;
   totalActiveStake: Gwei;
   /** For altair */
-  baseRewardPerIncrement: Gwei;
+  baseRewardPerIncrement: number;
   prevEpochUnslashedStake: IEpochStakeSummary;
   currEpochUnslashedTargetStake: Gwei;
   /**
@@ -162,7 +162,7 @@ export function beforeProcessEpoch<T extends allForks.BeaconState>(state: Cached
     const active = isActiveValidator(v, currentEpoch);
     if (active) {
       status.active = true;
-      totalActiveStake += v.effectiveBalance;
+      totalActiveStake += BigInt(v.effectiveBalance);
     }
 
     if (v.activationEligibilityEpoch === FAR_FUTURE_EPOCH && v.effectiveBalance === MAX_EFFECTIVE_BALANCE) {
@@ -185,7 +185,7 @@ export function beforeProcessEpoch<T extends allForks.BeaconState>(state: Cached
   });
 
   if (totalActiveStake < EFFECTIVE_BALANCE_INCREMENT) {
-    totalActiveStake = EFFECTIVE_BALANCE_INCREMENT;
+    totalActiveStake = BigInt(EFFECTIVE_BALANCE_INCREMENT);
   }
 
   // SPEC: function getBaseRewardPerIncrement()
@@ -243,7 +243,7 @@ export function beforeProcessEpoch<T extends allForks.BeaconState>(state: Cached
 
   for (let i = 0; i < statuses.length; i++) {
     const status = statuses[i];
-    const effectiveBalance = validators[i].effectiveBalance;
+    const effectiveBalance = BigInt(validators[i].effectiveBalance);
     if (hasMarkers(status.flags, FLAG_PREV_SOURCE_ATTESTER_UNSLASHED)) {
       prevSourceUnslStake += effectiveBalance;
     }
@@ -260,7 +260,8 @@ export function beforeProcessEpoch<T extends allForks.BeaconState>(state: Cached
   // As per spec of `get_total_balance`:
   // EFFECTIVE_BALANCE_INCREMENT Gwei minimum to avoid divisions by zero.
   // Math safe up to ~10B ETH, afterwhich this overflows uint64.
-  const increment = EFFECTIVE_BALANCE_INCREMENT;
+  // TODO: in eth
+  const increment = BigInt(EFFECTIVE_BALANCE_INCREMENT);
   if (prevSourceUnslStake < increment) prevSourceUnslStake = increment;
   if (prevTargetUnslStake < increment) prevTargetUnslStake = increment;
   if (prevHeadUnslStake < increment) prevHeadUnslStake = increment;

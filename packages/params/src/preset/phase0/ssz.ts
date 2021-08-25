@@ -22,8 +22,8 @@ export const Phase0Preset = new ContainerType<IPhase0Preset>({
 
     // Gwei Values
     MIN_DEPOSIT_AMOUNT: BigInt64,
-    MAX_EFFECTIVE_BALANCE: BigInt64,
-    EFFECTIVE_BALANCE_INCREMENT: BigInt64,
+    MAX_EFFECTIVE_BALANCE: Number64,
+    EFFECTIVE_BALANCE_INCREMENT: Number64,
 
     // Time parameters
     MIN_ATTESTATION_INCLUSION_DELAY: Number64,

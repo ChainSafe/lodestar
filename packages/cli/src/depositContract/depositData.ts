@@ -32,7 +32,7 @@ export function decodeEth1TxData(bytes: string, amount: string): {depositData: p
 }
 
 export function encodeDepositData(
-  amount: bigint,
+  amount: number,
   withdrawalPublicKey: PublicKey,
   signingKey: SecretKey,
   config: IChainForkConfig

@@ -121,7 +121,8 @@ export function createEpochContext(
     }
     if (isActiveValidator(v, currentEpoch)) {
       currentActiveIndices.push(i);
-      totalActiveBalance += v.effectiveBalance;
+      // TODO: totalActiveBalance in eth
+      totalActiveBalance += BigInt(v.effectiveBalance);
     }
     if (isActiveValidator(v, nextEpoch)) {
       nextActiveIndices.push(i);
@@ -140,7 +141,8 @@ export function createEpochContext(
 
   // Spec: `EFFECTIVE_BALANCE_INCREMENT` Gwei minimum to avoid divisions by zero
   if (totalActiveBalance < EFFECTIVE_BALANCE_INCREMENT) {
-    totalActiveBalance = EFFECTIVE_BALANCE_INCREMENT;
+    // TODO: totalActiveBalance in eth
+    totalActiveBalance = BigInt(EFFECTIVE_BALANCE_INCREMENT);
   }
 
   const currentShuffling = computeEpochShuffling(state, currentActiveIndices, currentEpoch);
@@ -160,10 +162,10 @@ export function createEpochContext(
   const syncParticipantReward = onAltairFork ? computeSyncParticipantReward(config, totalActiveBalance) : 0;
   // TODO: could PROPOSER_WEIGHT be number?
   const syncProposerReward = onAltairFork
-    ? Number((BigInt(syncParticipantReward) * PROPOSER_WEIGHT) / (WEIGHT_DENOMINATOR - PROPOSER_WEIGHT))
+    ? Math.floor((syncParticipantReward * PROPOSER_WEIGHT) / (WEIGHT_DENOMINATOR - PROPOSER_WEIGHT))
     : 0;
 
-  const baseRewardPerIncrement = onAltairFork ? computeBaseRewardPerIncrement(totalActiveBalance) : BigInt(0);
+  const baseRewardPerIncrement = onAltairFork ? computeBaseRewardPerIncrement(totalActiveBalance) : 0;
 
   // Precompute churnLimit for efficient initiateValidatorExit() during block proposing MUST be recompute everytime the
   // active validator indices set changes in size. Validators change active status only when:
@@ -248,12 +250,16 @@ export function computeProposers(state: allForks.BeaconState, shuffling: IEpochS
  * Same logic in https://github.com/ethereum/eth2.0-specs/blob/v1.1.0-alpha.5/specs/altair/beacon-chain.md#sync-committee-processing
  */
 export function computeSyncParticipantReward(config: IBeaconConfig, totalActiveBalance: Gwei): number {
-  const totalActiveIncrements = totalActiveBalance / EFFECTIVE_BALANCE_INCREMENT;
-  const baseRewardPerIncrement =
-    (EFFECTIVE_BALANCE_INCREMENT * BigInt(BASE_REWARD_FACTOR)) / bigIntSqrt(totalActiveBalance);
+  // TODO: manage totalActiveBalance in eth
+  const totalActiveIncrements = Number(totalActiveBalance / BigInt(EFFECTIVE_BALANCE_INCREMENT));
+  const baseRewardPerIncrement = Math.floor(
+    (EFFECTIVE_BALANCE_INCREMENT * BASE_REWARD_FACTOR) / Number(bigIntSqrt(totalActiveBalance))
+  );
   const totalBaseRewards = baseRewardPerIncrement * totalActiveIncrements;
-  const maxParticipantRewards = (totalBaseRewards * SYNC_REWARD_WEIGHT) / WEIGHT_DENOMINATOR / BigInt(SLOTS_PER_EPOCH);
-  return Number(maxParticipantRewards / BigInt(SYNC_COMMITTEE_SIZE));
+  const maxParticipantRewards = Math.floor(
+    Math.floor((totalBaseRewards * SYNC_REWARD_WEIGHT) / WEIGHT_DENOMINATOR) / SLOTS_PER_EPOCH
+  );
+  return Math.floor(maxParticipantRewards / SYNC_COMMITTEE_SIZE);
 }
 
 /**
@@ -302,7 +308,7 @@ export function afterProcessEpoch(state: CachedBeaconState<allForks.BeaconState>
     const totalActiveBalance = epochProcess.nextEpochTotalActiveBalance;
     epochCtx.syncParticipantReward = computeSyncParticipantReward(epochCtx.config, totalActiveBalance);
     epochCtx.syncProposerReward = Number(
-      (BigInt(epochCtx.syncParticipantReward) * PROPOSER_WEIGHT) / (WEIGHT_DENOMINATOR - PROPOSER_WEIGHT)
+      (epochCtx.syncParticipantReward * PROPOSER_WEIGHT) / (WEIGHT_DENOMINATOR - PROPOSER_WEIGHT)
     );
 
     epochCtx.baseRewardPerIncrement = computeBaseRewardPerIncrement(totalActiveBalance);
@@ -319,7 +325,7 @@ interface IEpochContextData {
   nextShuffling: IEpochShuffling;
   syncParticipantReward: number;
   syncProposerReward: number;
-  baseRewardPerIncrement: Gwei;
+  baseRewardPerIncrement: number;
   churnLimit: number;
   exitQueueEpoch: Epoch;
   exitQueueChurn: number;
@@ -374,9 +380,8 @@ export class EpochContext {
   syncProposerReward: number;
   /**
    * Update freq: once per epoch after `process_effective_balance_updates()`
-   * Memory cost: 1 bigint
    */
-  baseRewardPerIncrement: Gwei;
+  baseRewardPerIncrement: number;
   /**
    * Rate at which validators can enter or leave the set per epoch. Depends only on activeIndexes, so it does not
    * change through the epoch. It's used in initiateValidatorExit(). Must be update after changing active indexes.

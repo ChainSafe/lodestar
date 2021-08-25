@@ -12,6 +12,10 @@ export function hasFlag(flags: ParticipationFlags, flagIndex: number): boolean {
   return (flags & flag) == flag;
 }
 
-export function computeBaseRewardPerIncrement(totalActiveStake: Gwei): bigint {
-  return (EFFECTIVE_BALANCE_INCREMENT * BASE_REWARD_FACTOR) / bigIntSqrt(totalActiveStake);
+/**
+ * Before we manage bigIntSqrt(totalActiveStake) as BigInt and return BigInt.
+ * bigIntSqrt(totalActiveStake) should fit a number (2 ** 53 -1 max)
+ **/
+export function computeBaseRewardPerIncrement(totalActiveStake: Gwei): number {
+  return Math.floor((EFFECTIVE_BALANCE_INCREMENT * BASE_REWARD_FACTOR) / Number(bigIntSqrt(totalActiveStake)));
 }

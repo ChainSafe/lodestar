@@ -52,7 +52,7 @@ export interface IProtoBlock {
  */
 export interface IProtoNode extends IProtoBlock {
   parent?: number;
-  weight: Gwei;
+  weight: number;
   bestChild?: number;
   bestDescendant?: number;
 }
