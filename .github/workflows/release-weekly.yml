@@ -18,7 +18,7 @@ jobs:
       EVEN: false
     steps:
       - name: Check number of week
-      - run: scripts/fail-release.sh
+        run: scripts/fail-release.sh
       # - name: Checkout
       #   uses: actions/checkout@v2
       #   with:
