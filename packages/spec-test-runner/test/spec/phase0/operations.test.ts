@@ -15,7 +15,7 @@ import {IBaseSpecTest} from "../type";
 /** Describe with which function to run each directory of tests */
 const operationFns: Record<string, EpochProcessFn> = {
   attestation: (state, testCase: IBaseSpecTest & {attestation: phase0.Attestation}) => {
-    phase0.processAttestations(state, [testCase.attestation], {});
+    phase0.processAttestation(state, testCase.attestation, {});
   },
 
   attester_slashing: (state, testCase: IBaseSpecTest & {attester_slashing: phase0.AttesterSlashing}) => {

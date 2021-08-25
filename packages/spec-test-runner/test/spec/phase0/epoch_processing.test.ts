@@ -4,7 +4,7 @@ import fs from "fs";
 import {CachedBeaconState, allForks, phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {describeDirectorySpecTest} from "@chainsafe/lodestar-spec-test-util";
 import {processParticipationRecordUpdates} from "@chainsafe/lodestar-beacon-state-transition/src/phase0/epoch/processParticipationRecordUpdates";
-import {phase0 as phase0Types, ssz} from "@chainsafe/lodestar-types";
+import {ssz} from "@chainsafe/lodestar-types";
 import {TreeBacked} from "@chainsafe/ssz";
 import {ACTIVE_PRESET} from "@chainsafe/lodestar-params";
 import {SPEC_TEST_LOCATION} from "../../utils/specTestCases";
@@ -35,7 +35,7 @@ for (const testDir of fs.readdirSync(rootDir)) {
     throw Error(`No epochProcessFn for ${testDir}`);
   }
 
-  describeDirectorySpecTest<IPhase0StateTestCase, phase0Types.BeaconState>(
+  describeDirectorySpecTest<IPhase0StateTestCase, phase0.BeaconState>(
     `${ACTIVE_PRESET}/phase0/epoch_processing/${testDir}`,
     join(rootDir, `${testDir}/pyspec_tests`),
     (testcase) => {
@@ -43,7 +43,7 @@ for (const testDir of fs.readdirSync(rootDir)) {
       const state = allForks.createCachedBeaconState(config, stateTB);
       const epochProcess = allForks.beforeProcessEpoch(state);
       epochProcessFn(state, epochProcess);
-      return state;
+      return state as phase0.BeaconState;
     },
     {
       inputTypes: inputTypeSszTreeBacked,
