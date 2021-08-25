@@ -14,14 +14,16 @@ jobs:
   prepare:
     name: Prepare Pull-Request
     runs-on: ubuntu-latest
+    env: 
+      EVEN: false
     steps:
       - name: Populate run conditions
         run: |
           W=$(date +%V)
           if [[ $(($W%2)) -eq 0 ]]; then
-            export EVEN=true
+            export env.EVEN=true
           else
-            export EVEN=false
+            export env.EVEN=false
           fi
       - name: Check run conditions
         run: |
