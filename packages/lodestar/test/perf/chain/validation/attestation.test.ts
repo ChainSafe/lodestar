@@ -18,23 +18,13 @@ describe("validate gossip attestation", () => {
   const attStruct = attestation;
   const attTreeBacked = ssz.phase0.Attestation.createTreeBackedFromStruct(attStruct);
 
-  itBench({
-    id: "validate gossip attestation - struct",
-    beforeEach: () => {
-      chain.seenAttesters["validatorIndexesByEpoch"].clear();
-    },
-    fn: async () => {
-      await validateGossipAttestation(chain, attStruct, subnet);
-    },
-  });
-
-  itBench({
-    id: "validate gossip attestation - treeBacked",
-    beforeEach: () => {
-      chain.seenAttesters["validatorIndexesByEpoch"].clear();
-    },
-    fn: async () => {
-      await validateGossipAttestation(chain, attTreeBacked, subnet);
-    },
-  });
+  for (const [id, att] of Object.entries({struct: attStruct, treeBacked: attTreeBacked})) {
+    itBench({
+      id: `validate gossip attestation - ${id}`,
+      beforeEach: () => chain.seenAttesters["validatorIndexesByEpoch"].clear(),
+      fn: async () => {
+        await validateGossipAttestation(chain, att, subnet);
+      },
+    });
+  }
 });

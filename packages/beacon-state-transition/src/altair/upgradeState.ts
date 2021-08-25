@@ -4,7 +4,7 @@ import {getCurrentEpoch, newZeroedArray} from "../util";
 import {List, TreeBacked} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IParticipationStatus} from "../allForks/util/cachedEpochParticipation";
-import {getAttestationParticipationStatus} from "./block/processAttestation";
+import {getAttestationParticipationStatus, RootCache} from "./block/processAttestation";
 import {getNextSyncCommittee} from "./util/syncCommittee";
 
 /**
@@ -54,13 +54,16 @@ function translateParticipation(
   state: CachedBeaconState<altair.BeaconState>,
   pendingAttesations: phase0.PendingAttestation[]
 ): void {
+  const {epochCtx} = state;
+  const rootCache = new RootCache(state);
   const epochParticipation = state.previousEpochParticipation;
   for (const attestation of pendingAttesations) {
     const data = attestation.data;
     const {timelySource, timelyTarget, timelyHead} = getAttestationParticipationStatus(
-      state,
       data,
-      attestation.inclusionDelay
+      attestation.inclusionDelay,
+      rootCache,
+      epochCtx
     );
 
     const attestingIndices = state.getAttestingIndices(data, attestation.aggregationBits);

@@ -8,7 +8,7 @@ export const dev: ICliCommand<IDevArgs, IGlobalArgs> = {
   describe: "Quickly bootstrap a beacon node and multiple validators. Use for development and testing",
   examples: [
     {
-      command: "dev --dev.genesisValidators 8 --dev.reset",
+      command: "dev --genesisValidators 8 --reset",
       description: "Start a single beacon node with 8 interop validators",
     },
   ],

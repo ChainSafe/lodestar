@@ -32,6 +32,25 @@ jobs:
       - name: Download spec tests
         run: yarn download-test-cases
         working-directory: packages/spec-test-runner
-      - name: Spec tests
-        run: yarn test:spec
+
+      # Run them in different steps to quickly identifying which command failed
+      # Otherwise just doing `yarn test:spec` you can't tell which specific suite failed
+      # many of the suites have identical names for minimal and mainnet
+      - name: Spec tests ssz
+        run: yarn test:ssz
+        working-directory: packages/spec-test-runner
+      - name: Spec tests bls
+        run: yarn test:bls
+        working-directory: packages/spec-test-runner
+      - name: Spec tests phase0-minimal
+        run: yarn test:spec-phase0-minimal
+        working-directory: packages/spec-test-runner
+      - name: Spec tests phase0-mainnet
+        run: yarn test:spec-phase0-mainnet
+        working-directory: packages/spec-test-runner
+      - name: Spec tests altair-minimal
+        run: yarn test:spec-altair-minimal
+        working-directory: packages/spec-test-runner
+      - name: Spec tests altair-mainnet
+        run: yarn test:spec-altair-mainnet
         working-directory: packages/spec-test-runner

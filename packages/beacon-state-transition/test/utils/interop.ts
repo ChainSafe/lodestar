@@ -2,8 +2,9 @@ import fs from "fs";
 import path from "path";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {interopSecretKey} from "../../src";
+import {testCachePath} from "../cache";
 
-const interopPubkeysCachedPath = path.join(__dirname, "../../test-cache/interop-pubkeys.json");
+const interopPubkeysCachedPath = path.join(testCachePath, "interop-pubkeys.json");
 
 export function interopPubkeysCached(validatorCount: number): Uint8Array[] {
   fs.mkdirSync(path.dirname(interopPubkeysCachedPath), {recursive: true});

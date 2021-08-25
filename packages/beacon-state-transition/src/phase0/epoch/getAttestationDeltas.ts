@@ -37,6 +37,16 @@ interface IRewardPenaltyItem {
 
 /**
  * Return attestation reward/penalty deltas for each validator.
+ *
+ * - On normal mainnet conditions
+ *   - prevSourceAttester: 98%
+ *   - prevTargetAttester: 96%
+ *   - prevHeadAttester:   93%
+ *   - currSourceAttester: 95%
+ *   - currTargetAttester: 93%
+ *   - currHeadAttester:   91%
+ *   - unslashed:          100%
+ *   - eligibleAttester:   98%
  */
 export function getAttestationDeltas(
   state: CachedBeaconState<phase0.BeaconState>,

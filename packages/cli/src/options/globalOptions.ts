@@ -6,7 +6,6 @@ import {ICliCommandOptions, readFile} from "../util";
 interface IGlobalSingleArgs {
   rootDir: string;
   network: NetworkName;
-  preset: string;
   paramsFile: string;
 }
 
@@ -23,13 +22,6 @@ const globalSingleOptions: ICliCommandOptions<IGlobalSingleArgs> = {
     type: "string",
     default: defaultNetwork,
     choices: networkNames,
-  },
-
-  preset: {
-    description: "Specifies the default eth2 spec type",
-    choices: ["mainnet", "minimal"],
-    default: "mainnet",
-    type: "string",
   },
 
   paramsFile: {

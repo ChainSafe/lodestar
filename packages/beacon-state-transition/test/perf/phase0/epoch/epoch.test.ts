@@ -1,14 +1,48 @@
 import {itBench, setBenchOpts} from "@dapplion/benchmark";
-import {allForks, phase0} from "../../../../src";
-import {generatePerfTestCachedStatePhase0, perfStateId} from "../../util";
+import {allForks, CachedBeaconState, computeStartSlotAtEpoch, phase0} from "../../../../src";
+import {beforeValue, getNetworkCachedState, LazyValue} from "../../util";
+import {processParticipationRecordUpdates} from "../../../../src/phase0/epoch/processParticipationRecordUpdates";
+import {StateEpoch} from "../../types";
 
-describe("Phase 0 epoch transition steps", () => {
-  setBenchOpts({maxMs: 60 * 1000});
+const network = "mainnet" as const;
+const epoch = 58758;
+const slot = computeStartSlotAtEpoch(epoch) - 1;
+const stateId = `${network}_e${epoch}`;
 
-  const originalState = generatePerfTestCachedStatePhase0({goBackOneSlot: true});
-  const epochProcess = allForks.beforeProcessEpoch(originalState);
+describe(`phase0 processEpoch - ${stateId}`, () => {
+  setBenchOpts({maxMs: 60 * 1000, minRuns: 10});
 
-  const idPrefix = `epoch phase0 - ${perfStateId}`;
+  const stateOg = beforeValue(async () => {
+    const state = await getNetworkCachedState(network, slot, 300_000);
+    state.hashTreeRoot();
+    return state;
+  }, 300_000);
+
+  itBench({
+    id: `phase0 processEpoch - ${stateId}`,
+    beforeEach: () => stateOg.value.clone() as CachedBeaconState<allForks.BeaconState>,
+    fn: (state) => {
+      const epochProcess = allForks.beforeProcessEpoch(state);
+      phase0.processEpoch(state as CachedBeaconState<phase0.BeaconState>, epochProcess);
+      allForks.afterProcessEpoch(state, epochProcess);
+      // Simulate root computation through the next block to account for changes
+      state.hashTreeRoot();
+    },
+  });
+
+  // Only in local environment compute a full breakdown of the cost of each step
+  describe(`phase0 processEpoch steps - ${stateId}`, () => {
+    setBenchOpts({threshold: Infinity, minRuns: 10});
+
+    benchmarkPhase0EpochSteps(stateOg, stateId);
+  });
+});
+
+function benchmarkPhase0EpochSteps(
+  stateOg: LazyValue<allForks.CachedBeaconState<allForks.BeaconState>>,
+  stateId: string
+): void {
+  const epochProcess = beforeValue(() => allForks.beforeProcessEpoch(stateOg.value));
 
   // Functions in same order as phase0.processEpoch()
   // Rough summary as of Aug 5th 2021
@@ -28,77 +62,86 @@ describe("Phase 0 epoch transition steps", () => {
   // processParticipationRecordUpdates   | 0.000 ms/op |
 
   itBench({
-    id: `${idPrefix} - beforeProcessEpoch`,
+    id: `${stateId} - phase0 beforeProcessEpoch`,
     fn: () => {
-      allForks.beforeProcessEpoch(originalState);
+      allForks.beforeProcessEpoch(stateOg.value);
     },
   });
 
   // Very cheap 187.21 us/op and unstable, skip in CI
-  if (!process.env.CI)
-    itBench({
-      id: `${idPrefix} - processJustificationAndFinalization`,
-      beforeEach: () => originalState.clone() as allForks.CachedBeaconState<allForks.BeaconState>,
-      fn: (state) => allForks.processJustificationAndFinalization(state, epochProcess),
-    });
+  itBench({
+    id: `${stateId} - phase0 processJustificationAndFinalization`,
+    beforeEach: () => stateOg.value.clone(),
+    fn: (state) => allForks.processJustificationAndFinalization(state, epochProcess.value),
+  });
 
   // Very expensive 976.40 ms/op good target to optimize
   itBench({
-    id: `${idPrefix} - processRewardsAndPenalties`,
-    beforeEach: () => originalState.clone(),
-    fn: (state) => phase0.processRewardsAndPenalties(state, epochProcess),
+    id: `${stateId} - phase0 processRewardsAndPenalties`,
+    beforeEach: () => stateOg.value.clone() as allForks.CachedBeaconState<phase0.BeaconState>,
+    fn: (state) => phase0.processRewardsAndPenalties(state, epochProcess.value),
   });
 
   // TODO: Needs a better state to test with, current does not include enough actions: 17.715 us/op
-  if (!process.env.CI)
-    itBench({
-      id: `${idPrefix} - processRegistryUpdates`,
-      beforeEach: () => originalState.clone() as allForks.CachedBeaconState<allForks.BeaconState>,
-      fn: (state) => allForks.processRegistryUpdates(state, epochProcess),
-    });
-
-  // TODO: Needs a better state to test with, current does not include enough actions: 39.985 us/op
-  if (!process.env.CI)
-    itBench({
-      id: `${idPrefix} - processSlashings`,
-      beforeEach: () => originalState.clone(),
-      fn: (state) => phase0.processSlashings(state, epochProcess),
-    });
-
   itBench({
-    id: `${idPrefix} - processEffectiveBalanceUpdates`,
-    beforeEach: () => originalState.clone() as allForks.CachedBeaconState<allForks.BeaconState>,
-    fn: (state) => allForks.processEffectiveBalanceUpdates(state, epochProcess),
+    id: `${stateId} - phase0 processRegistryUpdates`,
+    beforeEach: () => stateOg.value.clone(),
+    fn: (state) => allForks.processRegistryUpdates(state, epochProcess.value),
   });
 
-  // very simple and fast functions, no need to benchmark
-  if (!process.env.CI) {
-    itBench({
-      id: `${idPrefix} - processEth1DataReset`,
-      beforeEach: () => originalState.clone() as allForks.CachedBeaconState<allForks.BeaconState>,
-      fn: (state) => allForks.processEth1DataReset(state, epochProcess),
-    });
+  // TODO: Needs a better state to test with, current does not include enough actions: 39.985 us/op
+  itBench({
+    id: `${stateId} - phase0 processSlashings`,
+    beforeEach: () => stateOg.value.clone() as allForks.CachedBeaconState<phase0.BeaconState>,
+    fn: (state) => phase0.processSlashings(state, epochProcess.value),
+  });
 
-    itBench({
-      id: `${idPrefix} - processSlashingsReset`,
-      beforeEach: () => originalState.clone() as allForks.CachedBeaconState<allForks.BeaconState>,
-      fn: (state) => allForks.processSlashingsReset(state, epochProcess),
-    });
+  itBench({
+    id: `${stateId} - phase0 processEth1DataReset`,
+    beforeEach: () => stateOg.value.clone(),
+    fn: (state) => allForks.processEth1DataReset(state, epochProcess.value),
+  });
 
-    itBench({
-      id: `${idPrefix} - processRandaoMixesReset`,
-      beforeEach: () => originalState.clone() as allForks.CachedBeaconState<allForks.BeaconState>,
-      fn: (state) => allForks.processRandaoMixesReset(state, epochProcess),
-    });
+  itBench({
+    id: `${stateId} - phase0 processEffectiveBalanceUpdates`,
+    beforeEach: () => stateOg.value.clone(),
+    fn: (state) => allForks.processEffectiveBalanceUpdates(state, epochProcess.value),
+  });
 
-    itBench({
-      id: `${idPrefix} - processHistoricalRootsUpdate`,
-      beforeEach: () => originalState.clone() as allForks.CachedBeaconState<allForks.BeaconState>,
-      fn: (state) => allForks.processHistoricalRootsUpdate(state, epochProcess),
-    });
+  itBench({
+    id: `${stateId} - phase0 processSlashingsReset`,
+    beforeEach: () => stateOg.value.clone(),
+    fn: (state) => allForks.processSlashingsReset(state, epochProcess.value),
+  });
 
-    // processParticipationRecordUpdates, no need to benchmark. Way too simple
-  }
+  itBench({
+    id: `${stateId} - phase0 processRandaoMixesReset`,
+    beforeEach: () => stateOg.value.clone(),
+    fn: (state) => allForks.processRandaoMixesReset(state, epochProcess.value),
+  });
 
-  // Other items in phase0 epoch processing are too small to care about performance
-});
+  itBench({
+    id: `${stateId} - phase0 processHistoricalRootsUpdate`,
+    beforeEach: () => stateOg.value.clone(),
+    fn: (state) => allForks.processHistoricalRootsUpdate(state, epochProcess.value),
+  });
+
+  itBench({
+    id: `${stateId} - phase0 processParticipationRecordUpdates`,
+    beforeEach: () => stateOg.value.clone() as allForks.CachedBeaconState<phase0.BeaconState>,
+    fn: (state) => processParticipationRecordUpdates(state),
+  });
+
+  itBench<StateEpoch, StateEpoch>({
+    id: `${stateId} - phase0 afterProcessEpoch`,
+    // Compute a state and epochProcess after running processEpoch() since those values are mutated
+    before: () => {
+      const state = stateOg.value.clone();
+      const epochProcessAfter = allForks.beforeProcessEpoch(state);
+      phase0.processEpoch(state as CachedBeaconState<phase0.BeaconState>, epochProcessAfter);
+      return {state, epochProcess: epochProcessAfter};
+    },
+    beforeEach: ({state, epochProcess}) => ({state: state.clone(), epochProcess}),
+    fn: ({state, epochProcess}) => allForks.afterProcessEpoch(state, epochProcess),
+  });
+}

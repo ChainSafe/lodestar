@@ -6,7 +6,7 @@ import {List} from "@chainsafe/ssz";
 import {allForks, computeDomain, computeEpochAtSlot, computeSigningRoot, ZERO_HASH} from "../../../../src";
 import {LeafNode} from "@chainsafe/persistent-merkle-tree";
 
-type BlockOpts = {
+export type BlockOpts = {
   proposerSlashingLen: number;
   attesterSlashingLen: number;
   attestationLen: number;
@@ -14,6 +14,7 @@ type BlockOpts = {
   voluntaryExitLen: number;
   bitsLen: number;
 };
+export type BlockAltairOpts = BlockOpts & {syncCommitteeBitsLen: number};
 
 /**
  * Generate a block that would pass stateTransition with a customizable count of operations
@@ -148,7 +149,7 @@ export function getBlockPhase0(
 
 export function getBlockAltair(
   preState: allForks.CachedBeaconState<allForks.BeaconState>,
-  opts: BlockOpts & {syncCommitteeBitsLen: number}
+  opts: BlockAltairOpts
 ): altair.SignedBeaconBlock {
   const emptySig = Buffer.alloc(96);
   const phase0Block = getBlockPhase0(preState as allForks.CachedBeaconState<allForks.BeaconState>, opts);

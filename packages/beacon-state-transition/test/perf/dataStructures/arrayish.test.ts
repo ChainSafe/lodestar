@@ -3,8 +3,8 @@ import {MutableVector} from "@chainsafe/persistent-ts";
 import {itBench, setBenchOpts} from "@dapplion/benchmark";
 
 const n = 250_000;
-const ilo = 0;
-const ihi = n - 1;
+const ih = Math.round(n / 2);
+const runsFactor = 1000;
 
 // Understand the cost of each array-ish data structure to:
 // - Get one element
@@ -46,40 +46,28 @@ const ihi = n - 1;
 
 describe("Tree (persistent-merkle-tree)", () => {
   // Don't track regressions in CI
-  setBenchOpts({maxMs: 10 * 1000, skip: Boolean(process.env.CI)});
+  setBenchOpts({maxMs: 10 * 1000, threshold: Infinity});
 
   const d = 40;
-  const tree = getTree(d, n);
-  const gilo = toGindex(d, BigInt(ilo));
-  const gihi = toGindex(d, BigInt(ihi));
+  const gih = toGindex(d, BigInt(ih));
   const n2 = new LeafNode(Buffer.alloc(32, 2));
+  let tree: Tree;
+
+  before(function () {
+    this.timeout(60_000);
+    tree = getTree(d, n);
+  });
 
   itBench({id: `Tree ${d} ${n} create`, timeout: 60_000}, () => {
     getTree(d, n);
   });
 
-  itBench(`Tree ${d} ${n} get(${ilo})`, () => {
-    tree.getNode(gilo);
+  itBench({id: `Tree ${d} ${n} get(${ih})`, runsFactor}, () => {
+    for (let i = 0; i < runsFactor; i++) tree.getNode(gih);
   });
 
-  itBench(`Tree ${d} ${n} get(${ihi})`, () => {
-    tree.getNode(gihi);
-  });
-
-  itBench(`Tree ${d} ${n} get(${ihi}) x1000`, () => {
-    for (let i = 0; i < 1000; i++) tree.getNode(gihi);
-  });
-
-  itBench(`Tree ${d} ${n} set(${ilo})`, () => {
-    tree.setNode(gilo, n2);
-  });
-
-  itBench(`Tree ${d} ${n} set(${ihi})`, () => {
-    tree.setNode(gihi, n2);
-  });
-
-  itBench(`Tree ${d} ${n} set(${ihi}) x1000`, () => {
-    for (let i = 0; i < 1000; i++) tree.setNode(gihi, n2);
+  itBench({id: `Tree ${d} ${n} set(${ih})`, runsFactor}, () => {
+    for (let i = 0; i < runsFactor; i++) tree.setNode(gih, n2);
   });
 
   itBench(`Tree ${d} ${n} toArray()`, () => {
@@ -113,37 +101,26 @@ describe("Tree (persistent-merkle-tree)", () => {
 
 describe("MutableVector", () => {
   // Don't track regressions in CI
-  setBenchOpts({maxMs: 10 * 1000, skip: Boolean(process.env.CI)});
+  setBenchOpts({maxMs: 10 * 1000, threshold: Infinity});
 
-  const items = createArray(n);
-  const mutableVector = MutableVector.from(items);
+  let items: number[];
+  let mutableVector: MutableVector<number>;
+
+  before(function () {
+    items = createArray(n);
+    mutableVector = MutableVector.from(items);
+  });
 
   itBench(`MutableVector ${n} create`, () => {
     MutableVector.from(items);
   });
 
-  itBench(`MutableVector ${n} get(${ilo})`, () => {
-    mutableVector.get(ilo);
+  itBench({id: `MutableVector ${n} get(${ih})`, runsFactor}, () => {
+    for (let i = 0; i < runsFactor; i++) mutableVector.get(ih - i);
   });
 
-  itBench(`MutableVector ${n} get(${ihi})`, () => {
-    mutableVector.get(ihi);
-  });
-
-  itBench(`MutableVector ${n} get(${ihi}) x1000`, () => {
-    for (let i = 0; i < 1000; i++) mutableVector.get(ihi - i);
-  });
-
-  itBench(`MutableVector ${n} set(${ilo})`, () => {
-    mutableVector.set(ilo, 10000000);
-  });
-
-  itBench(`MutableVector ${n} set(${ihi})`, () => {
-    mutableVector.set(ihi, 10000000);
-  });
-
-  itBench(`MutableVector ${n} set(${ihi}) x1000`, () => {
-    for (let i = 0; i < 1000; i++) mutableVector.set(ihi - i, 10000000);
+  itBench({id: `MutableVector ${n} set(${ih})`, runsFactor}, () => {
+    for (let i = 0; i < runsFactor; i++) mutableVector.set(ih - i, 10000000);
   });
 
   itBench(`MutableVector ${n} toArray()`, () => {
@@ -166,9 +143,13 @@ describe("MutableVector", () => {
 
 describe("Array", () => {
   // Don't track regressions in CI
-  setBenchOpts({maxMs: 10 * 1000, skip: Boolean(process.env.CI)});
+  setBenchOpts({maxMs: 10 * 1000, threshold: Infinity});
 
-  const arr = createArray(n);
+  let arr: number[];
+
+  before(function () {
+    arr = createArray(n);
+  });
 
   itBench(`Array ${n} create`, () => {
     createArray(n);
@@ -178,28 +159,12 @@ describe("Array", () => {
     [...arr];
   });
 
-  itBench(`Array ${n} get(${ilo})`, () => {
-    arr[ilo];
+  itBench({id: `Array ${n} get(${ih})`, runsFactor}, () => {
+    for (let i = 0; i < runsFactor; i++) arr[ih - 1];
   });
 
-  itBench(`Array ${n} get(${ihi})`, () => {
-    arr[ihi];
-  });
-
-  itBench(`Array ${n} get(${ihi}) x1000`, () => {
-    for (let i = 0; i < 1000; i++) arr[ihi - 1];
-  });
-
-  itBench(`Array ${n} set(${ilo})`, () => {
-    arr[ilo] = 10000000;
-  });
-
-  itBench(`Array ${n} set(${ihi})`, () => {
-    arr[ihi] = 10000000;
-  });
-
-  itBench(`Array ${n} set(${ihi}) x1000`, () => {
-    for (let i = 0; i < 1000; i++) arr[ihi - 1] = 10000000;
+  itBench({id: `Array ${n} set(${ih})`, runsFactor}, () => {
+    for (let i = 0; i < runsFactor; i++) arr[ih - 1] = 10000000;
   });
 
   itBench(`Array ${n} iterate all - loop`, () => {

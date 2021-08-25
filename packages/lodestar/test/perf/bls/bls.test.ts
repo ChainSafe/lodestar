@@ -34,6 +34,7 @@ describe("BLS ops", function () {
     return set;
   }
 
+  // Note: getSet() caches the value, does not re-compute every time
   itBench({id: `BLS verify - ${bls.implementation}`, beforeEach: () => getSet(0)}, (set) => {
     const isValid = set.signature.verify(set.publicKey, set.message);
     if (!isValid) throw Error("Invalid");
