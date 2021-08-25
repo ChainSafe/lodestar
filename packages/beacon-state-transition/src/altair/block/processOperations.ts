@@ -1,27 +1,14 @@
-import {List, readonlyValues} from "@chainsafe/ssz";
-import {altair, phase0} from "@chainsafe/lodestar-types";
+import {readonlyValues} from "@chainsafe/ssz";
+import {altair} from "@chainsafe/lodestar-types";
 
 import {CachedBeaconState} from "../../allForks/util";
 import {processProposerSlashing} from "./processProposerSlashing";
 import {processAttesterSlashing} from "./processAttesterSlashing";
-import {processAttestation} from "./processAttestation";
+import {processAttestations} from "./processAttestation";
 import {processDeposit} from "./processDeposit";
 import {processVoluntaryExit} from "./processVoluntaryExit";
 import {MAX_DEPOSITS} from "@chainsafe/lodestar-params";
 import {BlockProcess} from "../../util/blockProcess";
-
-type Operation =
-  | phase0.ProposerSlashing
-  | phase0.AttesterSlashing
-  | phase0.Attestation
-  | phase0.Deposit
-  | phase0.VoluntaryExit;
-type OperationFunction = (
-  state: CachedBeaconState<altair.BeaconState>,
-  op: Operation,
-  blockProcess: BlockProcess,
-  verify: boolean
-) => void;
 
 export function processOperations(
   state: CachedBeaconState<altair.BeaconState>,
@@ -37,15 +24,19 @@ export function processOperations(
     );
   }
 
-  for (const [operations, processOp] of [
-    [body.proposerSlashings, processProposerSlashing],
-    [body.attesterSlashings, processAttesterSlashing],
-    [body.attestations, processAttestation],
-    [body.deposits, processDeposit],
-    [body.voluntaryExits, processVoluntaryExit],
-  ] as [List<Operation>, OperationFunction][]) {
-    for (const op of readonlyValues(operations)) {
-      processOp(state, op, blockProcess, verifySignatures);
-    }
+  for (const proposerSlashing of readonlyValues(body.proposerSlashings)) {
+    processProposerSlashing(state, proposerSlashing, blockProcess, verifySignatures);
+  }
+  for (const attesterSlashing of readonlyValues(body.attesterSlashings)) {
+    processAttesterSlashing(state, attesterSlashing, blockProcess, verifySignatures);
+  }
+
+  processAttestations(state, Array.from(readonlyValues(body.attestations)), blockProcess, verifySignatures);
+
+  for (const deposit of readonlyValues(body.deposits)) {
+    processDeposit(state, deposit);
+  }
+  for (const voluntaryExit of readonlyValues(body.voluntaryExits)) {
+    processVoluntaryExit(state, voluntaryExit, blockProcess, verifySignatures);
   }
 }

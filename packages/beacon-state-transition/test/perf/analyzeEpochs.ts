@@ -29,13 +29,6 @@ type EpochData = {
   epoch: number;
   validatorCount: number;
 
-  effectiveBalance: number;
-  slashed: number;
-  activationEligibilityEpoch: number;
-  activationEpoch: number;
-  exitEpoch: number;
-  withdrawableEpoch: number;
-
   indicesEligibleForActivation: number;
   indicesEligibleForActivationQueue: number;
   indicesToEject: number;

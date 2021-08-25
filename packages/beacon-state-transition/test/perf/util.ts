@@ -1,10 +1,12 @@
+import fs from "fs";
+import path from "path";
 import {config} from "@chainsafe/lodestar-config/default";
 import {Gwei, phase0, ssz, Slot, altair, ParticipationFlags} from "@chainsafe/lodestar-types";
 import bls, {CoordType, PublicKey, SecretKey} from "@chainsafe/bls";
 import {fromHexString, List, TreeBacked} from "@chainsafe/ssz";
 import {allForks, interopSecretKey, computeEpochAtSlot, getActiveValidatorIndices} from "../../src";
-import {createIChainForkConfig} from "@chainsafe/lodestar-config";
-import {computeCommitteeCount, PubkeyIndexMap} from "../../src/allForks";
+import {createIChainForkConfig, IChainForkConfig} from "@chainsafe/lodestar-config";
+import {CachedBeaconState, computeCommitteeCount, createCachedBeaconState, PubkeyIndexMap} from "../../src/allForks";
 import {profilerLogger} from "../utils/logger";
 import {interopPubkeysCached} from "../utils/interop";
 import {PendingAttestation} from "@chainsafe/lodestar-types/phase0";
@@ -20,7 +22,11 @@ import {
   TIMELY_SOURCE_FLAG_INDEX,
   TIMELY_TARGET_FLAG_INDEX,
 } from "@chainsafe/lodestar-params";
+import {NetworkName, networksChainConfig} from "@chainsafe/lodestar-config/networks";
+import {getClient} from "@chainsafe/lodestar-api";
 import {getNextSyncCommittee} from "../../src/altair/util/syncCommittee";
+import {getInfuraUrl} from "./infura";
+import {testCachePath} from "../cache";
 
 let phase0State: TreeBacked<phase0.BeaconState> | null = null;
 let phase0CachedState23637: allForks.CachedBeaconState<phase0.BeaconState> | null = null;
@@ -384,4 +390,74 @@ export function generateTestCachedBeaconStateOnlyValidators({
     index2pubkey,
     skipSyncPubkeys: true,
   });
+}
+
+const initialValue = null;
+export type LazyValue<T> = {value: T};
+
+/**
+ * Register a callback to compute a value in the before() block of mocha tests
+ * ```ts
+ * const state = beforeValue(() => getState())
+ * it("test", () => {
+ *   doTest(state.value)
+ * })
+ * ```
+ */
+export function beforeValue<T>(fn: () => T | Promise<T>, timeout?: number): LazyValue<T> {
+  let value: T = (initialValue as unknown) as T;
+
+  before(async function () {
+    this.timeout(timeout ?? 300_000);
+    value = await fn();
+  });
+
+  return new Proxy<{value: T}>(
+    {value},
+    {
+      get: function (target, prop) {
+        if (prop === "value") {
+          if (value === initialValue) {
+            throw Error("beforeValue has not yet run the before() block");
+          } else {
+            return value;
+          }
+        } else {
+          return undefined;
+        }
+      },
+    }
+  );
+}
+
+/**
+ * Create a network config from known network params
+ */
+export function getNetworkConfig(network: NetworkName): IChainForkConfig {
+  const configNetwork = networksChainConfig[network];
+  return createIChainForkConfig(configNetwork);
+}
+
+/**
+ * Download a state from Infura. Caches states in local fs by network and slot to only download once.
+ */
+export async function getNetworkCachedState(
+  network: NetworkName,
+  slot: number,
+  timeout?: number
+): Promise<CachedBeaconState<allForks.BeaconState>> {
+  const config = getNetworkConfig(network);
+
+  const filepath = path.join(testCachePath, `state_${network}_${slot}.ssz`);
+  let stateSsz: Uint8Array;
+  if (fs.existsSync(filepath)) {
+    stateSsz = fs.readFileSync(filepath);
+  } else {
+    const client = getClient(config, {baseUrl: getInfuraUrl(network), timeoutMs: timeout || 300_000});
+    stateSsz = await client.debug.getState(String(slot), "ssz");
+    fs.writeFileSync(filepath, stateSsz);
+  }
+
+  const stateTB = config.getForkTypes(slot).BeaconState.createTreeBackedFromBytes(stateSsz);
+  return createCachedBeaconState(config, stateTB);
 }
