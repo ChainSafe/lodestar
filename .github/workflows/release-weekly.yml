@@ -15,7 +15,9 @@ jobs:
     name: Prepare Pull-Request
     runs-on: ubuntu-latest
     env: 
-      EVEN: false
+      WEEK: ${{ date +%V }}
+      YEAR: ${{ date +%Y }}
+      RUN: ${{ W=$(date +%V); if [[ $(($W%2)) -eq 0 ]]; then echo true; else echo false; fi }}
     steps:
       - name: Check number of week
         run: scripts/fail-release.sh
