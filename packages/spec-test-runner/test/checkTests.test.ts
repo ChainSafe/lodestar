@@ -5,7 +5,6 @@ import {SPEC_TEST_LOCATION} from "./utils/specTestCases";
 
 // TEMP TEMP
 const forksToIgnore = new Set(["merge"]);
-const testsToIgnore = new Set(["ssz_static"]);
 
 // This test ensures that we are covering all available spec tests.
 // The directory structure is organized first by preset, then by fork.
@@ -89,8 +88,6 @@ describe("Check tests", () => {
       // ├── shuffling
       // └── ssz_static
       for (const testGroup of fs.readdirSync(path.join(rootTestDir, testRelDir))) {
-        if (testsToIgnore.has(testGroup)) continue;
-
         const testDir = path.join(lodestarTests, testRelDir, testGroup);
         const testFile = testDir + ".test.ts";
         if (existsDir(testDir)) {
