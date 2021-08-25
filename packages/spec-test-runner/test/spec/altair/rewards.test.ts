@@ -1,7 +1,7 @@
 import fs from "fs";
 import {join} from "path";
 import {expect} from "chai";
-import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
+import {describeDirectorySpecTest} from "@chainsafe/lodestar-spec-test-util";
 import {altair, allForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {TreeBacked, VectorType} from "@chainsafe/ssz";
 import {
@@ -14,6 +14,7 @@ import {ssz} from "@chainsafe/lodestar-types";
 import {SPEC_TEST_LOCATION} from "../../utils/specTestCases";
 import {IBaseSpecTest} from "../type";
 import {config} from "./util";
+import {inputTypeSszTreeBacked} from "../util";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
@@ -41,9 +42,7 @@ for (const testDir of fs.readdirSync(rootDir)) {
       };
     },
     {
-      inputTypes: {
-        pre: {type: InputType.SSZ_SNAPPY, treeBacked: true},
-      },
+      inputTypes: inputTypeSszTreeBacked,
       sszTypes: {
         pre: ssz.altair.BeaconState,
         head_deltas: Deltas,

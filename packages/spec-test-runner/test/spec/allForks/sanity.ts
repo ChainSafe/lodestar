@@ -4,7 +4,7 @@ import {allForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {TreeBacked} from "@chainsafe/ssz";
 import {altair, ssz, Uint64} from "@chainsafe/lodestar-types";
 import {ACTIVE_PRESET, ForkName} from "@chainsafe/lodestar-params";
-import {expectEqualBeaconState} from "../util";
+import {expectEqualBeaconState, inputTypeSszTreeBacked} from "../util";
 import {SPEC_TEST_LOCATION} from "../../utils/specTestCases";
 import {IBaseSpecTest} from "../type";
 import {getConfig} from "./util";
@@ -20,11 +20,7 @@ export function sanity(fork: ForkName): void {
       return postState.type.createTreeBacked(postState.tree);
     },
     {
-      inputTypes: {
-        pre: {type: InputType.SSZ_SNAPPY, treeBacked: true},
-        post: {type: InputType.SSZ_SNAPPY, treeBacked: true},
-        slots: InputType.YAML,
-      },
+      inputTypes: {...inputTypeSszTreeBacked, slots: InputType.YAML},
       sszTypes: {
         pre: ssz[fork].BeaconState,
         post: ssz[fork].BeaconState,
@@ -60,11 +56,7 @@ export function sanity(fork: ForkName): void {
       return wrappedState;
     },
     {
-      inputTypes: {
-        pre: {type: InputType.SSZ_SNAPPY, treeBacked: true},
-        post: {type: InputType.SSZ_SNAPPY, treeBacked: true},
-        meta: InputType.YAML,
-      },
+      inputTypes: inputTypeSszTreeBacked,
       sszTypes: {
         pre: ssz[fork].BeaconState,
         post: ssz[fork].BeaconState,

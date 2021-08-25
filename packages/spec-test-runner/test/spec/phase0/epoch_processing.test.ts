@@ -2,13 +2,13 @@ import {join} from "path";
 import fs from "fs";
 
 import {CachedBeaconState, allForks, phase0} from "@chainsafe/lodestar-beacon-state-transition";
-import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
+import {describeDirectorySpecTest} from "@chainsafe/lodestar-spec-test-util";
 import {processParticipationRecordUpdates} from "@chainsafe/lodestar-beacon-state-transition/src/phase0/epoch/processParticipationRecordUpdates";
 import {phase0 as phase0Types, ssz} from "@chainsafe/lodestar-types";
 import {TreeBacked} from "@chainsafe/ssz";
 import {ACTIVE_PRESET} from "@chainsafe/lodestar-params";
 import {SPEC_TEST_LOCATION} from "../../utils/specTestCases";
-import {expectEqualBeaconStateAltair} from "../util";
+import {expectEqualBeaconStateAltair, inputTypeSszTreeBacked} from "../util";
 import {IPhase0StateTestCase, config} from "./util";
 
 /** Describe with which function to run each directory of tests */
@@ -46,10 +46,7 @@ for (const testDir of fs.readdirSync(rootDir)) {
       return state;
     },
     {
-      inputTypes: {
-        pre: {type: InputType.SSZ_SNAPPY, treeBacked: true},
-        post: {type: InputType.SSZ_SNAPPY, treeBacked: true},
-      },
+      inputTypes: inputTypeSszTreeBacked,
       sszTypes: {
         pre: ssz.phase0.BeaconState,
         post: ssz.phase0.BeaconState,

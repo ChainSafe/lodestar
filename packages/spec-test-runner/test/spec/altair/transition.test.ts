@@ -1,13 +1,13 @@
 import {join} from "path";
 import {allForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {altair, phase0, Uint64, ssz} from "@chainsafe/lodestar-types";
-import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
+import {describeDirectorySpecTest} from "@chainsafe/lodestar-spec-test-util";
 import {createIChainForkConfig} from "@chainsafe/lodestar-config";
 import {ForkName, ACTIVE_PRESET} from "@chainsafe/lodestar-params";
 import {TreeBacked} from "@chainsafe/ssz";
 import {SPEC_TEST_LOCATION} from "../../utils/specTestCases";
 import {IBaseSpecTest} from "../type";
-import {expectEqualBeaconStateAltair} from "../util";
+import {expectEqualBeaconStateAltair, inputTypeSszTreeBacked} from "../util";
 
 describeDirectorySpecTest<ITransitionTestCase, allForks.BeaconState>(
   `${ACTIVE_PRESET}/altair/transition`,
@@ -40,11 +40,7 @@ describeDirectorySpecTest<ITransitionTestCase, allForks.BeaconState>(
     return wrappedState;
   },
   {
-    inputTypes: {
-      pre: {type: InputType.SSZ_SNAPPY, treeBacked: true},
-      post: {type: InputType.SSZ_SNAPPY, treeBacked: true},
-      meta: InputType.YAML,
-    },
+    inputTypes: inputTypeSszTreeBacked,
     getSszTypes: (meta: ITransitionTestCase["meta"]) => {
       return {
         pre: ssz.phase0.BeaconState,
@@ -61,16 +57,16 @@ describeDirectorySpecTest<ITransitionTestCase, allForks.BeaconState>(
   }
 );
 
+type BlocksSZZTypeMapping = Record<string, typeof ssz[ForkName]["SignedBeaconBlock"]>;
+
 /**
  * https://github.com/ethereum/eth2.0-specs/tree/v1.1.0-alpha.5/tests/formats/transition
  */
-function generateBlocksSZZTypeMapping(
-  meta: ITransitionTestCase["meta"]
-): Record<string, typeof ssz.phase0.SignedBeaconBlock | typeof ssz.altair.SignedBeaconBlock> {
+function generateBlocksSZZTypeMapping(meta: ITransitionTestCase["meta"]): BlocksSZZTypeMapping {
   if (!meta) {
     throw new Error("No meta data found");
   }
-  const blocksMapping: Record<string, typeof ssz.phase0.SignedBeaconBlock | typeof ssz.altair.SignedBeaconBlock> = {};
+  const blocksMapping: BlocksSZZTypeMapping = {};
   // The fork_block is the index in the test data of the last block of the initial fork.
   for (let i = 0; i < meta.blocksCount; i++) {
     blocksMapping[`blocks_${i}`] = i <= meta.forkBlock ? ssz.phase0.SignedBeaconBlock : ssz.altair.SignedBeaconBlock;

@@ -2,13 +2,13 @@ import {join} from "path";
 import {TreeBacked} from "@chainsafe/ssz";
 import {config} from "@chainsafe/lodestar-config/default";
 import {allForks, phase0} from "@chainsafe/lodestar-beacon-state-transition";
-import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
+import {describeDirectorySpecTest} from "@chainsafe/lodestar-spec-test-util";
 import {altair} from "@chainsafe/lodestar-beacon-state-transition";
 import {ssz} from "@chainsafe/lodestar-types";
 import {ACTIVE_PRESET} from "@chainsafe/lodestar-params";
 import {SPEC_TEST_LOCATION} from "../../utils/specTestCases";
 import {IBaseSpecTest} from "../type";
-import {expectEqualBeaconStateAltair} from "../util";
+import {expectEqualBeaconStateAltair, inputTypeSszTreeBacked} from "../util";
 
 describeDirectorySpecTest<IUpgradeStateCase, altair.BeaconState>(
   `${ACTIVE_PRESET}/altair/fork/fork`,
@@ -32,11 +32,7 @@ describeDirectorySpecTest<IUpgradeStateCase, altair.BeaconState>(
     return altairState;
   },
   {
-    inputTypes: {
-      pre: {type: InputType.SSZ_SNAPPY, treeBacked: true},
-      post: {type: InputType.SSZ_SNAPPY, treeBacked: true},
-      meta: InputType.YAML,
-    },
+    inputTypes: inputTypeSszTreeBacked,
     sszTypes: {
       pre: ssz.phase0.BeaconState,
       post: ssz.altair.BeaconState,

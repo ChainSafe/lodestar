@@ -4,11 +4,12 @@ import {expect} from "chai";
 import {TreeBacked, ContainerType, ListType} from "@chainsafe/ssz";
 import {allForks, phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {config} from "@chainsafe/lodestar-config/default";
-import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
+import {describeDirectorySpecTest} from "@chainsafe/lodestar-spec-test-util";
 import {ssz, Gwei} from "@chainsafe/lodestar-types";
 import {ACTIVE_PRESET, VALIDATOR_REGISTRY_LIMIT} from "@chainsafe/lodestar-params";
 import {SPEC_TEST_LOCATION} from "../../utils/specTestCases";
 import {IBaseSpecTest} from "../type";
+import {inputTypeSszTreeBacked} from "../util";
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
 const DeltasType = new ContainerType({
@@ -30,10 +31,7 @@ for (const testDir of fs.readdirSync(rootDir)) {
     `${ACTIVE_PRESET}/phase0/rewards/${testDir}`,
     join(rootDir, `${testDir}/pyspec_tests`),
     (testcase) => {
-      const wrappedState = allForks.createCachedBeaconState<phase0.BeaconState>(
-        config,
-        testcase.pre as TreeBacked<phase0.BeaconState>
-      );
+      const wrappedState = allForks.createCachedBeaconState(config, testcase.pre as TreeBacked<phase0.BeaconState>);
       const epochProcess = allForks.beforeProcessEpoch(wrappedState);
       const [rewards, penalties] = phase0.getAttestationDeltas(wrappedState, epochProcess);
       return {
@@ -42,17 +40,7 @@ for (const testDir of fs.readdirSync(rootDir)) {
       };
     },
     {
-      inputTypes: {
-        pre: {
-          type: InputType.SSZ_SNAPPY,
-          treeBacked: true,
-        },
-        post: {
-          type: InputType.SSZ_SNAPPY,
-          treeBacked: true,
-        },
-        meta: InputType.YAML,
-      },
+      inputTypes: inputTypeSszTreeBacked,
       sszTypes: {
         pre: ssz.phase0.BeaconState,
         ...generateSZZTypeMapping(),

@@ -1,12 +1,12 @@
 import {join} from "path";
 import {TreeBacked} from "@chainsafe/ssz";
 import {CachedBeaconState, allForks, altair} from "@chainsafe/lodestar-beacon-state-transition";
-import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
+import {describeDirectorySpecTest} from "@chainsafe/lodestar-spec-test-util";
 import {ssz, Uint64} from "@chainsafe/lodestar-types";
 import {ACTIVE_PRESET, ForkName} from "@chainsafe/lodestar-params";
 import {SPEC_TEST_LOCATION} from "../../utils/specTestCases";
 import {IBaseSpecTest} from "../type";
-import {expectEqualBeaconState} from "../util";
+import {expectEqualBeaconState, inputTypeSszTreeBacked} from "../util";
 import {getConfig} from "./util";
 import {generateBlocksSZZTypeMapping} from "./sanity";
 
@@ -36,11 +36,7 @@ export function finality(fork: ForkName): void {
       return wrappedState;
     },
     {
-      inputTypes: {
-        pre: {type: InputType.SSZ_SNAPPY, treeBacked: true},
-        post: {type: InputType.SSZ_SNAPPY, treeBacked: true},
-        meta: InputType.YAML,
-      },
+      inputTypes: inputTypeSszTreeBacked,
       sszTypes: {
         pre: ssz[fork].BeaconState,
         post: ssz[fork].BeaconState,
