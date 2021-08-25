@@ -22,7 +22,7 @@ jobs:
           echo "::set-output name=year::$(date '+%Y')"
       - name: Fail every other week
         run: |
-          if [[ $(($WEEK%2)) -eq 1 ]]; then
+          if [[ $(($WEEK%2)) -eq 0 ]]; then
             echo "Even week, skipping release..."
             exit 1
           fi
