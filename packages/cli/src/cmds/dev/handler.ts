@@ -26,13 +26,6 @@ import {getVersion} from "../../util/version";
 export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
   await initBLS();
 
-  const {beaconNodeOptions, config} = await initializeOptionsAndConfig(args);
-
-  // ENR setup
-  const peerId = await createPeerId();
-  const enr = createEnr(peerId);
-  beaconNodeOptions.set({network: {discv5: {enr}}});
-
   // Custom paths different than regular beacon, validator paths
   // network="dev" will store all data in separate dir than other networks
   args.network = "dev";
@@ -40,6 +33,13 @@ export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
   const validatorPaths = getValidatorPaths(args);
   const beaconDbDir = beaconPaths.dbDir;
   const validatorsDbDir = validatorPaths.validatorsDbDir;
+
+  const {beaconNodeOptions, config} = await initializeOptionsAndConfig(args);
+
+  // ENR setup
+  const peerId = await createPeerId();
+  const enr = createEnr(peerId);
+  beaconNodeOptions.set({network: {discv5: {enr}}});
 
   mkdir(beaconDbDir);
   mkdir(validatorsDbDir);
