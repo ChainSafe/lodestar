@@ -4,11 +4,8 @@ concurrency:
   group: cd-release-weekly
 
 on:
-  # schedule:
-  #   - cron: '23 4 * * WED'
-  push:
-    branches:
-     - "q9-github-biweekly"
+  schedule:
+    - cron: '23 4 * * WED'
 
 jobs:
   prepare:
