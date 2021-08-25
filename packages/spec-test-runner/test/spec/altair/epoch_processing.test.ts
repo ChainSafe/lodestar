@@ -39,7 +39,7 @@ for (const testDir of fs.readdirSync(rootDir)) {
   }
 
   describeDirectorySpecTest<IAltairStateTestCase, altairTypes.BeaconState>(
-    `${testDir} ${ACTIVE_PRESET}`,
+    `${ACTIVE_PRESET}/altair/epoch_processing/${testDir}`,
     join(rootDir, `${testDir}/pyspec_tests`),
     (testcase) => {
       const stateTB = (testcase.pre as TreeBacked<allForks.BeaconState>).clone();
