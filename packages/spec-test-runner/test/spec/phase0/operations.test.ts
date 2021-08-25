@@ -54,8 +54,7 @@ for (const testDir of fs.readdirSync(rootDir)) {
     (testcase) => {
       const stateTB = (testcase.pre as TreeBacked<phase0.BeaconState>).clone();
       const state = allForks.createCachedBeaconState(config, stateTB);
-      const epochProcess = allForks.beforeProcessEpoch(state);
-      operationFn(state, epochProcess);
+      operationFn(state, testcase);
       return state;
     },
     {
@@ -70,6 +69,7 @@ for (const testDir of fs.readdirSync(rootDir)) {
         proposer_slashing: ssz.phase0.ProposerSlashing,
         voluntary_exit: ssz.phase0.SignedVoluntaryExit,
       },
+      shouldError: (testCase) => !testCase.post,
       getExpected: (testCase) => testCase.post,
       expectFunc: (testCase, expected, actual) => {
         expectEqualBeaconStateAltair(expected, actual);

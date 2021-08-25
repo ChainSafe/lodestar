@@ -1,8 +1,7 @@
 import {expect} from "chai";
 import {allForks, altair, phase0, ssz} from "@chainsafe/lodestar-types";
 import {ForkName} from "@chainsafe/lodestar-params";
-import {InputType, ISpecTestOptions} from "@chainsafe/lodestar-spec-test-util";
-import {IBaseSpecTest} from "./type";
+import {InputType} from "@chainsafe/lodestar-spec-test-util";
 
 /** Compare each field in BeaconState to help debug failed test easier. */
 export function expectEqualBeaconStatePhase0(expected: phase0.BeaconState, actual: phase0.BeaconState): void {
