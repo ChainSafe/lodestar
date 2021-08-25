@@ -4,7 +4,6 @@
 
 import {Epoch, Slot, Root, phase0, allForks} from "@chainsafe/lodestar-types";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
-import {assert} from "@chainsafe/lodestar-utils";
 
 import {ZERO_HASH} from "../constants";
 import {computeStartSlotAtEpoch} from "./epoch";
@@ -14,12 +13,12 @@ import {SLOTS_PER_HISTORICAL_ROOT} from "@chainsafe/lodestar-params";
  * Return the block root at a recent [[slot]].
  */
 export function getBlockRootAtSlot(state: allForks.BeaconState, slot: Slot): Root {
-  assert.lt(slot, state.slot, "Cannot get block root for slot in the future");
-  assert.lte(
-    state.slot,
-    slot + SLOTS_PER_HISTORICAL_ROOT,
-    `Cannot get block root from slot more than ${SLOTS_PER_HISTORICAL_ROOT} in the past`
-  );
+  if (slot >= state.slot) {
+    throw Error(`Can only get block root in the past currentSlot=${state.slot} slot=${slot}`);
+  }
+  if (slot < state.slot - SLOTS_PER_HISTORICAL_ROOT) {
+    throw Error(`Cannot get block root more than ${SLOTS_PER_HISTORICAL_ROOT} in the past`);
+  }
   return state.blockRoots[slot % SLOTS_PER_HISTORICAL_ROOT];
 }
 
