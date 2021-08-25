@@ -17,18 +17,8 @@ jobs:
     env: 
       EVEN: false
     steps:
-      - name: Populate run conditions
-        run: |
-          W=$(date +%V)
-          if [[ $(($W%2)) -eq 0 ]]; then
-            export env.EVEN=true
-          else
-            export env.EVEN=false
-          fi
-      - name: Check run conditions
-        run: |
-          echo $EVEN
-          echo env.$EVEN
+      - name: Check number of week
+      - run: scripts/fail-release.sh
       # - name: Checkout
       #   uses: actions/checkout@v2
       #   with:
