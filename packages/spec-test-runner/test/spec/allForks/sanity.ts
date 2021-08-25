@@ -38,15 +38,6 @@ export function sanity(fork: ForkName): void {
     }
   );
 
-  const typeSignedBeaconBlock = ssz[fork].SignedBeaconBlock;
-  function generateBlocksSZZTypeMapping(n: number): Record<string, typeof typeSignedBeaconBlock> {
-    const blocksMapping: Record<string, typeof typeSignedBeaconBlock> = {};
-    for (let i = 0; i < n; i++) {
-      blocksMapping[`blocks_${i}`] = typeSignedBeaconBlock;
-    }
-    return blocksMapping;
-  }
-
   describeDirectorySpecTest<IBlockSanityTestCase, allForks.BeaconState>(
     `${ACTIVE_PRESET}/${fork}/sanity/blocks`,
     join(SPEC_TEST_LOCATION, `/tests/${ACTIVE_PRESET}/${fork}/sanity/blocks/pyspec_tests`),
@@ -77,7 +68,7 @@ export function sanity(fork: ForkName): void {
       sszTypes: {
         pre: ssz[fork].BeaconState,
         post: ssz[fork].BeaconState,
-        ...generateBlocksSZZTypeMapping(99),
+        ...generateBlocksSZZTypeMapping(fork, 99),
       },
       shouldError: (testCase) => !testCase.post,
       timeout: 10000,
@@ -87,6 +78,16 @@ export function sanity(fork: ForkName): void {
       },
     }
   );
+}
+
+type BlocksSZZTypeMapping = Record<string, typeof ssz[ForkName]["SignedBeaconBlock"]>;
+
+export function generateBlocksSZZTypeMapping(fork: ForkName, n: number): BlocksSZZTypeMapping {
+  const blocksMapping: BlocksSZZTypeMapping = {};
+  for (let i = 0; i < n; i++) {
+    blocksMapping[`blocks_${i}`] = ssz[fork].SignedBeaconBlock;
+  }
+  return blocksMapping;
 }
 
 interface IBlockSanityTestCase extends IBaseSpecTest {
