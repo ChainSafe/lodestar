@@ -14,13 +14,19 @@ jobs:
   prepare:
     name: Prepare Pull-Request
     runs-on: ubuntu-latest
-    env: 
-      WEEK: ${{ date +%V }}
-      YEAR: ${{ date +%Y }}
-      RUN: ${{ W=$(date +%V); if [[ $(($W%2)) -eq 0 ]]; then echo true; else echo false; fi }}
     steps:
-      - name: Check number of week
-        run: scripts/fail-release.sh
+      - name: Get current week
+        id: week
+        run: echo "::set-output name=number::$(date '+%V')"
+      - name: Fail every other week
+        run: | 
+          echo $WEEK
+          if [[ $(($WEEK%2)) -eq 1 ]]; then
+            echo "Even week, skipping release..."
+            exit 1
+          fi
+        env:
+          WEEK: ${{ steps.week.outputs.number }}
       # - name: Checkout
       #   uses: actions/checkout@v2
       #   with:
