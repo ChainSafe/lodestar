@@ -1,17 +1,34 @@
-import {TreeBacked} from "@chainsafe/ssz";
+import fs from "fs";
+import {join} from "path";
+import {expect} from "chai";
+import {TreeBacked, ContainerType, ListType} from "@chainsafe/ssz";
 import {allForks, phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {config} from "@chainsafe/lodestar-config/default";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
-import {join} from "path";
-import {SPEC_TEST_LOCATION} from "../../../utils/specTestCases";
-import {generateSZZTypeMapping, IDeltas, DeltasType, IRewardsTestCase} from "./types";
-import {expect} from "chai";
-import {ssz} from "@chainsafe/lodestar-types";
+import {ssz, Gwei} from "@chainsafe/lodestar-types";
+import {ACTIVE_PRESET, VALIDATOR_REGISTRY_LIMIT} from "@chainsafe/lodestar-params";
+import {SPEC_TEST_LOCATION} from "../../utils/specTestCases";
+import {IBaseSpecTest} from "../type";
 
-for (const testSuite of ["basic", "leak", "random"]) {
+// eslint-disable-next-line @typescript-eslint/naming-convention
+const DeltasType = new ContainerType({
+  fields: {
+    rewards: new ListType({
+      elementType: ssz.Gwei,
+      limit: VALIDATOR_REGISTRY_LIMIT,
+    }),
+    penalties: new ListType({
+      elementType: ssz.Gwei,
+      limit: VALIDATOR_REGISTRY_LIMIT,
+    }),
+  },
+});
+
+const rootDir = join(SPEC_TEST_LOCATION, `tests/${ACTIVE_PRESET}/phase0/rewards`);
+for (const testDir of fs.readdirSync(rootDir)) {
   describeDirectorySpecTest<IRewardsTestCase, IDeltas>(
-    "process attestation mainnet",
-    join(SPEC_TEST_LOCATION, `/tests/mainnet/phase0/rewards/${testSuite}/pyspec_tests`),
+    `${ACTIVE_PRESET}/phase0/rewards/${testDir}`,
+    join(rootDir, `${testDir}/pyspec_tests`),
     (testcase) => {
       const wrappedState = allForks.createCachedBeaconState<phase0.BeaconState>(
         config,
@@ -78,4 +95,24 @@ for (const testSuite of ["basic", "leak", "random"]) {
       },
     }
   );
+}
+
+interface IDeltas {
+  rewards: Gwei[];
+  penalties: Gwei[];
+}
+
+interface IRewardsTestCase extends IBaseSpecTest {
+  [k: string]: IDeltas | unknown | null | undefined;
+  pre: phase0.BeaconState;
+}
+
+function generateSZZTypeMapping(): Record<string, unknown> {
+  const typeMappings: Record<string, unknown> = {};
+  typeMappings["source_deltas"] = DeltasType;
+  typeMappings["target_deltas"] = DeltasType;
+  typeMappings["head_deltas"] = DeltasType;
+  typeMappings["inclusion_delay_deltas"] = DeltasType;
+  typeMappings["inactivity_penalty_deltas"] = DeltasType;
+  return typeMappings;
 }

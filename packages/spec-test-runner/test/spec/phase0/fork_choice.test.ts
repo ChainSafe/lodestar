@@ -3,24 +3,19 @@ import {expect} from "chai";
 import {config} from "@chainsafe/lodestar-config/default";
 import {createCachedBeaconState, phase0, allForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
-import {
-  ANCHOR_STATE_FILE_NAME,
-  ANCHOR_BLOCK_FILE_NAME,
-  ATTESTATION_FILE_NAME,
-  BLOCK_FILE_NAME,
-  IForkChoiceTestCase,
-  isTick,
-  isAttestation,
-  isBlock,
-  isCheck,
-} from "./type";
 // eslint-disable-next-line no-restricted-imports
 import {LodestarForkChoice} from "@chainsafe/lodestar/lib/chain/forkChoice/forkChoice";
 // eslint-disable-next-line no-restricted-imports
 import {ChainEventEmitter} from "@chainsafe/lodestar/lib/chain/emitter";
 import {toHexString} from "@chainsafe/ssz";
 import {ssz} from "@chainsafe/lodestar-types";
-import {SPEC_TEST_LOCATION} from "../../../utils/specTestCases";
+import {SPEC_TEST_LOCATION} from "../../utils/specTestCases";
+import {IBaseSpecTest} from "../type";
+
+const ANCHOR_STATE_FILE_NAME = "anchor_state";
+const ANCHOR_BLOCK_FILE_NAME = "anchor_block";
+const BLOCK_FILE_NAME = "^(block)_([0-9a-zA-Z]+)$";
+const ATTESTATION_FILE_NAME = "^(attestation)_([0-9a-zA-Z])+$";
 
 describeDirectorySpecTest<IForkChoiceTestCase, void>(
   "forkchoice get_head",
@@ -116,3 +111,55 @@ describeDirectorySpecTest<IForkChoiceTestCase, void>(
     expectFunc: () => {},
   }
 );
+
+interface IForkChoiceTestCase extends IBaseSpecTest {
+  meta?: {
+    description?: string;
+    blsSetting: BigInt;
+  };
+  anchorState: phase0.BeaconState;
+  anchorBlock: phase0.BeaconBlock;
+  steps: Step[];
+  blocks: Map<string, phase0.SignedBeaconBlock>;
+  attestations: Map<string, phase0.Attestation>;
+}
+
+function isTick(step: Step): step is IOnTick {
+  return (step as IOnTick).tick > 0;
+}
+
+function isAttestation(step: Step): step is IOnAttestation {
+  return typeof (step as IOnAttestation).attestation === "string";
+}
+
+function isBlock(step: Step): step is IOnBlock {
+  return typeof (step as IOnBlock).block === "string";
+}
+
+function isCheck(step: Step): step is IChecks {
+  return typeof (step as IChecks).checks === "object";
+}
+
+type Step = IOnTick | IOnAttestation | IOnBlock | IChecks;
+
+interface IOnTick {
+  tick: number;
+}
+
+interface IOnAttestation {
+  attestation: string;
+}
+
+interface IOnBlock {
+  block: string;
+}
+
+interface IChecks {
+  checks: {
+    head: {slot: number; root: string};
+    time?: number;
+    justifiedCheckpointRoot?: string;
+    finalizedCheckpointRoot?: string;
+    bestJustifiedCheckpoint?: string;
+  };
+}

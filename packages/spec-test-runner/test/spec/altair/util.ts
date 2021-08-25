@@ -1,5 +1,4 @@
 import {altair} from "@chainsafe/lodestar-types";
-import {createIChainForkConfig} from "@chainsafe/lodestar-config";
 import {IBaseSpecTest} from "../type";
 
 export interface IAltairStateTestCase extends IBaseSpecTest {

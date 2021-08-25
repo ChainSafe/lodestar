@@ -52,9 +52,7 @@ describeDirectorySpecTest<ITransitionTestCase, allForks.BeaconState>(
         ...generateBlocksSZZTypeMapping(meta),
       };
     },
-    shouldError: (testCase) => {
-      return !testCase.post;
-    },
+    shouldError: (testCase) => !testCase.post,
     timeout: 10000,
     getExpected: (testCase) => testCase.post,
     expectFunc: (testCase, expected, actual) => {

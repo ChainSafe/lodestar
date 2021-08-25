@@ -1,7 +1,6 @@
 import fs from "fs";
 import {join} from "path";
 import {expect} from "chai";
-
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
 import {altair, allForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {TreeBacked, VectorType} from "@chainsafe/ssz";
