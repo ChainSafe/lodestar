@@ -22,6 +22,7 @@
   "scripts": {
     "check-types": "tsc --noEmit",
     "download-test-cases": "node -r ts-node/register test/downloadTests.ts",
+    "check-tests": "mocha test/checkTests.test.ts",
     "test:ssz-generic": "mocha 'test/spec/ssz/generic/index.test.ts'",
     "test:ssz-minimal": "LODESTAR_PRESET=minimal mocha 'test/spec/ssz/**/*minimal.test.ts'",
     "test:ssz-mainnet": "mocha 'test/spec/ssz/**/*mainnet.test.ts'",

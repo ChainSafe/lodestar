@@ -32,6 +32,9 @@ jobs:
       - name: Download spec tests
         run: yarn download-test-cases
         working-directory: packages/spec-test-runner
+      - name: Check spec tests
+        run: yarn check-tests
+        working-directory: packages/spec-test-runner
 
       # Run them in different steps to quickly identifying which command failed
       # Otherwise just doing `yarn test:spec` you can't tell which specific suite failed
