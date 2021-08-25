@@ -14,10 +14,21 @@ jobs:
   prepare:
     name: Prepare Pull-Request
     runs-on: ubuntu-latest
-    if: ${{ W=$(date +%V); if [[ $(($W%2)) -eq 1 ]]; then echo true; else echo false; fi }}
     steps:
+      - name: Populate run conditions
+        run: |
+          W=$(date +%V)
+          if [[ $(($W%2)) -eq 0 ]]; then
+            export EVEN=true
+            env.$EVEN=true
+          else
+            export EVEN=false
+            env.$EVEN=false
+          fi
       - name: Check run conditions
-        run: echo "test 1-2-3-4"
+        run: |
+          echo $EVEN
+          echo env.$EVEN
       # - name: Checkout
       #   uses: actions/checkout@v2
       #   with:
