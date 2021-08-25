@@ -1,16 +1,17 @@
 import {join} from "path";
 import {expect} from "chai";
-import {config} from "@chainsafe/lodestar-config/default";
 import {createCachedBeaconState, phase0, allForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
 // eslint-disable-next-line no-restricted-imports
 import {LodestarForkChoice} from "@chainsafe/lodestar/lib/chain/forkChoice/forkChoice";
 // eslint-disable-next-line no-restricted-imports
 import {ChainEventEmitter} from "@chainsafe/lodestar/lib/chain/emitter";
+import {ACTIVE_PRESET} from "@chainsafe/lodestar-params";
 import {toHexString} from "@chainsafe/ssz";
 import {ssz} from "@chainsafe/lodestar-types";
 import {SPEC_TEST_LOCATION} from "../../utils/specTestCases";
 import {IBaseSpecTest} from "../type";
+import {config} from "./util";
 
 const ANCHOR_STATE_FILE_NAME = "anchor_state";
 const ANCHOR_BLOCK_FILE_NAME = "anchor_block";
@@ -18,8 +19,8 @@ const BLOCK_FILE_NAME = "^(block)_([0-9a-zA-Z]+)$";
 const ATTESTATION_FILE_NAME = "^(attestation)_([0-9a-zA-Z])+$";
 
 describeDirectorySpecTest<IForkChoiceTestCase, void>(
-  "forkchoice get_head",
-  join(SPEC_TEST_LOCATION, "/tests/mainnet/phase0/fork_choice/get_head/pyspec_tests"),
+  `${ACTIVE_PRESET}/phase0/fork_choice/get_head`,
+  join(SPEC_TEST_LOCATION, `/tests/${ACTIVE_PRESET}/phase0/fork_choice/get_head/pyspec_tests`),
   (testcase) => {
     const emitter = new ChainEventEmitter();
     const {steps, anchorState} = testcase;

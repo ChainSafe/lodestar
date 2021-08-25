@@ -3,13 +3,13 @@ import {join} from "path";
 import {expect} from "chai";
 import {TreeBacked, ContainerType, ListType} from "@chainsafe/ssz";
 import {allForks, phase0} from "@chainsafe/lodestar-beacon-state-transition";
-import {config} from "@chainsafe/lodestar-config/default";
 import {describeDirectorySpecTest} from "@chainsafe/lodestar-spec-test-util";
 import {ssz, Gwei} from "@chainsafe/lodestar-types";
 import {ACTIVE_PRESET, VALIDATOR_REGISTRY_LIMIT} from "@chainsafe/lodestar-params";
 import {SPEC_TEST_LOCATION} from "../../utils/specTestCases";
 import {IBaseSpecTest} from "../type";
 import {inputTypeSszTreeBacked} from "../util";
+import {config} from "./util";
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
 const DeltasType = new ContainerType({
