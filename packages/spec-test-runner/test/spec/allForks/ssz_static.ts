@@ -46,14 +46,12 @@ interface IResult {
 }
 
 function testStatic(typeName: string, sszType: CompositeType<any>, forkName: ForkName, preset: PresetName): void {
-  const caseNames =
-    preset === PresetName.mainnet
-      ? ["ssz_random"]
-      : ["ssz_lengthy", "ssz_max", "ssz_one", "ssz_nil", "ssz_random", "ssz_random_chaos", "ssz_zero"];
-  for (const caseName of caseNames) {
+  const typeDir = path.join(SPEC_TEST_LOCATION, `tests/${preset}/${forkName}/ssz_static/${typeName}`);
+
+  for (const caseName of fs.readdirSync(typeDir)) {
     describeDirectorySpecTest<IBaseSSZStaticTestCase<any>, IResult>(
       `${preset}/${forkName}/ssz_static/${typeName}/${caseName}`,
-      path.join(SPEC_TEST_LOCATION, `tests/${preset}/${forkName}/ssz_static/${typeName}/${caseName}`),
+      path.join(typeDir, caseName),
       (testcase) => {
         //debugger;
         const serialized = sszType.serialize(testcase.serialized);
