@@ -1,3 +1,4 @@
+import {allForks, phase0} from "@chainsafe/lodestar-types";
 import {CachedBeaconState, IEpochProcess} from "../../allForks/util";
 import {
   processJustificationAndFinalization,
@@ -12,7 +13,6 @@ import {processRewardsAndPenalties} from "./processRewardsAndPenalties";
 import {processSlashings} from "./processSlashings";
 import {getAttestationDeltas} from "./getAttestationDeltas";
 import {processParticipationRecordUpdates} from "./processParticipationRecordUpdates";
-import {allForks, phase0} from "@chainsafe/lodestar-types";
 
 export {processRewardsAndPenalties, processSlashings, getAttestationDeltas};
 

@@ -1,6 +1,5 @@
 import {
   BasicListType,
-  CompositeListType,
   CompositeValue,
   ContainerType,
   isCompositeType,
@@ -14,10 +13,7 @@ import {allForks, altair, Number64, ParticipationFlags} from "@chainsafe/lodesta
 import {createIBeaconConfig, IBeaconConfig, IChainForkConfig} from "@chainsafe/lodestar-config";
 import {Tree} from "@chainsafe/persistent-merkle-tree";
 import {MutableVector} from "@chainsafe/persistent-ts";
-import {createValidatorFlat} from "./flat";
 import {createEpochContext, EpochContext, EpochContextOpts} from "./epochContext";
-import {CachedValidatorList, CachedValidatorListProxyHandler} from "./cachedValidatorList";
-import {CachedBalanceList, CachedBalanceListProxyHandler} from "./cachedBalanceList";
 import {
   CachedEpochParticipation,
   CachedEpochParticipationProxyHandler,
@@ -45,6 +41,43 @@ import {newFilledArray} from "../../util";
  * - The full merkle tree representation of the state
  * - A cache of shufflings, committees, proposers, expanded pubkeys
  * - A flat copy of validators (for fast access/iteration)
+ *
+ * ### BeaconState data representation tradeoffs:
+ *
+ * Requirements of a BeaconState:
+ * - Block processing and epoch processing be performant to not block the node. This functions requires to iterate over
+ *   very large arrays fast, while doing random mutations or big mutations. After them the state must be hashed.
+ *   Processing times: (ideal / current / maximum)
+ *   - block processing: 20ms / 200ms / 500ms
+ *   - epoch processing: 200ms / 2s / 4s
+ *
+ * - BeaconState must be memory efficient. Data should only be represented once in a succint manner. Uint8Arrays are
+ *   expensive, native types are not.
+ *
+ * - BeaconState must be hashed efficiently. Data must be merkelized before hashing so the conversion to merkelized
+ *   must be fast or be done already. It must must persist a hashing cache that should be structurally shared between
+ *   states for memory efficiency.
+ *
+ * - BeaconState raw data changes sparsingly, so it should be structurally shared between states for memory efficiency
+ *
+ * Summary of goals:
+ * - Structurally share data + hashing cache
+ * - Very fast read and iteration over large arrays
+ * - Fast bulk writes and somewhat fast single writes
+ * - Fast merkelization of data for hashing
+ *
+ * #### state.validators
+ *
+ * 91% of all memory merkelized is state.validators. In normal network conditions state.validators changes rarely.
+ * However for epoch processing the entire array must be iterated and read. So we need fast reads and slow writes.
+ * Tradeoffs to achieve that:
+ * - Represent leaf data with native JS types (deserialized form)
+ * - Use a single Tree for structurally sharing leaf data + hashing cache
+ * - Keep only the root cached on leaf nodes
+ * - Micro-optimizations (TODO):
+ *   - Keep also the root of the node above pubkey and withdrawal creds. Will never change
+ *   - Keep pubkey + withdrawal creds in the same Uint8Array
+ *   - Have a global pubkey + withdrawal creds Uint8Array global cache, like with the index2pubkey cache
  */
 export type CachedBeaconState<T extends allForks.BeaconState> =
   // Wrapper object ({validators, clone()})
@@ -63,19 +96,19 @@ export function createCachedBeaconState<T extends allForks.BeaconState>(
 ): CachedBeaconState<T> {
   const config = createIBeaconConfig(chainForkConfig, state.genesisValidatorsRoot);
 
-  // SLOW CODE - 🐢
-  const cachedValidators = MutableVector.from(
-    Array.from(readonlyValues(state.validators), (v) => createValidatorFlat(v))
-  );
-
-  const cachedBalances = MutableVector.from(readonlyValues(state.balances));
   let cachedPreviousParticipation, cachedCurrentParticipation;
   const forkName = config.getForkName(state.slot);
   let currIndexedSyncCommittee: IndexedSyncCommittee;
   let nextIndexedSyncCommittee: IndexedSyncCommittee;
-  const epochCtx = createEpochContext(config, state, cachedValidators, opts);
+
+  // TODO: Try to merge the validator loop inside createEpochContext() with the loops above
+  const epochCtx = createEpochContext(config, state, opts);
   let cachedInactivityScores: MutableVector<Number64>;
+
   if (forkName === ForkName.phase0) {
+    // TODO: More efficient way of getting the length?
+    const validatorCount = state.validators.length;
+
     const emptyParticipationStatus = {
       timelyHead: false,
       timelySource: false,
@@ -83,9 +116,10 @@ export function createCachedBeaconState<T extends allForks.BeaconState>(
     };
     currIndexedSyncCommittee = emptyIndexedSyncCommittee;
     nextIndexedSyncCommittee = emptyIndexedSyncCommittee;
+
     // Can these arrays be zero-ed for phase0? Are they actually used?
-    cachedPreviousParticipation = MutableVector.from(newFilledArray(cachedValidators.length, emptyParticipationStatus));
-    cachedCurrentParticipation = MutableVector.from(newFilledArray(cachedValidators.length, emptyParticipationStatus));
+    cachedPreviousParticipation = MutableVector.from(newFilledArray(validatorCount, emptyParticipationStatus));
+    cachedCurrentParticipation = MutableVector.from(newFilledArray(validatorCount, emptyParticipationStatus));
     cachedInactivityScores = MutableVector.empty();
   } else {
     const {pubkey2index} = epochCtx;
@@ -104,8 +138,8 @@ export function createCachedBeaconState<T extends allForks.BeaconState>(
     new BeaconStateContext(
       state.type as ContainerType<T>,
       state.tree,
-      cachedValidators,
-      cachedBalances,
+      // cachedValidators,
+      // cachedBalances,
       cachedPreviousParticipation,
       cachedCurrentParticipation,
       currIndexedSyncCommittee,
@@ -117,6 +151,55 @@ export function createCachedBeaconState<T extends allForks.BeaconState>(
   ) as CachedBeaconState<T>;
 }
 
+/**
+ * Cache useful data associated to a specific state.
+ * Optimize processing speed of block processing + gossip validation while having a low memory cost.
+ *
+ * Previously BeaconStateContext included:
+ * ```ts
+ * validators: CachedValidatorList & T["validators"];
+ * balances: CachedBalanceList & T["balances"];
+ * inactivityScores: CachedInactivityScoreList & List<Number64>;
+ * ```
+ *
+ * Those caches where removed since they are no strictly necessary to make the epoch transition faster,
+ * but have a high memory cost. Note that all data was duplicated between the Tree and MutableVector.
+ * 1. TreeBacked, for efficient hashing
+ * 2. MutableVector (persistent-ts) with StructBacked validator objects for fast accessing and iteration
+ *
+ * ### validators
+ * state.validators is the heaviest data structure in the state. As TreeBacked, the leafs account for 91% with
+ * 200_000 validators. It requires ~ 2_000_000 Uint8Array instances with total memory of ~ 400MB.
+ * However its contents don't change very often. Validators only change when;
+ * - they first deposit
+ * - they dip from 32 effective balance to 31 (pretty much only when inactive for very long, or slashed)
+ * - they activate (once)
+ * - they exit (once)
+ * - they get slashed (max once)
+ *
+ * TODO: How to quickly access the tree without having to duplicate its data?
+ *
+ * ### balances
+ * The balances array completely changes at the epoch boundary, where almost all the validator balances
+ * are updated. However it may have tiny changes during block processing if:
+ * - On a valid deposit
+ * - Validator gets slashed?
+ * - On altair, the block proposer. Optimized to only happen once per block
+ *
+ * TODO: Individual balances could be stored as regular numbers:
+ * - Number.MAX_SAFE_INTEGER = 9007199254740991, which is 9e6 GWEI
+ *
+ * ### inactivityScores
+ * inactivityScores can be changed only:
+ * - At the epoch transition. It only changes when a validator is offline. So it may change a bit but not
+ *   a lot on normal network conditions.
+ * - During block processing, when a validator joins a new 0 entry is pushed
+ *
+ * TODO: Don't keep a duplicated structure around always. During block processing just push to the tree,
+ * and maybe batch the changes. Then on process_inactivity_updates() compute the total deltas, and depending
+ * on the number of changes convert tree to array, apply diff, write to tree again. Or if there are just a few
+ * changes update the tree directly.
+ */
 export class BeaconStateContext<T extends allForks.BeaconState> {
   config: IBeaconConfig;
   /**
@@ -147,7 +230,7 @@ export class BeaconStateContext<T extends allForks.BeaconState> {
    *
    * TODO: How to quickly access the tree without having to duplicate its data?
    */
-  validators: CachedValidatorList<T["validators"][number]> & T["validators"];
+  // validators: CachedValidatorList & T["validators"];
   /**
    * Returns a Proxy to CachedBalanceList
    *
@@ -159,12 +242,12 @@ export class BeaconStateContext<T extends allForks.BeaconState> {
    * are updated. However it may have tiny changes during block processing if:
    * - On a valid deposit
    * - Validator gets slashed?
-   * - On altair, the block proposer
+   * - On altair, the block proposer. Optimized to only happen once per block
    *
    * TODO: Individual balances could be stored as regular numbers:
    * - Number.MAX_SAFE_INTEGER = 9007199254740991, which is 9e6 GWEI
    */
-  balances: CachedBalanceList & T["balances"];
+  // balances: CachedBalanceList & T["balances"];
   /**
    * Returns a Proxy to CachedEpochParticipation
    *
@@ -221,8 +304,8 @@ export class BeaconStateContext<T extends allForks.BeaconState> {
   constructor(
     type: ContainerType<T>,
     tree: Tree,
-    validatorCache: MutableVector<T["validators"][number]>,
-    balanceCache: MutableVector<T["balances"][number]>,
+    // validatorCache: MutableVector<ValidatorFlat>,
+    // balanceCache: MutableVector<T["balances"][number]>,
     previousEpochParticipationCache: MutableVector<IParticipationStatus>,
     currentEpochParticipationCache: MutableVector<IParticipationStatus>,
     currentSyncCommittee: IndexedSyncCommittee,
@@ -234,22 +317,23 @@ export class BeaconStateContext<T extends allForks.BeaconState> {
     this.type = type;
     this.tree = tree;
     this.epochCtx = epochCtx;
-    this.validators = (new Proxy(
-      new CachedValidatorList(
-        this.type.fields["validators"] as CompositeListType<List<T["validators"][number]>>,
-        this.type.tree_getProperty(this.tree, "validators") as Tree,
-        validatorCache
-      ),
-      CachedValidatorListProxyHandler
-    ) as unknown) as CachedValidatorList<T["validators"][number]> & T["validators"];
-    this.balances = (new Proxy(
-      new CachedBalanceList(
-        this.type.fields["balances"] as BasicListType<List<T["balances"][number]>>,
-        this.type.tree_getProperty(this.tree, "balances") as Tree,
-        balanceCache
-      ),
-      CachedBalanceListProxyHandler
-    ) as unknown) as CachedBalanceList & T["balances"];
+
+    // this.validators = (new Proxy(
+    //   new CachedValidatorList(
+    //     this.type.fields["validators"] as CompositeListType<List<T["validators"][number]>>,
+    //     this.type.tree_getProperty(this.tree, "validators") as Tree,
+    //     validatorCache
+    //   ),
+    //   CachedValidatorListProxyHandler
+    // ) as unknown) as CachedValidatorList & T["validators"];
+    // this.balances = (new Proxy(
+    //   new CachedBalanceList(
+    //     this.type.fields["balances"] as BasicListType<List<T["balances"][number]>>,
+    //     this.type.tree_getProperty(this.tree, "balances") as Tree,
+    //     balanceCache
+    //   ),
+    //   CachedBalanceListProxyHandler
+    // ) as unknown) as CachedBalanceList & T["balances"];
     this.previousEpochParticipation = (new Proxy(
       new CachedEpochParticipation({
         type: this.type.fields["previousEpochParticipation"] as BasicListType<List<ParticipationFlags>>,
@@ -283,8 +367,8 @@ export class BeaconStateContext<T extends allForks.BeaconState> {
       new BeaconStateContext(
         this.type,
         this.tree.clone(),
-        this.validators.persistent.clone(),
-        this.balances.persistent.clone(),
+        // this.validators.persistent.clone(),
+        // this.balances.persistent.clone(),
         this.previousEpochParticipation.persistent.clone(),
         this.currentEpochParticipation.persistent.clone(),
         // states in the same sync period has same sync committee
@@ -312,8 +396,8 @@ export class BeaconStateContext<T extends allForks.BeaconState> {
    * Toggle all `MutableVector` caches to use `TransientVector`
    */
   setStateCachesAsTransient(): void {
-    this.validators.persistent.asTransient();
-    this.balances.persistent.asTransient();
+    // this.validators.persistent.asTransient();
+    // this.balances.persistent.asTransient();
     this.previousEpochParticipation.persistent.asTransient();
     this.currentEpochParticipation.persistent.asTransient();
     this.inactivityScores.persistent.asTransient();
@@ -323,8 +407,8 @@ export class BeaconStateContext<T extends allForks.BeaconState> {
    * Toggle all `MutableVector` caches to use `PersistentVector`
    */
   setStateCachesAsPersistent(): void {
-    this.validators.persistent.asPersistent();
-    this.balances.persistent.asPersistent();
+    // this.validators.persistent.asPersistent();
+    // this.balances.persistent.asPersistent();
     this.previousEpochParticipation.persistent.asPersistent();
     this.currentEpochParticipation.persistent.asPersistent();
     this.inactivityScores.persistent.asPersistent();
@@ -334,11 +418,12 @@ export class BeaconStateContext<T extends allForks.BeaconState> {
 // eslint-disable-next-line @typescript-eslint/naming-convention
 export const CachedBeaconStateProxyHandler: ProxyHandler<CachedBeaconState<allForks.BeaconState>> = {
   get(target: CachedBeaconState<allForks.BeaconState>, key: string): unknown {
-    if (key === "validators") {
-      return target.validators;
-    } else if (key === "balances") {
-      return target.balances;
-    } else if (key === "previousEpochParticipation") {
+    // if (key === "validators") {
+    //   return target.validators;
+    // } else if (key === "balances") {
+    //   return target.balances;
+    // }
+    if (key === "previousEpochParticipation") {
       return target.previousEpochParticipation;
     } else if (key === "currentEpochParticipation") {
       return target.currentEpochParticipation;
@@ -369,11 +454,12 @@ export const CachedBeaconStateProxyHandler: ProxyHandler<CachedBeaconState<allFo
     return undefined;
   },
   set(target: CachedBeaconState<allForks.BeaconState>, key: string, value: unknown): boolean {
-    if (key === "validators") {
-      throw new Error("Cannot set validators");
-    } else if (key === "balances") {
-      throw new Error("Cannot set balances");
-    } else if (key === "previousEpochParticipation") {
+    // if (key === "validators") {
+    //   throw new Error("Cannot set validators");
+    // } else if (key === "balances") {
+    //   throw new Error("Cannot set balances");
+    // }
+    if (key === "previousEpochParticipation") {
       throw new Error("Cannot set previousEpochParticipation");
     } else if (key === "currentEpochParticipation") {
       throw new Error("Cannot set currentEpochParticipation");

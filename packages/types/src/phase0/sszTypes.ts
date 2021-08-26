@@ -309,6 +309,8 @@ export const EpochAttestations = new ListType<List<phase0.PendingAttestation>>({
   limit: MAX_ATTESTATIONS * SLOTS_PER_EPOCH,
 });
 
+export const Balances = new ListType<List<bigint>>({elementType: Gwei, limit: VALIDATOR_REGISTRY_LIMIT});
+
 export const BeaconState = new ContainerType<phase0.BeaconState>({
   fields: {
     // Misc
@@ -333,7 +335,7 @@ export const BeaconState = new ContainerType<phase0.BeaconState>({
     eth1DepositIndex: Number64,
     // Registry
     validators: new ListType({elementType: Validator, limit: VALIDATOR_REGISTRY_LIMIT}),
-    balances: new ListType({elementType: Gwei, limit: VALIDATOR_REGISTRY_LIMIT}),
+    balances: Balances,
     randaoMixes: new VectorType({elementType: Bytes32, length: EPOCHS_PER_HISTORICAL_VECTOR}),
     // Slashings
     slashings: new VectorType({elementType: Gwei, length: EPOCHS_PER_SLASHINGS_VECTOR}),

@@ -7,8 +7,11 @@ import {CachedBeaconState} from "../util";
  */
 export function initiateValidatorExit(state: CachedBeaconState<allForks.BeaconState>, index: ValidatorIndex): void {
   const {config, validators, epochCtx} = state;
+
+  const validator = validators[index];
+
   // return if validator already initiated exit
-  if (validators[index].exitEpoch !== FAR_FUTURE_EPOCH) {
+  if (validator.exitEpoch !== FAR_FUTURE_EPOCH) {
     return;
   }
 
@@ -24,8 +27,6 @@ export function initiateValidatorExit(state: CachedBeaconState<allForks.BeaconSt
   }
 
   // set validator exit epoch and withdrawable epoch
-  validators.update(index, {
-    exitEpoch: epochCtx.exitQueueEpoch,
-    withdrawableEpoch: epochCtx.exitQueueEpoch + config.MIN_VALIDATOR_WITHDRAWABILITY_DELAY,
-  });
+  validator.exitEpoch = epochCtx.exitQueueEpoch;
+  validator.withdrawableEpoch = epochCtx.exitQueueEpoch + config.MIN_VALIDATOR_WITHDRAWABILITY_DELAY;
 }

@@ -22,8 +22,8 @@ export function generateBalanceDeltasEpochProcess(
   const vcBn = BigInt(vc);
 
   const epochProcess: Partial<IEpochProcess> = {
-    statuses: generateStatuses(state.validators.length, flagFactors),
-    validators: state.validators.persistent.toArray(),
+    balancesFlat: state.balances.valueOf() as bigint[],
+    statusesFlat: generateStatuses(vc, flagFactors),
     totalActiveStake: MAX_EFFECTIVE_BALANCE * vcBn,
     baseRewardPerIncrement: BigInt(726),
     prevEpochUnslashedStake: {

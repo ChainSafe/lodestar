@@ -3,21 +3,22 @@
  */
 
 import {readonlyValues} from "@chainsafe/ssz";
-import {Epoch, phase0, ValidatorIndex, allForks} from "@chainsafe/lodestar-types";
+import {Epoch, ValidatorIndex, allForks} from "@chainsafe/lodestar-types";
 import {intDiv} from "@chainsafe/lodestar-utils";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
+import {ValidatorFlat} from "../allForks";
 
 /**
  * Check if [[validator]] is active
  */
-export function isActiveValidator(validator: phase0.Validator, epoch: Epoch): boolean {
+export function isActiveValidator(validator: ValidatorFlat, epoch: Epoch): boolean {
   return validator.activationEpoch <= epoch && epoch < validator.exitEpoch;
 }
 
 /**
  * Check if [[validator]] is slashable
  */
-export function isSlashableValidator(validator: phase0.Validator, epoch: Epoch): boolean {
+export function isSlashableValidator(validator: ValidatorFlat, epoch: Epoch): boolean {
   return !validator.slashed && validator.activationEpoch <= epoch && epoch < validator.withdrawableEpoch;
 }
 

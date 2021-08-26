@@ -50,10 +50,10 @@ export function getPubkeysForIndices(
   state: CachedBeaconState<allForks.BeaconState>,
   validatorIndices: ValidatorIndex[]
 ): (validatorIndex: ValidatorIndex) => BLSPubkey {
-  const validators = state.validators.persistent;
+  const validators = state.validators;
   const pubkeyMap = new Map(
     validatorIndices.map((validatorIndex) => {
-      const validator = validators.get(validatorIndex);
+      const validator = validators[validatorIndex];
       if (!validator) throw new ApiError(400, `Validator index ${validatorIndex} not in state`);
       return [validatorIndex, validator.pubkey];
     })

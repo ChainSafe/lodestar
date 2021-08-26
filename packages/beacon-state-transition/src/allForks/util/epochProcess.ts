@@ -1,4 +1,5 @@
 import {Epoch, ValidatorIndex, Gwei, phase0, allForks} from "@chainsafe/lodestar-types";
+import {readonlyValues} from "@chainsafe/ssz";
 import {intDiv} from "@chainsafe/lodestar-utils";
 import {
   EFFECTIVE_BALANCE_INCREMENT,
@@ -96,9 +97,6 @@ export interface IEpochProcess {
    */
   indicesToEject: ValidatorIndex[];
 
-  statuses: IAttesterStatus[];
-  validators: phase0.Validator[];
-  balances?: BigUint64Array;
   /**
    * Active validator indices for currentEpoch + 2.
    * This is only used in `afterProcessEpoch` to compute epoch shuffling, it's not efficient to calculate it at that time
@@ -121,8 +119,111 @@ export interface IEpochProcess {
    * | afterEpochProcess                | read it                            |
    */
   nextEpochTotalActiveBalance: Gwei;
+
+  // Flat arrays for fast iteration
+  statusesFlat: IAttesterStatus[];
+  /**
+   * TODO: Benchmark using a BigUint64Array instead
+   *
+   * Block processing:
+   * - Does not need to iterate over validators or balances
+   * - May mutate balances a little bit in slashings, valid deposit, (altair) process attestations + sync committee
+   *
+   * Epoch processing:
+   * - processRewardsAndPenalties() mutates almost all the state.balances array
+   * - processSlashings() mutates some of state.balances
+   * - processEffectiveBalanceUpdates() needs to iterate over all state.balances (readonly)
+   * - processRegistryUpdates() needs to mutate state.validator but only sparsly or not at all
+   *
+   * About balances in epoch processing:
+   * | epoch process fn                    | balances action |
+   * | ----------------------------------- | --------------- |
+   * | processJustificationAndFinalization | -
+   * | processInactivityUpdates (altair)   | -
+   * | processRewardsAndPenalties          | read + write all
+   * | processRegistryUpdates              | -
+   * | processSlashings                    | read + write a few
+   * | processEffectiveBalanceUpdates      | read all
+   * | processParticipationRecordUpdates   | -
+   * | processSyncCommitteeUpdates         | -
+   *
+   * Strategy with state.balances:
+   * 1. Create a flag balances array before epoch processing
+   * 2. Mutate flat balances only in processRewardsAndPenalties() and processSlashings()
+   * 3. In processEffectiveBalanceUpdates() read from flat balances
+   * 4. After epoch transition, create the balances tree again from scratch
+   */
+  balancesFlat: Gwei[];
+
+  /**
+   * Returns a Proxy to CachedInactivityScoreList
+   *
+   * Stores state<altair>.inactivityScores in two duplicated forms (both structures are structurally shared):
+   * 1. TreeBacked, for efficient hashing
+   * 2. MutableVector (persistent-ts) with a uint64 for each validator
+   *
+   * inactivityScores can be changed only:
+   * - At the epoch transition. It only changes when a validator is offline. So it may change a bit but not
+   *   a lot on normal network conditions.
+   * - During block processing, when a validator joins a new 0 entry is pushed
+   *
+   * TODO: Don't keep a duplicated structure around always. During block processing just push to the tree,
+   * and maybe batch the changes. Then on process_inactivity_updates() compute the total deltas, and depending
+   * on the number of changes convert tree to array, apply diff, write to tree again. Or if there are just a few
+   * changes update the tree directly.
+   *
+   * About balances in epoch processing:
+   * | epoch process fn                    | inactivityScores action |
+   * | ----------------------------------- | ----------------------- |
+   * | processJustificationAndFinalization | -
+   * | processInactivityUpdates (altair)   | read almost all - write some
+   * | processRewardsAndPenalties          | read almost all
+   * | processRegistryUpdates              | -
+   * | processSlashings                    | -
+   * | processEffectiveBalanceUpdates      | -
+   * | processParticipationRecordUpdates   | -
+   * | processSyncCommitteeUpdates         | -
+   *
+   * Strategy with state.inactivityScores:
+   * 1. Create a flag inactivityScores array before epoch processing
+   * 2. Mutate flat inactivityScores in processInactivityUpdates()
+   * 3. In processRewardsAndPenalties() read from flat inactivityScores
+   * 4. After epoch transition, create the inactivityScores tree again from scratch
+   */
+  inactivityScoresFlat: number[];
+
+  /**
+   * ### effectiveBalances
+   *
+   * About effectiveBalances in epoch processing:
+   * | epoch process fn                    | effectiveBalances action |
+   * | ----------------------------------- | ------------------------ |
+   * | processJustificationAndFinalization | -
+   * | processInactivityUpdates (altair)   | -
+   * | processRewardsAndPenalties          | read all
+   * | processRegistryUpdates              | -
+   * | processSlashings                    | read few (slashed)
+   * | processEffectiveBalanceUpdates      | read all - write some
+   * | processParticipationRecordUpdates   | -
+   * | processSyncCommitteeUpdates         | -
+   *
+   * Strategy with state.effectiveBalances:
+   * 1. Mantain a MutableVector attached to the state for block processing
+   * 2. Read directly from the MutableVector on epoch processing iterations
+   * 3. On processEffectiveBalanceUpdates mutate Tree and MutableVector
+   */
 }
 
+/**
+ * Runs just before running an epoch transition on state. It is used to prepare data required to run an epoch transition
+ * faster at the cost of added memory. When the epoch transition is over, rotateEpochs() is called, which would be the
+ * other hook:
+ * ```
+ * beforeProcessEpoch() // before epoch transition hook
+ * epochTransition()
+ * rotateEpochs() // after epoch transition hook
+ * ```
+ */
 export function beforeProcessEpoch<T extends allForks.BeaconState>(state: CachedBeaconState<T>): IEpochProcess {
   const {config, epochCtx} = state;
   const forkName = config.getForkName(state.slot);
@@ -131,58 +232,105 @@ export function beforeProcessEpoch<T extends allForks.BeaconState>(state: Cached
   // active validator indices for nextShuffling is ready, we want to precalculate for the one after that
   const nextShufflingEpoch = currentEpoch + 2;
 
-  const slashingsEpoch = currentEpoch + intDiv(EPOCHS_PER_SLASHINGS_VECTOR, 2);
-
   const indicesToSlash: ValidatorIndex[] = [];
   const indicesEligibleForActivationQueue: ValidatorIndex[] = [];
   const indicesEligibleForActivation: ValidatorIndex[] = [];
   const indicesToEject: ValidatorIndex[] = [];
   const nextEpochShufflingActiveValidatorIndices: ValidatorIndex[] = [];
 
+  // TODO: Investigate faster ways to convert to and from
+  // TODO - SLOW CODE - 🐢
+  const balancesFlat = Array.from(readonlyValues(state.balances));
+
   const statuses: IAttesterStatus[] = [];
+
+  const slashingsEpoch = currentEpoch + intDiv(EPOCHS_PER_SLASHINGS_VECTOR, 2);
 
   let totalActiveStake = BigInt(0);
 
-  const validators = state.validators.persistent.toArray();
-  validators.forEach((v, i) => {
+  // If it's too slow, consider having a persistent-ts array of references to the validator nodes for faster indexing
+  // Reading 250_000 leaf nodes from a depth 40 tree costs ~50ms, it's pretty cheap
+  // TODO: Use readonlyAllValues()
+  // TODO - SLOW CODE - 🐢
+  const validators: phase0.Validator[] = Array.from(readonlyValues(state.validators));
+  const validatorCount = validators.length;
+
+  for (let i = 0; i < validatorCount; i++) {
+    // TODO - SLOW CODE - 🐢🐢🐢🐢🐢🐢🐢🐢🐢
+    // Use a struct representation in the leaf nodes of the validators tree to have fast reads and slow writes
+    const validator = validators[i].valueOf() as typeof validators[0];
     const status = createIAttesterStatus();
 
-    if (v.slashed) {
-      if (slashingsEpoch === v.withdrawableEpoch) {
+    if (validator.slashed) {
+      if (slashingsEpoch === validator.withdrawableEpoch) {
         indicesToSlash.push(i);
       }
     } else {
       status.flags |= FLAG_UNSLASHED;
     }
 
-    if (isActiveValidator(v, prevEpoch) || (v.slashed && prevEpoch + 1 < v.withdrawableEpoch)) {
+    if (isActiveValidator(validator, prevEpoch) || (validator.slashed && prevEpoch + 1 < validator.withdrawableEpoch)) {
       status.flags |= FLAG_ELIGIBLE_ATTESTER;
     }
 
-    const active = isActiveValidator(v, currentEpoch);
+    const active = isActiveValidator(validator, currentEpoch);
     if (active) {
       status.active = true;
-      totalActiveStake += v.effectiveBalance;
+      totalActiveStake += validator.effectiveBalance;
     }
 
-    if (v.activationEligibilityEpoch === FAR_FUTURE_EPOCH && v.effectiveBalance === MAX_EFFECTIVE_BALANCE) {
+    // To optimize process_registry_updates():
+    // ```python
+    // def is_eligible_for_activation_queue(validator: Validator) -> bool:
+    //   return (
+    //     validator.activation_eligibility_epoch == FAR_FUTURE_EPOCH
+    //     and validator.effective_balance == MAX_EFFECTIVE_BALANCE
+    //   )
+    // ```
+    if (
+      validator.activationEligibilityEpoch === FAR_FUTURE_EPOCH &&
+      validator.effectiveBalance === MAX_EFFECTIVE_BALANCE
+    ) {
       indicesEligibleForActivationQueue.push(i);
     }
 
-    // Note: ignores churn, apply churn limit latter, because finality may change
-    if (v.activationEpoch === FAR_FUTURE_EPOCH && v.activationEligibilityEpoch <= currentEpoch) {
+    // To optimize process_registry_updates():
+    // ```python
+    // def is_eligible_for_activation(state: BeaconState, validator: Validator) -> bool:
+    //   return (
+    //     validator.activation_eligibility_epoch <= state.finalized_checkpoint.epoch  # Placement in queue is finalized
+    //     and validator.activation_epoch == FAR_FUTURE_EPOCH                          # Has not yet been activated
+    //   )
+    // ```
+    // Here we have to check if `activationEligibilityEpoch <= currentEpoch` instead of finalized checkpoint, because the finalized
+    // checkpoint may change during epoch processing at processJustificationAndFinalization(), which is called before processRegistryUpdates().
+    // Then in processRegistryUpdates() we will check `activationEligibilityEpoch <= finalityEpoch`. This is to keep the array small.
+    //
+    // Use `else` since indicesEligibleForActivationQueue + indicesEligibleForActivation are mutually exclusive
+    else if (validator.activationEpoch === FAR_FUTURE_EPOCH && validator.activationEligibilityEpoch <= currentEpoch) {
       indicesEligibleForActivation.push(i);
     }
 
-    if (status.active && v.exitEpoch === FAR_FUTURE_EPOCH && v.effectiveBalance <= config.EJECTION_BALANCE) {
+    // To optimize process_registry_updates():
+    // ```python
+    // if is_active_validator(validator, get_current_epoch(state)) and validator.effective_balance <= EJECTION_BALANCE:
+    // ```
+    // Adding extra condition `exitEpoch === FAR_FUTURE_EPOCH` to keep the array as small as possible. initiateValidatorExit() will ignore them anyway
+    //
+    // Use `else` since indicesEligibleForActivationQueue + indicesEligibleForActivation + indicesToEject are mutually exclusive
+    else if (
+      active &&
+      validator.exitEpoch === FAR_FUTURE_EPOCH &&
+      validator.effectiveBalance <= config.EJECTION_BALANCE
+    ) {
       indicesToEject.push(i);
     }
 
     statuses.push(status);
-    if (isActiveValidator(v, nextShufflingEpoch)) {
+    if (isActiveValidator(validator, nextShufflingEpoch)) {
       nextEpochShufflingActiveValidatorIndices.push(i);
     }
-  });
+  }
 
   if (totalActiveStake < EFFECTIVE_BALANCE_INCREMENT) {
     totalActiveStake = EFFECTIVE_BALANCE_INCREMENT;
@@ -191,6 +339,7 @@ export function beforeProcessEpoch<T extends allForks.BeaconState>(state: Cached
   // SPEC: function getBaseRewardPerIncrement()
   const baseRewardPerIncrement = computeBaseRewardPerIncrement(totalActiveStake);
 
+  // To optimize process_registry_updates():
   // order by sequence of activationEligibilityEpoch setting and then index
   indicesEligibleForActivation.sort(
     (a, b) => validators[a].activationEligibilityEpoch - validators[b].activationEligibilityEpoch || a - b
@@ -243,7 +392,9 @@ export function beforeProcessEpoch<T extends allForks.BeaconState>(state: Cached
 
   for (let i = 0; i < statuses.length; i++) {
     const status = statuses[i];
-    const effectiveBalance = validators[i].effectiveBalance;
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    const effectiveBalance = epochCtx.effectiveBalances.get(i)!;
+
     if (hasMarkers(status.flags, FLAG_PREV_SOURCE_ATTESTER_UNSLASHED)) {
       prevSourceUnslStake += effectiveBalance;
     }
@@ -266,6 +417,8 @@ export function beforeProcessEpoch<T extends allForks.BeaconState>(state: Cached
   if (prevHeadUnslStake < increment) prevHeadUnslStake = increment;
   if (currTargetUnslStake < increment) currTargetUnslStake = increment;
 
+  const inactivityScoresFlat = forkName === ForkName.phase0 ? [] : Array.from(readonlyValues(state.inactivityScores));
+
   return {
     prevEpoch,
     currentEpoch,
@@ -285,7 +438,8 @@ export function beforeProcessEpoch<T extends allForks.BeaconState>(state: Cached
     nextEpochShufflingActiveValidatorIndices,
     // to be updated in processEffectiveBalanceUpdates
     nextEpochTotalActiveBalance: BigInt(0),
-    statuses,
-    validators,
+    statusesFlat: statuses,
+    balancesFlat,
+    inactivityScoresFlat,
   };
 }

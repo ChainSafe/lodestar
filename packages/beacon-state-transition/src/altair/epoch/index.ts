@@ -9,10 +9,10 @@ import {
   processRandaoMixesReset,
   processHistoricalRootsUpdate,
 } from "../../allForks/epoch";
+import {processInactivityUpdates} from "./processInactivityUpdates";
 import {processRewardsAndPenalties} from "./processRewardsAndPenalties";
 import {processSlashings} from "./processSlashings";
 import {processParticipationFlagUpdates} from "./processParticipationFlagUpdates";
-import {processInactivityUpdates} from "./processInactivityUpdates";
 import {processSyncCommitteeUpdates} from "./processSyncCommitteeUpdates";
 
 // For spec tests

@@ -24,13 +24,16 @@ export function slashValidatorAllForks(
 ): void {
   const {validators, epochCtx} = state;
   const epoch = epochCtx.currentShuffling.epoch;
-  initiateValidatorExit(state as CachedBeaconState<allForks.BeaconState>, slashedIndex);
-  const validator = validators[slashedIndex];
-  validators.update(slashedIndex, {
-    slashed: true,
-    withdrawableEpoch: Math.max(validator.withdrawableEpoch, epoch + EPOCHS_PER_SLASHINGS_VECTOR),
-  });
 
+  // TODO: Merge initiateValidatorExit validators.update() with the one below
+  initiateValidatorExit(state as CachedBeaconState<allForks.BeaconState>, slashedIndex);
+
+  const validator = validators[slashedIndex];
+
+  validator.slashed = true;
+  validator.withdrawableEpoch = Math.max(validator.withdrawableEpoch, epoch + EPOCHS_PER_SLASHINGS_VECTOR);
+
+  // TODO: Use effectiveBalance array
   const {effectiveBalance} = validator;
   state.slashings[epoch % EPOCHS_PER_SLASHINGS_VECTOR] += effectiveBalance;
 
@@ -39,16 +42,18 @@ export function slashValidatorAllForks(
   decreaseBalance(state, slashedIndex, effectiveBalance / minSlashingPenaltyQuotient);
 
   // apply proposer and whistleblower rewards
-  const proposerIndex = epochCtx.getBeaconProposer(state.slot);
-  if (whistleblowerIndex === undefined || !Number.isSafeInteger(whistleblowerIndex)) {
-    whistleblowerIndex = proposerIndex;
-  }
   const whistleblowerReward = effectiveBalance / WHISTLEBLOWER_REWARD_QUOTIENT;
   const proposerReward =
     fork === ForkName.phase0
       ? whistleblowerReward / PROPOSER_REWARD_QUOTIENT
       : (whistleblowerReward * PROPOSER_WEIGHT) / WEIGHT_DENOMINATOR;
 
-  increaseBalance(state, proposerIndex, proposerReward);
-  increaseBalance(state, whistleblowerIndex, whistleblowerReward - proposerReward);
+  const proposerIndex = epochCtx.getBeaconProposer(state.slot);
+  if (whistleblowerIndex === undefined || !Number.isSafeInteger(whistleblowerIndex)) {
+    // Call increaseBalance() once with `(whistleblowerReward - proposerReward) + proposerReward`
+    increaseBalance(state, proposerIndex, whistleblowerReward);
+  } else {
+    increaseBalance(state, proposerIndex, proposerReward);
+    increaseBalance(state, whistleblowerIndex, whistleblowerReward - proposerReward);
+  }
 }

@@ -10,8 +10,9 @@ import {ForkChoice, ProtoArray} from "@chainsafe/lodestar-fork-choice";
 import {computeAnchorCheckpoint} from "../initState";
 import {ChainEventEmitter} from "../emitter";
 import {ForkChoiceStore} from "./store";
-import {getEffectiveBalances, CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
+import {CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
 import {IMetrics} from "../../metrics";
+import {getEffectiveBalances} from "../../util/beaconStateTransition";
 
 /**
  * Fork Choice extended with a ChainEventEmitter
@@ -41,6 +42,8 @@ export class LodestarForkChoice extends ForkChoice {
       epoch: checkpoint.epoch === 0 ? checkpoint.epoch : checkpoint.epoch + 1,
     };
     // TODO - PERFORMANCE WARNING - NAIVE CODE
+    // Compute this value somewhere else and use the result of EpochProcess or similar
+    // 🐢🐢🐢🐢🐢🐢🐢🐢🐢🐢🐢🐢🐢🐢🐢🐢🐢🐢🐢
     const justifiedBalances = getEffectiveBalances(state);
     super({
       config,

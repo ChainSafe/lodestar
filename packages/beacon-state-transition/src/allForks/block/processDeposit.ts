@@ -67,6 +67,7 @@ export function processDeposit(
     }
 
     // add validator and balance entries
+    const effectiveBalance = bigIntMin(amount - (amount % EFFECTIVE_BALANCE_INCREMENT), MAX_EFFECTIVE_BALANCE);
     validators.push({
       pubkey,
       withdrawalCredentials: deposit.data.withdrawalCredentials.valueOf() as Uint8Array, // Drop tree
@@ -74,10 +75,11 @@ export function processDeposit(
       activationEpoch: FAR_FUTURE_EPOCH,
       exitEpoch: FAR_FUTURE_EPOCH,
       withdrawableEpoch: FAR_FUTURE_EPOCH,
-      effectiveBalance: bigIntMin(amount - (amount % EFFECTIVE_BALANCE_INCREMENT), MAX_EFFECTIVE_BALANCE),
+      effectiveBalance: effectiveBalance,
       slashed: false,
     });
     state.balances.push(amount);
+    epochCtx.effectiveBalances.push(effectiveBalance);
 
     // add participation caches
     state.previousEpochParticipation.pushStatus({timelyHead: false, timelySource: false, timelyTarget: false});

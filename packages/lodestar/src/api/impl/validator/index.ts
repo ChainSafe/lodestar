@@ -193,14 +193,13 @@ export function getValidatorApi({
 
       // Note: Using a MutableVector is the fastest way of getting compressed pubkeys.
       //       See benchmark -> packages/lodestar/test/perf/api/impl/validator/attester.test.ts
-      const validators = state.validators.persistent;
+      const validators = state.validators;
       const duties: routes.validator.ProposerDuty[] = [];
 
       for (let slot = startSlot; slot < startSlot + SLOTS_PER_EPOCH; slot++) {
         // getBeaconProposer ensures the requested epoch is correct
         const validatorIndex = state.getBeaconProposer(slot);
-        const validator = validators.get(validatorIndex);
-        if (!validator) throw Error(`Unknown validatorIndex ${validatorIndex}`);
+        const validator = validators[validatorIndex];
         duties.push({slot, validatorIndex, pubkey: validator.pubkey});
       }
 

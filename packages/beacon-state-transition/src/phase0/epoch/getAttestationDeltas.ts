@@ -52,7 +52,8 @@ export function getAttestationDeltas(
   state: CachedBeaconState<phase0.BeaconState>,
   epochProcess: IEpochProcess
 ): [number[], number[]] {
-  const validatorCount = epochProcess.statuses.length;
+  const {epochCtx} = state;
+  const validatorCount = epochProcess.statusesFlat.length;
   const rewards = newZeroedArray(validatorCount);
   const penalties = newZeroedArray(validatorCount);
 
@@ -77,8 +78,9 @@ export function getAttestationDeltas(
   // effectiveBalance is multiple of EFFECTIVE_BALANCE_INCREMENT and less than MAX_EFFECTIVE_BALANCE
   // so there are limited values of them like 32000000000, 31000000000, 30000000000
   const rewardPnaltyItemCache = new Map<number, IRewardPenaltyItem>();
-  for (const [i, status] of epochProcess.statuses.entries()) {
-    const effBalance = epochProcess.validators[i].effectiveBalance;
+  for (const [i, status] of epochProcess.statusesFlat.entries()) {
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    const effBalance = epochCtx.effectiveBalances.get(i)!;
     let rewardItem = rewardPnaltyItemCache.get(Number(effBalance));
     if (!rewardItem) {
       const baseReward = Number((effBalance * BASE_REWARD_FACTOR) / balanceSqRoot / BASE_REWARDS_PER_EPOCH);

@@ -60,10 +60,9 @@ describe("api / impl / validator", () => {
       // Only track regressions for 1000 in CI to ensure performance does not degrade
       noThreshold: reqCount < 1000,
       fn: () => {
-        const validators = state.validators.persistent;
+        const validators = state.validators;
         for (let i = 0; i < reqCount; i++) {
-          const validator = validators.get(i);
-          if (!validator) throw Error(`Index ${i} not found`);
+          const validator = validators[i];
           validator.pubkey;
         }
       },
