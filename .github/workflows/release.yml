@@ -124,4 +124,5 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       - run: docker build --tag chainsafe/lodestar:latest --build-arg VERSION=${{ needs.tag.outputs.tag }} .
       - run: docker tag chainsafe/lodestar:latest chainsafe/lodestar:${{ needs.tag.outputs.tag }}
-      - run: docker push chainsafe/lodestar:latest chainsafe/lodestar:${{ needs.tag.outputs.tag }}
+      - run: docker push chainsafe/lodestar:latest
+      - run: docker push chainsafe/lodestar:${{ needs.tag.outputs.tag }}
