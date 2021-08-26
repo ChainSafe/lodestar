@@ -34,8 +34,8 @@ jobs:
       previous_tag: ${{ steps.get-latest-tag.outputs.tag }}
       version: ${{ steps.tag.outputs.version }}
 
-  publish:
-    name: Publish
+  npm:
+    name: Publish to NPM Registry
     runs-on: ubuntu-latest
     needs: tag
     if: needs.tag.outputs.tag != ''
@@ -112,7 +112,7 @@ jobs:
   docker:
     name: Publish to Docker Hub
     runs-on: ubuntu-latest
-    needs: tag
+    needs: npm
     if: needs.tag.outputs.tag != ''
     steps:
       - uses: actions/checkout@v2
