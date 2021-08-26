@@ -101,6 +101,7 @@ export interface IEpochProcess {
   balances?: BigUint64Array;
   // to be used for afterProcessEpoch()
   nextEpochShufflingActiveValidatorIndices: ValidatorIndex[];
+  nextEpochTotalActiveBalance: Gwei;
 }
 
 export function beforeProcessEpoch<T extends allForks.BeaconState>(state: CachedBeaconState<T>): IEpochProcess {
@@ -263,7 +264,8 @@ export function beforeProcessEpoch<T extends allForks.BeaconState>(state: Cached
     indicesEligibleForActivation,
     indicesToEject,
     nextEpochShufflingActiveValidatorIndices,
-
+    // to be updated in processEffectiveBalanceUpdates
+    nextEpochTotalActiveBalance: BigInt(0),
     statuses,
     validators,
   };
