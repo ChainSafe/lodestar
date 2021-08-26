@@ -19,10 +19,11 @@ describe("phase0 processRegistryUpdates", () => {
   setBenchOpts({maxMs: 60 * 1000, minRuns: 5});
 
   const vc = numValidators;
-  const testCases: {id: string; lengths: IndicesLengths}[] = [
+  const testCases: {id: string; notTrack?: boolean; lengths: IndicesLengths}[] = [
     // Normal (optimal) mainnet network conditions: No effectiveBalance is udpated
     {
       id: "normalcase",
+      notTrack: true,
       lengths: {
         indicesToEject: 0,
         indicesEligibleForActivationQueue: 0,
@@ -52,9 +53,10 @@ describe("phase0 processRegistryUpdates", () => {
   // Provide flat `epochProcess.balances` + flat `epochProcess.validators`
   // which will it update validators tree
 
-  for (const {id, lengths} of testCases) {
+  for (const {id, notTrack, lengths} of testCases) {
     itBench<StateEpoch, StateEpoch>({
       id: `phase0 processRegistryUpdates - ${vc} ${id}`,
+      threshold: notTrack ? Infinity : undefined,
       before: () => getRegistryUpdatesTestData(vc, lengths),
       beforeEach: ({state, epochProcess}) => ({state: state.clone(), epochProcess}),
       fn: ({state, epochProcess}) => allForks.processRegistryUpdates(state, epochProcess),
