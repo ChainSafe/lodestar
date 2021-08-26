@@ -29,8 +29,8 @@ export function processSlashingsAllForks(
   if (process.indicesToSlash.length === 0) {
     return;
   }
-
-  const totalBalance = process.totalActiveStake;
+  // TODO: have the regular totalBalance in EpochProcess too?
+  const totalBalance = BigInt(process.totalActiveStakeByIncrement) * BigInt(EFFECTIVE_BALANCE_INCREMENT);
   // TODO: could totalSlashings be number?
   const totalSlashings = Array.from(readonlyValues(state.slashings)).reduce((a, b) => a + b, BigInt(0));
 

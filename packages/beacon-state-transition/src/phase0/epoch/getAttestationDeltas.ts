@@ -1,5 +1,5 @@
 import {phase0} from "@chainsafe/lodestar-types";
-import {bigIntSqrt, bigIntMax} from "@chainsafe/lodestar-utils";
+import {bigIntSqrt} from "@chainsafe/lodestar-utils";
 import {BASE_REWARDS_PER_EPOCH as BASE_REWARDS_PER_EPOCH_CONST} from "../../constants";
 import {newZeroedArray} from "../../util";
 import {IEpochProcess, hasMarkers, CachedBeaconState} from "../../allForks/util";
@@ -56,20 +56,19 @@ export function getAttestationDeltas(
   const rewards = newZeroedArray(validatorCount);
   const penalties = newZeroedArray(validatorCount);
 
-  // TODO: remove this as we want everything below is number
-  const increment = BigInt(EFFECTIVE_BALANCE_INCREMENT);
-  let totalBalance = bigIntMax(epochProcess.totalActiveStake, increment);
+  // no need this as we make sure it in EpochProcess
+  // let totalBalance = bigIntMax(epochProcess.totalActiveStake, increment);
+  const totalBalance = epochProcess.totalActiveStakeByIncrement;
+  const totalBalanceInGwei = BigInt(totalBalance) * BigInt(EFFECTIVE_BALANCE_INCREMENT);
 
   // increment is factored out from balance totals to avoid overflow
-  const prevEpochSourceStake = bigIntMax(epochProcess.prevEpochUnslashedStake.sourceStake, increment) / increment;
-  const prevEpochTargetStake = bigIntMax(epochProcess.prevEpochUnslashedStake.targetStake, increment) / increment;
-  const prevEpochHeadStake = bigIntMax(epochProcess.prevEpochUnslashedStake.headStake, increment) / increment;
+  const prevEpochSourceStakeByIncrement = epochProcess.prevEpochUnslashedStake.sourceStakeByIncrement;
+  const prevEpochTargetStakeByIncrement = epochProcess.prevEpochUnslashedStake.targetStakeByIncrement;
+  const prevEpochHeadStakeByIncrement = epochProcess.prevEpochUnslashedStake.headStakeByIncrement;
 
   // sqrt first, before factoring out the increment for later usage
-  const balanceSqRoot = Number(bigIntSqrt(totalBalance));
+  const balanceSqRoot = Number(bigIntSqrt(totalBalanceInGwei));
   const finalityDelay = epochProcess.prevEpoch - state.finalizedCheckpoint.epoch;
-  // TODO: totalBalance in eth
-  totalBalance = totalBalance / increment;
 
   const BASE_REWARDS_PER_EPOCH = BASE_REWARDS_PER_EPOCH_CONST;
   const proposerRewardQuotient = Number(PROPOSER_REWARD_QUOTIENT);
@@ -92,11 +91,13 @@ export function getAttestationDeltas(
         maxAttesterReward: baseReward - proposerReward,
         sourceCheckpointReward: isInInactivityLeak
           ? baseReward
-          : Number((BigInt(baseReward) * prevEpochSourceStake) / totalBalance),
+          : Math.floor((baseReward * prevEpochSourceStakeByIncrement) / totalBalance),
         targetCheckpointReward: isInInactivityLeak
           ? baseReward
-          : Number((BigInt(baseReward) * prevEpochTargetStake) / totalBalance),
-        headReward: isInInactivityLeak ? baseReward : Number((BigInt(baseReward) * prevEpochHeadStake) / totalBalance),
+          : Math.floor((baseReward * prevEpochTargetStakeByIncrement) / totalBalance),
+        headReward: isInInactivityLeak
+          ? baseReward
+          : Math.floor((baseReward * prevEpochHeadStakeByIncrement) / totalBalance),
         basePenalty: baseReward * BASE_REWARDS_PER_EPOCH_CONST - proposerReward,
         finalityDelayPenalty: Math.floor((effBalance * finalityDelay) / INACTIVITY_PENALTY_QUOTIENT),
       };

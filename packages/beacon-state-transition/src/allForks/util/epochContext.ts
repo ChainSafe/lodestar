@@ -108,7 +108,7 @@ export function createEpochContext(
   const previousEpoch = currentEpoch === GENESIS_EPOCH ? GENESIS_EPOCH : currentEpoch - 1;
   const nextEpoch = currentEpoch + 1;
 
-  let totalActiveBalance = BigInt(0);
+  let totalActiveBalanceByIncrement = 0;
   let exitQueueEpoch = computeActivationExitEpoch(currentEpoch);
   let exitQueueChurn = 0;
 
@@ -122,7 +122,7 @@ export function createEpochContext(
     if (isActiveValidator(v, currentEpoch)) {
       currentActiveIndices.push(i);
       // TODO: totalActiveBalance in eth
-      totalActiveBalance += BigInt(v.effectiveBalance);
+      totalActiveBalanceByIncrement += Math.floor(v.effectiveBalance / EFFECTIVE_BALANCE_INCREMENT);
     }
     if (isActiveValidator(v, nextEpoch)) {
       nextActiveIndices.push(i);
@@ -140,9 +140,8 @@ export function createEpochContext(
   });
 
   // Spec: `EFFECTIVE_BALANCE_INCREMENT` Gwei minimum to avoid divisions by zero
-  if (totalActiveBalance < EFFECTIVE_BALANCE_INCREMENT) {
-    // TODO: totalActiveBalance in eth
-    totalActiveBalance = BigInt(EFFECTIVE_BALANCE_INCREMENT);
+  if (totalActiveBalanceByIncrement < 1) {
+    totalActiveBalanceByIncrement = 1;
   }
 
   const currentShuffling = computeEpochShuffling(state, currentActiveIndices, currentEpoch);
@@ -159,13 +158,13 @@ export function createEpochContext(
   // Only after altair, compute the indices of the current sync committee
   const onAltairFork = currentEpoch >= config.ALTAIR_FORK_EPOCH;
 
+  const totalActiveBalance = BigInt(totalActiveBalanceByIncrement) * BigInt(EFFECTIVE_BALANCE_INCREMENT);
   const syncParticipantReward = onAltairFork ? computeSyncParticipantReward(config, totalActiveBalance) : 0;
-  // TODO: could PROPOSER_WEIGHT be number?
   const syncProposerReward = onAltairFork
     ? Math.floor((syncParticipantReward * PROPOSER_WEIGHT) / (WEIGHT_DENOMINATOR - PROPOSER_WEIGHT))
     : 0;
 
-  const baseRewardPerIncrement = onAltairFork ? computeBaseRewardPerIncrement(totalActiveBalance) : 0;
+  const baseRewardPerIncrement = onAltairFork ? computeBaseRewardPerIncrement(totalActiveBalanceByIncrement) : 0;
 
   // Precompute churnLimit for efficient initiateValidatorExit() during block proposing MUST be recompute everytime the
   // active validator indices set changes in size. Validators change active status only when:
@@ -305,13 +304,14 @@ export function afterProcessEpoch(state: CachedBeaconState<allForks.BeaconState>
   }
 
   if (currEpoch >= epochCtx.config.ALTAIR_FORK_EPOCH) {
-    const totalActiveBalance = epochProcess.nextEpochTotalActiveBalance;
+    const totalActiveBalanceByIncrement = epochProcess.nextEpochTotalActiveBalanceByIncrement;
+    const totalActiveBalance = BigInt(totalActiveBalanceByIncrement) * BigInt(EFFECTIVE_BALANCE_INCREMENT);
     epochCtx.syncParticipantReward = computeSyncParticipantReward(epochCtx.config, totalActiveBalance);
     epochCtx.syncProposerReward = Number(
       (epochCtx.syncParticipantReward * PROPOSER_WEIGHT) / (WEIGHT_DENOMINATOR - PROPOSER_WEIGHT)
     );
 
-    epochCtx.baseRewardPerIncrement = computeBaseRewardPerIncrement(totalActiveBalance);
+    epochCtx.baseRewardPerIncrement = computeBaseRewardPerIncrement(totalActiveBalanceByIncrement);
   }
 }
 

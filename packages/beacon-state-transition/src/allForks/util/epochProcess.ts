@@ -8,7 +8,7 @@ import {
   MAX_EFFECTIVE_BALANCE,
 } from "@chainsafe/lodestar-params";
 
-import {isActiveValidator} from "../../util";
+import {isActiveValidator, newZeroedArray} from "../../util";
 import {
   IAttesterStatus,
   createIAttesterStatus,
@@ -37,11 +37,14 @@ import {computeBaseRewardPerIncrement} from "../../altair/util/misc";
 export interface IEpochProcess {
   prevEpoch: Epoch;
   currentEpoch: Epoch;
-  totalActiveStake: Gwei;
+  /**
+   * This is sum of active validators' balance in eth.
+   */
+  totalActiveStakeByIncrement: number;
   /** For altair */
   baseRewardPerIncrement: number;
   prevEpochUnslashedStake: IEpochStakeSummary;
-  currEpochUnslashedTargetStake: Gwei;
+  currEpochUnslashedTargetStakeByIncrement: number;
   /**
    * Indices which will receive the slashing penalty
    * ```
@@ -120,7 +123,7 @@ export interface IEpochProcess {
    * | processEffectiveBalancesUpdate   | calculate during the loop          |
    * | afterEpochProcess                | read it                            |
    */
-  nextEpochTotalActiveBalance: Gwei;
+  nextEpochTotalActiveBalanceByIncrement: number;
 }
 
 export function beforeProcessEpoch<T extends allForks.BeaconState>(state: CachedBeaconState<T>): IEpochProcess {
@@ -141,9 +144,10 @@ export function beforeProcessEpoch<T extends allForks.BeaconState>(state: Cached
 
   const statuses: IAttesterStatus[] = [];
 
-  let totalActiveStake = BigInt(0);
+  let totalActiveStakeByIncrement = 0;
 
   const validators = state.validators.persistent.toArray();
+  const effectiveBalancesByIncrements = newZeroedArray(validators.length);
   validators.forEach((v, i) => {
     const status = createIAttesterStatus();
 
@@ -162,7 +166,9 @@ export function beforeProcessEpoch<T extends allForks.BeaconState>(state: Cached
     const active = isActiveValidator(v, currentEpoch);
     if (active) {
       status.active = true;
-      totalActiveStake += BigInt(v.effectiveBalance);
+      const effectiveBalanceByIncrement = Math.floor(v.effectiveBalance / EFFECTIVE_BALANCE_INCREMENT);
+      effectiveBalancesByIncrements[i] = effectiveBalanceByIncrement;
+      totalActiveStakeByIncrement += effectiveBalanceByIncrement;
     }
 
     if (v.activationEligibilityEpoch === FAR_FUTURE_EPOCH && v.effectiveBalance === MAX_EFFECTIVE_BALANCE) {
@@ -184,12 +190,12 @@ export function beforeProcessEpoch<T extends allForks.BeaconState>(state: Cached
     }
   });
 
-  if (totalActiveStake < EFFECTIVE_BALANCE_INCREMENT) {
-    totalActiveStake = BigInt(EFFECTIVE_BALANCE_INCREMENT);
+  if (totalActiveStakeByIncrement < 1) {
+    totalActiveStakeByIncrement = 1;
   }
 
   // SPEC: function getBaseRewardPerIncrement()
-  const baseRewardPerIncrement = computeBaseRewardPerIncrement(totalActiveStake);
+  const baseRewardPerIncrement = computeBaseRewardPerIncrement(totalActiveStakeByIncrement);
 
   // order by sequence of activationEligibilityEpoch setting and then index
   indicesEligibleForActivation.sort(
@@ -230,11 +236,11 @@ export function beforeProcessEpoch<T extends allForks.BeaconState>(state: Cached
     });
   }
 
-  let prevSourceUnslStake = BigInt(0);
-  let prevTargetUnslStake = BigInt(0);
-  let prevHeadUnslStake = BigInt(0);
+  let prevSourceUnslStake = 0;
+  let prevTargetUnslStake = 0;
+  let prevHeadUnslStake = 0;
 
-  let currTargetUnslStake = BigInt(0);
+  let currTargetUnslStake = 0;
 
   const FLAG_PREV_SOURCE_ATTESTER_UNSLASHED = FLAG_PREV_SOURCE_ATTESTER | FLAG_UNSLASHED;
   const FLAG_PREV_TARGET_ATTESTER_UNSLASHED = FLAG_PREV_TARGET_ATTESTER | FLAG_UNSLASHED;
@@ -243,42 +249,40 @@ export function beforeProcessEpoch<T extends allForks.BeaconState>(state: Cached
 
   for (let i = 0; i < statuses.length; i++) {
     const status = statuses[i];
-    const effectiveBalance = BigInt(validators[i].effectiveBalance);
+    const effectiveBalanceByIncrement = effectiveBalancesByIncrements[i];
     if (hasMarkers(status.flags, FLAG_PREV_SOURCE_ATTESTER_UNSLASHED)) {
-      prevSourceUnslStake += effectiveBalance;
+      prevSourceUnslStake += effectiveBalanceByIncrement;
     }
     if (hasMarkers(status.flags, FLAG_PREV_TARGET_ATTESTER_UNSLASHED)) {
-      prevTargetUnslStake += effectiveBalance;
+      prevTargetUnslStake += effectiveBalanceByIncrement;
     }
     if (hasMarkers(status.flags, FLAG_PREV_HEAD_ATTESTER_UNSLASHED)) {
-      prevHeadUnslStake += effectiveBalance;
+      prevHeadUnslStake += effectiveBalanceByIncrement;
     }
     if (hasMarkers(status.flags, FLAG_CURR_TARGET_UNSLASHED)) {
-      currTargetUnslStake += effectiveBalance;
+      currTargetUnslStake += effectiveBalanceByIncrement;
     }
   }
   // As per spec of `get_total_balance`:
   // EFFECTIVE_BALANCE_INCREMENT Gwei minimum to avoid divisions by zero.
   // Math safe up to ~10B ETH, afterwhich this overflows uint64.
-  // TODO: in eth
-  const increment = BigInt(EFFECTIVE_BALANCE_INCREMENT);
-  if (prevSourceUnslStake < increment) prevSourceUnslStake = increment;
-  if (prevTargetUnslStake < increment) prevTargetUnslStake = increment;
-  if (prevHeadUnslStake < increment) prevHeadUnslStake = increment;
-  if (currTargetUnslStake < increment) currTargetUnslStake = increment;
+  if (prevSourceUnslStake < 1) prevSourceUnslStake = 1;
+  if (prevTargetUnslStake < 1) prevTargetUnslStake = 1;
+  if (prevHeadUnslStake < 1) prevHeadUnslStake = 1;
+  if (currTargetUnslStake < 1) currTargetUnslStake = 1;
 
   return {
     prevEpoch,
     currentEpoch,
-    totalActiveStake,
+    totalActiveStakeByIncrement,
 
     baseRewardPerIncrement,
     prevEpochUnslashedStake: {
-      sourceStake: prevSourceUnslStake,
-      targetStake: prevTargetUnslStake,
-      headStake: prevHeadUnslStake,
+      sourceStakeByIncrement: prevSourceUnslStake,
+      targetStakeByIncrement: prevTargetUnslStake,
+      headStakeByIncrement: prevHeadUnslStake,
     },
-    currEpochUnslashedTargetStake: currTargetUnslStake,
+    currEpochUnslashedTargetStakeByIncrement: currTargetUnslStake,
     indicesToSlash,
     indicesEligibleForActivationQueue,
     indicesEligibleForActivation,

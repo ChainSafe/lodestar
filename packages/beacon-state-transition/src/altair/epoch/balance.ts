@@ -47,8 +47,7 @@ export function getRewardsPenaltiesDeltas(
   process: IEpochProcess
 ): [number[], number[]] {
   const validatorCount = state.validators.length;
-  // TODO: manage totalActiveStake in eth
-  const activeIncrements = Number(process.totalActiveStake / BigInt(EFFECTIVE_BALANCE_INCREMENT));
+  const activeIncrements = process.totalActiveStakeByIncrement;
   const rewards = newZeroedArray(validatorCount);
   const penalties = newZeroedArray(validatorCount);
 
@@ -70,16 +69,9 @@ export function getRewardsPenaltiesDeltas(
       const tsWeigh = PARTICIPATION_FLAG_WEIGHTS[TIMELY_SOURCE_FLAG_INDEX];
       const ttWeigh = PARTICIPATION_FLAG_WEIGHTS[TIMELY_TARGET_FLAG_INDEX];
       const thWeigh = PARTICIPATION_FLAG_WEIGHTS[TIMELY_HEAD_FLAG_INDEX];
-      // TODO: manage all of these in eth
-      const tsUnslashedParticipatingIncrements = Number(
-        process.prevEpochUnslashedStake["sourceStake"] / BigInt(EFFECTIVE_BALANCE_INCREMENT)
-      );
-      const ttUnslashedParticipatingIncrements = Number(
-        process.prevEpochUnslashedStake["targetStake"] / BigInt(EFFECTIVE_BALANCE_INCREMENT)
-      );
-      const thUnslashedParticipatingIncrements = Number(
-        process.prevEpochUnslashedStake["headStake"] / BigInt(EFFECTIVE_BALANCE_INCREMENT)
-      );
+      const tsUnslashedParticipatingIncrements = process.prevEpochUnslashedStake.sourceStakeByIncrement;
+      const ttUnslashedParticipatingIncrements = process.prevEpochUnslashedStake.targetStakeByIncrement;
+      const thUnslashedParticipatingIncrements = process.prevEpochUnslashedStake.headStakeByIncrement;
       const tsRewardNumerator = baseReward * tsWeigh * tsUnslashedParticipatingIncrements;
       const ttRewardNumerator = baseReward * ttWeigh * ttUnslashedParticipatingIncrements;
       const thRewardNumerator = baseReward * thWeigh * thUnslashedParticipatingIncrements;
@@ -148,23 +140,20 @@ export function getFlagIndexDeltas(
 
   if (flagIndex === TIMELY_HEAD_FLAG_INDEX) {
     flag = FLAG_PREV_HEAD_ATTESTER_OR_UNSLASHED;
-    stakeSummaryKey = "headStake";
+    stakeSummaryKey = "headStakeByIncrement";
   } else if (flagIndex === TIMELY_SOURCE_FLAG_INDEX) {
     flag = FLAG_PREV_SOURCE_ATTESTER_OR_UNSLASHED;
-    stakeSummaryKey = "sourceStake";
+    stakeSummaryKey = "sourceStakeByIncrement";
   } else if (flagIndex === TIMELY_TARGET_FLAG_INDEX) {
     flag = FLAG_PREV_TARGET_ATTESTER_OR_UNSLASHED;
-    stakeSummaryKey = "targetStake";
+    stakeSummaryKey = "targetStakeByIncrement";
   } else {
     throw new Error(`Unable to process flagIndex: ${flagIndex}`);
   }
 
   const weight = PARTICIPATION_FLAG_WEIGHTS[flagIndex];
-  // TODO: make all of this in eth
-  const unslashedParticipatingIncrements = Number(
-    process.prevEpochUnslashedStake[stakeSummaryKey] / BigInt(EFFECTIVE_BALANCE_INCREMENT)
-  );
-  const activeIncrements = Number(process.totalActiveStake / BigInt(EFFECTIVE_BALANCE_INCREMENT));
+  const unslashedParticipatingIncrements = process.prevEpochUnslashedStake[stakeSummaryKey];
+  const activeIncrements = process.totalActiveStakeByIncrement;
 
   for (let i = 0; i < process.statuses.length; i++) {
     const status = process.statuses[i];

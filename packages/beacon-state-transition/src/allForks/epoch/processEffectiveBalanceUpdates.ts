@@ -31,8 +31,7 @@ export function processEffectiveBalanceUpdates(
   const {validators, epochCtx} = state;
   const nextEpoch = epochCtx.currentShuffling.epoch + 1;
   const isAltair = nextEpoch >= epochCtx.config.ALTAIR_FORK_EPOCH;
-  // TODO: ByIncrement
-  let nextEpochTotalActiveBalance: Gwei = BigInt(0);
+  let nextEpochTotalActiveBalanceByIncrement = 0;
 
   // update effective balances with hysteresis
   if (!epochProcess.balances) {
@@ -54,9 +53,8 @@ export function processEffectiveBalanceUpdates(
       });
     }
     if (isAltair && isActiveValidator(validator, nextEpoch)) {
-      // TODO: ByIncrement
-      nextEpochTotalActiveBalance += BigInt(effectiveBalance);
+      nextEpochTotalActiveBalanceByIncrement += Math.floor(effectiveBalance / EFFECTIVE_BALANCE_INCREMENT);
     }
   });
-  epochProcess.nextEpochTotalActiveBalance = nextEpochTotalActiveBalance;
+  epochProcess.nextEpochTotalActiveBalanceByIncrement = nextEpochTotalActiveBalanceByIncrement;
 }

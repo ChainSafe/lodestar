@@ -316,7 +316,7 @@ function buildPerformanceStateAllForks(state: allForks.BeaconState, pubkeysArg?:
   state.validators = pubkeys.map((_, i) => ({
     pubkey: pubkeys[i],
     withdrawalCredentials: Buffer.alloc(32, i),
-    effectiveBalance: BigInt(31000000000),
+    effectiveBalance: 31000000000,
     slashed: false,
     activationEligibilityEpoch: 0,
     activationEpoch: 0,
@@ -368,7 +368,7 @@ export function generateTestCachedBeaconStateOnlyValidators({
   const activeValidator = ssz.phase0.Validator.createTreeBackedFromStruct({
     pubkey: Buffer.alloc(48, 0),
     withdrawalCredentials: Buffer.alloc(32, 0),
-    effectiveBalance: BigInt(31000000000),
+    effectiveBalance: 31000000000,
     slashed: false,
     activationEligibilityEpoch: 0,
     activationEpoch: 0,
