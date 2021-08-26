@@ -13,7 +13,7 @@ declare CMD_NPM="npm view -j $PACKAGE"
 declare VERSION_LATEST=$($CMD_NPM | jq -r '."dist-tags".latest')
 
 # Usage: scripts/await-release.sh $VERSION $TIMEOUT
-declare VERSION_EXPECTED=$1
+declare VERSION_EXPECTED=$(echo $1 | tr -d 'v')
 declare TIMEOUT=$2
 
 declare TIME=0
