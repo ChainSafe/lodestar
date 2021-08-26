@@ -50,7 +50,7 @@ export function getPubkeysForIndices(
   state: CachedBeaconState<allForks.BeaconState>,
   validatorIndices: ValidatorIndex[]
 ): (validatorIndex: ValidatorIndex) => BLSPubkey {
-  const validators = state.validators;
+  const validators = state.validators; // Get the validators sub tree once for all the loop
   const pubkeyMap = new Map(
     validatorIndices.map((validatorIndex) => {
       const validator = validators[validatorIndex];

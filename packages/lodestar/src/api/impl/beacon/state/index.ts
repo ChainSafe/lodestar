@@ -46,13 +46,14 @@ export function getBeaconStateApi({chain, config, db}: Pick<ApiModules, "chain" 
     async getStateValidators(stateId, filters) {
       const state = await resolveStateId(config, chain, db, stateId);
       const currentEpoch = getCurrentEpoch(state);
+      const validators = state.validators; // Get the validators sub tree once for all the loop
 
-      const validators: routes.beacon.ValidatorResponse[] = [];
+      const validatorResponses: routes.beacon.ValidatorResponse[] = [];
       if (filters?.indices) {
         for (const id of filters.indices) {
           const validatorIndex = getStateValidatorIndex(id, state, chain);
           if (validatorIndex != null) {
-            const validator = state.validators[validatorIndex];
+            const validator = validators[validatorIndex];
             if (filters.statuses && !filters.statuses.includes(getValidatorStatus(validator, currentEpoch))) {
               continue;
             }
@@ -62,10 +63,10 @@ export function getBeaconStateApi({chain, config, db}: Pick<ApiModules, "chain" 
               state.balances[validatorIndex],
               currentEpoch
             );
-            validators.push(validatorResponse);
+            validatorResponses.push(validatorResponse);
           }
         }
-        return {data: validators};
+        return {data: validatorResponses};
       } else if (filters?.statuses) {
         const validatorsByStatus = filterStateValidatorsByStatuses(filters.statuses, state, chain, currentEpoch);
         return {data: validatorsByStatus};

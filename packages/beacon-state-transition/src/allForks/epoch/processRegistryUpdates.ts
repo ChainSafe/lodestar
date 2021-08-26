@@ -21,14 +21,17 @@ export function processRegistryUpdates(
   state: CachedBeaconState<allForks.BeaconState>,
   epochProcess: IEpochProcess
 ): void {
-  const {validators, epochCtx} = state;
+  const {epochCtx} = state;
+
+  // Get the validators sub tree once for all the loop
+  const validators = state.validators;
 
   // TODO: Batch set this properties in the tree at once with setMany() or setNodes()
   // process ejections
   for (const index of epochProcess.indicesToEject) {
     // set validator exit epoch and withdrawable epoch
     // TODO: Figure out a way to quickly set properties on the validators tree
-    initiateValidatorExit(state, index);
+    initiateValidatorExit(state, validators[index]);
   }
 
   // set new activation eligibilities
@@ -40,7 +43,7 @@ export function processRegistryUpdates(
   for (const index of epochProcess.indicesToEject) {
     // set validator exit epoch and withdrawable epoch
     // TODO: Figure out a way to quickly set properties on the validators tree
-    initiateValidatorExit(state, index);
+    initiateValidatorExit(state, validators[index]);
   }
 
   const finalityEpoch = state.finalizedCheckpoint.epoch;

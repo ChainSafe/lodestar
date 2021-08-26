@@ -25,7 +25,7 @@ export function processEffectiveBalanceUpdates(
   state: CachedBeaconState<allForks.BeaconState>,
   epochProcess: IEpochProcess
 ): void {
-  const {validators, epochCtx} = state;
+  const {epochCtx} = state;
   const {effectiveBalances} = epochCtx;
   const HYSTERESIS_INCREMENT = EFFECTIVE_BALANCE_INCREMENT / BigInt(HYSTERESIS_QUOTIENT);
   const DOWNWARD_THRESHOLD = HYSTERESIS_INCREMENT * BigInt(HYSTERESIS_DOWNWARD_MULTIPLIER);
@@ -33,6 +33,9 @@ export function processEffectiveBalanceUpdates(
   const nextEpoch = epochCtx.currentShuffling.epoch + 1;
   const isAltair = nextEpoch >= epochCtx.config.ALTAIR_FORK_EPOCH;
   let nextEpochTotalActiveBalance: Gwei = BigInt(0);
+
+  // Get the validators sub tree once for all the loop
+  const validators = state.validators;
 
   for (let i = 0, len = epochProcess.balancesFlat.length; i < len; i++) {
     const balance = epochProcess.balancesFlat[i];

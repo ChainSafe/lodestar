@@ -24,6 +24,8 @@ export function getNextSyncCommitteeIndices(
 ): ValidatorIndex[] {
   const epoch = computeEpochAtSlot(state.slot) + 1;
 
+  const validators = state.validators; // Get the validators sub tree once for all the loop
+
   const activeValidatorCount = activeValidatorIndices.length;
   const seed = getSeed(state, epoch, DOMAIN_SYNC_COMMITTEE);
   let i = 0;
@@ -32,7 +34,8 @@ export function getNextSyncCommitteeIndices(
     const shuffledIndex = computeShuffledIndex(i % activeValidatorCount, activeValidatorCount, seed);
     const candidateIndex = activeValidatorIndices[shuffledIndex];
     const randomByte = hash(Buffer.concat([seed, intToBytes(intDiv(i, 32), 8, "le")]))[i % 32];
-    const effectiveBalance = state.validators[candidateIndex].effectiveBalance;
+    // TODO: Use a fast cache to get the effective balance 🐢
+    const effectiveBalance = validators[candidateIndex].effectiveBalance;
     if (effectiveBalance * MAX_RANDOM_BYTE >= MAX_EFFECTIVE_BALANCE * BigInt(randomByte)) {
       syncCommitteeIndices.push(candidateIndex);
     }
@@ -51,7 +54,9 @@ export function getNextSyncCommittee(
   activeValidatorIndices: ValidatorIndex[]
 ): altair.SyncCommittee {
   const indices = getNextSyncCommitteeIndices(state, activeValidatorIndices);
-  const pubkeys = indices.map((index) => state.validators[index].pubkey);
+  const validators = state.validators; // Get the validators sub tree once for all the loop
+  // TODO: Use the index2pubkey cache here! 🐢
+  const pubkeys = indices.map((index) => validators[index].pubkey);
   return {
     pubkeys,
     aggregatePubkey: aggregatePublicKeys(pubkeys.map((pubkey) => pubkey.valueOf() as Uint8Array)),

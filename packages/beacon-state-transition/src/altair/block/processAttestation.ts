@@ -31,6 +31,9 @@ export function processAttestations(
   const stateSlot = state.slot;
   const rootCache = new RootCache(state);
 
+  // Get the validators sub tree once for all the loop
+  const validators = state.validators;
+
   // Process all attestations first and then increase the balance of the proposer once
   let proposerReward = BigInt(0);
   for (const attestation of attestations) {
@@ -91,10 +94,11 @@ export function processAttestations(
       if (totalWeight > 0) {
         // TODO: Cache effectiveBalance in a separate array
         // TODO: Consider using number instead of bigint for faster math
-        totalBalancesWithWeight += state.validators[index].effectiveBalance * totalWeight;
+        totalBalancesWithWeight += validators[index].effectiveBalance * totalWeight;
       }
     }
 
+    // Do the discrete math inside the loop to ensure a deterministic result
     const totalIncrements = totalBalancesWithWeight / EFFECTIVE_BALANCE_INCREMENT;
     const proposerRewardNumerator = totalIncrements * state.baseRewardPerIncrement;
     proposerReward += proposerRewardNumerator / PROPOSER_REWARD_DOMINATOR;

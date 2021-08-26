@@ -231,9 +231,13 @@ export function syncPubkeys(
   if (currentCount !== index2pubkey.length) {
     throw new Error(`Pubkey indices have fallen out of sync: ${currentCount} != ${index2pubkey.length}`);
   }
+
+  // Get the validators sub tree once for all the loop
+  const validators = state.validators;
+
   const newCount = state.validators.length;
   for (let i = currentCount; i < newCount; i++) {
-    const pubkey = state.validators[i].pubkey.valueOf() as Uint8Array;
+    const pubkey = validators[i].pubkey.valueOf() as Uint8Array;
     pubkey2index.set(pubkey, i);
     // Pubkeys must be checked for group + inf. This must be done only once when the validator deposit is processed.
     // Afterwards any public key is the state consider validated.

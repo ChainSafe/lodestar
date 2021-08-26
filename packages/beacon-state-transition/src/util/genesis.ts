@@ -157,6 +157,7 @@ export function applyDeposits(
   const activeValidatorIndices: ValidatorIndex[] = [];
   // Process activations
   // validators are edited, so we're not iterating (read-only) through the validators
+  // TODO: Use readonly SSZ methods for fast iteration 🐢
   const validatorLength = state.validators.length;
   for (let index = 0; index < validatorLength; index++) {
     const validator = state.validators[index];

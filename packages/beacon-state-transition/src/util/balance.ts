@@ -18,6 +18,7 @@ export function getTotalBalance(state: allForks.BeaconState, indices: ValidatorI
   return bigIntMax(
     EFFECTIVE_BALANCE_INCREMENT,
     indices.reduce(
+      // TODO: Use a fast cache to get the effective balance 🐢
       (total: Gwei, index: ValidatorIndex): Gwei => total + state.validators[index].effectiveBalance,
       BigInt(0)
     )

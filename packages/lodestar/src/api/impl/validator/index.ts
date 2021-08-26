@@ -193,7 +193,7 @@ export function getValidatorApi({
 
       // Note: Using a MutableVector is the fastest way of getting compressed pubkeys.
       //       See benchmark -> packages/lodestar/test/perf/api/impl/validator/attester.test.ts
-      const validators = state.validators;
+      const validators = state.validators; // Get the validators sub tree once for all the loop
       const duties: routes.validator.ProposerDuty[] = [];
 
       for (let slot = startSlot; slot < startSlot + SLOTS_PER_EPOCH; slot++) {

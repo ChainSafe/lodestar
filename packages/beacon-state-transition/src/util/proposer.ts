@@ -29,6 +29,7 @@ export function computeProposerIndex(
   while (true) {
     const candidateIndex = indices[computeShuffledIndex(i % indices.length, indices.length, seed)];
     const randByte = hash(Buffer.concat([seed, intToBytes(intDiv(i, 32), 8)]))[i % 32];
+    // TODO: Use a fast cache to get the effective balance 🐢
     const effectiveBalance = state.validators[candidateIndex].effectiveBalance;
     if (effectiveBalance * MAX_RANDOM_BYTE >= MAX_EFFECTIVE_BALANCE * BigInt(randByte)) {
       return candidateIndex;
