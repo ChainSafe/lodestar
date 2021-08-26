@@ -32,6 +32,7 @@ describe("phase0 processEffectiveBalanceUpdates", () => {
   for (const {id, changeRatio} of testCases) {
     itBench<StateEpoch, StateEpoch>({
       id: `phase0 processEffectiveBalanceUpdates - ${vc} ${id}`,
+      yieldEventLoopAfterEach: true, // So SubTree(s)'s WeakRef can be garbage collected https://github.com/nodejs/node/issues/39902
       before: () => getEffectiveBalanceTestData(vc, changeRatio),
       beforeEach: ({state, epochProcess}) => ({state: state.clone(), epochProcess}),
       fn: ({state, epochProcess}) => allForks.processEffectiveBalanceUpdates(state, epochProcess),

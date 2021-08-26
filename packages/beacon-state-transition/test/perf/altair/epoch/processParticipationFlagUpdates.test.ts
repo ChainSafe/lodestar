@@ -12,6 +12,7 @@ describe("altair processParticipationFlagUpdates", () => {
 
   itBench<StateAltair, StateAltair>({
     id: `altair processParticipationFlagUpdates - ${vc} anycase`,
+    yieldEventLoopAfterEach: true, // So SubTree(s)'s WeakRef can be garbage collected https://github.com/nodejs/node/issues/39902
     before: () => generatePerfTestCachedStateAltair({goBackOneSlot: true}),
     beforeEach: (state) => state.clone(),
     fn: (state) => altair.processParticipationFlagUpdates(state),

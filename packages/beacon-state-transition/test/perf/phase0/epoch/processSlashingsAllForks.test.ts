@@ -27,6 +27,7 @@ describe("phase0 processSlashings", () => {
   for (const {id, indicesToSlashLen} of testCases) {
     itBench<StateEpoch, StateEpoch>({
       id: `phase0 processSlashings - ${vc} ${id}`,
+      yieldEventLoopAfterEach: true, // So SubTree(s)'s WeakRef can be garbage collected https://github.com/nodejs/node/issues/39902
       before: () => getProcessSlashingsTestData(indicesToSlashLen),
       beforeEach: ({state, epochProcess}) => ({state: state.clone(), epochProcess}),
       fn: ({state, epochProcess}) => allForks.processRegistryUpdates(state, epochProcess),

@@ -11,6 +11,7 @@ describe("phase0 afterProcessEpoch", () => {
 
   itBench<StateEpoch, StateEpoch>({
     id: `phase0 afterProcessEpoch - ${perfStateId}`,
+    yieldEventLoopAfterEach: true, // So SubTree(s)'s WeakRef can be garbage collected https://github.com/nodejs/node/issues/39902
     before: () => {
       const state = generatePerfTestCachedStatePhase0({goBackOneSlot: true});
       const epochProcess = allForks.beforeProcessEpoch(state);

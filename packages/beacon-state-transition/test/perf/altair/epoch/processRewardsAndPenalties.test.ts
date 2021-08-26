@@ -43,6 +43,7 @@ describe("altair processRewardsAndPenalties", () => {
   for (const {id, isInInactivityLeak, flagFactors, factorWithPositive} of testCases) {
     itBench<StateAltairEpoch, StateAltairEpoch>({
       id: `altair processRewardsAndPenalties - ${vc} ${id}`,
+      yieldEventLoopAfterEach: true, // So SubTree(s)'s WeakRef can be garbage collected https://github.com/nodejs/node/issues/39902
       before: () => {
         const state = generatePerfTestCachedStateAltair({goBackOneSlot: true});
         const epochProcess = generateBalanceDeltasEpochProcess(state, isInInactivityLeak, flagFactors);

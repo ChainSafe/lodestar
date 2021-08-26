@@ -43,6 +43,7 @@ describe("phase0 getAttestationDeltas", () => {
   for (const {id, isInInactivityLeak, flagFactors} of testCases) {
     itBench<StatePhase0Epoch, StatePhase0Epoch>({
       id: `phase0 getAttestationDeltas - ${vc} ${id}`,
+      yieldEventLoopAfterEach: true, // So SubTree(s)'s WeakRef can be garbage collected https://github.com/nodejs/node/issues/39902
       before: () => {
         const state = generatePerfTestCachedStatePhase0({goBackOneSlot: true});
         const epochProcess = generateBalanceDeltasEpochProcess(state, isInInactivityLeak, flagFactors);

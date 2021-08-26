@@ -521,10 +521,10 @@
     enabled "2.0.x"
     kuler "^2.0.0"
 
-"@dapplion/benchmark@^0.2.0":
-  version "0.2.0"
-  resolved "https://registry.yarnpkg.com/@dapplion/benchmark/-/benchmark-0.2.0.tgz#0595ac6903e62be918bfc8fb6a557ecb0ded10d5"
-  integrity sha512-fPXqgCdV82uxqg1hxIYoXOSJHYaCOSDdf3AUMM33T21qGdBSjdGUbd4uXkw59Ec7rYNAuoahOTG9Albn9pLkRQ==
+"@dapplion/benchmark@^0.2.1":
+  version "0.2.1"
+  resolved "https://registry.yarnpkg.com/@dapplion/benchmark/-/benchmark-0.2.1.tgz#ead5948c631af6aa2bceabd4d3aea05c3634ced2"
+  integrity sha512-Zlq9KwHfo37ruAmJrgaSfpPuHbExG67BXsJgDGHTgcqS7P6U6+dLAYaODkz5gvYCyfmJ1D3rkt8GjHZnnk3/Vw==
   dependencies:
     "@actions/cache" "^1.0.7"
     "@actions/github" "^5.0.0"
