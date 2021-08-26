@@ -46,6 +46,7 @@ for (const testDir of fs.readdirSync(rootDir)) {
       const state = allForks.createCachedBeaconState(config, stateTB);
       const epochProcess = allForks.beforeProcessEpoch(state);
       epochProcessFn(state, epochProcess);
+      allForks.afterProcessEpoch(state, epochProcess);
       return state;
     },
     {
