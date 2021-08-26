@@ -50,7 +50,7 @@ describe("BeaconState hashTreeRoot", () => {
       noTrack: count < 512,
       fn: (state) => {
         for (const i of indicesShuffled.slice(0, count)) {
-          state.validators[i].effectiveBalance = BigInt(balance);
+          state.validators[i].effectiveBalance = balance;
         }
       },
     });
