@@ -62,7 +62,7 @@ function getEffectiveBalanceTestData(
 
   for (let i = 0; i < vc; i++) {
     // Set flat balance to lower value
-    const balance = i < vc * changeRatio ? BigInt(30e9) : BigInt(32e9);
+    const balance = i < vc * changeRatio ? 30e9 : 32e9;
     stateTree.balances.push(balance);
 
     // Initialize tree
