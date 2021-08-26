@@ -1,5 +1,5 @@
 import {FAR_FUTURE_EPOCH} from "@chainsafe/lodestar-params";
-import {allForks, phase0, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {allForks, phase0} from "@chainsafe/lodestar-types";
 import {CachedBeaconState} from "../util";
 
 /**
