@@ -77,12 +77,14 @@ export function getAttestationDeltas(
   // effectiveBalance is multiple of EFFECTIVE_BALANCE_INCREMENT and less than MAX_EFFECTIVE_BALANCE
   // so there are limited values of them like 32000000000, 31000000000, 30000000000
   const rewardPnaltyItemCache = new Map<number, IRewardPenaltyItem>();
-  for (const [i, status] of epochProcess.statuses.entries()) {
-    const effBalance = epochProcess.validators[i].effectiveBalance;
-    let rewardItem = rewardPnaltyItemCache.get(Number(effBalance));
+  const {validators, statuses} = epochProcess;
+  for (let i = 0; i < statuses.length; i++) {
+    const status = statuses[i];
+    const {effectiveBalance} = validators[i];
+    let rewardItem = rewardPnaltyItemCache.get(effectiveBalance);
     if (!rewardItem) {
       const baseReward = Math.floor(
-        Math.floor((effBalance * BASE_REWARD_FACTOR) / balanceSqRoot) / BASE_REWARDS_PER_EPOCH
+        Math.floor((effectiveBalance * BASE_REWARD_FACTOR) / balanceSqRoot) / BASE_REWARDS_PER_EPOCH
       );
       const proposerReward = Math.floor(baseReward / proposerRewardQuotient);
       rewardItem = {
@@ -99,9 +101,9 @@ export function getAttestationDeltas(
           ? baseReward
           : Math.floor((baseReward * prevEpochHeadStakeByIncrement) / totalBalance),
         basePenalty: baseReward * BASE_REWARDS_PER_EPOCH_CONST - proposerReward,
-        finalityDelayPenalty: Math.floor((effBalance * finalityDelay) / INACTIVITY_PENALTY_QUOTIENT),
+        finalityDelayPenalty: Math.floor((effectiveBalance * finalityDelay) / INACTIVITY_PENALTY_QUOTIENT),
       };
-      rewardPnaltyItemCache.set(Number(effBalance), rewardItem);
+      rewardPnaltyItemCache.set(effectiveBalance, rewardItem);
     }
 
     const {

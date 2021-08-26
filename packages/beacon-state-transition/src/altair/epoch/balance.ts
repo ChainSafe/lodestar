@@ -57,12 +57,13 @@ export function getRewardsPenaltiesDeltas(
   const rewardPenaltyItemCache = new Map<number, IRewardPenaltyItem>();
   const {config} = state;
   const penaltyDenominator = config.INACTIVITY_SCORE_BIAS * INACTIVITY_PENALTY_QUOTIENT_ALTAIR;
-  for (let i = 0; i < process.statuses.length; i++) {
-    const status = process.statuses[i];
+  const {validators, statuses} = process;
+  for (let i = 0; i < statuses.length; i++) {
+    const status = statuses[i];
     if (!hasMarkers(status.flags, FLAG_ELIGIBLE_ATTESTER)) {
       continue;
     }
-    const effectiveBalance = process.validators[i].effectiveBalance;
+    const {effectiveBalance} = validators[i];
     let rewardPenaltyItem = rewardPenaltyItemCache.get(effectiveBalance);
     if (!rewardPenaltyItem) {
       const baseReward = getBaseReward(process, i);
