@@ -39,11 +39,8 @@ jobs:
       # Run them in different steps to quickly identifying which command failed
       # Otherwise just doing `yarn test:spec` you can't tell which specific suite failed
       # many of the suites have identical names for minimal and mainnet
-      - name: Spec tests ssz
-        run: yarn test:ssz
-        working-directory: packages/spec-test-runner
-      - name: Spec tests bls
-        run: yarn test:bls
+      - name: Spec tests general
+        run: yarn test:spec-general
         working-directory: packages/spec-test-runner
       - name: Spec tests phase0-minimal
         run: yarn test:spec-phase0-minimal
