@@ -8,7 +8,6 @@ import {
   BLSPubkey,
   BLSSignature,
   Epoch,
-  Gwei,
   Root,
   Number64,
   Slot,

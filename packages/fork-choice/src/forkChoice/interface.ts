@@ -1,4 +1,4 @@
-import {Epoch, Gwei, Slot, ValidatorIndex, phase0, allForks} from "@chainsafe/lodestar-types";
+import {Epoch, Slot, ValidatorIndex, phase0, allForks} from "@chainsafe/lodestar-types";
 import {IBlockSummary} from "./blockSummary";
 
 export interface IForkChoice {

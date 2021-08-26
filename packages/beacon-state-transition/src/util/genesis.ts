@@ -9,7 +9,6 @@ import {
   MAX_EFFECTIVE_BALANCE,
 } from "@chainsafe/lodestar-params";
 import {allForks, altair, Bytes32, Number64, phase0, Root, ssz, ValidatorIndex} from "@chainsafe/lodestar-types";
-import {bigIntMin} from "@chainsafe/lodestar-utils";
 
 import {computeEpochAtSlot} from "./epoch";
 import {getActiveValidatorIndices} from "./validator";

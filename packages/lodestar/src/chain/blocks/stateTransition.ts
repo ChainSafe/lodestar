@@ -1,6 +1,6 @@
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {byteArrayEquals, toHexString} from "@chainsafe/ssz";
-import {Gwei, Slot, ssz} from "@chainsafe/lodestar-types";
+import {Slot, ssz} from "@chainsafe/lodestar-types";
 import {assert} from "@chainsafe/lodestar-utils";
 import {
   CachedBeaconState,

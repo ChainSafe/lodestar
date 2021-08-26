@@ -7,7 +7,7 @@ export interface IValidatorGeneratorOpts {
   exit?: number;
   withdrawableEpoch?: number;
   slashed?: boolean;
-  balance?: bigint;
+  balance?: number;
 }
 
 /**
@@ -31,7 +31,7 @@ export function generateValidator(opts: IValidatorGeneratorOpts = {}): phase0.Va
     exitEpoch: opts.exit || randNum(),
     withdrawableEpoch: opts.withdrawableEpoch ?? randNum(),
     slashed: opts.slashed || false,
-    effectiveBalance: opts.balance || BigInt(0),
+    effectiveBalance: opts.balance || 0,
   };
 }
 

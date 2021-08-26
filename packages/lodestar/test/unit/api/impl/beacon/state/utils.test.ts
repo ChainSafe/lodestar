@@ -195,7 +195,7 @@ describe("beacon state api utils", function () {
     it("should return WITHDRAWAL_POSSIBLE", function () {
       const validator = {
         withdrawableEpoch: 1,
-        effectiveBalance: BigInt(32),
+        effectiveBalance: 32,
       } as phase0.Validator;
       const currentEpoch = 1;
       const status = getValidatorStatus(validator, currentEpoch);
@@ -204,7 +204,7 @@ describe("beacon state api utils", function () {
     it("should return WITHDRAWAL_DONE", function () {
       const validator = {
         withdrawableEpoch: 1,
-        effectiveBalance: BigInt(0),
+        effectiveBalance: 0,
       } as phase0.Validator;
       const currentEpoch = 1;
       const status = getValidatorStatus(validator, currentEpoch);

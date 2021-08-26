@@ -1,11 +1,10 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 
-import {ContainerType, NumberUintType, BigIntUintType} from "@chainsafe/ssz";
+import {ContainerType, NumberUintType} from "@chainsafe/ssz";
 
 import {IAltairPreset} from "./interface";
 
 const Number64 = new NumberUintType({byteLength: 8});
-const BigInt64 = new BigIntUintType({byteLength: 8});
 
 export const AltairPreset = new ContainerType<IAltairPreset>({
   fields: {

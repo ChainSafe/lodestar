@@ -12,7 +12,7 @@ import {generateCachedState, generateState} from "../../utils/state";
 describe("getTotalBalance", () => {
   it("should return correct balances", () => {
     const num = 500;
-    const validatorBalance = BigInt(1000000000000);
+    const validatorBalance = 1e12;
     const validators = generateValidators(num);
     for (const v of validators) {
       v.effectiveBalance = validatorBalance;
@@ -21,7 +21,7 @@ describe("getTotalBalance", () => {
     const validatorIndices: ValidatorIndex[] = Array.from({length: num}, (_, i) => i);
 
     const result = getTotalBalance(state, validatorIndices);
-    const expected = BigInt(num) * validatorBalance;
+    const expected = BigInt(num * validatorBalance);
     assert(result === expected, `Expected: ${expected} :: Result: ${result}`);
   });
 
@@ -34,7 +34,7 @@ describe("getTotalBalance", () => {
 
     const result = getTotalBalance(state, validatorIndices);
     const expected = EFFECTIVE_BALANCE_INCREMENT;
-    assert(result === expected, `Expected: ${expected} :: Result: ${result}`);
+    assert(result === BigInt(expected), `Expected: ${expected} :: Result: ${result}`);
   });
 });
 

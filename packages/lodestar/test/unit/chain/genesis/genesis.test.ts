@@ -122,7 +122,7 @@ function generateDeposit(index: ValidatorIndex, secretKey: SecretKey, publicKey:
   const depositMessage = {
     pubkey: publicKey.toBytes(),
     withdrawalCredentials: Buffer.alloc(32, index),
-    amount: BigInt(32) * BigInt("1000000000000000000"),
+    amount: 32e18,
   };
   const signingRoot = computeSigningRoot(ssz.phase0.DepositMessage, depositMessage, domain);
   const signature = secretKey.sign(signingRoot);

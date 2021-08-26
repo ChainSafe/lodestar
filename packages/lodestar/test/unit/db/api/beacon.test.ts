@@ -39,7 +39,7 @@ describe("beacon db - post block processing", function () {
       generateState({
         validators: generateValidators(100, {
           activationEpoch: 0,
-          effectiveBalance: BigInt(2) ** BigInt(5) * BigInt(1e9),
+          effectiveBalance: 2 ** 5 * 1e9,
         }),
       }) as any
     );

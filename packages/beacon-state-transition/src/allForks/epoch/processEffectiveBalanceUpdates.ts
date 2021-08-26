@@ -6,7 +6,6 @@ import {
   MAX_EFFECTIVE_BALANCE,
 } from "@chainsafe/lodestar-params";
 import {allForks} from "@chainsafe/lodestar-types";
-import {Gwei} from "../../phase0";
 import {isActiveValidator} from "../../util";
 import {IEpochProcess, CachedBeaconState} from "../util";
 

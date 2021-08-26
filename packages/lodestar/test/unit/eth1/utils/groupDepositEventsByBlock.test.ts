@@ -5,7 +5,7 @@ import {groupDepositEventsByBlock} from "../../../../src/eth1/utils/groupDeposit
 describe("eth1 / util / groupDepositEventsByBlock", function () {
   it("should return deposit events by block sorted by index", () => {
     const depositData = {
-      amount: BigInt(0),
+      amount: 0,
       signature: Buffer.alloc(96),
       withdrawalCredentials: Buffer.alloc(32),
       pubkey: Buffer.alloc(48),

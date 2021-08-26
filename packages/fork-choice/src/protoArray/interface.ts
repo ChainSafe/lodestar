@@ -1,4 +1,4 @@
-import {Epoch, Gwei, Slot} from "@chainsafe/lodestar-types";
+import {Epoch, Slot} from "@chainsafe/lodestar-types";
 
 /**
  * HexRoot is a root as a hex string

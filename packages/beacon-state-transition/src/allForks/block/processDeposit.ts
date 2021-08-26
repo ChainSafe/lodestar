@@ -1,6 +1,6 @@
 import bls, {CoordType} from "@chainsafe/bls";
 import {allForks, altair, phase0, ssz} from "@chainsafe/lodestar-types";
-import {verifyMerkleBranch, bigIntMin} from "@chainsafe/lodestar-utils";
+import {verifyMerkleBranch} from "@chainsafe/lodestar-utils";
 import {
   DEPOSIT_CONTRACT_TREE_DEPTH,
   DOMAIN_DEPOSIT,

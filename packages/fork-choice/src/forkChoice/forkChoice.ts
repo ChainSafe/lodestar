@@ -1,7 +1,7 @@
 /* eslint-disable max-len */
 import {fromHexString, readonlyValues, toHexString} from "@chainsafe/ssz";
 import {SAFE_SLOTS_TO_UPDATE_JUSTIFIED, SLOTS_PER_HISTORICAL_ROOT} from "@chainsafe/lodestar-params";
-import {Slot, ValidatorIndex, Gwei, phase0, allForks, ssz, BlockRootHex, Epoch} from "@chainsafe/lodestar-types";
+import {Slot, ValidatorIndex, phase0, allForks, ssz, BlockRootHex, Epoch} from "@chainsafe/lodestar-types";
 import {
   computeSlotsSinceEpochStart,
   computeStartSlotAtEpoch,

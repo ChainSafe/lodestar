@@ -1,4 +1,4 @@
-import {Epoch, Gwei, Slot} from "@chainsafe/lodestar-types";
+import {Epoch, Slot} from "@chainsafe/lodestar-types";
 
 import {HexRoot, IProtoBlock, IProtoNode, HEX_ZERO_HASH} from "./interface";
 import {ProtoArrayError, ProtoArrayErrorCode} from "./errors";

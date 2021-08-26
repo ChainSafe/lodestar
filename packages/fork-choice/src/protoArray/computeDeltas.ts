@@ -1,4 +1,3 @@
-import {Gwei} from "@chainsafe/lodestar-types";
 import {IVoteTracker, HEX_ZERO_HASH} from "./interface";
 import {ProtoArrayError, ProtoArrayErrorCode} from "./errors";
 

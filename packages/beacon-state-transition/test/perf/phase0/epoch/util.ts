@@ -1,4 +1,3 @@
-import {EFFECTIVE_BALANCE_INCREMENT, MAX_EFFECTIVE_BALANCE} from "@chainsafe/lodestar-params";
 import {phase0, altair} from "../../../../src";
 import {
   AttesterFlags,
