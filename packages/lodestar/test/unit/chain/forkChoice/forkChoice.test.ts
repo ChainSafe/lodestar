@@ -2,7 +2,7 @@ import {ChainEventEmitter, computeAnchorCheckpoint, LodestarForkChoice} from "..
 import {generateState} from "../../../utils/state";
 import {FAR_FUTURE_EPOCH, MAX_EFFECTIVE_BALANCE} from "@chainsafe/lodestar-params";
 import {config} from "@chainsafe/lodestar-config/default";
-import {Gwei, Slot, ssz, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {Slot, ssz, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {generateSignedBlock} from "../../../utils/block";
 import {
   allForks,
@@ -27,7 +27,7 @@ describe("LodestarForkChoice", function () {
         exitEpoch: FAR_FUTURE_EPOCH,
         withdrawableEpoch: FAR_FUTURE_EPOCH,
       }),
-      balances: Array.from({length: 3}, () => BigInt(0)) as List<Gwei>,
+      balances: Array.from({length: 3}, () => 0) as List<number>,
       // Jan 01 2020
       genesisTime: 1577836800,
     },
