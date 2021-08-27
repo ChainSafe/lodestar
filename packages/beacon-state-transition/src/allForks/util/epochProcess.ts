@@ -99,8 +99,27 @@ export interface IEpochProcess {
   statuses: IAttesterStatus[];
   validators: phase0.Validator[];
   balances?: BigUint64Array;
-  // to be used for afterProcessEpoch()
+  /**
+   * Active validator indices for currentEpoch + 2.
+   * This is only used in `afterProcessEpoch` to compute epoch shuffling, it's not efficient to calculate it at that time
+   * since it requires 1 loop through validator.
+   * | epoch process fn                 | nextEpochTotalActiveBalance action |
+   * | -------------------------------- | ---------------------------------- |
+   * | beforeProcessEpoch               | calculate during the validator loop|
+   * | afterEpochProcess                | read it                            |
+   */
   nextEpochShufflingActiveValidatorIndices: ValidatorIndex[];
+  /**
+   * Altair specific, this is total active balances for the next epoch.
+   * This is only used in `afterProcessEpoch` to compute base reward and sync participant reward.
+   * It's not efficient to calculate it at that time since it requires looping through all active validators,
+   * so we should calculate it during `processEffectiveBalancesUpdate` which gives us updated effective balance.
+   * | epoch process fn                 | nextEpochTotalActiveBalance action |
+   * | -------------------------------- | ---------------------------------- |
+   * | beforeProcessEpoch               | initialize as BigInt(0)            |
+   * | processEffectiveBalancesUpdate   | calculate during the loop          |
+   * | afterEpochProcess                | read it                            |
+   */
   nextEpochTotalActiveBalance: Gwei;
 }
 
