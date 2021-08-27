@@ -1,5 +1,5 @@
 import {itBench} from "@dapplion/benchmark";
-import {allForks} from "../../../../src";
+import {allForks, phase0} from "../../../../src";
 import {beforeProcessEpoch} from "../../../../src/allForks";
 import {generatePerfTestCachedStatePhase0, numValidators} from "../../util";
 import {StateEpoch} from "../../types";
@@ -29,7 +29,8 @@ describe("phase0 processSlashings", () => {
       minRuns: 5, // Worst case is very slow
       before: () => getProcessSlashingsTestData(indicesToSlashLen),
       beforeEach: ({state, epochProcess}) => ({state: state.clone(), epochProcess}),
-      fn: ({state, epochProcess}) => allForks.processRegistryUpdates(state, epochProcess),
+      fn: ({state, epochProcess}) =>
+        phase0.processSlashings(state as allForks.CachedBeaconState<phase0.BeaconState>, epochProcess),
     });
   }
 });
