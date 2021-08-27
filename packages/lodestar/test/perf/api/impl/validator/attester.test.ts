@@ -1,4 +1,4 @@
-import {itBench, setBenchOpts} from "@dapplion/benchmark";
+import {itBench} from "@dapplion/benchmark";
 import {PointFormat} from "@chainsafe/bls";
 import {
   generatePerfTestCachedStatePhase0,
@@ -19,8 +19,6 @@ import {
 // ✓ getPubkeys - persistent - req 1000 vs - 200000 vc                   56593.10 ops/s    17.67000 us/op        -     111477 runs   2.00 s
 
 describe("api / impl / validator", () => {
-  setBenchOpts({maxMs: 10 * 1000});
-
   let state: ReturnType<typeof generatePerfTestCachedStatePhase0>;
 
   before(function () {
@@ -33,7 +31,7 @@ describe("api / impl / validator", () => {
   for (const reqCount of reqCounts) {
     itBench({
       id: `getPubkeys - index2pubkey - req ${reqCount} vs - ${numValidators} vc`,
-      threshold: Infinity,
+      noThreshold: true,
       fn: () => {
         for (let i = 0; i < reqCount; i++) {
           const pubkey = state.index2pubkey[i];
@@ -46,7 +44,7 @@ describe("api / impl / validator", () => {
   for (const reqCount of reqCounts) {
     itBench({
       id: `getPubkeys - validatorsArr - req ${reqCount} vs - ${numValidators} vc`,
-      threshold: Infinity,
+      noThreshold: true,
       fn: () => {
         for (let i = 0; i < reqCount; i++) {
           const validator = state.validators[i];
@@ -60,7 +58,7 @@ describe("api / impl / validator", () => {
     itBench({
       id: `getPubkeys - persistent - req ${reqCount} vs - ${numValidators} vc`,
       // Only track regressions for 1000 in CI to ensure performance does not degrade
-      threshold: reqCount < 1000 ? Infinity : undefined,
+      noThreshold: reqCount < 1000,
       fn: () => {
         const validators = state.validators.persistent;
         for (let i = 0; i < reqCount; i++) {

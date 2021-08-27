@@ -10,7 +10,9 @@ const slot = computeStartSlotAtEpoch(epoch) - 1;
 const stateId = `${network}_e${epoch}`;
 
 describe(`phase0 processEpoch - ${stateId}`, () => {
-  setBenchOpts({maxMs: 60 * 1000, minRuns: 10});
+  setBenchOpts({
+    yieldEventLoopAfterEach: true, // So SubTree(s)'s WeakRef can be garbage collected https://github.com/nodejs/node/issues/39902
+  });
 
   const stateOg = beforeValue(async () => {
     const state = await getNetworkCachedState(network, slot, 300_000);
@@ -32,7 +34,7 @@ describe(`phase0 processEpoch - ${stateId}`, () => {
 
   // Only in local environment compute a full breakdown of the cost of each step
   describe(`phase0 processEpoch steps - ${stateId}`, () => {
-    setBenchOpts({threshold: Infinity, minRuns: 10});
+    setBenchOpts({noThreshold: true});
 
     benchmarkPhase0EpochSteps(stateOg, stateId);
   });

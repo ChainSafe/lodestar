@@ -1,4 +1,4 @@
-import {itBench, setBenchOpts} from "@dapplion/benchmark";
+import {itBench} from "@dapplion/benchmark";
 import {phase0} from "../../../../src";
 import {generatePerfTestCachedStatePhase0, numValidators} from "../../util";
 import {StatePhase0Epoch} from "../../types";
@@ -15,8 +15,6 @@ import {FlagFactors, generateBalanceDeltasEpochProcess} from "./util";
 //   - eligibleAttester:   98%
 
 describe("phase0 getAttestationDeltas", () => {
-  setBenchOpts({maxMs: 60 * 1000, minRuns: 10});
-
   const vc = numValidators;
   const testCases: {id: string; isInInactivityLeak: boolean; flagFactors: FlagFactors}[] = [
     {
@@ -43,6 +41,7 @@ describe("phase0 getAttestationDeltas", () => {
   for (const {id, isInInactivityLeak, flagFactors} of testCases) {
     itBench<StatePhase0Epoch, StatePhase0Epoch>({
       id: `phase0 getAttestationDeltas - ${vc} ${id}`,
+      yieldEventLoopAfterEach: true, // So SubTree(s)'s WeakRef can be garbage collected https://github.com/nodejs/node/issues/39902
       before: () => {
         const state = generatePerfTestCachedStatePhase0({goBackOneSlot: true});
         const epochProcess = generateBalanceDeltasEpochProcess(state, isInInactivityLeak, flagFactors);

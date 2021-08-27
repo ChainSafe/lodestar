@@ -1,5 +1,4 @@
-import {itBench, setBenchOpts} from "@dapplion/benchmark";
-import {sleep} from "@chainsafe/lodestar-utils";
+import {itBench} from "@dapplion/benchmark";
 import {allForks} from "../../../../src";
 import {beforeProcessEpoch} from "../../../../src/allForks";
 import {generatePerfTestCachedStatePhase0, numValidators} from "../../util";
@@ -17,8 +16,6 @@ import {StateEpoch} from "../../types";
 //   - indicesToEject: 0
 
 describe("phase0 processRegistryUpdates", () => {
-  setBenchOpts({maxMs: 60 * 1000, minRuns: 5});
-
   const vc = numValidators;
   const testCases: {id: string; notTrack?: boolean; lengths: IndicesLengths}[] = [
     // Normal (optimal) mainnet network conditions: No effectiveBalance is udpated
@@ -57,15 +54,14 @@ describe("phase0 processRegistryUpdates", () => {
   for (const {id, notTrack, lengths} of testCases) {
     itBench<StateEpoch, StateEpoch>({
       id: `phase0 processRegistryUpdates - ${vc} ${id}`,
-      threshold: notTrack ? Infinity : undefined,
+      // WeakRef keeps a strong reference to its constructor value until the event loop ticks.
+      // Without this `sleep(0)` all the SubTree(s) created updating the validators registry
+      // won't be garabage collected causing an OOM crash. Tracking issue https://github.com/nodejs/node/issues/39902
+      yieldEventLoopAfterEach: true,
+      minRuns: 5, // Worst case is very slow
+      noThreshold: notTrack,
       before: () => getRegistryUpdatesTestData(vc, lengths),
-      beforeEach: async ({state, epochProcess}) => {
-        // WeakRef keeps a strong reference to its constructor value until the event loop ticks.
-        // Without this `sleep(0)` all the SubTree(s) created updating the validators registry
-        // won't be garabage collected causing an OOM crash. Tracking issue https://github.com/nodejs/node/issues/39902
-        await sleep(0);
-        return {state: state.clone(), epochProcess};
-      },
+      beforeEach: async ({state, epochProcess}) => ({state: state.clone(), epochProcess}),
       fn: ({state, epochProcess}) => allForks.processRegistryUpdates(state, epochProcess),
     });
   }

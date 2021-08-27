@@ -1,4 +1,4 @@
-import {itBench, setBenchOpts} from "@dapplion/benchmark";
+import {itBench} from "@dapplion/benchmark";
 import {allForks} from "../../../../src";
 import {beforeProcessEpoch} from "../../../../src/allForks";
 import {generatePerfTestCachedStatePhase0, numValidators} from "../../util";
@@ -11,8 +11,6 @@ import {StateEpoch} from "../../types";
 // - On normal mainnet conditions indicesToSlash = 0
 
 describe("phase0 processSlashings", () => {
-  setBenchOpts({maxMs: 60 * 1000, minRuns: 5});
-
   const vc = numValidators;
   const testCases: {id: string; indicesToSlashLen: number}[] = [
     // Normal (optimal) mainnet network conditions: No slashings. Ignore this case since it does nothing
@@ -27,6 +25,8 @@ describe("phase0 processSlashings", () => {
   for (const {id, indicesToSlashLen} of testCases) {
     itBench<StateEpoch, StateEpoch>({
       id: `phase0 processSlashings - ${vc} ${id}`,
+      yieldEventLoopAfterEach: true, // So SubTree(s)'s WeakRef can be garbage collected https://github.com/nodejs/node/issues/39902
+      minRuns: 5, // Worst case is very slow
       before: () => getProcessSlashingsTestData(indicesToSlashLen),
       beforeEach: ({state, epochProcess}) => ({state: state.clone(), epochProcess}),
       fn: ({state, epochProcess}) => allForks.processRegistryUpdates(state, epochProcess),

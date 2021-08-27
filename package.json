@@ -32,7 +32,7 @@
     "check-readme": "lerna run check-readme"
   },
   "devDependencies": {
-    "@dapplion/benchmark": "^0.2.0",
+    "@dapplion/benchmark": "^0.2.2",
     "@types/chai": "4.2.0",
     "@types/chai-as-promised": "^7.1.2",
     "@types/mocha": "^8.0.3",

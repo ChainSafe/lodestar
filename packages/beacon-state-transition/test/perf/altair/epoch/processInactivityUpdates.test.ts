@@ -1,4 +1,4 @@
-import {itBench, setBenchOpts} from "@dapplion/benchmark";
+import {itBench} from "@dapplion/benchmark";
 import {altair} from "../../../../src";
 import {FlagFactors, generateBalanceDeltasEpochProcess} from "../../phase0/epoch/util";
 import {StateAltairEpoch} from "../../types";
@@ -20,8 +20,6 @@ import {mutateInactivityScores} from "./util";
 //   - all inactivityScores > 0
 
 describe("altair processInactivityUpdates", () => {
-  setBenchOpts({maxMs: 60 * 1000, minRuns: 10});
-
   const vc = numValidators;
 
   const testCases: {id: string; isInInactivityLeak: boolean; flagFactors: FlagFactors; factorWithPositive: number}[] = [
@@ -42,6 +40,7 @@ describe("altair processInactivityUpdates", () => {
   for (const {id, isInInactivityLeak, flagFactors, factorWithPositive} of testCases) {
     itBench<StateAltairEpoch, StateAltairEpoch>({
       id: `altair processInactivityUpdates - ${vc} ${id}`,
+      yieldEventLoopAfterEach: true, // So SubTree(s)'s WeakRef can be garbage collected https://github.com/nodejs/node/issues/39902
       before: () => {
         const state = generatePerfTestCachedStateAltair({goBackOneSlot: true});
         const epochProcess = generateBalanceDeltasEpochProcess(state, isInInactivityLeak, flagFactors);

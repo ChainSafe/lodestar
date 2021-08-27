@@ -1,4 +1,4 @@
-import {itBench, setBenchOpts} from "@dapplion/benchmark";
+import {itBench} from "@dapplion/benchmark";
 import {generatePerfTestCachedStatePhase0} from "../../util";
 import {processSlot} from "../../../../src/allForks/slot";
 import {State} from "../../types";
@@ -6,8 +6,6 @@ import {State} from "../../types";
 // Test advancing through an empty slot, without any epoch transition
 
 describe("processSlot", () => {
-  setBenchOpts({maxMs: 60 * 1000});
-
   for (const slotCount of [1, 32]) {
     itBench<State, State>({
       id: `processSlot - ${slotCount} slots`,
