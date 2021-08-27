@@ -24,7 +24,7 @@ describe("state hashTreeRoot", () => {
   const validator: phase0.Validator = ssz.phase0.Validator.defaultValue();
   const balance = BigInt(31e9);
 
-  const testCases: {id: string; track?: boolean; fn: (state: TreeBacked<phase0.BeaconState>) => void}[] = [
+  const testCases: {id: string; noTrack?: boolean; fn: (state: TreeBacked<phase0.BeaconState>) => void}[] = [
     {
       id: "No change",
       fn: () => {
@@ -38,7 +38,7 @@ describe("state hashTreeRoot", () => {
     const idxs = indicesShuffled.slice(0, count);
     testCases.push({
       id: `${count} full validator`,
-      track: count >= 512,
+      noTrack: count < 512,
       fn: (state) => {
         for (const i of idxs) state.validators[i] = validator;
       },
@@ -49,7 +49,7 @@ describe("state hashTreeRoot", () => {
     const idxs = indicesShuffled.slice(0, count);
     testCases.push({
       id: `${count} validator.effectiveBalance`,
-      track: count >= 512,
+      noTrack: count < 512,
       fn: (state) => {
         for (const i of idxs) state.validators[i].effectiveBalance = balance;
       },
@@ -61,17 +61,17 @@ describe("state hashTreeRoot", () => {
     const idxs = indicesShuffled.slice(0, count);
     testCases.push({
       id: `${count} balances`,
-      track: count >= 512,
+      noTrack: count < 512,
       fn: (state) => {
         for (const i of idxs) state.balances[i] = balance;
       },
     });
   }
 
-  for (const {id, track, fn} of testCases) {
+  for (const {id, noTrack, fn} of testCases) {
     itBench<TreeBacked<phase0.BeaconState>, TreeBacked<phase0.BeaconState>>({
       id: `state hashTreeRoot - ${id}`,
-      threshold: !track ? Infinity : undefined,
+      noThreshold: noTrack,
       beforeEach: () => {
         fn(stateOg);
         return stateOg;

@@ -31,7 +31,7 @@ describe("api / impl / validator", () => {
   for (const reqCount of reqCounts) {
     itBench({
       id: `getPubkeys - index2pubkey - req ${reqCount} vs - ${numValidators} vc`,
-      threshold: Infinity,
+      noThreshold: true,
       fn: () => {
         for (let i = 0; i < reqCount; i++) {
           const pubkey = state.index2pubkey[i];
@@ -44,7 +44,7 @@ describe("api / impl / validator", () => {
   for (const reqCount of reqCounts) {
     itBench({
       id: `getPubkeys - validatorsArr - req ${reqCount} vs - ${numValidators} vc`,
-      threshold: Infinity,
+      noThreshold: true,
       fn: () => {
         for (let i = 0; i < reqCount; i++) {
           const validator = state.validators[i];
@@ -58,7 +58,7 @@ describe("api / impl / validator", () => {
     itBench({
       id: `getPubkeys - persistent - req ${reqCount} vs - ${numValidators} vc`,
       // Only track regressions for 1000 in CI to ensure performance does not degrade
-      threshold: reqCount < 1000 ? Infinity : undefined,
+      noThreshold: reqCount < 1000,
       fn: () => {
         const validators = state.validators.persistent;
         for (let i = 0; i < reqCount; i++) {

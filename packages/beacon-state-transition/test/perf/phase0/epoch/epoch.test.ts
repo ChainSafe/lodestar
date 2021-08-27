@@ -34,7 +34,7 @@ describe(`phase0 processEpoch - ${stateId}`, () => {
 
   // Only in local environment compute a full breakdown of the cost of each step
   describe(`phase0 processEpoch steps - ${stateId}`, () => {
-    setBenchOpts({threshold: Infinity});
+    setBenchOpts({noThreshold: true});
 
     benchmarkPhase0EpochSteps(stateOg, stateId);
   });

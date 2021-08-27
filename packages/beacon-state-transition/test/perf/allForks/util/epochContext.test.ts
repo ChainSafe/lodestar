@@ -32,7 +32,7 @@ describe("epochCtx.getCommitteeAssignments", () => {
     itBench({
       id: `getCommitteeAssignments - req ${reqCount} vs - ${validatorCount} vc`,
       // Only run for 1000 in CI to ensure performance does not degrade
-      threshold: reqCount < 1000 ? Infinity : undefined,
+      noThreshold: reqCount < 1000,
       fn: () => {
         state.epochCtx.getCommitteeAssignments(epoch, indices);
       },

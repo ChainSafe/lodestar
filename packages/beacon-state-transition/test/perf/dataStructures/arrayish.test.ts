@@ -46,7 +46,7 @@ const runsFactor = 1000;
 
 describe("Tree (persistent-merkle-tree)", () => {
   // Don't track regressions in CI
-  setBenchOpts({threshold: Infinity});
+  setBenchOpts({noThreshold: true});
 
   const d = 40;
   const gih = toGindex(d, BigInt(ih));
@@ -101,7 +101,7 @@ describe("Tree (persistent-merkle-tree)", () => {
 
 describe("MutableVector", () => {
   // Don't track regressions in CI
-  setBenchOpts({threshold: Infinity});
+  setBenchOpts({noThreshold: true});
 
   let items: number[];
   let mutableVector: MutableVector<number>;
@@ -143,7 +143,7 @@ describe("MutableVector", () => {
 
 describe("Array", () => {
   // Don't track regressions in CI
-  setBenchOpts({threshold: Infinity});
+  setBenchOpts({noThreshold: true});
 
   let arr: number[];
 

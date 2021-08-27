@@ -34,7 +34,7 @@ describe(`altair processEpoch - ${stateId}`, () => {
 
   // Only in local environment compute a full breakdown of the cost of each step
   describe(`altair processEpoch steps - ${stateId}`, () => {
-    setBenchOpts({threshold: Infinity});
+    setBenchOpts({noThreshold: true});
 
     benchmarkAltairEpochSteps(stateOg, stateId);
   });

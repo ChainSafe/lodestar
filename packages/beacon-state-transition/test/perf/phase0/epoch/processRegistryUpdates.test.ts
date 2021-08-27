@@ -59,7 +59,7 @@ describe("phase0 processRegistryUpdates", () => {
       // won't be garabage collected causing an OOM crash. Tracking issue https://github.com/nodejs/node/issues/39902
       yieldEventLoopAfterEach: true,
       minRuns: 5, // Worst case is very slow
-      threshold: notTrack ? Infinity : undefined,
+      noThreshold: notTrack,
       before: () => getRegistryUpdatesTestData(vc, lengths),
       beforeEach: async ({state, epochProcess}) => ({state: state.clone(), epochProcess}),
       fn: ({state, epochProcess}) => allForks.processRegistryUpdates(state, epochProcess),
