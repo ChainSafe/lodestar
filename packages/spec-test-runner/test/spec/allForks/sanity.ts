@@ -34,42 +34,49 @@ export function sanity(fork: ForkName): void {
     }
   );
 
-  describeDirectorySpecTest<IBlockSanityTestCase, allForks.BeaconState>(
-    `${ACTIVE_PRESET}/${fork}/sanity/blocks`,
-    join(SPEC_TEST_LOCATION, `/tests/${ACTIVE_PRESET}/${fork}/sanity/blocks/pyspec_tests`),
-    (testcase) => {
-      const stateTB = testcase.pre as TreeBacked<allForks.BeaconState>;
-      let wrappedState = allForks.createCachedBeaconState(getConfig(fork), stateTB);
-      const verify = !!testcase.meta && !!testcase.meta.blsSetting && testcase.meta.blsSetting === BigInt(1);
-      for (let i = 0; i < Number(testcase.meta.blocksCount); i++) {
-        const signedBlock = testcase[`blocks_${i}`] as altair.SignedBeaconBlock;
-        wrappedState = allForks.stateTransition(
-          wrappedState,
-          ssz[fork].SignedBeaconBlock.createTreeBackedFromStruct(signedBlock),
-          {
-            verifyStateRoot: verify,
-            verifyProposer: verify,
-            verifySignatures: verify,
-          }
-        );
+  const sanityBlockPaths = [
+    `/tests/${ACTIVE_PRESET}/${fork}/sanity/blocks/pyspec_tests`,
+    `/tests/${ACTIVE_PRESET}/${fork}/random/random/pyspec_tests`,
+  ];
+
+  for (const sanityBlockPath of sanityBlockPaths) {
+    describeDirectorySpecTest<IBlockSanityTestCase, allForks.BeaconState>(
+      `${ACTIVE_PRESET}/${fork}/sanity/blocks`,
+      join(SPEC_TEST_LOCATION, sanityBlockPath),
+      (testcase) => {
+        const stateTB = testcase.pre as TreeBacked<allForks.BeaconState>;
+        let wrappedState = allForks.createCachedBeaconState(getConfig(fork), stateTB);
+        const verify = !!testcase.meta && !!testcase.meta.blsSetting && testcase.meta.blsSetting === BigInt(1);
+        for (let i = 0; i < Number(testcase.meta.blocksCount); i++) {
+          const signedBlock = testcase[`blocks_${i}`] as altair.SignedBeaconBlock;
+          wrappedState = allForks.stateTransition(
+            wrappedState,
+            ssz[fork].SignedBeaconBlock.createTreeBackedFromStruct(signedBlock),
+            {
+              verifyStateRoot: verify,
+              verifyProposer: verify,
+              verifySignatures: verify,
+            }
+          );
+        }
+        return wrappedState;
+      },
+      {
+        inputTypes: inputTypeSszTreeBacked,
+        sszTypes: {
+          pre: ssz[fork].BeaconState,
+          post: ssz[fork].BeaconState,
+          ...generateBlocksSZZTypeMapping(fork, 99),
+        },
+        shouldError: (testCase) => !testCase.post,
+        timeout: 10000,
+        getExpected: (testCase) => testCase.post,
+        expectFunc: (testCase, expected, actual) => {
+          expectEqualBeaconState(fork, expected, actual);
+        },
       }
-      return wrappedState;
-    },
-    {
-      inputTypes: inputTypeSszTreeBacked,
-      sszTypes: {
-        pre: ssz[fork].BeaconState,
-        post: ssz[fork].BeaconState,
-        ...generateBlocksSZZTypeMapping(fork, 99),
-      },
-      shouldError: (testCase) => !testCase.post,
-      timeout: 10000,
-      getExpected: (testCase) => testCase.post,
-      expectFunc: (testCase, expected, actual) => {
-        expectEqualBeaconState(fork, expected, actual);
-      },
-    }
-  );
+    );
+  }
 }
 
 type BlocksSZZTypeMapping = Record<string, typeof ssz[ForkName]["SignedBeaconBlock"]>;

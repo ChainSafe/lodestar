@@ -849,8 +849,14 @@ export class ForkChoice implements IForkChoice {
       return;
     }
 
-    if (this.fcStore.bestJustifiedCheckpoint.epoch > this.fcStore.justifiedCheckpoint.epoch) {
-      this.updateJustified(this.fcStore.bestJustifiedCheckpoint, this.bestJustifiedBalances);
+    const {bestJustifiedCheckpoint, justifiedCheckpoint, finalizedCheckpoint} = this.fcStore;
+    // Update store.justified_checkpoint if a better checkpoint on the store.finalized_checkpoint chain
+    if (bestJustifiedCheckpoint.epoch > justifiedCheckpoint.epoch) {
+      const finalizedSlot = computeStartSlotAtEpoch(finalizedCheckpoint.epoch);
+      const ancestorAtFinalizedSlot = this.getAncestor(bestJustifiedCheckpoint.root, finalizedSlot);
+      if (ssz.Root.equals(ancestorAtFinalizedSlot, finalizedCheckpoint.root)) {
+        this.updateJustified(this.fcStore.bestJustifiedCheckpoint, this.bestJustifiedBalances);
+      }
     }
   }
 }

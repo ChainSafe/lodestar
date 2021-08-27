@@ -31,109 +31,112 @@ const ANCHOR_BLOCK_FILE_NAME = "anchor_block";
 const BLOCK_FILE_NAME = "^(block)_([0-9a-zA-Z]+)$";
 const ATTESTATION_FILE_NAME = "^(attestation)_([0-9a-zA-Z])+$";
 
-describeDirectorySpecTest<IForkChoiceTestCase, void>(
-  `${ACTIVE_PRESET}/altair/fork_choice/get_head`,
-  join(SPEC_TEST_LOCATION, `/tests/${ACTIVE_PRESET}/altair/fork_choice/get_head/pyspec_tests`),
-  (testcase) => {
-    const emitter = new ChainEventEmitter();
-    const {steps, anchorState} = testcase;
-    const currentSlot = anchorState.slot;
-    const tbState = config.getForkTypes(currentSlot).BeaconState.createTreeBackedFromStruct(anchorState);
-    let wrappedState = createCachedBeaconState(config, tbState);
-    const forkchoice = new LodestarForkChoice({config, emitter, currentSlot, state: wrappedState});
-    const checkpointStateCache = new CheckpointStateCache({});
-    const stateCache = new Map<string, CachedBeaconState<allForks.BeaconState>>();
-    cacheState(wrappedState, stateCache);
-    const {SECONDS_PER_SLOT} = wrappedState.config;
-    for (const [i, step] of steps.entries()) {
-      if (isTick(step)) {
-        forkchoice.updateTime(Number(step.tick) / SECONDS_PER_SLOT);
-      } else if (isAttestation(step)) {
-        const attestation = testcase.attestations.get(step.attestation);
-        if (!attestation) throw Error(`No attestation ${step.attestation}`);
-        forkchoice.onAttestation(wrappedState.epochCtx.getIndexedAttestation(attestation));
-      } else if (isBlock(step)) {
-        const signedBlock = testcase.blocks.get(step.block);
-        if (!signedBlock) throw Error(`No block ${step.block}`);
-        const preState = stateCache.get(toHexString(signedBlock.message.parentRoot));
-        if (!preState)
-          throw new Error("not found parent state for parent root" + toHexString(signedBlock.message.parentRoot));
-        wrappedState = runStateTranstion(preState, signedBlock, forkchoice, checkpointStateCache);
-        cacheState(wrappedState, stateCache);
-      } else if (isCheck(step)) {
-        const {
-          head: expectedHead,
-          time: expectedTime,
-          justifiedCheckpointRoot,
-          finalizedCheckpointRoot,
-          bestJustifiedCheckpoint,
-        } = step.checks;
-        const head = forkchoice.updateHead();
-        expect(head.slot).to.be.equal(Number(expectedHead.slot), `Invalid head slot at step ${i}`);
-        expect(toHexString(head.blockRoot)).to.be.equal(expectedHead.root, `Invalid head root at step ${i}`);
-        // time in spec mapped to Slot in our forkchoice implementation
-        if (expectedTime)
-          expect(forkchoice.getTime() * SECONDS_PER_SLOT).to.be.equal(
-            Number(expectedTime),
-            `Invalid forkchoice time at step ${i}`
-          );
-        if (justifiedCheckpointRoot)
-          expect(toHexString(forkchoice.getJustifiedCheckpoint().root)).to.be.equal(
+for (const testFolder of ["get_head", "on_block"]) {
+  describeDirectorySpecTest<IForkChoiceTestCase, void>(
+    `${ACTIVE_PRESET}/altair/fork_choice/get_head`,
+    join(SPEC_TEST_LOCATION, `/tests/${ACTIVE_PRESET}/altair/fork_choice/${testFolder}/pyspec_tests`),
+    (testcase) => {
+      const emitter = new ChainEventEmitter();
+      const {steps, anchorState} = testcase;
+      const currentSlot = anchorState.slot;
+      const tbState = config.getForkTypes(currentSlot).BeaconState.createTreeBackedFromStruct(anchorState);
+      let wrappedState = createCachedBeaconState(config, tbState);
+      const forkchoice = new LodestarForkChoice({config, emitter, currentSlot, state: wrappedState});
+      const checkpointStateCache = new CheckpointStateCache({});
+      const stateCache = new Map<string, CachedBeaconState<allForks.BeaconState>>();
+      cacheState(wrappedState, stateCache);
+      const {SECONDS_PER_SLOT} = wrappedState.config;
+      for (const [i, step] of steps.entries()) {
+        if (isTick(step)) {
+          forkchoice.updateTime(Number(step.tick) / SECONDS_PER_SLOT);
+        } else if (isAttestation(step)) {
+          const attestation = testcase.attestations.get(step.attestation);
+          if (!attestation) throw Error(`No attestation ${step.attestation}`);
+          forkchoice.onAttestation(wrappedState.epochCtx.getIndexedAttestation(attestation));
+        } else if (isBlock(step)) {
+          const signedBlock = testcase.blocks.get(step.block);
+          if (!signedBlock) throw Error(`No block ${step.block}`);
+          const preState = stateCache.get(toHexString(signedBlock.message.parentRoot));
+          if (!preState)
+            throw new Error("not found parent state for parent root" + toHexString(signedBlock.message.parentRoot));
+          wrappedState = runStateTranstion(preState, signedBlock, forkchoice, checkpointStateCache);
+          cacheState(wrappedState, stateCache);
+        } else if (isCheck(step)) {
+          const {
+            head: expectedHead,
+            time: expectedTime,
             justifiedCheckpointRoot,
-            `Invalid justified checkpoint time at step ${i}`
-          );
-        if (finalizedCheckpointRoot)
-          expect(toHexString(forkchoice.getFinalizedCheckpoint().root)).to.be.equal(
             finalizedCheckpointRoot,
-            `Invalid finalized checkpoint time at step ${i}`
-          );
-        if (bestJustifiedCheckpoint)
-          expect(toHexString(forkchoice.getBestJustifiedCheckpoint().root)).to.be.equal(
             bestJustifiedCheckpoint,
-            `Invalid best justified checkpoint time at step ${i}`
-          );
+          } = step.checks;
+          const head = forkchoice.updateHead();
+          expect(head.slot).to.be.equal(Number(expectedHead.slot), `Invalid head slot at step ${i}`);
+          expect(toHexString(head.blockRoot)).to.be.equal(expectedHead.root, `Invalid head root at step ${i}`);
+          // time in spec mapped to Slot in our forkchoice implementation
+          if (expectedTime)
+            expect(forkchoice.getTime() * SECONDS_PER_SLOT).to.be.equal(
+              Number(expectedTime),
+              `Invalid forkchoice time at step ${i}`
+            );
+          if (justifiedCheckpointRoot)
+            expect(toHexString(forkchoice.getJustifiedCheckpoint().root)).to.be.equal(
+              justifiedCheckpointRoot,
+              `Invalid justified checkpoint time at step ${i}`
+            );
+          if (finalizedCheckpointRoot)
+            expect(toHexString(forkchoice.getFinalizedCheckpoint().root)).to.be.equal(
+              finalizedCheckpointRoot,
+              `Invalid finalized checkpoint time at step ${i}`
+            );
+          if (bestJustifiedCheckpoint)
+            expect(toHexString(forkchoice.getBestJustifiedCheckpoint().root)).to.be.equal(
+              bestJustifiedCheckpoint,
+              `Invalid best justified checkpoint time at step ${i}`
+            );
+        }
       }
+    },
+    {
+      inputTypes: {
+        meta: InputType.YAML,
+        steps: InputType.YAML,
+      },
+      sszTypes: {
+        [ANCHOR_STATE_FILE_NAME]: ssz.altair.BeaconState,
+        [ANCHOR_BLOCK_FILE_NAME]: ssz.altair.BeaconBlock,
+        [BLOCK_FILE_NAME]: ssz.altair.SignedBeaconBlock,
+        [ATTESTATION_FILE_NAME]: ssz.phase0.Attestation,
+      },
+      mapToTestCase: (t: Record<string, any>) => {
+        // t has input file name as key
+        const blocks = new Map<string, altair.SignedBeaconBlock>();
+        const attestations = new Map<string, phase0.Attestation>();
+        for (const key in t) {
+          const blockMatch = key.match(BLOCK_FILE_NAME);
+          if (blockMatch) {
+            blocks.set(key, t[key]);
+          }
+          const attMatch = key.match(ATTESTATION_FILE_NAME);
+          if (attMatch) {
+            attestations.set(key, t[key]);
+          }
+        }
+        return {
+          meta: t["meta"] as IForkChoiceTestCase["meta"],
+          anchorState: t[ANCHOR_STATE_FILE_NAME] as IForkChoiceTestCase["anchorState"],
+          anchorBlock: t[ANCHOR_BLOCK_FILE_NAME] as IForkChoiceTestCase["anchorBlock"],
+          steps: t["steps"] as IForkChoiceTestCase["steps"],
+          blocks,
+          attestations,
+        };
+      },
+      timeout: 10000,
+      // eslint-disable-next-line @typescript-eslint/no-empty-function
+      expectFunc: () => {},
+      shouldSkip: (_, name) => name !== "new_finalized_slot_is_justified_checkpoint_ancestor",
     }
-  },
-  {
-    inputTypes: {
-      meta: InputType.YAML,
-      steps: InputType.YAML,
-    },
-    sszTypes: {
-      [ANCHOR_STATE_FILE_NAME]: ssz.altair.BeaconState,
-      [ANCHOR_BLOCK_FILE_NAME]: ssz.altair.BeaconBlock,
-      [BLOCK_FILE_NAME]: ssz.altair.SignedBeaconBlock,
-      [ATTESTATION_FILE_NAME]: ssz.phase0.Attestation,
-    },
-    mapToTestCase: (t: Record<string, any>) => {
-      // t has input file name as key
-      const blocks = new Map<string, altair.SignedBeaconBlock>();
-      const attestations = new Map<string, phase0.Attestation>();
-      for (const key in t) {
-        const blockMatch = key.match(BLOCK_FILE_NAME);
-        if (blockMatch) {
-          blocks.set(key, t[key]);
-        }
-        const attMatch = key.match(ATTESTATION_FILE_NAME);
-        if (attMatch) {
-          attestations.set(key, t[key]);
-        }
-      }
-      return {
-        meta: t["meta"] as IForkChoiceTestCase["meta"],
-        anchorState: t[ANCHOR_STATE_FILE_NAME] as IForkChoiceTestCase["anchorState"],
-        anchorBlock: t[ANCHOR_BLOCK_FILE_NAME] as IForkChoiceTestCase["anchorBlock"],
-        steps: t["steps"] as IForkChoiceTestCase["steps"],
-        blocks,
-        attestations,
-      };
-    },
-    timeout: 10000,
-    // eslint-disable-next-line @typescript-eslint/no-empty-function
-    expectFunc: () => {},
-  }
-);
+  );
+}
 
 function runStateTranstion(
   preState: CachedBeaconState<allForks.BeaconState>,
