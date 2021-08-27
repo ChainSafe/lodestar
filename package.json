@@ -8,7 +8,6 @@
     "packages/*"
   ],
   "scripts": {
-    "postinstall": "yarn build",
     "clean": "rm -rf ./packages/*/lib ./packages/*/*.tsbuildinfo",
     "build": "yarn clean && lerna run build",
     "build:docs": "lerna run build:typedocs && lerna run build:refdocs && ./scripts/prepare-docs.sh",
