@@ -41,10 +41,8 @@ export class LodestarForkChoice extends ForkChoice {
       // with the head not matching the fork choice justified and finalized epochs.
       epoch: checkpoint.epoch === 0 ? checkpoint.epoch : checkpoint.epoch + 1,
     };
-    // TODO - PERFORMANCE WARNING - NAIVE CODE
-    // Compute this value somewhere else and use the result of EpochProcess or similar
-    // 🐢🐢🐢🐢🐢🐢🐢🐢🐢🐢🐢🐢🐢🐢🐢🐢🐢🐢🐢
     const justifiedBalances = getEffectiveBalances(state);
+
     super({
       config,
 
