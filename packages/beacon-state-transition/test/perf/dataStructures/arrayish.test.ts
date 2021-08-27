@@ -46,7 +46,7 @@ const runsFactor = 1000;
 
 describe("Tree (persistent-merkle-tree)", () => {
   // Don't track regressions in CI
-  setBenchOpts({maxMs: 10 * 1000, threshold: Infinity});
+  setBenchOpts({threshold: Infinity});
 
   const d = 40;
   const gih = toGindex(d, BigInt(ih));
@@ -58,7 +58,7 @@ describe("Tree (persistent-merkle-tree)", () => {
     tree = getTree(d, n);
   });
 
-  itBench({id: `Tree ${d} ${n} create`, timeout: 60_000}, () => {
+  itBench({id: `Tree ${d} ${n} create`, timeoutBench: 60_000}, () => {
     getTree(d, n);
   });
 
@@ -101,7 +101,7 @@ describe("Tree (persistent-merkle-tree)", () => {
 
 describe("MutableVector", () => {
   // Don't track regressions in CI
-  setBenchOpts({maxMs: 10 * 1000, threshold: Infinity});
+  setBenchOpts({threshold: Infinity});
 
   let items: number[];
   let mutableVector: MutableVector<number>;
@@ -143,7 +143,7 @@ describe("MutableVector", () => {
 
 describe("Array", () => {
   // Don't track regressions in CI
-  setBenchOpts({maxMs: 10 * 1000, threshold: Infinity});
+  setBenchOpts({threshold: Infinity});
 
   let arr: number[];
 

@@ -1,4 +1,4 @@
-import {itBench, setBenchOpts} from "@dapplion/benchmark";
+import {itBench} from "@dapplion/benchmark";
 import {phase0, ssz} from "@chainsafe/lodestar-types";
 import {TreeBacked} from "@chainsafe/ssz";
 import {generatePerformanceStatePhase0, getPubkeys, numValidators} from "../util";
@@ -7,8 +7,6 @@ import {unshuffleList} from "../../../src";
 // Test cost of hashing state after some modifications
 
 describe("state hashTreeRoot", () => {
-  setBenchOpts({maxMs: 60 * 1000});
-
   const vc = numValidators;
   const indicesShuffled: number[] = [];
   let stateOg: TreeBacked<phase0.BeaconState>;

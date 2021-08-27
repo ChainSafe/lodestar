@@ -5,7 +5,7 @@ import {generateCachedState} from "../../../utils/state";
 import {CheckpointStateCache} from "../../../../src/chain/stateCache";
 
 describe("CheckpointStateCache perf tests", function () {
-  setBenchOpts({maxMs: 10 * 1000, threshold: Infinity});
+  setBenchOpts({threshold: Infinity});
 
   let state: CachedBeaconState<allForks.BeaconState>;
   let checkpoint: phase0.Checkpoint;

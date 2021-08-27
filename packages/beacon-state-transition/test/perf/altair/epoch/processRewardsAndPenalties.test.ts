@@ -1,4 +1,4 @@
-import {itBench, setBenchOpts} from "@dapplion/benchmark";
+import {itBench} from "@dapplion/benchmark";
 import {altair} from "../../../../src";
 import {generatePerfTestCachedStateAltair, numValidators} from "../../util";
 import {FlagFactors, generateBalanceDeltasEpochProcess} from "../../phase0/epoch/util";
@@ -13,8 +13,6 @@ import {mutateInactivityScores} from "./util";
 // inactivityScore > 0
 
 describe("altair processRewardsAndPenalties", () => {
-  setBenchOpts({maxMs: 60 * 1000, minRuns: 10});
-
   const vc = numValidators;
   const testCases: {id: string; isInInactivityLeak: boolean; flagFactors: FlagFactors; factorWithPositive: number}[] = [
     {

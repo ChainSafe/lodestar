@@ -10,7 +10,7 @@ import {byteArrayEquals, fromHexString} from "@chainsafe/ssz";
 // byteArrayEquals with valueOf()                                         853971.0 ops/s      1.171000 us/op 9963051 runs    16.07 s
 
 describe("root equals", () => {
-  setBenchOpts({maxMs: 60 * 1000, threshold: Infinity});
+  setBenchOpts({threshold: Infinity});
 
   const stateRoot = fromHexString("0x6c86ca3c4c6688cf189421b8a68bf2dbc91521609965e6f4e207d44347061fee");
   const rootTree = ssz.Root.createTreeBackedFromStruct(stateRoot);

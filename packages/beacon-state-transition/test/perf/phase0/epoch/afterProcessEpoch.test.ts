@@ -1,4 +1,4 @@
-import {itBench, setBenchOpts} from "@dapplion/benchmark";
+import {itBench} from "@dapplion/benchmark";
 import {allForks} from "../../../../src";
 import {StateEpoch} from "../../types";
 import {generatePerfTestCachedStatePhase0, perfStateId} from "../../util";
@@ -7,8 +7,6 @@ import {generatePerfTestCachedStatePhase0, perfStateId} from "../../util";
 // network conditions. See also individual benchmarks for shuffling computations.
 
 describe("phase0 afterProcessEpoch", () => {
-  setBenchOpts({maxMs: 60 * 1000, minRuns: 10});
-
   itBench<StateEpoch, StateEpoch>({
     id: `phase0 afterProcessEpoch - ${perfStateId}`,
     yieldEventLoopAfterEach: true, // So SubTree(s)'s WeakRef can be garbage collected https://github.com/nodejs/node/issues/39902

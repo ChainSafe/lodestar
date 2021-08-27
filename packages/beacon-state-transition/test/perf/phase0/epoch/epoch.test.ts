@@ -11,8 +11,6 @@ const stateId = `${network}_e${epoch}`;
 
 describe(`phase0 processEpoch - ${stateId}`, () => {
   setBenchOpts({
-    maxMs: 60 * 1000,
-    minRuns: 10,
     yieldEventLoopAfterEach: true, // So SubTree(s)'s WeakRef can be garbage collected https://github.com/nodejs/node/issues/39902
   });
 

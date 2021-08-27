@@ -5,7 +5,7 @@ import {BitList, List, readonlyValues, TreeBacked} from "@chainsafe/ssz";
 import {zipIndexesCommitteeBits} from "../../../src";
 
 describe("aggregationBits", () => {
-  setBenchOpts({maxMs: 60 * 1000, threshold: Infinity});
+  setBenchOpts({threshold: Infinity});
 
   const len = MAX_VALIDATORS_PER_COMMITTEE;
   const idPrefix = `aggregationBits - ${len} els`;
