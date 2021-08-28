@@ -60,8 +60,9 @@ export class QueuedStateRegenerator implements IStateRegenerator {
     block: allForks.BeaconBlock,
     rCaller: RegenCaller
   ): Promise<CachedBeaconState<allForks.BeaconState>> {
-    // First attempt to fetch the state from caches before queueing
     this.metrics?.regenFnCallTotal.inc({caller: rCaller, entrypoint: RegenFnName.getPreState});
+
+    // First attempt to fetch the state from caches before queueing
     const parentBlock = this.forkChoice.getBlock(block.parentRoot);
     if (!parentBlock) {
       throw new RegenError({
@@ -95,18 +96,14 @@ export class QueuedStateRegenerator implements IStateRegenerator {
     rCaller: RegenCaller
   ): Promise<CachedBeaconState<allForks.BeaconState>> {
     this.metrics?.regenFnCallTotal.inc({caller: rCaller, entrypoint: RegenFnName.getCheckpointState});
-    try {
-      // First attempt to fetch the state from cache before queueing
-      const checkpointState = this.checkpointStateCache.get(cp);
-      if (checkpointState) {
-        return checkpointState;
-      }
-      // The state is not immediately available in the cache, enqueue the job
-      return this.jobQueue.push({key: "getCheckpointState", args: [cp, rCaller]});
-    } catch (e) {
-      this.metrics?.regenFnTotalErrors.inc({caller: rCaller, entrypoint: RegenFnName.getCheckpointState});
-      throw e;
+
+    // First attempt to fetch the state from cache before queueing
+    const checkpointState = this.checkpointStateCache.get(cp);
+    if (checkpointState) {
+      return checkpointState;
     }
+    // The state is not immediately available in the cache, enqueue the job
+    return this.jobQueue.push({key: "getCheckpointState", args: [cp, rCaller]});
   }
 
   async getBlockSlotState(
@@ -115,33 +112,30 @@ export class QueuedStateRegenerator implements IStateRegenerator {
     rCaller: RegenCaller
   ): Promise<CachedBeaconState<allForks.BeaconState>> {
     this.metrics?.regenFnCallTotal.inc({caller: rCaller, entrypoint: RegenFnName.getBlockSlotState});
+
     return this.jobQueue.push({key: "getBlockSlotState", args: [blockRoot, slot, rCaller]});
   }
 
   async getState(stateRoot: Root, rCaller: RegenCaller): Promise<CachedBeaconState<allForks.BeaconState>> {
     this.metrics?.regenFnCallTotal.inc({caller: rCaller, entrypoint: RegenFnName.getState});
-    try {
-      // First attempt to fetch the state from cache before queueing
-      const state = this.stateCache.get(stateRoot);
-      if (state) {
-        return state;
-      }
-      // The state is not immediately available in the cache, enqueue the job
-      return this.jobQueue.push({key: "getState", args: [stateRoot, rCaller]});
-    } catch (e) {
-      this.metrics?.regenFnTotalErrors.inc({caller: rCaller, entrypoint: RegenFnName.getPreState});
-      throw e;
+
+    // First attempt to fetch the state from cache before queueing
+    const state = this.stateCache.get(stateRoot);
+    if (state) {
+      return state;
     }
+    // The state is not immediately available in the cache, enqueue the job
+    return this.jobQueue.push({key: "getState", args: [stateRoot, rCaller]});
   }
 
   private jobQueueProcessor = async (regenRequest: RegenRequest): Promise<CachedBeaconState<allForks.BeaconState>> => {
-    const rCaller = regenRequest.args[regenRequest.args.length - 1] as RegenCaller;
+    const metricsLabels = {
+      caller: regenRequest.args[regenRequest.args.length - 1] as RegenCaller,
+      entrypoint: regenRequest.key,
+    };
     let timer;
     try {
-      timer = this.metrics?.regenFnCallDuration.startTimer({
-        caller: rCaller,
-        entrypoint: regenRequest.key as RegenFnName,
-      });
+      timer = this.metrics?.regenFnCallDuration.startTimer(metricsLabels);
       switch (regenRequest.key) {
         case "getPreState":
           return await this.regen.getPreState(...regenRequest.args);
@@ -153,7 +147,7 @@ export class QueuedStateRegenerator implements IStateRegenerator {
           return await this.regen.getState(...regenRequest.args);
       }
     } catch (e) {
-      this.metrics?.regenFnTotalErrors.inc({caller: rCaller, entrypoint: regenRequest.key});
+      this.metrics?.regenFnTotalErrors.inc(metricsLabels);
       throw e;
     } finally {
       if (timer) timer();
