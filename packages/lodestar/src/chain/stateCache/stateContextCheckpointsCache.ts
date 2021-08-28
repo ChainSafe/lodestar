@@ -1,6 +1,7 @@
 import {toHexString} from "@chainsafe/ssz";
 import {phase0, Epoch, allForks} from "@chainsafe/lodestar-types";
 import {CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
+import {IMetrics} from "../../metrics";
 
 const MAX_EPOCHS = 10;
 
@@ -14,9 +15,20 @@ export class CheckpointStateCache {
   private cache = new Map<string, CachedBeaconState<allForks.BeaconState>>();
   /** Epoch -> Set<blockRoot> */
   private epochIndex = new Map<Epoch, Set<string>>();
+  private metrics: IMetrics | null | undefined;
+
+  constructor({metrics}: {metrics?: IMetrics | null}) {
+    if (metrics) {
+      this.metrics = metrics;
+      metrics.cpStateCacheSize.addCollect(() => metrics.cpStateCacheSize.set(this.cache.size));
+      metrics.cpStateEpochSize.addCollect(() => metrics.cpStateEpochSize.set(this.epochIndex.size));
+    }
+  }
 
   get(cp: phase0.Checkpoint): CachedBeaconState<allForks.BeaconState> | null {
+    this.metrics?.cpStateCacheLookups.inc();
     const item = this.cache.get(toCheckpointKey(cp));
+    if (item) this.metrics?.cpStateCacheHits.inc();
     return item ? item.clone() : null;
   }
 
@@ -25,6 +37,7 @@ export class CheckpointStateCache {
     if (this.cache.has(key)) {
       return;
     }
+    this.metrics?.cpStateCacheAdds.inc();
     this.cache.set(key, item.clone());
     const epochKey = toHexString(cp.root);
     const value = this.epochIndex.get(cp.epoch);

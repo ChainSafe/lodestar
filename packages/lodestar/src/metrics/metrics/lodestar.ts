@@ -404,5 +404,60 @@ export function createLodestarMetrics(
         labelNames: ["index", "src"],
       }),
     },
+    //regen metrics
+    stateCacheLookups: register.gauge({
+      name: "state_cache_lookups_total",
+      help: "Number of cache lookup",
+    }),
+    stateCacheHits: register.gauge({
+      name: "state_cache_hits_total",
+      help: "Number of total cache hits",
+    }),
+    stateCacheAdds: register.gauge({
+      name: "state_cache_adds_total",
+      help: "Number of items added in state cache",
+    }),
+    stateCacheSize: register.gauge({
+      name: "state_cache_size",
+      help: "State cache size",
+    }),
+
+    cpStateCacheLookups: register.gauge({
+      name: "cp_state_cache_lookups_total",
+      help: "Number of checkpoint cache lookup",
+    }),
+    cpStateCacheHits: register.gauge({
+      name: "cp_state_cache_hits_total",
+      help: "Number of checkpoint cache hits",
+    }),
+    cpStateCacheAdds: register.gauge({
+      name: "cp_state_cache_adds_total",
+      help: "Number of items added in checkpoint state cache",
+    }),
+    cpStateCacheSize: register.gauge({
+      name: "cp_state_cache_size",
+      help: "Checkpoint state cache size",
+    }),
+    cpStateEpochSize: register.gauge({
+      name: "cp_state_epoch_size",
+      help: "Checkpoint state cache size",
+    }),
+
+    regenFnCallTotal: register.gauge<"entrypoint" | "caller">({
+      name: "regen_fn_call_total",
+      help: "Number of calls for regen functions",
+      labelNames: ["entrypoint", "caller"],
+    }),
+    regenFnCallDuration: register.histogram<"entrypoint" | "caller">({
+      name: "regen_fn_call_duration",
+      help: "regen function duration",
+      labelNames: ["entrypoint", "caller"],
+      buckets: [0.1, 1, 10, 100],
+    }),
+    regenFnTotalErrors: register.gauge<"entrypoint" | "caller">({
+      name: "regen_fn_total_errors",
+      help: "regen function total errors",
+      labelNames: ["entrypoint", "caller"],
+    }),
   };
 }

@@ -8,6 +8,7 @@ import {ILogger, mapValues} from "@chainsafe/lodestar-utils";
 import {BeaconNode} from "../../../src";
 import {ChainEvent} from "../../../src/chain";
 import {linspace} from "../../../src/util/numpy";
+import {RegenCaller} from "../../../src/chain/regen";
 
 /* eslint-disable no-console */
 
@@ -58,11 +59,11 @@ export function simTestInfoTracker(bn: BeaconNode, logger: ILogger): () => void 
     if (checkpoint.epoch <= lastSeenEpoch) return;
     lastSeenEpoch = checkpoint.epoch;
 
-    // Recover the pre-epoch transition state
-    const checkpointState = await bn.chain.regen.getCheckpointState(checkpoint);
+    // Recover the pre-epoch transition state, use any random caller for regen
+    const checkpointState = await bn.chain.regen.getCheckpointState(checkpoint, RegenCaller.onForkChoiceFinalized);
     const lastSlot = computeStartSlotAtEpoch(checkpoint.epoch) - 1;
     const lastStateRoot = checkpointState.stateRoots[lastSlot % SLOTS_PER_HISTORICAL_ROOT];
-    const lastState = await bn.chain.regen.getState(lastStateRoot);
+    const lastState = await bn.chain.regen.getState(lastStateRoot, RegenCaller.onForkChoiceFinalized);
     logParticipation(lastState);
   }
 

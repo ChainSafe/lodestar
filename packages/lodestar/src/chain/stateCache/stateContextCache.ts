@@ -1,9 +1,9 @@
 import {ByteVector, toHexString} from "@chainsafe/ssz";
 import {Epoch, allForks} from "@chainsafe/lodestar-types";
 import {CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
+import {IMetrics} from "../../metrics";
 
 const MAX_STATES = 96;
-
 /**
  * In memory cache of CachedBeaconState
  *
@@ -18,16 +18,23 @@ export class StateContextCache {
   private cache = new Map<string, CachedBeaconState<allForks.BeaconState>>();
   /** Epoch -> Set<blockRoot> */
   private epochIndex = new Map<Epoch, Set<string>>();
+  private metrics: IMetrics | null | undefined;
 
-  constructor(maxStates = MAX_STATES) {
+  constructor({maxStates = MAX_STATES, metrics}: {maxStates?: number; metrics?: IMetrics | null}) {
     this.maxStates = maxStates;
+    if (metrics) {
+      this.metrics = metrics;
+      metrics.stateCacheSize.addCollect(() => metrics.stateCacheSize.set(this.cache.size));
+    }
   }
 
   get(root: ByteVector): CachedBeaconState<allForks.BeaconState> | null {
+    this.metrics?.stateCacheLookups.inc();
     const item = this.cache.get(toHexString(root));
     if (!item) {
       return null;
     }
+    this.metrics?.stateCacheHits.inc();
     return item.clone();
   }
 
@@ -36,6 +43,7 @@ export class StateContextCache {
     if (this.cache.get(key)) {
       return;
     }
+    this.metrics?.stateCacheAdds.inc();
     this.cache.set(key, item.clone());
     const epoch = item.epochCtx.currentShuffling.epoch;
     const blockRoots = this.epochIndex.get(epoch);

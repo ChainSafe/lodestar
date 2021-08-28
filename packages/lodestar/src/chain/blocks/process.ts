@@ -3,7 +3,7 @@ import {sleep} from "@chainsafe/lodestar-utils";
 import {ChainEventEmitter} from "../emitter";
 import {IBlockJob, IChainSegmentJob, IProcessBlock} from "../interface";
 import {runStateTransition} from "./stateTransition";
-import {IStateRegenerator, RegenError} from "../regen";
+import {IStateRegenerator, RegenError, RegenCaller} from "../regen";
 import {BlockError, BlockErrorCode, ChainSegmentError} from "../errors";
 import {IBlsVerifier} from "../bls";
 import {groupBlocksByEpoch} from "./util";
@@ -103,7 +103,7 @@ async function processBlocksInEpoch(
   }
 
   try {
-    let preState = await regen.getPreState(firstBlock.message);
+    let preState = await regen.getPreState(firstBlock.message, RegenCaller.processBlocksInEpoch);
     for (const block of blocksInEpoch) {
       preState = await runStateTransition({emitter, forkChoice, metrics}, checkpointStateCache, preState, {
         reprocess: job.reprocess,

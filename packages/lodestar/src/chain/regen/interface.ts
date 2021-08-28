@@ -1,6 +1,26 @@
 import {allForks, phase0, Root, Slot} from "@chainsafe/lodestar-types";
 import {CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
 
+export enum RegenCaller {
+  getProposerAttesterDuties = "getProposerAttesterDuties",
+  produceBlock = "produceBlock",
+  validateGossipBlock = "validateGossipBlock",
+  produceAttestationData = "produceAttestationData",
+  getStateByBlockRoot = "getStateByBlockRoot",
+  processBlocksInEpoch = "processBlocksInEpoch",
+  validateGossipAggregateAndProof = "validateGossipAggregateAndProof",
+  validateGossipAttestation = "validateGossipAttestation",
+  validateGossipVoluntaryExit = "validateGossipVoluntaryExit",
+  onForkChoiceFinalized = "onForkChoiceFinalized",
+}
+
+export enum RegenFnName {
+  getBlockSlotState = "getBlockSlotState",
+  getState = "getState",
+  getPreState = "getPreState",
+  getCheckpointState = "getCheckpointState",
+}
+
 /**
  * Regenerates states that have already been processed by the fork choice
  */
@@ -9,21 +29,25 @@ export interface IStateRegenerator {
    * Return a valid pre-state for a beacon block
    * This will always return a state in the latest viable epoch
    */
-  getPreState: (block: allForks.BeaconBlock) => Promise<CachedBeaconState<allForks.BeaconState>>;
+  getPreState: (block: allForks.BeaconBlock, rCaller: RegenCaller) => Promise<CachedBeaconState<allForks.BeaconState>>;
 
   /**
    * Return a valid checkpoint state
    * This will always return a state with `state.slot % SLOTS_PER_EPOCH === 0`
    */
-  getCheckpointState: (cp: phase0.Checkpoint) => Promise<CachedBeaconState<allForks.BeaconState>>;
+  getCheckpointState: (cp: phase0.Checkpoint, rCaller: RegenCaller) => Promise<CachedBeaconState<allForks.BeaconState>>;
 
   /**
    * Return the state of `blockRoot` processed to slot `slot`
    */
-  getBlockSlotState: (blockRoot: Root, slot: Slot) => Promise<CachedBeaconState<allForks.BeaconState>>;
+  getBlockSlotState: (
+    blockRoot: Root,
+    slot: Slot,
+    rCaller: RegenCaller
+  ) => Promise<CachedBeaconState<allForks.BeaconState>>;
 
   /**
    * Return the exact state with `stateRoot`
    */
-  getState: (stateRoot: Root) => Promise<CachedBeaconState<allForks.BeaconState>>;
+  getState: (stateRoot: Root, rCaller: RegenCaller) => Promise<CachedBeaconState<allForks.BeaconState>>;
 }
