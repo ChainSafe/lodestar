@@ -133,7 +133,7 @@ for (const testFolder of ["get_head", "on_block"]) {
       timeout: 10000,
       // eslint-disable-next-line @typescript-eslint/no-empty-function
       expectFunc: () => {},
-      shouldSkip: (_, name) => name !== "new_finalized_slot_is_justified_checkpoint_ancestor",
+      // shouldSkip: (_, name) => name !== "new_finalized_slot_is_justified_checkpoint_ancestor",
     }
   );
 }

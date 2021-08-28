@@ -277,17 +277,23 @@ export function beforeProcessEpoch<T extends allForks.BeaconState>(state: Cached
       FLAG_CURR_HEAD_ATTESTER
     );
   } else {
-    state.previousEpochParticipation.forEachStatus((status, i) => {
-      statuses[i].flags |=
-        ((status.timelySource && FLAG_PREV_SOURCE_ATTESTER) as number) |
-        ((status.timelyTarget && FLAG_PREV_TARGET_ATTESTER) as number) |
-        ((status.timelyHead && FLAG_PREV_HEAD_ATTESTER) as number);
+    state.previousEpochParticipation.forEachStatus((participationStatus, i) => {
+      const status = statuses[i];
+      if (status.active) {
+        status.flags |=
+          ((participationStatus.timelySource && FLAG_PREV_SOURCE_ATTESTER) as number) |
+          ((participationStatus.timelyTarget && FLAG_PREV_TARGET_ATTESTER) as number) |
+          ((participationStatus.timelyHead && FLAG_PREV_HEAD_ATTESTER) as number);
+      }
     });
-    state.currentEpochParticipation.forEachStatus((status, i) => {
-      statuses[i].flags |=
-        ((status.timelySource && FLAG_CURR_SOURCE_ATTESTER) as number) |
-        ((status.timelyTarget && FLAG_CURR_TARGET_ATTESTER) as number) |
-        ((status.timelyHead && FLAG_CURR_HEAD_ATTESTER) as number);
+    state.currentEpochParticipation.forEachStatus((participationStatus, i) => {
+      const status = statuses[i];
+      if (status.active) {
+        status.flags |=
+          ((participationStatus.timelySource && FLAG_CURR_SOURCE_ATTESTER) as number) |
+          ((participationStatus.timelyTarget && FLAG_CURR_TARGET_ATTESTER) as number) |
+          ((participationStatus.timelyHead && FLAG_CURR_HEAD_ATTESTER) as number);
+      }
     });
   }
 
