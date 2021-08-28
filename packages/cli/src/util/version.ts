@@ -1,28 +1,75 @@
 import fs from "fs";
 import findUp from "find-up";
+import {readLodestarGitData} from "./gitData";
+import {GitData} from "./gitData/gitDataPath";
 
-type LernaJson = {
-  /** "0.18.0" */
+type VersionJson = {
+  /** "0.28.2" */
   version: string;
 };
 
-/** Returns local version from `lerna.json` as `"0.18.0"` */
-export function getLocalVersion(): string | null {
+enum ReleaseTrack {
+  git = "git",
+  npm = "npm",
+  nightly = "nightly",
+  alpha = "alpha",
+  beta = "beta",
+  rc = "release candidate",
+  stable = "stable",
+  lts = "long term support",
+}
+
+/** Defines default release track, i.e., the "stability" of tag releases */
+const defaultReleaseTrack = ReleaseTrack.alpha;
+
+/**
+ * Gathers all information on package version including Git data.
+ * @returns a version string, e.g., `v0.28.2/developer-feature/+7/80c248bb (nightly)`
+ */
+export function getVersion(): string {
+  const gitData: GitData = readLodestarGitData();
+  const semver: string | undefined = gitData.semver;
+  const numCommits: string | undefined = gitData.numCommits;
+  const commitSlice: string | undefined = gitData.commit?.slice(0, 8);
+
+  // Fall back to/assume local package version if git is unavailable
+  if (!semver || semver.includes("N/A")) {
+    return `v${getLocalVersion()} (${ReleaseTrack.npm})`;
+  }
+
+  // If these values are empty/undefined, we assume tag release.
+  if (!commitSlice || !numCommits || numCommits === "") {
+    return `${semver} (${defaultReleaseTrack})`;
+  }
+
+  // Otherwise get branch and commit information
+  return `${semver}/${gitData.branch}/${numCommits}/${commitSlice} (${ReleaseTrack.git})`;
+}
+
+/** Exposes raw version data wherever needed for reporting (metrics, grafana). */
+export function getVersionGitData(): GitData {
+  return readLodestarGitData();
+}
+
+/** Returns local version from `lerna.json` or `package.json` as `"0.28.2"` */
+function getLocalVersion(): string | undefined {
   return readVersionFromLernaJson() || readCliPackageJson();
 }
 
-function readVersionFromLernaJson(): string | null {
-  const filePath = findUp.sync("lerna.json");
-  if (!filePath) return null;
+/** Read version information from lerna.json */
+function readVersionFromLernaJson(): string | undefined {
+  const filePath = findUp.sync("lerna.json", {cwd: __dirname});
+  if (!filePath) return undefined;
 
-  const lernaJson = JSON.parse(fs.readFileSync(filePath, "utf8")) as LernaJson;
+  const lernaJson = JSON.parse(fs.readFileSync(filePath, "utf8")) as VersionJson;
   return lernaJson.version;
 }
 
-function readCliPackageJson(): string | null {
+/** Read version information from package.json */
+function readCliPackageJson(): string | undefined {
   const filePath = findUp.sync("package.json", {cwd: __dirname});
-  if (!filePath) return null;
+  if (!filePath) return undefined;
 
-  const packageJson = JSON.parse(fs.readFileSync(filePath, "utf8")) as LernaJson;
+  const packageJson = JSON.parse(fs.readFileSync(filePath, "utf8")) as VersionJson;
   return packageJson.version;
 }

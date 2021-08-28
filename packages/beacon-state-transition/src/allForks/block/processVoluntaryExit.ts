@@ -6,18 +6,19 @@ import {initiateValidatorExit} from "../../allForks/block";
 import {verifyVoluntaryExitSignature} from "../../allForks/signatureSets";
 import {BlockProcess} from "../../util/blockProcess";
 
-export function processVoluntaryExit(
+/**
+ * Process a VoluntaryExit operation. Initiates the exit of a validator.
+ *
+ * PERF: Work depends on number of VoluntaryExit per block. On regular networks the average is 0 / block.
+ */
+export function processVoluntaryExitAllForks(
   state: CachedBeaconState<allForks.BeaconState>,
   signedVoluntaryExit: phase0.SignedVoluntaryExit,
   blockProcess: BlockProcess,
   verifySignature = true
 ): void {
   assertValidVoluntaryExit(state as CachedBeaconState<allForks.BeaconState>, signedVoluntaryExit, verifySignature);
-  initiateValidatorExit(
-    state as CachedBeaconState<allForks.BeaconState>,
-    signedVoluntaryExit.message.validatorIndex,
-    blockProcess
-  );
+  initiateValidatorExit(state as CachedBeaconState<allForks.BeaconState>, signedVoluntaryExit.message.validatorIndex);
 }
 
 export function assertValidVoluntaryExit(
@@ -35,13 +36,11 @@ export function assertValidVoluntaryExit(
   }
   // verify exit has not been initiated
   if (validator.exitEpoch !== FAR_FUTURE_EPOCH) {
-    throw new Error("VoluntaryExit validator exit has already been initiated: " + `exitEpoch=${validator.exitEpoch}`);
+    throw new Error(`VoluntaryExit validator exit has already been initiated: exitEpoch=${validator.exitEpoch}`);
   }
   // exits must specify an epoch when they become valid; they are not valid before then
   if (!(currentEpoch >= voluntaryExit.epoch)) {
-    throw new Error(
-      "VoluntaryExit epoch is not yet valid: " + `epoch=${voluntaryExit.epoch} currentEpoch=${currentEpoch}`
-    );
+    throw new Error(`VoluntaryExit epoch is not yet valid: epoch=${voluntaryExit.epoch} currentEpoch=${currentEpoch}`);
   }
   // verify the validator had been active long enough
   if (!(currentEpoch >= validator.activationEpoch + config.SHARD_COMMITTEE_PERIOD)) {

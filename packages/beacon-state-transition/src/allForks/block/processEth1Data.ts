@@ -4,6 +4,14 @@ import {readonlyValues} from "@chainsafe/ssz";
 
 import {CachedBeaconState} from "../util";
 
+/**
+ * Store vote counts for every eth1 block that has votes; if any eth1 block wins majority support within a 1024-slot
+ * voting period, formally accept that eth1 block and set it as the official "latest known eth1 block" in the eth2 state.
+ *
+ * PERF: Processing cost depends on the current amount of votes.
+ * - Best case: Vote is already decided, zero work. See getNewEth1Data conditions
+ * - Worst case: 1023 votes and no majority vote yet.
+ */
 export function processEth1Data(state: CachedBeaconState<allForks.BeaconState>, body: allForks.BeaconBlockBody): void {
   const newEth1Data = getNewEth1Data(state, body.eth1Data);
   if (newEth1Data) {

@@ -6,6 +6,7 @@ import {INetwork} from "../network";
 import {IBeaconSync, SyncState} from "../sync";
 import {prettyTimeDiff} from "../util/time";
 import {TimeSeries} from "../util/timeSeries";
+import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 
 /** Create a warning log whenever the peer count is at or below this value */
 const WARN_PEER_COUNT = 1;
@@ -47,13 +48,21 @@ export async function runNodeNotifier({
       const clockSlot = chain.clock.currentSlot;
       const headInfo = chain.forkChoice.getHead();
       const headState = chain.getHeadState();
+      const finalizedBlock = computeStartSlotAtEpoch(headState.finalizedCheckpoint.epoch);
       const finalizedEpoch = headState.finalizedCheckpoint.epoch;
       const finalizedRoot = headState.finalizedCheckpoint.root;
       const headSlot = headInfo.slot;
       timeSeries.addPoint(headSlot, Date.now());
 
+      let currentRow = `block: ${headInfo.slot} ${prettyBytes(headInfo.blockRoot)}`;
+
+      // Give info about empty slots if head < clock
+      if (headInfo.slot < clockSlot) {
+        currentRow = `block: ${clockSlot}   … (empty)`;
+      }
+
       const peersRow = `peers: ${connectedPeerCount}`;
-      const finalizedCheckpointRow = `finalized: ${finalizedEpoch} ${prettyBytes(finalizedRoot)}`;
+      const finalizedCheckpointRow = `finalized: ${finalizedBlock} ${prettyBytes(finalizedRoot)} (${finalizedEpoch})`;
       const headRow = `head: ${headInfo.slot} ${prettyBytes(headInfo.blockRoot)}`;
       const clockSlotRow = `clockSlot: ${clockSlot}`;
 
@@ -69,8 +78,8 @@ export async function runNodeNotifier({
             "Syncing",
             `${timeLeft} left`,
             `${slotsPerSecond.toPrecision(3)} slots/s`,
-            finalizedCheckpointRow,
             headRow,
+            finalizedCheckpointRow,
             clockSlotRow,
             peersRow,
           ];
@@ -78,12 +87,12 @@ export async function runNodeNotifier({
         }
 
         case SyncState.Synced: {
-          nodeState = ["Synced", finalizedCheckpointRow, headRow, clockSlotRow, peersRow];
+          nodeState = ["Synced", currentRow, headRow, finalizedCheckpointRow, peersRow];
           break;
         }
 
         case SyncState.Stalled: {
-          nodeState = ["Searching for peers", peersRow, finalizedCheckpointRow, headRow, clockSlotRow];
+          nodeState = ["Searching for peers", peersRow, headRow, finalizedCheckpointRow, clockSlotRow];
         }
       }
       logger.info(nodeState.join(" - "));

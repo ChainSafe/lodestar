@@ -9,9 +9,9 @@ jobs:
     steps:
       # <common-build> - Uses YAML anchors in the future
       - uses: actions/checkout@v2
-      - uses: actions/setup-node@v2-beta
+      - uses: actions/setup-node@v2
         with:
-          node-version: "14.16.0"
+          node-version: "lts/fermium"
       # As of October 2020, runner has +8GB of free space w/out this script (takes 1m30s to run)
       # - run: ./scripts/free-disk-space.sh
       - name: Restore dependencies
@@ -21,10 +21,10 @@ jobs:
           path: |
             node_modules
             packages/*/node_modules
-          key: ${{ runner.os }}-${{ hashFiles('**/yarn.lock') }}-14.16.0
+          key: ${{ runner.os }}-${{ hashFiles('**/yarn.lock') }}-fermium
       - name: Install & build
         if: steps.cache-deps.outputs.cache-hit != 'true'
-        run: yarn install --frozen-lockfile
+        run: yarn install --frozen-lockfile && yarn build
       - name: Build
         run: yarn build
         if: steps.cache-deps.outputs.cache-hit == 'true'
@@ -32,6 +32,25 @@ jobs:
       - name: Download spec tests
         run: yarn download-test-cases
         working-directory: packages/spec-test-runner
-      - name: Spec tests
-        run: yarn test:spec
+      - name: Check spec tests
+        run: yarn check-tests
+        working-directory: packages/spec-test-runner
+
+      # Run them in different steps to quickly identifying which command failed
+      # Otherwise just doing `yarn test:spec` you can't tell which specific suite failed
+      # many of the suites have identical names for minimal and mainnet
+      - name: Spec tests general
+        run: yarn test:spec-general
+        working-directory: packages/spec-test-runner
+      - name: Spec tests phase0-minimal
+        run: yarn test:spec-phase0-minimal
+        working-directory: packages/spec-test-runner
+      - name: Spec tests phase0-mainnet
+        run: yarn test:spec-phase0-mainnet
+        working-directory: packages/spec-test-runner
+      - name: Spec tests altair-minimal
+        run: yarn test:spec-altair-minimal
+        working-directory: packages/spec-test-runner
+      - name: Spec tests altair-mainnet
+        run: yarn test:spec-altair-mainnet
         working-directory: packages/spec-test-runner

@@ -1,4 +1,4 @@
-<p align="center"><a href="https://chainsafe.github.io/lodestar"><img width="400" title="Lodestar" src='assets/brand-assets/for-dark-backgrounds/full-mark.png' /></a></p>
+<p align="center"><a href="https://chainsafe.github.io/lodestar"><img width="500" title="Lodestar" src='assets/lodestar_icon_text_black_stroke.png' /></a></p>
 
 # Lodestar Monorepo
 

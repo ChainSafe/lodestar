@@ -6,6 +6,11 @@ import {verifyRandaoSignature} from "../signatureSets";
 import {CachedBeaconState} from "../util";
 import {EPOCHS_PER_HISTORICAL_VECTOR} from "@chainsafe/lodestar-params";
 
+/**
+ * Commit a randao reveal to generate pseudorandomness seeds
+ *
+ * PERF: Fixed work independent of block contents.
+ */
 export function processRandao(
   state: CachedBeaconState<allForks.BeaconState>,
   block: allForks.BeaconBlock,

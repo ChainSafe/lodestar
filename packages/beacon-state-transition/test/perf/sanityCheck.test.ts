@@ -1,9 +1,14 @@
 import {expect} from "chai";
-import {prepareEpochProcessState} from "../../src/allForks";
+import {ACTIVE_PRESET, PresetName} from "@chainsafe/lodestar-params";
+import {beforeProcessEpoch} from "../../src/allForks";
 import {generatePerfTestCachedStateAltair, generatePerfTestCachedStatePhase0, perfStateId} from "./util";
 
 describe("Perf test sanity check", function () {
   this.timeout(60 * 1000);
+
+  if (ACTIVE_PRESET !== PresetName.mainnet) {
+    throw Error(`ACTIVE_PRESET '${ACTIVE_PRESET}' must be mainnet`);
+  }
 
   const numValidators = 250000;
   const targetStakeYWei = 7;
@@ -25,7 +30,7 @@ describe("Perf test sanity check", function () {
 
   it("targetStake is in the same range", () => {
     const phase0State = generatePerfTestCachedStatePhase0();
-    const epochProcess = prepareEpochProcessState(phase0State);
+    const epochProcess = beforeProcessEpoch(phase0State);
     expect(epochProcess.prevEpochUnslashedStake.targetStake > targetStake).to.equal(
       true,
       `targetStake too low: ${epochProcess.prevEpochUnslashedStake.targetStake} > ${targetStake}`

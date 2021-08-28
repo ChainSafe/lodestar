@@ -8,7 +8,7 @@ import {
   MAX_EFFECTIVE_BALANCE,
 } from "@chainsafe/lodestar-params";
 
-import {computeActivationExitEpoch, getChurnLimit, isActiveValidator} from "../../util";
+import {isActiveValidator} from "../../util";
 import {
   IAttesterStatus,
   createIAttesterStatus,
@@ -25,9 +25,11 @@ import {
 import {IEpochStakeSummary} from "./epochStakeSummary";
 import {CachedBeaconState} from "./cachedBeaconState";
 import {statusProcessEpoch} from "../../phase0/epoch/processPendingAttestations";
-import {computeBaseRewardPerIncrement} from "../../altair/misc";
+import {computeBaseRewardPerIncrement} from "../../altair/util/misc";
 
 /**
+ * Pre-computed disposable data to process epoch transitions faster at the cost of more memory.
+ *
  * The AttesterStatus (and FlatValidator under status.validator) objects and
  * EpochStakeSummary are tracked in the IEpochProcess and made available as additional context in the
  * epoch transition.
@@ -40,72 +42,114 @@ export interface IEpochProcess {
   baseRewardPerIncrement: Gwei;
   prevEpochUnslashedStake: IEpochStakeSummary;
   currEpochUnslashedTargetStake: Gwei;
+  /**
+   * Indices which will receive the slashing penalty
+   * ```
+   * v.withdrawableEpoch === currentEpoch + EPOCHS_PER_SLASHINGS_VECTOR / 2
+   * ```
+   * There's a practical limitation in number of possible validators slashed by epoch, which would share the same
+   * withdrawableEpoch. Note that after some count exitChurn would advance the withdrawableEpoch.
+   * ```
+   * maxSlashedPerSlot = SLOTS_PER_EPOCH * (MAX_PROPOSER_SLASHINGS + MAX_ATTESTER_SLASHINGS * bits)
+   * ```
+   * For current mainnet conditions (bits = 128) that's `maxSlashedPerSlot = 8704`.
+   * For less than 327680 validators, churnLimit = 4 (minimum possible)
+   * For exitChurn to overtake the slashing delay, there should be
+   * ```
+   * churnLimit * (EPOCHS_PER_SLASHINGS_VECTOR / 2 - 1 - MAX_SEED_LOOKAHEAD)
+   * ```
+   * For mainnet conditions that's 16364 validators. So the limiting factor is the max operations on the block. Note
+   * that on average indicesToSlash must contain churnLimit validators (4), but it can spike to a max of 8704 in a
+   * single epoch if there haven't been exits in a while and there's a massive attester slashing at once of validators
+   * that happen to be in the same committee, which is very unlikely.
+   */
   indicesToSlash: ValidatorIndex[];
-  indicesToSetActivationEligibility: ValidatorIndex[];
-  // ignores churn, apply churn-limit manually.
-  // maybe, because finality affects it still
-  indicesToMaybeActivate: ValidatorIndex[];
-
+  /**
+   * Indices of validators that just joinned and will be eligible for the active queue.
+   * ```
+   * v.activationEligibilityEpoch === FAR_FUTURE_EPOCH && v.effectiveBalance === MAX_EFFECTIVE_BALANCE
+   * ```
+   * All validators in indicesEligibleForActivationQueue get activationEligibilityEpoch set. So it can only include
+   * validators that have just joinned the registry through a valid full deposit(s).
+   * ```
+   * max indicesEligibleForActivationQueue = SLOTS_PER_EPOCH * MAX_DEPOSITS
+   * ```
+   * For mainnet spec = 512
+   */
+  indicesEligibleForActivationQueue: ValidatorIndex[];
+  /**
+   * Indices of validators that may become active once churn and finaly allow.
+   * ```
+   * v.activationEpoch === FAR_FUTURE_EPOCH && v.activationEligibilityEpoch <= currentEpoch
+   * ```
+   * Many validators could be on indicesEligibleForActivation, but only up to churnLimit will be activated.
+   * For less than 327680 validators, churnLimit = 4 (minimum possible), so max processed is 4.
+   */
+  indicesEligibleForActivation: ValidatorIndex[];
+  /**
+   * Indices of validators that will be ejected due to low balance.
+   * ```
+   * status.active && v.exitEpoch === FAR_FUTURE_EPOCH && v.effectiveBalance <= config.EJECTION_BALANCE
+   * ```
+   * Potentially the entire validator set could be added to indicesToEject, and all validators in the array will have
+   * their validator object mutated. Exit queue churn delays exit, but the object is mutated immediately.
+   */
   indicesToEject: ValidatorIndex[];
-  exitQueueEnd: Epoch;
-  exitQueueEndChurn: number;
-  churnLimit: number;
 
   statuses: IAttesterStatus[];
   validators: phase0.Validator[];
   balances?: BigUint64Array;
-  // to be used for rotateEpochs()
-  indicesBounded: [ValidatorIndex, Epoch, Epoch][];
+  /**
+   * Active validator indices for currentEpoch + 2.
+   * This is only used in `afterProcessEpoch` to compute epoch shuffling, it's not efficient to calculate it at that time
+   * since it requires 1 loop through validator.
+   * | epoch process fn                 | nextEpochTotalActiveBalance action |
+   * | -------------------------------- | ---------------------------------- |
+   * | beforeProcessEpoch               | calculate during the validator loop|
+   * | afterEpochProcess                | read it                            |
+   */
+  nextEpochShufflingActiveValidatorIndices: ValidatorIndex[];
+  /**
+   * Altair specific, this is total active balances for the next epoch.
+   * This is only used in `afterProcessEpoch` to compute base reward and sync participant reward.
+   * It's not efficient to calculate it at that time since it requires looping through all active validators,
+   * so we should calculate it during `processEffectiveBalancesUpdate` which gives us updated effective balance.
+   * | epoch process fn                 | nextEpochTotalActiveBalance action |
+   * | -------------------------------- | ---------------------------------- |
+   * | beforeProcessEpoch               | initialize as BigInt(0)            |
+   * | processEffectiveBalancesUpdate   | calculate during the loop          |
+   * | afterEpochProcess                | read it                            |
+   */
+  nextEpochTotalActiveBalance: Gwei;
 }
 
-export function createIEpochProcess(): IEpochProcess {
-  return {
-    prevEpoch: 0,
-    currentEpoch: 0,
-    totalActiveStake: BigInt(0),
-    baseRewardPerIncrement: BigInt(0),
-    prevEpochUnslashedStake: {
-      sourceStake: BigInt(0),
-      targetStake: BigInt(0),
-      headStake: BigInt(0),
-    },
-    currEpochUnslashedTargetStake: BigInt(0),
-    indicesToSlash: [],
-    indicesToSetActivationEligibility: [],
-    indicesToMaybeActivate: [],
-    indicesToEject: [],
-    exitQueueEnd: 0,
-    exitQueueEndChurn: 0,
-    churnLimit: 0,
-    statuses: [],
-    validators: [],
-    indicesBounded: [],
-  };
-}
-
-export function prepareEpochProcessState<T extends allForks.BeaconState>(state: CachedBeaconState<T>): IEpochProcess {
-  const out = createIEpochProcess();
-
-  const {config, epochCtx, validators} = state;
+export function beforeProcessEpoch<T extends allForks.BeaconState>(state: CachedBeaconState<T>): IEpochProcess {
+  const {config, epochCtx} = state;
   const forkName = config.getForkName(state.slot);
   const currentEpoch = epochCtx.currentShuffling.epoch;
   const prevEpoch = epochCtx.previousShuffling.epoch;
-  out.currentEpoch = currentEpoch;
-  out.prevEpoch = prevEpoch;
+  // active validator indices for nextShuffling is ready, we want to precalculate for the one after that
+  const nextShufflingEpoch = currentEpoch + 2;
 
   const slashingsEpoch = currentEpoch + intDiv(EPOCHS_PER_SLASHINGS_VECTOR, 2);
-  let exitQueueEnd = computeActivationExitEpoch(currentEpoch);
-  let exitQueueEndChurn = 0;
 
-  let activeCount = 0;
+  const indicesToSlash: ValidatorIndex[] = [];
+  const indicesEligibleForActivationQueue: ValidatorIndex[] = [];
+  const indicesEligibleForActivation: ValidatorIndex[] = [];
+  const indicesToEject: ValidatorIndex[] = [];
+  const nextEpochShufflingActiveValidatorIndices: ValidatorIndex[] = [];
 
-  out.validators = validators.persistent.toArray();
-  out.validators.forEach((v, i) => {
+  const statuses: IAttesterStatus[] = [];
+
+  let totalActiveStake = BigInt(0);
+
+  const validators = state.validators.persistent.toArray();
+  validators.forEach((v, i) => {
     const status = createIAttesterStatus();
 
     if (v.slashed) {
       if (slashingsEpoch === v.withdrawableEpoch) {
-        out.indicesToSlash.push(i);
+        indicesToSlash.push(i);
       }
     } else {
       status.flags |= FLAG_UNSLASHED;
@@ -118,61 +162,44 @@ export function prepareEpochProcessState<T extends allForks.BeaconState>(state: 
     const active = isActiveValidator(v, currentEpoch);
     if (active) {
       status.active = true;
-      out.totalActiveStake += v.effectiveBalance;
-      activeCount += 1;
-    }
-
-    if (v.exitEpoch !== FAR_FUTURE_EPOCH) {
-      if (v.exitEpoch > exitQueueEnd) {
-        exitQueueEnd = v.exitEpoch;
-        exitQueueEndChurn = 1;
-      } else if (v.exitEpoch === exitQueueEnd) {
-        exitQueueEndChurn += 1;
-      }
+      totalActiveStake += v.effectiveBalance;
     }
 
     if (v.activationEligibilityEpoch === FAR_FUTURE_EPOCH && v.effectiveBalance === MAX_EFFECTIVE_BALANCE) {
-      out.indicesToSetActivationEligibility.push(i);
+      indicesEligibleForActivationQueue.push(i);
     }
 
+    // Note: ignores churn, apply churn limit latter, because finality may change
     if (v.activationEpoch === FAR_FUTURE_EPOCH && v.activationEligibilityEpoch <= currentEpoch) {
-      out.indicesToMaybeActivate.push(i);
+      indicesEligibleForActivation.push(i);
     }
 
     if (status.active && v.exitEpoch === FAR_FUTURE_EPOCH && v.effectiveBalance <= config.EJECTION_BALANCE) {
-      out.indicesToEject.push(i);
+      indicesToEject.push(i);
     }
 
-    out.statuses.push(status);
-    out.indicesBounded.push([i, v.activationEpoch, v.exitEpoch]);
+    statuses.push(status);
+    if (isActiveValidator(v, nextShufflingEpoch)) {
+      nextEpochShufflingActiveValidatorIndices.push(i);
+    }
   });
 
-  if (out.totalActiveStake < EFFECTIVE_BALANCE_INCREMENT) {
-    out.totalActiveStake = EFFECTIVE_BALANCE_INCREMENT;
+  if (totalActiveStake < EFFECTIVE_BALANCE_INCREMENT) {
+    totalActiveStake = EFFECTIVE_BALANCE_INCREMENT;
   }
 
   // SPEC: function getBaseRewardPerIncrement()
-  out.baseRewardPerIncrement = computeBaseRewardPerIncrement(out.totalActiveStake);
+  const baseRewardPerIncrement = computeBaseRewardPerIncrement(totalActiveStake);
 
   // order by sequence of activationEligibilityEpoch setting and then index
-  out.indicesToMaybeActivate.sort(
-    (a, b) => out.validators[a].activationEligibilityEpoch - out.validators[b].activationEligibilityEpoch || a - b
+  indicesEligibleForActivation.sort(
+    (a, b) => validators[a].activationEligibilityEpoch - validators[b].activationEligibilityEpoch || a - b
   );
-
-  const churnLimit = getChurnLimit(config, activeCount);
-  if (exitQueueEndChurn >= churnLimit) {
-    exitQueueEnd += 1;
-    exitQueueEndChurn = 0;
-  }
-
-  out.exitQueueEndChurn = exitQueueEndChurn;
-  out.exitQueueEnd = exitQueueEnd;
-  out.churnLimit = churnLimit;
 
   if (forkName === ForkName.phase0) {
     statusProcessEpoch(
       state,
-      out.statuses,
+      statuses,
       ((state as unknown) as CachedBeaconState<phase0.BeaconState>).previousEpochAttestations,
       prevEpoch,
       FLAG_PREV_SOURCE_ATTESTER,
@@ -181,7 +208,7 @@ export function prepareEpochProcessState<T extends allForks.BeaconState>(state: 
     );
     statusProcessEpoch(
       state,
-      out.statuses,
+      statuses,
       ((state as unknown) as CachedBeaconState<phase0.BeaconState>).currentEpochAttestations,
       currentEpoch,
       FLAG_CURR_SOURCE_ATTESTER,
@@ -190,13 +217,13 @@ export function prepareEpochProcessState<T extends allForks.BeaconState>(state: 
     );
   } else {
     state.previousEpochParticipation.forEachStatus((status, i) => {
-      out.statuses[i].flags |=
+      statuses[i].flags |=
         ((status.timelySource && FLAG_PREV_SOURCE_ATTESTER) as number) |
         ((status.timelyTarget && FLAG_PREV_TARGET_ATTESTER) as number) |
         ((status.timelyHead && FLAG_PREV_HEAD_ATTESTER) as number);
     });
     state.currentEpochParticipation.forEachStatus((status, i) => {
-      out.statuses[i].flags |=
+      statuses[i].flags |=
         ((status.timelySource && FLAG_CURR_SOURCE_ATTESTER) as number) |
         ((status.timelyTarget && FLAG_CURR_TARGET_ATTESTER) as number) |
         ((status.timelyHead && FLAG_CURR_HEAD_ATTESTER) as number);
@@ -214,9 +241,9 @@ export function prepareEpochProcessState<T extends allForks.BeaconState>(state: 
   const FLAG_PREV_HEAD_ATTESTER_UNSLASHED = FLAG_PREV_HEAD_ATTESTER | FLAG_UNSLASHED;
   const FLAG_CURR_TARGET_UNSLASHED = FLAG_CURR_TARGET_ATTESTER | FLAG_UNSLASHED;
 
-  for (let i = 0; i < out.statuses.length; i++) {
-    const status = out.statuses[i];
-    const effectiveBalance = out.validators[i].effectiveBalance;
+  for (let i = 0; i < statuses.length; i++) {
+    const status = statuses[i];
+    const effectiveBalance = validators[i].effectiveBalance;
     if (hasMarkers(status.flags, FLAG_PREV_SOURCE_ATTESTER_UNSLASHED)) {
       prevSourceUnslStake += effectiveBalance;
     }
@@ -239,10 +266,26 @@ export function prepareEpochProcessState<T extends allForks.BeaconState>(state: 
   if (prevHeadUnslStake < increment) prevHeadUnslStake = increment;
   if (currTargetUnslStake < increment) currTargetUnslStake = increment;
 
-  out.prevEpochUnslashedStake.sourceStake = prevSourceUnslStake;
-  out.prevEpochUnslashedStake.targetStake = prevTargetUnslStake;
-  out.prevEpochUnslashedStake.headStake = prevHeadUnslStake;
-  out.currEpochUnslashedTargetStake = currTargetUnslStake;
+  return {
+    prevEpoch,
+    currentEpoch,
+    totalActiveStake,
 
-  return out;
+    baseRewardPerIncrement,
+    prevEpochUnslashedStake: {
+      sourceStake: prevSourceUnslStake,
+      targetStake: prevTargetUnslStake,
+      headStake: prevHeadUnslStake,
+    },
+    currEpochUnslashedTargetStake: currTargetUnslStake,
+    indicesToSlash,
+    indicesEligibleForActivationQueue,
+    indicesEligibleForActivation,
+    indicesToEject,
+    nextEpochShufflingActiveValidatorIndices,
+    // to be updated in processEffectiveBalanceUpdates
+    nextEpochTotalActiveBalance: BigInt(0),
+    statuses,
+    validators,
+  };
 }

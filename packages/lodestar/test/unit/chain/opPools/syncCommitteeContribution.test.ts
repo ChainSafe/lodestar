@@ -1,7 +1,19 @@
 import {altair, ssz} from "@chainsafe/lodestar-types";
+import {initBLS} from "@chainsafe/lodestar-cli/src/util";
+import {newFilledArray} from "@chainsafe/lodestar-beacon-state-transition";
+
+import {SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
 import {expect} from "chai";
-import {SyncContributionAndProofPool} from "../../../../src/chain/opPools";
-import {generateContributionAndProof} from "../../../utils/contributionAndProof";
+import {
+  aggregate,
+  contributionToFast,
+  replaceIfBetter,
+  SyncContributionAndProofPool,
+  SyncContributionFast,
+} from "../../../../src/chain/opPools";
+import {generateContributionAndProof, generateEmptyContribution} from "../../../utils/contributionAndProof";
+import {InsertOutcome} from "../../../../src/chain/opPools/types";
+import bls, {SecretKey, Signature} from "@chainsafe/bls";
 
 describe("chain / opPools / SyncContributionAndProofPool", function () {
   let cache: SyncContributionAndProofPool;
@@ -27,4 +39,116 @@ describe("chain / opPools / SyncContributionAndProofPool", function () {
     // TODO Test it's correct. Modify the contributions above so they have 1 bit set to true
     expect(aggregate.syncCommitteeBits.length).to.be.equal(32);
   });
+});
+
+describe("replaceIfBetter", function () {
+  let bestContribution: SyncContributionFast;
+  // const subnetSize = Math.floor(SYNC_COMMITTEE_SIZE / SYNC_COMMITTEE_SUBNET_COUNT);
+  beforeEach(() => {
+    bestContribution = {
+      syncSubCommitteeBits: [true, true, false, false, false, false, false, false],
+      numParticipants: 2,
+      syncSubCommitteeSignature: ({} as unknown) as Signature,
+    };
+  });
+  it("less participants", () => {
+    const contribution = generateEmptyContribution();
+    contribution.aggregationBits[0] = true;
+    expect(replaceIfBetter(bestContribution, contribution)).to.be.equal(
+      InsertOutcome.NotBetterThan,
+      "less participant item should not replace the best contribution"
+    );
+  });
+
+  it("same participants", () => {
+    const contribution = generateEmptyContribution();
+    contribution.aggregationBits[0] = true;
+    contribution.aggregationBits[7] = true;
+    expect(replaceIfBetter(bestContribution, contribution)).to.be.equal(
+      InsertOutcome.NotBetterThan,
+      "same participant item should not replace the best contribution"
+    );
+  });
+
+  it("more participants", () => {
+    const contribution = generateEmptyContribution();
+    contribution.aggregationBits[3] = true;
+    contribution.aggregationBits[4] = true;
+    contribution.aggregationBits[5] = true;
+    expect(replaceIfBetter(bestContribution, contribution)).to.be.equal(
+      InsertOutcome.NewData,
+      "more participant item should replace the best contribution"
+    );
+    expect(bestContribution.syncSubCommitteeBits).to.be.deep.equal(
+      [false, false, false, true, true, true, false, false],
+      "incorect subcommittees"
+    );
+    expect(bestContribution.numParticipants).to.be.equal(3, "incorrect numParticipants");
+  });
+});
+
+describe("contributionToFast", function () {
+  let sk1: SecretKey;
+  before(async () => {
+    await initBLS();
+    sk1 = bls.SecretKey.fromBytes(Buffer.alloc(32, 1));
+  });
+
+  it("convert a contribution to SyncContributionFast", () => {
+    const contribution = generateEmptyContribution();
+    contribution.aggregationBits[3] = true;
+    contribution.aggregationBits[4] = true;
+    contribution.aggregationBits[5] = true;
+    contribution.signature = sk1.sign(Buffer.alloc(32)).toBytes();
+    const fast = contributionToFast(contribution);
+    expect(fast.syncSubCommitteeBits).to.be.deep.equal(
+      [false, false, false, true, true, true, false, false],
+      "incorect subcommittees"
+    );
+    expect(fast.numParticipants).to.be.equal(3, "incorrect numParticipants");
+    // no need to check sygnature
+  });
+});
+
+describe("aggregate", function () {
+  const sks: SecretKey[] = [];
+  let bestContributionBySubnet: Map<number, SyncContributionFast>;
+  before(async () => {
+    await initBLS();
+    for (let i = 0; i < SYNC_COMMITTEE_SUBNET_COUNT; i++) {
+      sks.push(bls.SecretKey.fromBytes(Buffer.alloc(32, i + 1)));
+    }
+    bestContributionBySubnet = new Map<number, SyncContributionFast>();
+  });
+
+  const numSubnets = [1, 2, 3, 4];
+  for (const numSubnet of numSubnets) {
+    it(`should aggregate best contributions from ${numSubnet} subnets`, () => {
+      const blockRoot = Buffer.alloc(32, 10);
+      const testSks: SecretKey[] = [];
+      for (let subnet = 0; subnet < numSubnet; subnet++) {
+        bestContributionBySubnet.set(subnet, {
+          // first participation of each subnet is true
+          syncSubCommitteeBits: [true, false, false, false, false, false, false, false],
+          numParticipants: 1,
+          syncSubCommitteeSignature: sks[subnet].sign(blockRoot),
+        });
+        testSks.push(sks[subnet]);
+      }
+      const syncAggregate = aggregate(bestContributionBySubnet);
+      const expectSyncCommittees = newFilledArray(SYNC_COMMITTEE_SIZE, false);
+      for (let subnet = 0; subnet < numSubnet; subnet++) {
+        // first participation of each subnet is true
+        expectSyncCommittees[subnet * 8] = true;
+      }
+      expect(syncAggregate.syncCommitteeBits).to.be.deep.equal(expectSyncCommittees, "incorrect sync committees");
+      expect(
+        bls.verifyAggregate(
+          testSks.map((sk) => sk.toPublicKey().toBytes()),
+          blockRoot,
+          syncAggregate.syncCommitteeSignature.valueOf() as Uint8Array
+        )
+      ).to.be.equal(true, "invalid aggregated signature");
+    });
+  }
 });

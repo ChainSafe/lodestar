@@ -3,16 +3,17 @@ import {allForks, altair} from "@chainsafe/lodestar-types";
 import {CachedBeaconState} from "../../allForks/util";
 import {processBlockHeader, processEth1Data, processRandao} from "../../allForks/block";
 import {processOperations} from "./processOperations";
-import {processAttestation} from "./processAttestation";
+import {processAttestations} from "./processAttestation";
 import {processAttesterSlashing} from "./processAttesterSlashing";
 import {processDeposit} from "./processDeposit";
 import {processProposerSlashing} from "./processProposerSlashing";
 import {processVoluntaryExit} from "./processVoluntaryExit";
 import {processSyncAggregate} from "./processSyncCommittee";
+import {BlockProcess} from "../../util";
 
 export {
   processOperations,
-  processAttestation,
+  processAttestations,
   processAttesterSlashing,
   processDeposit,
   processProposerSlashing,
@@ -25,7 +26,7 @@ export function processBlock(
   block: altair.BeaconBlock,
   verifySignatures = true
 ): void {
-  const blockProcess = {validatorExitCache: {}};
+  const blockProcess: BlockProcess = {};
   processBlockHeader(state as CachedBeaconState<allForks.BeaconState>, block);
   processRandao(state as CachedBeaconState<allForks.BeaconState>, block, verifySignatures);
   processEth1Data(state as CachedBeaconState<allForks.BeaconState>, block.body);

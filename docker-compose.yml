@@ -9,8 +9,13 @@ services:
     env_file: .env
     ports:
       - "9000:9000" # P2P port
-      - "9596:9596" # REST API port
+    #  - "9596:9596" # REST API port
     command: beacon --rootDir /data --api.rest.enabled --api.rest.host 0.0.0.0 --metrics.enabled --logFile /logs/beacon.log --logLevelFile debug --logRotate --logMaxFiles 5
+    # NodeJS applications have a default memory limit of 2.5GB.
+    # This limit is bit tight for a Prater node, it is recommended to raise the limit
+    # since memory may spike during certain network conditions.
+    environment:
+      NODE_OPTIONS: --max_old_space_size=6144
 
   prometheus:
     build: docker/prometheus
@@ -19,7 +24,10 @@ services:
       - "prometheus:/prometheus"
 
   grafana:
-    build: docker/grafana
+    build:
+      context: docker/grafana
+      args:
+        GF_SECURITY_ADMIN_PASSWORD: ${GF_SECURITY_ADMIN_PASSWORD}
     restart: always
     ports:
       - "3000:3000"

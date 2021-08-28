@@ -103,6 +103,7 @@ module.exports = {
     "func-call-spacing": "off",
     //if --fix is run it messes imports like /lib/presets/minimal & /lib/presets/mainnet
     "import/no-duplicates": "off",
+    "import/no-relative-packages": "error",
     "node/no-deprecated-api": "error",
     "new-parens": "error",
     "no-caller": "error",

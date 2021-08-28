@@ -81,8 +81,21 @@ describe("Sync Committee Contribution And Proof validation", function () {
     );
   });
 
-  it("should throw error - invalid aggregator", async function () {
+  it("should throw error - no participant", async function () {
     const signedContributionAndProof = generateSignedContributionAndProof({contribution: {slot: currentSlot}});
+    const headState = await generateCachedStateWithPubkeys({slot: currentSlot}, config, true);
+    chain.getHeadState.returns(headState);
+    isSyncCommitteeAggregatorStub.returns(false);
+    await expectRejectedWithLodestarError(
+      validateSyncCommitteeGossipContributionAndProof(chain, signedContributionAndProof),
+      SyncCommitteeErrorCode.NO_PARTICIPANT
+    );
+  });
+
+  it("should throw error - invalid aggregator", async function () {
+    const signedContributionAndProof = generateSignedContributionAndProof({
+      contribution: {slot: currentSlot, aggregationBits: [true]},
+    });
     const headState = await generateCachedStateWithPubkeys({slot: currentSlot}, config, true);
     chain.getHeadState.returns(headState);
     isSyncCommitteeAggregatorStub.returns(false);
@@ -108,7 +121,9 @@ describe("Sync Committee Contribution And Proof validation", function () {
   });
 
   it("should throw error - invalid selection_proof signature", async function () {
-    const signedContributionAndProof = generateSignedContributionAndProof({contribution: {slot: currentSlot}});
+    const signedContributionAndProof = generateSignedContributionAndProof({
+      contribution: {slot: currentSlot, aggregationBits: [true]},
+    });
     isSyncCommitteeAggregatorStub.returns(true);
     const headState = await generateCachedStateWithPubkeys({slot: currentSlot}, config, true);
     chain.getHeadState.returns(headState);

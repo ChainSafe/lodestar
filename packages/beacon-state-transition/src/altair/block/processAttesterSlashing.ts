@@ -7,7 +7,7 @@ import {BlockProcess} from "../../util/blockProcess";
 export function processAttesterSlashing(
   state: CachedBeaconState<altair.BeaconState>,
   attesterSlashing: phase0.AttesterSlashing,
-  blockProcess: BlockProcess = {validatorExitCache: {}},
+  blockProcess: BlockProcess,
   verifySignatures = true
 ): void {
   processAttesterSlashingAllForks(

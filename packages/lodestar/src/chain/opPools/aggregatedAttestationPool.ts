@@ -1,6 +1,7 @@
 import bls from "@chainsafe/bls";
 import {ForkName, MAX_ATTESTATIONS, MIN_ATTESTATION_INCLUSION_DELAY, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
-import {allForks, altair, Epoch, Slot, ssz, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {altair, Epoch, Slot, ssz, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {allForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {
   CachedBeaconState,
   computeEpochAtSlot,
@@ -11,7 +12,6 @@ import {List, readonlyValues, toHexString} from "@chainsafe/ssz";
 import {MapDef} from "../../util/map";
 import {pruneBySlot} from "./utils";
 import {InsertOutcome} from "./types";
-import {EpochContext} from "../../../../beacon-state-transition/lib/allForks";
 
 type DataRootHex = string;
 
@@ -61,7 +61,7 @@ export class AggregatedAttestationPool {
 
     let attestationGroup = attestationGroupByDataHash.get(dataRootHex);
     if (!attestationGroup) {
-      attestationGroup = new MatchingDataAttestationGroup(committee);
+      attestationGroup = new MatchingDataAttestationGroup(committee, attestation.data);
       attestationGroupByDataHash.set(dataRootHex, attestationGroup);
     }
 
@@ -80,7 +80,7 @@ export class AggregatedAttestationPool {
    */
   getAttestationsForBlock(state: CachedBeaconState<allForks.BeaconState>): phase0.Attestation[] {
     const stateSlot = state.slot;
-    const stateEpoch = computeEpochAtSlot(stateSlot);
+    const stateEpoch = state.currentShuffling.epoch;
     const statePrevEpoch = stateEpoch - 1;
     const forkName = state.config.getForkName(stateSlot);
 
@@ -90,6 +90,7 @@ export class AggregatedAttestationPool {
     const attestationsByScore: AttestationWithScore[] = [];
 
     const slots = Array.from(this.attestationGroupByDataHashBySlot.keys()).sort((a, b) => b - a);
+    const {previousJustifiedCheckpoint, currentJustifiedCheckpoint} = state;
     slot: for (const slot of slots) {
       const attestationGroupByDataHash = this.attestationGroupByDataHashBySlot.get(slot);
       // should not happen
@@ -108,8 +109,17 @@ export class AggregatedAttestationPool {
       }
 
       const attestationGroups = Array.from(attestationGroupByDataHash.values());
-
       for (const attestationGroup of attestationGroups) {
+        if (
+          !isValidAttestationData(
+            stateEpoch,
+            previousJustifiedCheckpoint,
+            currentJustifiedCheckpoint,
+            attestationGroup.data
+          )
+        ) {
+          continue;
+        }
         const participation = getParticipationFn(epoch, attestationGroup.committee);
         if (participation === null) {
           continue;
@@ -236,7 +246,7 @@ interface AttestationWithIndex {
 export class MatchingDataAttestationGroup {
   private readonly attestations: AttestationWithIndex[] = [];
 
-  constructor(readonly committee: ValidatorIndex[]) {}
+  constructor(readonly committee: ValidatorIndex[], readonly data: phase0.AttestationData) {}
 
   /**
    * Add an attestation.
@@ -331,7 +341,7 @@ export function aggregateInto(
 
 export function extractParticipation(
   attestations: List<phase0.PendingAttestation>,
-  epochCtx: EpochContext
+  epochCtx: allForks.EpochContext
 ): Set<ValidatorIndex> {
   const allParticipants = new Set<ValidatorIndex>();
   for (const att of readonlyValues(attestations)) {
@@ -354,4 +364,24 @@ export function intersection(bigSet: Set<ValidatorIndex>, smallSet: Set<Validato
     if (bigSet.has(validatorIndex)) numIntersection++;
   }
   return numIntersection;
+}
+
+/**
+ * The state transition accepts incorrect target and head attestations.
+ * We only need to validate the source checkpoint.
+ * @returns
+ */
+export function isValidAttestationData(
+  currentEpoch: Epoch,
+  previousJustifiedCheckpoint: phase0.Checkpoint,
+  currentJustifiedCheckpoint: phase0.Checkpoint,
+  data: phase0.AttestationData
+): boolean {
+  let justifiedCheckpoint;
+  if (data.target.epoch === currentEpoch) {
+    justifiedCheckpoint = currentJustifiedCheckpoint;
+  } else {
+    justifiedCheckpoint = previousJustifiedCheckpoint;
+  }
+  return ssz.phase0.Checkpoint.equals(data.source, justifiedCheckpoint);
 }

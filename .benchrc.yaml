@@ -1,0 +1,10 @@
+# Mocha opts
+colors: true
+require:
+  - ts-node/register
+  - packages/lodestar/test/setupBLS.ts
+
+# benchmark opts
+threshold: 3
+maxMs: 60_000
+minRuns: 10

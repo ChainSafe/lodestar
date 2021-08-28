@@ -5,12 +5,20 @@ import {CachedBeaconState} from "../../allForks/util";
 import {isValidIndexedAttestation} from "../../allForks/block";
 import {MIN_ATTESTATION_INCLUSION_DELAY, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {BlockProcess} from "../../util/blockProcess";
+import {toHexString} from "@chainsafe/ssz";
 
+/**
+ * Process an Attestation operation. Validates an attestation and appends it to state.currentEpochAttestations or
+ * state.previousEpochAttestations to be processed in bulk at the epoch transition.
+ *
+ * PERF: Work depends on number of Attestation per block. On mainnet the average is 89.7 / block, with 87.8 participant
+ * true bits on average. See `packages/beacon-state-transition/test/perf/analyzeBlocks.ts`
+ */
 export function processAttestation(
   state: CachedBeaconState<phase0.BeaconState>,
   attestation: phase0.Attestation,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  blockProcess: BlockProcess = {validatorExitCache: {}},
+  blockProcess: BlockProcess,
   verifySignature = true
 ): void {
   const {epochCtx} = state;
@@ -29,18 +37,18 @@ export function processAttestation(
   if (data.target.epoch === epochCtx.currentShuffling.epoch) {
     if (!ssz.phase0.Checkpoint.equals(data.source, state.currentJustifiedCheckpoint)) {
       throw new Error(
-        "Attestation source does not equal current justified checkpoint: " +
-          `source=${ssz.phase0.Checkpoint.toJson(data.source)} ` +
-          `currentJustifiedCheckpoint=${ssz.phase0.Checkpoint.toJson(state.currentJustifiedCheckpoint)}`
+        `Attestation source does not equal current justified checkpoint: source=${checkpointToStr(
+          data.source
+        )} currentJustifiedCheckpoint=${checkpointToStr(state.currentJustifiedCheckpoint)}`
       );
     }
     state.currentEpochAttestations.push(pendingAttestation);
   } else {
     if (!ssz.phase0.Checkpoint.equals(data.source, state.previousJustifiedCheckpoint)) {
       throw new Error(
-        "Attestation source does not equal previous justified checkpoint: " +
-          `source=${ssz.phase0.Checkpoint.toJson(data.source)} ` +
-          `previousJustifiedCheckpoint=${ssz.phase0.Checkpoint.toJson(state.previousJustifiedCheckpoint)}`
+        `Attestation source does not equal previous justified checkpoint: source=${checkpointToStr(
+          data.source
+        )} previousJustifiedCheckpoint=${checkpointToStr(state.previousJustifiedCheckpoint)}`
       );
     }
     state.previousEpochAttestations.push(pendingAttestation);
@@ -100,4 +108,8 @@ export function validateAttestation(
         `aggregationBitsLength=${attestation.aggregationBits.length} committeeLength=${committee.length}`
     );
   }
+}
+
+export function checkpointToStr(checkpoint: phase0.Checkpoint): string {
+  return `${toHexString(checkpoint.root)}:${checkpoint.epoch}`;
 }

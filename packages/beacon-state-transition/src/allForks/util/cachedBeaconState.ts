@@ -31,7 +31,7 @@ import {
   emptyIndexedSyncCommittee,
   IndexedSyncCommittee,
 } from "./indexedSyncCommittee";
-import {getNextSyncCommittee} from "../../altair/epoch/sync_committee";
+import {getNextSyncCommittee} from "../../altair/util/syncCommittee";
 import {ssz} from "@chainsafe/lodestar-types";
 import {CachedInactivityScoreList, CachedInactivityScoreListProxyHandler} from "./cachedInactivityScoreList";
 import {newFilledArray} from "../../util";
@@ -62,9 +62,12 @@ export function createCachedBeaconState<T extends allForks.BeaconState>(
   opts?: EpochContextOpts
 ): CachedBeaconState<T> {
   const config = createIBeaconConfig(chainForkConfig, state.genesisValidatorsRoot);
+
+  // SLOW CODE - 🐢
   const cachedValidators = MutableVector.from(
     Array.from(readonlyValues(state.validators), (v) => createValidatorFlat(v))
   );
+
   const cachedBalances = MutableVector.from(readonlyValues(state.balances));
   let cachedPreviousParticipation, cachedCurrentParticipation;
   const forkName = config.getForkName(state.slot);
@@ -80,6 +83,7 @@ export function createCachedBeaconState<T extends allForks.BeaconState>(
     };
     currIndexedSyncCommittee = emptyIndexedSyncCommittee;
     nextIndexedSyncCommittee = emptyIndexedSyncCommittee;
+    // Can these arrays be zero-ed for phase0? Are they actually used?
     cachedPreviousParticipation = MutableVector.from(newFilledArray(cachedValidators.length, emptyParticipationStatus));
     cachedCurrentParticipation = MutableVector.from(newFilledArray(cachedValidators.length, emptyParticipationStatus));
     cachedInactivityScores = MutableVector.empty();
@@ -115,21 +119,103 @@ export function createCachedBeaconState<T extends allForks.BeaconState>(
 
 export class BeaconStateContext<T extends allForks.BeaconState> {
   config: IBeaconConfig;
-  // epoch cache
+  /**
+   * Epoch cache: Caches constant data through the epoch: @see EpochContext
+   * - Proposer indexes: 32 x Number
+   * - Shufflings: 3 x $VALIDATOR_COUNT x Number
+   */
   epochCtx: EpochContext;
-  // the BeaconState ssz type
+  /** The BeaconState ssz type */
   type: ContainerType<T>;
-  // the original BeaconState as a Tree
+  /** The original BeaconState as a Tree */
   tree: Tree;
-  // return a proxy to CachedValidatorList
+  /**
+   * Returns a Proxy to CachedValidatorList.
+   *
+   * Stores state.validators in two duplicated forms (both structures are structurally shared):
+   * 1. TreeBacked, for efficient hashing
+   * 2. MutableVector (persistent-ts) with StructBacked validator objects for fast accessing and iteration
+   *
+   * state.validators is the heaviest data structure in the state. As TreeBacked, the leafs account for 91% with
+   * 200_000 validators. It requires ~ 2_000_000 Uint8Array instances with total memory of ~ 400MB.
+   * However its contents don't change very often. Validators only change when;
+   * - they first deposit
+   * - they dip from 32 effective balance to 31 (pretty much only when inactive for very long, or slashed)
+   * - they activate (once)
+   * - they exit (once)
+   * - they get slashed (max once)
+   *
+   * TODO: How to quickly access the tree without having to duplicate its data?
+   */
   validators: CachedValidatorList<T["validators"][number]> & T["validators"];
-  // return a proxy to CachedBalanceList
+  /**
+   * Returns a Proxy to CachedBalanceList
+   *
+   * Stores state.balances in two duplicated forms (both structures are structurally shared):
+   * 1. TreeBacked, for efficient hashing
+   * 2. MutableVector (persistent-ts) with each validator balance as a bigint
+   *
+   * The balances array completely changes at the epoch boundary, where almost all the validator balances
+   * are updated. However it may have tiny changes during block processing if:
+   * - On a valid deposit
+   * - Validator gets slashed?
+   * - On altair, the block proposer
+   *
+   * TODO: Individual balances could be stored as regular numbers:
+   * - Number.MAX_SAFE_INTEGER = 9007199254740991, which is 9e6 GWEI
+   */
   balances: CachedBalanceList & T["balances"];
+  /**
+   * Returns a Proxy to CachedEpochParticipation
+   *
+   * Stores state<altair>.previousEpochParticipation in two duplicated forms (both structures are structurally shared):
+   * 1. TreeBacked, for efficient hashing
+   * 2. MutableVector (persistent-ts) with each validator participation flags (uint8) in object form
+   *
+   * epochParticipation changes continuously through the epoch for each partipation bit of each valid attestation in the state.
+   * The entire structure is dropped after two epochs.
+   *
+   * TODO: Consider representing participation as a uint8 always, and have a fast transformation fuction with precomputed values.
+   * Here using a Uint8Array is probably the most efficient way of representing this structure. Then we only need a way to get
+   * and set the values fast to the tree. Maybe batching?
+   */
   previousEpochParticipation: CachedEpochParticipation & List<ParticipationFlags>;
+  /** Same as previousEpochParticipation */
   currentEpochParticipation: CachedEpochParticipation & List<ParticipationFlags>;
-  // phase0 has no sync committee
+  /**
+   * Returns a Proxy to IndexedSyncCommittee (Note: phase0 has no sync committee)
+   *
+   * Stores state<altair>.currentSyncCommittee in two duplicated forms (not structurally shared):
+   * 1. TreeBacked, for efficient hashing
+   * 2. Indexed data structures
+   *   - pubkeys vector (of the committee members)
+   *   - aggregatePubkey
+   *   - validatorIndices (of the committee members)
+   *   - validatorIndexMap: Map of ValidatorIndex -> syncCommitteeIndexes
+   *
+   * The syncCommittee is immutable and changes as a whole every ~ 27h.
+   * It contains fixed 512 members so it's rather small.
+   */
   currentSyncCommittee: IndexedSyncCommittee;
+  /** Same as currentSyncCommittee */
   nextSyncCommittee: IndexedSyncCommittee;
+  /**
+   * Returns a Proxy to CachedInactivityScoreList
+   *
+   * Stores state<altair>.inactivityScores in two duplicated forms (both structures are structurally shared):
+   * 1. TreeBacked, for efficient hashing
+   * 2. MutableVector (persistent-ts) with a uint64 for each validator
+   *
+   * inactivityScores can be changed only:
+   * - At the epoch transition. It only changes when a validator is offline. So it may change a bit but not
+   *   a lot on normal network conditions.
+   * - During block processing, when a validator joins a new 0 entry is pushed
+   *
+   * TODO: Don't keep a duplicated structure around always. During block processing just push to the tree,
+   * and maybe batch the changes. Then on process_inactivity_updates() compute the total deltas, and depending
+   * on the number of changes convert tree to array, apply diff, write to tree again. Or if there are just a few
+   * changes update the tree directly.
+   */
   inactivityScores: CachedInactivityScoreList & List<Number64>;
 
   constructor(
@@ -215,7 +301,9 @@ export class BeaconStateContext<T extends allForks.BeaconState> {
     const state = (this.type.createTreeBacked(this.tree) as unknown) as TreeBacked<altair.BeaconState>;
     this.currentSyncCommittee = this.nextSyncCommittee;
     state.currentSyncCommittee = state.nextSyncCommittee;
-    const nextSyncCommittee = ssz.altair.SyncCommittee.createTreeBackedFromStruct(getNextSyncCommittee(state));
+    const nextSyncCommittee = ssz.altair.SyncCommittee.createTreeBackedFromStruct(
+      getNextSyncCommittee(state, this.epochCtx.nextShuffling.activeIndices)
+    );
     this.nextSyncCommittee = convertToIndexedSyncCommittee(nextSyncCommittee, this.epochCtx.pubkey2index);
     state.nextSyncCommittee = nextSyncCommittee;
   }
@@ -228,6 +316,7 @@ export class BeaconStateContext<T extends allForks.BeaconState> {
     this.balances.persistent.asTransient();
     this.previousEpochParticipation.persistent.asTransient();
     this.currentEpochParticipation.persistent.asTransient();
+    this.inactivityScores.persistent.asTransient();
   }
 
   /**
@@ -237,6 +326,8 @@ export class BeaconStateContext<T extends allForks.BeaconState> {
     this.validators.persistent.asPersistent();
     this.balances.persistent.asPersistent();
     this.previousEpochParticipation.persistent.asPersistent();
+    this.currentEpochParticipation.persistent.asPersistent();
+    this.inactivityScores.persistent.asPersistent();
   }
 }
 

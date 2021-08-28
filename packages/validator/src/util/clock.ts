@@ -4,6 +4,7 @@ import {GENESIS_SLOT, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {Epoch, Number64, Slot} from "@chainsafe/lodestar-types";
 import {computeEpochAtSlot, getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
+import {isAbortedError} from "./error";
 
 type RunEveryFn = (slot: Slot, signal: AbortSignal) => Promise<void>;
 
@@ -34,7 +35,9 @@ export class Clock implements IClock {
   start(signal: AbortSignal): void {
     for (const {timeItem, fn} of this.fns) {
       this.runAtMostEvery(timeItem, signal, fn).catch((e) => {
-        this.logger.error("runAtMostEvery", {}, e);
+        if (!isAbortedError(e)) {
+          this.logger.error("runAtMostEvery", {}, e);
+        }
       });
     }
   }

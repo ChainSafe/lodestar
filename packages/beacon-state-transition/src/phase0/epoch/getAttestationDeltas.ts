@@ -37,26 +37,36 @@ interface IRewardPenaltyItem {
 
 /**
  * Return attestation reward/penalty deltas for each validator.
+ *
+ * - On normal mainnet conditions
+ *   - prevSourceAttester: 98%
+ *   - prevTargetAttester: 96%
+ *   - prevHeadAttester:   93%
+ *   - currSourceAttester: 95%
+ *   - currTargetAttester: 93%
+ *   - currHeadAttester:   91%
+ *   - unslashed:          100%
+ *   - eligibleAttester:   98%
  */
 export function getAttestationDeltas(
   state: CachedBeaconState<phase0.BeaconState>,
-  process: IEpochProcess
+  epochProcess: IEpochProcess
 ): [number[], number[]] {
-  const validatorCount = process.statuses.length;
+  const validatorCount = epochProcess.statuses.length;
   const rewards = newZeroedArray(validatorCount);
   const penalties = newZeroedArray(validatorCount);
 
   const increment = EFFECTIVE_BALANCE_INCREMENT;
-  let totalBalance = bigIntMax(process.totalActiveStake, increment);
+  let totalBalance = bigIntMax(epochProcess.totalActiveStake, increment);
 
   // increment is factored out from balance totals to avoid overflow
-  const prevEpochSourceStake = bigIntMax(process.prevEpochUnslashedStake.sourceStake, increment) / increment;
-  const prevEpochTargetStake = bigIntMax(process.prevEpochUnslashedStake.targetStake, increment) / increment;
-  const prevEpochHeadStake = bigIntMax(process.prevEpochUnslashedStake.headStake, increment) / increment;
+  const prevEpochSourceStake = bigIntMax(epochProcess.prevEpochUnslashedStake.sourceStake, increment) / increment;
+  const prevEpochTargetStake = bigIntMax(epochProcess.prevEpochUnslashedStake.targetStake, increment) / increment;
+  const prevEpochHeadStake = bigIntMax(epochProcess.prevEpochUnslashedStake.headStake, increment) / increment;
 
   // sqrt first, before factoring out the increment for later usage
   const balanceSqRoot = bigIntSqrt(totalBalance);
-  const finalityDelay = BigInt(process.prevEpoch - state.finalizedCheckpoint.epoch);
+  const finalityDelay = BigInt(epochProcess.prevEpoch - state.finalizedCheckpoint.epoch);
 
   totalBalance = totalBalance / increment;
 
@@ -67,8 +77,8 @@ export function getAttestationDeltas(
   // effectiveBalance is multiple of EFFECTIVE_BALANCE_INCREMENT and less than MAX_EFFECTIVE_BALANCE
   // so there are limited values of them like 32000000000, 31000000000, 30000000000
   const rewardPnaltyItemCache = new Map<number, IRewardPenaltyItem>();
-  for (const [i, status] of process.statuses.entries()) {
-    const effBalance = process.validators[i].effectiveBalance;
+  for (const [i, status] of epochProcess.statuses.entries()) {
+    const effBalance = epochProcess.validators[i].effectiveBalance;
     let rewardItem = rewardPnaltyItemCache.get(Number(effBalance));
     if (!rewardItem) {
       const baseReward = Number((effBalance * BASE_REWARD_FACTOR) / balanceSqRoot / BASE_REWARDS_PER_EPOCH);

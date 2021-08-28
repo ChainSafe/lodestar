@@ -36,6 +36,7 @@ export function getFetchOptsSerializer<Fn extends (...args: any) => any, ReqType
       method: routeDef.method,
       query: req.query,
       body: req.body as unknown,
+      headers: req.headers,
     };
   };
 }

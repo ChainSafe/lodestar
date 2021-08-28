@@ -57,17 +57,10 @@ export function computeCommitteeCount(activeValidatorCount: number): number {
 
 export function computeEpochShuffling(
   state: allForks.BeaconState,
-  indicesBounded: [ValidatorIndex, Epoch, Epoch][],
+  activeIndices: ValidatorIndex[],
   epoch: Epoch
 ): IEpochShuffling {
   const seed = getSeed(state, epoch, DOMAIN_BEACON_ATTESTER);
-
-  const activeIndices: ValidatorIndex[] = [];
-  for (const [index, activationEpoch, exitEpoch] of indicesBounded) {
-    if (activationEpoch <= epoch && epoch < exitEpoch) {
-      activeIndices.push(index);
-    }
-  }
 
   // copy
   const shuffling = activeIndices.slice();
@@ -78,21 +71,20 @@ export function computeEpochShuffling(
 
   const committeeCount = committeesPerSlot * SLOTS_PER_EPOCH;
 
-  const sliceCommittee = (slot: number, committeeIndex: number): ValidatorIndex[] => {
-    const index = slot * committeesPerSlot + committeeIndex;
-    const startOffset = Math.floor((activeValidatorCount * index) / committeeCount);
-    const endOffset = Math.floor((activeValidatorCount * (index + 1)) / committeeCount);
-    if (!(startOffset <= endOffset)) {
-      throw new Error(`Invalid offsets: start ${startOffset} must be less than or equal end ${endOffset}`);
+  const committees: ValidatorIndex[][][] = [];
+  for (let slot = 0; slot < SLOTS_PER_EPOCH; slot++) {
+    const slotCommittees: ValidatorIndex[][] = [];
+    for (let committeeIndex = 0; committeeIndex < committeesPerSlot; committeeIndex++) {
+      const index = slot * committeesPerSlot + committeeIndex;
+      const startOffset = Math.floor((activeValidatorCount * index) / committeeCount);
+      const endOffset = Math.floor((activeValidatorCount * (index + 1)) / committeeCount);
+      if (!(startOffset <= endOffset)) {
+        throw new Error(`Invalid offsets: start ${startOffset} must be less than or equal end ${endOffset}`);
+      }
+      slotCommittees.push(shuffling.slice(startOffset, endOffset));
     }
-    return shuffling.slice(startOffset, endOffset);
-  };
-
-  const committees = Array.from({length: SLOTS_PER_EPOCH}, (_, slot) => {
-    return Array.from({length: committeesPerSlot}, (_, committeeIndex) => {
-      return sliceCommittee(slot, committeeIndex);
-    });
-  });
+    committees.push(slotCommittees);
+  }
 
   return {
     epoch,

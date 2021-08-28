@@ -13,6 +13,8 @@ export enum InsertOutcome {
   Old = "Old",
   /** The data is know, and the new participants have been added to the aggregated signature */
   Aggregated = "Aggregated",
+  /** The data is not better than the existing data*/
+  NotBetterThan = "NotBetterThan",
 }
 
 export enum OpPoolErrorCode {

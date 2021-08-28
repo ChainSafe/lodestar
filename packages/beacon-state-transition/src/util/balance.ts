@@ -12,6 +12,8 @@ import {getActiveValidatorIndices, isActiveValidator} from "./validator";
 /**
  * Return the combined effective balance of the [[indices]].
  * `EFFECTIVE_BALANCE_INCREMENT` Gwei minimum to avoid divisions by zero.
+ *
+ * SLOW CODE - 🐢
  */
 export function getTotalBalance(state: allForks.BeaconState, indices: ValidatorIndex[]): Gwei {
   return bigIntMax(
@@ -24,8 +26,11 @@ export function getTotalBalance(state: allForks.BeaconState, indices: ValidatorI
 }
 
 /**
+ * Call this function with care since it has to loop through validators which is expensive.
  * Return the combined effective balance of the active validators.
  * Note: `getTotalBalance` returns `EFFECTIVE_BALANCE_INCREMENT` Gwei minimum to avoid divisions by zero.
+ *
+ * SLOW CODE - 🐢
  */
 export function getTotalActiveBalance(state: allForks.BeaconState): Gwei {
   return getTotalBalance(state, getActiveValidatorIndices(state, getCurrentEpoch(state)));
@@ -52,6 +57,8 @@ export function decreaseBalance(state: allForks.BeaconState, index: ValidatorInd
 /**
  * TODO - PERFORMANCE WARNING - NAIVE CODE
  * This method is used to get justified balances from a justified state.
+ *
+ * SLOW CODE - 🐢
  */
 export function getEffectiveBalances(justifiedState: CachedBeaconState<allForks.BeaconState>): Gwei[] {
   const justifiedEpoch = justifiedState.currentShuffling.epoch;

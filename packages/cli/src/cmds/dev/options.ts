@@ -1,7 +1,7 @@
 import {Options} from "yargs";
 import {ICliCommandOptions} from "../../util";
 import {beaconOptions, IBeaconArgs} from "../beacon/options";
-import {globalOptions, beaconNodeOptions} from "../../options";
+import {beaconNodeOptions} from "../../options";
 
 interface IDevOwnArgs {
   genesisValidators?: number;
@@ -21,7 +21,7 @@ const devOwnOptions: ICliCommandOptions<IDevOwnArgs> = {
 
   startValidators: {
     description: "Start interop validators in given range",
-    default: "0:8",
+    default: "0:7",
     type: "string",
     group: "dev",
   },
@@ -78,10 +78,6 @@ const externalOptionsOverrides: {[k: string]: Options} = {
     ...beaconNodeOptions["api.rest.enabled"],
     defaultDescription: undefined,
     default: true,
-  },
-  preset: {
-    ...globalOptions.preset,
-    default: "minimal",
   },
 };
 

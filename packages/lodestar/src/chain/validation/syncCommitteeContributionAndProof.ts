@@ -7,10 +7,11 @@ import {
   getSyncCommitteeSelectionProofSignatureSet,
   getContributionAndProofSignatureSet,
   getSyncCommitteeContributionSignatureSet,
+  getContributionPubkeys,
 } from "./signatureSets";
 
 /**
- * Spec v1.1.0-alpha.8
+ * Spec v1.1.0-beta.2
  */
 export async function validateSyncCommitteeGossipContributionAndProof(
   chain: IBeaconChain,
@@ -42,6 +43,14 @@ export async function validateSyncCommitteeGossipContributionAndProof(
     });
   }
 
+  // [REJECT] The contribution has participants -- that is, any(contribution.aggregation_bits)
+  const pubkeys = getContributionPubkeys(headState as CachedBeaconState<altair.BeaconState>, contribution);
+  if (!pubkeys.length) {
+    throw new SyncCommitteeError(GossipAction.REJECT, {
+      code: SyncCommitteeErrorCode.NO_PARTICIPANT,
+    });
+  }
+
   // [REJECT] contribution_and_proof.selection_proof selects the validator as an aggregator for the slot --
   // i.e. is_sync_committee_aggregator(contribution_and_proof.selection_proof) returns True.
   if (!isSyncCommitteeAggregator(contributionAndProof.selectionProof)) {
@@ -65,7 +74,7 @@ export async function validateSyncCommitteeGossipContributionAndProof(
 
     // [REJECT] The aggregate signature is valid for the message beacon_block_root and aggregate pubkey derived from
     // the participation info in aggregation_bits for the subcommittee specified by the contribution.subcommittee_index.
-    getSyncCommitteeContributionSignatureSet(headState as CachedBeaconState<altair.BeaconState>, contribution),
+    getSyncCommitteeContributionSignatureSet(headState as CachedBeaconState<altair.BeaconState>, contribution, pubkeys),
   ];
 
   if (!(await chain.bls.verifySignatureSets(signatureSets, {batchable: true}))) {

@@ -60,3 +60,16 @@ export function parseAttesterFlags(flags: number): AttesterFlags {
     eligibleAttester: hasMarkers(flags, FLAG_ELIGIBLE_ATTESTER),
   };
 }
+
+export function toAttesterFlags(flagsObj: AttesterFlags): number {
+  let flag = 0;
+  if (flagsObj.prevSourceAttester) flag |= FLAG_PREV_SOURCE_ATTESTER;
+  if (flagsObj.prevTargetAttester) flag |= FLAG_PREV_TARGET_ATTESTER;
+  if (flagsObj.prevHeadAttester) flag |= FLAG_PREV_HEAD_ATTESTER;
+  if (flagsObj.currSourceAttester) flag |= FLAG_CURR_SOURCE_ATTESTER;
+  if (flagsObj.currTargetAttester) flag |= FLAG_CURR_TARGET_ATTESTER;
+  if (flagsObj.currHeadAttester) flag |= FLAG_CURR_HEAD_ATTESTER;
+  if (flagsObj.unslashed) flag |= FLAG_UNSLASHED;
+  if (flagsObj.eligibleAttester) flag |= FLAG_ELIGIBLE_ATTESTER;
+  return flag;
+}

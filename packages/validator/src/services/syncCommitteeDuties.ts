@@ -13,7 +13,7 @@ import {BLSSignature, Epoch, Root, Slot, SyncPeriod, ValidatorIndex} from "@chai
 import {toHexString} from "@chainsafe/ssz";
 import {Api, routes} from "@chainsafe/lodestar-api";
 import {IndicesService} from "./indices";
-import {IClock, extendError, notAborted, isSyncing, ILoggerVc} from "../util";
+import {IClock, extendError, ILoggerVc} from "../util";
 import {ValidatorStore} from "./validatorStore";
 
 /** Only retain `HISTORICAL_DUTIES_PERIODS` duties prior to the current periods. */
@@ -94,7 +94,7 @@ export class SyncCommitteeDutiesService {
     await Promise.all([
       // Run pollSyncCommittees immediately for all known local indices
       this.pollSyncCommittees(currentEpoch, this.indicesService.getAllLocalIndices()).catch((e) => {
-        if (notAborted(e)) this.logger.error("Error on poll SyncDuties", {epoch: currentEpoch}, e);
+        this.logger.error("Error on poll SyncDuties", {epoch: currentEpoch}, e);
       }),
 
       // At the same time fetch any remaining unknown validator indices, then poll duties for those newIndices only
@@ -102,7 +102,7 @@ export class SyncCommitteeDutiesService {
         .pollValidatorIndices()
         .then((newIndices) => this.pollSyncCommittees(currentEpoch, newIndices))
         .catch((e) => {
-          if (notAborted(e)) this.logger.error("Error on poll indices and SyncDuties", {epoch: currentEpoch}, e);
+          this.logger.error("Error on poll indices and SyncDuties", {epoch: currentEpoch}, e);
         }),
     ]);
 
@@ -130,8 +130,7 @@ export class SyncCommitteeDutiesService {
     for (const epoch of [currentEpoch, nextPeriodEpoch]) {
       // Download the duties and update the duties for the current and next period.
       await this.pollSyncCommitteesForEpoch(epoch, indexArr).catch((e) => {
-        if (isSyncing(e)) this.logger.isSyncing(e);
-        else if (notAborted(e)) this.logger.error("Failed to download SyncDuties", {epoch}, e);
+        this.logger.error("Failed to download SyncDuties", {epoch}, e);
       });
     }
 

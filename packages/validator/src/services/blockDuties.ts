@@ -2,7 +2,7 @@ import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {BLSPubkey, Epoch, Root, Slot, ssz} from "@chainsafe/lodestar-types";
 import {toHexString} from "@chainsafe/ssz";
 import {Api, routes} from "@chainsafe/lodestar-api";
-import {IClock, extendError, isSyncing, notAborted, differenceHex, ILoggerVc} from "../util";
+import {IClock, extendError, differenceHex, ILoggerVc} from "../util";
 import {ValidatorStore} from "./validatorStore";
 
 /** Only retain `HISTORICAL_DUTIES_EPOCHS` duties prior to the current epoch */
@@ -70,8 +70,7 @@ export class BlockDutiesService {
         await this.pollBeaconProposersAndNotify(slot);
       }
     } catch (e) {
-      if (isSyncing(e)) this.logger.isSyncing(e);
-      else if (notAborted(e)) this.logger.error("Error on pollBeaconProposers", {}, e);
+      this.logger.error("Error on pollBeaconProposers", {}, e);
     } finally {
       this.pruneOldDuties(computeEpochAtSlot(slot));
     }

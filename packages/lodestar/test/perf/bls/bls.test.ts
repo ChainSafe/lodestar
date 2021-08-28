@@ -1,14 +1,8 @@
-import {itBench, setBenchOpts} from "@dapplion/benchmark";
+import {itBench} from "@dapplion/benchmark";
 import {bls, PublicKey, SecretKey, Signature} from "@chainsafe/bls";
 import {linspace} from "../../../src/util/numpy";
 
 describe("BLS ops", function () {
-  setBenchOpts({
-    maxMs: 60 * 1000,
-    minMs: 5 * 1000,
-    runs: 1024,
-  });
-
   type Keypair = {publicKey: PublicKey; secretKey: SecretKey};
   type BlsSet = {publicKey: PublicKey; message: Uint8Array; signature: Signature};
 
@@ -38,6 +32,7 @@ describe("BLS ops", function () {
     return set;
   }
 
+  // Note: getSet() caches the value, does not re-compute every time
   itBench({id: `BLS verify - ${bls.implementation}`, beforeEach: () => getSet(0)}, (set) => {
     const isValid = set.signature.verify(set.publicKey, set.message);
     if (!isValid) throw Error("Invalid");
