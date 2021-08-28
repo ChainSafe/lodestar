@@ -404,44 +404,66 @@ export function createLodestarMetrics(
         labelNames: ["index", "src"],
       }),
     },
-    //regen metrics
-    stateCacheLookups: register.gauge({
-      name: "state_cache_lookups_total",
-      help: "Number of cache lookup",
-    }),
-    stateCacheHits: register.gauge({
-      name: "state_cache_hits_total",
-      help: "Number of total cache hits",
-    }),
-    stateCacheAdds: register.gauge({
-      name: "state_cache_adds_total",
-      help: "Number of items added in state cache",
-    }),
-    stateCacheSize: register.gauge({
-      name: "state_cache_size",
-      help: "State cache size",
-    }),
 
-    cpStateCacheLookups: register.gauge({
-      name: "cp_state_cache_lookups_total",
-      help: "Number of checkpoint cache lookup",
-    }),
-    cpStateCacheHits: register.gauge({
-      name: "cp_state_cache_hits_total",
-      help: "Number of checkpoint cache hits",
-    }),
-    cpStateCacheAdds: register.gauge({
-      name: "cp_state_cache_adds_total",
-      help: "Number of items added in checkpoint state cache",
-    }),
-    cpStateCacheSize: register.gauge({
-      name: "cp_state_cache_size",
-      help: "Checkpoint state cache size",
-    }),
-    cpStateEpochSize: register.gauge({
-      name: "cp_state_epoch_size",
-      help: "Checkpoint state cache size",
-    }),
+    // regen metrics
+
+    stateCache: {
+      lookups: register.gauge({
+        name: "state_cache_lookups_total",
+        help: "Number of cache lookup",
+      }),
+      hits: register.gauge({
+        name: "state_cache_hits_total",
+        help: "Number of total cache hits",
+      }),
+      adds: register.gauge({
+        name: "state_cache_adds_total",
+        help: "Number of items added in state cache",
+      }),
+      size: register.gauge({
+        name: "state_cache_size",
+        help: "State cache size",
+      }),
+      reads: register.avgMinMax({
+        name: "state_cache_reads",
+        help: "Avg min max of all state cache items total read count",
+      }),
+      secondsSinceLastRead: register.avgMinMax({
+        name: "state_cache_seconds_since_last_read",
+        help: "Avg min max of all state cache items seconds since last reads",
+      }),
+    },
+
+    cpStateCache: {
+      lookups: register.gauge({
+        name: "cp_state_cache_lookups_total",
+        help: "Number of checkpoint cache lookup",
+      }),
+      hits: register.gauge({
+        name: "cp_state_cache_hits_total",
+        help: "Number of checkpoint cache hits",
+      }),
+      adds: register.gauge({
+        name: "cp_state_cache_adds_total",
+        help: "Number of items added in checkpoint state cache",
+      }),
+      size: register.gauge({
+        name: "cp_state_cache_size",
+        help: "Checkpoint state cache size",
+      }),
+      epochSize: register.gauge({
+        name: "cp_state_epoch_size",
+        help: "Checkpoint state cache size",
+      }),
+      reads: register.avgMinMax({
+        name: "cp_state_epoch_reads",
+        help: "Avg min max of all state cache items total read count",
+      }),
+      secondsSinceLastRead: register.avgMinMax({
+        name: "cp_state_epoch_seconds_since_last_read",
+        help: "Avg min max of all state cache items seconds since last reads",
+      }),
+    },
 
     regenFnCallTotal: register.gauge<"entrypoint" | "caller">({
       name: "regen_fn_call_total",

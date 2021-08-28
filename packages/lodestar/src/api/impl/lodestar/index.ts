@@ -121,19 +121,11 @@ export function getLodestarApi({
     },
 
     async getStateCacheItems() {
-      const states = (chain as BeaconChain)["stateCache"]["cache"].values();
-      return Array.from(states).map((state) => ({
-        slot: state.slot,
-        root: state.hashTreeRoot(),
-      }));
+      return (chain as BeaconChain)["stateCache"].dumpSummary();
     },
 
     async getCheckpointStateCacheItems() {
-      const states = (chain as BeaconChain)["checkpointStateCache"]["cache"].values();
-      return Array.from(states).map((state) => ({
-        slot: state.slot,
-        root: state.hashTreeRoot(),
-      }));
+      return (chain as BeaconChain)["checkpointStateCache"].dumpSummary();
     },
   };
 }
