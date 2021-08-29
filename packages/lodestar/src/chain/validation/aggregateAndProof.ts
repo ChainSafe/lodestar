@@ -1,5 +1,5 @@
 import {ValidatorIndex} from "@chainsafe/lodestar-types";
-import {List} from "@chainsafe/ssz";
+import {List, toHexString} from "@chainsafe/ssz";
 import {
   phase0,
   allForks,

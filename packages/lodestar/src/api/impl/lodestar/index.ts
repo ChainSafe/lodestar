@@ -143,7 +143,8 @@ export function getLodestarApi({
     },
 
     async timeQueueStyles(count = 100) {
-      return timeQueueStyles(chain as BeaconChain, latestValidSignedAggregateAndProof, count);
+      const signedAggregateAndProof = latestValidSignedAggregateAndProof.valueOf() as any;
+      return timeQueueStyles(chain as BeaconChain, signedAggregateAndProof, count);
     },
   };
 }
