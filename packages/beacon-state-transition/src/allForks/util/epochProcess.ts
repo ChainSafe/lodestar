@@ -27,6 +27,7 @@ import {IEpochStakeSummary} from "./epochStakeSummary";
 import {CachedBeaconState} from "./cachedBeaconState";
 import {statusProcessEpoch} from "../../phase0/epoch/processPendingAttestations";
 import {computeBaseRewardPerIncrement} from "../../altair/util/misc";
+import {createValidatorFlat} from "./flat";
 
 /**
  * Pre-computed disposable data to process epoch transitions faster at the cost of more memory.
@@ -258,7 +259,7 @@ export function beforeProcessEpoch<T extends allForks.BeaconState>(state: Cached
   for (let i = 0; i < validatorCount; i++) {
     // TODO - SLOW CODE - 🐢🐢🐢🐢🐢🐢🐢🐢🐢
     // Use a struct representation in the leaf nodes of the validators tree to have fast reads and slow writes
-    const validator = validators[i].valueOf() as typeof validators[0];
+    const validator = createValidatorFlat(validators[0]);
     const status = createIAttesterStatus();
 
     if (validator.slashed) {
