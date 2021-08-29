@@ -69,6 +69,7 @@ export type Api = {
   getStateCacheItems(): Promise<StateCacheItem[]>;
   /** Dump a summary of the states in the CheckpointStateCache */
   getCheckpointStateCacheItems(): Promise<StateCacheItem[]>;
+  timeQueueStyles(count?: number): Promise<{seriesMs: number; parallelMs: number; batchMs: number}>;
 };
 
 /**
@@ -84,6 +85,7 @@ export const routesData: RoutesData<Api> = {
   getBlockProcessorQueueItems: {url: "/eth/v1/lodestar/block-processor-queue-items/", method: "GET"},
   getStateCacheItems: {url: "/eth/v1/lodestar/state-cache-items/", method: "GET"},
   getCheckpointStateCacheItems: {url: "/eth/v1/lodestar/checkpoint-state-cache-items/", method: "GET"},
+  timeQueueStyles: {url: "/eth/v1/lodestar/time-queue-styles/", method: "GET"},
 };
 
 export type ReqTypes = {
@@ -96,6 +98,7 @@ export type ReqTypes = {
   getBlockProcessorQueueItems: ReqEmpty;
   getStateCacheItems: ReqEmpty;
   getCheckpointStateCacheItems: ReqEmpty;
+  timeQueueStyles: {query: {count?: number}};
 };
 
 export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
@@ -117,6 +120,11 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
     getBlockProcessorQueueItems: reqEmpty,
     getStateCacheItems: reqEmpty,
     getCheckpointStateCacheItems: reqEmpty,
+    timeQueueStyles: {
+      writeReq: (count) => ({query: {count}}),
+      parseReq: ({query}) => [query.count],
+      schema: {query: {count: Schema.Uint}},
+    },
   };
 }
 
@@ -149,5 +157,6 @@ export function getReturnTypes(): ReturnTypes<Api> {
     getBlockProcessorQueueItems: jsonType(),
     getStateCacheItems: ArrayOf(StateCacheItem),
     getCheckpointStateCacheItems: ArrayOf(StateCacheItem),
+    timeQueueStyles: jsonType(),
   };
 }

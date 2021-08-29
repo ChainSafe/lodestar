@@ -2,11 +2,17 @@ import {routes} from "@chainsafe/lodestar-api";
 import {allForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {Json, toHexString} from "@chainsafe/ssz";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
-import {ssz} from "@chainsafe/lodestar-types";
+import {phase0, ssz} from "@chainsafe/lodestar-types";
 import {BeaconChain, IBlockJob, IChainSegmentJob} from "../../../chain";
 import {QueuedStateRegenerator, RegenRequest} from "../../../chain/regen";
 import {GossipType} from "../../../network";
 import {ApiModules} from "../types";
+import {
+  latestValidSignedAggregateAndProof,
+  validateGossipAggregateAndProof,
+  validateGossipAggregateAndProofBatch,
+} from "../../../chain/validation";
+import {linspace} from "../../../util/numpy";
 
 export function getLodestarApi({
   chain,
@@ -135,6 +141,10 @@ export function getLodestarApi({
         root: state.hashTreeRoot(),
       }));
     },
+
+    async timeQueueStyles(count = 100) {
+      return timeQueueStyles(chain as BeaconChain, latestValidSignedAggregateAndProof, count);
+    },
   };
 }
 
@@ -162,4 +172,43 @@ function regenRequestToJson(config: IChainForkConfig, regenRequest: RegenRequest
         root: toHexString(regenRequest.args[0]),
       };
   }
+}
+
+// Try different queue types
+// 1. series async
+// 2. parallel async
+// 3. batched sync
+
+async function timeQueueStyles(
+  chain: BeaconChain,
+  signedAggregateAndProof: phase0.SignedAggregateAndProof,
+  count: number
+): Promise<{seriesMs: number; parallelMs: number; batchMs: number}> {
+  const indexes = linspace(0, count - 1);
+
+  const seriesStart = process.hrtime.bigint();
+  for (let i = 0; i < count; i++) {
+    await validateGossipAggregateAndProof(chain, signedAggregateAndProof);
+  }
+  const seriesEnd = process.hrtime.bigint();
+  const seriesNs = seriesEnd - seriesStart;
+
+  const parallelStart = process.hrtime.bigint();
+  await Promise.all(indexes.map(() => validateGossipAggregateAndProof(chain, signedAggregateAndProof)));
+  const parallelEnd = process.hrtime.bigint();
+  const parallelNs = parallelEnd - parallelStart;
+
+  const batchStart = process.hrtime.bigint();
+  await validateGossipAggregateAndProofBatch(
+    chain,
+    indexes.map(() => signedAggregateAndProof)
+  );
+  const batchEnd = process.hrtime.bigint();
+  const batchNs = batchEnd - batchStart;
+
+  return {
+    seriesMs: Number(seriesNs) / 1e6,
+    parallelMs: Number(parallelNs) / 1e6,
+    batchMs: Number(batchNs) / 1e6,
+  };
 }
