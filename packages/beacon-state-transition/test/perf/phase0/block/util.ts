@@ -5,6 +5,7 @@ import {config} from "@chainsafe/lodestar-config/default";
 import {List} from "@chainsafe/ssz";
 import {allForks, computeDomain, computeEpochAtSlot, computeSigningRoot, ZERO_HASH} from "../../../../src";
 import {LeafNode} from "@chainsafe/persistent-merkle-tree";
+import {getBlockRoot, getBlockRootAtSlot} from "../../../../src";
 
 export type BlockOpts = {
   proposerSlashingLen: number;
@@ -85,20 +86,21 @@ export function getBlockPhase0(
   }
 
   const attestations = ([] as phase0.Attestation[]) as List<phase0.Attestation>;
-  const attIndex = 0;
-  const attCommittee = preState.epochCtx.getBeaconCommittee(attSlot, attIndex);
+  const committeeCountPerSlot = preState.getCommitteeCountPerSlot(attEpoch);
   const attSource =
     attEpoch === stateEpoch ? preState.currentJustifiedCheckpoint : preState.previousJustifiedCheckpoint;
   for (let i = 0; i < attestationLen; i++) {
+    const attIndex = i % committeeCountPerSlot;
+    const attCommittee = preState.epochCtx.getBeaconCommittee(attSlot, attIndex);
     // Spread attesting indices through the whole range, offset on each attestation
     attestations.push({
       aggregationBits: getAggregationBits(attCommittee.length, bitsLen) as List<boolean>,
       data: {
         slot: attSlot,
-        index: 0,
-        beaconBlockRoot: rootB,
+        index: attIndex,
+        beaconBlockRoot: getBlockRootAtSlot(preState, attSlot),
         source: attSource,
-        target: {epoch: attEpoch, root: rootA},
+        target: {epoch: attEpoch, root: getBlockRoot(preState, attEpoch)},
       },
       signature: emptySig,
     });
@@ -147,13 +149,30 @@ export function getBlockPhase0(
   });
 }
 
+/**
+ * Get an altair block.
+ * This mutates the input preState as well to mark attestations not seen by the network.
+ */
 export function getBlockAltair(
   preState: allForks.CachedBeaconState<allForks.BeaconState>,
   opts: BlockAltairOpts
 ): altair.SignedBeaconBlock {
   const emptySig = Buffer.alloc(96);
   const phase0Block = getBlockPhase0(preState as allForks.CachedBeaconState<allForks.BeaconState>, opts);
-
+  const stateEpoch = computeEpochAtSlot(preState.slot);
+  for (const attestation of phase0Block.message.body.attestations) {
+    const attEpoch = computeEpochAtSlot(attestation.data.slot);
+    const epochParticipation =
+      attEpoch === stateEpoch ? preState.currentEpochParticipation : preState.previousEpochParticipation;
+    const attestingIndices = preState.getAttestingIndices(attestation.data, attestation.aggregationBits);
+    for (const index of attestingIndices) {
+      epochParticipation.setStatus(index, {
+        timelyHead: false,
+        timelySource: false,
+        timelyTarget: false,
+      });
+    }
+  }
   return {
     message: {
       ...phase0Block.message,

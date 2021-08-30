@@ -23,7 +23,7 @@ jobs:
           key: ${{ runner.os }}-${{ hashFiles('**/yarn.lock') }}-ignore-optional-fermium
       - name: Install & build
         if: steps.cache-deps.outputs.cache-hit != 'true'
-        run: yarn install --frozen-lockfile --ignore-optional
+        run: yarn install --frozen-lockfile --ignore-optional && yarn build
       - name: Build
         run: yarn build
         if: steps.cache-deps.outputs.cache-hit == 'true'

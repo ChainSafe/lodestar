@@ -6,9 +6,9 @@ import {describeDirectorySpecTest} from "@chainsafe/lodestar-spec-test-util";
 import {processParticipationRecordUpdates} from "@chainsafe/lodestar-beacon-state-transition/src/phase0/epoch/processParticipationRecordUpdates";
 import {altair as altairTypes, ssz} from "@chainsafe/lodestar-types";
 import {TreeBacked} from "@chainsafe/ssz";
-import {ACTIVE_PRESET} from "@chainsafe/lodestar-params";
+import {ACTIVE_PRESET, ForkName} from "@chainsafe/lodestar-params";
 import {SPEC_TEST_LOCATION} from "../../utils/specTestCases";
-import {expectEqualBeaconStateAltair, inputTypeSszTreeBacked} from "../util";
+import {expectEqualBeaconState, inputTypeSszTreeBacked} from "../util";
 import {IAltairStateTestCase, config} from "./util";
 
 /** Describe with which function to run each directory of tests */
@@ -56,7 +56,7 @@ for (const testDir of fs.readdirSync(rootDir)) {
       },
       getExpected: (testCase) => testCase.post,
       expectFunc: (testCase, expected, actual) => {
-        expectEqualBeaconStateAltair(expected, actual);
+        expectEqualBeaconState(ForkName.altair, expected, actual);
       },
     }
   );

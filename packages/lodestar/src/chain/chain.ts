@@ -21,7 +21,7 @@ import {ChainEventEmitter} from "./emitter";
 import {handleChainEvents} from "./eventHandlers";
 import {IBeaconChain} from "./interface";
 import {IChainOptions} from "./options";
-import {IStateRegenerator, QueuedStateRegenerator} from "./regen";
+import {IStateRegenerator, QueuedStateRegenerator, RegenCaller} from "./regen";
 import {LodestarForkChoice} from "./forkChoice";
 import {restoreStateCaches} from "./initState";
 import {IBlsVerifier, BlsSingleThreadVerifier, BlsMultiThreadWorkerPool} from "./bls";
@@ -98,8 +98,8 @@ export class BeaconChain implements IBeaconChain {
       : new BlsMultiThreadWorkerPool({logger, metrics, signal: this.abortController.signal});
 
     const clock = new LocalClock({config, emitter, genesisTime: this.genesisTime, signal});
-    const stateCache = new StateContextCache();
-    const checkpointStateCache = new CheckpointStateCache();
+    const stateCache = new StateContextCache({metrics});
+    const checkpointStateCache = new CheckpointStateCache({metrics});
     const cachedState = restoreStateCaches(config, stateCache, checkpointStateCache, anchorState);
     const forkChoice = new LodestarForkChoice({
       config,
@@ -171,11 +171,15 @@ export class BeaconChain implements IBeaconChain {
     const currentEpochStartSlot = computeStartSlotAtEpoch(this.clock.currentEpoch);
     const head = this.forkChoice.getHead();
     const bestSlot = currentEpochStartSlot > head.slot ? currentEpochStartSlot : head.slot;
-    return await this.regen.getBlockSlotState(head.blockRoot, bestSlot);
+    return await this.regen.getBlockSlotState(head.blockRoot, bestSlot, RegenCaller.getProposerAttesterDuties);
   }
 
   async getHeadStateAtCurrentSlot(): Promise<CachedBeaconState<allForks.BeaconState>> {
-    return await this.regen.getBlockSlotState(this.forkChoice.getHeadRoot(), this.clock.currentSlot);
+    return await this.regen.getBlockSlotState(
+      this.forkChoice.getHeadRoot(),
+      this.clock.currentSlot,
+      RegenCaller.getProposerAttesterDuties
+    );
   }
 
   async getHeadBlock(): Promise<allForks.SignedBeaconBlock | null> {
@@ -205,7 +209,7 @@ export class BeaconChain implements IBeaconChain {
       return null;
     }
     try {
-      return await this.regen.getState(blockSummary.stateRoot);
+      return await this.regen.getState(blockSummary.stateRoot, RegenCaller.getStateByBlockRoot);
     } catch (e) {
       return null;
     }

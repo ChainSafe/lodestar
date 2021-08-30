@@ -48,6 +48,10 @@ export type BlockProcessorQueueItem = {
 export type StateCacheItem = {
   slot: Slot;
   root: Uint8Array;
+  /** Total number of reads */
+  reads: number;
+  /** Unix timestamp (ms) of the last read */
+  lastRead: number;
 };
 
 export type Api = {

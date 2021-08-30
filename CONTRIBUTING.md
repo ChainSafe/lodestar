@@ -10,7 +10,7 @@
 # Getting Started
 
 - Run `lerna bootstrap` or `yarn install` to install dependencies
-- NOTE: By default the spec tests (5GB) will be installed with other dependencies. If you would like to avoid downloading the spec tests, instead run `yarn install --ignore-optional`.
+- Run `yarn build` to build lib from source
 
 # Tests
 

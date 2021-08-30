@@ -97,8 +97,8 @@ export class MockBeaconChain implements IBeaconChain {
       signal: this.abortController.signal,
     });
     this.forkChoice = mockForkChoice();
-    this.stateCache = new StateContextCache();
-    this.checkpointStateCache = new CheckpointStateCache();
+    this.stateCache = new StateContextCache({});
+    this.checkpointStateCache = new CheckpointStateCache({});
     this.pendingBlocks = new BlockPool(config, logger);
     const db = new StubbedBeaconDb(sinon);
     this.regen = new StateRegenerator({

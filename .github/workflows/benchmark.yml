@@ -35,7 +35,7 @@ jobs:
           key: ${{ runner.os }}-${{ hashFiles('**/yarn.lock') }}-ignore-optional-fermium
       - name: Install & build
         if: steps.cache-deps.outputs.cache-hit != 'true'
-        run: yarn install --frozen-lockfile --ignore-optional
+        run: yarn install --frozen-lockfile --ignore-optional && yarn build
       - name: Build
         run: yarn build
         if: steps.cache-deps.outputs.cache-hit == 'true'
@@ -47,7 +47,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # benchmark options
           BENCHMARK_S3: true
-          BENCHMARK_threshold: 3
           # S3 credentials
           S3_ACCESS_KEY: ${{ secrets.S3_BENCH_LODESTAR_ACCESS_KEY }}
           S3_SECRET_KEY: ${{ secrets.S3_BENCH_LODESTAR_SECRET_KEY }}

@@ -41,7 +41,7 @@ describeDirectorySpecTest<IForkChoiceTestCase, void>(
     const tbState = config.getForkTypes(currentSlot).BeaconState.createTreeBackedFromStruct(anchorState);
     let wrappedState = createCachedBeaconState(config, tbState);
     const forkchoice = new LodestarForkChoice({config, emitter, currentSlot, state: wrappedState});
-    const checkpointStateCache = new CheckpointStateCache();
+    const checkpointStateCache = new CheckpointStateCache({});
     const stateCache = new Map<string, CachedBeaconState<allForks.BeaconState>>();
     cacheState(wrappedState, stateCache);
     const {SECONDS_PER_SLOT} = wrappedState.config;

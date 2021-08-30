@@ -1,4 +1,4 @@
-import {itBench, setBenchOpts} from "@dapplion/benchmark";
+import {itBench} from "@dapplion/benchmark";
 import {unshuffleList} from "../../../src";
 
 //          Lightouse  Lodestar
@@ -7,8 +7,6 @@ import {unshuffleList} from "../../../src";
 // 4000000  1.5617 s   4.9690 s  (x3)
 
 describe("shuffle list", () => {
-  setBenchOpts({maxMs: 30 * 1000});
-
   // eslint-disable-next-line @typescript-eslint/naming-convention
   const seed = new Uint8Array([42, 32]);
 

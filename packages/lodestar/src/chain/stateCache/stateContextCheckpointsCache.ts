@@ -1,6 +1,8 @@
 import {toHexString} from "@chainsafe/ssz";
 import {phase0, Epoch, allForks} from "@chainsafe/lodestar-types";
 import {CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
+import {IMetrics} from "../../metrics";
+import {MapTracker} from "./mapMetrics";
 
 const MAX_EPOCHS = 10;
 
@@ -11,12 +13,24 @@ const MAX_EPOCHS = 10;
  * Similar API to Repository
  */
 export class CheckpointStateCache {
-  private cache = new Map<string, CachedBeaconState<allForks.BeaconState>>();
+  private readonly cache: MapTracker<string, CachedBeaconState<allForks.BeaconState>>;
   /** Epoch -> Set<blockRoot> */
-  private epochIndex = new Map<Epoch, Set<string>>();
+  private readonly epochIndex = new Map<Epoch, Set<string>>();
+  private readonly metrics: IMetrics["cpStateCache"] | null | undefined;
+
+  constructor({metrics}: {metrics?: IMetrics | null}) {
+    this.cache = new MapTracker(metrics?.cpStateCache);
+    if (metrics) {
+      this.metrics = metrics.cpStateCache;
+      metrics.cpStateCache.size.addCollect(() => metrics.cpStateCache.size.set(this.cache.size));
+      metrics.cpStateCache.epochSize.addCollect(() => metrics.cpStateCache.epochSize.set(this.epochIndex.size));
+    }
+  }
 
   get(cp: phase0.Checkpoint): CachedBeaconState<allForks.BeaconState> | null {
+    this.metrics?.lookups.inc();
     const item = this.cache.get(toCheckpointKey(cp));
+    if (item) this.metrics?.hits.inc();
     return item ? item.clone() : null;
   }
 
@@ -25,6 +39,7 @@ export class CheckpointStateCache {
     if (this.cache.has(key)) {
       return;
     }
+    this.metrics?.adds.inc();
     this.cache.set(key, item.clone());
     const epochKey = toHexString(cp.root);
     const value = this.epochIndex.get(cp.epoch);
@@ -94,6 +109,16 @@ export class CheckpointStateCache {
   clear(): void {
     this.cache.clear();
     this.epochIndex.clear();
+  }
+
+  /** ONLY FOR DEBUGGING PURPOSES. For lodestar debug API */
+  dumpSummary(): {slot: number; root: Uint8Array; reads: number; lastRead: number}[] {
+    return Array.from(this.cache.entries()).map(([key, state]) => ({
+      slot: state.slot,
+      root: state.hashTreeRoot(),
+      reads: this.cache.readCount.get(key) ?? 0,
+      lastRead: this.cache.lastRead.get(key) ?? 0,
+    }));
   }
 }
 

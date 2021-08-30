@@ -7,6 +7,8 @@ import {
 } from "@chainsafe/lodestar-params";
 import {allForks} from "@chainsafe/lodestar-types";
 import {bigIntMin} from "@chainsafe/lodestar-utils";
+import {Gwei} from "../../phase0";
+import {isActiveValidator} from "../../util";
 import {IEpochProcess, CachedBeaconState} from "../util";
 
 /**
@@ -23,23 +25,32 @@ export function processEffectiveBalanceUpdates(
   state: CachedBeaconState<allForks.BeaconState>,
   epochProcess: IEpochProcess
 ): void {
-  const {validators} = state;
   const HYSTERESIS_INCREMENT = EFFECTIVE_BALANCE_INCREMENT / BigInt(HYSTERESIS_QUOTIENT);
   const DOWNWARD_THRESHOLD = HYSTERESIS_INCREMENT * BigInt(HYSTERESIS_DOWNWARD_MULTIPLIER);
   const UPWARD_THRESHOLD = HYSTERESIS_INCREMENT * BigInt(HYSTERESIS_UPWARD_MULTIPLIER);
+  const {validators, epochCtx} = state;
+  const nextEpoch = epochCtx.currentShuffling.epoch + 1;
+  const isAltair = nextEpoch >= epochCtx.config.ALTAIR_FORK_EPOCH;
+  let nextEpochTotalActiveBalance: Gwei = BigInt(0);
 
   // update effective balances with hysteresis
   (epochProcess.balances ?? state.balances).forEach((balance: bigint, i: number) => {
-    const effectiveBalance = epochProcess.validators[i].effectiveBalance;
+    const validator = epochProcess.validators[i];
+    let effectiveBalance = validator.effectiveBalance;
     if (
       // Too big
       effectiveBalance > balance + DOWNWARD_THRESHOLD ||
       // Too small. Check effectiveBalance < MAX_EFFECTIVE_BALANCE to prevent unnecessary updates
       (effectiveBalance < MAX_EFFECTIVE_BALANCE && effectiveBalance < balance - UPWARD_THRESHOLD)
     ) {
+      effectiveBalance = bigIntMin(balance - (balance % EFFECTIVE_BALANCE_INCREMENT), MAX_EFFECTIVE_BALANCE);
       validators.update(i, {
-        effectiveBalance: bigIntMin(balance - (balance % EFFECTIVE_BALANCE_INCREMENT), MAX_EFFECTIVE_BALANCE),
+        effectiveBalance,
       });
     }
+    if (isAltair && isActiveValidator(validator, nextEpoch)) {
+      nextEpochTotalActiveBalance += effectiveBalance;
+    }
   });
+  epochProcess.nextEpochTotalActiveBalance = nextEpochTotalActiveBalance;
 }

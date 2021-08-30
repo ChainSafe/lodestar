@@ -1,4 +1,4 @@
-import {itBench, setBenchOpts} from "@dapplion/benchmark";
+import {itBench} from "@dapplion/benchmark";
 import {expect} from "chai";
 import {
   allForks,
@@ -16,8 +16,6 @@ import {ssz} from "@chainsafe/lodestar-types";
 // getAttestationsForBlock
 //     ✓ getAttestationsForBlock                                             4.410948 ops/s    226.7086 ms/op        -         64 runs   51.8 s
 describe("getAttestationsForBlock", () => {
-  setBenchOpts({maxMs: 60 * 1000});
-
   let originalState: allForks.CachedBeaconState<allForks.BeaconState>;
 
   before(function () {

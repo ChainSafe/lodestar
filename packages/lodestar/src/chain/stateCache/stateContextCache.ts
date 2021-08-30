@@ -1,9 +1,10 @@
 import {ByteVector, toHexString} from "@chainsafe/ssz";
 import {Epoch, allForks} from "@chainsafe/lodestar-types";
 import {CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
+import {IMetrics} from "../../metrics";
+import {MapTracker} from "./mapMetrics";
 
-const MAX_STATES = 96;
-
+const MAX_STATES = 3 * 32;
 /**
  * In memory cache of CachedBeaconState
  *
@@ -13,21 +14,29 @@ export class StateContextCache {
   /**
    * Max number of states allowed in the cache
    */
-  maxStates: number;
+  readonly maxStates: number;
 
-  private cache = new Map<string, CachedBeaconState<allForks.BeaconState>>();
+  private readonly cache: MapTracker<string, CachedBeaconState<allForks.BeaconState>>;
   /** Epoch -> Set<blockRoot> */
-  private epochIndex = new Map<Epoch, Set<string>>();
+  private readonly epochIndex = new Map<Epoch, Set<string>>();
+  private readonly metrics: IMetrics["stateCache"] | null | undefined;
 
-  constructor(maxStates = MAX_STATES) {
+  constructor({maxStates = MAX_STATES, metrics}: {maxStates?: number; metrics?: IMetrics | null}) {
     this.maxStates = maxStates;
+    this.cache = new MapTracker(metrics?.stateCache);
+    if (metrics) {
+      this.metrics = metrics.stateCache;
+      metrics.stateCache.size.addCollect(() => metrics.stateCache.size.set(this.cache.size));
+    }
   }
 
   get(root: ByteVector): CachedBeaconState<allForks.BeaconState> | null {
+    this.metrics?.lookups.inc();
     const item = this.cache.get(toHexString(root));
     if (!item) {
       return null;
     }
+    this.metrics?.hits.inc();
     return item.clone();
   }
 
@@ -36,6 +45,7 @@ export class StateContextCache {
     if (this.cache.get(key)) {
       return;
     }
+    this.metrics?.adds.inc();
     this.cache.set(key, item.clone());
     const epoch = item.epochCtx.currentShuffling.epoch;
     const blockRoots = this.epochIndex.get(epoch);
@@ -96,6 +106,16 @@ export class StateContextCache {
         this.deleteAllEpochItems(epoch);
       }
     }
+  }
+
+  /** ONLY FOR DEBUGGING PURPOSES. For lodestar debug API */
+  dumpSummary(): {slot: number; root: Uint8Array; reads: number; lastRead: number}[] {
+    return Array.from(this.cache.entries()).map(([key, state]) => ({
+      slot: state.slot,
+      root: state.hashTreeRoot(),
+      reads: this.cache.readCount.get(key) ?? 0,
+      lastRead: this.cache.lastRead.get(key) ?? 0,
+    }));
   }
 
   private deleteAllEpochItems(epoch: Epoch): void {

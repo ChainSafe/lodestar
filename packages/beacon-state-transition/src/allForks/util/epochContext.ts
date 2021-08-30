@@ -33,7 +33,6 @@ import {
   computeStartSlotAtEpoch,
   getChurnLimit,
   getSeed,
-  getTotalBalance,
   isActiveValidator,
   isAggregatorFromCommitteeLength,
   zipIndexesCommitteeBits,
@@ -299,7 +298,7 @@ export function afterProcessEpoch(state: CachedBeaconState<allForks.BeaconState>
   }
 
   if (currEpoch >= epochCtx.config.ALTAIR_FORK_EPOCH) {
-    const totalActiveBalance = getTotalBalance(state, epochCtx.currentShuffling.activeIndices);
+    const totalActiveBalance = epochProcess.nextEpochTotalActiveBalance;
     epochCtx.syncParticipantReward = computeSyncParticipantReward(epochCtx.config, totalActiveBalance);
     epochCtx.syncProposerReward =
       (epochCtx.syncParticipantReward * PROPOSER_WEIGHT) / (WEIGHT_DENOMINATOR - PROPOSER_WEIGHT);
