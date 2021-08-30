@@ -12,6 +12,7 @@ import {formatProtocolId} from "../utils";
 import {ResponseError} from "../response";
 import {requestEncode} from "../encoders/requestEncode";
 import {responseDecode} from "../encoders/responseDecode";
+import {Libp2pConnection} from "../interface";
 import {collectResponses} from "./collectResponses";
 import {maxTotalResponseTimeout, responseTimeoutsHandler} from "./responseTimeoutsHandler";
 import {
@@ -89,7 +90,10 @@ export async function sendRequest<T extends ResponseBody | ResponseBody[]>(
         const protocolIds = Array.from(protocols.keys());
         const conn = await libp2p.dialProtocol(peerId, protocolIds, {signal: timeoutAndParentSignal});
         if (!conn) throw Error("dialProtocol timeout");
-        return conn;
+        // TODO: libp2p-ts type Stream does not declare .abort() and requires casting to unknown here
+        // Remove when https://github.com/ChainSafe/lodestar/issues/2167
+        // After #2167 upstream types are still not good enough, and require casting
+        return (conn as unknown) as Libp2pConnection;
       },
       DIAL_TIMEOUT,
       signal
@@ -112,10 +116,10 @@ export async function sendRequest<T extends ResponseBody | ResponseBody[]>(
 
     // REQUEST_TIMEOUT: Non-spec timeout from sending request until write stream closed by responder
     // Note: libp2p.stop() will close all connections, so not necessary to abort this pipe on parent stop
-    await withTimeout(() => pipe(requestEncode(protocol, requestBody), stream.sink as any), REQUEST_TIMEOUT, signal).catch(
+    await withTimeout(() => pipe(requestEncode(protocol, requestBody), stream.sink), REQUEST_TIMEOUT, signal).catch(
       (e) => {
         // Must close the stream read side (stream.source) manually AND the write side
-        stream.abort();
+        stream.abort(e);
 
         if (e instanceof TimeoutError) {
           throw new RequestInternalError({code: RequestErrorCode.REQUEST_TIMEOUT});
@@ -132,7 +136,7 @@ export async function sendRequest<T extends ResponseBody | ResponseBody[]>(
       const responses = await withTimeout(
         () =>
           pipe(
-            stream.source as any,
+            stream.source,
             responseTimeoutsHandler(responseDecode(forkDigestContext, protocol), options),
             collectResponses(method, maxResponses)
           ),

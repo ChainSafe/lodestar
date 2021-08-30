@@ -2,6 +2,7 @@
  * @module network
  */
 import {Connection} from "libp2p";
+import {HandlerProps} from "libp2p/src/registrar";
 import {ForkName} from "@chainsafe/lodestar-params";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {allForks, phase0} from "@chainsafe/lodestar-types";
@@ -11,7 +12,7 @@ import LibP2p from "libp2p";
 import PeerId from "peer-id";
 import {timeoutOptions} from "../../constants";
 import {IForkDigestContext} from "../../util/forkDigestContext";
-import {IReqResp, IReqRespModules} from "./interface";
+import {IReqResp, IReqRespModules, Libp2pStream} from "./interface";
 import {sendRequest} from "./request";
 import {handleRequest} from "./response";
 import {onOutgoingReqRespError} from "./score";
@@ -32,7 +33,6 @@ import {
   RequestTypedContainer,
   protocolsSupported,
 } from "./types";
-import {MuxedStream} from "libp2p-interfaces/src/stream-muxer/types";
 
 export type IReqRespOptions = Partial<typeof timeoutOptions>;
 
@@ -76,7 +76,7 @@ export class ReqResp implements IReqResp {
     for (const [method, version, encoding] of protocolsSupported) {
       this.libp2p.handle(
         formatProtocolId(method, version, encoding),
-        this.getRequestHandler({method, version, encoding})
+        (this.getRequestHandler({method, version, encoding}) as unknown) as (props: HandlerProps) => void
       );
     }
   }
@@ -177,7 +177,7 @@ export class ReqResp implements IReqResp {
   }
 
   private getRequestHandler({method, version, encoding}: Protocol) {
-    return async ({connection, stream}: {connection: Connection; stream: MuxedStream}) => {
+    return async ({connection, stream}: {connection: Connection; stream: Libp2pStream}) => {
       const peerId = connection.remotePeer;
 
       // TODO: Do we really need this now that there is only one encoding?

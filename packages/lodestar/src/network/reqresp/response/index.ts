@@ -8,11 +8,11 @@ import {REQUEST_TIMEOUT, RespStatus} from "../../../constants";
 import {getAgentVersionFromPeerStore, prettyPrintPeerId} from "../../util";
 import {Protocol, RequestBody, ResponseBody} from "../types";
 import {onChunk} from "../utils";
+import {Libp2pStream} from "../interface";
 import {requestDecode} from "../encoders/requestDecode";
 import {responseEncodeError, responseEncodeSuccess} from "../encoders/responseEncode";
 import {ResponseError} from "./errors";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
-import {MuxedStream} from "libp2p-interfaces/src/stream-muxer/types";
 
 export {ResponseError};
 
@@ -42,7 +42,7 @@ type HandleRequestModules = {
 export async function handleRequest(
   {config, logger, forkDigestContext, libp2p}: HandleRequestModules,
   performRequestHandler: PerformRequestHandler,
-  stream: MuxedStream,
+  stream: Libp2pStream,
   peerId: PeerId,
   protocol: Protocol,
   signal?: AbortSignal,
@@ -59,7 +59,7 @@ export async function handleRequest(
     (async function* requestHandlerSource() {
       try {
         const requestBody = await withTimeout(
-          () => pipe(stream.source as any, requestDecode(protocol)),
+          () => pipe(stream.source, requestDecode(protocol)),
           REQUEST_TIMEOUT,
           signal
         ).catch((e: unknown) => {
@@ -68,7 +68,7 @@ export async function handleRequest(
           } else {
             throw new ResponseError(RespStatus.INVALID_REQUEST, (e as Error).message);
           }
-        }) as RequestBody;
+        });
 
         logger.debug("Resp received request", {...logCtx, requestBody} as Context);
 
@@ -87,7 +87,7 @@ export async function handleRequest(
         responseError = e as Error;
       }
     })(),
-    stream.sink as any
+    stream.sink
   );
 
   // If streak.sink throws, libp2p-mplex will close stream.source
