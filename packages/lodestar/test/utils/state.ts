@@ -128,9 +128,9 @@ export function generateState(
       (ssz.phase0.BeaconState.createTreeBackedFromStruct(defaultState) as TreeBacked<allForks.BeaconState>);
     phase0States.set(config, state);
   }
-  const resultState = (isAltair ? altairStates.get(config)?.clone() : phase0States.get(config)?.clone()) as TreeBacked<
-    allForks.BeaconState
-  >;
+  const resultState = (isAltair
+    ? altairStates.get(config)?.clone()
+    : phase0States.get(config)?.clone()) as TreeBacked<allForks.BeaconState>;
 
   for (const key in opts) {
     const newValue = opts[key as keyof TestBeaconState];
