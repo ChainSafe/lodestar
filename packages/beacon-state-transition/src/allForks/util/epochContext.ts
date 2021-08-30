@@ -26,7 +26,7 @@ import {
   SYNC_REWARD_WEIGHT,
   WEIGHT_DENOMINATOR,
 } from "@chainsafe/lodestar-params";
-import {bigIntSqrt, intToBytes, LodestarError} from "@chainsafe/lodestar-utils";
+import {bigIntMax, bigIntSqrt, intToBytes, LodestarError} from "@chainsafe/lodestar-utils";
 
 import {
   computeActivationExitEpoch,
@@ -337,7 +337,8 @@ export function afterProcessEpoch(
   }
 
   if (currEpoch >= epochCtx.config.ALTAIR_FORK_EPOCH) {
-    const totalActiveBalance = epochProcess.nextEpochTotalActiveBalance;
+    // To pass spec tests, force to EFFECTIVE_BALANCE_INCREMENT since nextEpochTotalActiveBalance may be zero
+    const totalActiveBalance = bigIntMax(epochProcess.nextEpochTotalActiveBalance, EFFECTIVE_BALANCE_INCREMENT);
     epochCtx.syncParticipantReward = computeSyncParticipantReward(epochCtx.config, totalActiveBalance);
     epochCtx.syncProposerReward =
       (epochCtx.syncParticipantReward * PROPOSER_WEIGHT) / (WEIGHT_DENOMINATOR - PROPOSER_WEIGHT);
