@@ -7163,7 +7163,7 @@ libp2p-mdns@^0.16.0:
     multicast-dns "^7.2.0"
     peer-id "^0.14.0"
 
-libp2p-mplex@^0.10.1:
+libp2p-mplex@^0.10.4:
   version "0.10.4"
   resolved "https://registry.yarnpkg.com/libp2p-mplex/-/libp2p-mplex-0.10.4.tgz#9f216ce481e94c748b4dc415e4555fdd8b09a9e4"
   integrity sha512-a8Oy68EXaSBBXGOGYMuwBcpnynkhqAFJ3LiyV24u9fE4wTxvuWTr0prSyKc+KC8QsLuX3A+CAdSgxqm09NbumQ==
@@ -7177,7 +7177,7 @@ libp2p-mplex@^0.10.1:
     it-pushable "^1.4.1"
     varint "^6.0.0"
 
-libp2p-tcp@^0.15.3:
+libp2p-tcp@^0.15.3, libp2p-tcp@^0.15.4:
   version "0.15.4"
   resolved "https://registry.yarnpkg.com/libp2p-tcp/-/libp2p-tcp-0.15.4.tgz#571c57dae60e6118162228abfa28700e86d47dca"
   integrity sha512-MqXIlqV7t9z0A1Ww9Omd2XIlndcYOAh5R6kWRZ8Vo/CITazKUC5ZGNoj23hq/aEPaX8p5XmJs2BKESg/OuhGhQ==
@@ -7204,7 +7204,7 @@ libp2p-utils@^0.3.0, libp2p-utils@^0.3.1:
     multiaddr "^9.0.1"
     private-ip "^2.1.1"
 
-libp2p@^0.31.1:
+libp2p@^0.31.7:
   version "0.31.7"
   resolved "https://registry.yarnpkg.com/libp2p/-/libp2p-0.31.7.tgz#49ff8b74cd5a3ed252b8584aaa6071f73cf62e6c"
   integrity sha512-0FUHYlwoDQ8+x3qQM9iTrZP0Ui1LWYxAbLZ9H8Hs57hqevEv08eX5EDFlkpqu/W9dkl4gsQ3kv3sa7ye8+lokA==
