@@ -64,6 +64,7 @@ export function processEffectiveBalanceUpdates(
     if (isAltair && isActiveValidator(validators[i], nextEpoch)) {
       nextEpochTotalActiveBalance += effectiveBalance;
     }
-    epochProcess.nextEpochTotalActiveBalance = nextEpochTotalActiveBalance;
   }
+
+  epochProcess.nextEpochTotalActiveBalance = nextEpochTotalActiveBalance;
 }
