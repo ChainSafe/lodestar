@@ -5,10 +5,10 @@ import {allForks, phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {describeDirectorySpecTest} from "@chainsafe/lodestar-spec-test-util";
 import {altair} from "@chainsafe/lodestar-beacon-state-transition";
 import {ssz} from "@chainsafe/lodestar-types";
-import {ACTIVE_PRESET} from "@chainsafe/lodestar-params";
+import {ACTIVE_PRESET, ForkName} from "@chainsafe/lodestar-params";
 import {SPEC_TEST_LOCATION} from "../../utils/specTestCases";
 import {IBaseSpecTest} from "../type";
-import {expectEqualBeaconStateAltair, inputTypeSszTreeBacked} from "../util";
+import {expectEqualBeaconState, inputTypeSszTreeBacked} from "../util";
 
 describeDirectorySpecTest<IUpgradeStateCase, altair.BeaconState>(
   `${ACTIVE_PRESET}/altair/fork/fork`,
@@ -42,7 +42,7 @@ describeDirectorySpecTest<IUpgradeStateCase, altair.BeaconState>(
     shouldError: (testCase) => !testCase.post,
     getExpected: (testCase) => testCase.post,
     expectFunc: (testCase, expected, actual) => {
-      expectEqualBeaconStateAltair(expected, actual);
+      expectEqualBeaconState(ForkName.altair, expected, actual);
     },
   }
 );
