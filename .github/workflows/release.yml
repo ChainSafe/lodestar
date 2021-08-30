@@ -15,13 +15,11 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
-
       - name: Get latest tag
+        id: get-latest-tag
         uses: actions-ecosystem/action-get-latest-tag@v1
         with:
           with_initial_version: false
-        id: get-latest-tag
-
       - name: Create tag
         id: tag
         uses: butlerlogic/action-autotag@1.1.2
@@ -98,7 +96,7 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      #in case of failure
+      # In case of failure
       - name: Rollback on failure
         if: failure()
         uses: author/action-rollback@9ec72a6af74774e00343c6de3e946b0901c23013
@@ -112,7 +110,7 @@ jobs:
   docker:
     name: Publish to Docker Hub
     runs-on: ubuntu-latest
-    needs: npm
+    needs: [tag, npm]
     if: needs.tag.outputs.tag != ''
     steps:
       - uses: actions/checkout@v2

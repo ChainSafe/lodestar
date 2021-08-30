@@ -51,7 +51,6 @@ jobs:
           --preid dev
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-
       - name: Get version
         id: version
         run: |
@@ -72,5 +71,5 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-      - run: docker build --tag chainsafe/lodestar:next --build-arg VERSION=${{ needs.publish.outputs.version }} .
+      - run: docker build --tag chainsafe/lodestar:next --build-arg VERSION=${{ needs.npm.outputs.version }} .
       - run: docker push chainsafe/lodestar:next
