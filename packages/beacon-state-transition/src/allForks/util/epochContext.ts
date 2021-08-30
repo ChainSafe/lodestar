@@ -16,6 +16,7 @@ import {
   BASE_REWARD_FACTOR,
   DOMAIN_BEACON_PROPOSER,
   EFFECTIVE_BALANCE_INCREMENT,
+  FAR_FUTURE_EPOCH,
   GENESIS_EPOCH,
   PROPOSER_WEIGHT,
   SLOTS_PER_EPOCH,
@@ -26,17 +27,22 @@ import {
 import {bigIntSqrt, intToBytes, LodestarError} from "@chainsafe/lodestar-utils";
 
 import {
+  computeActivationExitEpoch,
   computeEpochAtSlot,
   computeProposerIndex,
   computeStartSlotAtEpoch,
+  getChurnLimit,
   getSeed,
-  getTotalActiveBalance,
+  getTotalBalance,
+  isActiveValidator,
   isAggregatorFromCommitteeLength,
   zipIndexesCommitteeBits,
 } from "../../util";
 import {computeEpochShuffling, IEpochShuffling} from "./epochShuffling";
 import {MutableVector} from "@chainsafe/persistent-ts";
-import {computeBaseRewardPerIncrement} from "../../altair/misc";
+import {computeBaseRewardPerIncrement} from "../../altair/util/misc";
+import {CachedBeaconState} from "./cachedBeaconState";
+import {IEpochProcess} from "./epochProcess";
 
 export type AttesterDuty = {
   // Index of validator in validator registry
@@ -65,6 +71,7 @@ function toHexStringMaybe(hex: ByteVector | string): string {
 }
 
 export class PubkeyIndexMap {
+  // We don't really need the full pubkey. We could just use the first 20 bytes like an Ethereum address
   private readonly map = new Map<PubkeyHex, ValidatorIndex>();
 
   get size(): number {
@@ -83,6 +90,8 @@ export class PubkeyIndexMap {
 /**
  * Create an epoch cache
  * @param validators cached validators that matches `state.validators`
+ *
+ * SLOW CODE - 🐢
  */
 export function createEpochContext(
   config: IBeaconConfig,
@@ -100,21 +109,48 @@ export function createEpochContext(
   const previousEpoch = currentEpoch === GENESIS_EPOCH ? GENESIS_EPOCH : currentEpoch - 1;
   const nextEpoch = currentEpoch + 1;
 
-  const indicesBounded: [ValidatorIndex, Epoch, Epoch][] = validators.map((v, i) => [
-    i,
-    v.activationEpoch,
-    v.exitEpoch,
-  ]);
+  let totalActiveBalance = BigInt(0);
+  let exitQueueEpoch = computeActivationExitEpoch(currentEpoch);
+  let exitQueueChurn = 0;
 
-  const currentShuffling = computeEpochShuffling(state, indicesBounded, currentEpoch);
-  let previousShuffling;
-  if (previousEpoch === currentEpoch) {
-    // in case of genesis
-    previousShuffling = currentShuffling;
-  } else {
-    previousShuffling = computeEpochShuffling(state, indicesBounded, previousEpoch);
+  const previousActiveIndices: ValidatorIndex[] = [];
+  const currentActiveIndices: ValidatorIndex[] = [];
+  const nextActiveIndices: ValidatorIndex[] = [];
+  validators.forEach(function processActiveIndices(v, i) {
+    if (isActiveValidator(v, previousEpoch)) {
+      previousActiveIndices.push(i);
+    }
+    if (isActiveValidator(v, currentEpoch)) {
+      currentActiveIndices.push(i);
+      totalActiveBalance += v.effectiveBalance;
+    }
+    if (isActiveValidator(v, nextEpoch)) {
+      nextActiveIndices.push(i);
+    }
+
+    const {exitEpoch} = v;
+    if (exitEpoch !== FAR_FUTURE_EPOCH) {
+      if (exitEpoch > exitQueueEpoch) {
+        exitQueueEpoch = exitEpoch;
+        exitQueueChurn = 1;
+      } else if (exitEpoch === exitQueueEpoch) {
+        exitQueueChurn += 1;
+      }
+    }
+  });
+
+  // Spec: `EFFECTIVE_BALANCE_INCREMENT` Gwei minimum to avoid divisions by zero
+  if (totalActiveBalance < EFFECTIVE_BALANCE_INCREMENT) {
+    totalActiveBalance = EFFECTIVE_BALANCE_INCREMENT;
   }
-  const nextShuffling = computeEpochShuffling(state, indicesBounded, nextEpoch);
+
+  const currentShuffling = computeEpochShuffling(state, currentActiveIndices, currentEpoch);
+  const previousShuffling =
+    previousEpoch === currentEpoch
+      ? // in case of genesis
+        currentShuffling
+      : computeEpochShuffling(state, previousActiveIndices, previousEpoch);
+  const nextShuffling = computeEpochShuffling(state, nextActiveIndices, nextEpoch);
 
   // Allow to create CachedBeaconState for empty states
   const proposers = state.validators.length > 0 ? computeProposers(state, currentShuffling) : [];
@@ -122,13 +158,32 @@ export function createEpochContext(
   // Only after altair, compute the indices of the current sync committee
   const onAltairFork = currentEpoch >= config.ALTAIR_FORK_EPOCH;
 
-  const totalActiveBalance = getTotalActiveBalance(state);
   const syncParticipantReward = onAltairFork ? computeSyncParticipantReward(config, totalActiveBalance) : BigInt(0);
   const syncProposerReward = onAltairFork
     ? (syncParticipantReward * PROPOSER_WEIGHT) / (WEIGHT_DENOMINATOR - PROPOSER_WEIGHT)
     : BigInt(0);
 
   const baseRewardPerIncrement = onAltairFork ? computeBaseRewardPerIncrement(totalActiveBalance) : BigInt(0);
+
+  // Precompute churnLimit for efficient initiateValidatorExit() during block proposing MUST be recompute everytime the
+  // active validator indices set changes in size. Validators change active status only when:
+  // - validator.activation_epoch is set. Only changes in process_registry_updates() if validator can be activated. If
+  //   the value changes it will be set to `epoch + 1 + MAX_SEED_LOOKAHEAD`.
+  // - validator.exit_epoch is set. Only changes in initiate_validator_exit() if validator exits. If the value changes,
+  //   it will be set to at least `epoch + 1 + MAX_SEED_LOOKAHEAD`.
+  // ```
+  // is_active_validator = validator.activation_epoch <= epoch < validator.exit_epoch
+  // ```
+  // So the returned value of is_active_validator(epoch) is guaranteed to not change during `MAX_SEED_LOOKAHEAD` epochs.
+  //
+  // activeIndices size is dependant on the state epoch. The epoch is advanced after running the epoch transition, and
+  // the first block of the epoch process_block() call. So churnLimit must be computed at the end of the before epoch
+  // transition and the result is valid until the end of the next epoch transition
+  const churnLimit = getChurnLimit(config, currentShuffling.activeIndices.length);
+  if (exitQueueChurn >= churnLimit) {
+    exitQueueEpoch += 1;
+    exitQueueChurn = 0;
+  }
 
   return new EpochContext({
     config,
@@ -141,6 +196,9 @@ export function createEpochContext(
     syncParticipantReward,
     syncProposerReward,
     baseRewardPerIncrement,
+    churnLimit,
+    exitQueueEpoch,
+    exitQueueChurn,
   });
 }
 
@@ -148,6 +206,8 @@ export function createEpochContext(
  * Checks the pubkey indices against a state and adds missing pubkeys
  *
  * Mutates `pubkey2index` and `index2pubkey`
+ *
+ * If pubkey caches are empty: SLOW CODE - 🐢
  */
 export function syncPubkeys(
   state: allForks.BeaconState,
@@ -200,20 +260,46 @@ export function computeSyncParticipantReward(config: IBeaconConfig, totalActiveB
  * Called to re-use information, such as the shuffling of the next epoch, after transitioning into a
  * new epoch.
  */
-export function rotateEpochs(
-  epochCtx: EpochContext,
-  state: allForks.BeaconState,
-  indicesBounded: [ValidatorIndex, Epoch, Epoch][]
-): void {
+export function afterProcessEpoch(state: CachedBeaconState<allForks.BeaconState>, epochProcess: IEpochProcess): void {
+  const {epochCtx} = state;
   epochCtx.previousShuffling = epochCtx.currentShuffling;
   epochCtx.currentShuffling = epochCtx.nextShuffling;
   const currEpoch = epochCtx.currentShuffling.epoch;
   const nextEpoch = currEpoch + 1;
-  epochCtx.nextShuffling = computeEpochShuffling(state, indicesBounded, nextEpoch);
+  epochCtx.nextShuffling = computeEpochShuffling(
+    state,
+    epochProcess.nextEpochShufflingActiveValidatorIndices,
+    nextEpoch
+  );
   epochCtx.proposers = computeProposers(state, epochCtx.currentShuffling);
 
+  // TODO: DEDUPLICATE from createEpochContext
+  //
+  // Precompute churnLimit for efficient initiateValidatorExit() during block proposing MUST be recompute everytime the
+  // active validator indices set changes in size. Validators change active status only when:
+  // - validator.activation_epoch is set. Only changes in process_registry_updates() if validator can be activated. If
+  //   the value changes it will be set to `epoch + 1 + MAX_SEED_LOOKAHEAD`.
+  // - validator.exit_epoch is set. Only changes in initiate_validator_exit() if validator exits. If the value changes,
+  //   it will be set to at least `epoch + 1 + MAX_SEED_LOOKAHEAD`.
+  // ```
+  // is_active_validator = validator.activation_epoch <= epoch < validator.exit_epoch
+  // ```
+  // So the returned value of is_active_validator(epoch) is guaranteed to not change during `MAX_SEED_LOOKAHEAD` epochs.
+  //
+  // activeIndices size is dependant on the state epoch. The epoch is advanced after running the epoch transition, and
+  // the first block of the epoch process_block() call. So churnLimit must be computed at the end of the before epoch
+  // transition and the result is valid until the end of the next epoch transition
+  epochCtx.churnLimit = getChurnLimit(epochCtx.config, epochCtx.currentShuffling.activeIndices.length);
+
+  // Maybe advance exitQueueEpoch at the end of the epoch if there haven't been any exists for a while
+  const exitQueueEpoch = computeActivationExitEpoch(currEpoch);
+  if (exitQueueEpoch > epochCtx.exitQueueEpoch) {
+    epochCtx.exitQueueEpoch = exitQueueEpoch;
+    epochCtx.exitQueueChurn = 0;
+  }
+
   if (currEpoch >= epochCtx.config.ALTAIR_FORK_EPOCH) {
-    const totalActiveBalance = getTotalActiveBalance(state);
+    const totalActiveBalance = getTotalBalance(state, epochCtx.currentShuffling.activeIndices);
     epochCtx.syncParticipantReward = computeSyncParticipantReward(epochCtx.config, totalActiveBalance);
     epochCtx.syncProposerReward =
       (epochCtx.syncParticipantReward * PROPOSER_WEIGHT) / (WEIGHT_DENOMINATOR - PROPOSER_WEIGHT);
@@ -233,35 +319,82 @@ interface IEpochContextData {
   syncParticipantReward: Gwei;
   syncProposerReward: Gwei;
   baseRewardPerIncrement: Gwei;
+  churnLimit: number;
+  exitQueueEpoch: Epoch;
+  exitQueueChurn: number;
 }
 
 /**
- * The standard / Exchange Interface of EpochContext, this is what's exported from
- * lodestar-beacon-state-transition.
- * A collection of contextual information to re-use during an epoch, and rotating precomputed data of
- * the next epoch into the current epoch. This includes shuffling, but also proposer information is
- * available.
+ * Cached persisted data constant through an epoch attached to a state:
+ * - pubkey cache
+ * - proposer indexes
+ * - shufflings
+ *
+ * This data is used for faster processing of the beacon-state-transition-function plus gossip and API validation.
  **/
 export class EpochContext {
-  // TODO: this is a hack, we need a safety mechanism in case a bad eth1 majority vote is in,
-  // or handle non finalized data differently, or use an immutable.js structure for cheap copies
-  // Warning: may contain pubkeys that do not yet exist in the current state, but do in a later processed state.
+  config: IBeaconConfig;
+  /**
+   * Unique globally shared pubkey registry. There should only exist one for the entire application.
+   *
+   * TODO: this is a hack, we need a safety mechanism in case a bad eth1 majority vote is in,
+   * or handle non finalized data differently, or use an immutable.js structure for cheap copies
+   * Warning: may contain pubkeys that do not yet exist in the current state, but do in a later processed state.
+   *
+   * $VALIDATOR_COUNT x 192 char String -> Number Map
+   */
   pubkey2index: PubkeyIndexMap;
-  // Warning: may contain indices that do not yet exist in the current state, but do in a later processed state.
+  /**
+   * Unique globally shared pubkey registry. There should only exist one for the entire application.
+   *
+   * Warning: may contain indices that do not yet exist in the current state, but do in a later processed state.
+   *
+   * $VALIDATOR_COUNT x BLST deserialized pubkey (Jacobian coordinates)
+   */
   index2pubkey: PublicKey[];
-  proposers: number[];
-  // Per spec definition, shuffling will always be defined. They are never called before loadState()
+  /**
+   * Indexes of the block proposers for the current epoch.
+   *
+   * 32 x Number
+   */
+  proposers: ValidatorIndex[];
+  /**
+   * Shuffling of validator indexes. Immutable through the epoch, then it's replaced entirely.
+   * Note: Per spec definition, shuffling will always be defined. They are never called before loadState()
+   *
+   * $VALIDATOR_COUNT x Number
+   */
   previousShuffling: IEpochShuffling;
+  /** Same as previousShuffling */
   currentShuffling: IEpochShuffling;
+  /** Same as previousShuffling */
   nextShuffling: IEpochShuffling;
   syncParticipantReward: phase0.Gwei;
   syncProposerReward: phase0.Gwei;
-  config: IBeaconConfig;
   /**
    * Update freq: once per epoch after `process_effective_balance_updates()`
    * Memory cost: 1 bigint
    */
   baseRewardPerIncrement: Gwei;
+  /**
+   * Rate at which validators can enter or leave the set per epoch. Depends only on activeIndexes, so it does not
+   * change through the epoch. It's used in initiateValidatorExit(). Must be update after changing active indexes.
+   */
+  churnLimit: number;
+  /**
+   * Closest epoch with available churn for validators to exit at. May be updated every block as validators are
+   * initiateValidatorExit(). This value may vary on each fork of the state.
+   *
+   * NOTE: Changes block to block
+   */
+  exitQueueEpoch: Epoch;
+  /**
+   * Number of validators initiating an exit at exitQueueEpoch. May be updated every block as validators are
+   * initiateValidatorExit(). This value may vary on each fork of the state.
+   *
+   * NOTE: Changes block to block
+   */
+  exitQueueChurn: number;
 
   constructor(data: IEpochContextData) {
     this.config = data.config;
@@ -274,6 +407,9 @@ export class EpochContext {
     this.syncParticipantReward = data.syncParticipantReward;
     this.syncProposerReward = data.syncProposerReward;
     this.baseRewardPerIncrement = data.baseRewardPerIncrement;
+    this.churnLimit = data.churnLimit;
+    this.exitQueueEpoch = data.exitQueueEpoch;
+    this.exitQueueChurn = data.exitQueueChurn;
   }
 
   /**

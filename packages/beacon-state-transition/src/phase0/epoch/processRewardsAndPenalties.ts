@@ -4,13 +4,22 @@ import {phase0} from "@chainsafe/lodestar-types";
 import {CachedBeaconState, IEpochProcess} from "../../allForks/util";
 import {getAttestationDeltas} from "./getAttestationDeltas";
 
-export function processRewardsAndPenalties(state: CachedBeaconState<phase0.BeaconState>, process: IEpochProcess): void {
+/**
+ * Iterate over all validator and compute rewards and penalties to apply to balances.
+ *
+ * PERF: Cost = 'proportional' to $VALIDATOR_COUNT. Extra work is done per validator the more status flags
+ * are true, worst case: FLAG_UNSLASHED + FLAG_ELIGIBLE_ATTESTER + FLAG_PREV_*
+ */
+export function processRewardsAndPenalties(
+  state: CachedBeaconState<phase0.BeaconState>,
+  epochProcess: IEpochProcess
+): void {
   const {balances} = state;
   // No rewards are applied at the end of `GENESIS_EPOCH` because rewards are for work done in the previous epoch
-  if (process.currentEpoch === GENESIS_EPOCH) {
+  if (epochProcess.currentEpoch === GENESIS_EPOCH) {
     return;
   }
-  const [rewards, penalties] = getAttestationDeltas(state, process);
+  const [rewards, penalties] = getAttestationDeltas(state, epochProcess);
   const newBalances = new BigUint64Array(balances.length);
   balances.forEach((balance, i) => {
     const newBalance = balance + BigInt(rewards[i] - penalties[i]);
@@ -23,5 +32,5 @@ export function processRewardsAndPenalties(state: CachedBeaconState<phase0.Beaco
   // set them all at once, constructing the tree in one go
   balances.updateAll(newBalances);
   // cache the balances array, too
-  process.balances = newBalances;
+  epochProcess.balances = newBalances;
 }

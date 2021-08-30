@@ -5,15 +5,16 @@ import * as phase0 from "../phase0";
 import * as altair from "../altair";
 import {IBeaconStateTransitionMetrics} from "../metrics";
 import {verifyProposerSignature} from "./signatureSets";
-import {CachedBeaconState, IEpochProcess, rotateEpochs} from "./util";
+import {beforeProcessEpoch, CachedBeaconState, IEpochProcess, afterProcessEpoch} from "./util";
 import {processSlot} from "./slot";
 import {computeEpochAtSlot} from "../util";
+import {toHexString} from "@chainsafe/ssz";
 
 type StateAllForks = CachedBeaconState<allForks.BeaconState>;
 type StatePhase0 = CachedBeaconState<phase0Types.BeaconState>;
 
 type ProcessBlockFn = (state: StateAllForks, block: allForks.BeaconBlock, verifySignatures: boolean) => void;
-type ProcessEpochFn = (state: StateAllForks) => IEpochProcess;
+type ProcessEpochFn = (state: StateAllForks, epochProcess: IEpochProcess) => void;
 
 const processBlockByFork: Record<ForkName, ProcessBlockFn> = {
   [ForkName.phase0]: phase0.processBlock as ProcessBlockFn,
@@ -63,7 +64,11 @@ export function stateTransition(
   // Verify state root
   if (verifyStateRoot) {
     if (!ssz.Root.equals(block.stateRoot, postState.tree.root)) {
-      throw new Error("Invalid state root");
+      throw new Error(
+        `Invalid state root at slot ${block.slot}, expected=${toHexString(block.stateRoot)}, actual=${toHexString(
+          postState.tree.root
+        )}`
+      );
     }
   }
 
@@ -140,11 +145,12 @@ function processSlotsWithTransientCache(
       const fork = postState.config.getForkName(postState.slot);
       const timer = metrics?.stfnEpochTransition.startTimer();
       try {
-        const process = processEpochByFork[fork](postState);
-        metrics?.registerValidatorStatuses(process.currentEpoch, process.statuses);
+        const epochProcess = beforeProcessEpoch(postState);
+        processEpochByFork[fork](postState, epochProcess);
+        metrics?.registerValidatorStatuses(epochProcess.currentEpoch, epochProcess.statuses);
 
         postState.slot++;
-        rotateEpochs(postState.epochCtx, postState, process.indicesBounded);
+        afterProcessEpoch(postState, epochProcess);
       } finally {
         if (timer) timer();
       }

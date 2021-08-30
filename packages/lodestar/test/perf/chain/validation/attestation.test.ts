@@ -5,11 +5,7 @@ import {generateTestCachedBeaconStateOnlyValidators} from "@chainsafe/lodestar-b
 import {getAttestationValidData} from "../../../utils/validationData/attestation";
 
 describe("validate gossip attestation", () => {
-  setBenchOpts({
-    maxMs: 60 * 1000,
-    minMs: 2 * 1000,
-    runs: 1024,
-  });
+  setBenchOpts({maxMs: 60 * 1000});
 
   const vc = 64;
   const stateSlot = 100;
@@ -22,23 +18,13 @@ describe("validate gossip attestation", () => {
   const attStruct = attestation;
   const attTreeBacked = ssz.phase0.Attestation.createTreeBackedFromStruct(attStruct);
 
-  itBench({
-    id: "validate gossip attestation - struct",
-    beforeEach: () => {
-      chain.seenAttesters["validatorIndexesByEpoch"].clear();
-    },
-    fn: async () => {
-      await validateGossipAttestation(chain, attStruct, subnet);
-    },
-  });
-
-  itBench({
-    id: "validate gossip attestation - treeBacked",
-    beforeEach: () => {
-      chain.seenAttesters["validatorIndexesByEpoch"].clear();
-    },
-    fn: async () => {
-      await validateGossipAttestation(chain, attTreeBacked, subnet);
-    },
-  });
+  for (const [id, att] of Object.entries({struct: attStruct, treeBacked: attTreeBacked})) {
+    itBench({
+      id: `validate gossip attestation - ${id}`,
+      beforeEach: () => chain.seenAttesters["validatorIndexesByEpoch"].clear(),
+      fn: async () => {
+        await validateGossipAttestation(chain, att, subnet);
+      },
+    });
+  }
 });

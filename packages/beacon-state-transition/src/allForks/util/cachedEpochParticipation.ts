@@ -16,6 +16,7 @@ const TIMELY_SOURCE = 1 << TIMELY_SOURCE_FLAG_INDEX;
 const TIMELY_TARGET = 1 << TIMELY_TARGET_FLAG_INDEX;
 const TIMELY_HEAD = 1 << TIMELY_HEAD_FLAG_INDEX;
 
+// TODO: No need to do math! All these operations can be cached before hand in a giant if
 export function toParticipationFlags(data: IParticipationStatus): ParticipationFlags {
   return (
     ((data.timelySource && TIMELY_SOURCE) as number) |

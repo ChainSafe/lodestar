@@ -1,19 +1,8 @@
-/* eslint-disable @typescript-eslint/naming-convention */
-import {IBeaconParamsUnparsed} from "../config/types";
+import {pyrmontChainConfig} from "@chainsafe/lodestar-config/networks";
+
+export const chainConfig = pyrmontChainConfig;
 
 /* eslint-disable max-len */
-
-export const beaconParams: IBeaconParamsUnparsed = {
-  DEPOSIT_CONTRACT_ADDRESS: "0x8c5fecdC472E27Bc447696F431E425D02dd46a8c",
-
-  // Ethereum Goerli testnet
-  DEPOSIT_CHAIN_ID: 5,
-  DEPOSIT_NETWORK_ID: 5,
-
-  MIN_GENESIS_TIME: 1605700800, // Wednesday, November 18, 2020 12:00:00 PM UTC
-  GENESIS_DELAY: 432000,
-  GENESIS_FORK_VERSION: "0x00002009",
-};
 
 export const depositContractDeployBlock = 3743587;
 export const genesisFileUrl = "https://raw.githubusercontent.com/ChainSafe/pyrmont/master/genesis.ssz";

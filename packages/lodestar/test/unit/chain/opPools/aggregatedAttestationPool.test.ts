@@ -1,6 +1,7 @@
 import {bls, SecretKey} from "@chainsafe/bls";
 import {initBLS} from "@chainsafe/lodestar-cli/src/util";
 import {createIChainForkConfig, defaultChainConfig} from "@chainsafe/lodestar-config";
+import {allForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {List} from "@chainsafe/ssz";
 import {expect} from "chai";
@@ -13,34 +14,35 @@ import {
 import {InsertOutcome} from "../../../../src/chain/opPools/types";
 import {generateAttestation, generateEmptyAttestation} from "../../../utils/attestation";
 import {generateCachedState} from "../../../utils/state";
-// eslint-disable-next-line no-restricted-imports
-import * as attestationUtils from "@chainsafe/lodestar-beacon-state-transition/lib/phase0/block/processAttestation";
-import {SinonStubFn} from "../../../utils/types";
 import sinon from "sinon";
 
 describe("AggregatedAttestationPool", function () {
   let pool: AggregatedAttestationPool;
   const altairForkEpoch = 2020;
-  const currentSlot = SLOTS_PER_EPOCH * (altairForkEpoch + 10);
+  const currentEpoch = altairForkEpoch + 10;
+  const currentSlot = SLOTS_PER_EPOCH * currentEpoch;
   // eslint-disable-next-line @typescript-eslint/naming-convention
   const config = createIChainForkConfig(Object.assign({}, defaultChainConfig, {ALTAIR_FORK_EPOCH: altairForkEpoch}));
-  let validateAttestationStub: SinonStubFn<typeof attestationUtils["validateAttestation"]>;
-  const altairState = generateCachedState({slot: currentSlot}, config, true);
-  const attestation = generateAttestation({data: {slot: currentSlot - 2}});
+  const originalState = generateCachedState({slot: currentSlot + 1}, config, true);
+  let altairState: allForks.CachedBeaconState<allForks.BeaconState>;
+  const attestation = generateAttestation({data: {slot: currentSlot, target: {epoch: currentEpoch}}});
+  const committee = [0, 1, 2, 3];
 
   before(async function () {
     await initBLS();
   });
 
   beforeEach(() => {
-    validateAttestationStub = sinon.stub(attestationUtils, "validateAttestation");
     pool = new AggregatedAttestationPool();
+    altairState = originalState.clone();
   });
 
   this.afterEach(() => {
     sinon.restore();
   });
 
+  // previousEpochParticipation and currentEpochParticipation is created inside generateCachedState
+  // 0 and 1 are fully participated
   const testCases: {name: string; attestingIndices: number[]; expected: phase0.Attestation[]}[] = [
     {name: "all validators are seen", attestingIndices: [0, 1], expected: []},
     {name: "all validators are NOT seen", attestingIndices: [2, 3], expected: [attestation]},
@@ -49,12 +51,18 @@ describe("AggregatedAttestationPool", function () {
 
   for (const {name, attestingIndices, expected} of testCases) {
     it(name, function () {
-      validateAttestationStub.returns();
-      const committee = [0, 1, 2, 3];
       pool.add(attestation, attestingIndices, committee);
       expect(pool.getAttestationsForBlock(altairState)).to.be.deep.equal(expected, "incorrect returned attestations");
     });
   }
+
+  it("incorrect source", function () {
+    altairState.currentJustifiedCheckpoint.epoch = 1000;
+    // all attesters are not seen
+    const attestingIndices = [2, 3];
+    pool.add(attestation, attestingIndices, committee);
+    expect(pool.getAttestationsForBlock(altairState)).to.be.deep.equal([], "no attestation since incorrect source");
+  });
 });
 
 describe("MatchingDataAttestationGroup", function () {
@@ -72,7 +80,7 @@ describe("MatchingDataAttestationGroup", function () {
   });
 
   beforeEach(() => {
-    attestationGroup = new MatchingDataAttestationGroup(committee);
+    attestationGroup = new MatchingDataAttestationGroup(committee, attestation1.data);
     attestationGroup.add({
       attestation: attestation1,
       attestingIndices: new Set([100, 200]),

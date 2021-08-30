@@ -7,6 +7,7 @@ describe("options / beaconNodeOptions", () => {
   it("Should parse BeaconNodeArgs", () => {
     // Cast to match the expected fully defined type
     const beaconNodeArgsPartial = {
+      "api.maxGindicesInProof": 1000,
       "api.rest.api": [],
       "api.rest.cors": "*",
       "api.rest.enabled": true,
@@ -45,6 +46,7 @@ describe("options / beaconNodeOptions", () => {
 
     const expectedOptions: RecursivePartial<IBeaconNodeOptions> = {
       api: {
+        maxGindicesInProof: 1000,
         rest: {
           api: [],
           cors: "*",

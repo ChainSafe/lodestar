@@ -1,19 +1,12 @@
-import {altair, ssz} from "@chainsafe/lodestar-types";
-import {expect} from "chai";
+import {altair} from "@chainsafe/lodestar-types";
+import {createIChainForkConfig} from "@chainsafe/lodestar-config";
+import {IBaseSpecTest} from "../type";
 
-/**
- * Compare each field in BeaconState to help debug failed test easier.
- */
-export function expectEqualBeaconState(expected: altair.BeaconState, actual: altair.BeaconState): void {
-  const fields = ssz.altair.BeaconState.fields;
-  for (const field of Object.keys(fields)) {
-    expect(
-      ssz.altair.BeaconState.fields[field].equals(
-        (actual as Record<string, any>)[field],
-        (expected as Record<string, any>)[field]
-      ),
-      `Failed at ${field} field`
-    ).to.be.true;
-  }
-  expect(ssz.altair.BeaconState.equals(actual, expected)).to.be.true;
+export interface IAltairStateTestCase extends IBaseSpecTest {
+  pre: altair.BeaconState;
+  post: altair.BeaconState;
 }
+
+/** Config with `ALTAIR_FORK_EPOCH: 0` */
+// eslint-disable-next-line @typescript-eslint/naming-convention
+export const config = createIChainForkConfig({ALTAIR_FORK_EPOCH: 0});

@@ -40,8 +40,8 @@ export function getAttestationValidData(
 ): {chain: IBeaconChain; attestation: phase0.Attestation; subnet: number; validatorIndex: number} {
   const currentSlot = opts.currentSlot ?? 100;
   const attSlot = opts.attSlot ?? currentSlot;
-  const attIndex = opts.attIndex ?? 1;
-  const bitIndex = opts.bitIndex ?? 1;
+  const attIndex = opts.attIndex ?? 0;
+  const bitIndex = opts.bitIndex ?? 0;
   const targetRoot = opts.targetRoot ?? ZERO_HASH;
   const beaconBlockRoot = opts.beaconBlockRoot ?? ZERO_HASH;
   // Create cached state

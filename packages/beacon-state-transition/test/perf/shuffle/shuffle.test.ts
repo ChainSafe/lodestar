@@ -7,11 +7,7 @@ import {unshuffleList} from "../../../src";
 // 4000000  1.5617 s   4.9690 s  (x3)
 
 describe("shuffle list", () => {
-  setBenchOpts({
-    maxMs: 30 * 1000,
-    minMs: 10 * 1000,
-    runs: 512,
-  });
+  setBenchOpts({maxMs: 30 * 1000});
 
   // eslint-disable-next-line @typescript-eslint/naming-convention
   const seed = new Uint8Array([42, 32]);
@@ -22,13 +18,15 @@ describe("shuffle list", () => {
     // Don't run 4_000_000 since it's very slow and not testnet has gotten there yet
     // 4e6,
   ]) {
-    const input: number[] = [];
-    for (let i = 0; i < listSize; i++) {
-      input[i] = i;
-    }
-
-    itBench(`shuffle list - ${listSize} els`, () => {
-      unshuffleList(input, seed);
+    itBench<number[], number[]>({
+      id: `shuffle list - ${listSize} els`,
+      before: () => {
+        const input: number[] = [];
+        for (let i = 0; i < listSize; i++) input[i] = i;
+        return input;
+      },
+      beforeEach: (input) => input,
+      fn: (input) => unshuffleList(input, seed),
     });
   }
 });

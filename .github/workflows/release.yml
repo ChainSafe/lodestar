@@ -42,9 +42,9 @@ jobs:
     steps:
       # <common-build> - Uses YAML anchors in the future
       - uses: actions/checkout@v2
-      - uses: actions/setup-node@v2-beta
+      - uses: actions/setup-node@v2
         with:
-          node-version: "14.16.0"
+          node-version: "lts/fermium"
       - name: Restore dependencies
         uses: actions/cache@master
         id: cache-deps
@@ -52,7 +52,7 @@ jobs:
           path: |
             node_modules
             packages/*/node_modules
-          key: ${{ runner.os }}-${{ hashFiles('**/yarn.lock') }}-ignore-optional-14.16.0
+          key: ${{ runner.os }}-${{ hashFiles('**/yarn.lock') }}-ignore-optional-fermium
       - name: Install & build
         if: steps.cache-deps.outputs.cache-hit != 'true'
         run: yarn install --frozen-lockfile --ignore-optional
@@ -116,6 +116,7 @@ jobs:
     if: needs.tag.outputs.tag != ''
     steps:
       - uses: actions/checkout@v2
+      - run: scripts/await-release.sh ${{ needs.tag.outputs.tag }} 900
       - name: Login to Docker Hub
         uses: docker/login-action@v1
         with:

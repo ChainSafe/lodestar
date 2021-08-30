@@ -18,13 +18,9 @@ import {
 // ✓ getPubkeys - persistent - req 100 vs - 200000 vc                    395100.8 ops/s    2.531000 us/op        -     714562 runs   2.05 s
 // ✓ getPubkeys - persistent - req 1000 vs - 200000 vc                   56593.10 ops/s    17.67000 us/op        -     111477 runs   2.00 s
 
-enum Impl {
-  index2pubkey,
-  validatorsArr,
-  persistent,
-}
-
 describe("api / impl / validator", () => {
+  setBenchOpts({maxMs: 10 * 1000});
+
   let state: ReturnType<typeof generatePerfTestCachedStatePhase0>;
 
   before(function () {
@@ -32,48 +28,47 @@ describe("api / impl / validator", () => {
     state = generatePerfTestCachedStatePhase0();
   });
 
-  setBenchOpts({
-    maxMs: 10 * 1000,
-    minMs: 2 * 1000,
-    runs: 1024,
-  });
-
-  // Only run for 1000 in CI to ensure performance does not degrade
   const reqCounts = process.env.CI ? [1000] : [1, 100, 1000];
-  const impls = process.env.CI ? [Impl.persistent] : [Impl.index2pubkey, Impl.validatorsArr, Impl.persistent];
 
-  if (impls.includes(Impl.index2pubkey)) {
-    for (const reqCount of reqCounts) {
-      itBench(`getPubkeys - index2pubkey - req ${reqCount} vs - ${numValidators} vc`, () => {
+  for (const reqCount of reqCounts) {
+    itBench({
+      id: `getPubkeys - index2pubkey - req ${reqCount} vs - ${numValidators} vc`,
+      threshold: Infinity,
+      fn: () => {
         for (let i = 0; i < reqCount; i++) {
           const pubkey = state.index2pubkey[i];
           pubkey.toBytes(PointFormat.compressed);
         }
-      });
-    }
+      },
+    });
   }
 
-  if (impls.includes(Impl.validatorsArr)) {
-    for (const reqCount of reqCounts) {
-      itBench(`getPubkeys - validatorsArr - req ${reqCount} vs - ${numValidators} vc`, () => {
+  for (const reqCount of reqCounts) {
+    itBench({
+      id: `getPubkeys - validatorsArr - req ${reqCount} vs - ${numValidators} vc`,
+      threshold: Infinity,
+      fn: () => {
         for (let i = 0; i < reqCount; i++) {
           const validator = state.validators[i];
           validator.pubkey;
         }
-      });
-    }
+      },
+    });
   }
 
-  if (impls.includes(Impl.persistent)) {
-    for (const reqCount of reqCounts) {
-      itBench(`getPubkeys - persistent - req ${reqCount} vs - ${numValidators} vc`, () => {
+  for (const reqCount of reqCounts) {
+    itBench({
+      id: `getPubkeys - persistent - req ${reqCount} vs - ${numValidators} vc`,
+      // Only track regressions for 1000 in CI to ensure performance does not degrade
+      threshold: reqCount < 1000 ? Infinity : undefined,
+      fn: () => {
         const validators = state.validators.persistent;
         for (let i = 0; i < reqCount; i++) {
           const validator = validators.get(i);
           if (!validator) throw Error(`Index ${i} not found`);
           validator.pubkey;
         }
-      });
-    }
+      },
+    });
   }
 });

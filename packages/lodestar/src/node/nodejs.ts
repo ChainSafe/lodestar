@@ -165,7 +165,7 @@ export class BeaconNode {
       logger: logger.child(opts.logger.chores),
     });
 
-    const api = getApi({
+    const api = getApi(opts.api, {
       config,
       logger: logger.child(opts.logger.api),
       db,

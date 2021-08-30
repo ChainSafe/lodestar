@@ -20,6 +20,7 @@ export type FetchOpts = {
   method: RouteDef["method"];
   query?: ReqGeneric["query"];
   body?: ReqGeneric["body"];
+  headers?: ReqGeneric["headers"];
 };
 
 export interface IHttpClient {
@@ -74,11 +75,16 @@ export class HttpClient implements IHttpClient {
 
     try {
       const url = urlJoin(this.baseUrl, opts.url) + (opts.query ? "?" + stringifyQuery(opts.query) : "");
-      const bodyArgs = opts.body
-        ? {headers: {"Content-Type": "application/json"}, body: JSON.stringify(opts.body)}
-        : {};
 
-      const res = await this.fetch(url, {method: opts.method, ...bodyArgs, signal: controller.signal});
+      const headers = opts.headers || {};
+      if (opts.body) headers["Content-Type"] = "application/json";
+
+      const res = await this.fetch(url, {
+        method: opts.method,
+        headers: headers as Record<string, string>,
+        body: opts.body ? JSON.stringify(opts.body) : undefined,
+        signal: controller.signal,
+      });
 
       if (!res.ok) {
         const errBody = await res.text();

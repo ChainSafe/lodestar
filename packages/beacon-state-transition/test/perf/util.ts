@@ -1,24 +1,17 @@
+import fs from "fs";
+import path from "path";
 import {config} from "@chainsafe/lodestar-config/default";
-import {Gwei, phase0, ssz, Slot, ValidatorIndex, altair, ParticipationFlags} from "@chainsafe/lodestar-types";
+import {Gwei, phase0, ssz, Slot, altair, ParticipationFlags} from "@chainsafe/lodestar-types";
 import bls, {CoordType, PublicKey, SecretKey} from "@chainsafe/bls";
-import {fromHexString, List, TreeBacked, hash} from "@chainsafe/ssz";
-import {
-  allForks,
-  interopSecretKey,
-  computeEpochAtSlot,
-  computeProposerIndex,
-  getActiveValidatorIndices,
-  getCurrentEpoch,
-  getSeed,
-} from "../../src";
-import {createIChainForkConfig} from "@chainsafe/lodestar-config";
-import {computeCommitteeCount, PubkeyIndexMap} from "../../src/allForks";
+import {fromHexString, List, TreeBacked} from "@chainsafe/ssz";
+import {allForks, interopSecretKey, computeEpochAtSlot, getActiveValidatorIndices} from "../../src";
+import {createIChainForkConfig, IChainForkConfig} from "@chainsafe/lodestar-config";
+import {CachedBeaconState, computeCommitteeCount, createCachedBeaconState, PubkeyIndexMap} from "../../src/allForks";
 import {profilerLogger} from "../utils/logger";
 import {interopPubkeysCached} from "../utils/interop";
 import {PendingAttestation} from "@chainsafe/lodestar-types/phase0";
-import {intDiv, intToBytes} from "@chainsafe/lodestar-utils";
+import {intDiv} from "@chainsafe/lodestar-utils";
 import {
-  DOMAIN_BEACON_PROPOSER,
   EPOCHS_PER_ETH1_VOTING_PERIOD,
   EPOCHS_PER_HISTORICAL_VECTOR,
   MAX_ATTESTATIONS,
@@ -29,7 +22,11 @@ import {
   TIMELY_SOURCE_FLAG_INDEX,
   TIMELY_TARGET_FLAG_INDEX,
 } from "@chainsafe/lodestar-params";
-import {getNextSyncCommittee} from "../../src/altair/epoch/sync_committee";
+import {NetworkName, networksChainConfig} from "@chainsafe/lodestar-config/networks";
+import {getClient} from "@chainsafe/lodestar-api";
+import {getNextSyncCommittee} from "../../src/altair/util/syncCommittee";
+import {getInfuraUrl} from "./infura";
+import {testCachePath} from "../cache";
 
 let phase0State: TreeBacked<phase0.BeaconState> | null = null;
 let phase0CachedState23637: allForks.CachedBeaconState<phase0.BeaconState> | null = null;
@@ -183,7 +180,9 @@ export function generatePerformanceStateAltair(pubkeysArg?: Uint8Array[]): TreeB
       () => fullParticpation
     ) as List<ParticipationFlags>;
     state.inactivityScores = Array.from({length: pubkeys.length}, (_, i) => i % 2) as List<ParticipationFlags>;
-    const syncCommittee = getNextSyncCommittee(state);
+    const epoch = computeEpochAtSlot(state.slot);
+    const activeValidatorIndices = getActiveValidatorIndices(state, epoch);
+    const syncCommittee = getNextSyncCommittee(state, activeValidatorIndices);
     state.currentSyncCommittee = syncCommittee;
     state.nextSyncCommittee = syncCommittee;
     altairState = ssz.altair.BeaconState.createTreeBackedFromStruct(state);
@@ -264,11 +263,9 @@ export function generatePerformanceStatePhase0(pubkeysArg?: Uint8Array[]): TreeB
 export function generatePerformanceBlockPhase0(): TreeBacked<phase0.SignedBeaconBlock> {
   if (!phase0SignedBlock) {
     const block = ssz.phase0.SignedBeaconBlock.defaultValue();
-    const parentState = generatePerformanceStatePhase0();
-    const newState = parentState.clone();
-    newState.slot++;
-    block.message.slot = newState.slot;
-    block.message.proposerIndex = getBeaconProposerIndex(newState);
+    const parentState = generatePerfTestCachedStatePhase0();
+    block.message.slot = parentState.slot;
+    block.message.proposerIndex = parentState.getBeaconProposer(parentState.slot);
     block.message.parentRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(parentState.latestBlockHeader);
     block.message.stateRoot = fromHexString("0x6c86ca3c4c6688cf189421b8a68bf2dbc91521609965e6f4e207d44347061fee");
     block.message.body.randaoReveal = fromHexString(
@@ -347,17 +344,6 @@ function buildPerformanceStateAllForks(state: allForks.BeaconState, pubkeysArg?:
   return state;
 }
 
-/**
- * TODO - PERFORMANCE WARNING - NAIVE CODE
- * Return the beacon proposer index at ``state.slot``.
- */
-function getBeaconProposerIndex(state: allForks.BeaconState): ValidatorIndex {
-  const currentEpoch = getCurrentEpoch(state);
-  const seed = hash(Buffer.concat([getSeed(state, currentEpoch, DOMAIN_BEACON_PROPOSER), intToBytes(state.slot, 8)]));
-  const indices = getActiveValidatorIndices(state, currentEpoch);
-  return computeProposerIndex(state, indices, seed);
-}
-
 export function generateTestCachedBeaconStateOnlyValidators({
   vc,
   slot,
@@ -406,4 +392,74 @@ export function generateTestCachedBeaconStateOnlyValidators({
     index2pubkey,
     skipSyncPubkeys: true,
   });
+}
+
+const initialValue = null;
+export type LazyValue<T> = {value: T};
+
+/**
+ * Register a callback to compute a value in the before() block of mocha tests
+ * ```ts
+ * const state = beforeValue(() => getState())
+ * it("test", () => {
+ *   doTest(state.value)
+ * })
+ * ```
+ */
+export function beforeValue<T>(fn: () => T | Promise<T>, timeout?: number): LazyValue<T> {
+  let value: T = (initialValue as unknown) as T;
+
+  before(async function () {
+    this.timeout(timeout ?? 300_000);
+    value = await fn();
+  });
+
+  return new Proxy<{value: T}>(
+    {value},
+    {
+      get: function (target, prop) {
+        if (prop === "value") {
+          if (value === initialValue) {
+            throw Error("beforeValue has not yet run the before() block");
+          } else {
+            return value;
+          }
+        } else {
+          return undefined;
+        }
+      },
+    }
+  );
+}
+
+/**
+ * Create a network config from known network params
+ */
+export function getNetworkConfig(network: NetworkName): IChainForkConfig {
+  const configNetwork = networksChainConfig[network];
+  return createIChainForkConfig(configNetwork);
+}
+
+/**
+ * Download a state from Infura. Caches states in local fs by network and slot to only download once.
+ */
+export async function getNetworkCachedState(
+  network: NetworkName,
+  slot: number,
+  timeout?: number
+): Promise<CachedBeaconState<allForks.BeaconState>> {
+  const config = getNetworkConfig(network);
+
+  const filepath = path.join(testCachePath, `state_${network}_${slot}.ssz`);
+  let stateSsz: Uint8Array;
+  if (fs.existsSync(filepath)) {
+    stateSsz = fs.readFileSync(filepath);
+  } else {
+    const client = getClient(config, {baseUrl: getInfuraUrl(network), timeoutMs: timeout || 300_000});
+    stateSsz = await client.debug.getState(String(slot), "ssz");
+    fs.writeFileSync(filepath, stateSsz);
+  }
+
+  const stateTB = config.getForkTypes(slot).BeaconState.createTreeBackedFromBytes(stateSsz);
+  return createCachedBeaconState(config, stateTB);
 }

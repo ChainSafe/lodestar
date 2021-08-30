@@ -4,23 +4,22 @@ import {allForks} from "@chainsafe/lodestar-types";
 import {IBeaconNodeOptions} from "@chainsafe/lodestar";
 // eslint-disable-next-line no-restricted-imports
 import {getStateTypeFromBytes} from "@chainsafe/lodestar/lib/util/multifork";
-import {IChainForkConfig} from "@chainsafe/lodestar-config";
+import {IChainConfig, IChainForkConfig} from "@chainsafe/lodestar-config";
 import {RecursivePartial} from "@chainsafe/lodestar-utils";
-import {IBeaconParamsUnparsed} from "../config/types";
 import * as mainnet from "./mainnet";
 import * as pyrmont from "./pyrmont";
 import * as prater from "./prater";
-import * as altairDevnet2 from "./altair-devnet-2";
+import * as altairDevnet3 from "./altair-devnet-3";
 
-export type NetworkName = "mainnet" | "pyrmont" | "prater" | "dev" | "altair-devnet-2";
-export const networkNames: NetworkName[] = ["mainnet", "pyrmont", "prater", "altair-devnet-2"];
+export type NetworkName = "mainnet" | "pyrmont" | "prater" | "dev" | "altair-devnet-3";
+export const networkNames: NetworkName[] = ["mainnet", "pyrmont", "prater", "altair-devnet-3"];
 /** Networks that infura supports */
 export const infuraNetworks: NetworkName[] = ["mainnet", "pyrmont", "prater"];
 
 function getNetworkData(
   network: NetworkName
 ): {
-  beaconParams: IBeaconParamsUnparsed;
+  chainConfig: IChainConfig;
   depositContractDeployBlock: number;
   genesisFileUrl: string | null;
   bootnodesFileUrl: string;
@@ -33,8 +32,8 @@ function getNetworkData(
       return pyrmont;
     case "prater":
       return prater;
-    case "altair-devnet-2":
-      return altairDevnet2;
+    case "altair-devnet-3":
+      return altairDevnet3;
     default:
       throw Error(`Network not supported: ${network}`);
   }
@@ -51,13 +50,13 @@ export function getEth1ProviderUrl(networkId: number): string {
   }
 }
 
-export function getNetworkBeaconParams(network: NetworkName): IBeaconParamsUnparsed {
-  return getNetworkData(network).beaconParams;
+export function getNetworkBeaconParams(network: NetworkName): IChainConfig {
+  return getNetworkData(network).chainConfig;
 }
 
 export function getNetworkBeaconNodeOptions(network: NetworkName): RecursivePartial<IBeaconNodeOptions> {
-  const {depositContractDeployBlock, bootEnrs, beaconParams} = getNetworkData(network);
-  const networkId = parseInt((beaconParams.DEPOSIT_NETWORK_ID || 1) as string, 10);
+  const {depositContractDeployBlock, bootEnrs, chainConfig} = getNetworkData(network);
+  const networkId = parseInt(String(chainConfig.DEPOSIT_NETWORK_ID || 1), 10);
   return {
     eth1: {
       providerUrls: [getEth1ProviderUrl(networkId)],

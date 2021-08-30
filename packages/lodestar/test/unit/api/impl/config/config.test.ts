@@ -1,8 +1,9 @@
 // eslint-disable-next-line no-restricted-imports
-import * as params from "@chainsafe/lodestar-params/lib/activePreset";
-import {chainConfig, config} from "@chainsafe/lodestar-config/default";
+import {IChainConfig} from "@chainsafe/lodestar-config";
+import {config} from "@chainsafe/lodestar-config/default";
 import {expect} from "chai";
 import {getConfigApi} from "../../../../../src/api/impl/config";
+import {toJson} from "@chainsafe/lodestar-utils";
 
 describe("config api implementation", function () {
   let api: ReturnType<typeof getConfigApi>;
@@ -30,10 +31,13 @@ describe("config api implementation", function () {
   describe("getSpec", function () {
     it("should get the spec", async function () {
       const {data: spec} = await api.getSpec();
-      const expected: Record<string, unknown> = {...params, ...chainConfig};
-      delete expected.ACTIVE_PRESET;
-      delete expected.setActivePreset;
-      expect(spec).to.deep.equal(expected);
+      const specJson = (spec as unknown) as IChainConfig;
+
+      expect(toJson(specJson.SECONDS_PER_ETH1_BLOCK)).to.equal(14, "Wrong SECONDS_PER_ETH1_BLOCK");
+      expect(toJson(specJson.DEPOSIT_CONTRACT_ADDRESS)).to.equal(
+        "0x1234567890123456789012345678901234567890",
+        "Wrong DEPOSIT_CONTRACT_ADDRESS"
+      );
     });
   });
 });

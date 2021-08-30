@@ -1,6 +1,6 @@
 import {allForks, phase0} from "@chainsafe/lodestar-types";
 import {CachedBeaconState} from "../../allForks/util";
-import {processVoluntaryExit as processVoluntaryExitAllForks} from "../../allForks/block";
+import {processVoluntaryExitAllForks} from "../../allForks/block";
 import {BlockProcess} from "../../util/blockProcess";
 
 export function processVoluntaryExit(

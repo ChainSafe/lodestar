@@ -19,6 +19,8 @@ import {
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
 type SlotRoot = {slot: Slot; root: Root};
+export type StateFormat = "json" | "ssz";
+export const mimeTypeSSZ = "application/octet-stream";
 
 export type Api = {
   /**
@@ -35,7 +37,9 @@ export type Api = {
    * @param stateId State identifier.
    * Can be one of: "head" (canonical head in node's view), "genesis", "finalized", "justified", \<slot\>, \<hex encoded stateRoot with 0x prefix\>.
    */
-  getState(stateId: StateId): Promise<{data: allForks.BeaconState}>;
+  getState(stateId: StateId, format?: "json"): Promise<{data: allForks.BeaconState}>;
+  getState(stateId: StateId, format: "ssz"): Promise<Uint8Array>;
+  getState(stateId: StateId, format?: StateFormat): Promise<Uint8Array | {data: allForks.BeaconState}>;
 
   /**
    * Get full BeaconState object
@@ -45,7 +49,12 @@ export type Api = {
    * @param stateId State identifier.
    * Can be one of: "head" (canonical head in node's view), "genesis", "finalized", "justified", \<slot\>, \<hex encoded stateRoot with 0x prefix\>.
    */
-  getStateV2(stateId: StateId): Promise<{data: allForks.BeaconState; version: ForkName}>;
+  getStateV2(stateId: StateId, format?: "json"): Promise<{data: allForks.BeaconState; version: ForkName}>;
+  getStateV2(stateId: StateId, format: "ssz"): Promise<Uint8Array>;
+  getStateV2(
+    stateId: StateId,
+    format?: StateFormat
+  ): Promise<Uint8Array | {data: allForks.BeaconState; version: ForkName}>;
 
   /**
    * NOT IN SPEC
@@ -70,16 +79,19 @@ export const routesData: RoutesData<Api> = {
 
 export type ReqTypes = {
   getHeads: ReqEmpty;
-  getState: {params: {stateId: string}};
-  getStateV2: {params: {stateId: string}};
+  getState: {params: {stateId: string}; headers: {accept?: string}};
+  getStateV2: {params: {stateId: string}; headers: {accept?: string}};
   connectToPeer: {params: {peerId: string}; body: string[]};
   disconnectPeer: {params: {peerId: string}};
 };
 
 export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
   const getState: ReqSerializer<Api["getState"], ReqTypes["getState"]> = {
-    writeReq: (stateId) => ({params: {stateId}}),
-    parseReq: ({params}) => [params.stateId],
+    writeReq: (stateId, format) => ({
+      params: {stateId},
+      headers: {accept: format === "ssz" ? mimeTypeSSZ : ""},
+    }),
+    parseReq: ({params, headers}) => [params.stateId, headers.accept === mimeTypeSSZ ? "ssz" : "json"],
     schema: {params: {stateId: Schema.StringRequired}},
   };
 

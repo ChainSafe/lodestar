@@ -37,11 +37,13 @@ export function simTestInfoTracker(bn: BeaconNode, logger: ILogger): () => void 
   function logParticipation(state: allForks.CachedBeaconState<allForks.BeaconState>): void {
     // Compute participation (takes 5ms with 64 validators)
     // Need a CachedBeaconState<allForks.BeaconState> where (state.slot + 1) % SLOTS_EPOCH == 0
-    const process = allForks.prepareEpochProcessState(state);
+    const epochProcess = allForks.beforeProcessEpoch(state);
     const epoch = computeEpochAtSlot(state.slot);
 
-    const prevParticipation = Number(process.prevEpochUnslashedStake.targetStake) / Number(process.totalActiveStake);
-    const currParticipation = Number(process.currEpochUnslashedTargetStake) / Number(process.totalActiveStake);
+    const prevParticipation =
+      Number(epochProcess.prevEpochUnslashedStake.targetStake) / Number(epochProcess.totalActiveStake);
+    const currParticipation =
+      Number(epochProcess.currEpochUnslashedTargetStake) / Number(epochProcess.totalActiveStake);
     prevParticipationPerEpoch.set(epoch - 1, prevParticipation);
     currParticipationPerEpoch.set(epoch, currParticipation);
     logger.info("> Participation", {

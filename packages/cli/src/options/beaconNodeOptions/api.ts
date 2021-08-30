@@ -4,6 +4,7 @@ import {ICliCommandOptions} from "../../util";
 const enabledAll = "*";
 
 export interface IApiArgs {
+  "api.maxGindicesInProof": number;
   "api.rest.api": string[];
   "api.rest.cors": string;
   "api.rest.enabled": boolean;
@@ -13,6 +14,7 @@ export interface IApiArgs {
 
 export function parseArgs(args: IApiArgs): IBeaconNodeOptions["api"] {
   return {
+    maxGindicesInProof: args["api.maxGindicesInProof"],
     rest: {
       api: args["api.rest.api"] as IBeaconNodeOptions["api"]["rest"]["api"],
       cors: args["api.rest.cors"],
@@ -24,6 +26,14 @@ export function parseArgs(args: IApiArgs): IBeaconNodeOptions["api"] {
 }
 
 export const options: ICliCommandOptions<IApiArgs> = {
+  "api.maxGindicesInProof": {
+    hidden: true,
+    type: "number",
+    description: "Limit max number of gindices in a single proof request. DoS vector protection",
+    defaultDescription: String(defaultOptions.api.maxGindicesInProof),
+    group: "api",
+  },
+
   "api.rest.api": {
     type: "array",
     choices: [...allNamespaces, enabledAll],

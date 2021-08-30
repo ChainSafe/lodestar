@@ -4,16 +4,12 @@ import {allForks, ssz, phase0} from "@chainsafe/lodestar-types";
 import {generateCachedState} from "../../../utils/state";
 import {CheckpointStateCache} from "../../../../src/chain/stateCache";
 
-describe.skip("CheckpointStateCache perf tests", function () {
+describe("CheckpointStateCache perf tests", function () {
+  setBenchOpts({maxMs: 10 * 1000, threshold: Infinity});
+
   let state: CachedBeaconState<allForks.BeaconState>;
   let checkpoint: phase0.Checkpoint;
   let checkpointStateCache: CheckpointStateCache;
-
-  setBenchOpts({
-    maxMs: 60 * 1000,
-    minMs: 1 * 1000,
-    runs: 1024,
-  });
 
   before(() => {
     checkpointStateCache = new CheckpointStateCache();

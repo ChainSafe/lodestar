@@ -1,8 +1,10 @@
-import fs from "fs";
-import path from "path";
+/**
+ * Persist git data and distribute through NPM so CLI consumers can know exactly
+ * at what commit was this src build. This is used in the metrics and to log initially.
+ */
 
-// Persist git data and distribute through NPM so CLI consumers can know exactly
-// at what commit was this src build. This is used in the metrics and to log initially
+import path from "path";
+import fs from "fs";
 
 /**
  * WARNING!! If you change this path make sure to update:
@@ -10,17 +12,24 @@ import path from "path";
  */
 export const gitDataPath = path.resolve(__dirname, "../../../.git-data.json");
 
-export type GitDataFile = {
-  /** "developer/feature-1" */
+/** Git data type used to construct version information string and persistence. */
+export type GitData = {
+  /** v0.28.2 */
+  semver?: string;
+  /** "developer-feature" */
   branch?: string;
-  /** "4f816b16dfde718e2d74f95f2c8292596138c248" */
+  /** "80c248bb392f512cc115d95059e22239a17bbd7d" */
   commit?: string;
+  /** +7 (commits since last tag) */
+  numCommits?: string;
 };
 
-export function readGitDataFile(): GitDataFile {
-  return JSON.parse(fs.readFileSync(gitDataPath, "utf8")) as GitDataFile;
+/** Writes a persistent git data file. */
+export function writeGitDataFile(gitData: GitData): void {
+  fs.writeFileSync(gitDataPath, JSON.stringify(gitData, null, 2));
 }
 
-export function writeGitDataFile(gitData: GitDataFile): void {
-  fs.writeFileSync(gitDataPath, JSON.stringify(gitData, null, 2));
+/** Reads the persistent git data file. */
+export function readGitDataFile(): GitData {
+  return JSON.parse(fs.readFileSync(gitDataPath, "utf8")) as GitData;
 }

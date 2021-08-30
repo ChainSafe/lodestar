@@ -6,6 +6,7 @@ import {
   createCachedBeaconState,
   computeSyncPeriodAtEpoch,
   computeEpochAtSlot,
+  isActiveValidator,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {altair, phase0} from "@chainsafe/lodestar-types";
 import {allForks} from "@chainsafe/lodestar-beacon-state-transition";
@@ -131,12 +132,13 @@ export function getEpochBeaconCommittees(
     }
   }
 
-  const indicesBounded: [ValidatorIndex, Epoch, Epoch][] = Array.from(readonlyValues(state.validators), (v, i) => [
-    i,
-    v.activationEpoch,
-    v.exitEpoch,
-  ]);
-  const shuffling = allForks.computeEpochShuffling(state, indicesBounded, epoch);
+  const activeValidatorIndices: ValidatorIndex[] = [];
+  for (const [i, v] of Array.from(readonlyValues(state.validators)).entries()) {
+    if (isActiveValidator(v, epoch)) {
+      activeValidatorIndices.push(i);
+    }
+  }
+  const shuffling = allForks.computeEpochShuffling(state, activeValidatorIndices, epoch);
   return shuffling.committees;
 }
 

@@ -4,12 +4,17 @@ import {allForks} from "@chainsafe/lodestar-types";
 import {getBlockRoot} from "../../util";
 import {CachedBeaconState, IEpochProcess} from "../util";
 
+/**
+ * Update justified and finalized checkpoints depending on network participation.
+ *
+ * PERF: Very low (constant) cost. Persist small objects to the tree.
+ */
 export function processJustificationAndFinalization(
   state: CachedBeaconState<allForks.BeaconState>,
-  process: IEpochProcess
+  epochProcess: IEpochProcess
 ): void {
-  const previousEpoch = process.prevEpoch;
-  const currentEpoch = process.currentEpoch;
+  const previousEpoch = epochProcess.prevEpoch;
+  const currentEpoch = epochProcess.currentEpoch;
 
   // Initial FFG checkpoint values have a `0x00` stub for `root`.
   // Skip FFG updates in the first two epochs to avoid corner cases that might result in modifying this stub.
@@ -28,14 +33,14 @@ export function processJustificationAndFinalization(
   }
   bits[0] = false;
 
-  if (process.prevEpochUnslashedStake.targetStake * BigInt(3) >= process.totalActiveStake * BigInt(2)) {
+  if (epochProcess.prevEpochUnslashedStake.targetStake * BigInt(3) >= epochProcess.totalActiveStake * BigInt(2)) {
     state.currentJustifiedCheckpoint = {
       epoch: previousEpoch,
       root: getBlockRoot(state, previousEpoch),
     };
     bits[1] = true;
   }
-  if (process.currEpochUnslashedTargetStake * BigInt(3) >= process.totalActiveStake * BigInt(2)) {
+  if (epochProcess.currEpochUnslashedTargetStake * BigInt(3) >= epochProcess.totalActiveStake * BigInt(2)) {
     state.currentJustifiedCheckpoint = {
       epoch: currentEpoch,
       root: getBlockRoot(state, currentEpoch),
