@@ -255,7 +255,7 @@ export function beforeProcessEpoch<T extends allForks.BeaconState>(state: Cached
   const validatorCount = validators.length;
 
   for (let i = 0; i < validatorCount; i++) {
-    const validator = validators[0];
+    const validator = validators[i];
     const status = createIAttesterStatus();
 
     if (validator.slashed) {
