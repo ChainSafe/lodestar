@@ -14,7 +14,7 @@ describe("BeaconState hashTreeRoot", () => {
   before(function () {
     this.timeout(300_000);
     const {pubkeys} = getPubkeys();
-    stateOg = ssz.phase0.BeaconState.createTreeBacked(generatePerformanceStatePhase0(pubkeys).tree);
+    stateOg = generatePerformanceStatePhase0(pubkeys);
     stateOg.hashTreeRoot();
 
     for (let i = 0; i < vc; i++) indicesShuffled[i] = i;
