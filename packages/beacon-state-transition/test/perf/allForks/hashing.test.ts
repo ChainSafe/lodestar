@@ -73,8 +73,9 @@ describe("state hashTreeRoot", () => {
       id: `state hashTreeRoot - ${id}`,
       noThreshold: noTrack,
       beforeEach: () => {
-        fn(stateOg);
-        return stateOg;
+        const state = stateOg.clone();
+        fn(state);
+        return state;
       },
       fn: (state) => {
         state.hashTreeRoot();
