@@ -1,4 +1,4 @@
-import {ByteVector, hash, toHexString, BitList, List, readonlyValues} from "@chainsafe/ssz";
+import {ByteVector, hash, toHexString, BitList, List, readonlyValuesListOfLeafNodeStruct} from "@chainsafe/ssz";
 import bls, {CoordType, PublicKey} from "@chainsafe/bls";
 import {
   BLSSignature,
@@ -118,13 +118,11 @@ export function createEpochContext(
   const nextActiveIndices: ValidatorIndex[] = [];
   const effectiveBalancesArr: Gwei[] = [];
 
-  const validators: phase0.Validator[] = Array.from(readonlyValues(state.validators));
+  const validators = readonlyValuesListOfLeafNodeStruct(state.validators);
   const validatorCount = validators.length;
 
   for (let i = 0; i < validatorCount; i++) {
-    // TODO - SLOW CODE - 🐢🐢🐢🐢🐢🐢🐢🐢🐢
-    // Use a struct representation in the leaf nodes of the validators tree to have fast reads and slow writes
-    const validator = validators[i].valueOf() as typeof validators[0];
+    const validator = validators[i];
 
     if (isActiveValidator(validator, previousEpoch)) {
       previousActiveIndices.push(i);

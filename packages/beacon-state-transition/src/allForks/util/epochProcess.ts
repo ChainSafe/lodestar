@@ -251,7 +251,7 @@ export function beforeProcessEpoch<T extends allForks.BeaconState>(state: Cached
   // To optimize memory each validator node in `state.validators` is represented with a special node type
   // `BranchNodeStruct` that represents the data as struct internally. This utility grabs the struct data directrly
   // from the nodes without any extra transformation. The returned `validators` array contains native JS objects.
-  const validators: phase0.Validator[] = readonlyValuesListOfLeafNodeStruct(state.validators);
+  const validators = readonlyValuesListOfLeafNodeStruct(state.validators);
   const validatorCount = validators.length;
 
   for (let i = 0; i < validatorCount; i++) {
