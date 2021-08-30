@@ -88,7 +88,7 @@ export class ProtoArray {
       });
     }
 
-    if (justifiedEpoch !== this.justifiedEpoch || this.finalizedEpoch !== this.finalizedEpoch) {
+    if (justifiedEpoch !== this.justifiedEpoch || finalizedEpoch !== this.finalizedEpoch) {
       this.justifiedEpoch = justifiedEpoch;
       this.finalizedEpoch = finalizedEpoch;
     }
