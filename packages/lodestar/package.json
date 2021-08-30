@@ -44,7 +44,7 @@
   "dependencies": {
     "@chainsafe/abort-controller": "^3.0.1",
     "@chainsafe/bls": "6.0.1",
-    "@chainsafe/discv5": "^0.5.1",
+    "@chainsafe/discv5": "^0.6.3",
     "@chainsafe/libp2p-noise": "4.1.0",
     "@chainsafe/lodestar-api": "^0.29.1",
     "@chainsafe/lodestar-beacon-state-transition": "^0.29.2",

@@ -452,6 +452,27 @@
     rlp "^2.2.6"
     strict-event-emitter-types "^2.0.0"
 
+"@chainsafe/discv5@^0.6.3":
+  version "0.6.3"
+  resolved "https://registry.yarnpkg.com/@chainsafe/discv5/-/discv5-0.6.3.tgz#217d6287c89ea694150834a41b4bce9f5babb263"
+  integrity sha512-sgypqk1JYs6Cf+5YnBtrSpyFswawt2NZV+WKx3HhzSETgCTqFyd8miEbaFLb1OIYWytxRP9/f+BG/EMVKLZmAA==
+  dependencies:
+    "@chainsafe/abort-controller" "^3.0.1"
+    base64url "^3.0.1"
+    bcrypto "^5.4.0"
+    bigint-buffer "^1.1.5"
+    debug "^4.3.1"
+    dgram "^1.0.1"
+    err-code "^3.0.1"
+    ip6addr "^0.2.3"
+    is-ip "^3.1.0"
+    libp2p-crypto "^0.19.4"
+    multiaddr "^9.0.2"
+    peer-id "^0.14.8"
+    rlp "^2.2.6"
+    strict-event-emitter-types "^2.0.0"
+    varint "^6.0.0"
+
 "@chainsafe/fast-crc32c@3.0.0":
   version "3.0.0"
   resolved "https://registry.yarnpkg.com/@chainsafe/fast-crc32c/-/fast-crc32c-3.0.0.tgz#34879af40d7e75643bc5206e6502c2231494a7ba"
@@ -7306,6 +7327,23 @@ libp2p-crypto@^0.19.0:
     uint8arrays "^1.1.0"
     ursa-optional "^0.10.1"
 
+libp2p-crypto@^0.19.4:
+  version "0.19.7"
+  resolved "https://registry.yarnpkg.com/libp2p-crypto/-/libp2p-crypto-0.19.7.tgz#e96a95bd430e672a695209fe0fbd2bcbd348bc35"
+  integrity sha512-Qb5o/3WFKF2j6mYSt4UBPyi2kbKl3jYV0podBJoJCw70DlpM5Xc+oh3fFY9ToSunu8aSQQ5GY8nutjXgX/uGRA==
+  dependencies:
+    err-code "^3.0.1"
+    is-typedarray "^1.0.0"
+    iso-random-stream "^2.0.0"
+    keypair "^1.0.1"
+    multiformats "^9.4.5"
+    node-forge "^0.10.0"
+    pem-jwk "^2.0.0"
+    protobufjs "^6.11.2"
+    secp256k1 "^4.0.0"
+    uint8arrays "^3.0.0"
+    ursa-optional "^0.10.1"
+
 libp2p-gossipsub@^0.8.0:
   version "0.8.0"
   resolved "https://registry.yarnpkg.com/libp2p-gossipsub/-/libp2p-gossipsub-0.8.0.tgz#b9c961560dc02afa079790f44882854a19a94abf"
@@ -8169,6 +8207,19 @@ multiaddr@^8.0.0, multiaddr@^8.1.0, multiaddr@^8.1.2:
     uint8arrays "^1.1.0"
     varint "^5.0.0"
 
+multiaddr@^9.0.2:
+  version "9.0.2"
+  resolved "https://registry.yarnpkg.com/multiaddr/-/multiaddr-9.0.2.tgz#ab322bb768e77270650ebce71a452fdc760bda0d"
+  integrity sha512-YFaEb9t4yXSbaGksSEdg+Kn2U02s7w4wXUgyEMQmPxFJj7CfVHY10WOsScAX/rK6Soa15S1zXYadqH9TtlVreQ==
+  dependencies:
+    cids "^1.0.0"
+    dns-over-http-resolver "^1.0.0"
+    err-code "^3.0.1"
+    is-ip "^3.1.0"
+    multibase "^4.0.2"
+    uint8arrays "^2.1.3"
+    varint "^6.0.0"
+
 multibase@^3.0.0, multibase@^3.0.1, multibase@^3.1.0, multibase@^3.1.1:
   version "3.1.1"
   resolved "https://registry.yarnpkg.com/multibase/-/multibase-3.1.1.tgz#fb4c0fc169c2d89d80cbf0cbbec4e00ffed8cf3a"
@@ -8176,6 +8227,13 @@ multibase@^3.0.0, multibase@^3.0.1, multibase@^3.1.0, multibase@^3.1.1:
   dependencies:
     "@multiformats/base-x" "^4.0.1"
     web-encoding "^1.0.6"
+
+multibase@^4.0.1, multibase@^4.0.2:
+  version "4.0.6"
+  resolved "https://registry.yarnpkg.com/multibase/-/multibase-4.0.6.tgz#6e624341483d6123ca1ede956208cb821b440559"
+  integrity sha512-x23pDe5+svdLz/k5JPGCVdfn7Q5mZVMBETiC+ORfO+sor9Sgs0smJzAjfTbM5tckeCqnaUuMYoz+k3RXMmJClQ==
+  dependencies:
+    "@multiformats/base-x" "^4.0.1"
 
 multicast-dns@^7.2.0:
   version "7.2.2"
@@ -8214,6 +8272,15 @@ multihashes@^3.0.1, multihashes@^3.1.0, multihashes@^3.1.1:
     multibase "^3.1.0"
     uint8arrays "^2.0.5"
     varint "^6.0.0"
+
+multihashes@^4.0.2:
+  version "4.0.3"
+  resolved "https://registry.yarnpkg.com/multihashes/-/multihashes-4.0.3.tgz#426610539cd2551edbf533adeac4c06b3b90fb05"
+  integrity sha512-0AhMH7Iu95XjDLxIeuCOOE4t9+vQZsACyKZ9Fxw2pcsRmlX4iCn1mby0hS0bb+nQOVpdQYWPpnyusw4da5RPhA==
+  dependencies:
+    multibase "^4.0.1"
+    uint8arrays "^3.0.0"
+    varint "^5.0.2"
 
 multihashing-async@^2.0.1:
   version "2.0.1"
@@ -9356,6 +9423,19 @@ peer-id@^0.14.3:
     protons "^2.0.0"
     uint8arrays "^2.0.5"
 
+peer-id@^0.14.8:
+  version "0.14.8"
+  resolved "https://registry.yarnpkg.com/peer-id/-/peer-id-0.14.8.tgz#667c6bedc8ab313c81376f6aca0baa2140266fab"
+  integrity sha512-GpuLpob/9FrEFvyZrKKsISEkaBYsON2u0WtiawLHj1ii6ewkoeRiSDFLyIefYhw0jGvQoeoZS05jaT52X7Bvig==
+  dependencies:
+    cids "^1.1.5"
+    class-is "^1.1.0"
+    libp2p-crypto "^0.19.0"
+    minimist "^1.2.5"
+    multihashes "^4.0.2"
+    protobufjs "^6.10.2"
+    uint8arrays "^2.0.5"
+
 peer-id@^0.15.0:
   version "0.15.3"
   resolved "https://registry.yarnpkg.com/peer-id/-/peer-id-0.15.3.tgz#c093486bcc11399ba63672990382946cfcf0e6f3"
@@ -9608,7 +9688,7 @@ protobufjs@^6.10.1:
     "@types/node" "^13.7.0"
     long "^4.0.0"
 
-protobufjs@^6.10.2:
+protobufjs@^6.10.2, protobufjs@^6.11.2:
   version "6.11.2"
   resolved "https://registry.yarnpkg.com/protobufjs/-/protobufjs-6.11.2.tgz#de39fabd4ed32beaa08e9bb1e30d08544c1edf8b"
   integrity sha512-4BQJoPooKJl2G9j3XftkIXjoC9C0Av2NOrWmbLWT1vH32GcSUHjM0Arra6UfTsVyfMAuFzaLucXn1sadxJydAw==
@@ -11740,7 +11820,7 @@ validate-npm-package-name@^3.0.0:
   dependencies:
     builtins "^1.0.3"
 
-varint@^5.0.0:
+varint@^5.0.0, varint@^5.0.2:
   version "5.0.2"
   resolved "https://registry.yarnpkg.com/varint/-/varint-5.0.2.tgz#5b47f8a947eb668b848e034dcfa87d0ff8a7f7a4"
   integrity sha512-lKxKYG6H03yCZUpAGOPOsMcGxd1RHCu1iKvEHYDPmTyq2HueGhD73ssNBqqQWfvYs04G9iUFRvmAVLW20Jw6ow==
