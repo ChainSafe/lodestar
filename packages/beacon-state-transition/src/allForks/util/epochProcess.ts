@@ -1,5 +1,5 @@
 import {Epoch, ValidatorIndex, Gwei, phase0, allForks} from "@chainsafe/lodestar-types";
-import {readonlyValues} from "@chainsafe/ssz";
+import {readonlyValues, readonlyValuesListOfLeafNodeStruct} from "@chainsafe/ssz";
 import {intDiv} from "@chainsafe/lodestar-utils";
 import {
   EFFECTIVE_BALANCE_INCREMENT,
@@ -27,7 +27,6 @@ import {IEpochStakeSummary} from "./epochStakeSummary";
 import {CachedBeaconState} from "./cachedBeaconState";
 import {statusProcessEpoch} from "../../phase0/epoch/processPendingAttestations";
 import {computeBaseRewardPerIncrement} from "../../altair/util/misc";
-import {createValidatorFlat} from "./flat";
 
 /**
  * Pre-computed disposable data to process epoch transitions faster at the cost of more memory.
@@ -249,17 +248,14 @@ export function beforeProcessEpoch<T extends allForks.BeaconState>(state: Cached
 
   let totalActiveStake = BigInt(0);
 
-  // If it's too slow, consider having a persistent-ts array of references to the validator nodes for faster indexing
-  // Reading 250_000 leaf nodes from a depth 40 tree costs ~50ms, it's pretty cheap
-  // TODO: Use readonlyAllValues()
-  // TODO - SLOW CODE - 🐢
-  const validators: phase0.Validator[] = Array.from(readonlyValues(state.validators));
+  // To optimize memory each validator node in `state.validators` is represented with a special node type
+  // `BranchNodeStruct` that represents the data as struct internally. This utility grabs the struct data directrly
+  // from the nodes without any extra transformation. The returned `validators` array contains native JS objects.
+  const validators: phase0.Validator[] = readonlyValuesListOfLeafNodeStruct(state.validators);
   const validatorCount = validators.length;
 
   for (let i = 0; i < validatorCount; i++) {
-    // TODO - SLOW CODE - 🐢🐢🐢🐢🐢🐢🐢🐢🐢
-    // Use a struct representation in the leaf nodes of the validators tree to have fast reads and slow writes
-    const validator = createValidatorFlat(validators[0]);
+    const validator = validators[0];
     const status = createIAttesterStatus();
 
     if (validator.slashed) {
