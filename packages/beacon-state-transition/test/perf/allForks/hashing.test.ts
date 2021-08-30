@@ -14,7 +14,7 @@ describe("BeaconState hashTreeRoot", () => {
   before(function () {
     this.timeout(300_000);
     const {pubkeys} = getPubkeys();
-    stateOg = generatePerformanceStatePhase0(pubkeys);
+    stateOg = ssz.phase0.BeaconState.createTreeBacked(generatePerformanceStatePhase0(pubkeys).tree);
     stateOg.hashTreeRoot();
 
     for (let i = 0; i < vc; i++) indicesShuffled[i] = i;
@@ -35,35 +35,32 @@ describe("BeaconState hashTreeRoot", () => {
 
   // Validator mutations
   for (const count of [1, 32, 512]) {
-    const idxs = indicesShuffled.slice(0, count);
     testCases.push({
       id: `${count} full validator`,
       noTrack: count < 512,
       fn: (state) => {
-        for (const i of idxs) state.validators[i] = validator;
+        for (const i of indicesShuffled.slice(0, count)) state.validators[i] = validator;
       },
     });
   }
 
   for (const count of [1, 32, 512]) {
-    const idxs = indicesShuffled.slice(0, count);
     testCases.push({
       id: `${count} validator.effectiveBalance`,
       noTrack: count < 512,
       fn: (state) => {
-        for (const i of idxs) state.validators[i].effectiveBalance = balance;
+        for (const i of indicesShuffled.slice(0, count)) state.validators[i].effectiveBalance = balance;
       },
     });
   }
 
   // Balance mutations
   for (const count of [1, 32, 512, numValidators]) {
-    const idxs = indicesShuffled.slice(0, count);
     testCases.push({
       id: `${count} balances`,
       noTrack: count < 512,
       fn: (state) => {
-        for (const i of idxs) state.balances[i] = balance;
+        for (const i of indicesShuffled.slice(0, count)) state.balances[i] = balance;
       },
     });
   }
