@@ -6,7 +6,7 @@ import {unshuffleList} from "../../../src";
 
 // Test cost of hashing state after some modifications
 
-describe("state hashTreeRoot", () => {
+describe("BeaconState hashTreeRoot", () => {
   const vc = numValidators;
   const indicesShuffled: number[] = [];
   let stateOg: TreeBacked<phase0.BeaconState>;
@@ -70,7 +70,7 @@ describe("state hashTreeRoot", () => {
 
   for (const {id, noTrack, fn} of testCases) {
     itBench<TreeBacked<phase0.BeaconState>, TreeBacked<phase0.BeaconState>>({
-      id: `state hashTreeRoot - ${id}`,
+      id: `BeaconState.hashTreeRoot - ${id}`,
       noThreshold: noTrack,
       beforeEach: () => {
         const state = stateOg.clone();
