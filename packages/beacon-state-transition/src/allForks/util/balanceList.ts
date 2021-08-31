@@ -34,10 +34,6 @@ export class BalanceList implements List<number> {
     this.type.tree_applyDeltaInBatch(this.tree, deltaByIndex);
   }
 
-  applyDeltaInBatch(deltaByIndex: Map<number, number>): void {
-    this.type.tree_applyUint64DeltaInBatch(this.tree, deltaByIndex);
-  }
-
   /** Return the new balances */
   updateAll(deltas: number[]): number[] {
     const [newTree, newBalances] = this.type.tree_newTreeFromDeltas(this.tree, deltas);
