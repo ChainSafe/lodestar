@@ -43,7 +43,7 @@ describe("validate voluntary exit", () => {
     stateEmpty.validators[0] = {
       pubkey: sk.toPublicKey().toBytes(PointFormat.compressed),
       withdrawalCredentials: Buffer.alloc(32, 0),
-      effectiveBalance: BigInt(32e9),
+      effectiveBalance: 32e9,
       slashed: false,
       activationEligibilityEpoch: 0,
       activationEpoch: 0,

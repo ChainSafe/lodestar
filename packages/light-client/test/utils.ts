@@ -90,7 +90,7 @@ export function generateValidator(opts: Partial<altair.Validator> = {}): altair.
     exitEpoch: 10000,
     withdrawableEpoch: 10000,
     slashed: opts.slashed || false,
-    effectiveBalance: BigInt(32),
+    effectiveBalance: 32,
     ...opts,
   };
 }

@@ -34,7 +34,7 @@ interface IValidatorDirBuildOptions {
    * the withdrawal keystore is *always* stored to disk. This is to prevent data loss.
    */
   storeWithdrawalKeystore?: boolean;
-  depositGwei: bigint;
+  depositGwei: number;
   config: IChainForkConfig;
 }
 

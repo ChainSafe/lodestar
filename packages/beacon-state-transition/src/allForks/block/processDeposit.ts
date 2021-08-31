@@ -1,6 +1,6 @@
 import bls, {CoordType} from "@chainsafe/bls";
 import {allForks, altair, phase0, ssz} from "@chainsafe/lodestar-types";
-import {verifyMerkleBranch, bigIntMin} from "@chainsafe/lodestar-utils";
+import {verifyMerkleBranch} from "@chainsafe/lodestar-utils";
 import {
   DEPOSIT_CONTRACT_TREE_DEPTH,
   DOMAIN_DEPOSIT,
@@ -74,7 +74,7 @@ export function processDeposit(
       activationEpoch: FAR_FUTURE_EPOCH,
       exitEpoch: FAR_FUTURE_EPOCH,
       withdrawableEpoch: FAR_FUTURE_EPOCH,
-      effectiveBalance: bigIntMin(amount - (amount % EFFECTIVE_BALANCE_INCREMENT), MAX_EFFECTIVE_BALANCE),
+      effectiveBalance: Math.min(amount - (amount % EFFECTIVE_BALANCE_INCREMENT), MAX_EFFECTIVE_BALANCE),
       slashed: false,
     });
     state.balances.push(Number(amount));

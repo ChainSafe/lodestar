@@ -203,7 +203,7 @@ function getDeposits(preState: allForks.CachedBeaconState<allForks.BeaconState>,
   for (let i = 0; i < count; i++) {
     const sk = SecretKey.fromBytes(Buffer.alloc(32, i + 1));
     const pubkey = sk.toPublicKey().toBytes();
-    const depositMessage: phase0.DepositMessage = {pubkey, withdrawalCredentials, amount: BigInt(32e9)};
+    const depositMessage: phase0.DepositMessage = {pubkey, withdrawalCredentials, amount: 32e9};
     // Sign with disposable keys
     const domain = computeDomain(DOMAIN_DEPOSIT, config.GENESIS_FORK_VERSION, ZERO_HASH);
     const signingRoot = computeSigningRoot(ssz.phase0.DepositMessage, depositMessage, domain);

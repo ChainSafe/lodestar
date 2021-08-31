@@ -95,7 +95,7 @@ export function getValidatorStatus(validator: phase0.Validator, currentEpoch: Ep
   }
   // withdrawal
   if (validator.withdrawableEpoch <= currentEpoch) {
-    return validator.effectiveBalance !== BigInt(0) ? "withdrawal_possible" : "withdrawal_done";
+    return validator.effectiveBalance !== 0 ? "withdrawal_possible" : "withdrawal_done";
   }
   throw new Error("ValidatorStatus unknown");
 }

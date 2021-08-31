@@ -17,8 +17,8 @@ export interface IPhase0Preset {
 
   // Gwei Values
   MIN_DEPOSIT_AMOUNT: bigint;
-  MAX_EFFECTIVE_BALANCE: bigint;
-  EFFECTIVE_BALANCE_INCREMENT: bigint;
+  MAX_EFFECTIVE_BALANCE: number;
+  EFFECTIVE_BALANCE_INCREMENT: number;
 
   // Time parameters
   MIN_ATTESTATION_INCLUSION_DELAY: number;
@@ -36,12 +36,12 @@ export interface IPhase0Preset {
   VALIDATOR_REGISTRY_LIMIT: number;
 
   // Reward and penalty quotients
-  BASE_REWARD_FACTOR: bigint;
-  WHISTLEBLOWER_REWARD_QUOTIENT: bigint;
-  PROPOSER_REWARD_QUOTIENT: bigint;
-  INACTIVITY_PENALTY_QUOTIENT: bigint;
-  MIN_SLASHING_PENALTY_QUOTIENT: bigint;
-  PROPORTIONAL_SLASHING_MULTIPLIER: bigint;
+  BASE_REWARD_FACTOR: number;
+  WHISTLEBLOWER_REWARD_QUOTIENT: number;
+  PROPOSER_REWARD_QUOTIENT: number;
+  INACTIVITY_PENALTY_QUOTIENT: number;
+  MIN_SLASHING_PENALTY_QUOTIENT: number;
+  PROPORTIONAL_SLASHING_MULTIPLIER: number;
 
   // Max operations per block
   MAX_PROPOSER_SLASHINGS: number;

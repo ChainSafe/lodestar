@@ -33,14 +33,14 @@ export function processJustificationAndFinalization(
   }
   bits[0] = false;
 
-  if (epochProcess.prevEpochUnslashedStake.targetStake * BigInt(3) >= epochProcess.totalActiveStake * BigInt(2)) {
+  if (epochProcess.prevEpochUnslashedStake.targetStakeByIncrement * 3 >= epochProcess.totalActiveStakeByIncrement * 2) {
     state.currentJustifiedCheckpoint = {
       epoch: previousEpoch,
       root: getBlockRoot(state, previousEpoch),
     };
     bits[1] = true;
   }
-  if (epochProcess.currEpochUnslashedTargetStake * BigInt(3) >= epochProcess.totalActiveStake * BigInt(2)) {
+  if (epochProcess.currEpochUnslashedTargetStakeByIncrement * 3 >= epochProcess.totalActiveStakeByIncrement * 2) {
     state.currentJustifiedCheckpoint = {
       epoch: currentEpoch,
       root: getBlockRoot(state, currentEpoch),

@@ -1,4 +1,3 @@
-import {Gwei} from "@chainsafe/lodestar-types";
 import {IVoteTracker, HEX_ZERO_HASH} from "./interface";
 import {ProtoArrayError, ProtoArrayErrorCode} from "./errors";
 
@@ -14,10 +13,10 @@ import {ProtoArrayError, ProtoArrayErrorCode} from "./errors";
 export function computeDeltas(
   indices: Map<string, number>,
   votes: IVoteTracker[],
-  oldBalances: Gwei[],
-  newBalances: Gwei[]
-): Gwei[] {
-  const deltas = Array.from({length: indices.size}, () => BigInt(0));
+  oldBalances: number[],
+  newBalances: number[]
+): number[] {
+  const deltas = Array.from({length: indices.size}, () => 0);
 
   for (const [vIndex, vote] of votes.entries()) {
     // There is no need to create a score change if the validator has never voted or both of their
@@ -31,14 +30,14 @@ export function computeDeltas(
 
     // IF the validator was not included in the _old_ balances (i.e. it did not exist yet)
     // then say its balance was 0
-    const oldBalance = oldBalances[vIndex] || BigInt(0);
+    const oldBalance = oldBalances[vIndex] || 0;
 
     // If the validator's vote is not known in the _new_ balances, then use a balance of zero.
     //
     // It is possible that there was a vote for an unknown validator if we change our justified
     // state to a new state with a higher epoch that is on a different fork because that fork may have
     // on-boarded fewer validators than the prior fork.
-    const newBalance = newBalances[vIndex] || BigInt(0);
+    const newBalance = newBalances[vIndex] || 0;
 
     if (vote.currentRoot !== vote.nextRoot || oldBalance !== newBalance) {
       // We ignore the vote if it is not known in `indices .

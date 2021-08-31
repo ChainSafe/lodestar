@@ -1,5 +1,5 @@
 import {phase0} from "@chainsafe/lodestar-types";
-import {bigIntSqrt, bigIntMax} from "@chainsafe/lodestar-utils";
+import {bigIntSqrt} from "@chainsafe/lodestar-utils";
 import {BASE_REWARDS_PER_EPOCH as BASE_REWARDS_PER_EPOCH_CONST} from "../../constants";
 import {newZeroedArray} from "../../util";
 import {IEpochProcess, hasMarkers, CachedBeaconState} from "../../allForks/util";
@@ -56,32 +56,36 @@ export function getAttestationDeltas(
   const rewards = newZeroedArray(validatorCount);
   const penalties = newZeroedArray(validatorCount);
 
-  const increment = EFFECTIVE_BALANCE_INCREMENT;
-  let totalBalance = bigIntMax(epochProcess.totalActiveStake, increment);
+  // no need this as we make sure it in EpochProcess
+  // let totalBalance = bigIntMax(epochProcess.totalActiveStake, increment);
+  const totalBalance = epochProcess.totalActiveStakeByIncrement;
+  const totalBalanceInGwei = BigInt(totalBalance) * BigInt(EFFECTIVE_BALANCE_INCREMENT);
 
   // increment is factored out from balance totals to avoid overflow
-  const prevEpochSourceStake = bigIntMax(epochProcess.prevEpochUnslashedStake.sourceStake, increment) / increment;
-  const prevEpochTargetStake = bigIntMax(epochProcess.prevEpochUnslashedStake.targetStake, increment) / increment;
-  const prevEpochHeadStake = bigIntMax(epochProcess.prevEpochUnslashedStake.headStake, increment) / increment;
+  const prevEpochSourceStakeByIncrement = epochProcess.prevEpochUnslashedStake.sourceStakeByIncrement;
+  const prevEpochTargetStakeByIncrement = epochProcess.prevEpochUnslashedStake.targetStakeByIncrement;
+  const prevEpochHeadStakeByIncrement = epochProcess.prevEpochUnslashedStake.headStakeByIncrement;
 
   // sqrt first, before factoring out the increment for later usage
-  const balanceSqRoot = bigIntSqrt(totalBalance);
-  const finalityDelay = BigInt(epochProcess.prevEpoch - state.finalizedCheckpoint.epoch);
+  const balanceSqRoot = Number(bigIntSqrt(totalBalanceInGwei));
+  const finalityDelay = epochProcess.prevEpoch - state.finalizedCheckpoint.epoch;
 
-  totalBalance = totalBalance / increment;
-
-  const BASE_REWARDS_PER_EPOCH = BigInt(BASE_REWARDS_PER_EPOCH_CONST);
+  const BASE_REWARDS_PER_EPOCH = BASE_REWARDS_PER_EPOCH_CONST;
   const proposerRewardQuotient = Number(PROPOSER_REWARD_QUOTIENT);
   const isInInactivityLeak = finalityDelay > MIN_EPOCHS_TO_INACTIVITY_PENALTY;
 
   // effectiveBalance is multiple of EFFECTIVE_BALANCE_INCREMENT and less than MAX_EFFECTIVE_BALANCE
   // so there are limited values of them like 32000000000, 31000000000, 30000000000
   const rewardPnaltyItemCache = new Map<number, IRewardPenaltyItem>();
-  for (const [i, status] of epochProcess.statuses.entries()) {
-    const effBalance = epochProcess.validators[i].effectiveBalance;
-    let rewardItem = rewardPnaltyItemCache.get(Number(effBalance));
+  const {validators, statuses} = epochProcess;
+  for (let i = 0; i < statuses.length; i++) {
+    const status = statuses[i];
+    const {effectiveBalance} = validators[i];
+    let rewardItem = rewardPnaltyItemCache.get(effectiveBalance);
     if (!rewardItem) {
-      const baseReward = Number((effBalance * BASE_REWARD_FACTOR) / balanceSqRoot / BASE_REWARDS_PER_EPOCH);
+      const baseReward = Math.floor(
+        Math.floor((effectiveBalance * BASE_REWARD_FACTOR) / balanceSqRoot) / BASE_REWARDS_PER_EPOCH
+      );
       const proposerReward = Math.floor(baseReward / proposerRewardQuotient);
       rewardItem = {
         baseReward,
@@ -89,15 +93,17 @@ export function getAttestationDeltas(
         maxAttesterReward: baseReward - proposerReward,
         sourceCheckpointReward: isInInactivityLeak
           ? baseReward
-          : Number((BigInt(baseReward) * prevEpochSourceStake) / totalBalance),
+          : Math.floor((baseReward * prevEpochSourceStakeByIncrement) / totalBalance),
         targetCheckpointReward: isInInactivityLeak
           ? baseReward
-          : Number((BigInt(baseReward) * prevEpochTargetStake) / totalBalance),
-        headReward: isInInactivityLeak ? baseReward : Number((BigInt(baseReward) * prevEpochHeadStake) / totalBalance),
+          : Math.floor((baseReward * prevEpochTargetStakeByIncrement) / totalBalance),
+        headReward: isInInactivityLeak
+          ? baseReward
+          : Math.floor((baseReward * prevEpochHeadStakeByIncrement) / totalBalance),
         basePenalty: baseReward * BASE_REWARDS_PER_EPOCH_CONST - proposerReward,
-        finalityDelayPenalty: Number((effBalance * finalityDelay) / INACTIVITY_PENALTY_QUOTIENT),
+        finalityDelayPenalty: Math.floor((effectiveBalance * finalityDelay) / INACTIVITY_PENALTY_QUOTIENT),
       };
-      rewardPnaltyItemCache.set(Number(effBalance), rewardItem);
+      rewardPnaltyItemCache.set(effectiveBalance, rewardItem);
     }
 
     const {

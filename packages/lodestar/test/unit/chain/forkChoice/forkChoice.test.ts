@@ -74,7 +74,7 @@ describe("LodestarForkChoice", function () {
       expect(orphanedBlockHex > parentBlockHex).to.be.true;
       forkChoice.updateTime(childBlock.message.slot);
       // 3 validators involved
-      const justifiedBalances = [BigInt(1), BigInt(2), BigInt(3)];
+      const justifiedBalances = [1, 2, 3];
       forkChoice.onBlock(targetBlock.message, targetState, justifiedBalances);
       forkChoice.onBlock(orphanedBlock.message, orphanedState);
       let head = forkChoice.getHead();
@@ -135,7 +135,7 @@ describe("LodestarForkChoice", function () {
       };
       forkChoice.updateTime(128);
       // 3 validators involved
-      const justifiedBalances = [BigInt(1), BigInt(2), BigInt(3)];
+      const justifiedBalances = [1, 2, 3];
       forkChoice.onBlock(block08.message, state08, justifiedBalances);
       forkChoice.onBlock(block12.message, state12, justifiedBalances);
       forkChoice.onBlock(block16.message, state16, justifiedBalances);
@@ -187,7 +187,7 @@ describe("LodestarForkChoice", function () {
       const {block: childBlock, state: childState} = makeChild({block: parentBlock, state: parentState}, 35);
       forkChoice.updateTime(35);
       // 3 validators involved
-      const justifiedBalances = [BigInt(1), BigInt(2), BigInt(3)];
+      const justifiedBalances = [1, 2, 3];
       forkChoice.onBlock(targetBlock.message, targetState, justifiedBalances);
       forkChoice.onBlock(orphanedBlock.message, orphanedState);
       forkChoice.onBlock(parentBlock.message, parentState);

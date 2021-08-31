@@ -17,9 +17,9 @@ import {getActiveValidatorIndices, isActiveValidator} from "./validator";
  */
 export function getTotalBalance(state: allForks.BeaconState, indices: ValidatorIndex[]): Gwei {
   return bigIntMax(
-    EFFECTIVE_BALANCE_INCREMENT,
+    BigInt(EFFECTIVE_BALANCE_INCREMENT),
     indices.reduce(
-      (total: Gwei, index: ValidatorIndex): Gwei => total + state.validators[index].effectiveBalance,
+      (total: Gwei, index: ValidatorIndex): Gwei => total + BigInt(state.validators[index].effectiveBalance),
       BigInt(0)
     )
   );
@@ -67,11 +67,11 @@ export function decreaseBalance(
  *
  * SLOW CODE - 🐢
  */
-export function getEffectiveBalances(justifiedState: CachedBeaconState<allForks.BeaconState>): Gwei[] {
+export function getEffectiveBalances(justifiedState: CachedBeaconState<allForks.BeaconState>): number[] {
   const justifiedEpoch = justifiedState.currentShuffling.epoch;
-  const effectiveBalances: Gwei[] = [];
+  const effectiveBalances: number[] = [];
   justifiedState.validators.forEach((v) => {
-    effectiveBalances.push(isActiveValidator(v, justifiedEpoch) ? v.effectiveBalance : BigInt(0));
+    effectiveBalances.push(isActiveValidator(v, justifiedEpoch) ? v.effectiveBalance : 0);
   });
   return effectiveBalances;
 }

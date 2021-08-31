@@ -8,7 +8,6 @@ import {
   BLSPubkey,
   BLSSignature,
   Epoch,
-  Gwei,
   Root,
   Number64,
   Slot,
@@ -56,7 +55,7 @@ export interface Validator {
   // Commitment to pubkey for withdrawals
   withdrawalCredentials: Bytes32;
   // Balance at stake
-  effectiveBalance: Gwei;
+  effectiveBalance: Number64;
   // Was the validator slashed
   slashed: boolean;
   // When criteria for activation were met
@@ -132,7 +131,7 @@ export interface DepositMessage {
   // Withdrawal credentials
   withdrawalCredentials: Bytes32;
   // Amount in Gwei
-  amount: Gwei;
+  amount: Number64;
 }
 
 export interface DepositData {
@@ -141,7 +140,7 @@ export interface DepositData {
   // Withdrawal credentials
   withdrawalCredentials: Bytes32;
   // Amount in Gwei
-  amount: Gwei;
+  amount: Number64;
   // Signing over DepositMessage
   signature: BLSSignature;
 }

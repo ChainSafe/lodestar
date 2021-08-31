@@ -57,7 +57,7 @@ function getEffectiveBalanceTestData(
     exitEpoch: Infinity,
     withdrawableEpoch: Infinity,
     // Set current effective balance to max
-    effectiveBalance: BigInt(32e9),
+    effectiveBalance: 32e9,
   };
 
   const balances: number[] = [];

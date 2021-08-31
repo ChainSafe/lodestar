@@ -164,7 +164,7 @@ function runStateTranstion(
     cacheCheckpointState(postState, checkpointCache);
   }
   // same logic like in state transition https://github.com/ChainSafe/lodestar/blob/f6778740075fe2b75edf94d1db0b5691039cb500/packages/lodestar/src/chain/blocks/stateTransition.ts#L101
-  let justifiedBalances: phase0.Gwei[] = [];
+  let justifiedBalances: number[] = [];
   if (postState.currentJustifiedCheckpoint.epoch > forkchoice.getJustifiedCheckpoint().epoch) {
     const justifiedState = checkpointCache.get(postState.currentJustifiedCheckpoint);
     if (!justifiedState) {

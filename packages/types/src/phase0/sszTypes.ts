@@ -90,7 +90,7 @@ export const DepositMessage = new ContainerType<phase0.DepositMessage>({
   fields: {
     pubkey: BLSPubkey,
     withdrawalCredentials: Bytes32,
-    amount: Gwei,
+    amount: Number64,
   },
 });
 
@@ -98,7 +98,7 @@ export const DepositData = new ContainerType<phase0.DepositData>({
   fields: {
     pubkey: BLSPubkey,
     withdrawalCredentials: Bytes32,
-    amount: Gwei,
+    amount: Number64,
     signature: BLSSignature,
   },
 });
@@ -177,7 +177,7 @@ export const Validator = new ContainerType<phase0.Validator>({
   fields: {
     pubkey: BLSPubkey,
     withdrawalCredentials: Bytes32,
-    effectiveBalance: Gwei,
+    effectiveBalance: Number64,
     slashed: Boolean,
     activationEligibilityEpoch: Epoch,
     activationEpoch: Epoch,

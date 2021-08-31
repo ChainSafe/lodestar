@@ -1,4 +1,4 @@
-import {Epoch, Gwei, Slot} from "@chainsafe/lodestar-types";
+import {Epoch, Slot} from "@chainsafe/lodestar-types";
 
 /**
  * HexRoot is a root as a hex string
@@ -52,7 +52,7 @@ export interface IProtoBlock {
  */
 export interface IProtoNode extends IProtoBlock {
   parent?: number;
-  weight: Gwei;
+  weight: number;
   bestChild?: number;
   bestDescendant?: number;
 }

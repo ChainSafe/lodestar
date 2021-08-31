@@ -23,7 +23,7 @@ export function generateDepositEvent(index: number, blockNumber = 0): phase0.Dep
 
 export function generateDepositData(): phase0.DepositData {
   return {
-    amount: BigInt(32) * BigInt(10) * BigInt(9),
+    amount: 32 * 10 * 9,
     pubkey: Buffer.alloc(48),
     withdrawalCredentials: Buffer.alloc(32),
     signature: EMPTY_SIGNATURE,

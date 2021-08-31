@@ -29,7 +29,7 @@ export function parseDepositLog(log: {blockNumber: number; data: string; topics:
     depositData: {
       pubkey: fromHexString(values.pubkey),
       withdrawalCredentials: fromHexString(values.withdrawal_credentials),
-      amount: ssz.Gwei.deserialize(fromHexString(values.amount)),
+      amount: ssz.Number64.deserialize(fromHexString(values.amount)),
       signature: fromHexString(values.signature),
     },
   };

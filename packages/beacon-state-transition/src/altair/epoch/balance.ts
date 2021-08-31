@@ -47,7 +47,7 @@ export function getRewardsPenaltiesDeltas(
   process: IEpochProcess
 ): [number[], number[]] {
   const validatorCount = state.validators.length;
-  const activeIncrements = process.totalActiveStake / EFFECTIVE_BALANCE_INCREMENT;
+  const activeIncrements = process.totalActiveStakeByIncrement;
   const rewards = newZeroedArray(validatorCount);
   const penalties = newZeroedArray(validatorCount);
 
@@ -57,37 +57,34 @@ export function getRewardsPenaltiesDeltas(
   const rewardPenaltyItemCache = new Map<number, IRewardPenaltyItem>();
   const {config} = state;
   const penaltyDenominator = config.INACTIVITY_SCORE_BIAS * INACTIVITY_PENALTY_QUOTIENT_ALTAIR;
-  for (let i = 0; i < process.statuses.length; i++) {
-    const status = process.statuses[i];
+  const {validators, statuses} = process;
+  for (let i = 0; i < statuses.length; i++) {
+    const status = statuses[i];
     if (!hasMarkers(status.flags, FLAG_ELIGIBLE_ATTESTER)) {
       continue;
     }
-    const effectiveBalance = process.validators[i].effectiveBalance;
-    const effectiveBalanceNbr = Number(effectiveBalance);
-    let rewardPenaltyItem = rewardPenaltyItemCache.get(effectiveBalanceNbr);
+    const {effectiveBalance} = validators[i];
+    let rewardPenaltyItem = rewardPenaltyItemCache.get(effectiveBalance);
     if (!rewardPenaltyItem) {
       const baseReward = getBaseReward(process, i);
       const tsWeigh = PARTICIPATION_FLAG_WEIGHTS[TIMELY_SOURCE_FLAG_INDEX];
       const ttWeigh = PARTICIPATION_FLAG_WEIGHTS[TIMELY_TARGET_FLAG_INDEX];
       const thWeigh = PARTICIPATION_FLAG_WEIGHTS[TIMELY_HEAD_FLAG_INDEX];
-      const tsUnslashedParticipatingIncrements =
-        process.prevEpochUnslashedStake["sourceStake"] / EFFECTIVE_BALANCE_INCREMENT;
-      const ttUnslashedParticipatingIncrements =
-        process.prevEpochUnslashedStake["targetStake"] / EFFECTIVE_BALANCE_INCREMENT;
-      const thUnslashedParticipatingIncrements =
-        process.prevEpochUnslashedStake["headStake"] / EFFECTIVE_BALANCE_INCREMENT;
+      const tsUnslashedParticipatingIncrements = process.prevEpochUnslashedStake.sourceStakeByIncrement;
+      const ttUnslashedParticipatingIncrements = process.prevEpochUnslashedStake.targetStakeByIncrement;
+      const thUnslashedParticipatingIncrements = process.prevEpochUnslashedStake.headStakeByIncrement;
       const tsRewardNumerator = baseReward * tsWeigh * tsUnslashedParticipatingIncrements;
       const ttRewardNumerator = baseReward * ttWeigh * ttUnslashedParticipatingIncrements;
       const thRewardNumerator = baseReward * thWeigh * thUnslashedParticipatingIncrements;
       rewardPenaltyItem = {
-        baseReward: Number(baseReward),
-        timelySourceReward: Number(tsRewardNumerator / (activeIncrements * WEIGHT_DENOMINATOR)),
-        timelyTargetReward: Number(ttRewardNumerator / (activeIncrements * WEIGHT_DENOMINATOR)),
-        timelyHeadReward: Number(thRewardNumerator / (activeIncrements * WEIGHT_DENOMINATOR)),
-        timelySourcePenalty: Number((baseReward * tsWeigh) / WEIGHT_DENOMINATOR),
-        timelyTargetPenalty: Number((baseReward * ttWeigh) / WEIGHT_DENOMINATOR),
+        baseReward: baseReward,
+        timelySourceReward: Math.floor(tsRewardNumerator / (activeIncrements * WEIGHT_DENOMINATOR)),
+        timelyTargetReward: Math.floor(ttRewardNumerator / (activeIncrements * WEIGHT_DENOMINATOR)),
+        timelyHeadReward: Math.floor(thRewardNumerator / (activeIncrements * WEIGHT_DENOMINATOR)),
+        timelySourcePenalty: Math.floor((baseReward * tsWeigh) / WEIGHT_DENOMINATOR),
+        timelyTargetPenalty: Math.floor((baseReward * ttWeigh) / WEIGHT_DENOMINATOR),
       };
-      rewardPenaltyItemCache.set(effectiveBalanceNbr, rewardPenaltyItem);
+      rewardPenaltyItemCache.set(effectiveBalance, rewardPenaltyItem);
     }
     const {
       timelySourceReward,
@@ -119,9 +116,8 @@ export function getRewardsPenaltiesDeltas(
     // Same logic to getInactivityPenaltyDeltas
     // TODO: if we have limited value in inactivityScores we can provide a cache too
     if (!hasMarkers(status.flags, FLAG_PREV_TARGET_ATTESTER_OR_UNSLASHED)) {
-      // TODO: effectiveBalance as number
-      const penaltyNumerator = effectiveBalance * BigInt(state.inactivityScores[i]);
-      penalties[i] += Number(penaltyNumerator / penaltyDenominator);
+      const penaltyNumerator = effectiveBalance * state.inactivityScores[i];
+      penalties[i] += Math.floor(penaltyNumerator / penaltyDenominator);
     }
   }
   return [rewards, penalties];
@@ -145,21 +141,20 @@ export function getFlagIndexDeltas(
 
   if (flagIndex === TIMELY_HEAD_FLAG_INDEX) {
     flag = FLAG_PREV_HEAD_ATTESTER_OR_UNSLASHED;
-    stakeSummaryKey = "headStake";
+    stakeSummaryKey = "headStakeByIncrement";
   } else if (flagIndex === TIMELY_SOURCE_FLAG_INDEX) {
     flag = FLAG_PREV_SOURCE_ATTESTER_OR_UNSLASHED;
-    stakeSummaryKey = "sourceStake";
+    stakeSummaryKey = "sourceStakeByIncrement";
   } else if (flagIndex === TIMELY_TARGET_FLAG_INDEX) {
     flag = FLAG_PREV_TARGET_ATTESTER_OR_UNSLASHED;
-    stakeSummaryKey = "targetStake";
+    stakeSummaryKey = "targetStakeByIncrement";
   } else {
     throw new Error(`Unable to process flagIndex: ${flagIndex}`);
   }
 
   const weight = PARTICIPATION_FLAG_WEIGHTS[flagIndex];
-  const unslashedParticipatingIncrements =
-    process.prevEpochUnslashedStake[stakeSummaryKey] / EFFECTIVE_BALANCE_INCREMENT;
-  const activeIncrements = process.totalActiveStake / EFFECTIVE_BALANCE_INCREMENT;
+  const unslashedParticipatingIncrements = process.prevEpochUnslashedStake[stakeSummaryKey];
+  const activeIncrements = process.totalActiveStakeByIncrement;
 
   for (let i = 0; i < process.statuses.length; i++) {
     const status = process.statuses[i];
@@ -170,10 +165,10 @@ export function getFlagIndexDeltas(
     if (hasMarkers(status.flags, flag)) {
       if (!isInInactivityLeak((state as unknown) as phase0.BeaconState)) {
         const rewardNumerator = baseReward * weight * unslashedParticipatingIncrements;
-        rewards[i] += Number(rewardNumerator / (activeIncrements * WEIGHT_DENOMINATOR));
+        rewards[i] += Math.floor(rewardNumerator / (activeIncrements * WEIGHT_DENOMINATOR));
       }
     } else if (flagIndex !== TIMELY_HEAD_FLAG_INDEX) {
-      penalties[i] += Number((baseReward * weight) / WEIGHT_DENOMINATOR);
+      penalties[i] += Math.floor((baseReward * weight) / WEIGHT_DENOMINATOR);
     }
   }
   return [rewards, penalties];
@@ -196,17 +191,16 @@ export function getInactivityPenaltyDeltas(
     const status = process.statuses[i];
     if (hasMarkers(status.flags, FLAG_ELIGIBLE_ATTESTER)) {
       if (!hasMarkers(status.flags, FLAG_PREV_TARGET_ATTESTER_OR_UNSLASHED)) {
-        const penaltyNumerator = process.validators[i].effectiveBalance * BigInt(state.inactivityScores[i]);
+        const penaltyNumerator = process.validators[i].effectiveBalance * state.inactivityScores[i];
         const penaltyDenominator = config.INACTIVITY_SCORE_BIAS * INACTIVITY_PENALTY_QUOTIENT_ALTAIR;
-        penalties[i] += Number(penaltyNumerator / penaltyDenominator);
+        penalties[i] += Math.floor(penaltyNumerator / penaltyDenominator);
       }
     }
   }
   return [rewards, penalties];
 }
 
-// TODO: could this be number
-function getBaseReward(process: IEpochProcess, index: ValidatorIndex): bigint {
+function getBaseReward(process: IEpochProcess, index: ValidatorIndex): number {
   const increments = process.validators[index].effectiveBalance / EFFECTIVE_BALANCE_INCREMENT;
   return increments * process.baseRewardPerIncrement;
 }

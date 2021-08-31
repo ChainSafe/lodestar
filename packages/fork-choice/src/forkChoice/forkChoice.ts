@@ -1,7 +1,7 @@
 /* eslint-disable max-len */
 import {fromHexString, readonlyValues, toHexString} from "@chainsafe/ssz";
 import {SAFE_SLOTS_TO_UPDATE_JUSTIFIED, SLOTS_PER_HISTORICAL_ROOT} from "@chainsafe/lodestar-params";
-import {Slot, ValidatorIndex, Gwei, phase0, allForks, ssz, BlockRootHex, Epoch} from "@chainsafe/lodestar-types";
+import {Slot, ValidatorIndex, phase0, allForks, ssz, BlockRootHex, Epoch} from "@chainsafe/lodestar-types";
 import {
   computeSlotsSinceEpochStart,
   computeStartSlotAtEpoch,
@@ -56,14 +56,14 @@ export class ForkChoice implements IForkChoice {
    *
    * This should be the balances of the state at fcStore.justifiedCheckpoint
    */
-  justifiedBalances: Gwei[];
+  justifiedBalances: number[];
   /**
    * Balances tracked in the protoArray, or soon to be tracked
    * Indexed by validator index
    *
    * This should be the balances of the state at fcStore.bestJustifiedCheckpoint
    */
-  bestJustifiedBalances: Gwei[];
+  bestJustifiedBalances: number[];
   /**
    * Attestations that arrived at the current slot and must be queued for later processing.
    * NOT currently tracked in the protoArray
@@ -102,7 +102,7 @@ export class ForkChoice implements IForkChoice {
     fcStore: IForkChoiceStore;
     protoArray: ProtoArray;
     queuedAttestations: Set<IQueuedAttestation>;
-    justifiedBalances: Gwei[];
+    justifiedBalances: number[];
     metrics?: IForkChoiceMetrics | null;
   }) {
     this.config = config;
@@ -262,7 +262,7 @@ export class ForkChoice implements IForkChoice {
    * `justifiedBalances` balances of justified state which is updated synchronously.
    * This ensures that the forkchoice is never out of sync.
    */
-  onBlock(block: allForks.BeaconBlock, state: allForks.BeaconState, justifiedBalances?: Gwei[]): void {
+  onBlock(block: allForks.BeaconBlock, state: allForks.BeaconState, justifiedBalances?: number[]): void {
     const {parentRoot, slot} = block;
     const parentRootHex = toHexString(parentRoot);
     // Parent block must be known
@@ -586,13 +586,13 @@ export class ForkChoice implements IForkChoice {
     return this.protoArray.nodes.filter((node) => node.slot === slot).map(toBlockSummary);
   }
 
-  private updateJustified(justifiedCheckpoint: phase0.Checkpoint, justifiedBalances: Gwei[]): void {
+  private updateJustified(justifiedCheckpoint: phase0.Checkpoint, justifiedBalances: number[]): void {
     this.synced = false;
     this.justifiedBalances = justifiedBalances;
     this.fcStore.justifiedCheckpoint = justifiedCheckpoint;
   }
 
-  private updateBestJustified(justifiedCheckpoint: phase0.Checkpoint, justifiedBalances: Gwei[]): void {
+  private updateBestJustified(justifiedCheckpoint: phase0.Checkpoint, justifiedBalances: number[]): void {
     this.bestJustifiedBalances = justifiedBalances;
     this.fcStore.bestJustifiedCheckpoint = justifiedCheckpoint;
   }

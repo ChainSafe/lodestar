@@ -21,7 +21,7 @@ describe("CachedBeaconState", function () {
           "0x84105a985058fc8740a48bf1ede9d223ef09e8c6b1735ba0a55cf4a9ff2ff92376b778798365e488dab07a652eb04576"
         ),
         withdrawalCredentials: Buffer.alloc(32),
-        effectiveBalance: BigInt(1000000),
+        effectiveBalance: 1000000,
         slashed: false,
         activationEligibilityEpoch: i + 10,
         activationEpoch: i,
@@ -69,7 +69,7 @@ describe("CachedBeaconState", function () {
     wrappedState.validators.push({
       pubkey: Buffer.alloc(48),
       withdrawalCredentials: Buffer.alloc(32),
-      effectiveBalance: BigInt(1000000),
+      effectiveBalance: 1000000,
       slashed: false,
       activationEligibilityEpoch: NUM_VALIDATORS + 10,
       activationEpoch: NUM_VALIDATORS,
