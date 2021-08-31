@@ -289,7 +289,7 @@ export function beforeProcessEpoch<T extends allForks.BeaconState>(state: Cached
     indicesToEject,
     nextEpochShufflingActiveValidatorIndices,
     // to be updated in processEffectiveBalanceUpdates
-    nextEpochTotalActiveBalance: BigInt(0),
+    nextEpochTotalActiveBalanceByIncrement: 0,
     statuses,
     validators,
   };
