@@ -77,10 +77,12 @@ export function getAttestationDeltas(
   // effectiveBalance is multiple of EFFECTIVE_BALANCE_INCREMENT and less than MAX_EFFECTIVE_BALANCE
   // so there are limited values of them like 32000000000, 31000000000, 30000000000
   const rewardPnaltyItemCache = new Map<number, IRewardPenaltyItem>();
-  const {validators, statuses} = epochProcess;
+  const {statuses} = epochProcess;
+  const {effectiveBalances} = state.epochCtx;
   for (let i = 0; i < statuses.length; i++) {
     const status = statuses[i];
-    const {effectiveBalance} = validators[i];
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    const effectiveBalance = effectiveBalances.get(i)!;
     let rewardItem = rewardPnaltyItemCache.get(effectiveBalance);
     if (!rewardItem) {
       const baseReward = Math.floor(

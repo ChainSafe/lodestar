@@ -2,6 +2,7 @@ import {aggregatePublicKeys} from "@chainsafe/bls";
 import {DOMAIN_SYNC_COMMITTEE, MAX_EFFECTIVE_BALANCE, SYNC_COMMITTEE_SIZE} from "@chainsafe/lodestar-params";
 import {altair, ValidatorIndex, allForks} from "@chainsafe/lodestar-types";
 import {intDiv, intToBytes} from "@chainsafe/lodestar-utils";
+import {MutableVector} from "@chainsafe/persistent-ts";
 import {hash} from "@chainsafe/ssz";
 
 import {computeEpochAtSlot, computeShuffledIndex, getSeed} from "../../util";
@@ -20,7 +21,8 @@ const MAX_RANDOM_BYTE = 2 ** 8 - 1;
  */
 export function getNextSyncCommitteeIndices(
   state: allForks.BeaconState,
-  activeValidatorIndices: ValidatorIndex[]
+  activeValidatorIndices: ValidatorIndex[],
+  effectiveBalances: MutableVector<number>
 ): ValidatorIndex[] {
   const epoch = computeEpochAtSlot(state.slot) + 1;
 
@@ -32,7 +34,8 @@ export function getNextSyncCommitteeIndices(
     const shuffledIndex = computeShuffledIndex(i % activeValidatorCount, activeValidatorCount, seed);
     const candidateIndex = activeValidatorIndices[shuffledIndex];
     const randomByte = hash(Buffer.concat([seed, intToBytes(intDiv(i, 32), 8, "le")]))[i % 32];
-    const effectiveBalance = state.validators[candidateIndex].effectiveBalance;
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    const effectiveBalance = effectiveBalances.get(candidateIndex)!;
     if (effectiveBalance * MAX_RANDOM_BYTE >= MAX_EFFECTIVE_BALANCE * randomByte) {
       syncCommitteeIndices.push(candidateIndex);
     }
@@ -48,9 +51,10 @@ export function getNextSyncCommitteeIndices(
  */
 export function getNextSyncCommittee(
   state: allForks.BeaconState,
-  activeValidatorIndices: ValidatorIndex[]
+  activeValidatorIndices: ValidatorIndex[],
+  effectiveBalances: MutableVector<number>
 ): altair.SyncCommittee {
-  const indices = getNextSyncCommitteeIndices(state, activeValidatorIndices);
+  const indices = getNextSyncCommitteeIndices(state, activeValidatorIndices, effectiveBalances);
   const pubkeys = indices.map((index) => state.validators[index].pubkey);
   return {
     pubkeys,

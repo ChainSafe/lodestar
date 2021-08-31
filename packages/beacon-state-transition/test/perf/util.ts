@@ -27,6 +27,7 @@ import {getClient} from "@chainsafe/lodestar-api";
 import {getNextSyncCommittee} from "../../src/altair/util/syncCommittee";
 import {getInfuraUrl} from "./infura";
 import {testCachePath} from "../cache";
+import {MutableVector} from "@chainsafe/persistent-ts";
 
 let phase0State: TreeBacked<phase0.BeaconState> | null = null;
 let phase0CachedState23637: allForks.CachedBeaconState<phase0.BeaconState> | null = null;
@@ -182,7 +183,8 @@ export function generatePerformanceStateAltair(pubkeysArg?: Uint8Array[]): TreeB
     state.inactivityScores = Array.from({length: pubkeys.length}, (_, i) => i % 2) as List<ParticipationFlags>;
     const epoch = computeEpochAtSlot(state.slot);
     const activeValidatorIndices = getActiveValidatorIndices(state, epoch);
-    const syncCommittee = getNextSyncCommittee(state, activeValidatorIndices);
+    const effectiveBalances = MutableVector.from(Array.from(state.validators).map((v) => v.effectiveBalance));
+    const syncCommittee = getNextSyncCommittee(state, activeValidatorIndices, effectiveBalances);
     state.currentSyncCommittee = syncCommittee;
     state.nextSyncCommittee = syncCommittee;
     altairState = ssz.altair.BeaconState.createTreeBackedFromStruct(state);

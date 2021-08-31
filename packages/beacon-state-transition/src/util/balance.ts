@@ -6,8 +6,7 @@ import {EFFECTIVE_BALANCE_INCREMENT} from "@chainsafe/lodestar-params";
 import {allForks, altair, Gwei, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {bigIntMax} from "@chainsafe/lodestar-utils";
 import {CachedBeaconState} from "../allForks";
-import {getCurrentEpoch} from "./epoch";
-import {getActiveValidatorIndices, isActiveValidator} from "./validator";
+import {isActiveValidator} from "./validator";
 
 /**
  * Return the combined effective balance of the [[indices]].
@@ -23,17 +22,6 @@ export function getTotalBalance(state: allForks.BeaconState, indices: ValidatorI
       BigInt(0)
     )
   );
-}
-
-/**
- * Call this function with care since it has to loop through validators which is expensive.
- * Return the combined effective balance of the active validators.
- * Note: `getTotalBalance` returns `EFFECTIVE_BALANCE_INCREMENT` Gwei minimum to avoid divisions by zero.
- *
- * SLOW CODE - 🐢
- */
-export function getTotalActiveBalance(state: allForks.BeaconState): Gwei {
-  return getTotalBalance(state, getActiveValidatorIndices(state, getCurrentEpoch(state)));
 }
 
 /**

@@ -55,15 +55,16 @@ export function getRewardsPenaltiesDeltas(
   // effectiveBalance is multiple of EFFECTIVE_BALANCE_INCREMENT and less than MAX_EFFECTIVE_BALANCE
   // so there are limited values of them like 32000000000, 31000000000, 30000000000
   const rewardPenaltyItemCache = new Map<number, IRewardPenaltyItem>();
-  const {config} = state;
+  const {config, epochCtx} = state;
   const penaltyDenominator = config.INACTIVITY_SCORE_BIAS * INACTIVITY_PENALTY_QUOTIENT_ALTAIR;
-  const {validators, statuses} = process;
+  const {statuses} = process;
   for (let i = 0; i < statuses.length; i++) {
     const status = statuses[i];
     if (!hasMarkers(status.flags, FLAG_ELIGIBLE_ATTESTER)) {
       continue;
     }
-    const {effectiveBalance} = validators[i];
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    const effectiveBalance = epochCtx.effectiveBalances.get(i)!;
     let rewardPenaltyItem = rewardPenaltyItemCache.get(effectiveBalance);
     if (!rewardPenaltyItem) {
       const baseReward = getBaseReward(process, i);

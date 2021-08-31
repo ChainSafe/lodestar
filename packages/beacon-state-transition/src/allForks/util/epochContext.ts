@@ -112,6 +112,7 @@ export function createEpochContext(
   let exitQueueEpoch = computeActivationExitEpoch(currentEpoch);
   let exitQueueChurn = 0;
 
+  const effectiveBalancesArr: number[] = [];
   const previousActiveIndices: ValidatorIndex[] = [];
   const currentActiveIndices: ValidatorIndex[] = [];
   const nextActiveIndices: ValidatorIndex[] = [];
@@ -137,7 +138,11 @@ export function createEpochContext(
         exitQueueChurn += 1;
       }
     }
+
+    // TODO: Should have 0 for not active validators to be re-usable in ForkChoice
+    effectiveBalancesArr.push(v.effectiveBalance);
   });
+  const effectiveBalances = MutableVector.from(effectiveBalancesArr);
 
   // Spec: `EFFECTIVE_BALANCE_INCREMENT` Gwei minimum to avoid divisions by zero
   // 1 = 1 unit of EFFECTIVE_BALANCE_INCREMENT
@@ -154,7 +159,7 @@ export function createEpochContext(
   const nextShuffling = computeEpochShuffling(state, nextActiveIndices, nextEpoch);
 
   // Allow to create CachedBeaconState for empty states
-  const proposers = state.validators.length > 0 ? computeProposers(state, currentShuffling) : [];
+  const proposers = state.validators.length > 0 ? computeProposers(state, currentShuffling, effectiveBalances) : [];
 
   // Only after altair, compute the indices of the current sync committee
   const onAltairFork = currentEpoch >= config.ALTAIR_FORK_EPOCH;
@@ -198,6 +203,7 @@ export function createEpochContext(
     syncParticipantReward,
     syncProposerReward,
     baseRewardPerIncrement,
+    effectiveBalances,
     churnLimit,
     exitQueueEpoch,
     exitQueueChurn,
@@ -234,13 +240,21 @@ export function syncPubkeys(
 /**
  * Compute proposer indices for an epoch
  */
-export function computeProposers(state: allForks.BeaconState, shuffling: IEpochShuffling): number[] {
+export function computeProposers(
+  state: allForks.BeaconState,
+  shuffling: IEpochShuffling,
+  effectiveBalances: MutableVector<number>
+): number[] {
   const epochSeed = getSeed(state, shuffling.epoch, DOMAIN_BEACON_PROPOSER);
   const startSlot = computeStartSlotAtEpoch(shuffling.epoch);
   const proposers = [];
   for (let slot = startSlot; slot < startSlot + SLOTS_PER_EPOCH; slot++) {
     proposers.push(
-      computeProposerIndex(state, shuffling.activeIndices, hash(Buffer.concat([epochSeed, intToBytes(slot, 8)])))
+      computeProposerIndex(
+        effectiveBalances,
+        shuffling.activeIndices,
+        hash(Buffer.concat([epochSeed, intToBytes(slot, 8)]))
+      )
     );
   }
   return proposers;
@@ -277,7 +291,7 @@ export function afterProcessEpoch(state: CachedBeaconState<allForks.BeaconState>
     epochProcess.nextEpochShufflingActiveValidatorIndices,
     nextEpoch
   );
-  epochCtx.proposers = computeProposers(state, epochCtx.currentShuffling);
+  epochCtx.proposers = computeProposers(state, epochCtx.currentShuffling, epochCtx.effectiveBalances);
 
   // TODO: DEDUPLICATE from createEpochContext
   //
@@ -327,6 +341,7 @@ interface IEpochContextData {
   syncParticipantReward: number;
   syncProposerReward: number;
   baseRewardPerIncrement: number;
+  effectiveBalances: MutableVector<number>;
   churnLimit: number;
   exitQueueEpoch: Epoch;
   exitQueueChurn: number;
@@ -384,6 +399,10 @@ export class EpochContext {
    */
   baseRewardPerIncrement: number;
   /**
+   * Effective balances, for altair processAttestations()
+   */
+  effectiveBalances: MutableVector<number>;
+  /**
    * Rate at which validators can enter or leave the set per epoch. Depends only on activeIndexes, so it does not
    * change through the epoch. It's used in initiateValidatorExit(). Must be update after changing active indexes.
    */
@@ -414,6 +433,7 @@ export class EpochContext {
     this.syncParticipantReward = data.syncParticipantReward;
     this.syncProposerReward = data.syncProposerReward;
     this.baseRewardPerIncrement = data.baseRewardPerIncrement;
+    this.effectiveBalances = data.effectiveBalances;
     this.churnLimit = data.churnLimit;
     this.exitQueueEpoch = data.exitQueueEpoch;
     this.exitQueueChurn = data.exitQueueChurn;

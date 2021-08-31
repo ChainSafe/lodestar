@@ -124,6 +124,12 @@ export interface IEpochProcess {
    * | afterEpochProcess                | read it                            |
    */
   nextEpochTotalActiveBalanceByIncrement: number;
+
+  /**
+   * Track by validator index if it's active in the next epoch.
+   * Used in `processEffectiveBalanceUpdates` to save one loop over validators after epoch process.
+   */
+  isActiveNextEpoch: boolean[];
 }
 
 export function beforeProcessEpoch<T extends allForks.BeaconState>(state: CachedBeaconState<T>): IEpochProcess {
@@ -133,6 +139,7 @@ export function beforeProcessEpoch<T extends allForks.BeaconState>(state: Cached
   const prevEpoch = epochCtx.previousShuffling.epoch;
   // active validator indices for nextShuffling is ready, we want to precalculate for the one after that
   const nextShufflingEpoch = currentEpoch + 2;
+  const nextEpoch = currentEpoch + 1;
 
   const slashingsEpoch = currentEpoch + intDiv(EPOCHS_PER_SLASHINGS_VECTOR, 2);
 
@@ -141,7 +148,7 @@ export function beforeProcessEpoch<T extends allForks.BeaconState>(state: Cached
   const indicesEligibleForActivation: ValidatorIndex[] = [];
   const indicesToEject: ValidatorIndex[] = [];
   const nextEpochShufflingActiveValidatorIndices: ValidatorIndex[] = [];
-
+  const isActiveNextEpoch: boolean[] = [];
   const statuses: IAttesterStatus[] = [];
 
   let totalActiveStakeByIncrement = 0;
@@ -186,6 +193,9 @@ export function beforeProcessEpoch<T extends allForks.BeaconState>(state: Cached
     }
 
     statuses.push(status);
+
+    isActiveNextEpoch.push(isActiveValidator(v, nextEpoch));
+
     if (isActiveValidator(v, nextShufflingEpoch)) {
       nextEpochShufflingActiveValidatorIndices.push(i);
     }
@@ -291,6 +301,7 @@ export function beforeProcessEpoch<T extends allForks.BeaconState>(state: Cached
     nextEpochShufflingActiveValidatorIndices,
     // to be updated in processEffectiveBalanceUpdates
     nextEpochTotalActiveBalanceByIncrement: 0,
+    isActiveNextEpoch,
     statuses,
     validators,
   };

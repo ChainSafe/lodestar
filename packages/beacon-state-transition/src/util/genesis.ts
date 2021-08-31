@@ -209,7 +209,7 @@ export function initializeBeaconStateFromEth1(
   const activeValidatorIndices = applyDeposits(config, state, deposits);
 
   if (config.getForkName(GENESIS_SLOT) === ForkName.altair) {
-    const syncCommittees = getNextSyncCommittee(state, activeValidatorIndices);
+    const syncCommittees = getNextSyncCommittee(state, activeValidatorIndices, state.effectiveBalances);
     const altairState = state as TreeBacked<altair.BeaconState>;
     altairState.currentSyncCommittee = syncCommittees;
     altairState.nextSyncCommittee = syncCommittees;

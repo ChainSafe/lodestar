@@ -40,7 +40,8 @@ export function processSlashingsAllForks(
   const adjustedTotalSlashingBalance = bigIntMin(totalSlashings * BigInt(proportionalSlashingMultiplier), totalBalance);
   const increment = EFFECTIVE_BALANCE_INCREMENT;
   for (const index of process.indicesToSlash) {
-    const effectiveBalance = process.validators[index].effectiveBalance;
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    const effectiveBalance = state.epochCtx.effectiveBalances.get(index)!;
     const penaltyNumerator = BigInt(effectiveBalance / increment) * adjustedTotalSlashingBalance;
     const penalty = (penaltyNumerator / totalBalance) * BigInt(increment);
     decreaseBalance(state, index, Number(penalty));
