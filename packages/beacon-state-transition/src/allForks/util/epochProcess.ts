@@ -193,6 +193,8 @@ export function beforeProcessEpoch<T extends allForks.BeaconState>(state: Cached
 
   if (totalActiveStakeByIncrement < 1) {
     totalActiveStakeByIncrement = 1;
+  } else if (totalActiveStakeByIncrement >= Number.MAX_SAFE_INTEGER) {
+    throw Error("totalActiveStakeByIncrement >= Number.MAX_SAFE_INTEGER. MAX_EFFECTIVE_BALANCE is too low.");
   }
 
   // SPEC: function getBaseRewardPerIncrement()

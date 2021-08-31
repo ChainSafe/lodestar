@@ -143,6 +143,8 @@ export function createEpochContext(
   // 1 = 1 unit of EFFECTIVE_BALANCE_INCREMENT
   if (totalActiveBalanceByIncrement < 1) {
     totalActiveBalanceByIncrement = 1;
+  } else if (totalActiveBalanceByIncrement >= Number.MAX_SAFE_INTEGER) {
+    throw Error("totalActiveBalanceByIncrement >= Number.MAX_SAFE_INTEGER. MAX_EFFECTIVE_BALANCE is too low.");
   }
 
   const currentShuffling = computeEpochShuffling(state, currentActiveIndices, currentEpoch);
