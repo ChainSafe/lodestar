@@ -95,7 +95,7 @@ export class LightclientMockServer {
     // Increase balances, simulate rewards
     if (slot % SLOTS_PER_EPOCH === 0) {
       for (let i = 0, len = state.balances.length; i < len; i++) {
-        state.balances[i] = state.balances[i] + BigInt(Math.round(11430 * (1 + Math.random())));
+        state.balances[i] = state.balances[i] + Math.round(11430 * (1 + Math.random()));
       }
     }
 

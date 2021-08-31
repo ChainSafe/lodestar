@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import {config} from "@chainsafe/lodestar-config/default";
-import {Gwei, phase0, ssz, Slot, altair, ParticipationFlags} from "@chainsafe/lodestar-types";
+import {phase0, ssz, Slot, altair, ParticipationFlags} from "@chainsafe/lodestar-types";
 import bls, {CoordType, PublicKey, SecretKey} from "@chainsafe/bls";
 import {fromHexString, List, TreeBacked} from "@chainsafe/ssz";
 import {allForks, interopSecretKey, computeEpochAtSlot, getActiveValidatorIndices} from "../../src";
@@ -323,7 +323,7 @@ function buildPerformanceStateAllForks(state: allForks.BeaconState, pubkeysArg?:
     exitEpoch: Infinity,
     withdrawableEpoch: Infinity,
   })) as List<phase0.Validator>;
-  state.balances = Array.from({length: pubkeys.length}, () => BigInt(31217089836)) as List<Gwei>;
+  state.balances = Array.from({length: pubkeys.length}, () => 31217089836) as List<number>;
   state.randaoMixes = Array.from({length: EPOCHS_PER_HISTORICAL_VECTOR}, (_, i) => Buffer.alloc(32, i));
   // no slashings
   const currentEpoch = computeEpochAtSlot(state.slot - 1);
@@ -382,7 +382,7 @@ export function generateTestCachedBeaconStateOnlyValidators({
     state.validators[i] = validator;
   }
 
-  state.balances = Array.from({length: pubkeys.length}, () => BigInt(31217089836)) as List<Gwei>;
+  state.balances = Array.from({length: pubkeys.length}, () => 31217089836) as List<number>;
   state.randaoMixes = Array.from({length: EPOCHS_PER_HISTORICAL_VECTOR}, (_, i) => Buffer.alloc(32, i));
 
   return allForks.createCachedBeaconState(config, state as TreeBacked<allForks.BeaconState>, {

@@ -157,10 +157,11 @@ export function createEpochContext(
   // Only after altair, compute the indices of the current sync committee
   const onAltairFork = currentEpoch >= config.ALTAIR_FORK_EPOCH;
 
-  const syncParticipantReward = onAltairFork ? computeSyncParticipantReward(config, totalActiveBalance) : BigInt(0);
+  const syncParticipantReward = onAltairFork ? computeSyncParticipantReward(config, totalActiveBalance) : 0;
+  // TODO: could PROPOSER_WEIGHT be number?
   const syncProposerReward = onAltairFork
-    ? (syncParticipantReward * PROPOSER_WEIGHT) / (WEIGHT_DENOMINATOR - PROPOSER_WEIGHT)
-    : BigInt(0);
+    ? Number((BigInt(syncParticipantReward) * PROPOSER_WEIGHT) / (WEIGHT_DENOMINATOR - PROPOSER_WEIGHT))
+    : 0;
 
   const baseRewardPerIncrement = onAltairFork ? computeBaseRewardPerIncrement(totalActiveBalance) : BigInt(0);
 
@@ -246,13 +247,13 @@ export function computeProposers(state: allForks.BeaconState, shuffling: IEpochS
 /**
  * Same logic in https://github.com/ethereum/eth2.0-specs/blob/v1.1.0-alpha.5/specs/altair/beacon-chain.md#sync-committee-processing
  */
-export function computeSyncParticipantReward(config: IBeaconConfig, totalActiveBalance: Gwei): Gwei {
+export function computeSyncParticipantReward(config: IBeaconConfig, totalActiveBalance: Gwei): number {
   const totalActiveIncrements = totalActiveBalance / EFFECTIVE_BALANCE_INCREMENT;
   const baseRewardPerIncrement =
     (EFFECTIVE_BALANCE_INCREMENT * BigInt(BASE_REWARD_FACTOR)) / bigIntSqrt(totalActiveBalance);
   const totalBaseRewards = baseRewardPerIncrement * totalActiveIncrements;
   const maxParticipantRewards = (totalBaseRewards * SYNC_REWARD_WEIGHT) / WEIGHT_DENOMINATOR / BigInt(SLOTS_PER_EPOCH);
-  return maxParticipantRewards / BigInt(SYNC_COMMITTEE_SIZE);
+  return Number(maxParticipantRewards / BigInt(SYNC_COMMITTEE_SIZE));
 }
 
 /**
@@ -300,8 +301,9 @@ export function afterProcessEpoch(state: CachedBeaconState<allForks.BeaconState>
   if (currEpoch >= epochCtx.config.ALTAIR_FORK_EPOCH) {
     const totalActiveBalance = epochProcess.nextEpochTotalActiveBalance;
     epochCtx.syncParticipantReward = computeSyncParticipantReward(epochCtx.config, totalActiveBalance);
-    epochCtx.syncProposerReward =
-      (epochCtx.syncParticipantReward * PROPOSER_WEIGHT) / (WEIGHT_DENOMINATOR - PROPOSER_WEIGHT);
+    epochCtx.syncProposerReward = Number(
+      (BigInt(epochCtx.syncParticipantReward) * PROPOSER_WEIGHT) / (WEIGHT_DENOMINATOR - PROPOSER_WEIGHT)
+    );
 
     epochCtx.baseRewardPerIncrement = computeBaseRewardPerIncrement(totalActiveBalance);
   }
@@ -315,8 +317,8 @@ interface IEpochContextData {
   previousShuffling: IEpochShuffling;
   currentShuffling: IEpochShuffling;
   nextShuffling: IEpochShuffling;
-  syncParticipantReward: Gwei;
-  syncProposerReward: Gwei;
+  syncParticipantReward: number;
+  syncProposerReward: number;
   baseRewardPerIncrement: Gwei;
   churnLimit: number;
   exitQueueEpoch: Epoch;
@@ -368,8 +370,8 @@ export class EpochContext {
   currentShuffling: IEpochShuffling;
   /** Same as previousShuffling */
   nextShuffling: IEpochShuffling;
-  syncParticipantReward: phase0.Gwei;
-  syncProposerReward: phase0.Gwei;
+  syncParticipantReward: number;
+  syncProposerReward: number;
   /**
    * Update freq: once per epoch after `process_effective_balance_updates()`
    * Memory cost: 1 bigint

@@ -54,7 +54,7 @@
     "@chainsafe/lodestar-params": "^0.29.1",
     "@chainsafe/lodestar-types": "^0.29.1",
     "@chainsafe/lodestar-utils": "^0.29.1",
-    "@chainsafe/ssz": "^0.8.15",
+    "@chainsafe/ssz": "^0.8.17",
     "bigint-buffer": "^1.1.5"
   },
   "devDependencies": {

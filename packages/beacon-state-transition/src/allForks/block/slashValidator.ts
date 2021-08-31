@@ -36,19 +36,20 @@ export function slashValidatorAllForks(
 
   const minSlashingPenaltyQuotient =
     fork === ForkName.phase0 ? MIN_SLASHING_PENALTY_QUOTIENT : MIN_SLASHING_PENALTY_QUOTIENT_ALTAIR;
-  decreaseBalance(state, slashedIndex, effectiveBalance / minSlashingPenaltyQuotient);
+  decreaseBalance(state, slashedIndex, Number(effectiveBalance / minSlashingPenaltyQuotient));
 
   // apply proposer and whistleblower rewards
   const proposerIndex = epochCtx.getBeaconProposer(state.slot);
   if (whistleblowerIndex === undefined || !Number.isSafeInteger(whistleblowerIndex)) {
     whistleblowerIndex = proposerIndex;
   }
+  // TODO: could be all number here if effectiveBalance is also number
   const whistleblowerReward = effectiveBalance / WHISTLEBLOWER_REWARD_QUOTIENT;
   const proposerReward =
     fork === ForkName.phase0
       ? whistleblowerReward / PROPOSER_REWARD_QUOTIENT
       : (whistleblowerReward * PROPOSER_WEIGHT) / WEIGHT_DENOMINATOR;
 
-  increaseBalance(state, proposerIndex, proposerReward);
-  increaseBalance(state, whistleblowerIndex, whistleblowerReward - proposerReward);
+  increaseBalance(state, proposerIndex, Number(proposerReward));
+  increaseBalance(state, whistleblowerIndex, Number(whistleblowerReward - proposerReward));
 }

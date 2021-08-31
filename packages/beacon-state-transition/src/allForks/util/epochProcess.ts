@@ -98,7 +98,7 @@ export interface IEpochProcess {
 
   statuses: IAttesterStatus[];
   validators: phase0.Validator[];
-  balances?: BigUint64Array;
+  balances?: number[];
   /**
    * Active validator indices for currentEpoch + 2.
    * This is only used in `afterProcessEpoch` to compute epoch shuffling, it's not efficient to calculate it at that time

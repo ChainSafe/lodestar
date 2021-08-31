@@ -36,7 +36,7 @@ describe("SyncCommitteeDutiesService", function () {
   // Sample validator
   const defaultValidator: routes.beacon.ValidatorResponse = {
     index,
-    balance: BigInt(32e9),
+    balance: 32e9,
     status: "active",
     validator: ssz.phase0.Validator.defaultValue(),
   };

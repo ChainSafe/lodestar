@@ -2,12 +2,12 @@ import {assert} from "chai";
 
 import {List} from "@chainsafe/ssz";
 import {EFFECTIVE_BALANCE_INCREMENT} from "@chainsafe/lodestar-params";
-import {phase0, Gwei, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {phase0, ValidatorIndex} from "@chainsafe/lodestar-types";
 
 import {increaseBalance, decreaseBalance, getTotalBalance} from "../../../src/util";
 
 import {generateValidators} from "../../utils/validator";
-import {generateState} from "../../utils/state";
+import {generateCachedState, generateState} from "../../utils/state";
 
 describe("getTotalBalance", () => {
   it("should return correct balances", () => {
@@ -28,7 +28,7 @@ describe("getTotalBalance", () => {
   it("should return correct balances", () => {
     const num = 5;
     const validators = generateValidators(num);
-    const balances = Array.from({length: num}, () => BigInt(0)) as List<Gwei>;
+    const balances = Array.from({length: num}, () => 0) as List<number>;
     const state: phase0.BeaconState = generateState({validators: validators, balances});
     const validatorIndices: ValidatorIndex[] = Array.from({length: num}, (_, i) => i);
 
@@ -40,11 +40,11 @@ describe("getTotalBalance", () => {
 
 describe("increaseBalance", () => {
   it("should add to a validators balance", () => {
-    const state = generateState();
-    state.validators = generateValidators(1);
-    state.balances = [BigInt(0)] as List<Gwei>;
-    const delta = BigInt(5);
-    for (let i = BigInt(1); i < BigInt(10); i++) {
+    const state = generateCachedState();
+    state.validators.push(generateValidators(1)[0]);
+    state.balances.push(0);
+    const delta = 5;
+    for (let i = 1; i < 10; i++) {
       increaseBalance(state, 0, delta);
       assert(state.balances[0] === delta * i);
     }
@@ -53,23 +53,23 @@ describe("increaseBalance", () => {
 
 describe("decreaseBalance", () => {
   it("should subtract from a validators balance", () => {
-    const state = generateState();
-    state.validators = generateValidators(1);
-    const initial = BigInt(100);
-    state.balances = [initial] as List<Gwei>;
-    const delta = BigInt(5);
-    for (let i = BigInt(1); i < BigInt(10); i++) {
+    const state = generateCachedState();
+    state.validators.push(generateValidators(1)[0]);
+    const initial = 100;
+    state.balances.push(initial);
+    const delta = 5;
+    for (let i = 1; i < 10; i++) {
       decreaseBalance(state, 0, delta);
       assert(state.balances[0] === initial - delta * i);
     }
   });
   it("should not make a validators balance < 0", () => {
-    const state = generateState();
-    state.validators = generateValidators(1);
-    const initial = BigInt(10);
-    state.balances = [initial] as List<Gwei>;
-    const delta = BigInt(11);
+    const state = generateCachedState();
+    state.validators.push(generateValidators(1)[0]);
+    const initial = 10;
+    state.balances.push(initial);
+    const delta = 11;
     decreaseBalance(state, 0, delta);
-    assert(state.balances[0] === BigInt(0));
+    assert(state.balances[0] === 0);
   });
 });

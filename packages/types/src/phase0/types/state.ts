@@ -28,7 +28,7 @@ export interface BeaconState {
 
   // Registry
   validators: List<Validator>;
-  balances: List<Gwei>;
+  balances: List<Number64>;
 
   // Shuffling
   randaoMixes: Vector<Bytes32>;

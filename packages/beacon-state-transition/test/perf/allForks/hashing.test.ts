@@ -22,7 +22,7 @@ describe("BeaconState hashTreeRoot", () => {
   });
 
   const validator: phase0.Validator = ssz.phase0.Validator.defaultValue();
-  const balance = BigInt(31e9);
+  const balance = 31e9;
 
   const testCases: {id: string; noTrack?: boolean; fn: (state: TreeBacked<phase0.BeaconState>) => void}[] = [
     {
@@ -49,7 +49,9 @@ describe("BeaconState hashTreeRoot", () => {
       id: `${count} validator.effectiveBalance`,
       noTrack: count < 512,
       fn: (state) => {
-        for (const i of indicesShuffled.slice(0, count)) state.validators[i].effectiveBalance = balance;
+        for (const i of indicesShuffled.slice(0, count)) {
+          state.validators[i].effectiveBalance = BigInt(balance);
+        }
       },
     });
   }

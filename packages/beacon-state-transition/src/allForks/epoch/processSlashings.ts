@@ -42,6 +42,6 @@ export function processSlashingsAllForks(
     const effectiveBalance = process.validators[index].effectiveBalance;
     const penaltyNumerator = (effectiveBalance / increment) * adjustedTotalSlashingBalance;
     const penalty = (penaltyNumerator / totalBalance) * increment;
-    decreaseBalance(state, index, penalty);
+    decreaseBalance(state, index, Number(penalty));
   }
 }

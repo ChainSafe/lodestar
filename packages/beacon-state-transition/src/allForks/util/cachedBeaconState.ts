@@ -7,6 +7,7 @@ import {
   isTreeBacked,
   ITreeBacked,
   List,
+  Number64ListType,
   readonlyValues,
   TreeBacked,
 } from "@chainsafe/ssz";
@@ -17,7 +18,7 @@ import {MutableVector} from "@chainsafe/persistent-ts";
 import {createValidatorFlat} from "./flat";
 import {createEpochContext, EpochContext, EpochContextOpts} from "./epochContext";
 import {CachedValidatorList, CachedValidatorListProxyHandler} from "./cachedValidatorList";
-import {CachedBalanceList, CachedBalanceListProxyHandler} from "./cachedBalanceList";
+import {BalanceList, CachedBalanceListProxyHandler} from "./balanceList";
 import {
   CachedEpochParticipation,
   CachedEpochParticipationProxyHandler,
@@ -68,7 +69,6 @@ export function createCachedBeaconState<T extends allForks.BeaconState>(
     Array.from(readonlyValues(state.validators), (v) => createValidatorFlat(v))
   );
 
-  const cachedBalances = MutableVector.from(readonlyValues(state.balances));
   let cachedPreviousParticipation, cachedCurrentParticipation;
   const forkName = config.getForkName(state.slot);
   let currIndexedSyncCommittee: IndexedSyncCommittee;
@@ -105,7 +105,6 @@ export function createCachedBeaconState<T extends allForks.BeaconState>(
       state.type as ContainerType<T>,
       state.tree,
       cachedValidators,
-      cachedBalances,
       cachedPreviousParticipation,
       cachedCurrentParticipation,
       currIndexedSyncCommittee,
@@ -164,7 +163,7 @@ export class BeaconStateContext<T extends allForks.BeaconState> {
    * TODO: Individual balances could be stored as regular numbers:
    * - Number.MAX_SAFE_INTEGER = 9007199254740991, which is 9e6 GWEI
    */
-  balances: CachedBalanceList & T["balances"];
+  balances: BalanceList & T["balances"];
   /**
    * Returns a Proxy to CachedEpochParticipation
    *
@@ -222,7 +221,6 @@ export class BeaconStateContext<T extends allForks.BeaconState> {
     type: ContainerType<T>,
     tree: Tree,
     validatorCache: MutableVector<T["validators"][number]>,
-    balanceCache: MutableVector<T["balances"][number]>,
     previousEpochParticipationCache: MutableVector<IParticipationStatus>,
     currentEpochParticipationCache: MutableVector<IParticipationStatus>,
     currentSyncCommittee: IndexedSyncCommittee,
@@ -243,13 +241,12 @@ export class BeaconStateContext<T extends allForks.BeaconState> {
       CachedValidatorListProxyHandler
     ) as unknown) as CachedValidatorList<T["validators"][number]> & T["validators"];
     this.balances = (new Proxy(
-      new CachedBalanceList(
-        this.type.fields["balances"] as BasicListType<List<T["balances"][number]>>,
-        this.type.tree_getProperty(this.tree, "balances") as Tree,
-        balanceCache
+      new BalanceList(
+        this.type.fields["balances"] as Number64ListType,
+        this.type.tree_getProperty(this.tree, "balances") as Tree
       ),
       CachedBalanceListProxyHandler
-    ) as unknown) as CachedBalanceList & T["balances"];
+    ) as unknown) as BalanceList & T["balances"];
     this.previousEpochParticipation = (new Proxy(
       new CachedEpochParticipation({
         type: this.type.fields["previousEpochParticipation"] as BasicListType<List<ParticipationFlags>>,
@@ -284,7 +281,6 @@ export class BeaconStateContext<T extends allForks.BeaconState> {
         this.type,
         this.tree.clone(),
         this.validators.persistent.clone(),
-        this.balances.persistent.clone(),
         this.previousEpochParticipation.persistent.clone(),
         this.currentEpochParticipation.persistent.clone(),
         // states in the same sync period has same sync committee
@@ -313,7 +309,6 @@ export class BeaconStateContext<T extends allForks.BeaconState> {
    */
   setStateCachesAsTransient(): void {
     this.validators.persistent.asTransient();
-    this.balances.persistent.asTransient();
     this.previousEpochParticipation.persistent.asTransient();
     this.currentEpochParticipation.persistent.asTransient();
     this.inactivityScores.persistent.asTransient();
@@ -324,7 +319,6 @@ export class BeaconStateContext<T extends allForks.BeaconState> {
    */
   setStateCachesAsPersistent(): void {
     this.validators.persistent.asPersistent();
-    this.balances.persistent.asPersistent();
     this.previousEpochParticipation.persistent.asPersistent();
     this.currentEpochParticipation.persistent.asPersistent();
     this.inactivityScores.persistent.asPersistent();

@@ -100,7 +100,7 @@ export function processAttestations(
     proposerReward += proposerRewardNumerator / PROPOSER_REWARD_DOMINATOR;
   }
 
-  increaseBalance(state, epochCtx.getBeaconProposer(state.slot), proposerReward);
+  increaseBalance(state, epochCtx.getBeaconProposer(state.slot), Number(proposerReward));
 }
 
 /**
