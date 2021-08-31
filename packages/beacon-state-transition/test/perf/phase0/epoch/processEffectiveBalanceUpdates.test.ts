@@ -63,7 +63,7 @@ function getEffectiveBalanceTestData(
   const balances: number[] = [];
   for (let i = 0; i < vc; i++) {
     // Set flat balance to lower value
-    const balance = i < vc * changeRatio ? 30 : 32;
+    const balance = i < vc * changeRatio ? 30e9 : 32e9;
     stateTree.balances.push(balance);
     balances.push(balance);
 
