@@ -26,6 +26,7 @@ import {IEpochStakeSummary} from "./epochStakeSummary";
 import {CachedBeaconState} from "./cachedBeaconState";
 import {statusProcessEpoch} from "../../phase0/epoch/processPendingAttestations";
 import {computeBaseRewardPerIncrement} from "../../altair/util/misc";
+import {readonlyValuesListOfLeafNodeStruct} from "@chainsafe/ssz";
 
 /**
  * Pre-computed disposable data to process epoch transitions faster at the cost of more memory.
@@ -100,7 +101,6 @@ export interface IEpochProcess {
   indicesToEject: ValidatorIndex[];
 
   statuses: IAttesterStatus[];
-  validators: phase0.Validator[];
   balances?: number[];
   /**
    * Active validator indices for currentEpoch + 2.
@@ -153,53 +153,94 @@ export function beforeProcessEpoch<T extends allForks.BeaconState>(state: Cached
 
   let totalActiveStakeByIncrement = 0;
 
-  const validators = state.validators.persistent.toArray();
+  // To optimize memory each validator node in `state.validators` is represented with a special node type
+  // `BranchNodeStruct` that represents the data as struct internally. This utility grabs the struct data directrly
+  // from the nodes without any extra transformation. The returned `validators` array contains native JS objects.
+  const validators = readonlyValuesListOfLeafNodeStruct(state.validators);
+  const validatorCount = validators.length;
+
   const effectiveBalancesByIncrements = newZeroedArray(validators.length);
-  validators.forEach((v, i) => {
+
+  for (let i = 0; i < validatorCount; i++) {
+    const validator = validators[i];
     const status = createIAttesterStatus();
 
-    if (v.slashed) {
-      if (slashingsEpoch === v.withdrawableEpoch) {
+    if (validator.slashed) {
+      if (slashingsEpoch === validator.withdrawableEpoch) {
         indicesToSlash.push(i);
       }
     } else {
       status.flags |= FLAG_UNSLASHED;
     }
 
-    if (isActiveValidator(v, prevEpoch) || (v.slashed && prevEpoch + 1 < v.withdrawableEpoch)) {
+    if (isActiveValidator(validator, prevEpoch) || (validator.slashed && prevEpoch + 1 < validator.withdrawableEpoch)) {
       status.flags |= FLAG_ELIGIBLE_ATTESTER;
     }
 
-    const active = isActiveValidator(v, currentEpoch);
+    const active = isActiveValidator(validator, currentEpoch);
     if (active) {
       status.active = true;
       // We track effectiveBalanceByIncrement as ETH to fit total network balance in a JS number (53 bits)
-      const effectiveBalanceByIncrement = Math.floor(v.effectiveBalance / EFFECTIVE_BALANCE_INCREMENT);
+      const effectiveBalanceByIncrement = Math.floor(validator.effectiveBalance / EFFECTIVE_BALANCE_INCREMENT);
       effectiveBalancesByIncrements[i] = effectiveBalanceByIncrement;
       totalActiveStakeByIncrement += effectiveBalanceByIncrement;
     }
 
-    if (v.activationEligibilityEpoch === FAR_FUTURE_EPOCH && v.effectiveBalance === MAX_EFFECTIVE_BALANCE) {
+    // To optimize process_registry_updates():
+    // ```python
+    // def is_eligible_for_activation_queue(validator: Validator) -> bool:
+    //   return (
+    //     validator.activation_eligibility_epoch == FAR_FUTURE_EPOCH
+    //     and validator.effective_balance == MAX_EFFECTIVE_BALANCE
+    //   )
+    // ```
+    if (
+      validator.activationEligibilityEpoch === FAR_FUTURE_EPOCH &&
+      validator.effectiveBalance === MAX_EFFECTIVE_BALANCE
+    ) {
       indicesEligibleForActivationQueue.push(i);
     }
 
-    // Note: ignores churn, apply churn limit latter, because finality may change
-    if (v.activationEpoch === FAR_FUTURE_EPOCH && v.activationEligibilityEpoch <= currentEpoch) {
+    // To optimize process_registry_updates():
+    // ```python
+    // def is_eligible_for_activation(state: BeaconState, validator: Validator) -> bool:
+    //   return (
+    //     validator.activation_eligibility_epoch <= state.finalized_checkpoint.epoch  # Placement in queue is finalized
+    //     and validator.activation_epoch == FAR_FUTURE_EPOCH                          # Has not yet been activated
+    //   )
+    // ```
+    // Here we have to check if `activationEligibilityEpoch <= currentEpoch` instead of finalized checkpoint, because the finalized
+    // checkpoint may change during epoch processing at processJustificationAndFinalization(), which is called before processRegistryUpdates().
+    // Then in processRegistryUpdates() we will check `activationEligibilityEpoch <= finalityEpoch`. This is to keep the array small.
+    //
+    // Use `else` since indicesEligibleForActivationQueue + indicesEligibleForActivation are mutually exclusive
+    else if (validator.activationEpoch === FAR_FUTURE_EPOCH && validator.activationEligibilityEpoch <= currentEpoch) {
       indicesEligibleForActivation.push(i);
     }
 
-    if (status.active && v.exitEpoch === FAR_FUTURE_EPOCH && v.effectiveBalance <= config.EJECTION_BALANCE) {
+    // To optimize process_registry_updates():
+    // ```python
+    // if is_active_validator(validator, get_current_epoch(state)) and validator.effective_balance <= EJECTION_BALANCE:
+    // ```
+    // Adding extra condition `exitEpoch === FAR_FUTURE_EPOCH` to keep the array as small as possible. initiateValidatorExit() will ignore them anyway
+    //
+    // Use `else` since indicesEligibleForActivationQueue + indicesEligibleForActivation + indicesToEject are mutually exclusive
+    else if (
+      status.active &&
+      validator.exitEpoch === FAR_FUTURE_EPOCH &&
+      validator.effectiveBalance <= config.EJECTION_BALANCE
+    ) {
       indicesToEject.push(i);
     }
 
     statuses.push(status);
 
-    isActiveNextEpoch.push(isActiveValidator(v, nextEpoch));
+    isActiveNextEpoch.push(isActiveValidator(validator, nextEpoch));
 
-    if (isActiveValidator(v, nextShufflingEpoch)) {
+    if (isActiveValidator(validator, nextShufflingEpoch)) {
       nextEpochShufflingActiveValidatorIndices.push(i);
     }
-  });
+  }
 
   if (totalActiveStakeByIncrement < 1) {
     totalActiveStakeByIncrement = 1;
@@ -208,6 +249,7 @@ export function beforeProcessEpoch<T extends allForks.BeaconState>(state: Cached
   // SPEC: function getBaseRewardPerIncrement()
   const baseRewardPerIncrement = computeBaseRewardPerIncrement(totalActiveStakeByIncrement);
 
+  // To optimize process_registry_updates():
   // order by sequence of activationEligibilityEpoch setting and then index
   indicesEligibleForActivation.sort(
     (a, b) => validators[a].activationEligibilityEpoch - validators[b].activationEligibilityEpoch || a - b
@@ -303,6 +345,5 @@ export function beforeProcessEpoch<T extends allForks.BeaconState>(state: Cached
     nextEpochTotalActiveBalanceByIncrement: 0,
     isActiveNextEpoch,
     statuses,
-    validators,
   };
 }

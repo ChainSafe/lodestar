@@ -191,16 +191,17 @@ export function getValidatorApi({
 
       const state = await chain.getHeadStateAtCurrentEpoch();
 
-      // Note: Using a MutableVector is the fastest way of getting compressed pubkeys.
+      // NOTE: MutableVector was the fastest way of getting compressed pubkeys.
       //       See benchmark -> packages/lodestar/test/perf/api/impl/validator/attester.test.ts
-      const validators = state.validators.persistent;
+      // After dropping the flat caches attached to the CachedBeaconState it's no longer available.
+      // TODO: Add a flag to just send 0x00 as pubkeys since the Lodestar validator does not need them.
+      const validators = state.validators; // Get the validators sub tree once for all the loop
       const duties: routes.validator.ProposerDuty[] = [];
 
       for (let slot = startSlot; slot < startSlot + SLOTS_PER_EPOCH; slot++) {
         // getBeaconProposer ensures the requested epoch is correct
         const validatorIndex = state.getBeaconProposer(slot);
-        const validator = validators.get(validatorIndex);
-        if (!validator) throw Error(`Unknown validatorIndex ${validatorIndex}`);
+        const validator = validators[validatorIndex];
         duties.push({slot, validatorIndex, pubkey: validator.pubkey});
       }
 

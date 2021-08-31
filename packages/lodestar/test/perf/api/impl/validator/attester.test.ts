@@ -44,26 +44,11 @@ describe("api / impl / validator", () => {
   for (const reqCount of reqCounts) {
     itBench({
       id: `getPubkeys - validatorsArr - req ${reqCount} vs - ${numValidators} vc`,
-      noThreshold: true,
-      fn: () => {
-        for (let i = 0; i < reqCount; i++) {
-          const validator = state.validators[i];
-          validator.pubkey;
-        }
-      },
-    });
-  }
-
-  for (const reqCount of reqCounts) {
-    itBench({
-      id: `getPubkeys - persistent - req ${reqCount} vs - ${numValidators} vc`,
       // Only track regressions for 1000 in CI to ensure performance does not degrade
       noThreshold: reqCount < 1000,
       fn: () => {
-        const validators = state.validators.persistent;
         for (let i = 0; i < reqCount; i++) {
-          const validator = validators.get(i);
-          if (!validator) throw Error(`Index ${i} not found`);
+          const validator = state.validators[i];
           validator.pubkey;
         }
       },

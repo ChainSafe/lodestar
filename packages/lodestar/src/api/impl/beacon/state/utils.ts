@@ -227,14 +227,14 @@ async function stateBySlot(
 export function filterStateValidatorsByStatuses(
   statuses: string[],
   state: allForks.BeaconState,
-  chain: IBeaconChain,
+  pubkey2index: allForks.PubkeyIndexMap,
   currentEpoch: Epoch
 ): routes.beacon.ValidatorResponse[] {
   const responses: routes.beacon.ValidatorResponse[] = [];
   const validators = Array.from(state.validators);
   const filteredValidators = validators.filter((v) => statuses.includes(getValidatorStatus(v, currentEpoch)));
   for (const validator of readonlyValues(filteredValidators)) {
-    const validatorIndex = getStateValidatorIndex(validator.pubkey, state, chain);
+    const validatorIndex = getStateValidatorIndex(validator.pubkey, state, pubkey2index);
     if (validatorIndex && statuses?.includes(getValidatorStatus(validator, currentEpoch))) {
       responses.push(toValidatorResponse(validatorIndex, validator, state.balances[validatorIndex], currentEpoch));
     }
@@ -284,7 +284,7 @@ async function getFinalizedState(
 export function getStateValidatorIndex(
   id: routes.beacon.ValidatorId | ByteVector,
   state: allForks.BeaconState,
-  chain: IBeaconChain
+  pubkey2index: allForks.PubkeyIndexMap
 ): number | undefined {
   let validatorIndex: ValidatorIndex | undefined;
   if (typeof id === "number") {
@@ -292,7 +292,7 @@ export function getStateValidatorIndex(
       validatorIndex = id;
     }
   } else {
-    validatorIndex = chain.getHeadState().pubkey2index.get(id) ?? undefined;
+    validatorIndex = pubkey2index.get(id) ?? undefined;
     // validator added later than given stateId
     if (validatorIndex && validatorIndex >= state.validators.length) {
       validatorIndex = undefined;

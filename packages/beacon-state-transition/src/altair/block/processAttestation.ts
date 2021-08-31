@@ -95,6 +95,7 @@ export function processAttestations(
       }
     }
 
+    // Do the discrete math inside the loop to ensure a deterministic result
     const totalIncrements = Math.floor(totalBalancesWithWeight / EFFECTIVE_BALANCE_INCREMENT);
     const proposerRewardNumerator = totalIncrements * state.baseRewardPerIncrement;
     proposerReward += Math.floor(proposerRewardNumerator / PROPOSER_REWARD_DOMINATOR);

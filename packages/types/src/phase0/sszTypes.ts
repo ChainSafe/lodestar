@@ -17,7 +17,17 @@ import {
   SLOTS_PER_HISTORICAL_ROOT,
   VALIDATOR_REGISTRY_LIMIT,
 } from "@chainsafe/lodestar-params";
-import {BitListType, BitVectorType, ContainerType, List, ListType, RootType, Vector, VectorType} from "@chainsafe/ssz";
+import {
+  BitListType,
+  BitVectorType,
+  ContainerLeafNodeStructType,
+  ContainerType,
+  List,
+  ListType,
+  RootType,
+  Vector,
+  VectorType,
+} from "@chainsafe/ssz";
 import {ssz as primitiveSsz} from "../primitive";
 import {LazyVariable} from "../utils/lazyVar";
 import * as phase0 from "./types";
@@ -173,7 +183,7 @@ export const HistoricalBatch = new ContainerType<phase0.HistoricalBatch>({
   },
 });
 
-export const Validator = new ContainerType<phase0.Validator>({
+export const Validator = new ContainerLeafNodeStructType<phase0.Validator>({
   fields: {
     pubkey: BLSPubkey,
     withdrawalCredentials: Bytes32,

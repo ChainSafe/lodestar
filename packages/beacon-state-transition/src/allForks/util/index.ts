@@ -1,7 +1,6 @@
 export * from "./attestation";
 export * from "./attesterStatus";
 export * from "./cachedBeaconState";
-export * from "./cachedValidatorList";
 export * from "./epochContext";
 export * from "./epochProcess";
 export * from "./epochShuffling";

@@ -50,7 +50,7 @@ export function processEffectiveBalanceUpdates(
     ) {
       effectiveBalance = Math.min(balance - (balance % EFFECTIVE_BALANCE_INCREMENT), MAX_EFFECTIVE_BALANCE);
       // Update the state tree
-      validators.update(i, {effectiveBalance});
+      validators[i].effectiveBalance = effectiveBalance;
       // Also update the fast cached version
       // Should happen rarely, so it's fine to update the tree
       // TODO: Update all in batch after this loop
