@@ -16,7 +16,6 @@ import {
   FLAG_PREV_TARGET_ATTESTER_OR_UNSLASHED,
   hasMarkers,
   IEpochProcess,
-  IEpochStakeSummary,
 } from "../../allForks/util";
 import {isInInactivityLeak, newZeroedArray} from "../../util";
 
@@ -118,83 +117,6 @@ export function getRewardsPenaltiesDeltas(
     if (!hasMarkers(status.flags, FLAG_PREV_TARGET_ATTESTER_OR_UNSLASHED)) {
       const penaltyNumerator = effectiveBalance * state.inactivityScores[i];
       penalties[i] += Math.floor(penaltyNumerator / penaltyDenominator);
-    }
-  }
-  return [rewards, penalties];
-}
-
-/**
- * This is for spec test only as it's inefficient to loop through process.status for each flag.
- * Return the deltas for a given flag index by scanning through the participation flags.
- */
-export function getFlagIndexDeltas(
-  state: CachedBeaconState<altair.BeaconState>,
-  process: IEpochProcess,
-  flagIndex: number
-): [number[], number[]] {
-  const validatorCount = state.validators.length;
-  const rewards = newZeroedArray(validatorCount);
-  const penalties = newZeroedArray(validatorCount);
-
-  let flag;
-  let stakeSummaryKey: keyof IEpochStakeSummary;
-
-  if (flagIndex === TIMELY_HEAD_FLAG_INDEX) {
-    flag = FLAG_PREV_HEAD_ATTESTER_OR_UNSLASHED;
-    stakeSummaryKey = "headStakeByIncrement";
-  } else if (flagIndex === TIMELY_SOURCE_FLAG_INDEX) {
-    flag = FLAG_PREV_SOURCE_ATTESTER_OR_UNSLASHED;
-    stakeSummaryKey = "sourceStakeByIncrement";
-  } else if (flagIndex === TIMELY_TARGET_FLAG_INDEX) {
-    flag = FLAG_PREV_TARGET_ATTESTER_OR_UNSLASHED;
-    stakeSummaryKey = "targetStakeByIncrement";
-  } else {
-    throw new Error(`Unable to process flagIndex: ${flagIndex}`);
-  }
-
-  const weight = PARTICIPATION_FLAG_WEIGHTS[flagIndex];
-  const unslashedParticipatingIncrements = process.prevEpochUnslashedStake[stakeSummaryKey];
-  const activeIncrements = process.totalActiveStakeByIncrement;
-
-  for (let i = 0; i < process.statuses.length; i++) {
-    const status = process.statuses[i];
-    if (!hasMarkers(status.flags, FLAG_ELIGIBLE_ATTESTER)) {
-      continue;
-    }
-    const baseReward = getBaseReward(process, i);
-    if (hasMarkers(status.flags, flag)) {
-      if (!isInInactivityLeak((state as unknown) as phase0.BeaconState)) {
-        const rewardNumerator = baseReward * weight * unslashedParticipatingIncrements;
-        rewards[i] += Math.floor(rewardNumerator / (activeIncrements * WEIGHT_DENOMINATOR));
-      }
-    } else if (flagIndex !== TIMELY_HEAD_FLAG_INDEX) {
-      penalties[i] += Math.floor((baseReward * weight) / WEIGHT_DENOMINATOR);
-    }
-  }
-  return [rewards, penalties];
-}
-
-/**
- * This is for spec test only as it's inefficient to loop through process.status one more time.
- * Return the inactivity penalty deltas by considering timely target participation flags and inactivity scores.
- */
-export function getInactivityPenaltyDeltas(
-  state: CachedBeaconState<altair.BeaconState>,
-  process: IEpochProcess
-): [number[], number[]] {
-  const {config} = state;
-  const validatorCount = state.validators.length;
-  const rewards = newZeroedArray(validatorCount);
-  const penalties = newZeroedArray(validatorCount);
-
-  for (let i = 0; i < process.statuses.length; i++) {
-    const status = process.statuses[i];
-    if (hasMarkers(status.flags, FLAG_ELIGIBLE_ATTESTER)) {
-      if (!hasMarkers(status.flags, FLAG_PREV_TARGET_ATTESTER_OR_UNSLASHED)) {
-        const penaltyNumerator = process.validators[i].effectiveBalance * state.inactivityScores[i];
-        const penaltyDenominator = config.INACTIVITY_SCORE_BIAS * INACTIVITY_PENALTY_QUOTIENT_ALTAIR;
-        penalties[i] += Math.floor(penaltyNumerator / penaltyDenominator);
-      }
     }
   }
   return [rewards, penalties];
