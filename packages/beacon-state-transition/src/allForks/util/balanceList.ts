@@ -27,17 +27,17 @@ export class BalanceList implements List<number> {
   }
 
   applyDelta(index: number, delta: number): number {
-    return this.type.tree_applyUint64Delta(this.tree, index, delta);
+    return this.type.tree_applyDeltaAtIndex(this.tree, index, delta);
   }
 
   applyDeltaInBatch(deltaByIndex: Map<number, number>): void {
-    this.type.tree_applyUint64DeltaInBatch(this.tree, deltaByIndex);
+    this.type.tree_applyDeltaInBatch(this.tree, deltaByIndex);
   }
 
   /** Return the new balances */
   updateAll(deltas: number[]): number[] {
-    const [node, newBalances] = this.type.tree_newTreeFromUint64Deltas(this.tree, deltas);
-    this.tree.rootNode = node;
+    const [newTree, newBalances] = this.type.tree_newTreeFromDeltas(this.tree, deltas);
+    this.tree.rootNode = newTree.rootNode;
     this.type.tree_setLength(this.tree, newBalances.length);
     return newBalances;
   }

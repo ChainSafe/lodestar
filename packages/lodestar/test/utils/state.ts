@@ -136,7 +136,7 @@ export function generateState(
   for (const key in opts) {
     const newValue = opts[key as keyof TestBeaconState];
     // eslint-disable-next-line
-    resultState[key as keyof TreeBacked<allForks.BeaconState>] = (newValue as unknown) as any;
+    resultState[key as keyof TestBeaconState] = (newValue as unknown) as any;
   }
   return resultState;
 }

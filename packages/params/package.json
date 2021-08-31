@@ -43,7 +43,7 @@
     "blockchain"
   ],
   "dependencies": {
-    "@chainsafe/ssz": "^0.8.15",
+    "@chainsafe/ssz": "^0.8.17",
     "js-yaml": "^3.13.1"
   },
   "devDependencies": {

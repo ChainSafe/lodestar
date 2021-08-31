@@ -41,7 +41,8 @@ export function processEffectiveBalanceUpdates(
   epochProcess.balances.forEach((balanceNbr: number, i: number) => {
     // TODO: effectiveBalance as number
     const balance = BigInt(balanceNbr);
-    let effectiveBalance = epochProcess.validators[i].effectiveBalance;
+    const validator = epochProcess.validators[i];
+    let effectiveBalance = validator.effectiveBalance;
     if (
       // Too big
       effectiveBalance > balance + DOWNWARD_THRESHOLD ||

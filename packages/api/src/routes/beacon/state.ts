@@ -237,7 +237,7 @@ export function getReturnTypes(): ReturnTypes<Api> {
   const ValidatorResponse = new ContainerType<ValidatorResponse>({
     fields: {
       index: ssz.ValidatorIndex,
-      balance: ssz.Gwei,
+      balance: ssz.Number64,
       status: new StringType<ValidatorStatus>(),
       validator: ssz.phase0.Validator,
     },
@@ -246,7 +246,7 @@ export function getReturnTypes(): ReturnTypes<Api> {
   const ValidatorBalance = new ContainerType<ValidatorBalance>({
     fields: {
       index: ssz.ValidatorIndex,
-      balance: ssz.Gwei,
+      balance: ssz.Number64,
     },
   });
 
