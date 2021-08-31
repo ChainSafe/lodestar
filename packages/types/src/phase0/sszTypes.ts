@@ -90,7 +90,7 @@ export const DepositMessage = new ContainerType<phase0.DepositMessage>({
   fields: {
     pubkey: BLSPubkey,
     withdrawalCredentials: Bytes32,
-    amount: Gwei,
+    amount: Number64,
   },
 });
 
@@ -98,7 +98,7 @@ export const DepositData = new ContainerType<phase0.DepositData>({
   fields: {
     pubkey: BLSPubkey,
     withdrawalCredentials: Bytes32,
-    amount: Gwei,
+    amount: Number64,
     signature: BLSSignature,
   },
 });
@@ -177,7 +177,7 @@ export const Validator = new ContainerType<phase0.Validator>({
   fields: {
     pubkey: BLSPubkey,
     withdrawalCredentials: Bytes32,
-    effectiveBalance: Gwei,
+    effectiveBalance: Number64,
     slashed: Boolean,
     activationEligibilityEpoch: Epoch,
     activationEpoch: Epoch,
@@ -333,7 +333,7 @@ export const BeaconState = new ContainerType<phase0.BeaconState>({
     eth1DepositIndex: Number64,
     // Registry
     validators: new ListType({elementType: Validator, limit: VALIDATOR_REGISTRY_LIMIT}),
-    balances: new ListType({elementType: Gwei, limit: VALIDATOR_REGISTRY_LIMIT}),
+    balances: new ListType({elementType: Number64, limit: VALIDATOR_REGISTRY_LIMIT}),
     randaoMixes: new VectorType({elementType: Bytes32, length: EPOCHS_PER_HISTORICAL_VECTOR}),
     // Slashings
     slashings: new VectorType({elementType: Gwei, length: EPOCHS_PER_SLASHINGS_VECTOR}),

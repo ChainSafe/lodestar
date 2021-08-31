@@ -2,7 +2,7 @@ import {ChainEventEmitter, computeAnchorCheckpoint, LodestarForkChoice} from "..
 import {generateState} from "../../../utils/state";
 import {FAR_FUTURE_EPOCH, MAX_EFFECTIVE_BALANCE} from "@chainsafe/lodestar-params";
 import {config} from "@chainsafe/lodestar-config/default";
-import {Gwei, Slot, ssz, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {Slot, ssz, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {generateSignedBlock} from "../../../utils/block";
 import {
   allForks,
@@ -27,7 +27,7 @@ describe("LodestarForkChoice", function () {
         exitEpoch: FAR_FUTURE_EPOCH,
         withdrawableEpoch: FAR_FUTURE_EPOCH,
       }),
-      balances: Array.from({length: 3}, () => BigInt(0)) as List<Gwei>,
+      balances: Array.from({length: 3}, () => 0) as List<number>,
       // Jan 01 2020
       genesisTime: 1577836800,
     },
@@ -74,7 +74,7 @@ describe("LodestarForkChoice", function () {
       expect(orphanedBlockHex > parentBlockHex).to.be.true;
       forkChoice.updateTime(childBlock.message.slot);
       // 3 validators involved
-      const justifiedBalances = [BigInt(1), BigInt(2), BigInt(3)];
+      const justifiedBalances = [1, 2, 3];
       forkChoice.onBlock(targetBlock.message, targetState, justifiedBalances);
       forkChoice.onBlock(orphanedBlock.message, orphanedState);
       let head = forkChoice.getHead();
@@ -135,7 +135,7 @@ describe("LodestarForkChoice", function () {
       };
       forkChoice.updateTime(128);
       // 3 validators involved
-      const justifiedBalances = [BigInt(1), BigInt(2), BigInt(3)];
+      const justifiedBalances = [1, 2, 3];
       forkChoice.onBlock(block08.message, state08, justifiedBalances);
       forkChoice.onBlock(block12.message, state12, justifiedBalances);
       forkChoice.onBlock(block16.message, state16, justifiedBalances);
@@ -187,7 +187,7 @@ describe("LodestarForkChoice", function () {
       const {block: childBlock, state: childState} = makeChild({block: parentBlock, state: parentState}, 35);
       forkChoice.updateTime(35);
       // 3 validators involved
-      const justifiedBalances = [BigInt(1), BigInt(2), BigInt(3)];
+      const justifiedBalances = [1, 2, 3];
       forkChoice.onBlock(targetBlock.message, targetState, justifiedBalances);
       forkChoice.onBlock(orphanedBlock.message, orphanedState);
       forkChoice.onBlock(parentBlock.message, parentState);

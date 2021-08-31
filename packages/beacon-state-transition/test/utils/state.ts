@@ -1,4 +1,5 @@
 import {List, Vector} from "@chainsafe/ssz";
+import {config as minimalConfig} from "@chainsafe/lodestar-config/default";
 import {
   EPOCHS_PER_HISTORICAL_VECTOR,
   EPOCHS_PER_SLASHINGS_VECTOR,
@@ -6,13 +7,15 @@ import {
   GENESIS_SLOT,
   SLOTS_PER_HISTORICAL_ROOT,
 } from "@chainsafe/lodestar-params";
-import {phase0, ssz} from "@chainsafe/lodestar-types";
+import {allForks, phase0, ssz} from "@chainsafe/lodestar-types";
 import {config} from "@chainsafe/lodestar-config/default";
 
 import {ZERO_HASH} from "../../src/constants";
 import {newZeroedBigIntArray} from "../../src/util";
 
 import {generateEmptyBlock} from "./block";
+import {CachedBeaconState, createCachedBeaconState} from "../../src";
+import {IChainForkConfig} from "@chainsafe/lodestar-config";
 
 /**
  * Copy of BeaconState, but all fields are marked optional to allow for swapping out variables as needed.
@@ -53,7 +56,7 @@ export function generateState(opts?: TestBeaconState): phase0.BeaconState {
     eth1DataVotes: ([] as phase0.Eth1Data[]) as List<phase0.Eth1Data>,
     eth1DepositIndex: 0,
     validators: ([] as phase0.Validator[]) as List<phase0.Validator>,
-    balances: ([] as bigint[]) as List<bigint>,
+    balances: ([] as number[]) as List<number>,
     randaoMixes: Array.from({length: EPOCHS_PER_HISTORICAL_VECTOR}, () => ZERO_HASH),
     slashings: newZeroedBigIntArray(EPOCHS_PER_SLASHINGS_VECTOR),
     previousEpochAttestations: ([] as phase0.PendingAttestation[]) as List<phase0.PendingAttestation>,
@@ -73,4 +76,12 @@ export function generateState(opts?: TestBeaconState): phase0.BeaconState {
     },
     ...opts,
   };
+}
+
+export function generateCachedState(
+  config: IChainForkConfig = minimalConfig,
+  opts: TestBeaconState = {}
+): CachedBeaconState<allForks.BeaconState> {
+  const state = generateState(opts);
+  return createCachedBeaconState(config, config.getForkTypes(state.slot).BeaconState.createTreeBackedFromStruct(state));
 }

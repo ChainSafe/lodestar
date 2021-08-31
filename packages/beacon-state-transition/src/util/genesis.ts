@@ -9,7 +9,6 @@ import {
   MAX_EFFECTIVE_BALANCE,
 } from "@chainsafe/lodestar-params";
 import {allForks, altair, Bytes32, Number64, phase0, Root, ssz, ValidatorIndex} from "@chainsafe/lodestar-types";
-import {bigIntMin} from "@chainsafe/lodestar-utils";
 
 import {computeEpochAtSlot} from "./epoch";
 import {getActiveValidatorIndices} from "./validator";
@@ -161,7 +160,7 @@ export function applyDeposits(
   for (let index = 0; index < validatorLength; index++) {
     const validator = state.validators[index];
     const balance = state.balances[index];
-    validator.effectiveBalance = bigIntMin(balance - (balance % EFFECTIVE_BALANCE_INCREMENT), MAX_EFFECTIVE_BALANCE);
+    validator.effectiveBalance = Math.min(balance - (balance % EFFECTIVE_BALANCE_INCREMENT), MAX_EFFECTIVE_BALANCE);
 
     if (validator.effectiveBalance === MAX_EFFECTIVE_BALANCE) {
       validator.activationEligibilityEpoch = GENESIS_EPOCH;

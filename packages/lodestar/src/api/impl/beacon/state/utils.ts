@@ -12,7 +12,7 @@ import {altair, phase0} from "@chainsafe/lodestar-types";
 import {allForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
-import {Epoch, ValidatorIndex, Gwei, Slot} from "@chainsafe/lodestar-types";
+import {Epoch, ValidatorIndex, Slot} from "@chainsafe/lodestar-types";
 import {ByteVector, fromHexString, readonlyValues, TreeBacked} from "@chainsafe/ssz";
 import {IBeaconChain} from "../../../../chain";
 import {StateContextCache} from "../../../../chain/stateCache";
@@ -95,7 +95,7 @@ export function getValidatorStatus(validator: phase0.Validator, currentEpoch: Ep
   }
   // withdrawal
   if (validator.withdrawableEpoch <= currentEpoch) {
-    return validator.effectiveBalance !== BigInt(0) ? "withdrawal_possible" : "withdrawal_done";
+    return validator.effectiveBalance !== 0 ? "withdrawal_possible" : "withdrawal_done";
   }
   throw new Error("ValidatorStatus unknown");
 }
@@ -103,7 +103,7 @@ export function getValidatorStatus(validator: phase0.Validator, currentEpoch: Ep
 export function toValidatorResponse(
   index: ValidatorIndex,
   validator: phase0.Validator,
-  balance: Gwei,
+  balance: number,
   currentEpoch: Epoch
 ): routes.beacon.ValidatorResponse {
   return {

@@ -5,8 +5,8 @@ import {getChurnLimit} from "../../../src/util/validator";
 
 describe("weak subjectivity tests", () => {
   describe("computeWeakSubjectivityPeriodFromConstituents", function () {
-    const balance28 = BigInt(28) * ETH_TO_GWEI;
-    const balance32 = BigInt(32) * ETH_TO_GWEI;
+    const balance28 = BigInt(28) * BigInt(ETH_TO_GWEI);
+    const balance32 = BigInt(32) * BigInt(ETH_TO_GWEI);
 
     const testValues = [
       {avgValBalance: balance28, valCount: 32768, wsPeriod: 504},

@@ -6,7 +6,7 @@ import {hash} from "@chainsafe/ssz";
 
 import {computeEpochAtSlot, computeShuffledIndex, getSeed} from "../../util";
 
-const MAX_RANDOM_BYTE = BigInt(2 ** 8 - 1);
+const MAX_RANDOM_BYTE = 2 ** 8 - 1;
 
 /**
  * TODO: NAIVE
@@ -33,7 +33,7 @@ export function getNextSyncCommitteeIndices(
     const candidateIndex = activeValidatorIndices[shuffledIndex];
     const randomByte = hash(Buffer.concat([seed, intToBytes(intDiv(i, 32), 8, "le")]))[i % 32];
     const effectiveBalance = state.validators[candidateIndex].effectiveBalance;
-    if (effectiveBalance * MAX_RANDOM_BYTE >= MAX_EFFECTIVE_BALANCE * BigInt(randomByte)) {
+    if (effectiveBalance * MAX_RANDOM_BYTE >= MAX_EFFECTIVE_BALANCE * randomByte) {
       syncCommitteeIndices.push(candidateIndex);
     }
     i++;

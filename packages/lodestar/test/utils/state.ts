@@ -1,7 +1,7 @@
 import {config as minimalConfig} from "@chainsafe/lodestar-config/default";
 import {CachedBeaconState, createCachedBeaconState, phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {List, TreeBacked} from "@chainsafe/ssz";
-import {allForks, altair, Gwei, Root, ssz} from "@chainsafe/lodestar-types";
+import {allForks, altair, Root, ssz} from "@chainsafe/lodestar-types";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {
   EPOCHS_PER_HISTORICAL_VECTOR,
@@ -83,7 +83,7 @@ export function generateState(
     eth1DataVotes: ([] as phase0.Eth1Data[]) as List<phase0.Eth1Data>,
     eth1DepositIndex: 0,
     validators: validators as List<phase0.Validator>,
-    balances: Array.from({length: 4}, () => MAX_EFFECTIVE_BALANCE) as List<Gwei>,
+    balances: Array.from({length: 4}, () => MAX_EFFECTIVE_BALANCE) as List<number>,
     randaoMixes: Array.from({length: EPOCHS_PER_HISTORICAL_VECTOR}, () => ZERO_HASH),
     slashings: Array.from({length: EPOCHS_PER_SLASHINGS_VECTOR}, () => BigInt(0)),
     previousEpochAttestations: ([] as phase0.PendingAttestation[]) as List<phase0.PendingAttestation>,
@@ -135,7 +135,7 @@ export function generateState(
   for (const key in opts) {
     const newValue = opts[key as keyof TestBeaconState];
     // eslint-disable-next-line
-    resultState[key as keyof TreeBacked<allForks.BeaconState>] = (newValue as unknown) as any;
+    resultState[key as keyof TestBeaconState] = (newValue as unknown) as any;
   }
   return resultState;
 }

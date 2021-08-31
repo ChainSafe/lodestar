@@ -52,7 +52,7 @@ export const chainConfig: IChainConfig = {
   // Validator cycle
   // ---------------------------------------------------------------
   // 2**2 (= 4)
-  INACTIVITY_SCORE_BIAS: BigInt(4),
+  INACTIVITY_SCORE_BIAS: 4,
   // 2**4 (= 16)
   INACTIVITY_SCORE_RECOVERY_RATE: 16,
   // 2**4 * 10**9 (= 16,000,000,000) Gwei

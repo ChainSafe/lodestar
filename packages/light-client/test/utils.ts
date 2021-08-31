@@ -1,7 +1,7 @@
 import {PointFormat, PublicKey, SecretKey, Signature} from "@chainsafe/bls";
 import {computeDomain, computeSigningRoot, interopSecretKey} from "@chainsafe/lodestar-beacon-state-transition";
 import {DOMAIN_SYNC_COMMITTEE, SYNC_COMMITTEE_SIZE} from "@chainsafe/lodestar-params";
-import {altair, Bytes4, Gwei, Root, Slot, ssz, SyncPeriod} from "@chainsafe/lodestar-types";
+import {altair, Bytes4, Root, Slot, ssz, SyncPeriod} from "@chainsafe/lodestar-types";
 import {fromHexString, List} from "@chainsafe/ssz";
 import {SyncCommitteeFast} from "../src/client/types";
 
@@ -90,7 +90,7 @@ export function generateValidator(opts: Partial<altair.Validator> = {}): altair.
     exitEpoch: 10000,
     withdrawableEpoch: 10000,
     slashed: opts.slashed || false,
-    effectiveBalance: BigInt(32),
+    effectiveBalance: 32,
     ...opts,
   };
 }
@@ -102,6 +102,6 @@ export function generateValidators(n: number, opts?: Partial<altair.Validator>):
   return Array.from({length: n}, () => generateValidator(opts)) as List<altair.Validator>;
 }
 
-export function generateBalances(n: number): List<Gwei> {
-  return Array.from({length: n}, () => BigInt(32000000000)) as List<Gwei>;
+export function generateBalances(n: number): List<number> {
+  return Array.from({length: n}, () => 32e9) as List<number>;
 }

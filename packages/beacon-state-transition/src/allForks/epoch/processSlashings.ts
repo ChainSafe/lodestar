@@ -29,19 +29,20 @@ export function processSlashingsAllForks(
   if (process.indicesToSlash.length === 0) {
     return;
   }
-
-  const totalBalance = process.totalActiveStake;
+  // TODO: have the regular totalBalance in EpochProcess too?
+  const totalBalance = BigInt(process.totalActiveStakeByIncrement) * BigInt(EFFECTIVE_BALANCE_INCREMENT);
+  // TODO: could totalSlashings be number?
   const totalSlashings = Array.from(readonlyValues(state.slashings)).reduce((a, b) => a + b, BigInt(0));
 
   const proportionalSlashingMultiplier =
     fork === ForkName.phase0 ? PROPORTIONAL_SLASHING_MULTIPLIER : PROPORTIONAL_SLASHING_MULTIPLIER_ALTAIR;
 
-  const adjustedTotalSlashingBalance = bigIntMin(totalSlashings * proportionalSlashingMultiplier, totalBalance);
+  const adjustedTotalSlashingBalance = bigIntMin(totalSlashings * BigInt(proportionalSlashingMultiplier), totalBalance);
   const increment = EFFECTIVE_BALANCE_INCREMENT;
   for (const index of process.indicesToSlash) {
     const effectiveBalance = process.validators[index].effectiveBalance;
-    const penaltyNumerator = (effectiveBalance / increment) * adjustedTotalSlashingBalance;
-    const penalty = (penaltyNumerator / totalBalance) * increment;
-    decreaseBalance(state, index, penalty);
+    const penaltyNumerator = BigInt(effectiveBalance / increment) * adjustedTotalSlashingBalance;
+    const penalty = (penaltyNumerator / totalBalance) * BigInt(increment);
+    decreaseBalance(state, index, Number(penalty));
   }
 }

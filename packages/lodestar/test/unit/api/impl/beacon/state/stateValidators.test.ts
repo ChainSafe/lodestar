@@ -1,5 +1,4 @@
 import {config} from "@chainsafe/lodestar-config/default";
-import {Gwei} from "@chainsafe/lodestar-types";
 import {CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
 import {List, toHexString} from "@chainsafe/ssz";
 import {expect, use} from "chai";
@@ -35,7 +34,7 @@ describe("beacon api impl - state - validators", function () {
     toValidatorResponseStub = server.sandbox.stub(stateApiUtils, "toValidatorResponse");
     toValidatorResponseStub.returns({
       index: 1,
-      balance: BigInt(3200000),
+      balance: 3200000,
       status: "active_ongoing",
       validator: generateValidator(),
     });
@@ -60,7 +59,7 @@ describe("beacon api impl - state - validators", function () {
       resolveStateIdStub.resolves(generateState({validators: generateValidators(numValidators)}));
       toValidatorResponseStub.onFirstCall().returns({
         index: 1,
-        balance: BigInt(3200000),
+        balance: 3200000,
         status: "exited_slashed",
         validator: generateValidator(),
       });
@@ -144,7 +143,7 @@ describe("beacon api impl - state - validators", function () {
       resolveStateIdStub.resolves(
         generateState({
           validators: generateValidators(10),
-          balances: Array.from({length: 10}, () => BigInt(10)) as List<Gwei>,
+          balances: Array.from({length: 10}, () => 10) as List<number>,
         })
       );
       const pubkey2IndexStub = sinon.createStubInstance(allForks.PubkeyIndexMap);
@@ -164,7 +163,7 @@ describe("beacon api impl - state - validators", function () {
       resolveStateIdStub.resolves(
         generateState({
           validators: generateValidators(10),
-          balances: Array.from({length: 10}, () => BigInt(10)) as List<Gwei>,
+          balances: Array.from({length: 10}, () => 10) as List<number>,
         })
       );
       const api = getBeaconStateApi({config, db: dbStub, chain: chainStub});

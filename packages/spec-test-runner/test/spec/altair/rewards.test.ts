@@ -65,15 +65,15 @@ for (const testDir of fs.readdirSync(rootDir)) {
 
 interface RewardTestCase extends IBaseSpecTest {
   pre: altair.BeaconState;
-  head_deltas: bigint[][];
-  source_deltas: bigint[][];
-  target_deltas: bigint[][];
-  inactivity_penalty_deltas: bigint[][];
+  head_deltas: number[][];
+  source_deltas: number[][];
+  target_deltas: number[][];
+  inactivity_penalty_deltas: number[][];
 }
 
 type Output = {
-  head_deltas: bigint[][];
-  source_deltas: bigint[][];
-  target_deltas: bigint[][];
-  inactivity_penalty_deltas: bigint[][];
+  head_deltas: number[][];
+  source_deltas: number[][];
+  target_deltas: number[][];
+  inactivity_penalty_deltas: number[][];
 };

@@ -9,7 +9,7 @@ import {runGenericServerTest} from "../utils/genericServerTest";
 
 describe("beacon", () => {
   const root = Buffer.alloc(32, 1);
-  const balance = BigInt(32e9);
+  const balance = 32e9;
   const pubkeyHex = toHexString(Buffer.alloc(48, 1));
 
   const blockHeaderResponse: BlockHeaderResponse = {

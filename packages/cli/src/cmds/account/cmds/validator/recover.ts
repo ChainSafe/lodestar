@@ -65,7 +65,7 @@ export const recover: ICliCommand<IValidatorRecoverArgs, IGlobalArgs, ReturnType
 
     const {mnemonicInputPath, count, storeWithdrawalKeystore, firstIndex} = args;
     const maxEffectiveBalance = MAX_EFFECTIVE_BALANCE;
-    const depositGwei = BigInt(args.depositGwei || 0) || maxEffectiveBalance;
+    const depositGwei = Number(args.depositGwei || 0) || maxEffectiveBalance;
     let mnemonic;
 
     console.log("\nWARNING: KEY RECOVERY CAN LEAD TO DUPLICATING VALIDATORS KEYS, WHICH CAN LEAD TO SLASHING.\n");

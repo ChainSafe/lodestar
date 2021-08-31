@@ -42,9 +42,9 @@ export function simTestInfoTracker(bn: BeaconNode, logger: ILogger): () => void 
     const epoch = computeEpochAtSlot(state.slot);
 
     const prevParticipation =
-      Number(epochProcess.prevEpochUnslashedStake.targetStake) / Number(epochProcess.totalActiveStake);
+      epochProcess.prevEpochUnslashedStake.targetStakeByIncrement / epochProcess.totalActiveStakeByIncrement;
     const currParticipation =
-      Number(epochProcess.currEpochUnslashedTargetStake) / Number(epochProcess.totalActiveStake);
+      epochProcess.currEpochUnslashedTargetStakeByIncrement / epochProcess.totalActiveStakeByIncrement;
     prevParticipationPerEpoch.set(epoch - 1, prevParticipation);
     currParticipationPerEpoch.set(epoch, currParticipation);
     logger.info("> Participation", {

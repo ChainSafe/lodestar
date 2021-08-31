@@ -1,6 +1,6 @@
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {byteArrayEquals, toHexString} from "@chainsafe/ssz";
-import {Gwei, Slot, ssz} from "@chainsafe/lodestar-types";
+import {Slot, ssz} from "@chainsafe/lodestar-types";
 import {assert} from "@chainsafe/lodestar-utils";
 import {
   CachedBeaconState,
@@ -95,7 +95,7 @@ export async function runStateTransition(
 
   // current justified checkpoint should be prev epoch or current epoch if it's just updated
   // it should always have epochBalances there bc it's a checkpoint state, ie got through processEpoch
-  let justifiedBalances: Gwei[] = [];
+  let justifiedBalances: number[] = [];
   if (postState.currentJustifiedCheckpoint.epoch > forkChoice.getJustifiedCheckpoint().epoch) {
     const justifiedState = checkpointStateCache.get(postState.currentJustifiedCheckpoint);
     if (!justifiedState) {
