@@ -60,10 +60,12 @@ function getEffectiveBalanceTestData(
     effectiveBalance: BigInt(32e9),
   };
 
+  const balances: number[] = [];
   for (let i = 0; i < vc; i++) {
     // Set flat balance to lower value
     const balance = i < vc * changeRatio ? 30e9 : 32e9;
     stateTree.balances.push(balance);
+    balances.push(balance);
 
     // Initialize tree
     stateTree.validators.push(activeValidator);
@@ -71,6 +73,7 @@ function getEffectiveBalanceTestData(
 
   const cachedBeaconState = createCachedBeaconState(config, stateTree, {skipSyncPubkeys: true});
   const epochProcess = beforeProcessEpoch(cachedBeaconState);
+  epochProcess.balances = balances;
 
   return {
     state: cachedBeaconState as allForks.CachedBeaconState<allForks.BeaconState>,
