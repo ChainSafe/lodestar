@@ -2,6 +2,7 @@
  * @module network
  */
 import {Connection} from "libp2p";
+import {HandlerProps} from "libp2p/src/registrar";
 import {ForkName} from "@chainsafe/lodestar-params";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {allForks, phase0} from "@chainsafe/lodestar-types";
@@ -75,7 +76,7 @@ export class ReqResp implements IReqResp {
     for (const [method, version, encoding] of protocolsSupported) {
       this.libp2p.handle(
         formatProtocolId(method, version, encoding),
-        this.getRequestHandler({method, version, encoding})
+        (this.getRequestHandler({method, version, encoding}) as unknown) as (props: HandlerProps) => void
       );
     }
   }

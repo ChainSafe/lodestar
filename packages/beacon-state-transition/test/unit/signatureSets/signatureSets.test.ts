@@ -43,9 +43,9 @@ describe("signatureSets", () => {
           getMockAttestations({attestingIndices: [0] as List<ValidatorIndex>, signature: EMPTY_SIGNATURE}),
         ] as List<phase0.Attestation>,
         deposits: ([] as phase0.Deposit[]) as List<phase0.Deposit>,
-        voluntaryExits: [getMockSignedVoluntaryExit({validatorIndex: 0, signature: EMPTY_SIGNATURE})] as List<
-          phase0.SignedVoluntaryExit
-        >,
+        voluntaryExits: [
+          getMockSignedVoluntaryExit({validatorIndex: 0, signature: EMPTY_SIGNATURE}),
+        ] as List<phase0.SignedVoluntaryExit>,
       },
     };
 
