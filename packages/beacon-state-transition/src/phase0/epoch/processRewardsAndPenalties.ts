@@ -22,7 +22,6 @@ export function processRewardsAndPenalties(
   const deltas = rewards.map((_, i) => rewards[i] - penalties[i]);
   // important: do not change state one balance at a time
   // set them all at once, constructing the tree in one go
-  // balances.updateAll(newBalances);
   // cache the balances array, too
   epochProcess.balances = state.balances.updateAll(deltas);
 }
