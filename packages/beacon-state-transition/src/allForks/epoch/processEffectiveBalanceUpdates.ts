@@ -51,6 +51,7 @@ export function processEffectiveBalanceUpdates(
       });
     }
     if (isAltair && isActiveValidator(validator, nextEpoch)) {
+      // We track nextEpochTotalActiveBalanceByIncrement as ETH to fit total network balance in a JS number (53 bits)
       nextEpochTotalActiveBalanceByIncrement += Math.floor(effectiveBalance / EFFECTIVE_BALANCE_INCREMENT);
     }
   });

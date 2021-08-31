@@ -166,6 +166,7 @@ export function beforeProcessEpoch<T extends allForks.BeaconState>(state: Cached
     const active = isActiveValidator(v, currentEpoch);
     if (active) {
       status.active = true;
+      // We track effectiveBalanceByIncrement as ETH to fit total network balance in a JS number (53 bits)
       const effectiveBalanceByIncrement = Math.floor(v.effectiveBalance / EFFECTIVE_BALANCE_INCREMENT);
       effectiveBalancesByIncrements[i] = effectiveBalanceByIncrement;
       totalActiveStakeByIncrement += effectiveBalanceByIncrement;

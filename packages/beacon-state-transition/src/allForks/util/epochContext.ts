@@ -121,7 +121,7 @@ export function createEpochContext(
     }
     if (isActiveValidator(v, currentEpoch)) {
       currentActiveIndices.push(i);
-      // TODO: totalActiveBalance in eth
+      // We track totalActiveBalanceByIncrement as ETH to fit total network balance in a JS number (53 bits)
       totalActiveBalanceByIncrement += Math.floor(v.effectiveBalance / EFFECTIVE_BALANCE_INCREMENT);
     }
     if (isActiveValidator(v, nextEpoch)) {
@@ -140,6 +140,7 @@ export function createEpochContext(
   });
 
   // Spec: `EFFECTIVE_BALANCE_INCREMENT` Gwei minimum to avoid divisions by zero
+  // 1 = 1 unit of EFFECTIVE_BALANCE_INCREMENT
   if (totalActiveBalanceByIncrement < 1) {
     totalActiveBalanceByIncrement = 1;
   }
