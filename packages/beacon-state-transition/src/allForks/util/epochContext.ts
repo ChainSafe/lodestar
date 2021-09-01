@@ -308,7 +308,7 @@ export function afterProcessEpoch(state: CachedBeaconState<allForks.BeaconState>
     const totalActiveBalanceByIncrement = epochProcess.nextEpochTotalActiveBalanceByIncrement;
     const totalActiveBalance = BigInt(totalActiveBalanceByIncrement) * BigInt(EFFECTIVE_BALANCE_INCREMENT);
     epochCtx.syncParticipantReward = computeSyncParticipantReward(epochCtx.config, totalActiveBalance);
-    epochCtx.syncProposerReward = Number(
+    epochCtx.syncProposerReward = Math.floor(
       (epochCtx.syncParticipantReward * PROPOSER_WEIGHT) / (WEIGHT_DENOMINATOR - PROPOSER_WEIGHT)
     );
 
