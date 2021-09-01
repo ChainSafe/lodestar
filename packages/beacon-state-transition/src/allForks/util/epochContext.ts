@@ -200,10 +200,10 @@ export function createEpochContext(
     previousShuffling,
     currentShuffling,
     nextShuffling,
+    effectiveBalances,
     syncParticipantReward,
     syncProposerReward,
     baseRewardPerIncrement,
-    effectiveBalances,
     churnLimit,
     exitQueueEpoch,
     exitQueueChurn,
@@ -338,10 +338,10 @@ interface IEpochContextData {
   previousShuffling: IEpochShuffling;
   currentShuffling: IEpochShuffling;
   nextShuffling: IEpochShuffling;
+  effectiveBalances: MutableVector<number>;
   syncParticipantReward: number;
   syncProposerReward: number;
   baseRewardPerIncrement: number;
-  effectiveBalances: MutableVector<number>;
   churnLimit: number;
   exitQueueEpoch: Epoch;
   exitQueueChurn: number;
@@ -392,16 +392,17 @@ export class EpochContext {
   currentShuffling: IEpochShuffling;
   /** Same as previousShuffling */
   nextShuffling: IEpochShuffling;
+  /**
+   * Effective balances, for altair processAttestations()
+   */
+  effectiveBalances: MutableVector<number>;
   syncParticipantReward: number;
   syncProposerReward: number;
   /**
    * Update freq: once per epoch after `process_effective_balance_updates()`
    */
   baseRewardPerIncrement: number;
-  /**
-   * Effective balances, for altair processAttestations()
-   */
-  effectiveBalances: MutableVector<number>;
+
   /**
    * Rate at which validators can enter or leave the set per epoch. Depends only on activeIndexes, so it does not
    * change through the epoch. It's used in initiateValidatorExit(). Must be update after changing active indexes.
@@ -430,10 +431,10 @@ export class EpochContext {
     this.previousShuffling = data.previousShuffling;
     this.currentShuffling = data.currentShuffling;
     this.nextShuffling = data.nextShuffling;
+    this.effectiveBalances = data.effectiveBalances;
     this.syncParticipantReward = data.syncParticipantReward;
     this.syncProposerReward = data.syncProposerReward;
     this.baseRewardPerIncrement = data.baseRewardPerIncrement;
-    this.effectiveBalances = data.effectiveBalances;
     this.churnLimit = data.churnLimit;
     this.exitQueueEpoch = data.exitQueueEpoch;
     this.exitQueueChurn = data.exitQueueChurn;
@@ -446,7 +447,26 @@ export class EpochContext {
     // warning: pubkey cache is not copied, it is shared, as eth1 is not expected to reorder validators.
     // Shallow copy all data from current epoch context to the next
     // All data is completely replaced, or only-appended
-    return new EpochContext(this);
+    return new EpochContext({
+      config: this.config,
+      // Common append-only structures shared with all states, no need to clone
+      pubkey2index: this.pubkey2index,
+      index2pubkey: this.index2pubkey,
+      // Immutable data
+      proposers: this.proposers,
+      previousShuffling: this.previousShuffling,
+      currentShuffling: this.currentShuffling,
+      nextShuffling: this.nextShuffling,
+      // MutableVector, requires cloning
+      effectiveBalances: this.effectiveBalances.clone(),
+      // Basic types (numbers) cloned implicitly
+      syncParticipantReward: this.syncParticipantReward,
+      syncProposerReward: this.syncProposerReward,
+      baseRewardPerIncrement: this.baseRewardPerIncrement,
+      churnLimit: this.churnLimit,
+      exitQueueEpoch: this.exitQueueEpoch,
+      exitQueueChurn: this.exitQueueChurn,
+    });
   }
 
   /**
