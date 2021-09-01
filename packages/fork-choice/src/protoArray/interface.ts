@@ -43,7 +43,9 @@ export interface IProtoBlock {
    */
   targetRoot: HexRoot;
   justifiedEpoch: Epoch;
+  justifiedRoot: HexRoot;
   finalizedEpoch: Epoch;
+  finalizedRoot: HexRoot;
 }
 
 /**

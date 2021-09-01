@@ -196,11 +196,13 @@ export class ForkChoice implements IForkChoice {
           this.justifiedBalances,
           this.justifiedBalances
         );
-        this.protoArray.applyScoreChanges(
+        this.protoArray.applyScoreChanges({
           deltas,
-          this.fcStore.justifiedCheckpoint.epoch,
-          this.fcStore.finalizedCheckpoint.epoch
-        );
+          justifiedEpoch: this.fcStore.justifiedCheckpoint.epoch,
+          justifiedRoot: toHexString(this.fcStore.justifiedCheckpoint.root),
+          finalizedEpoch: this.fcStore.finalizedCheckpoint.epoch,
+          finalizedRoot: toHexString(this.fcStore.finalizedCheckpoint.root),
+        });
         this.synced = true;
       }
       const headRoot = this.protoArray.findHead(toHexString(this.fcStore.justifiedCheckpoint.root));
@@ -346,12 +348,16 @@ export class ForkChoice implements IForkChoice {
       // `valueOf` coerses the checkpoint, which may be tree-backed, into a javascript object
       // See https://github.com/ChainSafe/lodestar/issues/2258
       this.fcStore.finalizedCheckpoint = finalizedCheckpoint.valueOf() as phase0.Checkpoint;
+      this.synced = false;
 
       if (
         (!ssz.phase0.Checkpoint.equals(this.fcStore.justifiedCheckpoint, currentJustifiedCheckpoint) &&
           stateJustifiedEpoch > this.fcStore.justifiedCheckpoint.epoch) ||
         !ssz.Root.equals(
-          this.getAncestor(this.fcStore.justifiedCheckpoint.root, finalizedSlot),
+          this.getAncestor(
+            this.fcStore.justifiedCheckpoint.root,
+            computeStartSlotAtEpoch(this.fcStore.finalizedCheckpoint.epoch)
+          ),
           this.fcStore.finalizedCheckpoint.root
         )
       ) {
@@ -385,7 +391,9 @@ export class ForkChoice implements IForkChoice {
       targetRoot: toHexString(targetRoot),
       stateRoot: toHexString(block.stateRoot),
       justifiedEpoch: stateJustifiedEpoch,
+      justifiedRoot: toHexString(state.currentJustifiedCheckpoint.root),
       finalizedEpoch: finalizedCheckpoint.epoch,
+      finalizedRoot: toHexString(state.finalizedCheckpoint.root),
     });
   }
 

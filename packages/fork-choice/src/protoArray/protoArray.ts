@@ -10,22 +10,30 @@ export class ProtoArray {
   // Small prunes simply waste time
   pruneThreshold: number;
   justifiedEpoch: Epoch;
+  justifiedRoot: HexRoot;
   finalizedEpoch: Epoch;
+  finalizedRoot: HexRoot;
   nodes: IProtoNode[];
   indices: Map<HexRoot, number>;
 
   constructor({
     pruneThreshold,
     justifiedEpoch,
+    justifiedRoot,
     finalizedEpoch,
+    finalizedRoot,
   }: {
     pruneThreshold: number;
     justifiedEpoch: Epoch;
+    justifiedRoot: HexRoot;
     finalizedEpoch: Epoch;
+    finalizedRoot: HexRoot;
   }) {
     this.pruneThreshold = pruneThreshold;
     this.justifiedEpoch = justifiedEpoch;
+    this.justifiedRoot = justifiedRoot;
     this.finalizedEpoch = finalizedEpoch;
+    this.finalizedRoot = finalizedRoot;
     this.nodes = [];
     this.indices = new Map<string, number>();
   }
@@ -36,19 +44,25 @@ export class ProtoArray {
     stateRoot,
     blockRoot,
     justifiedEpoch,
+    justifiedRoot,
     finalizedEpoch,
+    finalizedRoot,
   }: {
     slot: Slot;
     parentRoot: HexRoot;
     stateRoot: HexRoot;
     blockRoot: HexRoot;
     justifiedEpoch: Epoch;
+    justifiedRoot: HexRoot;
     finalizedEpoch: Epoch;
+    finalizedRoot: HexRoot;
   }): ProtoArray {
     const protoArray = new ProtoArray({
       pruneThreshold: DEFAULT_PRUNE_THRESHOLD,
       justifiedEpoch,
+      justifiedRoot,
       finalizedEpoch,
+      finalizedRoot,
     });
     const block: IProtoBlock = {
       slot,
@@ -58,7 +72,9 @@ export class ProtoArray {
       // We are using the blockROot as the targetRoot, since it always lies on an epoch boundary
       targetRoot: blockRoot,
       justifiedEpoch,
+      justifiedRoot,
       finalizedEpoch,
+      finalizedRoot,
     };
     protoArray.onBlock(block);
     return protoArray;
@@ -79,7 +95,19 @@ export class ProtoArray {
    * should become the best child.
    * - If required, update the parents best-descendant with the current node or its best-descendant.
    */
-  applyScoreChanges(deltas: number[], justifiedEpoch: Epoch, finalizedEpoch: Epoch): void {
+  applyScoreChanges({
+    deltas,
+    justifiedEpoch,
+    justifiedRoot,
+    finalizedEpoch,
+    finalizedRoot,
+  }: {
+    deltas: number[];
+    justifiedEpoch: Epoch;
+    justifiedRoot: HexRoot;
+    finalizedEpoch: Epoch;
+    finalizedRoot: HexRoot;
+  }): void {
     if (deltas.length !== this.indices.size) {
       throw new ProtoArrayError({
         code: ProtoArrayErrorCode.INVALID_DELTA_LEN,
@@ -88,9 +116,16 @@ export class ProtoArray {
       });
     }
 
-    if (justifiedEpoch !== this.justifiedEpoch || finalizedEpoch !== this.finalizedEpoch) {
+    if (
+      justifiedEpoch !== this.justifiedEpoch ||
+      finalizedEpoch !== this.finalizedEpoch ||
+      justifiedRoot !== this.justifiedRoot ||
+      finalizedRoot !== this.finalizedRoot
+    ) {
       this.justifiedEpoch = justifiedEpoch;
       this.finalizedEpoch = finalizedEpoch;
+      this.justifiedRoot = justifiedRoot;
+      this.finalizedRoot = finalizedRoot;
     }
 
     // Iterate backwards through all indices in this.nodes
@@ -204,8 +239,14 @@ export class ProtoArray {
       });
     }
 
-    // Perform a sanity check that the node is indeed valid to be the head
-    if (!this.nodeIsViableForHead(bestNode)) {
+    /**
+     * Perform a sanity check that the node is indeed valid to be the head
+     * The justified node is always considered viable for head per spec:
+     * def get_head(store: Store) -> Root:
+     * blocks = get_filtered_block_tree(store)
+     * head = store.justified_checkpoint.root
+     */
+    if (bestDescendantIndex !== justifiedIndex && !this.nodeIsViableForHead(bestNode)) {
       throw new ProtoArrayError({
         code: ProtoArrayErrorCode.INVALID_BEST_NODE,
         startRoot: justifiedRoot,
@@ -438,10 +479,13 @@ export class ProtoArray {
    * head.
    */
   nodeIsViableForHead(node: IProtoNode): boolean {
-    return (
-      (node.justifiedEpoch === this.justifiedEpoch || this.justifiedEpoch === 0) &&
-      (node.finalizedEpoch === this.finalizedEpoch || this.finalizedEpoch === 0)
-    );
+    const correctJustified =
+      (node.justifiedEpoch === this.justifiedEpoch && node.justifiedRoot === this.justifiedRoot) ||
+      this.justifiedEpoch === 0;
+    const correctFinalized =
+      (node.finalizedEpoch === this.finalizedEpoch && node.finalizedRoot === this.finalizedRoot) ||
+      this.finalizedEpoch === 0;
+    return correctJustified && correctFinalized;
   }
 
   /**

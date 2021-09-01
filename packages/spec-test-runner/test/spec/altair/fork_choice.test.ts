@@ -57,8 +57,10 @@ for (const testFolder of ["get_head", "on_block"]) {
           const signedBlock = testcase.blocks.get(step.block);
           if (!signedBlock) throw Error(`No block ${step.block}`);
           const preState = stateCache.get(toHexString(signedBlock.message.parentRoot));
-          if (!preState)
-            throw new Error("not found parent state for parent root" + toHexString(signedBlock.message.parentRoot));
+          if (!preState) {
+            continue;
+            // should not throw error, on_block_bad_parent_root test wants this
+          }
           wrappedState = runStateTranstion(preState, signedBlock, forkchoice, checkpointStateCache);
           cacheState(wrappedState, stateCache);
         } else if (isCheck(step)) {
@@ -133,7 +135,11 @@ for (const testFolder of ["get_head", "on_block"]) {
       timeout: 10000,
       // eslint-disable-next-line @typescript-eslint/no-empty-function
       expectFunc: () => {},
-      // shouldSkip: (_, name) => name !== "new_finalized_slot_is_justified_checkpoint_ancestor",
+      // we should enable this for next spec test release
+      // refer to https://github.com/hwwhww/consensus-spec-tests/tree/fork-choice-pr2577
+      shouldSkip: (_, name) =>
+        name === "new_justified_is_later_than_store_justified" ||
+        name === "on_block_finalized_skip_slots_not_in_skip_chain",
     }
   );
 }
@@ -177,7 +183,17 @@ function runStateTranstion(
     }
     justifiedBalances = getEffectiveBalances(justifiedState);
   }
-  forkchoice.onBlock(signedBlock.message, postState, justifiedBalances);
+  try {
+    forkchoice.onBlock(signedBlock.message, postState, justifiedBalances);
+    for (const attestation of signedBlock.message.body.attestations) {
+      try {
+        const indexedAttestation = postState.epochCtx.getIndexedAttestation(attestation);
+        forkchoice.onAttestation(indexedAttestation);
+        // eslint-disable-next-line no-empty
+      } catch (e) {}
+    }
+    // eslint-disable-next-line no-empty
+  } catch (e) {}
   return postState;
 }
 
