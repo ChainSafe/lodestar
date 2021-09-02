@@ -59,10 +59,16 @@ export async function createNodeJsLibp2p(
     }
   }
 
+  let datastore: undefined | LevelDatastore = undefined;
+  if (peerStoreDir) {
+    datastore = new LevelDatastore(peerStoreDir);
+    await datastore.open();
+  }
+
   return new NodejsNode({
     peerId,
     addresses: {listen: localMultiaddrs},
-    datastore: peerStoreDir ? new LevelDatastore(peerStoreDir) : undefined,
+    datastore,
     bootMultiaddrs: bootMultiaddrs,
     discv5: network.discv5 || defaultDiscv5Options,
     maxConnections: network.maxPeers,
