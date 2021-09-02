@@ -1,4 +1,4 @@
-import {altair, phase0, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {altair, phase0} from "@chainsafe/lodestar-types";
 import {
   EFFECTIVE_BALANCE_INCREMENT,
   INACTIVITY_PENALTY_QUOTIENT_ALTAIR,
@@ -45,6 +45,7 @@ export function getRewardsPenaltiesDeltas(
   state: CachedBeaconState<altair.BeaconState>,
   process: IEpochProcess
 ): [number[], number[]] {
+  // TODO: Is there a cheaper way to measure length that going to `state.validators`?
   const validatorCount = state.validators.length;
   const activeIncrements = process.totalActiveStakeByIncrement;
   const rewards = newZeroedArray(validatorCount);
@@ -66,7 +67,7 @@ export function getRewardsPenaltiesDeltas(
     const effectiveBalance = epochCtx.effectiveBalances.get(i)!;
     let rewardPenaltyItem = rewardPenaltyItemCache.get(effectiveBalance);
     if (!rewardPenaltyItem) {
-      const baseReward = getBaseReward(process, i);
+      const baseReward = (effectiveBalance / EFFECTIVE_BALANCE_INCREMENT) * process.baseRewardPerIncrement;
       const tsWeigh = PARTICIPATION_FLAG_WEIGHTS[TIMELY_SOURCE_FLAG_INDEX];
       const ttWeigh = PARTICIPATION_FLAG_WEIGHTS[TIMELY_TARGET_FLAG_INDEX];
       const thWeigh = PARTICIPATION_FLAG_WEIGHTS[TIMELY_HEAD_FLAG_INDEX];
@@ -121,9 +122,4 @@ export function getRewardsPenaltiesDeltas(
     }
   }
   return [rewards, penalties];
-}
-
-function getBaseReward(process: IEpochProcess, index: ValidatorIndex): number {
-  const increments = process.validators[index].effectiveBalance / EFFECTIVE_BALANCE_INCREMENT;
-  return increments * process.baseRewardPerIncrement;
 }

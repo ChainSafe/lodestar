@@ -33,7 +33,7 @@ export function processAttesterSlashing(
   }
 
   let slashedAny = false;
-  const validators = state.validators;
+  const validators = state.validators; // Get the validators sub tree once for all indices
   // TODO: Why do we need to sort()? If it necessary add a comment with why
   for (const index of indices.sort((a, b) => a - b)) {
     if (isSlashableValidator(validators[index], state.epochCtx.currentShuffling.epoch)) {

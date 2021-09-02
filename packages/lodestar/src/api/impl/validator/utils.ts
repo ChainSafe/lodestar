@@ -5,7 +5,18 @@ import {
   computeSyncPeriodAtEpoch,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {ATTESTATION_SUBNET_COUNT} from "@chainsafe/lodestar-params";
-import {allForks, altair, BLSPubkey, CommitteeIndex, Epoch, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {
+  allForks,
+  altair,
+  BLSPubkey,
+  CommitteeIndex,
+  Epoch,
+  phase0,
+  Slot,
+  ssz,
+  ValidatorIndex,
+} from "@chainsafe/lodestar-types";
+import {BranchNodeStruct, TreeValue, List} from "@chainsafe/ssz";
 import {ApiError} from "../errors";
 
 export function getSyncComitteeValidatorIndexMap(
@@ -43,25 +54,46 @@ export function computeSubnetForCommitteesAtSlot(
  * Precompute all pubkeys for given `validatorIndices`. Ensures that all `validatorIndices` are known
  * before doing other expensive logic.
  *
- * Note: Using a MutableVector is the fastest way of getting compressed pubkeys.
+ * Uses special BranchNodeStruct state.validators data structure to optimize getting pubkeys.
+ * Type-unsafe: assumes state.validators[i] is of BranchNodeStruct type.
+ * Note: This is the fastest way of getting compressed pubkeys.
  *       See benchmark -> packages/lodestar/test/perf/api/impl/validator/attester.test.ts
  */
 export function getPubkeysForIndices(
-  state: CachedBeaconState<allForks.BeaconState>,
-  validatorIndices: ValidatorIndex[]
-): (validatorIndex: ValidatorIndex) => BLSPubkey {
-  const validators = state.validators.persistent;
-  const pubkeyMap = new Map(
-    validatorIndices.map((validatorIndex) => {
-      const validator = validators.get(validatorIndex);
-      if (!validator) throw new ApiError(400, `Validator index ${validatorIndex} not in state`);
-      return [validatorIndex, validator.pubkey];
-    })
-  );
+  validators: allForks.BeaconState["validators"],
+  indexes: ValidatorIndex[]
+): BLSPubkey[] {
+  const validatorsLen = validators.length; // Get once, it's expensive
+  const validatorsTree = ((validators as unknown) as TreeValue<List<phase0.Validator>>).tree;
 
-  return function getPubkey(validatorIndex: ValidatorIndex) {
-    const pubkey = pubkeyMap.get(validatorIndex);
-    if (!pubkey) throw Error(`Unknown validatorIndex ${validatorIndex}`);
-    return pubkey;
-  };
+  const pubkeys: BLSPubkey[] = [];
+  for (let i = 0, len = indexes.length; i < len; i++) {
+    const index = indexes[i];
+    if (index >= validatorsLen) {
+      throw Error(`validatorIndex ${index} too high. Current validator count ${validatorsLen}`);
+    }
+
+    // NOTE: This could be optimized further by traversing the tree optimally with .getNodes()
+    const gindex = ssz.phase0.Validators.getGindexBitStringAtChunkIndex(index);
+    const node = validatorsTree.getNode(gindex) as BranchNodeStruct<phase0.Validator>;
+    pubkeys.push(node.value.pubkey);
+  }
+
+  return pubkeys;
+}
+
+/**
+ * Uses special BranchNodeStruct state.validators data structure to optimize getting pubkeys.
+ * Type-unsafe: assumes state.validators[i] is of BranchNodeStruct type.
+ */
+export function getPubkeysForIndex(validators: allForks.BeaconState["validators"], index: ValidatorIndex): BLSPubkey {
+  const validatorsLen = validators.length;
+  if (index >= validatorsLen) {
+    throw Error(`validatorIndex ${index} too high. Current validator count ${validatorsLen}`);
+  }
+
+  const validatorsTree = ((validators as unknown) as TreeValue<List<phase0.Validator>>).tree;
+  const gindex = ssz.phase0.Validators.getGindexBitStringAtChunkIndex(index);
+  const node = validatorsTree.getNode(gindex) as BranchNodeStruct<phase0.Validator>;
+  return node.value.pubkey;
 }

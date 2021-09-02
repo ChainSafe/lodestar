@@ -55,6 +55,7 @@ export function getNextSyncCommittee(
   effectiveBalances: MutableVector<number>
 ): altair.SyncCommittee {
   const indices = getNextSyncCommitteeIndices(state, activeValidatorIndices, effectiveBalances);
+  // Using the index2pubkey cache is slower because it needs the serialized pubkey.
   const pubkeys = indices.map((index) => state.validators[index].pubkey);
   return {
     pubkeys,

@@ -5,6 +5,7 @@
 import {EFFECTIVE_BALANCE_INCREMENT} from "@chainsafe/lodestar-params";
 import {allForks, altair, Gwei, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {bigIntMax} from "@chainsafe/lodestar-utils";
+import {readonlyValuesListOfLeafNodeStruct} from "@chainsafe/ssz";
 import {CachedBeaconState} from "../allForks";
 import {isActiveValidator} from "./validator";
 
@@ -18,6 +19,7 @@ export function getTotalBalance(state: allForks.BeaconState, indices: ValidatorI
   return bigIntMax(
     BigInt(EFFECTIVE_BALANCE_INCREMENT),
     indices.reduce(
+      // TODO: Use a fast cache to get the effective balance 🐢
       (total: Gwei, index: ValidatorIndex): Gwei => total + BigInt(state.validators[index].effectiveBalance),
       BigInt(0)
     )
@@ -58,8 +60,10 @@ export function decreaseBalance(
 export function getEffectiveBalances(justifiedState: CachedBeaconState<allForks.BeaconState>): number[] {
   const justifiedEpoch = justifiedState.currentShuffling.epoch;
   const effectiveBalances: number[] = [];
-  justifiedState.validators.forEach((v) => {
-    effectiveBalances.push(isActiveValidator(v, justifiedEpoch) ? v.effectiveBalance : 0);
-  });
+  const validators = readonlyValuesListOfLeafNodeStruct(justifiedState.validators);
+  for (let i = 0, len = validators.length; i < len; i++) {
+    const validator = validators[i];
+    effectiveBalances.push(isActiveValidator(validator, justifiedEpoch) ? validator.effectiveBalance : 0);
+  }
   return effectiveBalances;
 }

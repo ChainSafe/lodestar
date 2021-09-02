@@ -18,7 +18,8 @@ export function processVoluntaryExitAllForks(
   verifySignature = true
 ): void {
   assertValidVoluntaryExit(state as CachedBeaconState<allForks.BeaconState>, signedVoluntaryExit, verifySignature);
-  initiateValidatorExit(state as CachedBeaconState<allForks.BeaconState>, signedVoluntaryExit.message.validatorIndex);
+  const validator = state.validators[signedVoluntaryExit.message.validatorIndex];
+  initiateValidatorExit(state as CachedBeaconState<allForks.BeaconState>, validator);
 }
 
 export function assertValidVoluntaryExit(

@@ -22,14 +22,15 @@ export function slashValidatorAllForks(
   blockProcess: BlockProcess,
   whistleblowerIndex?: ValidatorIndex
 ): void {
-  const {validators, epochCtx} = state;
+  const {epochCtx} = state;
   const epoch = epochCtx.currentShuffling.epoch;
-  initiateValidatorExit(state as CachedBeaconState<allForks.BeaconState>, slashedIndex);
-  const validator = validators[slashedIndex];
-  validators.update(slashedIndex, {
-    slashed: true,
-    withdrawableEpoch: Math.max(validator.withdrawableEpoch, epoch + EPOCHS_PER_SLASHINGS_VECTOR),
-  });
+  const validator = state.validators[slashedIndex];
+
+  // TODO: Merge initiateValidatorExit validators.update() with the one below
+  initiateValidatorExit(state as CachedBeaconState<allForks.BeaconState>, validator);
+
+  validator.slashed = true;
+  validator.withdrawableEpoch = Math.max(validator.withdrawableEpoch, epoch + EPOCHS_PER_SLASHINGS_VECTOR);
 
   const {effectiveBalance} = validator;
   // TODO: could state.slashings be number?
