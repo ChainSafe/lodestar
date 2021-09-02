@@ -4,12 +4,7 @@ import {expect} from "chai";
 import {describeDirectorySpecTest} from "@chainsafe/lodestar-spec-test-util";
 import {altair, allForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {TreeBacked, VectorType} from "@chainsafe/ssz";
-import {
-  ACTIVE_PRESET,
-  TIMELY_HEAD_FLAG_INDEX,
-  TIMELY_SOURCE_FLAG_INDEX,
-  TIMELY_TARGET_FLAG_INDEX,
-} from "@chainsafe/lodestar-params";
+import {ACTIVE_PRESET} from "@chainsafe/lodestar-params";
 import {ssz} from "@chainsafe/lodestar-types";
 import {SPEC_TEST_LOCATION} from "../../utils/specTestCases";
 import {IBaseSpecTest} from "../type";
@@ -29,17 +24,24 @@ for (const testDir of fs.readdirSync(rootDir)) {
     `${ACTIVE_PRESET}/altair/rewards/${testDir}`,
     join(rootDir, `${testDir}/pyspec_tests`),
     (testcase) => {
-      const wrappedState = allForks.createCachedBeaconState<altair.BeaconState>(
+      const state = allForks.createCachedBeaconState<altair.BeaconState>(
         config,
         (testcase.pre as TreeBacked<altair.BeaconState>).clone()
       );
-      const epochProcess = allForks.beforeProcessEpoch(wrappedState);
-      return {
-        head_deltas: altair.getFlagIndexDeltas(wrappedState, epochProcess, TIMELY_HEAD_FLAG_INDEX),
-        source_deltas: altair.getFlagIndexDeltas(wrappedState, epochProcess, TIMELY_SOURCE_FLAG_INDEX),
-        target_deltas: altair.getFlagIndexDeltas(wrappedState, epochProcess, TIMELY_TARGET_FLAG_INDEX),
-        inactivity_penalty_deltas: altair.getInactivityPenaltyDeltas(wrappedState, epochProcess),
-      };
+      const epochProcess = allForks.beforeProcessEpoch(state);
+      // To debug this test and get granular results you can tweak inputs to get more granular results
+      //
+      // TIMELY_HEAD_FLAG_INDEX -> FLAG_PREV_HEAD_ATTESTER_OR_UNSLASHED
+      // TIMELY_SOURCE_FLAG_INDEX -> FLAG_PREV_SOURCE_ATTESTER_OR_UNSLASHED
+      // TIMELY_TARGET_FLAG_INDEX -> FLAG_PREV_TARGET_ATTESTER_OR_UNSLASHED
+      //
+      // - To get head_deltas set TIMELY_SOURCE_FLAG_INDEX | TIMELY_TARGET_FLAG_INDEX to false
+      // - To get source_deltas set TIMELY_HEAD_FLAG_INDEX | TIMELY_TARGET_FLAG_INDEX to false
+      // - To get target_deltas set TIMELY_HEAD_FLAG_INDEX | TIMELY_SOURCE_FLAG_INDEX to false
+      //   + set all inactivityScores to zero
+      // - To get inactivity_penalty_deltas set TIMELY_HEAD_FLAG_INDEX | TIMELY_SOURCE_FLAG_INDEX to false
+      //   + set PARTICIPATION_FLAG_WEIGHTS[TIMELY_TARGET_FLAG_INDEX] to zero
+      return altair.getRewardsPenaltiesDeltas(state, epochProcess);
     },
     {
       inputTypes: inputTypeSszTreeBacked,
@@ -50,12 +52,13 @@ for (const testDir of fs.readdirSync(rootDir)) {
         target_deltas: Deltas,
         inactivity_penalty_deltas: Deltas,
       },
-      getExpected: (testCase) => ({
-        head_deltas: testCase.head_deltas,
-        source_deltas: testCase.source_deltas,
-        target_deltas: testCase.target_deltas,
-        inactivity_penalty_deltas: testCase.inactivity_penalty_deltas,
-      }),
+      getExpected: (testCase) =>
+        sumDeltas([
+          testCase.head_deltas,
+          testCase.source_deltas,
+          testCase.target_deltas,
+          testCase.inactivity_penalty_deltas,
+        ]),
       expectFunc: (testCase, expected, actual) => {
         expect(actual).to.deep.equal(expected);
       },
@@ -63,17 +66,26 @@ for (const testDir of fs.readdirSync(rootDir)) {
   );
 }
 
+type Deltas = [number[], number[]];
+
 interface RewardTestCase extends IBaseSpecTest {
   pre: altair.BeaconState;
-  head_deltas: number[][];
-  source_deltas: number[][];
-  target_deltas: number[][];
-  inactivity_penalty_deltas: number[][];
+  head_deltas: Deltas;
+  source_deltas: Deltas;
+  target_deltas: Deltas;
+  inactivity_penalty_deltas: Deltas;
 }
 
-type Output = {
-  head_deltas: number[][];
-  source_deltas: number[][];
-  target_deltas: number[][];
-  inactivity_penalty_deltas: number[][];
-};
+type Output = Deltas;
+
+function sumDeltas(deltasArr: Deltas[]): Deltas {
+  const totalDeltas: Deltas = [[], []];
+  for (const deltas of deltasArr) {
+    for (const n of [0, 1]) {
+      for (let i = 0; i < deltas[n].length; i++) {
+        totalDeltas[n][i] = (totalDeltas[n][i] ?? 0) + deltas[n][i];
+      }
+    }
+  }
+  return totalDeltas;
+}
