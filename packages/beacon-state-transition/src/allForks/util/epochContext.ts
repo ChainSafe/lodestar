@@ -530,9 +530,13 @@ export class EpochContext {
     return validatorIndices;
   }
 
-  getCommitteeAssignments(epoch: Epoch, requestedValidatorIndices: ValidatorIndex[]): AttesterDuty[] {
+  getCommitteeAssignments(
+    epoch: Epoch,
+    requestedValidatorIndices: ValidatorIndex[]
+  ): Map<ValidatorIndex, AttesterDuty> {
     const requestedValidatorIndicesSet = new Set(requestedValidatorIndices);
-    const duties = [];
+    const duties = new Map<ValidatorIndex, AttesterDuty>();
+
     const epochCommittees = this.getShufflingAtEpoch(epoch).committees;
     for (let epochSlot = 0; epochSlot < SLOTS_PER_EPOCH; epochSlot++) {
       const slotCommittees = epochCommittees[epochSlot];
@@ -540,7 +544,9 @@ export class EpochContext {
         for (let j = 0, committeeLength = slotCommittees[i].length; j < committeeLength; j++) {
           const validatorIndex = slotCommittees[i][j];
           if (requestedValidatorIndicesSet.has(validatorIndex)) {
-            duties.push({
+            // no-non-null-assertion: We know that if index is in set there must exist an entry in the map
+            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+            duties.set(validatorIndex, {
               validatorIndex,
               committeeLength,
               committeesAtSlot,
@@ -552,6 +558,7 @@ export class EpochContext {
         }
       }
     }
+
     return duties;
   }
 

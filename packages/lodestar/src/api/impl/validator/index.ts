@@ -250,11 +250,14 @@ export function getValidatorApi({
       const committeeAssignments = state.epochCtx.getCommitteeAssignments(epoch, validatorIndices);
       const duties: routes.validator.AttesterDuty[] = [];
       for (let i = 0, len = validatorIndices.length; i < len; i++) {
-        const duty = committeeAssignments[i] as routes.validator.AttesterDuty;
-        // Mutate existing object instead of re-creating another new object with spread operator
-        // Should be faster and require less memory
-        duty.pubkey = pubkeys[i];
-        duties.push(duty);
+        const validatorIndex = validatorIndices[i];
+        const duty = committeeAssignments.get(validatorIndex) as routes.validator.AttesterDuty | undefined;
+        if (duty) {
+          // Mutate existing object instead of re-creating another new object with spread operator
+          // Should be faster and require less memory
+          duty.pubkey = pubkeys[i];
+          duties.push(duty);
+        }
       }
 
       const dependentRoot = attesterShufflingDecisionRoot(state, epoch) || (await getGenesisBlockRoot(state));
