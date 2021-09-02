@@ -196,6 +196,10 @@ export const Validator = new ContainerLeafNodeStructType<phase0.Validator>({
   },
 });
 
+// Export as stand-alone for direct tree optimizations
+export const Validators = new ListType({elementType: Validator, limit: VALIDATOR_REGISTRY_LIMIT});
+export const Balances = new ListType({elementType: Number64, limit: VALIDATOR_REGISTRY_LIMIT});
+
 // Misc dependants
 
 export const AttestationData = new ContainerType<phase0.AttestationData>({
@@ -342,8 +346,8 @@ export const BeaconState = new ContainerType<phase0.BeaconState>({
     }),
     eth1DepositIndex: Number64,
     // Registry
-    validators: new ListType({elementType: Validator, limit: VALIDATOR_REGISTRY_LIMIT}),
-    balances: new ListType({elementType: Number64, limit: VALIDATOR_REGISTRY_LIMIT}),
+    validators: Validators,
+    balances: Balances,
     randaoMixes: new VectorType({elementType: Bytes32, length: EPOCHS_PER_HISTORICAL_VECTOR}),
     // Slashings
     slashings: new VectorType({elementType: Gwei, length: EPOCHS_PER_SLASHINGS_VECTOR}),

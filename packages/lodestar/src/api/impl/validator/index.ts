@@ -191,18 +191,24 @@ export function getValidatorApi({
 
       const state = await chain.getHeadStateAtCurrentEpoch();
 
-      // NOTE: MutableVector was the fastest way of getting compressed pubkeys.
+      const duties: routes.validator.ProposerDuty[] = [];
+      const indexes: ValidatorIndex[] = [];
+
+      // Gather indexes to get pubkeys in batch (performance optimization)
+      for (let i = 0; i < SLOTS_PER_EPOCH; i++) {
+        // getBeaconProposer ensures the requested epoch is correct
+        const validatorIndex = state.getBeaconProposer(startSlot + i);
+        indexes.push(validatorIndex);
+      }
+
+      // NOTE: this is the fastest way of getting compressed pubkeys.
       //       See benchmark -> packages/lodestar/test/perf/api/impl/validator/attester.test.ts
       // After dropping the flat caches attached to the CachedBeaconState it's no longer available.
       // TODO: Add a flag to just send 0x00 as pubkeys since the Lodestar validator does not need them.
-      const validators = state.validators; // Get the validators sub tree once for all the loop
-      const duties: routes.validator.ProposerDuty[] = [];
+      const pubkeys = getPubkeysForIndices(state.validators, indexes);
 
-      for (let slot = startSlot; slot < startSlot + SLOTS_PER_EPOCH; slot++) {
-        // getBeaconProposer ensures the requested epoch is correct
-        const validatorIndex = state.getBeaconProposer(slot);
-        const validator = validators[validatorIndex];
-        duties.push({slot, validatorIndex, pubkey: validator.pubkey});
+      for (let i = 0; i < SLOTS_PER_EPOCH; i++) {
+        duties.push({slot: startSlot + i, validatorIndex: indexes[i], pubkey: pubkeys[i]});
       }
 
       // Returns `null` on the one-off scenario where the genesis block decides its own shuffling.
@@ -240,14 +246,15 @@ export function getValidatorApi({
       // will equal `currentEpoch + 1`
 
       // Check that all validatorIndex belong to the state before calling getCommitteeAssignments()
-      const getPubkey = getPubkeysForIndices(state, validatorIndices);
-
+      const pubkeys = getPubkeysForIndices(state.validators, validatorIndices);
       const committeeAssignments = state.epochCtx.getCommitteeAssignments(epoch, validatorIndices);
-      const duties = committeeAssignments as routes.validator.AttesterDuty[];
-      for (const duty of duties) {
+      const duties: routes.validator.AttesterDuty[] = [];
+      for (let i = 0, len = validatorIndices.length; i < len; i++) {
+        const duty = committeeAssignments[i] as routes.validator.AttesterDuty;
         // Mutate existing object instead of re-creating another new object with spread operator
         // Should be faster and require less memory
-        duty.pubkey = getPubkey(duty.validatorIndex);
+        duty.pubkey = pubkeys[i];
+        duties.push(duty);
       }
 
       const dependentRoot = attesterShufflingDecisionRoot(state, epoch) || (await getGenesisBlockRoot(state));
@@ -284,16 +291,18 @@ export function getValidatorApi({
       // Note: does not support requesting past duties
       const state = chain.getHeadState();
 
+      // Check that all validatorIndex belong to the state before calling getCommitteeAssignments()
+      const pubkeys = getPubkeysForIndices(state.validators, validatorIndices);
       // Ensures `epoch // EPOCHS_PER_SYNC_COMMITTEE_PERIOD <= current_epoch // EPOCHS_PER_SYNC_COMMITTEE_PERIOD + 1`
       const syncComitteeValidatorIndexMap = getSyncComitteeValidatorIndexMap(state, epoch);
-      const getPubkey = getPubkeysForIndices(state, validatorIndices);
 
       const duties: routes.validator.SyncDuty[] = [];
-      for (const validatorIndex of validatorIndices) {
+      for (let i = 0, len = validatorIndices.length; i < len; i++) {
+        const validatorIndex = validatorIndices[i];
         const validatorSyncCommitteeIndices = syncComitteeValidatorIndexMap.get(validatorIndex);
         if (validatorSyncCommitteeIndices) {
           duties.push({
-            pubkey: getPubkey(validatorIndex),
+            pubkey: pubkeys[i],
             validatorIndex,
             validatorSyncCommitteeIndices,
           });
