@@ -16,7 +16,7 @@ import {
   ssz,
   ValidatorIndex,
 } from "@chainsafe/lodestar-types";
-import {BranchNodeStruct, TreeValue} from "@chainsafe/ssz";
+import {BranchNodeStruct, TreeValue, List} from "@chainsafe/ssz";
 import {ApiError} from "../errors";
 
 export function getSyncComitteeValidatorIndexMap(
@@ -64,7 +64,7 @@ export function getPubkeysForIndices(
   indexes: ValidatorIndex[]
 ): BLSPubkey[] {
   const validatorsLen = validators.length; // Get once, it's expensive
-  const validatorsTree = ((validators as unknown) as TreeValue<phase0.Validator>).tree;
+  const validatorsTree = ((validators as unknown) as TreeValue<List<phase0.Validator>>).tree;
 
   const pubkeys: BLSPubkey[] = [];
   for (let i = 0, len = indexes.length; i < len; i++) {
@@ -92,7 +92,7 @@ export function getPubkeysForIndex(validators: allForks.BeaconState["validators"
     throw Error(`validatorIndex ${index} too high. Current validator count ${validatorsLen}`);
   }
 
-  const validatorsTree = ((validators as unknown) as TreeValue<phase0.Validator>).tree;
+  const validatorsTree = ((validators as unknown) as TreeValue<List<phase0.Validator>>).tree;
   const gindex = ssz.phase0.Validators.getGindexBitStringAtChunkIndex(index);
   const node = validatorsTree.getNode(gindex) as BranchNodeStruct<phase0.Validator>;
   return node.value.pubkey;
