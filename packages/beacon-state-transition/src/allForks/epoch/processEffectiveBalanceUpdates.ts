@@ -6,7 +6,6 @@ import {
   MAX_EFFECTIVE_BALANCE,
 } from "@chainsafe/lodestar-params";
 import {allForks} from "@chainsafe/lodestar-types";
-import {isActiveValidator} from "../../util";
 import {IEpochProcess, CachedBeaconState} from "../util";
 
 /**
@@ -27,8 +26,9 @@ export function processEffectiveBalanceUpdates(
   const DOWNWARD_THRESHOLD = HYSTERESIS_INCREMENT * HYSTERESIS_DOWNWARD_MULTIPLIER;
   const UPWARD_THRESHOLD = HYSTERESIS_INCREMENT * HYSTERESIS_UPWARD_MULTIPLIER;
   const {validators, epochCtx} = state;
+  const {effectiveBalances} = epochCtx;
   const nextEpoch = epochCtx.currentShuffling.epoch + 1;
-  const isAltair = nextEpoch >= epochCtx.config.ALTAIR_FORK_EPOCH;
+  const isNextEpochAfterAltairFork = nextEpoch >= epochCtx.config.ALTAIR_FORK_EPOCH;
   let nextEpochTotalActiveBalanceByIncrement = 0;
 
   // update effective balances with hysteresis
@@ -36,9 +36,12 @@ export function processEffectiveBalanceUpdates(
     // only do this for genesis epoch, or spec test
     epochProcess.balances = Array.from({length: state.balances.length}, (_, i) => state.balances[i]);
   }
-  epochProcess.balances.forEach((balance: number, i: number) => {
-    const validator = epochProcess.validators[i];
-    let effectiveBalance = validator.effectiveBalance;
+
+  for (let i = 0, len = epochProcess.balances.length; i < len; i++) {
+    const balance = epochProcess.balances[i];
+    // PERF: It's faster to access to get() every single element (4ms) than to convert to regular array then loop (9ms)
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    let effectiveBalance = effectiveBalances.get(i)!;
     if (
       // Too big
       effectiveBalance > balance + DOWNWARD_THRESHOLD ||
@@ -46,14 +49,18 @@ export function processEffectiveBalanceUpdates(
       (effectiveBalance < MAX_EFFECTIVE_BALANCE && effectiveBalance < balance - UPWARD_THRESHOLD)
     ) {
       effectiveBalance = Math.min(balance - (balance % EFFECTIVE_BALANCE_INCREMENT), MAX_EFFECTIVE_BALANCE);
-      validators.update(i, {
-        effectiveBalance,
-      });
+      // Update the state tree
+      validators.update(i, {effectiveBalance});
+      // Also update the fast cached version
+      // Should happen rarely, so it's fine to update the tree
+      // TODO: Update all in batch after this loop
+      epochCtx.effectiveBalances.set(i, effectiveBalance);
     }
-    if (isAltair && isActiveValidator(validator, nextEpoch)) {
+    if (isNextEpochAfterAltairFork && epochProcess.isActiveNextEpoch[i]) {
       // We track nextEpochTotalActiveBalanceByIncrement as ETH to fit total network balance in a JS number (53 bits)
       nextEpochTotalActiveBalanceByIncrement += Math.floor(effectiveBalance / EFFECTIVE_BALANCE_INCREMENT);
     }
-  });
+  }
+
   epochProcess.nextEpochTotalActiveBalanceByIncrement = nextEpochTotalActiveBalanceByIncrement;
 }

@@ -3,11 +3,12 @@
  */
 
 import {hash} from "@chainsafe/ssz";
-import {allForks, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {ValidatorIndex} from "@chainsafe/lodestar-types";
 import {assert, intToBytes, intDiv} from "@chainsafe/lodestar-utils";
 import {MAX_EFFECTIVE_BALANCE} from "@chainsafe/lodestar-params";
 
 import {computeShuffledIndex} from "./seed";
+import {MutableVector} from "@chainsafe/persistent-ts";
 
 /**
  * Return from ``indices`` a random index sampled by effective balance.
@@ -15,7 +16,7 @@ import {computeShuffledIndex} from "./seed";
  * SLOW CODE - 🐢
  */
 export function computeProposerIndex(
-  state: allForks.BeaconState,
+  effectiveBalances: MutableVector<number>,
   indices: ValidatorIndex[],
   seed: Uint8Array
 ): ValidatorIndex {
@@ -29,7 +30,8 @@ export function computeProposerIndex(
   while (true) {
     const candidateIndex = indices[computeShuffledIndex(i % indices.length, indices.length, seed)];
     const randByte = hash(Buffer.concat([seed, intToBytes(intDiv(i, 32), 8)]))[i % 32];
-    const effectiveBalance = state.validators[candidateIndex].effectiveBalance;
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    const effectiveBalance = effectiveBalances.get(candidateIndex)!;
     if (effectiveBalance * MAX_RANDOM_BYTE >= MAX_EFFECTIVE_BALANCE * randByte) {
       return candidateIndex;
     }

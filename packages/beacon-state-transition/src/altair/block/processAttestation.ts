@@ -28,6 +28,7 @@ export function processAttestations(
   verifySignature = true
 ): void {
   const {epochCtx} = state;
+  const {effectiveBalances} = epochCtx;
   const stateSlot = state.slot;
   const rootCache = new RootCache(state);
 
@@ -89,9 +90,8 @@ export function processAttestations(
       const totalWeight = tsWeight + ttWeight + thWeight;
 
       if (totalWeight > 0) {
-        // TODO: Cache effectiveBalance in a separate array
-        // TODO: Consider using number instead of bigint for faster math
-        totalBalancesWithWeight += state.validators[index].effectiveBalance * totalWeight;
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        totalBalancesWithWeight += effectiveBalances.get(index)! * totalWeight;
       }
     }
 

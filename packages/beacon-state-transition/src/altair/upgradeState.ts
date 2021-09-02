@@ -1,4 +1,4 @@
-import {altair, ParticipationFlags, phase0, ssz, Uint8, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {altair, ParticipationFlags, phase0, ssz, Uint8} from "@chainsafe/lodestar-types";
 import {CachedBeaconState, createCachedBeaconState} from "../allForks/util";
 import {getCurrentEpoch, newZeroedArray} from "../util";
 import {List, TreeBacked} from "@chainsafe/ssz";
@@ -13,12 +13,7 @@ import {getNextSyncCommittee} from "./util/syncCommittee";
 export function upgradeState(state: CachedBeaconState<phase0.BeaconState>): CachedBeaconState<altair.BeaconState> {
   const {config} = state;
   const pendingAttesations = Array.from(state.previousEpochAttestations);
-  const nextEpochActiveIndices = state.nextShuffling.activeIndices;
-  const postTreeBackedState = upgradeTreeBackedState(
-    config,
-    ssz.phase0.BeaconState.createTreeBacked(state.tree),
-    nextEpochActiveIndices
-  );
+  const postTreeBackedState = upgradeTreeBackedState(config, state);
   const postState = createCachedBeaconState(config, postTreeBackedState);
   translateParticipation(postState, pendingAttesations);
   return postState;
@@ -26,22 +21,23 @@ export function upgradeState(state: CachedBeaconState<phase0.BeaconState>): Cach
 
 function upgradeTreeBackedState(
   config: IBeaconConfig,
-  state: TreeBacked<phase0.BeaconState>,
-  nextEpochActiveIndices: ValidatorIndex[]
+  state: CachedBeaconState<phase0.BeaconState>
 ): TreeBacked<altair.BeaconState> {
-  const validatorCount = state.validators.length;
-  const epoch = getCurrentEpoch(state);
+  const nextEpochActiveIndices = state.nextShuffling.activeIndices;
+  const stateTB = ssz.phase0.BeaconState.createTreeBacked(state.tree);
+  const validatorCount = stateTB.validators.length;
+  const epoch = getCurrentEpoch(stateTB);
   // TODO: Does this preserve the hashing cache? In altair devnets memory spikes on the fork transition
-  const postState = ssz.altair.BeaconState.createTreeBacked(state.tree);
+  const postState = ssz.altair.BeaconState.createTreeBacked(stateTB.tree);
   postState.fork = {
-    previousVersion: state.fork.currentVersion,
+    previousVersion: stateTB.fork.currentVersion,
     currentVersion: config.ALTAIR_FORK_VERSION,
     epoch,
   };
   postState.previousEpochParticipation = newZeroedArray(validatorCount) as List<ParticipationFlags>;
   postState.currentEpochParticipation = newZeroedArray(validatorCount) as List<ParticipationFlags>;
   postState.inactivityScores = newZeroedArray(validatorCount) as List<Uint8>;
-  const syncCommittee = getNextSyncCommittee(state, nextEpochActiveIndices);
+  const syncCommittee = getNextSyncCommittee(state, nextEpochActiveIndices, state.epochCtx.effectiveBalances);
   postState.currentSyncCommittee = syncCommittee;
   postState.nextSyncCommittee = syncCommittee;
   return postState;

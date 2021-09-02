@@ -298,7 +298,7 @@ export class BeaconStateContext<T extends allForks.BeaconState> {
     this.currentSyncCommittee = this.nextSyncCommittee;
     state.currentSyncCommittee = state.nextSyncCommittee;
     const nextSyncCommittee = ssz.altair.SyncCommittee.createTreeBackedFromStruct(
-      getNextSyncCommittee(state, this.epochCtx.nextShuffling.activeIndices)
+      getNextSyncCommittee(state, this.epochCtx.nextShuffling.activeIndices, this.epochCtx.effectiveBalances)
     );
     this.nextSyncCommittee = convertToIndexedSyncCommittee(nextSyncCommittee, this.epochCtx.pubkey2index);
     state.nextSyncCommittee = nextSyncCommittee;
