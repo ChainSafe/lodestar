@@ -74,7 +74,7 @@ export function getPubkeysForIndices(
     }
 
     // NOTE: This could be optimized further by traversing the tree optimally with .getNodes()
-    const gindex = ssz.phase0.Validators.getPropertyGindex(index);
+    const gindex = ssz.phase0.Validators.getGindexBitStringAtChunkIndex(index);
     const node = validatorsTree.getNode(gindex) as BranchNodeStruct<phase0.Validator>;
     pubkeys.push(node.value.pubkey);
   }
@@ -93,7 +93,7 @@ export function getPubkeysForIndex(validators: allForks.BeaconState["validators"
   }
 
   const validatorsTree = ((validators as unknown) as TreeValue<phase0.Validator>).tree;
-  const gindex = ssz.phase0.Validators.getPropertyGindex(index);
+  const gindex = ssz.phase0.Validators.getGindexBitStringAtChunkIndex(index);
   const node = validatorsTree.getNode(gindex) as BranchNodeStruct<phase0.Validator>;
   return node.value.pubkey;
 }
