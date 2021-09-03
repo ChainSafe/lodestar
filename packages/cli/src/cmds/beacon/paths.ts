@@ -6,7 +6,7 @@ export interface IBeaconPaths {
   beaconDir: string;
   peerStoreDir: string;
   dbDir: string;
-  configFile: string;
+  configFile?: string;
   peerIdFile: string;
   enrFile: string;
   logFile?: string;
@@ -35,7 +35,7 @@ export function getBeaconPaths(
   const beaconDir = rootDir;
   const dbDir = args.dbDir || path.join(beaconDir, "chain-db");
   const peerStoreDir = args.peerStoreDir || path.join(beaconDir, "peerstore");
-  const configFile = args.configFile || path.join(beaconDir, "beacon.config.json");
+  const configFile = args.configFile;
   const peerIdFile = args.peerIdFile || path.join(beaconDir, "peer-id.json");
   const enrFile = args.enrFile || path.join(beaconDir, "enr");
   const logFile = args.logFile;

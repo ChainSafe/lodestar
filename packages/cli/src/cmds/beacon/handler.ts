@@ -24,7 +24,7 @@ export async function beaconHandler(args: IBeaconArgs & IGlobalArgs): Promise<vo
   await initBLS();
 
   const {beaconNodeOptions, config} = await initializeOptionsAndConfig(args);
-  await persistOptionsAndConfig(args, beaconNodeOptions, config);
+  await persistOptionsAndConfig(args);
 
   const version = getVersion();
   const gitData = getVersionGitData();

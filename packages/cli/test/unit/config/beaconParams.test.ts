@@ -22,7 +22,6 @@ describe("config / beaconParams", () => {
     {
       id: "Params defaults > returns mainnet",
       kwargs: {
-        paramsFile: "./no/file",
         additionalParamsCli: {},
       },
       // eslint-disable-next-line @typescript-eslint/naming-convention
@@ -32,7 +31,6 @@ describe("config / beaconParams", () => {
       id: "Params from network > returns network",
       kwargs: {
         network: networkName,
-        paramsFile: "./no/file",
         additionalParamsCli: {},
       },
       // eslint-disable-next-line @typescript-eslint/naming-convention
