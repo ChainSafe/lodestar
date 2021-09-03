@@ -8,7 +8,7 @@ export function expectThrowsLodestarError(fn: () => void, expectedErr: LodestarE
     const json = JSON.stringify(value, null, 2);
     throw Error(`Expected fn to throw but returned value: \n\n\t${json}`);
   } catch (e) {
-    expectLodestarError(e, expectedErr);
+    expectLodestarError(e as LodestarError<any>, expectedErr);
   }
 }
 
