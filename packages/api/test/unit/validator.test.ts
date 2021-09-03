@@ -44,7 +44,7 @@ describe("validator", () => {
     },
     produceBlockV2: {
       args: [32000, Buffer.alloc(96, 1), "graffiti"],
-      res: {data: ssz.phase0.BeaconBlock.defaultValue(), version: ForkName.altair},
+      res: {data: ssz.altair.BeaconBlock.defaultValue(), version: ForkName.altair},
     },
     produceAttestationData: {
       args: [2, 32000],
