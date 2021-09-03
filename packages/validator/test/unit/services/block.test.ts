@@ -2,16 +2,18 @@ import {AbortController} from "@chainsafe/abort-controller";
 import {expect} from "chai";
 import sinon from "sinon";
 import bls from "@chainsafe/bls";
+import {createIChainForkConfig} from "@chainsafe/lodestar-config";
+import {config as mainnetConfig} from "@chainsafe/lodestar-config/default";
 import {Root} from "@chainsafe/lodestar-types";
 import {sleep} from "@chainsafe/lodestar-utils";
 import {routes} from "@chainsafe/lodestar-api";
+import {ForkName} from "@chainsafe/lodestar-params";
 import {generateEmptySignedBlock} from "@chainsafe/lodestar/test/utils/block";
 import {BlockProposingService} from "../../../src/services/block";
 import {ValidatorStore} from "../../../src/services/validatorStore";
 import {getApiClientStub} from "../../utils/apiStub";
 import {loggerVc} from "../../utils/logger";
 import {ClockMock} from "../../utils/clock";
-import {ForkName} from "@chainsafe/lodestar-params";
 
 type ProposerDutiesRes = {dependentRoot: Root; data: routes.validator.ProposerDuty[]};
 
@@ -23,6 +25,8 @@ describe("BlockDutiesService", function () {
   const validatorStore = sinon.createStubInstance(ValidatorStore) as ValidatorStore &
     sinon.SinonStubbedInstance<ValidatorStore>;
   let pubkeys: Uint8Array[]; // Initialize pubkeys in before() so bls is already initialized
+
+  const config = createIChainForkConfig(mainnetConfig);
 
   before(() => {
     const secretKeys = Array.from({length: 2}, (_, i) => bls.SecretKey.fromBytes(Buffer.alloc(32, i + 1)));
@@ -44,7 +48,7 @@ describe("BlockDutiesService", function () {
     api.validator.getProposerDuties.resolves(duties);
 
     const clock = new ClockMock();
-    const blockService = new BlockProposingService(loggerVc, api, clock, validatorStore);
+    const blockService = new BlockProposingService(config, loggerVc, api, clock, validatorStore);
 
     const signedBlock = generateEmptySignedBlock();
     validatorStore.signRandao.resolves(signedBlock.message.body.randaoReveal);

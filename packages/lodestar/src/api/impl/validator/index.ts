@@ -134,27 +134,30 @@ export function getValidatorApi({
     }
   }
 
-  return {
-    async produceBlock(slot, randaoReveal, graffiti = "") {
-      let timer;
-      metrics?.blockProductionRequests.inc();
-      try {
-        notWhileSyncing();
-        await waitForSlot(slot); // Must never request for a future slot > currentSlot
+  const produceBlock: routes.validator.Api["produceBlock"] = async function produceBlock(slot, randaoReveal, graffiti) {
+    let timer;
+    metrics?.blockProductionRequests.inc();
+    try {
+      notWhileSyncing();
+      await waitForSlot(slot); // Must never request for a future slot > currentSlot
 
-        timer = metrics?.blockProductionTime.startTimer();
-        const block = await assembleBlock(
-          {config, chain, db, eth1, metrics},
-          slot,
-          randaoReveal,
-          toGraffitiBuffer(graffiti)
-        );
-        metrics?.blockProductionSuccess.inc();
-        return {data: block, version: config.getForkName(block.slot)};
-      } finally {
-        if (timer) timer();
-      }
-    },
+      timer = metrics?.blockProductionTime.startTimer();
+      const block = await assembleBlock(
+        {config, chain, db, eth1, metrics},
+        slot,
+        randaoReveal,
+        toGraffitiBuffer(graffiti || "")
+      );
+      metrics?.blockProductionSuccess.inc();
+      return {data: block, version: config.getForkName(block.slot)};
+    } finally {
+      if (timer) timer();
+    }
+  };
+
+  return {
+    produceBlock: produceBlock,
+    produceBlockV2: produceBlock,
 
     async produceAttestationData(committeeIndex, slot) {
       notWhileSyncing();

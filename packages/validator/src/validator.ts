@@ -67,7 +67,7 @@ export class Validator {
     const indicesService = new IndicesService(logger, api, validatorStore);
     this.chainHeaderTracker = new ChainHeaderTracker(logger, api);
     const loggerVc = getLoggerVc(logger, clock);
-    new BlockProposingService(loggerVc, api, clock, validatorStore, graffiti);
+    new BlockProposingService(config, loggerVc, api, clock, validatorStore, graffiti);
     new AttestationService(loggerVc, api, clock, validatorStore, indicesService);
     new SyncCommitteeService(config, loggerVc, api, clock, validatorStore, this.chainHeaderTracker, indicesService);
 
