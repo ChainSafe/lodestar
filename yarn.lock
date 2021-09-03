@@ -7065,10 +7065,10 @@ libp2p-mplex@^0.10.4:
     it-pushable "^1.4.1"
     varint "^6.0.0"
 
-libp2p-tcp@^0.17.1:
-  version "0.17.1"
-  resolved "https://registry.yarnpkg.com/libp2p-tcp/-/libp2p-tcp-0.17.1.tgz#7d6844fdfbe978f862dd8b7b812f80c0c0eb1d80"
-  integrity sha512-Kxqb0gEi1BZT0guhWbmeyG+XhJHqod6jM3NvSvjwUaD6XmKFVt9yj4IPGnTfKPOSrkcWwAUhk6Qbv0eKSHlCnw==
+libp2p-tcp@^0.17.2:
+  version "0.17.2"
+  resolved "https://registry.yarnpkg.com/libp2p-tcp/-/libp2p-tcp-0.17.2.tgz#cf2caceee032d4e1aecac843b451477c3b6cf0d9"
+  integrity sha512-SAdgDB4Rm0olPbyvanKP5JBaiRwbIOo0Nt++WYe1U2B6akg2uatsDOtulfpnc1gsL1B5vamnOpOzKaDj4kkt8g==
   dependencies:
     abortable-iterator "^3.0.0"
     class-is "^1.1.0"
