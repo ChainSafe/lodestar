@@ -2,15 +2,18 @@ import {expect} from "chai";
 import fs from "fs";
 import yaml from "js-yaml";
 import {toHexString} from "@chainsafe/ssz";
+import {ACTIVE_PRESET, PresetName} from "@chainsafe/lodestar-params";
 import {getTestdirPath} from "../../utils";
 import {getBeaconParams} from "../../../src/config";
 
 describe("config / beaconParams", () => {
-  const GENESIS_FORK_VERSION_MAINNET = "0x00000000";
-  const GENESIS_FORK_VERSION_PYRMONT = "0x00002009";
+  before("Must run with preset minimal", () => {
+    expect(ACTIVE_PRESET).to.equal(PresetName.minimal);
+  });
+
+  const GENESIS_FORK_VERSION_MINIMAL = "0x00000001";
   const GENESIS_FORK_VERSION_FILE = "0x00009902";
   const GENESIS_FORK_VERSION_CLI = "0x00009903";
-  const networkName = "pyrmont";
   const paramsFilepath = getTestdirPath("./test-config.yaml");
 
   const testCases: {
@@ -20,28 +23,17 @@ describe("config / beaconParams", () => {
     GENESIS_FORK_VERSION: string;
   }[] = [
     {
-      id: "Params defaults > returns mainnet",
+      id: "Params defaults > returns minimal",
       kwargs: {
         paramsFile: "./no/file",
         additionalParamsCli: {},
       },
       // eslint-disable-next-line @typescript-eslint/naming-convention
-      GENESIS_FORK_VERSION: GENESIS_FORK_VERSION_MAINNET,
-    },
-    {
-      id: "Params from network > returns network",
-      kwargs: {
-        network: networkName,
-        paramsFile: "./no/file",
-        additionalParamsCli: {},
-      },
-      // eslint-disable-next-line @typescript-eslint/naming-convention
-      GENESIS_FORK_VERSION: GENESIS_FORK_VERSION_PYRMONT,
+      GENESIS_FORK_VERSION: GENESIS_FORK_VERSION_MINIMAL,
     },
     {
       id: "Params from network & file > returns file",
       kwargs: {
-        network: networkName,
         paramsFile: paramsFilepath,
         additionalParamsCli: {},
       },
@@ -51,7 +43,6 @@ describe("config / beaconParams", () => {
     {
       id: "Params from network & file & CLI > returns CLI",
       kwargs: {
-        network: networkName,
         paramsFile: paramsFilepath,
         // eslint-disable-next-line @typescript-eslint/naming-convention
         additionalParamsCli: {GENESIS_FORK_VERSION: GENESIS_FORK_VERSION_CLI},
@@ -73,7 +64,7 @@ describe("config / beaconParams", () => {
   for (const {id, kwargs, GENESIS_FORK_VERSION} of testCases) {
     it(id, () => {
       const params = getBeaconParams(kwargs);
-      expect(toHexString(params.GENESIS_FORK_VERSION)).to.equal(GENESIS_FORK_VERSION);
+      expect(toHexString(params.GENESIS_FORK_VERSION)).to.equal(GENESIS_FORK_VERSION, "Wrong GENESIS_FORK_VERSION");
     });
   }
 });

@@ -15,16 +15,22 @@ import {ClockMock} from "../../utils/clock";
 import {IndicesService} from "../../../src/services/indices";
 
 describe("AttestationService", function () {
-  const sandbox = sinon.createSandbox();
   const logger = testLogger();
   const ZERO_HASH = Buffer.alloc(32, 0);
 
-  const api = getApiClientStub(sandbox);
-  const validatorStore = sinon.createStubInstance(ValidatorStore) as ValidatorStore &
-    sinon.SinonStubbedInstance<ValidatorStore>;
+  let sandbox: sinon.SinonSandbox;
+  let api: ReturnType<typeof getApiClientStub>;
+  let validatorStore: ValidatorStore & sinon.SinonStubbedInstance<ValidatorStore>;
   let pubkeys: Uint8Array[]; // Initialize pubkeys in before() so bls is already initialized
 
   before(() => {
+    sandbox = sinon.createSandbox();
+    api = getApiClientStub(sandbox);
+    validatorStore = sinon.createStubInstance(ValidatorStore) as ValidatorStore &
+      sinon.SinonStubbedInstance<ValidatorStore>;
+
+    console.log({validatorStore});
+
     const secretKeys = Array.from({length: 1}, (_, i) => bls.SecretKey.fromBytes(Buffer.alloc(32, i + 1)));
     pubkeys = secretKeys.map((sk) => sk.toPublicKey().toBytes());
     validatorStore.votingPubkeys.returns(pubkeys);
