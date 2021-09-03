@@ -53,8 +53,7 @@ export function decreaseBalance(
  * This method is used to get justified balances from a justified state.
  */
 export function getEffectiveBalances(justifiedState: CachedBeaconState<allForks.BeaconState>): number[] {
-  const {currentShuffling} = justifiedState;
-  const {activeIndices} = currentShuffling;
+  const {activeIndices} = justifiedState.currentShuffling;
   // 5x faster than using readonlyValuesListOfLeafNodeStruct
   const effectiveBalances = justifiedState.effectiveBalances.toArray();
   let j = 0;
