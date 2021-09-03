@@ -274,7 +274,7 @@ export class Network implements INetwork {
         }
       }
     } catch (e) {
-      this.logger.error("Error on BeaconGossipHandler.onEpoch", {epoch}, e);
+      this.logger.error("Error on BeaconGossipHandler.onEpoch", {epoch}, e as Error);
     }
   };
 

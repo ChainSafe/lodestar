@@ -34,7 +34,7 @@ export class Clock implements IClock {
 
   start(signal: AbortSignal): void {
     for (const {timeItem, fn} of this.fns) {
-      this.runAtMostEvery(timeItem, signal, fn).catch((e) => {
+      this.runAtMostEvery(timeItem, signal, fn).catch((e: Error) => {
         if (!isAbortedError(e)) {
           this.logger.error("runAtMostEvery", {}, e);
         }
@@ -68,7 +68,7 @@ export class Clock implements IClock {
     let slotOrEpoch = timeItem === TimeItem.Slot ? slot : computeEpochAtSlot(slot);
     while (!signal.aborted) {
       // Must catch fn() to ensure `sleep()` is awaited both for resolve and reject
-      await fn(slotOrEpoch, signal).catch((e) => this.logger.error("Error on runEvery fn", {}, e));
+      await fn(slotOrEpoch, signal).catch((e: Error) => this.logger.error("Error on runEvery fn", {}, e));
 
       try {
         await sleep(this.timeUntilNext(timeItem), signal);
@@ -117,7 +117,7 @@ export function getCurrentSlotAround(config: IChainForkConfig, genesisTime: Numb
 
 // function useEventStream() {
 //   this.stream = this.events.getEventStream([BeaconEventType.BLOCK, BeaconEventType.HEAD, BeaconEventType.CHAIN_REORG]);
-//   pipeToEmitter(this.stream, this).catch((e) => {
+//   pipeToEmitter(this.stream, this).catch((e: Error) => {
 //     this.logger.error("Error on stream pipe", {}, e);
 //   });
 

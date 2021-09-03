@@ -369,14 +369,14 @@ export function getValidatorApi({
               return; // Ok to submit the same aggregate twice
             }
 
-            errors.push(e);
+            errors.push(e as Error);
             logger.error(
               `Error on publishAggregateAndProofs [${i}]`,
               {
                 slot: signedAggregateAndProof.message.aggregate.data.slot,
                 index: signedAggregateAndProof.message.aggregate.data.index,
               },
-              e
+              e as Error
             );
             if (e instanceof AttestationError && e.action === GossipAction.REJECT) {
               const archivedPath = chain.persistInvalidSszObject(
@@ -417,14 +417,14 @@ export function getValidatorApi({
             chain.syncContributionAndProofPool.add(contributionAndProof.message);
             await network.gossip.publishContributionAndProof(contributionAndProof);
           } catch (e) {
-            errors.push(e);
+            errors.push(e as Error);
             logger.error(
               `Error on publishContributionAndProofs [${i}]`,
               {
                 slot: contributionAndProof.message.contribution.slot,
                 subCommitteeIndex: contributionAndProof.message.contribution.subCommitteeIndex,
               },
-              e
+              e as Error
             );
             if (e instanceof SyncCommitteeError && e.action === GossipAction.REJECT) {
               const archivedPath = chain.persistInvalidSszObject(

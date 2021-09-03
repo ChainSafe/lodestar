@@ -29,7 +29,7 @@ export function getRoutes(config: IChainForkConfig, api: Api): ServerRoutes<Api,
                 const data = eventSerdes.toJson(event);
                 res.raw.write(serializeSSEEvent({event: event.type, data}));
               } catch (e) {
-                reject(e);
+                reject(e as Error);
               }
             });
 

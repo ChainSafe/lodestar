@@ -98,7 +98,7 @@ export class SyncnetsService implements ISubnetsService {
       // Unsubscribe to a committee subnet from subscriptionsCommittee.
       this.unsubscribeSubnets(this.subscriptionsCommittee.getExpired(slot));
     } catch (e) {
-      this.logger.error("Error on SyncnetsService.onEpoch", {epoch}, e);
+      this.logger.error("Error on SyncnetsService.onEpoch", {epoch}, e as Error);
     }
   };
 

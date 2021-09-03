@@ -32,7 +32,7 @@ async function downloadTestsCli(): Promise<void> {
   await downloadTests({specVersion, outputDir, testsToDownload}, console.log);
 }
 
-downloadTestsCli().catch((e) => {
+downloadTestsCli().catch((e: Error) => {
   console.error(e);
   process.exit(1);
 });

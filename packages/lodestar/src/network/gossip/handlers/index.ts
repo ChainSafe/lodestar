@@ -83,7 +83,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules): GossipHandlers 
         try {
           chain.receiveBlock(signedBlock);
         } catch (e) {
-          logger.error("Error receiving block", {}, e);
+          logger.error("Error receiving block", {}, e as Error);
         }
       } catch (e) {
         if (
@@ -183,7 +183,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules): GossipHandlers 
       try {
         chain.attestationPool.add(attestation);
       } catch (e) {
-        logger.error("Error adding attestation to pool", {subnet}, e);
+        logger.error("Error adding attestation to pool", {subnet}, e as Error);
       }
     },
 
@@ -192,7 +192,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules): GossipHandlers 
 
       // Handler
 
-      db.voluntaryExit.add(voluntaryExit).catch((e) => {
+      db.voluntaryExit.add(voluntaryExit).catch((e: Error) => {
         logger.error("Error adding attesterSlashing to pool", {}, e);
       });
     },
@@ -202,7 +202,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules): GossipHandlers 
 
       // Handler
 
-      db.proposerSlashing.add(proposerSlashing).catch((e) => {
+      db.proposerSlashing.add(proposerSlashing).catch((e: Error) => {
         logger.error("Error adding attesterSlashing to pool", {}, e);
       });
     },
@@ -212,7 +212,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules): GossipHandlers 
 
       // Handler
 
-      db.attesterSlashing.add(attesterSlashing).catch((e) => {
+      db.attesterSlashing.add(attesterSlashing).catch((e: Error) => {
         logger.error("Error adding attesterSlashing to pool", {}, e);
       });
     },
@@ -237,7 +237,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules): GossipHandlers 
       try {
         chain.syncContributionAndProofPool.add(contributionAndProof.message);
       } catch (e) {
-        logger.error("Error adding to contributionAndProof pool", {}, e);
+        logger.error("Error adding to contributionAndProof pool", {}, e as Error);
       }
     },
 
@@ -262,7 +262,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules): GossipHandlers 
       try {
         chain.syncCommitteeMessagePool.add(subnet, syncCommittee, indexInSubCommittee);
       } catch (e) {
-        logger.error("Error adding to syncCommittee pool", {subnet}, e);
+        logger.error("Error adding to syncCommittee pool", {subnet}, e as Error);
       }
     },
   };

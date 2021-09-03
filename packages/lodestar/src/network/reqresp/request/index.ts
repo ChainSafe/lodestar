@@ -97,7 +97,7 @@ export async function sendRequest<T extends ResponseBody | ResponseBody[]>(
       },
       DIAL_TIMEOUT,
       signal
-    ).catch((e) => {
+    ).catch((e: Error) => {
       if (e instanceof TimeoutError) {
         throw new RequestInternalError({code: RequestErrorCode.DIAL_TIMEOUT});
       } else {
@@ -141,7 +141,7 @@ export async function sendRequest<T extends ResponseBody | ResponseBody[]>(
             collectResponses(method, maxResponses)
           ),
         maxTotalResponseTimeout(maxResponses, options)
-      ).catch((e) => {
+      ).catch((e: Error) => {
         // No need to close the stream here, the outter finally {} block will
         if (e instanceof TimeoutError) {
           throw new RequestInternalError({code: RequestErrorCode.RESPONSE_TIMEOUT});

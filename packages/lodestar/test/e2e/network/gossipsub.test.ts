@@ -153,7 +153,7 @@ describe("network", function () {
     for (let i = 0; i < msgCount; i++) {
       const voluntaryExit = ssz.phase0.SignedVoluntaryExit.defaultValue();
       voluntaryExit.message.epoch = i;
-      netA.gossip.publishVoluntaryExit(voluntaryExit).catch((e) => {
+      netA.gossip.publishVoluntaryExit(voluntaryExit).catch((e: Error) => {
         logger.error("Error on publishVoluntaryExit", {}, e);
       });
     }

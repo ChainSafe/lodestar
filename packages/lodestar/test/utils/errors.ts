@@ -22,9 +22,9 @@ export async function expectRejectedWithLodestarError(
     throw Error(`Expected promise to reject but returned value: \n\n\t${json}`);
   } catch (e) {
     if (typeof expectedErr === "string") {
-      expectLodestarErrorCode(e, expectedErr);
+      expectLodestarErrorCode(e as LodestarError<any>, expectedErr);
     } else {
-      expectLodestarError(e, expectedErr);
+      expectLodestarError(e as LodestarError<any>, expectedErr);
     }
   }
 }

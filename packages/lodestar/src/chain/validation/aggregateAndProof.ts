@@ -63,7 +63,7 @@ export async function validateGossipAggregateAndProof(
 
   const targetState = await chain.regen
     .getCheckpointState(attTarget, RegenCaller.validateGossipAggregateAndProof)
-    .catch((e) => {
+    .catch((e: Error) => {
       throw new AttestationError(GossipAction.REJECT, {
         code: AttestationErrorCode.MISSING_ATTESTATION_TARGET_STATE,
         error: e as Error,

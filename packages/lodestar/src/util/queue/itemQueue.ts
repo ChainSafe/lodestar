@@ -93,7 +93,7 @@ export class JobItemQueue<Args extends any[], R> {
         await sleep(0);
       }
     } catch (e) {
-      job.reject(e);
+      job.reject(e as Error);
     }
 
     this.runningJobs = Math.max(0, this.runningJobs - 1);

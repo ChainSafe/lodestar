@@ -140,7 +140,7 @@ export class AttnetsService implements IAttnetsService {
     try {
       this.unsubscribeExpiredCommitteeSubnets(slot);
     } catch (e) {
-      this.logger.error("Error on AttnetsService.onSlot", {slot}, e);
+      this.logger.error("Error on AttnetsService.onSlot", {slot}, e as Error);
     }
   };
 
@@ -153,7 +153,7 @@ export class AttnetsService implements IAttnetsService {
       this.unsubscribeExpiredRandomSubnets(slot);
       this.pruneExpiredKnownValidators(slot);
     } catch (e) {
-      this.logger.error("Error on AttnetsService.onEpoch", {epoch}, e);
+      this.logger.error("Error on AttnetsService.onEpoch", {epoch}, e as Error);
     }
   };
 

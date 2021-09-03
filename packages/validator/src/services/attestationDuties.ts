@@ -53,7 +53,7 @@ export class AttestationDutiesService {
   private runDutiesTasks = async (epoch: Epoch): Promise<void> => {
     await Promise.all([
       // Run pollBeaconAttesters immediately for all known local indices
-      this.pollBeaconAttesters(epoch, this.indicesService.getAllLocalIndices()).catch((e) => {
+      this.pollBeaconAttesters(epoch, this.indicesService.getAllLocalIndices()).catch((e: Error) => {
         this.logger.error("Error on poll attesters", {epoch}, e);
       }),
 
@@ -61,7 +61,7 @@ export class AttestationDutiesService {
       this.indicesService
         .pollValidatorIndices()
         .then((newIndices) => this.pollBeaconAttesters(epoch, newIndices))
-        .catch((e) => {
+        .catch((e: Error) => {
           this.logger.error("Error on poll indices and attesters", {epoch}, e);
         }),
     ]);
@@ -90,7 +90,7 @@ export class AttestationDutiesService {
 
     for (const epoch of [currentEpoch, nextEpoch]) {
       // Download the duties and update the duties for the current and next epoch.
-      await this.pollBeaconAttestersForEpoch(epoch, indexArr).catch((e) => {
+      await this.pollBeaconAttestersForEpoch(epoch, indexArr).catch((e: Error) => {
         this.logger.error("Failed to download attester duties", {epoch}, e);
       });
     }
@@ -124,7 +124,7 @@ export class AttestationDutiesService {
     // If there are any subscriptions, push them out to the beacon node.
     if (beaconCommitteeSubscriptions.length > 0) {
       // TODO: Should log or throw?
-      await this.api.validator.prepareBeaconCommitteeSubnet(beaconCommitteeSubscriptions).catch((e) => {
+      await this.api.validator.prepareBeaconCommitteeSubnet(beaconCommitteeSubscriptions).catch((e: Error) => {
         throw extendError(e, "Failed to subscribe to beacon committee subnets");
       });
     }
@@ -140,7 +140,7 @@ export class AttestationDutiesService {
     }
 
     // TODO: Implement dependentRoot logic
-    const attesterDuties = await this.api.validator.getAttesterDuties(epoch, indexArr).catch((e) => {
+    const attesterDuties = await this.api.validator.getAttesterDuties(epoch, indexArr).catch((e: Error) => {
       throw extendError(e, "Failed to obtain attester duty");
     });
     const dependentRoot = attesterDuties.dependentRoot;

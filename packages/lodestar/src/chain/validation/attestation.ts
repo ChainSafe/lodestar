@@ -87,7 +87,7 @@ export async function validateGossipAttestation(
 
   const attestationTargetState = await chain.regen
     .getCheckpointState(attTarget, RegenCaller.validateGossipAttestation)
-    .catch((e) => {
+    .catch((e: Error) => {
       throw new AttestationError(GossipAction.REJECT, {
         code: AttestationErrorCode.MISSING_ATTESTATION_TARGET_STATE,
         error: e as Error,

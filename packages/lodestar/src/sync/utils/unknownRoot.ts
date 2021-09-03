@@ -19,7 +19,7 @@ export async function fetchUnknownBlockRoot(
         return blocks[0];
       }
     } catch (e) {
-      logger.debug("Error fetching UnknownBlockRoot", {i, parentRootHex}, e);
+      logger.debug("Error fetching UnknownBlockRoot", {i, parentRootHex}, e as Error);
     }
   }
 

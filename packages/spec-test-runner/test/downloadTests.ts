@@ -10,7 +10,7 @@ downloadTests(
     specTestsRepoUrl: SPEC_TEST_REPO_URL,
   },
   console.log
-).catch((e) => {
+).catch((e: Error) => {
   console.error(e);
   process.exit(1);
 });
