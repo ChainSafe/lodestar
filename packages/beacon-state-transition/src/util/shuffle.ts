@@ -8,12 +8,12 @@ import {assert, bytesToBigInt} from "@chainsafe/lodestar-utils";
 
 // ShuffleList shuffles a list, using the given seed for randomness. Mutates the input list.
 export function shuffleList(input: ValidatorIndex[], seed: Bytes32): void {
-  innerShuffleList(input, seed, true);
+  innerShuffleList(input, seed, true, SHUFFLE_ROUND_COUNT);
 }
 
 // UnshuffleList undoes a list shuffling using the seed of the shuffling. Mutates the input list.
 export function unshuffleList(input: ValidatorIndex[], seed: Bytes32): void {
-  innerShuffleList(input, seed, false);
+  innerShuffleList(input, seed, false, SHUFFLE_ROUND_COUNT);
 }
 
 const _SHUFFLE_H_SEED_SIZE = 32;
@@ -73,12 +73,17 @@ function setPositionUint32(value: number, buf: Buffer): void {
 }
 
 // Shuffles or unshuffles, depending on the `dir` (true for shuffling, false for unshuffling
-function innerShuffleList(input: ValidatorIndex[], seed: Bytes32, dir: boolean): void {
+export function innerShuffleList(
+  input: ValidatorIndex[],
+  seed: Bytes32,
+  dir: boolean,
+  shuffleRoundCount: number
+): void {
   if (input.length <= 1) {
     // nothing to (un)shuffle
     return;
   }
-  if (SHUFFLE_ROUND_COUNT == 0) {
+  if (shuffleRoundCount == 0) {
     // no shuffling
     return;
   }
@@ -93,7 +98,7 @@ function innerShuffleList(input: ValidatorIndex[], seed: Bytes32, dir: boolean):
   if (!dir) {
     // Start at last round.
     // Iterating through the rounds in reverse, un-swaps everything, effectively un-shuffling the list.
-    r = SHUFFLE_ROUND_COUNT - 1;
+    r = shuffleRoundCount - 1;
   }
 
   // Seed is always the first 32 bytes of the hash input, we never have to change this part of the buffer.
@@ -204,7 +209,7 @@ function innerShuffleList(input: ValidatorIndex[], seed: Bytes32, dir: boolean):
     if (dir) {
       // -> shuffle
       r += 1;
-      if (r == SHUFFLE_ROUND_COUNT) {
+      if (r == shuffleRoundCount) {
         break;
       }
     } else {

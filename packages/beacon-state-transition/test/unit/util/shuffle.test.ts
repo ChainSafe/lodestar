@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import {unshuffleList} from "../../../src";
+import {innerShuffleList} from "../../../src";
 
 describe("util / shuffle", () => {
   const testCases: {
@@ -21,10 +21,12 @@ describe("util / shuffle", () => {
   ];
 
   const seed = new Uint8Array([42, 32]);
+  // Force mainnet value for consistent results even with LODESTAR_PRESET=minimal
+  const SHUFFLE_ROUND_COUNT_MAINNET = 90;
 
   for (const {id, input, res} of testCases) {
     it(id, () => {
-      unshuffleList(input, seed);
+      innerShuffleList(input, seed, false, SHUFFLE_ROUND_COUNT_MAINNET);
       expect(input).to.deep.equal(res);
     });
   }

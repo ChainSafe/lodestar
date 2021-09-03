@@ -1,12 +1,18 @@
 import {expect} from "chai";
 import {fromHexString} from "@chainsafe/ssz";
 import {
+  ACTIVE_PRESET,
   SYNC_COMMITTEE_SIZE,
   SYNC_COMMITTEE_SUBNET_COUNT,
   TARGET_AGGREGATORS_PER_SYNC_SUBCOMMITTEE,
   TARGET_AGGREGATORS_PER_COMMITTEE,
+  PresetName,
 } from "@chainsafe/lodestar-params";
-import {isAggregatorFromCommitteeLength, isSyncCommitteeAggregator} from "../../../src/util/aggregator";
+import {
+  isAggregatorFromCommitteeLength,
+  isSelectionProofValid,
+  isSyncCommitteeAggregator,
+} from "../../../src/util/aggregator";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
@@ -21,15 +27,17 @@ describe("isAttestationAggregator", function () {
     });
   });
 
+  // NOTE: Invalid sig, bruteforced last characters to get a false result
   it("should be false", function () {
     const result = isAggregatorFromCommitteeLength(
       committeeLength,
       fromHexString(
-        "0x8191d16330837620f0ed85d0d3d52af5b56f7cec12658fa391814251d4b32977eb2e6ca055367354fd63175f8d1d2d7b0678c3c482b738f96a0df40bd06450d99c301a659b8396c227ed781abb37a1604297922219374772ab36b46b84817036"
+        "0x8191d16330837620f0ed85d0d3d52af5b56f7cec12658fa391814251d4b32977eb2e6ca055367354fd63175f8d1d2d7b0678c3c482b738f96a0df40bd06450d99c301a659b8396c227ed781abb37a1604297922219374772ab36b46b84817020"
       )
     );
     expect(result).to.be.equal(false);
   });
+
   it("should be true", function () {
     const result = isAggregatorFromCommitteeLength(
       committeeLength,
@@ -48,19 +56,23 @@ describe("isSyncCommitteeAggregator", function () {
       SYNC_COMMITTEE_SUBNET_COUNT,
       TARGET_AGGREGATORS_PER_SYNC_SUBCOMMITTEE,
     }).to.deep.equal({
-      SYNC_COMMITTEE_SIZE: 512,
+      SYNC_COMMITTEE_SIZE: 32,
       SYNC_COMMITTEE_SUBNET_COUNT: 4,
       TARGET_AGGREGATORS_PER_SYNC_SUBCOMMITTEE: 16,
     });
   });
 
   it("should be false", function () {
-    const result = isSyncCommitteeAggregator(
-      fromHexString(
-        "0x8191d16330837620f0ed85d0d3d52af5b56f7cec12658fa391814251d4b32977eb2e6ca055367354fd63175f8d1d2d7b0678c3c482b738f96a0df40bd06450d99c301a659b8396c227ed781abb37a1604297922219374772ab36b46b84817036"
-      )
+    const sig = fromHexString(
+      "0x8191d16330837620f0ed85d0d3d52af5b56f7cec12658fa391814251d4b32977eb2e6ca055367354fd63175f8d1d2d7b0678c3c482b738f96a0df40bd06450d99c301a659b8396c227ed781abb37a1604297922219374772ab36b46b84817036"
     );
-    expect(result).to.be.equal(false);
+
+    // With preset minimal the modulo is 1 so everyone is an aggregator. In that case force modulo to be 8 (mainnet value)
+    if (ACTIVE_PRESET === PresetName.minimal) {
+      expect(isSelectionProofValid(sig, 8)).to.be.equal(false);
+    } else {
+      expect(isSyncCommitteeAggregator(sig)).to.be.equal(false);
+    }
   });
 
   // NOTE: Invalid sig, bruteforced last characters to get a true result

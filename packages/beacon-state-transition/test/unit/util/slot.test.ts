@@ -4,11 +4,12 @@ import {computeSlotsSinceEpochStart} from "../../../src/util";
 import {Slot} from "@chainsafe/lodestar-types";
 
 describe("computeSlotsSinceEpochStart", () => {
+  // NOTE: WITH MINIMAL PRESET
   const pairs = [
     {test: 0, expected: 0},
     {test: 5, expected: 5},
-    {test: 40, expected: 8},
-    {test: 50, expected: 18},
+    {test: 40, expected: 0},
+    {test: 50, expected: 2},
   ];
 
   for (const pair of pairs) {
@@ -23,6 +24,6 @@ describe("computeSlotsSinceEpochStart", () => {
     const slot = 70;
     const result = computeSlotsSinceEpochStart(slot, epoch);
     // 70 - NUM_SLOT_PER_EPOCH
-    assert.equal(result, 38);
+    assert.equal(result, 62);
   });
 });
