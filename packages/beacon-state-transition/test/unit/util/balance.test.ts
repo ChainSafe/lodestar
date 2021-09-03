@@ -1,13 +1,15 @@
-import {assert} from "chai";
+import {assert, expect} from "chai";
+import {config as minimalConfig} from "@chainsafe/lodestar-config/default";
 
-import {List} from "@chainsafe/ssz";
+import {List, readonlyValuesListOfLeafNodeStruct} from "@chainsafe/ssz";
 import {EFFECTIVE_BALANCE_INCREMENT} from "@chainsafe/lodestar-params";
 import {phase0, ValidatorIndex} from "@chainsafe/lodestar-types";
 
-import {increaseBalance, decreaseBalance, getTotalBalance} from "../../../src/util";
+import {increaseBalance, decreaseBalance, getTotalBalance, isActiveValidator} from "../../../src/util";
 
 import {generateValidators} from "../../utils/validator";
 import {generateCachedState, generateState} from "../../utils/state";
+import {getEffectiveBalances} from "../../../src";
 
 describe("getTotalBalance", () => {
   it("should return correct balances", () => {
@@ -71,5 +73,25 @@ describe("decreaseBalance", () => {
     const delta = 11;
     decreaseBalance(state, 0, delta);
     assert(state.balances[0] === 0);
+  });
+});
+
+describe("getEffectiveBalances", () => {
+  it("should get correct effective balances", () => {
+    const justifiedState = generateCachedState(minimalConfig, {
+      validators: [
+        ...generateValidators(3, {activation: Infinity, exit: Infinity, balance: 32e9}),
+        ...generateValidators(4, {activation: 0, exit: Infinity, balance: 32e9}),
+        ...generateValidators(5, {activation: Infinity, exit: Infinity, balance: 32e9}),
+      ] as List<phase0.Validator>,
+    });
+    const justifiedEpoch = justifiedState.currentShuffling.epoch;
+    const effectiveBalances: number[] = [];
+    const validators = readonlyValuesListOfLeafNodeStruct(justifiedState.validators);
+    for (let i = 0, len = validators.length; i < len; i++) {
+      const validator = validators[i];
+      effectiveBalances.push(isActiveValidator(validator, justifiedEpoch) ? validator.effectiveBalance : 0);
+    }
+    expect(effectiveBalances).to.be.deep.equal(getEffectiveBalances(justifiedState), "wrong effectiveBalances");
   });
 });

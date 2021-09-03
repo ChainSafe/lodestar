@@ -5,9 +5,7 @@
 import {EFFECTIVE_BALANCE_INCREMENT} from "@chainsafe/lodestar-params";
 import {allForks, altair, Gwei, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {bigIntMax} from "@chainsafe/lodestar-utils";
-import {readonlyValuesListOfLeafNodeStruct} from "@chainsafe/ssz";
 import {CachedBeaconState} from "../allForks";
-import {isActiveValidator} from "./validator";
 
 /**
  * Return the combined effective balance of the [[indices]].
@@ -52,18 +50,23 @@ export function decreaseBalance(
 }
 
 /**
- * TODO - PERFORMANCE WARNING - NAIVE CODE
  * This method is used to get justified balances from a justified state.
- *
- * SLOW CODE - 🐢
  */
 export function getEffectiveBalances(justifiedState: CachedBeaconState<allForks.BeaconState>): number[] {
-  const justifiedEpoch = justifiedState.currentShuffling.epoch;
-  const effectiveBalances: number[] = [];
-  const validators = readonlyValuesListOfLeafNodeStruct(justifiedState.validators);
-  for (let i = 0, len = validators.length; i < len; i++) {
-    const validator = validators[i];
-    effectiveBalances.push(isActiveValidator(validator, justifiedEpoch) ? validator.effectiveBalance : 0);
+  const {currentShuffling} = justifiedState;
+  const {activeIndices} = currentShuffling;
+  // 5x faster than using readonlyValuesListOfLeafNodeStruct
+  const effectiveBalances = justifiedState.effectiveBalances.toArray();
+  let j = 0;
+  for (let i = 0; i < effectiveBalances.length; i++) {
+    // same logic to checking activeIndices.includes(i) since activeIndices is sorted
+    if (i !== activeIndices[j]) {
+      // inactive validator
+      effectiveBalances[i] = 0;
+    } else {
+      // active validator, keep effective balance as is
+      j++;
+    }
   }
   return effectiveBalances;
 }
