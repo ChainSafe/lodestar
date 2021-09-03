@@ -145,7 +145,7 @@ export class PeerDiscovery {
     const toDialPeers: PeerId[] = [];
 
     for (const peerIdStr of discoveredPeers) {
-      const peer = PeerId.createFromCID(peerIdStr);
+      const peer = PeerId.createFromB58String(peerIdStr);
       if (
         connectedPeersCount + toDialPeers.length < this.maxPeers &&
         !this.isPeerConnected(peerIdStr) &&

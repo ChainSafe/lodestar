@@ -7,7 +7,7 @@ export async function createPeerId(): Promise<PeerId> {
 }
 
 export function writePeerId(filepath: string, peerId: PeerId): void {
-  writeFile(filepath, peerId.toJSON() as Json);
+  writeFile(filepath, (peerId.toJSON() as unknown) as Json);
 }
 
 export async function readPeerId(filepath: string): Promise<PeerId> {
