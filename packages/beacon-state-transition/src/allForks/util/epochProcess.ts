@@ -178,11 +178,11 @@ export function beforeProcessEpoch<T extends allForks.BeaconState>(state: Cached
     }
 
     const active = isActiveValidator(validator, currentEpoch);
+    // We track effectiveBalanceByIncrement as ETH to fit total network balance in a JS number (53 bits)
+    const effectiveBalanceByIncrement = Math.floor(validator.effectiveBalance / EFFECTIVE_BALANCE_INCREMENT);
+    effectiveBalancesByIncrements[i] = effectiveBalanceByIncrement;
     if (active) {
       status.active = true;
-      // We track effectiveBalanceByIncrement as ETH to fit total network balance in a JS number (53 bits)
-      const effectiveBalanceByIncrement = Math.floor(validator.effectiveBalance / EFFECTIVE_BALANCE_INCREMENT);
-      effectiveBalancesByIncrements[i] = effectiveBalanceByIncrement;
       totalActiveStakeByIncrement += effectiveBalanceByIncrement;
     }
 
