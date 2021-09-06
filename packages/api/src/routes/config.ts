@@ -53,7 +53,7 @@ export type Api = {
 export const routesData: RoutesData<Api> = {
   getDepositContract: {url: "/eth/v1/config/deposit_contract", method: "GET"},
   getForkSchedule: {url: "/eth/v1/config/fork_schedule", method: "GET"},
-  getSpec: {url: "/eth/v1/config/spec", method: "GET"},
+  getSpec: {url: "/eth/v1/config/spec", method: "GET", jsonOpts: {case: "notransform" as const} },
 };
 
 export type ReqTypes = {[K in keyof Api]: ReqEmpty};

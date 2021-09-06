@@ -25,6 +25,19 @@ export type RouteGroupDefinition<
 export type RouteDef = {
   url: string;
   method: "GET" | "POST";
+  jsonOpts?: {case: 
+    | "lower"
+    | "snake"
+    | "constant"
+    | "camel"
+    | "kebab"
+    | "upper"
+    | "capital"
+    | "header"
+    | "pascal" //Same as squish
+    | "title"
+    | "sentence"
+    | "notransform"};
 };
 
 export type ReqGeneric = {

@@ -72,7 +72,7 @@ export function generateGenericJsonClient<
       const res = await fetchFn.json<Json>(fetchOptsSerializer(...args));
       if (returnType) {
         // eslint-disable-next-line @typescript-eslint/no-unsafe-return
-        return returnType.fromJson(res, jsonOpts) as ReturnType<Api[keyof Api]>;
+        return returnType.fromJson(res, routeDef.jsonOpts || jsonOpts) as ReturnType<Api[keyof Api]>;
       }
     };
   }) as Api;

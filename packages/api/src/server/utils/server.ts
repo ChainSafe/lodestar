@@ -69,7 +69,7 @@ export function getGenericJsonServer<
         const args: any[] = routeSerdes.parseReq(req as ReqTypes[keyof Api]);
         const data = (await api[routeKey](...args)) as Resolves<Api[keyof Api]>;
         if (returnType) {
-          return returnType.toJson(data, jsonOpts);
+          return returnType.toJson(data, routeDef.jsonOpts ||jsonOpts);
         } else {
           return {};
         }
