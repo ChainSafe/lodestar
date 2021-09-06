@@ -80,8 +80,11 @@ describe("getEffectiveBalances", () => {
   it("should get correct effective balances", () => {
     const justifiedState = generateCachedState(minimalConfig, {
       validators: [
+        // not active
         ...generateValidators(3, {activation: Infinity, exit: Infinity, balance: 32e9}),
+        // active
         ...generateValidators(4, {activation: 0, exit: Infinity, balance: 32e9}),
+        // not active
         ...generateValidators(5, {activation: Infinity, exit: Infinity, balance: 32e9}),
       ] as List<phase0.Validator>,
     });
@@ -90,8 +93,12 @@ describe("getEffectiveBalances", () => {
     const validators = readonlyValuesListOfLeafNodeStruct(justifiedState.validators);
     for (let i = 0, len = validators.length; i < len; i++) {
       const validator = validators[i];
-      effectiveBalances.push(isActiveValidator(validator, justifiedEpoch) ? validator.effectiveBalance : 0);
+      effectiveBalances.push(
+        isActiveValidator(validator, justifiedEpoch)
+          ? Math.floor(validator.effectiveBalance / EFFECTIVE_BALANCE_INCREMENT)
+          : 0
+      );
     }
-    expect(effectiveBalances).to.be.deep.equal(getEffectiveBalances(justifiedState), "wrong effectiveBalances");
+    expect(getEffectiveBalances(justifiedState)).to.be.deep.equal(effectiveBalances, "wrong effectiveBalances");
   });
 });

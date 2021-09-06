@@ -51,21 +51,26 @@ export function decreaseBalance(
 
 /**
  * This method is used to get justified balances from a justified state.
+ * This is consumed by forkchoice which based on delta so we return "by increment" (in ether) value,
+ * ie [30, 31, 32] instead of [30e9, 31e9, 32e9]
  */
 export function getEffectiveBalances(justifiedState: CachedBeaconState<allForks.BeaconState>): number[] {
   const {activeIndices} = justifiedState.currentShuffling;
   // 5x faster than using readonlyValuesListOfLeafNodeStruct
-  const effectiveBalances = justifiedState.effectiveBalances.toArray();
+  const count = justifiedState.validators.length;
+  const {effectiveBalances} = justifiedState;
+  const effectiveBalancesArr = new Array<number>(count);
   let j = 0;
-  for (let i = 0; i < effectiveBalances.length; i++) {
-    // same logic to checking activeIndices.includes(i) since activeIndices is sorted
-    if (i !== activeIndices[j]) {
-      // inactive validator
-      effectiveBalances[i] = 0;
-    } else {
-      // active validator, keep effective balance as is
+  for (let i = 0; i < count; i++) {
+    if (i === activeIndices[j]) {
+      // active validator
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      effectiveBalancesArr[i] = Math.floor(effectiveBalances.get(i)! / EFFECTIVE_BALANCE_INCREMENT);
       j++;
+    } else {
+      // inactive validator
+      effectiveBalancesArr[i] = 0;
     }
   }
-  return effectiveBalances;
+  return effectiveBalancesArr;
 }
