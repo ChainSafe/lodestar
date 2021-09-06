@@ -79,15 +79,15 @@ export type Api = {
  * Define javascript values for each route
  */
 export const routesData: RoutesData<Api> = {
-  getWtfNode: {url: "/eth/v1/lodestar/wtfnode/", method: "GET"},
-  writeHeapdump: {url: "/eth/v1/lodestar/writeheapdump/", method: "GET"},
-  getLatestWeakSubjectivityCheckpointEpoch: {url: "/eth/v1/lodestar/ws_epoch/", method: "GET"},
-  getSyncChainsDebugState: {url: "/eth/v1/lodestar/sync-chains-debug-state/", method: "GET"},
+  getWtfNode: {url: "/eth/v1/lodestar/wtfnode", method: "GET"},
+  writeHeapdump: {url: "/eth/v1/lodestar/writeheapdump", method: "GET"},
+  getLatestWeakSubjectivityCheckpointEpoch: {url: "/eth/v1/lodestar/ws_epoch", method: "GET"},
+  getSyncChainsDebugState: {url: "/eth/v1/lodestar/sync-chains-debug-state", method: "GET"},
   getGossipQueueItems: {url: "/eth/v1/lodestar/gossip-queue-items/:gossipType", method: "GET"},
-  getRegenQueueItems: {url: "/eth/v1/lodestar/regen-queue-items/", method: "GET"},
-  getBlockProcessorQueueItems: {url: "/eth/v1/lodestar/block-processor-queue-items/", method: "GET"},
-  getStateCacheItems: {url: "/eth/v1/lodestar/state-cache-items/", method: "GET"},
-  getCheckpointStateCacheItems: {url: "/eth/v1/lodestar/checkpoint-state-cache-items/", method: "GET"},
+  getRegenQueueItems: {url: "/eth/v1/lodestar/regen-queue-items", method: "GET"},
+  getBlockProcessorQueueItems: {url: "/eth/v1/lodestar/block-processor-queue-items", method: "GET"},
+  getStateCacheItems: {url: "/eth/v1/lodestar/state-cache-items", method: "GET"},
+  getCheckpointStateCacheItems: {url: "/eth/v1/lodestar/checkpoint-state-cache-items", method: "GET"},
 };
 
 export type ReqTypes = {
