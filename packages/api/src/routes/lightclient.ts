@@ -35,9 +35,9 @@ export type Api = {
  */
 export const routesData: RoutesData<Api> = {
   getStateProof: {url: "/eth/v1/lightclient/proof/:stateId", method: "POST"},
-  getBestUpdates: {url: "/eth/v1/lightclient/best_updates/", method: "GET"},
-  getLatestUpdateFinalized: {url: "/eth/v1/lightclient/latest_update_finalized/", method: "GET"},
-  getLatestUpdateNonFinalized: {url: "/eth/v1/lightclient/latest_update_nonfinalized/", method: "GET"},
+  getBestUpdates: {url: "/eth/v1/lightclient/best_updates", method: "GET"},
+  getLatestUpdateFinalized: {url: "/eth/v1/lightclient/latest_update_finalized", method: "GET"},
+  getLatestUpdateNonFinalized: {url: "/eth/v1/lightclient/latest_update_nonfinalized", method: "GET"},
   getInitProof: {url: "/eth/v1/lightclient/init_proof/:epoch", method: "GET"},
 };
 
