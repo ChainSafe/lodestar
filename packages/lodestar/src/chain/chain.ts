@@ -30,6 +30,7 @@ import {AttestationPool, SyncCommitteeMessagePool, SyncContributionAndProofPool}
 import {ForkDigestContext, IForkDigestContext} from "../util/forkDigestContext";
 import {LightClientIniter} from "./lightClient";
 import {AggregatedAttestationPool} from "./opPools/aggregatedAttestationPool";
+import {Archiver} from "./archiver";
 
 export interface IBeaconChainModules {
   config: IBeaconConfig;
@@ -78,6 +79,7 @@ export class BeaconChain implements IBeaconChain {
    * Once event have been handled internally, they are re-emitted externally for downstream consumers
    */
   protected internalEmitter = new ChainEventEmitter();
+  private readonly archiver: Archiver;
   private abortController = new AbortController();
 
   constructor(opts: IChainOptions, {config, db, logger, metrics, anchorState}: IBeaconChainModules) {
@@ -141,6 +143,7 @@ export class BeaconChain implements IBeaconChain {
 
     this.lightclientUpdater = new LightClientUpdater(this.db);
     this.lightClientIniter = new LightClientIniter({config: this.config, forkChoice, db: this.db, stateCache});
+    this.archiver = new Archiver(db, this, logger, signal);
 
     handleChainEvents.bind(this)(this.abortController.signal);
   }
@@ -149,6 +152,10 @@ export class BeaconChain implements IBeaconChain {
     this.abortController.abort();
     this.stateCache.clear();
     this.checkpointStateCache.clear();
+  }
+
+  async persistToDisk(): Promise<void> {
+    await this.archiver.persistToDisk();
   }
 
   getGenesisTime(): Number64 {

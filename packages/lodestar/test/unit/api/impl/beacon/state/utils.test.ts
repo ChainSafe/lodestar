@@ -11,11 +11,11 @@ import {
   getValidatorStatus,
 } from "../../../../../../src/api/impl/beacon/state/utils";
 import {IBeaconChain} from "../../../../../../src/chain";
+import {PERSIST_STATE_EVERY_EPOCHS} from "../../../../../../src/chain/archiver/archiveStates";
 import {generateBlockSummary} from "../../../../../utils/block";
 import {generateCachedState, generateState} from "../../../../../utils/state";
 import {StubbedBeaconDb} from "../../../../../utils/stub";
 import {generateValidators} from "../../../../../utils/validator";
-import {PERSIST_STATE_EVERY_EPOCHS} from "../../../../../../src/tasks/tasks/archiveStates";
 
 use(chaiAsPromised);
 

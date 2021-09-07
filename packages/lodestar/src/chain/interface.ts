@@ -78,6 +78,7 @@ export interface IBeaconChain {
 
   /** Stop beacon chain processing */
   close(): void;
+  persistToDisk(): Promise<void>;
   getGenesisTime(): Number64;
 
   getHeadState(): CachedBeaconState<allForks.BeaconState>;
