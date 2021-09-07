@@ -97,7 +97,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules): GossipHandlers 
             config.getForkTypes(slot).SignedBeaconBlock.serialize(signedBlock),
             `gossip_slot_${slot}`
           );
-          logger.error("Error validating gossip block", archivedPath);
+          logger.debug("The invalid gossip block was written to", archivedPath);
         }
 
         throw e;
@@ -146,7 +146,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules): GossipHandlers 
             ssz.phase0.SignedAggregateAndProof.serialize(signedAggregateAndProof),
             toHexString(ssz.phase0.SignedAggregateAndProof.hashTreeRoot(signedAggregateAndProof))
           );
-          logger.error("Error validating gossip aggregate and proof", archivedPath, e);
+          logger.debug("The invalid gossip aggregate and proof was written to", archivedPath, e);
         }
         throw e;
       }
@@ -164,7 +164,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules): GossipHandlers 
             ssz.phase0.Attestation.serialize(attestation),
             toHexString(ssz.phase0.Attestation.hashTreeRoot(attestation))
           );
-          logger.error("Error validating gossip attestation", {archivedPath}, e);
+          logger.debug("The invalid gossip attestation was written to", archivedPath);
         }
         throw e;
       }
@@ -226,7 +226,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules): GossipHandlers 
             ssz.altair.SignedContributionAndProof.serialize(contributionAndProof),
             toHexString(ssz.altair.SignedContributionAndProof.hashTreeRoot(contributionAndProof))
           );
-          logger.error("Error validating gossip contribution and proof", archivedPath, e);
+          logger.debug("The invalid gossip contribution and proof was written to", archivedPath);
         }
         throw e;
       }
@@ -251,7 +251,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules): GossipHandlers 
             ssz.altair.SyncCommitteeMessage.serialize(syncCommittee),
             toHexString(ssz.altair.SyncCommitteeMessage.hashTreeRoot(syncCommittee))
           );
-          logger.error("Error validating gossip sync committee", archivedPath, e);
+          logger.debug("The invalid gossip sync committee was written to", archivedPath);
         }
         throw e;
       }

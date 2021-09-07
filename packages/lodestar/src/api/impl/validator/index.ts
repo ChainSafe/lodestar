@@ -432,7 +432,7 @@ export function getValidatorApi({
                 ssz.altair.SignedContributionAndProof.serialize(contributionAndProof),
                 toHexString(ssz.altair.SignedContributionAndProof.hashTreeRoot(contributionAndProof))
               );
-              logger.error("The submitted contribution adn proof was written to", archivedPath);
+              logger.debug("The submitted contribution adn proof was written to", archivedPath);
             }
           }
         })
