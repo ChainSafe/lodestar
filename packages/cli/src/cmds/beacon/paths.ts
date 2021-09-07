@@ -6,6 +6,7 @@ export interface IBeaconPaths {
   beaconDir: string;
   peerStoreDir: string;
   dbDir: string;
+  persistInvalidSszObjectsDir: string;
   configFile: string;
   peerIdFile: string;
   enrFile: string;
@@ -34,6 +35,7 @@ export function getBeaconPaths(
   const rootDir = globalPaths.rootDir;
   const beaconDir = rootDir;
   const dbDir = args.dbDir || path.join(beaconDir, "chain-db");
+  const persistInvalidSszObjectsDir = args.persistInvalidSszObjectsDir || path.join(beaconDir, "invalidSszObjects");
   const peerStoreDir = args.peerStoreDir || path.join(beaconDir, "peerstore");
   const configFile = args.configFile || path.join(beaconDir, "beacon.config.json");
   const peerIdFile = args.peerIdFile || path.join(beaconDir, "peer-id.json");
@@ -44,6 +46,7 @@ export function getBeaconPaths(
     ...globalPaths,
     beaconDir,
     dbDir,
+    persistInvalidSszObjectsDir,
     configFile,
     peerStoreDir,
     peerIdFile,

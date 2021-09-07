@@ -199,6 +199,10 @@ export class MockBeaconChain implements IBeaconChain {
       headSlot: 0,
     };
   }
+
+  persistInvalidSszObject(): string | null {
+    return null;
+  }
 }
 
 function mockForkChoice(): IForkChoice {

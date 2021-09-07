@@ -119,4 +119,16 @@ export interface IBeaconChain {
   getClockForkDigest(): phase0.ForkDigest;
 
   getStatus(): phase0.Status;
+
+  /** Persist bad items to persistInvalidSszObjectsDir dir, for example invalid state, attestations etc. */
+  persistInvalidSszObject(type: SSZObjectType, bytes: Uint8Array, suffix: string): string | null;
 }
+
+export type SSZObjectType =
+  | "state"
+  | "signedBlock"
+  | "block"
+  | "attestation"
+  | "signedAggregatedAndProof"
+  | "syncCommittee"
+  | "contributionAndProof";
