@@ -55,7 +55,6 @@ export class BeaconChain implements IBeaconChain {
   forkDigestContext: IForkDigestContext;
   lightclientUpdater: LightClientUpdater;
   lightClientIniter: LightClientIniter;
-  archiver: Archiver;
 
   // Ops pool
   readonly attestationPool = new AttestationPool();
@@ -80,6 +79,7 @@ export class BeaconChain implements IBeaconChain {
    * Once event have been handled internally, they are re-emitted externally for downstream consumers
    */
   protected internalEmitter = new ChainEventEmitter();
+  private readonly archiver: Archiver;
   private abortController = new AbortController();
 
   constructor(opts: IChainOptions, {config, db, logger, metrics, anchorState}: IBeaconChainModules) {
