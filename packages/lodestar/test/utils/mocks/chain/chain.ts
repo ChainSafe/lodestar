@@ -170,21 +170,15 @@ export class MockBeaconChain implements IBeaconChain {
     return Math.floor(Date.now() / 1000);
   }
 
-  async receiveBlock(): Promise<void> {
-    return;
-  }
-
-  async processBlock(): Promise<void> {
-    return;
-  }
-
-  async processChainSegment(): Promise<void> {
-    return;
-  }
+  async receiveBlock(): Promise<void> {}
+  async processBlock(): Promise<void> {}
+  async processChainSegment(): Promise<void> {}
 
   close(): void {
     this.abortController.abort();
   }
+
+  async persistToDisk(): Promise<void> {}
 
   async getStateByBlockRoot(): Promise<CachedBeaconState<allForks.BeaconState> | null> {
     return null;
