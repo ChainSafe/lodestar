@@ -2,6 +2,7 @@
  * @module chain
  */
 
+import fs from "fs";
 import {ForkName} from "@chainsafe/lodestar-params";
 import {CachedBeaconState, computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
@@ -19,7 +20,7 @@ import {BlockPool, BlockProcessor} from "./blocks";
 import {IBeaconClock, LocalClock} from "./clock";
 import {ChainEventEmitter} from "./emitter";
 import {handleChainEvents} from "./eventHandlers";
-import {IBeaconChain} from "./interface";
+import {IBeaconChain, SSZObjectType} from "./interface";
 import {IChainOptions} from "./options";
 import {IStateRegenerator, QueuedStateRegenerator, RegenCaller} from "./regen";
 import {LodestarForkChoice} from "./forkChoice";
@@ -311,5 +312,24 @@ export class BeaconChain implements IBeaconChain {
       headRoot: head.blockRoot,
       headSlot: head.slot,
     };
+  }
+
+  persistInvalidSszObject(type: SSZObjectType, bytes: Uint8Array, suffix = ""): string | null {
+    if (!this.persistInvalidSszObject) {
+      return null;
+    }
+    const now = new Date();
+    // yyyy-MM-dd
+    const date = now.toISOString().split("T")[0];
+    // by default store to lodestar_archive of current dir
+    const byDate = this.opts.persistInvalidSszObjectsDir
+      ? `${this.opts.persistInvalidSszObjectsDir}/${date}`
+      : `invalidSszObjects/${date}`;
+    if (!fs.existsSync(byDate)) {
+      fs.mkdirSync(byDate, {recursive: true});
+    }
+    const fileName = `${byDate}/${type}_${suffix}_${Date.now()}.ssz`;
+    fs.writeFileSync(fileName, bytes);
+    return fileName;
   }
 }

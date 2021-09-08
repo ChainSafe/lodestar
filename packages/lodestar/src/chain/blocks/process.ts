@@ -101,9 +101,9 @@ async function processBlocksInEpoch(
   if (!firstBlock) {
     return;
   }
-
+  let preState: CachedBeaconState<allForks.BeaconState> | undefined = undefined;
   try {
-    let preState = await regen.getPreState(firstBlock.message, RegenCaller.processBlocksInEpoch);
+    preState = await regen.getPreState(firstBlock.message, RegenCaller.processBlocksInEpoch);
     for (const block of blocksInEpoch) {
       preState = await runStateTransition({emitter, forkChoice, metrics}, checkpointStateCache, preState, {
         reprocess: job.reprocess,
@@ -134,11 +134,11 @@ async function processBlocksInEpoch(
       }
 
       if (signatureSets.length > 0 && !(await bls.verifySignatureSets(signatureSets))) {
-        throw new BlockError(firstBlock, {code: BlockErrorCode.INVALID_SIGNATURE});
+        throw new BlockError(firstBlock, {code: BlockErrorCode.INVALID_SIGNATURE, preState});
       }
     }
   } catch (e) {
-    if (e instanceof RegenError) {
+    if (!preState || e instanceof RegenError) {
       throw new BlockError(firstBlock, {code: BlockErrorCode.PRESTATE_MISSING});
     }
 

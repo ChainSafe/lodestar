@@ -16,6 +16,7 @@ describe("options / beaconNodeOptions", () => {
 
       "chain.useSingleThreadVerifier": true,
       "chain.disableBlsBatchVerify": true,
+      "chain.persistInvalidSszObjects": true,
 
       "eth1.enabled": true,
       "eth1.providerUrl": "http://my.node:8545",
@@ -58,6 +59,7 @@ describe("options / beaconNodeOptions", () => {
       chain: {
         useSingleThreadVerifier: true,
         disableBlsBatchVerify: true,
+        persistInvalidSszObjects: true,
       },
       eth1: {
         enabled: true,

@@ -12,10 +12,10 @@ import {
   SYNC_COMMITTEE_SIZE,
   SYNC_COMMITTEE_SUBNET_COUNT,
 } from "@chainsafe/lodestar-params";
-import {allForks, Root, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {allForks, Root, Slot, ValidatorIndex, ssz} from "@chainsafe/lodestar-types";
 import {assembleAttestationData} from "../../../chain/factory/attestation";
 import {assembleBlock} from "../../../chain/factory/block";
-import {AttestationError, AttestationErrorCode} from "../../../chain/errors";
+import {AttestationError, AttestationErrorCode, GossipAction, SyncCommitteeError} from "../../../chain/errors";
 import {validateGossipAggregateAndProof} from "../../../chain/validation";
 import {ZERO_HASH} from "../../../constants";
 import {SyncState} from "../../../sync";
@@ -27,6 +27,7 @@ import {OpSource} from "../../../metrics/validatorMonitor";
 import {computeSubnetForCommitteesAtSlot, getPubkeysForIndices, getSyncComitteeValidatorIndexMap} from "./utils";
 import {ApiModules} from "../types";
 import {RegenCaller} from "../../../chain/regen";
+import {toHexString} from "@chainsafe/ssz";
 
 /**
  * Validator clock may be advanced from beacon's clock. If the validator requests a resource in a
@@ -377,6 +378,14 @@ export function getValidatorApi({
               },
               e
             );
+            if (e instanceof AttestationError && e.action === GossipAction.REJECT) {
+              const archivedPath = chain.persistInvalidSszObject(
+                "signedAggregatedAndProof",
+                ssz.phase0.SignedAggregateAndProof.serialize(signedAggregateAndProof),
+                toHexString(ssz.phase0.SignedAggregateAndProof.hashTreeRoot(signedAggregateAndProof))
+              );
+              logger.debug("The submitted signed aggregate and proof was written to", archivedPath);
+            }
           }
         })
       );
@@ -417,6 +426,14 @@ export function getValidatorApi({
               },
               e
             );
+            if (e instanceof SyncCommitteeError && e.action === GossipAction.REJECT) {
+              const archivedPath = chain.persistInvalidSszObject(
+                "contributionAndProof",
+                ssz.altair.SignedContributionAndProof.serialize(contributionAndProof),
+                toHexString(ssz.altair.SignedContributionAndProof.hashTreeRoot(contributionAndProof))
+              );
+              logger.debug("The submitted contribution adn proof was written to", archivedPath);
+            }
           }
         })
       );
